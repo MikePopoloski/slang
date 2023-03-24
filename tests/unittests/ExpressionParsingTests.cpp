@@ -213,7 +213,7 @@ TEST_CASE("Binary operators") {
     testBinaryOperator(TokenKind::TripleRightShiftEqual);
 }
 
-void testScopedName(string_view text) {
+void testScopedName(std::string_view text) {
     auto& expr = parseExpression(std::string(text));
 
     REQUIRE(expr.kind == SyntaxKind::ScopedName);
@@ -296,7 +296,7 @@ TEST_CASE("Element Access") {
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
-void testElementRange(string_view text, SyntaxKind kind) {
+void testElementRange(std::string_view text, SyntaxKind kind) {
     auto& expr = parseExpression(std::string(text));
     REQUIRE(expr.kind == SyntaxKind::ElementSelectExpression);
     CHECK(expr.as<ElementSelectExpressionSyntax>().select->selector->kind == kind);
@@ -484,7 +484,7 @@ module M; localparam foo = (stackDepth == 100) || ((stackDepth == 200) || ((stac
 
     Diagnostics diags;
     Preprocessor preprocessor(SyntaxTree::getDefaultSourceManager(), alloc, diags);
-    preprocessor.pushSource(string_view(text), "source");
+    preprocessor.pushSource(std::string_view(text), "source");
 
     Bag options;
     ParserOptions parserOptions;
@@ -594,7 +594,7 @@ TEST_CASE("List parsing recovery") {
     parseCompilationUnit(text);
 }
 
-void testExpr(string_view text, SyntaxKind kind) {
+void testExpr(std::string_view text, SyntaxKind kind) {
     auto& expr = parseExpression(std::string(text));
 
     REQUIRE(expr.kind == kind);
@@ -602,7 +602,7 @@ void testExpr(string_view text, SyntaxKind kind) {
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
-void testMethodExpr(string_view text) {
+void testMethodExpr(std::string_view text) {
     testExpr(text, SyntaxKind::ArrayOrRandomizeMethodExpression);
 }
 
@@ -624,7 +624,7 @@ TEST_CASE("Randomize method expressions") {
     testMethodExpr("asdf.randomize with (a, b) {}");
 }
 
-void testConstraintBlock(string_view text) {
+void testConstraintBlock(std::string_view text) {
     testExpr("asdf.randomize with " + std::string(text),
              SyntaxKind::ArrayOrRandomizeMethodExpression);
 }

@@ -248,11 +248,11 @@ public:
 
     /// Parses command line arguments from the given string.
     /// Any errors encountered will be printed to stderr.
-    [[nodiscard]] bool parseCommandLine(string_view argList);
+    [[nodiscard]] bool parseCommandLine(std::string_view argList);
 
     /// Reads a source file into the SourceManager and returns the buffer handle for it.
     /// If an error occurs a diagnostic will be issued to stderr.
-    SourceBuffer readSource(string_view fileName);
+    SourceBuffer readSource(std::string_view fileName);
 
     /// Processes the given command file for more options.
     /// Any errors encountered will be printed to stderr.
@@ -260,7 +260,7 @@ public:
     /// @param makeRelative indicates whether paths in the file are relative to the file
     ///                     itself or to the current working directory.
     /// @returns true on success and false if errors were encountered.
-    [[nodiscard]] bool processCommandFile(string_view fileName, bool makeRelative);
+    [[nodiscard]] bool processCommandFile(std::string_view fileName, bool makeRelative);
 
     /// Processes and applies all configured options.
     /// @returns true on success and false if errors were encountered.

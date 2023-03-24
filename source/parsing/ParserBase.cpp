@@ -172,7 +172,7 @@ void ParserBase::skipToken(std::optional<DiagCode> diagCode) {
     }
 }
 
-void ParserBase::pushTokens(span<const Token> tokens) {
+void ParserBase::pushTokens(std::span<const Token> tokens) {
     window.insertHead(tokens);
 }
 
@@ -246,7 +246,7 @@ void ParserBase::Window::moveToNext() {
     currentOffset++;
 }
 
-void ParserBase::Window::insertHead(span<const Token> tokens) {
+void ParserBase::Window::insertHead(std::span<const Token> tokens) {
     if (currentOffset >= tokens.size()) {
         currentOffset -= tokens.size();
         memcpy(buffer + currentOffset, tokens.data(), tokens.size() * sizeof(Token));

@@ -651,7 +651,7 @@ private:
             addDiag(symbol, code);
     }
 
-    void checkAssertionDeclUnused(const Symbol& symbol, string_view kind) {
+    void checkAssertionDeclUnused(const Symbol& symbol, std::string_view kind) {
         auto syntax = symbol.getSyntax();
         if (!syntax || symbol.name.empty())
             return;

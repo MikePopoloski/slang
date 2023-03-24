@@ -123,7 +123,7 @@ TEST_CASE("Disable fork statement") {
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
-void testTimingControl(string_view text, SyntaxKind kind) {
+void testTimingControl(std::string_view text, SyntaxKind kind) {
     auto& stmt = parseStatement(std::string(text));
 
     REQUIRE(stmt.kind == SyntaxKind::TimingControlStatement);
@@ -148,7 +148,7 @@ TEST_CASE("Timing control statements") {
                       SyntaxKind::EventControlWithExpression);
 }
 
-void testStatement(string_view text, SyntaxKind kind) {
+void testStatement(std::string_view text, SyntaxKind kind) {
     auto& stmt = parseStatement(std::string(text));
 
     REQUIRE(stmt.kind == kind);

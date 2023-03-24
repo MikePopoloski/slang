@@ -83,7 +83,7 @@ Expression* Expression::tryConnectPortArray(const ASTContext& context, const Typ
         auto& diag = context.addDiag(diag::PortConnArrayMismatch, expr.sourceRange);
         diag << *expr.type << portType;
 
-        string_view name = instance.getArrayName();
+        std::string_view name = instance.getArrayName();
         if (name.empty())
             diag << "<unknown>"sv;
         else {
@@ -101,8 +101,8 @@ Expression* Expression::tryConnectPortArray(const ASTContext& context, const Typ
     SmallVector<ConstantRange> instanceDimVec;
     instance.getArrayDimensions(instanceDimVec);
 
-    span<const ConstantRange> instanceDims = instanceDimVec;
-    span<const int32_t> arrayPath = instance.arrayPath;
+    std::span<const ConstantRange> instanceDims = instanceDimVec;
+    std::span<const int32_t> arrayPath = instance.arrayPath;
 
     // If the connection has any unpacked dimensions, match them up with
     // the leading instance dimensions now.
@@ -123,7 +123,7 @@ Expression* Expression::tryConnectPortArray(const ASTContext& context, const Typ
         // Select each element of the connection array based on the index of
         // the instance in the instance array path. Elements get matched
         // left index to left index.
-        span<const ConstantRange> unpackedDims = unpackedDimVec;
+        std::span<const ConstantRange> unpackedDims = unpackedDimVec;
         size_t common = std::min(instanceDims.size(), unpackedDims.size());
         for (size_t i = 0; i < common; i++) {
             if (unpackedDims[i].width() != instanceDims[i].width())
@@ -1288,7 +1288,7 @@ Expression& SimpleAssignmentPatternExpression::forStruct(
     return *result;
 }
 
-static span<const Expression* const> bindExpressionList(
+static std::span<const Expression* const> bindExpressionList(
     const Type& patternType, const Type& elementType, size_t replCount, bitwidth_t expectedCount,
     const SeparatedSyntaxList<ExpressionSyntax>& items, const ASTContext& context,
     SourceRange sourceRange, bool& bad) {
@@ -1343,7 +1343,7 @@ Expression& SimpleAssignmentPatternExpression::forDynamicArray(
 static const Expression* matchElementValue(
     const ASTContext& context, const Type& elementType, const FieldSymbol* targetField,
     SourceRange sourceRange,
-    span<const StructuredAssignmentPatternExpression::TypeSetter> typeSetters,
+    std::span<const StructuredAssignmentPatternExpression::TypeSetter> typeSetters,
     const Expression* defaultSetter) {
 
     // Every element in the array or structure must be covered by one of:
@@ -1560,7 +1560,7 @@ Expression& StructuredAssignmentPatternExpression::forStruct(
     }
 
     auto result = comp.emplace<StructuredAssignmentPatternExpression>(
-        type, memberSetters.copy(comp), typeSetters.copy(comp), span<const IndexSetter>{},
+        type, memberSetters.copy(comp), typeSetters.copy(comp), std::span<const IndexSetter>{},
         defaultSetter, elements.copy(comp), sourceRange);
 
     if (bad)
@@ -1678,7 +1678,7 @@ Expression& StructuredAssignmentPatternExpression::forFixedArray(
     }
 
     auto result = comp.emplace<StructuredAssignmentPatternExpression>(
-        type, span<const MemberSetter>{}, typeSetters.copy(comp), indexSetters.copy(comp),
+        type, std::span<const MemberSetter>{}, typeSetters.copy(comp), indexSetters.copy(comp),
         defaultSetter, elements.copy(comp), sourceRange);
 
     if (bad)
@@ -1743,8 +1743,8 @@ Expression& StructuredAssignmentPatternExpression::forDynamicArray(
     }
 
     auto result = comp.emplace<StructuredAssignmentPatternExpression>(
-        type, span<const MemberSetter>{}, span<const TypeSetter>{}, indexSetters.copy(comp),
-        nullptr, elements.copy(comp), sourceRange);
+        type, std::span<const MemberSetter>{}, std::span<const TypeSetter>{},
+        indexSetters.copy(comp), nullptr, elements.copy(comp), sourceRange);
 
     if (bad)
         return badExpr(comp, result);
@@ -1811,8 +1811,8 @@ Expression& StructuredAssignmentPatternExpression::forAssociativeArray(
     }
 
     auto result = comp.emplace<StructuredAssignmentPatternExpression>(
-        type, span<const MemberSetter>{}, span<const TypeSetter>{}, indexSetters.copy(comp),
-        defaultSetter, span<const Expression*>{}, sourceRange);
+        type, std::span<const MemberSetter>{}, std::span<const TypeSetter>{},
+        indexSetters.copy(comp), defaultSetter, std::span<const Expression*>{}, sourceRange);
 
     if (bad)
         return badExpr(comp, result);

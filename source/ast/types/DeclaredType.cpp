@@ -56,7 +56,7 @@ void DeclaredType::setDimensionSyntax(const SyntaxList<VariableDimensionSyntax>&
 
 void DeclaredType::mergeImplicitPort(
     const ImplicitTypeSyntax& implicit, SourceLocation location,
-    span<const VariableDimensionSyntax* const> unpackedDimensions) {
+    std::span<const VariableDimensionSyntax* const> unpackedDimensions) {
     mergePortTypes(getASTContext<false>(), parent.as<ValueSymbol>(), implicit, location,
                    unpackedDimensions);
 }
@@ -211,7 +211,7 @@ static bool isValidForIfaceVar(const Type& type) {
 
 void DeclaredType::checkType(const ASTContext& context) const {
     uint32_t masked = (flags & DeclaredTypeFlags::NeedsTypeCheck).bits();
-    ASSERT(countPopulation64(masked) == 1);
+    ASSERT(std::popcount(masked) == 1);
 
     switch (masked) {
         case uint32_t(DeclaredTypeFlags::NetType): {
@@ -233,7 +233,7 @@ void DeclaredType::checkType(const ASTContext& context) const {
                 mergePortTypes(context, *var, typeOrLink.typeSyntax->as<ImplicitTypeSyntax>(),
                                parent.location,
                                dimensions ? *dimensions
-                                          : span<const VariableDimensionSyntax* const>{});
+                                          : std::span<const VariableDimensionSyntax* const>{});
             }
             break;
         case uint32_t(DeclaredTypeFlags::Rand): {
@@ -306,7 +306,8 @@ static const Type* makeSigned(Compilation& compilation, const Type& type) {
 
 void DeclaredType::mergePortTypes(
     const ASTContext& context, const ValueSymbol& sourceSymbol, const ImplicitTypeSyntax& implicit,
-    SourceLocation location, span<const VariableDimensionSyntax* const> unpackedDimensions) const {
+    SourceLocation location,
+    std::span<const VariableDimensionSyntax* const> unpackedDimensions) const {
 
     // There's this really terrible "feature" where the port declaration can influence the type
     // of the actual symbol somewhere else in the tree. This is ugly but should be safe since

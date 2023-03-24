@@ -25,8 +25,8 @@ class ParameterBuilder {
 public:
     using Decl = Definition::ParameterDecl;
 
-    ParameterBuilder(const Scope& scope, string_view definitionName,
-                     span<const Decl> parameterDecls);
+    ParameterBuilder(const Scope& scope, std::string_view definitionName,
+                     std::span<const Decl> parameterDecls);
 
     bool hasErrors() const { return anyErrors; }
 
@@ -44,16 +44,16 @@ public:
     static void createDecls(const Scope& scope,
                             const syntax::ParameterDeclarationBaseSyntax& syntax, bool isLocal,
                             bool isPort,
-                            span<const syntax::AttributeInstanceSyntax* const> attributes,
+                            std::span<const syntax::AttributeInstanceSyntax* const> attributes,
                             SmallVectorBase<Decl>& results);
     static void createDecls(const Scope& scope, const syntax::ParameterPortListSyntax& syntax,
                             SmallVectorBase<Decl>& results);
 
 private:
     const Scope& scope;
-    string_view definitionName;
-    span<const Decl> parameterDecls;
-    SmallMap<string_view, const syntax::ExpressionSyntax*, 8> assignments;
+    std::string_view definitionName;
+    std::span<const Decl> parameterDecls;
+    SmallMap<std::string_view, const syntax::ExpressionSyntax*, 8> assignments;
     const ASTContext* instanceContext = nullptr;
     const HierarchyOverrideNode* overrideNode = nullptr;
     bool forceInvalidValues = false;

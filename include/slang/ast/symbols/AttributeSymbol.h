@@ -16,24 +16,24 @@ namespace slang::ast {
 
 class SLANG_EXPORT AttributeSymbol : public Symbol {
 public:
-    AttributeSymbol(string_view name, SourceLocation loc, const Symbol& symbol,
+    AttributeSymbol(std::string_view name, SourceLocation loc, const Symbol& symbol,
                     const syntax::ExpressionSyntax& expr);
 
-    AttributeSymbol(string_view name, SourceLocation loc, const Scope& scope,
+    AttributeSymbol(std::string_view name, SourceLocation loc, const Scope& scope,
                     LookupLocation lookupLocation, const syntax::ExpressionSyntax& expr);
 
-    AttributeSymbol(string_view name, SourceLocation loc, const ConstantValue& value);
+    AttributeSymbol(std::string_view name, SourceLocation loc, const ConstantValue& value);
 
     const ConstantValue& getValue() const;
 
     void serializeTo(ASTSerializer& serializer) const;
 
-    static span<const AttributeSymbol* const> fromSyntax(
-        span<const syntax::AttributeInstanceSyntax* const> syntax, const Scope& scope,
+    static std::span<const AttributeSymbol* const> fromSyntax(
+        std::span<const syntax::AttributeInstanceSyntax* const> syntax, const Scope& scope,
         const Symbol& symbol);
 
-    static span<const AttributeSymbol* const> fromSyntax(
-        span<const syntax::AttributeInstanceSyntax* const> syntax, const Scope& scope,
+    static std::span<const AttributeSymbol* const> fromSyntax(
+        std::span<const syntax::AttributeInstanceSyntax* const> syntax, const Scope& scope,
         LookupLocation lookupLocation);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Attribute; }

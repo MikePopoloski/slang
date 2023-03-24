@@ -149,7 +149,7 @@ public:
                                const Expression*) const final {
         auto& comp = context.getCompilation();
 
-        string_view message;
+        std::string_view message;
         const Expression* condition = nullptr;
 
         if (!args.empty()) {

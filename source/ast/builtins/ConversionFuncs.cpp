@@ -9,6 +9,20 @@
 #include "slang/ast/SystemSubroutine.h"
 #include "slang/diagnostics/SysFuncsDiags.h"
 
+// TODO: remove once AppleClang finally adds support for this
+template<typename Dest, typename Source>
+inline Dest bit_cast(const Source& src) noexcept {
+    static_assert(sizeof(Dest) == sizeof(Source),
+                  "bit_cast requires source and destination to be the same size");
+    static_assert(std::is_trivially_copyable<Dest>::value,
+                  "bit_cast requires the destination type to be copyable");
+    static_assert(std::is_trivially_copyable<Source>::value,
+                  "bit_cast requires the source type to be copyable");
+    Dest dst;
+    std::memcpy(&dst, &src, sizeof(Dest));
+    return dst;
+}
+
 namespace slang::ast::builtins {
 
 class SignedConversionFunction : public SystemSubroutine {

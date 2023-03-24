@@ -201,9 +201,9 @@ private:
 
 class SLANG_EXPORT EventListControl : public TimingControl {
 public:
-    span<const TimingControl* const> events;
+    std::span<const TimingControl* const> events;
 
-    EventListControl(span<const TimingControl* const> events, SourceRange sourceRange) :
+    EventListControl(std::span<const TimingControl* const> events, SourceRange sourceRange) :
         TimingControl(TimingControlKind::EventList, sourceRange), events(events) {}
 
     static TimingControl& fromSyntax(Compilation& compilation, const syntax::SyntaxNode& syntax,
@@ -296,9 +296,9 @@ public:
         bool isBegin = false;
     };
 
-    span<const Event> events;
+    std::span<const Event> events;
 
-    BlockEventListControl(span<const Event> events, SourceRange sourceRange) :
+    BlockEventListControl(std::span<const Event> events, SourceRange sourceRange) :
         TimingControl(TimingControlKind::BlockEventList, sourceRange), events(events) {}
 
     static TimingControl& fromSyntax(const syntax::BlockEventExpressionSyntax& syntax,

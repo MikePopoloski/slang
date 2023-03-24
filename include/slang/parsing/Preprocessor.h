@@ -50,7 +50,7 @@ struct SLANG_EXPORT PreprocessorOptions {
     std::vector<std::string> undefines;
 
     /// A set of preprocessor directives to be ignored.
-    flat_hash_set<string_view> ignoreDirectives;
+    flat_hash_set<std::string_view> ignoreDirectives;
 };
 
 /// Preprocessor - Interface between lexer and parser
@@ -62,32 +62,32 @@ class SLANG_EXPORT Preprocessor {
 public:
     Preprocessor(SourceManager& sourceManager, BumpAllocator& alloc, Diagnostics& diagnostics,
                  const Bag& options = {},
-                 span<const syntax::DefineDirectiveSyntax* const> inheritedMacros = {});
+                 std::span<const syntax::DefineDirectiveSyntax* const> inheritedMacros = {});
 
     /// Gets the next token in the stream, after applying preprocessor rules.
     Token next();
 
     /// Push a new source file onto the stack.
-    void pushSource(string_view source, string_view name = "source");
+    void pushSource(std::string_view source, std::string_view name = "source");
     void pushSource(SourceBuffer buffer);
 
     /// Predefines the given macro definition. The given definition string is lexed
     /// as if it were source text immediately following a `define directive.
     /// If any diagnostics are printed for the created text, they will be marked
     /// as coming from @a name.
-    void predefine(const std::string& definition, string_view name = "<api>");
+    void predefine(const std::string& definition, std::string_view name = "<api>");
 
     /// Undefines a previously defined macro. If the macro is not defined, or
     /// if you pass the name of an intrinsic macro, this call returns false and
     /// does not undefine anything.
-    bool undefine(string_view name);
+    bool undefine(std::string_view name);
 
     /// Undefines all currently defined macros.
     void undefineAll();
 
     /// Checks whether the given macro is defined. This does not check built-in
     /// directives except for the intrinsic macros (__LINE__, etc).
-    bool isDefined(string_view name);
+    bool isDefined(std::string_view name);
 
     /// Sets the base keyword version for the current compilation unit. Note that this does not
     /// affect the keyword version if the user has explicitly requested a different
@@ -165,7 +165,7 @@ private:
     std::pair<Trivia, Trivia> handlePragmaDirective(Token directive);
 
     // Determines whether the else branch of a conditional directive should be taken
-    bool shouldTakeElseBranch(SourceLocation location, bool isElseIf, string_view macroName);
+    bool shouldTakeElseBranch(SourceLocation location, bool isElseIf, std::string_view macroName);
 
     // Handle parsing a branch of a conditional directive
     Trivia parseBranchDirective(Token directive, Token condition, bool taken);
@@ -275,10 +275,10 @@ private:
     bool expandMacro(MacroDef macro, MacroExpansion& expansion,
                      syntax::MacroActualArgumentListSyntax* actualArgs);
     bool expandIntrinsic(MacroIntrinsic intrinsic, MacroExpansion& expansion);
-    bool expandReplacementList(span<Token const>& tokens,
+    bool expandReplacementList(std::span<Token const>& tokens,
                                SmallSet<const syntax::DefineDirectiveSyntax*, 8>& alreadyExpanded);
-    bool applyMacroOps(span<Token const> tokens, SmallVectorBase<Token>& dest);
-    void createBuiltInMacro(string_view name, int value, string_view valueStr = {});
+    bool applyMacroOps(std::span<Token const> tokens, SmallVectorBase<Token>& dest);
+    void createBuiltInMacro(std::string_view name, int value, std::string_view valueStr = {});
 
     static bool isSameMacro(const syntax::DefineDirectiveSyntax& left,
                             const syntax::DefineDirectiveSyntax& right);
@@ -320,7 +320,7 @@ private:
 
         // Set a buffer to use first, in order, before looking at an underlying preprocessor
         // stream for macro argument lists.
-        void setBuffer(span<Token const> newBuffer);
+        void setBuffer(std::span<Token const> newBuffer);
 
         // Pull tokens one at a time from a previously set buffer. Note that this won't pull
         // from the underlying preprocessor stream; its purpose is to allow stepping through
@@ -336,7 +336,7 @@ private:
 
         syntax::MacroActualArgumentSyntax* parseActualArgument();
         syntax::MacroFormalArgumentSyntax* parseFormalArgument();
-        span<Token> parseTokenList(bool allowNewlines);
+        std::span<Token> parseTokenList(bool allowNewlines);
 
         Token peek();
         Token consume();
@@ -344,7 +344,7 @@ private:
         bool peek(TokenKind kind) { return peek().kind == kind; }
 
         Preprocessor& pp;
-        span<Token const> buffer;
+        std::span<Token const> buffer;
         uint32_t currentIndex = 0;
     };
 
@@ -361,7 +361,7 @@ private:
     SmallVector<BranchEntry, 2> branchStack;
 
     // map from macro name to macro definition
-    flat_hash_map<string_view, MacroDef> macros;
+    flat_hash_map<std::string_view, MacroDef> macros;
 
     // list of expanded macro tokens to drain before continuing with active lexer
     SmallVector<Token> expandedTokens;
@@ -407,8 +407,9 @@ private:
     void handleExponentSplit(Token token, size_t offset);
 
     // A map of pragma protect keywords to their handler function.
-    flat_hash_map<string_view, void (Preprocessor::*)(Token, const syntax::PragmaExpressionSyntax*,
-                                                      SmallVectorBase<Token>&)>
+    flat_hash_map<std::string_view,
+                  void (Preprocessor::*)(Token, const syntax::PragmaExpressionSyntax*,
+                                         SmallVectorBase<Token>&)>
         pragmaProtectHandlers;
 };
 

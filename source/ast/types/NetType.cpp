@@ -22,12 +22,12 @@ namespace slang::ast {
 
 using namespace syntax;
 
-NetType::NetType(NetKind netKind, string_view name, const Type& dataType) :
+NetType::NetType(NetKind netKind, std::string_view name, const Type& dataType) :
     Symbol(SymbolKind::NetType, name, SourceLocation()), declaredType(*this), netKind(netKind) {
     declaredType.setType(dataType);
 }
 
-NetType::NetType(string_view name, SourceLocation location) :
+NetType::NetType(std::string_view name, SourceLocation location) :
     Symbol(SymbolKind::NetType, name, location),
     declaredType(*this, DeclaredTypeFlags::UserDefinedNetType), netKind(UserDefined) {
 }

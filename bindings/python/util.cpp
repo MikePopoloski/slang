@@ -125,10 +125,10 @@ void registerUtil(py::module_& m) {
         .def("getFullyExpandedLoc", &SourceManager::getFullyExpandedLoc, "location"_a)
         .def("getSourceText", &SourceManager::getSourceText, "buffer"_a)
         .def("assignText",
-             py::overload_cast<string_view, SourceLocation>(&SourceManager::assignText), "text"_a,
-             "includedFrom"_a = SourceLocation())
+             py::overload_cast<std::string_view, SourceLocation>(&SourceManager::assignText),
+             "text"_a, "includedFrom"_a = SourceLocation())
         .def("assignText",
-             py::overload_cast<string_view, string_view, SourceLocation>(
+             py::overload_cast<std::string_view, std::string_view, SourceLocation>(
                  &SourceManager::assignText),
              "path"_a, "text"_a, "includedFrom"_a = SourceLocation())
         .def("readSource", &SourceManager::readSource, "path"_a)

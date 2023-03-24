@@ -395,8 +395,9 @@ SubroutineSymbol& SubroutineSymbol::createOutOfBlock(Compilation& compilation,
     return *result;
 }
 
-static span<const FormalArgumentSymbol* const> cloneArguments(
-    Compilation& compilation, Scope& newParent, span<const FormalArgumentSymbol* const> source) {
+static std::span<const FormalArgumentSymbol* const> cloneArguments(
+    Compilation& compilation, Scope& newParent,
+    std::span<const FormalArgumentSymbol* const> source) {
 
     SmallVector<const FormalArgumentSymbol*> arguments(source.size(), UninitializedTag());
     for (auto arg : source) {
@@ -754,7 +755,7 @@ void SubroutineSymbol::addThisVar(const Type& type) {
     addMember(*thisVar);
 }
 
-MethodPrototypeSymbol::MethodPrototypeSymbol(Compilation& compilation, string_view name,
+MethodPrototypeSymbol::MethodPrototypeSymbol(Compilation& compilation, std::string_view name,
                                              SourceLocation loc, SubroutineKind subroutineKind,
                                              Visibility visibility, bitmask<MethodFlags> flags) :
     Symbol(SymbolKind::MethodPrototype, name, loc),

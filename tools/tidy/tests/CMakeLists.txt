@@ -10,7 +10,7 @@ endif()
 FetchContent_Declare(
   Catch2
   GIT_REPOSITORY https://github.com/catchorg/Catch2.git
-  GIT_TAG v3.2.1
+  GIT_TAG v3.3.2
   GIT_SHALLOW ON
   ${find_pkg_args})
 FetchContent_MakeAvailable(Catch2)
@@ -30,10 +30,8 @@ add_executable(
   ../synthesis/OnlyAssignedOnReset.cpp OnlyAssignedOnResetTest.cpp
   ../synthesis/RegisterHasNoReset.cpp RegisterHasNoResetTest.cpp)
 
-target_link_libraries(
-  tidy_unittests
-  PRIVATE slang::slang Catch2::Catch2 fmt::fmt
-  PUBLIC ${SLANG_LIBRARIES})
+target_link_libraries(tidy_unittests PRIVATE slang::slang Catch2::Catch2
+                                             fmt::fmt)
 target_compile_definitions(tidy_unittests PRIVATE UNITTESTS)
 target_include_directories(tidy_unittests PRIVATE ../include ../../../include
                                                   ../../../tests/unittests)

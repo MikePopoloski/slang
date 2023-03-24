@@ -48,86 +48,86 @@ void ASTSerializer::serialize(const Pattern& pattern) {
     pattern.visit(*this);
 }
 
-void ASTSerializer::serialize(string_view value) {
+void ASTSerializer::serialize(std::string_view value) {
     writer.writeValue(value);
 }
 
-void ASTSerializer::write(string_view name, string_view value) {
+void ASTSerializer::write(std::string_view name, std::string_view value) {
     writer.writeProperty(name);
     writer.writeValue(value);
 }
 
-void ASTSerializer::write(string_view name, int64_t value) {
+void ASTSerializer::write(std::string_view name, int64_t value) {
     writer.writeProperty(name);
     writer.writeValue(value);
 }
 
-void ASTSerializer::write(string_view name, uint64_t value) {
+void ASTSerializer::write(std::string_view name, uint64_t value) {
     writer.writeProperty(name);
     writer.writeValue(value);
 }
 
-void ASTSerializer::write(string_view name, double value) {
+void ASTSerializer::write(std::string_view name, double value) {
     writer.writeProperty(name);
     writer.writeValue(value);
 }
 
-void ASTSerializer::write(string_view name, bool value) {
+void ASTSerializer::write(std::string_view name, bool value) {
     writer.writeProperty(name);
     writer.writeValue(value);
 }
 
-void ASTSerializer::write(string_view name, const std::string& value) {
+void ASTSerializer::write(std::string_view name, const std::string& value) {
     writer.writeProperty(name);
     writer.writeValue(value);
 }
 
-void ASTSerializer::write(string_view name, const Symbol& value) {
+void ASTSerializer::write(std::string_view name, const Symbol& value) {
     writer.writeProperty(name);
     serialize(value);
 }
 
-void ASTSerializer::write(string_view name, const ConstantValue& value) {
+void ASTSerializer::write(std::string_view name, const ConstantValue& value) {
     writer.writeProperty(name);
     writer.writeValue(value.toString());
 }
 
-void ASTSerializer::write(string_view name, const Expression& value) {
+void ASTSerializer::write(std::string_view name, const Expression& value) {
     writer.writeProperty(name);
     serialize(value);
 }
 
-void ASTSerializer::write(string_view name, const Statement& value) {
+void ASTSerializer::write(std::string_view name, const Statement& value) {
     writer.writeProperty(name);
     serialize(value);
 }
 
-void ASTSerializer::write(string_view name, const TimingControl& value) {
+void ASTSerializer::write(std::string_view name, const TimingControl& value) {
     writer.writeProperty(name);
     serialize(value);
 }
 
-void ASTSerializer::write(string_view name, const Constraint& value) {
+void ASTSerializer::write(std::string_view name, const Constraint& value) {
     writer.writeProperty(name);
     serialize(value);
 }
 
-void ASTSerializer::write(string_view name, const AssertionExpr& value) {
+void ASTSerializer::write(std::string_view name, const AssertionExpr& value) {
     writer.writeProperty(name);
     serialize(value);
 }
 
-void ASTSerializer::write(string_view name, const BinsSelectExpr& value) {
+void ASTSerializer::write(std::string_view name, const BinsSelectExpr& value) {
     writer.writeProperty(name);
     serialize(value);
 }
 
-void ASTSerializer::write(string_view name, const Pattern& value) {
+void ASTSerializer::write(std::string_view name, const Pattern& value) {
     writer.writeProperty(name);
     serialize(value);
 }
 
-void ASTSerializer::writeLink(string_view name, const Symbol& value) {
+void ASTSerializer::writeLink(std::string_view name, const Symbol& value) {
     writer.writeProperty(name);
 
     std::string str;
@@ -146,7 +146,7 @@ void ASTSerializer::startArray() {
     writer.startArray();
 }
 
-void ASTSerializer::startArray(string_view name) {
+void ASTSerializer::startArray(std::string_view name) {
     writer.writeProperty(name);
     writer.startArray();
 }
@@ -163,7 +163,7 @@ void ASTSerializer::endObject() {
     writer.endObject();
 }
 
-void ASTSerializer::writeProperty(string_view name) {
+void ASTSerializer::writeProperty(std::string_view name) {
     writer.writeProperty(name);
 }
 

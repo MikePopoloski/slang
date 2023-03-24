@@ -27,7 +27,7 @@ namespace slang::ast {
 
 using namespace syntax;
 
-ValueSymbol::ValueSymbol(SymbolKind kind, string_view name, SourceLocation location,
+ValueSymbol::ValueSymbol(SymbolKind kind, std::string_view name, SourceLocation location,
                          bitmask<DeclaredTypeFlags> flags) :
     Symbol(kind, name, location),
     declaredType(*this, flags) {
@@ -52,7 +52,7 @@ bool ValueSymbol::isKind(SymbolKind kind) {
     }
 }
 
-static bool handleOverlap(const Scope& scope, string_view name, const ValueDriver& curr,
+static bool handleOverlap(const Scope& scope, std::string_view name, const ValueDriver& curr,
                           const ValueDriver& driver, bool isNet, bool isUWire,
                           bool isSingleDriverUDNT, const NetType* netType) {
     auto currRange = curr.getSourceRange();

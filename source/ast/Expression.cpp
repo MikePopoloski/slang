@@ -1074,7 +1074,7 @@ Expression& Expression::bindLookupResult(Compilation& compilation, LookupResult&
             // all the selectors together, as this may constitute a hierarchical reference.
             if (expr->type->isVirtualInterface()) {
                 LookupResult nextResult;
-                span<LookupResult::Selector> selectors = result.selectors;
+                std::span<LookupResult::Selector> selectors = result.selectors;
                 Lookup::selectChild(*expr->type, expr->sourceRange, selectors.subspan(i), context,
                                     nextResult);
 
@@ -1169,7 +1169,7 @@ Expression* Expression::tryBindInterfaceRef(const ASTContext& context,
 
     auto& comp = context.getCompilation();
     auto symbol = result.found;
-    string_view modportName;
+    std::string_view modportName;
 
     if (symbol->kind == SymbolKind::InterfacePort) {
         auto& ifacePort = symbol->as<InterfacePortSymbol>();

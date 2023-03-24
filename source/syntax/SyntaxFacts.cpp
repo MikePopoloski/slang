@@ -11,7 +11,7 @@
 
 namespace slang::syntax {
 
-string_view SyntaxFacts::getSimpleTypeName(const DataTypeSyntax& syntax) {
+std::string_view SyntaxFacts::getSimpleTypeName(const DataTypeSyntax& syntax) {
     if (syntax.kind == SyntaxKind::NamedType) {
         auto& namedType = syntax.as<NamedTypeSyntax>();
         if (namedType.name->kind == SyntaxKind::IdentifierName)

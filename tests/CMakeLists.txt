@@ -11,7 +11,7 @@ endif()
 FetchContent_Declare(
   Catch2
   GIT_REPOSITORY https://github.com/catchorg/Catch2.git
-  GIT_TAG v3.2.1
+  GIT_TAG v3.3.2
   GIT_SHALLOW ON
   ${find_pkg_args})
 FetchContent_MakeAvailable(Catch2)
@@ -55,10 +55,7 @@ add_executable(
   unittests/VisitorTests.cpp
   unittests/WarningTests.cpp)
 
-target_link_libraries(
-  unittests
-  PRIVATE slang::slang Catch2::Catch2 fmt::fmt
-  PUBLIC ${SLANG_LIBRARIES})
+target_link_libraries(unittests PRIVATE slang::slang Catch2::Catch2 fmt::fmt)
 target_compile_definitions(unittests PRIVATE UNITTESTS)
 
 if(SLANG_CI_BUILD)

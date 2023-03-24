@@ -123,9 +123,9 @@ void LookupResult::errorIfSelectors(const ASTContext& context) const {
 namespace {
 
 struct NameComponents {
-    string_view text;
+    std::string_view text;
     SourceRange range;
-    span<const ElementSelectSyntax* const> selectors;
+    std::span<const ElementSelectSyntax* const> selectors;
     const ParameterValueAssignmentSyntax* paramAssignments = nullptr;
 
     NameComponents() = default;
@@ -274,7 +274,7 @@ const Symbol* getContainingPackage(const Symbol& symbol) {
 // Returns true if the lookup was ok, or if it failed in a way that allows us to continue
 // looking up in other ways. Returns false if the entire lookup has failed and should be
 // aborted.
-bool lookupDownward(span<const NamePlusLoc> nameParts, NameComponents name,
+bool lookupDownward(std::span<const NamePlusLoc> nameParts, NameComponents name,
                     const ASTContext& context, LookupResult& result) {
     const Symbol* symbol = std::exchange(result.found, nullptr);
     ASSERT(symbol);
@@ -361,7 +361,7 @@ bool lookupDownward(span<const NamePlusLoc> nameParts, NameComponents name,
                                     !isCBOrVirtualIface;
         }
 
-        string_view modportName;
+        std::string_view modportName;
         if (symbol->kind == SymbolKind::InterfacePort) {
             auto& ifacePort = symbol->as<InterfacePortSymbol>();
             symbol = ifacePort.getConnection();
@@ -520,7 +520,7 @@ bool lookupDownward(span<const NamePlusLoc> nameParts, NameComponents name,
 // Returns true if the lookup was ok, or if it failed in a way that allows us to continue
 // looking up in other ways. Returns false if the entire lookup has failed and should be
 // aborted.
-bool lookupUpward(span<const NamePlusLoc> nameParts, const NameComponents& name,
+bool lookupUpward(std::span<const NamePlusLoc> nameParts, const NameComponents& name,
                   const ASTContext& context, LookupResult& result) {
     // Upward lookups can match either a scope name, or a module definition name (on any of the
     // instances). Imports are not considered.
@@ -1061,7 +1061,7 @@ void Lookup::name(const NameSyntax& syntax, const ASTContext& context, bitmask<L
     }
 }
 
-const Symbol* Lookup::unqualified(const Scope& scope, string_view name,
+const Symbol* Lookup::unqualified(const Scope& scope, std::string_view name,
                                   bitmask<LookupFlags> flags) {
     if (name.empty())
         return nullptr;
@@ -1074,8 +1074,9 @@ const Symbol* Lookup::unqualified(const Scope& scope, string_view name,
     return result.found;
 }
 
-const Symbol* Lookup::unqualifiedAt(const Scope& scope, string_view name, LookupLocation location,
-                                    SourceRange sourceRange, bitmask<LookupFlags> flags) {
+const Symbol* Lookup::unqualifiedAt(const Scope& scope, std::string_view name,
+                                    LookupLocation location, SourceRange sourceRange,
+                                    bitmask<LookupFlags> flags) {
     if (name.empty())
         return nullptr;
 
@@ -1197,7 +1198,7 @@ static const Symbol* selectChildRange(const InstanceArraySymbol& array,
 }
 
 const Symbol* Lookup::selectChild(const Symbol& initialSymbol,
-                                  span<const ElementSelectSyntax* const> selectors,
+                                  std::span<const ElementSelectSyntax* const> selectors,
                                   const ASTContext& context, LookupResult& result) {
     const Symbol* symbol = &initialSymbol;
     for (const ElementSelectSyntax* syntax : selectors) {
@@ -1249,7 +1250,7 @@ const Symbol* Lookup::selectChild(const Symbol& initialSymbol,
 }
 
 void Lookup::selectChild(const Type& virtualInterface, SourceRange range,
-                         span<LookupResult::Selector> selectors, const ASTContext& context,
+                         std::span<LookupResult::Selector> selectors, const ASTContext& context,
                          LookupResult& result) {
     NameComponents unused;
     SmallVector<NamePlusLoc, 4> nameParts;
@@ -1583,7 +1584,7 @@ bool Lookup::findAssertionLocalVar(const ASTContext& context, const NameSyntax& 
     return lookupDownward(nameParts, name, context, result);
 }
 
-void Lookup::unqualifiedImpl(const Scope& scope, string_view name, LookupLocation location,
+void Lookup::unqualifiedImpl(const Scope& scope, std::string_view name, LookupLocation location,
                              std::optional<SourceRange> sourceRange, bitmask<LookupFlags> flags,
                              SymbolIndex outOfBlockIndex, LookupResult& result,
                              const Scope& originalScope) {
@@ -2009,7 +2010,7 @@ void Lookup::qualified(const ScopedNameSyntax& syntax, const ASTContext& context
     }
 }
 
-void Lookup::reportUndeclared(const Scope& initialScope, string_view name, SourceRange range,
+void Lookup::reportUndeclared(const Scope& initialScope, std::string_view name, SourceRange range,
                               bitmask<LookupFlags> flags, bool isHierarchical,
                               LookupResult& result) {
     // If the caller doesn't want an error, don't give him one.

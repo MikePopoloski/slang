@@ -64,23 +64,23 @@ std::string TypePrinter::toString() const {
     return buffer->str();
 }
 
-void TypePrinter::visit(const ScalarType& type, string_view) {
+void TypePrinter::visit(const ScalarType& type, std::string_view) {
     buffer->append(type.name);
     if (type.isSigned)
         buffer->append(" signed");
 }
 
-void TypePrinter::visit(const PredefinedIntegerType& type, string_view) {
+void TypePrinter::visit(const PredefinedIntegerType& type, std::string_view) {
     buffer->append(type.name);
     if (type.isSigned != PredefinedIntegerType::isDefaultSigned(type.integerKind))
         buffer->append(type.isSigned ? " signed" : " unsigned");
 }
 
-void TypePrinter::visit(const FloatingType& type, string_view) {
+void TypePrinter::visit(const FloatingType& type, std::string_view) {
     buffer->append(type.name);
 }
 
-void TypePrinter::visit(const EnumType& type, string_view overrideName) {
+void TypePrinter::visit(const EnumType& type, std::string_view overrideName) {
     if (options.anonymousTypeStyle == TypePrintingOptions::FriendlyName) {
         printScope(type.getParentScope());
 
@@ -92,7 +92,8 @@ void TypePrinter::visit(const EnumType& type, string_view overrideName) {
     else {
         buffer->append("enum");
         if (options.fullEnumType) {
-            buffer->append(" " + type.baseType.toString());
+            buffer->append(" ");
+            buffer->append(type.baseType.toString());
         }
         buffer->append("{");
 
@@ -119,7 +120,7 @@ void TypePrinter::visit(const EnumType& type, string_view overrideName) {
     }
 }
 
-void TypePrinter::visit(const PackedArrayType& type, string_view) {
+void TypePrinter::visit(const PackedArrayType& type, std::string_view) {
     SmallVector<ConstantRange, 8> dims;
     const PackedArrayType* curr = &type;
     while (true) {
@@ -135,7 +136,7 @@ void TypePrinter::visit(const PackedArrayType& type, string_view) {
         buffer->format("[{}:{}]", range.left, range.right);
 }
 
-void TypePrinter::visit(const PackedStructType& type, string_view overrideName) {
+void TypePrinter::visit(const PackedStructType& type, std::string_view overrideName) {
     if (options.anonymousTypeStyle == TypePrintingOptions::FriendlyName) {
         printScope(type.getParentScope());
 
@@ -162,7 +163,7 @@ void TypePrinter::visit(const PackedStructType& type, string_view overrideName) 
     }
 }
 
-void TypePrinter::visit(const PackedUnionType& type, string_view overrideName) {
+void TypePrinter::visit(const PackedUnionType& type, std::string_view overrideName) {
     if (options.anonymousTypeStyle == TypePrintingOptions::FriendlyName) {
         printScope(type.getParentScope());
 
@@ -189,7 +190,7 @@ void TypePrinter::visit(const PackedUnionType& type, string_view overrideName) {
     }
 }
 
-void TypePrinter::visit(const FixedSizeUnpackedArrayType& type, string_view) {
+void TypePrinter::visit(const FixedSizeUnpackedArrayType& type, std::string_view) {
     if (options.anonymousTypeStyle == TypePrintingOptions::FriendlyName) {
         buffer->append("unpacked array ");
         if (!type.range.isLittleEndian() && type.range.lower() == 0)
@@ -205,7 +206,7 @@ void TypePrinter::visit(const FixedSizeUnpackedArrayType& type, string_view) {
     }
 }
 
-void TypePrinter::visit(const DynamicArrayType& type, string_view) {
+void TypePrinter::visit(const DynamicArrayType& type, std::string_view) {
     if (options.anonymousTypeStyle == TypePrintingOptions::FriendlyName) {
         buffer->append("dynamic array of ");
         type.elementType.visit(*this, ""sv);
@@ -215,7 +216,7 @@ void TypePrinter::visit(const DynamicArrayType& type, string_view) {
     }
 }
 
-void TypePrinter::visit(const DPIOpenArrayType& type, string_view) {
+void TypePrinter::visit(const DPIOpenArrayType& type, std::string_view) {
     if (options.anonymousTypeStyle == TypePrintingOptions::FriendlyName) {
         if (type.isPacked) {
             type.elementType.visit(*this, ""sv);
@@ -231,7 +232,7 @@ void TypePrinter::visit(const DPIOpenArrayType& type, string_view) {
     }
 }
 
-void TypePrinter::visit(const AssociativeArrayType& type, string_view) {
+void TypePrinter::visit(const AssociativeArrayType& type, std::string_view) {
     if (options.anonymousTypeStyle == TypePrintingOptions::FriendlyName) {
         buffer->append("associative array [");
         if (type.indexType)
@@ -247,7 +248,7 @@ void TypePrinter::visit(const AssociativeArrayType& type, string_view) {
     }
 }
 
-void TypePrinter::visit(const QueueType& type, string_view) {
+void TypePrinter::visit(const QueueType& type, std::string_view) {
     if (options.anonymousTypeStyle == TypePrintingOptions::FriendlyName) {
         buffer->append("queue of ");
         type.elementType.visit(*this, ""sv);
@@ -257,7 +258,7 @@ void TypePrinter::visit(const QueueType& type, string_view) {
     }
 }
 
-void TypePrinter::visit(const UnpackedStructType& type, string_view overrideName) {
+void TypePrinter::visit(const UnpackedStructType& type, std::string_view overrideName) {
     if (options.anonymousTypeStyle == TypePrintingOptions::FriendlyName) {
         printScope(type.getParentScope());
 
@@ -281,7 +282,7 @@ void TypePrinter::visit(const UnpackedStructType& type, string_view overrideName
     }
 }
 
-void TypePrinter::visit(const UnpackedUnionType& type, string_view overrideName) {
+void TypePrinter::visit(const UnpackedUnionType& type, std::string_view overrideName) {
     if (options.anonymousTypeStyle == TypePrintingOptions::FriendlyName) {
         printScope(type.getParentScope());
 
@@ -305,55 +306,55 @@ void TypePrinter::visit(const UnpackedUnionType& type, string_view overrideName)
     }
 }
 
-void TypePrinter::visit(const VoidType& type, string_view) {
+void TypePrinter::visit(const VoidType& type, std::string_view) {
     buffer->append(type.name);
 }
 
-void TypePrinter::visit(const NullType& type, string_view) {
+void TypePrinter::visit(const NullType& type, std::string_view) {
     buffer->append(type.name);
 }
 
-void TypePrinter::visit(const CHandleType& type, string_view) {
+void TypePrinter::visit(const CHandleType& type, std::string_view) {
     buffer->append(type.name);
 }
 
-void TypePrinter::visit(const StringType& type, string_view) {
+void TypePrinter::visit(const StringType& type, std::string_view) {
     buffer->append(type.name);
 }
 
-void TypePrinter::visit(const EventType& type, string_view) {
+void TypePrinter::visit(const EventType& type, std::string_view) {
     buffer->append(type.name);
 }
 
-void TypePrinter::visit(const UnboundedType& type, string_view) {
+void TypePrinter::visit(const UnboundedType& type, std::string_view) {
     buffer->append(type.name);
 }
 
-void TypePrinter::visit(const TypeRefType& type, string_view) {
+void TypePrinter::visit(const TypeRefType& type, std::string_view) {
     buffer->append(type.name);
 }
 
-void TypePrinter::visit(const UntypedType& type, string_view) {
+void TypePrinter::visit(const UntypedType& type, std::string_view) {
     buffer->append(type.name);
 }
 
-void TypePrinter::visit(const SequenceType& type, string_view) {
+void TypePrinter::visit(const SequenceType& type, std::string_view) {
     buffer->append(type.name);
 }
 
-void TypePrinter::visit(const PropertyType& type, string_view) {
+void TypePrinter::visit(const PropertyType& type, std::string_view) {
     buffer->append(type.name);
 }
 
-void TypePrinter::visit(const ClassType& type, string_view) {
+void TypePrinter::visit(const ClassType& type, std::string_view) {
     buffer->append(type.name);
 }
 
-void TypePrinter::visit(const CovergroupType& type, string_view) {
+void TypePrinter::visit(const CovergroupType& type, std::string_view) {
     buffer->append(type.name);
 }
 
-void TypePrinter::visit(const VirtualInterfaceType& type, string_view) {
+void TypePrinter::visit(const VirtualInterfaceType& type, std::string_view) {
     if (options.anonymousTypeStyle == TypePrintingOptions::FriendlyName) {
         if (!type.isRealIface)
             buffer->append("virtual ");
@@ -382,7 +383,7 @@ void TypePrinter::visit(const VirtualInterfaceType& type, string_view) {
         buffer->format(".{}", type.modport->name);
 }
 
-void TypePrinter::visit(const TypeAliasType& type, string_view overrideName) {
+void TypePrinter::visit(const TypeAliasType& type, std::string_view overrideName) {
     if (!overrideName.empty()) {
         type.targetType.getType().visit(*this, overrideName);
     }
@@ -396,7 +397,7 @@ void TypePrinter::visit(const TypeAliasType& type, string_view overrideName) {
     }
 }
 
-void TypePrinter::visit(const ErrorType&, string_view) {
+void TypePrinter::visit(const ErrorType&, std::string_view) {
     buffer->append("<error>");
 }
 
@@ -498,7 +499,7 @@ void TypeArgFormatter::startMessage(const Diagnostic& diag) {
     seenTypes.clear();
     typesToDisambiguate.clear();
 
-    SmallMap<string_view, const Type*, 4> typeNames;
+    SmallMap<std::string_view, const Type*, 4> typeNames;
     for (auto& arg : diag.args) {
         if (auto typePtr = std::any_cast<const Type*>(std::get_if<std::any>(&arg))) {
             auto& type = **typePtr;

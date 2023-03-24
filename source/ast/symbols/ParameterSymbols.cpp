@@ -54,7 +54,8 @@ bool ParameterSymbolBase::hasDefault() const {
         return symbol.as<TypeParameterSymbol>().targetType.getTypeSyntax();
 }
 
-ParameterSymbol::ParameterSymbol(string_view name, SourceLocation loc, bool isLocal, bool isPort) :
+ParameterSymbol::ParameterSymbol(std::string_view name, SourceLocation loc, bool isLocal,
+                                 bool isPort) :
     ValueSymbol(SymbolKind::Parameter, name, loc,
                 DeclaredTypeFlags::InferImplicit | DeclaredTypeFlags::InitializerCantSeeParent |
                     DeclaredTypeFlags::AllowUnboundedLiteral),
@@ -155,7 +156,7 @@ void ParameterSymbol::serializeTo(ASTSerializer& serializer) const {
     serializer.write("isBody", isBodyParam());
 }
 
-TypeParameterSymbol::TypeParameterSymbol(string_view name, SourceLocation loc, bool isLocal,
+TypeParameterSymbol::TypeParameterSymbol(std::string_view name, SourceLocation loc, bool isLocal,
                                          bool isPort) :
     Symbol(SymbolKind::TypeParameter, name, loc),
     ParameterSymbolBase(*this, isLocal, isPort), targetType(*this) {
@@ -393,7 +394,7 @@ void DefParamSymbol::serializeTo(ASTSerializer& serializer) const {
     serializer.write("value", getValue());
 }
 
-SpecparamSymbol::SpecparamSymbol(string_view name, SourceLocation loc) :
+SpecparamSymbol::SpecparamSymbol(std::string_view name, SourceLocation loc) :
     ValueSymbol(SymbolKind::Specparam, name, loc,
                 DeclaredTypeFlags::InferImplicit | DeclaredTypeFlags::InitializerCantSeeParent) {
 }
@@ -497,7 +498,7 @@ void SpecparamSymbol::resolvePathPulse() const {
     ASSERT(parent);
 
     auto prefix = "PATHPULSE$"sv;
-    if (startsWith(name, prefix) && parent->asSymbol().kind == SymbolKind::SpecifyBlock) {
+    if (name.starts_with(prefix) && parent->asSymbol().kind == SymbolKind::SpecifyBlock) {
         auto path = name.substr(prefix.length());
         if (!path.empty()) {
             auto loc = location + prefix.length();
@@ -508,7 +509,7 @@ void SpecparamSymbol::resolvePathPulse() const {
             };
 
             auto index = path.find('$');
-            if (index == string_view::npos) {
+            if (index == std::string_view::npos) {
                 nameError();
                 return;
             }
@@ -528,8 +529,9 @@ void SpecparamSymbol::resolvePathPulse() const {
     }
 }
 
-const Symbol* SpecparamSymbol::resolvePathTerminal(string_view terminalName, const Scope& parent,
-                                                   SourceLocation loc, bool isSource) const {
+const Symbol* SpecparamSymbol::resolvePathTerminal(std::string_view terminalName,
+                                                   const Scope& parent, SourceLocation loc,
+                                                   bool isSource) const {
     auto parentParent = parent.asSymbol().getParentScope();
     ASSERT(parentParent);
 

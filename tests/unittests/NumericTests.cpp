@@ -137,10 +137,10 @@ TEST_CASE("Construction") {
 
     // Create from memory pointer.
     uint64_t mem1 = 0x234907862346ff;
-    CHECK(SVInt(61, span((byte*)&mem1, 8), false).as<uint64_t>() == mem1);
+    CHECK(SVInt(61, std::span((byte*)&mem1, 8), false).as<uint64_t>() == mem1);
 
     char mem2[128] = "asdfkljhaw4rkjb234890uKLJNSDF  K@#*)U?:hjn";
-    CHECK(SVInt(128 * 8, span((byte*)mem2, 128), false).slice(263, 256).as<char>() == '@');
+    CHECK(SVInt(128 * 8, std::span((byte*)mem2, 128), false).slice(263, 256).as<char>() == '@');
 
     // Regression test for shrinkToFit with value of 0
     auto value13 = "27'd0"_si;
@@ -185,7 +185,7 @@ TEST_CASE("logic_t operators") {
 }
 
 void checkRoundTrip(std::string str, LiteralBase base) {
-    SVInt sv = SVInt::fromString(string_view(str));
+    SVInt sv = SVInt::fromString(std::string_view(str));
     str.erase(std::remove(str.begin(), str.end(), '_'), str.end());
     CHECK(sv.toString(base) == str);
 }
@@ -607,8 +607,6 @@ TEST_CASE("SVInt misc functions") {
     CHECK(clog2("900'd982134098123403498298103"_si) == 80);
     CHECK(clog2(SVInt::Zero) == 0);
 
-    CHECK(slang::countLeadingZeros32(0) == 32);
-
     CHECK_THAT("11'bx101011x01z"_si.sext(15), exactlyEquals("15'bxxxxx101011x01z"_si));
 
     CHECK_THAT((SVInt::One || logic_t::x), exactlyEquals(logic_t(1)));
@@ -754,8 +752,8 @@ TEST_CASE("Time scaling") {
     static constexpr double ep = std::numeric_limits<double>::epsilon() * 10;
 #define AP(v) Approx(v).epsilon(ep)
 
-    auto tv = [](string_view str) { return TimeScaleValue::fromString(str).value(); };
-    auto ts = [](string_view str) { return TimeScale::fromString(str).value(); };
+    auto tv = [](std::string_view str) { return TimeScaleValue::fromString(str).value(); };
+    auto ts = [](std::string_view str) { return TimeScale::fromString(str).value(); };
 
     TimeScale scale = ts("100ns / 1ps");
     CHECK(scale.apply(234.0567891, TimeUnit::Nanoseconds) == AP(2.34057));

@@ -144,11 +144,11 @@ public:
 /// Represents a string literal.
 class SLANG_EXPORT StringLiteral : public Expression {
 public:
-    StringLiteral(const Type& type, string_view value, string_view rawValue, ConstantValue& intVal,
-                  SourceRange sourceRange);
+    StringLiteral(const Type& type, std::string_view value, std::string_view rawValue,
+                  ConstantValue& intVal, SourceRange sourceRange);
 
-    string_view getValue() const { return value; }
-    string_view getRawValue() const { return rawValue; }
+    std::string_view getValue() const { return value; }
+    std::string_view getRawValue() const { return rawValue; }
     const ConstantValue& getIntValue() const;
 
     ConstantValue evalImpl(EvalContext& context) const;
@@ -161,8 +161,8 @@ public:
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::StringLiteral; }
 
 private:
-    string_view value;
-    string_view rawValue;
+    std::string_view value;
+    std::string_view rawValue;
     ConstantValue* intStorage;
 };
 

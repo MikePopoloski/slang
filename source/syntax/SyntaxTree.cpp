@@ -27,23 +27,23 @@ SyntaxTree::SyntaxTree(SyntaxNode* root, SourceManager& sourceManager, BumpAlloc
 
 SyntaxTree::~SyntaxTree() = default;
 
-std::shared_ptr<SyntaxTree> SyntaxTree::fromFile(string_view path) {
+std::shared_ptr<SyntaxTree> SyntaxTree::fromFile(std::string_view path) {
     return fromFile(path, getDefaultSourceManager());
 }
 
-std::shared_ptr<SyntaxTree> SyntaxTree::fromFile(string_view path, SourceManager& sourceManager,
-                                                 const Bag& options) {
+std::shared_ptr<SyntaxTree> SyntaxTree::fromFile(std::string_view path,
+                                                 SourceManager& sourceManager, const Bag& options) {
     SourceBuffer buffer = sourceManager.readSource(path);
     if (!buffer)
         return nullptr;
-    return create(sourceManager, span(&buffer, 1), options, {}, false);
+    return create(sourceManager, std::span(&buffer, 1), options, {}, false);
 }
 
-std::shared_ptr<SyntaxTree> SyntaxTree::fromFiles(span<const string_view> paths) {
+std::shared_ptr<SyntaxTree> SyntaxTree::fromFiles(std::span<const std::string_view> paths) {
     return fromFiles(paths, getDefaultSourceManager());
 }
 
-std::shared_ptr<SyntaxTree> SyntaxTree::fromFiles(span<const string_view> paths,
+std::shared_ptr<SyntaxTree> SyntaxTree::fromFiles(std::span<const std::string_view> paths,
                                                   SourceManager& sourceManager,
                                                   const Bag& options) {
     SmallVector<SourceBuffer, 4> buffers(paths.size(), UninitializedTag());
@@ -58,13 +58,14 @@ std::shared_ptr<SyntaxTree> SyntaxTree::fromFiles(span<const string_view> paths,
     return create(sourceManager, buffers, options, {}, false);
 }
 
-std::shared_ptr<SyntaxTree> SyntaxTree::fromText(string_view text, string_view name,
-                                                 string_view path) {
+std::shared_ptr<SyntaxTree> SyntaxTree::fromText(std::string_view text, std::string_view name,
+                                                 std::string_view path) {
     return fromText(text, getDefaultSourceManager(), name, path);
 }
 
-std::shared_ptr<SyntaxTree> SyntaxTree::fromText(string_view text, SourceManager& sourceManager,
-                                                 string_view name, string_view path,
+std::shared_ptr<SyntaxTree> SyntaxTree::fromText(std::string_view text,
+                                                 SourceManager& sourceManager,
+                                                 std::string_view name, std::string_view path,
                                                  const Bag& options) {
     SourceBuffer buffer = sourceManager.assignText(path, text);
     if (!buffer)
@@ -73,12 +74,13 @@ std::shared_ptr<SyntaxTree> SyntaxTree::fromText(string_view text, SourceManager
     if (!name.empty())
         sourceManager.addLineDirective(SourceLocation(buffer.id, 0), 2, name, 0);
 
-    return create(sourceManager, span(&buffer, 1), options, {}, true);
+    return create(sourceManager, std::span(&buffer, 1), options, {}, true);
 }
 
-std::shared_ptr<SyntaxTree> SyntaxTree::fromFileInMemory(string_view text,
+std::shared_ptr<SyntaxTree> SyntaxTree::fromFileInMemory(std::string_view text,
                                                          SourceManager& sourceManager,
-                                                         string_view name, string_view path,
+                                                         std::string_view name,
+                                                         std::string_view path,
                                                          const Bag& options) {
     SourceBuffer buffer = sourceManager.assignText(path, text);
     if (!buffer)
@@ -87,16 +89,16 @@ std::shared_ptr<SyntaxTree> SyntaxTree::fromFileInMemory(string_view text,
     if (!name.empty())
         sourceManager.addLineDirective(SourceLocation(buffer.id, 0), 2, name, 0);
 
-    return create(sourceManager, span(&buffer, 1), options, {}, false);
+    return create(sourceManager, std::span(&buffer, 1), options, {}, false);
 }
 
 std::shared_ptr<SyntaxTree> SyntaxTree::fromBuffer(const SourceBuffer& buffer,
                                                    SourceManager& sourceManager, const Bag& options,
                                                    MacroList inheritedMacros) {
-    return create(sourceManager, span(&buffer, 1), options, inheritedMacros, false);
+    return create(sourceManager, std::span(&buffer, 1), options, inheritedMacros, false);
 }
 
-std::shared_ptr<SyntaxTree> SyntaxTree::fromBuffers(span<const SourceBuffer> buffers,
+std::shared_ptr<SyntaxTree> SyntaxTree::fromBuffers(std::span<const SourceBuffer> buffers,
                                                     SourceManager& sourceManager,
                                                     const Bag& options, MacroList inheritedMacros) {
     return create(sourceManager, buffers, options, inheritedMacros, false);
@@ -117,8 +119,9 @@ SyntaxTree::SyntaxTree(SyntaxNode* root, SourceManager& sourceManager, BumpAlloc
 }
 
 std::shared_ptr<SyntaxTree> SyntaxTree::create(SourceManager& sourceManager,
-                                               span<const SourceBuffer> sources, const Bag& options,
-                                               MacroList inheritedMacros, bool guess) {
+                                               std::span<const SourceBuffer> sources,
+                                               const Bag& options, MacroList inheritedMacros,
+                                               bool guess) {
     TimeTraceScope timeScope("parseFile"sv, [&] {
         if (sources.size() == 1)
             return std::string(sourceManager.getRawFileName(sources[0].id));

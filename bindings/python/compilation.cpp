@@ -153,7 +153,7 @@ void registerCompilation(py::module_& m) {
         .def("addStandardArgs", &Driver::addStandardArgs)
         .def(
             "parseCommandLine",
-            [](Driver& self, string_view arg) { return self.parseCommandLine(arg); }, "arg"_a)
+            [](Driver& self, std::string_view arg) { return self.parseCommandLine(arg); }, "arg"_a)
         .def("readSource", &Driver::readSource, "fileName"_a)
         .def("processCommandFile", &Driver::processCommandFile, "fileName"_a, "makeRelative"_a)
         .def("processOptions", &Driver::processOptions)

@@ -65,7 +65,7 @@ bool getFourState(PredefinedIntegerType::Kind kind) {
     }
 }
 
-string_view getName(PredefinedIntegerType::Kind kind) {
+std::string_view getName(PredefinedIntegerType::Kind kind) {
     switch (kind) {
         case PredefinedIntegerType::ShortInt: return "shortint"sv;
         case PredefinedIntegerType::Int: return "int"sv;
@@ -77,7 +77,7 @@ string_view getName(PredefinedIntegerType::Kind kind) {
     }
 }
 
-string_view getName(ScalarType::Kind kind) {
+std::string_view getName(ScalarType::Kind kind) {
     switch (kind) {
         case ScalarType::Bit: return "bit"sv;
         case ScalarType::Logic: return "logic"sv;
@@ -86,7 +86,7 @@ string_view getName(ScalarType::Kind kind) {
     }
 }
 
-string_view getName(FloatingType::Kind kind) {
+std::string_view getName(FloatingType::Kind kind) {
     switch (kind) {
         case FloatingType::Real: return "real"sv;
         case FloatingType::ShortReal: return "shortreal"sv;
@@ -117,7 +117,7 @@ using namespace syntax;
 
 const ErrorType ErrorType::Instance;
 
-IntegralType::IntegralType(SymbolKind kind, string_view name, SourceLocation loc,
+IntegralType::IntegralType(SymbolKind kind, std::string_view name, SourceLocation loc,
                            bitwidth_t bitWidth_, bool isSigned_, bool isFourState_) :
     Type(kind, name, loc),
     bitWidth(bitWidth_), isSigned(isSigned_), isFourState(isFourState_) {
@@ -156,7 +156,7 @@ bool IntegralType::isDeclaredReg() const {
 }
 
 const Type& IntegralType::fromSyntax(Compilation& compilation, SyntaxKind integerKind,
-                                     span<const VariableDimensionSyntax* const> dimensions,
+                                     std::span<const VariableDimensionSyntax* const> dimensions,
                                      bool isSigned, const ASTContext& context) {
     // This is a simple integral vector (possibly of just one element).
     SmallVector<std::pair<EvaluatedDimension, const SyntaxNode*>, 4> dims;
@@ -499,7 +499,7 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
     return createPackedDims(context, resultType, syntax.dimensions);
 }
 
-static string_view getEnumValueName(Compilation& comp, string_view name, int32_t index) {
+static std::string_view getEnumValueName(Compilation& comp, std::string_view name, int32_t index) {
     if (!name.empty()) {
         ASSERT(index >= 0);
 
@@ -508,7 +508,7 @@ static string_view getEnumValueName(Compilation& comp, string_view name, int32_t
         memcpy(mem, name.data(), name.size());
         snprintf(mem + name.size(), sz + 1, "%d", index);
 
-        name = string_view(mem, sz + name.size());
+        name = std::string_view(mem, sz + name.size());
     }
     return name;
 }
@@ -517,7 +517,7 @@ void EnumType::createDefaultMembers(const ASTContext& context, const EnumTypeSyn
                                     SmallVectorBase<const Symbol*>& members) {
     auto& comp = context.getCompilation();
     for (auto member : syntax.members) {
-        string_view name = member->name.valueText();
+        std::string_view name = member->name.valueText();
         SourceLocation loc = member->name.location();
 
         if (member->dimensions.empty()) {
@@ -548,14 +548,14 @@ void EnumType::createDefaultMembers(const ASTContext& context, const EnumTypeSyn
     }
 }
 
-EnumValueSymbol::EnumValueSymbol(string_view name, SourceLocation loc) :
+EnumValueSymbol::EnumValueSymbol(std::string_view name, SourceLocation loc) :
     ValueSymbol(SymbolKind::EnumValue, name, loc, DeclaredTypeFlags::InitializerCantSeeParent) {
 }
 
 EnumValueSymbol& EnumValueSymbol::fromSyntax(Compilation& compilation,
                                              const DeclaratorSyntax& syntax, const Type& type,
                                              std::optional<int32_t> index) {
-    string_view name = syntax.name.valueText();
+    std::string_view name = syntax.name.valueText();
     if (index)
         name = getEnumValueName(compilation, name, *index);
 
@@ -673,7 +673,7 @@ FixedSizeUnpackedArrayType::FixedSizeUnpackedArrayType(const Type& elementType, 
 }
 
 const Type& FixedSizeUnpackedArrayType::fromDims(const Scope& scope, const Type& elementType,
-                                                 span<const ConstantRange> dimensions,
+                                                 std::span<const ConstantRange> dimensions,
                                                  DeferredSourceRange sourceRange) {
     const Type* result = &elementType;
     size_t count = dimensions.size();
@@ -989,8 +989,8 @@ const Type& PackedUnionType::fromSyntax(Compilation& comp, const StructUnionType
     }
 
     // In tagged unions the tag contributes to the total number of packed bits.
-    if (isTagged) {
-        unionType->tagBits = clog2(fieldIndex);
+    if (isTagged && fieldIndex) {
+        unionType->tagBits = std::bit_width(fieldIndex - 1);
         unionType->bitWidth += unionType->tagBits;
     }
 
@@ -1106,7 +1106,7 @@ const Type& VirtualInterfaceType::fromSyntax(const ASTContext& context,
     auto& iface = InstanceSymbol::createVirtual(context, loc, *definition, syntax.parameters);
 
     const ModportSymbol* modport = nullptr;
-    string_view modportName = syntax.modport ? syntax.modport->member.valueText() : ""sv;
+    std::string_view modportName = syntax.modport ? syntax.modport->member.valueText() : ""sv;
     if (!modportName.empty() && syntax.modport) {
         auto sym = iface.body.find(modportName);
         if (!sym || sym->kind != SymbolKind::Modport) {
@@ -1251,7 +1251,7 @@ void ForwardingTypedefSymbol::serializeTo(ASTSerializer& serializer) const {
         serializer.write("next", *next);
 }
 
-TypeAliasType::TypeAliasType(string_view name, SourceLocation loc) :
+TypeAliasType::TypeAliasType(std::string_view name, SourceLocation loc) :
     Type(SymbolKind::TypeAlias, name, loc), targetType(*this, DeclaredTypeFlags::TypedefTarget) {
     canonical = nullptr;
 }

@@ -37,8 +37,8 @@ using namespace slang::ast;
 using namespace slang::parsing;
 using namespace slang::syntax;
 
-std::pair<string_view, SourceLocation> getNameLoc(const HierarchicalInstanceSyntax& syntax) {
-    string_view name;
+std::pair<std::string_view, SourceLocation> getNameLoc(const HierarchicalInstanceSyntax& syntax) {
+    std::string_view name;
     SourceLocation loc;
     if (syntax.decl) {
         name = syntax.decl->name.valueText();
@@ -55,7 +55,7 @@ class InstanceBuilder {
 public:
     InstanceBuilder(const ASTContext& context, const Definition& definition,
                     ParameterBuilder& paramBuilder, const HierarchyOverrideNode* parentOverrideNode,
-                    span<const AttributeInstanceSyntax* const> attributes, bool isFromBind) :
+                    std::span<const AttributeInstanceSyntax* const> attributes, bool isFromBind) :
         compilation(context.getCompilation()),
         context(context), definition(definition), paramBuilder(paramBuilder),
         parentOverrideNode(parentOverrideNode), attributes(attributes), isFromBind(isFromBind) {}
@@ -81,7 +81,7 @@ public:
     }
 
 private:
-    using DimIterator = span<VariableDimensionSyntax*>::iterator;
+    using DimIterator = std::span<VariableDimensionSyntax*>::iterator;
 
     Compilation& compilation;
     const ASTContext& context;
@@ -89,7 +89,7 @@ private:
     SmallVector<int32_t> path;
     ParameterBuilder& paramBuilder;
     const HierarchyOverrideNode* parentOverrideNode;
-    span<const AttributeInstanceSyntax* const> attributes;
+    std::span<const AttributeInstanceSyntax* const> attributes;
     bool isFromBind;
 
     Symbol* createInstance(const HierarchicalInstanceSyntax& syntax,
@@ -116,7 +116,7 @@ private:
         auto createEmpty = [&]() {
             return compilation.emplace<InstanceArraySymbol>(compilation, nameToken.valueText(),
                                                             nameToken.location(),
-                                                            span<const Symbol* const>{},
+                                                            std::span<const Symbol* const>{},
                                                             ConstantRange());
         };
 
@@ -167,7 +167,7 @@ private:
 };
 
 void createImplicitNets(const HierarchicalInstanceSyntax& instance, const ASTContext& context,
-                        const NetType& netType, SmallSet<string_view, 8>& implicitNetNames,
+                        const NetType& netType, SmallSet<std::string_view, 8>& implicitNetNames,
                         SmallVectorBase<const Symbol*>& results) {
     // If no default nettype is set, we don't create implicit nets.
     if (netType.isError())
@@ -213,7 +213,7 @@ void getInstanceArrayDimensions(const InstanceArraySymbol& array,
 
 namespace slang::ast {
 
-string_view InstanceSymbolBase::getArrayName() const {
+std::string_view InstanceSymbolBase::getArrayName() const {
     auto scope = getParentScope();
     if (scope && scope->asSymbol().kind == SymbolKind::InstanceArray)
         return scope->asSymbol().as<InstanceArraySymbol>().getArrayName();
@@ -227,12 +227,14 @@ void InstanceSymbolBase::getArrayDimensions(SmallVectorBase<ConstantRange>& dime
         getInstanceArrayDimensions(scope->asSymbol().as<InstanceArraySymbol>(), dimensions);
 }
 
-InstanceSymbol::InstanceSymbol(string_view name, SourceLocation loc, InstanceBodySymbol& body) :
-    InstanceSymbolBase(SymbolKind::Instance, name, loc), body(body) {
+InstanceSymbol::InstanceSymbol(std::string_view name, SourceLocation loc,
+                               InstanceBodySymbol& body) :
+    InstanceSymbolBase(SymbolKind::Instance, name, loc),
+    body(body) {
     body.parentInstance = this;
 }
 
-InstanceSymbol::InstanceSymbol(Compilation& compilation, string_view name, SourceLocation loc,
+InstanceSymbol::InstanceSymbol(Compilation& compilation, std::string_view name, SourceLocation loc,
                                const Definition& definition, ParameterBuilder& paramBuilder,
                                bool isUninstantiated, bool isFromBind) :
     InstanceSymbol(name, loc,
@@ -406,7 +408,7 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
         isFromBind = true;
     }
 
-    SmallSet<string_view, 8> implicitNetNames;
+    SmallSet<std::string_view, 8> implicitNetNames;
     auto& netType = context.scope->getDefaultNetType();
 
     ParameterBuilder paramBuilder(*context.scope, definition->name, definition->parameters);
@@ -442,14 +444,14 @@ void InstanceSymbol::fromFixupSyntax(Compilation& comp, const Definition& defini
 
         auto instName = comp.emplace<InstanceNameSyntax>(decl->name, decl->dimensions);
         auto instance = comp.emplace<HierarchicalInstanceSyntax>(
-            instName, missing(TokenKind::OpenParenthesis, loc), span<TokenOrSyntax>(),
+            instName, missing(TokenKind::OpenParenthesis, loc), std::span<TokenOrSyntax>(),
             missing(TokenKind::CloseParenthesis, loc));
 
         instances.push_back(instance);
     }
 
     auto instantiation = comp.emplace<HierarchyInstantiationSyntax>(
-        span<AttributeInstanceSyntax*>(), syntax.type->getFirstToken(), nullptr,
+        std::span<AttributeInstanceSyntax*>(), syntax.type->getFirstToken(), nullptr,
         instances.copy(comp), syntax.semi);
 
     SmallVector<const Symbol*> implicitNets;
@@ -502,7 +504,7 @@ const PortConnection* InstanceSymbol::getPortConnection(const InterfacePortSymbo
     return reinterpret_cast<const PortConnection*>(it->second);
 }
 
-span<const PortConnection* const> InstanceSymbol::getPortConnections() const {
+std::span<const PortConnection* const> InstanceSymbol::getPortConnections() const {
     if (!connectionMap)
         resolvePortConnections();
     return connections;
@@ -669,7 +671,7 @@ InstanceBodySymbol& InstanceBodySymbol::fromDefinition(Compilation& comp,
     return *result;
 }
 
-const Symbol* InstanceBodySymbol::findPort(string_view portName) const {
+const Symbol* InstanceBodySymbol::findPort(std::string_view portName) const {
     for (auto port : getPortList()) {
         if (port->name == portName)
             return port;
@@ -716,7 +718,7 @@ void InstanceBodySymbol::serializeTo(ASTSerializer& serializer) const {
     serializer.write("definition", definition.name);
 }
 
-string_view InstanceArraySymbol::getArrayName() const {
+std::string_view InstanceArraySymbol::getArrayName() const {
     auto scope = getParentScope();
     if (scope && scope->asSymbol().kind == SymbolKind::InstanceArray)
         return scope->asSymbol().as<InstanceArraySymbol>().getArrayName();
@@ -730,11 +732,11 @@ void InstanceArraySymbol::serializeTo(ASTSerializer& serializer) const {
 
 template<typename TSyntax>
 static void createUninstantiatedDefs(Compilation& compilation, const TSyntax& syntax,
-                                     string_view moduleName, const ASTContext& context,
-                                     span<const Expression* const> params,
+                                     std::string_view moduleName, const ASTContext& context,
+                                     std::span<const Expression* const> params,
                                      SmallVectorBase<const Symbol*>& results,
                                      SmallVectorBase<const Symbol*>& implicitNets) {
-    SmallSet<string_view, 8> implicitNetNames;
+    SmallSet<std::string_view, 8> implicitNetNames;
     auto& netType = context.scope->getDefaultNetType();
     for (auto instanceSyntax : syntax.instances) {
         createImplicitNets(*instanceSyntax, context, netType, implicitNetNames, implicitNets);
@@ -825,7 +827,7 @@ static const AssertionExpr* bindUnknownPortConn(const ASTContext& context,
     return &AssertionExpr::bind(syntax, context);
 }
 
-span<const AssertionExpr* const> UninstantiatedDefSymbol::getPortConnections() const {
+std::span<const AssertionExpr* const> UninstantiatedDefSymbol::getPortConnections() const {
     if (!ports) {
         auto syntax = getSyntax();
         auto scope = getParentScope();
@@ -835,7 +837,7 @@ span<const AssertionExpr* const> UninstantiatedDefSymbol::getPortConnections() c
         ASTContext context(*scope, LookupLocation::after(*this));
 
         SmallVector<const AssertionExpr*> results;
-        SmallVector<string_view, 8> names;
+        SmallVector<std::string_view, 8> names;
         for (auto port : syntax->as<HierarchicalInstanceSyntax>().connections) {
             if (port->kind == SyntaxKind::OrderedPortConnection) {
                 names.push_back(""sv);
@@ -865,7 +867,7 @@ span<const AssertionExpr* const> UninstantiatedDefSymbol::getPortConnections() c
     return *ports;
 }
 
-span<string_view const> UninstantiatedDefSymbol::getPortNames() const {
+std::span<std::string_view const> UninstantiatedDefSymbol::getPortNames() const {
     if (!ports)
         getPortConnections();
     return portNames;
@@ -912,7 +914,7 @@ namespace {
 PrimitiveInstanceSymbol* createPrimInst(Compilation& compilation, const Scope& scope,
                                         const PrimitiveSymbol& primitive,
                                         const HierarchicalInstanceSyntax& syntax,
-                                        span<const AttributeInstanceSyntax* const> attributes,
+                                        std::span<const AttributeInstanceSyntax* const> attributes,
                                         SmallVectorBase<int32_t>& path) {
     auto [name, loc] = getNameLoc(syntax);
     auto result = compilation.emplace<PrimitiveInstanceSymbol>(name, loc, primitive);
@@ -922,12 +924,12 @@ PrimitiveInstanceSymbol* createPrimInst(Compilation& compilation, const Scope& s
     return result;
 }
 
-using DimIterator = span<VariableDimensionSyntax*>::iterator;
+using DimIterator = std::span<VariableDimensionSyntax*>::iterator;
 
 Symbol* recursePrimArray(Compilation& compilation, const PrimitiveSymbol& primitive,
                          const HierarchicalInstanceSyntax& instance, const ASTContext& context,
                          DimIterator it, DimIterator end,
-                         span<const AttributeInstanceSyntax* const> attributes,
+                         std::span<const AttributeInstanceSyntax* const> attributes,
                          SmallVectorBase<int32_t>& path) {
     if (it == end)
         return createPrimInst(compilation, *context.scope, primitive, instance, attributes, path);
@@ -937,7 +939,7 @@ Symbol* recursePrimArray(Compilation& compilation, const PrimitiveSymbol& primit
     auto createEmpty = [&]() {
         return compilation.emplace<InstanceArraySymbol>(compilation, nameToken.valueText(),
                                                         nameToken.location(),
-                                                        span<const Symbol* const>{},
+                                                        std::span<const Symbol* const>{},
                                                         ConstantRange());
     };
 
@@ -982,7 +984,7 @@ template<typename TSyntax>
 void createPrimitives(const PrimitiveSymbol& primitive, const TSyntax& syntax,
                       const ASTContext& context, SmallVectorBase<const Symbol*>& results,
                       SmallVectorBase<const Symbol*>& implicitNets) {
-    SmallSet<string_view, 8> implicitNetNames;
+    SmallSet<std::string_view, 8> implicitNetNames;
     SmallVector<int32_t> path;
 
     auto& comp = context.getCompilation();
@@ -1048,7 +1050,7 @@ void PrimitiveInstanceSymbol::fromSyntax(const PrimitiveInstantiationSyntax& syn
     createPrimitives(*prim, syntax, context, results, implicitNets);
 }
 
-span<const Expression* const> PrimitiveInstanceSymbol::getPortConnections() const {
+std::span<const Expression* const> PrimitiveInstanceSymbol::getPortConnections() const {
     if (!ports) {
         auto syntax = getSyntax();
         auto scope = getParentScope();

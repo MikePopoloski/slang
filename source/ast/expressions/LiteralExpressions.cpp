@@ -220,7 +220,7 @@ ConstantValue UnboundedLiteral::evalImpl(EvalContext& context) const {
     return SVInt(32, uint64_t(size - 1), true);
 }
 
-StringLiteral::StringLiteral(const Type& type, string_view value, string_view rawValue,
+StringLiteral::StringLiteral(const Type& type, std::string_view value, std::string_view rawValue,
                              ConstantValue& intVal, SourceRange sourceRange) :
     Expression(ExpressionKind::StringLiteral, type, sourceRange),
     value(value), rawValue(rawValue), intStorage(&intVal) {
@@ -230,7 +230,7 @@ Expression& StringLiteral::fromSyntax(const ASTContext& context,
                                       const LiteralExpressionSyntax& syntax) {
     ASSERT(syntax.kind == SyntaxKind::StringLiteralExpression);
 
-    string_view value = syntax.literal.valueText();
+    std::string_view value = syntax.literal.valueText();
     bitwidth_t width;
     ConstantValue* intVal;
 

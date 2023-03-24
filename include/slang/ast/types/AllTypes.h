@@ -42,16 +42,17 @@ public:
     static const Type& fromSyntax(Compilation& compilation, const syntax::IntegerTypeSyntax& syntax,
                                   const ASTContext& context);
 
-    static const Type& fromSyntax(Compilation& compilation, syntax::SyntaxKind integerKind,
-                                  span<const syntax::VariableDimensionSyntax* const> dimensions,
-                                  bool isSigned, const ASTContext& context);
+    static const Type& fromSyntax(
+        Compilation& compilation, syntax::SyntaxKind integerKind,
+        std::span<const syntax::VariableDimensionSyntax* const> dimensions, bool isSigned,
+        const ASTContext& context);
 
     ConstantValue getDefaultValueImpl() const;
 
     static bool isKind(SymbolKind kind);
 
 protected:
-    IntegralType(SymbolKind kind, string_view name, SourceLocation loc, bitwidth_t bitWidth,
+    IntegralType(SymbolKind kind, std::string_view name, SourceLocation loc, bitwidth_t bitWidth,
                  bool isSigned, bool isFourState);
 };
 
@@ -119,7 +120,7 @@ public:
 /// Represents an enumerated value / member.
 class SLANG_EXPORT EnumValueSymbol : public ValueSymbol {
 public:
-    EnumValueSymbol(string_view name, SourceLocation loc);
+    EnumValueSymbol(std::string_view name, SourceLocation loc);
 
     const ConstantValue& getValue(SourceRange referencingRange = {}) const;
     void setValue(ConstantValue value);
@@ -168,7 +169,7 @@ public:
                                uint32_t selectableWidth);
 
     static const Type& fromDims(const Scope& scope, const Type& elementType,
-                                span<const ConstantRange> dimensions,
+                                std::span<const ConstantRange> dimensions,
                                 syntax::DeferredSourceRange sourceRange);
 
     static const Type& fromDim(const Scope& scope, const Type& elementType, ConstantRange dim,
@@ -250,7 +251,7 @@ public:
 /// Represents an unpacked structure of members.
 class SLANG_EXPORT UnpackedStructType : public Type, public Scope {
 public:
-    span<const FieldSymbol* const> fields;
+    std::span<const FieldSymbol* const> fields;
     uint32_t selectableWidth = 0;
     int systemId;
 
@@ -284,7 +285,7 @@ public:
 /// Represents an unpacked union of members.
 class SLANG_EXPORT UnpackedUnionType : public Type, public Scope {
 public:
-    span<const FieldSymbol* const> fields;
+    std::span<const FieldSymbol* const> fields;
     uint32_t selectableWidth = 0;
     int systemId;
     bool isTagged;
@@ -436,8 +437,10 @@ public:
     ForwardTypedefCategory category;
     std::optional<Visibility> visibility;
 
-    ForwardingTypedefSymbol(string_view name, SourceLocation loc, ForwardTypedefCategory category) :
-        Symbol(SymbolKind::ForwardingTypedef, name, loc), category(category) {}
+    ForwardingTypedefSymbol(std::string_view name, SourceLocation loc,
+                            ForwardTypedefCategory category) :
+        Symbol(SymbolKind::ForwardingTypedef, name, loc),
+        category(category) {}
 
     static ForwardingTypedefSymbol& fromSyntax(
         const Scope& scope, const syntax::ForwardTypedefDeclarationSyntax& syntax);
@@ -468,7 +471,7 @@ public:
     DeclaredType targetType;
     Visibility visibility = Visibility::Public;
 
-    TypeAliasType(string_view name, SourceLocation loc);
+    TypeAliasType(std::string_view name, SourceLocation loc);
 
     static TypeAliasType& fromSyntax(const Scope& scope,
                                      const syntax::TypedefDeclarationSyntax& syntax);

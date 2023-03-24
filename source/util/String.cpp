@@ -36,7 +36,7 @@ void uintToStr(SmallVectorBase<char>& buffer, uint64_t value) {
     uintToStrImpl(buffer, "%lu", value);
 }
 
-std::optional<int32_t> strToInt(string_view str, size_t* pos, int base) {
+std::optional<int32_t> strToInt(std::string_view str, size_t* pos, int base) {
     int32_t value;
     auto result = std::from_chars(str.data(), str.data() + str.size(), value, base);
     if (result.ec != std::errc())
@@ -47,7 +47,7 @@ std::optional<int32_t> strToInt(string_view str, size_t* pos, int base) {
     return value;
 }
 
-std::optional<uint32_t> strToUInt(string_view str, size_t* pos, int base) {
+std::optional<uint32_t> strToUInt(std::string_view str, size_t* pos, int base) {
     uint32_t value;
     auto result = std::from_chars(str.data(), str.data() + str.size(), value, base);
     if (result.ec != std::errc())
@@ -59,7 +59,7 @@ std::optional<uint32_t> strToUInt(string_view str, size_t* pos, int base) {
 }
 
 // TODO: improve this once std::from_chars is available everywhere
-std::optional<double> strToDouble(string_view str, size_t* pos) {
+std::optional<double> strToDouble(std::string_view str, size_t* pos) {
     std::string copy(str);
     const char* start = copy.c_str();
 
@@ -85,7 +85,8 @@ void strToLower(std::string& str) {
                    [](unsigned char c) { return (char)std::tolower(c); });
 }
 
-int editDistance(string_view left, string_view right, bool allowReplacements, int maxDistance) {
+int editDistance(std::string_view left, std::string_view right, bool allowReplacements,
+                 int maxDistance) {
     // See: http://en.wikipedia.org/wiki/Levenshtein_distance
     size_t m = left.size();
     size_t n = right.size();
@@ -123,9 +124,14 @@ int editDistance(string_view left, string_view right, bool allowReplacements, in
     return row[n];
 }
 
+std::string getU8Str(const std::filesystem::path& path) {
+    auto u8str = path.u8string();
+    return {u8str.begin(), u8str.end()};
+}
+
 #if defined(_MSC_VER)
 
-std::wstring widen(string_view str) {
+std::wstring widen(std::string_view str) {
     if (str.empty())
         return L"";
 

@@ -41,16 +41,16 @@ public:
     const NetType& defaultNetType;
     std::optional<TimeScale> timeScale;
     VariableLifetime defaultLifetime;
-    span<const syntax::PackageImportItemSyntax* const> exportDecls;
+    std::span<const syntax::PackageImportItemSyntax* const> exportDecls;
     bool hasExportAll = false;
 
-    PackageSymbol(Compilation& compilation, string_view name, SourceLocation loc,
+    PackageSymbol(Compilation& compilation, std::string_view name, SourceLocation loc,
                   const NetType& defaultNetType, VariableLifetime defaultLifetime);
 
     /// Searches for a symbol by name, in the context of importing from the package.
     /// This is similar to a call to find() but also includes symbols that have been
     /// exported from the package.
-    const Symbol* findForImport(string_view name) const;
+    const Symbol* findForImport(std::string_view name) const;
 
     /// Notes that the given symbol was imported into this package from some other package.
     void noteImport(const Symbol& symbol) const;
@@ -71,8 +71,8 @@ private:
 /// Represents the entirety of a design, along with all contained compilation units.
 class SLANG_EXPORT RootSymbol : public Symbol, public Scope {
 public:
-    span<const InstanceSymbol* const> topInstances;
-    span<const CompilationUnitSymbol* const> compilationUnits;
+    std::span<const InstanceSymbol* const> topInstances;
+    std::span<const CompilationUnitSymbol* const> compilationUnits;
 
     explicit RootSymbol(Compilation& compilation) :
         Symbol(SymbolKind::Root, "$root", SourceLocation()), Scope(compilation, this) {}

@@ -17,7 +17,7 @@
 
 namespace slang::ast {
 
-using Args = span<const Expression* const>;
+using Args = std::span<const Expression* const>;
 
 static bool isValidForRaw(const Type& type) {
     if (type.isIntegral())
@@ -101,7 +101,7 @@ static bool checkArgType(TContext& context, const Expression& arg, char spec, So
 static bool checkFormatString(const ASTContext& context, const StringLiteral& arg,
                               Args::iterator& argIt, Args::iterator argEnd) {
     // Strip quotes from the raw string.
-    string_view fmt = arg.getRawValue();
+    std::string_view fmt = arg.getRawValue();
     if (fmt.length() >= 2)
         fmt = fmt.substr(1, fmt.length() - 2);
 
@@ -113,7 +113,7 @@ static bool checkFormatString(const ASTContext& context, const StringLiteral& ar
 
     bool ok = true;
     ok &= SFormat::parse(
-        fmt, [](string_view) {},
+        fmt, [](std::string_view) {},
         [&](char spec, size_t offset, size_t len, const SFormat::FormatOptions&) {
             // Filter out non-consuming arguments.
             switch (::tolower(spec)) {
@@ -211,9 +211,9 @@ static bool formatSpecialArg(char spec, const Scope& scope, std::string& result)
     }
 }
 
-std::optional<std::string> FmtHelpers::formatArgs(string_view formatString, SourceLocation loc,
+std::optional<std::string> FmtHelpers::formatArgs(std::string_view formatString, SourceLocation loc,
                                                   const Scope& scope, EvalContext& context,
-                                                  const span<const Expression* const>& args,
+                                                  const std::span<const Expression* const>& args,
                                                   bool isStringLiteral) {
     auto getRange = [&](size_t offset, size_t len) {
         // If this is not a string literal, we can't meaningfully get an offset.
@@ -229,7 +229,7 @@ std::optional<std::string> FmtHelpers::formatArgs(string_view formatString, Sour
 
     bool ok = true;
     ok &= SFormat::parse(
-        formatString, [&](string_view text) { result += text; },
+        formatString, [&](std::string_view text) { result += text; },
         [&](char spec, size_t offset, size_t len, const SFormat::FormatOptions& options) {
             if (formatSpecialArg(spec, scope, result))
                 return;
@@ -310,8 +310,8 @@ static char getDefaultSpecifier(const Expression& expr, LiteralBase defaultBase)
     return 'p';
 }
 
-std::optional<std::string> FmtHelpers::formatDisplay(const Scope& scope, EvalContext& context,
-                                                     const span<const Expression* const>& args) {
+std::optional<std::string> FmtHelpers::formatDisplay(
+    const Scope& scope, EvalContext& context, const std::span<const Expression* const>& args) {
     std::string result;
     auto argIt = args.begin();
     while (argIt != args.end()) {
@@ -326,13 +326,13 @@ std::optional<std::string> FmtHelpers::formatDisplay(const Scope& scope, EvalCon
         if (arg->kind == ExpressionKind::StringLiteral) {
             // Strip quotes from the raw string.
             auto& lit = arg->as<StringLiteral>();
-            string_view fmt = lit.getRawValue();
+            std::string_view fmt = lit.getRawValue();
             if (fmt.length() >= 2)
                 fmt = fmt.substr(1, fmt.length() - 2);
 
             bool ok = true;
             ok &= SFormat::parse(
-                fmt, [&](string_view text) { result += text; },
+                fmt, [&](std::string_view text) { result += text; },
                 [&](char specifier, size_t, size_t, const SFormat::FormatOptions& options) {
                     if (formatSpecialArg(specifier, scope, result))
                         return;

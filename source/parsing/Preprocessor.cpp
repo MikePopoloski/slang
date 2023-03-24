@@ -22,7 +22,7 @@ using LF = LexerFacts;
 
 Preprocessor::Preprocessor(SourceManager& sourceManager, BumpAllocator& alloc,
                            Diagnostics& diagnostics, const Bag& options_,
-                           span<const DefineDirectiveSyntax* const> inheritedMacros) :
+                           std::span<const DefineDirectiveSyntax* const> inheritedMacros) :
     sourceManager(sourceManager),
     alloc(alloc), diagnostics(diagnostics), options(options_.getOrDefault<PreprocessorOptions>()),
     lexerOptions(options_.getOrDefault<LexerOptions>()), numberParser(diagnostics, alloc) {
@@ -83,7 +83,7 @@ Preprocessor::Preprocessor(const Preprocessor& other) :
     keywordVersionStack.push_back(LF::getDefaultKeywordVersion());
 }
 
-void Preprocessor::pushSource(string_view source, string_view name) {
+void Preprocessor::pushSource(std::string_view source, std::string_view name) {
     auto buffer = sourceManager.assignText(source);
     pushSource(buffer);
 
@@ -103,7 +103,7 @@ void Preprocessor::popSource() {
     lexerStack.pop_back();
 }
 
-void Preprocessor::predefine(const std::string& definition, string_view name) {
+void Preprocessor::predefine(const std::string& definition, std::string_view name) {
     Preprocessor pp(*this);
     pp.pushSource("`define " + definition + "\n", name);
 
@@ -121,7 +121,7 @@ void Preprocessor::predefine(const std::string& definition, string_view name) {
     }
 }
 
-bool Preprocessor::undefine(string_view name) {
+bool Preprocessor::undefine(std::string_view name) {
     auto it = macros.find(name);
     if (it != macros.end() && !it->second.isIntrinsic()) {
         macros.erase(it);
@@ -169,10 +169,10 @@ void Preprocessor::undefineAll() {
     }
 
     for (const std::string& undef : options.undefines)
-        undefine(string_view(undef));
+        undefine(std::string_view(undef));
 }
 
-bool Preprocessor::isDefined(string_view name) {
+bool Preprocessor::isDefined(std::string_view name) {
     return !name.empty() && macros.find(name) != macros.end();
 }
 
@@ -452,7 +452,7 @@ Trivia Preprocessor::handleIncludeDirective(Token directive) {
     }
 
     // path should be at least three chars: "a" or <a>
-    string_view path = fileName.valueText();
+    std::string_view path = fileName.valueText();
     if (path.length() < 3) {
         if (!fileName.isMissing())
             addDiag(diag::ExpectedIncludeFileName, fileName.range());
@@ -642,7 +642,7 @@ Trivia Preprocessor::handleElseDirective(Token directive) {
 }
 
 bool Preprocessor::shouldTakeElseBranch(SourceLocation location, bool isElseIf,
-                                        string_view macroName) {
+                                        std::string_view macroName) {
     // empty stack is an error
     if (branchStack.empty()) {
         addDiag(diag::UnexpectedConditionalDirective, location);
@@ -758,7 +758,7 @@ bool Preprocessor::expectTimeScaleSpecifier(Token& token, TimeScaleValue& value)
         consume();
         auto start = token.rawText().data();
         auto end = suffix.rawText().data() + suffix.rawText().size();
-        auto text = string_view(start, size_t(end - start));
+        auto text = std::string_view(start, size_t(end - start));
 
         token = Token(alloc, TokenKind::TimeLiteral, token.trivia(), text, token.location(),
                       token.intValue().toDouble(), false, unit);
@@ -871,7 +871,7 @@ Trivia Preprocessor::handleUndefDirective(Token directive) {
     Token nameToken = expect(TokenKind::Identifier);
 
     if (!nameToken.isMissing()) {
-        string_view name = nameToken.valueText();
+        std::string_view name = nameToken.valueText();
         auto it = macros.find(name);
         if (it != macros.end()) {
             if (!it->second.builtIn)

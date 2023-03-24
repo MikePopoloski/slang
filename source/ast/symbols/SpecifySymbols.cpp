@@ -22,7 +22,7 @@ using namespace syntax;
 static void createImplicitNets(const SystemTimingCheckSymbol& timingCheck,
                                const SystemTimingCheckDef* def, const Scope& scope,
                                SmallVector<const Symbol*>& results,
-                               SmallSet<string_view, 8>& implicitNetNames);
+                               SmallSet<std::string_view, 8>& implicitNetNames);
 
 SpecifyBlockSymbol::SpecifyBlockSymbol(Compilation& compilation, SourceLocation loc) :
     Symbol(SymbolKind::SpecifyBlock, "", loc), Scope(compilation, this) {
@@ -38,7 +38,7 @@ SpecifyBlockSymbol& SpecifyBlockSymbol::fromSyntax(const Scope& scope,
     for (auto member : syntax.items)
         result->addMembers(*member);
 
-    SmallSet<string_view, 8> implicitNetNames;
+    SmallSet<std::string_view, 8> implicitNetNames;
 
     for (auto member = result->getFirstMember(); member; member = member->getNextSibling()) {
         if (member->kind == SymbolKind::Specparam) {
@@ -239,7 +239,7 @@ static const Expression* bindTerminal(const ExpressionSyntax& syntax, bool isSou
     return nullptr;
 }
 
-static span<const Expression* const> bindTerminals(
+static std::span<const Expression* const> bindTerminals(
     const SeparatedSyntaxList<NameSyntax>& syntaxList, bool isSource, const Scope* parentParent,
     ASTContext& context) {
 
@@ -537,7 +537,7 @@ void TimingPathSymbol::checkDuplicatePaths(TimingPathMap& timingPathMap) const {
     }
 }
 
-static string_view toString(TimingPathSymbol::Polarity polarity) {
+static std::string_view toString(TimingPathSymbol::Polarity polarity) {
     switch (polarity) {
         case TimingPathSymbol::Polarity::Unknown:
             return "Unknown"sv;
@@ -663,7 +663,7 @@ struct SystemTimingCheckDef {
     std::vector<SystemTimingCheckArgDef> args;
 };
 
-static flat_hash_map<string_view, SystemTimingCheckDef> createTimingCheckDefs() {
+static flat_hash_map<std::string_view, SystemTimingCheckDef> createTimingCheckDefs() {
     using Arg = SystemTimingCheckArgDef;
 
     SystemTimingCheckDef setup{SystemTimingCheckKind::Setup,
@@ -751,13 +751,13 @@ static flat_hash_map<string_view, SystemTimingCheckDef> createTimingCheckDefs() 
             {"$width"sv, std::move(width)},         {"$nochange"sv, std::move(noChange)}};
 }
 
-static const flat_hash_map<string_view, SystemTimingCheckDef> SystemTimingCheckDefs =
+static const flat_hash_map<std::string_view, SystemTimingCheckDef> SystemTimingCheckDefs =
     createTimingCheckDefs();
 
 static void createImplicitNets(const SystemTimingCheckSymbol& timingCheck,
                                const SystemTimingCheckDef* def, const Scope& scope,
                                SmallVector<const Symbol*>& results,
-                               SmallSet<string_view, 8>& implicitNetNames) {
+                               SmallSet<std::string_view, 8>& implicitNetNames) {
     // If no default nettype is set, we don't create implicit nets.
     auto& netType = scope.getDefaultNetType();
     if (netType.isError() || !def)
@@ -1023,7 +1023,7 @@ void SystemTimingCheckSymbol::serializeTo(ASTSerializer& serializer) const {
         if (!arg.edgeDescriptors.empty()) {
             serializer.startArray("edgeDescriptors");
             for (auto& desc : arg.edgeDescriptors)
-                serializer.serialize(string_view(desc.data(), desc.size()));
+                serializer.serialize(std::string_view(desc.data(), desc.size()));
             serializer.endArray();
         }
 

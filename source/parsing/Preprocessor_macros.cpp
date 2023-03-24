@@ -20,7 +20,7 @@ using namespace syntax;
 using LF = LexerFacts;
 
 Preprocessor::MacroDef Preprocessor::findMacro(Token directive) {
-    string_view name = directive.valueText().substr(1);
+    std::string_view name = directive.valueText().substr(1);
     if (!name.empty() && name[0] == '\\')
         name = name.substr(1);
 
@@ -30,14 +30,14 @@ Preprocessor::MacroDef Preprocessor::findMacro(Token directive) {
     return it->second;
 }
 
-void Preprocessor::createBuiltInMacro(string_view name, int value, string_view valueStr) {
+void Preprocessor::createBuiltInMacro(std::string_view name, int value, std::string_view valueStr) {
 #define NL SourceLocation::NoLocation
 
     if (valueStr.empty()) {
         auto str = std::to_string(value);
         auto ptr = (char*)alloc.allocate(str.length(), 1);
         memcpy(ptr, str.data(), str.length());
-        valueStr = string_view(ptr, str.length());
+        valueStr = std::string_view(ptr, str.length());
     }
 
     Token directive(alloc, TokenKind::Directive, {}, valueStr, NL, SyntaxKind::DefineDirective);
@@ -106,7 +106,7 @@ std::pair<MacroActualArgumentListSyntax*, Trivia> Preprocessor::handleTopLevelMa
     if (!macro.isIntrinsic())
         alreadyExpanded.insert(macro.syntax);
 
-    span<Token const> tokens = buffer.copy(alloc);
+    std::span<Token const> tokens = buffer.copy(alloc);
     while (true) {
         // Start by recursively expanding out all valid macro usages. We keep track of
         // the token pointer here so that we can detect if expandReplacementList actually
@@ -132,7 +132,7 @@ std::pair<MacroActualArgumentListSyntax*, Trivia> Preprocessor::handleTopLevelMa
     return {actualArgs, Trivia()};
 }
 
-bool Preprocessor::applyMacroOps(span<Token const> tokens, SmallVectorBase<Token>& dest) {
+bool Preprocessor::applyMacroOps(std::span<Token const> tokens, SmallVectorBase<Token>& dest) {
     SmallVector<Trivia, 8> emptyArgTrivia;
     SmallVector<Token, 8> stringifyBuffer;
     SmallVector<Token, 8> commentBuffer;
@@ -329,7 +329,7 @@ bool Preprocessor::expandMacro(MacroDef macro, MacroExpansion& expansion,
     if (body.empty())
         return true;
 
-    string_view macroName = directive->name.valueText();
+    std::string_view macroName = directive->name.valueText();
 
     if (!directive->formalArguments) {
         // each macro expansion gets its own location entry
@@ -353,12 +353,12 @@ bool Preprocessor::expandMacro(MacroDef macro, MacroExpansion& expansion,
         return false;
     }
 
-    struct ArgTokens : public span<const Token> {
-        using span<const Token>::span;
-        using span<const Token>::operator=;
+    struct ArgTokens : public std::span<const Token> {
+        using std::span<const Token>::span;
+        using std::span<const Token>::operator=;
         bool isExpanded = false;
     };
-    SmallMap<string_view, ArgTokens, 8> argumentMap;
+    SmallMap<std::string_view, ArgTokens, 8> argumentMap;
 
     for (size_t i = 0; i < formalList.size(); i++) {
         auto formal = formalList[i];
@@ -409,7 +409,7 @@ bool Preprocessor::expandMacro(MacroDef macro, MacroExpansion& expansion,
             return append(token);
         }
 
-        string_view text = token.valueText();
+        std::string_view text = token.valueText();
         if (token.kind == TokenKind::Directive && !text.empty()) {
             if (token.directiveKind() != SyntaxKind::MacroUsage) {
                 // If this is the start of a `define directive, note that fact because
@@ -434,7 +434,7 @@ bool Preprocessor::expandMacro(MacroDef macro, MacroExpansion& expansion,
         // Fully expand out arguments before substitution to make sure we can detect whether
         // a usage of a macro in a replacement list is valid or an illegal recursion.
         if (!it->second.isExpanded) {
-            span<const Token> argTokens = it->second;
+            std::span<const Token> argTokens = it->second;
             SmallSet<const DefineDirectiveSyntax*, 8> alreadyExpanded;
             if (!expandReplacementList(argTokens, alreadyExpanded))
                 return false;
@@ -604,7 +604,7 @@ void Preprocessor::MacroExpansion::append(Token token, SourceLocation location,
 }
 
 bool Preprocessor::expandReplacementList(
-    span<Token const>& tokens, SmallSet<const DefineDirectiveSyntax*, 8>& alreadyExpanded) {
+    std::span<Token const>& tokens, SmallSet<const DefineDirectiveSyntax*, 8>& alreadyExpanded) {
 
     SmallVector<Token, 16> outBuffer;
     SmallVector<Token, 16> expansionBuffer;
@@ -651,7 +651,7 @@ bool Preprocessor::expandReplacementList(
         // Recursively expand out nested macros; this ensures that we detect
         // any potentially recursive macros.
         alreadyExpanded.insert(macro.syntax);
-        span<const Token> expanded = expansionBuffer;
+        std::span<const Token> expanded = expansionBuffer;
         if (!expandReplacementList(expanded, alreadyExpanded))
             return false;
 
@@ -671,12 +671,12 @@ bool Preprocessor::expandIntrinsic(MacroIntrinsic intrinsic, MacroExpansion& exp
     SmallVector<char> text;
     switch (intrinsic) {
         case MacroIntrinsic::File: {
-            string_view fileName = sourceManager.getFileName(loc);
+            std::string_view fileName = sourceManager.getFileName(loc);
             text.push_back('"');
             text.append(fileName);
             text.push_back('"');
 
-            string_view rawText = toStringView(text.copy(alloc));
+            std::string_view rawText = toStringView(text.copy(alloc));
             Token token(alloc, TokenKind::StringLiteral, {}, rawText, loc, fileName);
             expansion.append(token, loc);
             break;
@@ -685,7 +685,7 @@ bool Preprocessor::expandIntrinsic(MacroIntrinsic intrinsic, MacroExpansion& exp
             size_t lineNum = sourceManager.getLineNumber(loc);
             uintToStr(text, static_cast<uint64_t>(lineNum));
 
-            string_view rawText = toStringView(text.copy(alloc));
+            std::string_view rawText = toStringView(text.copy(alloc));
             Token token(alloc, TokenKind::IntegerLiteral, {}, rawText, loc, lineNum);
             expansion.append(token, loc);
             break;
@@ -764,7 +764,7 @@ MacroFormalArgumentSyntax* Preprocessor::MacroParser::parseFormalArgument() {
     return pp.alloc.emplace<MacroFormalArgumentSyntax>(arg, argDef);
 }
 
-span<Token> Preprocessor::MacroParser::parseTokenList(bool allowNewlines) {
+std::span<Token> Preprocessor::MacroParser::parseTokenList(bool allowNewlines) {
     // comma and right parenthesis only end the default token list if they are
     // not inside a nested pair of (), [], or {}
     // otherwise, keep swallowing tokens as part of the default
@@ -797,7 +797,7 @@ span<Token> Preprocessor::MacroParser::parseTokenList(bool allowNewlines) {
     return tokens.copy(pp.alloc);
 }
 
-void Preprocessor::MacroParser::setBuffer(span<Token const> newBuffer) {
+void Preprocessor::MacroParser::setBuffer(std::span<Token const> newBuffer) {
     buffer = newBuffer;
     currentIndex = 0;
 }

@@ -44,13 +44,13 @@ const NetType& getDefaultNetType(const Scope& scope, SourceLocation location) {
     return scope.getCompilation().getWireNetType();
 }
 
-std::tuple<const Definition*, string_view> getInterfacePortInfo(
+std::tuple<const Definition*, std::string_view> getInterfacePortInfo(
     const Scope& scope, const InterfacePortHeaderSyntax& header) {
 
     auto& comp = scope.getCompilation();
     auto token = header.nameOrKeyword;
     auto def = comp.getDefinition(token.valueText(), scope);
-    string_view modport;
+    std::string_view modport;
 
     if (!def) {
         scope.addDiag(diag::UnknownInterface, token.range()) << token.valueText();
@@ -129,7 +129,7 @@ public:
 
                 // It's possible that this is actually an interface port if the data type is just an
                 // identifier. The only way to know is to do a lookup and see what comes back.
-                string_view simpleName = SyntaxFacts::getSimpleTypeName(*header.dataType);
+                std::string_view simpleName = SyntaxFacts::getSimpleTypeName(*header.dataType);
                 if (!simpleName.empty()) {
                     auto found = Lookup::unqualified(scope, simpleName, LookupFlags::Type);
                     if (found && found->kind == SymbolKind::NetType) {
@@ -198,7 +198,7 @@ public:
             case SyntaxKind::InterfacePortHeader: {
                 auto& header = syntax.header->as<InterfacePortHeaderSyntax>();
                 if (header.nameOrKeyword.kind == TokenKind::InterfaceKeyword) {
-                    string_view modport;
+                    std::string_view modport;
                     if (header.modport)
                         modport = header.modport->member.valueText();
                     return add(decl, nullptr, modport, /* isGeneric */ true, syntax.attributes);
@@ -238,7 +238,7 @@ private:
     }
 
     Symbol* addInherited(const DeclaratorSyntax& decl,
-                         span<const AttributeInstanceSyntax* const> attrs) {
+                         std::span<const AttributeInstanceSyntax* const> attrs) {
         if (lastInterface || lastGenericIface)
             return add(decl, lastInterface, lastModport, lastGenericIface, attrs);
 
@@ -250,7 +250,7 @@ private:
 
     Symbol* add(const DeclaratorSyntax& decl, ArgumentDirection direction,
                 const DataTypeSyntax* type, const NetType* netType,
-                span<const AttributeInstanceSyntax* const> attrs) {
+                std::span<const AttributeInstanceSyntax* const> attrs) {
         auto port = comp.emplace<PortSymbol>(decl.name.valueText(), decl.name.location(),
                                              /* isAnsiPort */ true);
         port->direction = direction;
@@ -315,8 +315,8 @@ private:
         return port;
     }
 
-    Symbol* add(const DeclaratorSyntax& decl, const Definition* iface, string_view modport,
-                bool isGeneric, span<const AttributeInstanceSyntax* const> attrs) {
+    Symbol* add(const DeclaratorSyntax& decl, const Definition* iface, std::string_view modport,
+                bool isGeneric, std::span<const AttributeInstanceSyntax* const> attrs) {
         auto port = comp.emplace<InterfacePortSymbol>(decl.name.valueText(), decl.name.location());
         port->interfaceDef = iface;
         port->modport = modport;
@@ -345,15 +345,16 @@ private:
     const DataTypeSyntax* lastType = nullptr;
     const NetType* lastNetType = nullptr;
     const Definition* lastInterface = nullptr;
-    string_view lastModport;
+    std::string_view lastModport;
     bool lastGenericIface = false;
 };
 
 class NonAnsiPortListBuilder {
 public:
-    NonAnsiPortListBuilder(const Scope& scope,
-                           span<std::pair<const SyntaxNode*, const Symbol*> const> portDeclarations,
-                           SmallVectorBase<std::pair<Symbol*, const Symbol*>>& implicitMembers) :
+    NonAnsiPortListBuilder(
+        const Scope& scope,
+        std::span<std::pair<const SyntaxNode*, const Symbol*> const> portDeclarations,
+        SmallVectorBase<std::pair<Symbol*, const Symbol*>>& implicitMembers) :
         comp(scope.getCompilation()),
         scope(scope), implicitMembers(implicitMembers) {
 
@@ -473,19 +474,21 @@ private:
 
     struct PortInfo {
         not_null<const DeclaratorSyntax*> syntax;
-        span<const AttributeInstanceSyntax* const> attrs;
+        std::span<const AttributeInstanceSyntax* const> attrs;
         const Symbol* internalSymbol = nullptr;
         const Symbol* insertionPoint = nullptr;
         const Definition* ifaceDef = nullptr;
-        string_view modport;
+        std::string_view modport;
         ArgumentDirection direction = ArgumentDirection::In;
         bool used = false;
         bool isIface = false;
 
-        PortInfo(const DeclaratorSyntax& syntax, span<const AttributeInstanceSyntax* const> attrs) :
-            syntax(&syntax), attrs(attrs) {}
+        PortInfo(const DeclaratorSyntax& syntax,
+                 std::span<const AttributeInstanceSyntax* const> attrs) :
+            syntax(&syntax),
+            attrs(attrs) {}
     };
-    SmallMap<string_view, PortInfo, 8> portInfos;
+    SmallMap<std::string_view, PortInfo, 8> portInfos;
 
     void handleIODecl(const PortHeaderSyntax& header, PortInfo& info) {
         auto& decl = *info.syntax;
@@ -611,7 +614,7 @@ private:
             symbol.getDeclaredType()->setOverrideIndex(info.insertionPoint->getIndex());
     }
 
-    Symbol& createPort(string_view externalName, SourceLocation externalLoc,
+    Symbol& createPort(std::string_view externalName, SourceLocation externalLoc,
                        const PortReferenceSyntax& syntax) {
         auto name = syntax.name.valueText();
         if (externalName.empty() && !syntax.select)
@@ -671,7 +674,7 @@ private:
         return *port;
     }
 
-    Symbol& createPort(string_view name, SourceLocation externalLoc,
+    Symbol& createPort(std::string_view name, SourceLocation externalLoc,
                        const PortConcatenationSyntax& syntax) {
         ArgumentDirection dir = ArgumentDirection::In;
         SmallVector<const PortSymbol*> buffer;
@@ -928,7 +931,7 @@ public:
 
         if (usingOrdered) {
             const PropertyExprSyntax* expr = nullptr;
-            span<const AttributeSymbol* const> attributes;
+            std::span<const AttributeSymbol* const> attributes;
 
             if (orderedIndex < orderedConns.size()) {
                 const PortConnectionSyntax& pc = *orderedConns[orderedIndex];
@@ -1008,7 +1011,7 @@ private:
     }
 
     PortConnection* defaultConnection(const PortSymbol& port,
-                                      span<const AttributeSymbol* const> attributes) {
+                                      std::span<const AttributeSymbol* const> attributes) {
         auto conn = comp.emplace<PortConnection>(port, instance, /* useDefault */ true);
         if (!attributes.empty())
             comp.setAttributes(*conn, attributes);
@@ -1017,7 +1020,7 @@ private:
     }
 
     PortConnection* defaultConnection(const MultiPortSymbol& port,
-                                      span<const AttributeSymbol* const> attributes) {
+                                      std::span<const AttributeSymbol* const> attributes) {
         auto conn = comp.emplace<PortConnection>(port, instance, /* useDefault */ false);
         if (!attributes.empty())
             comp.setAttributes(*conn, attributes);
@@ -1027,7 +1030,7 @@ private:
 
     template<typename TPort>
     PortConnection* createConnection(const TPort& port, const PropertyExprSyntax& syntax,
-                                     span<const AttributeSymbol* const> attributes) {
+                                     std::span<const AttributeSymbol* const> attributes) {
         // If this is an empty port, it's an error to provide an expression.
         if (port.isNullPort) {
             auto& diag = scope.addDiag(diag::NullPortExpression, syntax.sourceRange());
@@ -1048,7 +1051,7 @@ private:
     }
 
     PortConnection* createConnection(const InterfacePortSymbol& port, const Symbol* ifaceInst,
-                                     span<const AttributeSymbol* const> attributes) {
+                                     std::span<const AttributeSymbol* const> attributes) {
         auto conn = comp.emplace<PortConnection>(port, instance, ifaceInst);
         if (!attributes.empty())
             comp.setAttributes(*conn, attributes);
@@ -1058,7 +1061,7 @@ private:
 
     template<typename TPort>
     PortConnection* implicitNamedPort(const TPort& port,
-                                      span<const AttributeSymbol* const> attributes,
+                                      std::span<const AttributeSymbol* const> attributes,
                                       SourceRange range, bool isWildcard) {
         // An implicit named port connection is semantically equivalent to `.port(port)` except:
         // - Can't create implicit net declarations this way
@@ -1093,7 +1096,7 @@ private:
 
     PortConnection* getInterfaceExpr(const InterfacePortSymbol& port,
                                      const PropertyExprSyntax& syntax,
-                                     span<const AttributeSymbol* const> attributes) {
+                                     std::span<const AttributeSymbol* const> attributes) {
         ASTContext context(scope, lookupLocation, ASTFlags::NonProcedural);
         auto expr = context.requireSimpleExpr(syntax);
         if (!expr)
@@ -1104,7 +1107,7 @@ private:
     }
 
     PortConnection* getImplicitInterface(const InterfacePortSymbol& port, SourceRange range,
-                                         span<const AttributeSymbol* const> attributes) {
+                                         std::span<const AttributeSymbol* const> attributes) {
         auto symbol = Lookup::unqualified(scope, port.name);
         if (!symbol) {
             scope.addDiag(diag::ImplicitNamedPortNotFound, range) << port.name;
@@ -1122,7 +1125,8 @@ private:
         return createConnection(port, conn, attributes);
     }
 
-    static bool areDimSizesEqual(span<const ConstantRange> left, span<const ConstantRange> right) {
+    static bool areDimSizesEqual(std::span<const ConstantRange> left,
+                                 std::span<const ConstantRange> right) {
         if (left.size() != right.size())
             return false;
 
@@ -1198,7 +1202,7 @@ private:
         // the symbol we're connecting to is an array of interfaces, we need to check to see whether
         // to slice up that array among all the instances. We do the slicing operation if:
         // instance array dimensions + port dimensions == connection dimensions
-        span<const ConstantRange> dimSpan = dims;
+        std::span<const ConstantRange> dimSpan = dims;
         if (dimSpan.size() >= instanceDims.size() &&
             areDimSizesEqual(dimSpan.subspan(0, instanceDims.size()), instanceDims) &&
             areDimSizesEqual(dimSpan.subspan(instanceDims.size()), *portDims)) {
@@ -1235,8 +1239,8 @@ private:
     Compilation& comp;
     SmallVector<ConstantRange, 4> instanceDims;
     SmallVector<const PortConnectionSyntax*> orderedConns;
-    SmallMap<string_view, std::pair<const NamedPortConnectionSyntax*, bool>, 8> namedConns;
-    span<const AttributeSymbol* const> wildcardAttrs;
+    SmallMap<std::string_view, std::pair<const NamedPortConnectionSyntax*, bool>, 8> namedConns;
+    std::span<const AttributeSymbol* const> wildcardAttrs;
     LookupLocation lookupLocation;
     SourceRange wildcardRange;
     size_t orderedIndex = 0;
@@ -1274,7 +1278,7 @@ struct PortBackrefVisitor {
 
 } // end anonymous namespace
 
-PortSymbol::PortSymbol(string_view name, SourceLocation loc, bool isAnsiPort) :
+PortSymbol::PortSymbol(std::string_view name, SourceLocation loc, bool isAnsiPort) :
     Symbol(SymbolKind::Port, name, loc), isAnsiPort(isAnsiPort) {
     externalLoc = loc;
 }
@@ -1477,7 +1481,7 @@ bool PortSymbol::isNetPort() const {
 void PortSymbol::fromSyntax(
     const PortListSyntax& syntax, const Scope& scope, SmallVectorBase<const Symbol*>& results,
     SmallVectorBase<std::pair<Symbol*, const Symbol*>>& implicitMembers,
-    span<std::pair<const SyntaxNode*, const Symbol*> const> portDeclarations) {
+    std::span<std::pair<const SyntaxNode*, const Symbol*> const> portDeclarations) {
 
     switch (syntax.kind) {
         case SyntaxKind::AnsiPortList: {
@@ -1542,8 +1546,9 @@ void PortSymbol::serializeTo(ASTSerializer& serializer) const {
         serializer.writeLink("internalSymbol", *internalSymbol);
 }
 
-MultiPortSymbol::MultiPortSymbol(string_view name, SourceLocation loc,
-                                 span<const PortSymbol* const> ports, ArgumentDirection direction) :
+MultiPortSymbol::MultiPortSymbol(std::string_view name, SourceLocation loc,
+                                 std::span<const PortSymbol* const> ports,
+                                 ArgumentDirection direction) :
     Symbol(SymbolKind::MultiPort, name, loc),
     ports(ports), direction(direction) {
 }
@@ -1608,7 +1613,7 @@ void MultiPortSymbol::serializeTo(ASTSerializer& serializer) const {
     serializer.endArray();
 }
 
-std::optional<span<const ConstantRange>> InterfacePortSymbol::getDeclaredRange() const {
+std::optional<std::span<const ConstantRange>> InterfacePortSymbol::getDeclaredRange() const {
     if (range)
         return *range;
 
@@ -1991,7 +1996,7 @@ void PortConnection::checkSimulatedNetTypes() const {
 }
 
 void PortConnection::makeConnections(
-    const InstanceSymbol& instance, span<const Symbol* const> ports,
+    const InstanceSymbol& instance, std::span<const Symbol* const> ports,
     const SeparatedSyntaxList<PortConnectionSyntax>& portConnections,
     SmallVector<const PortConnection*>& results) {
 

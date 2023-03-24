@@ -7,8 +7,10 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include <algorithm>
 #include <cstdlib>
 #include <cstring>
+#include <memory>
 #include <new>
 
 #include "slang/util/BumpAllocator.h"
@@ -381,14 +383,14 @@ public:
     void swap(SmallVectorBase& rhs);
 
     /// Creates a copy of the array using the given allocator.
-    [[nodiscard]] span<T> copy(BumpAllocator& alloc) const {
+    [[nodiscard]] std::span<T> copy(BumpAllocator& alloc) const {
         if (len == 0)
             return {};
 
         pointer dest = reinterpret_cast<pointer>(alloc.allocate(len * sizeof(T), alignof(T)));
         std::uninitialized_copy(begin(), end(), dest);
 
-        return span<T>(dest, len);
+        return std::span<T>(dest, len);
     }
 
     using ConstElem = std::add_const_t<std::conditional_t<
@@ -396,9 +398,9 @@ public:
 
     /// Creates a constant copy of the array using the given allocator.
     /// If the array holds pointers, const is added to the pointed-to type as well.
-    [[nodiscard]] span<ConstElem> ccopy(BumpAllocator& alloc) const {
+    [[nodiscard]] std::span<ConstElem> ccopy(BumpAllocator& alloc) const {
         auto copied = copy(alloc);
-        return span<ConstElem>(copied.data(), copied.size());
+        return std::span<ConstElem>(copied.data(), copied.size());
     }
 
     /// @return the element at the given position in the array.

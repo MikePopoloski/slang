@@ -636,9 +636,9 @@ void SequenceConcatExpr::serializeTo(ASTSerializer& serializer) const {
     serializer.endArray();
 }
 
-static span<const Expression* const> bindMatchItems(const SequenceMatchListSyntax& syntax,
-                                                    const ASTContext& context,
-                                                    const AssertionExpr& sequence) {
+static std::span<const Expression* const> bindMatchItems(const SequenceMatchListSyntax& syntax,
+                                                         const ASTContext& context,
+                                                         const AssertionExpr& sequence) {
     auto checkLocalVar = [&](const Expression& expr) {
         auto sym = expr.getSymbolReference();
         if (!sym || sym->kind != SymbolKind::LocalAssertionVar)
@@ -723,7 +723,7 @@ AssertionExpr& SequenceWithMatchExpr::fromSyntax(const ParenthesizedSequenceExpr
             context.addDiag(diag::SeqInstanceRepetition, syntax.repetition->sourceRange());
     }
 
-    span<const Expression* const> matchItems;
+    std::span<const Expression* const> matchItems;
     if (syntax.matchList)
         matchItems = bindMatchItems(*syntax.matchList, context, expr);
 
@@ -970,7 +970,7 @@ AssertionExpr& FirstMatchAssertionExpr::fromSyntax(const FirstMatchSequenceExprS
     auto& seq = bind(*syntax.expr, context);
     seq.requireSequence(context);
 
-    span<const Expression* const> matchItems;
+    std::span<const Expression* const> matchItems;
     if (syntax.matchList)
         matchItems = bindMatchItems(*syntax.matchList, context, seq);
 

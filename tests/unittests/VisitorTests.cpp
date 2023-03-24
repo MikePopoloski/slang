@@ -397,7 +397,7 @@ endmodule
         class CloneRewriter : public SyntaxRewriter<CloneRewriter> {
         public:
             void handle(const DataDeclarationSyntax& syntax) {
-                auto op = [this, &syntax](string_view str) {
+                auto op = [this, &syntax](std::string_view str) {
                     auto cloned = clone(syntax, alloc);
                     cloned->declarators[0]->name = cloned->declarators[0]->name.withRawText(alloc,
                                                                                             str);
@@ -424,7 +424,7 @@ endmodule
         class CloneRewriter : public SyntaxRewriter<CloneRewriter> {
         public:
             void handle(const DataDeclarationSyntax& syntax) {
-                auto op = [this, &syntax](string_view str) {
+                auto op = [this, &syntax](std::string_view str) {
                     auto cloned = deepClone(syntax, alloc);
                     cloned->declarators[0]->name = cloned->declarators[0]->name.withRawText(alloc,
                                                                                             str);

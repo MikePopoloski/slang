@@ -32,8 +32,8 @@ void DiagnosticClient::getIncludeStack(BufferID buffer,
     }
 }
 
-string_view DiagnosticClient::getSourceLine(SourceLocation location, size_t col) const {
-    string_view text = sourceManager->getSourceText(location.buffer());
+std::string_view DiagnosticClient::getSourceLine(SourceLocation location, size_t col) const {
+    std::string_view text = sourceManager->getSourceText(location.buffer());
     if (text.empty())
         return "";
 
@@ -42,10 +42,10 @@ string_view DiagnosticClient::getSourceLine(SourceLocation location, size_t col)
     while (*curr != '\n' && *curr != '\r' && *curr != '\0')
         curr++;
 
-    return string_view(start, (size_t)(curr - start));
+    return std::string_view(start, (size_t)(curr - start));
 }
 
-string_view DiagnosticClient::getSeverityString(DiagnosticSeverity severity) {
+std::string_view DiagnosticClient::getSeverityString(DiagnosticSeverity severity) {
     switch (severity) {
         case DiagnosticSeverity::Ignored:
             return "ignored";

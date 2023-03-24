@@ -22,7 +22,7 @@ public:
     CoverageOptionSetter(const Scope& scope, const syntax::CoverageOptionSyntax& syntax);
 
     bool isTypeOption() const;
-    string_view getName() const;
+    std::string_view getName() const;
     const Expression& getExpression() const;
 
     void serializeTo(ASTSerializer& serializer) const;
@@ -43,7 +43,7 @@ private:
 /// they can be shadowed by body members.
 class SLANG_EXPORT CovergroupBodySymbol : public Symbol, public Scope {
 public:
-    span<const CoverageOptionSetter> options;
+    std::span<const CoverageOptionSetter> options;
 
     CovergroupBodySymbol(Compilation& compilation, SourceLocation loc);
 
@@ -55,11 +55,11 @@ public:
 /// Represents a covergroup definition type.
 class SLANG_EXPORT CovergroupType : public Type, public Scope {
 public:
-    span<const FormalArgumentSymbol* const> arguments;
-    span<const FormalArgumentSymbol* const> sampleArguments;
+    std::span<const FormalArgumentSymbol* const> arguments;
+    std::span<const FormalArgumentSymbol* const> sampleArguments;
     const CovergroupBodySymbol& body;
 
-    CovergroupType(Compilation& compilation, string_view name, SourceLocation loc,
+    CovergroupType(Compilation& compilation, std::string_view name, SourceLocation loc,
                    const CovergroupBodySymbol& body);
 
     static const CovergroupType& fromSyntax(const Scope& scope,
@@ -82,7 +82,7 @@ class BinsSelectExpr;
 class SLANG_EXPORT CoverageBinSymbol : public Symbol {
 public:
     struct TransRangeList {
-        span<const Expression* const> items;
+        std::span<const Expression* const> items;
         const Expression* repeatFrom = nullptr;
         const Expression* repeatTo = nullptr;
         enum RepeatKind { None, Consecutive, Nonconsecutive, GoTo } repeatKind = None;
@@ -105,7 +105,7 @@ public:
         }
     };
 
-    using TransSet = span<const TransRangeList>;
+    using TransSet = std::span<const TransRangeList>;
 
     enum BinKind { Bins, IllegalBins, IgnoreBins } binsKind = Bins;
     bool isArray = false;
@@ -113,7 +113,7 @@ public:
     bool isDefault = false;
     bool isDefaultSequence = false;
 
-    CoverageBinSymbol(string_view name, SourceLocation loc) :
+    CoverageBinSymbol(std::string_view name, SourceLocation loc) :
         Symbol(SymbolKind::CoverageBin, name, loc) {}
 
     const Expression* getIffExpr() const;
@@ -121,8 +121,8 @@ public:
     const Expression* getSetCoverageExpr() const;
     const Expression* getWithExpr() const;
     const BinsSelectExpr* getCrossSelectExpr() const;
-    span<const Expression* const> getValues() const;
-    span<const TransSet> getTransList() const;
+    std::span<const Expression* const> getValues() const;
+    std::span<const TransSet> getTransList() const;
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -144,17 +144,17 @@ private:
     mutable const Expression* setCoverageExpr = nullptr;
     mutable const Expression* withExpr = nullptr;
     mutable const BinsSelectExpr* selectExpr = nullptr;
-    mutable span<const Expression* const> values;
-    mutable span<const TransSet> transList;
+    mutable std::span<const Expression* const> values;
+    mutable std::span<const TransSet> transList;
     mutable bool isResolved = false;
 };
 
 class SLANG_EXPORT CoverpointSymbol : public Symbol, public Scope {
 public:
     DeclaredType declaredType;
-    span<const CoverageOptionSetter> options;
+    std::span<const CoverageOptionSetter> options;
 
-    CoverpointSymbol(Compilation& compilation, string_view name, SourceLocation loc);
+    CoverpointSymbol(Compilation& compilation, std::string_view name, SourceLocation loc);
 
     static CoverpointSymbol& fromSyntax(const Scope& scope, const syntax::CoverpointSyntax& syntax);
     static CoverpointSymbol& fromImplicit(const Scope& scope,
@@ -203,11 +203,11 @@ public:
 
 class SLANG_EXPORT CoverCrossSymbol : public Symbol, public Scope {
 public:
-    span<const CoverpointSymbol* const> targets;
-    span<const CoverageOptionSetter> options;
+    std::span<const CoverpointSymbol* const> targets;
+    std::span<const CoverageOptionSetter> options;
 
-    CoverCrossSymbol(Compilation& compilation, string_view name, SourceLocation loc,
-                     span<const CoverpointSymbol* const> targets);
+    CoverCrossSymbol(Compilation& compilation, std::string_view name, SourceLocation loc,
+                     std::span<const CoverpointSymbol* const> targets);
 
     static CoverCrossSymbol& fromSyntax(const Scope& scope, const syntax::CoverCrossSyntax& syntax,
                                         SmallVectorBase<const Symbol*>& implicitMembers);
@@ -312,7 +312,7 @@ public:
 class SLANG_EXPORT ConditionBinsSelectExpr : public BinsSelectExpr {
 public:
     const Symbol& target;
-    span<const Expression* const> intersects;
+    std::span<const Expression* const> intersects;
 
     explicit ConditionBinsSelectExpr(const Symbol& target) :
         BinsSelectExpr(BinsSelectExprKind::Condition), target(target) {}

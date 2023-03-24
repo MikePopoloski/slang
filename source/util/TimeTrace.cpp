@@ -23,7 +23,7 @@ std::unique_ptr<TimeTrace::Profiler> TimeTrace::profiler = nullptr;
 
 using DurationType = duration<steady_clock::rep, steady_clock::period>;
 
-static std::string escapeString(string_view src) {
+static std::string escapeString(std::string_view src) {
     std::string result;
     for (char c : src) {
         switch (c) {
@@ -113,12 +113,12 @@ void TimeTrace::write(std::ostream& os) {
     profiler->write(os);
 }
 
-void TimeTrace::beginTrace(string_view name, string_view detail) {
+void TimeTrace::beginTrace(std::string_view name, std::string_view detail) {
     if (profiler)
         profiler->begin(std::string(name), [&] { return std::string(detail); });
 }
 
-void TimeTrace::beginTrace(string_view name, function_ref<std::string()> detail) {
+void TimeTrace::beginTrace(std::string_view name, function_ref<std::string()> detail) {
     if (profiler)
         profiler->begin(std::string(name), detail);
 }

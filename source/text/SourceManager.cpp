@@ -25,16 +25,16 @@ SourceManager::SourceManager() {
     bufferEntries.emplace_back(file);
 }
 
-std::string SourceManager::makeAbsolutePath(string_view path) const {
-    return fs::canonical(widen(path)).u8string();
+std::string SourceManager::makeAbsolutePath(std::string_view path) const {
+    return getU8Str(fs::canonical(widen(path)));
 }
 
-void SourceManager::addSystemDirectory(string_view path) {
+void SourceManager::addSystemDirectory(std::string_view path) {
     std::unique_lock lock(mut);
     systemDirectories.push_back(fs::canonical(widen(path)));
 }
 
-void SourceManager::addUserDirectory(string_view path) {
+void SourceManager::addUserDirectory(std::string_view path) {
     std::unique_lock lock(mut);
     userDirectories.push_back(fs::canonical(widen(path)));
 }
@@ -72,7 +72,7 @@ size_t SourceManager::getColumnNumber(SourceLocation location) const {
     return location.offset() - lineStart + 1;
 }
 
-string_view SourceManager::getFileName(SourceLocation location) const {
+std::string_view SourceManager::getFileName(SourceLocation location) const {
     SourceLocation fileLocation = getFullyExpandedLoc(location);
 
     auto info = getFileInfo(fileLocation.buffer());
@@ -96,7 +96,7 @@ string_view SourceManager::getFileName(SourceLocation location) const {
         return lineDirective->name;
 }
 
-string_view SourceManager::getRawFileName(BufferID buffer) const {
+std::string_view SourceManager::getRawFileName(BufferID buffer) const {
     auto info = getFileInfo(buffer);
 
     // LOCKING: not required, immutable after creation
@@ -125,7 +125,7 @@ SourceLocation SourceManager::getIncludedFrom(BufferID buffer) const {
     return info->includedFrom;
 }
 
-string_view SourceManager::getMacroName(SourceLocation location) const {
+std::string_view SourceManager::getMacroName(SourceLocation location) const {
     while (isMacroArgLoc(location))
         location = getExpansionLoc(location);
 
@@ -275,14 +275,14 @@ SourceLocation SourceManager::getFullyExpandedLoc(SourceLocation location) const
     return location;
 }
 
-string_view SourceManager::getSourceText(BufferID buffer) const {
+std::string_view SourceManager::getSourceText(BufferID buffer) const {
     auto info = getFileInfo(buffer);
     if (!info || !info->data)
         return "";
 
     // LOCKING: not required here, data is immutable after creation
     auto fd = info->data;
-    return string_view(fd->mem.data(), fd->mem.size());
+    return std::string_view(fd->mem.data(), fd->mem.size());
 }
 
 SourceLocation SourceManager::createExpansionLoc(SourceLocation originalLoc,
@@ -295,18 +295,18 @@ SourceLocation SourceManager::createExpansionLoc(SourceLocation originalLoc,
 
 SourceLocation SourceManager::createExpansionLoc(SourceLocation originalLoc,
                                                  SourceRange expansionRange,
-                                                 string_view macroName) {
+                                                 std::string_view macroName) {
     std::unique_lock lock(mut);
 
     bufferEntries.emplace_back(ExpansionInfo(originalLoc, expansionRange, macroName));
     return SourceLocation(BufferID((uint32_t)(bufferEntries.size() - 1), macroName), 0);
 }
 
-SourceBuffer SourceManager::assignText(string_view text, SourceLocation includedFrom) {
+SourceBuffer SourceManager::assignText(std::string_view text, SourceLocation includedFrom) {
     return assignText("", text, includedFrom);
 }
 
-SourceBuffer SourceManager::assignText(string_view path, string_view text,
+SourceBuffer SourceManager::assignText(std::string_view path, std::string_view text,
                                        SourceLocation includedFrom) {
     std::string temp;
     if (path.empty()) {
@@ -323,12 +323,12 @@ SourceBuffer SourceManager::assignText(string_view path, string_view text,
     return assignBuffer(path, std::move(buffer), includedFrom);
 }
 
-SourceBuffer SourceManager::assignBuffer(string_view bufferPath, std::vector<char>&& buffer,
+SourceBuffer SourceManager::assignBuffer(std::string_view bufferPath, std::vector<char>&& buffer,
                                          SourceLocation includedFrom) {
 
     // first see if we have this file cached
     fs::path path(widen(bufferPath));
-    auto pathStr = path.u8string();
+    auto pathStr = getU8Str(path);
     {
         std::shared_lock lock(mut);
         auto it = lookupCache.find(pathStr);
@@ -345,7 +345,7 @@ SourceBuffer SourceManager::readSource(const fs::path& path) {
     return openCached(path, SourceLocation());
 }
 
-SourceBuffer SourceManager::readHeader(string_view path, SourceLocation includedFrom,
+SourceBuffer SourceManager::readHeader(std::string_view path, SourceLocation includedFrom,
                                        bool isSystemPath) {
     // if the header is specified as an absolute path, just do a straight lookup
     ASSERT(!path.empty());
@@ -393,7 +393,7 @@ SourceBuffer SourceManager::readHeader(string_view path, SourceLocation included
     return SourceBuffer();
 }
 
-void SourceManager::addLineDirective(SourceLocation location, size_t lineNum, string_view name,
+void SourceManager::addLineDirective(SourceLocation location, size_t lineNum, std::string_view name,
                                      uint8_t level) {
     SourceLocation fileLocation = getFullyExpandedLoc(location);
     FileInfo* info = getFileInfo(fileLocation.buffer());
@@ -411,10 +411,10 @@ void SourceManager::addLineDirective(SourceLocation location, size_t lineNum, st
     else
         full = fs::path(widen(info->data->name)).replace_filename(linePath);
 
-    info->lineDirectives.emplace_back(full.u8string(), sourceLineNum, lineNum, level);
+    info->lineDirectives.emplace_back(getU8Str(full), sourceLineNum, lineNum, level);
 }
 
-void SourceManager::addDiagnosticDirective(SourceLocation location, string_view name,
+void SourceManager::addDiagnosticDirective(SourceLocation location, std::string_view name,
                                            DiagnosticSeverity severity) {
     SourceLocation fileLocation = getFullyExpandedLoc(location);
 
@@ -436,7 +436,7 @@ void SourceManager::addDiagnosticDirective(SourceLocation location, string_view 
     }
 }
 
-span<const SourceManager::DiagnosticDirectiveInfo> SourceManager::getDiagnosticDirectives(
+std::span<const SourceManager::DiagnosticDirectiveInfo> SourceManager::getDiagnosticDirectives(
     BufferID buffer) const {
     if (auto it = diagDirectives.find(buffer); it != diagDirectives.end())
         return it->second;
@@ -476,7 +476,7 @@ SourceBuffer SourceManager::createBufferEntry(FileData* fd, SourceLocation inclu
                                               std::unique_lock<std::shared_mutex>&) {
     ASSERT(fd);
     bufferEntries.emplace_back(FileInfo(fd, includedFrom));
-    return SourceBuffer{string_view(fd->mem.data(), fd->mem.size()),
+    return SourceBuffer{std::string_view(fd->mem.data(), fd->mem.size()),
                         BufferID((uint32_t)(bufferEntries.size() - 1), fd->name)};
 }
 
@@ -493,7 +493,7 @@ bool SourceManager::isCached(const fs::path& path) const {
     }
 
     std::shared_lock lock(mut);
-    auto it = lookupCache.find(absPath.u8string());
+    auto it = lookupCache.find(getU8Str(absPath));
     return it != lookupCache.end();
 }
 
@@ -510,7 +510,7 @@ SourceBuffer SourceManager::openCached(const fs::path& fullPath, SourceLocation 
     }
 
     // first see if we have this file cached
-    std::string pathStr = absPath.u8string();
+    std::string pathStr = getU8Str(absPath);
     {
         std::unique_lock lock(mut);
         auto it = lookupCache.find(pathStr);
@@ -538,13 +538,13 @@ SourceBuffer SourceManager::cacheBuffer(fs::path&& path, std::string&& pathStr,
     std::string name;
     if (!disableProximatePaths) {
         std::error_code ec;
-        name = fs::proximate(path, ec).u8string();
+        name = getU8Str(fs::proximate(path, ec));
         if (ec)
             name = {};
     }
 
     if (name.empty())
-        name = path.filename().u8string();
+        name = getU8Str(path.filename());
 
     std::unique_lock lock(mut);
 

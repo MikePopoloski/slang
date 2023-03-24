@@ -43,8 +43,8 @@ public:
         UserDefined
     } netKind;
 
-    NetType(NetKind netKind, string_view name, const Type& dataType);
-    NetType(string_view name, SourceLocation location);
+    NetType(NetKind netKind, std::string_view name, const Type& dataType);
+    NetType(std::string_view name, SourceLocation location);
 
     /// Gets the data type for nets of this particular net type.
     const Type& getDataType() const { return declaredType.getType(); }

@@ -7,6 +7,8 @@
 //-----------------------------------------------------------------------------
 #pragma once
 
+#include <array>
+#include <bit>
 #include <iosfwd>
 
 #include "slang/numeric/MathUtils.h"
@@ -166,19 +168,27 @@ public:
         if constexpr (IsSignedHelper<T>::type::value) {
             signFlag = true;
             if (value < 0)
-                bitWidth = bitwidth_t(64 - slang::countLeadingOnes64(val) + 1);
+                bitWidth = bitwidth_t(64 - std::countl_one(val) + 1);
             else
-                bitWidth = bitwidth_t(64 - slang::countLeadingZeros64(val) + 1);
+                bitWidth = bitwidth_t(64 - std::countl_zero(val) + 1);
+        }
+        else if constexpr (std::is_same_v<T, bool>) {
+            bitWidth = 1;
+        }
+        else if constexpr (std::is_enum_v<T>) {
+            bitWidth = (bitwidth_t)std::bit_width<std::underlying_type_t<T>>(value);
         }
         else {
-            bitWidth = clog2(value + 1);
-            if (bitWidth == 0) {
-                if (value == 0)
-                    bitWidth = 1;
-                else
-                    bitWidth = 64;
-            }
+            bitWidth = (bitwidth_t)std::bit_width(value);
         }
+
+        if (bitWidth == 0) {
+            if (value == 0)
+                bitWidth = 1;
+            else
+                bitWidth = 64;
+        }
+
         clearUnusedBits();
     }
 
@@ -194,7 +204,7 @@ public:
     }
 
     /// Construct from numeric data already in memory as a range of bytes.
-    SVInt(bitwidth_t bits, span<const byte> bytes, bool isSigned) :
+    SVInt(bitwidth_t bits, std::span<const byte> bytes, bool isSigned) :
         SVIntStorage(bits, isSigned, false) {
         ASSERT(bits > 0 && bits <= MAX_BITS);
         initSlowCase(bytes);
@@ -352,7 +362,7 @@ public:
     /// unknown values, so make sure you know what you're doing with it.
     bitwidth_t countLeadingZeros() const {
         if (isSingleWord())
-            return slang::countLeadingZeros64(val) - (BITS_PER_WORD - bitWidth);
+            return bitwidth_t(std::countl_zero(val)) - (BITS_PER_WORD - bitWidth);
         return countLeadingZerosSlowCase();
     }
 
@@ -360,7 +370,7 @@ public:
     /// unknown values, so make sure you know what you're doing with it.
     bitwidth_t countLeadingOnes() const {
         if (isSingleWord())
-            return slang::countLeadingOnes64(val << (BITS_PER_WORD - bitWidth));
+            return bitwidth_t(std::countl_one(val << (BITS_PER_WORD - bitWidth)));
         return countLeadingOnesSlowCase();
     }
 
@@ -501,11 +511,11 @@ public:
 
     /// Constructs from a string (in SystemVerilog syntax). This is mostly for convenience;
     /// any errors will assert instead of being handled gracefully.
-    static SVInt fromString(string_view str);
+    static SVInt fromString(std::string_view str);
 
     /// Construct from an array of digits.
     static SVInt fromDigits(bitwidth_t bits, LiteralBase base, bool isSigned, bool anyUnknown,
-                            span<logic_t const> digits);
+                            std::span<logic_t const> digits);
 
     /// Construct from a floating point value.
     static SVInt fromDouble(bitwidth_t bits, double value, bool isSigned);
@@ -522,7 +532,7 @@ public:
     static logic_t logicalEquiv(const SVInt& lhs, const SVInt& rhs);
 
     /// Concatenates one or more integers into one output integer.
-    static SVInt concat(span<SVInt const> operands);
+    static SVInt concat(std::span<SVInt const> operands);
 
     /// Stream formatting operator. Guesses a nice base to use and writes the string representation
     /// into the stream.
@@ -569,7 +579,7 @@ private:
     // Initialization routines for various cases.
     void initSlowCase(logic_t bit);
     void initSlowCase(uint64_t value);
-    void initSlowCase(span<const byte> bytes);
+    void initSlowCase(std::span<const byte> bytes);
     void initSlowCase(const SVIntStorage& other);
 
     uint64_t* getRawData() { return isSingleWord() ? &val : pVal; }
@@ -600,10 +610,10 @@ private:
     static constexpr uint32_t whichBit(bitwidth_t bitIndex) { return bitIndex % BITS_PER_WORD; }
     static constexpr uint64_t maskBit(bitwidth_t bitIndex) { return 1ULL << whichBit(bitIndex); }
 
-    static SVInt fromDecimalDigits(bitwidth_t bits, bool isSigned, span<logic_t const> digits);
+    static SVInt fromDecimalDigits(bitwidth_t bits, bool isSigned, std::span<logic_t const> digits);
 
     static SVInt fromPow2Digits(bitwidth_t bits, bool isSigned, bool anyUnknown, uint32_t radix,
-                                uint32_t shift, span<logic_t const> digits);
+                                uint32_t shift, std::span<logic_t const> digits);
 
     // Split an integer's data into 32-bit words.
     static void splitWords(const SVInt& value, uint32_t* dest, uint32_t numWords);
@@ -689,7 +699,7 @@ inline SLANG_EXPORT uint32_t clog2(const SVInt& v) {
 inline namespace literals {
 
 inline SVInt operator""_si(const char* str, size_t size) {
-    return SVInt::fromString(string_view(str, size));
+    return SVInt::fromString(std::string_view(str, size));
 }
 
 } // namespace literals

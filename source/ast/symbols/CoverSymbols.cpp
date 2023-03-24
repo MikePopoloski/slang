@@ -43,13 +43,15 @@ public:
         }
     }
 
-    span<const CoverageOptionSetter> get() const { return options.copy(scope.getCompilation()); }
+    std::span<const CoverageOptionSetter> get() const {
+        return options.copy(scope.getCompilation());
+    }
 
 private:
     const Scope& scope;
     SmallVector<CoverageOptionSetter, 4> options;
-    SmallMap<string_view, const SyntaxNode*, 4> instNames;
-    SmallMap<string_view, const SyntaxNode*, 4> typeNames;
+    SmallMap<std::string_view, const SyntaxNode*, 4> instNames;
+    SmallMap<std::string_view, const SyntaxNode*, 4> typeNames;
 };
 
 } // namespace
@@ -77,7 +79,7 @@ bool CoverageOptionSetter::isTypeOption() const {
     return false;
 }
 
-string_view CoverageOptionSetter::getName() const {
+std::string_view CoverageOptionSetter::getName() const {
     if (syntax->expr->kind == SyntaxKind::AssignmentExpression) {
         auto& assign = syntax->expr->as<BinaryExpressionSyntax>();
         if (assign.left->kind == SyntaxKind::ScopedName) {
@@ -112,7 +114,7 @@ void CoverageOptionSetter::serializeTo(ASTSerializer& serializer) const {
     serializer.write("expr", getExpression());
 }
 
-static void addProperty(Scope& scope, string_view name, VariableLifetime lifetime,
+static void addProperty(Scope& scope, std::string_view name, VariableLifetime lifetime,
                         const StructBuilder& structBuilder) {
     auto& comp = scope.getCompilation();
     auto& prop = *comp.emplace<ClassPropertySymbol>(name, SourceLocation::NoLocation, lifetime,
@@ -123,7 +125,7 @@ static void addProperty(Scope& scope, string_view name, VariableLifetime lifetim
 
 static void addBuiltInMethods(Scope& scope, bool isCovergroup) {
     auto& comp = scope.getCompilation();
-    auto makeFunc = [&](string_view funcName, const Type& returnType) {
+    auto makeFunc = [&](std::string_view funcName, const Type& returnType) {
         MethodBuilder builder(comp, funcName, returnType, SubroutineKind::Function);
         scope.addMember(builder.symbol);
         return builder;
@@ -191,7 +193,7 @@ void CovergroupBodySymbol::serializeTo(ASTSerializer& serializer) const {
     }
 }
 
-CovergroupType::CovergroupType(Compilation& compilation, string_view name, SourceLocation loc,
+CovergroupType::CovergroupType(Compilation& compilation, std::string_view name, SourceLocation loc,
                                const CovergroupBodySymbol& body) :
     Type(SymbolKind::CovergroupType, name, loc),
     Scope(compilation, this), body(body) {
@@ -203,7 +205,7 @@ const CovergroupType& CovergroupType::fromSyntax(const Scope& scope,
     // If we're inside a class, this covergroup is actually anonymous and the name
     // is used to implicitly declare a property of the covergroup type.
     bool inClass = scope.asSymbol().kind == SymbolKind::ClassType;
-    string_view name = inClass ? ""sv : syntax.name.valueText();
+    std::string_view name = inClass ? ""sv : syntax.name.valueText();
 
     auto& comp = scope.getCompilation();
     auto body = comp.emplace<CovergroupBodySymbol>(comp, syntax.name.location());
@@ -345,13 +347,13 @@ const BinsSelectExpr* CoverageBinSymbol::getCrossSelectExpr() const {
     return selectExpr;
 }
 
-span<const Expression* const> CoverageBinSymbol::getValues() const {
+std::span<const Expression* const> CoverageBinSymbol::getValues() const {
     if (!isResolved)
         resolve();
     return values;
 }
 
-span<const CoverageBinSymbol::TransSet> CoverageBinSymbol::getTransList() const {
+std::span<const CoverageBinSymbol::TransSet> CoverageBinSymbol::getTransList() const {
     if (!isResolved)
         resolve();
     return transList;
@@ -655,7 +657,7 @@ void CoverageBinSymbol::TransRangeList::serializeTo(ASTSerializer& serializer) c
     }
 }
 
-CoverpointSymbol::CoverpointSymbol(Compilation& comp, string_view name, SourceLocation loc) :
+CoverpointSymbol::CoverpointSymbol(Compilation& comp, std::string_view name, SourceLocation loc) :
     Symbol(SymbolKind::Coverpoint, name, loc), Scope(comp, this),
     declaredType(*this, DeclaredTypeFlags::InferImplicit | DeclaredTypeFlags::AutomaticInitializer |
                             DeclaredTypeFlags::CoverageType) {
@@ -700,7 +702,7 @@ CoverpointSymbol& CoverpointSymbol::fromSyntax(const Scope& scope, const Coverpo
     // Figure out the name of the coverpoint. If there's a label, it provides the name.
     // Otherwise check if the expression is a simple variable reference. If so, we take
     // that variable name as the name of the coverpoint. Otherwise it's unnamed.
-    string_view name;
+    std::string_view name;
     SourceLocation loc;
     if (syntax.label) {
         name = syntax.label->name.valueText();
@@ -781,8 +783,8 @@ void CoverpointSymbol::serializeTo(ASTSerializer& serializer) const {
         serializer.write("iff", *iff);
 }
 
-CoverCrossSymbol::CoverCrossSymbol(Compilation& comp, string_view name, SourceLocation loc,
-                                   span<const CoverpointSymbol* const> targets) :
+CoverCrossSymbol::CoverCrossSymbol(Compilation& comp, std::string_view name, SourceLocation loc,
+                                   std::span<const CoverpointSymbol* const> targets) :
     Symbol(SymbolKind::CoverCross, name, loc),
     Scope(comp, this), targets(targets) {
 
@@ -808,7 +810,7 @@ CoverCrossSymbol::CoverCrossSymbol(Compilation& comp, string_view name, SourceLo
 
 CoverCrossSymbol& CoverCrossSymbol::fromSyntax(const Scope& scope, const CoverCrossSyntax& syntax,
                                                SmallVectorBase<const Symbol*>& implicitMembers) {
-    string_view name;
+    std::string_view name;
     SourceLocation loc;
     if (syntax.label) {
         name = syntax.label->name.valueText();

@@ -53,8 +53,8 @@ const Statement& StatementBlockSymbol::getStatement(const ASTContext& parentCont
     return *stmt;
 }
 
-static std::pair<string_view, SourceLocation> getLabel(const StatementSyntax& syntax,
-                                                       SourceLocation defaultLoc) {
+static std::pair<std::string_view, SourceLocation> getLabel(const StatementSyntax& syntax,
+                                                            SourceLocation defaultLoc) {
     if (syntax.label) {
         auto token = syntax.label->name;
         return {token.valueText(), token.location()};
@@ -64,7 +64,7 @@ static std::pair<string_view, SourceLocation> getLabel(const StatementSyntax& sy
 }
 
 static StatementBlockSymbol* createBlock(
-    const Scope& scope, const StatementSyntax& syntax, string_view name, SourceLocation loc,
+    const Scope& scope, const StatementSyntax& syntax, std::string_view name, SourceLocation loc,
     StatementBlockKind blockKind = StatementBlockKind::Sequential,
     std::optional<VariableLifetime> lifetime = {}) {
 
@@ -94,7 +94,7 @@ static StatementBlockSymbol* createBlock(
 
 StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
                                                        const BlockStatementSyntax& syntax) {
-    string_view name;
+    std::string_view name;
     SourceLocation loc;
     if (syntax.blockName) {
         auto token = syntax.blockName->name;
@@ -274,7 +274,7 @@ const Statement& ProceduralBlockSymbol::getBody() const {
 ProceduralBlockSymbol& ProceduralBlockSymbol::createProceduralBlock(
     const Scope& scope, ProceduralBlockKind kind, SourceLocation location,
     const MemberSyntax& syntax, const StatementSyntax& stmtSyntax,
-    span<const StatementBlockSymbol* const>& additionalBlocks) {
+    std::span<const StatementBlockSymbol* const>& additionalBlocks) {
 
     auto& comp = scope.getCompilation();
     auto result = comp.emplace<ProceduralBlockSymbol>(location, kind);
@@ -290,7 +290,7 @@ ProceduralBlockSymbol& ProceduralBlockSymbol::createProceduralBlock(
 
 ProceduralBlockSymbol& ProceduralBlockSymbol::fromSyntax(
     const Scope& scope, const ProceduralBlockSyntax& syntax,
-    span<const StatementBlockSymbol* const>& additionalBlocks) {
+    std::span<const StatementBlockSymbol* const>& additionalBlocks) {
     return createProceduralBlock(scope, SemanticFacts::getProceduralBlockKind(syntax.kind),
                                  syntax.keyword.location(), syntax, *syntax.statement,
                                  additionalBlocks);
@@ -298,7 +298,7 @@ ProceduralBlockSymbol& ProceduralBlockSymbol::fromSyntax(
 
 ProceduralBlockSymbol& ProceduralBlockSymbol::fromSyntax(
     const Scope& scope, const ImmediateAssertionMemberSyntax& syntax,
-    span<const StatementBlockSymbol* const>& additionalBlocks) {
+    std::span<const StatementBlockSymbol* const>& additionalBlocks) {
     return createProceduralBlock(scope, ProceduralBlockKind::Always,
                                  syntax.getFirstToken().location(), syntax, *syntax.statement,
                                  additionalBlocks);
@@ -306,7 +306,7 @@ ProceduralBlockSymbol& ProceduralBlockSymbol::fromSyntax(
 
 ProceduralBlockSymbol& ProceduralBlockSymbol::fromSyntax(
     const Scope& scope, const ConcurrentAssertionMemberSyntax& syntax,
-    span<const StatementBlockSymbol* const>& additionalBlocks) {
+    std::span<const StatementBlockSymbol* const>& additionalBlocks) {
     return createProceduralBlock(scope, ProceduralBlockKind::Always,
                                  syntax.getFirstToken().location(), syntax, *syntax.statement,
                                  additionalBlocks);
@@ -317,7 +317,7 @@ void ProceduralBlockSymbol::serializeTo(ASTSerializer& serializer) const {
     serializer.write("body", getBody());
 }
 
-static std::pair<string_view, SourceLocation> getGenerateBlockName(const SyntaxNode& node) {
+static std::pair<std::string_view, SourceLocation> getGenerateBlockName(const SyntaxNode& node) {
     if (node.kind == SyntaxKind::GenerateBlock) {
         // Try to find a name for this block. Generate blocks allow the name to be specified twice
         // (for no good reason) so check both locations.

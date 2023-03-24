@@ -35,7 +35,7 @@ Lexer::Lexer(SourceBuffer buffer, BumpAllocator& alloc, Diagnostics& diagnostics
     Lexer(buffer.id, buffer.data, buffer.data.data(), alloc, diagnostics, options) {
 }
 
-Lexer::Lexer(BufferID bufferId, string_view source, const char* startPtr, BumpAllocator& alloc,
+Lexer::Lexer(BufferID bufferId, std::string_view source, const char* startPtr, BumpAllocator& alloc,
              Diagnostics& diagnostics, LexerOptions options) :
     alloc(alloc),
     diagnostics(diagnostics), options(options), bufferId(bufferId), originalBegin(source.data()),
@@ -77,7 +77,7 @@ Token Lexer::concatenateTokens(BumpAllocator& alloc, Token left, Token right) {
     leftText.copy(mem, leftText.length());
     rightText.copy(mem + leftText.length(), rightText.length());
     mem[newLength - 1] = '\0';
-    string_view combined{mem, newLength};
+    std::string_view combined{mem, newLength};
 
     Diagnostics unused;
     Lexer lexer{
@@ -95,8 +95,8 @@ Token Lexer::concatenateTokens(BumpAllocator& alloc, Token left, Token right) {
     return token.clone(alloc, trivia, token.rawText(), location);
 }
 
-Token Lexer::stringify(BumpAllocator& alloc, SourceLocation location, span<Trivia const> trivia,
-                       Token* begin, Token* end) {
+Token Lexer::stringify(BumpAllocator& alloc, SourceLocation location,
+                       std::span<Trivia const> trivia, Token* begin, Token* end) {
     SmallVector<char> text;
     text.push_back('"');
 
@@ -131,7 +131,7 @@ Token Lexer::stringify(BumpAllocator& alloc, SourceLocation location, span<Trivi
     text.push_back('"');
     text.push_back('\0');
 
-    string_view raw = toStringView(text.copy(alloc));
+    std::string_view raw = toStringView(text.copy(alloc));
 
     Diagnostics unused;
     Lexer lexer{BufferID::getPlaceholder(), raw, raw.data(), alloc, unused, LexerOptions{}};
@@ -157,7 +157,7 @@ Trivia Lexer::commentify(BumpAllocator& alloc, Token* begin, Token* end) {
     }
     text.push_back('\0');
 
-    string_view raw = toStringView(text.copy(alloc));
+    std::string_view raw = toStringView(text.copy(alloc));
 
     Diagnostics unused;
     Lexer lexer{BufferID::getPlaceholder(), raw, raw.data(), alloc, unused, LexerOptions{}};
@@ -703,7 +703,7 @@ Token Lexer::lexStringLiteral() {
                             DiagCode code = c == '%' ? diag::NonstandardEscapeCode
                                                      : diag::UnknownEscapeCode;
                             addDiag(code, offset)
-                                << string_view(curr, (size_t)utf8Len((unsigned char)c));
+                                << std::string_view(curr, (size_t)utf8Len((unsigned char)c));
                         }
                     }
                     else {
@@ -1251,7 +1251,7 @@ void Lexer::scanEncodedText(ProtectEncoding encoding, uint32_t expectedBytes, bo
         return true;
     };
 
-    auto invalidByte = [&](char invalidChar, string_view name) {
+    auto invalidByte = [&](char invalidChar, std::string_view name) {
         auto& diag = addDiag(diag::InvalidEncodingByte, currentOffset()) << name;
         diag << (isPrintableASCII(invalidChar) ? std::string(1, invalidChar)
                                                : fmt::format("{:#04x}", invalidChar));

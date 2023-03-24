@@ -30,7 +30,7 @@ class InstanceBodySymbol;
 class NetType;
 class WildcardImportSymbol;
 
-using SymbolMap = flat_hash_map<string_view, const Symbol*>;
+using SymbolMap = flat_hash_map<std::string_view, const Symbol*>;
 using PointerMap = flat_hash_map<uintptr_t, uintptr_t>;
 
 /// Base class for symbols that represent a name scope; that is, they contain children and can
@@ -76,13 +76,13 @@ public:
     /// Finds a direct child member with the given name. This won't return anything weird like
     /// forwarding typedefs or imported symbols, but will return things like transparent enum
     /// members. If no symbol is found with the given name, nullptr is returned.
-    const Symbol* find(string_view name) const;
+    const Symbol* find(std::string_view name) const;
 
     /// Finds a direct child member with the given name. This won't return anything weird like
     /// forwarding typedefs or imported symbols, but will return things like transparent enum
     /// members. This method expects that the symbol will be found and be of the given type `T`.
     template<typename T>
-    const T& find(string_view name) const {
+    const T& find(std::string_view name) const {
         const Symbol* sym = find(name);
         ASSERT(sym);
         return sym->as<T>();
@@ -91,7 +91,7 @@ public:
     /// Performs a full fledged name lookup starting in the current scope, following all
     /// SystemVerilog rules for qualified or unqualified name resolution. The name to look up
     /// is parsed from the given input string.
-    const Symbol* lookupName(string_view name, LookupLocation location = LookupLocation::max,
+    const Symbol* lookupName(std::string_view name, LookupLocation location = LookupLocation::max,
                              bitmask<LookupFlags> flags = LookupFlags::None) const;
 
     /// Performs a full fledged name lookup starting in the current scope, following all
@@ -99,7 +99,7 @@ public:
     /// is parsed from the given input string. This method expects that the symbol will be found and
     /// be of the given type `T`.
     template<typename T>
-    const T& lookupName(string_view name, LookupLocation location = LookupLocation::max,
+    const T& lookupName(std::string_view name, LookupLocation location = LookupLocation::max,
                         bitmask<LookupFlags> flags = LookupFlags::None) const {
         const Symbol* sym = lookupName(name, location, flags);
         ASSERT(sym);
@@ -207,7 +207,7 @@ public:
 
     const SymbolMap& getUnelaboratedNameMap() const { return *nameMap; }
 
-    span<const WildcardImportSymbol* const> getWildcardImports() const;
+    std::span<const WildcardImportSymbol* const> getWildcardImports() const;
 
 protected:
     Scope(Compilation& compilation_, const Symbol* thisSym_);
@@ -242,16 +242,17 @@ private:
     class DeferredMemberData {
     public:
         void addMember(Symbol* symbol);
-        span<Symbol* const> getMembers() const;
+        std::span<Symbol* const> getMembers() const;
 
         void registerTransparentType(const Symbol* insertion, const Symbol& parent);
-        span<std::pair<const Symbol*, const Symbol*> const> getTransparentTypes() const;
+        std::span<std::pair<const Symbol*, const Symbol*> const> getTransparentTypes() const;
 
         void addForwardingTypedef(const ForwardingTypedefSymbol& symbol);
-        span<const ForwardingTypedefSymbol* const> getForwardingTypedefs() const;
+        std::span<const ForwardingTypedefSymbol* const> getForwardingTypedefs() const;
 
         void addPortDeclaration(const syntax::SyntaxNode& syntax, const Symbol* insertion);
-        span<std::pair<const syntax::SyntaxNode*, const Symbol*> const> getPortDeclarations() const;
+        std::span<std::pair<const syntax::SyntaxNode*, const Symbol*> const> getPortDeclarations()
+            const;
 
     private:
         // A list of deferred member symbols.
@@ -285,11 +286,11 @@ private:
     bool handleDataDeclaration(const syntax::DataDeclarationSyntax& syntax);
     void handleUserDefinedNet(const syntax::UserDefinedNetDeclarationSyntax& syntax);
     void handleNestedDefinition(const syntax::ModuleDeclarationSyntax& syntax) const;
-    void handleExportedMethods(span<Symbol* const> deferredMembers) const;
+    void handleExportedMethods(std::span<Symbol* const> deferredMembers) const;
     void reportNameConflict(const Symbol& member, const Symbol& existing) const;
     void checkImportConflict(const Symbol& member, const Symbol& existing) const;
     void addWildcardImport(const syntax::PackageImportItemSyntax& item,
-                           span<const syntax::AttributeInstanceSyntax* const> attributes);
+                           std::span<const syntax::AttributeInstanceSyntax* const> attributes);
     void tryFixupInstances(const syntax::DataDeclarationSyntax& syntax, const ASTContext& context,
                            SmallVectorBase<const Symbol*>& results) const;
 

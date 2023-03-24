@@ -44,9 +44,9 @@ public:
             const Expression* givenInitializer;
         };
 
-        string_view name;
+        std::string_view name;
         SourceLocation location;
-        span<const syntax::AttributeInstanceSyntax* const> attributes;
+        std::span<const syntax::AttributeInstanceSyntax* const> attributes;
         bool isTypeParam;
         bool isLocalParam;
         bool isPortParam;
@@ -54,19 +54,19 @@ public:
 
         ParameterDecl(const Scope& scope, const syntax::ParameterDeclarationSyntax& syntax,
                       const syntax::DeclaratorSyntax& decl, bool isLocal, bool isPort,
-                      span<const syntax::AttributeInstanceSyntax* const> attributes);
+                      std::span<const syntax::AttributeInstanceSyntax* const> attributes);
         ParameterDecl(const Scope& scope, const syntax::TypeParameterDeclarationSyntax& syntax,
                       const syntax::TypeAssignmentSyntax& decl, bool isLocal, bool isPort,
-                      span<const syntax::AttributeInstanceSyntax* const> attributes);
-        ParameterDecl(string_view name, SourceLocation location, const Type& givenType,
+                      std::span<const syntax::AttributeInstanceSyntax* const> attributes);
+        ParameterDecl(std::string_view name, SourceLocation location, const Type& givenType,
                       bool isLocal, bool isPort, const Expression* givenInitializer);
-        ParameterDecl(string_view name, SourceLocation location, bool isLocal, bool isPort,
+        ParameterDecl(std::string_view name, SourceLocation location, bool isLocal, bool isPort,
                       const Type* defaultType);
 
         bool hasDefault() const;
     };
 
-    string_view name;
+    std::string_view name;
     SourceLocation location;
     const syntax::ModuleDeclarationSyntax& syntax;
     const NetType& defaultNetType;
@@ -77,8 +77,8 @@ public:
     UnconnectedDrive unconnectedDrive;
     std::optional<TimeScale> timeScale;
     SmallVector<ParameterDecl, 8> parameters;
-    flat_hash_set<string_view> modports;
-    span<const AttributeSymbol* const> attributes;
+    flat_hash_set<std::string_view> modports;
+    std::span<const AttributeSymbol* const> attributes;
     std::vector<const syntax::BindDirectiveSyntax*> bindDirectives;
     const syntax::SyntaxTree* syntaxTree;
     bool hasNonAnsiPorts;
@@ -90,11 +90,11 @@ public:
 
     /// Returns a string description of the definition kind, such as "module",
     /// "interface", or "program".
-    string_view getKindString() const;
+    std::string_view getKindString() const;
 
     /// Returns a string description of the definition kind, including an
     /// indefinite article. e.g. "a module", "an interface".
-    string_view getArticleKindString() const;
+    std::string_view getArticleKindString() const;
 
     bool isInstantiated() const { return instantiated; }
     void noteInstantiated() const { instantiated = true; }

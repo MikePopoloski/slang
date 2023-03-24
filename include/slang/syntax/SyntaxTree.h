@@ -30,7 +30,7 @@ namespace slang::syntax {
 /// live for as long as you need to access its syntax nodes.
 class SLANG_EXPORT SyntaxTree {
 public:
-    using MacroList = span<const DefineDirectiveSyntax* const>;
+    using MacroList = std::span<const DefineDirectiveSyntax* const>;
 
     /// Indicates whether this syntax tree represents a "library" compilation unit,
     /// which means that modules declared within it are not automatically instantiated.
@@ -45,27 +45,27 @@ public:
     /// Creates a syntax tree from a full compilation unit.
     /// @a path is the path to the source file on disk.
     /// @return the created and parsed syntax tree.
-    static std::shared_ptr<SyntaxTree> fromFile(string_view path);
+    static std::shared_ptr<SyntaxTree> fromFile(std::string_view path);
 
     /// Creates a syntax tree from a full compilation unit.
     /// @a path is the path to the source file on disk.
     /// @a sourceManager is the manager that owns all of the loaded source code.
     /// @a options is an optional bag of lexer, preprocessor, and parser options.
     /// @return the created and parsed syntax tree.
-    static std::shared_ptr<SyntaxTree> fromFile(string_view path, SourceManager& sourceManager,
+    static std::shared_ptr<SyntaxTree> fromFile(std::string_view path, SourceManager& sourceManager,
                                                 const Bag& options = {});
 
     /// Creates a syntax tree by concatenating several files loaded from disk.
     /// @a paths is the list of paths to the source files on disk.
     /// @return the created and parsed syntax tree.
-    static std::shared_ptr<SyntaxTree> fromFiles(span<const string_view> paths);
+    static std::shared_ptr<SyntaxTree> fromFiles(std::span<const std::string_view> paths);
 
     /// Creates a syntax tree by concatenating several files loaded from disk.
     /// @a paths is the list of paths to the source files on disk.
     /// @a sourceManager is the manager that owns all of the loaded source code.
     /// @a options is an optional bag of lexer, preprocessor, and parser options.
     /// @return the created and parsed syntax tree.
-    static std::shared_ptr<SyntaxTree> fromFiles(span<const string_view> paths,
+    static std::shared_ptr<SyntaxTree> fromFiles(std::span<const std::string_view> paths,
                                                  SourceManager& sourceManager,
                                                  const Bag& options = {});
 
@@ -74,8 +74,9 @@ public:
     /// @a name is an optional name to give to the loaded source buffer.
     /// @a path is an optional path to give to the loaded source buffer.
     /// @return the created and parsed syntax tree.
-    static std::shared_ptr<SyntaxTree> fromText(string_view text, string_view name = "source",
-                                                string_view path = "");
+    static std::shared_ptr<SyntaxTree> fromText(std::string_view text,
+                                                std::string_view name = "source",
+                                                std::string_view path = "");
 
     /// Creates a syntax tree by guessing at what might be in the given source snippet.
     /// @a text is the actual source code text.
@@ -84,9 +85,10 @@ public:
     /// @a path is an optional path to give to the loaded source buffer.
     /// @a options is an optional bag of lexer, preprocessor, and parser options.
     /// @return the created and parsed syntax tree.
-    static std::shared_ptr<SyntaxTree> fromText(string_view text, SourceManager& sourceManager,
-                                                string_view name = "source"sv,
-                                                string_view path = "", const Bag& options = {});
+    static std::shared_ptr<SyntaxTree> fromText(std::string_view text, SourceManager& sourceManager,
+                                                std::string_view name = "source"sv,
+                                                std::string_view path = "",
+                                                const Bag& options = {});
 
     /// Creates a syntax tree from a full compilation unit already in memory.
     /// @a text is the actual source code text.
@@ -95,10 +97,10 @@ public:
     /// @a path is an optional path to give to the loaded source buffer.
     /// @a options is an optional bag of lexer, preprocessor, and parser options.
     /// @return the created and parsed syntax tree.
-    static std::shared_ptr<SyntaxTree> fromFileInMemory(string_view text,
+    static std::shared_ptr<SyntaxTree> fromFileInMemory(std::string_view text,
                                                         SourceManager& sourceManager,
-                                                        string_view name = "source"sv,
-                                                        string_view path = "",
+                                                        std::string_view name = "source"sv,
+                                                        std::string_view path = "",
                                                         const Bag& options = {});
 
     /// Creates a syntax tree from an already loaded source buffer.
@@ -119,7 +121,7 @@ public:
     /// @a options is an optional bag of lexer, preprocessor, and parser options.
     /// @a inheritedMacros is a list of macros to predefine in the new syntax tree.
     /// @return the created and parsed syntax tree.
-    static std::shared_ptr<SyntaxTree> fromBuffers(span<const SourceBuffer> buffers,
+    static std::shared_ptr<SyntaxTree> fromBuffers(std::span<const SourceBuffer> buffers,
                                                    SourceManager& sourceManager,
                                                    const Bag& options = {},
                                                    MacroList inheritedMacros = {});
@@ -169,8 +171,9 @@ private:
                std::vector<const DefineDirectiveSyntax*>&& macros, Bag options);
 
     static std::shared_ptr<SyntaxTree> create(SourceManager& sourceManager,
-                                              span<const SourceBuffer> source, const Bag& options,
-                                              MacroList inheritedMacros, bool guess);
+                                              std::span<const SourceBuffer> source,
+                                              const Bag& options, MacroList inheritedMacros,
+                                              bool guess);
 
     SyntaxNode* rootNode;
     SourceManager& sourceMan;

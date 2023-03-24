@@ -23,7 +23,7 @@ using namespace slang;
 using namespace slang::ast;
 using namespace slang::driver;
 
-void writeToFile(string_view fileName, string_view contents);
+void writeToFile(std::string_view fileName, std::string_view contents);
 
 void printJson(Compilation& compilation, const std::string& fileName,
                const std::vector<std::string>& scopes) {
@@ -179,7 +179,7 @@ catch (const std::exception& e) {
 }
 
 template<typename Stream, typename String>
-void writeToFile(Stream& os, string_view fileName, String contents) {
+void writeToFile(Stream& os, std::string_view fileName, String contents) {
     os.write(contents.data(), contents.size());
     os.flush();
     if (!os)
@@ -188,7 +188,7 @@ void writeToFile(Stream& os, string_view fileName, String contents) {
 
 #if defined(_MSC_VER)
 
-void writeToFile(string_view fileName, string_view contents) {
+void writeToFile(std::string_view fileName, std::string_view contents) {
     if (fileName == "-") {
         writeToFile(std::wcout, "stdout", widen(contents));
     }
@@ -206,7 +206,7 @@ int wmain(int argc, wchar_t** argv) {
 
 #else
 
-void writeToFile(string_view fileName, string_view contents) {
+void writeToFile(std::string_view fileName, std::string_view contents) {
     if (fileName == "-") {
         writeToFile(std::cout, "stdout", contents);
     }
@@ -229,7 +229,7 @@ int main(int argc, char** argv) {
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
     auto& sourceManager = SyntaxTree::getDefaultSourceManager();
 
-    string_view text(reinterpret_cast<const char*>(data), size);
+    std::string_view text(reinterpret_cast<const char*>(data), size);
     auto tree = SyntaxTree::fromFileInMemory(text, sourceManager);
 
     DiagnosticEngine diagEngine(sourceManager);

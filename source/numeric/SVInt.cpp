@@ -69,7 +69,7 @@ std::ostream& operator<<(std::ostream& os, const logic_t& rhs) {
     return os;
 }
 
-SVInt SVInt::fromString(string_view str) {
+SVInt SVInt::fromString(std::string_view str) {
     if (str.empty())
         throw std::invalid_argument("String is empty");
 
@@ -185,7 +185,7 @@ SVInt SVInt::fromString(string_view str) {
 }
 
 SVInt SVInt::fromDigits(bitwidth_t bits, LiteralBase base, bool isSigned, bool anyUnknown,
-                        span<logic_t const> digits) {
+                        std::span<logic_t const> digits) {
     if (digits.empty())
         throw std::invalid_argument("No digits provided");
 
@@ -253,7 +253,7 @@ SVInt SVInt::fromDigits(bitwidth_t bits, LiteralBase base, bool isSigned, bool a
     return fromPow2Digits(bits, isSigned, anyUnknown, radix, shift, digits);
 }
 
-SVInt SVInt::fromDecimalDigits(bitwidth_t bits, bool isSigned, span<logic_t const> digits) {
+SVInt SVInt::fromDecimalDigits(bitwidth_t bits, bool isSigned, std::span<logic_t const> digits) {
     SVInt result = allocZeroed(bits, isSigned, false);
 
     constexpr int charsPerWord = 18; // 18 decimal digits can fit in a 64-bit word
@@ -307,7 +307,7 @@ SVInt SVInt::fromDecimalDigits(bitwidth_t bits, bool isSigned, span<logic_t cons
 }
 
 SVInt SVInt::fromPow2Digits(bitwidth_t bits, bool isSigned, bool anyUnknown, uint32_t radix,
-                            uint32_t shift, span<logic_t const> digits) {
+                            uint32_t shift, std::span<logic_t const> digits) {
 
     SVInt result = allocZeroed(bits, isSigned, anyUnknown);
 
@@ -625,7 +625,7 @@ SVInt SVInt::replicate(const SVInt& times) const {
     SmallVector<SVInt> buffer(n, UninitializedTag());
     for (size_t i = 0; i < n; ++i)
         buffer.push_back(*this);
-    return concat(span<SVInt const>(buffer.begin(), buffer.end()));
+    return concat(std::span<SVInt const>(buffer.begin(), buffer.end()));
 }
 
 size_t SVInt::hash() const {
@@ -1730,7 +1730,7 @@ SVInt SVInt::conditional(const SVInt& condition, const SVInt& lhs, const SVInt& 
     return result;
 }
 
-SVInt SVInt::concat(span<SVInt const> operands) {
+SVInt SVInt::concat(std::span<SVInt const> operands) {
     // 0 operand concatenations can be valid inside of larger concatenations.
     if (operands.size() == 0)
         return SVInt::Zero;
@@ -1804,7 +1804,7 @@ void SVInt::initSlowCase(uint64_t value) {
     }
 }
 
-void SVInt::initSlowCase(span<const byte> bytes) {
+void SVInt::initSlowCase(std::span<const byte> bytes) {
     if (isSingleWord()) {
         val = 0;
         memcpy(&val, bytes.data(), std::min<size_t>(WORD_SIZE, bytes.size()));
@@ -1911,14 +1911,14 @@ bitwidth_t SVInt::countLeadingZerosSlowCase() const {
     uint32_t i = getNumWords();
     uint64_t part = pVal[i - 1] & mask;
     if (part)
-        return slang::countLeadingZeros64(part) - (BITS_PER_WORD - bitsInMsw);
+        return (bitwidth_t)std::countl_zero(part) - (BITS_PER_WORD - bitsInMsw);
 
     bitwidth_t count = bitsInMsw;
     for (--i; i > 0; --i) {
         if (pVal[i - 1] == 0)
             count += BITS_PER_WORD;
         else {
-            count += slang::countLeadingZeros64(pVal[i - 1]);
+            count += (bitwidth_t)std::countl_zero(pVal[i - 1]);
             break;
         }
     }
@@ -1934,13 +1934,13 @@ bitwidth_t SVInt::countLeadingOnesSlowCase() const {
         shift = BITS_PER_WORD - bitsInMsw;
 
     int i = int(getNumWords() - 1);
-    bitwidth_t count = slang::countLeadingOnes64(pVal[i] << shift);
+    bitwidth_t count = (bitwidth_t)std::countl_one(pVal[i] << shift);
     if (count == bitsInMsw) {
         for (i--; i >= 0; i--) {
             if (pVal[i] == UINT64_MAX)
                 count += BITS_PER_WORD;
             else {
-                count += slang::countLeadingOnes64(pVal[i]);
+                count += (bitwidth_t)std::countl_one(pVal[i]);
                 break;
             }
         }
@@ -1951,17 +1951,17 @@ bitwidth_t SVInt::countLeadingOnesSlowCase() const {
 
 bitwidth_t SVInt::countOnes() const {
     if (isSingleWord())
-        return slang::countPopulation64(val);
+        return (bitwidth_t)std::popcount(val);
 
     bitwidth_t count = 0;
     if (!unknownFlag) {
         for (uint32_t i = 0; i < getNumWords(); i++)
-            count += slang::countPopulation64(pVal[i]);
+            count += (bitwidth_t)std::popcount(pVal[i]);
     }
     else {
         uint32_t words = getNumWords(bitWidth, false);
         for (uint32_t i = 0; i < words; i++)
-            count += slang::countPopulation64(pVal[i] & ~pVal[i + words]);
+            count += (bitwidth_t)std::popcount(pVal[i] & ~pVal[i + words]);
     }
 
     return count;
@@ -1969,17 +1969,17 @@ bitwidth_t SVInt::countOnes() const {
 
 bitwidth_t SVInt::countZeros() const {
     if (isSingleWord())
-        return bitWidth - slang::countPopulation64(val);
+        return bitWidth - (bitwidth_t)std::popcount(val);
 
     bitwidth_t count = 0;
     if (!unknownFlag) {
         for (uint32_t i = 0; i < getNumWords(); i++)
-            count += slang::countPopulation64(~pVal[i]);
+            count += (bitwidth_t)std::popcount(~pVal[i]);
     }
     else {
         uint32_t words = getNumWords(bitWidth, false);
         for (uint32_t i = 0; i < words; i++)
-            count += slang::countPopulation64(~pVal[i] & ~pVal[i + words]);
+            count += (bitwidth_t)std::popcount(~pVal[i] & ~pVal[i + words]);
     }
 
     uint32_t wordBits = bitWidth % BITS_PER_WORD;
@@ -1996,7 +1996,7 @@ bitwidth_t SVInt::countXs() const {
     bitwidth_t count = 0;
     uint32_t words = getNumWords(bitWidth, false);
     for (uint32_t i = 0; i < words; i++)
-        count += slang::countPopulation64(~pVal[i] & pVal[i + words]);
+        count += (bitwidth_t)std::popcount(~pVal[i] & pVal[i + words]);
 
     return count;
 }
@@ -2008,7 +2008,7 @@ bitwidth_t SVInt::countZs() const {
     bitwidth_t count = 0;
     uint32_t words = getNumWords(bitWidth, false);
     for (uint32_t i = 0; i < words; i++)
-        count += slang::countPopulation64(pVal[i] & pVal[i + words]);
+        count += (bitwidth_t)std::popcount(pVal[i] & pVal[i + words]);
 
     return count;
 }

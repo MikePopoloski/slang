@@ -37,7 +37,7 @@ private:
 /// Represents a parameter value.
 class SLANG_EXPORT ParameterSymbol : public ValueSymbol, public ParameterSymbolBase {
 public:
-    ParameterSymbol(string_view name, SourceLocation loc, bool isLocal, bool isPort);
+    ParameterSymbol(std::string_view name, SourceLocation loc, bool isLocal, bool isPort);
 
     static void fromSyntax(const Scope& scope, const syntax::ParameterDeclarationSyntax& syntax,
                            bool isLocal, bool isPort, SmallVectorBase<ParameterSymbol*>& results);
@@ -63,7 +63,7 @@ class SLANG_EXPORT TypeParameterSymbol : public Symbol, public ParameterSymbolBa
 public:
     DeclaredType targetType;
 
-    TypeParameterSymbol(string_view name, SourceLocation loc, bool isLocal, bool isPort);
+    TypeParameterSymbol(std::string_view name, SourceLocation loc, bool isLocal, bool isPort);
 
     static void fromSyntax(const Scope& scope, const syntax::TypeParameterDeclarationSyntax& syntax,
                            bool isLocal, bool isPort,
@@ -108,7 +108,7 @@ class SLANG_EXPORT SpecparamSymbol : public ValueSymbol {
 public:
     bool isPathPulse = false;
 
-    SpecparamSymbol(string_view name, SourceLocation loc);
+    SpecparamSymbol(std::string_view name, SourceLocation loc);
 
     const ConstantValue& getValue(SourceRange referencingRange = {}) const;
 
@@ -136,7 +136,7 @@ public:
 
 private:
     void resolvePathPulse() const;
-    const Symbol* resolvePathTerminal(string_view terminalName, const Scope& parent,
+    const Symbol* resolvePathTerminal(std::string_view terminalName, const Scope& parent,
                                       SourceLocation loc, bool isSource) const;
 
     mutable const ConstantValue* value1 = nullptr;

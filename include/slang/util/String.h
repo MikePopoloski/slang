@@ -7,6 +7,7 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include <filesystem>
 #include <optional>
 
 #include "slang/util/SmallVector.h"
@@ -14,9 +15,9 @@
 
 namespace slang {
 
-/// Converts a span of characters into a string_view.
-inline string_view toStringView(span<char> text) {
-    return string_view(text.data(), text.size());
+/// Converts a span of characters into a std::string_view.
+inline std::string_view toStringView(std::span<char> text) {
+    return std::string_view(text.data(), text.size());
 }
 
 /// Converts the provided @a value into a string, storing it into @a buffer.
@@ -30,21 +31,21 @@ void uintToStr(SmallVectorBase<char>& buffer, uint64_t value);
 /// source string that was not part of the conversion.
 ///
 /// @return the converted value, or nullopt if conversion fails (invalid string, overflow, etc).
-std::optional<int32_t> strToInt(string_view str, size_t* pos = nullptr, int base = 10);
+std::optional<int32_t> strToInt(std::string_view str, size_t* pos = nullptr, int base = 10);
 
 /// Parses the provided @a str in the specified @a base into an unsigned integer.
 /// If @a pos is non-null, it will be set to point to the first character in the
 /// source string that was not part of the conversion.
 ///
 /// @return the converted value, or nullopt if conversion fails (invalid string, overflow, etc).
-std::optional<uint32_t> strToUInt(string_view str, size_t* pos = nullptr, int base = 10);
+std::optional<uint32_t> strToUInt(std::string_view str, size_t* pos = nullptr, int base = 10);
 
 /// Parses the provided @a str into a floating point value.
 /// If @a pos is non-null, it will be set to point to the first character in the
 /// source string that was not part of the conversion.
 ///
 /// @return the converted value, or nullopt if conversion fails (invalid string, overflow, etc).
-std::optional<double> strToDouble(string_view str, size_t* pos = nullptr);
+std::optional<double> strToDouble(std::string_view str, size_t* pos = nullptr);
 
 /// Converts the provided string to all uppercase characters (assuming ASCII contents).
 /// The string is converted in place.
@@ -61,22 +62,17 @@ void strToLower(std::string& str);
 ///
 /// If @a maxDistance is >0 and the computed distance is at least that much, give
 /// up and return maxDistance + 1.
-int editDistance(string_view left, string_view right, bool allowReplacements = true,
+int editDistance(std::string_view left, std::string_view right, bool allowReplacements = true,
                  int maxDistance = 0);
 
-// TODO: remove once we have C++20
-inline bool startsWith(string_view str, string_view prefix) {
-    return str.size() >= prefix.size() && str.compare(0, prefix.size(), prefix) == 0;
-};
-inline bool endsWith(string_view str, string_view suffix) {
-    return str.size() >= suffix.size() &&
-           str.compare(str.size() - suffix.size(), suffix.size(), suffix) == 0;
-};
+/// C++20 is dumb and provides no way to get a std::string with the UTF-8
+/// contents of a fs::path, so we have to use this method to copy the chars :(
+std::string getU8Str(const std::filesystem::path& path);
 
 #if defined(_MSC_VER)
 
 /// Widens the provided UTF8 string into UTF16 wchars.
-SLANG_EXPORT std::wstring widen(string_view str);
+SLANG_EXPORT std::wstring widen(std::string_view str);
 
 /// Widens the provided UTF16 string into UTF8.
 SLANG_EXPORT std::string narrow(std::wstring_view str);
@@ -84,12 +80,12 @@ SLANG_EXPORT std::string narrow(std::wstring_view str);
 #else
 
 /// Widens the provided UTF8 string into UTF16 wchars.
-inline string_view widen(string_view str) {
+inline std::string_view widen(std::string_view str) {
     return str;
 }
 
 /// Widens the provided UTF16 string into UTF8.
-inline string_view narrow(string_view str) {
+inline std::string_view narrow(std::string_view str) {
     return str;
 }
 

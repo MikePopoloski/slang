@@ -167,7 +167,7 @@ bool Expression::bindMembershipExpressions(const ASTContext& context, TokenKind 
                                            bool requireIntegral, bool unwrapUnpacked,
                                            bool allowTypeReferences, bool allowOpenRange,
                                            const ExpressionSyntax& valueExpr,
-                                           span<const ExpressionSyntax* const> expressions,
+                                           std::span<const ExpressionSyntax* const> expressions,
                                            SmallVectorBase<const Expression*>& results) {
     auto extraFlags = allowTypeReferences ? ASTFlags::AllowTypeReferences : ASTFlags::None;
     Compilation& comp = context.getCompilation();
@@ -1116,8 +1116,8 @@ ConstantValue ConditionalExpression::evalImpl(EvalContext& context) const {
 
         if (cvl.isUnpacked()) {
             // Sizes here might differ for dynamic arrays.
-            span<const ConstantValue> la = cvl.elements();
-            span<const ConstantValue> ra = cvr.elements();
+            std::span<const ConstantValue> la = cvl.elements();
+            std::span<const ConstantValue> ra = cvr.elements();
             if (la.size() == ra.size() && type->isArray()) {
                 std::vector<ConstantValue> result(la.size());
                 return combineArrays(result, la, ra);
@@ -1408,7 +1408,7 @@ Expression& ConcatenationExpression::fromSyntax(Compilation& compilation,
     if (errored) {
         return badExpr(compilation,
                        compilation.emplace<ConcatenationExpression>(compilation.getErrorType(),
-                                                                    span<const Expression*>(),
+                                                                    std::span<const Expression*>(),
                                                                     syntax.sourceRange()));
     }
 
@@ -1444,7 +1444,7 @@ Expression& ConcatenationExpression::fromEmpty(Compilation& compilation,
     }
 
     return *compilation.emplace<ConcatenationExpression>(*assignmentTarget,
-                                                         span<const Expression* const>{},
+                                                         std::span<const Expression* const>{},
                                                          syntax.sourceRange());
 }
 
@@ -1679,8 +1679,8 @@ Expression& StreamingConcatenationExpression::fromSyntax(
 
     auto badResult = [&]() -> Expression& {
         return badExpr(comp, comp.emplace<StreamingConcatenationExpression>(
-                                 comp.getErrorType(), sliceSize, span<const StreamExpression>(),
-                                 syntax.sourceRange()));
+                                 comp.getErrorType(), sliceSize,
+                                 std::span<const StreamExpression>(), syntax.sourceRange()));
     };
 
     if (!context.flags.has(ASTFlags::StreamingAllowed)) {

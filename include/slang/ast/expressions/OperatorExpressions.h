@@ -102,9 +102,9 @@ public:
         not_null<const Expression*> expr;
         const Pattern* pattern = nullptr;
     };
-    span<const Condition> conditions;
+    std::span<const Condition> conditions;
 
-    ConditionalExpression(const Type& type, span<const Condition> conditions, Expression& left,
+    ConditionalExpression(const Type& type, std::span<const Condition> conditions, Expression& left,
                           Expression& right, SourceRange sourceRange) :
         Expression(ExpressionKind::ConditionalOp, type, sourceRange),
         conditions(conditions), left_(&left), right_(&right) {}
@@ -145,13 +145,13 @@ private:
 class SLANG_EXPORT InsideExpression : public Expression {
 public:
     InsideExpression(const Type& type, const Expression& left,
-                     span<const Expression* const> rangeList, SourceRange sourceRange) :
+                     std::span<const Expression* const> rangeList, SourceRange sourceRange) :
         Expression(ExpressionKind::Inside, type, sourceRange),
         left_(&left), rangeList_(rangeList) {}
 
     const Expression& left() const { return *left_; }
 
-    span<const Expression* const> rangeList() const { return rangeList_; }
+    std::span<const Expression* const> rangeList() const { return rangeList_; }
 
     ConstantValue evalImpl(EvalContext& context) const;
 
@@ -172,18 +172,18 @@ public:
 
 private:
     const Expression* left_;
-    span<const Expression* const> rangeList_;
+    std::span<const Expression* const> rangeList_;
 };
 
 /// Represents a concatenation expression.
 class SLANG_EXPORT ConcatenationExpression : public Expression {
 public:
-    ConcatenationExpression(const Type& type, span<const Expression* const> operands,
+    ConcatenationExpression(const Type& type, std::span<const Expression* const> operands,
                             SourceRange sourceRange) :
         Expression(ExpressionKind::Concatenation, type, sourceRange),
         operands_(operands) {}
 
-    span<const Expression* const> operands() const { return operands_; }
+    std::span<const Expression* const> operands() const { return operands_; }
 
     ConstantValue evalImpl(EvalContext& context) const;
     LValue evalLValueImpl(EvalContext& context) const;
@@ -207,7 +207,7 @@ public:
     }
 
 private:
-    span<const Expression* const> operands_;
+    std::span<const Expression* const> operands_;
 };
 
 /// Represents a replication expression.
@@ -258,7 +258,7 @@ public:
     };
 
     StreamingConcatenationExpression(const Type& type, size_t sliceSize,
-                                     span<const StreamExpression> streams,
+                                     std::span<const StreamExpression> streams,
                                      SourceRange sourceRange) :
         Expression(ExpressionKind::Streaming, type, sourceRange),
         sliceSize(sliceSize), streams_(streams) {}
@@ -266,7 +266,7 @@ public:
     bool isFixedSize() const;
     size_t bitstreamWidth() const;
 
-    span<const StreamExpression> streams() const { return streams_; }
+    std::span<const StreamExpression> streams() const { return streams_; }
 
     ConstantValue evalImpl(EvalContext& context) const;
 
@@ -288,7 +288,7 @@ public:
     }
 
 private:
-    span<const StreamExpression> streams_;
+    std::span<const StreamExpression> streams_;
 };
 
 /// Denotes a range of values by providing expressions for the lower and upper

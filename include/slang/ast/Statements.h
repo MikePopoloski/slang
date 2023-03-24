@@ -137,7 +137,7 @@ public:
         /// A series of block symbols that are expected to be used, in order,
         /// during the creation of the statement tree. Each statement created
         /// can pop blocks off the beginning of this list.
-        span<const StatementBlockSymbol* const> blocks;
+        std::span<const StatementBlockSymbol* const> blocks;
 
         /// Tracks various bits of context about where we are in statement creation.
         bitmask<StatementFlags> flags;
@@ -194,18 +194,17 @@ public:
                                       const ASTContext& context, StatementContext& stmtCtx);
 
     /// Creates any symbols declared by the given statement syntax, such as local variables.
-    static span<const StatementBlockSymbol* const> createBlockItems(const Scope& scope,
-                                                                    const StatementSyntax& syntax,
-                                                                    bool labelHandled);
+    static std::span<const StatementBlockSymbol* const> createBlockItems(
+        const Scope& scope, const StatementSyntax& syntax, bool labelHandled);
 
     /// Creates any symbols declared by the given list of syntax nodes, such as local variables,
     /// and ignores any statement syntax nodes. The created symbols are added to the given scope.
-    static span<const StatementBlockSymbol* const> createAndAddBlockItems(
+    static std::span<const StatementBlockSymbol* const> createAndAddBlockItems(
         Scope& scope, const syntax::SyntaxList<syntax::SyntaxNode>& items);
 
     /// Creates any symbols declared by the given statement syntax, such as local variables.
     /// The created symbols are added to the given scope.
-    static span<const StatementBlockSymbol* const> createAndAddBlockItems(
+    static std::span<const StatementBlockSymbol* const> createAndAddBlockItems(
         Scope& scope, const StatementSyntax& syntax, bool labelHandled);
 
     template<typename T>
@@ -278,9 +277,9 @@ public:
 /// Represents a list of statements.
 class SLANG_EXPORT StatementList : public Statement {
 public:
-    span<const Statement* const> list;
+    std::span<const Statement* const> list;
 
-    StatementList(span<const Statement* const> list, SourceRange sourceRange) :
+    StatementList(std::span<const Statement* const> list, SourceRange sourceRange) :
         Statement(StatementKind::List, sourceRange), list(list) {}
 
     EvalResult evalImpl(EvalContext& context) const;
@@ -424,12 +423,12 @@ public:
         const Pattern* pattern = nullptr;
     };
 
-    span<const Condition> conditions;
+    std::span<const Condition> conditions;
     const Statement& ifTrue;
     const Statement* ifFalse;
     UniquePriorityCheck check;
 
-    ConditionalStatement(span<const Condition> conditions, UniquePriorityCheck check,
+    ConditionalStatement(std::span<const Condition> conditions, UniquePriorityCheck check,
                          const Statement& ifTrue, const Statement* ifFalse,
                          SourceRange sourceRange) :
         Statement(StatementKind::Conditional, sourceRange),
@@ -462,19 +461,19 @@ public:
 class SLANG_EXPORT CaseStatement : public Statement {
 public:
     struct ItemGroup {
-        span<const Expression* const> expressions;
+        std::span<const Expression* const> expressions;
         not_null<const Statement*> stmt;
     };
 
     const Expression& expr;
-    span<ItemGroup const> items;
+    std::span<ItemGroup const> items;
     const Statement* defaultCase = nullptr;
     CaseStatementCondition condition;
     UniquePriorityCheck check;
 
     CaseStatement(CaseStatementCondition condition, UniquePriorityCheck check,
-                  const Expression& expr, span<ItemGroup const> items, const Statement* defaultCase,
-                  SourceRange sourceRange) :
+                  const Expression& expr, std::span<ItemGroup const> items,
+                  const Statement* defaultCase, SourceRange sourceRange) :
         Statement(StatementKind::Case, sourceRange),
         expr(expr), items(items), defaultCase(defaultCase), condition(condition), check(check) {}
 
@@ -515,13 +514,13 @@ public:
     };
 
     const Expression& expr;
-    span<ItemGroup const> items;
+    std::span<ItemGroup const> items;
     const Statement* defaultCase = nullptr;
     CaseStatementCondition condition;
     UniquePriorityCheck check;
 
     PatternCaseStatement(CaseStatementCondition condition, UniquePriorityCheck check,
-                         const Expression& expr, span<ItemGroup const> items,
+                         const Expression& expr, std::span<ItemGroup const> items,
                          const Statement* defaultCase, SourceRange sourceRange) :
         Statement(StatementKind::PatternCase, sourceRange),
         expr(expr), items(items), defaultCase(defaultCase), condition(condition), check(check) {}
@@ -556,14 +555,14 @@ public:
 
 class SLANG_EXPORT ForLoopStatement : public Statement {
 public:
-    span<const Expression* const> initializers;
-    span<const VariableSymbol* const> loopVars;
+    std::span<const Expression* const> initializers;
+    std::span<const VariableSymbol* const> loopVars;
     const Expression* stopExpr;
-    span<const Expression* const> steps;
+    std::span<const Expression* const> steps;
     const Statement& body;
 
-    ForLoopStatement(span<const Expression* const> initializers, const Expression* stopExpr,
-                     span<const Expression* const> steps, const Statement& body,
+    ForLoopStatement(std::span<const Expression* const> initializers, const Expression* stopExpr,
+                     std::span<const Expression* const> steps, const Statement& body,
                      SourceRange sourceRange) :
         Statement(StatementKind::ForLoop, sourceRange),
         initializers(initializers), stopExpr(stopExpr), steps(steps), body(body) {}
@@ -637,10 +636,10 @@ public:
     };
 
     const Expression& arrayRef;
-    span<const LoopDim> loopDims;
+    std::span<const LoopDim> loopDims;
     const Statement& body;
 
-    ForeachLoopStatement(const Expression& arrayRef, span<const LoopDim> loopDims,
+    ForeachLoopStatement(const Expression& arrayRef, std::span<const LoopDim> loopDims,
                          const Statement& body, SourceRange sourceRange) :
         Statement(StatementKind::ForeachLoop, sourceRange),
         arrayRef(arrayRef), loopDims(loopDims), body(body) {}
@@ -670,7 +669,7 @@ public:
 
 private:
     EvalResult evalRecursive(EvalContext& context, const ConstantValue& cv,
-                             span<const LoopDim> loopDims) const;
+                             std::span<const LoopDim> loopDims) const;
 };
 
 class SLANG_EXPORT WhileLoopStatement : public Statement {
@@ -949,11 +948,11 @@ public:
 
 class SLANG_EXPORT WaitOrderStatement : public Statement {
 public:
-    span<const Expression* const> events;
+    std::span<const Expression* const> events;
     const Statement* ifTrue;
     const Statement* ifFalse;
 
-    WaitOrderStatement(span<const Expression* const> events, const Statement* ifTrue,
+    WaitOrderStatement(std::span<const Expression* const> events, const Statement* ifTrue,
                        const Statement* ifFalse, SourceRange sourceRange) :
         Statement(StatementKind::WaitOrder, sourceRange),
         events(events), ifTrue(ifTrue), ifFalse(ifFalse) {}
@@ -1069,9 +1068,9 @@ public:
         not_null<const Statement*> stmt;
     };
 
-    span<Item const> items;
+    std::span<Item const> items;
 
-    RandCaseStatement(span<Item const> items, SourceRange sourceRange) :
+    RandCaseStatement(std::span<Item const> items, SourceRange sourceRange) :
         Statement(StatementKind::RandCase, sourceRange), items(items) {}
 
     EvalResult evalImpl(EvalContext& context) const;

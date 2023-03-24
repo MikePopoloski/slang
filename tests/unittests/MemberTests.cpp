@@ -652,7 +652,7 @@ endpackage
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 
-    auto ts = [](string_view str) { return TimeScale::fromString(str).value(); };
+    auto ts = [](std::string_view str) { return TimeScale::fromString(str).value(); };
 
     CHECK(compilation.getDefinition("m", compilation.getRoot())->timeScale == ts("10ns/10ps"));
     CHECK(compilation.getDefinition("n", compilation.getRoot())->timeScale == ts("10us/1ns"));
@@ -2025,7 +2025,7 @@ endpackage
     NO_COMPILATION_ERRORS;
 
     auto& root = compilation.getRoot();
-    auto func = [&](string_view name) {
+    auto func = [&](std::string_view name) {
         return root.lookupName<SubroutineSymbol>(name).defaultLifetime;
     };
 

@@ -408,8 +408,8 @@ MemberSyntax* Parser::parseSingleMember(SyntaxKind parentKind) {
 }
 
 template<typename TMember, typename TParseFunc>
-span<TMember*> Parser::parseMemberList(TokenKind endKind, Token& endToken, SyntaxKind parentKind,
-                                       TParseFunc&& parseFunc) {
+std::span<TMember*> Parser::parseMemberList(TokenKind endKind, Token& endToken,
+                                            SyntaxKind parentKind, TParseFunc&& parseFunc) {
     SmallVector<TMember*, 8> members;
     bool errored = false;
     bool anyLocalModules = false;
@@ -543,7 +543,7 @@ ModportItemSyntax& Parser::parseModportItem() {
     auto name = expect(TokenKind::Identifier);
 
     Token openParen, closeParen;
-    span<TokenOrSyntax> items;
+    std::span<TokenOrSyntax> items;
     parseList<isPossibleModportPort, isEndOfParenList>(
         TokenKind::OpenParenthesis, TokenKind::CloseParenthesis, TokenKind::Comma, openParen, items,
         closeParen, RequireItems::True, diag::ExpectedModportPort,
@@ -717,7 +717,7 @@ FunctionDeclarationSyntax& Parser::parseFunctionDeclaration(AttrList attributes,
 GenvarDeclarationSyntax& Parser::parseGenvarDeclaration(AttrList attributes) {
     Token keyword;
     Token semi;
-    span<TokenOrSyntax> identifiers;
+    std::span<TokenOrSyntax> identifiers;
 
     parseList<isIdentifierOrComma, isSemicolon>(
         TokenKind::GenVarKeyword, TokenKind::Semicolon, TokenKind::Comma, keyword, identifiers,
@@ -952,7 +952,7 @@ ClassDeclarationSyntax& Parser::parseClassDeclaration(AttrList attributes,
     return result;
 }
 
-void Parser::checkClassQualifiers(span<const Token> qualifiers, bool isConstraint) {
+void Parser::checkClassQualifiers(std::span<const Token> qualifiers, bool isConstraint) {
     SmallMap<TokenKind, Token, 4> qualifierSet;
     Token lastRand;
     Token lastVisibility;
@@ -1570,7 +1570,7 @@ TransRangeSyntax& Parser::parseTransRange() {
 TransSetSyntax& Parser::parseTransSet() {
     Token openParen;
     Token closeParen;
-    span<TokenOrSyntax> list;
+    std::span<TokenOrSyntax> list;
 
     parseList<isPossibleTransSet, isEndOfTransSet>(
         TokenKind::OpenParenthesis, TokenKind::CloseParenthesis, TokenKind::EqualsArrow, openParen,
@@ -1829,7 +1829,7 @@ static bool checkConstraintName(const NameSyntax& name) {
     return name.kind == SyntaxKind::IdentifierName;
 }
 
-MemberSyntax& Parser::parseConstraint(AttrList attributes, span<Token> qualifiers) {
+MemberSyntax& Parser::parseConstraint(AttrList attributes, std::span<Token> qualifiers) {
     for (auto qual : qualifiers) {
         if (!isConstraintQualifier(qual.kind)) {
             auto& diag = addDiag(diag::InvalidConstraintQualifier, qual.range());
@@ -1973,7 +1973,7 @@ DistConstraintListSyntax& Parser::parseDistConstraintList() {
 
     Token openBrace;
     Token closeBrace;
-    span<TokenOrSyntax> list;
+    std::span<TokenOrSyntax> list;
 
     parseList<isPossibleOpenRangeElement, isEndOfBracedList>(
         TokenKind::OpenBrace, TokenKind::CloseBrace, TokenKind::Comma, openBrace, list, closeBrace,
@@ -1994,7 +1994,7 @@ DistItemSyntax& Parser::parseDistItem() {
     return factory.distItem(range, weight);
 }
 
-span<PackageImportDeclarationSyntax*> Parser::parsePackageImports() {
+std::span<PackageImportDeclarationSyntax*> Parser::parsePackageImports() {
     SmallVector<PackageImportDeclarationSyntax*> buffer;
     while (peek(TokenKind::ImportKeyword))
         buffer.push_back(&parseImportDeclaration({}));
@@ -2391,7 +2391,7 @@ HierarchyInstantiationSyntax& Parser::parseHierarchyInstantiation(AttrList attri
 
     // If this is an instantiation of a global module/interface/program,
     // keep track of it in our instantiatedModules set.
-    string_view name = type.valueText();
+    std::string_view name = type.valueText();
     if (!name.empty() && type.kind == TokenKind::Identifier) {
         bool found = false;
         for (auto& set : moduleDeclStack) {
@@ -2526,7 +2526,7 @@ HierarchicalInstanceSyntax& Parser::parseHierarchicalInstance() {
 
     Token openParen;
     Token closeParen;
-    span<TokenOrSyntax> items;
+    std::span<TokenOrSyntax> items;
     parseList<isPossiblePortConnection, isEndOfParenList>(
         TokenKind::OpenParenthesis, TokenKind::CloseParenthesis, TokenKind::Comma, openParen, items,
         closeParen, RequireItems::False, diag::ExpectedPortConnection,
@@ -2734,7 +2734,7 @@ SpecparamDeclaratorSyntax& Parser::parseSpecparamDeclarator(SyntaxKind parentKin
     auto openParen = consumeIf(TokenKind::OpenParenthesis);
     auto& expr1 = parseMinTypMaxExpression();
 
-    const bool isPathPulse = startsWith(name.valueText(), "PATHPULSE$"sv);
+    const bool isPathPulse = name.valueText().starts_with("PATHPULSE$"sv);
 
     Token comma;
     ExpressionSyntax* expr2 = nullptr;
@@ -2786,7 +2786,7 @@ SpecparamDeclarationSyntax& Parser::parseSpecparam(AttrList attr, SyntaxKind par
     return factory.specparamDeclaration(attr, keyword, type, buffer.copy(alloc), semi);
 }
 
-span<TokenOrSyntax> Parser::parsePathTerminals() {
+std::span<TokenOrSyntax> Parser::parsePathTerminals() {
     SmallVector<TokenOrSyntax, 4> results;
     while (true) {
         results.push_back(&parseName(NameOptions::NoClassScope));
@@ -2810,7 +2810,7 @@ PathDeclarationSyntax& Parser::parsePathDeclaration() {
         }
     };
 
-    auto checkTerminals = [&](span<TokenOrSyntax> terminals, bool isFull) {
+    auto checkTerminals = [&](std::span<TokenOrSyntax> terminals, bool isFull) {
         if (!isFull && terminals.size() > 2) {
             Token first = terminals[2].node()->getFirstToken();
             Token last = terminals.back().node()->getLastToken();
@@ -2898,7 +2898,7 @@ PathDeclarationSyntax& Parser::parsePathDeclaration() {
 
     Token semi;
     Token valueOpenParen, valueCloseParen;
-    span<TokenOrSyntax> delays;
+    std::span<TokenOrSyntax> delays;
 
     if (peek(TokenKind::OpenParenthesis)) {
         parseList<isPossibleExpressionOrComma, isEndOfParenList>(
@@ -3003,7 +3003,7 @@ TimingCheckArgSyntax& Parser::parseTimingCheckArg() {
         EdgeControlSpecifierSyntax* control = nullptr;
         if (peek(TokenKind::OpenBracket)) {
             Token openBracket, closeBracket;
-            span<TokenOrSyntax> list;
+            std::span<TokenOrSyntax> list;
             parseList<isPossibleEdgeDescriptor, isEndOfBracketedList>(
                 TokenKind::OpenBracket, TokenKind::CloseBracket, TokenKind::Comma, openBracket,
                 list, closeBracket, RequireItems::True, diag::ExpectedEdgeDescriptor,
@@ -3043,7 +3043,7 @@ SystemTimingCheckSyntax& Parser::parseSystemTimingCheck() {
     auto name = consume();
 
     Token openParen, closeParen;
-    span<TokenOrSyntax> list;
+    std::span<TokenOrSyntax> list;
     parseList<isPossibleTimingCheckArg, isEndOfParenList>(
         TokenKind::OpenParenthesis, TokenKind::CloseParenthesis, TokenKind::Comma, openParen, list,
         closeParen, RequireItems::True, diag::ExpectedExpression,

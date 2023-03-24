@@ -20,8 +20,8 @@ JsonWriter::JsonWriter() : buffer(std::make_unique<FormatBuffer>()) {
 
 JsonWriter::~JsonWriter() = default;
 
-string_view JsonWriter::view() const {
-    return string_view(buffer->data(), findLastComma());
+std::string_view JsonWriter::view() const {
+    return std::string_view(buffer->data(), findLastComma());
 }
 
 void JsonWriter::startObject() {
@@ -64,14 +64,14 @@ void JsonWriter::endArray() {
     }
 }
 
-void JsonWriter::writeProperty(string_view name) {
+void JsonWriter::writeProperty(std::string_view name) {
     writeQuoted(name);
     buffer->append(":");
     if (pretty)
         buffer->append(" ");
 }
 
-void JsonWriter::writeValue(string_view value) {
+void JsonWriter::writeValue(std::string_view value) {
     writeQuoted(value);
     endValue();
 }
@@ -96,7 +96,7 @@ void JsonWriter::writeValue(bool value) {
     endValue();
 }
 
-void JsonWriter::writeQuoted(string_view str) {
+void JsonWriter::writeQuoted(std::string_view str) {
     SmallVector<char> vec(str.size() + 2, UninitializedTag());
     vec.push_back('"');
     for (char c : str) {

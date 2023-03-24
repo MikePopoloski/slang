@@ -28,7 +28,7 @@ set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
 include(gitversion)
 get_git_version(SLANG_VERSION_PATCH SLANG_VERSION_HASH)
 
-set(SLANG_VERSION_MAJOR 2)
+set(SLANG_VERSION_MAJOR 3)
 set(SLANG_VERSION_MINOR 0)
 set(SLANG_VERSION_STRING
     "${SLANG_VERSION_MAJOR}.${SLANG_VERSION_MINOR}.${SLANG_VERSION_PATCH}")
@@ -122,8 +122,8 @@ foreach(
   endif()
 endforeach()
 
-# Always require C++17 or later, no extensions.
-set(CMAKE_CXX_STANDARD 17)
+# Always require C++20 or later, no extensions.
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
@@ -156,53 +156,6 @@ if(NOT CMAKE_INSTALL_RPATH AND BUILD_SHARED_LIBS)
   file(RELATIVE_PATH relDir ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_INSTALL_BINDIR}
        ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
   set(CMAKE_INSTALL_RPATH ${base} ${base}/${relDir})
-endif()
-
-set(STD_FS_LIB "")
-# ==== The test below is based on:
-# https://github.com/pybind/pybind11/blob/master/tests/CMakeLists.txt
-#
-# It is under a BSD-style license, see:
-# https://github.com/pybind/pybind11/blob/master/LICENSE
-#
-# Check if we need to add -lstdc++fs or -lc++fs or nothing
-if(DEFINED CMAKE_CXX_STANDARD AND CMAKE_CXX_STANDARD LESS 17)
-  set(STD_FS_NO_LIB_NEEDED TRUE)
-elseif(MSVC)
-  set(STD_FS_NO_LIB_NEEDED TRUE)
-else()
-  file(
-    WRITE ${CMAKE_CURRENT_BINARY_DIR}/main.cpp
-    "#include <filesystem>\nint main(int argc, char ** argv) {\n  std::filesystem::path p(argv[0]);\n  return p.string().length();\n}"
-  )
-  try_compile(
-    STD_FS_NO_LIB_NEEDED ${CMAKE_CURRENT_BINARY_DIR}
-    SOURCES ${CMAKE_CURRENT_BINARY_DIR}/main.cpp
-    COMPILE_DEFINITIONS -std=c++17)
-  try_compile(
-    STD_FS_NEEDS_STDCXXFS ${CMAKE_CURRENT_BINARY_DIR}
-    SOURCES ${CMAKE_CURRENT_BINARY_DIR}/main.cpp
-    COMPILE_DEFINITIONS -std=c++17
-    LINK_LIBRARIES stdc++fs)
-  try_compile(
-    STD_FS_NEEDS_CXXFS ${CMAKE_CURRENT_BINARY_DIR}
-    SOURCES ${CMAKE_CURRENT_BINARY_DIR}/main.cpp
-    COMPILE_DEFINITIONS -std=c++17
-    LINK_LIBRARIES c++fs)
-endif()
-
-if(NOT STD_FS_NO_LIB_NEEDED)
-  if(STD_FS_NEEDS_STDCXXFS)
-    set(STD_FS_LIB stdc++fs)
-  elseif(STD_FS_NEEDS_CXXFS)
-    set(STD_FS_LIB c++fs)
-  endif()
-endif()
-# ==== (end of test for stdc++fs)
-
-if(NOT "${STD_FS_LIB}" STREQUAL "")
-  message(STATUS "Linking with: ${STD_FS_LIB}")
-  list(APPEND SLANG_LIBRARIES ${STD_FS_LIB})
 endif()
 
 if(BUILD_SHARED_LIBS)

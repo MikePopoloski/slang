@@ -31,7 +31,7 @@ const Expression& SystemSubroutine::bindArgument(size_t, const ASTContext& conte
     return Expression::bind(syntax, context);
 }
 
-string_view SystemSubroutine::kindStr() const {
+std::string_view SystemSubroutine::kindStr() const {
     return kind == SubroutineKind::Task ? "task"sv : "function"sv;
 }
 

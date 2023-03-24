@@ -18,20 +18,22 @@ namespace slang::ast {
 
 using namespace syntax;
 
-AttributeSymbol::AttributeSymbol(string_view name, SourceLocation loc, const Symbol& symbol,
+AttributeSymbol::AttributeSymbol(std::string_view name, SourceLocation loc, const Symbol& symbol,
                                  const ExpressionSyntax& expr) :
     Symbol(SymbolKind::Attribute, name, loc),
     symbol(&symbol), expr(&expr) {
 }
 
-AttributeSymbol::AttributeSymbol(string_view name, SourceLocation loc, const Scope& scope,
+AttributeSymbol::AttributeSymbol(std::string_view name, SourceLocation loc, const Scope& scope,
                                  LookupLocation lookupLocation, const ExpressionSyntax& expr) :
     Symbol(SymbolKind::Attribute, name, loc),
     scope(&scope), expr(&expr), lookupLocation(lookupLocation) {
 }
 
-AttributeSymbol::AttributeSymbol(string_view name, SourceLocation loc, const ConstantValue& value) :
-    Symbol(SymbolKind::Attribute, name, loc), value(&value) {
+AttributeSymbol::AttributeSymbol(std::string_view name, SourceLocation loc,
+                                 const ConstantValue& value) :
+    Symbol(SymbolKind::Attribute, name, loc),
+    value(&value) {
 }
 
 const ConstantValue& AttributeSymbol::getValue() const {
@@ -60,10 +62,10 @@ void AttributeSymbol::serializeTo(ASTSerializer& serializer) const {
 }
 
 template<typename TFunc>
-static span<const AttributeSymbol* const> createAttributes(
-    span<const AttributeInstanceSyntax* const> syntax, const Scope& scope, TFunc&& factory) {
+static std::span<const AttributeSymbol* const> createAttributes(
+    std::span<const AttributeInstanceSyntax* const> syntax, const Scope& scope, TFunc&& factory) {
 
-    SmallMap<string_view, size_t, 4> nameMap;
+    SmallMap<std::string_view, size_t, 4> nameMap;
     SmallVector<const AttributeSymbol*> attrs;
 
     auto& comp = scope.getCompilation();
@@ -99,8 +101,9 @@ static span<const AttributeSymbol* const> createAttributes(
     return attrs.copy(comp);
 }
 
-span<const AttributeSymbol* const> AttributeSymbol::fromSyntax(
-    span<const AttributeInstanceSyntax* const> syntax, const Scope& scope, const Symbol& symbol) {
+std::span<const AttributeSymbol* const> AttributeSymbol::fromSyntax(
+    std::span<const AttributeInstanceSyntax* const> syntax, const Scope& scope,
+    const Symbol& symbol) {
 
     if (syntax.empty())
         return {};
@@ -111,8 +114,8 @@ span<const AttributeSymbol* const> AttributeSymbol::fromSyntax(
         });
 }
 
-span<const AttributeSymbol* const> AttributeSymbol::fromSyntax(
-    span<const AttributeInstanceSyntax* const> syntax, const Scope& scope,
+std::span<const AttributeSymbol* const> AttributeSymbol::fromSyntax(
+    std::span<const AttributeInstanceSyntax* const> syntax, const Scope& scope,
     LookupLocation lookupLocation) {
 
     if (syntax.empty())

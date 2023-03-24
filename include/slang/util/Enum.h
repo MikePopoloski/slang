@@ -19,7 +19,7 @@
 #define ENUM(name, elements) ENUM_SIZED(name, int, elements)
 #define ENUM_SIZED(name, underlying, elements)                                                  \
     enum class SLANG_EXPORT name : underlying { elements(UTIL_ENUM_ELEMENT) };                  \
-    inline string_view toString(name e) {                                                       \
+    inline std::string_view toString(name e) {                                                  \
         static const char* strings[] = {elements(UTIL_ENUM_STRING)};                            \
         return strings[static_cast<std::underlying_type_t<name>>(e)];                           \
     }                                                                                           \

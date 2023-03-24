@@ -119,7 +119,7 @@ std::string SyntaxPrinter::printFile(const SyntaxTree& tree) {
         .str();
 }
 
-SyntaxPrinter& SyntaxPrinter::append(string_view text) {
+SyntaxPrinter& SyntaxPrinter::append(std::string_view text) {
     if (!squashNewlines) {
         buffer.append(text);
         return *this;

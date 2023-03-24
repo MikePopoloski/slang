@@ -12,7 +12,7 @@ namespace slang::ast::builtins {
 
 #define NL SourceLocation::NoLocation
 
-static void gate(Compilation& c, string_view name,
+static void gate(Compilation& c, std::string_view name,
                  std::initializer_list<PrimitivePortDirection> portDirs,
                  PrimitiveSymbol::PrimitiveKind primitiveKind = PrimitiveSymbol::Fixed) {
     auto& prim = *c.emplace<PrimitiveSymbol>(c, name, NL, primitiveKind);

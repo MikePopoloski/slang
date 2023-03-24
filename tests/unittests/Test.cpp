@@ -25,7 +25,7 @@ void setupSourceManager(SourceManager& sourceManager) {
     auto testDir = findTestDir();
     sourceManager.addUserDirectory(testDir);
     sourceManager.addSystemDirectory(testDir);
-    sourceManager.addSystemDirectory(string_view(testDir + "system/"));
+    sourceManager.addSystemDirectory(std::string_view(testDir + "system/"));
 }
 
 SourceManager& getSourceManager() {
@@ -59,10 +59,10 @@ std::string reportGlobalDiags() {
 }
 
 std::string to_string(const Diagnostic& diag) {
-    return DiagnosticEngine::reportAll(getSourceManager(), span(&diag, 1));
+    return DiagnosticEngine::reportAll(getSourceManager(), std::span(&diag, 1));
 }
 
-Token lexToken(string_view text) {
+Token lexToken(std::string_view text) {
     diagnostics.clear();
 
     Preprocessor preprocessor(getSourceManager(), alloc, diagnostics);
@@ -73,7 +73,7 @@ Token lexToken(string_view text) {
     return token;
 }
 
-Token lexRawToken(string_view text) {
+Token lexRawToken(std::string_view text) {
     diagnostics.clear();
     auto buffer = getSourceManager().assignText(text);
     Lexer lexer(buffer, alloc, diagnostics);

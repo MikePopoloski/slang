@@ -132,7 +132,7 @@ protected:
     using Token = parsing::Token;
 
     /// A helper for derived classes that parses some text into syntax nodes.
-    SyntaxNode& parse(string_view text) {
+    SyntaxNode& parse(std::string_view text) {
         tempTrees.emplace_back(SyntaxTree::fromText(text, *sourceManager));
         return tempTrees.back()->root();
     }
@@ -175,16 +175,16 @@ protected:
         commits.listInsertAtBack[&list].push_back({&list, &newNode, separator});
     }
 
-    Token makeToken(parsing::TokenKind kind, string_view text,
-                    span<const parsing::Trivia> trivia = {}) {
+    Token makeToken(parsing::TokenKind kind, std::string_view text,
+                    std::span<const parsing::Trivia> trivia = {}) {
         return Token(alloc, kind, trivia, text, SourceLocation::NoLocation);
     }
 
-    Token makeId(string_view text, span<const parsing::Trivia> trivia = {}) {
+    Token makeId(std::string_view text, std::span<const parsing::Trivia> trivia = {}) {
         return makeToken(parsing::TokenKind::Identifier, text, trivia);
     }
 
-    Token makeId(string_view text, parsing::Trivia trivia) {
+    Token makeId(std::string_view text, parsing::Trivia trivia) {
         auto triviaPtr = alloc.emplace<parsing::Trivia>(trivia);
         return makeId(text, {triviaPtr, 1});
     }

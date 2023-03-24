@@ -321,7 +321,7 @@ void Scope::addMembers(const SyntaxNode& syntax) {
         case SyntaxKind::AlwaysFFBlock:
         case SyntaxKind::InitialBlock:
         case SyntaxKind::FinalBlock: {
-            span<const StatementBlockSymbol* const> additional;
+            std::span<const StatementBlockSymbol* const> additional;
             auto& block = ProceduralBlockSymbol::fromSyntax(*this,
                                                             syntax.as<ProceduralBlockSyntax>(),
                                                             additional);
@@ -332,7 +332,7 @@ void Scope::addMembers(const SyntaxNode& syntax) {
             break;
         }
         case SyntaxKind::ConcurrentAssertionMember: {
-            span<const StatementBlockSymbol* const> additional;
+            std::span<const StatementBlockSymbol* const> additional;
             auto& block = ProceduralBlockSymbol::fromSyntax(
                 *this, syntax.as<ConcurrentAssertionMemberSyntax>(), additional);
 
@@ -342,7 +342,7 @@ void Scope::addMembers(const SyntaxNode& syntax) {
             break;
         }
         case SyntaxKind::ImmediateAssertionMember: {
-            span<const StatementBlockSymbol* const> additional;
+            std::span<const StatementBlockSymbol* const> additional;
             auto& block = ProceduralBlockSymbol::fromSyntax(
                 *this, syntax.as<ImmediateAssertionMemberSyntax>(), additional);
 
@@ -549,7 +549,7 @@ void Scope::addMembers(const SyntaxNode& syntax) {
     }
 }
 
-const Symbol* Scope::find(string_view name) const {
+const Symbol* Scope::find(std::string_view name) const {
     // Just do a simple lookup and return the result if we have one.
     ensureElaborated();
     auto it = nameMap->find(name);
@@ -575,7 +575,7 @@ const Symbol* Scope::find(string_view name) const {
     }
 }
 
-const Symbol* Scope::lookupName(string_view name, LookupLocation location,
+const Symbol* Scope::lookupName(std::string_view name, LookupLocation location,
                                 bitmask<LookupFlags> flags) const {
     LookupResult result;
     ASTContext context(*this, location);
@@ -584,7 +584,7 @@ const Symbol* Scope::lookupName(string_view name, LookupLocation location,
     return result.found;
 }
 
-span<const WildcardImportSymbol* const> Scope::getWildcardImports() const {
+std::span<const WildcardImportSymbol* const> Scope::getWildcardImports() const {
     return compilation.queryImports(importDataIndex);
 }
 
@@ -1144,7 +1144,7 @@ void Scope::elaborate() const {
         }
     }
 
-    SmallSet<string_view, 4> observedForwardDecls;
+    SmallSet<std::string_view, 4> observedForwardDecls;
     for (auto symbol : deferredData.getForwardingTypedefs()) {
         // Ignore duplicate entries.
         if (symbol->name.empty() || !observedForwardDecls.emplace(symbol->name).second)
@@ -1180,7 +1180,7 @@ void Scope::elaborate() const {
         TimeTrace::endTrace();
 }
 
-static string_view getIdentifierName(const NamedTypeSyntax& syntax) {
+static std::string_view getIdentifierName(const NamedTypeSyntax& syntax) {
     if (syntax.name->kind == SyntaxKind::IdentifierName)
         return syntax.name->as<IdentifierNameSyntax>().identifier.valueText();
 
@@ -1192,7 +1192,7 @@ static string_view getIdentifierName(const NamedTypeSyntax& syntax) {
 
 bool Scope::handleDataDeclaration(const DataDeclarationSyntax& syntax) {
     auto& namedType = syntax.type->as<NamedTypeSyntax>();
-    string_view name = getIdentifierName(namedType);
+    std::string_view name = getIdentifierName(namedType);
     if (name.empty())
         return false;
 
@@ -1252,7 +1252,7 @@ bool Scope::handleDataDeclaration(const DataDeclarationSyntax& syntax) {
 void Scope::tryFixupInstances(const DataDeclarationSyntax& syntax, const ASTContext& context,
                               SmallVectorBase<const Symbol*>& results) const {
     auto& namedType = syntax.type->as<NamedTypeSyntax>();
-    string_view name = getIdentifierName(namedType);
+    std::string_view name = getIdentifierName(namedType);
     auto def = compilation.getDefinition(name, *this);
     if (!def)
         return;
@@ -1315,9 +1315,9 @@ void Scope::handleNestedDefinition(const ModuleDeclarationSyntax& syntax) const 
     insertMember(&inst, lastMember, /* isElaborating */ true, /* incrementIndex */ true);
 }
 
-void Scope::handleExportedMethods(span<Symbol* const> deferredMembers) const {
-    SmallSet<string_view, 4> waitingForImport;
-    SmallMap<string_view, const ModportSubroutinePortSyntax*, 4> foundImports;
+void Scope::handleExportedMethods(std::span<Symbol* const> deferredMembers) const {
+    SmallSet<std::string_view, 4> waitingForImport;
+    SmallMap<std::string_view, const ModportSubroutinePortSyntax*, 4> foundImports;
 
     auto create = [&](const ModportSubroutinePortSyntax& syntax) {
         auto& symbol = MethodPrototypeSymbol::implicitExtern(*this, syntax);
@@ -1387,7 +1387,7 @@ void Scope::handleExportedMethods(span<Symbol* const> deferredMembers) const {
 }
 
 void Scope::addWildcardImport(const PackageImportItemSyntax& item,
-                              span<const AttributeInstanceSyntax* const> attributes) {
+                              std::span<const AttributeInstanceSyntax* const> attributes) {
     // Check for redundant import statements.
     for (auto import : compilation.queryImports(importDataIndex)) {
         if (import->packageName == item.package.valueText()) {
@@ -1416,7 +1416,7 @@ void Scope::DeferredMemberData::addMember(Symbol* symbol) {
     members.emplace_back(symbol);
 }
 
-span<Symbol* const> Scope::DeferredMemberData::getMembers() const {
+std::span<Symbol* const> Scope::DeferredMemberData::getMembers() const {
     return members;
 }
 
@@ -1425,8 +1425,8 @@ void Scope::DeferredMemberData::registerTransparentType(const Symbol* insertion,
     transparentTypes.emplace_back(insertion, &parent);
 }
 
-span<std::pair<const Symbol*, const Symbol*> const> Scope::DeferredMemberData::getTransparentTypes()
-    const {
+std::span<std::pair<const Symbol*, const Symbol*> const> Scope::DeferredMemberData::
+    getTransparentTypes() const {
     return transparentTypes;
 }
 
@@ -1434,7 +1434,7 @@ void Scope::DeferredMemberData::addForwardingTypedef(const ForwardingTypedefSymb
     forwardingTypedefs.push_back(&symbol);
 }
 
-span<const ForwardingTypedefSymbol* const> Scope::DeferredMemberData::getForwardingTypedefs()
+std::span<const ForwardingTypedefSymbol* const> Scope::DeferredMemberData::getForwardingTypedefs()
     const {
     return forwardingTypedefs;
 }
@@ -1444,7 +1444,7 @@ void Scope::DeferredMemberData::addPortDeclaration(const SyntaxNode& syntax,
     portDecls.emplace_back(&syntax, insertion);
 }
 
-span<std::pair<const SyntaxNode*, const Symbol*> const> Scope::DeferredMemberData::
+std::span<std::pair<const SyntaxNode*, const Symbol*> const> Scope::DeferredMemberData::
     getPortDeclarations() const {
     return portDecls;
 }

@@ -18,8 +18,8 @@ namespace slang::ast {
 
 #define NL SourceLocation::NoLocation
 
-MethodBuilder::MethodBuilder(Compilation& compilation, string_view name, const Type& returnType,
-                             SubroutineKind kind) :
+MethodBuilder::MethodBuilder(Compilation& compilation, std::string_view name,
+                             const Type& returnType, SubroutineKind kind) :
     compilation(compilation),
     symbol(*compilation.emplace<SubroutineSymbol>(compilation, name, NL,
                                                   VariableLifetime::Automatic, kind)) {
@@ -40,7 +40,7 @@ MethodBuilder::~MethodBuilder() {
         symbol.setArguments(args.copy(compilation));
 }
 
-FormalArgumentSymbol& MethodBuilder::addArg(string_view name, const Type& type,
+FormalArgumentSymbol& MethodBuilder::addArg(std::string_view name, const Type& type,
                                             ArgumentDirection direction,
                                             std::optional<SVInt> defaultValue) {
     auto arg = compilation.emplace<FormalArgumentSymbol>(name, NL, direction,
@@ -78,7 +78,7 @@ void MethodBuilder::addFlags(bitmask<MethodFlags> flags) {
     symbol.flags |= flags;
 }
 
-ClassBuilder::ClassBuilder(Compilation& compilation, string_view name) :
+ClassBuilder::ClassBuilder(Compilation& compilation, std::string_view name) :
     compilation(compilation), type(*compilation.emplace<ClassType>(compilation, name, NL)) {
 }
 
@@ -86,7 +86,8 @@ ClassBuilder::ClassBuilder(Compilation& compilation, ClassType& existing) :
     compilation(compilation), type(existing) {
 }
 
-MethodBuilder ClassBuilder::addMethod(string_view name, const Type& retType, SubroutineKind kind) {
+MethodBuilder ClassBuilder::addMethod(std::string_view name, const Type& retType,
+                                      SubroutineKind kind) {
     MethodBuilder method(compilation, name, retType, kind);
     type.addMember(method.symbol);
     return method;
@@ -98,7 +99,7 @@ StructBuilder::StructBuilder(const Scope& scope, LookupLocation lookupLocation) 
                                                   ASTContext(scope, lookupLocation))) {
 }
 
-void StructBuilder::addField(string_view name, const Type& fieldType,
+void StructBuilder::addField(std::string_view name, const Type& fieldType,
                              bitmask<VariableFlags> flags) {
     auto field = compilation.emplace<FieldSymbol>(name, NL, currBitOffset, currFieldIndex);
     field->flags = flags;

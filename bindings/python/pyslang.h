@@ -46,7 +46,7 @@ namespace detail {
 // Returns {true, a span referencing the data contained by src} without copying
 // or converting the data if possible. Otherwise returns {false, an empty span}.
 template<typename T, typename std::enable_if<std::is_arithmetic<T>::value, bool>::type = true>
-std::tuple<bool, span<T>> loadSpanFromBuffer(handle src) {
+std::tuple<bool, std::span<T>> loadSpanFromBuffer(handle src) {
     Py_buffer view;
     int flags = PyBUF_STRIDES | PyBUF_FORMAT;
     if (!std::is_const<T>::value)
@@ -62,21 +62,21 @@ std::tuple<bool, span<T>> loadSpanFromBuffer(handle src) {
         // Clear the buffer error (failure is reported in the return value).
         PyErr_Clear();
     }
-    return {false, span<T>()};
+    return {false, std::span<T>()};
 }
 // If T is not a numeric type, the buffer interface cannot be used.
 template<typename T, typename std::enable_if<!std::is_arithmetic<T>::value, bool>::type = true>
-constexpr std::tuple<bool, span<T>> loadSpanFromBuffer(handle) {
-    return {false, span<T>()};
+constexpr std::tuple<bool, std::span<T>> loadSpanFromBuffer(handle) {
+    return {false, std::span<T>()};
 }
 
 template<typename T>
 struct is_span : std::false_type {};
 template<typename T>
-struct is_span<span<T>> : std::true_type {};
+struct is_span<std::span<T>> : std::true_type {};
 
 template<typename T>
-struct type_caster<span<T>> {
+struct type_caster<std::span<T>> {
 public:
     using value_type = typename std::remove_cv<T>::type;
     static_assert(!is_span<value_type>::value, "Nested spans are not supported.");
@@ -85,21 +85,21 @@ public:
     // Copy and Move operations must ensure the span points to the copied or
     // moved vector (if any), not the original one. Allows implicit conversions.
     template<typename U>
-    type_caster(const type_caster<span<U>>& other) {
+    type_caster(const type_caster<std::span<U>>& other) {
         *this = other;
     }
     template<typename U>
-    type_caster(type_caster<span<U>>&& other) {
+    type_caster(type_caster<std::span<U>>&& other) {
         *this = std::move(other);
     }
     template<typename U>
-    type_caster& operator=(const type_caster<span<U>>& other) {
+    type_caster& operator=(const type_caster<std::span<U>>& other) {
         listCaster = other.listCaster;
         value = listCaster ? get_value(*listCaster) : other.value;
         return *this;
     }
     template<typename U>
-    type_caster& operator=(type_caster<span<U>>&& other) {
+    type_caster& operator=(type_caster<std::span<U>>&& other) {
         listCaster = std::move(other.listCaster);
         value = listCaster ? get_value(*listCaster) : other.value;
         return *this;
@@ -111,8 +111,8 @@ public:
     // no advantage to moving and 2) the span cannot exist without the caster,
     // so moving leaves an implicit dependency (while a reference or pointer
     // make that dependency explicit).
-    operator span<T>*() { return &value; }
-    operator span<T>&() { return value; }
+    operator std::span<T>*() { return &value; }
+    operator std::span<T>&() { return value; }
     template<typename T_>
     using cast_op_type = cast_op_type<T_>;
 
@@ -158,13 +158,13 @@ public:
 
 private:
     template<typename Caster>
-    span<T> get_value(Caster& caster) {
+    std::span<T> get_value(Caster& caster) {
         return static_cast<std::vector<value_type>&>(caster);
     }
 
     using ListCaster = list_caster<std::vector<value_type>, value_type>;
     std::optional<ListCaster> listCaster;
-    span<T> value;
+    std::span<T> value;
 };
 
 // Convert between flat_hash_map and python dict.

@@ -218,7 +218,7 @@ public:
 
     /// Overwrites all children with the new set of provided @a children (and making
     /// a copy with the provided allocator).
-    virtual void resetAll(BumpAllocator& alloc, span<const TokenOrSyntax> children) = 0;
+    virtual void resetAll(BumpAllocator& alloc, std::span<const TokenOrSyntax> children) = 0;
 
     static bool isKind(SyntaxKind kind);
 
@@ -230,16 +230,11 @@ protected:
 
 /// A syntax node that represents a list of child syntax nodes.
 template<typename T>
-class SLANG_EXPORT SyntaxList : public SyntaxListBase, public span<T*> {
+class SLANG_EXPORT SyntaxList : public SyntaxListBase, public std::span<T*> {
 public:
-    SyntaxList(nullptr_t) : SyntaxList(span<T*>()) {}
-    SyntaxList(span<T*> elements) :
-        SyntaxListBase(SyntaxKind::SyntaxList, elements.size()), span<T*>(elements) {}
-
-    // TODO: this is here to work around a bug in GCC 9
-    operator span<const T* const>() const {
-        return span<const T* const>(this->data(), this->size());
-    }
+    SyntaxList(nullptr_t) : SyntaxList(std::span<T*>()) {}
+    SyntaxList(std::span<T*> elements) :
+        SyntaxListBase(SyntaxKind::SyntaxList, elements.size()), std::span<T*>(elements) {}
 
 private:
     TokenOrSyntax getChild(size_t index) final { return (*this)[index]; }
@@ -253,7 +248,7 @@ private:
         return alloc.emplace<SyntaxList<T>>(*this);
     }
 
-    void resetAll(BumpAllocator& alloc, span<const TokenOrSyntax> children) final {
+    void resetAll(BumpAllocator& alloc, std::span<const TokenOrSyntax> children) final {
         SmallVector<T*> buffer(children.size(), UninitializedTag());
         for (auto& t : children)
             buffer.push_back(&t.node()->as<T>());
@@ -273,11 +268,11 @@ SyntaxList<T>* deepClone(const SyntaxList<T>& node, BumpAllocator& alloc) {
 }
 
 /// A syntax node that represents a list of child tokens.
-class SLANG_EXPORT TokenList : public SyntaxListBase, public span<parsing::Token> {
+class SLANG_EXPORT TokenList : public SyntaxListBase, public std::span<parsing::Token> {
 public:
-    TokenList(nullptr_t) : TokenList(span<Token>()) {}
-    TokenList(span<Token> elements) :
-        SyntaxListBase(SyntaxKind::TokenList, elements.size()), span<Token>(elements) {}
+    TokenList(nullptr_t) : TokenList(std::span<Token>()) {}
+    TokenList(std::span<Token> elements) :
+        SyntaxListBase(SyntaxKind::TokenList, elements.size()), std::span<Token>(elements) {}
 
 private:
     TokenOrSyntax getChild(size_t index) final { return (*this)[index]; }
@@ -288,7 +283,7 @@ private:
         return alloc.emplace<TokenList>(*this);
     }
 
-    void resetAll(BumpAllocator& alloc, span<const TokenOrSyntax> children) final {
+    void resetAll(BumpAllocator& alloc, std::span<const TokenOrSyntax> children) final {
         SmallVector<Token> buffer(children.size(), UninitializedTag());
         for (auto& t : children)
             buffer.push_back(t.token());
@@ -343,17 +338,18 @@ public:
     using iterator = iterator_base<T*>;
     using const_iterator = iterator_base<const T*>;
 
-    SeparatedSyntaxList(nullptr_t) : SeparatedSyntaxList(span<TokenOrSyntax>()) {}
-    SeparatedSyntaxList(span<TokenOrSyntax> elements) :
+    SeparatedSyntaxList(nullptr_t) : SeparatedSyntaxList(std::span<TokenOrSyntax>()) {}
+    SeparatedSyntaxList(std::span<TokenOrSyntax> elements) :
         SyntaxListBase(SyntaxKind::SeparatedList, elements.size()), elements(elements) {}
 
     /// @return the elements of nodes in the list
-    [[nodiscard]] span<const ConstTokenOrSyntax> elems() const {
-        return span<const ConstTokenOrSyntax>(elements.data(), elements.size());
+    [[nodiscard]] std::span<const ConstTokenOrSyntax> elems() const {
+        return std::span<const ConstTokenOrSyntax>(
+            static_cast<ConstTokenOrSyntax*>(elements.data()), elements.size());
     }
 
     /// @return the elements of nodes in the list
-    [[nodiscard]] span<TokenOrSyntax> elems() { return elements; }
+    [[nodiscard]] std::span<TokenOrSyntax> elems() { return elements; }
 
     /// @return true if the list is empty, and false if it has elements.
     [[nodiscard]] bool empty() const { return elements.empty(); }
@@ -387,7 +383,7 @@ private:
         return alloc.emplace<SeparatedSyntaxList<T>>(*this);
     }
 
-    void resetAll(BumpAllocator& alloc, span<const TokenOrSyntax> children) final {
+    void resetAll(BumpAllocator& alloc, std::span<const TokenOrSyntax> children) final {
         SmallVector<TokenOrSyntax> buffer(children.size(), UninitializedTag());
         buffer.append(children);
 
@@ -395,7 +391,7 @@ private:
         childCount = buffer.size();
     }
 
-    span<TokenOrSyntax> elements;
+    std::span<TokenOrSyntax> elements;
 };
 
 template<typename T>

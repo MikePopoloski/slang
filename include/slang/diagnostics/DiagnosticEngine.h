@@ -24,10 +24,10 @@ class SourceManager;
 
 struct SLANG_EXPORT ReportedDiagnostic {
     const Diagnostic& originalDiagnostic;
-    span<const SourceLocation> expansionLocs;
-    span<const SourceRange> ranges;
+    std::span<const SourceLocation> expansionLocs;
+    std::span<const SourceRange> ranges;
     SourceLocation location;
-    string_view formattedMessage;
+    std::string_view formattedMessage;
     DiagnosticSeverity severity = DiagnosticSeverity::Ignored;
     bool shouldShowIncludeStack = false;
 
@@ -122,18 +122,18 @@ public:
     void setMessage(DiagCode code, const std::string& message);
 
     /// Gets the message currently mapped for the given diagnostic.
-    string_view getMessage(DiagCode code) const;
+    std::string_view getMessage(DiagCode code) const;
 
     /// Gets the option string that can be used to refer to a particular diagnostic.
     /// If the diagnostic has no option string provided, this returns an empty string.
-    string_view getOptionName(DiagCode code) const;
+    std::string_view getOptionName(DiagCode code) const;
 
     /// Finds a diagnostic given an option name. If no matching diagnostic is found,
     /// returns an empty diagnostic code.
-    span<const DiagCode> findFromOptionName(string_view optionName) const;
+    std::span<const DiagCode> findFromOptionName(std::string_view optionName) const;
 
     /// Finds the diagnostic group with the given name, if it exists. Otherwise returns nullptr.
-    const DiagGroup* findDiagGroup(string_view name) const;
+    const DiagGroup* findDiagGroup(std::string_view name) const;
 
     /// Clears out all custom mappings for diagnostics, reverting built-ins back to
     /// their defaults and removing all user-specified diagnostics.
@@ -171,7 +171,7 @@ public:
     /// Sets diagnostic options from the given option strings, typically from a list of -W
     /// arguments passed to a command line invocation. Any errors encountered while parsing
     /// the options are returned via the diagnostics set.
-    Diagnostics setWarningOptions(span<const std::string> options);
+    Diagnostics setWarningOptions(std::span<const std::string> options);
 
     /// Sets diagnostic options from the `pragma diagnostic entries in all of the various
     /// source files tracked by the engine's source manager. Any errors encountered
@@ -191,13 +191,14 @@ public:
     /// If @a mapOriginalLocations is set to true, the returned source ranges will
     /// be specified in their original textual locations. Otherwise they will
     /// remain as macro locations.
-    void mapSourceRanges(SourceLocation loc, span<const SourceRange> ranges,
+    void mapSourceRanges(SourceLocation loc, std::span<const SourceRange> ranges,
                          SmallVectorBase<SourceRange>& mapped,
                          bool mapOriginalLocations = true) const;
 
     /// A helper method used as a shortcut to turn all of the specified diagnostics into
     /// a human-friendly string. This is mostly intended to be used for things like tests.
-    static std::string reportAll(const SourceManager& sourceManager, span<const Diagnostic> diags);
+    static std::string reportAll(const SourceManager& sourceManager,
+                                 std::span<const Diagnostic> diags);
 
 private:
     // An entry added by `pragma diagnostic at the given source offset which
@@ -215,7 +216,7 @@ private:
     bool issueImpl(const Diagnostic& diagnostic, DiagnosticSeverity severity);
 
     template<typename TDirective>
-    void setMappingsFromPragmasImpl(BufferID buffer, span<const TDirective> directives,
+    void setMappingsFromPragmasImpl(BufferID buffer, std::span<const TDirective> directives,
                                     Diagnostics& diags);
 
     // The source manager used to resolve locations into file names.

@@ -142,7 +142,7 @@ struct SLANG_EXPORT LookupResult {
     /// symbol found during a lookup operation.
     struct MemberSelector {
         /// The name of the member to select.
-        string_view name;
+        std::string_view name;
 
         /// The source location of the dot operator in the name path that
         /// led to selecting this member.
@@ -207,27 +207,27 @@ public:
     /// Performs an unqualified lookup in this scope, then recursively up the parent
     /// chain until we reach root or the symbol is found. No errors are reported if
     /// no symbol can be found.
-    static const Symbol* unqualified(const Scope& scope, string_view name,
+    static const Symbol* unqualified(const Scope& scope, std::string_view name,
                                      bitmask<LookupFlags> flags = LookupFlags::None);
 
     /// Performs an unqualified lookup in this scope, then recursively up the parent
     /// chain until we reach root or the symbol is found. Reports an error if
     /// the symbol is not found.
-    static const Symbol* unqualifiedAt(const Scope& scope, string_view name,
+    static const Symbol* unqualifiedAt(const Scope& scope, std::string_view name,
                                        LookupLocation location, SourceRange sourceRange,
                                        bitmask<LookupFlags> flags = LookupFlags::None);
 
     /// Applies the given @a selectors to the @a symbol and returns the selected child.
     /// If any errors occur, diagnostics are issued to @a result and nullptr is returned.
     static const Symbol* selectChild(const Symbol& symbol,
-                                     span<const syntax::ElementSelectSyntax* const> selectors,
+                                     std::span<const syntax::ElementSelectSyntax* const> selectors,
                                      const ASTContext& context, LookupResult& result);
 
     /// Applies the given @a selectors to the @a virtualInterface type and returns the
     /// selected child in @result -- if any errors occur, diagnostics are issued to
     /// the result object and nullptr is returned.
     static void selectChild(const Type& virtualInterface, SourceRange range,
-                            span<LookupResult::Selector> selectors, const ASTContext& context,
+                            std::span<LookupResult::Selector> selectors, const ASTContext& context,
                             LookupResult& result);
 
     /// Searches for a class with the given @a name within @a context -- if no symbol is
@@ -292,7 +292,7 @@ public:
 private:
     Lookup() = default;
 
-    static void unqualifiedImpl(const Scope& scope, string_view name, LookupLocation location,
+    static void unqualifiedImpl(const Scope& scope, std::string_view name, LookupLocation location,
                                 std::optional<SourceRange> sourceRange, bitmask<LookupFlags> flags,
                                 SymbolIndex outOfBlockIndex, LookupResult& result,
                                 const Scope& originalScope);
@@ -300,7 +300,7 @@ private:
     static void qualified(const syntax::ScopedNameSyntax& syntax, const ASTContext& context,
                           bitmask<LookupFlags> flags, LookupResult& result);
 
-    static void reportUndeclared(const Scope& scope, string_view name, SourceRange range,
+    static void reportUndeclared(const Scope& scope, std::string_view name, SourceRange range,
                                  bitmask<LookupFlags> flags, bool isHierarchical,
                                  LookupResult& result);
 };

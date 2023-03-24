@@ -20,7 +20,7 @@ class SLANG_EXPORT SystemSubroutine {
 public:
     virtual ~SystemSubroutine() = default;
 
-    using Args = span<const Expression* const>;
+    using Args = std::span<const Expression* const>;
 
     std::string name;
     SubroutineKind kind;
@@ -43,7 +43,7 @@ public:
 protected:
     SystemSubroutine(const std::string& name, SubroutineKind kind) : name(name), kind(kind) {}
 
-    string_view kindStr() const;
+    std::string_view kindStr() const;
     const Type& badArg(const ASTContext& context, const Expression& arg) const;
 
     bool notConst(EvalContext& context, SourceRange range) const;

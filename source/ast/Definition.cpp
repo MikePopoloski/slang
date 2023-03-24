@@ -24,7 +24,7 @@ using namespace syntax;
 
 Definition::ParameterDecl::ParameterDecl(
     const Scope& scope, const ParameterDeclarationSyntax& syntax, const DeclaratorSyntax& decl,
-    bool isLocal, bool isPort, span<const syntax::AttributeInstanceSyntax* const> attributes) :
+    bool isLocal, bool isPort, std::span<const syntax::AttributeInstanceSyntax* const> attributes) :
     valueSyntax(&syntax),
     valueDecl(&decl), attributes(attributes), isTypeParam(false), isLocalParam(isLocal),
     isPortParam(isPort), hasSyntax(true) {
@@ -43,7 +43,7 @@ Definition::ParameterDecl::ParameterDecl(
 Definition::ParameterDecl::ParameterDecl(
     const Scope& scope, const TypeParameterDeclarationSyntax& syntax,
     const TypeAssignmentSyntax& decl, bool isLocal, bool isPort,
-    span<const syntax::AttributeInstanceSyntax* const> attributes) :
+    std::span<const syntax::AttributeInstanceSyntax* const> attributes) :
     typeSyntax(&syntax),
     typeDecl(&decl), attributes(attributes), isTypeParam(true), isLocalParam(isLocal),
     isPortParam(isPort), hasSyntax(true) {
@@ -59,7 +59,7 @@ Definition::ParameterDecl::ParameterDecl(
     }
 }
 
-Definition::ParameterDecl::ParameterDecl(string_view name, SourceLocation location,
+Definition::ParameterDecl::ParameterDecl(std::string_view name, SourceLocation location,
                                          const Type& givenType, bool isLocal, bool isPort,
                                          const Expression* givenInitializer) :
     givenType(&givenType),
@@ -68,8 +68,8 @@ Definition::ParameterDecl::ParameterDecl(string_view name, SourceLocation locati
     ASSERT(givenInitializer || (isPort && !isLocal));
 }
 
-Definition::ParameterDecl::ParameterDecl(string_view name, SourceLocation location, bool isLocal,
-                                         bool isPort, const Type* defaultType) :
+Definition::ParameterDecl::ParameterDecl(std::string_view name, SourceLocation location,
+                                         bool isLocal, bool isPort, const Type* defaultType) :
     givenType(defaultType),
     name(name), location(location), isTypeParam(true), isLocalParam(isLocal), isPortParam(isPort),
     hasSyntax(false) {
@@ -150,7 +150,7 @@ Definition::Definition(const Scope& scope, LookupLocation lookupLocation,
                                      precisionRange);
 }
 
-string_view Definition::getKindString() const {
+std::string_view Definition::getKindString() const {
     switch (definitionKind) {
         case DefinitionKind::Module:
             return "module"sv;
@@ -163,7 +163,7 @@ string_view Definition::getKindString() const {
     }
 }
 
-string_view Definition::getArticleKindString() const {
+std::string_view Definition::getArticleKindString() const {
     switch (definitionKind) {
         case DefinitionKind::Module:
             return "a module"sv;

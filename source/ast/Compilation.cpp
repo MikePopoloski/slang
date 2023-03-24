@@ -236,11 +236,11 @@ void Compilation::addSyntaxTree(std::shared_ptr<SyntaxTree> tree) {
     cachedParseDiagnostics.reset();
 }
 
-span<const std::shared_ptr<SyntaxTree>> Compilation::getSyntaxTrees() const {
+std::span<const std::shared_ptr<SyntaxTree>> Compilation::getSyntaxTrees() const {
     return syntaxTrees;
 }
 
-span<const CompilationUnitSymbol* const> Compilation::getCompilationUnits() const {
+std::span<const CompilationUnitSymbol* const> Compilation::getCompilationUnits() const {
     return compilationUnits;
 }
 
@@ -253,7 +253,7 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamsAndBinds) {
         return *root;
 
     // If any top-level parameter overrides were provided, parse them now.
-    flat_hash_map<string_view, const ConstantValue*> cliOverrides;
+    flat_hash_map<std::string_view, const ConstantValue*> cliOverrides;
     parseParamOverrides(cliOverrides);
 
     // If there are defparams we need to fully resolve their values up front before
@@ -416,7 +416,8 @@ const CompilationUnitSymbol* Compilation::getCompilationUnit(
     return nullptr;
 }
 
-const Definition* Compilation::getDefinition(string_view lookupName, const Scope& scope) const {
+const Definition* Compilation::getDefinition(std::string_view lookupName,
+                                             const Scope& scope) const {
     // First try to do a quick lookup in the top definitions map (most definitions are global).
     // If the flag is set it means we have to do a full scope lookup instead.
     if (auto it = topDefinitions.find(lookupName); it != topDefinitions.end()) {
@@ -496,7 +497,7 @@ void Compilation::createDefinition(const Scope& scope, LookupLocation location,
     }
 }
 
-const PackageSymbol* Compilation::getPackage(string_view lookupName) const {
+const PackageSymbol* Compilation::getPackage(std::string_view lookupName) const {
     auto it = packageMap.find(lookupName);
     if (it == packageMap.end())
         return nullptr;
@@ -521,7 +522,7 @@ const PackageSymbol& Compilation::createPackage(const Scope& scope,
     return package;
 }
 
-const PrimitiveSymbol* Compilation::getPrimitive(string_view lookupName) const {
+const PrimitiveSymbol* Compilation::getPrimitive(std::string_view lookupName) const {
     if (auto it = udpMap.find(lookupName); it != udpMap.end())
         return it->second;
     return nullptr;
@@ -542,7 +543,7 @@ const PrimitiveSymbol& Compilation::createPrimitive(const Scope& scope,
     return prim;
 }
 
-const PrimitiveSymbol* Compilation::getGateType(string_view lookupName) const {
+const PrimitiveSymbol* Compilation::getGateType(std::string_view lookupName) const {
     if (auto it = gateMap.find(lookupName); it != gateMap.end())
         return it->second;
     return nullptr;
@@ -563,22 +564,23 @@ void Compilation::addSystemSubroutine(const SystemSubroutine& subroutine) {
 }
 
 void Compilation::addSystemMethod(SymbolKind typeKind, std::unique_ptr<SystemSubroutine> method) {
-    methodMap.emplace(std::make_tuple(string_view(method->name), typeKind), method.get());
+    methodMap.emplace(std::make_tuple(std::string_view(method->name), typeKind), method.get());
     subroutineStorage.emplace_back(std::move(method));
 }
 
 void Compilation::addSystemMethod(SymbolKind typeKind, const SystemSubroutine& method) {
-    methodMap.emplace(std::make_tuple(string_view(method.name), typeKind), &method);
+    methodMap.emplace(std::make_tuple(std::string_view(method.name), typeKind), &method);
 }
 
-const SystemSubroutine* Compilation::getSystemSubroutine(string_view name) const {
+const SystemSubroutine* Compilation::getSystemSubroutine(std::string_view name) const {
     auto it = subroutineMap.find(name);
     if (it == subroutineMap.end())
         return nullptr;
     return it->second;
 }
 
-const SystemSubroutine* Compilation::getSystemMethod(SymbolKind typeKind, string_view name) const {
+const SystemSubroutine* Compilation::getSystemMethod(SymbolKind typeKind,
+                                                     std::string_view name) const {
     auto it = methodMap.find(std::make_tuple(name, typeKind));
     if (it == methodMap.end())
         return nullptr;
@@ -586,42 +588,43 @@ const SystemSubroutine* Compilation::getSystemMethod(SymbolKind typeKind, string
 }
 
 void Compilation::setAttributes(const Symbol& symbol,
-                                span<const AttributeSymbol* const> attributes) {
+                                std::span<const AttributeSymbol* const> attributes) {
     attributeMap[&symbol] = attributes;
 }
 
 void Compilation::setAttributes(const Statement& stmt,
-                                span<const AttributeSymbol* const> attributes) {
+                                std::span<const AttributeSymbol* const> attributes) {
     attributeMap[&stmt] = attributes;
 }
 
 void Compilation::setAttributes(const Expression& expr,
-                                span<const AttributeSymbol* const> attributes) {
+                                std::span<const AttributeSymbol* const> attributes) {
     attributeMap[&expr] = attributes;
 }
 
 void Compilation::setAttributes(const PortConnection& conn,
-                                span<const AttributeSymbol* const> attributes) {
+                                std::span<const AttributeSymbol* const> attributes) {
     attributeMap[&conn] = attributes;
 }
 
-span<const AttributeSymbol* const> Compilation::getAttributes(const Symbol& symbol) const {
+std::span<const AttributeSymbol* const> Compilation::getAttributes(const Symbol& symbol) const {
     return getAttributes(static_cast<const void*>(&symbol));
 }
 
-span<const AttributeSymbol* const> Compilation::getAttributes(const Statement& stmt) const {
+std::span<const AttributeSymbol* const> Compilation::getAttributes(const Statement& stmt) const {
     return getAttributes(static_cast<const void*>(&stmt));
 }
 
-span<const AttributeSymbol* const> Compilation::getAttributes(const Expression& expr) const {
+std::span<const AttributeSymbol* const> Compilation::getAttributes(const Expression& expr) const {
     return getAttributes(static_cast<const void*>(&expr));
 }
 
-span<const AttributeSymbol* const> Compilation::getAttributes(const PortConnection& conn) const {
+std::span<const AttributeSymbol* const> Compilation::getAttributes(
+    const PortConnection& conn) const {
     return getAttributes(static_cast<const void*>(&conn));
 }
 
-span<const AttributeSymbol* const> Compilation::getAttributes(const void* ptr) const {
+std::span<const AttributeSymbol* const> Compilation::getAttributes(const void* ptr) const {
     auto it = attributeMap.find(ptr);
     if (it == attributeMap.end())
         return {};
@@ -635,7 +638,7 @@ void Compilation::notePackageExportCandidate(const PackageSymbol& packageScope,
 }
 
 const Symbol* Compilation::findPackageExportCandidate(const PackageSymbol& packageScope,
-                                                      string_view name) const {
+                                                      std::string_view name) const {
     if (auto it = packageExportCandidateMap.find(&packageScope);
         it != packageExportCandidateMap.end()) {
         if (auto symIt = it->second.find(name); symIt != it->second.end())
@@ -659,8 +662,8 @@ void Compilation::noteDPIExportDirective(const DPIExportSyntax& syntax, const Sc
 
 void Compilation::addOutOfBlockDecl(const Scope& scope, const ScopedNameSyntax& name,
                                     const SyntaxNode& syntax, SymbolIndex index) {
-    string_view className = name.left->getLastToken().valueText();
-    string_view declName = name.right->getLastToken().valueText();
+    std::string_view className = name.left->getLastToken().valueText();
+    std::string_view declName = name.right->getLastToken().valueText();
     auto [it, inserted] = outOfBlockDecls.emplace(std::make_tuple(className, declName, &scope),
                                                   std::make_tuple(&syntax, &name, index, false));
 
@@ -675,7 +678,7 @@ void Compilation::addOutOfBlockDecl(const Scope& scope, const ScopedNameSyntax& 
 }
 
 std::tuple<const SyntaxNode*, SymbolIndex, bool*> Compilation::findOutOfBlockDecl(
-    const Scope& scope, string_view className, string_view declName) const {
+    const Scope& scope, std::string_view className, std::string_view declName) const {
 
     auto it = outOfBlockDecls.find({className, declName, &scope});
     if (it != outOfBlockDecls.end()) {
@@ -803,7 +806,7 @@ std::pair<bool, bool> Compilation::isReferenced(const SyntaxNode& node) const {
     return it->second;
 }
 
-const NameSyntax& Compilation::parseName(string_view name) {
+const NameSyntax& Compilation::parseName(std::string_view name) {
     Diagnostics localDiags;
     auto& result = tryParseName(name, localDiags);
 
@@ -816,7 +819,7 @@ const NameSyntax& Compilation::parseName(string_view name) {
     return result;
 }
 
-const NameSyntax& Compilation::tryParseName(string_view name, Diagnostics& localDiags) {
+const NameSyntax& Compilation::tryParseName(std::string_view name, Diagnostics& localDiags) {
     SourceManager& sourceMan = SyntaxTree::getDefaultSourceManager();
     Preprocessor preprocessor(sourceMan, *this, localDiags);
     preprocessor.pushSource(sourceMan.assignText(name));
@@ -1187,13 +1190,14 @@ void Compilation::trackImport(Scope::ImportDataIndex& index, const WildcardImpor
         index = importData.add({&import});
 }
 
-span<const WildcardImportSymbol*> Compilation::queryImports(Scope::ImportDataIndex index) {
+std::span<const WildcardImportSymbol*> Compilation::queryImports(Scope::ImportDataIndex index) {
     if (index == Scope::ImportDataIndex::Invalid)
         return {};
     return importData[index];
 }
 
-void Compilation::parseParamOverrides(flat_hash_map<string_view, const ConstantValue*>& results) {
+void Compilation::parseParamOverrides(
+    flat_hash_map<std::string_view, const ConstantValue*>& results) {
     if (options.paramOverrides.empty())
         return;
 
@@ -1205,15 +1209,15 @@ void Compilation::parseParamOverrides(flat_hash_map<string_view, const ConstantV
             // We found the equals sign, so split out the name and parse that.
             // For now, the name must always be a simple identifier.
             Diagnostics localDiags;
-            string_view optView = opt;
-            string_view name = optView.substr(0, index);
+            std::string_view optView = opt;
+            std::string_view name = optView.substr(0, index);
             if (tryParseName(name, localDiags).kind == SyntaxKind::IdentifierName &&
                 localDiags.empty()) {
 
                 // The name is good, evaluate the value string. Using the ScriptSession
                 // here is a little bit lazy but oh well, this executes almost never
                 // compared to everything else during compilation.
-                string_view value = optView.substr(index + 1);
+                std::string_view value = optView.substr(index + 1);
                 ConstantValue cv = session.eval(value);
                 if (cv) {
                     // Success, store in the map so we can apply the value later.
@@ -1251,22 +1255,22 @@ static bool checkSignaturesMatch(const SubroutineSymbol& a, const SubroutineSymb
     return true;
 }
 
-void Compilation::checkDPIMethods(span<const SubroutineSymbol* const> dpiImports) {
+void Compilation::checkDPIMethods(std::span<const SubroutineSymbol* const> dpiImports) {
     auto getCId = [&](const Scope& scope, Token cid, Token name) {
-        string_view text = cid ? cid.valueText() : name.valueText();
+        std::string_view text = cid ? cid.valueText() : name.valueText();
         if (!text.empty()) {
             auto tail = text.substr(1);
             if (!isValidCIdChar(text[0]) || isDecimalDigit(text[0]) ||
                 std::any_of(tail.begin(), tail.end(), [](char c) { return !isValidCIdChar(c); })) {
                 scope.addDiag(diag::InvalidDPICIdentifier, cid ? cid.range() : name.range())
                     << text;
-                return string_view();
+                return std::string_view();
             }
         }
         return text;
     };
 
-    flat_hash_map<string_view, const SubroutineSymbol*> nameMap;
+    flat_hash_map<std::string_view, const SubroutineSymbol*> nameMap;
     for (auto sub : dpiImports) {
         auto syntax = sub->getSyntax();
         ASSERT(syntax);
@@ -1275,7 +1279,7 @@ void Compilation::checkDPIMethods(span<const SubroutineSymbol* const> dpiImports
         ASSERT(scope);
 
         auto& dis = syntax->as<DPIImportSyntax>();
-        string_view cId = getCId(*scope, dis.c_identifier, dis.method->name->getLastToken());
+        std::string_view cId = getCId(*scope, dis.c_identifier, dis.method->name->getLastToken());
         if (cId.empty())
             continue;
 
@@ -1289,7 +1293,8 @@ void Compilation::checkDPIMethods(span<const SubroutineSymbol* const> dpiImports
         }
     }
 
-    flat_hash_map<std::tuple<string_view, const Scope*>, const DPIExportSyntax*> exportsByScope;
+    flat_hash_map<std::tuple<std::string_view, const Scope*>, const DPIExportSyntax*>
+        exportsByScope;
     flat_hash_map<const SubroutineSymbol*, const DPIExportSyntax*> previousExports;
     auto exports = dpiExports;
     for (auto [syntax, scope] : exports) {
@@ -1364,7 +1369,7 @@ void Compilation::checkDPIMethods(span<const SubroutineSymbol* const> dpiImports
             }
         }
 
-        string_view cId = getCId(*scope, syntax->c_identifier, syntax->name);
+        std::string_view cId = getCId(*scope, syntax->c_identifier, syntax->name);
         if (!cId.empty()) {
             {
                 auto [it, inserted] = nameMap.emplace(cId, &sub);
@@ -1389,7 +1394,7 @@ void Compilation::checkDPIMethods(span<const SubroutineSymbol* const> dpiImports
     }
 }
 
-void Compilation::checkExternIfaceMethods(span<const MethodPrototypeSymbol* const> protos) {
+void Compilation::checkExternIfaceMethods(std::span<const MethodPrototypeSymbol* const> protos) {
     for (auto proto : protos) {
         if (!proto->getFirstExternImpl() && !proto->flags.has(MethodFlags::ForkJoin)) {
             auto scope = proto->getParentScope();
@@ -1407,7 +1412,7 @@ void Compilation::checkExternIfaceMethods(span<const MethodPrototypeSymbol* cons
 }
 
 void Compilation::checkModportExports(
-    span<const std::pair<const InterfacePortSymbol*, const ModportSymbol*>> modports) {
+    std::span<const std::pair<const InterfacePortSymbol*, const ModportSymbol*>> modports) {
 
     for (auto [port, modport] : modports) {
         auto def = port->getDeclaringDefinition();
@@ -1534,7 +1539,8 @@ void Compilation::resolveBindTargets(const BindDirectiveSyntax& syntax, const Sc
 }
 
 void Compilation::checkBindTargetParams(const syntax::BindDirectiveSyntax& syntax,
-                                        const Scope& scope, span<const Symbol* const> instTargets,
+                                        const Scope& scope,
+                                        std::span<const Symbol* const> instTargets,
                                         const Definition* defTarget) {
     // This method checks the following rule from the LRM:
     //    User-defined type names that are used to override type parameters must be

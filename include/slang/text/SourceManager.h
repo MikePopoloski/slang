@@ -38,23 +38,23 @@ public:
     SourceManager& operator=(const SourceManager&) = delete;
 
     /// Convert the given relative path into an absolute path.
-    std::string makeAbsolutePath(string_view path) const;
+    std::string makeAbsolutePath(std::string_view path) const;
 
     /// Adds a system include directory.
-    void addSystemDirectory(string_view path);
+    void addSystemDirectory(std::string_view path);
 
     /// Adds a user include directory.
-    void addUserDirectory(string_view path);
+    void addUserDirectory(std::string_view path);
 
     /// Gets the source line number for a given source location.
     size_t getLineNumber(SourceLocation location) const;
 
     /// Gets the source file name for a given source location.
-    string_view getFileName(SourceLocation location) const;
+    std::string_view getFileName(SourceLocation location) const;
 
     /// Gets the source file name for a given source buffer, not taking
     /// into account any `line directives that may be in the file.
-    string_view getRawFileName(BufferID buffer) const;
+    std::string_view getRawFileName(BufferID buffer) const;
 
     /// Gets the full path to the given source buffer. This does not take
     /// into account any `line directives. If the buffer is not a file buffer,
@@ -71,7 +71,7 @@ public:
 
     /// Attempts to get the name of the macro represented by a macro location.
     /// If no macro name can be found, returns an empty string view.
-    string_view getMacroName(SourceLocation location) const;
+    std::string_view getMacroName(SourceLocation location) const;
 
     /// Determines whether the given location exists in a source file.
     bool isFileLoc(SourceLocation location) const;
@@ -111,7 +111,7 @@ public:
     SourceLocation getFullyExpandedLoc(SourceLocation location) const;
 
     /// Gets the actual source text for a given file buffer.
-    string_view getSourceText(BufferID buffer) const;
+    std::string_view getSourceText(BufferID buffer) const;
 
     /// Creates a macro expansion location; used by the preprocessor.
     SourceLocation createExpansionLoc(SourceLocation originalLoc, SourceRange expansionRange,
@@ -119,26 +119,26 @@ public:
 
     /// Creates a macro expansion location; used by the preprocessor.
     SourceLocation createExpansionLoc(SourceLocation originalLoc, SourceRange expansionRange,
-                                      string_view macroName);
+                                      std::string_view macroName);
 
     /// Instead of loading source from a file, copy it from text already in memory.
-    SourceBuffer assignText(string_view text, SourceLocation includedFrom = SourceLocation());
+    SourceBuffer assignText(std::string_view text, SourceLocation includedFrom = SourceLocation());
 
     /// Instead of loading source from a file, copy it from text already in memory.
     /// Pretend it came from a file located at @a path.
-    SourceBuffer assignText(string_view path, string_view text,
+    SourceBuffer assignText(std::string_view path, std::string_view text,
                             SourceLocation includedFrom = SourceLocation());
 
     /// Instead of loading source from a file, move it from text already in memory.
     /// Pretend it came from a file located at @a path.
-    SourceBuffer assignBuffer(string_view path, std::vector<char>&& buffer,
+    SourceBuffer assignBuffer(std::string_view path, std::vector<char>&& buffer,
                               SourceLocation includedFrom = SourceLocation());
 
     /// Read in a source file from disk.
     SourceBuffer readSource(const std::filesystem::path& path);
 
     /// Read in a header file from disk.
-    SourceBuffer readHeader(string_view path, SourceLocation includedFrom, bool isSystemPath);
+    SourceBuffer readHeader(std::string_view path, SourceLocation includedFrom, bool isSystemPath);
 
     /// Returns true if the given file path is already loaded and cached in the source manager.
     bool isCached(const std::filesystem::path& path) const;
@@ -149,17 +149,18 @@ public:
     void setDisableProximatePaths(bool set) { disableProximatePaths = set; }
 
     /// Adds a line directive at the given location.
-    void addLineDirective(SourceLocation location, size_t lineNum, string_view name, uint8_t level);
+    void addLineDirective(SourceLocation location, size_t lineNum, std::string_view name,
+                          uint8_t level);
 
     /// Adds a diagnostic directive at the given location.
-    void addDiagnosticDirective(SourceLocation location, string_view name,
+    void addDiagnosticDirective(SourceLocation location, std::string_view name,
                                 DiagnosticSeverity severity);
 
     /// Stores information specified in a `pragma diagnostic directive, which alters the
     /// currently active set of diagnostic mappings.
     struct DiagnosticDirectiveInfo {
         /// The name of the diagnostic being controlled.
-        string_view name;
+        std::string_view name;
 
         /// Offset in the source where the directive occurred.
         size_t offset;
@@ -167,7 +168,7 @@ public:
         /// The new severity the diagnostic should have.
         DiagnosticSeverity severity;
 
-        DiagnosticDirectiveInfo(string_view name, size_t offset,
+        DiagnosticDirectiveInfo(std::string_view name, size_t offset,
                                 DiagnosticSeverity severity) noexcept :
             name(name),
             offset(offset), severity(severity) {}
@@ -185,7 +186,7 @@ public:
     /// Gets the diagnostic directives associated with the given buffer, if any.
     /// Note that the returned span is not safe to store; the underlying data can
     /// be mutated by a call to @a addDiagnosticDirective and invalidate the span.
-    span<const DiagnosticDirectiveInfo> getDiagnosticDirectives(BufferID buffer) const;
+    std::span<const DiagnosticDirectiveInfo> getDiagnosticDirectives(BufferID buffer) const;
 
     /// Returns a list of buffers (files and macros) that have been created in the
     /// source manager.
@@ -246,14 +247,14 @@ private:
         SourceRange expansionRange;
         bool isMacroArg = false;
 
-        string_view macroName;
+        std::string_view macroName;
 
         ExpansionInfo() {}
         ExpansionInfo(SourceLocation originalLoc, SourceRange expansionRange, bool isMacroArg) :
             originalLoc(originalLoc), expansionRange(expansionRange), isMacroArg(isMacroArg) {}
 
         ExpansionInfo(SourceLocation originalLoc, SourceRange expansionRange,
-                      string_view macroName) :
+                      std::string_view macroName) :
             originalLoc(originalLoc),
             expansionRange(expansionRange), macroName(macroName) {}
     };

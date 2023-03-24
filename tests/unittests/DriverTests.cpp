@@ -9,11 +9,11 @@
 
 using namespace slang::driver;
 
-static bool stdoutContains(string_view text) {
+static bool stdoutContains(std::string_view text) {
     return OS::capturedStdout.find(text) != std::string::npos;
 }
 
-static bool stderrContains(string_view text) {
+static bool stderrContains(std::string_view text) {
     return OS::capturedStderr.find(text) != std::string::npos;
 }
 
@@ -126,12 +126,12 @@ TEST_CASE("Driver file preprocess") {
     auto output = OS::capturedStdout;
     output = std::regex_replace(output, std::regex("\r\n"), "\n");
 
-    CHECK(startsWith(output, "\nmodule m;\n"
+    CHECK(output.starts_with("\nmodule m;\n"
                              "    // hello\n"
                              "    int i = 32'haa_bb??e;\n"
                              "    string s = "));
 
-    CHECK(endsWith(output, ";\n"
+    CHECK(output.ends_with(";\n"
                            "    begin end\n"
                            "endmodule\n"
                            "\n"));
@@ -152,12 +152,12 @@ TEST_CASE("Driver file preprocess -- obfuscation") {
     auto output = OS::capturedStdout;
     output = std::regex_replace(output, std::regex("\r\n"), "\n");
 
-    CHECK(startsWith(output, "\nmodule ykyD0R1TWLDra6jk;\n"
+    CHECK(output.starts_with("\nmodule ykyD0R1TWLDra6jk;\n"
                              "    // hello\n"
                              "    int N65udx39eEabGtIV = 32'haa_bb??e;\n"
                              "    string TKs9hBr80Qx0xQD8 = "));
 
-    CHECK(endsWith(output, ";\n"
+    CHECK(output.ends_with(";\n"
                            "    begin end\n"
                            "endmodule\n"
                            "\n"));
@@ -209,7 +209,7 @@ SV_COV_STATEMENT 22
 SV_COV_STOP 1
 SV_COV_TOGGLE 23
 __slang__ 1
-__slang_major__ 2
+__slang_major__ 3
 __slang_minor__ 0
 )");
 }
@@ -404,7 +404,7 @@ TEST_CASE("Driver command files are processed strictly in order") {
     CHECK(driver.parseCommandLine(args));
     CHECK(driver.processOptions());
 
-    std::vector<string_view> fileNames;
+    std::vector<std::string_view> fileNames;
     for (auto buffer : driver.buffers) {
         auto name = driver.sourceManager.getRawFileName(buffer.id);
         if (auto idx = name.find_last_of("/\\"); idx != name.npos)

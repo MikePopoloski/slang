@@ -6,6 +6,19 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 ### Language Support
+
+### General Features
+
+### Improvements
+
+### Fixes
+
+
+## [v3.0] - 2023-03-18
+### Highlights
+As of this release slang passes 100% of the tests at https://github.com/chipsalliance/sv-tests (the only tool able to do so).
+
+### Language Support
 * Added support for specify module timing paths
 * Added support for specify pulsestyle and showcancelled directives
 * Added support for `PATHPULSE$` specparams
@@ -52,6 +65,7 @@ issued if not all elements have a time scale specified (as required by the LRM).
 * Bit-vector system functions (such as `$countbits`) can now be used with bitstream types (as opposed to just integral types)
 * Max size limits for packed and unpacked arrays and structs are now strictly enforced
 * Invalid inferred time scales will now issue an appropriate error
+* Fixed a bug in arithmetic of large constants at compile time (thanks to @adream307)
 
 
 ## [v2.0] - 2022-10-29

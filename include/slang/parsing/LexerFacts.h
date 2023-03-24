@@ -35,14 +35,14 @@ enum class SLANG_EXPORT KeywordVersion : uint8_t {
 
 class SLANG_EXPORT LexerFacts {
 public:
-    static TokenKind getSystemKeywordKind(string_view text);
-    static string_view getTokenKindText(TokenKind kind);
+    static TokenKind getSystemKeywordKind(std::string_view text);
+    static std::string_view getTokenKindText(TokenKind kind);
     static KeywordVersion getDefaultKeywordVersion();
-    static std::optional<KeywordVersion> getKeywordVersion(string_view text);
+    static std::optional<KeywordVersion> getKeywordVersion(std::string_view text);
     static const StringTable<TokenKind>* getKeywordTable(KeywordVersion version);
 
-    static syntax::SyntaxKind getDirectiveKind(string_view directive);
-    static string_view getDirectiveText(syntax::SyntaxKind kind);
+    static syntax::SyntaxKind getDirectiveKind(std::string_view directive);
+    static std::string_view getDirectiveText(syntax::SyntaxKind kind);
 
     /// This checks all keywords, regardless of the current keyword table. Should
     /// only be used when it is ok to get a false positive for a keyword that may
