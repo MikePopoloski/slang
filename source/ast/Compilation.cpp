@@ -473,16 +473,16 @@ void Compilation::createDefinition(const Scope& scope, LookupLocation location,
                                                               metadata.unconnectedDrive,
                                                               metadata.timeScale, metadata.tree))
                    .get();
+    definitionFromSyntax[&syntax] = def;
 
     // Record that the given scope contains this definition. If the scope is a compilation unit, add
     // it to the root scope instead so that lookups from other compilation units will find it.
     auto targetScope = scope.asSymbol().kind == SymbolKind::CompilationUnit ? root.get() : &scope;
-    std::tuple key(def->name, targetScope);
-    if (auto it = definitionMap.find(key); it != definitionMap.end())
+    auto [it, inserted] = definitionMap.emplace(std::tuple(def->name, targetScope), def);
+    if (!inserted) {
         reportRedefinition(scope, *def, *it->second, diag::DuplicateDefinition);
-
-    definitionMap[key] = def;
-    definitionFromSyntax[&syntax] = def;
+        return;
+    }
 
     if (targetScope == root.get()) {
         topDefinitions[def->name].first = def;
@@ -532,12 +532,13 @@ const PrimitiveSymbol& Compilation::createPrimitive(const Scope& scope,
                                                     const UdpDeclarationSyntax& syntax) {
     auto& prim = PrimitiveSymbol::fromSyntax(scope, syntax);
     if (!prim.name.empty()) {
-        if (auto ps = getPrimitive(prim.name))
-            reportRedefinition(*root, prim, *ps, diag::DuplicateDefinition);
+        auto [it, inserted] = udpMap.emplace(prim.name, &prim);
+        if (!inserted) {
+            reportRedefinition(*root, prim, *it->second, diag::DuplicateDefinition);
+        }
         else if (auto defIt = topDefinitions.find(prim.name); defIt != topDefinitions.end()) {
             reportRedefinition(*root, prim, *defIt->second.first);
         }
-        udpMap[prim.name] = &prim;
     }
 
     return prim;
