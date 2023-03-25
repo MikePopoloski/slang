@@ -637,6 +637,8 @@ warning ignored-slice IgnoredSlice "slice size ignored for left-to-right streami
 warning unsized-concat UnsizedInConcat "unsized integer in concat; using a width of {}"
 warning width-expand WidthExpand "implicit conversion expands from {} to {} bits"
 warning width-trunc WidthTruncate "implicit conversion truncates from {} to {} bits"
+warning port-width-expand PortWidthExpand "implicit conversion of port connection expands from {} to {} bits"
+warning port-width-trunc PortWidthTruncate "implicit conversion of port connection truncates from {} to {} bits"
 warning implicit-conv ImplicitConvert "implicit conversion from {} to {}"
 warning nonblocking-final NonblockingInFinal "nonblocking assignments in final blocks have no effect"
 warning port-coercion InputPortCoercion "input net port '{}' coerced to 'inout'"
@@ -993,12 +995,12 @@ group default = { real-underflow real-overflow vector-overflow int-overflow unco
 
 group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-none case-gen-dup
                 unused-result format-real ignored-slice task-ignored width-trunc dup-attr event-const
-                ineffective-sign }
+                ineffective-sign port-width-trunc }
 
 group pedantic = { empty-pattern implicit-net-port nonstandard-escape-code nonstandard-generate format-multibit-strength
                    nonstandard-sys-func nonstandard-foreach nonstandard-dist }
 
-group conversion = { width-trunc width-expand implicit-conv }
+group conversion = { width-trunc width-expand port-width-expand implicit-conv }
 
 group unused = { unused-def unused-net unused-implicit-net unused-variable undriven-net unassigned-variable
                  unused-but-set-net unused-but-set-variable unused-port undriven-port unused-argument
