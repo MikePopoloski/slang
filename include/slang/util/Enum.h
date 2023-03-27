@@ -23,7 +23,9 @@
         static const char* strings[] = {elements(UTIL_ENUM_STRING)};                            \
         return strings[static_cast<std::underlying_type_t<name>>(e)];                           \
     }                                                                                           \
-    inline std::ostream& operator<<(std::ostream& os, name e) { return os << toString(e); }     \
+    inline std::ostream& operator<<(std::ostream& os, name e) {                                 \
+        return os << toString(e);                                                               \
+    }                                                                                           \
     class name##_traits {                                                                       \
         enum e { elements(UTIL_ENUM_ELEMENT) };                                                 \
         static constexpr auto vals = {elements(UTIL_ENUM_ELEMENT)};                             \
