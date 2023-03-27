@@ -35,7 +35,11 @@ using namespace slang::driver;
 
 class NetlistNode;
 class NetlistEdge;
-using Netlist = DirectedGraph<NetlistNode, NetlistEdge>;
+
+enum class NodeKind {
+  VariableDeclaration,
+  VariableReference
+};
 
 enum class VariableSelectorKind {
   ElementSelect,
@@ -84,19 +88,12 @@ struct VariableMemberAccess : public VariableSelectorBase {
 class NetlistNode : public Node<NetlistNode, NetlistEdge> {
 public:
   NetlistNode() : ID(++nextID) {};
-  void addElementSelect(const ConstantValue &index) {
-    selectors.emplace_back(std::make_unique<VariableElementSelect>(index));
-  }
-  void addRangeSelect(const ConstantValue &leftIndex, const ConstantValue &rightIndex) {
-    selectors.emplace_back(std::make_unique<VariableRangeSelect>(leftIndex, rightIndex));
-  }
-  void addMemberAccess(std::string_view name) {
-    selectors.emplace_back(std::make_unique<VariableMemberAccess>(name));
-  }
+  virtual ~NetlistNode() = default;
   std::string_view getName() const { return symbol->name; }
 
 public:
   size_t ID;
+  NodeKind kind;
   const Symbol *symbol;
 
 private:
@@ -106,9 +103,74 @@ private:
 
 size_t NetlistNode::nextID = 0;
 
+/// A class representing a dependency between two variables in the netlist.
 class NetlistEdge : public DirectedEdge<NetlistNode, NetlistEdge> {
 public:
   NetlistEdge(NetlistNode &targetNode) : DirectedEdge(targetNode) {}
+};
+
+/// A class representing a variable declaration.
+class NetlistVariableDeclaration : public NetlistNode {
+public:
+  NetlistVariableDeclaration() : NetlistNode() {}
+
+public:
+  std::string heirarchicalPath;
+};
+
+/// A class representing a variable reference.
+class NetlistVariableReference : public NetlistNode {
+public:
+  NetlistVariableReference() : NetlistNode() {}
+  void addElementSelect(const ConstantValue &index) {
+    selectors.emplace_back(std::make_unique<VariableElementSelect>(index));
+  }
+  void addRangeSelect(const ConstantValue &leftIndex, const ConstantValue &rightIndex) {
+    selectors.emplace_back(std::make_unique<VariableRangeSelect>(leftIndex, rightIndex));
+  }
+  void addMemberAccess(std::string_view name) {
+    selectors.emplace_back(std::make_unique<VariableMemberAccess>(name));
+  }
+
+private:
+  std::vector<std::unique_ptr<VariableSelectorBase>> selectors;
+};
+
+/// A class representing the design netlist.
+class Netlist : public DirectedGraph<NetlistNode, NetlistEdge> {
+public:
+  Netlist() : DirectedGraph() {}
+
+  NetlistVariableDeclaration &addVariableDeclaration(const Symbol *symbol) {
+    nodes.push_back(std::make_unique<NetlistVariableDeclaration>());
+    auto *node = dynamic_cast<NetlistVariableDeclaration*>(nodes.back().get());
+    node->kind = NodeKind::VariableDeclaration;
+    node->symbol = symbol;
+    symbol->getHierarchicalPath(node->heirarchicalPath);
+    return *node;
+  }
+
+  NetlistVariableReference &addVariableReference(const Symbol *symbol) {
+    nodes.push_back(std::make_unique<NetlistVariableReference>());
+    auto *node = dynamic_cast<NetlistVariableReference*>(nodes.back().get());
+    node->kind = NodeKind::VariableReference;
+    node->symbol = symbol;
+    return *node;
+  }
+
+  NetlistNode *lookupVariable(std::string_view hierarchicalPath) {
+    //auto it = std::find_if(netlist.begin(), netlist.end(),
+    //                       [&name](const std::unique_ptr<NetlistNode> &node) {
+    //                         return node.kind == NodeKind::VariableDeclaration &&
+    //                                             node.hierarchicalPath == hierarchicalPath;
+    //                       });
+    //if (it == netlist.end()) {
+    //  return nullptr;
+    //} else {
+    //  return it->get();
+    //}
+    return nullptr;
+  }
 };
 
 /// An AST visitor to identify variable references with selectors in
@@ -121,9 +183,8 @@ public:
     netlist(netlist), visitList(visitList), evalCtx(evalCtx) {}
 
   void handle(const NamedValueExpression &expr) {
-    auto &node = netlist.addNode();
+    auto &node = netlist.addVariableReference(&expr.symbol);
     visitList.push_back(&node);
-    node.symbol = &(expr.symbol);
     for (auto *selector : selectors) {
       if (selector->kind == ExpressionKind::ElementSelect) {
         auto index = selector->as<ElementSelectExpression>().selector().eval(evalCtx);
@@ -173,16 +234,32 @@ public:
 
   void handle(const AssignmentExpression &expr) {
     std::cout << "AssignmentExpression non-blocking " << expr.isNonBlocking() << "\n";
-    // Collect variable references on the left and right hand sides of the
-    // assignment.
+    // Collect variable references on the left-hand side of the assignment.
     std::vector<NetlistNode*> visitListLHS, visitListRHS;
     {
       VariableReferenceVisitor visitor(netlist, visitListLHS, evalCtx);
       expr.left().visit(visitor);
     }
+    // Collect variable references on the right-hand side of the assignment.
     {
       VariableReferenceVisitor visitor(netlist, visitListRHS, evalCtx);
       expr.right().visit(visitor);
+    }
+    // Add edge from LHS variable refrence to variable declaration.
+    for (auto *leftNode : visitListLHS) {
+      std::string pathBuffer;
+      leftNode->symbol->getHierarchicalPath(pathBuffer);
+      auto var = evalCtx.compilation.getRoot().lookupName(pathBuffer);
+      auto *variableNode = netlist.lookupVariable(pathBuffer);
+      netlist.addEdge(*leftNode, *variableNode);
+    }
+    // Add edge from RHS variable references to variable declaration.
+    for (auto *rightNode : visitListRHS) {
+      std::string pathBuffer;
+      rightNode->symbol->getHierarchicalPath(pathBuffer);
+      auto var = evalCtx.compilation.getRoot().lookupName(pathBuffer);
+      auto *variableNode = netlist.lookupVariable(pathBuffer);
+      netlist.addEdge(*variableNode, *rightNode);
     }
     // Add edges RHS -> LHS...
     for (auto *leftNode : visitListLHS) {
@@ -344,7 +421,6 @@ public:
   }
 
   void handle(const ExpressionStatement& stmt) {
-//    std::cout << "ExpressionStatement\n";
     step();
     AssignmentVisitor visitor(netlist, evalCtx);
     stmt.visit(visitor);

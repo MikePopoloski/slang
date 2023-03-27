@@ -309,7 +309,7 @@ public:
     return count;
   }
 
-private:
+protected:
   NodeListType nodes;
 };
 
