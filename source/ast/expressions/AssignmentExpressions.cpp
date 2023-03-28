@@ -709,7 +709,14 @@ static void checkImplicitConversions(const ASTContext& context, const Type& targ
             // We'll ignore any constants, because as described above they
             // will get their own more fine grained warning later during eval.
             if (!context.tryEval(op)) {
-                DiagCode code = targetWidth < effective ? diag::WidthTruncate : diag::WidthExpand;
+                DiagCode code;
+                if (context.getInstance()) {
+                    code = targetWidth < effective ? diag::PortWidthTruncate
+                                                   : diag::PortWidthExpand;
+                }
+                else {
+                    code = targetWidth < effective ? diag::WidthTruncate : diag::WidthExpand;
+                }
                 context.addDiag(code, loc) << actualWidth << targetWidth << op.sourceRange;
             }
         }

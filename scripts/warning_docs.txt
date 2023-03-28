@@ -342,6 +342,31 @@ int a;
 logic [1:0] b = a;
 ```
 
+-Wport-width-expand
+An implicit conversion in a port connection expression expands a type. This may
+be harmless, but the warning provides a mechanism for discovering unintended conversions.
+An explicit cast can be used to silence the warning.
+```
+module m(input int a); endmodule
+
+module n;
+    logic [1:0] a;
+    m m1(.a(a));
+endmodule
+```
+
+-Wport-width-trunc
+An implicit conversion in a port connection expression truncates a type.
+This conversion potentially loses data. An explicit cast can be used to silence the warning.
+```
+module m(input logic [1:0] a); endmodule
+
+module n;
+    int a;
+    m m1(.a(a));
+endmodule
+```
+
 -Wimplicit-conv
 An implicit conversion in an expression converts between two unrelated types.
 SystemVerilog allows this for all packed integral types but it often

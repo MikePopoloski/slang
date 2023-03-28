@@ -1295,7 +1295,7 @@ endmodule
     CHECK(diags[9].code == diag::UndeclaredIdentifier);
     CHECK(diags[10].code == diag::PortConnDimensionsMismatch);
     CHECK(diags[11].code == diag::ImplicitNamedPortTypeMismatch);
-    CHECK(diags[12].code == diag::WidthExpand);
+    CHECK(diags[12].code == diag::PortWidthExpand);
     CHECK(diags[13].code == diag::UnconnectedUnnamedPort);
     CHECK(diags[14].code == diag::PortDoesNotExist);
 }
@@ -1421,14 +1421,14 @@ endmodule
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 9);
     CHECK(diags[0].code == diag::MismatchedUserDefPortConn);
-    CHECK(diags[1].code == diag::WidthTruncate);
+    CHECK(diags[1].code == diag::PortWidthTruncate);
     CHECK(diags[2].code == diag::MismatchedUserDefPortDir);
     CHECK(diags[3].code == diag::MismatchedUserDefPortConn);
-    CHECK(diags[4].code == diag::WidthTruncate);
+    CHECK(diags[4].code == diag::PortWidthTruncate);
     CHECK(diags[5].code == diag::UserDefPortTwoSided);
-    CHECK(diags[6].code == diag::WidthTruncate);
+    CHECK(diags[6].code == diag::PortWidthTruncate);
     CHECK(diags[7].code == diag::UserDefPortMixedConcat);
-    CHECK(diags[8].code == diag::WidthExpand);
+    CHECK(diags[8].code == diag::PortWidthExpand);
 }
 
 TEST_CASE("inout uwire port errors") {
