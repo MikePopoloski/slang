@@ -59,6 +59,7 @@ public:
 
   Node() = default;
   Node(EdgeType &edge) : edges() { edges.push_back(edge); }
+  virtual ~Node() = default;
 
   const_iterator begin() const { return edges.begin(); }
   const_iterator end() const { return edges.end(); }
@@ -136,6 +137,16 @@ public:
 
   /// Remove all edges outgoing from this node.
   void clearEdges() { edges.clear(); }
+
+  template<typename T>
+  T& as() {
+    return *(dynamic_cast<T*>(this));
+  }
+
+  template<typename T>
+  const T& as() const {
+    return const_cast<T&>(this->as<T>());
+  }
 
 protected:
   // As the default implementation use address comparison for equality.

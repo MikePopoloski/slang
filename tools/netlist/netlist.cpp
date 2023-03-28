@@ -115,7 +115,7 @@ public:
   NetlistVariableDeclaration() : NetlistNode() {}
 
 public:
-  std::string heirarchicalPath;
+  std::string hierarchicalPath;
 };
 
 /// A class representing a variable reference.
@@ -141,35 +141,36 @@ class Netlist : public DirectedGraph<NetlistNode, NetlistEdge> {
 public:
   Netlist() : DirectedGraph() {}
 
+  /// Add a variable declaration node to the netlist.
   NetlistVariableDeclaration &addVariableDeclaration(const Symbol *symbol) {
-    nodes.push_back(std::make_unique<NetlistVariableDeclaration>());
-    auto *node = dynamic_cast<NetlistVariableDeclaration*>(nodes.back().get());
-    node->kind = NodeKind::VariableDeclaration;
-    node->symbol = symbol;
-    symbol->getHierarchicalPath(node->heirarchicalPath);
-    return *node;
+    auto nodePtr = std::make_unique<NetlistVariableDeclaration>();
+    auto &node = nodePtr->as<NetlistVariableDeclaration>();
+    node.kind = NodeKind::VariableDeclaration;
+    node.symbol = symbol;
+    symbol->getHierarchicalPath(node.hierarchicalPath);
+    assert(lookupVariable(node.hierarchicalPath) == nullptr && "Variable declaration already exists");
+    nodes.push_back(std::move(nodePtr));
+    return node;
   }
 
+  /// Add a variable reference node to the netlist.
   NetlistVariableReference &addVariableReference(const Symbol *symbol) {
-    nodes.push_back(std::make_unique<NetlistVariableReference>());
-    auto *node = dynamic_cast<NetlistVariableReference*>(nodes.back().get());
-    node->kind = NodeKind::VariableReference;
-    node->symbol = symbol;
-    return *node;
+    auto nodePtr = std::make_unique<NetlistVariableReference>();
+    auto &node = nodePtr->as<NetlistVariableReference>();
+    node.kind = NodeKind::VariableReference;
+    node.symbol = symbol;
+    nodes.push_back(std::move(nodePtr));
+    return node;
   }
 
+  /// Find a variable declaration node in the netlist by hierarchical path.
   NetlistNode *lookupVariable(std::string_view hierarchicalPath) {
-    //auto it = std::find_if(netlist.begin(), netlist.end(),
-    //                       [&name](const std::unique_ptr<NetlistNode> &node) {
-    //                         return node.kind == NodeKind::VariableDeclaration &&
-    //                                             node.hierarchicalPath == hierarchicalPath;
-    //                       });
-    //if (it == netlist.end()) {
-    //  return nullptr;
-    //} else {
-    //  return it->get();
-    //}
-    return nullptr;
+    auto compareNode = [&hierarchicalPath](const std::unique_ptr<NetlistNode> &node) {
+                          return node->kind == NodeKind::VariableDeclaration &&
+                                 node->as<NetlistVariableDeclaration>().hierarchicalPath == hierarchicalPath;
+                       };
+    auto it = std::find_if(begin(), end(), compareNode);
+    return it == end() ? it->get() : nullptr;
   }
 };
 
@@ -233,7 +234,6 @@ public:
     netlist(netlist), evalCtx(evalCtx) {}
 
   void handle(const AssignmentExpression &expr) {
-    std::cout << "AssignmentExpression non-blocking " << expr.isNonBlocking() << "\n";
     // Collect variable references on the left-hand side of the assignment.
     std::vector<NetlistNode*> visitListLHS, visitListRHS;
     {
@@ -261,11 +261,10 @@ public:
       auto *variableNode = netlist.lookupVariable(pathBuffer);
       netlist.addEdge(*variableNode, *rightNode);
     }
-    // Add edges RHS -> LHS...
+    // Add edges form RHS expression terms to LHS expression terms.
     for (auto *leftNode : visitListLHS) {
       for (auto *rightNode : visitListRHS) {
         netlist.addEdge(*leftNode, *rightNode);
-        //std::cout<<"add edge "<<rightNode->getName()<< " to " <<leftNode->getName()<<"\n";
       }
     }
   }
