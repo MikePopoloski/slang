@@ -37,6 +37,7 @@ class NetlistNode;
 class NetlistEdge;
 
 enum class NodeKind {
+  PortDeclaration,
   VariableDeclaration,
   VariableReference
 };
@@ -87,14 +88,28 @@ struct VariableMemberAccess : public VariableSelectorBase {
 /// of a variable symbol, with zero or more selectors applied.
 class NetlistNode : public Node<NetlistNode, NetlistEdge> {
 public:
-  NetlistNode() : ID(++nextID) {};
+  NetlistNode(NodeKind kind, const Symbol &symbol) :
+    ID(++nextID), kind(kind), symbol(symbol) {};
   virtual ~NetlistNode() = default;
-  std::string_view getName() const { return symbol->name; }
+
+  template<typename T>
+  T& as() {
+    assert(T::isKind(kind));
+    return *(dynamic_cast<T*>(this));
+  }
+
+  template<typename T>
+  const T& as() const {
+    assert(T::isKind(kind));
+    return const_cast<T&>(this->as<T>());
+  }
+
+  std::string_view getName() const { return symbol.name; }
 
 public:
   size_t ID;
   NodeKind kind;
-  const Symbol *symbol;
+  const Symbol &symbol;
 
 private:
   static size_t nextID;
@@ -109,10 +124,29 @@ public:
   NetlistEdge(NetlistNode &targetNode) : DirectedEdge(targetNode) {}
 };
 
+/// A class representing a port declaration.
+class NetlistPortDeclaration : public NetlistNode {
+public:
+  NetlistPortDeclaration(const Symbol &symbol) :
+    NetlistNode(NodeKind::PortDeclaration, symbol) {}
+
+  static bool isKind(NodeKind otherKind) {
+    return otherKind == NodeKind::PortDeclaration;
+  }
+
+public:
+  std::string hierarchicalPath;
+};
+
 /// A class representing a variable declaration.
 class NetlistVariableDeclaration : public NetlistNode {
 public:
-  NetlistVariableDeclaration() : NetlistNode() {}
+  NetlistVariableDeclaration(const Symbol &symbol) :
+    NetlistNode(NodeKind::VariableDeclaration, symbol) {}
+
+  static bool isKind(NodeKind otherKind) {
+    return otherKind == NodeKind::VariableDeclaration;
+  }
 
 public:
   std::string hierarchicalPath;
@@ -121,7 +155,9 @@ public:
 /// A class representing a variable reference.
 class NetlistVariableReference : public NetlistNode {
 public:
-  NetlistVariableReference() : NetlistNode() {}
+  NetlistVariableReference(const Symbol &symbol) :
+    NetlistNode(NodeKind::VariableReference, symbol) {}
+
   void addElementSelect(const ConstantValue &index) {
     selectors.emplace_back(std::make_unique<VariableElementSelect>(index));
   }
@@ -130,6 +166,10 @@ public:
   }
   void addMemberAccess(std::string_view name) {
     selectors.emplace_back(std::make_unique<VariableMemberAccess>(name));
+  }
+
+  static bool isKind(NodeKind otherKind) {
+    return otherKind == NodeKind::VariableReference;
   }
 
 private:
@@ -142,35 +182,44 @@ public:
   Netlist() : DirectedGraph() {}
 
   /// Add a variable declaration node to the netlist.
-  NetlistVariableDeclaration &addVariableDeclaration(const Symbol *symbol) {
-    auto nodePtr = std::make_unique<NetlistVariableDeclaration>();
+  NetlistVariableDeclaration &addVariableDeclaration(const Symbol &symbol) {
+    std::cout << "Add var decl " << symbol.name << "\n";
+    auto nodePtr = std::make_unique<NetlistVariableDeclaration>(symbol);
     auto &node = nodePtr->as<NetlistVariableDeclaration>();
-    node.kind = NodeKind::VariableDeclaration;
-    node.symbol = symbol;
-    symbol->getHierarchicalPath(node.hierarchicalPath);
-    assert(lookupVariable(node.hierarchicalPath) == nullptr && "Variable declaration already exists");
+    symbol.getHierarchicalPath(node.hierarchicalPath);
+    assert(lookupVariable(nodePtr->hierarchicalPath) == nullptr && "Variable declaration already exists");
+    nodes.push_back(std::move(nodePtr));
+    return node;
+  }
+
+  /// Add a port declaration node to the netlist.
+  NetlistPortDeclaration &addPortDeclaration(const Symbol &symbol) {
+    std::cout << "Add port decl " << symbol.name << "\n";
+    auto nodePtr = std::make_unique<NetlistPortDeclaration>(symbol);
+    auto &node = nodePtr->as<NetlistPortDeclaration>();
+    symbol.getHierarchicalPath(node.hierarchicalPath);
+    assert(lookupVariable(nodePtr->hierarchicalPath) == nullptr && "Port declaration already exists");
     nodes.push_back(std::move(nodePtr));
     return node;
   }
 
   /// Add a variable reference node to the netlist.
-  NetlistVariableReference &addVariableReference(const Symbol *symbol) {
-    auto nodePtr = std::make_unique<NetlistVariableReference>();
+  NetlistVariableReference &addVariableReference(const Symbol &symbol) {
+    std::cout << "Add var ref " << symbol.name << "\n";
+    auto nodePtr = std::make_unique<NetlistVariableReference>(symbol);
     auto &node = nodePtr->as<NetlistVariableReference>();
-    node.kind = NodeKind::VariableReference;
-    node.symbol = symbol;
     nodes.push_back(std::move(nodePtr));
     return node;
   }
 
   /// Find a variable declaration node in the netlist by hierarchical path.
-  NetlistNode *lookupVariable(std::string_view hierarchicalPath) {
+  NetlistNode *lookupVariable(const std::string &hierarchicalPath) {
     auto compareNode = [&hierarchicalPath](const std::unique_ptr<NetlistNode> &node) {
                           return node->kind == NodeKind::VariableDeclaration &&
                                  node->as<NetlistVariableDeclaration>().hierarchicalPath == hierarchicalPath;
                        };
     auto it = std::find_if(begin(), end(), compareNode);
-    return it == end() ? it->get() : nullptr;
+    return it != end() ? it->get() : nullptr;
   }
 };
 
@@ -184,7 +233,7 @@ public:
     netlist(netlist), visitList(visitList), evalCtx(evalCtx) {}
 
   void handle(const NamedValueExpression &expr) {
-    auto &node = netlist.addVariableReference(&expr.symbol);
+    auto &node = netlist.addVariableReference(expr.symbol);
     visitList.push_back(&node);
     for (auto *selector : selectors) {
       if (selector->kind == ExpressionKind::ElementSelect) {
@@ -248,23 +297,26 @@ public:
     // Add edge from LHS variable refrence to variable declaration.
     for (auto *leftNode : visitListLHS) {
       std::string pathBuffer;
-      leftNode->symbol->getHierarchicalPath(pathBuffer);
-      auto var = evalCtx.compilation.getRoot().lookupName(pathBuffer);
+      leftNode->symbol.getHierarchicalPath(pathBuffer);
+      //auto var = evalCtx.compilation.getRoot().lookupName(pathBuffer);
       auto *variableNode = netlist.lookupVariable(pathBuffer);
       netlist.addEdge(*leftNode, *variableNode);
+      std::cout << fmt::format("Edge {} to decl {}\n", leftNode->getName(), variableNode->getName());
     }
     // Add edge from RHS variable references to variable declaration.
     for (auto *rightNode : visitListRHS) {
       std::string pathBuffer;
-      rightNode->symbol->getHierarchicalPath(pathBuffer);
-      auto var = evalCtx.compilation.getRoot().lookupName(pathBuffer);
+      rightNode->symbol.getHierarchicalPath(pathBuffer);
+      //auto var = evalCtx.compilation.getRoot().lookupName(pathBuffer);
       auto *variableNode = netlist.lookupVariable(pathBuffer);
       netlist.addEdge(*variableNode, *rightNode);
+      std::cout << fmt::format("Edge decl {} to {}\n", variableNode->getName(), rightNode->getName());
     }
     // Add edges form RHS expression terms to LHS expression terms.
     for (auto *leftNode : visitListLHS) {
       for (auto *rightNode : visitListRHS) {
         netlist.addEdge(*leftNode, *rightNode);
+        std::cout << fmt::format("Edge {} to {}\n", leftNode->getName(), rightNode->getName());
       }
     }
   }
@@ -284,9 +336,9 @@ public:
   }
 
   void handle(const InstanceSymbol &symbol) {
-    std::cout << "InstanceSymbol " << symbol.name << "\n";
+    //std::cout << "InstanceSymbol " << symbol.name << "\n";
     for (auto *portConnection : symbol.getPortConnections()) {
-      std::cout << "Port " << portConnection->port.name << " connects to:\n";
+      //std::cout << "Port " << portConnection->port.name << " connects to:\n";
       //if (portConnection->getExpression()) {
         //VariableReferenceVisitor visitor(netlist, evalCtx);
         //portConnection->getExpression()->visit(visitor);
@@ -296,16 +348,25 @@ public:
   }
 
   void handle(const InstanceBodySymbol &symbol) {
-    std::cout << "InstanceBodySymbol\n";
+    //std::cout << "InstanceBodySymbol\n";
     for (auto& member : symbol.members()) {
       member.visit(*this);
     }
   }
 
+  /// Variable declaration.
+  void handle(const VariableSymbol &symbol) {
+    netlist.addVariableDeclaration(symbol);
+  }
+
+  /// Net declaration.
+  void handle(const NetSymbol &symbol) {
+    netlist.addVariableDeclaration(symbol);
+  }
+
+  /// Port declaration.
   void handle(const PortSymbol &symbol) {
-    std::cout << "PortSymbol " << symbol.name << "\n";
-    auto &node = netlist.addNode();
-    node.symbol = &symbol;
+    netlist.addPortDeclaration(symbol);
   }
 
   void handle(const ContinuousAssignSymbol &symbol) {
@@ -314,7 +375,6 @@ public:
   }
 
   void handle(const ForLoopStatement& loop) {
-//    std::cout << "Unroll ForLoopStatement\n";
 
     // Conditions this loop cannot be unrolled.
     if (loop.loopVars.empty() || !loop.stopExpr || loop.steps.empty() || anyErrors) {
@@ -388,7 +448,6 @@ public:
   }
 
   void handle(const ConditionalStatement& stmt) {
-//    std::cout << "ConditionalStatement\n";
     // Evaluate the condition; if not constant visit both sides,
     // otherwise visit only the side that matches the condition.
     auto fallback = [&] {

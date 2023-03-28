@@ -138,16 +138,6 @@ public:
   /// Remove all edges outgoing from this node.
   void clearEdges() { edges.clear(); }
 
-  template<typename T>
-  T& as() {
-    return *(dynamic_cast<T*>(this));
-  }
-
-  template<typename T>
-  const T& as() const {
-    return const_cast<T&>(this->as<T>());
-  }
-
 protected:
   // As the default implementation use address comparison for equality.
   bool isEqualTo(const NodeType &node) const {
