@@ -620,7 +620,7 @@ private:
 
     std::unique_ptr<RootSymbol> root;
     const SourceManager* sourceManager = nullptr;
-    size_t numErrors = 0; // total number of errors inserted into the diagMap
+    size_t numErrors = 0;    // total number of errors inserted into the diagMap
     bool finalized = false;
     bool finalizing = false; // to prevent reentrant calls to getRoot()
     bool anyElemsWithTimescales = false;
