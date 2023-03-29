@@ -57,7 +57,6 @@ if(SLANG_INCLUDE_INSTALL)
     COMPONENT slang_Development)
   install(
     FILES ${PROJECT_SOURCE_DIR}/external/flat_hash_map.hpp
-          ${PROJECT_SOURCE_DIR}/external/span.hpp
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
     COMPONENT slang_Development)
   if(NOT unordered_dense_FOUND)
