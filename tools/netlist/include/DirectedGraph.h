@@ -277,7 +277,7 @@ public:
     return removeNode(findNode(node));
   }
 
-  EdgeType &addEdge(NodeType &sourceNode, NodeType &targetNode) {
+  EdgeType &addEdge(const NodeType &sourceNode, const NodeType &targetNode) {
     return addEdge(findNode(sourceNode), findNode(targetNode));
   }
 
