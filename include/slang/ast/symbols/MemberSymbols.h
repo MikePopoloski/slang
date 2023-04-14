@@ -368,6 +368,35 @@ public:
         ProdKind kind;
 
         explicit ProdBase(ProdKind kind) : kind(kind) {}
+
+        template<typename T>
+        T& as() {
+            ASSERT(T::isKind(kind));
+            return *static_cast<T*>(this);
+        }
+
+        template<typename T>
+        const T& as() const {
+            ASSERT(T::isKind(kind));
+            return *static_cast<const T*>(this);
+        }
+
+        template<typename T>
+        T* as_if() {
+            if (!T::isKind(kind))
+                return nullptr;
+            return static_cast<T*>(this);
+        }
+
+        template<typename T>
+        const T* as_if() const {
+            if (!T::isKind(kind))
+                return nullptr;
+            return static_cast<const T*>(this);
+        }
+
+        template<typename TVisitor, typename... Args>
+        decltype(auto) visit(TVisitor& visitor, Args&&... args) const;
     };
 
     struct ProdItem : public ProdBase {
@@ -376,6 +405,8 @@ public:
 
         ProdItem(const RandSeqProductionSymbol* target, std::span<const Expression* const> args) :
             ProdBase(ProdKind::Item), target(target), args(args) {}
+
+        static bool isKind(ProdKind kind) { return kind == ProdKind::Item; }
 
         template<typename TVisitor>
         void visitExprs(TVisitor&& visitor) const {
@@ -389,6 +420,8 @@ public:
 
         explicit CodeBlockProd(const StatementBlockSymbol& block) :
             ProdBase(ProdKind::CodeBlock), block(&block) {}
+
+        static bool isKind(ProdKind kind) { return kind == ProdKind::CodeBlock; }
     };
 
     struct IfElseProd : public ProdBase {
@@ -398,6 +431,8 @@ public:
 
         IfElseProd(const Expression& expr, ProdItem ifItem, std::optional<ProdItem> elseItem) :
             ProdBase(ProdKind::IfElse), expr(&expr), ifItem(ifItem), elseItem(elseItem) {}
+
+        static bool isKind(ProdKind kind) { return kind == ProdKind::IfElse; }
     };
 
     struct RepeatProd : public ProdBase {
@@ -406,6 +441,8 @@ public:
 
         RepeatProd(const Expression& expr, ProdItem item) :
             ProdBase(ProdKind::Repeat), expr(&expr), item(item) {}
+
+        static bool isKind(ProdKind kind) { return kind == ProdKind::Repeat; }
     };
 
     struct CaseItem {
@@ -422,6 +459,8 @@ public:
                  std::optional<ProdItem> defaultItem) :
             ProdBase(ProdKind::Case),
             expr(&expr), items(items), defaultItem(defaultItem) {}
+
+        static bool isKind(ProdKind kind) { return kind == ProdKind::Case; }
     };
 
     struct Rule {
