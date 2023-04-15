@@ -493,7 +493,8 @@ void registerSymbols(py::module_& m) {
     primitiveSym.def_readonly("ports", &PrimitiveSymbol::ports)
         .def_readonly("initVal", &PrimitiveSymbol::initVal)
         .def_readonly("primitiveKind", &PrimitiveSymbol::primitiveKind)
-        .def_readonly("isSequential", &PrimitiveSymbol::isSequential);
+        .def_readonly("isSequential", &PrimitiveSymbol::isSequential)
+        .def_readonly("table", &PrimitiveSymbol::table);
 
     py::enum_<PrimitiveSymbol::PrimitiveKind>(primitiveSym, "PrimitiveKind")
         .value("UserDefined", PrimitiveSymbol::PrimitiveKind::UserDefined)
@@ -501,6 +502,15 @@ void registerSymbols(py::module_& m) {
         .value("NInput", PrimitiveSymbol::PrimitiveKind::NInput)
         .value("NOutput", PrimitiveSymbol::PrimitiveKind::NOutput)
         .export_values();
+
+    py::class_<PrimitiveSymbol::TableField>(primitiveSym, "TableField")
+        .def_readonly("value", &PrimitiveSymbol::TableField::value)
+        .def_readonly("transitionTo", &PrimitiveSymbol::TableField::transitionTo);
+
+    py::class_<PrimitiveSymbol::TableEntry>(primitiveSym, "TableEntry")
+        .def_readonly("inputs", &PrimitiveSymbol::TableEntry::inputs)
+        .def_readonly("state", &PrimitiveSymbol::TableEntry::state)
+        .def_readonly("output", &PrimitiveSymbol::TableEntry::output);
 
     py::class_<AssertionPortSymbol, Symbol>(m, "AssertionPortSymbol")
         .def_readonly("localVarDirection", &AssertionPortSymbol::localVarDirection)

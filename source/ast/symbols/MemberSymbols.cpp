@@ -7,6 +7,8 @@
 //------------------------------------------------------------------------------
 #include "slang/ast/symbols/MemberSymbols.h"
 
+#include "fmt/core.h"
+
 #include "slang/ast/ASTSerializer.h"
 #include "slang/ast/ASTVisitor.h"
 #include "slang/ast/Compilation.h"
@@ -780,55 +782,90 @@ static void expandTableEntries(Compilation& comp,
         expandTableEntries(comp, fields, nextFieldList, fieldIndex + 1, baseEntry, results);
     };
 
-    const char v = (char)::tolower(fields[fieldIndex].value);
-    switch (v) {
-        case '?':
-            for (auto c : {'0', '1', 'x'}) {
+    auto& field = fields[fieldIndex];
+    const char v = (char)::tolower(field.value);
+
+    if (field.transitionTo) {
+        const char w = (char)::tolower(field.transitionTo);
+
+        SmallVector<char> firstChars;
+        SmallVector<char> secondChars;
+        for (int i = 0; i < 2; i++) {
+            auto currVec = i ? &secondChars : &firstChars;
+            auto c = i ? w : v;
+            switch (c) {
+                case '?':
+                    for (auto d : {'0', '1', 'x'})
+                        currVec->push_back(d);
+                    break;
+                case 'b':
+                    for (auto d : {'0', '1'})
+                        currVec->push_back(d);
+                    break;
+                default:
+                    currVec->push_back(c);
+                    break;
+            }
+        }
+
+        for (auto c : firstChars) {
+            for (auto d : secondChars) {
                 auto copiedEntry = currEntry;
-                copiedEntry.push_back({c});
+                copiedEntry.push_back({c, d});
                 next(copiedEntry);
             }
-            break;
-        case 'b':
-            for (auto c : {'0', '1'}) {
-                auto copiedEntry = currEntry;
-                copiedEntry.push_back({c});
-                next(copiedEntry);
-            }
-            break;
-        case 'p':
-            for (auto c : {"01", "0x", "x1"}) {
-                auto copiedEntry = currEntry;
-                copiedEntry.push_back({c[0], c[1]});
-                next(copiedEntry);
-            }
-            break;
-        case 'n':
-            for (auto c : {"10", "1x", "x0"}) {
-                auto copiedEntry = currEntry;
-                copiedEntry.push_back({c[0], c[1]});
-                next(copiedEntry);
-            }
-            break;
-        case '*':
-            for (auto c : {"01", "0x", "x1", "10", "1x", "x0"}) {
-                auto copiedEntry = currEntry;
-                copiedEntry.push_back({c[0], c[1]});
-                next(copiedEntry);
-            }
-            break;
-        case 'r':
-            currEntry.push_back({'0', '1'});
-            next(currEntry);
-            break;
-        case 'f':
-            currEntry.push_back({'1', '0'});
-            next(currEntry);
-            break;
-        default:
-            currEntry.push_back({v});
-            next(currEntry);
-            break;
+        }
+    }
+    else {
+        switch (v) {
+            case '?':
+                for (auto c : {'0', '1', 'x'}) {
+                    auto copiedEntry = currEntry;
+                    copiedEntry.push_back({c});
+                    next(copiedEntry);
+                }
+                break;
+            case 'b':
+                for (auto c : {'0', '1'}) {
+                    auto copiedEntry = currEntry;
+                    copiedEntry.push_back({c});
+                    next(copiedEntry);
+                }
+                break;
+            case 'p':
+                for (auto c : {"01", "0x", "x1"}) {
+                    auto copiedEntry = currEntry;
+                    copiedEntry.push_back({c[0], c[1]});
+                    next(copiedEntry);
+                }
+                break;
+            case 'n':
+                for (auto c : {"10", "1x", "x0"}) {
+                    auto copiedEntry = currEntry;
+                    copiedEntry.push_back({c[0], c[1]});
+                    next(copiedEntry);
+                }
+                break;
+            case '*':
+                for (auto c : {"01", "0x", "x1", "10", "1x", "x0"}) {
+                    auto copiedEntry = currEntry;
+                    copiedEntry.push_back({c[0], c[1]});
+                    next(copiedEntry);
+                }
+                break;
+            case 'r':
+                currEntry.push_back({'0', '1'});
+                next(currEntry);
+                break;
+            case 'f':
+                currEntry.push_back({'1', '0'});
+                next(currEntry);
+                break;
+            default:
+                currEntry.push_back({v});
+                next(currEntry);
+                break;
+        }
     }
 }
 
@@ -1116,8 +1153,30 @@ PrimitiveSymbol& PrimitiveSymbol::fromSyntax(const Scope& scope,
     return *prim;
 }
 
-void PrimitiveSymbol::serializeTo(ASTSerializer&) const {
-    // TODO:
+void PrimitiveSymbol::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("isSequential", isSequential);
+    if (initVal)
+        serializer.write("initVal", *initVal);
+
+    if (!table.empty()) {
+        serializer.startArray("table");
+        for (auto& row : table) {
+            serializer.startObject();
+            serializer.startArray("inputs");
+            for (auto& entry : row.inputs) {
+                if (entry.transitionTo)
+                    serializer.serialize(fmt::format("({}{})", entry.value, entry.transitionTo));
+                else
+                    serializer.serialize(std::string_view(&entry.value, 1));
+            }
+            serializer.endArray();
+            if (row.state.value)
+                serializer.write("state", std::string_view(&row.state.value, 1));
+            serializer.write("output", std::string_view(&row.output.value, 1));
+            serializer.endObject();
+        }
+        serializer.endArray();
+    }
 }
 
 AssertionPortSymbol::AssertionPortSymbol(std::string_view name, SourceLocation loc) :
