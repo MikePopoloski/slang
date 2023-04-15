@@ -832,8 +832,8 @@ static void expandTableEntries(Compilation& comp,
     }
 }
 
-static void createTableEntries(Compilation& comp, const UdpEntrySyntax& syntax,
-                               SmallVector<PrimitiveSymbol::TableEntry>& results) {
+static void createTableEntries(const Scope& scope, const UdpEntrySyntax& syntax,
+                               SmallVector<PrimitiveSymbol::TableEntry>& results, size_t numPorts) {
     SmallVector<PrimitiveSymbol::TableField> fields;
     for (auto input : syntax.inputs) {
         if (input->kind == SyntaxKind::UdpEdgeField) {
@@ -858,6 +858,12 @@ static void createTableEntries(Compilation& comp, const UdpEntrySyntax& syntax,
         }
     }
 
+    if (numPorts >= 2 && fields.size() != numPorts - 1) {
+        auto& diag = scope.addDiag(diag::UdpWrongInputCount, syntax.inputs.sourceRange());
+        diag << fields.size();
+        diag << numPorts - 1;
+    }
+
     auto getChar = [](const UdpFieldBaseSyntax* base) -> char {
         if (base && base->kind == SyntaxKind::UdpSimpleField) {
             auto raw = base->as<UdpSimpleFieldSyntax>().field.rawText();
@@ -872,7 +878,7 @@ static void createTableEntries(Compilation& comp, const UdpEntrySyntax& syntax,
     entry.output.value = getChar(syntax.next);
 
     SmallVector<PrimitiveSymbol::TableField> currEntry;
-    expandTableEntries(comp, fields, currEntry, 0, entry, results);
+    expandTableEntries(scope.getCompilation(), fields, currEntry, 0, entry, results);
 }
 
 PrimitiveSymbol& PrimitiveSymbol::fromSyntax(const Scope& scope,
@@ -1103,7 +1109,7 @@ PrimitiveSymbol& PrimitiveSymbol::fromSyntax(const Scope& scope,
 
     SmallVector<TableEntry> table;
     for (auto entry : syntax.body->entries)
-        createTableEntries(comp, *entry, table);
+        createTableEntries(scope, *entry, table, ports.size());
 
     prim->ports = ports.copy(comp);
     prim->table = table.copy(comp);

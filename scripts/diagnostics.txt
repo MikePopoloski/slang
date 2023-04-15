@@ -462,6 +462,7 @@ error VirtualInterfaceIfaceMember "virtual interfaces cannot be used as the type
 error DefparamBadHierarchy "defparam in a hierarchy in or under a generate block, array of instances, or bind instantiation cannot change a parameter value outside that hierarchy"
 error BindTargetPrimitive "cannot bind a primitive"
 error BindUnderBind "cannot bind an instance underneath the scope of another bind instance"
+error UdpWrongInputCount "incorrect number of input fields in table row; have {} but expect {}"
 error FatalTask "$fatal encountered{}"
 error ErrorTask "$error encountered{}"
 error StaticAssert "static assertion failed{}"

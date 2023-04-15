@@ -1790,7 +1790,7 @@ primitive p1 (input a, b, output c);
 endprimitive
 
 primitive p1 (output a, input b);
-    table 00:0; endtable
+    table 0:0; endtable
 endprimitive
 
 primitive p2 (output a);
@@ -1801,7 +1801,7 @@ primitive p3 (a, b);
     input b;
     output a;
     output reg a;
-    table 00:0:0; endtable
+    table 0:0:0; endtable
 endprimitive
 
 primitive p4 (a, b);
@@ -1811,14 +1811,14 @@ primitive p4 (a, b);
     reg a;
     input c;
     output d;
-    table 00:0:0; endtable
+    table 0:0:0; endtable
 endprimitive
 
 primitive p5 (a, b);
     reg a;
     input b;
     output reg a;
-    table 00:0:0; endtable
+    table 0:0:0; endtable
 endprimitive
 
 primitive p6 (a, b, c);
@@ -1839,21 +1839,21 @@ primitive p8 (a, b);
     output reg a = 1;
     input b;
     initial a = 1'bx;
-    table 00:0:0; endtable
+    table 0:0:0; endtable
 endprimitive
 
 primitive p9 (a, b);
     output reg a;
     input b;
     initial c = 1'bx;
-    table 00:0:0; endtable
+    table 0:0:0; endtable
 endprimitive
 
 primitive p10 (a, b);
     output reg a;
     input b;
     initial a = 3;
-    table 00:0:0; endtable
+    table 0:0:0; endtable
 endprimitive
 
 module p10; endmodule
@@ -1862,14 +1862,23 @@ module m;
 endmodule
 
 primitive m(output a, input b);
-    table 00:0; endtable
+    table 0:0; endtable
 endprimitive
 
 primitive p11 (a, b);
     output reg a;
     input b;
     initial a = 1'b1;
-    table 00: endtable
+    table 0: endtable
+endprimitive
+
+primitive p12 (a, b, c);
+    output reg a;
+    input b, c;
+    table
+        000:0:0;
+        0:0:0;
+    endtable
 endprimitive
 )");
 
@@ -1877,7 +1886,7 @@ endprimitive
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 20);
+    REQUIRE(diags.size() == 22);
     CHECK(diags[0].code == diag::PrimitiveOutputFirst);
     CHECK(diags[1].code == diag::PrimitiveAnsiMix);
     CHECK(diags[2].code == diag::DuplicateDefinition);
@@ -1898,12 +1907,14 @@ endprimitive
     CHECK(diags[17].code == diag::Redefinition);
     CHECK(diags[18].code == diag::Redefinition);
     CHECK(diags[19].code == diag::ExpectedUdpSymbol);
+    CHECK(diags[20].code == diag::UdpWrongInputCount);
+    CHECK(diags[21].code == diag::UdpWrongInputCount);
 }
 
 TEST_CASE("UDP instances error checking") {
     auto tree = SyntaxTree::fromText(R"(
 primitive p1 (output a, input b);
-    table 00:0; endtable
+    table 0:0; endtable
 endprimitive
 
 module m;
