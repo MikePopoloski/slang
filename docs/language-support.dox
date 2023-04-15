@@ -444,10 +444,10 @@ IEEE 1800-2017 SystemVerilog Language Reference Manual (LRM).
 
 {{w:15%}} LRM | Feature | {{w:15%}} Supported
 --- | ------- | ---------
-{{m-warning}} 29.3 | UDP definition | partial
-{{m-warning}} 29.4 | Combinational UDPs | partial
-{{m-warning}} 29.5 | Level-sensitive sequential UDPs | partial
-{{m-warning}} 29.6 | Edge-sensitive sequential UDPs | partial
+{{m-success}} 29.3 | UDP definition | v4.0
+{{m-success}} 29.4 | Combinational UDPs | v4.0
+{{m-success}} 29.5 | Level-sensitive sequential UDPs | v4.0
+{{m-success}} 29.6 | Edge-sensitive sequential UDPs | v4.0
 {{m-success}} 29.7 | Sequential UDP initialization | v0.7
 {{m-success}} 29.8 | UDP instances | v0.7
 {{m-dim}}     29.9 | Mixing level-sensitive and edge-sensitive descriptions | N/A
