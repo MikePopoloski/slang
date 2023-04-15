@@ -273,6 +273,8 @@ error UdpInvalidInputOnly "'{}' is only allowed in input fields of sequential pr
 error UdpInvalidMinus "'-' is only allowed in the output field of a sequential primitive"
 error UdpInvalidOutput "'{}' is not allowed in output field of state table"
 error UdpDupTransition "cannot have more than one input transition per row in a state table"
+error UdpCombState "combinational primitive row should not have a current state field"
+error UdpSequentialState "sequential primitive row is missing a current state field"
 warning nonstandard-generate NonStandardGenBlock "standalone generate block without loop or condition is not allowed in SystemVerilog"
 warning empty-pattern EmptyAssignmentPattern "empty assignment patterns are disallowed by SystemVerilog"
 warning nonstandard-foreach NonstandardForeach "non-standard foreach loop variable list"

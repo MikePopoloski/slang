@@ -1768,7 +1768,7 @@ primitive srff (q, s, r);
 endprimitive : srff
 
 primitive p2 (output reg a = 1'bx, input b, input c);
-    table 00:0; endtable
+    table 00:0:0; endtable
 endprimitive
 
 module m;
@@ -1801,7 +1801,7 @@ primitive p3 (a, b);
     input b;
     output a;
     output reg a;
-    table 00:0; endtable
+    table 00:0:0; endtable
 endprimitive
 
 primitive p4 (a, b);
@@ -1811,21 +1811,21 @@ primitive p4 (a, b);
     reg a;
     input c;
     output d;
-    table 00:0; endtable
+    table 00:0:0; endtable
 endprimitive
 
 primitive p5 (a, b);
     reg a;
     input b;
     output reg a;
-    table 00:0; endtable
+    table 00:0:0; endtable
 endprimitive
 
 primitive p6 (a, b, c);
     input b;
     output a;
     reg b;
-    table 00:0; endtable
+    table 00:0:0; endtable
 endprimitive
 
 primitive p7 (a, b, c);
@@ -1839,21 +1839,21 @@ primitive p8 (a, b);
     output reg a = 1;
     input b;
     initial a = 1'bx;
-    table 00:0; endtable
+    table 00:0:0; endtable
 endprimitive
 
 primitive p9 (a, b);
     output reg a;
     input b;
     initial c = 1'bx;
-    table 00:0; endtable
+    table 00:0:0; endtable
 endprimitive
 
 primitive p10 (a, b);
     output reg a;
     input b;
     initial a = 3;
-    table 00:0; endtable
+    table 00:0:0; endtable
 endprimitive
 
 module p10; endmodule
@@ -1869,7 +1869,7 @@ primitive p11 (a, b);
     output reg a;
     input b;
     initial a = 1'b1;
-    table 00:; endtable
+    table 00: endtable
 endprimitive
 )");
 
@@ -3434,7 +3434,7 @@ endmodule
 
 TEST_CASE("UDP body errors") {
     auto tree = SyntaxTree::fromText(R"(
-primitive p (q, s, r);
+primitive p1 (q, s, r);
     output q; reg q;
     input s, r;
     initial q = 1'b1;
@@ -3450,6 +3450,15 @@ primitive p (q, s, r);
         1 1 : - : 1;
         1 1 : 1 : ?;
         rr : 1 : 1;
+        1 1 : 1;
+    endtable
+endprimitive
+
+primitive p2 (q, s, r);
+    output q;
+    input s, r;
+    table
+        1 1 : 1 : 1;
     endtable
 endprimitive
 )");
@@ -3458,7 +3467,7 @@ endprimitive
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 10);
+    REQUIRE(diags.size() == 12);
     CHECK(diags[0].code == diag::UdpInvalidSymbol);
     CHECK(diags[1].code == diag::UdpInvalidTransition);
     CHECK(diags[2].code == diag::UdpInvalidEdgeSymbol);
@@ -3469,4 +3478,6 @@ endprimitive
     CHECK(diags[7].code == diag::UdpInvalidMinus);
     CHECK(diags[8].code == diag::UdpInvalidOutput);
     CHECK(diags[9].code == diag::UdpDupTransition);
+    CHECK(diags[10].code == diag::UdpSequentialState);
+    CHECK(diags[11].code == diag::UdpCombState);
 }
