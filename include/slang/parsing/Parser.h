@@ -329,7 +329,7 @@ private:
     syntax::UdpDeclarationSyntax& parseUdpDeclaration(AttrList attributes);
     syntax::UdpPortDeclSyntax& parseUdpPortDecl();
     syntax::UdpBodySyntax& parseUdpBody();
-    syntax::UdpFieldBaseSyntax* parseUdpField(bool required, bool isInput);
+    syntax::UdpFieldBaseSyntax* parseUdpField(bool required, bool isInput, bool& sawTransition);
     syntax::UdpEntrySyntax& parseUdpEntry();
     syntax::SpecparamDeclaratorSyntax& parseSpecparamDeclarator(syntax::SyntaxKind parentKind);
     syntax::SpecparamDeclarationSyntax& parseSpecparam(AttrList attributes, syntax::SyntaxKind parentKind);

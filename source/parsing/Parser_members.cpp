@@ -2629,11 +2629,23 @@ UdpPortListSyntax& Parser::parseUdpPortList() {
     }
 }
 
-UdpFieldBaseSyntax* Parser::parseUdpField(bool required, bool isInput) {
-    auto nextSymbol = [&](bool required, bool& error) {
+UdpFieldBaseSyntax* Parser::parseUdpField(bool required, bool isInput, bool& sawTransition) {
+    auto checkTransition = [&](std::optional<SourceLocation> loc = {}) {
+        if (isInput && sawTransition) {
+            if (!loc)
+                loc = peek().location();
+            addDiag(diag::UdpDupTransition, *loc);
+        }
+        sawTransition = true;
+    };
+
+    auto nextSymbol = [&](bool required, bool insideTrans, bool& error) {
         switch (peek().kind) {
             case TokenKind::Question:
+                return consume();
             case TokenKind::Star:
+                if (!insideTrans)
+                    checkTransition();
                 return consume();
             case TokenKind::Minus: {
                 auto tok = consume();
@@ -2654,10 +2666,13 @@ UdpFieldBaseSyntax* Parser::parseUdpField(bool required, bool isInput) {
                         case '1':
                         case 'x':
                         case 'b':
+                            break;
                         case 'r':
                         case 'f':
                         case 'p':
                         case 'n':
+                            if (!insideTrans)
+                                checkTransition(tok.location() + i);
                             break;
                         default:
                             error = true;
@@ -2677,11 +2692,12 @@ UdpFieldBaseSyntax* Parser::parseUdpField(bool required, bool isInput) {
     };
 
     if (peek(TokenKind::OpenParenthesis)) {
+        checkTransition();
         auto openParen = consume();
 
         bool error = false;
-        auto first = nextSymbol(true, error);
-        auto second = nextSymbol(false, error);
+        auto first = nextSymbol(true, true, error);
+        auto second = nextSymbol(false, true, error);
         auto closeParen = expect(TokenKind::CloseParenthesis);
         auto result = &factory.udpEdgeField(openParen, first, second, closeParen);
 
@@ -2719,7 +2735,7 @@ UdpFieldBaseSyntax* Parser::parseUdpField(bool required, bool isInput) {
     }
 
     bool error = false;
-    auto next = nextSymbol(required, error);
+    auto next = nextSymbol(required, false, error);
     if (!next)
         return nullptr;
 
@@ -2748,9 +2764,10 @@ UdpFieldBaseSyntax* Parser::parseUdpField(bool required, bool isInput) {
 }
 
 UdpEntrySyntax& Parser::parseUdpEntry() {
+    bool sawTransition = false;
     SmallVector<UdpFieldBaseSyntax*, 4> inputs;
     while (true) {
-        auto field = parseUdpField(inputs.empty(), /* isInput */ true);
+        auto field = parseUdpField(inputs.empty(), /* isInput */ true, sawTransition);
         if (!field)
             break;
 
@@ -2758,13 +2775,14 @@ UdpEntrySyntax& Parser::parseUdpEntry() {
     }
 
     auto colon1 = expect(TokenKind::Colon);
-    auto nextState = parseUdpField(true, /* isInput */ false);
+    auto nextState = parseUdpField(true, /* isInput */ false, sawTransition);
 
     Token colon2;
     UdpFieldBaseSyntax* currentState = nullptr;
     if (peek(TokenKind::Colon)) {
         colon2 = consume();
-        currentState = std::exchange(nextState, parseUdpField(true, /* isInput */ false));
+        currentState = std::exchange(nextState,
+                                     parseUdpField(true, /* isInput */ false, sawTransition));
     }
 
     auto checkNonInput = [&](const UdpFieldBaseSyntax* syntax, bool isOutput) {

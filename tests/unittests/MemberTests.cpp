@@ -3442,13 +3442,14 @@ primitive p (q, s, r);
         // s r q q+
         zx : (10) : 1 ;
         f 0 : 1 : - ;
-        (1r) r : ? : 0 ;
-        (111) f : 0 : - ;
+        (1r) x : ? : 0 ;
+        (111) x : 0 : - ;
         1 1 : ? : 01 ;
         1 1 : * : 1;
         1 - : 0 : 1;
         1 1 : - : 1;
         1 1 : 1 : ?;
+        rr : 1 : 1;
     endtable
 endprimitive
 )");
@@ -3457,7 +3458,7 @@ endprimitive
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 9);
+    REQUIRE(diags.size() == 10);
     CHECK(diags[0].code == diag::UdpInvalidSymbol);
     CHECK(diags[1].code == diag::UdpInvalidTransition);
     CHECK(diags[2].code == diag::UdpInvalidEdgeSymbol);
@@ -3467,4 +3468,5 @@ endprimitive
     CHECK(diags[6].code == diag::UdpInvalidMinus);
     CHECK(diags[7].code == diag::UdpInvalidMinus);
     CHECK(diags[8].code == diag::UdpInvalidOutput);
+    CHECK(diags[9].code == diag::UdpDupTransition);
 }
