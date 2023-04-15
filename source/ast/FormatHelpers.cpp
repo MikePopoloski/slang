@@ -14,6 +14,7 @@
 #include "slang/ast/types/AllTypes.h"
 #include "slang/diagnostics/SysFuncsDiags.h"
 #include "slang/text/SFormat.h"
+#include "slang/util/String.h"
 
 namespace slang::ast {
 
@@ -49,7 +50,7 @@ static bool checkArgType(TContext& context, const Expression& arg, char spec, So
         return false;
 
     auto& type = *arg.type;
-    switch (::tolower(spec)) {
+    switch (charToLower(spec)) {
         case 'h':
         case 'x':
         case 'd':
@@ -116,7 +117,7 @@ static bool checkFormatString(const ASTContext& context, const StringLiteral& ar
         fmt, [](std::string_view) {},
         [&](char spec, size_t offset, size_t len, const SFormat::FormatOptions&) {
             // Filter out non-consuming arguments.
-            switch (::tolower(spec)) {
+            switch (charToLower(spec)) {
                 case 'l':
                 case 'm':
                     return;
@@ -196,7 +197,7 @@ bool FmtHelpers::checkSFormatArgs(const ASTContext& context, const Args& args) {
 }
 
 static bool formatSpecialArg(char spec, const Scope& scope, std::string& result) {
-    switch (::tolower(spec)) {
+    switch (charToLower(spec)) {
         case 'l':
             if (auto def = scope.asSymbol().getDeclaringDefinition())
                 result += def->name;

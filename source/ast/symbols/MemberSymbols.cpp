@@ -30,6 +30,7 @@
 #include "slang/diagnostics/TypesDiags.h"
 #include "slang/syntax/AllSyntax.h"
 #include "slang/util/StackContainer.h"
+#include "slang/util/String.h"
 
 namespace slang::ast {
 
@@ -786,12 +787,15 @@ static void expandTableEntries(const Scope& scope, const UdpEntrySyntax& syntax,
         // Build a key out of inputs and current state (if present) that
         // let us determine if this combination has already been added to the table.
         std::string key;
+        bool allX = true;
         for (auto& field : currEntry) {
+            allX &= charToLower(field.value) == 'x';
             if (field.transitionTo) {
                 key.push_back('(');
                 key.push_back(field.value);
                 key.push_back(field.transitionTo);
                 key.push_back(')');
+                allX &= charToLower(field.transitionTo) == 'x';
             }
             else {
                 key.push_back(field.value);
@@ -812,6 +816,9 @@ static void expandTableEntries(const Scope& scope, const UdpEntrySyntax& syntax,
             }
         }
         else {
+            if (allX && !currEntry.empty() && charToLower(baseEntry.output.value) != 'x')
+                scope.addDiag(diag::UdpAllX, syntax.sourceRange());
+
             baseEntry.inputs = currEntry.copy(scope.getCompilation());
             results.push_back(baseEntry);
         }
@@ -824,10 +831,10 @@ static void expandTableEntries(const Scope& scope, const UdpEntrySyntax& syntax,
     };
 
     auto& field = fields[fieldIndex];
-    const char v = (char)::tolower(field.value);
+    const char v = charToLower(field.value);
 
     if (field.transitionTo) {
-        const char w = (char)::tolower(field.transitionTo);
+        const char w = charToLower(field.transitionTo);
 
         SmallVector<char> firstChars;
         SmallVector<char> secondChars;

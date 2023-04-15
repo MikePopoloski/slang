@@ -82,7 +82,7 @@ void strToUpper(std::string& str) {
 
 void strToLower(std::string& str) {
     std::transform(str.begin(), str.end(), str.begin(),
-                   [](unsigned char c) { return (char)std::tolower(c); });
+                   [](unsigned char c) { return charToLower(c); });
 }
 
 int editDistance(std::string_view left, std::string_view right, bool allowReplacements,

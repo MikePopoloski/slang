@@ -99,7 +99,7 @@ bool parse(std::string_view str, function_ref<void(std::string_view)> onText,
         bool widthAllowed = false;
         bool floatAllowed = false;
         char c = *ptr++;
-        char spec = char(::tolower(c));
+        char spec = charToLower(c);
         switch (spec) {
             case 'h':
             case 'x':
@@ -353,7 +353,7 @@ void formatStrength(std::string& result, const SVInt& value) {
 
 void formatArg(std::string& result, const ConstantValue& arg, char specifier,
                const FormatOptions& options) {
-    switch (::tolower(specifier)) {
+    switch (charToLower(specifier)) {
         case 'h':
         case 'x':
             formatInt(result, arg.convertToInt().integer(), LiteralBase::Hex, options);

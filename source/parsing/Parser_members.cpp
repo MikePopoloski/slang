@@ -2663,7 +2663,7 @@ UdpFieldBaseSyntax* Parser::parseUdpField(bool required, bool isInput, bool& saw
                 auto tok = consume();
                 auto text = tok.rawText();
                 for (size_t i = 0; i < text.length(); i++) {
-                    char c = (char)::tolower(text[i]);
+                    char c = charToLower(text[i]);
                     switch (c) {
                         case '0':
                         case '1':
@@ -2716,7 +2716,7 @@ UdpFieldBaseSyntax* Parser::parseUdpField(bool required, bool isInput, bool& saw
                     for (auto tok : {first, second}) {
                         auto text = tok.rawText();
                         for (size_t i = 0; i < text.length(); i++) {
-                            char c = (char)::tolower(text[i]);
+                            char c = charToLower(text[i]);
                             switch (c) {
                                 case '0':
                                 case '1':
@@ -2748,7 +2748,7 @@ UdpFieldBaseSyntax* Parser::parseUdpField(bool required, bool isInput, bool& saw
             addDiag(diag::UdpSingleChar, next.range());
         }
         else if (!text.empty()) {
-            char c = (char)::tolower(text[0]);
+            char c = charToLower(text[0]);
             switch (c) {
                 case '*':
                 case 'r':
@@ -3101,7 +3101,7 @@ EdgeDescriptorSyntax& Parser::parseEdgeDescriptor() {
         bool bad = false;
         bool bothUnknown = true;
         for (char& edge : edges) {
-            char c = edge = (char)::tolower(edge);
+            char c = edge = charToLower(edge);
             if (c == '0' || c == '1') {
                 bothUnknown = false;
             }
