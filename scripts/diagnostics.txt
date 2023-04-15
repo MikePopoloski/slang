@@ -463,6 +463,7 @@ error DefparamBadHierarchy "defparam in a hierarchy in or under a generate block
 error BindTargetPrimitive "cannot bind a primitive"
 error BindUnderBind "cannot bind an instance underneath the scope of another bind instance"
 error UdpWrongInputCount "incorrect number of input fields in table row; have {} but expect {}"
+error UdpDupDiffOutput "primitive table row duplicates a set of inputs with a different specified output value"
 error FatalTask "$fatal encountered{}"
 error ErrorTask "$error encountered{}"
 error StaticAssert "static assertion failed{}"

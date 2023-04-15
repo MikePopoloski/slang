@@ -767,19 +767,60 @@ void PrimitivePortSymbol::serializeTo(ASTSerializer& serializer) const {
     serializer.write("direction", toString(direction));
 }
 
-static void expandTableEntries(Compilation& comp,
+static char getUdpFieldChar(const UdpFieldBaseSyntax* base) {
+    if (base && base->kind == SyntaxKind::UdpSimpleField) {
+        auto raw = base->as<UdpSimpleFieldSyntax>().field.rawText();
+        if (!raw.empty())
+            return raw[0];
+    }
+    return 0;
+}
+
+static void expandTableEntries(const Scope& scope, const UdpEntrySyntax& syntax,
                                const SmallVector<PrimitiveSymbol::TableField>& fields,
                                SmallVector<PrimitiveSymbol::TableField>& currEntry,
                                size_t fieldIndex, PrimitiveSymbol::TableEntry& baseEntry,
-                               SmallVector<PrimitiveSymbol::TableEntry>& results) {
+                               SmallVector<PrimitiveSymbol::TableEntry>& results,
+                               SmallMap<std::string, const UdpEntrySyntax*, 4>& rowDupMap) {
     if (fieldIndex == fields.size()) {
-        baseEntry.inputs = currEntry.copy(comp);
-        results.push_back(baseEntry);
+        // Build a key out of inputs and current state (if present) that
+        // let us determine if this combination has already been added to the table.
+        std::string key;
+        for (auto& field : currEntry) {
+            if (field.transitionTo) {
+                key.push_back('(');
+                key.push_back(field.value);
+                key.push_back(field.transitionTo);
+                key.push_back(')');
+            }
+            else {
+                key.push_back(field.value);
+            }
+        }
+
+        if (baseEntry.state.value)
+            key.push_back(baseEntry.state.value);
+
+        auto [it, inserted] = rowDupMap.emplace(std::move(key), &syntax);
+        if (!inserted) {
+            // This is an error if the existing row has a different output,
+            // otherwise it's just silently ignored.
+            auto existing = getUdpFieldChar(it->second->next);
+            if (existing != baseEntry.output.value && existing && baseEntry.output.value) {
+                auto& diag = scope.addDiag(diag::UdpDupDiffOutput, syntax.sourceRange());
+                diag.addNote(diag::NotePreviousDefinition, it->second->sourceRange());
+            }
+        }
+        else {
+            baseEntry.inputs = currEntry.copy(scope.getCompilation());
+            results.push_back(baseEntry);
+        }
         return;
     }
 
     auto next = [&](SmallVector<PrimitiveSymbol::TableField>& nextFieldList) {
-        expandTableEntries(comp, fields, nextFieldList, fieldIndex + 1, baseEntry, results);
+        expandTableEntries(scope, syntax, fields, nextFieldList, fieldIndex + 1, baseEntry, results,
+                           rowDupMap);
     };
 
     auto& field = fields[fieldIndex];
@@ -870,7 +911,9 @@ static void expandTableEntries(Compilation& comp,
 }
 
 static void createTableEntries(const Scope& scope, const UdpEntrySyntax& syntax,
-                               SmallVector<PrimitiveSymbol::TableEntry>& results, size_t numPorts) {
+                               SmallVector<PrimitiveSymbol::TableEntry>& results,
+                               SmallMap<std::string, const UdpEntrySyntax*, 4>& rowDupMap,
+                               size_t numPorts) {
     SmallVector<PrimitiveSymbol::TableField> fields;
     for (auto input : syntax.inputs) {
         if (input->kind == SyntaxKind::UdpEdgeField) {
@@ -901,21 +944,12 @@ static void createTableEntries(const Scope& scope, const UdpEntrySyntax& syntax,
         diag << numPorts - 1;
     }
 
-    auto getChar = [](const UdpFieldBaseSyntax* base) -> char {
-        if (base && base->kind == SyntaxKind::UdpSimpleField) {
-            auto raw = base->as<UdpSimpleFieldSyntax>().field.rawText();
-            if (!raw.empty())
-                return raw[0];
-        }
-        return 0;
-    };
-
     PrimitiveSymbol::TableEntry entry;
-    entry.state.value = getChar(syntax.current);
-    entry.output.value = getChar(syntax.next);
+    entry.state.value = getUdpFieldChar(syntax.current);
+    entry.output.value = getUdpFieldChar(syntax.next);
 
     SmallVector<PrimitiveSymbol::TableField> currEntry;
-    expandTableEntries(scope.getCompilation(), fields, currEntry, 0, entry, results);
+    expandTableEntries(scope, syntax, fields, currEntry, 0, entry, results, rowDupMap);
 }
 
 PrimitiveSymbol& PrimitiveSymbol::fromSyntax(const Scope& scope,
@@ -1144,9 +1178,10 @@ PrimitiveSymbol& PrimitiveSymbol::fromSyntax(const Scope& scope,
         }
     }
 
+    SmallMap<std::string, const UdpEntrySyntax*, 4> rowDupMap;
     SmallVector<TableEntry> table;
     for (auto entry : syntax.body->entries)
-        createTableEntries(scope, *entry, table, ports.size());
+        createTableEntries(scope, *entry, table, rowDupMap, ports.size());
 
     prim->ports = ports.copy(comp);
     prim->table = table.copy(comp);
