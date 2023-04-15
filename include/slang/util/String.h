@@ -55,6 +55,11 @@ void strToUpper(std::string& str);
 /// The string is converted in place.
 void strToLower(std::string& str);
 
+/// Converts a character to uppercase (assuming ASCII).
+inline char charToUpper(char c) {
+    return (char)::toupper(c);
+}
+
 /// Converts a character to lowercase (assuming ASCII).
 inline char charToLower(char c) {
     return (char)::tolower(c);
