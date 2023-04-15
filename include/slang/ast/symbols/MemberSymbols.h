@@ -245,7 +245,19 @@ public:
 
 class SLANG_EXPORT PrimitiveSymbol : public Symbol, public Scope {
 public:
+    struct TableField {
+        char value = 0;
+        char transitionTo = 0;
+    };
+
+    struct TableEntry {
+        std::span<const TableField> inputs;
+        TableField state;
+        TableField output;
+    };
+
     std::span<const PrimitivePortSymbol* const> ports;
+    std::span<const TableEntry> table;
     const ConstantValue* initVal = nullptr;
     bool isSequential = false;
     enum PrimitiveKind { UserDefined, Fixed, NInput, NOutput } primitiveKind;

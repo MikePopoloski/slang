@@ -2629,11 +2629,10 @@ UdpPortListSyntax& Parser::parseUdpPortList() {
     }
 }
 
-UdpEntrySyntax& Parser::parseUdpEntry() {
+UdpFieldBaseSyntax* Parser::parseUdpField(bool required) {
     auto nextSymbol = [&](bool required) {
         switch (peek().kind) {
             case TokenKind::IntegerLiteral:
-            case TokenKind::IntegerBase:
             case TokenKind::Question:
             case TokenKind::Star:
             case TokenKind::Minus:
@@ -2646,46 +2645,43 @@ UdpEntrySyntax& Parser::parseUdpEntry() {
         }
     };
 
-    SmallVector<Token, 4> preInputs;
-    SmallVector<Token, 4> postInputs;
-    while (true) {
-        auto next = nextSymbol(false);
-        if (!next)
-            break;
-
-        preInputs.push_back(next);
-    }
-
-    UdpEdgeIndicatorSyntax* edgeIndicator = nullptr;
     if (peek(TokenKind::OpenParenthesis)) {
         auto openParen = consume();
         auto first = nextSymbol(true);
         auto second = nextSymbol(false);
         auto closeParen = expect(TokenKind::CloseParenthesis);
-        edgeIndicator = &factory.udpEdgeIndicator(openParen, first, second, closeParen);
+        return &factory.udpEdgeField(openParen, first, second, closeParen);
+    }
 
-        while (true) {
-            auto next = nextSymbol(false);
-            if (!next)
-                break;
+    auto next = nextSymbol(required);
+    if (!next)
+        return nullptr;
 
-            postInputs.push_back(next);
-        }
+    return &factory.udpSimpleField(next);
+}
+
+UdpEntrySyntax& Parser::parseUdpEntry() {
+    SmallVector<UdpFieldBaseSyntax*, 4> inputs;
+    while (true) {
+        auto field = parseUdpField(inputs.empty());
+        if (!field)
+            break;
+
+        inputs.push_back(field);
     }
 
     auto colon1 = expect(TokenKind::Colon);
-    auto current = nextSymbol(true);
+    auto nextState = parseUdpField(true);
 
     Token colon2;
-    Token nextState;
+    UdpFieldBaseSyntax* currentState = nullptr;
     if (peek(TokenKind::Colon)) {
         colon2 = consume();
-        nextState = nextSymbol(true);
+        currentState = std::exchange(nextState, parseUdpField(true));
     }
 
     auto semi = expect(TokenKind::Semicolon);
-    return factory.udpEntry(preInputs.copy(alloc), edgeIndicator, postInputs.copy(alloc), colon1,
-                            current, colon2, nextState, semi);
+    return factory.udpEntry(inputs.copy(alloc), colon1, currentState, colon2, nextState, semi);
 }
 
 UdpBodySyntax& Parser::parseUdpBody() {

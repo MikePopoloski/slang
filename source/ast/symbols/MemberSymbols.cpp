@@ -765,6 +765,116 @@ void PrimitivePortSymbol::serializeTo(ASTSerializer& serializer) const {
     serializer.write("direction", toString(direction));
 }
 
+static void expandTableEntries(Compilation& comp,
+                               const SmallVector<PrimitiveSymbol::TableField>& fields,
+                               SmallVector<PrimitiveSymbol::TableField>& currEntry,
+                               size_t fieldIndex, PrimitiveSymbol::TableEntry& baseEntry,
+                               SmallVector<PrimitiveSymbol::TableEntry>& results) {
+    if (fieldIndex == fields.size()) {
+        baseEntry.inputs = currEntry.copy(comp);
+        results.push_back(baseEntry);
+        return;
+    }
+
+    auto next = [&](SmallVector<PrimitiveSymbol::TableField>& nextFieldList) {
+        expandTableEntries(comp, fields, nextFieldList, fieldIndex + 1, baseEntry, results);
+    };
+
+    const char v = (char)::tolower(fields[fieldIndex].value);
+    switch (v) {
+        case '?':
+            for (auto c : {'0', '1', 'x'}) {
+                auto copiedEntry = currEntry;
+                copiedEntry.push_back({c});
+                next(copiedEntry);
+            }
+            break;
+        case 'b':
+            for (auto c : {'0', '1'}) {
+                auto copiedEntry = currEntry;
+                copiedEntry.push_back({c});
+                next(copiedEntry);
+            }
+            break;
+        case 'p':
+            for (auto c : {"01", "0x", "x1"}) {
+                auto copiedEntry = currEntry;
+                copiedEntry.push_back({c[0], c[1]});
+                next(copiedEntry);
+            }
+            break;
+        case 'n':
+            for (auto c : {"10", "1x", "x0"}) {
+                auto copiedEntry = currEntry;
+                copiedEntry.push_back({c[0], c[1]});
+                next(copiedEntry);
+            }
+            break;
+        case '*':
+            for (auto c : {"01", "0x", "x1", "10", "1x", "x0"}) {
+                auto copiedEntry = currEntry;
+                copiedEntry.push_back({c[0], c[1]});
+                next(copiedEntry);
+            }
+            break;
+        case 'r':
+            currEntry.push_back({'0', '1'});
+            next(currEntry);
+            break;
+        case 'f':
+            currEntry.push_back({'1', '0'});
+            next(currEntry);
+            break;
+        default:
+            currEntry.push_back({v});
+            next(currEntry);
+            break;
+    }
+}
+
+static void createTableEntries(Compilation& comp, const UdpEntrySyntax& syntax,
+                               SmallVector<PrimitiveSymbol::TableEntry>& results) {
+    SmallVector<PrimitiveSymbol::TableField> fields;
+    for (auto input : syntax.inputs) {
+        if (input->kind == SyntaxKind::UdpEdgeField) {
+            auto& edge = input->as<UdpEdgeFieldSyntax>();
+
+            SmallVector<char, 4> chars;
+            chars.append(edge.first.rawText());
+            chars.append(edge.second.rawText());
+
+            PrimitiveSymbol::TableField field;
+            if (chars.size() > 0)
+                field.value = chars[0];
+            if (chars.size() > 1)
+                field.transitionTo = chars[1];
+
+            fields.push_back(field);
+        }
+        else {
+            auto tok = input->as<UdpSimpleFieldSyntax>().field;
+            for (auto c : tok.rawText())
+                fields.push_back({c, 0});
+        }
+    }
+
+    auto getChar = [](const UdpFieldBaseSyntax* base) -> char {
+        if (base && base->kind == SyntaxKind::UdpSimpleField) {
+            auto raw = base->as<UdpSimpleFieldSyntax>().field.rawText();
+            if (!raw.empty())
+                return raw[0];
+        }
+        return 0;
+    };
+
+    PrimitiveSymbol::TableEntry entry;
+    entry.state.value = getChar(syntax.current);
+    entry.output.value = getChar(syntax.next);
+
+    SmallVector<PrimitiveSymbol::TableField> currEntry;
+    expandTableEntries(comp, fields, currEntry, 0, entry, results);
+}
+
 PrimitiveSymbol& PrimitiveSymbol::fromSyntax(const Scope& scope,
                                              const UdpDeclarationSyntax& syntax) {
     auto& comp = scope.getCompilation();
@@ -991,9 +1101,12 @@ PrimitiveSymbol& PrimitiveSymbol::fromSyntax(const Scope& scope,
         }
     }
 
-    // TODO: body
+    SmallVector<TableEntry> table;
+    for (auto entry : syntax.body->entries)
+        createTableEntries(comp, *entry, table);
 
     prim->ports = ports.copy(comp);
+    prim->table = table.copy(comp);
     return *prim;
 }
 
