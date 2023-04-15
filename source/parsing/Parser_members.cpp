@@ -2629,33 +2629,120 @@ UdpPortListSyntax& Parser::parseUdpPortList() {
     }
 }
 
-UdpFieldBaseSyntax* Parser::parseUdpField(bool required) {
-    auto nextSymbol = [&](bool required) {
+UdpFieldBaseSyntax* Parser::parseUdpField(bool required, bool isInput) {
+    auto nextSymbol = [&](bool required, bool& error) {
         switch (peek().kind) {
-            case TokenKind::IntegerLiteral:
             case TokenKind::Question:
             case TokenKind::Star:
-            case TokenKind::Minus:
-            case TokenKind::Identifier:
                 return consume();
+            case TokenKind::Minus: {
+                auto tok = consume();
+                if (isInput) {
+                    error = true;
+                    addDiag(diag::UdpInvalidMinus, tok.location());
+                }
+                return tok;
+            }
+            case TokenKind::Identifier:
+            case TokenKind::IntegerLiteral: {
+                auto tok = consume();
+                auto text = tok.rawText();
+                for (size_t i = 0; i < text.length(); i++) {
+                    char c = (char)::tolower(text[i]);
+                    switch (c) {
+                        case '0':
+                        case '1':
+                        case 'x':
+                        case 'b':
+                        case 'r':
+                        case 'f':
+                        case 'p':
+                        case 'n':
+                            break;
+                        default:
+                            error = true;
+                            addDiag(diag::UdpInvalidSymbol, tok.location() + i) << c;
+                            break;
+                    }
+                }
+                return tok;
+            }
             default:
-                if (required)
+                if (required) {
+                    error = true;
                     addDiag(diag::ExpectedUdpSymbol, peek().location());
+                }
                 return Token();
         }
     };
 
     if (peek(TokenKind::OpenParenthesis)) {
         auto openParen = consume();
-        auto first = nextSymbol(true);
-        auto second = nextSymbol(false);
+
+        bool error = false;
+        auto first = nextSymbol(true, error);
+        auto second = nextSymbol(false, error);
         auto closeParen = expect(TokenKind::CloseParenthesis);
-        return &factory.udpEdgeField(openParen, first, second, closeParen);
+        auto result = &factory.udpEdgeField(openParen, first, second, closeParen);
+
+        if (!closeParen.isMissing()) {
+            if (!isInput) {
+                addDiag(diag::UdpInvalidTransition, result->sourceRange());
+            }
+            else if (!error) {
+                if (first.rawText().size() + second.rawText().size() != 2) {
+                    addDiag(diag::UdpTransitionLength, result->sourceRange());
+                }
+                else {
+                    for (auto tok : {first, second}) {
+                        auto text = tok.rawText();
+                        for (size_t i = 0; i < text.length(); i++) {
+                            char c = (char)::tolower(text[i]);
+                            switch (c) {
+                                case '0':
+                                case '1':
+                                case 'x':
+                                case 'b':
+                                case '?':
+                                    break;
+                                default:
+                                    addDiag(diag::UdpInvalidEdgeSymbol, tok.location() + i) << c;
+                                    break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        return result;
     }
 
-    auto next = nextSymbol(required);
+    bool error = false;
+    auto next = nextSymbol(required, error);
     if (!next)
         return nullptr;
+
+    if (!isInput && !error) {
+        auto text = next.rawText();
+        if (text.length() > 1) {
+            addDiag(diag::UdpSingleChar, next.range());
+        }
+        else if (!text.empty()) {
+            char c = (char)::tolower(text[0]);
+            switch (c) {
+                case '*':
+                case 'r':
+                case 'f':
+                case 'p':
+                case 'n':
+                    addDiag(diag::UdpInvalidInputOnly, next.location()) << c;
+                    break;
+                default:
+                    break;
+            }
+        }
+    }
 
     return &factory.udpSimpleField(next);
 }
@@ -2663,7 +2750,7 @@ UdpFieldBaseSyntax* Parser::parseUdpField(bool required) {
 UdpEntrySyntax& Parser::parseUdpEntry() {
     SmallVector<UdpFieldBaseSyntax*, 4> inputs;
     while (true) {
-        auto field = parseUdpField(inputs.empty());
+        auto field = parseUdpField(inputs.empty(), /* isInput */ true);
         if (!field)
             break;
 
@@ -2671,14 +2758,40 @@ UdpEntrySyntax& Parser::parseUdpEntry() {
     }
 
     auto colon1 = expect(TokenKind::Colon);
-    auto nextState = parseUdpField(true);
+    auto nextState = parseUdpField(true, /* isInput */ false);
 
     Token colon2;
     UdpFieldBaseSyntax* currentState = nullptr;
     if (peek(TokenKind::Colon)) {
         colon2 = consume();
-        currentState = std::exchange(nextState, parseUdpField(true));
+        currentState = std::exchange(nextState, parseUdpField(true, /* isInput */ false));
     }
+
+    auto checkNonInput = [&](const UdpFieldBaseSyntax* syntax, bool isOutput) {
+        if (!syntax || syntax->kind != SyntaxKind::UdpSimpleField)
+            return;
+
+        auto tok = syntax->as<UdpSimpleFieldSyntax>().field;
+        auto raw = tok.rawText();
+        if (!raw.empty()) {
+            switch (raw[0]) {
+                case '?':
+                case 'b':
+                    if (isOutput)
+                        addDiag(diag::UdpInvalidOutput, tok.location()) << raw[0];
+                    break;
+                case '-':
+                    if (!isOutput)
+                        addDiag(diag::UdpInvalidMinus, tok.location());
+                    break;
+                default:
+                    break;
+            }
+        }
+    };
+
+    checkNonInput(currentState, false);
+    checkNonInput(nextState, true);
 
     auto semi = expect(TokenKind::Semicolon);
     return factory.udpEntry(inputs.copy(alloc), colon1, currentState, colon2, nextState, semi);

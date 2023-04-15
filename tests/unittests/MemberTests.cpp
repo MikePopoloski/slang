@@ -3431,3 +3431,40 @@ endmodule
     auto cs = m.find<NetSymbol>("b").getChargeStrength();
     CHECK(cs == ChargeStrength::Small);
 }
+
+TEST_CASE("UDP body errors") {
+    auto tree = SyntaxTree::fromText(R"(
+primitive p (q, s, r);
+    output q; reg q;
+    input s, r;
+    initial q = 1'b1;
+    table
+        // s r q q+
+        zx : (10) : 1 ;
+        f 0 : 1 : - ;
+        (1r) r : ? : 0 ;
+        (111) f : 0 : - ;
+        1 1 : ? : 01 ;
+        1 1 : * : 1;
+        1 - : 0 : 1;
+        1 1 : - : 1;
+        1 1 : 1 : ?;
+    endtable
+endprimitive
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 9);
+    CHECK(diags[0].code == diag::UdpInvalidSymbol);
+    CHECK(diags[1].code == diag::UdpInvalidTransition);
+    CHECK(diags[2].code == diag::UdpInvalidEdgeSymbol);
+    CHECK(diags[3].code == diag::UdpTransitionLength);
+    CHECK(diags[4].code == diag::UdpSingleChar);
+    CHECK(diags[5].code == diag::UdpInvalidInputOnly);
+    CHECK(diags[6].code == diag::UdpInvalidMinus);
+    CHECK(diags[7].code == diag::UdpInvalidMinus);
+    CHECK(diags[8].code == diag::UdpInvalidOutput);
+}
