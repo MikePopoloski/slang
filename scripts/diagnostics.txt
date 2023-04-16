@@ -1014,7 +1014,7 @@ group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-
 group pedantic = { empty-pattern implicit-net-port nonstandard-escape-code nonstandard-generate format-multibit-strength
                    nonstandard-sys-func nonstandard-foreach nonstandard-dist }
 
-group conversion = { width-trunc width-expand port-width-expand implicit-conv }
+group conversion = { width-trunc width-expand port-width-trunc port-width-expand implicit-conv }
 
 group unused = { unused-def unused-net unused-implicit-net unused-variable undriven-net unassigned-variable
                  unused-but-set-net unused-but-set-variable unused-port undriven-port unused-argument
