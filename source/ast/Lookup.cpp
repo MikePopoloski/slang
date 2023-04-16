@@ -512,7 +512,14 @@ bool lookupDownward(std::span<const NamePlusLoc> nameParts, NameComponents name,
     }
 
     result.found = symbol;
-    result.selectors.append(name.selectors);
+
+    if (!name.selectors.empty()) {
+        // If this is a scope, the selectors should be an index into it.
+        if (result.found && result.found->isScope() && !result.found->isType())
+            result.found = Lookup::selectChild(*result.found, name.selectors, context, result);
+        else
+            result.selectors.append(name.selectors);
+    }
 
     return true;
 }
