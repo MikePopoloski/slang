@@ -184,12 +184,16 @@ bool ValueExpressionBase::requireLValueImpl(const ASTContext& context, SourceLoc
         }
     }
     else if (symbol.kind == SymbolKind::ModportPort) {
-        if (symbol.as<ModportPortSymbol>().direction == ArgumentDirection::In) {
+        auto& modportPort = symbol.as<ModportPortSymbol>();
+        if (modportPort.direction == ArgumentDirection::In) {
             auto& diag = context.addDiag(diag::InputPortAssign, sourceRange);
             diag << symbol.name;
             diag.addNote(diag::NoteDeclarationHere, symbol.location);
             return false;
         }
+
+        if (auto expr = modportPort.getConnectionExpr())
+            return expr->requireLValue(context, location, flags, longestStaticPrefix);
     }
 
     if (!longestStaticPrefix)

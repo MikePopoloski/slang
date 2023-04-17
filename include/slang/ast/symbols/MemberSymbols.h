@@ -118,6 +118,12 @@ public:
 
     ModportPortSymbol(std::string_view name, SourceLocation loc, ArgumentDirection direction);
 
+    /// Returns an expression that represents whatever this port connects to.
+    /// For explicit connections, this just returns @a explicitConnection and for
+    /// implicit connections this returns a NamedValueExpression that wraps the
+    /// @a internalSymbol. Returns nullptr if there is no connection at all.
+    const Expression* getConnectionExpr() const { return connExpr; }
+
     void serializeTo(ASTSerializer& serializer) const;
 
     static ModportPortSymbol& fromSyntax(const ASTContext& context, ArgumentDirection direction,
@@ -127,6 +133,9 @@ public:
                                          const syntax::ModportExplicitPortSyntax& syntax);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::ModportPort; }
+
+private:
+    const Expression* connExpr = nullptr;
 };
 
 /// Represents a clocking block port.

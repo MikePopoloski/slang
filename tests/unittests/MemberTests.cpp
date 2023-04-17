@@ -3511,3 +3511,28 @@ endprimitive
     CHECK(diags[10].code == diag::UdpSequentialState);
     CHECK(diags[11].code == diag::UdpCombState);
 }
+
+TEST_CASE("Modport multi-driven errors") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I;
+    int i;
+    modport m(output i);
+endinterface
+
+module m(I.m i);
+    assign i.i = 1;
+endmodule
+
+module top;
+    I i();
+    m m1(i), m2(i);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::MultipleContAssigns);
+}

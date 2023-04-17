@@ -219,6 +219,7 @@ ModportPortSymbol& ModportPortSymbol::fromSyntax(const ASTContext& context,
             break;
     }
 
+    result->connExpr = &expr;
     return *result;
 }
 
@@ -242,6 +243,7 @@ ModportPortSymbol& ModportPortSymbol::fromSyntax(const ASTContext& parentContext
 
     auto& expr = Expression::bind(*syntax.expr, context, extraFlags);
     result->explicitConnection = &expr;
+    result->connExpr = &expr;
     if (expr.bad()) {
         result->setType(comp.getErrorType());
         return *result;
