@@ -1909,3 +1909,28 @@ endmodule
     CHECK(diags[7].code == diag::UnknownMember);
     CHECK(diags[8].code == diag::PatternTaggedType);
 }
+
+TEST_CASE("Break / continue in fork join") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int bar;
+    initial begin
+        for (int i = 0; i < 10; i++) begin
+            fork
+                if (i == 0)
+                    break;
+                continue;
+            join
+        end
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::StatementNotInLoop);
+    CHECK(diags[1].code == diag::StatementNotInLoop);
+}

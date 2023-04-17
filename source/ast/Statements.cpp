@@ -671,9 +671,20 @@ Statement& BlockStatement::fromSyntax(Compilation& comp, const BlockStatementSyn
         return badStmt(comp, nullptr);
     }
 
-    bool wasInForkJoin = stmtCtx.flags.has(StatementFlags::InForkJoin);
-    if (blockKind != StatementBlockKind::Sequential)
+    // When entering a fork-join we clear any active loop flags, since the new
+    // forked processes are effectively not in that loop (and statements like
+    // continue and break do not apply to the outer loop).
+    auto guard = ScopeGuard([&stmtCtx, savedFlags = stmtCtx.flags] {
+        const auto savableFlags = StatementFlags::InLoop | StatementFlags::InForLoop |
+                                  StatementFlags::InForkJoin;
+        stmtCtx.flags &= ~savableFlags;
+        stmtCtx.flags |= savedFlags & savableFlags;
+    });
+
+    if (blockKind != StatementBlockKind::Sequential) {
         stmtCtx.flags |= StatementFlags::InForkJoin;
+        stmtCtx.flags &= ~(StatementFlags::InLoop | StatementFlags::InForLoop);
+    }
 
     bool anyBad = false;
     SmallVector<const Statement*> buffer;
@@ -691,10 +702,6 @@ Statement& BlockStatement::fromSyntax(Compilation& comp, const BlockStatementSyn
     }
 
     auto result = createBlockStatement(comp, buffer, syntax, blockKind);
-
-    if (blockKind != StatementBlockKind::Sequential && !wasInForkJoin)
-        stmtCtx.flags &= ~StatementFlags::InForkJoin;
-
     if (anyBad)
         return badStmt(comp, result);
 
