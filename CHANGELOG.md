@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ### General Features
 * slang now requires a C++20 compatible compiler to build (e.g. minimum GCC 10)
 * New warnings [-Wport-width-expand](https://sv-lang.com/warning-ref.html#port-width-expand) and [-Wport-width-trunc](https://sv-lang.com/warning-ref.html#port-width-trunc) separate out width warnings that occur in port connections from general expressions elsewhere. This makes it easier to find and target these specific cases of width mismatches.
-* New option `--suppress-macro-warnings` that functions similarly to `--suppress-warnings` except that it applies to the original definition location of macros instead of their expansion location. This is useful if, for example, you want to hide warnings from 3rd party macros (like from UVM) that you use in your own code. 
+* New option `--suppress-macro-warnings` that functions similarly to `--suppress-warnings` except that it applies to the original definition location of macros instead of their expansion location. This is useful if, for example, you want to hide warnings from 3rd party macros (like from UVM) that you use in your own code.
 
 ### Improvements
 * When dealing with duplicate module/interface/program definitions (where the error has been downgraded to a warning) slang will now make use of the first definition seen instead of any later ones, to better match the behavior of other tools
