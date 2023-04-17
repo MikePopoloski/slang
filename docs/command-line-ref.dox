@@ -312,6 +312,12 @@ Show or hide hierarchy locations in diagnostic output. The default is to show.
 One or more paths in which to suppress warnings. Use this if you want to generally turn on warnings
 for your project and have it build cleanly but have some files which you can't modify for some reason.
 
+`--suppress-macro-warnings`
+
+One or more paths in which to suppress warnings that originate from macro expansions. This means that
+warnings inside of macros that are defined within these paths will be suppressed, even if the macros are
+expanded into files that are not within these paths.
+
 `--error-limit`
 
 Set a limit on the number of errors that will be printed. Setting this to zero will

@@ -169,6 +169,11 @@ void Driver::addStandardArgs() {
     cmdLine.add("--suppress-warnings", options.suppressWarningsPaths,
                 "One or more paths in which to suppress warnings", "<filename>",
                 /* isFileName */ true);
+    cmdLine.add("--suppress-macro-warnings", options.suppressMacroWarningsPaths,
+                "One or more paths in which to suppress warnings that "
+                "originate in macro expansions",
+                "<filename>",
+                /* isFileName */ true);
 
     // File lists
     cmdLine.add("--single-unit", options.singleUnit,
@@ -401,6 +406,8 @@ bool Driver::processOptions() {
 
     for (const std::string& path : options.suppressWarningsPaths)
         diagEngine.addIgnorePath(fs::canonical(widen(path)));
+    for (const std::string& path : options.suppressMacroWarningsPaths)
+        diagEngine.addIgnoreMacroPath(fs::canonical(widen(path)));
 
     Diagnostics optionDiags = diagEngine.setWarningOptions(options.warningOptions);
     for (auto& diag : optionDiags)
