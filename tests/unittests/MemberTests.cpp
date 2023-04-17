@@ -3536,3 +3536,18 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::MultipleContAssigns);
 }
+
+TEST_CASE("Function non-ansi port defaults are illegal") {
+    auto tree = SyntaxTree::fromText(R"(
+function foo;
+    input a = 1;
+endfunction
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::SubroutinePortInitializer);
+}
