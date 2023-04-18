@@ -149,6 +149,9 @@ module q(
        lhs = 0;
        lhs[lhs_lsb +: 2] = rhs[rhs_lsb +: 2];
    end
+
+   wire w, x;
+   tranif1(w, x, 1'b1);
 endmodule
 
 class C;

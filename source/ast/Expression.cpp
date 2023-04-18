@@ -207,7 +207,11 @@ const Expression& Expression::bindLValue(const ExpressionSyntax& lhs, const Type
                                   ASTFlags::StreamingAllowed | ASTFlags::LValue);
     }
     else {
-        lhsExpr = &create(comp, lhs, context, ASTFlags::LValue, rhsExpr->type);
+        bitmask<ASTFlags> astFlags = ASTFlags::LValue;
+        if (isInout)
+            astFlags |= ASTFlags::LAndRValue;
+
+        lhsExpr = &create(comp, lhs, context, astFlags, rhsExpr->type);
     }
 
     selfDetermined(context, lhsExpr);
