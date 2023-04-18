@@ -175,6 +175,11 @@ public:
                                           const ExpressionSyntax& syntax, const ASTContext& context,
                                           bool isConstRef = false);
 
+    /// Checks that the given expression is valid for the specified connection direction.
+    static bool checkConnectionDirection(const Expression& expr, ArgumentDirection direction,
+                                         const ASTContext& context, SourceLocation loc,
+                                         bitmask<AssignFlags> flags);
+
     /// Binds an initializer expression for an implicitly typed parameter.
     /// There are special inference rules for parameters.
     static std::tuple<const Expression*, const Type*> bindImplicitParam(
@@ -282,10 +287,6 @@ public:
     void getLongestStaticPrefixes(
         SmallVector<std::pair<const ValueSymbol*, const Expression*>>& results,
         EvalContext& evalContext, const Expression* longestStaticPrefix = nullptr) const;
-
-    /// Checks whether this kind of expression can be connected to a ref argument
-    /// for a subroutine or module port.
-    bool canConnectToRefArg(bool isConstRef, bool allowConstClassHandle = false) const;
 
     /// Returns true if this expression can be implicitly assigned to value
     /// of the given type.

@@ -203,21 +203,7 @@ ModportPortSymbol& ModportPortSymbol::fromSyntax(const ASTContext& context,
     auto& expr = ValueExpressionBase::fromSymbol(checkCtx, *result->internalSymbol, false,
                                                  {loc, loc + result->name.length()});
 
-    switch (direction) {
-        case ArgumentDirection::In:
-            // Nothing to check here.
-            break;
-        case ArgumentDirection::Out:
-            expr.requireLValue(checkCtx, loc, AssignFlags::NotADriver);
-            break;
-        case ArgumentDirection::InOut:
-            expr.requireLValue(checkCtx, loc, AssignFlags::NotADriver | AssignFlags::InOutPort);
-            break;
-        case ArgumentDirection::Ref:
-            if (!expr.canConnectToRefArg(/* isConstRef */ false))
-                checkCtx.addDiag(diag::InvalidRefArg, loc) << expr.sourceRange;
-            break;
-    }
+    Expression::checkConnectionDirection(expr, direction, checkCtx, loc, AssignFlags::NotADriver);
 
     result->connExpr = &expr;
     return *result;
@@ -251,21 +237,8 @@ ModportPortSymbol& ModportPortSymbol::fromSyntax(const ASTContext& parentContext
 
     result->setType(*expr.type);
 
-    switch (direction) {
-        case ArgumentDirection::In:
-            break;
-        case ArgumentDirection::Out:
-            expr.requireLValue(context, result->location, AssignFlags::NotADriver);
-            break;
-        case ArgumentDirection::InOut:
-            expr.requireLValue(context, result->location,
-                               AssignFlags::NotADriver | AssignFlags::InOutPort);
-            break;
-        case ArgumentDirection::Ref:
-            if (!expr.canConnectToRefArg(/* isConstRef */ false))
-                context.addDiag(diag::InvalidRefArg, result->location) << expr.sourceRange;
-            break;
-    }
+    Expression::checkConnectionDirection(expr, direction, context, result->location,
+                                         AssignFlags::NotADriver);
 
     return *result;
 }
