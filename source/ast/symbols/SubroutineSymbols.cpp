@@ -348,8 +348,8 @@ SubroutineSymbol& SubroutineSymbol::createOutOfBlock(Compilation& compilation,
         // that default into the definition.
         const FormalArgumentSymbol* da = *di;
         const FormalArgumentSymbol* pa = *pi;
-        const Expression* de = da->getInitializer();
-        const Expression* pe = pa->getInitializer();
+        const Expression* de = da->getDefaultValue();
+        const Expression* pe = pa->getDefaultValue();
         if (de) {
             if (!pe) {
                 auto& diag = parent.addDiag(diag::MethodArgNoDefault, de->sourceRange);
@@ -388,7 +388,7 @@ SubroutineSymbol& SubroutineSymbol::createOutOfBlock(Compilation& compilation,
             // Does foo have a default of 1 or 2? Other simulators disagree with each other
             // and can say either result. I think it makes most sense for the default to
             // come from the prototype's context, so that's what I do here.
-            const_cast<FormalArgumentSymbol*>(da)->setInitializer(*pe);
+            const_cast<FormalArgumentSymbol*>(da)->setDefaultValue(pe);
         }
     }
 
@@ -405,8 +405,7 @@ static std::span<const FormalArgumentSymbol* const> cloneArguments(
                                                                 arg->direction, arg->lifetime);
         copied->flags = arg->flags;
         copied->getDeclaredType()->setLink(*arg->getDeclaredType());
-        if (auto init = arg->getDeclaredType()->getInitializer())
-            copied->getDeclaredType()->setInitializer(*init);
+        copied->setDefaultValue(arg->getDefaultValue());
 
         newParent.addMember(*copied);
         arguments.push_back(copied);
@@ -516,8 +515,8 @@ void SubroutineSymbol::checkVirtualMethodMatch(const Scope& scope,
         }
 
         // The presence of a default value must be the same.
-        const Expression* de = da->getInitializer();
-        const Expression* pe = pa->getInitializer();
+        const Expression* de = da->getDefaultValue();
+        const Expression* pe = pa->getDefaultValue();
         if (bool(de) != bool(pe)) {
             if (de) {
                 auto& diag = scope.addDiag(diag::VirtualArgNoParentDefault, de->sourceRange);
@@ -582,8 +581,14 @@ void SubroutineSymbol::buildArguments(Scope& scope, const FunctionPortListSyntax
             arg->setDeclaredType(*lastType);
         }
 
-        arg->setFromDeclarator(*declarator);
         arg->setAttributes(scope, portSyntax->attributes);
+        arg->setSyntax(*declarator);
+
+        if (!declarator->dimensions.empty())
+            arg->getDeclaredType()->setDimensionSyntax(declarator->dimensions);
+
+        if (declarator->initializer)
+            arg->setDefaultValueSyntax(*declarator->initializer->expr);
 
         scope.addMember(*arg);
         arguments.push_back(arg);

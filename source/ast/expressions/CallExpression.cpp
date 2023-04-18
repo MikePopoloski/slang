@@ -215,7 +215,7 @@ bool CallExpression::bindArgs(const ArgumentListSyntax* argSyntax,
             auto arg = orderedArgs[orderedIndex++];
             if (arg->kind == SyntaxKind::EmptyArgument) {
                 // Empty arguments are allowed as long as a default is provided.
-                expr = formal->getInitializer();
+                expr = formal->getDefaultValue();
                 if (!expr)
                     context.addDiag(diag::ArgCannotBeEmpty, arg->sourceRange()) << formal->name;
             }
@@ -242,7 +242,7 @@ bool CallExpression::bindArgs(const ArgumentListSyntax* argSyntax,
             auto arg = it->second.first->expr;
             if (!arg) {
                 // Empty arguments are allowed as long as a default is provided.
-                expr = formal->getInitializer();
+                expr = formal->getDefaultValue();
                 if (!expr) {
                     context.addDiag(diag::ArgCannotBeEmpty, it->second.first->sourceRange())
                         << formal->name;
@@ -254,7 +254,7 @@ bool CallExpression::bindArgs(const ArgumentListSyntax* argSyntax,
             }
         }
         else {
-            expr = formal->getInitializer();
+            expr = formal->getDefaultValue();
             if (!expr) {
                 if (namedArgs.empty()) {
                     auto& diag = context.addDiag(diag::TooFewArguments, range);

@@ -3551,3 +3551,17 @@ endfunction
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::SubroutinePortInitializer);
 }
+
+TEST_CASE("Function arg defaults are checked") {
+    auto tree = SyntaxTree::fromText(R"(
+function foo(input a = baz);
+endfunction
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::UndeclaredIdentifier);
+}

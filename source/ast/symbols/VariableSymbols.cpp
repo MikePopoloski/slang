@@ -229,9 +229,28 @@ bool FormalArgumentSymbol::mergeVariable(const VariableSymbol& variable) {
     return true;
 }
 
+const Expression* FormalArgumentSymbol::getDefaultValue() const {
+    if (defaultVal || !defaultValSyntax)
+        return defaultVal;
+
+    auto scope = getParentScope();
+    ASSERT(scope);
+
+    ASTContext context(*scope, LookupLocation::after(*this));
+    // TODO: bind the correct direction
+    // defaultVal = &Expression::bindArgument(getType(), direction, *defaultValSyntax, context,
+    //                                        flags.has(VariableFlags::Const));
+    defaultVal = &Expression::bindRValue(getType(), *defaultValSyntax,
+                                         defaultValSyntax->getFirstToken().location(), context);
+    return defaultVal;
+}
+
 void FormalArgumentSymbol::serializeTo(ASTSerializer& serializer) const {
     VariableSymbol::serializeTo(serializer);
+
     serializer.write("direction", toString(direction));
+    if (auto defVal = getDefaultValue())
+        serializer.write("defaultValue", *defVal);
 }
 
 void FieldSymbol::serializeTo(ASTSerializer& serializer) const {

@@ -256,7 +256,8 @@ void registerSymbols(py::module_& m) {
         .def_readonly("flags", &VariableSymbol::flags);
 
     py::class_<FormalArgumentSymbol, VariableSymbol>(m, "FormalArgumentSymbol")
-        .def_readonly("direction", &FormalArgumentSymbol::direction);
+        .def_readonly("direction", &FormalArgumentSymbol::direction)
+        .def_property_readonly("defaultValue", &FormalArgumentSymbol::getDefaultValue);
 
     py::class_<FieldSymbol, VariableSymbol>(m, "FieldSymbol")
         .def_readonly("bitOffset", &FieldSymbol::bitOffset)
