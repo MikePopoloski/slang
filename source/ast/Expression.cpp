@@ -220,11 +220,15 @@ const Expression& Expression::bindLValue(const ExpressionSyntax& lhs, const Type
             assignFlags = AssignFlags::OutputPort;
     }
 
+    bitmask<ASTFlags> astFlags = ASTFlags::OutputArg;
+    if (context.flags.has(ASTFlags::NotADriver))
+        astFlags |= ASTFlags::NotADriver;
+
     SourceRange lhsRange = lhs.sourceRange();
     return AssignmentExpression::fromComponents(comp, std::nullopt, assignFlags, *lhsExpr, *rhsExpr,
                                                 lhsRange.start(),
                                                 /* timingControl */ nullptr, lhsRange,
-                                                context.resetFlags(ASTFlags::OutputArg));
+                                                context.resetFlags(astFlags));
 }
 
 const Expression& Expression::bindLValue(const ExpressionSyntax& syntax,

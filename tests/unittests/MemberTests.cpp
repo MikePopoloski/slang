@@ -3554,7 +3554,7 @@ endfunction
 
 TEST_CASE("Function arg defaults are checked") {
     auto tree = SyntaxTree::fromText(R"(
-function foo(input a = baz);
+function automatic foo(input a = baz, ref int b = 2);
 endfunction
 )");
 
@@ -3562,6 +3562,36 @@ endfunction
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 1);
+    REQUIRE(diags.size() == 2);
     CHECK(diags[0].code == diag::UndeclaredIdentifier);
+    CHECK(diags[1].code == diag::InvalidRefArg);
+}
+
+TEST_CASE("Function arg defaults with multi-driver checking") {
+    auto tree = SyntaxTree::fromText(R"(
+int baz, bar, biz;
+
+function automatic void f1(output int a = baz, ref int b = bar);
+endfunction
+
+function automatic void f2(inout int c = biz);
+endfunction
+
+module m;
+    initial f1();
+    always_comb begin
+        f1();
+    end
+
+    assign biz = 1;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::MultipleAlwaysAssigns);
+    CHECK(diags[1].code == diag::MultipleAlwaysAssigns);
 }

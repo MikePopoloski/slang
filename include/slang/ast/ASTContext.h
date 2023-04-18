@@ -152,9 +152,10 @@ enum class SLANG_EXPORT ASTFlags : uint64_t {
     /// AST creation is in a context that allows interconnect nets.
     AllowInterconnect = 1ull << 33,
 
-    /// AST creation is inside a potentially unrollable for loop, which means we
-    /// should skip registering drivers and let the loop unroller do it.
-    UnrollableForLoop = 1ull << 34,
+    /// AST creation is in a context where drivers should not be registered for
+    /// lvalues, even if they otherwise would normally be. This is used, for example,
+    /// in potentially unrollable for loops to let the loop unroller handle the drivers.
+    NotADriver = 1ull << 34,
 
     /// AST creation is for a range expression inside a streaming concatenation operator.
     StreamingWithRange = 1ull << 35,

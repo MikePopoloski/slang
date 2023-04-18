@@ -2249,7 +2249,7 @@ Statement& ExpressionStatement::fromSyntax(Compilation& compilation,
     if (stmtCtx.flags.has(StatementFlags::InForLoop) &&
         BinaryExpressionSyntax::isKind(syntax.expr->kind) &&
         !compilation.getOptions().strictDriverChecking) {
-        extraFlags |= ASTFlags::UnrollableForLoop;
+        extraFlags |= ASTFlags::NotADriver;
     }
 
     auto& expr = Expression::bind(*syntax.expr, context, extraFlags);
@@ -2873,7 +2873,7 @@ Statement& RandSequenceStatement::fromSyntax(Compilation& compilation,
         // Make sure the first production doesn't require arguments.
         SmallVector<const Expression*> args;
         CallExpression::bindArgs(nullptr, firstProd->arguments, firstProd->name, firstProdRange,
-                                 context, args);
+                                 context, args, /* isBuiltInMethod */ false);
     }
 
     // All of the logic for creating productions is in the RandSeqProduction symbol.

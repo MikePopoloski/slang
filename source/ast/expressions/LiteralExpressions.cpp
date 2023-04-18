@@ -64,7 +64,7 @@ Expression& IntegerLiteral::fromConstant(Compilation& compilation, const SVInt& 
     val.setSigned(true);
 
     return *compilation.emplace<IntegerLiteral>(compilation, compilation.getIntType(),
-                                                std::move(val), true, SourceRange());
+                                                std::move(val), true, SourceRange::NoLocation);
 }
 
 ConstantValue IntegerLiteral::evalImpl(EvalContext&) const {

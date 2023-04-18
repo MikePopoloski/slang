@@ -236,12 +236,9 @@ const Expression* FormalArgumentSymbol::getDefaultValue() const {
     auto scope = getParentScope();
     ASSERT(scope);
 
-    ASTContext context(*scope, LookupLocation::after(*this));
-    // TODO: bind the correct direction
-    // defaultVal = &Expression::bindArgument(getType(), direction, *defaultValSyntax, context,
-    //                                        flags.has(VariableFlags::Const));
-    defaultVal = &Expression::bindRValue(getType(), *defaultValSyntax,
-                                         defaultValSyntax->getFirstToken().location(), context);
+    ASTContext context(*scope, LookupLocation::after(*this), ASTFlags::NotADriver);
+    defaultVal = &Expression::bindArgument(getType(), direction, *defaultValSyntax, context,
+                                           flags.has(VariableFlags::Const));
     return defaultVal;
 }
 

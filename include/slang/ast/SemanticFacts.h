@@ -103,7 +103,7 @@ ENUM(DriveStrength, DS)
 #undef DS
 
 /// A set of flags that control how assignments are checked.
-enum class SLANG_EXPORT AssignFlags : uint16_t {
+enum class SLANG_EXPORT AssignFlags : uint8_t {
     /// No special assignment behavior specified.
     None = 0,
 
@@ -132,12 +132,9 @@ enum class SLANG_EXPORT AssignFlags : uint16_t {
 
     /// The assignment is for an output port that was sliced due to an array of instances
     /// being connected to an array argument.
-    SlicedPort = 1 << 7,
-
-    /// The assignment should not be considered a driver.
-    NotADriver = 1 << 8
+    SlicedPort = 1 << 7
 };
-BITMASK(AssignFlags, NotADriver)
+BITMASK(AssignFlags, SlicedPort)
 
 class SLANG_EXPORT SemanticFacts {
 public:

@@ -178,7 +178,7 @@ public:
     /// Checks that the given expression is valid for the specified connection direction.
     static bool checkConnectionDirection(const Expression& expr, ArgumentDirection direction,
                                          const ASTContext& context, SourceLocation loc,
-                                         bitmask<AssignFlags> flags);
+                                         bitmask<AssignFlags> flags = {});
 
     /// Binds an initializer expression for an implicitly typed parameter.
     /// There are special inference rules for parameters.

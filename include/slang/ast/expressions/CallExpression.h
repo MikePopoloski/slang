@@ -100,7 +100,7 @@ public:
     static bool bindArgs(const syntax::ArgumentListSyntax* argSyntax,
                          std::span<const FormalArgumentSymbol* const> formalArgs,
                          std::string_view symbolName, SourceRange range, const ASTContext& context,
-                         SmallVectorBase<const Expression*>& boundArgs);
+                         SmallVectorBase<const Expression*>& boundArgs, bool isBuiltInMethod);
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::Call; }
 

@@ -24,7 +24,7 @@ MethodBuilder::MethodBuilder(Compilation& compilation, std::string_view name,
     symbol(*compilation.emplace<SubroutineSymbol>(compilation, name, NL,
                                                   VariableLifetime::Automatic, kind)) {
     symbol.declaredReturnType.setType(returnType);
-    symbol.flags = MethodFlags::NotConst;
+    symbol.flags = MethodFlags::BuiltIn;
 }
 
 MethodBuilder::MethodBuilder(MethodBuilder&& other) noexcept :

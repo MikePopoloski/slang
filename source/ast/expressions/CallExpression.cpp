@@ -199,13 +199,37 @@ bool CallExpression::bindArgs(const ArgumentListSyntax* argSyntax,
                               std::span<const FormalArgumentSymbol* const> formalArgs,
                               std::string_view symbolName, SourceRange range,
                               const ASTContext& context,
-                              SmallVectorBase<const Expression*>& boundArgs) {
+                              SmallVectorBase<const Expression*>& boundArgs, bool isBuiltInMethod) {
     SmallVector<const SyntaxNode*> orderedArgs;
     NamedArgMap namedArgs;
     if (argSyntax) {
         if (!collectArgs(context, *argSyntax, orderedArgs, namedArgs))
             return false;
     }
+
+    // Helper function to register a driver for default value arguments.
+    auto addDefaultDriver = [&](const Expression& expr, const FormalArgumentSymbol& formal) {
+        if (isBuiltInMethod)
+            return;
+
+        switch (formal.direction) {
+            case ArgumentDirection::In:
+                // Nothing to do for inputs.
+                break;
+            case ArgumentDirection::Out:
+            case ArgumentDirection::InOut:
+                // The default value binding should always use bindLValue() which
+                // will always return either an AssignmentExpression or a bad expr.
+                ASSERT(expr.kind == ExpressionKind::Assignment || expr.bad());
+                if (expr.kind == ExpressionKind::Assignment)
+                    expr.as<AssignmentExpression>().left().requireLValue(context);
+                break;
+            case ArgumentDirection::Ref:
+                if (!formal.flags.has(VariableFlags::Const))
+                    expr.requireLValue(context);
+                break;
+        }
+    };
 
     bool bad = false;
     uint32_t orderedIndex = 0;
@@ -218,6 +242,8 @@ bool CallExpression::bindArgs(const ArgumentListSyntax* argSyntax,
                 expr = formal->getDefaultValue();
                 if (!expr)
                     context.addDiag(diag::ArgCannotBeEmpty, arg->sourceRange()) << formal->name;
+                else
+                    addDefaultDriver(*expr, *formal);
             }
             else if (auto exSyn = context.requireSimpleExpr(arg->as<PropertyExprSyntax>())) {
                 expr = &Expression::bindArgument(formal->getType(), formal->direction, *exSyn,
@@ -247,6 +273,9 @@ bool CallExpression::bindArgs(const ArgumentListSyntax* argSyntax,
                     context.addDiag(diag::ArgCannotBeEmpty, it->second.first->sourceRange())
                         << formal->name;
                 }
+                else {
+                    addDefaultDriver(*expr, *formal);
+                }
             }
             else if (auto exSyn = context.requireSimpleExpr(*arg)) {
                 expr = &Expression::bindArgument(formal->getType(), formal->direction, *exSyn,
@@ -266,6 +295,9 @@ bool CallExpression::bindArgs(const ArgumentListSyntax* argSyntax,
                 else {
                     context.addDiag(diag::UnconnectedArg, range) << formal->name;
                 }
+            }
+            else {
+                addDefaultDriver(*expr, *formal);
             }
         }
 
@@ -310,7 +342,8 @@ Expression& CallExpression::fromArgs(Compilation& compilation, const Subroutine&
                                      const ASTContext& context) {
     SmallVector<const Expression*> boundArgs;
     const SubroutineSymbol& symbol = *std::get<0>(subroutine);
-    bool bad = !bindArgs(argSyntax, symbol.getArguments(), symbol.name, range, context, boundArgs);
+    bool bad = !bindArgs(argSyntax, symbol.getArguments(), symbol.name, range, context, boundArgs,
+                         symbol.flags.has(MethodFlags::BuiltIn));
 
     auto result = compilation.emplace<CallExpression>(&symbol, symbol.getReturnType(), thisClass,
                                                       boundArgs.copy(compilation),
@@ -714,7 +747,7 @@ bool CallExpression::checkConstant(EvalContext& context, const SubroutineSymbol&
         return false;
     }
 
-    if (subroutine.flags.has(MethodFlags::NotConst | MethodFlags::InterfaceExtern |
+    if (subroutine.flags.has(MethodFlags::BuiltIn | MethodFlags::InterfaceExtern |
                              MethodFlags::ModportExport | MethodFlags::ModportImport)) {
         context.addDiag(diag::ConstEvalSubroutineNotConstant, range) << subroutine.name;
         return false;

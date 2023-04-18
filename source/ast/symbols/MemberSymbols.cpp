@@ -195,7 +195,7 @@ ModportPortSymbol& ModportPortSymbol::fromSyntax(const ASTContext& context,
 
     // Perform checking on the connected symbol to make sure it's allowed
     // given the modport's direction.
-    ASTContext checkCtx = context.resetFlags(ASTFlags::NonProcedural);
+    ASTContext checkCtx = context.resetFlags(ASTFlags::NonProcedural | ASTFlags::NotADriver);
     if (direction != ArgumentDirection::In)
         checkCtx.flags |= ASTFlags::LValue;
 
@@ -203,7 +203,7 @@ ModportPortSymbol& ModportPortSymbol::fromSyntax(const ASTContext& context,
     auto& expr = ValueExpressionBase::fromSymbol(checkCtx, *result->internalSymbol, false,
                                                  {loc, loc + result->name.length()});
 
-    Expression::checkConnectionDirection(expr, direction, checkCtx, loc, AssignFlags::NotADriver);
+    Expression::checkConnectionDirection(expr, direction, checkCtx, loc);
 
     result->connExpr = &expr;
     return *result;
@@ -212,7 +212,7 @@ ModportPortSymbol& ModportPortSymbol::fromSyntax(const ASTContext& context,
 ModportPortSymbol& ModportPortSymbol::fromSyntax(const ASTContext& parentContext,
                                                  ArgumentDirection direction,
                                                  const ModportExplicitPortSyntax& syntax) {
-    ASTContext context = parentContext.resetFlags(ASTFlags::NonProcedural);
+    ASTContext context = parentContext.resetFlags(ASTFlags::NonProcedural | ASTFlags::NotADriver);
     auto& comp = context.getCompilation();
     auto name = syntax.name;
     auto result = comp.emplace<ModportPortSymbol>(name.valueText(), name.location(), direction);
@@ -237,8 +237,7 @@ ModportPortSymbol& ModportPortSymbol::fromSyntax(const ASTContext& parentContext
 
     result->setType(*expr.type);
 
-    Expression::checkConnectionDirection(expr, direction, context, result->location,
-                                         AssignFlags::NotADriver);
+    Expression::checkConnectionDirection(expr, direction, context, result->location);
 
     return *result;
 }
@@ -1580,7 +1579,7 @@ RandSeqProductionSymbol::ProdItem RandSeqProductionSymbol::createProdItem(
 
     SmallVector<const Expression*> args;
     CallExpression::bindArgs(syntax.argList, symbol->arguments, symbol->name, syntax.sourceRange(),
-                             context, args);
+                             context, args, /* isBuiltInMethod */ false);
 
     return ProdItem(symbol, args.copy(context.getCompilation()));
 }

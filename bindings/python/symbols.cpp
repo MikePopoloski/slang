@@ -308,7 +308,7 @@ void registerSymbols(py::module_& m) {
         .value("ModportExport", MethodFlags::ModportExport)
         .value("DPIImport", MethodFlags::DPIImport)
         .value("DPIContext", MethodFlags::DPIContext)
-        .value("NotConst", MethodFlags::NotConst)
+        .value("BuiltIn", MethodFlags::BuiltIn)
         .value("Randomize", MethodFlags::Randomize)
         .value("ForkJoin", MethodFlags::ForkJoin);
 

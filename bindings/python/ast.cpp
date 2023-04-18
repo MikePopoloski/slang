@@ -110,7 +110,7 @@ void registerAST(py::module_& m) {
         .value("ProceduralAssign", ASTFlags::ProceduralAssign)
         .value("ProceduralForceRelease", ASTFlags::ProceduralForceRelease)
         .value("AllowInterconnect", ASTFlags::AllowInterconnect)
-        .value("UnrollableForLoop", ASTFlags::UnrollableForLoop)
+        .value("NotADriver", ASTFlags::NotADriver)
         .value("StreamingWithRange", ASTFlags::StreamingWithRange)
         .value("SpecifyBlock", ASTFlags::SpecifyBlock);
 

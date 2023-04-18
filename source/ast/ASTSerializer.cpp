@@ -240,7 +240,7 @@ void ASTSerializer::visit(const T& elem, bool inMembersArray) {
 
         // Ignore built-in methods on class types.
         if constexpr (std::is_same_v<SubroutineSymbol, T>) {
-            if (elem.flags.has(MethodFlags::NotConst | MethodFlags::Randomize))
+            if (elem.flags.has(MethodFlags::BuiltIn | MethodFlags::Randomize))
                 return;
         }
 
