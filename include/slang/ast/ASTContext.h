@@ -172,9 +172,14 @@ enum class SLANG_EXPORT ASTFlags : uint64_t {
     /// AST creation is for an lvalue that also counts as an rvalue. Only valid
     /// when combined with the LValue flag -- used for things like the pre & post
     /// increment and decrement operators.
-    LAndRValue = 1ull << 39
+    LAndRValue = 1ull << 39,
+
+    /// AST binding should not count symbol references towards that symbol being "used".
+    /// If this flag is not set, accessing a variable or net in an expression will count
+    /// that symbol as being "used".
+    NoReference = 1ull << 40
 };
-BITMASK(ASTFlags, LAndRValue)
+BITMASK(ASTFlags, NoReference)
 
 // clang-format off
 #define DK(x) \

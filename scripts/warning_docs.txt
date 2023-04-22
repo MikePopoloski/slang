@@ -880,7 +880,7 @@ endmodule
 ```
 
 -Wunused-but-set-net
-A net has a value driven but is never referenced.
+A net has a value driven but that value is never used.
 \n\n
 A net with name '_' will never warn. Attributes `(* unused *)` or `(* maybe_unused *)`
 may be applied to suppress this warning for a particular net.
@@ -892,7 +892,7 @@ endmodule
 ```
 
 -Wunused-but-set-variable
-A variable has a value assigned but is never referenced.
+A variable has a value assigned but that value is never used.
 \n\n
 A variable with name '_' will never warn. Attributes `(* unused *)` or `(* maybe_unused *)`
 may be applied to suppress this warning for a particular variable.
@@ -920,6 +920,19 @@ A port with name '_' will never warn. Attributes `(* unused *)` or `(* maybe_unu
 may be applied to suppress this warning for a particular port.
 ```
 module m(output x);
+endmodule
+```
+
+-Wunused-but-set-port
+A port has a value assigned but that value is never used. This only applies to 'inout' ports.
+The assumption is that if the port doesn't need to be read, the direction should be changed
+to 'output' instead.
+\n\n
+A port with name '_' will never warn. Attributes `(* unused *)` or `(* maybe_unused *)`
+may be applied to suppress this warning for a particular port.
+```
+module m(inout x);
+    assign x = 1;
 endmodule
 ```
 

@@ -58,6 +58,19 @@ module m #(int foo)(input baz, output bar);
     assign m = 1;
 endmodule
 
+module n(ref boz, inout buz, inout biz, inout bxz);
+    assign biz = 1;
+    (* maybe_unused *) logic n = bxz;
+endmodule
+
+module o(ref .a(boz), inout .b(buz), inout .c(biz), inout .d(bxz));
+    int boz;
+    wire buz,biz,bxz;
+
+    assign biz = 1;
+    (* maybe_unused *) logic n = bxz;
+endmodule
+
 module top;
     logic baz,bar;
     m #(1) m1(.*);
@@ -73,7 +86,7 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 11);
+    REQUIRE(diags.size() == 19);
     CHECK(diags[0].code == diag::UnusedPort);
     CHECK(diags[1].code == diag::UndrivenPort);
     CHECK(diags[2].code == diag::UnusedButSetVariable);
@@ -83,8 +96,16 @@ endmodule
     CHECK(diags[6].code == diag::UndrivenNet);
     CHECK(diags[7].code == diag::UnusedNet);
     CHECK(diags[8].code == diag::UnusedButSetNet);
-    CHECK(diags[9].code == diag::UnusedImplicitNet);
-    CHECK(diags[10].code == diag::UnusedImplicitNet);
+    CHECK(diags[9].code == diag::UnusedPort);
+    CHECK(diags[10].code == diag::UnusedPort);
+    CHECK(diags[11].code == diag::UnusedButSetPort);
+    CHECK(diags[12].code == diag::UndrivenPort);
+    CHECK(diags[13].code == diag::UnusedPort);
+    CHECK(diags[14].code == diag::UnusedPort);
+    CHECK(diags[15].code == diag::UnusedButSetPort);
+    CHECK(diags[16].code == diag::UndrivenPort);
+    CHECK(diags[17].code == diag::UnusedImplicitNet);
+    CHECK(diags[18].code == diag::UnusedImplicitNet);
 }
 
 TEST_CASE("Unused nets and vars false positives regress") {

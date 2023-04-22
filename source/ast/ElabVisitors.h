@@ -629,12 +629,27 @@ private:
                 return;
 
             // Otherwise check and warn about the port being unused.
-            if (portRef->port->direction == ArgumentDirection::Out) {
-                if (!lvalue)
-                    addDiag(symbol, diag::UndrivenPort);
-            }
-            else if (!rvalue) {
-                addDiag(symbol, diag::UnusedPort);
+            switch (portRef->port->direction) {
+                case ArgumentDirection::In:
+                    if (!rvalue)
+                        addDiag(symbol, diag::UnusedPort);
+                    break;
+                case ArgumentDirection::Out:
+                    if (!lvalue)
+                        addDiag(symbol, diag::UndrivenPort);
+                    break;
+                case ArgumentDirection::InOut:
+                    if (!rvalue && !lvalue)
+                        addDiag(symbol, diag::UnusedPort);
+                    else if (!rvalue)
+                        addDiag(symbol, diag::UnusedButSetPort);
+                    else if (!lvalue)
+                        addDiag(symbol, diag::UndrivenPort);
+                    break;
+                case ArgumentDirection::Ref:
+                    if (!rvalue && !lvalue)
+                        addDiag(symbol, diag::UnusedPort);
+                    break;
             }
             return;
         }

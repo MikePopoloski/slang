@@ -121,7 +121,7 @@ Expression& ValueExpressionBase::fromSymbol(const ASTContext& context, const Sym
         return badExpr(comp, nullptr);
     }
 
-    if (auto syntax = symbol.getSyntax()) {
+    if (auto syntax = symbol.getSyntax(); syntax && !context.flags.has(ASTFlags::NoReference)) {
         bool isLValue = context.flags.has(ASTFlags::LValue);
         if (isDottedAccess) {
             auto& type = value.getType();

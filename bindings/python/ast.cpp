@@ -112,7 +112,11 @@ void registerAST(py::module_& m) {
         .value("AllowInterconnect", ASTFlags::AllowInterconnect)
         .value("NotADriver", ASTFlags::NotADriver)
         .value("StreamingWithRange", ASTFlags::StreamingWithRange)
-        .value("SpecifyBlock", ASTFlags::SpecifyBlock);
+        .value("SpecifyBlock", ASTFlags::SpecifyBlock)
+        .value("DPIArg", ASTFlags::DPIArg)
+        .value("AssertionDefaultArg", ASTFlags::AssertionDefaultArg)
+        .value("LAndRValue", ASTFlags::LAndRValue)
+        .value("NoReference", ASTFlags::NoReference);
 
     py::class_<EvaluatedDimension>(m, "EvaluatedDimension")
         .def_readonly("kind", &EvaluatedDimension::kind)

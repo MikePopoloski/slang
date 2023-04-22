@@ -1274,7 +1274,8 @@ const Type& PortSymbol::getType() const {
         ASSERT(dt);
         type = &dt->getType();
 
-        bitmask<ASTFlags> astFlags = ASTFlags::NonProcedural | ASTFlags::AllowInterconnect;
+        bitmask<ASTFlags> astFlags = ASTFlags::NonProcedural | ASTFlags::AllowInterconnect |
+                                     ASTFlags::NoReference;
         if (direction != ArgumentDirection::Out)
             astFlags |= ASTFlags::LValue;
 
@@ -1315,7 +1316,7 @@ const Type& PortSymbol::getType() const {
         // The direction of the connection is reversed, as data coming in to an input
         // port flows out to the internal symbol, and vice versa. Inout and ref
         // ports don't change.
-        bitmask<ASTFlags> astFlags = ASTFlags::NonProcedural;
+        bitmask<ASTFlags> astFlags = ASTFlags::NonProcedural | ASTFlags::NoReference;
         ArgumentDirection checkDir = direction;
         switch (direction) {
             case ArgumentDirection::In:

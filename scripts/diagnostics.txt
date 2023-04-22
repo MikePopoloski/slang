@@ -974,8 +974,9 @@ warning unused-implicit-net UnusedImplicitNet "implicit net '{}' is unused elsew
 warning unused-variable UnusedVariable "unused variable '{}'"
 warning undriven-net UndrivenNet "net '{}' is never driven"
 warning unassigned-variable UnassignedVariable "variable '{}' is never assigned a value"
-warning unused-but-set-net UnusedButSetNet "net '{}' is driven but never referenced"
-warning unused-but-set-variable UnusedButSetVariable "variable '{}' is assigned but never read"
+warning unused-but-set-net UnusedButSetNet "net '{}' is driven but its value is never used"
+warning unused-but-set-variable UnusedButSetVariable "variable '{}' is assigned but its value is never used"
+warning unused-but-set-port UnusedButSetPort "'inout' port '{}' is driven but its value is never used"
 warning unused-port UnusedPort "unused port signal '{}'"
 warning undriven-port UndrivenPort "undriven output port '{}'"
 warning unused-argument UnusedArgument "unused formal argument '{}'"
@@ -1019,4 +1020,5 @@ group conversion = { width-trunc width-expand port-width-trunc port-width-expand
 
 group unused = { unused-def unused-net unused-implicit-net unused-variable undriven-net unassigned-variable
                  unused-but-set-net unused-but-set-variable unused-port undriven-port unused-argument
-                 unused-parameter unused-type-parameter unused-typedef unused-genvar unused-assertion-decl }
+                 unused-parameter unused-type-parameter unused-typedef unused-genvar unused-assertion-decl
+                 unused-but-set-port }
