@@ -525,6 +525,11 @@ const PackageSymbol& Compilation::createPackage(const Scope& scope,
     return package;
 }
 
+const ConfigBlockSymbol& Compilation::createConfigBlock(const Scope& scope,
+                                                        const ConfigDeclarationSyntax& syntax) {
+    return ConfigBlockSymbol::fromSyntax(scope, syntax);
+}
+
 const PrimitiveSymbol* Compilation::getPrimitive(std::string_view lookupName) const {
     if (auto it = udpMap.find(lookupName); it != udpMap.end())
         return it->second;

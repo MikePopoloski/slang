@@ -82,4 +82,18 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Root; }
 };
 
+/// Represents a config block declaration.
+class SLANG_EXPORT ConfigBlockSymbol : public Symbol, public Scope {
+public:
+    ConfigBlockSymbol(Compilation& compilation, std::string_view name, SourceLocation loc) :
+        Symbol(SymbolKind::ConfigBlock, name, loc), Scope(compilation, this) {}
+
+    static ConfigBlockSymbol& fromSyntax(const Scope& scope,
+                                         const syntax::ConfigDeclarationSyntax& syntax);
+
+    void serializeTo(ASTSerializer& serialize) const;
+
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::ConfigBlock; }
+};
+
 } // namespace slang::ast

@@ -74,3 +74,22 @@ TEST_CASE("Read header (include dirs)") {
     buffer = manager.readHeader("../infinite_chain.svh", SourceLocation(buffer.id, 0), false);
     CHECK(buffer);
 }
+
+TEST_CASE("Config Blocks") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+endmodule
+
+config cfg1;
+    localparam S = 24;
+
+    design rtlLib.top;
+    default liblist rtlLib;
+    instance top.a2 liblist gateLib;
+endconfig
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

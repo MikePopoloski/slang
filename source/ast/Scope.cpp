@@ -206,6 +206,10 @@ void Scope::addMembers(const SyntaxNode& syntax) {
             // Primitives exist in their own namespace and are tracked in the Compilation.
             addMember(compilation.createPrimitive(*this, syntax.as<UdpDeclarationSyntax>()));
             break;
+        case SyntaxKind::ConfigDeclaration:
+            // Config blocks exist in their own namespace and are tracked in the Compilation.
+            addMember(compilation.createConfigBlock(*this, syntax.as<ConfigDeclarationSyntax>()));
+            break;
         case SyntaxKind::PackageImportDeclaration: {
             auto& importDecl = syntax.as<PackageImportDeclarationSyntax>();
             for (auto item : importDecl.items) {
@@ -541,7 +545,6 @@ void Scope::addMembers(const SyntaxNode& syntax) {
         case SyntaxKind::ExternModuleDecl:
         case SyntaxKind::ExternUdpDecl:
         case SyntaxKind::WildcardPortList:
-        case SyntaxKind::ConfigDeclaration:
             addDiag(diag::NotYetSupported, syntax.sourceRange());
             break;
         default:
@@ -609,6 +612,7 @@ static bool canLookupByName(SymbolKind kind) {
         case SymbolKind::MultiPort:
         case SymbolKind::Package:
         case SymbolKind::Primitive:
+        case SymbolKind::ConfigBlock:
             return false;
         default:
             return true;

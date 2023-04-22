@@ -158,4 +158,21 @@ void PackageSymbol::noteImport(const Symbol& symbol) const {
     }
 }
 
+ConfigBlockSymbol& ConfigBlockSymbol::fromSyntax(const Scope& scope,
+                                                 const ConfigDeclarationSyntax& syntax) {
+    auto& comp = scope.getCompilation();
+    auto result = comp.emplace<ConfigBlockSymbol>(comp, syntax.name.valueText(),
+                                                  syntax.name.location());
+    result->setSyntax(syntax);
+    result->setAttributes(scope, syntax.attributes);
+
+    for (auto param : syntax.localparams)
+        result->addMembers(*param);
+
+    return *result;
+}
+
+void ConfigBlockSymbol::serializeTo(ASTSerializer&) const {
+}
+
 } // namespace slang::ast

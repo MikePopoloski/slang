@@ -116,7 +116,8 @@ enum class RandMode;
     x(TimingPath) \
     x(PulseStyle) \
     x(SystemTimingCheck) \
-    x(AnonymousProgram)
+    x(AnonymousProgram) \
+    x(ConfigBlock)
 // clang-format on
 
 ENUM(SymbolKind, SYMBOLKIND)
