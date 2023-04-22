@@ -24,7 +24,7 @@ MethodBuilder::MethodBuilder(Compilation& compilation, std::string_view name,
     symbol(*compilation.emplace<SubroutineSymbol>(compilation, name, NL,
                                                   VariableLifetime::Automatic, kind)) {
     symbol.declaredReturnType.setType(returnType);
-    symbol.flags = MethodFlags::NotConst;
+    symbol.flags = MethodFlags::BuiltIn;
 }
 
 MethodBuilder::MethodBuilder(MethodBuilder&& other) noexcept :
@@ -51,7 +51,7 @@ FormalArgumentSymbol& MethodBuilder::addArg(std::string_view name, const Type& t
 
     if (defaultValue) {
         ASSERT(type.isIntegral());
-        arg->setInitializer(IntegerLiteral::fromConstant(compilation, *defaultValue));
+        arg->setDefaultValue(&IntegerLiteral::fromConstant(compilation, *defaultValue));
     }
 
     return *arg;
@@ -61,15 +61,13 @@ FormalArgumentSymbol& MethodBuilder::copyArg(const FormalArgumentSymbol& fromArg
     auto arg = compilation.emplace<FormalArgumentSymbol>(fromArg.name, fromArg.location,
                                                          fromArg.direction, fromArg.lifetime);
     arg->flags = fromArg.flags;
+    arg->setDefaultValue(fromArg.getDefaultValue());
     symbol.addMember(*arg);
     args.push_back(arg);
 
     auto& argDT = *arg->getDeclaredType();
     auto& fromDT = *fromArg.getDeclaredType();
     argDT.setLink(fromDT);
-
-    if (auto expr = fromDT.getInitializerSyntax())
-        argDT.setInitializerSyntax(*expr, fromDT.getInitializerLocation());
 
     return *arg;
 }

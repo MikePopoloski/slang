@@ -524,7 +524,7 @@ const Expression* ClassType::getBaseConstructorCall() const {
     // it has no arguments or all of the arguments have default values.
     if (baseConstructor && !callExpr) {
         for (auto arg : baseConstructor->as<SubroutineSymbol>().getArguments()) {
-            if (!arg->getInitializer()) {
+            if (!arg->getDefaultValue()) {
                 auto& diag = context.addDiag(diag::BaseConstructorNotCalled,
                                              extendsClause.sourceRange());
                 diag << name << baseClass->name;

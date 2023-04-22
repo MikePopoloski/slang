@@ -132,6 +132,10 @@ void DiagnosticEngine::addIgnorePath(const std::filesystem::path& path) {
     ignoreWarnPrefixes.emplace_back(path);
 }
 
+void DiagnosticEngine::addIgnoreMacroPath(const std::filesystem::path& path) {
+    ignoreMacroWarnPrefixes.emplace_back(path);
+}
+
 // Checks that all of the given ranges are in the same macro argument expansion as `loc`
 static bool checkMacroArgRanges(const DiagnosticEngine& engine, SourceLocation loc,
                                 std::span<const SourceRange> ranges) {
@@ -193,7 +197,7 @@ bool DiagnosticEngine::issueImpl(const Diagnostic& diagnostic, DiagnosticSeverit
     // Walk out until we find a location for this diagnostic that isn't inside a macro.
     SmallVector<SourceLocation, 8> expansionLocs;
     SourceLocation loc = diagnostic.location;
-    size_t ignoreUntil = 0;
+    size_t ignoreExpansionsUntil = 0;
     bool showIncludeStack = false;
 
     if (loc != SourceLocation::NoLocation) {
@@ -209,19 +213,35 @@ bool DiagnosticEngine::issueImpl(const Diagnostic& diagnostic, DiagnosticSeverit
             }
 
             if (checkMacroArgRanges(*this, prevLoc, diagnostic.ranges))
-                ignoreUntil = expansionLocs.size();
+                ignoreExpansionsUntil = expansionLocs.size();
         }
 
         showIncludeStack = reportedIncludeStack.emplace(loc.buffer()).second;
 
-        if (!ignoreWarnPrefixes.empty() &&
-            getDefaultSeverity(diagnostic.code) == DiagnosticSeverity::Warning) {
+        auto checkSuppressed = [&](const std::vector<std::filesystem::path>& prefixes,
+                                   SourceLocation loc) {
+            if (prefixes.empty())
+                return false;
 
             auto& path = sourceManager.getFullPath(loc.buffer());
-            for (auto& prefix : ignoreWarnPrefixes) {
+            for (auto& prefix : prefixes) {
                 auto [_, mismatchIt] = std::mismatch(path.begin(), path.end(), prefix.begin(),
                                                      prefix.end());
                 if (mismatchIt == prefix.end())
+                    return true;
+            }
+            return false;
+        };
+
+        if (getDefaultSeverity(diagnostic.code) == DiagnosticSeverity::Warning) {
+            if (checkSuppressed(ignoreWarnPrefixes, loc))
+                return false;
+
+            if (ignoreExpansionsUntil < expansionLocs.size() && !ignoreMacroWarnPrefixes.empty()) {
+                auto originalLoc = sourceManager.getFullyOriginalLoc(
+                    expansionLocs[ignoreExpansionsUntil]);
+
+                if (checkSuppressed(ignoreMacroWarnPrefixes, originalLoc))
                     return false;
             }
         }
@@ -230,7 +250,7 @@ bool DiagnosticEngine::issueImpl(const Diagnostic& diagnostic, DiagnosticSeverit
     std::string message = formatMessage(diagnostic);
 
     ReportedDiagnostic report(diagnostic);
-    report.expansionLocs = std::span<SourceLocation>(expansionLocs).subspan(ignoreUntil);
+    report.expansionLocs = std::span<SourceLocation>(expansionLocs).subspan(ignoreExpansionsUntil);
     report.ranges = diagnostic.ranges;
     report.location = loc;
     report.severity = severity;

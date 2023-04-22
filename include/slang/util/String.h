@@ -55,6 +55,16 @@ void strToUpper(std::string& str);
 /// The string is converted in place.
 void strToLower(std::string& str);
 
+/// Converts a character to uppercase (assuming ASCII).
+inline char charToUpper(char c) {
+    return (char)::toupper(c);
+}
+
+/// Converts a character to lowercase (assuming ASCII).
+inline char charToLower(char c) {
+    return (char)::tolower(c);
+}
+
 /// Determines the number of edits to the left string that are required to
 /// change it into the right string.
 /// If @a allowReplacements is true, characters can be substituted as needed.

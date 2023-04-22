@@ -109,10 +109,7 @@ void ASTContext::setAttributes(const Expression& expr,
 
 void ASTContext::addDriver(const ValueSymbol& symbol, const Expression& longestStaticPrefix,
                            bitmask<AssignFlags> assignFlags) const {
-    if (flags.has(ASTFlags::UnrollableForLoop) || assignFlags.has(AssignFlags::NotADriver))
-        return;
-
-    if (scope->isUninstantiated())
+    if (flags.has(ASTFlags::NotADriver) || scope->isUninstantiated())
         return;
 
     symbol.addDriver(getDriverKind(), longestStaticPrefix, getContainingSymbol(), assignFlags);
@@ -485,7 +482,7 @@ ASTContext ASTContext::resetFlags(bitmask<ASTFlags> addedFlags) const {
     static constexpr bitmask<ASTFlags> NonSticky =
         ASTFlags::InsideConcatenation | ASTFlags::AllowDataType | ASTFlags::AssignmentAllowed |
         ASTFlags::StreamingAllowed | ASTFlags::TopLevelStatement | ASTFlags::AllowUnboundedLiteral |
-        ASTFlags::AllowTypeReferences | ASTFlags::AllowClockingBlock | ASTFlags::UnrollableForLoop |
+        ASTFlags::AllowTypeReferences | ASTFlags::AllowClockingBlock | ASTFlags::NotADriver |
         ASTFlags::AssertionDefaultArg;
 
     ASTContext result(*this);

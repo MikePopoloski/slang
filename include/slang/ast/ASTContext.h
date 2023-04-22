@@ -152,9 +152,10 @@ enum class SLANG_EXPORT ASTFlags : uint64_t {
     /// AST creation is in a context that allows interconnect nets.
     AllowInterconnect = 1ull << 33,
 
-    /// AST creation is inside a potentially unrollable for loop, which means we
-    /// should skip registering drivers and let the loop unroller do it.
-    UnrollableForLoop = 1ull << 34,
+    /// AST creation is in a context where drivers should not be registered for
+    /// lvalues, even if they otherwise would normally be. This is used, for example,
+    /// in potentially unrollable for loops to let the loop unroller handle the drivers.
+    NotADriver = 1ull << 34,
 
     /// AST creation is for a range expression inside a streaming concatenation operator.
     StreamingWithRange = 1ull << 35,
@@ -171,9 +172,14 @@ enum class SLANG_EXPORT ASTFlags : uint64_t {
     /// AST creation is for an lvalue that also counts as an rvalue. Only valid
     /// when combined with the LValue flag -- used for things like the pre & post
     /// increment and decrement operators.
-    LAndRValue = 1ull << 39
+    LAndRValue = 1ull << 39,
+
+    /// AST binding should not count symbol references towards that symbol being "used".
+    /// If this flag is not set, accessing a variable or net in an expression will count
+    /// that symbol as being "used".
+    NoReference = 1ull << 40
 };
-BITMASK(ASTFlags, LAndRValue)
+BITMASK(ASTFlags, NoReference)
 
 // clang-format off
 #define DK(x) \

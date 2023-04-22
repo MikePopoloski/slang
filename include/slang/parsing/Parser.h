@@ -325,11 +325,12 @@ private:
     syntax::ExpressionSyntax& parseSubExpression(bitmask<ExpressionOptions> options, int precedence);
     syntax::ExpressionSyntax& parseBinaryExpression(syntax::ExpressionSyntax* left, bitmask<ExpressionOptions> options, int precedence);
     syntax::BindDirectiveSyntax& parseBindDirective(AttrList attributes);
-    syntax::UdpPortListSyntax& parseUdpPortList();
+    syntax::UdpPortListSyntax& parseUdpPortList(bool& isSequential);
     syntax::UdpDeclarationSyntax& parseUdpDeclaration(AttrList attributes);
-    syntax::UdpPortDeclSyntax& parseUdpPortDecl();
-    syntax::UdpBodySyntax& parseUdpBody();
-    syntax::UdpEntrySyntax& parseUdpEntry();
+    syntax::UdpPortDeclSyntax& parseUdpPortDecl(bool& isReg);
+    syntax::UdpBodySyntax& parseUdpBody(bool isSequential);
+    syntax::UdpFieldBaseSyntax* parseUdpField(bool required, bool isInput, bool& sawTransition);
+    syntax::UdpEntrySyntax& parseUdpEntry(bool isSequential);
     syntax::SpecparamDeclaratorSyntax& parseSpecparamDeclarator(syntax::SyntaxKind parentKind);
     syntax::SpecparamDeclarationSyntax& parseSpecparam(AttrList attributes, syntax::SyntaxKind parentKind);
     syntax::MemberSyntax* parseSpecifyItem();

@@ -7,6 +7,7 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include "slang/ast/Expression.h"
 #include "slang/ast/SemanticFacts.h"
 #include "slang/ast/symbols/ValueSymbol.h"
 #include "slang/syntax/SyntaxFwd.h"
@@ -88,6 +89,19 @@ public:
     bool mergeVariable(const VariableSymbol& variable);
     const VariableSymbol* getMergedVariable() const { return mergedVar; }
 
+    void setDefaultValueSyntax(const syntax::ExpressionSyntax& syntax) {
+        defaultValSyntax = &syntax;
+        defaultVal = nullptr;
+    }
+
+    void setDefaultValue(const Expression* expr) {
+        defaultVal = expr;
+        defaultValSyntax = nullptr;
+    }
+
+    const syntax::ExpressionSyntax* getDefaultValueSyntax() const { return defaultValSyntax; }
+    const Expression* getDefaultValue() const;
+
     void serializeTo(ASTSerializer& serializer) const;
 
     static void fromSyntax(const Scope& scope, const syntax::PortDeclarationSyntax& syntax,
@@ -95,8 +109,16 @@ public:
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::FormalArgument; }
 
+    template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const {
+        if (auto expr = getDefaultValue())
+            expr->visit(visitor);
+    }
+
 private:
     const VariableSymbol* mergedVar = nullptr;
+    const syntax::ExpressionSyntax* defaultValSyntax = nullptr;
+    mutable const Expression* defaultVal = nullptr;
 };
 
 /// Represents a field member of a struct or union.

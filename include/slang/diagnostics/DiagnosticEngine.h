@@ -147,6 +147,12 @@ public:
     /// all natural warnings, regardless of whether they've been upgraded to an error.
     void addIgnorePath(const std::filesystem::path& path);
 
+    /// Adds a path prefix for which all warnings will be supressed, when looking at the
+    /// original location for macro expansions (i.e. where the macro was originally defined).
+    /// This applies to all natural warnings, regardless of whether they've been upgraded
+    /// to an error.
+    void addIgnoreMacroPath(const std::filesystem::path& path);
+
     /// Sets a custom formatter function for the given type. This is used to
     /// provide formatting for diagnostic arguments of a custom type.
     template<typename ForType>
@@ -254,6 +260,7 @@ private:
 
     // A list of path prefixes to use to suppress warnings.
     std::vector<std::filesystem::path> ignoreWarnPrefixes;
+    std::vector<std::filesystem::path> ignoreMacroWarnPrefixes;
 
     // A list of all registered clients that receive issued diagnostics.
     std::vector<std::shared_ptr<DiagnosticClient>> clients;

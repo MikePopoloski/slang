@@ -211,6 +211,10 @@ public:
         /// A list of paths in which to suppress warnings.
         std::vector<std::string> suppressWarningsPaths;
 
+        /// A list of paths in which to suppress warnings that
+        /// originate in macro expansions.
+        std::vector<std::string> suppressMacroWarningsPaths;
+
         /// @}
         /// @name File lists
         /// @{

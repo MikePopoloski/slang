@@ -51,10 +51,9 @@ enum class SLANG_EXPORT MethodFlags : uint16_t {
     /// The method is a DPI import marked 'context'.
     DPIContext = 1 << 8,
 
-    /// The method is known not to be constant, even if it otherwise
-    /// meets all of the requirements for a constant function. Used for
-    /// built-in methods only.
-    NotConst = 1 << 9,
+    /// The method is built-in via language rules,
+    /// as opposed to defined by the user.
+    BuiltIn = 1 << 9,
 
     /// This method is a std::randomize built-in. These are declared as
     /// normal subroutines so they can be found via name lookup, and then

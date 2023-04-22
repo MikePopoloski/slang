@@ -189,9 +189,15 @@ void FormalArgumentSymbol::fromSyntax(const Scope& scope, const PortDeclarationS
                                                       declarator->name.location(), direction,
                                                       lifetime);
         arg->setDeclaredType(*header.dataType);
-        arg->setFromDeclarator(*declarator);
         arg->setAttributes(scope, syntax.attributes);
+        arg->setSyntax(*declarator);
         results.push_back(arg);
+
+        if (!declarator->dimensions.empty())
+            arg->getDeclaredType()->setDimensionSyntax(declarator->dimensions);
+
+        if (declarator->initializer)
+            scope.addDiag(diag::SubroutinePortInitializer, declarator->initializer->sourceRange());
 
         if (isConst)
             arg->flags |= VariableFlags::Const;
@@ -223,9 +229,25 @@ bool FormalArgumentSymbol::mergeVariable(const VariableSymbol& variable) {
     return true;
 }
 
+const Expression* FormalArgumentSymbol::getDefaultValue() const {
+    if (defaultVal || !defaultValSyntax)
+        return defaultVal;
+
+    auto scope = getParentScope();
+    ASSERT(scope);
+
+    ASTContext context(*scope, LookupLocation::after(*this), ASTFlags::NotADriver);
+    defaultVal = &Expression::bindArgument(getType(), direction, *defaultValSyntax, context,
+                                           flags.has(VariableFlags::Const));
+    return defaultVal;
+}
+
 void FormalArgumentSymbol::serializeTo(ASTSerializer& serializer) const {
     VariableSymbol::serializeTo(serializer);
+
     serializer.write("direction", toString(direction));
+    if (auto defVal = getDefaultValue())
+        serializer.write("defaultValue", *defVal);
 }
 
 void FieldSymbol::serializeTo(ASTSerializer& serializer) const {

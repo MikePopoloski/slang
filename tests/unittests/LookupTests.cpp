@@ -1601,7 +1601,7 @@ endmodule
 
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 1);
-    CHECK(diags[0].code == diag::UnexpectedSelection);
+    CHECK(diags[0].code == diag::ScopeNotIndexable);
 }
 
 TEST_CASE("Upward lookup with different resolutions") {
@@ -1994,6 +1994,28 @@ package P;
         endtask
     endclass
 endpackage
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Selector of dotted interface array access") {
+    auto tree = SyntaxTree::fromText(R"(
+interface Iface;
+endinterface
+
+module m;
+    localparam int foo = 3;
+    if (1) begin : asdf
+        Iface i[foo]();
+    end
+    n #(foo) n1(asdf.i[0]);
+endmodule
+
+module n #(parameter count)(Iface i);
+endmodule
 )");
 
     Compilation compilation;

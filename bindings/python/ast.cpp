@@ -110,9 +110,13 @@ void registerAST(py::module_& m) {
         .value("ProceduralAssign", ASTFlags::ProceduralAssign)
         .value("ProceduralForceRelease", ASTFlags::ProceduralForceRelease)
         .value("AllowInterconnect", ASTFlags::AllowInterconnect)
-        .value("UnrollableForLoop", ASTFlags::UnrollableForLoop)
+        .value("NotADriver", ASTFlags::NotADriver)
         .value("StreamingWithRange", ASTFlags::StreamingWithRange)
-        .value("SpecifyBlock", ASTFlags::SpecifyBlock);
+        .value("SpecifyBlock", ASTFlags::SpecifyBlock)
+        .value("DPIArg", ASTFlags::DPIArg)
+        .value("AssertionDefaultArg", ASTFlags::AssertionDefaultArg)
+        .value("LAndRValue", ASTFlags::LAndRValue)
+        .value("NoReference", ASTFlags::NoReference);
 
     py::class_<EvaluatedDimension>(m, "EvaluatedDimension")
         .def_readonly("kind", &EvaluatedDimension::kind)
@@ -211,8 +215,6 @@ void registerAST(py::module_& m) {
         .def_property_readonly("hasHierarchicalReference", &Expression::hasHierarchicalReference)
         .def("eval", &Expression::eval, "context"_a)
         .def("evalLValue", &Expression::evalLValue, "context"_a)
-        .def("canConnectToRefArg", &Expression::canConnectToRefArg, "isConstRef"_a,
-             "allowConstClassHandle"_a = false)
         .def("isImplicitlyAssignableTo", &Expression::isImplicitlyAssignableTo, "compilation"_a,
              "type"_a)
         .def("getSymbolReference", &Expression::getSymbolReference, "allowPacked"_a = true)

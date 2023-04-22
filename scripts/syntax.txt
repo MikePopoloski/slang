@@ -1520,20 +1520,24 @@ token equals
 Expression value
 token semi
 
-UdpEdgeIndicator
+UdpFieldBase final=false
+empty
+
+UdpEdgeField base=UdpFieldBase
 token openParen
 token first
 token second
 token closeParen
 
+UdpSimpleField base=UdpFieldBase
+token field
+
 UdpEntry
-tokenlist preInputs
-UdpEdgeIndicator? edgeIndicator
-tokenlist postInputs
+list<UdpFieldBase> inputs
 token colon1
-token current
+UdpFieldBase? current
 token colon2
-token next
+UdpFieldBase? next
 token semi
 
 UdpBody

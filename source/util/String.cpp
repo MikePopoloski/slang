@@ -76,13 +76,11 @@ std::optional<double> strToDouble(std::string_view str, size_t* pos) {
 }
 
 void strToUpper(std::string& str) {
-    std::transform(str.begin(), str.end(), str.begin(),
-                   [](unsigned char c) { return (char)std::toupper(c); });
+    std::transform(str.begin(), str.end(), str.begin(), [](char c) { return charToUpper(c); });
 }
 
 void strToLower(std::string& str) {
-    std::transform(str.begin(), str.end(), str.begin(),
-                   [](unsigned char c) { return (char)std::tolower(c); });
+    std::transform(str.begin(), str.end(), str.begin(), [](char c) { return charToLower(c); });
 }
 
 int editDistance(std::string_view left, std::string_view right, bool allowReplacements,

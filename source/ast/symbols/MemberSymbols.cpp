@@ -7,6 +7,8 @@
 //------------------------------------------------------------------------------
 #include "slang/ast/symbols/MemberSymbols.h"
 
+#include "fmt/core.h"
+
 #include "slang/ast/ASTSerializer.h"
 #include "slang/ast/ASTVisitor.h"
 #include "slang/ast/Compilation.h"
@@ -28,6 +30,7 @@
 #include "slang/diagnostics/TypesDiags.h"
 #include "slang/syntax/AllSyntax.h"
 #include "slang/util/StackContainer.h"
+#include "slang/util/String.h"
 
 namespace slang::ast {
 
@@ -192,7 +195,7 @@ ModportPortSymbol& ModportPortSymbol::fromSyntax(const ASTContext& context,
 
     // Perform checking on the connected symbol to make sure it's allowed
     // given the modport's direction.
-    ASTContext checkCtx = context.resetFlags(ASTFlags::NonProcedural);
+    ASTContext checkCtx = context.resetFlags(ASTFlags::NonProcedural | ASTFlags::NotADriver);
     if (direction != ArgumentDirection::In)
         checkCtx.flags |= ASTFlags::LValue;
 
@@ -200,29 +203,16 @@ ModportPortSymbol& ModportPortSymbol::fromSyntax(const ASTContext& context,
     auto& expr = ValueExpressionBase::fromSymbol(checkCtx, *result->internalSymbol, false,
                                                  {loc, loc + result->name.length()});
 
-    switch (direction) {
-        case ArgumentDirection::In:
-            // Nothing to check here.
-            break;
-        case ArgumentDirection::Out:
-            expr.requireLValue(checkCtx, loc, AssignFlags::NotADriver);
-            break;
-        case ArgumentDirection::InOut:
-            expr.requireLValue(checkCtx, loc, AssignFlags::NotADriver | AssignFlags::InOutPort);
-            break;
-        case ArgumentDirection::Ref:
-            if (!expr.canConnectToRefArg(/* isConstRef */ false))
-                checkCtx.addDiag(diag::InvalidRefArg, loc) << expr.sourceRange;
-            break;
-    }
+    Expression::checkConnectionDirection(expr, direction, checkCtx, loc);
 
+    result->connExpr = &expr;
     return *result;
 }
 
 ModportPortSymbol& ModportPortSymbol::fromSyntax(const ASTContext& parentContext,
                                                  ArgumentDirection direction,
                                                  const ModportExplicitPortSyntax& syntax) {
-    ASTContext context = parentContext.resetFlags(ASTFlags::NonProcedural);
+    ASTContext context = parentContext.resetFlags(ASTFlags::NonProcedural | ASTFlags::NotADriver);
     auto& comp = context.getCompilation();
     auto name = syntax.name;
     auto result = comp.emplace<ModportPortSymbol>(name.valueText(), name.location(), direction);
@@ -239,6 +229,7 @@ ModportPortSymbol& ModportPortSymbol::fromSyntax(const ASTContext& parentContext
 
     auto& expr = Expression::bind(*syntax.expr, context, extraFlags);
     result->explicitConnection = &expr;
+    result->connExpr = &expr;
     if (expr.bad()) {
         result->setType(comp.getErrorType());
         return *result;
@@ -246,21 +237,7 @@ ModportPortSymbol& ModportPortSymbol::fromSyntax(const ASTContext& parentContext
 
     result->setType(*expr.type);
 
-    switch (direction) {
-        case ArgumentDirection::In:
-            break;
-        case ArgumentDirection::Out:
-            expr.requireLValue(context, result->location, AssignFlags::NotADriver);
-            break;
-        case ArgumentDirection::InOut:
-            expr.requireLValue(context, result->location,
-                               AssignFlags::NotADriver | AssignFlags::InOutPort);
-            break;
-        case ArgumentDirection::Ref:
-            if (!expr.canConnectToRefArg(/* isConstRef */ false))
-                context.addDiag(diag::InvalidRefArg, result->location) << expr.sourceRange;
-            break;
-    }
+    Expression::checkConnectionDirection(expr, direction, context, result->location);
 
     return *result;
 }
@@ -765,6 +742,197 @@ void PrimitivePortSymbol::serializeTo(ASTSerializer& serializer) const {
     serializer.write("direction", toString(direction));
 }
 
+static char getUdpFieldChar(const UdpFieldBaseSyntax* base) {
+    if (base && base->kind == SyntaxKind::UdpSimpleField) {
+        auto raw = base->as<UdpSimpleFieldSyntax>().field.rawText();
+        if (!raw.empty())
+            return raw[0];
+    }
+    return 0;
+}
+
+static void expandTableEntries(const Scope& scope, const UdpEntrySyntax& syntax,
+                               const SmallVector<PrimitiveSymbol::TableField>& fields,
+                               SmallVector<PrimitiveSymbol::TableField>& currEntry,
+                               size_t fieldIndex, PrimitiveSymbol::TableEntry& baseEntry,
+                               SmallVector<PrimitiveSymbol::TableEntry>& results,
+                               SmallMap<std::string, const UdpEntrySyntax*, 4>& rowDupMap) {
+    if (fieldIndex == fields.size()) {
+        // Build a key out of inputs and current state (if present) that
+        // let us determine if this combination has already been added to the table.
+        std::string key;
+        bool allX = true;
+        for (auto& field : currEntry) {
+            allX &= charToLower(field.value) == 'x';
+            if (field.transitionTo) {
+                key.push_back('(');
+                key.push_back(field.value);
+                key.push_back(field.transitionTo);
+                key.push_back(')');
+                allX &= charToLower(field.transitionTo) == 'x';
+            }
+            else {
+                key.push_back(field.value);
+            }
+        }
+
+        if (baseEntry.state.value)
+            key.push_back(baseEntry.state.value);
+
+        auto [it, inserted] = rowDupMap.emplace(std::move(key), &syntax);
+        if (!inserted) {
+            // This is an error if the existing row has a different output,
+            // otherwise it's just silently ignored.
+            auto existing = getUdpFieldChar(it->second->next);
+            if (existing != baseEntry.output.value && existing && baseEntry.output.value) {
+                auto& diag = scope.addDiag(diag::UdpDupDiffOutput, syntax.sourceRange());
+                diag.addNote(diag::NotePreviousDefinition, it->second->sourceRange());
+            }
+        }
+        else {
+            if (allX && !currEntry.empty() && charToLower(baseEntry.output.value) != 'x')
+                scope.addDiag(diag::UdpAllX, syntax.sourceRange());
+
+            baseEntry.inputs = currEntry.copy(scope.getCompilation());
+            results.push_back(baseEntry);
+        }
+        return;
+    }
+
+    auto next = [&](SmallVector<PrimitiveSymbol::TableField>& nextFieldList) {
+        expandTableEntries(scope, syntax, fields, nextFieldList, fieldIndex + 1, baseEntry, results,
+                           rowDupMap);
+    };
+
+    auto& field = fields[fieldIndex];
+    const char v = charToLower(field.value);
+
+    if (field.transitionTo) {
+        const char w = charToLower(field.transitionTo);
+
+        SmallVector<char> firstChars;
+        SmallVector<char> secondChars;
+        for (int i = 0; i < 2; i++) {
+            auto currVec = i ? &secondChars : &firstChars;
+            auto c = i ? w : v;
+            switch (c) {
+                case '?':
+                    for (auto d : {'0', '1', 'x'})
+                        currVec->push_back(d);
+                    break;
+                case 'b':
+                    for (auto d : {'0', '1'})
+                        currVec->push_back(d);
+                    break;
+                default:
+                    currVec->push_back(c);
+                    break;
+            }
+        }
+
+        for (auto c : firstChars) {
+            for (auto d : secondChars) {
+                auto copiedEntry = currEntry;
+                copiedEntry.push_back({c, d});
+                next(copiedEntry);
+            }
+        }
+    }
+    else {
+        switch (v) {
+            case '?':
+                for (auto c : {'0', '1', 'x'}) {
+                    auto copiedEntry = currEntry;
+                    copiedEntry.push_back({c});
+                    next(copiedEntry);
+                }
+                break;
+            case 'b':
+                for (auto c : {'0', '1'}) {
+                    auto copiedEntry = currEntry;
+                    copiedEntry.push_back({c});
+                    next(copiedEntry);
+                }
+                break;
+            case 'p':
+                for (auto c : {"01", "0x", "x1"}) {
+                    auto copiedEntry = currEntry;
+                    copiedEntry.push_back({c[0], c[1]});
+                    next(copiedEntry);
+                }
+                break;
+            case 'n':
+                for (auto c : {"10", "1x", "x0"}) {
+                    auto copiedEntry = currEntry;
+                    copiedEntry.push_back({c[0], c[1]});
+                    next(copiedEntry);
+                }
+                break;
+            case '*':
+                for (auto c : {"01", "0x", "x1", "10", "1x", "x0"}) {
+                    auto copiedEntry = currEntry;
+                    copiedEntry.push_back({c[0], c[1]});
+                    next(copiedEntry);
+                }
+                break;
+            case 'r':
+                currEntry.push_back({'0', '1'});
+                next(currEntry);
+                break;
+            case 'f':
+                currEntry.push_back({'1', '0'});
+                next(currEntry);
+                break;
+            default:
+                currEntry.push_back({v});
+                next(currEntry);
+                break;
+        }
+    }
+}
+
+static void createTableEntries(const Scope& scope, const UdpEntrySyntax& syntax,
+                               SmallVector<PrimitiveSymbol::TableEntry>& results,
+                               SmallMap<std::string, const UdpEntrySyntax*, 4>& rowDupMap,
+                               size_t numPorts) {
+    SmallVector<PrimitiveSymbol::TableField> fields;
+    for (auto input : syntax.inputs) {
+        if (input->kind == SyntaxKind::UdpEdgeField) {
+            auto& edge = input->as<UdpEdgeFieldSyntax>();
+
+            SmallVector<char, 4> chars;
+            chars.append(edge.first.rawText());
+            chars.append(edge.second.rawText());
+
+            PrimitiveSymbol::TableField field;
+            if (chars.size() > 0)
+                field.value = chars[0];
+            if (chars.size() > 1)
+                field.transitionTo = chars[1];
+
+            fields.push_back(field);
+        }
+        else {
+            auto tok = input->as<UdpSimpleFieldSyntax>().field;
+            for (auto c : tok.rawText())
+                fields.push_back({c, 0});
+        }
+    }
+
+    if (numPorts >= 2 && fields.size() != numPorts - 1) {
+        auto& diag = scope.addDiag(diag::UdpWrongInputCount, syntax.inputs.sourceRange());
+        diag << fields.size();
+        diag << numPorts - 1;
+    }
+
+    PrimitiveSymbol::TableEntry entry;
+    entry.state.value = getUdpFieldChar(syntax.current);
+    entry.output.value = getUdpFieldChar(syntax.next);
+
+    SmallVector<PrimitiveSymbol::TableField> currEntry;
+    expandTableEntries(scope, syntax, fields, currEntry, 0, entry, results, rowDupMap);
+}
+
 PrimitiveSymbol& PrimitiveSymbol::fromSyntax(const Scope& scope,
                                              const UdpDeclarationSyntax& syntax) {
     auto& comp = scope.getCompilation();
@@ -991,14 +1159,40 @@ PrimitiveSymbol& PrimitiveSymbol::fromSyntax(const Scope& scope,
         }
     }
 
-    // TODO: body
+    SmallMap<std::string, const UdpEntrySyntax*, 4> rowDupMap;
+    SmallVector<TableEntry> table;
+    for (auto entry : syntax.body->entries)
+        createTableEntries(scope, *entry, table, rowDupMap, ports.size());
 
     prim->ports = ports.copy(comp);
+    prim->table = table.copy(comp);
     return *prim;
 }
 
-void PrimitiveSymbol::serializeTo(ASTSerializer&) const {
-    // TODO:
+void PrimitiveSymbol::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("isSequential", isSequential);
+    if (initVal)
+        serializer.write("initVal", *initVal);
+
+    if (!table.empty()) {
+        serializer.startArray("table");
+        for (auto& row : table) {
+            serializer.startObject();
+            serializer.startArray("inputs");
+            for (auto& entry : row.inputs) {
+                if (entry.transitionTo)
+                    serializer.serialize(fmt::format("({}{})", entry.value, entry.transitionTo));
+                else
+                    serializer.serialize(std::string_view(&entry.value, 1));
+            }
+            serializer.endArray();
+            if (row.state.value)
+                serializer.write("state", std::string_view(&row.state.value, 1));
+            serializer.write("output", std::string_view(&row.output.value, 1));
+            serializer.endObject();
+        }
+        serializer.endArray();
+    }
 }
 
 AssertionPortSymbol::AssertionPortSymbol(std::string_view name, SourceLocation loc) :
@@ -1385,7 +1579,7 @@ RandSeqProductionSymbol::ProdItem RandSeqProductionSymbol::createProdItem(
 
     SmallVector<const Expression*> args;
     CallExpression::bindArgs(syntax.argList, symbol->arguments, symbol->name, syntax.sourceRange(),
-                             context, args);
+                             context, args, /* isBuiltInMethod */ false);
 
     return ProdItem(symbol, args.copy(context.getCompilation()));
 }

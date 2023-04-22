@@ -2564,13 +2564,16 @@ BindDirectiveSyntax& Parser::parseBindDirective(AttrList attr) {
     return factory.bindDirective(attr, keyword, target, targetInstances, instantiation);
 }
 
-UdpPortDeclSyntax& Parser::parseUdpPortDecl() {
+UdpPortDeclSyntax& Parser::parseUdpPortDecl(bool& isReg) {
     auto attrs = parseAttributes();
 
     if (peek(TokenKind::OutputKeyword) || peek(TokenKind::RegKeyword)) {
         auto output = consumeIf(TokenKind::OutputKeyword);
         auto reg = consumeIf(TokenKind::RegKeyword);
         auto name = expect(TokenKind::Identifier);
+
+        if (reg)
+            isReg = true;
 
         EqualsValueClauseSyntax* init = nullptr;
         if (output && reg && peek(TokenKind::Equals)) {
@@ -2597,7 +2600,7 @@ UdpPortDeclSyntax& Parser::parseUdpPortDecl() {
     return factory.udpInputPortDecl(attrs, input, ports.copy(alloc));
 }
 
-UdpPortListSyntax& Parser::parseUdpPortList() {
+UdpPortListSyntax& Parser::parseUdpPortList(bool& isSequential) {
     auto openParen = expect(TokenKind::OpenParenthesis);
 
     if (peek(TokenKind::DotStar)) {
@@ -2609,10 +2612,10 @@ UdpPortListSyntax& Parser::parseUdpPortList() {
     else if (peek(TokenKind::OutputKeyword) || peek(TokenKind::InputKeyword)) {
         Token closeParen;
         SmallVector<TokenOrSyntax, 4> ports;
-        parseList<isPossibleUdpPort, isEndOfParenList>(ports, TokenKind::CloseParenthesis,
-                                                       TokenKind::Comma, closeParen,
-                                                       RequireItems::True, diag::ExpectedUdpPort,
-                                                       [this] { return &parseUdpPortDecl(); });
+        parseList<isPossibleUdpPort, isEndOfParenList>(
+            ports, TokenKind::CloseParenthesis, TokenKind::Comma, closeParen, RequireItems::True,
+            diag::ExpectedUdpPort,
+            [this, &isSequential] { return &parseUdpPortDecl(isSequential); });
 
         return factory.ansiUdpPortList(openParen, ports.copy(alloc), closeParen,
                                        expect(TokenKind::Semicolon));
@@ -2629,69 +2632,202 @@ UdpPortListSyntax& Parser::parseUdpPortList() {
     }
 }
 
-UdpEntrySyntax& Parser::parseUdpEntry() {
-    auto nextSymbol = [&](bool required) {
+UdpFieldBaseSyntax* Parser::parseUdpField(bool required, bool isInput, bool& sawTransition) {
+    auto checkTransition = [&](std::optional<SourceLocation> loc = {}) {
+        if (isInput && sawTransition) {
+            if (!loc)
+                loc = peek().location();
+            addDiag(diag::UdpDupTransition, *loc);
+        }
+        sawTransition = true;
+    };
+
+    auto nextSymbol = [&](bool required, bool insideTrans, bool& error) {
         switch (peek().kind) {
-            case TokenKind::IntegerLiteral:
-            case TokenKind::IntegerBase:
             case TokenKind::Question:
-            case TokenKind::Star:
-            case TokenKind::Minus:
-            case TokenKind::Identifier:
                 return consume();
+            case TokenKind::Star:
+                if (!insideTrans)
+                    checkTransition();
+                return consume();
+            case TokenKind::Minus: {
+                auto tok = consume();
+                if (isInput) {
+                    error = true;
+                    addDiag(diag::UdpInvalidMinus, tok.location());
+                }
+                return tok;
+            }
+            case TokenKind::Identifier:
+            case TokenKind::IntegerLiteral: {
+                auto tok = consume();
+                auto text = tok.rawText();
+                for (size_t i = 0; i < text.length(); i++) {
+                    char c = charToLower(text[i]);
+                    switch (c) {
+                        case '0':
+                        case '1':
+                        case 'x':
+                        case 'b':
+                            break;
+                        case 'r':
+                        case 'f':
+                        case 'p':
+                        case 'n':
+                            if (!insideTrans)
+                                checkTransition(tok.location() + i);
+                            break;
+                        default:
+                            error = true;
+                            addDiag(diag::UdpInvalidSymbol, tok.location() + i) << c;
+                            break;
+                    }
+                }
+                return tok;
+            }
             default:
-                if (required)
+                if (required) {
+                    error = true;
                     addDiag(diag::ExpectedUdpSymbol, peek().location());
+                }
                 return Token();
         }
     };
 
-    SmallVector<Token, 4> preInputs;
-    SmallVector<Token, 4> postInputs;
-    while (true) {
-        auto next = nextSymbol(false);
-        if (!next)
-            break;
+    if (peek(TokenKind::OpenParenthesis)) {
+        checkTransition();
+        auto openParen = consume();
 
-        preInputs.push_back(next);
+        bool error = false;
+        auto first = nextSymbol(true, true, error);
+        auto second = nextSymbol(false, true, error);
+        auto closeParen = expect(TokenKind::CloseParenthesis);
+        auto result = &factory.udpEdgeField(openParen, first, second, closeParen);
+
+        if (!closeParen.isMissing()) {
+            if (!isInput) {
+                addDiag(diag::UdpInvalidTransition, result->sourceRange());
+            }
+            else if (!error) {
+                if (first.rawText().size() + second.rawText().size() != 2) {
+                    addDiag(diag::UdpTransitionLength, result->sourceRange());
+                }
+                else {
+                    for (auto tok : {first, second}) {
+                        auto text = tok.rawText();
+                        for (size_t i = 0; i < text.length(); i++) {
+                            char c = charToLower(text[i]);
+                            switch (c) {
+                                case '0':
+                                case '1':
+                                case 'x':
+                                case 'b':
+                                case '?':
+                                    break;
+                                default:
+                                    addDiag(diag::UdpInvalidEdgeSymbol, tok.location() + i) << c;
+                                    break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        return result;
     }
 
-    UdpEdgeIndicatorSyntax* edgeIndicator = nullptr;
-    if (peek(TokenKind::OpenParenthesis)) {
-        auto openParen = consume();
-        auto first = nextSymbol(true);
-        auto second = nextSymbol(false);
-        auto closeParen = expect(TokenKind::CloseParenthesis);
-        edgeIndicator = &factory.udpEdgeIndicator(openParen, first, second, closeParen);
+    bool error = false;
+    auto next = nextSymbol(required, false, error);
+    if (!next)
+        return nullptr;
 
-        while (true) {
-            auto next = nextSymbol(false);
-            if (!next)
-                break;
-
-            postInputs.push_back(next);
+    if (!isInput && !error) {
+        auto text = next.rawText();
+        if (text.length() > 1) {
+            addDiag(diag::UdpSingleChar, next.range());
+        }
+        else if (!text.empty()) {
+            char c = charToLower(text[0]);
+            switch (c) {
+                case '*':
+                case 'r':
+                case 'f':
+                case 'p':
+                case 'n':
+                    addDiag(diag::UdpInvalidInputOnly, next.location()) << c;
+                    break;
+                default:
+                    break;
+            }
         }
     }
 
-    auto colon1 = expect(TokenKind::Colon);
-    auto current = nextSymbol(true);
-
-    Token colon2;
-    Token nextState;
-    if (peek(TokenKind::Colon)) {
-        colon2 = consume();
-        nextState = nextSymbol(true);
-    }
-
-    auto semi = expect(TokenKind::Semicolon);
-    return factory.udpEntry(preInputs.copy(alloc), edgeIndicator, postInputs.copy(alloc), colon1,
-                            current, colon2, nextState, semi);
+    return &factory.udpSimpleField(next);
 }
 
-UdpBodySyntax& Parser::parseUdpBody() {
+UdpEntrySyntax& Parser::parseUdpEntry(bool isSequential) {
+    bool sawTransition = false;
+    SmallVector<UdpFieldBaseSyntax*, 4> inputs;
+    while (true) {
+        auto field = parseUdpField(inputs.empty(), /* isInput */ true, sawTransition);
+        if (!field)
+            break;
+
+        inputs.push_back(field);
+    }
+
+    auto colon1 = expect(TokenKind::Colon);
+    auto nextState = parseUdpField(true, /* isInput */ false, sawTransition);
+
+    Token colon2;
+    UdpFieldBaseSyntax* currentState = nullptr;
+    if (peek(TokenKind::Colon)) {
+        colon2 = consume();
+        currentState = std::exchange(nextState,
+                                     parseUdpField(true, /* isInput */ false, sawTransition));
+    }
+
+    auto checkNonInput = [&](const UdpFieldBaseSyntax* syntax, bool isOutput) {
+        if (!syntax || syntax->kind != SyntaxKind::UdpSimpleField)
+            return;
+
+        auto tok = syntax->as<UdpSimpleFieldSyntax>().field;
+        auto raw = tok.rawText();
+        if (!raw.empty()) {
+            switch (raw[0]) {
+                case '?':
+                case 'b':
+                    if (isOutput)
+                        addDiag(diag::UdpInvalidOutput, tok.location()) << raw[0];
+                    break;
+                case '-':
+                    if (!isOutput)
+                        addDiag(diag::UdpInvalidMinus, tok.location());
+                    break;
+                default:
+                    break;
+            }
+        }
+    };
+
+    checkNonInput(currentState, false);
+    checkNonInput(nextState, true);
+
+    auto semi = expect(TokenKind::Semicolon);
+
+    if (currentState && !isSequential)
+        addDiag(diag::UdpCombState, currentState->sourceRange());
+    else if (!currentState && isSequential && !semi.isMissing())
+        addDiag(diag::UdpSequentialState, semi.location());
+
+    return factory.udpEntry(inputs.copy(alloc), colon1, currentState, colon2, nextState, semi);
+}
+
+UdpBodySyntax& Parser::parseUdpBody(bool isSequential) {
     SmallVector<TokenOrSyntax, 4> portDecls;
     while (isPossibleUdpPort(peek().kind)) {
-        portDecls.push_back(&parseUdpPortDecl());
+        portDecls.push_back(&parseUdpPortDecl(isSequential));
         portDecls.push_back(expect(TokenKind::Semicolon));
     }
 
@@ -2709,7 +2845,7 @@ UdpBodySyntax& Parser::parseUdpBody() {
 
     SmallVector<UdpEntrySyntax*> entries;
     while (isPossibleUdpEntry(peek().kind))
-        entries.push_back(&parseUdpEntry());
+        entries.push_back(&parseUdpEntry(isSequential));
 
     auto endtable = expect(TokenKind::EndTableKeyword);
     return factory.udpBody(portDecls.copy(alloc), initial, table, entries.copy(alloc), endtable);
@@ -2718,8 +2854,10 @@ UdpBodySyntax& Parser::parseUdpBody() {
 UdpDeclarationSyntax& Parser::parseUdpDeclaration(AttrList attr) {
     auto primitive = consume();
     auto name = expect(TokenKind::Identifier);
-    auto& portList = parseUdpPortList();
-    auto& body = parseUdpBody();
+
+    bool isSequential = false;
+    auto& portList = parseUdpPortList(isSequential);
+    auto& body = parseUdpBody(isSequential);
     auto endprim = expect(TokenKind::EndPrimitiveKeyword);
 
     NamedBlockClauseSyntax* endBlockName = parseNamedBlockClause();
@@ -2963,7 +3101,7 @@ EdgeDescriptorSyntax& Parser::parseEdgeDescriptor() {
         bool bad = false;
         bool bothUnknown = true;
         for (char& edge : edges) {
-            char c = edge = (char)::tolower(edge);
+            char c = edge = charToLower(edge);
             if (c == '0' || c == '1') {
                 bothUnknown = false;
             }
@@ -3135,11 +3273,12 @@ MemberSyntax* Parser::parseExternMember(SyntaxKind parentKind, AttrList attribut
             return &factory.externModuleDecl(attributes, keyword, actualAttrs, header);
         }
         case TokenKind::PrimitiveKeyword: {
+            bool unused;
             auto keyword = consume();
             auto actualAttrs = parseAttributes();
             auto primitive = consume();
             auto name = expect(TokenKind::Identifier);
-            auto& portList = parseUdpPortList();
+            auto& portList = parseUdpPortList(unused);
             return &factory.externUdpDecl(attributes, keyword, actualAttrs, primitive, name,
                                           portList);
         }

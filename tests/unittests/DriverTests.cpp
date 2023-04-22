@@ -451,3 +451,22 @@ TEST_CASE("Driver suppress warnings by path") {
     CHECK(stdoutContains("Build succeeded"));
     CHECK(stdoutContains("0 errors, 0 warnings"));
 }
+
+TEST_CASE("Driver suppress macro warnings by path") {
+    auto guard = OS::captureOutput();
+
+    Driver driver;
+    driver.addStandardArgs();
+
+    auto testDir = findTestDir();
+    auto args = fmt::format(
+        "testfoo \"{0}test6.sv\" -Wwidth-trunc --suppress-macro-warnings \"{0}/nested\"", testDir);
+    CHECK(driver.parseCommandLine(args));
+    CHECK(driver.processOptions());
+    CHECK(driver.parseAllSources());
+
+    auto compilation = driver.createCompilation();
+    CHECK(driver.reportCompilation(*compilation, false));
+    CHECK(stdoutContains("Build succeeded"));
+    CHECK(stdoutContains("0 errors, 0 warnings"));
+}

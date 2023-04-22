@@ -443,6 +443,22 @@ decltype(auto) Pattern::visit(TVisitor& visitor, Args&&... args) const {
     ASSUME_UNREACHABLE;
 }
 
+template<typename TVisitor, typename... Args>
+decltype(auto) RandSeqProductionSymbol::ProdBase::visit(TVisitor& visitor, Args&&... args) const {
+    // clang-format off
+#define CASE(k, n) case RandSeqProductionSymbol::ProdKind::k: return visitor.visit(*static_cast<const n*>(this), std::forward<Args>(args)...)
+    switch (kind) {
+        CASE(Item, ProdItem);
+        CASE(CodeBlock, CodeBlockProd);
+        CASE(IfElse, IfElseProd);
+        CASE(Repeat, RepeatProd);
+        CASE(Case, CaseProd);
+    }
+#undef CASE
+    // clang-format on
+    ASSUME_UNREACHABLE;
+}
+
 /// @endcond
 
 } // namespace slang::ast

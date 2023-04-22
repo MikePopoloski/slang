@@ -123,7 +123,7 @@ public:
             // No convenient way to do this with standard lib functions :(
             const char* p1 = lhs.c_str();
             const char* p2 = rhs.c_str();
-            while ((result = std::tolower(*p1) - std::tolower(*p2++)) == 0) {
+            while ((result = charToLower(*p1) - charToLower(*p2++)) == 0) {
                 if (*p1++ == '\0')
                     break;
             }

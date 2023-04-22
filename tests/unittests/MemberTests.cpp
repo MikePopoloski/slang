@@ -1768,7 +1768,7 @@ primitive srff (q, s, r);
 endprimitive : srff
 
 primitive p2 (output reg a = 1'bx, input b, input c);
-    table 00:0; endtable
+    table 00:0:0; endtable
 endprimitive
 
 module m;
@@ -1790,7 +1790,7 @@ primitive p1 (input a, b, output c);
 endprimitive
 
 primitive p1 (output a, input b);
-    table 00:0; endtable
+    table 0:0; endtable
 endprimitive
 
 primitive p2 (output a);
@@ -1801,7 +1801,7 @@ primitive p3 (a, b);
     input b;
     output a;
     output reg a;
-    table 00:0; endtable
+    table 0:0:0; endtable
 endprimitive
 
 primitive p4 (a, b);
@@ -1811,21 +1811,21 @@ primitive p4 (a, b);
     reg a;
     input c;
     output d;
-    table 00:0; endtable
+    table 0:0:0; endtable
 endprimitive
 
 primitive p5 (a, b);
     reg a;
     input b;
     output reg a;
-    table 00:0; endtable
+    table 0:0:0; endtable
 endprimitive
 
 primitive p6 (a, b, c);
     input b;
     output a;
     reg b;
-    table 00:0; endtable
+    table 00:0:0; endtable
 endprimitive
 
 primitive p7 (a, b, c);
@@ -1839,21 +1839,21 @@ primitive p8 (a, b);
     output reg a = 1;
     input b;
     initial a = 1'bx;
-    table 00:0; endtable
+    table 0:0:0; endtable
 endprimitive
 
 primitive p9 (a, b);
     output reg a;
     input b;
     initial c = 1'bx;
-    table 00:0; endtable
+    table 0:0:0; endtable
 endprimitive
 
 primitive p10 (a, b);
     output reg a;
     input b;
     initial a = 3;
-    table 00:0; endtable
+    table 0:0:0; endtable
 endprimitive
 
 module p10; endmodule
@@ -1862,14 +1862,40 @@ module m;
 endmodule
 
 primitive m(output a, input b);
-    table 00:0; endtable
+    table 0:0; endtable
 endprimitive
 
 primitive p11 (a, b);
     output reg a;
     input b;
     initial a = 1'b1;
-    table 00:; endtable
+    table 0: endtable
+endprimitive
+
+primitive p12 (a, b, c);
+    output reg a;
+    input b, c;
+    table
+        000:0:0;
+        0:0:0;
+    endtable
+endprimitive
+
+primitive p13 (a, b, c);
+    output reg a;
+    input b, c;
+    table
+        0(10):0:0;
+        0f:0:1;
+    endtable
+endprimitive
+
+primitive p14 (a, b, c);
+    output reg a;
+    input b, c;
+    table
+        xx:0:0;
+    endtable
 endprimitive
 )");
 
@@ -1877,7 +1903,7 @@ endprimitive
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 20);
+    REQUIRE(diags.size() == 24);
     CHECK(diags[0].code == diag::PrimitiveOutputFirst);
     CHECK(diags[1].code == diag::PrimitiveAnsiMix);
     CHECK(diags[2].code == diag::DuplicateDefinition);
@@ -1898,12 +1924,16 @@ endprimitive
     CHECK(diags[17].code == diag::Redefinition);
     CHECK(diags[18].code == diag::Redefinition);
     CHECK(diags[19].code == diag::ExpectedUdpSymbol);
+    CHECK(diags[20].code == diag::UdpWrongInputCount);
+    CHECK(diags[21].code == diag::UdpWrongInputCount);
+    CHECK(diags[22].code == diag::UdpDupDiffOutput);
+    CHECK(diags[23].code == diag::UdpAllX);
 }
 
 TEST_CASE("UDP instances error checking") {
     auto tree = SyntaxTree::fromText(R"(
 primitive p1 (output a, input b);
-    table 00:0; endtable
+    table 0:0; endtable
 endprimitive
 
 module m;
@@ -3430,4 +3460,138 @@ endmodule
 
     auto cs = m.find<NetSymbol>("b").getChargeStrength();
     CHECK(cs == ChargeStrength::Small);
+}
+
+TEST_CASE("UDP body errors") {
+    auto tree = SyntaxTree::fromText(R"(
+primitive p1 (q, s, r);
+    output q; reg q;
+    input s, r;
+    initial q = 1'b1;
+    table
+        // s r q q+
+        zx : (10) : 1 ;
+        f 0 : 1 : - ;
+        (1r) x : ? : 0 ;
+        (111) x : 0 : - ;
+        1 1 : ? : 01 ;
+        1 1 : * : 1;
+        1 - : 0 : 1;
+        1 1 : - : 1;
+        1 1 : 1 : ?;
+        rr : 1 : 1;
+        1 1 : 1;
+    endtable
+endprimitive
+
+primitive p2 (q, s, r);
+    output q;
+    input s, r;
+    table
+        1 1 : 1 : 1;
+    endtable
+endprimitive
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 12);
+    CHECK(diags[0].code == diag::UdpInvalidSymbol);
+    CHECK(diags[1].code == diag::UdpInvalidTransition);
+    CHECK(diags[2].code == diag::UdpInvalidEdgeSymbol);
+    CHECK(diags[3].code == diag::UdpTransitionLength);
+    CHECK(diags[4].code == diag::UdpSingleChar);
+    CHECK(diags[5].code == diag::UdpInvalidInputOnly);
+    CHECK(diags[6].code == diag::UdpInvalidMinus);
+    CHECK(diags[7].code == diag::UdpInvalidMinus);
+    CHECK(diags[8].code == diag::UdpInvalidOutput);
+    CHECK(diags[9].code == diag::UdpDupTransition);
+    CHECK(diags[10].code == diag::UdpSequentialState);
+    CHECK(diags[11].code == diag::UdpCombState);
+}
+
+TEST_CASE("Modport multi-driven errors") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I;
+    int i;
+    modport m(output i);
+endinterface
+
+module m(I.m i);
+    assign i.i = 1;
+endmodule
+
+module top;
+    I i();
+    m m1(i), m2(i);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::MultipleContAssigns);
+}
+
+TEST_CASE("Function non-ansi port defaults are illegal") {
+    auto tree = SyntaxTree::fromText(R"(
+function foo;
+    input a = 1;
+endfunction
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::SubroutinePortInitializer);
+}
+
+TEST_CASE("Function arg defaults are checked") {
+    auto tree = SyntaxTree::fromText(R"(
+function automatic foo(input a = baz, ref int b = 2);
+endfunction
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::UndeclaredIdentifier);
+    CHECK(diags[1].code == diag::InvalidRefArg);
+}
+
+TEST_CASE("Function arg defaults with multi-driver checking") {
+    auto tree = SyntaxTree::fromText(R"(
+int baz, bar, biz;
+
+function automatic void f1(output int a = baz, ref int b = bar);
+endfunction
+
+function automatic void f2(inout int c = biz);
+endfunction
+
+module m;
+    initial f1();
+    always_comb begin
+        f1();
+    end
+
+    assign biz = 1;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::MultipleAlwaysAssigns);
+    CHECK(diags[1].code == diag::MultipleAlwaysAssigns);
 }

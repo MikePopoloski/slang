@@ -207,7 +207,11 @@ const Expression& Expression::bindLValue(const ExpressionSyntax& lhs, const Type
                                   ASTFlags::StreamingAllowed | ASTFlags::LValue);
     }
     else {
-        lhsExpr = &create(comp, lhs, context, ASTFlags::LValue, rhsExpr->type);
+        bitmask<ASTFlags> astFlags = ASTFlags::LValue;
+        if (isInout)
+            astFlags |= ASTFlags::LAndRValue;
+
+        lhsExpr = &create(comp, lhs, context, astFlags, rhsExpr->type);
     }
 
     selfDetermined(context, lhsExpr);
@@ -220,11 +224,15 @@ const Expression& Expression::bindLValue(const ExpressionSyntax& lhs, const Type
             assignFlags = AssignFlags::OutputPort;
     }
 
+    bitmask<ASTFlags> astFlags = ASTFlags::OutputArg;
+    if (context.flags.has(ASTFlags::NotADriver))
+        astFlags |= ASTFlags::NotADriver;
+
     SourceRange lhsRange = lhs.sourceRange();
     return AssignmentExpression::fromComponents(comp, std::nullopt, assignFlags, *lhsExpr, *rhsExpr,
                                                 lhsRange.start(),
                                                 /* timingControl */ nullptr, lhsRange,
-                                                context.resetFlags(ASTFlags::OutputArg));
+                                                context.resetFlags(astFlags));
 }
 
 const Expression& Expression::bindLValue(const ExpressionSyntax& syntax,
@@ -254,6 +262,34 @@ const Expression& Expression::bindRValue(const Type& lhs, const ExpressionSyntax
     return convertAssignment(ctx, lhs, expr, location);
 }
 
+static bool canConnectToRefArg(const Expression& expr, bool isConstRef,
+                               bool allowConstClassHandle = false) {
+    auto sym = expr.getSymbolReference(/* allowPacked */ false);
+    if (!sym || !VariableSymbol::isKind(sym->kind))
+        return false;
+
+    auto& var = sym->as<VariableSymbol>();
+    if (!isConstRef && var.flags.has(VariableFlags::Const) &&
+        (!allowConstClassHandle || !var.getType().isClass())) {
+        return false;
+    }
+
+    // Need to recursively check the left hand side of element selects and member accesses
+    // to be sure this is actually an lvalue and not, for example, the result of a
+    // function call or something.
+    switch (expr.kind) {
+        case ExpressionKind::ElementSelect:
+            return canConnectToRefArg(expr.as<ElementSelectExpression>().value(), isConstRef,
+                                      false);
+        case ExpressionKind::RangeSelect:
+            return canConnectToRefArg(expr.as<RangeSelectExpression>().value(), isConstRef, false);
+        case ExpressionKind::MemberAccess:
+            return canConnectToRefArg(expr.as<MemberAccessExpression>().value(), isConstRef, true);
+        default:
+            return true;
+    }
+}
+
 const Expression& Expression::bindRefArg(const Type& lhs, bool isConstRef,
                                          const ExpressionSyntax& rhs, SourceLocation location,
                                          const ASTContext& context) {
@@ -265,11 +301,11 @@ const Expression& Expression::bindRefArg(const Type& lhs, bool isConstRef,
     if (lhs.isError())
         return badExpr(comp, &expr);
 
-    if (!expr.canConnectToRefArg(isConstRef)) {
+    if (!canConnectToRefArg(expr, isConstRef)) {
         // If we can't bind to ref but we can bind to 'const ref', issue a more
         // specific error about constness.
         DiagCode code = diag::InvalidRefArg;
-        if (!isConstRef && expr.canConnectToRefArg(true))
+        if (!isConstRef && canConnectToRefArg(expr, true))
             code = diag::ConstVarToRef;
 
         context.addDiag(code, location) << expr.sourceRange;
@@ -307,6 +343,27 @@ const Expression& Expression::bindArgument(const Type& argType, ArgumentDirectio
             return bindLValue(syntax, argType, loc, context, direction == ArgumentDirection::InOut);
         case ArgumentDirection::Ref:
             return bindRefArg(argType, isConstRef, syntax, loc, context);
+    }
+    ASSUME_UNREACHABLE;
+}
+
+bool Expression::checkConnectionDirection(const Expression& expr, ArgumentDirection direction,
+                                          const ASTContext& context, SourceLocation loc,
+                                          bitmask<AssignFlags> flags) {
+    switch (direction) {
+        case ArgumentDirection::In:
+            // All expressions are fine for inputs.
+            return true;
+        case ArgumentDirection::Out:
+            return expr.requireLValue(context, loc, flags);
+        case ArgumentDirection::InOut:
+            return expr.requireLValue(context, loc, flags | AssignFlags::InOutPort);
+        case ArgumentDirection::Ref:
+            if (!canConnectToRefArg(expr, /* isConstRef */ false)) {
+                context.addDiag(diag::InvalidRefArg, loc) << expr.sourceRange;
+                return false;
+            }
+            return true;
     }
     ASSUME_UNREACHABLE;
 }
@@ -504,32 +561,6 @@ void Expression::getLongestStaticPrefixes(
         case ExpressionKind::Invalid:
         default:
             break;
-    }
-}
-
-bool Expression::canConnectToRefArg(bool isConstRef, bool allowConstClassHandle) const {
-    auto sym = getSymbolReference(/* allowPacked */ false);
-    if (!sym || !VariableSymbol::isKind(sym->kind))
-        return false;
-
-    auto& var = sym->as<VariableSymbol>();
-    if (!isConstRef && var.flags.has(VariableFlags::Const) &&
-        (!allowConstClassHandle || !var.getType().isClass())) {
-        return false;
-    }
-
-    // Need to recursively check the left hand side of element selects and member accesses
-    // to be sure this is actually an lvalue and not, for example, the result of a
-    // function call or something.
-    switch (kind) {
-        case ExpressionKind::ElementSelect:
-            return as<ElementSelectExpression>().value().canConnectToRefArg(isConstRef, false);
-        case ExpressionKind::RangeSelect:
-            return as<RangeSelectExpression>().value().canConnectToRefArg(isConstRef, false);
-        case ExpressionKind::MemberAccess:
-            return as<MemberAccessExpression>().value().canConnectToRefArg(isConstRef, true);
-        default:
-            return true;
     }
 }
 

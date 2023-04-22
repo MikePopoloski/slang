@@ -1029,7 +1029,7 @@ Expression& NewCovergroupExpression::fromSyntax(Compilation& compilation,
 
     SmallVector<const Expression*> args;
     if (!CallExpression::bindArgs(syntax.argList, coverType.arguments, "new"sv, range, context,
-                                  args)) {
+                                  args, /* isBuiltInMethod */ false)) {
         return badExpr(compilation, nullptr);
     }
 

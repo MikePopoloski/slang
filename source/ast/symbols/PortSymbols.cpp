@@ -75,28 +75,6 @@ std::tuple<const Definition*, std::string_view> getInterfacePortInfo(
     return {def, modport};
 }
 
-// This checks factors other than types when making a port connection
-// to a specific symbol.
-void checkSymbolConnection(const Expression& expr, ArgumentDirection direction,
-                           const ASTContext& context, SourceLocation loc,
-                           bitmask<AssignFlags> flags) {
-    switch (direction) {
-        case ArgumentDirection::In:
-            // All expressions are fine for inputs.
-            break;
-        case ArgumentDirection::Out:
-            expr.requireLValue(context, loc, flags);
-            break;
-        case ArgumentDirection::InOut:
-            expr.requireLValue(context, loc, AssignFlags::InOutPort);
-            break;
-        case ArgumentDirection::Ref:
-            if (!expr.canConnectToRefArg(/* isConstRef */ false))
-                context.addDiag(diag::InvalidRefArg, loc) << expr.sourceRange;
-            break;
-    }
-}
-
 // Helper class to build up lists of port symbols.
 class AnsiPortListBuilder {
 public:
@@ -1296,7 +1274,8 @@ const Type& PortSymbol::getType() const {
         ASSERT(dt);
         type = &dt->getType();
 
-        bitmask<ASTFlags> astFlags = ASTFlags::NonProcedural | ASTFlags::AllowInterconnect;
+        bitmask<ASTFlags> astFlags = ASTFlags::NonProcedural | ASTFlags::AllowInterconnect |
+                                     ASTFlags::NoReference;
         if (direction != ArgumentDirection::Out)
             astFlags |= ASTFlags::LValue;
 
@@ -1337,7 +1316,7 @@ const Type& PortSymbol::getType() const {
         // The direction of the connection is reversed, as data coming in to an input
         // port flows out to the internal symbol, and vice versa. Inout and ref
         // ports don't change.
-        bitmask<ASTFlags> astFlags = ASTFlags::NonProcedural;
+        bitmask<ASTFlags> astFlags = ASTFlags::NonProcedural | ASTFlags::NoReference;
         ArgumentDirection checkDir = direction;
         switch (direction) {
             case ArgumentDirection::In:
@@ -1359,9 +1338,10 @@ const Type& PortSymbol::getType() const {
         type = internalExpr->type;
 
         if (!internalExpr->bad()) {
-            checkSymbolConnection(*internalExpr, checkDir, context, location,
-                                  direction == ArgumentDirection::In ? AssignFlags::InputPort
-                                                                     : AssignFlags::None);
+            Expression::checkConnectionDirection(*internalExpr, checkDir, context, location,
+                                                 direction == ArgumentDirection::In
+                                                     ? AssignFlags::InputPort
+                                                     : AssignFlags::None);
 
             PortBackrefVisitor visitor(*this);
             internalExpr->visit(visitor);
@@ -1771,8 +1751,8 @@ const Expression* PortConnection::getExpression() const {
 
             expr = e;
             if (!expr->bad()) {
-                checkSymbolConnection(*expr, direction, context, expr->sourceRange.start(),
-                                      assignFlags);
+                Expression::checkConnectionDirection(*expr, direction, context,
+                                                     expr->sourceRange.start(), assignFlags);
             }
         }
         else {

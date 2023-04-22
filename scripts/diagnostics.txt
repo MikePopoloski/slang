@@ -264,6 +264,17 @@ error PulseControlTwoValues "pulse control specparams must be assigned two value
 error TooManyEdgeDescriptors "cannot have more than six pairs of edge transitions in list"
 error EdgeDescWrongKeyword "edge descriptor list cannot be used after '{}'"
 error BindDirectiveInvalidName "bind target name must be a simple module or interface identifier when a list of instances is provided"
+error UdpInvalidTransition "transition specifiers are only allowed in input fields"
+error UdpInvalidSymbol "invalid symbol '{}' in state table"
+error UdpTransitionLength "transition specifier requires exactly two symbols"
+error UdpInvalidEdgeSymbol "invalid symbol '{}' in edge transition specifier"
+error UdpSingleChar "state table entry can only be a single symbol"
+error UdpInvalidInputOnly "'{}' is only allowed in input fields of sequential primitives"
+error UdpInvalidMinus "'-' is only allowed in the output field of a sequential primitive"
+error UdpInvalidOutput "'{}' is not allowed in output field of state table"
+error UdpDupTransition "cannot have more than one input transition per row in a state table"
+error UdpCombState "combinational primitive row should not have a current state field"
+error UdpSequentialState "sequential primitive row is missing a current state field"
 warning nonstandard-generate NonStandardGenBlock "standalone generate block without loop or condition is not allowed in SystemVerilog"
 warning empty-pattern EmptyAssignmentPattern "empty assignment patterns are disallowed by SystemVerilog"
 warning nonstandard-foreach NonstandardForeach "non-standard foreach loop variable list"
@@ -451,6 +462,10 @@ error VirtualInterfaceIfaceMember "virtual interfaces cannot be used as the type
 error DefparamBadHierarchy "defparam in a hierarchy in or under a generate block, array of instances, or bind instantiation cannot change a parameter value outside that hierarchy"
 error BindTargetPrimitive "cannot bind a primitive"
 error BindUnderBind "cannot bind an instance underneath the scope of another bind instance"
+error UdpWrongInputCount "incorrect number of input fields in table row; have {} but expect {}"
+error UdpDupDiffOutput "primitive table row duplicates a set of inputs with a different specified output value"
+error UdpAllX "primitive table row has all 'x' inputs so its output must also be 'x'"
+error SubroutinePortInitializer "subroutine port declaration cannot contain an initializer"
 error FatalTask "$fatal encountered{}"
 error ErrorTask "$error encountered{}"
 error StaticAssert "static assertion failed{}"
@@ -959,8 +974,9 @@ warning unused-implicit-net UnusedImplicitNet "implicit net '{}' is unused elsew
 warning unused-variable UnusedVariable "unused variable '{}'"
 warning undriven-net UndrivenNet "net '{}' is never driven"
 warning unassigned-variable UnassignedVariable "variable '{}' is never assigned a value"
-warning unused-but-set-net UnusedButSetNet "net '{}' is driven but never referenced"
-warning unused-but-set-variable UnusedButSetVariable "variable '{}' is assigned but never read"
+warning unused-but-set-net UnusedButSetNet "net '{}' is driven but its value is never used"
+warning unused-but-set-variable UnusedButSetVariable "variable '{}' is assigned but its value is never used"
+warning unused-but-set-port UnusedButSetPort "'inout' port '{}' is driven but its value is never used"
 warning unused-port UnusedPort "unused port signal '{}'"
 warning undriven-port UndrivenPort "undriven output port '{}'"
 warning unused-argument UnusedArgument "unused formal argument '{}'"
@@ -1000,8 +1016,9 @@ group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-
 group pedantic = { empty-pattern implicit-net-port nonstandard-escape-code nonstandard-generate format-multibit-strength
                    nonstandard-sys-func nonstandard-foreach nonstandard-dist }
 
-group conversion = { width-trunc width-expand port-width-expand implicit-conv }
+group conversion = { width-trunc width-expand port-width-trunc port-width-expand implicit-conv }
 
 group unused = { unused-def unused-net unused-implicit-net unused-variable undriven-net unassigned-variable
                  unused-but-set-net unused-but-set-variable unused-port undriven-port unused-argument
-                 unused-parameter unused-type-parameter unused-typedef unused-genvar unused-assertion-decl }
+                 unused-parameter unused-type-parameter unused-typedef unused-genvar unused-assertion-decl
+                 unused-but-set-port }

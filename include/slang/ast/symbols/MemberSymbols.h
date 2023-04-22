@@ -118,6 +118,12 @@ public:
 
     ModportPortSymbol(std::string_view name, SourceLocation loc, ArgumentDirection direction);
 
+    /// Returns an expression that represents whatever this port connects to.
+    /// For explicit connections, this just returns @a explicitConnection and for
+    /// implicit connections this returns a NamedValueExpression that wraps the
+    /// @a internalSymbol. Returns nullptr if there is no connection at all.
+    const Expression* getConnectionExpr() const { return connExpr; }
+
     void serializeTo(ASTSerializer& serializer) const;
 
     static ModportPortSymbol& fromSyntax(const ASTContext& context, ArgumentDirection direction,
@@ -127,6 +133,9 @@ public:
                                          const syntax::ModportExplicitPortSyntax& syntax);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::ModportPort; }
+
+private:
+    const Expression* connExpr = nullptr;
 };
 
 /// Represents a clocking block port.
@@ -245,7 +254,19 @@ public:
 
 class SLANG_EXPORT PrimitiveSymbol : public Symbol, public Scope {
 public:
+    struct TableField {
+        char value = 0;
+        char transitionTo = 0;
+    };
+
+    struct TableEntry {
+        std::span<const TableField> inputs;
+        TableField state;
+        TableField output;
+    };
+
     std::span<const PrimitivePortSymbol* const> ports;
+    std::span<const TableEntry> table;
     const ConstantValue* initVal = nullptr;
     bool isSequential = false;
     enum PrimitiveKind { UserDefined, Fixed, NInput, NOutput } primitiveKind;
@@ -368,6 +389,35 @@ public:
         ProdKind kind;
 
         explicit ProdBase(ProdKind kind) : kind(kind) {}
+
+        template<typename T>
+        T& as() {
+            ASSERT(T::isKind(kind));
+            return *static_cast<T*>(this);
+        }
+
+        template<typename T>
+        const T& as() const {
+            ASSERT(T::isKind(kind));
+            return *static_cast<const T*>(this);
+        }
+
+        template<typename T>
+        T* as_if() {
+            if (!T::isKind(kind))
+                return nullptr;
+            return static_cast<T*>(this);
+        }
+
+        template<typename T>
+        const T* as_if() const {
+            if (!T::isKind(kind))
+                return nullptr;
+            return static_cast<const T*>(this);
+        }
+
+        template<typename TVisitor, typename... Args>
+        decltype(auto) visit(TVisitor& visitor, Args&&... args) const;
     };
 
     struct ProdItem : public ProdBase {
@@ -376,6 +426,8 @@ public:
 
         ProdItem(const RandSeqProductionSymbol* target, std::span<const Expression* const> args) :
             ProdBase(ProdKind::Item), target(target), args(args) {}
+
+        static bool isKind(ProdKind kind) { return kind == ProdKind::Item; }
 
         template<typename TVisitor>
         void visitExprs(TVisitor&& visitor) const {
@@ -389,6 +441,8 @@ public:
 
         explicit CodeBlockProd(const StatementBlockSymbol& block) :
             ProdBase(ProdKind::CodeBlock), block(&block) {}
+
+        static bool isKind(ProdKind kind) { return kind == ProdKind::CodeBlock; }
     };
 
     struct IfElseProd : public ProdBase {
@@ -398,6 +452,8 @@ public:
 
         IfElseProd(const Expression& expr, ProdItem ifItem, std::optional<ProdItem> elseItem) :
             ProdBase(ProdKind::IfElse), expr(&expr), ifItem(ifItem), elseItem(elseItem) {}
+
+        static bool isKind(ProdKind kind) { return kind == ProdKind::IfElse; }
     };
 
     struct RepeatProd : public ProdBase {
@@ -406,6 +462,8 @@ public:
 
         RepeatProd(const Expression& expr, ProdItem item) :
             ProdBase(ProdKind::Repeat), expr(&expr), item(item) {}
+
+        static bool isKind(ProdKind kind) { return kind == ProdKind::Repeat; }
     };
 
     struct CaseItem {
@@ -422,6 +480,8 @@ public:
                  std::optional<ProdItem> defaultItem) :
             ProdBase(ProdKind::Case),
             expr(&expr), items(items), defaultItem(defaultItem) {}
+
+        static bool isKind(ProdKind kind) { return kind == ProdKind::Case; }
     };
 
     struct Rule {
