@@ -29,7 +29,8 @@ add_executable(
   netlist_unittests
   ../../../tests/unittests/main.cpp
   ../../../tests/unittests/Test.cpp
-  DirectedGraphTest.cpp)
+  DirectedGraphTest.cpp
+  NetlistTest.cpp)
 
 target_link_libraries(
   netlist_unittests

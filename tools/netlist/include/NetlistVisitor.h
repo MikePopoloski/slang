@@ -13,6 +13,7 @@
 #include <iostream>
 
 #include "slang/ast/ASTVisitor.h"
+#include "slang/ast/symbols/BlockSymbols.h"
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
 #include "slang/diagnostics/TextDiagnosticClient.h"
 #include "slang/syntax/SyntaxTree.h"
@@ -305,6 +306,12 @@ public:
     auto &portNode = netlist.addPortDeclaration(symbol);
     // Save this to connect it to the corresponding internal variable later.
     portsToConnect.push_back(&portNode);
+  }
+
+  /// Procedural block.
+  void handle(const ast::ProceduralBlockSymbol &symbol) {
+    ProceduralBlockVisitor visitor(compilation, netlist);
+    symbol.visit(visitor);
   }
 
   /// Instance body.
