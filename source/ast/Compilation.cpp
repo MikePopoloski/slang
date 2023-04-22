@@ -177,6 +177,9 @@ Compilation::Compilation(const Bag& options) :
 Compilation::~Compilation() = default;
 
 void Compilation::addSyntaxTree(std::shared_ptr<SyntaxTree> tree) {
+    if (!tree)
+        throw std::invalid_argument("tree cannot be null");
+
     if (finalized)
         throw std::logic_error("The compilation has already been finalized");
 
