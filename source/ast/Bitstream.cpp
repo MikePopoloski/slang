@@ -60,7 +60,7 @@ static std::pair<size_t, size_t> dynamicBitstreamSize(const Type& type, Bitstrea
         }
         else if (mode == BitstreamSizeMode::DestFill) {
             if (!multiplierElem)
-                multiplier = fixedSizeElem;  // element is fixed size
+                multiplier = fixedSizeElem; // element is fixed size
             else {
                 multiplier = multiplierElem; // element is dynamically sized
                 fixedSize = fixedSizeElem;

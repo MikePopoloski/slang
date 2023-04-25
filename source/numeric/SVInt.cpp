@@ -862,7 +862,7 @@ SVInt SVInt::pow(const SVInt& rhs) const {
     bitwidth_t rhsBits = rhs.getActiveBits();
     // The second operand of the power operator shall be treated as self-determined
     if (lhsBits == 0) {
-        if (rhsBits == 0)                     // 0**0 == 1
+        if (rhsBits == 0) // 0**0 == 1
             return SVInt(bitWidth, 1, signFlag);
         if (rhs.signFlag && rhs.isNegative()) // 0**-y == x
             return createFillX(bitWidth, signFlag);
