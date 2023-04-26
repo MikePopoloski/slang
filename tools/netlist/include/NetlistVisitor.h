@@ -19,6 +19,8 @@
 #include "slang/syntax/SyntaxTree.h"
 #include "slang/syntax/SyntaxVisitor.h"
 
+#include "Config.h"
+#include "Debug.h"
 #include "Netlist.h"
 
 namespace slang {
@@ -101,7 +103,7 @@ public:
       //auto var = evalCtx.compilation.getRoot().lookupName(pathBuffer);
       auto *variableNode = netlist.lookupVariable(pathBuffer);
       netlist.addEdge(*leftNode, *variableNode);
-      std::cout << fmt::format("Edge {} to decl {}\n", leftNode->getName(), variableNode->getName());
+      DEBUG_PRINT(fmt::format("Edge {} to decl {}\n", leftNode->getName(), variableNode->getName()));
     }
     // Add edge from RHS variable references to variable declaration.
     for (auto *rightNode : visitListRHS) {
@@ -110,13 +112,13 @@ public:
       //auto var = evalCtx.compilation.getRoot().lookupName(pathBuffer);
       auto *variableNode = netlist.lookupVariable(pathBuffer);
       netlist.addEdge(*variableNode, *rightNode);
-      std::cout << fmt::format("Edge decl {} to {}\n", variableNode->getName(), rightNode->getName());
+      DEBUG_PRINT(fmt::format("Edge decl {} to {}\n", variableNode->getName(), rightNode->getName()));
     }
     // Add edges form RHS expression terms to LHS expression terms.
     for (auto *leftNode : visitListLHS) {
       for (auto *rightNode : visitListRHS) {
         netlist.addEdge(*rightNode, *leftNode);
-        std::cout << fmt::format("Edge {} to {}\n", leftNode->getName(), rightNode->getName());
+        DEBUG_PRINT(fmt::format("Edge {} to {}\n", leftNode->getName(), rightNode->getName()));
       }
     }
   }

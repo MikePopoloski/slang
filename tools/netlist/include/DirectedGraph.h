@@ -31,7 +31,7 @@ public:
   bool operator!=(const EdgeType &E) const { return !operator==(E); }
 
   /// Return the target node of this edge.
-  const NodeType &getTargetNode() const { return targetNode; }
+  NodeType &getTargetNode() const { return targetNode; }
 
 protected:
   // As the default implementation use address comparison for equality.

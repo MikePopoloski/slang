@@ -36,5 +36,3 @@ endmodule
   CHECK(netlist.numNodes() == 15);
   CHECK(netlist.numEdges() == 14);
 }
-
-

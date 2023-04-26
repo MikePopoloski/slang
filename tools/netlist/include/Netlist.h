@@ -17,7 +17,10 @@
 #include "slang/syntax/SyntaxTree.h"
 #include "slang/syntax/SyntaxVisitor.h"
 
+#include "Config.h"
+#include "Debug.h"
 #include "DirectedGraph.h"
+#include "NetlistPath.h"
 
 namespace slang {
 
@@ -191,7 +194,7 @@ public:
 
   /// Add a port declaration node to the netlist.
   NetlistPortDeclaration &addPortDeclaration(const ast::Symbol &symbol) {
-    std::cout << "Add port decl " << symbol.name << "\n";
+    DEBUG_PRINT("Add port decl " << symbol.name << "\n");
     auto nodePtr = std::make_unique<NetlistPortDeclaration>(symbol);
     auto &node = nodePtr->as<NetlistPortDeclaration>();
     symbol.getHierarchicalPath(node.hierarchicalPath);
@@ -202,7 +205,7 @@ public:
 
   /// Add a variable declaration node to the netlist.
   NetlistVariableDeclaration &addVariableDeclaration(const ast::Symbol &symbol) {
-    std::cout << "Add var decl " << symbol.name << "\n";
+    DEBUG_PRINT("Add var decl " << symbol.name << "\n");
     auto nodePtr = std::make_unique<NetlistVariableDeclaration>(symbol);
     auto &node = nodePtr->as<NetlistVariableDeclaration>();
     symbol.getHierarchicalPath(node.hierarchicalPath);
@@ -213,7 +216,7 @@ public:
 
   /// Add a variable reference node to the netlist.
   NetlistVariableReference &addVariableReference(const ast::Symbol &symbol) {
-    std::cout << "Add var ref " << symbol.name << "\n";
+    DEBUG_PRINT("Add var ref " << symbol.name << "\n");
     auto nodePtr = std::make_unique<NetlistVariableReference>(symbol);
     auto &node = nodePtr->as<NetlistVariableReference>();
     nodes.push_back(std::move(nodePtr));
@@ -238,6 +241,10 @@ public:
                        };
     auto it = std::find_if(begin(), end(), compareNode);
     return it != end() ? it->get() : nullptr;
+  }
+
+  NetlistPath findPath(NetlistNode &startNode, NetlistNode &endNode) {
+    return NetlistPath();
   }
 };
 
