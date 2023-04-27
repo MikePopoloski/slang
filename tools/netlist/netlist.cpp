@@ -28,6 +28,7 @@
 using namespace slang;
 using namespace slang::ast;
 using namespace slang::driver;
+using namespace netlist;
 
 void writeToFile(std::string_view fileName, std::string_view contents);
 

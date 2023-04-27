@@ -23,7 +23,9 @@
 #include "Debug.h"
 #include "Netlist.h"
 
-namespace slang {
+using namespace slang;
+
+namespace netlist {
 
 /// An AST visitor to identify variable references with selectors in
 /// expressions only.
@@ -350,5 +352,5 @@ private:
   std::vector<const NetlistPortDeclaration*> portsToConnect;
 };
 
-} // End namespace slang.
+} // End namespace netlist.
 

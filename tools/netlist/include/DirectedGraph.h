@@ -13,6 +13,8 @@
 #include <memory>
 #include <vector>
 
+namespace netlist {
+
 // Inspired by LLVM's DirectedGraph ADT.
 // https://llvm.org/doxygen/DirectedGraph_8h_source.html
 
@@ -20,15 +22,20 @@
 template<class NodeType, class EdgeType>
 class DirectedEdge {
 public:
-  DirectedEdge(NodeType &targetNode) : targetNode(targetNode) {}
+  DirectedEdge(NodeType &sourceNode, NodeType &targetNode)
+    : sourceNode(sourceNode), targetNode(targetNode) {}
 
   DirectedEdge<NodeType, EdgeType> &operator=(const DirectedEdge<NodeType, EdgeType> &edge) {
+    sourceNode = edge.sourceNode;
     targetNode = edge.targetNode;
     return *this;
   }
 
   bool operator==(const EdgeType &E) const { return getDerived().isEqualTo(E); }
   bool operator!=(const EdgeType &E) const { return !operator==(E); }
+
+  /// Return the source node of this edge.
+  NodeType &getSourceNode() const { return sourceNode; }
 
   /// Return the target node of this edge.
   NodeType &getTargetNode() const { return targetNode; }
@@ -45,6 +52,7 @@ protected:
     return *static_cast<const EdgeType*>(this);
   }
 
+  NodeType &sourceNode;
   NodeType &targetNode;
 };
 
@@ -97,7 +105,7 @@ public:
   EdgeType &addEdge(NodeType &targetNode) {
     auto edgeIt = findEdgeTo(targetNode);
     if (edgeIt == edges.end()) {
-      auto edge = std::make_unique<EdgeType>(targetNode);
+      auto edge = std::make_unique<EdgeType>(getDerived(), targetNode);
       edges.emplace_back(std::move(edge));
       return *(edges.back().get());
     } else {
@@ -190,9 +198,15 @@ public:
     }
   }
 
-  /// Add a node to the graph and return a descriptor.
+  /// Add a node to the graph and return a reference to it.
   NodeType &addNode() {
     nodes.push_back(std::make_unique<NodeType>());
+    return *(nodes.back().get());
+  }
+
+  /// Add an existing node to the graph and return a reference to it.
+  NodeType &addNode(std::unique_ptr<NodeType> node) {
+    nodes.push_back(std::move(node));
     return *(nodes.back().get());
   }
 
@@ -244,6 +258,11 @@ public:
   NodeType &getNode(node_descriptor node) {
     assert(node < nodes.size() && "Node does not exist");
     return *nodes[node];
+  }
+
+  /// Return the descriptor for a particular node.
+  node_descriptor getNodeDescriptor(NodeType &node) {
+    return &node - nodes.data();
   }
 
   /// Collect all edges that are incident to the specified node.
@@ -314,3 +333,4 @@ protected:
   NodeListType nodes;
 };
 
+} // End namespace netlist.

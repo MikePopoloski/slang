@@ -20,9 +20,12 @@
 #include "Config.h"
 #include "Debug.h"
 #include "DirectedGraph.h"
+#include "DepthFirstIterator.h"
 #include "NetlistPath.h"
 
-namespace slang {
+using namespace slang;
+
+namespace netlist {
 
 class NetlistNode;
 class NetlistEdge;
@@ -116,7 +119,8 @@ size_t NetlistNode::nextID = 0;
 /// A class representing a dependency between two variables in the netlist.
 class NetlistEdge : public DirectedEdge<NetlistNode, NetlistEdge> {
 public:
-  NetlistEdge(NetlistNode &targetNode) : DirectedEdge(targetNode) {}
+  NetlistEdge(NetlistNode &sourceNode, NetlistNode &targetNode)
+    : DirectedEdge(sourceNode, targetNode) {}
 };
 
 /// A class representing a port declaration.
@@ -224,6 +228,7 @@ public:
   }
 
   /// Find a variable declaration node in the netlist by hierarchical path.
+  /// TODO? Optimise this lookup by maintaining a list of declaration nodes.
   NetlistNode *lookupVariable(const std::string &hierarchicalPath) {
     auto compareNode = [&hierarchicalPath](const std::unique_ptr<NetlistNode> &node) {
                           return node->kind == NodeKind::VariableDeclaration &&
@@ -234,6 +239,7 @@ public:
   }
 
   /// Find a port declaration node in the netlist by hierarchical path.
+  /// TODO? Optimise this lookup by maintaining a list of port nodes.
   NetlistNode *lookupPort(const std::string &hierarchicalPath) {
     auto compareNode = [&hierarchicalPath](const std::unique_ptr<NetlistNode> &node) {
                           return node->kind == NodeKind::PortDeclaration &&
@@ -241,10 +247,6 @@ public:
                        };
     auto it = std::find_if(begin(), end(), compareNode);
     return it != end() ? it->get() : nullptr;
-  }
-
-  NetlistPath findPath(NetlistNode &startNode, NetlistNode &endNode) {
-    return NetlistPath();
   }
 };
 

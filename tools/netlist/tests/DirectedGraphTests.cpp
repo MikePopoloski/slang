@@ -9,6 +9,8 @@
 #include "Test.h"
 #include "DirectedGraph.h"
 
+using namespace netlist;
+
 struct TestNode;
 struct TestEdge;
 
@@ -17,7 +19,8 @@ struct TestNode : public Node<TestNode, TestEdge> {
 };
 
 struct TestEdge : public DirectedEdge<TestNode, TestEdge> {
-  TestEdge(TestNode &targetNode) : DirectedEdge(targetNode) {}
+  TestEdge(TestNode &sourceNode, TestNode &targetNode)
+    : DirectedEdge(sourceNode, targetNode) {}
 };
 
 TEST_CASE("Test basic connectivity") {

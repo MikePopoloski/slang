@@ -1,6 +1,7 @@
 //------------------------------------------------------------------------------
 //! @file DepthFirstIterator.h
-//! @brief Implementation of depth-first search for a directed graph.
+//! @brief Implementation of depth-first traversal of a directed graph with an
+//         iterator that provides access to edges.
 //
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
@@ -10,29 +11,33 @@
 #include <set>
 #include <vector>
 
+#include <iostream> //DEBUG
+
 #include "DirectedGraph.h"
+
+namespace netlist {
 
 template<class NodeType, class EdgeType>
 class DepthFirstIterator {
 public:
   using iterator_category = std::forward_iterator_tag;
   using difference_type = std::ptrdiff_t;
-  using value_type = NodeType;
-  using pointer = NodeType*;
-  using reference = NodeType&;
+  using value_type = EdgeType;
+  using pointer = EdgeType*;
+  using reference = EdgeType&;
+
+  DepthFirstIterator() = default;
 
   DepthFirstIterator(NodeType &startNode) {
     visitedNodes.insert(&startNode);
     visitStack.push_back(VisitStackElement(startNode, startNode.begin()));
   }
 
-  DepthFirstIterator() = default;
-
 private:
   using EdgeIteratorType = typename NodeType::iterator;
   using VisitStackElement = std::pair<NodeType&, EdgeIteratorType>;
 
-  /// Perform a depth-first search, terminating when targetNode is reached.
+  /// Perform an iteration of depth-first traversal.
   void next() {
     do {
       // Take the top node on the visit stack.
@@ -62,9 +67,15 @@ public:
     return DepthFirstIterator();
   }
 
-  reference operator*() const { return visitStack.back().first; }
+  reference operator*() const {
+    auto it = visitStack.back().second;
+    return *(it->get());
+  }
 
-  pointer operator->() { return &(visitStack.back().first); }
+  pointer operator->() {
+    auto it = visitStack.back().second;
+    return it->get();
+  }
 
   /// Prefix increment
   DepthFirstIterator& operator++() {
@@ -91,3 +102,5 @@ private:
   std::set<const NodeType*> visitedNodes;
   std::vector<VisitStackElement> visitStack;
 };
+
+} // End namespace netlist.

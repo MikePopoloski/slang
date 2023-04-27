@@ -10,6 +10,8 @@
 #include "Netlist.h"
 #include "NetlistVisitor.h"
 
+using namespace netlist;
+
 TEST_CASE("Chain of 1-bit assignments") {
   auto tree = SyntaxTree::fromText(R"(
 module chain(input logic i_value,
