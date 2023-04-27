@@ -91,9 +91,11 @@ int main(int argc, char** argv) {
   std::optional<bool> showHelp;
   std::optional<bool> showVersion;
   std::optional<bool> quiet;
+  std::optional<bool> debug;
   driver.cmdLine.add("-h,--help", showHelp, "Display available options");
   driver.cmdLine.add("--version", showVersion, "Display version information and exit");
   driver.cmdLine.add("-q,--quiet", quiet, "Suppress non-essential output");
+  driver.cmdLine.add("-d,--debug", quiet, "Output debugging information");
 
   std::optional<std::string> astJsonFile;
   driver.cmdLine.add("--ast-json", astJsonFile,
@@ -129,6 +131,10 @@ int main(int argc, char** argv) {
 
   if (!driver.processOptions()) {
     return 2;
+  }
+
+  if (debug) {
+    Config::getInstance().debugEnabled = true;
   }
 
   try {
