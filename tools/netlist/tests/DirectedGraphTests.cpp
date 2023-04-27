@@ -111,3 +111,38 @@ TEST_CASE("Test removing edges") {
   CHECK(!graph.removeEdge(n1, n2));
   CHECK(!graph.removeEdge(n2, n0));
 }
+
+TEST_CASE("Test iterating over nodes and node's edges") {
+  DirectedGraph<TestNode, TestEdge> graph;
+  auto &n0 = graph.addNode();
+  auto &n1 = graph.addNode();
+  auto &n2 = graph.addNode();
+  auto &n3 = graph.addNode();
+  graph.addEdge(n0, n1);
+  graph.addEdge(n0, n2);
+  graph.addEdge(n0, n3);
+  // Nodes.
+  {
+    size_t count = 0;
+    for (auto it = graph.begin(); it != graph.end(); it++) {
+      count++;
+    }
+    CHECK(count == 4);
+  }
+  // n0 edges.
+  {
+    size_t count = 0;
+    for (auto it = n0.begin(); it != n0.end(); it++) {
+      count++;
+    }
+    CHECK(count == 3);
+  }
+  // n1 edges.
+  {
+    size_t count = 0;
+    for (auto it = n1.begin(); it != n1.end(); it++) {
+      count++;
+    }
+    CHECK(count == 0);
+  }
+}

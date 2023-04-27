@@ -191,11 +191,8 @@ public:
                            [&nodeToFind](const std::unique_ptr<NodeType> &node) {
                              return const_cast<const NodeType&>(*node) == nodeToFind;
                            });
-    if (it == nodes.end()) {
-      return null_node;
-    } else {
-      return it - nodes.begin();
-    }
+    assert(it != nodes.end() && "could not find node");
+    return it - nodes.begin();
   }
 
   /// Add a node to the graph and return a reference to it.
@@ -261,6 +258,7 @@ public:
   }
 
   /// Return the descriptor for a particular node.
+  /// FIXME!
   node_descriptor getNodeDescriptor(NodeType &node) {
     return &node - nodes.data();
   }

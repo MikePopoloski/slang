@@ -1,0 +1,91 @@
+//------------------------------------------------------------------------------
+//! @file DepthFirstIteratorTest.cpp
+//! @brief Depth-first iterator unit tests.
+//
+// SPDX-FileCopyrightText: Michael Popoloski
+// SPDX-License-Identifier: MIT
+//------------------------------------------------------------------------------
+
+#include "Test.h"
+#include "DirectedGraph.h"
+#include "DepthFirstSearch.h"
+
+using namespace netlist;
+
+struct TestNode;
+struct TestEdge;
+
+size_t nodeIDs = 0;
+
+struct TestNode : public Node<TestNode, TestEdge> {
+  size_t ID;
+  TestNode() : ID(nodeIDs++) {};
+};
+
+struct TestEdge : public DirectedEdge<TestNode, TestEdge> {
+  TestEdge(TestNode &sourceNode, TestNode &targetNode)
+    : DirectedEdge(sourceNode, targetNode) {}
+};
+
+struct TestVisitor : public DepthFirstSearchVisitor<TestNode, TestEdge> {
+  std::vector<TestNode*> nodes;
+  std::vector<TestEdge*> edges;
+  TestVisitor() = default;
+  void visitNode(TestNode &node) override {
+    nodes.push_back(&node);
+  };
+  void visitEdge(TestEdge &edge) override {
+    edges.push_back(&edge);
+  };
+};
+
+TEST_CASE("Depth-first iteration on a ring") {
+  DirectedGraph<TestNode, TestEdge> graph;
+  auto &n0 = graph.addNode();
+  auto &n1 = graph.addNode();
+  auto &n2 = graph.addNode();
+  auto &n3 = graph.addNode();
+  auto &n4 = graph.addNode();
+  graph.addEdge(n0, n1);
+  graph.addEdge(n1, n2);
+  graph.addEdge(n2, n3);
+  graph.addEdge(n3, n4);
+  graph.addEdge(n4, n0);
+  TestVisitor visitor;
+  DepthFirstSearch dfs(visitor, n3);
+  CHECK(visitor.nodes.size() == 5);
+  CHECK(visitor.edges.size() == 4);
+  CHECK(*visitor.nodes[0] == n3);
+  CHECK(*visitor.nodes[1] == n4);
+  CHECK(*visitor.nodes[2] == n0);
+  CHECK(*visitor.nodes[3] == n1);
+  CHECK(*visitor.nodes[4] == n2);
+}
+
+TEST_CASE("Depth-first iteraton on a tree") {
+  DirectedGraph<TestNode, TestEdge> graph;
+  auto &n0 = graph.addNode();
+  auto &n1 = graph.addNode();
+  auto &n2 = graph.addNode();
+  auto &n3 = graph.addNode();
+  auto &n4 = graph.addNode();
+  auto &n5 = graph.addNode();
+  auto &n6 = graph.addNode();
+  graph.addEdge(n0, n1);
+  graph.addEdge(n0, n2);
+  graph.addEdge(n1, n3);
+  graph.addEdge(n1, n4);
+  graph.addEdge(n2, n5);
+  graph.addEdge(n2, n6);
+  TestVisitor visitor;
+  DepthFirstSearch dfs(visitor, n0);
+  CHECK(visitor.nodes.size() == 7);
+  CHECK(visitor.edges.size() == 6);
+  CHECK(*visitor.nodes[0] == n0);
+  CHECK(*visitor.nodes[1] == n1);
+  CHECK(*visitor.nodes[2] == n3);
+  CHECK(*visitor.nodes[3] == n4);
+  CHECK(*visitor.nodes[4] == n2);
+  CHECK(*visitor.nodes[5] == n5);
+  CHECK(*visitor.nodes[6] == n6);
+}

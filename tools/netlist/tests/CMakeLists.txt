@@ -7,7 +7,7 @@ add_executable(
   netlist_unittests
   ../../../tests/unittests/main.cpp
   ../../../tests/unittests/Test.cpp
-  DepthFirstIteratorTests.cpp
+  DepthFirstSearchTests.cpp
   DirectedGraphTests.cpp
   NetlistTests.cpp)
 

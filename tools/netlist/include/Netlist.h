@@ -20,8 +20,6 @@
 #include "Config.h"
 #include "Debug.h"
 #include "DirectedGraph.h"
-#include "DepthFirstIterator.h"
-#include "NetlistPath.h"
 
 using namespace slang;
 
