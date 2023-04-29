@@ -15,7 +15,6 @@
 #endif
 
 #include <ankerl/unordered_dense.h>
-#include <flat_hash_map.hpp>
 
 #include "slang/util/Util.h"
 

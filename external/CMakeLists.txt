@@ -97,10 +97,6 @@ if(SLANG_INCLUDE_INSTALL)
     DIRECTORY ${PROJECT_SOURCE_DIR}/external/ieee1800/
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/ieee1800
     COMPONENT slang_Development)
-  install(
-    FILES ${PROJECT_SOURCE_DIR}/external/flat_hash_map.hpp
-    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-    COMPONENT slang_Development)
   if(NOT unordered_dense_FOUND)
     install(
       DIRECTORY ${unordered_dense_SOURCE_DIR}/include/ankerl
