@@ -62,7 +62,7 @@ void registerUtil(py::module_& m) {
         .def(py::self <= py::self)
         .def(py::self > py::self)
         .def(py::self >= py::self)
-        .def(hash(py::self))
+        .def(py::hash(py::self))
         .def("__bool__", &BufferID::valid)
         .def("__repr__",
              [](const BufferID& self) { return fmt::format("BufferID({})", self.getId()); });
@@ -79,7 +79,7 @@ void registerUtil(py::module_& m) {
         .def(py::self <= py::self)
         .def(py::self > py::self)
         .def(py::self >= py::self)
-        .def(hash(py::self))
+        .def(py::hash(py::self))
         .def("__bool__", &SourceLocation::valid)
         .def("__repr__", [](const SourceLocation& self) {
             return fmt::format("SourceLocation({}, {})", self.buffer().getId(), self.offset());
@@ -157,7 +157,7 @@ void registerUtil(py::module_& m) {
         .def("getSubsystem", &DiagCode::getSubsystem)
         .def(py::self == py::self)
         .def(py::self != py::self)
-        .def(hash(py::self))
+        .def(py::hash(py::self))
         .def("__bool__", &DiagCode::valid)
         .def("__repr__",
              [](const DiagCode& self) { return fmt::format("DiagCode({})", toString(self)); });

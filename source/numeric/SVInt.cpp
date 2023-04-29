@@ -629,7 +629,7 @@ SVInt SVInt::replicate(const SVInt& times) const {
 }
 
 size_t SVInt::hash() const {
-    return ankerl::unordered_dense::detail::wyhash::hash(getRawData(), getNumWords() * WORD_SIZE);
+    return detail::hashing::hash(getRawData(), getNumWords() * WORD_SIZE);
 }
 
 std::ostream& operator<<(std::ostream& os, const SVInt& rhs) {
