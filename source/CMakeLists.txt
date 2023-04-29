@@ -112,10 +112,7 @@ target_include_directories(
 
 # Link libraries
 find_package(Threads)
-target_link_libraries(
-  slang_slang
-  PRIVATE fmt::fmt ${CMAKE_THREAD_LIBS_INIT}
-  PUBLIC unordered_dense::unordered_dense)
+target_link_libraries(slang_slang PRIVATE fmt::fmt ${CMAKE_THREAD_LIBS_INIT})
 
 if(SLANG_USE_BOOST)
   target_link_libraries(slang_slang PUBLIC Boost::headers)

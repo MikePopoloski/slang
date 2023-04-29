@@ -37,19 +37,6 @@ else()
   message(STATUS "Using remote fmt library")
 endif()
 
-set(find_pkg_args "")
-if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.24.0")
-  set(find_pkg_args "FIND_PACKAGE_ARGS" "3.0.0")
-endif()
-
-FetchContent_Declare(
-  unordered_dense
-  GIT_REPOSITORY https://github.com/martinus/unordered_dense.git
-  GIT_TAG v3.1.1
-  GIT_SHALLOW ON
-  ${find_pkg_args})
-FetchContent_MakeAvailable(unordered_dense)
-
 if(SLANG_USE_BOOST)
   find_package(Boost 1.81.0)
   if(NOT Boost_FOUND)
@@ -97,12 +84,6 @@ if(SLANG_INCLUDE_INSTALL)
     DIRECTORY ${PROJECT_SOURCE_DIR}/external/ieee1800/
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/ieee1800
     COMPONENT slang_Development)
-  if(NOT unordered_dense_FOUND)
-    install(
-      DIRECTORY ${unordered_dense_SOURCE_DIR}/include/ankerl
-      DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-      COMPONENT slang_Development)
-  endif()
 
   if(NOT fmt_FOUND)
     install(
@@ -116,10 +97,6 @@ if(SLANG_INCLUDE_INSTALL)
       DIRECTORY ${fmt_SOURCE_DIR}/include/fmt
       DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
       COMPONENT slang_Development)
-  endif()
-
-  if(NOT unordered_dense_FOUND)
-    install(TARGETS unordered_dense EXPORT slangTargets)
   endif()
 
   if(SLANG_USE_BOOST AND NOT Boost_FOUND)

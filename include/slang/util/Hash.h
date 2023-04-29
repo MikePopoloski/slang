@@ -7,14 +7,14 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include <array>
+
 #ifdef SLANG_USE_BOOST
 #    include <boost/unordered/unordered_flat_map.hpp>
 #    include <boost/unordered/unordered_flat_set.hpp>
 #    include <boost/unordered/unordered_node_map.hpp>
 #    include <boost/unordered/unordered_node_set.hpp>
 #endif
-
-#include <ankerl/unordered_dense.h>
 
 #include "slang/util/Util.h"
 
