@@ -384,8 +384,8 @@ using flat_node_set = std::unordered_set<T, H, E, A>;
 template<typename K, typename V, size_t N, typename Entry = std::pair<const K, V>,
          typename Alloc = detail::hashing::StackAllocator<Entry, N>>
 class SmallMap : private detail::hashing::StackAllocStorage<Entry, N>,
-                 public flat_hash_map<K, V, std::hash<K>, std::equal_to<K>, Alloc> {
-    using BaseType = flat_hash_map<K, V, std::hash<K>, std::equal_to<K>, Alloc>;
+                 public flat_hash_map<K, V, hash<K>, std::equal_to<K>, Alloc> {
+    using BaseType = flat_hash_map<K, V, hash<K>, std::equal_to<K>, Alloc>;
 
 public:
     SmallMap() : BaseType(Alloc(this)) {}
@@ -396,8 +396,8 @@ public:
 /// where heap allocations can be avoided.
 template<typename T, size_t N, typename Alloc = detail::hashing::StackAllocator<T, N>>
 class SmallSet : private detail::hashing::StackAllocStorage<T, N>,
-                 public flat_hash_set<T, std::hash<T>, std::equal_to<T>, Alloc> {
-    using BaseType = flat_hash_set<T, std::hash<T>, std::equal_to<T>, Alloc>;
+                 public flat_hash_set<T, hash<T>, std::equal_to<T>, Alloc> {
+    using BaseType = flat_hash_set<T, hash<T>, std::equal_to<T>, Alloc>;
 
 public:
     SmallSet() : BaseType(Alloc(this)) {}

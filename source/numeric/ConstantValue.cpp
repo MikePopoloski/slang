@@ -111,9 +111,9 @@ size_t ConstantValue::hash() const {
             else if constexpr (std::is_same_v<T, SVInt>)
                 hash_combine(h, arg.hash());
             else if constexpr (std::is_same_v<T, real_t>)
-                hash_combine(h, std::hash<double>()(arg));
+                hash_combine(h, slang::hash<double>()(arg));
             else if constexpr (std::is_same_v<T, shortreal_t>)
-                hash_combine(h, std::hash<float>()(arg));
+                hash_combine(h, slang::hash<float>()(arg));
             else if constexpr (std::is_same_v<T, ConstantValue::NullPlaceholder>)
                 hash_combine(h, 0);
             else if constexpr (std::is_same_v<T, ConstantValue::UnboundedPlaceholder>)
@@ -123,7 +123,7 @@ size_t ConstantValue::hash() const {
                     hash_combine(h, element.hash());
             }
             else if constexpr (std::is_same_v<T, std::string>)
-                hash_combine(h, std::hash<std::string>()(arg));
+                hash_combine(h, slang::hash<std::string>()(arg));
             else if constexpr (std::is_same_v<T, Map>) {
                 for (auto& [key, val] : *arg) {
                     hash_combine(h, key.hash());

@@ -961,7 +961,7 @@ size_t Type::hash() const {
         hash_combine(h, vi.modport);
     }
     else {
-        h = std::hash<const Type*>()(&ct);
+        h = slang::hash<const Type*>()(&ct);
     }
     return h;
 }
