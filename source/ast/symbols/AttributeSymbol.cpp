@@ -12,7 +12,6 @@
 #include "slang/ast/Expression.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/syntax/AllSyntax.h"
-#include "slang/util/StackContainer.h"
 
 namespace slang::ast {
 

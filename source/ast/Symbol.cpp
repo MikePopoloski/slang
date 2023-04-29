@@ -17,7 +17,6 @@
 #include "slang/ast/types/Type.h"
 #include "slang/syntax/AllSyntax.h"
 #include "slang/text/SourceManager.h"
-#include "slang/util/StackContainer.h"
 
 namespace {
 

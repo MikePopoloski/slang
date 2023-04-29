@@ -26,7 +26,6 @@
 #include "slang/diagnostics/ParserDiags.h"
 #include "slang/syntax/AllSyntax.h"
 #include "slang/syntax/SyntaxFacts.h"
-#include "slang/util/StackContainer.h"
 
 namespace slang::ast {
 

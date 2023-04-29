@@ -11,7 +11,6 @@
 #include "slang/ast/EvalContext.h"
 #include "slang/ast/LValue.h"
 #include "slang/ast/SemanticFacts.h"
-#include "slang/util/StackContainer.h"
 
 namespace slang::ast {
 

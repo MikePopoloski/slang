@@ -14,7 +14,6 @@
 #include "slang/diagnostics/MetaDiags.h"
 #include "slang/diagnostics/TextDiagnosticClient.h"
 #include "slang/text/SourceManager.h"
-#include "slang/util/StackContainer.h"
 #include "slang/util/String.h"
 
 namespace slang {

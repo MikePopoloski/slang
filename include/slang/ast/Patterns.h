@@ -10,7 +10,6 @@
 #include "slang/ast/Expression.h"
 #include "slang/syntax/SyntaxFwd.h"
 #include "slang/util/Enum.h"
-#include "slang/util/StackContainer.h"
 
 namespace slang::ast {
 
