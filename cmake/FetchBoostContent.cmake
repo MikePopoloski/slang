@@ -830,7 +830,8 @@ function(FetchBoostContent_MakeAvailable contentName)
           get_target_property(boost_headers_imported boost_headers IMPORTED)
           if(NOT boost_headers_imported)
             target_include_directories(
-              boost_headers INTERFACE "$<BUILD_INTERFACE:${src_dir}/include/>")
+              boost_headers SYSTEM
+              INTERFACE "$<BUILD_INTERFACE:${src_dir}/include/>")
             set_property(
               TARGET boost_headers
               APPEND
