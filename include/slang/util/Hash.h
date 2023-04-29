@@ -197,7 +197,7 @@ struct hash<Enum, typename std::enable_if<std::is_enum<Enum>::value>::type> {
     using is_avalanching = void;
     uint64_t operator()(Enum e) const noexcept {
         using underlying = typename std::underlying_type_t<Enum>;
-        return detail::hashing::hash(static_cast<underlying>(e));
+        return detail::hashing::hash(static_cast<uint64_t>(static_cast<underlying>(e)));
     }
 };
 
