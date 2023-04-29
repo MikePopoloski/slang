@@ -290,35 +290,6 @@ endmodule
     compilation.getRoot().lookupName<GenerateBlockSymbol>("Top.u2");
 }
 
-TEST_CASE("Interface instantiation") {
-    auto tree = SyntaxTree::fromText(R"(
-interface I2CBus(
-    input wire clk,
-    input wire rst);
-
-    logic scl_i;
-    logic sda_i;
-    logic scl_o;
-    logic sda_o;
-
-    modport master (input clk, rst, scl_i, sda_i,
-                    output scl_o, sda_o);
-
-endinterface
-
-module Top;
-    logic clk;
-    logic rst;
-
-    I2CBus bus(.*);
-endmodule
-)");
-
-    Compilation compilation;
-    evalModule(tree, compilation);
-    NO_COMPILATION_ERRORS;
-}
-
 TEST_CASE("Program instantiation") {
     auto tree = SyntaxTree::fromText(R"(
 program p1 #(parameter int foo)
@@ -422,87 +393,6 @@ endmodule
     Compilation compilation;
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
-}
-
-TEST_CASE("Interface param from const func") {
-    auto tree1 = SyntaxTree::fromText(R"(
-interface I #(parameter int foo = 1);
-endinterface
-)");
-    auto tree2 = SyntaxTree::fromText(R"(
-module M(I i);
-    function int stuff;
-        return i.foo;
-    endfunction
-
-    localparam int b = stuff();
-endmodule
-
-module top;
-    I i();
-    M m(i);
-endmodule
-)");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree1);
-    compilation.addSyntaxTree(tree2);
-    NO_COMPILATION_ERRORS;
-}
-
-TEST_CASE("Interface port param") {
-    auto tree = SyntaxTree::fromText(R"(
-interface I #(parameter int i) ();
-endinterface
-
-module M(I iface, input logic [iface.i - 1 : 0] foo);
-    localparam int j = $bits(foo);
-endmodule
-
-module test;
-    I #(17) i();
-    M m(i, 1);
-endmodule
-)");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-    NO_COMPILATION_ERRORS;
-
-    auto top = compilation.getRoot().topInstances[0];
-    auto& j = top->body.find<InstanceSymbol>("m").body.find<ParameterSymbol>("j");
-    CHECK(j.getValue().integer() == 17);
-}
-
-TEST_CASE("Generate dependent on iface port param") {
-    auto tree = SyntaxTree::fromText(R"(
-interface I #(parameter int i) ();
-endinterface
-
-module N;
-endmodule
-
-module M(I iface, input logic [iface.i - 1 : 0] foo);
-    localparam int j = $bits(foo);
-    if (j == 17) begin : asdf
-        N n();
-    end
-endmodule
-
-module test;
-
-    I #(17) i();
-    M m(i, 1);
-
-endmodule
-)");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-    NO_COMPILATION_ERRORS;
-
-    auto& asdf = compilation.getRoot().lookupName<GenerateBlockSymbol>("test.m.asdf");
-    CHECK(!asdf.isUninstantiated);
 }
 
 TEST_CASE("Name conflict bug") {
@@ -728,31 +618,6 @@ source:16:16: error: use of undeclared identifier 'asdf'
         always asdf = 1;
                ^~~~
 )");
-}
-
-TEST_CASE("Interface array port selection") {
-    auto tree = SyntaxTree::fromText(R"(
-interface Iface;
-endinterface
-
-module m (Iface i);
-endmodule
-
-module n (Iface arr[4]);
-    for (genvar i = 0; i < 4; i++) begin
-        m minst(.i(arr[i]));
-    end
-endmodule
-
-module top;
-    Iface arr[4] (.*);
-    n ninst(.arr);
-endmodule
-)");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-    NO_COMPILATION_ERRORS;
 }
 
 TEST_CASE("Parameter with type imported from package") {
@@ -1732,37 +1597,6 @@ endmodule
     CHECK(instances[2]->name == "ff2");
 }
 
-TEST_CASE("Nested interfaces") {
-    auto tree = SyntaxTree::fromText(R"(
-interface I;
-endinterface
-
-module m(I i);
-endmodule
-
-module n;
-    interface I; endinterface
-
-    I i();
-    m m1(i);
-endmodule
-)");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-
-    auto& diagnostics = compilation.getAllDiagnostics();
-    std::string result = "\n" + report(diagnostics);
-    CHECK(result == R"(
-source:12:10: error: cannot connect instance of interface 'n.I' to port of interface 'I'
-    m m1(i);
-         ^
-source:5:12: note: declared here
-module m(I i);
-           ^
-)");
-}
-
 TEST_CASE("Instance array size limits") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
@@ -1952,32 +1786,6 @@ endmodule
 module unused #(parameter int baz);
     $static_assert(baz < 10);
     $info("%d", baz);
-endmodule
-)");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-    NO_COMPILATION_ERRORS;
-}
-
-TEST_CASE("Uninstantiated virtual interface param regress GH #679") {
-    auto tree = SyntaxTree::fromText(R"(
-interface I;
-endinterface
-
-package P;
-    class C #(type T = int);
-        static function void add(string name, T t);
-        endfunction
-    endclass
-endpackage
-
-module M #(parameter int foo);
-    I i();
-
-    function void connect_if();
-        P::C #(virtual I)::add ("intf", i);
-    endfunction
 endmodule
 )");
 

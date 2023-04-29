@@ -38,6 +38,7 @@ add_executable(
   unittests/ExpressionTests.cpp
   unittests/FileTests.cpp
   unittests/HierarchyTests.cpp
+  unittests/InterfaceTests.cpp
   unittests/IntervalMapTests.cpp
   unittests/LexerTests.cpp
   unittests/LookupTests.cpp
@@ -47,8 +48,10 @@ add_executable(
   unittests/NumericTests.cpp
   unittests/PortTests.cpp
   unittests/PreprocessorTests.cpp
+  unittests/PrimitiveTests.cpp
   unittests/StatementParsingTests.cpp
   unittests/StatementTests.cpp
+  unittests/SubroutineTests.cpp
   unittests/SystemFuncTests.cpp
   unittests/Test.cpp
   unittests/TypeTests.cpp
