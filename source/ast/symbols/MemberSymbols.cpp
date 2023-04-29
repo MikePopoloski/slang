@@ -839,6 +839,12 @@ static void expandTableEntries(const Scope& scope, const UdpEntrySyntax& syntax,
 
         for (auto c : firstChars) {
             for (auto d : secondChars) {
+                // Don't insert invalid double-x transition entries
+                // even if the expansion of an iteration character would
+                // otherwise cause us to do so.
+                if (c == 'x' && d == 'x')
+                    continue;
+
                 auto copiedEntry = currEntry;
                 copiedEntry.push_back({c, d});
                 next(copiedEntry);

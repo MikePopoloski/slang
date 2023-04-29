@@ -324,3 +324,67 @@ endprimitive
     CHECK(diags[10].code == diag::UdpSequentialState);
     CHECK(diags[11].code == diag::UdpCombState);
 }
+
+TEST_CASE("UDP row error checking regress") {
+    auto tree = SyntaxTree::fromText(R"(
+module test;
+   wire q, e;
+   reg  a, b;
+   drec #1 rec(q, a, b);
+   edet det (e, q);
+
+   reg	error;
+   initial
+     begin
+	error = 0;
+	#2;
+	forever @(e)
+	  if (e !== 1'bx) begin
+	     error = 1;
+	     $display("%0d: FAILED: e=%b", $time, e);
+	  end
+     end
+
+   always @(q)
+     $display("%d: q=%b", $time, q);
+
+   initial
+     begin
+	a = 0;
+	b = 1;
+	#3;
+	a = 1;
+	b = 0;
+	#2;
+	a = 0;
+	b = 1;
+	#3;
+	if (!error)
+	  $display("PASSED");
+     end
+endmodule
+
+primitive drec (q, a, b);
+   output        q;
+   input  a, b;
+   table
+          1  0 : 1 ;
+          0  1 : 0 ;
+   endtable
+endprimitive
+
+primitive edet (q, i);
+   output           q;
+   input  i;
+   reg	        q;
+   table
+         (?x) : ? : 1;
+         (x?) : ? : 0;
+   endtable
+endprimitive
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
