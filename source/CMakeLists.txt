@@ -117,6 +117,11 @@ target_link_libraries(
   PRIVATE fmt::fmt ${CMAKE_THREAD_LIBS_INIT}
   PUBLIC unordered_dense::unordered_dense)
 
+if(SLANG_USE_BOOST)
+  target_link_libraries(slang_slang PUBLIC Boost::headers)
+  target_compile_definitions(slang_slang PUBLIC SLANG_USE_BOOST)
+endif()
+
 # If building the Python library we'll end up with a shared lib no matter what,
 # so make sure we always build with PIC.
 if(SLANG_INCLUDE_PYLIB)

@@ -50,6 +50,24 @@ FetchContent_Declare(
   ${find_pkg_args})
 FetchContent_MakeAvailable(unordered_dense)
 
+if(SLANG_USE_BOOST)
+  find_package(Boost 1.81.0)
+  if(NOT Boost_FOUND)
+    message(STATUS "Using remote Boost library")
+    include(cmake/FetchBoostContent.cmake)
+
+    fetchboostcontent_declare(
+      boost_unordered
+      GIT_REPOSITORY
+      https://github.com/boostorg/unordered
+      GIT_TAG
+      boost-1.82.0
+      GIT_SHALLOW
+      ON)
+    fetchboostcontent_makeavailable(boost_unordered)
+  endif()
+endif()
+
 if(SLANG_INCLUDE_TESTS)
   set(find_pkg_args "")
   if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.24.0")
@@ -106,5 +124,17 @@ if(SLANG_INCLUDE_INSTALL)
 
   if(NOT unordered_dense_FOUND)
     install(TARGETS unordered_dense EXPORT slangTargets)
+  endif()
+
+  if(SLANG_USE_BOOST AND NOT Boost_FOUND)
+    install(TARGETS boost_headers EXPORT slangTargets)
+    get_target_property(boost_target_install_dirs boost_headers
+                        boost_target_install_dir)
+    foreach(dir ${boost_target_install_dirs})
+      install(
+        DIRECTORY ${dir}/boost
+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+        COMPONENT slang_Development)
+    endforeach()
   endif()
 endif()
