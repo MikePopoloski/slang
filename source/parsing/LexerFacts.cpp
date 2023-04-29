@@ -14,12 +14,12 @@ namespace slang::parsing {
 using namespace syntax;
 
 // clang-format off
-const static StringTable<TokenKind> systemIdentifierKeywords = {
+const static flat_hash_map<std::string_view, TokenKind> systemIdentifierKeywords = {
     { "$root", TokenKind::RootSystemName },
     { "$unit", TokenKind::UnitSystemName }
 };
 
-const static StringTable<SyntaxKind> directiveTable = {
+const static flat_hash_map<std::string_view, SyntaxKind> directiveTable = {
     { "begin_keywords", SyntaxKind::BeginKeywordsDirective },
     { "celldefine", SyntaxKind::CellDefineDirective },
     { "default_nettype", SyntaxKind::DefaultNetTypeDirective },
@@ -42,7 +42,7 @@ const static StringTable<SyntaxKind> directiveTable = {
     { "undefineall", SyntaxKind::UndefineAllDirective }
 };
 
-const static StringTable<KeywordVersion> keywordVersionTable = {
+const static flat_hash_map<std::string_view, KeywordVersion> keywordVersionTable = {
     { "1364-1995", KeywordVersion::v1364_1995 },
     { "1364-2001-noconfig", KeywordVersion::v1364_2001_noconfig },
     { "1364-2001", KeywordVersion::v1364_2001 },
@@ -319,7 +319,7 @@ const static StringTable<KeywordVersion> keywordVersionTable = {
 
 // We maintain a separate table of keywords for all the various specifications,
 // to allow for easy switching between them when requested
-const static StringTable<TokenKind> allKeywords[8] =
+const static flat_hash_map<std::string_view, TokenKind> allKeywords[8] =
 { { // IEEE 1364-1995
     KEYWORDS_1364_1995
 }, { // IEEE 1364-2001-noconfig
@@ -624,16 +624,14 @@ bool LexerFacts::isKeyword(TokenKind kind) {
 }
 
 TokenKind LexerFacts::getSystemKeywordKind(std::string_view text) {
-    TokenKind kind;
-    if (systemIdentifierKeywords.lookup(text, kind))
-        return kind;
+    if (auto it = systemIdentifierKeywords.find(text); it != systemIdentifierKeywords.end())
+        return it->second;
     return TokenKind::Unknown;
 }
 
 SyntaxKind LexerFacts::getDirectiveKind(std::string_view directive) {
-    SyntaxKind kind;
-    if (directiveTable.lookup(directive, kind))
-        return kind;
+    if (auto it = directiveTable.find(directive); it != directiveTable.end())
+        return it->second;
     return SyntaxKind::MacroUsage;
 }
 
@@ -642,13 +640,13 @@ KeywordVersion LexerFacts::getDefaultKeywordVersion() {
 }
 
 std::optional<KeywordVersion> LexerFacts::getKeywordVersion(std::string_view text) {
-    KeywordVersion version;
-    if (keywordVersionTable.lookup(text, version))
-        return version;
+    if (auto it = keywordVersionTable.find(text); it != keywordVersionTable.end())
+        return it->second;
     return std::nullopt;
 }
 
-const StringTable<TokenKind>* LexerFacts::getKeywordTable(KeywordVersion version) {
+const flat_hash_map<std::string_view, TokenKind>* LexerFacts::getKeywordTable(
+    KeywordVersion version) {
     return &allKeywords[(uint8_t)version];
 }
 

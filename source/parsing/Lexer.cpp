@@ -536,9 +536,10 @@ Token Lexer::lexToken(KeywordVersion keywordVersion) {
             scanIdentifier();
 
             // might be a keyword
-            TokenKind kind;
-            if (LF::getKeywordTable(keywordVersion)->lookup(lexeme(), kind))
-                return create(kind);
+            auto table = LF::getKeywordTable(keywordVersion);
+            ASSERT(table);
+            if (auto it = table->find(lexeme()); it != table->end())
+                return create(it->second);
 
             return create(TokenKind::Identifier);
         }
