@@ -153,11 +153,20 @@ public:
         const Expression* condition = nullptr;
 
         if (!args.empty()) {
+            for (auto arg : args) {
+                if (arg->bad())
+                    return comp.getErrorType();
+            }
+
             if (!context.requireBooleanConvertible(*args[0]) || !context.eval(*args[0]))
                 return comp.getErrorType();
 
+            auto msg = ElabSystemTaskSymbol::createMessage(context, args.subspan(1));
+            if (!msg)
+                return comp.getErrorType();
+
             condition = args[0];
-            message = ElabSystemTaskSymbol::createMessage(context, args.subspan(1));
+            message = *msg;
         }
 
         ElabSystemTaskSymbol::reportStaticAssert(*context.scope, range.start(), message, condition);

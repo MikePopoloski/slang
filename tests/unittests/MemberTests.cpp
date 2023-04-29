@@ -1340,9 +1340,8 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 2);
-    CHECK(diags[0].code == diag::InfoTask);
-    CHECK(diags[1].code == diag::ConstEvalNonConstVariable);
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::ConstEvalNonConstVariable);
 }
 
 TEST_CASE("Const variable must provide initializer") {
@@ -2431,9 +2430,6 @@ source:11:24: note: comparison reduces to (12 < 8)
                    ~~~~^~~~~~~~~~~~
 source:12:5: error: static assertion failed: Stuff 6
     $static_assert(foo * 0, "Stuff %0d", foo / 2);
-    ^
-source:14:5: error: static assertion failed
-    $static_assert(bar);
     ^
 source:14:20: error: reference to non-constant variable 'bar' is not allowed in a constant expression
     $static_assert(bar);

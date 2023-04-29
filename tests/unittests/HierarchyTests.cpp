@@ -1948,6 +1948,11 @@ module n;
         m #(20) m1();
     end
 endmodule
+
+module unused #(parameter int baz);
+    $static_assert(baz < 10);
+    $info("%d", baz);
+endmodule
 )");
 
     Compilation compilation;

@@ -545,21 +545,20 @@ ElabSystemTaskSymbol& ElabSystemTaskSymbol::fromSyntax(Compilation& compilation,
     return *result;
 }
 
-std::string_view ElabSystemTaskSymbol::getMessage() const {
-    if (message)
-        return *message;
+std::optional<std::string_view> ElabSystemTaskSymbol::getMessage() const {
+    if (resolved)
+        return message;
+
+    resolved = true;
 
     auto syntax = getSyntax();
     ASSERT(syntax);
 
-    auto empty = [&] {
-        message = ""sv;
-        return *message;
-    };
-
     auto argSyntax = syntax->as<ElabSystemTaskSyntax>().arguments;
-    if (!argSyntax)
-        return empty();
+    if (!argSyntax) {
+        message = "";
+        return message;
+    }
 
     auto scope = getParentScope();
     ASSERT(scope);
@@ -575,12 +574,12 @@ std::string_view ElabSystemTaskSymbol::getMessage() const {
                 if (auto exSyn = astCtx.requireSimpleExpr(*oa.expr))
                     args.push_back(&Expression::bind(*exSyn, astCtx));
                 else
-                    return empty();
+                    return {};
                 break;
             }
             case SyntaxKind::NamedArgument:
                 astCtx.addDiag(diag::NamedArgNotAllowed, arg->sourceRange());
-                return empty();
+                return {};
             case SyntaxKind::EmptyArgument:
                 args.push_back(
                     comp.emplace<EmptyArgumentExpression>(comp.getVoidType(), arg->sourceRange()));
@@ -590,7 +589,7 @@ std::string_view ElabSystemTaskSymbol::getMessage() const {
         }
 
         if (args.back()->bad())
-            return empty();
+            return {};
     }
 
     std::span<const Expression* const> argSpan = args;
@@ -599,14 +598,14 @@ std::string_view ElabSystemTaskSymbol::getMessage() const {
             // If this is a $fatal task, check the finish number. We don't use this
             // for anything, but enforce that it's 0, 1, or 2.
             if (!FmtHelpers::checkFinishNum(astCtx, *argSpan[0]))
-                return empty();
+                return {};
 
             argSpan = argSpan.subspan(1);
         }
         else if (taskKind == ElabSystemTaskKind::StaticAssert) {
             // The first argument is the condition to check.
             if (!astCtx.requireBooleanConvertible(*argSpan[0]) || !astCtx.eval(*argSpan[0]))
-                return empty();
+                return {};
 
             assertCondition = argSpan[0];
             argSpan = argSpan.subspan(1);
@@ -614,14 +613,15 @@ std::string_view ElabSystemTaskSymbol::getMessage() const {
     }
 
     message = createMessage(astCtx, argSpan);
-    return *message;
+    return message;
 }
 
-std::string_view ElabSystemTaskSymbol::createMessage(const ASTContext& context,
-                                                     std::span<const Expression* const> args) {
+std::optional<std::string_view> ElabSystemTaskSymbol::createMessage(
+    const ASTContext& context, std::span<const Expression* const> args) {
+
     // Check all arguments.
     if (!FmtHelpers::checkDisplayArgs(context, args))
-        return ""sv;
+        return {};
 
     // Format the message to string.
     auto& comp = context.getCompilation();
@@ -629,7 +629,10 @@ std::string_view ElabSystemTaskSymbol::createMessage(const ASTContext& context,
     std::optional<std::string> str = FmtHelpers::formatDisplay(*context.scope, evalCtx, args);
     evalCtx.reportDiags(context);
 
-    if (!str || str->empty())
+    if (!str)
+        return {};
+
+    if (str->empty())
         return ""sv;
 
     str->insert(0, ": ");
@@ -691,7 +694,9 @@ void ElabSystemTaskSymbol::issueDiagnostic() const {
     auto scope = getParentScope();
     ASSERT(scope);
 
-    std::string_view msg = getMessage();
+    auto msg = getMessage();
+    if (!msg)
+        return;
 
     DiagCode code;
     switch (taskKind) {
@@ -708,13 +713,13 @@ void ElabSystemTaskSymbol::issueDiagnostic() const {
             code = diag::InfoTask;
             break;
         case ElabSystemTaskKind::StaticAssert:
-            reportStaticAssert(*scope, location, msg, assertCondition);
+            reportStaticAssert(*scope, location, *msg, assertCondition);
             return;
         default:
             ASSUME_UNREACHABLE;
     }
 
-    scope->addDiag(code, location).addStringAllowEmpty(std::string(msg));
+    scope->addDiag(code, location).addStringAllowEmpty(std::string(*msg));
 }
 
 const Expression* ElabSystemTaskSymbol::getAssertCondition() const {
@@ -724,7 +729,9 @@ const Expression* ElabSystemTaskSymbol::getAssertCondition() const {
 
 void ElabSystemTaskSymbol::serializeTo(ASTSerializer& serializer) const {
     serializer.write("taskKind", toString(taskKind));
-    serializer.write("message", getMessage());
+
+    if (auto msg = getMessage())
+        serializer.write("message", *msg);
 
     if (assertCondition)
         serializer.write("assertCondition", *assertCondition);
