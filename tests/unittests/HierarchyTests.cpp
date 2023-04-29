@@ -2254,3 +2254,21 @@ endmodule
     CHECK(diags[0].code == diag::InfoTask);
     CHECK(diags[1].code == diag::InfoTask);
 }
+
+TEST_CASE("Hierarchical parameter lookup location regress") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I;
+    parameter int P = 6;
+    function automatic int getP; return P; endfunction
+endinterface
+
+module m;
+    I i();
+    localparam int a = i.getP();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

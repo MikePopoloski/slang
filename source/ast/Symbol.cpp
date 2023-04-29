@@ -205,14 +205,14 @@ std::optional<bool> Symbol::isDeclaredBefore(LookupLocation target) const {
     // If target wasn't in a direct scope of any of our own parents,
     // repeat the process walking up target's scopes.
     sym = &target.getScope()->asSymbol();
-    ll = LookupLocation::before(*sym);
+    ll = LookupLocation::after(*sym);
 
     while ((scope = ll.getScope()) != nullptr && sym->kind != SymbolKind::CompilationUnit) {
         if (auto it = locMap.find(scope); it != locMap.end())
             return it->second < ll;
 
         sym = &scope->asSymbol();
-        ll = LookupLocation::before(*sym);
+        ll = LookupLocation::after(*sym);
     }
 
     return std::nullopt;
