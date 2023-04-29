@@ -81,8 +81,7 @@ inline bool operator!=(const StackAllocator<T, N>& x, const StackAllocator<U, M>
 /// A hash map container that allocates room for its first `N` elements on the stack.
 /// Prefer this over a normal hash map for temporary stack variables and small maps
 /// where heap allocations can be avoided.
-template<typename K, typename V, size_t N,
-         typename Entry = ska::detailv3::sherwood_v3_entry<std::pair<K, V>>,
+template<typename K, typename V, size_t N, typename Entry = std::pair<const K, V>,
          typename Alloc = StackAllocator<Entry, N>>
 class SmallMap : private StackAllocStorage<Entry, N>,
                  public flat_hash_map<K, V, std::hash<K>, std::equal_to<K>, Alloc> {
@@ -96,9 +95,8 @@ public:
 /// A hash set container that allocates room for its first `N` elements on the stack.
 /// Prefer this over a normal hash set for temporary stack variables and small sets
 /// where heap allocations can be avoided.
-template<typename T, size_t N, typename Entry = ska::detailv3::sherwood_v3_entry<T>,
-         typename Alloc = StackAllocator<Entry, N>>
-class SmallSet : private StackAllocStorage<Entry, N>,
+template<typename T, size_t N, typename Alloc = StackAllocator<T, N>>
+class SmallSet : private StackAllocStorage<T, N>,
                  public flat_hash_set<T, std::hash<T>, std::equal_to<T>, Alloc> {
 
     using BaseType = flat_hash_set<T, std::hash<T>, std::equal_to<T>, Alloc>;

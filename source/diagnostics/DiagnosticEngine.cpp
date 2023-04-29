@@ -120,12 +120,7 @@ void DiagnosticEngine::clearMappings() {
 }
 
 void DiagnosticEngine::clearMappings(DiagnosticSeverity severity) {
-    for (auto it = severityTable.begin(); it != severityTable.end();) {
-        if (it->second == severity)
-            it = severityTable.erase(it);
-        else
-            it++;
-    }
+    erase_if(severityTable, [severity](auto& pair) { return pair.second == severity; });
 }
 
 void DiagnosticEngine::addIgnorePath(const std::filesystem::path& path) {

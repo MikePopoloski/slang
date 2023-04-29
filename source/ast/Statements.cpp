@@ -1655,7 +1655,7 @@ private:
         PerAssignDriverState(const Expression& expr, const ValueSymbol& symbol) :
             longestStaticPrefix(&expr), symbol(&symbol), rootType(&symbol.getType()) {}
     };
-    flat_hash_map<const AssignmentExpression*, SmallVector<PerAssignDriverState>> driverMap;
+    flat_node_map<const AssignmentExpression*, SmallVector<PerAssignDriverState>> driverMap;
 };
 
 Statement& ForLoopStatement::fromSyntax(Compilation& compilation,
