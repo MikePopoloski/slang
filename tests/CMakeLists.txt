@@ -3,28 +3,6 @@
 # SPDX-License-Identifier: MIT
 # ~~~
 
-set(find_pkg_args "")
-if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.24.0")
-  set(find_pkg_args "FIND_PACKAGE_ARGS" "3.0.0")
-endif()
-
-FetchContent_Declare(
-  Catch2
-  GIT_REPOSITORY https://github.com/catchorg/Catch2.git
-  GIT_TAG v3.3.2
-  GIT_SHALLOW ON
-  ${find_pkg_args})
-FetchContent_MakeAvailable(Catch2)
-
-if(Catch2_FOUND)
-  get_target_property(Catch2_INCLUDE_DIR Catch2::Catch2
-                      INTERFACE_INCLUDE_DIRECTORIES)
-  message(STATUS "Found system Catch2 version: ${Catch2_VERSION}")
-  message(STATUS "Using system Catch2 include: ${Catch2_INCLUDE_DIR}")
-else()
-  message(STATUS "Using remote Catch2 library")
-endif()
-
 add_executable(
   unittests
   unittests/AssertionTests.cpp
