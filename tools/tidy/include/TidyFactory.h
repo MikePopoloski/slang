@@ -20,7 +20,7 @@ namespace slang {
 // clang-format off
     #define KIND(x) \
         x(Synthesis)
-    ENUM(TidyKind, KIND)
+    SLANG_ENUM(TidyKind, KIND)
     #undef KIND
 // clang-format on
 } // namespace slang

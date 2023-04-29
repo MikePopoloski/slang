@@ -26,7 +26,7 @@ enum class CaseStatementCondition;
     x(Variable) \
     x(Tagged) \
     x(Structure)
-ENUM(PatternKind, PATTERN)
+SLANG_ENUM(PatternKind, PATTERN)
 #undef PATTERN
 // clang-format on
 

@@ -640,8 +640,6 @@ const std::type_info* typeFromSyntaxKind(SyntaxKind kind) {
 //------------------------------------------------------------------------------
 #pragma once
 
-#include "slang/util/Enum.h"
-
 namespace std { class type_info; }
 
 namespace slang::syntax {

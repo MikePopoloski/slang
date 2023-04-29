@@ -43,7 +43,7 @@ class Symbol;
     x(Compilation) \
     x(Meta)   \
     x(Tidy)
-ENUM_SIZED(DiagSubsystem, uint16_t, DS)
+SLANG_ENUM_SIZED(DiagSubsystem, uint16_t, DS)
 #undef DS
 
 /// The severity of a given diagnostic. This is not tied to the diagnostic itself;
@@ -54,7 +54,7 @@ ENUM_SIZED(DiagSubsystem, uint16_t, DS)
     x(Warning) \
     x(Error) \
     x(Fatal)
-ENUM(DiagnosticSeverity, DS)
+SLANG_ENUM(DiagnosticSeverity, DS)
 #undef DS
 // clang-format on
 

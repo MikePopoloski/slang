@@ -28,7 +28,7 @@ using bitwidth_t = uint32_t;
 // clang-format on
 
 /// Specifies the base of an integer (for converting to/from a string)
-ENUM_SIZED(LiteralBase, uint8_t, LB)
+SLANG_ENUM_SIZED(LiteralBase, uint8_t, LB)
 #undef LB
 
 bool literalBaseFromChar(char base, LiteralBase& result);

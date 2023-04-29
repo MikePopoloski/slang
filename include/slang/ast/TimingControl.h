@@ -27,7 +27,7 @@ namespace slang::ast {
     x(OneStepDelay) \
     x(CycleDelay) \
     x(BlockEventList)
-ENUM(TimingControlKind, CONTROL)
+SLANG_ENUM(TimingControlKind, CONTROL)
 #undef CONTROL
 // clang-format on
 

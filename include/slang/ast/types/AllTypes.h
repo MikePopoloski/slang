@@ -426,7 +426,7 @@ public:
 };
 
 #define CATEGORY(x) x(None) x(Enum) x(Struct) x(Union) x(Class) x(InterfaceClass)
-ENUM(ForwardTypedefCategory, CATEGORY);
+SLANG_ENUM(ForwardTypedefCategory, CATEGORY);
 #undef CATEGORY
 
 /// A forward declaration of a user-defined type name. A given type name can have

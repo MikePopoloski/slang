@@ -96,7 +96,7 @@ enum class SLANG_EXPORT DeclaredTypeFlags {
     NeedsTypeCheck = NetType | UserDefinedNetType | FormalArgMergeVar | Rand | DPIReturnType |
                      DPIArg | RequireSequenceType | CoverageType | InterfaceVariable
 };
-BITMASK(DeclaredTypeFlags, InterfaceVariable)
+SLANG_BITMASK(DeclaredTypeFlags, InterfaceVariable)
 
 /// Ties together various syntax nodes that declare the type of some parent symbol
 /// along with the logic necessary to resolve that type. Optionally includes an

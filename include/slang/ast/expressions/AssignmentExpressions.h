@@ -72,7 +72,7 @@ private:
     x(Explicit) \
     x(BitstreamCast)
 // clang-format on
-ENUM(ConversionKind, CK)
+SLANG_ENUM(ConversionKind, CK)
 #undef CK
 
 /// Represents a type conversion expression (implicit or explicit).

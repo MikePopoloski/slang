@@ -120,7 +120,7 @@ enum class RandMode;
     x(ConfigBlock)
 // clang-format on
 
-ENUM(SymbolKind, SYMBOLKIND)
+SLANG_ENUM(SymbolKind, SYMBOLKIND)
 #undef SYMBOLKIND
 
 /// A numeric index that can be used to compare the relative ordering of symbols

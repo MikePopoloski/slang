@@ -244,7 +244,7 @@ private:
     x(SetExpr) \
     x(WithFilter) \
     x(CrossId)
-ENUM(BinsSelectExprKind, EXPR)
+SLANG_ENUM(BinsSelectExprKind, EXPR)
 #undef EXPR
 // clang-format on
 

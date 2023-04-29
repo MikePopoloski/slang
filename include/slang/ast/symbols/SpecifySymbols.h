@@ -153,7 +153,7 @@ private:
     x(NoChange)
 // clang-format on
 
-ENUM(SystemTimingCheckKind, STCK)
+SLANG_ENUM(SystemTimingCheckKind, STCK)
 #undef STCK
 
 struct SystemTimingCheckDef;

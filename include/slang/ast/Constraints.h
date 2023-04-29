@@ -26,7 +26,7 @@ namespace slang::ast {
     x(DisableSoft) \
     x(SolveBefore) \
     x(Foreach)
-ENUM(ConstraintKind, CONSTRAINT)
+SLANG_ENUM(ConstraintKind, CONSTRAINT)
 #undef CONSTRAINT
 // clang-format on
 
