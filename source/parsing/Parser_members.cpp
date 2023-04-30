@@ -15,7 +15,7 @@ namespace slang::parsing {
 using namespace syntax;
 
 CompilationUnitSyntax& Parser::parseCompilationUnit() {
-    try {
+    SLANG_TRY {
         auto members = parseMemberList<MemberSyntax>(
             TokenKind::EndOfFile, meta.eofToken, SyntaxKind::CompilationUnit,
             [this](SyntaxKind parentKind, bool& anyLocalModules) {
@@ -23,7 +23,7 @@ CompilationUnitSyntax& Parser::parseCompilationUnit() {
             });
         return factory.compilationUnit(members, meta.eofToken);
     }
-    catch (const RecursionException&) {
+    SLANG_CATCH(const RecursionException&) {
         return factory.compilationUnit(nullptr, meta.eofToken);
     }
 }

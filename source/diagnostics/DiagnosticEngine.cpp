@@ -288,7 +288,7 @@ std::string DiagnosticEngine::formatMessage(const Diagnostic& diag) const {
                     if (auto it = formatters.find(t.type()); it != formatters.end())
                         args.push_back(it->second->format(t));
                     else
-                        throw std::runtime_error("No diagnostic formatter for type");
+                        SLANG_THROW(std::runtime_error("No diagnostic formatter for type"));
                 }
                 else if constexpr (std::is_same_v<ConstantValue, T>) {
                     if (t.isReal())

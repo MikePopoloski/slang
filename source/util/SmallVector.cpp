@@ -9,17 +9,17 @@
 namespace slang::detail {
 
 void throwOutOfRange() {
-    throw std::out_of_range("vector index out of range");
+    SLANG_THROW(std::out_of_range("vector index out of range"));
 }
 
 void throwLengthError() {
-    throw std::length_error("vector is at maximum size");
+    SLANG_THROW(std::length_error("vector is at maximum size"));
 }
 
 void* allocArray(size_t capacity, size_t typeSize) {
     void* result = std::malloc(capacity * typeSize);
     if (!result)
-        throw std::bad_alloc();
+        SLANG_THROW(std::bad_alloc());
 
     return result;
 }

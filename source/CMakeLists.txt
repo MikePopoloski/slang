@@ -75,14 +75,14 @@ add_library(
   text/SFormat.cpp
   text/SourceLocation.cpp
   text/SourceManager.cpp
-  util/Assert.cpp
   util/BumpAllocator.cpp
   util/CommandLine.cpp
   util/IntervalMap.cpp
   util/OS.cpp
   util/SmallVector.cpp
   util/String.cpp
-  util/TimeTrace.cpp)
+  util/TimeTrace.cpp
+  util/Util.cpp)
 
 add_subdirectory(ast)
 

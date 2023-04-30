@@ -135,7 +135,7 @@ std::wstring widen(std::string_view str) {
 
     int sz = MultiByteToWideChar(CP_UTF8, 0, str.data(), (int)str.size(), NULL, 0);
     if (sz <= 0)
-        throw std::runtime_error("Failed to convert string to UTF16");
+        SLANG_THROW(std::runtime_error("Failed to convert string to UTF16"));
 
     std::wstring result;
     result.resize(sz);
@@ -150,7 +150,7 @@ std::string narrow(std::wstring_view str) {
 
     int sz = WideCharToMultiByte(CP_UTF8, 0, str.data(), (int)str.size(), NULL, 0, NULL, NULL);
     if (sz <= 0)
-        throw std::runtime_error("Failed to convert string to UTF8");
+        SLANG_THROW(std::runtime_error("Failed to convert string to UTF8"));
 
     std::string result;
     result.resize(sz);

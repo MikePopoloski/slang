@@ -1471,7 +1471,7 @@ void Parser::checkBlockNames(const NamedBlockClauseSyntax* beginBlock,
 
 void Parser::handleTooDeep() {
     addDiag(diag::ParseTreeTooDeep, peek().location());
-    throw RecursionException("");
+    SLANG_THROW(RecursionException(""));
 }
 
 } // namespace slang::parsing

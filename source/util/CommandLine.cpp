@@ -93,7 +93,7 @@ void CommandLine::add(std::string_view name, OptionCallback cb, std::string_view
 void CommandLine::addInternal(std::string_view name, OptionStorage storage, std::string_view desc,
                               std::string_view valueName, bool isFileName) {
     if (name.empty())
-        throw std::invalid_argument("Name cannot be empty");
+        SLANG_THROW(std::invalid_argument("Name cannot be empty"));
 
     auto option = std::make_shared<Option>();
     option->desc = desc;
@@ -109,23 +109,23 @@ void CommandLine::addInternal(std::string_view name, OptionStorage storage, std:
             curr = name.substr(0, index);
 
         if (curr.length() <= 1 || (curr[0] != '-' && curr[0] != '+'))
-            throw std::invalid_argument("Names must begin with '-', '+', or '--'");
+            SLANG_THROW(std::invalid_argument("Names must begin with '-', '+', or '--'"));
 
         if (curr[0] != '+') {
             curr = curr.substr(1);
             if (curr[0] == '-') {
                 curr = curr.substr(1);
                 if (curr.empty())
-                    throw std::invalid_argument("Names must begin with '-' or '--'");
+                    SLANG_THROW(std::invalid_argument("Names must begin with '-' or '--'"));
             }
             else if (curr.length() > 1) {
-                throw std::invalid_argument("Long name requires '--' prefix");
+                SLANG_THROW(std::invalid_argument("Long name requires '--' prefix"));
             }
         }
 
         if (!optionMap.try_emplace(std::string(curr), option).second) {
-            throw std::invalid_argument(
-                fmt::format("Argument with name '{}' already exists", curr));
+            SLANG_THROW(
+                std::invalid_argument(fmt::format("Argument with name '{}' already exists", curr)));
         }
 
         if (index == std::string_view::npos)
@@ -139,7 +139,7 @@ void CommandLine::addInternal(std::string_view name, OptionStorage storage, std:
 void CommandLine::setPositional(std::vector<std::string>& values, std::string_view valueName,
                                 bool isFileName) {
     if (positional)
-        throw std::runtime_error("Can only set one positional argument");
+        SLANG_THROW(std::runtime_error("Can only set one positional argument"));
 
     positional = std::make_shared<Option>();
     positional->valueName = valueName;
@@ -149,7 +149,7 @@ void CommandLine::setPositional(std::vector<std::string>& values, std::string_vi
 
 void CommandLine::setPositional(OptionCallback cb, std::string_view valueName, bool isFileName) {
     if (positional)
-        throw std::runtime_error("Can only set one positional argument");
+        SLANG_THROW(std::runtime_error("Can only set one positional argument"));
 
     positional = std::make_shared<Option>();
     positional->valueName = valueName;
@@ -344,11 +344,11 @@ std::string CommandLine::expandVar(const char*& ptr, const char* end) {
 
 bool CommandLine::parse(std::span<const std::string_view> args, ParseOptions options) {
     if (optionMap.empty())
-        throw std::runtime_error("No options defined");
+        SLANG_THROW(std::runtime_error("No options defined"));
 
     if (!options.ignoreProgramName) {
         if (args.empty())
-            throw std::runtime_error("Expected at least one argument");
+            SLANG_THROW(std::runtime_error("Expected at least one argument"));
 
         programName = getU8Str(fs::path(widen(args[0])).filename());
         args = args.subspan(1);

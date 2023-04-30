@@ -41,10 +41,12 @@ public:
     std::string makeAbsolutePath(std::string_view path) const;
 
     /// Adds a system include directory.
-    void addSystemDirectory(std::string_view path);
+    /// @returns true on success and false on failure (i.e. if the given path does not exist).
+    [[nodiscard]] bool addSystemDirectory(std::string_view path);
 
     /// Adds a user include directory.
-    void addUserDirectory(std::string_view path);
+    /// @returns true on success and false on failure (i.e. if the given path does not exist).
+    [[nodiscard]] bool addUserDirectory(std::string_view path);
 
     /// Gets the source line number for a given source location.
     size_t getLineNumber(SourceLocation location) const;

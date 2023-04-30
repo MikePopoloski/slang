@@ -85,6 +85,16 @@
       }
     },
     {
+      "name": "win64-debug-noexcept",
+      "displayName": "Win64 Debug No Exceptions",
+      "inherits": [
+        "win64-debug"
+      ],
+      "cacheVariables": {
+        "CMAKE_CXX_FLAGS": "/nologo /MP /volatile:iso /Zc:inline /Zc:preprocessor /Zc:__cplusplus /Zc:externConstexpr /Zc:throwingNew /D_HAS_EXCEPTIONS=0"
+      }
+    },
+    {
       "name": "gcc-flags",
       "hidden": true,
       "cacheVariables": {
@@ -162,6 +172,19 @@
         "CMAKE_BUILD_TYPE": "Debug",
         "CMAKE_CXX_COMPILER": "g++-12",
         "BUILD_SHARED_LIBS": "ON"
+      }
+    },
+    {
+      "name": "gcc-debug-noexcept",
+      "displayName": "GCC Debug No Exceptions",
+      "inherits": [
+        "linux-base",
+        "gcc-flags"
+      ],
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_CXX_FLAGS": "-fno-exceptions",
+        "CMAKE_CXX_COMPILER": "g++-12"
       }
     },
     {

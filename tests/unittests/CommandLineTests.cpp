@@ -214,6 +214,7 @@ $)qq"sv;
           std::vector{"$&"s, "asdf/abc"s, "123/bar"s, "some string"s, "987654"s, "${"s, "$"s});
 }
 
+#if __cpp_exceptions
 TEST_CASE("Test CommandLine -- programmer errors") {
     std::optional<bool> foo;
 
@@ -235,6 +236,7 @@ TEST_CASE("Test CommandLine -- programmer errors") {
 
     CHECK_THROWS(cmdLine.parse(std::string_view()));
 }
+#endif
 
 TEST_CASE("Test CommandLine -- user errors") {
     std::optional<int32_t> foo;

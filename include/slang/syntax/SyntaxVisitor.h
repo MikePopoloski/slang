@@ -142,7 +142,7 @@ protected:
         if (auto [_, ok] = commits.removeOrReplace.emplace(&oldNode,
                                                            detail::RemoveChange{&oldNode, nullptr});
             !ok) {
-            throw std::logic_error("Node only permit one remove/replace operation");
+            SLANG_THROW(std::logic_error("Node only permit one remove/replace operation"));
         }
     }
 
@@ -151,7 +151,7 @@ protected:
         if (auto [_, ok] = commits.removeOrReplace.emplace(
                 &oldNode, detail::ReplaceChange{&oldNode, &newNode});
             !ok) {
-            throw std::logic_error("Node only permit one remove/replace operation");
+            SLANG_THROW(std::logic_error("Node only permit one remove/replace operation"));
         }
     }
 

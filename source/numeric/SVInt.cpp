@@ -71,7 +71,7 @@ std::ostream& operator<<(std::ostream& os, const logic_t& rhs) {
 
 SVInt SVInt::fromString(std::string_view str) {
     if (str.empty())
-        throw std::invalid_argument("String is empty");
+        SLANG_THROW(std::invalid_argument("String is empty"));
 
     const char* c = str.data();
     const char* end = c + str.length();
@@ -79,7 +79,7 @@ SVInt SVInt::fromString(std::string_view str) {
     if (*c == '-' || *c == '+') {
         c++; // heh
         if (c == end)
-            throw std::invalid_argument("String only has a sign?");
+            SLANG_THROW(std::invalid_argument("String only has a sign?"));
     }
 
     // look for a base specifier (optional)
@@ -118,32 +118,32 @@ SVInt SVInt::fromString(std::string_view str) {
 
     if (apostrophe) {
         if (sizeBad || sizeOverflow || possibleSize == 0)
-            throw std::invalid_argument("Size is invalid (bad chars or overflow 16 bits)");
+            SLANG_THROW(std::invalid_argument("Size is invalid (bad chars or overflow 16 bits)"));
         bits = possibleSize;
 
         c = apostrophe + 1;
         if (c == end)
-            throw std::invalid_argument("Nothing after size specifier");
+            SLANG_THROW(std::invalid_argument("Nothing after size specifier"));
 
         if (*c == 's' || *c == 'S') {
             isSigned = true;
             c++;
             if (c == end)
-                throw std::invalid_argument("Nothing after sign specifier");
+                SLANG_THROW(std::invalid_argument("Nothing after sign specifier"));
         }
         else {
             isSigned = false;
         }
 
         if (!literalBaseFromChar(*c, base))
-            throw std::invalid_argument(fmt::format("Unknown base specifier '{}'", *c));
+            SLANG_THROW(std::invalid_argument(fmt::format("Unknown base specifier '{}'", *c)));
 
         c++;
         if (c == end)
-            throw std::invalid_argument("Nothing after base specifier");
+            SLANG_THROW(std::invalid_argument("Nothing after base specifier"));
     }
     else if (sizeBad) {
-        throw std::invalid_argument("Not an integer or sized literal");
+        SLANG_THROW(std::invalid_argument("Not an integer or sized literal"));
     }
 
     // convert the remaining chars to an array of digits to pass to the other
@@ -187,7 +187,7 @@ SVInt SVInt::fromString(std::string_view str) {
 SVInt SVInt::fromDigits(bitwidth_t bits, LiteralBase base, bool isSigned, bool anyUnknown,
                         std::span<logic_t const> digits) {
     if (digits.empty())
-        throw std::invalid_argument("No digits provided");
+        SLANG_THROW(std::invalid_argument("No digits provided"));
 
     // Note: If the user specified a number too large to fit in the number of bits specified,
     // the spec says to truncate from the left, which this method will successfully do.
@@ -226,8 +226,8 @@ SVInt SVInt::fromDigits(bitwidth_t bits, LiteralBase base, bool isSigned, bool a
 
             val += d.value;
             if (d.value >= radix) {
-                throw std::invalid_argument(
-                    fmt::format("Digit {} too large for radix {}", d.value, radix));
+                SLANG_THROW(std::invalid_argument(
+                    fmt::format("Digit {} too large for radix {}", d.value, radix)));
             }
         }
         return SVInt(bits, val, isSigned);
@@ -237,8 +237,8 @@ SVInt SVInt::fromDigits(bitwidth_t bits, LiteralBase base, bool isSigned, bool a
         // In base ten we can't have individual bits be X or Z, it's all or nothing
         if (anyUnknown) {
             if (digits.size() != 1) {
-                throw std::invalid_argument(
-                    "If a decimal number is unknown, it must have exactly one digit.");
+                SLANG_THROW(std::invalid_argument(
+                    "If a decimal number is unknown, it must have exactly one digit."));
             }
 
             if (exactlyEqual(digits[0], logic_t::z))
@@ -265,7 +265,8 @@ SVInt SVInt::fromDecimalDigits(bitwidth_t bits, bool isSigned, std::span<logic_t
     auto nextDigit = [&]() {
         uint8_t v = d->value;
         if (v >= 10) {
-            throw std::invalid_argument(fmt::format("Digit {} too large for radix {}", v, 10));
+            SLANG_THROW(
+                std::invalid_argument(fmt::format("Digit {} too large for radix {}", v, 10)));
         }
         d++;
         return v;
@@ -333,8 +334,8 @@ SVInt SVInt::fromPow2Digits(bitwidth_t bits, bool isSigned, bool anyUnknown, uin
             unknown = ones;
         }
         else if (value >= radix) {
-            throw std::invalid_argument(
-                fmt::format("Digit {} too large for radix {}", value, radix));
+            SLANG_THROW(std::invalid_argument(
+                fmt::format("Digit {} too large for radix {}", value, radix)));
         }
 
         word |= value << bitPos;

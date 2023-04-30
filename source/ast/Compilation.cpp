@@ -178,17 +178,17 @@ Compilation::~Compilation() = default;
 
 void Compilation::addSyntaxTree(std::shared_ptr<SyntaxTree> tree) {
     if (!tree)
-        throw std::invalid_argument("tree cannot be null");
+        SLANG_THROW(std::invalid_argument("tree cannot be null"));
 
     if (finalized)
-        throw std::logic_error("The compilation has already been finalized");
+        SLANG_THROW(std::logic_error("The compilation has already been finalized"));
 
     if (&tree->sourceManager() != sourceManager) {
         if (!sourceManager)
             sourceManager = &tree->sourceManager();
         else {
-            throw std::logic_error(
-                "All syntax trees added to the compilation must use the same source manager");
+            SLANG_THROW(std::logic_error(
+                "All syntax trees added to the compilation must use the same source manager"));
         }
     }
 
@@ -822,7 +822,7 @@ const NameSyntax& Compilation::parseName(std::string_view name) {
     if (!localDiags.empty()) {
         SourceManager& sourceMan = SyntaxTree::getDefaultSourceManager();
         localDiags.sort(sourceMan);
-        throw std::runtime_error(DiagnosticEngine::reportAll(sourceMan, localDiags));
+        SLANG_THROW(std::runtime_error(DiagnosticEngine::reportAll(sourceMan, localDiags)));
     }
 
     return result;

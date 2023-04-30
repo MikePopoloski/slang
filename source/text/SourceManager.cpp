@@ -28,14 +28,26 @@ std::string SourceManager::makeAbsolutePath(std::string_view path) const {
     return getU8Str(fs::canonical(widen(path)));
 }
 
-void SourceManager::addSystemDirectory(std::string_view path) {
+bool SourceManager::addSystemDirectory(std::string_view pathStr) {
+    std::error_code ec;
+    auto path = fs::canonical(widen(pathStr), ec);
+    if (ec)
+        return false;
+
     std::unique_lock lock(mut);
-    systemDirectories.push_back(fs::canonical(widen(path)));
+    systemDirectories.emplace_back(std::move(path));
+    return true;
 }
 
-void SourceManager::addUserDirectory(std::string_view path) {
+bool SourceManager::addUserDirectory(std::string_view pathStr) {
+    std::error_code ec;
+    auto path = fs::canonical(widen(pathStr), ec);
+    if (ec)
+        return false;
+
     std::unique_lock lock(mut);
-    userDirectories.push_back(fs::canonical(widen(path)));
+    userDirectories.emplace_back(std::move(path));
+    return true;
 }
 
 size_t SourceManager::getLineNumber(SourceLocation location) const {
@@ -332,8 +344,8 @@ SourceBuffer SourceManager::assignBuffer(std::string_view bufferPath, std::vecto
         std::shared_lock lock(mut);
         auto it = lookupCache.find(pathStr);
         if (it != lookupCache.end()) {
-            throw std::runtime_error(
-                "Buffer with the given path has already been assigned to the source manager");
+            SLANG_THROW(std::runtime_error(
+                "Buffer with the given path has already been assigned to the source manager"));
         }
     }
 
