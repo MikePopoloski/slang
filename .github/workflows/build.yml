@@ -19,6 +19,8 @@ jobs:
             os: ubuntu-22.04
           - preset: gcc-debug-shared
             os: ubuntu-22.04
+          - preset: gcc-debug-noexcept
+            os: ubuntu-22.04
           - preset: macos-release
             os: macos-latest
           - preset: win64-release
@@ -26,6 +28,8 @@ jobs:
           - preset: win32-release
             os: windows-latest
           - preset: win64-debug-shared
+            os: windows-latest
+          - preset: win64-debug-noexcept
             os: windows-latest
 
     runs-on: ${{ matrix.os }}
