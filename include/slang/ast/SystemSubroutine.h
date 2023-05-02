@@ -74,7 +74,7 @@ protected:
         SystemSubroutine(name, kind),
         argTypes(argTypes), returnType(&returnType), requiredArgs(requiredArgs), isMethod(isMethod),
         isFirstArgLValue(isFirstArgLValue) {
-        ASSERT(requiredArgs <= argTypes.size());
+        SLANG_ASSERT(requiredArgs <= argTypes.size());
     }
 
 private:

@@ -31,7 +31,7 @@ void InstancePath::buildPath(const Symbol& symbol) {
     auto current = &symbol;
     if (symbol.kind == SymbolKind::InstanceBody) {
         current = symbol.as<InstanceBodySymbol>().parentInstance;
-        ASSERT(current);
+        SLANG_ASSERT(current);
 
         scope = current->getParentScope();
     }
@@ -61,7 +61,7 @@ void InstancePath::buildPath(const Symbol& symbol) {
 
             std::span<const ConstantRange> instanceDims = instanceDimVec;
             std::span<const int32_t> arrayPath = inst.arrayPath;
-            ASSERT(instanceDims.size() == arrayPath.size());
+            SLANG_ASSERT(instanceDims.size() == arrayPath.size());
 
             for (size_t i = 0; i < instanceDims.size(); i++) {
                 auto dim = instanceDims[i];
@@ -78,7 +78,7 @@ void InstancePath::buildPath(const Symbol& symbol) {
             return;
     }
 
-    ASSERT(syntax);
+    SLANG_ASSERT(syntax);
     entries.push_back(*syntax);
 }
 

@@ -195,11 +195,11 @@ public:
     decltype(auto) as() {
         if constexpr (std::is_same_v<T, Scope>) {
             const Scope* scope = scopeOrNull();
-            ASSERT(scope);
+            SLANG_ASSERT(scope);
             return *scope;
         }
         else {
-            ASSERT(T::isKind(kind));
+            SLANG_ASSERT(T::isKind(kind));
             return *static_cast<T*>(this);
         }
     }

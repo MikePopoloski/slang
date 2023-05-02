@@ -70,35 +70,35 @@
 #endif
 
 #if SLANG_ASSERT_ENABLED
-#    define ASSERT(cond)                                                                       \
+#    define SLANG_ASSERT(cond)                                                                 \
         do {                                                                                   \
             if (!(cond))                                                                       \
                 slang::assert::assertFailed(#cond, __FILE__, __LINE__, SLANG_ASSERT_FUNCTION); \
         } while (false)
 
-#    define ASSUME_UNREACHABLE \
+#    define SLANG_UNREACHABLE \
         slang::assert::handleUnreachable(__FILE__, __LINE__, SLANG_ASSERT_FUNCTION)
 #else
-#    define ASSERT(cond)        \
+#    define SLANG_ASSERT(cond)  \
         do {                    \
             (void)sizeof(cond); \
         } while (false)
 
 #    if defined(__GNUC__) || defined(__clang__)
-#        define ASSUME_UNREACHABLE __builtin_unreachable()
+#        define SLANG_UNREACHABLE __builtin_unreachable()
 #    elif defined(_MSC_VER)
-#        define ASSUME_UNREACHABLE __assume(false)
+#        define SLANG_UNREACHABLE __assume(false)
 #    else
-#        define ASSUME_UNREACHABLE
+#        define SLANG_UNREACHABLE
 #    endif
 
 #endif
 
 // Compiler-specific macros for warnings and suppressions
 #ifdef __clang__
-#    define NO_SANITIZE(warningName) __attribute__((no_sanitize(warningName)))
+#    define SLANG_NO_SANITIZE(warningName) __attribute__((no_sanitize(warningName)))
 #else
-#    define NO_SANITIZE(warningName)
+#    define SLANG_NO_SANITIZE(warningName)
 #endif
 
 using namespace std::literals;
@@ -157,7 +157,7 @@ public:
 
     template<typename U, typename = std::enable_if_t<std::is_convertible<U, T>::value>>
     constexpr not_null(U&& u) : ptr(std::forward<U>(u)) {
-        ASSERT(ptr);
+        SLANG_ASSERT(ptr);
     }
 
     template<typename U, typename = std::enable_if_t<std::is_convertible<U, T>::value>>
@@ -168,7 +168,7 @@ public:
     not_null& operator=(const not_null& other) = default;
 
     constexpr T get() const {
-        ASSERT(ptr);
+        SLANG_ASSERT(ptr);
         return ptr;
     }
 

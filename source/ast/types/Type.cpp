@@ -35,7 +35,7 @@ struct GetDefaultVisitor {
             return type.getDefaultValueImpl();
         }
         else {
-            ASSUME_UNREACHABLE;
+            SLANG_UNREACHABLE;
         }
     }
 };
@@ -94,7 +94,7 @@ bitwidth_t Type::getBitWidth() const {
             case FloatingType::ShortReal:
                 return 32;
             default:
-                ASSUME_UNREACHABLE;
+                SLANG_UNREACHABLE;
         }
     }
     return 0;
@@ -1076,7 +1076,7 @@ const Type& Type::fromSyntax(Compilation& compilation, const DataTypeSyntax& nod
         case SyntaxKind::VirtualInterfaceType:
             return VirtualInterfaceType::fromSyntax(context, node.as<VirtualInterfaceTypeSyntax>());
         default:
-            ASSUME_UNREACHABLE;
+            SLANG_UNREACHABLE;
     }
 }
 
@@ -1185,7 +1185,7 @@ bool Type::isKind(SymbolKind kind) {
 }
 
 void Type::resolveCanonical() const {
-    ASSERT(kind == SymbolKind::TypeAlias);
+    SLANG_ASSERT(kind == SymbolKind::TypeAlias);
     canonical = this;
     do {
         canonical = &canonical->as<TypeAliasType>().targetType.getType();
@@ -1246,7 +1246,7 @@ const Type& Type::getPredefinedType(Compilation& compilation, SyntaxKind kind, b
 }
 
 Diagnostic& operator<<(Diagnostic& diag, const Type& arg) {
-    ASSERT(!arg.isError());
+    SLANG_ASSERT(!arg.isError());
     diag.args.emplace_back(Diagnostic::CustomArgType{type_index::of<const Type*>(), &arg});
     return diag;
 }

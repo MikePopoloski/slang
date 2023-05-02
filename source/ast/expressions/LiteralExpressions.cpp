@@ -35,7 +35,7 @@ IntegerLiteral::IntegerLiteral(BumpAllocator& alloc, const Type& type, const SVI
 
 Expression& IntegerLiteral::fromSyntax(Compilation& compilation,
                                        const LiteralExpressionSyntax& syntax) {
-    ASSERT(syntax.kind == SyntaxKind::IntegerLiteralExpression);
+    SLANG_ASSERT(syntax.kind == SyntaxKind::IntegerLiteralExpression);
 
     SVInt val = syntax.literal.intValue().resize(32);
     val.setSigned(true);
@@ -69,7 +69,7 @@ Expression& IntegerLiteral::fromConstant(Compilation& compilation, const SVInt& 
 
 ConstantValue IntegerLiteral::evalImpl(EvalContext&) const {
     SVInt result = getValue();
-    ASSERT(result.getBitWidth() == type->getBitWidth());
+    SLANG_ASSERT(result.getBitWidth() == type->getBitWidth());
     return result;
 }
 
@@ -90,7 +90,7 @@ void IntegerLiteral::serializeTo(ASTSerializer& serializer) const {
 
 Expression& RealLiteral::fromSyntax(Compilation& compilation,
                                     const LiteralExpressionSyntax& syntax) {
-    ASSERT(syntax.kind == SyntaxKind::RealLiteralExpression);
+    SLANG_ASSERT(syntax.kind == SyntaxKind::RealLiteralExpression);
 
     return *compilation.emplace<RealLiteral>(compilation.getRealType(), syntax.literal.realValue(),
                                              syntax.sourceRange());
@@ -106,7 +106,7 @@ void RealLiteral::serializeTo(ASTSerializer& serializer) const {
 
 Expression& TimeLiteral::fromSyntax(const ASTContext& context,
                                     const LiteralExpressionSyntax& syntax) {
-    ASSERT(syntax.kind == SyntaxKind::TimeLiteralExpression);
+    SLANG_ASSERT(syntax.kind == SyntaxKind::TimeLiteralExpression);
 
     // The provided value needs to be scaled to the current scope's time units
     // and then rounded to the current scope's time precision.
@@ -130,7 +130,7 @@ void TimeLiteral::serializeTo(ASTSerializer& serializer) const {
 
 Expression& UnbasedUnsizedIntegerLiteral::fromSyntax(Compilation& compilation,
                                                      const LiteralExpressionSyntax& syntax) {
-    ASSERT(syntax.kind == SyntaxKind::UnbasedUnsizedLiteralExpression);
+    SLANG_ASSERT(syntax.kind == SyntaxKind::UnbasedUnsizedLiteralExpression);
 
     // UnsizedUnbasedLiteralExpressions default to a size of 1 in an undetermined
     // context, but can grow to be wider during propagation.
@@ -142,8 +142,8 @@ Expression& UnbasedUnsizedIntegerLiteral::fromSyntax(Compilation& compilation,
 }
 
 bool UnbasedUnsizedIntegerLiteral::propagateType(const ASTContext&, const Type& newType) {
-    ASSERT(newType.isIntegral());
-    ASSERT(newType.getBitWidth());
+    SLANG_ASSERT(newType.isIntegral());
+    SLANG_ASSERT(newType.getBitWidth());
 
     type = &newType;
     return true;
@@ -166,7 +166,7 @@ SVInt UnbasedUnsizedIntegerLiteral::getValue() const {
         case logic_t::Z_VALUE:
             return SVInt::createFillZ(width, isSigned);
         default:
-            ASSUME_UNREACHABLE;
+            SLANG_UNREACHABLE;
     }
 }
 
@@ -184,7 +184,7 @@ void UnbasedUnsizedIntegerLiteral::serializeTo(ASTSerializer& serializer) const 
 
 Expression& NullLiteral::fromSyntax(Compilation& compilation,
                                     const LiteralExpressionSyntax& syntax) {
-    ASSERT(syntax.kind == SyntaxKind::NullLiteralExpression);
+    SLANG_ASSERT(syntax.kind == SyntaxKind::NullLiteralExpression);
     return *compilation.emplace<NullLiteral>(compilation.getNullType(), syntax.sourceRange());
 }
 
@@ -194,7 +194,7 @@ ConstantValue NullLiteral::evalImpl(EvalContext&) const {
 
 Expression& UnboundedLiteral::fromSyntax(const ASTContext& context,
                                          const LiteralExpressionSyntax& syntax) {
-    ASSERT(syntax.kind == SyntaxKind::WildcardLiteralExpression);
+    SLANG_ASSERT(syntax.kind == SyntaxKind::WildcardLiteralExpression);
 
     auto& comp = context.getCompilation();
     if (!context.flags.has(ASTFlags::AllowUnboundedLiteral)) {
@@ -228,7 +228,7 @@ StringLiteral::StringLiteral(const Type& type, std::string_view value, std::stri
 
 Expression& StringLiteral::fromSyntax(const ASTContext& context,
                                       const LiteralExpressionSyntax& syntax) {
-    ASSERT(syntax.kind == SyntaxKind::StringLiteralExpression);
+    SLANG_ASSERT(syntax.kind == SyntaxKind::StringLiteralExpression);
 
     std::string_view value = syntax.literal.valueText();
     bitwidth_t width;

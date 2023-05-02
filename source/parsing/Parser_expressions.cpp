@@ -53,7 +53,7 @@ ExpressionSyntax& Parser::parseSubExpression(bitmask<ExpressionOptions> options,
     auto current = peek();
     if (isPossibleDelayOrEventControl(current.kind)) {
         auto timingControl = parseTimingControl();
-        ASSERT(timingControl);
+        SLANG_ASSERT(timingControl);
 
         auto& expr = factory.timingControlExpression(*timingControl, parseExpression());
         return parsePostfixExpression(expr, options);
@@ -470,7 +470,7 @@ AssignmentPatternExpressionSyntax& Parser::parseAssignmentPatternExpression(Data
             pattern = &factory.simpleAssignmentPattern(openBrace, buffer.copy(alloc), closeBrace);
             break;
     }
-    ASSERT(pattern);
+    SLANG_ASSERT(pattern);
     return factory.assignmentPatternExpression(type, *pattern);
 }
 
@@ -767,7 +767,7 @@ NameSyntax& Parser::parseNamePart(bitmask<NameOptions> options) {
                 return factory.identifierName(identifier);
 
             auto parameterValues = parseParameterValueAssignment();
-            ASSERT(parameterValues);
+            SLANG_ASSERT(parameterValues);
             return factory.className(identifier, *parameterValues);
         }
         case TokenKind::OpenBracket: {
@@ -1397,7 +1397,7 @@ SequenceExprSyntax& Parser::parseSequencePrimary() {
             return parseDelayedSequenceExpr(nullptr);
         case TokenKind::At: {
             auto event = parseTimingControl();
-            ASSERT(event);
+            SLANG_ASSERT(event);
             return factory.clockingSequenceExpr(*event,
                                                 parseSequenceExpr(0, /* isInProperty */ false));
         }
@@ -1527,7 +1527,7 @@ PropertyExprSyntax& Parser::parsePropertyPrimary() {
     switch (current.kind) {
         case TokenKind::At: {
             auto event = parseTimingControl();
-            ASSERT(event);
+            SLANG_ASSERT(event);
 
             // To support clocking events in sampled value system calls,
             // check for an end of an argument and just return if so.

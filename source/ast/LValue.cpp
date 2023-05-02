@@ -155,8 +155,8 @@ void LValue::store(const ConstantValue& newValue) {
         target->integer().set(range->upper(), range->lower(), newValue.integer());
     }
     else if (target->isString()) {
-        ASSERT(range->left == range->right);
-        ASSERT(range->left >= 0);
+        SLANG_ASSERT(range->left == range->right);
+        SLANG_ASSERT(range->left >= 0);
 
         char c = (char)*newValue.integer().as<uint8_t>();
         if (c)
@@ -225,7 +225,7 @@ ConstantValue* LValue::resolveInternal(std::optional<ConstantRange>& range) {
                         }
                     }
                     else if (target->isUnion()) {
-                        ASSERT(arg.index >= 0);
+                        SLANG_ASSERT(arg.index >= 0);
 
                         auto& unionVal = target->unionVal();
                         if (unionVal->activeMember != uint32_t(arg.index)) {

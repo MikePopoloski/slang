@@ -81,7 +81,7 @@ std::pair<MacroActualArgumentListSyntax*, Trivia> Preprocessor::handleTopLevelMa
     }
 
     // if this assert fires, we failed to fully expand nested macros at a previous point
-    ASSERT(!currentMacroToken);
+    SLANG_ASSERT(!currentMacroToken);
 
     // parse arguments if necessary
     MacroActualArgumentListSyntax* actualArgs = nullptr;
@@ -317,12 +317,12 @@ bool Preprocessor::expandMacro(MacroDef macro, MacroExpansion& expansion,
                                MacroActualArgumentListSyntax* actualArgs) {
     if (macro.isIntrinsic()) {
         // for now, no intrisics can have arguments
-        ASSERT(!actualArgs);
+        SLANG_ASSERT(!actualArgs);
         return expandIntrinsic(macro.intrinsic, expansion);
     }
 
     const DefineDirectiveSyntax* directive = macro.syntax;
-    ASSERT(directive);
+    SLANG_ASSERT(directive);
 
     // ignore empty macro
     const auto& body = directive->body;
@@ -345,7 +345,7 @@ bool Preprocessor::expandMacro(MacroDef macro, MacroExpansion& expansion,
     }
 
     // match up actual arguments with formal parameters
-    ASSERT(actualArgs);
+    SLANG_ASSERT(actualArgs);
     auto& formalList = directive->formalArguments->args;
     auto& actualList = actualArgs->args;
     if (actualList.size() > formalList.size()) {
@@ -691,7 +691,7 @@ bool Preprocessor::expandIntrinsic(MacroIntrinsic intrinsic, MacroExpansion& exp
             break;
         }
         case MacroIntrinsic::None:
-            ASSUME_UNREACHABLE;
+            SLANG_UNREACHABLE;
     }
 
     return true;

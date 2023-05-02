@@ -225,7 +225,7 @@ decltype(auto) Symbol::visit(TVisitor&& visitor, Args&&... args) const {
 #undef TYPE
 #undef SYMBOL
     // clang-format on
-    ASSUME_UNREACHABLE;
+    SLANG_UNREACHABLE;
 }
 
 template<typename TVisitor, typename... Args>
@@ -267,7 +267,7 @@ decltype(auto) Statement::visit(TVisitor&& visitor, Args&&... args) const {
     }
 #undef CASE
     // clang-format on
-    ASSUME_UNREACHABLE;
+    SLANG_UNREACHABLE;
 }
 
 template<typename TVisitor, typename... Args>
@@ -288,7 +288,7 @@ decltype(auto) TimingControl::visit(TVisitor& visitor, Args&&... args) const {
     }
 #undef CASE
     // clang-format on
-    ASSUME_UNREACHABLE;
+    SLANG_UNREACHABLE;
 }
 
 template<typename TExpression, typename TVisitor, typename... Args>
@@ -344,7 +344,7 @@ decltype(auto) Expression::visitExpression(TExpression* expr, TVisitor&& visitor
     }
 #undef CASE
     // clang-format on
-    ASSUME_UNREACHABLE;
+    SLANG_UNREACHABLE;
 }
 
 template<typename TVisitor, typename... Args>
@@ -382,7 +382,7 @@ decltype(auto) Constraint::visit(TVisitor& visitor, Args&&... args) const {
     }
 #undef CASE
     // clang-format on
-    ASSUME_UNREACHABLE;
+    SLANG_UNREACHABLE;
 }
 
 template<typename TVisitor, typename... Args>
@@ -406,7 +406,7 @@ decltype(auto) AssertionExpr::visit(TVisitor& visitor, Args&&... args) const {
     }
 #undef CASE
     // clang-format on
-    ASSUME_UNREACHABLE;
+    SLANG_UNREACHABLE;
 }
 
 template<typename TVisitor, typename... Args>
@@ -424,7 +424,7 @@ decltype(auto) BinsSelectExpr::visit(TVisitor& visitor, Args&&... args) const {
     }
 #undef CASE
     // clang-format on
-    ASSUME_UNREACHABLE;
+    SLANG_UNREACHABLE;
 }
 
 template<typename TVisitor, typename... Args>
@@ -441,7 +441,7 @@ decltype(auto) Pattern::visit(TVisitor& visitor, Args&&... args) const {
     }
 #undef CASE
     // clang-format on
-    ASSUME_UNREACHABLE;
+    SLANG_UNREACHABLE;
 }
 
 template<typename TVisitor, typename... Args>
@@ -457,7 +457,7 @@ decltype(auto) RandSeqProductionSymbol::ProdBase::visit(TVisitor& visitor, Args&
     }
 #undef CASE
     // clang-format on
-    ASSUME_UNREACHABLE;
+    SLANG_UNREACHABLE;
 }
 
 /// @endcond

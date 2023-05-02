@@ -299,7 +299,7 @@ public:
                bitmask<ASTFlags> flags = ASTFlags::None) :
         scope(&scope),
         lookupIndex(lookupLocation.getIndex()), flags(flags) {
-        ASSERT(!lookupLocation.getScope() || lookupLocation.getScope() == &scope);
+        SLANG_ASSERT(!lookupLocation.getScope() || lookupLocation.getScope() == &scope);
     }
 
     Compilation& getCompilation() const { return scope->getCompilation(); }

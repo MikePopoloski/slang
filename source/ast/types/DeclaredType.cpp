@@ -32,7 +32,7 @@ using namespace syntax;
 DeclaredType::DeclaredType(const Symbol& parent, bitmask<DeclaredTypeFlags> flags) :
     parent(parent), flags(flags), overrideIndex(0), evaluating(false), hasLink(false) {
     // If this assert fires you need to update Symbol::getDeclaredType
-    ASSERT(parent.getDeclaredType() == this);
+    SLANG_ASSERT(parent.getDeclaredType() == this);
 }
 
 const Type& DeclaredType::getType() const {
@@ -42,15 +42,15 @@ const Type& DeclaredType::getType() const {
 }
 
 void DeclaredType::setLink(const DeclaredType& target) {
-    ASSERT(hasLink || !typeOrLink.typeSyntax);
-    ASSERT(!type && !dimensions && !initializer);
+    SLANG_ASSERT(hasLink || !typeOrLink.typeSyntax);
+    SLANG_ASSERT(!type && !dimensions && !initializer);
 
     hasLink = true;
     typeOrLink.link = &target;
 }
 
 void DeclaredType::setDimensionSyntax(const SyntaxList<VariableDimensionSyntax>& newDimensions) {
-    ASSERT(!type);
+    SLANG_ASSERT(!type);
     dimensions = &newDimensions;
 }
 
@@ -65,7 +65,7 @@ void DeclaredType::resolveType(const ASTContext& typeContext,
                                const ASTContext& initializerContext) const {
     auto& comp = typeContext.getCompilation();
     if (hasLink) {
-        ASSERT(typeOrLink.link);
+        SLANG_ASSERT(typeOrLink.link);
         type = &typeOrLink.link->getType();
         if (dimensions)
             type = &comp.getType(*type, *dimensions, typeContext);
@@ -73,13 +73,13 @@ void DeclaredType::resolveType(const ASTContext& typeContext,
     }
 
     auto syntax = typeOrLink.typeSyntax;
-    ASSERT(syntax);
+    SLANG_ASSERT(syntax);
     if (!syntax) {
         type = &comp.getErrorType();
         return;
     }
 
-    ASSERT(!evaluating);
+    SLANG_ASSERT(!evaluating);
     evaluating = true;
     auto guard = ScopeGuard([this] { evaluating = false; });
 
@@ -211,7 +211,7 @@ static bool isValidForIfaceVar(const Type& type) {
 
 void DeclaredType::checkType(const ASTContext& context) const {
     uint32_t masked = (flags & DeclaredTypeFlags::NeedsTypeCheck).bits();
-    ASSERT(std::popcount(masked) == 1);
+    SLANG_ASSERT(std::popcount(masked) == 1);
 
     switch (masked) {
         case uint32_t(DeclaredTypeFlags::NetType): {
@@ -228,8 +228,8 @@ void DeclaredType::checkType(const ASTContext& context) const {
             break;
         case uint32_t(DeclaredTypeFlags::FormalArgMergeVar):
             if (auto var = parent.as<FormalArgumentSymbol>().getMergedVariable()) {
-                ASSERT(!hasLink);
-                ASSERT(typeOrLink.typeSyntax);
+                SLANG_ASSERT(!hasLink);
+                SLANG_ASSERT(typeOrLink.typeSyntax);
                 mergePortTypes(context, *var, typeOrLink.typeSyntax->as<ImplicitTypeSyntax>(),
                                parent.location,
                                dimensions ? *dimensions
@@ -271,7 +271,7 @@ void DeclaredType::checkType(const ASTContext& context) const {
                 context.addDiag(diag::VirtualInterfaceIfaceMember, parent.location);
             break;
         default:
-            ASSUME_UNREACHABLE;
+            SLANG_UNREACHABLE;
     }
 }
 
@@ -480,7 +480,7 @@ T DeclaredType::getASTContext() const {
         astFlags |= ASTFlags::DPIArg;
 
     const Scope* scope = parent.getParentScope();
-    ASSERT(scope);
+    SLANG_ASSERT(scope);
 
     // Specparams inside of specify blocks have additional constraints so we
     // need to set the AST flag for them.
@@ -495,10 +495,10 @@ T DeclaredType::getASTContext() const {
     if ((IsInitializer && flags.has(DeclaredTypeFlags::InitializerOverridden)) ||
         (!IsInitializer && flags.has(DeclaredTypeFlags::TypeOverridden))) {
         auto inst = scope->asSymbol().as<InstanceBodySymbol>().parentInstance;
-        ASSERT(inst);
+        SLANG_ASSERT(inst);
 
         scope = inst->getParentScope();
-        ASSERT(scope);
+        SLANG_ASSERT(scope);
 
         return ASTContext(*scope, LookupLocation::before(*inst), astFlags);
     }

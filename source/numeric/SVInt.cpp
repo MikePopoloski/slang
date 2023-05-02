@@ -780,7 +780,7 @@ void SVInt::writeTo(SmallVectorBase<char>& buffer, LiteralBase base, bool includ
                 divide(tmp, tmp.getNumWords(), divisor, divisor.getNumWords(), &quotient,
                        &remainder);
                 uint64_t digit = remainder.as<uint64_t>().value();
-                ASSERT(digit < 10);
+                SLANG_ASSERT(digit < 10);
                 buffer.push_back(Digits[digit]);
                 tmp = quotient;
             }
@@ -804,7 +804,7 @@ void SVInt::writeTo(SmallVectorBase<char>& buffer, LiteralBase base, bool includ
                 maskAmount = 15;
                 break;
             case LiteralBase::Decimal:
-                ASSUME_UNREACHABLE;
+                SLANG_UNREACHABLE;
         }
 
         // if we have unknown values here, the comparison will return X
@@ -1039,7 +1039,7 @@ SVInt& SVInt::operator+=(const SVInt& rhs) {
     return *this;
 }
 
-NO_SANITIZE("unsigned-integer-overflow")
+SLANG_NO_SANITIZE("unsigned-integer-overflow")
 SVInt& SVInt::operator-=(const SVInt& rhs) {
     if (bitWidth != rhs.bitWidth) {
         if (bitWidth < rhs.bitWidth)
@@ -1450,7 +1450,7 @@ logic_t SVInt::operator[](int32_t index) const {
 }
 
 SVInt SVInt::slice(int32_t msb, int32_t lsb) const {
-    ASSERT(msb >= lsb);
+    SLANG_ASSERT(msb >= lsb);
 
     // handle indexing out of bounds
     bitwidth_t selectWidth = bitwidth_t(msb - lsb + 1);
@@ -1499,10 +1499,10 @@ SVInt SVInt::slice(int32_t msb, int32_t lsb) const {
 }
 
 void SVInt::set(int32_t msb, int32_t lsb, const SVInt& value) {
-    ASSERT(msb >= lsb);
+    SLANG_ASSERT(msb >= lsb);
 
     bitwidth_t selectWidth = bitwidth_t(msb - lsb + 1);
-    ASSERT(value.getBitWidth() == selectWidth);
+    SLANG_ASSERT(value.getBitWidth() == selectWidth);
     if (msb < 0 || lsb >= int32_t(bitWidth))
         return;
 
@@ -1538,7 +1538,7 @@ void SVInt::set(int32_t msb, int32_t lsb, const SVInt& value) {
 }
 
 SVInt SVInt::sext(bitwidth_t bits) const {
-    ASSERT(bits > bitWidth);
+    SLANG_ASSERT(bits > bitWidth);
 
     if (bits <= SVInt::BITS_PER_WORD && !unknownFlag) {
         uint64_t newVal = val << (SVInt::BITS_PER_WORD - bitWidth); // NOLINT
@@ -1587,7 +1587,7 @@ bool SVInt::isSignExtendedFrom(bitwidth_t msb) const {
 }
 
 void SVInt::signExtendFrom(bitwidth_t msb) {
-    ASSERT(msb < bitWidth - 1);
+    SLANG_ASSERT(msb < bitWidth - 1);
 
     uint64_t maskMsw;
     bitwidth_t bitsInMsw;
@@ -1609,7 +1609,7 @@ void SVInt::signExtendFrom(bitwidth_t msb) {
 }
 
 SVInt SVInt::zext(bitwidth_t bits) const {
-    ASSERT(bits > bitWidth);
+    SLANG_ASSERT(bits > bitWidth);
 
     if (bits <= SVInt::BITS_PER_WORD && !unknownFlag)
         return SVInt(bits, val, signFlag);
@@ -1634,7 +1634,7 @@ SVInt SVInt::extend(bitwidth_t bits, bool useSign) const {
 }
 
 SVInt SVInt::trunc(bitwidth_t bits) const {
-    ASSERT(bits > 0 && bits <= bitWidth);
+    SLANG_ASSERT(bits > 0 && bits <= bitWidth);
 
     if (isSingleWord()) {
         uint64_t mask = bits == 64 ? UINT64_MAX : (1ull << bits) - 1;
@@ -1777,12 +1777,12 @@ SVInt SVInt::concat(std::span<SVInt const> operands) {
 }
 
 SVInt SVInt::allocUninitialized(bitwidth_t bits, bool signFlag, bool unknownFlag) {
-    ASSERT(bits && (bits > 64 || unknownFlag));
+    SLANG_ASSERT(bits && (bits > 64 || unknownFlag));
     return SVInt(new uint64_t[getNumWords(bits, unknownFlag)], bits, signFlag, unknownFlag);
 }
 
 SVInt SVInt::allocZeroed(bitwidth_t bits, bool signFlag, bool unknownFlag) {
-    ASSERT(bits && (bits > 64 || unknownFlag));
+    SLANG_ASSERT(bits && (bits > 64 || unknownFlag));
     return SVInt(new uint64_t[getNumWords(bits, unknownFlag)](), bits, signFlag, unknownFlag);
 }
 
@@ -2108,10 +2108,10 @@ void SVInt::buildDivideResult(SVInt* result, uint32_t* value, bitwidth_t bitWidt
     }
 }
 
-NO_SANITIZE("unsigned-integer-overflow")
+SLANG_NO_SANITIZE("unsigned-integer-overflow")
 void SVInt::divide(const SVInt& lhs, uint32_t lhsWords, const SVInt& rhs, uint32_t rhsWords,
                    SVInt* quotient, SVInt* remainder) {
-    ASSERT(lhsWords >= rhsWords);
+    SLANG_ASSERT(lhsWords >= rhsWords);
 
     // The Knuth algorithm requires arrays of 32-bit words (because results of operations
     // need to fit natively into 64 bits). Allocate space for the backing memory, either on

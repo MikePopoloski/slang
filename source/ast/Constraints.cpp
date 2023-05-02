@@ -54,7 +54,7 @@ const Constraint& Constraint::bind(const ConstraintItemSyntax& syntax, const AST
             result = &ForeachConstraint::fromSyntax(syntax.as<LoopConstraintSyntax>(), ctx);
             break;
         default:
-            ASSUME_UNREACHABLE;
+            SLANG_UNREACHABLE;
     }
 
     result->syntax = &syntax;

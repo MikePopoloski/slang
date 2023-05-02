@@ -84,7 +84,7 @@ SubroutineSymbol* SubroutineSymbol::fromSyntax(Compilation& compilation,
             // the interface instance).
             auto result = SubroutineSymbol::fromSyntax(compilation, syntax, parent,
                                                        /* outOfBlock */ true);
-            ASSERT(result);
+            SLANG_ASSERT(result);
 
             result->setParent(parent, SymbolIndex(index));
             compilation.addExternInterfaceMethod(*result);
@@ -215,7 +215,7 @@ SubroutineSymbol* SubroutineSymbol::fromSyntax(Compilation& compilation,
                 // Parser already issued errors for these, so just ignore them here.
                 break;
             default:
-                ASSUME_UNREACHABLE;
+                SLANG_UNREACHABLE;
         }
     }
 
@@ -296,7 +296,7 @@ SubroutineSymbol& SubroutineSymbol::createOutOfBlock(Compilation& compilation,
                                                      const Scope& definitionScope,
                                                      SymbolIndex outOfBlockIndex) {
     auto result = fromSyntax(compilation, syntax, parent, /* outOfBlock */ true);
-    ASSERT(result);
+    SLANG_ASSERT(result);
 
     // Set the parent pointer of the new subroutine so that lookups work correctly.
     // We won't actually exist in the scope's name map or be iterable through its members,
@@ -437,7 +437,7 @@ void SubroutineSymbol::setOverride(const SubroutineSymbol& parentMethod) const {
     overrides = &parentMethod;
 
     auto scope = getParentScope();
-    ASSERT(scope);
+    SLANG_ASSERT(scope);
 
     checkVirtualMethodMatch(*scope, parentMethod, *this, /* allowDerivedReturn */ true);
 }
@@ -562,7 +562,7 @@ void SubroutineSymbol::buildArguments(Scope& scope, const FunctionPortListSyntax
                                                       defaultLifetime);
 
         if (portSyntax->constKeyword) {
-            ASSERT(direction == ArgumentDirection::Ref);
+            SLANG_ASSERT(direction == ArgumentDirection::Ref);
             arg->flags |= VariableFlags::Const;
         }
 
@@ -617,7 +617,7 @@ void SubroutineSymbol::connectExternInterfacePrototype() const {
 
     auto scope = getParentScope();
     auto syntax = getSyntax();
-    ASSERT(scope && syntax);
+    SLANG_ASSERT(scope && syntax);
 
     auto nameToken = syntax->as<FunctionDeclarationSyntax>().prototype->name->getFirstToken();
     auto ifaceName = nameToken.valueText();
@@ -684,7 +684,7 @@ void SubroutineSymbol::connectExternInterfacePrototype() const {
     }
 
     auto proto = sub.getPrototype();
-    ASSERT(proto);
+    SLANG_ASSERT(proto);
 
     if (!proto->flags.has(MethodFlags::ForkJoin) && proto->getFirstExternImpl() != nullptr) {
         auto& diag = scope->addDiag(diag::DupInterfaceExternMethod, location);
@@ -802,7 +802,7 @@ MethodPrototypeSymbol& MethodPrototypeSymbol::fromSyntax(const Scope& scope,
                 // Parser already issued errors for these, so just ignore them here.
                 break;
             default:
-                ASSUME_UNREACHABLE;
+                SLANG_UNREACHABLE;
         }
     }
 
@@ -977,7 +977,7 @@ MethodPrototypeSymbol& MethodPrototypeSymbol::implicitExtern(
 }
 
 const SubroutineSymbol* MethodPrototypeSymbol::getSubroutine() const {
-    ASSERT(getParentScope() && getParentScope()->asSymbol().getParentScope());
+    SLANG_ASSERT(getParentScope() && getParentScope()->asSymbol().getParentScope());
 
     if (subroutine) {
         if (needsMatchCheck) {
@@ -997,8 +997,8 @@ const SubroutineSymbol* MethodPrototypeSymbol::getSubroutine() const {
     auto& outerScope = *parentSym.getParentScope();
     auto& comp = outerScope.getCompilation();
 
-    ASSERT(!flags.has(MethodFlags::ModportImport | MethodFlags::ModportExport |
-                      MethodFlags::InterfaceExtern));
+    SLANG_ASSERT(!flags.has(MethodFlags::ModportImport | MethodFlags::ModportExport |
+                            MethodFlags::InterfaceExtern));
 
     // The out-of-block definition must be in our parent scope.
     auto [declSyntax, index, used] = comp.findOutOfBlockDecl(outerScope, parentSym.name, name);

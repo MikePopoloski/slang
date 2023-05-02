@@ -159,8 +159,8 @@ Expression* Expression::tryConnectPortArray(const ASTContext& context, const Typ
                 return bad();
             }
 
-            ASSERT(instanceDims.empty());
-            ASSERT(arrayPath.empty());
+            SLANG_ASSERT(instanceDims.empty());
+            SLANG_ASSERT(arrayPath.empty());
             return result;
         }
 
@@ -273,7 +273,7 @@ Expression& Expression::convertAssignment(const ASTContext& context, const Type&
                     selfDetermined(context, conn);
                     *lhsExpr = conn;
 
-                    ASSERT(assignFlags);
+                    SLANG_ASSERT(assignFlags);
                     if (assignFlags)
                         *assignFlags |= AssignFlags::SlicedPort;
 
@@ -511,12 +511,12 @@ Expression& AssignmentExpression::fromComponents(
         // cannot use any timing control other than cycle delays.
         if (auto sym = lhs.getSymbolReference(); sym && sym->kind == SymbolKind::ClockVar) {
             if (timingControl->kind != TimingControlKind::CycleDelay) {
-                ASSERT(timingControl->syntax);
+                SLANG_ASSERT(timingControl->syntax);
                 context.addDiag(diag::ClockVarBadTiming, timingControl->syntax->sourceRange());
             }
         }
         else if (timingControl->kind == TimingControlKind::CycleDelay) {
-            ASSERT(timingControl->syntax);
+            SLANG_ASSERT(timingControl->syntax);
             context.addDiag(diag::CycleDelayNonClock, timingControl->syntax->sourceRange());
         }
     }
@@ -703,7 +703,7 @@ static void checkImplicitConversions(const ASTContext& context, const Type& targ
         // Now that we know the effective width, compare it to the expression's
         // actual width. We don't warn if the target is anywhere in between the
         // effective and the actual width.
-        ASSERT(effective <= actualWidth);
+        SLANG_ASSERT(effective <= actualWidth);
         if (targetWidth < effective || targetWidth > actualWidth) {
             // Final check to rule out false positives: try to eval as a constant.
             // We'll ignore any constants, because as described above they
@@ -727,7 +727,7 @@ Expression& ConversionExpression::makeImplicit(const ASTContext& context, const 
                                                ConversionKind conversionKind, Expression& expr,
                                                SourceLocation loc) {
     auto& comp = context.getCompilation();
-    ASSERT(expr.isImplicitlyAssignableTo(comp, targetType));
+    SLANG_ASSERT(expr.isImplicitlyAssignableTo(comp, targetType));
 
     Expression* op = &expr;
     selfDetermined(context, op);
@@ -777,7 +777,7 @@ ConstantValue ConversionExpression::convert(EvalContext& context, const Type& fr
             case 64:
                 return value.convertToReal();
             default:
-                ASSUME_UNREACHABLE;
+                SLANG_UNREACHABLE;
         }
     }
 
@@ -787,7 +787,7 @@ ConstantValue ConversionExpression::convert(EvalContext& context, const Type& fr
     if (to.isUnpackedArray() && from.isUnpackedArray()) {
         // Conversion to a dynamic array just resizes. Conversion to a fixed array
         // must have the same number of elements in the source.
-        ASSERT(!to.hasFixedRange() || !from.hasFixedRange());
+        SLANG_ASSERT(!to.hasFixedRange() || !from.hasFixedRange());
         if (to.hasFixedRange()) {
             size_t size = value.size();
             if (size != to.getFixedRange().width()) {
@@ -835,7 +835,7 @@ ConstantValue ConversionExpression::convert(EvalContext& context, const Type& fr
     if (from.isNull())
         return std::move(value);
 
-    ASSUME_UNREACHABLE;
+    SLANG_UNREACHABLE;
 }
 
 std::optional<bitwidth_t> ConversionExpression::getEffectiveWidthImpl() const {
@@ -1121,7 +1121,7 @@ Expression& Expression::bindAssignmentPattern(Compilation& comp,
                     comp, p.as<ReplicatedAssignmentPatternSyntax>(), context, type, *structScope,
                     range);
             default:
-                ASSUME_UNREACHABLE;
+                SLANG_UNREACHABLE;
         }
     }
     else if (ct.kind == SymbolKind::DynamicArrayType || ct.kind == SymbolKind::QueueType) {
@@ -1139,7 +1139,7 @@ Expression& Expression::bindAssignmentPattern(Compilation& comp,
                     comp, p.as<ReplicatedAssignmentPatternSyntax>(), context, type, *elementType,
                     range);
             default:
-                ASSUME_UNREACHABLE;
+                SLANG_UNREACHABLE;
         }
     }
     else if (ct.kind == SymbolKind::AssociativeArrayType) {
@@ -1153,7 +1153,7 @@ Expression& Expression::bindAssignmentPattern(Compilation& comp,
                     comp, p.as<StructuredAssignmentPatternSyntax>(), context, type, *elementType,
                     range);
             default:
-                ASSUME_UNREACHABLE;
+                SLANG_UNREACHABLE;
         }
     }
     else {
@@ -1171,7 +1171,7 @@ Expression& Expression::bindAssignmentPattern(Compilation& comp,
                     comp, p.as<ReplicatedAssignmentPatternSyntax>(), context, type, *elementType,
                     numElements, range);
             default:
-                ASSUME_UNREACHABLE;
+                SLANG_UNREACHABLE;
         }
     }
 }
@@ -1184,7 +1184,7 @@ ConstantValue AssignmentPatternExpressionBase::evalImpl(EvalContext& context) co
                             .eval(context)
                             .integer()
                             .as<int32_t>();
-        ASSERT(countVal >= 0);
+        SLANG_ASSERT(countVal >= 0);
         replCount = size_t(*countVal);
     }
 
@@ -1209,7 +1209,7 @@ ConstantValue AssignmentPatternExpressionBase::evalImpl(EvalContext& context) co
         AssociativeArray values;
         auto& sap = as<StructuredAssignmentPatternExpression>();
         for (auto& setter : sap.indexSetters) {
-            ASSERT(setter.expr && setter.index);
+            SLANG_ASSERT(setter.expr && setter.index);
             ConstantValue key = setter.index->eval(context);
             ConstantValue val = setter.expr->eval(context);
             if (!key || !val)
@@ -1380,7 +1380,7 @@ static const Expression* matchElementValue(
     const ExpressionSyntax* defaultSyntax = nullptr;
     if (defaultSetter) {
         defaultSyntax = defaultSetter->syntax;
-        ASSERT(defaultSyntax);
+        SLANG_ASSERT(defaultSyntax);
     }
 
     if (defaultSetter) {
@@ -1424,7 +1424,7 @@ static const Expression* matchElementValue(
 
     if (elementType.isArray() && elementType.hasFixedRange()) {
         auto nestedElemType = elementType.getArrayElementType();
-        ASSERT(nestedElemType);
+        SLANG_ASSERT(nestedElemType);
 
         auto elemExpr = matchElementValue(context, *nestedElemType, nullptr, sourceRange,
                                           typeSetters, defaultSetter);
@@ -1744,7 +1744,7 @@ Expression& StructuredAssignmentPatternExpression::forDynamicArray(
         elements.reserve(maxIndex + 1);
         for (size_t i = 0; i <= maxIndex; i++) {
             auto expr = indexMap[int32_t(i)];
-            ASSERT(expr);
+            SLANG_ASSERT(expr);
             elements.push_back(expr);
         }
     }

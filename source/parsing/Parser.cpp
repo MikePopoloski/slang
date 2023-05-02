@@ -24,7 +24,7 @@ SyntaxNode& Parser::parseGuess() {
     if (isMember()) {
         bool anyLocalModules = false;
         auto member = parseMember(SyntaxKind::CompilationUnit, anyLocalModules);
-        ASSERT(member);
+        SLANG_ASSERT(member);
         return *member;
     }
 
@@ -286,7 +286,7 @@ PortDeclarationSyntax& Parser::parsePortDeclaration(AttrList attributes) {
         direction = consume();
 
     // Callers must ensure we don't call with 'const' unless also 'ref'.
-    ASSERT(!constKeyword || direction.kind == TokenKind::RefKeyword);
+    SLANG_ASSERT(!constKeyword || direction.kind == TokenKind::RefKeyword);
 
     auto& header = parsePortHeader(constKeyword, direction);
 
@@ -379,7 +379,7 @@ VariableDimensionSyntax* Parser::parseDimension() {
         }
         default: {
             auto selector = parseElementSelector();
-            ASSERT(selector);
+            SLANG_ASSERT(selector);
             specifier = &factory.rangeDimensionSpecifier(*selector);
             break;
         }
@@ -679,7 +679,7 @@ MemberSyntax& Parser::parseNetDeclaration(AttrList attributes) {
         // itself will only do so for an identifier if the following token is a hash,
         // indicating a timing control.
         auto delay = parseTimingControl();
-        ASSERT(delay);
+        SLANG_ASSERT(delay);
 
         Token semi;
         auto declarators = parseDeclarators(semi);

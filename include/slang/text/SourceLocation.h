@@ -117,7 +117,7 @@ public:
     }
 
     ptrdiff_t operator-(SourceLocation loc) const {
-        ASSERT(loc.buffer() == buffer());
+        SLANG_ASSERT(loc.buffer() == buffer());
         return (ptrdiff_t)charOffset - (ptrdiff_t)loc.charOffset;
     }
 

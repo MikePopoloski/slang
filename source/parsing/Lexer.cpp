@@ -41,8 +41,8 @@ Lexer::Lexer(BufferID bufferId, std::string_view source, const char* startPtr, B
     diagnostics(diagnostics), options(options), bufferId(bufferId), originalBegin(source.data()),
     sourceBuffer(startPtr), sourceEnd(source.data() + source.length()), marker(nullptr) {
     ptrdiff_t count = sourceEnd - sourceBuffer;
-    ASSERT(count);
-    ASSERT(sourceEnd[-1] == '\0');
+    SLANG_ASSERT(count);
+    SLANG_ASSERT(sourceEnd[-1] == '\0');
 
     // detect BOMs so we can give nice errors for invalid encoding
     if (count >= 2) {
@@ -137,8 +137,8 @@ Token Lexer::stringify(BumpAllocator& alloc, SourceLocation location,
     Lexer lexer{BufferID::getPlaceholder(), raw, raw.data(), alloc, unused, LexerOptions{}};
 
     auto token = lexer.lex();
-    ASSERT(token.kind == TokenKind::StringLiteral);
-    ASSERT(lexer.lex().kind == TokenKind::EndOfFile);
+    SLANG_ASSERT(token.kind == TokenKind::StringLiteral);
+    SLANG_ASSERT(lexer.lex().kind == TokenKind::EndOfFile);
 
     return token.clone(alloc, trivia, raw.substr(0, raw.length() - 1), location);
 }
@@ -163,8 +163,8 @@ Trivia Lexer::commentify(BumpAllocator& alloc, Token* begin, Token* end) {
     Lexer lexer{BufferID::getPlaceholder(), raw, raw.data(), alloc, unused, LexerOptions{}};
 
     auto token = lexer.lex();
-    ASSERT(token.kind == TokenKind::EndOfFile);
-    ASSERT(token.trivia().size() == 1);
+    SLANG_ASSERT(token.kind == TokenKind::EndOfFile);
+    SLANG_ASSERT(token.trivia().size() == 1);
 
     return token.trivia()[0];
 }
@@ -177,7 +177,7 @@ void Lexer::splitTokens(BumpAllocator& alloc, Diagnostics& diagnostics,
         loc = sourceManager.getOriginalLoc(loc);
 
     auto sourceText = sourceManager.getSourceText(loc.buffer());
-    ASSERT(!sourceText.empty());
+    SLANG_ASSERT(!sourceText.empty());
 
     Lexer lexer{loc.buffer(), sourceText,  sourceToken.rawText().substr(offset).data(),
                 alloc,        diagnostics, LexerOptions{}};
@@ -537,7 +537,7 @@ Token Lexer::lexToken(KeywordVersion keywordVersion) {
 
             // might be a keyword
             auto table = LF::getKeywordTable(keywordVersion);
-            ASSERT(table);
+            SLANG_ASSERT(table);
             if (auto it = table->find(lexeme()); it != table->end())
                 return create(it->second);
 
@@ -976,7 +976,7 @@ Token Lexer::lexNumericLiteral() {
         char* end;
         errno = 0;
         double value = strtod(floatChars.data(), &end);
-        ASSERT(end == floatChars.end() - 1); // should never error
+        SLANG_ASSERT(end == floatChars.end() - 1); // should never error
 
         // If we had an overflow or underflow, errno is now ERANGE. We can't warn here in case
         // this turns out to actually be a hex literal. Have the token carry this info so someone
@@ -1401,7 +1401,7 @@ void Lexer::scanEncodedText(ProtectEncoding encoding, uint32_t expectedBytes, bo
                 byteCount++;
                 break;
             default:
-                ASSUME_UNREACHABLE;
+                SLANG_UNREACHABLE;
         }
     }
 }

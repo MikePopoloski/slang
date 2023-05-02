@@ -121,7 +121,7 @@ public:
     /// Sets the source syntax for the type, which will later be used when
     /// resolution is requested.
     void setTypeSyntax(const syntax::DataTypeSyntax& newType) {
-        ASSERT(!type);
+        SLANG_ASSERT(!type);
         typeOrLink.typeSyntax = &newType;
         hasLink = false;
     }
@@ -158,7 +158,7 @@ public:
     /// @param syntax The initializer expression syntax.
     /// @param loc The source location to use when reporting diagnostics about the initializer.
     void setInitializerSyntax(const syntax::ExpressionSyntax& syntax, SourceLocation loc) {
-        ASSERT(!initializer);
+        SLANG_ASSERT(!initializer);
         initializerSyntax = &syntax;
         initializerLocation = loc;
     }
@@ -187,7 +187,7 @@ public:
     /// This will clear any resolved type to force resolution again with the
     /// new flags set.
     void addFlags(bitmask<DeclaredTypeFlags> toAdd) {
-        ASSERT(!type && !initializer);
+        SLANG_ASSERT(!type && !initializer);
         flags |= toAdd;
     }
 

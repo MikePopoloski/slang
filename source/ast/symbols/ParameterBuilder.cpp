@@ -175,7 +175,7 @@ const ParameterSymbolBase& ParameterBuilder::createParam(const Definition::Param
                 tt.setType(comp.getErrorType());
         }
         else {
-            ASSERT(decl.typeDecl);
+            SLANG_ASSERT(decl.typeDecl);
             param->setSyntax(*decl.typeDecl);
             if (decl.typeDecl->assignment)
                 tt.setTypeSyntax(*decl.typeDecl->assignment->type);
@@ -213,14 +213,14 @@ const ParameterSymbolBase& ParameterBuilder::createParam(const Definition::Param
             declType.addFlags(DeclaredTypeFlags::InitializerOverridden);
 
         if (!decl.hasSyntax) {
-            ASSERT(decl.givenType);
+            SLANG_ASSERT(decl.givenType);
             param->setType(*decl.givenType);
             if (decl.givenInitializer)
                 param->setInitializer(*decl.givenInitializer);
         }
         else {
-            ASSERT(decl.valueSyntax);
-            ASSERT(decl.valueDecl);
+            SLANG_ASSERT(decl.valueSyntax);
+            SLANG_ASSERT(decl.valueDecl);
 
             param->setDeclaredType(*decl.valueSyntax->type);
             param->setFromDeclarator(*decl.valueDecl);

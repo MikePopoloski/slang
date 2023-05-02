@@ -49,7 +49,7 @@ LookupLocation LookupLocation::after(const Symbol& symbol) {
 }
 
 bool LookupLocation::operator<(const LookupLocation& other) const {
-    ASSERT(scope == other.scope || !scope || !other.scope);
+    SLANG_ASSERT(scope == other.scope || !scope || !other.scope);
     return index < other.index;
 }
 
@@ -162,7 +162,7 @@ struct NameComponents {
                 set(name.as<KeywordNameSyntax>().keyword);
                 break;
             default:
-                ASSUME_UNREACHABLE;
+                SLANG_UNREACHABLE;
         }
     }
 
@@ -277,7 +277,7 @@ const Symbol* getContainingPackage(const Symbol& symbol) {
 bool lookupDownward(std::span<const NamePlusLoc> nameParts, NameComponents name,
                     const ASTContext& context, LookupResult& result) {
     const Symbol* symbol = std::exchange(result.found, nullptr);
-    ASSERT(symbol);
+    SLANG_ASSERT(symbol);
 
     // Helper function to check whether class parameter assignments have been
     // incorrectly supplied for a non-class symbol.
@@ -482,7 +482,7 @@ bool lookupDownward(std::span<const NamePlusLoc> nameParts, NameComponents name,
             if (SemanticFacts::isAllowedInModport(symbol->kind)) {
                 // This is an error, the modport disallows access.
                 auto def = prevSym.getDeclaringDefinition();
-                ASSERT(def);
+                SLANG_ASSERT(def);
 
                 auto& diag = result.addDiag(*context.scope, diag::InvalidModportAccess, name.range);
                 diag << name.text;
@@ -566,7 +566,7 @@ bool lookupUpward(std::span<const NamePlusLoc> nameParts, const NameComponents& 
         }
         else {
             auto inst = symbol->as<InstanceBodySymbol>().parentInstance;
-            ASSERT(inst);
+            SLANG_ASSERT(inst);
 
             // If the instance's definition name matches our target name,
             // try to match from the current instance.
@@ -905,7 +905,7 @@ const Symbol* findThisHandle(const Scope& scope, SourceRange range, LookupResult
     while (parent->kind == SymbolKind::StatementBlock ||
            parent->kind == SymbolKind::RandSeqProduction) {
         auto parentScope = parent->getParentScope();
-        ASSERT(parentScope);
+        SLANG_ASSERT(parentScope);
         parent = &parentScope->asSymbol();
     }
 
@@ -1027,7 +1027,7 @@ void Lookup::name(const NameSyntax& syntax, const ASTContext& context, bitmask<L
             // These error cases can't happen here because the parser will always
             // wrap them into a scoped name.
         default:
-            ASSUME_UNREACHABLE;
+            SLANG_UNREACHABLE;
     }
 
     // If the parser added a missing identifier token, it already issued an appropriate error.
@@ -1075,7 +1075,7 @@ const Symbol* Lookup::unqualified(const Scope& scope, std::string_view name,
 
     LookupResult result;
     unqualifiedImpl(scope, name, LookupLocation::max, std::nullopt, flags, {}, result, scope);
-    ASSERT(result.selectors.empty());
+    SLANG_ASSERT(result.selectors.empty());
     unwrapResult(scope, std::nullopt, result, /* unwrapGenericClasses */ false);
 
     return result.found;
@@ -1089,7 +1089,7 @@ const Symbol* Lookup::unqualifiedAt(const Scope& scope, std::string_view name,
 
     LookupResult result;
     unqualifiedImpl(scope, name, location, sourceRange, flags, {}, result, scope);
-    ASSERT(result.selectors.empty());
+    SLANG_ASSERT(result.selectors.empty());
     unwrapResult(scope, sourceRange, result, /* unwrapGenericClasses */ false);
 
     if (!result.found && !result.hasError())
@@ -1249,7 +1249,7 @@ const Symbol* Lookup::selectChild(const Symbol& initialSymbol,
                     return nullptr;
                 break;
             default:
-                ASSUME_UNREACHABLE;
+                SLANG_UNREACHABLE;
         }
     }
 
@@ -1357,7 +1357,7 @@ std::pair<const ClassType*, bool> Lookup::getContainingClass(const Scope& scope)
         }
 
         auto parentScope = parent->getParentScope();
-        ASSERT(parentScope);
+        SLANG_ASSERT(parentScope);
         parent = &parentScope->asSymbol();
     }
 
@@ -1480,14 +1480,14 @@ bool Lookup::withinClassRandomize(const ASTContext& context, const NameSyntax& s
     if (syntax.kind == SyntaxKind::ScopedName)
         first = splitScopedName(syntax.as<ScopedNameSyntax>(), nameParts, colonParts);
 
-    ASSERT(context.randomizeDetails);
+    SLANG_ASSERT(context.randomizeDetails);
     auto& details = *context.randomizeDetails;
     auto& classScope = *details.classType;
 
     auto findSuperScope = [&]() -> const Scope& {
         if (details.thisVar) {
             auto dt = details.thisVar->getDeclaredType();
-            ASSERT(dt);
+            SLANG_ASSERT(dt);
             return dt->getType().getCanonicalType().as<ClassType>();
         }
 
@@ -1577,7 +1577,7 @@ bool Lookup::findAssertionLocalVar(const ASTContext& context, const NameSyntax& 
     }
 
     auto inst = context.assertionInstance;
-    ASSERT(inst);
+    SLANG_ASSERT(inst);
 
     while (inst->argDetails)
         inst = inst->argDetails;
@@ -1962,7 +1962,7 @@ void Lookup::qualified(const ScopedNameSyntax& syntax, const ASTContext& context
             result.addDiag(scope, diag::UnexpectedNameToken, first.range) << name;
             return;
         default:
-            ASSUME_UNREACHABLE;
+            SLANG_UNREACHABLE;
     }
 
     if (result.hasError())

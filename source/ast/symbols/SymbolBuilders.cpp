@@ -50,7 +50,7 @@ FormalArgumentSymbol& MethodBuilder::addArg(std::string_view name, const Type& t
     args.push_back(arg);
 
     if (defaultValue) {
-        ASSERT(type.isIntegral());
+        SLANG_ASSERT(type.isIntegral());
         arg->setDefaultValue(&IntegerLiteral::fromConstant(compilation, *defaultValue));
     }
 

@@ -126,7 +126,7 @@ public:
                     << real_t(std::numeric_limits<double>::denorm_min());
             }
             else {
-                ASSERT(!std::isfinite(literal.realValue()));
+                SLANG_ASSERT(!std::isfinite(literal.realValue()));
                 addDiag(diag::RealLiteralOverflow, literal.location())
                     << real_t(std::numeric_limits<double>::max());
             }

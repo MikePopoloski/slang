@@ -121,7 +121,7 @@ struct CloneVisitor {
 #    pragma warning(pop)
 #endif
 
-    SyntaxNode* visitInvalid(const SyntaxNode&) { ASSUME_UNREACHABLE; }
+    SyntaxNode* visitInvalid(const SyntaxNode&) { SLANG_UNREACHABLE; }
 };
 
 } // namespace

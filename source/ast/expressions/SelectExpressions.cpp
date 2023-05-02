@@ -258,7 +258,7 @@ ConstantValue ElementSelectExpression::evalImpl(EvalContext& context) const {
     }
 
     // Handling for strings, dynamic arrays, and queues.
-    ASSERT(range->left == range->right);
+    SLANG_ASSERT(range->left == range->right);
     if (valType.isString())
         return cv.getSlice(range->left, range->right, nullptr);
 
@@ -305,7 +305,7 @@ LValue ElementSelectExpression::evalLValueImpl(EvalContext& context) const {
     }
 
     // Handling for strings, dynamic arrays, and queues.
-    ASSERT(range->left == range->right);
+    SLANG_ASSERT(range->left == range->right);
     lval.addIndex(range->left, type->getDefaultValue());
 
     return lval;
@@ -431,7 +431,7 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expressi
             selectionKind = RangeSelectionKind::IndexedDown;
             break;
         default:
-            ASSUME_UNREACHABLE;
+            SLANG_UNREACHABLE;
     }
 
     if (!value.bad() && value.type->isAssociativeArray()) {
@@ -648,8 +648,8 @@ Expression& RangeSelectExpression::fromConstant(Compilation& compilation, Expres
         return badExpr(compilation, result);
 
     // This method is only called on expressions with a fixed range type.
-    ASSERT(range.isLittleEndian() == valueType.getFixedRange().isLittleEndian());
-    ASSERT(valueType.hasFixedRange());
+    SLANG_ASSERT(range.isLittleEndian() == valueType.getFixedRange().isLittleEndian());
+    SLANG_ASSERT(valueType.hasFixedRange());
 
     if (valueType.isUnpackedArray()) {
         result->type = &FixedSizeUnpackedArrayType::fromDim(*context.scope, elementType, range,
@@ -1252,7 +1252,7 @@ LValue MemberAccessExpression::evalLValueImpl(EvalContext& context) const {
     else if (valueType.isUnpackedUnion()) {
         if (valueType.isTaggedUnion()) {
             auto target = lval.resolve();
-            ASSERT(target);
+            SLANG_ASSERT(target);
 
             if (target->unionVal()->activeMember != field.fieldIndex) {
                 context.addDiag(diag::ConstEvalTaggedUnion, sourceRange) << member.name;

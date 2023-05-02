@@ -62,7 +62,7 @@ static void validateResolver(const NetType& netType, const SubroutineSymbol& res
     }
 
     auto resolverParent = resolver.getParentScope();
-    ASSERT(resolverParent);
+    SLANG_ASSERT(resolverParent);
     if (!resolver.flags.has(MethodFlags::Static) &&
         resolverParent->asSymbol().kind == SymbolKind::ClassType) {
         reportError(diag::NTResolveClass);
@@ -103,7 +103,7 @@ const SubroutineSymbol* NetType::getResolutionFunction() const {
 
     auto syntax = getSyntax();
     auto scope = getParentScope();
-    ASSERT(syntax && scope);
+    SLANG_ASSERT(syntax && scope);
 
     auto& declSyntax = syntax->as<NetTypeDeclarationSyntax>();
     if (declSyntax.withFunction) {
@@ -293,7 +293,7 @@ const NetType& NetType::getSimulatedNetType(const NetType& internal, const NetTy
             }
             return internal;
         default:
-            ASSUME_UNREACHABLE;
+            SLANG_UNREACHABLE;
     }
 }
 

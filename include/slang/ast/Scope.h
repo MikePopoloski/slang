@@ -84,7 +84,7 @@ public:
     template<typename T>
     const T& find(std::string_view name) const {
         const Symbol* sym = find(name);
-        ASSERT(sym);
+        SLANG_ASSERT(sym);
         return sym->as<T>();
     }
 
@@ -102,7 +102,7 @@ public:
     const T& lookupName(std::string_view name, LookupLocation location = LookupLocation::max,
                         bitmask<LookupFlags> flags = LookupFlags::None) const {
         const Symbol* sym = lookupName(name, location, flags);
-        ASSERT(sym);
+        SLANG_ASSERT(sym);
         return sym->as<T>();
     }
 

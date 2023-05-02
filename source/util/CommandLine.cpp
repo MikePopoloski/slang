@@ -572,7 +572,7 @@ void CommandLine::handlePlusArg(std::string_view arg, ParseOptions options, bool
         }
         else {
             std::string result = option->set(arg, value, options.ignoreDuplicates);
-            ASSERT(result.empty());
+            SLANG_ASSERT(result.empty());
         }
         return;
     }

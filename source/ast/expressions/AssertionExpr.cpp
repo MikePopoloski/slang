@@ -105,7 +105,7 @@ const AssertionExpr& AssertionExpr::bind(const SequenceExprSyntax& syntax,
                                                         ctx);
             break;
         default:
-            ASSUME_UNREACHABLE;
+            SLANG_UNREACHABLE;
     }
 
     result->syntax = &syntax;
@@ -183,7 +183,7 @@ const AssertionExpr& AssertionExpr::bind(const PropertyExprSyntax& syntax,
             result = &CaseAssertionExpr::fromSyntax(syntax.as<CasePropertyExprSyntax>(), ctx);
             break;
         default:
-            ASSUME_UNREACHABLE;
+            SLANG_UNREACHABLE;
     }
 
     result->syntax = &syntax;
@@ -234,7 +234,7 @@ void AssertionExpr::requireSequence(const ASTContext& context, DiagCode code) co
         case AssertionExprKind::Conditional:
         case AssertionExprKind::Case:
         case AssertionExprKind::DisableIff:
-            ASSERT(syntax);
+            SLANG_ASSERT(syntax);
             context.addDiag(code, syntax->sourceRange());
             return;
         case AssertionExprKind::SequenceConcat:
@@ -243,7 +243,7 @@ void AssertionExpr::requireSequence(const ASTContext& context, DiagCode code) co
         case AssertionExprKind::Invalid:
             return;
     }
-    ASSUME_UNREACHABLE;
+    SLANG_UNREACHABLE;
 }
 
 bool AssertionExpr::admitsEmpty() const {
@@ -283,7 +283,7 @@ bool AssertionExpr::checkAssertionCall(const CallExpression& call, const ASTCont
             }
 
             if (formal->direction == ArgumentDirection::Ref) {
-                ASSERT(index < args.size());
+                SLANG_ASSERT(index < args.size());
                 if (auto sym = args[index]->getSymbolReference()) {
                     if (VariableSymbol::isKind(sym->kind) &&
                         sym->as<VariableSymbol>().lifetime == VariableLifetime::Automatic) {
@@ -459,7 +459,7 @@ SequenceRepetition::AdmitsEmpty SequenceRepetition::admitsEmpty() const {
                 return AdmitsEmpty::Yes;
             return AdmitsEmpty::No;
     }
-    ASSUME_UNREACHABLE;
+    SLANG_UNREACHABLE;
 }
 
 void SequenceRepetition::serializeTo(ASTSerializer& serializer) const {
@@ -521,7 +521,7 @@ void SimpleAssertionExpr::requireSequence(const ASTContext& context, DiagCode co
     if (expr.kind == ExpressionKind::AssertionInstance) {
         auto& aie = expr.as<AssertionInstanceExpression>();
         if (aie.type->isPropertyType()) {
-            ASSERT(syntax);
+            SLANG_ASSERT(syntax);
             context.addDiag(code, syntax->sourceRange());
             return;
         }
@@ -603,7 +603,7 @@ AssertionExpr& SequenceConcatExpr::fromSyntax(const DelayedSequenceExprSyntax& s
 
 bool SequenceConcatExpr::admitsEmptyImpl() const {
     auto it = elements.begin();
-    ASSERT(it != elements.end());
+    SLANG_ASSERT(it != elements.end());
 
     // See F.3.4.2.2 for the rules here.
     if (it->delay.min != 0 || !it->sequence->admitsEmpty())
@@ -759,7 +759,7 @@ static UnaryAssertionOperator getUnaryOp(TokenKind kind) {
         case TokenKind::SAlwaysKeyword: return UnaryAssertionOperator::SAlways;
         case TokenKind::EventuallyKeyword: return UnaryAssertionOperator::Eventually;
         case TokenKind::SEventuallyKeyword: return UnaryAssertionOperator::SEventually;
-        default: ASSUME_UNREACHABLE;
+        default: SLANG_UNREACHABLE;
     }
     // clang-format on
 }
@@ -839,7 +839,7 @@ AssertionExpr& BinaryAssertionExpr::fromSyntax(const BinarySequenceExprSyntax& s
         case SyntaxKind::IntersectSequenceExpr: op = BinaryAssertionOperator::Intersect; break;
         case SyntaxKind::ThroughoutSequenceExpr: op = BinaryAssertionOperator::Throughout; break;
         case SyntaxKind::WithinSequenceExpr: op = BinaryAssertionOperator::Within; break;
-        default: ASSUME_UNREACHABLE;
+        default: SLANG_UNREACHABLE;
     }
     // clang-format on
 
@@ -908,7 +908,7 @@ AssertionExpr& BinaryAssertionExpr::fromSyntax(const BinaryPropertyExprSyntax& s
                                                               BinaryAssertionOperator::NonOverlappedFollowedBy;
             break;
         default:
-            ASSUME_UNREACHABLE;
+            SLANG_UNREACHABLE;
     }
     // clang-format on
 
@@ -936,11 +936,11 @@ void BinaryAssertionExpr::requireSequence(const ASTContext& context, DiagCode co
         case BinaryAssertionOperator::NonOverlappedImplication:
         case BinaryAssertionOperator::OverlappedFollowedBy:
         case BinaryAssertionOperator::NonOverlappedFollowedBy:
-            ASSERT(syntax);
+            SLANG_ASSERT(syntax);
             context.addDiag(code, syntax->sourceRange());
             return;
     }
-    ASSUME_UNREACHABLE;
+    SLANG_UNREACHABLE;
 }
 
 bool BinaryAssertionExpr::admitsEmptyImpl() const {
@@ -1092,7 +1092,7 @@ AssertionExpr& AbortAssertionExpr::fromSyntax(const AcceptOnPropertyExprSyntax& 
             isSync = true;
             break;
         default:
-            ASSUME_UNREACHABLE;
+            SLANG_UNREACHABLE;
     }
 
     checkSampledValueExpr(cond, context, false, diag::PropAbortLocalVar, diag::PropAbortMatched);

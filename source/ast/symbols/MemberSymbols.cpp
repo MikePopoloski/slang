@@ -80,7 +80,7 @@ const Symbol* ExplicitImportSymbol::importedSymbol() const {
         initialized = true;
 
         const Scope* scope = getParentScope();
-        ASSERT(scope);
+        SLANG_ASSERT(scope);
 
         auto loc = location;
         if (auto syntax = getSyntax())
@@ -134,7 +134,7 @@ void WildcardImportSymbol::setPackage(const PackageSymbol& pkg) {
 const PackageSymbol* WildcardImportSymbol::getPackage() const {
     if (!package) {
         const Scope* scope = getParentScope();
-        ASSERT(scope);
+        SLANG_ASSERT(scope);
 
         auto loc = location;
         if (auto syntax = getSyntax(); syntax)
@@ -189,7 +189,7 @@ ModportPortSymbol& ModportPortSymbol::fromSyntax(const ASTContext& context,
     }
 
     auto sourceType = result->internalSymbol->getDeclaredType();
-    ASSERT(sourceType);
+    SLANG_ASSERT(sourceType);
     result->getDeclaredType()->setLink(*sourceType);
 
     // Perform checking on the connected symbol to make sure it's allowed
@@ -315,7 +315,7 @@ void ModportSymbol::fromSyntax(const ASTContext& context, const ModportDeclarati
                                 break;
                             }
                             default:
-                                ASSUME_UNREACHABLE;
+                                SLANG_UNREACHABLE;
                         }
                     }
                     break;
@@ -344,7 +344,7 @@ void ModportSymbol::fromSyntax(const ASTContext& context, const ModportDeclarati
                                 break;
                             }
                             default:
-                                ASSUME_UNREACHABLE;
+                                SLANG_UNREACHABLE;
                         }
                     }
                     break;
@@ -357,7 +357,7 @@ void ModportSymbol::fromSyntax(const ASTContext& context, const ModportDeclarati
                     break;
                 }
                 default: {
-                    ASSUME_UNREACHABLE;
+                    SLANG_UNREACHABLE;
                 }
             }
         }
@@ -410,7 +410,7 @@ const Expression& ContinuousAssignSymbol::getAssignment() const {
 
     auto scope = getParentScope();
     auto syntax = getSyntax();
-    ASSERT(scope && syntax);
+    SLANG_ASSERT(scope && syntax);
 
     ASTContext context(*scope, LookupLocation::after(*this), ASTFlags::NonProcedural);
     assign = &Expression::bind(syntax->as<ExpressionSyntax>(), context,
@@ -551,7 +551,7 @@ std::optional<std::string_view> ElabSystemTaskSymbol::getMessage() const {
     resolved = true;
 
     auto syntax = getSyntax();
-    ASSERT(syntax);
+    SLANG_ASSERT(syntax);
 
     auto argSyntax = syntax->as<ElabSystemTaskSyntax>().arguments;
     if (!argSyntax) {
@@ -560,7 +560,7 @@ std::optional<std::string_view> ElabSystemTaskSymbol::getMessage() const {
     }
 
     auto scope = getParentScope();
-    ASSERT(scope);
+    SLANG_ASSERT(scope);
 
     // Bind all arguments.
     auto& comp = scope->getCompilation();
@@ -584,7 +584,7 @@ std::optional<std::string_view> ElabSystemTaskSymbol::getMessage() const {
                     comp.emplace<EmptyArgumentExpression>(comp.getVoidType(), arg->sourceRange()));
                 break;
             default:
-                ASSUME_UNREACHABLE;
+                SLANG_UNREACHABLE;
         }
 
         if (args.back()->bad())
@@ -660,12 +660,12 @@ static void reduceComparison(const BinaryExpression& expr, Diagnostic& result) {
             return;
     }
 
-    ASSERT(expr.syntax);
+    SLANG_ASSERT(expr.syntax);
     auto& syntax = expr.syntax->as<BinaryExpressionSyntax>();
 
     auto lc = expr.left().constant;
     auto rc = expr.right().constant;
-    ASSERT(lc && rc);
+    SLANG_ASSERT(lc && rc);
 
     auto& note = result.addNote(diag::NoteComparisonReduces, syntax.operatorToken.location());
     note << expr.sourceRange;
@@ -691,7 +691,7 @@ void ElabSystemTaskSymbol::reportStaticAssert(const Scope& scope, SourceLocation
 
 void ElabSystemTaskSymbol::issueDiagnostic() const {
     auto scope = getParentScope();
-    ASSERT(scope);
+    SLANG_ASSERT(scope);
 
     auto msg = getMessage();
     if (!msg)
@@ -715,7 +715,7 @@ void ElabSystemTaskSymbol::issueDiagnostic() const {
             reportStaticAssert(*scope, location, *msg, assertCondition);
             return;
         default:
-            ASSUME_UNREACHABLE;
+            SLANG_UNREACHABLE;
     }
 
     scope->addDiag(code, location).addStringAllowEmpty(std::string(*msg));
@@ -1070,7 +1070,7 @@ PrimitiveSymbol& PrimitiveSymbol::fromSyntax(const Scope& scope,
         if (regSpecifier) {
             auto name = regSpecifier->name;
             auto it = portMap.find(name.valueText());
-            ASSERT(it != portMap.end());
+            SLANG_ASSERT(it != portMap.end());
 
             auto port = it->second;
             if (port->getSyntax()) {
@@ -1098,7 +1098,7 @@ PrimitiveSymbol& PrimitiveSymbol::fromSyntax(const Scope& scope,
         // TODO:
     }
     else {
-        ASSUME_UNREACHABLE;
+        SLANG_UNREACHABLE;
     }
 
     if (ports.size() < 2)
@@ -1452,7 +1452,7 @@ const TimingControl& ClockingBlockSymbol::getEvent() const {
     if (!event) {
         auto scope = getParentScope();
         auto syntax = getSyntax();
-        ASSERT(scope && syntax);
+        SLANG_ASSERT(scope && syntax);
 
         ASTContext context(*scope, LookupLocation::before(*this));
         event = &EventListControl::fromSyntax(getCompilation(),
@@ -1466,7 +1466,7 @@ ClockingSkew ClockingBlockSymbol::getDefaultInputSkew() const {
     if (!defaultInputSkew) {
         if (inputSkewSyntax) {
             auto scope = getParentScope();
-            ASSERT(scope);
+            SLANG_ASSERT(scope);
 
             ASTContext context(*scope, LookupLocation::before(*this));
             defaultInputSkew = ClockingSkew::fromSyntax(*inputSkewSyntax, context);
@@ -1482,7 +1482,7 @@ ClockingSkew ClockingBlockSymbol::getDefaultOutputSkew() const {
     if (!defaultOutputSkew) {
         if (outputSkewSyntax) {
             auto scope = getParentScope();
-            ASSERT(scope);
+            SLANG_ASSERT(scope);
 
             ASTContext context(*scope, LookupLocation::before(*this));
             defaultOutputSkew = ClockingSkew::fromSyntax(*outputSkewSyntax, context);
@@ -1547,7 +1547,7 @@ RandSeqProductionSymbol& RandSeqProductionSymbol::fromSyntax(Compilation& compil
 std::span<const RandSeqProductionSymbol::Rule> RandSeqProductionSymbol::getRules() const {
     if (!rules) {
         auto syntax = getSyntax();
-        ASSERT(syntax);
+        SLANG_ASSERT(syntax);
 
         ASTContext context(*this, LookupLocation::max);
 
@@ -1556,7 +1556,7 @@ std::span<const RandSeqProductionSymbol::Rule> RandSeqProductionSymbol::getRules
 
         SmallVector<Rule, 8> buffer;
         for (auto rule : syntax->as<ProductionSyntax>().rules) {
-            ASSERT(blockIt != blocks.end());
+            SLANG_ASSERT(blockIt != blocks.end());
             buffer.push_back(createRule(*rule, context, *blockIt++));
         }
 
@@ -1621,7 +1621,7 @@ const RandSeqProductionSymbol::CaseProd& RandSeqProductionSymbol::createCaseProd
                     defItem = createProdItem(*item->as<DefaultRsCaseItemSyntax>().item, context);
                 break;
             default:
-                ASSUME_UNREACHABLE;
+                SLANG_UNREACHABLE;
         }
     }
 
@@ -1673,7 +1673,7 @@ RandSeqProductionSymbol::Rule RandSeqProductionSymbol::createRule(
                     comp.emplace<ProdItem>(createProdItem(p->as<RsProdItemSyntax>(), context)));
                 break;
             case SyntaxKind::RsCodeBlock: {
-                ASSERT(blockIt != blockRange.end());
+                SLANG_ASSERT(blockIt != blockRange.end());
                 prods.push_back(comp.emplace<CodeBlockProd>(*blockIt++));
                 break;
             }
@@ -1705,7 +1705,7 @@ RandSeqProductionSymbol::Rule RandSeqProductionSymbol::createRule(
                 prods.push_back(&createCaseProd(p->as<RsCaseSyntax>(), context));
                 break;
             default:
-                ASSUME_UNREACHABLE;
+                SLANG_UNREACHABLE;
         }
     }
 
@@ -1716,7 +1716,7 @@ RandSeqProductionSymbol::Rule RandSeqProductionSymbol::createRule(
         context.requireIntegral(*weightExpr);
 
         if (wc->codeBlock) {
-            ASSERT(blockIt != blockRange.end());
+            SLANG_ASSERT(blockIt != blockRange.end());
             codeBlock = CodeBlockProd(*blockIt++);
         }
     }
@@ -1788,12 +1788,12 @@ void RandSeqProductionSymbol::createRuleVariables(const RsRuleSyntax& syntax, co
                             countProd(*item->as<DefaultRsCaseItemSyntax>().item);
                             break;
                         default:
-                            ASSUME_UNREACHABLE;
+                            SLANG_UNREACHABLE;
                     }
                 }
                 break;
             default:
-                ASSUME_UNREACHABLE;
+                SLANG_UNREACHABLE;
         }
     }
 
@@ -1892,7 +1892,7 @@ void RandSeqProductionSymbol::serializeTo(ASTSerializer& serializer) const {
                     break;
                 }
                 default:
-                    ASSUME_UNREACHABLE;
+                    SLANG_UNREACHABLE;
             }
             serializer.endObject();
         }

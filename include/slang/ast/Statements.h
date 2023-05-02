@@ -209,13 +209,13 @@ public:
 
     template<typename T>
     T& as() {
-        ASSERT(T::isKind(kind));
+        SLANG_ASSERT(T::isKind(kind));
         return *static_cast<T*>(this);
     }
 
     template<typename T>
     const T& as() const {
-        ASSERT(T::isKind(kind));
+        SLANG_ASSERT(T::isKind(kind));
         return *static_cast<const T*>(this);
     }
 

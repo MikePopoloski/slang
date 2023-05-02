@@ -46,7 +46,7 @@ public:
         }
         else {
             auto elemType = args[0]->type->getArrayElementType();
-            ASSERT(elemType);
+            SLANG_ASSERT(elemType);
 
             if (!elemType->isIntegral()) {
                 context.addDiag(diag::ArrayMethodIntegral, args[0]->sourceRange) << name;
@@ -65,7 +65,7 @@ public:
 
         auto [iterExpr, iterVar] = callInfo.getIteratorInfo();
         if (iterExpr) {
-            ASSERT(iterVar);
+            SLANG_ASSERT(iterVar);
             if (arr.empty()) {
                 auto elemType = iterExpr->type;
                 return SVInt(elemType->getBitWidth(), 0, elemType->isSigned());
@@ -133,7 +133,7 @@ public:
         }
         else {
             auto elemType = args[0]->type->getArrayElementType();
-            ASSERT(elemType);
+            SLANG_ASSERT(elemType);
 
             if (!isComparable(*elemType)) {
                 context.addDiag(diag::ArrayMethodComparable, args[0]->sourceRange) << name;
@@ -156,7 +156,7 @@ public:
 
         auto [iterExpr, iterVar] = callInfo.getIteratorInfo();
         if (iterExpr) {
-            ASSERT(iterVar);
+            SLANG_ASSERT(iterVar);
             auto guard = context.disableCaching();
             auto iterVal = context.createLocal(iterVar);
 
@@ -373,7 +373,7 @@ public:
             return comp.getErrorType();
 
         auto elemType = args[0]->type->getArrayElementType();
-        ASSERT(elemType);
+        SLANG_ASSERT(elemType);
 
         if (iterExpr) {
             if (!isComparable(*iterExpr->type)) {
@@ -401,7 +401,7 @@ public:
 
         auto [iterExpr, iterVar] = callInfo.getIteratorInfo();
         if (iterExpr) {
-            ASSERT(iterVar);
+            SLANG_ASSERT(iterVar);
 
             auto it = begin(arr);
             auto guard = context.disableCaching();
@@ -490,7 +490,7 @@ public:
 
         auto [iterExpr, iterVar] = callInfo.getIteratorInfo();
         if (iterExpr) {
-            ASSERT(iterVar);
+            SLANG_ASSERT(iterVar);
             auto guard = context.disableCaching();
             auto iterVal = context.createLocal(iterVar);
 
@@ -735,7 +735,7 @@ public:
             return nullptr;
 
         auto target = lval.resolve();
-        ASSERT(target && target->isQueue());
+        SLANG_ASSERT(target && target->isQueue());
 
         auto& q = *target->queue();
         if (q.empty()) {
@@ -793,7 +793,7 @@ public:
             return nullptr;
 
         auto target = lval.resolve();
-        ASSERT(target && target->isQueue());
+        SLANG_ASSERT(target && target->isQueue());
 
         auto& q = *target->queue();
         if (front)
@@ -849,7 +849,7 @@ public:
             return nullptr;
 
         auto target = lval.resolve();
-        ASSERT(target && target->isQueue());
+        SLANG_ASSERT(target && target->isQueue());
 
         auto& q = *target->queue();
         std::optional<int32_t> index = ci.integer().as<int32_t>();
@@ -893,7 +893,7 @@ public:
             return nullptr;
 
         auto target = lval.resolve();
-        ASSERT(target && target->isQueue());
+        SLANG_ASSERT(target && target->isQueue());
         auto& q = *target->queue();
 
         // If no arguments, clear the queue.

@@ -71,7 +71,7 @@ Expression& CallExpression::fromLookup(Compilation& compilation, const Subroutin
                                        const ArrayOrRandomizeMethodExpressionSyntax* withClause,
                                        SourceRange range, const ASTContext& context) {
     if (subroutine.index() == 1) {
-        ASSERT(!thisClass);
+        SLANG_ASSERT(!thisClass);
         const SystemCallInfo& info = std::get<1>(subroutine);
         return createSystemCall(compilation, *info.subroutine, nullptr, syntax, withClause, range,
                                 context);
@@ -81,7 +81,7 @@ Expression& CallExpression::fromLookup(Compilation& compilation, const Subroutin
     // If we're being called through a class handle (thisClass is non-null) that's fine,
     // otherwise we need to be called by a non-static member within the same class.
     auto sub = std::get<0>(subroutine);
-    ASSERT(sub->getParentScope());
+    SLANG_ASSERT(sub->getParentScope());
     auto& subroutineParent = sub->getParentScope()->asSymbol();
     if (!sub->flags.has(MethodFlags::Static) && !thisClass &&
         subroutineParent.kind == SymbolKind::ClassType) {
@@ -113,7 +113,7 @@ Expression& CallExpression::fromLookup(Compilation& compilation, const Subroutin
         else
             ss = compilation.getSystemSubroutine(sub->name);
 
-        ASSERT(ss);
+        SLANG_ASSERT(ss);
         return createSystemCall(compilation, *ss, thisClass, syntax, withClause, range, context,
                                 sub->getParentScope());
     }
@@ -220,7 +220,7 @@ bool CallExpression::bindArgs(const ArgumentListSyntax* argSyntax,
             case ArgumentDirection::InOut:
                 // The default value binding should always use bindLValue() which
                 // will always return either an AssignmentExpression or a bad expr.
-                ASSERT(expr.kind == ExpressionKind::Assignment || expr.bad());
+                SLANG_ASSERT(expr.kind == ExpressionKind::Assignment || expr.bad());
                 if (expr.kind == ExpressionKind::Assignment)
                     expr.as<AssignmentExpression>().left().requireLValue(context);
                 break;
@@ -614,14 +614,14 @@ Expression& CallExpression::createSystemCall(
                         }
                         break;
                     default:
-                        ASSUME_UNREACHABLE;
+                        SLANG_UNREACHABLE;
                 }
             }
         }
 
         if (withClause) {
             // Finally bind the inline constraint block if we have one.
-            ASSERT(withClause->constraints);
+            SLANG_ASSERT(withClause->constraints);
 
             // For scope randomize calls we need to register the
             // arg variables so they get treated as 'rand'.
@@ -665,7 +665,7 @@ ConstantValue CallExpression::evalImpl(EvalContext& context) const {
     // If thisClass() is set call eval on it to be sure an error is issued.
     if (thisClass()) {
         auto cv = thisClass()->eval(context);
-        ASSERT(!cv);
+        SLANG_ASSERT(!cv);
         return nullptr;
     }
 
@@ -696,7 +696,7 @@ ConstantValue CallExpression::evalImpl(EvalContext& context) const {
     for (size_t i = 0; i < formals.size(); i++)
         context.createLocal(formals[i], args[i]);
 
-    ASSERT(symbol.returnValVar);
+    SLANG_ASSERT(symbol.returnValVar);
     context.createLocal(symbol.returnValVar);
 
     using ER = Statement::EvalResult;
@@ -714,7 +714,7 @@ ConstantValue CallExpression::evalImpl(EvalContext& context) const {
     if (er == ER::Fail || er == ER::Disable)
         return nullptr;
 
-    ASSERT(er == ER::Success || er == ER::Return);
+    SLANG_ASSERT(er == ER::Success || er == ER::Return);
     return result;
 }
 
@@ -766,7 +766,7 @@ bool CallExpression::checkConstant(EvalContext& context, const SubroutineSymbol&
     }
 
     auto scope = subroutine.getParentScope();
-    ASSERT(scope);
+    SLANG_ASSERT(scope);
     if (scope->asSymbol().kind == SymbolKind::GenerateBlock) {
         context.addDiag(diag::ConstEvalFunctionInsideGenerate, range);
         return false;

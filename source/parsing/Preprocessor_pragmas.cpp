@@ -366,7 +366,7 @@ void Preprocessor::skipMacroTokensBeforeProtectRegion(Token directive,
     // We're about to lex an encoded / encrypted data block based on a pragma
     // protect directive, so we don't expect there to be macro tokens still pending.
     // If there are, issue an error and skip them.
-    ASSERT(!currentToken);
+    SLANG_ASSERT(!currentToken);
     if (currentMacroToken) {
         addDiag(diag::MacroTokensAfterPragmaProtect, currentMacroToken->range())
             .addNote(diag::NoteDirectiveHere, directive.range());

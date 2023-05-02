@@ -146,8 +146,8 @@ static bool checkMacroArgRanges(const DiagnosticEngine& engine, SourceLocation l
         return false;
 
     for (auto& range : mappedRanges) {
-        ASSERT(range.start().buffer() == loc.buffer());
-        ASSERT(range.end().buffer() == loc.buffer());
+        SLANG_ASSERT(range.start().buffer() == loc.buffer());
+        SLANG_ASSERT(range.end().buffer() == loc.buffer());
 
         if (loc < range.start() || loc >= range.end())
             return false;

@@ -59,7 +59,7 @@ TimingControl& TimingControl::bind(const TimingControlSyntax& syntax, const ASTC
             result = &CycleDelayControl::fromSyntax(comp, syntax.as<DelaySyntax>(), context);
             break;
         default:
-            ASSUME_UNREACHABLE;
+            SLANG_UNREACHABLE;
     }
 
     result->syntax = &syntax;
@@ -237,7 +237,7 @@ TimingControl& Delay3Control::fromParams(Compilation& compilation,
         }
     }
 
-    ASSERT(delays[0]);
+    SLANG_ASSERT(delays[0]);
     return *compilation.emplace<Delay3Control>(*delays[0], delays[1], delays[2],
                                                items.sourceRange());
 }
@@ -277,7 +277,7 @@ TimingControl& SignalEventControl::fromSyntax(Compilation& compilation,
                                               const ASTContext& context) {
     // We can hit this case for 'iff' binary property expressions that are actually
     // just a signal event with an 'iff' clause.
-    ASSERT(syntax.kind == SyntaxKind::IffPropertyExpr);
+    SLANG_ASSERT(syntax.kind == SyntaxKind::IffPropertyExpr);
 
     auto left = context.requireSimpleExpr(*syntax.left, diag::InvalidSyntaxInEventExpr);
     auto right = context.requireSimpleExpr(*syntax.left, diag::InvalidSyntaxInEventExpr);
@@ -408,7 +408,7 @@ static void collectEvents(const ASTContext& context, const SyntaxNode& expr,
             break;
         }
         default:
-            ASSUME_UNREACHABLE;
+            SLANG_UNREACHABLE;
     }
 }
 
@@ -539,7 +539,7 @@ TimingControl& BlockEventListControl::fromSyntax(const BlockEventExpressionSynta
 void BlockEventListControl::serializeTo(ASTSerializer& serializer) const {
     serializer.startArray("events");
     for (auto& event : events) {
-        ASSERT(event.target);
+        SLANG_ASSERT(event.target);
         serializer.startObject();
         serializer.writeLink("target", *event.target);
         serializer.write("isBegin", event.isBegin);

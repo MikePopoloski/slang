@@ -75,12 +75,12 @@ bool ASTContext::inAlwaysCombLatch() const {
 }
 
 void ASTContext::setInstance(const InstanceSymbolBase& inst) {
-    ASSERT(!instanceOrProc);
+    SLANG_ASSERT(!instanceOrProc);
     instanceOrProc = &inst;
 }
 
 void ASTContext::setProceduralBlock(const ProceduralBlockSymbol& block) {
-    ASSERT(!instanceOrProc);
+    SLANG_ASSERT(!instanceOrProc);
     instanceOrProc = &block;
 }
 
@@ -306,7 +306,7 @@ EvaluatedDimension ASTContext::evalDimension(const VariableDimensionSyntax& synt
                                    isPacked, result);
                 break;
             default:
-                ASSUME_UNREACHABLE;
+                SLANG_UNREACHABLE;
         }
     }
 
@@ -500,7 +500,7 @@ void ASTContext::addAssertionBacktrace(Diagnostic& diag) const {
         diag.addNote(diag::NoteExpandedHere, inst.argExpansionLoc);
     }
     else {
-        ASSERT(inst.symbol);
+        SLANG_ASSERT(inst.symbol);
         if (!inst.symbol->name.empty()) {
             auto& note = diag.addNote(diag::NoteWhileExpanding, inst.instanceLoc);
             switch (inst.symbol->kind) {
@@ -514,13 +514,13 @@ void ASTContext::addAssertionBacktrace(Diagnostic& diag) const {
                     note << "let declaration"sv;
                     break;
                 default:
-                    ASSUME_UNREACHABLE;
+                    SLANG_UNREACHABLE;
             }
             note << inst.symbol->name;
         }
     }
 
-    ASSERT(inst.prevContext);
+    SLANG_ASSERT(inst.prevContext);
     inst.prevContext->addAssertionBacktrace(diag);
 }
 

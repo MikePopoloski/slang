@@ -62,7 +62,7 @@ public:
         else {
             // Ensure that we get some kind of diagnostic issued here.
             auto result = expr.eval(context);
-            ASSERT(result.bad());
+            SLANG_ASSERT(result.bad());
             return nullptr;
         }
     }
@@ -344,7 +344,7 @@ const Expression& Expression::bindArgument(const Type& argType, ArgumentDirectio
         case ArgumentDirection::Ref:
             return bindRefArg(argType, isConstRef, syntax, loc, context);
     }
-    ASSUME_UNREACHABLE;
+    SLANG_UNREACHABLE;
 }
 
 bool Expression::checkConnectionDirection(const Expression& expr, ArgumentDirection direction,
@@ -365,7 +365,7 @@ bool Expression::checkConnectionDirection(const Expression& expr, ArgumentDirect
             }
             return true;
     }
-    ASSUME_UNREACHABLE;
+    SLANG_UNREACHABLE;
 }
 
 std::tuple<const Expression*, const Type*> Expression::bindImplicitParam(
@@ -471,7 +471,7 @@ bool Expression::requireLValue(const ASTContext& context, SourceLocation locatio
             if (!concat.type->isIntegral())
                 break;
 
-            ASSERT(!longestStaticPrefix || flags.has(AssignFlags::SlicedPort));
+            SLANG_ASSERT(!longestStaticPrefix || flags.has(AssignFlags::SlicedPort));
             for (auto op : concat.operands()) {
                 if (!op->requireLValue(context, location, flags | AssignFlags::InConcat)) {
                     return false;
@@ -480,7 +480,7 @@ bool Expression::requireLValue(const ASTContext& context, SourceLocation locatio
             return true;
         }
         case ExpressionKind::Streaming: {
-            ASSERT(!longestStaticPrefix);
+            SLANG_ASSERT(!longestStaticPrefix);
             auto& stream = as<StreamingConcatenationExpression>();
             for (auto& op : stream.streams()) {
                 if (!op.operand->requireLValue(context, location, flags | AssignFlags::InConcat,
@@ -546,7 +546,7 @@ void Expression::getLongestStaticPrefixes(
             break;
         }
         case ExpressionKind::Streaming: {
-            ASSERT(!longestStaticPrefix);
+            SLANG_ASSERT(!longestStaticPrefix);
             auto& stream = as<StreamingConcatenationExpression>();
             for (auto& op : stream.streams())
                 op.operand->getLongestStaticPrefixes(results, evalContext, nullptr);
@@ -922,7 +922,7 @@ Expression& Expression::create(Compilation& compilation, const ExpressionSyntax&
                                                          context);
                 break;
             }
-            ASSUME_UNREACHABLE;
+            SLANG_UNREACHABLE;
     }
 
     result->syntax = &syntax;
@@ -984,7 +984,7 @@ Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syn
 
     if (result.systemSubroutine) {
         // There won't be any selectors here; this gets checked in the lookup call.
-        ASSERT(result.selectors.empty());
+        SLANG_ASSERT(result.selectors.empty());
 
         SourceRange callRange = invocation ? invocation->sourceRange() : syntax.sourceRange();
         CallExpression::SystemCallInfo callInfo{result.systemSubroutine, context.scope, {}};
@@ -1040,7 +1040,7 @@ Expression& Expression::bindLookupResult(Compilation& compilation, LookupResult&
             auto& sym = scope->asSymbol();
             if (sym.kind == SymbolKind::Subroutine &&
                 sym.as<SubroutineSymbol>().returnValVar == symbol) {
-                ASSERT(sym.as<SubroutineSymbol>().subroutineKind == SubroutineKind::Function);
+                SLANG_ASSERT(sym.as<SubroutineSymbol>().subroutineKind == SubroutineKind::Function);
                 symbol = &sym;
             }
         }
@@ -1049,7 +1049,7 @@ Expression& Expression::bindLookupResult(Compilation& compilation, LookupResult&
     Expression* expr;
     switch (symbol->kind) {
         case SymbolKind::Subroutine: {
-            ASSERT(result.selectors.empty());
+            SLANG_ASSERT(result.selectors.empty());
             SourceRange callRange = invocation ? invocation->sourceRange() : sourceRange;
             expr = &CallExpression::fromLookup(compilation, &symbol->as<SubroutineSymbol>(),
                                                nullptr, invocation, withClause, callRange, context);
@@ -1174,7 +1174,7 @@ Expression& Expression::bindSelector(Compilation& compilation, Expression& value
                                                      selector->as<RangeSelectSyntax>(), fullRange,
                                                      context);
         default:
-            ASSUME_UNREACHABLE;
+            SLANG_UNREACHABLE;
     }
 }
 
@@ -1280,7 +1280,7 @@ Expression* Expression::tryBindInterfaceRef(const ASTContext& context,
 
     // Now make sure the interface or modport we found matches the target type.
     // Fabricate a virtual interface type for the rhs that we can use for matching.
-    ASSERT(iface->parentInstance);
+    SLANG_ASSERT(iface->parentInstance);
     auto sourceRange = syntax.sourceRange();
     const Type* type = comp.emplace<VirtualInterfaceType>(*iface->parentInstance, modport,
                                                           /* isRealIface */ true,
@@ -1326,7 +1326,7 @@ void Expression::contextDetermined(const ASTContext& context, Expression*& expr,
 }
 
 void Expression::selfDetermined(const ASTContext& context, Expression*& expr) {
-    ASSERT(expr->type);
+    SLANG_ASSERT(expr->type);
     PropagationVisitor visitor(context, *expr->type, {});
     expr = &expr->visit(visitor);
 }

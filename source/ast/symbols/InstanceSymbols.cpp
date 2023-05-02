@@ -110,7 +110,7 @@ private:
         if (it == end)
             return createInstance(syntax, overrideNode);
 
-        ASSERT(syntax.decl);
+        SLANG_ASSERT(syntax.decl);
         auto nameToken = syntax.decl->name;
         auto createEmpty = [&]() {
             return compilation.emplace<InstanceArraySymbol>(compilation, nameToken.valueText(),
@@ -287,7 +287,7 @@ static const HierarchyOverrideNode* findParentOverrideNode(const Scope& scope) {
         return sym.as<InstanceBodySymbol>().hierarchyOverrideNode;
 
     auto parentScope = sym.getParentScope();
-    ASSERT(parentScope);
+    SLANG_ASSERT(parentScope);
 
     auto node = findParentOverrideNode(*parentScope);
     if (!node)
@@ -304,7 +304,7 @@ static const HierarchyOverrideNode* findParentOverrideNode(const Scope& scope) {
     }
 
     auto syntax = sym.getSyntax();
-    ASSERT(syntax);
+    SLANG_ASSERT(syntax);
 
     auto it = node->childNodes.find(*syntax);
     if (it == node->childNodes.end())
@@ -455,7 +455,7 @@ void InstanceSymbol::fromFixupSyntax(Compilation& comp, const Definition& defini
 
     SmallVector<const Symbol*> implicitNets;
     fromSyntax(comp, *instantiation, context, results, implicitNets, /* isFromBind */ false);
-    ASSERT(implicitNets.empty());
+    SLANG_ASSERT(implicitNets.empty());
 }
 
 const Definition& InstanceSymbol::getDefinition() const {
@@ -532,7 +532,7 @@ void InstanceSymbol::resolvePortConnections() const {
         return;
 
     auto scope = getParentScope();
-    ASSERT(scope);
+    SLANG_ASSERT(scope);
 
     auto& comp = scope->getCompilation();
     connectionMap = comp.allocPointerMap();
@@ -547,12 +547,12 @@ void InstanceSymbol::resolvePortConnections() const {
 
     auto portIt = portList.begin();
     for (auto conn : conns) {
-        ASSERT(portIt != portList.end());
+        SLANG_ASSERT(portIt != portList.end());
         connectionMap->emplace(reinterpret_cast<uintptr_t>(*portIt++),
                                reinterpret_cast<uintptr_t>(conn));
     }
 
-    ASSERT(portIt == portList.end());
+    SLANG_ASSERT(portIt == portList.end());
     connections = conns.copy(comp);
 }
 
@@ -631,10 +631,10 @@ InstanceBodySymbol& InstanceBodySymbol::fromDefinition(Compilation& comp,
         }
         else {
             auto createParam = [&](auto& declarator) {
-                ASSERT(paramIt != definition.parameters.end());
+                SLANG_ASSERT(paramIt != definition.parameters.end());
 
                 auto& decl = *paramIt;
-                ASSERT(declarator.name.valueText() == decl.name);
+                SLANG_ASSERT(declarator.name.valueText() == decl.name);
 
                 auto& param = paramBuilder.createParam(decl, *result, instanceLoc);
                 params.push_back(&param);
@@ -830,7 +830,7 @@ std::span<const AssertionExpr* const> UninstantiatedDefSymbol::getPortConnection
     if (!ports) {
         auto syntax = getSyntax();
         auto scope = getParentScope();
-        ASSERT(syntax && scope);
+        SLANG_ASSERT(syntax && scope);
 
         auto& comp = scope->getCompilation();
         ASTContext context(*scope, LookupLocation::after(*this));
@@ -888,7 +888,7 @@ void UninstantiatedDefSymbol::serializeTo(ASTSerializer& serializer) const {
 
     auto conns = getPortConnections();
     auto names = getPortNames();
-    ASSERT(conns.size() == names.size());
+    SLANG_ASSERT(conns.size() == names.size());
 
     serializer.startArray("ports");
     for (size_t i = 0; i < conns.size(); i++) {
@@ -933,7 +933,7 @@ Symbol* recursePrimArray(Compilation& compilation, const PrimitiveSymbol& primit
     if (it == end)
         return createPrimInst(compilation, *context.scope, primitive, instance, attributes, path);
 
-    ASSERT(instance.decl);
+    SLANG_ASSERT(instance.decl);
     auto nameToken = instance.decl->name;
     auto createEmpty = [&]() {
         return compilation.emplace<InstanceArraySymbol>(compilation, nameToken.valueText(),
@@ -1029,7 +1029,7 @@ void PrimitiveInstanceSymbol::fromSyntax(const PrimitiveInstantiationSyntax& syn
         // See if there is a definition with this name, which indicates an error
         // in providing a drive strength or net delay.
         if (comp.getDefinition(name, *context.scope)) {
-            ASSERT(syntax.strength || syntax.delay);
+            SLANG_ASSERT(syntax.strength || syntax.delay);
             if (syntax.strength) {
                 context.addDiag(diag::InstanceWithStrength, syntax.strength->sourceRange()) << name;
             }
@@ -1053,7 +1053,7 @@ std::span<const Expression* const> PrimitiveInstanceSymbol::getPortConnections()
     if (!ports) {
         auto syntax = getSyntax();
         auto scope = getParentScope();
-        ASSERT(syntax && scope);
+        SLANG_ASSERT(syntax && scope);
 
         auto& comp = scope->getCompilation();
         ASTContext context(*scope, LookupLocation::after(*this), ASTFlags::NonProcedural);
@@ -1102,7 +1102,7 @@ std::span<const Expression* const> PrimitiveInstanceSymbol::getPortConnections()
                 else
                     dir = conns.size() - 1 ? ArgumentDirection::In : ArgumentDirection::Out;
 
-                ASSERT(conns[i]);
+                SLANG_ASSERT(conns[i]);
                 results.push_back(
                     &Expression::bindArgument(comp.getLogicType(), dir, *conns[i], context));
             }

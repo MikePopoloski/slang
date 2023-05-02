@@ -25,7 +25,7 @@ std::optional<VariableLifetime> SemanticFacts::getVariableLifetime(Token token) 
         case TokenKind::AutomaticKeyword: return VariableLifetime::Automatic;
         case TokenKind::StaticKeyword: return VariableLifetime::Static;
         case TokenKind::Unknown: return std::nullopt;
-        default: ASSUME_UNREACHABLE;
+        default: SLANG_UNREACHABLE;
     }
 }
 
@@ -35,7 +35,7 @@ ArgumentDirection SemanticFacts::getDirection(TokenKind kind) {
         case TokenKind::InOutKeyword: return ArgumentDirection::InOut;
         case TokenKind::OutputKeyword: return ArgumentDirection::Out;
         case TokenKind::RefKeyword: return ArgumentDirection::Ref;
-        default: ASSUME_UNREACHABLE;
+        default: SLANG_UNREACHABLE;
     }
 }
 
@@ -47,7 +47,7 @@ ProceduralBlockKind SemanticFacts::getProceduralBlockKind(SyntaxKind kind) {
         case SyntaxKind::AlwaysFFBlock: return ProceduralBlockKind::AlwaysFF;
         case SyntaxKind::InitialBlock: return ProceduralBlockKind::Initial;
         case SyntaxKind::FinalBlock: return ProceduralBlockKind::Final;
-        default: ASSUME_UNREACHABLE;
+        default: SLANG_UNREACHABLE;
     }
 }
 
@@ -56,7 +56,7 @@ DefinitionKind SemanticFacts::getDefinitionKind(SyntaxKind kind) {
         case SyntaxKind::ModuleDeclaration: return DefinitionKind::Module;
         case SyntaxKind::InterfaceDeclaration: return DefinitionKind::Interface;
         case SyntaxKind::ProgramDeclaration: return DefinitionKind::Program;
-        default: ASSUME_UNREACHABLE;
+        default: SLANG_UNREACHABLE;
     }
 }
 
@@ -80,7 +80,7 @@ AssertionKind SemanticFacts::getAssertKind(SyntaxKind kind) {
         case SyntaxKind::CoverSequenceStatement: return AssertionKind::CoverSequence;
         case SyntaxKind::ExpectPropertyStatement: return AssertionKind::Expect;
         case SyntaxKind::RestrictPropertyStatement: return AssertionKind::Restrict;
-        default: ASSUME_UNREACHABLE;
+        default: SLANG_UNREACHABLE;
     }
 }
 
@@ -96,7 +96,7 @@ ElabSystemTaskKind SemanticFacts::getElabSystemTaskKind(Token token) {
         return ElabSystemTaskKind::Info;
     if (name == "$static_assert"sv)
         return ElabSystemTaskKind::StaticAssert;
-    ASSUME_UNREACHABLE;
+    SLANG_UNREACHABLE;
 }
 
 PulseStyleKind SemanticFacts::getPulseStyleKind(TokenKind kind) {
@@ -105,7 +105,7 @@ PulseStyleKind SemanticFacts::getPulseStyleKind(TokenKind kind) {
         case TokenKind::PulseStyleOnDetectKeyword: return PulseStyleKind::OnDetect;
         case TokenKind::ShowCancelledKeyword: return PulseStyleKind::ShowCancelled;
         case TokenKind::NoShowCancelledKeyword: return PulseStyleKind::NoShowCancelled;
-        default: ASSUME_UNREACHABLE;
+        default: SLANG_UNREACHABLE;
     }
 }
 
@@ -114,7 +114,7 @@ ChargeStrength SemanticFacts::getChargeStrength(TokenKind kind) {
         case TokenKind::SmallKeyword: return ChargeStrength::Small;
         case TokenKind::MediumKeyword: return ChargeStrength::Medium;
         case TokenKind::LargeKeyword: return ChargeStrength::Large;
-        default: ASSUME_UNREACHABLE;
+        default: SLANG_UNREACHABLE;
     }
 }
 // clang-format on
@@ -134,7 +134,7 @@ std::string_view SemanticFacts::getProcedureKindStr(ProceduralBlockKind kind) {
         case ProceduralBlockKind::AlwaysFF:
             return "always_ff"sv;
     }
-    ASSUME_UNREACHABLE;
+    SLANG_UNREACHABLE;
 }
 
 static DriveStrength getDriveStrengthVal(TokenKind kind) {
@@ -155,7 +155,7 @@ static DriveStrength getDriveStrengthVal(TokenKind kind) {
         case TokenKind::HighZ1Keyword:
             return DriveStrength::HighZ;
         default:
-            ASSUME_UNREACHABLE;
+            SLANG_UNREACHABLE;
     }
 }
 
@@ -188,7 +188,7 @@ StatementBlockKind SemanticFacts::getStatementBlockKind(const BlockStatementSynt
     if (syntax.kind == SyntaxKind::SequentialBlockStatement)
         return StatementBlockKind::Sequential;
 
-    ASSERT(syntax.kind == SyntaxKind::ParallelBlockStatement);
+    SLANG_ASSERT(syntax.kind == SyntaxKind::ParallelBlockStatement);
     switch (syntax.end.kind) {
         case TokenKind::JoinAnyKeyword:
             return StatementBlockKind::JoinAny;

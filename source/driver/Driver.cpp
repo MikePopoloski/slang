@@ -266,7 +266,7 @@ bool Driver::processCommandFile(std::string_view fileName, bool makeRelative) {
     parseOpts.supportComments = true;
     parseOpts.ignoreDuplicates = true;
 
-    ASSERT(!buffer.empty());
+    SLANG_ASSERT(!buffer.empty());
     buffer.pop_back();
 
     std::string_view argStr(buffer.data(), buffer.size());

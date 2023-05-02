@@ -62,7 +62,7 @@ Token ParserBase::peek() {
             window.addNew();
         window.currentToken = window.buffer[window.currentOffset];
     }
-    ASSERT(window.currentToken);
+    SLANG_ASSERT(window.currentToken);
     return window.currentToken;
 }
 
@@ -117,7 +117,7 @@ Token ParserBase::expect(TokenKind kind) {
 
 void ParserBase::skipToken(std::optional<DiagCode> diagCode) {
     auto token = peek();
-    ASSERT(token.kind != TokenKind::EndOfFile);
+    SLANG_ASSERT(token.kind != TokenKind::EndOfFile);
 
     bool haveDiag = haveDiagAtCurrentLoc();
     skippedTokens.push_back(token);
@@ -254,7 +254,7 @@ void ParserBase::Window::insertHead(std::span<const Token> tokens) {
     }
 
     size_t existing = count - currentOffset;
-    ASSERT(tokens.size() + existing < capacity);
+    SLANG_ASSERT(tokens.size() + existing < capacity);
 
     memmove(buffer + tokens.size(), buffer + currentOffset, existing * sizeof(Token));
     memcpy(buffer, tokens.data(), tokens.size() * sizeof(Token));

@@ -139,7 +139,7 @@ void PackageSymbol::noteImport(const Symbol& symbol) const {
     const Symbol* packageParent;
     auto targetScope = symbol.getParentScope();
     while (true) {
-        ASSERT(targetScope);
+        SLANG_ASSERT(targetScope);
         packageParent = &targetScope->asSymbol();
         if (packageParent->kind == SymbolKind::Package)
             break;

@@ -557,7 +557,7 @@ struct PostElabVisitor : public ASTVisitor<PostElabVisitor, false, false> {
         }
         else if (symbol.kind == SymbolKind::FormalArgument) {
             auto parent = symbol.getParentScope();
-            ASSERT(parent);
+            SLANG_ASSERT(parent);
 
             if (parent->asSymbol().kind == SymbolKind::Subroutine) {
                 auto& sub = parent->asSymbol().as<SubroutineSymbol>();

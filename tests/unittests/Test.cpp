@@ -15,7 +15,7 @@ std::string findTestDir() {
     auto path = fs::current_path();
     while (!fs::exists(path / "tests")) {
         path = path.parent_path();
-        ASSERT(!path.empty());
+        SLANG_ASSERT(!path.empty());
     }
 
     return (path / "tests/unittests/data/").string();

@@ -1516,7 +1516,7 @@ MemberSyntax* Parser::parseCoverpointMember() {
             if (peek(1).kind == TokenKind::WithKeyword) {
                 auto id = consume();
                 auto with = parseWithClause();
-                ASSERT(with);
+                SLANG_ASSERT(with);
                 initializer = &factory.idWithExprCoverageBinInitializer(id, *with);
                 break;
             }
@@ -2427,7 +2427,7 @@ PrimitiveInstantiationSyntax& Parser::parsePrimitiveInstantiation(AttrList attri
             strength = parsePullStrength(type);
         else {
             strength = parseDriveStrength();
-            ASSERT(strength);
+            SLANG_ASSERT(strength);
             switch (type.kind) {
                 case TokenKind::CmosKeyword:
                 case TokenKind::RcmosKeyword:
@@ -3492,7 +3492,7 @@ void Parser::checkMemberAllowed(const SyntaxNode& member, SyntaxKind parentKind)
         case SyntaxKind::SpecifyBlock:
             return;
         default:
-            ASSUME_UNREACHABLE;
+            SLANG_UNREACHABLE;
     }
 }
 

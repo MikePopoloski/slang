@@ -73,7 +73,7 @@ void ClassPropertySymbol::fromSyntax(const Scope& scope,
                 // so just ignore them here.
                 break;
             default:
-                ASSUME_UNREACHABLE;
+                SLANG_UNREACHABLE;
         }
     }
 
@@ -89,7 +89,7 @@ void ClassPropertySymbol::fromSyntax(const Scope& scope,
                 lifetime = VariableLifetime::Static;
                 break;
             default:
-                ASSUME_UNREACHABLE;
+                SLANG_UNREACHABLE;
         }
     }
 
@@ -247,7 +247,7 @@ void ClassType::populate(const Scope& scope, const ClassDeclarationSyntax& synta
 
 void ClassType::inheritMembers(function_ref<void(const Symbol&)> insertCB) const {
     auto syntax = getSyntax();
-    ASSERT(syntax);
+    SLANG_ASSERT(syntax);
 
     ASTContext context(*this, LookupLocation(this, uint32_t(headerIndex)));
 
@@ -450,7 +450,7 @@ const Expression* ClassType::getBaseConstructorCall() const {
     const Expression* callExpr = nullptr;
 
     auto syntax = getSyntax();
-    ASSERT(syntax);
+    SLANG_ASSERT(syntax);
 
     auto& classSyntax = syntax->as<ClassDeclarationSyntax>();
     if (!classSyntax.extendsClause)
@@ -458,7 +458,7 @@ const Expression* ClassType::getBaseConstructorCall() const {
 
     ensureElaborated();
 
-    ASSERT(baseClass);
+    SLANG_ASSERT(baseClass);
     if (baseClass->isError())
         return nullptr;
 
@@ -610,7 +610,7 @@ void ClassType::handleImplements(const ImplementsClauseSyntax& implementsClause,
 
                         if (origExisting != origNew) {
                             auto parent = existing.getParentScope();
-                            ASSERT(parent);
+                            SLANG_ASSERT(parent);
 
                             auto& diag = context.addDiag(diag::IfaceNameConflict,
                                                          nameSyntax->sourceRange());
@@ -739,7 +739,7 @@ const Symbol& GenericClassDefSymbol::fromSyntax(const Scope& scope,
 
     // Extract information about parameters and save it for later use
     // when building specializations.
-    ASSERT(syntax.parameters);
+    SLANG_ASSERT(syntax.parameters);
     ParameterBuilder::createDecls(scope, *syntax.parameters, result->paramDecls);
 
     return *result;
@@ -750,7 +750,7 @@ const Type* GenericClassDefSymbol::getDefaultSpecialization() const {
         return *defaultSpecialization;
 
     auto scope = getParentScope();
-    ASSERT(scope);
+    SLANG_ASSERT(scope);
 
     auto result = getSpecializationImpl(ASTContext(*scope, LookupLocation::max), location,
                                         /* forceInvalidParams */ false, nullptr);
@@ -771,7 +771,7 @@ const Type& GenericClassDefSymbol::getSpecialization(
 
 const Type& GenericClassDefSymbol::getInvalidSpecialization() const {
     auto scope = getParentScope();
-    ASSERT(scope);
+    SLANG_ASSERT(scope);
 
     auto result = getSpecializationImpl(ASTContext(*scope, LookupLocation::max), location,
                                         /* forceInvalidParams */ true, nullptr);
@@ -787,7 +787,7 @@ const Type* GenericClassDefSymbol::getSpecializationImpl(
 
     auto& comp = context.getCompilation();
     auto scope = getParentScope();
-    ASSERT(scope);
+    SLANG_ASSERT(scope);
 
     // Create a class type instance to hold the parameters. If it turns out we already
     // have this specialization cached we'll throw it away, but that's not a big deal.
@@ -1021,7 +1021,7 @@ const Constraint& ConstraintBlockSymbol::getConstraints() const {
 
     auto syntax = getSyntax();
     auto scope = getParentScope();
-    ASSERT(syntax && scope);
+    SLANG_ASSERT(syntax && scope);
     ASTContext context(*this, LookupLocation::max);
 
     if (syntax->kind == SyntaxKind::ConstraintPrototype) {

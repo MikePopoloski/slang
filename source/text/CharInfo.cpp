@@ -222,7 +222,7 @@ bool isPrintableUnicode(uint32_t c) {
 }
 
 int charWidthUnicode(uint32_t c) {
-    ASSERT(isPrintableUnicode(c));
+    SLANG_ASSERT(isPrintableUnicode(c));
 
     // Sorted list of non-spacing and enclosing combining mark intervals as
     // defined in "3.6 Combination" of
