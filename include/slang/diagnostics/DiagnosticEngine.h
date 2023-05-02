@@ -10,11 +10,10 @@
 #include <filesystem>
 #include <memory>
 #include <string>
-#include <typeindex>
-#include <typeinfo>
 
 #include "slang/diagnostics/Diagnostics.h"
 #include "slang/util/Hash.h"
+#include "slang/util/TypeTraits.h"
 
 namespace slang {
 
@@ -157,14 +156,14 @@ public:
     /// provide formatting for diagnostic arguments of a custom type.
     template<typename ForType>
     void setFormatter(std::shared_ptr<DiagArgFormatter> formatter) {
-        formatters[std::type_index(typeid(ForType))] = std::move(formatter);
+        formatters[type_index::of<ForType>()] = std::move(formatter);
     }
 
     /// Sets a custom formatter for the given type that should apply by default to
     /// all new DiagnosticEngine instances that get created.
     template<typename ForType>
     static void setDefaultFormatter(std::shared_ptr<DiagArgFormatter> formatter) {
-        defaultFormatters[std::type_index(typeid(ForType))] = std::move(formatter);
+        defaultFormatters[type_index::of<ForType>()] = std::move(formatter);
     }
 
     /// Formats the given diagnostic using its arguments and the currently mapped
@@ -265,9 +264,9 @@ private:
     // A list of all registered clients that receive issued diagnostics.
     std::vector<std::shared_ptr<DiagnosticClient>> clients;
 
-    // A map from typeid to a formatter for that type. Used to register custom
+    // A map from type_index to a formatter for that type. Used to register custom
     // formatters for subsystem-specific types.
-    using FormatterMap = flat_hash_map<std::type_index, std::shared_ptr<DiagArgFormatter>>;
+    using FormatterMap = flat_hash_map<type_index, std::shared_ptr<DiagArgFormatter>>;
     mutable FormatterMap formatters;
 
     // A set of default formatters that will be assigned to each new DiagnosticEngine instance

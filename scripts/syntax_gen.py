@@ -541,6 +541,7 @@ std::string_view toString(SyntaxKind kind) {
     cppf.write(
         """};
 
+#ifdef SLANG_RTTI_ENABLED
 const std::type_info* typeFromSyntaxKind(SyntaxKind kind) {
     switch (kind) {
         case SyntaxKind::Unknown: break;
@@ -557,6 +558,7 @@ const std::type_info* typeFromSyntaxKind(SyntaxKind kind) {
         """    }
     return nullptr;
 }
+#endif
 
 }
 """

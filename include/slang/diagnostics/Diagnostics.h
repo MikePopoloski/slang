@@ -16,6 +16,7 @@
 #include "slang/text/SourceLocation.h"
 #include "slang/util/Enum.h"
 #include "slang/util/SmallVector.h"
+#include "slang/util/TypeTraits.h"
 
 namespace slang {
 
@@ -115,8 +116,10 @@ SLANG_EXPORT std::string_view toString(DiagCode code);
 /// Wraps up a reported diagnostic along with location in source and any arguments.
 class SLANG_EXPORT Diagnostic {
 public:
+    using CustomArgType = std::pair<type_index, std::any>;
+
     // Diagnostic-specific arguments that can be used to better report messages.
-    using Arg = std::variant<std::string, int64_t, uint64_t, char, ConstantValue, std::any>;
+    using Arg = std::variant<std::string, int64_t, uint64_t, char, ConstantValue, CustomArgType>;
     std::vector<Arg> args;
     std::vector<SourceRange> ranges;
     std::vector<Diagnostic> notes;

@@ -47,6 +47,22 @@
         slang::assert::handleThrow((e).what(), __FILE__, __LINE__, SLANG_ASSERT_FUNCTION)
 #endif
 
+#if defined(__clang__)
+#    if __has_feature(cxx_rtti)
+#        define SLANG_RTTI_ENABLED
+#    endif
+#elif defined(__GNUG__)
+#    if defined(__GXX_RTTI)
+#        define SLANG_RTTI_ENABLED
+#    endif
+#elif defined(_MSC_VER)
+#    if defined(_CPPRTTI)
+#        define SLANG_RTTI_ENABLED
+#    endif
+#else
+#    define SLANG_RTTI_ENABLED
+#endif
+
 #if !defined(SLANG_ASSERT_ENABLED)
 #    if !defined(NDEBUG)
 #        define SLANG_ASSERT_ENABLED 1

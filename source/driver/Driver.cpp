@@ -658,7 +658,7 @@ bool Driver::parseAllSources() {
                 break;
 
             missingNames = std::move(nextMissingNames);
-            nextMissingNames.clear();
+            nextMissingNames = {};
         }
     }
 

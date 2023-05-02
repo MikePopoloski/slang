@@ -284,9 +284,9 @@ std::string DiagnosticEngine::formatMessage(const Diagnostic& diag) const {
             [&](auto&& t) {
                 // If the argument is a pointer, the fmtlib API needs it unwrapped into a reference.
                 using T = std::decay_t<decltype(t)>;
-                if constexpr (std::is_same_v<std::any, T>) {
-                    if (auto it = formatters.find(t.type()); it != formatters.end())
-                        args.push_back(it->second->format(t));
+                if constexpr (std::is_same_v<Diagnostic::CustomArgType, T>) {
+                    if (auto it = formatters.find(t.first); it != formatters.end())
+                        args.push_back(it->second->format(t.second));
                     else
                         SLANG_THROW(std::runtime_error("No diagnostic formatter for type"));
                 }

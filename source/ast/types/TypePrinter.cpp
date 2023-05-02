@@ -502,13 +502,15 @@ void TypeArgFormatter::startMessage(const Diagnostic& diag) {
 
     SmallMap<std::string_view, const Type*, 4> typeNames;
     for (auto& arg : diag.args) {
-        if (auto typePtr = std::any_cast<const Type*>(std::get_if<std::any>(&arg))) {
-            auto& type = **typePtr;
-            if (type.isAlias()) {
-                auto [it, inserted] = typeNames.emplace(type.name, &type);
-                if (!inserted) {
-                    typesToDisambiguate.insert(&type);
-                    typesToDisambiguate.insert(it->second);
+        if (auto customArg = std::get_if<Diagnostic::CustomArgType>(&arg)) {
+            if (auto typePtr = std::any_cast<const Type*>(&customArg->second)) {
+                auto& type = **typePtr;
+                if (type.isAlias()) {
+                    auto [it, inserted] = typeNames.emplace(type.name, &type);
+                    if (!inserted) {
+                        typesToDisambiguate.insert(&type);
+                        typesToDisambiguate.insert(it->second);
+                    }
                 }
             }
         }

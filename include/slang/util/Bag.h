@@ -8,10 +8,9 @@
 #pragma once
 
 #include <any>
-#include <typeindex>
-#include <typeinfo>
 
 #include "slang/util/Hash.h"
+#include "slang/util/TypeTraits.h"
 
 namespace slang {
 
@@ -34,21 +33,21 @@ public:
     /// (making a copy in the process).
     template<typename T>
     void set(const T& item) {
-        items[std::type_index(typeid(T))] = item;
+        items[type_index::of<T>()] = item;
     }
 
     /// Adds or overwrites an existing element of type T in the bag
     /// (moving in the new item in the process).
     template<typename T>
     void set(T&& item) {
-        items[std::type_index(typeid(T))] = std::forward<T>(item);
+        items[type_index::of<T>()] = std::forward<T>(item);
     }
 
     /// Gets an element of type T from the bag, if it exists.
     /// Otherwise returns nullptr.
     template<typename T>
     const T* get() const {
-        auto it = items.find(std::type_index(typeid(T)));
+        auto it = items.find(type_index::of<T>());
         if (it == items.end())
             return nullptr;
         return std::any_cast<T>(&it->second);
@@ -65,7 +64,7 @@ public:
     }
 
 private:
-    flat_hash_map<std::type_index, std::any> items;
+    flat_hash_map<type_index, std::any> items;
 };
 
 } // namespace slang

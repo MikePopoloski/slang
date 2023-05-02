@@ -102,8 +102,8 @@ bool Diagnostic::operator==(const Diagnostic& rhs) const {
                 using LT = std::decay_t<decltype(l)>;
                 using RT = std::decay_t<decltype(r)>;
                 if constexpr (std::is_same_v<LT, RT>) {
-                    if constexpr (std::is_same_v<std::any, LT>) {
-                        return l.type() == r.type();
+                    if constexpr (std::is_same_v<Diagnostic::CustomArgType, LT>) {
+                        return l.first == r.first;
                     }
                     else {
                         return l == r;
