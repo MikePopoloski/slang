@@ -116,7 +116,7 @@ SLANG_EXPORT std::string_view toString(DiagCode code);
 /// Wraps up a reported diagnostic along with location in source and any arguments.
 class SLANG_EXPORT Diagnostic {
 public:
-    using CustomArgType = std::pair<type_index, std::any>;
+    using CustomArgType = std::pair<SLANG_TYPEINDEX, std::any>;
 
     // Diagnostic-specific arguments that can be used to better report messages.
     using Arg = std::variant<std::string, int64_t, uint64_t, char, ConstantValue, CustomArgType>;

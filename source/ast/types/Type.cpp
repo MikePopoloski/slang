@@ -1247,7 +1247,7 @@ const Type& Type::getPredefinedType(Compilation& compilation, SyntaxKind kind, b
 
 Diagnostic& operator<<(Diagnostic& diag, const Type& arg) {
     SLANG_ASSERT(!arg.isError());
-    diag.args.emplace_back(Diagnostic::CustomArgType{type_index::of<const Type*>(), &arg});
+    diag.args.emplace_back(Diagnostic::CustomArgType{SLANG_TYPEOF(const Type*), &arg});
     return diag;
 }
 

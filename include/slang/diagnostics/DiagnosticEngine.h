@@ -10,6 +10,8 @@
 #include <filesystem>
 #include <memory>
 #include <string>
+#include <typeindex>
+#include <typeinfo>
 
 #include "slang/diagnostics/Diagnostics.h"
 #include "slang/util/Hash.h"
@@ -156,14 +158,14 @@ public:
     /// provide formatting for diagnostic arguments of a custom type.
     template<typename ForType>
     void setFormatter(std::shared_ptr<DiagArgFormatter> formatter) {
-        formatters[type_index::of<ForType>()] = std::move(formatter);
+        formatters[SLANG_TYPEOF(ForType)] = std::move(formatter);
     }
 
     /// Sets a custom formatter for the given type that should apply by default to
     /// all new DiagnosticEngine instances that get created.
     template<typename ForType>
     static void setDefaultFormatter(std::shared_ptr<DiagArgFormatter> formatter) {
-        defaultFormatters[type_index::of<ForType>()] = std::move(formatter);
+        defaultFormatters[SLANG_TYPEOF(ForType)] = std::move(formatter);
     }
 
     /// Formats the given diagnostic using its arguments and the currently mapped
@@ -266,7 +268,7 @@ private:
 
     // A map from type_index to a formatter for that type. Used to register custom
     // formatters for subsystem-specific types.
-    using FormatterMap = flat_hash_map<type_index, std::shared_ptr<DiagArgFormatter>>;
+    using FormatterMap = flat_hash_map<SLANG_TYPEINDEX, std::shared_ptr<DiagArgFormatter>>;
     mutable FormatterMap formatters;
 
     // A set of default formatters that will be assigned to each new DiagnosticEngine instance

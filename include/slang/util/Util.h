@@ -63,6 +63,14 @@
 #    define SLANG_RTTI_ENABLED
 #endif
 
+#if defined(SLANG_RTTI_ENABLED)
+#    define SLANG_TYPEOF(x) std::type_index(typeid(x))
+#    define SLANG_TYPEINDEX std::type_index
+#else
+#    define SLANG_TYPEOF(x) type_index::of<x>()
+#    define SLANG_TYPEINDEX type_index
+#endif
+
 #if !defined(SLANG_ASSERT_ENABLED)
 #    if !defined(NDEBUG)
 #        define SLANG_ASSERT_ENABLED 1
