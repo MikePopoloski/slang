@@ -9,6 +9,7 @@
 #include "Test.h"
 #include "Netlist.h"
 #include "NetlistVisitor.h"
+#include "PathFinder.h"
 
 using namespace netlist;
 
@@ -37,4 +38,17 @@ endmodule
   compilation.getRoot().visit(visitor);
   CHECK(netlist.numNodes() == 15);
   CHECK(netlist.numEdges() == 14);
+  // Lookup the two ports in the netlist.
+  auto *inPort = netlist.lookupPort("chain.i_value");
+  CHECK(inPort != nullptr);
+  auto *outPort = netlist.lookupPort("chain.o_value");
+  CHECK(outPort != nullptr);
+  // Setup the path finder.
+  PathFinder pathFinder(netlist);
+  // i_value -> o_value
+  auto validPath = pathFinder.find(*inPort, *outPort);
+  CHECK(!validPath.empty());
+  // i_value -> o_value
+  auto invalidPath = pathFinder.find(*outPort, *inPort);
+  CHECK(invalidPath.empty());
 }

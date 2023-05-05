@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <vector>
 
 namespace netlist {
@@ -21,6 +22,12 @@ public:
   void add(const NetlistNode *node) {
     nodes.push_back(node);
   }
+
+  void reverse() {
+    std::reverse(nodes.begin(), nodes.end());
+  }
+
+  bool empty() const { return nodes.empty(); }
 };
 
 } // End namespace netlist.

@@ -1,4 +1,4 @@
-module chain(
+module chain_sequence(
   input logic i_value,
   output logic o_value
 );

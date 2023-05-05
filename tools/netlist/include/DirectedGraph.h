@@ -195,6 +195,11 @@ public:
     return it - nodes.begin();
   }
 
+  const NodeType &getNode(node_descriptor node) const {
+    assert(node < nodes.size() && "Node does not exist");
+    return *nodes[node];
+  }
+
   /// Add a node to the graph and return a reference to it.
   NodeType &addNode() {
     nodes.push_back(std::make_unique<NodeType>());
@@ -257,12 +262,6 @@ public:
     return *nodes[node];
   }
 
-  /// Return the descriptor for a particular node.
-  /// FIXME!
-  node_descriptor getNodeDescriptor(NodeType &node) {
-    return &node - nodes.data();
-  }
-
   /// Collect all edges that are incident to the specified node.
   /// Return true if at least one edge was found and false otherwise.
   bool getInEdgesToNode(node_descriptor nodeDesc, std::vector<EdgeType*> &results) const {
@@ -302,9 +301,8 @@ public:
     return removeEdge(findNode(sourceNode), findNode(targetNode));
   }
 
-  const NodeType &getNode(node_descriptor node) const {
-    assert(node < nodes.size() && "Node does not exist");
-    return *nodes[node];
+  bool getInEdgesToNode(const NodeType &node, std::vector<EdgeType*> &results) const {
+    return getInEdgesToNode(findNode(node), results);
   }
 
   size_t outDegree(const NodeType &node) const {

@@ -24,6 +24,7 @@
 
 #include "Netlist.h"
 #include "NetlistVisitor.h"
+#include "SplitVariables.h"
 
 using namespace slang;
 using namespace slang::ast;
@@ -95,7 +96,7 @@ int main(int argc, char** argv) {
   driver.cmdLine.add("-h,--help", showHelp, "Display available options");
   driver.cmdLine.add("--version", showVersion, "Display version information and exit");
   driver.cmdLine.add("-q,--quiet", quiet, "Suppress non-essential output");
-  driver.cmdLine.add("-d,--debug", quiet, "Output debugging information");
+  driver.cmdLine.add("-d,--debug", debug, "Output debugging information");
 
   std::optional<std::string> astJsonFile;
   driver.cmdLine.add("--ast-json", astJsonFile,
@@ -157,6 +158,7 @@ int main(int argc, char** argv) {
     Netlist netlist;
     NetlistVisitor visitor(*compilation, netlist);
     compilation->getRoot().visit(visitor);
+    SplitVariables splitVariables(netlist);
     std::cout << fmt::format("Netlist has {} nodes and {} edges\n",
                              netlist.numNodes(), netlist.numEdges());
 

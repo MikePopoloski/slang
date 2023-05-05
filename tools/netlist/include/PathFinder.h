@@ -15,7 +15,7 @@ private:
   /// can only have one parent node. This map captures these relationships and
   /// is used to determine paths between leaf nodes and the root node of the
   /// tree.
-  using TraversalMap = std::map<Netlist::node_descriptor, Netlist::node_descriptor>;
+  using TraversalMap = std::map<NetlistNode*, NetlistNode*>;
 
   class Visitor : public DepthFirstSearchVisitor<NetlistNode, NetlistEdge> {
   public:
@@ -24,10 +24,10 @@ private:
     void visitNode(NetlistNode &node) override {
     }
     void visitEdge(NetlistEdge &edge) override {
-      auto sourceDesc = netlist.getNodeDescriptor(edge.getSourceNode());
-      auto targetDesc = netlist.getNodeDescriptor(edge.getTargetNode());
-      assert(traversalMap.count(targetDesc) == 0 && "node cannot have two parents");
-      traversalMap[targetDesc] = sourceDesc;
+      auto *sourceNode = &edge.getSourceNode();
+      auto *targetNode = &edge.getTargetNode();
+      assert(traversalMap.count(targetNode) == 0 && "node cannot have two parents");
+      traversalMap[targetNode] = sourceNode;
     }
   private:
     Netlist &netlist;
@@ -41,25 +41,27 @@ public:
   NetlistPath buildPath(TraversalMap &traversalMap,
                         NetlistNode &startNode,
                         NetlistNode &endNode) {
+    // Empty path.
+    if (traversalMap.count(&endNode) == 0) {
+      return NetlistPath();
+    }
     // Single-node path.
     if (startNode == endNode) {
       return NetlistPath({&endNode});
     }
-    // Empty path.
-    if (traversalMap.count(netlist.getNodeDescriptor(endNode)) == 0) {
-      return NetlistPath();
-    }
     // Multi-node path.
     NetlistPath path({&endNode});
-    auto startNodeDesc = netlist.getNodeDescriptor(startNode);
-    auto nextNodeDesc = netlist.getNodeDescriptor(endNode);
+    auto *nextNode = &endNode;
     do {
-      nextNodeDesc = traversalMap[nextNodeDesc];
-      path.add(netlist.getNode(nextNodeDesc));
-    } while (nextNodeDesc != startNodeDesc);
+      nextNode = traversalMap[nextNode];
+      path.add(*nextNode);
+    } while (nextNode != &startNode);
+    path.reverse();
     return path;
   }
 
+  /// Find a path between two nodes in the netlist.
+  /// Return a NetlistPath object that is empty if the path does not exist.
   NetlistPath find(NetlistNode &startNode, NetlistNode &endNode) {
     TraversalMap traversalMap;
     Visitor visitor(netlist, traversalMap);

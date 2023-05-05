@@ -20,6 +20,7 @@
 #include "Config.h"
 #include "Debug.h"
 #include "DirectedGraph.h"
+#include "NetlistPath.h"
 
 using namespace slang;
 
@@ -54,7 +55,7 @@ struct VariableElementSelect : public VariableSelectorBase {
   VariableElementSelect(ConstantValue index) :
     VariableSelectorBase(VariableSelectorKind::ElementSelect), index(std::move(index)) {}
   std::string toString() const override {
-    return fmt::format("[%s]", index.toString());
+    return fmt::format("[{}]", index.toString());
   }
 };
 
@@ -65,7 +66,7 @@ struct VariableRangeSelect : public VariableSelectorBase {
     VariableSelectorBase(VariableSelectorKind::RangeSelect),
     leftIndex(std::move(leftIndex)), rightIndex(std::move(rightIndex)) {}
   std::string toString() const override {
-    return fmt::format("[%s:%s]", leftIndex.toString(), rightIndex.toString());
+    return fmt::format("[{}:{}]", leftIndex.toString(), rightIndex.toString());
   }
 };
 
@@ -75,7 +76,7 @@ struct VariableMemberAccess : public VariableSelectorBase {
   VariableMemberAccess(std::string_view name) :
     VariableSelectorBase(VariableSelectorKind::MemberAccess), name(name) {}
   std::string toString() const override {
-    return fmt::format(".%s", name);
+    return fmt::format(".{}", name);
   }
 };
 
