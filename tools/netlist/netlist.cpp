@@ -59,7 +59,9 @@ void printDOT(const Netlist &netlist, const std::string &fileName) {
   }
   for (auto &node : netlist) {
     for (auto &edge : node->getEdges()) {
-      buffer.format("  N{} -> N{}\n", node->ID, edge->getTargetNode().ID);
+      if (!edge->disabled) {
+        buffer.format("  N{} -> N{}\n", node->ID, edge->getTargetNode().ID);
+      }
     }
   }
   buffer.append("}\n");

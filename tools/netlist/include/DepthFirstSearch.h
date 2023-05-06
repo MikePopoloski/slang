@@ -14,28 +14,38 @@
 
 namespace netlist {
 
-/// A visitor class to be implemented that provides an interface to the
-/// depth-first traversal pattern.
-template<class NodeType, class EdgeType>
-struct DepthFirstSearchVisitor {
-  virtual void visitNode(NodeType &node) = 0;
-  virtual void visitEdge(EdgeType &edge) = 0;
+struct select_all {
+  template <typename T> bool operator()(const T&) const { return true; }
 };
 
-template<class NodeType, class EdgeType>
+template<class NodeType, class EdgeType, class Visitor, class EdgePredicate = select_all>
 class DepthFirstSearch {
 public:
-  DepthFirstSearch(DepthFirstSearchVisitor<NodeType, EdgeType> &visitor, NodeType &startNode)
+
+  DepthFirstSearch(Visitor &visitor, NodeType &startNode)
     : visitor(visitor) {
-    visitedNodes.insert(&startNode);
-    visitStack.push_back(VisitStackElement(startNode, startNode.begin()));
-    visitor.visitNode(startNode);
+    setup(startNode);
+    run();
+  }
+
+  DepthFirstSearch(Visitor &visitor,
+                   EdgePredicate edgePredicate,
+                   NodeType &startNode)
+    : visitor(visitor), edgePredicate(edgePredicate) {
+    setup(startNode);
     run();
   }
 
 private:
   using EdgeIteratorType = typename NodeType::iterator;
   using VisitStackElement = std::pair<NodeType&, EdgeIteratorType>;
+
+  /// Setup the traversal.
+  void setup(NodeType &startNode) {
+    visitedNodes.insert(&startNode);
+    visitStack.push_back(VisitStackElement(startNode, startNode.begin()));
+    visitor.visitNode(startNode);
+  }
 
   /// Perform a depth-first traversal, calling the visitor methods on the way.
   void run() {
@@ -47,7 +57,7 @@ private:
         auto *edge = nodeIt->get();
         auto &targetNode = edge->getTargetNode();
         nodeIt++;
-        if (visitedNodes.count(&targetNode) == 0) {
+        if (edgePredicate(*edge) && visitedNodes.count(&targetNode) == 0) {
           // Push a new 'current' node onto the stack and mark it as visited.
           visitStack.push_back(VisitStackElement(targetNode, targetNode.begin()));
           visitedNodes.insert(&targetNode);
@@ -62,7 +72,8 @@ private:
   }
 
 private:
-  DepthFirstSearchVisitor<NodeType, EdgeType> &visitor;
+  Visitor &visitor;
+  EdgePredicate edgePredicate;
   std::set<const NodeType*> visitedNodes;
   std::vector<VisitStackElement> visitStack;
 };

@@ -33,7 +33,8 @@ enum class NodeKind {
   None = 0,
   PortDeclaration,
   VariableDeclaration,
-  VariableReference
+  VariableReference,
+  VariableAlias
 };
 
 enum class VariableSelectorKind {
@@ -46,14 +47,34 @@ struct VariableSelectorBase {
   VariableSelectorKind kind;
   explicit VariableSelectorBase(VariableSelectorKind kind) : kind(kind) {}
   virtual ~VariableSelectorBase() = default;
+  //virtual bool operator==(const VariableSelectorBase &E) const = 0;
+  //virtual bool operator!=(const VariableSelectorBase &E) const = 0;
   virtual std::string toString() const = 0;
+
+  template<typename T>
+  T& as() {
+    assert(T::isKind(kind));
+    return *(dynamic_cast<T*>(this));
+  }
+
+  template<typename T>
+  const T& as() const {
+    assert(T::isKind(kind));
+    return const_cast<T&>(this->as<T>());
+  }
 };
 
 /// A variable selector representing an element selector.
 struct VariableElementSelect : public VariableSelectorBase {
   ConstantValue index;
+
   VariableElementSelect(ConstantValue index) :
     VariableSelectorBase(VariableSelectorKind::ElementSelect), index(std::move(index)) {}
+
+  static bool isKind(VariableSelectorKind otherKind) {
+    return otherKind == VariableSelectorKind::ElementSelect;
+  }
+
   std::string toString() const override {
     return fmt::format("[{}]", index.toString());
   }
@@ -62,9 +83,15 @@ struct VariableElementSelect : public VariableSelectorBase {
 /// A variable selector representing a range selector.
 struct VariableRangeSelect : public VariableSelectorBase {
   ConstantValue leftIndex, rightIndex;
+
   VariableRangeSelect(ConstantValue leftIndex, ConstantValue rightIndex) :
     VariableSelectorBase(VariableSelectorKind::RangeSelect),
     leftIndex(std::move(leftIndex)), rightIndex(std::move(rightIndex)) {}
+
+  static bool isKind(VariableSelectorKind otherKind) {
+    return otherKind == VariableSelectorKind::RangeSelect;
+  }
+
   std::string toString() const override {
     return fmt::format("[{}:{}]", leftIndex.toString(), rightIndex.toString());
   }
@@ -73,8 +100,14 @@ struct VariableRangeSelect : public VariableSelectorBase {
 /// A variable selector representing member access of a structure.
 struct VariableMemberAccess : public VariableSelectorBase {
   std::string_view name;
+
   VariableMemberAccess(std::string_view name) :
     VariableSelectorBase(VariableSelectorKind::MemberAccess), name(name) {}
+
+  static bool isKind(VariableSelectorKind otherKind) {
+    return otherKind == VariableSelectorKind::MemberAccess;
+  }
+
   std::string toString() const override {
     return fmt::format(".{}", name);
   }
@@ -110,7 +143,6 @@ public:
 
 private:
   static size_t nextID;
-  std::vector<std::unique_ptr<VariableSelectorBase>> selectors;
 };
 
 size_t NetlistNode::nextID = 0;
@@ -119,7 +151,12 @@ size_t NetlistNode::nextID = 0;
 class NetlistEdge : public DirectedEdge<NetlistNode, NetlistEdge> {
 public:
   NetlistEdge(NetlistNode &sourceNode, NetlistNode &targetNode)
-    : DirectedEdge(sourceNode, targetNode) {}
+    : DirectedEdge(sourceNode, targetNode), disabled(false) {}
+
+  void disable() { disabled = true; }
+
+public:
+  bool disabled;
 };
 
 /// A class representing a port declaration.
@@ -158,9 +195,29 @@ public:
   std::string hierarchicalPath;
 };
 
+/// A class representing a variable declaration alias.
+class NetlistVariableAlias : public NetlistNode {
+public:
+  NetlistVariableAlias(const ast::Symbol &symbol) :
+    NetlistNode(NodeKind::VariableAlias, symbol) {}
+
+  static bool isKind(NodeKind otherKind) {
+    return otherKind == NodeKind::VariableAlias;
+  }
+
+  std::string toString() const override {
+    return fmt::format("var alias {}", symbol.name);
+  }
+
+public:
+  std::string hierarchicalPath;
+};
+
 /// A class representing a variable reference.
 class NetlistVariableReference : public NetlistNode {
 public:
+  using SelectorsListType = std::vector<std::unique_ptr<VariableSelectorBase>>;
+
   NetlistVariableReference(const ast::Symbol &symbol) :
     NetlistNode(NodeKind::VariableReference, symbol) {}
 
@@ -186,8 +243,8 @@ public:
     return fmt::format("{}{}", symbol.name, buffer);
   }
 
-private:
-  std::vector<std::unique_ptr<VariableSelectorBase>> selectors;
+public:
+  SelectorsListType selectors;
 };
 
 /// A class representing the design netlist.
@@ -213,6 +270,16 @@ public:
     auto &node = nodePtr->as<NetlistVariableDeclaration>();
     symbol.getHierarchicalPath(node.hierarchicalPath);
     assert(lookupVariable(nodePtr->hierarchicalPath) == nullptr && "Variable declaration already exists");
+    nodes.push_back(std::move(nodePtr));
+    return node;
+  }
+
+  /// Add a variable declaration alias node to the netlist.
+  NetlistVariableAlias &addVariableAlias(const ast::Symbol &symbol) {
+    DEBUG_PRINT("Add var alias " << symbol.name << "\n");
+    auto nodePtr = std::make_unique<NetlistVariableAlias>(symbol);
+    auto &node = nodePtr->as<NetlistVariableAlias>();
+    symbol.getHierarchicalPath(node.hierarchicalPath);
     nodes.push_back(std::move(nodePtr));
     return node;
   }

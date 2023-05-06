@@ -1,3 +1,10 @@
+//------------------------------------------------------------------------------
+//! @file PathFinder.h
+//! @brief Find paths in the netlist.
+//
+// SPDX-FileCopyrightText: Michael Popoloski
+// SPDX-License-Identifier: MIT
+//------------------------------------------------------------------------------
 #pragma once
 
 #include <map>
@@ -17,13 +24,13 @@ private:
   /// tree.
   using TraversalMap = std::map<NetlistNode*, NetlistNode*>;
 
-  class Visitor : public DepthFirstSearchVisitor<NetlistNode, NetlistEdge> {
+  /// A visitor for the search that constructs the traversal map.
+  class Visitor {
   public:
     Visitor(Netlist &netlist, TraversalMap &traversalMap)
       : netlist(netlist), traversalMap(traversalMap) {}
-    void visitNode(NetlistNode &node) override {
-    }
-    void visitEdge(NetlistEdge &edge) override {
+    void visitNode(NetlistNode &node) {}
+    void visitEdge(NetlistEdge &edge) {
       auto *sourceNode = &edge.getSourceNode();
       auto *targetNode = &edge.getTargetNode();
       assert(traversalMap.count(targetNode) == 0 && "node cannot have two parents");
@@ -32,6 +39,14 @@ private:
   private:
     Netlist &netlist;
     TraversalMap &traversalMap;
+  };
+
+  /// A selector for edges that can be traversed in the search.
+  struct EdgePredicate {
+    EdgePredicate() = default;
+    bool operator()(const NetlistEdge &edge) {
+      return !edge.disabled;
+    }
   };
 
 public:
@@ -65,7 +80,8 @@ public:
   NetlistPath find(NetlistNode &startNode, NetlistNode &endNode) {
     TraversalMap traversalMap;
     Visitor visitor(netlist, traversalMap);
-    DepthFirstSearch dfs(visitor, startNode);
+    DepthFirstSearch<NetlistNode, NetlistEdge, Visitor, EdgePredicate>
+      dfs(visitor, startNode);
     return buildPath(traversalMap, startNode, endNode);
   }
 

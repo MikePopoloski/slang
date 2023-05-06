@@ -27,6 +27,7 @@ public:
     std::reverse(nodes.begin(), nodes.end());
   }
 
+  size_t size() const { return nodes.size(); }
   bool empty() const { return nodes.empty(); }
 };
 
