@@ -9,6 +9,7 @@
 
 #include <any>
 #include <string>
+#include <typeindex>
 #include <variant>
 #include <vector>
 
