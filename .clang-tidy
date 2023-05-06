@@ -26,9 +26,11 @@ Checks: >
     -clang-analyzer-cplusplus.InnerPointer,
     -clang-analyzer-core.NullDereference,
     -clang-analyzer-core.NonNullParamChecker,
+    -clang-analyzer-core.UndefinedBinaryOperatorResult,
     -clang-analyzer-optin.cplusplus.UninitializedObject,
     -misc-non-private-member-variables-in-classes,
     -misc-no-recursion,
     -misc-const-correctness,
+    -misc-use-anonymous-namespace,
     -performance-no-int-to-ptr,
     -portability-simd-intrinsics
