@@ -111,9 +111,9 @@ size_t ConstantValue::hash() const {
             else if constexpr (std::is_same_v<T, SVInt>)
                 hash_combine(h, arg.hash());
             else if constexpr (std::is_same_v<T, real_t>)
-                hash_combine(h, std::hash<double>()(arg));
+                hash_combine(h, slang::hash<double>()(arg));
             else if constexpr (std::is_same_v<T, shortreal_t>)
-                hash_combine(h, std::hash<float>()(arg));
+                hash_combine(h, slang::hash<float>()(arg));
             else if constexpr (std::is_same_v<T, ConstantValue::NullPlaceholder>)
                 hash_combine(h, 0);
             else if constexpr (std::is_same_v<T, ConstantValue::UnboundedPlaceholder>)
@@ -123,7 +123,7 @@ size_t ConstantValue::hash() const {
                     hash_combine(h, element.hash());
             }
             else if constexpr (std::is_same_v<T, std::string>)
-                hash_combine(h, std::hash<std::string>()(arg));
+                hash_combine(h, slang::hash<std::string>()(arg));
             else if constexpr (std::is_same_v<T, Map>) {
                 for (auto& [key, val] : *arg) {
                     hash_combine(h, key.hash());
@@ -181,7 +181,7 @@ ConstantValue& ConstantValue::at(size_t index) {
             else if constexpr (std::is_same_v<T, Queue>)
                 return arg->at(index);
             else
-                ASSUME_UNREACHABLE;
+                SLANG_UNREACHABLE;
         },
         value);
 }
@@ -195,7 +195,7 @@ const ConstantValue& ConstantValue::at(size_t index) const {
             else if constexpr (std::is_same_v<T, Queue>)
                 return arg->at(index);
             else
-                ASSUME_UNREACHABLE;
+                SLANG_UNREACHABLE;
         },
         value);
 }
@@ -232,8 +232,8 @@ ConstantValue ConstantValue::getSlice(int32_t upper, int32_t lower,
     }
 
     if (isString()) {
-        ASSERT(upper == lower);
-        ASSERT(upper >= 0);
+        SLANG_ASSERT(upper == lower);
+        SLANG_ASSERT(upper >= 0);
         return SVInt(8, (uint64_t)str()[size_t(upper)], false);
     }
 
@@ -706,7 +706,7 @@ CVIterator begin(ConstantValue& cv) {
                 return arg->begin();
             }
             else {
-                ASSUME_UNREACHABLE;
+                SLANG_UNREACHABLE;
             }
         },
         cv.getVariant());
@@ -724,7 +724,7 @@ CVIterator end(ConstantValue& cv) {
                 return arg->end();
             }
             else {
-                ASSUME_UNREACHABLE;
+                SLANG_UNREACHABLE;
             }
         },
         cv.getVariant());
@@ -742,7 +742,7 @@ CVConstIterator begin(const ConstantValue& cv) {
                 return arg->begin();
             }
             else {
-                ASSUME_UNREACHABLE;
+                SLANG_UNREACHABLE;
             }
         },
         cv.getVariant());
@@ -760,7 +760,7 @@ CVConstIterator end(const ConstantValue& cv) {
                 return arg->end();
             }
             else {
-                ASSUME_UNREACHABLE;
+                SLANG_UNREACHABLE;
             }
         },
         cv.getVariant());
@@ -772,7 +772,7 @@ ConstantRange ConstantRange::subrange(ConstantRange select) const {
     result.left = select.lower() + l;
     result.right = select.upper() + l;
 
-    ASSERT(result.right <= upper());
+    SLANG_ASSERT(result.right <= upper());
     if (isLittleEndian())
         return result;
     else

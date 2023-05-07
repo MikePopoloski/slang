@@ -15,7 +15,7 @@ namespace slang::parsing {
 using namespace syntax;
 
 CompilationUnitSyntax& Parser::parseCompilationUnit() {
-    try {
+    SLANG_TRY {
         auto members = parseMemberList<MemberSyntax>(
             TokenKind::EndOfFile, meta.eofToken, SyntaxKind::CompilationUnit,
             [this](SyntaxKind parentKind, bool& anyLocalModules) {
@@ -23,7 +23,7 @@ CompilationUnitSyntax& Parser::parseCompilationUnit() {
             });
         return factory.compilationUnit(members, meta.eofToken);
     }
-    catch (const RecursionException&) {
+    SLANG_CATCH(const RecursionException&) {
         return factory.compilationUnit(nullptr, meta.eofToken);
     }
 }
@@ -1516,7 +1516,7 @@ MemberSyntax* Parser::parseCoverpointMember() {
             if (peek(1).kind == TokenKind::WithKeyword) {
                 auto id = consume();
                 auto with = parseWithClause();
-                ASSERT(with);
+                SLANG_ASSERT(with);
                 initializer = &factory.idWithExprCoverageBinInitializer(id, *with);
                 break;
             }
@@ -2427,7 +2427,7 @@ PrimitiveInstantiationSyntax& Parser::parsePrimitiveInstantiation(AttrList attri
             strength = parsePullStrength(type);
         else {
             strength = parseDriveStrength();
-            ASSERT(strength);
+            SLANG_ASSERT(strength);
             switch (type.kind) {
                 case TokenKind::CmosKeyword:
                 case TokenKind::RcmosKeyword:
@@ -3492,7 +3492,7 @@ void Parser::checkMemberAllowed(const SyntaxNode& member, SyntaxKind parentKind)
         case SyntaxKind::SpecifyBlock:
             return;
         default:
-            ASSUME_UNREACHABLE;
+            SLANG_UNREACHABLE;
     }
 }
 

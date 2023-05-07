@@ -298,7 +298,7 @@ static char getDefaultSpecifier(const Expression& expr, LiteralBase defaultBase)
             case LiteralBase::Binary:
                 return 'b';
             default:
-                ASSUME_UNREACHABLE;
+                SLANG_UNREACHABLE;
         }
     }
 

@@ -71,7 +71,7 @@ std::ostream& operator<<(std::ostream& os, const logic_t& rhs) {
 
 SVInt SVInt::fromString(std::string_view str) {
     if (str.empty())
-        throw std::invalid_argument("String is empty");
+        SLANG_THROW(std::invalid_argument("String is empty"));
 
     const char* c = str.data();
     const char* end = c + str.length();
@@ -79,7 +79,7 @@ SVInt SVInt::fromString(std::string_view str) {
     if (*c == '-' || *c == '+') {
         c++; // heh
         if (c == end)
-            throw std::invalid_argument("String only has a sign?");
+            SLANG_THROW(std::invalid_argument("String only has a sign?"));
     }
 
     // look for a base specifier (optional)
@@ -118,32 +118,32 @@ SVInt SVInt::fromString(std::string_view str) {
 
     if (apostrophe) {
         if (sizeBad || sizeOverflow || possibleSize == 0)
-            throw std::invalid_argument("Size is invalid (bad chars or overflow 16 bits)");
+            SLANG_THROW(std::invalid_argument("Size is invalid (bad chars or overflow 16 bits)"));
         bits = possibleSize;
 
         c = apostrophe + 1;
         if (c == end)
-            throw std::invalid_argument("Nothing after size specifier");
+            SLANG_THROW(std::invalid_argument("Nothing after size specifier"));
 
         if (*c == 's' || *c == 'S') {
             isSigned = true;
             c++;
             if (c == end)
-                throw std::invalid_argument("Nothing after sign specifier");
+                SLANG_THROW(std::invalid_argument("Nothing after sign specifier"));
         }
         else {
             isSigned = false;
         }
 
         if (!literalBaseFromChar(*c, base))
-            throw std::invalid_argument(fmt::format("Unknown base specifier '{}'", *c));
+            SLANG_THROW(std::invalid_argument(fmt::format("Unknown base specifier '{}'", *c)));
 
         c++;
         if (c == end)
-            throw std::invalid_argument("Nothing after base specifier");
+            SLANG_THROW(std::invalid_argument("Nothing after base specifier"));
     }
     else if (sizeBad) {
-        throw std::invalid_argument("Not an integer or sized literal");
+        SLANG_THROW(std::invalid_argument("Not an integer or sized literal"));
     }
 
     // convert the remaining chars to an array of digits to pass to the other
@@ -187,7 +187,7 @@ SVInt SVInt::fromString(std::string_view str) {
 SVInt SVInt::fromDigits(bitwidth_t bits, LiteralBase base, bool isSigned, bool anyUnknown,
                         std::span<logic_t const> digits) {
     if (digits.empty())
-        throw std::invalid_argument("No digits provided");
+        SLANG_THROW(std::invalid_argument("No digits provided"));
 
     // Note: If the user specified a number too large to fit in the number of bits specified,
     // the spec says to truncate from the left, which this method will successfully do.
@@ -226,8 +226,8 @@ SVInt SVInt::fromDigits(bitwidth_t bits, LiteralBase base, bool isSigned, bool a
 
             val += d.value;
             if (d.value >= radix) {
-                throw std::invalid_argument(
-                    fmt::format("Digit {} too large for radix {}", d.value, radix));
+                SLANG_THROW(std::invalid_argument(
+                    fmt::format("Digit {} too large for radix {}", d.value, radix)));
             }
         }
         return SVInt(bits, val, isSigned);
@@ -237,8 +237,8 @@ SVInt SVInt::fromDigits(bitwidth_t bits, LiteralBase base, bool isSigned, bool a
         // In base ten we can't have individual bits be X or Z, it's all or nothing
         if (anyUnknown) {
             if (digits.size() != 1) {
-                throw std::invalid_argument(
-                    "If a decimal number is unknown, it must have exactly one digit.");
+                SLANG_THROW(std::invalid_argument(
+                    "If a decimal number is unknown, it must have exactly one digit."));
             }
 
             if (exactlyEqual(digits[0], logic_t::z))
@@ -265,7 +265,8 @@ SVInt SVInt::fromDecimalDigits(bitwidth_t bits, bool isSigned, std::span<logic_t
     auto nextDigit = [&]() {
         uint8_t v = d->value;
         if (v >= 10) {
-            throw std::invalid_argument(fmt::format("Digit {} too large for radix {}", v, 10));
+            SLANG_THROW(
+                std::invalid_argument(fmt::format("Digit {} too large for radix {}", v, 10)));
         }
         d++;
         return v;
@@ -333,8 +334,8 @@ SVInt SVInt::fromPow2Digits(bitwidth_t bits, bool isSigned, bool anyUnknown, uin
             unknown = ones;
         }
         else if (value >= radix) {
-            throw std::invalid_argument(
-                fmt::format("Digit {} too large for radix {}", value, radix));
+            SLANG_THROW(std::invalid_argument(
+                fmt::format("Digit {} too large for radix {}", value, radix)));
         }
 
         word |= value << bitPos;
@@ -629,7 +630,7 @@ SVInt SVInt::replicate(const SVInt& times) const {
 }
 
 size_t SVInt::hash() const {
-    return ankerl::unordered_dense::detail::wyhash::hash(getRawData(), getNumWords() * WORD_SIZE);
+    return detail::hashing::hash(getRawData(), getNumWords() * WORD_SIZE);
 }
 
 std::ostream& operator<<(std::ostream& os, const SVInt& rhs) {
@@ -779,7 +780,7 @@ void SVInt::writeTo(SmallVectorBase<char>& buffer, LiteralBase base, bool includ
                 divide(tmp, tmp.getNumWords(), divisor, divisor.getNumWords(), &quotient,
                        &remainder);
                 uint64_t digit = remainder.as<uint64_t>().value();
-                ASSERT(digit < 10);
+                SLANG_ASSERT(digit < 10);
                 buffer.push_back(Digits[digit]);
                 tmp = quotient;
             }
@@ -803,7 +804,7 @@ void SVInt::writeTo(SmallVectorBase<char>& buffer, LiteralBase base, bool includ
                 maskAmount = 15;
                 break;
             case LiteralBase::Decimal:
-                ASSUME_UNREACHABLE;
+                SLANG_UNREACHABLE;
         }
 
         // if we have unknown values here, the comparison will return X
@@ -862,7 +863,7 @@ SVInt SVInt::pow(const SVInt& rhs) const {
     bitwidth_t rhsBits = rhs.getActiveBits();
     // The second operand of the power operator shall be treated as self-determined
     if (lhsBits == 0) {
-        if (rhsBits == 0)                     // 0**0 == 1
+        if (rhsBits == 0) // 0**0 == 1
             return SVInt(bitWidth, 1, signFlag);
         if (rhs.signFlag && rhs.isNegative()) // 0**-y == x
             return createFillX(bitWidth, signFlag);
@@ -1038,7 +1039,7 @@ SVInt& SVInt::operator+=(const SVInt& rhs) {
     return *this;
 }
 
-NO_SANITIZE("unsigned-integer-overflow")
+SLANG_NO_SANITIZE("unsigned-integer-overflow")
 SVInt& SVInt::operator-=(const SVInt& rhs) {
     if (bitWidth != rhs.bitWidth) {
         if (bitWidth < rhs.bitWidth)
@@ -1449,7 +1450,7 @@ logic_t SVInt::operator[](int32_t index) const {
 }
 
 SVInt SVInt::slice(int32_t msb, int32_t lsb) const {
-    ASSERT(msb >= lsb);
+    SLANG_ASSERT(msb >= lsb);
 
     // handle indexing out of bounds
     bitwidth_t selectWidth = bitwidth_t(msb - lsb + 1);
@@ -1498,10 +1499,10 @@ SVInt SVInt::slice(int32_t msb, int32_t lsb) const {
 }
 
 void SVInt::set(int32_t msb, int32_t lsb, const SVInt& value) {
-    ASSERT(msb >= lsb);
+    SLANG_ASSERT(msb >= lsb);
 
     bitwidth_t selectWidth = bitwidth_t(msb - lsb + 1);
-    ASSERT(value.getBitWidth() == selectWidth);
+    SLANG_ASSERT(value.getBitWidth() == selectWidth);
     if (msb < 0 || lsb >= int32_t(bitWidth))
         return;
 
@@ -1537,7 +1538,7 @@ void SVInt::set(int32_t msb, int32_t lsb, const SVInt& value) {
 }
 
 SVInt SVInt::sext(bitwidth_t bits) const {
-    ASSERT(bits > bitWidth);
+    SLANG_ASSERT(bits > bitWidth);
 
     if (bits <= SVInt::BITS_PER_WORD && !unknownFlag) {
         uint64_t newVal = val << (SVInt::BITS_PER_WORD - bitWidth); // NOLINT
@@ -1586,7 +1587,7 @@ bool SVInt::isSignExtendedFrom(bitwidth_t msb) const {
 }
 
 void SVInt::signExtendFrom(bitwidth_t msb) {
-    ASSERT(msb < bitWidth - 1);
+    SLANG_ASSERT(msb < bitWidth - 1);
 
     uint64_t maskMsw;
     bitwidth_t bitsInMsw;
@@ -1608,7 +1609,7 @@ void SVInt::signExtendFrom(bitwidth_t msb) {
 }
 
 SVInt SVInt::zext(bitwidth_t bits) const {
-    ASSERT(bits > bitWidth);
+    SLANG_ASSERT(bits > bitWidth);
 
     if (bits <= SVInt::BITS_PER_WORD && !unknownFlag)
         return SVInt(bits, val, signFlag);
@@ -1633,7 +1634,7 @@ SVInt SVInt::extend(bitwidth_t bits, bool useSign) const {
 }
 
 SVInt SVInt::trunc(bitwidth_t bits) const {
-    ASSERT(bits > 0 && bits <= bitWidth);
+    SLANG_ASSERT(bits > 0 && bits <= bitWidth);
 
     if (isSingleWord()) {
         uint64_t mask = bits == 64 ? UINT64_MAX : (1ull << bits) - 1;
@@ -1776,12 +1777,12 @@ SVInt SVInt::concat(std::span<SVInt const> operands) {
 }
 
 SVInt SVInt::allocUninitialized(bitwidth_t bits, bool signFlag, bool unknownFlag) {
-    ASSERT(bits && (bits > 64 || unknownFlag));
+    SLANG_ASSERT(bits && (bits > 64 || unknownFlag));
     return SVInt(new uint64_t[getNumWords(bits, unknownFlag)], bits, signFlag, unknownFlag);
 }
 
 SVInt SVInt::allocZeroed(bitwidth_t bits, bool signFlag, bool unknownFlag) {
-    ASSERT(bits && (bits > 64 || unknownFlag));
+    SLANG_ASSERT(bits && (bits > 64 || unknownFlag));
     return SVInt(new uint64_t[getNumWords(bits, unknownFlag)](), bits, signFlag, unknownFlag);
 }
 
@@ -2107,10 +2108,10 @@ void SVInt::buildDivideResult(SVInt* result, uint32_t* value, bitwidth_t bitWidt
     }
 }
 
-NO_SANITIZE("unsigned-integer-overflow")
+SLANG_NO_SANITIZE("unsigned-integer-overflow")
 void SVInt::divide(const SVInt& lhs, uint32_t lhsWords, const SVInt& rhs, uint32_t rhsWords,
                    SVInt* quotient, SVInt* remainder) {
-    ASSERT(lhsWords >= rhsWords);
+    SLANG_ASSERT(lhsWords >= rhsWords);
 
     // The Knuth algorithm requires arrays of 32-bit words (because results of operations
     // need to fit natively into 64 bits). Allocate space for the backing memory, either on

@@ -109,7 +109,7 @@ std::string TextDiagnosticClient::getString() const {
 
 static bool printableTextForNextChar(std::string_view sourceLine, size_t& index, uint32_t tabStop,
                                      SmallVectorBase<char>& out, size_t& columnWidth) {
-    ASSERT(index < sourceLine.size());
+    SLANG_ASSERT(index < sourceLine.size());
 
     // Expand tabs based on tabStop setting.
     if (sourceLine[index] == '\t') {
@@ -123,7 +123,7 @@ static bool printableTextForNextChar(std::string_view sourceLine, size_t& index,
         }
 
         uint32_t numSpaces = tabStop - col % tabStop;
-        ASSERT(numSpaces > 0 && numSpaces <= tabStop);
+        SLANG_ASSERT(numSpaces > 0 && numSpaces <= tabStop);
         index++;
 
         for (uint32_t j = 0; j < numSpaces; j++)
@@ -184,7 +184,7 @@ static bool printableTextForNextChar(std::string_view sourceLine, size_t& index,
 
 struct SourceSnippet {
     SourceSnippet(std::string_view sourceLine, uint32_t tabStop) {
-        ASSERT(!sourceLine.empty());
+        SLANG_ASSERT(!sourceLine.empty());
 
         byteToColumn.resize(sourceLine.size() + 1);
         for (size_t i = 0; i < byteToColumn.size(); i++)
@@ -248,7 +248,7 @@ struct SourceSnippet {
 
         size_t startCol = getColumnForByte(start);
         size_t endCol = getColumnForByte(end);
-        ASSERT(startCol <= endCol);
+        SLANG_ASSERT(startCol <= endCol);
 
         if (highlightLine.size() < endCol)
             highlightLine.resize(endCol, ' ');
@@ -276,7 +276,7 @@ struct SourceSnippet {
             size_t index = 0;
             std::string_view view = snippetLine;
             for (auto [start, count] : invalidRanges) {
-                ASSERT(start >= index);
+                SLANG_ASSERT(start >= index);
                 out.append(view.substr(index, start - index));
 
                 out.append(fmt::emphasis::reverse, view.substr(start, count));

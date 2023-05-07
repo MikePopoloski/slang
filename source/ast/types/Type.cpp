@@ -17,7 +17,6 @@
 #include "slang/diagnostics/TypesDiags.h"
 #include "slang/parsing/LexerFacts.h"
 #include "slang/syntax/AllSyntax.h"
-#include "slang/util/StackContainer.h"
 
 namespace slang::ast {
 
@@ -36,7 +35,7 @@ struct GetDefaultVisitor {
             return type.getDefaultValueImpl();
         }
         else {
-            ASSUME_UNREACHABLE;
+            SLANG_UNREACHABLE;
         }
     }
 };
@@ -95,7 +94,7 @@ bitwidth_t Type::getBitWidth() const {
             case FloatingType::ShortReal:
                 return 32;
             default:
-                ASSUME_UNREACHABLE;
+                SLANG_UNREACHABLE;
         }
     }
     return 0;
@@ -962,7 +961,7 @@ size_t Type::hash() const {
         hash_combine(h, vi.modport);
     }
     else {
-        h = std::hash<const Type*>()(&ct);
+        h = slang::hash<const Type*>()(&ct);
     }
     return h;
 }
@@ -1077,7 +1076,7 @@ const Type& Type::fromSyntax(Compilation& compilation, const DataTypeSyntax& nod
         case SyntaxKind::VirtualInterfaceType:
             return VirtualInterfaceType::fromSyntax(context, node.as<VirtualInterfaceTypeSyntax>());
         default:
-            ASSUME_UNREACHABLE;
+            SLANG_UNREACHABLE;
     }
 }
 
@@ -1186,7 +1185,7 @@ bool Type::isKind(SymbolKind kind) {
 }
 
 void Type::resolveCanonical() const {
-    ASSERT(kind == SymbolKind::TypeAlias);
+    SLANG_ASSERT(kind == SymbolKind::TypeAlias);
     canonical = this;
     do {
         canonical = &canonical->as<TypeAliasType>().targetType.getType();
@@ -1247,8 +1246,8 @@ const Type& Type::getPredefinedType(Compilation& compilation, SyntaxKind kind, b
 }
 
 Diagnostic& operator<<(Diagnostic& diag, const Type& arg) {
-    ASSERT(!arg.isError());
-    diag.args.emplace_back(&arg);
+    SLANG_ASSERT(!arg.isError());
+    diag.args.emplace_back(Diagnostic::CustomArgType{SLANG_TYPEOF(const Type*), &arg});
     return diag;
 }
 

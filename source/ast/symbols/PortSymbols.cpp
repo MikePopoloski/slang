@@ -26,7 +26,6 @@
 #include "slang/diagnostics/ParserDiags.h"
 #include "slang/syntax/AllSyntax.h"
 #include "slang/syntax/SyntaxFacts.h"
-#include "slang/util/StackContainer.h"
 
 namespace slang::ast {
 
@@ -186,7 +185,7 @@ public:
                 return add(decl, definition, modport, /* isGeneric */ false, syntax.attributes);
             }
             default:
-                ASSUME_UNREACHABLE;
+                SLANG_UNREACHABLE;
         }
     }
 
@@ -262,7 +261,7 @@ private:
             symbol->setDeclaredType(*type, decl.dimensions);
         }
         else {
-            ASSERT(netType);
+            SLANG_ASSERT(netType);
             if (!decl.dimensions.empty())
                 symbol->getDeclaredType()->setDimensionSyntax(decl.dimensions);
         }
@@ -364,7 +363,7 @@ public:
                 auto typeName = namedType.name->as<IdentifierNameSyntax>().identifier.valueText();
                 auto def = comp.getDefinition(typeName, scope);
 
-                ASSERT(def && def->definitionKind == DefinitionKind::Interface);
+                SLANG_ASSERT(def && def->definitionKind == DefinitionKind::Interface);
 
                 for (auto decl : data.declarators) {
                     if (auto name = decl->name; !name.isMissing()) {
@@ -402,7 +401,7 @@ public:
             case SyntaxKind::PortConcatenation:
                 return &createPort(""sv, loc, syntax.expr->as<PortConcatenationSyntax>());
             default:
-                ASSUME_UNREACHABLE;
+                SLANG_UNREACHABLE;
         }
     }
 
@@ -424,7 +423,7 @@ public:
             case SyntaxKind::PortConcatenation:
                 return &createPort(name, loc, syntax.expr->as<PortConcatenationSyntax>());
             default:
-                ASSUME_UNREACHABLE;
+                SLANG_UNREACHABLE;
         }
     }
 
@@ -473,7 +472,7 @@ private:
         auto name = decl.name.valueText();
         auto declLoc = decl.name.location();
 
-        ASSERT(!name.empty());
+        SLANG_ASSERT(!name.empty());
 
         switch (header.kind) {
             case SyntaxKind::VariablePortHeader: {
@@ -549,7 +548,7 @@ private:
             case SyntaxKind::InterfacePortHeader: {
                 auto& ifaceHeader = header.as<InterfacePortHeaderSyntax>();
                 auto [definition, modport] = getInterfacePortInfo(scope, ifaceHeader);
-                ASSERT(ifaceHeader.nameOrKeyword.kind == TokenKind::Identifier);
+                SLANG_ASSERT(ifaceHeader.nameOrKeyword.kind == TokenKind::Identifier);
                 info.isIface = true;
                 info.ifaceDef = definition;
                 info.modport = modport;
@@ -560,7 +559,7 @@ private:
                 break;
             }
             default:
-                ASSUME_UNREACHABLE;
+                SLANG_UNREACHABLE;
         }
 
         const bool isNet = info.internalSymbol && info.internalSymbol->kind == SymbolKind::Net;
@@ -642,7 +641,7 @@ private:
         port->setSyntax(syntax);
         port->externalLoc = externalLoc;
 
-        ASSERT(info.internalSymbol);
+        SLANG_ASSERT(info.internalSymbol);
         port->direction = info.direction;
         port->internalSymbol = info.internalSymbol;
 
@@ -1118,7 +1117,7 @@ private:
 
     const Symbol* getInterfaceConn(ASTContext& context, const InterfacePortSymbol& port,
                                    const ExpressionSyntax& syntax) {
-        ASSERT(!port.isInvalid());
+        SLANG_ASSERT(!port.isInvalid());
 
         auto portDims = port.getDeclaredRange();
         if (!portDims)
@@ -1141,7 +1140,7 @@ private:
         auto& vit = type->as<VirtualInterfaceType>();
         auto& connDef = vit.iface.getDefinition();
 
-        ASSERT(port.isGeneric || port.interfaceDef);
+        SLANG_ASSERT(port.isGeneric || port.interfaceDef);
         if (&connDef != port.interfaceDef && !port.isGeneric) {
             std::string path;
             connDef.getHierarchicalPath(path);
@@ -1267,11 +1266,11 @@ const Type& PortSymbol::getType() const {
 
     auto scope = getParentScope();
     auto syntax = getSyntax();
-    ASSERT(scope && syntax);
+    SLANG_ASSERT(scope && syntax);
 
     if (internalSymbol) {
         auto dt = internalSymbol->getDeclaredType();
-        ASSERT(dt);
+        SLANG_ASSERT(dt);
         type = &dt->getType();
 
         bitmask<ASTFlags> astFlags = ASTFlags::NonProcedural | ASTFlags::AllowInterconnect |
@@ -1311,7 +1310,7 @@ const Type& PortSymbol::getType() const {
     else {
         // We should have an explicit port connection expression here.
         auto& eaps = syntax->as<ExplicitAnsiPortSyntax>();
-        ASSERT(eaps.expr);
+        SLANG_ASSERT(eaps.expr);
 
         // The direction of the connection is reversed, as data coming in to an input
         // port flows out to the internal symbol, and vice versa. Inout and ref
@@ -1362,8 +1361,8 @@ const Type& PortSymbol::getType() const {
 const Expression* PortSymbol::getInitializer() const {
     if (!initializer && initializerSyntax) {
         auto scope = getParentScope();
-        ASSERT(scope);
-        ASSERT(internalSymbol);
+        SLANG_ASSERT(scope);
+        SLANG_ASSERT(internalSymbol);
 
         // Ansi ports bind their initializers in the context of the port list,
         // while non-ansi ports use the internal symbol context.
@@ -1475,7 +1474,7 @@ void PortSymbol::fromSyntax(
                         results.push_back(builder.createPort(port->as<ExplicitAnsiPortSyntax>()));
                         break;
                     default:
-                        ASSUME_UNREACHABLE;
+                        SLANG_UNREACHABLE;
                 }
             }
 
@@ -1501,7 +1500,7 @@ void PortSymbol::fromSyntax(
                         results.push_back(builder.createPort(port->as<EmptyNonAnsiPortSyntax>()));
                         break;
                     default:
-                        ASSUME_UNREACHABLE;
+                        SLANG_UNREACHABLE;
                 }
             }
             builder.finalize();
@@ -1511,7 +1510,7 @@ void PortSymbol::fromSyntax(
             scope.addDiag(diag::NotYetSupported, syntax.sourceRange());
             break;
         default:
-            ASSUME_UNREACHABLE;
+            SLANG_UNREACHABLE;
     }
 }
 
@@ -1539,7 +1538,7 @@ const Type& MultiPortSymbol::getType() const {
 
     auto scope = getParentScope();
     auto syntax = getSyntax();
-    ASSERT(scope && syntax);
+    SLANG_ASSERT(scope && syntax);
 
     auto& comp = scope->getCompilation();
 
@@ -1603,10 +1602,10 @@ std::optional<std::span<const ConstantRange>> InterfacePortSymbol::getDeclaredRa
     }
 
     auto syntax = getSyntax();
-    ASSERT(syntax);
+    SLANG_ASSERT(syntax);
 
     auto scope = getParentScope();
-    ASSERT(scope);
+    SLANG_ASSERT(scope);
 
     ASTContext context(*scope, LookupLocation::before(*this), ASTFlags::NonProcedural);
 
@@ -1625,10 +1624,10 @@ std::optional<std::span<const ConstantRange>> InterfacePortSymbol::getDeclaredRa
 
 const Symbol* InterfacePortSymbol::getConnection() const {
     auto scope = getParentScope();
-    ASSERT(scope);
+    SLANG_ASSERT(scope);
 
     auto& body = scope->asSymbol().as<InstanceBodySymbol>();
-    ASSERT(body.parentInstance);
+    SLANG_ASSERT(body.parentInstance);
 
     auto conn = body.parentInstance->getPortConnection(*this);
     if (!conn)
@@ -1699,7 +1698,7 @@ const Expression* PortConnection::getExpression() const {
     if (connectedSymbol || exprSyntax) {
         auto ll = LookupLocation::after(parentInstance);
         auto scope = ll.getScope();
-        ASSERT(scope);
+        SLANG_ASSERT(scope);
 
         const bool isNetPort = port.kind == SymbolKind::Port && port.as<PortSymbol>().isNetPort();
         auto [direction, type] = getDirAndType(port);
@@ -1802,7 +1801,7 @@ void PortConnection::checkSimulatedNetTypes() const {
         return;
 
     auto scope = parentInstance.getParentScope();
-    ASSERT(scope);
+    SLANG_ASSERT(scope);
 
     // Do additional checking on the expression for interconnect port connections.
     if (internal.size() == 1 && internal[0].netType->netKind == NetType::Interconnect) {
@@ -1951,7 +1950,7 @@ void PortConnection::checkSimulatedNetTypes() const {
         }
 
         if (shouldWarn) {
-            ASSERT(exprWidth >= currBit + width);
+            SLANG_ASSERT(exprWidth >= currBit + width);
             bitwidth_t left = exprWidth - currBit - 1;
             bitwidth_t right = left - (width - 1);
 
@@ -1967,7 +1966,7 @@ void PortConnection::checkSimulatedNetTypes() const {
         }
 
         if (in == internal.end() || ex == external.end()) {
-            ASSERT(in == internal.end() && ex == external.end());
+            SLANG_ASSERT(in == internal.end() && ex == external.end());
             break;
         }
 
@@ -1985,19 +1984,19 @@ void PortConnection::makeConnections(
         if (portBase->kind == SymbolKind::Port) {
             auto& port = portBase->as<PortSymbol>();
             auto conn = builder.getConnection(port);
-            ASSERT(conn);
+            SLANG_ASSERT(conn);
             results.push_back(conn);
         }
         else if (portBase->kind == SymbolKind::MultiPort) {
             auto& port = portBase->as<MultiPortSymbol>();
             auto conn = builder.getConnection(port);
-            ASSERT(conn);
+            SLANG_ASSERT(conn);
             results.push_back(conn);
         }
         else {
             auto& port = portBase->as<InterfacePortSymbol>();
             auto conn = builder.getIfaceConnection(port);
-            ASSERT(conn);
+            SLANG_ASSERT(conn);
             results.push_back(conn);
         }
     }
@@ -2017,7 +2016,7 @@ void PortConnection::serializeTo(ASTSerializer& serializer) const {
     }
 
     auto scope = parentInstance.getParentScope();
-    ASSERT(scope);
+    SLANG_ASSERT(scope);
 
     auto attributes = scope->getCompilation().getAttributes(*this);
     if (!attributes.empty()) {

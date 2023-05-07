@@ -63,14 +63,32 @@ TEST_CASE("Read header (relative)") {
 
 TEST_CASE("Read header (include dirs)") {
     SourceManager manager;
-    manager.addSystemDirectory(
-        std::string_view(manager.makeAbsolutePath(std::string_view(findTestDir()))));
+    CHECK(manager.addSystemDirectory(manager.makeAbsolutePath(std::string_view(findTestDir()))));
 
     SourceBuffer buffer = manager.readHeader("include.svh", SourceLocation(), true);
     REQUIRE(buffer);
 
-    manager.addUserDirectory(
-        std::string_view(manager.makeAbsolutePath(std::string_view(findTestDir() + "/nested"))));
+    CHECK(manager.addUserDirectory(
+        manager.makeAbsolutePath(std::string_view(findTestDir() + "/nested"))));
     buffer = manager.readHeader("../infinite_chain.svh", SourceLocation(buffer.id, 0), false);
     CHECK(buffer);
+}
+
+TEST_CASE("Config Blocks") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+endmodule
+
+config cfg1;
+    localparam S = 24;
+
+    design rtlLib.top;
+    default liblist rtlLib;
+    instance top.a2 liblist gateLib;
+endconfig
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
 }

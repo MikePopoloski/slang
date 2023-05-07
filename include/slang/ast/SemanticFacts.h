@@ -23,83 +23,83 @@ enum class SymbolKind;
 
 #define LIFETIME(x) x(Automatic) x(Static)
 /// Specifies the storage lifetime of a variable.
-ENUM(VariableLifetime, LIFETIME)
+SLANG_ENUM(VariableLifetime, LIFETIME)
 #undef LIFETIME
 
 #define VISIBILITY(x) x(Public) x(Protected) x(Local)
 /// Specifies the visibility of class members.
-ENUM(Visibility, VISIBILITY)
+SLANG_ENUM(Visibility, VISIBILITY)
 #undef VISIBILITY
 
 #define DIRECTION(x) x(In) x(Out) x(InOut) x(Ref)
 /// Specifies behavior of an argument passed to a subroutine.
-ENUM(ArgumentDirection, DIRECTION)
+SLANG_ENUM(ArgumentDirection, DIRECTION)
 #undef DIRECTION
 
 #define BLOCK(x) x(Initial) x(Final) x(Always) x(AlwaysComb) x(AlwaysLatch) x(AlwaysFF)
 /// Specifies possible procedural block kinds.
-ENUM(ProceduralBlockKind, BLOCK)
+SLANG_ENUM(ProceduralBlockKind, BLOCK)
 #undef BLOCK
 
 #define BLOCK(x) x(Sequential) x(JoinAll) x(JoinAny) x(JoinNone)
 /// Specifies possible statement block kinds.
-ENUM(StatementBlockKind, BLOCK)
+SLANG_ENUM(StatementBlockKind, BLOCK)
 #undef BLOCK
 
 #define DEF(x) x(Module) x(Interface) x(Program)
 /// Specifies possible definition kinds.
-ENUM(DefinitionKind, DEF)
+SLANG_ENUM(DefinitionKind, DEF)
 #undef DEF
 
 #define UD(x) x(None) x(Pull0) x(Pull1)
 /// Specifies possible unconnected drive settings.
-ENUM(UnconnectedDrive, UD)
+SLANG_ENUM(UnconnectedDrive, UD)
 #undef UD
 
 #define EDGE(x) x(None) x(PosEdge) x(NegEdge) x(BothEdges)
 /// Specifies possible edge kinds.
-ENUM(EdgeKind, EDGE)
+SLANG_ENUM(EdgeKind, EDGE)
 #undef EDGE
 
 #define SRK(x) x(Function) x(Task)
 /// Specifies possible subroutine kinds.
-ENUM(SubroutineKind, SRK)
+SLANG_ENUM(SubroutineKind, SRK)
 #undef SRK
 
 #define ASK(x) x(Assert) x(Assume) x(CoverProperty) x(CoverSequence) x(Restrict) x(Expect)
 /// Specifies possible assertion kinds.
-ENUM(AssertionKind, ASK)
+SLANG_ENUM(AssertionKind, ASK)
 #undef ASK
 
 #define ELAB(x) x(Fatal) x(Error) x(Warning) x(Info) x(StaticAssert)
 /// Specifies possible elaboration system task kinds.
-ENUM(ElabSystemTaskKind, ELAB)
+SLANG_ENUM(ElabSystemTaskKind, ELAB)
 #undef ELAB
 
 #define MODE(x) x(None) x(Rand) x(RandC)
 /// Specifies possible assertion kinds.
-ENUM(RandMode, MODE)
+SLANG_ENUM(RandMode, MODE)
 #undef MODE
 
 #define DIRECTION(x) x(In) x(Out) x(OutReg) x(InOut)
 /// Specifies behavior of a primitive port.
-ENUM(PrimitivePortDirection, DIRECTION)
+SLANG_ENUM(PrimitivePortDirection, DIRECTION)
 #undef DIRECTION
 
 #define DRIVER(x) x(Procedural) x(Continuous) x(Other)
-ENUM_SIZED(DriverKind, uint8_t, DRIVER)
+SLANG_ENUM_SIZED(DriverKind, uint8_t, DRIVER)
 #undef DRIVER
 
 #define PSK(x) x(OnEvent) x(OnDetect) x(ShowCancelled) x(NoShowCancelled)
-ENUM(PulseStyleKind, PSK)
+SLANG_ENUM(PulseStyleKind, PSK)
 #undef PSK
 
 #define CS(x) x(Small) x(Medium) x(Large)
-ENUM(ChargeStrength, CS)
+SLANG_ENUM(ChargeStrength, CS)
 #undef CS
 
 #define DS(x) x(Supply) x(Strong) x(Pull) x(Weak) x(HighZ)
-ENUM(DriveStrength, DS)
+SLANG_ENUM(DriveStrength, DS)
 #undef DS
 
 /// A set of flags that control how assignments are checked.
@@ -134,7 +134,7 @@ enum class SLANG_EXPORT AssignFlags : uint8_t {
     /// being connected to an array argument.
     SlicedPort = 1 << 7
 };
-BITMASK(AssignFlags, SlicedPort)
+SLANG_BITMASK(AssignFlags, SlicedPort)
 
 class SLANG_EXPORT SemanticFacts {
 public:

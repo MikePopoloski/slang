@@ -32,6 +32,7 @@ namespace slang::ast {
 class AttributeSymbol;
 class ASTContext;
 class CompilationUnitSymbol;
+class ConfigBlockSymbol;
 class Definition;
 class Expression;
 class GenericClassDefSymbol;
@@ -235,6 +236,10 @@ public:
     /// Creates a new package in the given scope based on the given syntax.
     const PackageSymbol& createPackage(const Scope& scope,
                                        const syntax::ModuleDeclarationSyntax& syntax);
+
+    /// Creates a new config block in the given scope based on the given syntax.
+    const ConfigBlockSymbol& createConfigBlock(const Scope& scope,
+                                               const syntax::ConfigDeclarationSyntax& syntax);
 
     /// Gets the primitive with the given name, or null if there is no such primitive.
     const PrimitiveSymbol* getPrimitive(std::string_view name) const;
@@ -620,7 +625,7 @@ private:
 
     std::unique_ptr<RootSymbol> root;
     const SourceManager* sourceManager = nullptr;
-    size_t numErrors = 0;    // total number of errors inserted into the diagMap
+    size_t numErrors = 0; // total number of errors inserted into the diagMap
     bool finalized = false;
     bool finalizing = false; // to prevent reentrant calls to getRoot()
     bool anyElemsWithTimescales = false;

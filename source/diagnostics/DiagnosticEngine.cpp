@@ -14,7 +14,6 @@
 #include "slang/diagnostics/MetaDiags.h"
 #include "slang/diagnostics/TextDiagnosticClient.h"
 #include "slang/text/SourceManager.h"
-#include "slang/util/StackContainer.h"
 #include "slang/util/String.h"
 
 namespace slang {
@@ -120,12 +119,7 @@ void DiagnosticEngine::clearMappings() {
 }
 
 void DiagnosticEngine::clearMappings(DiagnosticSeverity severity) {
-    for (auto it = severityTable.begin(); it != severityTable.end();) {
-        if (it->second == severity)
-            it = severityTable.erase(it);
-        else
-            it++;
-    }
+    erase_if(severityTable, [severity](auto& pair) { return pair.second == severity; });
 }
 
 void DiagnosticEngine::addIgnorePath(const std::filesystem::path& path) {
@@ -152,8 +146,8 @@ static bool checkMacroArgRanges(const DiagnosticEngine& engine, SourceLocation l
         return false;
 
     for (auto& range : mappedRanges) {
-        ASSERT(range.start().buffer() == loc.buffer());
-        ASSERT(range.end().buffer() == loc.buffer());
+        SLANG_ASSERT(range.start().buffer() == loc.buffer());
+        SLANG_ASSERT(range.end().buffer() == loc.buffer());
 
         if (loc < range.start() || loc >= range.end())
             return false;
@@ -290,11 +284,11 @@ std::string DiagnosticEngine::formatMessage(const Diagnostic& diag) const {
             [&](auto&& t) {
                 // If the argument is a pointer, the fmtlib API needs it unwrapped into a reference.
                 using T = std::decay_t<decltype(t)>;
-                if constexpr (std::is_same_v<std::any, T>) {
-                    if (auto it = formatters.find(t.type()); it != formatters.end())
-                        args.push_back(it->second->format(t));
+                if constexpr (std::is_same_v<Diagnostic::CustomArgType, T>) {
+                    if (auto it = formatters.find(t.first); it != formatters.end())
+                        args.push_back(it->second->format(t.second));
                     else
-                        throw std::runtime_error("No diagnostic formatter for type");
+                        SLANG_THROW(std::runtime_error("No diagnostic formatter for type"));
                 }
                 else if constexpr (std::is_same_v<ConstantValue, T>) {
                     if (t.isReal())

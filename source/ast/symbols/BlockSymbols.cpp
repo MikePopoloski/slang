@@ -21,7 +21,6 @@
 #include "slang/diagnostics/LookupDiags.h"
 #include "slang/diagnostics/StatementsDiags.h"
 #include "slang/syntax/AllSyntax.h"
-#include "slang/util/StackContainer.h"
 
 namespace slang::ast {
 
@@ -209,7 +208,7 @@ StatementBlockSymbol& StatementBlockSymbol::fromLabeledStmt(const Scope& scope,
 }
 
 void StatementBlockSymbol::elaborateVariables(function_ref<void(const Symbol&)> insertCB) const {
-    ASSERT(!stmt);
+    SLANG_ASSERT(!stmt);
 
     auto syntax = getSyntax();
     if (!syntax)
@@ -249,13 +248,13 @@ ProceduralBlockSymbol::ProceduralBlockSymbol(SourceLocation loc,
 
 const Statement& ProceduralBlockSymbol::getBody() const {
     if (!stmt) {
-        ASSERT(!isConstructing);
+        SLANG_ASSERT(!isConstructing);
 
         isConstructing = true;
         auto guard = ScopeGuard([this] { isConstructing = false; });
 
         auto scope = getParentScope();
-        ASSERT(scope && stmtSyntax);
+        SLANG_ASSERT(scope && stmtSyntax);
 
         ASTContext context(*scope, LookupLocation::after(*this));
         context.setProceduralBlock(*this);
@@ -419,7 +418,7 @@ void GenerateBlockSymbol::fromSyntax(Compilation& compilation, const CaseGenerat
                 defBlock = item->as<DefaultCaseItemSyntax>().clause;
                 break;
             default:
-                ASSUME_UNREACHABLE;
+                SLANG_UNREACHABLE;
         }
     }
 
@@ -538,7 +537,7 @@ std::string GenerateBlockSymbol::getExternalName() const {
         return std::string(name);
 
     auto parent = getParentScope();
-    ASSERT(parent);
+    SLANG_ASSERT(parent);
 
     return createGenBlkName(constructIndex, *parent);
 }
@@ -735,7 +734,7 @@ std::string GenerateBlockArraySymbol::getExternalName() const {
         return std::string(name);
 
     auto parent = getParentScope();
-    ASSERT(parent);
+    SLANG_ASSERT(parent);
 
     return createGenBlkName(constructIndex, *parent);
 }

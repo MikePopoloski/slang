@@ -58,8 +58,8 @@ struct CloneVisitor {
 
             if (auto it = commits.insertBefore.find(child); it != commits.insertBefore.end()) {
                 if (!IsList) {
-                    throw std::logic_error(
-                        "Can't use insertBefore or insertAfter on a non-list node");
+                    SLANG_THROW(std::logic_error(
+                        "Can't use insertBefore or insertAfter on a non-list node"));
                 }
 
                 for (const auto& change : it->second)
@@ -92,8 +92,8 @@ struct CloneVisitor {
 
             if (auto it = commits.insertAfter.find(child); it != commits.insertAfter.end()) {
                 if (!IsList) {
-                    throw std::logic_error(
-                        "Can't use insertBefore or insertAfter on a non-list node");
+                    SLANG_THROW(std::logic_error(
+                        "Can't use insertBefore or insertAfter on a non-list node"));
                 }
 
                 for (const auto& change : it->second)
@@ -121,7 +121,7 @@ struct CloneVisitor {
 #    pragma warning(pop)
 #endif
 
-    SyntaxNode* visitInvalid(const SyntaxNode&) { ASSUME_UNREACHABLE; }
+    SyntaxNode* visitInvalid(const SyntaxNode&) { SLANG_UNREACHABLE; }
 };
 
 } // namespace

@@ -475,12 +475,12 @@ static const Expression& bindCovergroupExpr(const ExpressionSyntax& syntax,
 }
 
 void CoverageBinSymbol::resolve() const {
-    ASSERT(!isResolved);
+    SLANG_ASSERT(!isResolved);
     isResolved = true;
 
     auto syntax = getSyntax();
     auto scope = getParentScope();
-    ASSERT(syntax && scope);
+    SLANG_ASSERT(syntax && scope);
 
     auto& comp = scope->getCompilation();
     ASTContext context(*scope, LookupLocation::before(*this));
@@ -582,7 +582,7 @@ void CoverageBinSymbol::resolve() const {
             // Already handled at construction time.
             break;
         default:
-            ASSUME_UNREACHABLE;
+            SLANG_UNREACHABLE;
     }
 }
 
@@ -609,7 +609,7 @@ CoverageBinSymbol::TransRangeList::TransRangeList(const TransRangeSyntax& syntax
                 repeatKind = GoTo;
                 break;
             default:
-                ASSUME_UNREACHABLE;
+                SLANG_UNREACHABLE;
         }
 
         auto bindCount = [&](const ExpressionSyntax& exprSyntax) {
@@ -752,7 +752,7 @@ const Expression* CoverpointSymbol::getIffExpr() const {
     if (!iffExpr) {
         auto scope = getParentScope();
         auto syntax = getSyntax();
-        ASSERT(scope);
+        SLANG_ASSERT(scope);
 
         if (!syntax)
             iffExpr = nullptr;
@@ -876,7 +876,7 @@ const Expression* CoverCrossSymbol::getIffExpr() const {
     if (!iffExpr) {
         auto scope = getParentScope();
         auto syntax = getSyntax();
-        ASSERT(scope);
+        SLANG_ASSERT(scope);
 
         if (!syntax)
             iffExpr = nullptr;
@@ -942,7 +942,7 @@ const BinsSelectExpr& BinsSelectExpr::bind(const BinsSelectExpressionSyntax& syn
                 syntax.as<BinSelectWithFilterExprSyntax>(), context);
             break;
         default:
-            ASSUME_UNREACHABLE;
+            SLANG_UNREACHABLE;
     }
 
     result->syntax = &syntax;
@@ -1037,10 +1037,10 @@ void BinaryBinsSelectExpr::serializeTo(ASTSerializer& serializer) const {
 BinsSelectExpr& SetExprBinsSelectExpr::fromSyntax(const SimpleBinsSelectExprSyntax& syntax,
                                                   const ASTContext& context) {
     auto& body = context.scope->asSymbol().as<CoverCrossBodySymbol>();
-    ASSERT(body.crossQueueType);
+    SLANG_ASSERT(body.crossQueueType);
 
     auto parent = body.getParentScope();
-    ASSERT(parent);
+    SLANG_ASSERT(parent);
 
     // If the syntax is a simple identifier that names our parent cross,
     // we're selecting the whole cross (which is otherwise not an expression).

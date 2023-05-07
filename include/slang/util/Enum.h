@@ -11,24 +11,24 @@
 
 #include "slang/util/Util.h"
 
-#define UTIL_ENUM_ELEMENT(x) x,
-#define UTIL_ENUM_STRING(x) #x,
+#define SLANG_UTIL_ENUM_ELEMENT(x) x,
+#define SLANG_UTIL_ENUM_STRING(x) #x,
 
-/// The ENUM macro defines a strongly-typed enum with the given elements
+/// The SLANG_ENUM macro defines a strongly-typed enum with the given elements
 /// along with a toString() method and an overload of operator<< for formatting.
-#define ENUM(name, elements) ENUM_SIZED(name, int, elements)
-#define ENUM_SIZED(name, underlying, elements)                                                  \
-    enum class SLANG_EXPORT name : underlying { elements(UTIL_ENUM_ELEMENT) };                  \
+#define SLANG_ENUM(name, elements) SLANG_ENUM_SIZED(name, int, elements)
+#define SLANG_ENUM_SIZED(name, underlying, elements)                                            \
+    enum class SLANG_EXPORT name : underlying { elements(SLANG_UTIL_ENUM_ELEMENT) };            \
     inline std::string_view toString(name e) {                                                  \
-        static const char* strings[] = {elements(UTIL_ENUM_STRING)};                            \
+        static const char* strings[] = {elements(SLANG_UTIL_ENUM_STRING)};                      \
         return strings[static_cast<std::underlying_type_t<name>>(e)];                           \
     }                                                                                           \
     inline std::ostream& operator<<(std::ostream& os, name e) {                                 \
         return os << toString(e);                                                               \
     }                                                                                           \
     class name##_traits {                                                                       \
-        enum e { elements(UTIL_ENUM_ELEMENT) };                                                 \
-        static constexpr auto vals = {elements(UTIL_ENUM_ELEMENT)};                             \
+        enum e { elements(SLANG_UTIL_ENUM_ELEMENT) };                                           \
+        static constexpr auto vals = {elements(SLANG_UTIL_ENUM_ELEMENT)};                       \
         static constexpr auto getValues() {                                                     \
             std::array<name, vals.size()> result{};                                             \
             for (size_t i = 0; i < vals.size(); i++)                                            \
@@ -42,7 +42,7 @@
     inline constexpr const std::array<name, name##_traits::vals.size()> name##_traits::values = \
         getValues();
 
-#define BITMASK_DETAIL_DEFINE_OPS(value_type)                                                    \
+#define SLANG_BITMASK_DEFINE_OPS(value_type)                                                     \
     inline constexpr slang::bitmask<value_type> operator&(value_type l, value_type r) noexcept { \
         return slang::bitmask<value_type>{l} & r;                                                \
     }                                                                                            \
@@ -59,19 +59,19 @@
         return slang::bitmask<value_type>{op}.bits();                                            \
     }
 
-#define BITMASK_DETAIL_DEFINE_MAX_ELEMENT(value_type, max_element)                           \
+#define SLANG_BITMASK_DEFINE_MAX_ELEMENT(value_type, max_element)                            \
     inline constexpr slang::bitmask_detail::underlying_type_t<value_type> get_enum_mask(     \
         value_type) noexcept {                                                               \
         return slang::bitmask_detail::mask_from_max_element<value_type,                      \
                                                             value_type::max_element>::value; \
     }
 
-/// The BITMASK macro defines convenience operators for a bitmask type.
+/// The SLANG_BITMASK macro defines convenience operators for a bitmask type.
 /// This is to work around strongly typed enums not being combinable by
 /// operators like | and & in C++.
-#define BITMASK(value_type, max_element)                       \
-    BITMASK_DETAIL_DEFINE_MAX_ELEMENT(value_type, max_element) \
-    BITMASK_DETAIL_DEFINE_OPS(value_type)
+#define SLANG_BITMASK(value_type, max_element)                \
+    SLANG_BITMASK_DEFINE_MAX_ELEMENT(value_type, max_element) \
+    SLANG_BITMASK_DEFINE_OPS(value_type)
 
 namespace slang {
 

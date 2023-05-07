@@ -16,7 +16,6 @@
 #include "slang/syntax/AllSyntax.h"
 #include "slang/text/FormatBuffer.h"
 #include "slang/text/SourceManager.h"
-#include "slang/util/StackContainer.h"
 
 namespace {
 
@@ -80,7 +79,7 @@ static void getHierarchicalPathImpl(const Symbol& symbol, FormatBuffer& buffer) 
     auto current = &symbol;
     if (scope && symbol.kind == SymbolKind::InstanceBody) {
         current = symbol.as<InstanceBodySymbol>().parentInstance;
-        ASSERT(current);
+        SLANG_ASSERT(current);
 
         scope = current->getParentScope();
     }
@@ -128,7 +127,7 @@ static void getHierarchicalPathImpl(const Symbol& symbol, FormatBuffer& buffer) 
 
             std::span<const ConstantRange> instanceDims = instanceDimVec;
             std::span<const int32_t> arrayPath = inst.arrayPath;
-            ASSERT(instanceDims.size() == arrayPath.size());
+            SLANG_ASSERT(instanceDims.size() == arrayPath.size());
 
             for (size_t i = 0; i < instanceDims.size(); i++) {
                 auto dim = instanceDims[i];
@@ -204,14 +203,14 @@ std::optional<bool> Symbol::isDeclaredBefore(LookupLocation target) const {
     // If target wasn't in a direct scope of any of our own parents,
     // repeat the process walking up target's scopes.
     sym = &target.getScope()->asSymbol();
-    ll = LookupLocation::before(*sym);
+    ll = LookupLocation::after(*sym);
 
     while ((scope = ll.getScope()) != nullptr && sym->kind != SymbolKind::CompilationUnit) {
         if (auto it = locMap.find(scope); it != locMap.end())
             return it->second < ll;
 
         sym = &scope->asSymbol();
-        ll = LookupLocation::before(*sym);
+        ll = LookupLocation::after(*sym);
     }
 
     return std::nullopt;

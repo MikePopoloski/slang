@@ -44,7 +44,7 @@ bool SystemSubroutine::checkArgCount(const ASTContext& context, bool isMethod, c
 
     size_t provided = args.size();
     if (isMethod) {
-        ASSERT(provided);
+        SLANG_ASSERT(provided);
         provided--;
     }
 

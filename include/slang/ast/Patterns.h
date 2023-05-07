@@ -10,7 +10,6 @@
 #include "slang/ast/Expression.h"
 #include "slang/syntax/SyntaxFwd.h"
 #include "slang/util/Enum.h"
-#include "slang/util/StackContainer.h"
 
 namespace slang::ast {
 
@@ -26,7 +25,7 @@ enum class CaseStatementCondition;
     x(Variable) \
     x(Tagged) \
     x(Structure)
-ENUM(PatternKind, PATTERN)
+SLANG_ENUM(PatternKind, PATTERN)
 #undef PATTERN
 // clang-format on
 
@@ -61,13 +60,13 @@ public:
 
     template<typename T>
     T& as() {
-        ASSERT(T::isKind(kind));
+        SLANG_ASSERT(T::isKind(kind));
         return *static_cast<T*>(this);
     }
 
     template<typename T>
     const T& as() const {
-        ASSERT(T::isKind(kind));
+        SLANG_ASSERT(T::isKind(kind));
         return *static_cast<const T*>(this);
     }
 

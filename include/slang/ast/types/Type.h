@@ -36,7 +36,7 @@ enum class SLANG_EXPORT IntegralFlags : uint8_t {
     /// more useful messaging.
     Reg = 4
 };
-BITMASK(IntegralFlags, Reg)
+SLANG_BITMASK(IntegralFlags, Reg)
 
 /// Base class for all data types in SystemVerilog.
 ///

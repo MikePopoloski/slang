@@ -53,4 +53,43 @@ inline constexpr bool is_iterator_v = false;
 template<typename TIter>
 inline constexpr bool is_iterator_v<TIter, std::void_t<IteratorCategory<TIter>>> = true;
 
+/// A simple implementation of a type index that can stand in for std::type_index
+/// to allow building without RTTI enabled.
+class SLANG_EXPORT type_index {
+public:
+    bool operator==(type_index t) const { return id == t.id; }
+    bool operator!=(type_index t) const { return id != t.id; }
+    bool operator<(type_index t) const { return std::less<int*>()(id, t.id); }
+    bool operator<=(type_index t) const { return !(t > *this); }
+    bool operator>(type_index t) const { return t < *this; }
+    bool operator>=(type_index t) const { return !(*this < t); }
+
+    size_t hash_code() const { return std::hash<int*>()(id); }
+
+    template<typename T>
+    static type_index of() {
+        using t = std::remove_cv_t<std::remove_reference_t<T>>;
+        return type_id_with_cvr<t>();
+    }
+
+private:
+    int* id;
+    type_index(int* id) : id(id) {}
+
+    template<typename T>
+    static type_index type_id_with_cvr() {
+        static int id;
+        return &id;
+    }
+};
+
 } // namespace slang
+
+namespace std {
+
+template<>
+struct hash<slang::type_index> {
+    size_t operator()(slang::type_index t) const { return t.hash_code(); }
+};
+
+} // namespace std

@@ -182,7 +182,7 @@ static bool handleOverlap(const Scope& scope, std::string_view name, const Value
     auto& diag = scope.addDiag(code, driverRange);
     diag << name;
     if (isSingleDriverUDNT) {
-        ASSERT(netType);
+        SLANG_ASSERT(netType);
         diag << netType->name;
     }
 
@@ -193,7 +193,7 @@ static bool handleOverlap(const Scope& scope, std::string_view name, const Value
 void ValueSymbol::addDriver(DriverKind driverKind, const Expression& longestStaticPrefix,
                             const Symbol& containingSymbol, bitmask<AssignFlags> flags) const {
     auto scope = getParentScope();
-    ASSERT(scope);
+    SLANG_ASSERT(scope);
 
     auto& comp = scope->getCompilation();
     EvalContext evalCtx(comp);
@@ -211,7 +211,7 @@ void ValueSymbol::addDriver(DriverKind driverKind, std::pair<uint32_t, uint32_t>
                             const Expression& longestStaticPrefix, const Symbol& containingSymbol,
                             const Expression& procCallExpression) const {
     auto scope = getParentScope();
-    ASSERT(scope);
+    SLANG_ASSERT(scope);
 
     auto& comp = scope->getCompilation();
     auto driver = comp.emplace<ValueDriver>(driverKind, longestStaticPrefix, containingSymbol,
@@ -223,7 +223,7 @@ void ValueSymbol::addDriver(DriverKind driverKind, std::pair<uint32_t, uint32_t>
 
 void ValueSymbol::addDriver(std::pair<uint32_t, uint32_t> bounds, const ValueDriver& driver) const {
     auto scope = getParentScope();
-    ASSERT(scope);
+    SLANG_ASSERT(scope);
 
     auto& comp = scope->getCompilation();
 
@@ -342,7 +342,7 @@ void ValueSymbol::addDriver(std::pair<uint32_t, uint32_t> bounds, const ValueDri
 
 void ValueSymbol::addPortBackref(const PortSymbol& port) const {
     auto scope = getParentScope();
-    ASSERT(scope);
+    SLANG_ASSERT(scope);
 
     auto& comp = scope->getCompilation();
     firstPortBackref = comp.emplace<PortBackref>(port, firstPortBackref);
@@ -381,7 +381,7 @@ static void visitPrefixExpressions(const Expression& longestStaticPrefix, TCallb
                 break;
             }
             default:
-                ASSUME_UNREACHABLE;
+                SLANG_UNREACHABLE;
         }
     } while (expr);
 }
@@ -430,7 +430,7 @@ std::optional<std::pair<uint32_t, uint32_t>> ValueDriver::getBounds(
             return std::nullopt;
 
         auto range = *elemRange;
-        ASSERT(range.left >= 0 && range.right >= 0);
+        SLANG_ASSERT(range.left >= 0 && range.right >= 0);
 
         if (type->kind == SymbolKind::FixedSizeUnpackedArrayType) {
             // Unpacked arrays need their selection adjusted since they

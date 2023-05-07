@@ -69,7 +69,7 @@ Pattern& Pattern::bind(const PatternSyntax& syntax, const Type& targetType, VarM
                                                    varMap, context);
             break;
         default:
-            ASSUME_UNREACHABLE;
+            SLANG_UNREACHABLE;
     }
 
     result->syntax = &syntax;
@@ -159,8 +159,8 @@ Pattern& ConstantPattern::fromSyntax(const ExpressionPatternSyntax& syntax, cons
 
 ConstantValue ConstantPattern::evalImpl(EvalContext&, const ConstantValue& value,
                                         CaseStatementCondition conditionKind) const {
-    ASSERT(expr.constant);
-    ASSERT(conditionKind != CaseStatementCondition::Inside);
+    SLANG_ASSERT(expr.constant);
+    SLANG_ASSERT(conditionKind != CaseStatementCondition::Inside);
 
     bool result;
     if (conditionKind == CaseStatementCondition::Normal || !expr.constant->isInteger() ||

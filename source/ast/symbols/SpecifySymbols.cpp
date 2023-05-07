@@ -92,7 +92,7 @@ bool SpecifyBlockSymbol::checkPathTerminal(const ValueSymbol& terminal, const Ty
     }
 
     auto terminalParentScope = terminal.getParentScope();
-    ASSERT(terminalParentScope);
+    SLANG_ASSERT(terminalParentScope);
 
     auto& terminalParent = terminalParentScope->asSymbol();
     if (terminalParent.kind == SymbolKind::InstanceBody &&
@@ -358,7 +358,7 @@ void TimingPathSymbol::resolve() const {
 
     auto syntaxPtr = getSyntax();
     auto parent = getParentScope();
-    ASSERT(syntaxPtr && parent);
+    SLANG_ASSERT(syntaxPtr && parent);
 
     auto parentParent = parent->asSymbol().getParentScope();
     auto& comp = parent->getCompilation();
@@ -425,7 +425,7 @@ void TimingPathSymbol::resolve() const {
 
 void TimingPathSymbol::checkDuplicatePaths(TimingPathMap& timingPathMap) const {
     auto parent = getParentScope();
-    ASSERT(parent);
+    SLANG_ASSERT(parent);
 
     EvalContext evalCtx(parent->getCompilation(), EvalFlags::CacheResults);
 
@@ -546,7 +546,7 @@ static std::string_view toString(TimingPathSymbol::Polarity polarity) {
         case TimingPathSymbol::Polarity::Negative:
             return "Negative"sv;
         default:
-            ASSUME_UNREACHABLE;
+            SLANG_UNREACHABLE;
     }
 }
 
@@ -599,7 +599,7 @@ void PulseStyleSymbol::resolve() const {
 
     auto syntaxPtr = getSyntax();
     auto parent = getParentScope();
-    ASSERT(syntaxPtr && parent);
+    SLANG_ASSERT(syntaxPtr && parent);
 
     auto parentParent = parent->asSymbol().getParentScope();
     ASTContext context(*parent, LookupLocation::after(*this),
@@ -612,7 +612,7 @@ void PulseStyleSymbol::resolve() const {
 void PulseStyleSymbol::checkPreviouslyUsed(const TimingPathMap& timingPathMap) const {
     auto parent = getParentScope();
     auto syntax = getSyntax();
-    ASSERT(parent && syntax);
+    SLANG_ASSERT(parent && syntax);
 
     for (auto terminal : getTerminals()) {
         if (auto symbol = terminal->getSymbolReference()) {
@@ -627,7 +627,7 @@ void PulseStyleSymbol::checkPreviouslyUsed(const TimingPathMap& timingPathMap) c
                         }
                     }
 
-                    ASSERT(pathRange != SourceRange());
+                    SLANG_ASSERT(pathRange != SourceRange());
 
                     auto& diag = parent->addDiag(diag::InvalidPulseStyle, terminal->sourceRange);
                     diag << syntax->as<PulseStyleDeclarationSyntax>().keyword.valueText();
@@ -764,7 +764,7 @@ static void createImplicitNets(const SystemTimingCheckSymbol& timingCheck,
         return;
 
     auto syntaxPtr = timingCheck.getSyntax();
-    ASSERT(syntaxPtr);
+    SLANG_ASSERT(syntaxPtr);
 
     auto& syntax = syntaxPtr->as<SystemTimingCheckSyntax>();
     auto& actualArgs = syntax.args;
@@ -840,7 +840,7 @@ void SystemTimingCheckSymbol::resolve() const {
 
     auto syntaxPtr = getSyntax();
     auto parent = getParentScope();
-    ASSERT(syntaxPtr && parent);
+    SLANG_ASSERT(syntaxPtr && parent);
 
     auto parentParent = parent->asSymbol().getParentScope();
     auto& comp = parent->getCompilation();
@@ -985,7 +985,7 @@ void SystemTimingCheckSymbol::resolve() const {
                 }
                 break;
             case SystemTimingCheckArgDef::DelayedRef: {
-                ASSERT(formal.signalRef >= 0 && formal.signalRef < int(i));
+                SLANG_ASSERT(formal.signalRef >= 0 && formal.signalRef < int(i));
                 auto signalExpr = argBuf[size_t(formal.signalRef)].expr;
                 if (!signalExpr) {
                     argBuf.emplace_back();
@@ -1000,7 +1000,7 @@ void SystemTimingCheckSymbol::resolve() const {
                 break;
             }
             default:
-                ASSUME_UNREACHABLE;
+                SLANG_UNREACHABLE;
         }
     }
 

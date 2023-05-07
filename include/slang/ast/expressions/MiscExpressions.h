@@ -225,7 +225,7 @@ public:
         body.visit(visitor);
         for (auto sym : localVars) {
             auto dt = sym->getDeclaredType();
-            ASSERT(dt);
+            SLANG_ASSERT(dt);
             if (auto init = dt->getInitializer())
                 init->visit(visitor);
         }

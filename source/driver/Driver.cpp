@@ -266,7 +266,7 @@ bool Driver::processCommandFile(std::string_view fileName, bool makeRelative) {
     parseOpts.supportComments = true;
     parseOpts.ignoreDuplicates = true;
 
-    ASSERT(!buffer.empty());
+    SLANG_ASSERT(!buffer.empty());
     buffer.pop_back();
 
     std::string_view argStr(buffer.data(), buffer.size());
@@ -336,20 +336,14 @@ bool Driver::processOptions() {
         options.ignoreUnknownModules = true;
 
     for (const std::string& dir : options.includeDirs) {
-        try {
-            sourceManager.addUserDirectory(std::string_view(dir));
-        }
-        catch (const std::exception&) {
+        if (!sourceManager.addUserDirectory(dir)) {
             OS::printE(fg(diagClient->warningColor), "warning: ");
             OS::printE(fmt::format("include directory '{}' does not exist\n", dir));
         }
     }
 
     for (const std::string& dir : options.includeSystemDirs) {
-        try {
-            sourceManager.addSystemDirectory(std::string_view(dir));
-        }
-        catch (const std::exception&) {
+        if (!sourceManager.addSystemDirectory(dir)) {
             OS::printE(fg(diagClient->warningColor), "warning: ");
             OS::printE(fmt::format("include directory '{}' does not exist\n", dir));
         }
@@ -664,7 +658,7 @@ bool Driver::parseAllSources() {
                 break;
 
             missingNames = std::move(nextMissingNames);
-            nextMissingNames.clear();
+            nextMissingNames = {};
         }
     }
 

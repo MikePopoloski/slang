@@ -28,14 +28,14 @@ void EvalContext::reset() {
 }
 
 ConstantValue* EvalContext::createLocal(const ValueSymbol* symbol, ConstantValue value) {
-    ASSERT(!stack.empty());
+    SLANG_ASSERT(!stack.empty());
     ConstantValue& result = stack.back().temporaries[symbol];
     if (!value) {
         result = symbol->getType().getDefaultValue();
     }
     else {
-        ASSERT(!value.isInteger() ||
-               value.integer().getBitWidth() == symbol->getType().getBitWidth());
+        SLANG_ASSERT(!value.isInteger() ||
+                     value.integer().getBitWidth() == symbol->getType().getBitWidth());
 
         result = std::move(value);
     }
@@ -165,7 +165,7 @@ static void reportFrame(Diagnostic& diag, const EvalContext::Frame& frame) {
 
     for (auto arg : frame.subroutine->getArguments()) {
         auto it = frame.temporaries.find(arg);
-        ASSERT(it != frame.temporaries.end());
+        SLANG_ASSERT(it != frame.temporaries.end());
 
         buffer.append(it->second.toString());
         if (arg != frame.subroutine->getArguments().last(1)[0])

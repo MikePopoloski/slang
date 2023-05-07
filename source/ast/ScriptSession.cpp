@@ -75,7 +75,7 @@ ConstantValue ScriptSession::eval(std::string_view text) {
             else {
                 // If this throws, ScriptSession doesn't currently support whatever construct
                 // you were trying to evaluate. Add support to the case above.
-                ASSUME_UNREACHABLE;
+                SLANG_UNREACHABLE;
             }
     }
 }

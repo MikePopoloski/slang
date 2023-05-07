@@ -45,7 +45,7 @@ enum class SLANG_EXPORT EvalFlags : uint8_t {
     /// without a queue target will return an invalid value.
     AllowUnboundedPlaceholder = 1 << 4
 };
-BITMASK(EvalFlags, AllowUnboundedPlaceholder)
+SLANG_BITMASK(EvalFlags, AllowUnboundedPlaceholder)
 
 /// A container for all context required to evaluate a statement or expression.
 /// Mostly this involves tracking the callstack and maintaining

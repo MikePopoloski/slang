@@ -218,7 +218,7 @@ public:
 
     ElabSystemTaskSymbol(ElabSystemTaskKind taskKind, SourceLocation loc);
 
-    std::string_view getMessage() const;
+    std::optional<std::string_view> getMessage() const;
     const Expression* getAssertCondition() const;
     void issueDiagnostic() const;
 
@@ -227,8 +227,8 @@ public:
     static ElabSystemTaskSymbol& fromSyntax(Compilation& compilation,
                                             const syntax::ElabSystemTaskSyntax& syntax);
 
-    static std::string_view createMessage(const ASTContext& context,
-                                          std::span<const Expression* const> args);
+    static std::optional<std::string_view> createMessage(const ASTContext& context,
+                                                         std::span<const Expression* const> args);
 
     static void reportStaticAssert(const Scope& scope, SourceLocation loc, std::string_view message,
                                    const Expression* condition);
@@ -238,6 +238,7 @@ public:
 private:
     mutable std::optional<std::string_view> message;
     mutable const Expression* assertCondition = nullptr;
+    mutable bool resolved = false;
 };
 
 class SLANG_EXPORT PrimitivePortSymbol : public ValueSymbol {
@@ -392,13 +393,13 @@ public:
 
         template<typename T>
         T& as() {
-            ASSERT(T::isKind(kind));
+            SLANG_ASSERT(T::isKind(kind));
             return *static_cast<T*>(this);
         }
 
         template<typename T>
         const T& as() const {
-            ASSERT(T::isKind(kind));
+            SLANG_ASSERT(T::isKind(kind));
             return *static_cast<const T*>(this);
         }
 
@@ -561,7 +562,7 @@ public:
                         break;
                     }
                     default:
-                        ASSUME_UNREACHABLE;
+                        SLANG_UNREACHABLE;
                 }
             }
 

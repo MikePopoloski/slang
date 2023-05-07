@@ -23,7 +23,7 @@ namespace slang {
     x(Picoseconds) \
     x(Femtoseconds)
 /// Scale unit for a time value.
-ENUM_SIZED(TimeUnit, uint8_t, TU)
+SLANG_ENUM_SIZED(TimeUnit, uint8_t, TU)
 #undef TU
 // clang-format on
 

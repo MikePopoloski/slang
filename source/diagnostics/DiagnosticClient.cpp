@@ -13,7 +13,7 @@ namespace slang {
 
 void DiagnosticClient::setEngine(const DiagnosticEngine& newEngine) {
     if (engine && engine != &newEngine)
-        throw std::runtime_error("Diagnostic client already has a different engine set");
+        SLANG_THROW(std::runtime_error("Diagnostic client already has a different engine set"));
 
     engine = &newEngine;
     sourceManager = &engine->getSourceManager();
@@ -58,7 +58,7 @@ std::string_view DiagnosticClient::getSeverityString(DiagnosticSeverity severity
         case DiagnosticSeverity::Fatal:
             return "fatal error";
         default:
-            ASSUME_UNREACHABLE;
+            SLANG_UNREACHABLE;
     }
 }
 

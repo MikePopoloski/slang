@@ -67,7 +67,7 @@ enum class SLANG_EXPORT LookupFlags {
     /// Treat this lookup as hierarchical even if it's a simple name.
     ForceHierarchical = AllowDeclaredAfter | NoUndeclaredErrorIfUninstantiated
 };
-BITMASK(LookupFlags, AllowRoot)
+SLANG_BITMASK(LookupFlags, AllowRoot)
 
 /// This type denotes the ordering of symbols within a particular scope, for the purposes of
 /// determining whether a found symbol is visible compared to the given location.

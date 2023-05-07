@@ -162,7 +162,7 @@ int NumberParser::append(Token token, bool isFirst) {
             }
             break;
         default:
-            ASSUME_UNREACHABLE;
+            SLANG_UNREACHABLE;
     }
 
     valid = true;
@@ -226,7 +226,7 @@ Token NumberParser::finishValue(Token firstToken, bool singleToken) {
                 multiplier = 4;
                 break;
             default:
-                ASSUME_UNREACHABLE;
+                SLANG_UNREACHABLE;
         }
 
         // All of the digits in the number require `multiplier` bits, except for
@@ -269,7 +269,7 @@ void NumberParser::addDigit(logic_t digit, int maxValue) {
         hasUnknown = true;
     }
     else {
-        ASSERT(digit.value < maxValue);
+        SLANG_ASSERT(digit.value < maxValue);
         if (digits.size() == 1 && digits.front().value == 0) {
             if (digit.value == 0)
                 return; // at most one leading zero

@@ -75,7 +75,7 @@ StatementSyntax& Parser::parseStatement(bool allowEmpty, bool allowSuperNew) {
         case TokenKind::DoubleHash:
         case TokenKind::At: {
             auto timingControl = parseTimingControl();
-            ASSERT(timingControl);
+            SLANG_ASSERT(timingControl);
             return factory.timingControlStatement(label, attributes, *timingControl,
                                                   parseStatement());
         }
@@ -514,7 +514,7 @@ StatementSyntax& Parser::parseAssertionStatement(NamedLabelSyntax* label, AttrLi
             assertionKind = SyntaxKind::ImmediateCoverStatement;
             break;
         default:
-            ASSUME_UNREACHABLE;
+            SLANG_UNREACHABLE;
     }
 
     Token keyword = consume();
@@ -573,7 +573,7 @@ ConcurrentAssertionStatementSyntax& Parser::parseConcurrentAssertion(NamedLabelS
             kind = SyntaxKind::ExpectPropertyStatement;
             break;
         default:
-            ASSUME_UNREACHABLE;
+            SLANG_UNREACHABLE;
     }
 
     auto openParen = expect(TokenKind::OpenParenthesis);

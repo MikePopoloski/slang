@@ -31,7 +31,7 @@ namespace slang::ast {
     x(Conditional) \
     x(Case) \
     x(DisableIff)
-ENUM(AssertionExprKind, EXPR)
+SLANG_ENUM(AssertionExprKind, EXPR)
 #undef EXPR
 
 #define OP(x) \
@@ -42,7 +42,7 @@ ENUM(AssertionExprKind, EXPR)
     x(SAlways) \
     x(Eventually) \
     x(SEventually)
-ENUM(UnaryAssertionOperator, OP)
+SLANG_ENUM(UnaryAssertionOperator, OP)
 #undef OP
 
 #define OP(x) \
@@ -61,7 +61,7 @@ ENUM(UnaryAssertionOperator, OP)
     x(NonOverlappedImplication) \
     x(OverlappedFollowedBy) \
     x(NonOverlappedFollowedBy)
-ENUM(BinaryAssertionOperator, OP)
+SLANG_ENUM(BinaryAssertionOperator, OP)
 #undef OP
 // clang-format on
 
@@ -102,13 +102,13 @@ public:
 
     template<typename T>
     T& as() {
-        ASSERT(T::isKind(kind));
+        SLANG_ASSERT(T::isKind(kind));
         return *static_cast<T*>(this);
     }
 
     template<typename T>
     const T& as() const {
-        ASSERT(T::isKind(kind));
+        SLANG_ASSERT(T::isKind(kind));
         return *static_cast<const T*>(this);
     }
 

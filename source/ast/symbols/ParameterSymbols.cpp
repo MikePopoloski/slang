@@ -90,12 +90,12 @@ const ConstantValue& ParameterSymbol::getValue(SourceRange referencingRange) con
         auto init = getInitializer();
         if (init) {
             auto scope = getParentScope();
-            ASSERT(scope);
+            SLANG_ASSERT(scope);
 
             ASTContext ctx(*scope, LookupLocation::max);
 
             if (evaluating) {
-                ASSERT(referencingRange.start());
+                SLANG_ASSERT(referencingRange.start());
 
                 auto& diag = ctx.addDiag(diag::ConstEvalParamCycle, location) << name;
                 diag.addNote(diag::NoteReferencedHere, referencingRange);
@@ -124,7 +124,7 @@ const ConstantValue& ParameterSymbol::getValue(SourceRange referencingRange) con
     }
     else if (needsCoercion) {
         auto scope = getParentScope();
-        ASSERT(scope);
+        SLANG_ASSERT(scope);
 
         value = scope->getCompilation().allocConstant(getType().coerceValue(*value));
         needsCoercion = false;
@@ -193,7 +193,7 @@ const Type& TypeParameterSymbol::getTypeAlias() const {
         return *typeAlias;
 
     auto scope = getParentScope();
-    ASSERT(scope);
+    SLANG_ASSERT(scope);
 
     auto alias = scope->getCompilation().emplace<TypeAliasType>(name, location);
     if (auto syntax = getSyntax())
@@ -242,7 +242,7 @@ const Expression& DefParamSymbol::getInitializer() const {
 
 const ConstantValue& DefParamSymbol::getValue() const {
     auto v = getInitializer().constant;
-    ASSERT(v);
+    SLANG_ASSERT(v);
     return *v;
 }
 
@@ -288,7 +288,7 @@ static const Symbol* checkDefparamHierarchy(const Symbol& target, const Scope& d
         }
 
         auto& body = sym.as<InstanceBodySymbol>();
-        ASSERT(body.parentInstance);
+        SLANG_ASSERT(body.parentInstance);
         scope = body.parentInstance->getParentScope();
 
         isInsideBind |= body.isFromBind;
@@ -299,13 +299,13 @@ static const Symbol* checkDefparamHierarchy(const Symbol& target, const Scope& d
             if (auto connSym = conn->getIfaceInstance()) {
                 if (connSym->kind == SymbolKind::Modport) {
                     auto parent = connSym->getParentScope();
-                    ASSERT(parent);
+                    SLANG_ASSERT(parent);
                     connSym = &parent->asSymbol();
                 }
 
                 if (connSym->kind == SymbolKind::InstanceBody) {
                     auto& connBody = connSym->as<InstanceBodySymbol>();
-                    ASSERT(connBody.parentInstance);
+                    SLANG_ASSERT(connBody.parentInstance);
                     connSym = connBody.parentInstance;
                 }
 
@@ -324,7 +324,7 @@ static const Symbol* checkDefparamHierarchy(const Symbol& target, const Scope& d
 void DefParamSymbol::resolve() const {
     auto syntax = getSyntax();
     auto scope = getParentScope();
-    ASSERT(syntax && scope);
+    SLANG_ASSERT(syntax && scope);
 
     auto& comp = scope->getCompilation();
     auto& assignment = syntax->as<DefParamAssignmentSyntax>();
@@ -406,12 +406,12 @@ const ConstantValue& SpecparamSymbol::getValue(SourceRange referencingRange) con
         auto init = getInitializer();
         if (init) {
             auto scope = getParentScope();
-            ASSERT(scope);
+            SLANG_ASSERT(scope);
 
             ASTContext ctx(*scope, LookupLocation::before(*this));
 
             if (evaluating) {
-                ASSERT(referencingRange.start());
+                SLANG_ASSERT(referencingRange.start());
 
                 auto& diag = ctx.addDiag(diag::ConstEvalParamCycle, location) << name;
                 diag.addNote(diag::NoteReferencedHere, referencingRange);
@@ -426,7 +426,7 @@ const ConstantValue& SpecparamSymbol::getValue(SourceRange referencingRange) con
 
             // Specparams can also be a "PATHPULSE$" which has two values to bind.
             auto syntax = getSyntax();
-            ASSERT(syntax);
+            SLANG_ASSERT(syntax);
 
             auto& decl = syntax->as<SpecparamDeclaratorSyntax>();
             if (auto exprSyntax = decl.value2) {
@@ -447,13 +447,13 @@ const ConstantValue& SpecparamSymbol::getValue(SourceRange referencingRange) con
 }
 
 const ConstantValue& SpecparamSymbol::getPulseRejectLimit() const {
-    ASSERT(isPathPulse);
+    SLANG_ASSERT(isPathPulse);
     getValue();
     return *value1;
 }
 
 const ConstantValue& SpecparamSymbol::getPulseErrorLimit() const {
-    ASSERT(isPathPulse);
+    SLANG_ASSERT(isPathPulse);
     getValue();
     return *value2;
 }
@@ -495,7 +495,7 @@ void SpecparamSymbol::resolvePathPulse() const {
         return;
 
     auto parent = getParentScope();
-    ASSERT(parent);
+    SLANG_ASSERT(parent);
 
     auto prefix = "PATHPULSE$"sv;
     if (name.starts_with(prefix) && parent->asSymbol().kind == SymbolKind::SpecifyBlock) {
@@ -533,7 +533,7 @@ const Symbol* SpecparamSymbol::resolvePathTerminal(std::string_view terminalName
                                                    const Scope& parent, SourceLocation loc,
                                                    bool isSource) const {
     auto parentParent = parent.asSymbol().getParentScope();
-    ASSERT(parentParent);
+    SLANG_ASSERT(parentParent);
 
     SourceRange sourceRange{loc, loc + terminalName.length()};
     auto symbol = Lookup::unqualifiedAt(*parentParent, terminalName,

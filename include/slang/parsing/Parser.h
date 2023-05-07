@@ -55,7 +55,7 @@ enum class ExpressionOptions {
     /// "dist" expressions are allowed in this context.
     AllowDist = 1 << 7
 };
-BITMASK(ExpressionOptions, AllowDist)
+SLANG_BITMASK(ExpressionOptions, AllowDist)
 
 /// Various options for parsing names.
 enum class NameOptions {
@@ -83,7 +83,7 @@ enum class NameOptions {
     /// This name does not allow class scope components.
     NoClassScope = 1 << 6
 };
-BITMASK(NameOptions, NoClassScope)
+SLANG_BITMASK(NameOptions, NoClassScope)
 
 /// Various options for parsing types.
 enum class TypeOptions {
@@ -96,7 +96,7 @@ enum class TypeOptions {
     /// Allow void types.
     AllowVoid = 2
 };
-BITMASK(TypeOptions, AllowVoid)
+SLANG_BITMASK(TypeOptions, AllowVoid)
 
 /// Various options for parsing functions.
 enum class FunctionOptions {
@@ -116,7 +116,7 @@ enum class FunctionOptions {
     /// are slightly different.
     IsPrototype = 8
 };
-BITMASK(FunctionOptions, AllowImplicitReturn)
+SLANG_BITMASK(FunctionOptions, AllowImplicitReturn)
 
 } // namespace detail
 

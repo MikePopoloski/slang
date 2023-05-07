@@ -139,7 +139,7 @@ void PackageSymbol::noteImport(const Symbol& symbol) const {
     const Symbol* packageParent;
     auto targetScope = symbol.getParentScope();
     while (true) {
-        ASSERT(targetScope);
+        SLANG_ASSERT(targetScope);
         packageParent = &targetScope->asSymbol();
         if (packageParent->kind == SymbolKind::Package)
             break;
@@ -156,6 +156,23 @@ void PackageSymbol::noteImport(const Symbol& symbol) const {
             return;
         }
     }
+}
+
+ConfigBlockSymbol& ConfigBlockSymbol::fromSyntax(const Scope& scope,
+                                                 const ConfigDeclarationSyntax& syntax) {
+    auto& comp = scope.getCompilation();
+    auto result = comp.emplace<ConfigBlockSymbol>(comp, syntax.name.valueText(),
+                                                  syntax.name.location());
+    result->setSyntax(syntax);
+    result->setAttributes(scope, syntax.attributes);
+
+    for (auto param : syntax.localparams)
+        result->addMembers(*param);
+
+    return *result;
+}
+
+void ConfigBlockSymbol::serializeTo(ASTSerializer&) const {
 }
 
 } // namespace slang::ast

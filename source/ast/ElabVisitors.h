@@ -10,7 +10,6 @@
 #include "slang/ast/ASTVisitor.h"
 #include "slang/diagnostics/CompilationDiags.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
-#include "slang/util/StackContainer.h"
 #include "slang/util/TimeTrace.h"
 
 namespace slang::ast {
@@ -558,7 +557,7 @@ struct PostElabVisitor : public ASTVisitor<PostElabVisitor, false, false> {
         }
         else if (symbol.kind == SymbolKind::FormalArgument) {
             auto parent = symbol.getParentScope();
-            ASSERT(parent);
+            SLANG_ASSERT(parent);
 
             if (parent->asSymbol().kind == SymbolKind::Subroutine) {
                 auto& sub = parent->asSymbol().as<SubroutineSymbol>();

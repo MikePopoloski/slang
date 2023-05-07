@@ -10,7 +10,6 @@
 #include <string>
 
 #include "slang/util/OS.h"
-#include "slang/util/StackContainer.h"
 #include "slang/util/String.h"
 
 namespace fs = std::filesystem;
@@ -29,14 +28,26 @@ std::string SourceManager::makeAbsolutePath(std::string_view path) const {
     return getU8Str(fs::canonical(widen(path)));
 }
 
-void SourceManager::addSystemDirectory(std::string_view path) {
+bool SourceManager::addSystemDirectory(std::string_view pathStr) {
+    std::error_code ec;
+    auto path = fs::canonical(widen(pathStr), ec);
+    if (ec)
+        return false;
+
     std::unique_lock lock(mut);
-    systemDirectories.push_back(fs::canonical(widen(path)));
+    systemDirectories.emplace_back(std::move(path));
+    return true;
 }
 
-void SourceManager::addUserDirectory(std::string_view path) {
+bool SourceManager::addUserDirectory(std::string_view pathStr) {
+    std::error_code ec;
+    auto path = fs::canonical(widen(pathStr), ec);
+    if (ec)
+        return false;
+
     std::unique_lock lock(mut);
-    userDirectories.push_back(fs::canonical(widen(path)));
+    userDirectories.emplace_back(std::move(path));
+    return true;
 }
 
 size_t SourceManager::getLineNumber(SourceLocation location) const {
@@ -65,7 +76,7 @@ size_t SourceManager::getColumnNumber(SourceLocation location) const {
     // walk backward to find start of line
     auto fd = info->data;
     size_t lineStart = location.offset();
-    ASSERT(lineStart < fd->mem.size());
+    SLANG_ASSERT(lineStart < fd->mem.size());
     while (lineStart > 0 && fd->mem[lineStart - 1] != '\n' && fd->mem[lineStart - 1] != '\r')
         lineStart--;
 
@@ -135,7 +146,7 @@ std::string_view SourceManager::getMacroName(SourceLocation location) const {
 
     std::shared_lock lock(mut);
 
-    ASSERT(buffer.getId() < bufferEntries.size());
+    SLANG_ASSERT(buffer.getId() < bufferEntries.size());
     auto info = std::get_if<ExpansionInfo>(&bufferEntries[buffer.getId()]);
     if (!info)
         return {};
@@ -160,7 +171,7 @@ bool SourceManager::isMacroLoc(SourceLocation location) const {
 
     std::shared_lock lock(mut);
 
-    ASSERT(buffer.getId() < bufferEntries.size());
+    SLANG_ASSERT(buffer.getId() < bufferEntries.size());
     return std::get_if<ExpansionInfo>(&bufferEntries[buffer.getId()]) != nullptr;
 }
 
@@ -174,7 +185,7 @@ bool SourceManager::isMacroArgLoc(SourceLocation location) const {
 
     std::shared_lock lock(mut);
 
-    ASSERT(buffer.getId() < bufferEntries.size());
+    SLANG_ASSERT(buffer.getId() < bufferEntries.size());
     auto info = std::get_if<ExpansionInfo>(&bufferEntries[buffer.getId()]);
     return info && info->isMacroArg;
 }
@@ -221,7 +232,7 @@ bool SourceManager::isBeforeInCompilationUnit(SourceLocation left, SourceLocatio
 
     // At this point, we either have a nearest common ancestor, or the two
     // locations are simply in totally different compilation units.
-    ASSERT(left.buffer() == right.buffer());
+    SLANG_ASSERT(left.buffer() == right.buffer());
     return left.offset() < right.offset();
 }
 
@@ -232,7 +243,7 @@ SourceLocation SourceManager::getExpansionLoc(SourceLocation location) const {
 
     std::shared_lock lock(mut);
 
-    ASSERT(buffer.getId() < bufferEntries.size());
+    SLANG_ASSERT(buffer.getId() < bufferEntries.size());
     return std::get<ExpansionInfo>(bufferEntries[buffer.getId()]).expansionRange.start();
 }
 
@@ -243,7 +254,7 @@ SourceRange SourceManager::getExpansionRange(SourceLocation location) const {
 
     std::shared_lock lock(mut);
 
-    ASSERT(buffer.getId() < bufferEntries.size());
+    SLANG_ASSERT(buffer.getId() < bufferEntries.size());
     const ExpansionInfo& info = std::get<ExpansionInfo>(bufferEntries[buffer.getId()]);
     return info.expansionRange;
 }
@@ -255,7 +266,7 @@ SourceLocation SourceManager::getOriginalLoc(SourceLocation location) const {
 
     std::shared_lock lock(mut);
 
-    ASSERT(buffer.getId() < bufferEntries.size());
+    SLANG_ASSERT(buffer.getId() < bufferEntries.size());
     return std::get<ExpansionInfo>(bufferEntries[buffer.getId()]).originalLoc + location.offset();
 }
 
@@ -333,8 +344,8 @@ SourceBuffer SourceManager::assignBuffer(std::string_view bufferPath, std::vecto
         std::shared_lock lock(mut);
         auto it = lookupCache.find(pathStr);
         if (it != lookupCache.end()) {
-            throw std::runtime_error(
-                "Buffer with the given path has already been assigned to the source manager");
+            SLANG_THROW(std::runtime_error(
+                "Buffer with the given path has already been assigned to the source manager"));
         }
     }
 
@@ -348,7 +359,7 @@ SourceBuffer SourceManager::readSource(const fs::path& path) {
 SourceBuffer SourceManager::readHeader(std::string_view path, SourceLocation includedFrom,
                                        bool isSystemPath) {
     // if the header is specified as an absolute path, just do a straight lookup
-    ASSERT(!path.empty());
+    SLANG_ASSERT(!path.empty());
     fs::path p = widen(path);
     if (p.is_absolute())
         return openCached(p, includedFrom);
@@ -457,7 +468,7 @@ SourceManager::FileInfo* SourceManager::getFileInfo(BufferID buffer) {
         return nullptr;
 
     std::shared_lock lock(mut);
-    ASSERT(buffer.getId() < bufferEntries.size());
+    SLANG_ASSERT(buffer.getId() < bufferEntries.size());
     return std::get_if<FileInfo>(&bufferEntries[buffer.getId()]);
 }
 
@@ -474,7 +485,7 @@ const SourceManager::FileInfo* SourceManager::getFileInfo(BufferID buffer) const
 
 SourceBuffer SourceManager::createBufferEntry(FileData* fd, SourceLocation includedFrom,
                                               std::unique_lock<std::shared_mutex>&) {
-    ASSERT(fd);
+    SLANG_ASSERT(fd);
     bufferEntries.emplace_back(FileInfo(fd, includedFrom));
     return SourceBuffer{std::string_view(fd->mem.data(), fd->mem.size()),
                         BufferID((uint32_t)(bufferEntries.size() - 1), fd->name)};
@@ -553,7 +564,7 @@ SourceBuffer SourceManager::cacheBuffer(fs::path&& path, std::string&& pathStr,
                                          std::move(path));
 
     auto [it, inserted] = lookupCache.emplace(pathStr, std::move(fd));
-    ASSERT(inserted);
+    SLANG_ASSERT(inserted);
 
     FileData* fdPtr = it->second.get();
     return createBufferEntry(fdPtr, includedFrom, lock);

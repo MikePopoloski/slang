@@ -11,13 +11,103 @@
 #include <cstdint>
 #include <cstring>
 #include <span>
+#include <stdexcept>
 #include <string_view>
 #include <utility>
 
 #include "slang/slang_export.h"
-#include "slang/util/Assert.h"
 #include "slang/util/Enum.h"
-#include "slang/util/NotNull.h"
+
+#if defined(__GNUC__) || defined(__INTEL_COMPILER) || defined(__clang__)
+#    define SLANG_LIKELY(x) __builtin_expect(x, 1)
+#    define SLANG_UNLIKELY(x) __builtin_expect(x, 0)
+#else
+#    define SLANG_LIKELY(x) (x)
+#    define SLANG_UNLIKELY(x) (x)
+#endif
+
+#if defined(__GNUC__) || defined(__clang__)
+#    define SLANG_ASSERT_FUNCTION __PRETTY_FUNCTION__
+#elif defined(_MSC_VER)
+#    define SLANG_ASSERT_FUNCTION __FUNCSIG__
+#elif defined(__SUNPRO_CC)
+#    define SLANG_ASSERT_FUNCTION __func__
+#else
+#    define SLANG_ASSERT_FUNCTION __FUNCTION__
+#endif
+
+#if __cpp_exceptions
+#    define SLANG_TRY try
+#    define SLANG_CATCH(X) catch (X)
+#    define SLANG_THROW(e) throw(e)
+#else
+#    define SLANG_TRY if (true)
+#    define SLANG_CATCH(X) if (false)
+#    define SLANG_THROW(e) \
+        slang::assert::handleThrow((e).what(), __FILE__, __LINE__, SLANG_ASSERT_FUNCTION)
+#endif
+
+#if defined(__clang__)
+#    if __has_feature(cxx_rtti)
+#        define SLANG_RTTI_ENABLED
+#    endif
+#elif defined(__GNUG__)
+#    if defined(__GXX_RTTI)
+#        define SLANG_RTTI_ENABLED
+#    endif
+#elif defined(_MSC_VER)
+#    if defined(_CPPRTTI)
+#        define SLANG_RTTI_ENABLED
+#    endif
+#else
+#    define SLANG_RTTI_ENABLED
+#endif
+
+#if defined(SLANG_RTTI_ENABLED)
+#    define SLANG_TYPEOF(x) std::type_index(typeid(x))
+#    define SLANG_TYPEINDEX std::type_index
+#else
+#    define SLANG_TYPEOF(x) type_index::of<x>()
+#    define SLANG_TYPEINDEX type_index
+#endif
+
+#if !defined(SLANG_ASSERT_ENABLED)
+#    if !defined(NDEBUG)
+#        define SLANG_ASSERT_ENABLED 1
+#    endif
+#endif
+
+#if SLANG_ASSERT_ENABLED
+#    define SLANG_ASSERT(cond)                                                                 \
+        do {                                                                                   \
+            if (!(cond))                                                                       \
+                slang::assert::assertFailed(#cond, __FILE__, __LINE__, SLANG_ASSERT_FUNCTION); \
+        } while (false)
+
+#    define SLANG_UNREACHABLE \
+        slang::assert::handleUnreachable(__FILE__, __LINE__, SLANG_ASSERT_FUNCTION)
+#else
+#    define SLANG_ASSERT(cond)  \
+        do {                    \
+            (void)sizeof(cond); \
+        } while (false)
+
+#    if defined(__GNUC__) || defined(__clang__)
+#        define SLANG_UNREACHABLE __builtin_unreachable()
+#    elif defined(_MSC_VER)
+#        define SLANG_UNREACHABLE __assume(false)
+#    else
+#        define SLANG_UNREACHABLE
+#    endif
+
+#endif
+
+// Compiler-specific macros for warnings and suppressions
+#ifdef __clang__
+#    define SLANG_NO_SANITIZE(warningName) __attribute__((no_sanitize(warningName)))
+#else
+#    define SLANG_NO_SANITIZE(warningName)
+#endif
 
 using namespace std::literals;
 
@@ -38,4 +128,136 @@ using uint64_t = std::uint64_t;
 using uint8_t = std::uint8_t;
 using uintptr_t = std::uintptr_t;
 
+namespace assert {
+
+/// An exception thrown when an ASSERT condition fails.
+class SLANG_EXPORT AssertionException : public std::logic_error {
+public:
+    AssertionException(const std::string& message) : std::logic_error(message) {}
+};
+
+/// A handler that runs when an ASSERT condition fails; it will unconditionally
+/// throw an exception.
+[[noreturn]] SLANG_EXPORT void assertFailed(const char* expr, const char* file, int line,
+                                            const char* func);
+
+/// A handler that runs when an exception is thrown but exceptions are disabled; it will
+/// unconditionally abort the program.
+[[noreturn]] SLANG_EXPORT void handleThrow(const char* msg, const char* file, int line,
+                                           const char* func);
+
+/// A handler that runs when a code path is reached that is supposed to be unreachable.
+/// An exception will be thrown or the program will be aborted.
+[[noreturn]] SLANG_EXPORT void handleUnreachable(const char* file, int line, const char* func);
+
+} // namespace assert
+
+/// A wrapper around a pointer that indicates that it should never be null.
+/// It deletes some operators and assignments from null, but it can only enforce at
+/// runtime, via asserts, that the value is not actually null.
+///
+/// The real value of this type is in documenting in the API the intentions of the pointer,
+/// so that consumers don't need to add explicit null checks.
+template<typename T>
+class SLANG_EXPORT not_null {
+public:
+    static_assert(std::is_assignable<T&, std::nullptr_t>::value, "T cannot be assigned nullptr.");
+
+    template<typename U, typename = std::enable_if_t<std::is_convertible<U, T>::value>>
+    constexpr not_null(U&& u) : ptr(std::forward<U>(u)) {
+        SLANG_ASSERT(ptr);
+    }
+
+    template<typename U, typename = std::enable_if_t<std::is_convertible<U, T>::value>>
+    constexpr not_null(const not_null<U>& other) : not_null(other.get()) {}
+
+    not_null(not_null&& other) noexcept = default;
+    not_null(const not_null& other) = default;
+    not_null& operator=(const not_null& other) = default;
+
+    constexpr T get() const {
+        SLANG_ASSERT(ptr);
+        return ptr;
+    }
+
+    constexpr operator T() const { return get(); }
+    constexpr T operator->() const { return get(); }
+    constexpr decltype(auto) operator*() const { return *get(); }
+
+    // prevents compilation when someone attempts to assign a null pointer constant
+    not_null(std::nullptr_t) = delete;
+    not_null& operator=(std::nullptr_t) = delete;
+
+    // unwanted operators... pointers only point to single objects!
+    not_null& operator++() = delete;
+    not_null& operator--() = delete;
+    not_null operator++(int) = delete;
+    not_null operator--(int) = delete;
+    not_null& operator+=(std::ptrdiff_t) = delete;
+    not_null& operator-=(std::ptrdiff_t) = delete;
+    void operator[](std::ptrdiff_t) const = delete;
+
+private:
+    T ptr;
+};
+
+template<typename T>
+std::ostream& operator<<(std::ostream& os, const not_null<T>& val) {
+    os << val.get();
+    return os;
+}
+
+template<typename T, typename U>
+auto operator==(const not_null<T>& lhs, const not_null<U>& rhs)
+    -> decltype(lhs.get() == rhs.get()) {
+    return lhs.get() == rhs.get();
+}
+
+template<typename T, typename U>
+auto operator!=(const not_null<T>& lhs, const not_null<U>& rhs)
+    -> decltype(lhs.get() != rhs.get()) {
+    return lhs.get() != rhs.get();
+}
+
+template<typename T, typename U>
+auto operator<(const not_null<T>& lhs, const not_null<U>& rhs) -> decltype(lhs.get() < rhs.get()) {
+    return lhs.get() < rhs.get();
+}
+
+template<typename T, typename U>
+auto operator<=(const not_null<T>& lhs, const not_null<U>& rhs)
+    -> decltype(lhs.get() <= rhs.get()) {
+    return lhs.get() <= rhs.get();
+}
+
+template<typename T, typename U>
+auto operator>(const not_null<T>& lhs, const not_null<U>& rhs) -> decltype(lhs.get() > rhs.get()) {
+    return lhs.get() > rhs.get();
+}
+
+template<typename T, typename U>
+auto operator>=(const not_null<T>& lhs, const not_null<U>& rhs)
+    -> decltype(lhs.get() >= rhs.get()) {
+    return lhs.get() >= rhs.get();
+}
+
+// more unwanted operators
+template<typename T, typename U>
+std::ptrdiff_t operator-(const not_null<T>&, const not_null<U>&) = delete;
+template<class T>
+not_null<T> operator-(const not_null<T>&, std::ptrdiff_t) = delete;
+template<class T>
+not_null<T> operator+(const not_null<T>&, std::ptrdiff_t) = delete;
+template<class T>
+not_null<T> operator+(std::ptrdiff_t, const not_null<T>&) = delete;
+
 } // namespace slang
+
+namespace std {
+
+template<typename T>
+struct hash<slang::not_null<T>> {
+    std::size_t operator()(const slang::not_null<T>& value) const { return hash<T>{}(value); }
+};
+
+} // namespace std

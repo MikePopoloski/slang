@@ -35,7 +35,7 @@ enum class SLANG_EXPORT VariableFlags : uint16_t {
     /// The variable is a formal argument of an overridden sample method in a covergroup.
     CoverageSampleFormal = 1 << 3
 };
-BITMASK(VariableFlags, CoverageSampleFormal)
+SLANG_BITMASK(VariableFlags, CoverageSampleFormal)
 
 /// Represents a variable declaration.
 class SLANG_EXPORT VariableSymbol : public ValueSymbol {

@@ -24,9 +24,9 @@ public:
         SystemSubroutine(name, SubroutineKind::Function),
         argTypes(argTypes), returnType(&returnType), nameOrHierIndex(nameOrHierIndex),
         requiredArgs(requiredArgs) {
-        ASSERT(requiredArgs <= argTypes.size());
-        ASSERT(nameOrHierIndex <= argTypes.size());
-        ASSERT(requiredArgs > nameOrHierIndex);
+        SLANG_ASSERT(requiredArgs <= argTypes.size());
+        SLANG_ASSERT(nameOrHierIndex <= argTypes.size());
+        SLANG_ASSERT(requiredArgs > nameOrHierIndex);
     };
 
     const Expression& bindArgument(size_t argIndex, const ASTContext& context,

@@ -368,7 +368,7 @@ size_t SyntaxNode::getChildCount() const {
         cppf.write("        case SyntaxKind::{}: return {};\n".format(k, count))
 
     cppf.write("    }\n")
-    cppf.write("    ASSUME_UNREACHABLE;\n")
+    cppf.write("    SLANG_UNREACHABLE;\n")
     cppf.write("}\n\n")
 
     # Build a reverse mapping from class types to their syntax kinds.
@@ -467,7 +467,7 @@ size_t SyntaxNode::getChildCount() const {
                             )
                         )
 
-                cppf.write("        default: ASSUME_UNREACHABLE;\n")
+                cppf.write("        default: SLANG_UNREACHABLE;\n")
                 cppf.write("    }\n")
             else:
                 cppf.write("    (void)index;\n")
@@ -541,6 +541,7 @@ std::string_view toString(SyntaxKind kind) {
     cppf.write(
         """};
 
+#ifdef SLANG_RTTI_ENABLED
 const std::type_info* typeFromSyntaxKind(SyntaxKind kind) {
     switch (kind) {
         case SyntaxKind::Unknown: break;
@@ -557,6 +558,7 @@ const std::type_info* typeFromSyntaxKind(SyntaxKind kind) {
         """    }
     return nullptr;
 }
+#endif
 
 }
 """
@@ -597,7 +599,7 @@ const std::type_info* typeFromSyntaxKind(SyntaxKind kind) {
         alltypes.pop(v, None)
 
     outf.write("    }\n")
-    outf.write("    ASSUME_UNREACHABLE;\n")
+    outf.write("    SLANG_UNREACHABLE;\n")
     outf.write("}\n\n")
     outf.write("}\n\n")
 
@@ -639,8 +641,6 @@ const std::type_info* typeFromSyntaxKind(SyntaxKind kind) {
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
 #pragma once
-
-#include "slang/util/Enum.h"
 
 namespace std { class type_info; }
 

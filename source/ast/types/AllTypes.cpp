@@ -20,7 +20,6 @@
 #include "slang/diagnostics/LookupDiags.h"
 #include "slang/diagnostics/TypesDiags.h"
 #include "slang/syntax/AllSyntax.h"
-#include "slang/util/StackContainer.h"
 
 namespace {
 
@@ -37,7 +36,7 @@ bitwidth_t getWidth(PredefinedIntegerType::Kind kind) {
         case PredefinedIntegerType::Byte: return 8;
         case PredefinedIntegerType::Integer: return 32;
         case PredefinedIntegerType::Time: return 64;
-        default: ASSUME_UNREACHABLE;
+        default: SLANG_UNREACHABLE;
     }
 }
 
@@ -49,7 +48,7 @@ bool getSigned(PredefinedIntegerType::Kind kind) {
         case PredefinedIntegerType::Byte: return true;
         case PredefinedIntegerType::Integer: return true;
         case PredefinedIntegerType::Time: return false;
-        default: ASSUME_UNREACHABLE;
+        default: SLANG_UNREACHABLE;
     }
 }
 
@@ -61,7 +60,7 @@ bool getFourState(PredefinedIntegerType::Kind kind) {
         case PredefinedIntegerType::Byte: return false;
         case PredefinedIntegerType::Integer: return true;
         case PredefinedIntegerType::Time: return true;
-        default: ASSUME_UNREACHABLE;
+        default: SLANG_UNREACHABLE;
     }
 }
 
@@ -73,7 +72,7 @@ std::string_view getName(PredefinedIntegerType::Kind kind) {
         case PredefinedIntegerType::Byte: return "byte"sv;
         case PredefinedIntegerType::Integer: return "integer"sv;
         case PredefinedIntegerType::Time: return "time"sv;
-        default: ASSUME_UNREACHABLE;
+        default: SLANG_UNREACHABLE;
     }
 }
 
@@ -82,7 +81,7 @@ std::string_view getName(ScalarType::Kind kind) {
         case ScalarType::Bit: return "bit"sv;
         case ScalarType::Logic: return "logic"sv;
         case ScalarType::Reg: return "reg"sv;
-        default: ASSUME_UNREACHABLE;
+        default: SLANG_UNREACHABLE;
     }
 }
 
@@ -91,7 +90,7 @@ std::string_view getName(FloatingType::Kind kind) {
         case FloatingType::Real: return "real"sv;
         case FloatingType::ShortReal: return "shortreal"sv;
         case FloatingType::RealTime: return "realtime"sv;
-        default: ASSUME_UNREACHABLE;
+        default: SLANG_UNREACHABLE;
     }
 }
 // clang-format on
@@ -265,7 +264,7 @@ static void checkEnumRange(const ASTContext& context, const VariableDimensionSyn
         }
     };
 
-    ASSERT(syntax.specifier && syntax.specifier->kind == SyntaxKind::RangeDimensionSpecifier);
+    SLANG_ASSERT(syntax.specifier && syntax.specifier->kind == SyntaxKind::RangeDimensionSpecifier);
     auto& sel = *syntax.specifier->as<RangeDimensionSpecifierSyntax>().selector;
     if (sel.kind == SyntaxKind::BitSelect) {
         auto& expr = *sel.as<BitSelectSyntax>().expr;
@@ -305,7 +304,7 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
         }
 
         bitWidth = cb->getBitWidth();
-        ASSERT(bitWidth);
+        SLANG_ASSERT(bitWidth);
     }
 
     SVInt allOnes(bitWidth, 0, cb->isSigned());
@@ -501,7 +500,7 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
 
 static std::string_view getEnumValueName(Compilation& comp, std::string_view name, int32_t index) {
     if (!name.empty()) {
-        ASSERT(index >= 0);
+        SLANG_ASSERT(index >= 0);
 
         size_t sz = (size_t)snprintf(nullptr, 0, "%d", index);
         char* mem = (char*)comp.allocate(sz + name.size() + 1, 1);
@@ -572,12 +571,12 @@ const ConstantValue& EnumValueSymbol::getValue(SourceRange referencingRange) con
         auto init = getInitializer();
         if (init) {
             auto scope = getParentScope();
-            ASSERT(scope);
+            SLANG_ASSERT(scope);
 
             ASTContext ctx(*scope, LookupLocation::max);
 
             if (evaluating) {
-                ASSERT(referencingRange.start());
+                SLANG_ASSERT(referencingRange.start());
 
                 auto& diag = ctx.addDiag(diag::ConstEvalParamCycle, location) << name;
                 diag.addNote(diag::NoteReferencedHere, referencingRange) << referencingRange;
@@ -598,7 +597,7 @@ const ConstantValue& EnumValueSymbol::getValue(SourceRange referencingRange) con
 
 void EnumValueSymbol::setValue(ConstantValue newValue) {
     auto scope = getParentScope();
-    ASSERT(scope);
+    SLANG_ASSERT(scope);
     value = scope->getCompilation().allocConstant(std::move(newValue));
 }
 
@@ -759,7 +758,7 @@ PackedStructType::PackedStructType(Compilation& compilation, bool isSigned, Sour
 
 const Type& PackedStructType::fromSyntax(Compilation& comp, const StructUnionTypeSyntax& syntax,
                                          const ASTContext& parentContext) {
-    ASSERT(syntax.packed);
+    SLANG_ASSERT(syntax.packed);
     const bool isSigned = syntax.signing.kind == TokenKind::SignedKeyword;
     bool issuedError = false;
 
@@ -852,7 +851,7 @@ ConstantValue UnpackedStructType::getDefaultValueImpl() const {
 
 const Type& UnpackedStructType::fromSyntax(const ASTContext& context,
                                            const StructUnionTypeSyntax& syntax) {
-    ASSERT(!syntax.packed);
+    SLANG_ASSERT(!syntax.packed);
 
     auto& comp = context.getCompilation();
     auto result = comp.emplace<UnpackedStructType>(comp, syntax.keyword.location(), context);
@@ -922,7 +921,7 @@ PackedUnionType::PackedUnionType(Compilation& compilation, bool isSigned, bool i
 
 const Type& PackedUnionType::fromSyntax(Compilation& comp, const StructUnionTypeSyntax& syntax,
                                         const ASTContext& parentContext) {
-    ASSERT(syntax.packed);
+    SLANG_ASSERT(syntax.packed);
     const bool isSigned = syntax.signing.kind == TokenKind::SignedKeyword;
     const bool isTagged = syntax.tagged.valid();
     bool issuedError = false;
@@ -1027,7 +1026,7 @@ ConstantValue UnpackedUnionType::getDefaultValueImpl() const {
 
 const Type& UnpackedUnionType::fromSyntax(const ASTContext& context,
                                           const StructUnionTypeSyntax& syntax) {
-    ASSERT(!syntax.packed);
+    SLANG_ASSERT(!syntax.packed);
 
     auto& comp = context.getCompilation();
     bool isTagged = syntax.tagged.valid();
@@ -1059,7 +1058,7 @@ const Type& UnpackedUnionType::fromSyntax(const ASTContext& context,
                 context.addDiag(diag::VirtualInterfaceUnionMember, field->location);
             }
             else {
-                ASSERT(!isTagged);
+                SLANG_ASSERT(!isTagged);
                 context.addDiag(diag::InvalidUnionMember, field->location) << varType;
             }
         }
@@ -1110,7 +1109,7 @@ const Type& VirtualInterfaceType::fromSyntax(const ASTContext& context,
     if (!modportName.empty() && syntax.modport) {
         auto sym = iface.body.find(modportName);
         if (!sym || sym->kind != SymbolKind::Modport) {
-            ASSERT(syntax.modport);
+            SLANG_ASSERT(syntax.modport);
             auto& diag = context.addDiag(diag::NotAModport, syntax.modport->member.range());
             diag << modportName;
             diag << definition->name;
@@ -1229,7 +1228,7 @@ void ForwardingTypedefSymbol::checkType(ForwardTypedefCategory checkCategory,
                 diag << "interface class"sv;
                 break;
             default:
-                ASSUME_UNREACHABLE;
+                SLANG_UNREACHABLE;
         }
         diag.addNote(diag::NoteDeclarationHere, declLoc);
         return;

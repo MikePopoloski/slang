@@ -12,7 +12,6 @@
 #include "slang/ast/Expression.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/syntax/AllSyntax.h"
-#include "slang/util/StackContainer.h"
 
 namespace slang::ast {
 
@@ -45,8 +44,8 @@ const ConstantValue& AttributeSymbol::getValue() const {
             loc = LookupLocation::before(*symbol);
         }
 
-        ASSERT(bindScope);
-        ASSERT(expr);
+        SLANG_ASSERT(bindScope);
+        SLANG_ASSERT(expr);
 
         ASTContext context(*bindScope, loc, ASTFlags::NoAttributes | ASTFlags::NonProcedural);
         auto& bound = Expression::bind(*expr, context);

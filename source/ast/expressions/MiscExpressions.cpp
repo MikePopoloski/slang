@@ -238,7 +238,7 @@ bool ValueExpressionBase::checkVariableAssignment(const ASTContext& context,
         const Symbol* parent = &context.scope->asSymbol();
         while (parent->kind == SymbolKind::StatementBlock) {
             auto parentScope = parent->getParentScope();
-            ASSERT(parentScope);
+            SLANG_ASSERT(parentScope);
             parent = &parentScope->asSymbol();
         }
 
@@ -479,7 +479,7 @@ ConstantValue HierarchicalValueExpression::evalImpl(EvalContext& context) const 
         case SymbolKind::Specparam:
             return symbol.as<SpecparamSymbol>().getValue(sourceRange);
         default:
-            ASSUME_UNREACHABLE;
+            SLANG_UNREACHABLE;
     }
 }
 
@@ -758,7 +758,7 @@ Expression& AssertionInstanceExpression::fromLookup(const Symbol& symbol,
             break;
         }
         default:
-            ASSUME_UNREACHABLE;
+            SLANG_UNREACHABLE;
     }
 
     SmallVector<const SyntaxNode*> orderedArgs;
@@ -804,7 +804,7 @@ Expression& AssertionInstanceExpression::fromLookup(const Symbol& symbol,
         if (currInst->argDetails)
             currInst = currInst->argDetails;
         else {
-            ASSERT(currInst->prevContext);
+            SLANG_ASSERT(currInst->prevContext);
             currInst = currInst->prevContext->assertionInstance;
         }
     }
@@ -936,7 +936,7 @@ Expression& AssertionInstanceExpression::fromLookup(const Symbol& symbol,
 
     // Now instantiate by creating the assertion expression of the sequence / property body.
     auto bodySyntax = symbol.getSyntax();
-    ASSERT(bodySyntax);
+    SLANG_ASSERT(bodySyntax);
 
     SmallVector<const Symbol*> localVars;
     auto& body = bindAssertionBody(symbol, *bodySyntax, bodyContext, outputLocalVarArgLoc, instance,
@@ -962,7 +962,7 @@ Expression& AssertionInstanceExpression::fromLookup(const Symbol& symbol,
 
 Expression& AssertionInstanceExpression::makeDefault(const Symbol& symbol) {
     auto parentScope = symbol.getParentScope();
-    ASSERT(parentScope);
+    SLANG_ASSERT(parentScope);
 
     ASTContext context(*parentScope, LookupLocation::before(symbol));
     auto& comp = context.getCompilation();
@@ -993,7 +993,7 @@ Expression& AssertionInstanceExpression::makeDefault(const Symbol& symbol) {
             break;
         }
         default:
-            ASSUME_UNREACHABLE;
+            SLANG_UNREACHABLE;
     }
 
     ASTContext::AssertionInstanceDetails instance;
@@ -1034,7 +1034,7 @@ Expression& AssertionInstanceExpression::makeDefault(const Symbol& symbol) {
         return create(comp, *symbol.as<LetDeclSymbol>().exprSyntax, bodyContext);
 
     auto bodySyntax = symbol.getSyntax();
-    ASSERT(bodySyntax);
+    SLANG_ASSERT(bodySyntax);
 
     SmallVector<const Symbol*> localVars;
     auto& body = bindAssertionBody(symbol, *bodySyntax, bodyContext, outputLocalVarArgLoc, instance,
@@ -1051,7 +1051,7 @@ Expression& AssertionInstanceExpression::bindPort(const Symbol& symbol, SourceRa
                                                   const ASTContext& instanceCtx) {
     Compilation& comp = instanceCtx.getCompilation();
     auto inst = instanceCtx.assertionInstance;
-    ASSERT(inst);
+    SLANG_ASSERT(inst);
 
     // When looking up an argument reference from within another expanded
     // argument, use that original location's context.

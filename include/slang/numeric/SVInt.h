@@ -28,7 +28,7 @@ using bitwidth_t = uint32_t;
 // clang-format on
 
 /// Specifies the base of an integer (for converting to/from a string)
-ENUM_SIZED(LiteralBase, uint8_t, LB)
+SLANG_ENUM_SIZED(LiteralBase, uint8_t, LB)
 #undef LB
 
 bool literalBaseFromChar(char base, LiteralBase& result);
@@ -195,7 +195,7 @@ public:
     /// Construct from a 64-bit value that can be given an arbitrarily large number of bits (sign
     /// extended if necessary).
     SVInt(bitwidth_t bits, uint64_t value, bool isSigned) : SVIntStorage(bits, isSigned, false) {
-        ASSERT(bits > 0 && bits <= MAX_BITS);
+        SLANG_ASSERT(bits > 0 && bits <= MAX_BITS);
         if (isSingleWord())
             val = value;
         else
@@ -206,7 +206,7 @@ public:
     /// Construct from numeric data already in memory as a range of bytes.
     SVInt(bitwidth_t bits, std::span<const byte> bytes, bool isSigned) :
         SVIntStorage(bits, isSigned, false) {
-        ASSERT(bits > 0 && bits <= MAX_BITS);
+        SLANG_ASSERT(bits > 0 && bits <= MAX_BITS);
         initSlowCase(bytes);
     }
 

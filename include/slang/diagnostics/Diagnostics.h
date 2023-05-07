@@ -16,6 +16,7 @@
 #include "slang/text/SourceLocation.h"
 #include "slang/util/Enum.h"
 #include "slang/util/SmallVector.h"
+#include "slang/util/TypeTraits.h"
 
 namespace slang {
 
@@ -43,7 +44,7 @@ class Symbol;
     x(Compilation) \
     x(Meta)   \
     x(Tidy)
-ENUM_SIZED(DiagSubsystem, uint16_t, DS)
+SLANG_ENUM_SIZED(DiagSubsystem, uint16_t, DS)
 #undef DS
 
 /// The severity of a given diagnostic. This is not tied to the diagnostic itself;
@@ -54,7 +55,7 @@ ENUM_SIZED(DiagSubsystem, uint16_t, DS)
     x(Warning) \
     x(Error) \
     x(Fatal)
-ENUM(DiagnosticSeverity, DS)
+SLANG_ENUM(DiagnosticSeverity, DS)
 #undef DS
 // clang-format on
 
@@ -115,8 +116,10 @@ SLANG_EXPORT std::string_view toString(DiagCode code);
 /// Wraps up a reported diagnostic along with location in source and any arguments.
 class SLANG_EXPORT Diagnostic {
 public:
+    using CustomArgType = std::pair<SLANG_TYPEINDEX, std::any>;
+
     // Diagnostic-specific arguments that can be used to better report messages.
-    using Arg = std::variant<std::string, int64_t, uint64_t, char, ConstantValue, std::any>;
+    using Arg = std::variant<std::string, int64_t, uint64_t, char, ConstantValue, CustomArgType>;
     std::vector<Arg> args;
     std::vector<SourceRange> ranges;
     std::vector<Diagnostic> notes;

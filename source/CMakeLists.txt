@@ -75,14 +75,14 @@ add_library(
   text/SFormat.cpp
   text/SourceLocation.cpp
   text/SourceManager.cpp
-  util/Assert.cpp
   util/BumpAllocator.cpp
   util/CommandLine.cpp
   util/IntervalMap.cpp
   util/OS.cpp
   util/SmallVector.cpp
   util/String.cpp
-  util/TimeTrace.cpp)
+  util/TimeTrace.cpp
+  util/Util.cpp)
 
 add_subdirectory(ast)
 
@@ -112,10 +112,12 @@ target_include_directories(
 
 # Link libraries
 find_package(Threads)
-target_link_libraries(
-  slang_slang
-  PRIVATE fmt::fmt ${CMAKE_THREAD_LIBS_INIT}
-  PUBLIC unordered_dense::unordered_dense)
+target_link_libraries(slang_slang PRIVATE fmt::fmt ${CMAKE_THREAD_LIBS_INIT})
+
+if(SLANG_USE_BOOST)
+  target_link_libraries(slang_slang PUBLIC Boost::headers)
+  target_compile_definitions(slang_slang PUBLIC SLANG_USE_BOOST)
+endif()
 
 # If building the Python library we'll end up with a shared lib no matter what,
 # so make sure we always build with PIC.

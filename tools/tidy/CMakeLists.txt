@@ -14,4 +14,6 @@ if(SLANG_INCLUDE_INSTALL)
   install(TARGETS slang_tidy RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 endif()
 
-add_subdirectory(tests)
+if(SLANG_INCLUDE_TESTS)
+  add_subdirectory(tests)
+endif()

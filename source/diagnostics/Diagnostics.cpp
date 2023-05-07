@@ -30,7 +30,7 @@ bool Diagnostic::isError() const {
 }
 
 Diagnostic& Diagnostic::addNote(DiagCode noteCode, SourceLocation noteLocation) {
-    ASSERT(noteLocation);
+    SLANG_ASSERT(noteLocation);
     notes.emplace_back(noteCode, noteLocation);
     return notes.back();
 }
@@ -50,20 +50,20 @@ Diagnostic& Diagnostic::addStringAllowEmpty(const std::string& arg) {
 }
 
 Diagnostic& Diagnostic::operator<<(const std::string& arg) {
-    ASSERT(!arg.empty());
+    SLANG_ASSERT(!arg.empty());
     args.emplace_back(arg);
     return *this;
 }
 
 Diagnostic& Diagnostic::operator<<(std::string_view arg) {
-    ASSERT(!arg.empty());
+    SLANG_ASSERT(!arg.empty());
     args.emplace_back(std::string(arg));
     return *this;
 }
 
 Diagnostic& Diagnostic::operator<<(SourceRange range) {
-    ASSERT(range.start());
-    ASSERT(range.end());
+    SLANG_ASSERT(range.start());
+    SLANG_ASSERT(range.end());
     ranges.push_back(range);
     return *this;
 }
@@ -102,8 +102,8 @@ bool Diagnostic::operator==(const Diagnostic& rhs) const {
                 using LT = std::decay_t<decltype(l)>;
                 using RT = std::decay_t<decltype(r)>;
                 if constexpr (std::is_same_v<LT, RT>) {
-                    if constexpr (std::is_same_v<std::any, LT>) {
-                        return l.type() == r.type();
+                    if constexpr (std::is_same_v<Diagnostic::CustomArgType, LT>) {
+                        return l.first == r.first;
                     }
                     else {
                         return l == r;
@@ -123,7 +123,7 @@ bool Diagnostic::operator==(const Diagnostic& rhs) const {
 }
 
 Diagnostic& Diagnostics::add(DiagCode code, SourceLocation location) {
-    ASSERT(location);
+    SLANG_ASSERT(location);
     emplace_back(code, location);
     return back();
 }
@@ -133,7 +133,7 @@ Diagnostic& Diagnostics::add(DiagCode code, SourceRange range) {
 }
 
 Diagnostic& Diagnostics::add(const ast::Symbol& source, DiagCode code, SourceLocation location) {
-    ASSERT(location);
+    SLANG_ASSERT(location);
     emplace_back(source, code, location);
     return back();
 }

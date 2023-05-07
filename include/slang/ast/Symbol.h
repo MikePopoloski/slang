@@ -116,10 +116,11 @@ enum class RandMode;
     x(TimingPath) \
     x(PulseStyle) \
     x(SystemTimingCheck) \
-    x(AnonymousProgram)
+    x(AnonymousProgram) \
+    x(ConfigBlock)
 // clang-format on
 
-ENUM(SymbolKind, SYMBOLKIND)
+SLANG_ENUM(SymbolKind, SYMBOLKIND)
 #undef SYMBOLKIND
 
 /// A numeric index that can be used to compare the relative ordering of symbols
@@ -194,11 +195,11 @@ public:
     decltype(auto) as() {
         if constexpr (std::is_same_v<T, Scope>) {
             const Scope* scope = scopeOrNull();
-            ASSERT(scope);
+            SLANG_ASSERT(scope);
             return *scope;
         }
         else {
-            ASSERT(T::isKind(kind));
+            SLANG_ASSERT(T::isKind(kind));
             return *static_cast<T*>(this);
         }
     }

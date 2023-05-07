@@ -79,25 +79,25 @@ public:
 
     /// @return a reference to the first element in the array. The array must not be empty!
     [[nodiscard]] constexpr const_reference front() const {
-        ASSERT(len);
+        SLANG_ASSERT(len);
         return data_[0];
     }
 
     /// @return a reference to the last element in the array. The array must not be empty!
     [[nodiscard]] constexpr const_reference back() const {
-        ASSERT(len);
+        SLANG_ASSERT(len);
         return data_[len - 1];
     }
 
     /// @return a reference to the first element in the array. The array must not be empty!
     [[nodiscard]] constexpr reference front() {
-        ASSERT(len);
+        SLANG_ASSERT(len);
         return data_[0];
     }
 
     /// @return a reference to the last element in the array. The array must not be empty!
     [[nodiscard]] constexpr reference back() {
-        ASSERT(len);
+        SLANG_ASSERT(len);
         return data_[len - 1];
     }
 
@@ -150,7 +150,7 @@ public:
 
     /// Removes the last element from the array. The array must not be empty!
     void pop_back() {
-        ASSERT(len);
+        SLANG_ASSERT(len);
         len--;
         std::destroy_at(data_ + len);
     }
@@ -405,13 +405,13 @@ public:
 
     /// @return the element at the given position in the array.
     constexpr reference operator[](size_type index) {
-        ASSERT(index < len);
+        SLANG_ASSERT(index < len);
         return data_[index];
     }
 
     /// @return the element at the given position in the array.
     constexpr const_reference operator[](size_type index) const {
-        ASSERT(index < len);
+        SLANG_ASSERT(index < len);
         return data_[index];
     }
 
@@ -830,7 +830,7 @@ typename SmallVectorBase<T>::pointer SmallVectorBase<T>::emplaceRealloc(const po
 template<typename T>
 template<typename TVal>
 void SmallVectorBase<T>::resizeRealloc(size_type newSize, const TVal& val) {
-    ASSERT(newSize > len);
+    SLANG_ASSERT(newSize > len);
     if (newSize > max_size())
         detail::throwLengthError();
 

@@ -101,6 +101,7 @@ void registerSymbols(py::module_& m) {
         .def_property_readonly("isScope", &Symbol::isScope)
         .def_property_readonly("isType", &Symbol::isType)
         .def_property_readonly("isValue", &Symbol::isValue)
+        .def_property_readonly("declaredType", &Symbol::getDeclaredType)
         .def_property_readonly("declaringDefinition", &Symbol::getDeclaringDefinition)
         .def_property_readonly("randMode", &Symbol::getRandMode)
         .def_property_readonly("nextSibling", &Symbol::getNextSibling)

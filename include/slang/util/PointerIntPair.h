@@ -35,13 +35,13 @@ public:
 
     void setPointer(TPointer ptr) {
         uintptr_t ptrWord = reinterpret_cast<uintptr_t>(ptr);
-        ASSERT((ptrWord & ~PointerMask) == 0);
+        SLANG_ASSERT((ptrWord & ~PointerMask) == 0);
         value = ptrWord | (value & ~PointerMask);
     }
 
     void setInt(TInt intVal) {
         uintptr_t intWord = static_cast<uintptr_t>(intVal);
-        ASSERT((intWord & ~IntMask) == 0);
+        SLANG_ASSERT((intWord & ~IntMask) == 0);
         value = (value & ~ShiftedIntMask) | (intWord << IntShift);
     }
 

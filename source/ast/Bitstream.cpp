@@ -60,7 +60,7 @@ static std::pair<size_t, size_t> dynamicBitstreamSize(const Type& type, Bitstrea
         }
         else if (mode == BitstreamSizeMode::DestFill) {
             if (!multiplierElem)
-                multiplier = fixedSizeElem;  // element is fixed size
+                multiplier = fixedSizeElem; // element is fixed size
             else {
                 multiplier = multiplierElem; // element is dynamically sized
                 fixedSize = fixedSizeElem;
@@ -108,7 +108,7 @@ static std::pair<size_t, size_t> dynamicBitstreamSize(
         if (stream.withExpr) {
             auto [multiplierElem,
                   fixedSizeElem] = dynamicBitstreamSize(*operand.type->getArrayElementType(), mode);
-            ASSERT(!multiplierElem);
+            SLANG_ASSERT(!multiplierElem);
             if (stream.constantWithWidth) {
                 // TODO: overflow
                 auto rw = *stream.constantWithWidth;
@@ -255,7 +255,7 @@ static ConstantValue constContainer(const Type& type, std::span<ConstantValue> e
             return result;
         }
         default:
-            ASSUME_UNREACHABLE;
+            SLANG_UNREACHABLE;
     }
 }
 
@@ -301,13 +301,13 @@ static SVInt slicePacked(PackIterator& iter, const PackIterator iterEnd, bitwidt
         cp = cp.convertToInt();
 
     auto& ci = cp.integer();
-    ASSERT(bit < ci.getBitWidth());
+    SLANG_ASSERT(bit < ci.getBitWidth());
     bitwidth_t msb = ci.getBitWidth() - bit - 1;
     bitwidth_t lsb = std::min(bit + width, ci.getBitWidth());
     lsb = ci.getBitWidth() - lsb;
     bit += msb - lsb + 1;
 
-    ASSERT(bit <= ci.getBitWidth());
+    SLANG_ASSERT(bit <= ci.getBitWidth());
     if (bit == ci.getBitWidth()) {
         iter++;
         bit = 0;
@@ -328,7 +328,7 @@ static ConstantValue unpackBitstream(const Type& type, PackIterator& iter,
         SmallVector<SVInt> buffer;
         while (width > 0) {
             auto ci = slicePacked(iter, iterEnd, bit, width);
-            ASSERT(ci.getBitWidth() <= width);
+            SLANG_ASSERT(ci.getBitWidth() <= width);
             width -= ci.getBitWidth();
             if (!isFourState)
                 ci.flattenUnknowns();
@@ -336,7 +336,7 @@ static ConstantValue unpackBitstream(const Type& type, PackIterator& iter,
             buffer.emplace_back(std::move(ci));
         }
 
-        ASSERT(!buffer.empty());
+        SLANG_ASSERT(!buffer.empty());
         if (buffer.size() == 1)
             return buffer.front();
 
@@ -388,7 +388,7 @@ static ConstantValue unpackBitstream(const Type& type, PackIterator& iter,
                                                         bit, dynamicSize));
                 }
 
-                ASSERT(!dynamicSize || type.getArrayElementType()->isFixedSize());
+                SLANG_ASSERT(!dynamicSize || type.getArrayElementType()->isFixedSize());
                 dynamicSize = 0;
             }
         }
@@ -444,8 +444,8 @@ ConstantValue Bitstream::evaluateCast(const Type& type, ConstantValue&& value,
     bitwidth_t bitOffset = 0;
     auto iter = std::cbegin(packed);
     auto cv = unpackBitstream(type, iter, std::cend(packed), bitOffset, dynamicSize);
-    ASSERT(!dynamicSize);
-    ASSERT(isImplicit || (iter == std::cend(packed) && !bitOffset));
+    SLANG_ASSERT(!dynamicSize);
+    SLANG_ASSERT(isImplicit || (iter == std::cend(packed) && !bitOffset));
     return cv;
 }
 
@@ -561,7 +561,7 @@ bool Bitstream::isBitstreamCast(const Type& type, const StreamingConcatenationEx
 
 ConstantValue Bitstream::reOrder(ConstantValue&& value, size_t sliceSize, size_t unpackWidth) {
     size_t totalWidth = value.bitstreamWidth();
-    ASSERT(unpackWidth <= totalWidth);
+    SLANG_ASSERT(unpackWidth <= totalWidth);
 
     size_t numBlocks = ((unpackWidth ? unpackWidth : totalWidth) + sliceSize - 1) / sliceSize;
     if (numBlocks <= 1)
@@ -688,8 +688,8 @@ static bool unpackConcatenation(const StreamingConcatenationExpression& lhs, Pac
                 return false;
             }
 
-            ASSERT(dynamicSizeSave == dynamicSize);
-            ASSERT(iterConcat == std::cend(packed) && !bit);
+            SLANG_ASSERT(dynamicSizeSave == dynamicSize);
+            SLANG_ASSERT(iterConcat == std::cend(packed) && !bit);
         }
         else {
             auto& arrayType = *operand.type;
@@ -703,7 +703,7 @@ static bool unpackConcatenation(const StreamingConcatenationExpression& lhs, Pac
                 with = *range;
 
                 auto elemType = arrayType.getArrayElementType();
-                ASSERT(elemType);
+                SLANG_ASSERT(elemType);
 
                 if (dynamicSize > 0 && !stream.constantWithWidth) {
                     // TODO: overflow
@@ -747,7 +747,7 @@ static bool unpackConcatenation(const StreamingConcatenationExpression& lhs, Pac
                 if (!arrayType.hasFixedRange()) {
                     // When the array is a variable-size array, it shall be resized to
                     // accommodate the range expression.
-                    ASSERT(with.left <= with.right);
+                    SLANG_ASSERT(with.left <= with.right);
                     auto oldValue = lvalue.load();
                     if (oldValue.size() <= static_cast<uint32_t>(with.right)) {
                         auto newValue = Bitstream::resizeToRange(std::move(oldValue),
@@ -820,7 +820,7 @@ ConstantValue Bitstream::evaluateTarget(const StreamingConcatenationExpression& 
 
     // (iter==iterEnd && !bitOffset) implies target and source have exactly the same size.
     if (iter == iterEnd) {
-        ASSERT(dynamicSize == 0);
+        SLANG_ASSERT(dynamicSize == 0);
         if (bitOffset > 0) {
             // Target longer than source
             context.addDiag(diag::BadStreamSize, lhs.sourceRange) << srcSize + bitOffset << srcSize;
@@ -828,7 +828,7 @@ ConstantValue Bitstream::evaluateTarget(const StreamingConcatenationExpression& 
     }
     else if (rhs.kind == ExpressionKind::Streaming) {
         // Target shorter than source; this is legal unless rhs is a streaming concatenation.
-        ASSERT(srcSize >= (*iter)->bitstreamWidth());
+        SLANG_ASSERT(srcSize >= (*iter)->bitstreamWidth());
         auto tSize = srcSize - (*iter++)->bitstreamWidth() + bitOffset;
         while (iter != iterEnd)
             tSize -= (*iter++)->bitstreamWidth();
@@ -860,15 +860,15 @@ ConstantValue Bitstream::resizeToRange(ConstantValue&& value, ConstantRange rang
             sliceValue.reserve(range.width());
             sliceValue.insert(sliceValue.end(), old.begin() + lower, old.begin() + upper);
             sliceValue.insert(sliceValue.end(), more, defaultValue);
-            ASSERT(sliceValue.size() == range.width());
+            SLANG_ASSERT(sliceValue.size() == range.width());
             return sliceValue;
         }
         else {
-            ASSERT(value.isQueue());
+            SLANG_ASSERT(value.isQueue());
             const auto& old = value.queue();
             SVQueue sliceValue(old->cbegin() + lower, old->cbegin() + upper);
             sliceValue.insert(sliceValue.end(), more, defaultValue);
-            ASSERT(sliceValue.size() == range.width());
+            SLANG_ASSERT(sliceValue.size() == range.width());
             return sliceValue;
         }
     }

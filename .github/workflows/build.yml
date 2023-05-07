@@ -19,6 +19,8 @@ jobs:
             os: ubuntu-22.04
           - preset: gcc-debug-shared
             os: ubuntu-22.04
+          - preset: gcc-debug-noexcept
+            os: ubuntu-22.04
           - preset: macos-release
             os: macos-latest
           - preset: win64-release
@@ -27,19 +29,21 @@ jobs:
             os: windows-latest
           - preset: win64-debug-shared
             os: windows-latest
+          - preset: win64-debug-noexcept
+            os: windows-latest
 
     runs-on: ${{ matrix.os }}
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
       with:
         fetch-depth: 0
     - name: Install dependencies
       if: matrix.os == 'ubuntu-22.04'
       run: |
         wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
-        sudo add-apt-repository "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-15 main"
+        sudo add-apt-repository "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-16 main"
         sudo apt-get update
-        sudo apt-get install -y g++-12 g++-10 clang++-15 clang-tidy-15
+        sudo apt-get install -y g++-12 g++-10 clang-16 clang-tidy-16
     - uses: ilammy/msvc-dev-cmd@v1
       if: matrix.os == 'windows-latest'
     - name: Configure
@@ -54,7 +58,7 @@ jobs:
   coverage:
     runs-on: ubuntu-22.04
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
       with:
         fetch-depth: 0
     - name: Install dependencies
@@ -79,7 +83,7 @@ jobs:
   bindings:
     runs-on: windows-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
       with:
         fetch-depth: 0
     - uses: ilammy/msvc-dev-cmd@v1

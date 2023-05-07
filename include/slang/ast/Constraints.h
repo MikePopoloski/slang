@@ -26,7 +26,7 @@ namespace slang::ast {
     x(DisableSoft) \
     x(SolveBefore) \
     x(Foreach)
-ENUM(ConstraintKind, CONSTRAINT)
+SLANG_ENUM(ConstraintKind, CONSTRAINT)
 #undef CONSTRAINT
 // clang-format on
 
@@ -48,13 +48,13 @@ public:
 
     template<typename T>
     T& as() {
-        ASSERT(T::isKind(kind));
+        SLANG_ASSERT(T::isKind(kind));
         return *static_cast<T*>(this);
     }
 
     template<typename T>
     const T& as() const {
-        ASSERT(T::isKind(kind));
+        SLANG_ASSERT(T::isKind(kind));
         return *static_cast<const T*>(this);
     }
 

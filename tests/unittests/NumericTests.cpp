@@ -118,6 +118,7 @@ TEST_CASE("Construction") {
     CHECK_THAT("100'hxabcdef987654310"_si[99], exactlyEquals(logic_t::x));
     CHECK_THAT("100'hxabcdef98765431f"_si[1], exactlyEquals(logic_t(1)));
 
+#if __cpp_exceptions
     CHECK_THROWS(""_si);
     CHECK_THROWS("'"_si);
     CHECK_THROWS("30'"_si);
@@ -134,6 +135,7 @@ TEST_CASE("Construction") {
     CHECK_THROWS("300'df"_si);
     CHECK_THROWS("300'of"_si);
     CHECK_THROWS(SVInt::fromDigits(1, LiteralBase::Decimal, false, false, {}));
+#endif
 
     // Create from memory pointer.
     uint64_t mem1 = 0x234907862346ff;

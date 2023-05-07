@@ -65,7 +65,7 @@ Definition::ParameterDecl::ParameterDecl(std::string_view name, SourceLocation l
     givenType(&givenType),
     givenInitializer(givenInitializer), name(name), location(location), isTypeParam(false),
     isLocalParam(isLocal), isPortParam(isPort), hasSyntax(false) {
-    ASSERT(givenInitializer || (isPort && !isLocal));
+    SLANG_ASSERT(givenInitializer || (isPort && !isLocal));
 }
 
 Definition::ParameterDecl::ParameterDecl(std::string_view name, SourceLocation location,
@@ -73,7 +73,7 @@ Definition::ParameterDecl::ParameterDecl(std::string_view name, SourceLocation l
     givenType(defaultType),
     name(name), location(location), isTypeParam(true), isLocalParam(isLocal), isPortParam(isPort),
     hasSyntax(false) {
-    ASSERT(givenType || (isPort && !isLocal));
+    SLANG_ASSERT(givenType || (isPort && !isLocal));
 }
 
 bool Definition::ParameterDecl::hasDefault() const {
@@ -159,7 +159,7 @@ std::string_view Definition::getKindString() const {
         case DefinitionKind::Program:
             return "program"sv;
         default:
-            ASSUME_UNREACHABLE;
+            SLANG_UNREACHABLE;
     }
 }
 
@@ -172,7 +172,7 @@ std::string_view Definition::getArticleKindString() const {
         case DefinitionKind::Program:
             return "a program"sv;
         default:
-            ASSUME_UNREACHABLE;
+            SLANG_UNREACHABLE;
     }
 }
 

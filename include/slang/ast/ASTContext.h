@@ -179,7 +179,7 @@ enum class SLANG_EXPORT ASTFlags : uint64_t {
     /// that symbol as being "used".
     NoReference = 1ull << 40
 };
-BITMASK(ASTFlags, NoReference)
+SLANG_BITMASK(ASTFlags, NoReference)
 
 // clang-format off
 #define DK(x) \
@@ -191,7 +191,7 @@ BITMASK(ASTFlags, NoReference)
     x(Queue) \
     x(DPIOpenArray)
 // clang-format on
-ENUM(DimensionKind, DK)
+SLANG_ENUM(DimensionKind, DK)
 #undef DK
 
 struct SLANG_EXPORT EvaluatedDimension {
@@ -299,7 +299,7 @@ public:
                bitmask<ASTFlags> flags = ASTFlags::None) :
         scope(&scope),
         lookupIndex(lookupLocation.getIndex()), flags(flags) {
-        ASSERT(!lookupLocation.getScope() || lookupLocation.getScope() == &scope);
+        SLANG_ASSERT(!lookupLocation.getScope() || lookupLocation.getScope() == &scope);
     }
 
     Compilation& getCompilation() const { return scope->getCompilation(); }

@@ -39,7 +39,7 @@ ConstantValue evalLogicalOp(BinaryOperator op, const TL& l, const TR& r) {
         OP(LogicalImplication, SVInt(SVInt::logicalImpl(l, r)));
         OP(LogicalEquivalence, SVInt(SVInt::logicalEquiv(l, r)));
         default:
-            ASSUME_UNREACHABLE;
+            SLANG_UNREACHABLE;
     }
 }
 
@@ -67,7 +67,7 @@ ConstantValue evalFloatOp(BinaryOperator op, TFloat l, TFloat r) {
         OP(LogicalImplication, SVInt(!bl || br));
         OP(LogicalEquivalence, SVInt((!bl || br) && (!br || bl)));
         default:
-            ASSUME_UNREACHABLE;
+            SLANG_UNREACHABLE;
     }
 }
 #undef OP
@@ -368,7 +368,7 @@ Expression& UnaryExpression::fromSyntax(Compilation& compilation,
 
             break;
         default:
-            ASSUME_UNREACHABLE;
+            SLANG_UNREACHABLE;
     }
 
     if (!good) {
@@ -435,7 +435,7 @@ bool UnaryExpression::propagateType(const ASTContext& context, const Type& newTy
             // Operand is self determined and already folded.
             return false;
     }
-    ASSUME_UNREACHABLE;
+    SLANG_UNREACHABLE;
 }
 
 std::optional<bitwidth_t> UnaryExpression::getEffectiveWidthImpl() const {
@@ -512,7 +512,7 @@ ConstantValue UnaryExpression::evalImpl(EvalContext& context) const {
 #undef OP
         }
 
-        ASSUME_UNREACHABLE;
+        SLANG_UNREACHABLE;
     }
 
     ConstantValue cv = operand().eval(context);
@@ -562,7 +562,7 @@ ConstantValue UnaryExpression::evalImpl(EvalContext& context) const {
     }
 
 #undef OP
-    ASSUME_UNREACHABLE;
+    SLANG_UNREACHABLE;
 }
 
 void UnaryExpression::serializeTo(ASTSerializer& serializer) const {
@@ -800,7 +800,7 @@ Expression& BinaryExpression::fromComponents(Expression& lhs, Expression& rhs, B
             }
             break;
         default:
-            ASSUME_UNREACHABLE;
+            SLANG_UNREACHABLE;
     }
 
     if (!good) {
@@ -855,7 +855,7 @@ bool BinaryExpression::propagateType(const ASTContext& context, const Type& newT
             contextDetermined(context, left_, newType);
             return true;
     }
-    ASSUME_UNREACHABLE;
+    SLANG_UNREACHABLE;
 }
 
 std::optional<bitwidth_t> BinaryExpression::getEffectiveWidthImpl() const {
@@ -914,7 +914,7 @@ ConstantValue BinaryExpression::evalImpl(EvalContext& context) const {
                     return SVInt(true);
                 break;
             default:
-                ASSUME_UNREACHABLE;
+                SLANG_UNREACHABLE;
         }
     }
 
@@ -1462,7 +1462,7 @@ ConstantValue ConcatenationExpression::evalImpl(EvalContext& context) const {
                 if (elemType.isEquivalent(*op->type))
                     result.emplace_back(std::move(cv));
                 else {
-                    ASSERT(cv.isContainer());
+                    SLANG_ASSERT(cv.isContainer());
                     const Type& from = *op->type->getArrayElementType();
                     for (auto& elem : cv) {
                         result.emplace_back(ConversionExpression::convert(
@@ -1980,7 +1980,7 @@ UnaryOperator Expression::getUnaryOperator(SyntaxKind kind) {
         case SyntaxKind::PostdecrementExpression:
             return UnaryOperator::Postdecrement;
         default:
-            ASSUME_UNREACHABLE;
+            SLANG_UNREACHABLE;
     }
 }
 
@@ -2067,7 +2067,7 @@ BinaryOperator Expression::getBinaryOperator(SyntaxKind kind) {
         case SyntaxKind::ArithmeticRightShiftAssignmentExpression:
             return BinaryOperator::ArithmeticShiftRight;
         default:
-            ASSUME_UNREACHABLE;
+            SLANG_UNREACHABLE;
     }
 }
 
@@ -2175,7 +2175,7 @@ ConstantValue Expression::evalBinaryOperator(BinaryOperator op, const ConstantVa
             OP(CaseEquality, SVInt(l == r));
             OP(CaseInequality, SVInt(l != r));
             default:
-                ASSUME_UNREACHABLE;
+                SLANG_UNREACHABLE;
         }
     }
     else if (cvl.isNullHandle()) {
@@ -2187,12 +2187,12 @@ ConstantValue Expression::evalBinaryOperator(BinaryOperator op, const ConstantVa
             OP(CaseEquality, SVInt(true));
             OP(CaseInequality, SVInt(false));
             default:
-                ASSUME_UNREACHABLE;
+                SLANG_UNREACHABLE;
         }
     }
 
 #undef OP
-    ASSUME_UNREACHABLE;
+    SLANG_UNREACHABLE;
 }
 
 } // namespace slang::ast

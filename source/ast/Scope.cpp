@@ -26,7 +26,6 @@
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/diagnostics/LookupDiags.h"
 #include "slang/syntax/AllSyntax.h"
-#include "slang/util/StackContainer.h"
 #include "slang/util/TimeTrace.h"
 
 namespace {
@@ -205,6 +204,10 @@ void Scope::addMembers(const SyntaxNode& syntax) {
         case SyntaxKind::UdpDeclaration:
             // Primitives exist in their own namespace and are tracked in the Compilation.
             addMember(compilation.createPrimitive(*this, syntax.as<UdpDeclarationSyntax>()));
+            break;
+        case SyntaxKind::ConfigDeclaration:
+            // Config blocks exist in their own namespace and are tracked in the Compilation.
+            addMember(compilation.createConfigBlock(*this, syntax.as<ConfigDeclarationSyntax>()));
             break;
         case SyntaxKind::PackageImportDeclaration: {
             auto& importDecl = syntax.as<PackageImportDeclarationSyntax>();
@@ -541,11 +544,10 @@ void Scope::addMembers(const SyntaxNode& syntax) {
         case SyntaxKind::ExternModuleDecl:
         case SyntaxKind::ExternUdpDecl:
         case SyntaxKind::WildcardPortList:
-        case SyntaxKind::ConfigDeclaration:
             addDiag(diag::NotYetSupported, syntax.sourceRange());
             break;
         default:
-            ASSUME_UNREACHABLE;
+            SLANG_UNREACHABLE;
     }
 }
 
@@ -580,7 +582,7 @@ const Symbol* Scope::lookupName(std::string_view name, LookupLocation location,
     LookupResult result;
     ASTContext context(*this, location);
     Lookup::name(compilation.parseName(name), context, flags, result);
-    ASSERT(result.selectors.empty());
+    SLANG_ASSERT(result.selectors.empty());
     return result.found;
 }
 
@@ -609,6 +611,7 @@ static bool canLookupByName(SymbolKind kind) {
         case SymbolKind::MultiPort:
         case SymbolKind::Package:
         case SymbolKind::Primitive:
+        case SymbolKind::ConfigBlock:
             return false;
         default:
             return true;
@@ -617,8 +620,8 @@ static bool canLookupByName(SymbolKind kind) {
 
 void Scope::insertMember(const Symbol* member, const Symbol* at, bool isElaborating,
                          bool incrementIndex) const {
-    ASSERT(!member->parentScope);
-    ASSERT(!member->nextInScope);
+    SLANG_ASSERT(!member->parentScope);
+    SLANG_ASSERT(!member->nextInScope);
 
     if (!at) {
         member->indexInScope = SymbolIndex{1};
@@ -716,7 +719,7 @@ void Scope::handleNameConflict(const Symbol& member, const Symbol*& existing,
         auto& gen1 = existing->as<GenerateBlockSymbol>();
         auto& gen2 = member.as<GenerateBlockSymbol>();
         if (gen1.constructIndex == gen2.constructIndex) {
-            ASSERT(gen1.isUninstantiated || gen2.isUninstantiated);
+            SLANG_ASSERT(gen1.isUninstantiated || gen2.isUninstantiated);
             if (gen1.isUninstantiated)
                 existing = &member;
             return;
@@ -762,7 +765,7 @@ void Scope::handleNameConflict(const Symbol& member, const Symbol*& existing,
 
 void Scope::handleNameConflict(const Symbol& member) const {
     auto existing = nameMap->find(member.name)->second;
-    ASSERT(existing);
+    SLANG_ASSERT(existing);
     if (member.kind == SymbolKind::ExplicitImport)
         checkImportConflict(member, *existing);
     else
@@ -822,7 +825,7 @@ void Scope::elaborate() const {
         });
     }
 
-    ASSERT(deferredMemberIndex != DeferredMemberIndex::Invalid);
+    SLANG_ASSERT(deferredMemberIndex != DeferredMemberIndex::Invalid);
     auto deferredData = compilation.getOrAddDeferredData(deferredMemberIndex);
     deferredMemberIndex = DeferredMemberIndex::Invalid;
 
@@ -849,8 +852,8 @@ void Scope::elaborate() const {
             // add all of the members into this scope so that we don't get
             // further errors reported.
             auto syntax = dt->getTypeSyntax();
-            ASSERT(syntax);
-            ASSERT(type->kind == SymbolKind::ErrorType);
+            SLANG_ASSERT(syntax);
+            SLANG_ASSERT(type->kind == SymbolKind::ErrorType);
 
             SmallVector<const Symbol*> members;
             ASTContext context(*this, LookupLocation::max);
@@ -882,7 +885,7 @@ void Scope::elaborate() const {
         // When we originally inserted the DeferredMemberSymbol we made room
         // in the index space for these new members. Back the index up by
         // the number of new members to make sure we insert in order.
-        ASSERT(at);
+        SLANG_ASSERT(at);
         at->indexInScope -= (uint32_t)members.size();
         for (auto member : members) {
             insertMember(member, at, true, true);
@@ -891,7 +894,7 @@ void Scope::elaborate() const {
     };
 
     auto insertMembersAndNets = [this](auto& members, auto& implicitNets, const Symbol* at) {
-        ASSERT(at);
+        SLANG_ASSERT(at);
         at->indexInScope -= (uint32_t)members.size() + 1;
         for (auto net : implicitNets) {
             insertMember(net, at, true, false);
@@ -1071,7 +1074,7 @@ void Scope::elaborate() const {
                 break;
             }
             default:
-                ASSUME_UNREACHABLE;
+                SLANG_UNREACHABLE;
         }
     }
 
@@ -1153,7 +1156,7 @@ void Scope::elaborate() const {
         // Try to do a lookup by name; if the program is well-formed we'll find the
         // corresponding full typedef. If we don't, issue an error.
         auto it = nameMap->find(symbol->name);
-        ASSERT(it != nameMap->end());
+        SLANG_ASSERT(it != nameMap->end());
 
         if (it->second->kind == SymbolKind::TypeAlias)
             it->second->as<TypeAliasType>().checkForwardDecls();
@@ -1175,7 +1178,7 @@ void Scope::elaborate() const {
         });
     }
 
-    ASSERT(deferredMemberIndex == DeferredMemberIndex::Invalid);
+    SLANG_ASSERT(deferredMemberIndex == DeferredMemberIndex::Invalid);
     if (thisSym->kind == SymbolKind::InstanceBody && TimeTrace::isEnabled())
         TimeTrace::endTrace();
 }
@@ -1378,7 +1381,7 @@ void Scope::handleExportedMethods(std::span<Symbol* const> deferredMembers) cons
                             break;
                         }
                         default:
-                            ASSUME_UNREACHABLE;
+                            SLANG_UNREACHABLE;
                     }
                 }
             }
@@ -1471,7 +1474,7 @@ static size_t countGenMembers(const SyntaxNode& syntax) {
                         count += countGenMembers(*item->as<DefaultCaseItemSyntax>().clause);
                         break;
                     default:
-                        ASSUME_UNREACHABLE;
+                        SLANG_UNREACHABLE;
                 }
             }
             return count;
@@ -1520,7 +1523,7 @@ static size_t countMembers(const SyntaxNode& syntax) {
         case SyntaxKind::CoverCross:
             return 2;
         default:
-            ASSUME_UNREACHABLE;
+            SLANG_UNREACHABLE;
     }
 }
 

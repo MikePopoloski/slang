@@ -58,7 +58,7 @@ private:
     };
 
     FreeNode* pop() {
-        ASSERT(freeList);
+        SLANG_ASSERT(freeList);
         auto result = freeList;
         freeList = freeList->next;
         return result;

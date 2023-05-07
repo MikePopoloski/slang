@@ -17,7 +17,6 @@
 using namespace slang;
 
 int main(int argc, char** argv) {
-
     driver::Driver driver;
     driver.addStandardArgs();
 
@@ -117,13 +116,15 @@ int main(int argc, char** argv) {
 
     std::unique_ptr<ast::Compilation> compilation;
     bool compilation_ok;
-    try {
+    SLANG_TRY {
         compilation_ok = driver.parseAllSources();
         compilation = driver.createCompilation();
         compilation_ok &= driver.reportCompilation(*compilation, true);
     }
-    catch (const std::exception& e) {
+    SLANG_CATCH(const std::exception& e) {
+#if __cpp_exceptions
         slang::OS::printE(fmt::format("internal compiler error: {}\n", e.what()));
+#endif
         return 4;
     }
 

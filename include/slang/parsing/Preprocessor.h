@@ -16,7 +16,6 @@
 #include "slang/text/SourceLocation.h"
 #include "slang/util/Bag.h"
 #include "slang/util/SmallVector.h"
-#include "slang/util/StackContainer.h"
 
 namespace slang::syntax {
 

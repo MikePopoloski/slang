@@ -70,7 +70,7 @@ struct TimeTrace::Profiler {
     }
 
     void end() {
-        ASSERT(!stack.empty());
+        SLANG_ASSERT(!stack.empty());
 
         auto& entry = stack.back();
         entry.duration = steady_clock::now() - entry.start;
@@ -83,7 +83,7 @@ struct TimeTrace::Profiler {
     }
 
     void write(std::ostream& os) {
-        ASSERT(stack.empty());
+        SLANG_ASSERT(stack.empty());
 
         os << "{ \"traceEvents\": [\n";
 
@@ -104,12 +104,12 @@ struct TimeTrace::Profiler {
 };
 
 void TimeTrace::initialize() {
-    ASSERT(!profiler);
+    SLANG_ASSERT(!profiler);
     profiler = std::make_unique<Profiler>();
 }
 
 void TimeTrace::write(std::ostream& os) {
-    ASSERT(profiler);
+    SLANG_ASSERT(profiler);
     profiler->write(os);
 }
 

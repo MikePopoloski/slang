@@ -65,7 +65,7 @@ enum class SLANG_EXPORT MethodFlags : uint16_t {
     /// module is allowed to export the same task.
     ForkJoin = 1 << 11
 };
-BITMASK(MethodFlags, ForkJoin)
+SLANG_BITMASK(MethodFlags, ForkJoin)
 
 class MethodPrototypeSymbol;
 

@@ -92,7 +92,7 @@ void Preprocessor::pushSource(std::string_view source, std::string_view name) {
 }
 
 void Preprocessor::pushSource(SourceBuffer buffer) {
-    ASSERT(buffer.id);
+    SLANG_ASSERT(buffer.id);
 
     lexerStack.emplace_back(std::make_unique<Lexer>(buffer, alloc, diagnostics, lexerOptions));
 }
@@ -323,7 +323,7 @@ Token Preprocessor::handleDirectives(Token token) {
                         trivia.push_back(createSimpleDirective(token));
                         break;
                     default:
-                        ASSUME_UNREACHABLE;
+                        SLANG_UNREACHABLE;
                 }
                 break;
             default:
@@ -352,7 +352,7 @@ Token Preprocessor::nextRaw() {
     }
 
     // if this assert fires, the user disregarded an EoF and kept calling next()
-    ASSERT(!lexerStack.empty());
+    SLANG_ASSERT(!lexerStack.empty());
 
     // Pull the next token from the active source.
     // This is the common case.

@@ -70,7 +70,7 @@ void VariableSymbol::fromSyntax(Compilation& compilation, const DataDeclarationS
                 }
                 break;
             default:
-                ASSUME_UNREACHABLE;
+                SLANG_UNREACHABLE;
         }
     }
 
@@ -121,7 +121,7 @@ VariableSymbol& VariableSymbol::fromSyntax(Compilation& compilation,
     if (syntax.type)
         var->setDeclaredType(*syntax.type);
     else {
-        ASSERT(lastVar);
+        SLANG_ASSERT(lastVar);
         var->getDeclaredType()->setLink(*lastVar->getDeclaredType());
     }
 
@@ -180,7 +180,7 @@ void FormalArgumentSymbol::fromSyntax(const Scope& scope, const PortDeclarationS
 
     bool isConst = false;
     if (header.constKeyword) {
-        ASSERT(direction == ArgumentDirection::Ref);
+        SLANG_ASSERT(direction == ArgumentDirection::Ref);
         isConst = true;
     }
 
@@ -210,7 +210,7 @@ bool FormalArgumentSymbol::mergeVariable(const VariableSymbol& variable) {
         return false;
 
     auto syntax = getSyntax();
-    ASSERT(syntax && syntax->parent);
+    SLANG_ASSERT(syntax && syntax->parent);
     if (syntax->parent->kind != SyntaxKind::PortDeclaration)
         return false;
 
@@ -234,7 +234,7 @@ const Expression* FormalArgumentSymbol::getDefaultValue() const {
         return defaultVal;
 
     auto scope = getParentScope();
-    ASSERT(scope);
+    SLANG_ASSERT(scope);
 
     ASTContext context(*scope, LookupLocation::after(*this), ASTFlags::NotADriver);
     defaultVal = &Expression::bindArgument(getType(), direction, *defaultValSyntax, context,
@@ -469,7 +469,7 @@ void ClockVarSymbol::fromSyntax(const Scope& scope, const ClockingItemSyntax& sy
     // clocking block members cannot reference each other.
     auto& comp = scope.getCompilation();
     auto parent = scope.asSymbol().getParentScope();
-    ASSERT(parent);
+    SLANG_ASSERT(parent);
 
     LookupLocation ll = LookupLocation::before(scope.asSymbol());
     ASTContext context(*parent, ll, ASTFlags::NonProcedural);
@@ -525,7 +525,7 @@ void ClockVarSymbol::fromSyntax(const Scope& scope, const ClockingItemSyntax& sy
 
             if (sym) {
                 auto sourceType = sym->getDeclaredType();
-                ASSERT(sourceType);
+                SLANG_ASSERT(sourceType);
                 arg->getDeclaredType()->setLink(*sourceType);
 
                 auto& valExpr = ValueExpressionBase::fromSymbol(

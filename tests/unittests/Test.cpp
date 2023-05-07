@@ -15,7 +15,7 @@ std::string findTestDir() {
     auto path = fs::current_path();
     while (!fs::exists(path / "tests")) {
         path = path.parent_path();
-        ASSERT(!path.empty());
+        SLANG_ASSERT(!path.empty());
     }
 
     return (path / "tests/unittests/data/").string();
@@ -23,9 +23,9 @@ std::string findTestDir() {
 
 void setupSourceManager(SourceManager& sourceManager) {
     auto testDir = findTestDir();
-    sourceManager.addUserDirectory(testDir);
-    sourceManager.addSystemDirectory(testDir);
-    sourceManager.addSystemDirectory(std::string_view(testDir + "system/"));
+    CHECK(sourceManager.addUserDirectory(testDir));
+    CHECK(sourceManager.addSystemDirectory(testDir));
+    CHECK(sourceManager.addSystemDirectory(std::string_view(testDir + "system/")));
 }
 
 SourceManager& getSourceManager() {

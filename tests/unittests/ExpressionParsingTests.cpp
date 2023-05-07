@@ -385,6 +385,7 @@ TEST_CASE("Conditional expression (pattern matching)") {
           SyntaxKind::ExpressionPattern);
 }
 
+#if __cpp_exceptions
 TEST_CASE("Big expression") {
     auto& text = R"(
 module M; localparam foo = (stackDepth == 100) || ((stackDepth == 200) || ((stackDepth ==
@@ -501,6 +502,7 @@ source:23:43: error: language constructs are too deeply nested
                                           ^
 )");
 }
+#endif
 
 TEST_CASE("Arithmetic expressions") {
     auto& expr = parseExpression("3 + 4 / 2 * 9");

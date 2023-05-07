@@ -60,7 +60,7 @@ std::string_view timeUnitToSuffix(TimeUnit unit) {
         case TimeUnit::Femtoseconds:
             return "fs";
     }
-    ASSUME_UNREACHABLE;
+    SLANG_UNREACHABLE;
 }
 
 std::optional<TimeScaleValue> TimeScaleValue::fromLiteral(double value, TimeUnit unit) {

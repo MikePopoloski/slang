@@ -37,18 +37,47 @@ else()
   message(STATUS "Using remote fmt library")
 endif()
 
-set(find_pkg_args "")
-if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.24.0")
-  set(find_pkg_args "FIND_PACKAGE_ARGS" "3.0.0")
+if(SLANG_USE_BOOST)
+  find_package(Boost 1.81.0)
+  if(NOT Boost_FOUND)
+    message(STATUS "Using remote Boost library")
+    include(cmake/FetchBoostContent.cmake)
+
+    fetchboostcontent_declare(
+      boost_unordered
+      GIT_REPOSITORY
+      https://github.com/boostorg/unordered
+      GIT_TAG
+      boost-1.82.0
+      GIT_SHALLOW
+      ON)
+    fetchboostcontent_makeavailable(boost_unordered)
+  endif()
 endif()
 
-FetchContent_Declare(
-  unordered_dense
-  GIT_REPOSITORY https://github.com/martinus/unordered_dense.git
-  GIT_TAG v3.1.1
-  GIT_SHALLOW ON
-  ${find_pkg_args})
-FetchContent_MakeAvailable(unordered_dense)
+if(SLANG_INCLUDE_TESTS)
+  set(find_pkg_args "")
+  if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.24.0")
+    set(find_pkg_args "FIND_PACKAGE_ARGS" "3.0.0")
+  endif()
+
+  FetchContent_Declare(
+    Catch2
+    GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+    GIT_TAG v3.3.2
+    GIT_SHALLOW ON
+    ${find_pkg_args})
+  FetchContent_MakeAvailable(Catch2)
+
+  if(Catch2_FOUND)
+    get_target_property(Catch2_INCLUDE_DIR Catch2::Catch2
+                        INTERFACE_INCLUDE_DIRECTORIES)
+    message(STATUS "Found system Catch2 version: ${Catch2_VERSION}")
+    message(STATUS "Using system Catch2 include: ${Catch2_INCLUDE_DIR}")
+  else()
+    message(STATUS "Using remote Catch2 library")
+  endif()
+endif()
 
 set(find_pkg_args "")
 if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.24.0")
@@ -77,16 +106,6 @@ if(SLANG_INCLUDE_INSTALL)
     DIRECTORY ${PROJECT_SOURCE_DIR}/external/ieee1800/
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/ieee1800
     COMPONENT slang_Development)
-  install(
-    FILES ${PROJECT_SOURCE_DIR}/external/flat_hash_map.hpp
-    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-    COMPONENT slang_Development)
-  if(NOT unordered_dense_FOUND)
-    install(
-      DIRECTORY ${unordered_dense_SOURCE_DIR}/include/ankerl
-      DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-      COMPONENT slang_Development)
-  endif()
 
   if(NOT fmt_FOUND)
     install(
@@ -102,7 +121,15 @@ if(SLANG_INCLUDE_INSTALL)
       COMPONENT slang_Development)
   endif()
 
-  if(NOT unordered_dense_FOUND)
-    install(TARGETS unordered_dense EXPORT slangTargets)
+  if(SLANG_USE_BOOST AND NOT Boost_FOUND)
+    install(TARGETS boost_headers EXPORT slangTargets)
+    get_target_property(boost_target_install_dirs boost_headers
+                        boost_target_install_dir)
+    foreach(dir ${boost_target_install_dirs})
+      install(
+        DIRECTORY ${dir}/boost
+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+        COMPONENT slang_Development)
+    endforeach()
   endif()
 endif()

@@ -119,7 +119,7 @@ const Statement& Statement::bind(const StatementSyntax& syntax, const ASTContext
 
     if (!labelHandled && hasSimpleLabel(syntax)) {
         auto block = stmtCtx.tryGetBlock(context, syntax);
-        ASSERT(block);
+        SLANG_ASSERT(block);
         return *block;
     }
 
@@ -275,7 +275,7 @@ const Statement& Statement::bind(const StatementSyntax& syntax, const ASTContext
             context.addDiag(diag::NotYetSupported, syntax.sourceRange());
             return badStmt(comp, nullptr);
         default:
-            ASSUME_UNREACHABLE;
+            SLANG_UNREACHABLE;
     }
 
     result->syntax = &syntax;
@@ -464,7 +464,7 @@ static void findBlocks(const Scope& scope, const StatementSyntax& syntax,
                         recurse(&item->as<DefaultCaseItemSyntax>().clause->as<StatementSyntax>());
                         break;
                     default:
-                        ASSUME_UNREACHABLE;
+                        SLANG_UNREACHABLE;
                 }
             }
             return;
@@ -561,7 +561,7 @@ static void findBlocks(const Scope& scope, const StatementSyntax& syntax,
             }
             return;
         default:
-            ASSUME_UNREACHABLE;
+            SLANG_UNREACHABLE;
     }
 }
 
@@ -665,7 +665,7 @@ Statement& BlockStatement::fromSyntax(Compilation& comp, const BlockStatementSyn
     }
     else if (blockKind != StatementBlockKind::Sequential && context.inAlwaysCombLatch()) {
         auto proc = context.getProceduralBlock();
-        ASSERT(proc);
+        SLANG_ASSERT(proc);
         context.addDiag(diag::ForkJoinAlwaysComb, syntax.begin.range())
             << SemanticFacts::getProcedureKindStr(proc->procedureKind);
         return badStmt(comp, nullptr);
@@ -733,7 +733,7 @@ ER BlockStatement::evalImpl(EvalContext& context) const {
         // If it was, we've already skipped enough statements, so just clear out
         // the target and continue on.
         auto target = context.getDisableTarget();
-        ASSERT(target);
+        SLANG_ASSERT(target);
         if (target == blockSymbol) {
             result = ER::Success;
             context.setDisableTarget(nullptr, {});
@@ -785,10 +785,10 @@ Statement& ReturnStatement::fromSyntax(Compilation& compilation,
 ER ReturnStatement::evalImpl(EvalContext& context) const {
     if (expr) {
         const SubroutineSymbol* subroutine = context.topFrame().subroutine;
-        ASSERT(subroutine);
+        SLANG_ASSERT(subroutine);
 
         ConstantValue* storage = context.findLocal(subroutine->returnValVar);
-        ASSERT(storage);
+        SLANG_ASSERT(storage);
 
         *storage = expr->eval(context);
     }
@@ -859,7 +859,7 @@ ER DisableStatement::evalImpl(EvalContext& context) const {
         return ER::Fail;
     }
 
-    ASSERT(!context.getDisableTarget());
+    SLANG_ASSERT(!context.getDisableTarget());
     context.setDisableTarget(&target, sourceRange);
     return ER::Disable;
 }
@@ -912,7 +912,7 @@ static UniquePriorityCheck getUniquePriority(TokenKind kind) {
             check = UniquePriorityCheck::Priority;
             break;
         default:
-            ASSUME_UNREACHABLE;
+            SLANG_UNREACHABLE;
     }
 
     return check;
@@ -1078,7 +1078,7 @@ static CaseStatementCondition getCondition(TokenKind kind) {
             condition = CaseStatementCondition::WildcardJustZ;
             break;
         default:
-            ASSUME_UNREACHABLE;
+            SLANG_UNREACHABLE;
     }
 
     return condition;
@@ -1117,7 +1117,7 @@ Statement& CaseStatement::fromSyntax(Compilation& compilation, const CaseStateme
                 }
                 break;
             default:
-                ASSUME_UNREACHABLE;
+                SLANG_UNREACHABLE;
         }
     }
 
@@ -1310,7 +1310,7 @@ void CaseStatement::serializeTo(ASTSerializer& serializer) const {
 Statement& PatternCaseStatement::fromSyntax(Compilation& compilation,
                                             const CaseStatementSyntax& syntax,
                                             const ASTContext& context, StatementContext& stmtCtx) {
-    ASSERT(syntax.matchesOrInside.kind == TokenKind::MatchesKeyword);
+    SLANG_ASSERT(syntax.matchesOrInside.kind == TokenKind::MatchesKeyword);
 
     auto& expr = Expression::bind(*syntax.expr, context);
     bool bad = expr.bad();
@@ -1350,7 +1350,7 @@ Statement& PatternCaseStatement::fromSyntax(Compilation& compilation,
                 }
                 break;
             default:
-                ASSUME_UNREACHABLE;
+                SLANG_UNREACHABLE;
         }
     }
 
@@ -1655,7 +1655,7 @@ private:
         PerAssignDriverState(const Expression& expr, const ValueSymbol& symbol) :
             longestStaticPrefix(&expr), symbol(&symbol), rootType(&symbol.getType()) {}
     };
-    flat_hash_map<const AssignmentExpression*, SmallVector<PerAssignDriverState>> driverMap;
+    flat_node_map<const AssignmentExpression*, SmallVector<PerAssignDriverState>> driverMap;
 };
 
 Statement& ForLoopStatement::fromSyntax(Compilation& compilation,
@@ -1956,7 +1956,7 @@ Statement& ForeachLoopStatement::fromSyntax(Compilation& compilation,
     auto guard = stmtCtx.enterLoop();
 
     auto& arrayRef = Expression::bind(*syntax.loopList->arrayName, context);
-    ASSERT(!arrayRef.bad());
+    SLANG_ASSERT(!arrayRef.bad());
 
     // Loop variables were already built in the containing block when it was elaborated,
     // so we just have to find them and associate them with the correct dim ranges here.
@@ -1976,15 +1976,15 @@ Statement& ForeachLoopStatement::fromSyntax(Compilation& compilation,
         if (loopVar->kind == SyntaxKind::EmptyIdentifierName)
             continue;
 
-        ASSERT(itIt != range.end());
-        ASSERT(itIt->name == loopVar->as<IdentifierNameSyntax>().identifier.valueText());
+        SLANG_ASSERT(itIt != range.end());
+        SLANG_ASSERT(itIt->name == loopVar->as<IdentifierNameSyntax>().identifier.valueText());
 
         IteratorSymbol* it = const_cast<IteratorSymbol*>(&*itIt);
         dims.back().loopVar = it;
         itIt++;
     }
 
-    ASSERT(itIt == range.end());
+    SLANG_ASSERT(itIt == range.end());
 
     auto& bodyStmt = Statement::bind(*syntax.statement, context, stmtCtx);
     auto result = compilation.emplace<ForeachLoopStatement>(arrayRef, dims.copy(compilation),
@@ -2053,7 +2053,7 @@ ER ForeachLoopStatement::evalRecursive(EvalContext& context, const ConstantValue
         }
     }
     else if (cv.isString()) {
-        ASSERT(currDims.size() == 1);
+        SLANG_ASSERT(currDims.size() == 1);
 
         auto& str = cv.str();
         for (size_t i = 0; i < str.size(); i++) {

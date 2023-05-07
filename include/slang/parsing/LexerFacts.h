@@ -9,7 +9,7 @@
 
 #include <optional>
 
-#include "slang/util/StringTable.h"
+#include "slang/util/Hash.h"
 
 namespace slang::syntax {
 enum class SyntaxKind;
@@ -39,7 +39,8 @@ public:
     static std::string_view getTokenKindText(TokenKind kind);
     static KeywordVersion getDefaultKeywordVersion();
     static std::optional<KeywordVersion> getKeywordVersion(std::string_view text);
-    static const StringTable<TokenKind>* getKeywordTable(KeywordVersion version);
+    static const flat_hash_map<std::string_view, TokenKind>* getKeywordTable(
+        KeywordVersion version);
 
     static syntax::SyntaxKind getDirectiveKind(std::string_view directive);
     static std::string_view getDirectiveText(syntax::SyntaxKind kind);

@@ -58,7 +58,7 @@ class VariableSymbol;
     x(ProceduralDeassign) \
     x(RandCase) \
     x(RandSequence)
-ENUM(StatementKind, STATEMENT)
+SLANG_ENUM(StatementKind, STATEMENT)
 #undef STATEMENT
 
 #define CASE_CONDITION(x) \
@@ -66,7 +66,7 @@ ENUM(StatementKind, STATEMENT)
     x(WildcardXOrZ) \
     x(WildcardJustZ) \
     x(Inside)
-ENUM(CaseStatementCondition, CASE_CONDITION)
+SLANG_ENUM(CaseStatementCondition, CASE_CONDITION)
 #undef CASE_CONDITION
 
 #define UNIQUE_PRIORITY(x) \
@@ -74,7 +74,7 @@ ENUM(CaseStatementCondition, CASE_CONDITION)
     x(Unique) \
     x(Unique0) \
     x(Priority)
-ENUM(UniquePriorityCheck, UNIQUE_PRIORITY)
+SLANG_ENUM(UniquePriorityCheck, UNIQUE_PRIORITY)
 #undef UNIQUE_PRIORITY
 // clang-format on
 
@@ -86,7 +86,7 @@ enum class StatementFlags {
     InForLoop = 1 << 3,
     HasTimingError = 1 << 4
 };
-BITMASK(StatementFlags, HasTimingError)
+SLANG_BITMASK(StatementFlags, HasTimingError)
 
 /// The base class for all statements in SystemVerilog.
 class SLANG_EXPORT Statement {
@@ -209,13 +209,13 @@ public:
 
     template<typename T>
     T& as() {
-        ASSERT(T::isKind(kind));
+        SLANG_ASSERT(T::isKind(kind));
         return *static_cast<T*>(this);
     }
 
     template<typename T>
     const T& as() const {
-        ASSERT(T::isKind(kind));
+        SLANG_ASSERT(T::isKind(kind));
         return *static_cast<const T*>(this);
     }
 

@@ -68,6 +68,7 @@ option(SLANG_CI_BUILD "Enable longer running tests for CI builds" OFF)
 option(SLANG_FUZZ_TARGET "Enables changes to make binaries easier to fuzz test"
        OFF)
 option(BUILD_SHARED_LIBS "Generate shared libraries instead of static" OFF)
+option(SLANG_USE_BOOST "Enable the use of Boost libraries" ON)
 
 set(SLANG_LIB_NAME
     "svlang"

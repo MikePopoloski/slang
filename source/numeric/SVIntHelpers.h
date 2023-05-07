@@ -241,7 +241,7 @@ static bool subOne(uint64_t* dst, uint64_t* src, uint32_t len, uint64_t value) {
 }
 
 // Generalized adder
-NO_SANITIZE("unsigned-integer-overflow")
+SLANG_NO_SANITIZE("unsigned-integer-overflow")
 static bool addGeneral(uint64_t* dst, const uint64_t* x, const uint64_t* y, uint32_t len) {
     uint8_t carry = 0;
     for (uint32_t i = 0; i < len; i++) {
@@ -253,7 +253,7 @@ static bool addGeneral(uint64_t* dst, const uint64_t* x, const uint64_t* y, uint
 }
 
 // Generalized subtractor (x - y)
-NO_SANITIZE("unsigned-integer-overflow")
+SLANG_NO_SANITIZE("unsigned-integer-overflow")
 static bool subGeneral(uint64_t* dst, const uint64_t* x, const uint64_t* y, uint32_t len) {
     uint8_t borrow = 0;
     for (uint32_t i = 0; i < len; i++) {
@@ -265,7 +265,7 @@ static bool subGeneral(uint64_t* dst, const uint64_t* x, const uint64_t* y, uint
 }
 
 // One term of a multiply operation
-NO_SANITIZE("unsigned-integer-overflow")
+SLANG_NO_SANITIZE("unsigned-integer-overflow")
 static uint64_t mulTerm(uint64_t x, uint64_t y, uint64_t& carry) {
 #ifdef _MSC_VER
     uint64_t high;
@@ -292,7 +292,7 @@ static void mulKaratsuba(uint64_t* dst, const uint64_t* x, uint32_t xlen, const 
                          uint32_t ylen);
 
 // Generalized multiplier
-NO_SANITIZE("unsigned-integer-overflow")
+SLANG_NO_SANITIZE("unsigned-integer-overflow")
 static void mul(uint64_t* dst, const uint64_t* x, uint32_t xlen, const uint64_t* y, uint32_t ylen) {
     if (xlen > 7 && ylen > 7) {
         mulKaratsuba(dst, x, xlen, y, ylen);
@@ -374,7 +374,7 @@ static void mulKaratsuba(uint64_t* dst, const uint64_t* x, uint32_t xlen, const 
     t2.fill(0);
     unevenAdd(t2.get(), yh, yhSize, yl, ylSize);
 
-    ASSERT(std::max(xlSize, xhSize) + 1 + std::max(ylSize, yhSize) + 1 < xlen + ylen);
+    SLANG_ASSERT(std::max(xlSize, xhSize) + 1 + std::max(ylSize, yhSize) + 1 < xlen + ylen);
 
     TempBuffer<uint64_t, 128> t3(xlen + ylen);
     t3.fill(0);
@@ -387,13 +387,13 @@ static void mulKaratsuba(uint64_t* dst, const uint64_t* x, uint32_t xlen, const 
 // from "Art of Computer Programming, Volume 2", section 4.3.1, p. 272.
 // Note that this implementation is based on the APInt implementation from
 // the LLVM project.
-NO_SANITIZE("unsigned-integer-overflow")
+SLANG_NO_SANITIZE("unsigned-integer-overflow")
 static void knuthDiv(uint32_t* u, uint32_t* v, uint32_t* q, uint32_t* r, uint32_t m, uint32_t n) {
-    ASSERT(u);
-    ASSERT(v);
-    ASSERT(q);
-    ASSERT(u != v && u != q && v != q);
-    ASSERT(n > 1);
+    SLANG_ASSERT(u);
+    SLANG_ASSERT(v);
+    SLANG_ASSERT(q);
+    SLANG_ASSERT(u != v && u != q && v != q);
+    SLANG_ASSERT(n > 1);
 
     // b denotes the base of the number system. In our case b is 2^32.
     const uint64_t b = 1ULL << 32;
@@ -700,7 +700,7 @@ static TVal toIEEE754(SVInt value) {
     // 2. If they are less than half way then round down.
     // 3. If they are exactly equal to the half way point, round to even.
     bitwidth_t bwidth = value.getActiveBits();
-    ASSERT(bwidth);
+    SLANG_ASSERT(bwidth);
 
     uint64_t mantissa, remainder = 0, halfway = 1;
     uint32_t word = (bwidth - 1) / SVInt::BITS_PER_WORD;

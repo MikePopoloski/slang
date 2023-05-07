@@ -10,20 +10,20 @@
 namespace slang::IntervalMapDetails {
 
 void Path::replaceRoot(void* node, uint32_t size, IndexPair offset) {
-    ASSERT(!path.empty());
+    SLANG_ASSERT(!path.empty());
     path.front() = Entry(node, size, offset.first);
     path.insert(path.begin() + 1, Entry(childAt(0), offset.second));
 }
 
 void Path::moveLeft(uint32_t level) {
-    ASSERT(level);
+    SLANG_ASSERT(level);
 
     // Go up the tree until we find a node where we can go left.
     uint32_t l = 0;
     if (valid()) {
         l = level - 1;
         while (path[l].offset == 0) {
-            ASSERT(l);
+            SLANG_ASSERT(l);
             --l;
         }
     }
@@ -43,7 +43,7 @@ void Path::moveLeft(uint32_t level) {
 }
 
 void Path::moveRight(uint32_t level) {
-    ASSERT(level);
+    SLANG_ASSERT(level);
 
     // Go up the tree until we find a node where we can go right.
     uint32_t l = level - 1;
@@ -63,7 +63,7 @@ void Path::moveRight(uint32_t level) {
 }
 
 NodeRef Path::getLeftSibling(uint32_t level) const {
-    ASSERT(level > 0);
+    SLANG_ASSERT(level > 0);
 
     // Go up until we can go left.
     uint32_t l = level - 1;
@@ -83,7 +83,7 @@ NodeRef Path::getLeftSibling(uint32_t level) const {
 }
 
 NodeRef Path::getRightSibling(uint32_t level) const {
-    ASSERT(level > 0);
+    SLANG_ASSERT(level > 0);
 
     // Go up until we can go right.
     uint32_t l = level - 1;
@@ -104,9 +104,9 @@ NodeRef Path::getRightSibling(uint32_t level) const {
 
 IndexPair distribute(uint32_t numNodes, uint32_t numElements, uint32_t capacity, uint32_t* newSizes,
                      uint32_t position) {
-    ASSERT(numElements + 1 <= numNodes * capacity);
-    ASSERT(position <= numElements);
-    ASSERT(numNodes > 0);
+    SLANG_ASSERT(numElements + 1 <= numNodes * capacity);
+    SLANG_ASSERT(position <= numElements);
+    SLANG_ASSERT(numNodes > 0);
 
     // left-leaning even distribution
     const uint32_t perNode = (numElements + 1) / numNodes;
@@ -120,9 +120,9 @@ IndexPair distribute(uint32_t numNodes, uint32_t numElements, uint32_t capacity,
     }
 
     // Subtract the new element that was added.
-    ASSERT(sum == numElements + 1);
-    ASSERT(posPair.first < numNodes);
-    ASSERT(newSizes[posPair.first]);
+    SLANG_ASSERT(sum == numElements + 1);
+    SLANG_ASSERT(posPair.first < numNodes);
+    SLANG_ASSERT(newSizes[posPair.first]);
     --newSizes[posPair.first];
 
     return posPair;
