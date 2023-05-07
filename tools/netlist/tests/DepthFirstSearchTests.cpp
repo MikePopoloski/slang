@@ -1,6 +1,6 @@
 //------------------------------------------------------------------------------
-//! @file DepthFirstIteratorTest.cpp
-//! @brief Depth-first iterator unit tests.
+//! @file DepthFirstSearchTests.cpp
+//! @brief Depth-first search unit tests.
 //
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
