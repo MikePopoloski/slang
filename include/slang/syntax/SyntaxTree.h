@@ -126,6 +126,37 @@ public:
                                                    const Bag& options = {},
                                                    MacroList inheritedMacros = {});
 
+    /// Creates a syntax tree from a library map file.
+    /// @a path is the path to the source file on disk.
+    /// @a sourceManager is the manager that owns all of the loaded source code.
+    /// @a options is an optional bag of lexer, preprocessor, and parser options.
+    /// @return the created and parsed syntax tree.
+    static std::shared_ptr<SyntaxTree> fromLibraryMapFile(std::string_view path,
+                                                          SourceManager& sourceManager,
+                                                          const Bag& options = {});
+
+    /// Creates a syntax tree from a library map located in memory.
+    /// @a text is the actual source code text.
+    /// @a sourceManager is the manager that owns all of the loaded source code.
+    /// @a name is an optional name to give to the loaded source buffer.
+    /// @a path is an optional path to give to the loaded source buffer.
+    /// @a options is an optional bag of lexer, preprocessor, and parser options.
+    /// @return the created and parsed syntax tree.
+    static std::shared_ptr<SyntaxTree> fromLibraryMapText(std::string_view text,
+                                                          SourceManager& sourceManager,
+                                                          std::string_view name = "source"sv,
+                                                          std::string_view path = "",
+                                                          const Bag& options = {});
+
+    /// Creates a syntax tree from a library map already loaded into a source buffer.
+    /// @a buffer is the loaded source buffer.
+    /// @a sourceManager is the manager that owns the buffer.
+    /// @a options is an optional bag of lexer, preprocessor, and parser options.
+    /// @return the created and parsed syntax tree.
+    static std::shared_ptr<SyntaxTree> fromLibraryMapBuffer(const SourceBuffer& buffer,
+                                                            SourceManager& sourceManager,
+                                                            const Bag& options = {});
+
     /// Gets any diagnostics generated while parsing.
     Diagnostics& diagnostics() { return diagnosticsBuffer; }
 

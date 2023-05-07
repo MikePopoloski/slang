@@ -1107,3 +1107,25 @@ endmodule
     REQUIRE(diagnostics.size() == 1);
     CHECK(diagnostics[0].code == diag::BindDirectiveInvalidName);
 }
+
+TEST_CASE("Library map parsing") {
+    auto tree = SyntaxTree::fromLibraryMapText(R"(
+config cfgl;
+    design rtlLib.top;
+    instance top use #(.WIDTH(32));
+    instance top.a1 use #(.W(top.WIDTH));
+endconfig
+
+;;
+
+include C:/foo/bar\\baz? ;
+library rtlLib /a/b/c, f/...*?/asdf*.v,
+    asdfasdf, ***;
+)",
+                                               getSourceManager());
+
+    REQUIRE(tree);
+
+    diagnostics = tree->diagnostics();
+    CHECK_DIAGNOSTICS_EMPTY;
+}

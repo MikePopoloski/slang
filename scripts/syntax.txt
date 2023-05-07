@@ -2133,6 +2133,10 @@ CompilationUnit
 list<Member> members
 token endOfFile
 
+LibraryMap
+list<Member> members
+token endOfFile
+
 // ----- DIRECTIVES -----
 
 Directive final=false
@@ -2293,3 +2297,23 @@ token semi2
 list<ConfigRule> rules
 token endconfig
 NamedBlockClause? blockName
+
+FilePathSpec
+token path
+
+LibraryIncDirClause
+token minus
+token incdir
+separated_list<FilePathSpec> filePaths
+
+LibraryDeclaration base=Member
+token library
+token name
+separated_list<FilePathSpec> filePaths
+LibraryIncDirClause? incDirClause
+token semi
+
+LibraryIncludeStatement base=Member
+token include
+FilePathSpec filePath
+token semi
