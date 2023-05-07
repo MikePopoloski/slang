@@ -1,3 +1,12 @@
+//------------------------------------------------------------------------------
+//! @file SplitVariables.h
+//! @brief A class that performs a transformation on the netlist graph to split
+//         variable declaration nodes with structured types such that false
+//         dependencies between input and output edges are removed.
+//
+// SPDX-FileCopyrightText: Michael Popoloski
+// SPDX-License-Identifier: MIT
+//------------------------------------------------------------------------------
 #pragma once
 
 #include "fmt/color.h"
@@ -20,10 +29,15 @@ public:
   }
 
 private:
+  /// Given two ranges [end1:start1] and [end2:start2], return true if there is
+  /// any overlap in values between them.
+  inline bool rangesOverlap(size_t start1, size_t end1, size_t start2, size_t end2) const {
+    return start1 <= end2 && start2 <= end1;
+  }
+
   /// Return true if the selection made by the target node intersects with the
   /// selection made by the source node.
-  bool isIntersectingSelection(const ast::Type &varType,
-                               NetlistVariableReference &sourceNode,
+  bool isIntersectingSelection(NetlistVariableReference &sourceNode,
                                NetlistVariableReference &targetNode) const {
     bool match = true;
     size_t selectorDepth = 0;
@@ -40,20 +54,18 @@ private:
       switch (sourceSelector->kind) {
       case VariableSelectorKind::ElementSelect:
         // Matching selectors if the index is the same.
-        match = sourceSelector->as<VariableElementSelect>().index.integer().as<size_t>() ==
-                targetSelector->as<VariableElementSelect>().index.integer().as<size_t>();
+        match = sourceSelector->as<VariableElementSelect>().getIndexInt() ==
+                targetSelector->as<VariableElementSelect>().getIndexInt();
         break;
       case VariableSelectorKind::RangeSelect: {
         // Matching selectors if there is any overlap in the two ranges.
         auto sourceRangeSel = sourceSelector->as<VariableRangeSelect>();
         auto targetRangeSel = targetSelector->as<VariableRangeSelect>();
-        auto srcLeft = sourceRangeSel.leftIndex.integer().as<size_t>();
-        auto srcRight = sourceRangeSel.rightIndex.integer().as<size_t>();
-        auto tgtLeft = targetRangeSel.leftIndex.integer().as<size_t>();
-        auto tgtRight = targetRangeSel.rightIndex.integer().as<size_t>();
-        match = (srcLeft >= tgtLeft && srcLeft <= tgtRight) ||
-                (srcRight >= tgtLeft && srcRight <= tgtRight) ||
-                (srcLeft < tgtLeft && srcRight > tgtRight);
+        auto srcLeft = sourceRangeSel.getLeftIndexInt();
+        auto srcRight = sourceRangeSel.getRightIndexInt();
+        auto tgtLeft = targetRangeSel.getLeftIndexInt();
+        auto tgtRight = targetRangeSel.getRightIndexInt();
+        match = rangesOverlap(srcRight, srcLeft, tgtRight, tgtLeft);
         break;
       }
       case VariableSelectorKind::MemberAccess:
@@ -68,7 +80,8 @@ private:
   }
 
   void split() {
-    std::vector<std::tuple<NetlistVariableDeclaration*, NetlistEdge*, NetlistEdge*>> modifications;
+    std::vector<std::tuple<NetlistVariableDeclaration*, NetlistEdge*, NetlistEdge*>>
+      modifications;
     // Find each variable declaration nodes in the graph that has multiple
     // outgoing edges.
     for (auto &node : netlist) {
@@ -76,8 +89,8 @@ private:
           node->outDegree() > 1) {
         auto &varDeclNode = node->as<NetlistVariableDeclaration>();
         auto &varType = varDeclNode.symbol.getDeclaredType()->getType();
-        DEBUG_PRINT(fmt::format("Var {} has type {}\n", varDeclNode.hierarchicalPath,
-                                                        varType.toString()));
+        DEBUG_PRINT(fmt::format("Variable {} has type {}\n", varDeclNode.hierarchicalPath,
+                                                             varType.toString()));
         std::vector<NetlistEdge*> inEdges;
         netlist.getInEdgesToNode(*node, inEdges);
         // Find pairs of input and output edges that are attached to variable
@@ -93,9 +106,9 @@ private:
                 outEdge->getTargetNode().kind == NodeKind::VariableReference) {
               auto &sourceVarRef = inEdge->getSourceNode().as<NetlistVariableReference>();
               auto &targetVarRef = outEdge->getTargetNode().as<NetlistVariableReference>();
-              auto match = isIntersectingSelection(varType, sourceVarRef, targetVarRef);
+              auto match = isIntersectingSelection(sourceVarRef, targetVarRef);
               if (match) {
-                DEBUG_PRINT(fmt::format("{} -> {}\n",
+                DEBUG_PRINT(fmt::format("New dependency through variable {} -> {}\n",
                                         inEdge->getSourceNode().toString(),
                                         outEdge->getTargetNode().toString()));
                 modifications.emplace_back(&varDeclNode, inEdge, outEdge.get());

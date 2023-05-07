@@ -75,6 +75,12 @@ struct VariableElementSelect : public VariableSelectorBase {
     return otherKind == VariableSelectorKind::ElementSelect;
   }
 
+  size_t getIndexInt() const {
+    auto intValue = index.integer().as<size_t>();
+    assert(intValue && "could not convert index to size_t");
+    return *intValue;
+  }
+
   std::string toString() const override {
     return fmt::format("[{}]", index.toString());
   }
@@ -90,6 +96,18 @@ struct VariableRangeSelect : public VariableSelectorBase {
 
   static bool isKind(VariableSelectorKind otherKind) {
     return otherKind == VariableSelectorKind::RangeSelect;
+  }
+
+  size_t getLeftIndexInt() const {
+    auto intValue = leftIndex.integer().as<size_t>();
+    assert(intValue && "could not convert left index to size_t");
+    return *intValue;
+  }
+
+  size_t getRightIndexInt() const {
+    auto intValue = rightIndex.integer().as<size_t>();
+    assert(intValue && "could not convert right index to size_t");
+    return *intValue;
   }
 
   std::string toString() const override {
@@ -151,12 +169,12 @@ size_t NetlistNode::nextID = 0;
 class NetlistEdge : public DirectedEdge<NetlistNode, NetlistEdge> {
 public:
   NetlistEdge(NetlistNode &sourceNode, NetlistNode &targetNode)
-    : DirectedEdge(sourceNode, targetNode), disabled(false) {}
+    : DirectedEdge(sourceNode, targetNode)  {}
 
   void disable() { disabled = true; }
 
 public:
-  bool disabled;
+  bool disabled{};
 };
 
 /// A class representing a port declaration.
