@@ -31,6 +31,12 @@ public:
     return *this;
   }
 
+  /// Static polymorphism: delegate implementation (via isEqualTo) to the
+  /// derived class. Add friend operator to resolve ambiguity between operand
+  /// ordering with C++20.
+  friend bool operator==(const EdgeType &A, const EdgeType &B) noexcept {
+    return A.getDerived().isEqualTo(B);
+  }
   bool operator==(const EdgeType &E) const { return getDerived().isEqualTo(E); }
   bool operator!=(const EdgeType &E) const { return !operator==(E); }
 

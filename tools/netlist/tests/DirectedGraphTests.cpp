@@ -23,6 +23,21 @@ struct TestEdge : public DirectedEdge<TestNode, TestEdge> {
     : DirectedEdge(sourceNode, targetNode) {}
 };
 
+TEST_CASE("Test node and edge equality") {
+  DirectedGraph<TestNode, TestEdge> graph;
+  auto &n0 = graph.addNode();
+  auto &n0Alias = graph.getNode(graph.findNode(n0));
+  CHECK(n0 == n0Alias);
+  auto &n1 = graph.addNode();
+  CHECK(n0 != n1);
+  auto &n2 = graph.addNode();
+  auto &e0 = n0.addEdge(n1);
+  auto &e1 = n1.addEdge(n2);
+  auto *e0Alias = n0.findEdgeTo(n1)->get();
+  CHECK(e0 == *e0Alias);
+  CHECK(e0 != e1);
+}
+
 TEST_CASE("Test basic connectivity") {
   DirectedGraph<TestNode, TestEdge> graph;
   auto &n0 = graph.addNode();
@@ -45,12 +60,23 @@ TEST_CASE("Test basic connectivity") {
   CHECK(e3.getTargetNode() == n2);
   CHECK(e4.getTargetNode() == n3);
   CHECK(e5.getTargetNode() == n3);
-  // Out edges.
+  // Edge source nodes.
+  CHECK(e0.getSourceNode() == n0);
+  CHECK(e1.getSourceNode() == n0);
+  CHECK(e2.getSourceNode() == n0);
+  CHECK(e3.getSourceNode() == n1);
+  CHECK(e4.getSourceNode() == n1);
+  CHECK(e5.getSourceNode() == n2);
+  // Out degrees.
   CHECK(graph.outDegree(n0) == 3);
   CHECK(graph.outDegree(n1) == 2);
   CHECK(graph.outDegree(n2) == 1);
   CHECK(graph.outDegree(n3) == 0);
-  // In edges.
+  CHECK(n0.outDegree() == 3);
+  CHECK(n1.outDegree() == 2);
+  CHECK(n2.outDegree() == 1);
+  CHECK(n3.outDegree() == 0);
+  // In degrees.
   CHECK(graph.inDegree(n0) == 0);
   CHECK(graph.inDegree(n1) == 1);
   CHECK(graph.inDegree(n2) == 2);
