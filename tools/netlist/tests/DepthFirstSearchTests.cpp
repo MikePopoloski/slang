@@ -119,3 +119,4 @@ TEST_CASE("Depth-first search with an edge predicate") {
   CHECK(*visitor.nodes[1] == n2);
   CHECK(*visitor.nodes[2] == n4);
 }
+

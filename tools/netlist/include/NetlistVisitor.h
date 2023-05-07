@@ -349,7 +349,7 @@ public:
 private:
   ast::Compilation &compilation;
   Netlist &netlist;
-  std::vector<const NetlistPortDeclaration*> portsToConnect;
+  std::vector<NetlistPortDeclaration*> portsToConnect;
 };
 
 } // End namespace netlist.

@@ -93,7 +93,7 @@ public:
   bool operator!=(const NodeType &N) const { return !operator==(N); }
 
   /// Return an iterator to the edge connecting the target node.
-  const_iterator findEdgeTo(NodeType &targetNode) {
+  const_iterator findEdgeTo(const NodeType &targetNode) {
     return std::find_if(edges.begin(), edges.end(),
                         [&targetNode](std::unique_ptr<EdgeType> &edge) {
                           return edge->getTargetNode() == targetNode;
@@ -191,11 +191,12 @@ public:
                            [&nodeToFind](const std::unique_ptr<NodeType> &node) {
                              return const_cast<const NodeType&>(*node) == nodeToFind;
                            });
-    assert(it != nodes.end() && "could not find node");
+    assert(it != nodes.end() && "Could not find node");
     return it - nodes.begin();
   }
 
-  const NodeType &getNode(node_descriptor node) const {
+  /// Given a node descriptor, return the node by reference.
+  NodeType &getNode(node_descriptor node) const {
     assert(node < nodes.size() && "Node does not exist");
     return *nodes[node];
   }
@@ -216,59 +217,54 @@ public:
   /// incident upon this node, and all edges that are outgoing from this node.
   /// Return true if the node exists and was removed and false if it didn't
   /// exist.
-  bool removeNode(node_descriptor nodeToRemove) {
-    if (nodeToRemove >= nodes.size()) {
+  bool removeNode(NodeType &nodeToRemove) {
+    auto nodeToRemoveDesc = findNode(nodeToRemove);
+    if (nodeToRemoveDesc >= nodes.size()) {
       // The node is not in the graph.
       return false;
     }
     // Remove incoming edges to node for removal.
     std::vector<EdgeType*> edgesToRemove;
     for (auto &node : nodes) {
-      if (getNode(nodeToRemove) == *node) {
+      if (nodeToRemove == *node) {
         // Skip the node to remove.
         continue;
       }
-      node->getEdgesTo(getNode(nodeToRemove), edgesToRemove);
+      node->getEdgesTo(nodeToRemove, edgesToRemove);
       for (auto *edge : edgesToRemove) {
-        node->removeEdge(getNode(nodeToRemove));
+        node->removeEdge(nodeToRemove);
       }
       edgesToRemove.clear();
     }
     // Remove the outgoing edges from the node for removal.
-    nodes[nodeToRemove]->clearEdges();
+    nodeToRemove.clearEdges();
     // Remove the node itself.
-    nodes.erase(std::next(nodes.begin(), nodeToRemove));
+    nodes.erase(std::next(nodes.begin(), nodeToRemoveDesc));
     return true;
   }
 
   /// Add an edge between two existing nodes in the graph.
-  EdgeType &addEdge(node_descriptor sourceNode, node_descriptor targetNode) {
-    assert(sourceNode < nodes.size() && "Source node does not exist");
-    assert(targetNode < nodes.size() && "Target node does not exist");
-    return nodes[sourceNode]->addEdge(getNode(targetNode));
+  EdgeType &addEdge(NodeType &sourceNode, NodeType &targetNode) {
+    assert(findNode(sourceNode) < nodes.size() && "Source node does not exist");
+    assert(findNode(targetNode) < nodes.size() && "Target node does not exist");
+    return sourceNode.addEdge(targetNode);
   }
 
   /// Remove an edge between the two specified vertices. Return true if the
   /// edge exists and was removed, and false if it didn't exist.
-  bool removeEdge(node_descriptor sourceNode, node_descriptor targetNode) {
-    assert(sourceNode < nodes.size() && "Source node does not exist");
-    assert(targetNode < nodes.size() && "Target node does not exist");
-    return nodes[sourceNode]->removeEdge(getNode(targetNode));
-  }
-
-  /// Retrieve a node by its descriptor.
-  NodeType &getNode(node_descriptor node) {
-    assert(node < nodes.size() && "Node does not exist");
-    return *nodes[node];
+  bool removeEdge(NodeType &sourceNode, NodeType &targetNode) {
+    assert(findNode(sourceNode) < nodes.size() && "Source node does not exist");
+    assert(findNode(targetNode) < nodes.size() && "Target node does not exist");
+    return sourceNode.removeEdge(targetNode);
   }
 
   /// Collect all edges that are incident to the specified node.
   /// Return true if at least one edge was found and false otherwise.
-  bool getInEdgesToNode(node_descriptor nodeDesc, std::vector<EdgeType*> &results) const {
+  bool getInEdgesToNode(const NodeType &targetNode, std::vector<EdgeType*> &results) const {
     assert(results.empty() && "Expected the results parameter to be empty");
     std::vector<EdgeType*> tempResults;
     for (auto &node : nodes) {
-      node->getEdgesTo(getNode(nodeDesc), tempResults);
+      node->getEdgesTo(targetNode, tempResults);
       results.insert(results.end(), tempResults.begin(), tempResults.end());
       tempResults.clear();
     }
@@ -276,41 +272,16 @@ public:
   }
 
   /// Return the number of edges eminating from the specified node.
-  size_t outDegree(node_descriptor nodeDesc) const {
-    assert(nodeDesc < nodes.size() && "Node does not exist");
-    return nodes[nodeDesc]->outDegree();
+  size_t outDegree(const NodeType &node) const {
+    assert(findNode(node) < nodes.size() && "Node does not exist");
+    return node.outDegree();
   }
 
   /// Return the number of edges incident to the specified node.
-  size_t inDegree(node_descriptor nodeDesc) const {
-    assert(nodeDesc < nodes.size() && "Node does not exist");
-    std::vector<EdgeType*> results;
-    getInEdgesToNode(nodeDesc, results);
-    return results.size();
-  }
-
-  bool removeNode(NodeType &node) {
-    return removeNode(findNode(node));
-  }
-
-  EdgeType &addEdge(const NodeType &sourceNode, const NodeType &targetNode) {
-    return addEdge(findNode(sourceNode), findNode(targetNode));
-  }
-
-  bool removeEdge(NodeType &sourceNode, NodeType &targetNode) {
-    return removeEdge(findNode(sourceNode), findNode(targetNode));
-  }
-
-  bool getInEdgesToNode(const NodeType &node, std::vector<EdgeType*> &results) const {
-    return getInEdgesToNode(findNode(node), results);
-  }
-
-  size_t outDegree(const NodeType &node) const {
-    return outDegree(findNode(node));
-  }
-
   size_t inDegree(const NodeType &node) const {
-    return inDegree(findNode(node));
+    std::vector<EdgeType*> results;
+    getInEdgesToNode(node, results);
+    return results.size();
   }
 
   /// Return the size of the graph.

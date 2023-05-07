@@ -146,3 +146,4 @@ TEST_CASE("Test iterating over nodes and node's edges") {
     CHECK(count == 0);
   }
 }
+
