@@ -38,7 +38,7 @@ else()
 endif()
 
 if(SLANG_USE_BOOST)
-  find_package(Boost 1.81.0)
+  find_package(Boost 1.82.0)
   if(NOT Boost_FOUND)
     message(STATUS "Using remote Boost library")
     include(cmake/FetchBoostContent.cmake)
