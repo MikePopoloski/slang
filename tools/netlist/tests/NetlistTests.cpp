@@ -14,6 +14,10 @@
 
 using namespace netlist;
 
+//===---------------------------------------------------------------------===//
+// Basic tests
+//===---------------------------------------------------------------------===//
+
 TEST_CASE("Empty module") {
   // Test the simplest path can be traced through a module.
   auto tree = SyntaxTree::fromText(R"(
@@ -31,10 +35,15 @@ endmodule
   SplitVariables splitVariables(netlist);
   CHECK(netlist.numNodes() == 4);
   CHECK(netlist.numEdges() == 2);
+  // Lookup the two ports in the netlist.
+  auto *inPort = netlist.lookupPort("empty.i_value");
+  CHECK(inPort != nullptr);
+  auto *outPort = netlist.lookupPort("empty.o_value");
+  CHECK(outPort != nullptr);
 }
 
-TEST_CASE("Simplest path through a module") {
-  // Test the simplest path can be traced through a module.
+TEST_CASE("Pass through a module") {
+  // Test the simplest path through a module.
   auto tree = SyntaxTree::fromText(R"(
 module passthrough (
   input logic i_value,
@@ -58,21 +67,22 @@ endmodule
   CHECK(inPort != nullptr);
   auto *outPort = netlist.lookupPort("passthrough.o_value");
   CHECK(outPort != nullptr);
-  // Setup the path finder.
   PathFinder pathFinder(netlist);
-  // i_value -> o_value
-  auto validPath = pathFinder.find(*inPort, *outPort);
-  CHECK(!validPath.empty());
-  // o_value -> i_value
-  auto invalidPath = pathFinder.find(*outPort, *inPort);
-  CHECK(invalidPath.empty());
+  // Valid i_value -> o_value
+  CHECK(!pathFinder.find(*inPort, *outPort).empty());
+  // Invalid o_value -> i_value
+  CHECK(pathFinder.find(*outPort, *inPort).empty());
 }
 
-TEST_CASE("Chain of assignments in a sequence") {
+//===---------------------------------------------------------------------===//
+// Tests for variable splitting
+//===---------------------------------------------------------------------===//
+
+TEST_CASE("Chain of assignments in a sequence using variables") {
   // Test that correct dependencies can be formed from procedural and
   // continuous assignments.
   auto tree = SyntaxTree::fromText(R"(
-module chain_sequence (
+module chain_vars (
   input logic i_value,
   output logic o_value);
 
@@ -100,20 +110,102 @@ endmodule
   SplitVariables splitVariables(netlist);
   CHECK(netlist.numNodes() == 21);
   CHECK(netlist.numEdges() == 20);
-  // Lookup the two ports in the netlist.
-  auto *inPort = netlist.lookupPort("chain_sequence.i_value");
-  CHECK(inPort != nullptr);
-  auto *outPort = netlist.lookupPort("chain_sequence.o_value");
-  CHECK(outPort != nullptr);
-  // Setup the path finder.
   PathFinder pathFinder(netlist);
   // i_value -> o_value
-  auto validPath = pathFinder.find(*inPort, *outPort);
-  CHECK(validPath.size() == 21);
+  CHECK(pathFinder.find(*netlist.lookupPort("chain_vars.i_value"),
+                        *netlist.lookupPort("chain_vars.o_value")).size() == 21);
 }
 
-TEST_CASE("Chain of assignments using an array") {
-  // Test that variable declarations can be split out for elements of an array.
+TEST_CASE("Chain of assignments in a sequence using a vector") {
+  // As above but this time using a packed array.
+  auto tree = SyntaxTree::fromText(R"(
+module chain_array (
+  input logic i_value,
+  output logic o_value);
+
+  logic [4:0] x;
+
+  assign x[0] = i_value;
+
+  always_comb begin
+    x[1] = x[0];
+    x[2] = x[1];
+    x[3] = x[2];
+  end
+
+  assign x[4] = x[3];
+  assign o_value = x[4];
+
+endmodule
+)");
+  Compilation compilation;
+  compilation.addSyntaxTree(tree);
+  NO_COMPILATION_ERRORS;
+  Netlist netlist;
+  NetlistVisitor visitor(compilation, netlist);
+  compilation.getRoot().visit(visitor);
+  SplitVariables splitVariables(netlist);
+  CHECK(netlist.numNodes() == 22);
+  CHECK(netlist.numEdges() == 30);
+  PathFinder pathFinder(netlist);
+  // i_value -> o_value
+  CHECK(pathFinder.find(*netlist.lookupPort("chain_array.i_value"),
+                        *netlist.lookupPort("chain_array.o_value")).size() == 21);
+}
+
+TEST_CASE("Passthrough two signals via a shared structure") {
+  auto tree = SyntaxTree::fromText(R"(
+module member_access (
+  input logic i_value_a,
+  input logic i_value_b,
+  output logic o_value_a,
+  output logic o_value_b
+);
+
+  struct packed {
+    logic a;
+    logic b;
+  } foo;
+
+  assign foo.a = i_value_a;
+  assign foo.b = i_value_b;
+
+  assign o_value_a = foo.a;
+  assign o_value_b = foo.b;
+
+endmodule
+)");
+  Compilation compilation;
+  compilation.addSyntaxTree(tree);
+  NO_COMPILATION_ERRORS;
+  Netlist netlist;
+  NetlistVisitor visitor(compilation, netlist);
+  compilation.getRoot().visit(visitor);
+  SplitVariables splitVariables(netlist);
+  CHECK(netlist.numNodes() == 19);
+  CHECK(netlist.numEdges() == 20);
+  PathFinder pathFinder(netlist);
+  auto *inPortA = netlist.lookupPort("member_access.i_value_a");
+  auto *inPortB = netlist.lookupPort("member_access.i_value_b");
+  auto *outPortA = netlist.lookupPort("member_access.o_value_a");
+  auto *outPortB = netlist.lookupPort("member_access.o_value_b");
+  // Valid paths.
+  CHECK(pathFinder.find(*inPortA, *outPortA).size() == 9);
+  CHECK(pathFinder.find(*inPortB, *outPortB).size() == 9);
+  // Invalid paths.
+  CHECK(pathFinder.find(*inPortA, *outPortB).empty());
+  CHECK(pathFinder.find(*inPortB, *outPortA).empty());
+}
+
+// To do: basic test for ranges.
+
+//===---------------------------------------------------------------------===//
+// Tests for loop unrolling
+//===---------------------------------------------------------------------===//
+
+TEST_CASE("Chain of assignments using a single loop") {
+  // Test that a loop can be unrolled and variable declarations can be split
+  // out for elements of an array.
   auto tree = SyntaxTree::fromText(R"(
 module chain_array #(parameter N=4) (
   input logic i_value,
@@ -142,19 +234,13 @@ endmodule
   SplitVariables splitVariables(netlist);
   CHECK(netlist.numNodes() == 20);
   CHECK(netlist.numEdges() == 25);
-  // Lookup the two ports in the netlist.
-  auto *inPort = netlist.lookupPort("chain_array.i_value");
-  CHECK(inPort != nullptr);
-  auto *outPort = netlist.lookupPort("chain_array.o_value");
-  CHECK(outPort != nullptr);
-  // Setup the path finder.
   PathFinder pathFinder(netlist);
   // i_value -> o_value, check it passes through each stage.
-  auto validPath = pathFinder.find(*inPort, *outPort);
-  CHECK(validPath.size() == 18);
+  CHECK(pathFinder.find(*netlist.lookupPort("chain_array.i_value"),
+                        *netlist.lookupPort("chain_array.o_value")).size() == 18);
 }
 
-TEST_CASE("Chain of assignments using nested for loops") {
+TEST_CASE("Chain of assignments using a nested loop") {
   // Expand the previous test to check the handling of multiple loop variables.
   auto tree = SyntaxTree::fromText(R"(
 module chain_nested #(parameter N=3) (
@@ -188,16 +274,10 @@ endmodule
   SplitVariables splitVariables(netlist);
   CHECK(netlist.numNodes() == 36);
   CHECK(netlist.numEdges() == 50);
-  // Lookup the two ports in the netlist.
-  auto *inPort = netlist.lookupPort("chain_nested.i_value");
-  CHECK(inPort != nullptr);
-  auto *outPort = netlist.lookupPort("chain_nested.o_value");
-  CHECK(outPort != nullptr);
-  // Setup the path finder.
   PathFinder pathFinder(netlist);
   // i_value -> o_value, check it passes through each stage.
-  auto validPath = pathFinder.find(*inPort, *outPort);
-  CHECK(validPath.size() == 33);
+  CHECK(pathFinder.find(*netlist.lookupPort("chain_nested.i_value"),
+                        *netlist.lookupPort("chain_nested.o_value")).size() == 33);
 }
 
 TEST_CASE("Two chains of assignments using a shared 2D array") {
@@ -238,22 +318,16 @@ endmodule
   NetlistVisitor visitor(compilation, netlist);
   compilation.getRoot().visit(visitor);
   SplitVariables splitVariables(netlist);
-  // Lookup the two ports in the netlist.
-  auto *inPortA = netlist.lookupPort("chain_loop_dual.i_value_a");
-  CHECK(inPortA != nullptr);
-  auto *inPortB = netlist.lookupPort("chain_loop_dual.i_value_b");
-  CHECK(inPortB != nullptr);
-  auto *outPortA = netlist.lookupPort("chain_loop_dual.o_value_a");
-  CHECK(outPortA != nullptr);
-  auto *outPortB = netlist.lookupPort("chain_loop_dual.o_value_b");
-  CHECK(outPortB != nullptr);
-  // Setup the path finder.
   PathFinder pathFinder(netlist);
-  // i_value_a -> o_value_a
+  auto *inPortA = netlist.lookupPort("chain_loop_dual.i_value_a");
+  auto *inPortB = netlist.lookupPort("chain_loop_dual.i_value_b");
+  auto *outPortA = netlist.lookupPort("chain_loop_dual.o_value_a");
+  auto *outPortB = netlist.lookupPort("chain_loop_dual.o_value_b");
+  // Valid paths.
   CHECK(pathFinder.find(*inPortA, *outPortA).size() == 18);
-  // i_value_b -> o_value_b
   CHECK(pathFinder.find(*inPortB, *outPortB).size() == 18);
   // Invalid paths.
   CHECK(pathFinder.find(*inPortA, *outPortB).empty());
   CHECK(pathFinder.find(*inPortB, *outPortA).empty());
 }
+
