@@ -614,7 +614,7 @@ bool Driver::parseAllSources() {
             }
 
             for (auto bd : meta.interfacePorts) {
-                string_view name = bd->nameOrKeyword.valueText();
+                std::string_view name = bd->nameOrKeyword.valueText();
                 if (knownNames.find(name) == knownNames.end())
                     missing.emplace(name);
             }
