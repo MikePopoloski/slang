@@ -135,6 +135,9 @@ public:
     /// Parse a whole compilation unit.
     syntax::CompilationUnitSyntax& parseCompilationUnit();
 
+    /// Parse a library map file.
+    syntax::LibraryMapSyntax& parseLibraryMap();
+
     /// Parse an expression / statement / module / class / name.
     /// These are mostly for testing; only use if you know that the
     /// source stream is currently looking at one of these.
@@ -362,6 +365,9 @@ private:
     syntax::ConfigLiblistSyntax& parseConfigLiblist();
     syntax::ConfigUseClauseSyntax& parseConfigUseClause();
     syntax::ConfigDeclarationSyntax& parseConfigDeclaration(AttrList attributes);
+    syntax::MemberSyntax* parseLibraryMember();
+    syntax::FilePathSpecSyntax& parseFilePathSpec();
+    syntax::LibraryDeclarationSyntax& parseLibraryDecl();
     // clang-format on
 
     template<bool (*IsEnd)(TokenKind)>

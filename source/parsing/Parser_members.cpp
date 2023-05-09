@@ -28,6 +28,19 @@ CompilationUnitSyntax& Parser::parseCompilationUnit() {
     }
 }
 
+LibraryMapSyntax& Parser::parseLibraryMap() {
+    SLANG_TRY {
+        auto members = parseMemberList<MemberSyntax>(
+            TokenKind::EndOfFile, meta.eofToken, SyntaxKind::LibraryMap,
+            [this](SyntaxKind, bool&) { return parseLibraryMember(); });
+
+        return factory.libraryMap(members, meta.eofToken);
+    }
+    SLANG_CATCH(const RecursionException&) {
+        return factory.libraryMap(nullptr, meta.eofToken);
+    }
+}
+
 MemberSyntax& Parser::parseModule() {
     bool anyLocalModules = false;
     return parseModule(parseAttributes(), SyntaxKind::CompilationUnit, anyLocalModules);
@@ -3417,6 +3430,93 @@ ConfigDeclarationSyntax& Parser::parseConfigDeclaration(AttrList attributes) {
                                      endconfig, blockName);
 }
 
+MemberSyntax* Parser::parseLibraryMember() {
+    Token token = peek();
+    switch (token.kind) {
+        case TokenKind::ConfigKeyword:
+            return &parseConfigDeclaration({});
+        case TokenKind::Semicolon:
+            return &factory.emptyMember(nullptr, nullptr, consume());
+        case TokenKind::IncludeKeyword: {
+            auto keyword = consume();
+            auto& path = parseFilePathSpec();
+            auto semi = expect(TokenKind::Semicolon);
+            return &factory.libraryIncludeStatement(nullptr, keyword, path, semi);
+        }
+        case TokenKind::LibraryKeyword:
+            return &parseLibraryDecl();
+        default:
+            return nullptr;
+    }
+}
+
+LibraryDeclarationSyntax& Parser::parseLibraryDecl() {
+    auto keyword = consume();
+    auto name = expect(TokenKind::Identifier);
+
+    auto parseFilePathList = [&] {
+        SmallVector<TokenOrSyntax, 4> buffer;
+        while (true) {
+            buffer.push_back(&parseFilePathSpec());
+
+            if (!peek(TokenKind::Comma))
+                break;
+
+            buffer.push_back(consume());
+        }
+
+        return buffer.copy(alloc);
+    };
+
+    auto filePaths = parseFilePathList();
+
+    LibraryIncDirClauseSyntax* incDir = nullptr;
+    if (peek(TokenKind::Minus) && peek(1).kind == TokenKind::IncDirKeyword) {
+        auto minus = consume();
+        auto incDirKeyword = consume();
+        auto incPaths = parseFilePathList();
+        incDir = &factory.libraryIncDirClause(minus, incDirKeyword, incPaths);
+    }
+
+    return factory.libraryDeclaration(nullptr, keyword, name, filePaths, incDir,
+                                      expect(TokenKind::Semicolon));
+}
+
+FilePathSpecSyntax& Parser::parseFilePathSpec() {
+    if (peek(TokenKind::StringLiteral))
+        return factory.filePathSpec(consume());
+
+    auto nextIsValidPathToken = [&] {
+        switch (peek().kind) {
+            case TokenKind::Minus:
+                return peek(1).kind != TokenKind::IncDirKeyword;
+            case TokenKind::Comma:
+            case TokenKind::Semicolon:
+            case TokenKind::EndOfFile:
+                return false;
+            default:
+                return true;
+        }
+    };
+
+    if (!nextIsValidPathToken())
+        return factory.filePathSpec(expect(TokenKind::IncludeFileName));
+
+    SmallVector<char> text;
+    text.push_back('"');
+
+    auto first = peek();
+    do {
+        text.append(consume().rawText());
+    } while (nextIsValidPathToken() && peek().trivia().empty());
+
+    text.push_back('"');
+
+    auto path = Token(alloc, TokenKind::IncludeFileName, first.trivia(),
+                      toStringView(text.copy(alloc)), first.location());
+    return factory.filePathSpec(path);
+}
+
 void Parser::checkMemberAllowed(const SyntaxNode& member, SyntaxKind parentKind) {
     // If this is an empty member with a missing semicolon, it was some kind
     // of error that has already been reported so don't pile on here.
@@ -3490,6 +3590,7 @@ void Parser::checkMemberAllowed(const SyntaxNode& member, SyntaxKind parentKind)
         case SyntaxKind::ConstraintBlock:
         case SyntaxKind::ClockingDeclaration:
         case SyntaxKind::SpecifyBlock:
+        case SyntaxKind::LibraryMap:
             return;
         default:
             SLANG_UNREACHABLE;

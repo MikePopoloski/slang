@@ -152,4 +152,45 @@ std::shared_ptr<SyntaxTree> SyntaxTree::create(SourceManager& sourceManager,
                                                       preprocessor.getDefinedMacros(), options));
 }
 
+std::shared_ptr<SyntaxTree> SyntaxTree::fromLibraryMapFile(std::string_view path,
+                                                           SourceManager& sourceManager,
+                                                           const Bag& options) {
+    SourceBuffer buffer = sourceManager.readSource(path);
+    if (!buffer)
+        return nullptr;
+
+    return fromLibraryMapBuffer(buffer, sourceManager, options);
+}
+
+std::shared_ptr<SyntaxTree> SyntaxTree::fromLibraryMapText(std::string_view text,
+                                                           SourceManager& sourceManager,
+                                                           std::string_view name,
+                                                           std::string_view path,
+                                                           const Bag& options) {
+    SourceBuffer buffer = sourceManager.assignText(path, text);
+    if (!buffer)
+        return nullptr;
+
+    if (!name.empty())
+        sourceManager.addLineDirective(SourceLocation(buffer.id, 0), 2, name, 0);
+
+    return fromLibraryMapBuffer(buffer, sourceManager, options);
+}
+
+std::shared_ptr<SyntaxTree> SyntaxTree::fromLibraryMapBuffer(const SourceBuffer& buffer,
+                                                             SourceManager& sourceManager,
+                                                             const Bag& options) {
+    BumpAllocator alloc;
+    Diagnostics diagnostics;
+    Preprocessor preprocessor(sourceManager, alloc, diagnostics, options);
+    preprocessor.pushSource(buffer);
+
+    Parser parser(preprocessor, options);
+    auto& root = parser.parseLibraryMap();
+
+    return std::shared_ptr<SyntaxTree>(new SyntaxTree(&root, sourceManager, std::move(alloc),
+                                                      std::move(diagnostics), parser.getMetadata(),
+                                                      preprocessor.getDefinedMacros(), options));
+}
+
 } // namespace slang::syntax

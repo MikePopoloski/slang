@@ -190,6 +190,12 @@ void registerSyntax(py::module_& m) {
                     "options"_a = Bag(), "inheritedMacros"_a = SyntaxTree::MacroList{})
         .def_static("fromBuffers", &SyntaxTree::fromBuffers, "buffers"_a, "sourceManager"_a,
                     "options"_a = Bag(), "inheritedMacros"_a = SyntaxTree::MacroList{})
+        .def_static("fromLibraryMapFile", &SyntaxTree::fromLibraryMapFile, "path"_a,
+                    "sourceManager"_a, "options"_a = Bag())
+        .def_static("fromLibraryMapText", &SyntaxTree::fromLibraryMapText, "text"_a,
+                    "sourceManager"_a, "name"_a = "source", "path"_a = "", "options"_a = Bag())
+        .def_static("fromLibraryMapBuffer", &SyntaxTree::fromLibraryMapBuffer, "buffer"_a,
+                    "sourceManager"_a, "options"_a = Bag())
         .def_property_readonly("diagnostics", &SyntaxTree::diagnostics)
         .def_property_readonly("sourceManager", py::overload_cast<>(&SyntaxTree::sourceManager))
         .def_property_readonly("root", py::overload_cast<>(&SyntaxTree::root))
