@@ -14,6 +14,14 @@
 
 using namespace netlist;
 
+Netlist createNetlist(Compilation &compilation) {
+  Netlist netlist;
+  NetlistVisitor visitor(compilation, netlist);
+  compilation.getRoot().visit(visitor);
+  SplitVariables splitVariables(netlist);
+  return netlist;
+}
+
 //===---------------------------------------------------------------------===//
 // Basic tests
 //===---------------------------------------------------------------------===//
@@ -29,10 +37,7 @@ endmodule
   Compilation compilation;
   compilation.addSyntaxTree(tree);
   NO_COMPILATION_ERRORS;
-  Netlist netlist;
-  NetlistVisitor visitor(compilation, netlist);
-  compilation.getRoot().visit(visitor);
-  SplitVariables splitVariables(netlist);
+  auto netlist = createNetlist(compilation);
   CHECK(netlist.numNodes() == 4);
   CHECK(netlist.numEdges() == 2);
   // Lookup the two ports in the netlist.
@@ -56,10 +61,7 @@ endmodule
   Compilation compilation;
   compilation.addSyntaxTree(tree);
   NO_COMPILATION_ERRORS;
-  Netlist netlist;
-  NetlistVisitor visitor(compilation, netlist);
-  compilation.getRoot().visit(visitor);
-  SplitVariables splitVariables(netlist);
+  auto netlist = createNetlist(compilation);
   CHECK(netlist.numNodes() == 6);
   CHECK(netlist.numEdges() == 5);
   // Lookup the two ports in the netlist.
@@ -104,10 +106,7 @@ endmodule
   Compilation compilation;
   compilation.addSyntaxTree(tree);
   NO_COMPILATION_ERRORS;
-  Netlist netlist;
-  NetlistVisitor visitor(compilation, netlist);
-  compilation.getRoot().visit(visitor);
-  SplitVariables splitVariables(netlist);
+  auto netlist = createNetlist(compilation);
   CHECK(netlist.numNodes() == 21);
   CHECK(netlist.numEdges() == 20);
   PathFinder pathFinder(netlist);
@@ -141,10 +140,7 @@ endmodule
   Compilation compilation;
   compilation.addSyntaxTree(tree);
   NO_COMPILATION_ERRORS;
-  Netlist netlist;
-  NetlistVisitor visitor(compilation, netlist);
-  compilation.getRoot().visit(visitor);
-  SplitVariables splitVariables(netlist);
+  auto netlist = createNetlist(compilation);
   CHECK(netlist.numNodes() == 22);
   CHECK(netlist.numEdges() == 30);
   PathFinder pathFinder(netlist);
@@ -155,7 +151,7 @@ endmodule
 
 TEST_CASE("Passthrough two signals via a shared structure") {
   auto tree = SyntaxTree::fromText(R"(
-module member_access (
+module passthrough_member_access (
   input logic i_value_a,
   input logic i_value_b,
   output logic o_value_a,
@@ -178,17 +174,14 @@ endmodule
   Compilation compilation;
   compilation.addSyntaxTree(tree);
   NO_COMPILATION_ERRORS;
-  Netlist netlist;
-  NetlistVisitor visitor(compilation, netlist);
-  compilation.getRoot().visit(visitor);
-  SplitVariables splitVariables(netlist);
+  auto netlist = createNetlist(compilation);
   CHECK(netlist.numNodes() == 19);
   CHECK(netlist.numEdges() == 20);
+  auto *inPortA = netlist.lookupPort("passthrough_member_access.i_value_a");
+  auto *inPortB = netlist.lookupPort("passthrough_member_access.i_value_b");
+  auto *outPortA = netlist.lookupPort("passthrough_member_access.o_value_a");
+  auto *outPortB = netlist.lookupPort("passthrough_member_access.o_value_b");
   PathFinder pathFinder(netlist);
-  auto *inPortA = netlist.lookupPort("member_access.i_value_a");
-  auto *inPortB = netlist.lookupPort("member_access.i_value_b");
-  auto *outPortA = netlist.lookupPort("member_access.o_value_a");
-  auto *outPortB = netlist.lookupPort("member_access.o_value_b");
   // Valid paths.
   CHECK(pathFinder.find(*inPortA, *outPortA).size() == 9);
   CHECK(pathFinder.find(*inPortB, *outPortB).size() == 9);
@@ -197,7 +190,43 @@ endmodule
   CHECK(pathFinder.find(*inPortB, *outPortA).empty());
 }
 
-// To do: basic test for ranges.
+TEST_CASE("Passthrough two signals via ranges in a shared vector") {
+  auto tree = SyntaxTree::fromText(R"(
+module passthrough_ranges (
+  input  logic [1:0] i_value_a,
+  input  logic [1:0] i_value_b,
+  output logic [1:0] o_value_a,
+  output logic [1:0] o_value_b
+);
+
+  logic [3:0] foo;
+
+  assign foo[1:0] = i_value_a;
+  assign foo[3:2] = i_value_b;
+
+  assign o_value_a = foo[1:0];
+  assign o_value_b = foo[3:2];
+
+endmodule
+)");
+  Compilation compilation;
+  compilation.addSyntaxTree(tree);
+  NO_COMPILATION_ERRORS;
+  auto netlist = createNetlist(compilation);
+  CHECK(netlist.numNodes() == 19);
+  CHECK(netlist.numEdges() == 20);
+  auto *inPortA = netlist.lookupPort("passthrough_ranges.i_value_a");
+  auto *inPortB = netlist.lookupPort("passthrough_ranges.i_value_b");
+  auto *outPortA = netlist.lookupPort("passthrough_ranges.o_value_a");
+  auto *outPortB = netlist.lookupPort("passthrough_ranges.o_value_b");
+  PathFinder pathFinder(netlist);
+  // Valid paths.
+  CHECK(pathFinder.find(*inPortA, *outPortA).size() == 9);
+  CHECK(pathFinder.find(*inPortB, *outPortB).size() == 9);
+  // Invalid paths.
+  CHECK(pathFinder.find(*inPortA, *outPortB).empty());
+  CHECK(pathFinder.find(*inPortB, *outPortA).empty());
+}
 
 //===---------------------------------------------------------------------===//
 // Tests for loop unrolling
@@ -228,10 +257,7 @@ endmodule
   Compilation compilation;
   compilation.addSyntaxTree(tree);
   NO_COMPILATION_ERRORS;
-  Netlist netlist;
-  NetlistVisitor visitor(compilation, netlist);
-  compilation.getRoot().visit(visitor);
-  SplitVariables splitVariables(netlist);
+  auto netlist = createNetlist(compilation);
   CHECK(netlist.numNodes() == 20);
   CHECK(netlist.numEdges() == 25);
   PathFinder pathFinder(netlist);
@@ -268,10 +294,7 @@ endmodule
   Compilation compilation;
   compilation.addSyntaxTree(tree);
   NO_COMPILATION_ERRORS;
-  Netlist netlist;
-  NetlistVisitor visitor(compilation, netlist);
-  compilation.getRoot().visit(visitor);
-  SplitVariables splitVariables(netlist);
+  auto netlist = createNetlist(compilation);
   CHECK(netlist.numNodes() == 36);
   CHECK(netlist.numEdges() == 50);
   PathFinder pathFinder(netlist);
@@ -314,15 +337,12 @@ endmodule
   Compilation compilation;
   compilation.addSyntaxTree(tree);
   NO_COMPILATION_ERRORS;
-  Netlist netlist;
-  NetlistVisitor visitor(compilation, netlist);
-  compilation.getRoot().visit(visitor);
-  SplitVariables splitVariables(netlist);
-  PathFinder pathFinder(netlist);
+  auto netlist = createNetlist(compilation);
   auto *inPortA = netlist.lookupPort("chain_loop_dual.i_value_a");
   auto *inPortB = netlist.lookupPort("chain_loop_dual.i_value_b");
   auto *outPortA = netlist.lookupPort("chain_loop_dual.o_value_a");
   auto *outPortB = netlist.lookupPort("chain_loop_dual.o_value_b");
+  PathFinder pathFinder(netlist);
   // Valid paths.
   CHECK(pathFinder.find(*inPortA, *outPortA).size() == 18);
   CHECK(pathFinder.find(*inPortB, *outPortB).size() == 18);
