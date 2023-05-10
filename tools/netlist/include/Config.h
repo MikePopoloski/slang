@@ -1,3 +1,10 @@
+//------------------------------------------------------------------------------
+//! @file Config.h
+//! @brief Provide singleton configuration class.
+//
+// SPDX-FileCopyrightText: Michael Popoloski
+// SPDX-License-Identifier: MIT
+//------------------------------------------------------------------------------
 #pragma once
 
 namespace netlist {

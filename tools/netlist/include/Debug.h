@@ -1,3 +1,10 @@
+//------------------------------------------------------------------------------
+//! @file Debug.h
+//! @brief Provide a debug printing macro.
+//
+// SPDX-FileCopyrightText: Michael Popoloski
+// SPDX-License-Identifier: MIT
+//------------------------------------------------------------------------------
 #pragma once
 
 #include <iostream>
