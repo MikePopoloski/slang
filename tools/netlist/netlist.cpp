@@ -75,7 +75,7 @@ void writeToFile(Stream& os, std::string_view fileName, String contents) {
   os.write(contents.data(), contents.size());
   os.flush();
   if (!os) {
-    throw std::runtime_error(fmt::format("Unable to write AST to '{}'", fileName));
+    SLANG_THROW(std::runtime_error(fmt::format("Unable to write AST to '{}'", fileName)));
   }
 }
 
@@ -134,12 +134,12 @@ int main(int argc, char** argv) {
   }
 
   if (showHelp == true) {
-    printf("%s\n", driver.cmdLine.getHelpText("slang SystemVerilog compiler").c_str());
+    std::cout << fmt::format("{}\n", driver.cmdLine.getHelpText("slang SystemVerilog netlist tool").c_str());
     return 0;
   }
 
   if (showVersion == true) {
-    printf("slang version %d.%d.%d+%s\n", VersionInfo::getMajor(),
+    std::cout << fmt::format("slang-netlist version {}.{}.{}+{}\n", VersionInfo::getMajor(),
         VersionInfo::getMinor(), VersionInfo::getPatch(),
         std::string(VersionInfo::getHash()).c_str());
     return 0;
@@ -153,12 +153,12 @@ int main(int argc, char** argv) {
     Config::getInstance().debugEnabled = true;
   }
 
-  try {
+  SLANG_TRY {
 
     bool ok = driver.parseAllSources();
 
     auto compilation = driver.createCompilation();
-    ok &= driver.reportCompilation(*compilation, quiet == true);
+    ok &= driver.reportCompilation(*compilation, *quiet);
 
     if (!ok) {
       return ok;
@@ -174,8 +174,8 @@ int main(int argc, char** argv) {
     NetlistVisitor visitor(*compilation, netlist);
     compilation->getRoot().visit(visitor);
     SplitVariables splitVariables(netlist);
-    std::cout << fmt::format("Netlist has {} nodes and {} edges\n",
-                             netlist.numNodes(), netlist.numEdges());
+    DEBUG_PRINT(fmt::format("Netlist has {} nodes and {} edges\n",
+                            netlist.numNodes(), netlist.numEdges()));
 
     // Output a DOT file of the netlist.
     if (netlistDotFile) {
@@ -186,23 +186,23 @@ int main(int argc, char** argv) {
     // Find a point-to-point path in the netlist.
     if (fromPointName.has_value() && toPointName.has_value()) {
       if (!fromPointName.has_value()) {
-        throw std::runtime_error("please specify a start point using --from <name>");
+        SLANG_THROW(std::runtime_error("please specify a start point using --from <name>"));
       }
       if (!toPointName.has_value()) {
-        throw std::runtime_error("please specify a finish point using --to <name>");
+        SLANG_THROW(std::runtime_error("please specify a finish point using --to <name>"));
       }
       auto fromPoint = netlist.lookupVariable(*fromPointName);
       if (fromPoint == nullptr) {
-        throw std::runtime_error(fmt::format("could not find start point: {}", *fromPointName));
+        SLANG_THROW(std::runtime_error(fmt::format("could not find start point: {}", *fromPointName)));
       }
       auto toPoint = netlist.lookupVariable(*toPointName);
       if (toPoint == nullptr) {
-        throw std::runtime_error(fmt::format("could not find finish point: {}", *toPointName));
+        SLANG_THROW(std::runtime_error(fmt::format("could not find finish point: {}", *toPointName)));
       }
       PathFinder pathFinder(netlist);
       auto path = pathFinder.find(*fromPoint, *toPoint);
       if (path.empty()) {
-        throw std::runtime_error(fmt::format("no path between {} and {}", *fromPointName, *toPointName));
+        SLANG_THROW(std::runtime_error(fmt::format("no path between {} and {}", *fromPointName, *toPointName)));
       }
       // Report the path.
       for (auto *node : path) {
@@ -219,7 +219,7 @@ int main(int argc, char** argv) {
     // No action performed.
     return 1;
 
-  } catch (const std::exception& e) {
+  } SLANG_CATCH (const std::exception& e) {
     OS::printE(fmt::format("{}\n", e.what()));
     return 1;
   }
