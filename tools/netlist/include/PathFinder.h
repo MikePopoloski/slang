@@ -69,7 +69,10 @@ public:
     auto *nextNode = &endNode;
     do {
       nextNode = traversalMap[nextNode];
-      path.add(*nextNode);
+      // Add only the variable references to the path.
+      if (nextNode->kind == NodeKind::VariableReference) {
+        path.add(*nextNode);
+      }
     } while (nextNode != &startNode);
     path.reverse();
     return path;

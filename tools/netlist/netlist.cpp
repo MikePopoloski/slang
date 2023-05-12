@@ -8,6 +8,7 @@
 
 #include "fmt/color.h"
 #include "fmt/format.h"
+#include <stdexcept>
 #include <unordered_set>
 #include <fstream>
 #include <iostream>
@@ -25,6 +26,7 @@
 #include "Netlist.h"
 #include "NetlistVisitor.h"
 #include "SplitVariables.h"
+#include "PathFinder.h"
 
 using namespace slang;
 using namespace slang::ast;
@@ -113,8 +115,19 @@ int main(int argc, char** argv) {
 
   std::optional<std::string> netlistDotFile;
   driver.cmdLine.add("--netlist-dot", netlistDotFile,
-                     "Dump the netlist in DOT format to the specified file, or '-' for stdout", "<file>",
+                     "Dump the netlist in DOT format to the specified file, or '-' for stdout",
+                     "<file>",
                      /* isFileName */ true);
+
+  std::optional<std::string> fromPointName;
+  driver.cmdLine.add("--from", fromPointName,
+                     "Specify a start point from which to trace a path",
+                     "<name>");
+
+  std::optional<std::string> toPointName;
+  driver.cmdLine.add("--to", toPointName,
+                     "Specify a finish point to trace a path to",
+                     "<name>");
 
   if (!driver.parseCommandLine(argc, argv)) {
     return 1;
@@ -164,14 +177,51 @@ int main(int argc, char** argv) {
     std::cout << fmt::format("Netlist has {} nodes and {} edges\n",
                              netlist.numNodes(), netlist.numEdges());
 
+    // Output a DOT file of the netlist.
     if (netlistDotFile) {
       printDOT(netlist, *netlistDotFile);
       return 0;
     }
 
+    // Find a point-to-point path in the netlist.
+    if (fromPointName.has_value() && toPointName.has_value()) {
+      if (!fromPointName.has_value()) {
+        throw std::runtime_error("please specify a start point using --from <name>");
+      }
+      if (!toPointName.has_value()) {
+        throw std::runtime_error("please specify a finish point using --to <name>");
+      }
+      auto fromPoint = netlist.lookupVariable(*fromPointName);
+      if (fromPoint == nullptr) {
+        throw std::runtime_error(fmt::format("could not find start point: {}", *fromPointName));
+      }
+      auto toPoint = netlist.lookupVariable(*toPointName);
+      if (toPoint == nullptr) {
+        throw std::runtime_error(fmt::format("could not find finish point: {}", *toPointName));
+      }
+      PathFinder pathFinder(netlist);
+      auto path = pathFinder.find(*fromPoint, *toPoint);
+      if (path.empty()) {
+        throw std::runtime_error(fmt::format("no path between {} and {}", *fromPointName, *toPointName));
+      }
+      // Report the path.
+      for (auto *node : path) {
+        auto *SM = compilation->getSourceManager();
+        auto &location = node->symbol.location;
+        auto bufferID = location.buffer();
+        std::cout << fmt::format("{} {}:{}\n",
+                                 node->toString(),
+                                 SM->getRawFileName(bufferID),
+                                 SM->getLineNumber(location));
+      }
+    }
+
+    // No action performed.
+    return 1;
+
   } catch (const std::exception& e) {
     OS::printE(fmt::format("{}\n", e.what()));
-    return 3;
+    return 1;
   }
 
   return 0;
