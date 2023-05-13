@@ -267,7 +267,7 @@ struct SourceSnippet {
 
     void trimHighlight() { highlightLine.erase(highlightLine.find_last_not_of(' ') + 1); }
 
-    void printTo(FormatBuffer& out, fmt::v9::terminal_color highlightColor) {
+    void printTo(FormatBuffer& out, fmt::v10::terminal_color highlightColor) {
         out.append("\n");
 
         if (invalidRanges.empty()) {

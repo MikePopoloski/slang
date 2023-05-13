@@ -5,13 +5,13 @@
 
 set(find_pkg_args "")
 if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.24.0")
-  set(find_pkg_args "FIND_PACKAGE_ARGS" "9.0.0")
+  set(find_pkg_args "FIND_PACKAGE_ARGS" "10.0.0")
 endif()
 
 FetchContent_Declare(
   fmt
   GIT_REPOSITORY https://github.com/fmtlib/fmt.git
-  GIT_TAG 9.1.0
+  GIT_TAG 10.0.0
   GIT_SHALLOW ON
   ${find_pkg_args})
 
