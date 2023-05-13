@@ -22,7 +22,6 @@ namespace detail {
 
 [[noreturn]] SLANG_EXPORT void throwOutOfRange();
 [[noreturn]] SLANG_EXPORT void throwLengthError();
-SLANG_EXPORT void* allocArray(size_t capacity, size_t typeSize);
 
 } // namespace detail
 
@@ -471,7 +470,7 @@ private:
     void cleanup() {
         std::destroy(begin(), end());
         if (!isSmall())
-            free(data_);
+            ::operator delete(data_);
     }
 
     template<typename... Args>
@@ -505,7 +504,7 @@ private:
     }
 
     void reallocateTo(size_type newCapacity) {
-        auto newData = (pointer)detail::allocArray(newCapacity, sizeof(T));
+        auto newData = (pointer)::operator new(newCapacity * sizeof(T));
         std::uninitialized_move(begin(), end(), newData);
 
         cleanup();
@@ -803,7 +802,7 @@ typename SmallVectorBase<T>::pointer SmallVectorBase<T>::emplaceRealloc(const po
 
     auto newCap = calculateGrowth(len + 1);
     auto offset = static_cast<size_type>(pos - begin());
-    auto newData = (pointer)detail::allocArray(newCap, sizeof(T));
+    auto newData = (pointer)::operator new(newCap * sizeof(T));
 
     // First construct the new element in the new memory,
     // so that we don't corrupt the new element if it relied on
@@ -835,7 +834,7 @@ void SmallVectorBase<T>::resizeRealloc(size_type newSize, const TVal& val) {
         detail::throwLengthError();
 
     auto newCap = calculateGrowth(newSize);
-    auto newData = (pointer)detail::allocArray(newCap, sizeof(T));
+    auto newData = (pointer)::operator new(newCap * sizeof(T));
 
     std::uninitialized_move(begin(), end(), newData);
 
