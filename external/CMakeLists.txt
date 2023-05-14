@@ -61,6 +61,22 @@ if(SLANG_USE_MIMALLOC)
     set(find_pkg_args "FIND_PACKAGE_ARGS" "2.1")
   endif()
 
+  set(MI_OVERRIDE
+      OFF
+      CACHE INTERNAL "")
+  set(MI_BUILD_SHARED
+      OFF
+      CACHE INTERNAL "")
+  set(MI_BUILD_OBJECT
+      OFF
+      CACHE INTERNAL "")
+  set(MI_BUILD_TESTS
+      OFF
+      CACHE INTERNAL "")
+  set(MI_SKIP_COLLECT_ON_EXIT
+      ON
+      CACHE INTERNAL "")
+
   FetchContent_Declare(
     mimalloc
     GIT_REPOSITORY https://github.com/microsoft/mimalloc.git
