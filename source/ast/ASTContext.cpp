@@ -513,6 +513,9 @@ void ASTContext::addAssertionBacktrace(Diagnostic& diag) const {
                 case SymbolKind::LetDecl:
                     note << "let declaration"sv;
                     break;
+                case SymbolKind::Checker:
+                    note << "checker"sv;
+                    break;
                 default:
                     SLANG_UNREACHABLE;
             }

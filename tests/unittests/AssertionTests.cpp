@@ -1302,3 +1302,54 @@ endmodule
     CHECK(diags[1].code == diag::AssertionArgTypeMismatch);
     CHECK(diags[2].code == diag::InferredValDefArg);
 }
+
+TEST_CASE("Checker declarations") {
+    auto tree = SyntaxTree::fromText(R"(
+checker my_check1 (logic test_sig, event clock);
+    default clocking @clock; endclocking
+    property p(logic sig); 1; endproperty
+    a1: assert property (p (test_sig));
+    c1: cover property (!test_sig ##1 test_sig);
+endchecker : my_check1
+
+checker my_check2 (logic a, b);
+    a1: assert #0 ($onehot0({a, b}));
+    c1: cover #0 (a == 0 && b == 0);
+    c2: cover #0 (a == 1);
+    c3: cover #0 (b == 1);
+endchecker : my_check2
+
+checker my_check3 (logic a, b, event clock, output bit failure, undef);
+    default clocking @clock; endclocking
+    a1: assert property ($onehot0({a, b})) failure = 1'b0; else failure = 1'b1;
+    a2: assert property ($isunknown({a, b})) undef = 1'b0; else undef = 1'b1;
+endchecker : my_check3
+
+checker my_check4 (input logic in,
+                   en = 1'b1, // default value
+                   event clock,
+                   output int ctr = 0); // initial value
+    default clocking @clock; endclocking
+    always_ff @clock
+        if (en && in) ctr <= ctr + 1;
+    a1: assert property (ctr < 5);
+endchecker : my_check4
+
+module m;
+    wire clk1, clk2, rst1, rst2;
+
+    default clocking @clk1; endclocking
+    default disable iff rst1;
+    checker c1;
+    endchecker : c1
+    checker c2;
+        default clocking @clk2; endclocking
+        default disable iff rst2;
+    endchecker : c2
+endmodule : m
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

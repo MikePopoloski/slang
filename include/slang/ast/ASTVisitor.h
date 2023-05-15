@@ -181,6 +181,7 @@ decltype(auto) Symbol::visit(TVisitor&& visitor, Args&&... args) const {
         SYMBOL(ClockVar);
         SYMBOL(LocalAssertionVar);
         SYMBOL(LetDecl);
+        SYMBOL(Checker);
         SYMBOL(RandSeqProduction);
         SYMBOL(CovergroupBody);
         SYMBOL(Coverpoint);

@@ -493,6 +493,9 @@ void Scope::addMembers(const SyntaxNode& syntax) {
         case SyntaxKind::LetDeclaration:
             addMember(LetDeclSymbol::fromSyntax(*this, syntax.as<LetDeclarationSyntax>()));
             break;
+        case SyntaxKind::CheckerDeclaration:
+            addMember(CheckerSymbol::fromSyntax(*this, syntax.as<CheckerDeclarationSyntax>()));
+            break;
         case SyntaxKind::CovergroupDeclaration: {
             const Symbol* classProperty = nullptr;
             addMember(CovergroupType::fromSyntax(*this, syntax.as<CovergroupDeclarationSyntax>(),
@@ -539,7 +542,6 @@ void Scope::addMembers(const SyntaxNode& syntax) {
             break;
         case SyntaxKind::NetAlias:
         case SyntaxKind::CheckerInstantiation:
-        case SyntaxKind::CheckerDeclaration:
         case SyntaxKind::CheckerDataDeclaration:
         case SyntaxKind::ExternModuleDecl:
         case SyntaxKind::ExternUdpDecl:

@@ -2066,6 +2066,7 @@ void Lookup::reportUndeclared(const Scope& initialScope, std::string_view name, 
                     case SymbolKind::InstanceArray:
                     case SymbolKind::Sequence:
                     case SymbolKind::Property:
+                    case SymbolKind::Checker:
                     case SymbolKind::UninstantiatedDef:
                         break;
                     case SymbolKind::Instance:
