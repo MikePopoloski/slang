@@ -215,8 +215,8 @@ class NetlistVariableReference : public NetlistNode {
 public:
     using SelectorsListType = std::vector<std::unique_ptr<VariableSelectorBase>>;
 
-    NetlistVariableReference(const ast::Symbol& symbol) :
-        NetlistNode(NodeKind::VariableReference, symbol) {}
+    NetlistVariableReference(const ast::Symbol& symbol, const ast::Expression &expr) :
+        NetlistNode(NodeKind::VariableReference, symbol), expression(expr) {}
 
     void addElementSelect(const ConstantValue& index) {
         selectors.emplace_back(std::make_unique<VariableElementSelect>(index));
@@ -239,6 +239,7 @@ public:
     }
 
 public:
+    const ast::Expression &expression;
     SelectorsListType selectors;
 };
 
@@ -282,9 +283,10 @@ public:
     }
 
     /// Add a variable reference node to the netlist.
-    NetlistVariableReference& addVariableReference(const ast::Symbol& symbol) {
+    NetlistVariableReference& addVariableReference(const ast::Symbol& symbol,
+                                                   const ast::Expression& expr) {
         DEBUG_PRINT("Add var ref " << symbol.name << "\n");
-        auto nodePtr = std::make_unique<NetlistVariableReference>(symbol);
+        auto nodePtr = std::make_unique<NetlistVariableReference>(symbol, expr);
         auto& node = nodePtr->as<NetlistVariableReference>();
         nodes.push_back(std::move(nodePtr));
         return node;

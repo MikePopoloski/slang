@@ -27,11 +27,19 @@
 #include "slang/util/TimeTrace.h"
 #include "slang/util/Util.h"
 #include "slang/util/Version.h"
+#include "slang/diagnostics/Diagnostics.h"
+#include "slang/diagnostics/DiagnosticEngine.h"
 
 using namespace slang;
 using namespace slang::ast;
 using namespace slang::driver;
 using namespace netlist;
+
+namespace slang::diag {
+
+inline constexpr DiagCode VariableReference(DiagSubsystem::Netlist, 0);
+
+} // namespace slang::diag
 
 void writeToFile(std::string_view fileName, std::string_view contents);
 
@@ -88,6 +96,31 @@ void writeToFile(std::string_view fileName, std::string_view contents) {
         std::ofstream file{std::string(fileName)};
         writeToFile(file, fileName, contents);
     }
+}
+
+void reportPath(Compilation& compilation, const NetlistPath& path) {
+    DiagnosticEngine diagEngine(*compilation.getSourceManager());
+    diagEngine.setMessage(diag::VariableReference, "{}");
+    diagEngine.setSeverity(diag::VariableReference, DiagnosticSeverity::Note);
+    auto textDiagClient = std::make_shared<TextDiagnosticClient>();
+    textDiagClient->showColors(true);
+    textDiagClient->showLocation(true);
+    textDiagClient->showSourceLine(true);
+    textDiagClient->showHierarchyInstance(true);
+    diagEngine.addClient(textDiagClient);
+    for (auto* node : path) {
+        auto* SM = compilation.getSourceManager();
+        auto& location = node->symbol.location;
+        auto bufferID = location.buffer();
+        assert(node->kind == NodeKind::VariableReference);
+        const auto& varRefNode = node->as<NetlistVariableReference>();
+        Diagnostic diagnostic(diag::VariableReference, varRefNode.expression.sourceRange.start());
+        diagnostic << varRefNode.expression.sourceRange;
+        diagnostic << std::string("blah...");
+        diagEngine.issue(diagnostic);
+        OS::print(fmt::format("{}\n", textDiagClient->getString()));
+        textDiagClient->clear();
+  }
 }
 
 int main(int argc, char** argv) {
@@ -209,13 +242,7 @@ int main(int argc, char** argv) {
                     fmt::format("no path between {} and {}", *fromPointName, *toPointName)));
             }
             // Report the path.
-            for (auto* node : path) {
-                auto* SM = compilation->getSourceManager();
-                auto& location = node->symbol.location;
-                auto bufferID = location.buffer();
-                std::cout << fmt::format("{} {}:{}\n", node->toString(),
-                                         SM->getRawFileName(bufferID), SM->getLineNumber(location));
-            }
+            reportPath(*compilation, path);
         }
 
         // No action performed.

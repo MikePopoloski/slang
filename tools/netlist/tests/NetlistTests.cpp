@@ -114,7 +114,7 @@ endmodule
     CHECK(pathFinder
               .find(*netlist.lookupPort("chain_vars.i_value"),
                     *netlist.lookupPort("chain_vars.o_value"))
-              .size() == 21);
+              .size() == 13);
 }
 
 TEST_CASE("Chain of assignments in a sequence using a vector") {
@@ -150,7 +150,7 @@ endmodule
     CHECK(pathFinder
               .find(*netlist.lookupPort("chain_array.i_value"),
                     *netlist.lookupPort("chain_array.o_value"))
-              .size() == 21);
+              .size() == 13);
 }
 
 TEST_CASE("Passthrough two signals via a shared structure") {
@@ -187,8 +187,8 @@ endmodule
     auto* outPortB = netlist.lookupPort("passthrough_member_access.o_value_b");
     PathFinder pathFinder(netlist);
     // Valid paths.
-    CHECK(pathFinder.find(*inPortA, *outPortA).size() == 9);
-    CHECK(pathFinder.find(*inPortB, *outPortB).size() == 9);
+    CHECK(pathFinder.find(*inPortA, *outPortA).size() == 5);
+    CHECK(pathFinder.find(*inPortB, *outPortB).size() == 5);
     // Invalid paths.
     CHECK(pathFinder.find(*inPortA, *outPortB).empty());
     CHECK(pathFinder.find(*inPortB, *outPortA).empty());
@@ -225,8 +225,8 @@ endmodule
     auto* outPortB = netlist.lookupPort("passthrough_ranges.o_value_b");
     PathFinder pathFinder(netlist);
     // Valid paths.
-    CHECK(pathFinder.find(*inPortA, *outPortA).size() == 9);
-    CHECK(pathFinder.find(*inPortB, *outPortB).size() == 9);
+    CHECK(pathFinder.find(*inPortA, *outPortA).size() == 5);
+    CHECK(pathFinder.find(*inPortB, *outPortB).size() == 5);
     // Invalid paths.
     CHECK(pathFinder.find(*inPortA, *outPortB).empty());
     CHECK(pathFinder.find(*inPortB, *outPortA).empty());
@@ -269,7 +269,7 @@ endmodule
     CHECK(pathFinder
               .find(*netlist.lookupPort("chain_array.i_value"),
                     *netlist.lookupPort("chain_array.o_value"))
-              .size() == 18);
+              .size() == 11);
 }
 
 TEST_CASE("Chain of assignments using a nested loop") {
@@ -308,7 +308,7 @@ endmodule
     CHECK(pathFinder
               .find(*netlist.lookupPort("chain_nested.i_value"),
                     *netlist.lookupPort("chain_nested.o_value"))
-              .size() == 33);
+              .size() == 21);
 }
 
 TEST_CASE("Two chains of assignments using a shared 2D array") {
@@ -352,8 +352,8 @@ endmodule
     auto* outPortB = netlist.lookupPort("chain_loop_dual.o_value_b");
     PathFinder pathFinder(netlist);
     // Valid paths.
-    CHECK(pathFinder.find(*inPortA, *outPortA).size() == 18);
-    CHECK(pathFinder.find(*inPortB, *outPortB).size() == 18);
+    CHECK(pathFinder.find(*inPortA, *outPortA).size() == 11);
+    CHECK(pathFinder.find(*inPortB, *outPortB).size() == 11);
     // Invalid paths.
     CHECK(pathFinder.find(*inPortA, *outPortB).empty());
     CHECK(pathFinder.find(*inPortB, *outPortA).empty());

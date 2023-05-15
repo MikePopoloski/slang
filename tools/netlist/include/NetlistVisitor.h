@@ -36,7 +36,7 @@ public:
         visitList(visitList), evalCtx(evalCtx) {}
 
     void handle(const ast::NamedValueExpression& expr) {
-        auto& node = netlist.addVariableReference(expr.symbol);
+        auto& node = netlist.addVariableReference(expr.symbol, expr);
         visitList.push_back(&node);
         for (auto* selector : selectors) {
             if (selector->kind == ast::ExpressionKind::ElementSelect) {

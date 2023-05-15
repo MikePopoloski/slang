@@ -61,7 +61,7 @@ public:
             return NetlistPath({&endNode});
         }
         // Multi-node path.
-        NetlistPath path({&endNode});
+        NetlistPath path;
         auto* nextNode = &endNode;
         do {
             nextNode = traversalMap[nextNode];
