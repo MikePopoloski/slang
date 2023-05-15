@@ -56,6 +56,11 @@ if(SLANG_USE_BOOST)
 endif()
 
 if(SLANG_USE_MIMALLOC)
+  if(CMAKE_SYSTEM_NAME MATCHES "Windows" AND BUILD_SHARED_LIBS)
+    message(
+      FATAL_ERROR "mimalloc cannot be used with Windows shared lib builds")
+  endif()
+
   set(find_pkg_args "")
   if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.24.0")
     set(find_pkg_args "FIND_PACKAGE_ARGS" "2.1")

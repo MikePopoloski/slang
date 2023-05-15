@@ -84,6 +84,7 @@
       ],
       "cacheVariables": {
         "BUILD_SHARED_LIBS": "ON",
+        "SLANG_USE_MIMALLOC": "OFF",
         "CMAKE_CXX_FLAGS_DEBUG": "/MTd /Zi /Ob0 /Od /RTC1"
       }
     },
