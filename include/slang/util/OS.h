@@ -14,7 +14,7 @@
 #include "slang/util/String.h"
 
 namespace fmt {
-inline namespace v9 {
+inline namespace v10 {
 class text_style;
 }
 } // namespace fmt

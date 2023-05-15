@@ -56,6 +56,16 @@ Any provided positional arguments that have extensions matching &lt;ext> will be
 This option is typically used when projects have existing command files listing sources
 that are not SystemVerilog code.
 
+`-j,--threads <count>`
+
+Controls the number of threads used for parallel compilation. slang will by default
+use the number of threads supported by the system -- this can be set to some other
+value to more specifically control the concurrency. Setting it to 1 will disable
+the use of threading.
+
+Note that multithreading only currently applies to the parsing stage of compilation,
+and that it is not supported when running with `--single-unit`
+
 @section Actions
 
 These options control what action the tool will perform when run.

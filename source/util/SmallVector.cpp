@@ -16,12 +16,4 @@ void throwLengthError() {
     SLANG_THROW(std::length_error("vector is at maximum size"));
 }
 
-void* allocArray(size_t capacity, size_t typeSize) {
-    void* result = std::malloc(capacity * typeSize);
-    if (!result)
-        SLANG_THROW(std::bad_alloc());
-
-    return result;
-}
-
 } // namespace slang::detail

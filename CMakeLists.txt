@@ -69,6 +69,7 @@ option(SLANG_FUZZ_TARGET "Enables changes to make binaries easier to fuzz test"
        OFF)
 option(BUILD_SHARED_LIBS "Generate shared libraries instead of static" OFF)
 option(SLANG_USE_BOOST "Enable the use of Boost libraries" ON)
+option(SLANG_USE_MIMALLOC "Enable use of the mimalloc library" ON)
 
 set(SLANG_LIB_NAME
     "svlang"
@@ -133,17 +134,13 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # target_ specific commands.
 if(CMAKE_SYSTEM_NAME MATCHES "Windows")
   add_compile_definitions(WIN32 _WINDOWS NTDDI_VERSION=0x06010000
-                          _WIN32_WINNT=0x0601)
-  add_compile_definitions(UNICODE _UNICODE NOMINMAX WIN32_LEAN_AND_MEAN)
+                          _WIN32_WINNT=0x0601 UNICODE _UNICODE)
   add_compile_definitions(_SCL_SECURE_NO_WARNINGS _CRT_SECURE_NO_WARNINGS)
   add_compile_definitions(_CRT_SECURE_NO_DEPRECATE _CRT_NONSTDC_NO_WARNINGS)
-
-  # Project won't build out of the box without this flag.
-  add_compile_options(/permissive-)
 endif()
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
-  add_compile_options(/utf-8 /bigobj)
+  add_compile_options(/utf-8 /bigobj /permissive-)
 endif()
 
 # Get sane install RPATH handling by default if none has been provided.

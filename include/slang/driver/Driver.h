@@ -102,6 +102,9 @@ public:
         /// The maximum number of lexer errors that can be encountered before giving up.
         std::optional<uint32_t> maxLexerErrors;
 
+        /// The number of threads to use for parsing.
+        std::optional<uint32_t> numThreads;
+
         /// @}
         /// @name Compilation
         /// @{

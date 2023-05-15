@@ -13,7 +13,7 @@
 #include "slang/diagnostics/DiagnosticClient.h"
 
 namespace fmt {
-inline namespace v9 {
+inline namespace v10 {
 enum class terminal_color : uint8_t;
 }
 } // namespace fmt

@@ -9,6 +9,10 @@
 
 #include <fmt/core.h>
 
+#if defined(SLANG_USE_MIMALLOC) && defined(_WIN32)
+#    include <mimalloc-new-delete.h>
+#endif
+
 namespace slang::assert {
 
 [[noreturn]] void assertFailed(const char* expr, const char* file, int line, const char* func) {

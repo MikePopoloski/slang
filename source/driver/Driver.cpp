@@ -24,6 +24,7 @@
 #include "slang/syntax/SyntaxPrinter.h"
 #include "slang/syntax/SyntaxTree.h"
 #include "slang/util/Random.h"
+#include "slang/util/ThreadPool.h"
 
 namespace fs = std::filesystem;
 
@@ -91,6 +92,8 @@ void Driver::addStandardArgs() {
                 "Maximum number of errors that can occur during lexing before the rest of the file "
                 "is skipped",
                 "<count>");
+    cmdLine.add("-j,--threads", options.numThreads,
+                "The number of threads to use to parallelize parsing", "<count>");
 
     // Compilation
     cmdLine.add("--max-hierarchy-depth", options.maxInstanceDepth,
@@ -530,12 +533,29 @@ bool Driver::parseAllSources() {
         syntaxTrees.emplace_back(std::move(tree));
     }
     else {
-        for (const SourceBuffer& buffer : buffers) {
+        auto parse = [&](const SourceBuffer& buffer) {
             auto tree = SyntaxTree::fromBuffer(buffer, sourceManager, optionBag);
             if (onlyLint)
                 tree->isLibrary = true;
 
-            syntaxTrees.emplace_back(std::move(tree));
+            return tree;
+        };
+
+        // If there are enough buffers to parse and the user hasn't disabled
+        // the use of threads, do the parsing via a thread pool.
+        if (buffers.size() > 4 && options.numThreads != 1u) {
+            ThreadPool threadPool(options.numThreads.value_or(0u));
+            std::vector<std::future<std::shared_ptr<SyntaxTree>>> tasks;
+            for (auto& buffer : buffers)
+                tasks.emplace_back(threadPool.submit(parse, buffer));
+
+            threadPool.waitForAll();
+            for (auto& task : tasks)
+                syntaxTrees.emplace_back(std::move(task.get()));
+        }
+        else {
+            for (auto& buffer : buffers)
+                syntaxTrees.emplace_back(parse(buffer));
         }
     }
 

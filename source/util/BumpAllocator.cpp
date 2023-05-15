@@ -8,6 +8,7 @@
 #include "slang/util/BumpAllocator.h"
 
 #include <cstdlib>
+#include <new>
 
 namespace slang {
 
@@ -20,7 +21,7 @@ BumpAllocator::~BumpAllocator() {
     Segment* seg = head;
     while (seg) {
         Segment* prev = seg->prev;
-        free(seg);
+        ::operator delete(seg);
         seg = prev;
     }
 }
@@ -64,7 +65,7 @@ byte* BumpAllocator::allocateSlow(size_t size, size_t alignment) {
 }
 
 BumpAllocator::Segment* BumpAllocator::allocSegment(Segment* prev, size_t size) {
-    auto seg = (Segment*)malloc(size);
+    auto seg = (Segment*)::operator new(size);
     seg->prev = prev;
     seg->current = (byte*)seg + sizeof(Segment);
     return seg;
