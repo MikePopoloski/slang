@@ -1,6 +1,7 @@
-- Test handling of range selects in splitting variables.
-- Test handling of member access in splitting variables.
+To dos
+======
+
 - Hookup though syntax elements:
   * Instances
-- Marking of sequential elements.
-- Path finding limited by start/end points.
+- Inferring of sequential elements.
+- Restricting paths to stop at sequential elements.
