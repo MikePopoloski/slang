@@ -92,6 +92,10 @@ if(SLANG_USE_MIMALLOC)
     if(IS_DIRECTORY "${mimalloc_SOURCE_DIR}")
       set_property(DIRECTORY ${mimalloc_SOURCE_DIR} PROPERTY EXCLUDE_FROM_ALL
                                                              YES)
+
+      get_target_property(lib_include_dirs mimalloc-static INCLUDE_DIRECTORIES)
+      target_include_directories(mimalloc-static SYSTEM
+                                 PUBLIC ${lib_include_dirs})
     endif()
   endif()
 endif()
