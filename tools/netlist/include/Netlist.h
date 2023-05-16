@@ -176,7 +176,7 @@ public:
 
     static bool isKind(NodeKind otherKind) { return otherKind == NodeKind::PortDeclaration; }
 
-    std::string toString() const override { return fmt::format("port {}", symbol.name); }
+    std::string toString() const override { return fmt::format("port {}", hierarchicalPath); }
 
 public:
     std::string hierarchicalPath;
@@ -190,7 +190,7 @@ public:
 
     static bool isKind(NodeKind otherKind) { return otherKind == NodeKind::VariableDeclaration; }
 
-    std::string toString() const override { return fmt::format("var {}", symbol.name); }
+    std::string toString() const override { return fmt::format("var {}", hierarchicalPath); }
 
 public:
     std::string hierarchicalPath;
@@ -204,7 +204,7 @@ public:
 
     static bool isKind(NodeKind otherKind) { return otherKind == NodeKind::VariableAlias; }
 
-    std::string toString() const override { return fmt::format("var alias {}", symbol.name); }
+    std::string toString() const override { return fmt::format("var alias {}", hierarchicalPath); }
 
 public:
     std::string hierarchicalPath;
@@ -250,45 +250,45 @@ public:
 
     /// Add a port declaration node to the netlist.
     NetlistPortDeclaration& addPortDeclaration(const ast::Symbol& symbol) {
-        DEBUG_PRINT("Add port decl " << symbol.name << "\n");
         auto nodePtr = std::make_unique<NetlistPortDeclaration>(symbol);
         auto& node = nodePtr->as<NetlistPortDeclaration>();
         symbol.getHierarchicalPath(node.hierarchicalPath);
         assert(lookupPort(nodePtr->hierarchicalPath) == nullptr &&
                "Port declaration already exists");
         nodes.push_back(std::move(nodePtr));
+        DEBUG_PRINT("Add port decl " << node.hierarchicalPath << "\n");
         return node;
     }
 
     /// Add a variable declaration node to the netlist.
     NetlistVariableDeclaration& addVariableDeclaration(const ast::Symbol& symbol) {
-        DEBUG_PRINT("Add var decl " << symbol.name << "\n");
         auto nodePtr = std::make_unique<NetlistVariableDeclaration>(symbol);
         auto& node = nodePtr->as<NetlistVariableDeclaration>();
         symbol.getHierarchicalPath(node.hierarchicalPath);
         assert(lookupVariable(nodePtr->hierarchicalPath) == nullptr &&
                "Variable declaration already exists");
         nodes.push_back(std::move(nodePtr));
+        DEBUG_PRINT("Add var decl " << node.hierarchicalPath << "\n");
         return node;
     }
 
     /// Add a variable declaration alias node to the netlist.
     NetlistVariableAlias& addVariableAlias(const ast::Symbol& symbol) {
-        DEBUG_PRINT("Add var alias " << symbol.name << "\n");
         auto nodePtr = std::make_unique<NetlistVariableAlias>(symbol);
         auto& node = nodePtr->as<NetlistVariableAlias>();
         symbol.getHierarchicalPath(node.hierarchicalPath);
         nodes.push_back(std::move(nodePtr));
+        DEBUG_PRINT("Add var alias " << node.hierarchicalPath << "\n");
         return node;
     }
 
     /// Add a variable reference node to the netlist.
     NetlistVariableReference& addVariableReference(const ast::Symbol& symbol,
                                                    const ast::Expression& expr) {
-        DEBUG_PRINT("Add var ref " << symbol.name << "\n");
         auto nodePtr = std::make_unique<NetlistVariableReference>(symbol, expr);
         auto& node = nodePtr->as<NetlistVariableReference>();
         nodes.push_back(std::move(nodePtr));
+        DEBUG_PRINT("Add var ref " << symbol.name << "\n");
         return node;
     }
 

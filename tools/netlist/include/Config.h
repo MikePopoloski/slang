@@ -1,6 +1,6 @@
 //------------------------------------------------------------------------------
 //! @file Config.h
-//! @brief Provide singleton configuration class.
+//! @brief Provide singleton configuration class debug printing macro.
 //
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT

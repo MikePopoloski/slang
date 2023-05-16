@@ -16,6 +16,7 @@
 #include <iostream>
 
 #include "slang/ast/ASTVisitor.h"
+#include "slang/ast/Symbol.h"
 #include "slang/ast/symbols/BlockSymbols.h"
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
 #include "slang/diagnostics/TextDiagnosticClient.h"
@@ -25,6 +26,29 @@
 using namespace slang;
 
 namespace netlist {
+
+static std::string getSymbolHierPath(const ast::Symbol &symbol) {
+    std::string buffer;
+    symbol.getHierarchicalPath(buffer);
+    return buffer;
+}
+
+static void connectDeclToVar(Netlist &netlist, NetlistNode &varNode, std::string hierarchicalPath) {
+    auto* variableNode = netlist.lookupVariable(hierarchicalPath);
+    netlist.addEdge(*variableNode, varNode);
+    DEBUG_PRINT(fmt::format("Edge decl {} to ref {}\n", variableNode->getName(), varNode.getName()));
+}
+
+static void connectVarToDecl(Netlist &netlist, NetlistNode &varNode, std::string hierarchicalPath) {
+    auto* portNode = netlist.lookupVariable(hierarchicalPath);
+    netlist.addEdge(varNode, *portNode);
+    DEBUG_PRINT(fmt::format("Edge ref {} to port ref {}\n", varNode.getName(), portNode->getName()));
+}
+
+static void connectVarToVar(Netlist &netlist, NetlistNode &sourceVarNode, NetlistNode &targetVarNode) {
+    netlist.addEdge(sourceVarNode, targetVarNode);
+    DEBUG_PRINT(fmt::format("Edge ref {} to ref {}\n", sourceVarNode.getName(), targetVarNode.getName()));
+}
 
 /// An AST visitor to identify variable references with selectors in
 /// expressions only.
@@ -99,30 +123,16 @@ public:
         }
         // Add edge from LHS variable refrence to variable declaration.
         for (auto* leftNode : visitListLHS) {
-            std::string pathBuffer;
-            leftNode->symbol.getHierarchicalPath(pathBuffer);
-            // auto var = evalCtx.compilation.getRoot().lookupName(pathBuffer);
-            auto* variableNode = netlist.lookupVariable(pathBuffer);
-            netlist.addEdge(*leftNode, *variableNode);
-            DEBUG_PRINT(
-                fmt::format("Edge {} to decl {}\n", leftNode->getName(), variableNode->getName()));
+            connectVarToDecl(netlist, *leftNode, getSymbolHierPath(leftNode->symbol));
         }
-        // Add edge from RHS variable references to variable declaration.
+        // Add edge from variable declaration to RHS variable reference.
         for (auto* rightNode : visitListRHS) {
-            std::string pathBuffer;
-            rightNode->symbol.getHierarchicalPath(pathBuffer);
-            // auto var = evalCtx.compilation.getRoot().lookupName(pathBuffer);
-            auto* variableNode = netlist.lookupVariable(pathBuffer);
-            netlist.addEdge(*variableNode, *rightNode);
-            DEBUG_PRINT(
-                fmt::format("Edge decl {} to {}\n", variableNode->getName(), rightNode->getName()));
+            connectDeclToVar(netlist, *rightNode, getSymbolHierPath(rightNode->symbol));
         }
         // Add edges form RHS expression terms to LHS expression terms.
         for (auto* leftNode : visitListLHS) {
             for (auto* rightNode : visitListRHS) {
-                netlist.addEdge(*rightNode, *leftNode);
-                DEBUG_PRINT(
-                    fmt::format("Edge {} to {}\n", leftNode->getName(), rightNode->getName()));
+              connectVarToVar(netlist, *rightNode, *leftNode);
             }
         }
     }
@@ -272,57 +282,91 @@ public:
         compilation(compilation), netlist(netlist) {}
 
     /// Connect ports to their corresponding variables.
-    void connectInstancePorts() {
-        for (auto* port : portsToConnect) {
-            if (auto* internalSymbol = port->symbol.as<ast::PortSymbol>().internalSymbol) {
-                std::string pathBuffer;
-                internalSymbol->getHierarchicalPath(pathBuffer);
-                auto* variableNode = netlist.lookupVariable(pathBuffer);
-                switch (port->symbol.as<ast::PortSymbol>().direction) {
-                    case ast::ArgumentDirection::In:
-                        netlist.addEdge(*port, *variableNode);
-                        break;
-                    case ast::ArgumentDirection::Out:
-                        netlist.addEdge(*variableNode, *port);
-                        break;
-                    case ast::ArgumentDirection::InOut:
-                        netlist.addEdge(*port, *variableNode);
-                        netlist.addEdge(*variableNode, *port);
-                        break;
-                    case ast::ArgumentDirection::Ref:
-                        break;
-                }
+    void connectInstancePort(NetlistNode &port) {
+        if (auto* internalSymbol = port.symbol.as<ast::PortSymbol>().internalSymbol) {
+            std::string pathBuffer;
+            internalSymbol->getHierarchicalPath(pathBuffer);
+            auto* variableNode = netlist.lookupVariable(pathBuffer);
+            switch (port.symbol.as<ast::PortSymbol>().direction) {
+                case ast::ArgumentDirection::In:
+                    netlist.addEdge(port, *variableNode);
+                    break;
+                case ast::ArgumentDirection::Out:
+                    netlist.addEdge(*variableNode, port);
+                    break;
+                case ast::ArgumentDirection::InOut:
+                    netlist.addEdge(port, *variableNode);
+                    netlist.addEdge(*variableNode, port);
+                    break;
+                case ast::ArgumentDirection::Ref:
+                    break;
             }
+        } else {
+          assert(0 && "Unexpected port without internal symbol");
         }
-        portsToConnect.clear();
+
     }
 
     /// Variable declaration.
-    void handle(const ast::VariableSymbol& symbol) { netlist.addVariableDeclaration(symbol); }
+    void handle(const ast::VariableSymbol& symbol) {}
 
     /// Net declaration.
-    void handle(const ast::NetSymbol& symbol) { netlist.addVariableDeclaration(symbol); }
+    void handle(const ast::NetSymbol& symbol) {}
 
     /// Port declaration.
-    void handle(const ast::PortSymbol& symbol) {
-        auto& portNode = netlist.addPortDeclaration(symbol);
-        // Save this to connect it to the corresponding internal variable later.
-        portsToConnect.push_back(&portNode);
+    void handle(const ast::PortSymbol& symbol) {}
+
+    /// Instance.
+    void handle(const ast::InstanceSymbol &symbol) {
+      // Body members.
+      // Variables first.
+      for (auto& member : symbol.body.members()) {
+          if (member.kind == ast::SymbolKind::Variable ||
+              member.kind == ast::SymbolKind::Net) {
+            netlist.addVariableDeclaration(member);
+          }
+      }
+      // Then ports.
+      for (auto& member : symbol.body.members()) {
+          if (member.kind == ast::SymbolKind::Port) {
+            // Create the port declaration netlist node.
+            auto& portNode = netlist.addPortDeclaration(member);
+            // Connected to to the corresponding local variable.
+            connectInstancePort(portNode);
+          }
+      }
+      // Handle connections to the ports of the instance.
+      for (auto *portConnection : symbol.getPortConnections()) {
+        // Collect variable references in the port expression.
+        std::vector<NetlistNode*> exprVisitList;
+        ast::EvalContext evalCtx(compilation);
+        VariableReferenceVisitor visitor(netlist, exprVisitList, evalCtx);
+        portConnection->getExpression()->visit(visitor);
+        // Given a port hookup of the form:
+        //   .foo(expr(x, y))
+        // Where expr() is an expression involving some variables.
+        // Then, add the following edges:
+        //   var decl x -> var ref x
+        //   var decl y -> var ref y
+        //   var ref x -> port var ref foo
+        //   var ref y -> port var ref foo
+        for (auto* node : exprVisitList) {
+            // TODO: direction of connections depends on port type
+            connectDeclToVar(netlist, *node, getSymbolHierPath(node->symbol));
+            connectVarToDecl(netlist, *node, getSymbolHierPath(portConnection->port));
+        }
+      }
+      symbol.body.visit(*this);
     }
+
+    ///// Instance body.
+    //void handle(const ast::InstanceBodySymbol& symbol) {
+    //}
 
     /// Procedural block.
     void handle(const ast::ProceduralBlockSymbol& symbol) {
         ProceduralBlockVisitor visitor(compilation, netlist);
         symbol.visit(visitor);
-    }
-
-    /// Instance body.
-    void handle(const ast::InstanceBodySymbol& symbol) {
-        for (auto& member : symbol.members()) {
-            member.visit(*this);
-        }
-        // Peform the port-variable hookups.
-        connectInstancePorts();
     }
 
     /// Continuous assignment statement.
@@ -332,22 +376,9 @@ public:
         symbol.visit(visitor);
     }
 
-    // void handle(const InstanceSymbol &symbol) {
-    //   //std::cout << "InstanceSymbol " << symbol.name << "\n";
-    //   for (auto *portConnection : symbol.getPortConnections()) {
-    //     //std::cout << "Port " << portConnection->port.name << " connects to:\n";
-    //     //if (portConnection->getExpression()) {
-    //       //VariableReferenceVisitor visitor(netlist, evalCtx);
-    //       //portConnection->getExpression()->visit(visitor);
-    //     //}
-    //   }
-    //   symbol.body.visit(*this);
-    // }
-
 private:
     ast::Compilation& compilation;
     Netlist& netlist;
-    std::vector<NetlistPortDeclaration*> portsToConnect;
 };
 
 } // End namespace netlist.
