@@ -16,6 +16,7 @@
 #include <iostream>
 
 #include "slang/ast/ASTVisitor.h"
+#include "slang/ast/SemanticFacts.h"
 #include "slang/ast/Symbol.h"
 #include "slang/ast/symbols/BlockSymbols.h"
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
@@ -304,7 +305,6 @@ public:
         } else {
           assert(0 && "Unexpected port without internal symbol");
         }
-
     }
 
     /// Variable declaration.
@@ -346,14 +346,32 @@ public:
         //   .foo(expr(x, y))
         // Where expr() is an expression involving some variables.
         // Then, add the following edges:
-        //   var decl x -> var ref x
-        //   var decl y -> var ref y
-        //   var ref x -> port var ref foo
-        //   var ref y -> port var ref foo
+        // Input port:
+        //   var decl x -> var ref x -> port var ref foo
+        // Output port:
+        //   var decl y <- var ref y <- port var ref foo
+        // InOut port:
+        //   var decl x -> var ref x -> port var ref foo
+        //   var decl y <- var ref y <- port var ref foo
         for (auto* node : exprVisitList) {
-            // TODO: direction of connections depends on port type
-            connectDeclToVar(netlist, *node, getSymbolHierPath(node->symbol));
-            connectVarToDecl(netlist, *node, getSymbolHierPath(portConnection->port));
+            switch (portConnection->port.as<ast::PortSymbol>().direction) {
+            case ast::ArgumentDirection::In:
+              connectDeclToVar(netlist, *node, getSymbolHierPath(node->symbol));
+              connectVarToDecl(netlist, *node, getSymbolHierPath(portConnection->port));
+              break;
+            case ast::ArgumentDirection::Out:
+              connectDeclToVar(netlist, *node, getSymbolHierPath(portConnection->port));
+              connectVarToDecl(netlist, *node, getSymbolHierPath(node->symbol));
+              break;
+            case ast::ArgumentDirection::InOut:
+              connectDeclToVar(netlist, *node, getSymbolHierPath(node->symbol));
+              connectDeclToVar(netlist, *node, getSymbolHierPath(portConnection->port));
+              connectVarToDecl(netlist, *node, getSymbolHierPath(node->symbol));
+              connectVarToDecl(netlist, *node, getSymbolHierPath(portConnection->port));
+              break;
+            case ast::ArgumentDirection::Ref:
+              break;
+            }
         }
       }
       symbol.body.visit(*this);
