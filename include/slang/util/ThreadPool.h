@@ -17,6 +17,8 @@
 #include <type_traits>
 #include <vector>
 
+#include "slang/util/Util.h"
+
 namespace slang {
 
 /// A lightweight thread pool for running concurrent jobs.
@@ -83,7 +85,7 @@ public:
         auto taskPromise = std::make_shared<std::promise<TResult>>();
 
         pushTask([func = std::move(func), taskPromise] {
-            try {
+            SLANG_TRY {
                 if constexpr (std::is_void_v<TResult>) {
                     std::invoke(func);
                     taskPromise->set_value();
@@ -92,11 +94,11 @@ public:
                     taskPromise->set_value(std::invoke(func));
                 }
             }
-            catch (...) {
-                try {
+            SLANG_CATCH(...) {
+                SLANG_TRY {
                     taskPromise->set_exception(std::current_exception());
                 }
-                catch (...) {
+                SLANG_CATCH(...) {
                 }
             }
         });

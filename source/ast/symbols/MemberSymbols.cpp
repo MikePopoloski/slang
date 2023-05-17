@@ -1324,6 +1324,7 @@ SequenceSymbol& SequenceSymbol::fromSyntax(const Scope& scope,
     auto result = comp.emplace<SequenceSymbol>(comp, syntax.name.valueText(),
                                                syntax.name.location());
     result->setSyntax(syntax);
+    result->setAttributes(scope, syntax.attributes);
 
     SmallVector<const AssertionPortSymbol*> ports;
     if (syntax.portList)
@@ -1349,6 +1350,7 @@ PropertySymbol& PropertySymbol::fromSyntax(const Scope& scope,
     auto result = comp.emplace<PropertySymbol>(comp, syntax.name.valueText(),
                                                syntax.name.location());
     result->setSyntax(syntax);
+    result->setAttributes(scope, syntax.attributes);
 
     SmallVector<const AssertionPortSymbol*> ports;
     if (syntax.portList)
@@ -1373,6 +1375,7 @@ LetDeclSymbol& LetDeclSymbol::fromSyntax(const Scope& scope, const LetDeclaratio
     auto result = comp.emplace<LetDeclSymbol>(comp, *syntax.expr, syntax.identifier.valueText(),
                                               syntax.identifier.location());
     result->setSyntax(syntax);
+    result->setAttributes(scope, syntax.attributes);
 
     SmallVector<const AssertionPortSymbol*> ports;
     if (syntax.portList)
@@ -1384,6 +1387,31 @@ LetDeclSymbol& LetDeclSymbol::fromSyntax(const Scope& scope, const LetDeclaratio
 
 void LetDeclSymbol::makeDefaultInstance() const {
     AssertionInstanceExpression::makeDefault(*this);
+}
+
+CheckerSymbol::CheckerSymbol(Compilation& compilation, std::string_view name, SourceLocation loc) :
+    Symbol(SymbolKind::Checker, name, loc), Scope(compilation, this) {
+}
+
+CheckerSymbol& CheckerSymbol::fromSyntax(const Scope& scope,
+                                         const CheckerDeclarationSyntax& syntax) {
+    auto& comp = scope.getCompilation();
+    auto result = comp.emplace<CheckerSymbol>(comp, syntax.name.valueText(),
+                                              syntax.name.location());
+    result->setSyntax(syntax);
+    result->setAttributes(scope, syntax.attributes);
+
+    SmallVector<const AssertionPortSymbol*> ports;
+    if (syntax.portList)
+        AssertionPortSymbol::buildPorts(*result, *syntax.portList, ports);
+    result->ports = ports.copy(comp);
+
+    return *result;
+}
+
+void CheckerSymbol::makeDefaultInstance() const {
+    // TODO:
+    // AssertionInstanceExpression::makeDefault(*this);
 }
 
 ClockingBlockSymbol::ClockingBlockSymbol(Compilation& compilation, std::string_view name,

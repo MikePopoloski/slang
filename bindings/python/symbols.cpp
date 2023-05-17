@@ -529,6 +529,9 @@ void registerSymbols(py::module_& m) {
     py::class_<LetDeclSymbol, Symbol, Scope>(m, "LetDeclSymbol")
         .def_readonly("ports", &LetDeclSymbol::ports);
 
+    py::class_<CheckerSymbol, Symbol, Scope>(m, "CheckerSymbol")
+        .def_readonly("ports", &CheckerSymbol::ports);
+
     py::class_<ClockingBlockSymbol, Symbol, Scope>(m, "ClockingBlockSymbol")
         .def_property_readonly("event", &ClockingBlockSymbol::getEvent)
         .def_property_readonly("defaultInputSkew", &ClockingBlockSymbol::getDefaultInputSkew)

@@ -24,9 +24,10 @@
       "inherits": "windows-base",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
-        "CMAKE_CXX_FLAGS_DEBUG": "/MDd /Zi /Ob0 /Od /RTC1",
+        "CMAKE_CXX_FLAGS_DEBUG": "/Zi /Ob0 /Od /RTC1",
         "CMAKE_EXE_LINKER_FLAGS_DEBUG": "/nologo /DEBUG:FASTLINK",
-        "CMAKE_SHARED_LINKER_FLAGS_DEBUG": "/nologo /DEBUG:FASTLINK"
+        "CMAKE_SHARED_LINKER_FLAGS_DEBUG": "/nologo /DEBUG:FASTLINK",
+        "CMAKE_MSVC_RUNTIME_LIBRARY": "MultiThreadedDebugDLL"
       }
     },
     {
@@ -35,7 +36,8 @@
       "inherits": "windows-base",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "CMAKE_CXX_FLAGS_RELEASE": "/MD /O2 /Ob3 /GS- /DNDEBUG"
+        "CMAKE_CXX_FLAGS_RELEASE": "/O2 /Ob3 /GS- /DNDEBUG",
+        "CMAKE_MSVC_RUNTIME_LIBRARY": "MultiThreadedDLL"
       }
     },
     {
@@ -81,7 +83,9 @@
         "win64-debug"
       ],
       "cacheVariables": {
-        "BUILD_SHARED_LIBS": "ON"
+        "BUILD_SHARED_LIBS": "ON",
+        "SLANG_USE_MIMALLOC": "OFF",
+        "CMAKE_CXX_FLAGS_DEBUG": "/MTd /Zi /Ob0 /Od /RTC1"
       }
     },
     {

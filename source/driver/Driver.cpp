@@ -551,7 +551,7 @@ bool Driver::parseAllSources() {
 
             threadPool.waitForAll();
             for (auto& task : tasks)
-                syntaxTrees.emplace_back(std::move(task.get()));
+                syntaxTrees.emplace_back(task.get());
         }
         else {
             for (auto& buffer : buffers)

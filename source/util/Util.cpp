@@ -9,7 +9,7 @@
 
 #include <fmt/core.h>
 
-#if defined(SLANG_USE_MIMALLOC) && defined(_WIN32)
+#if defined(SLANG_USE_MIMALLOC)
 #    include <mimalloc-new-delete.h>
 #endif
 

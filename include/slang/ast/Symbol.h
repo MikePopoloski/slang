@@ -107,6 +107,7 @@ enum class RandMode;
     x(ClockVar) \
     x(LocalAssertionVar) \
     x(LetDecl) \
+    x(Checker) \
     x(RandSeqProduction) \
     x(CovergroupBody) \
     x(Coverpoint) \

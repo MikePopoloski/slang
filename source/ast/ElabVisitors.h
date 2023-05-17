@@ -321,6 +321,13 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
         symbol.makeDefaultInstance();
     }
 
+    void handle(const CheckerSymbol& symbol) {
+        if (!handleDefault(symbol))
+            return;
+
+        symbol.makeDefaultInstance();
+    }
+
     void handle(const RandSeqProductionSymbol& symbol) {
         if (!handleDefault(symbol))
             return;
@@ -609,6 +616,7 @@ struct PostElabVisitor : public ASTVisitor<PostElabVisitor, false, false> {
     void handle(const SequenceSymbol& symbol) { checkAssertionDeclUnused(symbol, "sequence"sv); }
     void handle(const PropertySymbol& symbol) { checkAssertionDeclUnused(symbol, "property"sv); }
     void handle(const LetDeclSymbol& symbol) { checkAssertionDeclUnused(symbol, "let"sv); }
+    void handle(const CheckerSymbol& symbol) { checkAssertionDeclUnused(symbol, "checker"sv); }
 
 private:
     void checkValueUnused(const ValueSymbol& symbol, DiagCode unusedCode,
