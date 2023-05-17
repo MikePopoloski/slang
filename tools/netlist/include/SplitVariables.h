@@ -109,8 +109,8 @@ private:
                             if (match) {
                                 DEBUG_PRINT(
                                     fmt::format("New dependency through variable {} -> {}\n",
-                                                inEdge->getSourceNode().toString(),
-                                                outEdge->getTargetNode().toString()));
+                                                sourceVarRef.toString(),
+                                                targetVarRef.toString()));
                                 modifications.emplace_back(&varDeclNode, inEdge, outEdge.get());
                             }
                         }

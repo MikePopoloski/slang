@@ -65,8 +65,32 @@ void printJson(Compilation& compilation, const std::string& fileName,
 void printDOT(const Netlist& netlist, const std::string& fileName) {
     slang::FormatBuffer buffer;
     buffer.append("digraph {\n");
+    buffer.append("  node [shape=record];\n");
     for (auto& node : netlist) {
-        buffer.format("  N{} [label=\"{}\",shape=circle]\n", node->ID, node->toString());
+        switch (node->kind) {
+        case NodeKind::PortDeclaration: {
+          auto &portDecl = node->as<NetlistPortDeclaration>();
+          buffer.format("  N{} [label=\"port declaration\\n{}\"]\n", node->ID, portDecl.hierarchicalPath);
+          break;
+        }
+        case NodeKind::VariableDeclaration: {
+          auto &varDecl = node->as<NetlistVariableDeclaration>();
+          buffer.format("  N{} [label=\"variable declaration\\n{}\"]\n", node->ID, varDecl.hierarchicalPath);
+          break;
+        }
+        case NodeKind::VariableAlias: {
+          auto &varAlias = node->as<NetlistVariableAlias>();
+          buffer.format("  N{} [label=\"variable alias\\n{}\"]\n", node->ID, varAlias.hierarchicalPath);
+          break;
+        }
+        case NodeKind::VariableReference: {
+          auto &varRef = node->as<NetlistVariableReference>();
+          buffer.format("  N{} [label=\"{}{}\"]\n", node->ID, varRef.getName(), varRef.selectorString());
+          break;
+        }
+        default:
+          SLANG_UNREACHABLE;
+        }
     }
     for (auto& node : netlist) {
         for (auto& edge : node->getEdges()) {

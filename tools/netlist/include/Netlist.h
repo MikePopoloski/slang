@@ -144,7 +144,6 @@ public:
     }
 
     std::string_view getName() const { return symbol.name; }
-    virtual std::string toString() const = 0;
 
 public:
     size_t ID;
@@ -177,8 +176,6 @@ public:
 
     static bool isKind(NodeKind otherKind) { return otherKind == NodeKind::PortDeclaration; }
 
-    std::string toString() const override { return fmt::format("port {}", hierarchicalPath); }
-
 public:
     std::string hierarchicalPath;
 };
@@ -191,8 +188,6 @@ public:
 
     static bool isKind(NodeKind otherKind) { return otherKind == NodeKind::VariableDeclaration; }
 
-    std::string toString() const override { return fmt::format("var {}", hierarchicalPath); }
-
 public:
     std::string hierarchicalPath;
 };
@@ -204,8 +199,6 @@ public:
         NetlistNode(NodeKind::VariableAlias, symbol) {}
 
     static bool isKind(NodeKind otherKind) { return otherKind == NodeKind::VariableAlias; }
-
-    std::string toString() const override { return fmt::format("var alias {}", hierarchicalPath); }
 
 public:
     std::string hierarchicalPath;
@@ -231,12 +224,16 @@ public:
 
     static bool isKind(NodeKind otherKind) { return otherKind == NodeKind::VariableReference; }
 
-    std::string toString() const override {
+    std::string selectorString() const {
         std::string buffer;
         for (auto& selector : selectors) {
             buffer += selector->toString();
         }
-        return fmt::format("{}{}", symbol.name, buffer);
+        return buffer;
+    }
+
+    std::string toString() const {
+      return fmt::format("{}{}", getName(), selectorString());
     }
 
 public:
