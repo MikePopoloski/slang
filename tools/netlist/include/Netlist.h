@@ -209,7 +209,7 @@ class NetlistVariableReference : public NetlistNode {
 public:
     using SelectorsListType = std::vector<std::unique_ptr<VariableSelectorBase>>;
 
-    NetlistVariableReference(const ast::Symbol& symbol, const ast::Expression &expr) :
+    NetlistVariableReference(const ast::Symbol& symbol, const ast::Expression& expr) :
         NetlistNode(NodeKind::VariableReference, symbol), expression(expr) {}
 
     void addElementSelect(const ConstantValue& index) {
@@ -232,12 +232,10 @@ public:
         return buffer;
     }
 
-    std::string toString() const {
-      return fmt::format("{}{}", getName(), selectorString());
-    }
+    std::string toString() const { return fmt::format("{}{}", getName(), selectorString()); }
 
 public:
-    const ast::Expression &expression;
+    const ast::Expression& expression;
     SelectorsListType selectors;
 };
 
@@ -252,7 +250,7 @@ public:
         auto& node = nodePtr->as<NetlistPortDeclaration>();
         symbol.getHierarchicalPath(node.hierarchicalPath);
         SLANG_ASSERT(lookupPort(nodePtr->hierarchicalPath) == nullptr &&
-               "Port declaration already exists");
+                     "Port declaration already exists");
         nodes.push_back(std::move(nodePtr));
         DEBUG_PRINT("Add port decl " << node.hierarchicalPath << "\n");
         return node;
@@ -264,7 +262,7 @@ public:
         auto& node = nodePtr->as<NetlistVariableDeclaration>();
         symbol.getHierarchicalPath(node.hierarchicalPath);
         SLANG_ASSERT(lookupVariable(nodePtr->hierarchicalPath) == nullptr &&
-               "Variable declaration already exists");
+                     "Variable declaration already exists");
         nodes.push_back(std::move(nodePtr));
         DEBUG_PRINT("Add var decl " << node.hierarchicalPath << "\n");
         return node;

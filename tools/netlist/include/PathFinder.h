@@ -7,14 +7,13 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include "DepthFirstSearch.h"
+#include "Netlist.h"
+#include "NetlistPath.h"
 #include <map>
 #include <vector>
 
 #include "slang/util/Util.h"
-
-#include "DepthFirstSearch.h"
-#include "Netlist.h"
-#include "NetlistPath.h"
 
 namespace netlist {
 

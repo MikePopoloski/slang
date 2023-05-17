@@ -21,14 +21,14 @@
 #include <vector>
 
 #include "slang/ast/ASTSerializer.h"
+#include "slang/diagnostics/DiagnosticEngine.h"
+#include "slang/diagnostics/Diagnostics.h"
 #include "slang/driver/Driver.h"
 #include "slang/text/FormatBuffer.h"
 #include "slang/text/Json.h"
 #include "slang/util/TimeTrace.h"
 #include "slang/util/Util.h"
 #include "slang/util/Version.h"
-#include "slang/diagnostics/Diagnostics.h"
-#include "slang/diagnostics/DiagnosticEngine.h"
 
 using namespace slang;
 using namespace slang::ast;
@@ -68,28 +68,32 @@ void printDOT(const Netlist& netlist, const std::string& fileName) {
     buffer.append("  node [shape=record];\n");
     for (auto& node : netlist) {
         switch (node->kind) {
-        case NodeKind::PortDeclaration: {
-          auto &portDecl = node->as<NetlistPortDeclaration>();
-          buffer.format("  N{} [label=\"port declaration\\n{}\"]\n", node->ID, portDecl.hierarchicalPath);
-          break;
-        }
-        case NodeKind::VariableDeclaration: {
-          auto &varDecl = node->as<NetlistVariableDeclaration>();
-          buffer.format("  N{} [label=\"variable declaration\\n{}\"]\n", node->ID, varDecl.hierarchicalPath);
-          break;
-        }
-        case NodeKind::VariableAlias: {
-          auto &varAlias = node->as<NetlistVariableAlias>();
-          buffer.format("  N{} [label=\"variable alias\\n{}\"]\n", node->ID, varAlias.hierarchicalPath);
-          break;
-        }
-        case NodeKind::VariableReference: {
-          auto &varRef = node->as<NetlistVariableReference>();
-          buffer.format("  N{} [label=\"{}{}\"]\n", node->ID, varRef.getName(), varRef.selectorString());
-          break;
-        }
-        default:
-          SLANG_UNREACHABLE;
+            case NodeKind::PortDeclaration: {
+                auto& portDecl = node->as<NetlistPortDeclaration>();
+                buffer.format("  N{} [label=\"port declaration\\n{}\"]\n", node->ID,
+                              portDecl.hierarchicalPath);
+                break;
+            }
+            case NodeKind::VariableDeclaration: {
+                auto& varDecl = node->as<NetlistVariableDeclaration>();
+                buffer.format("  N{} [label=\"variable declaration\\n{}\"]\n", node->ID,
+                              varDecl.hierarchicalPath);
+                break;
+            }
+            case NodeKind::VariableAlias: {
+                auto& varAlias = node->as<NetlistVariableAlias>();
+                buffer.format("  N{} [label=\"variable alias\\n{}\"]\n", node->ID,
+                              varAlias.hierarchicalPath);
+                break;
+            }
+            case NodeKind::VariableReference: {
+                auto& varRef = node->as<NetlistVariableReference>();
+                buffer.format("  N{} [label=\"{}{}\"]\n", node->ID, varRef.getName(),
+                              varRef.selectorString());
+                break;
+            }
+            default:
+                SLANG_UNREACHABLE;
         }
     }
     for (auto& node : netlist) {
@@ -144,7 +148,7 @@ void reportPath(Compilation& compilation, const NetlistPath& path) {
         diagEngine.issue(diagnostic);
         OS::print(fmt::format("{}\n", textDiagClient->getString()));
         textDiagClient->clear();
-  }
+    }
 }
 
 int main(int argc, char** argv) {
