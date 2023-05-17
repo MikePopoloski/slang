@@ -29,9 +29,7 @@ Netlist createNetlist(Compilation& compilation) {
 TEST_CASE("Empty module") {
     // Test the simplest path can be traced through a module.
     auto tree = SyntaxTree::fromText(R"(
-module empty (
-  input logic i_value,
-  output logic o_value);
+module empty (input logic i_value, output logic o_value);
 endmodule
 )");
     Compilation compilation;
@@ -50,12 +48,8 @@ endmodule
 TEST_CASE("Pass through a module") {
     // Test the simplest path through a module.
     auto tree = SyntaxTree::fromText(R"(
-module passthrough (
-  input logic i_value,
-  output logic o_value);
-
+module passthrough (input logic i_value, output logic o_value);
   assign o_value = i_value;
-
 endmodule
 )");
     Compilation compilation;
@@ -76,17 +70,11 @@ endmodule
     CHECK(pathFinder.find(*outPort, *inPort).empty());
 }
 
-//===---------------------------------------------------------------------===//
-// Tests for variable splitting
-//===---------------------------------------------------------------------===//
-
 TEST_CASE("Chain of assignments in a sequence using variables") {
     // Test that correct dependencies can be formed from procedural and
     // continuous assignments.
     auto tree = SyntaxTree::fromText(R"(
-module chain_vars (
-  input logic i_value,
-  output logic o_value);
+module chain_vars (input logic i_value, output logic o_value);
 
   logic a, b, c, d, e;
 
@@ -117,12 +105,70 @@ endmodule
               .size() == 12);
 }
 
+//===---------------------------------------------------------------------===//
+// Tests for module instance connectivity.
+//===---------------------------------------------------------------------===//
+
+TEST_CASE("Signal passthrough with a nested module") {
+    // Test that a nested module is connected correctly.
+    auto tree = SyntaxTree::fromText(R"(
+module passthrough(input logic i_value, output logic o_value);
+  assign o_value = i_value;
+endmodule
+
+module nested_passthrough(input logic i_value, output logic o_value);
+  passthrough foo(
+    .i_value(i_value),
+    .o_value(o_value));
+endmodule
+)");
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+    auto netlist = createNetlist(compilation);
+    PathFinder pathFinder(netlist);
+    CHECK(pathFinder
+              .find(*netlist.lookupPort("nested_passthrough.i_value"),
+                    *netlist.lookupPort("nested_passthrough.o_value"))
+              .size() == 4);
+}
+
+TEST_CASE("Signal passthrough with a chain of two nested modules") {
+    // Test that two nested module are connected correctly.
+    auto tree = SyntaxTree::fromText(R"(
+module passthrough(input logic i_value, output logic o_value);
+  assign o_value = i_value;
+endmodule
+
+module nested_passthrough(input logic i_value, output logic o_value);
+  logic value;
+  passthrough foo_a(
+    .i_value(i_value),
+    .o_value(value));
+  passthrough foo_b(
+    .i_value(value),
+    .o_value(o_value));
+endmodule
+)");
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+    auto netlist = createNetlist(compilation);
+    PathFinder pathFinder(netlist);
+    CHECK(pathFinder
+              .find(*netlist.lookupPort("nested_passthrough.i_value"),
+                    *netlist.lookupPort("nested_passthrough.o_value"))
+              .size() == 8);
+}
+
+//===---------------------------------------------------------------------===//
+// Tests for variable splitting
+//===---------------------------------------------------------------------===//
+
 TEST_CASE("Chain of assignments in a sequence using a vector") {
     // As above but this time using a packed array.
     auto tree = SyntaxTree::fromText(R"(
-module chain_array (
-  input logic i_value,
-  output logic o_value);
+module chain_array (input logic i_value, output logic o_value);
 
   logic [4:0] x;
 
@@ -262,7 +308,7 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
     auto netlist = createNetlist(compilation);
-    CHECK(netlist.numNodes() == 20);
+    CHECK(netlist.numNodes() == 19);
     CHECK(netlist.numEdges() == 25);
     PathFinder pathFinder(netlist);
     // i_value -> o_value, check it passes through each stage.
@@ -301,7 +347,7 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
     auto netlist = createNetlist(compilation);
-    CHECK(netlist.numNodes() == 36);
+    CHECK(netlist.numNodes() == 34);
     CHECK(netlist.numEdges() == 50);
     PathFinder pathFinder(netlist);
     // i_value -> o_value, check it passes through each stage.
