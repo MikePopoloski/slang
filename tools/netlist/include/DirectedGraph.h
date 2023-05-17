@@ -13,6 +13,8 @@
 #include <memory>
 #include <vector>
 
+#include "slang/util/Util.h"
+
 namespace netlist {
 
 // Inspired by LLVM's DirectedGraph ADT.
@@ -132,7 +134,7 @@ public:
     /// Populate a result vector of edges from this node to the specified target
     /// node. Return true if at least one edge was found.
     bool getEdgesTo(const NodeType& targetNode, std::vector<EdgeType*>& result) {
-        assert(result.empty() && "Expected the results parameter to be empty");
+        SLANG_ASSERT(result.empty() && "Expected the results parameter to be empty");
         for (auto& edge : edges) {
             if (edge->getTargetNode() == targetNode) {
                 result.push_back(edge.get());
@@ -190,13 +192,13 @@ public:
                                [&nodeToFind](const std::unique_ptr<NodeType>& node) {
                                    return const_cast<const NodeType&>(*node) == nodeToFind;
                                });
-        assert(it != nodes.end() && "Could not find node");
+        SLANG_ASSERT(it != nodes.end() && "Could not find node");
         return it - nodes.begin();
     }
 
     /// Given a node descriptor, return the node by reference.
     NodeType& getNode(node_descriptor node) const {
-        assert(node < nodes.size() && "Node does not exist");
+        SLANG_ASSERT(node < nodes.size() && "Node does not exist");
         return *nodes[node];
     }
 
@@ -244,23 +246,23 @@ public:
 
     /// Add an edge between two existing nodes in the graph.
     EdgeType& addEdge(NodeType& sourceNode, NodeType& targetNode) {
-        assert(findNode(sourceNode) < nodes.size() && "Source node does not exist");
-        assert(findNode(targetNode) < nodes.size() && "Target node does not exist");
+        SLANG_ASSERT(findNode(sourceNode) < nodes.size() && "Source node does not exist");
+        SLANG_ASSERT(findNode(targetNode) < nodes.size() && "Target node does not exist");
         return sourceNode.addEdge(targetNode);
     }
 
     /// Remove an edge between the two specified vertices. Return true if the
     /// edge exists and was removed, and false if it didn't exist.
     bool removeEdge(NodeType& sourceNode, NodeType& targetNode) {
-        assert(findNode(sourceNode) < nodes.size() && "Source node does not exist");
-        assert(findNode(targetNode) < nodes.size() && "Target node does not exist");
+        SLANG_ASSERT(findNode(sourceNode) < nodes.size() && "Source node does not exist");
+        SLANG_ASSERT(findNode(targetNode) < nodes.size() && "Target node does not exist");
         return sourceNode.removeEdge(targetNode);
     }
 
     /// Collect all edges that are incident to the specified node.
     /// Return true if at least one edge was found and false otherwise.
     bool getInEdgesToNode(const NodeType& targetNode, std::vector<EdgeType*>& results) const {
-        assert(results.empty() && "Expected the results parameter to be empty");
+        SLANG_ASSERT(results.empty() && "Expected the results parameter to be empty");
         std::vector<EdgeType*> tempResults;
         for (auto& node : nodes) {
             node->getEdgesTo(targetNode, tempResults);
@@ -272,7 +274,7 @@ public:
 
     /// Return the number of edges eminating from the specified node.
     size_t outDegree(const NodeType& node) const {
-        assert(findNode(node) < nodes.size() && "Node does not exist");
+        SLANG_ASSERT(findNode(node) < nodes.size() && "Node does not exist");
         return node.outDegree();
     }
 

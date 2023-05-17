@@ -15,6 +15,7 @@
 #include <utility>
 
 #include "slang/ast/types/Type.h"
+#include "slang/util/Util.h"
 
 namespace netlist {
 
@@ -47,7 +48,7 @@ private:
             }
             auto& sourceSelector = sourceNode.selectors[selectorDepth];
             auto& targetSelector = targetNode.selectors[selectorDepth];
-            assert(sourceSelector->kind == targetSelector->kind && "selectors do not match");
+            SLANG_ASSERT(sourceSelector->kind == targetSelector->kind && "selectors do not match");
             switch (sourceSelector->kind) {
                 case VariableSelectorKind::ElementSelect:
                     // Matching selectors if the index is the same.

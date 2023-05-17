@@ -112,7 +112,7 @@ void reportPath(Compilation& compilation, const NetlistPath& path) {
         auto* SM = compilation.getSourceManager();
         auto& location = node->symbol.location;
         auto bufferID = location.buffer();
-        assert(node->kind == NodeKind::VariableReference);
+        SLANG_ASSERT(node->kind == NodeKind::VariableReference);
         const auto& varRefNode = node->as<NetlistVariableReference>();
         Diagnostic diagnostic(diag::VariableReference, varRefNode.expression.sourceRange.start());
         diagnostic << varRefNode.expression.sourceRange;

@@ -23,6 +23,7 @@
 #include "slang/diagnostics/TextDiagnosticClient.h"
 #include "slang/syntax/SyntaxTree.h"
 #include "slang/syntax/SyntaxVisitor.h"
+#include "slang/util/Util.h"
 
 using namespace slang;
 
@@ -303,7 +304,7 @@ public:
                     break;
             }
         } else {
-          assert(0 && "Unexpected port without internal symbol");
+          SLANG_ASSERT(0 && "Unexpected port without internal symbol");
         }
     }
 

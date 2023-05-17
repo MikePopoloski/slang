@@ -20,6 +20,7 @@
 #include "slang/diagnostics/TextDiagnosticClient.h"
 #include "slang/syntax/SyntaxTree.h"
 #include "slang/syntax/SyntaxVisitor.h"
+#include "slang/util/Util.h"
 
 using namespace slang;
 
@@ -48,13 +49,13 @@ struct VariableSelectorBase {
 
     template<typename T>
     T& as() {
-        assert(T::isKind(kind));
+        SLANG_ASSERT(T::isKind(kind));
         return *(dynamic_cast<T*>(this));
     }
 
     template<typename T>
     const T& as() const {
-        assert(T::isKind(kind));
+        SLANG_ASSERT(T::isKind(kind));
         return const_cast<T&>(this->as<T>());
     }
 };
@@ -72,7 +73,7 @@ struct VariableElementSelect : public VariableSelectorBase {
 
     size_t getIndexInt() const {
         auto intValue = index.integer().as<size_t>();
-        assert(intValue && "could not convert index to size_t");
+        SLANG_ASSERT(intValue && "could not convert index to size_t");
         return *intValue;
     }
 
@@ -93,13 +94,13 @@ struct VariableRangeSelect : public VariableSelectorBase {
 
     size_t getLeftIndexInt() const {
         auto intValue = leftIndex.integer().as<size_t>();
-        assert(intValue && "could not convert left index to size_t");
+        SLANG_ASSERT(intValue && "could not convert left index to size_t");
         return *intValue;
     }
 
     size_t getRightIndexInt() const {
         auto intValue = rightIndex.integer().as<size_t>();
-        assert(intValue && "could not convert right index to size_t");
+        SLANG_ASSERT(intValue && "could not convert right index to size_t");
         return *intValue;
     }
 
@@ -132,13 +133,13 @@ public:
 
     template<typename T>
     T& as() {
-        assert(T::isKind(kind));
+        SLANG_ASSERT(T::isKind(kind));
         return *(dynamic_cast<T*>(this));
     }
 
     template<typename T>
     const T& as() const {
-        assert(T::isKind(kind));
+        SLANG_ASSERT(T::isKind(kind));
         return const_cast<T&>(this->as<T>());
     }
 
@@ -253,7 +254,7 @@ public:
         auto nodePtr = std::make_unique<NetlistPortDeclaration>(symbol);
         auto& node = nodePtr->as<NetlistPortDeclaration>();
         symbol.getHierarchicalPath(node.hierarchicalPath);
-        assert(lookupPort(nodePtr->hierarchicalPath) == nullptr &&
+        SLANG_ASSERT(lookupPort(nodePtr->hierarchicalPath) == nullptr &&
                "Port declaration already exists");
         nodes.push_back(std::move(nodePtr));
         DEBUG_PRINT("Add port decl " << node.hierarchicalPath << "\n");
@@ -265,7 +266,7 @@ public:
         auto nodePtr = std::make_unique<NetlistVariableDeclaration>(symbol);
         auto& node = nodePtr->as<NetlistVariableDeclaration>();
         symbol.getHierarchicalPath(node.hierarchicalPath);
-        assert(lookupVariable(nodePtr->hierarchicalPath) == nullptr &&
+        SLANG_ASSERT(lookupVariable(nodePtr->hierarchicalPath) == nullptr &&
                "Variable declaration already exists");
         nodes.push_back(std::move(nodePtr));
         DEBUG_PRINT("Add var decl " << node.hierarchicalPath << "\n");

@@ -7,11 +7,14 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include <map>
+#include <vector>
+
+#include "slang/util/Util.h"
+
 #include "DepthFirstSearch.h"
 #include "Netlist.h"
 #include "NetlistPath.h"
-#include <map>
-#include <vector>
 
 namespace netlist {
 
@@ -32,7 +35,7 @@ private:
         void visitEdge(NetlistEdge& edge) {
             auto* sourceNode = &edge.getSourceNode();
             auto* targetNode = &edge.getTargetNode();
-            assert(traversalMap.count(targetNode) == 0 && "node cannot have two parents");
+            SLANG_ASSERT(traversalMap.count(targetNode) == 0 && "node cannot have two parents");
             traversalMap[targetNode] = sourceNode;
         }
 
