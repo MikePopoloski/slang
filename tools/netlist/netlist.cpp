@@ -128,7 +128,7 @@ void writeToFile(std::string_view fileName, std::string_view contents) {
 
 void reportPath(Compilation& compilation, const NetlistPath& path) {
     DiagnosticEngine diagEngine(*compilation.getSourceManager());
-    diagEngine.setMessage(diag::VariableReference, "{}");
+    diagEngine.setMessage(diag::VariableReference, "variable {}");
     diagEngine.setSeverity(diag::VariableReference, DiagnosticSeverity::Note);
     auto textDiagClient = std::make_shared<TextDiagnosticClient>();
     textDiagClient->showColors(true);
@@ -144,7 +144,11 @@ void reportPath(Compilation& compilation, const NetlistPath& path) {
         const auto& varRefNode = node->as<NetlistVariableReference>();
         Diagnostic diagnostic(diag::VariableReference, varRefNode.expression.sourceRange.start());
         diagnostic << varRefNode.expression.sourceRange;
-        diagnostic << std::string("blah...");
+        if (varRefNode.isLeftOperand()) {
+            diagnostic << fmt::format("{} assigned to", varRefNode.getName());
+        } else {
+            diagnostic << fmt::format("{} read from", varRefNode.getName());
+        }
         diagEngine.issue(diagnostic);
         OS::print(fmt::format("{}\n", textDiagClient->getString()));
         textDiagClient->clear();
