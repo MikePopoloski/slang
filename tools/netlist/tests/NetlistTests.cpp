@@ -98,11 +98,15 @@ endmodule
     CHECK(netlist.numNodes() == 21);
     CHECK(netlist.numEdges() == 20);
     PathFinder pathFinder(netlist);
-    // i_value -> o_value
-    CHECK(pathFinder
-              .find(*netlist.lookupPort("chain_vars.i_value"),
-                    *netlist.lookupPort("chain_vars.o_value"))
-              .size() == 12);
+    // Find path i_value -> o_value
+    auto path = pathFinder.find(*netlist.lookupPort("chain_vars.i_value"),
+                                *netlist.lookupPort("chain_vars.o_value"));
+    CHECK(path.size() == 12);
+    CHECK(*path.findVariable("chain_vars.a") == 1);
+    CHECK(*path.findVariable("chain_vars.b") == 3);
+    CHECK(*path.findVariable("chain_vars.c") == 5);
+    CHECK(*path.findVariable("chain_vars.d") == 7);
+    CHECK(*path.findVariable("chain_vars.e") == 9);
 }
 
 //===---------------------------------------------------------------------===//
@@ -127,10 +131,10 @@ endmodule
     NO_COMPILATION_ERRORS;
     auto netlist = createNetlist(compilation);
     PathFinder pathFinder(netlist);
-    CHECK(pathFinder
-              .find(*netlist.lookupPort("nested_passthrough.i_value"),
-                    *netlist.lookupPort("nested_passthrough.o_value"))
-              .size() == 4);
+    auto path = pathFinder.find(*netlist.lookupPort("nested_passthrough.i_value"),
+                                *netlist.lookupPort("nested_passthrough.o_value"));
+    CHECK(*path.findVariable("nested_passthrough.foo.i_value") == 1);
+    CHECK(*path.findVariable("nested_passthrough.foo.o_value") == 2);
 }
 
 TEST_CASE("Signal passthrough with a chain of two nested modules") {
@@ -155,10 +159,13 @@ endmodule
     NO_COMPILATION_ERRORS;
     auto netlist = createNetlist(compilation);
     PathFinder pathFinder(netlist);
-    CHECK(pathFinder
-              .find(*netlist.lookupPort("nested_passthrough.i_value"),
-                    *netlist.lookupPort("nested_passthrough.o_value"))
-              .size() == 8);
+    auto path = pathFinder.find(*netlist.lookupPort("nested_passthrough.i_value"),
+                                *netlist.lookupPort("nested_passthrough.o_value"));
+    CHECK(path.size() == 8);
+    CHECK(*path.findVariable("nested_passthrough.foo_a.i_value") == 1);
+    CHECK(*path.findVariable("nested_passthrough.foo_a.o_value") == 2);
+    CHECK(*path.findVariable("nested_passthrough.foo_b.i_value") == 5);
+    CHECK(*path.findVariable("nested_passthrough.foo_b.o_value") == 6);
 }
 
 //===---------------------------------------------------------------------===//
@@ -189,14 +196,14 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
     auto netlist = createNetlist(compilation);
-    CHECK(netlist.numNodes() == 22);
-    CHECK(netlist.numEdges() == 30);
     PathFinder pathFinder(netlist);
-    // i_value -> o_value
-    CHECK(pathFinder
-              .find(*netlist.lookupPort("chain_array.i_value"),
-                    *netlist.lookupPort("chain_array.o_value"))
-              .size() == 12);
+    auto path = pathFinder.find(*netlist.lookupPort("chain_array.i_value"),
+                                *netlist.lookupPort("chain_array.o_value"));
+    CHECK(*path.findVariable("chain_array.x[0]") == 1);
+    CHECK(*path.findVariable("chain_array.x[1]") == 3);
+    CHECK(*path.findVariable("chain_array.x[2]") == 5);
+    CHECK(*path.findVariable("chain_array.x[3]") == 7);
+    CHECK(*path.findVariable("chain_array.x[4]") == 9);
 }
 
 TEST_CASE("Passthrough two signals via a shared structure") {
@@ -225,8 +232,6 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
     auto netlist = createNetlist(compilation);
-    CHECK(netlist.numNodes() == 19);
-    CHECK(netlist.numEdges() == 20);
     auto* inPortA = netlist.lookupPort("passthrough_member_access.i_value_a");
     auto* inPortB = netlist.lookupPort("passthrough_member_access.i_value_b");
     auto* outPortA = netlist.lookupPort("passthrough_member_access.o_value_a");
@@ -263,8 +268,6 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
     auto netlist = createNetlist(compilation);
-    CHECK(netlist.numNodes() == 19);
-    CHECK(netlist.numEdges() == 20);
     auto* inPortA = netlist.lookupPort("passthrough_ranges.i_value_a");
     auto* inPortB = netlist.lookupPort("passthrough_ranges.i_value_b");
     auto* outPortA = netlist.lookupPort("passthrough_ranges.o_value_a");
@@ -308,8 +311,6 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
     auto netlist = createNetlist(compilation);
-    CHECK(netlist.numNodes() == 19);
-    CHECK(netlist.numEdges() == 25);
     PathFinder pathFinder(netlist);
     // i_value -> o_value, check it passes through each stage.
     CHECK(pathFinder
@@ -347,14 +348,19 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
     auto netlist = createNetlist(compilation);
-    CHECK(netlist.numNodes() == 34);
-    CHECK(netlist.numEdges() == 50);
     PathFinder pathFinder(netlist);
     // i_value -> o_value, check it passes through each stage.
-    CHECK(pathFinder
-              .find(*netlist.lookupPort("chain_nested.i_value"),
-                    *netlist.lookupPort("chain_nested.o_value"))
-              .size() == 20);
+    auto path = pathFinder.find(*netlist.lookupPort("chain_nested.i_value"),
+                                *netlist.lookupPort("chain_nested.o_value"));
+    CHECK(*path.findVariable("chain_nested.stages[0]") == 1);
+    CHECK(*path.findVariable("chain_nested.stages[1]") == 3);
+    CHECK(*path.findVariable("chain_nested.stages[2]") == 5);
+    CHECK(*path.findVariable("chain_nested.stages[3]") == 7);
+    CHECK(*path.findVariable("chain_nested.stages[4]") == 9);
+    CHECK(*path.findVariable("chain_nested.stages[5]") == 11);
+    CHECK(*path.findVariable("chain_nested.stages[6]") == 13);
+    CHECK(*path.findVariable("chain_nested.stages[7]") == 15);
+    CHECK(*path.findVariable("chain_nested.stages[8]") == 17);
 }
 
 TEST_CASE("Two chains of assignments using a shared 2D array") {

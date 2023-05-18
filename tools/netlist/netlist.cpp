@@ -70,26 +70,26 @@ void printDOT(const Netlist& netlist, const std::string& fileName) {
         switch (node->kind) {
             case NodeKind::PortDeclaration: {
                 auto& portDecl = node->as<NetlistPortDeclaration>();
-                buffer.format("  N{} [label=\"port declaration\\n{}\"]\n", node->ID,
+                buffer.format("  N{} [label=\"Port declaration\\n{}\"]\n", node->ID,
                               portDecl.hierarchicalPath);
                 break;
             }
             case NodeKind::VariableDeclaration: {
                 auto& varDecl = node->as<NetlistVariableDeclaration>();
-                buffer.format("  N{} [label=\"variable declaration\\n{}\"]\n", node->ID,
+                buffer.format("  N{} [label=\"Variable declaration\\n{}\"]\n", node->ID,
                               varDecl.hierarchicalPath);
                 break;
             }
             case NodeKind::VariableAlias: {
                 auto& varAlias = node->as<NetlistVariableAlias>();
-                buffer.format("  N{} [label=\"variable alias\\n{}\"]\n", node->ID,
+                buffer.format("  N{} [label=\"Variable alias\\n{}\"]\n", node->ID,
                               varAlias.hierarchicalPath);
                 break;
             }
             case NodeKind::VariableReference: {
                 auto& varRef = node->as<NetlistVariableReference>();
-                buffer.format("  N{} [label=\"{}{}\"]\n", node->ID, varRef.getName(),
-                              varRef.selectorString());
+                buffer.format("  N{} [label=\"{}\\n{}\"]\n", node->ID, varRef.toString(),
+                    varRef.isLeftOperand() ? "[Assigned to]" : "");
                 break;
             }
             default:

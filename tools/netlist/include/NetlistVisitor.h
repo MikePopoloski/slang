@@ -61,12 +61,11 @@ static void connectVarToVar(Netlist& netlist, NetlistNode& sourceVarNode,
 class VariableReferenceVisitor : public ast::ASTVisitor<VariableReferenceVisitor, false, true> {
 public:
     explicit VariableReferenceVisitor(Netlist& netlist, std::vector<NetlistNode*>& visitList,
-                                      ast::EvalContext& evalCtx) :
-        netlist(netlist),
-        visitList(visitList), evalCtx(evalCtx) {}
+                                      ast::EvalContext& evalCtx, bool leftOperand) :
+        netlist(netlist), visitList(visitList), evalCtx(evalCtx), leftOperand(leftOperand) {}
 
     void handle(const ast::NamedValueExpression& expr) {
-        auto& node = netlist.addVariableReference(expr.symbol, expr);
+        auto& node = netlist.addVariableReference(expr.symbol, expr, leftOperand);
         visitList.push_back(&node);
         for (auto* selector : selectors) {
             if (selector->kind == ast::ExpressionKind::ElementSelect) {
@@ -105,6 +104,7 @@ private:
     Netlist& netlist;
     std::vector<NetlistNode*>& visitList;
     ast::EvalContext& evalCtx;
+    bool leftOperand;
     std::vector<const ast::Expression*> selectors;
 };
 
@@ -119,12 +119,12 @@ public:
         // Collect variable references on the left-hand side of the assignment.
         std::vector<NetlistNode*> visitListLHS, visitListRHS;
         {
-            VariableReferenceVisitor visitor(netlist, visitListLHS, evalCtx);
+            VariableReferenceVisitor visitor(netlist, visitListLHS, evalCtx, true);
             expr.left().visit(visitor);
         }
         // Collect variable references on the right-hand side of the assignment.
         {
-            VariableReferenceVisitor visitor(netlist, visitListRHS, evalCtx);
+            VariableReferenceVisitor visitor(netlist, visitListRHS, evalCtx, false);
             expr.right().visit(visitor);
         }
         // Add edge from LHS variable refrence to variable declaration.
@@ -345,7 +345,12 @@ public:
             // Collect variable references in the port expression.
             std::vector<NetlistNode*> exprVisitList;
             ast::EvalContext evalCtx(compilation);
-            VariableReferenceVisitor visitor(netlist, exprVisitList, evalCtx);
+            auto portDirection = portConnection->port.as<ast::PortSymbol>().direction;
+            // The port is effectively the target of an assignment if it is an
+            // input.
+            bool isLeftOperand = portDirection == ast::ArgumentDirection::In ||
+                                 portDirection == ast::ArgumentDirection::InOut;
+            VariableReferenceVisitor visitor(netlist, exprVisitList, evalCtx, isLeftOperand);
             portConnection->getExpression()->visit(visitor);
             // Given a port hookup of the form:
             //   .foo(expr(x, y))
@@ -359,7 +364,7 @@ public:
             //   var decl x -> var ref x -> port var ref foo
             //   var decl y <- var ref y <- port var ref foo
             for (auto* node : exprVisitList) {
-                switch (portConnection->port.as<ast::PortSymbol>().direction) {
+                switch (portDirection) {
                     case ast::ArgumentDirection::In:
                         connectDeclToVar(netlist, *node, getSymbolHierPath(node->symbol));
                         connectVarToDecl(netlist, *node, getSymbolHierPath(portConnection->port));

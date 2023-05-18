@@ -10,7 +10,6 @@
 #include "Config.h"
 #include "Debug.h"
 #include "DirectedGraph.h"
-#include "NetlistPath.h"
 #include "fmt/color.h"
 #include "fmt/format.h"
 #include <iostream>
@@ -123,6 +122,18 @@ struct VariableMemberAccess : public VariableSelectorBase {
     std::string toString() const override { return fmt::format(".{}", name); }
 };
 
+/// A class representing a dependency between two variables in the netlist.
+class NetlistEdge : public DirectedEdge<NetlistNode, NetlistEdge> {
+public:
+    NetlistEdge(NetlistNode& sourceNode, NetlistNode& targetNode) :
+        DirectedEdge(sourceNode, targetNode) {}
+
+    void disable() { disabled = true; }
+
+public:
+    bool disabled{};
+};
+
 /// A class representing a node in the netlist, corresponding to the appearance
 /// of a variable symbol, with zero or more selectors applied.
 class NetlistNode : public Node<NetlistNode, NetlistEdge> {
@@ -143,6 +154,17 @@ public:
         return const_cast<T&>(this->as<T>());
     }
 
+    /// Return the out degree of this node, including only enabled edges.
+    size_t outDegree() {
+        size_t count = 0;
+        for (auto &edge : edges) {
+            if (!edge->disabled) {
+                count++;
+            }
+        }
+        return count;
+    }
+
     std::string_view getName() const { return symbol.name; }
 
 public:
@@ -155,18 +177,6 @@ private:
 };
 
 size_t NetlistNode::nextID = 0;
-
-/// A class representing a dependency between two variables in the netlist.
-class NetlistEdge : public DirectedEdge<NetlistNode, NetlistEdge> {
-public:
-    NetlistEdge(NetlistNode& sourceNode, NetlistNode& targetNode) :
-        DirectedEdge(sourceNode, targetNode) {}
-
-    void disable() { disabled = true; }
-
-public:
-    bool disabled{};
-};
 
 /// A class representing a port declaration.
 class NetlistPortDeclaration : public NetlistNode {
@@ -209,8 +219,8 @@ class NetlistVariableReference : public NetlistNode {
 public:
     using SelectorsListType = std::vector<std::unique_ptr<VariableSelectorBase>>;
 
-    NetlistVariableReference(const ast::Symbol& symbol, const ast::Expression& expr) :
-        NetlistNode(NodeKind::VariableReference, symbol), expression(expr) {}
+    NetlistVariableReference(const ast::Symbol& symbol, const ast::Expression& expr, bool leftOperand) :
+        NetlistNode(NodeKind::VariableReference, symbol), expression(expr), leftOperand(leftOperand) {}
 
     void addElementSelect(const ConstantValue& index) {
         selectors.emplace_back(std::make_unique<VariableElementSelect>(index));
@@ -224,6 +234,10 @@ public:
 
     static bool isKind(NodeKind otherKind) { return otherKind == NodeKind::VariableReference; }
 
+    bool isLeftOperand() const { return leftOperand; }
+
+    /// Return a string representation of the selectors applied to this
+    /// variable reference.
     std::string selectorString() const {
         std::string buffer;
         for (auto& selector : selectors) {
@@ -232,10 +246,12 @@ public:
         return buffer;
     }
 
+    /// Return a string representation of this variable reference.
     std::string toString() const { return fmt::format("{}{}", getName(), selectorString()); }
 
 public:
     const ast::Expression& expression;
+    bool leftOperand;
     SelectorsListType selectors;
 };
 
@@ -280,8 +296,9 @@ public:
 
     /// Add a variable reference node to the netlist.
     NetlistVariableReference& addVariableReference(const ast::Symbol& symbol,
-                                                   const ast::Expression& expr) {
-        auto nodePtr = std::make_unique<NetlistVariableReference>(symbol, expr);
+                                                   const ast::Expression& expr,
+                                                   bool leftOperand) {
+        auto nodePtr = std::make_unique<NetlistVariableReference>(symbol, expr, leftOperand);
         auto& node = nodePtr->as<NetlistVariableReference>();
         nodes.push_back(std::move(nodePtr));
         DEBUG_PRINT("Add var ref " << symbol.name << "\n");

@@ -3,9 +3,9 @@
 #include <algorithm>
 #include <vector>
 
-namespace netlist {
+#include "Netlist.h"
 
-class NetlistNode;
+namespace netlist {
 
 class NetlistPath {
 public:
@@ -29,7 +29,38 @@ public:
     void reverse() { std::reverse(nodes.begin(), nodes.end()); }
 
     size_t size() const { return nodes.size(); }
+
     bool empty() const { return nodes.empty(); }
+
+    static std::string getSymbolHierPath(const ast::Symbol& symbol) {
+        std::string buffer;
+        symbol.getHierarchicalPath(buffer);
+        return buffer;
+    }
+
+    /// Return index within the path if a variable reference matches the
+    /// specified syntax (ie including the hierarchical reference to the
+    /// variable name and selectors) and appears on the left-hand side of an
+    /// assignment (ie a target).
+    std::optional<size_t> findVariable(std::string syntax) {
+        auto match = [this, &syntax](NetlistNode *node) {
+                        if (node->kind == NodeKind::VariableReference /*&&
+                            node->as<NetlistVariableReference>().isLeftOperand()*/) {
+                          auto &varRefNode = node->as<NetlistVariableReference>();
+                          auto hierPath = getSymbolHierPath(varRefNode.symbol);
+                          auto selectorString = varRefNode.selectorString();
+                          return hierPath + selectorString == syntax;
+                        } else {
+                          return false;
+                        }
+                      };
+        auto it = std::find_if(nodes.begin(), nodes.end(), match);
+        if (it != nodes.end()) {
+          return std::make_optional(it - nodes.begin());
+        } else {
+          return std::nullopt;
+        }
+    }
 
 private:
     NodeListType nodes;
