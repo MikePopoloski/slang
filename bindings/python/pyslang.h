@@ -167,6 +167,7 @@ private:
     std::span<T> value;
 };
 
+#ifdef SLANG_USE_BOOST
 // Convert between flat_hash_map and python dict.
 template<typename Key, typename Value, typename Hash, typename Equal, typename Alloc>
 struct type_caster<flat_hash_map<Key, Value, Hash, Equal, Alloc>>
@@ -176,6 +177,7 @@ struct type_caster<flat_hash_map<Key, Value, Hash, Equal, Alloc>>
 template<typename Key, typename Hash, typename Equal, typename Alloc>
 struct type_caster<flat_hash_set<Key, Hash, Equal, Alloc>>
     : set_caster<flat_hash_set<Key, Hash, Equal, Alloc>, Key> {};
+#endif
 
 template<typename type>
 class type_caster<not_null<type>> {
