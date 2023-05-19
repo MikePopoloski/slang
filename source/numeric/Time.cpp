@@ -7,6 +7,7 @@
 //------------------------------------------------------------------------------
 #include "slang/numeric/Time.h"
 
+#include <cmath>
 #include <fmt/core.h>
 #include <ostream>
 
