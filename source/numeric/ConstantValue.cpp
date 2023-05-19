@@ -9,8 +9,8 @@
 
 #include <ostream>
 
-#include "slang/util/Hash.h"
 #include "slang/text/FormatBuffer.h"
+#include "slang/util/Hash.h"
 
 namespace slang {
 
