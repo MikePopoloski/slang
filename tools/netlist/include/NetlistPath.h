@@ -6,6 +6,7 @@
 
 namespace netlist {
 
+/// A class represening a path traversing nodes in the netlist.
 class NetlistPath {
 public:
     using NodeListType = std::vector<NetlistNode*>;
@@ -43,8 +44,7 @@ public:
     /// assignment (ie a target).
     std::optional<size_t> findVariable(std::string syntax) {
         auto match = [this, &syntax](NetlistNode* node) {
-            if (node->kind == NodeKind::VariableReference /*&&
-                            node->as<NetlistVariableReference>().isLeftOperand()*/) {
+            if (node->kind == NodeKind::VariableReference) {
                 auto& varRefNode = node->as<NetlistVariableReference>();
                 auto hierPath = getSymbolHierPath(varRefNode.symbol);
                 auto selectorString = varRefNode.selectorString();
@@ -67,4 +67,4 @@ private:
     NodeListType nodes;
 };
 
-} // End namespace netlist.
+} // namespace netlist

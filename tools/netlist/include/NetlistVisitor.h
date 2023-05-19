@@ -35,14 +35,14 @@ static std::string getSymbolHierPath(const ast::Symbol& symbol) {
     return buffer;
 }
 
-static void connectDeclToVar(Netlist& netlist, NetlistNode& varNode, std::string hierarchicalPath) {
+static void connectDeclToVar(Netlist& netlist, NetlistNode& varNode, const std::string& hierarchicalPath) {
     auto* variableNode = netlist.lookupVariable(hierarchicalPath);
     netlist.addEdge(*variableNode, varNode);
     DEBUG_PRINT(
         fmt::format("Edge decl {} to ref {}\n", variableNode->getName(), varNode.getName()));
 }
 
-static void connectVarToDecl(Netlist& netlist, NetlistNode& varNode, std::string hierarchicalPath) {
+static void connectVarToDecl(Netlist& netlist, NetlistNode& varNode, const std::string& hierarchicalPath) {
     auto* portNode = netlist.lookupVariable(hierarchicalPath);
     netlist.addEdge(varNode, *portNode);
     DEBUG_PRINT(
@@ -57,7 +57,7 @@ static void connectVarToVar(Netlist& netlist, NetlistNode& sourceVarNode,
 }
 
 /// An AST visitor to identify variable references with selectors in
-/// expressions only.
+/// expressions, adding them to a visit list during the traversal.
 class VariableReferenceVisitor : public ast::ASTVisitor<VariableReferenceVisitor, false, true> {
 public:
     explicit VariableReferenceVisitor(Netlist& netlist, std::vector<NetlistNode*>& visitList,
@@ -105,6 +105,7 @@ private:
     Netlist& netlist;
     std::vector<NetlistNode*>& visitList;
     ast::EvalContext& evalCtx;
+    /// Whether this traversal is the target of an assignment or not.
     bool leftOperand;
     std::vector<const ast::Expression*> selectors;
 };
@@ -282,13 +283,13 @@ private:
     ast::EvalContext evalCtx;
 };
 
-/// A base visitor that traverses the AST and builds a netlist representation.
+/// A visitor that traverses the AST and builds a netlist representation.
 class NetlistVisitor : public ast::ASTVisitor<NetlistVisitor, true, false> {
 public:
     explicit NetlistVisitor(ast::Compilation& compilation, Netlist& netlist) :
         compilation(compilation), netlist(netlist) {}
 
-    /// Connect ports to their corresponding variables.
+    /// Connect ports of a module instance to their corresponding variables.
     void connectInstancePort(NetlistNode& port) {
         if (auto* internalSymbol = port.symbol.as<ast::PortSymbol>().internalSymbol) {
             std::string pathBuffer;
@@ -310,7 +311,7 @@ public:
             }
         }
         else {
-            SLANG_ASSERT(0 && "Unexpected port without internal symbol");
+            SLANG_UNREACHABLE;
         }
     }
 
@@ -388,10 +389,6 @@ public:
         symbol.body.visit(*this);
     }
 
-    ///// Instance body.
-    // void handle(const ast::InstanceBodySymbol& symbol) {
-    // }
-
     /// Procedural block.
     void handle(const ast::ProceduralBlockSymbol& symbol) {
         ProceduralBlockVisitor visitor(compilation, netlist);
@@ -410,4 +407,4 @@ private:
     Netlist& netlist;
 };
 
-} // End namespace netlist.
+} // namespace netlist

@@ -112,9 +112,23 @@ void writeToFile(Stream& os, std::string_view fileName, String contents) {
     os.write(contents.data(), contents.size());
     os.flush();
     if (!os) {
-        SLANG_THROW(std::runtime_error(fmt::format("Unable to write AST to '{}'", fileName)));
+        SLANG_THROW(std::runtime_error(fmt::format("Unable to write to '{}'", fileName)));
     }
 }
+
+#if defined(_MSC_VER)
+
+void writeToFile(std::string_view fileName, std::string_view contents) {
+    if (fileName == "-") {
+        writeToFile(std::wcout, "stdout", widen(contents));
+    }
+    else {
+        std::ofstream file(widen(fileName));
+        writeToFile(file, fileName, contents);
+    }
+}
+
+#else
 
 void writeToFile(std::string_view fileName, std::string_view contents) {
     if (fileName == "-") {
@@ -125,6 +139,8 @@ void writeToFile(std::string_view fileName, std::string_view contents) {
         writeToFile(file, fileName, contents);
     }
 }
+
+#endif
 
 void reportPath(Compilation& compilation, const NetlistPath& path) {
     DiagnosticEngine diagEngine(*compilation.getSourceManager());

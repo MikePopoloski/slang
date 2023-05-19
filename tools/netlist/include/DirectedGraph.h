@@ -17,9 +17,6 @@
 
 namespace netlist {
 
-// Inspired by LLVM's DirectedGraph ADT.
-// https://llvm.org/doxygen/DirectedGraph_8h_source.html
-
 /// A class to represent a directed edge in a graph.
 template<class NodeType, class EdgeType>
 class DirectedEdge {
@@ -301,4 +298,4 @@ protected:
     NodeListType nodes;
 };
 
-} // End namespace netlist.
+} // namespace netlist

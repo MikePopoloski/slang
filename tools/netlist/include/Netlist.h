@@ -38,12 +38,12 @@ enum class NodeKind {
 
 enum class VariableSelectorKind { ElementSelect, RangeSelect, MemberAccess };
 
+/// Base class representing various selectors that can be applied to references
+/// to structured variables (eg vectors, structs, unions).
 struct VariableSelectorBase {
     VariableSelectorKind kind;
     explicit VariableSelectorBase(VariableSelectorKind kind) : kind(kind) {}
     virtual ~VariableSelectorBase() = default;
-    // virtual bool operator==(const VariableSelectorBase &E) const = 0;
-    // virtual bool operator!=(const VariableSelectorBase &E) const = 0;
     virtual std::string toString() const = 0;
 
     template<typename T>
@@ -252,8 +252,12 @@ public:
     std::string toString() const { return fmt::format("{}{}", getName(), selectorString()); }
 
 public:
+    /// The expression containing the variable reference.
     const ast::Expression& expression;
+    /// Whether the variable reference is assignd to (ie appearing on the
+    /// left-hand side of an assignent), or otherwise read from.
     bool leftOperand;
+    /// Selectors applied to the variable reference.
     SelectorsListType selectors;
 };
 

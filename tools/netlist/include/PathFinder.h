@@ -1,6 +1,6 @@
 //------------------------------------------------------------------------------
 //! @file PathFinder.h
-//! @brief Find paths in the netlist.
+//! @brief Find paths between two points in the netlist.
 //
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
@@ -17,6 +17,7 @@
 
 namespace netlist {
 
+/// Find a path between two points in a netlist.
 class PathFinder {
 private:
     /// Depth-first traversal produces a tree sub graph and as such, each node
@@ -89,4 +90,4 @@ private:
     Netlist& netlist;
 };
 
-} // End namespace netlist.
+} // namespace netlist

@@ -1,8 +1,7 @@
 //------------------------------------------------------------------------------
 //! @file SplitVariables.h
-//! @brief A class that performs a transformation on the netlist graph to split
-//         variable declaration nodes with structured types such that false
-//         dependencies between input and output edges are removed.
+//! @brief Transform netlist variable nodes to reflect connections with
+///        structured variables.
 //
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
@@ -137,4 +136,4 @@ private:
     Netlist& netlist;
 };
 
-} // End namespace netlist.
+} // namespace netlist

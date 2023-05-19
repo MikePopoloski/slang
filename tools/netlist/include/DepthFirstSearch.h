@@ -1,6 +1,6 @@
 //------------------------------------------------------------------------------
 //! @file DepthFirstSearch.h
-//! @brief Implementation of depth-first search of a directed graph.
+//! @brief Implementation of depth-first search on a directed graph.
 //
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
@@ -20,6 +20,9 @@ struct select_all {
     }
 };
 
+/// Depth-first search on a directed graph. A visitor class provides visibility
+/// to the caller of visits to edges and nodes. An optional edge predicate
+/// selects which edges can be included in the traversal.
 template<class NodeType, class EdgeType, class Visitor, class EdgePredicate = select_all>
 class DepthFirstSearch {
 public:
@@ -76,4 +79,4 @@ private:
     std::vector<VisitStackElement> visitStack;
 };
 
-} // End namespace netlist.
+} // namespace netlist

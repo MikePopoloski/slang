@@ -9,12 +9,12 @@
 
 namespace netlist {
 
+/// A singleton to hold global configuration options.
 class Config {
-private:
 public:
-    bool debugEnabled;
+    bool debugEnabled{};
 
-    Config() : debugEnabled(false){};
+    Config() = default;
 
     static Config& getInstance() {
         static Config instance;
@@ -26,4 +26,4 @@ public:
     void operator=(Config const&) = delete;
 };
 
-} // End namespace netlist.
+} // namespace netlist
