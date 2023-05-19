@@ -35,14 +35,16 @@ static std::string getSymbolHierPath(const ast::Symbol& symbol) {
     return buffer;
 }
 
-static void connectDeclToVar(Netlist& netlist, NetlistNode& varNode, const std::string& hierarchicalPath) {
+static void connectDeclToVar(Netlist& netlist, NetlistNode& varNode,
+                             const std::string& hierarchicalPath) {
     auto* variableNode = netlist.lookupVariable(hierarchicalPath);
     netlist.addEdge(*variableNode, varNode);
     DEBUG_PRINT(
         fmt::format("Edge decl {} to ref {}\n", variableNode->getName(), varNode.getName()));
 }
 
-static void connectVarToDecl(Netlist& netlist, NetlistNode& varNode, const std::string& hierarchicalPath) {
+static void connectVarToDecl(Netlist& netlist, NetlistNode& varNode,
+                             const std::string& hierarchicalPath) {
     auto* portNode = netlist.lookupVariable(hierarchicalPath);
     netlist.addEdge(varNode, *portNode);
     DEBUG_PRINT(
