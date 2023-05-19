@@ -49,7 +49,7 @@ struct VariableSelectorBase {
     template<typename T>
     T& as() {
         SLANG_ASSERT(T::isKind(kind));
-        return *(dynamic_cast<T*>(this));
+        return *(static_cast<T*>(this));
     }
 
     template<typename T>
@@ -145,7 +145,7 @@ public:
     template<typename T>
     T& as() {
         SLANG_ASSERT(T::isKind(kind));
-        return *(dynamic_cast<T*>(this));
+        return *(static_cast<T*>(this));
     }
 
     template<typename T>
