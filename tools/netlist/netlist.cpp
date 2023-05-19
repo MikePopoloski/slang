@@ -89,7 +89,7 @@ void printDOT(const Netlist& netlist, const std::string& fileName) {
             case NodeKind::VariableReference: {
                 auto& varRef = node->as<NetlistVariableReference>();
                 buffer.format("  N{} [label=\"{}\\n{}\"]\n", node->ID, varRef.toString(),
-                    varRef.isLeftOperand() ? "[Assigned to]" : "");
+                              varRef.isLeftOperand() ? "[Assigned to]" : "");
                 break;
             }
             default:
@@ -146,7 +146,8 @@ void reportPath(Compilation& compilation, const NetlistPath& path) {
         diagnostic << varRefNode.expression.sourceRange;
         if (varRefNode.isLeftOperand()) {
             diagnostic << fmt::format("{} assigned to", varRefNode.getName());
-        } else {
+        }
+        else {
             diagnostic << fmt::format("{} read from", varRefNode.getName());
         }
         diagEngine.issue(diagnostic);

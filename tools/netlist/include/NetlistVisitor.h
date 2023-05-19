@@ -62,7 +62,8 @@ class VariableReferenceVisitor : public ast::ASTVisitor<VariableReferenceVisitor
 public:
     explicit VariableReferenceVisitor(Netlist& netlist, std::vector<NetlistNode*>& visitList,
                                       ast::EvalContext& evalCtx, bool leftOperand) :
-        netlist(netlist), visitList(visitList), evalCtx(evalCtx), leftOperand(leftOperand) {}
+        netlist(netlist),
+        visitList(visitList), evalCtx(evalCtx), leftOperand(leftOperand) {}
 
     void handle(const ast::NamedValueExpression& expr) {
         auto& node = netlist.addVariableReference(expr.symbol, expr, leftOperand);

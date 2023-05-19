@@ -157,7 +157,7 @@ public:
     /// Return the out degree of this node, including only enabled edges.
     size_t outDegree() {
         size_t count = 0;
-        for (auto &edge : edges) {
+        for (auto& edge : edges) {
             if (!edge->disabled) {
                 count++;
             }
@@ -219,8 +219,10 @@ class NetlistVariableReference : public NetlistNode {
 public:
     using SelectorsListType = std::vector<std::unique_ptr<VariableSelectorBase>>;
 
-    NetlistVariableReference(const ast::Symbol& symbol, const ast::Expression& expr, bool leftOperand) :
-        NetlistNode(NodeKind::VariableReference, symbol), expression(expr), leftOperand(leftOperand) {}
+    NetlistVariableReference(const ast::Symbol& symbol, const ast::Expression& expr,
+                             bool leftOperand) :
+        NetlistNode(NodeKind::VariableReference, symbol),
+        expression(expr), leftOperand(leftOperand) {}
 
     void addElementSelect(const ConstantValue& index) {
         selectors.emplace_back(std::make_unique<VariableElementSelect>(index));
@@ -296,8 +298,7 @@ public:
 
     /// Add a variable reference node to the netlist.
     NetlistVariableReference& addVariableReference(const ast::Symbol& symbol,
-                                                   const ast::Expression& expr,
-                                                   bool leftOperand) {
+                                                   const ast::Expression& expr, bool leftOperand) {
         auto nodePtr = std::make_unique<NetlistVariableReference>(symbol, expr, leftOperand);
         auto& node = nodePtr->as<NetlistVariableReference>();
         nodes.push_back(std::move(nodePtr));
