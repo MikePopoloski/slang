@@ -1475,6 +1475,9 @@ module m;
     c c4(.*, .c(), .r(), 5);
 
     int b;
+
+    initial c c5(1, 2, foo);
+    c c6(1, 2, bar);
 endmodule
 )");
 
@@ -1482,7 +1485,7 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 16);
+    REQUIRE(diags.size() == 17);
     CHECK(diags[0].code == diag::ExpectedIdentifier);
     CHECK(diags[1].code == diag::CheckerArgCannotBeEmpty);
     CHECK(diags[2].code == diag::ExpressionNotAssignable);
@@ -1499,4 +1502,5 @@ endmodule
     CHECK(diags[13].code == diag::CheckerArgCannotBeEmpty);
     CHECK(diags[14].code == diag::CheckerArgCannotBeEmpty);
     CHECK(diags[15].code == diag::MixingOrderedAndNamedPorts);
+    CHECK(diags[16].code == diag::UndeclaredIdentifier);
 }

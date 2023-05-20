@@ -1294,7 +1294,9 @@ void createCheckers(const CheckerSymbol& checker, const TSyntax& syntax, const A
 
     for (auto instance : syntax.instances) {
         path.clear();
-        createImplicitNets(*instance, context, netType, implicitNetNames, implicitNets);
+
+        if (!isProcedural)
+            createImplicitNets(*instance, context, netType, implicitNetNames, implicitNets);
 
         if (!instance->decl) {
             context.addDiag(diag::InstanceNameRequired, instance->sourceRange());
