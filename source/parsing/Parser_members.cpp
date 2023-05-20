@@ -2190,7 +2190,7 @@ AssertionItemPortListSyntax* Parser::parseAssertionItemPortList(SyntaxKind paren
     SmallVector<TokenOrSyntax, 4> buffer;
     Token closeParen;
     parseList<isPossiblePropertyPortItem, isEndOfParenList>(
-        buffer, TokenKind::CloseParenthesis, TokenKind::Comma, closeParen, RequireItems::True,
+        buffer, TokenKind::CloseParenthesis, TokenKind::Comma, closeParen, RequireItems::False,
         diag::ExpectedAssertionItemPort,
         [this, parentKind] { return &parseAssertionItemPort(parentKind); });
 

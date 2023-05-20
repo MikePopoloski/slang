@@ -1413,7 +1413,7 @@ CheckerInstanceSymbol& CheckerInstanceSymbol::fromSyntax(
 
         auto setDefault = [&](std::optional<DeferredSourceRange> explicitRange) {
             if (!port->defaultValueSyntax || port->direction != ArgumentDirection::In) {
-                auto code = explicitRange ? diag::ArgCannotBeEmpty : diag::UnconnectedArg;
+                auto code = explicitRange ? diag::CheckerArgCannotBeEmpty : diag::UnconnectedArg;
                 auto& diag = context.addDiag(code, explicitRange ? explicitRange->get()
                                                                  : syntax.sourceRange());
                 diag << port->name;
@@ -1436,8 +1436,9 @@ CheckerInstanceSymbol& CheckerInstanceSymbol::fromSyntax(
                 // If this is a wildcard connection, we're allowed to use the port's default value,
                 // if it has one.
                 if (isWildcard && port->defaultValueSyntax &&
-                    port->direction == ArgumentDirection::In)
+                    port->direction == ArgumentDirection::In) {
                     return port->defaultValueSyntax;
+                }
 
                 context.addDiag(diag::ImplicitNamedPortNotFound, range.get()) << port->name;
                 return nullptr;
@@ -1488,7 +1489,8 @@ CheckerInstanceSymbol& CheckerInstanceSymbol::fromSyntax(
                     // connection, so we never take the default value here.
                     expr = conn.expr;
                     if (!expr) {
-                        auto& diag = context.addDiag(diag::ArgCannotBeEmpty, conn.sourceRange());
+                        auto& diag = context.addDiag(diag::CheckerArgCannotBeEmpty,
+                                                     conn.sourceRange());
                         diag << port->name;
                     }
                 }

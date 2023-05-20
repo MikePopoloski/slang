@@ -1450,3 +1450,53 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Checker port connection errors") {
+    auto tree = SyntaxTree::fromText(R"(
+package p;
+    real prq;
+    bit bc;
+    checker c(a, b, output bit c = bc, input real r = prq);
+        initial $display(a, b, r);
+        always_comb c = 1;
+
+        checker d(input untyped);
+        endchecker
+
+        d d1();
+    endchecker
+endpackage
+
+module m;
+    import p::*;
+    c c1(1, , 3, 4, 5);
+    c c2();
+    c c3(.a(), .b(1), .q(3));
+    c c4(.*, .c(), .r(), 5);
+
+    int b;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 16);
+    CHECK(diags[0].code == diag::ExpectedIdentifier);
+    CHECK(diags[1].code == diag::CheckerArgCannotBeEmpty);
+    CHECK(diags[2].code == diag::ExpressionNotAssignable);
+    CHECK(diags[3].code == diag::WidthExpand);
+    CHECK(diags[4].code == diag::TooManyPortConnections);
+    CHECK(diags[5].code == diag::UnconnectedArg);
+    CHECK(diags[6].code == diag::UnconnectedArg);
+    CHECK(diags[7].code == diag::UnconnectedArg);
+    CHECK(diags[8].code == diag::UnconnectedArg);
+    CHECK(diags[9].code == diag::CheckerArgCannotBeEmpty);
+    CHECK(diags[10].code == diag::PortDoesNotExist);
+    CHECK(diags[11].code == diag::ImplicitNamedPortNotFound);
+    CHECK(diags[12].code == diag::UsedBeforeDeclared);
+    CHECK(diags[13].code == diag::CheckerArgCannotBeEmpty);
+    CHECK(diags[14].code == diag::CheckerArgCannotBeEmpty);
+    CHECK(diags[15].code == diag::MixingOrderedAndNamedPorts);
+}
