@@ -1211,16 +1211,16 @@ AssertionPortSymbol::AssertionPortSymbol(std::string_view name, SourceLocation l
     Symbol(SymbolKind::AssertionPort, name, loc), declaredType(*this) {
 }
 
+static bool isEmptyType(const DataTypeSyntax& syntax) {
+    if (syntax.kind != SyntaxKind::ImplicitType)
+        return false;
+
+    auto& implicit = syntax.as<ImplicitTypeSyntax>();
+    return !implicit.signing && implicit.dimensions.empty();
+}
+
 void AssertionPortSymbol::buildPorts(Scope& scope, const AssertionItemPortListSyntax& syntax,
                                      SmallVectorBase<const AssertionPortSymbol*>& results) {
-    auto isEmpty = [](const DataTypeSyntax& syntax) {
-        if (syntax.kind != SyntaxKind::ImplicitType)
-            return false;
-
-        auto& implicit = syntax.as<ImplicitTypeSyntax>();
-        return !implicit.signing && implicit.dimensions.empty();
-    };
-
     auto& comp = scope.getCompilation();
     auto parentKind = scope.asSymbol().kind;
     auto& untyped = comp.getType(SyntaxKind::Untyped);
@@ -1236,17 +1236,17 @@ void AssertionPortSymbol::buildPorts(Scope& scope, const AssertionItemPortListSy
         if (!item->dimensions.empty())
             port->declaredType.setDimensionSyntax(item->dimensions);
 
-        if (item->local || (parentKind == SymbolKind::Checker && item->direction)) {
+        if (item->local) {
             port->direction = item->direction ? SemanticFacts::getDirection(item->direction.kind)
                                               : ArgumentDirection::In;
 
-            // If we have a local keyword we can never inherit the previous type.
+            // If we have a direction we can never inherit the previous type.
             lastType = nullptr;
 
             if (parentKind == SymbolKind::Property && port->direction != ArgumentDirection::In)
                 scope.addDiag(diag::AssertionPortPropOutput, item->direction.range());
         }
-        else if (isEmpty(*item->type)) {
+        else if (isEmptyType(*item->type)) {
             port->direction = lastDir;
         }
 
@@ -1255,7 +1255,7 @@ void AssertionPortSymbol::buildPorts(Scope& scope, const AssertionItemPortListSy
         if (port->direction)
             port->declaredType.addFlags(DeclaredTypeFlags::RequireSequenceType);
 
-        if (isEmpty(*item->type)) {
+        if (isEmptyType(*item->type)) {
             if (lastType)
                 port->declaredType.setTypeSyntax(*lastType);
             else {
@@ -1289,9 +1289,8 @@ void AssertionPortSymbol::buildPorts(Scope& scope, const AssertionItemPortListSy
 
         lastDir = port->direction;
         if (item->defaultValue) {
-            if ((port->direction == ArgumentDirection::Out ||
-                 port->direction == ArgumentDirection::InOut) &&
-                parentKind != SymbolKind::Checker) {
+            if (port->direction == ArgumentDirection::Out ||
+                port->direction == ArgumentDirection::InOut) {
                 scope.addDiag(diag::AssertionPortOutputDefault,
                               item->defaultValue->expr->sourceRange());
             }
@@ -1415,8 +1414,69 @@ CheckerSymbol& CheckerSymbol::fromSyntax(const Scope& scope,
     result->setAttributes(scope, syntax.attributes);
 
     SmallVector<const AssertionPortSymbol*> ports;
-    if (syntax.portList)
-        AssertionPortSymbol::buildPorts(*result, *syntax.portList, ports);
+    if (syntax.portList) {
+        // Checker port symbols differ enough in their rules that we
+        // don't try to reuse buildPorts here.
+        auto& untyped = comp.getType(SyntaxKind::Untyped);
+        const DataTypeSyntax* lastType = nullptr;
+        ArgumentDirection lastDir = ArgumentDirection::In;
+
+        for (auto item : syntax.portList->ports) {
+            auto port = comp.emplace<AssertionPortSymbol>(item->name.valueText(),
+                                                          item->name.location());
+            port->setSyntax(*item);
+            port->setAttributes(scope, item->attributes);
+
+            if (!item->dimensions.empty())
+                port->declaredType.setDimensionSyntax(item->dimensions);
+
+            if (item->local)
+                scope.addDiag(diag::LocalNotAllowed, item->local.range());
+
+            if (item->direction) {
+                port->direction = SemanticFacts::getDirection(item->direction.kind);
+
+                // If we have a direction we can never inherit the previous type.
+                lastType = nullptr;
+            }
+            else {
+                port->direction = lastDir;
+            }
+
+            if (isEmptyType(*item->type)) {
+                if (lastType)
+                    port->declaredType.setTypeSyntax(*lastType);
+                else {
+                    port->declaredType.setType(untyped);
+                    if (!item->dimensions.empty()) {
+                        scope.addDiag(diag::InvalidArrayElemType, item->dimensions.sourceRange())
+                            << untyped;
+                    }
+
+                    if (item->direction)
+                        scope.addDiag(diag::CheckerPortDirectionType, item->direction.range());
+                }
+            }
+            else {
+                port->declaredType.setTypeSyntax(*item->type);
+                lastType = item->type;
+
+                auto itemKind = item->type->kind;
+                if (port->direction == ArgumentDirection::Out &&
+                    (itemKind == SyntaxKind::PropertyType || itemKind == SyntaxKind::SequenceType ||
+                     itemKind == SyntaxKind::Untyped)) {
+                    scope.addDiag(diag::CheckerOutputBadType, item->type->sourceRange());
+                }
+            }
+
+            lastDir = *port->direction;
+            if (item->defaultValue)
+                port->defaultValueSyntax = item->defaultValue->expr;
+
+            result->addMember(*port);
+            ports.push_back(port);
+        }
+    }
     result->ports = ports.copy(comp);
 
     return *result;

@@ -1402,3 +1402,20 @@ endmodule : m2
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Checker formal port error checking") {
+    auto tree = SyntaxTree::fromText(R"(
+checker c(input i, j[3], local output int k, property p);
+endchecker
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 4);
+    CHECK(diags[0].code == diag::CheckerPortDirectionType);
+    CHECK(diags[1].code == diag::InvalidArrayElemType);
+    CHECK(diags[2].code == diag::LocalNotAllowed);
+    CHECK(diags[3].code == diag::CheckerOutputBadType);
+}

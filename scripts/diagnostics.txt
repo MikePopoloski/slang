@@ -466,6 +466,8 @@ error UdpWrongInputCount "incorrect number of input fields in table row; have {}
 error UdpDupDiffOutput "primitive table row duplicates a set of inputs with a different specified output value"
 error UdpAllX "primitive table row has all 'x' inputs so its output must also be 'x'"
 error SubroutinePortInitializer "subroutine port declaration cannot contain an initializer"
+error CheckerPortDirectionType "checker ports with an explicit direction declared must also declare a type"
+error CheckerOutputBadType "checker output ports cannot be of type 'untyped', 'sequence', or 'property'"
 error FatalTask "$fatal encountered{}"
 error ErrorTask "$error encountered{}"
 error StaticAssert "static assertion failed{}"
