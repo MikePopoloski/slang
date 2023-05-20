@@ -172,6 +172,21 @@ public:
 
     void serializeTo(ASTSerializer& serializer) const;
 
+    struct ConnMap {
+        using NamedConnMap = SmallMap<std::string_view,
+                                      std::pair<const syntax::NamedPortConnectionSyntax*, bool>, 8>;
+
+        SmallVector<const syntax::PortConnectionSyntax*> orderedConns;
+        NamedConnMap namedConns;
+        std::span<const AttributeSymbol* const> wildcardAttrs;
+        SourceRange wildcardRange;
+        bool usingOrdered = true;
+        bool hasWildcard = false;
+
+        ConnMap(const syntax::SeparatedSyntaxList<syntax::PortConnectionSyntax>& portConnections,
+                const Scope& scope, LookupLocation lookupLocation);
+    };
+
     static void makeConnections(
         const InstanceSymbol& instance, std::span<const Symbol* const> ports,
         const syntax::SeparatedSyntaxList<syntax::PortConnectionSyntax>& portConnections,

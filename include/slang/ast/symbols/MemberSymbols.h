@@ -291,11 +291,13 @@ class SLANG_EXPORT AssertionPortSymbol : public Symbol {
 public:
     DeclaredType declaredType;
     const syntax::PropertyExprSyntax* defaultValueSyntax = nullptr;
-    std::optional<ArgumentDirection> localVarDirection;
+    std::optional<ArgumentDirection> direction;
 
     AssertionPortSymbol(std::string_view name, SourceLocation loc);
 
-    bool isLocalVar() const { return localVarDirection.has_value(); }
+    bool isLocalVar() const { return direction.has_value(); }
+
+    AssertionPortSymbol& clone(Scope& newScope) const;
 
     static void buildPorts(Scope& scope, const syntax::AssertionItemPortListSyntax& syntax,
                            SmallVectorBase<const AssertionPortSymbol*>& results);

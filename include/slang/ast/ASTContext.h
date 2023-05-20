@@ -205,6 +205,43 @@ struct SLANG_EXPORT EvaluatedDimension {
     }
 };
 
+/// Information required to instantiate a sequence, property, or checker instance.
+struct SLANG_EXPORT AssertionInstanceDetails {
+    /// The assertion member being instantiated.
+    const Symbol* symbol = nullptr;
+
+    /// The previous AST context used to start the instantiation.
+    /// This effectively forms a linked list when expanding a nested
+    /// stack of sequence and property instances.
+    const ASTContext* prevContext = nullptr;
+
+    /// The location where the instance is being instantiated.
+    SourceLocation instanceLoc;
+
+    /// A map of formal argument symbols to their actual replacements.
+    flat_hash_map<const Symbol*, std::tuple<const syntax::PropertyExprSyntax*, ASTContext>>
+        argumentMap;
+
+    /// A map of local variables declared in the assertion item.
+    /// These don't exist in any scope because their types can depend
+    /// on the expanded arguments.
+    flat_hash_map<std::string_view, const Symbol*> localVars;
+
+    /// If an argument to a sequence or property is being expanded, this
+    /// member contains the source location where the argument was referenced.
+    SourceLocation argExpansionLoc;
+
+    /// If an argument is being expanded, this is the context in which the
+    /// argument was originally being created (as opposed to where it is being
+    /// expanded now).
+    const AssertionInstanceDetails* argDetails = nullptr;
+
+    /// Indicates whether this particular instance has already been seen
+    /// previously in the stack of assertion instances being expanded.
+    /// Only applicable to properties, since this is illegal for sequences.
+    bool isRecursive = false;
+};
+
 /// Contains required context for binding syntax nodes with symbols to form
 /// an AST. Expressions, statements, timing controls, constraints, and assertion
 /// items all use this for creation.
@@ -253,43 +290,6 @@ public:
     /// happen inside the class scope before going through the normal local lookup,
     /// for example.
     const RandomizeDetails* randomizeDetails = nullptr;
-
-    /// Information required to instantiate a sequence or property instance.
-    struct AssertionInstanceDetails {
-        /// The assertion member being instantiated.
-        const Symbol* symbol = nullptr;
-
-        /// The previous AST context used to start the instantiation.
-        /// This effectively forms a linked list when expanding a nested
-        /// stack of sequence and property instances.
-        const ASTContext* prevContext = nullptr;
-
-        /// The location where the instance is being instantiated.
-        SourceLocation instanceLoc;
-
-        /// A map of formal argument symbols to their actual replacements.
-        flat_hash_map<const Symbol*, std::tuple<const syntax::PropertyExprSyntax*, ASTContext>>
-            argumentMap;
-
-        /// A map of local variables declared in the assertion item.
-        /// These don't exist in any scope because their types can depend
-        /// on the expanded arguments.
-        flat_hash_map<std::string_view, const Symbol*> localVars;
-
-        /// If an argument to a sequence or property is being expanded, this
-        /// member contains the source location where the argument was referenced.
-        SourceLocation argExpansionLoc;
-
-        /// If an argument is being expanded, this is the context in which the
-        /// argument was originally being created (as opposed to where it is being
-        /// expanded now).
-        const AssertionInstanceDetails* argDetails = nullptr;
-
-        /// Indicates whether this particular instance has already been seen
-        /// previously in the stack of assertion instances being expanded.
-        /// Only applicable to properties, since this is illegal for sequences.
-        bool isRecursive = false;
-    };
 
     /// If this context is for creating an instantiation of a sequence or
     /// property this points to information about that instantiation.

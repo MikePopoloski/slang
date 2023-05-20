@@ -742,51 +742,8 @@ public:
                           const SeparatedSyntaxList<PortConnectionSyntax>& portConnections) :
         scope(*instance.getParentScope()),
         instance(instance), comp(scope.getCompilation()),
-        lookupLocation(LookupLocation::after(instance)) {
-
-        bool hasConnections = false;
-        for (auto conn : portConnections) {
-            bool isOrdered = conn->kind == SyntaxKind::OrderedPortConnection ||
-                             conn->kind == SyntaxKind::EmptyPortConnection;
-            if (!hasConnections) {
-                hasConnections = true;
-                usingOrdered = isOrdered;
-            }
-            else if (isOrdered != usingOrdered) {
-                scope.addDiag(diag::MixingOrderedAndNamedPorts, conn->getFirstToken().location());
-                break;
-            }
-
-            if (isOrdered) {
-                orderedConns.push_back(conn);
-            }
-            else if (conn->kind == SyntaxKind::WildcardPortConnection) {
-                if (!std::exchange(hasWildcard, true)) {
-                    wildcardRange = conn->sourceRange();
-                    wildcardAttrs = AttributeSymbol::fromSyntax(conn->attributes, scope,
-                                                                lookupLocation);
-                }
-                else {
-                    auto& diag = scope.addDiag(diag::DuplicateWildcardPortConnection,
-                                               conn->sourceRange());
-                    diag.addNote(diag::NotePreviousUsage, wildcardRange);
-                }
-            }
-            else {
-                auto& npc = conn->as<NamedPortConnectionSyntax>();
-                auto name = npc.name.valueText();
-                if (!name.empty()) {
-                    auto pair = namedConns.emplace(name, std::make_pair(&npc, false));
-                    if (!pair.second) {
-                        auto& diag = scope.addDiag(diag::DuplicatePortConnection,
-                                                   npc.name.location());
-                        diag << name;
-                        diag.addNote(diag::NotePreviousUsage,
-                                     pair.first->second.first->name.location());
-                    }
-                }
-            }
-        }
+        lookupLocation(LookupLocation::after(instance)),
+        connMap(portConnections, scope, lookupLocation) {
 
         // Build up the set of dimensions for the instantiating instance's array parent, if any.
         // This builds up the dimensions in reverse order, so we have to reverse them back.
@@ -831,8 +788,8 @@ public:
         };
 
         const bool hasDefault = port.hasInitializer() && port.direction == ArgumentDirection::In;
-        if (usingOrdered) {
-            if (orderedIndex >= orderedConns.size()) {
+        if (connMap.usingOrdered) {
+            if (orderedIndex >= connMap.orderedConns.size()) {
                 orderedIndex++;
 
                 if (hasDefault)
@@ -841,7 +798,7 @@ public:
                 return reportUnconnected();
             }
 
-            const PortConnectionSyntax& pc = *orderedConns[orderedIndex++];
+            const PortConnectionSyntax& pc = *connMap.orderedConns[orderedIndex++];
             auto attrs = AttributeSymbol::fromSyntax(pc.attributes, scope, lookupLocation);
             if (pc.kind == SyntaxKind::OrderedPortConnection)
                 return createConnection(port, *pc.as<OrderedPortConnectionSyntax>().expr, attrs);
@@ -854,10 +811,10 @@ public:
             return reportUnconnected();
         }
 
-        auto it = namedConns.find(port.name);
-        if (it == namedConns.end()) {
-            if (hasWildcard)
-                return implicitNamedPort(port, wildcardAttrs, wildcardRange, true);
+        auto it = connMap.namedConns.find(port.name);
+        if (it == connMap.namedConns.end()) {
+            if (connMap.hasWildcard)
+                return implicitNamedPort(port, connMap.wildcardAttrs, connMap.wildcardRange, true);
 
             if (hasDefault)
                 return defaultConnection(port, {});
@@ -888,12 +845,12 @@ public:
         // If the port definition is empty it means an error already
         // occurred; there's no way to check this connection so early out.
         if (port.isInvalid() || port.name.empty()) {
-            if (usingOrdered) {
+            if (connMap.usingOrdered) {
                 orderedIndex++;
             }
             else {
-                auto it = namedConns.find(port.name);
-                if (it != namedConns.end())
+                auto it = connMap.namedConns.find(port.name);
+                if (it != connMap.namedConns.end())
                     it->second.second = true;
             }
             return emptyConnection(port);
@@ -906,12 +863,12 @@ public:
             return emptyConnection(port);
         };
 
-        if (usingOrdered) {
+        if (connMap.usingOrdered) {
             const PropertyExprSyntax* expr = nullptr;
             std::span<const AttributeSymbol* const> attributes;
 
-            if (orderedIndex < orderedConns.size()) {
-                const PortConnectionSyntax& pc = *orderedConns[orderedIndex];
+            if (orderedIndex < connMap.orderedConns.size()) {
+                const PortConnectionSyntax& pc = *connMap.orderedConns[orderedIndex];
                 attributes = AttributeSymbol::fromSyntax(pc.attributes, scope, lookupLocation);
                 if (pc.kind == SyntaxKind::OrderedPortConnection)
                     expr = pc.as<OrderedPortConnectionSyntax>().expr;
@@ -924,10 +881,10 @@ public:
             return getInterfaceExpr(port, *expr, attributes);
         }
 
-        auto it = namedConns.find(port.name);
-        if (it == namedConns.end()) {
-            if (hasWildcard)
-                return getImplicitInterface(port, wildcardRange, wildcardAttrs);
+        auto it = connMap.namedConns.find(port.name);
+        if (it == connMap.namedConns.end()) {
+            if (connMap.hasWildcard)
+                return getImplicitInterface(port, connMap.wildcardRange, connMap.wildcardAttrs);
 
             return reportUnconnected();
         }
@@ -951,17 +908,17 @@ public:
     }
 
     void finalize() {
-        if (usingOrdered) {
-            if (orderedIndex < orderedConns.size()) {
-                auto loc = orderedConns[orderedIndex]->getFirstToken().location();
+        if (connMap.usingOrdered) {
+            if (orderedIndex < connMap.orderedConns.size()) {
+                auto loc = connMap.orderedConns[orderedIndex]->getFirstToken().location();
                 auto& diag = scope.addDiag(diag::TooManyPortConnections, loc);
                 diag << instance.body.getDefinition().name;
-                diag << orderedConns.size();
+                diag << connMap.orderedConns.size();
                 diag << orderedIndex;
             }
         }
         else {
-            for (auto& pair : namedConns) {
+            for (auto& pair : connMap.namedConns) {
                 // We marked all the connections that we used, so anything left over is a connection
                 // for a non-existent port.
                 if (!pair.second.second) {
@@ -1214,15 +1171,10 @@ private:
     const Scope& scope;
     const InstanceSymbol& instance;
     Compilation& comp;
-    SmallVector<ConstantRange, 4> instanceDims;
-    SmallVector<const PortConnectionSyntax*> orderedConns;
-    SmallMap<std::string_view, std::pair<const NamedPortConnectionSyntax*, bool>, 8> namedConns;
-    std::span<const AttributeSymbol* const> wildcardAttrs;
     LookupLocation lookupLocation;
-    SourceRange wildcardRange;
+    PortConnection::ConnMap connMap;
+    SmallVector<ConstantRange, 4> instanceDims;
     size_t orderedIndex = 0;
-    bool usingOrdered = true;
-    bool hasWildcard = false;
     bool warnedAboutUnnamed = false;
     bool unnamedRefError = false;
 };
@@ -1971,6 +1923,54 @@ void PortConnection::checkSimulatedNetTypes() const {
         }
 
         currBit += width;
+    }
+}
+
+PortConnection::ConnMap::ConnMap(
+    const syntax::SeparatedSyntaxList<syntax::PortConnectionSyntax>& portConnections,
+    const Scope& scope, LookupLocation lookupLocation) {
+
+    bool hasConnections = false;
+    for (auto conn : portConnections) {
+        bool isOrdered = conn->kind == SyntaxKind::OrderedPortConnection ||
+                         conn->kind == SyntaxKind::EmptyPortConnection;
+        if (!hasConnections) {
+            hasConnections = true;
+            usingOrdered = isOrdered;
+        }
+        else if (isOrdered != usingOrdered) {
+            scope.addDiag(diag::MixingOrderedAndNamedPorts, conn->getFirstToken().location());
+            break;
+        }
+
+        if (isOrdered) {
+            orderedConns.push_back(conn);
+        }
+        else if (conn->kind == SyntaxKind::WildcardPortConnection) {
+            if (!std::exchange(hasWildcard, true)) {
+                wildcardRange = conn->sourceRange();
+                wildcardAttrs = AttributeSymbol::fromSyntax(conn->attributes, scope,
+                                                            lookupLocation);
+            }
+            else {
+                auto& diag = scope.addDiag(diag::DuplicateWildcardPortConnection,
+                                           conn->sourceRange());
+                diag.addNote(diag::NotePreviousUsage, wildcardRange);
+            }
+        }
+        else {
+            auto& npc = conn->as<NamedPortConnectionSyntax>();
+            auto name = npc.name.valueText();
+            if (!name.empty()) {
+                auto pair = namedConns.emplace(name, std::make_pair(&npc, false));
+                if (!pair.second) {
+                    auto& diag = scope.addDiag(diag::DuplicatePortConnection, npc.name.location());
+                    diag << name;
+                    diag.addNote(diag::NotePreviousUsage,
+                                 pair.first->second.first->name.location());
+                }
+            }
+        }
     }
 }
 

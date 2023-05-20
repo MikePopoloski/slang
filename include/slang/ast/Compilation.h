@@ -47,6 +47,7 @@ class Statement;
 class SubroutineSymbol;
 class SystemSubroutine;
 class ValueDriver;
+struct AssertionInstanceDetails;
 
 using DriverIntervalMap = IntervalMap<uint32_t, const ValueDriver*>;
 using UnrollIntervalMap = IntervalMap<uint32_t, std::monostate>;
@@ -465,6 +466,9 @@ public:
     /// Allocates a pointer map.
     PointerMap* allocPointerMap() { return pointerMapAllocator.emplace(); }
 
+    /// Allocates an assertion instance details object.
+    AssertionInstanceDetails* allocAssertionDetails();
+
     /// Allocates a generic class symbol.
     template<typename... Args>
     GenericClassDefSymbol* allocGenericClass(Args&&... args) {
@@ -524,6 +528,7 @@ private:
     TypedBumpAllocator<PointerMap> pointerMapAllocator;
     TypedBumpAllocator<ConstantValue> constantAllocator;
     TypedBumpAllocator<GenericClassDefSymbol> genericClassAllocator;
+    TypedBumpAllocator<AssertionInstanceDetails> assertionDetailsAllocator;
     DriverIntervalMap::allocator_type driverMapAllocator;
     UnrollIntervalMap::allocator_type unrollIntervalMapAllocator;
 

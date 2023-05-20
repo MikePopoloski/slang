@@ -425,7 +425,7 @@ void registerSymbols(py::module_& m) {
         .def_property_readonly("delay", &PrimitiveInstanceSymbol::getDelay)
         .def_property_readonly("driveStrength", &PrimitiveInstanceSymbol::getDriveStrength);
 
-    py::class_<CheckerInstanceSymbol, InstanceSymbolBase>(m, "CheckerInstanceSymbol")
+    py::class_<CheckerInstanceSymbol, InstanceSymbolBase, Scope>(m, "CheckerInstanceSymbol")
         .def_property_readonly("checker",
                                [](const CheckerInstanceSymbol& self) { return &self.checker; });
 
@@ -519,7 +519,8 @@ void registerSymbols(py::module_& m) {
         .def_readonly("output", &PrimitiveSymbol::TableEntry::output);
 
     py::class_<AssertionPortSymbol, Symbol>(m, "AssertionPortSymbol")
-        .def_readonly("localVarDirection", &AssertionPortSymbol::localVarDirection)
+        .def_readonly("direction", &AssertionPortSymbol::direction)
+        .def_property_readonly("isLocalVar", &AssertionPortSymbol::isLocalVar)
         .def_property_readonly("type", [](const AssertionPortSymbol& self) {
             return &self.declaredType.getType();
         });

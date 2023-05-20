@@ -16,6 +16,7 @@
 #include "slang/ast/TimingControl.h"
 #include "slang/ast/expressions/AssertionExpr.h"
 #include "slang/ast/expressions/MiscExpressions.h"
+#include "slang/ast/symbols/AttributeSymbol.h"
 #include "slang/ast/symbols/BlockSymbols.h"
 #include "slang/ast/symbols/MemberSymbols.h"
 #include "slang/ast/symbols/ParameterSymbols.h"
@@ -1225,15 +1226,112 @@ void PrimitiveInstanceSymbol::serializeTo(ASTSerializer& serializer) const {
 namespace {
 
 CheckerInstanceSymbol* createCheckerInstance(
-    Compilation& compilation, const Scope& scope, const CheckerSymbol& checker,
+    Compilation& comp, const ASTContext& context, const CheckerSymbol& checker,
     const HierarchicalInstanceSyntax& syntax,
     std::span<const AttributeInstanceSyntax* const> attributes, SmallVectorBase<int32_t>& path) {
 
     auto [name, loc] = getNameLoc(syntax);
-    auto result = compilation.emplace<CheckerInstanceSymbol>(name, loc, checker);
-    result->arrayPath = path.copy(compilation);
+    auto assertionDetails = comp.allocAssertionDetails();
+    auto result = comp.emplace<CheckerInstanceSymbol>(comp, name, loc, checker, *assertionDetails);
+    result->arrayPath = path.copy(comp);
     result->setSyntax(syntax);
-    result->setAttributes(scope, attributes);
+    result->setAttributes(*context.scope, attributes);
+
+    assertionDetails->symbol = &checker;
+    assertionDetails->instanceLoc = loc;
+
+    // Build port connection map from formals to connection expressions.
+    size_t orderedIndex = 0;
+    PortConnection::ConnMap connMap(syntax.connections, *context.scope, context.getLocation());
+    for (auto port : checker.ports) {
+        if (port->name.empty())
+            continue;
+
+        // Clone all of the formal arguments and add them to the instance so that
+        // members in the body can reference them.
+        auto& cloned = port->clone(*result);
+        result->addMember(cloned);
+
+        const ASTContext* argCtx = &context;
+        const PropertyExprSyntax* expr = nullptr;
+        std::optional<ASTContext> defValCtx;
+        std::span<const AttributeSymbol* const> attrs;
+
+        auto setDefault = [&] {
+            expr = port->defaultValueSyntax;
+            defValCtx.emplace(checker, LookupLocation::after(*port));
+            defValCtx->assertionInstance = assertionDetails;
+            defValCtx->flags |= ASTFlags::AssertionDefaultArg;
+            argCtx = &defValCtx.value();
+
+            if (!port->defaultValueSyntax || port->direction != ArgumentDirection::In) {
+                // TODO: error
+            }
+        };
+
+        if (connMap.usingOrdered) {
+            if (orderedIndex >= connMap.orderedConns.size()) {
+                orderedIndex++;
+                setDefault();
+            }
+            else {
+                const PortConnectionSyntax& pc = *connMap.orderedConns[orderedIndex++];
+                attrs = AttributeSymbol::fromSyntax(pc.attributes, *context.scope,
+                                                    context.getLocation());
+
+                if (pc.kind == SyntaxKind::OrderedPortConnection)
+                    expr = pc.as<OrderedPortConnectionSyntax>().expr;
+                else
+                    setDefault();
+            }
+        }
+        else {
+            auto it = connMap.namedConns.find(port->name);
+            if (it == connMap.namedConns.end()) {
+                if (connMap.hasWildcard) {
+                    // TODO:
+                    // return implicitNamedPort(port, connMap.wildcardAttrs, connMap.wildcardRange,
+                    //                       true);
+                }
+                else {
+                    setDefault();
+                }
+            }
+            else {
+                // We have a named connection; there are two possibilities here:
+                // - An explicit connection (with an optional expression)
+                // - An implicit connection, where we have to look up the name ourselves
+                const NamedPortConnectionSyntax& conn = *it->second.first;
+                it->second.second = true;
+
+                attrs = AttributeSymbol::fromSyntax(conn.attributes, *context.scope,
+                                                    context.getLocation());
+                if (conn.openParen) {
+                    // For explicit named port connections, having an empty expression means no
+                    // connection, so we never take the default value here.
+                    expr = conn.expr;
+
+                    // TODO:
+                    // return emptyConnection(port);
+                }
+
+                // TODO:
+                // return implicitNamedPort(port, attrs, conn.name.range(), false);
+            }
+        }
+
+        // TODO: attributes?
+        assertionDetails->argumentMap.emplace(&cloned, std::make_tuple(expr, *argCtx));
+
+        // TODO: check arg
+    }
+
+    // Now add all members.
+    auto checkerSyntax = checker.getSyntax();
+    SLANG_ASSERT(checkerSyntax);
+    for (auto member : checkerSyntax->as<CheckerDeclarationSyntax>().members)
+        result->addMembers(*member);
+
     return result;
 }
 
@@ -1245,7 +1343,7 @@ Symbol* recurseCheckerArray(Compilation& comp, const CheckerSymbol& checker,
                             std::span<const AttributeInstanceSyntax* const> attributes,
                             SmallVectorBase<int32_t>& path) {
     if (it == end)
-        return createCheckerInstance(comp, *context.scope, checker, instance, attributes, path);
+        return createCheckerInstance(comp, context, checker, instance, attributes, path);
 
     SLANG_ASSERT(instance.decl);
     auto nameToken = instance.decl->name;
@@ -1307,8 +1405,8 @@ void createCheckers(const CheckerSymbol& checker, const TSyntax& syntax, const A
 
         if (!instance->decl) {
             context.addDiag(diag::InstanceNameRequired, instance->sourceRange());
-            results.push_back(createCheckerInstance(comp, *context.scope, checker, *instance,
-                                                    syntax.attributes, path));
+            results.push_back(
+                createCheckerInstance(comp, context, checker, *instance, syntax.attributes, path));
         }
         else {
             auto dims = instance->decl->dimensions;
@@ -1355,6 +1453,7 @@ void CheckerInstanceSymbol::fromSyntax(const CheckerInstantiationSyntax& syntax,
 }
 
 void CheckerInstanceSymbol::serializeTo(ASTSerializer&) const {
+    // TODO:
 }
 
 } // namespace slang::ast

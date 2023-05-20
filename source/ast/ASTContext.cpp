@@ -523,8 +523,8 @@ void ASTContext::addAssertionBacktrace(Diagnostic& diag) const {
         }
     }
 
-    SLANG_ASSERT(inst.prevContext);
-    inst.prevContext->addAssertionBacktrace(diag);
+    if (inst.prevContext)
+        inst.prevContext->addAssertionBacktrace(diag);
 }
 
 } // namespace slang::ast

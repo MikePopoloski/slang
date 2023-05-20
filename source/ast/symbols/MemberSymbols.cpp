@@ -1222,9 +1222,10 @@ void AssertionPortSymbol::buildPorts(Scope& scope, const AssertionItemPortListSy
     };
 
     auto& comp = scope.getCompilation();
+    auto parentKind = scope.asSymbol().kind;
     auto& untyped = comp.getType(SyntaxKind::Untyped);
     const DataTypeSyntax* lastType = nullptr;
-    std::optional<ArgumentDirection> lastLocalDir;
+    std::optional<ArgumentDirection> lastDir;
 
     for (auto item : syntax.ports) {
         auto port = comp.emplace<AssertionPortSymbol>(item->name.valueText(),
@@ -1235,26 +1236,23 @@ void AssertionPortSymbol::buildPorts(Scope& scope, const AssertionItemPortListSy
         if (!item->dimensions.empty())
             port->declaredType.setDimensionSyntax(item->dimensions);
 
-        if (item->local) {
-            port->localVarDirection = item->direction
-                                          ? SemanticFacts::getDirection(item->direction.kind)
-                                          : ArgumentDirection::In;
+        if (item->local || (parentKind == SymbolKind::Checker && item->direction)) {
+            port->direction = item->direction ? SemanticFacts::getDirection(item->direction.kind)
+                                              : ArgumentDirection::In;
 
             // If we have a local keyword we can never inherit the previous type.
             lastType = nullptr;
 
-            if (scope.asSymbol().kind == SymbolKind::Property &&
-                port->localVarDirection != ArgumentDirection::In) {
+            if (parentKind == SymbolKind::Property && port->direction != ArgumentDirection::In)
                 scope.addDiag(diag::AssertionPortPropOutput, item->direction.range());
-            }
         }
         else if (isEmpty(*item->type)) {
-            port->localVarDirection = lastLocalDir;
+            port->direction = lastDir;
         }
 
         // 'local' direction requires that we have a sequence type. This flag needs to be
         // added prior to setting a resolved type in the branches below.
-        if (port->localVarDirection)
+        if (port->direction)
             port->declaredType.addFlags(DeclaredTypeFlags::RequireSequenceType);
 
         if (isEmpty(*item->type)) {
@@ -1267,7 +1265,7 @@ void AssertionPortSymbol::buildPorts(Scope& scope, const AssertionItemPortListSy
                         << untyped;
                 }
 
-                if (item->local && scope.asSymbol().kind != SymbolKind::LetDecl)
+                if (item->local && parentKind != SymbolKind::LetDecl)
                     scope.addDiag(diag::LocalVarTypeRequired, item->local.range());
             }
         }
@@ -1278,22 +1276,22 @@ void AssertionPortSymbol::buildPorts(Scope& scope, const AssertionItemPortListSy
             // Ports of type 'property' are not allowed in sequences,
             // and let declarations cannot have ports of type 'sequence' or 'property'.
             auto itemKind = item->type->kind;
-            if (itemKind == SyntaxKind::PropertyType &&
-                scope.asSymbol().kind == SymbolKind::Sequence) {
+            if (itemKind == SyntaxKind::PropertyType && parentKind == SymbolKind::Sequence) {
                 scope.addDiag(diag::PropertyPortInSeq, item->type->sourceRange());
             }
             else if ((itemKind == SyntaxKind::PropertyType ||
                       itemKind == SyntaxKind::SequenceType) &&
-                     scope.asSymbol().kind == SymbolKind::LetDecl) {
+                     parentKind == SymbolKind::LetDecl) {
                 scope.addDiag(diag::PropertyPortInLet, item->type->sourceRange())
                     << item->type->getFirstToken().valueText();
             }
         }
 
-        lastLocalDir = port->localVarDirection;
+        lastDir = port->direction;
         if (item->defaultValue) {
-            if (port->localVarDirection == ArgumentDirection::Out ||
-                port->localVarDirection == ArgumentDirection::InOut) {
+            if ((port->direction == ArgumentDirection::Out ||
+                 port->direction == ArgumentDirection::InOut) &&
+                parentKind != SymbolKind::Checker) {
                 scope.addDiag(diag::AssertionPortOutputDefault,
                               item->defaultValue->expr->sourceRange());
             }
@@ -1307,9 +1305,24 @@ void AssertionPortSymbol::buildPorts(Scope& scope, const AssertionItemPortListSy
     }
 }
 
+AssertionPortSymbol& AssertionPortSymbol::clone(Scope& newScope) const {
+    auto& comp = newScope.getCompilation();
+    auto result = comp.emplace<AssertionPortSymbol>(name, location);
+    result->declaredType.setLink(declaredType);
+    result->defaultValueSyntax = defaultValueSyntax;
+    result->direction = direction;
+
+    if (auto syntax = getSyntax()) {
+        result->setSyntax(*syntax);
+        result->setAttributes(newScope, syntax->as<AssertionItemPortSyntax>().attributes);
+    }
+
+    return *result;
+}
+
 void AssertionPortSymbol::serializeTo(ASTSerializer& serializer) const {
-    if (localVarDirection)
-        serializer.write("localVarDirection", toString(*localVarDirection));
+    if (direction)
+        serializer.write("direction", toString(*direction));
 }
 
 SequenceSymbol::SequenceSymbol(Compilation& compilation, std::string_view name,

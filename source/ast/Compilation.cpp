@@ -1117,6 +1117,10 @@ Diagnostic& Compilation::addDiag(Diagnostic diag) {
     return it->second.back();
 }
 
+AssertionInstanceDetails* Compilation::allocAssertionDetails() {
+    return assertionDetailsAllocator.emplace();
+}
+
 const ImplicitTypeSyntax& Compilation::createEmptyTypeSyntax(SourceLocation loc) {
     return *emplace<ImplicitTypeSyntax>(Token(), nullptr,
                                         Token(*this, TokenKind::Placeholder, {}, {}, loc));

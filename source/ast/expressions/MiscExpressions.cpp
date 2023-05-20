@@ -14,6 +14,7 @@
 #include "slang/ast/expressions/AssignmentExpressions.h"
 #include "slang/ast/symbols/BlockSymbols.h"
 #include "slang/ast/symbols/ClassSymbols.h"
+#include "slang/ast/symbols/InstanceSymbols.h"
 #include "slang/ast/symbols/MemberSymbols.h"
 #include "slang/ast/symbols/ParameterSymbols.h"
 #include "slang/ast/symbols/SubroutineSymbols.h"
@@ -667,8 +668,8 @@ static bool checkAssertionArg(const PropertyExprSyntax& propExpr, const Assertio
     }
 
     // Local var formals that are output or inout must bind only to another local var.
-    if (formal.localVarDirection == ArgumentDirection::InOut ||
-        formal.localVarDirection == ArgumentDirection::Out) {
+    if (formal.direction == ArgumentDirection::InOut ||
+        formal.direction == ArgumentDirection::Out) {
         auto sym = bound.getSymbolReference();
         if (!sym || sym->kind != SymbolKind::LocalAssertionVar) {
             ctx.addDiag(diag::AssertionOutputLocalVar, bound.sourceRange);
@@ -686,7 +687,7 @@ static bool checkAssertionArg(const PropertyExprSyntax& propExpr, const Assertio
 static const AssertionExpr& bindAssertionBody(const Symbol& symbol, const SyntaxNode& syntax,
                                               const ASTContext& context,
                                               SourceLocation outputLocalVarArgLoc,
-                                              ASTContext::AssertionInstanceDetails& instance,
+                                              AssertionInstanceDetails& instance,
                                               SmallVectorBase<const Symbol*>& localVars) {
     auto createLocals = [&](auto& syntaxType) {
         for (auto varSyntax : syntaxType.variables) {
@@ -768,7 +769,7 @@ Expression& AssertionInstanceExpression::fromLookup(const Symbol& symbol,
             return badExpr(comp, nullptr);
     }
 
-    ASTContext::AssertionInstanceDetails instance;
+    AssertionInstanceDetails instance;
     instance.symbol = &symbol;
     instance.prevContext = &context;
     instance.instanceLoc = range.start();
@@ -901,8 +902,8 @@ Expression& AssertionInstanceExpression::fromLookup(const Symbol& symbol,
         else
             actualArgs.push_back({formal, arg});
 
-        if (!outputLocalVarArgLoc && (formal->localVarDirection == ArgumentDirection::InOut ||
-                                      formal->localVarDirection == ArgumentDirection::Out)) {
+        if (!outputLocalVarArgLoc && (formal->direction == ArgumentDirection::InOut ||
+                                      formal->direction == ArgumentDirection::Out)) {
             outputLocalVarArgLoc = formal->location;
         }
     }
@@ -996,7 +997,7 @@ Expression& AssertionInstanceExpression::makeDefault(const Symbol& symbol) {
             SLANG_UNREACHABLE;
     }
 
-    ASTContext::AssertionInstanceDetails instance;
+    AssertionInstanceDetails instance;
     instance.symbol = &symbol;
     instance.prevContext = &context;
     instance.instanceLoc = symbol.location;
@@ -1020,8 +1021,8 @@ Expression& AssertionInstanceExpression::makeDefault(const Symbol& symbol) {
             checkAssertionArg(*expr, *formal, ctx, arg, false);
         }
 
-        if (!outputLocalVarArgLoc && (formal->localVarDirection == ArgumentDirection::InOut ||
-                                      formal->localVarDirection == ArgumentDirection::Out)) {
+        if (!outputLocalVarArgLoc && (formal->direction == ArgumentDirection::InOut ||
+                                      formal->direction == ArgumentDirection::Out)) {
             outputLocalVarArgLoc = formal->location;
         }
     }
@@ -1050,8 +1051,20 @@ Expression& AssertionInstanceExpression::makeDefault(const Symbol& symbol) {
 Expression& AssertionInstanceExpression::bindPort(const Symbol& symbol, SourceRange range,
                                                   const ASTContext& instanceCtx) {
     Compilation& comp = instanceCtx.getCompilation();
+
     auto inst = instanceCtx.assertionInstance;
-    SLANG_ASSERT(inst);
+    if (!inst) {
+        // This is only possible if we're in a checker instance,
+        // so look upward until we find it.
+        auto sym = &instanceCtx.scope->asSymbol();
+        while (sym->kind != SymbolKind::CheckerInstance) {
+            auto scope = sym->getParentScope();
+            SLANG_ASSERT(scope);
+            sym = &scope->asSymbol();
+        }
+
+        inst = &sym->as<CheckerInstanceSymbol>().assertionDetails;
+    }
 
     // When looking up an argument reference from within another expanded
     // argument, use that original location's context.
@@ -1087,7 +1100,7 @@ Expression& AssertionInstanceExpression::bindPort(const Symbol& symbol, SourceRa
             }
         }
 
-        if (instanceCtx.flags.has(ASTFlags::LValue) && !formal.localVarDirection) {
+        if (instanceCtx.flags.has(ASTFlags::LValue) && !formal.direction) {
             instanceCtx.addDiag(diag::AssertionPortTypedLValue, range) << formal.name;
             return badExpr(comp, nullptr);
         }
@@ -1110,7 +1123,7 @@ Expression& AssertionInstanceExpression::bindPort(const Symbol& symbol, SourceRa
     // Inherit any AST flags that are specific to this argument's instantiation.
     argCtx.flags |= instanceCtx.flags;
 
-    ASTContext::AssertionInstanceDetails details;
+    AssertionInstanceDetails details;
     details.argExpansionLoc = range.start();
     details.prevContext = &instanceCtx;
     details.argDetails = argCtx.assertionInstance;
@@ -1171,7 +1184,7 @@ Expression& AssertionInstanceExpression::bindPort(const Symbol& symbol, SourceRa
             auto& expr = selfDetermined(comp, *regExpr, argCtx, argCtx.flags);
             expr.sourceRange = range;
 
-            if (!expr.type->isMatching(type)) {
+            if (!instanceCtx.flags.has(ASTFlags::LValue) && !expr.type->isMatching(type)) {
                 return *comp.emplace<ConversionExpression>(type, ConversionKind::Explicit, expr,
                                                            range);
             }

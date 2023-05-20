@@ -29,6 +29,7 @@ class PortConnection;
 class PortSymbol;
 class PrimitiveSymbol;
 class TimingControl;
+struct AssertionInstanceDetails;
 struct HierarchyOverrideNode;
 
 /// Common functionality for module, interface, program, and primitive instances.
@@ -267,12 +268,16 @@ private:
     mutable std::optional<const TimingControl*> delay;
 };
 
-class SLANG_EXPORT CheckerInstanceSymbol : public InstanceSymbolBase {
+class SLANG_EXPORT CheckerInstanceSymbol : public InstanceSymbolBase, public Scope {
 public:
     const CheckerSymbol& checker;
+    const AssertionInstanceDetails& assertionDetails;
 
-    CheckerInstanceSymbol(std::string_view name, SourceLocation loc, const CheckerSymbol& checker) :
-        InstanceSymbolBase(SymbolKind::CheckerInstance, name, loc), checker(checker) {}
+    CheckerInstanceSymbol(Compilation& compilation, std::string_view name, SourceLocation loc,
+                          const CheckerSymbol& checker,
+                          const AssertionInstanceDetails& assertionDetails) :
+        InstanceSymbolBase(SymbolKind::CheckerInstance, name, loc),
+        Scope(compilation, this), checker(checker), assertionDetails(assertionDetails) {}
 
     static void fromSyntax(const CheckerSymbol& checker,
                            const syntax::HierarchyInstantiationSyntax& syntax,

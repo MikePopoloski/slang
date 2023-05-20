@@ -330,8 +330,8 @@ private:
 
             auto& seq = aie.symbol.as<SequenceSymbol>();
             for (auto& arg : seq.membersOfType<AssertionPortSymbol>()) {
-                if (arg.localVarDirection == ArgumentDirection::In ||
-                    arg.localVarDirection == ArgumentDirection::InOut) {
+                if (arg.direction == ArgumentDirection::In ||
+                    arg.direction == ArgumentDirection::InOut) {
                     auto& diag = context.addDiag(diag::SeqMethodInputLocalVar, range);
                     diag << name;
                     diag.addNote(diag::NoteDeclarationHere, arg.location);
