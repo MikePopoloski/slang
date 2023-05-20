@@ -545,7 +545,9 @@ bool Driver::parseAllSources() {
         // the use of threads, do the parsing via a thread pool.
         if (buffers.size() > 4 && options.numThreads != 1u) {
             ThreadPool threadPool(options.numThreads.value_or(0u));
+
             std::vector<std::future<std::shared_ptr<SyntaxTree>>> tasks;
+            tasks.reserve(buffers.size());
             for (auto& buffer : buffers)
                 tasks.emplace_back(threadPool.submit(parse, buffer));
 

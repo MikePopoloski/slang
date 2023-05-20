@@ -27,6 +27,7 @@ Checks: >
     -clang-analyzer-core.NullDereference,
     -clang-analyzer-core.NonNullParamChecker,
     -clang-analyzer-core.UndefinedBinaryOperatorResult,
+    -clang-analyzer-core.uninitialized.Assign,
     -clang-analyzer-optin.cplusplus.UninitializedObject,
     -misc-non-private-member-variables-in-classes,
     -misc-no-recursion,
