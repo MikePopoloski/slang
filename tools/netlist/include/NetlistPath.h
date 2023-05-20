@@ -1,3 +1,10 @@
+//------------------------------------------------------------------------------
+//! @file NetlistPath.h
+//! @brief A class that represents a path within a netlist.
+//
+// SPDX-FileCopyrightText: Michael Popoloski
+// SPDX-License-Identifier: MIT
+//------------------------------------------------------------------------------
 #pragma once
 
 #include "Netlist.h"
