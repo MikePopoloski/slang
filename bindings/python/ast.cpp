@@ -217,7 +217,8 @@ void registerAST(py::module_& m) {
         .def("evalLValue", &Expression::evalLValue, "context"_a)
         .def("isImplicitlyAssignableTo", &Expression::isImplicitlyAssignableTo, "compilation"_a,
              "type"_a)
-        .def("getSymbolReference", &Expression::getSymbolReference, "allowPacked"_a = true)
+        .def("getSymbolReference", &Expression::getSymbolReference, byrefint,
+             "allowPacked"_a = true)
         .def("__repr__", [](const Expression& self) {
             return fmt::format("Expression(ExpressionKind.{})", toString(self.kind));
         });

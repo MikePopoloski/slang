@@ -147,7 +147,7 @@ void registerSymbols(py::module_& m) {
                  if (ptrdiff_t(i) >= members.size())
                      throw py::index_error();
 
-                 return py::cast(&(*std::next(members.begin(), i)));
+                 return py::cast(&(*std::next(members.begin(), i)), byrefint);
              })
         .def("__len__", [](const Scope& self) { return self.members().size(); })
         .def(

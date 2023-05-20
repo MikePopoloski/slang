@@ -218,12 +218,12 @@ void registerCompilation(py::module_& m) {
         .def_readwrite("withClauseMode", &SystemSubroutine::withClauseMode)
         .def("allowEmptyArgument", &SystemSubroutine::allowEmptyArgument, "argIndex"_a)
         .def("allowClockingArgument", &SystemSubroutine::allowClockingArgument, "argIndex"_a)
-        .def("bindArgument", &SystemSubroutine::bindArgument, "argIndex"_a, "context"_a, "syntax"_a,
-             "previousArgs"_a)
-        .def("checkArguments", &SystemSubroutine::checkArguments, "context"_a, "args"_a, "range"_a,
-             "iterOrThis"_a)
+        .def("bindArgument", &SystemSubroutine::bindArgument, byrefint, "argIndex"_a, "context"_a,
+             "syntax"_a, "previousArgs"_a)
+        .def("checkArguments", &SystemSubroutine::checkArguments, byrefint, "context"_a, "args"_a,
+             "range"_a, "iterOrThis"_a)
         .def("eval", &SystemSubroutine::eval, "context"_a, "args"_a, "range"_a, "callInfo"_a)
-        .def("badArg", &SystemSubroutinePublicist::badArg, "context"_a, "arg"_a)
+        .def("badArg", &SystemSubroutinePublicist::badArg, byrefint, "context"_a, "arg"_a)
         .def("checkArgCount", &SystemSubroutinePublicist::checkArgCount, "context"_a, "isMethod"_a,
              "args"_a, "callRange"_a, "min"_a, "max"_a)
         .def("kindStr", &SystemSubroutinePublicist::kindStr)
