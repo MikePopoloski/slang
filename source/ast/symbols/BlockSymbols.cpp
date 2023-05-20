@@ -271,44 +271,43 @@ const Statement& ProceduralBlockSymbol::getBody() const {
 }
 
 ProceduralBlockSymbol& ProceduralBlockSymbol::createProceduralBlock(
-    const Scope& scope, ProceduralBlockKind kind, SourceLocation location,
-    const MemberSyntax& syntax, const StatementSyntax& stmtSyntax,
-    std::span<const StatementBlockSymbol* const>& additionalBlocks) {
+    Scope& scope, ProceduralBlockKind kind, SourceLocation location, const MemberSyntax& syntax,
+    const StatementSyntax& stmtSyntax) {
 
     auto& comp = scope.getCompilation();
     auto result = comp.emplace<ProceduralBlockSymbol>(location, kind);
     result->setSyntax(syntax);
     result->setAttributes(scope, syntax.attributes);
-    result->blocks = Statement::createBlockItems(scope, stmtSyntax, /* labelHandled */ false);
     result->stmtSyntax = &stmtSyntax;
 
-    additionalBlocks = result->blocks;
+    SmallVector<const SyntaxNode*> extraMembers;
+    result->blocks = Statement::createBlockItems(scope, stmtSyntax, /* labelHandled */ false,
+                                                 extraMembers);
+
+    for (auto b : result->blocks)
+        scope.addMember(*b);
+    for (auto member : extraMembers)
+        scope.addMembers(*member);
 
     return *result;
 }
 
-ProceduralBlockSymbol& ProceduralBlockSymbol::fromSyntax(
-    const Scope& scope, const ProceduralBlockSyntax& syntax,
-    std::span<const StatementBlockSymbol* const>& additionalBlocks) {
+ProceduralBlockSymbol& ProceduralBlockSymbol::fromSyntax(Scope& scope,
+                                                         const ProceduralBlockSyntax& syntax) {
     return createProceduralBlock(scope, SemanticFacts::getProceduralBlockKind(syntax.kind),
-                                 syntax.keyword.location(), syntax, *syntax.statement,
-                                 additionalBlocks);
+                                 syntax.keyword.location(), syntax, *syntax.statement);
 }
 
 ProceduralBlockSymbol& ProceduralBlockSymbol::fromSyntax(
-    const Scope& scope, const ImmediateAssertionMemberSyntax& syntax,
-    std::span<const StatementBlockSymbol* const>& additionalBlocks) {
+    Scope& scope, const ImmediateAssertionMemberSyntax& syntax) {
     return createProceduralBlock(scope, ProceduralBlockKind::Always,
-                                 syntax.getFirstToken().location(), syntax, *syntax.statement,
-                                 additionalBlocks);
+                                 syntax.getFirstToken().location(), syntax, *syntax.statement);
 }
 
 ProceduralBlockSymbol& ProceduralBlockSymbol::fromSyntax(
-    const Scope& scope, const ConcurrentAssertionMemberSyntax& syntax,
-    std::span<const StatementBlockSymbol* const>& additionalBlocks) {
+    Scope& scope, const ConcurrentAssertionMemberSyntax& syntax) {
     return createProceduralBlock(scope, ProceduralBlockKind::Always,
-                                 syntax.getFirstToken().location(), syntax, *syntax.statement,
-                                 additionalBlocks);
+                                 syntax.getFirstToken().location(), syntax, *syntax.statement);
 }
 
 void ProceduralBlockSymbol::serializeTo(ASTSerializer& serializer) const {

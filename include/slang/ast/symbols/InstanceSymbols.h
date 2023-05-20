@@ -17,6 +17,7 @@
 namespace slang::ast {
 
 class AssertionExpr;
+class CheckerSymbol;
 class Definition;
 class Expression;
 class InstanceBodySymbol;
@@ -264,6 +265,27 @@ public:
 private:
     mutable std::optional<std::span<const Expression* const>> ports;
     mutable std::optional<const TimingControl*> delay;
+};
+
+class SLANG_EXPORT CheckerInstanceSymbol : public InstanceSymbolBase {
+public:
+    const CheckerSymbol& checker;
+
+    CheckerInstanceSymbol(std::string_view name, SourceLocation loc, const CheckerSymbol& checker) :
+        InstanceSymbolBase(SymbolKind::CheckerInstance, name, loc), checker(checker) {}
+
+    static void fromSyntax(const CheckerSymbol& checker,
+                           const syntax::HierarchyInstantiationSyntax& syntax,
+                           const ASTContext& context, SmallVectorBase<const Symbol*>& results,
+                           SmallVectorBase<const Symbol*>& implicitNets, bool isFromBind);
+
+    static void fromSyntax(const syntax::CheckerInstantiationSyntax& syntax,
+                           const ASTContext& context, SmallVectorBase<const Symbol*>& results,
+                           SmallVectorBase<const Symbol*>& implicitNets, bool isFromBind);
+
+    void serializeTo(ASTSerializer& serializer) const;
+
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::CheckerInstance; }
 };
 
 } // namespace slang::ast

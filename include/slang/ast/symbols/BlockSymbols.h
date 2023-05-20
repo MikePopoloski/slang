@@ -71,17 +71,14 @@ public:
                procedureKind == ProceduralBlockKind::AlwaysFF;
     }
 
-    static ProceduralBlockSymbol& fromSyntax(
-        const Scope& scope, const syntax::ProceduralBlockSyntax& syntax,
-        std::span<const StatementBlockSymbol* const>& additionalBlocks);
+    static ProceduralBlockSymbol& fromSyntax(Scope& scope,
+                                             const syntax::ProceduralBlockSyntax& syntax);
 
-    static ProceduralBlockSymbol& fromSyntax(
-        const Scope& scope, const syntax::ImmediateAssertionMemberSyntax& syntax,
-        std::span<const StatementBlockSymbol* const>& additionalBlocks);
+    static ProceduralBlockSymbol& fromSyntax(Scope& scope,
+                                             const syntax::ImmediateAssertionMemberSyntax& syntax);
 
-    static ProceduralBlockSymbol& fromSyntax(
-        const Scope& scope, const syntax::ConcurrentAssertionMemberSyntax& syntax,
-        std::span<const StatementBlockSymbol* const>& additionalBlocks);
+    static ProceduralBlockSymbol& fromSyntax(Scope& scope,
+                                             const syntax::ConcurrentAssertionMemberSyntax& syntax);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::ProceduralBlock; }
 
@@ -96,10 +93,10 @@ private:
     mutable const Statement* stmt = nullptr;
     mutable bool isConstructing = false;
 
-    static ProceduralBlockSymbol& createProceduralBlock(
-        const Scope& scope, ProceduralBlockKind kind, SourceLocation location,
-        const syntax::MemberSyntax& syntax, const syntax::StatementSyntax& stmtSyntax,
-        std::span<const StatementBlockSymbol* const>& additionalBlocks);
+    static ProceduralBlockSymbol& createProceduralBlock(Scope& scope, ProceduralBlockKind kind,
+                                                        SourceLocation location,
+                                                        const syntax::MemberSyntax& syntax,
+                                                        const syntax::StatementSyntax& stmtSyntax);
 };
 
 /// Represents blocks that are instantiated by a loop generate or conditional

@@ -182,6 +182,7 @@ decltype(auto) Symbol::visit(TVisitor&& visitor, Args&&... args) const {
         SYMBOL(LocalAssertionVar);
         SYMBOL(LetDecl);
         SYMBOL(Checker);
+        SYMBOL(CheckerInstance);
         SYMBOL(RandSeqProduction);
         SYMBOL(CovergroupBody);
         SYMBOL(Coverpoint);
@@ -265,6 +266,7 @@ decltype(auto) Statement::visit(TVisitor&& visitor, Args&&... args) const {
         CASE(ProceduralDeassign, ProceduralDeassignStatement);
         CASE(RandCase, RandCaseStatement);
         CASE(RandSequence, RandSequenceStatement);
+        CASE(ProceduralChecker, ProceduralCheckerStatement);
     }
 #undef CASE
     // clang-format on

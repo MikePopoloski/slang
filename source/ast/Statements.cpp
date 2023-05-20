@@ -272,8 +272,9 @@ const Statement& Statement::bind(const StatementSyntax& syntax, const ASTContext
                                                         context);
             break;
         case SyntaxKind::CheckerInstanceStatement:
-            context.addDiag(diag::NotYetSupported, syntax.sourceRange());
-            return badStmt(comp, nullptr);
+            result = &ProceduralCheckerStatement::fromSyntax(
+                comp, syntax.as<CheckerInstanceStatementSyntax>(), context);
+            break;
         default:
             SLANG_UNREACHABLE;
     }
@@ -400,13 +401,16 @@ Statement& Statement::badStmt(Compilation& compilation, const Statement* stmt) {
 }
 
 static void findBlocks(const Scope& scope, const StatementSyntax& syntax,
-                       SmallVectorBase<const StatementBlockSymbol*>& results, bool labelHandled) {
+                       SmallVectorBase<const StatementBlockSymbol*>& results,
+                       SmallVector<const SyntaxNode*>& extraMembers, bool labelHandled) {
     if (!labelHandled && hasSimpleLabel(syntax)) {
         results.push_back(&StatementBlockSymbol::fromLabeledStmt(scope, syntax));
         return;
     }
 
-    auto recurse = [&](auto stmt) { findBlocks(scope, *stmt, results, /* lableHandled */ false); };
+    auto recurse = [&](auto stmt) {
+        findBlocks(scope, *stmt, results, extraMembers, /* lableHandled */ false);
+    };
 
     switch (syntax.kind) {
         case SyntaxKind::ReturnStatement:
@@ -423,7 +427,6 @@ static void findBlocks(const Scope& scope, const StatementSyntax& syntax,
         case SyntaxKind::ExpressionStatement:
         case SyntaxKind::WaitForkStatement:
         case SyntaxKind::VoidCastedCallStatement:
-        case SyntaxKind::CheckerInstanceStatement:
             // These statements don't have child statements within them.
             return;
 
@@ -560,6 +563,11 @@ static void findBlocks(const Scope& scope, const StatementSyntax& syntax,
                     scope, syntax.as<RandSequenceStatementSyntax>()));
             }
             return;
+        case SyntaxKind::CheckerInstanceStatement:
+            // We have an extra parameter just for collecting these checker syntax
+            // nodes; the caller will handle adding them to the parent scope.
+            extraMembers.push_back(syntax.as<CheckerInstanceStatementSyntax>().instance);
+            break;
         default:
             SLANG_UNREACHABLE;
     }
@@ -569,6 +577,7 @@ std::span<const StatementBlockSymbol* const> Statement::createAndAddBlockItems(
     Scope& scope, const SyntaxList<SyntaxNode>& items) {
 
     SmallVector<const StatementBlockSymbol*> buffer;
+    SmallVector<const SyntaxNode*> extraMembers;
     for (auto item : items) {
         switch (item->kind) {
             case SyntaxKind::DataDeclaration:
@@ -594,7 +603,7 @@ std::span<const StatementBlockSymbol* const> Statement::createAndAddBlockItems(
                 }
                 break;
             default:
-                findBlocks(scope, item->as<StatementSyntax>(), buffer, false);
+                findBlocks(scope, item->as<StatementSyntax>(), buffer, extraMembers, false);
                 break;
         }
     }
@@ -602,23 +611,30 @@ std::span<const StatementBlockSymbol* const> Statement::createAndAddBlockItems(
     auto blocks = buffer.copy(scope.getCompilation());
     for (auto block : blocks)
         scope.addMember(*block);
+    for (auto member : extraMembers)
+        scope.addMembers(*member);
 
     return blocks;
 }
 
 std::span<const StatementBlockSymbol* const> Statement::createBlockItems(
-    const Scope& scope, const StatementSyntax& syntax, bool labelHandled) {
+    const Scope& scope, const StatementSyntax& syntax, bool labelHandled,
+    SmallVector<const SyntaxNode*>& extraMembers) {
+
     SmallVector<const StatementBlockSymbol*> buffer;
-    findBlocks(scope, syntax, buffer, labelHandled);
+    findBlocks(scope, syntax, buffer, extraMembers, labelHandled);
     return buffer.copy(scope.getCompilation());
 }
 
 std::span<const StatementBlockSymbol* const> Statement::createAndAddBlockItems(
     Scope& scope, const StatementSyntax& syntax, bool labelHandled) {
 
-    auto blocks = createBlockItems(scope, syntax, labelHandled);
+    SmallVector<const SyntaxNode*> extraMembers;
+    auto blocks = createBlockItems(scope, syntax, labelHandled, extraMembers);
     for (auto block : blocks)
         scope.addMember(*block);
+    for (auto member : extraMembers)
+        scope.addMembers(*member);
 
     return blocks;
 }
@@ -2877,8 +2893,7 @@ Statement& RandSequenceStatement::fromSyntax(Compilation& compilation,
     }
 
     // All of the logic for creating productions is in the RandSeqProduction symbol.
-    auto result = compilation.emplace<RandSequenceStatement>(firstProd, syntax.sourceRange());
-    return *result;
+    return *compilation.emplace<RandSequenceStatement>(firstProd, syntax.sourceRange());
 }
 
 ER RandSequenceStatement::evalImpl(EvalContext& context) const {
@@ -2889,6 +2904,49 @@ ER RandSequenceStatement::evalImpl(EvalContext& context) const {
 void RandSequenceStatement::serializeTo(ASTSerializer& serializer) const {
     if (firstProduction)
         serializer.writeLink("firstProduction", *firstProduction);
+}
+
+Statement& ProceduralCheckerStatement::fromSyntax(Compilation& comp,
+                                                  const CheckerInstanceStatementSyntax& syntax,
+                                                  const ASTContext& context) {
+    // Find all of the checkers that were pre-created for this syntax node.
+    // It's possible to not find them if there were errors in the declaration,
+    // so we don't issue errors here -- they are already handled.
+    SmallVector<const Symbol*> instances;
+    for (auto instSyntax : syntax.instance->instances) {
+        if (auto decl = instSyntax->decl) {
+            if (auto sym = context.scope->find(decl->name.valueText())) {
+                auto nestedSym = sym;
+                while (nestedSym->kind == SymbolKind::InstanceArray) {
+                    auto& array = nestedSym->as<InstanceArraySymbol>();
+                    if (array.elements.empty())
+                        break;
+
+                    nestedSym = array.elements[0];
+                }
+
+                if (nestedSym->kind == SymbolKind::CheckerInstance)
+                    instances.push_back(sym);
+            }
+        }
+    }
+
+    return *comp.emplace<ProceduralCheckerStatement>(instances.copy(comp), syntax.sourceRange());
+}
+
+ER ProceduralCheckerStatement::evalImpl(EvalContext& context) const {
+    context.addDiag(diag::ConstEvalCheckers, sourceRange);
+    return ER::Fail;
+}
+
+void ProceduralCheckerStatement::serializeTo(ASTSerializer& serializer) const {
+    serializer.startArray("instances");
+    for (auto inst : instances) {
+        serializer.startObject();
+        serializer.writeLink("instance", *inst);
+        serializer.endObject();
+    }
+    serializer.endArray();
 }
 
 } // namespace slang::ast

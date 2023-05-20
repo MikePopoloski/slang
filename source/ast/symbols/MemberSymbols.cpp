@@ -1409,11 +1409,6 @@ CheckerSymbol& CheckerSymbol::fromSyntax(const Scope& scope,
     return *result;
 }
 
-void CheckerSymbol::makeDefaultInstance() const {
-    // TODO:
-    // AssertionInstanceExpression::makeDefault(*this);
-}
-
 ClockingBlockSymbol::ClockingBlockSymbol(Compilation& compilation, std::string_view name,
                                          SourceLocation loc) :
     Symbol(SymbolKind::ClockingBlock, name, loc),

@@ -321,13 +321,6 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
         symbol.makeDefaultInstance();
     }
 
-    void handle(const CheckerSymbol& symbol) {
-        if (!handleDefault(symbol))
-            return;
-
-        symbol.makeDefaultInstance();
-    }
-
     void handle(const RandSeqProductionSymbol& symbol) {
         if (!handleDefault(symbol))
             return;

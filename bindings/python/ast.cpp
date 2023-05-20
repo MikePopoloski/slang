@@ -619,6 +619,9 @@ void registerAST(py::module_& m) {
     py::class_<RandSequenceStatement, Statement>(m, "RandSequenceStatement")
         .def_readonly("firstProduction", &RandSequenceStatement::firstProduction);
 
+    py::class_<ProceduralCheckerStatement, Statement>(m, "ProceduralCheckerStatement")
+        .def_readonly("instances", &ProceduralCheckerStatement::instances);
+
     py::class_<Pattern>(m, "Pattern")
         .def_readonly("kind", &Pattern::kind)
         .def_readonly("syntax", &Pattern::syntax)

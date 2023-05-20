@@ -256,6 +256,7 @@ void Scope::addMembers(const SyntaxNode& syntax) {
         }
         case SyntaxKind::HierarchyInstantiation:
         case SyntaxKind::PrimitiveInstantiation:
+        case SyntaxKind::CheckerInstantiation:
         case SyntaxKind::AnsiPortList:
         case SyntaxKind::NonAnsiPortList:
         case SyntaxKind::IfGenerate:
@@ -323,37 +324,17 @@ void Scope::addMembers(const SyntaxNode& syntax) {
         case SyntaxKind::AlwaysLatchBlock:
         case SyntaxKind::AlwaysFFBlock:
         case SyntaxKind::InitialBlock:
-        case SyntaxKind::FinalBlock: {
-            std::span<const StatementBlockSymbol* const> additional;
-            auto& block = ProceduralBlockSymbol::fromSyntax(*this,
-                                                            syntax.as<ProceduralBlockSyntax>(),
-                                                            additional);
-
-            for (auto b : additional)
-                addMember(*b);
-            addMember(block);
+        case SyntaxKind::FinalBlock:
+            addMember(ProceduralBlockSymbol::fromSyntax(*this, syntax.as<ProceduralBlockSyntax>()));
             break;
-        }
-        case SyntaxKind::ConcurrentAssertionMember: {
-            std::span<const StatementBlockSymbol* const> additional;
-            auto& block = ProceduralBlockSymbol::fromSyntax(
-                *this, syntax.as<ConcurrentAssertionMemberSyntax>(), additional);
-
-            for (auto b : additional)
-                addMember(*b);
-            addMember(block);
+        case SyntaxKind::ConcurrentAssertionMember:
+            addMember(ProceduralBlockSymbol::fromSyntax(
+                *this, syntax.as<ConcurrentAssertionMemberSyntax>()));
             break;
-        }
-        case SyntaxKind::ImmediateAssertionMember: {
-            std::span<const StatementBlockSymbol* const> additional;
-            auto& block = ProceduralBlockSymbol::fromSyntax(
-                *this, syntax.as<ImmediateAssertionMemberSyntax>(), additional);
-
-            for (auto b : additional)
-                addMember(*b);
-            addMember(block);
+        case SyntaxKind::ImmediateAssertionMember:
+            addMember(ProceduralBlockSymbol::fromSyntax(
+                *this, syntax.as<ImmediateAssertionMemberSyntax>()));
             break;
-        }
         case SyntaxKind::EmptyMember:
             addMember(
                 EmptyMemberSymbol::fromSyntax(compilation, *this, syntax.as<EmptyMemberSyntax>()));
@@ -541,7 +522,6 @@ void Scope::addMembers(const SyntaxNode& syntax) {
                 AnonymousProgramSymbol::fromSyntax(*this, syntax.as<AnonymousProgramSyntax>()));
             break;
         case SyntaxKind::NetAlias:
-        case SyntaxKind::CheckerInstantiation:
         case SyntaxKind::CheckerDataDeclaration:
         case SyntaxKind::ExternModuleDecl:
         case SyntaxKind::ExternUdpDecl:
@@ -934,6 +914,15 @@ void Scope::elaborate() const {
                 SmallVector<const Symbol*> implicitNets;
                 PrimitiveInstanceSymbol::fromSyntax(member.node.as<PrimitiveInstantiationSyntax>(),
                                                     context, instances, implicitNets);
+                insertMembersAndNets(instances, implicitNets, symbol);
+                break;
+            }
+            case SyntaxKind::CheckerInstantiation: {
+                SmallVector<const Symbol*> instances;
+                SmallVector<const Symbol*> implicitNets;
+                CheckerInstanceSymbol::fromSyntax(member.node.as<CheckerInstantiationSyntax>(),
+                                                  context, instances, implicitNets,
+                                                  /* isFromBind */ false);
                 insertMembersAndNets(instances, implicitNets, symbol);
                 break;
             }
@@ -1495,6 +1484,8 @@ static size_t countMembers(const SyntaxNode& syntax) {
             return syntax.as<HierarchyInstantiationSyntax>().instances.size() + 1;
         case SyntaxKind::PrimitiveInstantiation:
             return syntax.as<PrimitiveInstantiationSyntax>().instances.size() + 1;
+        case SyntaxKind::CheckerInstantiation:
+            return syntax.as<CheckerInstantiationSyntax>().instances.size() + 1;
         case SyntaxKind::BindDirective:
             return syntax.as<BindDirectiveSyntax>().instantiation->instances.size() + 1;
         case SyntaxKind::ContinuousAssign:

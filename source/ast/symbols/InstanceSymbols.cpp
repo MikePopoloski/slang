@@ -320,6 +320,18 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
     TimeTraceScope timeScope("createInstances"sv,
                              [&] { return std::string(syntax.type.valueText()); });
 
+    // Unfortunately this instantiation could be for a checker instead of a
+    // module/interface/program, so we're forced to do a real name lookup here
+    // in the local scope before doing a global definition lookup.
+    if (auto sym = Lookup::unqualified(*context.scope, syntax.type.valueText(),
+                                       LookupFlags::AllowDeclaredAfter)) {
+        if (sym->kind == SymbolKind::Checker) {
+            CheckerInstanceSymbol::fromSyntax(sym->as<CheckerSymbol>(), syntax, context, results,
+                                              implicitNets, isFromBind);
+            return;
+        }
+    }
+
     // Find our parent instance, if there is one.
     bool isUninstantiated = false;
     const InstanceBodySymbol* parentInst = nullptr;
@@ -1208,6 +1220,141 @@ void PrimitiveInstanceSymbol::serializeTo(ASTSerializer& serializer) const {
         serializer.write("driveStrength0", toString(*ds0));
     if (ds1)
         serializer.write("driveStrength1", toString(*ds1));
+}
+
+namespace {
+
+CheckerInstanceSymbol* createCheckerInstance(
+    Compilation& compilation, const Scope& scope, const CheckerSymbol& checker,
+    const HierarchicalInstanceSyntax& syntax,
+    std::span<const AttributeInstanceSyntax* const> attributes, SmallVectorBase<int32_t>& path) {
+
+    auto [name, loc] = getNameLoc(syntax);
+    auto result = compilation.emplace<CheckerInstanceSymbol>(name, loc, checker);
+    result->arrayPath = path.copy(compilation);
+    result->setSyntax(syntax);
+    result->setAttributes(scope, attributes);
+    return result;
+}
+
+using DimIterator = std::span<VariableDimensionSyntax*>::iterator;
+
+Symbol* recurseCheckerArray(Compilation& comp, const CheckerSymbol& checker,
+                            const HierarchicalInstanceSyntax& instance, const ASTContext& context,
+                            DimIterator it, DimIterator end,
+                            std::span<const AttributeInstanceSyntax* const> attributes,
+                            SmallVectorBase<int32_t>& path) {
+    if (it == end)
+        return createCheckerInstance(comp, *context.scope, checker, instance, attributes, path);
+
+    SLANG_ASSERT(instance.decl);
+    auto nameToken = instance.decl->name;
+    auto createEmpty = [&]() {
+        return comp.emplace<InstanceArraySymbol>(comp, nameToken.valueText(), nameToken.location(),
+                                                 std::span<const Symbol* const>{}, ConstantRange());
+    };
+
+    auto& dimSyntax = **it;
+    ++it;
+
+    // Evaluate the dimensions of the array. If this fails for some reason,
+    // make up an empty array so that we don't get further errors when
+    // things try to reference this symbol.
+    auto dim = context.evalDimension(dimSyntax, /* requireRange */ true, /* isPacked */ false);
+    if (!dim.isRange())
+        return createEmpty();
+
+    ConstantRange range = dim.range;
+    if (range.width() > comp.getOptions().maxInstanceArray) {
+        auto& diag = context.addDiag(diag::MaxInstanceArrayExceeded, dimSyntax.sourceRange());
+        diag << "checker"sv << comp.getOptions().maxInstanceArray;
+        return createEmpty();
+    }
+
+    SmallVector<const Symbol*> elements;
+    for (int32_t i = range.lower(); i <= range.upper(); i++) {
+        path.push_back(i);
+        auto symbol = recurseCheckerArray(comp, checker, instance, context, it, end, attributes,
+                                          path);
+        path.pop_back();
+
+        symbol->name = "";
+        elements.push_back(symbol);
+    }
+
+    auto result = comp.emplace<InstanceArraySymbol>(comp, nameToken.valueText(),
+                                                    nameToken.location(), elements.copy(comp),
+                                                    range);
+    for (auto element : elements)
+        result->addMember(*element);
+
+    return result;
+}
+
+template<typename TSyntax>
+void createCheckers(const CheckerSymbol& checker, const TSyntax& syntax, const ASTContext& context,
+                    SmallVectorBase<const Symbol*>& results,
+                    SmallVectorBase<const Symbol*>& implicitNets, bool) {
+    SmallSet<std::string_view, 8> implicitNetNames;
+    SmallVector<int32_t> path;
+
+    auto& comp = context.getCompilation();
+    auto& netType = context.scope->getDefaultNetType();
+
+    for (auto instance : syntax.instances) {
+        path.clear();
+        createImplicitNets(*instance, context, netType, implicitNetNames, implicitNets);
+
+        if (!instance->decl) {
+            context.addDiag(diag::InstanceNameRequired, instance->sourceRange());
+            results.push_back(createCheckerInstance(comp, *context.scope, checker, *instance,
+                                                    syntax.attributes, path));
+        }
+        else {
+            auto dims = instance->decl->dimensions;
+            auto symbol = recurseCheckerArray(comp, checker, *instance, context, dims.begin(),
+                                              dims.end(), syntax.attributes, path);
+            results.push_back(symbol);
+        }
+    }
+}
+
+} // namespace
+
+void CheckerInstanceSymbol::fromSyntax(const CheckerSymbol& checker,
+                                       const HierarchyInstantiationSyntax& syntax,
+                                       const ASTContext& context,
+                                       SmallVectorBase<const Symbol*>& results,
+                                       SmallVectorBase<const Symbol*>& implicitNets,
+                                       bool isFromBind) {
+    createCheckers(checker, syntax, context, results, implicitNets, isFromBind);
+}
+
+void CheckerInstanceSymbol::fromSyntax(const CheckerInstantiationSyntax& syntax,
+                                       const ASTContext& context,
+                                       SmallVectorBase<const Symbol*>& results,
+                                       SmallVectorBase<const Symbol*>& implicitNets,
+                                       bool isFromBind) {
+    LookupResult lookupResult;
+    Lookup::name(*syntax.type, context, LookupFlags::AllowDeclaredAfter | LookupFlags::NoSelectors,
+                 lookupResult);
+
+    lookupResult.reportDiags(context);
+    if (!lookupResult.found) {
+        // TODO:
+        return;
+    }
+
+    auto symbol = lookupResult.found;
+    if (symbol->kind != SymbolKind::Checker) {
+        // TODO:
+        return;
+    }
+
+    createCheckers(symbol->as<CheckerSymbol>(), syntax, context, results, implicitNets, isFromBind);
+}
+
+void CheckerInstanceSymbol::serializeTo(ASTSerializer&) const {
 }
 
 } // namespace slang::ast

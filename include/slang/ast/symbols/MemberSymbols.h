@@ -368,8 +368,6 @@ public:
     static CheckerSymbol& fromSyntax(const Scope& scope,
                                      const syntax::CheckerDeclarationSyntax& syntax);
 
-    void makeDefaultInstance() const;
-
     void serializeTo(ASTSerializer&) const {}
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Checker; }

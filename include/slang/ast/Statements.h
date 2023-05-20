@@ -57,7 +57,8 @@ class VariableSymbol;
     x(ProceduralAssign) \
     x(ProceduralDeassign) \
     x(RandCase) \
-    x(RandSequence)
+    x(RandSequence) \
+    x(ProceduralChecker)
 SLANG_ENUM(StatementKind, STATEMENT)
 #undef STATEMENT
 
@@ -195,7 +196,8 @@ public:
 
     /// Creates any symbols declared by the given statement syntax, such as local variables.
     static std::span<const StatementBlockSymbol* const> createBlockItems(
-        const Scope& scope, const StatementSyntax& syntax, bool labelHandled);
+        const Scope& scope, const StatementSyntax& syntax, bool labelHandled,
+        SmallVector<const syntax::SyntaxNode*>& extraMembers);
 
     /// Creates any symbols declared by the given list of syntax nodes, such as local variables,
     /// and ignores any statement syntax nodes. The created symbols are added to the given scope.
@@ -1112,6 +1114,24 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(StatementKind kind) { return kind == StatementKind::RandSequence; }
+};
+
+class SLANG_EXPORT ProceduralCheckerStatement : public Statement {
+public:
+    std::span<const Symbol* const> instances;
+
+    ProceduralCheckerStatement(std::span<const Symbol* const> instances, SourceRange sourceRange) :
+        Statement(StatementKind::ProceduralChecker, sourceRange), instances(instances) {}
+
+    EvalResult evalImpl(EvalContext& context) const;
+
+    static Statement& fromSyntax(Compilation& compilation,
+                                 const syntax::CheckerInstanceStatementSyntax& syntax,
+                                 const ASTContext& context);
+
+    void serializeTo(ASTSerializer& serializer) const;
+
+    static bool isKind(StatementKind kind) { return kind == StatementKind::ProceduralChecker; }
 };
 
 } // namespace slang::ast

@@ -932,6 +932,7 @@ error ConstEvalRandValue "random value statements are not allowed in constant fu
 error ConstEvalParamCycle "cyclic dependency found when determining value of '{}'"
 error ConstEvalNoIfItemsMatched "no items in {} if statement matched value {} in constant function"
 error ConstEvalIfItemsNotUnique "more than one match found in unique if statement for value {} in constant function"
+error ConstEvalCheckers "checkers are not allowed in constant functions"
 warning elem-not-found ConstEvalAssociativeElementNotFound "element {} does not exist in associative array"
 warning static-skipped ConstEvalStaticSkipped "static variable initialization is skipped in constant function calls"
 warning dynarray-index ConstEvalDynamicArrayIndex "invalid index {} for {} of length {}"
