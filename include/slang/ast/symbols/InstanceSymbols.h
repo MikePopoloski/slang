@@ -7,6 +7,7 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include "slang/ast/ASTContext.h"
 #include "slang/ast/Scope.h"
 #include "slang/ast/SemanticFacts.h"
 #include "slang/ast/Symbol.h"
@@ -17,6 +18,7 @@
 namespace slang::ast {
 
 class AssertionExpr;
+class AttributeSymbol;
 class CheckerSymbol;
 class Definition;
 class Expression;
@@ -272,12 +274,24 @@ class SLANG_EXPORT CheckerInstanceSymbol : public InstanceSymbolBase, public Sco
 public:
     const CheckerSymbol& checker;
     const AssertionInstanceDetails& assertionDetails;
+    bool isProcedural;
 
     CheckerInstanceSymbol(Compilation& compilation, std::string_view name, SourceLocation loc,
-                          const CheckerSymbol& checker,
-                          const AssertionInstanceDetails& assertionDetails) :
+                          const CheckerSymbol& checker, AssertionInstanceDetails& assertionDetails,
+                          const ASTContext& originalContext, bool isProcedural) :
         InstanceSymbolBase(SymbolKind::CheckerInstance, name, loc),
-        Scope(compilation, this), checker(checker), assertionDetails(assertionDetails) {}
+        Scope(compilation, this), checker(checker), assertionDetails(assertionDetails),
+        isProcedural(isProcedural), originalContext(originalContext) {
+        assertionDetails.prevContext = &this->originalContext;
+    }
+
+    struct Connection {
+        not_null<const Symbol*> formal;
+        std::variant<const Expression*, const AssertionExpr*, const TimingControl*> actual;
+        std::span<const AttributeSymbol* const> attributes;
+    };
+
+    std::span<const Connection> getPortConnections() const;
 
     static void fromSyntax(const CheckerSymbol& checker,
                            const syntax::HierarchyInstantiationSyntax& syntax,
@@ -288,9 +302,20 @@ public:
                            const ASTContext& context, SmallVectorBase<const Symbol*>& results,
                            SmallVectorBase<const Symbol*>& implicitNets, bool isFromBind);
 
+    static CheckerInstanceSymbol& fromSyntax(
+        Compilation& compilation, const ASTContext& context, const CheckerSymbol& checker,
+        const syntax::HierarchicalInstanceSyntax& syntax,
+        std::span<const syntax::AttributeInstanceSyntax* const> attributes,
+        SmallVectorBase<int32_t>& path, bool isProcedural);
+
     void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::CheckerInstance; }
+
+private:
+    ASTContext originalContext;
+    std::span<Connection> connections;
+    mutable bool connectionsResolved = false;
 };
 
 } // namespace slang::ast

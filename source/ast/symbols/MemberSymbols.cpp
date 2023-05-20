@@ -1237,6 +1237,7 @@ void AssertionPortSymbol::buildPorts(Scope& scope, const AssertionItemPortListSy
             port->declaredType.setDimensionSyntax(item->dimensions);
 
         if (item->local) {
+            // TODO: check direction
             port->direction = item->direction ? SemanticFacts::getDirection(item->direction.kind)
                                               : ArgumentDirection::In;
 
@@ -1434,6 +1435,7 @@ CheckerSymbol& CheckerSymbol::fromSyntax(const Scope& scope,
                 scope.addDiag(diag::LocalNotAllowed, item->local.range());
 
             if (item->direction) {
+                // TODO: check direction
                 port->direction = SemanticFacts::getDirection(item->direction.kind);
 
                 // If we have a direction we can never inherit the previous type.
@@ -1466,6 +1468,7 @@ CheckerSymbol& CheckerSymbol::fromSyntax(const Scope& scope,
                     (itemKind == SyntaxKind::PropertyType || itemKind == SyntaxKind::SequenceType ||
                      itemKind == SyntaxKind::Untyped)) {
                     scope.addDiag(diag::CheckerOutputBadType, item->type->sourceRange());
+                    port->declaredType.setType(comp.getErrorType());
                 }
             }
 

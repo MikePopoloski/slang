@@ -577,10 +577,10 @@ static std::tuple<const SequenceExprSyntax*, const ExpressionSyntax*> decomposeP
     return {seqExpr, regExpr};
 }
 
-static bool checkAssertionArg(const PropertyExprSyntax& propExpr, const AssertionPortSymbol& formal,
-                              const ASTContext& context,
-                              AssertionInstanceExpression::ActualArg& result,
-                              bool isRecursiveProp) {
+bool AssertionInstanceExpression::checkAssertionArg(const PropertyExprSyntax& propExpr,
+                                                    const AssertionPortSymbol& formal,
+                                                    const ASTContext& context, ActualArg& result,
+                                                    bool isRecursiveProp) {
     auto [seqExpr, regExpr] = decomposePropExpr(propExpr);
 
     ASTContext ctx = context;
@@ -667,9 +667,13 @@ static bool checkAssertionArg(const PropertyExprSyntax& propExpr, const Assertio
         return false;
     }
 
+    auto formalParent = formal.getParentScope();
+    SLANG_ASSERT(formalParent);
+
     // Local var formals that are output or inout must bind only to another local var.
-    if (formal.direction == ArgumentDirection::InOut ||
-        formal.direction == ArgumentDirection::Out) {
+    if ((formal.direction == ArgumentDirection::InOut ||
+         formal.direction == ArgumentDirection::Out) &&
+        formalParent->asSymbol().kind != SymbolKind::Checker) {
         auto sym = bound.getSymbolReference();
         if (!sym || sym->kind != SymbolKind::LocalAssertionVar) {
             ctx.addDiag(diag::AssertionOutputLocalVar, bound.sourceRange);

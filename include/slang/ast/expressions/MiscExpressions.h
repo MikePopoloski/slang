@@ -15,6 +15,8 @@
 
 namespace slang::ast {
 
+class AssertionPortSymbol;
+
 /// Common base class for both NamedValueExpression and HierarchicalValueExpression.
 class SLANG_EXPORT ValueExpressionBase : public Expression {
 public:
@@ -215,6 +217,10 @@ public:
     static Expression& makeDefault(const Symbol& symbol);
 
     static Expression& bindPort(const Symbol& symbol, SourceRange range, const ASTContext& context);
+
+    static bool checkAssertionArg(const syntax::PropertyExprSyntax& propExpr,
+                                  const AssertionPortSymbol& formal, const ASTContext& context,
+                                  ActualArg& result, bool isRecursiveProp);
 
     void serializeTo(ASTSerializer& serializer) const;
 

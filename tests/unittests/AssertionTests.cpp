@@ -1419,3 +1419,34 @@ endchecker
     CHECK(diags[2].code == diag::LocalNotAllowed);
     CHECK(diags[3].code == diag::CheckerOutputBadType);
 }
+
+TEST_CASE("Checker port connections") {
+    auto tree = SyntaxTree::fromText(R"(
+package p;
+    real prq;
+    checker c(a, b, output bit c, input real r = prq);
+        initial $display(a, b, r);
+        always_comb c = 1;
+    endchecker
+endpackage
+
+module m;
+    bit d;
+    initial p::c c1(1, 2, d, 3.14);
+
+    int a, b;
+    real r;
+
+    import p::*;
+    c c2(1, 2, e, 3.14);
+    c c3(.*, .c(foo), .r);
+    c c4(.*, .c(foo));
+    c c5(1, 2, e);
+    c c6(.a(1), .b, .c(foo));
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
