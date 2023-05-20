@@ -831,13 +831,15 @@ static const AssertionExpr* bindUnknownPortConn(const ASTContext& context,
                     }
                 }
 
-                return comp.emplace<SimpleAssertionExpr>(Expression::bind(*expr, context),
-                                                         std::nullopt);
+                return comp.emplace<SimpleAssertionExpr>(
+                    Expression::bind(*expr, context, ASTFlags::AllowUnboundedLiteral),
+                    std::nullopt);
             }
         }
     }
 
-    return &AssertionExpr::bind(syntax, context);
+    return &AssertionExpr::bind(syntax, context.resetFlags(ASTFlags::AssertionInstanceArgCheck |
+                                                           ASTFlags::AllowUnboundedLiteral));
 }
 
 std::span<const AssertionExpr* const> UninstantiatedDefSymbol::getPortConnections() const {
@@ -1286,6 +1288,9 @@ template<typename TSyntax>
 void createCheckers(const CheckerSymbol& checker, const TSyntax& syntax, const ASTContext& context,
                     SmallVectorBase<const Symbol*>& results,
                     SmallVectorBase<const Symbol*>& implicitNets, bool, bool isProcedural) {
+    if (syntax.parameters)
+        context.addDiag(diag::CheckerParameterAssign, syntax.parameters->sourceRange());
+
     SmallSet<std::string_view, 8> implicitNetNames;
     SmallVector<int32_t> path;
 
@@ -1334,14 +1339,24 @@ void CheckerInstanceSymbol::fromSyntax(const CheckerInstantiationSyntax& syntax,
                  lookupResult);
 
     lookupResult.reportDiags(context);
-    if (!lookupResult.found) {
-        // TODO:
+    if (!lookupResult.found)
         return;
-    }
 
     auto symbol = lookupResult.found;
     if (symbol->kind != SymbolKind::Checker) {
-        // TODO:
+        if (symbol->kind == SymbolKind::ClassType) {
+            context.addDiag(diag::CheckerClassBadInstantiation, syntax.sourceRange())
+                << symbol->name;
+        }
+        else if (symbol->kind == SymbolKind::Subroutine) {
+            context.addDiag(diag::CheckerFuncBadInstantiation, syntax.sourceRange())
+                << symbol->name;
+        }
+        else {
+            auto& diag = context.addDiag(diag::NotAChecker, syntax.sourceRange());
+            diag << symbol->name << symbol->name;
+            diag.addNote(diag::NoteDeclarationHere, symbol->location);
+        }
         return;
     }
 

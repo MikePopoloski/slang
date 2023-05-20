@@ -1504,3 +1504,40 @@ endmodule
     CHECK(diags[15].code == diag::MixingOrderedAndNamedPorts);
     CHECK(diags[16].code == diag::UndeclaredIdentifier);
 }
+
+TEST_CASE("Checker invalid instantiations") {
+    auto tree = SyntaxTree::fromText(R"(
+package p;
+    int e;
+    function automatic func(int a, b); endfunction
+    class cls; endclass
+endpackage
+
+checker check;
+endchecker
+
+module m;
+    c c1(posedge clk, $, 3 + 4);
+    initial d d1(posedge clk, $, 3 + 4);
+
+    p::e e1(posedge clk, $, 3 + 4);
+
+    p::func func(1, 2);
+    p::cls cls(1, 2);
+
+    check #(1, 2) c2();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 6);
+    CHECK(diags[0].code == diag::UnknownModule);
+    CHECK(diags[1].code == diag::UndeclaredIdentifier);
+    CHECK(diags[2].code == diag::NotAChecker);
+    CHECK(diags[3].code == diag::CheckerFuncBadInstantiation);
+    CHECK(diags[4].code == diag::CheckerClassBadInstantiation);
+    CHECK(diags[5].code == diag::CheckerParameterAssign);
+}
