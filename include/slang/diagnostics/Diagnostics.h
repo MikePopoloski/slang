@@ -43,8 +43,9 @@ class Symbol;
     x(SysFuncs) \
     x(ConstEval) \
     x(Compilation) \
-    x(Meta)   \
-    x(Tidy)
+    x(Meta) \
+    x(Tidy) \
+    x(Netlist)
 SLANG_ENUM_SIZED(DiagSubsystem, uint16_t, DS)
 #undef DS
 

@@ -7,9 +7,8 @@
 //------------------------------------------------------------------------------
 #include "slang/diagnostics/TextDiagnosticClient.h"
 
-#include "../text/FormatBuffer.h"
-
 #include "slang/text/CharInfo.h"
+#include "slang/text/FormatBuffer.h"
 #include "slang/text/SourceManager.h"
 
 namespace slang {

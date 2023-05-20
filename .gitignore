@@ -2,6 +2,8 @@
 .vscode/
 .venv/
 .idea/
+.cache/
+.DS_Store
 build/
 install/
 compile_commands.json

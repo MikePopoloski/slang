@@ -7,9 +7,9 @@
 //------------------------------------------------------------------------------
 #include "slang/numeric/ConstantValue.h"
 
-#include "../text/FormatBuffer.h"
 #include <ostream>
 
+#include "slang/text/FormatBuffer.h"
 #include "slang/util/Hash.h"
 
 namespace slang {

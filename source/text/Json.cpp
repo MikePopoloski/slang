@@ -7,9 +7,9 @@
 //------------------------------------------------------------------------------
 #include "slang/text/Json.h"
 
-#include "FormatBuffer.h"
 #include <climits>
 
+#include "slang/text/FormatBuffer.h"
 #include "slang/util/SmallVector.h"
 #include "slang/util/String.h"
 
