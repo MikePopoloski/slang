@@ -1541,3 +1541,20 @@ endmodule
     CHECK(diags[4].code == diag::CheckerClassBadInstantiation);
     CHECK(diags[5].code == diag::CheckerParameterAssign);
 }
+
+TEST_CASE("Assertion ports invalid directions") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    sequence s(local ref int r); 1; endsequence
+    checker c(inout int i); endchecker
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::AssertionPortRef);
+    CHECK(diags[1].code == diag::CheckerPortInout);
+}

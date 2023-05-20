@@ -2151,6 +2151,19 @@ AssertionItemPortSyntax& Parser::parseAssertionItemPort(SyntaxKind parentKind) {
         else if (direction)
             addDiag(diag::UnexpectedLetPortKeyword, direction.range()) << direction.valueText();
     }
+    else if (direction) {
+        if (direction.kind == TokenKind::RefKeyword) {
+            addDiag(diag::AssertionPortRef, direction.range());
+        }
+        else if (parentKind == SyntaxKind::PropertyDeclaration &&
+                 direction.kind != TokenKind::InputKeyword) {
+            addDiag(diag::AssertionPortPropOutput, direction.range());
+        }
+        else if (parentKind == SyntaxKind::CheckerDeclaration &&
+                 direction.kind == TokenKind::InOutKeyword) {
+            addDiag(diag::CheckerPortInout, direction.range());
+        }
+    }
 
     DataTypeSyntax* type;
     switch (peek().kind) {
