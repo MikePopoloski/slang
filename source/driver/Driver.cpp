@@ -593,7 +593,7 @@ bool Driver::parseAllSources() {
 
         auto findMissingNames = [&](const std::shared_ptr<SyntaxTree>& tree,
                                     flat_hash_set<std::string_view>& missing) {
-            const auto& meta = ParserMetadata::fromSyntax(tree->root());
+            auto& meta = tree->getMetadata();
             for (auto name : meta.globalInstances) {
                 if (knownNames.find(name) == knownNames.end())
                     missing.emplace(name);
@@ -613,9 +613,9 @@ bool Driver::parseAllSources() {
                 }
             }
 
-            for (auto bd : meta.interfacePorts) {
-                std::string_view name = bd->nameOrKeyword.valueText();
-                if (knownNames.find(name) == knownNames.end())
+            for (auto intf : meta.interfacePorts) {
+                std::string_view name = intf->nameOrKeyword.valueText();
+                if (knownNames.find(name) == knownNames.end() && name != "interface")
                     missing.emplace(name);
             }
         };

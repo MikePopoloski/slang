@@ -82,7 +82,21 @@ AnsiPortListSyntax& Parser::parseAnsiPortList(Token openParen) {
                                                     TokenKind::Comma, closeParen,
                                                     RequireItems::False, diag::ExpectedAnsiPort,
                                                     [this] { return &parseAnsiPort(); });
-    return factory.ansiPortList(openParen, buffer.copy(alloc), closeParen);
+    AnsiPortListSyntax* portList = &factory.ansiPortList(openParen, buffer.copy(alloc), closeParen);
+
+    // put interface ports in metadata
+    
+    for (auto port : portList->ports) {
+        if (port->kind != SyntaxKind::ImplicitAnsiPort) continue;
+        ImplicitAnsiPortSyntax* ansiport = &port->as<ImplicitAnsiPortSyntax>();
+
+        if(ansiport->header->kind != SyntaxKind::InterfacePortHeader) continue;
+        InterfacePortHeaderSyntax* goodheader = &ansiport->header->as<InterfacePortHeaderSyntax>();
+
+        meta.interfacePorts.push_back(goodheader);
+    }
+
+    return *portList;
 }
 
 ModuleHeaderSyntax& Parser::parseModuleHeader() {

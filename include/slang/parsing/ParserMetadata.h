@@ -44,6 +44,7 @@ struct SLANG_EXPORT ParserMetadata {
     /// A list of all class declarations parsed.
     std::vector<const syntax::ClassDeclarationSyntax*> classDecls;
 
+    /// A list of all interface port headers parsed.
     std::vector<const syntax::InterfacePortHeaderSyntax*> interfacePorts;
 
     /// The EOF token, if one has already been consumed by the parser.
