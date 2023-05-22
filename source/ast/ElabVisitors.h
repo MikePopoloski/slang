@@ -328,6 +328,14 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
         symbol.makeDefaultInstance();
     }
 
+    void handle(const CheckerSymbol& symbol) {
+        if (!handleDefault(symbol))
+            return;
+
+        auto& result = CheckerInstanceSymbol::createInvalid(symbol);
+        result.visit(*this);
+    }
+
     void handle(const RandSeqProductionSymbol& symbol) {
         if (!handleDefault(symbol))
             return;

@@ -276,19 +276,35 @@ public:
     const AssertionInstanceDetails& assertionDetails;
     bool isProcedural;
 
+    /// Indicates whether the checker isn't actually instantiated in the design.
+    /// This might be because it was created with invalid port connections simply
+    /// to check name lookup rules but it's never actually referenced elsewhere
+    /// in the user's code.
+    bool isUninstantiated;
+
     CheckerInstanceSymbol(Compilation& compilation, std::string_view name, SourceLocation loc,
                           const CheckerSymbol& checker, AssertionInstanceDetails& assertionDetails,
-                          const ASTContext& originalContext, bool isProcedural) :
-        InstanceSymbolBase(SymbolKind::CheckerInstance, name, loc),
-        Scope(compilation, this), checker(checker), assertionDetails(assertionDetails),
-        isProcedural(isProcedural), originalContext(originalContext) {
-        assertionDetails.prevContext = &this->originalContext;
-    }
+                          const ASTContext& originalContext, bool isProcedural,
+                          bool isUninstantiated);
 
-    struct Connection {
-        not_null<const Symbol*> formal;
+    class Connection {
+    public:
+        const CheckerInstanceSymbol& instance;
+        const Symbol& formal;
         std::variant<const Expression*, const AssertionExpr*, const TimingControl*> actual;
         std::span<const AttributeSymbol* const> attributes;
+
+        Connection(const CheckerInstanceSymbol& instance, const Symbol& formal,
+                   const syntax::ExpressionSyntax* outputInitialSyntax,
+                   std::span<const AttributeSymbol* const> attributes) :
+            instance(instance),
+            formal(formal), attributes(attributes), outputInitialSyntax(outputInitialSyntax) {}
+
+        const Expression* getOutputInitialExpr() const;
+
+    private:
+        const syntax::ExpressionSyntax* outputInitialSyntax;
+        mutable std::optional<const Expression*> outputInitialExpr;
     };
 
     std::span<const Connection> getPortConnections() const;
@@ -301,6 +317,11 @@ public:
     static void fromSyntax(const syntax::CheckerInstantiationSyntax& syntax,
                            const ASTContext& context, SmallVectorBase<const Symbol*>& results,
                            SmallVectorBase<const Symbol*>& implicitNets, bool isFromBind);
+
+    /// Creates an intentionally invalid instance by forcing all port connections to
+    /// null values. This allows type checking instance members as long as they don't
+    /// depend on any port expansion.
+    static CheckerInstanceSymbol& createInvalid(const CheckerSymbol& checker);
 
     static CheckerInstanceSymbol& fromSyntax(
         Compilation& compilation, const ASTContext& context, const CheckerSymbol& checker,

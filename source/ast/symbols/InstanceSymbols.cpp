@@ -336,6 +336,7 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
 
     // Find our parent instance, if there is one.
     bool isUninstantiated = false;
+    bool inChecker = false;
     const InstanceBodySymbol* parentInst = nullptr;
     const Scope* currScope = context.scope;
     do {
@@ -345,9 +346,13 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
             isUninstantiated |= parentInst->isUninstantiated;
             break;
         }
-
-        if (sym.kind == SymbolKind::GenerateBlock)
+        else if (sym.kind == SymbolKind::CheckerInstance) {
+            inChecker = true;
+            isUninstantiated |= sym.as<CheckerInstanceSymbol>().isUninstantiated;
+        }
+        else if (sym.kind == SymbolKind::GenerateBlock) {
             isUninstantiated |= sym.as<GenerateBlockSymbol>().isUninstantiated;
+        }
 
         currScope = sym.getParentScope();
     } while (currScope);
@@ -379,7 +384,7 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
             PrimitiveInstanceSymbol::fromSyntax(*prim, syntax, context, results, implicitNets);
             if (!results.empty()) {
                 if (!owningDefinition ||
-                    owningDefinition->definitionKind != DefinitionKind::Module) {
+                    owningDefinition->definitionKind != DefinitionKind::Module || inChecker) {
                     context.addDiag(diag::InvalidPrimInstanceForParent, syntax.type.range());
                 }
                 else if (isFromBind) {
@@ -400,7 +405,11 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
 
     definition->noteInstantiated();
 
-    if (owningDefinition) {
+    if (inChecker) {
+        context.addDiag(diag::InvalidInstanceForParent, syntax.type.range())
+            << definition->getArticleKindString() << "a checker"sv;
+    }
+    else if (owningDefinition) {
         auto owningKind = owningDefinition->definitionKind;
         if (owningKind == DefinitionKind::Program ||
             (owningKind == DefinitionKind::Interface &&
@@ -1319,6 +1328,19 @@ void createCheckers(const CheckerSymbol& checker, const TSyntax& syntax, const A
 
 } // namespace
 
+CheckerInstanceSymbol::CheckerInstanceSymbol(Compilation& compilation, std::string_view name,
+                                             SourceLocation loc, const CheckerSymbol& checker,
+                                             AssertionInstanceDetails& assertionDetails,
+                                             const ASTContext& originalContext, bool isProcedural,
+                                             bool isUninstantiated) :
+    InstanceSymbolBase(SymbolKind::CheckerInstance, name, loc),
+    Scope(compilation, this), checker(checker), assertionDetails(assertionDetails),
+    isProcedural(isProcedural), isUninstantiated(isUninstantiated),
+    originalContext(originalContext) {
+
+    assertionDetails.prevContext = &this->originalContext;
+}
+
 void CheckerInstanceSymbol::fromSyntax(const CheckerSymbol& checker,
                                        const HierarchyInstantiationSyntax& syntax,
                                        const ASTContext& context,
@@ -1368,6 +1390,37 @@ void CheckerInstanceSymbol::fromSyntax(const CheckerInstantiationSyntax& syntax,
                    isProcedural);
 }
 
+static const Symbol* createCheckerFormal(Compilation& comp, const AssertionPortSymbol& port,
+                                         CheckerInstanceSymbol& instance,
+                                         const ExpressionSyntax*& outputInitialSyntax,
+                                         const ASTContext& context) {
+    // Output ports are special; they aren't involved in the rewriting process,
+    // they just act like normal formal ports / arguments.
+    if (port.direction == ArgumentDirection::Out) {
+        auto arg = comp.emplace<FormalArgumentSymbol>(port.name, port.location, *port.direction,
+                                                      VariableLifetime::Static);
+        arg->getDeclaredType()->setLink(port.declaredType);
+
+        if (auto portSyntax = port.getSyntax()) {
+            arg->setSyntax(*portSyntax);
+            arg->setAttributes(instance, portSyntax->as<AssertionItemPortSyntax>().attributes);
+        }
+
+        if (port.defaultValueSyntax)
+            outputInitialSyntax = context.requireSimpleExpr(*port.defaultValueSyntax);
+
+        instance.addMember(*arg);
+        return arg;
+    }
+    else {
+        // Clone all of the formal arguments and add them to the instance so that
+        // members in the body can reference them.
+        auto& cloned = port.clone(instance);
+        instance.addMember(cloned);
+        return &cloned;
+    }
+}
+
 CheckerInstanceSymbol& CheckerInstanceSymbol::fromSyntax(
     Compilation& comp, const ASTContext& context, const CheckerSymbol& checker,
     const HierarchicalInstanceSyntax& syntax,
@@ -1377,7 +1430,8 @@ CheckerInstanceSymbol& CheckerInstanceSymbol::fromSyntax(
     auto [name, loc] = getNameLoc(syntax);
     auto assertionDetails = comp.allocAssertionDetails();
     auto result = comp.emplace<CheckerInstanceSymbol>(comp, name, loc, checker, *assertionDetails,
-                                                      context, isProcedural);
+                                                      context, isProcedural,
+                                                      /* isUninstantiated */ false);
     result->arrayPath = path.copy(comp);
     result->setSyntax(syntax);
     result->setAttributes(*context.scope, attributes);
@@ -1386,42 +1440,15 @@ CheckerInstanceSymbol& CheckerInstanceSymbol::fromSyntax(
     assertionDetails->instanceLoc = loc;
 
     // Build port connection map from formals to connection expressions.
-    SmallVector<CheckerInstanceSymbol::Connection> connections;
+    SmallVector<Connection> connections;
     size_t orderedIndex = 0;
     PortConnection::ConnMap connMap(syntax.connections, *context.scope, context.getLocation());
     for (auto port : checker.ports) {
         if (port->name.empty())
             continue;
 
-        // Output ports are special; they aren't involved in the rewriting process,
-        // they just act like normal formal ports / arguments.
-        const Symbol* actualArg;
-        if (port->direction == ArgumentDirection::Out) {
-            auto arg = comp.emplace<FormalArgumentSymbol>(port->name, port->location,
-                                                          *port->direction,
-                                                          VariableLifetime::Automatic);
-            arg->getDeclaredType()->setLink(port->declaredType);
-
-            if (auto portSyntax = port->getSyntax()) {
-                arg->setSyntax(*portSyntax);
-                arg->setAttributes(*result, portSyntax->as<AssertionItemPortSyntax>().attributes);
-            }
-
-            if (port->defaultValueSyntax) {
-                if (auto expr = context.requireSimpleExpr(*port->defaultValueSyntax))
-                    arg->setDefaultValueSyntax(*expr);
-            }
-
-            result->addMember(*arg);
-            actualArg = arg;
-        }
-        else {
-            // Clone all of the formal arguments and add them to the instance so that
-            // members in the body can reference them.
-            auto& cloned = port->clone(*result);
-            result->addMember(cloned);
-            actualArg = &cloned;
-        }
+        const ExpressionSyntax* outputInitialSyntax = nullptr;
+        auto actualArg = createCheckerFormal(comp, *port, *result, outputInitialSyntax, context);
 
         const ASTContext* argCtx = &context;
         const PropertyExprSyntax* expr = nullptr;
@@ -1518,7 +1545,7 @@ CheckerInstanceSymbol& CheckerInstanceSymbol::fromSyntax(
         }
 
         assertionDetails->argumentMap.emplace(actualArg, std::make_tuple(expr, *argCtx));
-        connections.push_back({actualArg, (const Expression*)nullptr, attrs});
+        connections.emplace_back(*result, *actualArg, outputInitialSyntax, attrs);
     }
 
     if (connMap.usingOrdered) {
@@ -1554,6 +1581,47 @@ CheckerInstanceSymbol& CheckerInstanceSymbol::fromSyntax(
     return *result;
 }
 
+CheckerInstanceSymbol& CheckerInstanceSymbol::createInvalid(const CheckerSymbol& checker) {
+    auto scope = checker.getParentScope();
+    SLANG_ASSERT(scope);
+
+    auto& comp = scope->getCompilation();
+    auto assertionDetails = comp.allocAssertionDetails();
+    assertionDetails->symbol = &checker;
+    assertionDetails->instanceLoc = checker.location;
+
+    ASTContext context(*scope, LookupLocation::after(checker));
+    auto result = comp.emplace<CheckerInstanceSymbol>(comp, checker.name, checker.location, checker,
+                                                      *assertionDetails, context,
+                                                      /* isProcedural */ false,
+                                                      /* isUninstantiated */ true);
+
+    SmallVector<Connection> connections;
+    for (auto port : checker.ports) {
+        if (port->name.empty())
+            continue;
+
+        const ExpressionSyntax* outputInitialSyntax = nullptr;
+        auto actualArg = createCheckerFormal(comp, *port, *result, outputInitialSyntax, context);
+
+        assertionDetails->argumentMap.emplace(
+            actualArg, std::make_tuple((const PropertyExprSyntax*)nullptr, context));
+        connections.emplace_back(*result, *actualArg, outputInitialSyntax,
+                                 std::span<const AttributeSymbol* const>{});
+    }
+
+    result->connections = connections.copy(comp);
+
+    auto checkerSyntax = checker.getSyntax();
+    SLANG_ASSERT(checkerSyntax);
+    result->setSyntax(*checkerSyntax);
+
+    for (auto member : checkerSyntax->as<CheckerDeclarationSyntax>().members)
+        result->addMembers(*member);
+
+    return *result;
+}
+
 std::span<const CheckerInstanceSymbol::Connection> CheckerInstanceSymbol::getPortConnections()
     const {
     if (connectionsResolved)
@@ -1564,17 +1632,19 @@ std::span<const CheckerInstanceSymbol::Connection> CheckerInstanceSymbol::getPor
     // We prepopulated some of the connection members but still need
     // to resolve the actual argument value and save it.
     for (auto& conn : connections) {
-        auto argIt = assertionDetails.argumentMap.find(conn.formal);
+        conn.getOutputInitialExpr();
+
+        auto argIt = assertionDetails.argumentMap.find(&conn.formal);
         SLANG_ASSERT(argIt != assertionDetails.argumentMap.end());
 
         auto& [expr, argCtx] = argIt->second;
         if (!expr)
             continue;
 
-        if (conn.formal->kind == SymbolKind::AssertionPort) {
+        if (conn.formal.kind == SymbolKind::AssertionPort) {
             AssertionInstanceExpression::ActualArg actualArgValue;
             if (AssertionInstanceExpression::checkAssertionArg(
-                    *expr, conn.formal->as<AssertionPortSymbol>(), argCtx, actualArgValue,
+                    *expr, conn.formal.as<AssertionPortSymbol>(), argCtx, actualArgValue,
                     /* isRecursiveProp */ false)) {
                 conn.actual = actualArgValue;
             }
@@ -1584,13 +1654,29 @@ std::span<const CheckerInstanceSymbol::Connection> CheckerInstanceSymbol::getPor
             if (!isProcedural)
                 context.flags |= ASTFlags::NonProcedural;
 
-            auto& formal = conn.formal->as<FormalArgumentSymbol>();
+            auto& formal = conn.formal.as<FormalArgumentSymbol>();
             conn.actual = &Expression::bindArgument(formal.getType(), formal.direction, *exprSyntax,
                                                     context);
         }
     }
 
     return connections;
+}
+
+const Expression* CheckerInstanceSymbol::Connection::getOutputInitialExpr() const {
+    if (!outputInitialExpr) {
+        if (outputInitialSyntax) {
+            auto originalPort = instance.checker.find(formal.name);
+            SLANG_ASSERT(originalPort);
+
+            ASTContext context(instance.checker, LookupLocation::after(*originalPort));
+            outputInitialExpr = &Expression::bind(*outputInitialSyntax, context);
+        }
+        else {
+            outputInitialExpr = nullptr;
+        }
+    }
+    return *outputInitialExpr;
 }
 
 void CheckerInstanceSymbol::serializeTo(ASTSerializer&) const {

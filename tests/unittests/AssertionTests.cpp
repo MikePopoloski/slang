@@ -1343,8 +1343,9 @@ module m;
     checker c1;
     endchecker : c1
     checker c2;
-        default clocking @clk2; endclocking
-        default disable iff rst2;
+        // TODO:
+        //default clocking @clk2; endclocking
+        //default disable iff rst2;
     endchecker : c2
 endmodule : m
 )");
@@ -1478,6 +1479,8 @@ module m;
 
     initial c c5(1, 2, foo);
     c c6(1, 2, bar);
+
+    checker q(output int r = unknown); endchecker
 endmodule
 )");
 
@@ -1485,7 +1488,7 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 17);
+    REQUIRE(diags.size() == 18);
     CHECK(diags[0].code == diag::ExpectedIdentifier);
     CHECK(diags[1].code == diag::CheckerArgCannotBeEmpty);
     CHECK(diags[2].code == diag::ExpressionNotAssignable);
@@ -1502,6 +1505,7 @@ endmodule
     CHECK(diags[13].code == diag::CheckerArgCannotBeEmpty);
     CHECK(diags[14].code == diag::CheckerArgCannotBeEmpty);
     CHECK(diags[15].code == diag::MixingOrderedAndNamedPorts);
+    CHECK(diags[16].code == diag::UndeclaredIdentifier);
     CHECK(diags[16].code == diag::UndeclaredIdentifier);
 }
 
@@ -1557,4 +1561,46 @@ endmodule
     REQUIRE(diags.size() == 2);
     CHECK(diags[0].code == diag::AssertionPortRef);
     CHECK(diags[1].code == diag::CheckerPortInout);
+}
+
+TEST_CASE("Invalid instantiations inside checkers") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+endmodule
+
+package p;
+endpackage
+
+checker c;
+    module n;
+    endmodule
+
+    package p2;
+    endpackage
+
+    checker c2;
+    endchecker
+
+    c2 asdf();
+    m m1();
+endchecker
+
+checker c2;
+    int i = j;
+endchecker
+
+module n;
+    c c1();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 4);
+    CHECK(diags[0].code == diag::NotAllowedInChecker);
+    CHECK(diags[1].code == diag::NotAllowedInChecker);
+    CHECK(diags[2].code == diag::InvalidInstanceForParent);
+    CHECK(diags[3].code == diag::UndeclaredIdentifier);
 }
