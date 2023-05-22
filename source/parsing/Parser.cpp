@@ -85,12 +85,14 @@ AnsiPortListSyntax& Parser::parseAnsiPortList(Token openParen) {
     AnsiPortListSyntax* portList = &factory.ansiPortList(openParen, buffer.copy(alloc), closeParen);
 
     // put interface ports in metadata
-    
+
     for (auto port : portList->ports) {
-        if (port->kind != SyntaxKind::ImplicitAnsiPort) continue;
+        if (port->kind != SyntaxKind::ImplicitAnsiPort)
+            continue;
         ImplicitAnsiPortSyntax* ansiport = &port->as<ImplicitAnsiPortSyntax>();
 
-        if(ansiport->header->kind != SyntaxKind::InterfacePortHeader) continue;
+        if (ansiport->header->kind != SyntaxKind::InterfacePortHeader)
+            continue;
         InterfacePortHeaderSyntax* goodheader = &ansiport->header->as<InterfacePortHeaderSyntax>();
 
         meta.interfacePorts.push_back(goodheader);
