@@ -82,23 +82,7 @@ AnsiPortListSyntax& Parser::parseAnsiPortList(Token openParen) {
                                                     TokenKind::Comma, closeParen,
                                                     RequireItems::False, diag::ExpectedAnsiPort,
                                                     [this] { return &parseAnsiPort(); });
-    AnsiPortListSyntax* portList = &factory.ansiPortList(openParen, buffer.copy(alloc), closeParen);
-
-    // put interface ports in metadata
-
-    for (auto port : portList->ports) {
-        if (port->kind != SyntaxKind::ImplicitAnsiPort)
-            continue;
-        ImplicitAnsiPortSyntax* ansiport = &port->as<ImplicitAnsiPortSyntax>();
-
-        if (ansiport->header->kind != SyntaxKind::InterfacePortHeader)
-            continue;
-        InterfacePortHeaderSyntax* goodheader = &ansiport->header->as<InterfacePortHeaderSyntax>();
-
-        meta.interfacePorts.push_back(goodheader);
-    }
-
-    return *portList;
+    return factory.ansiPortList(openParen, buffer.copy(alloc), closeParen);
 }
 
 ModuleHeaderSyntax& Parser::parseModuleHeader() {
@@ -250,7 +234,10 @@ PortHeaderSyntax& Parser::parsePortHeader(Token constKeyword, Token direction) {
         if (!constKeyword && peek(1).kind == TokenKind::Dot &&
             peek(2).kind == TokenKind::Identifier && peek(3).kind == TokenKind::Identifier) {
             auto name = consume();
-            return factory.interfacePortHeader(name, parseDotMemberClause());
+            InterfacePortHeaderSyntax* header =
+                &factory.interfacePortHeader(name, parseDotMemberClause());
+            meta.interfacePorts.push_back(header);
+            return *header;
         }
 
         DataTypeSyntax* type;
