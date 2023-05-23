@@ -219,7 +219,8 @@ struct SLANG_EXPORT AssertionInstanceDetails {
     SourceLocation instanceLoc;
 
     /// A map of formal argument symbols to their actual replacements.
-    flat_hash_map<const Symbol*, std::tuple<const syntax::PropertyExprSyntax*, ASTContext>>
+    map_with_incomplete_type<const Symbol*,
+                             std::tuple<const syntax::PropertyExprSyntax*, ASTContext>>
         argumentMap;
 
     /// A map of local variables declared in the assertion item.

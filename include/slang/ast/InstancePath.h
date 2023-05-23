@@ -30,6 +30,7 @@ public:
 
         bool operator==(const Entry& rhs) const { return value == rhs.value; }
         bool operator!=(const Entry& rhs) const { return !(*this == rhs); }
+        bool operator<(const Entry& rhs) const { return value < rhs.value; }
 
         uintptr_t getOpaqueValue() const { return value; }
 
