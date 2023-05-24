@@ -220,6 +220,7 @@ void registerSyntax(py::module_& m) {
     py::class_<SyntaxPrinter>(m, "SyntaxPrinter")
         .def(py::init<>())
         .def(py::init<const SourceManager&>(), "sourceManager"_a)
+        .def("append", &SyntaxPrinter::append, byrefint, "text"_a)
         .def("print", py::overload_cast<Trivia>(&SyntaxPrinter::print), byrefint, "trivia"_a)
         .def("print", py::overload_cast<Token>(&SyntaxPrinter::print), byrefint, "token"_a)
         .def("print", py::overload_cast<const SyntaxNode&>(&SyntaxPrinter::print), byrefint,
