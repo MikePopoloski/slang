@@ -162,7 +162,7 @@ text via the @ref slang::syntax::SyntaxPrinter class. This class has a variety o
 for how you'd like the text printed, and then will print any tokens, trivia,
 or syntax nodes you give it.
 
-See the tests/unittests/RewriterTests.cpp file for an example of using all of
+See the tests/unittests/VisitorTests.cpp file for an example of using all of
 these mechanisms together.
 
 */
