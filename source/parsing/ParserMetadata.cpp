@@ -46,7 +46,9 @@ public:
     }
 
     void handle(const InterfacePortHeaderSyntax& syntax) {
-        meta.interfacePorts.push_back(&syntax);
+        std::string_view name = syntax.nameOrKeyword.valueText();
+        if (name != "" && name != "interface")
+            meta.interfacePorts.push_back(&syntax);
         visitDefault(syntax);
     }
 
