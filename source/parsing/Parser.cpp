@@ -234,7 +234,10 @@ PortHeaderSyntax& Parser::parsePortHeader(Token constKeyword, Token direction) {
         if (!constKeyword && peek(1).kind == TokenKind::Dot &&
             peek(2).kind == TokenKind::Identifier && peek(3).kind == TokenKind::Identifier) {
             auto name = consume();
-            return factory.interfacePortHeader(name, parseDotMemberClause());
+            InterfacePortHeaderSyntax* header =
+                &factory.interfacePortHeader(name, parseDotMemberClause());
+            meta.interfacePorts.push_back(header);
+            return *header;
         }
 
         DataTypeSyntax* type;

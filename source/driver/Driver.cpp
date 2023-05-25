@@ -634,6 +634,12 @@ bool Driver::parseAllSources() {
                         missing.emplace(name);
                 }
             }
+
+            for (auto intf : meta.interfacePorts) {
+                std::string_view name = intf->nameOrKeyword.valueText();
+                if (knownNames.find(name) == knownNames.end())
+                    missing.emplace(name);
+            }
         };
 
         for (auto& tree : syntaxTrees)

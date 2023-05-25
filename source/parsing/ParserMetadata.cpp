@@ -45,6 +45,13 @@ public:
         visitDefault(syntax);
     }
 
+    void handle(const InterfacePortHeaderSyntax& syntax) {
+        std::string_view name = syntax.nameOrKeyword.valueText();
+        if (name != "" && name != "interface")
+            meta.interfacePorts.push_back(&syntax);
+        visitDefault(syntax);
+    }
+
     void handle(const DefParamSyntax& syntax) {
         meta.hasDefparams = true;
         visitDefault(syntax);
