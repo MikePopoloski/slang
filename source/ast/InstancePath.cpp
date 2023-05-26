@@ -16,7 +16,7 @@ InstancePath::InstancePath(const Symbol& symbol) {
     auto curr = &symbol;
     if (symbol.kind != SymbolKind::Instance) {
         while (curr->kind != SymbolKind::InstanceBody) {
-            auto parent = curr->getParentScope();
+            auto parent = curr->getHierarchicalParent();
             if (!parent)
                 return;
 
@@ -27,25 +27,27 @@ InstancePath::InstancePath(const Symbol& symbol) {
 }
 
 void InstancePath::buildPath(const Symbol& symbol) {
-    auto scope = symbol.getParentScope();
-    auto current = &symbol;
-    if (symbol.kind == SymbolKind::InstanceBody) {
+    auto scope = symbol.getHierarchicalParent();
+    const Symbol* current;
+    if (symbol.kind == SymbolKind::InstanceBody)
         current = symbol.as<InstanceBodySymbol>().parentInstance;
-        SLANG_ASSERT(current);
+    else if (symbol.kind == SymbolKind::CheckerInstanceBody)
+        current = symbol.as<CheckerInstanceBodySymbol>().parentInstance;
+    else
+        current = &symbol;
 
-        scope = current->getParentScope();
-    }
+    SLANG_ASSERT(current);
+    auto syntax = current->getSyntax();
 
     if (scope) {
         auto& parent = scope->asSymbol();
         if (parent.kind == SymbolKind::InstanceBody || parent.kind == SymbolKind::InstanceArray ||
+            parent.kind == SymbolKind::CheckerInstance ||
             parent.kind == SymbolKind::GenerateBlock ||
             parent.kind == SymbolKind::GenerateBlockArray) {
             buildPath(parent);
         }
     }
-
-    auto syntax = current->getSyntax();
 
     if (current->kind == SymbolKind::GenerateBlock) {
         if (scope && scope->asSymbol().kind == SymbolKind::GenerateBlockArray) {
@@ -53,8 +55,9 @@ void InstancePath::buildPath(const Symbol& symbol) {
             return;
         }
     }
-    else if (current->kind == SymbolKind::Instance) {
-        auto& inst = current->as<InstanceSymbol>();
+    else if (current->kind == SymbolKind::Instance ||
+             current->kind == SymbolKind::CheckerInstance) {
+        auto& inst = current->as<InstanceSymbolBase>();
         if (!inst.arrayPath.empty()) {
             SmallVector<ConstantRange, 8> instanceDimVec;
             inst.getArrayDimensions(instanceDimVec);
@@ -70,8 +73,12 @@ void InstancePath::buildPath(const Symbol& symbol) {
             return;
         }
 
-        if (!syntax)
-            syntax = inst.body.getSyntax();
+        if (!syntax) {
+            if (current->kind == SymbolKind::Instance)
+                syntax = current->as<InstanceSymbol>().body.getSyntax();
+            else
+                syntax = current->as<CheckerInstanceSymbol>().body.getSyntax();
+        }
     }
     else if (current->kind == SymbolKind::InstanceArray) {
         if (scope && scope->asSymbol().kind == SymbolKind::InstanceArray)

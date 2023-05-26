@@ -48,6 +48,11 @@ public:
     /// If this instance is not part of an array, does not add any dimensions to the given list.
     void getArrayDimensions(SmallVectorBase<ConstantRange>& dimensions) const;
 
+    static bool isKind(SymbolKind kind) {
+        return kind == SymbolKind::Instance || kind == SymbolKind::PrimitiveInstance ||
+               kind == SymbolKind::CheckerInstance;
+    }
+
 protected:
     using Symbol::Symbol;
 };

@@ -152,6 +152,10 @@ public:
     /// Gets the logical parent scope that contains this symbol.
     const Scope* getParentScope() const { return parentScope; }
 
+    /// Gets the parent scope of this symbol in terms of its hierarchy location.
+    /// This is the same as getParentScope except for instance body symbols.
+    const Scope* getHierarchicalParent() const;
+
     /// Gets the syntax node that was used to create this symbol, if any. Symbols can
     /// be created without any originating syntax; in those cases, this returns nullptr.
     const syntax::SyntaxNode* getSyntax() const { return originatingSyntax; }

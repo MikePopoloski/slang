@@ -562,7 +562,7 @@ bool lookupUpward(std::span<const NamePlusLoc> nameParts, const NameComponents& 
         // we hit an instance body instead of going on to the compilation unit.
         symbol = &scope->asSymbol();
         if (symbol->kind != SymbolKind::InstanceBody) {
-            scope = symbol->getParentScope();
+            scope = symbol->getHierarchicalParent();
         }
         else {
             auto inst = symbol->as<InstanceBodySymbol>().parentInstance;

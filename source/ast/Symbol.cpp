@@ -41,6 +41,20 @@ namespace slang::ast {
 
 using namespace syntax;
 
+const Scope* Symbol::getHierarchicalParent() const {
+    if (kind == SymbolKind::InstanceBody) {
+        auto parentInst = as<InstanceBodySymbol>().parentInstance;
+        SLANG_ASSERT(parentInst);
+        return parentInst->getParentScope();
+    }
+    else if (kind == SymbolKind::CheckerInstanceBody) {
+        auto parentInst = as<CheckerInstanceBodySymbol>().parentInstance;
+        SLANG_ASSERT(parentInst);
+        return parentInst->getParentScope();
+    }
+    return parentScope;
+}
+
 bool Symbol::isType() const {
     return Type::isKind(kind);
 }
@@ -83,6 +97,12 @@ static void getHierarchicalPathImpl(const Symbol& symbol, FormatBuffer& buffer) 
 
         scope = current->getParentScope();
     }
+    else if (scope && symbol.kind == SymbolKind::CheckerInstanceBody) {
+        current = symbol.as<CheckerInstanceBodySymbol>().parentInstance;
+        SLANG_ASSERT(current);
+
+        scope = current->getParentScope();
+    }
 
     std::string_view separator;
     if (scope) {
@@ -119,8 +139,9 @@ static void getHierarchicalPathImpl(const Symbol& symbol, FormatBuffer& buffer) 
             addName(block.getExternalName());
         }
     }
-    else if (current->kind == SymbolKind::Instance) {
-        auto& inst = current->as<InstanceSymbol>();
+    else if (current->kind == SymbolKind::Instance ||
+             current->kind == SymbolKind::CheckerInstance) {
+        auto& inst = current->as<InstanceSymbolBase>();
         if (!inst.arrayPath.empty()) {
             SmallVector<ConstantRange, 8> instanceDimVec;
             inst.getArrayDimensions(instanceDimVec);

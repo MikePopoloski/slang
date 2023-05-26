@@ -1603,3 +1603,25 @@ endmodule
     CHECK(diags[2].code == diag::InvalidInstanceForParent);
     CHECK(diags[3].code == diag::UndeclaredIdentifier);
 }
+
+TEST_CASE("Upward lookup from checkers") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    logic req, gnt;
+endmodule :m
+
+module top;
+    logic clock, reset;
+    m m1();
+    request_granted c1(clock, reset);
+endmodule : top
+
+checker request_granted(clk, rst);
+    a1: assert property (@clk disable iff (rst) m1.req |=> m1.gnt);
+endchecker : request_granted
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

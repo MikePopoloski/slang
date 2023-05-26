@@ -757,15 +757,7 @@ const Symbol* Compilation::getGlobalClocking(const Scope& scope) const {
         if (auto it = globalClockingMap.find(curr); it != globalClockingMap.end())
             return it->second;
 
-        auto& sym = curr->asSymbol();
-        if (sym.kind != SymbolKind::InstanceBody)
-            curr = sym.getParentScope();
-        else {
-            auto parent = sym.as<InstanceBodySymbol>().parentInstance;
-            SLANG_ASSERT(parent);
-
-            curr = parent->getParentScope();
-        }
+        curr = curr->asSymbol().getHierarchicalParent();
     } while (curr);
 
     return nullptr;

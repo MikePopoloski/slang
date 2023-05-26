@@ -92,7 +92,8 @@ public:
                 member.visit(DERIVED);
         }
 
-        if constexpr (std::is_same_v<InstanceSymbol, T>) {
+        if constexpr (std::is_same_v<InstanceSymbol, T> ||
+                      std::is_same_v<CheckerInstanceSymbol, T>) {
             t.body.visit(DERIVED);
         }
     }

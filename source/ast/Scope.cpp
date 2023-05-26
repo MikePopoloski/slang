@@ -135,6 +135,8 @@ bool Scope::isUninstantiated() const {
         auto& sym = currScope->asSymbol();
         if (sym.kind == SymbolKind::InstanceBody)
             return sym.as<InstanceBodySymbol>().isUninstantiated;
+        if (sym.kind == SymbolKind::CheckerInstanceBody)
+            return sym.as<CheckerInstanceBodySymbol>().isUninstantiated;
         if (sym.kind == SymbolKind::GenerateBlock)
             return sym.as<GenerateBlockSymbol>().isUninstantiated;
         currScope = sym.getParentScope();
