@@ -81,7 +81,7 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
         if (symbol.interfaceDef) {
             usedIfacePorts.emplace(symbol.interfaceDef);
 
-            // If we this interface port specifies a modport and that
+            // If this interface port specifies a modport and that
             // modport has export methods, store it in a list for later
             // processing and checking.
             if (!symbol.modport.empty()) {
@@ -233,6 +233,7 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
             return;
 
         symbol.getPortConnections();
+        visit(symbol.body);
     }
 
     void handle(const ClockingBlockSymbol& symbol) {

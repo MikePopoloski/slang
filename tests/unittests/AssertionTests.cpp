@@ -1343,9 +1343,8 @@ module m;
     checker c1;
     endchecker : c1
     checker c2;
-        // TODO:
-        //default clocking @clk2; endclocking
-        //default disable iff rst2;
+        default clocking @clk2; endclocking
+        default disable iff rst2;
     endchecker : c2
 endmodule : m
 )");

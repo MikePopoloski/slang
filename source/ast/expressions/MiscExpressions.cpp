@@ -1061,13 +1061,13 @@ Expression& AssertionInstanceExpression::bindPort(const Symbol& symbol, SourceRa
         // This is only possible if we're in a checker instance,
         // so look upward until we find it.
         auto sym = &instanceCtx.scope->asSymbol();
-        while (sym->kind != SymbolKind::CheckerInstance) {
+        while (sym->kind != SymbolKind::CheckerInstanceBody) {
             auto scope = sym->getParentScope();
             SLANG_ASSERT(scope);
             sym = &scope->asSymbol();
         }
 
-        inst = &sym->as<CheckerInstanceSymbol>().assertionDetails;
+        inst = &sym->as<CheckerInstanceBodySymbol>().assertionDetails;
     }
 
     // When looking up an argument reference from within another expanded

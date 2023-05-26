@@ -109,6 +109,7 @@ enum class RandMode;
     x(LetDecl) \
     x(Checker) \
     x(CheckerInstance) \
+    x(CheckerInstanceBody) \
     x(RandSeqProduction) \
     x(CovergroupBody) \
     x(Coverpoint) \

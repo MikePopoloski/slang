@@ -346,9 +346,11 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
             isUninstantiated |= parentInst->isUninstantiated;
             break;
         }
-        else if (sym.kind == SymbolKind::CheckerInstance) {
+        else if (sym.kind == SymbolKind::CheckerInstanceBody) {
+            auto& body = sym.as<CheckerInstanceBodySymbol>();
             inChecker = true;
-            isUninstantiated |= sym.as<CheckerInstanceSymbol>().isUninstantiated;
+            isUninstantiated |= body.isUninstantiated;
+            currScope = body.parentInstance->getParentScope();
         }
         else if (sym.kind == SymbolKind::GenerateBlock) {
             isUninstantiated |= sym.as<GenerateBlockSymbol>().isUninstantiated;
@@ -1328,17 +1330,11 @@ void createCheckers(const CheckerSymbol& checker, const TSyntax& syntax, const A
 
 } // namespace
 
-CheckerInstanceSymbol::CheckerInstanceSymbol(Compilation& compilation, std::string_view name,
-                                             SourceLocation loc, const CheckerSymbol& checker,
-                                             AssertionInstanceDetails& assertionDetails,
-                                             const ASTContext& originalContext, bool isProcedural,
-                                             bool isUninstantiated) :
+CheckerInstanceSymbol::CheckerInstanceSymbol(std::string_view name, SourceLocation loc,
+                                             CheckerInstanceBodySymbol& body) :
     InstanceSymbolBase(SymbolKind::CheckerInstance, name, loc),
-    Scope(compilation, this), checker(checker), assertionDetails(assertionDetails),
-    isProcedural(isProcedural), isUninstantiated(isUninstantiated),
-    originalContext(originalContext) {
-
-    assertionDetails.prevContext = &this->originalContext;
+    body(body) {
+    body.parentInstance = this;
 }
 
 void CheckerInstanceSymbol::fromSyntax(const CheckerSymbol& checker,
@@ -1391,7 +1387,7 @@ void CheckerInstanceSymbol::fromSyntax(const CheckerInstantiationSyntax& syntax,
 }
 
 static const Symbol* createCheckerFormal(Compilation& comp, const AssertionPortSymbol& port,
-                                         CheckerInstanceSymbol& instance,
+                                         CheckerInstanceBodySymbol& instance,
                                          const ExpressionSyntax*& outputInitialSyntax,
                                          const ASTContext& context) {
     // Output ports are special; they aren't involved in the rewriting process,
@@ -1429,12 +1425,13 @@ CheckerInstanceSymbol& CheckerInstanceSymbol::fromSyntax(
 
     auto [name, loc] = getNameLoc(syntax);
     auto assertionDetails = comp.allocAssertionDetails();
-    auto result = comp.emplace<CheckerInstanceSymbol>(comp, name, loc, checker, *assertionDetails,
-                                                      context, isProcedural,
-                                                      /* isUninstantiated */ false);
-    result->arrayPath = path.copy(comp);
-    result->setSyntax(syntax);
-    result->setAttributes(*context.scope, attributes);
+    auto body = comp.emplace<CheckerInstanceBodySymbol>(comp, checker, *assertionDetails, context,
+                                                        isProcedural,
+                                                        /* isUninstantiated */ false);
+
+    auto checkerSyntax = checker.getSyntax();
+    SLANG_ASSERT(checkerSyntax);
+    body->setSyntax(*checkerSyntax);
 
     assertionDetails->symbol = &checker;
     assertionDetails->instanceLoc = loc;
@@ -1448,7 +1445,7 @@ CheckerInstanceSymbol& CheckerInstanceSymbol::fromSyntax(
             continue;
 
         const ExpressionSyntax* outputInitialSyntax = nullptr;
-        auto actualArg = createCheckerFormal(comp, *port, *result, outputInitialSyntax, context);
+        auto actualArg = createCheckerFormal(comp, *port, *body, outputInitialSyntax, context);
 
         const ASTContext* argCtx = &context;
         const PropertyExprSyntax* expr = nullptr;
@@ -1545,7 +1542,7 @@ CheckerInstanceSymbol& CheckerInstanceSymbol::fromSyntax(
         }
 
         assertionDetails->argumentMap.emplace(actualArg, std::make_tuple(expr, *argCtx));
-        connections.emplace_back(*result, *actualArg, outputInitialSyntax, attrs);
+        connections.emplace_back(*body, *actualArg, outputInitialSyntax, attrs);
     }
 
     if (connMap.usingOrdered) {
@@ -1570,15 +1567,16 @@ CheckerInstanceSymbol& CheckerInstanceSymbol::fromSyntax(
         }
     }
 
-    result->connections = connections.copy(comp);
-
     // Now add all members.
-    auto checkerSyntax = checker.getSyntax();
-    SLANG_ASSERT(checkerSyntax);
     for (auto member : checkerSyntax->as<CheckerDeclarationSyntax>().members)
-        result->addMembers(*member);
+        body->addMembers(*member);
 
-    return *result;
+    auto instance = comp.emplace<CheckerInstanceSymbol>(name, loc, *body);
+    instance->arrayPath = path.copy(comp);
+    instance->setSyntax(syntax);
+    instance->setAttributes(*context.scope, attributes);
+    instance->connections = connections.copy(comp);
+    return *instance;
 }
 
 CheckerInstanceSymbol& CheckerInstanceSymbol::createInvalid(const CheckerSymbol& checker) {
@@ -1591,10 +1589,13 @@ CheckerInstanceSymbol& CheckerInstanceSymbol::createInvalid(const CheckerSymbol&
     assertionDetails->instanceLoc = checker.location;
 
     ASTContext context(*scope, LookupLocation::after(checker));
-    auto result = comp.emplace<CheckerInstanceSymbol>(comp, checker.name, checker.location, checker,
-                                                      *assertionDetails, context,
-                                                      /* isProcedural */ false,
-                                                      /* isUninstantiated */ true);
+    auto body = comp.emplace<CheckerInstanceBodySymbol>(comp, checker, *assertionDetails, context,
+                                                        /* isProcedural */ false,
+                                                        /* isUninstantiated */ true);
+
+    auto checkerSyntax = checker.getSyntax();
+    SLANG_ASSERT(checkerSyntax);
+    body->setSyntax(*checkerSyntax);
 
     SmallVector<Connection> connections;
     for (auto port : checker.ports) {
@@ -1602,24 +1603,21 @@ CheckerInstanceSymbol& CheckerInstanceSymbol::createInvalid(const CheckerSymbol&
             continue;
 
         const ExpressionSyntax* outputInitialSyntax = nullptr;
-        auto actualArg = createCheckerFormal(comp, *port, *result, outputInitialSyntax, context);
+        auto actualArg = createCheckerFormal(comp, *port, *body, outputInitialSyntax, context);
 
         assertionDetails->argumentMap.emplace(
             actualArg, std::make_tuple((const PropertyExprSyntax*)nullptr, context));
-        connections.emplace_back(*result, *actualArg, outputInitialSyntax,
+        connections.emplace_back(*body, *actualArg, outputInitialSyntax,
                                  std::span<const AttributeSymbol* const>{});
     }
 
-    result->connections = connections.copy(comp);
-
-    auto checkerSyntax = checker.getSyntax();
-    SLANG_ASSERT(checkerSyntax);
-    result->setSyntax(*checkerSyntax);
-
     for (auto member : checkerSyntax->as<CheckerDeclarationSyntax>().members)
-        result->addMembers(*member);
+        body->addMembers(*member);
 
-    return *result;
+    auto instance = comp.emplace<CheckerInstanceSymbol>(checker.name, checker.location, *body);
+    instance->setSyntax(*checkerSyntax);
+    instance->connections = connections.copy(comp);
+    return *instance;
 }
 
 std::span<const CheckerInstanceSymbol::Connection> CheckerInstanceSymbol::getPortConnections()
@@ -1634,8 +1632,8 @@ std::span<const CheckerInstanceSymbol::Connection> CheckerInstanceSymbol::getPor
     for (auto& conn : connections) {
         conn.getOutputInitialExpr();
 
-        auto argIt = assertionDetails.argumentMap.find(&conn.formal);
-        SLANG_ASSERT(argIt != assertionDetails.argumentMap.end());
+        auto argIt = body.assertionDetails.argumentMap.find(&conn.formal);
+        SLANG_ASSERT(argIt != body.assertionDetails.argumentMap.end());
 
         auto& [expr, argCtx] = argIt->second;
         if (!expr)
@@ -1651,7 +1649,7 @@ std::span<const CheckerInstanceSymbol::Connection> CheckerInstanceSymbol::getPor
         }
         else if (auto exprSyntax = argCtx.requireSimpleExpr(*expr)) {
             ASTContext context = argCtx;
-            if (!isProcedural)
+            if (!body.isProcedural)
                 context.flags |= ASTFlags::NonProcedural;
 
             auto& formal = conn.formal.as<FormalArgumentSymbol>();
@@ -1666,10 +1664,7 @@ std::span<const CheckerInstanceSymbol::Connection> CheckerInstanceSymbol::getPor
 const Expression* CheckerInstanceSymbol::Connection::getOutputInitialExpr() const {
     if (!outputInitialExpr) {
         if (outputInitialSyntax) {
-            auto originalPort = instance.checker.find(formal.name);
-            SLANG_ASSERT(originalPort);
-
-            ASTContext context(instance.checker, LookupLocation::after(*originalPort));
+            ASTContext context(parent, LookupLocation::after(formal));
             outputInitialExpr = &Expression::bind(*outputInitialSyntax, context);
         }
         else {
@@ -1680,6 +1675,27 @@ const Expression* CheckerInstanceSymbol::Connection::getOutputInitialExpr() cons
 }
 
 void CheckerInstanceSymbol::serializeTo(ASTSerializer&) const {
+    // TODO:
+}
+
+CheckerInstanceBodySymbol::CheckerInstanceBodySymbol(Compilation& compilation,
+                                                     const CheckerSymbol& checker,
+                                                     AssertionInstanceDetails& assertionDetails,
+                                                     const ASTContext& originalContext,
+                                                     bool isProcedural, bool isUninstantiated) :
+    Symbol(SymbolKind::CheckerInstanceBody, checker.name, checker.location),
+    Scope(compilation, this), checker(checker), assertionDetails(assertionDetails),
+    isProcedural(isProcedural), isUninstantiated(isUninstantiated),
+    originalContext(originalContext) {
+
+    assertionDetails.prevContext = &this->originalContext;
+
+    auto parent = checker.getParentScope();
+    SLANG_ASSERT(parent);
+    setParent(*parent, checker.getIndex());
+}
+
+void CheckerInstanceBodySymbol::serializeTo(ASTSerializer&) const {
     // TODO:
 }
 

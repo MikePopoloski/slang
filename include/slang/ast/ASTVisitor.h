@@ -183,6 +183,7 @@ decltype(auto) Symbol::visit(TVisitor&& visitor, Args&&... args) const {
         SYMBOL(LetDecl);
         SYMBOL(Checker);
         SYMBOL(CheckerInstance);
+        SYMBOL(CheckerInstanceBody);
         SYMBOL(RandSeqProduction);
         SYMBOL(CovergroupBody);
         SYMBOL(Coverpoint);

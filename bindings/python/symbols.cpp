@@ -425,9 +425,9 @@ void registerSymbols(py::module_& m) {
         .def_property_readonly("delay", &PrimitiveInstanceSymbol::getDelay)
         .def_property_readonly("driveStrength", &PrimitiveInstanceSymbol::getDriveStrength);
 
-    py::class_<CheckerInstanceSymbol, InstanceSymbolBase, Scope>(m, "CheckerInstanceSymbol")
-        .def_property_readonly("checker",
-                               [](const CheckerInstanceSymbol& self) { return &self.checker; });
+    py::class_<CheckerInstanceSymbol, InstanceSymbolBase>(m, "CheckerInstanceSymbol")
+        .def_property_readonly("body",
+                               [](const CheckerInstanceSymbol& self) { return &self.body; });
 
     py::class_<StatementBlockSymbol, Symbol, Scope>(m, "StatementBlockSymbol")
         .def_readonly("blockKind", &StatementBlockSymbol::blockKind)
