@@ -1438,8 +1438,8 @@ module m;
     real r;
 
     import p::*;
-    c c2(1, 2, e, 3.14);
-    c c3(.*, .c(foo), .r);
+    c c2 [3](1, 2, e, 3.14);
+    c c3 [1:2][3:2] (.*, .c(foo), .r);
     c c4(.*, .c(foo));
     c c5(1, 2, e);
     c c6(.a(1), .b, .c(foo));
@@ -1619,6 +1619,52 @@ endmodule : top
 checker request_granted(clk, rst);
     a1: assert property (@clk disable iff (rst) m1.req |=> m1.gnt);
 endchecker : request_granted
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Hierarchical lookup into checkers disallowed") {
+    auto tree = SyntaxTree::fromText(R"(
+checker c(q);
+    int i;
+endchecker
+
+module m;
+    int j = c.i + c.q;
+    c c1(3);
+    int k = c1.i + c1.q;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 4);
+    CHECK(diags[0].code == diag::CheckerHierarchical);
+    CHECK(diags[1].code == diag::CheckerHierarchical);
+    CHECK(diags[2].code == diag::CheckerHierarchical);
+    CHECK(diags[3].code == diag::CheckerHierarchical);
+}
+
+TEST_CASE("Nested checker name lookup") {
+    auto tree = SyntaxTree::fromText(R"(
+checker c(q);
+    int i;
+    checker d(r);
+        int j = i;
+        int k = q + r;
+    endchecker
+
+    d d1(q);
+endchecker
+
+module m;
+    c c1(3);
+endmodule
 )");
 
     Compilation compilation;
