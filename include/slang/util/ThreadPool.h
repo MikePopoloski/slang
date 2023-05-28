@@ -36,8 +36,11 @@ public:
                 threadCount = 1;
         }
 
-        waiting = false;
-        running = true;
+        {
+            std::unique_lock lock(mutex);
+            waiting = false;
+            running = true;
+        }
 
         for (unsigned i = 0; i < threadCount; i++)
             threads.emplace_back(&ThreadPool::worker, this);
@@ -47,12 +50,12 @@ public:
     ~ThreadPool() {
         waitForAll();
 
-        running = false;
         {
             std::unique_lock lock(mutex);
-            taskAvailable.notify_all();
+            running = false;
         }
 
+        taskAvailable.notify_all();
         for (auto& thread : threads)
             thread.join();
     }
@@ -63,11 +66,9 @@ public:
     /// calling @a waitForAll and waiting for all tasks in the pool to complete.
     template<typename TFunc, typename... TArgs>
     void pushTask(TFunc&& task, TArgs&&... args) {
-        std::function<void()> func = std::bind(std::forward<TFunc>(task),
-                                               std::forward<TArgs>(args)...);
         {
             std::unique_lock lock(mutex);
-            tasks.emplace_back(std::move(func));
+            tasks.emplace_back(std::bind(std::forward<TFunc>(task), std::forward<TArgs>(args)...));
         }
 
         taskAvailable.notify_one();
@@ -80,11 +81,9 @@ public:
     template<typename TFunc, typename... TArgs,
              typename TResult = std::invoke_result_t<std::decay_t<TFunc>, std::decay_t<TArgs>...>>
     [[nodiscard]] std::future<TResult> submit(TFunc&& task, TArgs&&... args) {
-        std::function<TResult()> func = std::bind(std::forward<TFunc>(task),
-                                                  std::forward<TArgs>(args)...);
         auto taskPromise = std::make_shared<std::promise<TResult>>();
-
-        pushTask([func = std::move(func), taskPromise] {
+        pushTask([func = std::bind(std::forward<TFunc>(task), std::forward<TArgs>(args)...),
+                  taskPromise] {
             SLANG_TRY {
                 if constexpr (std::is_void_v<TResult>) {
                     std::invoke(func);
@@ -108,40 +107,38 @@ public:
 
     /// Blocks the calling thread until all running tasks are complete.
     void waitForAll() {
-        if (!waiting) {
-            waiting = true;
-            std::unique_lock lock(mutex);
-            taskDone.wait(lock, [this] { return tasks.empty(); });
-            waiting = false;
-        }
+        std::unique_lock lock(mutex);
+        waiting = true;
+        taskDone.wait(lock, [this] { return tasks.empty(); });
+        waiting = false;
     }
 
 private:
     void worker() {
-        while (running) {
+        while (true) {
             std::unique_lock lock(mutex);
             taskAvailable.wait(lock, [this] { return !tasks.empty() || !running; });
+            if (!running)
+                break;
 
-            if (!tasks.empty()) {
-                auto task = std::move(tasks.front());
-                tasks.pop_front();
-                lock.unlock();
-                task();
-                lock.lock();
+            auto task = std::move(tasks.front());
+            tasks.pop_front();
+            lock.unlock();
+            task();
+            lock.lock();
 
-                if (waiting)
-                    taskDone.notify_one();
-            }
+            if (waiting && tasks.empty())
+                taskDone.notify_one();
         }
     }
 
     std::mutex mutex;
     std::deque<std::function<void()>> tasks;
-    std::atomic<bool> running;
-    std::atomic<bool> waiting;
     std::condition_variable taskAvailable;
     std::condition_variable taskDone;
     std::vector<std::thread> threads;
+    bool running;
+    bool waiting;
 };
 
 } // namespace slang
