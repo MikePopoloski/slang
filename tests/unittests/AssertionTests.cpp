@@ -1692,3 +1692,24 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Recursive checker instances -- bad") {
+    auto tree = SyntaxTree::fromText(R"(
+package p;
+    checker c(q);
+        c c_next(q + 1);
+    endchecker
+endpackage
+
+module m;
+    p::c c1(1);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::MaxInstanceDepthExceeded);
+}
