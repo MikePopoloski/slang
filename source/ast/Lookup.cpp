@@ -371,7 +371,8 @@ bool lookupDownward(std::span<const NamePlusLoc> nameParts, NameComponents name,
             modportName = ifacePort.modport;
         }
 
-        if ((!symbol->isScope() && symbol->kind != SymbolKind::Instance) || symbol->isType()) {
+        if ((!symbol->isScope() && symbol->kind != SymbolKind::Instance) || symbol->isType() ||
+            symbol->kind == SymbolKind::Checker) {
             // If we found an uninstantiated def, exit silently. An appropriate error was
             // already issued, so no need to pile on.
             if (symbol->kind == SymbolKind::UninstantiatedDef)
@@ -391,7 +392,18 @@ bool lookupDownward(std::span<const NamePlusLoc> nameParts, NameComponents name,
                 isType = symbol->kind == SymbolKind::GenericClassDef;
             }
 
-            auto code = isType ? diag::DotOnType : diag::NotAHierarchicalScope;
+            DiagCode code;
+            if (isType) {
+                code = diag::DotOnType;
+            }
+            else if (symbol->kind == SymbolKind::Checker ||
+                     symbol->kind == SymbolKind::CheckerInstance) {
+                code = diag::CheckerHierarchical;
+            }
+            else {
+                code = diag::NotAHierarchicalScope;
+            }
+
             auto& diag = result.addDiag(*context.scope, code, it->dotLocation);
             diag << name.range;
             diag << it->name.range;
