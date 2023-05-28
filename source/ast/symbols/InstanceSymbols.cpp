@@ -322,18 +322,6 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
     TimeTraceScope timeScope("createInstances"sv,
                              [&] { return std::string(syntax.type.valueText()); });
 
-    // Unfortunately this instantiation could be for a checker instead of a
-    // module/interface/program, so we're forced to do a real name lookup here
-    // in the local scope before doing a global definition lookup.
-    if (auto sym = Lookup::unqualified(*context.scope, syntax.type.valueText(),
-                                       LookupFlags::AllowDeclaredAfter)) {
-        if (sym->kind == SymbolKind::Checker) {
-            CheckerInstanceSymbol::fromSyntax(sym->as<CheckerSymbol>(), syntax, context, results,
-                                              implicitNets, isFromBind);
-            return;
-        }
-    }
-
     // Find our parent instance, if there is one.
     bool isUninstantiated = false;
     bool inChecker = false;
@@ -364,6 +352,18 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
     if (isUninstantiated) {
         UninstantiatedDefSymbol::fromSyntax(compilation, syntax, context, results, implicitNets);
         return;
+    }
+
+    // Unfortunately this instantiation could be for a checker instead of a
+    // module/interface/program, so we're forced to do a real name lookup here
+    // in the local scope before doing a global definition lookup.
+    if (auto sym = Lookup::unqualified(*context.scope, syntax.type.valueText(),
+                                       LookupFlags::AllowDeclaredAfter)) {
+        if (sym->kind == SymbolKind::Checker) {
+            CheckerInstanceSymbol::fromSyntax(sym->as<CheckerSymbol>(), syntax, context, results,
+                                              implicitNets, isFromBind);
+            return;
+        }
     }
 
     const Definition* owningDefinition = nullptr;
@@ -807,6 +807,19 @@ void UninstantiatedDefSymbol::fromSyntax(Compilation& compilation,
     ASTContext context = parentContext.resetFlags(ASTFlags::NonProcedural);
     createUninstantiatedDefs(compilation, syntax, syntax.type.valueText(), context, {}, results,
                              implicitNets);
+}
+
+void UninstantiatedDefSymbol::fromSyntax(Compilation& compilation,
+                                         const CheckerInstantiationSyntax& syntax,
+                                         const ASTContext& parentContext,
+                                         SmallVectorBase<const Symbol*>& results,
+                                         SmallVectorBase<const Symbol*>& implicitNets) {
+    ASTContext context = parentContext.resetFlags(ASTFlags::NonProcedural);
+    createUninstantiatedDefs(compilation, syntax, syntax.type->getLastToken().valueText(), context,
+                             {}, results, implicitNets);
+
+    for (auto sym : results)
+        sym->as<UninstantiatedDefSymbol>().mustBeChecker = true;
 }
 
 static const AssertionExpr* bindUnknownPortConn(const ASTContext& context,
@@ -1352,6 +1365,14 @@ void CheckerInstanceSymbol::fromSyntax(const CheckerInstantiationSyntax& syntax,
                                        SmallVectorBase<const Symbol*>& results,
                                        SmallVectorBase<const Symbol*>& implicitNets,
                                        bool isFromBind) {
+    // If this instance is not instantiated then we'll just fill in a placeholder
+    // and move on. This is likely inside an untaken generate branch.
+    if (context.scope->isUninstantiated()) {
+        UninstantiatedDefSymbol::fromSyntax(context.getCompilation(), syntax, context, results,
+                                            implicitNets);
+        return;
+    }
+
     LookupResult lookupResult;
     Lookup::name(*syntax.type, context, LookupFlags::AllowDeclaredAfter | LookupFlags::NoSelectors,
                  lookupResult);

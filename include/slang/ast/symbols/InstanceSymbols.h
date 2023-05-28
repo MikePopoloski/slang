@@ -235,6 +235,11 @@ public:
                            const ASTContext& context, SmallVectorBase<const Symbol*>& results,
                            SmallVectorBase<const Symbol*>& implicitNets);
 
+    static void fromSyntax(Compilation& compilation,
+                           const syntax::CheckerInstantiationSyntax& syntax,
+                           const ASTContext& context, SmallVectorBase<const Symbol*>& results,
+                           SmallVectorBase<const Symbol*>& implicitNets);
+
     void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::UninstantiatedDef; }

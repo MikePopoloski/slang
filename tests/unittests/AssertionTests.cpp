@@ -1671,3 +1671,24 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Recursive checker instances -- ok") {
+    auto tree = SyntaxTree::fromText(R"(
+package p;
+    checker c(q);
+        if (q < 4) begin
+            c c_next(q + 1);
+            p::c c_next2(q + 1);
+        end
+    endchecker
+endpackage
+
+module m;
+    p::c c1(1);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
