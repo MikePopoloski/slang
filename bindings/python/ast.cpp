@@ -4,6 +4,7 @@
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
 #include "pyslang.h"
+#include "visitor.h"
 
 #include "slang/ast/Compilation.h"
 #include "slang/ast/SystemSubroutine.h"
@@ -26,6 +27,11 @@ void registerAST(py::module_& m) {
     EXPOSE_ENUM(m, BinaryAssertionOperator);
     EXPOSE_ENUM(m, BinsSelectExprKind);
     EXPOSE_ENUM(m, DimensionKind);
+
+    py::enum_<VisitAction>(m, "VisitAction")
+        .value("Advance", VisitAction::Advance)
+        .value("Skip", VisitAction::Skip)
+        .value("Interrupt", VisitAction::Interrupt);
 
     py::enum_<EvalFlags>(m, "EvalFlags")
         .value("None", EvalFlags::None)
@@ -219,6 +225,7 @@ void registerAST(py::module_& m) {
              "type"_a)
         .def("getSymbolReference", &Expression::getSymbolReference, byrefint,
              "allowPacked"_a = true)
+        .def("visit", &pyVisit<Expression>, "f"_a, PyVisitor::doc)
         .def("__repr__", [](const Expression& self) {
             return fmt::format("Expression(ExpressionKind.{})", toString(self.kind));
         });
@@ -456,6 +463,7 @@ void registerAST(py::module_& m) {
         .def_readonly("sourceRange", &Statement::sourceRange)
         .def_property_readonly("bad", &Statement::bad)
         .def("eval", &Statement::eval, "context"_a)
+        .def("visit", &pyVisit<Statement>, "f"_a, PyVisitor::doc)
         .def("__repr__", [](const Statement& self) {
             return fmt::format("Statement(StatementKind.{})", toString(self.kind));
         });
