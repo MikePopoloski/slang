@@ -103,7 +103,7 @@ void registerSyntax(py::module_& m) {
 
         py::object operator*() const {
             if (auto child = node->childNode(index))
-                return py::cast(child);
+                return py::cast(child, byrefint, py::cast(node));
             return py::cast(node->childToken(index));
         }
 
@@ -142,7 +142,7 @@ void registerSyntax(py::module_& m) {
                      throw py::index_error();
 
                  if (auto node = self.childNode(i))
-                     return py::cast(node);
+                     return py::cast(node, byrefint, py::cast(&self));
                  return py::cast(self.childToken(i));
              })
         .def("__len__", &SyntaxNode::getChildCount)
