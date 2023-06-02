@@ -143,6 +143,11 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
   add_compile_options(/utf-8 /bigobj /permissive-)
 endif()
 
+# mimalloc is incompatible with Python bindings on MacOS
+if(CMAKE_SYSTEM_NAME MATCHES "Darwin" AND SLANG_INCLUDE_PYLIB)
+  set(SLANG_USE_MIMALLOC OFF)
+endif()
+
 # Get sane install RPATH handling by default if none has been provided.
 if(NOT CMAKE_INSTALL_RPATH AND BUILD_SHARED_LIBS)
   if(APPLE)
