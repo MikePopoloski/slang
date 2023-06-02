@@ -16,6 +16,7 @@
 #include "slang/ast/types/TypePrinter.h"
 #include "slang/diagnostics/DiagnosticEngine.h"
 #include "slang/diagnostics/LookupDiags.h"
+#include "slang/diagnostics/StatementsDiags.h"
 #include "slang/diagnostics/TextDiagnosticClient.h"
 #include "slang/parsing/Parser.h"
 #include "slang/parsing/Preprocessor.h"
@@ -1004,7 +1005,23 @@ const Diagnostics& Compilation::getSemanticDiagnostics() {
         for (auto& diag : diagList) {
             auto symbol = diag.symbol;
             while (symbol && symbol->kind != SymbolKind::InstanceBody) {
-                auto scope = symbol->getParentScope();
+                const Scope* scope;
+                if (symbol->kind == SymbolKind::CheckerInstanceBody) {
+                    auto& checkerBody = symbol->as<CheckerInstanceBodySymbol>();
+                    SLANG_ASSERT(checkerBody.parentInstance);
+                    scope = checkerBody.parentInstance->getParentScope();
+
+                    // Add an expansion note to the diagnostic since
+                    // we won't have added it yet for the checker.
+                    if (!checkerBody.isUninstantiated) {
+                        diag.addNote(diag::NoteWhileExpanding, checkerBody.parentInstance->location)
+                            << "checker"sv << checkerBody.checker.name;
+                    }
+                }
+                else {
+                    scope = symbol->getParentScope();
+                }
+
                 symbol = scope ? &scope->asSymbol() : nullptr;
             }
 
@@ -1073,10 +1090,8 @@ void Compilation::addDiagnostics(const Diagnostics& diagnostics) {
 Diagnostic& Compilation::addDiag(Diagnostic diag) {
     auto isSuppressed = [](const Symbol* symbol) {
         while (symbol) {
-            if (symbol->kind == SymbolKind::GenerateBlock &&
-                symbol->as<GenerateBlockSymbol>().isUninstantiated) {
-                return true;
-            }
+            if (symbol->kind == SymbolKind::GenerateBlock)
+                return symbol->as<GenerateBlockSymbol>().isUninstantiated;
 
             auto scope = symbol->getParentScope();
             symbol = scope ? &scope->asSymbol() : nullptr;

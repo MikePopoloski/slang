@@ -733,8 +733,9 @@ static const AssertionExpr& bindAssertionBody(const Symbol& symbol, const Syntax
 
 Expression& AssertionInstanceExpression::fromLookup(const Symbol& symbol,
                                                     const InvocationExpressionSyntax* syntax,
-                                                    SourceRange range, const ASTContext& context) {
-    auto& comp = context.getCompilation();
+                                                    SourceRange range,
+                                                    const ASTContext& parentContext) {
+    auto& comp = parentContext.getCompilation();
     const Type* type;
     const Scope* symbolScope;
     std::span<const AssertionPortSymbol* const> formalPorts;
@@ -769,9 +770,12 @@ Expression& AssertionInstanceExpression::fromLookup(const Symbol& symbol,
     SmallVector<const SyntaxNode*> orderedArgs;
     NamedArgMap namedArgs;
     if (syntax && syntax->arguments) {
-        if (!collectArgs(context, *syntax->arguments, orderedArgs, namedArgs))
+        if (!collectArgs(parentContext, *syntax->arguments, orderedArgs, namedArgs))
             return badExpr(comp, nullptr);
     }
+
+    ASTContext context = parentContext;
+    context.tryFillAssertionDetails();
 
     AssertionInstanceDetails instance;
     instance.symbol = &symbol;

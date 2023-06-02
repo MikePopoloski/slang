@@ -1439,20 +1439,23 @@ static const Symbol* createCheckerFormal(Compilation& comp, const AssertionPortS
 }
 
 CheckerInstanceSymbol& CheckerInstanceSymbol::fromSyntax(
-    Compilation& comp, const ASTContext& context, const CheckerSymbol& checker,
+    Compilation& comp, const ASTContext& parentContext, const CheckerSymbol& checker,
     const HierarchicalInstanceSyntax& syntax,
     std::span<const AttributeInstanceSyntax* const> attributes, SmallVectorBase<int32_t>& path,
     bool isProcedural) {
 
     auto [name, loc] = getNameLoc(syntax);
     auto assertionDetails = comp.allocAssertionDetails();
-    auto body = comp.emplace<CheckerInstanceBodySymbol>(comp, checker, *assertionDetails, context,
-                                                        isProcedural,
+    auto body = comp.emplace<CheckerInstanceBodySymbol>(comp, checker, *assertionDetails,
+                                                        parentContext, isProcedural,
                                                         /* isUninstantiated */ false);
 
     auto checkerSyntax = checker.getSyntax();
     SLANG_ASSERT(checkerSyntax);
     body->setSyntax(*checkerSyntax);
+
+    ASTContext context = parentContext;
+    context.tryFillAssertionDetails();
 
     assertionDetails->symbol = &checker;
     assertionDetails->instanceLoc = loc;
