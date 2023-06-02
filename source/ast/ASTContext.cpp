@@ -84,6 +84,28 @@ void ASTContext::setProceduralBlock(const ProceduralBlockSymbol& block) {
     instanceOrProc = &block;
 }
 
+void ASTContext::tryFillAssertionDetails() {
+    if (assertionInstance)
+        return;
+
+    auto parentSym = &scope->asSymbol();
+    while (true) {
+        if (parentSym->kind == SymbolKind::InstanceBody)
+            return;
+
+        if (parentSym->kind == SymbolKind::CheckerInstanceBody) {
+            assertionInstance = &parentSym->as<CheckerInstanceBodySymbol>().assertionDetails;
+            return;
+        }
+
+        auto nextScope = parentSym->getParentScope();
+        if (!nextScope)
+            break;
+
+        parentSym = &nextScope->asSymbol();
+    }
+}
+
 void ASTContext::setAttributes(const Statement& stmt,
                                std::span<const AttributeInstanceSyntax* const> syntax) const {
     if (syntax.empty())
@@ -500,7 +522,11 @@ void ASTContext::addAssertionBacktrace(Diagnostic& diag) const {
         diag.addNote(diag::NoteExpandedHere, inst.argExpansionLoc);
     }
     else {
+        // We ignore checkers here; they have specialized handling in Compilation.cpp.
         SLANG_ASSERT(inst.symbol);
+        if (inst.symbol->kind == SymbolKind::Checker)
+            return;
+
         if (!inst.symbol->name.empty()) {
             auto& note = diag.addNote(diag::NoteWhileExpanding, inst.instanceLoc);
             switch (inst.symbol->kind) {
@@ -512,9 +538,6 @@ void ASTContext::addAssertionBacktrace(Diagnostic& diag) const {
                     break;
                 case SymbolKind::LetDecl:
                     note << "let declaration"sv;
-                    break;
-                case SymbolKind::Checker:
-                    note << "checker"sv;
                     break;
                 default:
                     SLANG_UNREACHABLE;

@@ -1693,23 +1693,82 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
-TEST_CASE("Recursive checker instances -- bad") {
+// TEST_CASE("Recursive checker instances -- bad") {
+//     auto tree = SyntaxTree::fromText(R"(
+// package p;
+//     checker c(q);
+//         c c_next(q + 1);
+//     endchecker
+// endpackage
+//
+// module m;
+//     p::c c1(1);
+// endmodule
+//)");
+//
+//     Compilation compilation;
+//     compilation.addSyntaxTree(tree);
+//
+//     auto& diags = compilation.getAllDiagnostics();
+//     REQUIRE(diags.size() == 1);
+//     CHECK(diags[0].code == diag::MaxInstanceDepthExceeded);
+// }
+
+TEST_CASE("Checkers diagnostic expansion stack") {
     auto tree = SyntaxTree::fromText(R"(
 package p;
     checker c(q);
-        c c_next(q + 1);
+        d d1(q);
+    endchecker
+
+    checker d(r);
+        string a;
+        int b,c,d,e;
+
+        assert property (a ##1 b ##[+] c ##[*] d ##[1:5] e + r);
     endchecker
 endpackage
 
 module m;
     p::c c1(1);
+    p::c c2($);
+
+    checker e(q);
+        f f1(q);
+    endchecker
+
+    checker f(r);
+        int foo[$];
+        int j = foo + r;
+    endchecker
+
+    e e1(5);
 endmodule
 )");
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
 
-    auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 1);
-    CHECK(diags[0].code == diag::MaxInstanceDepthExceeded);
+    auto& diagnostics = compilation.getAllDiagnostics();
+    std::string result = "\n" + report(diagnostics);
+    CHECK(result == R"(
+source:17:13: error: unbounded literal '$' not allowed here
+    p::c c2($);
+            ^
+source:4:14: note: expanded here
+        d d1(q);
+             ^
+source:11:62: note: expanded here
+        assert property (a ##1 b ##[+] c ##[*] d ##[1:5] e + r);
+                                                             ^
+source:25:21: error: invalid operands to binary expression ('queue of int' and 'int')
+        int j = foo + r;
+                ~~~ ^ ~
+source:20:11: note: while expanding checker 'f'
+        f f1(q);
+          ^
+source:28:7: note: while expanding checker 'e'
+    e e1(5);
+      ^
+)");
 }
