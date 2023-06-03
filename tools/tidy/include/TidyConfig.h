@@ -9,11 +9,11 @@
 
 #include "TidyKind.h"
 #include <algorithm>
+#include <fmt/format.h>
+#include <slang/util/CppTypePrinter.h>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
-#include <fmt/format.h>
-#include <slang/util/TypePrinter.h>
 
 class TidyConfig {
     friend class TidyConfigParser;

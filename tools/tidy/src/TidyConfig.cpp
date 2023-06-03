@@ -22,7 +22,8 @@ TidyConfig::TidyConfig() {
 
     auto portsChecks = std::unordered_map<std::string, CheckStatus>();
     portsChecks.emplace("EnforcePortSuffix", CheckStatus::ENABLED);
-    checkKinds.insert({slang::TidyKind::Ports, portsChecks});
+    portsChecks.emplace("NoOldAlwaysCombSyntax", CheckStatus::ENABLED);
+    checkKinds.insert({slang::TidyKind::Style, portsChecks});
 
     auto synthesisChecks = std::unordered_map<std::string, CheckStatus>();
     synthesisChecks.emplace("OnlyAssignedOnReset", CheckStatus::ENABLED);

@@ -141,8 +141,7 @@ public:
 
     std::string shortDescription() const override {
         return "A register in an always_ff, which contains the reset signal on its sensitivity "
-               "list,\n"
-               "which do not have a value when the design is on reset.";
+               "list, which do not have a value when the design is on reset.";
     }
 };
 

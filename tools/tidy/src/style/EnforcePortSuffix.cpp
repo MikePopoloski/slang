@@ -75,13 +75,16 @@ public:
     }
     std::string name() const override { return "EnforcePortSuffix"; }
     std::string description() const override {
-        return "Enforces that all ports in the design follow the code guidelines provided by " +
-               fmt::format(fmt::emphasis::italic, "--input-port-suffix") + " and " +
-               fmt::format(fmt::emphasis::italic, "--output-port-suffix") + '\n';
+        return "Enforces that all ports in the design follow the code guidelines provided in the "
+               "configuration file by the configs " +
+               fmt::format(fmt::emphasis::italic, "inputPortSuffix") + " , " +
+               fmt::format(fmt::emphasis::italic, "outputPortSuffix") + " , " +
+               fmt::format(fmt::emphasis::italic, "inoutPortSuffix") + '\n';
     }
     std::string shortDescription() const override {
-        return "Enforces that all ports in the design follows the code guidelines provided";
+        return "Enforces that all ports in the design follows the code guidelines provided in the "
+               "configuration file";
     }
 };
 
-REGISTER(EnforcePortSuffix, EnforcePortSuffix, TidyKind::Ports)
+REGISTER(EnforcePortSuffix, EnforcePortSuffix, TidyKind::Style)

@@ -24,10 +24,8 @@ int main(int argc, char** argv) {
 
     std::optional<bool> showHelp;
     std::optional<bool> showVersion;
-    std::optional<bool> quiet;
     driver.cmdLine.add("-h,--help", showHelp, "Display available options");
     driver.cmdLine.add("--version", showVersion, "Display version information and exit");
-    driver.cmdLine.add("-q,--quiet", quiet, "Suppress non-essential output");
 
     std::optional<bool> printDescriptions;
     std::optional<bool> printShortDescriptions;
