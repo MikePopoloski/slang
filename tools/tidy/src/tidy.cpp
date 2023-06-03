@@ -106,6 +106,7 @@ int main(int argc, char** argv) {
     }
 
     // Set the config to the Registry
+    Registry::set_config(tidyConfig);
 
     DiagnosticEngine diagEngine(*compilation->getSourceManager());
     auto textDiagClient = std::make_shared<TextDiagnosticClient>();

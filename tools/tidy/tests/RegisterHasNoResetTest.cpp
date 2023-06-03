@@ -35,7 +35,7 @@ endmodule
     Registry::set_config(config);
     auto visitor = Registry::create("RegisterHasNoReset");
     bool result = visitor->check(root);
-    CHECK(result == false);
+    CHECK_FALSE(result);
 }
 
 TEST_CASE("RegisterHasNoReset: Register always assigned") {
@@ -64,7 +64,7 @@ endmodule
     Registry::set_config(config);
     auto visitor = Registry::create("RegisterHasNoReset");
     bool result = visitor->check(root);
-    CHECK(result == true);
+    CHECK(result);
 }
 
 TEST_CASE("RegisterHasNoReset: Register always assigned outside if reset block") {
@@ -95,7 +95,7 @@ endmodule
     Registry::set_config(config);
     auto visitor = Registry::create("RegisterHasNoReset");
     bool result = visitor->check(root);
-    CHECK(result == true);
+    CHECK(result);
 }
 
 TEST_CASE("RegisterHasNoReset: Array always assigned") {
@@ -129,7 +129,7 @@ endmodule
     Registry::set_config(config);
     auto visitor = Registry::create("RegisterHasNoReset");
     bool result = visitor->check(root);
-    CHECK(result == true);
+    CHECK(result);
 }
 
 TEST_CASE("RegisterHasNoReset: Array not assigned on reset") {
@@ -162,7 +162,7 @@ endmodule
     Registry::set_config(config);
     auto visitor = Registry::create("RegisterHasNoReset");
     bool result = visitor->check(root);
-    CHECK(result == false);
+    CHECK_FALSE(result);
 }
 
 TEST_CASE("RegisterHasNoReset: Struct always assigned") {
@@ -198,7 +198,7 @@ endmodule
     Registry::set_config(config);
     auto visitor = Registry::create("RegisterHasNoReset");
     bool result = visitor->check(root);
-    CHECK(result == true);
+    CHECK(result);
 }
 
 TEST_CASE("RegisterHasNoReset: Struct not assigned on reset") {
@@ -231,5 +231,5 @@ endmodule
     Registry::set_config(config);
     auto visitor = Registry::create("RegisterHasNoReset");
     bool result = visitor->check(root);
-    CHECK(result == false);
+    CHECK_FALSE(result);
 }

@@ -4,17 +4,18 @@
 # ~~~
 
 add_executable(
-  tidy_unittests
-  ../../../tests/unittests/main.cpp ../../../tests/unittests/Test.cpp
-        ../src/TidyConfig.cpp ../src/TidyConfigParser.cpp
+        tidy_unittests
+        ../../../tests/unittests/main.cpp ../../../tests/unittests/Test.cpp
+        ../src/TidyConfig.cpp ../src/TidyConfigParser.cpp TidyConfigParserTest.cpp
         ../src/synthesis/OnlyAssignedOnReset.cpp OnlyAssignedOnResetTest.cpp
         ../src/synthesis/RegisterHasNoReset.cpp RegisterHasNoResetTest.cpp
-        ../src/ports/EnforcePortSuffix.cpp EnforcePortSuffixTest.cpp SlangTidyParserTest.cpp)
+        ../src/synthesis/NoLatchesOnDesign.cpp NoLatchesOnDesignTest.cpp
+        ../src/ports/EnforcePortSuffix.cpp EnforcePortSuffixTest.cpp)
 
 target_link_libraries(tidy_unittests PRIVATE slang::slang Catch2::Catch2
-                                             fmt::fmt)
+        fmt::fmt)
 target_compile_definitions(tidy_unittests PRIVATE UNITTESTS)
 target_include_directories(tidy_unittests PRIVATE ../include ../../../include
-                                                  ../../../tests/unittests)
+        ../../../tests/unittests)
 
 add_test(NAME tidy_unittests COMMAND tidy_unittests)

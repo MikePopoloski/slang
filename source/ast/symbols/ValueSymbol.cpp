@@ -407,6 +407,12 @@ bool ValueDriver::isInAlwaysFFBlock() const {
                ProceduralBlockKind::AlwaysFF;
 }
 
+bool ValueDriver::isInAlwaysLatchBlock() const {
+    return containingSymbol->kind == SymbolKind::ProceduralBlock &&
+           containingSymbol->as<ProceduralBlockSymbol>().procedureKind ==
+               ProceduralBlockKind::AlwaysLatch;
+}
+
 SourceRange ValueDriver::getSourceRange() const {
     if (procCallExpression)
         return procCallExpression->sourceRange;

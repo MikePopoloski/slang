@@ -27,6 +27,7 @@ TidyConfig::TidyConfig() {
     auto synthesisChecks = std::unordered_map<std::string, CheckStatus>();
     synthesisChecks.emplace("OnlyAssignedOnReset", CheckStatus::ENABLED);
     synthesisChecks.emplace("RegisterHasNoReset", CheckStatus::ENABLED);
+    synthesisChecks.emplace("NoLatchesOnDesign", CheckStatus::ENABLED);
     checkKinds.insert({slang::TidyKind::Synthesis, synthesisChecks});
 }
 

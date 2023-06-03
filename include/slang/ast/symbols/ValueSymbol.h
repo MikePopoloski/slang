@@ -153,6 +153,9 @@ public:
     /// Indicates whether the driver is inside an always_ff block.
     bool isInAlwaysFFBlock() const;
 
+    /// Indicates whether the driver is inside an always_latch block.
+    bool isInAlwaysLatchBlock() const;
+
     /// Gets the source range describing the driver as written in the source code.
     SourceRange getSourceRange() const;
 
