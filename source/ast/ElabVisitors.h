@@ -238,17 +238,6 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
         for (auto& conn : symbol.getPortConnections())
             conn.getOutputInitialExpr();
 
-        auto guard = ScopeGuard([this] { checkerInstanceDepth--; });
-        if (++checkerInstanceDepth + activeInstanceBodies.size() >
-            compilation.getOptions().maxInstanceDepth) {
-            auto& diag = symbol.getParentScope()->addDiag(diag::MaxInstanceDepthExceeded,
-                                                          symbol.location);
-            diag << "checker"sv;
-            diag << compilation.getOptions().maxInstanceDepth;
-            hierarchyProblem = true;
-            return;
-        }
-
         visit(symbol.body);
     }
 
@@ -434,7 +423,6 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
     SmallVector<const MethodPrototypeSymbol*> externIfaceProtos;
     SmallVector<std::pair<const InterfacePortSymbol*, const ModportSymbol*>> modportsWithExports;
     TimingPathMap timingPathMap;
-    size_t checkerInstanceDepth = 0;
 };
 
 // This visitor is for finding all defparam directives in the hierarchy.
