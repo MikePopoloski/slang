@@ -17,7 +17,7 @@ namespace slang {
 // clang-format off
 #define KIND(x)  \
     x(Synthesis) \
-    x(Ports)
+    x(Style)
 SLANG_ENUM(TidyKind, KIND)
 #undef KIND
 // clang-format on
@@ -26,8 +26,8 @@ inline std::optional<slang::TidyKind> tidy_kind_from_str(std::string str) {
     std::transform(str.begin(), str.end(), str.begin(), ::tolower);
     if (str == "synthesis")
         return slang::TidyKind::Synthesis;
-    if (str == "ports")
-        return slang::TidyKind::Ports;
+    if (str == "style")
+        return slang::TidyKind::Style;
     return {};
 }
 
