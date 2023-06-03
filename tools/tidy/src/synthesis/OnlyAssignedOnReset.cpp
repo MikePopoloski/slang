@@ -1,6 +1,6 @@
 //------------------------------------------------------------------------------
-//! @file RegisterHasNoReset.h
-//! @brief Register has no reset slang-tidy check
+//! @file OnlyAssignedOnReset.h
+//! @brief Only assigned on reset slang-tidy check
 //
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
@@ -15,7 +15,7 @@
 using namespace slang;
 using namespace slang::ast;
 
-namespace register_has_no_reset {
+namespace only_assigned_on_reset {
 struct AlwaysFFVisitor : public ASTVisitor<AlwaysFFVisitor, true, true> {
     explicit AlwaysFFVisitor(const std::string_view name, const std::string_view resetName) :
         name(name), resetName(resetName){};
@@ -41,10 +41,10 @@ struct AlwaysFFVisitor : public ASTVisitor<AlwaysFFVisitor, true, true> {
 
         if (isReset) {
             LookupLhsIdentifier visitor(name);
-            statement.ifFalse->visit(visitor);
+            statement.ifTrue.visit(visitor);
             if (visitor.found()) {
                 visitor.reset();
-                statement.ifTrue.visit(visitor);
+                statement.ifFalse->visit(visitor);
                 if (!visitor.found()) {
                     correctlyAssignedOnIfReset = true;
                 }
@@ -66,12 +66,12 @@ struct AlwaysFFVisitor : public ASTVisitor<AlwaysFFVisitor, true, true> {
     bool assignedOutsideIfReset = false;
 };
 
-struct MainVisitor : public ASTVisitor<MainVisitor, true, true> {
-    explicit MainVisitor(Diagnostics& diagnostics, const Registry::RegistryCheckConfig& config) :
+struct MainVisitor : public ASTVisitor<MainVisitor, true, false> {
+    explicit MainVisitor(Diagnostics& diagnostics, const TidyConfig::CheckConfigs& config) :
         diags(diagnostics), config(config) {}
 
     Diagnostics& diags;
-    const Registry::RegistryCheckConfig& config;
+    const TidyConfig::CheckConfigs& config;
 
     void handle(const VariableSymbol& symbol) {
         if (symbol.drivers().empty())
@@ -82,18 +82,17 @@ struct MainVisitor : public ASTVisitor<MainVisitor, true, true> {
             AlwaysFFVisitor visitor(symbol.name, config.resetName);
             firstDriver->containingSymbol->visit(visitor);
             if (visitor.hasError()) {
-                diags.add(diag::RegisterNotAssignedOnReset, symbol.location) << symbol.name;
+                diags.add(diag::OnlyAssignedOnReset, symbol.location) << symbol.name;
             }
         }
     }
 };
-} // namespace register_has_no_reset
+} // namespace only_assigned_on_reset
 
-using namespace register_has_no_reset;
-
-class RegisterHasNoReset : public TidyCheck {
+using namespace only_assigned_on_reset;
+class OnlyAssignedOnReset : public TidyCheck {
 public:
-    explicit RegisterHasNoReset(const Registry::RegistryCheckConfig& config, TidyKind kind) :
+    explicit OnlyAssignedOnReset(const TidyConfig::CheckConfigs& config, TidyKind kind) :
         TidyCheck(config, kind) {}
 
     bool check(const RootSymbol& root) override {
@@ -104,47 +103,33 @@ public:
         return true;
     }
 
-    DiagCode diagCode() const override { return diag::RegisterNotAssignedOnReset; }
+    DiagCode diagCode() const override { return diag::OnlyAssignedOnReset; }
 
-    std::string diagString() const override {
-        return "register '{}' has no value on reset, but the always_ff block has the reset signal "
-               "on the sensitivity list. Consider moving the register to an always_ff that has no "
-               "reset or set a value on reset";
-    }
+    std::string diagString() const override { return "register '{}' is only assigned on reset"; }
 
     DiagnosticSeverity diagSeverity() const override { return DiagnosticSeverity::Warning; }
 
-    std::string_view name() const override { return "RegisterHasNoReset"; }
+    std::string name() const override { return "OnlyAssignedOnReset"; }
 
     std::string description() const override {
-        return "A register in an always_ff, which contains the reset signal on its sensitivity "
-               "list, which\ndo not have a value when the design is on reset. This will cause "
-               "errors with "
-               "synthesis\ntools since they will use an incorrect register cell.\n\n" +
+        return "A register in an always_ff only have value while the design is on reset.\n\n" +
                fmt::format(fmt::emphasis::italic,
                            "module m (logic clk, logic reset);\n"
                            "    logic r;\n"
                            "    always_ff @(posedge clk or negedge reset) begin\n"
-                           "                               ^^^^^^^^^^^^^------\\\n"
-                           "                                                  \\\n"
-                           "        r <= 1'b1;                                \\\n"
-                           "        ^~~~Register r do not have a value when reset\n"
+                           "        if (~reset) begin\n"
+                           "            r <= 1'b0;\n"
+                           "        end\n"
+                           "        begin\n"
+                           "            ~~r do not have a value when design is not in reset\n"
+                           "        end\n"
                            "    end\n"
-                           "endmodule\n\n") +
-               "Instead the always_ff should be written like this:\n\n" +
-               fmt::format(fmt::emphasis::italic, "module m (logic clk, logic reset);\n"
-                                                  "    logic r;\n"
-                                                  "    always_ff @(posedge clk) begin\n"
-                                                  "        r <= 1'b1;\n"
-                                                  "    end\n"
-                                                  "endmodule\n");
+                           "endmodule\n");
     }
 
-    std::string_view shortDescription() const override {
-        return "A register in an always_ff, which contains the reset signal on its sensitivity "
-               "list,\n"
-               "which do not have a value when the design is on reset."sv;
+    std::string shortDescription() const override {
+        return "A register in an always_ff only have value while the design is on reset.";
     }
 };
 
-REGISTER(RegisterHasNoReset, RegisterHasNoReset, TidyKind::Synthesis)
+REGISTER(OnlyAssignedOnReset, OnlyAssignedOnReset, TidyKind::Synthesis)
