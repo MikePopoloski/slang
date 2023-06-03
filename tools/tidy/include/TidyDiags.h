@@ -14,5 +14,6 @@ namespace slang::diag {
 inline constexpr DiagCode OnlyAssignedOnReset(DiagSubsystem::Tidy, 0);
 inline constexpr DiagCode RegisterNotAssignedOnReset(DiagSubsystem::Tidy, 1);
 inline constexpr DiagCode EnforcePortSuffix(DiagSubsystem::Tidy, 2);
+inline constexpr DiagCode NoLatchesOnDesign(DiagSubsystem::Tidy, 3);
 
 } // namespace slang::diag

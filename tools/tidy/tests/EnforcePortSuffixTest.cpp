@@ -28,7 +28,7 @@ endmodule
     Registry::set_config(config);
     auto visitor = Registry::create("EnforcePortSuffix");
     bool result = visitor->check(root);
-    CHECK(result == false);
+    CHECK_FALSE(result);
 }
 
 TEST_CASE("EnforcePortSuffix: Correct input suffix") {
@@ -51,7 +51,7 @@ endmodule
     Registry::set_config(config);
     auto visitor = Registry::create("EnforcePortSuffix");
     bool result = visitor->check(root);
-    CHECK(result == true);
+    CHECK(result);
 }
 
 TEST_CASE("EnforcePortSuffix: Incorrect output suffix") {
@@ -74,7 +74,7 @@ endmodule
     Registry::set_config(config);
     auto visitor = Registry::create("EnforcePortSuffix");
     bool result = visitor->check(root);
-    CHECK(result == false);
+    CHECK_FALSE(result);
 }
 
 TEST_CASE("EnforcePortSuffix: Correct output suffix") {
@@ -97,7 +97,7 @@ endmodule
     Registry::set_config(config);
     auto visitor = Registry::create("EnforcePortSuffix");
     bool result = visitor->check(root);
-    CHECK(result == true);
+    CHECK(result);
 }
 
 TEST_CASE("EnforcePortSuffix: Incorrect inout suffix") {
@@ -120,7 +120,7 @@ endmodule
     Registry::set_config(config);
     auto visitor = Registry::create("EnforcePortSuffix");
     bool result = visitor->check(root);
-    CHECK(result == false);
+    CHECK_FALSE(result);
 }
 
 TEST_CASE("EnforcePortSuffix: Correct inout suffix") {
@@ -143,5 +143,5 @@ endmodule
     Registry::set_config(config);
     auto visitor = Registry::create("EnforcePortSuffix");
     bool result = visitor->check(root);
-    CHECK(result == true);
+    CHECK(result);
 }

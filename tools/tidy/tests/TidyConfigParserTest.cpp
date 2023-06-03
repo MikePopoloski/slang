@@ -1,6 +1,6 @@
 //------------------------------------------------------------------------------
-//! @file SlangTidyParserTest.h
-//! @brief Test suite for the SlangTidyParser
+//! @file TidyConfigParserTest.h
+//! @brief Test suite for the TidyConfigParser
 //
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
