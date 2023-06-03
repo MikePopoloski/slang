@@ -20,6 +20,7 @@
 
 namespace slang::ast {
 
+class CheckerInstanceBodySymbol;
 class Expression;
 class InstanceSymbolBase;
 class ProceduralBlockSymbol;
@@ -360,7 +361,7 @@ public:
     /// Clears the parent instance and parent procedural block symbol
     /// associated with the context.
     void clearInstanceAndProc() { instanceOrProc = nullptr; }
-    void tryFillAssertionDetails();
+    const CheckerInstanceBodySymbol* tryFillAssertionDetails();
 
     /// Tries to fill the @a assertionInstance member by searching upward through
     /// parent scopes to find an assertion instantiation.
