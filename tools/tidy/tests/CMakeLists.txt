@@ -6,8 +6,10 @@
 add_executable(
   tidy_unittests
   ../../../tests/unittests/main.cpp ../../../tests/unittests/Test.cpp
-  ../synthesis/OnlyAssignedOnReset.cpp OnlyAssignedOnResetTest.cpp
-  ../synthesis/RegisterHasNoReset.cpp RegisterHasNoResetTest.cpp)
+        ../src/TidyConfig.cpp ../src/TidyConfigParser.cpp
+        ../src/synthesis/OnlyAssignedOnReset.cpp OnlyAssignedOnResetTest.cpp
+        ../src/synthesis/RegisterHasNoReset.cpp RegisterHasNoResetTest.cpp
+        ../src/ports/EnforcePortSuffix.cpp EnforcePortSuffixTest.cpp SlangTidyParserTest.cpp)
 
 target_link_libraries(tidy_unittests PRIVATE slang::slang Catch2::Catch2
                                              fmt::fmt)

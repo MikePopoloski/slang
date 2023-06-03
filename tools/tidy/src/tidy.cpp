@@ -5,12 +5,13 @@
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
+#include "TidyConfigParser.h"
+#include "TidyFactory.h"
 #include "fmt/color.h"
 #include "fmt/format.h"
-#include "include/TidyFactory.h"
+#include <filesystem>
 #include <unordered_set>
 
-#include "slang/ast/Compilation.h"
 #include "slang/diagnostics/TextDiagnosticClient.h"
 #include "slang/driver/Driver.h"
 #include "slang/util/Version.h"
@@ -35,24 +36,9 @@ int main(int argc, char** argv) {
     driver.cmdLine.add("--print-short-descriptions", printShortDescriptions,
                        "Displays the short description of each check and exits");
 
-    std::optional<bool> disableSynthesisChecks;
-    std::vector<std::string> disabledCheckNames;
-    driver.cmdLine.add("--disable-synthesis-checks", disableSynthesisChecks,
-                       "Disables the synthesis checks");
-    driver.cmdLine.add("--disable-checks", disabledCheckNames,
-                       "Names of checks that will be disabled");
-
-    std::optional<bool> onlySynthesisChecks;
-    driver.cmdLine.add("--only-synthesis-checks", onlySynthesisChecks,
-                       "Disables the synthesis checks");
-
-    std::optional<std::string> clockName;
-    std::optional<std::string> resetName;
-    std::optional<bool> resetActiveHigh;
-    driver.cmdLine.add("--clock-name", clockName, "Name of the design clock signal");
-    driver.cmdLine.add("--reset-name", resetName, "Name of the design reset signal");
-    driver.cmdLine.add("--reset-active-high", resetActiveHigh,
-                       "Indicates that the reset is active high. By default reset is active low");
+    std::optional<std::string> tidyConfigFile;
+    driver.cmdLine.add("--config-file", tidyConfigFile,
+                       "Path to where the tidy config file is located");
 
     if (!driver.parseCommandLine(argc, argv))
         return 1;
@@ -70,34 +56,19 @@ int main(int argc, char** argv) {
         return 0;
     }
 
-    if (!disabledCheckNames.empty()) {
-        auto allRegisteredChecks = Registry::get_registered();
-        for (const auto& name : disabledCheckNames) {
-            if (!std::ranges::count(allRegisteredChecks, name)) {
-                OS::printE(
-                    fmt::format("the check {} provided in --disable-check do not exist\n", name));
-                return 6;
-            }
-        }
+    // Create the config class and populate it with the config file if provided
+    TidyConfig tidyConfig;
+    if (tidyConfigFile) {
+        if (!exists(std::filesystem::path(tidyConfigFile.value())))
+            slang::OS::printE(fmt::format("the path provided for the config file does not exist {}",
+                                          tidyConfigFile.value()));
+        tidyConfig = TidyConfigParser(tidyConfigFile.value()).getConfig();
     }
 
-    std::unordered_set<slang::TidyKind> disabledCheckKinds;
-    if (disableSynthesisChecks)
-        disabledCheckKinds.insert(TidyKind::Synthesis);
-
-    auto filter_func = [&](const Registry::RegistryItem& item) {
-        if (std::ranges::count(disabledCheckNames, item.first))
-            return false;
-        if (disabledCheckKinds.count(item.second.kind))
-            return false;
-        if (onlySynthesisChecks)
-            return item.second.kind == slang::TidyKind::Synthesis;
-        return true;
-    };
-
+    // Print (short)descriptions of the checks
     if (printDescriptions || printShortDescriptions) {
         bool first = true;
-        for (const auto& check_name : Registry::get_registered(filter_func)) {
+        for (const auto& check_name : Registry::get_registered_checks()) {
             const auto check = Registry::create(check_name);
             if (first)
                 first = false;
@@ -113,7 +84,7 @@ int main(int argc, char** argv) {
     }
 
     if (!driver.processOptions())
-        return 2;
+        return 1;
 
     std::unique_ptr<ast::Compilation> compilation;
     bool compilation_ok;
@@ -126,13 +97,15 @@ int main(int argc, char** argv) {
 #if __cpp_exceptions
         slang::OS::printE(fmt::format("internal compiler error: {}\n", e.what()));
 #endif
-        return 4;
+        return 1;
     }
 
     if (!compilation_ok) {
         slang::OS::print("slang-tidy: errors found during compilation\n");
         return 1;
     }
+
+    // Set the config to the Registry
 
     DiagnosticEngine diagEngine(*compilation->getSourceManager());
     auto textDiagClient = std::make_shared<TextDiagnosticClient>();
@@ -141,15 +114,8 @@ int main(int argc, char** argv) {
 
     int ret_code = 0;
 
-    Registry::initialize_default_check_config();
-    if (clockName)
-        Registry::set_check_config_clock_name(clockName.value());
-    if (resetName)
-        Registry::set_check_config_reset_name(resetName.value());
-    if (resetActiveHigh)
-        Registry::set_check_config_reset_active_high(true);
-
-    for (const auto& check_name : Registry::get_registered(filter_func)) {
+    // Check all enabled checks
+    for (const auto& check_name : Registry::get_enabled_checks()) {
         const auto check = Registry::create(check_name);
         OS::print(fmt::format("[{}]", check->name()));
 
@@ -158,7 +124,7 @@ int main(int argc, char** argv) {
 
         auto checkOk = check->check(compilation->getRoot());
         if (!checkOk) {
-            ret_code = 5;
+            ret_code = 1;
             OS::print(fmt::emphasis::bold | fmt::fg(fmt::color::red), " FAIL\n");
             const auto& diags = check->getDiagnostics();
             for (const auto& diag : diags)
