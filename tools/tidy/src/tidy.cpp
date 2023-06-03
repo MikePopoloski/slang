@@ -106,11 +106,6 @@ int main(int argc, char** argv) {
     // Set the config to the Registry
     Registry::set_config(tidyConfig);
 
-    DiagnosticEngine diagEngine(*compilation->getSourceManager());
-    auto textDiagClient = std::make_shared<TextDiagnosticClient>();
-    textDiagClient->showColors(true);
-    diagEngine.addClient(textDiagClient);
-
     int ret_code = 0;
 
     // Check all enabled checks
@@ -118,8 +113,8 @@ int main(int argc, char** argv) {
         const auto check = Registry::create(check_name);
         OS::print(fmt::format("[{}]", check->name()));
 
-        diagEngine.setMessage(check->diagCode(), check->diagString());
-        diagEngine.setSeverity(check->diagCode(), check->diagSeverity());
+        driver.diagEngine.setMessage(check->diagCode(), check->diagString());
+        driver.diagEngine.setSeverity(check->diagCode(), check->diagSeverity());
 
         auto checkOk = check->check(compilation->getRoot());
         if (!checkOk) {
@@ -127,9 +122,9 @@ int main(int argc, char** argv) {
             OS::print(fmt::emphasis::bold | fmt::fg(fmt::color::red), " FAIL\n");
             const auto& diags = check->getDiagnostics();
             for (const auto& diag : diags)
-                diagEngine.issue(diag);
-            OS::print(fmt::format("{}\n", textDiagClient->getString()));
-            textDiagClient->clear();
+                driver.diagEngine.issue(diag);
+            OS::print(fmt::format("{}\n", driver.diagClient->getString()));
+            driver.diagClient->clear();
         }
         else {
             OS::print(fmt::emphasis::bold | fmt::fg(fmt::color::green), " PASS\n");
