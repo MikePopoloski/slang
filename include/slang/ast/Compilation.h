@@ -74,6 +74,9 @@ struct SLANG_EXPORT CompilationOptions {
     /// to detect infinite recursion.
     uint32_t maxInstanceDepth = 128;
 
+    /// The maximum depth of nested checker instances to detect infinite recursion.
+    uint32_t maxCheckerInstanceDepth = 64;
+
     /// The maximum number of steps that will be taken when expanding a single
     /// generate construct, to detect infinite loops.
     uint32_t maxGenerateSteps = 131072;

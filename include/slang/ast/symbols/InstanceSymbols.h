@@ -346,6 +346,7 @@ public:
 
     const CheckerSymbol& checker;
     const AssertionInstanceDetails& assertionDetails;
+    uint32_t instanceDepth;
     bool isProcedural;
 
     /// Indicates whether the checker isn't actually instantiated in the design.
@@ -356,8 +357,8 @@ public:
 
     CheckerInstanceBodySymbol(Compilation& compilation, const CheckerSymbol& checker,
                               AssertionInstanceDetails& assertionDetails,
-                              const ASTContext& originalContext, bool isProcedural,
-                              bool isUninstantiated);
+                              const ASTContext& originalContext, uint32_t instanceDepth,
+                              bool isProcedural, bool isUninstantiated);
 
     void serializeTo(ASTSerializer& serializer) const;
 

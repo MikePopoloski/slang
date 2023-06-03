@@ -24,6 +24,7 @@
 #include "slang/ast/symbols/VariableSymbols.h"
 #include "slang/ast/types/NetType.h"
 #include "slang/ast/types/Type.h"
+#include "slang/diagnostics/CompilationDiags.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/diagnostics/ExpressionsDiags.h"
 #include "slang/diagnostics/LookupDiags.h"
@@ -1444,18 +1445,30 @@ CheckerInstanceSymbol& CheckerInstanceSymbol::fromSyntax(
     std::span<const AttributeInstanceSyntax* const> attributes, SmallVectorBase<int32_t>& path,
     bool isProcedural) {
 
+    ASTContext context = parentContext;
+    auto parentChecker = context.tryFillAssertionDetails();
+
     auto [name, loc] = getNameLoc(syntax);
+
+    uint32_t depth = 0;
+    if (parentChecker) {
+        depth = parentChecker->instanceDepth + 1;
+        if (depth > comp.getOptions().maxCheckerInstanceDepth) {
+            auto& diag = context.addDiag(diag::MaxInstanceDepthExceeded, loc);
+            diag << "checker"sv;
+            diag << comp.getOptions().maxCheckerInstanceDepth;
+            return createInvalid(checker);
+        }
+    }
+
     auto assertionDetails = comp.allocAssertionDetails();
     auto body = comp.emplace<CheckerInstanceBodySymbol>(comp, checker, *assertionDetails,
-                                                        parentContext, isProcedural,
+                                                        parentContext, depth, isProcedural,
                                                         /* isUninstantiated */ false);
 
     auto checkerSyntax = checker.getSyntax();
     SLANG_ASSERT(checkerSyntax);
     body->setSyntax(*checkerSyntax);
-
-    ASTContext context = parentContext;
-    context.tryFillAssertionDetails();
 
     assertionDetails->symbol = &checker;
     assertionDetails->instanceLoc = loc;
@@ -1614,6 +1627,7 @@ CheckerInstanceSymbol& CheckerInstanceSymbol::createInvalid(const CheckerSymbol&
 
     ASTContext context(*scope, LookupLocation::after(checker));
     auto body = comp.emplace<CheckerInstanceBodySymbol>(comp, checker, *assertionDetails, context,
+                                                        0u,
                                                         /* isProcedural */ false,
                                                         /* isUninstantiated */ true);
 
@@ -1706,10 +1720,11 @@ CheckerInstanceBodySymbol::CheckerInstanceBodySymbol(Compilation& compilation,
                                                      const CheckerSymbol& checker,
                                                      AssertionInstanceDetails& assertionDetails,
                                                      const ASTContext& originalContext,
-                                                     bool isProcedural, bool isUninstantiated) :
+                                                     uint32_t instanceDepth, bool isProcedural,
+                                                     bool isUninstantiated) :
     Symbol(SymbolKind::CheckerInstanceBody, checker.name, checker.location),
     Scope(compilation, this), checker(checker), assertionDetails(assertionDetails),
-    isProcedural(isProcedural), isUninstantiated(isUninstantiated),
+    instanceDepth(instanceDepth), isProcedural(isProcedural), isUninstantiated(isUninstantiated),
     originalContext(originalContext) {
 
     assertionDetails.prevContext = &this->originalContext;
