@@ -361,7 +361,7 @@ public:
     /// Clears the parent instance and parent procedural block symbol
     /// associated with the context.
     void clearInstanceAndProc() { instanceOrProc = nullptr; }
-    const CheckerInstanceBodySymbol* tryFillAssertionDetails();
+    const Symbol* tryFillAssertionDetails();
 
     /// Tries to fill the @a assertionInstance member by searching upward through
     /// parent scopes to find an assertion instantiation.
