@@ -427,9 +427,24 @@ void registerSymbols(py::module_& m) {
         .def_property_readonly("delay", &PrimitiveInstanceSymbol::getDelay)
         .def_property_readonly("driveStrength", &PrimitiveInstanceSymbol::getDriveStrength);
 
-    py::class_<CheckerInstanceSymbol, InstanceSymbolBase>(m, "CheckerInstanceSymbol")
-        .def_property_readonly("body",
-                               [](const CheckerInstanceSymbol& self) { return &self.body; });
+    py::class_<CheckerInstanceSymbol, InstanceSymbolBase> checkerInst(m, "CheckerInstanceSymbol");
+    checkerInst
+        .def_property_readonly("body", [](const CheckerInstanceSymbol& self) { return &self.body; })
+        .def_property_readonly("portConnections", &CheckerInstanceSymbol::getPortConnections);
+
+    py::class_<CheckerInstanceSymbol::Connection>(checkerInst, "Connection")
+        .def_property_readonly(
+            "formal", [](const CheckerInstanceSymbol::Connection& self) { return &self.formal; })
+        .def_property_readonly("outputInitialExpr",
+                               &CheckerInstanceSymbol::Connection::getOutputInitialExpr)
+        .def_readonly("actual", &CheckerInstanceSymbol::Connection::actual)
+        .def_readonly("attributes", &CheckerInstanceSymbol::Connection::attributes);
+
+    py::class_<CheckerInstanceBodySymbol, Symbol, Scope>(m, "CheckerInstanceBodySymbol")
+        .def_readonly("parentInstance", &CheckerInstanceBodySymbol::parentInstance)
+        .def_readonly("isUninstantiated", &CheckerInstanceBodySymbol::isUninstantiated)
+        .def_property_readonly("checker",
+                               [](const CheckerInstanceBodySymbol& self) { return &self.checker; });
 
     py::class_<StatementBlockSymbol, Symbol, Scope>(m, "StatementBlockSymbol")
         .def_readonly("blockKind", &StatementBlockSymbol::blockKind)

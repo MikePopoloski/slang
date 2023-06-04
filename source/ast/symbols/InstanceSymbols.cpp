@@ -1737,8 +1737,31 @@ const Expression* CheckerInstanceSymbol::Connection::getOutputInitialExpr() cons
     return *outputInitialExpr;
 }
 
-void CheckerInstanceSymbol::serializeTo(ASTSerializer&) const {
-    // TODO:
+void CheckerInstanceSymbol::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("body", body);
+
+    serializer.startArray("connections");
+    for (auto& conn : getPortConnections()) {
+        serializer.startObject();
+
+        serializer.writeLink("formal", conn.formal);
+        std::visit(
+            [&](auto&& arg) {
+                if (arg)
+                    serializer.write("actual", *arg);
+            },
+            conn.actual);
+
+        if (!conn.attributes.empty()) {
+            serializer.startArray("attributes");
+            for (auto attr : conn.attributes)
+                serializer.serialize(*attr);
+            serializer.endArray();
+        }
+
+        serializer.endObject();
+    }
+    serializer.endArray();
 }
 
 CheckerInstanceBodySymbol::CheckerInstanceBodySymbol(Compilation& compilation,
@@ -1759,8 +1782,9 @@ CheckerInstanceBodySymbol::CheckerInstanceBodySymbol(Compilation& compilation,
     setParent(*parent, checker.getIndex());
 }
 
-void CheckerInstanceBodySymbol::serializeTo(ASTSerializer&) const {
-    // TODO:
+void CheckerInstanceBodySymbol::serializeTo(ASTSerializer& serializer) const {
+    serializer.writeLink("checker", checker);
+    serializer.write("isProcedural", isProcedural);
 }
 
 } // namespace slang::ast

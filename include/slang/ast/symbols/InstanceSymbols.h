@@ -276,6 +276,9 @@ public:
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::PrimitiveInstance; }
 
+    template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const; // implementation is in ASTVisitor.h
+
 private:
     mutable std::optional<std::span<const Expression* const>> ports;
     mutable std::optional<const TimingControl*> delay;
@@ -333,6 +336,9 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::CheckerInstance; }
+
+    template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const; // implementation is in ASTVisitor.h
 
 private:
     std::span<Connection> connections;
