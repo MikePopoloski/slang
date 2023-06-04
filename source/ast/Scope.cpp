@@ -25,6 +25,7 @@
 #include "slang/ast/types/NetType.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/diagnostics/LookupDiags.h"
+#include "slang/diagnostics/ParserDiags.h"
 #include "slang/syntax/AllSyntax.h"
 #include "slang/util/TimeTrace.h"
 
@@ -1218,6 +1219,22 @@ bool Scope::handleDataDeclaration(const DataDeclarationSyntax& syntax) {
             net->setAttributes(*this, syntax.attributes);
             addMember(*net);
         }
+
+        // Make sure we're not declared within a checker.
+        const Scope* currScope = this;
+        do {
+            auto& sym = currScope->asSymbol();
+            if (sym.kind == SymbolKind::InstanceBody)
+                break;
+
+            if (sym.kind == SymbolKind::CheckerInstanceBody) {
+                addDiag(diag::NotAllowedInChecker, syntax.sourceRange());
+                break;
+            }
+
+            currScope = sym.getParentScope();
+        } while (currScope);
+
         return true;
     }
 
