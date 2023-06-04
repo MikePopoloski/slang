@@ -367,7 +367,27 @@ void InstanceSymbol::visitExprs(TVisitor&& visitor) const {
     for (auto conn : getPortConnections()) {
         if (auto expr = conn->getExpression())
             expr->visit(visitor);
-    };
+    }
+}
+
+template<typename TVisitor>
+void PrimitiveInstanceSymbol::visitExprs(TVisitor&& visitor) const {
+    for (auto conn : getPortConnections())
+        conn->visit(visitor);
+}
+
+template<typename TVisitor>
+void CheckerInstanceSymbol::visitExprs(TVisitor&& visitor) const {
+    for (auto& conn : getPortConnections()) {
+        std::visit(
+            [&](auto&& arg) {
+                if (arg)
+                    arg->visit(visitor);
+            },
+            conn.actual);
+        if (auto expr = conn.getOutputInitialExpr())
+            expr->visit(visitor);
+    }
 }
 
 template<typename TVisitor, typename... Args>
