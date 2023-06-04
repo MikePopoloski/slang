@@ -1824,3 +1824,19 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::BindUnderBind);
 }
+
+TEST_CASE("UDNT decl in checker") {
+    auto tree = SyntaxTree::fromText(R"(
+nettype logic l;
+checker s;
+    l r;
+endchecker
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::NotAllowedInChecker);
+}
