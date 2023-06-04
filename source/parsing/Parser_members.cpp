@@ -2586,8 +2586,15 @@ BindDirectiveSyntax& Parser::parseBindDirective(AttrList attr) {
 
     meta.hasBindDirectives = true;
 
-    auto& instantiation = parseHierarchyInstantiation({});
-    return factory.bindDirective(attr, keyword, target, targetInstances, instantiation);
+    if (peek(TokenKind::Identifier) && peek(1).kind == TokenKind::DoubleColon &&
+        peek(2).kind == TokenKind::Identifier) {
+        return factory.bindDirective(attr, keyword, target, targetInstances,
+                                     parseCheckerInstantiation({}));
+    }
+    else {
+        return factory.bindDirective(attr, keyword, target, targetInstances,
+                                     parseHierarchyInstantiation({}));
+    }
 }
 
 UdpPortDeclSyntax& Parser::parseUdpPortDecl(bool& isReg) {

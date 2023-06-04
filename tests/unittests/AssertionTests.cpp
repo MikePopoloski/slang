@@ -1772,3 +1772,55 @@ source:28:7: note: while expanding checker 'e'
       ^
 )");
 }
+
+TEST_CASE("Binding checker targets") {
+    auto tree = SyntaxTree::fromText(R"(
+package p;
+    checker c(q);
+    endchecker
+endpackage
+
+module m;
+    import p::*;
+endmodule
+
+module n;
+    m m1();
+    bind m c c1(1);
+    bind m p::c c2(1);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Binding checker errors") {
+    auto tree = SyntaxTree::fromText(R"(
+package p;
+    checker c(q);
+    endchecker
+endpackage
+
+module m;
+    import p::*;
+endmodule
+
+module n;
+    m m1();
+    bind m o o1();
+    bind o p::c c1(1);
+endmodule
+
+module o;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::BindUnderBind);
+}

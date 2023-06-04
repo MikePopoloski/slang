@@ -1259,10 +1259,10 @@ Symbol* recurseCheckerArray(Compilation& comp, const CheckerSymbol& checker,
                             const HierarchicalInstanceSyntax& instance, const ASTContext& context,
                             DimIterator it, DimIterator end,
                             std::span<const AttributeInstanceSyntax* const> attributes,
-                            SmallVectorBase<int32_t>& path, bool isProcedural) {
+                            SmallVectorBase<int32_t>& path, bool isProcedural, bool isFromBind) {
     if (it == end) {
         return &CheckerInstanceSymbol::fromSyntax(comp, context, checker, instance, attributes,
-                                                  path, isProcedural);
+                                                  path, isProcedural, isFromBind);
     }
 
     SLANG_ASSERT(instance.decl);
@@ -1293,7 +1293,7 @@ Symbol* recurseCheckerArray(Compilation& comp, const CheckerSymbol& checker,
     for (int32_t i = range.lower(); i <= range.upper(); i++) {
         path.push_back(i);
         auto symbol = recurseCheckerArray(comp, checker, instance, context, it, end, attributes,
-                                          path, isProcedural);
+                                          path, isProcedural, isFromBind);
         path.pop_back();
 
         symbol->name = "";
@@ -1312,7 +1312,8 @@ Symbol* recurseCheckerArray(Compilation& comp, const CheckerSymbol& checker,
 template<typename TSyntax>
 void createCheckers(const CheckerSymbol& checker, const TSyntax& syntax, const ASTContext& context,
                     SmallVectorBase<const Symbol*>& results,
-                    SmallVectorBase<const Symbol*>& implicitNets, bool, bool isProcedural) {
+                    SmallVectorBase<const Symbol*>& implicitNets, bool isProcedural,
+                    bool isFromBind) {
     if (syntax.parameters)
         context.addDiag(diag::CheckerParameterAssign, syntax.parameters->sourceRange());
 
@@ -1330,13 +1331,15 @@ void createCheckers(const CheckerSymbol& checker, const TSyntax& syntax, const A
 
         if (!instance->decl) {
             context.addDiag(diag::InstanceNameRequired, instance->sourceRange());
-            results.push_back(&CheckerInstanceSymbol::fromSyntax(
-                comp, context, checker, *instance, syntax.attributes, path, isProcedural));
+            results.push_back(&CheckerInstanceSymbol::fromSyntax(comp, context, checker, *instance,
+                                                                 syntax.attributes, path,
+                                                                 isProcedural, isFromBind));
         }
         else {
             auto dims = instance->decl->dimensions;
             auto symbol = recurseCheckerArray(comp, checker, *instance, context, dims.begin(),
-                                              dims.end(), syntax.attributes, path, isProcedural);
+                                              dims.end(), syntax.attributes, path, isProcedural,
+                                              isFromBind);
             results.push_back(symbol);
         }
     }
@@ -1357,8 +1360,8 @@ void CheckerInstanceSymbol::fromSyntax(const CheckerSymbol& checker,
                                        SmallVectorBase<const Symbol*>& results,
                                        SmallVectorBase<const Symbol*>& implicitNets,
                                        bool isFromBind) {
-    createCheckers(checker, syntax, context, results, implicitNets, isFromBind,
-                   /* isProcedural */ false);
+    createCheckers(checker, syntax, context, results, implicitNets,
+                   /* isProcedural */ false, isFromBind);
 }
 
 void CheckerInstanceSymbol::fromSyntax(const CheckerInstantiationSyntax& syntax,
@@ -1404,8 +1407,8 @@ void CheckerInstanceSymbol::fromSyntax(const CheckerInstantiationSyntax& syntax,
     const bool isProcedural = syntax.parent &&
                               syntax.parent->kind == SyntaxKind::CheckerInstanceStatement;
 
-    createCheckers(symbol->as<CheckerSymbol>(), syntax, context, results, implicitNets, isFromBind,
-                   isProcedural);
+    createCheckers(symbol->as<CheckerSymbol>(), syntax, context, results, implicitNets,
+                   isProcedural, isFromBind);
 }
 
 static const Symbol* createCheckerFormal(Compilation& comp, const AssertionPortSymbol& port,
@@ -1443,27 +1446,48 @@ CheckerInstanceSymbol& CheckerInstanceSymbol::fromSyntax(
     Compilation& comp, const ASTContext& parentContext, const CheckerSymbol& checker,
     const HierarchicalInstanceSyntax& syntax,
     std::span<const AttributeInstanceSyntax* const> attributes, SmallVectorBase<int32_t>& path,
-    bool isProcedural) {
+    bool isProcedural, bool isFromBind) {
 
     ASTContext context = parentContext;
-    auto parentChecker = context.tryFillAssertionDetails();
+    auto parentSym = context.tryFillAssertionDetails();
 
     auto [name, loc] = getNameLoc(syntax);
 
     uint32_t depth = 0;
-    if (parentChecker) {
-        depth = parentChecker->instanceDepth + 1;
-        if (depth > comp.getOptions().maxCheckerInstanceDepth) {
-            auto& diag = context.addDiag(diag::MaxInstanceDepthExceeded, loc);
-            diag << "checker"sv;
-            diag << comp.getOptions().maxCheckerInstanceDepth;
+    bool parentIsFromBind = false;
+    if (parentSym) {
+        if (parentSym->kind == SymbolKind::CheckerInstanceBody) {
+            auto& checkerBody = parentSym->as<CheckerInstanceBodySymbol>();
+            depth = checkerBody.instanceDepth + 1;
+            if (depth > comp.getOptions().maxCheckerInstanceDepth) {
+                auto& diag = context.addDiag(diag::MaxInstanceDepthExceeded, loc);
+                diag << "checker"sv;
+                diag << comp.getOptions().maxCheckerInstanceDepth;
+                return createInvalid(checker);
+            }
+
+            parentIsFromBind = checkerBody.isFromBind;
+        }
+        else {
+            parentIsFromBind = parentSym->as<InstanceBodySymbol>().isFromBind;
+        }
+    }
+
+    if (parentIsFromBind) {
+        if (isFromBind) {
+            context.addDiag(diag::BindUnderBind, syntax.sourceRange());
             return createInvalid(checker);
         }
+
+        // If our parent is from a bind statement, pass down the flag
+        // so that we prevent further binds below us too.
+        isFromBind = true;
     }
 
     auto assertionDetails = comp.allocAssertionDetails();
     auto body = comp.emplace<CheckerInstanceBodySymbol>(comp, checker, *assertionDetails,
                                                         parentContext, depth, isProcedural,
+                                                        isFromBind,
                                                         /* isUninstantiated */ false);
 
     auto checkerSyntax = checker.getSyntax();
@@ -1629,6 +1653,7 @@ CheckerInstanceSymbol& CheckerInstanceSymbol::createInvalid(const CheckerSymbol&
     auto body = comp.emplace<CheckerInstanceBodySymbol>(comp, checker, *assertionDetails, context,
                                                         0u,
                                                         /* isProcedural */ false,
+                                                        /* isFromBind */ false,
                                                         /* isUninstantiated */ true);
 
     auto checkerSyntax = checker.getSyntax();
@@ -1721,11 +1746,11 @@ CheckerInstanceBodySymbol::CheckerInstanceBodySymbol(Compilation& compilation,
                                                      AssertionInstanceDetails& assertionDetails,
                                                      const ASTContext& originalContext,
                                                      uint32_t instanceDepth, bool isProcedural,
-                                                     bool isUninstantiated) :
+                                                     bool isFromBind, bool isUninstantiated) :
     Symbol(SymbolKind::CheckerInstanceBody, checker.name, checker.location),
     Scope(compilation, this), checker(checker), assertionDetails(assertionDetails),
-    instanceDepth(instanceDepth), isProcedural(isProcedural), isUninstantiated(isUninstantiated),
-    originalContext(originalContext) {
+    instanceDepth(instanceDepth), isProcedural(isProcedural), isFromBind(isFromBind),
+    isUninstantiated(isUninstantiated), originalContext(originalContext) {
 
     assertionDetails.prevContext = &this->originalContext;
 

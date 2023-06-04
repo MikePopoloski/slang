@@ -1060,9 +1060,18 @@ void Scope::elaborate() const {
                 // create the instances here.
                 SmallVector<const Symbol*> instances;
                 SmallVector<const Symbol*> implicitNets;
-                InstanceSymbol::fromSyntax(compilation,
-                                           *member.node.as<BindDirectiveSyntax>().instantiation,
-                                           context, instances, implicitNets, /* isFromBind */ true);
+                auto& bind = member.node.as<BindDirectiveSyntax>();
+                if (bind.instantiation->kind == SyntaxKind::CheckerInstantiation) {
+                    CheckerInstanceSymbol::fromSyntax(
+                        bind.instantiation->as<CheckerInstantiationSyntax>(), context, instances,
+                        implicitNets,
+                        /* isFromBind */ true);
+                }
+                else {
+                    InstanceSymbol::fromSyntax(
+                        compilation, bind.instantiation->as<HierarchyInstantiationSyntax>(),
+                        context, instances, implicitNets, /* isFromBind */ true);
+                }
                 insertMembersAndNets(instances, implicitNets, symbol);
                 break;
             }
@@ -1478,6 +1487,13 @@ static size_t countGenMembers(const SyntaxNode& syntax) {
     }
 }
 
+static size_t countBindMembers(const BindDirectiveSyntax& syntax) {
+    if (syntax.instantiation->kind == SyntaxKind::CheckerInstantiation)
+        return syntax.instantiation->as<CheckerInstantiationSyntax>().instances.size();
+    else
+        return syntax.instantiation->as<HierarchyInstantiationSyntax>().instances.size();
+}
+
 static size_t countMembers(const SyntaxNode& syntax) {
     // Note that the +1s on some of these are to make a slot for implicit
     // nets that get created to live.
@@ -1488,8 +1504,6 @@ static size_t countMembers(const SyntaxNode& syntax) {
             return syntax.as<PrimitiveInstantiationSyntax>().instances.size() + 1;
         case SyntaxKind::CheckerInstantiation:
             return syntax.as<CheckerInstantiationSyntax>().instances.size() + 1;
-        case SyntaxKind::BindDirective:
-            return syntax.as<BindDirectiveSyntax>().instantiation->instances.size() + 1;
         case SyntaxKind::ContinuousAssign:
             return syntax.as<ContinuousAssignSyntax>().assignments.size() + 1;
         case SyntaxKind::AnsiPortList:
@@ -1507,6 +1521,8 @@ static size_t countMembers(const SyntaxNode& syntax) {
         case SyntaxKind::IfGenerate:
         case SyntaxKind::CaseGenerate:
             return countGenMembers(syntax);
+        case SyntaxKind::BindDirective:
+            return countBindMembers(syntax.as<BindDirectiveSyntax>()) + 1;
         case SyntaxKind::LoopGenerate:
         case SyntaxKind::GenerateBlock:
         case SyntaxKind::DefaultClockingReference:

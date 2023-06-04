@@ -84,19 +84,19 @@ void ASTContext::setProceduralBlock(const ProceduralBlockSymbol& block) {
     instanceOrProc = &block;
 }
 
-const CheckerInstanceBodySymbol* ASTContext::tryFillAssertionDetails() {
+const Symbol* ASTContext::tryFillAssertionDetails() {
     if (assertionInstance)
         return nullptr;
 
     auto parentSym = &scope->asSymbol();
     while (true) {
         if (parentSym->kind == SymbolKind::InstanceBody)
-            return nullptr;
+            return parentSym;
 
         if (parentSym->kind == SymbolKind::CheckerInstanceBody) {
             auto& body = parentSym->as<CheckerInstanceBodySymbol>();
             assertionInstance = &body.assertionDetails;
-            return &body;
+            return parentSym;
         }
 
         auto nextScope = parentSym->getParentScope();
