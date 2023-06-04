@@ -1568,7 +1568,10 @@ void Compilation::checkBindTargetParams(const syntax::BindDirectiveSyntax& synta
     //    visible and matching in both the scope containing the bind statement and in
     //    the target scope.
     auto doCheck = [&](const InstanceBodySymbol& container) {
-        for (auto instSyntax : syntax.instantiation->instances) {
+        if (syntax.instantiation->kind == SyntaxKind::CheckerInstantiation)
+            return;
+
+        for (auto instSyntax : syntax.instantiation->as<HierarchyInstantiationSyntax>().instances) {
             if (!instSyntax->decl)
                 continue;
 

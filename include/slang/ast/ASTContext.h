@@ -317,7 +317,7 @@ public:
     void setInstance(const InstanceSymbolBase& inst);
     void setProceduralBlock(const ProceduralBlockSymbol& block);
     void clearInstanceAndProc() { instanceOrProc = nullptr; }
-    const CheckerInstanceBodySymbol* tryFillAssertionDetails();
+    const Symbol* tryFillAssertionDetails();
 
     void setAttributes(const Statement& stmt,
                        std::span<const syntax::AttributeInstanceSyntax* const> syntax) const;

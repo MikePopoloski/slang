@@ -1279,7 +1279,7 @@ BindDirective base=Member
 token bind
 Name target
 BindTargetList? targetInstances
-HierarchyInstantiation instantiation
+Member instantiation
 
 FunctionPrototype
 token keyword

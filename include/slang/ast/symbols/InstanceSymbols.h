@@ -328,7 +328,7 @@ public:
         Compilation& compilation, const ASTContext& context, const CheckerSymbol& checker,
         const syntax::HierarchicalInstanceSyntax& syntax,
         std::span<const syntax::AttributeInstanceSyntax* const> attributes,
-        SmallVectorBase<int32_t>& path, bool isProcedural);
+        SmallVectorBase<int32_t>& path, bool isProcedural, bool isFromBind);
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -349,6 +349,10 @@ public:
     uint32_t instanceDepth;
     bool isProcedural;
 
+    /// Indicates whether this instance was created from a bind directive
+    /// instead of a typical instantiation.
+    bool isFromBind = false;
+
     /// Indicates whether the checker isn't actually instantiated in the design.
     /// This might be because it was created with invalid port connections simply
     /// to check name lookup rules but it's never actually referenced elsewhere
@@ -358,7 +362,7 @@ public:
     CheckerInstanceBodySymbol(Compilation& compilation, const CheckerSymbol& checker,
                               AssertionInstanceDetails& assertionDetails,
                               const ASTContext& originalContext, uint32_t instanceDepth,
-                              bool isProcedural, bool isUninstantiated);
+                              bool isProcedural, bool isFromBind, bool isUninstantiated);
 
     void serializeTo(ASTSerializer& serializer) const;
 
