@@ -1892,3 +1892,168 @@ endmodule : m
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Covergroups in checkers") {
+    auto tree = SyntaxTree::fromText(R"(
+checker my_check(logic clk, active);
+    bit active_d1 = 1'b0;
+    always_ff @(posedge clk) begin
+        active_d1 <= active;
+    end
+
+    covergroup cg_active @(posedge clk);
+        cp_active : coverpoint active
+        {
+            bins idle = { 1'b0 };
+            bins active = { 1'b1 };
+        }
+        cp_active_d1 : coverpoint active_d1
+        {
+            bins idle = { 1'b0 };
+            bins active = { 1'b1 };
+        }
+        option.per_instance = 1;
+    endgroup
+    cg_active cg_active_1 = new();
+endchecker : my_check
+
+checker op_test1 (logic clk, vld_1, vld_2, logic [3:0] opcode);
+    bit [3:0] opcode_d1;
+
+    always_ff @(posedge clk) opcode_d1 <= opcode;
+
+    covergroup cg_op;
+        cp_op : coverpoint opcode_d1;
+    endgroup: cg_op
+    cg_op cg_op_1 = new();
+
+    sequence op_accept;
+        @(posedge clk) vld_1 ##1 (vld_2, cg_op_1.sample());
+    endsequence
+    cover property (op_accept);
+endchecker
+
+checker op_test2 (logic clk, vld_1, vld_2, logic [3:0] opcode);
+    bit [3:0] opcode_d1;
+
+    always_ff @(posedge clk) opcode_d1 <= opcode;
+
+    covergroup cg_op with function sample(bit [3:0] opcode_d1);
+        cp_op : coverpoint opcode_d1;
+    endgroup: cg_op
+    cg_op cg_op_1 = new();
+
+    sequence op_accept;
+        @(posedge clk) vld_1 ##1 (vld_2, cg_op_1.sample(opcode_d1));
+    endsequence
+    cover property (op_accept);
+endchecker
+
+module m;
+    logic clk;
+    my_check c1(clk, 1);
+    op_test1 t1(clk, 1, 2, 3);
+    op_test2 t2(clk, 1, 2, 3);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Checker LRM examples") {
+    auto tree = SyntaxTree::fromText(R"(
+typedef enum { cover_none, cover_all } coverage_level;
+checker assert_window1 (
+    logic test_expr,
+    untyped start_event,
+    untyped end_event,
+    event clock = $inferred_clock,
+    logic reset = $inferred_disable,
+    string error_msg = "violation",
+    coverage_level clevel = cover_all
+);
+    default clocking @clock; endclocking
+    default disable iff reset;
+    bit window = 1'b0, next_window = 1'b1;
+
+    always_comb begin
+        if (reset || window && end_event)
+            next_window = 1'b0;
+        else if (!window && start_event)
+            next_window = 1'b1;
+        else
+            next_window = window;
+    end
+
+    always_ff @clock
+        window <= next_window;
+
+    property p_window;
+        start_event && !window |=> test_expr[+] ##0 end_event;
+    endproperty
+
+    a_window: assert property (p_window) else $error(error_msg);
+
+    generate if (clevel != cover_none) begin : cover_b
+        cover_window_open: cover property (start_event && !window)
+        $display("window_open covered");
+        cover_window: cover property (
+            start_event && !window
+            ##1 (!end_event && window) [*]
+            ##1 end_event && window
+        ) $display("window covered");
+    end : cover_b
+    endgenerate
+endchecker : assert_window1
+
+checker assert_window2 (
+    logic test_expr,
+    sequence start_event,
+    sequence end_event,
+    event clock = $inferred_clock,
+    logic reset = $inferred_disable,
+    string error_msg = "violation",
+    coverage_level clevel = cover_all
+);
+    default clocking @clock; endclocking
+    default disable iff reset;
+    bit window = 0;
+    let start_flag = start_event.triggered;
+    let end_flag = end_event.triggered;
+
+    function bit next_window (bit win);
+        if (reset || win && end_flag)
+            return 1'b0;
+        if (!win && start_flag)
+            return 1'b1;
+        return win;
+    endfunction
+
+    always_ff @clock
+        window <= next_window(window);
+
+    property p_window;
+        start_flag && !window |=> test_expr[+] ##0 end_flag;
+    endproperty
+
+    a_window: assert property (p_window) else $error(error_msg);
+
+    generate if (clevel != cover_none) begin : cover_b
+        cover_window_open: cover property (start_flag && !window)
+        $display("window_open covered");
+        cover_window: cover property (
+            start_flag && !window
+            ##1 (!end_flag && window) [*]
+            ##1 end_flag && window
+        ) $display("window covered");
+    end : cover_b
+    endgenerate
+endchecker : assert_window2
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
