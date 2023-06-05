@@ -33,52 +33,56 @@ public:
     TidyConfig();
 
     /// Returns whether a check is enabled or not
-    [[nodiscard]] bool is_check_enabled(slang::TidyKind kind, const std::string &checkName) const;
+    [[nodiscard]] bool isCheckEnabled(slang::TidyKind kind, const std::string& checkName) const;
 
     /// Returns the check config object
-    inline const CheckConfigs &get_check_configs() const { return checkConfigs; }
+    inline const CheckConfigs& getCheckConfigs() const { return checkConfigs; }
 
 private:
     CheckConfigs checkConfigs;
 
     /// Possible status of the checks
-    enum class CheckStatus {
-        ENABLED, DISABLED
-    };
+    enum class CheckStatus { ENABLED, DISABLED };
 
     std::unordered_map<slang::TidyKind, std::unordered_map<std::string, CheckStatus>> checkKinds;
 
     /// Enables or disables all the implemented checks based on status
-    void toggle_all(CheckStatus status);
+    void toggleAl(CheckStatus status);
 
     /// Enables or disables all the checks implemented in the TidyKind provided based on status
-    void toggle_group(slang::TidyKind kind, CheckStatus status);
+    void toggleGroup(slang::TidyKind kind, CheckStatus status);
 
     /// Disables or enables a particular check implemented in the TidyKind provided based on status.
     /// It will return false if the check do not exist.
-    [[nodiscard]] bool toggle_check(slang::TidyKind kind, const std::string &checkName, CheckStatus status);
+    [[nodiscard]] bool toggleCheck(slang::TidyKind kind, const std::string& checkName,
+                                    CheckStatus status);
 
     /// Sets the value of a check config. Will throw an invalid_argument exception if the type of
     /// value doesn't match the config type
     template<typename T>
-    void set_config(const std::string &configName, T value) {
+    void setConfig(const std::string& configName, T value) {
         if (configName == "clkName") {
-            inner_set_config(checkConfigs.clkName, value);
+            innerSetConfig(checkConfigs.clkName, value);
             return;
-        } else if (configName == "resetName") {
-            inner_set_config(checkConfigs.resetName, value);
+        }
+        else if (configName == "resetName") {
+            innerSetConfig(checkConfigs.resetName, value);
             return;
-        } else if (configName == "resetIsActiveHigh") {
-            inner_set_config(checkConfigs.resetIsActiveHigh, value);
+        }
+        else if (configName == "resetIsActiveHigh") {
+            innerSetConfig(checkConfigs.resetIsActiveHigh, value);
             return;
-        } else if (configName == "inputPortSuffix") {
-            inner_set_config(checkConfigs.inputPortSuffix, value);
+        }
+        else if (configName == "inputPortSuffix") {
+            innerSetConfig(checkConfigs.inputPortSuffix, value);
             return;
-        } else if (configName == "outputPortSuffix") {
-            inner_set_config(checkConfigs.outputPortSuffix, value);
+        }
+        else if (configName == "outputPortSuffix") {
+            innerSetConfig(checkConfigs.outputPortSuffix, value);
             return;
-        } else if (configName == "inoutPortSuffix") {
-            inner_set_config(checkConfigs.inoutPortSuffix, value);
+        }
+        else if (configName == "inoutPortSuffix") {
+            innerSetConfig(checkConfigs.inoutPortSuffix, value);
             return;
         }
 
@@ -86,11 +90,12 @@ private:
     }
 
     template<typename T, typename U>
-    void inner_set_config(T &config, U value) {
+    void innerSetConfig(T& config, U value) {
         if constexpr (std::is_same_v<T, U>)
             config = value;
         else
-            SLANG_THROW(std::invalid_argument(
-                    fmt::format("check config expected a {} found {}", slang::typeName<T>(), slang::typeName<U>())));
+            SLANG_THROW(
+                std::invalid_argument(fmt::format("check config expected a {} found {}",
+                                                  slang::typeName<T>(), slang::typeName<U>())));
     }
 };

@@ -25,7 +25,7 @@ endmodule
     auto& root = compilation.getRoot();
 
     TidyConfig config;
-    Registry::set_config(config);
+    Registry::setConfig(config);
     auto visitor = Registry::create("EnforcePortSuffix");
     bool result = visitor->check(root);
     CHECK_FALSE(result);
@@ -48,7 +48,7 @@ endmodule
     auto& root = compilation.getRoot();
 
     TidyConfig config;
-    Registry::set_config(config);
+    Registry::setConfig(config);
     auto visitor = Registry::create("EnforcePortSuffix");
     bool result = visitor->check(root);
     CHECK(result);
@@ -71,7 +71,7 @@ endmodule
     auto& root = compilation.getRoot();
 
     TidyConfig config;
-    Registry::set_config(config);
+    Registry::setConfig(config);
     auto visitor = Registry::create("EnforcePortSuffix");
     bool result = visitor->check(root);
     CHECK_FALSE(result);
@@ -94,7 +94,7 @@ endmodule
     auto& root = compilation.getRoot();
 
     TidyConfig config;
-    Registry::set_config(config);
+    Registry::setConfig(config);
     auto visitor = Registry::create("EnforcePortSuffix");
     bool result = visitor->check(root);
     CHECK(result);
@@ -117,7 +117,7 @@ endmodule
     auto& root = compilation.getRoot();
 
     TidyConfig config;
-    Registry::set_config(config);
+    Registry::setConfig(config);
     auto visitor = Registry::create("EnforcePortSuffix");
     bool result = visitor->check(root);
     CHECK_FALSE(result);
@@ -140,7 +140,7 @@ endmodule
     auto& root = compilation.getRoot();
 
     TidyConfig config;
-    Registry::set_config(config);
+    Registry::setConfig(config);
     auto visitor = Registry::create("EnforcePortSuffix");
     bool result = visitor->check(root);
     CHECK(result);

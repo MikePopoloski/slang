@@ -66,7 +66,7 @@ int main(int argc, char** argv) {
     // Print (short)descriptions of the checks
     if (printDescriptions || printShortDescriptions) {
         bool first = true;
-        for (const auto& check_name : Registry::get_registered_checks()) {
+        for (const auto& check_name : Registry::getRegisteredChecks()) {
             const auto check = Registry::create(check_name);
             if (first)
                 first = false;
@@ -104,12 +104,12 @@ int main(int argc, char** argv) {
     }
 
     // Set the config to the Registry
-    Registry::set_config(tidyConfig);
+    Registry::setConfig(tidyConfig);
 
     int ret_code = 0;
 
     // Check all enabled checks
-    for (const auto& check_name : Registry::get_enabled_checks()) {
+    for (const auto& check_name : Registry::getEnabledChecks()) {
         const auto check = Registry::create(check_name);
         OS::print(fmt::format("[{}]", check->name()));
 
@@ -120,8 +120,7 @@ int main(int argc, char** argv) {
         if (!checkOk) {
             ret_code = 1;
             OS::print(fmt::emphasis::bold | fmt::fg(fmt::color::red), " FAIL\n");
-            const auto& diags = check->getDiagnostics();
-            for (const auto& diag : diags)
+            for (const auto& diag : check->getDiagnostics())
                 driver.diagEngine.issue(diag);
             OS::print(fmt::format("{}\n", driver.diagClient->getString()));
             driver.diagClient->clear();

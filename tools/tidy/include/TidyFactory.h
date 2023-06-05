@@ -31,6 +31,12 @@ public:
     using RegistryKey = std::string;
     using RegistryMap = std::unordered_map<RegistryKey, RegistryValue>;
 
+    Registry() = default;
+
+    // Prevent copies from being made.
+    Registry(Registry const&) = delete;
+    void operator=(Registry const&) = delete;
+
     static bool add(const std::string& name, const slang::TidyKind& kind,
                     const RegistryFunction& func) {
         checks()[name] = {kind, func};
@@ -40,25 +46,25 @@ public:
     static std::unique_ptr<TidyCheck> create(const std::string& name) {
         if (checks().find(name) == checks().end())
             SLANG_THROW(std::runtime_error(name + " has not been registered"));
-        return checks()[name].creator(check_configs());
+        return checks()[name].creator(checkConfigs());
     }
 
-    static std::vector<std::string> get_registered_checks() {
+    static std::vector<std::string> getRegisteredChecks() {
         std::vector<std::string> ret;
         for (const auto& check : checks())
             ret.push_back(check.first);
         return ret;
     }
 
-    static std::vector<std::string> get_enabled_checks() {
+    static std::vector<std::string> getEnabledChecks() {
         std::vector<std::string> ret;
         for (const auto& check : checks())
-            if (config().is_check_enabled(check.second.kind, check.first))
+            if (config().isCheckEnabled(check.second.kind, check.first))
                 ret.push_back(check.first);
         return ret;
     }
 
-    static void set_config(TidyConfig& newConfig) { config() = newConfig; }
+    static void setConfig(TidyConfig& newConfig) { config() = newConfig; }
 
 private:
     static RegistryMap& checks() {
@@ -66,7 +72,7 @@ private:
         return map;
     }
 
-    static const TidyConfig::CheckConfigs& check_configs() { return config().get_check_configs(); }
+    static const TidyConfig::CheckConfigs& checkConfigs() { return config().getCheckConfigs(); }
 
     static TidyConfig& config() {
         static TidyConfig config;

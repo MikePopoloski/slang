@@ -32,20 +32,21 @@ TidyConfig::TidyConfig() {
     checkKinds.insert({slang::TidyKind::Synthesis, synthesisChecks});
 }
 
-void TidyConfig::toggle_all(CheckStatus status) {
-    for (auto &checkKind: checkKinds) {
-        for (auto &check: checkKind.second)
+void TidyConfig::toggleAl(CheckStatus status) {
+    for (auto& checkKind : checkKinds) {
+        for (auto& check : checkKind.second)
             check.second = status;
     }
 }
 
-void TidyConfig::toggle_group(slang::TidyKind kind, CheckStatus status) {
+void TidyConfig::toggleGroup(slang::TidyKind kind, CheckStatus status) {
     for (auto& check : checkKinds.at(kind))
         check.second = status;
 }
 
-bool TidyConfig::toggle_check(slang::TidyKind kind, const std::string &checkName, CheckStatus status) {
-    auto registeredChecks = Registry::get_registered_checks();
+bool TidyConfig::toggleCheck(slang::TidyKind kind, const std::string& checkName,
+                              CheckStatus status) {
+    auto registeredChecks = Registry::getRegisteredChecks();
     if (std::find(registeredChecks.begin(), registeredChecks.end(), checkName) ==
         registeredChecks.end()) {
         return false;
@@ -54,6 +55,6 @@ bool TidyConfig::toggle_check(slang::TidyKind kind, const std::string &checkName
     return true;
 }
 
-bool TidyConfig::is_check_enabled(slang::TidyKind kind, const std::string &checkName) const {
+bool TidyConfig::isCheckEnabled(slang::TidyKind kind, const std::string& checkName) const {
     return checkKinds.at(kind).at(checkName) == CheckStatus::ENABLED;
 }
