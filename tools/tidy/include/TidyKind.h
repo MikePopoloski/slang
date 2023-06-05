@@ -22,7 +22,7 @@ SLANG_ENUM(TidyKind, KIND)
 #undef KIND
 // clang-format on
 
-inline std::optional<slang::TidyKind> tidy_kind_from_str(std::string str) {
+inline std::optional<slang::TidyKind> tidyKindFromStr(std::string str) {
     std::transform(str.begin(), str.end(), str.begin(), ::tolower);
     if (str == "synthesis")
         return slang::TidyKind::Synthesis;

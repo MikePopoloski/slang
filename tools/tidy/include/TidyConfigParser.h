@@ -37,33 +37,34 @@ private:
     TidyConfig config;
 
     /// Reports an error and terminates the program
-    void report_error_and_exit(const std::string& str) const;
+    void reportErrorAndExit(const std::string& str) const;
     /// Reports a warning
-    void report_warning(const std::string& str) const;
+    void reportWarning(const std::string& str) const;
 
     /// Parses the whole file and populates the config object
-    void parse_file();
+    void parseFile();
     /// Gets the next character from the file stream, skips whitespaces and tabs
-    char next_char();
+    char nextChar();
     /// Peeks the next character from the file stream
-    char peek_char();
+    char peekChar();
     /// Parses config file and sets the state to parse checks or check configs
-    void parse_initial();
+    void parseInitial();
     /// Parsers the check regions of the config file
-    void parse_checks();
+    void parseChecks();
     /// Parses the check configs regions of the config file
-    void parse_check_configs();
+    void parseCheckConfigs();
     /// Toggles all checks with the status provided
-    void toggle_all_checks(TidyConfig::CheckStatus status);
+    void toggleAllChecks(TidyConfig::CheckStatus status);
     /// Toggles all checks in the specified group with the status provided
-    void toggle_all_group_checks(const std::string& groupName, TidyConfig::CheckStatus status);
+    void toggleAllGroupChecks(const std::string& groupName, TidyConfig::CheckStatus status);
     /// Toggles the specified check with the status provided
-    void toggle_check(const std::string& groupName, const std::string& checkName, TidyConfig::CheckStatus status);
+    void toggleCheck(const std::string& groupName, const std::string& checkName,
+                      TidyConfig::CheckStatus status);
     /// Sets the check config with the provided value
-    void set_check_config(const std::string &configName, std::string configValue);
+    void setCheckConfig(const std::string& configName, std::string configValue);
 
     /// The name format of the checks provided by the user are required to be: this-is-my-check
     /// but the registered names in the TidyFactory are ThisIsMyCheck. This function translates from
     /// the one provided by the user to the one expected by the Factory.
-    static std::string format_check_name(const std::string& checkName);
+    static std::string formatCheckName(const std::string& checkName);
 };
