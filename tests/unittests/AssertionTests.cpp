@@ -1529,6 +1529,20 @@ module m;
     p::cls cls(1, 2);
 
     check #(1, 2) c2();
+
+    initial begin
+        fork : asdf
+            if (1) begin : bazz
+                check c1();
+            end
+        join_none
+    end
+
+    checker cfoo;
+        initial check c4();
+    endchecker
+
+    cfoo foo1();
 endmodule
 )");
 
@@ -1536,13 +1550,15 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 6);
+    REQUIRE(diags.size() == 8);
     CHECK(diags[0].code == diag::UnknownModule);
     CHECK(diags[1].code == diag::UndeclaredIdentifier);
     CHECK(diags[2].code == diag::NotAChecker);
     CHECK(diags[3].code == diag::CheckerFuncBadInstantiation);
     CHECK(diags[4].code == diag::CheckerClassBadInstantiation);
     CHECK(diags[5].code == diag::CheckerParameterAssign);
+    CHECK(diags[6].code == diag::CheckerInForkJoin);
+    CHECK(diags[7].code == diag::CheckerInCheckerProc);
 }
 
 TEST_CASE("Assertion ports invalid directions") {
