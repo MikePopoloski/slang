@@ -474,6 +474,8 @@ error CheckerClassBadInstantiation "class '{}' cannot be instantiated this way -
 error CheckerFuncBadInstantiation "invalid syntax for calling '{}'"
 error NotAChecker "invalid reference to '{}' -- this looks like a module/interface/program/checker instantiation but '{}' is none of those things"
 error CheckerParameterAssign "checkers cannot have parameter assignments"
+error CheckerInForkJoin "checkers cannot be instantiated inside fork-join blocks"
+error CheckerInCheckerProc "checkers cannot be instantiated inside the procedures of other checkers"
 error FatalTask "$fatal encountered{}"
 error ErrorTask "$error encountered{}"
 error StaticAssert "static assertion failed{}"
