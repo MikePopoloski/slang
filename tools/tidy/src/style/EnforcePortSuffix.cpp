@@ -57,7 +57,7 @@ struct MainVisitor : public ASTVisitor<MainVisitor, true, false> {
 using namespace enforce_port_suffix;
 class EnforcePortSuffix : public TidyCheck {
 public:
-    explicit EnforcePortSuffix(const TidyConfig::CheckConfigs& config, TidyKind kind) :
+    [[maybe_unused]] explicit EnforcePortSuffix(const TidyConfig::CheckConfigs& config, TidyKind kind) :
         TidyCheck(config, kind) {}
 
     bool check(const ast::RootSymbol& root) override {
