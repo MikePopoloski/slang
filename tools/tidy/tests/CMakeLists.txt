@@ -10,7 +10,8 @@ add_executable(
         ../src/synthesis/OnlyAssignedOnReset.cpp OnlyAssignedOnResetTest.cpp
         ../src/synthesis/RegisterHasNoReset.cpp RegisterHasNoResetTest.cpp
         ../src/synthesis/NoLatchesOnDesign.cpp NoLatchesOnDesignTest.cpp
-        ../src/style/EnforcePortSuffix.cpp EnforcePortSuffixTest.cpp)
+        ../src/style/EnforcePortSuffix.cpp EnforcePortSuffixTest.cpp
+        ../src/style/NoOldAlwaysSyntax.cpp NoOldAlwaysSyntaxTest.cpp)
 
 target_link_libraries(tidy_unittests PRIVATE slang::slang Catch2::Catch2
         fmt::fmt)
