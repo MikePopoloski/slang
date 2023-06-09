@@ -11,9 +11,9 @@ All source code is hosted on [GitHub](https://github.com/MikePopoloski/slang)
 git clone https://github.com/MikePopoloski/slang.git
 @endcode
 
-@section dependencies Dependencies
+@section build-requirements Build Requirements
 
-slang requires the following dependencies in order to build:
+slang requires the following tools in order to build:
 - [python 3](https://www.python.org/)
 - [CMake](https://cmake.org/) (3.15 or later)
 - C++20 compatible compiler
@@ -31,7 +31,7 @@ The build should work out of the box on all supported platforms with the same se
 
 @code{.ansi}
 cmake -B build
-cmake --build build
+cmake --build build -j8
 @endcode
 
 Tests are included in the configuration by default. You can run them via ctest:
@@ -39,6 +39,33 @@ Tests are included in the configuration by default. You can run them via ctest:
 @code{.ansi}
 cd build && ctest --output-on-failure
 @endcode
+
+@section dependencies Dependencies
+
+slang depends on several 3rd party libraries. By default, if not found installed on your local
+machine the build will fetch and include them from GitHub via CMake's FetchContent feature,
+to preserve the ability to always build fresh out of the box.
+
+It's generally recommended to install dependencies locally instead of relying on fetching them
+every time you reconfigure. One easy way to do this is by using the [conan.io](https://conan.io/)
+package manager. slang includes a conanfile.py listing dependencies which should let you get
+up and running with something like the following set of commands (assuming you've already installed
+conan and have configured a default profile to your liking):
+
+@code{.ansi}
+git clone https://github.com/MikePopoloski/slang.git
+cd slang
+conan install . -b missing
+cmake --preset conan-gcc-x86_64-release
+cmake --build --preset conan-gcc-x86_64-release -j8
+@endcode
+
+Note that the preset name here, "conan-gcc-x86_64-release" will vary based on your conan profile.
+The install step will tell you what the name is, or you can get it from `cmake --list-presets`
+
+The conan install step will generate a CMakeUserPresets.txt file in the source directory that you
+can use to create custom configurations of the slang build with overrides for options that you
+may want to set and keep in a convenient location.
 
 @section build-options Build Options
 
