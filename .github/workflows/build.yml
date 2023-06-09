@@ -107,7 +107,7 @@ jobs:
         conan profile detect
     - name: Configure
       run: |
-        conan install .
+        conan install . -b missing
         cmake --preset conan-gcc-x86_64-release
     - name: Build
       run: cmake --build --preset conan-gcc-x86_64-release -j8
