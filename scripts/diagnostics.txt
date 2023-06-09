@@ -284,6 +284,7 @@ warning nonstandard-foreach NonstandardForeach "non-standard foreach loop variab
 warning lifetime-prototype LifetimeForPrototype "lifetime specifier is not allowed on prototype declaration"
 warning nonstandard-dist NonstandardDist "use of parentheses around 'dist' expression is non-standard"
 warning empty-body EmptyBody "{} has empty body (put the semicolon on a separate line to silence this warning)"
+warning split-distweight-op SplitDistWeightOp "split dist weight operator is not allowed; SystemVerilog requires that they be joined together"
 note NoteToMatchThis "to match this '{}'"
 
 subsystem Declarations
@@ -1020,7 +1021,8 @@ group default = { real-underflow real-overflow vector-overflow int-overflow unco
                   protect-arglist unknown-protect-encoding unknown-protect-option invalid-pragma-number
                   invalid-pragma-viewport duplicate-definition protect-encoding-bytes invalid-encoding-byte
                   raw-protect-eof protected-envelope specify-param dup-timing-path invalid-pulsestyle
-                  negative-timing-limit bad-procedural-force duplicate-defparam implicit-port-type-mismatch }
+                  negative-timing-limit bad-procedural-force duplicate-defparam implicit-port-type-mismatch
+                  split-distweight-op }
 
 group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-none case-gen-dup
                 unused-result format-real ignored-slice task-ignored width-trunc dup-attr event-const

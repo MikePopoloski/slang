@@ -1687,6 +1687,7 @@ empty
 
 DistWeight
 token op
+token extraOp
 Expression expr
 
 DistItem
