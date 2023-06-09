@@ -2,15 +2,22 @@
   "version": 3,
   "configurePresets": [
     {
+      "name": "windows-flags",
+      "hidden": true,
+      "cacheVariables": {
+        "SLANG_WARN_FLAGS": "/W4;/WX;/external:anglebrackets;/external:W0"
+      }
+    },
+    {
       "name": "windows-base",
       "hidden": true,
+      "inherits": "windows-flags",
       "generator": "Ninja",
       "binaryDir": "${sourceDir}/build/${presetName}",
       "installDir": "${sourceDir}/install/${presetName}",
       "cacheVariables": {
         "CMAKE_CXX_COMPILER": "cl.exe",
-        "CMAKE_CXX_FLAGS": "/nologo /MP /volatile:iso /Zc:inline /Zc:preprocessor /EHsc /Zc:__cplusplus /Zc:externConstexpr /Zc:throwingNew",
-        "SLANG_WARN_FLAGS": "/W4;/WX;/external:anglebrackets;/external:W0"
+        "CMAKE_CXX_FLAGS": "/nologo /MP /volatile:iso /Zc:inline /Zc:preprocessor /EHsc /Zc:__cplusplus /Zc:externConstexpr /Zc:throwingNew"
       },
       "condition": {
         "type": "equals",
