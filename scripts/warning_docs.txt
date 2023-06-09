@@ -157,6 +157,18 @@ module m;
 endmodule
 ```
 
+-Wsplit-distweight-op
+Some tools allow the dist weight operators to be split instead of a single token.
+slang will issue this warning as an error by default but it can be downgraded for compatibility.
+```
+class c;
+  rand int val;
+  constraint cst_sum {
+    val dist {1 :    = 10, 4 :   / 20};
+  }
+endclass
+```
+
 -Wwarning-task
 A $warning elaboration task was encountered. Its message is printed by this diagnostic.
 ```

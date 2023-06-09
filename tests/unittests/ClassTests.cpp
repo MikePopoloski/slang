@@ -2678,3 +2678,22 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::MultipleContAssigns);
 }
+
+TEST_CASE("Dist weight split operators") {
+    auto tree = SyntaxTree::fromText(R"(
+class c;
+  rand int val;
+  constraint cst_sum {
+    val dist {1 :    = 10, 4 :   / 20};
+  }
+endclass
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::SplitDistWeightOp);
+    CHECK(diags[1].code == diag::SplitDistWeightOp);
+}

@@ -399,6 +399,7 @@ bool Driver::processOptions() {
         diagEngine.setSeverity(diag::RangeOOB, DiagnosticSeverity::Error);
         diagEngine.setSeverity(diag::RangeWidthOOB, DiagnosticSeverity::Error);
         diagEngine.setSeverity(diag::ImplicitNamedPortTypeMismatch, DiagnosticSeverity::Error);
+        diagEngine.setSeverity(diag::SplitDistWeightOp, DiagnosticSeverity::Error);
     }
 
     for (const std::string& path : options.suppressWarningsPaths)

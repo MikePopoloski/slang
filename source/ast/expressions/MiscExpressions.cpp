@@ -1320,8 +1320,13 @@ Expression& DistExpression::fromSyntax(Compilation& comp, const ExpressionOrDist
     for (auto item : syntax.distribution->items) {
         DistItem di{*bound[index++], {}};
         if (item->weight) {
-            auto weightKind = item->weight->op.kind == TokenKind::ColonSlash ? DistWeight::PerRange
-                                                                             : DistWeight::PerValue;
+            auto weightKind = DistWeight::PerValue;
+            if (item->weight->op.kind == TokenKind::ColonSlash ||
+                (item->weight->op.kind == TokenKind::Colon &&
+                 item->weight->extraOp.kind == TokenKind::Slash)) {
+                weightKind = DistWeight::PerRange;
+            }
+
             auto& weightExpr = Expression::bind(*item->weight->expr, context);
             di.weight.emplace(DistWeight{weightKind, weightExpr});
 

@@ -2001,7 +2001,16 @@ DistItemSyntax& Parser::parseDistItem() {
     DistWeightSyntax* weight = nullptr;
     if (peek(TokenKind::ColonEquals) || peek(TokenKind::ColonSlash)) {
         auto op = consume();
-        weight = &factory.distWeight(op, parseExpression());
+        weight = &factory.distWeight(op, Token(), parseExpression());
+    }
+    else if (peek(TokenKind::Colon) &&
+             (peek(1).kind == TokenKind::Equals || peek(1).kind == TokenKind::Slash)) {
+        // VCS allows the dist weight operators to be split, so allow this with a diagnostic
+        // for compat purposes.
+        auto op1 = consume();
+        auto op2 = consume();
+        addDiag(diag::SplitDistWeightOp, op1.range()) << op2.range();
+        weight = &factory.distWeight(op1, op2, parseExpression());
     }
 
     return factory.distItem(range, weight);
