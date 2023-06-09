@@ -291,7 +291,7 @@ public:
     CheckerInstanceSymbol(std::string_view name, SourceLocation loc,
                           CheckerInstanceBodySymbol& body);
 
-    class Connection {
+    class SLANG_EXPORT Connection {
     public:
         const CheckerInstanceBodySymbol& parent;
         const Symbol& formal;
