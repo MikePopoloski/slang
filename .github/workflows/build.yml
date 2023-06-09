@@ -94,3 +94,22 @@ jobs:
     - name: Run tests
       working-directory: build
       run: ctest --output-on-failure -C Release --no-tests=error
+
+  conan:
+    runs-on: ubuntu-22.04
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+    - name: Install dependencies
+      run: |
+        pip3 install conan
+        conan profile detect
+    - name: Configure
+      run: |
+        conan install .
+        cmake --preset conan-gcc-x86_64-release
+    - name: Build
+      run: cmake --build --preset conan-gcc-x86_64-release -j8
+    - name: Run tests
+      run: ctest --preset conan-gcc-x86_64-release --output-on-failure --no-tests=error
