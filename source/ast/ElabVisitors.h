@@ -117,6 +117,12 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
         symbol.getDelay();
     }
 
+    void handle(const NetAliasSymbol& symbol) {
+        if (!handleDefault(symbol))
+            return;
+        symbol.getNetReferences();
+    }
+
     void handle(const ElabSystemTaskSymbol& symbol) {
         if (!handleDefault(symbol))
             return;

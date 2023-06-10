@@ -614,4 +614,22 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::AnonymousProgram; }
 };
 
+class SLANG_EXPORT NetAliasSymbol : public Symbol {
+public:
+    explicit NetAliasSymbol(SourceLocation loc) : Symbol(SymbolKind::NetAlias, ""sv, loc) {}
+
+    std::span<const Expression* const> getNetReferences() const;
+
+    static NetAliasSymbol& fromSyntax(const ASTContext& context,
+                                      const syntax::NetAliasSyntax& syntax,
+                                      SmallVectorBase<const Symbol*>& implicitNets);
+
+    void serializeTo(ASTSerializer& serializer) const;
+
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::NetAlias; }
+
+private:
+    mutable std::optional<std::span<const Expression* const>> netRefs;
+};
+
 } // namespace slang::ast
