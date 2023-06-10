@@ -2140,8 +2140,11 @@ std::span<const Expression* const> NetAliasSymbol::getNetReferences() const {
     return *netRefs;
 }
 
-void NetAliasSymbol::serializeTo(ASTSerializer&) const {
-    // TODO:
+void NetAliasSymbol::serializeTo(ASTSerializer& serializer) const {
+    serializer.startArray("netReferences");
+    for (auto expr : getNetReferences())
+        serializer.serialize(*expr);
+    serializer.endArray();
 }
 
 } // namespace slang::ast

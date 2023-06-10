@@ -628,6 +628,12 @@ public:
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::NetAlias; }
 
+    template<typename TVisitor>
+    decltype(auto) visitExprs(TVisitor&& visitor) const {
+        for (auto expr : getNetReferences())
+            expr->visit(visitor);
+    }
+
 private:
     mutable std::optional<std::span<const Expression* const>> netRefs;
 };
