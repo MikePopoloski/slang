@@ -273,6 +273,7 @@ void Scope::addMembers(const SyntaxNode& syntax) {
         case SyntaxKind::DefaultDisableDeclaration:
         case SyntaxKind::SpecifyBlock:
         case SyntaxKind::CoverCross:
+        case SyntaxKind::NetAlias:
             addDeferredMembers(syntax);
             break;
         case SyntaxKind::PortDeclaration:
@@ -524,7 +525,6 @@ void Scope::addMembers(const SyntaxNode& syntax) {
             addMember(
                 AnonymousProgramSymbol::fromSyntax(*this, syntax.as<AnonymousProgramSyntax>()));
             break;
-        case SyntaxKind::NetAlias:
         case SyntaxKind::CheckerDataDeclaration:
         case SyntaxKind::ExternModuleDecl:
         case SyntaxKind::ExternUdpDecl:
@@ -1055,6 +1055,14 @@ void Scope::elaborate() const {
                 cross.addBody(member.node.as<CoverCrossSyntax>(), *this);
                 break;
             }
+            case SyntaxKind::NetAlias: {
+                SmallVector<const Symbol*> implicitNets;
+                auto& alias = NetAliasSymbol::fromSyntax(context, member.node.as<NetAliasSyntax>(),
+                                                         implicitNets);
+                auto members = {&alias};
+                insertMembersAndNets(members, implicitNets, symbol);
+                break;
+            }
             case SyntaxKind::BindDirective: {
                 // We only find a bind directive in our deferred members list if that
                 // directive is *targeting* this scope, so we should go ahead and
@@ -1549,6 +1557,7 @@ static size_t countMembers(const SyntaxNode& syntax) {
             return 1;
         case SyntaxKind::SpecifyBlock:
         case SyntaxKind::CoverCross:
+        case SyntaxKind::NetAlias:
             return 2;
         default:
             SLANG_UNREACHABLE;

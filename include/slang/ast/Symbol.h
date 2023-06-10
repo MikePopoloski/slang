@@ -120,6 +120,7 @@ enum class RandMode;
     x(PulseStyle) \
     x(SystemTimingCheck) \
     x(AnonymousProgram) \
+    x(NetAlias) \
     x(ConfigBlock)
 // clang-format on
 

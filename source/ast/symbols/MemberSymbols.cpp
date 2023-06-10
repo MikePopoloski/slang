@@ -2024,4 +2024,55 @@ AnonymousProgramSymbol& AnonymousProgramSymbol::fromSyntax(Scope& scope,
     return *result;
 }
 
+NetAliasSymbol& NetAliasSymbol::fromSyntax(const ASTContext& parentContext,
+                                           const syntax::NetAliasSyntax& syntax,
+                                           SmallVectorBase<const Symbol*>& implicitNets) {
+    SmallSet<std::string_view, 8> seenNames;
+    ASTContext context = parentContext.resetFlags(ASTFlags::NonProcedural);
+    auto& comp = context.getCompilation();
+    auto& netType = context.scope->getDefaultNetType();
+
+    for (auto expr : syntax.nets) {
+        // If not explicitly disabled check for implicit nets.
+        if (!netType.isError()) {
+            SmallVector<const IdentifierNameSyntax*> implicitNetNames;
+            Expression::findPotentiallyImplicitNets(*expr, context, implicitNetNames);
+
+            for (auto ins : implicitNetNames) {
+                if (seenNames.emplace(ins->identifier.valueText()).second)
+                    implicitNets.push_back(&NetSymbol::createImplicit(comp, *ins, netType));
+            }
+        }
+    }
+
+    auto result = comp.emplace<NetAliasSymbol>(syntax.keyword.location());
+    result->setSyntax(syntax);
+    result->setAttributes(*context.scope, syntax.attributes);
+    return *result;
+}
+
+std::span<const Expression* const> NetAliasSymbol::getNetReferences() const {
+    if (netRefs)
+        return *netRefs;
+
+    auto scope = getParentScope();
+    auto syntax = getSyntax();
+    SLANG_ASSERT(scope && syntax);
+
+    ASTContext context(*scope, LookupLocation::after(*this), ASTFlags::NonProcedural);
+
+    SmallVector<const Expression*> buffer;
+    for (auto exprSyntax : syntax->as<NetAliasSyntax>().nets) {
+        auto& netRef = Expression::bind(*exprSyntax, context);
+        buffer.push_back(&netRef);
+    }
+
+    netRefs = buffer.copy(scope->getCompilation());
+    return *netRefs;
+}
+
+void NetAliasSymbol::serializeTo(ASTSerializer&) const {
+    // TODO:
+}
+
 } // namespace slang::ast

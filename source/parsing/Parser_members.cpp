@@ -3294,7 +3294,8 @@ NetAliasSyntax& Parser::parseNetAlias(AttrList attributes) {
     SmallVector<TokenOrSyntax, 8> buffer;
     parseList<isPossibleExpressionOrEquals, isSemicolon>(
         buffer, TokenKind::Semicolon, TokenKind::Equals, semi, RequireItems::True,
-        diag::ExpectedExpression, [this] { return &parseExpression(); });
+        diag::ExpectedExpression,
+        [this] { return &parsePrimaryExpression(ExpressionOptions::None); });
 
     return factory.netAlias(attributes, keyword, buffer.copy(alloc), semi);
 }
