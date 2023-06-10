@@ -2051,6 +2051,56 @@ NetAliasSymbol& NetAliasSymbol::fromSyntax(const ASTContext& parentContext,
     return *result;
 }
 
+struct NetAliasVisitor {
+    const ASTContext& context;
+    const NetType* commonNetType = nullptr;
+    bool issuedError = false;
+
+    NetAliasVisitor(const ASTContext& context) : context(context) {}
+
+    template<typename T>
+    void visit(const T& expr) {
+        if constexpr (std::is_base_of_v<Expression, T>) {
+            switch (expr.kind) {
+                case ExpressionKind::NamedValue:
+                case ExpressionKind::MemberAccess:
+                case ExpressionKind::ElementSelect:
+                case ExpressionKind::RangeSelect: {
+                    if (auto sym = expr.getSymbolReference()) {
+                        if (sym->kind != SymbolKind::Net) {
+                            context.addDiag(diag::NetAliasNotANet, expr.sourceRange) << sym->name;
+                        }
+                        else {
+                            auto& nt = sym->as<NetSymbol>().netType;
+                            if (!commonNetType) {
+                                commonNetType = &nt;
+                            }
+                            else if (commonNetType != &nt && !issuedError) {
+                                auto& diag = context.addDiag(diag::NetAliasCommonNetType,
+                                                             expr.sourceRange);
+                                diag << sym->name;
+                                diag << nt.name << commonNetType->name;
+                                issuedError = true;
+                            }
+                        }
+                    }
+                    break;
+                }
+                case ExpressionKind::HierarchicalValue:
+                    context.addDiag(diag::NetAliasHierarchical, expr.sourceRange);
+                    break;
+                default:
+                    if constexpr (is_detected_v<ASTDetectors::visitExprs_t, T, NetAliasVisitor>)
+                        expr.visitExprs(*this);
+                    break;
+            }
+        }
+    }
+
+    void visitInvalid(const Expression&) {}
+    void visitInvalid(const AssertionExpr&) {}
+};
+
 std::span<const Expression* const> NetAliasSymbol::getNetReferences() const {
     if (netRefs)
         return *netRefs;
@@ -2059,11 +2109,30 @@ std::span<const Expression* const> NetAliasSymbol::getNetReferences() const {
     auto syntax = getSyntax();
     SLANG_ASSERT(scope && syntax);
 
-    ASTContext context(*scope, LookupLocation::after(*this), ASTFlags::NonProcedural);
-
+    // TODO: there should be a global check somewhere that any given bit
+    // of a net isn't aliased to the same target signal bit multiple times.
+    bitwidth_t bitWidth = 0;
+    bool issuedError = false;
     SmallVector<const Expression*> buffer;
+    ASTContext context(*scope, LookupLocation::after(*this),
+                       ASTFlags::NonProcedural | ASTFlags::NotADriver);
+    NetAliasVisitor visitor(context);
+
     for (auto exprSyntax : syntax->as<NetAliasSyntax>().nets) {
         auto& netRef = Expression::bind(*exprSyntax, context);
+        if (!netRef.requireLValue(context))
+            continue;
+
+        if (!bitWidth) {
+            bitWidth = netRef.type->getBitWidth();
+        }
+        else if (bitWidth != netRef.type->getBitWidth() && !issuedError) {
+            auto& diag = context.addDiag(diag::NetAliasWidthMismatch, netRef.sourceRange);
+            diag << netRef.type->getBitWidth() << bitWidth;
+            issuedError = true;
+        }
+
+        netRef.visit(visitor);
         buffer.push_back(&netRef);
     }
 

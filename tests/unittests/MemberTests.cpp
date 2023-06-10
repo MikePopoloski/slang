@@ -2386,3 +2386,29 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Net alias errors") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    wire [1:0] a;
+    wire [3:1] b;
+    logic [1:0] c;
+    wor [1:0] d;
+
+    alias a = b;
+    alias a = 1;
+    alias a = c = m.c = d;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 5);
+    CHECK(diags[0].code == diag::NetAliasWidthMismatch);
+    CHECK(diags[1].code == diag::ExpressionNotAssignable);
+    CHECK(diags[2].code == diag::NetAliasNotANet);
+    CHECK(diags[3].code == diag::NetAliasHierarchical);
+    CHECK(diags[4].code == diag::NetAliasCommonNetType);
+}
