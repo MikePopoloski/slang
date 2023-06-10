@@ -472,6 +472,9 @@ void registerSymbols(py::module_& m) {
     py::class_<SpecifyBlockSymbol, Symbol, Scope>(m, "SpecifyBlockSymbol");
     py::class_<AnonymousProgramSymbol, Symbol, Scope>(m, "AnonymousProgramSymbol");
 
+    py::class_<NetAliasSymbol, Symbol>(m, "NetAliasSymbol")
+        .def_property_readonly("netReferences", &NetAliasSymbol::getNetReferences);
+
     py::class_<TransparentMemberSymbol, Symbol>(m, "TransparentMemberSymbol")
         .def_property_readonly("wrapped",
                                [](const TransparentMemberSymbol& self) { return &self.wrapped; });
