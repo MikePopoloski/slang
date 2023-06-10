@@ -94,6 +94,18 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
+TEST_CASE("Continuous assign same implicit net") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    assign a = 1, a = 0;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
 TEST_CASE("Invalid continuous assign") {
     auto tree = SyntaxTree::fromText(R"(
 interface I;

@@ -381,6 +381,7 @@ void ContinuousAssignSymbol::fromSyntax(Compilation& compilation,
                                         SmallVectorBase<const Symbol*>& implicitNets) {
     ASTContext context = parentContext.resetFlags(ASTFlags::NonProcedural);
     auto& netType = context.scope->getDefaultNetType();
+    SmallSet<std::string_view, 8> seenNames;
 
     for (auto expr : syntax.assignments) {
         // If not explicitly disabled, check for net references on the lhs of each
@@ -393,8 +394,12 @@ void ContinuousAssignSymbol::fromSyntax(Compilation& compilation,
                 Expression::findPotentiallyImplicitNets(*expr->as<BinaryExpressionSyntax>().left,
                                                         context, implicitNetNames);
 
-                for (auto ins : implicitNetNames)
-                    implicitNets.push_back(&NetSymbol::createImplicit(compilation, *ins, netType));
+                for (auto ins : implicitNetNames) {
+                    if (seenNames.emplace(ins->identifier.valueText()).second) {
+                        implicitNets.push_back(
+                            &NetSymbol::createImplicit(compilation, *ins, netType));
+                    }
+                }
             }
         }
 
