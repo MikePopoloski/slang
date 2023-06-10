@@ -161,7 +161,7 @@ IEEE 1800-2017 SystemVerilog Language Reference Manual (LRM).
 {{m-success}} 10.8 | Assignment-like contexts | v0.2
 {{m-warning}} 10.9 | Assignment patterns | partial
 {{m-success}} 10.10 | Unpacked array concatenation | v0.4
-{{m-danger}}  10.11 | Net aliasing | no
+{{m-success}} 10.11 | Net aliasing | v4.0
 
 ## 11. Operators and expressions
 
