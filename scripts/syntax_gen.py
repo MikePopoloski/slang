@@ -40,6 +40,9 @@ class TypeInfo:
         self.baseInitializers = baseInitializers
 
 
+vowels = ("a", "e", "i", "o", "u", "A", "E", "I", "O", "U")
+
+
 def main():
     parser = argparse.ArgumentParser(description="Diagnostic source generator")
     parser.add_argument("--dir", default=os.getcwd(), help="Output directory")
@@ -277,6 +280,10 @@ namespace slang::syntax {
 """
     )
 
+    # Start a documentation header file.
+    docf = open(os.path.join(headerdir, "SyntaxDoc.dox"), "w")
+    docf.write("/** @file */\n\n")
+
     # Write all type definitions.
     alltypesSaved = alltypes.copy()
     for name, currtype in alltypes.items():
@@ -287,8 +294,18 @@ namespace slang::syntax {
             "struct SLANG_EXPORT {} : public {} {{\n".format(name, currtype.base)
         )
 
+        article = "an" if name[0] in vowels else "a"
+        docf.write("/** @struct slang::syntax::{}\n".format(name))
+        docf.write(
+            "    @brief Concrete syntax definition for {} {}\n".format(
+                article, name[:-6]
+            )
+        )
+
         for m in currtype.members:
             outf.write("    {} {};\n".format(m[0], m[1]))
+            docf.write("    @var slang::syntax::{}::{}\n".format(name, m[1]))
+            docf.write("    @brief The {} member\n".format(m[1]))
 
         outf.write("\n")
         outf.write("    {}({}) :\n".format(name, currtype.constructorArgs))
@@ -299,6 +316,15 @@ namespace slang::syntax {
                 currtype.baseInitializers,
                 currtype.initializers,
             )
+        )
+
+        docf.write(
+            "    @fn slang::syntax::{}::{}({})\n".format(
+                name, name, currtype.constructorArgs
+            )
+        )
+        docf.write(
+            "    @brief Constructs a new instance of the {} struct\n".format(name)
         )
 
         # Write constructor body.
@@ -324,6 +350,16 @@ namespace slang::syntax {
         # Copy constructor (defaulted).
         outf.write("    explicit {}(const {}&) = default;\n\n".format(name, name))
 
+        docf.write(
+            "    @fn slang::syntax::{}::{}(const {}&)\n".format(name, name, name)
+        )
+        docf.write("    @brief Copy constructor\n")
+
+        docf.write("    @fn slang::syntax::{}::isKind\n".format(name))
+        docf.write(
+            "    @brief Returns true if the provided syntax kind is represented by this type\n"
+        )
+
         if not currtype.members and currtype.final == "":
             outf.write("    static bool isKind(SyntaxKind kind);\n")
         else:
@@ -333,7 +369,29 @@ namespace slang::syntax {
             outf.write("    ConstTokenOrSyntax getChild(size_t index) const;\n")
             outf.write("    void setChild(size_t index, TokenOrSyntax child);\n\n")
 
+            docf.write(
+                "    @fn TokenOrSyntax slang::syntax::{}::getChild(size_t index)\n".format(
+                    name
+                )
+            )
+            docf.write(
+                "    @brief Gets the child member (token or syntax node) at the provided index within this struct\n"
+            )
+            docf.write(
+                "    @fn ConstTokenOrSyntax slang::syntax::{}::getChild(size_t index) const\n".format(
+                    name
+                )
+            )
+            docf.write(
+                "    @brief Gets the child member (token or syntax node) at the provided index within this struct\n"
+            )
+            docf.write("    @fn slang::syntax::{}::setChild\n".format(name))
+            docf.write(
+                "    @brief Sets the child member (token or syntax node) at the provided index within this struct\n"
+            )
+
         outf.write("};\n\n")
+        docf.write("*/\n\n")
 
     # Start the source file.
     cppf = open(os.path.join(builddir, "AllSyntax.cpp"), "w")
