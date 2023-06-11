@@ -11,9 +11,10 @@
 
 namespace slang::ast {
 
+/// Provides utility methods for working with bitstream operations.
 class SLANG_EXPORT Bitstream {
 public:
-    /// Compile-time check that the source and destination types have the same dynamic bit-stream
+    /// Compile-time check that the source and destination types have the same dynamic bitstream
     /// sizes.
     /// note: only Type and StreamingConcatenationExpression are allowed for T1/T2
     template<typename T1, typename T2>
@@ -42,7 +43,7 @@ public:
     /// target/unpacked concatenation, unpackWidth is the total width of target.
     static ConstantValue reOrder(ConstantValue&& value, size_t sliceSize, size_t unpackWidth = 0);
 
-    /// Performs constant evaluation of an assignment with a streaming concatenation as the target
+    /// Performs constant evaluation of an assignment with a streaming concatenation as the target.
     static ConstantValue evaluateTarget(const StreamingConcatenationExpression& lhs,
                                         const Expression& rhs, EvalContext& context);
 

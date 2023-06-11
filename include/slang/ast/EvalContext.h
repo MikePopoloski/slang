@@ -52,7 +52,10 @@ SLANG_BITMASK(EvalFlags, AllowUnboundedPlaceholder)
 /// storage for local variables.
 class SLANG_EXPORT EvalContext {
 public:
+    /// The parent compilation.
     Compilation& compilation;
+
+    /// Flags that control evaluation.
     bitmask<EvalFlags> flags;
 
     /// Represents a single frame in the call stack.
@@ -71,6 +74,7 @@ public:
         LookupLocation lookupLocation;
     };
 
+    /// Constructs a new EvalContext instance.
     explicit EvalContext(Compilation& compilation, bitmask<EvalFlags> flags = {}) :
         compilation(compilation), flags(flags) {}
 
@@ -181,7 +185,11 @@ public:
 
     /// Records a diagnostic under the current evaluation context.
     Diagnostic& addDiag(DiagCode code, SourceLocation location);
+
+    /// Records a diagnostic under the current evaluation context.
     Diagnostic& addDiag(DiagCode code, SourceRange range);
+
+    /// Records the given set of diagnostics under the current evaluation context.
     void addDiags(const Diagnostics& diags);
 
     /// Issues all recorded diagnostics to the given AST context.
