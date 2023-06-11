@@ -52,7 +52,7 @@ target_sources(
           Definition.cpp
           EvalContext.cpp
           Expression.cpp
-          FormatHelpers.cpp
+          FmtHelpers.cpp
           InstancePath.cpp
           Lookup.cpp
           LValue.cpp

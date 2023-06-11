@@ -1,11 +1,11 @@
 //------------------------------------------------------------------------------
-// FormatHelpers.cpp
+// FmtHelpers.cpp
 // Helpers for implementing the string formatting system functions
 //
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
-#include "slang/ast/FormatHelpers.h"
+#include "FmtHelpers.h"
 
 #include "slang/ast/Definition.h"
 #include "slang/ast/Expression.h"

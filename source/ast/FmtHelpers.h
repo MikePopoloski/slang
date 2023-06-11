@@ -1,6 +1,6 @@
 //------------------------------------------------------------------------------
-//! @file FormatHelpers.h
-//! @brief Helpers for implementing the string formatting system functions
+// FmtHelpers.h
+// Helpers for implementing the string formatting system functions
 //
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT

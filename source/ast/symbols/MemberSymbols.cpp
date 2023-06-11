@@ -7,6 +7,7 @@
 //------------------------------------------------------------------------------
 #include "slang/ast/symbols/MemberSymbols.h"
 
+#include "../FmtHelpers.h"
 #include "fmt/core.h"
 
 #include "slang/ast/ASTSerializer.h"
@@ -14,7 +15,6 @@
 #include "slang/ast/Compilation.h"
 #include "slang/ast/Definition.h"
 #include "slang/ast/Expression.h"
-#include "slang/ast/FormatHelpers.h"
 #include "slang/ast/TimingControl.h"
 #include "slang/ast/expressions/AssertionExpr.h"
 #include "slang/ast/expressions/AssignmentExpressions.h"
