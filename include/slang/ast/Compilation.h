@@ -185,15 +185,29 @@ struct HierarchyOverrideNode {
 /// A centralized location for creating and caching symbols. This includes
 /// creating symbols from syntax nodes as well as fabricating them synthetically.
 /// Common symbols such as built in types are exposed here as well.
+///
+/// A Compilation object is the entry point for building ASTs. Typically you
+/// add one or more SyntaxTrees to the compilation and then call getRoot() to
+/// retrieve the root of the elaborated AST, and getAllDiagnostics() to get
+/// a list of all diagnostics issued in the design.
+///
 class SLANG_EXPORT Compilation : public BumpAllocator {
 public:
+    /// Constructs a new instance of the Compilation class.
     explicit Compilation(const Bag& options = {});
     Compilation(const Compilation& other) = delete;
     Compilation(Compilation&& other) = delete;
     ~Compilation();
 
+    /// @name Top-level API
+    /// @{
+
     /// Gets the set of options used to construct the compilation.
     const CompilationOptions& getOptions() const { return options; }
+
+    /// Gets the source manager associated with the compilation. If no syntax trees have
+    /// been added to the design this method will return nullptr.
+    const SourceManager* getSourceManager() const { return sourceManager; }
 
     /// Adds a syntax tree to the compilation. If the compilation has already been finalized
     /// by calling @a getRoot this call will throw an exception.
@@ -201,14 +215,6 @@ public:
 
     /// Gets the set of syntax trees that have been added to the compilation.
     std::span<const std::shared_ptr<syntax::SyntaxTree>> getSyntaxTrees() const;
-
-    /// Gets the compilation unit for the given syntax node. The compilation unit must have
-    /// already been added to the compilation previously via a call to @a addSyntaxTree
-    const CompilationUnitSymbol* getCompilationUnit(
-        const syntax::CompilationUnitSyntax& syntax) const;
-
-    /// Gets the set of compilation units that have been added to the compilation.
-    std::span<const CompilationUnitSymbol* const> getCompilationUnits() const;
 
     /// Gets the root of the design. The first time you call this method all top-level
     /// instances will be elaborated and the compilation finalized. After that you can
@@ -219,7 +225,53 @@ public:
     /// Indicates whether the design has been compiled and can no longer accept modifications.
     bool isFinalized() const { return finalized; }
 
-    /// Gets the definition with the given name, or null if there is no such definition.
+    /// Gets the diagnostics produced during lexing, preprocessing, and syntax parsing.
+    const Diagnostics& getParseDiagnostics();
+
+    /// Gets the diagnostics produced during semantic analysis, including the creation of
+    /// symbols, type checking, and name lookup. Note that this will finalize the compilation,
+    /// including forcing the evaluation of any symbols or expressions that were still waiting
+    /// for lazy evaluation.
+    const Diagnostics& getSemanticDiagnostics();
+
+    /// Gets all of the diagnostics produced during compilation.
+    const Diagnostics& getAllDiagnostics();
+
+    /// @}
+    /// @name Utility and convenience methods
+    /// @{
+
+    /// A convenience method for parsing a name string and turning it into a set
+    /// of syntax nodes. This is mostly for testing and API purposes; normal
+    /// compilation never does this.
+    /// Throws an exception if there are errors parsing the name.
+    const syntax::NameSyntax& parseName(std::string_view name);
+
+    /// A convenience method for parsing a name string and turning it into a set
+    /// of syntax nodes. This is mostly for testing and API purposes. Errors are
+    /// added to the provided diagnostics bag.
+    const syntax::NameSyntax& tryParseName(std::string_view name, Diagnostics& diags);
+
+    /// Creates a new compilation unit within the design that can be modified dynamically,
+    /// which is useful in runtime scripting scenarios. Note that this call will succeed
+    /// even if the design has been finalized, but in that case any instantiations in the
+    /// script scope won't affect which modules are determined to be top-level instances.
+    CompilationUnitSymbol& createScriptScope();
+
+    /// @}
+    /// @name Lookup and query methods
+    /// @{
+
+    /// Gets the compilation unit for the given syntax node. The compilation unit must have
+    /// already been added to the compilation previously via a call to @a addSyntaxTree --
+    /// otherwise returns nullptr.
+    const CompilationUnitSymbol* getCompilationUnit(
+        const syntax::CompilationUnitSyntax& syntax) const;
+
+    /// Gets the set of compilation units that have been added to the compilation.
+    std::span<const CompilationUnitSymbol* const> getCompilationUnits() const;
+
+    /// Gets the definition with the given name, or nullptr if there is no such definition.
     /// This takes into account the given scope so that nested definitions are found
     /// before more global ones.
     const Definition* getDefinition(std::string_view name, const Scope& scope) const;
@@ -227,15 +279,65 @@ public:
     /// Gets the definition for the given syntax node, or nullptr if it does not exist.
     const Definition* getDefinition(const syntax::ModuleDeclarationSyntax& syntax) const;
 
-    /// Creates a new definition in the given scope based on the given syntax.
-    void createDefinition(const Scope& scope, LookupLocation location,
-                          const syntax::ModuleDeclarationSyntax& syntax);
-
-    /// Gets the package with the give name, or null if there is no such package.
+    /// Gets the package with the give name, or nullptr if there is no such package.
     const PackageSymbol* getPackage(std::string_view name) const;
 
     /// Gets the built-in 'std' package.
     const PackageSymbol& getStdPackage() const { return *stdPkg; }
+
+    /// Gets the primitive with the given name, or nullptr if there is no such primitive.
+    const PrimitiveSymbol* getPrimitive(std::string_view name) const;
+
+    /// Gets the built-in gate type with the given name, or nullptr if there is no such gate.
+    const PrimitiveSymbol* getGateType(std::string_view name) const;
+
+    /// @}
+    /// @name System function management
+    /// @{
+
+    /// Registers a system subroutine handler, which can be accessed by compiled code.
+    void addSystemSubroutine(std::unique_ptr<SystemSubroutine> subroutine);
+
+    /// Registers an externally owned system subroutine handler,
+    /// which can be accessed by compiled code. The provided subroutine must remain
+    /// valid for the lifetime of this object.
+    void addSystemSubroutine(const SystemSubroutine& subroutine);
+
+    /// Registers a type-based system method handler, which can be accessed by compiled code.
+    void addSystemMethod(SymbolKind typeKind, std::unique_ptr<SystemSubroutine> method);
+
+    /// Registers an externally owned type-based system method handler,
+    /// which can be accessed by compiled code. The provided subroutine must remain
+    /// valid for the lifetime of this object.
+    void addSystemMethod(SymbolKind typeKind, const SystemSubroutine& subroutine);
+
+    /// Gets a system subroutine with the given name, or nullptr if there is no such subroutine
+    /// registered.
+    const SystemSubroutine* getSystemSubroutine(std::string_view name) const;
+
+    /// Gets a system method for the specified type with the given name, or nullptr if there
+    /// is no such method registered.
+    const SystemSubroutine* getSystemMethod(SymbolKind typeKind, std::string_view name) const;
+
+    /// Gets the attributes associated with the given symbol.
+    std::span<const AttributeSymbol* const> getAttributes(const Symbol& symbol) const;
+
+    /// Gets the attributes associated with the given statement.
+    std::span<const AttributeSymbol* const> getAttributes(const Statement& stmt) const;
+
+    /// Gets the attributes associated with the given expression.
+    std::span<const AttributeSymbol* const> getAttributes(const Expression& expr) const;
+
+    /// Gets the attributes associated with the given port connection.
+    std::span<const AttributeSymbol* const> getAttributes(const PortConnection& conn) const;
+
+    /// @}
+    /// @name Internal AST construction
+    /// @{
+
+    /// Creates a new definition in the given scope based on the given syntax.
+    void createDefinition(const Scope& scope, LookupLocation location,
+                          const syntax::ModuleDeclarationSyntax& syntax);
 
     /// Creates a new package in the given scope based on the given syntax.
     const PackageSymbol& createPackage(const Scope& scope,
@@ -245,40 +347,12 @@ public:
     const ConfigBlockSymbol& createConfigBlock(const Scope& scope,
                                                const syntax::ConfigDeclarationSyntax& syntax);
 
-    /// Gets the primitive with the given name, or null if there is no such primitive.
-    const PrimitiveSymbol* getPrimitive(std::string_view name) const;
-
     /// Creates a new primitive in the given scope based on the given syntax.
     const PrimitiveSymbol& createPrimitive(const Scope& scope,
                                            const syntax::UdpDeclarationSyntax& syntax);
 
     /// Registers a built-in gate symbol.
     void addGateType(const PrimitiveSymbol& primitive);
-
-    /// Gets the built-in gate type with the given name, or null if there is no such gate.
-    const PrimitiveSymbol* getGateType(std::string_view name) const;
-
-    /// Registers a system subroutine handler, which can be accessed by compiled code.
-    void addSystemSubroutine(std::unique_ptr<SystemSubroutine> subroutine);
-
-    /// Registers an externally owned system subroutine handler,
-    /// which can be accessed by compiled code.
-    void addSystemSubroutine(const SystemSubroutine& subroutine);
-
-    /// Registers a type-based system method handler, which can be accessed by compiled code.
-    void addSystemMethod(SymbolKind typeKind, std::unique_ptr<SystemSubroutine> method);
-
-    /// Registers an externally owned type-based system method handler,
-    /// which can be accessed by compiled code.
-    void addSystemMethod(SymbolKind typeKind, const SystemSubroutine& subroutine);
-
-    /// Gets a system subroutine with the given name, or null if there is no such subroutine
-    /// registered.
-    const SystemSubroutine* getSystemSubroutine(std::string_view name) const;
-
-    /// Gets a system method for the specified type with the given name, or null if there is no such
-    /// method registered.
-    const SystemSubroutine* getSystemMethod(SymbolKind typeKind, std::string_view name) const;
 
     /// Sets the attributes associated with the given symbol.
     void setAttributes(const Symbol& symbol, std::span<const AttributeSymbol* const> attributes);
@@ -293,21 +367,9 @@ public:
     void setAttributes(const PortConnection& conn,
                        std::span<const AttributeSymbol* const> attributes);
 
-    /// Gets the attributes associated with the given symbol.
-    std::span<const AttributeSymbol* const> getAttributes(const Symbol& symbol) const;
-
-    /// Gets the attributes associated with the given statement.
-    std::span<const AttributeSymbol* const> getAttributes(const Statement& stmt) const;
-
-    /// Gets the attributes associated with the given expression.
-    std::span<const AttributeSymbol* const> getAttributes(const Expression& expr) const;
-
-    /// Gets the attributes associated with the given port connection.
-    std::span<const AttributeSymbol* const> getAttributes(const PortConnection& conn) const;
-
     /// Notes that the given symbol was imported into the current scope via a package import,
     /// and further that the current scope is within a package declaration. These symbols are
-    /// candidates for being exported from this package.
+    /// candidates for being exported from that package.
     void notePackageExportCandidate(const PackageSymbol& packageScope, const Symbol& symbol);
 
     /// Tries to find a symbol that can be exported from the given package to satisfy an import
@@ -320,7 +382,7 @@ public:
     void noteBindDirective(const syntax::BindDirectiveSyntax& syntax, const Scope& scope);
 
     /// Notes an instance that contains a bind directive targeting a global definition.
-    /// These are later checked for correctness of type params.
+    /// These are later checked for correctness.
     void noteInstanceWithDefBind(const Symbol& instance);
 
     /// Notes the presence of a DPI export directive. These will be checked for correctness
@@ -388,75 +450,103 @@ public:
     /// This will cause appropriate errors to be issued.
     void noteNameConflict(const Symbol& symbol);
 
-    /// A convenience method for parsing a name string and turning it into a set
-    /// of syntax nodes. This is mostly for testing and API purposes; normal
-    /// compilation never does this.
-    /// Throws an exception if there are errors parsing the name.
-    const syntax::NameSyntax& parseName(std::string_view name);
-
-    /// A convenience method for parsing a name string and turning it into a set
-    /// of syntax nodes. This is mostly for testing and API purposes. Errors are
-    /// added to the provided diagnostics bag.
-    const syntax::NameSyntax& tryParseName(std::string_view name, Diagnostics& diags);
-
-    /// Creates a new compilation unit within the design that can be modified dynamically,
-    /// which is useful in runtime scripting scenarios. Note that this call will succeed
-    /// even if the design has been finalized, but in that case any instantiations in the
-    /// script scope won't affect which modules are determined to be top-level instances.
-    CompilationUnitSymbol& createScriptScope();
-
-    /// Gets the source manager associated with the compilation. If no syntax trees have
-    /// been added to the design this method will return null.
-    const SourceManager* getSourceManager() const { return sourceManager; }
-
-    /// Gets the diagnostics produced during lexing, preprocessing, and syntax parsing.
-    const Diagnostics& getParseDiagnostics();
-
-    /// Gets the diagnostics produced during semantic analysis, including the creation of
-    /// symbols, type checking, and name lookup. Note that this will finalize the compilation,
-    /// including forcing the evaluation of any symbols or expressions that were still waiting
-    /// for lazy evaluation.
-    const Diagnostics& getSemanticDiagnostics();
-
-    /// Gets all of the diagnostics produced during compilation.
-    const Diagnostics& getAllDiagnostics();
-
     /// Adds a set of diagnostics to the compilation's list of semantic diagnostics.
     void addDiagnostics(const Diagnostics& diagnostics);
+
+    /// Forces the given symbol and all children underneath it in the hierarchy to
+    /// be elaborated and any relevant diagnostics to be issued.
+    void forceElaborate(const Symbol& symbol);
 
     /// Gets the default time scale to use when none is specified in the source code.
     std::optional<TimeScale> getDefaultTimeScale() const { return options.defaultTimeScale; }
 
+    /// Gets the next system ID to use for identifying enum types.
+    int getNextEnumSystemId() { return nextEnumSystemId++; }
+
+    /// Gets the next system ID to use for identifying struct types.
+    int getNextStructSystemId() { return nextStructSystemId++; }
+
+    /// Gets the next system ID to use for identifying union types.
+    int getNextUnionSystemId() { return nextUnionSystemId++; }
+
+    /// @}
+    /// @name Types
+    /// @{
+
+    /// Gets the type associated with the given syntax node kind.
+    /// If the syntax kind doesn't represent a type this will return the error type.
     const Type& getType(syntax::SyntaxKind kind) const;
+
+    /// Gets the type represented by the given data type syntax node.
     const Type& getType(const syntax::DataTypeSyntax& node, const ASTContext& context,
                         const Type* typedefTarget = nullptr);
+
+    /// Gets an array type created from the given element type and dimensions.
     const Type& getType(const Type& elementType,
                         const syntax::SyntaxList<syntax::VariableDimensionSyntax>& dimensions,
                         const ASTContext& context);
 
+    /// Gets an integral vector type with the given size and flags.
     const Type& getType(bitwidth_t width, bitmask<IntegralFlags> flags);
+
+    /// Gets a scalar (single bit) type with the given flags.
     const Type& getScalarType(bitmask<IntegralFlags> flags);
+
+    /// Gets the nettype represented by the given token kind.
+    /// If the token kind does not represent a nettype this will return the
+    /// error nettype.
     const NetType& getNetType(parsing::TokenKind kind) const;
 
-    /// Various built-in type symbols for easy access.
+    /// Get the built-in `bit` type.
     const Type& getBitType() const { return *bitType; }
+
+    /// Get the built-in `logic` type.
     const Type& getLogicType() const { return *logicType; }
+
+    /// Get the built-in `int` type.
     const Type& getIntType() const { return *intType; }
+
+    /// Get the built-in `byte` type.
     const Type& getByteType() const { return *byteType; }
+
+    /// Get the built-in `integer` type.
     const Type& getIntegerType() const { return *integerType; }
+
+    /// Get the built-in `real` type.
     const Type& getRealType() const { return *realType; }
+
+    /// Get the built-in `shortreal` type.
     const Type& getShortRealType() const { return *shortRealType; }
+
+    /// Get the built-in `string` type.
     const Type& getStringType() const { return *stringType; }
+
+    /// Get the built-in `void` type.
     const Type& getVoidType() const { return *voidType; }
+
+    /// Get the error type, which is used as a placeholder
+    /// to represent an invalid type.
     const Type& getErrorType() const { return *errorType; }
+
+    /// Get the built-in `int unsigned` type.
     const Type& getUnsignedIntType();
+
+    /// Get the built-in `null` type.
     const Type& getNullType();
+
+    /// Get the built-in `$` type.
     const Type& getUnboundedType();
+
+    /// Get the built-in type used for the result of the `type()` operator.
     const Type& getTypeRefType();
 
-    /// Get the 'wire' built in net type. The rest of the built-in net types are rare enough
-    /// that we don't bother providing dedicated accessors for them.
+    /// Get the `wire` built in net type. The rest of the built-in net types are
+    /// rare enough that we don't bother providing dedicated accessors for them.
     const NetType& getWireNetType() const { return *wireNetType; }
+
+    /// @}
+    /// @name Allocation functions
+    /// @{
 
     /// Allocates space for a constant value in the pool of constants.
     ConstantValue* allocConstant(ConstantValue&& value) {
@@ -478,20 +568,18 @@ public:
         return genericClassAllocator.emplace(std::forward<Args>(args)...);
     }
 
+    /// Gets the driver map allocator.
     DriverIntervalMap::allocator_type& getDriverMapAllocator() { return driverMapAllocator; }
+
+    /// Gets the unroll interval map allocator.
     UnrollIntervalMap::allocator_type& getUnrollIntervalMapAllocator() {
         return unrollIntervalMapAllocator;
     }
 
+    /// Creates an empty ImplicitTypeSyntax object.
     const syntax::ImplicitTypeSyntax& createEmptyTypeSyntax(SourceLocation loc);
 
-    /// Forces the given symbol and all children underneath it in the hierarchy to
-    /// be elaborated and any relevant diagnostics to be issued.
-    void forceElaborate(const Symbol& symbol);
-
-    int getNextEnumSystemId() { return nextEnumSystemId++; }
-    int getNextStructSystemId() { return nextStructSystemId++; }
-    int getNextUnionSystemId() { return nextUnionSystemId++; }
+    /// @{
 
 private:
     friend class Lookup;

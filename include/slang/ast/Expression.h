@@ -146,11 +146,16 @@ public:
     Expression(const Expression&) = delete;
     Expression& operator=(const Expression&) = delete;
 
-    /// Binds an expression tree from the given syntax nodes.
+    /// Binds an expression tree from the given syntax node.
     static const Expression& bind(const ExpressionSyntax& syntax, const ASTContext& context,
                                   bitmask<ASTFlags> extraFlags = ASTFlags::None);
 
     /// Binds the left hand side of an assignment-like expression from the given syntax nodes.
+    /// @param lhs The syntax node representing the expression to bind
+    /// @param rhs The type of the right hand side, for type checking
+    /// @param location The location of the assignment, for reporting diagnostics
+    /// @param context The AST context under which binding is performed
+    /// @param isInout true if the assignment is for an inout port
     static const Expression& bindLValue(const ExpressionSyntax& lhs, const Type& rhs,
                                         SourceLocation location, const ASTContext& context,
                                         bool isInout);
@@ -160,6 +165,11 @@ public:
     static const Expression& bindLValue(const ExpressionSyntax& syntax, const ASTContext& context);
 
     /// Binds the right hand side of an assignment-like expression from the given syntax nodes.
+    /// @param lhs The type of the left hand side, for type checking
+    /// @param rhs The syntax node representing the expression to bind
+    /// @param location The location of the assignment, for reporting diagnostics
+    /// @param context The AST context under which binding is performed
+    /// @param extraFlags Extra flags to apply when binding
     static const Expression& bindRValue(const Type& lhs, const ExpressionSyntax& rhs,
                                         SourceLocation location, const ASTContext& context,
                                         bitmask<ASTFlags> extraFlags = ASTFlags::None);
@@ -169,24 +179,35 @@ public:
                                         const ExpressionSyntax& rhs, SourceLocation location,
                                         const ASTContext& context);
 
-    /// Binds an argument or port connection with the given direction and syntax nodes.
+    /// Binds an argument or port connection with the given direction.
     static const Expression& bindArgument(const Type& argType, ArgumentDirection direction,
                                           const ExpressionSyntax& syntax, const ASTContext& context,
                                           bool isConstRef = false);
 
     /// Checks that the given expression is valid for the specified connection direction.
+    /// @returns true if the connection is valid and false otherwise.
     static bool checkConnectionDirection(const Expression& expr, ArgumentDirection direction,
                                          const ASTContext& context, SourceLocation loc,
                                          bitmask<AssignFlags> flags = {});
 
     /// Binds an initializer expression for an implicitly typed parameter.
-    /// There are special inference rules for parameters.
+    ///
+    /// @param implicitType The implicit type syntax for the parameter
+    /// @param rhs The initializer expression to bind
+    /// @param location The location of the initializer, for reporting diagnostics
+    /// @param exprContext The AST context to use for binding the initializer
+    /// @param typeContext The AST context to use for binding the type
+    /// @param extraFlags Extra flags to apply to AST creation
+    /// @returns A tuple, the first element of which is the bound initializer and the
+    /// second of which is the original type of that expression prior to any conversions
+    /// being performed.
+    ///
     static std::tuple<const Expression*, const Type*> bindImplicitParam(
         const syntax::DataTypeSyntax& implicitType, const ExpressionSyntax& rhs,
         SourceLocation location, const ASTContext& exprContext, const ASTContext& typeContext,
         bitmask<ASTFlags> extraFlags = ASTFlags::None);
 
-    /// Bind a selector expression given an already existing value to select from.
+    /// Bind a selector expression given an already existing value expression to select from.
     static const Expression& bindSelector(Expression& value,
                                           const syntax::ElementSelectSyntax& syntax,
                                           const ASTContext& context);
@@ -203,28 +224,24 @@ public:
     /// @param context The context used for creating expressions.
     /// @param valueExpr The value being checked for membership.
     /// @param expressions Denotes the set to check within. All of the expressions influence
-    /// each other for purposes of finding a common comparison type.
-    ///
+    ///                    each other for purposes of finding a common comparison type.
     /// @param keyword The kind of membership being created, which is used to customize
-    /// any diagnostics produced.
-    ///
+    ///                any diagnostics produced.
     /// @param requireIntegral If set to true, expression types will be restricted to
-    /// be only integral types.
-    ///
+    ///                        be only integral types.
     /// @param unwrapUnpacked If set to true, unpacked arrays will be unwrapped to
-    /// their element types to find the type to check against. Otherwise, all aggregates
-    /// are illegal.
-    ///
+    ///                       their element types to find the type to check against.
+    ///                       Otherwise, all aggregates are illegal.
     /// @param allowOpenRange If set to true, open range expressions will be allowed.
-    /// Otherwise an error will be issued for them.
-    ///
+    ///                       Otherwise an error will be issued for them.
     /// @param allowTypeReferences If set to true the created expressions are allowed to
-    /// be type reference expressions. Otherwise an error will be issued.
-    ///
+    ///                            be type reference expressions. Otherwise an error will
+    ///                            be issued.
     /// @param results A vector that will be filled with the created membership expressions.
     ///
     /// @returns true if all expressions are legal, otherwise false and appropriate
     /// diagnostics are issued.
+    ///
     static bool bindMembershipExpressions(const ASTContext& context, parsing::TokenKind keyword,
                                           bool requireIntegral, bool unwrapUnpacked,
                                           bool allowTypeReferences, bool allowOpenRange,
@@ -241,6 +258,16 @@ public:
 
     /// Converts an expression to be of the given type, following the rules for
     /// implicit conversions, array port slicing, etc.
+    /// @param context The AST context
+    /// @param type The type to convert to
+    /// @param expr The expression being converted
+    /// @param location The location where conversion is happening, for reporting diagnostics
+    /// @param lhsExpr If the conversion is for an output port, this is a pointer to
+    ///                the left-hand side expression. The pointer will be reassigned if
+    ///                array port slicing occurs.
+    /// @param assignFlags If @a lhsExpr is provided, this parameter must also be provided.
+    ///                    It will the @a AssignFlags::SlicedPort flag added to it if array
+    ///                    port slicing occurs.
     static Expression& convertAssignment(const ASTContext& context, const Type& type,
                                          Expression& expr, SourceLocation location,
                                          Expression** lhsExpr = nullptr,
@@ -287,7 +314,7 @@ public:
         SmallVector<std::pair<const ValueSymbol*, const Expression*>>& results,
         EvalContext& evalContext, const Expression* longestStaticPrefix = nullptr) const;
 
-    /// Returns true if this expression can be implicitly assigned to value
+    /// Returns true if this expression can be implicitly assigned to a value
     /// of the given type.
     bool isImplicitlyAssignableTo(Compilation& compilation, const Type& type) const;
 
@@ -297,28 +324,34 @@ public:
     std::optional<bitwidth_t> getEffectiveWidth() const;
 
     /// If this expression is a reference to a symbol, returns a pointer to that symbol.
-    /// Otherwise, returns null. If the expression is a member access of a struct
-    /// or class, returns the member being accessed. If it's a select of an array, returns
-    /// the root array variable. The @a allowPacked argument determines whether selects
-    /// of a packed type are considered a symbol reference or whether to consider only
-    /// unpacked structs and arrays.
+    /// If the expression is a member access of a struct or class, returns the member
+    /// being accessed. If it's a select of an array, returns the root array variable.
+    /// @param allowPacked Determines whether selects of a packed type are considered a
+    ///                    symbol reference or whether to consider only unpacked structs
+    ///                    and arrays.
     const Symbol* getSymbolReference(bool allowPacked = true) const;
 
     /// Returns true if any subexpression of this expression is a hierarchical reference.
     bool hasHierarchicalReference() const;
 
+    /// Casts this expression to the given concrete derived type.
+    /// Asserts that the type is appropriate given this expression's kind.
     template<typename T>
     T& as() {
         SLANG_ASSERT(T::isKind(kind));
         return *static_cast<T*>(this);
     }
 
+    /// Casts this expression to the given concrete derived type.
+    /// Asserts that the type is appropriate given this expression's kind.
     template<typename T>
     const T& as() const {
         SLANG_ASSERT(T::isKind(kind));
         return *static_cast<const T*>(this);
     }
 
+    /// Tries to cast this expression to the given concrete derived type.
+    /// If the type is not appropriate given this expression's kind, returns nullptr.
     template<typename T>
     T* as_if() {
         if (!T::isKind(kind))
@@ -326,6 +359,8 @@ public:
         return static_cast<T*>(this);
     }
 
+    /// Tries to cast this expression to the given concrete derived type.
+    /// If the type is not appropriate given this expression's kind, returns nullptr.
     template<typename T>
     const T* as_if() const {
         if (!T::isKind(kind))
@@ -333,9 +368,11 @@ public:
         return static_cast<const T*>(this);
     }
 
+    /// Visits this expression's concrete derived type via the provided visitor object.
     template<typename TVisitor, typename... Args>
     decltype(auto) visit(TVisitor&& visitor, Args&&... args);
 
+    /// Visits this expression's concrete derived type via the provided visitor object.
     template<typename TVisitor, typename... Args>
     decltype(auto) visit(TVisitor&& visitor, Args&&... args) const;
 

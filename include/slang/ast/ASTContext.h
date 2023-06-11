@@ -195,12 +195,24 @@ SLANG_BITMASK(ASTFlags, NoReference)
 SLANG_ENUM(DimensionKind, DK)
 #undef DK
 
+/// The result of evaluating dimension syntax nodes.
 struct SLANG_EXPORT EvaluatedDimension {
+    /// The kind of dimension indicated by the syntax nodes.
     DimensionKind kind = DimensionKind::Unknown;
+
+    /// The compile-time constant range specifying the dimensions.
     ConstantRange range;
+
+    /// If the dimension is for an associative type, this is a pointer to that type.
+    /// Otherwise nullptr.
     const Type* associativeType = nullptr;
+
+    /// If the dimension is for a queue type, this is the optionally specified
+    /// max queue size.
     uint32_t queueMaxSize = 0;
 
+    /// Indicates whether the dimension is for a range (as opposed to a single
+    /// index or an associative array access, for example).
     bool isRange() const {
         return kind == DimensionKind::Range || kind == DimensionKind::AbbreviatedRange;
     }
@@ -244,8 +256,10 @@ struct SLANG_EXPORT AssertionInstanceDetails {
     bool isRecursive = false;
 };
 
-/// Contains required context for binding syntax nodes with symbols to form
-/// an AST. Expressions, statements, timing controls, constraints, and assertion
+/// @brief Contains required context for binding syntax nodes with symbols to form
+/// an AST.
+///
+/// Expressions, statements, timing controls, constraints, and assertion
 /// items all use this for creation.
 class SLANG_EXPORT ASTContext {
 public:
@@ -297,6 +311,11 @@ public:
     /// property this points to information about that instantiation.
     const AssertionInstanceDetails* assertionInstance = nullptr;
 
+    /// Constructs a new ASTContext instance.
+    /// @param scope The scope in which the AST is being created
+    /// @param lookupLocation The lookup location within the parent
+    ///                       scope where lookups are being performed.
+    /// @param flags Flags that control AST creation
     ASTContext(const Scope& scope, LookupLocation lookupLocation,
                bitmask<ASTFlags> flags = ASTFlags::None) :
         scope(&scope),
@@ -304,63 +323,202 @@ public:
         SLANG_ASSERT(!lookupLocation.getScope() || lookupLocation.getScope() == &scope);
     }
 
+    /// Gets the parent compilation associated with the AST.
     Compilation& getCompilation() const { return scope->getCompilation(); }
-    LookupLocation getLocation() const { return LookupLocation(scope, uint32_t(lookupIndex)); }
-    bool inUnevaluatedBranch() const { return (flags & ASTFlags::UnevaluatedBranch) != 0; }
 
+    /// Gets the lookup location passed to the ASTContext constructor.
+    LookupLocation getLocation() const { return LookupLocation(scope, uint32_t(lookupIndex)); }
+
+    /// Indicates whether the AST creation is happening inside an unevaluated branch.
+    bool inUnevaluatedBranch() const { return flags.has(ASTFlags::UnevaluatedBranch); }
+
+    /// Indicates the kind of driver that each assignment expression created
+    /// using this context should use.
     DriverKind getDriverKind() const;
+
+    /// Gets the parent instance if this context is being used to bind expressions
+    /// for an instantiation.
     const InstanceSymbolBase* getInstance() const;
+
+    /// If this context is within a procedural block, returns a pointer
+    /// to that symbol.
     const ProceduralBlockSymbol* getProceduralBlock() const;
+
+    /// If this context is within a subroutine, returns a pointer to that subroutine.
     const SubroutineSymbol* getContainingSubroutine() const;
+
+    /// Indicates whether AST creation is happening within an always_comb
+    /// or always_latch procedure.
     bool inAlwaysCombLatch() const;
 
+    /// Sets the parent instance associated with the context.
     void setInstance(const InstanceSymbolBase& inst);
+
+    /// Sets the procedural block associated with the context.
     void setProceduralBlock(const ProceduralBlockSymbol& block);
+
+    /// Clears the parent instance and parent procedural block symbol
+    /// associated with the context.
     void clearInstanceAndProc() { instanceOrProc = nullptr; }
+
+    /// Tries to fill the @a assertionInstance member by searching upward through
+    /// parent scopes to find an assertion instantiation.
+    /// @returns The nearest parent instantiation, instance body or checker instance,
+    ///          or nullptr if neither is found.
     const Symbol* tryFillAssertionDetails();
 
+    /// Registers attributes for the given statement.
     void setAttributes(const Statement& stmt,
                        std::span<const syntax::AttributeInstanceSyntax* const> syntax) const;
 
+    /// Registers attributes for the given expression.
     void setAttributes(const Expression& expr,
                        std::span<const syntax::AttributeInstanceSyntax* const> syntax) const;
 
+    /// Registers a driver for the given symbol.
+    /// @param symbol The symbol that is being driven
+    /// @param longestStaticPrefix The portion of the symbol that is being driven
+    /// @param assignFlags Flags that specify how the driver functions
     void addDriver(const ValueSymbol& symbol, const Expression& longestStaticPrefix,
                    bitmask<AssignFlags> assignFlags) const;
 
+    /// @brief Gets the symbol that contains the AST context
+    ///
+    /// @returns Either a parent procedural block or subroutine if one is
+    /// registered, and if not the scope passed to the ASTContext constructor.
     const Symbol& getContainingSymbol() const;
 
+    /// Issues a new diagnostic.
     Diagnostic& addDiag(DiagCode code, SourceLocation location) const;
+
+    /// Issues a new diagnostic.
     Diagnostic& addDiag(DiagCode code, SourceRange sourceRange) const;
 
+    /// Reports an error if the given expression is not integral.
+    /// @returns true if the expression is integral and false otherwise
     bool requireIntegral(const Expression& expr) const;
+
+    /// Reports an error if the given constant value is not integral.
+    /// @returns true if the value is integral and false otherwise
     bool requireIntegral(const ConstantValue& cv, SourceRange range) const;
+
+    /// Reports an error if the given integer has unknowns.
+    /// @returns false if the value has unknowns and true otherwise
     bool requireNoUnknowns(const SVInt& value, SourceRange range) const;
+
+    /// Reports an error if the given integer is not positive or zero.
+    /// @returns true if the value is positive or zero and false otherwise
     bool requirePositive(const SVInt& value, SourceRange range) const;
+
+    /// @brief Reports an error if the given integer is not positive or zero.
+    ///
+    /// If @a value is unset, this method does not report an error.
+    /// @returns true if the value is set and positive or zero and false otherwise
     bool requirePositive(std::optional<int32_t> value, SourceRange range) const;
+
+    /// @brief Reports an error if the given integer is not greater than zero.
+    ///
+    /// If @a value is unset, this method does not report an error.
+    /// @returns true if the value is set and greater than zero and false otherwise
     bool requireGtZero(std::optional<int32_t> value, SourceRange range) const;
+
+    /// Reports an error if the given expression's type is not boolean convertible.
+    /// @returns true if the expression is boolean convertible and false otherwise
     bool requireBooleanConvertible(const Expression& expr) const;
+
+    /// Reports an error if the given width is a valid bit width.
+    /// @returns true if the width is valid as a bit width and false otherwise
     bool requireValidBitWidth(bitwidth_t width, SourceRange range) const;
+
+    /// Reports an error if the given width is a valid bit width.
+    /// @returns A bitwidth if the provided integer is a valid bit width,
+    ///          and std::nullopt otherwise.
     std::optional<bitwidth_t> requireValidBitWidth(const SVInt& value, SourceRange range) const;
 
+    /// @brief Evaluates the provided expression as a constant expression.
+    ///
+    /// If evaluation fails appropriate diagnostics will be issued.
+    /// @returns The result of constant evaluation or an empty value if it failed
     ConstantValue eval(const Expression& expr, bitmask<EvalFlags> extraFlags = {}) const;
+
+    /// @brief Evaluates the provided expression as a constant expression.
+    ///
+    /// If evaluation fails no diagnostics will be issued.
+    /// @returns The result of constant evaluation or an empty value if it failed
     ConstantValue tryEval(const Expression& expr) const;
 
+    /// @brief Evaluates the provided expression as an integral constant expression.
+    ///
+    /// If evaluation fails (or if the expression is not integral to begin with)
+    /// appropriate diagnostics will be issued.
+    ///
+    /// @returns The result of constant evaluation or std::nullopt if it failed
     std::optional<int32_t> evalInteger(const syntax::ExpressionSyntax& syntax,
                                        bitmask<ASTFlags> extraFlags = {}) const;
+
+    /// @brief Evaluates the provided expression as an integral constant expression.
+    ///
+    /// If evaluation fails (or if the expression is not integral to begin with)
+    /// appropriate diagnostics will be issued.
+    ///
+    /// @returns The result of constant evaluation or std::nullopt if it failed
     std::optional<int32_t> evalInteger(const Expression& expr,
                                        bitmask<EvalFlags> extraFlags = {}) const;
+
+    /// Evaluates the given dimension syntax to determine its compile-time
+    /// bounds and other properties.
+    /// @param syntax The dimension syntax node to evaluate
+    /// @param requireRange If true, the dimension syntax must represent a range,
+    ///                     as opposed to a single index or other kind of dimension
+    /// @param isPacked If true, this dimension should be treated as a packed dimension
+    /// @returns Details about the evaluated dimension
     EvaluatedDimension evalDimension(const syntax::VariableDimensionSyntax& syntax,
                                      bool requireRange, bool isPacked) const;
 
+    /// Evaluates the given dimension syntax to determine its compile-time
+    /// bounds and other properties.
+    /// @param syntax The dimension syntax node to evaluate
+    /// @returns Details about the evaluated dimension
     EvaluatedDimension evalPackedDimension(const syntax::VariableDimensionSyntax& syntax) const;
+
+    /// Evaluates the given dimension syntax to determine its compile-time
+    /// bounds and other properties.
+    /// @param syntax The dimension syntax node to evaluate
+    /// @returns Details about the evaluated dimension
     EvaluatedDimension evalPackedDimension(const syntax::ElementSelectSyntax& syntax) const;
+
+    /// Evaluates the given dimension syntax to determine its compile-time
+    /// bounds and other properties.
+    /// @param syntax The dimension syntax node to evaluate
+    /// @returns Details about the evaluated dimension
     EvaluatedDimension evalUnpackedDimension(const syntax::VariableDimensionSyntax& syntax) const;
 
+    /// @brief Checks and unwraps a given property expression syntax node into a
+    /// simple expression syntax pointer.
+    ///
     /// Subroutine argument expressions are parsed as property expressions, since we don't know
     /// up front whether they will be used to instantiate a property or a sequence or are actually
     /// for a subroutine. This method unwraps for the case where we are calling a subroutine.
+    ///
+    /// If the given property expression is actually a real sequence or property expression
+    /// and not just a plain old expression an appropriate diagnostic will be issued.
+    ///
+    /// @returns The unwrapped expression if the given syntax node represents a simple
+    ///          expression, and nullptr otherwise.
     const syntax::ExpressionSyntax* requireSimpleExpr(const syntax::PropertyExprSyntax& expr) const;
+
+    /// @brief Checks and unwraps a given property expression syntax node into a
+    /// simple expression syntax pointer.
+    ///
+    /// Subroutine argument expressions are parsed as property expressions, since we don't know
+    /// up front whether they will be used to instantiate a property or a sequence or are actually
+    /// for a subroutine. This method unwraps for the case where we are calling a subroutine.
+    ///
+    /// If the given property expression is actually a real sequence or property expression
+    /// and not just a plain old expression a diagnostic will be issued with the specified @a code
+    ///
+    /// @returns The unwrapped expression if the given syntax node represents a simple
+    ///          expression, and nullptr otherwise.
     const syntax::ExpressionSyntax* requireSimpleExpr(const syntax::PropertyExprSyntax& expr,
                                                       DiagCode code) const;
 
@@ -372,6 +530,8 @@ public:
     /// instance was expanded to the given diagnostic; otherwise, do nothing.
     void addAssertionBacktrace(Diagnostic& diag) const;
 
+    /// Resets the flags for this context; the @a addedFlags will be added to the flag set,
+    /// and any non-sticky flags will be removed.
     ASTContext resetFlags(bitmask<ASTFlags> addedFlags) const;
 
 private:

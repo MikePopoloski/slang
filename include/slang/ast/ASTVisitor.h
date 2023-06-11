@@ -36,30 +36,47 @@
 
 namespace slang::ast {
 
+/// Contains various helper traits for detecting AST visit methods.
 struct SLANG_EXPORT ASTDetectors {
+    /// Detects whether T has a method of the form handle(Arg)
     template<typename T, typename Arg>
     using handle_t = decltype(std::declval<T>().handle(std::declval<Arg>()));
 
+    /// Detects whether T has an operator(Arg)
     template<typename T, typename Arg>
     using op_t = decltype(std::declval<T>()(std::declval<Arg>()));
 
+    /// Detects whether T has a method of the form getBody()
     template<typename T>
     using getBody_t = decltype(std::declval<T>().getBody());
 
+    /// Detects whether T has a method of the form visitExprs(Arg)
     template<typename T, typename Arg>
     using visitExprs_t = decltype(std::declval<T>().visitExprs(std::declval<Arg>()));
 
+    /// Detects whether T has a method of the form visitStmts(Arg)
     template<typename T, typename Arg>
     using visitStmts_t = decltype(std::declval<T>().visitStmts(std::declval<Arg>()));
 };
 
-/// Use this type as a base class for AST visitors. It will default to
-/// traversing all children of each node. Add implementations for any specific
-/// node types you want to handle.
+/// @brief A base class for AST visitors
+///
+/// This class provides default visitors that can visit each child
+/// of an AST node recursively. Statement and expression trees under
+/// each node will only be visited if the corresponding template argument
+/// is set to true.
+///
+/// You provide custom logic for specific node types by including a
+/// handle(const Type& t) method in your derived class. If you provide
+/// such a handler, by default child nodes of that node will not be
+/// visited -- you can include that behavior by invoking @a visitDefault
+/// in your handler.
+///
 template<typename TDerived, bool VisitStatements, bool VisitExpressions>
-struct ASTVisitor : public ASTDetectors {
+class ASTVisitor : public ASTDetectors {
 #define DERIVED *static_cast<TDerived*>(this)
 public:
+    /// The visit() entry point for visiting AST nodes.
     template<typename T>
     void visit(const T& t) {
         if constexpr (is_detected_v<handle_t, TDerived, T>)
@@ -70,6 +87,8 @@ public:
             visitDefault(t);
     }
 
+    /// The default visit implementation, which is to descend into child nodes.
+    /// You can invoke this from custom node handlers to get the default behavior.
     template<typename T>
     void visitDefault(const T& t) {
         if constexpr (VisitExpressions && is_detected_v<visitExprs_t, T, TDerived>) {
@@ -109,6 +128,16 @@ public:
 #undef DERIVED
 };
 
+/// @brief Creates an ASTVisitor out of the provided handler functions.
+///
+/// For example, to create a visitor that will count all of the BinaryExpressions
+/// in an AST:
+///
+/// @code
+/// int count = 0;
+/// makeVisitor([&](const BinaryExpression&) { count++; })
+/// @endcode
+///
 template<typename... Functions>
 auto makeVisitor(Functions... funcs) {
     struct Result : public Functions..., public ASTVisitor<Result, true, true> {
