@@ -2076,7 +2076,7 @@ struct NetAliasVisitor {
                             context.addDiag(diag::NetAliasNotANet, expr.sourceRange) << sym->name;
                         }
                         else {
-                            auto& nt = sym->as<NetSymbol>().netType;
+                            auto& nt = sym->template as<NetSymbol>().netType;
                             if (!commonNetType) {
                                 commonNetType = &nt;
                             }
