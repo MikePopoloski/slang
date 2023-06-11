@@ -5,14 +5,13 @@
 
 FetchContent_Declare(
   mcss
-  URL https://github.com/MikePopoloski/m.css/releases/download/release-2/mcss.zip
-  URL_HASH MD5=51d4806d2ddb1cc0951ad2ad3c8df5d7
+  URL https://github.com/MikePopoloski/m.css/releases/download/release-4/mcss.zip
+  URL_HASH MD5=0abb2da13b01e89f286d1a2260f305c6
   SOURCE_DIR "${PROJECT_BINARY_DIR}/mcss"
   UPDATE_DISCONNECTED YES)
 FetchContent_MakeAvailable(mcss)
 
-# Find all the public headers of the slang project, the only one we currently
-# document
+# Find all the public headers of the slang project
 file(GLOB_RECURSE SLANG_PUBLIC_HEADERS ${PROJECT_SOURCE_DIR}/include/*.h)
 file(GLOB_RECURSE SLANG_DOX_FILES ${PROJECT_SOURCE_DIR}/docs/*.dox)
 
