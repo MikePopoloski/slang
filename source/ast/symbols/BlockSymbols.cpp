@@ -240,10 +240,10 @@ void StatementBlockSymbol::elaborateVariables(function_ref<void(const Symbol&)> 
     }
 }
 
-ProceduralBlockSymbol::ProceduralBlockSymbol(SourceLocation loc,
-                                             ProceduralBlockKind procedureKind) :
+ProceduralBlockSymbol::ProceduralBlockSymbol(SourceLocation loc, ProceduralBlockKind procedureKind,
+                                             bool isFromAssertion) :
     Symbol(SymbolKind::ProceduralBlock, "", loc),
-    procedureKind(procedureKind) {
+    procedureKind(procedureKind), isFromAssertion(isFromAssertion) {
 }
 
 const Statement& ProceduralBlockSymbol::getBody() const {
@@ -271,11 +271,11 @@ const Statement& ProceduralBlockSymbol::getBody() const {
 }
 
 ProceduralBlockSymbol& ProceduralBlockSymbol::createProceduralBlock(
-    Scope& scope, ProceduralBlockKind kind, SourceLocation location, const MemberSyntax& syntax,
-    const StatementSyntax& stmtSyntax) {
+    Scope& scope, ProceduralBlockKind kind, SourceLocation location, bool isFromAssertion,
+    const MemberSyntax& syntax, const StatementSyntax& stmtSyntax) {
 
     auto& comp = scope.getCompilation();
-    auto result = comp.emplace<ProceduralBlockSymbol>(location, kind);
+    auto result = comp.emplace<ProceduralBlockSymbol>(location, kind, isFromAssertion);
     result->setSyntax(syntax);
     result->setAttributes(scope, syntax.attributes);
     result->stmtSyntax = &stmtSyntax;
@@ -295,19 +295,22 @@ ProceduralBlockSymbol& ProceduralBlockSymbol::createProceduralBlock(
 ProceduralBlockSymbol& ProceduralBlockSymbol::fromSyntax(Scope& scope,
                                                          const ProceduralBlockSyntax& syntax) {
     return createProceduralBlock(scope, SemanticFacts::getProceduralBlockKind(syntax.kind),
-                                 syntax.keyword.location(), syntax, *syntax.statement);
+                                 syntax.keyword.location(), /* isFromAssertion */ false, syntax,
+                                 *syntax.statement);
 }
 
 ProceduralBlockSymbol& ProceduralBlockSymbol::fromSyntax(
     Scope& scope, const ImmediateAssertionMemberSyntax& syntax) {
     return createProceduralBlock(scope, ProceduralBlockKind::Always,
-                                 syntax.getFirstToken().location(), syntax, *syntax.statement);
+                                 syntax.getFirstToken().location(), /* isFromAssertion */ true,
+                                 syntax, *syntax.statement);
 }
 
 ProceduralBlockSymbol& ProceduralBlockSymbol::fromSyntax(
     Scope& scope, const ConcurrentAssertionMemberSyntax& syntax) {
     return createProceduralBlock(scope, ProceduralBlockKind::Always,
-                                 syntax.getFirstToken().location(), syntax, *syntax.statement);
+                                 syntax.getFirstToken().location(), /* isFromAssertion */ true,
+                                 syntax, *syntax.statement);
 }
 
 void ProceduralBlockSymbol::serializeTo(ASTSerializer& serializer) const {

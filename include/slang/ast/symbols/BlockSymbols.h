@@ -59,8 +59,10 @@ private:
 class SLANG_EXPORT ProceduralBlockSymbol : public Symbol {
 public:
     ProceduralBlockKind procedureKind;
+    bool isFromAssertion;
 
-    ProceduralBlockSymbol(SourceLocation loc, ProceduralBlockKind procedureKind);
+    ProceduralBlockSymbol(SourceLocation loc, ProceduralBlockKind procedureKind,
+                          bool isFromAssertion);
 
     const Statement& getBody() const;
     void serializeTo(ASTSerializer& serializer) const;
@@ -95,6 +97,7 @@ private:
 
     static ProceduralBlockSymbol& createProceduralBlock(Scope& scope, ProceduralBlockKind kind,
                                                         SourceLocation location,
+                                                        bool isFromAssertion,
                                                         const syntax::MemberSyntax& syntax,
                                                         const syntax::StatementSyntax& stmtSyntax);
 };

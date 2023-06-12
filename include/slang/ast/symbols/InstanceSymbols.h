@@ -333,6 +333,8 @@ public:
         std::span<const syntax::AttributeInstanceSyntax* const> attributes,
         SmallVectorBase<int32_t>& path, bool isProcedural, bool isFromBind);
 
+    void verifyMembers() const;
+
     void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::CheckerInstance; }

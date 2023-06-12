@@ -1425,7 +1425,7 @@ TEST_CASE("Checker port connections") {
 package p;
     real prq;
     checker c(a, b, output bit c, input real r = prq);
-        initial $display(a, b, r);
+        initial assert(a + b + r > 1);
         always_comb c = 1;
     endchecker
 endpackage
@@ -1457,7 +1457,7 @@ package p;
     real prq;
     bit bc;
     checker c(a, b, output bit c = bc, input real r = prq);
-        initial $display(a, b, r);
+        initial assert(a + b + r > 1);
         always_comb c = 1;
 
         checker d(input untyped);
@@ -2056,4 +2056,63 @@ endchecker : assert_window2
     Compilation compilation;
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Error checking for procedures inside checkers") {
+    auto tree = SyntaxTree::fromText(R"(
+wire clk;
+
+function void foo(); endfunction
+
+checker s;
+    int i;
+    final begin
+        i++;
+    end
+
+    always @(posedge clk) begin end
+
+    initial begin
+        fork join_none
+        #3 i++;
+        @(posedge clk) i++;
+    end
+
+    always_comb begin
+        i <= 3;
+        i = 4;
+        if (i > 3) begin
+            foo();
+        end
+    end
+
+    always_ff begin
+        @(posedge clk) i = 5;
+        fork join_any
+        #3 i++;
+    end
+
+    always_latch begin
+        i++;
+    end
+
+    always_comb disable fork;
+endchecker
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 10);
+    CHECK(diags[0].code == diag::AlwaysInChecker);
+    CHECK(diags[1].code == diag::InvalidStmtInChecker);
+    CHECK(diags[2].code == diag::CheckerTimingControl);
+    CHECK(diags[3].code == diag::InvalidStmtInChecker);
+    CHECK(diags[4].code == diag::CheckerBlockingAssign);
+    CHECK(diags[5].code == diag::InvalidStmtInChecker);
+    CHECK(diags[6].code == diag::CheckerTimingControl);
+    CHECK(diags[7].code == diag::BlockingInAlwaysFF);
+    CHECK(diags[8].code == diag::InvalidStmtInChecker);
+    CHECK(diags[9].code == diag::InvalidStmtInChecker);
 }
