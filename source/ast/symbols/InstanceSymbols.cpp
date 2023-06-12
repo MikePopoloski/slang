@@ -10,6 +10,7 @@
 #include "ParameterBuilder.h"
 
 #include "slang/ast/ASTSerializer.h"
+#include "slang/ast/ASTVisitor.h"
 #include "slang/ast/Compilation.h"
 #include "slang/ast/Definition.h"
 #include "slang/ast/Expression.h"
@@ -1752,6 +1753,154 @@ const Expression* CheckerInstanceSymbol::Connection::getOutputInitialExpr() cons
         }
     }
     return *outputInitialExpr;
+}
+
+class CheckerMemberVisitor : public ASTVisitor<CheckerMemberVisitor, true, true> {
+public:
+    CheckerMemberVisitor(const CheckerInstanceBodySymbol& body) : body(body) {}
+
+    void handle(const ProceduralBlockSymbol& symbol) {
+        // Everything is allowed in final blocks, and implicit procedures created
+        // for asserions should be ignored.
+        if (symbol.procedureKind == ProceduralBlockKind::Final || symbol.isFromAssertion)
+            return;
+
+        if (symbol.procedureKind == ProceduralBlockKind::Always) {
+            body.addDiag(diag::AlwaysInChecker, symbol.location);
+            return;
+        }
+
+        SLANG_ASSERT(!currBlock);
+        currBlock = &symbol;
+        visitDefault(symbol);
+        currBlock = nullptr;
+    }
+
+    template<typename T, typename = std::enable_if_t<std::is_base_of_v<Statement, T>>>
+    void handle(const T& stmt) {
+        if (!currBlock)
+            return;
+
+        auto notAllowed = [&] {
+            auto& diag = body.addDiag(diag::InvalidStmtInChecker, stmt.sourceRange);
+            switch (currBlock->procedureKind) {
+                case ProceduralBlockKind::Initial:
+                    diag << "initial"sv;
+                    break;
+                case ProceduralBlockKind::AlwaysComb:
+                    diag << "always_comb"sv;
+                    break;
+                case ProceduralBlockKind::AlwaysFF:
+                    diag << "always_ff"sv;
+                    break;
+                case ProceduralBlockKind::AlwaysLatch:
+                    diag << "always_latch"sv;
+                    break;
+                default:
+                    SLANG_UNREACHABLE;
+            }
+        };
+
+        auto checkTimed = [&] {
+            auto& timed = stmt.template as<TimedStatement>();
+            switch (timed.timing.kind) {
+                case TimingControlKind::Invalid:
+                case TimingControlKind::SignalEvent:
+                case TimingControlKind::EventList:
+                case TimingControlKind::ImplicitEvent:
+                    return true;
+                default:
+                    body.addDiag(diag::CheckerTimingControl, timed.sourceRange);
+                    return false;
+            }
+        };
+
+        if (currBlock->procedureKind == ProceduralBlockKind::Initial) {
+            switch (stmt.kind) {
+                case StatementKind::Empty:
+                case StatementKind::List:
+                    break;
+                case StatementKind::Timed:
+                    if (!checkTimed())
+                        return;
+                    break;
+                case StatementKind::Block:
+                    if (stmt.template as<BlockStatement>().blockKind !=
+                        StatementBlockKind::Sequential) {
+                        return notAllowed();
+                    }
+                    break;
+                case StatementKind::ImmediateAssertion:
+                case StatementKind::ConcurrentAssertion:
+                case StatementKind::ProceduralChecker:
+                    return;
+                default:
+                    return notAllowed();
+            }
+        }
+        else {
+            switch (stmt.kind) {
+                case StatementKind::Empty:
+                case StatementKind::List:
+                case StatementKind::Return:
+                case StatementKind::Continue:
+                case StatementKind::Break:
+                case StatementKind::Conditional:
+                case StatementKind::Case:
+                case StatementKind::ForLoop:
+                case StatementKind::RepeatLoop:
+                case StatementKind::ForeachLoop:
+                case StatementKind::WhileLoop:
+                case StatementKind::DoWhileLoop:
+                case StatementKind::ForeverLoop:
+                    break;
+                case StatementKind::Timed:
+                    if (!checkTimed())
+                        return;
+                    break;
+                case StatementKind::ExpressionStatement: {
+                    auto& expr = stmt.template as<ExpressionStatement>().expr;
+                    switch (expr.kind) {
+                        case ExpressionKind::Call:
+                            break;
+                        case ExpressionKind::Assignment:
+                            if (!expr.template as<AssignmentExpression>().isNonBlocking() &&
+                                currBlock->procedureKind == ProceduralBlockKind::AlwaysFF) {
+                                body.addDiag(diag::CheckerBlockingAssign, stmt.sourceRange);
+                                return;
+                            }
+                            break;
+                        default:
+                            return notAllowed();
+                    }
+                    break;
+                }
+                case StatementKind::Block:
+                    if (stmt.template as<BlockStatement>().blockKind !=
+                        StatementBlockKind::Sequential) {
+                        return notAllowed();
+                    }
+                    break;
+                case StatementKind::ImmediateAssertion:
+                case StatementKind::ConcurrentAssertion:
+                case StatementKind::ProceduralChecker:
+                    return;
+                default:
+                    return notAllowed();
+            }
+        }
+
+        visitDefault(stmt);
+    }
+
+private:
+    const CheckerInstanceBodySymbol& body;
+    const ProceduralBlockSymbol* currBlock = nullptr;
+};
+
+void CheckerInstanceSymbol::verifyMembers() const {
+    CheckerMemberVisitor visitor(body);
+    body.visit(visitor);
 }
 
 void CheckerInstanceSymbol::serializeTo(ASTSerializer& serializer) const {

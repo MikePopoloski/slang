@@ -245,6 +245,7 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
             conn.getOutputInitialExpr();
 
         visit(symbol.body);
+        symbol.verifyMembers();
     }
 
     void handle(const ClockingBlockSymbol& symbol) {
