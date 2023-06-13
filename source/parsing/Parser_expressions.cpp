@@ -1158,6 +1158,9 @@ TimingControlSyntax* Parser::parseTimingControl() {
                 }
                 case TokenKind::Star:
                     return &factory.implicitEventControl(at, Token(), consume(), Token());
+                case TokenKind::SystemIdentifier:
+                    return &factory.eventControl(at,
+                                                 parsePrimaryExpression(ExpressionOptions::None));
                 default:
                     return &factory.eventControl(at, parseName(NameOptions::NoClassScope));
             }

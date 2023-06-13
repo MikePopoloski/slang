@@ -222,7 +222,8 @@ public:
         }
 
         if (!comp.getGlobalClocking(*context.scope)) {
-            context.addDiag(diag::NoGlobalClocking, range);
+            if (!context.scope->isUninstantiated())
+                context.addDiag(diag::NoGlobalClocking, range);
             return comp.getErrorType();
         }
 
