@@ -261,14 +261,14 @@ IEEE 1800-2017 SystemVerilog Language Reference Manual (LRM).
 
 {{w:15%}} LRM | Feature | {{w:15%}} Supported
 --- | ------- | ---------
-{{m-danger}} 17.2 | Checker declaration | no
-{{m-danger}} 17.3 | Checker instantiation | no
-{{m-danger}} 17.4 | Context inference | no
-{{m-danger}} 17.5 | Checker procedures | no
-{{m-danger}} 17.6 | Covergroups in checkers | no
-{{m-danger}} 17.7 | Checker variables | no
-{{m-danger}} 17.8 | Functions in checkers | no
-{{m-danger}} 17.9 | Complex checker example | no
+{{m-success}} 17.2 | Checker declaration | v4.0
+{{m-success}} 17.3 | Checker instantiation | v4.0
+{{m-success}} 17.4 | Context inference | v4.0
+{{m-success}} 17.5 | Checker procedures | v4.0
+{{m-success}} 17.6 | Covergroups in checkers | v4.0
+{{m-success}} 17.7 | Checker variables | v4.0
+{{m-success}} 17.8 | Functions in checkers | v4.0
+{{m-success}} 17.9 | Complex checker example | v4.0
 
 ## 18. Constrained random value generation
 
