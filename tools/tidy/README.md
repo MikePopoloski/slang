@@ -4,8 +4,8 @@ A SystemVerilog linter
 
 ## Configuration File
 
-Slang Tidy can be configured using a `.slang-tidy` file located on the root of the project
-or by providing the path of the file using `--config-file`.
+Slang Tidy can be configured using a `.slang-tidy`. This file can be provided using the `--config-file` argument or the 
+`slang-tidy` tool will search for it from the path where it has been called until the root directory.
 
 ### Configuration file grammar
 
@@ -26,7 +26,7 @@ config_name           ::= identifier
 config_value          ::= identifier
 identifier            ::= {A-Za-z}+
 EOL                   ::= '\n' | '\r' | '\r\n'
-END                   ::= EOL | EOF
+END                   ::= EOL* | EOF
 ```
 
 ### Configuration file example
