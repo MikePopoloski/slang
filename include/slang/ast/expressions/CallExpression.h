@@ -57,6 +57,7 @@ public:
 
     std::string_view getSubroutineName() const;
     SubroutineKind getSubroutineKind() const;
+    bool hasOutputArgs() const;
 
     ConstantValue evalImpl(EvalContext& context) const;
     std::optional<bitwidth_t> getEffectiveWidthImpl() const;

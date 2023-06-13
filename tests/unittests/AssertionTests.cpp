@@ -2202,3 +2202,40 @@ endmodule
     CHECK(diags[1].code == diag::BlockingAssignToFreeVar);
     CHECK(diags[2].code == diag::BlockingAssignToFreeVar);
 }
+
+TEST_CASE("Checker function restrictions") {
+    auto tree = SyntaxTree::fromText(R"(
+int i;
+
+function automatic int f1(output int o);
+    return 1;
+endfunction
+
+function automatic int f2(const ref int o);
+    return 1;
+endfunction
+
+module m;
+    int j;
+    checker check1(bit a, b, event clk);
+        int k;
+        always_comb begin
+            i = f1(i);
+            j = f1(i);
+            k = f1(i);
+            k = f2(i);
+        end
+    endchecker
+
+    wire clk;
+    check1 c(1, 0, clk);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::CheckerFuncArg);
+}
