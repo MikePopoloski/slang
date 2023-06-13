@@ -13,7 +13,7 @@
 
 #include "slang/util/OS.h"
 
-TidyConfigParser::TidyConfigParser(const std::string_view path) {
+TidyConfigParser::TidyConfigParser(const std::filesystem::path& path) {
     parserState = ParserState::Initial;
     filePath = path;
     fileStream << std::ifstream(filePath).rdbuf();
@@ -42,15 +42,18 @@ char TidyConfigParser::nextChar() {
 #if defined(_WIN32)
     if (c == '\r' && stream.peek() == '\n') {
         stream >> std::noskipws >> c;
-        line++
+        col = 0;
+        line++;
     }
 #elif defined(_MACOS)
     if (c == '\r') {
         c = '\n';
+        col = 0;
         line++;
     }
 #else
     if (c == '\n') {
+        col = 0;
         line++;
     }
 #endif
@@ -58,7 +61,24 @@ char TidyConfigParser::nextChar() {
 }
 
 inline char TidyConfigParser::peekChar() {
+#if defined(_WIN32)
+    char ret = fileStream.peek();
+    if (ret == '\r') {
+        fileStream.get();
+        if (fileStream.peek() == '\n') {
+            ret = '\n';
+        }
+        fileStream.unget();
+    }
+    return ret;
+#elif defined(_MACOS)
+    char ret = fileStream.peek();
+    if (ret == '\r')
+        ret = '\n';
+    return ret;
+#else
     return static_cast<char>(fileStream.peek());
+#endif
 }
 
 void TidyConfigParser::parseFile() {
@@ -93,8 +113,8 @@ void TidyConfigParser::parseInitial() {
     }
 
     if (currentChar != ':')
-        reportErrorAndExit(
-            fmt::format("Expected token: ':', found: ({}){}", +currentChar, currentChar));
+        reportErrorAndExit(fmt::format("Expected token: ':', found: (ASCIICode: {}){}",
+                                       +currentChar, currentChar));
 
     if (auto keyword = keywords.find(str); keyword != keywords.end()) {
         switch (keyword->second) {
@@ -136,6 +156,8 @@ void TidyConfigParser::parseChecks() {
             toggleAllChecks(TidyConfig::CheckStatus::ENABLED);
             currentChar = nextChar();
             if (currentChar == '\n' || currentChar == 0) {
+                while (peekChar() == '\n')
+                    nextChar();
                 parserState = TidyConfigParser::ParserState::Initial;
                 return;
             }
@@ -156,9 +178,6 @@ void TidyConfigParser::parseChecks() {
             reportErrorAndExit(fmt::format("Expected '-' or '*' or a letter but found: ({}){}",
                                            +currentChar, currentChar));
         }
-
-        if (ruleParsed)
-            continue;
 
         // Parse second char
         currentChar = nextChar();
@@ -181,6 +200,8 @@ void TidyConfigParser::parseChecks() {
         if (ruleParsed) {
             currentChar = nextChar();
             if (currentChar == '\n' || currentChar == 0) {
+                while (peekChar() == '\n')
+                    nextChar();
                 parserState = TidyConfigParser::ParserState::Initial;
                 return;
             }
@@ -226,6 +247,8 @@ void TidyConfigParser::parseChecks() {
                 checkName.push_back(currentChar);
             }
             else if (currentChar == '\n' || currentChar == 0) {
+                while (peekChar() == '\n')
+                    nextChar();
                 if (!checkParsed)
                     toggleCheck(checkGroup, checkName, newCheckState);
                 parserState = ParserState::Initial;
@@ -274,6 +297,8 @@ void TidyConfigParser::parseCheckConfigs() {
                 optionValue.push_back(currentChar);
             }
             else if (currentChar == '\n' || currentChar == 0) {
+                while (peekChar() == '\n')
+                    nextChar();
                 setCheckConfig(optionName, optionValue);
                 parserState = ParserState::Initial;
                 return;
@@ -290,7 +315,7 @@ void TidyConfigParser::toggleAllChecks(TidyConfig::CheckStatus status) {
 }
 
 void TidyConfigParser::toggleAllGroupChecks(const std::string& groupName,
-                                               TidyConfig::CheckStatus status) {
+                                            TidyConfig::CheckStatus status) {
     auto kind = slang::tidyKindFromStr(groupName);
     if (!kind)
         reportErrorAndExit(fmt::format("Group {} does not exist", groupName));
@@ -299,7 +324,7 @@ void TidyConfigParser::toggleAllGroupChecks(const std::string& groupName,
 }
 
 void TidyConfigParser::toggleCheck(const std::string& groupName, const std::string& checkName,
-                                    TidyConfig::CheckStatus status) {
+                                   TidyConfig::CheckStatus status) {
     if (checkName.empty()) {
         reportWarning(fmt::format(
             "Empty check name in group {0}, you can toggle the whole group with {0}-*", groupName));

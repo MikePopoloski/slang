@@ -45,7 +45,7 @@ void TidyConfig::toggleGroup(slang::TidyKind kind, CheckStatus status) {
 }
 
 bool TidyConfig::toggleCheck(slang::TidyKind kind, const std::string& checkName,
-                              CheckStatus status) {
+                             CheckStatus status) {
     auto registeredChecks = Registry::getRegisteredChecks();
     if (std::find(registeredChecks.begin(), registeredChecks.end(), checkName) ==
         registeredChecks.end()) {

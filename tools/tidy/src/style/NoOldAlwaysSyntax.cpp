@@ -26,13 +26,14 @@ struct MainVisitor : public ASTVisitor<MainVisitor, true, true> {
         }
     }
 };
-} // namespace no_old_always_comb_syntax
+} // namespace no_old_always_syntax
 
 using namespace no_old_always_syntax;
 
 class NoOldAlwaysSyntax : public TidyCheck {
 public:
-    [[maybe_unused]] explicit NoOldAlwaysSyntax(const TidyConfig::CheckConfigs& config, TidyKind kind) :
+    [[maybe_unused]] explicit NoOldAlwaysSyntax(const TidyConfig::CheckConfigs& config,
+                                                TidyKind kind) :
         TidyCheck(config, kind) {}
 
     bool check(const RootSymbol& root) override {

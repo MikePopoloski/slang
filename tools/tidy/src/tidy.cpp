@@ -16,6 +16,9 @@
 #include "slang/driver/Driver.h"
 #include "slang/util/Version.h"
 
+/// Performs a search for the .slang-tidy file on the current directory. If the file is not found,
+/// tries on the parent directory until the root.
+std::optional<std::filesystem::path> project_slang_tidy_config();
 using namespace slang;
 
 int main(int argc, char** argv) {
@@ -61,6 +64,9 @@ int main(int argc, char** argv) {
             slang::OS::printE(fmt::format("the path provided for the config file does not exist {}",
                                           tidyConfigFile.value()));
         tidyConfig = TidyConfigParser(tidyConfigFile.value()).getConfig();
+    }
+    else if (auto path = project_slang_tidy_config()) {
+        tidyConfig = TidyConfigParser(path.value()).getConfig();
     }
 
     // Print (short)descriptions of the checks
@@ -131,4 +137,21 @@ int main(int argc, char** argv) {
     }
 
     return ret_code;
+}
+
+std::optional<std::filesystem::path> project_slang_tidy_config() {
+    std::optional<std::filesystem::path> ret = {};
+    auto cwd = std::filesystem::current_path();
+    while (cwd != cwd.root_path()) {
+        if (exists(cwd / ".slang-tidy")) {
+            ret = cwd / ".slang-tidy";
+            break;
+        }
+        cwd = cwd.parent_path();
+    }
+    // Checks if the .slang-tidy is on the root path
+    if (!ret.has_value() && exists(std::filesystem::path("/.slang-tidy"))) {
+        ret = std::filesystem::path("/.slang-tidy");
+    }
+    return ret;
 }
