@@ -147,11 +147,21 @@ TEST_CASE("TidyParser: Checks and CheckConfigs") {
     auto config_str = std::string(R"(Checks:
         -synthesis-only-assigned-on-reset,
         -style-enforce-port-suffix
+
+
+
+
     CheckConfigs:
         clkName: clk,
         resetIsActiveHigh: false,
         inputPortSuffix: _k,
-        inputPortSuffix: _p)");
+        inputPortSuffix: _p
+
+
+
+
+
+)");
     TidyConfigParser parser(config_str);
 
     auto config = parser.getConfig();

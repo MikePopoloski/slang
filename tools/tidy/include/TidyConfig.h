@@ -55,7 +55,7 @@ private:
     /// Disables or enables a particular check implemented in the TidyKind provided based on status.
     /// It will return false if the check do not exist.
     [[nodiscard]] bool toggleCheck(slang::TidyKind kind, const std::string& checkName,
-                                    CheckStatus status);
+                                   CheckStatus status);
 
     /// Sets the value of a check config. Will throw an invalid_argument exception if the type of
     /// value doesn't match the config type
