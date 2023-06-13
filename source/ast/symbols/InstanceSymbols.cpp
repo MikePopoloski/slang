@@ -1776,6 +1776,43 @@ public:
         currBlock = nullptr;
     }
 
+    void handle(const VariableSymbol& symbol) {
+        inAssignmentRhs = true;
+        visitDefault(symbol);
+        inAssignmentRhs = false;
+    }
+
+    void handle(const AssignmentExpression& expr) {
+        // Special checking only applies to assignments to
+        // checker variables.
+        if (auto sym = expr.left().getSymbolReference()) {
+            auto scope = sym->getParentScope();
+            while (scope) {
+                auto& parentSym = scope->asSymbol();
+                if (parentSym.kind == SymbolKind::CheckerInstanceBody) {
+                    expr.left().visit(*this);
+
+                    auto prev = std::exchange(inAssignmentRhs, true);
+                    expr.right().visit(*this);
+                    inAssignmentRhs = prev;
+                    return;
+                }
+
+                if (parentSym.kind == SymbolKind::InstanceBody)
+                    break;
+
+                scope = parentSym.getParentScope();
+            }
+        }
+
+        visitDefault(expr);
+    }
+
+    void handle(const CallExpression& expr) {
+        if (inAssignmentRhs && expr.hasOutputArgs())
+            body.addDiag(diag::CheckerFuncArg, expr.sourceRange);
+    }
+
     template<typename T, typename = std::enable_if_t<std::is_base_of_v<Statement, T>>>
     void handle(const T& stmt) {
         if (!currBlock)
@@ -1896,6 +1933,7 @@ public:
 private:
     const CheckerInstanceBodySymbol& body;
     const ProceduralBlockSymbol* currBlock = nullptr;
+    bool inAssignmentRhs = false;
 };
 
 void CheckerInstanceSymbol::verifyMembers() const {

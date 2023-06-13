@@ -803,6 +803,16 @@ SubroutineKind CallExpression::getSubroutineKind() const {
     return symbol.subroutineKind;
 }
 
+bool CallExpression::hasOutputArgs() const {
+    if (subroutine.index() == 1) {
+        auto& callInfo = std::get<1>(subroutine);
+        return callInfo.subroutine->hasOutputArgs;
+    }
+
+    const SubroutineSymbol& symbol = *std::get<0>(subroutine);
+    return symbol.hasOutputArgs();
+}
+
 void CallExpression::serializeTo(ASTSerializer& serializer) const {
     if (subroutine.index() == 1) {
         auto& callInfo = std::get<1>(subroutine);

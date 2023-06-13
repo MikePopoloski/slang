@@ -481,6 +481,7 @@ error InvalidStmtInChecker "statement is not allowed in '{}' procedure inside a 
 error AlwaysInChecker "always procedures are not allowed in checkers (use always_comb, always_latch, or always_ff)"
 error CheckerTimingControl "procedural timing control statements in checkers can only use event controls"
 error CheckerBlockingAssign "blocking assignments in checkers can only occur in always_comb and always_latch procedures"
+error CheckerFuncArg "cannot call a function with output, inout, or ref arguments in a checker variable assignment"
 error NetAliasWidthMismatch "all aliased nets must have the same width; expression has width of {}, previously seen width was {}"
 error NetAliasHierarchical "cannot use hierarchical references in net alias statements"
 error NetAliasNotANet "'{}' is not a net and so cannot be used in a net alias statement"
