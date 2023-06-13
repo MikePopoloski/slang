@@ -2172,3 +2172,33 @@ endchecker : data_legal_with_loc
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Checker variable errors") {
+    auto tree = SyntaxTree::fromText(R"(
+checker check1(bit a, b, event clk);
+    rand bit x, y, z, v;
+    assign x = a & b; // Illegal
+    always_comb
+        y = a & b; // Illegal
+    always_ff @clk
+        z <= a & b; // OK
+
+    initial v = 1'b0; // Illegal
+    bit w = 1'b0; // OK
+endchecker : check1
+
+module m;
+    wire clk;
+    check1 c(1, 0, clk);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::BlockingAssignToFreeVar);
+    CHECK(diags[1].code == diag::BlockingAssignToFreeVar);
+    CHECK(diags[2].code == diag::BlockingAssignToFreeVar);
+}

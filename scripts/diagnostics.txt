@@ -581,6 +581,7 @@ error AutoFromNonProcedural "cannot refer to automatic variable '{}' from non-pr
 error AutoFromNonBlockingTiming "cannot refer to automatic variable '{}' from intra-assignment event control of nonblocking assignment"
 error CantModifyConst "constant '{}' is not modifiable"
 error AssignmentToConstVar "cannot assign to read-only variable '{}'"
+error BlockingAssignToFreeVar "continuous assignments and blocking procedural assignments to free checker variables are not allowed"
 error EmptyConcatNotAllowed "concatenation cannot be empty"
 error TimingControlNotAllowed "timing control is not allowed in this context"
 error NewArrayTarget "new array expression can only be used in an assignment to a dynamic array type"
