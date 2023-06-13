@@ -423,7 +423,7 @@ token oneStep
 
 EventControl base=TimingControl
 token at
-Name eventName
+Expression eventName
 
 IffEventClause
 token iff

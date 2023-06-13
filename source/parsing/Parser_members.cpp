@@ -2388,11 +2388,15 @@ MemberSyntax& Parser::parseClockingDeclaration(AttrList attributes) {
     Token at = expect(TokenKind::At);
 
     EventExpressionSyntax* event;
-    if (peek(TokenKind::OpenParenthesis))
+    if (peek(TokenKind::OpenParenthesis)) {
         event = &parseEventExpression();
+    }
+    else if (peek(TokenKind::SystemIdentifier)) {
+        event = &factory.signalEventExpression({}, parsePrimaryExpression(ExpressionOptions::None),
+                                               nullptr);
+    }
     else {
-        auto& name = parseName();
-        event = &factory.signalEventExpression({}, name, nullptr);
+        event = &factory.signalEventExpression({}, parseName(), nullptr);
     }
 
     Token semi = expect(TokenKind::Semicolon);
