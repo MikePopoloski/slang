@@ -298,8 +298,9 @@ void Scope::addMembers(const SyntaxNode& syntax) {
                     break;
             }
 
-            SmallVector<const ValueSymbol*> symbols;
-            VariableSymbol::fromSyntax(compilation, dataDecl, *this, symbols);
+            SmallVector<VariableSymbol*> symbols;
+            VariableSymbol::fromSyntax(compilation, dataDecl, *this, /* isCheckerFreeVar */ false,
+                                       symbols);
             for (auto symbol : symbols)
                 addMember(*symbol);
             break;
@@ -312,6 +313,14 @@ void Scope::addMembers(const SyntaxNode& syntax) {
             NetSymbol::fromSyntax(*this, syntax.as<NetDeclarationSyntax>(), nets);
             for (auto net : nets)
                 addMember(*net);
+            break;
+        }
+        case SyntaxKind::CheckerDataDeclaration: {
+            SmallVector<VariableSymbol*> symbols;
+            VariableSymbol::fromSyntax(compilation, *syntax.as<CheckerDataDeclarationSyntax>().data,
+                                       *this, /* isCheckerFreeVar */ true, symbols);
+            for (auto symbol : symbols)
+                addMember(*symbol);
             break;
         }
         case SyntaxKind::ParameterDeclarationStatement: {
@@ -525,7 +534,6 @@ void Scope::addMembers(const SyntaxNode& syntax) {
             addMember(
                 AnonymousProgramSymbol::fromSyntax(*this, syntax.as<AnonymousProgramSyntax>()));
             break;
-        case SyntaxKind::CheckerDataDeclaration:
         case SyntaxKind::ExternModuleDecl:
         case SyntaxKind::ExternUdpDecl:
         case SyntaxKind::WildcardPortList:

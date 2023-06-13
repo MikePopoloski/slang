@@ -33,9 +33,13 @@ enum class SLANG_EXPORT VariableFlags : uint16_t {
     ImmutableCoverageOption = 1 << 2,
 
     /// The variable is a formal argument of an overridden sample method in a covergroup.
-    CoverageSampleFormal = 1 << 3
+    CoverageSampleFormal = 1 << 3,
+
+    /// This is a checker "free variable", which may behave nondeterministically
+    /// in simulation and participate differently in formal verification.
+    CheckerFreeVariable = 1 << 4
 };
-SLANG_BITMASK(VariableFlags, CoverageSampleFormal)
+SLANG_BITMASK(VariableFlags, CheckerFreeVariable)
 
 /// Represents a variable declaration.
 class SLANG_EXPORT VariableSymbol : public ValueSymbol {
@@ -51,7 +55,8 @@ public:
     /// this might actually construct net symbols if the data type syntax refers to
     /// a user defined net type or alias.
     static void fromSyntax(Compilation& compilation, const syntax::DataDeclarationSyntax& syntax,
-                           const Scope& scope, SmallVectorBase<const ValueSymbol*>& results);
+                           const Scope& scope, bool isCheckerFreeVar,
+                           SmallVectorBase<VariableSymbol*>& results);
 
     static VariableSymbol& fromSyntax(Compilation& compilation,
                                       const syntax::ForVariableDeclarationSyntax& syntax,

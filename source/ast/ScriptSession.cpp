@@ -45,9 +45,9 @@ ConstantValue ScriptSession::eval(std::string_view text) {
             scope.addMembers(node);
             return nullptr;
         case SyntaxKind::DataDeclaration: {
-            SmallVector<const ValueSymbol*> symbols;
+            SmallVector<VariableSymbol*> symbols;
             VariableSymbol::fromSyntax(compilation, node.as<DataDeclarationSyntax>(), scope,
-                                       symbols);
+                                       /* isCheckerFreeVar */ false, symbols);
 
             for (auto symbol : symbols) {
                 scope.addMember(*symbol);

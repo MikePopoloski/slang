@@ -46,7 +46,8 @@ static VariableLifetime getDefaultLifetime(const Scope& scope) {
 }
 
 void VariableSymbol::fromSyntax(Compilation& compilation, const DataDeclarationSyntax& syntax,
-                                const Scope& scope, SmallVectorBase<const ValueSymbol*>& results) {
+                                const Scope& scope, bool isCheckerFreeVar,
+                                SmallVectorBase<VariableSymbol*>& results) {
     bool isConst = false;
     bool inProceduralContext = scope.isProceduralContext();
     std::optional<VariableLifetime> lifetime;
@@ -95,6 +96,9 @@ void VariableSymbol::fromSyntax(Compilation& compilation, const DataDeclarationS
         if (isConst)
             variable->flags |= VariableFlags::Const;
 
+        if (isCheckerFreeVar)
+            variable->flags |= VariableFlags::CheckerFreeVariable;
+
         if (isInIface)
             variable->getDeclaredType()->addFlags(DeclaredTypeFlags::InterfaceVariable);
 
@@ -106,7 +110,7 @@ void VariableSymbol::fromSyntax(Compilation& compilation, const DataDeclarationS
         }
 
         // Constants require an initializer.
-        if (isConst && !declarator->initializer)
+        if (isConst && !declarator->initializer && !isCheckerFreeVar)
             scope.addDiag(diag::ConstVarNoInitializer, declarator->name.range());
     }
 }
@@ -153,6 +157,10 @@ void VariableSymbol::serializeTo(ASTSerializer& serializer) const {
             str += "compiler_generated,";
         if (flags.has(VariableFlags::ImmutableCoverageOption))
             str += "imm_cov_option,";
+        if (flags.has(VariableFlags::CoverageSampleFormal))
+            str += "formal_cov_sample,";
+        if (flags.has(VariableFlags::CheckerFreeVariable))
+            str += "checker_free,";
         if (!str.empty()) {
             str.pop_back();
             serializer.write("flags", str);
