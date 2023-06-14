@@ -29,12 +29,6 @@ struct MainVisitor : public ASTVisitor<MainVisitor, true, false> {
         if (symbol->name == config.clkName || symbol->name == config.resetName)
             return;
 
-        // TODO: Change this to std::basic_char<>::ends_with one we have c++20
-        auto ends_with = [](std::string_view name, std::string_view suffix) {
-            return name.size() >= suffix.size() &&
-                   !name.compare(name.size() - suffix.size(), suffix.size(), suffix);
-        };
-
         std::string_view suffix;
 
         if (port.direction == slang::ast::ArgumentDirection::In)
@@ -44,7 +38,7 @@ struct MainVisitor : public ASTVisitor<MainVisitor, true, false> {
         else
             suffix = config.inoutPortSuffix;
 
-        if (!ends_with(symbol->name, suffix)) {
+        if (!symbol->name.ends_with(suffix)) {
             diags.add(diag::EnforcePortSuffix, port.location) << symbol->name << suffix;
         }
     }
