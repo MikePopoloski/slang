@@ -443,10 +443,11 @@ public:
                                     SourceRange sourceRange);
 
     /// Notes the existence of an extern primitive declaration.
-    void noteExternPrimitive(const syntax::ExternUdpDeclSyntax& syntax);
+    void noteExternPrimitive(const Scope& scope, const syntax::ExternUdpDeclSyntax& syntax);
 
     /// Performs a lookup for an extern primitive declaration of the given name.
-    const syntax::ExternUdpDeclSyntax* getExternPrimitive(std::string_view name) const;
+    const syntax::ExternUdpDeclSyntax* getExternPrimitive(std::string_view name,
+                                                          const Scope& scope) const;
 
     /// Reports an error about a missing implementation if there exists an
     /// extern primitive declaration for the given name.
@@ -820,7 +821,8 @@ private:
         externModuleMap;
 
     // The name map for extern user-defined primitive declarations.
-    flat_hash_map<std::string_view, const syntax::ExternUdpDeclSyntax*> externUdpMap;
+    flat_hash_map<std::tuple<std::string_view, const Scope*>, const syntax::ExternUdpDeclSyntax*>
+        externUdpMap;
 
     // Storage for system subroutine instances.
     std::vector<std::unique_ptr<SystemSubroutine>> subroutineStorage;
