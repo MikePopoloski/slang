@@ -538,7 +538,7 @@ void Scope::addMembers(const SyntaxNode& syntax) {
             compilation.noteExternModule(*this, syntax.as<ExternModuleDeclSyntax>());
             break;
         case SyntaxKind::ExternUdpDecl:
-            compilation.noteExternPrimitive(syntax.as<ExternUdpDeclSyntax>());
+            compilation.noteExternPrimitive(*this, syntax.as<ExternUdpDeclSyntax>());
             break;
         case SyntaxKind::WildcardPortList:
             addDiag(diag::NotYetSupported, syntax.sourceRange());

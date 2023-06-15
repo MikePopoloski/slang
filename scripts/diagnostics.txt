@@ -993,6 +993,8 @@ error BindTypeParamNotFound "bind type parameter '{}' resolves to {} which canno
 error BindTypeParamMismatch "bind type parameter '{}' resolves to {} in source scope but {} in target scope"
 error MissingTimeScale "design element does not have a time scale defined but others in the design do"
 error MissingExternModuleImpl "missing implementation for extern {} '{}'"
+error ExternDeclMismatchImpl "extern {} '{}' does not match implementation"
+error ExternDeclMismatchPrev "extern {} '{}' does not match previous extern definition"
 warning unused-def UnusedDefinition "{} definition is unused"
 warning unused-net UnusedNet "unused net '{}'"
 warning unused-implicit-net UnusedImplicitNet "implicit net '{}' is unused elsewhere"

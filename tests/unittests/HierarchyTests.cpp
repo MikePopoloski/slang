@@ -2115,3 +2115,65 @@ endmodule
     CHECK(diags[3].code == diag::MissingExternModuleImpl);
     CHECK(diags[4].code == diag::MissingExternModuleImpl);
 }
+
+TEST_CASE("Extern module/primitive mismatch errors") {
+    auto tree = SyntaxTree::fromText(R"(
+package pack; endpackage
+
+extern module m1;
+extern interface m1;
+
+module m1();
+endmodule
+
+extern module m2 #(parameter int i = 1)(input a, interface b);
+extern module m2 #(parameter int i = 2)(input a, interface b);
+
+module automatic m2 import pack::*; #(parameter int i = 1)(input a, interface b);
+endmodule
+
+extern primitive p1(a, b);
+extern primitive p1(a, b, c);
+
+primitive p1(output a, input b);
+    table 0:0; endtable
+endprimitive
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 5);
+    CHECK(diags[0].code == diag::ExternDeclMismatchImpl);
+    CHECK(diags[1].code == diag::ExternDeclMismatchPrev);
+    CHECK(diags[2].code == diag::ExternDeclMismatchPrev);
+    CHECK(diags[3].code == diag::ExternDeclMismatchImpl);
+    CHECK(diags[4].code == diag::ExternDeclMismatchPrev);
+}
+
+TEST_CASE("Extern module/primitive redefinition errors") {
+    auto tree = SyntaxTree::fromText(R"(
+extern module m1;
+extern primitive m1(a, b);
+
+extern primitive p1(a, b);
+extern module p1;
+
+module p1; endmodule
+
+primitive m1(output a, input b);
+    table 0:0; endtable
+endprimitive
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 4);
+    CHECK(diags[0].code == diag::Redefinition);
+    CHECK(diags[1].code == diag::Redefinition);
+    CHECK(diags[2].code == diag::Redefinition);
+    CHECK(diags[3].code == diag::Redefinition);
+}

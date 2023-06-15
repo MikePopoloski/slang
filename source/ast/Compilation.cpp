@@ -458,13 +458,46 @@ const Definition* Compilation::getDefinition(const ModuleDeclarationSyntax& synt
     return nullptr;
 }
 
-template<typename T, typename U>
-static void reportRedefinition(const Scope& scope, const T& newSym, const U& oldSym,
-                               DiagCode code = diag::Redefinition) {
+template<typename T>
+static void reportRedefinition(const Scope& scope, const T& newSym, SourceLocation oldLoc,
+                               DiagCode code) {
     if (!newSym.name.empty()) {
         auto& diag = scope.addDiag(code, newSym.location);
         diag << newSym.name;
-        diag.addNote(diag::NotePreviousDefinition, oldSym.location);
+        diag.addNote(diag::NotePreviousDefinition, oldLoc);
+    }
+}
+
+static void checkExternModMatch(const Scope& scope, const ModuleHeaderSyntax& externNode,
+                                const ModuleHeaderSyntax& prevNode, DiagCode code) {
+    auto isEmptyPortList = [](const PortListSyntax* pls) {
+        return !pls || (pls->kind == SyntaxKind::NonAnsiPortList &&
+                        pls->as<NonAnsiPortListSyntax>().ports.empty());
+    };
+
+    bool portsMatch;
+    if (bool(externNode.ports) == bool(prevNode.ports))
+        portsMatch = !externNode.ports || externNode.ports->isEquivalentTo(*prevNode.ports);
+    else
+        portsMatch = isEmptyPortList(externNode.ports) && isEmptyPortList(prevNode.ports);
+
+    if (!portsMatch || externNode.moduleKeyword.kind != prevNode.moduleKeyword.kind ||
+        bool(externNode.parameters) != bool(prevNode.parameters) ||
+        (externNode.parameters && !externNode.parameters->isEquivalentTo(*prevNode.parameters))) {
+
+        auto& diag = scope.addDiag(code, externNode.sourceRange());
+        diag << externNode.moduleKeyword.valueText() << externNode.name.valueText();
+        diag.addNote(diag::NotePreviousDefinition, prevNode.sourceRange());
+    }
+}
+
+static void checkExternUdpMatch(const Scope& scope, const UdpPortListSyntax& externNode,
+                                const UdpPortListSyntax& prevNode, std::string_view name,
+                                DiagCode code) {
+    if (!externNode.isEquivalentTo(prevNode)) {
+        auto& diag = scope.addDiag(code, externNode.sourceRange());
+        diag << "primitive"sv << name;
+        diag.addNote(diag::NotePreviousDefinition, prevNode.sourceRange());
     }
 }
 
@@ -484,14 +517,20 @@ void Compilation::createDefinition(const Scope& scope, LookupLocation location,
     auto targetScope = scope.asSymbol().kind == SymbolKind::CompilationUnit ? root.get() : &scope;
     auto [it, inserted] = definitionMap.emplace(std::tuple(def->name, targetScope), def);
     if (!inserted) {
-        reportRedefinition(scope, *def, *it->second, diag::DuplicateDefinition);
+        reportRedefinition(scope, *def, it->second->location, diag::DuplicateDefinition);
         return;
     }
 
     if (targetScope == root.get()) {
         topDefinitions[def->name].first = def;
         if (auto primIt = udpMap.find(def->name); primIt != udpMap.end())
-            reportRedefinition(scope, *def, *primIt->second);
+            reportRedefinition(scope, *def, primIt->second->location, diag::Redefinition);
+        else if (auto prim = getExternPrimitive(def->name, scope))
+            reportRedefinition(scope, *def, prim->name.location(), diag::Redefinition);
+        else if (auto externMod = getExternModule(def->name, scope)) {
+            checkExternModMatch(scope, *externMod->header, *syntax.header,
+                                diag::ExternDeclMismatchImpl);
+        }
 
         checkElemTimeScale(def->timeScale, syntax.header->name.range());
     }
@@ -544,10 +583,20 @@ const PrimitiveSymbol& Compilation::createPrimitive(const Scope& scope,
     if (!prim.name.empty()) {
         auto [it, inserted] = udpMap.emplace(prim.name, &prim);
         if (!inserted) {
-            reportRedefinition(*root, prim, *it->second, diag::DuplicateDefinition);
+            reportRedefinition(*root, prim, it->second->location, diag::DuplicateDefinition);
         }
-        else if (auto defIt = topDefinitions.find(prim.name); defIt != topDefinitions.end()) {
-            reportRedefinition(*root, prim, *defIt->second.first);
+        else {
+            if (auto defIt = topDefinitions.find(prim.name); defIt != topDefinitions.end()) {
+                reportRedefinition(*root, prim, defIt->second.first->location, diag::Redefinition);
+            }
+            else if (auto externMod = getExternModule(prim.name, scope)) {
+                reportRedefinition(*root, prim, externMod->header->name.location(),
+                                   diag::Redefinition);
+            }
+            else if (auto externPrim = getExternPrimitive(prim.name, scope)) {
+                checkExternUdpMatch(scope, *externPrim->portList, *syntax.portList, prim.name,
+                                    diag::ExternDeclMismatchImpl);
+            }
         }
     }
 
@@ -796,8 +845,16 @@ void Compilation::noteExternModule(const Scope& scope, const ExternModuleDeclSyn
     auto targetScope = scope.asSymbol().kind == SymbolKind::CompilationUnit ? root.get() : &scope;
     auto [it, inserted] = externModuleMap.emplace(std::tuple(name, targetScope), &syntax);
     if (!inserted) {
-        // TODO: check dups
+        checkExternModMatch(scope, *syntax.header, *it->second->header,
+                            diag::ExternDeclMismatchPrev);
         return;
+    }
+
+    if (auto udpIt = externUdpMap.find(std::tuple(name, targetScope));
+        udpIt != externUdpMap.end()) {
+        auto& diag = scope.addDiag(diag::Redefinition, syntax.header->name.location());
+        diag << name;
+        diag.addNote(diag::NotePreviousDefinition, udpIt->second->name.location());
     }
 }
 
@@ -828,27 +885,44 @@ bool Compilation::errorIfMissingExternModule(std::string_view name, const Scope&
     return true;
 }
 
-void Compilation::noteExternPrimitive(const ExternUdpDeclSyntax& syntax) {
+void Compilation::noteExternPrimitive(const Scope& scope, const ExternUdpDeclSyntax& syntax) {
     auto name = syntax.name.valueText();
     if (name.empty())
         return;
 
-    auto [it, inserted] = externUdpMap.emplace(name, &syntax);
+    auto targetScope = scope.asSymbol().kind == SymbolKind::CompilationUnit ? root.get() : &scope;
+    auto [it, inserted] = externUdpMap.emplace(std::tuple(name, targetScope), &syntax);
     if (!inserted) {
-        // TODO: check dups
+        checkExternUdpMatch(scope, *syntax.portList, *it->second->portList, name,
+                            diag::ExternDeclMismatchPrev);
         return;
+    }
+
+    if (auto modIt = externModuleMap.find(std::tuple(name, targetScope));
+        modIt != externModuleMap.end()) {
+        auto& diag = scope.addDiag(diag::Redefinition, syntax.name.location());
+        diag << name;
+        diag.addNote(diag::NotePreviousDefinition, modIt->second->header->name.location());
     }
 }
 
-const ExternUdpDeclSyntax* Compilation::getExternPrimitive(std::string_view name) const {
-    if (auto it = externUdpMap.find(name); it != externUdpMap.end())
-        return it->second;
+const ExternUdpDeclSyntax* Compilation::getExternPrimitive(std::string_view name,
+                                                           const Scope& scope) const {
+    const Scope* searchScope = &scope;
+    do {
+        auto it = externUdpMap.find(std::make_tuple(name, searchScope));
+        if (it != externUdpMap.end())
+            return it->second;
+
+        searchScope = searchScope->asSymbol().getParentScope();
+    } while (searchScope);
+
     return nullptr;
 }
 
 bool Compilation::errorIfMissingExternPrimitive(std::string_view name, const Scope& scope,
                                                 SourceRange sourceRange) {
-    auto decl = getExternPrimitive(name);
+    auto decl = getExternPrimitive(name, scope);
     if (!decl)
         return false;
 
