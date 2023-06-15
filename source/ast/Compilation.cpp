@@ -788,6 +788,77 @@ const Expression* Compilation::getDefaultDisable(const Scope& scope) const {
     }
 }
 
+void Compilation::noteExternModule(const Scope& scope, const ExternModuleDeclSyntax& syntax) {
+    auto name = syntax.header->name.valueText();
+    if (name.empty())
+        return;
+
+    auto targetScope = scope.asSymbol().kind == SymbolKind::CompilationUnit ? root.get() : &scope;
+    auto [it, inserted] = externModuleMap.emplace(std::tuple(name, targetScope), &syntax);
+    if (!inserted) {
+        // TODO: check dups
+        return;
+    }
+}
+
+const ExternModuleDeclSyntax* Compilation::getExternModule(std::string_view name,
+                                                           const Scope& scope) const {
+    const Scope* searchScope = &scope;
+    do {
+        auto it = externModuleMap.find(std::make_tuple(name, searchScope));
+        if (it != externModuleMap.end())
+            return it->second;
+
+        searchScope = searchScope->asSymbol().getParentScope();
+    } while (searchScope);
+
+    return nullptr;
+}
+
+bool Compilation::errorIfMissingExternModule(std::string_view name, const Scope& scope,
+                                             SourceRange sourceRange) {
+    auto decl = getExternModule(name, scope);
+    if (!decl)
+        return false;
+
+    auto& diag = scope.addDiag(diag::MissingExternModuleImpl, decl->header->name.range());
+    diag << decl->header->moduleKeyword.valueText();
+    diag << name;
+    diag.addNote(diag::NoteReferencedHere, sourceRange);
+    return true;
+}
+
+void Compilation::noteExternPrimitive(const ExternUdpDeclSyntax& syntax) {
+    auto name = syntax.name.valueText();
+    if (name.empty())
+        return;
+
+    auto [it, inserted] = externUdpMap.emplace(name, &syntax);
+    if (!inserted) {
+        // TODO: check dups
+        return;
+    }
+}
+
+const ExternUdpDeclSyntax* Compilation::getExternPrimitive(std::string_view name) const {
+    if (auto it = externUdpMap.find(name); it != externUdpMap.end())
+        return it->second;
+    return nullptr;
+}
+
+bool Compilation::errorIfMissingExternPrimitive(std::string_view name, const Scope& scope,
+                                                SourceRange sourceRange) {
+    auto decl = getExternPrimitive(name);
+    if (!decl)
+        return false;
+
+    auto& diag = scope.addDiag(diag::MissingExternModuleImpl, decl->name.range());
+    diag << "primitive"sv;
+    diag << name;
+    diag.addNote(diag::NoteReferencedHere, sourceRange);
+    return true;
+}
+
 void Compilation::noteReference(const SyntaxNode& node, bool isLValue) {
     auto [it, inserted] = referenceStatusMap.emplace(&node, std::pair{!isLValue, isLValue});
     if (!inserted) {
@@ -1513,7 +1584,8 @@ void Compilation::resolveBindTargets(const BindDirectiveSyntax& syntax, const Sc
         Token name = syntax.target->as<IdentifierNameSyntax>().identifier;
         auto targetDef = getDefinition(name.valueText(), scope);
         if (!targetDef) {
-            scope.addDiag(diag::UnknownModule, name.range()) << name.valueText();
+            if (!errorIfMissingExternModule(name.valueText(), scope, name.range()))
+                scope.addDiag(diag::UnknownModule, name.range()) << name.valueText();
             return;
         }
 
@@ -1551,6 +1623,9 @@ void Compilation::resolveBindTargets(const BindDirectiveSyntax& syntax, const Sc
                     *defTarget = def;
                     return;
                 }
+
+                if (errorIfMissingExternModule(name.valueText(), scope, name.range()))
+                    return;
             }
 
             // If no name and no definition, report an error.

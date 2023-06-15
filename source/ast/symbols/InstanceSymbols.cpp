@@ -317,8 +317,7 @@ static const HierarchyOverrideNode* findParentOverrideNode(const Scope& scope) {
     return &it->second;
 }
 
-void InstanceSymbol::fromSyntax(Compilation& compilation,
-                                const HierarchyInstantiationSyntax& syntax,
+void InstanceSymbol::fromSyntax(Compilation& comp, const HierarchyInstantiationSyntax& syntax,
                                 const ASTContext& context, SmallVectorBase<const Symbol*>& results,
                                 SmallVectorBase<const Symbol*>& implicitNets, bool isFromBind) {
     TimeTraceScope timeScope("createInstances"sv,
@@ -352,7 +351,7 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
     // If this instance is not instantiated then we'll just fill in a placeholder
     // and move on. This is likely inside an untaken generate branch.
     if (isUninstantiated) {
-        UninstantiatedDefSymbol::fromSyntax(compilation, syntax, context, results, implicitNets);
+        UninstantiatedDefSymbol::fromSyntax(comp, syntax, context, results, implicitNets);
         return;
     }
 
@@ -381,10 +380,10 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
             parentOverrideNode = findParentOverrideNode(*context.scope);
     }
 
-    auto definition = compilation.getDefinition(syntax.type.valueText(), *context.scope);
+    auto definition = comp.getDefinition(syntax.type.valueText(), *context.scope);
     if (!definition) {
         // This might actually be a user-defined primitive instantiation.
-        if (auto prim = compilation.getPrimitive(syntax.type.valueText())) {
+        if (auto prim = comp.getPrimitive(syntax.type.valueText())) {
             PrimitiveInstanceSymbol::fromSyntax(*prim, syntax, context, results, implicitNets);
             if (!results.empty()) {
                 if (!owningDefinition ||
@@ -397,12 +396,20 @@ void InstanceSymbol::fromSyntax(Compilation& compilation,
             }
         }
         else {
-            if (!compilation.getOptions().ignoreUnknownModules) {
+            // A compilation option can prevent errors in this scenario.
+            // If not set, we error about the missing module, unless we see an extern
+            // module or UDP declaration for this name, in which case we provide a
+            // slightly different error.
+            if (!comp.getOptions().ignoreUnknownModules &&
+                !comp.errorIfMissingExternModule(syntax.type.valueText(), *context.scope,
+                                                 syntax.type.range()) &&
+                !comp.errorIfMissingExternPrimitive(syntax.type.valueText(), *context.scope,
+                                                    syntax.type.range())) {
+
                 context.addDiag(diag::UnknownModule, syntax.type.range())
                     << syntax.type.valueText();
             }
-            UninstantiatedDefSymbol::fromSyntax(compilation, syntax, context, results,
-                                                implicitNets);
+            UninstantiatedDefSymbol::fromSyntax(comp, syntax, context, results, implicitNets);
         }
         return;
     }
@@ -1080,7 +1087,8 @@ void PrimitiveInstanceSymbol::fromSyntax(const PrimitiveInstantiationSyntax& syn
                                 syntax.delay->getFirstToken().location() + 1);
             }
         }
-        else if (!context.scope->isUninstantiated()) {
+        else if (!context.scope->isUninstantiated() &&
+                 !comp.errorIfMissingExternPrimitive(name, *context.scope, syntax.type.range())) {
             context.addDiag(diag::UnknownPrimitive, syntax.type.range()) << name;
         }
 

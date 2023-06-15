@@ -1097,7 +1097,9 @@ const Type& VirtualInterfaceType::fromSyntax(const ASTContext& context,
 
     auto definition = comp.getDefinition(ifaceName, *context.scope);
     if (!definition || definition->definitionKind != DefinitionKind::Interface) {
-        context.addDiag(diag::UnknownInterface, syntax.name.range()) << ifaceName;
+        if (!comp.errorIfMissingExternModule(ifaceName, *context.scope, syntax.name.range())) {
+            context.addDiag(diag::UnknownInterface, syntax.name.range()) << ifaceName;
+        }
         return comp.getErrorType();
     }
 
