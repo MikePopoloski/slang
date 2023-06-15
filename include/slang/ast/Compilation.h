@@ -430,6 +430,29 @@ public:
     /// if no such declaration is in effect.
     const Expression* getDefaultDisable(const Scope& scope) const;
 
+    /// Notes the existence of an extern module/interface/program declaration.
+    void noteExternModule(const Scope& scope, const syntax::ExternModuleDeclSyntax& syntax);
+
+    /// Performs a lookup for an extern module declaration of the given name.
+    const syntax::ExternModuleDeclSyntax* getExternModule(std::string_view name,
+                                                          const Scope& scope) const;
+
+    /// Reports an error about a missing implementation if there exists an
+    /// extern module declaration for the given name.
+    bool errorIfMissingExternModule(std::string_view name, const Scope& scope,
+                                    SourceRange sourceRange);
+
+    /// Notes the existence of an extern primitive declaration.
+    void noteExternPrimitive(const syntax::ExternUdpDeclSyntax& syntax);
+
+    /// Performs a lookup for an extern primitive declaration of the given name.
+    const syntax::ExternUdpDeclSyntax* getExternPrimitive(std::string_view name) const;
+
+    /// Reports an error about a missing implementation if there exists an
+    /// extern primitive declaration for the given name.
+    bool errorIfMissingExternPrimitive(std::string_view name, const Scope& scope,
+                                       SourceRange sourceRange);
+
     /// Notes that the given syntax node is "referenced" somewhere in the AST.
     /// This is used to diagnose unused variables, nets, etc. The @a isLValue parameter
     /// is used to tell whether a value is only assigned or whether it's also read somewhere.
@@ -790,6 +813,14 @@ private:
     // A set of instances that have global definition-based bind directives applied.
     // This is pretty rare and only used for checking of type params.
     flat_hash_map<const Definition*, std::vector<const Symbol*>> instancesWithDefBinds;
+
+    // The name map for extern module declarations.
+    // The key is a combination of definition name + the scope in which it was declared.
+    flat_hash_map<std::tuple<std::string_view, const Scope*>, const syntax::ExternModuleDeclSyntax*>
+        externModuleMap;
+
+    // The name map for extern user-defined primitive declarations.
+    flat_hash_map<std::string_view, const syntax::ExternUdpDeclSyntax*> externUdpMap;
 
     // Storage for system subroutine instances.
     std::vector<std::unique_ptr<SystemSubroutine>> subroutineStorage;

@@ -535,7 +535,11 @@ void Scope::addMembers(const SyntaxNode& syntax) {
                 AnonymousProgramSymbol::fromSyntax(*this, syntax.as<AnonymousProgramSyntax>()));
             break;
         case SyntaxKind::ExternModuleDecl:
+            compilation.noteExternModule(*this, syntax.as<ExternModuleDeclSyntax>());
+            break;
         case SyntaxKind::ExternUdpDecl:
+            compilation.noteExternPrimitive(syntax.as<ExternUdpDeclSyntax>());
+            break;
         case SyntaxKind::WildcardPortList:
             addDiag(diag::NotYetSupported, syntax.sourceRange());
             break;

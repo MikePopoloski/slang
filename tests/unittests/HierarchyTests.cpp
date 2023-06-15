@@ -2080,3 +2080,38 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Extern module missing impl errors") {
+    auto tree = SyntaxTree::fromText(R"(
+extern module mod1 #(parameter int i) (input real r);
+extern module mod2 #(parameter int i) (input real r);
+extern interface intf;
+
+extern primitive p1 (a, b);
+extern primitive p2 (a, b);
+
+module n; endmodule
+
+module m;
+    virtual intf i;
+
+    mod1 #(3) m1(3.14);
+
+    bind mod2 n n1();
+
+    p1 p(1, 2);
+    p2 #3 q(1, 2);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 5);
+    CHECK(diags[0].code == diag::MissingExternModuleImpl);
+    CHECK(diags[1].code == diag::MissingExternModuleImpl);
+    CHECK(diags[2].code == diag::MissingExternModuleImpl);
+    CHECK(diags[3].code == diag::MissingExternModuleImpl);
+    CHECK(diags[4].code == diag::MissingExternModuleImpl);
+}
