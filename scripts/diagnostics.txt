@@ -2,7 +2,6 @@
 // for built-in compiler diagnostics.
 
 subsystem General
-error NotYetSupported "language feature not yet supported"
 error ExpectedExpression "expected expression"
 note NotePreviousDefinition "previous definition here"
 note NotePreviousUsage "previous usage here"
