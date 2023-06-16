@@ -367,7 +367,7 @@ IEEE 1800-2017 SystemVerilog Language Reference Manual (LRM).
 {{m-success}} 23.3.2 | Module instantiation syntax | v0.2
 {{m-success}} 23.3.3 | Port connection rules | v1.0
 {{m-success}} 23.4 | Nested modules | v1.0
-{{m-danger}}  23.5 | Extern modules | no
+{{m-success}} 23.5 | Extern modules | v4.0
 {{m-success}} 23.6 | Hierarchical names | v0.2
 {{m-success}} 23.7 | Member selects and hierarchical names | v0.2
 {{m-success}} 23.8 | Upwards name referencing | v0.7
