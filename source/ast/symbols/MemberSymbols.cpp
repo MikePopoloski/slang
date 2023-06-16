@@ -953,14 +953,24 @@ static void createTableEntries(const Scope& scope, const UdpEntrySyntax& syntax,
 PrimitiveSymbol& PrimitiveSymbol::fromSyntax(const Scope& scope,
                                              const UdpDeclarationSyntax& syntax) {
     auto& comp = scope.getCompilation();
-    auto prim = comp.emplace<PrimitiveSymbol>(comp, syntax.name.valueText(), syntax.name.location(),
+    auto primName = syntax.name.valueText();
+    auto prim = comp.emplace<PrimitiveSymbol>(comp, primName, syntax.name.location(),
                                               PrimitiveSymbol::UserDefined);
     prim->setAttributes(scope, syntax.attributes);
     prim->setSyntax(syntax);
 
+    auto portList = syntax.portList.get();
+    if (portList->kind == SyntaxKind::WildcardUdpPortList) {
+        auto externPrim = comp.getExternPrimitive(primName, scope);
+        if (!externPrim)
+            scope.addDiag(diag::MissingExternWildcardPorts, portList->sourceRange()) << primName;
+        else
+            portList = externPrim->portList;
+    }
+
     SmallVector<const PrimitivePortSymbol*> ports;
-    if (syntax.portList->kind == SyntaxKind::AnsiUdpPortList) {
-        for (auto decl : syntax.portList->as<AnsiUdpPortListSyntax>().ports) {
+    if (portList->kind == SyntaxKind::AnsiUdpPortList) {
+        for (auto decl : portList->as<AnsiUdpPortListSyntax>().ports) {
             if (decl->kind == SyntaxKind::UdpOutputPortDecl) {
                 auto& outputDecl = decl->as<UdpOutputPortDeclSyntax>();
                 PrimitivePortDirection dir = PrimitivePortDirection::Out;
@@ -993,11 +1003,11 @@ PrimitiveSymbol& PrimitiveSymbol::fromSyntax(const Scope& scope,
         if (!syntax.body->portDecls.empty())
             scope.addDiag(diag::PrimitiveAnsiMix, syntax.body->portDecls[0]->sourceRange());
     }
-    else if (syntax.portList->kind == SyntaxKind::NonAnsiUdpPortList) {
+    else if (portList->kind == SyntaxKind::NonAnsiUdpPortList) {
         // In the non-ansi case the port list only gives the ordering, we need to
         // look through the body decls to get the rest of the port info.
         SmallMap<std::string_view, PrimitivePortSymbol*, 4> portMap;
-        for (auto nameSyntax : syntax.portList->as<NonAnsiUdpPortListSyntax>().ports) {
+        for (auto nameSyntax : portList->as<NonAnsiUdpPortListSyntax>().ports) {
             auto name = nameSyntax->identifier;
             auto port = comp.emplace<PrimitivePortSymbol>(comp, name.valueText(), name.location(),
                                                           PrimitivePortDirection::In);
@@ -1099,11 +1109,11 @@ PrimitiveSymbol& PrimitiveSymbol::fromSyntax(const Scope& scope,
             }
         }
     }
-    else if (syntax.portList->kind == SyntaxKind::WildcardUdpPortList) {
-        // TODO:
-    }
     else {
-        SLANG_UNREACHABLE;
+        // This is an error condition (wildcard port list without a
+        // corresponding extern decl). The error has already been
+        // issued so just get out of here.
+        return *prim;
     }
 
     if (ports.size() < 2)

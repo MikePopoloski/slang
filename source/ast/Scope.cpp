@@ -541,7 +541,8 @@ void Scope::addMembers(const SyntaxNode& syntax) {
             compilation.noteExternPrimitive(*this, syntax.as<ExternUdpDeclSyntax>());
             break;
         case SyntaxKind::WildcardPortList:
-            addDiag(diag::NotYetSupported, syntax.sourceRange());
+            // If we hit this case we've run into an error elsewhere.
+            // Just silently ignore it here.
             break;
         default:
             SLANG_UNREACHABLE;

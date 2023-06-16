@@ -2177,3 +2177,55 @@ endprimitive
     CHECK(diags[2].code == diag::Redefinition);
     CHECK(diags[3].code == diag::Redefinition);
 }
+
+TEST_CASE("Wildcard module port list") {
+    auto tree = SyntaxTree::fromText(R"(
+extern module m2 #(parameter int i = 1)(input a, int b);
+
+module m2(.*);
+endmodule
+
+extern primitive p1(a, b);
+
+primitive p1(.*);
+    output a;
+    input b;
+    table 0:0; endtable
+endprimitive
+
+module m;
+    logic a;
+    int b;
+    m2 #(3) inst(a, b);
+    p1 p(a, b[0]);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Wildcard port list errors") {
+    auto tree = SyntaxTree::fromText(R"(
+extern module q(.*);
+extern primitive r(.*);
+
+module m(.*);
+endmodule
+
+primitive p(.*);
+    table 0:0; endtable
+endprimitive
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 4);
+    CHECK(diags[0].code == diag::ExternWildcardPortList);
+    CHECK(diags[1].code == diag::ExternWildcardPortList);
+    CHECK(diags[2].code == diag::MissingExternWildcardPorts);
+    CHECK(diags[3].code == diag::MissingExternWildcardPorts);
+}
