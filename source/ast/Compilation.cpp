@@ -475,16 +475,29 @@ static void checkExternModMatch(const Scope& scope, const ModuleHeaderSyntax& ex
                         pls->as<NonAnsiPortListSyntax>().ports.empty());
     };
 
+    const bool prevIsWildcard = prevNode.ports &&
+                                prevNode.ports->kind == SyntaxKind::WildcardPortList;
+
     bool portsMatch;
-    if (bool(externNode.ports) == bool(prevNode.ports))
+    if (prevIsWildcard)
+        portsMatch = true;
+    else if (bool(externNode.ports) == bool(prevNode.ports))
         portsMatch = !externNode.ports || externNode.ports->isEquivalentTo(*prevNode.ports);
     else
         portsMatch = isEmptyPortList(externNode.ports) && isEmptyPortList(prevNode.ports);
 
-    if (!portsMatch || externNode.moduleKeyword.kind != prevNode.moduleKeyword.kind ||
-        bool(externNode.parameters) != bool(prevNode.parameters) ||
-        (externNode.parameters && !externNode.parameters->isEquivalentTo(*prevNode.parameters))) {
+    bool paramsMatch;
+    if (prevIsWildcard)
+        paramsMatch = true;
+    else if (bool(externNode.parameters) != bool(prevNode.parameters))
+        paramsMatch = false;
+    else {
+        paramsMatch = !externNode.parameters ||
+                      externNode.parameters->isEquivalentTo(*prevNode.parameters);
+    }
 
+    if (!portsMatch || !paramsMatch ||
+        externNode.moduleKeyword.kind != prevNode.moduleKeyword.kind) {
         auto& diag = scope.addDiag(code, externNode.sourceRange());
         diag << externNode.moduleKeyword.valueText() << externNode.name.valueText();
         diag.addNote(diag::NotePreviousDefinition, prevNode.sourceRange());
@@ -494,7 +507,7 @@ static void checkExternModMatch(const Scope& scope, const ModuleHeaderSyntax& ex
 static void checkExternUdpMatch(const Scope& scope, const UdpPortListSyntax& externNode,
                                 const UdpPortListSyntax& prevNode, std::string_view name,
                                 DiagCode code) {
-    if (!externNode.isEquivalentTo(prevNode)) {
+    if (prevNode.kind != SyntaxKind::WildcardUdpPortList && !externNode.isEquivalentTo(prevNode)) {
         auto& diag = scope.addDiag(code, externNode.sourceRange());
         diag << "primitive"sv << name;
         diag.addNote(diag::NotePreviousDefinition, prevNode.sourceRange());

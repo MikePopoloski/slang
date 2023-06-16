@@ -100,21 +100,31 @@ Definition::Definition(const Scope& scope, LookupLocation lookupLocation,
     syntaxTree(syntaxTree) {
 
     // Extract and save various properties of the definition.
-    auto& header = *syntax.header;
-    name = header.name.valueText();
-    location = header.name.location();
+    name = syntax.header->name.valueText();
+    location = syntax.header->name.location();
     indexInScope = lookupLocation.getIndex();
     definitionKind = SemanticFacts::getDefinitionKind(syntax.kind);
-    defaultLifetime =
-        SemanticFacts::getVariableLifetime(header.lifetime).value_or(VariableLifetime::Static);
+    defaultLifetime = SemanticFacts::getVariableLifetime(syntax.header->lifetime)
+                          .value_or(VariableLifetime::Static);
     attributes = AttributeSymbol::fromSyntax(syntax.attributes, scope, lookupLocation);
-    hasNonAnsiPorts = syntax.header->ports &&
-                      syntax.header->ports->kind == SyntaxKind::NonAnsiPortList;
+
+    auto header = syntax.header.get();
+    if (header->ports && header->ports->kind == SyntaxKind::WildcardPortList) {
+        auto& comp = scope.getCompilation();
+        auto externMod = comp.getExternModule(name, scope);
+        if (!externMod)
+            scope.addDiag(diag::MissingExternWildcardPorts, header->ports->sourceRange()) << name;
+        else
+            header = externMod->header;
+    }
+
+    portList = header->ports;
+    hasNonAnsiPorts = portList && portList->kind == SyntaxKind::NonAnsiPortList;
 
     // Find all port parameters.
-    bool hasPortParams = header.parameters != nullptr;
+    bool hasPortParams = header->parameters != nullptr;
     if (hasPortParams)
-        ParameterBuilder::createDecls(scope, *header.parameters, parameters);
+        ParameterBuilder::createDecls(scope, *header->parameters, parameters);
 
     bool first = true;
     std::optional<SourceRange> unitsRange;

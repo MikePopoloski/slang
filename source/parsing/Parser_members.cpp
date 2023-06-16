@@ -3317,6 +3317,8 @@ MemberSyntax* Parser::parseExternMember(SyntaxKind parentKind, AttrList attribut
             auto keyword = consume();
             auto actualAttrs = parseAttributes();
             auto& header = parseModuleHeader();
+            if (header.ports && header.ports->kind == SyntaxKind::WildcardPortList)
+                addDiag(diag::ExternWildcardPortList, header.ports->sourceRange());
             return &factory.externModuleDecl(attributes, keyword, actualAttrs, header);
         }
         case TokenKind::PrimitiveKeyword: {
@@ -3326,6 +3328,8 @@ MemberSyntax* Parser::parseExternMember(SyntaxKind parentKind, AttrList attribut
             auto primitive = consume();
             auto name = expect(TokenKind::Identifier);
             auto& portList = parseUdpPortList(unused);
+            if (portList.kind == SyntaxKind::WildcardUdpPortList)
+                addDiag(diag::ExternWildcardPortList, portList.sourceRange());
             return &factory.externUdpDecl(attributes, keyword, actualAttrs, primitive, name,
                                           portList);
         }

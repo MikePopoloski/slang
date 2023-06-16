@@ -1458,9 +1458,6 @@ void PortSymbol::fromSyntax(
             builder.finalize();
             break;
         }
-        case SyntaxKind::WildcardPortList:
-            scope.addDiag(diag::NotYetSupported, syntax.sourceRange());
-            break;
         default:
             SLANG_UNREACHABLE;
     }

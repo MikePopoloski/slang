@@ -653,8 +653,8 @@ InstanceBodySymbol& InstanceBodySymbol::fromDefinition(Compilation& comp,
         paramIt++;
     }
 
-    if (declSyntax.header->ports)
-        result->addMembers(*declSyntax.header->ports);
+    if (definition.portList)
+        result->addMembers(*definition.portList);
 
     // Finally add members from the body.
     for (auto member : declSyntax.members) {

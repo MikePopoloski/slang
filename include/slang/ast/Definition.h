@@ -124,6 +124,9 @@ public:
     /// A list of parameters declared by this definition.
     SmallVector<ParameterDecl, 8> parameters;
 
+    /// A list of ports declared by this definition.
+    const syntax::PortListSyntax* portList;
+
     /// A set of modport names declared by this definition.
     flat_hash_set<std::string_view> modports;
 
