@@ -15,12 +15,12 @@ using namespace slang;
 using namespace slang::ast;
 
 namespace no_old_always_syntax {
-struct MainVisitor : public ASTVisitor<MainVisitor, true, true> {
-    explicit MainVisitor(Diagnostics& diagnostics) : diags(diagnostics) {}
-
-    Diagnostics& diags;
+struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, true, true> {
+    explicit MainVisitor(Diagnostics& diagnostics) : TidyVisitor(diagnostics) {}
 
     void handle(const ast::ProceduralBlockSymbol& symbol) {
+        NEEDS_SKIP_SYMBOL(symbol)
+
         if (symbol.procedureKind == ProceduralBlockKind::Always) {
             diags.add(diag::NoOldAlwaysSyntax, symbol.location);
         }
@@ -32,9 +32,7 @@ using namespace no_old_always_syntax;
 
 class NoOldAlwaysSyntax : public TidyCheck {
 public:
-    [[maybe_unused]] explicit NoOldAlwaysSyntax(const TidyConfig::CheckConfigs& config,
-                                                TidyKind kind) :
-        TidyCheck(config, kind) {}
+    [[maybe_unused]] explicit NoOldAlwaysSyntax(TidyKind kind) : TidyCheck(kind) {}
 
     bool check(const RootSymbol& root) override {
         MainVisitor visitor(diagnostics);

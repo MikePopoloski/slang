@@ -65,20 +65,17 @@ struct AlwaysFFVisitor : public ASTVisitor<AlwaysFFVisitor, true, true> {
     bool assignedOutsideIfReset = false;
 };
 
-struct MainVisitor : public ASTVisitor<MainVisitor, true, true> {
-    explicit MainVisitor(Diagnostics& diagnostics, const TidyConfig::CheckConfigs& config) :
-        diags(diagnostics), config(config) {}
-
-    Diagnostics& diags;
-    const TidyConfig::CheckConfigs& config;
+struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, true, true> {
+    explicit MainVisitor(Diagnostics& diagnostics) : TidyVisitor(diagnostics) {}
 
     void handle(const VariableSymbol& symbol) {
+        NEEDS_SKIP_SYMBOL(symbol)
         if (symbol.drivers().empty())
             return;
 
         auto firstDriver = *symbol.drivers().begin();
         if (firstDriver && firstDriver->isInAlwaysFFBlock()) {
-            AlwaysFFVisitor visitor(symbol.name, config.resetName);
+            AlwaysFFVisitor visitor(symbol.name, config.getCheckConfigs().resetName);
             firstDriver->containingSymbol->visit(visitor);
             if (visitor.hasError()) {
                 diags.add(diag::RegisterNotAssignedOnReset, symbol.location) << symbol.name;
@@ -92,11 +89,10 @@ using namespace register_has_no_reset;
 
 class RegisterHasNoReset : public TidyCheck {
 public:
-    explicit RegisterHasNoReset(const TidyConfig::CheckConfigs& config, TidyKind kind) :
-        TidyCheck(config, kind) {}
+    explicit RegisterHasNoReset(TidyKind kind) : TidyCheck(kind) {}
 
     bool check(const RootSymbol& root) override {
-        MainVisitor visitor(diagnostics, config);
+        MainVisitor visitor(diagnostics);
         root.visit(visitor);
         if (!diagnostics.empty())
             return false;

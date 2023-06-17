@@ -41,6 +41,9 @@ int main(int argc, char** argv) {
     driver.cmdLine.add("--config-file", tidyConfigFile,
                        "Path to where the tidy config file is located");
 
+    std::vector<std::string> skippedFiles;
+    driver.cmdLine.add("--skip-file", skippedFiles, "Paths to be skipped by slang-tidy");
+
     if (!driver.parseCommandLine(argc, argv))
         return 1;
 
@@ -68,6 +71,9 @@ int main(int argc, char** argv) {
     else if (auto path = project_slang_tidy_config()) {
         tidyConfig = TidyConfigParser(path.value()).getConfig();
     }
+
+    // Add skipped files provided by the cmd args
+    tidyConfig.addSkipFile(std::move(skippedFiles));
 
     // Print (short)descriptions of the checks
     if (printDescriptions || printShortDescriptions) {

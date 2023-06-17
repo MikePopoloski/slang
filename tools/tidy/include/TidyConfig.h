@@ -38,6 +38,13 @@ public:
     /// Returns the check config object
     inline const CheckConfigs& getCheckConfigs() const { return checkConfigs; }
 
+    // Returns a vector containing the file names that won't be checked by slang-tidy
+    inline const std::vector<std::string>& getSkipFiles() const { return skipFiles; }
+
+    // Adds a new file into the list of skipped files
+    void addSkipFile(const std::string& path);
+    void addSkipFile(std::vector<std::string> paths);
+
 private:
     CheckConfigs checkConfigs;
 
@@ -45,6 +52,9 @@ private:
     enum class CheckStatus { ENABLED, DISABLED };
 
     std::unordered_map<slang::TidyKind, std::unordered_map<std::string, CheckStatus>> checkKinds;
+
+    // List of files that won't be checked by slang-tidy
+    std::vector<std::string> skipFiles;
 
     /// Enables or disables all the implemented checks based on status
     void toggleAl(CheckStatus status);

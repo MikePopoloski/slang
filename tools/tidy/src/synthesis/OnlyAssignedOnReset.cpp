@@ -7,7 +7,6 @@
 //------------------------------------------------------------------------------
 #include "ASTHelperVisitors.h"
 #include "TidyDiags.h"
-#include "TidyFactory.h"
 #include "fmt/color.h"
 
 #include "slang/syntax/AllSyntax.h"
@@ -65,20 +64,18 @@ struct AlwaysFFVisitor : public ASTVisitor<AlwaysFFVisitor, true, true> {
     bool assignedOutsideIfReset = false;
 };
 
-struct MainVisitor : public ASTVisitor<MainVisitor, true, false> {
-    explicit MainVisitor(Diagnostics& diagnostics, const TidyConfig::CheckConfigs& config) :
-        diags(diagnostics), config(config) {}
-
-    Diagnostics& diags;
-    const TidyConfig::CheckConfigs& config;
+struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, true, false> {
+    explicit MainVisitor(Diagnostics& diagnostics) : TidyVisitor(diagnostics) {}
 
     void handle(const VariableSymbol& symbol) {
+        NEEDS_SKIP_SYMBOL(symbol)
+
         if (symbol.drivers().empty())
             return;
 
         auto firstDriver = *symbol.drivers().begin();
         if (firstDriver && firstDriver->isInAlwaysFFBlock()) {
-            AlwaysFFVisitor visitor(symbol.name, config.resetName);
+            AlwaysFFVisitor visitor(symbol.name, config.getCheckConfigs().resetName);
             firstDriver->containingSymbol->visit(visitor);
             if (visitor.hasError()) {
                 diags.add(diag::OnlyAssignedOnReset, symbol.location) << symbol.name;
@@ -91,11 +88,10 @@ struct MainVisitor : public ASTVisitor<MainVisitor, true, false> {
 using namespace only_assigned_on_reset;
 class OnlyAssignedOnReset : public TidyCheck {
 public:
-    explicit OnlyAssignedOnReset(const TidyConfig::CheckConfigs& config, TidyKind kind) :
-        TidyCheck(config, kind) {}
+    explicit OnlyAssignedOnReset(TidyKind kind) : TidyCheck(kind) {}
 
     bool check(const RootSymbol& root) override {
-        MainVisitor visitor(diagnostics, config);
+        MainVisitor visitor(diagnostics);
         root.visit(visitor);
         if (!diagnostics.empty())
             return false;
