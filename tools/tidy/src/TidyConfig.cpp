@@ -9,6 +9,7 @@
 #include "TidyConfig.h"
 
 #include "TidyFactory.h"
+#include <filesystem>
 
 using slang::TidyKind;
 
@@ -30,6 +31,14 @@ TidyConfig::TidyConfig() {
     synthesisChecks.emplace("RegisterHasNoReset", CheckStatus::ENABLED);
     synthesisChecks.emplace("NoLatchesOnDesign", CheckStatus::ENABLED);
     checkKinds.insert({slang::TidyKind::Synthesis, synthesisChecks});
+}
+
+void TidyConfig::addSkipFile(const std::string& path) {
+    skipFiles.push_back(std::filesystem::path(path).filename());
+}
+
+void TidyConfig::addSkipFile(std::vector<std::string> paths) {
+    skipFiles = paths;
 }
 
 void TidyConfig::toggleAl(CheckStatus status) {

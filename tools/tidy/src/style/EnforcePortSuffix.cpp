@@ -5,58 +5,54 @@
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
+#include "ASTHelperVisitors.h"
 #include "TidyDiags.h"
-#include "TidyFactory.h"
 #include "fmt/color.h"
 
-#include "slang/ast/ASTVisitor.h"
 #include "slang/syntax/AllSyntax.h"
 
 using namespace slang;
 using namespace slang::ast;
 
 namespace enforce_port_suffix {
-struct MainVisitor : public ASTVisitor<MainVisitor, true, false> {
-    explicit MainVisitor(Diagnostics& diagnostics, const TidyConfig::CheckConfigs& config) :
-        diags(diagnostics), config(config) {}
+struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, true, false> {
+    explicit MainVisitor(Diagnostics& diagnostics) : TidyVisitor(diagnostics) {}
 
     void handle(const PortSymbol& port) {
+        NEEDS_SKIP_SYMBOL(port)
+
+        const auto& checkConfig = config.getCheckConfigs();
         if (port.isNullPort)
             return;
 
         auto symbol = port.internalSymbol;
 
-        if (symbol->name == config.clkName || symbol->name == config.resetName)
+        if (symbol->name == checkConfig.clkName || symbol->name == checkConfig.resetName)
             return;
 
         std::string_view suffix;
 
         if (port.direction == slang::ast::ArgumentDirection::In)
-            suffix = config.inputPortSuffix;
+            suffix = checkConfig.inputPortSuffix;
         else if (port.direction == slang::ast::ArgumentDirection::Out)
-            suffix = config.outputPortSuffix;
+            suffix = checkConfig.outputPortSuffix;
         else
-            suffix = config.inoutPortSuffix;
+            suffix = checkConfig.inoutPortSuffix;
 
         if (!symbol->name.ends_with(suffix)) {
             diags.add(diag::EnforcePortSuffix, port.location) << symbol->name << suffix;
         }
     }
-
-    Diagnostics& diags;
-    const TidyConfig::CheckConfigs& config;
 };
 } // namespace enforce_port_suffix
 
 using namespace enforce_port_suffix;
 class EnforcePortSuffix : public TidyCheck {
 public:
-    [[maybe_unused]] explicit EnforcePortSuffix(const TidyConfig::CheckConfigs& config,
-                                                TidyKind kind) :
-        TidyCheck(config, kind) {}
+    [[maybe_unused]] explicit EnforcePortSuffix(TidyKind kind) : TidyCheck(kind) {}
 
     bool check(const ast::RootSymbol& root) override {
-        MainVisitor visitor(diagnostics, config);
+        MainVisitor visitor(diagnostics);
         root.visit(visitor);
         if (!diagnostics.empty())
             return false;

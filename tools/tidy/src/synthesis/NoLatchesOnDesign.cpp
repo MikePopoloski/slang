@@ -6,7 +6,6 @@
 //------------------------------------------------------------------------------
 #include "ASTHelperVisitors.h"
 #include "TidyDiags.h"
-#include "TidyFactory.h"
 #include "fmt/color.h"
 
 #include "slang/syntax/AllSyntax.h"
@@ -15,12 +14,12 @@ using namespace slang;
 using namespace slang::ast;
 
 namespace no_latches_on_design {
-struct MainVisitor : public ASTVisitor<MainVisitor, true, false> {
-    explicit MainVisitor(Diagnostics& diagnostics) : diags(diagnostics) {}
-
-    Diagnostics& diags;
+struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, true, false> {
+    explicit MainVisitor(Diagnostics& diagnostics) : TidyVisitor(diagnostics) {}
 
     void handle(const VariableSymbol& symbol) {
+        NEEDS_SKIP_SYMBOL(symbol)
+
         if (symbol.drivers().empty())
             return;
 
@@ -36,8 +35,7 @@ using namespace no_latches_on_design;
 
 class NoLatchesOnDesign : public TidyCheck {
 public:
-    explicit NoLatchesOnDesign(const TidyConfig::CheckConfigs& config, TidyKind kind) :
-        TidyCheck(config, kind) {}
+    [[maybe_unused]] explicit NoLatchesOnDesign(TidyKind kind) : TidyCheck(kind) {}
 
     bool check(const RootSymbol& root) override {
         MainVisitor visitor(diagnostics);
@@ -51,7 +49,7 @@ public:
 
     std::string diagString() const override { return "Latches are not allowed in this design"; }
 
-    DiagnosticSeverity diagSeverity() const override { return DiagnosticSeverity::Warning; }
+    DiagnosticSeverity diagSeverity() const override { return DiagnosticSeverity::Error; }
 
     std::string name() const override { return "NoLatchesOnDesign"; }
 

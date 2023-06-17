@@ -22,8 +22,7 @@ class TidyCheck;
 
 class Registry {
 public:
-    using RegistryFunction =
-        std::function<std::unique_ptr<TidyCheck>(const TidyConfig::CheckConfigs&)>;
+    using RegistryFunction = std::function<std::unique_ptr<TidyCheck>()>;
     struct RegistryValue {
         slang::TidyKind kind;
         RegistryFunction creator;
@@ -46,7 +45,7 @@ public:
     static std::unique_ptr<TidyCheck> create(const std::string& name) {
         if (checks().find(name) == checks().end())
             SLANG_THROW(std::runtime_error(name + " has not been registered"));
-        return checks()[name].creator(checkConfigs());
+        return checks()[name].creator();
     }
 
     static std::vector<std::string> getRegisteredChecks() {
@@ -66,13 +65,13 @@ public:
 
     static void setConfig(TidyConfig& newConfig) { config() = newConfig; }
 
+    static const TidyConfig& getConfig() { return config(); }
+
 private:
     static RegistryMap& checks() {
         static RegistryMap map;
         return map;
     }
-
-    static const TidyConfig::CheckConfigs& checkConfigs() { return config().getCheckConfigs(); }
 
     static TidyConfig& config() {
         static TidyConfig config;
@@ -82,8 +81,7 @@ private:
 
 class TidyCheck {
 public:
-    explicit TidyCheck(const TidyConfig::CheckConfigs& config, slang::TidyKind kind) :
-        config(config), kind(kind) {}
+    explicit TidyCheck(slang::TidyKind kind) : kind(kind) {}
     virtual ~TidyCheck() = default;
 
     [[nodiscard]] virtual bool check(const slang::ast::RootSymbol& root) = 0;
@@ -102,10 +100,8 @@ public:
 protected:
     slang::Diagnostics diagnostics;
     slang::TidyKind kind;
-    const TidyConfig::CheckConfigs& config;
 };
 
-#define REGISTER(name, class_name, kind)                                           \
-    static auto name##_entry = Registry::add(#name, kind, [](const auto& config) { \
-        return std::make_unique<class_name>(config, kind);                         \
-    });
+#define REGISTER(name, class_name, kind)                  \
+    static auto name##_entry = Registry::add(#name, kind, \
+                                             []() { return std::make_unique<class_name>(kind); });
