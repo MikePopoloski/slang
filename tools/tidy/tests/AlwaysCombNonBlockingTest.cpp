@@ -1,5 +1,6 @@
-//! @file NoLatchesOnDesignTest.h
-//! @brief Tests for the NoLatchesOnDesign check
+//------------------------------------------------------------------------------
+//! @file AlwaysCombNonBlockingTest.h
+//! @brief Tests for the AlwaysCombNonBlocking check
 //
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
@@ -7,13 +8,11 @@
 #include "Test.h"
 #include "TidyFactory.h"
 
-TEST_CASE("NoLatchesOnDesign: Design with latch") {
+TEST_CASE("AlwaysCombNonBlocking: Non blocking assignment inside always_comb") {
     auto tree = SyntaxTree::fromText(R"(
-module top (
-    input logic a,
-    output logic b
-);
-    always_latch begin
+module top ();
+    logic a, b;
+    always_comb begin
         a <= b;
     end
 endmodule
@@ -26,17 +25,15 @@ endmodule
 
     TidyConfig config;
     Registry::setConfig(config);
-    auto visitor = Registry::create("NoLatchesOnDesign");
+    auto visitor = Registry::create("AlwaysCombNonBlocking");
     bool result = visitor->check(root);
     CHECK_FALSE(result);
 }
 
-TEST_CASE("NoLatchesOnDesign: Design without latch") {
+TEST_CASE("AlwaysCombNonBlocking: Blocking assignment inside always_comb") {
     auto tree = SyntaxTree::fromText(R"(
-module top (
-    input logic a,
-    output logic b
-);
+module top ();
+    logic a, b;
     always_comb begin
         a = b;
     end
@@ -50,7 +47,7 @@ endmodule
 
     TidyConfig config;
     Registry::setConfig(config);
-    auto visitor = Registry::create("NoLatchesOnDesign");
+    auto visitor = Registry::create("AlwaysCombNonBlocking");
     bool result = visitor->check(root);
     CHECK(result);
 }

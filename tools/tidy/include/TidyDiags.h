@@ -16,5 +16,6 @@ inline constexpr DiagCode RegisterNotAssignedOnReset(DiagSubsystem::Tidy, 1);
 inline constexpr DiagCode EnforcePortSuffix(DiagSubsystem::Tidy, 2);
 inline constexpr DiagCode NoLatchesOnDesign(DiagSubsystem::Tidy, 3);
 inline constexpr DiagCode NoOldAlwaysSyntax(DiagSubsystem::Tidy, 4);
+inline constexpr DiagCode AlwaysCombNonBlocking(DiagSubsystem::Tidy, 5);
 
 } // namespace slang::diag

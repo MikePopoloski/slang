@@ -1,6 +1,6 @@
 //------------------------------------------------------------------------------
 //! @file RegisterHasNoResetTest.h
-//! @brief Test for the RegisterHasNoReset check
+//! @brief Tests for the RegisterHasNoReset check
 //
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT

@@ -1,6 +1,6 @@
 //------------------------------------------------------------------------------
 //! @file EnforcePortSuffixTest.h
-//! @brief Test for the EnforcePortSuffix check
+//! @brief Tests for the EnforcePortSuffix check
 //
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT

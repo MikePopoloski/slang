@@ -1,6 +1,6 @@
 //------------------------------------------------------------------------------
 //! @file NoOldAlwaysSyntaxTest.h
-//! @brief Test for the NoOldAlwaysSyntax check
+//! @brief Tests for the NoOldAlwaysSyntax check
 //
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT

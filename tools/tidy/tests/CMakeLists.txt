@@ -11,7 +11,8 @@ add_executable(
         ../src/synthesis/RegisterHasNoReset.cpp RegisterHasNoResetTest.cpp
         ../src/synthesis/NoLatchesOnDesign.cpp NoLatchesOnDesignTest.cpp
         ../src/style/EnforcePortSuffix.cpp EnforcePortSuffixTest.cpp
-        ../src/style/NoOldAlwaysSyntax.cpp NoOldAlwaysSyntaxTest.cpp)
+        ../src/style/NoOldAlwaysSyntax.cpp NoOldAlwaysSyntaxTest.cpp
+        ../src/style/AlwaysCombNonBlocking.cpp AlwaysCombNonBlockingTest.cpp)
 
 target_link_libraries(tidy_unittests PRIVATE slang::slang Catch2::Catch2
         fmt::fmt)
