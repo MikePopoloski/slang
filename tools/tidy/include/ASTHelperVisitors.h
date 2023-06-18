@@ -1,6 +1,6 @@
 //------------------------------------------------------------------------------
 //! @file ASTHelperVisitors.h
-//! @brief Reusable AST visitors
+//! @brief Reusable AST visitors and functions
 //
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
@@ -13,13 +13,16 @@
 
 #include "slang/ast/ASTVisitor.h"
 
-#define NEEDS_SKIP_SYMBOL(__symbol)         \
+#define NEEDS_SKIP_SYMBOL(__symbol)           \
     if (skip((__symbol).location.bufferName)) \
         return;
 
 #define NEEDS_SKIP_STATEMENT(__statement)               \
     if (skip(statement.sourceRange.start().bufferName)) \
         return;
+
+// Function that tries to get the name of the variable in an expression
+std::optional<std::string_view> getIdentifier(const slang::ast::Expression& expr);
 
 struct TidyVisitor {
 protected:
@@ -58,17 +61,9 @@ struct LookupLhsIdentifier : public slang::ast::ASTVisitor<LookupLhsIdentifier, 
     // Checks if the symbol on the LHS of the expression has the provided name
     static bool hasIdentifier(const std::string_view& name,
                               const slang::ast::AssignmentExpression& expression) {
-        const slang::ast::Symbol* symbol = nullptr;
-        if (slang::ast::MemberAccessExpression::isKind(expression.left().kind)) {
-            auto& memberAccess = expression.left().as<slang::ast::MemberAccessExpression>();
-            if (slang::ast::NamedValueExpression::isKind(memberAccess.value().kind))
-                symbol = &memberAccess.value().as<slang::ast::NamedValueExpression>().symbol;
-        }
-        else {
-            symbol = expression.left().getSymbolReference();
-        }
+        auto identifier = getIdentifier(expression.left());
 
-        if (symbol && symbol->name == name) {
+        if (identifier && identifier.value() == name) {
             return true;
         }
         return false;
