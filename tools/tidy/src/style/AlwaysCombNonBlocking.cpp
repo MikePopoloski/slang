@@ -1,6 +1,6 @@
 //------------------------------------------------------------------------------
 //! @file AlwaysCombNonBlocking.h
-//! @brief Enforce that there are any non blocking assignments on an always_comb
+//! @brief Enforces that there are any non blocking assignments on an always_comb
 //
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
@@ -11,12 +11,10 @@
 
 #include "slang/syntax/AllSyntax.h"
 
-#include <iostream>
-
 using namespace slang;
 using namespace slang::ast;
 
-namespace always_comb_blocking {
+namespace always_comb_non_blocking {
 
 struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, true, false> {
     explicit MainVisitor(Diagnostics& diagnostics) : TidyVisitor(diagnostics) {}
@@ -37,7 +35,7 @@ struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, true, false> {
 };
 } // namespace always_comb_blocking
 
-using namespace always_comb_blocking;
+using namespace always_comb_non_blocking;
 class AlwaysCombNonBlocking : public TidyCheck {
 public:
     [[maybe_unused]] explicit AlwaysCombNonBlocking(TidyKind kind) : TidyCheck(kind) {}
@@ -53,13 +51,14 @@ public:
     DiagCode diagCode() const override { return diag::AlwaysCombNonBlocking; }
     DiagnosticSeverity diagSeverity() const override { return DiagnosticSeverity::Warning; }
     std::string diagString() const override {
-        return "use of a non blocking assignment for variable {} inside always_comb";
+        return "use of a non blocking assignment inside always_comb";
     }
     std::string name() const override { return "AlwaysCombNonBlocking"; }
     std::string description() const override { return shortDescription(); }
     std::string shortDescription() const override {
-        return "Enforces that non blocking assignments are not being used inside always_comb blocks";
+        return "Enforces that non blocking assignments are not being used inside always_comb "
+               "blocks";
     }
 };
 
-REGISTER(AlwaysCombNonBlocking, AlwaysCombNonBlocking, TidyKind::Style)
+REGISTER(AlwaysFFBlocking, AlwaysCombNonBlocking, TidyKind::Style)
