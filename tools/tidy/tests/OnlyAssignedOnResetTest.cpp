@@ -1,6 +1,6 @@
 //------------------------------------------------------------------------------
 //! @file OnlyAssignedOnResetTest.h
-//! @brief Test for the OnlyAssignedOnReset check
+//! @brief Tests for the OnlyAssignedOnReset check
 //
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
