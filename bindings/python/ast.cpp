@@ -225,7 +225,7 @@ void registerAST(py::module_& m) {
              "type"_a)
         .def("getSymbolReference", &Expression::getSymbolReference, byrefint,
              "allowPacked"_a = true)
-        .def("visit", &pyVisit<Expression>, "f"_a, PyVisitor::doc)
+        .def("visit", &pyASTVisit<Expression>, "f"_a, PyASTVisitor::doc)
         .def("__repr__", [](const Expression& self) {
             return fmt::format("Expression(ExpressionKind.{})", toString(self.kind));
         });
@@ -463,7 +463,7 @@ void registerAST(py::module_& m) {
         .def_readonly("sourceRange", &Statement::sourceRange)
         .def_property_readonly("bad", &Statement::bad)
         .def("eval", &Statement::eval, "context"_a)
-        .def("visit", &pyVisit<Statement>, "f"_a, PyVisitor::doc)
+        .def("visit", &pyASTVisit<Statement>, "f"_a, PyASTVisitor::doc)
         .def("__repr__", [](const Statement& self) {
             return fmt::format("Statement(StatementKind.{})", toString(self.kind));
         });
@@ -667,7 +667,7 @@ void registerAST(py::module_& m) {
         .def_readonly("syntax", &TimingControl::syntax)
         .def_readonly("sourceRange", &TimingControl::sourceRange)
         .def_property_readonly("bad", &TimingControl::bad)
-        .def("visit", &pyVisit<TimingControl>, "f"_a, PyVisitor::doc)
+        .def("visit", &pyASTVisit<TimingControl>, "f"_a, PyASTVisitor::doc)
         .def("__repr__", [](const TimingControl& self) {
             return fmt::format("TimingControl(TimingControlKind.{})", toString(self.kind));
         });

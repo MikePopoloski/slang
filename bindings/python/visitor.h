@@ -15,7 +15,7 @@ enum class VisitAction {
     Interrupt,
 };
 
-struct PyVisitor : ASTVisitor<PyVisitor, true, true> {
+struct PyASTVisitor : ASTVisitor<PyASTVisitor, true, true> {
     py::object f;
     bool interrupted = false;
 
@@ -27,7 +27,7 @@ struct PyVisitor : ASTVisitor<PyVisitor, true, true> {
         "visit continues. Any other return value, including "
         "pslang.VisitAction.Advance is ignored, and the walk continues.";
 
-    explicit PyVisitor(py::object f) : f{f} {}
+    explicit PyASTVisitor(py::object f) : f{f} {}
 
     template<typename T>
     void handle(const T& t) {
@@ -44,7 +44,7 @@ struct PyVisitor : ASTVisitor<PyVisitor, true, true> {
 };
 
 template<typename T>
-void pyVisit(const T& t, py::object f) {
-    PyVisitor visitor{f};
+void pyASTVisit(const T& t, py::object f) {
+    PyASTVisitor visitor{f};
     t.visit(visitor);
 }
