@@ -15,7 +15,8 @@ enum class VisitAction {
     Interrupt,
 };
 
-struct PyASTVisitor : ASTVisitor<PyASTVisitor, true, true> {
+template<typename TDerived, template<class, auto...> class BaseVisitor, auto... baseArgs>
+struct PyVisitorBase : public BaseVisitor<TDerived, baseArgs...> {
     py::object f;
     bool interrupted = false;
 
@@ -27,7 +28,7 @@ struct PyASTVisitor : ASTVisitor<PyASTVisitor, true, true> {
         "visit continues. Any other return value, including "
         "pslang.VisitAction.Advance is ignored, and the walk continues.";
 
-    explicit PyASTVisitor(py::object f) : f{f} {}
+    explicit PyVisitorBase(py::object f) : f{f} {}
 
     template<typename T>
     void handle(const T& t) {
@@ -41,6 +42,10 @@ struct PyASTVisitor : ASTVisitor<PyASTVisitor, true, true> {
         if (result.not_equal(py::cast(VisitAction::Skip)))
             this->visitDefault(t);
     }
+};
+
+struct PyASTVisitor : PyVisitorBase<PyASTVisitor, ASTVisitor, true, true> {
+    using PyVisitorBase::PyVisitorBase;
 };
 
 template<typename T>
