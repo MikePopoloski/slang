@@ -31,15 +31,15 @@ struct PyASTVisitor : ASTVisitor<PyASTVisitor, true, true> {
 
     template<typename T>
     void handle(const T& t) {
-        if (interrupted)
+        if (this->interrupted)
             return;
-        py::object result = f(&t);
+        py::object result = this->f(&t);
         if (result.equal(py::cast(VisitAction::Interrupt))) {
-            interrupted = true;
+            this->interrupted = true;
             return;
         }
         if (result.not_equal(py::cast(VisitAction::Skip)))
-            visitDefault(t);
+            this->visitDefault(t);
     }
 };
 
