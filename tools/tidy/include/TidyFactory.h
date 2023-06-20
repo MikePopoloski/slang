@@ -68,7 +68,7 @@ public:
 
     static const TidyConfig& getConfig() { return config(); }
 
-    static void setSourceManager(slang::SourceManager* sm) { *sourceManager() = sm; }
+    static void setSourceManager(const slang::SourceManager* sm) { *sourceManager() = sm; }
     static const slang::SourceManager* getSourceManager() {
         if (auto sm = *sourceManager(); sm == nullptr)
             SLANG_THROW(std::runtime_error("TidyFactory: Trying to get SourceManager, but factory "
@@ -87,8 +87,8 @@ private:
         return config;
     }
 
-    static slang::SourceManager** sourceManager() {
-        static slang::SourceManager* sm;
+    static const slang::SourceManager** sourceManager() {
+        static const slang::SourceManager* sm;
         return &sm;
     }
 };

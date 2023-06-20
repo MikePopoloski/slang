@@ -77,6 +77,10 @@ int main(int argc, char** argv) {
 
     // Print (short)descriptions of the checks
     if (printDescriptions || printShortDescriptions) {
+        // Create a sourceManage placeholder
+        auto sm = SourceManager();
+        Registry::setSourceManager(&sm);
+
         bool first = true;
         for (const auto& check_name : Registry::getRegisteredChecks()) {
             const auto check = Registry::create(check_name);
@@ -117,6 +121,8 @@ int main(int argc, char** argv) {
 
     // Set the config to the Registry
     Registry::setConfig(tidyConfig);
+    // Set the sourceManager to the Registry so checks can access it
+    Registry::setSourceManager(compilation->getSourceManager());
 
     int ret_code = 0;
 
