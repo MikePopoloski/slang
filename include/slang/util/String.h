@@ -84,7 +84,7 @@ std::string getU8Str(const std::filesystem::path& path);
 /// Widens the provided UTF8 string into UTF16 wchars.
 SLANG_EXPORT std::wstring widen(std::string_view str);
 
-/// Widens the provided UTF16 string into UTF8.
+/// Narrows the provided UTF16 string into UTF8.
 SLANG_EXPORT std::string narrow(std::wstring_view str);
 
 #else
@@ -94,7 +94,7 @@ inline std::string_view widen(std::string_view str) {
     return str;
 }
 
-/// Widens the provided UTF16 string into UTF8.
+/// Narrows the provided UTF16 string into UTF8.
 inline std::string_view narrow(std::string_view str) {
     return str;
 }

@@ -104,7 +104,7 @@ void printDOT(const Netlist& netlist, const std::string& fileName) {
         }
     }
     buffer.append("}\n");
-    writeToFile(fileName, std::string_view(buffer.data()));
+    writeToFile(fileName, buffer.data());
 }
 
 template<typename Stream, typename String>

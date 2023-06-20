@@ -169,7 +169,7 @@ void Preprocessor::undefineAll() {
     }
 
     for (const std::string& undef : options.undefines)
-        undefine(std::string_view(undef));
+        undefine(undef);
 }
 
 bool Preprocessor::isDefined(std::string_view name) {

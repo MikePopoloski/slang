@@ -11,29 +11,29 @@ std::string getTestInclude() {
 
 TEST_CASE("Read source") {
     SourceManager manager;
-    std::string testPath = manager.makeAbsolutePath(std::string_view(getTestInclude()));
+    std::string testPath = manager.makeAbsolutePath(getTestInclude());
 
     CHECK(!manager.readSource("X:\\nonsense.txt"));
 
-    auto file = manager.readSource(std::string_view(testPath));
+    auto file = manager.readSource(testPath);
     REQUIRE(file);
     CHECK(file.data.length() > 0);
 }
 
 TEST_CASE("Read header (absolute)") {
     SourceManager manager;
-    std::string testPath = manager.makeAbsolutePath(std::string_view(getTestInclude()));
+    std::string testPath = manager.makeAbsolutePath(getTestInclude());
 
     // check load failure
     CHECK(!manager.readHeader("X:\\nonsense.txt", SourceLocation(), false));
 
     // successful load
-    SourceBuffer buffer = manager.readHeader(std::string_view(testPath), SourceLocation(), false);
+    SourceBuffer buffer = manager.readHeader(testPath, SourceLocation(), false);
     REQUIRE(buffer);
     CHECK(!buffer.data.empty());
 
     // next load should be cached
-    buffer = manager.readHeader(std::string_view(testPath), SourceLocation(), false);
+    buffer = manager.readHeader(testPath, SourceLocation(), false);
     CHECK(!buffer.data.empty());
 }
 
@@ -44,9 +44,8 @@ TEST_CASE("Read header (relative)") {
     CHECK(!manager.readHeader("relative", SourceLocation(), false));
 
     // get a file ID to load relative to
-    SourceBuffer buffer1 = manager.readHeader(
-        std::string_view(manager.makeAbsolutePath(std::string_view(getTestInclude()))),
-        SourceLocation(), false);
+    SourceBuffer buffer1 = manager.readHeader(manager.makeAbsolutePath(getTestInclude()),
+                                              SourceLocation(), false);
     REQUIRE(buffer1);
 
     // reading the same header by name should return the same ID
@@ -63,13 +62,12 @@ TEST_CASE("Read header (relative)") {
 
 TEST_CASE("Read header (include dirs)") {
     SourceManager manager;
-    CHECK(manager.addSystemDirectory(manager.makeAbsolutePath(std::string_view(findTestDir()))));
+    CHECK(manager.addSystemDirectory(manager.makeAbsolutePath(findTestDir())));
 
     SourceBuffer buffer = manager.readHeader("include.svh", SourceLocation(), true);
     REQUIRE(buffer);
 
-    CHECK(manager.addUserDirectory(
-        manager.makeAbsolutePath(std::string_view(findTestDir() + "/nested"))));
+    CHECK(manager.addUserDirectory(manager.makeAbsolutePath(findTestDir() + "/nested")));
     buffer = manager.readHeader("../infinite_chain.svh", SourceLocation(buffer.id, 0), false);
     CHECK(buffer);
 }
