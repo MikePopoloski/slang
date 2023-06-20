@@ -6,8 +6,6 @@
 //------------------------------------------------------------------------------
 #include "ASTHelperVisitors.h"
 #include "TidyDiags.h"
-#include "TidyFactory.h"
-#include <iostream>
 
 #include "slang/syntax/AllSyntax.h"
 

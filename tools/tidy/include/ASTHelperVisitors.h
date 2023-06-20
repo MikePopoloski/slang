@@ -13,12 +13,8 @@
 
 #include "slang/ast/ASTVisitor.h"
 
-#define NEEDS_SKIP_SYMBOL(__symbol)           \
-    if (skip((__symbol).location.bufferName)) \
-        return;
-
-#define NEEDS_SKIP_STATEMENT(__statement)               \
-    if (skip(statement.sourceRange.start().bufferName)) \
+#define NEEDS_SKIP_SYMBOL(__symbol)                            \
+    if (skip(sourceManager->getFileName((__symbol).location))) \
         return;
 
 // Function that tries to get the name of the variable in an expression
@@ -27,7 +23,8 @@ std::optional<std::string_view> getIdentifier(const slang::ast::Expression& expr
 struct TidyVisitor {
 protected:
     explicit TidyVisitor(slang::Diagnostics& diagnostics) :
-        diags(diagnostics), config(Registry::getConfig()) {}
+        sourceManager(Registry::getSourceManager()), diags(diagnostics),
+        config(Registry::getConfig()) {}
 
     [[nodiscard]] bool skip(std::string_view path) const {
         auto file = std::filesystem::path(path).filename();
@@ -35,6 +32,7 @@ protected:
         return std::find(skipFiles.begin(), skipFiles.end(), file) != skipFiles.end();
     }
 
+    slang::not_null<const slang::SourceManager*> sourceManager;
     slang::Diagnostics& diags;
     const TidyConfig& config;
 };
