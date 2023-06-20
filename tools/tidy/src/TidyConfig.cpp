@@ -10,8 +10,7 @@
 
 #include "TidyFactory.h"
 #include <filesystem>
-
-using slang::TidyKind;
+#include <utility>
 
 TidyConfig::TidyConfig() {
     checkConfigs.clkName = "clk_i";
@@ -21,15 +20,17 @@ TidyConfig::TidyConfig() {
     checkConfigs.outputPortSuffix = "_o";
     checkConfigs.inoutPortSuffix = "_io";
 
-    auto portsChecks = std::unordered_map<std::string, CheckStatus>();
-    portsChecks.emplace("EnforcePortSuffix", CheckStatus::ENABLED);
-    portsChecks.emplace("NoOldAlwaysSyntax", CheckStatus::ENABLED);
-    checkKinds.insert({slang::TidyKind::Style, portsChecks});
+    auto styleChecks = std::unordered_map<std::string, CheckStatus>();
+    styleChecks.emplace("AlwaysCombNonBlocking", CheckStatus::ENABLED);
+    styleChecks.emplace("AlwaysFFBlocking", CheckStatus::ENABLED);
+    styleChecks.emplace("EnforcePortSuffix", CheckStatus::ENABLED);
+    styleChecks.emplace("NoOldAlwaysSyntax", CheckStatus::ENABLED);
+    checkKinds.insert({slang::TidyKind::Style, styleChecks});
 
     auto synthesisChecks = std::unordered_map<std::string, CheckStatus>();
+    synthesisChecks.emplace("NoLatchesOnDesign", CheckStatus::ENABLED);
     synthesisChecks.emplace("OnlyAssignedOnReset", CheckStatus::ENABLED);
     synthesisChecks.emplace("RegisterHasNoReset", CheckStatus::ENABLED);
-    synthesisChecks.emplace("NoLatchesOnDesign", CheckStatus::ENABLED);
     checkKinds.insert({slang::TidyKind::Synthesis, synthesisChecks});
 }
 
@@ -38,7 +39,7 @@ void TidyConfig::addSkipFile(const std::string& path) {
 }
 
 void TidyConfig::addSkipFile(std::vector<std::string> paths) {
-    skipFiles = paths;
+    skipFiles = std::move(paths);
 }
 
 void TidyConfig::toggleAl(CheckStatus status) {
