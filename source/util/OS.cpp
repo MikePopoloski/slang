@@ -20,7 +20,6 @@
 #    include <fcntl.h>
 #    include <io.h>
 #else
-#    include <sys/stat.h>
 #    include <unistd.h>
 #endif
 
@@ -89,19 +88,10 @@ bool OS::fileSupportsColors(FILE* file) {
 #endif
 
 bool OS::readFile(const fs::path& path, std::vector<char>& buffer) {
-#if defined(_MSC_VER)
     std::error_code ec;
     uintmax_t size = fs::file_size(path, ec);
     if (ec)
         return false;
-#else
-    struct stat s;
-    int ec = ::stat(path.string().c_str(), &s);
-    if (ec != 0 || s.st_size < 0)
-        return false;
-
-    uintmax_t size = uintmax_t(s.st_size);
-#endif
 
     // + 1 for null terminator
     buffer.resize((size_t)size + 1);

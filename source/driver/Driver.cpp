@@ -259,8 +259,8 @@ bool Driver::processCommandFile(std::string_view fileName, bool makeRelative) {
 
     fs::path currPath;
     if (makeRelative) {
-        currPath = fs::current_path();
-        fs::current_path(path.parent_path());
+        currPath = fs::current_path(ec);
+        fs::current_path(path.parent_path(), ec);
     }
 
     CommandLine::ParseOptions parseOpts;
@@ -276,7 +276,7 @@ bool Driver::processCommandFile(std::string_view fileName, bool makeRelative) {
     bool result = cmdLine.parse(argStr, parseOpts);
 
     if (makeRelative)
-        fs::current_path(currPath);
+        fs::current_path(currPath, ec);
 
     if (!result) {
         for (auto& err : cmdLine.getErrors())
@@ -402,10 +402,18 @@ bool Driver::processOptions() {
         diagEngine.setSeverity(diag::SplitDistWeightOp, DiagnosticSeverity::Error);
     }
 
-    for (const std::string& path : options.suppressWarningsPaths)
-        diagEngine.addIgnorePath(fs::canonical(widen(path)));
-    for (const std::string& path : options.suppressMacroWarningsPaths)
-        diagEngine.addIgnoreMacroPath(fs::canonical(widen(path)));
+    std::error_code ec;
+    for (const std::string& pathStr : options.suppressWarningsPaths) {
+        auto path = fs::canonical(widen(pathStr), ec);
+        if (!path.empty())
+            diagEngine.addIgnorePath(std::move(path));
+    }
+
+    for (const std::string& pathStr : options.suppressMacroWarningsPaths) {
+        auto path = fs::canonical(widen(pathStr), ec);
+        if (!path.empty())
+            diagEngine.addIgnoreMacroPath(std::move(path));
+    }
 
     Diagnostics optionDiags = diagEngine.setWarningOptions(options.warningOptions);
     for (auto& diag : optionDiags)

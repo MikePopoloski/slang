@@ -129,8 +129,7 @@ int editDistance(std::string_view left, std::string_view right, bool allowReplac
 }
 
 std::string getU8Str(const std::filesystem::path& path) {
-    auto u8str = path.u8string();
-    return {u8str.begin(), u8str.end()};
+    return std::string(narrow(path.native()));
 }
 
 #if defined(_MSC_VER)
