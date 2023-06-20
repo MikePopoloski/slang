@@ -253,7 +253,7 @@ void CommandLine::parseStr(std::string_view argList, ParseOptions options, bool&
 
         // Look for environment variables to expand.
         if (c == '$' && options.expandEnvVars && ptr != end) {
-            std::string result = expandVar(ptr, end);
+            std::string result = OS::parseEnvVar(ptr, end);
 
             ParseOptions newOptions = options;
             newOptions.expandEnvVars = false;
@@ -294,7 +294,7 @@ void CommandLine::parseStr(std::string_view argList, ParseOptions options, bool&
                     c = *ptr++;
 
                 if (c == '$' && options.expandEnvVars && ptr != end)
-                    current.append(expandVar(ptr, end));
+                    current.append(OS::parseEnvVar(ptr, end));
                 else
                     current += c;
             }
@@ -303,42 +303,6 @@ void CommandLine::parseStr(std::string_view argList, ParseOptions options, bool&
 
         // Otherwise we just have a normal character.
         current += c;
-    }
-}
-
-std::string CommandLine::expandVar(const char*& ptr, const char* end) {
-    // Three forms for environment variables to try:
-    // $VAR
-    // $(VAR)
-    // ${VAR}
-    char c = *ptr++;
-    if (c == '(' || c == '{') {
-        char startDelim = c;
-        char endDelim = c == '(' ? ')' : '}';
-        std::string varName;
-        while (ptr != end) {
-            c = *ptr++;
-            if (c == endDelim)
-                return OS::getEnv(varName);
-
-            varName += c;
-        }
-
-        // If we reach the end, we didn't find a closing delimiter.
-        // Don't try to expand, just return the whole thing we collected.
-        return "$"s + startDelim + varName;
-    }
-    else if (isValidCIdChar(c)) {
-        std::string varName;
-        varName += c;
-        while (ptr != end && isValidCIdChar(*ptr))
-            varName += *ptr++;
-
-        return OS::getEnv(varName);
-    }
-    else {
-        // This is not a possible variable name so just return what we have.
-        return "$"s + c;
     }
 }
 

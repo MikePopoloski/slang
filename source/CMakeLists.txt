@@ -71,6 +71,7 @@ add_library(
   syntax/SyntaxTree.cpp
   syntax/SyntaxVisitor.cpp
   text/CharInfo.cpp
+  text/Glob.cpp
   text/Json.cpp
   text/SFormat.cpp
   text/SourceLocation.cpp

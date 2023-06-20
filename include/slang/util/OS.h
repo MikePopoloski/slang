@@ -57,6 +57,7 @@ public:
     static void printE(const fmt::text_style& style, std::string_view text);
 
     static std::string getEnv(const std::string& name);
+    static std::string parseEnvVar(const char*& ptr, const char* end);
 
     static auto captureOutput() {
         capturedStdout.clear();

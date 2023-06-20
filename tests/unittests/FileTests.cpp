@@ -4,6 +4,7 @@
 #include "Test.h"
 
 #include "slang/text/SourceManager.h"
+#include "slang/util/String.h"
 
 std::string getTestInclude() {
     return findTestDir() + "/include.svh";
@@ -70,6 +71,35 @@ TEST_CASE("Read header (include dirs)") {
     CHECK(manager.addUserDirectory(manager.makeAbsolutePath(findTestDir() + "/nested")));
     buffer = manager.readHeader("../infinite_chain.svh", SourceLocation(buffer.id, 0), false);
     CHECK(buffer);
+}
+
+static void globAndCheck(const fs::path& basePath, std::string_view pattern,
+                         std::initializer_list<const char*> expected) {
+    SmallVector<fs::path> results;
+    svGlob(basePath, pattern, results);
+
+    CHECK(results.size() == expected.size());
+    for (auto str : expected) {
+        auto it = std::find_if(results.begin(), results.end(),
+                               [str](auto& item) { return item.filename() == str; });
+        if (it == results.end()) {
+            FAIL_CHECK(str << " is not found in results for " << pattern);
+        }
+    }
+}
+
+TEST_CASE("File globbing") {
+    auto testDir = findTestDir();
+    globAndCheck(testDir, "*st?.sv", {"test2.sv", "test3.sv", "test4.sv", "test5.sv", "test6.sv"});
+    globAndCheck(testDir, "system", {});
+    globAndCheck(testDir, "system/", {"system.svh"});
+    globAndCheck(testDir, ".../f*.svh", {"file.svh", "file_defn.svh", "file_uses_defn.svh"});
+    globAndCheck(testDir, "*ste*/", {"file.svh", "macro.svh", "nested_local.svh", "system.svh"});
+    globAndCheck(testDir, testDir + "/library/pkg.sv", {"pkg.sv"});
+    globAndCheck(testDir, "*??blah", {});
+
+    putenv((char*)"BAR#=cmd");
+    globAndCheck(testDir, "*${BAR#}.f", {"cmd.f"});
 }
 
 TEST_CASE("Config Blocks") {

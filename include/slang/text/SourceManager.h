@@ -18,11 +18,20 @@
 
 #include "slang/text/SourceLocation.h"
 #include "slang/util/Hash.h"
+#include "slang/util/SmallVector.h"
 #include "slang/util/Util.h"
 
 namespace slang {
 
 enum class DiagnosticSeverity;
+
+/// Performs a file system "glob" operation to return all files underneath
+/// @a basePath that match the given @a pattern string. The pattern is in
+/// the format described by the LRM 33.3.1, which mostly matches other
+/// glob implementations except for the use of '...' to mean recursive
+/// directory match.
+SLANG_EXPORT void svGlob(const std::filesystem::path& basePath, std::string_view pattern,
+                         SmallVector<std::filesystem::path>& results);
 
 /// SourceManager - Handles loading and tracking source files.
 ///

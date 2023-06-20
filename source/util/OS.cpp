@@ -7,6 +7,8 @@
 //------------------------------------------------------------------------------
 #include "slang/util/OS.h"
 
+#include "slang/text/CharInfo.h"
+
 #if defined(_MSC_VER)
 #    ifndef WIN32_LEAN_AND_MEAN
 #        define WIN32_LEAN_AND_MEAN
@@ -153,6 +155,42 @@ std::string OS::getEnv(const std::string& name) {
         return result;
     else
         return {};
-};
+}
+
+std::string OS::parseEnvVar(const char*& ptr, const char* end) {
+    // Three forms for environment variables to try:
+    // $VAR
+    // $(VAR)
+    // ${VAR}
+    char c = *ptr++;
+    if (c == '(' || c == '{') {
+        char startDelim = c;
+        char endDelim = c == '(' ? ')' : '}';
+        std::string varName;
+        while (ptr != end) {
+            c = *ptr++;
+            if (c == endDelim)
+                return OS::getEnv(varName);
+
+            varName += c;
+        }
+
+        // If we reach the end, we didn't find a closing delimiter.
+        // Don't try to expand, just return the whole thing we collected.
+        return "$"s + startDelim + varName;
+    }
+    else if (isValidCIdChar(c)) {
+        std::string varName;
+        varName += c;
+        while (ptr != end && isValidCIdChar(*ptr))
+            varName += *ptr++;
+
+        return OS::getEnv(varName);
+    }
+    else {
+        // This is not a possible variable name so just return what we have.
+        return "$"s + c;
+    }
+}
 
 } // namespace slang
