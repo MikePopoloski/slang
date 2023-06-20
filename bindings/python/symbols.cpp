@@ -122,7 +122,7 @@ void registerSymbols(py::module_& m) {
              py::overload_cast<const Symbol&>(&Symbol::isDeclaredBefore, py::const_), "target"_a)
         .def("isDeclaredBefore",
              py::overload_cast<LookupLocation>(&Symbol::isDeclaredBefore, py::const_), "location"_a)
-        .def("visit", &pyVisit<Symbol>, "f"_a, PyVisitor::doc)
+        .def("visit", &pyASTVisit<Symbol>, "f"_a, PyASTVisitor::doc)
         .def("__repr__", [](const Symbol& self) {
             return fmt::format("Symbol(SymbolKind.{}, \"{}\")", toString(self.kind), self.name);
         });
