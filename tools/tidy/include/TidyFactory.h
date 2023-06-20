@@ -16,6 +16,7 @@
 #include <unordered_map>
 
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
+#include "slang/text/SourceManager.h"
 #include "slang/util/Util.h"
 
 class TidyCheck;
@@ -67,6 +68,14 @@ public:
 
     static const TidyConfig& getConfig() { return config(); }
 
+    static void setSourceManager(slang::SourceManager* sm) { *sourceManager() = sm; }
+    static const slang::SourceManager* getSourceManager() {
+        if (auto sm = *sourceManager(); sm == nullptr)
+            SLANG_THROW(std::runtime_error("TidyFactory: Trying to get SourceManager, but factory "
+                                           "pointer has not been initialized"));
+        return *sourceManager();
+    }
+
 private:
     static RegistryMap& checks() {
         static RegistryMap map;
@@ -76,6 +85,11 @@ private:
     static TidyConfig& config() {
         static TidyConfig config;
         return config;
+    }
+
+    static slang::SourceManager** sourceManager() {
+        static slang::SourceManager* sm;
+        return &sm;
     }
 };
 
