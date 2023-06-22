@@ -1,4 +1,4 @@
-//------------------------------------------------------------------------------
+
 //! @file AlwaysCombNonBlocking.h
 //! @brief Enforces that there are any non blocking assignments on an always_comb
 //
@@ -20,6 +20,7 @@ struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, true, false> {
     explicit MainVisitor(Diagnostics& diagnostics) : TidyVisitor(diagnostics) {}
 
     void handle(const ProceduralBlockSymbol& symbol) {
+        NEEDS_SKIP_SYMBOL(symbol)
         if (symbol.procedureKind == ProceduralBlockKind::AlwaysComb) {
             bool hasNonBlockingAssignment = false;
             symbol.visitStmts(makeVisitor([&](const AssignmentExpression& expr) {

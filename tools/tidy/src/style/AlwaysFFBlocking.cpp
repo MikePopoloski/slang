@@ -21,6 +21,7 @@ struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, true, false> {
     explicit MainVisitor(Diagnostics& diagnostics) : TidyVisitor(diagnostics) {}
 
     void handle(const ProceduralBlockSymbol& symbol) {
+        NEEDS_SKIP_SYMBOL(symbol)
         if (symbol.procedureKind == ProceduralBlockKind::AlwaysFF) {
             // Collect all declared local variables
             std::vector<std::string_view> locals;
