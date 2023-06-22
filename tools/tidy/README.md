@@ -4,7 +4,7 @@ A SystemVerilog linter
 
 ## Configuration File
 
-Slang Tidy can be configured using a `.slang-tidy`. This file can be provided using the `--config-file` argument or the 
+Slang Tidy can be configured using a `.slang-tidy`. This file can be provided using the `--config-file` argument or the
 `slang-tidy` tool will search for it from the path where it has been called until the root directory.
 
 ### Configuration file grammar
@@ -49,4 +49,4 @@ CheckConfigs:
   3. Use the `REGISTER` macro to register the new check in the factory.
   4. Create the new tidy diagnostic in the `TidyDiags.h` file.
   5. Add the new check to the corresponding map in the `TidyConfig` constructor.
-  
+
