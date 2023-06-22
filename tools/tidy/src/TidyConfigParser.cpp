@@ -41,7 +41,7 @@ char TidyConfigParser::nextChar() {
     col++;
 #if defined(_WIN32)
     if (c == '\r' && stream.peek() == '\n') {
-        stream >> std::noskipws >> c;
+        fileStream >> std::noskipws >> c;
         col = 0;
         line++;
     }
