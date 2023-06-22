@@ -8,9 +8,9 @@
 #pragma once
 
 #include <algorithm>
+#include <array>
 #include <optional>
 #include <string>
-#include <array>
 
 #include "slang/util/Util.h"
 
