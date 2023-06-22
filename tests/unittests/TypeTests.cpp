@@ -614,13 +614,13 @@ TEST_CASE("Type matching") {
     auto& scope = compilation.createScriptScope();
 
     auto declare = [&](const std::string& source) {
-        auto tree = SyntaxTree::fromText(std::string_view(source));
+        auto tree = SyntaxTree::fromText(source);
         savedTrees.push_back(tree);
         scope.addMembers(tree->root());
     };
 
     auto typeof = [&](const std::string& source) {
-        auto tree = SyntaxTree::fromText(std::string_view(source));
+        auto tree = SyntaxTree::fromText(source);
         ASTContext context(scope, LookupLocation::max);
         return Expression::bind(tree->root().as<ExpressionSyntax>(), context).type;
     };
@@ -741,13 +741,13 @@ TEST_CASE("Type equivalence") {
     auto& scope = compilation.createScriptScope();
 
     auto declare = [&](const std::string& source) {
-        auto tree = SyntaxTree::fromText(std::string_view(source));
+        auto tree = SyntaxTree::fromText(source);
         savedTrees.push_back(tree);
         scope.addMembers(tree->root());
     };
 
     auto typeof = [&](const std::string& source) {
-        auto tree = SyntaxTree::fromText(std::string_view(source));
+        auto tree = SyntaxTree::fromText(source);
         ASTContext context(scope, LookupLocation::max);
         return Expression::bind(tree->root().as<ExpressionSyntax>(), context).type;
     };
@@ -810,13 +810,13 @@ TEST_CASE("Assignment compatibility") {
     auto& scope = compilation.createScriptScope();
 
     auto declare = [&](const std::string& source) {
-        auto tree = SyntaxTree::fromText(std::string_view(source));
+        auto tree = SyntaxTree::fromText(source);
         savedTrees.push_back(tree);
         scope.addMembers(tree->root());
     };
 
     auto typeof = [&](const std::string& source) {
-        auto tree = SyntaxTree::fromText(std::string_view(source));
+        auto tree = SyntaxTree::fromText(source);
         ASTContext context(scope, LookupLocation::max);
         return Expression::bind(tree->root().as<ExpressionSyntax>(), context).type;
     };

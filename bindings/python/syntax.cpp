@@ -4,6 +4,7 @@
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
 #include "pyslang.h"
+#include "visitor.h"
 
 #include "slang/parsing/Lexer.h"
 #include "slang/parsing/Parser.h"
@@ -11,7 +12,30 @@
 #include "slang/syntax/SyntaxNode.h"
 #include "slang/syntax/SyntaxPrinter.h"
 #include "slang/syntax/SyntaxTree.h"
+#include "slang/syntax/SyntaxVisitor.h"
 #include "slang/text/SourceManager.h"
+
+namespace {
+
+struct PySyntaxVisitor : public PyVisitorBase<PySyntaxVisitor, SyntaxVisitor> {
+    using PyVisitorBase::PyVisitorBase;
+
+    void visitToken(parsing::Token t) {
+        if (this->interrupted)
+            return;
+        py::object result = this->f(t);
+        if (result.equal(py::cast(VisitAction::Interrupt))) {
+            this->interrupted = true;
+        }
+    }
+};
+
+void pySyntaxVisit(const SyntaxNode& sn, py::object f) {
+    PySyntaxVisitor visitor{f};
+    sn.visit(visitor);
+}
+
+} // end namespace
 
 void registerSyntax(py::module_& m) {
     EXPOSE_ENUM(m, TriviaKind);
@@ -135,6 +159,7 @@ void registerSyntax(py::module_& m) {
         .def("getFirstToken", &SyntaxNode::getFirstToken)
         .def("getLastToken", &SyntaxNode::getLastToken)
         .def("isEquivalentTo", &SyntaxNode::isEquivalentTo, "other"_a)
+        .def("visit", &pySyntaxVisit, "f"_a, PySyntaxVisitor::doc)
         .def_property_readonly("sourceRange", &SyntaxNode::sourceRange)
         .def("__getitem__",
              [](const SyntaxNode& self, size_t i) -> py::object {

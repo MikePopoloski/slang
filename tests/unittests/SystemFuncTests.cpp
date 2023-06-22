@@ -186,13 +186,13 @@ TEST_CASE("Utility system functions") {
     auto& scope = compilation.createScriptScope();
 
     auto declare = [&](const std::string& source) {
-        auto tree = SyntaxTree::fromText(std::string_view(source));
+        auto tree = SyntaxTree::fromText(source);
         scope.getCompilation().addSyntaxTree(tree);
         scope.addMembers(tree->root());
     };
 
     auto typeof = [&](const std::string& source) {
-        auto tree = SyntaxTree::fromText(std::string_view(source));
+        auto tree = SyntaxTree::fromText(source);
         ASTContext context(scope, LookupLocation::max);
         return Expression::bind(tree->root().as<ExpressionSyntax>(), context).type->toString();
     };
@@ -245,7 +245,7 @@ TEST_CASE("Conversion system functions") {
     auto& scope = compilation.createScriptScope();
 
     auto typeof = [&](const std::string& source) {
-        auto tree = SyntaxTree::fromText(std::string_view(source));
+        auto tree = SyntaxTree::fromText(source);
         ASTContext context(scope, LookupLocation::max);
         return Expression::bind(tree->root().as<ExpressionSyntax>(), context).type->toString();
     };

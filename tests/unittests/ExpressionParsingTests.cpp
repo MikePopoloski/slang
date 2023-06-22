@@ -485,7 +485,7 @@ module M; localparam foo = (stackDepth == 100) || ((stackDepth == 200) || ((stac
 
     Diagnostics diags;
     Preprocessor preprocessor(SyntaxTree::getDefaultSourceManager(), alloc, diags);
-    preprocessor.pushSource(std::string_view(text), "source");
+    preprocessor.pushSource(text, "source");
 
     Bag options;
     ParserOptions parserOptions;

@@ -25,7 +25,7 @@ void setupSourceManager(SourceManager& sourceManager) {
     auto testDir = findTestDir();
     CHECK(sourceManager.addUserDirectory(testDir));
     CHECK(sourceManager.addSystemDirectory(testDir));
-    CHECK(sourceManager.addSystemDirectory(std::string_view(testDir + "system/")));
+    CHECK(sourceManager.addSystemDirectory(testDir + "system/"));
 }
 
 SourceManager& getSourceManager() {

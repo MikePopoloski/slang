@@ -25,7 +25,8 @@ SourceManager::SourceManager() {
 }
 
 std::string SourceManager::makeAbsolutePath(std::string_view path) const {
-    return getU8Str(fs::canonical(widen(path)));
+    std::error_code ec;
+    return getU8Str(fs::canonical(widen(path), ec));
 }
 
 bool SourceManager::addSystemDirectory(std::string_view pathStr) {
@@ -417,8 +418,9 @@ void SourceManager::addLineDirective(SourceLocation location, size_t lineNum, st
 
     fs::path full;
     fs::path linePath = widen(name);
+    std::error_code ec;
     if (!disableProximatePaths && linePath.has_relative_path())
-        full = linePath.lexically_proximate(fs::current_path());
+        full = linePath.lexically_proximate(fs::current_path(ec));
     else
         full = fs::path(widen(info->data->name)).replace_filename(linePath);
 

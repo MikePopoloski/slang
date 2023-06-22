@@ -187,7 +187,7 @@ TEST_CASE("logic_t operators") {
 }
 
 void checkRoundTrip(std::string str, LiteralBase base) {
-    SVInt sv = SVInt::fromString(std::string_view(str));
+    SVInt sv = SVInt::fromString(str);
     str.erase(std::remove(str.begin(), str.end(), '_'), str.end());
     CHECK(sv.toString(base) == str);
 }

@@ -359,8 +359,6 @@ private:
     void parseStr(std::string_view argList, ParseOptions options, bool& hasArg,
                   std::string& current, SmallVectorBase<std::string>& storage);
 
-    static std::string expandVar(const char*& ptr, const char* end);
-
     void handlePlusArg(std::string_view arg, ParseOptions options, bool& hadUnknowns);
 
     Option* findOption(std::string_view arg, std::string_view& value) const;
