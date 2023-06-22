@@ -49,4 +49,3 @@ CheckConfigs:
   3. Use the `REGISTER` macro to register the new check in the factory.
   4. Create the new tidy diagnostic in the `TidyDiags.h` file.
   5. Add the new check to the corresponding map in the `TidyConfig` constructor.
-
