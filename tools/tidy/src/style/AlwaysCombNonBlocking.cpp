@@ -61,4 +61,4 @@ public:
     }
 };
 
-REGISTER(AlwaysFFBlocking, AlwaysCombNonBlocking, TidyKind::Style)
+REGISTER(AlwaysCombNonBlocking, AlwaysCombNonBlocking, TidyKind::Style)

@@ -41,3 +41,12 @@ CheckConfigs:
     inputPortSuffix: _k,
     inputPortSuffix: _p
 ```
+
+## How to add a new check
+  1. Create a new `cpp` file with the name of the check in CamelCase format inside the check kind folder.
+  2. Inside the new `cpp` file create a class that inherits from `TidyChecks`. Use the `check` function to implement
+     the code that will perform the check in the AST.
+  3. Use the `REGISTER` macro to register the new check in the factory.
+  4. Create the new tidy diagnostic in the `TidyDiags.h` file.
+  5. Add the new check to the corresponding map in the `TidyConfig` constructor.
+  

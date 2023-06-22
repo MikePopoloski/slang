@@ -1,6 +1,6 @@
 //------------------------------------------------------------------------------
 //! @file tidy.h
-//! @brief The slang linter
+//! @brief A SystemVerilog linting tool
 //
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
