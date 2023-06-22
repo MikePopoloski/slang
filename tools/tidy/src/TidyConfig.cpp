@@ -35,7 +35,7 @@ TidyConfig::TidyConfig() {
 }
 
 void TidyConfig::addSkipFile(const std::string& path) {
-    skipFiles.push_back(std::filesystem::path(path).filename());
+    skipFiles.push_back(std::filesystem::path(path).filename().string());
 }
 
 void TidyConfig::addSkipFile(std::vector<std::string> paths) {
