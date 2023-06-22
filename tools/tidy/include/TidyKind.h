@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <optional>
 #include <string>
+#include <array>
 
 #include "slang/util/Util.h"
 
