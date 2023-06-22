@@ -15,7 +15,7 @@
 
 TidyConfigParser::TidyConfigParser(const std::filesystem::path& path) {
     parserState = ParserState::Initial;
-    filePath = path;
+    filePath = path.string();
     fileStream << std::ifstream(filePath).rdbuf();
     line = 0;
     col = 0;
