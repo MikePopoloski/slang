@@ -152,7 +152,8 @@ void svGlobInternal(const fs::path& basePath, std::string_view pattern,
     iterDirectory(currPath, results, SearchMode::Files);
 }
 
-void svGlob(const fs::path& basePath, std::string_view pattern, SmallVector<fs::path>& results) {
+SLANG_EXPORT void svGlob(const fs::path& basePath, std::string_view pattern,
+                         SmallVector<fs::path>& results) {
     // Expand any environment variable references in the pattern.
     std::string patternStr;
     patternStr.reserve(pattern.size());
