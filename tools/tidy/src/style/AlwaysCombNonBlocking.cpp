@@ -34,7 +34,7 @@ struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, true, false> {
         }
     }
 };
-} // namespace always_comb_blocking
+} // namespace always_comb_non_blocking
 
 using namespace always_comb_non_blocking;
 class AlwaysCombNonBlocking : public TidyCheck {
