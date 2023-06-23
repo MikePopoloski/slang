@@ -347,7 +347,9 @@ void TidyConfigParser::setCheckConfig(const std::string& configName, std::string
             config.setConfig(configName, value);
         }
         SLANG_CATCH(std::invalid_argument & exception) {
+#if __cpp_exceptions
             reportWarning(exception.what());
+#endif
         }
     };
 
