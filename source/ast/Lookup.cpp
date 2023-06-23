@@ -1294,7 +1294,7 @@ void Lookup::selectChild(const Type& virtualInterface, SourceRange range,
 
     // lookupDownward expects names in reverse order...
     SmallVector<NamePlusLoc, 4> namePartsReversed(nameParts.size(), UninitializedTag());
-    for (auto& npl : make_reverse_range(nameParts))
+    for (auto& npl : std::views::reverse(nameParts))
         namePartsReversed.push_back(npl);
 
     result.found = getVirtualInterfaceTarget(virtualInterface, context, range);

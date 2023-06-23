@@ -26,7 +26,7 @@ public:
         auto type = model.getDeclaredSymbol(decl.type->as<EnumTypeSyntax>());
         REQUIRE(type);
 
-        size_t count = type->as<EnumType>().members().size();
+        size_t count = std::ranges::distance(type->as<EnumType>().members());
         auto& newNode = parse(
             fmt::format("\n    localparam int {}__count = {};", decl.name.valueText(), count));
         insertAfter(decl, newNode);
@@ -137,7 +137,7 @@ TEST_CASE("Advanced rewriting") {
                 auto type = model.getDeclaredSymbol(decl.type->as<EnumTypeSyntax>());
                 REQUIRE(type);
 
-                size_t count = type->as<EnumType>().members().size();
+                size_t count = std::ranges::distance(type->as<EnumType>().members());
                 auto& newNode1 = parse(fmt::format("\n    localparam int {}__count1 = {};",
                                                    decl.name.valueText(), count));
                 insertBefore(decl, newNode1);
@@ -211,7 +211,7 @@ endmodule
                 auto type = model.getDeclaredSymbol(decl.type->as<EnumTypeSyntax>());
                 REQUIRE(type);
 
-                size_t count = type->as<EnumType>().members().size();
+                size_t count = std::ranges::distance(type->as<EnumType>().members());
                 auto& newNode1 = parse(fmt::format("\n    localparam int {}__count1 = {};",
                                                    decl.name.valueText(), count));
                 insertBefore(decl, newNode1);
@@ -279,7 +279,7 @@ endmodule
                 auto type = model.getDeclaredSymbol(decl.type->as<EnumTypeSyntax>());
                 REQUIRE(type);
 
-                size_t count = type->as<EnumType>().members().size();
+                size_t count = std::ranges::distance(type->as<EnumType>().members());
                 auto& newNode1 = parse(fmt::format("\n    localparam int {}__count1 = {};",
                                                    decl.name.valueText(), count));
                 insertBefore(decl, newNode1);

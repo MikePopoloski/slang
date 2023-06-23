@@ -81,10 +81,10 @@ endmodule
     CHECK(get("D0") == 1);
 
     auto& e1 = top.find<VariableSymbol>("e1");
-    CHECK(e1.getType().as<EnumType>().values().size() == 7);
+    CHECK(std::ranges::distance(e1.getType().as<EnumType>().values()) == 7);
 
     auto& e2 = top.find<VariableSymbol>("e2");
-    CHECK(e2.getType().as<EnumType>().values().size() == 1);
+    CHECK(std::ranges::distance(e2.getType().as<EnumType>().values()) == 1);
 }
 
 TEST_CASE("Enum initializer restrictions") {

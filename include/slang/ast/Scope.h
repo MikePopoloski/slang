@@ -7,6 +7,8 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include <ranges>
+
 #include "slang/ast/Lookup.h"
 #include "slang/ast/SemanticFacts.h"
 #include "slang/ast/Symbol.h"
@@ -179,15 +181,15 @@ public:
         return firstMember == nullptr;
     }
 
-    /// Gets an iterator to the members contained in the scope.
-    iterator_range<iterator> members() const {
+    /// Gets the range of members contained in the scope.
+    std::ranges::subrange<iterator> members() const {
         ensureElaborated();
         return {firstMember, nullptr};
     }
 
-    /// Gets an iterator to all of the members of the given type contained in the scope.
+    /// Gets the range of members of the given type contained in the scope.
     template<typename T>
-    iterator_range<specific_symbol_iterator<T>> membersOfType() const {
+    std::ranges::subrange<specific_symbol_iterator<T>> membersOfType() const {
         ensureElaborated();
         return {firstMember, nullptr};
     }

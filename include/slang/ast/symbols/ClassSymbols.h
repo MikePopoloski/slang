@@ -153,6 +153,12 @@ public:
     /// Gets the number of specializations that have been made for this generic class.
     size_t numSpecializations() const { return specMap.size(); }
 
+    /// Gets an iterator to the specializations created for the generic class.
+    auto specializations() const {
+        return std::views::values(specMap) |
+               std::views::transform([](auto& t) -> decltype(auto) { return *t; });
+    }
+
     void addForwardDecl(const ForwardingTypedefSymbol& decl) const;
     const ForwardingTypedefSymbol* getFirstForwardDecl() const { return firstForward; }
 
@@ -206,43 +212,6 @@ private:
     mutable std::optional<const Type*> defaultSpecialization;
     mutable const ForwardingTypedefSymbol* firstForward = nullptr;
     function_ref<void(Compilation&, ClassType&)> specializeFunc;
-
-public:
-    /// An iterator for specializations of the generic class.
-    class iterator : public iterator_facade<iterator, std::forward_iterator_tag, const Type> {
-    public:
-        iterator(SpecMap::const_iterator it) : it(it) {}
-        iterator(const iterator& other) : it(other.it) {}
-
-        iterator& operator=(const iterator& other) {
-            it = other.it;
-            return *this;
-        }
-
-        bool operator==(const iterator& other) const { return it == other.it; }
-
-        const Type& operator*() const { return *it->second; }
-        const Type& operator*() { return *it->second; }
-
-        iterator& operator++() {
-            ++it;
-            return *this;
-        }
-
-        iterator operator++(int) {
-            iterator tmp = *this;
-            ++(*this);
-            return tmp;
-        }
-
-    private:
-        SpecMap::const_iterator it;
-    };
-
-    /// Gets an iterator to the specializations created for the generic class.
-    iterator_range<iterator> specializations() const {
-        return {iterator(specMap.begin()), iterator(specMap.end())};
-    }
 };
 
 /// Represents a named constraint block declaration within a class.
