@@ -7,6 +7,7 @@
 //------------------------------------------------------------------------------
 #include "slang/diagnostics/DiagnosticEngine.h"
 
+#include <algorithm>
 #include <fmt/args.h>
 
 #include "slang/diagnostics/DiagArgFormatter.h"
@@ -219,8 +220,7 @@ bool DiagnosticEngine::issueImpl(const Diagnostic& diagnostic, DiagnosticSeverit
 
             auto& path = sourceManager.getFullPath(loc.buffer());
             for (auto& prefix : prefixes) {
-                auto [_, mismatchIt] = std::mismatch(path.begin(), path.end(), prefix.begin(),
-                                                     prefix.end());
+                auto [_, mismatchIt] = std::ranges::mismatch(path, prefix);
                 if (mismatchIt == prefix.end())
                     return true;
             }
@@ -330,12 +330,11 @@ static void getCommonMacroArgExpansions(const SourceManager& sm, SourceLocation 
     SmallVector<BufferID> endArgExpansions;
     getMacroArgExpansions(sm, start, true, startArgExpansions);
     getMacroArgExpansions(sm, end, false, endArgExpansions);
-    std::stable_sort(startArgExpansions.begin(), startArgExpansions.end());
-    std::stable_sort(endArgExpansions.begin(), endArgExpansions.end());
+    std::ranges::stable_sort(startArgExpansions);
+    std::ranges::stable_sort(endArgExpansions);
 
-    std::set_intersection(startArgExpansions.begin(), startArgExpansions.end(),
-                          endArgExpansions.begin(), endArgExpansions.end(),
-                          std::back_inserter(results));
+    std::ranges::set_intersection(startArgExpansions, endArgExpansions,
+                                  std::back_inserter(results));
 }
 
 // Recursively tries to find an expansion location of `loc` that is in the
@@ -354,7 +353,7 @@ static SourceLocation getMatchingMacroLoc(const SourceManager& sm, SourceLocatio
     if (sm.isMacroArgLoc(loc)) {
         // Only look at the original location of this argument if the other location
         // in the range is also present in the expansion.
-        if (std::binary_search(commonArgs.begin(), commonArgs.end(), loc.buffer())) {
+        if (std::ranges::binary_search(commonArgs, loc.buffer())) {
             SourceLocation orig = sm.getOriginalLoc(loc);
             macroRange = SourceRange(orig, orig);
         }
@@ -587,11 +586,8 @@ std::optional<DiagnosticSeverity> DiagnosticEngine::findMappedSeverity(
         return std::nullopt;
 
     const std::vector<DiagnosticMapping>& mappings = byBuffer->second;
-    auto byOffset = std::lower_bound(mappings.begin(), mappings.end(), fileLoc.offset(),
-                                     [](const DiagnosticMapping& mapping, size_t off) {
-                                         return mapping.offset < off;
-                                     });
-
+    auto byOffset = std::ranges::lower_bound(mappings, fileLoc.offset(), {},
+                                             &DiagnosticMapping::offset);
     if (byOffset == mappings.begin())
         return std::nullopt;
 

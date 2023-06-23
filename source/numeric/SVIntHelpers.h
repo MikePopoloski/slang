@@ -78,7 +78,7 @@ public:
             ptr = new T[size];
         else {
             ptr = reinterpret_cast<T*>(stackBase);
-            std::uninitialized_default_construct_n(ptr, size);
+            std::ranges::uninitialized_default_construct_n(ptr, size);
         }
     }
 
@@ -88,7 +88,7 @@ public:
         if (size > StackCount)
             delete[] ptr;
         else
-            std::destroy_n(ptr, size);
+            std::ranges::destroy_n(ptr, size);
     }
 
     T* get() const { return ptr; }

@@ -182,7 +182,7 @@ public:
             return nullptr;
 
         std::string str = cv.str();
-        str.erase(std::remove(str.begin(), str.end(), '_'), str.end());
+        std::erase(str, '_');
 
         int result = strToInt(str, nullptr, base).value_or(0);
         return SVInt(32, uint64_t(result), true);
@@ -205,7 +205,7 @@ public:
             return nullptr;
 
         std::string str = cv.str();
-        str.erase(std::remove(str.begin(), str.end(), '_'), str.end());
+        std::erase(str, '_');
 
         double result = strToDouble(str).value_or(0.0);
         return real_t(result);

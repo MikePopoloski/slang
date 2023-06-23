@@ -844,7 +844,7 @@ void SVInt::writeTo(SmallVectorBase<char>& buffer, LiteralBase base, bool includ
         buffer.push_back('0');
     else {
         // reverse the digits
-        std::reverse(buffer.begin() + startOffset, buffer.end());
+        std::ranges::reverse(buffer.begin() + startOffset, buffer.end());
         if (base10Exponent > 0) {
             buffer.append("...e"sv);
             uintToStr(buffer, base10Exponent);
@@ -1821,7 +1821,7 @@ void SVInt::initSlowCase(std::span<const byte> bytes) {
 void SVInt::initSlowCase(const SVIntStorage& other) {
     uint32_t words = getNumWords();
     pVal = new uint64_t[words];
-    std::copy(other.pVal, other.pVal + words, pVal);
+    std::ranges::copy(other.pVal, other.pVal + words, pVal);
 }
 
 SVInt& SVInt::assignSlowCase(const SVInt& rhs) {

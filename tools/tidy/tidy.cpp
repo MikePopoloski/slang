@@ -72,8 +72,8 @@ int main(int argc, char** argv) {
     if (!disabledCheckNames.empty()) {
         auto allRegisteredChecks = Registry::get_registered();
         for (const auto& name : disabledCheckNames) {
-            if (!std::count(allRegisteredChecks.begin(), allRegisteredChecks.end(), name)) {
-                slang::OS::printE(
+            if (!std::ranges::count(allRegisteredChecks, name)) {
+                OS::printE(
                     fmt::format("the check {} provided in --disable-check do not exist\n", name));
                 return 6;
             }
@@ -85,7 +85,7 @@ int main(int argc, char** argv) {
         disabledCheckKinds.insert(TidyKind::Synthesis);
 
     auto filter_func = [&](const Registry::RegistryItem& item) {
-        if (std::count(disabledCheckNames.begin(), disabledCheckNames.end(), item.first))
+        if (std::ranges::count(disabledCheckNames, item.first))
             return false;
         if (disabledCheckKinds.count(item.second.kind))
             return false;

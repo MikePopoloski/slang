@@ -753,7 +753,7 @@ public:
             instanceDims.push_back(sym.range);
             parent = sym.getParentScope();
         }
-        std::reverse(instanceDims.begin(), instanceDims.end());
+        std::ranges::reverse(instanceDims);
     }
 
     template<typename TPort>

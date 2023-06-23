@@ -441,10 +441,7 @@ void SourceManager::addDiagnosticDirective(SourceLocation location, std::string_
         // Keep the list in sorted order. Typically new additions should be at the end,
         // in which case we'll hit the condition above, but just in case we will do the
         // full search and insert here.
-        vec.emplace(std::upper_bound(vec.begin(), vec.end(), offset,
-                                     [](size_t offset, auto& diag) {
-                                         return offset < diag.offset;
-                                     }),
+        vec.emplace(std::ranges::upper_bound(vec, offset, {}, &DiagnosticDirectiveInfo::offset),
                     name, offset, severity);
     }
 }
@@ -599,9 +596,8 @@ const SourceManager::LineDirectiveInfo* SourceManager::FileInfo::getPreviousLine
     if (lineDirectives.empty())
         return nullptr;
 
-    auto it = std::lower_bound(
-        lineDirectives.begin(), lineDirectives.end(), LineDirectiveInfo({}, rawLineNumber, 0, 0),
-        [](const auto& a, const auto& b) { return a.lineInFile < b.lineInFile; });
+    auto it = std::ranges::lower_bound(lineDirectives, rawLineNumber, {},
+                                       &LineDirectiveInfo::lineInFile);
 
     // lower_bound will give us an iterator to the first directive after the command
     // let's instead get a pointer to the one right before it
@@ -643,7 +639,7 @@ size_t SourceManager::getRawLineNumber(SourceLocation location) const {
 
     // Find the first line offset that is greater than the given location offset. That iterator
     // then tells us how many lines away from the beginning we are.
-    auto it = std::lower_bound(fd->lineOffsets.begin(), fd->lineOffsets.end(), location.offset());
+    auto it = std::ranges::lower_bound(fd->lineOffsets, location.offset());
 
     // We want to ensure the line we return is strictly greater than the given location offset.
     // So if it is equal, add one to the lower bound we got.

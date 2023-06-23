@@ -145,8 +145,8 @@ TEST_CASE("IntervalMap -- branching inserts") {
         return ll < rl || (ll == rl && std::get<1>(left) < std::get<1>(right));
     };
 
-    std::sort(expectedOverlap.begin(), expectedOverlap.end(), sorter);
-    std::sort(actualOverlaps.begin(), actualOverlaps.end(), sorter);
+    std::ranges::sort(expectedOverlap, sorter);
+    std::ranges::sort(actualOverlaps, sorter);
 
     CHECK(expectedOverlap == actualOverlaps);
 

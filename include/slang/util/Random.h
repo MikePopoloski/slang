@@ -34,7 +34,7 @@ static T createRandomGenerator() {
     auto constexpr seedLen = seedBytes / sizeof(std::seed_seq::result_type);
     auto seed = std::array<std::seed_seq::result_type, seedLen>();
     auto dev = std::random_device();
-    std::generate_n(begin(seed), seedLen, std::ref(dev));
+    std::ranges::generate_n(begin(seed), seedLen, std::ref(dev));
     auto seedSeq = std::seed_seq(begin(seed), end(seed));
     return T{seedSeq};
 }

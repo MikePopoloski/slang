@@ -414,7 +414,7 @@ TEST_CASE("Driver command files are processed strictly in order") {
     }
 
     CHECK(fileNames.size() == 4);
-    CHECK(std::is_sorted(fileNames.begin(), fileNames.end()));
+    CHECK(std::ranges::is_sorted(fileNames));
 }
 
 TEST_CASE("Driver flag --exclude-ext (multiple use)") {

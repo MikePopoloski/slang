@@ -143,7 +143,7 @@ public:
 
     /// Clears all elements but retain underlying storage.
     void clear() noexcept {
-        std::destroy(begin(), end());
+        std::ranges::destroy(*this);
         len = 0;
     }
 
@@ -151,7 +151,7 @@ public:
     void pop_back() {
         SLANG_ASSERT(len);
         len--;
-        std::destroy_at(data_ + len);
+        std::ranges::destroy_at(data_ + len);
     }
 
     /// Adds an element to the end of the array.
@@ -178,14 +178,14 @@ public:
         auto newSize = len + numElems;
         reserve(newSize);
 
-        std::uninitialized_copy(first, last, end());
+        std::ranges::uninitialized_copy(first, last, end(), end() + numElems);
         len = newSize;
     }
 
     /// Appends a range of elements to the end of the array.
     template<typename TContainer>
     void append(const TContainer& container) {
-        append(std::begin(container), std::end(container));
+        append(std::ranges::begin(container), std::ranges::end(container));
     }
 
     /// Appends @a count copies of @a value to the end of the array.
@@ -196,7 +196,7 @@ public:
         auto newSize = len + count;
         reserve(newSize);
 
-        std::uninitialized_fill_n(end(), count, temp);
+        std::ranges::uninitialized_fill_n(end(), count, temp);
         len = newSize;
     }
 
@@ -211,16 +211,16 @@ public:
             reserve(count);
 
             // Fill the range.
-            std::uninitialized_fill_n(begin(), count, temp);
+            std::ranges::uninitialized_fill_n(begin(), count, temp);
             len = count;
             return;
         }
 
-        std::fill_n(begin(), std::min(count, size()), value);
+        std::ranges::fill_n(begin(), std::min(count, size()), value);
         if (count > size())
-            std::uninitialized_fill_n(end(), count - size(), value);
+            std::ranges::uninitialized_fill_n(end(), count - size(), value);
         else if (count < size())
-            std::destroy(begin() + count, end());
+            std::ranges::destroy(begin() + count, end());
         len = count;
     }
 
@@ -252,7 +252,7 @@ public:
         new (end()) T(std::move(back()));
 
         // Now move everything else and insert our temporary.
-        std::move_backward(result, end() - 1, end());
+        std::ranges::move_backward(result, end() - 1, end());
         *result = std::move(temp);
 
         len++;
@@ -291,20 +291,20 @@ public:
             append(std::move_iterator<iterator>(end() - numElems),
                    std::move_iterator<iterator>(end()));
 
-            std::move_backward(pos, oldEnd - numElems, oldEnd);
-            std::copy(first, last, pos);
+            std::ranges::move_backward(pos, oldEnd - numElems, oldEnd);
+            std::ranges::copy(first, last, pos);
             return pos;
         }
 
         // Move over elements we're about to overwrite.
-        std::uninitialized_move(pos, end(), begin() + newSize - existingOverlap);
+        std::ranges::uninitialized_move(pos, end(), begin() + newSize - existingOverlap);
 
         // Copy in the new elements.
-        std::copy_n(first, existingOverlap, pos);
+        std::ranges::copy_n(first, existingOverlap, pos);
         first += existingOverlap;
 
         // Insert the non-overwritten middle part.
-        std::uninitialized_copy(first, last, end());
+        std::ranges::uninitialized_copy(first, last, end());
         len = newSize;
         return pos;
     }
@@ -336,19 +336,19 @@ public:
             append(std::move_iterator<iterator>(end() - count),
                    std::move_iterator<iterator>(end()));
 
-            std::move_backward(result, oldEnd - count, oldEnd);
-            std::fill_n(result, count, temp);
+            std::ranges::move_backward(result, oldEnd - count, oldEnd);
+            std::ranges::fill_n(result, count, temp);
             return result;
         }
 
         // Move over elements we're about to overwrite.
-        std::uninitialized_move(result, end(), begin() + newSize - existingOverlap);
+        std::ranges::uninitialized_move(result, end(), begin() + newSize - existingOverlap);
 
         // Copy in the new elements.
-        std::fill_n(result, existingOverlap, temp);
+        std::ranges::fill_n(result, existingOverlap, temp);
 
         // Insert the non-overwritten middle part.
-        std::uninitialized_fill_n(end(), count - existingOverlap, temp);
+        std::ranges::uninitialized_fill_n(end(), count - existingOverlap, temp);
         len = newSize;
         return result;
     }
@@ -358,7 +358,7 @@ public:
         // const_cast is fine, this is a non-const member function.
         iterator result = const_cast<iterator>(pos);
 
-        std::move(result + 1, end(), result);
+        std::ranges::move(result + 1, end(), result);
         pop_back();
         return result;
     }
@@ -369,9 +369,9 @@ public:
         iterator result = const_cast<iterator>(first);
 
         if (first != last) {
-            auto newLast = std::move(const_cast<iterator>(last), end(),
-                                     const_cast<iterator>(first));
-            std::destroy(newLast, end());
+            auto newLast = std::ranges::move(const_cast<iterator>(last), end(),
+                                             const_cast<iterator>(first));
+            std::ranges::destroy(newLast, end());
             len = static_cast<size_type>(newLast - begin());
         }
 
@@ -387,7 +387,7 @@ public:
             return {};
 
         pointer dest = reinterpret_cast<pointer>(alloc.allocate(len * sizeof(T), alignof(T)));
-        std::uninitialized_copy(begin(), end(), dest);
+        std::ranges::uninitialized_copy(begin(), end(), dest, dest + len);
 
         return std::span<T>(dest, len);
     }
@@ -468,7 +468,7 @@ private:
     struct ValueInitTag {};
 
     void cleanup() {
-        std::destroy(begin(), end());
+        std::ranges::destroy(*this);
         if (!isSmall())
             ::operator delete(data_);
     }
@@ -482,7 +482,7 @@ private:
     template<typename TVal>
     void resizeImpl(size_type newSize, const TVal& val) {
         if (newSize < len) {
-            std::destroy(begin() + newSize, end());
+            std::ranges::destroy(begin() + newSize, end());
             len = newSize;
             return;
         }
@@ -494,10 +494,10 @@ private:
             }
 
             if constexpr (std::is_same_v<T, TVal>) {
-                std::uninitialized_fill_n(end(), newSize - len, val);
+                std::ranges::uninitialized_fill_n(end(), newSize - len, val);
             }
             else {
-                std::uninitialized_value_construct_n(end(), newSize - len);
+                std::ranges::uninitialized_value_construct_n(end(), newSize - len);
             }
             len = newSize;
         }
@@ -505,7 +505,7 @@ private:
 
     void reallocateTo(size_type newCapacity) {
         auto newData = (pointer)::operator new(newCapacity * sizeof(T));
-        std::uninitialized_move(begin(), end(), newData);
+        std::ranges::uninitialized_move(begin(), end(), newData, newData + len);
 
         cleanup();
         cap = newCapacity;
@@ -627,7 +627,8 @@ public:
         }
         else {
             auto newData = reinterpret_cast<pointer>(&this->firstElement[0]);
-            std::uninitialized_move(this->begin(), this->end(), newData);
+            std::ranges::uninitialized_move(this->begin(), this->end(), newData,
+                                            newData + this->size());
 
             this->cleanup();
             this->cap = N;
@@ -641,9 +642,7 @@ private:
 
 template<typename T>
 inline bool operator==(const SmallVectorBase<T>& lhs, const SmallVectorBase<T>& rhs) {
-    if (lhs.size() != rhs.size())
-        return false;
-    return std::equal(lhs.begin(), lhs.end(), rhs.begin());
+    return std::ranges::equal(lhs, rhs);
 }
 
 template<typename T>
@@ -653,7 +652,7 @@ inline bool operator!=(const SmallVectorBase<T>& lhs, const SmallVectorBase<T>& 
 
 template<typename T>
 inline bool operator<(const SmallVectorBase<T>& lhs, const SmallVectorBase<T>& rhs) {
-    return std::lexicographical_compare(lhs.begin(), lhs.end(), rhs.begin(), rhs.end());
+    return std::ranges::lexicographical_compare(lhs, rhs);
 }
 
 template<typename T>
@@ -695,17 +694,19 @@ void SmallVectorBase<T>::swap(SmallVectorBase<T>& rhs) {
 
     // Copy over the extra elements from whichever side is larger.
     if (size() > rhs.size()) {
-        std::uninitialized_copy(begin() + numShared, end(), rhs.end());
+        std::ranges::uninitialized_copy(begin() + numShared, end(), rhs.end(),
+                                        rhs.end() + size() - numShared);
         rhs.len = len;
 
-        std::destroy(begin() + numShared, end());
+        std::ranges::destroy(begin() + numShared, end());
         len = numShared;
     }
     else if (rhs.size() > size()) {
-        std::uninitialized_copy(rhs.begin() + numShared, rhs.end(), end());
+        std::ranges::uninitialized_copy(rhs.begin() + numShared, rhs.end(), end(),
+                                        end() + rhs.size() - numShared);
         len = rhs.len;
 
-        std::destroy(rhs.begin() + numShared, rhs.end());
+        std::ranges::destroy(rhs.begin() + numShared, rhs.end());
         rhs.len = numShared;
     }
 }
@@ -720,11 +721,11 @@ SmallVectorBase<T>& SmallVectorBase<T>::operator=(const SmallVectorBase<T>& rhs)
     if (len >= rhs.size()) {
         iterator newEnd;
         if (rhs.size())
-            newEnd = std::copy(rhs.begin(), rhs.end(), begin());
+            newEnd = std::ranges::copy(rhs, begin()).out;
         else
             newEnd = begin();
 
-        std::destroy(newEnd, end());
+        std::ranges::destroy(newEnd, end());
         len = rhs.size();
         return *this;
     }
@@ -737,11 +738,12 @@ SmallVectorBase<T>& SmallVectorBase<T>::operator=(const SmallVectorBase<T>& rhs)
     }
     else if (len) {
         // Otherwise, use assignment for the already-constructed elements.
-        std::copy(rhs.begin(), rhs.begin() + len, begin());
+        std::ranges::copy(rhs.begin(), rhs.begin() + len, begin());
     }
 
     // Copy construct the new elements in place.
-    std::uninitialized_copy(rhs.begin() + len, rhs.end(), begin() + len);
+    std::ranges::uninitialized_copy(rhs.begin() + len, rhs.end(), begin() + len,
+                                    begin() + rhs.size() - len);
     len = rhs.size();
     return *this;
 }
@@ -765,11 +767,11 @@ SmallVectorBase<T>& SmallVectorBase<T>::operator=(SmallVectorBase<T>&& rhs) {
     if (len >= rhs.size()) {
         iterator newEnd;
         if (rhs.size())
-            newEnd = std::move(rhs.begin(), rhs.end(), begin());
+            newEnd = std::ranges::move(rhs, begin());
         else
             newEnd = begin();
 
-        std::destroy(newEnd, end());
+        std::ranges::destroy(newEnd, end());
         len = rhs.size();
         rhs.clear();
         return *this;
@@ -783,11 +785,12 @@ SmallVectorBase<T>& SmallVectorBase<T>::operator=(SmallVectorBase<T>&& rhs) {
     }
     else if (len) {
         // Otherwise, use assignment for the already-constructed elements.
-        std::move(rhs.begin(), rhs.begin() + len, begin());
+        std::ranges::move(rhs.begin(), rhs.begin() + len, begin());
     }
 
     // Move construct the new elements in place.
-    std::uninitialized_move(rhs.begin() + len, rhs.end(), begin() + len);
+    std::ranges::uninitialized_move(rhs.begin() + len, rhs.end(), begin() + len,
+                                    begin() + rhs.size() - len);
     len = rhs.size();
     rhs.clear();
     return *this;
@@ -812,11 +815,11 @@ typename SmallVectorBase<T>::pointer SmallVectorBase<T>::emplaceRealloc(const po
 
     // Now move elements to the new memory.
     if (pos == end()) {
-        std::uninitialized_move(begin(), end(), newData);
+        std::ranges::uninitialized_move(begin(), end(), newData, newData + len);
     }
     else {
-        std::uninitialized_move(begin(), pos, newData);
-        std::uninitialized_move(pos, end(), newPos + 1);
+        std::ranges::uninitialized_move(begin(), pos, newData, newPos);
+        std::ranges::uninitialized_move(pos, end(), newPos + 1, newData + len + 1);
     }
 
     cleanup();
@@ -836,13 +839,13 @@ void SmallVectorBase<T>::resizeRealloc(size_type newSize, const TVal& val) {
     auto newCap = calculateGrowth(newSize);
     auto newData = (pointer)::operator new(newCap * sizeof(T));
 
-    std::uninitialized_move(begin(), end(), newData);
+    std::ranges::uninitialized_move(begin(), end(), newData, newData + len);
 
     if constexpr (std::is_same_v<T, TVal>) {
-        std::uninitialized_fill_n(newData + len, newSize - len, val);
+        std::ranges::uninitialized_fill_n(newData + len, newSize - len, val);
     }
     else {
-        std::uninitialized_value_construct_n(newData + len, newSize - len);
+        std::ranges::uninitialized_value_construct_n(newData + len, newSize - len);
     }
 
     cleanup();

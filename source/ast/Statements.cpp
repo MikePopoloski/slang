@@ -1474,8 +1474,8 @@ public:
         UnrollVisitor visitor(astCtx);
         visitor.visit(loop);
 
-        if (std::any_of(visitor.driverMap.begin(), visitor.driverMap.end(),
-                        [](auto& item) { return !item.second.empty(); })) {
+        if (std::ranges::any_of(visitor.driverMap,
+                                [](auto& item) { return !item.second.empty(); })) {
             visitor.runForReal(loop);
         }
     }
