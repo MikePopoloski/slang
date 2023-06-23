@@ -343,10 +343,10 @@ void TidyConfigParser::toggleCheck(const std::string& groupName, const std::stri
 
 void TidyConfigParser::setCheckConfig(const std::string& configName, std::string configValue) {
     auto set_config = [&](auto value) {
-        try {
+        SLANG_TRY {
             config.setConfig(configName, value);
         }
-        catch (std::invalid_argument& exception) {
+        SLANG_CATCH(std::invalid_argument & exception) {
             reportWarning(exception.what());
         }
     };
