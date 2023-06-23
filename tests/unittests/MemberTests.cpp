@@ -568,7 +568,7 @@ endmodule
     CHECK(attrs[0]->name == "blah");
 
     auto ports = n1.body.membersOfType<PortSymbol>();
-    REQUIRE(ports.size() == 1);
+    REQUIRE(std::ranges::distance(ports) == 1);
 
     auto& fooPort = *ports.begin();
     attrs = compilation.getAttributes(fooPort);
@@ -2342,7 +2342,7 @@ endmodule
 
     auto& m = compilation.getRoot().topInstances[0]->body;
 
-    auto ds = m.membersOfType<ContinuousAssignSymbol>()[0]->getDriveStrength();
+    auto ds = m.membersOfType<ContinuousAssignSymbol>().begin()->getDriveStrength();
     CHECK(ds.first == DriveStrength::Weak);
     CHECK(ds.second == DriveStrength::Supply);
 

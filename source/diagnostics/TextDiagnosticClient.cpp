@@ -7,6 +7,8 @@
 //------------------------------------------------------------------------------
 #include "slang/diagnostics/TextDiagnosticClient.h"
 
+#include <ranges>
+
 #include "slang/text/CharInfo.h"
 #include "slang/text/FormatBuffer.h"
 #include "slang/text/SourceManager.h"
@@ -170,7 +172,7 @@ static bool printableTextForNextChar(std::string_view sourceLine, size_t& index,
         }
 
         out.append("<U+"sv);
-        out.append(make_reverse_range(buf));
+        out.append(std::views::reverse(buf));
         out.push_back('>');
         columnWidth = out.size();
         return false;

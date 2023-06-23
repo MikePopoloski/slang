@@ -144,14 +144,15 @@ void registerSymbols(py::module_& m) {
                bitmask<LookupFlags> flags) { return self.lookupName(arg, location, flags); },
             "name"_a, "location"_a = LookupLocation::max, "flags"_a = LookupFlags::None, byrefint)
         .def("__getitem__",
-             [](const Scope& self, size_t i) {
+             [](const Scope& self, size_t idx) {
                  auto members = self.members();
-                 if (ptrdiff_t(i) >= members.size())
+                 members.advance(ptrdiff_t(idx));
+                 if (members.begin() == members.end())
                      throw py::index_error();
 
-                 return py::cast(&(*std::next(members.begin(), i)), byrefint, py::cast(&self));
+                 return py::cast(&members.front(), byrefint, py::cast(&self));
              })
-        .def("__len__", [](const Scope& self) { return self.members().size(); })
+        .def("__len__", [](const Scope& self) { return std::ranges::distance(self.members()); })
         .def(
             "__iter__",
             [](const Scope& self) {

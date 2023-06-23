@@ -822,7 +822,7 @@ const Type& PackedStructType::fromSyntax(Compilation& comp, const StructUnionTyp
     // We added the fields in reverse order, so compute their actual
     // offsets in the right order now.
     bitwidth_t offset = 0;
-    for (auto member : make_reverse_range(members)) {
+    for (auto member : std::views::reverse(members)) {
         member->bitOffset = offset;
         offset += member->getType().getBitWidth();
     }

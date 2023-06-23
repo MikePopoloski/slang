@@ -164,7 +164,7 @@ public:
         // Expression isn't actually evaluated here; we know the value to return at compile time.
         noHierarchical(context, *args[0]);
         const EnumType& type = args[0]->type->getCanonicalType().as<EnumType>();
-        return SVInt(32, (uint64_t)type.values().size(), true);
+        return SVInt(32, (uint64_t)std::ranges::distance(type.values()), true);
     }
 };
 

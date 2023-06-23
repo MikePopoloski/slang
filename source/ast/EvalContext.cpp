@@ -181,14 +181,14 @@ void EvalContext::reportStack(Diagnostic& diag) const {
     const size_t limit = compilation.getOptions().maxConstexprBacktrace;
     if (stack.size() <= limit || limit == 0) {
         FormatBuffer buffer;
-        for (const Frame& frame : make_reverse_range(stack))
+        for (const Frame& frame : std::views::reverse(stack))
             reportFrame(diag, frame);
         return;
     }
 
     const ptrdiff_t start = ptrdiff_t(limit / 2);
     const ptrdiff_t end = start + ptrdiff_t(limit % 2);
-    auto reversed = make_reverse_range(stack);
+    auto reversed = std::views::reverse(stack);
     for (auto it = reversed.begin(), itEnd = it + start; it != itEnd; it++)
         reportFrame(diag, *it);
 

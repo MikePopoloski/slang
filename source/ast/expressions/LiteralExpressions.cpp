@@ -251,7 +251,7 @@ Expression& StringLiteral::fromSyntax(const ASTContext& context,
         // String literals represented as integers put the first character on the
         // left, which translates to the msb, so we have to reverse the string.
         SmallVector<byte> bytes;
-        for (char c : make_reverse_range(value))
+        for (char c : std::views::reverse(value))
             bytes.push_back((byte)c);
 
         intVal = comp.allocConstant(SVInt(width, bytes, false));

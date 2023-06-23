@@ -72,7 +72,7 @@ public:
 
     void addDriver(std::pair<uint32_t, uint32_t> bounds, const ValueDriver& driver) const;
 
-    iterator_range<DriverIntervalMap::const_iterator> drivers() const {
+    std::ranges::subrange<DriverIntervalMap::const_iterator> drivers() const {
         return {driverMap.begin(), driverMap.end()};
     }
 

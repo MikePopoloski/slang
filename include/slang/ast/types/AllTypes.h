@@ -112,7 +112,7 @@ public:
                                      const syntax::EnumTypeSyntax& syntax,
                                      SmallVectorBase<const Symbol*>& members);
 
-    iterator_range<specific_symbol_iterator<EnumValueSymbol>> values() const {
+    std::ranges::subrange<specific_symbol_iterator<EnumValueSymbol>> values() const {
         return membersOfType<EnumValueSymbol>();
     }
 };

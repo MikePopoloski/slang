@@ -263,7 +263,7 @@ endmodule
     Compilation compilation;
     const auto& instance = evalModule(tree, compilation).body.memberAt<GenerateBlockArraySymbol>(1);
 
-    REQUIRE(instance.members().size() == 10);
+    REQUIRE(std::ranges::distance(instance.members()) == 10);
 
     for (uint32_t i = 0; i < 10; i++) {
         auto& leaf = instance.memberAt<GenerateBlockSymbol>(i).memberAt<InstanceSymbol>(1).body;
@@ -1213,7 +1213,7 @@ endmodule
     NO_COMPILATION_ERRORS;
 
     auto& root = compilation.getRoot().topInstances[0]->body;
-    REQUIRE(root.members().size() == 4);
+    REQUIRE(std::ranges::distance(root.members()) == 4);
 
     auto checkChild = [&](int index, const std::string& name, int val) {
         auto& inst = root.memberAt<InstanceSymbol>(index);
@@ -1591,10 +1591,7 @@ endmodule
 
     auto& top = compilation.getRoot().lookupName<InstanceSymbol>("top").body;
     auto instances = top.membersOfType<InstanceSymbol>();
-    REQUIRE(instances.size() == 3);
-    CHECK(instances[0]->name == "i1");
-    CHECK(instances[1]->name == "i3");
-    CHECK(instances[2]->name == "ff2");
+    REQUIRE(std::ranges::equal(instances, std::array{"i1", "i3", "ff2"}, {}, &Symbol::name));
 }
 
 TEST_CASE("Instance array size limits") {
