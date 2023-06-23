@@ -8,6 +8,7 @@
 #include "TidyDiags.h"
 
 #include "slang/syntax/AllSyntax.h"
+#include "slang/text/SourceManager.h"
 
 using namespace slang;
 using namespace slang::ast;
