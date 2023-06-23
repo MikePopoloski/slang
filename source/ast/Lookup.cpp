@@ -1518,8 +1518,8 @@ bool Lookup::withinClassRandomize(const ASTContext& context, const NameSyntax& s
             // first element is in the list. Otherwise, an empty list indicates that
             // the lookup is unrestricted.
             if (!details.nameRestrictions.empty()) {
-                if (std::find(details.nameRestrictions.begin(), details.nameRestrictions.end(),
-                              name.text) == details.nameRestrictions.end()) {
+                if (std::ranges::find(details.nameRestrictions, name.text) ==
+                    details.nameRestrictions.end()) {
                     return false;
                 }
             }

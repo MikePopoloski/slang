@@ -172,9 +172,9 @@ public:
                 };
 
                 if (reversed)
-                    std::sort(target.rbegin(), target.rend(), pred);
+                    std::ranges::sort(target.rbegin(), target.rend(), pred);
                 else
-                    std::sort(target.begin(), target.end(), pred);
+                    std::ranges::sort(target, pred);
             };
 
             if (target->isQueue()) {
@@ -188,9 +188,9 @@ public:
         else {
             auto sortTarget = [&](auto& target) {
                 if (reversed)
-                    std::sort(target.rbegin(), target.rend());
+                    std::ranges::sort(target.rbegin(), target.rend(), std::less<>{});
                 else
-                    std::sort(target.begin(), target.end());
+                    std::ranges::sort(target, std::less<>{});
             };
 
             if (target->isQueue()) {
@@ -235,11 +235,10 @@ public:
         if (!target)
             return nullptr;
 
-        auto doReverse = [](auto& target) { std::reverse(target.begin(), target.end()); };
         if (target->isQueue())
-            doReverse(*target->queue());
+            std::ranges::reverse(*target->queue());
         else
-            doReverse(std::get<ConstantValue::Elements>(target->getVariant()));
+            std::ranges::reverse(std::get<ConstantValue::Elements>(target->getVariant()));
 
         return nullptr;
     }

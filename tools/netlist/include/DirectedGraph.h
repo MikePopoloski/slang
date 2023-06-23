@@ -95,10 +95,9 @@ public:
 
     /// Return an iterator to the edge connecting the target node.
     const_iterator findEdgeTo(const NodeType& targetNode) {
-        return std::find_if(edges.begin(), edges.end(),
-                            [&targetNode](std::unique_ptr<EdgeType>& edge) {
-                                return edge->getTargetNode() == targetNode;
-                            });
+        return std::ranges::find_if(edges, [&targetNode](std::unique_ptr<EdgeType>& edge) {
+            return edge->getTargetNode() == targetNode;
+        });
     }
 
     /// Add an edge between this node and a target node, only if it does not
@@ -185,10 +184,9 @@ public:
     iterator end() { return nodes.end(); }
 
     node_descriptor findNode(const NodeType& nodeToFind) const {
-        auto it = std::find_if(nodes.begin(), nodes.end(),
-                               [&nodeToFind](const std::unique_ptr<NodeType>& node) {
-                                   return const_cast<const NodeType&>(*node) == nodeToFind;
-                               });
+        auto it = std::ranges::find_if(nodes, [&nodeToFind](const std::unique_ptr<NodeType>& node) {
+            return const_cast<const NodeType&>(*node) == nodeToFind;
+        });
         SLANG_ASSERT(it != nodes.end() && "Could not find node");
         return it - nodes.begin();
     }

@@ -317,7 +317,7 @@ public:
             return node->kind == NodeKind::VariableDeclaration &&
                    node->as<NetlistVariableDeclaration>().hierarchicalPath == hierarchicalPath;
         };
-        auto it = std::find_if(begin(), end(), compareNode);
+        auto it = std::ranges::find_if(*this, compareNode);
         return it != end() ? it->get() : nullptr;
     }
 
@@ -328,7 +328,7 @@ public:
             return node->kind == NodeKind::PortDeclaration &&
                    node->as<NetlistPortDeclaration>().hierarchicalPath == hierarchicalPath;
         };
-        auto it = std::find_if(begin(), end(), compareNode);
+        auto it = std::ranges::find_if(*this, compareNode);
         return it != end() ? it->get() : nullptr;
     }
 };

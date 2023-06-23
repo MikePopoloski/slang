@@ -360,8 +360,8 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamsAndBinds) {
     // Sort the list of definitions so that we get deterministic ordering of instances;
     // the order is otherwise dependent on iterating over a hash table.
     auto byName = [](auto a, auto b) { return a->name < b->name; };
-    std::sort(topDefs.begin(), topDefs.end(), byName);
-    std::sort(unreferencedDefs.begin(), unreferencedDefs.end(), byName);
+    std::ranges::sort(topDefs, byName);
+    std::ranges::sort(unreferencedDefs, byName);
 
     // If we have any cli param overrides we should apply them to
     // each top-level instance.
@@ -1440,7 +1440,7 @@ void Compilation::checkDPIMethods(std::span<const SubroutineSymbol* const> dpiIm
         if (!text.empty()) {
             auto tail = text.substr(1);
             if (!isValidCIdChar(text[0]) || isDecimalDigit(text[0]) ||
-                std::any_of(tail.begin(), tail.end(), [](char c) { return !isValidCIdChar(c); })) {
+                std::ranges::any_of(tail, [](char c) { return !isValidCIdChar(c); })) {
                 scope.addDiag(diag::InvalidDPICIdentifier, cid ? cid.range() : name.range())
                     << text;
                 return std::string_view();

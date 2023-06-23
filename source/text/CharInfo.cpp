@@ -17,20 +17,22 @@ namespace slang {
 struct UnicodeCharRange {
     uint32_t lower;
     uint32_t upper;
+
+    auto operator<=>(const UnicodeCharRange& range) const = default;
+
+    std::weak_ordering operator<=>(uint32_t value) const {
+        if (value < lower)
+            return std::weak_ordering::greater;
+        if (value > upper)
+            return std::weak_ordering::less;
+        return std::weak_ordering::equivalent;
+    }
 };
-
-bool operator<(uint32_t value, UnicodeCharRange range) {
-    return value < range.lower;
-}
-
-bool operator<(UnicodeCharRange range, uint32_t value) {
-    return range.upper < value;
-}
 
 struct UnicodeCharSet {
     explicit UnicodeCharSet(std::span<const UnicodeCharRange> ranges) : ranges(ranges) {}
 
-    bool contains(uint32_t c) const { return std::binary_search(ranges.begin(), ranges.end(), c); }
+    bool contains(uint32_t c) const { return std::ranges::binary_search(ranges, c, std::less<>{}); }
 
     const std::span<const UnicodeCharRange> ranges;
 };

@@ -33,7 +33,7 @@ public:
 
     void add(NetlistNode* node) { nodes.push_back(node); }
 
-    void reverse() { std::reverse(nodes.begin(), nodes.end()); }
+    void reverse() { std::ranges::reverse(nodes); }
 
     size_t size() const { return nodes.size(); }
 
@@ -61,7 +61,7 @@ public:
                 return false;
             }
         };
-        auto it = std::find_if(nodes.begin(), nodes.end(), match);
+        auto it = std::ranges::find_if(nodes, match);
         if (it != nodes.end()) {
             return std::make_optional(it - nodes.begin());
         }

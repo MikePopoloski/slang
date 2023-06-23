@@ -428,8 +428,9 @@ static std::string generateRandomAlphanumericString(TGenerator& gen, size_t len)
                                   "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
                                   "abcdefghijklmnopqrstuvwxyz"sv;
     auto result = std::string(len, '\0');
-    std::generate_n(begin(result), len,
-                    [&] { return chars[getUniformIntDist(gen, size_t(0), chars.size() - 1)]; });
+    std::ranges::generate_n(begin(result), len, [&] {
+        return chars[getUniformIntDist(gen, size_t(0), chars.size() - 1)];
+    });
     return result;
 }
 

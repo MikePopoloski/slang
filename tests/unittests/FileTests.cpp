@@ -80,8 +80,8 @@ static void globAndCheck(const fs::path& basePath, std::string_view pattern,
 
     CHECK(results.size() == expected.size());
     for (auto str : expected) {
-        auto it = std::find_if(results.begin(), results.end(),
-                               [str](auto& item) { return item.filename() == str; });
+        auto it = std::ranges::find_if(results,
+                                       [str](auto& item) { return item.filename() == str; });
         if (it == results.end()) {
             FAIL_CHECK(str << " is not found in results for " << pattern);
         }

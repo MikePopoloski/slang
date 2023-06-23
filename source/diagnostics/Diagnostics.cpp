@@ -153,7 +153,7 @@ void Diagnostics::sort(const SourceManager& sourceManager) {
         return false;
     };
 
-    std::stable_sort(begin(), end(), compare);
+    std::ranges::stable_sort(*this, compare);
 }
 
 } // namespace slang

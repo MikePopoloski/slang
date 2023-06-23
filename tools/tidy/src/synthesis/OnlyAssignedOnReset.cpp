@@ -32,11 +32,10 @@ struct AlwaysFFVisitor : public ASTVisitor<AlwaysFFVisitor, true, true> {
         }
 
         // Check if one of the identifiers is a reset
-        const auto isReset = std::any_of(collectIdentifiersVisitor.identifiers.begin(),
-                                         collectIdentifiersVisitor.identifiers.end(),
-                                         [this](auto id) {
-                                             return id.find(resetName) != std::string_view::npos;
-                                         });
+        const auto isReset =
+            std::ranges::any_of(collectIdentifiersVisitor.identifiers, [this](auto id) {
+                return id.find(resetName) != std::string_view::npos;
+            });
 
         if (isReset) {
             LookupLhsIdentifier visitor(name);

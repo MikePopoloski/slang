@@ -194,10 +194,9 @@ std::vector<const DefineDirectiveSyntax*> Preprocessor::getDefinedMacros() const
             results.push_back(def.syntax);
     }
 
-    std::sort(results.begin(), results.end(),
-              [](const DefineDirectiveSyntax* a, const DefineDirectiveSyntax* b) {
-                  return a->name.valueText() < b->name.valueText();
-              });
+    std::ranges::sort(results, [](const DefineDirectiveSyntax* a, const DefineDirectiveSyntax* b) {
+        return a->name.valueText() < b->name.valueText();
+    });
     return results;
 }
 

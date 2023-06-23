@@ -253,8 +253,8 @@ struct SourceSnippet {
         if (highlightLine.size() < endCol)
             highlightLine.resize(endCol, ' ');
 
-        std::fill(highlightLine.begin() + ptrdiff_t(startCol),
-                  highlightLine.begin() + ptrdiff_t(endCol), '~');
+        std::ranges::fill(highlightLine.begin() + ptrdiff_t(startCol),
+                          highlightLine.begin() + ptrdiff_t(endCol), '~');
     }
 
     void insertCaret(size_t offset) {
