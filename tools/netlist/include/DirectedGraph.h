@@ -235,7 +235,7 @@ public:
         // Remove the outgoing edges from the node for removal.
         nodeToRemove.clearEdges();
         // Remove the node itself.
-        nodes.erase(std::next(nodes.begin(), nodeToRemoveDesc));
+        nodes.erase(std::ranges::next(nodes.begin(), nodeToRemoveDesc));
         return true;
     }
 

@@ -113,27 +113,18 @@ public:
     /// index is of the specified type `T`.
     template<typename T>
     const T& memberAt(uint32_t index) const {
-        return std::next(members().begin(), index)->as<T>();
+        return std::ranges::next(members().begin(), index)->as<T>();
     }
 
     /// An iterator for members in the scope.
-    class iterator : public iterator_facade<iterator, std::forward_iterator_tag, const Symbol> {
+    class iterator : public iterator_facade<iterator> {
     public:
         iterator() : current(nullptr) {}
         iterator(const Symbol* firstSymbol) : current(firstSymbol) {}
 
-        bool operator==(const iterator& other) const { return current == other.current; }
-
-        const Symbol& operator*() const { return *current; }
-        const Symbol& operator*() { return *current; }
-
-        SLANG_EXPORT iterator& operator++();
-
-        SLANG_EXPORT iterator operator++(int) {
-            iterator tmp = *this;
-            ++(*this);
-            return tmp;
-        }
+        const Symbol& dereference() const { return *current; }
+        void increment() { current = current->nextInScope; }
+        bool equals(const iterator& other) const { return current == other.current; }
 
     private:
         const Symbol* current;
@@ -141,29 +132,20 @@ public:
 
     template<typename SpecificType>
     class specific_symbol_iterator
-        : public iterator_facade<specific_symbol_iterator<SpecificType>, std::forward_iterator_tag,
-                                 const SpecificType> {
+        : public iterator_facade<specific_symbol_iterator<SpecificType>> {
     public:
         specific_symbol_iterator() : current(nullptr) {}
         specific_symbol_iterator(const Symbol* firstSymbol) : current(firstSymbol) { skipToNext(); }
 
-        bool operator==(const specific_symbol_iterator& other) const {
-            return current == other.current;
-        }
+        const SpecificType& dereference() const { return current->as<SpecificType>(); }
 
-        const SpecificType& operator*() const { return current->as<SpecificType>(); }
-        const SpecificType& operator*() { return current->as<SpecificType>(); }
-
-        specific_symbol_iterator& operator++() {
+        void increment() {
             current = current->nextInScope;
             skipToNext();
-            return *this;
         }
 
-        specific_symbol_iterator operator++(int) {
-            specific_symbol_iterator tmp = *this;
-            ++(*this);
-            return tmp;
+        bool equals(const specific_symbol_iterator& other) const {
+            return current == other.current;
         }
 
     private:

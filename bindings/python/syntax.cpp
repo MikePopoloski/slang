@@ -112,33 +112,26 @@ void registerSyntax(py::module_& m) {
              })
         .def("__str__", &Token::toString);
 
-    class SyntaxNodeIterator
-        : public iterator_facade<SyntaxNodeIterator, std::forward_iterator_tag, py::object> {
+    class SyntaxNodeIterator : public iterator_facade<SyntaxNodeIterator> {
     public:
+        SyntaxNodeIterator() : node(nullptr), index(0) {}
         SyntaxNodeIterator(const SyntaxNode& node, size_t index) : node(&node), index(index) {
             skipToNext();
         }
 
-        SyntaxNodeIterator& operator=(const SyntaxNodeIterator& other) {
-            node = other.node;
-            index = other.index;
-            return *this;
-        }
-
-        py::object operator*() const {
+        py::object dereference() const {
             if (auto child = node->childNode(index))
                 return py::cast(child, byrefint, py::cast(node));
             return py::cast(node->childToken(index));
         }
 
-        bool operator==(const SyntaxNodeIterator& other) const {
+        bool equals(const SyntaxNodeIterator& other) const {
             return node == other.node && index == other.index;
         }
 
-        SyntaxNodeIterator& operator++() {
+        void increment() {
             index++;
             skipToNext();
-            return *this;
         }
 
     private:
