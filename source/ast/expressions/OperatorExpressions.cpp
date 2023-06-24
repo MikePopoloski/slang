@@ -7,6 +7,8 @@
 //------------------------------------------------------------------------------
 #include "slang/ast/expressions/OperatorExpressions.h"
 
+#include <cmath>
+
 #include "slang/ast/ASTSerializer.h"
 #include "slang/ast/Bitstream.h"
 #include "slang/ast/Compilation.h"

@@ -5,6 +5,8 @@
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
+#include <cmath>
+
 #include "slang/ast/Bitstream.h"
 #include "slang/ast/Compilation.h"
 #include "slang/ast/SystemSubroutine.h"
