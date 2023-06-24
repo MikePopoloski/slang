@@ -494,10 +494,10 @@ private:
             }
 
             if constexpr (std::is_same_v<T, TVal>) {
-                std::ranges::uninitialized_fill_n(end(), newSize - len, val);
+                std::ranges::uninitialized_fill_n(end(), ptrdiff_t(newSize - len), val);
             }
             else {
-                std::ranges::uninitialized_value_construct_n(end(), newSize - len);
+                std::ranges::uninitialized_value_construct_n(end(), ptrdiff_t(newSize - len));
             }
             len = newSize;
         }
@@ -842,10 +842,10 @@ void SmallVectorBase<T>::resizeRealloc(size_type newSize, const TVal& val) {
     std::ranges::uninitialized_move(begin(), end(), newData, newData + len);
 
     if constexpr (std::is_same_v<T, TVal>) {
-        std::ranges::uninitialized_fill_n(newData + len, newSize - len, val);
+        std::ranges::uninitialized_fill_n(newData + len, ptrdiff_t(newSize - len), val);
     }
     else {
-        std::ranges::uninitialized_value_construct_n(newData + len, newSize - len);
+        std::ranges::uninitialized_value_construct_n(newData + len, ptrdiff_t(newSize - len));
     }
 
     cleanup();
