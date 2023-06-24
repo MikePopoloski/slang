@@ -264,8 +264,7 @@
       "name": "macos-release",
       "displayName": "macOS Release",
       "inherits": [
-        "macos-base",
-        "clang-flags"
+        "macos-base"
       ],
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release"
