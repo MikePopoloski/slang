@@ -22,7 +22,7 @@ jobs:
           - preset: gcc-debug-noexcept
             os: ubuntu-22.04
           - preset: macos-release
-            os: macos-latest
+            os: macos-13
           - preset: win64-release
             os: windows-latest
           - preset: win32-release
