@@ -10,7 +10,10 @@
 #include "slang/ast/Compilation.h"
 #include "slang/ast/EvalContext.h"
 #include "slang/syntax/SyntaxFwd.h"
-#include "slang/syntax/SyntaxTree.h"
+
+namespace slang::syntax {
+class SyntaxTree;
+}
 
 namespace slang::ast {
 

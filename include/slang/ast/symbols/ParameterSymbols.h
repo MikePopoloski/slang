@@ -12,6 +12,8 @@
 
 namespace slang::ast {
 
+class Compilation;
+
 class SLANG_EXPORT ParameterSymbolBase {
 public:
     const Symbol& symbol;

@@ -7,7 +7,6 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include "slang/ast/Lookup.h"
 #include "slang/ast/SemanticFacts.h"
 #include "slang/syntax/SyntaxFwd.h"
 #include "slang/util/Hash.h"
@@ -15,19 +14,18 @@
 #include "slang/util/Util.h"
 
 namespace slang::syntax {
-
 class SyntaxTree;
-
 }
 
 namespace slang::ast {
 
 class AttributeSymbol;
-class Compilation;
 class Expression;
+class LookupLocation;
 class NetType;
 class Scope;
 class Type;
+enum class SymbolIndex : uint32_t;
 
 /// Represents a module, interface, or program definition.
 class SLANG_EXPORT Definition {

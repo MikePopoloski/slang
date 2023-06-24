@@ -13,6 +13,7 @@
 
 namespace slang::ast {
 
+class ASTSerializer;
 class SubroutineSymbol;
 
 /// Base class for all net types in SystemVerilog.

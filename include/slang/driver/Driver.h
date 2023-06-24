@@ -8,22 +8,24 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include "slang/ast/Compilation.h"
 #include "slang/diagnostics/DiagnosticEngine.h"
 #include "slang/text/SourceManager.h"
+#include "slang/util/Bag.h"
 #include "slang/util/CommandLine.h"
 #include "slang/util/OS.h"
 #include "slang/util/Util.h"
 
 namespace slang {
-
 class TextDiagnosticClient;
+}
 
-namespace syntax {
+namespace slang::syntax {
 class SyntaxTree;
 }
 
-} // namespace slang
+namespace slang::ast {
+class Compilation;
+}
 
 namespace slang::driver {
 

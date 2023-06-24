@@ -7,8 +7,6 @@
 //------------------------------------------------------------------------------
 #include "slang/ast/symbols/ValueSymbol.h"
 
-#include <new>
-
 #include "slang/ast/Compilation.h"
 #include "slang/ast/Expression.h"
 #include "slang/ast/Scope.h"
@@ -16,10 +14,9 @@
 #include "slang/ast/expressions/MiscExpressions.h"
 #include "slang/ast/expressions/SelectExpressions.h"
 #include "slang/ast/symbols/BlockSymbols.h"
-#include "slang/ast/symbols/SubroutineSymbols.h"
 #include "slang/ast/symbols/VariableSymbols.h"
-#include "slang/ast/types/AllTypes.h"
 #include "slang/ast/types/NetType.h"
+#include "slang/ast/types/Type.h"
 #include "slang/diagnostics/ExpressionsDiags.h"
 #include "slang/syntax/AllSyntax.h"
 

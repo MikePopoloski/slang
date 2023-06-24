@@ -11,7 +11,6 @@
 #include "slang/ast/Compilation.h"
 #include "slang/diagnostics/StatementsDiags.h"
 #include "slang/syntax/AllSyntax.h"
-#include "slang/util/TypeTraits.h"
 
 namespace slang::ast {
 

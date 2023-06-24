@@ -8,7 +8,6 @@
 #pragma once
 
 #include "slang/diagnostics/Diagnostics.h"
-#include "slang/text/SourceLocation.h"
 #include "slang/util/Function.h"
 #include "slang/util/Util.h"
 

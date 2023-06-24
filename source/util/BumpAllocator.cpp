@@ -7,7 +7,6 @@
 //------------------------------------------------------------------------------
 #include "slang/util/BumpAllocator.h"
 
-#include <cstdlib>
 #include <new>
 
 namespace slang {

@@ -17,7 +17,6 @@
 #include "slang/ast/expressions/CallExpression.h"
 #include "slang/ast/expressions/MiscExpressions.h"
 #include "slang/ast/expressions/OperatorExpressions.h"
-#include "slang/ast/symbols/MemberSymbols.h"
 #include "slang/ast/symbols/VariableSymbols.h"
 #include "slang/ast/types/Type.h"
 #include "slang/diagnostics/StatementsDiags.h"

@@ -7,9 +7,9 @@
 //------------------------------------------------------------------------------
 #include "slang/ast/symbols/CoverSymbols.h"
 
-#include "slang/ast/ASTVisitor.h"
 #include "slang/ast/Compilation.h"
 #include "slang/ast/TimingControl.h"
+#include "slang/ast/expressions/AssignmentExpressions.h"
 #include "slang/ast/symbols/ClassSymbols.h"
 #include "slang/ast/symbols/SubroutineSymbols.h"
 #include "slang/ast/symbols/SymbolBuilders.h"

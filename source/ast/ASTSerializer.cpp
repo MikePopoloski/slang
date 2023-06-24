@@ -9,6 +9,7 @@
 
 #include "slang/ast/ASTVisitor.h"
 #include "slang/ast/Compilation.h"
+#include "slang/text/Json.h"
 
 namespace slang::ast {
 

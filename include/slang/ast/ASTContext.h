@@ -11,6 +11,8 @@
 
 #include "slang/ast/EvalContext.h"
 #include "slang/ast/Lookup.h"
+#include "slang/ast/Scope.h"
+#include "slang/ast/SemanticFacts.h"
 #include "slang/numeric/ConstantValue.h"
 #include "slang/syntax/SyntaxFwd.h"
 #include "slang/util/Hash.h"
@@ -18,15 +20,13 @@
 
 namespace slang::ast {
 
-class CheckerInstanceBodySymbol;
 class Expression;
 class InstanceSymbolBase;
 class ProceduralBlockSymbol;
-class Scope;
 class Statement;
 class TempVarSymbol;
 class Type;
-class VariableSymbol;
+class ValueSymbol;
 enum class RandMode;
 
 /// Specifies flags that control expression and statement creation.

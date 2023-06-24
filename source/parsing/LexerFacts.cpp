@@ -7,7 +7,8 @@
 //------------------------------------------------------------------------------
 #include "slang/parsing/LexerFacts.h"
 
-#include "slang/syntax/SyntaxNode.h"
+#include "slang/parsing/TokenKind.h"
+#include "slang/syntax/SyntaxKind.h"
 
 namespace slang::parsing {
 

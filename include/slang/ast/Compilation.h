@@ -11,7 +11,6 @@
 
 #include "slang/ast/InstancePath.h"
 #include "slang/ast/Scope.h"
-#include "slang/ast/Symbol.h"
 #include "slang/diagnostics/Diagnostics.h"
 #include "slang/numeric/Time.h"
 #include "slang/syntax/SyntaxFwd.h"
@@ -22,9 +21,7 @@
 #include "slang/util/SafeIndexedVector.h"
 
 namespace slang::syntax {
-
 class SyntaxTree;
-
 }
 
 namespace slang::ast {
@@ -45,6 +42,7 @@ class PortConnection;
 class RootSymbol;
 class Statement;
 class SubroutineSymbol;
+class Symbol;
 class SystemSubroutine;
 class ValueDriver;
 struct AssertionInstanceDetails;
@@ -53,6 +51,8 @@ using DriverIntervalMap = IntervalMap<uint32_t, const ValueDriver*>;
 using UnrollIntervalMap = IntervalMap<uint32_t, std::monostate>;
 
 enum class IntegralFlags : uint8_t;
+enum class SymbolIndex : uint32_t;
+enum class SymbolKind : int;
 enum class UnconnectedDrive;
 
 /// Specifies which set of min:typ:max expressions should

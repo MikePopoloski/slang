@@ -11,7 +11,6 @@
 #include "slang/ast/Expression.h"
 #include "slang/ast/Scope.h"
 #include "slang/ast/Symbol.h"
-#include "slang/ast/symbols/ClassSymbols.h"
 #include "slang/ast/symbols/InstanceSymbols.h"
 #include "slang/ast/symbols/SubroutineSymbols.h"
 #include "slang/ast/symbols/VariableSymbols.h"

@@ -16,15 +16,12 @@
 #include "slang/ast/expressions/MiscExpressions.h"
 #include "slang/ast/symbols/BlockSymbols.h"
 #include "slang/ast/symbols/InstanceSymbols.h"
-#include "slang/ast/symbols/PortSymbols.h"
 #include "slang/ast/symbols/SubroutineSymbols.h"
 #include "slang/ast/types/NetType.h"
 #include "slang/ast/types/Type.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
-#include "slang/diagnostics/LookupDiags.h"
 #include "slang/diagnostics/ParserDiags.h"
 #include "slang/syntax/AllSyntax.h"
-#include "slang/syntax/SyntaxFacts.h"
 
 namespace slang::ast {
 

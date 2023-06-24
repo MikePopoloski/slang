@@ -10,7 +10,6 @@
 #include <memory>
 
 #include "slang/diagnostics/Diagnostics.h"
-#include "slang/parsing/ParserMetadata.h"
 #include "slang/util/Bag.h"
 #include "slang/util/BumpAllocator.h"
 
@@ -21,7 +20,14 @@ struct SourceBuffer;
 
 } // namespace slang
 
+namespace slang::parsing {
+struct ParserMetadata;
+}
+
 namespace slang::syntax {
+
+class SyntaxNode;
+struct DefineDirectiveSyntax;
 
 /// The SyntaxTree is the easiest way to interface with the lexer / preprocessor /
 /// parser stack. Give it some source text and it produces a parse tree.

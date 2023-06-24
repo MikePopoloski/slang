@@ -8,7 +8,6 @@
 #include "slang/ast/SemanticModel.h"
 
 #include "slang/ast/Compilation.h"
-#include "slang/ast/Definition.h"
 #include "slang/syntax/AllSyntax.h"
 
 namespace slang::ast {

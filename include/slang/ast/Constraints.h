@@ -7,13 +7,13 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include "slang/ast/ASTSerializer.h"
 #include "slang/ast/Statements.h"
-#include "slang/numeric/ConstantValue.h"
 #include "slang/syntax/SyntaxFwd.h"
 #include "slang/util/Util.h"
 
 namespace slang::ast {
+
+class ASTSerializer;
 
 // clang-format off
 #define CONSTRAINT(x) \

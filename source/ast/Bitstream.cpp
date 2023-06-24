@@ -10,13 +10,12 @@
 #include <numeric>
 
 #include "slang/ast/Compilation.h"
-#include "slang/ast/expressions/SelectExpressions.h"
+#include "slang/ast/expressions/OperatorExpressions.h"
 #include "slang/ast/symbols/ClassSymbols.h"
 #include "slang/ast/symbols/VariableSymbols.h"
 #include "slang/ast/types/AllTypes.h"
 #include "slang/diagnostics/ConstEvalDiags.h"
 #include "slang/diagnostics/ExpressionsDiags.h"
-#include "slang/diagnostics/NumericDiags.h"
 #include "slang/text/FormatBuffer.h"
 
 namespace slang::ast {

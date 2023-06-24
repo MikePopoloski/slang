@@ -13,7 +13,6 @@
 #include <vector>
 
 #include "slang/text/CharInfo.h"
-#include "slang/util/Hash.h"
 
 using namespace std::chrono;
 

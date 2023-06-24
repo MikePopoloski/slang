@@ -7,6 +7,7 @@
 //------------------------------------------------------------------------------
 #include "slang/ast/TimingControl.h"
 
+#include "slang/ast/ASTSerializer.h"
 #include "slang/ast/Compilation.h"
 #include "slang/ast/Expression.h"
 #include "slang/ast/types/Type.h"

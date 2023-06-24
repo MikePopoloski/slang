@@ -7,13 +7,15 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include "slang/ast/ASTSerializer.h"
 #include "slang/ast/Expression.h"
-#include "slang/ast/SemanticFacts.h"
 #include "slang/syntax/SyntaxFwd.h"
 #include "slang/util/Util.h"
 
 namespace slang::ast {
+
+class ASTContext;
+class ASTSerializer;
+enum class EdgeKind : int;
 
 // clang-format off
 #define CONTROL(x) \
@@ -30,8 +32,6 @@ namespace slang::ast {
 SLANG_ENUM(TimingControlKind, CONTROL)
 #undef CONTROL
 // clang-format on
-
-class ASTContext;
 
 class SLANG_EXPORT TimingControl {
 public:

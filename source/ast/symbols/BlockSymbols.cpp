@@ -19,7 +19,6 @@
 #include "slang/ast/types/Type.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/diagnostics/LookupDiags.h"
-#include "slang/diagnostics/StatementsDiags.h"
 #include "slang/syntax/AllSyntax.h"
 
 namespace slang::ast {

@@ -12,10 +12,12 @@
 #include <iostream>
 
 #include "slang/ast/ASTSerializer.h"
+#include "slang/ast/Compilation.h"
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
 #include "slang/diagnostics/TextDiagnosticClient.h"
 #include "slang/syntax/SyntaxTree.h"
 #include "slang/text/Json.h"
+#include "slang/util/String.h"
 #include "slang/util/TimeTrace.h"
 #include "slang/util/Version.h"
 

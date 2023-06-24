@@ -7,9 +7,7 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include "slang/ast/EvalContext.h"
 #include "slang/ast/Expression.h"
-#include "slang/ast/SemanticFacts.h"
 #include "slang/ast/TimingControl.h"
 #include "slang/ast/expressions/AssertionExpr.h"
 #include "slang/syntax/SyntaxFwd.h"
@@ -18,12 +16,12 @@
 
 namespace slang::ast {
 
-class BlockStatement;
+class EvalContext;
 class IteratorSymbol;
-class ProceduralBlockSymbol;
 class RandSeqProductionSymbol;
 class StatementBlockSymbol;
 class VariableSymbol;
+enum class StatementBlockKind : int;
 
 // clang-format off
 #define STATEMENT(x) \

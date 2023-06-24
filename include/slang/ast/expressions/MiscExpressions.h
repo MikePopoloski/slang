@@ -16,6 +16,7 @@
 namespace slang::ast {
 
 class AssertionPortSymbol;
+class VariableSymbol;
 
 /// Common base class for both NamedValueExpression and HierarchicalValueExpression.
 class SLANG_EXPORT ValueExpressionBase : public Expression {

@@ -7,6 +7,7 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include <array>
 #include <limits>
 
 #include "slang/util/Util.h"

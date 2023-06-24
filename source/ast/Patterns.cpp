@@ -10,7 +10,6 @@
 #include "slang/ast/ASTSerializer.h"
 #include "slang/ast/ASTVisitor.h"
 #include "slang/ast/Compilation.h"
-#include "slang/ast/types/AllTypes.h"
 #include "slang/diagnostics/ExpressionsDiags.h"
 #include "slang/diagnostics/LookupDiags.h"
 #include "slang/syntax/AllSyntax.h"

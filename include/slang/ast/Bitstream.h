@@ -7,9 +7,17 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include "slang/ast/expressions/OperatorExpressions.h"
+#include "slang/numeric/ConstantValue.h"
+#include "slang/text/SourceLocation.h"
+#include "slang/util/Util.h"
 
 namespace slang::ast {
+
+class ASTContext;
+class EvalContext;
+class Expression;
+class StreamingConcatenationExpression;
+class Type;
 
 /// Provides utility methods for working with bitstream operations.
 class SLANG_EXPORT Bitstream {

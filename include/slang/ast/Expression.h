@@ -8,13 +8,13 @@
 #pragma once
 
 #include "slang/ast/ASTContext.h"
-#include "slang/ast/EvalContext.h"
 #include "slang/ast/LValue.h"
 #include "slang/ast/SemanticFacts.h"
 
 namespace slang::ast {
 
 class ASTSerializer;
+class EvalContext;
 class InstanceSymbolBase;
 class Type;
 class ValueSymbol;

@@ -13,11 +13,9 @@
 
 namespace slang::ast {
 
-class ASTSerializer;
 class DeclaredType;
 class Definition;
 class Scope;
-class Type;
 enum class RandMode;
 
 // clang-format off

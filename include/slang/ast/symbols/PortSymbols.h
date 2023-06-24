@@ -16,7 +16,6 @@ namespace slang::ast {
 
 class AttributeSymbol;
 class Definition;
-class InstanceBodySymbol;
 class InstanceSymbol;
 
 /// Represents the public-facing side of a module / program / interface port.

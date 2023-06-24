@@ -11,14 +11,11 @@
 #include "slang/ast/Symbol.h"
 #include "slang/ast/types/DeclaredType.h"
 #include "slang/util/IntervalMap.h"
-#include "slang/util/Iterator.h"
 
 namespace slang::ast {
 
-class Compilation;
 class EvalContext;
 class PortSymbol;
-class ProceduralBlockSymbol;
 class ValueDriver;
 
 using DriverIntervalMap = IntervalMap<uint32_t, const ValueDriver*>;

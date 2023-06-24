@@ -28,7 +28,6 @@
 #include "slang/diagnostics/CompilationDiags.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/diagnostics/ExpressionsDiags.h"
-#include "slang/diagnostics/LookupDiags.h"
 #include "slang/diagnostics/ParserDiags.h"
 #include "slang/syntax/AllSyntax.h"
 #include "slang/util/TimeTrace.h"

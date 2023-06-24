@@ -7,7 +7,8 @@
 //------------------------------------------------------------------------------
 #include "slang/syntax/SyntaxPrinter.h"
 
-#include "slang/parsing/Parser.h"
+#include "slang/parsing/ParserMetadata.h"
+#include "slang/syntax/SyntaxNode.h"
 #include "slang/syntax/SyntaxTree.h"
 #include "slang/text/SourceManager.h"
 

@@ -7,9 +7,11 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include "slang/numeric/SVInt.h"
+#include <optional>
+#include <span>
+#include <string>
+
 #include "slang/text/SourceLocation.h"
-#include "slang/util/Util.h"
 
 namespace slang::ast {
 

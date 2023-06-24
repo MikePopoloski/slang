@@ -12,10 +12,8 @@
 #include "slang/ast/Compilation.h"
 #include "slang/ast/Scope.h"
 #include "slang/ast/symbols/AttributeSymbol.h"
-#include "slang/ast/symbols/ParameterSymbols.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/syntax/AllSyntax.h"
-#include "slang/syntax/SyntaxFacts.h"
 
 namespace slang::ast {
 

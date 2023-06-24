@@ -7,6 +7,7 @@
 //------------------------------------------------------------------------------
 #include "slang/ast/SemanticFacts.h"
 
+#include "slang/ast/ASTSerializer.h"
 #include "slang/ast/Scope.h"
 #include "slang/ast/TimingControl.h"
 #include "slang/diagnostics/DeclarationsDiags.h"

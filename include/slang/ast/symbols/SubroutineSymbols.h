@@ -8,7 +8,7 @@
 #pragma once
 
 #include "slang/ast/Statements.h"
-#include "slang/ast/symbols/ValueSymbol.h"
+#include "slang/ast/types/DeclaredType.h"
 #include "slang/syntax/SyntaxFwd.h"
 #include "slang/util/Enum.h"
 
