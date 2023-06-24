@@ -20,7 +20,7 @@
 // Function that tries to get the name of the variable in an expression
 std::optional<std::string_view> getIdentifier(const slang::ast::Expression& expr);
 
-struct TidyVisitor {
+struct SLANG_EXPORT TidyVisitor {
 protected:
     explicit TidyVisitor(slang::Diagnostics& diagnostics) :
         sourceManager(Registry::getSourceManager()), diags(diagnostics),
