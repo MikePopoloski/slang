@@ -26,6 +26,7 @@ endmodule
 
     TidyConfig config;
     Registry::setConfig(config);
+    Registry::setSourceManager(compilation.getSourceManager());
     auto visitor = Registry::create("NoOldAlwaysSyntax");
     bool result = visitor->check(root);
     CHECK_FALSE(result);
@@ -49,6 +50,7 @@ endmodule
 
     TidyConfig config;
     Registry::setConfig(config);
+    Registry::setSourceManager(compilation.getSourceManager());
     auto visitor = Registry::create("NoOldAlwaysSyntax");
     bool result = visitor->check(root);
     CHECK_FALSE(result);
@@ -77,6 +79,7 @@ endmodule
 
     TidyConfig config;
     Registry::setConfig(config);
+    Registry::setSourceManager(compilation.getSourceManager());
     auto visitor = Registry::create("NoOldAlwaysSyntax");
     bool result = visitor->check(root);
     CHECK(result);
