@@ -8,6 +8,7 @@
 #pragma once
 
 #include <bit>
+#include <climits>
 #include <iosfwd>
 #include <optional>
 
