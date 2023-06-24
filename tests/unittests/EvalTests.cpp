@@ -3,6 +3,7 @@
 
 #include "Test.h"
 #include <catch2/catch_approx.hpp>
+#include <cmath>
 using Catch::Approx;
 
 #include "slang/ast/ScriptSession.h"

@@ -7,13 +7,14 @@
 //------------------------------------------------------------------------------
 #include "slang/text/SFormat.h"
 
+#include <cmath>
 #include <ieee1800/vpi_user.h>
 
 #include "slang/diagnostics/SysFuncsDiags.h"
 #include "slang/text/CharInfo.h"
 #include "slang/util/String.h"
 
-static const double log2_10 = log2(10.0);
+static const double log2_10 = std::log2(10.0);
 
 namespace slang::SFormat {
 
@@ -190,13 +191,13 @@ void formatInt(std::string& result, const SVInt& value, LiteralBase base,
                 width = bw;
                 break;
             case LiteralBase::Octal:
-                width = uint32_t(ceil(bw / 3.0));
+                width = uint32_t(std::ceil(bw / 3.0));
                 break;
             case LiteralBase::Hex:
-                width = uint32_t(ceil(bw / 4.0));
+                width = uint32_t(std::ceil(bw / 4.0));
                 break;
             case LiteralBase::Decimal:
-                width = uint32_t(ceil(bw / log2_10));
+                width = uint32_t(std::ceil(bw / log2_10));
                 if (value.isSigned())
                     width++;
                 break;
