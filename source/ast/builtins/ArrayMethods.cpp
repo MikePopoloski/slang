@@ -326,9 +326,9 @@ public:
                     ConstantValue cv = ie->eval(context);
                     if (cv.isTrue()) {
                         if (isIndexed) {
-                            auto dist = std::distance(begin, it);
+                            auto dist = std::ranges::distance(begin, it);
                             if (mode == Last)
-                                dist = std::distance(begin, end) - dist - 1;
+                                dist = std::ranges::distance(begin, end) - dist - 1;
 
                             results.emplace_back(SVInt(32, (uint64_t)dist, true));
                         }

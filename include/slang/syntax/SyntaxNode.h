@@ -301,34 +301,25 @@ public:
     /// An iterator that will iterate over just the nodes (and skip the delimiters) in the
     /// parent SeparatedSyntaxList.
     template<typename U>
-    class iterator_base
-        : public iterator_facade<iterator_base<U>, std::random_access_iterator_tag, U, size_t> {
+    class iterator_base : public iterator_facade<iterator_base<U>> {
     public:
         using ParentList = std::conditional_t<std::is_const_v<std::remove_pointer_t<U>>,
                                               const SeparatedSyntaxList, SeparatedSyntaxList>;
+
+        iterator_base() : list(nullptr), index(0) {}
         iterator_base(ParentList& list, size_t index) : list(&list), index(index) {}
-        iterator_base(const iterator_base& other) = default;
 
-        iterator_base& operator=(const iterator_base& other) = default;
+        U dereference() const { return (*list)[index]; }
 
-        bool operator==(const iterator_base& other) const {
+        bool equals(const iterator_base& other) const {
             return list == other.list && index == other.index;
         }
 
-        bool operator<(const iterator_base& other) const { return index < other.index; }
-
-        U operator*() const { return (*list)[index]; }
-
-        size_t operator-(const iterator_base& other) const { return index - other.index; }
-
-        iterator_base& operator+=(ptrdiff_t n) {
-            index = size_t(ptrdiff_t(index) + n);
-            return *this;
+        ptrdiff_t distance_to(const iterator_base& other) const {
+            return ptrdiff_t(other.index) - ptrdiff_t(index);
         }
-        iterator_base& operator-=(ptrdiff_t n) {
-            index = size_t(ptrdiff_t(index) - n);
-            return *this;
-        }
+
+        void advance(ptrdiff_t n) { index = size_t(ptrdiff_t(index) + n); }
 
     private:
         ParentList* list;

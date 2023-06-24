@@ -209,72 +209,97 @@ struct SLANG_EXPORT SVUnion {
 
 /// An iterator for child elements in a ConstantValue, if it represents an
 /// array, map, or queue.
-class CVIterator
-    : public iterator_facade<CVIterator, std::bidirectional_iterator_tag, ConstantValue> {
+template<bool IsConst>
+class CVIterator : public iterator_facade<CVIterator<IsConst>> {
 public:
-    CVIterator(ConstantValue::Elements::iterator it) : current(it) {}
-    CVIterator(AssociativeArray::iterator it) : current(it) {}
-    CVIterator(SVQueue::iterator it) : current(it) {}
+    using TRef = std::conditional_t<IsConst, const ConstantValue&, ConstantValue&>;
+    using ElemIt = std::conditional_t<IsConst, ConstantValue::Elements::const_iterator,
+                                      ConstantValue::Elements::iterator>;
+    using AssocIt =
+        std::conditional_t<IsConst, AssociativeArray::const_iterator, AssociativeArray::iterator>;
+    using QueueIt = std::conditional_t<IsConst, SVQueue::const_iterator, SVQueue::iterator>;
+    using VarType = std::variant<ElemIt, AssocIt, QueueIt>;
+
+    CVIterator(ElemIt&& it) : current(std::move(it)) {}
+    CVIterator(AssocIt&& it) : current(std::move(it)) {}
+    CVIterator(QueueIt&& it) : current(std::move(it)) {}
     CVIterator(const CVIterator& other) : current(other.current) {}
 
-    CVIterator& operator=(const CVIterator& other) {
-        current = other.current;
-        return *this;
+    TRef dereference() const {
+        return std::visit(
+            [](auto&& arg) -> TRef {
+                if constexpr (requires { arg->second; })
+                    return arg->second;
+                else
+                    return *arg;
+            },
+            current);
     }
 
-    bool operator==(const CVIterator& other) const { return current == other.current; }
-
-    const ConstantValue& operator*() const;
-    ConstantValue& operator*();
-
-    using iterator_facade::operator++;
-    using iterator_facade::operator--;
-    CVIterator& operator++();
-    CVIterator& operator--();
-
-    const ConstantValue& key() const;
-
-private:
-    std::variant<ConstantValue::Elements::iterator, AssociativeArray::iterator, SVQueue::iterator>
-        current;
-};
-
-/// A constant iterator for child elements in a ConstantValue, if it represents an
-/// array, map, or queue.
-class CVConstIterator : public iterator_facade<CVConstIterator, std::bidirectional_iterator_tag,
-                                               const ConstantValue> {
-public:
-    CVConstIterator(ConstantValue::Elements::const_iterator it) : current(it) {}
-    CVConstIterator(AssociativeArray::const_iterator it) : current(it) {}
-    CVConstIterator(SVQueue::const_iterator it) : current(it) {}
-    CVConstIterator(const CVConstIterator& other) : current(other.current) {}
-
-    CVConstIterator& operator=(const CVConstIterator& other) {
-        current = other.current;
-        return *this;
+    void increment() {
+        std::visit([](auto&& arg) { ++arg; }, current);
     }
 
-    bool operator==(const CVConstIterator& other) const { return current == other.current; }
+    void decrement() {
+        std::visit([](auto&& arg) { --arg; }, current);
+    }
 
-    const ConstantValue& operator*() const;
+    bool equals(const CVIterator& other) const { return current == other.current; }
 
-    using iterator_facade::operator++;
-    using iterator_facade::operator--;
-    CVConstIterator& operator++();
-    CVConstIterator& operator--();
-
-    const ConstantValue& key() const;
+    const ConstantValue& key() const {
+        return std::visit(
+            [](auto&& arg) -> const ConstantValue& {
+                if constexpr (requires { arg->first; })
+                    return arg->first;
+                else
+                    return *arg;
+            },
+            current);
+    }
 
 private:
-    std::variant<ConstantValue::Elements::const_iterator, AssociativeArray::const_iterator,
-                 SVQueue::const_iterator>
-        current;
+    VarType current;
 };
 
-CVIterator begin(ConstantValue& cv);
-CVIterator end(ConstantValue& cv);
-CVConstIterator begin(const ConstantValue& cv);
-CVConstIterator end(const ConstantValue& cv);
+template<typename TValue, bool IsConst = std::is_const_v<TValue>>
+    requires std::is_same_v<std::remove_cvref_t<TValue>, ConstantValue>
+CVIterator<IsConst> begin(TValue& cv) {
+    return std::visit(
+        [](auto&& arg) -> CVIterator<IsConst> {
+            using T = std::decay_t<decltype(arg)>;
+            if constexpr (std::is_same_v<T, ConstantValue::Elements>) {
+                return arg.begin();
+            }
+            else if constexpr (std::is_same_v<T, ConstantValue::Map> ||
+                               std::is_same_v<T, ConstantValue::Queue>) {
+                return arg->begin();
+            }
+            else {
+                SLANG_UNREACHABLE;
+            }
+        },
+        cv.getVariant());
+}
+
+template<typename TValue, bool IsConst = std::is_const_v<TValue>>
+    requires std::is_same_v<std::remove_cvref_t<TValue>, ConstantValue>
+CVIterator<IsConst> end(TValue& cv) {
+    return std::visit(
+        [](auto&& arg) -> CVIterator<IsConst> {
+            using T = std::decay_t<decltype(arg)>;
+            if constexpr (std::is_same_v<T, ConstantValue::Elements>) {
+                return arg.end();
+            }
+            else if constexpr (std::is_same_v<T, ConstantValue::Map> ||
+                               std::is_same_v<T, ConstantValue::Queue>) {
+                return arg->end();
+            }
+            else {
+                SLANG_UNREACHABLE;
+            }
+        },
+        cv.getVariant());
+}
 
 /// Represents a simple constant range, fully inclusive. SystemVerilog allows negative
 /// indices, and for the left side to be less, equal, or greater than the right.

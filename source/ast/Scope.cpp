@@ -60,11 +60,6 @@ Scope::Scope(Compilation& compilation_, const Symbol* thisSym_) :
     compilation(compilation_), thisSym(thisSym_), nameMap(compilation.allocSymbolMap()) {
 }
 
-Scope::iterator& Scope::iterator::operator++() {
-    current = current->nextInScope;
-    return *this;
-}
-
 const NetType& Scope::getDefaultNetType() const {
     const Scope* current = this;
     do {

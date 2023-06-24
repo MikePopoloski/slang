@@ -167,32 +167,32 @@ TEST_CASE("IntervalMap -- unioning intervals") {
     map.unionWith({10, 15}, 1, alloc);
     map.unionWith({1, 2}, 1, alloc);
     map.unionWith({90, 102}, 1, alloc);
-    CHECK(std::distance(map.begin(), map.end()) == 4);
+    CHECK(std::ranges::distance(map.begin(), map.end()) == 4);
 
     map.unionWith({3, 19}, 1, alloc);
-    CHECK(std::distance(map.begin(), map.end()) == 2);
+    CHECK(std::ranges::distance(map.begin(), map.end()) == 2);
 
     map.unionWith({3, 8}, 1, alloc);
     map.unionWith({3, 7}, 1, alloc);
-    CHECK(std::distance(map.begin(), map.end()) == 2);
+    CHECK(std::ranges::distance(map.begin(), map.end()) == 2);
 
     map.insert({4, 39}, 1, alloc);
     map.insert({4, 39}, 1, alloc);
     map.insert({4, 39}, 1, alloc);
     map.insert({1, 30}, 1, alloc);
-    CHECK(std::distance(map.begin(), map.end()) == 6);
+    CHECK(std::ranges::distance(map.begin(), map.end()) == 6);
 
     map.unionWith({0, 1}, 1, alloc);
-    CHECK(std::distance(map.begin(), map.end()) == 2);
+    CHECK(std::ranges::distance(map.begin(), map.end()) == 2);
 
     for (int i = 0; i < 16; i++)
         map.unionWith({45 + 10 * i, 50 + 10 * i}, 1, alloc);
-    CHECK(std::distance(map.begin(), map.end()) == 16);
+    CHECK(std::ranges::distance(map.begin(), map.end()) == 16);
 
     map.unionWith({41, 42}, 1, alloc);
     map.unionWith({201, 250}, 1, alloc);
     map.unionWith({260, 300}, 1, alloc);
-    CHECK(std::distance(map.begin(), map.end()) == 18);
+    CHECK(std::ranges::distance(map.begin(), map.end()) == 18);
 
     map.unionWith({122, 123}, 1, alloc);
     map.verify();
@@ -200,14 +200,14 @@ TEST_CASE("IntervalMap -- unioning intervals") {
     // This will trigger an erase of a full branch node and collapse back to root
     map.unionWith({119, 400}, 1, alloc);
     map.verify();
-    CHECK(std::distance(map.begin(), map.end()) == 9);
+    CHECK(std::ranges::distance(map.begin(), map.end()) == 9);
 
     for (int i = 0; i < 100; i++)
         map.unionWith({450 + 100 * i, 500 + 100 * i}, 1, alloc);
 
     // Union the whole map down to one element.
     map.unionWith({1, 11000}, 1, alloc);
-    CHECK(std::distance(map.begin(), map.end()) == 1);
+    CHECK(std::ranges::distance(map.begin(), map.end()) == 1);
     map.verify();
 }
 
@@ -225,5 +225,5 @@ TEST_CASE("IntervalMap -- pseudorandom union testing") {
         map.verify();
     }
 
-    CHECK(std::distance(map.begin(), map.end()) == 34);
+    CHECK(std::ranges::distance(map.begin(), map.end()) == 34);
 }

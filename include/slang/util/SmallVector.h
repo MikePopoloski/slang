@@ -172,7 +172,7 @@ public:
     /// Appends a range of elements to the end of the array.
     template<typename TIter, typename = std::enable_if_t<is_iterator_v<TIter>>>
     void append(TIter first, TIter last) {
-        auto numElems = static_cast<size_type>(std::distance(first, last));
+        auto numElems = static_cast<size_type>(std::ranges::distance(first, last));
         auto newSize = len + numElems;
         reserve(newSize);
 
@@ -273,7 +273,7 @@ public:
         }
 
         // Make space for new elements.
-        auto numElems = static_cast<size_type>(std::distance(first, last));
+        auto numElems = static_cast<size_type>(std::ranges::distance(first, last));
         auto newSize = len + numElems;
         reserve(newSize);
 
