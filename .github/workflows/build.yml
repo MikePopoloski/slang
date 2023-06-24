@@ -46,6 +46,10 @@ jobs:
         sudo apt-get install -y g++-12 g++-10 clang-16 clang-tidy-16
     - uses: ilammy/msvc-dev-cmd@v1
       if: matrix.os == 'windows-latest'
+    - uses: maxim-lobanov/setup-xcode@v1
+      if: matrix.os == 'macos-13'
+      with:
+        xcode-version: '14.3'
     - name: Configure
       run: cmake --preset ${{ matrix.preset }} -DSLANG_CI_BUILD=ON
     - name: Build
