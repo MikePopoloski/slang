@@ -10,6 +10,7 @@
 #include <memory>
 
 #include "slang/diagnostics/Diagnostics.h"
+#include "slang/parsing/ParserMetadata.h"
 #include "slang/util/Bag.h"
 #include "slang/util/BumpAllocator.h"
 
