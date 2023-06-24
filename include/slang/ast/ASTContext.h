@@ -20,7 +20,6 @@
 
 namespace slang::ast {
 
-class CheckerInstanceBodySymbol;
 class Expression;
 class InstanceSymbolBase;
 class ProceduralBlockSymbol;
