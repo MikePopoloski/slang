@@ -155,8 +155,7 @@ public:
 
     /// Gets an iterator to the specializations created for the generic class.
     auto specializations() const {
-        return std::views::values(specMap) |
-               std::views::transform([](auto& t) -> decltype(auto) { return *t; });
+        return std::views::transform(specMap, [](auto& p) -> decltype(auto) { return *p.second; });
     }
 
     void addForwardDecl(const ForwardingTypedefSymbol& decl) const;
