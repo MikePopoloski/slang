@@ -7,7 +7,6 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include "slang/ast/Lookup.h"
 #include "slang/ast/Symbol.h"
 #include "slang/numeric/ConstantValue.h"
 #include "slang/syntax/SyntaxNode.h"
@@ -15,6 +14,7 @@
 namespace slang::ast {
 
 class Compilation;
+struct LookupResult;
 enum class RandMode;
 
 /// Specifies possible traits for integral types.

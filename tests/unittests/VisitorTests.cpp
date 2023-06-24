@@ -6,6 +6,7 @@
 
 #include "slang/ast/ASTVisitor.h"
 #include "slang/ast/SemanticModel.h"
+#include "slang/parsing/ParserMetadata.h"
 #include "slang/syntax/SyntaxPrinter.h"
 #include "slang/syntax/SyntaxVisitor.h"
 

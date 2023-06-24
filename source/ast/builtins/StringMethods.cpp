@@ -7,7 +7,6 @@
 //------------------------------------------------------------------------------
 #include "slang/ast/Compilation.h"
 #include "slang/ast/SystemSubroutine.h"
-#include "slang/diagnostics/SysFuncsDiags.h"
 #include "slang/util/String.h"
 
 namespace slang::ast::builtins {

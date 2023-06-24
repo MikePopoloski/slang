@@ -7,7 +7,7 @@
 //------------------------------------------------------------------------------
 #include "slang/ast/Compilation.h"
 #include "slang/ast/SystemSubroutine.h"
-#include "slang/diagnostics/SysFuncsDiags.h"
+#include "slang/ast/types/Type.h"
 
 // TODO: remove once AppleClang finally adds support for this
 template<typename Dest, typename Source>

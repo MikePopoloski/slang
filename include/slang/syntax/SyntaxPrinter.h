@@ -9,10 +9,15 @@
 
 #include <string>
 
-#include "slang/syntax/SyntaxNode.h"
+#include "slang/parsing/Token.h"
+
+namespace slang {
+class SourceManager;
+}
 
 namespace slang::syntax {
 
+class SyntaxNode;
 class SyntaxTree;
 
 /// Provides support for printing tokens, trivia, or whole syntax trees

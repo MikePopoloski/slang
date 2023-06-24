@@ -5,7 +5,6 @@
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
-
 #include "Netlist.h"
 
 #include "NetlistVisitor.h"
@@ -21,11 +20,13 @@
 #include <vector>
 
 #include "slang/ast/ASTSerializer.h"
+#include "slang/ast/Compilation.h"
 #include "slang/diagnostics/DiagnosticEngine.h"
 #include "slang/diagnostics/Diagnostics.h"
 #include "slang/driver/Driver.h"
 #include "slang/text/FormatBuffer.h"
 #include "slang/text/Json.h"
+#include "slang/util/String.h"
 #include "slang/util/TimeTrace.h"
 #include "slang/util/Util.h"
 #include "slang/util/Version.h"

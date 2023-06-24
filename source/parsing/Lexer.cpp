@@ -7,13 +7,12 @@
 //------------------------------------------------------------------------------
 #include "slang/parsing/Lexer.h"
 
-#include <algorithm>
 #include <cmath>
 #include <fmt/core.h>
 
 #include "slang/diagnostics/LexerDiags.h"
 #include "slang/diagnostics/NumericDiags.h"
-#include "slang/syntax/SyntaxNode.h"
+#include "slang/syntax/SyntaxKind.h"
 #include "slang/text/CharInfo.h"
 #include "slang/text/SourceManager.h"
 #include "slang/util/BumpAllocator.h"

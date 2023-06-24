@@ -12,8 +12,6 @@
 
 namespace slang {
 
-class SourceManager;
-
 /// BufferID - Represents a source buffer.
 ///
 /// Buffers can either be source code loaded from a file, assigned

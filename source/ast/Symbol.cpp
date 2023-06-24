@@ -9,13 +9,9 @@
 
 #include "slang/ast/ASTVisitor.h"
 #include "slang/ast/Compilation.h"
-#include "slang/ast/Definition.h"
-#include "slang/ast/symbols/CompilationUnitSymbols.h"
 #include "slang/ast/symbols/MemberSymbols.h"
 #include "slang/ast/types/Type.h"
-#include "slang/syntax/AllSyntax.h"
 #include "slang/text/FormatBuffer.h"
-#include "slang/text/SourceManager.h"
 
 namespace {
 

@@ -8,7 +8,7 @@
 #include "slang/ast/Bitstream.h"
 #include "slang/ast/Compilation.h"
 #include "slang/ast/SystemSubroutine.h"
-#include "slang/diagnostics/SysFuncsDiags.h"
+#include "slang/ast/types/Type.h"
 
 namespace slang::ast::builtins {
 

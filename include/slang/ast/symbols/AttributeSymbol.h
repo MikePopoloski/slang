@@ -7,12 +7,14 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include "slang/ast/Scope.h"
 #include "slang/ast/Symbol.h"
 #include "slang/syntax/SyntaxFwd.h"
 #include "slang/text/SourceLocation.h"
 
 namespace slang::ast {
+
+class ASTSerializer;
+class Scope;
 
 class SLANG_EXPORT AttributeSymbol : public Symbol {
 public:

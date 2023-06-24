@@ -19,6 +19,7 @@
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/diagnostics/LookupDiags.h"
 #include "slang/diagnostics/TypesDiags.h"
+#include "slang/numeric/MathUtils.h"
 #include "slang/syntax/AllSyntax.h"
 
 namespace {

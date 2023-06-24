@@ -17,7 +17,6 @@
 #include "slang/diagnostics/ConstEvalDiags.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/syntax/AllSyntax.h"
-#include "slang/util/String.h"
 
 namespace slang::ast {
 

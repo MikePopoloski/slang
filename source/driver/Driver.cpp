@@ -10,6 +10,7 @@
 
 #include <fmt/color.h>
 
+#include "slang/ast/Compilation.h"
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
 #include "slang/ast/symbols/InstanceSymbols.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
@@ -24,6 +25,7 @@
 #include "slang/syntax/SyntaxPrinter.h"
 #include "slang/syntax/SyntaxTree.h"
 #include "slang/util/Random.h"
+#include "slang/util/String.h"
 #include "slang/util/ThreadPool.h"
 
 namespace fs = std::filesystem;

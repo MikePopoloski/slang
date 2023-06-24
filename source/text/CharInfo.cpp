@@ -8,7 +8,7 @@
 #include "slang/text/CharInfo.h"
 
 #include <algorithm>
-#include <cctype>
+#include <span>
 
 #include "slang/util/Util.h"
 

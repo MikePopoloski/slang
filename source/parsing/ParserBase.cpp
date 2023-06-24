@@ -9,7 +9,6 @@
 
 #include "slang/diagnostics/ParserDiags.h"
 #include "slang/parsing/Preprocessor.h"
-#include "slang/util/BumpAllocator.h"
 
 namespace slang::parsing {
 

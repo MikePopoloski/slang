@@ -12,8 +12,6 @@
 
 namespace slang::ast {
 
-class FieldSymbol;
-
 /// Represents a single element selection expression.
 class SLANG_EXPORT ElementSelectExpression : public Expression {
 public:

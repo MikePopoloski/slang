@@ -8,6 +8,7 @@
 #include "slang/syntax/SyntaxTree.h"
 
 #include "slang/parsing/Parser.h"
+#include "slang/parsing/ParserMetadata.h"
 #include "slang/parsing/Preprocessor.h"
 #include "slang/text/SourceManager.h"
 #include "slang/util/TimeTrace.h"

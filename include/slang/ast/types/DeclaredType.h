@@ -10,17 +10,10 @@
 #include "slang/syntax/SyntaxFwd.h"
 #include "slang/syntax/SyntaxNode.h"
 
-namespace slang {
-
-class ConstantValue;
-
-}
-
 namespace slang::ast {
 
 class ASTContext;
 class Expression;
-class Scope;
 class Symbol;
 class Type;
 class ValueSymbol;

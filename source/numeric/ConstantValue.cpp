@@ -9,6 +9,7 @@
 
 #include <ostream>
 
+#include "slang/numeric/MathUtils.h"
 #include "slang/text/FormatBuffer.h"
 #include "slang/util/Hash.h"
 

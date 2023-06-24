@@ -7,11 +7,10 @@
 //-----------------------------------------------------------------------------
 #pragma once
 
-#include <array>
 #include <bit>
 #include <iosfwd>
+#include <optional>
 
-#include "slang/numeric/MathUtils.h"
 #include "slang/util/SmallVector.h"
 
 namespace slang {

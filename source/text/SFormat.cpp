@@ -8,7 +8,6 @@
 #include "slang/text/SFormat.h"
 
 #include <ieee1800/vpi_user.h>
-#include <ostream>
 
 #include "slang/diagnostics/SysFuncsDiags.h"
 #include "slang/text/CharInfo.h"

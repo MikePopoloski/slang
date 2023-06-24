@@ -15,7 +15,6 @@
 
 namespace slang::ast {
 
-class AssertionExpr;
 class FormalArgumentSymbol;
 class PackageSymbol;
 class StatementBlockSymbol;

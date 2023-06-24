@@ -7,19 +7,18 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include "slang/text/Json.h"
 #include "slang/util/Util.h"
 
 namespace slang {
 
 class ConstantValue;
+class JsonWriter;
 
 } // namespace slang
 
 namespace slang::ast {
 
 class AssertionExpr;
-class AttributeSymbol;
 class BinsSelectExpr;
 class Compilation;
 class Constraint;
@@ -27,7 +26,6 @@ class Expression;
 class Pattern;
 class Statement;
 class Symbol;
-class Type;
 class TimingControl;
 
 /// A class that serializes AST nodes to JSON.

@@ -8,7 +8,6 @@
 #include "slang/util/CommandLine.h"
 
 #include <charconv>
-#include <cstdlib>
 #include <filesystem>
 #include <fmt/core.h>
 

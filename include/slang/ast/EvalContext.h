@@ -9,13 +9,15 @@
 
 #include <map>
 
-#include "slang/ast/Scope.h"
+#include "slang/ast/Lookup.h"
 #include "slang/numeric/ConstantValue.h"
+#include "slang/text/SourceLocation.h"
 #include "slang/util/ScopeGuard.h"
 
 namespace slang::ast {
 
 class ASTContext;
+class Compilation;
 class LValue;
 class SubroutineSymbol;
 class ValueSymbol;

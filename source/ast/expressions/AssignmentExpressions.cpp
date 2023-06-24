@@ -26,6 +26,7 @@
 #include "slang/diagnostics/LookupDiags.h"
 #include "slang/diagnostics/NumericDiags.h"
 #include "slang/diagnostics/TypesDiags.h"
+#include "slang/numeric/MathUtils.h"
 #include "slang/syntax/AllSyntax.h"
 
 namespace {

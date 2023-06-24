@@ -7,14 +7,15 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include "slang/ast/Expression.h"
 #include "slang/ast/SemanticFacts.h"
 #include "slang/ast/expressions/CallExpression.h"
-#include "slang/ast/types/AllTypes.h"
-#include "slang/util/SmallVector.h"
 #include "slang/util/Util.h"
 
 namespace slang::ast {
+
+class EvalContext;
+class Expression;
+class Type;
 
 class SLANG_EXPORT SystemSubroutine {
 public:

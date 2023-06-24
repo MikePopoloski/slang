@@ -10,6 +10,7 @@
 #include "slang/diagnostics/ParserDiags.h"
 #include "slang/diagnostics/PreprocessorDiags.h"
 #include "slang/parsing/LexerFacts.h"
+#include "slang/syntax/SyntaxNode.h"
 #include "slang/syntax/SyntaxPrinter.h"
 #include "slang/util/BumpAllocator.h"
 

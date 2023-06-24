@@ -13,7 +13,6 @@ namespace slang::ast {
 
 class ParameterSymbolBase;
 class Scope;
-class Type;
 struct HierarchyOverrideNode;
 
 /// This is a helper type for turning parameter-related syntax nodes into actual

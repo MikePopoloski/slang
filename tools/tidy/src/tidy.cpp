@@ -12,6 +12,7 @@
 #include <filesystem>
 #include <unordered_set>
 
+#include "slang/ast/Compilation.h"
 #include "slang/diagnostics/TextDiagnosticClient.h"
 #include "slang/driver/Driver.h"
 #include "slang/util/Version.h"

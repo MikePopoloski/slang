@@ -9,11 +9,9 @@
 
 #include "slang/ast/ASTContext.h"
 #include "slang/ast/Scope.h"
-#include "slang/ast/SemanticFacts.h"
 #include "slang/ast/Symbol.h"
 #include "slang/numeric/ConstantValue.h"
 #include "slang/syntax/SyntaxFwd.h"
-#include "slang/util/Function.h"
 
 namespace slang::ast {
 
@@ -32,8 +30,8 @@ class PortConnection;
 class PortSymbol;
 class PrimitiveSymbol;
 class TimingControl;
-struct AssertionInstanceDetails;
 struct HierarchyOverrideNode;
+enum class DriveStrength : int;
 
 /// Common functionality for module, interface, program, and primitive instances.
 class SLANG_EXPORT InstanceSymbolBase : public Symbol {

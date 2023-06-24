@@ -11,7 +11,7 @@
 #include <vector>
 
 #include "slang/util/ScopeGuard.h"
-#include "slang/util/String.h"
+#include "slang/util/Util.h"
 
 namespace fmt {
 inline namespace v10 {
