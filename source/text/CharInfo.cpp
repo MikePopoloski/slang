@@ -32,7 +32,7 @@ struct UnicodeCharRange {
 struct UnicodeCharSet {
     explicit UnicodeCharSet(std::span<const UnicodeCharRange> ranges) : ranges(ranges) {}
 
-    bool contains(uint32_t c) const { return std::ranges::binary_search(ranges, c, std::less<>{}); }
+    bool contains(uint32_t c) const { return std::binary_search(ranges.begin(), ranges.end(), c); }
 
     const std::span<const UnicodeCharRange> ranges;
 };
