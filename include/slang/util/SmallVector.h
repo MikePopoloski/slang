@@ -297,7 +297,7 @@ public:
         }
 
         // Move over elements we're about to overwrite.
-        std::ranges::uninitialized_move(pos, end(), begin() + newSize - existingOverlap);
+        std::uninitialized_move(pos, end(), begin() + newSize - existingOverlap);
 
         // Copy in the new elements.
         std::ranges::copy_n(first, existingOverlap, pos);
@@ -342,7 +342,7 @@ public:
         }
 
         // Move over elements we're about to overwrite.
-        std::ranges::uninitialized_move(result, end(), begin() + newSize - existingOverlap);
+        std::uninitialized_move(result, end(), begin() + newSize - existingOverlap);
 
         // Copy in the new elements.
         std::ranges::fill_n(result, existingOverlap, temp);
@@ -370,7 +370,8 @@ public:
 
         if (first != last) {
             auto newLast = std::ranges::move(const_cast<iterator>(last), end(),
-                                             const_cast<iterator>(first));
+                                             const_cast<iterator>(first))
+                               .out;
             std::ranges::destroy(newLast, end());
             len = static_cast<size_type>(newLast - begin());
         }
@@ -505,7 +506,7 @@ private:
 
     void reallocateTo(size_type newCapacity) {
         auto newData = (pointer)::operator new(newCapacity * sizeof(T));
-        std::ranges::uninitialized_move(begin(), end(), newData, newData + len);
+        std::uninitialized_move(begin(), end(), newData);
 
         cleanup();
         cap = newCapacity;
@@ -627,8 +628,7 @@ public:
         }
         else {
             auto newData = reinterpret_cast<pointer>(&this->firstElement[0]);
-            std::ranges::uninitialized_move(this->begin(), this->end(), newData,
-                                            newData + this->size());
+            std::uninitialized_move(this->begin(), this->end(), newData);
 
             this->cleanup();
             this->cap = N;
@@ -767,7 +767,7 @@ SmallVectorBase<T>& SmallVectorBase<T>::operator=(SmallVectorBase<T>&& rhs) {
     if (len >= rhs.size()) {
         iterator newEnd;
         if (rhs.size())
-            newEnd = std::ranges::move(rhs, begin());
+            newEnd = std::ranges::move(rhs, begin()).out;
         else
             newEnd = begin();
 
@@ -789,8 +789,7 @@ SmallVectorBase<T>& SmallVectorBase<T>::operator=(SmallVectorBase<T>&& rhs) {
     }
 
     // Move construct the new elements in place.
-    std::ranges::uninitialized_move(rhs.begin() + len, rhs.end(), begin() + len,
-                                    begin() + rhs.size() - len);
+    std::uninitialized_move(rhs.begin() + len, rhs.end(), begin() + len);
     len = rhs.size();
     rhs.clear();
     return *this;
@@ -815,11 +814,11 @@ typename SmallVectorBase<T>::pointer SmallVectorBase<T>::emplaceRealloc(const po
 
     // Now move elements to the new memory.
     if (pos == end()) {
-        std::ranges::uninitialized_move(begin(), end(), newData, newData + len);
+        std::uninitialized_move(begin(), end(), newData);
     }
     else {
-        std::ranges::uninitialized_move(begin(), pos, newData, newPos);
-        std::ranges::uninitialized_move(pos, end(), newPos + 1, newData + len + 1);
+        std::uninitialized_move(begin(), pos, newData);
+        std::uninitialized_move(pos, end(), newPos + 1);
     }
 
     cleanup();
@@ -839,7 +838,7 @@ void SmallVectorBase<T>::resizeRealloc(size_type newSize, const TVal& val) {
     auto newCap = calculateGrowth(newSize);
     auto newData = (pointer)::operator new(newCap * sizeof(T));
 
-    std::ranges::uninitialized_move(begin(), end(), newData, newData + len);
+    std::uninitialized_move(begin(), end(), newData);
 
     if constexpr (std::is_same_v<T, TVal>) {
         std::ranges::uninitialized_fill_n(newData + len, ptrdiff_t(newSize - len), val);

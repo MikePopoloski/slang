@@ -108,7 +108,7 @@
       "name": "gcc-flags",
       "hidden": true,
       "cacheVariables": {
-        "SLANG_WARN_FLAGS": "-Wall;-Wextra;-Werror;-Wunused-value;-Wformat-security;-Wimplicit-fallthrough=5;-Walloc-zero;-Wlogical-op;-Wlogical-not-parentheses;-Wvla;-Wduplicated-cond;-Wtype-limits;-Wno-maybe-uninitialized;-Wno-stringop-overflow"
+        "SLANG_WARN_FLAGS": "-Wall;-Wextra;-Werror;-Wunused-value;-Wformat-security;-Wimplicit-fallthrough=5;-Walloc-zero;-Wlogical-op;-Wlogical-not-parentheses;-Wvla;-Wduplicated-cond;-Wtype-limits;-Wno-maybe-uninitialized"
       }
     },
     {
@@ -258,9 +258,6 @@
         "type": "equals",
         "lhs": "${hostSystemName}",
         "rhs": "Darwin"
-      },
-      "cacheVariables": {
-        "CMAKE_CXX_FLAGS": "-fexperimental-library"
       }
     },
     {
