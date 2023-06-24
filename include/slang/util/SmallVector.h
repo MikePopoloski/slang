@@ -8,8 +8,10 @@
 #pragma once
 
 #include <algorithm>
+#include <limits>
 #include <memory>
 #include <span>
+#include <utility>
 
 #include "slang/util/BumpAllocator.h"
 #include "slang/util/TypeTraits.h"
