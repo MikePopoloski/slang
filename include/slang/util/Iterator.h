@@ -435,7 +435,7 @@ struct std::pointer_traits<Iter> {
     template<typename Other>
     using rebind = typename slang::detail::rebind_alias<Iter, Other>::type;
 
-    using reference = conditional_t<is_void_v<element_type>, char, element_type>&;
+    using reference = std::conditional_t<std::is_void_v<element_type>, char, element_type>&;
 
     static pointer pointer_to(reference value) noexcept(noexcept(Iter::pointer_to(value))) {
         return Iter::pointer_to(value);

@@ -8,6 +8,7 @@
 #pragma once
 
 #include <array>
+#include <cstring>
 
 #ifdef SLANG_USE_BOOST
 #    include <boost/unordered/unordered_flat_map.hpp>

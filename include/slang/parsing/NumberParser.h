@@ -7,6 +7,8 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include <cmath>
+
 #include "slang/diagnostics/Diagnostics.h"
 #include "slang/diagnostics/NumericDiags.h"
 #include "slang/numeric/SVInt.h"

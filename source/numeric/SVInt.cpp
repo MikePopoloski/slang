@@ -8,6 +8,7 @@
 #include "slang/numeric/SVInt.h"
 
 #include "SVIntHelpers.h"
+#include <cmath>
 #include <fmt/core.h>
 #include <ostream>
 #include <stdexcept>
