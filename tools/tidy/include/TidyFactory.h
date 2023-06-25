@@ -69,11 +69,11 @@ public:
     static const TidyConfig& getConfig() { return config(); }
 
     static void setSourceManager(const slang::SourceManager* sm) { *sourceManager() = sm; }
-    static const slang::SourceManager* getSourceManager() {
+    static slang::not_null<const slang::SourceManager*> getSourceManager() {
         if (auto sm = *sourceManager(); sm == nullptr)
             SLANG_THROW(std::runtime_error("TidyFactory: Trying to get SourceManager, but factory "
                                            "pointer has not been initialized"));
-        return *sourceManager();
+        return slang::not_null<const slang::SourceManager*>(*sourceManager());
     }
 
 private:
