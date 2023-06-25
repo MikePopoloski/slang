@@ -53,6 +53,12 @@ add_custom_command(
     ${CMAKE_COMMAND} -E copy_directory
     ${CMAKE_CURRENT_SOURCE_DIR}/unittests/data
     ${CMAKE_CURRENT_BINARY_DIR}/unittests/data)
+add_custom_command(
+  TARGET unittests
+  POST_BUILD
+  COMMAND
+    ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/regression
+    ${CMAKE_CURRENT_BINARY_DIR}/regression)
 
 add_test(NAME unittests COMMAND unittests)
 set_tests_properties(unittests PROPERTIES TIMEOUT 60)
@@ -63,3 +69,6 @@ add_test(NAME regression_delayed_reg
 add_test(NAME regression_wire_module
          COMMAND slang::driver
                  "${CMAKE_CURRENT_LIST_DIR}/regression/wire_module.v")
+add_test(NAME regression_all_file
+         COMMAND slang::driver "${CMAKE_CURRENT_LIST_DIR}/regression/all.sv"
+                 "--ast-json=-")

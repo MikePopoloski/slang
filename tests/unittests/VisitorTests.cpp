@@ -346,7 +346,10 @@ endmodule
 
     // Visit the whole tree and count the binary expressions.
     int count = 0;
-    compilation.getRoot().visit(makeVisitor([&](const BinaryExpression&) { count++; }));
+    compilation.getRoot().visit(makeVisitor([&](auto& v, const BinaryExpression& expr) {
+        count++;
+        v.visitDefault(expr);
+    }));
     CHECK(count == 3);
 }
 
@@ -551,4 +554,24 @@ class C; endclass
             CHECK(node.unconnectedDrive == TokenKind::Pull0Keyword);
         }
     }
+}
+
+TEST_CASE("Visit all file") {
+    // Load a file containing all the SystemVerilog constructs and visit them
+    // just to get coverage of all the visitor methods.
+    fs::path path = findTestDir();
+    path /= "../../regression/all.sv";
+    auto tree = SyntaxTree::fromFile(path.string());
+    REQUIRE(tree);
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    int count = 0;
+    compilation.getRoot().visit(makeVisitor([&](auto& v, auto& elem) {
+        count++;
+        v.visitDefault(elem);
+    }));
+
+    CHECK(count == 682);
 }

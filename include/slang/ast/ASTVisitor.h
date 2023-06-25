@@ -42,9 +42,9 @@ struct SLANG_EXPORT ASTDetectors {
     template<typename T, typename Arg>
     using handle_t = decltype(std::declval<T>().handle(std::declval<Arg>()));
 
-    /// Detects whether T has an operator(Arg)
+    /// Detects whether T has an operator(T, Arg)
     template<typename T, typename Arg>
-    using op_t = decltype(std::declval<T>()(std::declval<Arg>()));
+    using op_t = decltype(std::declval<T>()(std::declval<T>(), std::declval<Arg>()));
 
     /// Detects whether T has a method of the form getBody()
     template<typename T>
@@ -79,10 +79,10 @@ public:
     /// The visit() entry point for visiting AST nodes.
     template<typename T>
     void visit(const T& t) {
-        if constexpr (is_detected_v<handle_t, TDerived, T>)
-            static_cast<TDerived*>(this)->handle(t);
-        else if constexpr (is_detected_v<op_t, TDerived, T>)
-            (DERIVED)(t);
+        if constexpr (requires { (DERIVED).handle(t); })
+            (DERIVED).handle(t);
+        else if constexpr (requires { (DERIVED)(DERIVED, t); })
+            (DERIVED)(DERIVED, t);
         else
             visitDefault(t);
     }
@@ -135,7 +135,10 @@ public:
 ///
 /// @code
 /// int count = 0;
-/// makeVisitor([&](const BinaryExpression&) { count++; })
+/// makeVisitor([&](auto& visitor, const BinaryExpression& expr) {
+///     count++;
+///     visitor.visitDefault(expr);
+/// })
 /// @endcode
 ///
 template<typename... Functions>
