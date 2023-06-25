@@ -127,7 +127,7 @@ const ParameterSymbolBase& ParameterBuilder::createParam(const Definition::Param
                                                          SourceLocation instanceLoc) {
     auto reportError = [&](auto& param) {
         anyErrors = true;
-        if (!suppressErrors) {
+        if (!suppressErrors && !param.name.empty()) {
             auto& diag = scope.addDiag(diag::ParamHasNoValue, instanceLoc);
             diag << definitionName;
             diag << param.name;
