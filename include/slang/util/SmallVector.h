@@ -308,7 +308,7 @@ public:
         // Copy in the new elements.
         first = std::ranges::copy_n(first, existingOverlap, result).in;
 
-        // Insert the non-overwritten end part.
+        // Insert the non-overwritten middle part.
         std::ranges::uninitialized_copy(first, last, end(), end() + numElems - existingOverlap);
         len = newSize;
         return result;
@@ -756,7 +756,7 @@ SmallVectorBase<T>& SmallVectorBase<T>::operator=(const SmallVectorBase<T>& rhs)
 
     // Copy construct the new elements in place.
     std::ranges::uninitialized_copy(rhs.begin() + len, rhs.end(), begin() + len,
-                                    begin() + rhs.size() - len);
+                                    begin() + rhs.size());
     len = rhs.size();
     return *this;
 }

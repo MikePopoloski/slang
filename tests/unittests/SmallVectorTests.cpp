@@ -46,6 +46,7 @@ public:
         CHECK(constructed);
         ++numDestructorCalls;
         constructed = false;
+        value = 0;
     }
 
     Constructable& operator=(const Constructable& src) {
@@ -167,6 +168,58 @@ TEMPLATE_LIST_TEST_CASE_METHOD(SmallVectorTest, "EmptyVectorTest", "[small_vec]"
     CHECK(v.rbegin() == v.rend());
     CHECK(0 == Constructable::getNumConstructorCalls());
     CHECK(0 == Constructable::getNumDestructorCalls());
+}
+
+TEMPLATE_LIST_TEST_CASE_METHOD(SmallVectorTest, "MoveConstruct", "[small_vec]",
+                               SmallVectorTestTypes) {
+    auto& v = this->theVector;
+    makeSequence(v, 1, 4);
+
+    TestType tt(std::move(v));
+    assertValuesInOrder(tt, 1, 2, 3, 4);
+}
+
+TEMPLATE_LIST_TEST_CASE_METHOD(SmallVectorTest, "CopyAssign", "[small_vec]", SmallVectorTestTypes) {
+    auto& v = this->theVector;
+    makeSequence(v, 1, 4);
+
+    SmallVector<Constructable, 2> tt;
+    v = v;
+    tt = v;
+    assertValuesInOrder(tt, 1, 2, 3, 4);
+
+    tt = v;
+    assertValuesInOrder(tt, 1, 2, 3, 4);
+
+    v.clear();
+    tt = v;
+    CHECK(tt.empty());
+
+    makeSequence(v, 1, 4);
+    tt.push_back(1);
+    tt = v;
+    assertValuesInOrder(tt, 1, 2, 3, 4);
+}
+
+TEMPLATE_LIST_TEST_CASE_METHOD(SmallVectorTest, "ShrinkToFit", "[small_vec]",
+                               SmallVectorTestTypes) {
+    auto& v = this->theVector;
+    makeSequence(v, 1, 4);
+
+    v.shrink_to_fit();
+    CHECK(v.capacity() == std::max(v.size(), numBuiltinElts(v)));
+}
+
+TEMPLATE_LIST_TEST_CASE_METHOD(SmallVectorTest, "ShrinkToFit back to small", "[small_vec]",
+                               SmallVectorTestTypes) {
+    auto& v = this->theVector;
+    makeSequence(v, 1, 5);
+    v.pop_back();
+    v.pop_back();
+    v.pop_back();
+
+    v.shrink_to_fit();
+    CHECK(v.capacity() == numBuiltinElts(v));
 }
 
 TEMPLATE_LIST_TEST_CASE_METHOD(SmallVectorTest, "PushPopTest", "[small_vec]",
@@ -346,6 +399,14 @@ TEMPLATE_LIST_TEST_CASE_METHOD(SmallVectorTest, "IterationTest", "[small_vec]",
     --rit;
     CHECK(*rit == v[1]);
     CHECK(2 == rit->getValue());
+
+    const TestType constV = v;
+    auto crit = constV.rbegin();
+    CHECK(crit != constV.rend());
+    CHECK(*crit == 2);
+    CHECK(constV.front() == 1);
+    CHECK(constV.back() == 2);
+    CHECK(*constV.data() == 1);
 }
 
 TEMPLATE_LIST_TEST_CASE_METHOD(SmallVectorTest, "SwapTest", "[small_vec]", SmallVectorTestTypes) {
@@ -353,9 +414,17 @@ TEMPLATE_LIST_TEST_CASE_METHOD(SmallVectorTest, "SwapTest", "[small_vec]", Small
     auto& u = this->otherVector;
     makeSequence(v, 1, 2);
     std::swap(v, u);
+    std::swap(v, v);
 
     assertEmpty(v);
     assertValuesInOrder(u, 1, 2);
+
+    makeSequence(v, 3, 8);
+    makeSequence(u, 9, 18);
+    std::swap(v, u);
+
+    assertValuesInOrder(u, 3, 4, 5, 6, 7, 8);
+    assertValuesInOrder(v, 1, 2, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18);
 }
 
 TEMPLATE_LIST_TEST_CASE_METHOD(SmallVectorTest, "AppendTest", "[small_vec]", SmallVectorTestTypes) {
@@ -465,6 +534,7 @@ TEMPLATE_LIST_TEST_CASE_METHOD(SmallVectorTest, "MoveAssignTest", "[small_vec]",
 
     // Move-assign from the other vector.
     v = std::move(u);
+    v = std::move(v);
 
     // Make sure we have the right result.
     assertValuesInOrder(v, 2, 3);
@@ -477,6 +547,13 @@ TEMPLATE_LIST_TEST_CASE_METHOD(SmallVectorTest, "MoveAssignTest", "[small_vec]",
     // There shouldn't be any live objects any more.
     v.clear();
     CHECK(Constructable::getNumConstructorCalls() == Constructable::getNumDestructorCalls());
+
+    makeSequence(v, 1, 12);
+    makeSequence(u, 5, 10);
+    v = std::move(u);
+    assertValuesInOrder(v, 5, 6, 7, 8, 9, 10);
+    v = std::move(u);
+    CHECK(v.empty());
 }
 
 TEMPLATE_LIST_TEST_CASE_METHOD(SmallVectorTest, "EraseTest", "[small_vec]", SmallVectorTestTypes) {
@@ -547,6 +624,16 @@ TEMPLATE_LIST_TEST_CASE_METHOD(SmallVectorTest, "InsertRepeatedNonIterTest", "[s
     auto it = v.insert(v.begin() + 1, 2, 7);
     CHECK(v.begin() + 1 == it);
     assertValuesInOrder(v, 1, 7, 7, 2, 3, 4);
+}
+
+TEMPLATE_LIST_TEST_CASE_METHOD(SmallVectorTest, "InsertRepeatedInMiddlePastEndTest", "[small_vec]",
+                               SmallVectorTestTypes) {
+    auto& v = this->theVector;
+    makeSequence(v, 1, 4);
+    Constructable::reset();
+    auto it = v.insert(v.begin() + 1, 5, 7);
+    CHECK(v.begin() + 1 == it);
+    assertValuesInOrder(v, 1, 7, 7, 7, 7, 7, 2, 3, 4);
 }
 
 TEMPLATE_LIST_TEST_CASE_METHOD(SmallVectorTest, "InsertRepeatedAtEndTest", "[small_vec]",
@@ -777,39 +864,6 @@ TEMPLATE_LIST_TEST_CASE_METHOD(DualSmallVectorsTest, "MoveAssignment", "[small_v
 
     // We shouldn't have copied anything in this whole process.
     CHECK(Constructable::getNumCopyConstructorCalls() == 0);
-}
-
-struct NotAssignable {
-    int& x;
-    NotAssignable(int& x) : x(x) {}
-};
-
-TEST_CASE("SmallVector::NoAssignTest", "[small_vec]") {
-    int x = 0;
-    SmallVector<NotAssignable, 2> vec;
-    vec.push_back(NotAssignable(x));
-
-    x = 42;
-    CHECK(42 == vec.back().x);
-}
-
-struct MovedFrom {
-    bool hasValue;
-    MovedFrom() : hasValue(true) {}
-    MovedFrom(MovedFrom&& m) : hasValue(m.hasValue) { m.hasValue = false; }
-    MovedFrom& operator=(MovedFrom&& m) {
-        hasValue = m.hasValue;
-        m.hasValue = false;
-        return *this;
-    }
-};
-
-TEST_CASE("SmallVector::MidInsert", "[small_vec]") {
-    SmallVector<MovedFrom, 3> v;
-    v.push_back(MovedFrom());
-    v.insert(v.begin(), MovedFrom());
-    for (MovedFrom& m : v)
-        CHECK(m.hasValue);
 }
 
 enum class EmplaceableArgState { Defaulted, Arg, LValue, RValue, Failure };
@@ -1274,6 +1328,104 @@ TEMPLATE_LIST_TEST_CASE_METHOD(SmallVectorInternalReferenceInvalidationTest, "Em
     v.emplace_back(v.back().first, v.back().second);
     CHECK(int(v.size()) - 1 == v.back().first);
     CHECK(int(v.size()) - 1 == v.back().second);
+}
+
+struct NotAssignable {
+    int& x;
+    NotAssignable(int& x) : x(x) {}
+};
+
+TEST_CASE("SmallVector::NoAssignTest", "[small_vec]") {
+    int x = 0;
+    SmallVector<NotAssignable, 2> vec;
+    vec.push_back(NotAssignable(x));
+
+    x = 42;
+    CHECK(42 == vec.back().x);
+}
+
+struct MovedFrom {
+    bool hasValue;
+    MovedFrom() : hasValue(true) {}
+    MovedFrom(MovedFrom&& m) : hasValue(m.hasValue) { m.hasValue = false; }
+    MovedFrom& operator=(MovedFrom&& m) {
+        hasValue = m.hasValue;
+        m.hasValue = false;
+        return *this;
+    }
+};
+
+TEST_CASE("SmallVector::MidInsert", "[small_vec]") {
+    SmallVector<MovedFrom, 3> v;
+    v.push_back(MovedFrom());
+    v.insert(v.begin(), MovedFrom());
+    for (MovedFrom& m : v)
+        CHECK(m.hasValue);
+}
+
+#if __cpp_exceptions
+TEST_CASE("SmallVector::resize error", "[small_vec]") {
+    SmallVector<int, 2> vec;
+    CHECK_THROWS(vec.resize(SIZE_MAX));
+}
+#endif
+
+#if __cpp_exceptions
+TEST_CASE("SmallVector::reserve error", "[small_vec]") {
+    SmallVector<int, 2> vec;
+    CHECK_THROWS(vec.reserve(SIZE_MAX));
+}
+#endif
+
+TEST_CASE("SmallVector::resize more than double", "[small_vec]") {
+    SmallVector<int, 2> vec;
+    vec.resize(32);
+    CHECK(vec.size() == 32);
+    CHECK(vec.capacity() == 32);
+}
+
+TEST_CASE("SmallVector::Emplace at back", "[small_vec]") {
+    Constructable::reset();
+    SmallVector<Constructable, 2> vec;
+    vec.emplace(vec.end(), 1);
+    vec.emplace(vec.end(), 2);
+
+    CHECK(Constructable::getNumConstructorCalls() == 2);
+}
+
+TEST_CASE("SmallVector::copy/ccopy", "[small_vec]") {
+    SmallVector<Constructable, 2> vec;
+    makeSequence(vec, 1, 4);
+
+    BumpAllocator alloc;
+    std::span<Constructable> s1 = vec.copy(alloc);
+    CHECK(std::ranges::equal(s1, vec));
+
+    std::span<const Constructable> s2 = vec.ccopy(alloc);
+    CHECK(std::ranges::equal(s2, vec));
+
+    vec.clear();
+    s1 = vec.copy(alloc);
+    CHECK(s1.empty());
+}
+
+TEST_CASE("SmallVector::at", "[small_vec]") {
+    SmallVector<Constructable, 2> vec;
+    makeSequence(vec, 1, 4);
+
+    CHECK(vec.at(2) == 3);
+    CHECK_THROWS(vec.at(4));
+
+    const SmallVector<Constructable, 2> cv = vec;
+    CHECK(cv.at(2) == 3);
+    CHECK(cv.at(3) == cv[3]);
+    CHECK_THROWS(cv.at(4));
+}
+
+TEST_CASE("SmallVector::uninitialized construct", "[small_vec]") {
+    SmallVector<Constructable, 2> vec(32, UninitializedTag{});
+    CHECK(vec.empty());
+    CHECK(vec.capacity() == 32);
 }
 
 } // end namespace
