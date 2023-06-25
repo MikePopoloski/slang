@@ -73,6 +73,14 @@ TEST_CASE("Read header (include dirs)") {
     CHECK(buffer);
 }
 
+TEST_CASE("Read header (dev/null)") {
+    if (fs::exists("/dev/null")) {
+        SourceManager manager;
+        SourceBuffer buffer = manager.readHeader("/dev/null", SourceLocation(), true);
+        CHECK(buffer);
+    }
+}
+
 static void globAndCheck(const fs::path& basePath, std::string_view pattern,
                          std::initializer_list<const char*> expected) {
     SmallVector<fs::path> results;

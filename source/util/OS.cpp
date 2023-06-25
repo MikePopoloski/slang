@@ -87,11 +87,23 @@ bool OS::fileSupportsColors(FILE* file) {
 
 #endif
 
+static const fs::path devNull("/dev/null");
+
 bool OS::readFile(const fs::path& path, std::vector<char>& buffer) {
     std::error_code ec;
-    uintmax_t size = fs::file_size(path, ec);
-    if (ec)
+    fs::directory_entry entry(path, ec);
+    if (!entry.exists(ec))
         return false;
+
+    uintmax_t size = entry.file_size(ec);
+    if (ec) {
+        // The path exists but it's not a regular file with a known size.
+        // As a special case, support reading from /dev/null (returns 0).
+        if (path == devNull)
+            size = 0;
+        else
+            return false;
+    }
 
     // + 1 for null terminator
     buffer.resize((size_t)size + 1);
