@@ -407,7 +407,7 @@ bool ValueDriver::isInAlwaysFFBlock() const {
 bool ValueDriver::isInAlwaysLatchBlock() const {
     return containingSymbol->kind == SymbolKind::ProceduralBlock &&
            containingSymbol->as<ProceduralBlockSymbol>().procedureKind ==
-           ProceduralBlockKind::AlwaysLatch;
+               ProceduralBlockKind::AlwaysLatch;
 }
 
 SourceRange ValueDriver::getSourceRange() const {
