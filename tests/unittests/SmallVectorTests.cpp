@@ -1409,6 +1409,7 @@ TEST_CASE("SmallVector::copy/ccopy", "[small_vec]") {
     CHECK(s1.empty());
 }
 
+#if __cpp_exceptions
 TEST_CASE("SmallVector::at", "[small_vec]") {
     SmallVector<Constructable, 2> vec;
     makeSequence(vec, 1, 4);
@@ -1421,6 +1422,7 @@ TEST_CASE("SmallVector::at", "[small_vec]") {
     CHECK(cv.at(3) == cv[3]);
     CHECK_THROWS(cv.at(4));
 }
+#endif
 
 TEST_CASE("SmallVector::uninitialized construct", "[small_vec]") {
     SmallVector<Constructable, 2> vec(32, UninitializedTag{});
