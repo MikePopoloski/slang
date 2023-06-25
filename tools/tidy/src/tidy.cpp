@@ -1,20 +1,26 @@
 //------------------------------------------------------------------------------
 //! @file tidy.h
-//! @brief The slang linter
+//! @brief A SystemVerilog linting tool
 //
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
+#include "TidyConfigParser.h"
+#include "TidyFactory.h"
 #include "fmt/color.h"
 #include "fmt/format.h"
-#include "include/TidyFactory.h"
+#include <filesystem>
 #include <unordered_set>
 
 #include "slang/ast/Compilation.h"
 #include "slang/diagnostics/TextDiagnosticClient.h"
 #include "slang/driver/Driver.h"
+#include "slang/text/SourceManager.h"
 #include "slang/util/Version.h"
 
+/// Performs a search for the .slang-tidy file on the current directory. If the file is not found,
+/// tries on the parent directory until the root.
+std::optional<std::filesystem::path> project_slang_tidy_config();
 using namespace slang;
 
 int main(int argc, char** argv) {
@@ -23,10 +29,8 @@ int main(int argc, char** argv) {
 
     std::optional<bool> showHelp;
     std::optional<bool> showVersion;
-    std::optional<bool> quiet;
     driver.cmdLine.add("-h,--help", showHelp, "Display available options");
     driver.cmdLine.add("--version", showVersion, "Display version information and exit");
-    driver.cmdLine.add("-q,--quiet", quiet, "Suppress non-essential output");
 
     std::optional<bool> printDescriptions;
     std::optional<bool> printShortDescriptions;
@@ -35,24 +39,12 @@ int main(int argc, char** argv) {
     driver.cmdLine.add("--print-short-descriptions", printShortDescriptions,
                        "Displays the short description of each check and exits");
 
-    std::optional<bool> disableSynthesisChecks;
-    std::vector<std::string> disabledCheckNames;
-    driver.cmdLine.add("--disable-synthesis-checks", disableSynthesisChecks,
-                       "Disables the synthesis checks");
-    driver.cmdLine.add("--disable-checks", disabledCheckNames,
-                       "Names of checks that will be disabled");
+    std::optional<std::string> tidyConfigFile;
+    driver.cmdLine.add("--config-file", tidyConfigFile,
+                       "Path to where the tidy config file is located");
 
-    std::optional<bool> onlySynthesisChecks;
-    driver.cmdLine.add("--only-synthesis-checks", onlySynthesisChecks,
-                       "Disables the synthesis checks");
-
-    std::optional<std::string> clockName;
-    std::optional<std::string> resetName;
-    std::optional<bool> resetActiveHigh;
-    driver.cmdLine.add("--clock-name", clockName, "Name of the design clock signal");
-    driver.cmdLine.add("--reset-name", resetName, "Name of the design reset signal");
-    driver.cmdLine.add("--reset-active-high", resetActiveHigh,
-                       "Indicates that the reset is active high. By default reset is active low");
+    std::vector<std::string> skippedFiles;
+    driver.cmdLine.add("--skip-file", skippedFiles, "Paths to be skipped by slang-tidy");
 
     if (!driver.parseCommandLine(argc, argv))
         return 1;
@@ -70,34 +62,29 @@ int main(int argc, char** argv) {
         return 0;
     }
 
-    if (!disabledCheckNames.empty()) {
-        auto allRegisteredChecks = Registry::get_registered();
-        for (const auto& name : disabledCheckNames) {
-            if (!std::ranges::count(allRegisteredChecks, name)) {
-                OS::printE(
-                    fmt::format("the check {} provided in --disable-check do not exist\n", name));
-                return 6;
-            }
-        }
+    // Create the config class and populate it with the config file if provided
+    TidyConfig tidyConfig;
+    if (tidyConfigFile) {
+        if (!exists(std::filesystem::path(tidyConfigFile.value())))
+            slang::OS::printE(fmt::format("the path provided for the config file does not exist {}",
+                                          tidyConfigFile.value()));
+        tidyConfig = TidyConfigParser(tidyConfigFile.value()).getConfig();
+    }
+    else if (auto path = project_slang_tidy_config()) {
+        tidyConfig = TidyConfigParser(path.value()).getConfig();
     }
 
-    std::unordered_set<slang::TidyKind> disabledCheckKinds;
-    if (disableSynthesisChecks)
-        disabledCheckKinds.insert(TidyKind::Synthesis);
+    // Add skipped files provided by the cmd args
+    tidyConfig.addSkipFile(std::move(skippedFiles));
 
-    auto filter_func = [&](const Registry::RegistryItem& item) {
-        if (std::ranges::count(disabledCheckNames, item.first))
-            return false;
-        if (disabledCheckKinds.count(item.second.kind))
-            return false;
-        if (onlySynthesisChecks)
-            return item.second.kind == slang::TidyKind::Synthesis;
-        return true;
-    };
-
+    // Print (short)descriptions of the checks
     if (printDescriptions || printShortDescriptions) {
+        // Create a sourceManage placeholder
+        auto sm = SourceManager();
+        Registry::setSourceManager(&sm);
+
         bool first = true;
-        for (const auto& check_name : Registry::get_registered(filter_func)) {
+        for (const auto& check_name : Registry::getRegisteredChecks()) {
             const auto check = Registry::create(check_name);
             if (first)
                 first = false;
@@ -113,7 +100,7 @@ int main(int argc, char** argv) {
     }
 
     if (!driver.processOptions())
-        return 2;
+        return 1;
 
     std::unique_ptr<ast::Compilation> compilation;
     bool compilation_ok;
@@ -126,7 +113,7 @@ int main(int argc, char** argv) {
 #if __cpp_exceptions
         slang::OS::printE(fmt::format("internal compiler error: {}\n", e.what()));
 #endif
-        return 4;
+        return 1;
     }
 
     if (!compilation_ok) {
@@ -134,37 +121,29 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    DiagnosticEngine diagEngine(*compilation->getSourceManager());
-    auto textDiagClient = std::make_shared<TextDiagnosticClient>();
-    textDiagClient->showColors(true);
-    diagEngine.addClient(textDiagClient);
+    // Set the config to the Registry
+    Registry::setConfig(tidyConfig);
+    // Set the sourceManager to the Registry so checks can access it
+    Registry::setSourceManager(compilation->getSourceManager());
 
     int ret_code = 0;
 
-    Registry::initialize_default_check_config();
-    if (clockName)
-        Registry::set_check_config_clock_name(clockName.value());
-    if (resetName)
-        Registry::set_check_config_reset_name(resetName.value());
-    if (resetActiveHigh)
-        Registry::set_check_config_reset_active_high(true);
-
-    for (const auto& check_name : Registry::get_registered(filter_func)) {
+    // Check all enabled checks
+    for (const auto& check_name : Registry::getEnabledChecks()) {
         const auto check = Registry::create(check_name);
         OS::print(fmt::format("[{}]", check->name()));
 
-        diagEngine.setMessage(check->diagCode(), check->diagString());
-        diagEngine.setSeverity(check->diagCode(), check->diagSeverity());
+        driver.diagEngine.setMessage(check->diagCode(), check->diagString());
+        driver.diagEngine.setSeverity(check->diagCode(), check->diagSeverity());
 
         auto checkOk = check->check(compilation->getRoot());
         if (!checkOk) {
-            ret_code = 5;
+            ret_code = 1;
             OS::print(fmt::emphasis::bold | fmt::fg(fmt::color::red), " FAIL\n");
-            const auto& diags = check->getDiagnostics();
-            for (const auto& diag : diags)
-                diagEngine.issue(diag);
-            OS::print(fmt::format("{}\n", textDiagClient->getString()));
-            textDiagClient->clear();
+            for (const auto& diag : check->getDiagnostics())
+                driver.diagEngine.issue(diag);
+            OS::print(fmt::format("{}\n", driver.diagClient->getString()));
+            driver.diagClient->clear();
         }
         else {
             OS::print(fmt::emphasis::bold | fmt::fg(fmt::color::green), " PASS\n");
@@ -172,4 +151,21 @@ int main(int argc, char** argv) {
     }
 
     return ret_code;
+}
+
+std::optional<std::filesystem::path> project_slang_tidy_config() {
+    std::optional<std::filesystem::path> ret = {};
+    auto cwd = std::filesystem::current_path();
+    while (cwd != cwd.root_path()) {
+        if (exists(cwd / ".slang-tidy")) {
+            ret = cwd / ".slang-tidy";
+            break;
+        }
+        cwd = cwd.parent_path();
+    }
+    // Checks if the .slang-tidy is on the root path
+    if (!ret.has_value() && exists(std::filesystem::path("/.slang-tidy"))) {
+        ret = std::filesystem::path("/.slang-tidy");
+    }
+    return ret;
 }

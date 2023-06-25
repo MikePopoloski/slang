@@ -1,13 +1,41 @@
 //------------------------------------------------------------------------------
 //! @file ASTHelperVisitors.h
-//! @brief Reusable AST visitors
+//! @brief Reusable AST visitors and functions
 //
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
 #pragma once
 
+#include "TidyConfig.h"
+#include "TidyFactory.h"
+#include <filesystem>
+
 #include "slang/ast/ASTVisitor.h"
+
+#define NEEDS_SKIP_SYMBOL(__symbol)                            \
+    if (skip(sourceManager->getFileName((__symbol).location))) \
+        return;
+
+// Function that tries to get the name of the variable in an expression
+std::optional<std::string_view> getIdentifier(const slang::ast::Expression& expr);
+
+struct TidyVisitor {
+protected:
+    explicit TidyVisitor(slang::Diagnostics& diagnostics) :
+        sourceManager(Registry::getSourceManager()), diags(diagnostics),
+        config(Registry::getConfig()) {}
+
+    [[nodiscard]] bool skip(std::string_view path) const {
+        auto file = std::filesystem::path(path).filename();
+        const auto& skipFiles = config.getSkipFiles();
+        return std::find(skipFiles.begin(), skipFiles.end(), file) != skipFiles.end();
+    }
+
+    slang::not_null<const slang::SourceManager*> sourceManager;
+    slang::Diagnostics& diags;
+    const TidyConfig& config;
+};
 
 /// ASTVisitor that will collect all identifiers under a node and store them in the identifiers
 /// internal variable so they can be retrieved later
@@ -31,17 +59,9 @@ struct LookupLhsIdentifier : public slang::ast::ASTVisitor<LookupLhsIdentifier, 
     // Checks if the symbol on the LHS of the expression has the provided name
     static bool hasIdentifier(const std::string_view& name,
                               const slang::ast::AssignmentExpression& expression) {
-        const slang::ast::Symbol* symbol = nullptr;
-        if (slang::ast::MemberAccessExpression::isKind(expression.left().kind)) {
-            auto& memberAccess = expression.left().as<slang::ast::MemberAccessExpression>();
-            if (slang::ast::NamedValueExpression::isKind(memberAccess.value().kind))
-                symbol = &memberAccess.value().as<slang::ast::NamedValueExpression>().symbol;
-        }
-        else {
-            symbol = expression.left().getSymbolReference();
-        }
+        auto identifier = getIdentifier(expression.left());
 
-        if (symbol && symbol->name == name) {
+        if (identifier && identifier.value() == name) {
             return true;
         }
         return false;
@@ -54,6 +74,6 @@ struct LookupLhsIdentifier : public slang::ast::ASTVisitor<LookupLhsIdentifier, 
     void reset() { _found = false; }
 
 private:
-    const std::string_view& name;
+    const std::string_view name;
     bool _found = false;
 };

@@ -2,8 +2,19 @@
 # SPDX-FileCopyrightText: Michael Popoloski
 # SPDX-License-Identifier: MIT
 # ~~~
-add_executable(slang_tidy tidy.cpp synthesis/OnlyAssignedOnReset.cpp
-                          synthesis/RegisterHasNoReset.cpp)
+add_executable(
+  slang_tidy
+  src/tidy.cpp
+  src/TidyConfigParser.cpp
+  src/synthesis/OnlyAssignedOnReset.cpp
+  src/synthesis/RegisterHasNoReset.cpp
+  src/style/EnforcePortSuffix.cpp
+  src/TidyConfig.cpp
+  src/synthesis/NoLatchesOnDesign.cpp
+  src/style/NoOldAlwaysSyntax.cpp
+  src/style/AlwaysCombNonBlocking.cpp
+  src/style/AlwaysFFBlocking.cpp
+  src/ASTHelperVisitors.cpp)
 add_executable(slang::tidy ALIAS slang_tidy)
 
 target_link_libraries(slang_tidy PRIVATE slang::slang fmt::fmt)
