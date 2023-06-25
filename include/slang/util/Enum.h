@@ -121,7 +121,7 @@ inline constexpr bitmask_detail::underlying_type_t<T> get_enum_mask(const T&) no
 /// of bitwise-combined flags. Built-in strongly-typed C++ enums are not otherwise
 /// combinable via operators like | and &.
 template<typename T>
-class SLANG_EXPORT bitmask {
+class bitmask {
 public:
     using underlying_type = bitmask_detail::underlying_type_t<T>;
 
