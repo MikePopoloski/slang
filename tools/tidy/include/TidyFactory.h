@@ -21,7 +21,7 @@
 
 class TidyCheck;
 
-class Registry {
+class SLANG_EXPORT Registry {
 public:
     using RegistryFunction = std::function<std::unique_ptr<TidyCheck>()>;
     struct RegistryValue {
