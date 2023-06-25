@@ -13,9 +13,9 @@
 
 #include "slang/ast/ASTVisitor.h"
 
-#define NEEDS_SKIP_SYMBOL(__symbol) //                           \
-    // if (skip(sourceManager->getFileName((__symbol).location))) \
-    //     return;
+#define NEEDS_SKIP_SYMBOL(__symbol)                            \
+    if (skip(sourceManager->getFileName((__symbol).location))) \
+        return;
 
 // Function that tries to get the name of the variable in an expression
 std::optional<std::string_view> getIdentifier(const slang::ast::Expression& expr);
