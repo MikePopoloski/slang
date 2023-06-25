@@ -1,10 +1,6 @@
-//------------------------------------------------------------------------------
-//! @file ASTHelperVisitors.cpp
-//! @brief Reusable AST visitors and functions
-//
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
-//------------------------------------------------------------------------------
+
 
 #include "ASTHelperVisitors.h"
 

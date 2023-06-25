@@ -1,10 +1,6 @@
-//------------------------------------------------------------------------------
-//! @file RegisterHasNoResetTest.h
-//! @brief Tests for the RegisterHasNoReset check
-//
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
-//------------------------------------------------------------------------------
+
 #include "Test.h"
 #include "TidyFactory.h"
 

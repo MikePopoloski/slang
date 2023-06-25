@@ -1,10 +1,6 @@
-//------------------------------------------------------------------------------
-//! @file RegisterHasNoReset.h
-//! @brief Register has no reset slang-tidy check
-//
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
-//------------------------------------------------------------------------------
+
 #include "ASTHelperVisitors.h"
 #include "TidyDiags.h"
 #include "TidyFactory.h"

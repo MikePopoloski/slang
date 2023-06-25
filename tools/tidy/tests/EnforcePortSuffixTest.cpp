@@ -1,10 +1,6 @@
-//------------------------------------------------------------------------------
-//! @file EnforcePortSuffixTest.h
-//! @brief Tests for the EnforcePortSuffix check
-//
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
-//------------------------------------------------------------------------------
+
 #include "Test.h"
 #include "TidyFactory.h"
 

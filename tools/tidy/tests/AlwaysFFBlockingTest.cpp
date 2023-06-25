@@ -1,10 +1,6 @@
-//------------------------------------------------------------------------------
-//! @file AlwaysFFBlockingTest.h
-//! @brief Tests for the AlwaysFFBlocking check
-//
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
-//------------------------------------------------------------------------------
+
 #include "Test.h"
 #include "TidyFactory.h"
 

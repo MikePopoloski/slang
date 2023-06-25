@@ -1,10 +1,5 @@
-//------------------------------------------------------------------------------
-//! @file TidyConfigParserTest.h
-//! @brief Tests suite for the TidyConfigParser
-//
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
-//------------------------------------------------------------------------------
 
 #include "Test.h"
 #include "TidyConfigParser.h"

@@ -1,10 +1,6 @@
-//------------------------------------------------------------------------------
-//! @file TidyConfigParser.cpp
-//! @brief Parser of the config file for the slang-tidy tool
-//
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
-//------------------------------------------------------------------------------
+
 #include "TidyConfigParser.h"
 
 #include "fmt/format.h"

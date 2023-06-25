@@ -1,10 +1,6 @@
-//------------------------------------------------------------------------------
-//! @file NoOldAlwaysSyntaxTest.h
-//! @brief Tests for the NoOldAlwaysSyntax check
-//
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
-//------------------------------------------------------------------------------
+
 #include "Test.h"
 #include "TidyFactory.h"
 

@@ -1,10 +1,6 @@
-//------------------------------------------------------------------------------
-//! @file TidyConfig.cpp
-//! @brief Configuration of the tidy tool
-//
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
-//------------------------------------------------------------------------------
+
 
 #include "TidyConfig.h"
 

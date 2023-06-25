@@ -1,9 +1,6 @@
-//! @file NoOldAlwaysSyntax.h
-//! @brief Checks for use of old verilog always syntax
-//
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
-//------------------------------------------------------------------------------
+
 #include "ASTHelperVisitors.h"
 #include "TidyDiags.h"
 

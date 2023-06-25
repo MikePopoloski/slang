@@ -1,10 +1,5 @@
-//------------------------------------------------------------------------------
-//! @file AlwaysFFBlocking.h
-//! @brief Enforce that blocking assignments are only used for locals inside always_ff blocks
-//
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
-//------------------------------------------------------------------------------
 
 #include "ASTHelperVisitors.h"
 #include "TidyDiags.h"

@@ -1,10 +1,6 @@
-
-//! @file AlwaysCombNonBlocking.h
-//! @brief Enforces that there are any non blocking assignments on an always_comb
-//
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
-//------------------------------------------------------------------------------
+
 #include "ASTHelperVisitors.h"
 #include "TidyDiags.h"
 #include "fmt/color.h"

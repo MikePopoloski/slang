@@ -1,10 +1,6 @@
-//------------------------------------------------------------------------------
-//! @file AlwaysCombNonBlockingTest.h
-//! @brief Tests for the AlwaysCombNonBlocking check
-//
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
-//------------------------------------------------------------------------------
+
 #include "Test.h"
 #include "TidyFactory.h"
 

@@ -1,10 +1,6 @@
-//------------------------------------------------------------------------------
-//! @file OnlyAssignedOnResetTest.h
-//! @brief Tests for the OnlyAssignedOnReset check
-//
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
-//------------------------------------------------------------------------------
+
 #include "Test.h"
 #include "TidyFactory.h"
 

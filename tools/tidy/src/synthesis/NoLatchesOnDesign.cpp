@@ -1,9 +1,6 @@
-//! @file NoLatchesOnDesign.h
-//! @brief No latches on design slang-tidy check
-//
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
-//------------------------------------------------------------------------------
+
 #include "ASTHelperVisitors.h"
 #include "TidyDiags.h"
 #include "fmt/color.h"
