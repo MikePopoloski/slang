@@ -773,6 +773,7 @@ endsequence
 module m;
     wire clk, a;
     assert property (s(@(posedge clk) a |-> clk, p, p within clk));
+    assert property (p and p);
 endmodule
 )");
 

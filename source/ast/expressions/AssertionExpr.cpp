@@ -858,12 +858,15 @@ AssertionExpr& BinaryAssertionExpr::fromSyntax(const BinarySequenceExprSyntax& s
             context.addDiag(diag::ThroughoutLhsInvalid, syntax.left->sourceRange())
                 << syntax.op.range();
         }
+        right.requireSequence(context);
     }
-    else {
+    else if (op != BinaryAssertionOperator::And && op != BinaryAssertionOperator::Or) {
+        // The 'and' and 'or' operators may just be simple property references,
+        // which is fine unless someone up above us decides they need sequences only.
         left.requireSequence(context);
+        right.requireSequence(context);
     }
 
-    right.requireSequence(context);
     return *comp.emplace<BinaryAssertionExpr>(op, left, right);
 }
 
