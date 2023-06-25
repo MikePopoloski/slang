@@ -334,16 +334,18 @@ void InstanceSymbol::fromSyntax(Compilation& comp, const HierarchyInstantiationS
             isUninstantiated |= parentInst->isUninstantiated;
             break;
         }
-        else if (sym.kind == SymbolKind::CheckerInstanceBody) {
+
+        if (sym.kind == SymbolKind::CheckerInstanceBody) {
             auto& body = sym.as<CheckerInstanceBodySymbol>();
             inChecker = true;
             isUninstantiated |= body.isUninstantiated;
             currScope = body.parentInstance->getParentScope();
-        }
-        else if (sym.kind == SymbolKind::GenerateBlock) {
-            isUninstantiated |= sym.as<GenerateBlockSymbol>().isUninstantiated;
+            continue;
         }
 
+        if (sym.kind == SymbolKind::GenerateBlock) {
+            isUninstantiated |= sym.as<GenerateBlockSymbol>().isUninstantiated;
+        }
         currScope = sym.getParentScope();
     } while (currScope);
 

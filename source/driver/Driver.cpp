@@ -408,13 +408,13 @@ bool Driver::processOptions() {
     for (const std::string& pathStr : options.suppressWarningsPaths) {
         auto path = fs::canonical(widen(pathStr), ec);
         if (!path.empty())
-            diagEngine.addIgnorePath(std::move(path));
+            diagEngine.addIgnorePath(path);
     }
 
     for (const std::string& pathStr : options.suppressMacroWarningsPaths) {
         auto path = fs::canonical(widen(pathStr), ec);
         if (!path.empty())
-            diagEngine.addIgnoreMacroPath(std::move(path));
+            diagEngine.addIgnoreMacroPath(path);
     }
 
     Diagnostics optionDiags = diagEngine.setWarningOptions(options.warningOptions);
