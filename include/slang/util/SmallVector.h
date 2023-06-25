@@ -183,7 +183,7 @@ public:
 
     /// Appends a range of elements to the end of the array.
     template<std::ranges::input_range TContainer>
-    void append(const TContainer& container) {
+    void append_range(const TContainer& container) {
         append(std::ranges::begin(container), std::ranges::end(container));
     }
 
@@ -232,7 +232,7 @@ public:
 
     /// Resets the contents of the array to be the contents of the given range.
     template<std::ranges::input_range TContainer>
-    void assign(const TContainer& container) {
+    void assign_range(const TContainer& container) {
         assign(std::ranges::begin(container), std::ranges::end(container));
     }
 
@@ -269,6 +269,12 @@ public:
 
     /// Inserts the given value at the specified position in the array.
     iterator insert(const_iterator pos, T&& val) { return emplace(pos, std::move(val)); }
+
+    /// Inserts a range of elements at the specified position in the array.
+    template<std::ranges::input_range TContainer>
+    iterator insert_range(const_iterator pos, const TContainer& container) {
+        return insert(pos, std::ranges::begin(container), std::ranges::end(container));
+    }
 
     /// Inserts a range of elements at the specified position in the array.
     template<std::input_iterator TIter>
@@ -582,7 +588,7 @@ public:
     /// Constructs the SmallVector from the given range.
     template<std::ranges::input_range TRange>
     explicit SmallVector(TRange range) {
-        this->append(range);
+        this->append_range(range);
     }
 
     /// Copy constructs from another vector.
@@ -658,8 +664,23 @@ inline bool operator==(const SmallVectorBase<T>& lhs, const SmallVectorBase<T>& 
 }
 
 template<typename T>
-inline auto operator<=>(const SmallVectorBase<T>& lhs, const SmallVectorBase<T>& rhs) {
-    return std::lexicographical_compare_three_way(lhs.begin(), lhs.end(), rhs.begin(), rhs.end());
+inline bool operator<(const SmallVectorBase<T>& lhs, const SmallVectorBase<T>& rhs) {
+    return std::ranges::lexicographical_compare(lhs, rhs);
+}
+
+template<typename T>
+inline bool operator>(const SmallVectorBase<T>& lhs, const SmallVectorBase<T>& rhs) {
+    return rhs < lhs;
+}
+
+template<typename T>
+inline bool operator<=(const SmallVectorBase<T>& lhs, const SmallVectorBase<T>& rhs) {
+    return !(lhs > rhs);
+}
+
+template<typename T>
+inline bool operator>=(const SmallVectorBase<T>& lhs, const SmallVectorBase<T>& rhs) {
+    return !(lhs < rhs);
 }
 
 template<typename T>

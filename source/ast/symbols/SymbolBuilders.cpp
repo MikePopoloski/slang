@@ -31,7 +31,7 @@ MethodBuilder::MethodBuilder(MethodBuilder&& other) noexcept :
     compilation(other.compilation), symbol(other.symbol) {
     // Clear arguments in the other builder so that its destructor doesn't overwrite
     // any arguments we may add from here on out.
-    args.append(other.args);
+    args.append_range(other.args);
     other.args.clear();
 }
 

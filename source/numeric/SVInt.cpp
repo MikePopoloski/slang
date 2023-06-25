@@ -847,7 +847,7 @@ void SVInt::writeTo(SmallVectorBase<char>& buffer, LiteralBase base, bool includ
         // reverse the digits
         std::ranges::reverse(buffer.begin() + startOffset, buffer.end());
         if (base10Exponent > 0) {
-            buffer.append("...e"sv);
+            buffer.append_range("...e"sv);
             uintToStr(buffer, base10Exponent);
         }
     }

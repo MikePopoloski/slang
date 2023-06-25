@@ -376,7 +376,7 @@ private:
 
     void resetAll(BumpAllocator& alloc, std::span<const TokenOrSyntax> children) final {
         SmallVector<TokenOrSyntax> buffer(children.size(), UninitializedTag());
-        buffer.append(children);
+        buffer.append_range(children);
 
         elements = buffer.copy(alloc);
         childCount = buffer.size();

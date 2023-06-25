@@ -326,7 +326,7 @@ Token Preprocessor::handleDirectives(Token token) {
                 }
                 break;
             default:
-                trivia.append(token.trivia());
+                trivia.append_range(token.trivia());
                 return token.withTrivia(alloc, trivia.copy(alloc));
         }
 
@@ -412,7 +412,7 @@ Trivia Preprocessor::handleIncludeDirective(Token directive) {
                 if (!tokens.empty()) {
                     SmallVector<Trivia, 4> trivia;
                     trivia.push_back(Trivia(TriviaKind::SkippedTokens, tokens.copy(alloc)));
-                    trivia.append(fileName.trivia());
+                    trivia.append_range(fileName.trivia());
                     fileName = fileName.withTrivia(alloc, trivia.copy(alloc));
                 }
                 break;
@@ -425,12 +425,12 @@ Trivia Preprocessor::handleIncludeDirective(Token directive) {
 
                 for (Token cur : tokens) {
                     for (Trivia t : cur.trivia())
-                        text.append(t.getRawText());
-                    text.append(cur.rawText());
+                        text.append_range(t.getRawText());
+                    text.append_range(cur.rawText());
                 }
 
                 for (Trivia t : token.trivia())
-                    text.append(t.getRawText());
+                    text.append_range(t.getRawText());
                 text.push_back('>');
 
                 fileName = Token(alloc, TokenKind::IncludeFileName, fileName.trivia(),

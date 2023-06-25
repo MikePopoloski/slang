@@ -475,11 +475,11 @@ TEMPLATE_LIST_TEST_CASE_METHOD(SmallVectorTest, "AppendRepeatedNonForwardIterato
 TEMPLATE_LIST_TEST_CASE_METHOD(SmallVectorTest, "AppendSmallVector", "[small_vec]",
                                SmallVectorTestTypes) {
     SmallVector<Constructable, 3> otherVector;
-    otherVector.assign(std::array{7, 7});
+    otherVector.assign_range(std::array{7, 7});
 
     auto& v = this->theVector;
     v.push_back(Constructable(1));
-    v.append(otherVector);
+    v.append_range(otherVector);
     assertValuesInOrder(v, 1, 7, 7);
 }
 
@@ -511,11 +511,11 @@ TEMPLATE_LIST_TEST_CASE_METHOD(SmallVectorTest, "AssignNonIterTest", "[small_vec
 TEMPLATE_LIST_TEST_CASE_METHOD(SmallVectorTest, "AssignSmallVector", "[small_vec]",
                                SmallVectorTestTypes) {
     SmallVector<Constructable, 3> otherVector;
-    otherVector.assign(std::array{7, 7});
+    otherVector.assign_range(std::array{7, 7});
 
     auto& v = this->theVector;
     v.push_back(Constructable(1));
-    v.assign(otherVector);
+    v.assign_range(otherVector);
     assertValuesInOrder(v, 7, 7);
 }
 
@@ -676,7 +676,7 @@ TEMPLATE_LIST_TEST_CASE_METHOD(SmallVectorTest, "InsertRangeTest", "[small_vec]"
 
     makeSequence(v, 1, 3);
     Constructable::reset();
-    auto it = v.insert(v.begin() + 1, arr, arr + 3);
+    auto it = v.insert_range(v.begin() + 1, arr);
 
     // Move construct the top 3 elements into newly allocated space.
     // Possibly move the whole sequence into new space first.
@@ -749,8 +749,8 @@ TEMPLATE_LIST_TEST_CASE_METHOD(SmallVectorTest, "ComparisonLessThanTest", "[smal
                                SmallVectorTestTypes) {
     auto& v = this->theVector;
     auto& u = this->otherVector;
-    v.assign(std::array{1, 2, 4});
-    u.assign(std::array{1, 4});
+    v.assign_range(std::array{1, 2, 4});
+    u.assign_range(std::array{1, 4});
 
     CHECK(v < u);
     CHECK(v <= u);
@@ -762,7 +762,7 @@ TEMPLATE_LIST_TEST_CASE_METHOD(SmallVectorTest, "ComparisonLessThanTest", "[smal
     CHECK(u > v);
     CHECK(u >= v);
 
-    u.assign(std::array{1, 2, 4});
+    u.assign_range(std::array{1, 2, 4});
 
     CHECK_FALSE(v < u);
     CHECK(v <= u);

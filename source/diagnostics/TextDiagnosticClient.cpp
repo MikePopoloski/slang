@@ -155,7 +155,7 @@ static bool printableTextForNextChar(std::string_view sourceLine, size_t& index,
     if (error) {
         // Not valid UTF-8, so print a placeholder instead.
         unsigned char invalid = (unsigned char)sourceLine[index++];
-        out.append("<XX>"sv);
+        out.append_range("<XX>"sv);
         out[1] = getHexForDigit(invalid / 16);
         out[2] = getHexForDigit(invalid % 16);
         columnWidth = out.size();
@@ -171,8 +171,8 @@ static bool printableTextForNextChar(std::string_view sourceLine, size_t& index,
             c /= 16;
         }
 
-        out.append("<U+"sv);
-        out.append(std::views::reverse(buf));
+        out.append_range("<U+"sv);
+        out.append_range(std::views::reverse(buf));
         out.push_back('>');
         columnWidth = out.size();
         return false;

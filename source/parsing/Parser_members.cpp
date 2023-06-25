@@ -3545,7 +3545,7 @@ FilePathSpecSyntax& Parser::parseFilePathSpec() {
 
     auto first = peek();
     do {
-        text.append(consume().rawText());
+        text.append_range(consume().rawText());
     } while (nextIsValidPathToken() && peek().trivia().empty());
 
     text.push_back('"');

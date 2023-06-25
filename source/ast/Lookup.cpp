@@ -94,10 +94,10 @@ void LookupResult::copyFrom(const LookupResult& other) {
     fromForwardTypedef = other.fromForwardTypedef;
 
     selectors.clear();
-    selectors.append(other.selectors);
+    selectors.append_range(other.selectors);
 
     diagnostics.clear();
-    diagnostics.append(other.diagnostics);
+    diagnostics.append_range(other.diagnostics);
 }
 
 void LookupResult::reportDiags(const ASTContext& context) const {
@@ -328,14 +328,14 @@ bool lookupDownward(std::span<const NamePlusLoc> nameParts, NameComponents name,
 
         // If we found a value, the remaining dots are member access expressions.
         if (isValueLike(symbol)) {
-            result.selectors.append(name.selectors);
+            result.selectors.append_range(name.selectors);
 
             for (; it != nameParts.rend(); it++) {
                 auto& memberName = it->name;
                 result.selectors.push_back(LookupResult::MemberSelector{
                     memberName.text, it->dotLocation, memberName.range});
 
-                result.selectors.append(memberName.selectors);
+                result.selectors.append_range(memberName.selectors);
 
                 if (!checkClassParams(memberName))
                     return false;
@@ -528,7 +528,7 @@ bool lookupDownward(std::span<const NamePlusLoc> nameParts, NameComponents name,
         if (result.found && result.found->isScope() && !result.found->isType())
             result.found = Lookup::selectChild(*result.found, name.selectors, context, result);
         else
-            result.selectors.append(name.selectors);
+            result.selectors.append_range(name.selectors);
     }
 
     return true;
@@ -1071,7 +1071,7 @@ void Lookup::name(const NameSyntax& syntax, const ASTContext& context, bitmask<L
             result.found = selectChild(*result.found, name.selectors, context, result);
         }
         else {
-            result.selectors.append(name.selectors);
+            result.selectors.append_range(name.selectors);
             if (flags.has(LookupFlags::NoSelectors))
                 result.errorIfSelectors(context);
         }

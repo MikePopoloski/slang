@@ -916,8 +916,8 @@ static void createTableEntries(const Scope& scope, const UdpEntrySyntax& syntax,
             auto& edge = input->as<UdpEdgeFieldSyntax>();
 
             SmallVector<char, 4> chars;
-            chars.append(edge.first.rawText());
-            chars.append(edge.second.rawText());
+            chars.append_range(edge.first.rawText());
+            chars.append_range(edge.second.rawText());
 
             PrimitiveSymbol::TableField field;
             if (chars.size() > 0)

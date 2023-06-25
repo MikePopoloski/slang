@@ -1001,7 +1001,7 @@ const Diagnostics& Compilation::getParseDiagnostics() {
 
     cachedParseDiagnostics.emplace();
     for (const auto& tree : syntaxTrees)
-        cachedParseDiagnostics->append(tree->diagnostics());
+        cachedParseDiagnostics->append_range(tree->diagnostics());
 
     if (sourceManager)
         cachedParseDiagnostics->sort(*sourceManager);
@@ -1232,8 +1232,8 @@ const Diagnostics& Compilation::getAllDiagnostics() {
         return *cachedAllDiagnostics;
 
     cachedAllDiagnostics.emplace();
-    cachedAllDiagnostics->append(getParseDiagnostics());
-    cachedAllDiagnostics->append(getSemanticDiagnostics());
+    cachedAllDiagnostics->append_range(getParseDiagnostics());
+    cachedAllDiagnostics->append_range(getSemanticDiagnostics());
 
     if (sourceManager)
         cachedAllDiagnostics->sort(*sourceManager);
