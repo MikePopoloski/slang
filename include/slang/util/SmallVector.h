@@ -172,7 +172,7 @@ public:
     }
 
     /// Appends a range of elements to the end of the array.
-    template<typename TIter, typename = std::enable_if_t<is_iterator_v<TIter>>>
+    template<std::input_or_output_iterator TIter>
     void append(TIter first, TIter last) {
         auto numElems = static_cast<size_type>(std::ranges::distance(first, last));
         auto newSize = len + numElems;
@@ -231,6 +231,12 @@ public:
         append(first, last);
     }
 
+    /// Resets the contents of the array to be the contents of the given range.
+    template<typename TContainer>
+    void assign(const TContainer& container) {
+        assign(std::ranges::begin(container), std::ranges::end(container));
+    }
+
     /// Constructs a new element at the specified position in the array.
     template<typename... Args>
     iterator emplace(const_iterator pos, Args&&... args) {
@@ -280,33 +286,32 @@ public:
         reserve(newSize);
 
         // Reset the iterator since reserve() may have invalidated it.
-        pos = begin() + offset;
+        auto result = begin() + offset;
 
         // If there are more existing elements between the insertion point and
         // the end of the range than there are being inserted we can use a
         // simpler approach for insertion.
-        auto existingOverlap = static_cast<size_type>(end() - pos);
+        auto existingOverlap = static_cast<size_type>(end() - result);
         if (existingOverlap >= numElems) {
             auto oldEnd = end();
             append(std::move_iterator<iterator>(end() - numElems),
                    std::move_iterator<iterator>(end()));
 
-            std::ranges::move_backward(pos, oldEnd - numElems, oldEnd);
-            std::ranges::copy(first, last, pos);
-            return pos;
+            std::ranges::move_backward(result, oldEnd - numElems, oldEnd);
+            std::ranges::copy(first, last, result);
+            return result;
         }
 
         // Move over elements we're about to overwrite.
-        std::uninitialized_move(pos, end(), begin() + newSize - existingOverlap);
+        std::uninitialized_move(result, end(), begin() + newSize - existingOverlap);
 
         // Copy in the new elements.
-        std::ranges::copy_n(first, existingOverlap, pos);
-        first += existingOverlap;
+        first = std::ranges::copy_n(first, existingOverlap, result).in;
 
-        // Insert the non-overwritten middle part.
-        std::ranges::uninitialized_copy(first, last, end());
+        // Insert the non-overwritten end part.
+        std::ranges::uninitialized_copy(first, last, end(), end() + numElems - existingOverlap);
         len = newSize;
-        return pos;
+        return result;
     }
 
     /// Inserts @a count copies of @a value at the specified position in the array.
@@ -490,7 +495,9 @@ private:
 
         if (newSize > len) {
             if (newSize > cap) {
-                resizeRealloc(newSize, val);
+                // Copy the value in case it's inside our existing array.
+                TVal temp(val);
+                resizeRealloc(newSize, temp);
                 return;
             }
 
@@ -571,6 +578,12 @@ public:
     template<typename TIter, typename = std::enable_if_t<is_iterator_v<TIter>>>
     SmallVector(TIter first, TIter last) {
         this->append(first, last);
+    }
+
+    /// Constructs the SmallVector from the given range.
+    template<typename TRange>
+    explicit SmallVector(TRange range) {
+        this->append(range);
     }
 
     /// Copy constructs from another vector.
