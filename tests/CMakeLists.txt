@@ -27,6 +27,7 @@ add_executable(
   unittests/PortTests.cpp
   unittests/PreprocessorTests.cpp
   unittests/PrimitiveTests.cpp
+  unittests/SmallVectorTests.cpp
   unittests/StatementParsingTests.cpp
   unittests/StatementTests.cpp
   unittests/SubroutineTests.cpp

@@ -157,7 +157,7 @@ public:
 /// The real value of this type is in documenting in the API the intentions of the pointer,
 /// so that consumers don't need to add explicit null checks.
 template<typename T>
-class SLANG_EXPORT not_null {
+class not_null {
 public:
     static_assert(std::is_assignable<T&, std::nullptr_t>::value, "T cannot be assigned nullptr.");
 
