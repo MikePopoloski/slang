@@ -287,7 +287,7 @@ struct SequenceMethodExprVisitor {
             }
         }
 
-        if constexpr (is_detected_v<ASTDetectors::visitExprs_t, T, SequenceMethodExprVisitor>)
+        if constexpr (HasVisitExprs<T, SequenceMethodExprVisitor>)
             expr.visitExprs(*this);
     }
 

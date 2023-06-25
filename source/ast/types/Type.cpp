@@ -26,11 +26,8 @@ namespace {
 
 struct GetDefaultVisitor {
     template<typename T>
-    using getDefault_t = decltype(std::declval<T>().getDefaultValueImpl());
-
-    template<typename T>
     ConstantValue visit([[maybe_unused]] const T& type) {
-        if constexpr (is_detected_v<getDefault_t, T>) {
+        if constexpr (requires { type.getDefaultValueImpl(); }) {
             return type.getDefaultValueImpl();
         }
         else {

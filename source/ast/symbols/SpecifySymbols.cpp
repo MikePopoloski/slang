@@ -293,8 +293,7 @@ struct SpecifyConditionVisitor {
                 case ExpressionKind::UnaryOp:
                 case ExpressionKind::BinaryOp:
                 case ExpressionKind::Conversion:
-                    if constexpr (is_detected_v<ASTDetectors::visitExprs_t, T,
-                                                SpecifyConditionVisitor>)
+                    if constexpr (HasVisitExprs<T, SpecifyConditionVisitor>)
                         expr.visitExprs(*this);
 
                     if (expr.kind == ExpressionKind::UnaryOp) {

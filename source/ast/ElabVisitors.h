@@ -49,7 +49,7 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
                 attr->getValue();
         }
 
-        if constexpr (is_detected_v<getBody_t, T>) {
+        if constexpr (requires { symbol.getBody(); }) {
             auto& body = symbol.getBody();
             if (body.bad())
                 return true;

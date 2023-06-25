@@ -438,8 +438,7 @@ struct ExpressionVarVisitor {
                     break;
                 }
                 default:
-                    if constexpr (is_detected_v<ASTDetectors::visitExprs_t, T,
-                                                ExpressionVarVisitor>) {
+                    if constexpr (HasVisitExprs<T, ExpressionVarVisitor>) {
                         expr.visitExprs(*this);
                     }
                     break;
@@ -2103,7 +2102,7 @@ struct NetAliasVisitor {
                     context.addDiag(diag::NetAliasHierarchical, expr.sourceRange);
                     break;
                 default:
-                    if constexpr (is_detected_v<ASTDetectors::visitExprs_t, T, NetAliasVisitor>)
+                    if constexpr (HasVisitExprs<T, NetAliasVisitor>)
                         expr.visitExprs(*this);
                     break;
             }

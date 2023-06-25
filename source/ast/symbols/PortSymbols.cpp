@@ -1192,8 +1192,7 @@ struct PortBackrefVisitor {
                     expr.template as<NamedValueExpression>().symbol.addPortBackref(port);
                     break;
                 default:
-                    if constexpr (is_detected_v<ASTDetectors::visitExprs_t, T,
-                                                PortBackrefVisitor>) {
+                    if constexpr (HasVisitExprs<T, PortBackrefVisitor>) {
                         expr.visitExprs(*this);
                     }
                     break;

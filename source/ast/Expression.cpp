@@ -46,13 +46,10 @@ struct EvalVisitor {
 };
 
 class LValueVisitor {
-    template<typename T, typename Arg>
-    using evalLValue_t = decltype(std::declval<T>().evalLValueImpl(std::declval<Arg>()));
-
 public:
     template<typename T>
     LValue visit(const T& expr, EvalContext& context) {
-        if constexpr (is_detected_v<evalLValue_t, T, EvalContext&>) {
+        if constexpr (requires { expr.evalLValueImpl(context); }) {
             if (expr.bad())
                 return nullptr;
 
@@ -70,13 +67,10 @@ public:
 };
 
 class EffectiveWidthVisitor {
-    template<typename T>
-    using getEffectiveWidth_t = decltype(std::declval<T>().getEffectiveWidthImpl());
-
 public:
     template<typename T>
     std::optional<bitwidth_t> visit(const T& expr) {
-        if constexpr (is_detected_v<getEffectiveWidth_t, T>) {
+        if constexpr (requires { expr.getEffectiveWidthImpl(); }) {
             if (expr.bad())
                 return std::nullopt;
 
@@ -99,7 +93,7 @@ struct HierarchicalVisitor {
             if (expr.kind == ExpressionKind::HierarchicalValue) {
                 any = true;
             }
-            else if constexpr (is_detected_v<ASTDetectors::visitExprs_t, T, HierarchicalVisitor>) {
+            else if constexpr (HasVisitExprs<T, HierarchicalVisitor>) {
                 expr.visitExprs(*this);
             }
         }
@@ -121,9 +115,6 @@ using namespace syntax;
 // the type of one branch of an expression tree can bubble up and then propagate
 // back down a different branch, which is also implemented here.
 struct Expression::PropagationVisitor {
-    template<typename T, typename... Args>
-    using propagate_t = decltype(std::declval<T>().propagateType(std::declval<Args>()...));
-
     const ASTContext& context;
     const Type& newType;
     SourceLocation assignmentLoc;
@@ -148,7 +139,7 @@ struct Expression::PropagationVisitor {
         // check if the conversion should be pushed further down the tree. Otherwise we
         // should insert the implicit conversion here.
         bool needConversion = !newType.isEquivalent(*expr.type);
-        if constexpr (is_detected_v<propagate_t, T, const ASTContext&, const Type&>) {
+        if constexpr (requires { expr.propagateType(context, newType); }) {
             if ((newType.isFloating() && expr.type->isFloating()) ||
                 (newType.isIntegral() && expr.type->isIntegral()) || newType.isString() ||
                 expr.kind == ExpressionKind::OpenRange) {

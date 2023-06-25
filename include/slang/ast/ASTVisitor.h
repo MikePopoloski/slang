@@ -36,28 +36,8 @@
 
 namespace slang::ast {
 
-/// Contains various helper traits for detecting AST visit methods.
-struct SLANG_EXPORT ASTDetectors {
-    /// Detects whether T has a method of the form handle(Arg)
-    template<typename T, typename Arg>
-    using handle_t = decltype(std::declval<T>().handle(std::declval<Arg>()));
-
-    /// Detects whether T has an operator(T, Arg)
-    template<typename T, typename Arg>
-    using op_t = decltype(std::declval<T>()(std::declval<T>(), std::declval<Arg>()));
-
-    /// Detects whether T has a method of the form getBody()
-    template<typename T>
-    using getBody_t = decltype(std::declval<T>().getBody());
-
-    /// Detects whether T has a method of the form visitExprs(Arg)
-    template<typename T, typename Arg>
-    using visitExprs_t = decltype(std::declval<T>().visitExprs(std::declval<Arg>()));
-
-    /// Detects whether T has a method of the form visitStmts(Arg)
-    template<typename T, typename Arg>
-    using visitStmts_t = decltype(std::declval<T>().visitStmts(std::declval<Arg>()));
-};
+template<typename T, typename TVisitor>
+concept HasVisitExprs = requires(const T& t, TVisitor&& visitor) { t.visitExprs(visitor); };
 
 /// @brief A base class for AST visitors
 ///
@@ -73,7 +53,7 @@ struct SLANG_EXPORT ASTDetectors {
 /// in your handler.
 ///
 template<typename TDerived, bool VisitStatements, bool VisitExpressions>
-class ASTVisitor : public ASTDetectors {
+class ASTVisitor {
 #define DERIVED *static_cast<TDerived*>(this)
 public:
     /// The visit() entry point for visiting AST nodes.
@@ -91,11 +71,11 @@ public:
     /// You can invoke this from custom node handlers to get the default behavior.
     template<typename T>
     void visitDefault(const T& t) {
-        if constexpr (VisitExpressions && is_detected_v<visitExprs_t, T, TDerived>) {
+        if constexpr (VisitExpressions && HasVisitExprs<T, TDerived>) {
             t.visitExprs(DERIVED);
         }
 
-        if constexpr (VisitStatements && is_detected_v<visitStmts_t, T, TDerived>) {
+        if constexpr (VisitStatements && requires { t.visitStmts(DERIVED); }) {
             t.visitStmts(DERIVED);
         }
 

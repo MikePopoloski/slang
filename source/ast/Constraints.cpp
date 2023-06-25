@@ -120,7 +120,7 @@ struct DistVarVisitor {
                     break;
                 }
                 default:
-                    if constexpr (is_detected_v<ASTDetectors::visitExprs_t, T, DistVarVisitor>)
+                    if constexpr (HasVisitExprs<T, DistVarVisitor>)
                         expr.visitExprs(*this);
                     break;
             }
@@ -153,7 +153,7 @@ struct ConstraintExprVisitor {
                 }
             }
 
-            if constexpr (is_detected_v<ASTDetectors::visitExprs_t, T, ConstraintExprVisitor>) {
+            if constexpr (HasVisitExprs<T, ConstraintExprVisitor>) {
                 // Inside call and select expressions we don't care about the types.
                 // This allows things like selections of associative arrays and built-in methods
                 // on arrays of strings to work as long as the actual operators at the top level

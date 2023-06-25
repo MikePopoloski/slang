@@ -340,8 +340,7 @@ struct SampledValueExprVisitor {
                     break;
                 }
                 default:
-                    if constexpr (is_detected_v<ASTDetectors::visitExprs_t, T,
-                                                SampledValueExprVisitor>)
+                    if constexpr (HasVisitExprs<T, SampledValueExprVisitor>)
                         expr.visitExprs(*this);
                     break;
             }

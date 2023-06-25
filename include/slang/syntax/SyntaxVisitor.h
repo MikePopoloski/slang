@@ -23,14 +23,11 @@ namespace slang::syntax {
 /// node types you want to handle.
 template<typename TDerived>
 class SyntaxVisitor {
-    template<typename T, typename Arg>
-    using handle_t = decltype(std::declval<T>().handle(std::declval<Arg&&>()));
-
 public:
     /// Visit the provided node, of static type T.
     template<typename T>
     void visit(T&& t) {
-        if constexpr (is_detected_v<handle_t, TDerived, T>)
+        if constexpr (requires { DERIVED->handle(t); })
             DERIVED->handle(t);
         else
             DERIVED->visitDefault(t);
