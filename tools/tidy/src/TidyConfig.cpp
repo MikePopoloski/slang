@@ -1,7 +1,6 @@
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
 
-
 #include "TidyConfig.h"
 
 #include "TidyFactory.h"
