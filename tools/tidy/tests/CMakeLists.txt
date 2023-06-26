@@ -4,17 +4,17 @@
 # ~~~
 
 add_executable(
-        tidy_unittests
-        ../../../tests/unittests/main.cpp
-        ../../../tests/unittests/Test.cpp
-        TidyConfigParserTest.cpp
-        OnlyAssignedOnResetTest.cpp
-        RegisterHasNoResetTest.cpp
-        NoLatchesOnDesignTest.cpp
-        EnforcePortSuffixTest.cpp
-        NoOldAlwaysSyntaxTest.cpp
-        AlwaysCombNonBlockingTest.cpp
-        AlwaysFFBlockingTest.cpp)
+  tidy_unittests
+  ../../../tests/unittests/main.cpp
+  ../../../tests/unittests/Test.cpp
+  TidyConfigParserTest.cpp
+  OnlyAssignedOnResetTest.cpp
+  RegisterHasNoResetTest.cpp
+  NoLatchesOnDesignTest.cpp
+  EnforcePortSuffixTest.cpp
+  NoOldAlwaysSyntaxTest.cpp
+  AlwaysCombNonBlockingTest.cpp
+  AlwaysFFBlockingTest.cpp)
 
 target_link_libraries(tidy_unittests PRIVATE Catch2::Catch2 slang_tidy_obj_lib)
 target_compile_definitions(tidy_unittests PRIVATE UNITTESTS)
