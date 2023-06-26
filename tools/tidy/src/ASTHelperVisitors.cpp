@@ -1,7 +1,6 @@
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
 
-
 #include "ASTHelperVisitors.h"
 
 std::optional<std::string_view> getIdentifier(const slang::ast::Expression& expr) {
