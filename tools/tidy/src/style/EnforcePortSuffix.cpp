@@ -1,0 +1,77 @@
+// SPDX-FileCopyrightText: Michael Popoloski
+// SPDX-License-Identifier: MIT
+
+#include "ASTHelperVisitors.h"
+#include "TidyDiags.h"
+#include "fmt/color.h"
+
+#include "slang/syntax/AllSyntax.h"
+
+using namespace slang;
+using namespace slang::ast;
+
+namespace enforce_port_suffix {
+struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, true, false> {
+    explicit MainVisitor(Diagnostics& diagnostics) : TidyVisitor(diagnostics) {}
+
+    void handle(const PortSymbol& port) {
+        NEEDS_SKIP_SYMBOL(port)
+
+        const auto& checkConfig = config.getCheckConfigs();
+        if (port.isNullPort)
+            return;
+
+        auto symbol = port.internalSymbol;
+
+        if (symbol->name == checkConfig.clkName || symbol->name == checkConfig.resetName)
+            return;
+
+        std::string_view suffix;
+
+        if (port.direction == slang::ast::ArgumentDirection::In)
+            suffix = checkConfig.inputPortSuffix;
+        else if (port.direction == slang::ast::ArgumentDirection::Out)
+            suffix = checkConfig.outputPortSuffix;
+        else
+            suffix = checkConfig.inoutPortSuffix;
+
+        if (!symbol->name.ends_with(suffix)) {
+            diags.add(diag::EnforcePortSuffix, port.location) << symbol->name << suffix;
+        }
+    }
+};
+} // namespace enforce_port_suffix
+
+using namespace enforce_port_suffix;
+class EnforcePortSuffix : public TidyCheck {
+public:
+    [[maybe_unused]] explicit EnforcePortSuffix(TidyKind kind) : TidyCheck(kind) {}
+
+    bool check(const ast::RootSymbol& root) override {
+        MainVisitor visitor(diagnostics);
+        root.visit(visitor);
+        if (!diagnostics.empty())
+            return false;
+        return true;
+    }
+
+    DiagCode diagCode() const override { return diag::EnforcePortSuffix; }
+    DiagnosticSeverity diagSeverity() const override { return DiagnosticSeverity::Warning; }
+    std::string diagString() const override {
+        return "port '{}' is not correctly suffixed with suffix: '{}'";
+    }
+    std::string name() const override { return "EnforcePortSuffix"; }
+    std::string description() const override {
+        return "Enforces that all ports in the design follow the code guidelines provided in the "
+               "configuration file by the configs " +
+               fmt::format(fmt::emphasis::italic, "inputPortSuffix") + " , " +
+               fmt::format(fmt::emphasis::italic, "outputPortSuffix") + " , " +
+               fmt::format(fmt::emphasis::italic, "inoutPortSuffix") + '\n';
+    }
+    std::string shortDescription() const override {
+        return "Enforces that all ports in the design follows the code guidelines provided in the "
+               "configuration file";
+    }
+};
+
+REGISTER(EnforcePortSuffix, EnforcePortSuffix, TidyKind::Style)

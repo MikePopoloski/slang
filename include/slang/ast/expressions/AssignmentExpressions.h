@@ -29,6 +29,7 @@ public:
 
     bool isCompound() const { return op.has_value(); }
     bool isNonBlocking() const { return nonBlocking; }
+    bool isBlocking() const { return !nonBlocking; }
     bool isLValueArg() const;
 
     const Expression& left() const { return *left_; }
