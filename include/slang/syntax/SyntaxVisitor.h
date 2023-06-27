@@ -49,9 +49,6 @@ public:
         }
     }
 
-    /// The default handler invoked when visiting an invalid node.
-    void visitInvalid(const SyntaxNode&) {}
-
 private:
     // This is to make things compile if the derived class doesn't provide an implementation.
     void visitToken(parsing::Token) {}

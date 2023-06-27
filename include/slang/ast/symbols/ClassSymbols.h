@@ -250,6 +250,11 @@ public:
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::ConstraintBlock; }
 
+    template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const {
+        getConstraints().visit(visitor);
+    }
+
 private:
     void addThisVar(const Type& type);
 

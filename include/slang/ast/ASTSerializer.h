@@ -165,14 +165,6 @@ private:
     template<typename T>
     void visit(const T& symbol, bool inMembersArray = false);
 
-    void visitInvalid(const Expression& expr);
-    void visitInvalid(const Statement& statement);
-    void visitInvalid(const TimingControl& timing);
-    void visitInvalid(const Constraint& timing);
-    void visitInvalid(const AssertionExpr& expr);
-    void visitInvalid(const BinsSelectExpr& expr);
-    void visitInvalid(const Pattern& pattern);
-
     Compilation& compilation;
     JsonWriter& writer;
     bool includeAddrs = true;

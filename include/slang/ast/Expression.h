@@ -453,6 +453,7 @@ public:
     InvalidExpression(const Expression* child, const Type& type) :
         Expression(ExpressionKind::Invalid, type, SourceRange()), child(child) {}
 
+    ConstantValue evalImpl(EvalContext&) const { return nullptr; }
     void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::Invalid; }

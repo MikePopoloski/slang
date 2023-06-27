@@ -38,8 +38,6 @@ struct EvalVisitor {
 
         return stmt.evalImpl(context);
     }
-
-    ER visitInvalid(const Statement&, EvalContext&) { return ER::Fail; }
 };
 
 } // namespace
@@ -1034,8 +1032,6 @@ struct EvalConditionalVisitor {
     }
 
     void visit(const Statement& stmt) { items.push_back(&stmt); }
-
-    void visitInvalid(const Statement&) {}
 };
 
 ER ConditionalStatement::evalImpl(EvalContext& context) const {

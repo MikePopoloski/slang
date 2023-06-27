@@ -273,9 +273,9 @@ public:
 
     template<typename TVisitor>
     decltype(auto) visitExprs(TVisitor&& visitor) const {
-        // This only visits the selected expression... you could imagine
-        // wanting to visit all three instead though.
-        return selected().visit(visitor);
+        min().visit(visitor);
+        typ().visit(visitor);
+        max().visit(visitor);
     }
 
 private:

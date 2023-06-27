@@ -142,6 +142,8 @@ public:
     explicit InvalidAssertionExpr(const AssertionExpr* child) :
         AssertionExpr(AssertionExprKind::Invalid), child(child) {}
 
+    bool admitsEmptyImpl() const { return false; }
+
     static bool isKind(AssertionExprKind kind) { return kind == AssertionExprKind::Invalid; }
 
     void serializeTo(ASTSerializer& serializer) const;

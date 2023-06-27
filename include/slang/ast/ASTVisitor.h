@@ -59,6 +59,11 @@ public:
     /// The visit() entry point for visiting AST nodes.
     template<typename T>
     void visit(const T& t) {
+        if constexpr (requires { t.bad(); }) {
+            if (t.bad())
+                return;
+        }
+
         if constexpr (requires { (DERIVED).handle(t); })
             (DERIVED).handle(t);
         else if constexpr (requires { (DERIVED)(DERIVED, t); })
@@ -96,14 +101,6 @@ public:
             t.body.visit(DERIVED);
         }
     }
-
-    void visitInvalid(const Expression&) {}
-    void visitInvalid(const Statement&) {}
-    void visitInvalid(const TimingControl&) {}
-    void visitInvalid(const Constraint&) {}
-    void visitInvalid(const AssertionExpr&) {}
-    void visitInvalid(const BinsSelectExpr&) {}
-    void visitInvalid(const Pattern&) {}
 
 #undef DERIVED
 };
@@ -250,7 +247,7 @@ decltype(auto) Statement::visit(TVisitor&& visitor, Args&&... args) const {
     // clang-format off
 #define CASE(k, n) case StatementKind::k: return visitor.visit(*static_cast<const n*>(this), std::forward<Args>(args)...)
     switch (kind) {
-        case StatementKind::Invalid: return visitor.visitInvalid(*this, std::forward<Args>(args)...);
+        CASE(Invalid, InvalidStatement);
         CASE(Empty, EmptyStatement);
         CASE(List, StatementList);
         CASE(Block, BlockStatement);
@@ -293,7 +290,7 @@ decltype(auto) TimingControl::visit(TVisitor& visitor, Args&&... args) const {
     // clang-format off
 #define CASE(k, n) case TimingControlKind::k: return visitor.visit(*static_cast<const n*>(this), std::forward<Args>(args)...)
     switch (kind) {
-        case TimingControlKind::Invalid: return visitor.visit(*this, std::forward<Args>(args)...);
+        CASE(Invalid, InvalidTimingControl);
         CASE(Delay, DelayControl);
         CASE(Delay3, Delay3Control);
         CASE(SignalEvent, SignalEventControl);
@@ -318,7 +315,7 @@ decltype(auto) Expression::visitExpression(TExpression* expr, TVisitor&& visitor
                             std::forward<Args>(args)...)
 
     switch (expr->kind) {
-        case ExpressionKind::Invalid: return visitor.visitInvalid(*expr, std::forward<Args>(args)...);
+        CASE(Invalid, InvalidExpression);
         CASE(IntegerLiteral, IntegerLiteral);
         CASE(RealLiteral, RealLiteral);
         CASE(TimeLiteral, TimeLiteral);
@@ -408,7 +405,7 @@ decltype(auto) Constraint::visit(TVisitor& visitor, Args&&... args) const {
     // clang-format off
 #define CASE(k, n) case ConstraintKind::k: return visitor.visit(*static_cast<const n*>(this), std::forward<Args>(args)...)
     switch (kind) {
-        case ConstraintKind::Invalid: return visitor.visit(*this, std::forward<Args>(args)...);
+        CASE(Invalid, InvalidConstraint);
         CASE(List, ConstraintList);
         CASE(Expression, ExpressionConstraint);
         CASE(Implication, ImplicationConstraint);
@@ -428,7 +425,7 @@ decltype(auto) AssertionExpr::visit(TVisitor& visitor, Args&&... args) const {
     // clang-format off
 #define CASE(k, n) case AssertionExprKind::k: return visitor.visit(*static_cast<const n*>(this), std::forward<Args>(args)...)
     switch (kind) {
-        case AssertionExprKind::Invalid: return visitor.visitInvalid(*this, std::forward<Args>(args)...);
+        CASE(Invalid, InvalidAssertionExpr);
         CASE(Simple, SimpleAssertionExpr);
         CASE(SequenceConcat, SequenceConcatExpr);
         CASE(SequenceWithMatch, SequenceWithMatchExpr);
@@ -452,7 +449,7 @@ decltype(auto) BinsSelectExpr::visit(TVisitor& visitor, Args&&... args) const {
     // clang-format off
 #define CASE(k, n) case BinsSelectExprKind::k: return visitor.visit(*static_cast<const n*>(this), std::forward<Args>(args)...)
     switch (kind) {
-        case BinsSelectExprKind::Invalid: return visitor.visitInvalid(*this, std::forward<Args>(args)...);
+        CASE(Invalid, InvalidBinsSelectExpr);
         CASE(Condition, ConditionBinsSelectExpr);
         CASE(Unary, UnaryBinsSelectExpr);
         CASE(Binary, BinaryBinsSelectExpr);
@@ -470,7 +467,7 @@ decltype(auto) Pattern::visit(TVisitor& visitor, Args&&... args) const {
     // clang-format off
 #define CASE(k, n) case PatternKind::k: return visitor.visit(*static_cast<const n*>(this), std::forward<Args>(args)...)
     switch (kind) {
-        case PatternKind::Invalid: return visitor.visitInvalid(*this, std::forward<Args>(args)...);
+        CASE(Invalid, InvalidPattern);
         CASE(Wildcard, WildcardPattern);
         CASE(Constant, ConstantPattern);
         CASE(Variable, VariablePattern);

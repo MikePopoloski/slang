@@ -41,8 +41,6 @@ struct EvalVisitor {
 
         return cv;
     }
-
-    ConstantValue visitInvalid(const Expression&, EvalContext&) { return nullptr; }
 };
 
 class LValueVisitor {
@@ -62,8 +60,6 @@ public:
             return nullptr;
         }
     }
-
-    LValue visitInvalid(const Expression&, EvalContext&) { return nullptr; }
 };
 
 class EffectiveWidthVisitor {
@@ -80,8 +76,6 @@ public:
             return expr.type->getBitWidth();
         }
     }
-
-    std::optional<bitwidth_t> visitInvalid(const Expression&) { return std::nullopt; }
 };
 
 struct HierarchicalVisitor {
@@ -98,9 +92,6 @@ struct HierarchicalVisitor {
             }
         }
     }
-
-    void visitInvalid(const Expression&) {}
-    void visitInvalid(const AssertionExpr&) {}
 };
 
 } // namespace
@@ -165,8 +156,6 @@ struct Expression::PropagationVisitor {
 
         return *result;
     }
-
-    Expression& visitInvalid(Expression& expr) { return expr; }
 };
 
 const InvalidExpression InvalidExpression::Instance(nullptr, ErrorType::Instance);

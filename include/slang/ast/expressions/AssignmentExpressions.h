@@ -8,6 +8,7 @@
 #pragma once
 
 #include "slang/ast/Expression.h"
+#include "slang/ast/TimingControl.h"
 #include "slang/syntax/SyntaxFwd.h"
 
 namespace slang::ast {
@@ -55,6 +56,8 @@ public:
 
     template<typename TVisitor>
     void visitExprs(TVisitor&& visitor) const {
+        if (timingControl)
+            timingControl->visit(visitor);
         left().visit(visitor);
         right().visit(visitor);
     }
@@ -329,6 +332,20 @@ public:
 
     static bool isKind(ExpressionKind kind) {
         return kind == ExpressionKind::StructuredAssignmentPattern;
+    }
+
+    template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const {
+        for (auto& setter : memberSetters)
+            setter.expr->visit(visitor);
+        for (auto& setter : typeSetters)
+            setter.expr->visit(visitor);
+        for (auto& setter : indexSetters) {
+            setter.index->visit(visitor);
+            setter.expr->visit(visitor);
+        }
+        if (defaultSetter)
+            defaultSetter->visit(visitor);
     }
 };
 
