@@ -1,6 +1,7 @@
 To dos
 ======
 
+- Dumping of a dot file outputs random characters at the end.
 - Reporting of variables in the netlist (by type, matching patterns).
 - Infer sequential elements in the netlist (ie non-blocking assignment and
   sensitive to a clock edge).
