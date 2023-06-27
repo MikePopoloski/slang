@@ -254,6 +254,8 @@ public:
     explicit InvalidStatement(const Statement* child) :
         Statement(StatementKind::Invalid, SourceRange()), child(child) {}
 
+    EvalResult evalImpl(EvalContext&) const { return EvalResult::Fail; }
+
     static bool isKind(StatementKind kind) { return kind == StatementKind::Invalid; }
 
     void serializeTo(ASTSerializer& serializer) const;

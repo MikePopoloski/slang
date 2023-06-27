@@ -1199,9 +1199,6 @@ struct PortBackrefVisitor {
             }
         }
     }
-
-    void visitInvalid(const Expression&) {}
-    void visitInvalid(const AssertionExpr&) {}
 };
 
 } // end anonymous namespace

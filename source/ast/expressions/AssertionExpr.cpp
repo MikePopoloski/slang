@@ -34,8 +34,6 @@ struct AdmitsEmptyVisitor {
 
         return expr.admitsEmptyImpl();
     }
-
-    bool visitInvalid(const AssertionExpr&) { return false; }
 };
 
 } // namespace
@@ -346,9 +344,6 @@ struct SampledValueExprVisitor {
             }
         }
     }
-
-    void visitInvalid(const Expression&) {}
-    void visitInvalid(const AssertionExpr&) {}
 
     static inline const flat_hash_set<std::string_view> FutureGlobalNames = {
         "$future_gclk"sv, "$rising_gclk"sv, "$falling_gclk"sv, "$steady_gclk"sv,

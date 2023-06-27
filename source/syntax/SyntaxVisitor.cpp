@@ -120,8 +120,6 @@ struct CloneVisitor {
 #ifdef _MSC_VER
 #    pragma warning(pop)
 #endif
-
-    SyntaxNode* visitInvalid(const SyntaxNode&) { SLANG_UNREACHABLE; }
 };
 
 } // namespace

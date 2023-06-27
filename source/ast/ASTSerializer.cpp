@@ -284,32 +284,4 @@ void ASTSerializer::visit(const T& elem, bool inMembersArray) {
     }
 }
 
-void ASTSerializer::visitInvalid(const Expression& expr) {
-    visit(expr.as<InvalidExpression>());
-}
-
-void ASTSerializer::visitInvalid(const slang::ast::Statement& statement) {
-    visit(statement.as<InvalidStatement>());
-}
-
-void ASTSerializer::visitInvalid(const slang::ast::TimingControl& timing) {
-    visit(timing.as<InvalidTimingControl>());
-}
-
-void ASTSerializer::visitInvalid(const slang::ast::Constraint& constraint) {
-    visit(constraint.as<InvalidConstraint>());
-}
-
-void ASTSerializer::visitInvalid(const slang::ast::AssertionExpr& expr) {
-    visit(expr.as<InvalidAssertionExpr>());
-}
-
-void ASTSerializer::visitInvalid(const slang::ast::BinsSelectExpr& expr) {
-    visit(expr.as<InvalidBinsSelectExpr>());
-}
-
-void ASTSerializer::visitInvalid(const slang::ast::Pattern& pattern) {
-    visit(pattern.as<InvalidPattern>());
-}
-
 } // namespace slang::ast

@@ -254,12 +254,6 @@ struct polymorphic_type_hook<T, CanDowncast<T>> {
             type = &typeid(U);
             return &u;
         }
-
-        template<typename U>
-        const void* visitInvalid(const U& u, const std::type_info*& type) {
-            type = &typeid(U);
-            return &u;
-        }
     };
 
     static const void* get(const T* src, const std::type_info*& type) {

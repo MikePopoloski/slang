@@ -158,6 +158,11 @@ public:
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::MemberAccess; }
 
+    template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const {
+        value().visit(visitor);
+    }
+
 private:
     Expression* value_;
 };

@@ -126,9 +126,6 @@ struct DistVarVisitor {
             }
         }
     }
-
-    void visitInvalid(const Expression&) {}
-    void visitInvalid(const AssertionExpr&) {}
 };
 
 struct ConstraintExprVisitor {
@@ -141,8 +138,8 @@ struct ConstraintExprVisitor {
 
     template<typename T>
     bool visit(const T& expr) {
-        if (failed)
-            return false;
+        if (failed || expr.bad())
+            return fail();
 
         if constexpr (std::is_base_of_v<Expression, T>) {
             if (isSoft) {
@@ -171,21 +168,21 @@ struct ConstraintExprVisitor {
                 case ExpressionKind::NewClass:
                 case ExpressionKind::CopyClass:
                     context.addDiag(diag::ExprNotConstraint, expr.sourceRange);
-                    return visitInvalid(expr);
+                    return fail();
                 case ExpressionKind::RealLiteral:
                 case ExpressionKind::TimeLiteral:
                     context.addDiag(diag::NonIntegralConstraintLiteral, expr.sourceRange);
-                    return visitInvalid(expr);
+                    return fail();
                 case ExpressionKind::IntegerLiteral:
                     if (expr.template as<IntegerLiteral>().getValue().hasUnknown()) {
                         context.addDiag(diag::UnknownConstraintLiteral, expr.sourceRange);
-                        return visitInvalid(expr);
+                        return fail();
                     }
                     return true;
                 case ExpressionKind::UnbasedUnsizedIntegerLiteral:
                     if (expr.template as<UnbasedUnsizedIntegerLiteral>().getValue().hasUnknown()) {
                         context.addDiag(diag::UnknownConstraintLiteral, expr.sourceRange);
-                        return visitInvalid(expr);
+                        return fail();
                     }
                     return true;
                 case ExpressionKind::BinaryOp: {
@@ -195,7 +192,7 @@ struct ConstraintExprVisitor {
                         case BinaryOperator::WildcardEquality:
                         case BinaryOperator::WildcardInequality:
                             context.addDiag(diag::ExprNotConstraint, expr.sourceRange);
-                            return visitInvalid(expr);
+                            return fail();
                         default:
                             break;
                     }
@@ -218,7 +215,7 @@ struct ConstraintExprVisitor {
                     auto& call = expr.template as<CallExpression>();
                     if (call.getSubroutineKind() == SubroutineKind::Task) {
                         context.addDiag(diag::TaskInConstraint, expr.sourceRange);
-                        return visitInvalid(expr);
+                        return fail();
                     }
 
                     if (!call.isSystemCall()) {
@@ -228,7 +225,7 @@ struct ConstraintExprVisitor {
                                 (arg->direction == ArgumentDirection::Ref &&
                                  !arg->flags.has(VariableFlags::Const))) {
                                 context.addDiag(diag::OutRefFuncConstraint, expr.sourceRange);
-                                return visitInvalid(expr);
+                                return fail();
                             }
                         }
                     }
@@ -240,19 +237,18 @@ struct ConstraintExprVisitor {
 
             if (!expr.type->isValidForRand(RandMode::Rand)) {
                 context.addDiag(diag::NonIntegralConstraintExpr, expr.sourceRange) << *expr.type;
-                return visitInvalid(expr);
+                return fail();
             }
         }
 
         return true;
     }
 
-    bool visitInvalid(const Expression&) {
+private:
+    bool fail() {
         failed = true;
         return false;
     }
-
-    bool visitInvalid(const AssertionExpr&) { return false; }
 };
 
 Constraint& ExpressionConstraint::fromSyntax(const ExpressionConstraintSyntax& syntax,

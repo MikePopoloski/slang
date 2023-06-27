@@ -445,9 +445,6 @@ struct ExpressionVarVisitor {
             }
         }
     }
-
-    void visitInvalid(const Expression&) {}
-    void visitInvalid(const AssertionExpr&) {}
 };
 
 const TimingControl* ContinuousAssignSymbol::getDelay() const {
@@ -2108,9 +2105,6 @@ struct NetAliasVisitor {
             }
         }
     }
-
-    void visitInvalid(const Expression&) {}
-    void visitInvalid(const AssertionExpr&) {}
 };
 
 std::span<const Expression* const> NetAliasSymbol::getNetReferences() const {

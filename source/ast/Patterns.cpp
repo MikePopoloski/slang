@@ -28,11 +28,6 @@ struct EvalVisitor {
 
         return pattern.evalImpl(context, value, conditionKind);
     }
-
-    ConstantValue visitInvalid(const Pattern&, EvalContext&, const ConstantValue&,
-                               CaseStatementCondition) {
-        return nullptr;
-    }
 };
 
 } // namespace

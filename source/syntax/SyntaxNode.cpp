@@ -20,8 +20,6 @@ struct ConstGetChildVisitor {
     ConstTokenOrSyntax visit(const T& node, size_t index) {
         return node.getChild(index);
     }
-
-    ConstTokenOrSyntax visitInvalid(const SyntaxNode&, size_t) { return nullptr; }
 };
 
 struct GetChildVisitor {
@@ -29,8 +27,6 @@ struct GetChildVisitor {
     TokenOrSyntax visit(T& node, size_t index) {
         return node.getChild(index);
     }
-
-    TokenOrSyntax visitInvalid(SyntaxNode&, size_t) { return nullptr; }
 };
 
 } // namespace

@@ -265,6 +265,9 @@ struct SpecifyConditionVisitor {
     template<typename T>
     void visit(const T& expr) {
         if constexpr (std::is_base_of_v<Expression, T>) {
+            if (expr.bad())
+                return;
+
             switch (expr.kind) {
                 case ExpressionKind::NamedValue:
                     if (auto sym = expr.getSymbolReference()) {
@@ -347,9 +350,6 @@ struct SpecifyConditionVisitor {
             hasError = true;
         }
     }
-
-    void visitInvalid(const Expression&) {}
-    void visitInvalid(const AssertionExpr&) {}
 };
 
 void TimingPathSymbol::resolve() const {

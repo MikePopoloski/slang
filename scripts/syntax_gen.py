@@ -630,6 +630,15 @@ const std::type_info* typeFromSyntaxKind(SyntaxKind kind) {
 
     # Write out a dispatch method to get from SyntaxKind to actual concrete type
     outf.write("namespace detail {\n\n")
+    outf.write("struct InvalidSyntaxNode : public SyntaxNode {\n")
+    outf.write(
+        "    static bool isKind(SyntaxKind kind) { return kind == SyntaxKind::Unknown; }\n"
+    )
+    outf.write("    TokenOrSyntax getChild(size_t) { return nullptr; }\n")
+    outf.write("    ConstTokenOrSyntax getChild(size_t) const { return nullptr; }\n")
+    outf.write("    void setChild(size_t, TokenOrSyntax) {}\n")
+    outf.write("};\n\n")
+
     outf.write("template<typename TNode, typename TVisitor, typename... Args>\n")
     outf.write(
         "decltype(auto) visitSyntaxNode(TNode* node, TVisitor& visitor, Args&&... args) {\n"
@@ -637,7 +646,7 @@ const std::type_info* typeFromSyntaxKind(SyntaxKind kind) {
     outf.write("    static constexpr bool isConst = std::is_const_v<TNode>;")
     outf.write("    switch (node->kind) {\n")
     outf.write(
-        "        case SyntaxKind::Unknown: return visitor.visitInvalid(*node, std::forward<Args>(args)...);\n"
+        "        case SyntaxKind::Unknown: return visitor.visit(*static_cast<std::conditional_t<isConst, const InvalidSyntaxNode*, InvalidSyntaxNode*>>(node), std::forward<Args>(args)...);\n"
     )
     outf.write("        case SyntaxKind::SyntaxList:\n")
     outf.write("        case SyntaxKind::TokenList:\n")
@@ -855,7 +864,6 @@ struct CloneVisitor {
             return shallow::clone(node, alloc);
         }
     }
-    SyntaxNode* visitInvalid(const SyntaxNode&, BumpAllocator&) { return nullptr; }
 };
 
 struct DeepCloneVisitor {
@@ -863,7 +871,6 @@ struct DeepCloneVisitor {
     SyntaxNode* visit(const T& node, BumpAllocator& alloc) {
         return deep::clone(node, alloc);
     }
-    SyntaxNode* visitInvalid(const SyntaxNode&, BumpAllocator&) { return nullptr; }
 };
 
 SyntaxNode* deepClone(const SyntaxNode& node, BumpAllocator& alloc) {

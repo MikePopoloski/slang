@@ -102,6 +102,10 @@ public:
     explicit InvalidPattern(const Pattern* child) :
         Pattern(PatternKind::Invalid, SourceRange()), child(child) {}
 
+    ConstantValue evalImpl(EvalContext&, const ConstantValue&, CaseStatementCondition) const {
+        return nullptr;
+    }
+
     static bool isKind(PatternKind kind) { return kind == PatternKind::Invalid; }
 
     void serializeTo(ASTSerializer& serializer) const;

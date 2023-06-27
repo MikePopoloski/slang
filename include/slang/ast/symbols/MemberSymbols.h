@@ -10,6 +10,7 @@
 #include "slang/ast/Expression.h"
 #include "slang/ast/Scope.h"
 #include "slang/ast/SemanticFacts.h"
+#include "slang/ast/TimingControl.h"
 #include "slang/ast/symbols/ValueSymbol.h"
 #include "slang/syntax/SyntaxFwd.h"
 
@@ -189,7 +190,9 @@ public:
 
     template<typename TVisitor>
     decltype(auto) visitExprs(TVisitor&& visitor) const {
-        return getAssignment().visit(visitor);
+        getAssignment().visit(visitor);
+        if (auto d = getDelay())
+            d->visit(visitor);
     }
 
 private:

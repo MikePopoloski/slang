@@ -290,9 +290,6 @@ struct SequenceMethodExprVisitor {
         if constexpr (HasVisitExprs<T, SequenceMethodExprVisitor>)
             expr.visitExprs(*this);
     }
-
-    void visitInvalid(const Expression&) {}
-    void visitInvalid(const AssertionExpr&) {}
 };
 
 class SequenceMethod : public SystemSubroutine {

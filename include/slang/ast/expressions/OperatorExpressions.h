@@ -129,8 +129,11 @@ public:
 
     template<typename TVisitor>
     void visitExprs(TVisitor&& visitor) const {
-        for (auto& cond : conditions)
+        for (auto& cond : conditions) {
             cond.expr->visit(visitor);
+            if (cond.pattern)
+                cond.pattern->visit(visitor);
+        }
 
         left().visit(visitor);
         right().visit(visitor);

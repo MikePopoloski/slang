@@ -9,6 +9,7 @@
 
 #include "slang/ast/Expression.h"
 #include "slang/ast/SemanticFacts.h"
+#include "slang/ast/TimingControl.h"
 #include "slang/ast/symbols/ValueSymbol.h"
 #include "slang/syntax/SyntaxFwd.h"
 
@@ -183,6 +184,12 @@ public:
                                      const NetType& netType);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Net; }
+
+    template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const {
+        if (auto d = getDelay())
+            d->visit(visitor);
+    }
 
 private:
     mutable std::optional<const TimingControl*> delay;

@@ -40,10 +40,25 @@ macromodule m3;
     wor u,v;
     alias {u,v} = w;
 
+    logic f;
+    event ev;
     initial begin
+        repeat (3) @(negedge b) f = #2 1;
+        wait (f) ++f;
+        wait fork;
+        wait_order (m3.ev) f++;
+
+        fork : fkb
+            static int i = 1;
+            disable fork;
+        join_none
+
+        disable m3.foo;
+
+        if (1) begin end else begin end
     end
 
-    always_ff @(posedge b) begin
+    always_ff @(posedge b iff f == 1) begin
     end
 
     always @* begin : foo
@@ -305,6 +320,7 @@ class C2 extends B;
     endfunction
 
     rand bit [63:0] value;
+    rand logic q;
     constraint value_c {
         value[63] dist {0 :/ 70, 1 :/ 30};
         value[0] == 1'b0;
@@ -312,6 +328,10 @@ class C2 extends B;
             8'h0,
             8'hF
         };
+        solve value before q;
+        soft value[3:1] > 1;
+        q -> { value[4] == 0; }
+        if (q) { foreach (value[b]) { value[b] == 0; } } else { disable soft value; }
     }
 endclass
 
