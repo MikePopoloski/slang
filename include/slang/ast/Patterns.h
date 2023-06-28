@@ -143,6 +143,11 @@ public:
     static bool isKind(PatternKind kind) { return kind == PatternKind::Constant; }
 
     void serializeTo(ASTSerializer& serializer) const;
+
+    template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const {
+        expr.visit(visitor);
+    }
 };
 
 class SLANG_EXPORT VariablePattern : public Pattern {
@@ -180,6 +185,12 @@ public:
     static bool isKind(PatternKind kind) { return kind == PatternKind::Tagged; }
 
     void serializeTo(ASTSerializer& serializer) const;
+
+    template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const {
+        if (valuePattern)
+            valuePattern->visit(visitor);
+    }
 };
 
 class SLANG_EXPORT StructurePattern : public Pattern {
@@ -203,6 +214,12 @@ public:
     static bool isKind(PatternKind kind) { return kind == PatternKind::Structure; }
 
     void serializeTo(ASTSerializer& serializer) const;
+
+    template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const {
+        for (auto& pattern : patterns)
+            pattern.pattern->visit(visitor);
+    }
 };
 
 } // namespace slang::ast
