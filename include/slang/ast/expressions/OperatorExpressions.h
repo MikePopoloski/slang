@@ -8,6 +8,7 @@
 #pragma once
 
 #include "slang/ast/Expression.h"
+#include "slang/ast/Patterns.h"
 #include "slang/syntax/SyntaxFwd.h"
 
 namespace slang::ast {
