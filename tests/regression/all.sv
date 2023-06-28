@@ -56,15 +56,75 @@ macromodule m3;
         disable m3.foo;
 
         if (1) begin end else begin end
+
+        unique0 casex (w)
+            0, 1: ;
+            default ;
+        endcase
+
+        case (w) inside
+            [0: 3]: ;
+        endcase
     end
 
     always_ff @(posedge b iff f == 1) begin
+        forever break;
+        repeat (f + 2) continue;
+        while (1)
+            ;
+        for (int i = 0, j = i; i < 10; i += 2, j += i) begin end
+        foreach (w[q]) begin end
     end
 
     always @* begin : foo
     end : foo
 
     always_comb begin
+        typedef union tagged {
+            void Invalid;
+            int Valid;
+        } VInt;
+
+        typedef union tagged {
+            struct {
+                bit [4:0] reg1, reg2, regd;
+            } Add;
+            union tagged {
+                bit [9:0] JmpU;
+                struct {
+                    bit [1:0] cc;
+                    bit [9:0] addr;
+                } JmpC;
+            } Jmp;
+        } Instr;
+
+        VInt v;
+        Instr instr;
+        automatic int rf[] = new [3];
+        static longint pc = 'x;
+
+        case (v) matches
+            tagged Invalid &&& ~w : $display ("v is Invalid");
+            tagged Valid .n : $display ("v is Valid with value %d", n);
+        endcase
+
+        case (instr) matches
+            tagged Add .s: case (s) matches
+                            '{.*, .*, 0} : ; // no op
+                            '{.r1, .r2, .rd} : rf[rd] = rf[r1] + rf[r2];
+                          endcase
+            tagged Jmp .j: case (j) matches
+                            tagged JmpU .a : pc = pc + a;
+                            tagged JmpC '{.c, .a} : if (rf[c]) pc = a;
+                           endcase
+        endcase
+
+        if (instr matches (tagged Jmp .j) &&&
+            j matches (tagged JmpC '{cc:.c,addr:.a})) begin
+            pc = c[0] & a[0];
+        end
+        else begin
+        end
     end
 
     always_latch begin
