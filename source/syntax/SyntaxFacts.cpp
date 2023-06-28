@@ -754,6 +754,8 @@ bool SyntaxFacts::isPossiblePattern(TokenKind kind) {
         case TokenKind::DotStar:
         case TokenKind::ApostropheOpenBrace:
             return true;
+        case TokenKind::TripleAnd:
+            return false;
         default:
             return isPossibleExpression(kind);
     }
