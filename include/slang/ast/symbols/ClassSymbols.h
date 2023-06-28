@@ -7,6 +7,7 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include "slang/ast/Constraints.h"
 #include "slang/ast/Definition.h"
 #include "slang/ast/Scope.h"
 #include "slang/ast/symbols/VariableSymbols.h"
