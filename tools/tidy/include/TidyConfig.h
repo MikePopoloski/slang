@@ -10,7 +10,7 @@
 #include "TidyKind.h"
 #include <algorithm>
 #include <fmt/format.h>
-#include <slang/util/CppTypePrinter.h>
+#include <slang/util/TypeTraits.h>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
