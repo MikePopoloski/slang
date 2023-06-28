@@ -448,8 +448,11 @@ public:
 
     template<typename TVisitor>
     void visitExprs(TVisitor&& visitor) const {
-        for (auto& cond : conditions)
+        for (auto& cond : conditions) {
             cond.expr->visit(visitor);
+            if (cond.pattern)
+                cond.pattern->visit(visitor);
+        }
     }
 
     template<typename TVisitor>
@@ -541,6 +544,7 @@ public:
     void visitExprs(TVisitor&& visitor) const {
         expr.visit(visitor);
         for (auto& item : items) {
+            item.pattern->visit(visitor);
             if (item.filter)
                 item.filter->visit(visitor);
         }
