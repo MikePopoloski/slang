@@ -127,24 +127,21 @@ public:
         // Collect variable references on the right-hand side of the assignment.
         VariableReferenceVisitor visitorRHS(netlist, evalCtx, false);
         expr.right().visit(visitorRHS);
-        // Add edge from LHS variable refrence to variable declaration.
         for (auto* leftNode : visitorLHS.getVars()) {
+            // Add edge from LHS variable refrence to variable declaration.
             connectVarToDecl(netlist, *leftNode, getSymbolHierPath(leftNode->symbol));
-        }
-        // Add edge from variable declaration to RHS variable reference.
-        for (auto* rightNode : visitorRHS.getVars()) {
-            connectDeclToVar(netlist, *rightNode, getSymbolHierPath(rightNode->symbol));
-        }
-        // Add edges form RHS expression terms to LHS expression terms.
-        for (auto* leftNode : visitorLHS.getVars()) {
             for (auto* rightNode : visitorRHS.getVars()) {
+                // Add edge from variable declaration to RHS variable reference.
+                connectDeclToVar(netlist, *rightNode, getSymbolHierPath(rightNode->symbol));
+                // Add edge form RHS expression term to LHS expression terms.
                 connectVarToVar(netlist, *rightNode, *leftNode);
             }
         }
-        // Add edge from each of the conditional varaibles to the LHS variable
-        // reference.
-        for (auto* leftNode : visitorLHS.getVars()) {
-            for (auto *condNode : condVars) {
+        for (auto *condNode : condVars) {
+            // Add edge from conditional variable declaraiton to the reference.
+            connectDeclToVar(netlist, *condNode, getSymbolHierPath(condNode->symbol));
+            for (auto* leftNode : visitorLHS.getVars()) {
+                // Add edge from conditional variable to the LHS variable.
                 connectVarToVar(netlist, *condNode, *leftNode);
             }
         }
