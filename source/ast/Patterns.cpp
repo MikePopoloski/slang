@@ -195,6 +195,10 @@ Pattern& VariablePattern::fromSyntax(const VariablePatternSyntax& syntax, const 
         var->nextTemp = std::exchange(context.firstTempVar, var);
     }
 
+    // We need to force resolution here because the pattern variable doesn't
+    // live in a scope and so later attempts at touching it could cause normal
+    // resolution logic to fail.
+    var->getDeclaredType()->forceResolveAt(context);
     return *comp.emplace<VariablePattern>(*var, syntax.sourceRange());
 }
 
