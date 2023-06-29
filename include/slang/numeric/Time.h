@@ -48,9 +48,8 @@ struct SLANG_EXPORT TimeScaleValue {
     static std::optional<TimeScaleValue> fromLiteral(double value, TimeUnit unit);
     static std::optional<TimeScaleValue> fromString(std::string_view str);
 
-    bool operator>(const TimeScaleValue& rhs) const;
-    bool operator==(const TimeScaleValue& rhs) const;
-    bool operator!=(const TimeScaleValue& rhs) const { return !(*this == rhs); }
+    bool operator==(const TimeScaleValue& rhs) const = default;
+    std::strong_ordering operator<=>(const TimeScaleValue& rhs) const;
 
     SLANG_EXPORT friend std::ostream& operator<<(std::ostream& os, const TimeScaleValue& tv);
 };
@@ -70,8 +69,7 @@ struct SLANG_EXPORT TimeScale {
 
     static std::optional<TimeScale> fromString(std::string_view str);
 
-    bool operator==(const TimeScale& rhs) const;
-    bool operator!=(const TimeScale& rhs) const { return !(*this == rhs); }
+    bool operator==(const TimeScale& rhs) const = default;
 
     SLANG_EXPORT friend std::ostream& operator<<(std::ostream& os, const TimeScale& ts);
 };

@@ -79,6 +79,16 @@ public:
         return *this;
     }
 
+    template<typename U>
+    bool operator==(const CopyPtr<U>& rhs) const {
+        return get() == rhs.get();
+    }
+
+    template<typename U>
+    auto operator<=>(const CopyPtr<U>& rhs) const {
+        return get() <=> rhs.get();
+    }
+
 private:
     T* ptr = nullptr;
 };
@@ -87,36 +97,6 @@ template<typename T>
 std::ostream& operator<<(std::ostream& os, const CopyPtr<T>& val) {
     os << val.get();
     return os;
-}
-
-template<typename T, typename U>
-auto operator==(const CopyPtr<T>& lhs, const CopyPtr<U>& rhs) -> decltype(lhs.get() == rhs.get()) {
-    return lhs.get() == rhs.get();
-}
-
-template<typename T, typename U>
-auto operator!=(const CopyPtr<T>& lhs, const CopyPtr<U>& rhs) -> decltype(lhs.get() != rhs.get()) {
-    return lhs.get() != rhs.get();
-}
-
-template<typename T, typename U>
-auto operator<(const CopyPtr<T>& lhs, const CopyPtr<U>& rhs) -> decltype(lhs.get() < rhs.get()) {
-    return lhs.get() < rhs.get();
-}
-
-template<typename T, typename U>
-auto operator<=(const CopyPtr<T>& lhs, const CopyPtr<U>& rhs) -> decltype(lhs.get() <= rhs.get()) {
-    return lhs.get() <= rhs.get();
-}
-
-template<typename T, typename U>
-auto operator>(const CopyPtr<T>& lhs, const CopyPtr<U>& rhs) -> decltype(lhs.get() > rhs.get()) {
-    return lhs.get() > rhs.get();
-}
-
-template<typename T, typename U>
-auto operator>=(const CopyPtr<T>& lhs, const CopyPtr<U>& rhs) -> decltype(lhs.get() >= rhs.get()) {
-    return lhs.get() >= rhs.get();
 }
 
 } // namespace slang

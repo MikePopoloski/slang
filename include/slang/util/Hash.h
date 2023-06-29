@@ -363,12 +363,6 @@ inline bool operator==(const StackAllocator<T1, N1, A1>& x,
     return N1 == N2 && A1 == A2 && &x.storage == &y.storage;
 }
 
-template<typename T1, size_t N1, size_t A1, typename T2, size_t N2, size_t A2>
-inline bool operator!=(const StackAllocator<T1, N1, A1>& x,
-                       const StackAllocator<T2, N2, A2>& y) noexcept {
-    return !(x == y);
-}
-
 } // namespace detail::hashing
 
 template<typename... TT>

@@ -28,11 +28,9 @@ public:
         Entry(uint32_t index) : value(index) {}
         Entry(const syntax::SyntaxNode& syntax) : value(reinterpret_cast<uintptr_t>(&syntax)) {}
 
-        bool operator==(const Entry& rhs) const { return value == rhs.value; }
-        bool operator!=(const Entry& rhs) const { return !(*this == rhs); }
-        bool operator<(const Entry& rhs) const { return value < rhs.value; }
-
         uintptr_t getOpaqueValue() const { return value; }
+
+        auto operator<=>(const Entry& rhs) const = default;
 
     private:
         uintptr_t value;

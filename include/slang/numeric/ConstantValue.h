@@ -177,8 +177,8 @@ public:
 
     SLANG_EXPORT friend std::ostream& operator<<(std::ostream& os, const ConstantValue& cv);
     SLANG_EXPORT friend bool operator==(const ConstantValue& lhs, const ConstantValue& rhs);
-    SLANG_EXPORT friend bool operator!=(const ConstantValue& lhs, const ConstantValue& rhs);
-    SLANG_EXPORT friend bool operator<(const ConstantValue& lhs, const ConstantValue& rhs);
+    SLANG_EXPORT friend std::partial_ordering operator<=>(const ConstantValue& lhs,
+                                                          const ConstantValue& rhs);
 
 private:
     Variant value;
@@ -356,11 +356,7 @@ struct SLANG_EXPORT ConstantRange {
 
     std::string toString() const;
 
-    bool operator==(const ConstantRange& rhs) const {
-        return left == rhs.left && right == rhs.right;
-    }
-
-    bool operator!=(const ConstantRange& rhs) const { return !(*this == rhs); }
+    bool operator==(const ConstantRange& rhs) const = default;
     SLANG_EXPORT friend std::ostream& operator<<(std::ostream& os, const ConstantRange& cr);
 };
 

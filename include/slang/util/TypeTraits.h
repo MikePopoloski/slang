@@ -53,24 +53,18 @@ constexpr std::string_view typeName() {
 /// to allow building without RTTI enabled.
 class SLANG_EXPORT type_index {
 public:
-    bool operator==(type_index t) const { return id == t.id; }
-    bool operator!=(type_index t) const { return id != t.id; }
-    bool operator<(type_index t) const { return std::less<int*>()(id, t.id); }
-    bool operator<=(type_index t) const { return !(t > *this); }
-    bool operator>(type_index t) const { return t < *this; }
-    bool operator>=(type_index t) const { return !(*this < t); }
+    constexpr friend auto operator<=>(type_index l, type_index r) = default;
 
     size_t hash_code() const { return std::hash<int*>()(id); }
 
     template<typename T>
     static type_index of() {
-        using t = std::remove_cv_t<std::remove_reference_t<T>>;
-        return type_id_with_cvr<t>();
+        return type_id_with_cvr<std::remove_cvref_t<T>>();
     }
 
 private:
     int* id;
-    type_index(int* id) : id(id) {}
+    constexpr type_index(int* id) : id(id) {}
 
     template<typename T>
     static type_index type_id_with_cvr() {

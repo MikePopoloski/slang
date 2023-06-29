@@ -46,11 +46,6 @@ LookupLocation LookupLocation::after(const Symbol& symbol) {
     return LookupLocation(symbol.getParentScope(), (uint32_t)symbol.getIndex() + 1);
 }
 
-bool LookupLocation::operator<(const LookupLocation& other) const {
-    SLANG_ASSERT(scope == other.scope || !scope || !other.scope);
-    return index < other.index;
-}
-
 Diagnostic& LookupResult::addDiag(const Scope& scope, DiagCode code, SourceLocation location) {
     return diagnostics.add(scope.asSymbol(), code, location);
 }
