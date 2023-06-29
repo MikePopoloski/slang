@@ -36,7 +36,7 @@ struct interval {
         return (right + 1 >= rhs.left) && (rhs.right + 1 >= left);
     }
 
-    bool operator==(const interval<T>& rhs) const { return left == rhs.left && right == rhs.right; }
+    bool operator==(const interval<T>& rhs) const = default;
 };
 
 using IndexPair = std::pair<uint32_t, uint32_t>;
@@ -359,8 +359,6 @@ struct SLANG_EXPORT Path {
         return path.back().node == rhs.path.back().node;
     }
 
-    bool operator!=(const Path& rhs) const { return !(*this == rhs); }
-
 private:
     struct Entry {
         void* node;
@@ -681,9 +679,7 @@ public:
     }
 
     bool operator==(const const_iterator& rhs) const { return path == rhs.path; }
-    bool operator!=(const const_iterator& rhs) const { return !(*this == rhs); }
     bool operator==(const overlap_iterator& rhs) const { return path == rhs.path; }
-    bool operator!=(const overlap_iterator& rhs) const { return !(*this == rhs); }
 
     const_iterator& operator++() {
         SLANG_ASSERT(valid());
@@ -843,9 +839,7 @@ public:
     }
 
     bool operator==(const overlap_iterator& rhs) const { return this->path == rhs.path; }
-    bool operator!=(const overlap_iterator& rhs) const { return !(*this == rhs); }
     bool operator==(const const_iterator& rhs) const { return this->path == rhs.path; }
-    bool operator!=(const const_iterator& rhs) const { return !(*this == rhs); }
 
 protected:
     friend class IntervalMap;

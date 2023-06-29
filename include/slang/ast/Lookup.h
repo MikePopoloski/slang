@@ -96,12 +96,12 @@ public:
     /// A special location that should always compare before any other.
     static const LookupLocation min;
 
-    bool operator==(const LookupLocation& other) const {
-        return scope == other.scope && index == other.index;
-    }
+    bool operator==(const LookupLocation& other) const = default;
 
-    bool operator!=(const LookupLocation& other) const { return !(*this == other); }
-    bool operator<(const LookupLocation& other) const;
+    std::strong_ordering operator<=>(const LookupLocation& other) const {
+        SLANG_ASSERT(scope == other.scope || !scope || !other.scope);
+        return index <=> other.index;
+    }
 
 private:
     const Scope* scope = nullptr;

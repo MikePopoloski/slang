@@ -37,7 +37,6 @@ public:
         return A.getDerived().isEqualTo(B);
     }
     bool operator==(const EdgeType& E) const { return getDerived().isEqualTo(E); }
-    bool operator!=(const EdgeType& E) const { return !operator==(E); }
 
     /// Return the source node of this edge.
     NodeType& getSourceNode() const { return sourceNode; }
@@ -91,7 +90,6 @@ public:
         return A.getDerived().isEqualTo(B);
     }
     bool operator==(const NodeType& N) const { return getDerived().isEqualTo(N); }
-    bool operator!=(const NodeType& N) const { return !operator==(N); }
 
     /// Return an iterator to the edge connecting the target node.
     const_iterator findEdgeTo(const NodeType& targetNode) {

@@ -31,12 +31,10 @@ struct SLANG_EXPORT BufferID {
     /// @return true if the ID is for a valid buffer, and false if not.
     [[nodiscard]] bool valid() const { return id != 0; }
 
+    // Comparison operators are implemented manually so that we don't
+    // bother comparing the buffer name in debug builds.
     bool operator==(const BufferID& rhs) const { return id == rhs.id; }
-    bool operator!=(const BufferID& rhs) const { return !(*this == rhs); }
-    bool operator<(const BufferID& rhs) const { return id < rhs.id; }
-    bool operator<=(const BufferID& rhs) const { return id <= rhs.id; }
-    bool operator>(const BufferID& rhs) const { return rhs < *this; }
-    bool operator>=(const BufferID& rhs) const { return rhs <= *this; }
+    std::strong_ordering operator<=>(const BufferID& rhs) const { return id <=> rhs.id; }
 
     /// @return an integer representing the raw buffer ID.
     constexpr uint32_t getId() const { return id; }
@@ -120,22 +118,16 @@ public:
     }
 
     bool operator==(const SourceLocation& rhs) const {
+        // Implemented manually so that we don't bother comparing the
+        // buffer name in debug builds.
         return bufferID == rhs.bufferID && charOffset == rhs.charOffset;
     }
 
-    bool operator!=(const SourceLocation& rhs) const { return !(*this == rhs); }
-
-    bool operator<(const SourceLocation& rhs) const {
-        if (bufferID != rhs.bufferID)
-            return bufferID < rhs.bufferID;
-        return charOffset < rhs.charOffset;
+    std::strong_ordering operator<=>(const SourceLocation& rhs) const {
+        if (auto cmp = uint32_t(bufferID) <=> uint32_t(rhs.bufferID); cmp != 0)
+            return cmp;
+        return charOffset <=> rhs.charOffset;
     }
-
-    bool operator<=(const SourceLocation& rhs) const { return (*this < rhs) || *this == rhs; }
-
-    bool operator>(const SourceLocation& rhs) const { return !(*this <= rhs); }
-
-    bool operator>=(const SourceLocation& rhs) const { return !(*this < rhs); }
 
 #ifdef DEBUG
     std::string_view bufferName;
@@ -166,11 +158,7 @@ public:
     /// @return the end of the range.
     SourceLocation end() const { return endLoc; }
 
-    bool operator==(const SourceRange& rhs) const {
-        return startLoc == rhs.startLoc && endLoc == rhs.endLoc;
-    }
-
-    bool operator!=(const SourceRange& rhs) const { return !(*this == rhs); }
+    bool operator==(const SourceRange& rhs) const = default;
 
     /// A range that is reserved to represent "no location" at all.
     static const SourceRange NoLocation;

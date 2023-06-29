@@ -139,6 +139,10 @@ public:
     /// @return true if any flags at all are set (non-zero), otherwise false.
     constexpr explicit operator bool() const noexcept { return bits() ? true : false; }
 
+    bool operator==(const bitmask<T>& r) const { return bits() == r.bits(); }
+    bool operator==(T r) const { return bits() == static_cast<underlying_type>(r); }
+    bool operator==(underlying_type r) const { return bits() == r; }
+
     constexpr bitmask operator~() const noexcept {
         return bitmask{std::true_type{}, ~m_bits & mask_value};
     }
@@ -191,60 +195,6 @@ inline constexpr bitmask<T> operator|(T l, const bitmask<T>& r) noexcept {
 template<class T>
 inline constexpr bitmask<T> operator^(T l, const bitmask<T>& r) noexcept {
     return r ^ l;
-}
-
-template<class T>
-inline constexpr bool operator!=(const bitmask<T>& l, const bitmask<T>& r) noexcept {
-    return l.bits() != r.bits();
-}
-
-template<class T>
-inline constexpr bool operator==(const bitmask<T>& l, const bitmask<T>& r) noexcept {
-    return !operator!=(l, r);
-}
-
-template<class T>
-inline constexpr bool operator!=(T l, const bitmask<T>& r) noexcept {
-    return static_cast<bitmask_detail::underlying_type_t<T>>(l) != r.bits();
-}
-
-template<class T>
-inline constexpr bool operator==(T l, const bitmask<T>& r) noexcept {
-    return !operator!=(l, r);
-}
-
-template<class T>
-inline constexpr bool operator!=(const bitmask<T>& l, T r) noexcept {
-    return l.bits() != static_cast<bitmask_detail::underlying_type_t<T>>(r);
-}
-
-template<class T>
-inline constexpr bool operator==(const bitmask<T>& l, T r) noexcept {
-    return !operator!=(l, r);
-}
-
-template<class T>
-inline constexpr bool operator!=(const bitmask_detail::underlying_type_t<T>& l,
-                                 const bitmask<T>& r) noexcept {
-    return l != r.bits();
-}
-
-template<class T>
-inline constexpr bool operator==(const bitmask_detail::underlying_type_t<T>& l,
-                                 const bitmask<T>& r) noexcept {
-    return !operator!=(l, r);
-}
-
-template<class T>
-inline constexpr bool operator!=(const bitmask<T>& l,
-                                 const bitmask_detail::underlying_type_t<T>& r) noexcept {
-    return l.bits() != r;
-}
-
-template<class T>
-inline constexpr bool operator==(const bitmask<T>& l,
-                                 const bitmask_detail::underlying_type_t<T>& r) noexcept {
-    return !operator!=(l, r);
 }
 
 } // namespace slang

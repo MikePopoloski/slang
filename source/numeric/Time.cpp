@@ -111,17 +111,11 @@ std::string TimeScaleValue::toString() const {
     return result;
 }
 
-bool TimeScaleValue::operator>(const TimeScaleValue& rhs) const {
+std::strong_ordering TimeScaleValue::operator<=>(const TimeScaleValue& rhs) const {
     // Unit enum is specified in reverse order, so check in the opposite direction.
-    if (unit < rhs.unit)
-        return true;
-    if (unit > rhs.unit)
-        return false;
-    return magnitude > rhs.magnitude;
-}
-
-bool TimeScaleValue::operator==(const TimeScaleValue& rhs) const {
-    return unit == rhs.unit && magnitude == rhs.magnitude;
+    if (auto cmp = rhs.unit <=> unit; cmp != 0)
+        return cmp;
+    return magnitude <=> rhs.magnitude;
 }
 
 std::ostream& operator<<(std::ostream& os, const TimeScaleValue& tv) {
@@ -180,10 +174,6 @@ double TimeScale::apply(double value, TimeUnit unit) const {
 
 std::string TimeScale::toString() const {
     return fmt::format("{} / {}", base.toString(), precision.toString());
-}
-
-bool TimeScale::operator==(const TimeScale& rhs) const {
-    return base == rhs.base && precision == rhs.precision;
 }
 
 std::ostream& operator<<(std::ostream& os, const TimeScale& ts) {

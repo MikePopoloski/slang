@@ -173,6 +173,10 @@ public:
     not_null(const not_null& other) = default;
     not_null& operator=(const not_null& other) = default;
 
+    // prevents compilation when someone attempts to assign a null pointer constant
+    not_null(std::nullptr_t) = delete;
+    not_null& operator=(std::nullptr_t) = delete;
+
     constexpr T get() const {
         SLANG_ASSERT(ptr);
         return ptr;
@@ -182,9 +186,15 @@ public:
     constexpr T operator->() const { return get(); }
     constexpr decltype(auto) operator*() const { return *get(); }
 
-    // prevents compilation when someone attempts to assign a null pointer constant
-    not_null(std::nullptr_t) = delete;
-    not_null& operator=(std::nullptr_t) = delete;
+    template<typename U>
+    bool operator==(const not_null<U>& rhs) const {
+        return get() == rhs.get();
+    }
+
+    template<typename U>
+    auto operator<=>(const not_null<U>& rhs) const {
+        return get() <=> rhs.get();
+    }
 
     // unwanted operators... pointers only point to single objects!
     not_null& operator++() = delete;
@@ -203,40 +213,6 @@ template<typename T>
 std::ostream& operator<<(std::ostream& os, const not_null<T>& val) {
     os << val.get();
     return os;
-}
-
-template<typename T, typename U>
-auto operator==(const not_null<T>& lhs, const not_null<U>& rhs)
-    -> decltype(lhs.get() == rhs.get()) {
-    return lhs.get() == rhs.get();
-}
-
-template<typename T, typename U>
-auto operator!=(const not_null<T>& lhs, const not_null<U>& rhs)
-    -> decltype(lhs.get() != rhs.get()) {
-    return lhs.get() != rhs.get();
-}
-
-template<typename T, typename U>
-auto operator<(const not_null<T>& lhs, const not_null<U>& rhs) -> decltype(lhs.get() < rhs.get()) {
-    return lhs.get() < rhs.get();
-}
-
-template<typename T, typename U>
-auto operator<=(const not_null<T>& lhs, const not_null<U>& rhs)
-    -> decltype(lhs.get() <= rhs.get()) {
-    return lhs.get() <= rhs.get();
-}
-
-template<typename T, typename U>
-auto operator>(const not_null<T>& lhs, const not_null<U>& rhs) -> decltype(lhs.get() > rhs.get()) {
-    return lhs.get() > rhs.get();
-}
-
-template<typename T, typename U>
-auto operator>=(const not_null<T>& lhs, const not_null<U>& rhs)
-    -> decltype(lhs.get() >= rhs.get()) {
-    return lhs.get() >= rhs.get();
 }
 
 // more unwanted operators

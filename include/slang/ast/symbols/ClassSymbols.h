@@ -188,7 +188,6 @@ private:
         size_t hash() const { return savedHash; }
 
         bool operator==(const SpecializationKey& other) const;
-        bool operator!=(const SpecializationKey& other) const { return !(*this == other); }
 
     private:
         const GenericClassDefSymbol* definition;

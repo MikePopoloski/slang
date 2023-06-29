@@ -90,18 +90,8 @@ public:
     /// Explicit boolean conversion operator that defers to @a valid
     constexpr explicit operator bool() const { return valid(); }
 
-    /// Equality comparison.
-    constexpr bool operator==(DiagCode other) const {
-        return subsystem == other.subsystem && code == other.code;
-    }
-
-    /// Inequality comparison.
-    constexpr bool operator!=(DiagCode other) const { return !(*this == other); }
-
-    /// Less-than comparison.
-    constexpr bool operator<(DiagCode other) const {
-        return subsystem < other.subsystem || (subsystem == other.subsystem && code < other.code);
-    }
+    /// Three way comparison.
+    constexpr friend auto operator<=>(DiagCode left, DiagCode right) = default;
 
     /// @brief A list of all "known" DiagCodes.
     ///
@@ -179,7 +169,6 @@ public:
     }
 
     bool operator==(const Diagnostic& rhs) const;
-    bool operator!=(const Diagnostic& rhs) const { return !(*this == rhs); }
 };
 
 /// A collection of diagnostics.

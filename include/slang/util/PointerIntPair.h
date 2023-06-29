@@ -53,12 +53,7 @@ public:
 
     uintptr_t getOpaqueValue() const { return value; }
 
-    bool operator==(const PointerIntPair& rhs) const { return value == rhs.value; }
-    bool operator!=(const PointerIntPair& rhs) const { return value != rhs.value; }
-    bool operator<(const PointerIntPair& rhs) const { return value < rhs.value; }
-    bool operator<=(const PointerIntPair& rhs) const { return value <= rhs.value; }
-    bool operator>(const PointerIntPair& rhs) const { return value > rhs.value; }
-    bool operator>=(const PointerIntPair& rhs) const { return value >= rhs.value; }
+    auto operator<=>(const PointerIntPair& rhs) const = default;
 
 private:
     uintptr_t value = 0;

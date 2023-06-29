@@ -561,52 +561,61 @@ bool operator==(const ConstantValue& lhs, const ConstantValue& rhs) {
         lhs.value);
 }
 
-bool operator!=(const ConstantValue& lhs, const ConstantValue& rhs) {
-    return !(lhs == rhs);
-}
-
-bool operator<(const ConstantValue& lhs, const ConstantValue& rhs) {
+std::partial_ordering operator<=>(const ConstantValue& lhs, const ConstantValue& rhs) {
     return std::visit(
         [&](auto&& arg) {
+            constexpr auto unordered = std::partial_ordering::unordered;
             using T = std::decay_t<decltype(arg)>;
             if constexpr (std::is_same_v<T, std::monostate>)
-                return false;
-            else if constexpr (std::is_same_v<T, SVInt>)
-                return rhs.isInteger() && bool(arg < rhs.integer());
+                return unordered;
+            else if constexpr (std::is_same_v<T, SVInt>) {
+                if (!rhs.isInteger())
+                    return unordered;
+
+                auto& rhi = rhs.integer();
+                if (arg < rhi)
+                    return std::partial_ordering::less;
+                else if (arg == rhi)
+                    return std::partial_ordering::equivalent;
+                else
+                    return std::partial_ordering::greater;
+            }
             else if constexpr (std::is_same_v<T, real_t>)
-                return rhs.isReal() && arg < double(rhs.real());
+                return rhs.isReal() ? arg <=> double(rhs.real()) : unordered;
             else if constexpr (std::is_same_v<T, shortreal_t>)
-                return rhs.isShortReal() && arg < float(rhs.shortReal());
+                return rhs.isShortReal() ? arg <=> float(rhs.shortReal()) : unordered;
             else if constexpr (std::is_same_v<T, ConstantValue::NullPlaceholder>)
-                return false;
+                return unordered;
             else if constexpr (std::is_same_v<T, ConstantValue::UnboundedPlaceholder>)
-                return false;
+                return unordered;
             else if constexpr (std::is_same_v<T, ConstantValue::Elements>) {
                 if (!rhs.isUnpacked())
-                    return false;
+                    return unordered;
 
-                return arg < std::get<ConstantValue::Elements>(rhs.value);
+                return arg <=> std::get<ConstantValue::Elements>(rhs.value);
             }
             else if constexpr (std::is_same_v<T, std::string>)
-                return rhs.isString() && arg < rhs.str();
+                return rhs.isString() ? arg <=> rhs.str() : unordered;
             else if constexpr (std::is_same_v<T, ConstantValue::Map>) {
                 if (!rhs.isMap())
-                    return false;
+                    return unordered;
 
-                return *arg < *rhs.map();
+                return *arg <=> *rhs.map();
             }
             else if constexpr (std::is_same_v<T, ConstantValue::Queue>) {
                 if (!rhs.isQueue())
-                    return false;
+                    return unordered;
 
-                return *arg < *rhs.queue();
+                return *arg <=> *rhs.queue();
             }
             else if constexpr (std::is_same_v<T, ConstantValue::Union>) {
                 if (!rhs.isUnion())
-                    return false;
+                    return unordered;
 
                 auto& ru = rhs.unionVal();
-                return arg->activeMember < ru->activeMember && arg->value < ru->value;
+                if (auto cmp = arg->activeMember <=> ru->activeMember; cmp != 0)
+                    return std::partial_ordering(cmp);
+                return arg->value <=> ru->value;
             }
             else {
                 static_assert(always_false<T>::value, "Missing case");

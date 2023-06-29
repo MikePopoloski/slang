@@ -179,7 +179,6 @@ public:
     explicit operator bool() const { return valid(); }
 
     bool operator==(const Token& other) const { return kind == other.kind && info == other.info; }
-    bool operator!=(const Token& other) const { return !(*this == other); }
 
     /// Modification methods to make it easier to deal with immutable tokens.
     [[nodiscard]] Token withTrivia(BumpAllocator& alloc, std::span<Trivia const> trivia) const;
