@@ -28,6 +28,8 @@ namespace slang::ast {
 using namespace parsing;
 using namespace syntax;
 
+static const Expression* NoInitializer = reinterpret_cast<const Expression*>(UINTPTR_MAX);
+
 DeclaredType::DeclaredType(const Symbol& parent, bitmask<DeclaredTypeFlags> flags) :
     parent(parent), flags(flags), overrideIndex(0), evaluating(false), hasLink(false) {
     // If this assert fires you need to update Symbol::getDeclaredType
@@ -108,6 +110,7 @@ void DeclaredType::resolveType(const ASTContext& typeContext,
                                                                         initializerLocation,
                                                                         initializerContext,
                                                                         typeContext, extraFlags);
+            SLANG_ASSERT(initializer);
         }
     }
     else if (flags.has(DeclaredTypeFlags::InterconnectNet)) {
@@ -420,8 +423,10 @@ void DeclaredType::resolveAt(const ASTContext& context) const {
             return;
     }
 
-    if (!initializerSyntax)
+    if (!initializerSyntax) {
+        initializer = NoInitializer;
         return;
+    }
 
     // Enums are special in that their initializers target the base type of the enum
     // instead of the actual enum type (which doesn't allow implicit conversions from
@@ -450,11 +455,10 @@ void DeclaredType::forceResolveAt(const ASTContext& context) const {
 }
 
 const Expression* DeclaredType::getInitializer() const {
-    if (initializer)
-        return initializer;
+    if (!initializer)
+        resolveAt(getASTContext<true>());
 
-    resolveAt(getASTContext<true>());
-    return initializer;
+    return initializer == NoInitializer ? nullptr : initializer;
 }
 
 void DeclaredType::setFromDeclarator(const DeclaratorSyntax& decl) {
