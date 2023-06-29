@@ -24,10 +24,12 @@ public:
     CopyPtr(const CopyPtr& other) : ptr(new T(*other.ptr)) {}
     CopyPtr(CopyPtr&& other) noexcept : ptr(std::exchange(other.ptr, nullptr)) {}
 
-    template<typename U, typename = std::enable_if_t<std::is_convertible<U*, T*>::value>>
+    template<typename U>
+        requires std::is_convertible_v<U*, T*>
     CopyPtr(const U& other) : ptr(new T(other)) {}
 
-    template<typename U, typename = std::enable_if_t<std::is_convertible<U*, T*>::value>>
+    template<typename U>
+        requires std::is_convertible_v<U*, T*>
     CopyPtr(U&& other) noexcept : ptr(new T(std::forward<U>(other))) {}
 
     T* get() { return ptr; }
@@ -45,14 +47,16 @@ public:
         return *this;
     }
 
-    template<typename U, typename = std::enable_if_t<std::is_convertible<U*, T*>::value>>
+    template<typename U>
+        requires std::is_convertible_v<U*, T*>
     CopyPtr& operator=(const U& other) {
         delete ptr;
         ptr = new T(other);
         return *this;
     }
 
-    template<typename U, typename = std::enable_if_t<std::is_convertible<U*, T*>::value>>
+    template<typename U>
+        requires std::is_convertible_v<U*, T*>
     CopyPtr& operator=(U&& other) {
         delete ptr;
         ptr = new T(std::forward<U>(other));

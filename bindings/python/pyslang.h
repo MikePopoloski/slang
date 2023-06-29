@@ -45,7 +45,8 @@ namespace detail {
 
 // Returns {true, a span referencing the data contained by src} without copying
 // or converting the data if possible. Otherwise returns {false, an empty span}.
-template<typename T, typename std::enable_if<std::is_arithmetic<T>::value, bool>::type = true>
+template<typename T>
+    requires std::is_arithmetic_v<T>
 std::tuple<bool, std::span<T>> loadSpanFromBuffer(handle src) {
     Py_buffer view;
     int flags = PyBUF_STRIDES | PyBUF_FORMAT;
@@ -65,7 +66,8 @@ std::tuple<bool, std::span<T>> loadSpanFromBuffer(handle src) {
     return {false, std::span<T>()};
 }
 // If T is not a numeric type, the buffer interface cannot be used.
-template<typename T, typename std::enable_if<!std::is_arithmetic<T>::value, bool>::type = true>
+template<typename T>
+    requires(!std::is_arithmetic_v<T>)
 constexpr std::tuple<bool, std::span<T>> loadSpanFromBuffer(handle) {
     return {false, std::span<T>()};
 }

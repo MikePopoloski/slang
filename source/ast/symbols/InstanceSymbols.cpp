@@ -1822,7 +1822,7 @@ public:
             body.addDiag(diag::CheckerFuncArg, expr.sourceRange);
     }
 
-    template<typename T, typename = std::enable_if_t<std::is_base_of_v<Statement, T>>>
+    template<std::derived_from<Statement> T>
     void handle(const T& stmt) {
         if (!currBlock)
             return;

@@ -8,6 +8,7 @@
 #pragma once
 
 #include <any>
+#include <concepts>
 #include <string>
 #include <typeindex>
 #include <variant>
@@ -165,14 +166,13 @@ public:
 
     Diagnostic& addStringAllowEmpty(const std::string& arg);
 
-    template<typename T, typename = std::enable_if_t<std::is_integral_v<T> && std::is_signed_v<T>>>
+    template<std::signed_integral T>
     Diagnostic& operator<<(T arg) {
         args.emplace_back((int64_t)arg);
         return *this;
     }
 
-    template<typename T, typename = void,
-             typename = std::enable_if_t<std::is_integral_v<T> && std::is_unsigned_v<T>>>
+    template<std::unsigned_integral T>
     Diagnostic& operator<<(T arg) {
         args.emplace_back((uint64_t)arg);
         return *this;
