@@ -161,12 +161,12 @@ class not_null {
 public:
     static_assert(std::is_assignable<T&, std::nullptr_t>::value, "T cannot be assigned nullptr.");
 
-    template<typename U, typename = std::enable_if_t<std::is_convertible<U, T>::value>>
+    template<std::convertible_to<T> U>
     constexpr not_null(U&& u) : ptr(std::forward<U>(u)) {
         SLANG_ASSERT(ptr);
     }
 
-    template<typename U, typename = std::enable_if_t<std::is_convertible<U, T>::value>>
+    template<std::convertible_to<T> U>
     constexpr not_null(const not_null<U>& other) : not_null(other.get()) {}
 
     not_null(not_null&& other) noexcept = default;

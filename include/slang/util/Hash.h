@@ -174,7 +174,7 @@ struct hash<std::basic_string_view<CharT>> {
     }
 };
 
-template<class T>
+template<typename T>
 struct hash<T*> {
     using is_avalanching = void;
     uint64_t operator()(T* ptr) const noexcept {
@@ -182,7 +182,7 @@ struct hash<T*> {
     }
 };
 
-template<class T>
+template<typename T>
 struct hash<std::unique_ptr<T>> {
     using is_avalanching = void;
     uint64_t operator()(std::unique_ptr<T> const& ptr) const noexcept {
@@ -190,7 +190,7 @@ struct hash<std::unique_ptr<T>> {
     }
 };
 
-template<class T>
+template<typename T>
 struct hash<std::shared_ptr<T>> {
     using is_avalanching = void;
     uint64_t operator()(const std::shared_ptr<T>& ptr) const noexcept {
@@ -199,7 +199,8 @@ struct hash<std::shared_ptr<T>> {
 };
 
 template<typename Enum>
-struct hash<Enum, typename std::enable_if<std::is_enum<Enum>::value>::type> {
+    requires std::is_enum_v<Enum>
+struct hash<Enum> {
     using is_avalanching = void;
     uint64_t operator()(Enum e) const noexcept {
         using underlying = typename std::underlying_type_t<Enum>;

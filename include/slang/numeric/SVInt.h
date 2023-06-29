@@ -9,6 +9,7 @@
 
 #include <bit>
 #include <climits>
+#include <concepts>
 #include <iosfwd>
 #include <optional>
 
@@ -162,10 +163,10 @@ public:
     }
 
     /// Construct from a given integer value. Uses only the bits necessary to hold the value.
-    template<typename T, typename = std::enable_if_t<std::is_integral_v<T> || std::is_enum_v<T>>>
+    template<std::integral T>
     SVInt(T value) : SVIntStorage(0, false, false) {
         val = (uint64_t)value;
-        if constexpr (IsSignedHelper<T>::type::value) {
+        if constexpr (std::is_signed_v<T>) {
             signFlag = true;
             if (value < 0)
                 bitWidth = bitwidth_t(64 - std::countl_one(val) + 1);
@@ -174,9 +175,6 @@ public:
         }
         else if constexpr (std::is_same_v<T, bool>) {
             bitWidth = 1;
-        }
-        else if constexpr (std::is_enum_v<T>) {
-            bitWidth = (bitwidth_t)std::bit_width<std::underlying_type_t<T>>(value);
         }
         else {
             bitWidth = (bitwidth_t)std::bit_width(value);
@@ -249,7 +247,7 @@ public:
 
     /// Checks whether it's possible to convert the value to a simple built-in
     /// integer type and if so returns it.
-    template<typename T, typename = std::enable_if_t<std::is_integral_v<T> || std::is_enum_v<T>>>
+    template<std::integral T>
     std::optional<T> as() const {
         bitwidth_t bits = getMinRepresentedBits();
         if (unknownFlag || bits > sizeof(T) * CHAR_BIT)
@@ -640,16 +638,6 @@ private:
         uint32_t value = (bitWidth + BITS_PER_WORD - 1) / BITS_PER_WORD;
         return unknown ? value * 2 : value;
     }
-
-    template<typename T, typename = void>
-    struct IsSignedHelper {
-        using type = std::is_signed<T>;
-    };
-
-    template<typename T>
-    struct IsSignedHelper<T, std::enable_if_t<std::is_enum_v<T>>> {
-        using type = std::is_signed<std::underlying_type_t<T>>;
-    };
 };
 
 inline logic_t operator||(const SVInt& lhs, logic_t rhs) {

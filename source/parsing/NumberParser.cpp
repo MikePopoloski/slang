@@ -47,7 +47,7 @@ void NumberParser::startVector(Token baseToken, Token sizeToken) {
         if (sizeVal == 0) {
             addDiag(diag::LiteralSizeIsZero, sizeToken.location());
         }
-        else if (sizeVal > SVInt::MAX_BITS) {
+        else if (sizeVal > (int)SVInt::MAX_BITS) {
             sizeBits = SVInt::MAX_BITS;
             addDiag(diag::LiteralSizeTooLarge, sizeToken.location()) << (int)SVInt::MAX_BITS;
         }

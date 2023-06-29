@@ -133,19 +133,20 @@ public:
     void writeLink(std::string_view name, const Symbol& value);
 
     /// Writes a property with the given signed integral value to the serialized output.
-    template<typename T, std::enable_if_t<std::is_integral_v<T> && std::is_signed_v<T>, int> = 0>
+    template<std::signed_integral T>
     void write(std::string_view name, T value) {
         write(name, int64_t(value));
     }
 
     /// Writes a property with the given unsigned integral value to the serialized output.
-    template<typename T, std::enable_if_t<std::is_integral_v<T> && std::is_unsigned_v<T>, int> = 0>
+    template<std::unsigned_integral T>
     void write(std::string_view name, T value) {
         write(name, uint64_t(value));
     }
 
     /// Writes a property with the given pointer value to the serialized output.
-    template<typename T, std::enable_if_t<std::is_pointer_v<T>, int> = 0>
+    template<typename T>
+        requires std::is_pointer_v<T>
     void write(std::string_view name, T value) = delete;
 
     /// Writes a property with the given value to the serialized output.

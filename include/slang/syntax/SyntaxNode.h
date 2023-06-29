@@ -161,12 +161,12 @@ private:
 SLANG_EXPORT SyntaxNode* clone(const SyntaxNode&, BumpAllocator&);
 SLANG_EXPORT SyntaxNode* deepClone(const SyntaxNode&, BumpAllocator&);
 
-template<typename T, typename = std::enable_if_t<std::is_base_of_v<SyntaxNode, T>>>
+template<std::derived_from<SyntaxNode> T>
 T* clone(const T& node, BumpAllocator& alloc) {
     return static_cast<T*>(clone(static_cast<const SyntaxNode&>(node), alloc));
 }
 
-template<typename T, typename = std::enable_if_t<std::is_base_of_v<SyntaxNode, T>>>
+template<std::derived_from<SyntaxNode> T>
 T* deepClone(const T& node, BumpAllocator& alloc) {
     return static_cast<T*>(deepClone(static_cast<const SyntaxNode&>(node), alloc));
 }

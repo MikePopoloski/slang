@@ -92,23 +92,23 @@ public:
     /// Computes a source location that is offset from the current one.
     /// Note that there is no error checking to ensure that the location
     /// still points to a valid place in the source.
-    template<typename T, typename = std::enable_if_t<std::is_integral_v<T>>>
+    template<std::integral T>
     SourceLocation operator+(T delta) const {
         return SourceLocation(buffer(), size_t((T)charOffset + delta));
     }
 
-    template<typename T, typename = std::enable_if_t<std::is_integral_v<T>>>
+    template<std::integral T>
     SourceLocation operator-(T delta) const {
         return SourceLocation(buffer(), size_t((T)charOffset - delta));
     }
 
-    template<typename T, typename = std::enable_if_t<std::is_integral_v<T>>>
+    template<std::integral T>
     SourceLocation& operator+=(T delta) {
         charOffset = size_t((T)charOffset + delta);
         return *this;
     }
 
-    template<typename T, typename = std::enable_if_t<std::is_integral_v<T>>>
+    template<std::integral T>
     SourceLocation& operator-=(T delta) {
         charOffset = size_t((T)charOffset - delta);
         return *this;
