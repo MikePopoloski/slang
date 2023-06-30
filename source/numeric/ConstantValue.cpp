@@ -594,8 +594,16 @@ std::partial_ordering operator<=>(const ConstantValue& lhs, const ConstantValue&
 
                 return arg <=> std::get<ConstantValue::Elements>(rhs.value);
             }
-            else if constexpr (std::is_same_v<T, std::string>)
-                return rhs.isString() ? arg <=> rhs.str() : unordered;
+            else if constexpr (std::is_same_v<T, std::string>) {
+                // TODO: clean this up once Xcode / libc++ get their act together
+                if (!rhs.isString())
+                    return unordered;
+
+                int cmp = arg.compare(rhs.str());
+                return cmp < 0    ? std::partial_ordering::less
+                       : cmp == 0 ? std::partial_ordering::equivalent
+                                  : std::partial_ordering::greater;
+            }
             else if constexpr (std::is_same_v<T, ConstantValue::Map>) {
                 if (!rhs.isMap())
                     return unordered;
