@@ -170,13 +170,13 @@ endif()
 include(external/CMakeLists.txt)
 add_subdirectory(source)
 
-if(SLANG_INCLUDE_TOOLS)
-  add_subdirectory(tools)
-endif()
-
 if(SLANG_INCLUDE_TESTS)
   include(CTest)
   add_subdirectory(tests)
+endif()
+
+if(SLANG_INCLUDE_TOOLS)
+  add_subdirectory(tools)
 endif()
 
 if(SLANG_INCLUDE_DOCS)
