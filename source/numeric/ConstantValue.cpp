@@ -612,9 +612,12 @@ std::partial_ordering operator<=>(const ConstantValue& lhs, const ConstantValue&
                 if (!rhs.isUnion())
                     return unordered;
 
+                // TODO: clean this up once Xcode / libc++ get their act together
                 auto& ru = rhs.unionVal();
-                if (auto cmp = arg->activeMember <=> ru->activeMember; cmp != 0)
-                    return std::partial_ordering(cmp);
+                if (arg->activeMember < ru->activeMember)
+                    return std::partial_ordering::less;
+                if (arg->activeMember > ru->activeMember)
+                    return std::partial_ordering::greater;
                 return arg->value <=> ru->value;
             }
             else {
