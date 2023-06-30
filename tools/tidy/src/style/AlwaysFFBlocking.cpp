@@ -20,11 +20,12 @@ struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, true, false> {
         if (symbol.procedureKind == ProceduralBlockKind::AlwaysFF) {
             // Collect all declared local variables
             std::vector<std::string_view> locals;
-            symbol.visitStmts(makeVisitor(
-                [&](const VariableDeclStatement& decl) { locals.push_back(decl.symbol.name); }));
+            symbol.visitStmts(makeVisitor([&](auto&, const VariableDeclStatement& decl) {
+                locals.push_back(decl.symbol.name);
+            }));
 
             bool hasBlockingAssignments = false;
-            symbol.visitStmts(makeVisitor([&](const AssignmentExpression& expr) {
+            symbol.visitStmts(makeVisitor([&](auto&, const AssignmentExpression& expr) {
                 if (expr.isBlocking()) {
                     auto identifier = getIdentifier(expr.left());
                     if (identifier && std::find(locals.begin(), locals.end(), identifier.value()) ==

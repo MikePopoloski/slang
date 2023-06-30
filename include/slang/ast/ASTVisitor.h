@@ -107,6 +107,10 @@ public:
 
 /// @brief Creates an ASTVisitor out of the provided handler functions.
 ///
+/// The provided callable arguments must take two parameters, the first of which
+/// is the visitor object itself (so that you can call visitDefault on it if
+/// desired) and the second is the AST type to match against.
+///
 /// For example, to create a visitor that will count all of the BinaryExpressions
 /// in an AST:
 ///

@@ -19,7 +19,7 @@ struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, true, false> {
         NEEDS_SKIP_SYMBOL(symbol)
         if (symbol.procedureKind == ProceduralBlockKind::AlwaysComb) {
             bool hasNonBlockingAssignment = false;
-            symbol.visitStmts(makeVisitor([&](const AssignmentExpression& expr) {
+            symbol.visitStmts(makeVisitor([&](auto&, const AssignmentExpression& expr) {
                 if (expr.isNonBlocking()) {
                     hasNonBlockingAssignment = true;
                 }
