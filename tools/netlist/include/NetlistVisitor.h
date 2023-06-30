@@ -302,41 +302,6 @@ public:
         stmt.visit(visitor);
     }
 
-    // Other statements:
-    //
-    // InvalidStatement
-    // EmptyStatement
-    // StatementList
-    // BlockStatement
-    // ReturnStatement
-    // BreakStatement
-    // ContinueStatement
-    // DisableStatement
-    // VariableDeclStatement
-    // ConditionalStatement
-    // CaseStatement
-    // PatternCaseStatement
-    // ForLoopStatement
-    // RepeatLoopStatement
-    // ForeachLoopStatement
-    // WhileLoopStatement
-    // DoWhileLoopStatement
-    // ForeverLoopStatement
-    // ExpressionStatement
-    // TimedStatement
-    // ImmediateAssertionStatement
-    // ConcurrentAssertionStatement
-    // DisableForkStatement
-    // WaitStatement
-    // WaitForkStatement
-    // WaitOrderStatement
-    // EventTriggerStatement
-    // ProceduralAssignStatement
-    // ProceduralDeassignStatement
-    // RandCaseStatement
-    // RandSequenceStatement
-    // ProceduralCheckerStatement
-
 private:
     bool step() {
         if (anyErrors || !evalCtx.step(SourceLocation::NoLocation)) {
