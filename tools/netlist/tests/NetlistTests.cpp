@@ -434,8 +434,7 @@ endmodule
     NO_COMPILATION_ERRORS;
     auto netlist = createNetlist(compilation);
     PathFinder pathFinder(netlist);
-    CHECK(!pathFinder.find(*netlist.lookupPort("mux.sel"),
-                           *netlist.lookupPort("mux.f")).empty());
+    CHECK(!pathFinder.find(*netlist.lookupPort("mux.sel"), *netlist.lookupPort("mux.f")).empty());
 }
 
 TEST_CASE("Nested muxing") {
@@ -462,8 +461,6 @@ endmodule
     NO_COMPILATION_ERRORS;
     auto netlist = createNetlist(compilation);
     PathFinder pathFinder(netlist);
-    CHECK(!pathFinder.find(*netlist.lookupPort("mux.sel_a"),
-                           *netlist.lookupPort("mux.f")).empty());
-    CHECK(!pathFinder.find(*netlist.lookupPort("mux.sel_b"),
-                           *netlist.lookupPort("mux.f")).empty());
+    CHECK(!pathFinder.find(*netlist.lookupPort("mux.sel_a"), *netlist.lookupPort("mux.f")).empty());
+    CHECK(!pathFinder.find(*netlist.lookupPort("mux.sel_b"), *netlist.lookupPort("mux.f")).empty());
 }

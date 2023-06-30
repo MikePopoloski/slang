@@ -62,8 +62,10 @@ static void connectVarToVar(Netlist& netlist, NetlistNode& sourceVarNode,
 /// expressions, adding them to a visit list during the traversal.
 class VariableReferenceVisitor : public ast::ASTVisitor<VariableReferenceVisitor, false, true> {
 public:
-    explicit VariableReferenceVisitor(Netlist& netlist, ast::EvalContext& evalCtx, bool leftOperand = false) :
-        netlist(netlist), evalCtx(evalCtx), leftOperand(leftOperand) {}
+    explicit VariableReferenceVisitor(Netlist& netlist, ast::EvalContext& evalCtx,
+                                      bool leftOperand = false) :
+        netlist(netlist),
+        evalCtx(evalCtx), leftOperand(leftOperand) {}
 
     void handle(const ast::NamedValueExpression& expr) {
         auto& node = netlist.addVariableReference(expr.symbol, expr, leftOperand);
@@ -101,7 +103,7 @@ public:
         expr.value().visit(*this);
     }
 
-    std::vector<NetlistNode*> &getVars() { return varList; }
+    std::vector<NetlistNode*>& getVars() { return varList; }
 
 private:
     Netlist& netlist;
@@ -117,8 +119,9 @@ private:
 class AssignmentVisitor : public ast::ASTVisitor<AssignmentVisitor, false, true> {
 public:
     explicit AssignmentVisitor(Netlist& netlist, ast::EvalContext& evalCtx,
-                               SmallVector<NetlistNode*> &condVars) :
-        netlist(netlist), evalCtx(evalCtx), condVars(condVars) {}
+                               SmallVector<NetlistNode*>& condVars) :
+        netlist(netlist),
+        evalCtx(evalCtx), condVars(condVars) {}
 
     void handle(const ast::AssignmentExpression& expr) {
         // Collect variable references on the left-hand side of the assignment.
@@ -137,7 +140,7 @@ public:
                 connectVarToVar(netlist, *rightNode, *leftNode);
             }
         }
-        for (auto *condNode : condVars) {
+        for (auto* condNode : condVars) {
             // Add edge from conditional variable declaraiton to the reference.
             connectDeclToVar(netlist, *condNode, getSymbolHierPath(condNode->symbol));
             for (auto* leftNode : visitorLHS.getVars()) {
@@ -150,7 +153,7 @@ public:
 private:
     Netlist& netlist;
     ast::EvalContext& evalCtx;
-    SmallVector<NetlistNode*> &condVars;
+    SmallVector<NetlistNode*>& condVars;
 };
 
 /// An AST visitor for proceural blocks that performs loop unrolling.
@@ -243,11 +246,10 @@ public:
         // condition.
 
         auto fallback = [&] {
-
             // Create a list of variables appearing in the condition
             // expression.
             VariableReferenceVisitor varRefVisitor(netlist, evalCtx);
-            for (auto &cond : stmt.conditions) {
+            for (auto& cond : stmt.conditions) {
                 if (cond.pattern) {
                     // Skip.
                     continue;
@@ -256,7 +258,7 @@ public:
             }
 
             // Push the condition variables.
-            for (auto &varRef : varRefVisitor.getVars()) {
+            for (auto& varRef : varRefVisitor.getVars()) {
                 condVarsStack.push_back(varRef);
             }
 
@@ -268,7 +270,7 @@ public:
             }
 
             // Pop the conditon variables.
-            for (auto &varRef : varRefVisitor.getVars()) {
+            for (auto& varRef : varRefVisitor.getVars()) {
                 condVarsStack.pop_back();
             }
         };
