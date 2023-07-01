@@ -9,10 +9,13 @@
 
 #include <chrono>
 #include <fmt/core.h>
+#include <mutex>
 #include <ostream>
+#include <thread>
 #include <vector>
 
 #include "slang/text/CharInfo.h"
+#include "slang/util/Hash.h"
 
 using namespace std::chrono;
 
@@ -49,49 +52,69 @@ static std::string escapeString(std::string_view src) {
 struct Entry {
     time_point<steady_clock> start;
     DurationType duration;
+    std::thread::id threadId;
     std::string name;
     std::string detail;
 };
 
 struct TimeTrace::Profiler {
-    std::vector<Entry> stack;
+    static thread_local std::vector<Entry> stack;
     std::vector<Entry> entries;
     time_point<steady_clock> startTime;
+    std::mutex mut;
 
     Profiler() {
-        stack.reserve(8);
         entries.reserve(128);
         startTime = steady_clock::now();
     }
 
     void begin(std::string name, function_ref<std::string()> detail) {
-        stack.push_back(Entry{steady_clock::now(), {}, std::move(name), detail()});
+        stack.push_back(
+            Entry{steady_clock::now(), {}, std::this_thread::get_id(), std::move(name), detail()});
     }
 
     void end() {
         SLANG_ASSERT(!stack.empty());
+        SLANG_ASSERT(stack.back().threadId == std::this_thread::get_id());
 
-        auto& entry = stack.back();
+        auto&& entry = stack.back();
         entry.duration = steady_clock::now() - entry.start;
 
         // Only include sections longer than 500us.
-        if (duration_cast<microseconds>(entry.duration).count() > 500)
-            entries.emplace_back(entry);
+        if (duration_cast<microseconds>(entry.duration).count() > 500) {
+            std::scoped_lock lock(mut);
+            entries.emplace_back(std::move(entry));
+        }
 
         stack.pop_back();
     }
 
     void write(std::ostream& os) {
         SLANG_ASSERT(stack.empty());
+        std::scoped_lock lock(mut);
+
+        // std::thread::id isn't convertible to an integer, so put it in
+        // a table to generate nice ids for output.
+        flat_hash_map<std::thread::id, int> threadIdMap;
+        int nextThreadId = 0;
+        auto getTID = [&](std::thread::id id) {
+            auto [it, inserted] = threadIdMap.try_emplace(id, nextThreadId);
+            if (inserted)
+                ++nextThreadId;
+            return it->second;
+        };
+
+        // Make sure this thread (presumably the main thread) has ID 0.
+        getTID(std::this_thread::get_id());
 
         os << "{ \"traceEvents\": [\n";
 
         for (auto& entry : entries) {
             auto startUs = duration_cast<microseconds>(entry.start - startTime).count();
             auto durationUs = duration_cast<microseconds>(entry.duration).count();
-            os << fmt::format("{{ \"pid\":1, \"tid\":0, \"ph\":\"X\", \"ts\":{}, "
+            os << fmt::format("{{ \"pid\":1, \"tid\":{}, \"ph\":\"X\", \"ts\":{}, "
                               "\"dur\":{}, \"name\":\"{}\", \"args\":{{ \"detail\":\"{}\" }} }},\n",
-                              startUs, durationUs, escapeString(entry.name),
+                              getTID(entry.threadId), startUs, durationUs, escapeString(entry.name),
                               escapeString(entry.detail));
         }
 
@@ -101,6 +124,8 @@ struct TimeTrace::Profiler {
         os << "] }\n";
     }
 };
+
+thread_local std::vector<Entry> TimeTrace::Profiler::stack;
 
 void TimeTrace::initialize() {
     SLANG_ASSERT(!profiler);

@@ -37,7 +37,8 @@ public:
     function_ref(std::nullptr_t) {}
 
     template<typename Callable>
-        requires(!std::is_same_v<std::remove_cvref_t<Callable>, function_ref>)
+        requires(!std::is_same_v<std::remove_cvref_t<Callable>, function_ref> &&
+                 std::is_invocable_r_v<Ret, Callable, Params...>)
     function_ref(Callable&& callable) :
         callback(callback_fn<typename std::remove_reference_t<Callable>>),
         callable(reinterpret_cast<intptr_t>(&callable)) {}
