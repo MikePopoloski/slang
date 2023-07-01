@@ -1,6 +1,12 @@
 slang-netlist
 =============
 
+> **Warning**
+>
+> slang-netlist is a work in progress and may not work as expected. Check
+> TODO.md for a list of some new features and fixes that are planned. If you
+> encounter a problem, please submit a bug report via Issues.
+
 slang-netlist is a library and tool for analysing the source-level static
 connectivity of a design. This capability can be useful, for example, to
 develop structural checks or to investigate timing paths, rather than having to
