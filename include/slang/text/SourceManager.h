@@ -25,6 +25,10 @@ namespace slang {
 
 enum class DiagnosticSeverity;
 
+template<typename T>
+concept IsLock = std::is_same_v<T, std::shared_lock<std::shared_mutex>> ||
+                 std::is_same_v<T, std::unique_lock<std::shared_mutex>>;
+
 /// Performs a file system "glob" operation to return all files underneath
 /// @a basePath that match the given @a pattern string. The pattern is in
 /// the format described by the LRM 33.3.1, which mostly matches other
@@ -270,7 +274,12 @@ private:
             expansionRange(expansionRange), macroName(macroName) {}
     };
 
-    mutable std::shared_mutex mut;
+    // This mutex protects pretty much everything in this class.
+    mutable std::shared_mutex mutex;
+
+    // This mutex is specifically for protecting the system and user
+    // include directory lists.
+    mutable std::shared_mutex includeDirMutex;
 
     // index from BufferID to buffer metadata
     std::vector<std::variant<FileInfo, ExpansionInfo>> bufferEntries;
@@ -291,8 +300,12 @@ private:
     std::atomic<uint32_t> unnamedBufferCount = 0;
     bool disableProximatePaths = false;
 
-    FileInfo* getFileInfo(BufferID buffer);
-    const FileInfo* getFileInfo(BufferID buffer) const;
+    template<IsLock TLock>
+    FileInfo* getFileInfo(BufferID buffer, TLock& lock);
+
+    template<IsLock TLock>
+    const FileInfo* getFileInfo(BufferID buffer, TLock& lock) const;
+
     SourceBuffer createBufferEntry(FileData* fd, SourceLocation includedFrom,
                                    std::unique_lock<std::shared_mutex>& lock);
 
@@ -300,8 +313,23 @@ private:
     SourceBuffer cacheBuffer(std::filesystem::path&& path, std::string&& pathStr,
                              SourceLocation includedFrom, std::vector<char>&& buffer);
 
-    // Get raw line number of a file location, ignoring any line directives
-    size_t getRawLineNumber(SourceLocation location) const;
+    template<IsLock TLock>
+    size_t getRawLineNumber(SourceLocation location, TLock& lock) const;
+
+    template<IsLock TLock>
+    bool isMacroLocImpl(SourceLocation location, TLock& lock) const;
+
+    template<IsLock TLock>
+    bool isMacroArgLocImpl(SourceLocation location, TLock& lock) const;
+
+    template<IsLock TLock>
+    SourceLocation getFullyExpandedLocImpl(SourceLocation location, TLock& lock) const;
+
+    template<IsLock TLock>
+    SourceLocation getOriginalLocImpl(SourceLocation location, TLock& lock) const;
+
+    template<IsLock TLock>
+    SourceRange getExpansionRangeImpl(SourceLocation location, TLock& lock) const;
 
     static void computeLineOffsets(const std::vector<char>& buffer,
                                    std::vector<size_t>& offsets) noexcept;

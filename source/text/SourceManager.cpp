@@ -35,7 +35,8 @@ bool SourceManager::addSystemDirectory(std::string_view pathStr) {
     if (ec)
         return false;
 
-    std::unique_lock lock(mut);
+    // Note: locking the separate mutex for include dirs here.
+    std::unique_lock lock(includeDirMutex);
     systemDirectories.emplace_back(std::move(path));
     return true;
 }
@@ -46,20 +47,21 @@ bool SourceManager::addUserDirectory(std::string_view pathStr) {
     if (ec)
         return false;
 
-    std::unique_lock lock(mut);
+    // Note: locking the separate mutex for include dirs here.
+    std::unique_lock lock(includeDirMutex);
     userDirectories.emplace_back(std::move(path));
     return true;
 }
 
 size_t SourceManager::getLineNumber(SourceLocation location) const {
-    SourceLocation fileLocation = getFullyExpandedLoc(location);
-    size_t rawLineNumber = getRawLineNumber(fileLocation);
+    std::shared_lock lock(mutex);
+    SourceLocation fileLocation = getFullyExpandedLocImpl(location, lock);
+    size_t rawLineNumber = getRawLineNumber(fileLocation, lock);
     if (rawLineNumber == 0)
         return 0;
 
-    auto info = getFileInfo(fileLocation.buffer());
+    auto info = getFileInfo(fileLocation.buffer(), lock);
 
-    std::shared_lock lock(mut);
     auto lineDirective = info->getPreviousLineDirective(rawLineNumber);
     if (!lineDirective)
         return rawLineNumber;
@@ -68,9 +70,8 @@ size_t SourceManager::getLineNumber(SourceLocation location) const {
 }
 
 size_t SourceManager::getColumnNumber(SourceLocation location) const {
-    auto info = getFileInfo(location.buffer());
-
-    // LOCKING: don't need a lock here, data is always valid once loaded.
+    std::shared_lock lock(mutex);
+    auto info = getFileInfo(location.buffer(), lock);
     if (!info || !info->data)
         return 0;
 
@@ -85,22 +86,17 @@ size_t SourceManager::getColumnNumber(SourceLocation location) const {
 }
 
 std::string_view SourceManager::getFileName(SourceLocation location) const {
-    SourceLocation fileLocation = getFullyExpandedLoc(location);
-
-    auto info = getFileInfo(fileLocation.buffer());
+    std::shared_lock lock(mutex);
+    SourceLocation fileLocation = getFullyExpandedLocImpl(location, lock);
+    auto info = getFileInfo(fileLocation.buffer(), lock);
     if (!info || !info->data)
         return "";
 
     // Avoid computing line offsets if we just need a name of `line-less file
-    {
-        std::shared_lock lock(mut);
-        if (info->lineDirectives.empty())
-            return info->data->name;
-    }
+    if (info->lineDirectives.empty())
+        return info->data->name;
 
-    size_t rawLine = getRawLineNumber(fileLocation);
-
-    std::shared_lock lock(mut);
+    size_t rawLine = getRawLineNumber(fileLocation, lock);
     auto lineDirective = info->getPreviousLineDirective(rawLine);
     if (!lineDirective)
         return info->data->name;
@@ -109,43 +105,40 @@ std::string_view SourceManager::getFileName(SourceLocation location) const {
 }
 
 std::string_view SourceManager::getRawFileName(BufferID buffer) const {
-    auto info = getFileInfo(buffer);
-
-    // LOCKING: not required, immutable after creation
+    std::shared_lock lock(mutex);
+    auto info = getFileInfo(buffer, lock);
     if (!info || !info->data)
         return "";
-    else
-        return info->data->name;
+
+    return info->data->name;
 }
 
 const fs::path& SourceManager::getFullPath(BufferID buffer) const {
-    auto info = getFileInfo(buffer);
-
-    // LOCKING: not required, immutable after creation
+    std::shared_lock lock(mutex);
+    auto info = getFileInfo(buffer, lock);
     if (!info || !info->data)
         return emptyPath;
-    else
-        return info->data->fullPath;
+
+    return info->data->fullPath;
 }
 
 SourceLocation SourceManager::getIncludedFrom(BufferID buffer) const {
-    auto info = getFileInfo(buffer);
+    std::shared_lock lock(mutex);
+    auto info = getFileInfo(buffer, lock);
     if (!info)
         return SourceLocation();
 
-    // LOCKING: not required, immutable after creation
     return info->includedFrom;
 }
 
 std::string_view SourceManager::getMacroName(SourceLocation location) const {
-    while (isMacroArgLoc(location))
-        location = getExpansionLoc(location);
+    std::shared_lock lock(mutex);
+    while (isMacroArgLocImpl(location, lock))
+        location = getExpansionRangeImpl(location, lock).start();
 
     auto buffer = location.buffer();
     if (!buffer)
         return {};
-
-    std::shared_lock lock(mut);
 
     SLANG_ASSERT(buffer.getId() < bufferEntries.size());
     auto info = std::get_if<ExpansionInfo>(&bufferEntries[buffer.getId()]);
@@ -159,36 +152,18 @@ bool SourceManager::isFileLoc(SourceLocation location) const {
     if (location.buffer() == SourceLocation::NoLocation.buffer())
         return false;
 
-    return getFileInfo(location.buffer());
+    std::shared_lock lock(mutex);
+    return getFileInfo(location.buffer(), lock) != nullptr;
 }
 
 bool SourceManager::isMacroLoc(SourceLocation location) const {
-    if (location.buffer() == SourceLocation::NoLocation.buffer())
-        return false;
-
-    auto buffer = location.buffer();
-    if (!buffer)
-        return false;
-
-    std::shared_lock lock(mut);
-
-    SLANG_ASSERT(buffer.getId() < bufferEntries.size());
-    return std::get_if<ExpansionInfo>(&bufferEntries[buffer.getId()]) != nullptr;
+    std::shared_lock lock(mutex);
+    return isMacroLocImpl(location, lock);
 }
 
 bool SourceManager::isMacroArgLoc(SourceLocation location) const {
-    if (location == SourceLocation::NoLocation)
-        return false;
-
-    auto buffer = location.buffer();
-    if (!buffer)
-        return false;
-
-    std::shared_lock lock(mut);
-
-    SLANG_ASSERT(buffer.getId() < bufferEntries.size());
-    auto info = std::get_if<ExpansionInfo>(&bufferEntries[buffer.getId()]);
-    return info && info->isMacroArg;
+    std::shared_lock lock(mutex);
+    return isMacroArgLocImpl(location, lock);
 }
 
 bool SourceManager::isIncludedFileLoc(SourceLocation location) const {
@@ -238,68 +213,45 @@ bool SourceManager::isBeforeInCompilationUnit(SourceLocation left, SourceLocatio
 }
 
 SourceLocation SourceManager::getExpansionLoc(SourceLocation location) const {
-    auto buffer = location.buffer();
-    if (!buffer)
-        return SourceLocation();
-
-    std::shared_lock lock(mut);
-
-    SLANG_ASSERT(buffer.getId() < bufferEntries.size());
-    return std::get<ExpansionInfo>(bufferEntries[buffer.getId()]).expansionRange.start();
+    std::shared_lock lock(mutex);
+    return getExpansionRangeImpl(location, lock).start();
 }
 
 SourceRange SourceManager::getExpansionRange(SourceLocation location) const {
-    auto buffer = location.buffer();
-    if (!buffer)
-        return SourceRange();
-
-    std::shared_lock lock(mut);
-
-    SLANG_ASSERT(buffer.getId() < bufferEntries.size());
-    const ExpansionInfo& info = std::get<ExpansionInfo>(bufferEntries[buffer.getId()]);
-    return info.expansionRange;
+    std::shared_lock lock(mutex);
+    return getExpansionRangeImpl(location, lock);
 }
 
 SourceLocation SourceManager::getOriginalLoc(SourceLocation location) const {
-    auto buffer = location.buffer();
-    if (!buffer)
-        return SourceLocation();
-
-    std::shared_lock lock(mut);
-
-    SLANG_ASSERT(buffer.getId() < bufferEntries.size());
-    return std::get<ExpansionInfo>(bufferEntries[buffer.getId()]).originalLoc + location.offset();
+    std::shared_lock lock(mutex);
+    return getOriginalLocImpl(location, lock);
 }
 
 SourceLocation SourceManager::getFullyOriginalLoc(SourceLocation location) const {
-    while (isMacroLoc(location))
-        location = getOriginalLoc(location);
+    std::shared_lock lock(mutex);
+    while (isMacroLocImpl(location, lock))
+        location = getOriginalLocImpl(location, lock);
     return location;
 }
 
 SourceLocation SourceManager::getFullyExpandedLoc(SourceLocation location) const {
-    while (isMacroLoc(location)) {
-        if (isMacroArgLoc(location))
-            location = getOriginalLoc(location);
-        else
-            location = getExpansionLoc(location);
-    }
-    return location;
+    std::shared_lock lock(mutex);
+    return getFullyExpandedLocImpl(location, lock);
 }
 
 std::string_view SourceManager::getSourceText(BufferID buffer) const {
-    auto info = getFileInfo(buffer);
+    std::shared_lock lock(mutex);
+    auto info = getFileInfo(buffer, lock);
     if (!info || !info->data)
         return "";
 
-    // LOCKING: not required here, data is immutable after creation
     auto fd = info->data;
     return std::string_view(fd->mem.data(), fd->mem.size());
 }
 
 SourceLocation SourceManager::createExpansionLoc(SourceLocation originalLoc,
                                                  SourceRange expansionRange, bool isMacroArg) {
-    std::unique_lock lock(mut);
+    std::unique_lock lock(mutex);
 
     bufferEntries.emplace_back(ExpansionInfo(originalLoc, expansionRange, isMacroArg));
     return SourceLocation(BufferID((uint32_t)(bufferEntries.size() - 1), ""sv), 0);
@@ -308,7 +260,7 @@ SourceLocation SourceManager::createExpansionLoc(SourceLocation originalLoc,
 SourceLocation SourceManager::createExpansionLoc(SourceLocation originalLoc,
                                                  SourceRange expansionRange,
                                                  std::string_view macroName) {
-    std::unique_lock lock(mut);
+    std::unique_lock lock(mutex);
 
     bufferEntries.emplace_back(ExpansionInfo(originalLoc, expansionRange, macroName));
     return SourceLocation(BufferID((uint32_t)(bufferEntries.size() - 1), macroName), 0);
@@ -342,7 +294,7 @@ SourceBuffer SourceManager::assignBuffer(std::string_view bufferPath, std::vecto
     fs::path path(widen(bufferPath));
     auto pathStr = getU8Str(path);
     {
-        std::shared_lock lock(mut);
+        std::shared_lock lock(mutex);
         auto it = lookupCache.find(pathStr);
         if (it != lookupCache.end()) {
             SLANG_THROW(std::runtime_error(
@@ -367,13 +319,11 @@ SourceBuffer SourceManager::readHeader(std::string_view path, SourceLocation inc
 
     // system path lookups only look in system directories
     if (isSystemPath) {
-        std::vector<fs::path> sysDirs;
-        {
-            std::shared_lock readLock(mut);
-            sysDirs = systemDirectories;
-        }
-
-        for (auto& d : sysDirs) {
+        // Separate lock for the include dirs here so that we can iterate
+        // over them without having to make a copy. It's unlikely that the
+        // list is being modified while we're reading headers anyway.
+        std::shared_lock includeDirLock(includeDirMutex);
+        for (auto& d : systemDirectories) {
             SourceBuffer result = openCached(d / p, includedFrom);
             if (result.id)
                 return result;
@@ -382,21 +332,23 @@ SourceBuffer SourceManager::readHeader(std::string_view path, SourceLocation inc
     }
 
     // search relative to the current file
-    FileInfo* info = getFileInfo(includedFrom.buffer());
-    if (info && info->data && info->data->directory) {
-        SourceBuffer result = openCached((*info->data->directory) / p, includedFrom);
+    const fs::path* currFileDir = nullptr;
+    {
+        std::shared_lock lock(mutex);
+        auto info = getFileInfo(includedFrom.buffer(), lock);
+        if (info && info->data)
+            currFileDir = info->data->directory;
+    }
+
+    if (currFileDir) {
+        SourceBuffer result = openCached(*currFileDir / p, includedFrom);
         if (result.id)
             return result;
     }
 
-    // search additional include directories
-    std::vector<fs::path> userDirs;
-    {
-        std::shared_lock readLock(mut);
-        userDirs = userDirectories;
-    }
-
-    for (auto& d : userDirs) {
+    // See comment above about this separate mutex / lock.
+    std::shared_lock includeDirLock(includeDirMutex);
+    for (auto& d : userDirectories) {
         SourceBuffer result = openCached(d / p, includedFrom);
         if (result.id)
             return result;
@@ -407,14 +359,11 @@ SourceBuffer SourceManager::readHeader(std::string_view path, SourceLocation inc
 
 void SourceManager::addLineDirective(SourceLocation location, size_t lineNum, std::string_view name,
                                      uint8_t level) {
-    SourceLocation fileLocation = getFullyExpandedLoc(location);
-    FileInfo* info = getFileInfo(fileLocation.buffer());
+    std::unique_lock lock(mutex);
+    SourceLocation fileLocation = getFullyExpandedLocImpl(location, lock);
+    FileInfo* info = getFileInfo(fileLocation.buffer(), lock);
     if (!info || !info->data)
         return;
-
-    size_t sourceLineNum = getRawLineNumber(fileLocation);
-
-    std::unique_lock lock(mut);
 
     fs::path full;
     fs::path linePath = widen(name);
@@ -424,14 +373,14 @@ void SourceManager::addLineDirective(SourceLocation location, size_t lineNum, st
     else
         full = fs::path(widen(info->data->name)).replace_filename(linePath);
 
+    size_t sourceLineNum = getRawLineNumber(fileLocation, lock);
     info->lineDirectives.emplace_back(getU8Str(full), sourceLineNum, lineNum, level);
 }
 
 void SourceManager::addDiagnosticDirective(SourceLocation location, std::string_view name,
                                            DiagnosticSeverity severity) {
-    SourceLocation fileLocation = getFullyExpandedLoc(location);
-
-    std::unique_lock lock(mut);
+    std::unique_lock lock(mutex);
+    SourceLocation fileLocation = getFullyExpandedLocImpl(location, lock);
 
     size_t offset = fileLocation.offset();
     auto& vec = diagDirectives[fileLocation.buffer()];
@@ -454,7 +403,7 @@ std::span<const SourceManager::DiagnosticDirectiveInfo> SourceManager::getDiagno
 }
 
 std::vector<BufferID> SourceManager::getAllBuffers() const {
-    std::shared_lock lock(mut);
+    std::shared_lock lock(mutex);
     std::vector<BufferID> result;
     for (size_t i = 1; i < bufferEntries.size(); i++)
         result.push_back(BufferID((uint32_t)i, ""sv));
@@ -462,21 +411,17 @@ std::vector<BufferID> SourceManager::getAllBuffers() const {
     return result;
 }
 
-SourceManager::FileInfo* SourceManager::getFileInfo(BufferID buffer) {
-    if (!buffer)
+template<IsLock TLock>
+SourceManager::FileInfo* SourceManager::getFileInfo(BufferID buffer, TLock&) {
+    if (!buffer || buffer.getId() >= bufferEntries.size())
         return nullptr;
 
-    std::shared_lock lock(mut);
-    SLANG_ASSERT(buffer.getId() < bufferEntries.size());
     return std::get_if<FileInfo>(&bufferEntries[buffer.getId()]);
 }
 
-const SourceManager::FileInfo* SourceManager::getFileInfo(BufferID buffer) const {
-    if (!buffer)
-        return nullptr;
-
-    std::shared_lock lock(mut);
-    if (buffer.getId() >= bufferEntries.size())
+template<IsLock TLock>
+const SourceManager::FileInfo* SourceManager::getFileInfo(BufferID buffer, TLock&) const {
+    if (!buffer || buffer.getId() >= bufferEntries.size())
         return nullptr;
 
     return std::get_if<FileInfo>(&bufferEntries[buffer.getId()]);
@@ -502,7 +447,7 @@ bool SourceManager::isCached(const fs::path& path) const {
         absPath = path;
     }
 
-    std::shared_lock lock(mut);
+    std::shared_lock lock(mutex);
     auto it = lookupCache.find(getU8Str(absPath));
     return it != lookupCache.end();
 }
@@ -522,7 +467,7 @@ SourceBuffer SourceManager::openCached(const fs::path& fullPath, SourceLocation 
     // first see if we have this file cached
     std::string pathStr = getU8Str(absPath);
     {
-        std::unique_lock lock(mut);
+        std::unique_lock lock(mutex);
         auto it = lookupCache.find(pathStr);
         if (it != lookupCache.end()) {
             FileData* fd = it->second.get();
@@ -535,7 +480,7 @@ SourceBuffer SourceManager::openCached(const fs::path& fullPath, SourceLocation 
     // do the read
     std::vector<char> buffer;
     if (!OS::readFile(absPath, buffer)) {
-        std::unique_lock lock(mut);
+        std::unique_lock lock(mutex);
         lookupCache.emplace(pathStr, nullptr);
         return SourceBuffer();
     }
@@ -556,7 +501,7 @@ SourceBuffer SourceManager::cacheBuffer(fs::path&& path, std::string&& pathStr,
     if (name.empty())
         name = getU8Str(path.filename());
 
-    std::unique_lock lock(mut);
+    std::unique_lock lock(mutex);
 
     auto directory = &*directories.insert(path.parent_path()).first;
     auto fd = std::make_unique<FileData>(directory, std::move(name), std::move(buffer),
@@ -567,6 +512,108 @@ SourceBuffer SourceManager::cacheBuffer(fs::path&& path, std::string&& pathStr,
 
     FileData* fdPtr = it->second.get();
     return createBufferEntry(fdPtr, includedFrom, lock);
+}
+
+template<IsLock TLock>
+size_t SourceManager::getRawLineNumber(SourceLocation location, TLock& readLock) const {
+    FileData* fd;
+    {
+        // Separate scope so that info isn't used after it may potentially
+        // get invalidated when we briefly unloack a read lock and grab a
+        // write lock below.
+        const FileInfo* info = getFileInfo(location.buffer(), readLock);
+        if (!info || !info->data)
+            return 0;
+
+        fd = info->data;
+    }
+
+    if (fd->lineOffsets.empty()) {
+        // We need to compute line offsets. If the lock is a write lock then
+        // we can just go ahead and do that; if not we need to unlock the
+        // read lock and grab a write lock.
+        if constexpr (std::is_same_v<TLock, std::shared_lock<std::shared_mutex>>) {
+            readLock.unlock();
+
+            std::unique_lock writeLock(mutex);
+            computeLineOffsets(fd->mem, fd->lineOffsets);
+
+            writeLock.unlock();
+            readLock.lock();
+        }
+        else {
+            computeLineOffsets(fd->mem, fd->lineOffsets);
+        }
+    }
+
+    // Find the first line offset that is greater than the given location offset. That iterator
+    // then tells us how many lines away from the beginning we are.
+    auto it = std::ranges::lower_bound(fd->lineOffsets, location.offset());
+
+    // We want to ensure the line we return is strictly greater than the given location offset.
+    // So if it is equal, add one to the lower bound we got.
+    size_t line = size_t(it - fd->lineOffsets.begin());
+    if (it != fd->lineOffsets.end() && *it == location.offset())
+        line++;
+    return line;
+}
+
+template<IsLock TLock>
+SourceLocation SourceManager::getFullyExpandedLocImpl(SourceLocation location, TLock& lock) const {
+    while (isMacroLocImpl(location, lock)) {
+        if (isMacroArgLocImpl(location, lock))
+            location = getOriginalLocImpl(location, lock);
+        else
+            location = getExpansionRangeImpl(location, lock).start();
+    }
+    return location;
+}
+
+template<IsLock TLock>
+bool SourceManager::isMacroLocImpl(SourceLocation location, TLock&) const {
+    if (location.buffer() == SourceLocation::NoLocation.buffer())
+        return false;
+
+    auto buffer = location.buffer();
+    if (!buffer)
+        return false;
+
+    SLANG_ASSERT(buffer.getId() < bufferEntries.size());
+    return std::get_if<ExpansionInfo>(&bufferEntries[buffer.getId()]) != nullptr;
+}
+
+template<IsLock TLock>
+bool SourceManager::isMacroArgLocImpl(SourceLocation location, TLock&) const {
+    if (location == SourceLocation::NoLocation)
+        return false;
+
+    auto buffer = location.buffer();
+    if (!buffer)
+        return false;
+
+    SLANG_ASSERT(buffer.getId() < bufferEntries.size());
+    auto info = std::get_if<ExpansionInfo>(&bufferEntries[buffer.getId()]);
+    return info && info->isMacroArg;
+}
+
+template<IsLock TLock>
+SourceRange SourceManager::getExpansionRangeImpl(SourceLocation location, TLock&) const {
+    auto buffer = location.buffer();
+    if (!buffer)
+        return SourceRange();
+
+    SLANG_ASSERT(buffer.getId() < bufferEntries.size());
+    return std::get<ExpansionInfo>(bufferEntries[buffer.getId()]).expansionRange;
+}
+
+template<IsLock TLock>
+SourceLocation SourceManager::getOriginalLocImpl(SourceLocation location, TLock&) const {
+    auto buffer = location.buffer();
+    if (!buffer)
+        return SourceLocation();
+
+    SLANG_ASSERT(buffer.getId() < bufferEntries.size());
+    return std::get<ExpansionInfo>(bufferEntries[buffer.getId()]).originalLoc + location.offset();
 }
 
 void SourceManager::computeLineOffsets(const std::vector<char>& buffer,
@@ -615,38 +662,6 @@ const SourceManager::LineDirectiveInfo* SourceManager::FileInfo::getPreviousLine
         }
         return &*(it - 1);
     }
-}
-
-size_t SourceManager::getRawLineNumber(SourceLocation location) const {
-    const FileInfo* info = getFileInfo(location.buffer());
-    if (!info || !info->data)
-        return 0;
-
-    std::shared_lock readLock(mut);
-    auto fd = info->data;
-
-    if (fd->lineOffsets.empty()) {
-        // This is annoying; we have to give up our read lock, compute the line
-        // offsets, and then re-engage the read lock.
-        readLock.unlock();
-
-        std::unique_lock writeLock(mut);
-        computeLineOffsets(fd->mem, fd->lineOffsets);
-
-        writeLock.unlock();
-        readLock.lock();
-    }
-
-    // Find the first line offset that is greater than the given location offset. That iterator
-    // then tells us how many lines away from the beginning we are.
-    auto it = std::ranges::lower_bound(fd->lineOffsets, location.offset());
-
-    // We want to ensure the line we return is strictly greater than the given location offset.
-    // So if it is equal, add one to the lower bound we got.
-    size_t line = size_t(it - fd->lineOffsets.begin());
-    if (it != fd->lineOffsets.end() && *it == location.offset())
-        line++;
-    return line;
 }
 
 } // namespace slang
