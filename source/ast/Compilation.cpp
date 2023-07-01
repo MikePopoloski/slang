@@ -9,6 +9,7 @@
 
 #include "ElabVisitors.h"
 #include <fmt/core.h>
+#include <mutex>
 
 #include "slang/ast/Definition.h"
 #include "slang/ast/ScriptSession.h"
@@ -161,11 +162,14 @@ Compilation::Compilation(const Bag& options) :
     builtins::registerGateTypes(*this);
 
     // Set a default handler for printing types and symbol paths, for convenience.
-    DiagnosticEngine::setDefaultFormatter<const Type*>(std::make_unique<TypeArgFormatter>());
-    TextDiagnosticClient::setDefaultSymbolPathCB([](const Symbol& sym) {
-        std::string str;
-        sym.getHierarchicalPath(str);
-        return str;
+    static std::once_flag onceFlag;
+    std::call_once(onceFlag, [] {
+        DiagnosticEngine::setDefaultFormatter<const Type*>(std::make_unique<TypeArgFormatter>());
+        TextDiagnosticClient::setDefaultSymbolPathCB([](const Symbol& sym) {
+            std::string str;
+            sym.getHierarchicalPath(str);
+            return str;
+        });
     });
 
     // Reset systemId counters that may have been changed due to creation of types
