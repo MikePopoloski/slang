@@ -1,5 +1,5 @@
 //------------------------------------------------------------------------------
-// util.cpp
+// UtilBindings.cpp
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------

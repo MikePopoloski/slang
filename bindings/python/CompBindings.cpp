@@ -1,12 +1,11 @@
 //------------------------------------------------------------------------------
-// compilation.cpp
+// CompBindings.cpp
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
-#include "slang/ast/Compilation.h"
-
 #include "pyslang.h"
 
+#include "slang/ast/Compilation.h"
 #include "slang/ast/Definition.h"
 #include "slang/ast/ScriptSession.h"
 #include "slang/ast/SystemSubroutine.h"

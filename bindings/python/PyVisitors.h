@@ -1,11 +1,11 @@
 //------------------------------------------------------------------------------
-// visitor.h
+// PyVisitors.h
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
 #pragma once
 
-#include <pybind11/pybind11.h>
+#include "pyslang.h"
 
 #include "slang/ast/ASTVisitor.h"
 

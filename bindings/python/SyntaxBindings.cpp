@@ -1,10 +1,10 @@
 //------------------------------------------------------------------------------
-// pyslang.cpp
+// SyntaxBindings.cpp
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
+#include "PyVisitors.h"
 #include "pyslang.h"
-#include "visitor.h"
 
 #include "slang/parsing/Lexer.h"
 #include "slang/parsing/Parser.h"

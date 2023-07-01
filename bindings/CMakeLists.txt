@@ -35,14 +35,14 @@ add_custom_command(
 pybind11_add_module(
   pyslang
   MODULE
-  python/ast.cpp
-  python/compilation.cpp
-  python/numeric.cpp
+  python/ASTBindings.cpp
+  python/CompBindings.cpp
+  python/NumericBindings.cpp
   python/pyslang.cpp
-  python/symbols.cpp
-  python/syntax.cpp
-  python/types.cpp
-  python/util.cpp
+  python/SymbolBindings.cpp
+  python/SyntaxBindings.cpp
+  python/TypeBindings.cpp
+  python/UtilBindings.cpp
   ${CMAKE_CURRENT_BINARY_DIR}/PySyntaxBindings.cpp)
 target_link_libraries(pyslang PUBLIC slang::slang fmt::fmt)
 target_include_directories(pyslang PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/python)
