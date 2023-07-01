@@ -28,6 +28,7 @@ namespace slang::assert {
 #endif
 }
 
+#if !__cpp_exceptions
 [[noreturn]] void handleThrow(const char* msg, const char* file, int line, const char* func) {
     fprintf(stderr,
             "internal compiler error: '%s'\n  in file %s, line %d\n"
@@ -35,6 +36,7 @@ namespace slang::assert {
             msg, file, line, func);
     std::abort();
 }
+#endif
 
 [[noreturn]] void handleUnreachable(const char* file, int line, const char* func) {
     auto msg = fmt::format("Supposedly unreachable code was executed\n  in file {}, line {}\n"
