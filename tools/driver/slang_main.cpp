@@ -1,12 +1,10 @@
 //------------------------------------------------------------------------------
-// driver.cpp
+// slang_main.cpp
 // Entry point for the primary driver program.
 //
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
-#include "slang/driver/Driver.h"
-
 #include <fmt/color.h>
 #include <fstream>
 #include <iostream>
@@ -15,6 +13,7 @@
 #include "slang/ast/Compilation.h"
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
 #include "slang/diagnostics/TextDiagnosticClient.h"
+#include "slang/driver/Driver.h"
 #include "slang/syntax/SyntaxTree.h"
 #include "slang/text/Json.h"
 #include "slang/util/String.h"

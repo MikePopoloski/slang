@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: MIT
 # ~~~
 
-add_executable(slang_driver driver/driver.cpp)
+add_executable(slang_driver driver/slang_main.cpp)
 add_executable(slang::driver ALIAS slang_driver)
 
 target_link_libraries(slang_driver PRIVATE slang::slang fmt::fmt)
