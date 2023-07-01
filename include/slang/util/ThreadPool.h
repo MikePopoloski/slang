@@ -60,6 +60,8 @@ public:
             thread.join();
     }
 
+    size_t getThreadCount() const { return threads.size(); }
+
     /// @brief Pushes a new task into the pool for execution.
     ///
     /// There is no way to wait for the pushed task to complete aside from
@@ -109,8 +111,21 @@ public:
     void waitForAll() {
         std::unique_lock lock(mutex);
         waiting = true;
-        taskDone.wait(lock, [this] { return tasks.empty(); });
+        taskDone.wait(lock, [this] { return !currentTasks && tasks.empty(); });
         waiting = false;
+    }
+
+    /// Blocks the calling thread until all running tasks are complete, or
+    /// until the provided duration is passed.
+    /// @returns true if all tasks completed, or false if the timeout was reached first
+    template<typename R, typename P>
+    bool waitForAll(const std::chrono::duration<R, P>& duration) {
+        std::unique_lock lock(mutex);
+        waiting = true;
+        const bool status = taskDone.wait_for(lock, duration,
+                                              [this] { return !currentTasks && tasks.empty(); });
+        waiting = false;
+        return status;
     }
 
 private:
@@ -123,12 +138,14 @@ private:
 
             auto task = std::move(tasks.front());
             tasks.pop_front();
+            ++currentTasks;
             lock.unlock();
             task();
             lock.lock();
+            --currentTasks;
 
-            if (waiting && tasks.empty())
-                taskDone.notify_one();
+            if (waiting && !currentTasks && tasks.empty())
+                taskDone.notify_all();
         }
     }
 
@@ -137,6 +154,7 @@ private:
     std::condition_variable taskAvailable;
     std::condition_variable taskDone;
     std::vector<std::thread> threads;
+    size_t currentTasks = 0;
     bool running;
     bool waiting;
 };
