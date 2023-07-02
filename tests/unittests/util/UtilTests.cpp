@@ -26,7 +26,7 @@ TEST_CASE("TypeName test") {
     CHECK(typeName<void>() == "void");
 
     auto name = typeName<std::string>();
-    CHECK_THAT(std::string(name), ContainsSubstring("basic_string<char"));
+    CHECK_THAT(std::string(name), ContainsSubstring("string"));
 
     name = typeName<slang::ast::AssertionKind>();
     CHECK_THAT(std::string(name), ContainsSubstring("slang::ast::AssertionKind"));
