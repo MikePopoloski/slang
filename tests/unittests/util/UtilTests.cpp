@@ -47,7 +47,7 @@ TEST_CASE("TimeTrace tests") {
 
     ThreadPool pool;
     for (int i = 0; i < 20; i++) {
-        pool.pushTask([&] {
+        pool.pushTask([i, &frob] {
             if (i % 2 == 0) {
                 TimeTraceScope timeScope("Foo\"thing"sv, std::to_string(i));
                 std::this_thread::sleep_for(std::chrono::milliseconds(1));
