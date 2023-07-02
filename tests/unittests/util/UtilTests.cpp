@@ -2,13 +2,16 @@
 // SPDX-License-Identifier: MIT
 
 #include "Test.h"
+#include <catch2/matchers/catch_matchers_string.hpp>
 #include <sstream>
 
 #include "slang/util/Random.h"
 #include "slang/util/ThreadPool.h"
 #include "slang/util/TimeTrace.h"
 
-#if __cpp_exceptions && defined(CI_BUILD)
+using namespace Catch::Matchers;
+
+#if __cpp_exceptions && defined(CI_BUILD) && SLANG_ASSERT_ENABLED
 TEST_CASE("Assertions") {
     int i = 4;
     SLANG_ASSERT(i == 4);
@@ -23,10 +26,10 @@ TEST_CASE("TypeName test") {
     CHECK(typeName<void>() == "void");
 
     auto name = typeName<std::string>();
-    CHECK(name.find("std::basic_string<char") != std::string::npos);
+    CHECK_THAT(std::string(name), ContainsSubstring("basic_string<char"));
 
     name = typeName<slang::ast::AssertionKind>();
-    CHECK(name.find("slang::ast::AssertionKind") != std::string::npos);
+    CHECK_THAT(std::string(name), ContainsSubstring("slang::ast::AssertionKind"));
 }
 
 TEST_CASE("createRandomGenerator construction") {
