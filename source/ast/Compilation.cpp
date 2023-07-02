@@ -520,7 +520,13 @@ static void checkExternUdpMatch(const Scope& scope, const UdpPortListSyntax& ext
 
 void Compilation::createDefinition(const Scope& scope, LookupLocation location,
                                    const ModuleDeclarationSyntax& syntax) {
+    // We can only be missing metadata if the definition is created programmatically
+    // (i.e. not via the parser) so we just fill in the parent's default net type
+    // so that it's not a null pointer.
     auto& metadata = definitionMetadata[&syntax];
+    if (!metadata.defaultNetType)
+        metadata.defaultNetType = &scope.getDefaultNetType();
+
     auto def = definitionMemory
                    .emplace_back(std::make_unique<Definition>(scope, location, syntax,
                                                               *metadata.defaultNetType,
@@ -567,6 +573,9 @@ const PackageSymbol* Compilation::getPackage(std::string_view lookupName) const 
 const PackageSymbol& Compilation::createPackage(const Scope& scope,
                                                 const ModuleDeclarationSyntax& syntax) {
     auto& metadata = definitionMetadata[&syntax];
+    if (!metadata.defaultNetType)
+        metadata.defaultNetType = &scope.getDefaultNetType();
+
     auto& package = PackageSymbol::fromSyntax(scope, syntax, *metadata.defaultNetType,
                                               metadata.timeScale);
 
