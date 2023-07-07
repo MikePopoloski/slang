@@ -14,12 +14,14 @@ TidyConfig::TidyConfig() {
     checkConfigs.inputPortSuffix = "_i";
     checkConfigs.outputPortSuffix = "_o";
     checkConfigs.inoutPortSuffix = "_io";
+    checkConfigs.moduleInstantiationPrefix = "i_";
 
     auto styleChecks = std::unordered_map<std::string, CheckStatus>();
     styleChecks.emplace("AlwaysCombNonBlocking", CheckStatus::ENABLED);
     styleChecks.emplace("AlwaysFFBlocking", CheckStatus::ENABLED);
     styleChecks.emplace("EnforcePortSuffix", CheckStatus::ENABLED);
     styleChecks.emplace("NoOldAlwaysSyntax", CheckStatus::ENABLED);
+    styleChecks.emplace("EnforceModuleInstantiationPrefix", CheckStatus::ENABLED);
     checkKinds.insert({slang::TidyKind::Style, styleChecks});
 
     auto synthesisChecks = std::unordered_map<std::string, CheckStatus>();

@@ -14,7 +14,8 @@ add_executable(
   EnforcePortSuffixTest.cpp
   NoOldAlwaysSyntaxTest.cpp
   AlwaysCombNonBlockingTest.cpp
-  AlwaysFFBlockingTest.cpp)
+  AlwaysFFBlockingTest.cpp
+  EnforceModuleInstantiationTest.cpp)
 
 target_link_libraries(tidy_unittests PRIVATE Catch2::Catch2 slang_tidy_obj_lib)
 target_compile_definitions(tidy_unittests PRIVATE UNITTESTS)

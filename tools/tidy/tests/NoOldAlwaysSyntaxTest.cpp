@@ -80,3 +80,75 @@ endmodule
     bool result = visitor->check(root);
     CHECK(result);
 }
+
+TEST_CASE("NoOldAlwaysSyntax: Assertion") {
+    auto tree = SyntaxTree::fromText(R"(
+module top(input logic clk, input logic rst);
+    logic a, b;
+
+    test : assert property (
+        @(posedge clk) disable iff (rst) a |-> b) else $error("error");
+    )
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    compilation.getAllDiagnostics();
+    auto& root = compilation.getRoot();
+
+    TidyConfig config;
+    Registry::setConfig(config);
+    Registry::setSourceManager(compilation.getSourceManager());
+    auto visitor = Registry::create("NoOldAlwaysSyntax");
+    bool result = visitor->check(root);
+    CHECK(result);
+}
+
+TEST_CASE("NoOldAlwaysSyntax: Sequence") {
+    auto tree = SyntaxTree::fromText(R"(
+module top(input logic clk);
+    logic a, b;
+
+    sequence;
+        @(posedge clk) a |-> b
+    endsequence
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    compilation.getAllDiagnostics();
+    auto& root = compilation.getRoot();
+
+    TidyConfig config;
+    Registry::setConfig(config);
+    Registry::setSourceManager(compilation.getSourceManager());
+    auto visitor = Registry::create("NoOldAlwaysSyntax");
+    bool result = visitor->check(root);
+    CHECK(result);
+}
+
+TEST_CASE("NoOldAlwaysSyntax: Covergroup") {
+    auto tree = SyntaxTree::fromText(R"(
+module top(input logic clk, input logic rst);
+    logic a;
+
+    covergroup cg @(posedge clk);
+        coverpoint a;
+    endgroup
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    compilation.getAllDiagnostics();
+    auto& root = compilation.getRoot();
+
+    TidyConfig config;
+    Registry::setConfig(config);
+    Registry::setSourceManager(compilation.getSourceManager());
+    auto visitor = Registry::create("NoOldAlwaysSyntax");
+    bool result = visitor->check(root);
+    CHECK(result);
+}

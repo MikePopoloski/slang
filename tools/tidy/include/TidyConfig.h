@@ -28,6 +28,7 @@ public:
         std::string inputPortSuffix;
         std::string outputPortSuffix;
         std::string inoutPortSuffix;
+        std::string moduleInstantiationPrefix;
     };
 
     /// Default TidyConfig constructor which will set the default check's configuration values
