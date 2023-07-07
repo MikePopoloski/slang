@@ -4,7 +4,6 @@
 #include "ASTHelperVisitors.h"
 #include "TidyDiags.h"
 #include "fmt/color.h"
-#include <iostream>
 
 #include "slang/syntax/AllSyntax.h"
 
