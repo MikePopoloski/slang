@@ -5,7 +5,6 @@
 
 #include "fmt/format.h"
 #include <fstream>
-#include <iostream>
 
 #include "slang/util/OS.h"
 
@@ -352,7 +351,7 @@ void TidyConfigParser::setCheckConfig(const std::string& configName, std::string
     std::transform(configValue.begin(), configValue.end(), configValue.begin(), ::tolower);
 
     if (configValue == "true" || configValue == "false") {
-        set_config(configValue == "true" ? true : false);
+        set_config(configValue == "true");
     }
     else {
         set_config(configValue);

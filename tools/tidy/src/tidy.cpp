@@ -16,7 +16,6 @@
 #include "slang/ast/Compilation.h"
 #include "slang/diagnostics/TextDiagnosticClient.h"
 #include "slang/driver/Driver.h"
-#include "slang/text/SourceManager.h"
 #include "slang/util/Version.h"
 
 /// Performs a search for the .slang-tidy file on the current directory. If the file is not found,
@@ -85,8 +84,8 @@ int main(int argc, char** argv) {
         Registry::setSourceManager(&sm);
 
         bool first = true;
-        for (const auto& check_name : Registry::getRegisteredChecks()) {
-            const auto check = Registry::create(check_name);
+        for (const auto& checkName : Registry::getRegisteredChecks()) {
+            const auto check = Registry::create(checkName);
             if (first)
                 first = false;
             else
@@ -104,11 +103,11 @@ int main(int argc, char** argv) {
         return 1;
 
     std::unique_ptr<ast::Compilation> compilation;
-    bool compilation_ok;
+    bool compilationOk;
     SLANG_TRY {
-        compilation_ok = driver.parseAllSources();
+        compilationOk = driver.parseAllSources();
         compilation = driver.createCompilation();
-        compilation_ok &= driver.reportCompilation(*compilation, true);
+        compilationOk &= driver.reportCompilation(*compilation, true);
     }
     SLANG_CATCH(const std::exception& e) {
 #if __cpp_exceptions
@@ -117,7 +116,7 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    if (!compilation_ok) {
+    if (!compilationOk) {
         slang::OS::print("slang-tidy: errors found during compilation\n");
         return 1;
     }
@@ -127,11 +126,11 @@ int main(int argc, char** argv) {
     // Set the sourceManager to the Registry so checks can access it
     Registry::setSourceManager(compilation->getSourceManager());
 
-    int ret_code = 0;
+    int retCode = 0;
 
     // Check all enabled checks
-    for (const auto& check_name : Registry::getEnabledChecks()) {
-        const auto check = Registry::create(check_name);
+    for (const auto& checkName : Registry::getEnabledChecks()) {
+        const auto check = Registry::create(checkName);
         OS::print(fmt::format("[{}]", check->name()));
 
         driver.diagEngine.setMessage(check->diagCode(), check->diagString());
@@ -139,7 +138,7 @@ int main(int argc, char** argv) {
 
         auto checkOk = check->check(compilation->getRoot());
         if (!checkOk) {
-            ret_code = 1;
+            retCode = 1;
             OS::print(fmt::emphasis::bold | fmt::fg(fmt::color::red), " FAIL\n");
             for (const auto& diag : check->getDiagnostics())
                 driver.diagEngine.issue(diag);
@@ -151,7 +150,7 @@ int main(int argc, char** argv) {
         }
     }
 
-    return ret_code;
+    return retCode;
 }
 
 std::optional<std::filesystem::path> project_slang_tidy_config() {
