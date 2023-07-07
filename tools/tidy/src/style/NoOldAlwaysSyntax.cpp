@@ -16,6 +16,9 @@ struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, true, true> {
     void handle(const ast::ProceduralBlockSymbol& symbol) {
         NEEDS_SKIP_SYMBOL(symbol)
 
+        if (symbol.isFromAssertion)
+            return;
+
         if (symbol.procedureKind == ProceduralBlockKind::Always) {
             diags.add(diag::NoOldAlwaysSyntax, symbol.location);
         }
