@@ -218,8 +218,7 @@
       ],
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "CMAKE_CXX_COMPILER": "g++-10",
-        "SLANG_USE_BOOST": "OFF"
+        "CMAKE_CXX_COMPILER": "g++-10"
       }
     },
     {

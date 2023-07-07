@@ -113,12 +113,8 @@ target_include_directories(
 
 # Link libraries
 find_package(Threads)
-target_link_libraries(slang_slang PRIVATE fmt::fmt ${CMAKE_THREAD_LIBS_INIT})
-
-if(SLANG_USE_BOOST)
-  target_link_libraries(slang_slang PUBLIC Boost::headers)
-  target_compile_definitions(slang_slang PUBLIC SLANG_USE_BOOST)
-endif()
+target_link_libraries(slang_slang PUBLIC fmt::fmt Boost::headers
+                                         ${CMAKE_THREAD_LIBS_INIT})
 
 if(SLANG_USE_MIMALLOC)
   target_link_libraries(slang_slang PUBLIC mimalloc-static)

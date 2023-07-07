@@ -40,7 +40,7 @@ add_executable(
   Test.cpp)
 
 target_include_directories(unittests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries(unittests PRIVATE slang::slang Catch2::Catch2 fmt::fmt)
+target_link_libraries(unittests PRIVATE slang::slang Catch2::Catch2)
 target_compile_definitions(unittests PRIVATE UNITTESTS)
 
 if(SLANG_CI_BUILD)

@@ -37,22 +37,18 @@ else()
   message(STATUS "Using remote fmt library")
 endif()
 
-if(SLANG_USE_BOOST)
-  find_package(Boost 1.82.0)
-  if(NOT Boost_FOUND)
-    message(STATUS "Using remote Boost library")
-    include(cmake/FetchBoostContent.cmake)
+find_package(Boost 1.82.0 QUIET)
+if(NOT Boost_FOUND)
+  message(STATUS "Using vendored boost_unordered header")
 
-    fetchboostcontent_declare(
-      boost_unordered
-      GIT_REPOSITORY
-      https://github.com/boostorg/unordered
-      GIT_TAG
-      boost-1.82.0
-      GIT_SHALLOW
-      ON)
-    fetchboostcontent_makeavailable(boost_unordered)
-  endif()
+  add_library(boost_unordered INTERFACE)
+  add_library(Boost::headers ALIAS boost_unordered)
+  target_compile_definitions(boost_unordered
+                             INTERFACE SLANG_BOOST_SINGLE_HEADER)
+else()
+  message(
+    STATUS "Found system boost ${Boost_VERSION_STRING} at ${Boost_INCLUDE_DIRS}"
+  )
 endif()
 
 if(SLANG_USE_MIMALLOC)
@@ -149,19 +145,15 @@ if(SLANG_INCLUDE_INSTALL)
       COMPONENT slang_Development)
   endif()
 
-  if(SLANG_USE_BOOST AND NOT Boost_FOUND)
+  if(NOT Boost_FOUND)
     install(
-      TARGETS boost_headers
+      TARGETS boost_unordered
       EXPORT slangTargets
       COMPONENT slang_Development)
-    get_target_property(boost_target_install_dirs boost_headers
-                        boost_target_install_dir)
-    foreach(dir ${boost_target_install_dirs})
-      install(
-        DIRECTORY ${dir}/boost
-        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-        COMPONENT slang_Development)
-    endforeach()
+    install(
+      FILES ${PROJECT_SOURCE_DIR}/external/boost_unordered.hpp
+      DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+      COMPONENT slang_Development)
   endif()
 
   if(SLANG_USE_MIMALLOC AND NOT mimalloc_FOUND)

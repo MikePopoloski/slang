@@ -44,7 +44,7 @@ pybind11_add_module(
   python/TypeBindings.cpp
   python/UtilBindings.cpp
   ${CMAKE_CURRENT_BINARY_DIR}/PySyntaxBindings.cpp)
-target_link_libraries(pyslang PUBLIC slang::slang fmt::fmt)
+target_link_libraries(pyslang PUBLIC slang::slang)
 target_include_directories(pyslang PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/python)
 target_compile_definitions(pyslang PRIVATE VERSION_INFO=${PROJECT_VERSION})
 

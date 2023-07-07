@@ -10,16 +10,13 @@
 #include <array>
 #include <cstring>
 
-#ifdef SLANG_USE_BOOST
+#ifdef SLANG_BOOST_SINGLE_HEADER
+#    include <boost_unordered.hpp>
+#else
 #    include <boost/unordered/unordered_flat_map.hpp>
 #    include <boost/unordered/unordered_flat_set.hpp>
 #    include <boost/unordered/unordered_node_map.hpp>
 #    include <boost/unordered/unordered_node_set.hpp>
-#else
-#    include <map>
-#    include <memory>
-#    include <unordered_map>
-#    include <unordered_set>
 #endif
 
 #include "slang/util/Util.h"
@@ -374,8 +371,6 @@ struct hash<std::tuple<TT...>> {
     }
 };
 
-#ifdef SLANG_USE_BOOST
-
 template<typename K, typename V, typename H = hash<K>, typename E = std::equal_to<K>,
          typename A = std::allocator<std::pair<const K, V>>>
 using flat_hash_map = boost::unordered_flat_map<K, V, H, E, A>;
@@ -395,31 +390,6 @@ using flat_node_set = boost::unordered_node_set<T, H, E, A>;
 template<typename K, typename V, typename H = hash<K>, typename E = std::equal_to<K>,
          typename A = std::allocator<std::pair<const K, V>>>
 using map_with_incomplete_type = boost::unordered_flat_map<K, V, H, E, A>;
-
-#else
-
-template<typename K, typename V, typename H = hash<K>, typename E = std::equal_to<K>,
-         typename A = std::allocator<std::pair<const K, V>>>
-using flat_hash_map = std::unordered_map<K, V, H, E, A>;
-
-template<typename T, typename H = hash<T>, typename E = std::equal_to<T>,
-         typename A = std::allocator<T>>
-using flat_hash_set = std::unordered_set<T, H, E, A>;
-
-template<typename K, typename V, typename H = hash<K>, typename E = std::equal_to<K>,
-         typename A = std::allocator<std::pair<const K, V>>>
-using flat_node_map = std::unordered_map<K, V, H, E, A>;
-
-template<typename T, typename H = hash<T>, typename E = std::equal_to<T>,
-         typename A = std::allocator<T>>
-using flat_node_set = std::unordered_set<T, H, E, A>;
-
-// TODO: this exists to workaround older libstdc++ versions having an
-// unordered_map that does not accept incomplete value types.
-template<typename K, typename V>
-using map_with_incomplete_type = std::map<K, V>;
-
-#endif
 
 /// A hash map container that allocates room for its first `N` elements on the stack.
 /// Prefer this over a normal hash map for temporary stack variables and small maps

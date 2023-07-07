@@ -6,3 +6,7 @@ Source: https://sv-lang.com/
 Files: *
 Copyright: Michael Popoloski
 License: MIT
+
+Files: external/boost_unordered.hpp
+Copyright: Boost authors
+License: BSL-1.0
