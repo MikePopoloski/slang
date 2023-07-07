@@ -176,7 +176,7 @@ struct HierarchyOverrideNode {
         overrides;
 
     /// A map of child scopes that also contain overrides.
-    map_with_incomplete_type<InstancePath::Entry, HierarchyOverrideNode> childNodes;
+    flat_hash_map<InstancePath::Entry, HierarchyOverrideNode> childNodes;
 
     /// A list of bind directives to apply in this scope.
     std::vector<const syntax::BindDirectiveSyntax*> binds;
