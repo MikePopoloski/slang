@@ -18,10 +18,10 @@ namespace slang::syntax {
 using namespace parsing;
 
 SyntaxTree::SyntaxTree(SyntaxNode* root, SourceManager& sourceManager, BumpAllocator&& alloc,
-                       std::shared_ptr<SyntaxTree> parent) :
+                       const SourceLibrary* library, std::shared_ptr<SyntaxTree> parent) :
     rootNode(root),
     sourceMan(sourceManager), alloc(std::move(alloc)), parentTree(std::move(parent)) {
-    metadata = std::make_unique<ParserMetadata>(ParserMetadata::fromSyntax(*root));
+    metadata = std::make_unique<ParserMetadata>(ParserMetadata::fromSyntax(*root, library));
     if (!metadata->eofToken && parentTree)
         metadata->eofToken = parentTree->getMetadata().eofToken;
 }
@@ -34,7 +34,7 @@ std::shared_ptr<SyntaxTree> SyntaxTree::fromFile(std::string_view path) {
 
 std::shared_ptr<SyntaxTree> SyntaxTree::fromFile(std::string_view path,
                                                  SourceManager& sourceManager, const Bag& options) {
-    SourceBuffer buffer = sourceManager.readSource(path);
+    SourceBuffer buffer = sourceManager.readSource(path, /* library */ nullptr);
     if (!buffer)
         return nullptr;
     return create(sourceManager, std::span(&buffer, 1), options, {}, false);
@@ -49,7 +49,7 @@ std::shared_ptr<SyntaxTree> SyntaxTree::fromFiles(std::span<const std::string_vi
                                                   const Bag& options) {
     SmallVector<SourceBuffer, 4> buffers(paths.size(), UninitializedTag());
     for (auto path : paths) {
-        SourceBuffer buffer = sourceManager.readSource(path);
+        SourceBuffer buffer = sourceManager.readSource(path, /* library */ nullptr);
         if (!buffer)
             return nullptr;
 
@@ -156,7 +156,7 @@ std::shared_ptr<SyntaxTree> SyntaxTree::create(SourceManager& sourceManager,
 std::shared_ptr<SyntaxTree> SyntaxTree::fromLibraryMapFile(std::string_view path,
                                                            SourceManager& sourceManager,
                                                            const Bag& options) {
-    SourceBuffer buffer = sourceManager.readSource(path);
+    SourceBuffer buffer = sourceManager.readSource(path, /* library */ nullptr);
     if (!buffer)
         return nullptr;
 

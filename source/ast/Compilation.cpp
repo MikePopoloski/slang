@@ -211,6 +211,7 @@ void Compilation::addSyntaxTree(std::shared_ptr<SyntaxTree> tree) {
         auto decl = &n->as<ModuleDeclarationSyntax>();
         DefinitionMetadata result;
         result.tree = tree.get();
+        result.library = meta.library;
         result.defaultNetType = &getNetType(meta.defaultNetType);
         result.timeScale = meta.timeScale;
 
@@ -996,7 +997,7 @@ const NameSyntax& Compilation::parseName(std::string_view name) {
 const NameSyntax& Compilation::tryParseName(std::string_view name, Diagnostics& localDiags) {
     SourceManager& sourceMan = SyntaxTree::getDefaultSourceManager();
     Preprocessor preprocessor(sourceMan, *this, localDiags);
-    preprocessor.pushSource(sourceMan.assignText(name));
+    preprocessor.pushSource(name);
 
     Parser parser(preprocessor);
     return parser.parseName();

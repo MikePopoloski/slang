@@ -125,8 +125,16 @@ public:
     /// Gets the currently active keyword version in use by the preprocessor.
     KeywordVersion getCurrentKeywordVersion() const { return keywordVersionStack.back(); }
 
+    /// Gets the currently active source library, or nullptr if none has been set.
+    const SourceLibrary* getCurrentLibrary() const;
+
+    /// Gets the source manager associated with the preprocessor.
     SourceManager& getSourceManager() const { return sourceManager; }
+
+    /// Gets the allocator used by the preprocessor.
     BumpAllocator& getAllocator() const { return alloc; }
+
+    /// Gets the diagnostic bag passed to the Preprocessor's constructor.
     Diagnostics& getDiagnostics() const { return diagnostics; }
 
     /// Gets all macros that have been defined thus far in the preprocessor.

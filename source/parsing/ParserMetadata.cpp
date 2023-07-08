@@ -19,6 +19,8 @@ class MetadataVisitor : public SyntaxVisitor<MetadataVisitor> {
 public:
     ParserMetadata meta;
 
+    explicit MetadataVisitor(const SourceLibrary* library) : library(library) {}
+
     void handle(const CompilationUnitSyntax& syntax) {
         meta.eofToken = syntax.endOfFile;
         visitDefault(syntax);
@@ -91,7 +93,7 @@ public:
 
         // Needs to come after we visitDefault because visiting the first token
         // might update our preproc state.
-        meta.nodeMap[&syntax] = {defaultNetType, unconnectedDrive, timeScale};
+        meta.nodeMap[&syntax] = {library, defaultNetType, unconnectedDrive, timeScale};
     }
 
     void visitToken(Token token) {
@@ -141,6 +143,7 @@ public:
 
 private:
     SmallVector<flat_hash_set<std::string_view>, 4> moduleDeclStack;
+    const SourceLibrary* library;
     TokenKind defaultNetType = TokenKind::Unknown;
     TokenKind unconnectedDrive = TokenKind::Unknown;
     std::optional<TimeScale> timeScale;
@@ -148,8 +151,8 @@ private:
 
 } // namespace
 
-ParserMetadata ParserMetadata::fromSyntax(const SyntaxNode& root) {
-    MetadataVisitor visitor;
+ParserMetadata ParserMetadata::fromSyntax(const SyntaxNode& root, const SourceLibrary* library) {
+    MetadataVisitor visitor(library);
     root.visit(visitor);
     return visitor.meta;
 }

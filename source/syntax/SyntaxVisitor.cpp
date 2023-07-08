@@ -126,10 +126,11 @@ struct CloneVisitor {
 
 namespace slang::syntax::detail {
 
-std::shared_ptr<SyntaxTree> transformTree(
-    BumpAllocator&& alloc, const std::shared_ptr<SyntaxTree>& tree, const ChangeCollection& commits,
-    const std::vector<std::shared_ptr<SyntaxTree>>& tempTrees) {
-
+std::shared_ptr<SyntaxTree> transformTree(BumpAllocator&& alloc,
+                                          const std::shared_ptr<SyntaxTree>& tree,
+                                          const ChangeCollection& commits,
+                                          const std::vector<std::shared_ptr<SyntaxTree>>& tempTrees,
+                                          const SourceLibrary* library) {
     CloneVisitor visitor(alloc, commits);
     SyntaxNode* root = tree->root().visit(visitor);
 
@@ -138,7 +139,8 @@ std::shared_ptr<SyntaxTree> transformTree(
     for (auto& t : tempTrees)
         alloc.steal(std::move(t->allocator()));
 
-    return std::make_shared<SyntaxTree>(root, tree->sourceManager(), std::move(alloc), tree);
+    return std::make_shared<SyntaxTree>(root, tree->sourceManager(), std::move(alloc), library,
+                                        tree);
 }
 
 } // namespace slang::syntax::detail

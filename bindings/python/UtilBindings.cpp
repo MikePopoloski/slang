@@ -93,9 +93,14 @@ void registerUtil(py::module_& m) {
         .def(py::self == py::self)
         .def(py::self != py::self);
 
+    py::class_<SourceLibrary>(m, "SourceLibrary")
+        .def(py::init<>())
+        .def_readonly("name", &SourceLibrary::name);
+
     py::class_<SourceBuffer>(m, "SourceBuffer")
         .def(py::init<>())
         .def_readonly("id", &SourceBuffer::id)
+        .def_readonly("library", &SourceBuffer::library, byrefint)
         .def_readonly("data", &SourceBuffer::data)
         .def("__bool__", &SourceBuffer::operator bool);
 
@@ -125,14 +130,16 @@ void registerUtil(py::module_& m) {
         .def("getFullyExpandedLoc", &SourceManager::getFullyExpandedLoc, "location"_a)
         .def("getSourceText", &SourceManager::getSourceText, "buffer"_a)
         .def("assignText",
-             py::overload_cast<std::string_view, SourceLocation>(&SourceManager::assignText),
-             "text"_a, "includedFrom"_a = SourceLocation())
-        .def("assignText",
-             py::overload_cast<std::string_view, std::string_view, SourceLocation>(
+             py::overload_cast<std::string_view, SourceLocation, const SourceLibrary*>(
                  &SourceManager::assignText),
-             "path"_a, "text"_a, "includedFrom"_a = SourceLocation())
-        .def("readSource", &SourceManager::readSource, "path"_a)
-        .def("readHeader", &SourceManager::readHeader, "path"_a, "includedFrom"_a, "isSystemPath"_a)
+             "text"_a, "includedFrom"_a = SourceLocation(), "library"_a = nullptr)
+        .def("assignText",
+             py::overload_cast<std::string_view, std::string_view, SourceLocation,
+                               const SourceLibrary*>(&SourceManager::assignText),
+             "path"_a, "text"_a, "includedFrom"_a = SourceLocation(), "library"_a = nullptr)
+        .def("readSource", &SourceManager::readSource, "path"_a, "library"_a)
+        .def("readHeader", &SourceManager::readHeader, "path"_a, "includedFrom"_a, "library"_a,
+             "isSystemPath"_a)
         .def("isCached", &SourceManager::isCached, "path"_a)
         .def("setDisableProximatePaths", &SourceManager::setDisableProximatePaths, "set"_a)
         .def("addLineDirective", &SourceManager::addLineDirective, "location"_a, "lineNum"_a,

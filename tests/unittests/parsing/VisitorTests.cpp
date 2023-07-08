@@ -462,7 +462,7 @@ endmodule
                 BumpAllocator newAlloc;
                 auto newModule = slang::syntax::deepClone(decl, newAlloc);
                 tree = std::make_shared<SyntaxTree>(newModule, tree->sourceManager(),
-                                                    std::move(newAlloc));
+                                                    std::move(newAlloc), nullptr);
             }
         };
         CloneRewriter visitor(tree);

@@ -92,7 +92,7 @@ struct SLANG_EXPORT ChangeCollection {
 
 SLANG_EXPORT std::shared_ptr<SyntaxTree> transformTree(
     BumpAllocator&& alloc, const std::shared_ptr<SyntaxTree>& tree, const ChangeCollection& commits,
-    const std::vector<std::shared_ptr<SyntaxTree>>& tempTrees);
+    const std::vector<std::shared_ptr<SyntaxTree>>& tempTrees, const SourceLibrary* library);
 
 } // namespace detail
 
@@ -109,7 +109,8 @@ public:
     ///
     /// @return if no changes are requested, returns the original syntax tree.
     /// Otherwise, the changes are applied and the newly rewritten syntax tree is returned.
-    std::shared_ptr<SyntaxTree> transform(const std::shared_ptr<SyntaxTree>& tree) {
+    std::shared_ptr<SyntaxTree> transform(const std::shared_ptr<SyntaxTree>& tree,
+                                          const SourceLibrary* library = nullptr) {
         sourceManager = &tree->sourceManager();
         commits.clear();
         tempTrees.clear();
@@ -119,7 +120,7 @@ public:
         if (commits.empty())
             return tree;
 
-        return transformTree(std::move(alloc), tree, commits, tempTrees);
+        return transformTree(std::move(alloc), tree, commits, tempTrees, library);
     }
 
 protected:

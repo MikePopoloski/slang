@@ -32,7 +32,7 @@ bool SourceLoader::addLibraryMaps(std::string_view pattern) {
     // Load and parse the map file right away; we need it to
     // figure out what other sources to load.
     // TODO: make readSource take a fs::path?
-    auto buffer = sourceManager.readSource(widen(pattern));
+    auto buffer = sourceManager.readSource(widen(pattern), /* library */ nullptr);
     if (!buffer)
         return false;
 

@@ -241,7 +241,8 @@ void Driver::addStandardArgs() {
 }
 
 SourceBuffer Driver::readSource(std::string_view fileName) {
-    SourceBuffer buffer = sourceManager.readSource(widen(fileName));
+    // TODO: handle library mapping
+    SourceBuffer buffer = sourceManager.readSource(widen(fileName), /* library */ nullptr);
     if (!buffer) {
         OS::printE(fg(diagClient->errorColor), "error: ");
         OS::printE(fmt::format("no such file or directory: '{}'\n", fileName));
@@ -673,7 +674,8 @@ bool Driver::parseAllSources() {
                     for (auto& ext : extensions) {
                         path.replace_extension(ext);
                         if (!sourceManager.isCached(path)) {
-                            buffer = sourceManager.readSource(path);
+                            // TODO: library mapping
+                            buffer = sourceManager.readSource(path, /* library */ nullptr);
                             if (buffer)
                                 break;
                         }

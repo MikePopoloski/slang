@@ -129,23 +129,27 @@ public:
                                       std::string_view macroName);
 
     /// Instead of loading source from a file, copy it from text already in memory.
-    SourceBuffer assignText(std::string_view text, SourceLocation includedFrom = SourceLocation());
+    SourceBuffer assignText(std::string_view text, SourceLocation includedFrom = SourceLocation(),
+                            const SourceLibrary* library = nullptr);
 
     /// Instead of loading source from a file, copy it from text already in memory.
     /// Pretend it came from a file located at @a path.
     SourceBuffer assignText(std::string_view path, std::string_view text,
-                            SourceLocation includedFrom = SourceLocation());
+                            SourceLocation includedFrom = SourceLocation(),
+                            const SourceLibrary* library = nullptr);
 
     /// Instead of loading source from a file, move it from text already in memory.
     /// Pretend it came from a file located at @a path.
     SourceBuffer assignBuffer(std::string_view path, std::vector<char>&& buffer,
-                              SourceLocation includedFrom = SourceLocation());
+                              SourceLocation includedFrom = SourceLocation(),
+                              const SourceLibrary* library = nullptr);
 
     /// Read in a source file from disk.
-    SourceBuffer readSource(const std::filesystem::path& path);
+    SourceBuffer readSource(const std::filesystem::path& path, const SourceLibrary* library);
 
     /// Read in a header file from disk.
-    SourceBuffer readHeader(std::string_view path, SourceLocation includedFrom, bool isSystemPath);
+    SourceBuffer readHeader(std::string_view path, SourceLocation includedFrom,
+                            const SourceLibrary* library, bool isSystemPath);
 
     /// Returns true if the given file path is already loaded and cached in the source manager.
     bool isCached(const std::filesystem::path& path) const;
@@ -299,11 +303,14 @@ private:
     const FileInfo* getFileInfo(BufferID buffer, TLock& lock) const;
 
     SourceBuffer createBufferEntry(FileData* fd, SourceLocation includedFrom,
+                                   const SourceLibrary* library,
                                    std::unique_lock<std::shared_mutex>& lock);
 
-    SourceBuffer openCached(const std::filesystem::path& fullPath, SourceLocation includedFrom);
+    SourceBuffer openCached(const std::filesystem::path& fullPath, SourceLocation includedFrom,
+                            const SourceLibrary* library);
     SourceBuffer cacheBuffer(std::filesystem::path&& path, std::string&& pathStr,
-                             SourceLocation includedFrom, std::vector<char>&& buffer);
+                             SourceLocation includedFrom, const SourceLibrary* library,
+                             std::vector<char>&& buffer);
 
     template<IsLock TLock>
     size_t getRawLineNumber(SourceLocation location, TLock& lock) const;

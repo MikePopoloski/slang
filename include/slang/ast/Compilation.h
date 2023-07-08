@@ -709,6 +709,7 @@ private:
 
     struct DefinitionMetadata {
         const syntax::SyntaxTree* tree = nullptr;
+        const SourceLibrary* library = nullptr;
         const NetType* defaultNetType = nullptr;
         std::optional<TimeScale> timeScale;
         UnconnectedDrive unconnectedDrive = UnconnectedDrive::None;

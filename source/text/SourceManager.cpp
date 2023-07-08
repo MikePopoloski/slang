@@ -266,12 +266,13 @@ SourceLocation SourceManager::createExpansionLoc(SourceLocation originalLoc,
     return SourceLocation(BufferID((uint32_t)(bufferEntries.size() - 1), macroName), 0);
 }
 
-SourceBuffer SourceManager::assignText(std::string_view text, SourceLocation includedFrom) {
-    return assignText("", text, includedFrom);
+SourceBuffer SourceManager::assignText(std::string_view text, SourceLocation includedFrom,
+                                       const SourceLibrary* library) {
+    return assignText("", text, includedFrom, library);
 }
 
 SourceBuffer SourceManager::assignText(std::string_view path, std::string_view text,
-                                       SourceLocation includedFrom) {
+                                       SourceLocation includedFrom, const SourceLibrary* library) {
     std::string temp;
     if (path.empty()) {
         using namespace std::literals;
@@ -284,11 +285,12 @@ SourceBuffer SourceManager::assignText(std::string_view path, std::string_view t
     if (buffer.empty() || buffer.back() != '\0')
         buffer.push_back('\0');
 
-    return assignBuffer(path, std::move(buffer), includedFrom);
+    return assignBuffer(path, std::move(buffer), includedFrom, library);
 }
 
 SourceBuffer SourceManager::assignBuffer(std::string_view bufferPath, std::vector<char>&& buffer,
-                                         SourceLocation includedFrom) {
+                                         SourceLocation includedFrom,
+                                         const SourceLibrary* library) {
 
     // first see if we have this file cached
     fs::path path(widen(bufferPath));
@@ -302,20 +304,21 @@ SourceBuffer SourceManager::assignBuffer(std::string_view bufferPath, std::vecto
         }
     }
 
-    return cacheBuffer(std::move(path), std::move(pathStr), includedFrom, std::move(buffer));
+    return cacheBuffer(std::move(path), std::move(pathStr), includedFrom, library,
+                       std::move(buffer));
 }
 
-SourceBuffer SourceManager::readSource(const fs::path& path) {
-    return openCached(path, SourceLocation());
+SourceBuffer SourceManager::readSource(const fs::path& path, const SourceLibrary* library) {
+    return openCached(path, SourceLocation(), library);
 }
 
 SourceBuffer SourceManager::readHeader(std::string_view path, SourceLocation includedFrom,
-                                       bool isSystemPath) {
+                                       const SourceLibrary* library, bool isSystemPath) {
     // if the header is specified as an absolute path, just do a straight lookup
     SLANG_ASSERT(!path.empty());
     fs::path p = widen(path);
     if (p.is_absolute())
-        return openCached(p, includedFrom);
+        return openCached(p, includedFrom, library);
 
     // system path lookups only look in system directories
     if (isSystemPath) {
@@ -324,7 +327,7 @@ SourceBuffer SourceManager::readHeader(std::string_view path, SourceLocation inc
         // list is being modified while we're reading headers anyway.
         std::shared_lock includeDirLock(includeDirMutex);
         for (auto& d : systemDirectories) {
-            SourceBuffer result = openCached(d / p, includedFrom);
+            SourceBuffer result = openCached(d / p, includedFrom, library);
             if (result.id)
                 return result;
         }
@@ -341,7 +344,7 @@ SourceBuffer SourceManager::readHeader(std::string_view path, SourceLocation inc
     }
 
     if (currFileDir) {
-        SourceBuffer result = openCached(*currFileDir / p, includedFrom);
+        SourceBuffer result = openCached(*currFileDir / p, includedFrom, library);
         if (result.id)
             return result;
     }
@@ -349,7 +352,7 @@ SourceBuffer SourceManager::readHeader(std::string_view path, SourceLocation inc
     // See comment above about this separate mutex / lock.
     std::shared_lock includeDirLock(includeDirMutex);
     for (auto& d : userDirectories) {
-        SourceBuffer result = openCached(d / p, includedFrom);
+        SourceBuffer result = openCached(d / p, includedFrom, library);
         if (result.id)
             return result;
     }
@@ -428,10 +431,11 @@ const SourceManager::FileInfo* SourceManager::getFileInfo(BufferID buffer, TLock
 }
 
 SourceBuffer SourceManager::createBufferEntry(FileData* fd, SourceLocation includedFrom,
+                                              const SourceLibrary* library,
                                               std::unique_lock<std::shared_mutex>&) {
     SLANG_ASSERT(fd);
     bufferEntries.emplace_back(FileInfo(fd, includedFrom));
-    return SourceBuffer{std::string_view(fd->mem.data(), fd->mem.size()),
+    return SourceBuffer{std::string_view(fd->mem.data(), fd->mem.size()), library,
                         BufferID((uint32_t)(bufferEntries.size() - 1), fd->name)};
 }
 
@@ -452,7 +456,8 @@ bool SourceManager::isCached(const fs::path& path) const {
     return it != lookupCache.end();
 }
 
-SourceBuffer SourceManager::openCached(const fs::path& fullPath, SourceLocation includedFrom) {
+SourceBuffer SourceManager::openCached(const fs::path& fullPath, SourceLocation includedFrom,
+                                       const SourceLibrary* library) {
     fs::path absPath;
     if (!disableProximatePaths) {
         std::error_code ec;
@@ -473,7 +478,7 @@ SourceBuffer SourceManager::openCached(const fs::path& fullPath, SourceLocation 
             FileData* fd = it->second.get();
             if (!fd)
                 return SourceBuffer();
-            return createBufferEntry(fd, includedFrom, lock);
+            return createBufferEntry(fd, includedFrom, library, lock);
         }
     }
 
@@ -485,11 +490,13 @@ SourceBuffer SourceManager::openCached(const fs::path& fullPath, SourceLocation 
         return SourceBuffer();
     }
 
-    return cacheBuffer(std::move(absPath), std::move(pathStr), includedFrom, std::move(buffer));
+    return cacheBuffer(std::move(absPath), std::move(pathStr), includedFrom, library,
+                       std::move(buffer));
 }
 
 SourceBuffer SourceManager::cacheBuffer(fs::path&& path, std::string&& pathStr,
-                                        SourceLocation includedFrom, std::vector<char>&& buffer) {
+                                        SourceLocation includedFrom, const SourceLibrary* library,
+                                        std::vector<char>&& buffer) {
     std::string name;
     if (!disableProximatePaths) {
         std::error_code ec;
@@ -511,7 +518,7 @@ SourceBuffer SourceManager::cacheBuffer(fs::path&& path, std::string&& pathStr,
     SLANG_ASSERT(inserted);
 
     FileData* fdPtr = it->second.get();
-    return createBufferEntry(fdPtr, includedFrom, lock);
+    return createBufferEntry(fdPtr, includedFrom, library, lock);
 }
 
 template<IsLock TLock>

@@ -168,12 +168,21 @@ private:
     SourceLocation endLoc;
 };
 
+/// A named collection of source buffers that form a library.
+/// Each buffer is associated with one library.
+struct SLANG_EXPORT SourceLibrary {
+    std::string name;
+};
+
 /// Represents a source buffer; that is, the actual text of the source
 /// code along with an identifier for the buffer which potentially
 /// encodes its include stack.
 struct SLANG_EXPORT SourceBuffer {
     /// A view into the text comprising the buffer.
     std::string_view data;
+
+    /// The library associated with the buffer.
+    const SourceLibrary* library = nullptr;
 
     /// The ID assigned to the buffer.
     BufferID id;

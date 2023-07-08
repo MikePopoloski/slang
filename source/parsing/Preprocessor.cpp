@@ -187,6 +187,10 @@ void Preprocessor::resetAllDirectives() {
     resetProtectState();
 }
 
+const SourceLibrary* Preprocessor::getCurrentLibrary() const {
+    return lexerStack.empty() ? nullptr : lexerStack.back()->getLibrary();
+}
+
 std::vector<const DefineDirectiveSyntax*> Preprocessor::getDefinedMacros() const {
     std::vector<const DefineDirectiveSyntax*> results;
     for (auto& [name, def] : macros) {
@@ -460,7 +464,8 @@ Trivia Preprocessor::handleIncludeDirective(Token directive) {
         // remove delimiters
         bool isSystem = path[0] == '<';
         path = path.substr(1, path.length() - 2);
-        SourceBuffer buffer = sourceManager.readHeader(path, directive.location(), isSystem);
+        SourceBuffer buffer = sourceManager.readHeader(path, directive.location(),
+                                                       getCurrentLibrary(), isSystem);
         if (!buffer.id) {
             addDiag(diag::CouldNotOpenIncludeFile, fileName.range());
         }

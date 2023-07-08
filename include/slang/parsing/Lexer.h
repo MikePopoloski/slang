@@ -59,6 +59,9 @@ public:
     /// Lexes a token that contains encoded text as part of a protected envelope.
     Token lexEncodedText(ProtectEncoding encoding, uint32_t expectedBytes, bool singleLine);
 
+    /// Returns the library with which the lexer's source buffer is associated.
+    const SourceLibrary* getLibrary() const { return library; }
+
     /// Concatenates two tokens together; used for macro pasting.
     static Token concatenateTokens(BumpAllocator& alloc, Token left, Token right);
 
@@ -152,6 +155,8 @@ private:
 
     // temporary storage for building string literals
     SmallVector<char> stringBuffer;
+
+    const SourceLibrary* library = nullptr;
 };
 
 } // namespace slang::parsing

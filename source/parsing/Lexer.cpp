@@ -32,6 +32,7 @@ using LF = LexerFacts;
 Lexer::Lexer(SourceBuffer buffer, BumpAllocator& alloc, Diagnostics& diagnostics,
              LexerOptions options) :
     Lexer(buffer.id, buffer.data, buffer.data.data(), alloc, diagnostics, options) {
+    library = buffer.library;
 }
 
 Lexer::Lexer(BufferID bufferId, std::string_view source, const char* startPtr, BumpAllocator& alloc,
