@@ -81,11 +81,12 @@ TEST_CASE("Read header (dev/null)") {
     }
 }
 
-static void globAndCheck(const fs::path& basePath, std::string_view pattern,
+static void globAndCheck(const fs::path& basePath, std::string_view pattern, GlobRank expectedRank,
                          std::initializer_list<const char*> expected) {
     SmallVector<fs::path> results;
-    svGlob(basePath, pattern, results);
+    auto rank = svGlob(basePath, pattern, results);
 
+    CHECK(rank == expectedRank);
     CHECK(results.size() == expected.size());
     for (auto str : expected) {
         auto it = std::ranges::find_if(results,
@@ -98,16 +99,19 @@ static void globAndCheck(const fs::path& basePath, std::string_view pattern,
 
 TEST_CASE("File globbing") {
     auto testDir = findTestDir();
-    globAndCheck(testDir, "*st?.sv", {"test2.sv", "test3.sv", "test4.sv", "test5.sv", "test6.sv"});
-    globAndCheck(testDir, "system", {});
-    globAndCheck(testDir, "system/", {"system.svh"});
-    globAndCheck(testDir, ".../f*.svh", {"file.svh", "file_defn.svh", "file_uses_defn.svh"});
-    globAndCheck(testDir, "*ste*/", {"file.svh", "macro.svh", "nested_local.svh", "system.svh"});
-    globAndCheck(testDir, testDir + "/library/pkg.sv", {"pkg.sv"});
-    globAndCheck(testDir, "*??blah", {});
+    globAndCheck(testDir, "*st?.sv", GlobRank::WildcardName,
+                 {"test2.sv", "test3.sv", "test4.sv", "test5.sv", "test6.sv"});
+    globAndCheck(testDir, "system", GlobRank::FileName, {});
+    globAndCheck(testDir, "system/", GlobRank::Directory, {"system.svh"});
+    globAndCheck(testDir, ".../f*.svh", GlobRank::WildcardName,
+                 {"file.svh", "file_defn.svh", "file_uses_defn.svh"});
+    globAndCheck(testDir, "*ste*/", GlobRank::Directory,
+                 {"file.svh", "macro.svh", "nested_local.svh", "system.svh"});
+    globAndCheck(testDir, testDir + "/library/pkg.sv", GlobRank::FileName, {"pkg.sv"});
+    globAndCheck(testDir, "*??blah", GlobRank::WildcardName, {});
 
     putenv((char*)"BAR#=cmd");
-    globAndCheck(testDir, "*${BAR#}.f", {"cmd.f"});
+    globAndCheck(testDir, "*${BAR#}.f", GlobRank::WildcardName, {"cmd.f"});
 }
 
 TEST_CASE("Config Blocks") {

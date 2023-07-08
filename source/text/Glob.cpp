@@ -5,6 +5,7 @@
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
+#include "slang/text/SourceManager.h"
 #include "slang/util/OS.h"
 #include "slang/util/String.h"
 
@@ -83,8 +84,8 @@ static void globDir(const fs::path& path, std::string_view pattern, SmallVector<
     }
 }
 
-void svGlobInternal(const fs::path& basePath, std::string_view pattern,
-                    SmallVector<fs::path>& results) {
+GlobRank svGlobInternal(const fs::path& basePath, std::string_view pattern,
+                        SmallVector<fs::path>& results) {
     // Parse the pattern. Consume directories in chunks until
     // we find one that has wildcards for us to handle.
     auto currPath = basePath;
@@ -97,9 +98,11 @@ void svGlobInternal(const fs::path& basePath, std::string_view pattern,
             dirs.emplace_back(std::move(currPath));
 
             pattern = pattern.substr(3);
+
+            auto rank = GlobRank::Directory;
             for (auto& dir : dirs)
-                svGlobInternal(dir, pattern, results);
-            return;
+                rank = svGlobInternal(dir, pattern, results);
+            return rank;
         }
 
         bool hasWildcards = false;
@@ -116,9 +119,11 @@ void svGlobInternal(const fs::path& basePath, std::string_view pattern,
                 if (hasWildcards) {
                     SmallVector<fs::path> dirs;
                     globDir(currPath, subPattern, dirs, SearchMode::Directories);
+
+                    auto rank = GlobRank::Directory;
                     for (auto& dir : dirs)
-                        svGlobInternal(dir, pattern, results);
-                    return;
+                        rank = svGlobInternal(dir, pattern, results);
+                    return rank;
                 }
 
                 // Otherwise just record this directory and move on to the next.
@@ -133,15 +138,16 @@ void svGlobInternal(const fs::path& basePath, std::string_view pattern,
         if (!foundDir) {
             if (hasWildcards) {
                 globDir(currPath, pattern, results, SearchMode::Files);
+                return GlobRank::WildcardName;
             }
-            else {
-                // Check for an exact match and add the file if we find it.
-                std::error_code ec;
-                currPath /= pattern;
-                if (fs::is_regular_file(currPath, ec))
-                    results.emplace_back(std::move(currPath));
-            }
-            return;
+
+            // Check for an exact match and add the file if we find it.
+            std::error_code ec;
+            currPath /= pattern;
+            if (fs::is_regular_file(currPath, ec))
+                results.emplace_back(std::move(currPath));
+
+            return GlobRank::FileName;
         }
     }
 
@@ -150,10 +156,11 @@ void svGlobInternal(const fs::path& basePath, std::string_view pattern,
     // directory separator. In this case we want to include all files
     // underneath the directory pointed to by currPath.
     iterDirectory(currPath, results, SearchMode::Files);
+    return GlobRank::Directory;
 }
 
-SLANG_EXPORT void svGlob(const fs::path& basePath, std::string_view pattern,
-                         SmallVector<fs::path>& results) {
+SLANG_EXPORT GlobRank svGlob(const fs::path& basePath, std::string_view pattern,
+                             SmallVector<fs::path>& results) {
     // Expand any environment variable references in the pattern.
     std::string patternStr;
     patternStr.reserve(pattern.size());
@@ -172,11 +179,11 @@ SLANG_EXPORT void svGlob(const fs::path& basePath, std::string_view pattern,
     // whether we have an absolute path, etc.
     auto patternPath = fs::path(widen(patternStr)).lexically_normal();
     if (patternPath.has_root_path()) {
-        svGlobInternal(patternPath.root_path(), narrow(patternPath.relative_path().native()),
-                       results);
+        return svGlobInternal(patternPath.root_path(), narrow(patternPath.relative_path().native()),
+                              results);
     }
     else {
-        svGlobInternal(basePath, narrow(patternPath.native()), results);
+        return svGlobInternal(basePath, narrow(patternPath.native()), results);
     }
 }
 
