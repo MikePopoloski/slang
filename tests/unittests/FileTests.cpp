@@ -3,6 +3,7 @@
 
 #include "Test.h"
 
+#include "slang/text/Glob.h"
 #include "slang/text/SourceManager.h"
 #include "slang/util/String.h"
 
@@ -81,37 +82,56 @@ TEST_CASE("Read header (dev/null)") {
     }
 }
 
-static void globAndCheck(const fs::path& basePath, std::string_view pattern, GlobRank expectedRank,
-                         std::initializer_list<const char*> expected) {
+static void globAndCheck(const fs::path& basePath, std::string_view pattern, GlobMode mode,
+                         GlobRank expectedRank, std::initializer_list<const char*> expected) {
     SmallVector<fs::path> results;
-    auto rank = svGlob(basePath, pattern, results);
+    auto rank = svGlob(basePath, pattern, mode, results);
 
     CHECK(rank == expectedRank);
     CHECK(results.size() == expected.size());
     for (auto str : expected) {
-        auto it = std::ranges::find_if(results,
-                                       [str](auto& item) { return item.filename() == str; });
+        auto it = std::ranges::find_if(results, [str, mode](auto& item) {
+            return mode == GlobMode::Files ? item.filename() == str
+                                           : item.parent_path().filename() == str;
+        });
         if (it == results.end()) {
             FAIL_CHECK(str << " is not found in results for " << pattern);
         }
+    }
+
+    for (auto& path : results) {
+        if (mode == GlobMode::Files)
+            CHECK(fs::is_regular_file(path));
+        else
+            CHECK(fs::is_directory(path));
     }
 }
 
 TEST_CASE("File globbing") {
     auto testDir = findTestDir();
-    globAndCheck(testDir, "*st?.sv", GlobRank::WildcardName,
+    globAndCheck(testDir, "*st?.sv", GlobMode::Files, GlobRank::WildcardName,
                  {"test2.sv", "test3.sv", "test4.sv", "test5.sv", "test6.sv"});
-    globAndCheck(testDir, "system", GlobRank::FileName, {});
-    globAndCheck(testDir, "system/", GlobRank::Directory, {"system.svh"});
-    globAndCheck(testDir, ".../f*.svh", GlobRank::WildcardName,
+    globAndCheck(testDir, "system", GlobMode::Files, GlobRank::ExactName, {});
+    globAndCheck(testDir, "system/", GlobMode::Files, GlobRank::Directory, {"system.svh"});
+    globAndCheck(testDir, ".../f*.svh", GlobMode::Files, GlobRank::WildcardName,
                  {"file.svh", "file_defn.svh", "file_uses_defn.svh"});
-    globAndCheck(testDir, "*ste*/", GlobRank::Directory,
+    globAndCheck(testDir, "*ste*/", GlobMode::Files, GlobRank::Directory,
                  {"file.svh", "macro.svh", "nested_local.svh", "system.svh"});
-    globAndCheck(testDir, testDir + "/library/pkg.sv", GlobRank::FileName, {"pkg.sv"});
-    globAndCheck(testDir, "*??blah", GlobRank::WildcardName, {});
+    globAndCheck(testDir, testDir + "/library/pkg.sv", GlobMode::Files, GlobRank::ExactName,
+                 {"pkg.sv"});
+    globAndCheck(testDir, "*??blah", GlobMode::Files, GlobRank::WildcardName, {});
 
     putenv((char*)"BAR#=cmd");
-    globAndCheck(testDir, "*${BAR#}.f", GlobRank::WildcardName, {"cmd.f"});
+    globAndCheck(testDir, "*${BAR#}.f", GlobMode::Files, GlobRank::WildcardName, {"cmd.f"});
+}
+
+TEST_CASE("Directory globbing") {
+    auto testDir = findTestDir();
+    globAndCheck(testDir, "*st?.sv", GlobMode::Directories, GlobRank::WildcardName, {});
+    globAndCheck(testDir, "system", GlobMode::Directories, GlobRank::ExactName, {"system"});
+    globAndCheck(testDir, "system/", GlobMode::Directories, GlobRank::Directory, {"system"});
+    globAndCheck(testDir, ".../", GlobMode::Directories, GlobRank::Directory,
+                 {"library", "nested", "system", "data"});
 }
 
 TEST_CASE("Config Blocks") {

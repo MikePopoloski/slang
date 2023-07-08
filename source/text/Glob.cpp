@@ -5,7 +5,8 @@
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
-#include "slang/text/SourceManager.h"
+#include "slang/text/Glob.h"
+
 #include "slang/util/OS.h"
 #include "slang/util/String.h"
 
@@ -47,17 +48,14 @@ static bool matches(std::string_view str, std::string_view pattern) {
     }
 }
 
-enum class SearchMode { Files, Directories };
-
-static void iterDirectory(const fs::path& path, SmallVector<fs::path>& results,
-                          SearchMode searchMode) {
+static void iterDirectory(const fs::path& path, SmallVector<fs::path>& results, GlobMode mode) {
     std::error_code ec;
     for (auto& entry : fs::directory_iterator(path.empty() ? "." : path,
                                               fs::directory_options::follow_directory_symlink |
                                                   fs::directory_options::skip_permission_denied,
                                               ec)) {
-        if ((searchMode == SearchMode::Files && entry.is_regular_file(ec)) ||
-            (searchMode == SearchMode::Directories && entry.is_directory(ec))) {
+        if ((mode == GlobMode::Files && entry.is_regular_file(ec)) ||
+            (mode == GlobMode::Directories && entry.is_directory(ec))) {
             results.emplace_back(entry.path());
         }
     }
@@ -65,7 +63,7 @@ static void iterDirectory(const fs::path& path, SmallVector<fs::path>& results,
 
 static void iterDirectoriesRecursive(const fs::path& path, SmallVector<fs::path>& results) {
     SmallVector<fs::path> local;
-    iterDirectory(path, local, SearchMode::Directories);
+    iterDirectory(path, local, GlobMode::Directories);
 
     for (auto&& p : local) {
         iterDirectoriesRecursive(p, results);
@@ -74,9 +72,9 @@ static void iterDirectoriesRecursive(const fs::path& path, SmallVector<fs::path>
 }
 
 static void globDir(const fs::path& path, std::string_view pattern, SmallVector<fs::path>& results,
-                    SearchMode searchMode) {
+                    GlobMode mode) {
     SmallVector<fs::path> local;
-    iterDirectory(path, local, searchMode);
+    iterDirectory(path, local, mode);
 
     for (auto&& p : local) {
         if (matches(narrow(p.filename().native()), pattern))
@@ -84,7 +82,7 @@ static void globDir(const fs::path& path, std::string_view pattern, SmallVector<
     }
 }
 
-GlobRank svGlobInternal(const fs::path& basePath, std::string_view pattern,
+GlobRank svGlobInternal(const fs::path& basePath, std::string_view pattern, GlobMode mode,
                         SmallVector<fs::path>& results) {
     // Parse the pattern. Consume directories in chunks until
     // we find one that has wildcards for us to handle.
@@ -101,7 +99,7 @@ GlobRank svGlobInternal(const fs::path& basePath, std::string_view pattern,
 
             auto rank = GlobRank::Directory;
             for (auto& dir : dirs)
-                rank = svGlobInternal(dir, pattern, results);
+                rank = svGlobInternal(dir, pattern, mode, results);
             return rank;
         }
 
@@ -118,11 +116,11 @@ GlobRank svGlobInternal(const fs::path& basePath, std::string_view pattern,
                 // and recursively search within each expanded directory.
                 if (hasWildcards) {
                     SmallVector<fs::path> dirs;
-                    globDir(currPath, subPattern, dirs, SearchMode::Directories);
+                    globDir(currPath, subPattern, dirs, GlobMode::Directories);
 
                     auto rank = GlobRank::Directory;
                     for (auto& dir : dirs)
-                        rank = svGlobInternal(dir, pattern, results);
+                        rank = svGlobInternal(dir, pattern, mode, results);
                     return rank;
                 }
 
@@ -134,32 +132,46 @@ GlobRank svGlobInternal(const fs::path& basePath, std::string_view pattern,
         }
 
         // We didn't find a directory separator, so we're going to consume
-        // the remainder of the pattern and search for files with that pattern.
+        // the remainder of the pattern and search for files/directories with
+        // that pattern.
         if (!foundDir) {
             if (hasWildcards) {
-                globDir(currPath, pattern, results, SearchMode::Files);
+                globDir(currPath, pattern, results, mode);
                 return GlobRank::WildcardName;
             }
 
-            // Check for an exact match and add the file if we find it.
+            // Check for an exact match and add the target if we find it.
             std::error_code ec;
             currPath /= pattern;
-            if (fs::is_regular_file(currPath, ec))
-                results.emplace_back(std::move(currPath));
 
-            return GlobRank::FileName;
+            if (!pattern.empty() && mode == GlobMode::Directories)
+                currPath /= "";
+
+            if ((mode == GlobMode::Files && fs::is_regular_file(currPath, ec)) ||
+                (mode == GlobMode::Directories && fs::is_directory(currPath, ec))) {
+                results.emplace_back(std::move(currPath));
+            }
+
+            return GlobRank::ExactName;
         }
     }
 
     // If we reach this point, we either had an empty pattern to
     // begin with or we consumed the whole pattern and it had a trailing
-    // directory separator. In this case we want to include all files
-    // underneath the directory pointed to by currPath.
-    iterDirectory(currPath, results, SearchMode::Files);
+    // directory separator. If we are search for files we want to include
+    // all files underneath the directory pointed to by currPath, and if
+    // we're searching for directories we'll just take this directory.
+    if (mode == GlobMode::Files)
+        iterDirectory(currPath, results, GlobMode::Files);
+    else {
+        if (pattern.empty())
+            currPath /= "";
+        results.emplace_back(std::move(currPath));
+    }
     return GlobRank::Directory;
 }
 
-SLANG_EXPORT GlobRank svGlob(const fs::path& basePath, std::string_view pattern,
+SLANG_EXPORT GlobRank svGlob(const fs::path& basePath, std::string_view pattern, GlobMode mode,
                              SmallVector<fs::path>& results) {
     // Expand any environment variable references in the pattern.
     std::string patternStr;
@@ -180,10 +192,10 @@ SLANG_EXPORT GlobRank svGlob(const fs::path& basePath, std::string_view pattern,
     auto patternPath = fs::path(widen(patternStr)).lexically_normal();
     if (patternPath.has_root_path()) {
         return svGlobInternal(patternPath.root_path(), narrow(patternPath.relative_path().native()),
-                              results);
+                              mode, results);
     }
     else {
-        return svGlobInternal(basePath, narrow(patternPath.native()), results);
+        return svGlobInternal(basePath, narrow(patternPath.native()), mode, results);
     }
 }
 

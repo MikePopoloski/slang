@@ -14,6 +14,7 @@
 #include <vector>
 
 #include "slang/syntax/SyntaxFwd.h"
+#include "slang/text/Glob.h"
 #include "slang/util/Hash.h"
 #include "slang/util/Util.h"
 
@@ -21,7 +22,6 @@ namespace slang {
 
 class Bag;
 class SourceManager;
-enum class GlobRank;
 
 } // namespace slang
 

@@ -21,7 +21,7 @@ using namespace syntax;
 
 void SourceLoader::addFiles(std::string_view pattern) {
     SmallVector<fs::path> files;
-    svGlob("", pattern, files);
+    svGlob("", pattern, GlobMode::Files, files);
 
     directFiles.insert(directFiles.end(), files.begin(), files.end());
 }
@@ -255,7 +255,7 @@ void SourceLoader::createLibrary(const LibraryDeclarationSyntax& syntax) {
         if (!spec.empty()) {
             // TODO: base path?
             SmallVector<fs::path> globFiles;
-            auto rank = svGlob("", spec, globFiles);
+            auto rank = svGlob("", spec, GlobMode::Files, globFiles);
 
             files.reserve(files.size() + globFiles.size());
             for (auto& path : globFiles)
