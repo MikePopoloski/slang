@@ -49,6 +49,7 @@ add_library(
   diagnostics/Diagnostics.cpp
   diagnostics/TextDiagnosticClient.cpp
   driver/Driver.cpp
+  driver/SourceLoader.cpp
   numeric/ConstantValue.cpp
   numeric/SVInt.cpp
   numeric/Time.cpp
