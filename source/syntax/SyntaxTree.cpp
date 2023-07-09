@@ -123,6 +123,9 @@ std::shared_ptr<SyntaxTree> SyntaxTree::create(SourceManager& sourceManager,
                                                std::span<const SourceBuffer> sources,
                                                const Bag& options, MacroList inheritedMacros,
                                                bool guess) {
+    if (sources.empty())
+        SLANG_THROW(std::invalid_argument("sources cannot be empty"));
+
     TimeTraceScope timeScope("parseFile"sv, [&] {
         if (sources.size() == 1)
             return std::string(sourceManager.getRawFileName(sources[0].id));

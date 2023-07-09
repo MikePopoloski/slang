@@ -41,14 +41,15 @@ struct SourceOptions {
 class SLANG_EXPORT SourceLoader {
 public:
     using SyntaxTreeList = std::vector<std::shared_ptr<syntax::SyntaxTree>>;
+    using ErrorCallback = std::function<void(const std::string&)>;
 
-    SourceLoader(SourceManager& sourceManager, const Bag& optionBag);
+    SourceLoader(SourceManager& sourceManager, const Bag& optionBag, ErrorCallback errorCallback);
 
     void addFiles(std::string_view pattern);
     bool addLibraryMaps(std::string_view pattern);
     void addLibraryFiles(std::string_view libraryName, std::string_view pattern);
-    void addLibraryDirectories(std::span<const std::string> directories);
-    void addLibraryExtensions(std::span<const std::string> extensions);
+    void addSearchDirectories(std::span<const std::string> directories);
+    void addSearchExtensions(std::span<const std::string> extensions);
 
     const SyntaxTreeList& getLibraryMaps() const { return libraryMaps; }
 
@@ -66,9 +67,14 @@ private:
     const Bag& optionBag;
     SourceOptions srcOptions;
 
-    std::vector<std::filesystem::path> directFiles;
+    std::vector<std::pair<std::filesystem::path, bool>> filePaths;
+    flat_hash_map<std::filesystem::path, std::vector<std::pair<Library, GlobRank>>> fileToLibMap;
     flat_hash_map<std::string_view, Library> libraries;
+    std::vector<std::filesystem::path> searchDirectories;
+    std::vector<std::filesystem::path> searchExtensions;
+    flat_hash_set<std::string_view> uniqueExtensions;
     SyntaxTreeList libraryMaps;
+    ErrorCallback errorCallback;
 };
 
 } // namespace slang::driver
