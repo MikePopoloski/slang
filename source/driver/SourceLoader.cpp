@@ -7,6 +7,8 @@
 //------------------------------------------------------------------------------
 #include "slang/driver/SourceLoader.h"
 
+#include <fmt/core.h>
+
 #include "slang/syntax/AllSyntax.h"
 #include "slang/syntax/SyntaxTree.h"
 #include "slang/text/SourceManager.h"
@@ -35,7 +37,13 @@ SourceLoader::SourceLoader(SourceManager& sourceManager, const Bag& optionBag,
 
 void SourceLoader::addFiles(std::string_view pattern) {
     SmallVector<fs::path> files;
-    svGlob("", pattern, GlobMode::Files, files);
+    auto rank = svGlob("", pattern, GlobMode::Files, files);
+
+    if (files.empty()) {
+        if (rank == GlobRank::ExactName)
+            errorCallback(fmt::format("no such file: '{}'", pattern));
+        return;
+    }
 
     filePaths.reserve(filePaths.size() + files.size());
     for (auto&& path : files)
@@ -87,7 +95,13 @@ void SourceLoader::addLibraryFiles(std::string_view, std::string_view pattern) {
     // TODO: lookup library
 
     SmallVector<fs::path> files;
-    svGlob("", pattern, GlobMode::Files, files);
+    auto rank = svGlob("", pattern, GlobMode::Files, files);
+
+    if (files.empty()) {
+        if (rank == GlobRank::ExactName)
+            errorCallback(fmt::format("no such file: '{}'", pattern));
+        return;
+    }
 
     filePaths.reserve(filePaths.size() + files.size());
     for (auto&& path : files)
@@ -108,73 +122,95 @@ void SourceLoader::addSearchExtensions(std::span<const std::string> extensions) 
 }
 
 SourceLoader::SyntaxTreeList SourceLoader::loadAndParseSources() {
-    auto loadSource = [this](const std::filesystem::path& path, bool isLibrary,
-                             std::vector<SourceBuffer>& singleUnitBuffers,
-                             std::vector<SourceBuffer>& deferredLibBuffers,
-                             SyntaxTreeList& results) {
-        // TODO: Figure out which library this file is in.
-        const SourceLibrary* library = nullptr;
-
-        // Load into memory.
-        auto buffer = sourceManager.readSource(path, library);
-        if (!buffer) {
-            // TODO: error checking
-        }
-
-        if (!isLibrary && srcOptions.singleUnit) {
-            // If this file was directly specified (i.e. not via
-            // a library mapping) and we're in single-unit mode,
-            // collect it for later parsing.
-            singleUnitBuffers.push_back(buffer);
-        }
-        else if (srcOptions.librariesInheritMacros) {
-            // If libraries inherit macros then we can't parse here,
-            // we need to wait for the main compilation unit to be
-            // parsed.
-            SLANG_ASSERT(isLibrary);
-            deferredLibBuffers.push_back(buffer);
-        }
-        else {
-            // Otherwise we can parse right away.
-            auto tree = SyntaxTree::fromBuffer(buffer, sourceManager, optionBag);
-            if (isLibrary || srcOptions.onlyLint)
-                tree->isLibrary = true;
-
-            results.emplace_back(std::move(tree));
-        }
-    };
-
     SyntaxTreeList syntaxTrees;
     std::span<const DefineDirectiveSyntax* const> inheritedMacros;
 
-    if (filePaths.size() > 4 && srcOptions.numThreads != 1u) {
+    auto parseSingleUnit = [&](std::span<const SourceBuffer> buffers) {
+        // If we waited to parse direct buffers due to wanting a single unit, parse that unit now.
+        if (!buffers.empty()) {
+            auto tree = SyntaxTree::fromBuffers(buffers, sourceManager, optionBag);
+            if (srcOptions.onlyLint)
+                tree->isLibrary = true;
+
+            syntaxTrees.emplace_back(std::move(tree));
+            inheritedMacros = syntaxTrees.back()->getDefinedMacros();
+        }
+    };
+
+    if (filePaths.size() >= MinFilesForThreading && srcOptions.numThreads != 1u) {
         // If there are enough files to parse and the user hasn't disabled
         // the use of threads, do the parsing via a thread pool.
         ThreadPool threadPool(srcOptions.numThreads.value_or(0u));
 
-        // TODO:
+        std::vector<SourceBuffer> singleUnitBuffers;
+        std::vector<SourceBuffer> deferredLibBuffers;
+        std::mutex mut;
+
+        // Load all source files that were specified on the command line
+        // or via library maps.
+        threadPool.pushLoop(size_t(0), filePaths.size(), [&](size_t start, size_t end) {
+            SyntaxTreeList localTrees;
+            std::vector<SourceBuffer> localSingleUnitBufs;
+            std::vector<SourceBuffer> localDeferredLibBufs;
+
+            const size_t count = end - start;
+            localTrees.reserve(count);
+            localSingleUnitBufs.reserve(count);
+            localDeferredLibBufs.reserve(count);
+
+            for (size_t i = start; i < end; i++) {
+                auto& [path, isLibrary] = filePaths[i];
+                loadSource(path, isLibrary, localSingleUnitBufs, localDeferredLibBufs, localTrees);
+            }
+
+            // Merge our local results into the shared lists.
+            std::unique_lock lock(mut);
+            syntaxTrees.insert(syntaxTrees.end(), localTrees.begin(), localTrees.end());
+            singleUnitBuffers.insert(singleUnitBuffers.end(), localSingleUnitBufs.begin(),
+                                     localSingleUnitBufs.end());
+            deferredLibBuffers.insert(deferredLibBuffers.end(), localDeferredLibBufs.begin(),
+                                      localDeferredLibBufs.end());
+        });
+        threadPool.waitForAll();
+
+        parseSingleUnit(singleUnitBuffers);
+
+        // If we deferred libraries due to wanting to inherit macros, parse them now.
+        threadPool.pushLoop(size_t(0), deferredLibBuffers.size(), [&](size_t start, size_t end) {
+            SyntaxTreeList localTrees;
+            localTrees.reserve(end - start);
+
+            for (size_t i = start; i < end; i++) {
+                auto tree = SyntaxTree::fromBuffer(deferredLibBuffers[i], sourceManager, optionBag,
+                                                   inheritedMacros);
+                tree->isLibrary = true;
+                localTrees.emplace_back(std::move(tree));
+            }
+
+            std::unique_lock lock(mut);
+            syntaxTrees.insert(syntaxTrees.end(), localTrees.begin(), localTrees.end());
+        });
+        threadPool.waitForAll();
     }
     else {
         std::vector<SourceBuffer> singleUnitBuffers;
         std::vector<SourceBuffer> deferredLibBuffers;
+
+        const size_t count = filePaths.size();
+        syntaxTrees.reserve(count);
+        singleUnitBuffers.reserve(count);
+        deferredLibBuffers.reserve(count);
 
         // Load all source files that were specified on the command line
         // or via library maps.
         for (auto& [path, isLibrary] : filePaths)
             loadSource(path, isLibrary, singleUnitBuffers, deferredLibBuffers, syntaxTrees);
 
-        // If we waited to parse direct buffers due to wanting a single unit, parse that unit now.
-        if (!singleUnitBuffers.empty()) {
-            auto tree = SyntaxTree::fromBuffers(singleUnitBuffers, sourceManager, optionBag);
-            if (srcOptions.onlyLint)
-                tree->isLibrary = true;
-
-            syntaxTrees.emplace_back(std::move(tree));
-        }
+        parseSingleUnit(singleUnitBuffers);
 
         // If we deferred libraries due to wanting to inherit macros, parse them now.
         if (!deferredLibBuffers.empty()) {
-            inheritedMacros = syntaxTrees.back()->getDefinedMacros();
+            syntaxTrees.reserve(syntaxTrees.size() + deferredLibBuffers.size());
             for (auto& buffer : deferredLibBuffers) {
                 auto tree = SyntaxTree::fromBuffer(buffer, sourceManager, optionBag,
                                                    inheritedMacros);
@@ -310,5 +346,42 @@ void SourceLoader::createLibrary(const LibraryDeclarationSyntax& syntax) {
     // TODO: check dups
     libraries.emplace(libName, Library{libName, std::move(files)});
 }
+
+void SourceLoader::loadSource(const std::filesystem::path& path, bool isLibrary,
+                              std::vector<SourceBuffer>& singleUnitBuffers,
+                              std::vector<SourceBuffer>& deferredLibBuffers,
+                              SyntaxTreeList& syntaxTrees) {
+    // TODO: Figure out which library this file is in.
+    const SourceLibrary* library = nullptr;
+
+    // Load into memory.
+    auto buffer = sourceManager.readSource(path, library);
+    if (!buffer) {
+        errorCallback(fmt::format("unable to open file: '{}'\n", getU8Str(path)));
+        return;
+    }
+
+    if (!isLibrary && srcOptions.singleUnit) {
+        // If this file was directly specified (i.e. not via
+        // a library mapping) and we're in single-unit mode,
+        // collect it for later parsing.
+        singleUnitBuffers.push_back(buffer);
+    }
+    else if (srcOptions.librariesInheritMacros) {
+        // If libraries inherit macros then we can't parse here,
+        // we need to wait for the main compilation unit to be
+        // parsed.
+        SLANG_ASSERT(isLibrary);
+        deferredLibBuffers.push_back(buffer);
+    }
+    else {
+        // Otherwise we can parse right away.
+        auto tree = SyntaxTree::fromBuffer(buffer, sourceManager, optionBag);
+        if (isLibrary || srcOptions.onlyLint)
+            tree->isLibrary = true;
+
+        syntaxTrees.emplace_back(std::move(tree));
+    }
+};
 
 } // namespace slang::driver
