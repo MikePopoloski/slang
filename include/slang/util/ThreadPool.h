@@ -60,6 +60,7 @@ public:
             thread.join();
     }
 
+    /// Gets the number of threads in the thread pool.
     size_t getThreadCount() const { return threads.size(); }
 
     /// @brief Pushes a new task into the pool for execution.
@@ -105,6 +106,35 @@ public:
         });
 
         return taskPromise->get_future();
+    }
+
+    /// @brief Pushes several tasks into the pool in order to parallelize
+    /// the loop given by [from, to).
+    ///
+    /// The loop will be broken into a number of blocks as specified by
+    /// @a numBlocks -- or if zero, the number of blocks will be set to
+    /// the number of threads in the pool.
+    template<typename TIndex, typename TFunc>
+    void pushLoop(TIndex from, TIndex to, TFunc&& body, size_t numBlocks = 0) {
+        SLANG_ASSERT(to >= from);
+        if (!numBlocks)
+            numBlocks = getThreadCount();
+
+        const size_t totalSize = size_t(to - from);
+        if (!totalSize)
+            return;
+
+        size_t blockSize = totalSize / numBlocks;
+        if (blockSize == 0) {
+            blockSize = 1;
+            numBlocks = totalSize;
+        }
+
+        for (size_t i = 0; i < numBlocks; i++) {
+            const TIndex start = TIndex(i * blockSize) + from;
+            const TIndex end = i == numBlocks - 1 ? to : TIndex(start + blockSize);
+            pushTask(std::forward<TFunc>(body), start, end);
+        }
     }
 
     /// Blocks the calling thread until all running tasks are complete.

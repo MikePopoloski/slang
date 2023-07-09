@@ -235,6 +235,34 @@ TEST_CASE("ThreadPool -- exception handling") {
 }
 #endif
 
+TEST_CASE("ThreadPool -- pushLoop") {
+    ThreadPool pool(3);
+
+    // Pushing an empty loop does nothing.
+    bool flag = false;
+    pool.pushLoop(3, 3, [&](int start, int end) { flag = true; });
+    pool.waitForAll();
+    CHECK(!flag);
+
+    std::array<std::atomic<bool>, 2> flags2{false, false};
+    pool.pushLoop(3, 5, [&](int start, int end) {
+        for (int i = start; i < end; i++)
+            flags2[i - 3] = true;
+    });
+    pool.waitForAll();
+    CHECK(std::ranges::all_of(flags2, [](auto&& f) -> bool { return f; }));
+
+    std::array<std::atomic<bool>, 10> flags10;
+    std::ranges::fill(flags10, false);
+
+    pool.pushLoop(3, 13, [&](int start, int end) {
+        for (int i = start; i < end; i++)
+            flags10[i - 3] = true;
+    });
+    pool.waitForAll();
+    CHECK(std::ranges::all_of(flags10, [](auto&& f) -> bool { return f; }));
+}
+
 #ifdef CI_BUILD
 
 TEST_CASE("ThreadPool -- no destruction deadlocks") {
