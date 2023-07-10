@@ -15,13 +15,13 @@ struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, true, false> {
 
     void handle(const PortSymbol& port) {
         NEEDS_SKIP_SYMBOL(port)
-        
+
         if (!port.isAnsiPort) {
             diags.add(diag::OnlyANSIPortDecl, port.location) << port.internalSymbol->name;
         }
     }
 };
-} // namespace enforce_port_suffix
+} // namespace no_ansi_port_decl
 
 using namespace no_ansi_port_decl;
 class OnlyANSIPortDecl : public TidyCheck {
@@ -46,9 +46,7 @@ public:
         return "Enforces that all ports in the design are declared using the ANSI port "
                "declaration style";
     }
-    std::string shortDescription() const override {
-        return "Enforces ANSI port declaration style";
-    }
+    std::string shortDescription() const override { return "Enforces ANSI port declaration style"; }
 };
 
 REGISTER(OnlyANSIPortDecl, OnlyANSIPortDecl, TidyKind::Style)
