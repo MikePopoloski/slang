@@ -51,8 +51,20 @@ private:
     /// Gets the next character from the file stream, skips whitespaces and tabs
     char nextChar();
 
-    /// Peeks the next character from the file stream
+    /// Peeks the next character from the file stream, skips whitespaces and tabs
     char peekChar();
+
+    /// Reads characters from the file stream and adds them to str
+    /// as long as pred for the extracted character is true.
+    /// Returns the first character for which pred is false.
+    template<typename Func, std::enable_if_t<std::is_invocable_r_v<bool, Func, char>, bool> = true>
+    char readIf(std::string& str, Func pred) {
+        char c;
+        while (pred(c = nextChar())) {
+            str.push_back(c);
+        }
+        return c;
+    }
 
     /// Parses config file and sets the state to parse checks or check configs
     void parseInitial();
@@ -62,6 +74,24 @@ private:
 
     /// Parses the check configs regions of the config file
     void parseCheckConfigs();
+
+    /// Parses multiple configValues by individually
+    /// parsing every single config values of type T
+    template<typename T>
+    void parseConfigValue(std::vector<T>& config, std::vector<std::string>&& configValues) {
+        config.clear();
+        for (auto& value : configValues) {
+            T tmp;
+            parseConfigValue(tmp, std::move(value));
+            config.emplace_back(std::move(tmp));
+        }
+    }
+
+    /// Parses configValue as a single string
+    void parseConfigValue(std::string& config, std::string&& configValue);
+
+    /// Parses configValue as a bool.
+    void parseConfigValue(bool& config, std::string&& configValue);
 
     /// Toggles all checks with the status provided
     void toggleAllChecks(TidyConfig::CheckStatus status);
@@ -74,7 +104,7 @@ private:
                      TidyConfig::CheckStatus status);
 
     /// Sets the check config with the provided value
-    void setCheckConfig(const std::string& configName, std::string configValue);
+    void setCheckConfig(const std::string& configName, std::vector<std::string> configValue);
 
     /// The name format of the checks provided by the user are required to be: this-is-my-check
     /// but the registered names in the TidyFactory are ThisIsMyCheck. This function translates from

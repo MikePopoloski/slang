@@ -11,9 +11,9 @@ TidyConfig::TidyConfig() {
     checkConfigs.clkName = "clk_i";
     checkConfigs.resetName = "rst_ni";
     checkConfigs.resetIsActiveHigh = true;
-    checkConfigs.inputPortSuffix = "_i";
-    checkConfigs.outputPortSuffix = "_o";
-    checkConfigs.inoutPortSuffix = "_io";
+    checkConfigs.inputPortSuffix = {"_i"};
+    checkConfigs.outputPortSuffix = {"_o"};
+    checkConfigs.inoutPortSuffix = {"_io"};
     checkConfigs.moduleInstantiationPrefix = "i_";
 
     auto styleChecks = std::unordered_map<std::string, CheckStatus>();

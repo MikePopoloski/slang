@@ -25,9 +25,9 @@ public:
         std::string clkName;
         std::string resetName;
         bool resetIsActiveHigh;
-        std::string inputPortSuffix;
-        std::string outputPortSuffix;
-        std::string inoutPortSuffix;
+        std::vector<std::string> inputPortSuffix;
+        std::vector<std::string> outputPortSuffix;
+        std::vector<std::string> inoutPortSuffix;
         std::string moduleInstantiationPrefix;
     };
 
@@ -39,6 +39,9 @@ public:
 
     /// Returns the check config object
     inline const CheckConfigs& getCheckConfigs() const { return checkConfigs; }
+
+    /// Returns the check config object
+    inline CheckConfigs& getCheckConfigs() { return checkConfigs; }
 
     // Returns a vector containing the file names that won't be checked by slang-tidy
     inline const std::vector<std::string>& getSkipFiles() const { return skipFiles; }
@@ -69,45 +72,34 @@ private:
     [[nodiscard]] bool toggleCheck(slang::TidyKind kind, const std::string& checkName,
                                    CheckStatus status);
 
-    /// Sets the value of a check config. Will throw an invalid_argument exception if the type of
-    /// value doesn't match the config type
-    template<typename T>
-    void setConfig(const std::string& configName, T value) {
+    /// Visits the value of a check config. Will throw an invalid_argument exception
+    /// if the configName is unknown
+    template<typename Visitor>
+    void visitConfig(std::string const& configName, Visitor visit) {
         if (configName == "clkName") {
-            innerSetConfig(checkConfigs.clkName, value);
+            visit(checkConfigs.clkName);
             return;
         }
         else if (configName == "resetName") {
-            innerSetConfig(checkConfigs.resetName, value);
+            visit(checkConfigs.resetName);
             return;
         }
         else if (configName == "resetIsActiveHigh") {
-            innerSetConfig(checkConfigs.resetIsActiveHigh, value);
+            visit(checkConfigs.resetIsActiveHigh);
             return;
         }
         else if (configName == "inputPortSuffix") {
-            innerSetConfig(checkConfigs.inputPortSuffix, value);
+            visit(checkConfigs.inputPortSuffix);
             return;
         }
         else if (configName == "outputPortSuffix") {
-            innerSetConfig(checkConfigs.outputPortSuffix, value);
+            visit(checkConfigs.outputPortSuffix);
             return;
         }
         else if (configName == "inoutPortSuffix") {
-            innerSetConfig(checkConfigs.inoutPortSuffix, value);
+            visit(checkConfigs.inoutPortSuffix);
             return;
         }
-
         SLANG_THROW(std::invalid_argument(fmt::format("The check: {} does not exist", configName)));
-    }
-
-    template<typename T, typename U>
-    void innerSetConfig(T& config, U value) {
-        if constexpr (std::is_same_v<T, U>)
-            config = value;
-        else
-            SLANG_THROW(
-                std::invalid_argument(fmt::format("check config expected a {} found {}",
-                                                  slang::typeName<T>(), slang::typeName<U>())));
     }
 };

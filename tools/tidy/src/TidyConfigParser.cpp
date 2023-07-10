@@ -8,6 +8,15 @@
 
 #include "slang/util/OS.h"
 
+template<typename T>
+struct is_vector : std::false_type {};
+
+template<typename T>
+struct is_vector<std::vector<T>> : std::true_type {};
+
+template<typename T>
+inline constexpr bool is_vector_v = is_vector<T>::value;
+
 TidyConfigParser::TidyConfigParser(const std::filesystem::path& path) {
     parserState = ParserState::Initial;
     filePath = path.string();
@@ -56,6 +65,11 @@ char TidyConfigParser::nextChar() {
 }
 
 inline char TidyConfigParser::peekChar() {
+    while (fileStream.peek() == ' ' || fileStream.peek() == '\t') {
+        fileStream.get();
+    }
+    if (fileStream.eof())
+        return 0;
 #if defined(_WIN32)
     char ret = fileStream.peek();
     if (ret == '\r') {
@@ -93,7 +107,7 @@ void TidyConfigParser::parseFile() {
 }
 
 void TidyConfigParser::parseInitial() {
-    char currentChar = nextChar();
+    char currentChar = peekChar();
     if (currentChar == 0)
         reportErrorAndExit("Unexpected end of file");
 
@@ -102,10 +116,7 @@ void TidyConfigParser::parseInitial() {
             fmt::format("Unexpected token with ascii_code ({}): {}", +currentChar, currentChar));
 
     std::string str;
-    while (!fileStream.eof() && isalpha(currentChar)) {
-        str.push_back(currentChar);
-        currentChar = nextChar();
-    }
+    currentChar = readIf(str, isalpha);
 
     if (currentChar != ':')
         reportErrorAndExit(fmt::format("Expected token: ':', found: (ASCIICode: {}){}",
@@ -138,7 +149,7 @@ void TidyConfigParser::parseChecks() {
         char currentChar = nextChar();
 
         // If it is a new line ignore it and get the following char
-        if (currentChar == '\n')
+        while (currentChar == '\n')
             currentChar = nextChar();
 
         if (currentChar == '-')
@@ -146,8 +157,6 @@ void TidyConfigParser::parseChecks() {
         else if (isalpha(currentChar))
             checkGroup.push_back(currentChar);
         else if (currentChar == '*') {
-            if (checkGroup.size())
-                reportErrorAndExit("Unexpected '*'");
             toggleAllChecks(TidyConfig::CheckStatus::ENABLED);
             currentChar = nextChar();
             if (currentChar == '\n' || currentChar == 0) {
@@ -258,49 +267,63 @@ void TidyConfigParser::parseChecks() {
 
 void TidyConfigParser::parseCheckConfigs() {
     while (!fileStream.eof()) {
-        std::string optionName;
-        std::string optionValue;
-
         // Parse optional newline
         if (peekChar() == '\n')
             nextChar();
 
         // Parse option name
-        while (true) {
-            char currentChar = nextChar();
-            if (currentChar == ':')
-                break;
-            else if (isalpha(currentChar))
-                optionName.push_back(currentChar);
-            else
-                reportErrorAndExit(fmt::format("Expected ':' or '_' or a letter but found ({}){}",
-                                               +currentChar, currentChar));
+        std::string optionName;
+        char currentChar = readIf(optionName, isalpha);
+
+        if (currentChar != ':') {
+            reportErrorAndExit(fmt::format("Expected ':' or a letter but found ({}){}",
+                                           +currentChar, currentChar));
         }
 
-        // Parse option value
-        while (true) {
-            char currentChar = nextChar();
-            if (currentChar == ',') {
-                setCheckConfig(optionName, optionValue);
-                if (nextChar() != '\n') {
-                    reportErrorAndExit(fmt::format("Expected new line but found: ({}){}",
-                                                   +currentChar, currentChar));
-                }
-                break;
+        // Parse multiple option values
+        std::vector<std::string> optionValues;
+
+        auto isOptionValueChar = [](char c) { return isalnum(c) || c == '_'; };
+
+        if (peekChar() == '[') {
+            currentChar = nextChar(); // skip '['
+
+            do {
+                std::string optionValue;
+                currentChar = readIf(optionValue, isOptionValueChar);
+                if (!optionValue.empty())
+                    optionValues.emplace_back(optionValue);
+            } while (currentChar == ',');
+
+            if (currentChar != ']') {
+                reportErrorAndExit(
+                    fmt::format("Expected ']' but found ({}){}", +currentChar, currentChar));
             }
-            else if (isalpha(currentChar) || currentChar == '_') {
-                optionValue.push_back(currentChar);
+            currentChar = nextChar();
+        }
+        else { // Parse single option value
+            std::string optionValue;
+            currentChar = readIf(optionValue, isOptionValueChar);
+            optionValues.emplace_back(optionValue);
+        }
+
+        if (currentChar == ',') {
+            setCheckConfig(optionName, optionValues);
+            if (nextChar() != '\n') {
+                reportErrorAndExit(
+                    fmt::format("Expected new line but found: ({}){}", +currentChar, currentChar));
             }
-            else if (currentChar == '\n' || currentChar == 0) {
-                while (peekChar() == '\n')
-                    nextChar();
-                setCheckConfig(optionName, optionValue);
-                parserState = ParserState::Initial;
-                return;
-            }
-            else
-                reportErrorAndExit(fmt::format("Expected ',' new line or a letter but found ({}){}",
-                                               +currentChar, currentChar));
+        }
+        else if (currentChar == '\n' || currentChar == 0) {
+            while (peekChar() == '\n')
+                nextChar();
+            setCheckConfig(optionName, optionValues);
+            parserState = ParserState::Initial;
+            return;
+        }
+        else {
+            reportErrorAndExit(fmt::format("Expected ',' new line or a letter but found ({}){}",
+                                           +currentChar, currentChar));
         }
     }
 }
@@ -336,25 +359,44 @@ void TidyConfigParser::toggleCheck(const std::string& groupName, const std::stri
             fmt::format("Check name {} does not exist in group {}", checkName, groupName));
 }
 
-void TidyConfigParser::setCheckConfig(const std::string& configName, std::string configValue) {
-    auto set_config = [&](auto value) {
-        SLANG_TRY {
-            config.setConfig(configName, value);
-        }
-        SLANG_CATCH(std::invalid_argument & exception) {
-#if __cpp_exceptions
-            reportWarning(exception.what());
-#endif
-        }
-    };
+void TidyConfigParser::parseConfigValue(std::string& config, std::string&& configValue) {
+    config = std::move(configValue);
+}
 
+void TidyConfigParser::parseConfigValue(bool& config, std::string&& configValue) {
     std::transform(configValue.begin(), configValue.end(), configValue.begin(), ::tolower);
-
     if (configValue == "true" || configValue == "false") {
-        set_config(configValue == "true");
+        config = configValue == "true";
+    }
+    else if (configValue == "1" || configValue == "0") {
+        config = configValue == "1";
     }
     else {
-        set_config(configValue);
+        reportErrorAndExit(fmt::format("Expected boolean expression but got '{}'", configValue));
+    }
+}
+
+void TidyConfigParser::setCheckConfig(const std::string& configName,
+                                      std::vector<std::string> configValues) {
+    SLANG_TRY {
+        config.visitConfig(configName, [&](auto& v) {
+            if constexpr (is_vector_v<std::remove_cvref_t<decltype(v)>>) {
+                parseConfigValue(v, std::move(configValues));
+            }
+            else {
+                if (configValues.size() != 1) {
+                    reportErrorAndExit(
+                        fmt::format("Expected one configuration value for '{}' but got {}",
+                                    configName, configValues.size()));
+                }
+                parseConfigValue(v, std::move(configValues.front()));
+            }
+        });
+    }
+    SLANG_CATCH(std::invalid_argument & exception) {
+#if __cpp_exceptions
+        reportWarning(exception.what());
+#endif
     }
 }
 
