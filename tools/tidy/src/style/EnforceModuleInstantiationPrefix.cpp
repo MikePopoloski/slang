@@ -22,7 +22,7 @@ struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, true, false> {
 
         std::string_view prefix = config.getCheckConfigs().moduleInstantiationPrefix;
         for (auto& member : instance.body.members()) {
-            if (!member.name.starts_with(prefix)) {
+            if (member.kind == SymbolKind::Instance && !member.name.starts_with(prefix)) {
                 diags.add(diag::EnforcePortSuffix, member.location) << member.name << prefix;
             }
         }
