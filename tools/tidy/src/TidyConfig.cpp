@@ -22,6 +22,7 @@ TidyConfig::TidyConfig() {
     styleChecks.emplace("EnforcePortSuffix", CheckStatus::ENABLED);
     styleChecks.emplace("NoOldAlwaysSyntax", CheckStatus::ENABLED);
     styleChecks.emplace("EnforceModuleInstantiationPrefix", CheckStatus::ENABLED);
+    styleChecks.emplace("OnlyANSIPortDecl", CheckStatus::ENABLED);
     checkKinds.insert({slang::TidyKind::Style, styleChecks});
 
     auto synthesisChecks = std::unordered_map<std::string, CheckStatus>();
