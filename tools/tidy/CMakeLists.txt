@@ -15,7 +15,8 @@ add_library(
   src/style/NoOldAlwaysSyntax.cpp
   src/style/AlwaysCombNonBlocking.cpp
   src/style/AlwaysFFBlocking.cpp
-  src/style/EnforceModuleInstantiationPrefix.cpp)
+  src/style/EnforceModuleInstantiationPrefix.cpp
+  src/style/OnlyANSIPortDecl.cpp)
 
 target_include_directories(slang_tidy_obj_lib PUBLIC include ../../include)
 target_link_libraries(slang_tidy_obj_lib PUBLIC slang::slang)
