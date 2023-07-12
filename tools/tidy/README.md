@@ -23,8 +23,9 @@ checks_config_section ::= "CheckConfigs:" [EOL] config+
 config                ::= ((config_tuple ",")* | config_tuple) END
 config_tuple          ::= config_name ":" config_value
 config_name           ::= identifier
-config_value          ::= identifier
-identifier            ::= {A-Za-z}+
+config_value          ::= expression | "[" ((expression ",")* expression)? "]"
+identifier            ::= { A-Z | a-z }+
+expression            ::= { A-Z | a-z | 0-9 | "_" }+
 EOL                   ::= '\n' | '\r' | '\r\n'
 END                   ::= EOL* | EOF
 ```

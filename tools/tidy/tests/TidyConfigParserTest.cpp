@@ -113,7 +113,7 @@ TEST_CASE("TidyParser: Set check config") {
     CHECK(config.getCheckConfigs().clkName == "clk");
     CHECK(config.getCheckConfigs().resetName == "rst_ni");
     CHECK_FALSE(config.getCheckConfigs().resetIsActiveHigh);
-    CHECK(config.getCheckConfigs().inputPortSuffix == "_p");
+    CHECK(config.getCheckConfigs().inputPortSuffix == std::vector<std::string>{"_p"});
 }
 
 TEST_CASE("TidyParser: CheckConfigs and Checks") {
@@ -132,7 +132,7 @@ TEST_CASE("TidyParser: CheckConfigs and Checks") {
     CHECK(config.getCheckConfigs().clkName == "clk");
     CHECK(config.getCheckConfigs().resetName == "rst_ni");
     CHECK_FALSE(config.getCheckConfigs().resetIsActiveHigh);
-    CHECK(config.getCheckConfigs().inputPortSuffix == "_p");
+    CHECK(config.getCheckConfigs().inputPortSuffix == std::vector<std::string>{"_p"});
     CHECK_FALSE(config.isCheckEnabled(slang::TidyKind::Style, "EnforcePortSuffix"));
     CHECK_FALSE(config.isCheckEnabled(slang::TidyKind::Synthesis, "OnlyAssignedOnReset"));
     CHECK(config.isCheckEnabled(slang::TidyKind::Synthesis, "RegisterHasNoReset"));
@@ -164,8 +164,23 @@ TEST_CASE("TidyParser: Checks and CheckConfigs") {
     CHECK(config.getCheckConfigs().clkName == "clk");
     CHECK(config.getCheckConfigs().resetName == "rst_ni");
     CHECK_FALSE(config.getCheckConfigs().resetIsActiveHigh);
-    CHECK(config.getCheckConfigs().inputPortSuffix == "_p");
+    CHECK(config.getCheckConfigs().inputPortSuffix == std::vector<std::string>{"_p"});
     CHECK_FALSE(config.isCheckEnabled(slang::TidyKind::Style, "EnforcePortSuffix"));
     CHECK_FALSE(config.isCheckEnabled(slang::TidyKind::Synthesis, "OnlyAssignedOnReset"));
     CHECK(config.isCheckEnabled(slang::TidyKind::Synthesis, "RegisterHasNoReset"));
+}
+
+TEST_CASE("TidyParser: Parse array") {
+    auto config_str = std::string(R"(CheckConfigs:
+        inputPortSuffix: [_a, _b, _c],
+        inoutPortSuffix: [_a],
+        outputPortSuffix: []
+)");
+    TidyConfigParser parser(config_str);
+
+    auto config = parser.getConfig();
+
+    CHECK(config.getCheckConfigs().inputPortSuffix == std::vector<std::string>{"_a", "_b", "_c"});
+    CHECK(config.getCheckConfigs().inoutPortSuffix == std::vector<std::string>{"_a"});
+    CHECK(config.getCheckConfigs().outputPortSuffix == std::vector<std::string>{});
 }

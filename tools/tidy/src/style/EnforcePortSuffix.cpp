@@ -4,6 +4,7 @@
 #include "ASTHelperVisitors.h"
 #include "TidyDiags.h"
 #include "fmt/color.h"
+#include "fmt/ranges.h"
 
 #include "slang/syntax/AllSyntax.h"
 
@@ -26,17 +27,27 @@ struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, true, false> {
         if (symbol->name == checkConfig.clkName || symbol->name == checkConfig.resetName)
             return;
 
-        std::string_view suffix;
+        std::vector<std::string> const* suffixes;
 
         if (port.direction == slang::ast::ArgumentDirection::In)
-            suffix = checkConfig.inputPortSuffix;
+            suffixes = &checkConfig.inputPortSuffix;
         else if (port.direction == slang::ast::ArgumentDirection::Out)
-            suffix = checkConfig.outputPortSuffix;
+            suffixes = &checkConfig.outputPortSuffix;
         else
-            suffix = checkConfig.inoutPortSuffix;
+            suffixes = &checkConfig.inoutPortSuffix;
 
-        if (!symbol->name.ends_with(suffix)) {
-            diags.add(diag::EnforcePortSuffix, port.location) << symbol->name << suffix;
+        bool matched = suffixes->empty(); // no error is thrown without a suffix
+        for (auto& suffix : *suffixes) {
+            matched |= symbol->name.ends_with(suffix);
+        }
+        if (!matched) {
+            auto& diag = diags.add(diag::EnforcePortSuffix, port.location) << symbol->name;
+            if (suffixes->size() == 1) {
+                diag << fmt::format("\"{}\"", suffixes->front());
+            }
+            else {
+                diag << fmt::format("{}", *suffixes);
+            }
         }
     }
 };
@@ -58,7 +69,7 @@ public:
     DiagCode diagCode() const override { return diag::EnforcePortSuffix; }
     DiagnosticSeverity diagSeverity() const override { return DiagnosticSeverity::Warning; }
     std::string diagString() const override {
-        return "port '{}' is not correctly suffixed with suffix: '{}'";
+        return "port '{}' is not correctly suffixed with suffix: {}";
     }
     std::string name() const override { return "EnforcePortSuffix"; }
     std::string description() const override {
