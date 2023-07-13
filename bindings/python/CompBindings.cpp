@@ -147,13 +147,12 @@ void registerCompilation(py::module_& m) {
         .def_readonly("sourceManager", &Driver::sourceManager)
         .def_readonly("diagEngine", &Driver::diagEngine)
         .def_readonly("diagClient", &Driver::diagClient)
-        .def_readonly("buffers", &Driver::buffers)
+        .def_readonly("sourceLoader", &Driver::sourceLoader)
         .def_readonly("syntaxTrees", &Driver::syntaxTrees)
         .def("addStandardArgs", &Driver::addStandardArgs)
         .def(
             "parseCommandLine",
             [](Driver& self, std::string_view arg) { return self.parseCommandLine(arg); }, "arg"_a)
-        .def("readSource", &Driver::readSource, "fileName"_a)
         .def("processCommandFile", &Driver::processCommandFile, "fileName"_a, "makeRelative"_a)
         .def("processOptions", &Driver::processOptions)
         .def("runPreprocessor", &Driver::runPreprocessor, "includeComments"_a,

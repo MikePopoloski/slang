@@ -36,7 +36,10 @@ using namespace ast;
 using namespace parsing;
 using namespace syntax;
 
-Driver::Driver() : diagEngine(sourceManager) {
+Driver::Driver() :
+    diagEngine(sourceManager),
+    sourceLoader(sourceManager, [this](auto& arg) { onLoadError(arg); }) {
+
     diagClient = std::make_shared<TextDiagnosticClient>();
     diagEngine.addClient(diagClient);
 }
@@ -190,20 +193,16 @@ void Driver::addStandardArgs() {
                 "<filename>", /* isFileName */ true);
 
     cmdLine.setPositional(
-        [this](std::string_view fileName) {
+        [this](std::string_view filePattern) {
             if (!options.excludeExts.empty()) {
-                if (size_t extIndex = fileName.find_last_of('.');
+                if (size_t extIndex = filePattern.find_last_of('.');
                     extIndex != std::string_view::npos) {
-                    if (options.excludeExts.count(std::string(fileName.substr(extIndex + 1))))
+                    if (options.excludeExts.count(std::string(filePattern.substr(extIndex + 1))))
                         return "";
                 }
             }
 
-            SourceBuffer buffer = readSource(fileName);
-            if (!buffer)
-                anyFailedLoads = true;
-
-            buffers.push_back(buffer);
+            sourceLoader.addFiles(filePattern);
             return "";
         },
         "files", /* isFileName */ true);
@@ -238,16 +237,6 @@ void Driver::addStandardArgs() {
         return false;
     }
     return !anyFailedLoads;
-}
-
-SourceBuffer Driver::readSource(std::string_view fileName) {
-    // TODO: handle library mapping
-    SourceBuffer buffer = sourceManager.readSource(widen(fileName), /* library */ nullptr);
-    if (!buffer) {
-        OS::printE(fg(diagClient->errorColor), "error: ");
-        OS::printE(fmt::format("no such file or directory: '{}'\n", fileName));
-    }
-    return buffer;
 }
 
 bool Driver::processCommandFile(std::string_view fileName, bool makeRelative) {
@@ -355,10 +344,18 @@ bool Driver::processOptions() {
         }
     }
 
+    for (auto& str : options.libraryFiles) {
+        // TODO: separate library name
+        sourceLoader.addLibraryFiles("", str);
+    }
+
+    sourceLoader.addSearchDirectories(options.libDirs);
+    sourceLoader.addSearchExtensions(options.libExts);
+
     if (anyFailedLoads)
         return false;
 
-    if (buffers.empty() && options.libraryFiles.empty()) {
+    if (!sourceLoader.hasFiles()) {
         OS::printE(fg(diagClient->errorColor), "error: ");
         OS::printE("no input files\n");
         return false;
@@ -378,9 +375,9 @@ bool Driver::processOptions() {
     diagEngine.setDefaultWarnings();
 
     // Some tools violate the standard in various ways, but in order to allow
-    // compatibility with these tools, we change the respective errors into a
-    // suppressible warning that we promote to an error by default, allowing
-    // the user to turn this back into a warning, ot turn it off altogether.
+    // compatibility with these tools we change the respective errors into a
+    // suppressible warning that we promote to an error by default. This allows
+    // the user to turn this back into a warning, or turn it off altogether.
 
     // allow ignoring duplicate module/interface/program definitions,
     diagEngine.setSeverity(diag::DuplicateDefinition, DiagnosticSeverity::Error);
@@ -443,6 +440,7 @@ bool Driver::runPreprocessor(bool includeComments, bool includeDirectives, bool 
     Diagnostics diagnostics;
     Preprocessor preprocessor(sourceManager, alloc, diagnostics, createOptionBag());
 
+    auto buffers = sourceLoader.loadSources();
     for (auto it = buffers.rbegin(); it != buffers.rend(); it++)
         preprocessor.pushSource(*it);
 
@@ -505,6 +503,7 @@ void Driver::reportMacros() {
     Diagnostics diagnostics;
     Preprocessor preprocessor(sourceManager, alloc, diagnostics, createOptionBag());
 
+    auto buffers = sourceLoader.loadSources();
     for (auto it = buffers.rbegin(); it != buffers.rend(); it++)
         preprocessor.pushSource(*it);
 
@@ -534,186 +533,24 @@ void Driver::reportMacros() {
 }
 
 bool Driver::parseAllSources() {
-    bool singleUnit = options.singleUnit == true;
-    bool onlyLint = options.onlyLint == true;
+    syntaxTrees = sourceLoader.loadAndParseSources(createOptionBag());
+    if (anyFailedLoads)
+        return false;
 
-    auto optionBag = createOptionBag();
-    if (singleUnit) {
-        auto tree = SyntaxTree::fromBuffers(buffers, sourceManager, optionBag);
-        if (onlyLint)
-            tree->isLibrary = true;
+    Diagnostics pragmaDiags = diagEngine.setMappingsFromPragmas();
+    for (auto& diag : pragmaDiags)
+        diagEngine.issue(diag);
 
-        syntaxTrees.emplace_back(std::move(tree));
-    }
-    else {
-        auto parse = [&](const SourceBuffer& buffer) {
-            auto tree = SyntaxTree::fromBuffer(buffer, sourceManager, optionBag);
-            if (onlyLint)
-                tree->isLibrary = true;
-
-            return tree;
-        };
-
-        // If there are enough buffers to parse and the user hasn't disabled
-        // the use of threads, do the parsing via a thread pool.
-        if (buffers.size() > 4 && options.numThreads != 1u) {
-            ThreadPool threadPool(options.numThreads.value_or(0u));
-
-            std::vector<std::future<std::shared_ptr<SyntaxTree>>> tasks;
-            tasks.reserve(buffers.size());
-            for (auto& buffer : buffers)
-                tasks.emplace_back(threadPool.submit(parse, buffer));
-
-            threadPool.waitForAll();
-            for (auto& task : tasks)
-                syntaxTrees.emplace_back(task.get());
-        }
-        else {
-            for (auto& buffer : buffers)
-                syntaxTrees.emplace_back(parse(buffer));
-        }
-    }
-
-    std::span<const DefineDirectiveSyntax* const> inheritedMacros;
-    if (options.librariesInheritMacros == true)
-        inheritedMacros = syntaxTrees.back()->getDefinedMacros();
-
-    bool ok = true;
-    for (auto& file : options.libraryFiles) {
-        SourceBuffer buffer = readSource(file);
-        if (!buffer) {
-            ok = false;
-            continue;
-        }
-
-        auto tree = SyntaxTree::fromBuffer(buffer, sourceManager, optionBag, inheritedMacros);
-        tree->isLibrary = true;
-        syntaxTrees.emplace_back(std::move(tree));
-    }
-
-    if (!options.libDirs.empty()) {
-        std::vector<fs::path> directories;
-        directories.reserve(options.libDirs.size());
-        for (auto& dir : options.libDirs)
-            directories.emplace_back(widen(dir));
-
-        flat_hash_set<std::string_view> uniqueExtensions;
-        uniqueExtensions.emplace(".v"sv);
-        uniqueExtensions.emplace(".sv"sv);
-        for (auto& ext : options.libExts)
-            uniqueExtensions.emplace(ext);
-
-        std::vector<fs::path> extensions;
-        for (auto ext : uniqueExtensions)
-            extensions.emplace_back(widen(ext));
-
-        // If library directories are specified, see if we have any unknown instantiations
-        // or package names for which we should search for additional source files to load.
-        flat_hash_set<std::string_view> knownNames;
-        auto addKnownNames = [&](const std::shared_ptr<SyntaxTree>& tree) {
-            auto& meta = tree->getMetadata();
-            for (auto& [n, _] : meta.nodeMap) {
-                auto decl = &n->as<ModuleDeclarationSyntax>();
-                std::string_view name = decl->header->name.valueText();
-                if (!name.empty())
-                    knownNames.emplace(name);
-            }
-
-            for (auto classDecl : meta.classDecls) {
-                std::string_view name = classDecl->name.valueText();
-                if (!name.empty())
-                    knownNames.emplace(name);
-            }
-        };
-
-        auto findMissingNames = [&](const std::shared_ptr<SyntaxTree>& tree,
-                                    flat_hash_set<std::string_view>& missing) {
-            auto& meta = tree->getMetadata();
-            for (auto name : meta.globalInstances) {
-                if (knownNames.find(name) == knownNames.end())
-                    missing.emplace(name);
-            }
-
-            for (auto idName : meta.classPackageNames) {
-                std::string_view name = idName->identifier.valueText();
-                if (!name.empty() && knownNames.find(name) == knownNames.end())
-                    missing.emplace(name);
-            }
-
-            for (auto importDecl : meta.packageImports) {
-                for (auto importItem : importDecl->items) {
-                    std::string_view name = importItem->package.valueText();
-                    if (!name.empty() && knownNames.find(name) == knownNames.end())
-                        missing.emplace(name);
-                }
-            }
-
-            for (auto intf : meta.interfacePorts) {
-                std::string_view name = intf->nameOrKeyword.valueText();
-                if (knownNames.find(name) == knownNames.end())
-                    missing.emplace(name);
-            }
-        };
-
-        for (auto& tree : syntaxTrees)
-            addKnownNames(tree);
-
-        flat_hash_set<std::string_view> missingNames;
-        for (auto& tree : syntaxTrees)
-            findMissingNames(tree, missingNames);
-
-        // Keep loading new files as long as we are making forward progress.
-        flat_hash_set<std::string_view> nextMissingNames;
-        while (true) {
-            for (auto name : missingNames) {
-                SourceBuffer buffer;
-                for (auto& dir : directories) {
-                    fs::path path(dir);
-                    path /= name;
-
-                    for (auto& ext : extensions) {
-                        path.replace_extension(ext);
-                        if (!sourceManager.isCached(path)) {
-                            // TODO: library mapping
-                            buffer = sourceManager.readSource(path, /* library */ nullptr);
-                            if (buffer)
-                                break;
-                        }
-                    }
-
-                    if (buffer)
-                        break;
-                }
-
-                if (buffer) {
-                    auto tree = SyntaxTree::fromBuffer(buffer, sourceManager, optionBag,
-                                                       inheritedMacros);
-                    tree->isLibrary = true;
-                    syntaxTrees.emplace_back(tree);
-
-                    addKnownNames(tree);
-                    findMissingNames(tree, nextMissingNames);
-                }
-            }
-
-            if (nextMissingNames.empty())
-                break;
-
-            missingNames = std::move(nextMissingNames);
-            nextMissingNames = {};
-        }
-    }
-
-    if (ok) {
-        Diagnostics pragmaDiags = diagEngine.setMappingsFromPragmas();
-        for (auto& diag : pragmaDiags)
-            diagEngine.issue(diag);
-    }
-
-    return ok;
+    return true;
 }
 
 Bag Driver::createOptionBag() const {
+    SourceOptions soptions;
+    soptions.numThreads = options.numThreads;
+    soptions.singleUnit = options.singleUnit == true;
+    soptions.onlyLint = options.onlyLint == true;
+    soptions.librariesInheritMacros = options.librariesInheritMacros == true;
+
     PreprocessorOptions ppoptions;
     ppoptions.predefines = options.defines;
     ppoptions.undefines = options.undefines;
@@ -783,6 +620,7 @@ Bag Driver::createOptionBag() const {
         coptions.defaultTimeScale = TimeScale::fromString(*options.timeScale);
 
     Bag bag;
+    bag.set(soptions);
     bag.set(ppoptions);
     bag.set(loptions);
     bag.set(poptions);
@@ -843,6 +681,13 @@ bool Driver::reportCompilation(Compilation& compilation, bool quiet) {
     }
 
     return succeeded;
+}
+
+void Driver::onLoadError(const std::string& message) {
+    OS::printE(fg(diagClient->errorColor), "error: ");
+    OS::printE(message);
+    OS::printE("\n");
+    anyFailedLoads = true;
 }
 
 } // namespace slang::driver

@@ -251,8 +251,7 @@ TEST_CASE("Driver invalid library module file") {
 
     const char* argv[] = {"testfoo", "-vblah.sv"};
     CHECK(driver.parseCommandLine(2, argv));
-    CHECK(driver.processOptions());
-    CHECK(!driver.parseAllSources());
+    CHECK(!driver.processOptions());
     CHECK(stderrContains("no such file"));
 }
 
@@ -405,7 +404,7 @@ TEST_CASE("Driver command files are processed strictly in order") {
     CHECK(driver.processOptions());
 
     std::vector<std::string_view> fileNames;
-    for (auto buffer : driver.buffers) {
+    for (auto buffer : driver.sourceLoader.loadSources()) {
         auto name = driver.sourceManager.getRawFileName(buffer.id);
         if (auto idx = name.find_last_of("/\\"); idx != name.npos)
             name = name.substr(idx + 1);

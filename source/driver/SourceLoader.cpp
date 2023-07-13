@@ -21,11 +21,8 @@ namespace slang::driver {
 
 using namespace syntax;
 
-SourceLoader::SourceLoader(SourceManager& sourceManager, const Bag& optionBag,
-                           ErrorCallback errorCallback) :
-    sourceManager(sourceManager),
-    optionBag(optionBag), srcOptions(optionBag.getOrDefault<SourceOptions>()),
-    errorCallback(std::move(errorCallback)) {
+SourceLoader::SourceLoader(SourceManager& sourceManager, ErrorCallback errorCallback) :
+    sourceManager(sourceManager), errorCallback(std::move(errorCallback)) {
 
     // When searching for library modules we will always include these extensions
     // in addition to anything the user provides.
@@ -50,7 +47,7 @@ void SourceLoader::addFiles(std::string_view pattern) {
         filePaths.emplace_back(std::move(path), /* isLibrary */ false);
 }
 
-bool SourceLoader::addLibraryMaps(std::string_view pattern) {
+bool SourceLoader::addLibraryMaps(std::string_view pattern, const Bag& optionBag) {
     // TODO: should this allow patterns / multiple maps?
 
     // Load and parse the map file right away; we need it to
@@ -76,7 +73,7 @@ bool SourceLoader::addLibraryMaps(std::string_view pattern) {
                     // TODO: set current path to this file
                     auto spec = token.valueText();
                     if (!spec.empty())
-                        addLibraryMaps(spec);
+                        addLibraryMaps(spec, optionBag);
                 }
                 break;
             }
@@ -121,9 +118,29 @@ void SourceLoader::addSearchExtensions(std::span<const std::string> extensions) 
     }
 }
 
-SourceLoader::SyntaxTreeList SourceLoader::loadAndParseSources() {
+std::vector<SourceBuffer> SourceLoader::loadSources() {
+    std::vector<SourceBuffer> results;
+    results.reserve(filePaths.size());
+
+    for (auto& [path, isLibrary] : filePaths) {
+        // TODO: Figure out which library this file is in.
+        const SourceLibrary* library = nullptr;
+
+        auto buffer = sourceManager.readSource(path, library);
+        if (!buffer)
+            errorCallback(fmt::format("unable to open file: '{}'", getU8Str(path)));
+        else
+            results.push_back(buffer);
+    }
+
+    return results;
+}
+
+SourceLoader::SyntaxTreeList SourceLoader::loadAndParseSources(const Bag& optionBag) {
     SyntaxTreeList syntaxTrees;
     std::span<const DefineDirectiveSyntax* const> inheritedMacros;
+
+    auto srcOptions = optionBag.getOrDefault<SourceOptions>();
 
     auto parseSingleUnit = [&](std::span<const SourceBuffer> buffers) {
         // If we waited to parse direct buffers due to wanting a single unit, parse that unit now.
@@ -160,7 +177,8 @@ SourceLoader::SyntaxTreeList SourceLoader::loadAndParseSources() {
 
             for (size_t i = start; i < end; i++) {
                 auto& [path, isLibrary] = filePaths[i];
-                loadSource(path, isLibrary, localSingleUnitBufs, localDeferredLibBufs, localTrees);
+                loadAndParse(path, isLibrary, optionBag, srcOptions, localSingleUnitBufs,
+                             localDeferredLibBufs, localTrees);
             }
 
             // Merge our local results into the shared lists.
@@ -203,8 +221,10 @@ SourceLoader::SyntaxTreeList SourceLoader::loadAndParseSources() {
 
         // Load all source files that were specified on the command line
         // or via library maps.
-        for (auto& [path, isLibrary] : filePaths)
-            loadSource(path, isLibrary, singleUnitBuffers, deferredLibBuffers, syntaxTrees);
+        for (auto& [path, isLibrary] : filePaths) {
+            loadAndParse(path, isLibrary, optionBag, srcOptions, singleUnitBuffers,
+                         deferredLibBuffers, syntaxTrees);
+        }
 
         parseSingleUnit(singleUnitBuffers);
 
@@ -347,17 +367,18 @@ void SourceLoader::createLibrary(const LibraryDeclarationSyntax& syntax) {
     libraries.emplace(libName, Library{libName, std::move(files)});
 }
 
-void SourceLoader::loadSource(const std::filesystem::path& path, bool isLibrary,
-                              std::vector<SourceBuffer>& singleUnitBuffers,
-                              std::vector<SourceBuffer>& deferredLibBuffers,
-                              SyntaxTreeList& syntaxTrees) {
+void SourceLoader::loadAndParse(const std::filesystem::path& path, bool isLibrary,
+                                const Bag& optionBag, const SourceOptions& srcOptions,
+                                std::vector<SourceBuffer>& singleUnitBuffers,
+                                std::vector<SourceBuffer>& deferredLibBuffers,
+                                SyntaxTreeList& syntaxTrees) {
     // TODO: Figure out which library this file is in.
     const SourceLibrary* library = nullptr;
 
     // Load into memory.
     auto buffer = sourceManager.readSource(path, library);
     if (!buffer) {
-        errorCallback(fmt::format("unable to open file: '{}'\n", getU8Str(path)));
+        errorCallback(fmt::format("unable to open file: '{}'", getU8Str(path)));
         return;
     }
 

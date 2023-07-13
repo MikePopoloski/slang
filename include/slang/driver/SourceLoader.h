@@ -59,7 +59,7 @@ public:
     using ErrorCallback = std::function<void(const std::string&)>;
 
     /// Constructs a new instance of the SourceLoader class.
-    SourceLoader(SourceManager& sourceManager, const Bag& optionBag, ErrorCallback errorCallback);
+    SourceLoader(SourceManager& sourceManager, ErrorCallback errorCallback);
 
     /// @brief Adds files to be loaded, specified via the given @a pattern.
     ///
@@ -97,11 +97,19 @@ public:
     /// in the search set.
     void addSearchExtensions(std::span<const std::string> extensions);
 
-    bool addLibraryMaps(std::string_view pattern);
+    /// Returns true if there is at least one source file to load,
+    /// and false if none have been added to the loader.
+    bool hasFiles() const { return !filePaths.empty(); }
+
+    bool addLibraryMaps(std::string_view pattern, const Bag& optionBag);
     const SyntaxTreeList& getLibraryMaps() const { return libraryMaps; }
 
+    /// Loads all of the sources that have been added to the loader,
+    /// but does not parse them. Returns the loaded buffers.
+    std::vector<SourceBuffer> loadSources();
+
     /// Loads and parses all of the source files that have been added to the loader.
-    SyntaxTreeList loadAndParseSources();
+    SyntaxTreeList loadAndParseSources(const Bag& optionBag);
 
 private:
     struct Library {
@@ -110,13 +118,11 @@ private:
     };
 
     void createLibrary(const syntax::LibraryDeclarationSyntax& syntax);
-    void loadSource(const std::filesystem::path& path, bool isLibrary,
-                    std::vector<SourceBuffer>& singleUnitBuffers,
-                    std::vector<SourceBuffer>& deferredLibBuffers, SyntaxTreeList& syntaxTrees);
+    void loadAndParse(const std::filesystem::path& path, bool isLibrary, const Bag& optionBag,
+                      const SourceOptions& srcOptions, std::vector<SourceBuffer>& singleUnitBuffers,
+                      std::vector<SourceBuffer>& deferredLibBuffers, SyntaxTreeList& syntaxTrees);
 
     SourceManager& sourceManager;
-    const Bag& optionBag;
-    SourceOptions srcOptions;
 
     std::vector<std::pair<std::filesystem::path, bool>> filePaths;
     flat_hash_map<std::filesystem::path, std::vector<std::pair<Library, GlobRank>>> fileToLibMap;

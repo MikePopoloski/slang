@@ -9,6 +9,7 @@
 #pragma once
 
 #include "slang/diagnostics/DiagnosticEngine.h"
+#include "slang/driver/SourceLoader.h"
 #include "slang/text/SourceManager.h"
 #include "slang/util/Bag.h"
 #include "slang/util/CommandLine.h"
@@ -48,8 +49,8 @@ public:
     /// The diagnostics client that will be used to render diagnostics.
     std::shared_ptr<TextDiagnosticClient> diagClient;
 
-    /// A list of source buffers that have been loaded.
-    std::vector<SourceBuffer> buffers;
+    /// The object that handles loading and parsing source files.
+    SourceLoader sourceLoader;
 
     /// A list of syntax trees that have been parsed.
     std::vector<std::shared_ptr<syntax::SyntaxTree>> syntaxTrees;
@@ -259,10 +260,6 @@ public:
     /// Any errors encountered will be printed to stderr.
     [[nodiscard]] bool parseCommandLine(std::string_view argList);
 
-    /// Reads a source file into the SourceManager and returns the buffer handle for it.
-    /// If an error occurs a diagnostic will be issued to stderr.
-    SourceBuffer readSource(std::string_view fileName);
-
     /// Processes the given command file for more options.
     /// Any errors encountered will be printed to stderr.
     /// @param fileName The name (and potentially the path) of the command file to process.
@@ -312,6 +309,8 @@ public:
     [[nodiscard]] bool reportCompilation(ast::Compilation& compilation, bool quiet);
 
 private:
+    void onLoadError(const std::string& message);
+
     bool anyFailedLoads = false;
 };
 
