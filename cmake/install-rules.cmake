@@ -32,6 +32,12 @@ install(
 if(fmt_FOUND)
   set(FMT_FIND_DEP "find_dependency(fmt)")
 endif()
+if(Boost_FOUND)
+  set(BOOST_FIND_DEP "find_dependency(Boost)")
+endif()
+if(mimalloc_FOUND)
+  set(BOOST_FIND_DEP "find_dependency(mimalloc)")
+endif()
 
 configure_package_config_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/cmake/slangConfig.cmake.in

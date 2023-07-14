@@ -95,8 +95,14 @@ if(SLANG_USE_MIMALLOC)
                                                              YES)
 
       get_target_property(lib_include_dirs mimalloc-static INCLUDE_DIRECTORIES)
-      target_include_directories(mimalloc-static SYSTEM
-                                 PUBLIC ${lib_include_dirs})
+      set(mi_version "2.1")
+
+      set(mi_install_incdir
+          "${CMAKE_INSTALL_INCLUDEDIR}/mimalloc-${mi_version}")
+
+      target_include_directories(
+        mimalloc-static SYSTEM PUBLIC $<BUILD_INTERFACE:${lib_include_dirs}>
+                                      $<INSTALL_INTERFACE:${mi_install_incdir}>)
     endif()
   endif()
 endif()
@@ -162,8 +168,10 @@ if(SLANG_INCLUDE_INSTALL)
       EXPORT slangTargets
       COMPONENT slang_Development)
     install(
-      DIRECTORY ${mimalloc_SOURCE_DIR}/include/
-      DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+      FILES ${mimalloc_SOURCE_DIR}/include/mimalloc.h
+            ${mimalloc_SOURCE_DIR}/include/mimalloc-override.h
+            ${mimalloc_SOURCE_DIR}/include/mimalloc-new-delete.h
+      DESTINATION ${mi_install_incdir}
       COMPONENT slang_Development)
   endif()
 endif()
