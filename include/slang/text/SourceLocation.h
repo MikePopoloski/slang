@@ -168,10 +168,20 @@ private:
     SourceLocation endLoc;
 };
 
-/// A named collection of source buffers that form a library.
-/// Each buffer is associated with one library.
+/// @brief A named collection of source buffers that form a library.
+///
+/// Each buffer is associated with one library. Libraries are
+/// uniqued by name, so identity for the rest of the program is
+/// by object address, not by the name string.
 struct SLANG_EXPORT SourceLibrary {
+    /// The name of the library.
     std::string name;
+
+    /// Default constructor.
+    SourceLibrary() = default;
+
+    /// Constructs a new source library object with the given name.
+    SourceLibrary(std::string&& name) : name(std::move(name)) {}
 };
 
 /// Represents a source buffer; that is, the actual text of the source
