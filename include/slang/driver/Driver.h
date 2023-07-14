@@ -309,6 +309,8 @@ public:
     [[nodiscard]] bool reportCompilation(ast::Compilation& compilation, bool quiet);
 
 private:
+    void printError(const std::string& message);
+    void printWarning(const std::string& message);
     void onLoadError(const std::string& message);
 
     bool anyFailedLoads = false;

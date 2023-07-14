@@ -244,8 +244,7 @@ bool Driver::processCommandFile(std::string_view fileName, bool makeRelative) {
     fs::path path = fs::canonical(widen(fileName), ec);
     std::vector<char> buffer;
     if (ec || !OS::readFile(path, buffer)) {
-        OS::printE(fg(diagClient->errorColor), "error: ");
-        OS::printE(fmt::format("no such file or directory: '{}'\n", fileName));
+        printError(fmt::format("unable to find or open file: '{}'", fileName));
         return false;
     }
 
@@ -302,28 +301,24 @@ bool Driver::processOptions() {
                 options.relaxEnumConversions = true;
         }
         else {
-            OS::printE(fg(diagClient->errorColor), "error: ");
-            OS::printE(fmt::format("invalid value for compat option: '{}'", *options.compat));
+            printError(fmt::format("invalid value for compat option: '{}'", *options.compat));
             return false;
         }
     }
 
     if (options.minTypMax.has_value() && options.minTypMax != "min" && options.minTypMax != "typ" &&
         options.minTypMax != "max") {
-        OS::printE(fg(diagClient->errorColor), "error: ");
-        OS::printE(fmt::format("invalid value for timing option: '{}'", *options.minTypMax));
+        printError(fmt::format("invalid value for timing option: '{}'", *options.minTypMax));
         return false;
     }
 
     if (options.librariesInheritMacros == true && !options.singleUnit.value_or(false)) {
-        OS::printE(fg(diagClient->errorColor), "error: ");
-        OS::printE("--single-unit must be set when --libraries-inherit-macros is used");
+        printError("--single-unit must be set when --libraries-inherit-macros is used");
         return false;
     }
 
     if (options.timeScale.has_value() && !TimeScale::fromString(*options.timeScale)) {
-        OS::printE(fg(diagClient->errorColor), "error: ");
-        OS::printE(fmt::format("invalid value for time scale option: '{}'", *options.timeScale));
+        printError(fmt::format("invalid value for time scale option: '{}'", *options.timeScale));
         return false;
     }
 
@@ -331,17 +326,13 @@ bool Driver::processOptions() {
         options.ignoreUnknownModules = true;
 
     for (const std::string& dir : options.includeDirs) {
-        if (!sourceManager.addUserDirectory(dir)) {
-            OS::printE(fg(diagClient->warningColor), "warning: ");
-            OS::printE(fmt::format("include directory '{}' does not exist\n", dir));
-        }
+        if (!sourceManager.addUserDirectory(dir))
+            printWarning(fmt::format("include directory '{}' does not exist", dir));
     }
 
     for (const std::string& dir : options.includeSystemDirs) {
-        if (!sourceManager.addSystemDirectory(dir)) {
-            OS::printE(fg(diagClient->warningColor), "warning: ");
-            OS::printE(fmt::format("include directory '{}' does not exist\n", dir));
-        }
+        if (!sourceManager.addSystemDirectory(dir))
+            printWarning(fmt::format("include directory '{}' does not exist", dir));
     }
 
     for (auto& str : options.libraryFiles) {
@@ -356,8 +347,7 @@ bool Driver::processOptions() {
         return false;
 
     if (!sourceLoader.hasFiles()) {
-        OS::printE(fg(diagClient->errorColor), "error: ");
-        OS::printE("no input files\n");
+        printError("no input files");
         return false;
     }
 
@@ -683,10 +673,20 @@ bool Driver::reportCompilation(Compilation& compilation, bool quiet) {
     return succeeded;
 }
 
-void Driver::onLoadError(const std::string& message) {
+void Driver::printError(const std::string& message) {
     OS::printE(fg(diagClient->errorColor), "error: ");
     OS::printE(message);
     OS::printE("\n");
+}
+
+void Driver::printWarning(const std::string& message) {
+    OS::printE(fg(diagClient->warningColor), "warning: ");
+    OS::printE(message);
+    OS::printE("\n");
+}
+
+void Driver::onLoadError(const std::string& message) {
+    printError(message);
     anyFailedLoads = true;
 }
 
