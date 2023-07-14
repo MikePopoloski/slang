@@ -36,7 +36,7 @@ if(Boost_FOUND)
   set(BOOST_FIND_DEP "find_dependency(Boost)")
 endif()
 if(mimalloc_FOUND)
-  set(BOOST_FIND_DEP "find_dependency(mimalloc)")
+  set(MIMALLOC_FIND_DEP "find_dependency(mimalloc)")
 endif()
 
 configure_package_config_file(
