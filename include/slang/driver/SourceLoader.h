@@ -114,7 +114,7 @@ public:
     /// and false if none have been added to the loader.
     bool hasFiles() const { return !fileEntries.empty(); }
 
-    bool addLibraryMaps(std::string_view pattern, const Bag& optionBag);
+    void addLibraryMaps(std::string_view pattern, const Bag& optionBag);
     const SyntaxTreeList& getLibraryMaps() const { return libraryMapTrees; }
 
     /// Loads all of the sources that have been added to the loader,

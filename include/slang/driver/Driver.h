@@ -67,18 +67,6 @@ public:
         /// A list of system include directories in which to search for files.
         std::vector<std::string> includeSystemDirs;
 
-        /// A list of library directories in which to search for missing modules.
-        std::vector<std::string> libDirs;
-
-        /// A list of extensions that will be used to search for library files.
-        std::vector<std::string> libExts;
-
-        /// A set of extensions that will be used to exclude files.
-        flat_hash_set<std::string> excludeExts;
-
-        /// A set of preprocessor directives to be ignored.
-        std::vector<std::string> ignoreDirectives;
-
         /// @}
         /// @name Preprocessing
         /// @{
@@ -94,6 +82,9 @@ public:
 
         /// If true, library files will inherit macro definitions from primary source files.
         std::optional<bool> librariesInheritMacros;
+
+        /// A set of preprocessor directives to be ignored.
+        std::vector<std::string> ignoreDirectives;
 
         /// @}
         /// @name Parsing
@@ -232,6 +223,18 @@ public:
         /// A list of library files to include in the compilation.
         std::vector<std::string> libraryFiles;
 
+        /// A list of library maps to include in the compilation.
+        std::vector<std::string> libMaps;
+
+        /// A list of library directories in which to search for missing modules.
+        std::vector<std::string> libDirs;
+
+        /// A list of extensions that will be used to search for library files.
+        std::vector<std::string> libExts;
+
+        /// A set of extensions that will be used to exclude files.
+        flat_hash_set<std::string> excludeExts;
+
         /// @}
     } options;
 
@@ -309,6 +312,9 @@ public:
     [[nodiscard]] bool reportCompilation(ast::Compilation& compilation, bool quiet);
 
 private:
+    void addParseOptions(Bag& bag) const;
+    void addCompilationOptions(Bag& bag) const;
+
     void printError(const std::string& message);
     void printWarning(const std::string& message);
     void onLoadError(const std::string& message);

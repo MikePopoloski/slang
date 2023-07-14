@@ -51,18 +51,6 @@ void Driver::addStandardArgs() {
     cmdLine.add("--isystem", options.includeSystemDirs, "Additional system include search paths",
                 "<dir>",
                 /* isFileName */ true);
-    cmdLine.add("-y,--libdir", options.libDirs,
-                "Library search paths, which will be searched for missing modules", "<dir>",
-                /* isFileName */ true);
-    cmdLine.add("-Y,--libext", options.libExts, "Additional library file extensions to search",
-                "<ext>");
-    cmdLine.add(
-        "--exclude-ext",
-        [this](std::string_view value) {
-            options.excludeExts.emplace(std::string(value));
-            return "";
-        },
-        "Exclude provided source files with these extensions", "<ext>");
 
     // Preprocessor
     cmdLine.add("-D,--define-macro,+define", options.defines,
@@ -186,11 +174,26 @@ void Driver::addStandardArgs() {
     // File lists
     cmdLine.add("--single-unit", options.singleUnit,
                 "Treat all input files as a single compilation unit");
-
     cmdLine.add("-v", options.libraryFiles,
                 "One or more library files, which are separate compilation units "
                 "where modules are not automatically instantiated.",
                 "<filename>", /* isFileName */ true);
+    cmdLine.add("--libmap", options.libMaps,
+                "One or more library map files to parse "
+                "for library name mappings and file lists",
+                "<filename>", /* isFileName */ true);
+    cmdLine.add("-y,--libdir", options.libDirs,
+                "Library search paths, which will be searched for missing modules", "<dir>",
+                /* isFileName */ true);
+    cmdLine.add("-Y,--libext", options.libExts, "Additional library file extensions to search",
+                "<ext>");
+    cmdLine.add(
+        "--exclude-ext",
+        [this](std::string_view value) {
+            options.excludeExts.emplace(std::string(value));
+            return "";
+        },
+        "Exclude provided source files with these extensions", "<ext>");
 
     cmdLine.setPositional(
         [this](std::string_view filePattern) {
@@ -340,6 +343,14 @@ bool Driver::processOptions() {
         sourceLoader.addLibraryFiles("", str);
     }
 
+    if (!options.libMaps.empty()) {
+        Bag optionBag;
+        addParseOptions(optionBag);
+
+        for (auto& map : options.libMaps)
+            sourceLoader.addLibraryMaps(map, optionBag);
+    }
+
     sourceLoader.addSearchDirectories(options.libDirs);
     sourceLoader.addSearchExtensions(options.libExts);
 
@@ -426,9 +437,12 @@ static std::string generateRandomAlphanumericString(TGenerator& gen, size_t len)
 
 bool Driver::runPreprocessor(bool includeComments, bool includeDirectives, bool obfuscateIds,
                              bool useFixedObfuscationSeed) {
+    Bag optionBag;
+    addParseOptions(optionBag);
+
     BumpAllocator alloc;
     Diagnostics diagnostics;
-    Preprocessor preprocessor(sourceManager, alloc, diagnostics, createOptionBag());
+    Preprocessor preprocessor(sourceManager, alloc, diagnostics, optionBag);
 
     auto buffers = sourceLoader.loadSources();
     for (auto it = buffers.rbegin(); it != buffers.rend(); it++)
@@ -489,9 +503,12 @@ bool Driver::runPreprocessor(bool includeComments, bool includeDirectives, bool 
 }
 
 void Driver::reportMacros() {
+    Bag optionBag;
+    addParseOptions(optionBag);
+
     BumpAllocator alloc;
     Diagnostics diagnostics;
-    Preprocessor preprocessor(sourceManager, alloc, diagnostics, createOptionBag());
+    Preprocessor preprocessor(sourceManager, alloc, diagnostics, optionBag);
 
     auto buffers = sourceLoader.loadSources();
     for (auto it = buffers.rbegin(); it != buffers.rend(); it++)
@@ -523,7 +540,10 @@ void Driver::reportMacros() {
 }
 
 bool Driver::parseAllSources() {
-    syntaxTrees = sourceLoader.loadAndParseSources(createOptionBag());
+    Bag optionBag;
+    addParseOptions(optionBag);
+
+    syntaxTrees = sourceLoader.loadAndParseSources(optionBag);
     if (anyFailedLoads)
         return false;
 
@@ -535,6 +555,13 @@ bool Driver::parseAllSources() {
 }
 
 Bag Driver::createOptionBag() const {
+    Bag bag;
+    addParseOptions(bag);
+    addCompilationOptions(bag);
+    return bag;
+}
+
+void Driver::addParseOptions(Bag& bag) const {
     SourceOptions soptions;
     soptions.numThreads = options.numThreads;
     soptions.singleUnit = options.singleUnit == true;
@@ -558,6 +585,13 @@ Bag Driver::createOptionBag() const {
     if (options.maxParseDepth.has_value())
         poptions.maxRecursionDepth = *options.maxParseDepth;
 
+    bag.set(soptions);
+    bag.set(ppoptions);
+    bag.set(loptions);
+    bag.set(poptions);
+}
+
+void Driver::addCompilationOptions(Bag& bag) const {
     CompilationOptions coptions;
     coptions.suppressUnused = false;
     coptions.scriptMode = false;
@@ -609,14 +643,7 @@ Bag Driver::createOptionBag() const {
     if (options.timeScale.has_value())
         coptions.defaultTimeScale = TimeScale::fromString(*options.timeScale);
 
-    Bag bag;
-    bag.set(soptions);
-    bag.set(ppoptions);
-    bag.set(loptions);
-    bag.set(poptions);
     bag.set(coptions);
-
-    return bag;
 }
 
 std::unique_ptr<Compilation> Driver::createCompilation() const {

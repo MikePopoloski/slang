@@ -53,42 +53,47 @@ void SourceLoader::addSearchExtensions(std::span<const std::string> extensions) 
     }
 }
 
-bool SourceLoader::addLibraryMaps(std::string_view pattern, const Bag& optionBag) {
-    // TODO: should this allow patterns / multiple maps?
-
-    // Load and parse the map file right away; we need it to
-    // figure out what other sources to load.
-    auto buffer = sourceManager.readSource(widen(pattern), /* library */ nullptr);
-    if (!buffer)
-        return false;
-
-    auto tree = SyntaxTree::fromLibraryMapBuffer(buffer, sourceManager, optionBag);
-    libraryMapTrees.push_back(tree);
-
-    for (auto member : tree->root().as<LibraryMapSyntax>().members) {
-        switch (member->kind) {
-            case SyntaxKind::ConfigDeclaration:
-            case SyntaxKind::EmptyMember:
-                break;
-            case SyntaxKind::LibraryIncludeStatement: {
-                auto token = member->as<FilePathSpecSyntax>().path;
-                // TODO: error handling if file(s) don't exist
-                // TODO: infinite include detection
-                // TODO: set current path to this file
-                auto spec = token.valueText();
-                if (!spec.empty())
-                    addLibraryMaps(spec, optionBag);
-                break;
-            }
-            case SyntaxKind::LibraryDeclaration:
-                createLibrary(member->as<LibraryDeclarationSyntax>());
-                break;
-            default:
-                SLANG_UNREACHABLE;
-        }
+void SourceLoader::addLibraryMaps(std::string_view pattern, const Bag& optionBag) {
+    SmallVector<fs::path> files;
+    auto rank = svGlob("", pattern, GlobMode::Files, files);
+    if (files.empty()) {
+        if (rank == GlobRank::ExactName)
+            errorCallback(fmt::format("no such file: '{}'", pattern));
+        return;
     }
 
-    return true;
+    for (auto& path : files) {
+        auto buffer = sourceManager.readSource(path, /* library */ nullptr);
+        if (!buffer) {
+            errorCallback(fmt::format("unable to open file: '{}'", getU8Str(path)));
+            continue;
+        }
+
+        auto tree = SyntaxTree::fromLibraryMapBuffer(buffer, sourceManager, optionBag);
+        libraryMapTrees.push_back(tree);
+
+        for (auto member : tree->root().as<LibraryMapSyntax>().members) {
+            switch (member->kind) {
+                case SyntaxKind::ConfigDeclaration:
+                case SyntaxKind::EmptyMember:
+                    break;
+                case SyntaxKind::LibraryIncludeStatement: {
+                    auto token = member->as<FilePathSpecSyntax>().path;
+                    // TODO: infinite include detection
+                    // TODO: set current path to this file
+                    auto spec = token.valueText();
+                    if (!spec.empty())
+                        addLibraryMaps(spec, optionBag);
+                    break;
+                }
+                case SyntaxKind::LibraryDeclaration:
+                    createLibrary(member->as<LibraryDeclarationSyntax>());
+                    break;
+                default:
+                    SLANG_UNREACHABLE;
+            }
+        }
+    }
 }
 
 std::vector<SourceBuffer> SourceLoader::loadSources() {
@@ -329,7 +334,6 @@ void SourceLoader::addFilesInternal(std::string_view pattern, bool isLibraryFile
     // TODO: basePath?
     SmallVector<fs::path> files;
     auto rank = svGlob("", pattern, GlobMode::Files, files);
-
     if (files.empty()) {
         if (rank == GlobRank::ExactName)
             errorCallback(fmt::format("no such file: '{}'", pattern));
