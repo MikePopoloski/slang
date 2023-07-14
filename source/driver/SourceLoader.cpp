@@ -33,11 +33,13 @@ SourceLoader::SourceLoader(SourceManager& sourceManager, ErrorCallback errorCall
 }
 
 void SourceLoader::addFiles(std::string_view pattern) {
-    addFilesInternal(pattern, /* isLibraryFile */ false, /* library */ nullptr);
+    addFilesInternal(pattern, /* isLibraryFile */ false, /* library */ nullptr,
+                     /* expandEnvVars */ false);
 }
 
 void SourceLoader::addLibraryFiles(std::string_view libName, std::string_view pattern) {
-    addFilesInternal(pattern, /* isLibraryFile */ true, getOrAddLibrary(libName));
+    addFilesInternal(pattern, /* isLibraryFile */ true, getOrAddLibrary(libName),
+                     /* expandEnvVars */ false);
 }
 
 void SourceLoader::addSearchDirectories(std::span<const std::string> directories) {
@@ -53,9 +55,10 @@ void SourceLoader::addSearchExtensions(std::span<const std::string> extensions) 
     }
 }
 
-void SourceLoader::addLibraryMaps(std::string_view pattern, const Bag& optionBag) {
+void SourceLoader::addLibraryMaps(std::string_view pattern, const Bag& optionBag,
+                                  bool expandEnvVars) {
     SmallVector<fs::path> files;
-    auto rank = svGlob("", pattern, GlobMode::Files, files);
+    auto rank = svGlob("", pattern, GlobMode::Files, files, expandEnvVars);
     if (files.empty()) {
         if (rank == GlobRank::ExactName)
             errorCallback(fmt::format("no such file: '{}'", pattern));
@@ -83,7 +86,7 @@ void SourceLoader::addLibraryMaps(std::string_view pattern, const Bag& optionBag
                     // TODO: set current path to this file
                     auto spec = token.valueText();
                     if (!spec.empty())
-                        addLibraryMaps(spec, optionBag);
+                        addLibraryMaps(spec, optionBag, /* expandEnvVars */ true);
                     break;
                 }
                 case SyntaxKind::LibraryDeclaration:
@@ -330,10 +333,10 @@ const SourceLibrary* SourceLoader::getOrAddLibrary(std::string_view name) {
 }
 
 void SourceLoader::addFilesInternal(std::string_view pattern, bool isLibraryFile,
-                                    const SourceLibrary* library) {
+                                    const SourceLibrary* library, bool expandEnvVars) {
     // TODO: basePath?
     SmallVector<fs::path> files;
-    auto rank = svGlob("", pattern, GlobMode::Files, files);
+    auto rank = svGlob("", pattern, GlobMode::Files, files, expandEnvVars);
     if (files.empty()) {
         if (rank == GlobRank::ExactName)
             errorCallback(fmt::format("no such file: '{}'", pattern));
@@ -380,7 +383,7 @@ void SourceLoader::createLibrary(const LibraryDeclarationSyntax& syntax) {
     for (auto filePath : syntax.filePaths) {
         auto spec = filePath->path.valueText();
         if (!spec.empty())
-            addFilesInternal(spec, /* isLibraryFile */ true, library);
+            addFilesInternal(spec, /* isLibraryFile */ true, library, /* expandEnvVars */ true);
     }
 
     // TODO: incdirs

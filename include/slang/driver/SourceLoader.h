@@ -110,12 +110,19 @@ public:
     /// in the search set.
     void addSearchExtensions(std::span<const std::string> extensions);
 
+    /// @brief Adds library map files to the loader.
+    ///
+    /// All files that match the given pattern will be loaded and parsed as if
+    /// they were library map files. The libraries within those maps will be
+    /// created and any files they reference will be included in the list to load.
+    void addLibraryMaps(std::string_view pattern, const Bag& optionBag, bool expandEnvVars = false);
+
+    /// Returns a list of all library map syntax trees that have been loaded and parsed.
+    const SyntaxTreeList& getLibraryMaps() const { return libraryMapTrees; }
+
     /// Returns true if there is at least one source file to load,
     /// and false if none have been added to the loader.
     bool hasFiles() const { return !fileEntries.empty(); }
-
-    void addLibraryMaps(std::string_view pattern, const Bag& optionBag);
-    const SyntaxTreeList& getLibraryMaps() const { return libraryMapTrees; }
 
     /// Loads all of the sources that have been added to the loader,
     /// but does not parse them. Returns the loaded buffers.
@@ -160,7 +167,7 @@ private:
 
     const SourceLibrary* getOrAddLibrary(std::string_view name);
     void addFilesInternal(std::string_view pattern, bool isLibraryFile,
-                          const SourceLibrary* library);
+                          const SourceLibrary* library, bool expandEnvVars);
     void createLibrary(const syntax::LibraryDeclarationSyntax& syntax);
     void loadAndParse(const FileEntry& fileEntry, const Bag& optionBag,
                       const SourceOptions& srcOptions, std::vector<SourceBuffer>& singleUnitBuffers,

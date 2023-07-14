@@ -172,24 +172,32 @@ GlobRank svGlobInternal(const fs::path& basePath, std::string_view pattern, Glob
 }
 
 SLANG_EXPORT GlobRank svGlob(const fs::path& basePath, std::string_view pattern, GlobMode mode,
-                             SmallVector<fs::path>& results) {
-    // Expand any environment variable references in the pattern.
-    std::string patternStr;
-    patternStr.reserve(pattern.size());
+                             SmallVector<fs::path>& results, bool expandEnvVars) {
+    fs::path patternPath;
+    if (expandEnvVars) {
+        std::string patternStr;
+        patternStr.reserve(pattern.size());
 
-    auto ptr = pattern.data();
-    auto end = ptr + pattern.size();
-    while (ptr != end) {
-        char c = *ptr++;
-        if (c == '$' && ptr != end)
-            patternStr.append(OS::parseEnvVar(ptr, end));
-        else
-            patternStr.push_back(c);
+        auto ptr = pattern.data();
+        auto end = ptr + pattern.size();
+        while (ptr != end) {
+            char c = *ptr++;
+            if (c == '$' && ptr != end)
+                patternStr.append(OS::parseEnvVar(ptr, end));
+            else
+                patternStr.push_back(c);
+        }
+
+        patternPath = fs::path(widen(patternStr));
+    }
+    else {
+        patternPath = fs::path(widen(pattern));
     }
 
     // Normalize the path to remove duplicate separators, figure out
     // whether we have an absolute path, etc.
-    auto patternPath = fs::path(widen(patternStr)).lexically_normal();
+    patternPath = patternPath.lexically_normal();
+
     if (patternPath.has_root_path()) {
         return svGlobInternal(patternPath.root_path(), narrow(patternPath.relative_path().native()),
                               mode, results);

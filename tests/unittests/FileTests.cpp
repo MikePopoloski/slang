@@ -87,7 +87,7 @@ TEST_CASE("Read header (dev/null)") {
 static void globAndCheck(const fs::path& basePath, std::string_view pattern, GlobMode mode,
                          GlobRank expectedRank, std::initializer_list<const char*> expected) {
     SmallVector<fs::path> results;
-    auto rank = svGlob(basePath, pattern, mode, results);
+    auto rank = svGlob(basePath, pattern, mode, results, /* expandEnvVars */ true);
 
     CHECK(rank == expectedRank);
     CHECK(results.size() == expected.size());

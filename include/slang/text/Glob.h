@@ -45,6 +45,7 @@ enum class GlobMode {
 /// glob implementations except for the use of '...' to mean recursive
 /// directory match.
 SLANG_EXPORT GlobRank svGlob(const std::filesystem::path& basePath, std::string_view pattern,
-                             GlobMode mode, SmallVector<std::filesystem::path>& results);
+                             GlobMode mode, SmallVector<std::filesystem::path>& results,
+                             bool expandEnvVars);
 
 } // namespace slang
