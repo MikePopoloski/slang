@@ -25,6 +25,15 @@ class SourceManager;
 struct SourceBuffer;
 struct SourceLibrary;
 
+// This is needed as a workaround for missing std::hash<> of paths;
+// it was added as a DR to C++17 but not all of our targets have it yet.
+template<>
+struct hash<std::filesystem::path> {
+    uint64_t operator()(const std::filesystem::path& path) const noexcept {
+        return std::filesystem::hash_value(path);
+    }
+};
+
 } // namespace slang
 
 namespace slang::syntax {
