@@ -7,6 +7,7 @@
 //------------------------------------------------------------------------------
 #include "slang/text/Glob.h"
 
+#include "slang/util/Hash.h"
 #include "slang/util/OS.h"
 #include "slang/util/String.h"
 
@@ -50,24 +51,31 @@ static bool matches(std::string_view str, std::string_view pattern) {
 
 static void iterDirectory(const fs::path& path, SmallVector<fs::path>& results, GlobMode mode) {
     std::error_code ec;
-    for (auto& entry : fs::directory_iterator(path.empty() ? "." : path,
-                                              fs::directory_options::follow_directory_symlink |
-                                                  fs::directory_options::skip_permission_denied,
-                                              ec)) {
-        if ((mode == GlobMode::Files && entry.is_regular_file(ec)) ||
-            (mode == GlobMode::Directories && entry.is_directory(ec))) {
-            results.emplace_back(entry.path());
+    for (auto it = fs::directory_iterator(path.empty() ? "." : path,
+                                          fs::directory_options::follow_directory_symlink |
+                                              fs::directory_options::skip_permission_denied,
+                                          ec);
+         it != fs::directory_iterator(); it.increment(ec)) {
+        auto status = it->status(ec);
+        if ((mode == GlobMode::Files && it->is_regular_file(ec)) ||
+            (mode == GlobMode::Directories && it->is_directory(ec))) {
+            results.emplace_back(it->path());
         }
     }
 }
 
-static void iterDirectoriesRecursive(const fs::path& path, SmallVector<fs::path>& results) {
+static void iterDirectoriesRecursive(const fs::path& path, SmallVector<fs::path>& results,
+                                     flat_hash_set<std::string>& visited) {
     SmallVector<fs::path> local;
     iterDirectory(path, local, GlobMode::Directories);
 
     for (auto&& p : local) {
-        iterDirectoriesRecursive(p, results);
-        results.emplace_back(std::move(p));
+        // Avoid recursing into directories we've already visited (via symlinks).
+        std::error_code ec;
+        if (visited.emplace(getU8Str(fs::weakly_canonical(p, ec))).second) {
+            iterDirectoriesRecursive(p, results, visited);
+            results.emplace_back(std::move(p));
+        }
     }
 }
 
@@ -92,7 +100,8 @@ GlobRank svGlobInternal(const fs::path& basePath, std::string_view pattern, Glob
         // and means to recursively pull all directories.
         if (pattern.starts_with("..."sv)) {
             SmallVector<fs::path> dirs;
-            iterDirectoriesRecursive(currPath, dirs);
+            flat_hash_set<std::string> visited;
+            iterDirectoriesRecursive(currPath, dirs, visited);
             dirs.emplace_back(std::move(currPath));
 
             pattern = pattern.substr(3);

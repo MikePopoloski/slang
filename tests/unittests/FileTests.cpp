@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 #include "Test.h"
+#include <fstream>
 
 #include "slang/text/Glob.h"
 #include "slang/text/SourceManager.h"
@@ -134,6 +135,20 @@ TEST_CASE("Directory globbing") {
     globAndCheck(testDir, "system/", GlobMode::Directories, GlobRank::Directory, {"system"});
     globAndCheck(testDir, ".../", GlobMode::Directories, GlobRank::Directory,
                  {"library", "nested", "system", "data"});
+}
+
+TEST_CASE("File glob infinite recursion") {
+    std::error_code ec;
+    auto p = fs::temp_directory_path(ec);
+    fs::current_path(p, ec);
+    fs::create_directories("sandbox/a/b/c", ec);
+    fs::create_directories("sandbox/a/b/d/e", ec);
+    std::ofstream("sandbox/a/b/file1.txt");
+    fs::create_directory_symlink(fs::absolute("sandbox/a", ec), "sandbox/a/b/c/syma", ec);
+
+    globAndCheck({}, "sandbox/...", GlobMode::Files, GlobRank::Directory, {"file1.txt"});
+
+    fs::remove_all("sandbox", ec);
 }
 
 TEST_CASE("Config Blocks") {
