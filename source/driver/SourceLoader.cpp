@@ -33,76 +33,11 @@ SourceLoader::SourceLoader(SourceManager& sourceManager, ErrorCallback errorCall
 }
 
 void SourceLoader::addFiles(std::string_view pattern) {
-    SmallVector<fs::path> files;
-    auto rank = svGlob("", pattern, GlobMode::Files, files);
-
-    if (files.empty()) {
-        if (rank == GlobRank::ExactName)
-            errorCallback(fmt::format("no such file: '{}'", pattern));
-        return;
-    }
-
-    filePaths.reserve(filePaths.size() + files.size());
-    for (auto&& path : files)
-        filePaths.emplace_back(std::move(path), /* isLibrary */ false);
+    addFilesInternal(pattern, /* isLibraryFile */ false, /* library */ nullptr);
 }
 
-bool SourceLoader::addLibraryMaps(std::string_view pattern, const Bag& optionBag) {
-    // TODO: should this allow patterns / multiple maps?
-
-    // Load and parse the map file right away; we need it to
-    // figure out what other sources to load.
-    // TODO: make readSource take a fs::path?
-    auto buffer = sourceManager.readSource(widen(pattern), /* library */ nullptr);
-    if (!buffer)
-        return false;
-
-    auto tree = SyntaxTree::fromLibraryMapBuffer(buffer, sourceManager, optionBag);
-    libraryMaps.push_back(tree);
-
-    for (auto member : tree->root().as<LibraryMapSyntax>().members) {
-        switch (member->kind) {
-            case SyntaxKind::ConfigDeclaration:
-            case SyntaxKind::EmptyMember:
-                break;
-            case SyntaxKind::LibraryIncludeStatement: {
-                auto token = member->as<FilePathSpecSyntax>().path;
-                if (!token.isMissing()) {
-                    // TODO: error handling if file(s) don't exist
-                    // TODO: infinite include detection
-                    // TODO: set current path to this file
-                    auto spec = token.valueText();
-                    if (!spec.empty())
-                        addLibraryMaps(spec, optionBag);
-                }
-                break;
-            }
-            case SyntaxKind::LibraryDeclaration:
-                createLibrary(member->as<LibraryDeclarationSyntax>());
-                break;
-            default:
-                SLANG_UNREACHABLE;
-        }
-    }
-
-    return true;
-}
-
-void SourceLoader::addLibraryFiles(std::string_view, std::string_view pattern) {
-    // TODO: lookup library
-
-    SmallVector<fs::path> files;
-    auto rank = svGlob("", pattern, GlobMode::Files, files);
-
-    if (files.empty()) {
-        if (rank == GlobRank::ExactName)
-            errorCallback(fmt::format("no such file: '{}'", pattern));
-        return;
-    }
-
-    filePaths.reserve(filePaths.size() + files.size());
-    for (auto&& path : files)
-        filePaths.emplace_back(std::move(path), /* isLibrary */ true);
+void SourceLoader::addLibraryFiles(std::string_view libName, std::string_view pattern) {
+    addFilesInternal(pattern, /* isLibraryFile */ true, getOrAddLibrary(libName));
 }
 
 void SourceLoader::addSearchDirectories(std::span<const std::string> directories) {
@@ -118,17 +53,52 @@ void SourceLoader::addSearchExtensions(std::span<const std::string> extensions) 
     }
 }
 
+bool SourceLoader::addLibraryMaps(std::string_view pattern, const Bag& optionBag) {
+    // TODO: should this allow patterns / multiple maps?
+
+    // Load and parse the map file right away; we need it to
+    // figure out what other sources to load.
+    auto buffer = sourceManager.readSource(widen(pattern), /* library */ nullptr);
+    if (!buffer)
+        return false;
+
+    auto tree = SyntaxTree::fromLibraryMapBuffer(buffer, sourceManager, optionBag);
+    libraryMapTrees.push_back(tree);
+
+    for (auto member : tree->root().as<LibraryMapSyntax>().members) {
+        switch (member->kind) {
+            case SyntaxKind::ConfigDeclaration:
+            case SyntaxKind::EmptyMember:
+                break;
+            case SyntaxKind::LibraryIncludeStatement: {
+                auto token = member->as<FilePathSpecSyntax>().path;
+                // TODO: error handling if file(s) don't exist
+                // TODO: infinite include detection
+                // TODO: set current path to this file
+                auto spec = token.valueText();
+                if (!spec.empty())
+                    addLibraryMaps(spec, optionBag);
+                break;
+            }
+            case SyntaxKind::LibraryDeclaration:
+                createLibrary(member->as<LibraryDeclarationSyntax>());
+                break;
+            default:
+                SLANG_UNREACHABLE;
+        }
+    }
+
+    return true;
+}
+
 std::vector<SourceBuffer> SourceLoader::loadSources() {
     std::vector<SourceBuffer> results;
-    results.reserve(filePaths.size());
+    results.reserve(fileEntries.size());
 
-    for (auto& [path, isLibrary] : filePaths) {
-        // TODO: Figure out which library this file is in.
-        const SourceLibrary* library = nullptr;
-
-        auto buffer = sourceManager.readSource(path, library);
+    for (auto& entry : fileEntries) {
+        auto buffer = sourceManager.readSource(entry.path, entry.library);
         if (!buffer)
-            errorCallback(fmt::format("unable to open file: '{}'", getU8Str(path)));
+            errorCallback(fmt::format("unable to open file: '{}'", getU8Str(entry.path)));
         else
             results.push_back(buffer);
     }
@@ -154,7 +124,7 @@ SourceLoader::SyntaxTreeList SourceLoader::loadAndParseSources(const Bag& option
         }
     };
 
-    if (filePaths.size() >= MinFilesForThreading && srcOptions.numThreads != 1u) {
+    if (fileEntries.size() >= MinFilesForThreading && srcOptions.numThreads != 1u) {
         // If there are enough files to parse and the user hasn't disabled
         // the use of threads, do the parsing via a thread pool.
         ThreadPool threadPool(srcOptions.numThreads.value_or(0u));
@@ -165,7 +135,7 @@ SourceLoader::SyntaxTreeList SourceLoader::loadAndParseSources(const Bag& option
 
         // Load all source files that were specified on the command line
         // or via library maps.
-        threadPool.pushLoop(size_t(0), filePaths.size(), [&](size_t start, size_t end) {
+        threadPool.pushLoop(size_t(0), fileEntries.size(), [&](size_t start, size_t end) {
             SyntaxTreeList localTrees;
             std::vector<SourceBuffer> localSingleUnitBufs;
             std::vector<SourceBuffer> localDeferredLibBufs;
@@ -176,8 +146,8 @@ SourceLoader::SyntaxTreeList SourceLoader::loadAndParseSources(const Bag& option
             localDeferredLibBufs.reserve(count);
 
             for (size_t i = start; i < end; i++) {
-                auto& [path, isLibrary] = filePaths[i];
-                loadAndParse(path, isLibrary, optionBag, srcOptions, localSingleUnitBufs,
+                auto& entry = fileEntries[i];
+                loadAndParse(entry, optionBag, srcOptions, localSingleUnitBufs,
                              localDeferredLibBufs, localTrees);
             }
 
@@ -214,16 +184,16 @@ SourceLoader::SyntaxTreeList SourceLoader::loadAndParseSources(const Bag& option
         std::vector<SourceBuffer> singleUnitBuffers;
         std::vector<SourceBuffer> deferredLibBuffers;
 
-        const size_t count = filePaths.size();
+        const size_t count = fileEntries.size();
         syntaxTrees.reserve(count);
         singleUnitBuffers.reserve(count);
         deferredLibBuffers.reserve(count);
 
         // Load all source files that were specified on the command line
         // or via library maps.
-        for (auto& [path, isLibrary] : filePaths) {
-            loadAndParse(path, isLibrary, optionBag, srcOptions, singleUnitBuffers,
-                         deferredLibBuffers, syntaxTrees);
+        for (auto& entry : fileEntries) {
+            loadAndParse(entry, optionBag, srcOptions, singleUnitBuffers, deferredLibBuffers,
+                         syntaxTrees);
         }
 
         parseSingleUnit(singleUnitBuffers);
@@ -308,9 +278,9 @@ SourceLoader::SyntaxTreeList SourceLoader::loadAndParseSources(const Bag& option
                     for (auto& ext : searchExtensions) {
                         path.replace_extension(ext);
                         if (!sourceManager.isCached(path)) {
-                            // TODO: figure out which library this is
-                            const SourceLibrary* library = nullptr;
-                            buffer = sourceManager.readSource(path, library);
+                            // This file is never part of a library because if
+                            // it was we would have already loaded it earlier.
+                            buffer = sourceManager.readSource(path, /* library */ nullptr);
                             if (buffer)
                                 break;
                         }
@@ -342,47 +312,91 @@ SourceLoader::SyntaxTreeList SourceLoader::loadAndParseSources(const Bag& option
     return syntaxTrees;
 }
 
+const SourceLibrary* SourceLoader::getOrAddLibrary(std::string_view name) {
+    if (name.empty())
+        return nullptr;
+
+    auto nameStr = std::string(name);
+    auto& lib = libraries[nameStr];
+    if (!lib)
+        lib = std::make_unique<SourceLibrary>(std::move(nameStr));
+
+    return lib.get();
+}
+
+void SourceLoader::addFilesInternal(std::string_view pattern, bool isLibraryFile,
+                                    const SourceLibrary* library) {
+    // TODO: basePath?
+    SmallVector<fs::path> files;
+    auto rank = svGlob("", pattern, GlobMode::Files, files);
+
+    if (files.empty()) {
+        if (rank == GlobRank::ExactName)
+            errorCallback(fmt::format("no such file: '{}'", pattern));
+        return;
+    }
+
+    fileEntries.reserve(fileEntries.size() + files.size());
+    for (auto&& path : files) {
+        std::error_code ec;
+        auto [it, inserted] = fileIndex.try_emplace(fs::weakly_canonical(path, ec),
+                                                    fileEntries.size());
+        if (inserted) {
+            fileEntries.emplace_back(std::move(path), isLibraryFile, library, rank);
+        }
+        else {
+            // If any of the times we see this is entry is for a non-library file,
+            // then it's always a non-library file, hence the &=.
+            auto& entry = fileEntries[it->second];
+            entry.isLibraryFile &= isLibraryFile;
+
+            if (library) {
+                // If there is already a library for this entry and our rank is lower,
+                // we overrule it. If it's higher, we ignore. If it's a tie, we remember
+                // that fact for now and later we will issue an error if the tie is
+                // never resolved.
+                if (!entry.library || rank < entry.libraryRank) {
+                    entry.library = library;
+                    entry.libraryRank = rank;
+                }
+                else if (rank == entry.libraryRank) {
+                    entry.secondLib = library;
+                }
+            }
+        }
+    }
+}
+
 void SourceLoader::createLibrary(const LibraryDeclarationSyntax& syntax) {
     auto libName = syntax.name.valueText();
     if (libName.empty())
         return;
 
-    std::vector<std::pair<std::filesystem::path, GlobRank>> files;
+    auto library = getOrAddLibrary(libName);
     for (auto filePath : syntax.filePaths) {
         auto spec = filePath->path.valueText();
-        if (!spec.empty()) {
-            // TODO: base path?
-            SmallVector<fs::path> globFiles;
-            auto rank = svGlob("", spec, GlobMode::Files, globFiles);
-
-            files.reserve(files.size() + globFiles.size());
-            for (auto& path : globFiles)
-                files.emplace_back(std::move(path), rank);
-        }
+        if (!spec.empty())
+            addFilesInternal(spec, /* isLibraryFile */ true, library);
     }
 
     // TODO: incdirs
-
-    // TODO: check dups
-    libraries.emplace(libName, Library{libName, std::move(files)});
 }
 
-void SourceLoader::loadAndParse(const std::filesystem::path& path, bool isLibrary,
-                                const Bag& optionBag, const SourceOptions& srcOptions,
+void SourceLoader::loadAndParse(const FileEntry& entry, const Bag& optionBag,
+                                const SourceOptions& srcOptions,
                                 std::vector<SourceBuffer>& singleUnitBuffers,
                                 std::vector<SourceBuffer>& deferredLibBuffers,
                                 SyntaxTreeList& syntaxTrees) {
-    // TODO: Figure out which library this file is in.
-    const SourceLibrary* library = nullptr;
+    // TODO: error if secondLib is set
 
     // Load into memory.
-    auto buffer = sourceManager.readSource(path, library);
+    auto buffer = sourceManager.readSource(entry.path, entry.library);
     if (!buffer) {
-        errorCallback(fmt::format("unable to open file: '{}'", getU8Str(path)));
+        errorCallback(fmt::format("unable to open file: '{}'", getU8Str(entry.path)));
         return;
     }
 
-    if (!isLibrary && srcOptions.singleUnit) {
+    if (!entry.isLibraryFile && srcOptions.singleUnit) {
         // If this file was directly specified (i.e. not via
         // a library mapping) and we're in single-unit mode,
         // collect it for later parsing.
@@ -392,13 +406,13 @@ void SourceLoader::loadAndParse(const std::filesystem::path& path, bool isLibrar
         // If libraries inherit macros then we can't parse here,
         // we need to wait for the main compilation unit to be
         // parsed.
-        SLANG_ASSERT(isLibrary);
+        SLANG_ASSERT(entry.isLibraryFile);
         deferredLibBuffers.push_back(buffer);
     }
     else {
         // Otherwise we can parse right away.
         auto tree = SyntaxTree::fromBuffer(buffer, sourceManager, optionBag);
-        if (isLibrary || srcOptions.onlyLint)
+        if (entry.isLibraryFile || srcOptions.onlyLint)
             tree->isLibrary = true;
 
         syntaxTrees.emplace_back(std::move(tree));

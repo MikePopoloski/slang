@@ -23,6 +23,7 @@ namespace slang {
 class Bag;
 class SourceManager;
 struct SourceBuffer;
+struct SourceLibrary;
 
 } // namespace slang
 
@@ -60,6 +61,9 @@ public:
 
     /// Constructs a new instance of the SourceLoader class.
     SourceLoader(SourceManager& sourceManager, ErrorCallback errorCallback);
+
+    SourceLoader(const SourceLoader& other) = delete;
+    SourceLoader(SourceLoader&& other) = default;
 
     /// @brief Adds files to be loaded, specified via the given @a pattern.
     ///
@@ -99,10 +103,10 @@ public:
 
     /// Returns true if there is at least one source file to load,
     /// and false if none have been added to the loader.
-    bool hasFiles() const { return !filePaths.empty(); }
+    bool hasFiles() const { return !fileEntries.empty(); }
 
     bool addLibraryMaps(std::string_view pattern, const Bag& optionBag);
-    const SyntaxTreeList& getLibraryMaps() const { return libraryMaps; }
+    const SyntaxTreeList& getLibraryMaps() const { return libraryMapTrees; }
 
     /// Loads all of the sources that have been added to the loader,
     /// but does not parse them. Returns the loaded buffers.
@@ -112,25 +116,56 @@ public:
     SyntaxTreeList loadAndParseSources(const Bag& optionBag);
 
 private:
-    struct Library {
-        std::string_view name;
-        std::vector<std::pair<std::filesystem::path, GlobRank>> files;
+    // One entry per unique file path added to the loader.
+    struct FileEntry {
+        // The filesystem path (as specified by the user).
+        std::filesystem::path path;
+
+        // The library to which the file belongs, if any.
+        const SourceLibrary* library = nullptr;
+
+        // A second library that can lay claim to this file,
+        // at the same glob rank as the first library. It's an
+        // error if we end up in this state for any file but
+        // we can temporarily be here if two libraries match at
+        // the same rank but another library we haven't seen yet
+        // matches at an even higher rank.
+        const SourceLibrary* secondLib = nullptr;
+
+        // A measure of how strongly this file belongs to the library.
+        GlobRank libraryRank;
+
+        // True if the file is intended to be part of a library
+        // (because it was specified via addLibraryFiles or via a
+        // library map) and false if not. Non-library files (which set
+        // this to false) can still map to a SourceLibrary but get
+        // treated differently (such as modules within them being
+        // eligible for automatic instantiation).
+        bool isLibraryFile = false;
+
+        FileEntry(std::filesystem::path&& path, bool isLibraryFile, const SourceLibrary* library,
+                  GlobRank libraryRank) :
+            path(std::move(path)),
+            library(library), libraryRank(libraryRank), isLibraryFile(isLibraryFile) {}
     };
 
+    const SourceLibrary* getOrAddLibrary(std::string_view name);
+    void addFilesInternal(std::string_view pattern, bool isLibraryFile,
+                          const SourceLibrary* library);
     void createLibrary(const syntax::LibraryDeclarationSyntax& syntax);
-    void loadAndParse(const std::filesystem::path& path, bool isLibrary, const Bag& optionBag,
+    void loadAndParse(const FileEntry& fileEntry, const Bag& optionBag,
                       const SourceOptions& srcOptions, std::vector<SourceBuffer>& singleUnitBuffers,
                       std::vector<SourceBuffer>& deferredLibBuffers, SyntaxTreeList& syntaxTrees);
 
     SourceManager& sourceManager;
 
-    std::vector<std::pair<std::filesystem::path, bool>> filePaths;
-    flat_hash_map<std::filesystem::path, std::vector<std::pair<Library, GlobRank>>> fileToLibMap;
-    flat_hash_map<std::string_view, Library> libraries;
+    std::vector<FileEntry> fileEntries;
+    flat_hash_map<std::filesystem::path, size_t> fileIndex;
+    flat_hash_map<std::string, std::unique_ptr<SourceLibrary>> libraries;
     std::vector<std::filesystem::path> searchDirectories;
     std::vector<std::filesystem::path> searchExtensions;
     flat_hash_set<std::string_view> uniqueExtensions;
-    SyntaxTreeList libraryMaps;
+    SyntaxTreeList libraryMapTrees;
     ErrorCallback errorCallback;
 
     static constexpr int MinFilesForThreading = 4;
