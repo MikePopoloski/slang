@@ -94,8 +94,8 @@ static void globAndCheck(const fs::path& basePath, std::string_view pattern, Glo
     CHECK(results.size() == expected.size());
     for (auto str : expected) {
         auto it = std::ranges::find_if(results, [str, mode](auto& item) {
-            return mode == GlobMode::Files ? item.filename() == str
-                                           : item.parent_path().filename() == str;
+            return item.has_filename() ? item.filename() == str
+                                       : item.parent_path().filename() == str;
         });
         if (it == results.end()) {
             FAIL_CHECK(str << " is not found in results for " << pattern);

@@ -208,12 +208,12 @@ void Driver::addStandardArgs() {
             sourceLoader.addFiles(filePattern);
             return "";
         },
-        "files", /* isFileName */ true);
+        "files");
 
     cmdLine.add(
         "-f",
-        [this](std::string_view fileName) {
-            if (!processCommandFile(fileName, /* makeRelative */ false))
+        [this](std::string_view filePattern) {
+            if (!processCommandFile(filePattern, /* makeRelative */ false))
                 anyFailedLoads = true;
             return "";
         },
@@ -223,8 +223,8 @@ void Driver::addStandardArgs() {
 
     cmdLine.add(
         "-F",
-        [this](std::string_view fileName) {
-            if (!processCommandFile(fileName, /* makeRelative */ true))
+        [this](std::string_view filePattern) {
+            if (!processCommandFile(filePattern, /* makeRelative */ true))
                 anyFailedLoads = true;
             return "";
         },

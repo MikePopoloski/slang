@@ -57,8 +57,9 @@ void SourceLoader::addSearchExtensions(std::span<const std::string> extensions) 
 
 void SourceLoader::addLibraryMaps(std::string_view pattern, const Bag& optionBag,
                                   bool expandEnvVars) {
+    // TODO: base path?
     SmallVector<fs::path> files;
-    auto rank = svGlob("", pattern, GlobMode::Files, files, expandEnvVars);
+    auto rank = svGlob({}, pattern, GlobMode::Files, files, expandEnvVars);
     if (files.empty()) {
         if (rank == GlobRank::ExactName)
             errorCallback(fmt::format("no such file: '{}'", pattern));
@@ -334,9 +335,9 @@ const SourceLibrary* SourceLoader::getOrAddLibrary(std::string_view name) {
 
 void SourceLoader::addFilesInternal(std::string_view pattern, bool isLibraryFile,
                                     const SourceLibrary* library, bool expandEnvVars) {
-    // TODO: basePath?
+    // TODO: base path?
     SmallVector<fs::path> files;
-    auto rank = svGlob("", pattern, GlobMode::Files, files, expandEnvVars);
+    auto rank = svGlob({}, pattern, GlobMode::Files, files, expandEnvVars);
     if (files.empty()) {
         if (rank == GlobRank::ExactName)
             errorCallback(fmt::format("no such file: '{}'", pattern));
@@ -346,8 +347,7 @@ void SourceLoader::addFilesInternal(std::string_view pattern, bool isLibraryFile
     fileEntries.reserve(fileEntries.size() + files.size());
     for (auto&& path : files) {
         std::error_code ec;
-        auto [it, inserted] = fileIndex.try_emplace(fs::weakly_canonical(path, ec),
-                                                    fileEntries.size());
+        auto [it, inserted] = fileIndex.try_emplace(path, fileEntries.size());
         if (inserted) {
             fileEntries.emplace_back(std::move(path), isLibraryFile, library, rank);
         }

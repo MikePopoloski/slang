@@ -69,12 +69,15 @@ static void iterDirectoriesRecursive(const fs::path& path, SmallVector<fs::path>
     SmallVector<fs::path> local;
     iterDirectory(path, local, GlobMode::Directories);
 
-    for (auto&& p : local) {
+    results.reserve(results.size() + local.size());
+    for (auto& p : local) {
         // Avoid recursing into directories we've already visited (via symlinks).
         std::error_code ec;
-        if (visited.emplace(getU8Str(fs::weakly_canonical(p, ec))).second) {
-            iterDirectoriesRecursive(p, results, visited);
-            results.emplace_back(std::move(p));
+        fs::path canonical = fs::weakly_canonical(p, ec);
+
+        if (visited.emplace(getU8Str(canonical)).second) {
+            iterDirectoriesRecursive(canonical, results, visited);
+            results.emplace_back(std::move(canonical));
         }
     }
 }
@@ -84,6 +87,7 @@ static void globDir(const fs::path& path, std::string_view pattern, SmallVector<
     SmallVector<fs::path> local;
     iterDirectory(path, local, mode);
 
+    results.reserve(results.size() + local.size());
     for (auto&& p : local) {
         if (matches(narrow(p.filename().native()), pattern))
             results.emplace_back(std::move(p));
@@ -207,13 +211,23 @@ SLANG_EXPORT GlobRank svGlob(const fs::path& basePath, std::string_view pattern,
     // whether we have an absolute path, etc.
     patternPath = patternPath.lexically_normal();
 
+    SmallVector<fs::path> local;
+    GlobRank rank;
     if (patternPath.has_root_path()) {
-        return svGlobInternal(patternPath.root_path(), narrow(patternPath.relative_path().native()),
-                              mode, results);
+        rank = svGlobInternal(patternPath.root_path(), narrow(patternPath.relative_path().native()),
+                              mode, local);
     }
     else {
-        return svGlobInternal(basePath, narrow(patternPath.native()), mode, results);
+        rank = svGlobInternal(basePath, narrow(patternPath.native()), mode, local);
     }
+
+    // Results paths are always made canonical.
+    std::error_code ec;
+    results.reserve(local.size());
+    for (auto& p : local)
+        results.emplace_back(fs::weakly_canonical(p, ec));
+
+    return rank;
 }
 
 } // namespace slang
