@@ -61,7 +61,7 @@ void SourceLoader::addLibraryMaps(std::string_view pattern, const Bag& optionBag
     SmallVector<fs::path> files;
     auto rank = svGlob({}, pattern, GlobMode::Files, files, expandEnvVars);
     if (files.empty()) {
-        if (rank == GlobRank::ExactName)
+        if (rank == GlobRank::ExactPath)
             errorCallback(fmt::format("no such file: '{}'", pattern));
         return;
     }
@@ -339,7 +339,7 @@ void SourceLoader::addFilesInternal(std::string_view pattern, bool isLibraryFile
     SmallVector<fs::path> files;
     auto rank = svGlob({}, pattern, GlobMode::Files, files, expandEnvVars);
     if (files.empty()) {
-        if (rank == GlobRank::ExactName)
+        if (rank == GlobRank::ExactPath)
             errorCallback(fmt::format("no such file: '{}'", pattern));
         return;
     }

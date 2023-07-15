@@ -113,13 +113,17 @@ TEST_CASE("File globbing") {
     auto testDir = findTestDir();
     globAndCheck(testDir, "*st?.sv", GlobMode::Files, GlobRank::WildcardName,
                  {"test2.sv", "test3.sv", "test4.sv", "test5.sv", "test6.sv"});
-    globAndCheck(testDir, "system", GlobMode::Files, GlobRank::ExactName, {});
+    globAndCheck(testDir, "system", GlobMode::Files, GlobRank::ExactPath, {});
     globAndCheck(testDir, "system/", GlobMode::Files, GlobRank::Directory, {"system.svh"});
     globAndCheck(testDir, ".../f*.svh", GlobMode::Files, GlobRank::WildcardName,
                  {"file.svh", "file_defn.svh", "file_uses_defn.svh"});
     globAndCheck(testDir, "*ste*/", GlobMode::Files, GlobRank::Directory,
                  {"file.svh", "macro.svh", "nested_local.svh", "system.svh"});
-    globAndCheck(testDir, testDir + "/library/pkg.sv", GlobMode::Files, GlobRank::ExactName,
+    globAndCheck(testDir, testDir + "/library/pkg.sv", GlobMode::Files, GlobRank::ExactPath,
+                 {"pkg.sv"});
+    globAndCheck(testDir, testDir + "/li?ra?y/pkg.sv", GlobMode::Files, GlobRank::SimpleName,
+                 {"pkg.sv"});
+    globAndCheck(testDir, testDir + ".../pkg.sv", GlobMode::Files, GlobRank::SimpleName,
                  {"pkg.sv"});
     globAndCheck(testDir, "*??blah", GlobMode::Files, GlobRank::WildcardName, {});
 
@@ -130,8 +134,8 @@ TEST_CASE("File globbing") {
 TEST_CASE("Directory globbing") {
     auto testDir = findTestDir();
     globAndCheck(testDir, "*st?.sv", GlobMode::Directories, GlobRank::WildcardName, {});
-    globAndCheck(testDir, "system", GlobMode::Directories, GlobRank::ExactName, {"system"});
-    globAndCheck(testDir, "system/", GlobMode::Directories, GlobRank::ExactName, {"system"});
+    globAndCheck(testDir, "system", GlobMode::Directories, GlobRank::ExactPath, {"system"});
+    globAndCheck(testDir, "system/", GlobMode::Directories, GlobRank::ExactPath, {"system"});
     globAndCheck(testDir, ".../", GlobMode::Directories, GlobRank::Directory,
                  {"library", "nested", "system", "data"});
 }

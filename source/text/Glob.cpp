@@ -94,7 +94,7 @@ static void globDir(const fs::path& path, std::string_view pattern, SmallVector<
 }
 
 GlobRank svGlobInternal(const fs::path& basePath, std::string_view pattern, GlobMode mode,
-                        SmallVector<fs::path>& results) {
+                        SmallVector<fs::path>& results, bool& anyWildcards) {
     // Parse the pattern. Consume directories in chunks until
     // we find one that has wildcards for us to handle.
     auto currPath = basePath;
@@ -112,7 +112,9 @@ GlobRank svGlobInternal(const fs::path& basePath, std::string_view pattern, Glob
 
             auto rank = GlobRank::Directory;
             for (auto& dir : dirs)
-                rank = svGlobInternal(dir, pattern, mode, results);
+                rank = svGlobInternal(dir, pattern, mode, results, anyWildcards);
+
+            anyWildcards = true;
             return rank;
         }
 
@@ -133,7 +135,9 @@ GlobRank svGlobInternal(const fs::path& basePath, std::string_view pattern, Glob
 
                     auto rank = GlobRank::Directory;
                     for (auto& dir : dirs)
-                        rank = svGlobInternal(dir, pattern, mode, results);
+                        rank = svGlobInternal(dir, pattern, mode, results, anyWildcards);
+
+                    anyWildcards = true;
                     return rank;
                 }
 
@@ -150,6 +154,7 @@ GlobRank svGlobInternal(const fs::path& basePath, std::string_view pattern, Glob
         if (!foundDir) {
             if (hasWildcards) {
                 globDir(currPath, pattern, results, mode);
+                anyWildcards = true;
                 return GlobRank::WildcardName;
             }
 
@@ -162,7 +167,7 @@ GlobRank svGlobInternal(const fs::path& basePath, std::string_view pattern, Glob
                 results.emplace_back(std::move(currPath));
             }
 
-            return GlobRank::ExactName;
+            return GlobRank::SimpleName;
         }
     }
 
@@ -185,7 +190,7 @@ GlobRank svGlobInternal(const fs::path& basePath, std::string_view pattern, Glob
             return GlobRank::Directory;
         }
         else {
-            return GlobRank::ExactName;
+            return GlobRank::SimpleName;
         }
     }
 }
@@ -219,12 +224,13 @@ SLANG_EXPORT GlobRank svGlob(const fs::path& basePath, std::string_view pattern,
 
     SmallVector<fs::path> local;
     GlobRank rank;
+    bool anyWildcards = false;
     if (patternPath.has_root_path()) {
         rank = svGlobInternal(patternPath.root_path(), narrow(patternPath.relative_path().native()),
-                              mode, local);
+                              mode, local, anyWildcards);
     }
     else {
-        rank = svGlobInternal(basePath, narrow(patternPath.native()), mode, local);
+        rank = svGlobInternal(basePath, narrow(patternPath.native()), mode, local, anyWildcards);
     }
 
     // Results paths are always made canonical.
@@ -235,6 +241,11 @@ SLANG_EXPORT GlobRank svGlob(const fs::path& basePath, std::string_view pattern,
         if (!ec)
             results.emplace_back(std::move(canonical));
     }
+
+    // If there were no wildcards at all and we had a simple name match,
+    // promote the rank to an exact path match.
+    if (!anyWildcards && rank == GlobRank::SimpleName)
+        rank = GlobRank::ExactPath;
 
     return rank;
 }

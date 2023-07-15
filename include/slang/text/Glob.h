@@ -19,10 +19,13 @@ namespace slang {
 /// The LRM specifies that files that match patterns of a given
 /// rank are preferred over those that match later ranks.
 enum class GlobRank {
-    /// An explicit name match.
-    ExactName,
+    /// A full match of an exact path without any wildcards.
+    ExactPath,
 
-    /// A filename with wildcards.
+    /// A plain textual name match.
+    SimpleName,
+
+    /// A name with wildcards.
     WildcardName,
 
     /// A directory name (and therefore all files
