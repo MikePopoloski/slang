@@ -14,7 +14,7 @@ std::string getTestInclude() {
 
 TEST_CASE("Read source") {
     SourceManager manager;
-    std::string testPath = manager.makeAbsolutePath(getTestInclude());
+    std::string testPath = getTestInclude();
 
     CHECK(!manager.readSource("X:\\nonsense.txt", /* library */ nullptr));
 
@@ -25,7 +25,7 @@ TEST_CASE("Read source") {
 
 TEST_CASE("Read header (absolute)") {
     SourceManager manager;
-    std::string testPath = manager.makeAbsolutePath(getTestInclude());
+    std::string testPath = getTestInclude();
 
     // check load failure
     CHECK(!manager.readHeader("X:\\nonsense.txt", SourceLocation(), nullptr, false));
@@ -47,8 +47,7 @@ TEST_CASE("Read header (relative)") {
     CHECK(!manager.readHeader("relative", SourceLocation(), nullptr, false));
 
     // get a file ID to load relative to
-    SourceBuffer buffer1 = manager.readHeader(manager.makeAbsolutePath(getTestInclude()),
-                                              SourceLocation(), nullptr, false);
+    SourceBuffer buffer1 = manager.readHeader(getTestInclude(), SourceLocation(), nullptr, false);
     REQUIRE(buffer1);
 
     // reading the same header by name should return the same ID
@@ -66,12 +65,12 @@ TEST_CASE("Read header (relative)") {
 
 TEST_CASE("Read header (include dirs)") {
     SourceManager manager;
-    CHECK(manager.addSystemDirectory(manager.makeAbsolutePath(findTestDir())));
+    CHECK(manager.addSystemDirectory(findTestDir()));
 
     SourceBuffer buffer = manager.readHeader("include.svh", SourceLocation(), nullptr, true);
     REQUIRE(buffer);
 
-    CHECK(manager.addUserDirectory(manager.makeAbsolutePath(findTestDir() + "/nested")));
+    CHECK(manager.addUserDirectory(findTestDir() + "/nested"));
     buffer = manager.readHeader("../infinite_chain.svh", SourceLocation(buffer.id, 0), nullptr,
                                 false);
     CHECK(buffer);

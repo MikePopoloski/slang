@@ -106,7 +106,6 @@ void registerUtil(py::module_& m) {
 
     py::class_<SourceManager>(m, "SourceManager")
         .def(py::init<>())
-        .def("makeAbsolutePath", &SourceManager::makeAbsolutePath, "path"_a)
         .def("addSystemDirectory", &SourceManager::addSystemDirectory, "path"_a)
         .def("addUserDirectory", &SourceManager::addUserDirectory, "path"_a)
         .def("getLineNumber", &SourceManager::getLineNumber, "location"_a)

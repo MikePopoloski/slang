@@ -43,9 +43,6 @@ public:
     SourceManager(const SourceManager&) = delete;
     SourceManager& operator=(const SourceManager&) = delete;
 
-    /// Convert the given relative path into an absolute path.
-    std::string makeAbsolutePath(std::string_view path) const;
-
     /// Adds a system include directory.
     /// @returns true on success and false on failure (i.e. if the given path does not exist).
     [[nodiscard]] bool addSystemDirectory(std::string_view path);

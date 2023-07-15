@@ -24,11 +24,6 @@ SourceManager::SourceManager() {
     bufferEntries.emplace_back(file);
 }
 
-std::string SourceManager::makeAbsolutePath(std::string_view path) const {
-    std::error_code ec;
-    return getU8Str(fs::canonical(widen(path), ec));
-}
-
 bool SourceManager::addSystemDirectory(std::string_view pathStr) {
     std::error_code ec;
     auto path = fs::canonical(widen(pathStr), ec);
