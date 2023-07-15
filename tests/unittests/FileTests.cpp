@@ -132,7 +132,7 @@ TEST_CASE("Directory globbing") {
     auto testDir = findTestDir();
     globAndCheck(testDir, "*st?.sv", GlobMode::Directories, GlobRank::WildcardName, {});
     globAndCheck(testDir, "system", GlobMode::Directories, GlobRank::ExactName, {"system"});
-    globAndCheck(testDir, "system/", GlobMode::Directories, GlobRank::Directory, {"system"});
+    globAndCheck(testDir, "system/", GlobMode::Directories, GlobRank::ExactName, {"system"});
     globAndCheck(testDir, ".../", GlobMode::Directories, GlobRank::Directory,
                  {"library", "nested", "system", "data"});
 }

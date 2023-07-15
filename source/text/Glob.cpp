@@ -56,7 +56,6 @@ static void iterDirectory(const fs::path& path, SmallVector<fs::path>& results, 
                                               fs::directory_options::skip_permission_denied,
                                           ec);
          it != fs::directory_iterator(); it.increment(ec)) {
-        auto status = it->status(ec);
         if ((mode == GlobMode::Files && it->is_regular_file(ec)) ||
             (mode == GlobMode::Directories && it->is_directory(ec))) {
             results.emplace_back(it->path());
@@ -75,7 +74,7 @@ static void iterDirectoriesRecursive(const fs::path& path, SmallVector<fs::path>
         std::error_code ec;
         fs::path canonical = fs::weakly_canonical(p, ec);
 
-        if (visited.emplace(getU8Str(canonical)).second) {
+        if (!ec && visited.emplace(getU8Str(canonical)).second) {
             iterDirectoriesRecursive(canonical, results, visited);
             results.emplace_back(std::move(canonical));
         }
@@ -99,6 +98,7 @@ GlobRank svGlobInternal(const fs::path& basePath, std::string_view pattern, Glob
     // Parse the pattern. Consume directories in chunks until
     // we find one that has wildcards for us to handle.
     auto currPath = basePath;
+    const auto originalPattern = pattern;
     while (!pattern.empty()) {
         // The '...' pattern only applies at the start of a segment,
         // and means to recursively pull all directories.
@@ -157,9 +157,6 @@ GlobRank svGlobInternal(const fs::path& basePath, std::string_view pattern, Glob
             std::error_code ec;
             currPath /= pattern;
 
-            if (!pattern.empty() && mode == GlobMode::Directories)
-                currPath /= "";
-
             if ((mode == GlobMode::Files && fs::is_regular_file(currPath, ec)) ||
                 (mode == GlobMode::Directories && fs::is_directory(currPath, ec))) {
                 results.emplace_back(std::move(currPath));
@@ -171,17 +168,26 @@ GlobRank svGlobInternal(const fs::path& basePath, std::string_view pattern, Glob
 
     // If we reach this point, we either had an empty pattern to
     // begin with or we consumed the whole pattern and it had a trailing
-    // directory separator. If we are search for files we want to include
+    // directory separator. If we are searching for files we want to include
     // all files underneath the directory pointed to by currPath, and if
     // we're searching for directories we'll just take this directory.
-    if (mode == GlobMode::Files)
+    if (mode == GlobMode::Files) {
         iterDirectory(currPath, results, GlobMode::Files);
-    else {
-        if (pattern.empty())
-            currPath /= "";
-        results.emplace_back(std::move(currPath));
+        return GlobRank::Directory;
     }
-    return GlobRank::Directory;
+    else {
+        std::error_code ec;
+        if (fs::is_directory(currPath, ec))
+            results.emplace_back(std::move(currPath));
+
+        if (originalPattern.empty() ||
+            (originalPattern.size() == 1 && originalPattern[0] == fs::path::preferred_separator)) {
+            return GlobRank::Directory;
+        }
+        else {
+            return GlobRank::ExactName;
+        }
+    }
 }
 
 SLANG_EXPORT GlobRank svGlob(const fs::path& basePath, std::string_view pattern, GlobMode mode,
@@ -224,8 +230,11 @@ SLANG_EXPORT GlobRank svGlob(const fs::path& basePath, std::string_view pattern,
     // Results paths are always made canonical.
     std::error_code ec;
     results.reserve(local.size());
-    for (auto& p : local)
-        results.emplace_back(fs::weakly_canonical(p, ec));
+    for (auto& p : local) {
+        auto canonical = fs::weakly_canonical(p, ec);
+        if (!ec)
+            results.emplace_back(std::move(canonical));
+    }
 
     return rank;
 }
