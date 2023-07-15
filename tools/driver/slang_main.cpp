@@ -167,7 +167,7 @@ int driverMain(int argc, TArgs argv) {
         }
 
         if (timeTrace) {
-#if defined(_MSC_VER)
+#if defined(_WIN32)
             std::ofstream file(widen(*timeTrace));
 #else
             std::ofstream file(*timeTrace);
@@ -197,7 +197,7 @@ void writeToFile(Stream& os, std::string_view fileName, String contents) {
         SLANG_THROW(std::runtime_error(fmt::format("Unable to write AST to '{}'", fileName)));
 }
 
-#if defined(_MSC_VER)
+#if defined(_WIN32)
 
 void writeToFile(std::string_view fileName, std::string_view contents) {
     if (fileName == "-") {

@@ -79,7 +79,7 @@ int editDistance(std::string_view left, std::string_view right, bool allowReplac
 /// contents of a fs::path, so we have to use this method to copy the chars :(
 std::string getU8Str(const std::filesystem::path& path);
 
-#if defined(_MSC_VER)
+#if defined(_WIN32)
 
 /// Widens the provided UTF8 string into UTF16 wchars.
 SLANG_EXPORT std::wstring widen(std::string_view str);

@@ -117,7 +117,7 @@ void writeToFile(Stream& os, std::string_view fileName, String contents) {
     }
 }
 
-#if defined(_MSC_VER)
+#if defined(_WIN32)
 
 void writeToFile(std::string_view fileName, std::string_view contents) {
     if (fileName == "-") {

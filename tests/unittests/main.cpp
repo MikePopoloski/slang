@@ -8,7 +8,7 @@
 #include "slang/text/SourceManager.h"
 #include "slang/util/BumpAllocator.h"
 
-#if defined(_MSC_VER)
+#if defined(_WIN32)
 #    include <Windows.h>
 #endif
 
@@ -20,7 +20,7 @@ Diagnostics diagnostics;
 } // namespace slang
 
 int main(int argc, char* argv[]) {
-#if defined(_MSC_VER)
+#if defined(_WIN32)
     SetConsoleOutputCP(CP_UTF8);
     setvbuf(stdout, nullptr, _IOFBF, 1000);
 #endif

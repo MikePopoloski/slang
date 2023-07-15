@@ -164,7 +164,7 @@ bool CommandLine::parse(int argc, const char* const argv[]) {
     return parse(args);
 }
 
-#if defined(_MSC_VER)
+#if defined(_WIN32)
 
 bool CommandLine::parse(int argc, const wchar_t* const argv[]) {
     SmallVector<std::string, 8> storage{size_t(argc), UninitializedTag()};

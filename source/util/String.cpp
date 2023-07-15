@@ -12,7 +12,7 @@
 
 #include "slang/util/SmallVector.h"
 
-#if defined(_MSC_VER)
+#if defined(_WIN32)
 #    ifndef WIN32_LEAN_AND_MEAN
 #        define WIN32_LEAN_AND_MEAN
 #    endif
@@ -132,7 +132,7 @@ std::string getU8Str(const std::filesystem::path& path) {
     return std::string(narrow(path.native()));
 }
 
-#if defined(_MSC_VER)
+#if defined(_WIN32)
 
 std::wstring widen(std::string_view str) {
     if (str.empty())
