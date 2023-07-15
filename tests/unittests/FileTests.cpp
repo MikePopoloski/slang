@@ -85,12 +85,18 @@ TEST_CASE("Read header (dev/null)") {
 }
 
 static void globAndCheck(const fs::path& basePath, std::string_view pattern, GlobMode mode,
-                         GlobRank expectedRank, std::initializer_list<const char*> expected) {
+                         GlobRank expectedRank, std::error_code expectedEc,
+                         std::initializer_list<const char*> expected) {
     SmallVector<fs::path> results;
-    auto rank = svGlob(basePath, pattern, mode, results, /* expandEnvVars */ true);
+    std::error_code ec;
+    auto rank = svGlob(basePath, pattern, mode, results, /* expandEnvVars */ true, ec);
 
     CHECK(rank == expectedRank);
     CHECK(results.size() == expected.size());
+
+    if (ec != expectedEc && ec.default_error_condition() != expectedEc)
+        FAIL_CHECK(ec.message() << " != " << expectedEc.message());
+
     for (auto str : expected) {
         auto it = std::ranges::find_if(results, [str, mode](auto& item) {
             return item.has_filename() ? item.filename() == str
@@ -111,33 +117,38 @@ static void globAndCheck(const fs::path& basePath, std::string_view pattern, Glo
 
 TEST_CASE("File globbing") {
     auto testDir = findTestDir();
-    globAndCheck(testDir, "*st?.sv", GlobMode::Files, GlobRank::WildcardName,
+    globAndCheck(testDir, "*st?.sv", GlobMode::Files, GlobRank::WildcardName, {},
                  {"test2.sv", "test3.sv", "test4.sv", "test5.sv", "test6.sv"});
-    globAndCheck(testDir, "system", GlobMode::Files, GlobRank::ExactPath, {});
-    globAndCheck(testDir, "system/", GlobMode::Files, GlobRank::Directory, {"system.svh"});
-    globAndCheck(testDir, ".../f*.svh", GlobMode::Files, GlobRank::WildcardName,
+    globAndCheck(testDir, "system", GlobMode::Files, GlobRank::ExactPath,
+                 make_error_code(std::errc::is_a_directory), {});
+    globAndCheck(testDir, "system/", GlobMode::Files, GlobRank::Directory, {}, {"system.svh"});
+    globAndCheck(testDir, ".../f*.svh", GlobMode::Files, GlobRank::WildcardName, {},
                  {"file.svh", "file_defn.svh", "file_uses_defn.svh"});
-    globAndCheck(testDir, "*ste*/", GlobMode::Files, GlobRank::Directory,
+    globAndCheck(testDir, "*ste*/", GlobMode::Files, GlobRank::Directory, {},
                  {"file.svh", "macro.svh", "nested_local.svh", "system.svh"});
-    globAndCheck(testDir, testDir + "/library/pkg.sv", GlobMode::Files, GlobRank::ExactPath,
+    globAndCheck(testDir, testDir + "/library/pkg.sv", GlobMode::Files, GlobRank::ExactPath, {},
                  {"pkg.sv"});
-    globAndCheck(testDir, testDir + "/li?ra?y/pkg.sv", GlobMode::Files, GlobRank::SimpleName,
+    globAndCheck(testDir, testDir + "/li?ra?y/pkg.sv", GlobMode::Files, GlobRank::SimpleName, {},
                  {"pkg.sv"});
-    globAndCheck(testDir, testDir + ".../pkg.sv", GlobMode::Files, GlobRank::SimpleName,
+    globAndCheck(testDir, testDir + ".../pkg.sv", GlobMode::Files, GlobRank::SimpleName, {},
                  {"pkg.sv"});
-    globAndCheck(testDir, "*??blah", GlobMode::Files, GlobRank::WildcardName, {});
+    globAndCheck(testDir, "*??blah", GlobMode::Files, GlobRank::WildcardName, {}, {});
+    globAndCheck(testDir, "blah", GlobMode::Files, GlobRank::ExactPath,
+                 make_error_code(std::errc::no_such_file_or_directory), {});
 
     putenv((char*)"BAR#=cmd");
-    globAndCheck(testDir, "*${BAR#}.f", GlobMode::Files, GlobRank::WildcardName, {"cmd.f"});
+    globAndCheck(testDir, "*${BAR#}.f", GlobMode::Files, GlobRank::WildcardName, {}, {"cmd.f"});
 }
 
 TEST_CASE("Directory globbing") {
     auto testDir = findTestDir();
-    globAndCheck(testDir, "*st?.sv", GlobMode::Directories, GlobRank::WildcardName, {});
-    globAndCheck(testDir, "system", GlobMode::Directories, GlobRank::ExactPath, {"system"});
-    globAndCheck(testDir, "system/", GlobMode::Directories, GlobRank::ExactPath, {"system"});
-    globAndCheck(testDir, ".../", GlobMode::Directories, GlobRank::Directory,
+    globAndCheck(testDir, "*st?.sv", GlobMode::Directories, GlobRank::WildcardName, {}, {});
+    globAndCheck(testDir, "system", GlobMode::Directories, GlobRank::ExactPath, {}, {"system"});
+    globAndCheck(testDir, "system/", GlobMode::Directories, GlobRank::ExactPath, {}, {"system"});
+    globAndCheck(testDir, ".../", GlobMode::Directories, GlobRank::Directory, {},
                  {"library", "nested", "system", "data"});
+    globAndCheck(testDir, testDir + "/library/pkg.sv", GlobMode::Directories, GlobRank::ExactPath,
+                 make_error_code(std::errc::not_a_directory), {});
 }
 
 TEST_CASE("File glob infinite recursion") {
@@ -149,7 +160,7 @@ TEST_CASE("File glob infinite recursion") {
     std::ofstream("sandbox/a/b/file1.txt");
     fs::create_directory_symlink(fs::absolute("sandbox/a", ec), "sandbox/a/b/c/syma", ec);
 
-    globAndCheck({}, "sandbox/...", GlobMode::Files, GlobRank::Directory, {"file1.txt"});
+    globAndCheck({}, "sandbox/...", GlobMode::Files, GlobRank::Directory, {}, {"file1.txt"});
 
     fs::remove_all("sandbox", ec);
 }

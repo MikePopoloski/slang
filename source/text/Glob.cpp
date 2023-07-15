@@ -196,7 +196,8 @@ GlobRank svGlobInternal(const fs::path& basePath, std::string_view pattern, Glob
 }
 
 SLANG_EXPORT GlobRank svGlob(const fs::path& basePath, std::string_view pattern, GlobMode mode,
-                             SmallVector<fs::path>& results, bool expandEnvVars) {
+                             SmallVector<fs::path>& results, bool expandEnvVars,
+                             std::error_code& ec) {
     fs::path patternPath;
     if (expandEnvVars) {
         std::string patternStr;
@@ -234,18 +235,45 @@ SLANG_EXPORT GlobRank svGlob(const fs::path& basePath, std::string_view pattern,
     }
 
     // Results paths are always made canonical.
-    std::error_code ec;
+    std::error_code localEc;
     results.reserve(local.size());
     for (auto& p : local) {
-        auto canonical = fs::weakly_canonical(p, ec);
-        if (!ec)
+        auto canonical = fs::weakly_canonical(p, localEc);
+        if (!localEc)
             results.emplace_back(std::move(canonical));
     }
 
-    // If there were no wildcards at all and we had a simple name match,
-    // promote the rank to an exact path match.
-    if (!anyWildcards && rank == GlobRank::SimpleName)
+    ec.clear();
+    if (!anyWildcards && rank == GlobRank::SimpleName) {
+        // If there were no wildcards at all and we had a simple name match,
+        // promote the rank to an exact path match.
         rank = GlobRank::ExactPath;
+        if (results.empty()) {
+            if (!patternPath.has_root_path())
+                patternPath = basePath / patternPath;
+
+            auto status = fs::status(patternPath, ec);
+            if (!ec) {
+                switch (status.type()) {
+                    case fs::file_type::directory:
+                        ec = make_error_code(std::errc::is_a_directory);
+                        break;
+                    case fs::file_type::not_found:
+                        ec = make_error_code(std::errc::no_such_file_or_directory);
+                        break;
+                    case fs::file_type::unknown:
+                        ec = make_error_code(std::errc::permission_denied);
+                        break;
+                    default:
+                        if (mode == GlobMode::Directories)
+                            ec = make_error_code(std::errc::not_a_directory);
+                        else
+                            ec = make_error_code(std::errc::not_supported);
+                        break;
+                }
+            }
+        }
+    }
 
     return rank;
 }

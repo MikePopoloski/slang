@@ -42,13 +42,27 @@ enum class GlobMode {
     Directories
 };
 
-/// Performs a file system "glob" operation to return all files underneath
-/// @a basePath that match the given @a pattern string. The pattern is in
-/// the format described by the LRM 33.3.1, which mostly matches other
-/// glob implementations except for the use of '...' to mean recursive
-/// directory match.
+/// @brief Performs a file system "glob" operation to find paths matching
+/// the given pattern.
+///
+/// The pattern is in the format described by the LRM 33.3.1, which follows
+/// normal path syntax but allows for '?' and '*' wildcards, along with
+/// '...' to mean recursive directory search.
+///
+/// @param basePath The path in which to search. If empty, uses the current working directory.
+/// @param pattern The pattern to match against paths
+/// @param mode The type of search to perform (either for files or for directories)
+/// @param results The list of paths that matched the given pattern
+/// @param expandEnvVars If true, environment variables references in the pattern will
+///                      be expanded before searching. References can be of the form $VAR,
+///                      $(VAR), and ${VAR}.
+/// @param ec An error code that will be cleared on success and set to a value on failure.
+///           Failure to match is only indicated when the pattern is an exact path with no
+///           wildcards.
+/// @returns A rank that indicates the strength of the match result.
+///
 SLANG_EXPORT GlobRank svGlob(const std::filesystem::path& basePath, std::string_view pattern,
                              GlobMode mode, SmallVector<std::filesystem::path>& results,
-                             bool expandEnvVars);
+                             bool expandEnvVars, std::error_code& ec);
 
 } // namespace slang
