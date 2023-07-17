@@ -66,24 +66,6 @@
       }
     },
     {
-      "name": "win32-debug",
-      "displayName": "Win32 Debug",
-      "inherits": "windows-debug",
-      "architecture": {
-        "value": "x86",
-        "strategy": "external"
-      }
-    },
-    {
-      "name": "win32-release",
-      "displayName": "Win32 Release",
-      "inherits": "windows-release",
-      "architecture": {
-        "value": "x86",
-        "strategy": "external"
-      }
-    },
-    {
       "name": "win64-debug-shared",
       "displayName": "Win64 Debug Shared",
       "inherits": [

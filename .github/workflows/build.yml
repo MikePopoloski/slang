@@ -26,8 +26,6 @@ jobs:
             os: macos-13
           - preset: win64-release
             os: windows-latest
-          - preset: win32-release
-            os: windows-latest
           - preset: win64-debug-shared
             os: windows-latest
           - preset: win64-debug-noexcept
