@@ -246,7 +246,7 @@ bool Driver::processCommandFile(std::string_view fileName, bool makeRelative) {
     std::error_code ec;
     fs::path path = fs::canonical(widen(fileName), ec);
     std::vector<char> buffer;
-    if (ec || !OS::readFile(path, buffer)) {
+    if (ec || OS::readFile(path, buffer)) {
         printError(fmt::format("unable to find or open file: '{}'", fileName));
         return false;
     }

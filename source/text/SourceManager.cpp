@@ -479,7 +479,7 @@ SourceBuffer SourceManager::openCached(const fs::path& fullPath, SourceLocation 
 
     // do the read
     std::vector<char> buffer;
-    if (!OS::readFile(absPath, buffer)) {
+    if (OS::readFile(absPath, buffer)) {
         std::unique_lock lock(mutex);
         lookupCache.emplace(pathStr, nullptr);
         return SourceBuffer();

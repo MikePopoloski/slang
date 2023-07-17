@@ -9,7 +9,7 @@
 
 #include "slang/text/CharInfo.h"
 
-#if defined(_MSC_VER)
+#if defined(_WIN32)
 #    ifndef WIN32_LEAN_AND_MEAN
 #        define WIN32_LEAN_AND_MEAN
 #    endif
@@ -20,6 +20,8 @@
 #    include <fcntl.h>
 #    include <io.h>
 #else
+#    include <fcntl.h>
+#    include <sys/stat.h>
 #    include <unistd.h>
 #endif
 
@@ -30,7 +32,7 @@ namespace fs = std::filesystem;
 
 namespace slang {
 
-#if defined(_MSC_VER)
+#if defined(_WIN32)
 
 bool OS::tryEnableColors() {
     auto tryEnable = [](DWORD handle) {
@@ -67,6 +69,87 @@ bool OS::fileSupportsColors(FILE* file) {
     return fileSupportsColors(_fileno(file));
 }
 
+std::error_code OS::readFile(const fs::path& path, std::vector<char>& buffer) {
+    HANDLE handle = ::CreateFileW(path.native().c_str(), GENERIC_READ,
+                                  FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL,
+                                  OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,
+                                  NULL);
+    if (handle == INVALID_HANDLE_VALUE) {
+        // Provide a better error when trying to open directories.
+        std::error_code ec;
+        DWORD lastErr = ::GetLastError();
+        if (lastErr == ERROR_ACCESS_DENIED && fs::is_directory(path, ec))
+            return make_error_code(std::errc::is_a_directory);
+
+        return std::error_code(lastErr, std::system_category());
+    }
+
+    std::error_code ec;
+    DWORD fileType = ::GetFileType(handle);
+    if (fileType == FILE_TYPE_DISK) {
+        BY_HANDLE_FILE_INFORMATION fileInfo;
+        if (!::GetFileInformationByHandle(handle, &fileInfo)) {
+            ec.assign(::GetLastError(), std::system_category());
+        }
+        else {
+            size_t fileSize = (size_t(fileInfo.nFileSizeHigh) << 32) + fileInfo.nFileSizeLow;
+            buffer.resize(fileSize + 1);
+
+            char* buf = buffer.data();
+            while (fileSize) {
+                DWORD bytesToRead = (DWORD)std::min(size_t(std::numeric_limits<DWORD>::max()),
+                                                    fileSize);
+                DWORD bytesRead = 0;
+                if (!::ReadFile(handle, buf, bytesToRead, &bytesRead, NULL)) {
+                    ec.assign(::GetLastError(), std::system_category());
+                    break;
+                }
+
+                buf += bytesRead;
+                fileSize -= bytesRead;
+                if (bytesRead == 0) {
+                    // We reached the end of the file early -- it must have been
+                    // truncated by someone else.
+                    buffer.resize((buf - buffer.data()) + 1);
+                    break;
+                }
+            }
+
+            buffer.back() = '\0';
+        }
+    }
+    else if (DWORD lastErr = ::GetLastError(); lastErr != NO_ERROR) {
+        ec.assign(lastErr, std::system_category());
+    }
+    else {
+        static constexpr DWORD ChunkSize = 4 * 4096;
+
+        size_t currSize = 0;
+        while (true) {
+            buffer.resize(currSize + ChunkSize);
+
+            DWORD bytesRead = 0;
+            BOOL result = ::ReadFile(handle, buffer.data() + currSize, ChunkSize, &bytesRead, NULL);
+
+            currSize += bytesRead;
+            if (!result) {
+                lastErr = ::GetLastError();
+                if (lastErr != ERROR_BROKEN_PIPE && lastErr != ERROR_HANDLE_EOF)
+                    ec.assign(lastErr, std::system_category());
+                break;
+            }
+        }
+
+        buffer.resize(currSize + 1);
+        buffer.back() = '\0';
+    }
+
+    if (!::CloseHandle(handle) && !ec)
+        ec = std::error_code(::GetLastError(), std::system_category());
+
+    return ec;
+}
+
 #else
 
 bool OS::tryEnableColors() {
@@ -85,39 +168,82 @@ bool OS::fileSupportsColors(FILE* file) {
     return fileSupportsColors(fileno(file));
 }
 
-#endif
+std::error_code OS::readFile(const fs::path& path, std::vector<char>& buffer) {
+    int fd;
+    while (true) {
+        fd = ::open(path.native().c_str(), O_RDONLY | O_CLOEXEC);
+        if (fd >= 0)
+            break;
 
-static const fs::path devNull("/dev/null");
-
-bool OS::readFile(const fs::path& path, std::vector<char>& buffer) {
-    std::error_code ec;
-    fs::directory_entry entry(path, ec);
-    if (!entry.exists(ec))
-        return false;
-
-    uintmax_t size = entry.file_size(ec);
-    if (ec) {
-        // The path exists but it's not a regular file with a known size.
-        // As a special case, support reading from /dev/null (returns 0).
-        if (path == devNull)
-            size = 0;
-        else
-            return false;
+        if (errno != EINTR)
+            return std::error_code(errno, std::generic_category());
     }
 
-    // + 1 for null terminator
-    buffer.resize((size_t)size + 1);
-    std::ifstream stream(path, std::ios::binary);
-    if (!stream.read(buffer.data(), (std::streamsize)size))
-        return false;
+    std::error_code ec;
+    struct stat status;
+    if (::fstat(fd, &status) != 0) {
+        ec.assign(errno, std::generic_category());
+    }
+    else if (S_ISREG(status.st_mode) || S_ISBLK(status.st_mode)) {
+        size_t fileSize = status.st_size;
+        buffer.resize(fileSize + 1);
 
-    // null-terminate the buffer while we're at it
-    size_t sz = (size_t)stream.gcount();
-    buffer.resize(sz + 1);
-    buffer[sz] = '\0';
+        char* buf = buffer.data();
+        while (fileSize) {
+            size_t bytesToRead = std::min(fileSize, size_t(INT32_MAX));
+            ssize_t numRead = ::read(fd, buf, bytesToRead);
+            if (numRead < 0) {
+                if (errno == EINTR)
+                    continue;
 
-    return true;
+                ec.assign(errno, std::generic_category());
+                break;
+            }
+
+            buf += numRead;
+            fileSize -= numRead;
+            if (numRead == 0) {
+                // We reached the end of the file early -- it must have been
+                // truncated by someone else.
+                buffer.resize((buf - buffer.data()) + 1);
+                break;
+            }
+        }
+
+        buffer.back() = '\0';
+    }
+    else {
+        static constexpr size_t ChunkSize = 4 * 4096;
+
+        size_t currSize = 0;
+        while (true) {
+            buffer.resize(currSize + ChunkSize);
+
+            ssize_t numRead = ::read(fd, buffer.data() + currSize, ChunkSize);
+            if (numRead < 0) {
+                if (errno == EINTR)
+                    continue;
+
+                ec.assign(errno, std::generic_category());
+                break;
+            }
+
+            currSize += numRead;
+            if (numRead == 0)
+                break;
+        }
+
+        buffer.resize(currSize + 1);
+        buffer.back() = '\0';
+    }
+
+    if (::close(fd) < 0 && !ec)
+        ec.assign(errno, std::generic_category());
+
+    return ec;
 }
+
+#endif
 
 void OS::print(std::string_view text) {
     if (capturingOutput)
