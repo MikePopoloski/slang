@@ -75,7 +75,7 @@ void SourceLoader::addLibraryMaps(std::string_view pattern, const Bag& optionBag
             continue;
         }
 
-        auto tree = SyntaxTree::fromLibraryMapBuffer(buffer, sourceManager, optionBag);
+        auto tree = SyntaxTree::fromLibraryMapBuffer(*buffer, sourceManager, optionBag);
         libraryMapTrees.push_back(tree);
 
         for (auto member : tree->root().as<LibraryMapSyntax>().members) {
@@ -111,7 +111,7 @@ std::vector<SourceBuffer> SourceLoader::loadSources() {
         if (!buffer)
             errorCallback(fmt::format("unable to open file: '{}'", getU8Str(entry.path)));
         else
-            results.push_back(buffer);
+            results.push_back(*buffer);
     }
 
     return results;
@@ -291,9 +291,11 @@ SourceLoader::SyntaxTreeList SourceLoader::loadAndParseSources(const Bag& option
                         if (!sourceManager.isCached(path)) {
                             // This file is never part of a library because if
                             // it was we would have already loaded it earlier.
-                            buffer = sourceManager.readSource(path, /* library */ nullptr);
-                            if (buffer)
+                            auto readResult = sourceManager.readSource(path, /* library */ nullptr);
+                            if (readResult) {
+                                buffer = *readResult;
                                 break;
+                            }
                         }
                     }
 
@@ -410,18 +412,18 @@ void SourceLoader::loadAndParse(const FileEntry& entry, const Bag& optionBag,
         // If this file was directly specified (i.e. not via
         // a library mapping) and we're in single-unit mode,
         // collect it for later parsing.
-        singleUnitBuffers.push_back(buffer);
+        singleUnitBuffers.push_back(*buffer);
     }
     else if (srcOptions.librariesInheritMacros) {
         // If libraries inherit macros then we can't parse here,
         // we need to wait for the main compilation unit to be
         // parsed.
         SLANG_ASSERT(entry.isLibraryFile);
-        deferredLibBuffers.push_back(buffer);
+        deferredLibBuffers.push_back(*buffer);
     }
     else {
         // Otherwise we can parse right away.
-        auto tree = SyntaxTree::fromBuffer(buffer, sourceManager, optionBag);
+        auto tree = SyntaxTree::fromBuffer(*buffer, sourceManager, optionBag);
         if (entry.isLibraryFile || srcOptions.onlyLint)
             tree->isLibrary = true;
 

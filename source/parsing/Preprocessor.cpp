@@ -464,17 +464,19 @@ Trivia Preprocessor::handleIncludeDirective(Token directive) {
         // remove delimiters
         bool isSystem = path[0] == '<';
         path = path.substr(1, path.length() - 2);
-        SourceBuffer buffer = sourceManager.readHeader(path, directive.location(),
-                                                       getCurrentLibrary(), isSystem);
-        if (!buffer.id) {
+
+        // TODO: better error reporting
+        auto buffer = sourceManager.readHeader(path, directive.location(), getCurrentLibrary(),
+                                               isSystem);
+        if (!buffer) {
             addDiag(diag::CouldNotOpenIncludeFile, fileName.range());
         }
         else if (includeDepth >= options.maxIncludeDepth) {
             addDiag(diag::ExceededMaxIncludeDepth, fileName.range());
         }
-        else if (includeOnceHeaders.find(buffer.data.data()) == includeOnceHeaders.end()) {
+        else if (includeOnceHeaders.find(buffer->data.data()) == includeOnceHeaders.end()) {
             includeDepth++;
-            pushSource(buffer);
+            pushSource(*buffer);
         }
     }
 

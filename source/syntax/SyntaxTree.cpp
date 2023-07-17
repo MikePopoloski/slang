@@ -34,10 +34,10 @@ std::shared_ptr<SyntaxTree> SyntaxTree::fromFile(std::string_view path) {
 
 std::shared_ptr<SyntaxTree> SyntaxTree::fromFile(std::string_view path,
                                                  SourceManager& sourceManager, const Bag& options) {
-    SourceBuffer buffer = sourceManager.readSource(path, /* library */ nullptr);
+    auto buffer = sourceManager.readSource(path, /* library */ nullptr);
     if (!buffer)
         return nullptr;
-    return create(sourceManager, std::span(&buffer, 1), options, {}, false);
+    return create(sourceManager, std::span(&buffer.value(), 1), options, {}, false);
 }
 
 std::shared_ptr<SyntaxTree> SyntaxTree::fromFiles(std::span<const std::string_view> paths) {
@@ -49,11 +49,11 @@ std::shared_ptr<SyntaxTree> SyntaxTree::fromFiles(std::span<const std::string_vi
                                                   const Bag& options) {
     SmallVector<SourceBuffer, 4> buffers(paths.size(), UninitializedTag());
     for (auto path : paths) {
-        SourceBuffer buffer = sourceManager.readSource(path, /* library */ nullptr);
+        auto buffer = sourceManager.readSource(path, /* library */ nullptr);
         if (!buffer)
             return nullptr;
 
-        buffers.push_back(buffer);
+        buffers.push_back(*buffer);
     }
 
     return create(sourceManager, buffers, options, {}, false);
@@ -159,11 +159,11 @@ std::shared_ptr<SyntaxTree> SyntaxTree::create(SourceManager& sourceManager,
 std::shared_ptr<SyntaxTree> SyntaxTree::fromLibraryMapFile(std::string_view path,
                                                            SourceManager& sourceManager,
                                                            const Bag& options) {
-    SourceBuffer buffer = sourceManager.readSource(path, /* library */ nullptr);
+    auto buffer = sourceManager.readSource(path, /* library */ nullptr);
     if (!buffer)
         return nullptr;
 
-    return fromLibraryMapBuffer(buffer, sourceManager, options);
+    return fromLibraryMapBuffer(*buffer, sourceManager, options);
 }
 
 std::shared_ptr<SyntaxTree> SyntaxTree::fromLibraryMapText(std::string_view text,

@@ -145,7 +145,7 @@ std::error_code OS::readFile(const fs::path& path, std::vector<char>& buffer) {
     }
 
     if (!::CloseHandle(handle) && !ec)
-        ec = std::error_code(::GetLastError(), std::system_category());
+        ec.assign(::GetLastError(), std::system_category());
 
     return ec;
 }
@@ -185,7 +185,7 @@ std::error_code OS::readFile(const fs::path& path, std::vector<char>& buffer) {
         ec.assign(errno, std::generic_category());
     }
     else if (S_ISREG(status.st_mode) || S_ISBLK(status.st_mode)) {
-        size_t fileSize = status.st_size;
+        auto fileSize = (size_t)status.st_size;
         buffer.resize(fileSize + 1);
 
         char* buf = buffer.data();
@@ -201,11 +201,11 @@ std::error_code OS::readFile(const fs::path& path, std::vector<char>& buffer) {
             }
 
             buf += numRead;
-            fileSize -= numRead;
+            fileSize -= (size_t)numRead;
             if (numRead == 0) {
                 // We reached the end of the file early -- it must have been
                 // truncated by someone else.
-                buffer.resize((buf - buffer.data()) + 1);
+                buffer.resize(size_t(buf - buffer.data()) + 1);
                 break;
             }
         }
@@ -228,7 +228,7 @@ std::error_code OS::readFile(const fs::path& path, std::vector<char>& buffer) {
                 break;
             }
 
-            currSize += numRead;
+            currSize += (size_t)numRead;
             if (numRead == 0)
                 break;
         }

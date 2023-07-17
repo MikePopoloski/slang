@@ -20,7 +20,7 @@ TEST_CASE("Read source") {
 
     auto file = manager.readSource(testPath, /* library */ nullptr);
     REQUIRE(file);
-    CHECK(file.data.length() > 0);
+    CHECK(file->data.length() > 0);
 }
 
 TEST_CASE("Read header (absolute)") {
@@ -31,13 +31,13 @@ TEST_CASE("Read header (absolute)") {
     CHECK(!manager.readHeader("X:\\nonsense.txt", SourceLocation(), nullptr, false));
 
     // successful load
-    SourceBuffer buffer = manager.readHeader(testPath, SourceLocation(), nullptr, false);
+    auto buffer = manager.readHeader(testPath, SourceLocation(), nullptr, false);
     REQUIRE(buffer);
-    CHECK(!buffer.data.empty());
+    CHECK(!buffer->data.empty());
 
     // next load should be cached
     buffer = manager.readHeader(testPath, SourceLocation(), nullptr, false);
-    CHECK(!buffer.data.empty());
+    CHECK(!buffer->data.empty());
 }
 
 TEST_CASE("Read header (relative)") {
@@ -47,31 +47,32 @@ TEST_CASE("Read header (relative)") {
     CHECK(!manager.readHeader("relative", SourceLocation(), nullptr, false));
 
     // get a file ID to load relative to
-    SourceBuffer buffer1 = manager.readHeader(getTestInclude(), SourceLocation(), nullptr, false);
+    auto buffer1 = manager.readHeader(getTestInclude(), SourceLocation(), nullptr, false);
     REQUIRE(buffer1);
 
-    // reading the same header by name should return the same ID
-    SourceBuffer buffer2 = manager.readHeader("include.svh", SourceLocation(buffer1.id, 0), nullptr,
-                                              false);
+    // reading the same header by name should return the same data pointer
+    auto buffer2 = manager.readHeader("include.svh", SourceLocation(buffer1->id, 0), nullptr,
+                                      false);
+    CHECK(buffer2->data.data() == buffer1->data.data());
 
     // should be able to load relative
-    buffer2 = manager.readHeader("nested/file.svh", SourceLocation(buffer1.id, 0), nullptr, false);
+    buffer2 = manager.readHeader("nested/file.svh", SourceLocation(buffer1->id, 0), nullptr, false);
     REQUIRE(buffer2);
-    CHECK(!buffer2.data.empty());
+    CHECK(!buffer2->data.empty());
 
     // load another level of relative
-    CHECK(manager.readHeader("nested_local.svh", SourceLocation(buffer2.id, 0), nullptr, false));
+    CHECK(manager.readHeader("nested_local.svh", SourceLocation(buffer2->id, 0), nullptr, false));
 }
 
 TEST_CASE("Read header (include dirs)") {
     SourceManager manager;
     CHECK(manager.addSystemDirectory(findTestDir()));
 
-    SourceBuffer buffer = manager.readHeader("include.svh", SourceLocation(), nullptr, true);
+    auto buffer = manager.readHeader("include.svh", SourceLocation(), nullptr, true);
     REQUIRE(buffer);
 
     CHECK(manager.addUserDirectory(findTestDir() + "/nested"));
-    buffer = manager.readHeader("../infinite_chain.svh", SourceLocation(buffer.id, 0), nullptr,
+    buffer = manager.readHeader("../infinite_chain.svh", SourceLocation(buffer->id, 0), nullptr,
                                 false);
     CHECK(buffer);
 }
@@ -79,7 +80,7 @@ TEST_CASE("Read header (include dirs)") {
 TEST_CASE("Read header (dev/null)") {
     if (fs::exists("/dev/null")) {
         SourceManager manager;
-        SourceBuffer buffer = manager.readHeader("/dev/null", SourceLocation(), nullptr, true);
+        auto buffer = manager.readHeader("/dev/null", SourceLocation(), nullptr, true);
         CHECK(buffer);
     }
 }

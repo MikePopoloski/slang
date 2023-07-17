@@ -8,6 +8,7 @@
 #pragma once
 
 #include <atomic>
+#include <expected.hpp>
 #include <filesystem>
 #include <memory>
 #include <mutex>
@@ -38,6 +39,8 @@ concept IsLock = std::is_same_v<T, std::shared_lock<std::shared_mutex>> ||
 /// The methods in this class are thread safe unless otherwise noted.
 class SLANG_EXPORT SourceManager {
 public:
+    using BufferOrError = nonstd::expected<SourceBuffer, std::error_code>;
+
     /// Default constructor.
     SourceManager();
     SourceManager(const SourceManager&) = delete;
@@ -143,11 +146,11 @@ public:
                               const SourceLibrary* library = nullptr);
 
     /// Read in a source file from disk.
-    SourceBuffer readSource(const std::filesystem::path& path, const SourceLibrary* library);
+    BufferOrError readSource(const std::filesystem::path& path, const SourceLibrary* library);
 
     /// Read in a header file from disk.
-    SourceBuffer readHeader(std::string_view path, SourceLocation includedFrom,
-                            const SourceLibrary* library, bool isSystemPath);
+    BufferOrError readHeader(std::string_view path, SourceLocation includedFrom,
+                             const SourceLibrary* library, bool isSystemPath);
 
     /// Returns true if the given file path is already loaded and cached in the source manager.
     bool isCached(const std::filesystem::path& path) const;
@@ -281,7 +284,7 @@ private:
     std::vector<std::variant<FileInfo, ExpansionInfo>> bufferEntries;
 
     // cache for file lookups; this holds on to the actual file data
-    flat_hash_map<std::string, std::unique_ptr<FileData>> lookupCache;
+    flat_hash_map<std::string, std::pair<std::unique_ptr<FileData>, std::error_code>> lookupCache;
 
     // directories for system and user includes
     std::vector<std::filesystem::path> systemDirectories;
@@ -306,8 +309,8 @@ private:
                                    const SourceLibrary* library,
                                    std::unique_lock<std::shared_mutex>& lock);
 
-    SourceBuffer openCached(const std::filesystem::path& fullPath, SourceLocation includedFrom,
-                            const SourceLibrary* library);
+    BufferOrError openCached(const std::filesystem::path& fullPath, SourceLocation includedFrom,
+                             const SourceLibrary* library);
     SourceBuffer cacheBuffer(std::filesystem::path&& path, std::string&& pathStr,
                              SourceLocation includedFrom, const SourceLibrary* library,
                              std::vector<char>&& buffer);

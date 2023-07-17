@@ -286,7 +286,6 @@ SourceBuffer SourceManager::assignText(std::string_view path, std::string_view t
 SourceBuffer SourceManager::assignBuffer(std::string_view bufferPath, std::vector<char>&& buffer,
                                          SourceLocation includedFrom,
                                          const SourceLibrary* library) {
-
     // first see if we have this file cached
     fs::path path(widen(bufferPath));
     auto pathStr = getU8Str(path);
@@ -303,12 +302,15 @@ SourceBuffer SourceManager::assignBuffer(std::string_view bufferPath, std::vecto
                        std::move(buffer));
 }
 
-SourceBuffer SourceManager::readSource(const fs::path& path, const SourceLibrary* library) {
+SourceManager::BufferOrError SourceManager::readSource(const fs::path& path,
+                                                       const SourceLibrary* library) {
     return openCached(path, SourceLocation(), library);
 }
 
-SourceBuffer SourceManager::readHeader(std::string_view path, SourceLocation includedFrom,
-                                       const SourceLibrary* library, bool isSystemPath) {
+SourceManager::BufferOrError SourceManager::readHeader(std::string_view path,
+                                                       SourceLocation includedFrom,
+                                                       const SourceLibrary* library,
+                                                       bool isSystemPath) {
     // if the header is specified as an absolute path, just do a straight lookup
     SLANG_ASSERT(!path.empty());
     fs::path p = widen(path);
@@ -322,11 +324,11 @@ SourceBuffer SourceManager::readHeader(std::string_view path, SourceLocation inc
         // list is being modified while we're reading headers anyway.
         std::shared_lock includeDirLock(includeDirMutex);
         for (auto& d : systemDirectories) {
-            SourceBuffer result = openCached(d / p, includedFrom, library);
-            if (result.id)
+            auto result = openCached(d / p, includedFrom, library);
+            if (result)
                 return result;
         }
-        return SourceBuffer();
+        return nonstd::make_unexpected(make_error_code(std::errc::no_such_file_or_directory));
     }
 
     // search relative to the current file
@@ -339,20 +341,20 @@ SourceBuffer SourceManager::readHeader(std::string_view path, SourceLocation inc
     }
 
     if (currFileDir) {
-        SourceBuffer result = openCached(*currFileDir / p, includedFrom, library);
-        if (result.id)
+        auto result = openCached(*currFileDir / p, includedFrom, library);
+        if (result)
             return result;
     }
 
     // See comment above about this separate mutex / lock.
     std::shared_lock includeDirLock(includeDirMutex);
     for (auto& d : userDirectories) {
-        SourceBuffer result = openCached(d / p, includedFrom, library);
-        if (result.id)
+        auto result = openCached(d / p, includedFrom, library);
+        if (result)
             return result;
     }
 
-    return SourceBuffer();
+    return nonstd::make_unexpected(make_error_code(std::errc::no_such_file_or_directory));
 }
 
 void SourceManager::addLineDirective(SourceLocation location, size_t lineNum, std::string_view name,
@@ -451,14 +453,15 @@ bool SourceManager::isCached(const fs::path& path) const {
     return it != lookupCache.end();
 }
 
-SourceBuffer SourceManager::openCached(const fs::path& fullPath, SourceLocation includedFrom,
-                                       const SourceLibrary* library) {
+SourceManager::BufferOrError SourceManager::openCached(const fs::path& fullPath,
+                                                       SourceLocation includedFrom,
+                                                       const SourceLibrary* library) {
     fs::path absPath;
     if (!disableProximatePaths) {
         std::error_code ec;
         absPath = fs::weakly_canonical(fullPath, ec);
         if (ec)
-            return SourceBuffer();
+            return nonstd::make_unexpected(ec);
     }
     else {
         absPath = fullPath;
@@ -470,19 +473,21 @@ SourceBuffer SourceManager::openCached(const fs::path& fullPath, SourceLocation 
         std::unique_lock lock(mutex);
         auto it = lookupCache.find(pathStr);
         if (it != lookupCache.end()) {
-            FileData* fd = it->second.get();
-            if (!fd)
-                return SourceBuffer();
-            return createBufferEntry(fd, includedFrom, library, lock);
+            auto& [fd, ec] = it->second;
+            if (ec)
+                return nonstd::make_unexpected(ec);
+
+            SLANG_ASSERT(fd);
+            return createBufferEntry(fd.get(), includedFrom, library, lock);
         }
     }
 
     // do the read
     std::vector<char> buffer;
-    if (OS::readFile(absPath, buffer)) {
+    if (std::error_code ec = OS::readFile(absPath, buffer)) {
         std::unique_lock lock(mutex);
-        lookupCache.emplace(pathStr, nullptr);
-        return SourceBuffer();
+        lookupCache.emplace(pathStr, std::pair{nullptr, ec});
+        return nonstd::make_unexpected(ec);
     }
 
     return cacheBuffer(std::move(absPath), std::move(pathStr), includedFrom, library,
@@ -509,10 +514,10 @@ SourceBuffer SourceManager::cacheBuffer(fs::path&& path, std::string&& pathStr,
     auto fd = std::make_unique<FileData>(directory, std::move(name), std::move(buffer),
                                          std::move(path));
 
-    auto [it, inserted] = lookupCache.emplace(pathStr, std::move(fd));
+    auto [it, inserted] = lookupCache.emplace(pathStr, std::pair{std::move(fd), std::error_code{}});
     SLANG_ASSERT(inserted);
 
-    FileData* fdPtr = it->second.get();
+    FileData* fdPtr = it->second.first.get();
     return createBufferEntry(fdPtr, includedFrom, library, lock);
 }
 
