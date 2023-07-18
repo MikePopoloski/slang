@@ -355,6 +355,7 @@ namespace nonstd {
 // - C26409: Avoid calling new and delete explicitly, use std::make_unique<T> instead (r.11)
 
 nsel_DISABLE_MSVC_WARNINGS( 26409 )
+nsel_DISABLE_MSVC_WARNINGS( 4702 )
 
 //
 // expected:
