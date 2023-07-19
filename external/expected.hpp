@@ -82,7 +82,7 @@
 // at default use SEH with MSVC for no C++ exceptions
 
 #ifndef  nsel_CONFIG_NO_EXCEPTIONS_SEH
-# define nsel_CONFIG_NO_EXCEPTIONS_SEH  ( nsel_CONFIG_NO_EXCEPTIONS && _MSC_VER )
+# define nsel_CONFIG_NO_EXCEPTIONS_SEH  0
 #endif
 
 // C++ language version detection (C++23 is speculative):
