@@ -28,23 +28,29 @@ TEST_CASE("Read header (absolute)") {
     std::string testPath = getTestInclude();
 
     // check load failure
-    CHECK(!manager.readHeader("X:\\nonsense.txt", SourceLocation(), nullptr, false));
+    auto result = manager.readHeader("X:\\nonsense.txt", SourceLocation(), nullptr, false);
+    CHECK(!result);
+    CHECK(result.error() == std::errc::no_such_file_or_directory);
 
     // successful load
-    auto buffer = manager.readHeader(testPath, SourceLocation(), nullptr, false);
-    REQUIRE(buffer);
-    CHECK(!buffer->data.empty());
+    auto buffer1 = manager.readHeader(testPath, SourceLocation(), nullptr, false);
+    REQUIRE(buffer1);
+    CHECK(!buffer1->data.empty());
 
     // next load should be cached
-    buffer = manager.readHeader(testPath, SourceLocation(), nullptr, false);
-    CHECK(!buffer->data.empty());
+    auto buffer2 = manager.readHeader(testPath, SourceLocation(), nullptr, false);
+    REQUIRE(buffer2);
+    CHECK(!buffer2->data.empty());
+    CHECK(buffer1->data.data() == buffer2->data.data());
 }
 
 TEST_CASE("Read header (relative)") {
     SourceManager manager;
 
     // relative to nothing should never return anything
-    CHECK(!manager.readHeader("relative", SourceLocation(), nullptr, false));
+    auto result = manager.readHeader("relative", SourceLocation(), nullptr, false);
+    CHECK(!result);
+    CHECK(result.error() == std::errc::no_such_file_or_directory);
 
     // get a file ID to load relative to
     auto buffer1 = manager.readHeader(getTestInclude(), SourceLocation(), nullptr, false);

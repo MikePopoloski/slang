@@ -465,11 +465,11 @@ Trivia Preprocessor::handleIncludeDirective(Token directive) {
         bool isSystem = path[0] == '<';
         path = path.substr(1, path.length() - 2);
 
-        // TODO: better error reporting
         auto buffer = sourceManager.readHeader(path, directive.location(), getCurrentLibrary(),
                                                isSystem);
         if (!buffer) {
-            addDiag(diag::CouldNotOpenIncludeFile, fileName.range());
+            addDiag(diag::CouldNotOpenIncludeFile, fileName.range())
+                << path << buffer.error().message();
         }
         else if (includeDepth >= options.maxIncludeDepth) {
             addDiag(diag::ExceededMaxIncludeDepth, fileName.range());

@@ -58,7 +58,7 @@ warning vector-overflow VectorLiteralOverflow "vector literal too large for the 
 warning int-overflow SignedIntegerOverflow "signed integer literal overflows 32 bits, will be truncated to {}"
 
 subsystem Preprocessor
-error CouldNotOpenIncludeFile "could not find or open include file"
+error CouldNotOpenIncludeFile "'{}': {}"
 error ExceededMaxIncludeDepth "exceeded max include depth"
 error UnknownDirective "unknown macro or compiler directive '{}'"
 error UnexpectedConditionalDirective "unexpected conditional directive"
