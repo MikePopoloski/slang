@@ -138,6 +138,9 @@ public:
 
         /// System information about why the load failed.
         std::error_code errorCode;
+
+        Error(std::filesystem::path path, std::error_code errorCode) :
+            path(std::move(path)), errorCode(errorCode) {}
     };
 
     /// Gets the list of errors that have occurred while loading files.
