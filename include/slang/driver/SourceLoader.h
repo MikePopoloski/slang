@@ -9,6 +9,7 @@
 
 #include <filesystem>
 #include <memory>
+#include <mutex>
 #include <optional>
 #include <span>
 #include <vector>
@@ -66,10 +67,9 @@ struct SLANG_EXPORT SourceOptions {
 class SLANG_EXPORT SourceLoader {
 public:
     using SyntaxTreeList = std::vector<std::shared_ptr<syntax::SyntaxTree>>;
-    using ErrorCallback = std::function<void(const std::string&)>;
 
     /// Constructs a new instance of the SourceLoader class.
-    SourceLoader(SourceManager& sourceManager, ErrorCallback errorCallback);
+    explicit SourceLoader(SourceManager& sourceManager);
 
     SourceLoader(const SourceLoader& other) = delete;
     SourceLoader(SourceLoader&& other) = default;
@@ -131,6 +131,18 @@ public:
     /// Loads and parses all of the source files that have been added to the loader.
     SyntaxTreeList loadAndParseSources(const Bag& optionBag);
 
+    /// Information about an error that occurred during loading.
+    struct Error {
+        /// The path that failed to load.
+        std::filesystem::path path;
+
+        /// System information about why the load failed.
+        std::error_code errorCode;
+    };
+
+    /// Gets the list of errors that have occurred while loading files.
+    std::span<const Error> getErrors() const { return errors; }
+
 private:
     // One entry per unique file path added to the loader.
     struct FileEntry {
@@ -171,7 +183,8 @@ private:
     void createLibrary(const syntax::LibraryDeclarationSyntax& syntax);
     void loadAndParse(const FileEntry& fileEntry, const Bag& optionBag,
                       const SourceOptions& srcOptions, std::vector<SourceBuffer>& singleUnitBuffers,
-                      std::vector<SourceBuffer>& deferredLibBuffers, SyntaxTreeList& syntaxTrees);
+                      std::vector<SourceBuffer>& deferredLibBuffers, SyntaxTreeList& syntaxTrees,
+                      std::mutex* errorMutex);
 
     SourceManager& sourceManager;
 
@@ -181,8 +194,8 @@ private:
     std::vector<std::filesystem::path> searchDirectories;
     std::vector<std::filesystem::path> searchExtensions;
     flat_hash_set<std::string_view> uniqueExtensions;
+    std::vector<Error> errors;
     SyntaxTreeList libraryMapTrees;
-    ErrorCallback errorCallback;
 
     static constexpr int MinFilesForThreading = 4;
 };

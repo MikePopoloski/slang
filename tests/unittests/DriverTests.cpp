@@ -106,9 +106,9 @@ TEST_CASE("Driver invalid source file") {
     driver.addStandardArgs();
 
     const char* argv[] = {"testfoo", "blah.sv"};
-    CHECK(!driver.parseCommandLine(2, argv));
+    CHECK(driver.parseCommandLine(2, argv));
     CHECK(!driver.processOptions());
-    CHECK(stderrContains("no such file"));
+    CHECK(stderrContains("error: 'blah.sv':"));
 }
 
 TEST_CASE("Driver file preprocess") {
@@ -252,7 +252,7 @@ TEST_CASE("Driver invalid library module file") {
     const char* argv[] = {"testfoo", "-vblah.sv"};
     CHECK(driver.parseCommandLine(2, argv));
     CHECK(!driver.processOptions());
-    CHECK(stderrContains("no such file"));
+    CHECK(stderrContains("error: 'blah.sv':"));
 }
 
 TEST_CASE("Driver full compilation") {

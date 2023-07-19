@@ -36,10 +36,7 @@ using namespace ast;
 using namespace parsing;
 using namespace syntax;
 
-Driver::Driver() :
-    diagEngine(sourceManager),
-    sourceLoader(sourceManager, [this](auto& arg) { onLoadError(arg); }) {
-
+Driver::Driver() : diagEngine(sourceManager), sourceLoader(sourceManager) {
     diagClient = std::make_shared<TextDiagnosticClient>();
     diagEngine.addClient(diagClient);
 }
@@ -354,7 +351,7 @@ bool Driver::processOptions() {
     sourceLoader.addSearchDirectories(options.libDirs);
     sourceLoader.addSearchExtensions(options.libExts);
 
-    if (anyFailedLoads)
+    if (!reportLoadErrors())
         return false;
 
     if (!sourceLoader.hasFiles()) {
@@ -544,7 +541,7 @@ bool Driver::parseAllSources() {
     addParseOptions(optionBag);
 
     syntaxTrees = sourceLoader.loadAndParseSources(optionBag);
-    if (anyFailedLoads)
+    if (!reportLoadErrors())
         return false;
 
     Diagnostics pragmaDiags = diagEngine.setMappingsFromPragmas();
@@ -700,6 +697,15 @@ bool Driver::reportCompilation(Compilation& compilation, bool quiet) {
     return succeeded;
 }
 
+bool Driver::reportLoadErrors() {
+    if (auto errors = sourceLoader.getErrors(); !errors.empty()) {
+        for (auto& err : errors)
+            printError(fmt::format("'{}': {}", getU8Str(err.path), err.errorCode.message()));
+        return false;
+    }
+    return true;
+}
+
 void Driver::printError(const std::string& message) {
     OS::printE(fg(diagClient->errorColor), "error: ");
     OS::printE(message);
@@ -710,11 +716,6 @@ void Driver::printWarning(const std::string& message) {
     OS::printE(fg(diagClient->warningColor), "warning: ");
     OS::printE(message);
     OS::printE("\n");
-}
-
-void Driver::onLoadError(const std::string& message) {
-    printError(message);
-    anyFailedLoads = true;
 }
 
 } // namespace slang::driver

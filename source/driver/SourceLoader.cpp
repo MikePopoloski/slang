@@ -21,9 +21,7 @@ namespace slang::driver {
 
 using namespace syntax;
 
-SourceLoader::SourceLoader(SourceManager& sourceManager, ErrorCallback errorCallback) :
-    sourceManager(sourceManager), errorCallback(std::move(errorCallback)) {
-
+SourceLoader::SourceLoader(SourceManager& sourceManager) : sourceManager(sourceManager) {
     // When searching for library modules we will always include these extensions
     // in addition to anything the user provides.
     uniqueExtensions.emplace(".v"sv);
@@ -58,20 +56,19 @@ void SourceLoader::addSearchExtensions(std::span<const std::string> extensions) 
 void SourceLoader::addLibraryMaps(std::string_view pattern, const Bag& optionBag,
                                   bool expandEnvVars) {
     // TODO: base path?
-    // TODO: error code
     SmallVector<fs::path> files;
     std::error_code ec;
-    auto rank = svGlob({}, pattern, GlobMode::Files, files, expandEnvVars, ec);
-    if (files.empty()) {
-        if (rank == GlobRank::ExactPath)
-            errorCallback(fmt::format("no such file: '{}'", pattern));
+    svGlob({}, pattern, GlobMode::Files, files, expandEnvVars, ec);
+
+    if (ec) {
+        errors.emplace_back(widen(pattern), ec);
         return;
     }
 
     for (auto& path : files) {
         auto buffer = sourceManager.readSource(path, /* library */ nullptr);
         if (!buffer) {
-            errorCallback(fmt::format("unable to open file: '{}'", getU8Str(path)));
+            errors.emplace_back(path, buffer.error());
             continue;
         }
 
@@ -109,7 +106,7 @@ std::vector<SourceBuffer> SourceLoader::loadSources() {
     for (auto& entry : fileEntries) {
         auto buffer = sourceManager.readSource(entry.path, entry.library);
         if (!buffer)
-            errorCallback(fmt::format("unable to open file: '{}'", getU8Str(entry.path)));
+            errors.emplace_back(entry.path, buffer.error());
         else
             results.push_back(*buffer);
     }
@@ -159,7 +156,7 @@ SourceLoader::SyntaxTreeList SourceLoader::loadAndParseSources(const Bag& option
             for (size_t i = start; i < end; i++) {
                 auto& entry = fileEntries[i];
                 loadAndParse(entry, optionBag, srcOptions, localSingleUnitBufs,
-                             localDeferredLibBufs, localTrees);
+                             localDeferredLibBufs, localTrees, &mut);
             }
 
             // Merge our local results into the shared lists.
@@ -204,7 +201,7 @@ SourceLoader::SyntaxTreeList SourceLoader::loadAndParseSources(const Bag& option
         // or via library maps.
         for (auto& entry : fileEntries) {
             loadAndParse(entry, optionBag, srcOptions, singleUnitBuffers, deferredLibBuffers,
-                         syntaxTrees);
+                         syntaxTrees, nullptr);
         }
 
         parseSingleUnit(singleUnitBuffers);
@@ -340,13 +337,12 @@ const SourceLibrary* SourceLoader::getOrAddLibrary(std::string_view name) {
 void SourceLoader::addFilesInternal(std::string_view pattern, bool isLibraryFile,
                                     const SourceLibrary* library, bool expandEnvVars) {
     // TODO: base path?
-    // TODO: error code
     SmallVector<fs::path> files;
     std::error_code ec;
     auto rank = svGlob({}, pattern, GlobMode::Files, files, expandEnvVars, ec);
-    if (files.empty()) {
-        if (rank == GlobRank::ExactPath)
-            errorCallback(fmt::format("no such file: '{}'", pattern));
+
+    if (ec) {
+        errors.emplace_back(widen(pattern), ec);
         return;
     }
 
@@ -398,13 +394,17 @@ void SourceLoader::loadAndParse(const FileEntry& entry, const Bag& optionBag,
                                 const SourceOptions& srcOptions,
                                 std::vector<SourceBuffer>& singleUnitBuffers,
                                 std::vector<SourceBuffer>& deferredLibBuffers,
-                                SyntaxTreeList& syntaxTrees) {
+                                SyntaxTreeList& syntaxTrees, std::mutex* errorMutex) {
     // TODO: error if secondLib is set
 
-    // Load into memory.
     auto buffer = sourceManager.readSource(entry.path, entry.library);
     if (!buffer) {
-        errorCallback(fmt::format("unable to open file: '{}'", getU8Str(entry.path)));
+        // If a mutex is provided we need to lock it before adding the error.
+        std::unique_lock<std::mutex> lock;
+        if (errorMutex)
+            lock = std::unique_lock(*errorMutex);
+
+        errors.emplace_back(entry.path, buffer.error());
         return;
     }
 

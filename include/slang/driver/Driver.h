@@ -314,10 +314,9 @@ public:
 private:
     void addParseOptions(Bag& bag) const;
     void addCompilationOptions(Bag& bag) const;
-
+    bool reportLoadErrors();
     void printError(const std::string& message);
     void printWarning(const std::string& message);
-    void onLoadError(const std::string& message);
 
     bool anyFailedLoads = false;
 };
