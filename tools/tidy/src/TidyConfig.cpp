@@ -5,7 +5,8 @@
 
 #include "TidyFactory.h"
 #include <filesystem>
-#include <utility>
+
+namespace fs = std::filesystem;
 
 TidyConfig::TidyConfig() {
     checkConfigs.clkName = "clk_i";
@@ -33,11 +34,21 @@ TidyConfig::TidyConfig() {
 }
 
 void TidyConfig::addSkipFile(const std::string& path) {
-    skipFiles.push_back(std::filesystem::path(path).filename().string());
+    skipFiles.push_back(fs::path(path).filename().string());
 }
 
-void TidyConfig::addSkipFile(std::vector<std::string> paths) {
-    skipFiles = std::move(paths);
+void TidyConfig::addSkipFile(const std::vector<std::string>& paths) {
+    for (const auto& path : paths)
+        skipFiles.push_back(fs::path(path).filename().string());
+}
+
+void TidyConfig::addSkipPath(const std::string& path) {
+    skipPaths.push_back(fs::path(path).parent_path().string());
+}
+
+void TidyConfig::addSkipPath(const std::vector<std::string>& paths) {
+    for (const auto& path : paths)
+        skipPaths.push_back(fs::path(path).parent_path().string());
 }
 
 void TidyConfig::toggleAl(CheckStatus status) {
