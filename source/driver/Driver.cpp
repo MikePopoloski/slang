@@ -171,14 +171,29 @@ void Driver::addStandardArgs() {
     // File lists
     cmdLine.add("--single-unit", options.singleUnit,
                 "Treat all input files as a single compilation unit");
-    cmdLine.add("-v", options.libraryFiles,
-                "One or more library files, which are separate compilation units "
-                "where modules are not automatically instantiated.",
-                "<filename>", /* isFileName */ true);
-    cmdLine.add("--libmap", options.libMaps,
-                "One or more library map files to parse "
-                "for library name mappings and file lists",
-                "<filename>", /* isFileName */ true);
+    cmdLine.add(
+        "-v",
+        [this](std::string_view value) {
+            // TODO: parse lib name
+            sourceLoader.addLibraryFiles("", value);
+            return "";
+        },
+        "One or more library files, which are separate compilation units "
+        "where modules are not automatically instantiated.",
+        "<filename>");
+
+    cmdLine.add(
+        "--libmap",
+        [this](std::string_view value) {
+            Bag optionBag;
+            addParseOptions(optionBag);
+            sourceLoader.addLibraryMaps(value, optionBag);
+            return "";
+        },
+        "One or more library map files to parse "
+        "for library name mappings and file lists",
+        "<filename>");
+
     cmdLine.add("-y,--libdir", options.libDirs,
                 "Library search paths, which will be searched for missing modules", "<dir>",
                 /* isFileName */ true);
@@ -333,19 +348,6 @@ bool Driver::processOptions() {
     for (const std::string& dir : options.includeSystemDirs) {
         if (!sourceManager.addSystemDirectory(dir))
             printWarning(fmt::format("include directory '{}' does not exist", dir));
-    }
-
-    for (auto& str : options.libraryFiles) {
-        // TODO: separate library name
-        sourceLoader.addLibraryFiles("", str);
-    }
-
-    if (!options.libMaps.empty()) {
-        Bag optionBag;
-        addParseOptions(optionBag);
-
-        for (auto& map : options.libMaps)
-            sourceLoader.addLibraryMaps(map, optionBag);
     }
 
     sourceLoader.addSearchDirectories(options.libDirs);

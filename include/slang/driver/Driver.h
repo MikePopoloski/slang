@@ -220,12 +220,6 @@ public:
         /// compilation unit, meaning all of their text will be merged together.
         std::optional<bool> singleUnit;
 
-        /// A list of library files to include in the compilation.
-        std::vector<std::string> libraryFiles;
-
-        /// A list of library maps to include in the compilation.
-        std::vector<std::string> libMaps;
-
         /// A list of library directories in which to search for missing modules.
         std::vector<std::string> libDirs;
 
