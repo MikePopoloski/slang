@@ -43,11 +43,25 @@ Driver::Driver() : diagEngine(sourceManager), sourceLoader(sourceManager) {
 
 void Driver::addStandardArgs() {
     // Include paths
-    cmdLine.add("-I,--include-directory,+incdir", options.includeDirs,
-                "Additional include search paths", "<dir>", /* isFileName */ true);
-    cmdLine.add("--isystem", options.includeSystemDirs, "Additional system include search paths",
-                "<dir>",
-                /* isFileName */ true);
+    cmdLine.add(
+        "-I,--include-directory,+incdir",
+        [this](std::string_view value) {
+            if (auto ec = sourceManager.addUserDirectories(value)) {
+                printWarning(fmt::format("include directory '{}': {}", value, ec.message()));
+            }
+            return "";
+        },
+        "Additional include search paths", "<dir>");
+
+    cmdLine.add(
+        "--isystem",
+        [this](std::string_view value) {
+            if (auto ec = sourceManager.addSystemDirectories(value)) {
+                printWarning(fmt::format("system include directory '{}': {}", value, ec.message()));
+            }
+            return "";
+        },
+        "Additional system include search paths", "<dir>");
 
     // Preprocessor
     cmdLine.add("-D,--define-macro,+define", options.defines,
@@ -364,16 +378,6 @@ bool Driver::processOptions() {
 
     if (options.onlyLint == true && !options.ignoreUnknownModules.has_value())
         options.ignoreUnknownModules = true;
-
-    for (const std::string& dir : options.includeDirs) {
-        if (!sourceManager.addUserDirectory(dir))
-            printWarning(fmt::format("include directory '{}' does not exist", dir));
-    }
-
-    for (const std::string& dir : options.includeSystemDirs) {
-        if (!sourceManager.addSystemDirectory(dir))
-            printWarning(fmt::format("include directory '{}' does not exist", dir));
-    }
 
     if (!reportLoadErrors())
         return false;

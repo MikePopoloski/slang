@@ -83,7 +83,7 @@ TEST_CASE("Driver invalid include dirs") {
     const char* argv[] = {"testfoo", "-Ifoo/bar/baz/", "--isystem=foo/bar/baz/"};
     CHECK(driver.parseCommandLine(3, argv));
     CHECK(!driver.processOptions());
-    CHECK(stderrContains("does not exist"));
+    CHECK(stderrContains("warning: system include directory 'foo/bar/baz/':"));
     CHECK(stderrContains("no input files"));
 }
 

@@ -58,16 +58,6 @@ public:
     /// A container for various options that can be parsed and applied
     /// to the compilation process.
     struct Options {
-        /// @name Include paths
-        /// @{
-
-        /// A list of include directories in which to search for files.
-        std::vector<std::string> includeDirs;
-
-        /// A list of system include directories in which to search for files.
-        std::vector<std::string> includeSystemDirs;
-
-        /// @}
         /// @name Preprocessing
         /// @{
 

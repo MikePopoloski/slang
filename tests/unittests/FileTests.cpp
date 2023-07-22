@@ -72,12 +72,12 @@ TEST_CASE("Read header (relative)") {
 
 TEST_CASE("Read header (include dirs)") {
     SourceManager manager;
-    CHECK(manager.addSystemDirectory(findTestDir()));
+    CHECK(!manager.addSystemDirectories(findTestDir()));
 
     auto buffer = manager.readHeader("include.svh", SourceLocation(), nullptr, true);
     REQUIRE(buffer);
 
-    CHECK(manager.addUserDirectory(findTestDir() + "/nested"));
+    CHECK(!manager.addUserDirectories(findTestDir() + "/nested"));
     buffer = manager.readHeader("../infinite_chain.svh", SourceLocation(buffer->id, 0), nullptr,
                                 false);
     CHECK(buffer);

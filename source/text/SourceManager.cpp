@@ -9,6 +9,7 @@
 
 #include <string>
 
+#include "slang/text/Glob.h"
 #include "slang/util/OS.h"
 #include "slang/util/String.h"
 
@@ -24,28 +25,26 @@ SourceManager::SourceManager() {
     bufferEntries.emplace_back(file);
 }
 
-bool SourceManager::addSystemDirectory(std::string_view pathStr) {
+std::error_code SourceManager::addSystemDirectories(std::string_view pattern) {
+    SmallVector<fs::path> dirs;
     std::error_code ec;
-    auto path = fs::canonical(widen(pathStr), ec);
-    if (ec)
-        return false;
+    svGlob({}, pattern, GlobMode::Directories, dirs, /* expandEnvVars */ false, ec);
 
     // Note: locking the separate mutex for include dirs here.
     std::unique_lock lock(includeDirMutex);
-    systemDirectories.emplace_back(std::move(path));
-    return true;
+    systemDirectories.insert(systemDirectories.end(), dirs.begin(), dirs.end());
+    return ec;
 }
 
-bool SourceManager::addUserDirectory(std::string_view pathStr) {
+std::error_code SourceManager::addUserDirectories(std::string_view pattern) {
+    SmallVector<fs::path> dirs;
     std::error_code ec;
-    auto path = fs::canonical(widen(pathStr), ec);
-    if (ec)
-        return false;
+    svGlob({}, pattern, GlobMode::Directories, dirs, /* expandEnvVars */ false, ec);
 
     // Note: locking the separate mutex for include dirs here.
     std::unique_lock lock(includeDirMutex);
-    userDirectories.emplace_back(std::move(path));
-    return true;
+    userDirectories.insert(userDirectories.end(), dirs.begin(), dirs.end());
+    return ec;
 }
 
 size_t SourceManager::getLineNumber(SourceLocation location) const {

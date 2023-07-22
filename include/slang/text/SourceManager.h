@@ -46,13 +46,19 @@ public:
     SourceManager(const SourceManager&) = delete;
     SourceManager& operator=(const SourceManager&) = delete;
 
-    /// Adds a system include directory.
-    /// @returns true on success and false on failure (i.e. if the given path does not exist).
-    [[nodiscard]] bool addSystemDirectory(std::string_view path);
+    /// @brief Adds one or more system include directories that match
+    /// the given pattern.
+    ///
+    /// @returns An error code if the given pattern is for an exact path
+    /// and that path does not exist or is not a directory.
+    std::error_code addSystemDirectories(std::string_view pattern);
 
-    /// Adds a user include directory.
-    /// @returns true on success and false on failure (i.e. if the given path does not exist).
-    [[nodiscard]] bool addUserDirectory(std::string_view path);
+    /// @brief Adds one or more user include directories that match
+    /// the given pattern.
+    ///
+    /// @returns An error code if the given pattern is for an exact path
+    /// and that path does not exist or is not a directory.
+    std::error_code addUserDirectories(std::string_view pattern);
 
     /// Gets the source line number for a given source location.
     size_t getLineNumber(SourceLocation location) const;
