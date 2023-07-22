@@ -205,13 +205,6 @@ public:
         /// A list of warning options that will be passed to the DiagnosticEngine.
         std::vector<std::string> warningOptions;
 
-        /// A list of paths in which to suppress warnings.
-        std::vector<std::string> suppressWarningsPaths;
-
-        /// A list of paths in which to suppress warnings that
-        /// originate in macro expansions.
-        std::vector<std::string> suppressMacroWarningsPaths;
-
         /// @}
         /// @name File lists
         /// @{
@@ -219,12 +212,6 @@ public:
         /// If set to true, all source files will be treated as part of a single
         /// compilation unit, meaning all of their text will be merged together.
         std::optional<bool> singleUnit;
-
-        /// A list of library directories in which to search for missing modules.
-        std::vector<std::string> libDirs;
-
-        /// A list of extensions that will be used to search for library files.
-        std::vector<std::string> libExts;
 
         /// A set of extensions that will be used to exclude files.
         flat_hash_set<std::string> excludeExts;

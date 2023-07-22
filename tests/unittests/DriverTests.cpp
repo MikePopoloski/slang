@@ -459,7 +459,7 @@ TEST_CASE("Driver suppress macro warnings by path") {
 
     auto testDir = findTestDir();
     auto args = fmt::format(
-        "testfoo \"{0}test6.sv\" -Wwidth-trunc --suppress-macro-warnings \"{0}/nested\"", testDir);
+        "testfoo \"{0}test6.sv\" -Wwidth-trunc --suppress-macro-warnings \"{0}/nested/\"", testDir);
     CHECK(driver.parseCommandLine(args));
     CHECK(driver.processOptions());
     CHECK(driver.parseAllSources());

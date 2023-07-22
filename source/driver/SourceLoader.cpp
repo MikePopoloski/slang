@@ -40,17 +40,21 @@ void SourceLoader::addLibraryFiles(std::string_view libName, std::string_view pa
                      /* expandEnvVars */ false);
 }
 
-void SourceLoader::addSearchDirectories(std::span<const std::string> directories) {
-    searchDirectories.reserve(searchDirectories.size() + directories.size());
-    for (auto& dir : directories)
-        searchDirectories.emplace_back(widen(dir));
+void SourceLoader::addSearchDirectories(std::string_view pattern) {
+    SmallVector<fs::path> directories;
+    std::error_code ec;
+    svGlob({}, pattern, GlobMode::Directories, directories, /* expandEnvVars */ false, ec);
+    if (ec) {
+        errors.emplace_back(widen(pattern), ec);
+        return;
+    }
+
+    searchDirectories.insert(searchDirectories.end(), directories.begin(), directories.end());
 }
 
-void SourceLoader::addSearchExtensions(std::span<const std::string> extensions) {
-    for (auto& ext : extensions) {
-        if (uniqueExtensions.emplace(ext).second)
-            searchExtensions.emplace_back(widen(ext));
-    }
+void SourceLoader::addSearchExtension(std::string_view extension) {
+    if (uniqueExtensions.emplace(extension).second)
+        searchExtensions.emplace_back(widen(extension));
 }
 
 void SourceLoader::addLibraryMaps(std::string_view pattern, const Bag& optionBag,

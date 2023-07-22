@@ -26,15 +26,6 @@ class SourceManager;
 struct SourceBuffer;
 struct SourceLibrary;
 
-// This is needed as a workaround for missing std::hash<> of paths;
-// it was added as a DR to C++17 but not all of our targets have it yet.
-template<>
-struct hash<std::filesystem::path> {
-    uint64_t operator()(const std::filesystem::path& path) const noexcept {
-        return std::filesystem::hash_value(path);
-    }
-};
-
 } // namespace slang
 
 namespace slang::syntax {
@@ -92,15 +83,16 @@ public:
     /// are not automatically instantiated.
     void addLibraryFiles(std::string_view libraryName, std::string_view pattern);
 
-    /// @brief Adds directories in which to search for library module files.
+    /// @brief Adds directories in which to search for library module files,
+    /// specified via the given @a pattern.
     ///
     /// A search for a library module occurs when there are instantiations found
     /// for unknown modules (or interfaces or programs). The given directories
     /// will be searched for files with the missing module's name plus any registered
     /// search extensions.
-    void addSearchDirectories(std::span<const std::string> directories);
+    void addSearchDirectories(std::string_view pattern);
 
-    /// @brief Adds extensions used to search for library module files.
+    /// @brief Adds an extension used to search for library module files.
     ///
     /// A search for a library module occurs when there are instantiations found
     /// for unknown modules (or interfaces or programs). The search will be for
@@ -108,7 +100,7 @@ public:
     ///
     /// Note that the extensions ".v" and ".sv" are always automatically included
     /// in the search set.
-    void addSearchExtensions(std::span<const std::string> extensions);
+    void addSearchExtension(std::string_view extension);
 
     /// @brief Adds library map files to the loader.
     ///

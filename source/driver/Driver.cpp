@@ -159,18 +159,33 @@ void Driver::addStandardArgs() {
                 "Limit on the number of errors that will be printed. Setting this to zero will "
                 "disable the limit.",
                 "<limit>");
-    cmdLine.add("--suppress-warnings", options.suppressWarningsPaths,
-                "One or more paths in which to suppress warnings", "<filename>",
-                /* isFileName */ true);
-    cmdLine.add("--suppress-macro-warnings", options.suppressMacroWarningsPaths,
-                "One or more paths in which to suppress warnings that "
-                "originate in macro expansions",
-                "<filename>",
-                /* isFileName */ true);
+
+    cmdLine.add(
+        "--suppress-warnings",
+        [this](std::string_view value) {
+            if (auto ec = diagEngine.addIgnorePaths(value))
+                printWarning(fmt::format("--suppress-warnings path '{}': {}", value, ec.message()));
+            return "";
+        },
+        "One or more paths in which to suppress warnings", "<filename>");
+
+    cmdLine.add(
+        "--suppress-macro-warnings",
+        [this](std::string_view value) {
+            if (auto ec = diagEngine.addIgnoreMacroPaths(value)) {
+                printWarning(
+                    fmt::format("--suppress-macro-warnings path '{}': {}", value, ec.message()));
+            }
+            return "";
+        },
+        "One or more paths in which to suppress warnings that "
+        "originate in macro expansions",
+        "<filename>");
 
     // File lists
     cmdLine.add("--single-unit", options.singleUnit,
                 "Treat all input files as a single compilation unit");
+
     cmdLine.add(
         "-v",
         [this](std::string_view value) {
@@ -194,11 +209,22 @@ void Driver::addStandardArgs() {
         "for library name mappings and file lists",
         "<filename>");
 
-    cmdLine.add("-y,--libdir", options.libDirs,
-                "Library search paths, which will be searched for missing modules", "<dir>",
-                /* isFileName */ true);
-    cmdLine.add("-Y,--libext", options.libExts, "Additional library file extensions to search",
-                "<ext>");
+    cmdLine.add(
+        "-y,--libdir",
+        [this](std::string_view value) {
+            sourceLoader.addSearchDirectories(value);
+            return "";
+        },
+        "Library search paths, which will be searched for missing modules", "<dir>");
+
+    cmdLine.add(
+        "-Y,--libext",
+        [this](std::string_view value) {
+            sourceLoader.addSearchExtension(value);
+            return "";
+        },
+        "Additional library file extensions to search", "<ext>");
+
     cmdLine.add(
         "--exclude-ext",
         [this](std::string_view value) {
@@ -208,24 +234,23 @@ void Driver::addStandardArgs() {
         "Exclude provided source files with these extensions", "<ext>");
 
     cmdLine.setPositional(
-        [this](std::string_view filePattern) {
+        [this](std::string_view value) {
             if (!options.excludeExts.empty()) {
-                if (size_t extIndex = filePattern.find_last_of('.');
-                    extIndex != std::string_view::npos) {
-                    if (options.excludeExts.count(std::string(filePattern.substr(extIndex + 1))))
+                if (size_t extIndex = value.find_last_of('.'); extIndex != std::string_view::npos) {
+                    if (options.excludeExts.count(std::string(value.substr(extIndex + 1))))
                         return "";
                 }
             }
 
-            sourceLoader.addFiles(filePattern);
+            sourceLoader.addFiles(value);
             return "";
         },
         "files");
 
     cmdLine.add(
         "-f",
-        [this](std::string_view filePattern) {
-            if (!processCommandFile(filePattern, /* makeRelative */ false))
+        [this](std::string_view value) {
+            if (!processCommandFile(value, /* makeRelative */ false))
                 anyFailedLoads = true;
             return "";
         },
@@ -235,8 +260,8 @@ void Driver::addStandardArgs() {
 
     cmdLine.add(
         "-F",
-        [this](std::string_view filePattern) {
-            if (!processCommandFile(filePattern, /* makeRelative */ true))
+        [this](std::string_view value) {
+            if (!processCommandFile(value, /* makeRelative */ true))
                 anyFailedLoads = true;
             return "";
         },
@@ -350,9 +375,6 @@ bool Driver::processOptions() {
             printWarning(fmt::format("include directory '{}' does not exist", dir));
     }
 
-    sourceLoader.addSearchDirectories(options.libDirs);
-    sourceLoader.addSearchExtensions(options.libExts);
-
     if (!reportLoadErrors())
         return false;
 
@@ -400,19 +422,6 @@ bool Driver::processOptions() {
         diagEngine.setSeverity(diag::RangeWidthOOB, DiagnosticSeverity::Error);
         diagEngine.setSeverity(diag::ImplicitNamedPortTypeMismatch, DiagnosticSeverity::Error);
         diagEngine.setSeverity(diag::SplitDistWeightOp, DiagnosticSeverity::Error);
-    }
-
-    std::error_code ec;
-    for (const std::string& pathStr : options.suppressWarningsPaths) {
-        auto path = fs::canonical(widen(pathStr), ec);
-        if (!path.empty())
-            diagEngine.addIgnorePath(path);
-    }
-
-    for (const std::string& pathStr : options.suppressMacroWarningsPaths) {
-        auto path = fs::canonical(widen(pathStr), ec);
-        if (!path.empty())
-            diagEngine.addIgnoreMacroPath(path);
     }
 
     Diagnostics optionDiags = diagEngine.setWarningOptions(options.warningOptions);
