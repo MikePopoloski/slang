@@ -9,7 +9,6 @@
 #include "slang/driver/Driver.h"
 
 #include <fmt/color.h>
-#include <fmt/std.h>
 
 #include "slang/ast/Compilation.h"
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
@@ -293,7 +292,7 @@ void Driver::addStandardArgs() {
 }
 
 bool Driver::processCommandFiles(std::string_view pattern, bool makeRelative) {
-    auto onError = [this](auto& name, std::error_code ec) {
+    auto onError = [this](const auto& name, std::error_code ec) {
         printError(fmt::format("command file '{}': {}", name, ec.message()));
         anyFailedLoads = true;
         return false;
@@ -308,7 +307,7 @@ bool Driver::processCommandFiles(std::string_view pattern, bool makeRelative) {
     for (auto& path : files) {
         std::vector<char> buffer;
         if (auto readEc = OS::readFile(path, buffer))
-            return onError(path, readEc);
+            return onError(getU8Str(path), readEc);
 
         fs::path currPath;
         std::error_code ec;
