@@ -120,8 +120,6 @@ void registerUtil(py::module_& m) {
         .def("isMacroArgLoc", &SourceManager::isMacroArgLoc, "location"_a)
         .def("isIncludedFileLoc", &SourceManager::isIncludedFileLoc, "location"_a)
         .def("isPreprocessedLoc", &SourceManager::isPreprocessedLoc, "location"_a)
-        .def("isBeforeInCompilationUnit", &SourceManager::isBeforeInCompilationUnit, "left"_a,
-             "right"_a)
         .def("getExpansionLoc", &SourceManager::getExpansionLoc, "location"_a)
         .def("getExpansionRange", &SourceManager::getExpansionRange, "location"_a)
         .def("getOriginalLoc", &SourceManager::getOriginalLoc, "location"_a)

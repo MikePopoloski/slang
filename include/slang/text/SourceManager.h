@@ -106,11 +106,6 @@ public:
     /// Determines whether the given location is from a macro expansion or an include file.
     bool isPreprocessedLoc(SourceLocation location) const;
 
-    /// Determines whether the @a left location comes before the @a right location
-    /// within the "compilation unit space", which is a hypothetical source space where
-    /// all macros and include files have been expanded out into a flat file.
-    bool isBeforeInCompilationUnit(SourceLocation left, SourceLocation right) const;
-
     /// Gets the expansion location of a given macro location.
     SourceLocation getExpansionLoc(SourceLocation location) const;
 
