@@ -470,6 +470,11 @@ TEST_CASE("Driver suppress macro warnings by path") {
     CHECK(stdoutContains("0 errors, 0 warnings"));
 }
 
+// TODO: remove once stdlib gets contains()
+static bool contains(std::string_view str, std::string_view value) {
+    return str.find(value) != std::string_view::npos;
+}
+
 TEST_CASE("Driver library files with explicit name") {
     auto guard = OS::captureOutput();
 
@@ -492,7 +497,7 @@ TEST_CASE("Driver library files with explicit name") {
 
         auto lib = sm.getLibraryFor(buf);
         auto name = sm.getRawFileName(buf);
-        if (sm.getRawFileName(buf).find("test6.sv") != std::string_view::npos) {
+        if (contains(name, "test6.sv")) {
             CHECK(!lib);
         }
         else {
@@ -500,4 +505,42 @@ TEST_CASE("Driver library files with explicit name") {
             CHECK(lib->name == "libfoo");
         }
     }
+}
+
+TEST_CASE("Driver load library maps") {
+    auto guard = OS::captureOutput();
+
+    Driver driver;
+    driver.addStandardArgs();
+
+    auto testDir = findTestDir();
+    auto args = fmt::format("testfoo \"{0}test6.sv\" --libmap \"{0}/library/lib.map\"", testDir);
+    CHECK(driver.parseCommandLine(args));
+    CHECK(driver.processOptions());
+    CHECK(driver.parseAllSources());
+
+    auto& sm = driver.sourceManager;
+    for (auto buf : sm.getAllBuffers()) {
+        // Ignore include files and macro buffers.
+        if (sm.isMacroLoc(SourceLocation(buf, 0)) || sm.getIncludedFrom(buf))
+            continue;
+
+        auto name = sm.getRawFileName(buf);
+        if (contains(name, ".map"))
+            continue;
+
+        auto lib = sm.getLibraryFor(buf);
+        if (contains(name, "test6.sv")) {
+            CHECK(!lib);
+        }
+        else {
+            REQUIRE(lib);
+            if (contains(name, "libmod.qv") || contains(name, "pkg.sv"))
+                CHECK(lib->name == "libfoo");
+            else
+                CHECK(lib->name == "libsys");
+        }
+    }
+
+    CHECK(driver.sourceLoader.getLibraryMaps().size() == 2);
 }

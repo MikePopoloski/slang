@@ -31,12 +31,12 @@ SourceLoader::SourceLoader(SourceManager& sourceManager) : sourceManager(sourceM
 }
 
 void SourceLoader::addFiles(std::string_view pattern) {
-    addFilesInternal(pattern, /* isLibraryFile */ false, /* library */ nullptr,
+    addFilesInternal(pattern, {}, /* isLibraryFile */ false, /* library */ nullptr,
                      /* expandEnvVars */ false);
 }
 
 void SourceLoader::addLibraryFiles(std::string_view libName, std::string_view pattern) {
-    addFilesInternal(pattern, /* isLibraryFile */ true, getOrAddLibrary(libName),
+    addFilesInternal(pattern, {}, /* isLibraryFile */ true, getOrAddLibrary(libName),
                      /* expandEnvVars */ false);
 }
 
@@ -57,12 +57,19 @@ void SourceLoader::addSearchExtension(std::string_view extension) {
         searchExtensions.emplace_back(widen(extension));
 }
 
-void SourceLoader::addLibraryMaps(std::string_view pattern, const Bag& optionBag,
-                                  bool expandEnvVars) {
-    // TODO: base path?
+static std::string_view getPathFromSpec(const FilePathSpecSyntax& syntax) {
+    auto path = syntax.path.valueText();
+    if (path.length() < 3)
+        return {};
+
+    return path.substr(1, path.length() - 2);
+}
+
+void SourceLoader::addLibraryMaps(std::string_view pattern, const fs::path& basePath,
+                                  const Bag& optionBag, bool expandEnvVars) {
     SmallVector<fs::path> files;
     std::error_code ec;
-    svGlob({}, pattern, GlobMode::Files, files, expandEnvVars, ec);
+    svGlob(basePath, pattern, GlobMode::Files, files, expandEnvVars, ec);
 
     if (ec) {
         errors.emplace_back(widen(pattern), ec);
@@ -79,22 +86,24 @@ void SourceLoader::addLibraryMaps(std::string_view pattern, const Bag& optionBag
         auto tree = SyntaxTree::fromLibraryMapBuffer(*buffer, sourceManager, optionBag);
         libraryMapTrees.push_back(tree);
 
+        auto parentPath = path.parent_path();
         for (auto member : tree->root().as<LibraryMapSyntax>().members) {
             switch (member->kind) {
                 case SyntaxKind::ConfigDeclaration:
                 case SyntaxKind::EmptyMember:
                     break;
                 case SyntaxKind::LibraryIncludeStatement: {
-                    auto token = member->as<FilePathSpecSyntax>().path;
                     // TODO: infinite include detection
-                    // TODO: set current path to this file
-                    auto spec = token.valueText();
-                    if (!spec.empty())
-                        addLibraryMaps(spec, optionBag, /* expandEnvVars */ true);
+                    auto spec = getPathFromSpec(
+                        *member->as<LibraryIncludeStatementSyntax>().filePath);
+                    if (!spec.empty()) {
+                        addLibraryMaps(spec, parentPath, optionBag,
+                                       /* expandEnvVars */ true);
+                    }
                     break;
                 }
                 case SyntaxKind::LibraryDeclaration:
-                    createLibrary(member->as<LibraryDeclarationSyntax>());
+                    createLibrary(member->as<LibraryDeclarationSyntax>(), parentPath);
                     break;
                 default:
                     SLANG_UNREACHABLE;
@@ -338,13 +347,12 @@ const SourceLibrary* SourceLoader::getOrAddLibrary(std::string_view name) {
     return lib.get();
 }
 
-void SourceLoader::addFilesInternal(std::string_view pattern, bool isLibraryFile,
-                                    const SourceLibrary* library, bool expandEnvVars) {
-    // TODO: base path?
+void SourceLoader::addFilesInternal(std::string_view pattern, const fs::path& basePath,
+                                    bool isLibraryFile, const SourceLibrary* library,
+                                    bool expandEnvVars) {
     SmallVector<fs::path> files;
     std::error_code ec;
-    auto rank = svGlob({}, pattern, GlobMode::Files, files, expandEnvVars, ec);
-
+    auto rank = svGlob(basePath, pattern, GlobMode::Files, files, expandEnvVars, ec);
     if (ec) {
         errors.emplace_back(widen(pattern), ec);
         return;
@@ -379,16 +387,18 @@ void SourceLoader::addFilesInternal(std::string_view pattern, bool isLibraryFile
     }
 }
 
-void SourceLoader::createLibrary(const LibraryDeclarationSyntax& syntax) {
+void SourceLoader::createLibrary(const LibraryDeclarationSyntax& syntax, const fs::path& basePath) {
     auto libName = syntax.name.valueText();
     if (libName.empty())
         return;
 
     auto library = getOrAddLibrary(libName);
     for (auto filePath : syntax.filePaths) {
-        auto spec = filePath->path.valueText();
-        if (!spec.empty())
-            addFilesInternal(spec, /* isLibraryFile */ true, library, /* expandEnvVars */ true);
+        auto spec = getPathFromSpec(*filePath);
+        if (!spec.empty()) {
+            addFilesInternal(spec, basePath, /* isLibraryFile */ true, library,
+                             /* expandEnvVars */ true);
+        }
     }
 
     // TODO: incdirs

@@ -128,11 +128,12 @@ TEST_CASE("File globbing") {
                  {"test2.sv", "test3.sv", "test4.sv", "test5.sv", "test6.sv"});
     globAndCheck(testDir, "system", GlobMode::Files, GlobRank::ExactPath,
                  make_error_code(std::errc::is_a_directory), {});
-    globAndCheck(testDir, "system/", GlobMode::Files, GlobRank::Directory, {}, {"system.svh"});
+    globAndCheck(testDir, "system/", GlobMode::Files, GlobRank::Directory, {},
+                 {"system.svh", "system.map"});
     globAndCheck(testDir, ".../f*.svh", GlobMode::Files, GlobRank::WildcardName, {},
                  {"file.svh", "file_defn.svh", "file_uses_defn.svh"});
     globAndCheck(testDir, "*ste*/", GlobMode::Files, GlobRank::Directory, {},
-                 {"file.svh", "macro.svh", "nested_local.svh", "system.svh"});
+                 {"file.svh", "macro.svh", "nested_local.svh", "system.svh", "system.map"});
     globAndCheck(testDir, testDir + "/library/pkg.sv", GlobMode::Files, GlobRank::ExactPath, {},
                  {"pkg.sv"});
     globAndCheck(testDir, testDir + "/li?ra?y/pkg.sv", GlobMode::Files, GlobRank::SimpleName, {},

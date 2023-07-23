@@ -215,7 +215,7 @@ void Driver::addStandardArgs() {
         [this](std::string_view value) {
             Bag optionBag;
             addParseOptions(optionBag);
-            sourceLoader.addLibraryMaps(value, optionBag);
+            sourceLoader.addLibraryMaps(value, {}, optionBag);
             return "";
         },
         "One or more library map files to parse "

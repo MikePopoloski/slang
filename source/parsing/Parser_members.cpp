@@ -3522,8 +3522,12 @@ LibraryDeclarationSyntax& Parser::parseLibraryDecl() {
 }
 
 FilePathSpecSyntax& Parser::parseFilePathSpec() {
-    if (peek(TokenKind::StringLiteral))
-        return factory.filePathSpec(consume());
+    if (peek(TokenKind::StringLiteral)) {
+        auto lit = consume();
+        auto path = Token(alloc, TokenKind::IncludeFileName, lit.trivia(), lit.rawText(),
+                          lit.location());
+        return factory.filePathSpec(path);
+    }
 
     auto nextIsValidPathToken = [&] {
         switch (peek().kind) {
