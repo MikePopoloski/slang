@@ -164,6 +164,31 @@ void registerCompilation(py::module_& m) {
         .def("reportParseDiags", &Driver::reportParseDiags)
         .def("reportCompilation", &Driver::reportCompilation, "compilation"_a, "quiet"_a);
 
+    py::class_<SourceOptions>(m, "SourceOptions")
+        .def(py::init<>())
+        .def_readwrite("numThreads", &SourceOptions::numThreads)
+        .def_readwrite("singleUnit", &SourceOptions::singleUnit)
+        .def_readwrite("onlyLint", &SourceOptions::onlyLint)
+        .def_readwrite("librariesInheritMacros", &SourceOptions::librariesInheritMacros);
+
+    py::class_<SourceLoader> sourceLoader(m, "SourceLoader");
+    sourceLoader.def(py::init<SourceManager&>(), "sourceManager"_a)
+        .def("addFiles", &SourceLoader::addFiles, "pattern"_a)
+        .def("addLibraryFiles", &SourceLoader::addLibraryFiles, "libraryName"_a, "pattern"_a)
+        .def("addSearchDirectories", &SourceLoader::addSearchDirectories, "pattern"_a)
+        .def("addSearchExtension", &SourceLoader::addSearchExtension, "extension"_a)
+        .def("addLibraryMaps", &SourceLoader::addLibraryMaps, "pattern"_a, "basePath"_a,
+             "optionBag"_a, "expandEnvVars"_a = false)
+        .def("loadSources", &SourceLoader::loadSources)
+        .def("loadAndParseSources", &SourceLoader::loadAndParseSources, "optionBag"_a)
+        .def_property_readonly("hasFiles", &SourceLoader::hasFiles)
+        .def_property_readonly("libraryMaps", &SourceLoader::getLibraryMaps)
+        .def_property_readonly("errors", &SourceLoader::getErrors);
+
+    py::class_<SourceLoader::Error>(sourceLoader, "Error")
+        .def_readonly("path", &SourceLoader::Error::path)
+        .def_readonly("errorCode", &SourceLoader::Error::errorCode);
+
     class PySystemSubroutine : public SystemSubroutine {
     public:
         PySystemSubroutine(const std::string& name, SubroutineKind kind) :
