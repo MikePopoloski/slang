@@ -20,6 +20,8 @@
 #include "slang/util/BumpAllocator.h"
 #include "slang/util/Version.h"
 
+namespace fs = std::filesystem;
+
 void registerUtil(py::module_& m) {
     py::class_<BumpAllocator>(m, "BumpAllocator").def(py::init<>());
 
@@ -106,8 +108,22 @@ void registerUtil(py::module_& m) {
 
     py::class_<SourceManager>(m, "SourceManager")
         .def(py::init<>())
-        .def("addSystemDirectories", &SourceManager::addSystemDirectories, "path"_a)
-        .def("addUserDirectories", &SourceManager::addUserDirectories, "path"_a)
+        .def(
+            "addSystemDirectories",
+            [](SourceManager& self, std::string_view path) {
+                auto ec = self.addSystemDirectories(path);
+                if (ec)
+                    throw fs::filesystem_error("", path, ec);
+            },
+            "path"_a)
+        .def(
+            "addUserDirectories",
+            [](SourceManager& self, std::string_view path) {
+                auto ec = self.addUserDirectories(path);
+                if (ec)
+                    throw fs::filesystem_error("", path, ec);
+            },
+            "path"_a)
         .def("getLineNumber", &SourceManager::getLineNumber, "location"_a)
         .def("getFileName", &SourceManager::getFileName, "location"_a)
         .def("getRawFileName", &SourceManager::getRawFileName, "buffer"_a)
@@ -134,9 +150,25 @@ void registerUtil(py::module_& m) {
              py::overload_cast<std::string_view, std::string_view, SourceLocation,
                                const SourceLibrary*>(&SourceManager::assignText),
              "path"_a, "text"_a, "includedFrom"_a = SourceLocation(), "library"_a = nullptr)
-        .def("readSource", &SourceManager::readSource, "path"_a, "library"_a)
-        .def("readHeader", &SourceManager::readHeader, "path"_a, "includedFrom"_a, "library"_a,
-             "isSystemPath"_a)
+        .def(
+            "readSource",
+            [](SourceManager& self, const fs::path& path, const SourceLibrary* library) {
+                auto result = self.readSource(path, library);
+                if (!result)
+                    throw fs::filesystem_error("", path, result.error());
+                return *result;
+            },
+            "path"_a, "library"_a = py::none())
+        .def(
+            "readHeader",
+            [](SourceManager& self, std::string_view path, SourceLocation includedFrom,
+               const SourceLibrary* library, bool isSystemPath) {
+                auto result = self.readHeader(path, includedFrom, library, isSystemPath);
+                if (!result)
+                    throw fs::filesystem_error("", path, result.error());
+                return *result;
+            },
+            "path"_a, "includedFrom"_a, "library"_a, "isSystemPath"_a)
         .def("isCached", &SourceManager::isCached, "path"_a)
         .def("setDisableProximatePaths", &SourceManager::setDisableProximatePaths, "set"_a)
         .def("addLineDirective", &SourceManager::addLineDirective, "location"_a, "lineNum"_a,
