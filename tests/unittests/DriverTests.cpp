@@ -469,3 +469,35 @@ TEST_CASE("Driver suppress macro warnings by path") {
     CHECK(stdoutContains("Build succeeded"));
     CHECK(stdoutContains("0 errors, 0 warnings"));
 }
+
+TEST_CASE("Driver library files with explicit name") {
+    auto guard = OS::captureOutput();
+
+    Driver driver;
+    driver.addStandardArgs();
+
+    auto testDir = findTestDir();
+    auto args = fmt::format("testfoo \"{0}test6.sv\" --single-unit --libraries-inherit-macros "
+                            "\"-vlibfoo={0}/library/.../*.sv\"",
+                            testDir);
+    CHECK(driver.parseCommandLine(args));
+    CHECK(driver.processOptions());
+    CHECK(driver.parseAllSources());
+
+    auto& sm = driver.sourceManager;
+    for (auto buf : sm.getAllBuffers()) {
+        // Ignore include files and macro buffers.
+        if (sm.isMacroLoc(SourceLocation(buf, 0)) || sm.getIncludedFrom(buf))
+            continue;
+
+        auto lib = sm.getLibraryFor(buf);
+        auto name = sm.getRawFileName(buf);
+        if (sm.getRawFileName(buf).find("test6.sv") != std::string_view::npos) {
+            CHECK(!lib);
+        }
+        else {
+            REQUIRE(lib);
+            CHECK(lib->name == "libfoo");
+        }
+    }
+}

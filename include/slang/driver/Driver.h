@@ -283,6 +283,7 @@ public:
     [[nodiscard]] bool reportCompilation(ast::Compilation& compilation, bool quiet);
 
 private:
+    void addLibraryFiles(std::string_view pattern);
     void addParseOptions(Bag& bag) const;
     void addCompilationOptions(Bag& bag) const;
     bool reportLoadErrors();

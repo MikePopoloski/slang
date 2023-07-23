@@ -125,6 +125,15 @@ SourceLocation SourceManager::getIncludedFrom(BufferID buffer) const {
     return info->includedFrom;
 }
 
+const SourceLibrary* SourceManager::getLibraryFor(BufferID buffer) const {
+    std::shared_lock lock(mutex);
+    auto info = getFileInfo(buffer, lock);
+    if (!info)
+        return nullptr;
+
+    return info->library;
+}
+
 std::string_view SourceManager::getMacroName(SourceLocation location) const {
     std::shared_lock lock(mutex);
     while (isMacroArgLocImpl(location, lock))
@@ -430,7 +439,7 @@ SourceBuffer SourceManager::createBufferEntry(FileData* fd, SourceLocation inclu
                                               const SourceLibrary* library,
                                               std::unique_lock<std::shared_mutex>&) {
     SLANG_ASSERT(fd);
-    bufferEntries.emplace_back(FileInfo(fd, includedFrom));
+    bufferEntries.emplace_back(FileInfo(fd, library, includedFrom));
     return SourceBuffer{std::string_view(fd->mem.data(), fd->mem.size()), library,
                         BufferID((uint32_t)(bufferEntries.size() - 1), fd->name)};
 }

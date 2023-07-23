@@ -83,6 +83,10 @@ public:
     /// @a location must be a file location.
     SourceLocation getIncludedFrom(BufferID buffer) const;
 
+    /// Gets the source library of which the given buffer is a part,
+    /// or nullptr if it's not explicitly part of any library.
+    const SourceLibrary* getLibraryFor(BufferID buffer) const;
+
     /// Attempts to get the name of the macro represented by a macro location.
     /// If no macro name can be found, returns an empty string view.
     std::string_view getMacroName(SourceLocation location) const;
@@ -243,12 +247,13 @@ private:
     // There can potentially be many of these for a given file.
     struct FileInfo {
         FileData* data = nullptr;
+        const SourceLibrary* library = nullptr;
         SourceLocation includedFrom;
         std::vector<LineDirectiveInfo> lineDirectives;
 
         FileInfo() {}
-        FileInfo(FileData* data, SourceLocation includedFrom) :
-            data(data), includedFrom(includedFrom) {}
+        FileInfo(FileData* data, const SourceLibrary* library, SourceLocation includedFrom) :
+            data(data), library(library), includedFrom(includedFrom) {}
 
         // Returns a pointer to the LineDirectiveInfo for the nearest enclosing
         // line directive of the given raw line number, or nullptr if there is none

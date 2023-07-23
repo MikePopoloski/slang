@@ -203,8 +203,7 @@ void Driver::addStandardArgs() {
     cmdLine.add(
         "-v",
         [this](std::string_view value) {
-            // TODO: parse lib name
-            sourceLoader.addLibraryFiles("", value);
+            addLibraryFiles(value);
             return "";
         },
         "One or more library files, which are separate compilation units "
@@ -721,6 +720,19 @@ bool Driver::reportCompilation(Compilation& compilation, bool quiet) {
     }
 
     return succeeded;
+}
+
+void Driver::addLibraryFiles(std::string_view pattern) {
+    // Parse the pattern; there's an optional leading library name
+    // followed by an equals sign. If not there, we use the default
+    // library (represented by the empty string).
+    std::string_view libraryName;
+    auto index = pattern.find_first_of('=');
+    if (index != std::string_view::npos) {
+        libraryName = pattern.substr(0, index);
+        pattern = pattern.substr(index + 1);
+    }
+    sourceLoader.addLibraryFiles(libraryName, pattern);
 }
 
 bool Driver::reportLoadErrors() {
