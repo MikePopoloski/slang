@@ -9,6 +9,7 @@
 #include "slang/driver/Driver.h"
 
 #include <fmt/color.h>
+#include <fmt/std.h>
 
 #include "slang/ast/Compilation.h"
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
@@ -264,24 +265,22 @@ void Driver::addStandardArgs() {
     cmdLine.add(
         "-f",
         [this](std::string_view value) {
-            if (!processCommandFile(value, /* makeRelative */ false))
-                anyFailedLoads = true;
+            processCommandFiles(value, /* makeRelative */ false);
             return "";
         },
         "One or more command files containing additional program options. "
         "Paths in the file are considered relative to the current directory.",
-        "<filename>", /* isFileName */ true);
+        "<filename>");
 
     cmdLine.add(
         "-F",
         [this](std::string_view value) {
-            if (!processCommandFile(value, /* makeRelative */ true))
-                anyFailedLoads = true;
+            processCommandFiles(value, /* makeRelative */ true);
             return "";
         },
         "One or more command files containing additional program options. "
         "Paths in the file are considered relative to the file itself.",
-        "<filename>", /* isFileName */ true);
+        "<filename>");
 }
 
 [[nodiscard]] bool Driver::parseCommandLine(std::string_view argList) {
@@ -293,40 +292,53 @@ void Driver::addStandardArgs() {
     return !anyFailedLoads;
 }
 
-bool Driver::processCommandFile(std::string_view fileName, bool makeRelative) {
-    std::error_code ec;
-    fs::path path = fs::canonical(widen(fileName), ec);
-    std::vector<char> buffer;
-    if (ec || OS::readFile(path, buffer)) {
-        printError(fmt::format("unable to find or open file: '{}'", fileName));
+bool Driver::processCommandFiles(std::string_view pattern, bool makeRelative) {
+    auto onError = [this](auto& name, std::error_code ec) {
+        printError(fmt::format("command file '{}': {}", name, ec.message()));
+        anyFailedLoads = true;
         return false;
-    }
+    };
 
-    fs::path currPath;
-    if (makeRelative) {
-        currPath = fs::current_path(ec);
-        fs::current_path(path.parent_path(), ec);
-    }
+    SmallVector<fs::path> files;
+    std::error_code globEc;
+    svGlob({}, pattern, GlobMode::Files, files, /* expandEnvVars */ false, globEc);
+    if (globEc)
+        return onError(pattern, globEc);
 
-    CommandLine::ParseOptions parseOpts;
-    parseOpts.expandEnvVars = true;
-    parseOpts.ignoreProgramName = true;
-    parseOpts.supportComments = true;
-    parseOpts.ignoreDuplicates = true;
+    for (auto& path : files) {
+        std::vector<char> buffer;
+        if (auto readEc = OS::readFile(path, buffer))
+            return onError(path, readEc);
 
-    SLANG_ASSERT(!buffer.empty());
-    buffer.pop_back();
+        fs::path currPath;
+        std::error_code ec;
+        if (makeRelative) {
+            currPath = fs::current_path(ec);
+            fs::current_path(path.parent_path(), ec);
+        }
 
-    std::string_view argStr(buffer.data(), buffer.size());
-    bool result = cmdLine.parse(argStr, parseOpts);
+        CommandLine::ParseOptions parseOpts;
+        parseOpts.expandEnvVars = true;
+        parseOpts.ignoreProgramName = true;
+        parseOpts.supportComments = true;
+        parseOpts.ignoreDuplicates = true;
 
-    if (makeRelative)
-        fs::current_path(currPath, ec);
+        SLANG_ASSERT(!buffer.empty());
+        buffer.pop_back();
 
-    if (!result) {
-        for (auto& err : cmdLine.getErrors())
-            OS::printE(fmt::format("{}\n", err));
-        return false;
+        std::string_view argStr(buffer.data(), buffer.size());
+        bool result = cmdLine.parse(argStr, parseOpts);
+
+        if (makeRelative)
+            fs::current_path(currPath, ec);
+
+        if (!result) {
+            for (auto& err : cmdLine.getErrors())
+                OS::printE(fmt::format("{}\n", err));
+
+            anyFailedLoads = true;
+            return false;
+        }
     }
 
     return true;

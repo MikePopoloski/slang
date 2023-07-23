@@ -234,13 +234,13 @@ public:
     /// Any errors encountered will be printed to stderr.
     [[nodiscard]] bool parseCommandLine(std::string_view argList);
 
-    /// Processes the given command file for more options.
+    /// Processes the given command file(s) for more options.
     /// Any errors encountered will be printed to stderr.
     /// @param fileName The name (and potentially the path) of the command file to process.
     /// @param makeRelative indicates whether paths in the file are relative to the file
     ///                     itself or to the current working directory.
     /// @returns true on success and false if errors were encountered.
-    [[nodiscard]] bool processCommandFile(std::string_view fileName, bool makeRelative);
+    bool processCommandFiles(std::string_view pattern, bool makeRelative);
 
     /// Processes and applies all configured options.
     /// @returns true on success and false if errors were encountered.

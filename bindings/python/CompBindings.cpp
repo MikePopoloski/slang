@@ -153,7 +153,7 @@ void registerCompilation(py::module_& m) {
         .def(
             "parseCommandLine",
             [](Driver& self, std::string_view arg) { return self.parseCommandLine(arg); }, "arg"_a)
-        .def("processCommandFile", &Driver::processCommandFile, "fileName"_a, "makeRelative"_a)
+        .def("processCommandFiles", &Driver::processCommandFiles, "fileName"_a, "makeRelative"_a)
         .def("processOptions", &Driver::processOptions)
         .def("runPreprocessor", &Driver::runPreprocessor, "includeComments"_a,
              "includeDirectives"_a, "obfuscateIds"_a, "useFixedObfuscationSeed"_a = false)

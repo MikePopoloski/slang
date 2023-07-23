@@ -106,8 +106,8 @@ void registerUtil(py::module_& m) {
 
     py::class_<SourceManager>(m, "SourceManager")
         .def(py::init<>())
-        .def("addSystemDirectory", &SourceManager::addSystemDirectory, "path"_a)
-        .def("addUserDirectory", &SourceManager::addUserDirectory, "path"_a)
+        .def("addSystemDirectories", &SourceManager::addSystemDirectories, "path"_a)
+        .def("addUserDirectories", &SourceManager::addUserDirectories, "path"_a)
         .def("getLineNumber", &SourceManager::getLineNumber, "location"_a)
         .def("getFileName", &SourceManager::getFileName, "location"_a)
         .def("getRawFileName", &SourceManager::getRawFileName, "buffer"_a)

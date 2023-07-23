@@ -372,7 +372,7 @@ TEST_CASE("Driver unknown command file") {
     auto args = fmt::format("testfoo -F \"asdfasdf\"", findTestDir());
     CHECK(!driver.parseCommandLine(args));
     CHECK(!driver.processOptions());
-    CHECK(stderrContains("unable to find or open"));
+    CHECK(stderrContains("error: command file 'asdfasdf':"));
 }
 
 TEST_CASE("Driver allow defines to be inherited to lib files") {
