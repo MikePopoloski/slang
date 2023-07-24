@@ -27,9 +27,13 @@ enum class CommandLineFlags {
 
     /// The option is for a file path, which should be translated
     /// relative to the current working directory.
-    FilePath = 1
+    FilePath = 1,
+
+    /// For list options, allow specifying multiple values in
+    /// a single entry via a comma-separated list.
+    CommaList = 2
 };
-SLANG_BITMASK(CommandLineFlags, FilePath)
+SLANG_BITMASK(CommandLineFlags, CommaList)
 
 /// Command line argument parser.
 ///

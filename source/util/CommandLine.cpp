@@ -706,8 +706,10 @@ static std::optional<double> parseDouble(std::string_view name, std::string_view
 
     size_t pos;
     std::optional<double> val = strToDouble(value, &pos);
-    if (!val || pos != value.size())
+    if (!val || pos != value.size()) {
         error = fmt::format("invalid value '{}' for float argument '{}'", value, name);
+        return {};
+    }
 
     return val;
 }
@@ -760,60 +762,88 @@ std::string CommandLine::Option::set(std::optional<std::string>& target, std::st
     return {};
 }
 
+static std::span<const std::string_view> parseList(std::string_view value, bool allowCommaList,
+                                                   SmallVector<std::string_view>& splitMem) {
+    if (allowCommaList) {
+        while (true) {
+            auto index = value.find_first_of(',');
+            if (index == std::string_view::npos)
+                break;
+
+            splitMem.push_back(value.substr(0, index));
+            value = value.substr(index + 1);
+        }
+    }
+    splitMem.push_back(value);
+    return splitMem;
+}
+
+template<typename T>
+static std::string setIntList(std::vector<T>& target, std::string_view name, std::string_view value,
+                              bitmask<CommandLineFlags> flags) {
+    SmallVector<std::string_view> splitMem;
+    for (auto entry : parseList(value, flags.has(CommandLineFlags::CommaList), splitMem)) {
+        std::string error;
+        auto result = parseInt<T>(name, entry, error);
+        if (!result)
+            return error;
+
+        target.push_back(*result);
+    }
+    return {};
+}
+
 std::string CommandLine::Option::set(std::vector<int32_t>& target, std::string_view name,
                                      std::string_view value) {
-    std::string error;
-    auto result = parseInt<int32_t>(name, value, error);
-    if (result)
-        target.push_back(*result);
-    return error;
+    return setIntList(target, name, value, flags);
 }
 
 std::string CommandLine::Option::set(std::vector<uint32_t>& target, std::string_view name,
                                      std::string_view value) {
-    std::string error;
-    auto result = parseInt<uint32_t>(name, value, error);
-    if (result)
-        target.push_back(*result);
-    return error;
+    return setIntList(target, name, value, flags);
 }
 
 std::string CommandLine::Option::set(std::vector<int64_t>& target, std::string_view name,
                                      std::string_view value) {
-    std::string error;
-    auto result = parseInt<int64_t>(name, value, error);
-    if (result)
-        target.push_back(*result);
-    return error;
+    return setIntList(target, name, value, flags);
 }
 
 std::string CommandLine::Option::set(std::vector<uint64_t>& target, std::string_view name,
                                      std::string_view value) {
-    std::string error;
-    auto result = parseInt<uint64_t>(name, value, error);
-    if (result)
-        target.push_back(*result);
-    return error;
+    return setIntList(target, name, value, flags);
 }
 
 std::string CommandLine::Option::set(std::vector<double>& target, std::string_view name,
                                      std::string_view value) {
-    std::string error;
-    auto result = parseDouble(name, value, error);
-    if (result)
+    SmallVector<std::string_view> splitMem;
+    for (auto entry : parseList(value, flags.has(CommandLineFlags::CommaList), splitMem)) {
+        std::string error;
+        auto result = parseDouble(name, entry, error);
+        if (!result)
+            return error;
+
         target.push_back(*result);
-    return error;
+    }
+    return {};
 }
 
 std::string CommandLine::Option::set(std::vector<std::string>& target, std::string_view,
                                      std::string_view value) {
-    target.emplace_back(value);
+    SmallVector<std::string_view> splitMem;
+    for (auto entry : parseList(value, flags.has(CommandLineFlags::CommaList), splitMem))
+        target.emplace_back(entry);
     return {};
 }
 
 std::string CommandLine::Option::set(OptionCallback& target, std::string_view,
                                      std::string_view value) {
-    return target(value);
+    SmallVector<std::string_view> splitMem;
+    for (auto entry : parseList(value, flags.has(CommandLineFlags::CommaList), splitMem)) {
+        auto result = target(entry);
+        if (!result.empty())
+            return result;
+    }
+    return {};
 }
 
 std::string CommandLine::addIgnoreCommand(std::string_view value) {

@@ -156,6 +156,29 @@ TEST_CASE("Test CommandLine -- vectors") {
     CHECK(groupf == std::vector{"fff"s, "ffff"s});
 }
 
+TEST_CASE("Test CommandLine -- vectors with comma lists") {
+    std::vector<int32_t> groupa;
+    std::vector<double> groupb;
+    std::vector<std::string> groupc;
+
+    CommandLine cmdLine;
+    cmdLine.add("-a,--longa", groupa, "SDF", "", CommandLineFlags::CommaList);
+    cmdLine.add("-b,--longb", groupb, "SDF", "", CommandLineFlags::CommaList);
+    cmdLine.add(
+        "-c,--longc",
+        [&](std::string_view val) {
+            groupc.push_back(std::string(val));
+            return "";
+        },
+        "SDF", "", CommandLineFlags::CommaList);
+
+    CHECK(cmdLine.parse("prog -a 1,2,3 --longa=4,5,6 -b 3.14,4.15 -c foo,bar,baz"sv));
+
+    CHECK(groupa == std::vector<int32_t>{1, 2, 3, 4, 5, 6});
+    CHECK(groupb == std::vector{3.14, 4.15});
+    CHECK(groupc == std::vector{"foo"s, "bar"s, "baz"s});
+}
+
 TEST_CASE("Test CommandLine -- splitting") {
     std::vector<std::string> stuff;
 
