@@ -191,7 +191,7 @@ int main(int argc, char** argv) {
     driver.cmdLine.add(
         "--ast-json", astJsonFile,
         "Dump the compiled AST in JSON format to the specified file, or '-' for stdout", "<file>",
-        /* isFileName */ true);
+        CommandLineFlags::FilePath);
 
     std::vector<std::string> astJsonScopes;
     driver.cmdLine.add("--ast-json-scope", astJsonScopes,
@@ -202,8 +202,7 @@ int main(int argc, char** argv) {
     std::optional<std::string> netlistDotFile;
     driver.cmdLine.add("--netlist-dot", netlistDotFile,
                        "Dump the netlist in DOT format to the specified file, or '-' for stdout",
-                       "<file>",
-                       /* isFileName */ true);
+                       "<file>", CommandLineFlags::FilePath);
 
     std::optional<std::string> fromPointName;
     driver.cmdLine.add("--from", fromPointName, "Specify a start point from which to trace a path",

@@ -85,8 +85,7 @@ int driverMain(int argc, TArgs argv) {
         driver.cmdLine.add(
             "--ast-json", astJsonFile,
             "Dump the compiled AST in JSON format to the specified file, or '-' for stdout",
-            "<file>",
-            /* isFileName */ true);
+            "<file>", CommandLineFlags::FilePath);
 
         std::vector<std::string> astJsonScopes;
         driver.cmdLine.add("--ast-json-scope", astJsonScopes,

@@ -416,7 +416,7 @@ TEST_CASE("Test CommandLine -- file names") {
     std::optional<std::string> foo;
 
     CommandLine cmdLine;
-    cmdLine.add("+foo", foo, "", "", /* isFileName */ true);
+    cmdLine.add("+foo", foo, "", "", CommandLineFlags::FilePath);
 
     CHECK(cmdLine.parse("prog +foo+../something/bar/baz"));
 

@@ -14,10 +14,22 @@
 #include <variant>
 #include <vector>
 
+#include "slang/util/Enum.h"
 #include "slang/util/SmallVector.h"
 #include "slang/util/Util.h"
 
 namespace slang {
+
+/// Specifies flags that can apply to command line options.
+enum class CommandLineFlags {
+    /// No special flags.
+    None = 0,
+
+    /// The option is for a file path, which should be translated
+    /// relative to the current working directory.
+    FilePath = 1
+};
+SLANG_BITMASK(CommandLineFlags, FilePath)
 
 /// Command line argument parser.
 ///
@@ -62,134 +74,144 @@ public:
     /// the strings "true", "True", "false", and "False" for longform values.
     /// If the flag is not provided on a command line, the value will remain unset.
     ///
-    /// @name is a comma separated list of long form and short form names
-    /// (including the dashes) that are accepted for this option.
-    /// @a desc is a human-friendly description for printing help text.
-    void add(std::string_view name, std::optional<bool>& value, std::string_view desc);
+    /// @param name a comma separated list of long form and short form names
+    ///             (including the dashes) that are accepted for this option.
+    /// @param desc a human-friendly description for printing help text.
+    /// @param flags Additional flags that control how the option behaves.
+    void add(std::string_view name, std::optional<bool>& value, std::string_view desc,
+             bitmask<CommandLineFlags> flags = {});
 
     /// Register an option with @a name that will be parsed as an int32.
     /// If the option is not provided on a command line, the value will remain unset.
     ///
-    /// @name is a comma separated list of long form and short form names
-    /// (including the dashes) that are accepted for this option.
-    /// @a desc is a human-friendly description for printing help text.
-    /// @a valueName is an example name for the value when printing help text.
+    /// @param name a comma separated list of long form and short form names
+    ///             (including the dashes) that are accepted for this option.
+    /// @param desc a human-friendly description for printing help text.
+    /// @param valueName an example name for the value when printing help text.
+    /// @param flags Additional flags that control how the option behaves.
     void add(std::string_view name, std::optional<int32_t>& value, std::string_view desc,
-             std::string_view valueName = {});
+             std::string_view valueName = {}, bitmask<CommandLineFlags> flags = {});
 
     /// Register an option with @a name that will be parsed as a uint32.
     /// If the option is not provided on a command line, the value will remain unset.
     ///
-    /// @name is a comma separated list of long form and short form names
-    /// (including the dashes) that are accepted for this option.
-    /// @a desc is a human-friendly description for printing help text.
-    /// @a valueName is an example name for the value when printing help text.
+    /// @param name a comma separated list of long form and short form names
+    ///             (including the dashes) that are accepted for this option.
+    /// @param desc a human-friendly description for printing help text.
+    /// @param valueName an example name for the value when printing help text.
+    /// @param flags Additional flags that control how the option behaves.
     void add(std::string_view name, std::optional<uint32_t>& value, std::string_view desc,
-             std::string_view valueName = {});
+             std::string_view valueName = {}, bitmask<CommandLineFlags> flags = {});
 
     /// Register an option with @a name that will be parsed as an int64.
     /// If the option is not provided on a command line, the value will remain unset.
     ///
-    /// @name is a comma separated list of long form and short form names
-    /// (including the dashes) that are accepted for this option.
-    /// @a desc is a human-friendly description for printing help text.
-    /// @a valueName is an example name for the value when printing help text.
+    /// @param name a comma separated list of long form and short form names
+    ///             (including the dashes) that are accepted for this option.
+    /// @param desc a human-friendly description for printing help text.
+    /// @param valueName an example name for the value when printing help text.
+    /// @param flags Additional flags that control how the option behaves.
     void add(std::string_view name, std::optional<int64_t>& value, std::string_view desc,
-             std::string_view valueName = {});
+             std::string_view valueName = {}, bitmask<CommandLineFlags> flags = {});
 
     /// Register an option with @a name that will be parsed as a uint64.
     /// If the option is not provided on a command line, the value will remain unset.
     ///
-    /// @name is a comma separated list of long form and short form names
-    /// (including the dashes) that are accepted for this option.
-    /// @a desc is a human-friendly description for printing help text.
-    /// @a valueName is an example name for the value when printing help text.
+    /// @param name a comma separated list of long form and short form names
+    ///             (including the dashes) that are accepted for this option.
+    /// @param desc a human-friendly description for printing help text.
+    /// @param valueName an example name for the value when printing help text.
+    /// @param flags Additional flags that control how the option behaves.
     void add(std::string_view name, std::optional<uint64_t>& value, std::string_view desc,
-             std::string_view valueName = {});
+             std::string_view valueName = {}, bitmask<CommandLineFlags> flags = {});
 
     /// Register an option with @a name that will be parsed as a double.
     /// If the option is not provided on a command line, the value will remain unset.
     ///
-    /// @name is a comma separated list of long form and short form names
-    /// (including the dashes) that are accepted for this option.
-    /// @a desc is a human-friendly description for printing help text.
-    /// @a valueName is an example name for the value when printing help text.
+    /// @param name a comma separated list of long form and short form names
+    ///             (including the dashes) that are accepted for this option.
+    /// @param desc a human-friendly description for printing help text.
+    /// @param valueName an example name for the value when printing help text.
+    /// @param flags Additional flags that control how the option behaves.
     void add(std::string_view name, std::optional<double>& value, std::string_view desc,
-             std::string_view valueName = {});
+             std::string_view valueName = {}, bitmask<CommandLineFlags> flags = {});
 
     /// Register an option with @a name that will be parsed as a string.
     /// If the option is not provided on a command line, the value will remain unset.
     ///
-    /// @name is a comma separated list of long form and short form names
-    /// (including the dashes) that are accepted for this option.
-    /// @a desc is a human-friendly description for printing help text.
-    /// @a valueName is an example name for the value when printing help text.
-    /// @a isFileName indicates whether the parsed string is a filename that
-    ///               might be relative to the current directory.
+    /// @param name a comma separated list of long form and short form names
+    ///             (including the dashes) that are accepted for this option.
+    /// @param desc a human-friendly description for printing help text.
+    /// @param valueName an example name for the value when printing help text.
+    /// @param flags Additional flags that control how the option behaves.
     void add(std::string_view name, std::optional<std::string>& value, std::string_view desc,
-             std::string_view valueName = {}, bool isFileName = false);
+             std::string_view valueName = {}, bitmask<CommandLineFlags> flags = {});
 
     /// Register an option with @a name that will be parsed as a list of int32s.
     /// If the option is not provided on a command line, the value will remain an empty vector.
     ///
-    /// @name is a comma separated list of long form and short form names
-    /// (including the dashes) that are accepted for this option.
-    /// @a desc is a human-friendly description for printing help text.
-    /// @a valueName is an example name for the value when printing help text.
+    /// @param name a comma separated list of long form and short form names
+    ///             (including the dashes) that are accepted for this option.
+    /// @param desc a human-friendly description for printing help text.
+    /// @param valueName an example name for the value when printing help text.
+    /// @param flags Additional flags that control how the option behaves.
     void add(std::string_view name, std::vector<int32_t>& value, std::string_view desc,
-             std::string_view valueName = {});
+             std::string_view valueName = {}, bitmask<CommandLineFlags> flags = {});
 
     /// Register an option with @a name that will be parsed as a list of uint32s.
     /// If the option is not provided on a command line, the value will remain an empty vector.
     ///
-    /// @name is a comma separated list of long form and short form names
-    /// (including the dashes) that are accepted for this option.
-    /// @a desc is a human-friendly description for printing help text.
-    /// @a valueName is an example name for the value when printing help text.
+    /// @param name a comma separated list of long form and short form names
+    ///             (including the dashes) that are accepted for this option.
+    /// @param desc a human-friendly description for printing help text.
+    /// @param valueName an example name for the value when printing help text.
+    /// @param flags Additional flags that control how the option behaves.
     void add(std::string_view name, std::vector<uint32_t>& value, std::string_view desc,
-             std::string_view valueName = {});
+             std::string_view valueName = {}, bitmask<CommandLineFlags> flags = {});
 
     /// Register an option with @a name that will be parsed as a list of int64s.
     /// If the option is not provided on a command line, the value will remain an empty vector.
     ///
-    /// @name is a comma separated list of long form and short form names
-    /// (including the dashes) that are accepted for this option.
-    /// @a desc is a human-friendly description for printing help text.
-    /// @a valueName is an example name for the value when printing help text.
+    /// @param name a comma separated list of long form and short form names
+    ///             (including the dashes) that are accepted for this option.
+    /// @param desc a human-friendly description for printing help text.
+    /// @param valueName an example name for the value when printing help text.
+    /// @param flags Additional flags that control how the option behaves.
     void add(std::string_view name, std::vector<int64_t>& value, std::string_view desc,
-             std::string_view valueName = {});
+             std::string_view valueName = {}, bitmask<CommandLineFlags> flags = {});
 
     /// Register an option with @a name that will be parsed as a list of uint64s.
     /// If the option is not provided on a command line, the value will remain an empty vector.
     ///
-    /// @name is a comma separated list of long form and short form names
-    /// (including the dashes) that are accepted for this option.
-    /// @a desc is a human-friendly description for printing help text.
-    /// @a valueName is an example name for the value when printing help text.
+    /// @param name a comma separated list of long form and short form names
+    ///             (including the dashes) that are accepted for this option.
+    /// @param desc a human-friendly description for printing help text.
+    /// @param valueName an example name for the value when printing help text.
+    /// @param flags Additional flags that control how the option behaves.
     void add(std::string_view name, std::vector<uint64_t>& value, std::string_view desc,
-             std::string_view valueName = {});
+             std::string_view valueName = {}, bitmask<CommandLineFlags> flags = {});
 
     /// Register an option with @a name that will be parsed as a list of doubles.
     /// If the option is not provided on a command line, the value will remain an empty vector.
     ///
-    /// @name is a comma separated list of long form and short form names
-    /// (including the dashes) that are accepted for this option.
-    /// @a desc is a human-friendly description for printing help text.
-    /// @a valueName is an example name for the value when printing help text.
+    /// @param name a comma separated list of long form and short form names
+    ///             (including the dashes) that are accepted for this option.
+    /// @param desc a human-friendly description for printing help text.
+    /// @param valueName an example name for the value when printing help text.
+    /// @param flags Additional flags that control how the option behaves.
     void add(std::string_view name, std::vector<double>& value, std::string_view desc,
-             std::string_view valueName = {});
+             std::string_view valueName = {}, bitmask<CommandLineFlags> flags = {});
 
     /// Register an option with @a name that will be parsed as a list of strings.
     /// If the option is not provided on a command line, the value will remain an empty vector.
     ///
-    /// @name is a comma separated list of long form and short form names
-    /// (including the dashes) that are accepted for this option.
-    /// @a desc is a human-friendly description for printing help text.
-    /// @a valueName is an example name for the value when printing help text.
-    /// @a isFileName indicates whether the parsed string is a filename that
-    ///               might be relative to the current directory.
+    /// @param name a comma separated list of long form and short form names
+    ///             (including the dashes) that are accepted for this option.
+    /// @param desc a human-friendly description for printing help text.
+    /// @param valueName an example name for the value when printing help text.
+    /// @param flags Additional flags that control how the option behaves.
     void add(std::string_view name, std::vector<std::string>& value, std::string_view desc,
-             std::string_view valueName = {}, bool isFileName = false);
+             std::string_view valueName = {}, bitmask<CommandLineFlags> flags = {});
 
     using OptionCallback = std::function<std::string(std::string_view)>;
 
@@ -198,31 +220,29 @@ public:
     /// If the option is not provided on a command line, the callback
     /// will never be invoked.
     ///
-    /// @name is a comma separated list of long form and short form names
-    /// (including the dashes) that are accepted for this option.
-    /// @a desc is a human-friendly description for printing help text.
-    /// @a valueName is an example name for the value when printing help text.
-    /// @a isFileName indicates whether the parsed string is a filename that
-    ///               might be relative to the current directory.
+    /// @param name a comma separated list of long form and short form names
+    ///             (including the dashes) that are accepted for this option.
+    /// @param desc a human-friendly description for printing help text.
+    /// @param valueName an example name for the value when printing help text.
+    /// @param flags Additional flags that control how the option behaves.
     void add(std::string_view name, OptionCallback cb, std::string_view desc,
-             std::string_view valueName = {}, bool isFileName = false);
+             std::string_view valueName = {}, bitmask<CommandLineFlags> flags = {});
 
     /// Set a variable that will receive any positional arguments provided
     /// on the command line. They will be returned as a list of strings.
-    /// @a valueName is for including in the help text.
-    /// @a isFileName indicates whether the parsed string is a filename that
-    ///               might be relative to the current directory.
+    /// @param valueName for including in the help text.
+    /// @param flags Additional flags that control how the option behaves.
     /// @note only one variable or callback be set to receive positional arguments.
     void setPositional(std::vector<std::string>& values, std::string_view valueName,
-                       bool isFileName = false);
+                       bitmask<CommandLineFlags> flags = {});
 
     /// Set a callback that will receive any positional arguments provided
     /// on the command line.
-    /// @a valueName is for including in the help text.
-    /// @a isFileName indicates whether the parsed string is a filename that
-    ///               might be relative to the current directory.
+    /// @param valueName for including in the help text.
+    /// @param flags Additional flags that control how the option behaves.
     /// @note only one variable or callback be set to receive positional arguments.
-    void setPositional(OptionCallback cb, std::string_view valueName, bool isFileName = false);
+    void setPositional(OptionCallback cb, std::string_view valueName,
+                       bitmask<CommandLineFlags> flags = {});
 
     /// Adds a command that will be ignored if encountered during argument parsing.
     /// @param value a string containing a single comma-separated "name,value" pair,
@@ -309,7 +329,7 @@ private:
         std::string desc;
         std::string valueName;
         std::string allArgNames;
-        bool isFileName = false;
+        bitmask<CommandLineFlags> flags;
 
         bool expectsValue() const;
 
@@ -354,7 +374,7 @@ private:
     };
 
     void addInternal(std::string_view name, OptionStorage storage, std::string_view desc,
-                     std::string_view valueName, bool isFileName = false);
+                     std::string_view valueName, bitmask<CommandLineFlags> flags);
 
     void parseStr(std::string_view argList, ParseOptions options, bool& hasArg,
                   std::string& current, SmallVectorBase<std::string>& storage);
