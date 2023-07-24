@@ -51,7 +51,7 @@ void Driver::addStandardArgs() {
             }
             return "";
         },
-        "Additional include search paths", "<dir>");
+        "Additional include search paths", "<dir>", CommandLineFlags::CommaList);
 
     cmdLine.add(
         "--isystem",
@@ -61,14 +61,15 @@ void Driver::addStandardArgs() {
             }
             return "";
         },
-        "Additional system include search paths", "<dir>");
+        "Additional system include search paths", "<dir>", CommandLineFlags::CommaList);
 
     // Preprocessor
     cmdLine.add("-D,--define-macro,+define", options.defines,
                 "Define <macro> to <value> (or 1 if <value> ommitted) in all source files",
                 "<macro>=<value>");
     cmdLine.add("-U,--undefine-macro", options.undefines,
-                "Undefine macro name at the start of all source files", "<macro>");
+                "Undefine macro name at the start of all source files", "<macro>",
+                CommandLineFlags::CommaList);
     cmdLine.add("--max-include-depth", options.maxIncludeDepth,
                 "Maximum depth of nested include files allowed", "<depth>");
     cmdLine.add("--libraries-inherit-macros", options.librariesInheritMacros,
@@ -87,7 +88,8 @@ void Driver::addStandardArgs() {
         "Define rule to rename vendor command <vendor_cmd> into existing <slang_cmd>",
         "<vendor_cmd>,<slang_cmd>");
     cmdLine.add("--ignore-directive", options.ignoreDirectives,
-                "Ignore preprocessor directive and all its arguments until EOL", "<directive>");
+                "Ignore preprocessor directive and all its arguments until EOL", "<directive>",
+                CommandLineFlags::CommaList);
 
     // Parsing
     cmdLine.add("--max-parse-depth", options.maxParseDepth,
@@ -145,7 +147,7 @@ void Driver::addStandardArgs() {
     cmdLine.add("--top", options.topModules,
                 "One or more top-level modules to instantiate "
                 "(instead of figuring it out automatically)",
-                "<name>");
+                "<name>", CommandLineFlags::CommaList);
     cmdLine.add("-G", options.paramOverrides,
                 "One or more parameter overrides to apply when "
                 "instantiating top-level modules",
@@ -181,7 +183,8 @@ void Driver::addStandardArgs() {
                 printWarning(fmt::format("--suppress-warnings path '{}': {}", value, ec.message()));
             return "";
         },
-        "One or more paths in which to suppress warnings", "<filename>");
+        "One or more paths in which to suppress warnings", "<filename>",
+        CommandLineFlags::CommaList);
 
     cmdLine.add(
         "--suppress-macro-warnings",
@@ -194,7 +197,7 @@ void Driver::addStandardArgs() {
         },
         "One or more paths in which to suppress warnings that "
         "originate in macro expansions",
-        "<filename>");
+        "<filename>", CommandLineFlags::CommaList);
 
     // File lists
     cmdLine.add("--single-unit", options.singleUnit,
@@ -208,7 +211,7 @@ void Driver::addStandardArgs() {
         },
         "One or more library files, which are separate compilation units "
         "where modules are not automatically instantiated.",
-        "<filename>");
+        "<filename>", CommandLineFlags::CommaList);
 
     cmdLine.add(
         "--libmap",
@@ -220,7 +223,7 @@ void Driver::addStandardArgs() {
         },
         "One or more library map files to parse "
         "for library name mappings and file lists",
-        "<filename>");
+        "<filename>", CommandLineFlags::CommaList);
 
     cmdLine.add(
         "-y,--libdir",
@@ -228,7 +231,8 @@ void Driver::addStandardArgs() {
             sourceLoader.addSearchDirectories(value);
             return "";
         },
-        "Library search paths, which will be searched for missing modules", "<dir>");
+        "Library search paths, which will be searched for missing modules", "<dir>",
+        CommandLineFlags::CommaList);
 
     cmdLine.add(
         "-Y,--libext",
@@ -236,7 +240,7 @@ void Driver::addStandardArgs() {
             sourceLoader.addSearchExtension(value);
             return "";
         },
-        "Additional library file extensions to search", "<ext>");
+        "Additional library file extensions to search", "<ext>", CommandLineFlags::CommaList);
 
     cmdLine.add(
         "--exclude-ext",
@@ -244,7 +248,8 @@ void Driver::addStandardArgs() {
             options.excludeExts.emplace(std::string(value));
             return "";
         },
-        "Exclude provided source files with these extensions", "<ext>");
+        "Exclude provided source files with these extensions", "<ext>",
+        CommandLineFlags::CommaList);
 
     cmdLine.setPositional(
         [this](std::string_view value) {
@@ -268,7 +273,7 @@ void Driver::addStandardArgs() {
         },
         "One or more command files containing additional program options. "
         "Paths in the file are considered relative to the current directory.",
-        "<filename>");
+        "<filename>", CommandLineFlags::CommaList);
 
     cmdLine.add(
         "-F",
@@ -278,7 +283,7 @@ void Driver::addStandardArgs() {
         },
         "One or more command files containing additional program options. "
         "Paths in the file are considered relative to the file itself.",
-        "<filename>");
+        "<filename>", CommandLineFlags::CommaList);
 }
 
 [[nodiscard]] bool Driver::parseCommandLine(std::string_view argList) {
