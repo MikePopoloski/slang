@@ -320,6 +320,21 @@ TEMPLATE_LIST_TEST_CASE_METHOD(SmallVectorTest, "ResizeGrowTest", "[small_vec]",
     CHECK(2u == v.size());
 }
 
+TEMPLATE_LIST_TEST_CASE_METHOD(SmallVectorTest, "ResizeForOverwriteGrowTest", "[small_vec]",
+                               SmallVectorTestTypes) {
+    auto& v = this->theVector;
+    v.resize_for_overwrite(2);
+
+    CHECK(2 == Constructable::getNumConstructorCalls());
+    CHECK(0 == Constructable::getNumDestructorCalls());
+    CHECK(2u == v.size());
+
+    v.resize_for_overwrite(20);
+    CHECK(22 == Constructable::getNumConstructorCalls());
+    CHECK(2 == Constructable::getNumDestructorCalls());
+    CHECK(20u == v.size());
+}
+
 TEMPLATE_LIST_TEST_CASE_METHOD(SmallVectorTest, "ResizeWithElementsTest", "[small_vec]",
                                SmallVectorTestTypes) {
     auto& v = this->theVector;
