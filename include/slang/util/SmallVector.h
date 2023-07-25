@@ -320,7 +320,10 @@ public:
         std::uninitialized_move(result, end(), begin() + newSize - existingOverlap);
 
         // Copy in the new elements.
-        first = std::ranges::copy_n(first, existingOverlap, result).in;
+        first = std::ranges::copy_n(first,
+                                    static_cast<std::iter_difference_t<TIter>>(existingOverlap),
+                                    result)
+                    .in;
 
         // Insert the non-overwritten middle part.
         std::ranges::uninitialized_copy(first, last, end(), end() + numElems - existingOverlap);
