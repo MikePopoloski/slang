@@ -69,7 +69,7 @@ bool OS::fileSupportsColors(FILE* file) {
     return fileSupportsColors(_fileno(file));
 }
 
-std::error_code OS::readFile(const fs::path& path, std::vector<char>& buffer) {
+std::error_code OS::readFile(const fs::path& path, SmallVector<char>& buffer) {
     HANDLE handle = ::CreateFileW(path.native().c_str(), GENERIC_READ,
                                   FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL,
                                   OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,
@@ -93,7 +93,7 @@ std::error_code OS::readFile(const fs::path& path, std::vector<char>& buffer) {
         }
         else {
             size_t fileSize = (size_t(fileInfo.nFileSizeHigh) << 32) + fileInfo.nFileSizeLow;
-            buffer.resize(fileSize + 1);
+            buffer.resize_for_overwrite(fileSize + 1);
 
             char* buf = buffer.data();
             while (fileSize) {
@@ -126,7 +126,7 @@ std::error_code OS::readFile(const fs::path& path, std::vector<char>& buffer) {
 
         size_t currSize = 0;
         while (true) {
-            buffer.resize(currSize + ChunkSize);
+            buffer.resize_for_overwrite(currSize + ChunkSize + 1);
 
             DWORD bytesRead = 0;
             BOOL result = ::ReadFile(handle, buffer.data() + currSize, ChunkSize, &bytesRead, NULL);
@@ -168,7 +168,7 @@ bool OS::fileSupportsColors(FILE* file) {
     return fileSupportsColors(fileno(file));
 }
 
-std::error_code OS::readFile(const fs::path& path, std::vector<char>& buffer) {
+std::error_code OS::readFile(const fs::path& path, SmallVector<char>& buffer) {
     int fd;
     while (true) {
         fd = ::open(path.native().c_str(), O_RDONLY | O_CLOEXEC);
@@ -186,7 +186,7 @@ std::error_code OS::readFile(const fs::path& path, std::vector<char>& buffer) {
     }
     else if (S_ISREG(status.st_mode) || S_ISBLK(status.st_mode)) {
         auto fileSize = (size_t)status.st_size;
-        buffer.resize(fileSize + 1);
+        buffer.resize_for_overwrite(fileSize + 1);
 
         char* buf = buffer.data();
         while (fileSize) {
@@ -217,7 +217,7 @@ std::error_code OS::readFile(const fs::path& path, std::vector<char>& buffer) {
 
         size_t currSize = 0;
         while (true) {
-            buffer.resize(currSize + ChunkSize);
+            buffer.resize_for_overwrite(currSize + ChunkSize + 1);
 
             ssize_t numRead = ::read(fd, buffer.data() + currSize, ChunkSize);
             if (numRead < 0) {

@@ -8,9 +8,9 @@
 #pragma once
 
 #include <filesystem>
-#include <vector>
 
 #include "slang/util/ScopeGuard.h"
+#include "slang/util/SmallVector.h"
 #include "slang/util/Util.h"
 
 namespace fmt {
@@ -42,7 +42,7 @@ public:
     /// Reads a file from @a path into memory. If successful, the bytes are placed
     /// into @a buffer -- otherwise, returns false.
     /// Note that the buffer will be null-terminated.
-    static std::error_code readFile(const std::filesystem::path& path, std::vector<char>& buffer);
+    static std::error_code readFile(const std::filesystem::path& path, SmallVector<char>& buffer);
 
     /// Prints text to stdout.
     static void print(std::string_view text);

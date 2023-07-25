@@ -309,7 +309,7 @@ bool Driver::processCommandFiles(std::string_view pattern, bool makeRelative) {
         return onError(pattern, globEc);
 
     for (auto& path : files) {
-        std::vector<char> buffer;
+        SmallVector<char> buffer;
         if (auto readEc = OS::readFile(path, buffer))
             return onError(getU8Str(path), readEc);
 

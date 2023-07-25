@@ -20,6 +20,7 @@
 
 #include "slang/text/SourceLocation.h"
 #include "slang/util/Hash.h"
+#include "slang/util/SmallVector.h"
 #include "slang/util/Util.h"
 
 namespace slang {
@@ -146,7 +147,7 @@ public:
 
     /// Instead of loading source from a file, move it from text already in memory.
     /// Pretend it came from a file located at @a path.
-    SourceBuffer assignBuffer(std::string_view path, std::vector<char>&& buffer,
+    SourceBuffer assignBuffer(std::string_view path, SmallVector<char>&& buffer,
                               SourceLocation includedFrom = SourceLocation(),
                               const SourceLibrary* library = nullptr);
 
@@ -227,12 +228,12 @@ private:
     // Stores actual file contents and metadata; only one per loaded file
     struct FileData {
         const std::string name;                       // name of the file
-        const std::vector<char> mem;                  // file contents
+        const SmallVector<char> mem;                  // file contents
         std::vector<size_t> lineOffsets;              // cache of compute line offsets
         const std::filesystem::path* const directory; // directory in which the file exists
         const std::filesystem::path fullPath;         // full path to the file
 
-        FileData(const std::filesystem::path* directory, std::string name, std::vector<char>&& data,
+        FileData(const std::filesystem::path* directory, std::string name, SmallVector<char>&& data,
                  std::filesystem::path fullPath) :
             name(std::move(name)),
             mem(std::move(data)), directory(directory), fullPath(std::move(fullPath)) {}
@@ -319,7 +320,7 @@ private:
                              const SourceLibrary* library);
     SourceBuffer cacheBuffer(std::filesystem::path&& path, std::string&& pathStr,
                              SourceLocation includedFrom, const SourceLibrary* library,
-                             std::vector<char>&& buffer);
+                             SmallVector<char>&& buffer);
 
     template<IsLock TLock>
     size_t getRawLineNumber(SourceLocation location, TLock& lock) const;
@@ -339,7 +340,7 @@ private:
     template<IsLock TLock>
     SourceRange getExpansionRangeImpl(SourceLocation location, TLock& lock) const;
 
-    static void computeLineOffsets(const std::vector<char>& buffer,
+    static void computeLineOffsets(const SmallVector<char>& buffer,
                                    std::vector<size_t>& offsets) noexcept;
 };
 

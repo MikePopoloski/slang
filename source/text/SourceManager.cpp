@@ -245,7 +245,7 @@ SourceBuffer SourceManager::assignText(std::string_view path, std::string_view t
         path = temp;
     }
 
-    std::vector<char> buffer;
+    SmallVector<char> buffer;
     buffer.insert(buffer.end(), text.begin(), text.end());
     if (buffer.empty() || buffer.back() != '\0')
         buffer.push_back('\0');
@@ -253,7 +253,7 @@ SourceBuffer SourceManager::assignText(std::string_view path, std::string_view t
     return assignBuffer(path, std::move(buffer), includedFrom, library);
 }
 
-SourceBuffer SourceManager::assignBuffer(std::string_view bufferPath, std::vector<char>&& buffer,
+SourceBuffer SourceManager::assignBuffer(std::string_view bufferPath, SmallVector<char>&& buffer,
                                          SourceLocation includedFrom,
                                          const SourceLibrary* library) {
     // first see if we have this file cached
@@ -453,7 +453,7 @@ SourceManager::BufferOrError SourceManager::openCached(const fs::path& fullPath,
     }
 
     // do the read
-    std::vector<char> buffer;
+    SmallVector<char> buffer;
     if (std::error_code ec = OS::readFile(absPath, buffer)) {
         std::unique_lock lock(mutex);
         lookupCache.emplace(pathStr, std::pair{nullptr, ec});
@@ -466,7 +466,7 @@ SourceManager::BufferOrError SourceManager::openCached(const fs::path& fullPath,
 
 SourceBuffer SourceManager::cacheBuffer(fs::path&& path, std::string&& pathStr,
                                         SourceLocation includedFrom, const SourceLibrary* library,
-                                        std::vector<char>&& buffer) {
+                                        SmallVector<char>&& buffer) {
     std::string name;
     if (!disableProximatePaths) {
         std::error_code ec;
@@ -593,7 +593,7 @@ SourceLocation SourceManager::getOriginalLocImpl(SourceLocation location, TLock&
     return std::get<ExpansionInfo>(bufferEntries[buffer.getId()]).originalLoc + location.offset();
 }
 
-void SourceManager::computeLineOffsets(const std::vector<char>& buffer,
+void SourceManager::computeLineOffsets(const SmallVector<char>& buffer,
                                        std::vector<size_t>& offsets) noexcept {
     // first line always starts at offset 0
     offsets.push_back(0);
