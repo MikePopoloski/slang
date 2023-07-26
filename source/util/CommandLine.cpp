@@ -20,77 +20,79 @@ namespace fs = std::filesystem;
 
 namespace slang {
 
-void CommandLine::add(std::string_view name, std::optional<bool>& value, std::string_view desc) {
-    addInternal(name, &value, desc, {});
+void CommandLine::add(std::string_view name, std::optional<bool>& value, std::string_view desc,
+                      bitmask<CommandLineFlags> flags) {
+    addInternal(name, &value, desc, {}, flags);
 }
 
 void CommandLine::add(std::string_view name, std::optional<int32_t>& value, std::string_view desc,
-                      std::string_view valueName) {
-    addInternal(name, &value, desc, valueName);
+                      std::string_view valueName, bitmask<CommandLineFlags> flags) {
+    addInternal(name, &value, desc, valueName, flags);
 }
 
 void CommandLine::add(std::string_view name, std::optional<uint32_t>& value, std::string_view desc,
-                      std::string_view valueName) {
-    addInternal(name, &value, desc, valueName);
+                      std::string_view valueName, bitmask<CommandLineFlags> flags) {
+    addInternal(name, &value, desc, valueName, flags);
 }
 
 void CommandLine::add(std::string_view name, std::optional<int64_t>& value, std::string_view desc,
-                      std::string_view valueName) {
-    addInternal(name, &value, desc, valueName);
+                      std::string_view valueName, bitmask<CommandLineFlags> flags) {
+    addInternal(name, &value, desc, valueName, flags);
 }
 
 void CommandLine::add(std::string_view name, std::optional<uint64_t>& value, std::string_view desc,
-                      std::string_view valueName) {
-    addInternal(name, &value, desc, valueName);
+                      std::string_view valueName, bitmask<CommandLineFlags> flags) {
+    addInternal(name, &value, desc, valueName, flags);
 }
 
 void CommandLine::add(std::string_view name, std::optional<double>& value, std::string_view desc,
-                      std::string_view valueName) {
-    addInternal(name, &value, desc, valueName);
+                      std::string_view valueName, bitmask<CommandLineFlags> flags) {
+    addInternal(name, &value, desc, valueName, flags);
 }
 
 void CommandLine::add(std::string_view name, std::optional<std::string>& value,
-                      std::string_view desc, std::string_view valueName, bool isFileName) {
-    addInternal(name, &value, desc, valueName, isFileName);
+                      std::string_view desc, std::string_view valueName,
+                      bitmask<CommandLineFlags> flags) {
+    addInternal(name, &value, desc, valueName, flags);
 }
 
 void CommandLine::add(std::string_view name, std::vector<int32_t>& value, std::string_view desc,
-                      std::string_view valueName) {
-    addInternal(name, &value, desc, valueName);
+                      std::string_view valueName, bitmask<CommandLineFlags> flags) {
+    addInternal(name, &value, desc, valueName, flags);
 }
 
 void CommandLine::add(std::string_view name, std::vector<uint32_t>& value, std::string_view desc,
-                      std::string_view valueName) {
-    addInternal(name, &value, desc, valueName);
+                      std::string_view valueName, bitmask<CommandLineFlags> flags) {
+    addInternal(name, &value, desc, valueName, flags);
 }
 
 void CommandLine::add(std::string_view name, std::vector<int64_t>& value, std::string_view desc,
-                      std::string_view valueName) {
-    addInternal(name, &value, desc, valueName);
+                      std::string_view valueName, bitmask<CommandLineFlags> flags) {
+    addInternal(name, &value, desc, valueName, flags);
 }
 
 void CommandLine::add(std::string_view name, std::vector<uint64_t>& value, std::string_view desc,
-                      std::string_view valueName) {
-    addInternal(name, &value, desc, valueName);
+                      std::string_view valueName, bitmask<CommandLineFlags> flags) {
+    addInternal(name, &value, desc, valueName, flags);
 }
 
 void CommandLine::add(std::string_view name, std::vector<double>& value, std::string_view desc,
-                      std::string_view valueName) {
-    addInternal(name, &value, desc, valueName);
+                      std::string_view valueName, bitmask<CommandLineFlags> flags) {
+    addInternal(name, &value, desc, valueName, flags);
 }
 
 void CommandLine::add(std::string_view name, std::vector<std::string>& value, std::string_view desc,
-                      std::string_view valueName, bool isFileName) {
-    addInternal(name, &value, desc, valueName, isFileName);
+                      std::string_view valueName, bitmask<CommandLineFlags> flags) {
+    addInternal(name, &value, desc, valueName, flags);
 }
 
 void CommandLine::add(std::string_view name, OptionCallback cb, std::string_view desc,
-                      std::string_view valueName, bool isFileName) {
-    addInternal(name, cb, desc, valueName, isFileName);
+                      std::string_view valueName, bitmask<CommandLineFlags> flags) {
+    addInternal(name, cb, desc, valueName, flags);
 }
 
 void CommandLine::addInternal(std::string_view name, OptionStorage storage, std::string_view desc,
-                              std::string_view valueName, bool isFileName) {
+                              std::string_view valueName, bitmask<CommandLineFlags> flags) {
     if (name.empty())
         SLANG_THROW(std::invalid_argument("Name cannot be empty"));
 
@@ -99,7 +101,7 @@ void CommandLine::addInternal(std::string_view name, OptionStorage storage, std:
     option->valueName = valueName;
     option->allArgNames = name;
     option->storage = std::move(storage); // NOLINT
-    option->isFileName = isFileName;
+    option->flags = flags;
 
     while (true) {
         size_t index = name.find_first_of(',');
@@ -136,24 +138,25 @@ void CommandLine::addInternal(std::string_view name, OptionStorage storage, std:
 }
 
 void CommandLine::setPositional(std::vector<std::string>& values, std::string_view valueName,
-                                bool isFileName) {
+                                bitmask<CommandLineFlags> flags) {
     if (positional)
         SLANG_THROW(std::runtime_error("Can only set one positional argument"));
 
     positional = std::make_shared<Option>();
     positional->valueName = valueName;
     positional->storage = &values;
-    positional->isFileName = isFileName;
+    positional->flags = flags;
 }
 
-void CommandLine::setPositional(OptionCallback cb, std::string_view valueName, bool isFileName) {
+void CommandLine::setPositional(OptionCallback cb, std::string_view valueName,
+                                bitmask<CommandLineFlags> flags) {
     if (positional)
         SLANG_THROW(std::runtime_error("Can only set one positional argument"));
 
     positional = std::make_shared<Option>();
     positional->valueName = valueName;
     positional->storage = cb;
-    positional->isFileName = isFileName;
+    positional->flags = flags;
 }
 
 bool CommandLine::parse(int argc, const char* const argv[]) {
@@ -636,9 +639,9 @@ bool CommandLine::Option::expectsValue() const {
 std::string CommandLine::Option::set(std::string_view name, std::string_view value,
                                      bool ignoreDup) {
     std::string pathMem;
-    if (isFileName && !value.empty() && value != "-") {
+    if (flags.has(CommandLineFlags::FilePath) && !value.empty() && value != "-") {
         std::error_code ec;
-        fs::path path = fs::weakly_canonical(fs::path(widen(value)), ec);
+        fs::path path = fs::weakly_canonical(widen(value), ec);
         if (!ec) {
             pathMem = getU8Str(path);
             value = pathMem;
@@ -703,8 +706,10 @@ static std::optional<double> parseDouble(std::string_view name, std::string_view
 
     size_t pos;
     std::optional<double> val = strToDouble(value, &pos);
-    if (!val || pos != value.size())
+    if (!val || pos != value.size()) {
         error = fmt::format("invalid value '{}' for float argument '{}'", value, name);
+        return {};
+    }
 
     return val;
 }
@@ -757,60 +762,88 @@ std::string CommandLine::Option::set(std::optional<std::string>& target, std::st
     return {};
 }
 
+static std::span<const std::string_view> parseList(std::string_view value, bool allowCommaList,
+                                                   SmallVector<std::string_view>& splitMem) {
+    if (allowCommaList) {
+        while (true) {
+            auto index = value.find_first_of(',');
+            if (index == std::string_view::npos)
+                break;
+
+            splitMem.push_back(value.substr(0, index));
+            value = value.substr(index + 1);
+        }
+    }
+    splitMem.push_back(value);
+    return splitMem;
+}
+
+template<typename T>
+static std::string setIntList(std::vector<T>& target, std::string_view name, std::string_view value,
+                              bitmask<CommandLineFlags> flags) {
+    SmallVector<std::string_view> splitMem;
+    for (auto entry : parseList(value, flags.has(CommandLineFlags::CommaList), splitMem)) {
+        std::string error;
+        auto result = parseInt<T>(name, entry, error);
+        if (!result)
+            return error;
+
+        target.push_back(*result);
+    }
+    return {};
+}
+
 std::string CommandLine::Option::set(std::vector<int32_t>& target, std::string_view name,
                                      std::string_view value) {
-    std::string error;
-    auto result = parseInt<int32_t>(name, value, error);
-    if (result)
-        target.push_back(*result);
-    return error;
+    return setIntList(target, name, value, flags);
 }
 
 std::string CommandLine::Option::set(std::vector<uint32_t>& target, std::string_view name,
                                      std::string_view value) {
-    std::string error;
-    auto result = parseInt<uint32_t>(name, value, error);
-    if (result)
-        target.push_back(*result);
-    return error;
+    return setIntList(target, name, value, flags);
 }
 
 std::string CommandLine::Option::set(std::vector<int64_t>& target, std::string_view name,
                                      std::string_view value) {
-    std::string error;
-    auto result = parseInt<int64_t>(name, value, error);
-    if (result)
-        target.push_back(*result);
-    return error;
+    return setIntList(target, name, value, flags);
 }
 
 std::string CommandLine::Option::set(std::vector<uint64_t>& target, std::string_view name,
                                      std::string_view value) {
-    std::string error;
-    auto result = parseInt<uint64_t>(name, value, error);
-    if (result)
-        target.push_back(*result);
-    return error;
+    return setIntList(target, name, value, flags);
 }
 
 std::string CommandLine::Option::set(std::vector<double>& target, std::string_view name,
                                      std::string_view value) {
-    std::string error;
-    auto result = parseDouble(name, value, error);
-    if (result)
+    SmallVector<std::string_view> splitMem;
+    for (auto entry : parseList(value, flags.has(CommandLineFlags::CommaList), splitMem)) {
+        std::string error;
+        auto result = parseDouble(name, entry, error);
+        if (!result)
+            return error;
+
         target.push_back(*result);
-    return error;
+    }
+    return {};
 }
 
 std::string CommandLine::Option::set(std::vector<std::string>& target, std::string_view,
                                      std::string_view value) {
-    target.emplace_back(value);
+    SmallVector<std::string_view> splitMem;
+    for (auto entry : parseList(value, flags.has(CommandLineFlags::CommaList), splitMem))
+        target.emplace_back(entry);
     return {};
 }
 
 std::string CommandLine::Option::set(OptionCallback& target, std::string_view,
                                      std::string_view value) {
-    return target(value);
+    SmallVector<std::string_view> splitMem;
+    for (auto entry : parseList(value, flags.has(CommandLineFlags::CommaList), splitMem)) {
+        auto result = target(entry);
+        if (!result.empty())
+            return result;
+    }
+    return {};
 }
 
 std::string CommandLine::addIgnoreCommand(std::string_view value) {

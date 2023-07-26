@@ -13,7 +13,7 @@
 #    include <io.h>
 #endif
 
-#include <filesystem>
+#include <fmt/format.h>
 
 #include "slang/syntax/SyntaxPrinter.h"
 #include "slang/syntax/SyntaxTree.h"
@@ -24,7 +24,13 @@ using namespace slang::syntax;
 int main(int argc, char** argv) {
     SLANG_TRY {
         if (argc != 2) {
-            fprintf(stderr, "usage: rewriter file\n");
+            fmt::print(stderr, "usage: rewriter file\n");
+            return 1;
+        }
+
+        auto tree = SyntaxTree::fromFile(argv[1]);
+        if (!tree) {
+            fmt::print(stderr, "error: '{}': {}\n", argv[1], tree.error().first.message());
             return 1;
         }
 
@@ -33,18 +39,7 @@ int main(int argc, char** argv) {
         _setmode(_fileno(stdout), _O_BINARY);
 #endif
 
-        if (!std::filesystem::exists(argv[1])) {
-            fprintf(stderr, "File does not exist: %s\n", argv[1]);
-            return 1;
-        }
-
-        if (!std::filesystem::is_regular_file(argv[1])) {
-            fprintf(stderr, "%s is not a file\n", argv[1]);
-            return 1;
-        }
-
-        auto tree = SyntaxTree::fromFile(argv[1]);
-        printf("%s", SyntaxPrinter::printFile(*tree).c_str());
+        printf("%s", SyntaxPrinter::printFile(*tree.value()).c_str());
         return 0;
     }
     SLANG_CATCH(const std::exception& e) {

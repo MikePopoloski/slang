@@ -83,7 +83,7 @@ TEST_CASE("Driver invalid include dirs") {
     const char* argv[] = {"testfoo", "-Ifoo/bar/baz/", "--isystem=foo/bar/baz/"};
     CHECK(driver.parseCommandLine(3, argv));
     CHECK(!driver.processOptions());
-    CHECK(stderrContains("does not exist"));
+    CHECK(stderrContains("warning: system include directory 'foo/bar/baz/':"));
     CHECK(stderrContains("no input files"));
 }
 
@@ -372,7 +372,7 @@ TEST_CASE("Driver unknown command file") {
     auto args = fmt::format("testfoo -F \"asdfasdf\"", findTestDir());
     CHECK(!driver.parseCommandLine(args));
     CHECK(!driver.processOptions());
-    CHECK(stderrContains("unable to find or open"));
+    CHECK(stderrContains("error: command file 'asdfasdf':"));
 }
 
 TEST_CASE("Driver allow defines to be inherited to lib files") {
@@ -425,9 +425,8 @@ TEST_CASE("Driver flag --exclude-ext (multiple use)") {
     auto filePath1 = findTestDir() + "test.sv";
     auto filePath2 = findTestDir() + "test.vhd";
     auto filePath3 = findTestDir() + "test.e";
-    const char* argv[] = {
-        "testfoo",         "--exclude-ext",  "vhd", "--exclude-ext", "e", filePath1.c_str(),
-        filePath2.c_str(), filePath3.c_str()};
+    const char* argv[] = {"testfoo", "--exclude-ext=vhd,e", filePath1.c_str(), filePath2.c_str(),
+                          filePath3.c_str()};
     CHECK(driver.parseCommandLine(sizeof(argv) / sizeof(argv[0]), argv));
     CHECK(driver.processOptions());
 }
@@ -459,7 +458,7 @@ TEST_CASE("Driver suppress macro warnings by path") {
 
     auto testDir = findTestDir();
     auto args = fmt::format(
-        "testfoo \"{0}test6.sv\" -Wwidth-trunc --suppress-macro-warnings \"{0}/nested\"", testDir);
+        "testfoo \"{0}test6.sv\" -Wwidth-trunc --suppress-macro-warnings \"{0}/nested/\"", testDir);
     CHECK(driver.parseCommandLine(args));
     CHECK(driver.processOptions());
     CHECK(driver.parseAllSources());
@@ -468,4 +467,79 @@ TEST_CASE("Driver suppress macro warnings by path") {
     CHECK(driver.reportCompilation(*compilation, false));
     CHECK(stdoutContains("Build succeeded"));
     CHECK(stdoutContains("0 errors, 0 warnings"));
+}
+
+// TODO: remove once stdlib gets contains()
+static bool contains(std::string_view str, std::string_view value) {
+    return str.find(value) != std::string_view::npos;
+}
+
+TEST_CASE("Driver library files with explicit name") {
+    auto guard = OS::captureOutput();
+
+    Driver driver;
+    driver.addStandardArgs();
+
+    auto testDir = findTestDir();
+    auto args = fmt::format("testfoo \"{0}test6.sv\" --single-unit --libraries-inherit-macros "
+                            "\"-vlibfoo={0}/library/.../*.sv\"",
+                            testDir);
+    CHECK(driver.parseCommandLine(args));
+    CHECK(driver.processOptions());
+    CHECK(driver.parseAllSources());
+
+    auto& sm = driver.sourceManager;
+    for (auto buf : sm.getAllBuffers()) {
+        // Ignore include files and macro buffers.
+        if (sm.isMacroLoc(SourceLocation(buf, 0)) || sm.getIncludedFrom(buf))
+            continue;
+
+        auto lib = sm.getLibraryFor(buf);
+        auto name = sm.getRawFileName(buf);
+        if (contains(name, "test6.sv")) {
+            CHECK(!lib);
+        }
+        else {
+            REQUIRE(lib);
+            CHECK(lib->name == "libfoo");
+        }
+    }
+}
+
+TEST_CASE("Driver load library maps") {
+    auto guard = OS::captureOutput();
+
+    Driver driver;
+    driver.addStandardArgs();
+
+    auto testDir = findTestDir();
+    auto args = fmt::format("testfoo \"{0}test6.sv\" --libmap \"{0}/library/lib.map\"", testDir);
+    CHECK(driver.parseCommandLine(args));
+    CHECK(driver.processOptions());
+    CHECK(driver.parseAllSources());
+
+    auto& sm = driver.sourceManager;
+    for (auto buf : sm.getAllBuffers()) {
+        // Ignore include files and macro buffers.
+        if (sm.isMacroLoc(SourceLocation(buf, 0)) || sm.getIncludedFrom(buf))
+            continue;
+
+        auto name = sm.getRawFileName(buf);
+        if (contains(name, ".map"))
+            continue;
+
+        auto lib = sm.getLibraryFor(buf);
+        if (contains(name, "test6.sv")) {
+            CHECK(!lib);
+        }
+        else {
+            REQUIRE(lib);
+            if (contains(name, "libmod.qv") || contains(name, "pkg.sv"))
+                CHECK(lib->name == "libfoo");
+            else
+                CHECK(lib->name == "libsys");
+        }
+    }
+
+    CHECK(driver.sourceLoader.getLibraryMaps().size() == 2);
 }

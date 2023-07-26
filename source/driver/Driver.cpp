@@ -43,18 +43,33 @@ Driver::Driver() : diagEngine(sourceManager), sourceLoader(sourceManager) {
 
 void Driver::addStandardArgs() {
     // Include paths
-    cmdLine.add("-I,--include-directory,+incdir", options.includeDirs,
-                "Additional include search paths", "<dir>", /* isFileName */ true);
-    cmdLine.add("--isystem", options.includeSystemDirs, "Additional system include search paths",
-                "<dir>",
-                /* isFileName */ true);
+    cmdLine.add(
+        "-I,--include-directory,+incdir",
+        [this](std::string_view value) {
+            if (auto ec = sourceManager.addUserDirectories(value)) {
+                printWarning(fmt::format("include directory '{}': {}", value, ec.message()));
+            }
+            return "";
+        },
+        "Additional include search paths", "<dir>", CommandLineFlags::CommaList);
+
+    cmdLine.add(
+        "--isystem",
+        [this](std::string_view value) {
+            if (auto ec = sourceManager.addSystemDirectories(value)) {
+                printWarning(fmt::format("system include directory '{}': {}", value, ec.message()));
+            }
+            return "";
+        },
+        "Additional system include search paths", "<dir>", CommandLineFlags::CommaList);
 
     // Preprocessor
     cmdLine.add("-D,--define-macro,+define", options.defines,
                 "Define <macro> to <value> (or 1 if <value> ommitted) in all source files",
                 "<macro>=<value>");
     cmdLine.add("-U,--undefine-macro", options.undefines,
-                "Undefine macro name at the start of all source files", "<macro>");
+                "Undefine macro name at the start of all source files", "<macro>",
+                CommandLineFlags::CommaList);
     cmdLine.add("--max-include-depth", options.maxIncludeDepth,
                 "Maximum depth of nested include files allowed", "<depth>");
     cmdLine.add("--libraries-inherit-macros", options.librariesInheritMacros,
@@ -73,7 +88,8 @@ void Driver::addStandardArgs() {
         "Define rule to rename vendor command <vendor_cmd> into existing <slang_cmd>",
         "<vendor_cmd>,<slang_cmd>");
     cmdLine.add("--ignore-directive", options.ignoreDirectives,
-                "Ignore preprocessor directive and all its arguments until EOL", "<directive>");
+                "Ignore preprocessor directive and all its arguments until EOL", "<directive>",
+                CommandLineFlags::CommaList);
 
     // Parsing
     cmdLine.add("--max-parse-depth", options.maxParseDepth,
@@ -131,7 +147,7 @@ void Driver::addStandardArgs() {
     cmdLine.add("--top", options.topModules,
                 "One or more top-level modules to instantiate "
                 "(instead of figuring it out automatically)",
-                "<name>");
+                "<name>", CommandLineFlags::CommaList);
     cmdLine.add("-G", options.paramOverrides,
                 "One or more parameter overrides to apply when "
                 "instantiating top-level modules",
@@ -159,75 +175,115 @@ void Driver::addStandardArgs() {
                 "Limit on the number of errors that will be printed. Setting this to zero will "
                 "disable the limit.",
                 "<limit>");
-    cmdLine.add("--suppress-warnings", options.suppressWarningsPaths,
-                "One or more paths in which to suppress warnings", "<filename>",
-                /* isFileName */ true);
-    cmdLine.add("--suppress-macro-warnings", options.suppressMacroWarningsPaths,
-                "One or more paths in which to suppress warnings that "
-                "originate in macro expansions",
-                "<filename>",
-                /* isFileName */ true);
+
+    cmdLine.add(
+        "--suppress-warnings",
+        [this](std::string_view value) {
+            if (auto ec = diagEngine.addIgnorePaths(value))
+                printWarning(fmt::format("--suppress-warnings path '{}': {}", value, ec.message()));
+            return "";
+        },
+        "One or more paths in which to suppress warnings", "<filename>",
+        CommandLineFlags::CommaList);
+
+    cmdLine.add(
+        "--suppress-macro-warnings",
+        [this](std::string_view value) {
+            if (auto ec = diagEngine.addIgnoreMacroPaths(value)) {
+                printWarning(
+                    fmt::format("--suppress-macro-warnings path '{}': {}", value, ec.message()));
+            }
+            return "";
+        },
+        "One or more paths in which to suppress warnings that "
+        "originate in macro expansions",
+        "<filename>", CommandLineFlags::CommaList);
 
     // File lists
     cmdLine.add("--single-unit", options.singleUnit,
                 "Treat all input files as a single compilation unit");
-    cmdLine.add("-v", options.libraryFiles,
-                "One or more library files, which are separate compilation units "
-                "where modules are not automatically instantiated.",
-                "<filename>", /* isFileName */ true);
-    cmdLine.add("--libmap", options.libMaps,
-                "One or more library map files to parse "
-                "for library name mappings and file lists",
-                "<filename>", /* isFileName */ true);
-    cmdLine.add("-y,--libdir", options.libDirs,
-                "Library search paths, which will be searched for missing modules", "<dir>",
-                /* isFileName */ true);
-    cmdLine.add("-Y,--libext", options.libExts, "Additional library file extensions to search",
-                "<ext>");
+
+    cmdLine.add(
+        "-v",
+        [this](std::string_view value) {
+            addLibraryFiles(value);
+            return "";
+        },
+        "One or more library files, which are separate compilation units "
+        "where modules are not automatically instantiated.",
+        "<filename>", CommandLineFlags::CommaList);
+
+    cmdLine.add(
+        "--libmap",
+        [this](std::string_view value) {
+            Bag optionBag;
+            addParseOptions(optionBag);
+            sourceLoader.addLibraryMaps(value, {}, optionBag);
+            return "";
+        },
+        "One or more library map files to parse "
+        "for library name mappings and file lists",
+        "<filename>", CommandLineFlags::CommaList);
+
+    cmdLine.add(
+        "-y,--libdir",
+        [this](std::string_view value) {
+            sourceLoader.addSearchDirectories(value);
+            return "";
+        },
+        "Library search paths, which will be searched for missing modules", "<dir>",
+        CommandLineFlags::CommaList);
+
+    cmdLine.add(
+        "-Y,--libext",
+        [this](std::string_view value) {
+            sourceLoader.addSearchExtension(value);
+            return "";
+        },
+        "Additional library file extensions to search", "<ext>", CommandLineFlags::CommaList);
+
     cmdLine.add(
         "--exclude-ext",
         [this](std::string_view value) {
             options.excludeExts.emplace(std::string(value));
             return "";
         },
-        "Exclude provided source files with these extensions", "<ext>");
+        "Exclude provided source files with these extensions", "<ext>",
+        CommandLineFlags::CommaList);
 
     cmdLine.setPositional(
-        [this](std::string_view filePattern) {
+        [this](std::string_view value) {
             if (!options.excludeExts.empty()) {
-                if (size_t extIndex = filePattern.find_last_of('.');
-                    extIndex != std::string_view::npos) {
-                    if (options.excludeExts.count(std::string(filePattern.substr(extIndex + 1))))
+                if (size_t extIndex = value.find_last_of('.'); extIndex != std::string_view::npos) {
+                    if (options.excludeExts.count(std::string(value.substr(extIndex + 1))))
                         return "";
                 }
             }
 
-            sourceLoader.addFiles(filePattern);
+            sourceLoader.addFiles(value);
             return "";
         },
         "files");
 
     cmdLine.add(
         "-f",
-        [this](std::string_view filePattern) {
-            if (!processCommandFile(filePattern, /* makeRelative */ false))
-                anyFailedLoads = true;
+        [this](std::string_view value) {
+            processCommandFiles(value, /* makeRelative */ false);
             return "";
         },
         "One or more command files containing additional program options. "
         "Paths in the file are considered relative to the current directory.",
-        "<filename>", /* isFileName */ true);
+        "<filename>", CommandLineFlags::CommaList);
 
     cmdLine.add(
         "-F",
-        [this](std::string_view filePattern) {
-            if (!processCommandFile(filePattern, /* makeRelative */ true))
-                anyFailedLoads = true;
+        [this](std::string_view value) {
+            processCommandFiles(value, /* makeRelative */ true);
             return "";
         },
         "One or more command files containing additional program options. "
         "Paths in the file are considered relative to the file itself.",
-        "<filename>", /* isFileName */ true);
+        "<filename>", CommandLineFlags::CommaList);
 }
 
 [[nodiscard]] bool Driver::parseCommandLine(std::string_view argList) {
@@ -239,40 +295,53 @@ void Driver::addStandardArgs() {
     return !anyFailedLoads;
 }
 
-bool Driver::processCommandFile(std::string_view fileName, bool makeRelative) {
-    std::error_code ec;
-    fs::path path = fs::canonical(widen(fileName), ec);
-    std::vector<char> buffer;
-    if (ec || OS::readFile(path, buffer)) {
-        printError(fmt::format("unable to find or open file: '{}'", fileName));
+bool Driver::processCommandFiles(std::string_view pattern, bool makeRelative) {
+    auto onError = [this](const auto& name, std::error_code ec) {
+        printError(fmt::format("command file '{}': {}", name, ec.message()));
+        anyFailedLoads = true;
         return false;
-    }
+    };
 
-    fs::path currPath;
-    if (makeRelative) {
-        currPath = fs::current_path(ec);
-        fs::current_path(path.parent_path(), ec);
-    }
+    SmallVector<fs::path> files;
+    std::error_code globEc;
+    svGlob({}, pattern, GlobMode::Files, files, /* expandEnvVars */ false, globEc);
+    if (globEc)
+        return onError(pattern, globEc);
 
-    CommandLine::ParseOptions parseOpts;
-    parseOpts.expandEnvVars = true;
-    parseOpts.ignoreProgramName = true;
-    parseOpts.supportComments = true;
-    parseOpts.ignoreDuplicates = true;
+    for (auto& path : files) {
+        SmallVector<char> buffer;
+        if (auto readEc = OS::readFile(path, buffer))
+            return onError(getU8Str(path), readEc);
 
-    SLANG_ASSERT(!buffer.empty());
-    buffer.pop_back();
+        fs::path currPath;
+        std::error_code ec;
+        if (makeRelative) {
+            currPath = fs::current_path(ec);
+            fs::current_path(path.parent_path(), ec);
+        }
 
-    std::string_view argStr(buffer.data(), buffer.size());
-    bool result = cmdLine.parse(argStr, parseOpts);
+        CommandLine::ParseOptions parseOpts;
+        parseOpts.expandEnvVars = true;
+        parseOpts.ignoreProgramName = true;
+        parseOpts.supportComments = true;
+        parseOpts.ignoreDuplicates = true;
 
-    if (makeRelative)
-        fs::current_path(currPath, ec);
+        SLANG_ASSERT(!buffer.empty());
+        buffer.pop_back();
 
-    if (!result) {
-        for (auto& err : cmdLine.getErrors())
-            OS::printE(fmt::format("{}\n", err));
-        return false;
+        std::string_view argStr(buffer.data(), buffer.size());
+        bool result = cmdLine.parse(argStr, parseOpts);
+
+        if (makeRelative)
+            fs::current_path(currPath, ec);
+
+        if (!result) {
+            for (auto& err : cmdLine.getErrors())
+                OS::printE(fmt::format("{}\n", err));
+
+            anyFailedLoads = true;
+            return false;
+        }
     }
 
     return true;
@@ -325,32 +394,6 @@ bool Driver::processOptions() {
     if (options.onlyLint == true && !options.ignoreUnknownModules.has_value())
         options.ignoreUnknownModules = true;
 
-    for (const std::string& dir : options.includeDirs) {
-        if (!sourceManager.addUserDirectory(dir))
-            printWarning(fmt::format("include directory '{}' does not exist", dir));
-    }
-
-    for (const std::string& dir : options.includeSystemDirs) {
-        if (!sourceManager.addSystemDirectory(dir))
-            printWarning(fmt::format("include directory '{}' does not exist", dir));
-    }
-
-    for (auto& str : options.libraryFiles) {
-        // TODO: separate library name
-        sourceLoader.addLibraryFiles("", str);
-    }
-
-    if (!options.libMaps.empty()) {
-        Bag optionBag;
-        addParseOptions(optionBag);
-
-        for (auto& map : options.libMaps)
-            sourceLoader.addLibraryMaps(map, optionBag);
-    }
-
-    sourceLoader.addSearchDirectories(options.libDirs);
-    sourceLoader.addSearchExtensions(options.libExts);
-
     if (!reportLoadErrors())
         return false;
 
@@ -398,19 +441,6 @@ bool Driver::processOptions() {
         diagEngine.setSeverity(diag::RangeWidthOOB, DiagnosticSeverity::Error);
         diagEngine.setSeverity(diag::ImplicitNamedPortTypeMismatch, DiagnosticSeverity::Error);
         diagEngine.setSeverity(diag::SplitDistWeightOp, DiagnosticSeverity::Error);
-    }
-
-    std::error_code ec;
-    for (const std::string& pathStr : options.suppressWarningsPaths) {
-        auto path = fs::canonical(widen(pathStr), ec);
-        if (!path.empty())
-            diagEngine.addIgnorePath(path);
-    }
-
-    for (const std::string& pathStr : options.suppressMacroWarningsPaths) {
-        auto path = fs::canonical(widen(pathStr), ec);
-        if (!path.empty())
-            diagEngine.addIgnoreMacroPath(path);
     }
 
     Diagnostics optionDiags = diagEngine.setWarningOptions(options.warningOptions);
@@ -695,6 +725,19 @@ bool Driver::reportCompilation(Compilation& compilation, bool quiet) {
     }
 
     return succeeded;
+}
+
+void Driver::addLibraryFiles(std::string_view pattern) {
+    // Parse the pattern; there's an optional leading library name
+    // followed by an equals sign. If not there, we use the default
+    // library (represented by the empty string).
+    std::string_view libraryName;
+    auto index = pattern.find_first_of('=');
+    if (index != std::string_view::npos) {
+        libraryName = pattern.substr(0, index);
+        pattern = pattern.substr(index + 1);
+    }
+    sourceLoader.addLibraryFiles(libraryName, pattern);
 }
 
 bool Driver::reportLoadErrors() {

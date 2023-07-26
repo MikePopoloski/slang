@@ -198,6 +198,13 @@ GlobRank svGlobInternal(const fs::path& basePath, std::string_view pattern, Glob
 SLANG_EXPORT GlobRank svGlob(const fs::path& basePath, std::string_view pattern, GlobMode mode,
                              SmallVector<fs::path>& results, bool expandEnvVars,
                              std::error_code& ec) {
+    ec.clear();
+    if (pattern == "-"sv && mode == GlobMode::Files) {
+        // This is interpretted as trying to read stdin.
+        results.emplace_back("-");
+        return GlobRank::ExactPath;
+    }
+
     fs::path patternPath;
     if (expandEnvVars) {
         std::string patternStr;
@@ -243,7 +250,6 @@ SLANG_EXPORT GlobRank svGlob(const fs::path& basePath, std::string_view pattern,
             results.emplace_back(std::move(canonical));
     }
 
-    ec.clear();
     if (!anyWildcards && rank == GlobRank::SimpleName) {
         // If there were no wildcards at all and we had a simple name match,
         // promote the rank to an exact path match.

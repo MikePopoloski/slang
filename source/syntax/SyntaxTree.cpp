@@ -28,30 +28,29 @@ SyntaxTree::SyntaxTree(SyntaxNode* root, SourceManager& sourceManager, BumpAlloc
 
 SyntaxTree::~SyntaxTree() = default;
 
-std::shared_ptr<SyntaxTree> SyntaxTree::fromFile(std::string_view path) {
+SyntaxTree::TreeOrError SyntaxTree::fromFile(std::string_view path) {
     return fromFile(path, getDefaultSourceManager());
 }
 
-std::shared_ptr<SyntaxTree> SyntaxTree::fromFile(std::string_view path,
-                                                 SourceManager& sourceManager, const Bag& options) {
+SyntaxTree::TreeOrError SyntaxTree::fromFile(std::string_view path, SourceManager& sourceManager,
+                                             const Bag& options) {
     auto buffer = sourceManager.readSource(path, /* library */ nullptr);
     if (!buffer)
-        return nullptr;
+        return nonstd::make_unexpected(std::pair{buffer.error(), path});
     return create(sourceManager, std::span(&buffer.value(), 1), options, {}, false);
 }
 
-std::shared_ptr<SyntaxTree> SyntaxTree::fromFiles(std::span<const std::string_view> paths) {
+SyntaxTree::TreeOrError SyntaxTree::fromFiles(std::span<const std::string_view> paths) {
     return fromFiles(paths, getDefaultSourceManager());
 }
 
-std::shared_ptr<SyntaxTree> SyntaxTree::fromFiles(std::span<const std::string_view> paths,
-                                                  SourceManager& sourceManager,
-                                                  const Bag& options) {
+SyntaxTree::TreeOrError SyntaxTree::fromFiles(std::span<const std::string_view> paths,
+                                              SourceManager& sourceManager, const Bag& options) {
     SmallVector<SourceBuffer, 4> buffers(paths.size(), UninitializedTag());
     for (auto path : paths) {
         auto buffer = sourceManager.readSource(path, /* library */ nullptr);
         if (!buffer)
-            return nullptr;
+            return nonstd::make_unexpected(std::pair{buffer.error(), path});
 
         buffers.push_back(*buffer);
     }

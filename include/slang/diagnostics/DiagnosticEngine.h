@@ -144,15 +144,15 @@ public:
     /// severity type.
     void clearMappings(DiagnosticSeverity severity);
 
-    /// Adds a path prefix for which all warnings will be supressed. This applies to
+    /// Adds paths for which all warnings will be supressed. This applies to
     /// all natural warnings, regardless of whether they've been upgraded to an error.
-    void addIgnorePath(const std::filesystem::path& path);
+    std::error_code addIgnorePaths(std::string_view pattern);
 
-    /// Adds a path prefix for which all warnings will be supressed, when looking at the
+    /// Adds paths for which all warnings will be supressed, when looking at the
     /// original location for macro expansions (i.e. where the macro was originally defined).
     /// This applies to all natural warnings, regardless of whether they've been upgraded
     /// to an error.
-    void addIgnoreMacroPath(const std::filesystem::path& path);
+    std::error_code addIgnoreMacroPaths(std::string_view pattern);
 
     /// Sets a custom formatter function for the given type. This is used to
     /// provide formatting for diagnostic arguments of a custom type.
@@ -259,9 +259,9 @@ private:
     // These correspond to `pragma diagnostic entries in the source code.
     flat_hash_map<DiagCode, flat_hash_map<BufferID, std::vector<DiagnosticMapping>>> diagMappings;
 
-    // A list of path prefixes to use to suppress warnings.
-    std::vector<std::filesystem::path> ignoreWarnPrefixes;
-    std::vector<std::filesystem::path> ignoreMacroWarnPrefixes;
+    // A set of paths in which to suppress warnings.
+    flat_hash_set<std::filesystem::path> ignoreWarnPaths;
+    flat_hash_set<std::filesystem::path> ignoreMacroWarnPaths;
 
     // A list of all registered clients that receive issued diagnostics.
     std::vector<std::shared_ptr<DiagnosticClient>> clients;

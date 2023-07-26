@@ -15,6 +15,8 @@
 #include "slang/syntax/SyntaxVisitor.h"
 #include "slang/text/SourceManager.h"
 
+namespace fs = std::filesystem;
+
 namespace {
 
 struct PySyntaxVisitor : public PyVisitorBase<PySyntaxVisitor, SyntaxVisitor> {
@@ -179,19 +181,42 @@ void registerSyntax(py::module_& m) {
 
     py::class_<SyntaxTree, std::shared_ptr<SyntaxTree>>(m, "SyntaxTree")
         .def_readonly("isLibrary", &SyntaxTree::isLibrary)
-        .def_static("fromFile", py::overload_cast<std::string_view>(&SyntaxTree::fromFile),
-                    "path"_a)
-        .def_static("fromFile",
-                    py::overload_cast<std::string_view, SourceManager&, const Bag&>(
-                        &SyntaxTree::fromFile),
-                    "path"_a, "sourceManager"_a, "options"_a = Bag())
-        .def_static("fromFiles",
-                    py::overload_cast<std::span<const std::string_view>>(&SyntaxTree::fromFiles),
-                    "paths"_a)
+        .def_static(
+            "fromFile",
+            [](std::string_view path) {
+                auto result = SyntaxTree::fromFile(path);
+                if (!result)
+                    throw fs::filesystem_error("", path, result.error().first);
+                return *result;
+            },
+            "path"_a)
+        .def_static(
+            "fromFile",
+            [](std::string_view path, SourceManager& sourceManager, const Bag& options) {
+                auto result = SyntaxTree::fromFile(path, sourceManager, options);
+                if (!result)
+                    throw fs::filesystem_error("", path, result.error().first);
+                return *result;
+            },
+            "path"_a, "sourceManager"_a, "options"_a = Bag())
         .def_static(
             "fromFiles",
-            py::overload_cast<std::span<const std::string_view>, SourceManager&, const Bag&>(
-                &SyntaxTree::fromFiles),
+            [](std::span<const std::string_view> paths) {
+                auto result = SyntaxTree::fromFiles(paths);
+                if (!result)
+                    throw fs::filesystem_error("", result.error().second, result.error().first);
+                return *result;
+            },
+            "paths"_a)
+        .def_static(
+            "fromFiles",
+            [](std::span<const std::string_view> paths, SourceManager& sourceManager,
+               const Bag& options) {
+                auto result = SyntaxTree::fromFiles(paths, sourceManager, options);
+                if (!result)
+                    throw fs::filesystem_error("", result.error().second, result.error().first);
+                return *result;
+            },
             "paths"_a, "sourceManager"_a, "options"_a = Bag())
         .def_static("fromText",
                     py::overload_cast<std::string_view, std::string_view, std::string_view>(

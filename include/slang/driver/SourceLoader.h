@@ -26,15 +26,6 @@ class SourceManager;
 struct SourceBuffer;
 struct SourceLibrary;
 
-// This is needed as a workaround for missing std::hash<> of paths;
-// it was added as a DR to C++17 but not all of our targets have it yet.
-template<>
-struct hash<std::filesystem::path> {
-    uint64_t operator()(const std::filesystem::path& path) const noexcept {
-        return std::filesystem::hash_value(path);
-    }
-};
-
 } // namespace slang
 
 namespace slang::syntax {
@@ -92,15 +83,16 @@ public:
     /// are not automatically instantiated.
     void addLibraryFiles(std::string_view libraryName, std::string_view pattern);
 
-    /// @brief Adds directories in which to search for library module files.
+    /// @brief Adds directories in which to search for library module files,
+    /// specified via the given @a pattern.
     ///
     /// A search for a library module occurs when there are instantiations found
     /// for unknown modules (or interfaces or programs). The given directories
     /// will be searched for files with the missing module's name plus any registered
     /// search extensions.
-    void addSearchDirectories(std::span<const std::string> directories);
+    void addSearchDirectories(std::string_view pattern);
 
-    /// @brief Adds extensions used to search for library module files.
+    /// @brief Adds an extension used to search for library module files.
     ///
     /// A search for a library module occurs when there are instantiations found
     /// for unknown modules (or interfaces or programs). The search will be for
@@ -108,14 +100,15 @@ public:
     ///
     /// Note that the extensions ".v" and ".sv" are always automatically included
     /// in the search set.
-    void addSearchExtensions(std::span<const std::string> extensions);
+    void addSearchExtension(std::string_view extension);
 
     /// @brief Adds library map files to the loader.
     ///
     /// All files that match the given pattern will be loaded and parsed as if
     /// they were library map files. The libraries within those maps will be
     /// created and any files they reference will be included in the list to load.
-    void addLibraryMaps(std::string_view pattern, const Bag& optionBag, bool expandEnvVars = false);
+    void addLibraryMaps(std::string_view pattern, const std::filesystem::path& basePath,
+                        const Bag& optionBag, bool expandEnvVars = false);
 
     /// Returns a list of all library map syntax trees that have been loaded and parsed.
     const SyntaxTreeList& getLibraryMaps() const { return libraryMapTrees; }
@@ -181,9 +174,10 @@ private:
     };
 
     const SourceLibrary* getOrAddLibrary(std::string_view name);
-    void addFilesInternal(std::string_view pattern, bool isLibraryFile,
-                          const SourceLibrary* library, bool expandEnvVars);
-    void createLibrary(const syntax::LibraryDeclarationSyntax& syntax);
+    void addFilesInternal(std::string_view pattern, const std::filesystem::path& basePath,
+                          bool isLibraryFile, const SourceLibrary* library, bool expandEnvVars);
+    void createLibrary(const syntax::LibraryDeclarationSyntax& syntax,
+                       const std::filesystem::path& basePath);
     void loadAndParse(const FileEntry& fileEntry, const Bag& optionBag,
                       const SourceOptions& srcOptions, std::vector<SourceBuffer>& singleUnitBuffers,
                       std::vector<SourceBuffer>& deferredLibBuffers, SyntaxTreeList& syntaxTrees,

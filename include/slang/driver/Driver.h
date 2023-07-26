@@ -58,16 +58,6 @@ public:
     /// A container for various options that can be parsed and applied
     /// to the compilation process.
     struct Options {
-        /// @name Include paths
-        /// @{
-
-        /// A list of include directories in which to search for files.
-        std::vector<std::string> includeDirs;
-
-        /// A list of system include directories in which to search for files.
-        std::vector<std::string> includeSystemDirs;
-
-        /// @}
         /// @name Preprocessing
         /// @{
 
@@ -205,13 +195,6 @@ public:
         /// A list of warning options that will be passed to the DiagnosticEngine.
         std::vector<std::string> warningOptions;
 
-        /// A list of paths in which to suppress warnings.
-        std::vector<std::string> suppressWarningsPaths;
-
-        /// A list of paths in which to suppress warnings that
-        /// originate in macro expansions.
-        std::vector<std::string> suppressMacroWarningsPaths;
-
         /// @}
         /// @name File lists
         /// @{
@@ -219,18 +202,6 @@ public:
         /// If set to true, all source files will be treated as part of a single
         /// compilation unit, meaning all of their text will be merged together.
         std::optional<bool> singleUnit;
-
-        /// A list of library files to include in the compilation.
-        std::vector<std::string> libraryFiles;
-
-        /// A list of library maps to include in the compilation.
-        std::vector<std::string> libMaps;
-
-        /// A list of library directories in which to search for missing modules.
-        std::vector<std::string> libDirs;
-
-        /// A list of extensions that will be used to search for library files.
-        std::vector<std::string> libExts;
 
         /// A set of extensions that will be used to exclude files.
         flat_hash_set<std::string> excludeExts;
@@ -263,13 +234,13 @@ public:
     /// Any errors encountered will be printed to stderr.
     [[nodiscard]] bool parseCommandLine(std::string_view argList);
 
-    /// Processes the given command file for more options.
+    /// Processes the given command file(s) for more options.
     /// Any errors encountered will be printed to stderr.
     /// @param fileName The name (and potentially the path) of the command file to process.
     /// @param makeRelative indicates whether paths in the file are relative to the file
     ///                     itself or to the current working directory.
     /// @returns true on success and false if errors were encountered.
-    [[nodiscard]] bool processCommandFile(std::string_view fileName, bool makeRelative);
+    bool processCommandFiles(std::string_view pattern, bool makeRelative);
 
     /// Processes and applies all configured options.
     /// @returns true on success and false if errors were encountered.
@@ -312,6 +283,7 @@ public:
     [[nodiscard]] bool reportCompilation(ast::Compilation& compilation, bool quiet);
 
 private:
+    void addLibraryFiles(std::string_view pattern);
     void addParseOptions(Bag& bag) const;
     void addCompilationOptions(Bag& bag) const;
     bool reportLoadErrors();

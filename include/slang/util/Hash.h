@@ -10,6 +10,9 @@
 #include <array>
 #include <cstring>
 
+// TODO: remove once fs::path in stdlib has a hash impl
+#include <filesystem>
+
 #ifdef SLANG_BOOST_SINGLE_HEADER
 #    include <boost_unordered.hpp>
 #else
@@ -202,6 +205,15 @@ struct hash<Enum> {
     uint64_t operator()(Enum e) const noexcept {
         using underlying = typename std::underlying_type_t<Enum>;
         return detail::hashing::hash(static_cast<uint64_t>(static_cast<underlying>(e)));
+    }
+};
+
+// TODO: This is needed as a workaround for missing std::hash<> of paths;
+// it was added as a DR to C++17 but not all of our targets have it yet.
+template<>
+struct hash<std::filesystem::path> {
+    uint64_t operator()(const std::filesystem::path& path) const noexcept {
+        return std::filesystem::hash_value(path);
     }
 };
 

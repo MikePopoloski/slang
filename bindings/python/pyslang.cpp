@@ -31,4 +31,21 @@ PYBIND11_MODULE(pyslang, m) {
     registerSyntax(m);
     registerSyntaxNodes(m);
     registerTypes(m);
+
+    py::register_exception_translator([](std::exception_ptr p) {
+        try {
+            if (p)
+                std::rethrow_exception(p);
+        }
+        catch (const std::filesystem::filesystem_error& e) {
+            const auto code = e.code();
+            const auto p1 = e.path1().string();
+            const auto p2 = e.path2().string();
+            PyErr_SetObject(PyExc_IOError,
+                            py::make_tuple(code.value(), code.message(),
+                                           p1.empty() ? py::none() : py::cast(p1), code.value(),
+                                           p2.empty() ? py::none() : py::cast(p2))
+                                .ptr());
+        }
+    });
 }

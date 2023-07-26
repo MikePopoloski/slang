@@ -140,6 +140,15 @@ public:
     /// elements are destructed.
     void resize(size_t newSize, const T& value) { resizeImpl(newSize, value); }
 
+    /// Resizes the array. If larger than the current size, default constructs new elements to
+    /// fill the gap. If smaller than the current size, the length is shrunk and elements
+    /// are destructed.
+    void resize_for_overwrite(size_type newSize)
+        requires(std::is_standard_layout_v<T>)
+    {
+        resizeImpl(newSize, DefaultInitTag());
+    }
+
     /// Clears all elements but retain underlying storage.
     void clear() noexcept {
         std::ranges::destroy(*this);
@@ -311,7 +320,10 @@ public:
         std::uninitialized_move(result, end(), begin() + newSize - existingOverlap);
 
         // Copy in the new elements.
-        first = std::ranges::copy_n(first, existingOverlap, result).in;
+        first = std::ranges::copy_n(first,
+                                    static_cast<std::iter_difference_t<TIter>>(existingOverlap),
+                                    result)
+                    .in;
 
         // Insert the non-overwritten middle part.
         std::ranges::uninitialized_copy(first, last, end(), end() + numElems - existingOverlap);
@@ -476,6 +488,7 @@ private:
 #    pragma warning(pop)
 #endif
 
+    struct DefaultInitTag {};
     struct ValueInitTag {};
 
     void cleanup() {
@@ -508,6 +521,9 @@ private:
 
             if constexpr (std::is_same_v<T, TVal>) {
                 std::ranges::uninitialized_fill_n(end(), ptrdiff_t(newSize - len), val);
+            }
+            else if constexpr (std::is_same_v<TVal, DefaultInitTag>) {
+                std::ranges::uninitialized_default_construct_n(end(), ptrdiff_t(newSize - len));
             }
             else {
                 std::ranges::uninitialized_value_construct_n(end(), ptrdiff_t(newSize - len));
@@ -856,6 +872,9 @@ void SmallVectorBase<T>::resizeRealloc(size_type newSize, const TVal& val) {
 
     if constexpr (std::is_same_v<T, TVal>) {
         std::ranges::uninitialized_fill_n(newData + len, ptrdiff_t(newSize - len), val);
+    }
+    else if constexpr (std::is_same_v<TVal, DefaultInitTag>) {
+        std::ranges::uninitialized_default_construct_n(newData + len, ptrdiff_t(newSize - len));
     }
     else {
         std::ranges::uninitialized_value_construct_n(newData + len, ptrdiff_t(newSize - len));

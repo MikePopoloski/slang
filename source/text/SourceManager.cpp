@@ -9,6 +9,7 @@
 
 #include <string>
 
+#include "slang/text/Glob.h"
 #include "slang/util/OS.h"
 #include "slang/util/String.h"
 
@@ -24,28 +25,26 @@ SourceManager::SourceManager() {
     bufferEntries.emplace_back(file);
 }
 
-bool SourceManager::addSystemDirectory(std::string_view pathStr) {
+std::error_code SourceManager::addSystemDirectories(std::string_view pattern) {
+    SmallVector<fs::path> dirs;
     std::error_code ec;
-    auto path = fs::canonical(widen(pathStr), ec);
-    if (ec)
-        return false;
+    svGlob({}, pattern, GlobMode::Directories, dirs, /* expandEnvVars */ false, ec);
 
     // Note: locking the separate mutex for include dirs here.
     std::unique_lock lock(includeDirMutex);
-    systemDirectories.emplace_back(std::move(path));
-    return true;
+    systemDirectories.insert(systemDirectories.end(), dirs.begin(), dirs.end());
+    return ec;
 }
 
-bool SourceManager::addUserDirectory(std::string_view pathStr) {
+std::error_code SourceManager::addUserDirectories(std::string_view pattern) {
+    SmallVector<fs::path> dirs;
     std::error_code ec;
-    auto path = fs::canonical(widen(pathStr), ec);
-    if (ec)
-        return false;
+    svGlob({}, pattern, GlobMode::Directories, dirs, /* expandEnvVars */ false, ec);
 
     // Note: locking the separate mutex for include dirs here.
     std::unique_lock lock(includeDirMutex);
-    userDirectories.emplace_back(std::move(path));
-    return true;
+    userDirectories.insert(userDirectories.end(), dirs.begin(), dirs.end());
+    return ec;
 }
 
 size_t SourceManager::getLineNumber(SourceLocation location) const {
@@ -126,6 +125,15 @@ SourceLocation SourceManager::getIncludedFrom(BufferID buffer) const {
     return info->includedFrom;
 }
 
+const SourceLibrary* SourceManager::getLibraryFor(BufferID buffer) const {
+    std::shared_lock lock(mutex);
+    auto info = getFileInfo(buffer, lock);
+    if (!info)
+        return nullptr;
+
+    return info->library;
+}
+
 std::string_view SourceManager::getMacroName(SourceLocation location) const {
     std::shared_lock lock(mutex);
     while (isMacroArgLocImpl(location, lock))
@@ -167,44 +175,6 @@ bool SourceManager::isIncludedFileLoc(SourceLocation location) const {
 
 bool SourceManager::isPreprocessedLoc(SourceLocation location) const {
     return isMacroLoc(location) || isIncludedFileLoc(location);
-}
-
-bool SourceManager::isBeforeInCompilationUnit(SourceLocation left, SourceLocation right) const {
-    // Simple check: if they're in the same buffer, just do an easy compare
-    if (left.buffer() == right.buffer())
-        return left.offset() < right.offset();
-
-    auto moveUp = [this](SourceLocation& sl) {
-        if (sl && !isFileLoc(sl))
-            sl = getExpansionLoc(sl);
-        else {
-            SourceLocation included = getIncludedFrom(sl.buffer());
-            if (!included)
-                return true;
-            sl = included;
-        }
-        return false;
-    };
-
-    // Otherwise we have to build the full include / expansion chain and compare.
-    SmallMap<BufferID, size_t, 16> leftChain;
-    do {
-        leftChain.emplace(left.buffer(), left.offset());
-    } while (left.buffer() != right.buffer() && !moveUp(left));
-
-    SmallMap<BufferID, size_t, 16>::iterator it;
-    while ((it = leftChain.find(right.buffer())) == leftChain.end()) {
-        if (moveUp(right))
-            break;
-    }
-
-    if (it != leftChain.end())
-        left = SourceLocation(it->first, it->second);
-
-    // At this point, we either have a nearest common ancestor, or the two
-    // locations are simply in totally different compilation units.
-    SLANG_ASSERT(left.buffer() == right.buffer());
-    return left.offset() < right.offset();
 }
 
 SourceLocation SourceManager::getExpansionLoc(SourceLocation location) const {
@@ -275,7 +245,7 @@ SourceBuffer SourceManager::assignText(std::string_view path, std::string_view t
         path = temp;
     }
 
-    std::vector<char> buffer;
+    SmallVector<char> buffer;
     buffer.insert(buffer.end(), text.begin(), text.end());
     if (buffer.empty() || buffer.back() != '\0')
         buffer.push_back('\0');
@@ -283,7 +253,7 @@ SourceBuffer SourceManager::assignText(std::string_view path, std::string_view t
     return assignBuffer(path, std::move(buffer), includedFrom, library);
 }
 
-SourceBuffer SourceManager::assignBuffer(std::string_view bufferPath, std::vector<char>&& buffer,
+SourceBuffer SourceManager::assignBuffer(std::string_view bufferPath, SmallVector<char>&& buffer,
                                          SourceLocation includedFrom,
                                          const SourceLibrary* library) {
     // first see if we have this file cached
@@ -431,7 +401,7 @@ SourceBuffer SourceManager::createBufferEntry(FileData* fd, SourceLocation inclu
                                               const SourceLibrary* library,
                                               std::unique_lock<std::shared_mutex>&) {
     SLANG_ASSERT(fd);
-    bufferEntries.emplace_back(FileInfo(fd, includedFrom));
+    bufferEntries.emplace_back(FileInfo(fd, library, includedFrom));
     return SourceBuffer{std::string_view(fd->mem.data(), fd->mem.size()), library,
                         BufferID((uint32_t)(bufferEntries.size() - 1), fd->name)};
 }
@@ -483,7 +453,7 @@ SourceManager::BufferOrError SourceManager::openCached(const fs::path& fullPath,
     }
 
     // do the read
-    std::vector<char> buffer;
+    SmallVector<char> buffer;
     if (std::error_code ec = OS::readFile(absPath, buffer)) {
         std::unique_lock lock(mutex);
         lookupCache.emplace(pathStr, std::pair{nullptr, ec});
@@ -496,7 +466,7 @@ SourceManager::BufferOrError SourceManager::openCached(const fs::path& fullPath,
 
 SourceBuffer SourceManager::cacheBuffer(fs::path&& path, std::string&& pathStr,
                                         SourceLocation includedFrom, const SourceLibrary* library,
-                                        std::vector<char>&& buffer) {
+                                        SmallVector<char>&& buffer) {
     std::string name;
     if (!disableProximatePaths) {
         std::error_code ec;
@@ -623,7 +593,7 @@ SourceLocation SourceManager::getOriginalLocImpl(SourceLocation location, TLock&
     return std::get<ExpansionInfo>(bufferEntries[buffer.getId()]).originalLoc + location.offset();
 }
 
-void SourceManager::computeLineOffsets(const std::vector<char>& buffer,
+void SourceManager::computeLineOffsets(const SmallVector<char>& buffer,
                                        std::vector<size_t>& offsets) noexcept {
     // first line always starts at offset 0
     offsets.push_back(0);

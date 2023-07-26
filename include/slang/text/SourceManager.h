@@ -20,6 +20,7 @@
 
 #include "slang/text/SourceLocation.h"
 #include "slang/util/Hash.h"
+#include "slang/util/SmallVector.h"
 #include "slang/util/Util.h"
 
 namespace slang {
@@ -46,13 +47,19 @@ public:
     SourceManager(const SourceManager&) = delete;
     SourceManager& operator=(const SourceManager&) = delete;
 
-    /// Adds a system include directory.
-    /// @returns true on success and false on failure (i.e. if the given path does not exist).
-    [[nodiscard]] bool addSystemDirectory(std::string_view path);
+    /// @brief Adds one or more system include directories that match
+    /// the given pattern.
+    ///
+    /// @returns An error code if the given pattern is for an exact path
+    /// and that path does not exist or is not a directory.
+    std::error_code addSystemDirectories(std::string_view pattern);
 
-    /// Adds a user include directory.
-    /// @returns true on success and false on failure (i.e. if the given path does not exist).
-    [[nodiscard]] bool addUserDirectory(std::string_view path);
+    /// @brief Adds one or more user include directories that match
+    /// the given pattern.
+    ///
+    /// @returns An error code if the given pattern is for an exact path
+    /// and that path does not exist or is not a directory.
+    std::error_code addUserDirectories(std::string_view pattern);
 
     /// Gets the source line number for a given source location.
     size_t getLineNumber(SourceLocation location) const;
@@ -77,6 +84,10 @@ public:
     /// @a location must be a file location.
     SourceLocation getIncludedFrom(BufferID buffer) const;
 
+    /// Gets the source library of which the given buffer is a part,
+    /// or nullptr if it's not explicitly part of any library.
+    const SourceLibrary* getLibraryFor(BufferID buffer) const;
+
     /// Attempts to get the name of the macro represented by a macro location.
     /// If no macro name can be found, returns an empty string view.
     std::string_view getMacroName(SourceLocation location) const;
@@ -95,11 +106,6 @@ public:
 
     /// Determines whether the given location is from a macro expansion or an include file.
     bool isPreprocessedLoc(SourceLocation location) const;
-
-    /// Determines whether the @a left location comes before the @a right location
-    /// within the "compilation unit space", which is a hypothetical source space where
-    /// all macros and include files have been expanded out into a flat file.
-    bool isBeforeInCompilationUnit(SourceLocation left, SourceLocation right) const;
 
     /// Gets the expansion location of a given macro location.
     SourceLocation getExpansionLoc(SourceLocation location) const;
@@ -141,7 +147,7 @@ public:
 
     /// Instead of loading source from a file, move it from text already in memory.
     /// Pretend it came from a file located at @a path.
-    SourceBuffer assignBuffer(std::string_view path, std::vector<char>&& buffer,
+    SourceBuffer assignBuffer(std::string_view path, SmallVector<char>&& buffer,
                               SourceLocation includedFrom = SourceLocation(),
                               const SourceLibrary* library = nullptr);
 
@@ -222,12 +228,12 @@ private:
     // Stores actual file contents and metadata; only one per loaded file
     struct FileData {
         const std::string name;                       // name of the file
-        const std::vector<char> mem;                  // file contents
+        const SmallVector<char> mem;                  // file contents
         std::vector<size_t> lineOffsets;              // cache of compute line offsets
         const std::filesystem::path* const directory; // directory in which the file exists
         const std::filesystem::path fullPath;         // full path to the file
 
-        FileData(const std::filesystem::path* directory, std::string name, std::vector<char>&& data,
+        FileData(const std::filesystem::path* directory, std::string name, SmallVector<char>&& data,
                  std::filesystem::path fullPath) :
             name(std::move(name)),
             mem(std::move(data)), directory(directory), fullPath(std::move(fullPath)) {}
@@ -237,12 +243,13 @@ private:
     // There can potentially be many of these for a given file.
     struct FileInfo {
         FileData* data = nullptr;
+        const SourceLibrary* library = nullptr;
         SourceLocation includedFrom;
         std::vector<LineDirectiveInfo> lineDirectives;
 
         FileInfo() {}
-        FileInfo(FileData* data, SourceLocation includedFrom) :
-            data(data), includedFrom(includedFrom) {}
+        FileInfo(FileData* data, const SourceLibrary* library, SourceLocation includedFrom) :
+            data(data), library(library), includedFrom(includedFrom) {}
 
         // Returns a pointer to the LineDirectiveInfo for the nearest enclosing
         // line directive of the given raw line number, or nullptr if there is none
@@ -313,7 +320,7 @@ private:
                              const SourceLibrary* library);
     SourceBuffer cacheBuffer(std::filesystem::path&& path, std::string&& pathStr,
                              SourceLocation includedFrom, const SourceLibrary* library,
-                             std::vector<char>&& buffer);
+                             SmallVector<char>&& buffer);
 
     template<IsLock TLock>
     size_t getRawLineNumber(SourceLocation location, TLock& lock) const;
@@ -333,7 +340,7 @@ private:
     template<IsLock TLock>
     SourceRange getExpansionRangeImpl(SourceLocation location, TLock& lock) const;
 
-    static void computeLineOffsets(const std::vector<char>& buffer,
+    static void computeLineOffsets(const SmallVector<char>& buffer,
                                    std::vector<size_t>& offsets) noexcept;
 };
 

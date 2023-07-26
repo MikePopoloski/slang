@@ -14,7 +14,10 @@
 #include "slang/diagnostics/DiagnosticClient.h"
 #include "slang/diagnostics/MetaDiags.h"
 #include "slang/diagnostics/TextDiagnosticClient.h"
+#include "slang/text/Glob.h"
 #include "slang/text/SourceManager.h"
+
+namespace fs = std::filesystem;
 
 namespace slang {
 
@@ -122,12 +125,23 @@ void DiagnosticEngine::clearMappings(DiagnosticSeverity severity) {
     erase_if(severityTable, [severity](auto& pair) { return pair.second == severity; });
 }
 
-void DiagnosticEngine::addIgnorePath(const std::filesystem::path& path) {
-    ignoreWarnPrefixes.emplace_back(path);
+static std::error_code addPathsImpl(std::string_view pattern, flat_hash_set<fs::path>& set) {
+    SmallVector<fs::path> files;
+    std::error_code ec;
+    svGlob({}, pattern, GlobMode::Files, files, /* expandEnvVars */ false, ec);
+
+    for (auto&& path : files)
+        set.emplace(std::move(path));
+
+    return ec;
 }
 
-void DiagnosticEngine::addIgnoreMacroPath(const std::filesystem::path& path) {
-    ignoreMacroWarnPrefixes.emplace_back(path);
+std::error_code DiagnosticEngine::addIgnorePaths(std::string_view pattern) {
+    return addPathsImpl(pattern, ignoreWarnPaths);
+}
+
+std::error_code DiagnosticEngine::addIgnoreMacroPaths(std::string_view pattern) {
+    return addPathsImpl(pattern, ignoreMacroWarnPaths);
 }
 
 // Checks that all of the given ranges are in the same macro argument expansion as `loc`
@@ -212,29 +226,22 @@ bool DiagnosticEngine::issueImpl(const Diagnostic& diagnostic, DiagnosticSeverit
 
         showIncludeStack = reportedIncludeStack.emplace(loc.buffer()).second;
 
-        auto checkSuppressed = [&](const std::vector<std::filesystem::path>& prefixes,
-                                   SourceLocation loc) {
-            if (prefixes.empty())
+        auto checkSuppressed = [&](const flat_hash_set<fs::path>& paths, SourceLocation loc) {
+            if (paths.empty())
                 return false;
 
-            auto& path = sourceManager.getFullPath(loc.buffer());
-            for (auto& prefix : prefixes) {
-                auto [_, mismatchIt] = std::ranges::mismatch(path, prefix);
-                if (mismatchIt == prefix.end())
-                    return true;
-            }
-            return false;
+            return paths.contains(sourceManager.getFullPath(loc.buffer()));
         };
 
         if (getDefaultSeverity(diagnostic.code) == DiagnosticSeverity::Warning) {
-            if (checkSuppressed(ignoreWarnPrefixes, loc))
+            if (checkSuppressed(ignoreWarnPaths, loc))
                 return false;
 
-            if (ignoreExpansionsUntil < expansionLocs.size() && !ignoreMacroWarnPrefixes.empty()) {
+            if (ignoreExpansionsUntil < expansionLocs.size() && !ignoreMacroWarnPaths.empty()) {
                 auto originalLoc = sourceManager.getFullyOriginalLoc(
                     expansionLocs[ignoreExpansionsUntil]);
 
-                if (checkSuppressed(ignoreMacroWarnPrefixes, originalLoc))
+                if (checkSuppressed(ignoreMacroWarnPaths, originalLoc))
                     return false;
             }
         }

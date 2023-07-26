@@ -72,12 +72,12 @@ TEST_CASE("Read header (relative)") {
 
 TEST_CASE("Read header (include dirs)") {
     SourceManager manager;
-    CHECK(manager.addSystemDirectory(findTestDir()));
+    CHECK(!manager.addSystemDirectories(findTestDir()));
 
     auto buffer = manager.readHeader("include.svh", SourceLocation(), nullptr, true);
     REQUIRE(buffer);
 
-    CHECK(manager.addUserDirectory(findTestDir() + "/nested"));
+    CHECK(!manager.addUserDirectories(findTestDir() + "/nested"));
     buffer = manager.readHeader("../infinite_chain.svh", SourceLocation(buffer->id, 0), nullptr,
                                 false);
     CHECK(buffer);
@@ -128,11 +128,12 @@ TEST_CASE("File globbing") {
                  {"test2.sv", "test3.sv", "test4.sv", "test5.sv", "test6.sv"});
     globAndCheck(testDir, "system", GlobMode::Files, GlobRank::ExactPath,
                  make_error_code(std::errc::is_a_directory), {});
-    globAndCheck(testDir, "system/", GlobMode::Files, GlobRank::Directory, {}, {"system.svh"});
+    globAndCheck(testDir, "system/", GlobMode::Files, GlobRank::Directory, {},
+                 {"system.svh", "system.map"});
     globAndCheck(testDir, ".../f*.svh", GlobMode::Files, GlobRank::WildcardName, {},
                  {"file.svh", "file_defn.svh", "file_uses_defn.svh"});
     globAndCheck(testDir, "*ste*/", GlobMode::Files, GlobRank::Directory, {},
-                 {"file.svh", "macro.svh", "nested_local.svh", "system.svh"});
+                 {"file.svh", "macro.svh", "nested_local.svh", "system.svh", "system.map"});
     globAndCheck(testDir, testDir + "/library/pkg.sv", GlobMode::Files, GlobRank::ExactPath, {},
                  {"pkg.sv"});
     globAndCheck(testDir, testDir + "/li?ra?y/pkg.sv", GlobMode::Files, GlobRank::SimpleName, {},

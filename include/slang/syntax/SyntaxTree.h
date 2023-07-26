@@ -7,6 +7,7 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include <expected.hpp>
 #include <memory>
 
 #include "slang/diagnostics/Diagnostics.h"
@@ -37,6 +38,8 @@ struct DefineDirectiveSyntax;
 /// live for as long as you need to access its syntax nodes.
 class SLANG_EXPORT SyntaxTree {
 public:
+    using TreeOrError =
+        nonstd::expected<std::shared_ptr<SyntaxTree>, std::pair<std::error_code, std::string_view>>;
     using MacroList = std::span<const DefineDirectiveSyntax* const>;
 
     /// Indicates whether this syntax tree represents a "library" compilation unit,
@@ -52,29 +55,31 @@ public:
     /// Creates a syntax tree from a full compilation unit.
     /// @a path is the path to the source file on disk.
     /// @return the created and parsed syntax tree.
-    static std::shared_ptr<SyntaxTree> fromFile(std::string_view path);
+    static TreeOrError fromFile(std::string_view path);
 
     /// Creates a syntax tree from a full compilation unit.
     /// @a path is the path to the source file on disk.
     /// @a sourceManager is the manager that owns all of the loaded source code.
     /// @a options is an optional bag of lexer, preprocessor, and parser options.
-    /// @return the created and parsed syntax tree.
-    static std::shared_ptr<SyntaxTree> fromFile(std::string_view path, SourceManager& sourceManager,
-                                                const Bag& options = {});
+    /// @return the created and parsed syntax tree on success, or an OS error
+    ///         code if the file fails to load.
+    static TreeOrError fromFile(std::string_view path, SourceManager& sourceManager,
+                                const Bag& options = {});
 
     /// Creates a syntax tree by concatenating several files loaded from disk.
     /// @a paths is the list of paths to the source files on disk.
-    /// @return the created and parsed syntax tree.
-    static std::shared_ptr<SyntaxTree> fromFiles(std::span<const std::string_view> paths);
+    /// @return the created and parsed syntax tree on success, or an OS error
+    ///         code if the file fails to load.
+    static TreeOrError fromFiles(std::span<const std::string_view> paths);
 
     /// Creates a syntax tree by concatenating several files loaded from disk.
     /// @a paths is the list of paths to the source files on disk.
     /// @a sourceManager is the manager that owns all of the loaded source code.
     /// @a options is an optional bag of lexer, preprocessor, and parser options.
-    /// @return the created and parsed syntax tree.
-    static std::shared_ptr<SyntaxTree> fromFiles(std::span<const std::string_view> paths,
-                                                 SourceManager& sourceManager,
-                                                 const Bag& options = {});
+    /// @return the created and parsed syntax tree on success, or an OS error
+    ///         code if the file fails to load.
+    static TreeOrError fromFiles(std::span<const std::string_view> paths,
+                                 SourceManager& sourceManager, const Bag& options = {});
 
     /// Creates a syntax tree by guessing at what might be in the given source snippet.
     /// @a text is the actual source code text.

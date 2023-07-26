@@ -69,19 +69,29 @@ bool OS::fileSupportsColors(FILE* file) {
     return fileSupportsColors(_fileno(file));
 }
 
-std::error_code OS::readFile(const fs::path& path, std::vector<char>& buffer) {
-    HANDLE handle = ::CreateFileW(path.native().c_str(), GENERIC_READ,
-                                  FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL,
-                                  OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,
-                                  NULL);
-    if (handle == INVALID_HANDLE_VALUE) {
-        // Provide a better error when trying to open directories.
-        std::error_code ec;
-        DWORD lastErr = ::GetLastError();
-        if (lastErr == ERROR_ACCESS_DENIED && fs::is_directory(path, ec))
-            return make_error_code(std::errc::is_a_directory);
+std::error_code OS::readFile(const fs::path& path, SmallVector<char>& buffer) {
+    HANDLE handle;
+    auto& pathStr = path.native();
+    const bool isStdin = pathStr == L"-";
 
-        return std::error_code(lastErr, std::system_category());
+    if (isStdin) {
+        _setmode(_fileno(stdin), _O_BINARY);
+        handle = ::GetStdHandle(STD_INPUT_HANDLE);
+    }
+    else {
+        handle = ::CreateFileW(pathStr.c_str(), GENERIC_READ,
+                               FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL,
+                               OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,
+                               NULL);
+        if (handle == INVALID_HANDLE_VALUE) {
+            // Provide a better error when trying to open directories.
+            std::error_code ec;
+            DWORD lastErr = ::GetLastError();
+            if (lastErr == ERROR_ACCESS_DENIED && fs::is_directory(path, ec))
+                return make_error_code(std::errc::is_a_directory);
+
+            return std::error_code(lastErr, std::system_category());
+        }
     }
 
     std::error_code ec;
@@ -93,7 +103,7 @@ std::error_code OS::readFile(const fs::path& path, std::vector<char>& buffer) {
         }
         else {
             size_t fileSize = (size_t(fileInfo.nFileSizeHigh) << 32) + fileInfo.nFileSizeLow;
-            buffer.resize(fileSize + 1);
+            buffer.resize_for_overwrite(fileSize + 1);
 
             char* buf = buffer.data();
             while (fileSize) {
@@ -126,7 +136,7 @@ std::error_code OS::readFile(const fs::path& path, std::vector<char>& buffer) {
 
         size_t currSize = 0;
         while (true) {
-            buffer.resize(currSize + ChunkSize);
+            buffer.resize_for_overwrite(currSize + ChunkSize + 1);
 
             DWORD bytesRead = 0;
             BOOL result = ::ReadFile(handle, buffer.data() + currSize, ChunkSize, &bytesRead, NULL);
@@ -144,8 +154,10 @@ std::error_code OS::readFile(const fs::path& path, std::vector<char>& buffer) {
         buffer.back() = '\0';
     }
 
-    if (!::CloseHandle(handle) && !ec)
-        ec.assign(::GetLastError(), std::system_category());
+    if (!isStdin) {
+        if (!::CloseHandle(handle) && !ec)
+            ec.assign(::GetLastError(), std::system_category());
+    }
 
     return ec;
 }
@@ -168,15 +180,23 @@ bool OS::fileSupportsColors(FILE* file) {
     return fileSupportsColors(fileno(file));
 }
 
-std::error_code OS::readFile(const fs::path& path, std::vector<char>& buffer) {
+std::error_code OS::readFile(const fs::path& path, SmallVector<char>& buffer) {
     int fd;
-    while (true) {
-        fd = ::open(path.native().c_str(), O_RDONLY | O_CLOEXEC);
-        if (fd >= 0)
-            break;
+    auto& pathStr = path.native();
+    const bool isStdin = pathStr == "-";
 
-        if (errno != EINTR)
-            return std::error_code(errno, std::generic_category());
+    if (isStdin) {
+        fd = STDIN_FILENO;
+    }
+    else {
+        while (true) {
+            fd = ::open(pathStr.c_str(), O_RDONLY | O_CLOEXEC);
+            if (fd >= 0)
+                break;
+
+            if (errno != EINTR)
+                return std::error_code(errno, std::generic_category());
+        }
     }
 
     std::error_code ec;
@@ -186,7 +206,7 @@ std::error_code OS::readFile(const fs::path& path, std::vector<char>& buffer) {
     }
     else if (S_ISREG(status.st_mode) || S_ISBLK(status.st_mode)) {
         auto fileSize = (size_t)status.st_size;
-        buffer.resize(fileSize + 1);
+        buffer.resize_for_overwrite(fileSize + 1);
 
         char* buf = buffer.data();
         while (fileSize) {
@@ -217,7 +237,7 @@ std::error_code OS::readFile(const fs::path& path, std::vector<char>& buffer) {
 
         size_t currSize = 0;
         while (true) {
-            buffer.resize(currSize + ChunkSize);
+            buffer.resize_for_overwrite(currSize + ChunkSize + 1);
 
             ssize_t numRead = ::read(fd, buffer.data() + currSize, ChunkSize);
             if (numRead < 0) {
@@ -237,8 +257,10 @@ std::error_code OS::readFile(const fs::path& path, std::vector<char>& buffer) {
         buffer.back() = '\0';
     }
 
-    if (::close(fd) < 0 && !ec)
-        ec.assign(errno, std::generic_category());
+    if (!isStdin) {
+        if (::close(fd) < 0 && !ec)
+            ec.assign(errno, std::generic_category());
+    }
 
     return ec;
 }
