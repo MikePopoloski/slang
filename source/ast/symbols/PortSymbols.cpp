@@ -1667,6 +1667,7 @@ const Expression* PortConnection::getExpression() const {
 
             if (!e->type->isEquivalent(*type)) {
                 auto& comp = context.getCompilation();
+                auto exprType = e->type;
                 if (direction == ArgumentDirection::In) {
                     e = &Expression::convertAssignment(context, *type, *e,
                                                        implicitNameRange.start());
@@ -1685,7 +1686,7 @@ const Expression* PortConnection::getExpression() const {
                                                  implicitNameRange);
                     diag << port.name;
                     diag << *type;
-                    diag << *e->type;
+                    diag << *exprType;
 
                     // There's no way to represent this expression for the ref case.
                     if (direction == ArgumentDirection::Ref)
