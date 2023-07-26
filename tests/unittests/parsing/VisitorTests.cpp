@@ -565,7 +565,7 @@ TEST_CASE("Visit all file") {
     REQUIRE(tree);
 
     Compilation compilation;
-    compilation.addSyntaxTree(tree);
+    compilation.addSyntaxTree(*tree);
 
     int count = 0;
     compilation.getRoot().visit(makeVisitor([&](auto& v, auto& elem) {
