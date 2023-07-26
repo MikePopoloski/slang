@@ -27,9 +27,14 @@ protected:
         config(Registry::getConfig()) {}
 
     [[nodiscard]] bool skip(std::string_view path) const {
-        auto file = std::filesystem::path(path).filename();
+        auto file = std::filesystem::path(path).filename().string();
+        auto parentPath = weakly_canonical(std::filesystem::path(path));
         const auto& skipFiles = config.getSkipFiles();
-        return std::find(skipFiles.begin(), skipFiles.end(), file) != skipFiles.end();
+        const auto& skipPaths = config.getSkipPaths();
+        return std::find(skipFiles.begin(), skipFiles.end(), file) != skipFiles.end() ||
+               std::find_if(skipPaths.begin(), skipPaths.end(), [&](auto& path) {
+                   return parentPath.string().find(path) != std::string::npos;
+               }) != skipPaths.end();
     }
 
     slang::not_null<const slang::SourceManager*> sourceManager;

@@ -46,9 +46,16 @@ public:
     // Returns a vector containing the file names that won't be checked by slang-tidy
     inline const std::vector<std::string>& getSkipFiles() const { return skipFiles; }
 
+    // Returns a vector containing the paths names that won't be checked by slang-tidy
+    inline const std::vector<std::string>& getSkipPaths() const { return skipPaths; }
+
     // Adds a new file into the list of skipped files
     void addSkipFile(const std::string& path);
-    void addSkipFile(std::vector<std::string> paths);
+    void addSkipFile(const std::vector<std::string>& paths);
+
+    // Adds a new path into the list of skipped paths
+    void addSkipPath(const std::string& path);
+    void addSkipPath(const std::vector<std::string>& paths);
 
 private:
     CheckConfigs checkConfigs;
@@ -60,6 +67,9 @@ private:
 
     // List of files that won't be checked by slang-tidy
     std::vector<std::string> skipFiles;
+
+    // List of paths that won't be checked by slang-tidy
+    std::vector<std::string> skipPaths;
 
     /// Enables or disables all the implemented checks based on status
     void toggleAl(CheckStatus status);
