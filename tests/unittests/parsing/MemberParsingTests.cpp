@@ -47,13 +47,17 @@ TEST_CASE("Complex header") {
     CHECK(module.header->name.valueText() == "foo");
     CHECK(module.attributes.size() == 1);
     CHECK(module.header->imports[0]->items.size() == 2);
-    CHECK(module.header->parameters->declarations.size() == 3);
+    CHECK(module.header->parameters->declarations.size() == 2);
+    CHECK(module.header->parameters->declarations[1]
+              ->as<ParameterDeclarationSyntax>()
+              .declarators.size() == 2);
     CHECK(module.header->ports->kind == SyntaxKind::AnsiPortList);
 }
 
 TEST_CASE("Parameter ports") {
-    auto& text = "module foo #(foo, foo [3:1][9:0] = 4:3:9, parameter blah = blah, localparam type "
-                 "stuff = shortint, stuff2, stuff3 = int, Blah blahblah); endmodule";
+    auto& text = "module foo #(foo, foo2 [3:1][9:0] = 4:3:9, parameter blah = blah, "
+                 "localparam type stuff = shortint, stuff2, stuff3 = int, "
+                 "Blah blahblah); endmodule";
     const auto& module = parseModule(text);
 
     REQUIRE(module.kind == SyntaxKind::ModuleDeclaration);
@@ -61,23 +65,28 @@ TEST_CASE("Parameter ports") {
     CHECK_DIAGNOSTICS_EMPTY;
 
     auto parameters = module.header->parameters->declarations;
-    REQUIRE(parameters.size() == 5);
-    CHECK(parameters[0]->kind == SyntaxKind::ParameterDeclaration);
-    CHECK(parameters[1]->kind == SyntaxKind::ParameterDeclaration);
-    CHECK(parameters[2]->kind == SyntaxKind::ParameterDeclaration);
-    CHECK(parameters[2]->as<ParameterDeclarationSyntax>().declarators[0]->name.valueText() ==
-          "blah");
-    CHECK(parameters[3]->kind == SyntaxKind::TypeParameterDeclaration);
+    REQUIRE(parameters.size() == 4);
+    REQUIRE(parameters[0]->kind == SyntaxKind::ParameterDeclaration);
 
-    auto& typeParam = parameters[3]->as<TypeParameterDeclarationSyntax>();
+    auto& valueParam = parameters[0]->as<ParameterDeclarationSyntax>();
+    REQUIRE(valueParam.declarators.size() == 2);
+    CHECK(valueParam.declarators[1]->name.valueText() == "foo2");
+
+    REQUIRE(parameters[1]->kind == SyntaxKind::ParameterDeclaration);
+    CHECK(parameters[1]->as<ParameterDeclarationSyntax>().declarators[0]->name.valueText() ==
+          "blah");
+
+    REQUIRE(parameters[2]->kind == SyntaxKind::TypeParameterDeclaration);
+
+    auto& typeParam = parameters[2]->as<TypeParameterDeclarationSyntax>();
     REQUIRE(typeParam.declarators.size() == 3);
     CHECK(typeParam.declarators[0]->name.valueText() == "stuff");
     CHECK(typeParam.declarators[0]->assignment->type->kind == SyntaxKind::ShortIntType);
     CHECK(typeParam.declarators[1]->name.valueText() == "stuff2");
     CHECK(typeParam.declarators[2]->name.valueText() == "stuff3");
 
-    CHECK(parameters[4]->kind == SyntaxKind::ParameterDeclaration);
-    CHECK(parameters[4]->as<ParameterDeclarationSyntax>().declarators[0]->name.valueText() ==
+    CHECK(parameters[3]->kind == SyntaxKind::ParameterDeclaration);
+    CHECK(parameters[3]->as<ParameterDeclarationSyntax>().declarators[0]->name.valueText() ==
           "blahblah");
 }
 

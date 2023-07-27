@@ -2424,3 +2424,27 @@ endmodule
     CHECK(diags[3].code == diag::NetAliasHierarchical);
     CHECK(diags[4].code == diag::NetAliasCommonNetType);
 }
+
+TEST_CASE("Parameter port wrong / implicit type regression GH #797") {
+    auto tree = SyntaxTree::fromText(R"(
+module dut #(
+    parameter bit P1,
+    parameter bit P2
+);
+endmodule
+
+module top #(
+   parameter bit [3:1]
+       P1 = {3{1'b1}},
+       P2 = {3{1'b1}}
+);
+    for (genvar p=1; p<4; p++) begin: gen_loop
+        dut #(.P1 (P1[p]), .P2 (P2[p])) dut_i();
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

@@ -1009,14 +1009,30 @@ ParameterDeclarationBaseSyntax& Parser::parseParameterDecl(Token keyword, Token*
     else {
         auto& type = parseDataType(TypeOptions::AllowImplicit);
 
-        // If the semi pointer is given, we should parse a list of decls.
-        // Otherwise we're in a parameter port list and should just parse one.
+        // If the semi pointer is given, we should parse a simple list of decls.
+        // Otherwise we're in a parameter port list and don't know if we'll encounter
+        // other non-decl things, so do the parsing manually.
         std::span<TokenOrSyntax> decls;
-        if (semi)
+        if (semi) {
             decls = parseDeclarators(*semi, /* allowMinTypMax */ true);
+        }
         else {
             SmallVector<TokenOrSyntax, 2> buffer;
-            buffer.push_back(&parseDeclarator(/* allowMinTypMax */ true));
+            while (true) {
+                buffer.push_back(&parseDeclarator(/* allowMinTypMax */ true));
+                if (!peek(TokenKind::Comma) || peek(1).kind != TokenKind::Identifier)
+                    break;
+
+                // We need to disambiguate here between another decl which has an optional
+                // unpacked dimension list from a totally new parameter being declared with
+                // an identifier type and an optional packed dimension list. If it's not the
+                // former we will bail out and let our parent parse a new parameter.
+                uint32_t index = 2;
+                if (!scanDimensionList(index) || peek(index).kind == TokenKind::Identifier)
+                    break;
+
+                buffer.push_back(consume());
+            }
             decls = buffer.copy(alloc);
         }
 
