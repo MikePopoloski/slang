@@ -39,8 +39,7 @@ int main(int argc, char** argv) {
         return 1;
 
     if (showHelp) {
-        slang::OS::print(
-            fmt::format("{}", driver.cmdLine.getHelpText("slang-reflect")));
+        slang::OS::print(fmt::format("{}", driver.cmdLine.getHelpText("slang-reflect")));
         return 0;
     }
 
