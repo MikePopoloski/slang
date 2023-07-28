@@ -1,3 +1,11 @@
+//------------------------------------------------------------------------------
+//! @file ASTVisitors.h
+//! @brief Reusable AST visitors
+//
+// SPDX-FileCopyrightText: Michael Popoloski
+// SPDX-License-Identifier: MIT
+//------------------------------------------------------------------------------
+
 #pragma once
 
 #include <iostream>
@@ -24,11 +32,7 @@ public:
         }
     }
 
-    bool operator()() {
-        bool ret = isPublic;
-        isPublic = false;
-        return ret;
-    }
+    bool operator()() { return std::exchange(isPublic, false); }
 
 private:
     bool isPublic{false};

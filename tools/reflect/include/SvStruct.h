@@ -1,3 +1,11 @@
+//------------------------------------------------------------------------------
+//! @file SvStruct.h
+//! @brief Handles with SystemVerilog structs
+//
+// SPDX-FileCopyrightText: Michael Popoloski
+// SPDX-License-Identifier: MIT
+//------------------------------------------------------------------------------
+
 #pragma once
 
 #include "CppEmitter.h"

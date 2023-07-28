@@ -1,4 +1,7 @@
-#include "SvTypeExtractor.h"
+// SPDX-FileCopyrightText: Michael Popoloski
+// SPDX-License-Identifier: MIT
+
+#include "SvTypeReflector.h"
 
 #include "ASTVisitors.h"
 #include "SvEnum.h"
@@ -12,7 +15,7 @@
 using namespace slang;
 using namespace ast;
 
-void SvTypeExtractor::extract() {
+void SvTypeReflector::reflect() {
     auto checkPublic = [](const auto& type, auto tokenKind) {
         static auto visitor = PublicDirectiveVisitor(tokenKind);
         if (!type.getSyntax())

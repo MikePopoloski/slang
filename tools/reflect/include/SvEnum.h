@@ -1,3 +1,11 @@
+//------------------------------------------------------------------------------
+//! @file SvEnum.h
+//! @brief Handles with SystemVerilog Enums
+//
+// SPDX-FileCopyrightText: Michael Popoloski
+// SPDX-License-Identifier: MIT
+//------------------------------------------------------------------------------
+
 #pragma once
 
 #include "SvGeneric.h"

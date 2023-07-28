@@ -1,3 +1,11 @@
+//------------------------------------------------------------------------------
+//! @file SvLocalParam.h
+//! @brief Handles with SystemVerilog local parameters
+//
+// SPDX-FileCopyrightText: Michael Popoloski
+// SPDX-License-Identifier: MIT
+//------------------------------------------------------------------------------
+
 #pragma once
 
 #include "SvGeneric.h"
@@ -10,7 +18,6 @@ public:
         SvGeneric(SvGeneric::Kind::LocalParam), parameter(parameter) {}
 
     void toCpp(HppFile& hppFile, std::string_view, const SvAliases&, bool) const override {
-        //** DECLARATION **//
         std::string parameterName = isCppReserved(parameter.name)
                                         ? fmt::format("_{}", parameter.name)
                                         : std::string(parameter.name);

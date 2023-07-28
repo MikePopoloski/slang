@@ -1,6 +1,5 @@
-//
-// Created by jsans on 7/11/23.
-//
+// SPDX-FileCopyrightText: Michael Popoloski
+// SPDX-License-Identifier: MIT
 
 #include "SvEnum.h"
 

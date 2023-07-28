@@ -1,3 +1,11 @@
+//------------------------------------------------------------------------------
+//! @file CppEmitter.h
+//! @brief C++ Emitter classes
+//
+// SPDX-FileCopyrightText: Michael Popoloski
+// SPDX-License-Identifier: MIT
+//------------------------------------------------------------------------------
+
 #pragma once
 
 #include <filesystem>
@@ -22,18 +30,18 @@ public:
             includes.emplace_back("systemc.h");
     }
 
-    inline void add(std::string&& code) { hpp << code; }
-    inline void addInclude(std::string&& code) {
+    void add(std::string&& code) { hpp << code; }
+    void addInclude(std::string&& code) {
         if (std::find(includes.begin(), includes.end(), code) == includes.end())
             includes.emplace_back(code);
     }
-    inline void addIncludeHeader(std::string_view code) {
+    void addIncludeHeader(std::string_view code) {
         if (std::find(headers.begin(), headers.end(), code) == headers.end())
             headers.emplace_back(code);
     }
-    inline void addWithIndent(std::string&& code) { hpp << indent(currentIndent) << code; }
-    inline void increaseIndent() { currentIndent++; }
-    inline void decreaseIndent() {
+    void addWithIndent(std::string&& code) { hpp << indent(currentIndent) << code; }
+    void increaseIndent() { currentIndent++; }
+    void decreaseIndent() {
         SLANG_ASSERT(currentIndent != 0);
         currentIndent--;
     }
@@ -66,7 +74,7 @@ private:
     std::string fileName;
     uint32_t currentIndent{0};
 
-    inline std::string indent(uint64_t blocks) {
+    std::string indent(uint64_t blocks) {
         std::string ret;
         for (auto i = 0; i < blocks * 4; i++)
             ret += " ";

@@ -1,3 +1,11 @@
+//------------------------------------------------------------------------------
+//! @file SvType.h
+//! @brief C++ Type representation of a SystemVerilog type
+//
+// SPDX-FileCopyrightText: Michael Popoloski
+// SPDX-License-Identifier: MIT
+//------------------------------------------------------------------------------
+
 #pragma once
 
 #include <ostream>
@@ -7,7 +15,7 @@
 namespace CppType {
 enum Type { BOOL, U32, U64, SC_BV, STRUCT, ENUM };
 
-std::string toString(const Type cppType);
+std::string toString(const Type& cppType);
 Type fromSize(size_t size);
 } // namespace CppType
 
@@ -18,9 +26,9 @@ public:
         this->name = name;
     }
 
-    inline bool isStruct() const { return cppType == CppType::STRUCT; }
-    inline bool isEnum() const { return cppType == CppType::ENUM; }
-    inline bool isStructOrEnum() const { return this->isStruct() || this->isEnum(); }
+    bool isStruct() const { return cppType == CppType::STRUCT; }
+    bool isEnum() const { return cppType == CppType::ENUM; }
+    bool isStructOrEnum() const { return this->isStruct() || this->isEnum(); }
 
     std::string toString() const;
     friend std::ostream& operator<<(std::ostream& os, const SvType& type);

@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: Michael Popoloski
+// SPDX-License-Identifier: MIT
+
 #include "SvType.h"
 
 #include <fmt/format.h>
@@ -41,7 +44,7 @@ std::string SvType::toString() const {
 }
 
 namespace CppType {
-std::string toString(const CppType::Type cppType) {
+std::string toString(const CppType::Type& cppType) {
     // clang-format off
     switch (cppType) {
         case BOOL: return "bool";

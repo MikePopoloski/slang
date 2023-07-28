@@ -1,7 +1,7 @@
-slang-type-extract
+slang-reflect
 ==================
 
-slang-type-extract is a tool that aims to help developers to remove the burden of creating `C/C++` representations of
+slang-reflect is a tool that aims to help developers to remove the burden of creating `C/C++` representations of
 SystemVerilog structs, enums and parameters. Its behavior is inspired from
 the [verilator public](https://verilator.org/guide/latest/extensions.html#cmdoption-2) option provided by `verilator`,
 and it is of a great use when building testbenches using `C++/SystemC`.

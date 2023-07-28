@@ -1,23 +1,28 @@
 //------------------------------------------------------------------------------
-//! @file type_extract.h
-//! @brief A SystemVerilog linting tool
+//! @file reflect.cpp
+//! @brief Generates C++ headers for SystemVerilog types
 //
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
 
 #include "ASTVisitors.h"
-#include "SvTypeExtractor.h"
+#include "SvTypeReflector.h"
 #include <fmt/format.h>
 #include <optional>
 
 #include "slang/driver/Driver.h"
+#include "slang/util/Version.h"
 
 using namespace slang;
 
 int main(int argc, char** argv) {
     driver::Driver driver;
     driver.addStandardArgs();
+    std::optional<bool> showHelp;
+    driver.cmdLine.add("-h,--help", showHelp, "Display available options");
+    std::optional<bool> showVersion;
+    driver.cmdLine.add("--version", showVersion, "Display version information and exit");
     std::optional<std::string> outputDir;
     driver.cmdLine.add("--output-dir", outputDir, "Output directory of the generated .h files");
     std::optional<bool> toStdout;
@@ -33,8 +38,18 @@ int main(int argc, char** argv) {
     if (!driver.parseCommandLine(argc, argv))
         return 1;
 
-    if (!driver.processOptions())
-        return 1;
+    if (showHelp) {
+        slang::OS::print(
+            fmt::format("{}", driver.cmdLine.getHelpText("slang-reflect")));
+        return 0;
+    }
+
+    if (showVersion) {
+        OS::print(fmt::format("slang-reflect version {}.{}.{}+{}\n", VersionInfo::getMajor(),
+                              VersionInfo::getMinor(), VersionInfo::getPatch(),
+                              VersionInfo::getHash()));
+        return 0;
+    }
 
     bool info = verbose && *verbose;
 
@@ -46,6 +61,9 @@ int main(int argc, char** argv) {
             return 1;
         }
     }
+
+    if (!driver.processOptions())
+        return 1;
 
     std::unique_ptr<ast::Compilation> compilation;
 
@@ -63,20 +81,20 @@ int main(int argc, char** argv) {
     }
 
     if (!compilation_ok) {
-        OS::print("slang-tidy: errors found during compilation\n");
+        OS::print("slang-reflect: errors found during compilation\n");
         return 1;
     }
 
     bool noSc = noSystemC.has_value() && noSystemC.value();
 
-    auto extractor = SvTypeExtractor(std::move(compilation), info, noSc);
-    extractor.extract();
+    auto reflector = SvTypeReflector(std::move(compilation), info, noSc);
+    reflector.reflect();
 
     if (toStdout && *toStdout) {
-        std::cout << extractor.emit() << std::endl;
+        std::cout << reflector.emit() << std::endl;
     }
     else {
         OS::print("Emitting code to: " + absolute(outputPath).string() + "\n");
-        extractor.emitToFile(outputPath);
+        reflector.emitToFile(outputPath);
     }
 }
