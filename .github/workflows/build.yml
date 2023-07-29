@@ -54,11 +54,9 @@ jobs:
     - name: Build
       run: cmake --build build/${{ matrix.preset }} -j8
     - name: Run tests
-      run: |
-        cd build/${{ matrix.preset }}
-        ctest --output-on-failure --no-tests=error
+      run: ctest --test-dir build/${{ matrix.preset }} --output-on-failure --no-tests=error -j8
 
-  coverage:
+  linux-coverage:
     runs-on: ubuntu-22.04
     steps:
     - uses: actions/checkout@v3
@@ -73,8 +71,7 @@ jobs:
     - name: Build
       run: cmake --build build/ci-coverage -j8
     - name: Run tests
-      working-directory: build/ci-coverage
-      run: ctest --output-on-failure --no-tests=error
+      run: ctest --test-dir build/ci-coverage --output-on-failure --no-tests=error -j8
     - name: Process coverage info
       run: cmake --build build/ci-coverage -t coverage
     - name: Submit to codecov.io
@@ -95,8 +92,7 @@ jobs:
     - name: Build
       run: cmake --build build --config Release -j8
     - name: Run tests
-      working-directory: build
-      run: ctest --output-on-failure -C Release --no-tests=error
+      run: ctest --test-dir build --output-on-failure -C Release --no-tests=error -j8
 
   conan:
     runs-on: ubuntu-22.04
@@ -115,4 +111,4 @@ jobs:
     - name: Build
       run: cmake --build --preset conan-gcc-x86_64-release -j8
     - name: Run tests
-      run: ctest --preset conan-gcc-x86_64-release --output-on-failure --no-tests=error
+      run: ctest --preset conan-gcc-x86_64-release --output-on-failure --no-tests=error -j8
