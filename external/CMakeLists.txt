@@ -3,9 +3,15 @@
 # SPDX-License-Identifier: MIT
 # ~~~
 
+# Required minimum versions for dependencies
+set(fmt_min_version "10.0")
+set(mimalloc_min_version "2.1")
+set(catch2_min_version "3.0")
+
+# --- fmt lib ---
 set(find_pkg_args "")
 if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.24.0")
-  set(find_pkg_args "FIND_PACKAGE_ARGS" "10.0.0")
+  set(find_pkg_args "FIND_PACKAGE_ARGS" "${fmt_min_version}")
 endif()
 
 FetchContent_Declare(
@@ -23,6 +29,11 @@ set(BUILD_SHARED_LIBS OFF)
 FetchContent_MakeAvailable(fmt)
 set(BUILD_SHARED_LIBS ${saved_build_shared_libs})
 
+if(NOT TARGET fmt::fmt)
+  message(
+    FATAL_ERROR "Could not find fmt package, min version: ${fmt_min_version}")
+endif()
+
 if((SLANG_INCLUDE_PYLIB OR BUILD_SHARED_LIBS) AND NOT fmt_FOUND)
   set_target_properties(fmt PROPERTIES POSITION_INDEPENDENT_CODE ON)
 endif()
@@ -37,6 +48,7 @@ else()
   message(STATUS "Using remote fmt library")
 endif()
 
+# --- boost ---
 find_package(Boost 1.82.0 QUIET)
 if(NOT Boost_FOUND)
   message(STATUS "Using vendored boost_unordered header")
@@ -51,6 +63,7 @@ else()
   )
 endif()
 
+# --- mimalloc ---
 if(SLANG_USE_MIMALLOC)
   if(CMAKE_SYSTEM_NAME MATCHES "Windows" AND BUILD_SHARED_LIBS)
     message(
@@ -59,7 +72,7 @@ if(SLANG_USE_MIMALLOC)
 
   set(find_pkg_args "")
   if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.24.0")
-    set(find_pkg_args "FIND_PACKAGE_ARGS" "2.1")
+    set(find_pkg_args "FIND_PACKAGE_ARGS" "${mimalloc_min_version}")
   endif()
 
   set(MI_OVERRIDE
@@ -86,6 +99,12 @@ if(SLANG_USE_MIMALLOC)
     ${find_pkg_args})
   FetchContent_MakeAvailable(mimalloc)
 
+  if(NOT TARGET mimalloc-static)
+    message(
+      FATAL_ERROR
+        "Could not find mimalloc package, min version: ${mimalloc_min_version}")
+  endif()
+
   if(mimalloc_FOUND)
     message(STATUS "Found system mimalloc version: ${Catch2_VERSION}")
   else()
@@ -96,7 +115,6 @@ if(SLANG_USE_MIMALLOC)
 
       get_target_property(lib_include_dirs mimalloc-static INCLUDE_DIRECTORIES)
       set(mi_version "2.1")
-
       set(mi_install_incdir
           "${CMAKE_INSTALL_INCLUDEDIR}/mimalloc-${mi_version}")
 
@@ -107,10 +125,11 @@ if(SLANG_USE_MIMALLOC)
   endif()
 endif()
 
+# --- catch2 ---
 if(SLANG_INCLUDE_TESTS)
   set(find_pkg_args "")
   if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.24.0")
-    set(find_pkg_args "FIND_PACKAGE_ARGS" "3.0.0")
+    set(find_pkg_args "FIND_PACKAGE_ARGS" "${catch2_min_version}")
   endif()
 
   FetchContent_Declare(
@@ -120,6 +139,12 @@ if(SLANG_INCLUDE_TESTS)
     GIT_SHALLOW ON
     ${find_pkg_args})
   FetchContent_MakeAvailable(Catch2)
+
+  if(NOT TARGET Catch2::Catch2)
+    message(
+      FATAL_ERROR
+        "Could not find Catch2 package, min version: ${catch2_min_version}")
+  endif()
 
   if(Catch2_FOUND)
     get_target_property(Catch2_INCLUDE_DIR Catch2::Catch2
@@ -131,6 +156,7 @@ if(SLANG_INCLUDE_TESTS)
   endif()
 endif()
 
+# --- install rules ---
 if(SLANG_INCLUDE_INSTALL)
   install(
     DIRECTORY ${PROJECT_SOURCE_DIR}/external/ieee1800/
