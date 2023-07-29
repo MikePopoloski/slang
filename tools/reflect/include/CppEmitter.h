@@ -8,8 +8,10 @@
 
 #pragma once
 
+#include "fmt/format.h"
 #include <filesystem>
 #include <fstream>
+#include <ranges>
 #include <sstream>
 #include <vector>
 
@@ -47,19 +49,15 @@ public:
     }
 
     std::string emit() {
-        std::stringstream ss;
-        ss << "// " << fileName << std::endl;
-        ss << "#pragma once" << std::endl;
-        ss << std::endl;
-        for (auto& header : includes) {
-            ss << "#include <" << header << ">" << std::endl;
-        }
-        for (auto& header : headers) {
-            ss << "#include \"" << header << ".h\"" << std::endl;
-        }
-        ss << std::endl;
-        ss << hpp.str();
-        return std::move(ss.str());
+        auto includesTransform = std::views::transform(includes, [](const auto& inc) {
+            return fmt::format("#include <{}>", inc);
+        });
+        auto headersTransform = std::views::transform(headers, [](const auto& h) {
+            return fmt::format("#include \"{}.h\"", h);
+        });
+        return fmt::format("// {}\n#pragma once\n\n{}{}\n\n{}", fileName,
+                           fmt::join(includesTransform, "\n"), fmt::join(headersTransform, "\n"),
+                           hpp.str());
     }
 
     void emitToFile(const fs::path& path) {
