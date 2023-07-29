@@ -142,6 +142,13 @@ void registerCompilation(py::module_& m) {
         .def("evalStatement", &ScriptSession::evalStatement, "expr"_a)
         .def("getDiagnostics", &ScriptSession::getDiagnostics);
 
+    py::class_<CommandLine::ParseOptions>(m, "CommandLineOptions")
+        .def(py::init<>())
+        .def_readwrite("supportsComments", &CommandLine::ParseOptions::supportComments)
+        .def_readwrite("ignoreProgramName", &CommandLine::ParseOptions::ignoreProgramName)
+        .def_readwrite("expandEnvVars", &CommandLine::ParseOptions::expandEnvVars)
+        .def_readwrite("ignoreDuplicates", &CommandLine::ParseOptions::ignoreDuplicates);
+
     py::class_<Driver>(m, "Driver")
         .def(py::init<>())
         .def_readonly("sourceManager", &Driver::sourceManager)
@@ -152,7 +159,10 @@ void registerCompilation(py::module_& m) {
         .def("addStandardArgs", &Driver::addStandardArgs)
         .def(
             "parseCommandLine",
-            [](Driver& self, std::string_view arg) { return self.parseCommandLine(arg); }, "arg"_a)
+            [](Driver& self, std::string_view arg, CommandLine::ParseOptions parseOptions) {
+                return self.parseCommandLine(arg, parseOptions);
+            },
+            "arg"_a, "parseOptions"_a = CommandLine::ParseOptions{})
         .def("processCommandFiles", &Driver::processCommandFiles, "fileName"_a, "makeRelative"_a)
         .def("processOptions", &Driver::processOptions)
         .def("runPreprocessor", &Driver::runPreprocessor, "includeComments"_a,

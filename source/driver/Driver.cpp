@@ -286,8 +286,9 @@ void Driver::addStandardArgs() {
         "<filename>", CommandLineFlags::CommaList);
 }
 
-[[nodiscard]] bool Driver::parseCommandLine(std::string_view argList) {
-    if (!cmdLine.parse(argList)) {
+[[nodiscard]] bool Driver::parseCommandLine(std::string_view argList,
+                                            CommandLine::ParseOptions parseOptions) {
+    if (!cmdLine.parse(argList, parseOptions)) {
         for (auto& err : cmdLine.getErrors())
             OS::printE(fmt::format("{}\n", err));
         return false;
@@ -330,15 +331,12 @@ bool Driver::processCommandFiles(std::string_view pattern, bool makeRelative) {
         buffer.pop_back();
 
         std::string_view argStr(buffer.data(), buffer.size());
-        bool result = cmdLine.parse(argStr, parseOpts);
+        const bool result = parseCommandLine(argStr, parseOpts);
 
         if (makeRelative)
             fs::current_path(currPath, ec);
 
         if (!result) {
-            for (auto& err : cmdLine.getErrors())
-                OS::printE(fmt::format("{}\n", err));
-
             anyFailedLoads = true;
             return false;
         }

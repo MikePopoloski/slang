@@ -30,10 +30,24 @@ class Compilation;
 
 namespace slang::driver {
 
-/// A top-level class that handles argument parsing, option preparation,
+/// @brief A top-level class that handles argument parsing, option preparation,
 /// and invoking various parts of the slang compilation process.
+///
 /// This is exposed as a convenience wrapper around the various components
 /// that could otherwise be used on their own.
+///
+/// A typical compilation flow using the driver looks as follows:
+/// @code{.cpp}
+/// Driver driver;
+/// driver.addStandardArgs();
+/// if (!driver.parseCommandLine(someStr)) { /* error */ }
+/// if (!driver.processOptions()) { /* error */ }
+/// if (!driver.parseAllSources()) { /* error */ }
+///
+/// auto compilation = driver.createCompilation();
+/// if (!driver.reportCompilation(*compilation)) { /* error */ }
+/// else { /* success */ }
+/// @endcode
 class SLANG_EXPORT Driver {
 public:
     /// The command line object that will be used to parse
@@ -212,12 +226,14 @@ public:
     /// Constructs a new instance of the @a Driver class.
     Driver();
 
-    /// Adds standard command line arguments to the @a cmdLine object.
+    /// @brief Adds standard command line arguments to the @a cmdLine object.
+    ///
     /// If not called, no arguments will be added by default, though the user
     /// can still add their own custom arguments if desired.
     void addStandardArgs();
 
-    /// Parses command line arguments from the given C-style argument list.
+    /// @brief Parses command line arguments from the given C-style argument list.
+    ///
     /// This is templated to support both char and wchar_t arg lists.
     /// Any errors encountered will be printed to stderr.
     template<typename TArgs>
@@ -230,11 +246,14 @@ public:
         return !anyFailedLoads;
     }
 
-    /// Parses command line arguments from the given string.
+    /// @brief Parses command line arguments from the given string.
+    ///
     /// Any errors encountered will be printed to stderr.
-    [[nodiscard]] bool parseCommandLine(std::string_view argList);
+    [[nodiscard]] bool parseCommandLine(std::string_view argList,
+                                        CommandLine::ParseOptions parseOptions = {});
 
-    /// Processes the given command file(s) for more options.
+    /// @brief Processes the given command file(s) for more options.
+    ///
     /// Any errors encountered will be printed to stderr.
     /// @param fileName The name (and potentially the path) of the command file to process.
     /// @param makeRelative indicates whether paths in the file are relative to the file
@@ -246,7 +265,8 @@ public:
     /// @returns true on success and false if errors were encountered.
     [[nodiscard]] bool processOptions();
 
-    /// Runs the preprocessor on all loaded buffers and outputs the result to stdout.
+    /// @brief Runs the preprocessor on all loaded buffers and outputs the result to stdout.
+    ///
     /// Any errors encountered will be printed to stderr.
     /// @param includeComments If true, comments will be included in the output.
     /// @param includeDirectives If true, preprocessor directives will be included in the output.
@@ -262,8 +282,9 @@ public:
     /// Prints all macros from all loaded buffers to stdout.
     void reportMacros();
 
-    /// Parses all loaded buffers into syntax trees and appends the resulting trees
+    /// @brief Parses all loaded buffers into syntax trees and appends the resulting trees
     /// to the @a syntaxTrees list.
+    ///
     /// @returns true on success and false if errors were encountered.
     [[nodiscard]] bool parseAllSources();
 
@@ -277,7 +298,8 @@ public:
     /// @returns true on success and false if errors were encountered.
     [[nodiscard]] bool reportParseDiags();
 
-    /// Reports the result of compilation.
+    /// @brief Reports the result of compilation.
+    ///
     /// If @a quiet is set to true, non-essential output will be suppressed.
     /// @returns true if compilation succeeded and false if errors were encountered.
     [[nodiscard]] bool reportCompilation(ast::Compilation& compilation, bool quiet);
