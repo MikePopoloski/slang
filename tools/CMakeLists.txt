@@ -26,3 +26,4 @@ endif()
 
 add_subdirectory(netlist)
 add_subdirectory(tidy)
+add_subdirectory(reflect)
