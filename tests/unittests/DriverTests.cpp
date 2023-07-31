@@ -255,6 +255,19 @@ TEST_CASE("Driver invalid library module file") {
     CHECK(stderrContains("error: 'blah.sv':"));
 }
 
+TEST_CASE("Driver parsing multiple input files") {
+    auto guard = OS::captureOutput();
+
+    Driver driver;
+    driver.addStandardArgs();
+
+    auto args = fmt::format("testfoo \"{0}test?.sv\"", findTestDir());
+    CHECK(driver.parseCommandLine(args));
+    CHECK(driver.processOptions());
+    CHECK(driver.parseAllSources());
+    CHECK(!driver.reportParseDiags());
+}
+
 TEST_CASE("Driver full compilation") {
     auto guard = OS::captureOutput();
 

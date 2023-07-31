@@ -9,3 +9,8 @@ endmodule
 module qq;
 endmodule
 `endif
+
+interface I;
+    int i;
+    modport m(input i);
+endinterface
