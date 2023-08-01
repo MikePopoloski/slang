@@ -430,7 +430,7 @@ SourceLoader::LoadResult SourceLoader::loadAndParse(const FileEntry& entry, cons
         if (entry.isLibraryFile || srcOptions.onlyLint)
             tree->isLibrary = true;
 
-        return std::move(tree);
+        return tree;
     }
 };
 
