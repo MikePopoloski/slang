@@ -173,15 +173,21 @@ private:
             library(library), libraryRank(libraryRank), isLibraryFile(isLibraryFile) {}
     };
 
+    // The result of a loadAndParse call.
+    // 0: A parsed syntax tree
+    // 1: A loaded source buffer + bool that indicates whether it's a library
+    // 2: A file entry + error code if the load fails
+    using LoadResult =
+        std::variant<std::shared_ptr<syntax::SyntaxTree>, std::pair<SourceBuffer, bool>,
+                     std::pair<const FileEntry*, std::error_code>>;
+
     const SourceLibrary* getOrAddLibrary(std::string_view name);
     void addFilesInternal(std::string_view pattern, const std::filesystem::path& basePath,
                           bool isLibraryFile, const SourceLibrary* library, bool expandEnvVars);
     void createLibrary(const syntax::LibraryDeclarationSyntax& syntax,
                        const std::filesystem::path& basePath);
-    void loadAndParse(const FileEntry& fileEntry, const Bag& optionBag,
-                      const SourceOptions& srcOptions, std::vector<SourceBuffer>& singleUnitBuffers,
-                      std::vector<SourceBuffer>& deferredLibBuffers, SyntaxTreeList& syntaxTrees,
-                      std::mutex* errorMutex);
+    LoadResult loadAndParse(const FileEntry& fileEntry, const Bag& optionBag,
+                            const SourceOptions& srcOptions);
 
     SourceManager& sourceManager;
 

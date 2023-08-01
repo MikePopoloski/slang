@@ -261,7 +261,9 @@ TEST_CASE("Driver parsing multiple input files") {
     Driver driver;
     driver.addStandardArgs();
 
-    auto args = fmt::format("testfoo \"{0}test?.sv\"", findTestDir());
+    auto args = fmt::format("testfoo \"{0}test?.sv\" --single-unit --libraries-inherit-macros -v "
+                            "\"{0}library/libmod.qv\"",
+                            findTestDir());
     CHECK(driver.parseCommandLine(args));
     CHECK(driver.processOptions());
     CHECK(driver.parseAllSources());

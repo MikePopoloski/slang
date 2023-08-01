@@ -129,9 +129,37 @@ std::vector<SourceBuffer> SourceLoader::loadSources() {
 
 SourceLoader::SyntaxTreeList SourceLoader::loadAndParseSources(const Bag& optionBag) {
     SyntaxTreeList syntaxTrees;
+    std::vector<SourceBuffer> singleUnitBuffers;
+    std::vector<SourceBuffer> deferredLibBuffers;
     std::span<const DefineDirectiveSyntax* const> inheritedMacros;
 
+    const size_t fileEntryCount = fileEntries.size();
+    syntaxTrees.reserve(fileEntryCount);
+    singleUnitBuffers.reserve(fileEntryCount);
+    deferredLibBuffers.reserve(fileEntryCount);
+
     auto srcOptions = optionBag.getOrDefault<SourceOptions>();
+
+    auto handleLoadResult = [&](LoadResult&& result) {
+        switch (result.index()) {
+            case 0:
+                syntaxTrees.emplace_back(std::get<0>(std::move(result)));
+                break;
+            case 1: {
+                auto [buffer, isDeferredLib] = std::get<1>(result);
+                if (isDeferredLib)
+                    deferredLibBuffers.push_back(buffer);
+                else
+                    singleUnitBuffers.push_back(buffer);
+                break;
+            }
+            case 2: {
+                auto [entry, code] = std::get<2>(result);
+                errors.emplace_back(entry->path, code);
+                break;
+            }
+        }
+    };
 
     auto parseSingleUnit = [&](std::span<const SourceBuffer> buffers) {
         // If we waited to parse direct buffers due to wanting a single unit, parse that unit now.
@@ -150,78 +178,50 @@ SourceLoader::SyntaxTreeList SourceLoader::loadAndParseSources(const Bag& option
         // the use of threads, do the parsing via a thread pool.
         ThreadPool threadPool(srcOptions.numThreads.value_or(0u));
 
-        std::vector<SourceBuffer> singleUnitBuffers;
-        std::vector<SourceBuffer> deferredLibBuffers;
-        std::mutex mut;
+        std::vector<LoadResult> loadResults;
+        loadResults.resize(fileEntries.size());
 
         // Load all source files that were specified on the command line
         // or via library maps.
         threadPool.pushLoop(size_t(0), fileEntries.size(), [&](size_t start, size_t end) {
-            SyntaxTreeList localTrees;
-            std::vector<SourceBuffer> localSingleUnitBufs;
-            std::vector<SourceBuffer> localDeferredLibBufs;
-
-            const size_t count = end - start;
-            localTrees.reserve(count);
-            localSingleUnitBufs.reserve(count);
-            localDeferredLibBufs.reserve(count);
-
-            for (size_t i = start; i < end; i++) {
-                auto& entry = fileEntries[i];
-                loadAndParse(entry, optionBag, srcOptions, localSingleUnitBufs,
-                             localDeferredLibBufs, localTrees, &mut);
-            }
-
-            // Merge our local results into the shared lists.
-            std::unique_lock lock(mut);
-            syntaxTrees.insert(syntaxTrees.end(), localTrees.begin(), localTrees.end());
-            singleUnitBuffers.insert(singleUnitBuffers.end(), localSingleUnitBufs.begin(),
-                                     localSingleUnitBufs.end());
-            deferredLibBuffers.insert(deferredLibBuffers.end(), localDeferredLibBufs.begin(),
-                                      localDeferredLibBufs.end());
+            for (size_t i = start; i < end; i++)
+                loadResults[i] = loadAndParse(fileEntries[i], optionBag, srcOptions);
         });
         threadPool.waitForAll();
 
-        parseSingleUnit(singleUnitBuffers);
-
-        // If we deferred libraries due to wanting to inherit macros, parse them now.
-        threadPool.pushLoop(size_t(0), deferredLibBuffers.size(), [&](size_t start, size_t end) {
-            SyntaxTreeList localTrees;
-            localTrees.reserve(end - start);
-
-            for (size_t i = start; i < end; i++) {
-                auto tree = SyntaxTree::fromBuffer(deferredLibBuffers[i], sourceManager, optionBag,
-                                                   inheritedMacros);
-                tree->isLibrary = true;
-                localTrees.emplace_back(std::move(tree));
-            }
-
-            std::unique_lock lock(mut);
-            syntaxTrees.insert(syntaxTrees.end(), localTrees.begin(), localTrees.end());
-        });
-        threadPool.waitForAll();
-    }
-    else {
-        std::vector<SourceBuffer> singleUnitBuffers;
-        std::vector<SourceBuffer> deferredLibBuffers;
-
-        const size_t count = fileEntries.size();
-        syntaxTrees.reserve(count);
-        singleUnitBuffers.reserve(count);
-        deferredLibBuffers.reserve(count);
-
-        // Load all source files that were specified on the command line
-        // or via library maps.
-        for (auto& entry : fileEntries) {
-            loadAndParse(entry, optionBag, srcOptions, singleUnitBuffers, deferredLibBuffers,
-                         syntaxTrees, nullptr);
-        }
+        for (auto&& result : loadResults)
+            handleLoadResult(std::move(result));
 
         parseSingleUnit(singleUnitBuffers);
 
         // If we deferred libraries due to wanting to inherit macros, parse them now.
         if (!deferredLibBuffers.empty()) {
-            syntaxTrees.reserve(syntaxTrees.size() + deferredLibBuffers.size());
+            const size_t numTrees = syntaxTrees.size();
+            syntaxTrees.resize(numTrees + deferredLibBuffers.size());
+
+            threadPool.pushLoop(size_t(0), deferredLibBuffers.size(),
+                                [&](size_t start, size_t end) {
+                                    for (size_t i = start; i < end; i++) {
+                                        auto tree = SyntaxTree::fromBuffer(deferredLibBuffers[i],
+                                                                           sourceManager, optionBag,
+                                                                           inheritedMacros);
+                                        tree->isLibrary = true;
+                                        syntaxTrees[i + numTrees] = std::move(tree);
+                                    }
+                                });
+            threadPool.waitForAll();
+        }
+    }
+    else {
+        // Load all source files that were specified on the command line
+        // or via library maps.
+        for (auto& entry : fileEntries)
+            handleLoadResult(loadAndParse(entry, optionBag, srcOptions));
+
+        parseSingleUnit(singleUnitBuffers);
+
+        // If we deferred libraries due to wanting to inherit macros, parse them now.
+        if (!deferredLibBuffers.empty()) {
             for (auto& buffer : deferredLibBuffers) {
                 auto tree = SyntaxTree::fromBuffer(buffer, sourceManager, optionBag,
                                                    inheritedMacros);
@@ -404,36 +404,25 @@ void SourceLoader::createLibrary(const LibraryDeclarationSyntax& syntax, const f
     // TODO: incdirs
 }
 
-void SourceLoader::loadAndParse(const FileEntry& entry, const Bag& optionBag,
-                                const SourceOptions& srcOptions,
-                                std::vector<SourceBuffer>& singleUnitBuffers,
-                                std::vector<SourceBuffer>& deferredLibBuffers,
-                                SyntaxTreeList& syntaxTrees, std::mutex* errorMutex) {
+SourceLoader::LoadResult SourceLoader::loadAndParse(const FileEntry& entry, const Bag& optionBag,
+                                                    const SourceOptions& srcOptions) {
     // TODO: error if secondLib is set
 
     auto buffer = sourceManager.readSource(entry.path, entry.library);
-    if (!buffer) {
-        // If a mutex is provided we need to lock it before adding the error.
-        std::unique_lock<std::mutex> lock;
-        if (errorMutex)
-            lock = std::unique_lock(*errorMutex);
-
-        errors.emplace_back(entry.path, buffer.error());
-        return;
-    }
+    if (!buffer)
+        return std::pair{&entry, buffer.error()};
 
     if (!entry.isLibraryFile && srcOptions.singleUnit) {
         // If this file was directly specified (i.e. not via
         // a library mapping) and we're in single-unit mode,
         // collect it for later parsing.
-        singleUnitBuffers.push_back(*buffer);
+        return std::pair{*buffer, false};
     }
     else if (srcOptions.librariesInheritMacros) {
         // If libraries inherit macros then we can't parse here,
-        // we need to wait for the main compilation unit to be
-        // parsed.
+        // we need to wait for the main compilation unit to be parsed.
         SLANG_ASSERT(entry.isLibraryFile);
-        deferredLibBuffers.push_back(*buffer);
+        return std::pair{*buffer, true};
     }
     else {
         // Otherwise we can parse right away.
@@ -441,7 +430,7 @@ void SourceLoader::loadAndParse(const FileEntry& entry, const Bag& optionBag,
         if (entry.isLibraryFile || srcOptions.onlyLint)
             tree->isLibrary = true;
 
-        syntaxTrees.emplace_back(std::move(tree));
+        return std::move(tree);
     }
 };
 
