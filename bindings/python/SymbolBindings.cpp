@@ -211,7 +211,8 @@ void registerSymbols(py::module_& m) {
                                [](const EnumValueSymbol& self) { return self.getValue(); });
 
     py::class_<ParameterSymbolBase>(m, "ParameterSymbolBase")
-        .def_property_readonly("symbol", [](const ParameterSymbolBase& self) { return &self.symbol; } )
+        .def_property_readonly("symbol",
+                               [](const ParameterSymbolBase& self) { return &self.symbol; })
         .def_property_readonly("isLocalParam", &ParameterSymbolBase::isLocalParam)
         .def_property_readonly("isPortParam", &ParameterSymbolBase::isPortParam)
         .def_property_readonly("isBodyParam", &ParameterSymbolBase::isBodyParam)
