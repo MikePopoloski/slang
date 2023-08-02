@@ -8,16 +8,11 @@
 #pragma once
 
 #include <filesystem>
+#include <fmt/color.h>
 
 #include "slang/util/ScopeGuard.h"
 #include "slang/util/SmallVector.h"
 #include "slang/util/Util.h"
-
-namespace fmt {
-inline namespace v10 {
-class text_style;
-}
-} // namespace fmt
 
 namespace slang {
 

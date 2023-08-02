@@ -7,16 +7,11 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include <fmt/color.h>
 #include <functional>
 #include <string>
 
 #include "slang/diagnostics/DiagnosticClient.h"
-
-namespace fmt {
-inline namespace v10 {
-enum class terminal_color : uint8_t;
-}
-} // namespace fmt
 
 namespace slang {
 
