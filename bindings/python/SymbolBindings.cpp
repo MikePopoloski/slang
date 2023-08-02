@@ -373,9 +373,7 @@ void registerSymbols(py::module_& m) {
     py::class_<PortConnection>(m, "PortConnection")
         .def_property_readonly("ifaceInstance", &PortConnection::getIfaceInstance)
         .def_property_readonly("expression", &PortConnection::getExpression)
-        .def_property_readonly("port", [](const PortConnection& self) { return &self.port; })
-        .def_property_readonly("parentInstance",
-                               [](const PortConnection& self) { return &self.parentInstance; });
+        .def_property_readonly("port", [](const PortConnection& self) { return &self.port; });
 
     py::class_<InstanceSymbolBase, Symbol>(m, "InstanceSymbolBase")
         .def_readonly("arrayPath", &InstanceSymbolBase::arrayPath)

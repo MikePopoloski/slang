@@ -933,20 +933,20 @@ public:
 
 private:
     PortConnection* emptyConnection(const PortSymbol& port) {
-        return comp.emplace<PortConnection>(port, instance);
+        return comp.emplace<PortConnection>(port);
     }
 
     PortConnection* emptyConnection(const MultiPortSymbol& port) {
-        return comp.emplace<PortConnection>(port, instance);
+        return comp.emplace<PortConnection>(port);
     }
 
     PortConnection* emptyConnection(const InterfacePortSymbol& port) {
-        return comp.emplace<PortConnection>(port, instance);
+        return comp.emplace<PortConnection>(port);
     }
 
     PortConnection* defaultConnection(const PortSymbol& port,
                                       std::span<const AttributeSymbol* const> attributes) {
-        auto conn = comp.emplace<PortConnection>(port, instance, /* useDefault */ true);
+        auto conn = comp.emplace<PortConnection>(port, /* useDefault */ true);
         if (!attributes.empty())
             comp.setAttributes(*conn, attributes);
 
@@ -955,7 +955,7 @@ private:
 
     PortConnection* defaultConnection(const MultiPortSymbol& port,
                                       std::span<const AttributeSymbol* const> attributes) {
-        auto conn = comp.emplace<PortConnection>(port, instance, /* useDefault */ false);
+        auto conn = comp.emplace<PortConnection>(port, /* useDefault */ false);
         if (!attributes.empty())
             comp.setAttributes(*conn, attributes);
 
@@ -977,7 +977,7 @@ private:
         if (!exprSyntax)
             return emptyConnection(port);
 
-        auto conn = comp.emplace<PortConnection>(port, instance, *exprSyntax);
+        auto conn = comp.emplace<PortConnection>(port, *exprSyntax);
         if (!attributes.empty())
             comp.setAttributes(*conn, attributes);
 
@@ -986,7 +986,7 @@ private:
 
     PortConnection* createConnection(const InterfacePortSymbol& port, const Symbol* ifaceInst,
                                      std::span<const AttributeSymbol* const> attributes) {
-        auto conn = comp.emplace<PortConnection>(port, instance, ifaceInst);
+        auto conn = comp.emplace<PortConnection>(port, ifaceInst);
         if (!attributes.empty())
             comp.setAttributes(*conn, attributes);
 
@@ -1021,7 +1021,7 @@ private:
             diag.addNote(diag::NoteDeclarationHere, symbol->location);
         }
 
-        auto conn = comp.emplace<PortConnection>(port, instance, symbol, range);
+        auto conn = comp.emplace<PortConnection>(port, symbol, range);
         if (!attributes.empty())
             comp.setAttributes(*conn, attributes);
 
@@ -1589,40 +1589,41 @@ void InterfacePortSymbol::serializeTo(ASTSerializer& serializer) const {
     serializer.write("isGeneric", isGeneric);
 }
 
-PortConnection::PortConnection(const Symbol& port, const InstanceSymbol& parentInstance) :
-    port(port), parentInstance(parentInstance) {
+PortConnection::PortConnection(const Symbol& port) : port(port) {
 }
 
-PortConnection::PortConnection(const Symbol& port, const InstanceSymbol& parentInstance,
-                               const ExpressionSyntax& expr) :
-    port(port),
-    parentInstance(parentInstance), exprSyntax(&expr) {
+PortConnection::PortConnection(const Symbol& port, const ExpressionSyntax& expr) :
+    port(port), exprSyntax(&expr) {
 }
 
-PortConnection::PortConnection(const Symbol& port, const InstanceSymbol& parentInstance,
-                               bool useDefault) :
-    port(port),
-    parentInstance(parentInstance), useDefault(useDefault) {
+PortConnection::PortConnection(const Symbol& port, bool useDefault) :
+    port(port), useDefault(useDefault) {
 }
 
-PortConnection::PortConnection(const InterfacePortSymbol& port,
-                               const InstanceSymbol& parentInstance,
-                               const Symbol* connectedSymbol) :
-    port(port),
-    parentInstance(parentInstance), connectedSymbol(connectedSymbol) {
+PortConnection::PortConnection(const InterfacePortSymbol& port, const Symbol* connectedSymbol) :
+    port(port), connectedSymbol(connectedSymbol) {
 }
 
-PortConnection::PortConnection(const Symbol& port, const InstanceSymbol& parentInstance,
-                               const Symbol* connectedSymbol, SourceRange implicitNameRange) :
+PortConnection::PortConnection(const Symbol& port, const Symbol* connectedSymbol,
+                               SourceRange implicitNameRange) :
     port(port),
-    parentInstance(parentInstance), connectedSymbol(connectedSymbol),
-    implicitNameRange(implicitNameRange) {
+    connectedSymbol(connectedSymbol), implicitNameRange(implicitNameRange) {
 }
 
 const Symbol* PortConnection::getIfaceInstance() const {
     if (port.kind == SymbolKind::InterfacePort)
         return connectedSymbol;
     return nullptr;
+}
+
+const InstanceSymbol& PortConnection::getParentInstance() const {
+    auto portScope = port.getParentScope();
+    SLANG_ASSERT(portScope);
+
+    auto inst = portScope->asSymbol().as<InstanceBodySymbol>().parentInstance;
+    SLANG_ASSERT(inst);
+
+    return *inst;
 }
 
 static std::pair<ArgumentDirection, const Type*> getDirAndType(const Symbol& port) {
@@ -1641,6 +1642,7 @@ const Expression* PortConnection::getExpression() const {
         return expr;
 
     if (connectedSymbol || exprSyntax) {
+        auto& parentInstance = getParentInstance();
         auto ll = LookupLocation::after(parentInstance);
         auto scope = ll.getScope();
         SLANG_ASSERT(scope);
@@ -1746,6 +1748,7 @@ void PortConnection::checkSimulatedNetTypes() const {
     if (internal.empty() && external.empty())
         return;
 
+    auto& parentInstance = getParentInstance();
     auto scope = parentInstance.getParentScope();
     SLANG_ASSERT(scope);
 
@@ -2009,6 +2012,7 @@ void PortConnection::serializeTo(ASTSerializer& serializer) const {
             serializer.write("expr", *e);
     }
 
+    auto& parentInstance = getParentInstance();
     auto scope = parentInstance.getParentScope();
     SLANG_ASSERT(scope);
 

@@ -154,16 +154,13 @@ private:
 class SLANG_EXPORT PortConnection {
 public:
     const Symbol& port;
-    const InstanceSymbol& parentInstance;
 
-    PortConnection(const Symbol& port, const InstanceSymbol& parentInstance);
-    PortConnection(const Symbol& port, const InstanceSymbol& parentInstance,
-                   const syntax::ExpressionSyntax& expr);
-    PortConnection(const Symbol& port, const InstanceSymbol& parentInstance, bool useDefault);
-    PortConnection(const InterfacePortSymbol& port, const InstanceSymbol& parentInstance,
-                   const Symbol* connectedSymbol);
-    PortConnection(const Symbol& port, const InstanceSymbol& parentInstance,
-                   const Symbol* connectedSymbol, SourceRange implicitNameRange);
+    PortConnection(const Symbol& port);
+    PortConnection(const Symbol& port, const syntax::ExpressionSyntax& expr);
+    PortConnection(const Symbol& port, bool useDefault);
+    PortConnection(const InterfacePortSymbol& port, const Symbol* connectedSymbol);
+    PortConnection(const Symbol& port, const Symbol* connectedSymbol,
+                   SourceRange implicitNameRange);
 
     const Symbol* getIfaceInstance() const;
     const Expression* getExpression() const;
@@ -192,6 +189,8 @@ public:
         SmallVector<const PortConnection*>& results);
 
 private:
+    const InstanceSymbol& getParentInstance() const;
+
     const Symbol* connectedSymbol = nullptr;
     mutable const Expression* expr = nullptr;
     union {
