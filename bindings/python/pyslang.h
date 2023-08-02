@@ -295,4 +295,16 @@ struct polymorphic_type_hook<RandSeqProductionSymbol::ProdBase> {
     }
 };
 
+template<>
+struct polymorphic_type_hook<ParameterSymbolBase> {
+    static const void* get(const ParameterSymbolBase* src, const std::type_info*& type) {
+        if (!src) {
+            type = nullptr;
+            return src;
+        }
+
+        return polymorphic_type_hook<Symbol>::get(&src->symbol, type);
+    }
+};
+
 } // namespace pybind11
