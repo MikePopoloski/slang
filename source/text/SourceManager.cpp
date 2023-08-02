@@ -484,8 +484,13 @@ SourceBuffer SourceManager::cacheBuffer(fs::path&& path, std::string&& pathStr,
     auto fd = std::make_unique<FileData>(directory, std::move(name), std::move(buffer),
                                          std::move(path));
 
+    // Note: it's possible that insertion here fails due to another thread
+    // racing against us to open and insert the same file. We do a lookup
+    // in the cache before proceeding to read the file but we drop the lock
+    // during the read. It's not actually a problem, we'll just use the data
+    // we already loaded (just like we had gotten a hit on the cache in the
+    // first place).
     auto [it, inserted] = lookupCache.emplace(pathStr, std::pair{std::move(fd), std::error_code{}});
-    SLANG_ASSERT(inserted);
 
     FileData* fdPtr = it->second.first.get();
     return createBufferEntry(fdPtr, includedFrom, library, lock);
