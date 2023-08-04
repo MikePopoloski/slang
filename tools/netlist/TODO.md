@@ -36,6 +36,12 @@ To dos
     RandSequenceStatement
     ProceduralCheckerStatement
 
+- In SplitVariables, handle:
+  * Nested range selections, eg `x[3:0][2:0][1:0]` has a dependency with
+    `x[0]`, so effectively multiple ranges should be flattened eg to `[1:0]`.
+  * Unions, where they casue access cannot to no longer be tracked through a
+    heirarchy of types. Instead access must be resolved on the bit level (bit blasted).
+
 - Dumping of a dot file outputs random characters at the end.
 - Reporting of variables in the netlist (by type, matching patterns).
 - Infer sequential elements in the netlist (ie non-blocking assignment and
