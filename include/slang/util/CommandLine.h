@@ -79,9 +79,10 @@ public:
     /// If the flag is not provided on a command line, the value will remain unset.
     ///
     /// @param name a comma separated list of long form and short form names
-    ///             (including the dashes) that are accepted for this option.
-    /// @param desc a human-friendly description for printing help text.
-    /// @param flags Additional flags that control how the option behaves.
+    ///             (including the dashes) that are accepted for this option
+    /// @param value a value that will be set if the option is provided
+    /// @param desc a human-friendly description for printing help text
+    /// @param flags additional flags that control how the option behaves
     void add(std::string_view name, std::optional<bool>& value, std::string_view desc,
              bitmask<CommandLineFlags> flags = {});
 
@@ -89,10 +90,11 @@ public:
     /// If the option is not provided on a command line, the value will remain unset.
     ///
     /// @param name a comma separated list of long form and short form names
-    ///             (including the dashes) that are accepted for this option.
-    /// @param desc a human-friendly description for printing help text.
-    /// @param valueName an example name for the value when printing help text.
-    /// @param flags Additional flags that control how the option behaves.
+    ///             (including the dashes) that are accepted for this option
+    /// @param value a value that will be set if the option is provided
+    /// @param desc a human-friendly description for printing help text
+    /// @param valueName an example name for the value when printing help text
+    /// @param flags additional flags that control how the option behaves
     void add(std::string_view name, std::optional<int32_t>& value, std::string_view desc,
              std::string_view valueName = {}, bitmask<CommandLineFlags> flags = {});
 
@@ -100,10 +102,11 @@ public:
     /// If the option is not provided on a command line, the value will remain unset.
     ///
     /// @param name a comma separated list of long form and short form names
-    ///             (including the dashes) that are accepted for this option.
-    /// @param desc a human-friendly description for printing help text.
-    /// @param valueName an example name for the value when printing help text.
-    /// @param flags Additional flags that control how the option behaves.
+    ///             (including the dashes) that are accepted for this option
+    /// @param value a value that will be set if the option is provided
+    /// @param desc a human-friendly description for printing help text
+    /// @param valueName an example name for the value when printing help text
+    /// @param flags additional flags that control how the option behaves
     void add(std::string_view name, std::optional<uint32_t>& value, std::string_view desc,
              std::string_view valueName = {}, bitmask<CommandLineFlags> flags = {});
 
@@ -111,10 +114,11 @@ public:
     /// If the option is not provided on a command line, the value will remain unset.
     ///
     /// @param name a comma separated list of long form and short form names
-    ///             (including the dashes) that are accepted for this option.
-    /// @param desc a human-friendly description for printing help text.
-    /// @param valueName an example name for the value when printing help text.
-    /// @param flags Additional flags that control how the option behaves.
+    ///             (including the dashes) that are accepted for this option
+    /// @param value a value that will be set if the option is provided
+    /// @param desc a human-friendly description for printing help text
+    /// @param valueName an example name for the value when printing help text
+    /// @param flags additional flags that control how the option behaves
     void add(std::string_view name, std::optional<int64_t>& value, std::string_view desc,
              std::string_view valueName = {}, bitmask<CommandLineFlags> flags = {});
 
@@ -122,10 +126,11 @@ public:
     /// If the option is not provided on a command line, the value will remain unset.
     ///
     /// @param name a comma separated list of long form and short form names
-    ///             (including the dashes) that are accepted for this option.
-    /// @param desc a human-friendly description for printing help text.
-    /// @param valueName an example name for the value when printing help text.
-    /// @param flags Additional flags that control how the option behaves.
+    ///             (including the dashes) that are accepted for this option
+    /// @param value a value that will be set if the option is provided
+    /// @param desc a human-friendly description for printing help text
+    /// @param valueName an example name for the value when printing help text
+    /// @param flags additional flags that control how the option behaves
     void add(std::string_view name, std::optional<uint64_t>& value, std::string_view desc,
              std::string_view valueName = {}, bitmask<CommandLineFlags> flags = {});
 
@@ -133,10 +138,11 @@ public:
     /// If the option is not provided on a command line, the value will remain unset.
     ///
     /// @param name a comma separated list of long form and short form names
-    ///             (including the dashes) that are accepted for this option.
-    /// @param desc a human-friendly description for printing help text.
-    /// @param valueName an example name for the value when printing help text.
-    /// @param flags Additional flags that control how the option behaves.
+    ///             (including the dashes) that are accepted for this option
+    /// @param value a value that will be set if the option is provided
+    /// @param desc a human-friendly description for printing help text
+    /// @param valueName an example name for the value when printing help text
+    /// @param flags additional flags that control how the option behaves
     void add(std::string_view name, std::optional<double>& value, std::string_view desc,
              std::string_view valueName = {}, bitmask<CommandLineFlags> flags = {});
 
@@ -144,10 +150,11 @@ public:
     /// If the option is not provided on a command line, the value will remain unset.
     ///
     /// @param name a comma separated list of long form and short form names
-    ///             (including the dashes) that are accepted for this option.
-    /// @param desc a human-friendly description for printing help text.
-    /// @param valueName an example name for the value when printing help text.
-    /// @param flags Additional flags that control how the option behaves.
+    ///             (including the dashes) that are accepted for this option
+    /// @param value a value that will be set if the option is provided
+    /// @param desc a human-friendly description for printing help text
+    /// @param valueName an example name for the value when printing help text
+    /// @param flags additional flags that control how the option behaves
     void add(std::string_view name, std::optional<std::string>& value, std::string_view desc,
              std::string_view valueName = {}, bitmask<CommandLineFlags> flags = {});
 
@@ -155,10 +162,11 @@ public:
     /// If the option is not provided on a command line, the value will remain an empty vector.
     ///
     /// @param name a comma separated list of long form and short form names
-    ///             (including the dashes) that are accepted for this option.
-    /// @param desc a human-friendly description for printing help text.
-    /// @param valueName an example name for the value when printing help text.
-    /// @param flags Additional flags that control how the option behaves.
+    ///             (including the dashes) that are accepted for this option
+    /// @param value a value that will be set if the option is provided
+    /// @param desc a human-friendly description for printing help text
+    /// @param valueName an example name for the value when printing help text
+    /// @param flags additional flags that control how the option behaves
     void add(std::string_view name, std::vector<int32_t>& value, std::string_view desc,
              std::string_view valueName = {}, bitmask<CommandLineFlags> flags = {});
 
@@ -166,10 +174,11 @@ public:
     /// If the option is not provided on a command line, the value will remain an empty vector.
     ///
     /// @param name a comma separated list of long form and short form names
-    ///             (including the dashes) that are accepted for this option.
-    /// @param desc a human-friendly description for printing help text.
-    /// @param valueName an example name for the value when printing help text.
-    /// @param flags Additional flags that control how the option behaves.
+    ///             (including the dashes) that are accepted for this option
+    /// @param value a value that will be set if the option is provided
+    /// @param desc a human-friendly description for printing help text
+    /// @param valueName an example name for the value when printing help text
+    /// @param flags additional flags that control how the option behaves
     void add(std::string_view name, std::vector<uint32_t>& value, std::string_view desc,
              std::string_view valueName = {}, bitmask<CommandLineFlags> flags = {});
 
@@ -177,10 +186,11 @@ public:
     /// If the option is not provided on a command line, the value will remain an empty vector.
     ///
     /// @param name a comma separated list of long form and short form names
-    ///             (including the dashes) that are accepted for this option.
-    /// @param desc a human-friendly description for printing help text.
-    /// @param valueName an example name for the value when printing help text.
-    /// @param flags Additional flags that control how the option behaves.
+    ///             (including the dashes) that are accepted for this option
+    /// @param value a value that will be set if the option is provided
+    /// @param desc a human-friendly description for printing help text
+    /// @param valueName an example name for the value when printing help text
+    /// @param flags additional flags that control how the option behaves
     void add(std::string_view name, std::vector<int64_t>& value, std::string_view desc,
              std::string_view valueName = {}, bitmask<CommandLineFlags> flags = {});
 
@@ -188,10 +198,11 @@ public:
     /// If the option is not provided on a command line, the value will remain an empty vector.
     ///
     /// @param name a comma separated list of long form and short form names
-    ///             (including the dashes) that are accepted for this option.
-    /// @param desc a human-friendly description for printing help text.
-    /// @param valueName an example name for the value when printing help text.
-    /// @param flags Additional flags that control how the option behaves.
+    ///             (including the dashes) that are accepted for this option
+    /// @param value a value that will be set if the option is provided
+    /// @param desc a human-friendly description for printing help text
+    /// @param valueName an example name for the value when printing help text
+    /// @param flags additional flags that control how the option behaves
     void add(std::string_view name, std::vector<uint64_t>& value, std::string_view desc,
              std::string_view valueName = {}, bitmask<CommandLineFlags> flags = {});
 
@@ -199,10 +210,11 @@ public:
     /// If the option is not provided on a command line, the value will remain an empty vector.
     ///
     /// @param name a comma separated list of long form and short form names
-    ///             (including the dashes) that are accepted for this option.
-    /// @param desc a human-friendly description for printing help text.
-    /// @param valueName an example name for the value when printing help text.
-    /// @param flags Additional flags that control how the option behaves.
+    ///             (including the dashes) that are accepted for this option
+    /// @param value a value that will be set if the option is provided
+    /// @param desc a human-friendly description for printing help text
+    /// @param valueName an example name for the value when printing help text
+    /// @param flags additional flags that control how the option behaves
     void add(std::string_view name, std::vector<double>& value, std::string_view desc,
              std::string_view valueName = {}, bitmask<CommandLineFlags> flags = {});
 
@@ -210,10 +222,11 @@ public:
     /// If the option is not provided on a command line, the value will remain an empty vector.
     ///
     /// @param name a comma separated list of long form and short form names
-    ///             (including the dashes) that are accepted for this option.
-    /// @param desc a human-friendly description for printing help text.
-    /// @param valueName an example name for the value when printing help text.
-    /// @param flags Additional flags that control how the option behaves.
+    ///             (including the dashes) that are accepted for this option
+    /// @param value a value that will be set if the option is provided
+    /// @param desc a human-friendly description for printing help text
+    /// @param valueName an example name for the value when printing help text
+    /// @param flags additional flags that control how the option behaves
     void add(std::string_view name, std::vector<std::string>& value, std::string_view desc,
              std::string_view valueName = {}, bitmask<CommandLineFlags> flags = {});
 
@@ -225,30 +238,37 @@ public:
     /// will never be invoked.
     ///
     /// @param name a comma separated list of long form and short form names
-    ///             (including the dashes) that are accepted for this option.
-    /// @param desc a human-friendly description for printing help text.
-    /// @param valueName an example name for the value when printing help text.
-    /// @param flags Additional flags that control how the option behaves.
+    ///             (including the dashes) that are accepted for this option
+    /// @param cb a calback that will be invoked if the option is provided
+    /// @param desc a human-friendly description for printing help text
+    /// @param valueName an example name for the value when printing help text
+    /// @param flags additional flags that control how the option behaves
     void add(std::string_view name, OptionCallback cb, std::string_view desc,
              std::string_view valueName = {}, bitmask<CommandLineFlags> flags = {});
 
     /// Set a variable that will receive any positional arguments provided
     /// on the command line. They will be returned as a list of strings.
-    /// @param valueName for including in the help text.
-    /// @param flags Additional flags that control how the option behaves.
-    /// @note only one variable or callback be set to receive positional arguments.
+    ///
+    /// @param values a vector of strings that will contain all provided
+    ///               positional arguments
+    /// @param valueName for including in the help text
+    /// @param flags additional flags that control how the option behaves
+    /// @note only one variable or callback be set to receive positional arguments
     void setPositional(std::vector<std::string>& values, std::string_view valueName,
                        bitmask<CommandLineFlags> flags = {});
 
     /// Set a callback that will receive any positional arguments provided
     /// on the command line.
-    /// @param valueName for including in the help text.
-    /// @param flags Additional flags that control how the option behaves.
-    /// @note only one variable or callback be set to receive positional arguments.
+    ///
+    /// @param cb a callback that will be invoked for each position argument
+    /// @param valueName for including in the help text
+    /// @param flags additional flags that control how the option behaves
+    /// @note only one variable or callback be set to receive positional arguments
     void setPositional(OptionCallback cb, std::string_view valueName,
                        bitmask<CommandLineFlags> flags = {});
 
     /// Adds a command that will be ignored if encountered during argument parsing.
+    ///
     /// @param value a string containing a single comma-separated "name,value" pair,
     ///              where the name is the argument to ignore (including any leading
     ///              '+' and '-' characters) and the value is an integer indicating the
@@ -258,6 +278,7 @@ public:
     std::string addIgnoreCommand(std::string_view value);
 
     /// Adds a command that will be renamed to one of the existing commands already registered.
+    ///
     /// @param value a string containing a single comma-separated "from,to" pair, where the
     ///              "from" is the command that should be renamed whenever encountered in the
     ///              argument list (including any leading '+' and '-' characters), and "to" is

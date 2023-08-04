@@ -38,7 +38,7 @@ issue, options that can hide all or some subset of warnings, and the ability to
 remap the default severity of a given diagnostic code.
 
 Each Diagnostic that is issued to a DiagnosticEngine is formatted and, assuming
-it's not supressed, forwarded to all registered @ref slang::DiagnosticClient
+it's not suppressed, forwarded to all registered @ref slang::DiagnosticClient
 instances. Clients are registered with the engine via
 @ref slang::DiagnosticEngine::addClient. It's the client's job to actually do
 something with the diagnostic; for example, it may write the text to an internal

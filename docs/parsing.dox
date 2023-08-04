@@ -139,8 +139,20 @@ diagnostics that occurred.
 Parsing text is then as easy as:
 
 @code{.cpp}
-auto tree1 = SyntaxTree::fromFile("path/to/file.sv");
-auto tree2 = SyntaxTree::fromText("module m; endmodule");
+auto tree = SyntaxTree::fromText("module m; endmodule");
+@endcode
+
+When loading from a file the result also includes (via a std::expected object)
+a system error code if the load fails.
+
+@code{.cpp}
+auto result = SyntaxTree::fromFile("path/to/file.sv");
+if (result) {
+    /* do something with *result */
+}
+else {
+    /* do something with result.error() */
+}
 @endcode
 
 @section syntax-visitor Manipulating the syntax tree

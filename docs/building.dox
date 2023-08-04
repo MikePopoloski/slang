@@ -111,7 +111,7 @@ This section contains instructions for building the documentation.
 
 ## Dependencies
 
-- [doxygen](http://www.doxygen.nl/) - at least 1.8.17
+- [doxygen](http://www.doxygen.nl/) - at least 1.9
 
 ## Steps
 
@@ -186,6 +186,5 @@ target_link_libraries(example PRIVATE slang::slang)
 ```
 
 See [this GitHub project](https://github.com/MikePopoloski/slang_subproject_example) as an example of integrating slang using this method.
-
 
 */

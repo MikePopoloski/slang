@@ -10,8 +10,6 @@ C++20.
 analysis.
 - clang-format enforces stylistic conventions
 - Types and constants are PascalCase, functions and members are camelCase.
-- Some common standard library components are included and exposed via Util.h
-which is widely included throughout the library.
 - slang is intended to be used as a library in other programs, possibly in
 multithreaded scenarios, so global state or code that affects the environment
 is not allowed.

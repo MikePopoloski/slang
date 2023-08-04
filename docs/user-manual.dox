@@ -54,6 +54,23 @@ endmodule
 [31mBuild failed: [0m1 error, 0 warnings
 @endcode
 
+@section file-patterns File Patterns
+
+All inputs to slang that accept a file path also accept a file "pattern", which is
+a wildcarded pattern that can select zero or more files (or directories, for options
+like `-I`). Allowed shortcuts/wildcards are:
+-   `?` matches any single character
+-   `*` matches zero or more characters
+-   `...` recursively matches any number of directories
+-   `..` specifies the parent directory
+-   `.` specifies the current directory
+
+Paths that end in a `/` include all the files in that directory, identical to \c /\*.
+
+@note File patterns provided on the command line will first be seen by your shell;
+be aware that it may be expanded before slang even sees it, which can cause
+unintuitive results.
+
 @section compilation-units Compilation Units
 
 By default `slang` treats all input files as separate SystemVerilog compilation units.
@@ -65,14 +82,64 @@ parsed in a specific order.
 If you have an older project where file ordering does matter, you can pass the `--single-unit`
 option to have all input files treated as a single compilation unit.
 
-@section built-in-macros Built-in Macros
+@section source-libraries Source Libraries
 
-There are a handful of slang-specific predefined macros that you can reference in your code:
-Name | Value
----- | -----
-\`__slang__ | 1
-\`__slang_major__ | *slang major version number*
-\`__slang_minor__ | *slang minor version number*
+SystemVerilog has a concept of a "source library" which is a named collection of files that
+can be included in a design. All files are part of a source library -- if none is named
+explicitly for a given file, that file will be part of the default library (named "work").
+
+Library files can be specified on the command line using the `-v` option, which accepts
+a file pattern and an optional library name. If the library name is ommitted, the file
+is placed in the default library. For example:
+
+@code{.ansi}
+> slang top_module.sv -v some/lib1.sv -v "my_lib=some/other/lib2.sv"
+@endcode
+
+This includes three files in the design; top_module.sv is a non-library file (though it
+is placed in the default "work" library for purposes of having a library name available),
+lib1.sv is a library file in the "work" library, and lib2.sv is a library file in the
+"my_lib" library.
+
+The distinction between library files and non-library files is that modules in
+library files are never automatically instantiated, unused code elements don't cause
+warnings, and unused modules have no semantic error checking applied (e.g. name lookups
+don't occur, though the files must still be syntactically correct SystemVerilog code).
+Also it is assumed that library files are independent from each other even if the
+`--single-unit` flag is used (and thus can be loaded and parsed in any order).
+If you are using `--single-unit` and need macros declared in the regular files to be
+visible in library files you can use the `--libraries-inherit-macros` flag.
+
+Libraries can also be defined using "library map" files, which are passed to slang
+using the `--libmap` flag. The format of library map files is specified in the
+SystemVerilog LRM, section 33.3. An example map file might look like:
+
+@code{.sv}
+include some/other/lib.map
+
+// Declare a library called "my_lib" with some files in it
+library my_lib some_file.sv all/in/dir/*.sv other/file2.sv
+@endcode
+
+All files specified in a library map are loaded and parsed as if they had
+been passed using the `-v` flag.
+
+@section library-search Searching for Library Files
+
+slang can also dynamically search for library files instead of needing them
+provided up front, assuming they are named in a predictable fashion. This is
+accomplished by using the `--libdir` flag to specify directories in which to
+search for library modules, and `--libext` to specify which file extensions
+these module files will have (.v and .sv are included by default).
+
+After parsing all explicitly provided sources, slang will look through all
+module instantiations, package import directives, and interface port declarations
+and build a set of names that are not satisfied by any modules, packages,
+or interfaces already in the design. Then it will search in each provided
+`--libdir` directory for a file with the name of the missing module/interface/package
+and one of the provided extensions. If found, it will load that file as a
+library file and include it in the build. This process continues until all
+missing names are satisfied or all file names have been searched.
 
 @section command-files Command Files
 
@@ -97,6 +164,15 @@ like any other form of whitespace. Some important features are as follows:
 -  Command files can further include other command files by using -f or -F.
 -  Arguments set in a command file are overridden by anything set on the command line if they would
    otherwise conflict.
+
+@section built-in-macros Built-in Macros
+
+There are a handful of slang-specific predefined macros that you can reference in your code:
+Name | Value
+---- | -----
+\`__slang__ | 1
+\`__slang_major__ | *slang major version number*
+\`__slang_minor__ | *slang minor version number*
 
 @section system-funcs Nonstandard Built-in Functions
 
