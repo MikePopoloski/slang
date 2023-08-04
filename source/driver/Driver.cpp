@@ -51,7 +51,7 @@ void Driver::addStandardArgs() {
             }
             return "";
         },
-        "Additional include search paths", "<dir>", CommandLineFlags::CommaList);
+        "Additional include search paths", "<dir-pattern>[,...]", CommandLineFlags::CommaList);
 
     cmdLine.add(
         "--isystem",
@@ -61,7 +61,8 @@ void Driver::addStandardArgs() {
             }
             return "";
         },
-        "Additional system include search paths", "<dir>", CommandLineFlags::CommaList);
+        "Additional system include search paths", "<dir-pattern>[,...]",
+        CommandLineFlags::CommaList);
 
     // Preprocessor
     cmdLine.add("-D,--define-macro,+define", options.defines,
@@ -183,7 +184,7 @@ void Driver::addStandardArgs() {
                 printWarning(fmt::format("--suppress-warnings path '{}': {}", value, ec.message()));
             return "";
         },
-        "One or more paths in which to suppress warnings", "<filename>",
+        "One or more paths in which to suppress warnings", "<file-pattern>[,...]",
         CommandLineFlags::CommaList);
 
     cmdLine.add(
@@ -197,21 +198,21 @@ void Driver::addStandardArgs() {
         },
         "One or more paths in which to suppress warnings that "
         "originate in macro expansions",
-        "<filename>", CommandLineFlags::CommaList);
+        "<file-pattern>[,...]", CommandLineFlags::CommaList);
 
     // File lists
     cmdLine.add("--single-unit", options.singleUnit,
                 "Treat all input files as a single compilation unit");
 
     cmdLine.add(
-        "-v",
+        "-v,--libfile",
         [this](std::string_view value) {
             addLibraryFiles(value);
             return "";
         },
         "One or more library files, which are separate compilation units "
         "where modules are not automatically instantiated.",
-        "<filename>", CommandLineFlags::CommaList);
+        "<file-pattern>[,...]", CommandLineFlags::CommaList);
 
     cmdLine.add(
         "--libmap",
@@ -223,7 +224,7 @@ void Driver::addStandardArgs() {
         },
         "One or more library map files to parse "
         "for library name mappings and file lists",
-        "<filename>", CommandLineFlags::CommaList);
+        "<file-pattern>[,...]", CommandLineFlags::CommaList);
 
     cmdLine.add(
         "-y,--libdir",
@@ -231,7 +232,7 @@ void Driver::addStandardArgs() {
             sourceLoader.addSearchDirectories(value);
             return "";
         },
-        "Library search paths, which will be searched for missing modules", "<dir>",
+        "Library search paths, which will be searched for missing modules", "<dir-pattern>[,...]",
         CommandLineFlags::CommaList);
 
     cmdLine.add(
@@ -273,7 +274,7 @@ void Driver::addStandardArgs() {
         },
         "One or more command files containing additional program options. "
         "Paths in the file are considered relative to the current directory.",
-        "<filename>", CommandLineFlags::CommaList);
+        "<file-pattern>[,...]", CommandLineFlags::CommaList);
 
     cmdLine.add(
         "-F",
@@ -283,7 +284,7 @@ void Driver::addStandardArgs() {
         },
         "One or more command files containing additional program options. "
         "Paths in the file are considered relative to the file itself.",
-        "<filename>", CommandLineFlags::CommaList);
+        "<file-pattern>[,...]", CommandLineFlags::CommaList);
 }
 
 [[nodiscard]] bool Driver::parseCommandLine(std::string_view argList,
