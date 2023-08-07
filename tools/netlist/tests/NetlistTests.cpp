@@ -510,4 +510,5 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
     auto netlist = createNetlist(compilation);
+    CHECK(netlist.numNodes() > 0);
 }
