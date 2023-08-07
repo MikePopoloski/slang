@@ -361,6 +361,13 @@ public:
 
     /// Instance.
     void handle(const ast::InstanceSymbol& symbol) {
+        DEBUG_PRINT(fmt::format("Instance {}\n", symbol.name));
+        if (symbol.name.empty()) {
+            // An instance without a name has been excluded from the design.
+            // This can happen when the --top option is used and there is an
+            // uninstanced module.
+            return;
+        }
         // Body members.
         // Variables first.
         for (auto& member : symbol.body.members()) {
