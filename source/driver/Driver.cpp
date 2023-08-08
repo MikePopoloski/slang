@@ -315,6 +315,13 @@ bool Driver::processCommandFiles(std::string_view pattern, bool makeRelative) {
         if (auto readEc = OS::readFile(path, buffer))
             return onError(getU8Str(path), readEc);
 
+        if (!activeCommandFiles.insert(path).second) {
+            printError(
+                fmt::format("command file '{}' includes itself recursively", getU8Str(path)));
+            anyFailedLoads = true;
+            return false;
+        }
+
         fs::path currPath;
         std::error_code ec;
         if (makeRelative) {
@@ -336,6 +343,8 @@ bool Driver::processCommandFiles(std::string_view pattern, bool makeRelative) {
 
         if (makeRelative)
             fs::current_path(currPath, ec);
+
+        activeCommandFiles.erase(path);
 
         if (!result) {
             anyFailedLoads = true;
@@ -750,7 +759,7 @@ void Driver::addLibraryFiles(std::string_view pattern) {
 bool Driver::reportLoadErrors() {
     if (auto errors = sourceLoader.getErrors(); !errors.empty()) {
         for (auto& err : errors)
-            printError(fmt::format("'{}': {}", getU8Str(err.path), err.errorCode.message()));
+            printError(err);
         return false;
     }
     return true;

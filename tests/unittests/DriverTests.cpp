@@ -575,3 +575,30 @@ TEST_CASE("Driver library map in compilation") {
     CHECK(stdoutContains("Build succeeded"));
     CHECK(stdoutContains("0 errors, 1 warning"));
 }
+
+TEST_CASE("Driver checking for infinite command file includes") {
+    auto guard = OS::captureOutput();
+
+    Driver driver;
+    driver.addStandardArgs();
+
+    auto testDir = findTestDir();
+    auto args = fmt::format("testfoo -F \"{0}infinite.f\"", testDir);
+    CHECK(!driver.parseCommandLine(args));
+    CHECK(stderrContains("error: command file "));
+    CHECK(stderrContains("includes itself recursively"));
+}
+
+TEST_CASE("Driver checking for infinite library map includes") {
+    auto guard = OS::captureOutput();
+
+    Driver driver;
+    driver.addStandardArgs();
+
+    auto testDir = findTestDir();
+    auto args = fmt::format("testfoo --libmap \"{0}infinite.map\"", testDir);
+    CHECK(driver.parseCommandLine(args));
+    CHECK(!driver.processOptions());
+    CHECK(stderrContains("error: library map "));
+    CHECK(stderrContains("includes itself recursively"));
+}
