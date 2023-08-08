@@ -539,6 +539,11 @@ void Scope::addMembers(const SyntaxNode& syntax) {
             // If we hit this case we've run into an error elsewhere.
             // Just silently ignore it here.
             break;
+        case SyntaxKind::LibraryDeclaration:
+        case SyntaxKind::LibraryIncludeStatement:
+            // These are ignored here, they're only processed during
+            // library map construction.
+            break;
         default:
             SLANG_UNREACHABLE;
     }

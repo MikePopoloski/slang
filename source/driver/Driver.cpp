@@ -674,6 +674,8 @@ void Driver::addCompilationOptions(Bag& bag) const {
 
 std::unique_ptr<Compilation> Driver::createCompilation() const {
     auto compilation = std::make_unique<Compilation>(createOptionBag());
+    for (auto& tree : sourceLoader.getLibraryMaps())
+        compilation->addSyntaxTree(tree);
     for (auto& tree : syntaxTrees)
         compilation->addSyntaxTree(tree);
 

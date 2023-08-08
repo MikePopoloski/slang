@@ -237,6 +237,10 @@ void Compilation::addSyntaxTree(std::shared_ptr<SyntaxTree> tree) {
         for (auto member : node.as<CompilationUnitSyntax>().members)
             unit->addMembers(*member);
     }
+    else if (node.kind == SyntaxKind::LibraryMap) {
+        for (auto member : node.as<LibraryMapSyntax>().members)
+            unit->addMembers(*member);
+    }
     else {
         unit->addMembers(node);
     }
