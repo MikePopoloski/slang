@@ -2697,3 +2697,37 @@ endclass
     CHECK(diags[0].code == diag::SplitDistWeightOp);
     CHECK(diags[1].code == diag::SplitDistWeightOp);
 }
+
+TEST_CASE("Compilation error limit skips post-elab checks") {
+    auto tree = SyntaxTree::fromText(R"(
+class test_class#(PARA=1);
+    function new();
+    endfunction:new
+    extern function void extern_f();
+endclass
+
+function void test_class::extern_f();
+endfunction:extern_f
+
+module top;
+    initial begin
+        // total 20 errors, and all of them are "use of undeclared identifier 'a'"
+        a = 1; a = 1; a = 1; a = 1; a = 1;
+        a = 1; a = 1; a = 1; a = 1; a = 1;
+        a = 1; a = 1; a = 1; a = 1; a = 1;
+        a = 1; a = 1; a = 1; a = 1; a = 1;
+    end
+endmodule
+)");
+
+    CompilationOptions options;
+    options.errorLimit = 5;
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 20);
+    for (int i = 0; i < 20; i++)
+        CHECK(diags[i].code == diag::UndeclaredIdentifier);
+}
