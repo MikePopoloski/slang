@@ -681,8 +681,14 @@ std::unique_ptr<Compilation> Driver::createCompilation() const {
 }
 
 bool Driver::reportParseDiags() {
-    auto compilation = createCompilation();
-    for (auto& diag : compilation->getParseDiagnostics())
+    Diagnostics diags;
+    for (auto& tree : sourceLoader.getLibraryMaps())
+        diags.append_range(tree->diagnostics());
+    for (auto& tree : syntaxTrees)
+        diags.append_range(tree->diagnostics());
+
+    diags.sort(sourceManager);
+    for (auto& diag : diags)
         diagEngine.issue(diag);
 
     OS::printE(fmt::format("{}", diagClient->getString()));

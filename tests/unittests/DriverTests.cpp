@@ -497,11 +497,12 @@ TEST_CASE("Driver library files with explicit name") {
 
     auto testDir = findTestDir();
     auto args = fmt::format("testfoo \"{0}test6.sv\" --single-unit --libraries-inherit-macros "
-                            "\"-vlibfoo={0}/library/.../*.sv\"",
+                            " \"-I{0}/nested\" \"-vlibfoo={0}/library/.../*.sv\"",
                             testDir);
     CHECK(driver.parseCommandLine(args));
     CHECK(driver.processOptions());
     CHECK(driver.parseAllSources());
+    CHECK(driver.reportParseDiags());
 
     auto& sm = driver.sourceManager;
     for (auto buf : sm.getAllBuffers()) {
@@ -532,6 +533,7 @@ TEST_CASE("Driver load library maps") {
     CHECK(driver.parseCommandLine(args));
     CHECK(driver.processOptions());
     CHECK(driver.parseAllSources());
+    CHECK(driver.reportParseDiags());
 
     auto& sm = driver.sourceManager;
     for (auto buf : sm.getAllBuffers()) {
@@ -544,15 +546,12 @@ TEST_CASE("Driver load library maps") {
             continue;
 
         auto lib = sm.getLibraryFor(buf);
-        if (contains(name, "test6.sv")) {
-            CHECK(!lib);
+        REQUIRE(lib);
+        if (contains(name, "libmod.qv") || contains(name, "pkg.sv") || contains(name, "other.sv")) {
+            CHECK(lib->name == "libfoo");
         }
         else {
-            REQUIRE(lib);
-            if (contains(name, "libmod.qv") || contains(name, "pkg.sv"))
-                CHECK(lib->name == "libfoo");
-            else
-                CHECK(lib->name == "libsys");
+            CHECK(lib->name == "libsys");
         }
     }
 

@@ -115,10 +115,10 @@ using the `--libmap` flag. The format of library map files is specified in the
 SystemVerilog LRM, section 33.3. An example map file might look like:
 
 @code{.sv}
-include some/other/lib.map
+include some/other/lib.map;
 
 // Declare a library called "my_lib" with some files in it
-library my_lib some_file.sv all/in/dir/*.sv other/file2.sv
+library my_lib some_file.sv, "all/in/dir/*.sv", other/file2.sv;
 @endcode
 
 All files specified in a library map are loaded and parsed as if they had

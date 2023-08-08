@@ -335,7 +335,7 @@ SourceLoader::SyntaxTreeList SourceLoader::loadAndParseSources(const Bag& option
     return syntaxTrees;
 }
 
-const SourceLibrary* SourceLoader::getOrAddLibrary(std::string_view name) {
+SourceLibrary* SourceLoader::getOrAddLibrary(std::string_view name) {
     if (name.empty())
         return nullptr;
 
@@ -401,7 +401,26 @@ void SourceLoader::createLibrary(const LibraryDeclarationSyntax& syntax, const f
         }
     }
 
-    // TODO: incdirs
+    if (syntax.incDirClause) {
+        for (auto filePath : syntax.incDirClause->filePaths) {
+            auto spec = getPathFromSpec(*filePath);
+            if (!spec.empty()) {
+                SmallVector<fs::path> dirs;
+                std::error_code ec;
+                svGlob(basePath, spec, GlobMode::Directories, dirs,
+                       /* expandEnvVars */ true, ec);
+
+                if (ec) {
+                    errors.emplace_back(widen(spec), ec);
+                }
+                else {
+                    auto& lid = library->includeDirs;
+                    lid.reserve(lid.size() + dirs.size());
+                    lid.insert(lid.end(), dirs.begin(), dirs.end());
+                }
+            }
+        }
+    }
 }
 
 SourceLoader::LoadResult SourceLoader::loadAndParse(const FileEntry& entry, const Bag& optionBag,

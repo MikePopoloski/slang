@@ -181,7 +181,7 @@ private:
         std::variant<std::shared_ptr<syntax::SyntaxTree>, std::pair<SourceBuffer, bool>,
                      std::pair<const FileEntry*, std::error_code>>;
 
-    const SourceLibrary* getOrAddLibrary(std::string_view name);
+    SourceLibrary* getOrAddLibrary(std::string_view name);
     void addFilesInternal(std::string_view pattern, const std::filesystem::path& basePath,
                           bool isLibraryFile, const SourceLibrary* library, bool expandEnvVars);
     void createLibrary(const syntax::LibraryDeclarationSyntax& syntax,
