@@ -110,9 +110,9 @@ struct VariableRangeSelect : public VariableSelectorBase {
 
 /// A variable selector representing member access of a structure.
 struct VariableMemberAccess : public VariableSelectorBase {
-    std::string_view name;
+    const std::string_view name;
 
-    VariableMemberAccess(std::string_view name) :
+    VariableMemberAccess(const std::string_view name) :
         VariableSelectorBase(VariableSelectorKind::MemberAccess), name(name) {}
 
     static bool isKind(VariableSelectorKind otherKind) {
