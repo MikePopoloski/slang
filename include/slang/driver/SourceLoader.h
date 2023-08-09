@@ -108,7 +108,7 @@ public:
     /// they were library map files. The libraries within those maps will be
     /// created and any files they reference will be included in the list to load.
     void addLibraryMaps(std::string_view pattern, const std::filesystem::path& basePath,
-                        const Bag& optionBag, bool expandEnvVars = false);
+                        const Bag& optionBag);
 
     /// Returns a list of all library map syntax trees that have been loaded and parsed.
     const SyntaxTreeList& getLibraryMaps() const { return libraryMapTrees; }
@@ -124,20 +124,8 @@ public:
     /// Loads and parses all of the source files that have been added to the loader.
     SyntaxTreeList loadAndParseSources(const Bag& optionBag);
 
-    /// Information about an error that occurred during loading.
-    struct Error {
-        /// The path that failed to load.
-        std::filesystem::path path;
-
-        /// System information about why the load failed.
-        std::error_code errorCode;
-
-        Error(std::filesystem::path path, std::error_code errorCode) :
-            path(std::move(path)), errorCode(errorCode) {}
-    };
-
     /// Gets the list of errors that have occurred while loading files.
-    std::span<const Error> getErrors() const { return errors; }
+    std::span<const std::string> getErrors() const { return errors; }
 
 private:
     // One entry per unique file path added to the loader.
@@ -181,13 +169,17 @@ private:
         std::variant<std::shared_ptr<syntax::SyntaxTree>, std::pair<SourceBuffer, bool>,
                      std::pair<const FileEntry*, std::error_code>>;
 
-    const SourceLibrary* getOrAddLibrary(std::string_view name);
+    SourceLibrary* getOrAddLibrary(std::string_view name);
     void addFilesInternal(std::string_view pattern, const std::filesystem::path& basePath,
                           bool isLibraryFile, const SourceLibrary* library, bool expandEnvVars);
+    void addLibraryMapsInternal(std::string_view pattern, const std::filesystem::path& basePath,
+                                const Bag& optionBag, bool expandEnvVars,
+                                flat_hash_set<std::filesystem::path>& seenMaps);
     void createLibrary(const syntax::LibraryDeclarationSyntax& syntax,
                        const std::filesystem::path& basePath);
     LoadResult loadAndParse(const FileEntry& fileEntry, const Bag& optionBag,
                             const SourceOptions& srcOptions);
+    void addError(const std::filesystem::path& path, std::error_code ec);
 
     SourceManager& sourceManager;
 
@@ -197,7 +189,7 @@ private:
     std::vector<std::filesystem::path> searchDirectories;
     std::vector<std::filesystem::path> searchExtensions;
     flat_hash_set<std::string_view> uniqueExtensions;
-    std::vector<Error> errors;
+    std::vector<std::string> errors;
     SyntaxTreeList libraryMapTrees;
 
     static constexpr int MinFilesForThreading = 4;

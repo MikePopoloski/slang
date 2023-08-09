@@ -497,11 +497,12 @@ TEST_CASE("Driver library files with explicit name") {
 
     auto testDir = findTestDir();
     auto args = fmt::format("testfoo \"{0}test6.sv\" --single-unit --libraries-inherit-macros "
-                            "\"-vlibfoo={0}/library/.../*.sv\"",
+                            " \"-I{0}/nested\" \"-vlibfoo={0}/library/.../*.sv\"",
                             testDir);
     CHECK(driver.parseCommandLine(args));
     CHECK(driver.processOptions());
     CHECK(driver.parseAllSources());
+    CHECK(driver.reportParseDiags());
 
     auto& sm = driver.sourceManager;
     for (auto buf : sm.getAllBuffers()) {
@@ -532,6 +533,7 @@ TEST_CASE("Driver load library maps") {
     CHECK(driver.parseCommandLine(args));
     CHECK(driver.processOptions());
     CHECK(driver.parseAllSources());
+    CHECK(driver.reportParseDiags());
 
     auto& sm = driver.sourceManager;
     for (auto buf : sm.getAllBuffers()) {
@@ -544,17 +546,59 @@ TEST_CASE("Driver load library maps") {
             continue;
 
         auto lib = sm.getLibraryFor(buf);
-        if (contains(name, "test6.sv")) {
-            CHECK(!lib);
+        REQUIRE(lib);
+        if (contains(name, "libmod.qv") || contains(name, "pkg.sv") || contains(name, "other.sv")) {
+            CHECK(lib->name == "libfoo");
         }
         else {
-            REQUIRE(lib);
-            if (contains(name, "libmod.qv") || contains(name, "pkg.sv"))
-                CHECK(lib->name == "libfoo");
-            else
-                CHECK(lib->name == "libsys");
+            CHECK(lib->name == "libsys");
         }
     }
 
     CHECK(driver.sourceLoader.getLibraryMaps().size() == 2);
+}
+
+TEST_CASE("Driver library map in compilation") {
+    auto guard = OS::captureOutput();
+
+    Driver driver;
+    driver.addStandardArgs();
+
+    auto testDir = findTestDir();
+    auto args = fmt::format("testfoo \"{0}test6.sv\" --libmap \"{0}/library/lib.map\"", testDir);
+    CHECK(driver.parseCommandLine(args));
+    CHECK(driver.processOptions());
+    CHECK(driver.parseAllSources());
+
+    auto compilation = driver.createCompilation();
+    CHECK(driver.reportCompilation(*compilation, false));
+    CHECK(stdoutContains("Build succeeded"));
+    CHECK(stdoutContains("0 errors, 1 warning"));
+}
+
+TEST_CASE("Driver checking for infinite command file includes") {
+    auto guard = OS::captureOutput();
+
+    Driver driver;
+    driver.addStandardArgs();
+
+    auto testDir = findTestDir();
+    auto args = fmt::format("testfoo -F \"{0}infinite.f\"", testDir);
+    CHECK(!driver.parseCommandLine(args));
+    CHECK(stderrContains("error: command file "));
+    CHECK(stderrContains("includes itself recursively"));
+}
+
+TEST_CASE("Driver checking for infinite library map includes") {
+    auto guard = OS::captureOutput();
+
+    Driver driver;
+    driver.addStandardArgs();
+
+    auto testDir = findTestDir();
+    auto args = fmt::format("testfoo --libmap \"{0}infinite.map\"", testDir);
+    CHECK(driver.parseCommandLine(args));
+    CHECK(!driver.processOptions());
+    CHECK(stderrContains("error: library map "));
+    CHECK(stderrContains("includes itself recursively"));
 }

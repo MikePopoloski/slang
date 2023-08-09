@@ -51,7 +51,7 @@ void Driver::addStandardArgs() {
             }
             return "";
         },
-        "Additional include search paths", "<dir>", CommandLineFlags::CommaList);
+        "Additional include search paths", "<dir-pattern>[,...]", CommandLineFlags::CommaList);
 
     cmdLine.add(
         "--isystem",
@@ -61,7 +61,8 @@ void Driver::addStandardArgs() {
             }
             return "";
         },
-        "Additional system include search paths", "<dir>", CommandLineFlags::CommaList);
+        "Additional system include search paths", "<dir-pattern>[,...]",
+        CommandLineFlags::CommaList);
 
     // Preprocessor
     cmdLine.add("-D,--define-macro,+define", options.defines,
@@ -183,7 +184,7 @@ void Driver::addStandardArgs() {
                 printWarning(fmt::format("--suppress-warnings path '{}': {}", value, ec.message()));
             return "";
         },
-        "One or more paths in which to suppress warnings", "<filename>",
+        "One or more paths in which to suppress warnings", "<file-pattern>[,...]",
         CommandLineFlags::CommaList);
 
     cmdLine.add(
@@ -197,21 +198,21 @@ void Driver::addStandardArgs() {
         },
         "One or more paths in which to suppress warnings that "
         "originate in macro expansions",
-        "<filename>", CommandLineFlags::CommaList);
+        "<file-pattern>[,...]", CommandLineFlags::CommaList);
 
     // File lists
     cmdLine.add("--single-unit", options.singleUnit,
                 "Treat all input files as a single compilation unit");
 
     cmdLine.add(
-        "-v",
+        "-v,--libfile",
         [this](std::string_view value) {
             addLibraryFiles(value);
             return "";
         },
         "One or more library files, which are separate compilation units "
         "where modules are not automatically instantiated.",
-        "<filename>", CommandLineFlags::CommaList);
+        "<file-pattern>[,...]", CommandLineFlags::CommaList);
 
     cmdLine.add(
         "--libmap",
@@ -223,7 +224,7 @@ void Driver::addStandardArgs() {
         },
         "One or more library map files to parse "
         "for library name mappings and file lists",
-        "<filename>", CommandLineFlags::CommaList);
+        "<file-pattern>[,...]", CommandLineFlags::CommaList);
 
     cmdLine.add(
         "-y,--libdir",
@@ -231,7 +232,7 @@ void Driver::addStandardArgs() {
             sourceLoader.addSearchDirectories(value);
             return "";
         },
-        "Library search paths, which will be searched for missing modules", "<dir>",
+        "Library search paths, which will be searched for missing modules", "<dir-pattern>[,...]",
         CommandLineFlags::CommaList);
 
     cmdLine.add(
@@ -273,7 +274,7 @@ void Driver::addStandardArgs() {
         },
         "One or more command files containing additional program options. "
         "Paths in the file are considered relative to the current directory.",
-        "<filename>", CommandLineFlags::CommaList);
+        "<file-pattern>[,...]", CommandLineFlags::CommaList);
 
     cmdLine.add(
         "-F",
@@ -283,7 +284,7 @@ void Driver::addStandardArgs() {
         },
         "One or more command files containing additional program options. "
         "Paths in the file are considered relative to the file itself.",
-        "<filename>", CommandLineFlags::CommaList);
+        "<file-pattern>[,...]", CommandLineFlags::CommaList);
 }
 
 [[nodiscard]] bool Driver::parseCommandLine(std::string_view argList,
@@ -314,6 +315,13 @@ bool Driver::processCommandFiles(std::string_view pattern, bool makeRelative) {
         if (auto readEc = OS::readFile(path, buffer))
             return onError(getU8Str(path), readEc);
 
+        if (!activeCommandFiles.insert(path).second) {
+            printError(
+                fmt::format("command file '{}' includes itself recursively", getU8Str(path)));
+            anyFailedLoads = true;
+            return false;
+        }
+
         fs::path currPath;
         std::error_code ec;
         if (makeRelative) {
@@ -335,6 +343,8 @@ bool Driver::processCommandFiles(std::string_view pattern, bool makeRelative) {
 
         if (makeRelative)
             fs::current_path(currPath, ec);
+
+        activeCommandFiles.erase(path);
 
         if (!result) {
             anyFailedLoads = true;
@@ -673,6 +683,8 @@ void Driver::addCompilationOptions(Bag& bag) const {
 
 std::unique_ptr<Compilation> Driver::createCompilation() const {
     auto compilation = std::make_unique<Compilation>(createOptionBag());
+    for (auto& tree : sourceLoader.getLibraryMaps())
+        compilation->addSyntaxTree(tree);
     for (auto& tree : syntaxTrees)
         compilation->addSyntaxTree(tree);
 
@@ -680,8 +692,14 @@ std::unique_ptr<Compilation> Driver::createCompilation() const {
 }
 
 bool Driver::reportParseDiags() {
-    auto compilation = createCompilation();
-    for (auto& diag : compilation->getParseDiagnostics())
+    Diagnostics diags;
+    for (auto& tree : sourceLoader.getLibraryMaps())
+        diags.append_range(tree->diagnostics());
+    for (auto& tree : syntaxTrees)
+        diags.append_range(tree->diagnostics());
+
+    diags.sort(sourceManager);
+    for (auto& diag : diags)
         diagEngine.issue(diag);
 
     OS::printE(fmt::format("{}", diagClient->getString()));
@@ -741,7 +759,7 @@ void Driver::addLibraryFiles(std::string_view pattern) {
 bool Driver::reportLoadErrors() {
     if (auto errors = sourceLoader.getErrors(); !errors.empty()) {
         for (auto& err : errors)
-            printError(fmt::format("'{}': {}", getU8Str(err.path), err.errorCode.message()));
+            printError(err);
         return false;
     }
     return true;

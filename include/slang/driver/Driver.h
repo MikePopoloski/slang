@@ -315,6 +315,7 @@ private:
     void printWarning(const std::string& message);
 
     bool anyFailedLoads = false;
+    flat_hash_set<std::filesystem::path> activeCommandFiles;
 };
 
 } // namespace slang::driver

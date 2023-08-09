@@ -28,7 +28,7 @@ By default all files are considered to be separate compilation units and orderin
 does not matter. When this option is provided, all files are concatenated together, in order, to
 produce a single compilation unit.
 
-`-v <file-pattern>[,...]`
+`-v,--libfile <file-pattern>[,...]`
 
 Adds files to the compilation, like a positional argument, except that the files are
 considered to be Verilog @ref source-libraries "source libraries". Libraries are always their

@@ -1,1 +1,1 @@
-library libsys system.svh ../.../*.sv
+library libsys ../test6.sv;

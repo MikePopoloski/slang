@@ -237,6 +237,10 @@ void Compilation::addSyntaxTree(std::shared_ptr<SyntaxTree> tree) {
         for (auto member : node.as<CompilationUnitSyntax>().members)
             unit->addMembers(*member);
     }
+    else if (node.kind == SyntaxKind::LibraryMap) {
+        for (auto member : node.as<LibraryMapSyntax>().members)
+            unit->addMembers(*member);
+    }
     else {
         unit->addMembers(node);
     }
@@ -1031,131 +1035,135 @@ const Diagnostics& Compilation::getSemanticDiagnostics() {
     uint32_t errorLimit = options.errorLimit == 0 ? UINT32_MAX : options.errorLimit;
     DiagnosticVisitor elabVisitor(*this, numErrors, errorLimit);
     getRoot().visit(elabVisitor);
-    elabVisitor.finalize();
 
-    // Note for the following checks here: anything that depends on a list
-    // stored in the compilation object should think carefully about taking
-    // a copy of that list first before iterating over it, because your check
-    // might trigger additional action that ends up adding to that list,
-    // causing undefined behavior.
+    if (!elabVisitor.finishedEarly()) {
+        elabVisitor.finalize();
 
-    // Check all DPI methods for correctness.
-    if (!dpiExports.empty() || !elabVisitor.dpiImports.empty())
-        checkDPIMethods(elabVisitor.dpiImports);
+        // Note for the following checks here: anything that depends on a list
+        // stored in the compilation object should think carefully about taking
+        // a copy of that list first before iterating over it, because your check
+        // might trigger additional action that ends up adding to that list,
+        // causing undefined behavior.
 
-    // Check extern interface methods for correctness.
-    if (!externInterfaceMethods.empty()) {
-        auto methods = externInterfaceMethods;
-        for (auto method : methods)
-            method->connectExternInterfacePrototype();
-    }
+        // Check all DPI methods for correctness.
+        if (!dpiExports.empty() || !elabVisitor.dpiImports.empty())
+            checkDPIMethods(elabVisitor.dpiImports);
 
-    if (!elabVisitor.externIfaceProtos.empty())
-        checkExternIfaceMethods(elabVisitor.externIfaceProtos);
-
-    if (!elabVisitor.modportsWithExports.empty())
-        checkModportExports(elabVisitor.modportsWithExports);
-
-    // Double check any bind directives for correctness. These were already
-    // resolve prior to full elaboration but their diagnostics were not
-    // issued so we need to check again.
-    for (auto [directive, scope] : bindDirectives) {
-        SmallVector<const Symbol*> instTargets;
-        const Definition* defTarget = nullptr;
-        resolveBindTargets(*directive, *scope, instTargets, &defTarget);
-        checkBindTargetParams(*directive, *scope, instTargets, defTarget);
-    }
-
-    // Report any lingering name conflicts.
-    if (!nameConflicts.empty()) {
-        auto conflicts = nameConflicts;
-        for (auto symbol : conflicts) {
-            auto scope = symbol->getParentScope();
-            SLANG_ASSERT(scope);
-            scope->handleNameConflict(*symbol);
+        // Check extern interface methods for correctness.
+        if (!externInterfaceMethods.empty()) {
+            auto methods = externInterfaceMethods;
+            for (auto method : methods)
+                method->connectExternInterfacePrototype();
         }
-    }
 
-    // Report on unused out-of-block definitions. These are always a real error.
-    if (!outOfBlockDecls.empty()) {
-        auto decls = outOfBlockDecls;
-        for (auto& [key, val] : decls) {
-            auto& [syntax, name, index, used] = val;
-            if (!used) {
-                auto& [className, declName, scope] = key;
-                auto classRange = name->left->sourceRange();
-                auto sym = Lookup::unqualifiedAt(*scope, className,
-                                                 LookupLocation(scope, uint32_t(index)),
-                                                 classRange);
+        if (!elabVisitor.externIfaceProtos.empty())
+            checkExternIfaceMethods(elabVisitor.externIfaceProtos);
 
-                if (sym && !declName.empty() && !className.empty()) {
-                    if (sym->kind == SymbolKind::ClassType ||
-                        sym->kind == SymbolKind::GenericClassDef) {
-                        auto& diag = scope->addDiag(diag::NoDeclInClass, name->sourceRange());
-                        diag << declName << className;
-                    }
-                    else {
-                        auto& diag = scope->addDiag(diag::NotAClass, classRange);
-                        diag << className;
-                    }
-                }
+        if (!elabVisitor.modportsWithExports.empty())
+            checkModportExports(elabVisitor.modportsWithExports);
+
+        // Double check any bind directives for correctness. These were already
+        // resolve prior to full elaboration but their diagnostics were not
+        // issued so we need to check again.
+        for (auto [directive, scope] : bindDirectives) {
+            SmallVector<const Symbol*> instTargets;
+            const Definition* defTarget = nullptr;
+            resolveBindTargets(*directive, *scope, instTargets, &defTarget);
+            checkBindTargetParams(*directive, *scope, instTargets, defTarget);
+        }
+
+        // Report any lingering name conflicts.
+        if (!nameConflicts.empty()) {
+            auto conflicts = nameConflicts;
+            for (auto symbol : conflicts) {
+                auto scope = symbol->getParentScope();
+                SLANG_ASSERT(scope);
+                scope->handleNameConflict(*symbol);
             }
         }
-    }
 
-    if (!options.scriptMode) {
-        // Top level instances cannot have interface or ref ports.
-        for (auto inst : getRoot().topInstances) {
-            for (auto port : inst->body.getPortList()) {
-                if (port->kind == SymbolKind::InterfacePort) {
-                    inst->body.addDiag(diag::TopModuleIfacePort, port->location)
-                        << inst->name << port->name;
-                    break;
-                }
-                else {
-                    ArgumentDirection dir;
-                    if (port->kind == SymbolKind::MultiPort)
-                        dir = port->as<MultiPortSymbol>().direction;
-                    else
-                        dir = port->as<PortSymbol>().direction;
+        // Report on unused out-of-block definitions. These are always a real error.
+        if (!outOfBlockDecls.empty()) {
+            auto decls = outOfBlockDecls;
+            for (auto& [key, val] : decls) {
+                auto& [syntax, name, index, used] = val;
+                if (!used) {
+                    auto& [className, declName, scope] = key;
+                    auto classRange = name->left->sourceRange();
+                    auto sym = Lookup::unqualifiedAt(*scope, className,
+                                                     LookupLocation(scope, uint32_t(index)),
+                                                     classRange);
 
-                    if (dir == ArgumentDirection::Ref) {
-                        if (port->name.empty()) {
-                            inst->body.addDiag(diag::TopModuleUnnamedRefPort, port->location)
-                                << inst->name;
+                    if (sym && !declName.empty() && !className.empty()) {
+                        if (sym->kind == SymbolKind::ClassType ||
+                            sym->kind == SymbolKind::GenericClassDef) {
+                            auto& diag = scope->addDiag(diag::NoDeclInClass, name->sourceRange());
+                            diag << declName << className;
                         }
                         else {
-                            inst->body.addDiag(diag::TopModuleRefPort, port->location)
-                                << inst->name << port->name;
+                            auto& diag = scope->addDiag(diag::NotAClass, classRange);
+                            diag << className;
                         }
                     }
                 }
             }
         }
-    }
 
-    if (!options.suppressUnused) {
-        // Report on unused definitions.
-        for (auto def : unreferencedDefs) {
-            // If this is an interface, it may have been referenced in a port.
-            if (elabVisitor.usedIfacePorts.find(def) != elabVisitor.usedIfacePorts.end())
-                continue;
+        if (!options.scriptMode) {
+            // Top level instances cannot have interface or ref ports.
+            for (auto inst : getRoot().topInstances) {
+                for (auto port : inst->body.getPortList()) {
+                    if (port->kind == SymbolKind::InterfacePort) {
+                        inst->body.addDiag(diag::TopModuleIfacePort, port->location)
+                            << inst->name << port->name;
+                        break;
+                    }
+                    else {
+                        ArgumentDirection dir;
+                        if (port->kind == SymbolKind::MultiPort)
+                            dir = port->as<MultiPortSymbol>().direction;
+                        else
+                            dir = port->as<PortSymbol>().direction;
 
-            auto hasUnusedAttrib = [&] {
-                for (auto attr : def->attributes) {
-                    if (attr->name == "unused"sv || attr->name == "maybe_unused"sv)
-                        return attr->getValue().isTrue();
+                        if (dir == ArgumentDirection::Ref) {
+                            if (port->name.empty()) {
+                                inst->body.addDiag(diag::TopModuleUnnamedRefPort, port->location)
+                                    << inst->name;
+                            }
+                            else {
+                                inst->body.addDiag(diag::TopModuleRefPort, port->location)
+                                    << inst->name << port->name;
+                            }
+                        }
+                    }
                 }
-                return false;
-            };
-
-            if (!def->name.empty() && def->name != "_"sv && !hasUnusedAttrib())
-                def->scope.addDiag(diag::UnusedDefinition, def->location) << def->getKindString();
+            }
         }
 
-        if (!elabVisitor.hierarchyProblem && numErrors == 0) {
-            PostElabVisitor postElabVisitor(*this);
-            getRoot().visit(postElabVisitor);
+        if (!options.suppressUnused) {
+            // Report on unused definitions.
+            for (auto def : unreferencedDefs) {
+                // If this is an interface, it may have been referenced in a port.
+                if (elabVisitor.usedIfacePorts.find(def) != elabVisitor.usedIfacePorts.end())
+                    continue;
+
+                auto hasUnusedAttrib = [&] {
+                    for (auto attr : def->attributes) {
+                        if (attr->name == "unused"sv || attr->name == "maybe_unused"sv)
+                            return attr->getValue().isTrue();
+                    }
+                    return false;
+                };
+
+                if (!def->name.empty() && def->name != "_"sv && !hasUnusedAttrib())
+                    def->scope.addDiag(diag::UnusedDefinition, def->location)
+                        << def->getKindString();
+            }
+
+            if (!elabVisitor.hierarchyProblem && numErrors == 0) {
+                PostElabVisitor postElabVisitor(*this);
+                getRoot().visit(postElabVisitor);
+            }
         }
     }
 

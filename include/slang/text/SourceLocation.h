@@ -7,6 +7,10 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include <filesystem>
+#include <string>
+#include <vector>
+
 #include "slang/util/Hash.h"
 #include "slang/util/Util.h"
 
@@ -176,6 +180,10 @@ private:
 struct SLANG_EXPORT SourceLibrary {
     /// The name of the library.
     std::string name;
+
+    /// Additional include directories that are used when
+    /// parsing files that are part of this library.
+    std::vector<std::filesystem::path> includeDirs;
 
     /// Default constructor.
     SourceLibrary() = default;

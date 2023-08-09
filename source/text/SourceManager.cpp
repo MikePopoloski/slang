@@ -316,6 +316,15 @@ SourceManager::BufferOrError SourceManager::readHeader(std::string_view path,
             return result;
     }
 
+    // Use library-specific include dirs if they exist.
+    if (library) {
+        for (auto& dir : library->includeDirs) {
+            auto result = openCached(dir / p, includedFrom, library);
+            if (result)
+                return result;
+        }
+    }
+
     // See comment above about this separate mutex / lock.
     std::shared_lock includeDirLock(includeDirMutex);
     for (auto& d : userDirectories) {

@@ -188,16 +188,12 @@ void registerCompilation(py::module_& m) {
         .def("addSearchDirectories", &SourceLoader::addSearchDirectories, "pattern"_a)
         .def("addSearchExtension", &SourceLoader::addSearchExtension, "extension"_a)
         .def("addLibraryMaps", &SourceLoader::addLibraryMaps, "pattern"_a, "basePath"_a,
-             "optionBag"_a, "expandEnvVars"_a = false)
+             "optionBag"_a)
         .def("loadSources", &SourceLoader::loadSources)
         .def("loadAndParseSources", &SourceLoader::loadAndParseSources, "optionBag"_a)
         .def_property_readonly("hasFiles", &SourceLoader::hasFiles)
         .def_property_readonly("libraryMaps", &SourceLoader::getLibraryMaps)
         .def_property_readonly("errors", &SourceLoader::getErrors);
-
-    py::class_<SourceLoader::Error>(sourceLoader, "Error")
-        .def_readonly("path", &SourceLoader::Error::path)
-        .def_readonly("errorCode", &SourceLoader::Error::errorCode);
 
     class PySystemSubroutine : public SystemSubroutine {
     public:

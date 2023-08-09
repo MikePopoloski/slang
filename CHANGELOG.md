@@ -16,8 +16,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * slang now requires a C++20 compatible compiler to build (e.g. minimum GCC 10)
 * New warnings [-Wport-width-expand](https://sv-lang.com/warning-ref.html#port-width-expand) and [-Wport-width-trunc](https://sv-lang.com/warning-ref.html#port-width-trunc) separate out width warnings that occur in port connections from general expressions elsewhere. This makes it easier to find and target these specific cases of width mismatches.
 * New option `--suppress-macro-warnings` that functions similarly to `--suppress-warnings` except that it applies to the original definition location of macros instead of their expansion location. This is useful if, for example, you want to hide warnings from 3rd party macros (like from UVM) that you use in your own code.
-* A new experimental tool called `slang-netlist` has been added (thanks to @jameshanlon) -- see the [PR #757](https://github.com/MikePopoloski/slang/pull/757) for more details
+* A new experimental tool called `slang-netlist` has been added (thanks to @jameshanlon) -- see the [readme](https://github.com/MikePopoloski/slang/blob/master/tools/netlist/README.md) for more details
+* A new experimental tool called `slang-reflect` has been added (thanks to @Sustrak) -- see the [readme](https://github.com/MikePopoloski/slang/tree/master/tools/reflect/README.md) for more details
 * The slang build optionally supports obtaining dependencies via [conan.io](https://conan.io/) -- see [the docs](https://sv-lang.com/building.html#dependencies) for details.
+* The slang driver now accepts [file patterns](https://sv-lang.com/user-manual.html#file-patterns) to make it easier to select groups of files
+* Initial support for [source libraries](https://sv-lang.com/user-manual.html#source-libraries) and library map files has been added. This is only for specifying input files right now but in future releases will be expanded to work with SystemVerilog config declarations.
 
 ### Improvements
 * When dealing with duplicate module/interface/program definitions (where the error has been downgraded to a warning) slang will now make use of the first definition seen instead of any later ones, to better match the behavior of other tools
@@ -30,6 +33,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * The slang driver will now parse input files in multiple threads by default. This can be disabled with `--threads=1`. This feature is not supported when using `--single-unit`.
 * The `--libdir` feature will now search for files based on interface port declarations in addition to module instantiations (thanks to @AndrewNolte)
 * Support for visitors has been added to the Python bindings (thanks to @tdp2110)
+* Low-level file loading routines in slang have been rewritten to use platform-level APIs. This should slightly improve performance, but more importantly it allows slang to report system-specific error messages when file loading fails.
+* Failed file loads invoked via the Python bindings now raise an appropriate Python exception
+* The `--suppress-warnings` option has been changed to take a file pattern instead of a directory path prefix. Existing uses of this flag will need to be updated to the new behavior.
+* Most command line arguments that accept multiple values now accept those values as a comma-separated list in addition to repeating the argument multiple times
+* slang can now read input from stdin by specifying a file named '-'
 
 ### Fixes
 * Fixed a bug that prevented indexing into an interface array when accessing that array hierarchically
@@ -46,6 +54,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Fixed parsing of tagged patterns when followed immediately by a `&&&` predicate
 * Added tests and fixed resulting issues found in AST serialization and visitation methods
 * The Compilation constructor now ensures it safely only adds type diagnostic printing callbacks once, to allow multithreaded use of separate Compilation objects
+* Fixed the error message reported for -Wimplicit-port-type-mismatch -- it was reporting the wrong types involved
+* Fixed parsing of parameter ports that have multiple declarators -- previously later parameters in the list were not being associated with the prior type declaration
 
 
 ## [v3.0] - 2023-03-18

@@ -22,6 +22,8 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
     DiagnosticVisitor(Compilation& compilation, const size_t& numErrors, uint32_t errorLimit) :
         compilation(compilation), numErrors(numErrors), errorLimit(errorLimit) {}
 
+    bool finishedEarly() const { return numErrors > errorLimit || hierarchyProblem; }
+
     template<typename T>
     void handle(const T& symbol) {
         handleDefault(symbol);
@@ -29,7 +31,7 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
 
     template<typename T>
     bool handleDefault(const T& symbol) {
-        if (numErrors > errorLimit || hierarchyProblem)
+        if (finishedEarly())
             return false;
 
         if constexpr (std::is_base_of_v<Symbol, T>) {
@@ -235,7 +237,7 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
     }
 
     void handle(const CheckerInstanceSymbol& symbol) {
-        if (numErrors > errorLimit || hierarchyProblem)
+        if (finishedEarly())
             return;
 
         for (auto attr : compilation.getAttributes(symbol))
@@ -258,7 +260,7 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
     }
 
     void handle(const InstanceSymbol& symbol) {
-        if (numErrors > errorLimit || hierarchyProblem)
+        if (finishedEarly())
             return;
 
         TimeTraceScope timeScope("AST Instance", [&] {

@@ -45,7 +45,7 @@ void SourceLoader::addSearchDirectories(std::string_view pattern) {
     std::error_code ec;
     svGlob({}, pattern, GlobMode::Directories, directories, /* expandEnvVars */ false, ec);
     if (ec) {
-        errors.emplace_back(widen(pattern), ec);
+        addError(widen(pattern), ec);
         return;
     }
 
@@ -66,20 +66,33 @@ static std::string_view getPathFromSpec(const FilePathSpecSyntax& syntax) {
 }
 
 void SourceLoader::addLibraryMaps(std::string_view pattern, const fs::path& basePath,
-                                  const Bag& optionBag, bool expandEnvVars) {
+                                  const Bag& optionBag) {
+    flat_hash_set<fs::path> seenMaps;
+    addLibraryMapsInternal(pattern, basePath, optionBag, /* expandEnvVars */ false, seenMaps);
+}
+
+void SourceLoader::addLibraryMapsInternal(std::string_view pattern, const fs::path& basePath,
+                                          const Bag& optionBag, bool expandEnvVars,
+                                          flat_hash_set<fs::path>& seenMaps) {
     SmallVector<fs::path> files;
     std::error_code ec;
     svGlob(basePath, pattern, GlobMode::Files, files, expandEnvVars, ec);
 
     if (ec) {
-        errors.emplace_back(widen(pattern), ec);
+        addError(widen(pattern), ec);
         return;
     }
 
     for (auto& path : files) {
         auto buffer = sourceManager.readSource(path, /* library */ nullptr);
         if (!buffer) {
-            errors.emplace_back(path, buffer.error());
+            addError(path, buffer.error());
+            continue;
+        }
+
+        if (!seenMaps.insert(path).second) {
+            errors.emplace_back(
+                fmt::format("library map '{}' includes itself recursively", getU8Str(path)));
             continue;
         }
 
@@ -97,8 +110,8 @@ void SourceLoader::addLibraryMaps(std::string_view pattern, const fs::path& base
                     auto spec = getPathFromSpec(
                         *member->as<LibraryIncludeStatementSyntax>().filePath);
                     if (!spec.empty()) {
-                        addLibraryMaps(spec, parentPath, optionBag,
-                                       /* expandEnvVars */ true);
+                        addLibraryMapsInternal(spec, parentPath, optionBag,
+                                               /* expandEnvVars */ true, seenMaps);
                     }
                     break;
                 }
@@ -109,6 +122,8 @@ void SourceLoader::addLibraryMaps(std::string_view pattern, const fs::path& base
                     SLANG_UNREACHABLE;
             }
         }
+
+        seenMaps.erase(path);
     }
 }
 
@@ -119,7 +134,7 @@ std::vector<SourceBuffer> SourceLoader::loadSources() {
     for (auto& entry : fileEntries) {
         auto buffer = sourceManager.readSource(entry.path, entry.library);
         if (!buffer)
-            errors.emplace_back(entry.path, buffer.error());
+            addError(entry.path, buffer.error());
         else
             results.push_back(*buffer);
     }
@@ -155,7 +170,7 @@ SourceLoader::SyntaxTreeList SourceLoader::loadAndParseSources(const Bag& option
             }
             case 2: {
                 auto [entry, code] = std::get<2>(result);
-                errors.emplace_back(entry->path, code);
+                addError(entry->path, code);
                 break;
             }
         }
@@ -335,7 +350,7 @@ SourceLoader::SyntaxTreeList SourceLoader::loadAndParseSources(const Bag& option
     return syntaxTrees;
 }
 
-const SourceLibrary* SourceLoader::getOrAddLibrary(std::string_view name) {
+SourceLibrary* SourceLoader::getOrAddLibrary(std::string_view name) {
     if (name.empty())
         return nullptr;
 
@@ -354,7 +369,7 @@ void SourceLoader::addFilesInternal(std::string_view pattern, const fs::path& ba
     std::error_code ec;
     auto rank = svGlob(basePath, pattern, GlobMode::Files, files, expandEnvVars, ec);
     if (ec) {
-        errors.emplace_back(widen(pattern), ec);
+        addError(widen(pattern), ec);
         return;
     }
 
@@ -401,7 +416,26 @@ void SourceLoader::createLibrary(const LibraryDeclarationSyntax& syntax, const f
         }
     }
 
-    // TODO: incdirs
+    if (syntax.incDirClause) {
+        for (auto filePath : syntax.incDirClause->filePaths) {
+            auto spec = getPathFromSpec(*filePath);
+            if (!spec.empty()) {
+                SmallVector<fs::path> dirs;
+                std::error_code ec;
+                svGlob(basePath, spec, GlobMode::Directories, dirs,
+                       /* expandEnvVars */ true, ec);
+
+                if (ec) {
+                    addError(widen(spec), ec);
+                }
+                else {
+                    auto& lid = library->includeDirs;
+                    lid.reserve(lid.size() + dirs.size());
+                    lid.insert(lid.end(), dirs.begin(), dirs.end());
+                }
+            }
+        }
+    }
 }
 
 SourceLoader::LoadResult SourceLoader::loadAndParse(const FileEntry& entry, const Bag& optionBag,
@@ -432,6 +466,10 @@ SourceLoader::LoadResult SourceLoader::loadAndParse(const FileEntry& entry, cons
 
         return tree;
     }
-};
+}
+
+void SourceLoader::addError(const std::filesystem::path& path, std::error_code ec) {
+    errors.emplace_back(fmt::format("'{}': {}", getU8Str(path), ec.message()));
+}
 
 } // namespace slang::driver
