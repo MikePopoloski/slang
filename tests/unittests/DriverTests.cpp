@@ -189,7 +189,7 @@ TEST_CASE("Driver report macros") {
     CHECK(driver.processOptions());
     driver.reportMacros();
 
-    CHECK("\n" + OS::capturedStdout == R"(
+    CHECK(("\n" + OS::capturedStdout).starts_with(R"(
 BAR `__FILE__
 FOO `BAR
 ID(x) x
@@ -209,9 +209,10 @@ SV_COV_STATEMENT 22
 SV_COV_STOP 1
 SV_COV_TOGGLE 23
 __slang__ 1
-__slang_major__ 3
-__slang_minor__ 0
-)");
+)"));
+
+    CHECK(stdoutContains("__slang_major__"));
+    CHECK(stdoutContains("__slang_minor__"));
 }
 
 TEST_CASE("Driver single-unit parsing") {

@@ -6,6 +6,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 ### Language Support
+### General Features
+### Improvements
+### Fixes
+
+
+## [v4.0] - 2023-08-10
+### Language Support
 * Finished full support for user-defined primitives by adding error checking for table entries
 * Support for whitespace between the two characters of the dist weight operators has been added for compatibility with other tools -- this is an error by default but can be downgraded as needed. See [-Wsplit-distweight-op](https://sv-lang.com/warning-ref.html#split-distweight-op).
 * Added support for net aliases
