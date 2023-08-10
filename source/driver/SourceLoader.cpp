@@ -106,7 +106,6 @@ void SourceLoader::addLibraryMapsInternal(std::string_view pattern, const fs::pa
                 case SyntaxKind::EmptyMember:
                     break;
                 case SyntaxKind::LibraryIncludeStatement: {
-                    // TODO: infinite include detection
                     auto spec = getPathFromSpec(
                         *member->as<LibraryIncludeStatementSyntax>().filePath);
                     if (!spec.empty()) {
