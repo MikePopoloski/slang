@@ -1176,7 +1176,7 @@ Expression* Expression::tryBindInterfaceRef(const ASTContext& context,
     Lookup::name(expr->as<NameSyntax>(), context, LookupFlags::None, result);
 
     DeferredSourceRange modportRange;
-    std::string_view modportName;
+    std::string_view arrayModportName;
     if (!result.found) {
         // We didn't find the name as-is. This might be a case where the user has
         // provided an explicit modport name on top of an array of interfaces,
@@ -1188,10 +1188,10 @@ Expression* Expression::tryBindInterfaceRef(const ASTContext& context,
                 scoped.right->kind == SyntaxKind::IdentifierName) {
                 LookupResult result2;
                 Lookup::name(*scoped.left, context, LookupFlags::None, result2);
-                modportName = scoped.right->as<IdentifierNameSyntax>().identifier.valueText();
+                arrayModportName = scoped.right->as<IdentifierNameSyntax>().identifier.valueText();
 
                 auto found = result2.found;
-                if (found && !modportName.empty() &&
+                if (found && !arrayModportName.empty() &&
                     (found->kind == SymbolKind::InterfacePort ||
                      found->kind == SymbolKind::InstanceArray)) {
                     result.copyFrom(result2);
@@ -1213,12 +1213,11 @@ Expression* Expression::tryBindInterfaceRef(const ASTContext& context,
     auto& comp = context.getCompilation();
     auto symbol = result.found;
     const InterfacePortSymbol* ifacePort = nullptr;
+    const ModportSymbol* modport = nullptr;
 
     // If we found an interface port we should unwrap to what it's connected to.
     if (symbol->kind == SymbolKind::InterfacePort) {
         ifacePort = &symbol->as<InterfacePortSymbol>();
-
-        const ModportSymbol* modport;
         std::tie(symbol, modport) = ifacePort->getConnection();
 
         if (symbol && !result.selectors.empty()) {
@@ -1238,9 +1237,6 @@ Expression* Expression::tryBindInterfaceRef(const ASTContext& context,
             result.reportDiags(context);
             return &badExpr(comp, nullptr);
         }
-
-        if (symbol->kind == SymbolKind::Instance && modport)
-            symbol = modport;
     }
 
     // Unwrap any interface arrays we found, collect the dimensions along the way.
@@ -1283,7 +1279,6 @@ Expression* Expression::tryBindInterfaceRef(const ASTContext& context,
     result.errorIfSelectors(context);
 
     const InstanceBodySymbol* iface = nullptr;
-    const ModportSymbol* modport = nullptr;
     if (symbol->kind == SymbolKind::Modport) {
         modport = &symbol->as<ModportSymbol>();
         iface = &symbol->getParentScope()->asSymbol().as<InstanceBodySymbol>();
@@ -1292,37 +1287,27 @@ Expression* Expression::tryBindInterfaceRef(const ASTContext& context,
         iface = &symbol->as<InstanceSymbol>().body;
     }
 
-    // If we connected via an interface port that itself has a modport restriction,
-    // or that port is connected via a modport restriction, verify that we aren't
-    // also trying to access via an interface array modport name.
-    const bool hasIfacePortModportName = ifacePort && !ifacePort->modport.empty();
-    if (hasIfacePortModportName || modport) {
-        auto newModportName = modport ? modport->name : ifacePort->modport;
-        if (!modportName.empty()) {
+    if (!arrayModportName.empty()) {
+        if (modport) {
+            // If we connected via an interface port that itself has a modport restriction,
+            // we can't also be restricting via an interface array modport.
             auto& diag = context.addDiag(diag::InvalidModportAccess, *modportRange);
-            diag << modportName;
+            diag << arrayModportName;
             diag << iface->getDefinition().name;
-            diag << newModportName;
+            diag << modport->name;
             return &badExpr(comp, nullptr);
         }
-        modportName = newModportName;
-    }
-
-    // If we have a modport name but no modport yet, try to find it.
-    if (!modport && !modportName.empty()) {
-        auto sym = iface->find(modportName);
-        if (!sym || sym->kind != SymbolKind::Modport) {
-            // Couldn't find the modport; if the name came from an interface port
-            // then an error has already been issued. If not, report the error here.
-            if (!hasIfacePortModportName) {
+        else {
+            auto sym = iface->find(arrayModportName);
+            if (!sym || sym->kind != SymbolKind::Modport) {
                 auto& diag = context.addDiag(diag::NotAModport, *modportRange);
-                diag << modportName;
+                diag << arrayModportName;
                 diag << iface->getDefinition().name;
+                return &badExpr(comp, nullptr);
             }
-            return &badExpr(comp, nullptr);
-        }
 
-        modport = &sym->as<ModportSymbol>();
+            modport = &sym->as<ModportSymbol>();
+        }
     }
 
     // Now make sure the interface or modport we found matches the target type.
@@ -1334,6 +1319,13 @@ Expression* Expression::tryBindInterfaceRef(const ASTContext& context,
                                                           sourceRange.start());
     if (!dims.empty())
         type = &FixedSizeUnpackedArrayType::fromDims(*context.scope, *type, dims, sourceRange);
+
+    // Don't return a modport as the symbol target, it's expected that it
+    // will be pulled from the virtual interface type instead.
+    if (origSymbol->kind == SymbolKind::Modport) {
+        origSymbol = &origSymbol->getParentScope()->asSymbol();
+        origSymbol = origSymbol->as<InstanceBodySymbol>().parentInstance;
+    }
 
     return comp.emplace<ArbitrarySymbolExpression>(*origSymbol, *type, sourceRange);
 }

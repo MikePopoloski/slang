@@ -1136,15 +1136,8 @@ private:
 
         // Make the connection if the dimensions match exactly what the port is expecting.
         const Symbol* symbol = expr->as<ArbitrarySymbolExpression>().symbol;
-        if (areDimSizesEqual(*portDims, dims)) {
-            // TODO: stop checking for modport here once tryBindInterfaceRef stops returning them.
-            if (symbol->kind == SymbolKind::Modport) {
-                modport = &symbol->as<ModportSymbol>();
-                symbol = &symbol->getParentScope()->asSymbol();
-                symbol = symbol->as<InstanceBodySymbol>().parentInstance;
-            }
+        if (areDimSizesEqual(*portDims, dims))
             return {symbol, modport};
-        }
 
         // Otherwise, if the instance being instantiated is part of an array of instances *and*
         // the symbol we're connecting to is an array of interfaces, we need to check to see whether
@@ -1173,8 +1166,7 @@ private:
                 symbol = array.elements[size_t(index)];
             }
 
-            // TODO: modport
-            return {symbol, nullptr};
+            return {symbol, modport};
         }
 
         auto& diag = scope.addDiag(diag::PortConnDimensionsMismatch, syntax.sourceRange())

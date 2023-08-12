@@ -531,7 +531,8 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 2);
+    REQUIRE(diags.size() == 3);
     CHECK(diags[0].code == diag::InvalidModportAccess);
-    CHECK(diags[1].code == diag::NotAModport);
+    CHECK(diags[1].code == diag::InvalidModportAccess);
+    CHECK(diags[2].code == diag::NotAModport);
 }
