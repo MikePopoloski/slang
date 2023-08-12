@@ -470,7 +470,8 @@ bool lookupDownward(std::span<const NamePlusLoc> nameParts, NameComponents name,
             // Other symbols aren't permitted in a modport, so they are allowed
             // to be accessed through it as if we had accessed the interface
             // instance itself.
-            if (SemanticFacts::isAllowedInModport(symbol->kind)) {
+            if (SemanticFacts::isAllowedInModport(symbol->kind) ||
+                symbol->kind == SymbolKind::Modport) {
                 // This is an error, the modport disallows access.
                 auto def = prevSym.getDeclaringDefinition();
                 SLANG_ASSERT(def);

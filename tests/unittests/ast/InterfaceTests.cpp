@@ -464,3 +464,74 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Selecting modport from modport-ed iface port") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I;
+    int i;
+    modport m(input i);
+    modport n(output i);
+endinterface
+
+module o #(q) (I i);
+endmodule
+
+module m #(q) (I.m i);
+    assign i.n.i = 1;
+    o #(q) o1(i.n);
+endmodule
+
+module n;
+    I i();
+    m #(3) m1(i);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::InvalidModportAccess);
+    CHECK(diags[1].code == diag::InvalidModportAccess);
+}
+
+TEST_CASE("Connecting explicit modport on array of ifaces") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I;
+    int i;
+    modport m(input i);
+    modport n(output i);
+endinterface
+
+module o #(q) (I i[3]);
+    int j = i[0].i;
+endmodule
+
+module m #(q) (I.m i[3]);
+    int j = i[0].i;
+    o #(q) o1(i.n);
+endmodule
+
+module n #(q) (I i[3]);
+    int j = i[0].i;
+    o #(q) o1(i.n);
+endmodule
+
+module p;
+    I i [3] ();
+    m #(3) m1(i.m);
+    o #(3) o1(i.m);
+    o #(3) o2(i.unknown);
+    n #(3) n1(i.m);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::InvalidModportAccess);
+    CHECK(diags[1].code == diag::NotAModport);
+}

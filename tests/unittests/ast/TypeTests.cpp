@@ -1947,9 +1947,6 @@ module m(I.m a[3][4], I.m b, I c, I d);
     virtual I o = b;
     virtual I.m p = b;
 
-    virtual I q = b.m;
-    virtual I.m r = b.m;
-
     virtual I s = c;
     virtual I.m t = c;
 
@@ -1958,9 +1955,6 @@ module m(I.m a[3][4], I.m b, I c, I d);
 
     virtual I w = d;
     virtual I.m x = d;
-
-    virtual I y = d.m;
-    virtual I.m z = d.m;
 endmodule
 
 module top;
@@ -1973,18 +1967,16 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 11);
+    REQUIRE(diags.size() == 9);
     CHECK(diags[0].code == diag::BadAssignment);
     CHECK(diags[1].code == diag::BadAssignment);
     CHECK(diags[2].code == diag::BadAssignment);
     CHECK(diags[3].code == diag::BadAssignment);
-    CHECK(diags[4].code == diag::CouldNotResolveHierarchicalPath);
+    CHECK(diags[4].code == diag::InvalidModportAccess);
     CHECK(diags[5].code == diag::BadAssignment);
     CHECK(diags[6].code == diag::BadAssignment);
     CHECK(diags[7].code == diag::BadAssignment);
     CHECK(diags[8].code == diag::BadAssignment);
-    CHECK(diags[9].code == diag::BadAssignment);
-    CHECK(diags[10].code == diag::BadAssignment);
 }
 
 TEST_CASE("Virtual interface type restrictions") {
