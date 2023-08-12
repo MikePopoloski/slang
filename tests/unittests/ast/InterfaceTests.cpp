@@ -536,3 +536,40 @@ endmodule
     CHECK(diags[1].code == diag::InvalidModportAccess);
     CHECK(diags[2].code == diag::NotAModport);
 }
+
+TEST_CASE("Iface array explicit modport actually restricts lookup") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I;
+    int i;
+    int j;
+    modport m(input i);
+endinterface
+
+module m(I.m i[3]);
+    int j = i[0].j;
+endmodule
+
+module n(I i[3]);
+    int j = i[0].j;
+endmodule
+
+module o(I.m i[4][3]);
+    n n1(i[0]);
+endmodule
+
+module p;
+    I i [4][3] ();
+    m m1(i[0].m), m2(i[2]);
+    n n1(i[1].m), n2(i[3]);
+    o o1(i);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::InvalidModportAccess);
+    CHECK(diags[1].code == diag::InvalidModportAccess);
+}
