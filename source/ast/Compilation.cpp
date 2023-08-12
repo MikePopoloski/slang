@@ -1109,7 +1109,7 @@ const Diagnostics& Compilation::getSemanticDiagnostics() {
             }
         }
 
-        if (!options.scriptMode) {
+        if (!options.allowTopLevelIfacePorts) {
             // Top level instances cannot have interface or ref ports.
             for (auto inst : getRoot().topInstances) {
                 for (auto port : inst->body.getPortList()) {

@@ -573,3 +573,33 @@ endmodule
     CHECK(diags[0].code == diag::InvalidModportAccess);
     CHECK(diags[1].code == diag::InvalidModportAccess);
 }
+
+TEST_CASE("Top-level module with interface ports") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I #(parameter int q = 1);
+endinterface
+
+module m(I i);
+    if (i.q == 1) begin
+        int j = asdf;
+    end
+endmodule
+
+interface J #(parameter int r);
+endinterface
+
+module n(J j);
+    if (j.r == 1) begin
+        int j = asdf;
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::UndeclaredIdentifier);
+    CHECK(diags[1].code == diag::ParamHasNoValue);
+}

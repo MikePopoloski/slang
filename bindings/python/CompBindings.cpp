@@ -81,11 +81,11 @@ void registerCompilation(py::module_& m) {
         .def_readwrite("relaxEnumConversions", &CompilationOptions::relaxEnumConversions)
         .def_readwrite("allowUseBeforeDeclare", &CompilationOptions::allowUseBeforeDeclare)
         .def_readwrite("allowDupInitialDrivers", &CompilationOptions::allowDupInitialDrivers)
+        .def_readwrite("allowTopLevelIfacePorts", &CompilationOptions::allowTopLevelIfacePorts)
         .def_readwrite("strictDriverChecking", &CompilationOptions::strictDriverChecking)
         .def_readwrite("lintMode", &CompilationOptions::lintMode)
         .def_readwrite("suppressUnused", &CompilationOptions::suppressUnused)
         .def_readwrite("ignoreUnknownModules", &CompilationOptions::ignoreUnknownModules)
-        .def_readwrite("scriptMode", &CompilationOptions::scriptMode)
         .def_readwrite("defaultTimeScale", &CompilationOptions::defaultTimeScale)
         .def_readwrite("topModules", &CompilationOptions::topModules)
         .def_readwrite("paramOverrides", &CompilationOptions::paramOverrides);
