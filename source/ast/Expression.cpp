@@ -1185,7 +1185,9 @@ Expression* Expression::tryBindInterfaceRef(const ASTContext& context,
         auto& ifacePort = symbol->as<InterfacePortSymbol>();
         modportName = ifacePort.modport;
 
-        symbol = ifacePort.getConnection();
+        const ModportSymbol* modport;
+        std::tie(symbol, modport) = ifacePort.getConnection();
+
         if (symbol && !result.selectors.empty()) {
             SmallVector<const ElementSelectSyntax*> selectors;
             for (auto& sel : result.selectors)
@@ -1203,6 +1205,9 @@ Expression* Expression::tryBindInterfaceRef(const ASTContext& context,
             result.reportDiags(context);
             return &badExpr(comp, nullptr);
         }
+
+        if (symbol->kind == SymbolKind::Instance && modport)
+            symbol = modport;
     }
 
     SmallVector<ConstantRange, 4> dims;

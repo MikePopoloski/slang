@@ -1279,7 +1279,7 @@ endmodule
     auto& m1 = compilation.getRoot().lookupName<InstanceSymbol>("top.m1");
     auto& m1_i = m1.body.findPort("x")->as<PortSymbol>();
     CHECK(!m1_i.getInternalExpr());
-    CHECK(!m1.getPortConnection(m1_i)->getIfaceInstance());
+    CHECK(!m1.getPortConnection(m1_i)->getIfaceConn().first);
 
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 15);

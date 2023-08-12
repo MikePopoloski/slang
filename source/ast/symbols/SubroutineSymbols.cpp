@@ -631,23 +631,14 @@ void SubroutineSymbol::connectExternInterfacePrototype() const {
     const InstanceSymbol* inst = nullptr;
     const ModportSymbol* modport = nullptr;
     if (symbol->kind == SymbolKind::InterfacePort) {
+        const Symbol* conn;
         auto& port = symbol->as<InterfacePortSymbol>();
-        auto conn = port.getConnection();
+        std::tie(conn, modport) = port.getConnection();
         if (!conn)
             return;
 
-        if (conn->kind == SymbolKind::Modport) {
-            modport = &conn->as<ModportSymbol>();
-            inst = conn->getParentScope()->asSymbol().as<InstanceBodySymbol>().parentInstance;
-        }
-        else {
-            inst = &conn->as<InstanceSymbol>();
-            if (!port.modport.empty()) {
-                conn = inst->body.find(port.modport);
-                if (conn && conn->kind == SymbolKind::Modport)
-                    modport = &conn->as<ModportSymbol>();
-            }
-        }
+        // TODO: what if conn is for an iface array?
+        inst = &conn->as<InstanceSymbol>();
     }
     else if (symbol->kind == SymbolKind::Instance) {
         inst = &symbol->as<InstanceSymbol>();
