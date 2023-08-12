@@ -69,6 +69,62 @@ bool isSameEnum(const Expression& expr, const Type& enumType) {
     return expr.type->isMatching(enumType);
 }
 
+void checkImplicitConversions(const ASTContext& context, const Type& targetType,
+                              const Expression& op, SourceLocation loc) {
+    auto isStructUnionEnum = [](const Type& t) {
+        return t.kind == SymbolKind::PackedStructType || t.kind == SymbolKind::PackedUnionType ||
+               t.kind == SymbolKind::EnumType;
+    };
+
+    const Type& sourceType = *op.type;
+    const Type& lt = targetType.getCanonicalType();
+    const Type& rt = sourceType.getCanonicalType();
+    if (lt.isIntegral() && rt.isIntegral()) {
+        // Warn for conversions between different enums/structs/unions.
+        if (isStructUnionEnum(lt) && isStructUnionEnum(rt) && !lt.isMatching(rt)) {
+            context.addDiag(diag::ImplicitConvert, loc)
+                << sourceType << targetType << op.sourceRange;
+            return;
+        }
+
+        // Warn for implicit assignments between integral types of differing widths.
+        bitwidth_t targetWidth = lt.getBitWidth();
+        bitwidth_t actualWidth = rt.getBitWidth();
+        if (targetWidth == actualWidth)
+            return;
+
+        // Before we go and issue this warning, weed out false positives by
+        // recomputing the width of the expression, with all constants sized
+        // to the minimum width necessary to represent them. Otherwise, even
+        // code as simple as this will result in a warning:
+        //    logic [3:0] a = 1;
+        std::optional<bitwidth_t> effective = op.getEffectiveWidth();
+        if (!effective)
+            return;
+
+        // Now that we know the effective width, compare it to the expression's
+        // actual width. We don't warn if the target is anywhere in between the
+        // effective and the actual width.
+        SLANG_ASSERT(effective <= actualWidth);
+        if (targetWidth < effective || targetWidth > actualWidth) {
+            // Final check to rule out false positives: try to eval as a constant.
+            // We'll ignore any constants, because as described above they
+            // will get their own more fine grained warning later during eval.
+            if (!context.tryEval(op)) {
+                DiagCode code;
+                if (context.getInstance()) {
+                    code = targetWidth < effective ? diag::PortWidthTruncate
+                                                   : diag::PortWidthExpand;
+                }
+                else {
+                    code = targetWidth < effective ? diag::WidthTruncate : diag::WidthExpand;
+                }
+                context.addDiag(code, loc) << actualWidth << targetWidth << op.sourceRange;
+            }
+        }
+    }
+}
+
 } // namespace
 
 namespace slang::ast {
@@ -253,6 +309,12 @@ Expression& Expression::convertAssignment(const ASTContext& context, const Type&
     const Type* rt = expr.type;
     if (type.isEquivalent(*rt)) {
         selfDetermined(context, result);
+
+        // If the types are not actually matching we might still want
+        // to issue conversion warnings.
+        if (!context.inUnevaluatedBranch() && !type.isMatching(*rt))
+            checkImplicitConversions(context, type, *result, location);
+
         return *result;
     }
 
@@ -666,62 +728,6 @@ Expression& ConversionExpression::fromSyntax(Compilation& compilation,
 
     result->type = &compilation.getType(operand.type->getBitWidth(), flags);
     return *result;
-}
-
-static void checkImplicitConversions(const ASTContext& context, const Type& targetType,
-                                     const Expression& op, SourceLocation loc) {
-    auto isStructUnionEnum = [](const Type& t) {
-        return t.kind == SymbolKind::PackedStructType || t.kind == SymbolKind::PackedUnionType ||
-               t.kind == SymbolKind::EnumType;
-    };
-
-    const Type& sourceType = *op.type;
-    const Type& lt = targetType.getCanonicalType();
-    const Type& rt = sourceType.getCanonicalType();
-    if (lt.isIntegral() && rt.isIntegral()) {
-        // Warn for conversions between different enums/structs/unions.
-        if (isStructUnionEnum(lt) && isStructUnionEnum(rt) && !lt.isMatching(rt)) {
-            context.addDiag(diag::ImplicitConvert, loc)
-                << sourceType << targetType << op.sourceRange;
-            return;
-        }
-
-        // Warn for implicit assignments between integral types of differing widths.
-        bitwidth_t targetWidth = lt.getBitWidth();
-        bitwidth_t actualWidth = rt.getBitWidth();
-        if (targetWidth == actualWidth)
-            return;
-
-        // Before we go and issue this warning, weed out false positives by
-        // recomputing the width of the expression, with all constants sized
-        // to the minimum width necessary to represent them. Otherwise, even
-        // code as simple as this will result in a warning:
-        //    logic [3:0] a = 1;
-        std::optional<bitwidth_t> effective = op.getEffectiveWidth();
-        if (!effective)
-            return;
-
-        // Now that we know the effective width, compare it to the expression's
-        // actual width. We don't warn if the target is anywhere in between the
-        // effective and the actual width.
-        SLANG_ASSERT(effective <= actualWidth);
-        if (targetWidth < effective || targetWidth > actualWidth) {
-            // Final check to rule out false positives: try to eval as a constant.
-            // We'll ignore any constants, because as described above they
-            // will get their own more fine grained warning later during eval.
-            if (!context.tryEval(op)) {
-                DiagCode code;
-                if (context.getInstance()) {
-                    code = targetWidth < effective ? diag::PortWidthTruncate
-                                                   : diag::PortWidthExpand;
-                }
-                else {
-                    code = targetWidth < effective ? diag::WidthTruncate : diag::WidthExpand;
-                }
-                context.addDiag(code, loc) << actualWidth << targetWidth << op.sourceRange;
-            }
-        }
-    }
 }
 
 Expression& ConversionExpression::makeImplicit(const ASTContext& context, const Type& targetType,

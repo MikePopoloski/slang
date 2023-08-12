@@ -2061,3 +2061,22 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::PackedTypeTooLarge);
 }
+
+TEST_CASE("Struct implicit conversion warning regress") {
+    auto tree = SyntaxTree::fromText(R"(
+module m #(parameter type t = struct packed { logic l; })(input t t1);
+endmodule
+
+module top;
+    struct packed { logic signed l; } t;
+    m m1(t);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::ImplicitConvert);
+}
