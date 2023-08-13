@@ -3,6 +3,7 @@
 
 #include "Test.h"
 
+#include "slang/ast/EvalContext.h"
 #include "slang/ast/Expression.h"
 #include "slang/ast/expressions/AssignmentExpressions.h"
 #include "slang/ast/expressions/MiscExpressions.h"
@@ -52,23 +53,24 @@ TEST_CASE("Evaluate assignment expression") {
 
     // Bind the expression tree to the symbol
     scope.addMember(local);
-    auto& bound = Expression::bind(syntax->root().as<ExpressionSyntax>(),
-                                   ASTContext(scope, LookupLocation::max),
+
+    ASTContext astCtx(scope, LookupLocation::max);
+    auto& bound = Expression::bind(syntax->root().as<ExpressionSyntax>(), astCtx,
                                    ASTFlags::AssignmentAllowed);
     REQUIRE(syntax->diagnostics().empty());
 
     // Initialize `i` to 1.
-    EvalContext context(compilation);
-    context.pushEmptyFrame();
+    EvalContext evalCtx(astCtx);
+    evalCtx.pushEmptyFrame();
 
-    auto i = context.createLocal(&local, SVInt(32, 1, true));
+    auto i = evalCtx.createLocal(&local, SVInt(32, 1, true));
 
     // Evaluate the expression tree.
-    bound.eval(context);
+    bound.eval(evalCtx);
     CHECK(i->integer() == 4);
 
     // Run it again, results should be as you'd expect
-    bound.eval(context);
+    bound.eval(evalCtx);
     CHECK(i->integer() == 7);
     NO_COMPILATION_ERRORS;
 }

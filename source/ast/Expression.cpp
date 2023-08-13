@@ -10,6 +10,7 @@
 #include "slang/ast/ASTSerializer.h"
 #include "slang/ast/ASTVisitor.h"
 #include "slang/ast/Compilation.h"
+#include "slang/ast/EvalContext.h"
 #include "slang/ast/types/Type.h"
 #include "slang/diagnostics/ExpressionsDiags.h"
 #include "slang/diagnostics/LookupDiags.h"
@@ -24,18 +25,18 @@ using namespace slang::ast;
 struct EvalVisitor {
     template<typename T>
     ConstantValue visit(const T& expr, EvalContext& context) {
+        if (expr.constant)
+            return *expr.constant;
+
         if (expr.bad()) {
             if (context.cacheResults())
                 expr.constant = &ConstantValue::Invalid;
             return nullptr;
         }
 
-        if (expr.constant)
-            return *expr.constant;
-
         ConstantValue cv = expr.evalImpl(context);
         if (cv && context.cacheResults()) {
-            expr.constant = context.compilation.allocConstant(std::move(cv));
+            expr.constant = context.getCompilation().allocConstant(std::move(cv));
             return *expr.constant;
         }
 

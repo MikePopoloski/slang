@@ -13,6 +13,7 @@
 #include "slang/ast/ASTSerializer.h"
 #include "slang/ast/ASTVisitor.h"
 #include "slang/ast/Compilation.h"
+#include "slang/ast/EvalContext.h"
 #include "slang/ast/Expression.h"
 #include "slang/ast/TimingControl.h"
 #include "slang/ast/expressions/AssignmentExpressions.h"
@@ -622,10 +623,9 @@ std::optional<std::string_view> ElabSystemTaskSymbol::createMessage(
         return {};
 
     // Format the message to string.
-    auto& comp = context.getCompilation();
-    EvalContext evalCtx(comp);
+    EvalContext evalCtx(context);
     std::optional<std::string> str = FmtHelpers::formatDisplay(*context.scope, evalCtx, args);
-    evalCtx.reportDiags(context);
+    evalCtx.reportDiags();
 
     if (!str)
         return {};
@@ -636,7 +636,7 @@ std::optional<std::string_view> ElabSystemTaskSymbol::createMessage(
     str->insert(0, ": ");
 
     // Copy the string into permanent memory.
-    auto mem = comp.allocate(str->size(), alignof(char));
+    auto mem = context.getCompilation().allocate(str->size(), alignof(char));
     memcpy(mem, str->data(), str->size());
 
     return std::string_view(reinterpret_cast<char*>(mem), str->size());

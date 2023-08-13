@@ -9,6 +9,7 @@
 
 #include "slang/ast/ASTVisitor.h"
 #include "slang/ast/Compilation.h"
+#include "slang/ast/EvalContext.h"
 #include "slang/text/Json.h"
 
 namespace slang::ast {
@@ -190,8 +191,8 @@ void ASTSerializer::visit(const T& elem, bool inMembersArray) {
             elem.serializeTo(*this);
         }
 
-        EvalContext ctx(compilation, EvalFlags::CacheResults);
-        ConstantValue constant = elem.eval(ctx);
+        ASTContext ctx(compilation.getRoot(), LookupLocation::max);
+        ConstantValue constant = ctx.tryEval(elem);
         if (constant)
             write("constant", constant);
 

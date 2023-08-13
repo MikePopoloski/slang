@@ -8,6 +8,7 @@
 #include "slang/ast/symbols/ValueSymbol.h"
 
 #include "slang/ast/Compilation.h"
+#include "slang/ast/EvalContext.h"
 #include "slang/ast/Expression.h"
 #include "slang/ast/Scope.h"
 #include "slang/ast/expressions/AssignmentExpressions.h"
@@ -193,7 +194,7 @@ void ValueSymbol::addDriver(DriverKind driverKind, const Expression& longestStat
     SLANG_ASSERT(scope);
 
     auto& comp = scope->getCompilation();
-    EvalContext evalCtx(comp);
+    EvalContext evalCtx(ASTContext(*scope, LookupLocation::max));
 
     auto bounds = ValueDriver::getBounds(longestStaticPrefix, evalCtx, getType());
     if (!bounds)

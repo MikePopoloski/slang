@@ -3,6 +3,7 @@
 
 #include "Test.h"
 
+#include "slang/ast/EvalContext.h"
 #include "slang/ast/Expression.h"
 #include "slang/ast/symbols/ClassSymbols.h"
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
@@ -649,7 +650,7 @@ endfunction
     auto init = f1.getArguments()[0]->getDefaultValue();
     REQUIRE(init);
 
-    EvalContext ctx(compilation);
+    EvalContext ctx(ASTContext(compilation.getRoot(), LookupLocation::max));
     CHECK(init->eval(ctx).integer() == 1);
 }
 

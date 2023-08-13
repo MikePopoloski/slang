@@ -8,6 +8,7 @@
 #include "FmtHelpers.h"
 
 #include "slang/ast/Definition.h"
+#include "slang/ast/EvalContext.h"
 #include "slang/ast/Expression.h"
 #include "slang/ast/expressions/LiteralExpressions.h"
 #include "slang/ast/symbols/VariableSymbols.h"

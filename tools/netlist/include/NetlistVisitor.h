@@ -15,7 +15,10 @@
 #include "fmt/format.h"
 #include <iostream>
 
+#include "slang/ast/ASTContext.h"
 #include "slang/ast/ASTVisitor.h"
+#include "slang/ast/Compilation.h"
+#include "slang/ast/EvalContext.h"
 #include "slang/ast/SemanticFacts.h"
 #include "slang/ast/Symbol.h"
 #include "slang/ast/symbols/BlockSymbols.h"
@@ -162,7 +165,8 @@ public:
     bool anyErrors = false;
 
     explicit ProceduralBlockVisitor(ast::Compilation& compilation, Netlist& netlist) :
-        netlist(netlist), evalCtx(compilation) {
+        netlist(netlist),
+        evalCtx(ast::ASTContext(compilation.getRoot(), ast::LookupLocation::max)) {
         evalCtx.pushEmptyFrame();
     }
 
@@ -387,7 +391,8 @@ public:
         // Handle connections to the ports of the instance.
         for (auto* portConnection : symbol.getPortConnections()) {
             // Collect variable references in the port expression.
-            ast::EvalContext evalCtx(compilation);
+            ast::EvalContext evalCtx(
+                ast::ASTContext(compilation.getRoot(), ast::LookupLocation::max));
             auto portDirection = portConnection->port.as<ast::PortSymbol>().direction;
             // The port is effectively the target of an assignment if it is an
             // input.
@@ -438,7 +443,7 @@ public:
 
     /// Continuous assignment statement.
     void handle(const ast::ContinuousAssignSymbol& symbol) {
-        ast::EvalContext evalCtx(compilation);
+        ast::EvalContext evalCtx(ast::ASTContext(compilation.getRoot(), ast::LookupLocation::max));
         SmallVector<NetlistNode*> condVars;
         AssignmentVisitor visitor(netlist, evalCtx, condVars);
         symbol.visit(visitor);

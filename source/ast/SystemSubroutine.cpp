@@ -8,6 +8,7 @@
 #include "slang/ast/SystemSubroutine.h"
 
 #include "slang/ast/Compilation.h"
+#include "slang/ast/EvalContext.h"
 #include "slang/ast/Expression.h"
 #include "slang/ast/types/Type.h"
 #include "slang/diagnostics/ExpressionsDiags.h"
@@ -91,7 +92,7 @@ bool SystemSubroutine::notConst(EvalContext& context, SourceRange range) const {
 
 bool SystemSubroutine::noHierarchical(EvalContext& context, const Expression& expr) const {
     if (expr.hasHierarchicalReference() &&
-        !context.compilation.getOptions().allowHierarchicalConst &&
+        !context.getCompilation().getOptions().allowHierarchicalConst &&
         !context.flags.has(EvalFlags::IsScript)) {
         context.addDiag(diag::SysFuncHierarchicalNotAllowed, expr.sourceRange) << name;
         return false;

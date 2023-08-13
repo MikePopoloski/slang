@@ -63,7 +63,7 @@ void EvalContext::deleteLocal(const ValueSymbol* symbol) {
 
 bool EvalContext::pushFrame(const SubroutineSymbol& subroutine, SourceLocation callLocation,
                             LookupLocation lookupLocation) {
-    const uint32_t maxDepth = compilation.getOptions().maxConstexprDepth;
+    const uint32_t maxDepth = getCompilation().getOptions().maxConstexprDepth;
     if (stack.size() >= maxDepth) {
         addDiag(diag::ConstEvalExceededMaxCallDepth, subroutine.location) << maxDepth;
         return false;
@@ -101,7 +101,7 @@ LValue* EvalContext::getTopLValue() const {
 }
 
 bool EvalContext::step(SourceLocation loc) {
-    if (++steps < compilation.getOptions().maxConstexprSteps)
+    if (++steps < getCompilation().getOptions().maxConstexprSteps)
         return true;
 
     addDiag(diag::ConstEvalExceededMaxSteps, loc);
@@ -146,14 +146,15 @@ void EvalContext::addDiags(const Diagnostics& additional) {
     }
 }
 
-void EvalContext::reportDiags(const ASTContext& context) {
+void EvalContext::reportDiags() {
     if (diags.empty())
         return;
 
-    if (context.assertionInstance)
-        context.addAssertionBacktrace(diags[0]);
+    if (astCtx.assertionInstance)
+        astCtx.addAssertionBacktrace(diags[0]);
 
-    context.scope->addDiags(diags);
+    astCtx.scope->addDiags(diags);
+    diags.clear();
 }
 
 static void reportFrame(Diagnostic& diag, const EvalContext::Frame& frame) {
@@ -178,7 +179,7 @@ static void reportFrame(Diagnostic& diag, const EvalContext::Frame& frame) {
 }
 
 void EvalContext::reportStack(Diagnostic& diag) const {
-    const size_t limit = compilation.getOptions().maxConstexprBacktrace;
+    const size_t limit = getCompilation().getOptions().maxConstexprBacktrace;
     if (stack.size() <= limit || limit == 0) {
         FormatBuffer buffer;
         for (const Frame& frame : std::views::reverse(stack))

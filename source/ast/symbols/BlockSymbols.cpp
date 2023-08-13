@@ -10,6 +10,7 @@
 #include "slang/ast/ASTSerializer.h"
 #include "slang/ast/Compilation.h"
 #include "slang/ast/Definition.h"
+#include "slang/ast/EvalContext.h"
 #include "slang/ast/Expression.h"
 #include "slang/ast/expressions/MiscExpressions.h"
 #include "slang/ast/symbols/MemberSymbols.h"
@@ -662,7 +663,7 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(Compilation& comp
         return *result;
 
     // Create storage for the iteration variable.
-    EvalContext evalContext(compilation);
+    EvalContext evalContext(iterContext);
     evalContext.pushEmptyFrame();
 
     auto loopVal = evalContext.createLocal(&local, initialVal);
@@ -709,7 +710,7 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(Compilation& comp
     if (indices.empty())
         iterExpr.eval(evalContext);
 
-    evalContext.reportDiags(iterContext);
+    evalContext.reportDiags();
 
     // If the generate loop completed successfully, go through and create blocks.
     if (result->valid) {

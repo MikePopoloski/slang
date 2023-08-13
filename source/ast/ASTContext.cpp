@@ -8,6 +8,7 @@
 #include "slang/ast/ASTContext.h"
 
 #include "slang/ast/Compilation.h"
+#include "slang/ast/EvalContext.h"
 #include "slang/ast/expressions/MiscExpressions.h"
 #include "slang/ast/symbols/AttributeSymbol.h"
 #include "slang/ast/symbols/BlockSymbols.h"
@@ -250,9 +251,9 @@ ConstantValue ASTContext::eval(const Expression& expr, bitmask<EvalFlags> extraF
     if (flags.has(ASTFlags::SpecifyBlock))
         extraFlags |= EvalFlags::SpecparamsAllowed;
 
-    EvalContext ctx(getCompilation(), extraFlags);
+    EvalContext ctx(*this, extraFlags);
     ConstantValue result = expr.eval(ctx);
-    ctx.reportDiags(*this);
+    ctx.reportDiags();
     return result;
 }
 
@@ -261,7 +262,7 @@ ConstantValue ASTContext::tryEval(const Expression& expr) const {
     if (flags.has(ASTFlags::SpecifyBlock))
         extraFlags |= EvalFlags::SpecparamsAllowed;
 
-    EvalContext ctx(getCompilation(), extraFlags);
+    EvalContext ctx(*this, extraFlags);
     return expr.eval(ctx);
 }
 

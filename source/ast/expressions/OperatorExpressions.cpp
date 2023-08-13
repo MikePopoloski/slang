@@ -12,6 +12,7 @@
 #include "slang/ast/ASTSerializer.h"
 #include "slang/ast/Bitstream.h"
 #include "slang/ast/Compilation.h"
+#include "slang/ast/EvalContext.h"
 #include "slang/ast/Patterns.h"
 #include "slang/ast/Statements.h"
 #include "slang/ast/expressions/AssignmentExpressions.h"
@@ -1576,12 +1577,12 @@ Expression& ReplicationExpression::fromSyntax(Compilation& compilation,
     }
 
     // If the multiplier isn't constant this must be a string replication.
-    EvalContext evalCtx(compilation, EvalFlags::CacheResults);
+    EvalContext evalCtx(context, EvalFlags::CacheResults);
     if (ConstantValue leftVal = left.eval(evalCtx); !leftVal) {
         if (!right->isImplicitString()) {
             // They probably meant for this to be a constant (non-string) replication,
             // so do the normal error reporting for that case.
-            evalCtx.reportDiags(context);
+            evalCtx.reportDiags();
             return badExpr(compilation, result);
         }
 
@@ -1759,7 +1760,7 @@ Expression& StreamingConcatenationExpression::fromSyntax(
                 return badResult();
 
             // Try to get the bounds of the selection, if they are constant.
-            EvalContext evalCtx(comp);
+            EvalContext evalCtx(context);
             auto range = withExpr->evalSelector(evalCtx);
             if (range)
                 constantWithWidth = range->width();

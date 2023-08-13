@@ -7,6 +7,7 @@
 #include "pyslang.h"
 
 #include "slang/ast/Compilation.h"
+#include "slang/ast/EvalContext.h"
 #include "slang/ast/SystemSubroutine.h"
 #include "slang/syntax/AllSyntax.h"
 
@@ -43,7 +44,7 @@ void registerAST(py::module_& m) {
 
     py::class_<EvalContext> evalCtx(m, "EvalContext");
     evalCtx
-        .def(py::init<Compilation&, bitmask<EvalFlags>>(), "compilation"_a,
+        .def(py::init<const ASTContext&, bitmask<EvalFlags>>(), "astCtx"_a,
              "flags"_a = bitmask<EvalFlags>{})
         .def_readonly("flags", &EvalContext::flags)
         .def("createLocal", &EvalContext::createLocal, byrefint, "symbol"_a, "value"_a = nullptr)

@@ -27,7 +27,7 @@ static CompilationOptions createOptions() {
 
 ScriptSession::ScriptSession() :
     compilation(createOptions()), scope(compilation.createScriptScope()),
-    evalContext(compilation, EvalFlags::IsScript) {
+    astCtx(scope, LookupLocation::max), evalContext(astCtx, EvalFlags::IsScript) {
     evalContext.pushEmptyFrame();
 }
 
