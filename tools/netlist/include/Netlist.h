@@ -46,6 +46,10 @@ struct VariableSelectorBase {
     virtual ~VariableSelectorBase() = default;
     virtual std::string toString() const = 0;
 
+    bool isElementSelect() const { return kind == VariableSelectorKind::ElementSelect; }
+    bool isRangeSelect() const { return kind == VariableSelectorKind::RangeSelect; }
+    bool isMemberAccess() const { return kind == VariableSelectorKind::MemberAccess; }
+
     template<typename T>
     T& as() {
         SLANG_ASSERT(T::isKind(kind));
@@ -175,8 +179,6 @@ public:
 private:
     static size_t nextID;
 };
-
-size_t NetlistNode::nextID = 0;
 
 /// A class representing a port declaration.
 class NetlistPortDeclaration : public NetlistNode {

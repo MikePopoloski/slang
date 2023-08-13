@@ -13,6 +13,7 @@
 #include "Netlist.h"
 #include "fmt/color.h"
 #include "fmt/format.h"
+#include <algorithm>
 #include <iostream>
 
 #include "slang/ast/ASTVisitor.h"
@@ -85,6 +86,7 @@ public:
                 node.addMemberAccess(selector->as<ast::MemberAccessExpression>().member.name);
             }
         }
+        std::reverse(node.selectors.begin(), node.selectors.end());
         selectors.clear();
     }
 
