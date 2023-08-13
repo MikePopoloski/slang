@@ -135,6 +135,11 @@ public:
     /// to any interface type. If true, @a interfaceDef will be nullptr.
     bool isGeneric = false;
 
+    InterfacePortSymbol(std::string_view name, SourceLocation loc) :
+        Symbol(SymbolKind::InterfacePort, name, loc) {}
+
+    bool isInvalid() const { return !interfaceDef && !isGeneric; }
+
     /// Gets the set of dimensions for specifying interface arrays.
     /// Returns nullopt if an error occurs evaluating the dimensions.
     std::optional<std::span<const ConstantRange>> getDeclaredRange() const;
@@ -142,10 +147,9 @@ public:
     /// Gets the interface instance that this port connects to.
     IfaceConn getConnection() const;
 
-    InterfacePortSymbol(std::string_view name, SourceLocation loc) :
-        Symbol(SymbolKind::InterfacePort, name, loc) {}
+    const ModportSymbol* getModport(const ASTContext& context, const InstanceSymbol& instance,
+                                    syntax::DeferredSourceRange sourceRange) const;
 
-    bool isInvalid() const { return !interfaceDef && !isGeneric; }
     void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::InterfacePort; }

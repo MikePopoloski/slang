@@ -1121,17 +1121,12 @@ private:
                 return {nullptr, nullptr};
             }
 
-            auto sym = vit.iface.body.find(port.modport);
-            if (!sym || sym->kind != SymbolKind::Modport) {
-                auto& diag = context.addDiag(diag::NotAModport, syntax.sourceRange());
-                diag << port.modport;
-                diag << connDef.name;
-                diag.addNote(diag::NoteReferencedHere, port.location);
+            auto sym = port.getModport(context, vit.iface, syntax);
+            if (!sym)
                 return {nullptr, nullptr};
-            }
 
             SLANG_ASSERT(!modport || sym == modport);
-            modport = &sym->as<ModportSymbol>();
+            modport = sym;
         }
 
         // Make the connection if the dimensions match exactly what the port is expecting.
@@ -1586,6 +1581,24 @@ InterfacePortSymbol::IfaceConn InterfacePortSymbol::getConnection() const {
         return {nullptr, nullptr};
 
     return conn->getIfaceConn();
+}
+
+const ModportSymbol* InterfacePortSymbol::getModport(const ASTContext& context,
+                                                     const InstanceSymbol& instance,
+                                                     DeferredSourceRange sourceRange) const {
+    if (modport.empty())
+        return nullptr;
+
+    auto sym = instance.body.find(modport);
+    if (!sym || sym->kind != SymbolKind::Modport) {
+        auto& diag = context.addDiag(diag::NotAModport, *sourceRange);
+        diag << modport;
+        diag << instance.getDefinition().name;
+        diag.addNote(diag::NoteReferencedHere, location);
+        return nullptr;
+    }
+
+    return &sym->as<ModportSymbol>();
 }
 
 void InterfacePortSymbol::serializeTo(ASTSerializer& serializer) const {

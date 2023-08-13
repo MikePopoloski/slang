@@ -577,11 +577,13 @@ endmodule
 TEST_CASE("Top-level module with interface ports") {
     auto tree = SyntaxTree::fromText(R"(
 interface I #(parameter int q = 1);
+    int i, j;
+    modport m(input i);
 endinterface
 
-module m(I i);
+module m(I.m i);
     if (i.q == 1) begin
-        int j = asdf;
+        int j = i.j;
     end
 endmodule
 
@@ -600,6 +602,6 @@ endmodule
 
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 2);
-    CHECK(diags[0].code == diag::UndeclaredIdentifier);
+    CHECK(diags[0].code == diag::InvalidModportAccess);
     CHECK(diags[1].code == diag::ParamHasNoValue);
 }

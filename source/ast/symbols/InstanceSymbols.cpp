@@ -606,17 +606,22 @@ void InstanceSymbol::resolvePortConnections() const {
 
 void InstanceSymbol::connectDefaultIfacePorts() const {
     auto parent = getParentScope();
+    SLANG_ASSERT(parent);
+
     auto& comp = parent->getCompilation();
+    ASTContext context(*parent, LookupLocation::max);
 
     SmallVector<const PortConnection*> conns;
     for (auto port : body.getPortList()) {
         if (port->kind == SymbolKind::InterfacePort) {
             auto& ifacePort = port->as<InterfacePortSymbol>();
             if (ifacePort.interfaceDef) {
-                // TODO: modport
-                const ModportSymbol* modport = nullptr;
                 auto& inst = createDefault(comp, *ifacePort.interfaceDef, nullptr, port->location);
                 inst.setParent(*parent);
+
+                auto portRange = SourceRange{ifacePort.location,
+                                             ifacePort.location + ifacePort.name.length()};
+                auto modport = ifacePort.getModport(context, inst, portRange);
 
                 conns.emplace_back(comp.emplace<PortConnection>(ifacePort, &inst, modport));
                 connectionMap->emplace(reinterpret_cast<uintptr_t>(port),
