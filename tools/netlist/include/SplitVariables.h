@@ -21,15 +21,19 @@
 namespace netlist {
 
 struct BitRange {
-  size_t start;
-  size_t end;
+  slang::bitwidth_t start;
+  slang::bitwidth_t end;
   BitRange(size_t index) : start(index), end(index) {}
   BitRange(size_t start, size_t end) : start(start), end(end) {
     SLANG_ASSERT(start <= end);
   }
-  /// Given two ranges, return true if there is any overlap in values between them.
+  /// Given another range, return true if it overlaps with this range.
   inline bool overlap(BitRange other) const {
       return start <= other.end && other.start <= end;
+  }
+  /// Given another range, return true if it is contained within this range.
+  inline bool contains(BitRange other) {
+      return other.start >= start && other.end <= end;
   }
   size_t size() const { return end - start; }
 };
@@ -68,18 +72,72 @@ public:
 
     BitRange handleScalarRangeSelect(const slang::ast::Type &type, BitRange range) {
         const auto& rangeSelector = selectorsIt->get()->as<VariableRangeSelect>();
-        SLANG_ASSERT(rangeSelector.getRightIndexInt() >= range.start);
-        SLANG_ASSERT(rangeSelector.getLeftIndexInt() <= range.end);
-        SLANG_ASSERT(rangeSelector.getRightIndexInt() <= rangeSelector.getLeftIndexInt());
+        slang::bitwidth_t leftIndex = rangeSelector.getLeftIndexInt();
+        slang::bitwidth_t rightIndex = rangeSelector.getRightIndexInt();
+        SLANG_ASSERT(rightIndex <= leftIndex);
+        SLANG_ASSERT(rightIndex >= range.start);
+        SLANG_ASSERT(leftIndex <= range.end);
+        auto newRange = BitRange(range.start + rightIndex,
+                                 range.start + leftIndex);
         if (std::next(selectorsIt) != node.selectors.end()) {
             selectorsIt++;
-            return getBitRangeImpl(type,
-                                   BitRange(rangeSelector.getRightIndexInt(),
-                                            rangeSelector.getLeftIndexInt()));
+            return getBitRangeImpl(type, newRange);
         } else {
-            return BitRange(rangeSelector.getRightIndexInt(),
-                            rangeSelector.getLeftIndexInt());
+            return newRange;
         }
+    }
+
+    BitRange handleArrayElementSelect(const slang::ast::Type &type, BitRange range) {
+        const auto& elementSelector = selectorsIt->get()->as<VariableElementSelect>();
+        slang::bitwidth_t index = elementSelector.getIndexInt();
+        auto* elementType = type.getArrayElementType();
+        SLANG_ASSERT((index * elementType->getBitWidth()) >= range.start);
+        SLANG_ASSERT(((index + 1) * elementType->getBitWidth()) <= range.end);
+        auto newRange = BitRange(range.start + (elementType->getBitWidth() * index),
+                                 range.start + (elementType->getBitWidth() * (index + 1)));
+        if (std::next(selectorsIt) != node.selectors.end()) {
+            selectorsIt++;
+            return getBitRangeImpl(*elementType, newRange);
+        } else {
+            return newRange;
+        }
+    }
+
+    BitRange handleArrayRangeSelect(const slang::ast::Type &type, BitRange range) {
+        const auto& rangeSelector = selectorsIt->get()->as<VariableRangeSelect>();
+        slang::bitwidth_t leftIndex = rangeSelector.getLeftIndexInt();
+        slang::bitwidth_t rightIndex = rangeSelector.getRightIndexInt();
+        auto* elementType = type.getArrayElementType();
+        SLANG_ASSERT(rightIndex <= leftIndex);
+        SLANG_ASSERT((rightIndex * elementType->getBitWidth()) >= range.start);
+        SLANG_ASSERT((leftIndex * elementType->getBitWidth()) <= range.end);
+        auto newRange = BitRange(range.start + (rightIndex * elementType->getBitWidth()),
+                                 range.start + (leftIndex * elementType->getBitWidth()));
+        if (std::next(selectorsIt) != node.selectors.end()) {
+            selectorsIt++;
+            return getBitRangeImpl(type, newRange);
+        } else {
+            return newRange;
+        }
+    }
+
+    BitRange handleStructMemberAccess(const slang::ast::Type &type, BitRange range) {
+        //const auto& packedStruct = type.getCanonicalType().as<slang::ast::PackedStructType>();
+        //SLANG_ASSERT(selectorsIt->get()->kind == VariableSelectorKind::MemberAccess);
+        //const auto& memberAccessSelector = selectorsIt->get()->as<VariableMemberAccess>();
+        //auto fieldRange = getFieldRange(packedStruct, memberAccessSelector.name);
+        //SLANG_ASSERT(range.contains(fieldRange));
+        //auto fieldType = packedStruct.getNameMap()[memberAccessSelector.name];
+        //return getBitRange(fieldType, fieldRange.start, fieldRange.end);
+        return BitRange(0);
+    }
+
+    BitRange handleUnionMemberAccess(const slang::ast::Type &type, BitRange range) {
+        return BitRange(0);
+    }
+
+    BitRange handleEnumMemberAccess(const slang::ast::Type &type, BitRange range) {
+        return BitRange(0);
     }
 
     /// Given a variable reference with zero or more selectors, determine the
@@ -89,7 +147,7 @@ public:
         if (node.selectors.empty()) {
             return BitRange(0, node.symbol.getDeclaredType()->getType().getBitWidth()-1);
         }
-        // Scalar
+        // Simple vector
         if (type.isSimpleBitVector()) {
             if (selectorsIt->get()->isElementSelect()) {
                 return handleScalarElementSelect(type, range);
@@ -101,51 +159,51 @@ public:
                 SLANG_ASSERT(0 && "unsupported scalar selector");
             }
         }
-        //// Packed or unpacked array
-        //else if (type.isArray()) {
-        //    if (selectorsIt->get()->kind == VariableSelectorKind::ElementSelect) {
-        //        const auto& elementSelector = selectorsIt->get()->as<VariableElementSelect>();
-        //        size_t index = leftIndex + elementSelector.getIndexInt();
-        //        // TODO: also needs to recurse if there are more selectors
-        //        return std::make_pair(index, index);
-        //    }
-        //    else if (selectorsIt->get()->kind == VariableSelectorKind::RangeSelect) {
-        //        const auto& rangeSelector = selectorsIt->get()->as<VariableRangeSelect>();
-        //        SLANG_ASSERT(rangeSelector.getLeftIndexInt() <= rightIndex);
-        //        SLANG_ASSERT(rangeSelector.getRightIndexInt() <= rightIndex);
-        //        SLANG_ASSERT(rangeSelector.getRightIndexInt() - rangeSelector.getLeftIndexInt() < rightIndex - leftIndex);
-        //        if (std::next(selectorsIt) != node.selectors.end()) {
-        //            return getBitRange(node, type, std::next(selectorsIt),
-        //                               leftIndex + rangeSelector.getLeftIndexInt(),
-        //                               leftIndex + rangeSelector.getRightIndexInt());
-        //        } else {
-        //            return std::make_pair(leftIndex + rangeSelector.getLeftIndexInt(),
-        //                                  leftIndex + rangeSelector.getRightIndexInt());
-        //        }
-        //    }
-        //    else {
-        //      SLANG_ASSERT(0 && "unsupported array selector");
-        //    }
-        //}
-        //// Packed struct
-        //else if (type.isStruct() && !type.isUnpackedStruct()) {
-        //    const auto& packedStruct = type.getCanonicalType().as<slang::ast::PackedStructType>();
-        //    SLANG_ASSERT(selectorsIt->get()->kind == VariableSelectorKind::MemberAccess);
-        //    const auto& memberAccessSelector = selectorsIt->get()->as<VariableMemberAccess>();
-        //    auto fieldRange = getFieldRange(packedStruct, memberAccessSelector.name);
-        //    SLANG_ASSERT(fieldRange.first >= leftIndex);
-        //    SLANG_ASSERT(fieldRange.second <= rightIndex);
-        //    auto fieldType = packedStruct.getNameMap()[memberAccessSelector.name];
-        //    return getBitRange(node, fieldType, std::next(selectorsIt),
-        //                      leftIndex + fieldRange.first,
-        //                      leftIndex + fieldRange.second);
-        //}
-        //else if (type.isPackedUnion()) {
-        //}
-        //else if (type.isEnum()) {
-        //}
+        // Packed or unpacked array
+        else if (type.isArray()) {
+            if (std::next(selectorsIt) != node.selectors.end() &&
+                (std::next(selectorsIt)->get()->isElementSelect() || std::next(selectorsIt)->get()->isRangeSelect())) {
+                // Multiple range or element selectors have only the effect of
+                // the last one.
+                selectorsIt++;
+                return getBitRangeImpl(type, range);
+            }
+            if (selectorsIt->get()->isElementSelect()) {
+                return handleArrayElementSelect(type, range);
+            }
+            else if (selectorsIt->get()->isRangeSelect()) {
+                return handleArrayRangeSelect(type, range);
+            }
+            else {
+                SLANG_ASSERT(0 && "unsupported array selector");
+            }
+        }
+        // Packed struct
+        else if (type.isStruct() && !type.isUnpackedStruct()) {
+            if (selectorsIt->get()->isMemberAccess()) {
+                return handleStructMemberAccess(type, range);
+            } else {
+                SLANG_ASSERT(0 && "unsupported struct selector");
+            }
+        }
+        // Packed union
+        else if (type.isPackedUnion()) {
+            if (selectorsIt->get()->isMemberAccess()) {
+                return handleUnionMemberAccess(type, range);
+            } else {
+                SLANG_ASSERT(0 && "unsupported union selector");
+            }
+        }
+        // Enum
+        else if (type.isEnum()) {
+            if (selectorsIt->get()->isMemberAccess()) {
+                return handleEnumMemberAccess(type, range);
+            } else {
+                SLANG_ASSERT(0 && "unsupported enum selector");
+            }
+        }
         else {
-            SLANG_THROW(std::runtime_error("unhandled type"));
+            SLANG_ASSERT(0 && "unhandled type in getBitRangeImpl");
         }
     }
 

@@ -65,7 +65,7 @@ module m (input logic [3:0] i_a,
           input logic [3:0] i_b,
           output logic [1:0] o_a,
           output logic [1:0] o_b);
-  int foo, bar;
+  int foo;
   assign foo[7:4] = i_a;
   assign foo[3:0] = i_b;
   assign o_a = foo[7:4][6:5];
@@ -82,6 +82,106 @@ endmodule
     CHECK(!pathExists(netlist, "m.i_a", "m.o_b"));
     CHECK(!pathExists(netlist, "m.i_b", "m.o_a"));
 }
+
+TEST_CASE("Packed array element") {
+    // Test element select on a packed array variable.
+    auto tree = SyntaxTree::fromText(R"(
+module m (input logic i_a,
+          input logic i_b,
+          output logic o_a,
+          output logic o_b);
+  logic [1:0] foo;
+  assign foo[1] = i_a;
+  assign foo[0] = i_b;
+  assign o_a = foo[1];
+  assign o_b = foo[0];
+endmodule
+)");
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+    auto netlist = createNetlist(compilation);
+    CHECK(pathExists(netlist, "m.i_a", "m.o_a"));
+    CHECK(pathExists(netlist, "m.i_b", "m.o_b"));
+    CHECK(!pathExists(netlist, "m.i_a", "m.o_b"));
+    CHECK(!pathExists(netlist, "m.i_b", "m.o_a"));
+}
+
+TEST_CASE("Unpacked array element") {
+    // Test element select on an unpacked array variable.
+    auto tree = SyntaxTree::fromText(R"(
+module m (input logic i_a,
+          input logic i_b,
+          output logic o_a,
+          output logic o_b);
+  logic foo [1:0];
+  assign foo[1] = i_a;
+  assign foo[0] = i_b;
+  assign o_a = foo[1];
+  assign o_b = foo[0];
+endmodule
+)");
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+    auto netlist = createNetlist(compilation);
+    CHECK(pathExists(netlist, "m.i_a", "m.o_a"));
+    CHECK(pathExists(netlist, "m.i_b", "m.o_b"));
+    CHECK(!pathExists(netlist, "m.i_a", "m.o_b"));
+    CHECK(!pathExists(netlist, "m.i_b", "m.o_a"));
+}
+
+
+TEST_CASE("Packed array range") {
+    // Test range select on a packed array variable.
+    auto tree = SyntaxTree::fromText(R"(
+module m (input logic [1:0] i_a,
+          input logic [1:0] i_b,
+          output logic [1:0] o_a,
+          output logic [1:0] o_b);
+  logic [3:0] foo;
+  assign foo[3:2] = i_a;
+  assign foo[1:0] = i_b;
+  assign o_a = foo[3:2];
+  assign o_b = foo[1:0];
+endmodule
+)");
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+    auto netlist = createNetlist(compilation);
+    PathFinder pathFinder(netlist);
+    CHECK(pathExists(netlist, "m.i_a", "m.o_a"));
+    CHECK(pathExists(netlist, "m.i_b", "m.o_b"));
+    CHECK(!pathExists(netlist, "m.i_a", "m.o_b"));
+    CHECK(!pathExists(netlist, "m.i_b", "m.o_a"));
+}
+
+TEST_CASE("Packed array range 2") {
+    // Test stacked range selects on a packed array variable.
+    auto tree = SyntaxTree::fromText(R"(
+module m (input logic [3:0] i_a,
+          input logic [3:0] i_b,
+          output logic [1:0] o_a,
+          output logic [1:0] o_b);
+  logic [7:0] foo;
+  assign foo[7:4] = i_a;
+  assign foo[3:0] = i_b;
+  assign o_a = foo[7:4][6:5];
+  assign o_b = foo[3:0][2:1];
+endmodule
+)");
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+    auto netlist = createNetlist(compilation);
+    PathFinder pathFinder(netlist);
+    CHECK(pathExists(netlist, "m.i_a", "m.o_a"));
+    CHECK(pathExists(netlist, "m.i_b", "m.o_b"));
+    CHECK(!pathExists(netlist, "m.i_a", "m.o_b"));
+    CHECK(!pathExists(netlist, "m.i_b", "m.o_a"));
+}
+
 
 
 //===---------------------------------------------------------------------===//
