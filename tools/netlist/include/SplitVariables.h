@@ -94,7 +94,7 @@ public:
         SLANG_ASSERT((index * elementType->getBitWidth()) >= range.start);
         SLANG_ASSERT(((index + 1) * elementType->getBitWidth()) <= range.end);
         auto newRange = BitRange(range.start + (elementType->getBitWidth() * index),
-                                 range.start + (elementType->getBitWidth() * (index + 1)));
+                                 range.start + (elementType->getBitWidth() * (index + 1)) - 1);
         if (std::next(selectorsIt) != node.selectors.end()) {
             selectorsIt++;
             return getBitRangeImpl(*elementType, newRange);
@@ -112,7 +112,7 @@ public:
         SLANG_ASSERT((rightIndex * elementType->getBitWidth()) >= range.start);
         SLANG_ASSERT((leftIndex * elementType->getBitWidth()) <= range.end);
         auto newRange = BitRange(range.start + (rightIndex * elementType->getBitWidth()),
-                                 range.start + (leftIndex * elementType->getBitWidth()));
+                                 range.start + (leftIndex * elementType->getBitWidth()) - 1);
         if (std::next(selectorsIt) != node.selectors.end()) {
             selectorsIt++;
             return getBitRangeImpl(type, newRange);
@@ -162,9 +162,11 @@ public:
         // Packed or unpacked array
         else if (type.isArray()) {
             if (std::next(selectorsIt) != node.selectors.end() &&
-                (std::next(selectorsIt)->get()->isElementSelect() || std::next(selectorsIt)->get()->isRangeSelect())) {
+                (std::next(selectorsIt)->get()->isElementSelect() ||
+                 std::next(selectorsIt)->get()->isRangeSelect())) {
                 // Multiple range or element selectors have only the effect of
-                // the last one.
+                // the last one. Eg x[3:0][2:1] <=> x[2:1] or x[2:1][2] <=>
+                // x[2].
                 selectorsIt++;
                 return getBitRangeImpl(type, range);
             }
