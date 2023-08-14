@@ -36,6 +36,11 @@ struct EvalVisitor {
 
         ConstantValue cv = expr.evalImpl(context);
         if (cv && context.cacheResults()) {
+            // If we're caching results we can't let any reported
+            // diagnostics get lost because there won't be another
+            // opportunity to see them, so make sure they get logged
+            // to the compilation now.
+            context.reportDiags();
             expr.constant = context.getCompilation().allocConstant(std::move(cv));
             return *expr.constant;
         }

@@ -964,6 +964,7 @@ warning dynarray-range ConstEvalDynamicArrayRange "invalid range [{}:{}] for {} 
 warning queue-range ConstEvalQueueRange "reversed selection range [{}:{}] for queue will always yield an empty result"
 warning empty-queue ConstEvalEmptyQueue "pop from empty queue"
 warning task-ignored ConstSysTaskIgnored "system task '{}' is ignored in constant expression"
+warning constant-conversion ConstantConversion "implicit conversion from {} to {} changes value from {} to {}"
 
 subsystem Compilation
 error MaxInstanceDepthExceeded "{} instantiation exceeded maximum depth of {}"
@@ -1040,12 +1041,13 @@ group default = { real-underflow real-overflow vector-overflow int-overflow unco
 
 group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-none case-gen-dup
                 unused-result format-real ignored-slice task-ignored width-trunc dup-attr event-const
-                ineffective-sign port-width-trunc }
+                ineffective-sign port-width-trunc constant-conversion }
 
 group pedantic = { empty-pattern implicit-net-port nonstandard-escape-code nonstandard-generate format-multibit-strength
                    nonstandard-sys-func nonstandard-foreach nonstandard-dist }
 
-group conversion = { width-trunc width-expand port-width-trunc port-width-expand implicit-conv }
+group conversion = { width-trunc width-expand port-width-trunc port-width-expand implicit-conv
+                     constant-conversion }
 
 group unused = { unused-def unused-net unused-implicit-net unused-variable undriven-net unassigned-variable
                  unused-but-set-net unused-but-set-variable unused-port undriven-port unused-argument

@@ -940,7 +940,9 @@ TEST_CASE("Dynamic string ops") {
 
     CHECK(session.eval("int'(str2)").integer() == 0x69427965);
 
-    NO_SESSION_ERRORS;
+    auto diags = session.getDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::ConstantConversion);
 }
 
 TEST_CASE("Ambiguous numeric literals") {
@@ -1784,7 +1786,7 @@ union { int i[4]; bit [18:0] j; } u;
 TEST_CASE("bit-stream cast evaluation") {
     ScriptSession session;
     session.eval(R"(
-localparam struct {bit a[$]; shortint b; string c; logic[3:0]d;} a = '{{1,2,3,4}, 67, "$", 4'b1x1z};
+localparam struct {bit a[$]; shortint b; string c; logic[3:0]d;} a = '{{1,0,1,0}, 67, "$", 4'b1x1z};
 localparam integer tab [string] = '{"Peter":20, "Paul":22, "Mary":23, default:-1 };
 typedef int b[5:7];
 localparam string str = "hello!!";
@@ -2355,7 +2357,9 @@ struct {
     session.eval("logic [11:0] r = '{12{4'd3}};");
     CHECK(session.eval("r").integer() == 4095);
 
-    NO_SESSION_ERRORS;
+    auto diags = session.getDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::ConstantConversion);
 }
 
 TEST_CASE("foreach loop extended name eval") {

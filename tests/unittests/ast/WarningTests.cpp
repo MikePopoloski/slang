@@ -608,3 +608,18 @@ endmodule
     CHECK(diags[1].code == diag::UnusedAssertionDecl);
     CHECK(diags[2].code == diag::UnusedAssertionDecl);
 }
+
+TEST_CASE("Implicit conversions with constants") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    logic [9:0] a = 9000;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::ConstantConversion);
+}

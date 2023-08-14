@@ -1059,3 +1059,11 @@ module n;
     m m1(.p);
 endmodule
 ```
+
+-Wconstant-conversion
+A constant value is changed (truncated) by an implicit conversion.
+```
+module m;
+    logic [9:0] a = 9000;
+endmodule
+```

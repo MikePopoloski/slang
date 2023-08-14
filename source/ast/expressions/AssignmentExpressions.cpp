@@ -70,14 +70,13 @@ bool isSameEnum(const Expression& expr, const Type& enumType) {
     return expr.type->isMatching(enumType);
 }
 
-void checkImplicitConversions(const ASTContext& context, const Type& targetType,
-                              const Expression& op, SourceLocation loc) {
+void checkImplicitConversions(const ASTContext& context, const Type& sourceType,
+                              const Type& targetType, const Expression& op, SourceLocation loc) {
     auto isStructUnionEnum = [](const Type& t) {
         return t.kind == SymbolKind::PackedStructType || t.kind == SymbolKind::PackedUnionType ||
                t.kind == SymbolKind::EnumType;
     };
 
-    const Type& sourceType = *op.type;
     const Type& lt = targetType.getCanonicalType();
     const Type& rt = sourceType.getCanonicalType();
     if (lt.isIntegral() && rt.isIntegral()) {
@@ -314,7 +313,7 @@ Expression& Expression::convertAssignment(const ASTContext& context, const Type&
         // If the types are not actually matching we might still want
         // to issue conversion warnings.
         if (!context.inUnevaluatedBranch() && !type.isMatching(*rt))
-            checkImplicitConversions(context, type, *result, location);
+            checkImplicitConversions(context, *rt, type, *result, location);
 
         return *result;
     }
@@ -740,13 +739,16 @@ Expression& ConversionExpression::makeImplicit(const ASTContext& context, const 
     Expression* op = &expr;
     selfDetermined(context, op);
 
+    auto result = comp.emplace<ConversionExpression>(targetType, conversionKind, *op,
+                                                     op->sourceRange);
+
     // Check if we should issue any warnings for implicit integer conversions.
     // Note that this does not apply to propagated conversions, as those almost
     // always do the right thing and the warnings would be very noisy.
     if (conversionKind == ConversionKind::Implicit && !context.inUnevaluatedBranch())
-        checkImplicitConversions(context, targetType, *op, loc);
+        checkImplicitConversions(context, *op->type, targetType, *result, loc);
 
-    return *comp.emplace<ConversionExpression>(targetType, conversionKind, *op, op->sourceRange);
+    return *result;
 }
 
 ConstantValue ConversionExpression::evalImpl(EvalContext& context) const {
@@ -775,7 +777,24 @@ ConstantValue ConversionExpression::convert(EvalContext& context, const Type& fr
         // ConversionKind::Propagated marked in Expression::PropagationVisitor
         if (conversionKind == ConversionKind::Propagated && value.isInteger())
             value.integer().setSigned(to.isSigned());
-        return value.convertToInt(to.getBitWidth(), to.isSigned(), to.isFourState());
+
+        auto result = value.convertToInt(to.getBitWidth(), to.isSigned(), to.isFourState());
+        if (conversionKind == ConversionKind::Implicit) {
+            if (value.isInteger()) {
+                // We warn if the conversion changes the value, but not if
+                // that value change is only due to a sign conversion.
+                // (Sign conversion warnings are handled elsewhere).
+                auto& oldInt = value.integer();
+                auto& newInt = result.integer();
+                if (!oldInt.hasUnknown() && !newInt.hasUnknown() &&
+                    oldInt.getBitWidth() != newInt.getBitWidth() && oldInt != newInt) {
+                    context.addDiag(diag::ConstantConversion, sourceRange)
+                        << from << to << oldInt << newInt;
+                }
+            }
+        }
+
+        return result;
     }
 
     if (to.isFloating()) {

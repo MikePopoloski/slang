@@ -1249,7 +1249,7 @@ module top;
     m m3((* foo = 1 *));
     m m4((* foo = 2 *) .x);
     m m5((* foo = 3 *) .*);
-    n n1(.c(2));
+    n n1(.c(0));
     o o1(.i(), .foo(2));
     o o2((* baz = 3 *) .i);
     o o3((* baz = 3 *) .i(i));

@@ -641,14 +641,18 @@ std::ostream& operator<<(std::ostream& os, const SVInt& rhs) {
 
 std::string SVInt::toString(bitwidth_t abbreviateThresholdBits, bool exactUnknowns) const {
     // guess the base to use
-    LiteralBase base;
     // unknown bits require binary base for lossless representation
-    if (bitWidth < 8 || (unknownFlag && exactUnknowns) || (unknownFlag && bitWidth <= 64))
+    LiteralBase base;
+    if ((bitWidth < 8 && !signFlag) || (unknownFlag && exactUnknowns) ||
+        (unknownFlag && bitWidth <= 64)) {
         base = LiteralBase::Binary;
-    else if (bitWidth <= 32 || signFlag)
+    }
+    else if (bitWidth <= 32 || signFlag) {
         base = LiteralBase::Decimal;
-    else
+    }
+    else {
         base = LiteralBase::Hex;
+    }
 
     return toString(base, abbreviateThresholdBits);
 }

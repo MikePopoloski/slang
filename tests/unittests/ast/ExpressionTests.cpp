@@ -544,6 +544,9 @@ endmodule
     auto& diagnostics = compilation.getAllDiagnostics();
     std::string result = "\n" + report(diagnostics);
     CHECK(result == R"(
+source:7:13: warning: implicit conversion from 'bit[34:0]' to 'int' changes value from 35'h22c6d1fba to 745349050 [-Wconstant-conversion]
+    int i = 35'd123498234978234;
+            ^~~~~~~~~~~~~~~~~~~
 source:7:17: warning: vector literal too large for the given number of bits [-Wvector-overflow]
     int i = 35'd123498234978234;
                 ^
@@ -617,8 +620,9 @@ TEST_CASE("Crazy long hex literal") {
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 1);
-    CHECK(diags[0].code == diag::LiteralSizeTooLarge);
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::ConstantConversion);
+    CHECK(diags[1].code == diag::LiteralSizeTooLarge);
 }
 
 TEST_CASE("Simple assignment patterns") {
@@ -1150,15 +1154,16 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 8);
+    REQUIRE(diags.size() == 9);
     CHECK(diags[0].code == diag::BadAssignment);
     CHECK(diags[1].code == diag::BadAssignment);
     CHECK(diags[2].code == diag::NoImplicitConversion);
     CHECK(diags[3].code == diag::UnpackedConcatSize);
-    CHECK(diags[4].code == diag::UnsizedInConcat);
-    CHECK(diags[5].code == diag::AssignmentPatternNoContext);
-    CHECK(diags[6].code == diag::UnpackedConcatAssociative);
-    CHECK(diags[7].code == diag::BadConcatExpression);
+    CHECK(diags[4].code == diag::ConstantConversion);
+    CHECK(diags[5].code == diag::UnsizedInConcat);
+    CHECK(diags[6].code == diag::AssignmentPatternNoContext);
+    CHECK(diags[7].code == diag::UnpackedConcatAssociative);
+    CHECK(diags[8].code == diag::BadConcatExpression);
 }
 
 TEST_CASE("Empty array concatenations") {
@@ -1417,13 +1422,17 @@ dest_t b = dest_t'(a);
         asso x = asso'(64'b0);
 )"};
 
-    for (const auto& code : illegal)
-        CHECK(testBitstream(code, diag::BadConversion) == 1);
+    for (const auto& code : illegal) {
+        auto count = testBitstream(code, diag::BadConversion);
+        if (count != 1) {
+            FAIL_CHECK("Bitstream check failed (" << count << "): " << code);
+        }
+    }
 
     std::string legal[] = {
         R"(
 // Illegal conversion from 20-bit struct to int (32 bits) - run time error
-struct {bit a[$]; shortint b;} a = '{{1,2,3,4}, 67};
+struct {bit a[$]; shortint b;} a = '{{1,0,1,0}, 67};
 int b = int'(a);
 )",
         R"(
@@ -1445,13 +1454,17 @@ channel_type channel = channel_type'(genPkt);
 Packet p = Packet'( channel[0 : 1] );
 )"};
 
-    for (const auto& code : legal)
-        CHECK(testBitstream(code) == 0);
+    for (const auto& code : legal) {
+        auto count = testBitstream(code);
+        if (count != 0) {
+            FAIL_CHECK("Bitstream check failed (" << count << "): " << code);
+        }
+    }
 
     std::string eval[] = {
         R"(
 // Illegal conversion from 20-bit struct to int (32 bits) - run time error
-localparam struct {bit a[$]; shortint b;} a = '{{1,2,3,4}, 67};
+localparam struct {bit a[$]; shortint b;} a = '{{1,0,1,0}, 67};
 localparam b = int'(a);
 )",
         R"(
@@ -1465,8 +1478,12 @@ typedef struct { shortint a[]; byte b[1:0]; } c;
 localparam c d = c'(str);
 )"};
 
-    for (const auto& code : eval)
-        CHECK(testBitstream(code, diag::ConstEvalBitstreamCastSize) == 1);
+    for (const auto& code : eval) {
+        auto count = testBitstream(code, diag::ConstEvalBitstreamCastSize);
+        if (count != 1) {
+            FAIL_CHECK("Bitstream check failed (" << count << "): " << code);
+        }
+    }
 
     CHECK(testBitstream("byte a[2]; localparam b = shortint'(a);",
                         diag::ConstEvalNonConstVariable) == 1);

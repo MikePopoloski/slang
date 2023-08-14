@@ -1066,7 +1066,7 @@ module m;
     initial begin
         assign a = 5;
         deassign a;
-        force b = 5;
+        force b = 1;
         release b;
         force c = 4;
         release c;
