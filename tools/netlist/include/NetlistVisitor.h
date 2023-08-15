@@ -80,7 +80,7 @@ public:
                 auto& rangeSelectExpr = selector->as<ast::RangeSelectExpression>();
                 auto leftIndex = rangeSelectExpr.left().eval(evalCtx);
                 auto rightIndex = rangeSelectExpr.right().eval(evalCtx);
-                node.addRangeSelect(leftIndex, rightIndex);
+                node.addRangeSelect(leftIndex, rightIndex, rangeSelectExpr.getSelectionKind());
             }
             else if (selector->kind == ast::ExpressionKind::MemberAccess) {
                 node.addMemberAccess(selector->as<ast::MemberAccessExpression>().member.name);

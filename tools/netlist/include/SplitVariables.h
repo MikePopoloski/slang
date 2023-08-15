@@ -13,8 +13,10 @@
 #include "fmt/format.h"
 #include <utility>
 
+#include "slang/ast/Symbol.h"
 #include "slang/ast/types/AllTypes.h"
 #include "slang/ast/types/Type.h"
+#include "slang/numeric/SVInt.h"
 #include "slang/util/Util.h"
 
 
@@ -62,6 +64,21 @@ public:
         SLANG_UNREACHABLE;
     }
 
+    /// Given an array type, return the base from which this array is indexed.
+    const slang::ConstantRange& getArrayRange(const slang::ast::Type &type) {
+        if (type.kind == slang::ast::SymbolKind::PackedArrayType) {
+            auto& arrayType = type.as<slang::ast::PackedArrayType>();
+            return arrayType.range;
+        }
+        else if (type.kind == slang::ast::SymbolKind::FixedSizeUnpackedArrayType) {
+            auto& arrayType = type.as<slang::ast::FixedSizeUnpackedArrayType>();
+            return arrayType.range;
+        }
+        else {
+          SLANG_ASSERT(0 && "unexpected array type");
+        }
+    }
+
     BitRange handleScalarElementSelect(const slang::ast::Type &type, BitRange range) {
         const auto& elementSelector = selectorsIt->get()->as<VariableElementSelect>();
         SLANG_ASSERT(elementSelector.getIndexInt() >= range.start);
@@ -89,12 +106,15 @@ public:
 
     BitRange handleArrayElementSelect(const slang::ast::Type &type, BitRange range) {
         const auto& elementSelector = selectorsIt->get()->as<VariableElementSelect>();
-        slang::bitwidth_t index = elementSelector.getIndexInt();
+        size_t index = elementSelector.getIndexInt();
+        auto& arrayRange = getArrayRange(type);
+        SLANG_ASSERT(index >= arrayRange.right);
+        SLANG_ASSERT(index <= arrayRange.left);
+        // Adjust for non-zero array indexing.
+        index -= arrayRange.right;
         auto* elementType = type.getArrayElementType();
-        SLANG_ASSERT((index * elementType->getBitWidth()) >= range.start);
-        SLANG_ASSERT(((index + 1) * elementType->getBitWidth()) <= range.end);
-        auto newRange = BitRange(range.start + (elementType->getBitWidth() * index),
-                                 range.start + (elementType->getBitWidth() * (index + 1)) - 1);
+        auto newRange = BitRange(range.start + (index * elementType->getBitWidth()),
+                                 range.start + ((index + 1) * elementType->getBitWidth()) - 1);
         if (std::next(selectorsIt) != node.selectors.end()) {
             selectorsIt++;
             return getBitRangeImpl(*elementType, newRange);
@@ -105,12 +125,16 @@ public:
 
     BitRange handleArrayRangeSelect(const slang::ast::Type &type, BitRange range) {
         const auto& rangeSelector = selectorsIt->get()->as<VariableRangeSelect>();
-        slang::bitwidth_t leftIndex = rangeSelector.getLeftIndexInt();
-        slang::bitwidth_t rightIndex = rangeSelector.getRightIndexInt();
-        auto* elementType = type.getArrayElementType();
+        size_t leftIndex = rangeSelector.getLeftIndexInt();
+        size_t rightIndex = rangeSelector.getRightIndexInt();
+        auto& arrayRange = getArrayRange(type);
+        SLANG_ASSERT(rightIndex >= arrayRange.right);
+        SLANG_ASSERT(leftIndex <= arrayRange.left);
         SLANG_ASSERT(rightIndex <= leftIndex);
-        SLANG_ASSERT((rightIndex * elementType->getBitWidth()) >= range.start);
-        SLANG_ASSERT((leftIndex * elementType->getBitWidth()) <= range.end);
+        // Adjust for non-zero array indexing.
+        leftIndex -= arrayRange.right;
+        rightIndex -= arrayRange.right;
+        auto* elementType = type.getArrayElementType();
         auto newRange = BitRange(range.start + (rightIndex * elementType->getBitWidth()),
                                  range.start + (leftIndex * elementType->getBitWidth()) - 1);
         if (std::next(selectorsIt) != node.selectors.end()) {
@@ -148,7 +172,7 @@ public:
             return BitRange(0, node.symbol.getDeclaredType()->getType().getBitWidth()-1);
         }
         // Simple vector
-        if (type.isSimpleBitVector()) {
+        if (type.isPredefinedInteger() || type.isScalar()) {
             if (selectorsIt->get()->isElementSelect()) {
                 return handleScalarElementSelect(type, range);
             }

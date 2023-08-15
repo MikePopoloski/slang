@@ -15,6 +15,7 @@
 #include <iostream>
 
 #include "slang/ast/ASTVisitor.h"
+#include "slang/ast/Expression.h"
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
 #include "slang/diagnostics/TextDiagnosticClient.h"
 #include "slang/syntax/SyntaxTree.h"
@@ -86,10 +87,11 @@ struct VariableElementSelect : public VariableSelectorBase {
 /// A variable selector representing a range selector.
 struct VariableRangeSelect : public VariableSelectorBase {
     ConstantValue leftIndex, rightIndex;
+    ast::RangeSelectionKind selectionKind;
 
-    VariableRangeSelect(ConstantValue leftIndex, ConstantValue rightIndex) :
+    VariableRangeSelect(ConstantValue leftIndex, ConstantValue rightIndex, ast::RangeSelectionKind selectionKind) :
         VariableSelectorBase(VariableSelectorKind::RangeSelect), leftIndex(std::move(leftIndex)),
-        rightIndex(std::move(rightIndex)) {}
+        rightIndex(std::move(rightIndex)), selectionKind(selectionKind) {}
 
     static bool isKind(VariableSelectorKind otherKind) {
         return otherKind == VariableSelectorKind::RangeSelect;
@@ -229,8 +231,8 @@ public:
     void addElementSelect(const ConstantValue& index) {
         selectors.emplace_back(std::make_unique<VariableElementSelect>(index));
     }
-    void addRangeSelect(const ConstantValue& leftIndex, const ConstantValue& rightIndex) {
-        selectors.emplace_back(std::make_unique<VariableRangeSelect>(leftIndex, rightIndex));
+    void addRangeSelect(const ConstantValue& leftIndex, const ConstantValue& rightIndex, ast::RangeSelectionKind selectionKind) {
+        selectors.emplace_back(std::make_unique<VariableRangeSelect>(leftIndex, rightIndex, selectionKind));
     }
     void addMemberAccess(std::string_view name) {
         selectors.emplace_back(std::make_unique<VariableMemberAccess>(name));

@@ -33,6 +33,33 @@ endmodule
     CHECK(!pathExists(netlist, "m.i_b", "m.o_a"));
 }
 
+//TEST_CASE("Scalar variable element") {
+//    // Test variable element select on a scalar variable.
+//    auto tree = SyntaxTree::fromText(R"(
+//module m (input logic i_a,
+//          input logic i_b,
+//          input logic i_sel,
+//          output logic o_a,
+//          output logic o_b);
+//  int foo;
+//  always_comb begin
+//    foo[i_sel] = i_a;
+//    foo[!i_sel] = i_b;
+//  end
+//  assign o_a = foo[i_sel];
+//  assign o_b = foo[!i_sel];
+//endmodule
+//)");
+//    Compilation compilation;
+//    compilation.addSyntaxTree(tree);
+//    NO_COMPILATION_ERRORS;
+//    auto netlist = createNetlist(compilation);
+//    CHECK(pathExists(netlist, "m.i_a", "m.o_a"));
+//    CHECK(pathExists(netlist, "m.i_b", "m.o_b"));
+//    CHECK(!pathExists(netlist, "m.i_a", "m.o_b"));
+//    CHECK(!pathExists(netlist, "m.i_b", "m.o_a"));
+//}
+
 TEST_CASE("Scalar range") {
     // Test range select on a scalar variable.
     auto tree = SyntaxTree::fromText(R"(
@@ -107,31 +134,6 @@ endmodule
     CHECK(!pathExists(netlist, "m.i_b", "m.o_a"));
 }
 
-TEST_CASE("Unpacked array element") {
-    // Test element select on an unpacked array variable.
-    auto tree = SyntaxTree::fromText(R"(
-module m (input logic i_a,
-          input logic i_b,
-          output logic o_a,
-          output logic o_b);
-  logic foo [1:0];
-  assign foo[1] = i_a;
-  assign foo[0] = i_b;
-  assign o_a = foo[1];
-  assign o_b = foo[0];
-endmodule
-)");
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-    NO_COMPILATION_ERRORS;
-    auto netlist = createNetlist(compilation);
-    CHECK(pathExists(netlist, "m.i_a", "m.o_a"));
-    CHECK(pathExists(netlist, "m.i_b", "m.o_b"));
-    CHECK(!pathExists(netlist, "m.i_a", "m.o_b"));
-    CHECK(!pathExists(netlist, "m.i_b", "m.o_a"));
-}
-
-
 TEST_CASE("Packed array range") {
     // Test range select on a packed array variable.
     auto tree = SyntaxTree::fromText(R"(
@@ -182,6 +184,32 @@ endmodule
     CHECK(!pathExists(netlist, "m.i_b", "m.o_a"));
 }
 
+TEST_CASE("Unpacked array element") {
+    // Test element select on an unpacked array variable.
+    auto tree = SyntaxTree::fromText(R"(
+module m (input logic i_a,
+          input logic i_b,
+          output logic o_a,
+          output logic o_b);
+  logic foo [1:0];
+  assign foo[1] = i_a;
+  assign foo[0] = i_b;
+  assign o_a = foo[1];
+  assign o_b = foo[0];
+endmodule
+)");
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+    auto netlist = createNetlist(compilation);
+    CHECK(pathExists(netlist, "m.i_a", "m.o_a"));
+    CHECK(pathExists(netlist, "m.i_b", "m.o_b"));
+    CHECK(!pathExists(netlist, "m.i_a", "m.o_b"));
+    CHECK(!pathExists(netlist, "m.i_b", "m.o_a"));
+}
+
+// TODO: variable positions in element and range selects
+// TODO: [x:y], [x+:y] and [x-:y] range selects
 
 
 //===---------------------------------------------------------------------===//
