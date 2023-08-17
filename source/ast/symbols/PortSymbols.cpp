@@ -1125,7 +1125,6 @@ private:
             if (!sym)
                 return {nullptr, nullptr};
 
-            SLANG_ASSERT(!modport || sym == modport);
             modport = sym;
         }
 

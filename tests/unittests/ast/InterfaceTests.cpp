@@ -605,3 +605,27 @@ endmodule
     CHECK(diags[0].code == diag::InvalidModportAccess);
     CHECK(diags[1].code == diag::ParamHasNoValue);
 }
+
+TEST_CASE("Interface array multi-driven error regress") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I;
+    int i;
+    modport m(output i);
+endinterface
+
+module mod(I.m arr[3]);
+    for (genvar i = 0; i < 3; i++) begin
+        always_comb arr[i].i = i;
+    end
+endmodule
+
+module top;
+    I i [3]();
+    mod m1(i);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

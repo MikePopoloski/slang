@@ -418,8 +418,13 @@ bool lookupDownward(std::span<const NamePlusLoc> nameParts, NameComponents name,
 
             // If we had a modport restriction on an interface port lookup
             // we should switch to doing the next lookup in that modport's scope.
-            if (modport)
-                symbol = modport;
+            // We need to re-lookup the modport symbol because the one we have
+            // is just representative; the real one depends on the result of the
+            // selectChild call we made above in the case of an interface array.
+            if (modport) {
+                symbol = body.find(modport->name);
+                SLANG_ASSERT(symbol);
+            }
 
             // If we're descending into a program instance, verify that
             // the original scope for the lookup is also within a program.
