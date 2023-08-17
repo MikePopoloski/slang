@@ -687,6 +687,7 @@ warning range-oob RangeOOB "cannot select range of [{}:{}] from {}"
 warning range-width-oob RangeWidthOOB "cannot select range of {} elements from {}"
 warning specify-param SpecifyBlockParam "parameters cannot be used in specify blocks"
 warning negative-timing-limit NegativeTimingLimit "timing check limit value '{}' should not be negative"
+warning sign-conversion SignConversion "implicit conversion changes signedness from {} to {}"
 
 subsystem Statements
 error ReturnNotInSubroutine "return statement is only valid inside task and function blocks"
@@ -1047,7 +1048,7 @@ group pedantic = { empty-pattern implicit-net-port nonstandard-escape-code nonst
                    nonstandard-sys-func nonstandard-foreach nonstandard-dist }
 
 group conversion = { width-trunc width-expand port-width-trunc port-width-expand implicit-conv
-                     constant-conversion }
+                     constant-conversion sign-conversion }
 
 group unused = { unused-def unused-net unused-implicit-net unused-variable undriven-net unassigned-variable
                  unused-but-set-net unused-but-set-variable unused-port undriven-port unused-argument

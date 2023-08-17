@@ -2072,3 +2072,23 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::ImplicitConvert);
 }
+
+TEST_CASE("No implicit conv warning for identical structs") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    struct packed { logic a; } s1;
+    struct packed { logic a; } s2;
+    struct packed { logic b; } s3;
+
+    assign s1 = s2;
+    assign s2 = s3;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::ImplicitConvert);
+}
