@@ -659,16 +659,20 @@ static void reduceComparison(const BinaryExpression& expr, Diagnostic& result) {
             return;
     }
 
-    SLANG_ASSERT(expr.syntax);
-    auto& syntax = expr.syntax->as<BinaryExpressionSyntax>();
+    auto syntax = expr.syntax;
+    SLANG_ASSERT(syntax);
+    while (syntax->kind == SyntaxKind::ParenthesizedExpression)
+        syntax = syntax->as<ParenthesizedExpressionSyntax>().expression;
+
+    auto opToken = syntax->as<BinaryExpressionSyntax>().operatorToken;
 
     auto lc = expr.left().constant;
     auto rc = expr.right().constant;
     SLANG_ASSERT(lc && rc);
 
-    auto& note = result.addNote(diag::NoteComparisonReduces, syntax.operatorToken.location());
+    auto& note = result.addNote(diag::NoteComparisonReduces, opToken.location());
     note << expr.sourceRange;
-    note << *lc << syntax.operatorToken.rawText() << *rc;
+    note << *lc << opToken.rawText() << *rc;
 }
 
 void ElabSystemTaskSymbol::reportStaticAssert(const Scope& scope, SourceLocation loc,

@@ -1546,7 +1546,7 @@ module m;
 
     initial begin
         $static_assert(foo > $bits(bar));
-        $static_assert(foo < $bits(bar));
+        $static_assert((foo < $bits(bar)));
     end
 endmodule
 )");
@@ -1573,11 +1573,11 @@ source:9:41: note: declared here
     struct packed { logic [4:1] a, b; } bar;
                                         ^
 source:18:9: error: static assertion failed
-        $static_assert(foo < $bits(bar));
+        $static_assert((foo < $bits(bar)));
         ^
-source:18:28: note: comparison reduces to (12 < 8)
-        $static_assert(foo < $bits(bar));
-                       ~~~~^~~~~~~~~~~~
+source:18:29: note: comparison reduces to (12 < 8)
+        $static_assert((foo < $bits(bar)));
+                        ~~~~^~~~~~~~~~~~
 )");
 }
 
