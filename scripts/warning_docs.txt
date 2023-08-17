@@ -1067,3 +1067,6 @@ module m;
     logic [9:0] a = 9000;
 endmodule
 ```
+
+-Wsign-conversion
+<ignored>
