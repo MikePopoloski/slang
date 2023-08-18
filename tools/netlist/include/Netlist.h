@@ -50,6 +50,7 @@ struct VariableSelectorBase {
     bool isElementSelect() const { return kind == VariableSelectorKind::ElementSelect; }
     bool isRangeSelect() const { return kind == VariableSelectorKind::RangeSelect; }
     bool isMemberAccess() const { return kind == VariableSelectorKind::MemberAccess; }
+    bool isArraySelect() const { return isElementSelect() || isRangeSelect(); }
 
     template<typename T>
     T& as() {
@@ -314,26 +315,37 @@ public:
         return node;
     }
 
-    /// Find a variable declaration node in the netlist by hierarchical path.
-    /// TODO? Optimise this lookup by maintaining a list of declaration nodes.
-    NetlistNode* lookupVariable(const std::string& hierarchicalPath) {
-        auto compareNode = [&hierarchicalPath](const std::unique_ptr<NetlistNode>& node) {
-            return node->kind == NodeKind::VariableDeclaration &&
-                   node->as<NetlistVariableDeclaration>().hierarchicalPath == hierarchicalPath;
-        };
-        auto it = std::ranges::find_if(*this, compareNode);
-        return it != end() ? it->get() : nullptr;
-    }
-
     /// Find a port declaration node in the netlist by hierarchical path.
-    /// TODO? Optimise this lookup by maintaining a list of port nodes.
-    NetlistNode* lookupPort(const std::string& hierarchicalPath) {
+    NetlistPortDeclaration* lookupPort(std::string_view hierarchicalPath) {
         auto compareNode = [&hierarchicalPath](const std::unique_ptr<NetlistNode>& node) {
             return node->kind == NodeKind::PortDeclaration &&
                    node->as<NetlistPortDeclaration>().hierarchicalPath == hierarchicalPath;
         };
         auto it = std::ranges::find_if(*this, compareNode);
-        return it != end() ? it->get() : nullptr;
+        return it != end() ? &it->get()->as<NetlistPortDeclaration>() : nullptr;
+    }
+
+    /// Find a variable declaration node in the netlist by hierarchical path.
+    /// Note that this does not lookup alias nodes.
+    NetlistVariableDeclaration* lookupVariable(std::string_view hierarchicalPath) {
+        auto compareNode = [&hierarchicalPath](const std::unique_ptr<NetlistNode>& node) {
+            return node->kind == NodeKind::VariableDeclaration &&
+                   node->as<NetlistVariableDeclaration>().hierarchicalPath == hierarchicalPath;
+        };
+        auto it = std::ranges::find_if(*this, compareNode);
+        return it != end() ? &it->get()->as<NetlistVariableDeclaration>() : nullptr;
+    }
+
+    /// Find a variable reference node in the netlist by its syntax.
+    /// Note that this does not include the hierarchical path, which is only
+    /// associated with the corresponding variable declaration nodes.
+    NetlistVariableReference* lookupVariableReference(std::string_view syntax) {
+        auto compareNode = [&syntax](const std::unique_ptr<NetlistNode>& node) {
+            return node->kind == NodeKind::VariableReference &&
+                   node->as<NetlistVariableReference>().toString() == syntax;
+        };
+        auto it = std::ranges::find_if(*this, compareNode);
+        return it != end() ? &it->get()->as<NetlistVariableReference>() : nullptr;
     }
 };
 
