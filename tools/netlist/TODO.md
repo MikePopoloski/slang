@@ -1,6 +1,20 @@
 To dos
 ======
 
+- Bug report:
+
+module m;
+  logic [7:4] [3:2] foo;
+  always_comb begin
+    foo[0] = 0;
+  end
+endmodule
+
+  Assertion 'range.left >= 0 && range.right >= 0' failed
+    in file /home/jamie/slang/source/ast/symbols/ValueSymbol.cpp, line 436
+    function: static std::optional<std::pair<uint32_t, uint32_t>> slang::ast::
+  ValueDriver::getBounds(const Expression &, EvalContext &, const Type &)
+
 - Support for more procedural statements, the full list is:
 
     InvalidStatement

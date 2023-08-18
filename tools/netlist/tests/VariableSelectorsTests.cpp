@@ -8,21 +8,25 @@
 
 #include "NetlistTest.h"
 #include "SplitVariables.h"
+#include <stdexcept>
 
 
 /// Helper method to extract a variable reference from a netlist and return the
 /// bit range associated with it.
 BitRange getBitRange(Netlist &netlist, std::string_view variableSyntax) {
     auto* node = netlist.lookupVariableReference(variableSyntax);
+    if (node == nullptr) {
+      throw std::runtime_error(fmt::format("Could not find node {}", variableSyntax));
+    }
     return AnalyseVariableReference::create(*node).getBitRange();
 }
 
 TEST_CASE("Scalar element and range") {
-    // Test element select on a scalar variable.
     auto tree = SyntaxTree::fromText(R"(
 module m;
   int foo;
   always_comb begin
+    foo = 0;
     foo[0] = 0;
     foo[1] = 0;
     foo[7:7] = 0;
@@ -40,6 +44,7 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
     auto netlist = createNetlist(compilation);
+    CHECK(getBitRange(netlist, "foo") == BitRange(0, 31));
     CHECK(getBitRange(netlist, "foo[0]") == BitRange(0));
     CHECK(getBitRange(netlist, "foo[1]") == BitRange(1));
     CHECK(getBitRange(netlist, "foo[7:7]") == BitRange(7));
@@ -57,6 +62,7 @@ TEST_CASE("Packed 1D array element and range") {
 module m;
   logic [3:0] foo;
   always_comb begin
+    foo = 0;
     foo[0] = 0;
     foo[1] = 0;
     foo[2] = 0;
@@ -73,6 +79,7 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
     auto netlist = createNetlist(compilation);
+    CHECK(getBitRange(netlist, "foo") == BitRange(0, 3));
     CHECK(getBitRange(netlist, "foo[0]") == BitRange(0));
     CHECK(getBitRange(netlist, "foo[1]") == BitRange(1));
     CHECK(getBitRange(netlist, "foo[2]") == BitRange(2));
@@ -89,6 +96,7 @@ TEST_CASE("Packed 1D array element and range non-zero indexed") {
 module m;
   logic [7:4] foo;
   always_comb begin
+    foo = 0;
     foo[4] = 0;
     foo[5] = 0;
     foo[6] = 0;
@@ -105,6 +113,7 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
     auto netlist = createNetlist(compilation);
+    CHECK(getBitRange(netlist, "foo") == BitRange(0, 3));
     CHECK(getBitRange(netlist, "foo[4]") == BitRange(0));
     CHECK(getBitRange(netlist, "foo[5]") == BitRange(1));
     CHECK(getBitRange(netlist, "foo[6]") == BitRange(2));
@@ -116,53 +125,123 @@ endmodule
     CHECK(getBitRange(netlist, "foo[7:4][6:5][5]") == BitRange(1));
 }
 
-//TEST_CASE("Packed 2D array element and range") {
-//    // Test element select on a packed array variable.
-//    auto tree = SyntaxTree::fromText(R"(
-//module m;
-//  logic [1:0] [1:0] foo;
-//  always_comb begin
-//    foo[0] = 0;
-//    foo[1] = 0;
-//    foo[0][0] = 0;
-//    foo[0][1] = 0;
-//    foo[1][0] = 0;
-//    foo[1][1] = 0;
-//  assign foo[3:2] = i_a;
-//  assign foo[1:0] = i_b;
-//  assign o_a = foo[7:4][6:5];
-//  assign o_b = foo[3:0][2:1];
-//  end
-//endmodule
-//)");
-//    Compilation compilation;
-//    compilation.addSyntaxTree(tree);
-//    NO_COMPILATION_ERRORS;
-//    auto netlist = createNetlist(compilation);
-//    CHECK(getBitRange(netlist, "foo[0]") == BitRange(0, 1));
-//    CHECK(getBitRange(netlist, "foo[1]") == BitRange(2, 3));
-//    CHECK(getBitRange(netlist, "foo[0][0]") == BitRange(0));
-//    CHECK(getBitRange(netlist, "foo[0][1]") == BitRange(1));
-//    CHECK(getBitRange(netlist, "foo[1][0]") == BitRange(2));
-//    CHECK(getBitRange(netlist, "foo[1][1]") == BitRange(3));
-//}
-//
-//TEST_CASE("Unpacked 1D array element") {
-//    // Test element select on an unpacked array variable.
-//    auto tree = SyntaxTree::fromText(R"(
-//module m;
-//  logic foo [1:0];
-//  always_comb begin
-//    foo[0] = 0;
-//    foo[1] = 0;
-//  end
-//endmodule
-//)");
-//    Compilation compilation;
-//    compilation.addSyntaxTree(tree);
-//    NO_COMPILATION_ERRORS;
-//    auto netlist = createNetlist(compilation);
-//}
+TEST_CASE("Packed 2D array element and range") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+  logic [3:0] [1:0] foo;
+  always_comb begin
+    foo = 0;
+    foo[0] = 0;
+    foo[1] = 0;
+    foo[2] = 0;
+    foo[3] = 0;
+    foo[0][1] = 0;
+    foo[1][1] = 0;
+    foo[2][1] = 0;
+    foo[3][1] = 0;
+    foo[1:0] = 0;
+    foo[3:2] = 0;
+    foo[3:0][2:1] = 0;
+    foo[3:0][2:1][1] = 0;
+  end
+endmodule
+)");
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+    auto netlist = createNetlist(compilation);
+    CHECK(getBitRange(netlist, "foo") == BitRange(0, 7));
+    CHECK(getBitRange(netlist, "foo[0]") == BitRange(0, 1));
+    CHECK(getBitRange(netlist, "foo[1]") == BitRange(2, 3));
+    CHECK(getBitRange(netlist, "foo[2]") == BitRange(4, 5));
+    CHECK(getBitRange(netlist, "foo[3]") == BitRange(6, 7));
+    CHECK(getBitRange(netlist, "foo[0][1]") == BitRange(1));
+    CHECK(getBitRange(netlist, "foo[1][1]") == BitRange(3));
+    CHECK(getBitRange(netlist, "foo[2][1]") == BitRange(5));
+    CHECK(getBitRange(netlist, "foo[3][1]") == BitRange(7));
+    CHECK(getBitRange(netlist, "foo[1:0]") == BitRange(0, 3));
+    CHECK(getBitRange(netlist, "foo[3:2]") == BitRange(4, 7));
+    CHECK(getBitRange(netlist, "foo[3:0][2:1]") == BitRange(2, 5));
+    CHECK(getBitRange(netlist, "foo[3:0][2:1][1]") == BitRange(2, 3));
+}
+
+TEST_CASE("Packed 2D array element and range, non-zero indexing") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+  logic [7:4] [3:2] foo;
+  always_comb begin
+    foo = 0;
+    foo[4] = 0;
+    foo[4][3] = 0;
+    foo[5:4] = 0;
+    foo[7:4][6:5] = 0;
+    foo[7:5][6:5][5] = 0;
+  end
+endmodule
+)");
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+    auto netlist = createNetlist(compilation);
+    CHECK(getBitRange(netlist, "foo") == BitRange(0, 7));
+    CHECK(getBitRange(netlist, "foo[4]") == BitRange(0, 1));
+    CHECK(getBitRange(netlist, "foo[4][3]") == BitRange(1));
+    CHECK(getBitRange(netlist, "foo[5:4]") == BitRange(0, 3));
+    CHECK(getBitRange(netlist, "foo[7:4][6:5]") == BitRange(2, 5));
+    CHECK(getBitRange(netlist, "foo[7:5][6:5][5]") == BitRange(2, 3));
+}
+
+TEST_CASE("Unpacked 1D array element") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+  logic foo [1:0];
+  logic bar [1:0];
+  always_comb begin
+    foo = bar;
+    foo[0] = 0;
+    foo[1] = 0;
+  end
+endmodule
+)");
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+    auto netlist = createNetlist(compilation);
+    // Can't get bitwidth of an unpacked type.
+    //CHECK(getBitRange(netlist, "foo") == BitRange(0, 1));
+    CHECK(getBitRange(netlist, "foo[0]") == BitRange(0));
+    CHECK(getBitRange(netlist, "foo[1]") == BitRange(1));
+}
+
+TEST_CASE("Unpacked 2D array element") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+  logic foo [3:0] [1:0];
+  logic bar [1:0];
+  always_comb begin
+    foo[0] = bar;
+    foo[1] = bar;
+    foo[2] = bar;
+    foo[3] = bar;
+    foo[0][1] = 0;
+    foo[1][1] = 0;
+    foo[2][1] = 0;
+    foo[3][1] = 0;
+  end
+endmodule
+)");
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+    auto netlist = createNetlist(compilation);
+    // Can't get bitwidth of an unpacked type.
+    //CHECK(getBitRange(netlist, "foo[0]") == BitRange(0, 1));
+    //CHECK(getBitRange(netlist, "foo[1]") == BitRange(2, 3));
+    //CHECK(getBitRange(netlist, "foo[0][1]") == BitRange(1));
+    //CHECK(getBitRange(netlist, "foo[1][1]") == BitRange(3));
+    //CHECK(getBitRange(netlist, "foo[2][1]") == BitRange(5));
+    //CHECK(getBitRange(netlist, "foo[3][1]") == BitRange(7));
+}
 
 //===---------------------------------------------------------------------===//
 // Tests for variable splitting
