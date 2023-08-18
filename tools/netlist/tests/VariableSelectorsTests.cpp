@@ -101,14 +101,14 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
     auto netlist = createNetlist(compilation);
-    CHECK(getBitRange(netlist, "foo[0]") == BitRange(0));
-    CHECK(getBitRange(netlist, "foo[1]") == BitRange(1));
-    CHECK(getBitRange(netlist, "foo[2]") == BitRange(2));
-    CHECK(getBitRange(netlist, "foo[3]") == BitRange(3));
+    CHECK(getBitRange(netlist, "foo[4]") == BitRange(0));
+    CHECK(getBitRange(netlist, "foo[5]") == BitRange(1));
+    CHECK(getBitRange(netlist, "foo[6]") == BitRange(2));
+    CHECK(getBitRange(netlist, "foo[7]") == BitRange(3));
     CHECK(getBitRange(netlist, "foo[7:7]") == BitRange(3));
-    CHECK(getBitRange(netlist, "foo[1:0]") == BitRange(0, 1));
-    CHECK(getBitRange(netlist, "foo[3:0]") == BitRange(0, 3));
-    CHECK(getBitRange(netlist, "foo[2:1]") == BitRange(1, 2));
+    CHECK(getBitRange(netlist, "foo[5:4]") == BitRange(0, 1));
+    CHECK(getBitRange(netlist, "foo[7:4]") == BitRange(0, 3));
+    CHECK(getBitRange(netlist, "foo[6:5]") == BitRange(1, 2));
 }
 
 //TEST_CASE("Packed 2D array element and range") {
