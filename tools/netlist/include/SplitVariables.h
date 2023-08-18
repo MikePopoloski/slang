@@ -121,7 +121,7 @@ public:
         rightIndex -= arrayRange.right;
         auto* elementType = type.getArrayElementType();
         auto newRange = BitRange(range.start + (rightIndex * elementType->getBitWidth()),
-                                 range.start + (leftIndex * elementType->getBitWidth()) - 1);
+                                 range.start + ((leftIndex + 1) * elementType->getBitWidth()) - 1);
         if (std::next(selectorsIt) != node.selectors.end()) {
             selectorsIt++;
             return getBitRangeImpl(type, newRange);
@@ -158,6 +158,15 @@ public:
         }
         // Simple vector
         if (type.isPredefinedInteger() || type.isScalar()) {
+            if (selectorsIt->get()->isRangeSelect() &&
+                std::next(selectorsIt) != node.selectors.end() &&
+                std::next(selectorsIt)->get()->isArraySelect()) {
+                // Multiple range selectors have only the effect of
+                // the last one. Eg x[3:0][2:1] <=> x[2:1] or x[2:1][2] <=>
+                // x[2].
+                selectorsIt++;
+                return getBitRangeImpl(type, range);
+            }
             if (selectorsIt->get()->isElementSelect()) {
                 return handleScalarElementSelect(type, range);
             }
@@ -170,12 +179,10 @@ public:
         }
         // Packed or unpacked array
         else if (type.isArray()) {
-            if (std::next(selectorsIt) != node.selectors.end() &&
-                (selectorsIt->get()->isRangeSelect() &&
-                 std::next(selectorsIt)->get()->isArraySelect())) {
-                // Multiple range selectors have only the effect of
-                // the last one. Eg x[3:0][2:1] <=> x[2:1] or x[2:1][2] <=>
-                // x[2].
+            if (selectorsIt->get()->isRangeSelect() &&
+                std::next(selectorsIt) != node.selectors.end() &&
+                std::next(selectorsIt)->get()->isArraySelect()) {
+                // Multiple range selectors.
                 selectorsIt++;
                 return getBitRangeImpl(type, range);
             }

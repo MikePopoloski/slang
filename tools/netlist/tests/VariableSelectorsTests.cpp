@@ -46,6 +46,7 @@ endmodule
     CHECK(getBitRange(netlist, "foo[1:0]") == BitRange(0, 1));
     CHECK(getBitRange(netlist, "foo[3:1]") == BitRange(1, 3));
     CHECK(getBitRange(netlist, "foo[7:4]") == BitRange(4, 7));
+    CHECK(getBitRange(netlist, "foo[3:1][2:1]") == BitRange(1, 2));
     CHECK(getBitRange(netlist, "foo[7:4][6:5]") == BitRange(5, 6));
     CHECK(getBitRange(netlist, "foo[3:1][2:1][1]") == BitRange(1));
     CHECK(getBitRange(netlist, "foo[7:4][6:5][5]") == BitRange(5));
@@ -64,6 +65,7 @@ module m;
     foo[1:0] = 0;
     foo[3:0] = 0;
     foo[2:1] = 0;
+    foo[3:1][2:1][1] = 0;
   end
 endmodule
 )");
@@ -79,6 +81,7 @@ endmodule
     CHECK(getBitRange(netlist, "foo[1:0]") == BitRange(0, 1));
     CHECK(getBitRange(netlist, "foo[3:0]") == BitRange(0, 3));
     CHECK(getBitRange(netlist, "foo[2:1]") == BitRange(1, 2));
+    CHECK(getBitRange(netlist, "foo[3:1][2:1][1]") == BitRange(1));
 }
 
 TEST_CASE("Packed 1D array element and range non-zero indexed") {
@@ -94,6 +97,7 @@ module m;
     foo[5:4] = 0;
     foo[7:4] = 0;
     foo[6:5] = 0;
+    foo[7:4][6:5][5] = 0;
   end
 endmodule
 )");
@@ -109,6 +113,7 @@ endmodule
     CHECK(getBitRange(netlist, "foo[5:4]") == BitRange(0, 1));
     CHECK(getBitRange(netlist, "foo[7:4]") == BitRange(0, 3));
     CHECK(getBitRange(netlist, "foo[6:5]") == BitRange(1, 2));
+    CHECK(getBitRange(netlist, "foo[7:4][6:5][5]") == BitRange(1));
 }
 
 //TEST_CASE("Packed 2D array element and range") {
