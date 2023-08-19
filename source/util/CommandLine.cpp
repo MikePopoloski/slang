@@ -148,7 +148,7 @@ void CommandLine::setPositional(std::vector<std::string>& values, std::string_vi
     positional->flags = flags;
 }
 
-void CommandLine::setPositional(OptionCallback cb, std::string_view valueName,
+void CommandLine::setPositional(const OptionCallback& cb, std::string_view valueName,
                                 bitmask<CommandLineFlags> flags) {
     if (positional)
         SLANG_THROW(std::runtime_error("Can only set one positional argument"));

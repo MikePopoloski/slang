@@ -96,7 +96,8 @@ bool isSameStructUnion(const Type& left, const Type& right) {
         if (!lft.isMatching(rft) && !isSameStructUnion(lft, rft))
             return false;
 
-        ++lit, ++rit;
+        ++lit;
+        ++rit;
     }
     return rit == rr.end();
 }

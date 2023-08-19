@@ -264,7 +264,7 @@ public:
     /// @param valueName for including in the help text
     /// @param flags additional flags that control how the option behaves
     /// @note only one variable or callback be set to receive positional arguments
-    void setPositional(OptionCallback cb, std::string_view valueName,
+    void setPositional(const OptionCallback& cb, std::string_view valueName,
                        bitmask<CommandLineFlags> flags = {});
 
     /// Adds a command that will be ignored if encountered during argument parsing.
