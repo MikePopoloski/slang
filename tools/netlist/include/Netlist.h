@@ -76,9 +76,9 @@ struct VariableElementSelect : public VariableSelectorBase {
         return otherKind == VariableSelectorKind::ElementSelect;
     }
 
-    size_t getIndexInt() const {
-        auto intValue = index.integer().as<size_t>();
-        SLANG_ASSERT(intValue && "could not convert index to size_t");
+    int32_t getIndexInt() const {
+        auto intValue = index.integer().as<int32_t>();
+        SLANG_ASSERT(intValue && "could not convert index to int32_t");
         return *intValue;
     }
 
@@ -98,15 +98,15 @@ struct VariableRangeSelect : public VariableSelectorBase {
         return otherKind == VariableSelectorKind::RangeSelect;
     }
 
-    size_t getLeftIndexInt() const {
-        auto intValue = leftIndex.integer().as<size_t>();
-        SLANG_ASSERT(intValue && "could not convert left index to size_t");
+    int32_t getLeftIndexInt() const {
+        auto intValue = leftIndex.integer().as<int32_t>();
+        SLANG_ASSERT(intValue && "could not convert left index to int32_t");
         return *intValue;
     }
 
-    size_t getRightIndexInt() const {
-        auto intValue = rightIndex.integer().as<size_t>();
-        SLANG_ASSERT(intValue && "could not convert right index to size_t");
+    int32_t getRightIndexInt() const {
+        auto intValue = rightIndex.integer().as<int32_t>();
+        SLANG_ASSERT(intValue && "could not convert right index to int32_t");
         return *intValue;
     }
 
