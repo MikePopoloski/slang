@@ -3,12 +3,12 @@ To dos
 
 - Bug report:
 
-module m;
-  logic [7:4] [3:2] foo;
-  always_comb begin
-    foo[0] = 0;
-  end
-endmodule
+  module m;
+    logic [7:4] [3:2] foo;
+    always_comb begin
+      foo[0] = 0;
+    end
+  endmodule
 
   Assertion 'range.left >= 0 && range.right >= 0' failed
     in file /home/jamie/slang/source/ast/symbols/ValueSymbol.cpp, line 436

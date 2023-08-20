@@ -16,9 +16,10 @@
 #include "slang/ast/Symbol.h"
 #include "slang/ast/types/AllTypes.h"
 #include "slang/ast/types/Type.h"
+#include "slang/numeric/ConstantValue.h"
 #include "slang/numeric/SVInt.h"
 #include "slang/util/Util.h"
-#include "BitRange.h"
+
 
 namespace netlist {
 
@@ -36,13 +37,13 @@ public:
       node(node), selectorsIt(node.selectors.begin()) {}
 
     /// Given a packed struct type, return the bit position of the named field.
-    BitRange getFieldRange(const slang::ast::PackedStructType &packedStruct,
-                           const std::string_view fieldName) const {
+    ConstantRange getFieldRange(const slang::ast::PackedStructType &packedStruct,
+                               const std::string_view fieldName) const {
         size_t offset = 0;
         for (auto &member : packedStruct.members()) {
-            auto fieldWidth = member.getDeclaredType()->getType().getBitWidth();
+            int32_t fieldWidth = member.getDeclaredType()->getType().getBitWidth();
             if (member.name == fieldName) {
-                return BitRange(offset, offset+fieldWidth);
+                return {(int32_t) offset, (int32_t) offset + fieldWidth};
             };
             offset += fieldWidth;;
         }
@@ -50,7 +51,7 @@ public:
     }
 
     /// Given an array type, return the range from which the array is indexed.
-    const slang::ConstantRange& getArrayRange(const slang::ast::Type &type) {
+    ConstantRange getArrayRange(const slang::ast::Type &type) {
         if (type.kind == slang::ast::SymbolKind::PackedArrayType) {
             auto& arrayType = type.as<slang::ast::PackedArrayType>();
             return arrayType.range;
@@ -64,23 +65,23 @@ public:
         }
     }
 
-    BitRange handleScalarElementSelect(const slang::ast::Type &type, BitRange range) {
+    ConstantRange handleScalarElementSelect(const slang::ast::Type &type, ConstantRange range) {
         const auto& elementSelector = selectorsIt->get()->as<VariableElementSelect>();
-        SLANG_ASSERT(elementSelector.getIndexInt() >= range.start);
-        SLANG_ASSERT(elementSelector.getIndexInt() <= range.end);
-        size_t index = range.start + elementSelector.getIndexInt();
-        return BitRange(index);
+        SLANG_ASSERT(elementSelector.getIndexInt() >= range.lower());
+        SLANG_ASSERT(elementSelector.getIndexInt() <= range.upper());
+        int32_t index = range.lower() + elementSelector.getIndexInt();
+        return {index, index};
     }
 
-    BitRange handleScalarRangeSelect(const slang::ast::Type &type, BitRange range) {
+    ConstantRange handleScalarRangeSelect(const slang::ast::Type &type, ConstantRange range) {
         const auto& rangeSelector = selectorsIt->get()->as<VariableRangeSelect>();
-        slang::bitwidth_t leftIndex = rangeSelector.getLeftIndexInt();
-        slang::bitwidth_t rightIndex = rangeSelector.getRightIndexInt();
+        int32_t leftIndex = rangeSelector.getLeftIndexInt();
+        int32_t rightIndex = rangeSelector.getRightIndexInt();
         SLANG_ASSERT(rightIndex <= leftIndex);
-        SLANG_ASSERT(rightIndex >= range.start);
-        SLANG_ASSERT(leftIndex <= range.end);
-        auto newRange = BitRange(range.start + rightIndex,
-                                 range.start + leftIndex);
+        SLANG_ASSERT(rightIndex >= range.lower());
+        SLANG_ASSERT(leftIndex <= range.upper());
+        ConstantRange newRange = {range.lower() + rightIndex,
+                                  range.lower() + leftIndex};
         if (std::next(selectorsIt) != node.selectors.end()) {
             selectorsIt++;
             return getBitRangeImpl(type, newRange);
@@ -89,17 +90,17 @@ public:
         }
     }
 
-    BitRange handleArrayElementSelect(const slang::ast::Type &type, BitRange range) {
+    ConstantRange handleArrayElementSelect(const slang::ast::Type &type, ConstantRange range) {
         const auto& elementSelector = selectorsIt->get()->as<VariableElementSelect>();
-        size_t index = elementSelector.getIndexInt();
-        auto& arrayRange = getArrayRange(type);
-        SLANG_ASSERT(index >= arrayRange.right);
-        SLANG_ASSERT(index <= arrayRange.left);
+        int32_t index = elementSelector.getIndexInt();
+        auto arrayRange = getArrayRange(type);
+        SLANG_ASSERT(index >= arrayRange.lower());
+        SLANG_ASSERT(index <= arrayRange.upper());
         // Adjust for non-zero array indexing.
-        index -= arrayRange.right;
+        index -= arrayRange.lower();
         auto* elementType = type.getArrayElementType();
-        auto newRange = BitRange(range.start + (index * elementType->getBitWidth()),
-                                 range.start + ((index + 1) * elementType->getBitWidth()) - 1);
+        ConstantRange newRange = {range.lower() + (index * (int32_t) elementType->getBitWidth()),
+                                  range.lower() + ((index + 1) * (int32_t) elementType->getBitWidth()) - 1};
         if (std::next(selectorsIt) != node.selectors.end()) {
             selectorsIt++;
             return getBitRangeImpl(*elementType, newRange);
@@ -108,20 +109,20 @@ public:
         }
     }
 
-    BitRange handleArrayRangeSelect(const slang::ast::Type &type, BitRange range) {
+    ConstantRange handleArrayRangeSelect(const slang::ast::Type &type, ConstantRange range) {
         const auto& rangeSelector = selectorsIt->get()->as<VariableRangeSelect>();
-        size_t leftIndex = rangeSelector.getLeftIndexInt();
-        size_t rightIndex = rangeSelector.getRightIndexInt();
-        auto& arrayRange = getArrayRange(type);
-        SLANG_ASSERT(rightIndex >= arrayRange.right);
-        SLANG_ASSERT(leftIndex <= arrayRange.left);
+        int32_t leftIndex = rangeSelector.getLeftIndexInt();
+        int32_t rightIndex = rangeSelector.getRightIndexInt();
+        auto arrayRange = getArrayRange(type);
+        SLANG_ASSERT(rightIndex >= arrayRange.lower());
+        SLANG_ASSERT(leftIndex <= arrayRange.upper());
         SLANG_ASSERT(rightIndex <= leftIndex);
         // Adjust for non-zero array indexing.
-        leftIndex -= arrayRange.right;
-        rightIndex -= arrayRange.right;
+        leftIndex -= arrayRange.lower();
+        rightIndex -= arrayRange.lower();
         auto* elementType = type.getArrayElementType();
-        auto newRange = BitRange(range.start + (rightIndex * elementType->getBitWidth()),
-                                 range.start + ((leftIndex + 1) * elementType->getBitWidth()) - 1);
+        ConstantRange newRange = {range.lower() + (rightIndex * (int32_t) elementType->getBitWidth()),
+                                  range.lower() + ((leftIndex + 1) * (int32_t) elementType->getBitWidth()) - 1};
         if (std::next(selectorsIt) != node.selectors.end()) {
             selectorsIt++;
             return getBitRangeImpl(type, newRange);
@@ -130,7 +131,7 @@ public:
         }
     }
 
-    BitRange handleStructMemberAccess(const slang::ast::Type &type, BitRange range) {
+    ConstantRange handleStructMemberAccess(const slang::ast::Type &type, ConstantRange range) {
         //const auto& packedStruct = type.getCanonicalType().as<slang::ast::PackedStructType>();
         //SLANG_ASSERT(selectorsIt->get()->kind == VariableSelectorKind::MemberAccess);
         //const auto& memberAccessSelector = selectorsIt->get()->as<VariableMemberAccess>();
@@ -138,23 +139,23 @@ public:
         //SLANG_ASSERT(range.contains(fieldRange));
         //auto fieldType = packedStruct.getNameMap()[memberAccessSelector.name];
         //return getBitRange(fieldType, fieldRange.start, fieldRange.end);
-        return BitRange(0);
+        return {0, 0};
     }
 
-    BitRange handleUnionMemberAccess(const slang::ast::Type &type, BitRange range) {
-        return BitRange(0);
+    ConstantRange handleUnionMemberAccess(const slang::ast::Type &type, ConstantRange range) {
+        return {0, 0};
     }
 
-    BitRange handleEnumMemberAccess(const slang::ast::Type &type, BitRange range) {
-        return BitRange(0);
+    ConstantRange handleEnumMemberAccess(const slang::ast::Type &type, ConstantRange range) {
+        return {0, 0};
     }
 
     /// Given a variable reference with zero or more selectors, determine the
     /// bit range that is accessed.
-    BitRange getBitRangeImpl(const slang::ast::Type &type, BitRange range) {
+    ConstantRange getBitRangeImpl(const slang::ast::Type &type, ConstantRange range) {
         // No selectors
         if (node.selectors.empty()) {
-            return BitRange(0, node.symbol.getDeclaredType()->getType().getBitWidth()-1);
+            return {0, (int32_t) node.symbol.getDeclaredType()->getType().getBitWidth() - 1};
         }
         // Simple vector
         if (type.isPredefinedInteger() || type.isScalar()) {
@@ -226,9 +227,9 @@ public:
     }
 
     /// Return a range indicating the bits of the variable that are accessed.
-    BitRange getBitRange() {
-      auto& variableType = node.symbol.getDeclaredType()->getType();
-      return getBitRangeImpl(variableType, BitRange(0, variableType.getBitWidth()-1));
+    ConstantRange getBitRange() {
+        auto& variableType = node.symbol.getDeclaredType()->getType();
+        return getBitRangeImpl(variableType, {0, (int32_t) variableType.getBitWidth() - 1});
     }
 };
 
@@ -245,7 +246,7 @@ private:
     /// selection made by the source node.
     bool isIntersectingSelection(NetlistVariableReference& sourceNode,
                                  NetlistVariableReference& targetNode) const {
-        return AnalyseVariableReference(sourceNode).getBitRange().overlap(
+        return AnalyseVariableReference(sourceNode).getBitRange().overlaps(
                    AnalyseVariableReference(targetNode).getBitRange());
     }
 

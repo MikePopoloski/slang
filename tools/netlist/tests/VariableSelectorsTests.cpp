@@ -13,7 +13,7 @@
 
 /// Helper method to extract a variable reference from a netlist and return the
 /// bit range associated with it.
-BitRange getBitRange(Netlist &netlist, std::string_view variableSyntax) {
+ConstantRange getBitRange(Netlist &netlist, std::string_view variableSyntax) {
     auto* node = netlist.lookupVariableReference(variableSyntax);
     if (node == nullptr) {
       throw std::runtime_error(fmt::format("Could not find node {}", variableSyntax));
@@ -44,17 +44,17 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
     auto netlist = createNetlist(compilation);
-    CHECK(getBitRange(netlist, "foo") == BitRange(0, 31));
-    CHECK(getBitRange(netlist, "foo[0]") == BitRange(0));
-    CHECK(getBitRange(netlist, "foo[1]") == BitRange(1));
-    CHECK(getBitRange(netlist, "foo[7:7]") == BitRange(7));
-    CHECK(getBitRange(netlist, "foo[1:0]") == BitRange(0, 1));
-    CHECK(getBitRange(netlist, "foo[3:1]") == BitRange(1, 3));
-    CHECK(getBitRange(netlist, "foo[7:4]") == BitRange(4, 7));
-    CHECK(getBitRange(netlist, "foo[3:1][2:1]") == BitRange(1, 2));
-    CHECK(getBitRange(netlist, "foo[7:4][6:5]") == BitRange(5, 6));
-    CHECK(getBitRange(netlist, "foo[3:1][2:1][1]") == BitRange(1));
-    CHECK(getBitRange(netlist, "foo[7:4][6:5][5]") == BitRange(5));
+    CHECK(getBitRange(netlist, "foo") == ConstantRange(0, 31));
+    CHECK(getBitRange(netlist, "foo[0]") == ConstantRange(0, 0));
+    CHECK(getBitRange(netlist, "foo[1]") == ConstantRange(1, 1));
+    CHECK(getBitRange(netlist, "foo[7:7]") == ConstantRange(7, 7));
+    CHECK(getBitRange(netlist, "foo[1:0]") == ConstantRange(0, 1));
+    CHECK(getBitRange(netlist, "foo[3:1]") == ConstantRange(1, 3));
+    CHECK(getBitRange(netlist, "foo[7:4]") == ConstantRange(4, 7));
+    CHECK(getBitRange(netlist, "foo[3:1][2:1]") == ConstantRange(1, 2));
+    CHECK(getBitRange(netlist, "foo[7:4][6:5]") == ConstantRange(5, 6));
+    CHECK(getBitRange(netlist, "foo[3:1][2:1][1]") == ConstantRange(1, 1));
+    CHECK(getBitRange(netlist, "foo[7:4][6:5][5]") == ConstantRange(5, 5));
 }
 
 TEST_CASE("Packed 1D array element and range") {
@@ -79,16 +79,16 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
     auto netlist = createNetlist(compilation);
-    CHECK(getBitRange(netlist, "foo") == BitRange(0, 3));
-    CHECK(getBitRange(netlist, "foo[0]") == BitRange(0));
-    CHECK(getBitRange(netlist, "foo[1]") == BitRange(1));
-    CHECK(getBitRange(netlist, "foo[2]") == BitRange(2));
-    CHECK(getBitRange(netlist, "foo[3]") == BitRange(3));
-    CHECK(getBitRange(netlist, "foo[3:3]") == BitRange(3));
-    CHECK(getBitRange(netlist, "foo[1:0]") == BitRange(0, 1));
-    CHECK(getBitRange(netlist, "foo[3:0]") == BitRange(0, 3));
-    CHECK(getBitRange(netlist, "foo[2:1]") == BitRange(1, 2));
-    CHECK(getBitRange(netlist, "foo[3:1][2:1][1]") == BitRange(1));
+    CHECK(getBitRange(netlist, "foo") == ConstantRange(0, 3));
+    CHECK(getBitRange(netlist, "foo[0]") == ConstantRange(0, 0));
+    CHECK(getBitRange(netlist, "foo[1]") == ConstantRange(1, 1));
+    CHECK(getBitRange(netlist, "foo[2]") == ConstantRange(2, 2));
+    CHECK(getBitRange(netlist, "foo[3]") == ConstantRange(3, 3));
+    CHECK(getBitRange(netlist, "foo[3:3]") == ConstantRange(3, 3));
+    CHECK(getBitRange(netlist, "foo[1:0]") == ConstantRange(0, 1));
+    CHECK(getBitRange(netlist, "foo[3:0]") == ConstantRange(0, 3));
+    CHECK(getBitRange(netlist, "foo[2:1]") == ConstantRange(1, 2));
+    CHECK(getBitRange(netlist, "foo[3:1][2:1][1]") == ConstantRange(1, 1));
 }
 
 TEST_CASE("Packed 1D array element and range non-zero indexed") {
@@ -113,16 +113,16 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
     auto netlist = createNetlist(compilation);
-    CHECK(getBitRange(netlist, "foo") == BitRange(0, 3));
-    CHECK(getBitRange(netlist, "foo[4]") == BitRange(0));
-    CHECK(getBitRange(netlist, "foo[5]") == BitRange(1));
-    CHECK(getBitRange(netlist, "foo[6]") == BitRange(2));
-    CHECK(getBitRange(netlist, "foo[7]") == BitRange(3));
-    CHECK(getBitRange(netlist, "foo[7:7]") == BitRange(3));
-    CHECK(getBitRange(netlist, "foo[5:4]") == BitRange(0, 1));
-    CHECK(getBitRange(netlist, "foo[7:4]") == BitRange(0, 3));
-    CHECK(getBitRange(netlist, "foo[6:5]") == BitRange(1, 2));
-    CHECK(getBitRange(netlist, "foo[7:4][6:5][5]") == BitRange(1));
+    CHECK(getBitRange(netlist, "foo") == ConstantRange(0, 3));
+    CHECK(getBitRange(netlist, "foo[4]") == ConstantRange(0, 0));
+    CHECK(getBitRange(netlist, "foo[5]") == ConstantRange(1, 1));
+    CHECK(getBitRange(netlist, "foo[6]") == ConstantRange(2, 2));
+    CHECK(getBitRange(netlist, "foo[7]") == ConstantRange(3, 3));
+    CHECK(getBitRange(netlist, "foo[7:7]") == ConstantRange(3, 3));
+    CHECK(getBitRange(netlist, "foo[5:4]") == ConstantRange(0, 1));
+    CHECK(getBitRange(netlist, "foo[7:4]") == ConstantRange(0, 3));
+    CHECK(getBitRange(netlist, "foo[6:5]") == ConstantRange(1, 2));
+    CHECK(getBitRange(netlist, "foo[7:4][6:5][5]") == ConstantRange(1, 1));
 }
 
 TEST_CASE("Packed 2D array element and range") {
@@ -150,19 +150,19 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
     auto netlist = createNetlist(compilation);
-    CHECK(getBitRange(netlist, "foo") == BitRange(0, 7));
-    CHECK(getBitRange(netlist, "foo[0]") == BitRange(0, 1));
-    CHECK(getBitRange(netlist, "foo[1]") == BitRange(2, 3));
-    CHECK(getBitRange(netlist, "foo[2]") == BitRange(4, 5));
-    CHECK(getBitRange(netlist, "foo[3]") == BitRange(6, 7));
-    CHECK(getBitRange(netlist, "foo[0][1]") == BitRange(1));
-    CHECK(getBitRange(netlist, "foo[1][1]") == BitRange(3));
-    CHECK(getBitRange(netlist, "foo[2][1]") == BitRange(5));
-    CHECK(getBitRange(netlist, "foo[3][1]") == BitRange(7));
-    CHECK(getBitRange(netlist, "foo[1:0]") == BitRange(0, 3));
-    CHECK(getBitRange(netlist, "foo[3:2]") == BitRange(4, 7));
-    CHECK(getBitRange(netlist, "foo[3:0][2:1]") == BitRange(2, 5));
-    CHECK(getBitRange(netlist, "foo[3:0][2:1][1]") == BitRange(2, 3));
+    CHECK(getBitRange(netlist, "foo") == ConstantRange(0, 7));
+    CHECK(getBitRange(netlist, "foo[0]") == ConstantRange(0, 1));
+    CHECK(getBitRange(netlist, "foo[1]") == ConstantRange(2, 3));
+    CHECK(getBitRange(netlist, "foo[2]") == ConstantRange(4, 5));
+    CHECK(getBitRange(netlist, "foo[3]") == ConstantRange(6, 7));
+    CHECK(getBitRange(netlist, "foo[0][1]") == ConstantRange(1, 1));
+    CHECK(getBitRange(netlist, "foo[1][1]") == ConstantRange(3, 3));
+    CHECK(getBitRange(netlist, "foo[2][1]") == ConstantRange(5, 5));
+    CHECK(getBitRange(netlist, "foo[3][1]") == ConstantRange(7, 7));
+    CHECK(getBitRange(netlist, "foo[1:0]") == ConstantRange(0, 3));
+    CHECK(getBitRange(netlist, "foo[3:2]") == ConstantRange(4, 7));
+    CHECK(getBitRange(netlist, "foo[3:0][2:1]") == ConstantRange(2, 5));
+    CHECK(getBitRange(netlist, "foo[3:0][2:1][1]") == ConstantRange(2, 3));
 }
 
 TEST_CASE("Packed 2D array element and range, non-zero indexing") {
@@ -183,12 +183,12 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
     auto netlist = createNetlist(compilation);
-    CHECK(getBitRange(netlist, "foo") == BitRange(0, 7));
-    CHECK(getBitRange(netlist, "foo[4]") == BitRange(0, 1));
-    CHECK(getBitRange(netlist, "foo[4][3]") == BitRange(1));
-    CHECK(getBitRange(netlist, "foo[5:4]") == BitRange(0, 3));
-    CHECK(getBitRange(netlist, "foo[7:4][6:5]") == BitRange(2, 5));
-    CHECK(getBitRange(netlist, "foo[7:5][6:5][5]") == BitRange(2, 3));
+    CHECK(getBitRange(netlist, "foo") == ConstantRange(0, 7));
+    CHECK(getBitRange(netlist, "foo[4]") == ConstantRange(0, 1));
+    CHECK(getBitRange(netlist, "foo[4][3]") == ConstantRange(1, 1));
+    CHECK(getBitRange(netlist, "foo[5:4]") == ConstantRange(0, 3));
+    CHECK(getBitRange(netlist, "foo[7:4][6:5]") == ConstantRange(2, 5));
+    CHECK(getBitRange(netlist, "foo[7:5][6:5][5]") == ConstantRange(2, 3));
 }
 
 TEST_CASE("Unpacked 1D array element") {
@@ -208,9 +208,9 @@ endmodule
     NO_COMPILATION_ERRORS;
     auto netlist = createNetlist(compilation);
     // Can't get bitwidth of an unpacked type.
-    //CHECK(getBitRange(netlist, "foo") == BitRange(0, 1));
-    CHECK(getBitRange(netlist, "foo[0]") == BitRange(0));
-    CHECK(getBitRange(netlist, "foo[1]") == BitRange(1));
+    //CHECK(getBitRange(netlist, "foo") == ConstantRange(0, 1));
+    //CHECK(getBitRange(netlist, "foo[0]") == ConstantRange(0, 0));
+    //CHECK(getBitRange(netlist, "foo[1]") == ConstantRange(1, 1));
 }
 
 TEST_CASE("Unpacked 2D array element") {
@@ -235,12 +235,12 @@ endmodule
     NO_COMPILATION_ERRORS;
     auto netlist = createNetlist(compilation);
     // Can't get bitwidth of an unpacked type.
-    //CHECK(getBitRange(netlist, "foo[0]") == BitRange(0, 1));
-    //CHECK(getBitRange(netlist, "foo[1]") == BitRange(2, 3));
-    //CHECK(getBitRange(netlist, "foo[0][1]") == BitRange(1));
-    //CHECK(getBitRange(netlist, "foo[1][1]") == BitRange(3));
-    //CHECK(getBitRange(netlist, "foo[2][1]") == BitRange(5));
-    //CHECK(getBitRange(netlist, "foo[3][1]") == BitRange(7));
+    //CHECK(getBitRange(netlist, "foo[0]") == ConstantRange(0, 1));
+    //CHECK(getBitRange(netlist, "foo[1]") == ConstantRange(2, 3));
+    //CHECK(getBitRange(netlist, "foo[0][1]") == ConstantRange(1));
+    //CHECK(getBitRange(netlist, "foo[1][1]") == ConstantRange(3));
+    //CHECK(getBitRange(netlist, "foo[2][1]") == ConstantRange(5));
+    //CHECK(getBitRange(netlist, "foo[3][1]") == ConstantRange(7));
 }
 
 //===---------------------------------------------------------------------===//
