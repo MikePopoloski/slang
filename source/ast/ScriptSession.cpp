@@ -102,7 +102,7 @@ Diagnostics ScriptSession::getDiagnostics() {
         result.append_range(tree->diagnostics());
 
     result.append_range(compilation.getAllDiagnostics());
-    result.append_range(evalContext.getDiagnostics());
+    result.append_range(evalContext.getAllDiagnostics());
     result.sort(SyntaxTree::getDefaultSourceManager());
     return result;
 }

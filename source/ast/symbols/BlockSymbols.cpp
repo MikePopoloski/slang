@@ -710,7 +710,7 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(Compilation& comp
     if (indices.empty())
         iterExpr.eval(evalContext);
 
-    evalContext.reportDiags();
+    evalContext.reportAllDiags();
 
     // If the generate loop completed successfully, go through and create blocks.
     if (result->valid) {

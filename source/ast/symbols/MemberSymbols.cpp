@@ -625,7 +625,7 @@ std::optional<std::string_view> ElabSystemTaskSymbol::createMessage(
     // Format the message to string.
     EvalContext evalCtx(context);
     std::optional<std::string> str = FmtHelpers::formatDisplay(*context.scope, evalCtx, args);
-    evalCtx.reportDiags();
+    evalCtx.reportAllDiags();
 
     if (!str)
         return {};

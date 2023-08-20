@@ -103,6 +103,9 @@ private:
     uint16_t code;
 };
 
+// Defined in the generated DiagCode.cpp file.
+DiagnosticSeverity getDefaultSeverity(DiagCode code);
+
 SLANG_EXPORT std::ostream& operator<<(std::ostream& os, DiagCode code);
 SLANG_EXPORT std::string_view toString(DiagCode code);
 

@@ -24,7 +24,9 @@ void EvalContext::reset() {
     stack.clear();
     lvalStack.clear();
     diags.clear();
+    warnings.clear();
     disableRange = {};
+    backtraceReported = false;
 }
 
 ConstantValue* EvalContext::createLocal(const ValueSymbol* symbol, ConstantValue value) {
@@ -119,42 +121,46 @@ std::string EvalContext::dumpStack() const {
     return buffer.str();
 }
 
+Diagnostics EvalContext::getAllDiagnostics() const {
+    Diagnostics results;
+    results.append_range(diags);
+    results.append_range(warnings);
+    return results;
+}
+
 Diagnostic& EvalContext::addDiag(DiagCode code, SourceLocation location) {
-    auto& diag = diags.add(code, location);
+    const bool isError = getDefaultSeverity(code) >= DiagnosticSeverity::Error;
+    auto& diag = isError ? diags.add(code, location) : warnings.add(code, location);
     reportStack(diag);
     return diag;
 }
 
 Diagnostic& EvalContext::addDiag(DiagCode code, SourceRange range) {
-    auto& diag = diags.add(code, range);
+    const bool isError = getDefaultSeverity(code) >= DiagnosticSeverity::Error;
+    auto& diag = isError ? diags.add(code, range) : warnings.add(code, range);
     reportStack(diag);
     return diag;
 }
 
-void EvalContext::addDiags(const Diagnostics& additional) {
-    bool first = true;
-    for (auto& diag : additional) {
-        if (first) {
-            Diagnostic copy = diag;
-            reportStack(copy);
-            diags.emplace_back(std::move(copy));
-            first = false;
-        }
-        else {
-            diags.push_back(diag);
-        }
-    }
+void EvalContext::reportAllDiags() {
+    reportDiags(diags);
+    reportWarnings();
 }
 
-void EvalContext::reportDiags() {
-    if (diags.empty())
-        return;
+void EvalContext::reportWarnings() {
+    reportDiags(warnings);
+}
 
-    if (astCtx.assertionInstance)
-        astCtx.addAssertionBacktrace(diags[0]);
+void EvalContext::reportDiags(Diagnostics& diagSet) {
+    if (!diagSet.empty()) {
+        if (astCtx.assertionInstance && !backtraceReported) {
+            astCtx.addAssertionBacktrace(diagSet[0]);
+            backtraceReported = true;
+        }
 
-    astCtx.scope->addDiags(diags);
-    diags.clear();
+        astCtx.scope->addDiags(diagSet);
+        diagSet.clear();
+    }
 }
 
 static void reportFrame(Diagnostic& diag, const EvalContext::Frame& frame) {

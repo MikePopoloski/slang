@@ -158,7 +158,7 @@ public:
     std::string dumpStack() const;
 
     /// Gets the set of diagnostics that have been produced during constant evaluation.
-    const Diagnostics& getDiagnostics() const { return diags; }
+    Diagnostics getAllDiagnostics() const;
 
     /// Records a diagnostic under the current evaluation context.
     Diagnostic& addDiag(DiagCode code, SourceLocation location);
@@ -166,23 +166,27 @@ public:
     /// Records a diagnostic under the current evaluation context.
     Diagnostic& addDiag(DiagCode code, SourceRange range);
 
-    /// Records the given set of diagnostics under the current evaluation context.
-    void addDiags(const Diagnostics& diags);
-
     /// Issues all recorded diagnostics to the associated AST context.
-    void reportDiags();
+    void reportAllDiags();
+
+    /// Issues only warnings to the associated AST context.
+    void reportWarnings();
 
     /// Reports the current function call stack as notes to the given diagnostic.
     void reportStack(Diagnostic& diag) const;
 
 private:
+    void reportDiags(Diagnostics& diagSet);
+
     uint32_t steps = 0;
     const Symbol* disableTarget = nullptr;
     const ConstantValue* queueTarget = nullptr;
     SmallVector<Frame> stack;
     SmallVector<LValue*> lvalStack;
     Diagnostics diags;
+    Diagnostics warnings;
     SourceRange disableRange;
+    bool backtraceReported = false;
 };
 
 } // namespace slang::ast

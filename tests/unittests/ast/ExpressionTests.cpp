@@ -2923,3 +2923,35 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("String constant expression error regress GH #811") {
+    auto tree = SyntaxTree::fromText(R"(
+class A;
+    string s3[string];
+    function void f();
+        if (s3.exists("abcdef")) begin
+        end
+    endfunction
+endclass
+
+class C;
+    A a;
+    function void f();
+        string s1 = "abcdef";
+        string s2 = "abc";
+        a = new();
+
+        if (s1.substr(0, 2) == s2) begin
+        end
+        if (s1 == s2) begin
+        end
+        if (a.s3.exists("abcdef")) begin
+        end
+    endfunction
+endclass
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

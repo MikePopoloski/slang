@@ -65,7 +65,7 @@ void registerAST(py::module_& m) {
         .def_property_readonly("topFrame", &EvalContext::topFrame)
         .def_property_readonly("disableTarget", &EvalContext::getDisableTarget)
         .def_property_readonly("disableRange", &EvalContext::getDisableRange)
-        .def_property_readonly("diagnostics", &EvalContext::getDiagnostics)
+        .def_property_readonly("diagnostics", &EvalContext::getAllDiagnostics)
         .def_property("queueTarget", &EvalContext::getQueueTarget, &EvalContext::setQueueTarget);
 
     py::class_<EvalContext::Frame>(evalCtx, "Frame")

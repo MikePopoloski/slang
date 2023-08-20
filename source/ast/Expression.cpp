@@ -40,7 +40,7 @@ struct EvalVisitor {
             // diagnostics get lost because there won't be another
             // opportunity to see them, so make sure they get logged
             // to the compilation now.
-            context.reportDiags();
+            context.reportWarnings();
             expr.constant = context.getCompilation().allocConstant(std::move(cv));
             return *expr.constant;
         }

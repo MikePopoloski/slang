@@ -11,9 +11,6 @@
 
 namespace slang {
 
-// Defined in the generated DiagCode.cpp file.
-DiagnosticSeverity getDefaultSeverity(DiagCode code);
-
 Diagnostic::Diagnostic() noexcept : location(SourceLocation::NoLocation) {
 }
 

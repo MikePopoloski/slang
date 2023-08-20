@@ -1582,7 +1582,7 @@ Expression& ReplicationExpression::fromSyntax(Compilation& compilation,
         if (!right->isImplicitString()) {
             // They probably meant for this to be a constant (non-string) replication,
             // so do the normal error reporting for that case.
-            evalCtx.reportDiags();
+            evalCtx.reportAllDiags();
             return badExpr(compilation, result);
         }
 

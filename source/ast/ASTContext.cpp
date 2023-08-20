@@ -253,7 +253,7 @@ ConstantValue ASTContext::eval(const Expression& expr, bitmask<EvalFlags> extraF
 
     EvalContext ctx(*this, extraFlags);
     ConstantValue result = expr.eval(ctx);
-    ctx.reportDiags();
+    ctx.reportAllDiags();
     return result;
 }
 
