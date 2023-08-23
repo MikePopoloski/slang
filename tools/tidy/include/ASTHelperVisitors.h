@@ -42,8 +42,7 @@ protected:
     const TidyConfig& config;
 };
 
-/// ASTVisitor that will collect all identifiers under a node and store them in the identifiers
-/// internal variable so they can be retrieved later
+/// ASTVisitor that will collect all identifiers under a node
 struct CollectIdentifiers : public slang::ast::ASTVisitor<CollectIdentifiers, false, true> {
     void handle(const slang::ast::NamedValueExpression& expression) {
         if (auto* symbol = expression.getSymbolReference(); symbol) {
@@ -51,6 +50,15 @@ struct CollectIdentifiers : public slang::ast::ASTVisitor<CollectIdentifiers, fa
         }
     }
     std::vector<std::string_view> identifiers;
+};
+
+/// ASTVisitor that will collect all LHS assignment symbols under a node
+struct CollectLHSSymbols : public slang::ast::ASTVisitor<CollectLHSSymbols, true, true> {
+    void handle(const slang::ast::AssignmentExpression& expression) {
+        symbols.push_back(expression.left().getSymbolReference());
+    }
+
+    std::vector<const slang::ast::Symbol*> symbols;
 };
 
 /// ASTVisitor that will try to find the provided name in the LHS of an assignment

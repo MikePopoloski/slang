@@ -20,7 +20,20 @@ struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, true, true> {
             return;
 
         if (symbol.procedureKind == ProceduralBlockKind::Always) {
-            diags.add(diag::NoOldAlwaysSyntax, symbol.location);
+            // Parent scopes of the always block
+            std::set<const Scope*> scopes;
+            for (auto scope = symbol.getHierarchicalParent(); scope;
+                 scope = scope->asSymbol().getHierarchicalParent()) {
+                scopes.insert(scope);
+            }
+
+            // If there are assignments of variables that are declared outside the always block,
+            // issue the diagnostic
+            CollectLHSSymbols visitor;
+            symbol.visit(visitor);
+            for (auto& s : visitor.symbols)
+                if (scopes.contains(s->getHierarchicalParent()))
+                    diags.add(diag::NoOldAlwaysSyntax, symbol.location);
         }
     }
 };
