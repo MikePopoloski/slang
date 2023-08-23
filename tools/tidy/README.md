@@ -30,23 +30,61 @@ EOL                   ::= '\n' | '\r' | '\r\n'
 END                   ::= EOL* | EOF
 ```
 
-### Configuration file example
+### Configuration file
+
+The syntax of the `.slang-tidy` file is similar to the syntax of the `.clang-tidy`. There are two main
+sections: `Checks` and `CheckConfigs`, that can appear as many times as needed in the config file.
+
+The `Checks` section is a comma separated list of globs with an optional `-` prefix, that will enable or disable
+the specified check or group of checks.
 
 ```
+Enable a check: synthesis-only-assigned-on-reset
+
+Disable a check: -synthesis-only-assigned-on-reset
+
+Enable a group: synthesis-*
+
+Disable a group: -synthesis-*
+
+Enable all: *
+
+Disable all: -*
+```
+
+The `CheckConfigs` is a dictionary like, `config: value`, comma separated list of options for the different checks.
+The available options are:
+
+|            Config             |   Type   | Default |
+|:-----------------------------:|:--------:|:-------:|
+|          **clkName**          |  string  |  clk_i  |
+|         **resetName**         |  string  | rst_ni  |
+|     **resetIsActiveHigh**     |   bool   |  true   |
+|      **inputPortSuffix**      | [string] |  [_i]   |
+|     **outputPortSuffix**      | [string] |  [_o]   | 
+|      **inoutPortSuffix**      | [string] |  [_io]  | 
+| **moduleInstantiationPrefix** |  string  |   i_    |
+
+An example of a possible configuration file:
+```
 Checks:
-    -synthesis-only-assigned-on-reset,
-    -ports-enforce-port-suffix
+    -*,
+    synthesis-only-assigned-on-reset,
+    style-enforce-port-suffix
+    
 CheckConfigs:
     clkName: clk,
     resetIsActiveHigh: false,
     inputPortSuffix: _k,
-    inputPortSuffix: _p
+    outputPortSuffix: _p
 ```
 
 ## How to add a new check
-  1. Create a new `cpp` file with the name of the check in CamelCase format inside the check kind folder.
-  2. Inside the new `cpp` file create a class that inherits from `TidyChecks`. Use the `check` function to implement
-     the code that will perform the check in the AST.
-  3. Use the `REGISTER` macro to register the new check in the factory.
-  4. Create the new tidy diagnostic in the `TidyDiags.h` file.
-  5. Add the new check to the corresponding map in the `TidyConfig` constructor.
+
+1. Create a new `cpp` file with the name of the check in CamelCase format inside the check kind folder.
+2. Inside the new `cpp` file create a class that inherits from `TidyChecks`. Use the `check` function to implement
+   the code that will perform the check in the AST.
+3. Use the `REGISTER` macro to register the new check in the factory.
+4. Create the new tidy diagnostic in the `TidyDiags.h` file.
+5. Add the new check to the corresponding map in the `TidyConfig` constructor.
+6. Update the documentation accordingly
