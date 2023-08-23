@@ -46,11 +46,11 @@ public:
     DiagCode diagCode() const override { return diag::EnforceModuleInstantiationPrefix; }
     DiagnosticSeverity diagSeverity() const override { return DiagnosticSeverity::Warning; }
     std::string diagString() const override {
-        return "module instantiation '{}' is not correctly suffixed with prefix: '{}'";
+        return "module instantiation '{}' is not correctly prefixed with prefix: '{}'";
     }
     std::string name() const override { return "EnforceModuleInstantiationPrefix"; }
     std::string description() const override {
-        return "Enforces that module instantiations in the design follow the code guidelines "
+        return "Enforces that module instantiations in the design follows the code guidelines "
                "provided in the configuration file by the config " +
                fmt::format(fmt::emphasis::italic, "moduleInstantiationPrefix");
     }
