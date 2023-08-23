@@ -98,6 +98,7 @@ public:
     explicit TidyCheck(slang::TidyKind kind) : kind(kind) {}
     virtual ~TidyCheck() = default;
 
+    /// Returns true if the check didn't find any errors, false otherwise
     [[nodiscard]] virtual bool check(const slang::ast::RootSymbol& root) = 0;
 
     virtual std::string name() const = 0;
