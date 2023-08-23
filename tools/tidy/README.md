@@ -61,8 +61,8 @@ The available options are:
 |         **resetName**         |  string  | rst_ni  |
 |     **resetIsActiveHigh**     |   bool   |  true   |
 |      **inputPortSuffix**      | [string] |  [_i]   |
-|     **outputPortSuffix**      | [string] |  [_o]   | 
-|      **inoutPortSuffix**      | [string] |  [_io]  | 
+|     **outputPortSuffix**      | [string] |  [_o]   |
+|      **inoutPortSuffix**      | [string] |  [_io]  |
 | **moduleInstantiationPrefix** |  string  |   i_    |
 
 An example of a possible configuration file:
@@ -71,7 +71,7 @@ Checks:
     -*,
     synthesis-only-assigned-on-reset,
     style-enforce-port-suffix
-    
+
 CheckConfigs:
     clkName: clk,
     resetIsActiveHigh: false,
