@@ -8,6 +8,8 @@
 #include "slang/ast/symbols/InstanceSymbols.h"
 #include "slang/ast/symbols/MemberSymbols.h"
 #include "slang/ast/symbols/ParameterSymbols.h"
+#include "slang/ast/symbols/VariableSymbols.h"
+#include "slang/ast/types/Type.h"
 
 TEST_CASE("Interface instantiation") {
     auto tree = SyntaxTree::fromText(R"(
@@ -628,4 +630,25 @@ endmodule
     Compilation compilation;
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Interface-based typedef") {
+    auto tree = SyntaxTree::fromText(R"(
+interface intf_i;
+    typedef int data_t;
+endinterface
+
+module sub(intf_i p);
+    typedef p.data_t my_data_t;
+    my_data_t data;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& type = compilation.getRoot().lookupName<VariableSymbol>("sub.data").getType();
+    CHECK(type.name == "my_data_t");
+    CHECK(type.getCanonicalType().name == "int");
 }

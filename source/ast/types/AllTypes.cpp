@@ -1260,7 +1260,6 @@ TypeAliasType::TypeAliasType(std::string_view name, SourceLocation loc) :
 
 TypeAliasType& TypeAliasType::fromSyntax(const Scope& scope,
                                          const TypedefDeclarationSyntax& syntax) {
-    // TODO: interface based typedefs
     auto& comp = scope.getCompilation();
     auto result = comp.emplace<TypeAliasType>(syntax.name.valueText(), syntax.name.location());
     result->targetType.setTypeSyntax(*syntax.type);
