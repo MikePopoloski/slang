@@ -1167,8 +1167,8 @@ module m;
     specparam s2 = 3.14;
     specparam [31:0] s3 = s1 + s2;
 
-    int i = s3;
-    localparam int j = s3;
+    logic [31:0] i = s3;
+    localparam logic [31:0] j = s3;
 
     specify
         specparam s4 = 2:3:4;

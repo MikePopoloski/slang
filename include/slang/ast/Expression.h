@@ -422,7 +422,8 @@ protected:
     static Expression& badExpr(Compilation& compilation, const Expression* expr);
 
     // Perform type propagation and constant folding of a context-determined subexpression.
-    static void contextDetermined(const ASTContext& context, Expression*& expr, const Type& newType,
+    static void contextDetermined(const ASTContext& context, Expression*& expr,
+                                  const Expression* parentExpr, const Type& newType,
                                   SourceLocation assignmentLoc = {});
 
     // Perform type propagation and constant folding of a self-determined subexpression.

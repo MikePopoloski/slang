@@ -1264,7 +1264,7 @@ Expression& MinTypMaxExpression::fromSyntax(Compilation& compilation,
 bool MinTypMaxExpression::propagateType(const ASTContext& context, const Type& newType) {
     // Only the selected expression gets a propagated type.
     type = &newType;
-    contextDetermined(context, selected_, newType);
+    contextDetermined(context, selected_, this, newType);
     return true;
 }
 

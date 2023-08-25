@@ -62,6 +62,18 @@ std::string to_string(const Diagnostic& diag) {
     return DiagnosticEngine::reportAll(getSourceManager(), std::span(&diag, 1));
 }
 
+Diagnostics filterWarnings(const Diagnostics& diags) {
+    Diagnostics results;
+    results.reserve(diags.size());
+
+    for (auto& d : diags) {
+        if (d.isError())
+            results.push_back(d);
+    }
+
+    return results;
+}
+
 Token lexToken(std::string_view text) {
     diagnostics.clear();
 

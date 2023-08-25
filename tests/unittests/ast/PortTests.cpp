@@ -1264,7 +1264,7 @@ module top;
     u u1(.z(z.mod));
     u u2(.z(arr));
 
-    logic qq;
+    logic signed [1:0] qq;
     v v1(.qq);
 
     w w1(t);
@@ -1386,7 +1386,7 @@ nettype integer nt1;
 module m(nt1 foo, bar, input nt1 baz);
 endmodule
 
-module n(input foo);
+module n(input signed foo);
 endmodule
 
 module o(nt1 a);
@@ -1397,12 +1397,12 @@ module p({a, b});
 endmodule
 
 module top;
-    wire [5:0] a;
+    wire signed [5:0] a;
     wire integer b;
 
     m m1(a, b, b);
 
-    nettype logic[5:0] nt2;
+    nettype logic signed[5:0] nt2;
     nt2 c;
     n n1(c);
 

@@ -1277,10 +1277,12 @@ program T (A_Bus.STB b1, A_Bus.STB b2 );
         s.sb.req <= 0;
     endtask
 
+    typedef logic [7:0] addr_t;
+
     assert property (b1.sb.p1);
     initial begin
-        drive( b1, 8'($random), 8'($random) );
-        drive( b2, 8'($random), 8'($random) );
+        drive( b1, addr_t'($random), addr_t'($random) );
+        drive( b2, addr_t'($random), addr_t'($random) );
     end
 endprogram
 )");

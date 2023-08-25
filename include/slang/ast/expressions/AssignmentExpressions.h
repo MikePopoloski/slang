@@ -108,7 +108,7 @@ public:
 
     static Expression& makeImplicit(const ASTContext& context, const Type& targetType,
                                     ConversionKind conversionKind, Expression& expr,
-                                    SourceLocation loc);
+                                    const Expression* parentExpr, SourceLocation loc);
 
     static ConstantValue convert(EvalContext& context, const Type& from, const Type& to,
                                  SourceRange sourceRange, ConstantValue&& value,

@@ -354,8 +354,8 @@ interface I;
 endinterface
 
 module n (I.m m);
-    longint i = m.k;
-    assign m.o = i;
+    longint i = signed'(m.k);
+    assign m.o = unsigned'(i);
     int q = m.s;
 endmodule
 

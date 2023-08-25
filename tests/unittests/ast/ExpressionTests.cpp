@@ -358,7 +358,7 @@ TEST_CASE("Expression types") {
     CHECK(typeof("uu1 !== uu2") == "<error>");
     CHECK(typeof("1 ? uu1 : uu2") == "<error>");
 
-    auto& diags = compilation.getAllDiagnostics();
+    auto diags = filterWarnings(compilation.getAllDiagnostics());
     REQUIRE(diags.size() == 11);
     CHECK(diags[0].code == diag::BadUnaryExpression);
     CHECK(diags[1].code == diag::BadBinaryExpression);
@@ -1969,10 +1969,11 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 3);
+    REQUIRE(diags.size() == 4);
     CHECK(diags[0].code == diag::ImplicitConvert);
     CHECK(diags[1].code == diag::WidthExpand);
-    CHECK(diags[2].code == diag::WidthTruncate);
+    CHECK(diags[2].code == diag::SignConversion);
+    CHECK(diags[3].code == diag::WidthTruncate);
 }
 
 TEST_CASE("Assign to net in procedural context") {

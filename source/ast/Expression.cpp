@@ -114,12 +114,13 @@ using namespace syntax;
 struct Expression::PropagationVisitor {
     const ASTContext& context;
     const Type& newType;
+    const Expression* parentExpr;
     SourceLocation assignmentLoc;
 
-    PropagationVisitor(const ASTContext& context, const Type& newType,
+    PropagationVisitor(const ASTContext& context, const Type& newType, const Expression* parentExpr,
                        SourceLocation assignmentLoc) :
         context(context),
-        newType(newType), assignmentLoc(assignmentLoc) {}
+        newType(newType), parentExpr(parentExpr), assignmentLoc(assignmentLoc) {}
 
     template<typename T>
     Expression& visit(T& expr) {
@@ -151,12 +152,12 @@ struct Expression::PropagationVisitor {
             if (assignmentLoc) {
                 result = &ConversionExpression::makeImplicit(context, newType,
                                                              ConversionKind::Implicit, expr,
-                                                             assignmentLoc);
+                                                             parentExpr, assignmentLoc);
             }
             else {
                 result = &ConversionExpression::makeImplicit(context, newType,
                                                              ConversionKind::Propagated, expr,
-                                                             expr.sourceRange.start());
+                                                             parentExpr, expr.sourceRange.start());
             }
         }
 
@@ -1365,14 +1366,15 @@ void Expression::findPotentiallyImplicitNets(
 }
 
 void Expression::contextDetermined(const ASTContext& context, Expression*& expr,
-                                   const Type& newType, SourceLocation assignmentLoc) {
-    PropagationVisitor visitor(context, newType, assignmentLoc);
+                                   const Expression* parentExpr, const Type& newType,
+                                   SourceLocation assignmentLoc) {
+    PropagationVisitor visitor(context, newType, parentExpr, assignmentLoc);
     expr = &expr->visit(visitor);
 }
 
 void Expression::selfDetermined(const ASTContext& context, Expression*& expr) {
     SLANG_ASSERT(expr->type);
-    PropagationVisitor visitor(context, *expr->type, {});
+    PropagationVisitor visitor(context, *expr->type, nullptr, {});
     expr = &expr->visit(visitor);
 }
 

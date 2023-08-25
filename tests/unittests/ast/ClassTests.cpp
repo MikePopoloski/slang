@@ -1564,7 +1564,7 @@ module m;
     B b;
     C c;
     D d;
-    logic [ab:1] bits;
+    logic signed [ab:1] bits;
 
     initial begin
         bits = int'(a);

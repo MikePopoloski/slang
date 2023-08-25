@@ -103,11 +103,30 @@ bool isSameStructUnion(const Type& left, const Type& right) {
 }
 
 void checkImplicitConversions(const ASTContext& context, const Type& sourceType,
-                              const Type& targetType, const Expression& op, SourceLocation loc) {
+                              const Type& targetType, const Expression& op,
+                              const Expression* parentExpr, SourceLocation loc,
+                              ConversionKind conversionKind) {
     auto isStructUnionEnum = [](const Type& t) {
         return t.kind == SymbolKind::PackedStructType || t.kind == SymbolKind::PackedUnionType ||
                t.kind == SymbolKind::EnumType;
     };
+
+    auto expr = &op;
+    while (expr->kind == ExpressionKind::Conversion)
+        expr = &expr->as<ConversionExpression>().operand();
+
+    if (expr->kind == ExpressionKind::LValueReference)
+        return;
+
+    // Don't warn about conversions in compound assignment operators.
+    if (expr->kind == ExpressionKind::BinaryOp) {
+        auto left = &expr->as<BinaryExpression>().left();
+        while (left->kind == ExpressionKind::Conversion)
+            left = &left->as<ConversionExpression>().operand();
+
+        if (left->kind == ExpressionKind::LValueReference)
+            return;
+    }
 
     const Type& lt = targetType.getCanonicalType();
     const Type& rt = sourceType.getCanonicalType();
@@ -120,6 +139,47 @@ void checkImplicitConversions(const ASTContext& context, const Type& sourceType,
             }
             return;
         }
+
+        // Warn for sign conversions.
+        bool isKnownNotConst = false;
+        if (lt.isSigned() != rt.isSigned()) {
+            if (context.tryEval(op))
+                return;
+
+            isKnownNotConst = true;
+
+            // Comparisons get their own warning elsewhere.
+            bool isComparison = false;
+            if (parentExpr && parentExpr->kind == ExpressionKind::BinaryOp) {
+                switch (parentExpr->as<BinaryExpression>().op) {
+                    case BinaryOperator::Equality:
+                    case BinaryOperator::Inequality:
+                    case BinaryOperator::CaseEquality:
+                    case BinaryOperator::CaseInequality:
+                    case BinaryOperator::GreaterThanEqual:
+                    case BinaryOperator::GreaterThan:
+                    case BinaryOperator::LessThanEqual:
+                    case BinaryOperator::LessThan:
+                    case BinaryOperator::WildcardEquality:
+                    case BinaryOperator::WildcardInequality:
+                        isComparison = true;
+                        break;
+                    default:
+                        break;
+                }
+            }
+
+            if (!isComparison) {
+                context.addDiag(diag::SignConversion, loc)
+                    << sourceType << targetType << op.sourceRange;
+            }
+        }
+
+        // Don't issue width warnings for propagated conversions, as they would
+        // be extremely noisy and of dubious value (since they act the way people
+        // expect their expressions to behave).
+        if (conversionKind == ConversionKind::Propagated)
+            return;
 
         // Warn for implicit assignments between integral types of differing widths.
         bitwidth_t targetWidth = lt.getBitWidth();
@@ -144,7 +204,7 @@ void checkImplicitConversions(const ASTContext& context, const Type& sourceType,
             // Final check to rule out false positives: try to eval as a constant.
             // We'll ignore any constants, because as described above they
             // will get their own more fine grained warning later during eval.
-            if (!context.tryEval(op)) {
+            if (isKnownNotConst || !context.tryEval(op)) {
                 DiagCode code;
                 if (context.getInstance()) {
                     code = targetWidth < effective ? diag::PortWidthTruncate
@@ -292,7 +352,7 @@ Expression* Expression::tryConnectPortArray(const ASTContext& context, const Typ
     // without this conversion.
     result = &ConversionExpression::makeImplicit(
         context, comp.getType(*instPortWidth, result->type->getIntegralFlags()),
-        ConversionKind::Implicit, *result, result->sourceRange.start());
+        ConversionKind::Implicit, *result, nullptr, result->sourceRange.start());
 
     // We have enough bits to assign each port on each instance, so now we just need
     // to pick the right ones. The spec says we start with all right hand indices
@@ -346,8 +406,10 @@ Expression& Expression::convertAssignment(const ASTContext& context, const Type&
 
         // If the types are not actually matching we might still want
         // to issue conversion warnings.
-        if (!context.inUnevaluatedBranch() && !type.isMatching(*rt))
-            checkImplicitConversions(context, *rt, type, *result, location);
+        if (!context.inUnevaluatedBranch() && !type.isMatching(*rt)) {
+            checkImplicitConversions(context, *rt, type, *result, nullptr, location,
+                                     ConversionKind::Implicit);
+        }
 
         return *result;
     }
@@ -391,7 +453,7 @@ Expression& Expression::convertAssignment(const ASTContext& context, const Type&
     if (!type.isAssignmentCompatible(*rt)) {
         if (expr.isImplicitlyAssignableTo(comp, type)) {
             return ConversionExpression::makeImplicit(context, type, ConversionKind::Implicit,
-                                                      *result, location);
+                                                      *result, nullptr, location);
         }
 
         if (expr.kind == ExpressionKind::Streaming) {
@@ -449,7 +511,7 @@ Expression& Expression::convertAssignment(const ASTContext& context, const Type&
         if (expanding)
             rt = &type;
 
-        contextDetermined(context, result, *rt, location);
+        contextDetermined(context, result, nullptr, *rt, location);
         if (expanding)
             return *result;
 
@@ -461,7 +523,7 @@ Expression& Expression::convertAssignment(const ASTContext& context, const Type&
     }
 
     return ConversionExpression::makeImplicit(context, type, ConversionKind::Implicit, *result,
-                                              location);
+                                              nullptr, location);
 }
 
 Expression& AssignmentExpression::fromSyntax(Compilation& compilation,
@@ -766,7 +828,7 @@ Expression& ConversionExpression::fromSyntax(Compilation& compilation,
 
 Expression& ConversionExpression::makeImplicit(const ASTContext& context, const Type& targetType,
                                                ConversionKind conversionKind, Expression& expr,
-                                               SourceLocation loc) {
+                                               const Expression* parentExpr, SourceLocation loc) {
     auto& comp = context.getCompilation();
     SLANG_ASSERT(expr.isImplicitlyAssignableTo(comp, targetType));
 
@@ -776,11 +838,12 @@ Expression& ConversionExpression::makeImplicit(const ASTContext& context, const 
     auto result = comp.emplace<ConversionExpression>(targetType, conversionKind, *op,
                                                      op->sourceRange);
 
-    // Check if we should issue any warnings for implicit integer conversions.
-    // Note that this does not apply to propagated conversions, as those almost
-    // always do the right thing and the warnings would be very noisy.
-    if (conversionKind == ConversionKind::Implicit && !context.inUnevaluatedBranch())
-        checkImplicitConversions(context, *op->type, targetType, *result, loc);
+    if ((conversionKind == ConversionKind::Implicit ||
+         conversionKind == ConversionKind::Propagated) &&
+        !context.inUnevaluatedBranch()) {
+        checkImplicitConversions(context, *op->type, targetType, *result, parentExpr, loc,
+                                 conversionKind);
+    }
 
     return *result;
 }
