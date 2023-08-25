@@ -20,5 +20,6 @@ inline constexpr DiagCode AlwaysCombNonBlocking(DiagSubsystem::Tidy, 5);
 inline constexpr DiagCode AlwaysFFBlocking(DiagSubsystem::Tidy, 6);
 inline constexpr DiagCode EnforceModuleInstantiationPrefix(DiagSubsystem::Tidy, 7);
 inline constexpr DiagCode OnlyANSIPortDecl(DiagSubsystem::Tidy, 8);
+inline constexpr DiagCode XilinxDoNotCareValues(DiagSubsystem::Tidy, 9);
 
 } // namespace slang::diag
