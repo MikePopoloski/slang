@@ -47,7 +47,7 @@ public:
 
     DiagnosticSeverity diagSeverity() const override { return DiagnosticSeverity::Warning; }
 
-    std::string name() const override { return "RegisterHasNoReset"; }
+    std::string name() const override { return "XilinxDoNotCareValues"; }
 
     std::string description() const override {
         return "The use of x'd? notation for do-not-care values is not recommended since it has "
