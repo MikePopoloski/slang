@@ -378,9 +378,13 @@ void formatArg(std::string& result, const ConstantValue& arg, char specifier,
         case 'g':
             formatFloat(result, arg.convertToReal().real(), specifier, options);
             return;
-        case 't':
-            // TODO:
+        case 't': {
+            auto timeOptions = options;
+            if (!timeOptions.width)
+                timeOptions.width = 20;
+            formatInt(result, arg.convertToInt().integer(), LiteralBase::Decimal, timeOptions);
             return;
+        }
         case 'c':
             formatChar(result, arg.convertToInt().integer());
             return;
