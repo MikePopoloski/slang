@@ -11,7 +11,7 @@
 #include "slang/util/Function.h"
 #include "slang/util/Util.h"
 
-namespace slang {
+namespace slang::ast {
 
 namespace SFormat {
 
@@ -59,4 +59,4 @@ void formatArg(std::string& result, const ConstantValue& arg, char specifier,
 
 } // namespace SFormat
 
-} // namespace slang
+} // namespace slang::ast

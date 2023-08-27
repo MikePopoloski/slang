@@ -61,6 +61,7 @@ target_sources(
           ScriptSession.cpp
           SemanticFacts.cpp
           SemanticModel.cpp
+          SFormat.cpp
           Statements.cpp
           Symbol.cpp
           SystemSubroutine.cpp

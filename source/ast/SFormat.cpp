@@ -5,7 +5,7 @@
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
-#include "slang/text/SFormat.h"
+#include "slang/ast/SFormat.h"
 
 #include <cmath>
 #include <ieee1800/vpi_user.h>
@@ -16,7 +16,7 @@
 
 static const double log2_10 = std::log2(10.0);
 
-namespace slang::SFormat {
+namespace slang::ast::SFormat {
 
 static std::optional<uint32_t> parseUInt(const char*& ptr, const char* end) {
     size_t pos;
@@ -402,4 +402,4 @@ void formatArg(std::string& result, const ConstantValue& arg, char specifier,
     }
 }
 
-} // namespace slang::SFormat
+} // namespace slang::ast::SFormat
