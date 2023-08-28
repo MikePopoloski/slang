@@ -36,6 +36,30 @@ public:
     AnalyseVariableReference(NetlistVariableReference &node) :
       node(node), selectorsIt(node.selectors.begin()) {}
 
+    std::pair<size_t, size_t> getTypeBitWidthImpl(slang::ast::Type const& type) {
+        size_t fixedSize = type.getBitWidth();
+        if (fixedSize > 0) {
+            return {1, fixedSize};
+        }
+
+        size_t multiplier = 0;
+        const auto& ct = type.getCanonicalType();
+        if (ct.kind == slang::ast::SymbolKind::FixedSizeUnpackedArrayType) {
+            auto [multiplierElem, fixedSizeElem] = getTypeBitWidthImpl(*type.getArrayElementType());
+            auto rw = ct.as<slang::ast::FixedSizeUnpackedArrayType>().range.width();
+            return {multiplierElem * rw, fixedSizeElem};
+        }
+
+        SLANG_ASSERT(0 && "unsupported type for getTypeBitWidth");
+    }
+
+    /// Return the bit width of a slang type, treating unpacked arrays as
+    /// as if they were packed.
+    int32_t getTypeBitWidth(slang::ast::Type const &type) {
+       auto [multiplierElem, fixedSizeElem] =  getTypeBitWidthImpl(type);
+       return (int32_t) (multiplierElem * fixedSizeElem);
+    }
+
     /// Given a packed struct type, return the bit position of the named field.
     ConstantRange getFieldRange(const slang::ast::PackedStructType &packedStruct,
                                const std::string_view fieldName) const {
@@ -99,8 +123,8 @@ public:
         // Adjust for non-zero array indexing.
         index -= arrayRange.lower();
         auto* elementType = type.getArrayElementType();
-        ConstantRange newRange = {range.lower() + (index * (int32_t) elementType->getBitWidth()),
-                                  range.lower() + ((index + 1) * (int32_t) elementType->getBitWidth()) - 1};
+        ConstantRange newRange = {range.lower() + (index * getTypeBitWidth(*elementType)),
+                                  range.lower() + ((index + 1) * getTypeBitWidth(*elementType)) - 1};
         if (std::next(selectorsIt) != node.selectors.end()) {
             selectorsIt++;
             return getBitRangeImpl(*elementType, newRange);
@@ -121,8 +145,8 @@ public:
         leftIndex -= arrayRange.lower();
         rightIndex -= arrayRange.lower();
         auto* elementType = type.getArrayElementType();
-        ConstantRange newRange = {range.lower() + (rightIndex * (int32_t) elementType->getBitWidth()),
-                                  range.lower() + ((leftIndex + 1) * (int32_t) elementType->getBitWidth()) - 1};
+        ConstantRange newRange = {range.lower() + (rightIndex * getTypeBitWidth(*elementType)),
+                                  range.lower() + ((leftIndex + 1) * getTypeBitWidth(*elementType)) - 1};
         if (std::next(selectorsIt) != node.selectors.end()) {
             selectorsIt++;
             return getBitRangeImpl(type, newRange);
@@ -155,7 +179,7 @@ public:
     ConstantRange getBitRangeImpl(const slang::ast::Type &type, ConstantRange range) {
         // No selectors
         if (node.selectors.empty()) {
-            return {0, (int32_t) node.symbol.getDeclaredType()->getType().getBitWidth() - 1};
+            return {0, getTypeBitWidth(node.symbol.getDeclaredType()->getType()) - 1};
         }
         // Simple vector
         if (type.isPredefinedInteger() || type.isScalar()) {
@@ -229,7 +253,7 @@ public:
     /// Return a range indicating the bits of the variable that are accessed.
     ConstantRange getBitRange() {
         auto& variableType = node.symbol.getDeclaredType()->getType();
-        return getBitRangeImpl(variableType, {0, (int32_t) variableType.getBitWidth() - 1});
+        return getBitRangeImpl(variableType, {0, getTypeBitWidth(variableType) - 1});
     }
 };
 
