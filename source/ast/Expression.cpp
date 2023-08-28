@@ -10,6 +10,7 @@
 #include "slang/ast/ASTSerializer.h"
 #include "slang/ast/ASTVisitor.h"
 #include "slang/ast/Compilation.h"
+#include "slang/ast/EvalContext.h"
 #include "slang/ast/types/Type.h"
 #include "slang/diagnostics/ExpressionsDiags.h"
 #include "slang/diagnostics/LookupDiags.h"
@@ -24,18 +25,23 @@ using namespace slang::ast;
 struct EvalVisitor {
     template<typename T>
     ConstantValue visit(const T& expr, EvalContext& context) {
+        if (expr.constant)
+            return *expr.constant;
+
         if (expr.bad()) {
             if (context.cacheResults())
                 expr.constant = &ConstantValue::Invalid;
             return nullptr;
         }
 
-        if (expr.constant)
-            return *expr.constant;
-
         ConstantValue cv = expr.evalImpl(context);
         if (cv && context.cacheResults()) {
-            expr.constant = context.compilation.allocConstant(std::move(cv));
+            // If we're caching results we can't let any reported
+            // diagnostics get lost because there won't be another
+            // opportunity to see them, so make sure they get logged
+            // to the compilation now.
+            context.reportWarnings();
+            expr.constant = context.getCompilation().allocConstant(std::move(cv));
             return *expr.constant;
         }
 
@@ -108,12 +114,13 @@ using namespace syntax;
 struct Expression::PropagationVisitor {
     const ASTContext& context;
     const Type& newType;
+    const Expression* parentExpr;
     SourceLocation assignmentLoc;
 
-    PropagationVisitor(const ASTContext& context, const Type& newType,
+    PropagationVisitor(const ASTContext& context, const Type& newType, const Expression* parentExpr,
                        SourceLocation assignmentLoc) :
         context(context),
-        newType(newType), assignmentLoc(assignmentLoc) {}
+        newType(newType), parentExpr(parentExpr), assignmentLoc(assignmentLoc) {}
 
     template<typename T>
     Expression& visit(T& expr) {
@@ -145,12 +152,12 @@ struct Expression::PropagationVisitor {
             if (assignmentLoc) {
                 result = &ConversionExpression::makeImplicit(context, newType,
                                                              ConversionKind::Implicit, expr,
-                                                             assignmentLoc);
+                                                             parentExpr, assignmentLoc);
             }
             else {
                 result = &ConversionExpression::makeImplicit(context, newType,
                                                              ConversionKind::Propagated, expr,
-                                                             expr.sourceRange.start());
+                                                             parentExpr, expr.sourceRange.start());
             }
         }
 
@@ -1159,33 +1166,67 @@ Expression& Expression::bindSelector(Compilation& compilation, Expression& value
 
 Expression* Expression::tryBindInterfaceRef(const ASTContext& context,
                                             const ExpressionSyntax& syntax, bool isInterfacePort) {
+    // Unwrap the expression; parentheses are superfluous.
     const ExpressionSyntax* expr = &syntax;
     while (expr->kind == SyntaxKind::ParenthesizedExpression)
         expr = expr->as<ParenthesizedExpressionSyntax>().expression;
 
+    // Connection must be a name (not some arbitrary expression).
     if (!NameSyntax::isKind(expr->kind)) {
         if (isInterfacePort)
             context.addDiag(diag::InterfacePortInvalidExpression, expr->sourceRange());
         return nullptr;
     }
 
+    // Try to look up that name.
     LookupResult result;
     Lookup::name(expr->as<NameSyntax>(), context, LookupFlags::None, result);
+
+    DeferredSourceRange modportRange;
+    std::string_view arrayModportName;
     if (!result.found) {
-        if (isInterfacePort)
-            result.reportDiags(context);
-        return nullptr;
+        // We didn't find the name as-is. This might be a case where the user has
+        // provided an explicit modport name on top of an array of interfaces,
+        // which we should support by looking up the name again withotu the trailing
+        // name component and taking the result if it's an iface array.
+        if (expr->kind == SyntaxKind::ScopedName) {
+            auto& scoped = expr->as<ScopedNameSyntax>();
+            if (scoped.separator.kind == TokenKind::Dot &&
+                scoped.right->kind == SyntaxKind::IdentifierName) {
+                LookupResult result2;
+                Lookup::name(*scoped.left, context, LookupFlags::None, result2);
+                arrayModportName = scoped.right->as<IdentifierNameSyntax>().identifier.valueText();
+
+                auto found = result2.found;
+                if (found && !arrayModportName.empty() &&
+                    (found->kind == SymbolKind::InterfacePort ||
+                     found->kind == SymbolKind::InstanceArray)) {
+                    result.copyFrom(result2);
+                    modportRange = *scoped.right;
+                }
+            }
+        }
+
+        // If still not found we can't make a connection. Error if this is for a
+        // port, and otherwise return null to let the caller try binding as a
+        // normal expression.
+        if (!result.found) {
+            if (isInterfacePort)
+                result.reportDiags(context);
+            return nullptr;
+        }
     }
 
     auto& comp = context.getCompilation();
     auto symbol = result.found;
-    std::string_view modportName;
+    const InterfacePortSymbol* ifacePort = nullptr;
+    const ModportSymbol* modport = nullptr;
 
+    // If we found an interface port we should unwrap to what it's connected to.
     if (symbol->kind == SymbolKind::InterfacePort) {
-        auto& ifacePort = symbol->as<InterfacePortSymbol>();
-        modportName = ifacePort.modport;
+        ifacePort = &symbol->as<InterfacePortSymbol>();
+        std::tie(symbol, modport) = ifacePort->getConnection();
 
-        symbol = ifacePort.getConnection();
         if (symbol && !result.selectors.empty()) {
             SmallVector<const ElementSelectSyntax*> selectors;
             for (auto& sel : result.selectors)
@@ -1205,6 +1246,7 @@ Expression* Expression::tryBindInterfaceRef(const ASTContext& context,
         }
     }
 
+    // Unwrap any interface arrays we found, collect the dimensions along the way.
     SmallVector<ConstantRange, 4> dims;
     auto origSymbol = symbol;
     while (symbol->kind == SymbolKind::InstanceArray) {
@@ -1216,6 +1258,8 @@ Expression* Expression::tryBindInterfaceRef(const ASTContext& context,
         symbol = array.elements[0];
     }
 
+    // If we didn't find a modport or an interface instance then this is not
+    // an interface connection.
     if (symbol->kind != SymbolKind::Modport &&
         (symbol->kind != SymbolKind::Instance || !symbol->as<InstanceSymbol>().isInterface())) {
         // If this is a variable with an errored type, an error is already emitted.
@@ -1236,22 +1280,38 @@ Expression* Expression::tryBindInterfaceRef(const ASTContext& context,
         return nullptr;
     }
 
+    // At this point we've found a connection so we're no longer speculatively
+    // trying to connect, we're going to connect or issue an error.
     result.reportDiags(context);
     result.errorIfSelectors(context);
 
     const InstanceBodySymbol* iface = nullptr;
-    const ModportSymbol* modport = nullptr;
-
     if (symbol->kind == SymbolKind::Modport) {
         modport = &symbol->as<ModportSymbol>();
         iface = &symbol->getParentScope()->asSymbol().as<InstanceBodySymbol>();
     }
     else {
         iface = &symbol->as<InstanceSymbol>().body;
-        if (!modportName.empty()) {
-            auto sym = iface->find(modportName);
-            if (!sym || sym->kind != SymbolKind::Modport)
+    }
+
+    if (!arrayModportName.empty()) {
+        if (modport) {
+            // If we connected via an interface port that itself has a modport restriction,
+            // we can't also be restricting via an interface array modport.
+            auto& diag = context.addDiag(diag::InvalidModportAccess, *modportRange);
+            diag << arrayModportName;
+            diag << iface->getDefinition().name;
+            diag << modport->name;
+            return &badExpr(comp, nullptr);
+        }
+        else {
+            auto sym = iface->find(arrayModportName);
+            if (!sym || sym->kind != SymbolKind::Modport) {
+                auto& diag = context.addDiag(diag::NotAModport, *modportRange);
+                diag << arrayModportName;
+                diag << iface->getDefinition().name;
                 return &badExpr(comp, nullptr);
+            }
 
             modport = &sym->as<ModportSymbol>();
         }
@@ -1266,6 +1326,13 @@ Expression* Expression::tryBindInterfaceRef(const ASTContext& context,
                                                           sourceRange.start());
     if (!dims.empty())
         type = &FixedSizeUnpackedArrayType::fromDims(*context.scope, *type, dims, sourceRange);
+
+    // Don't return a modport as the symbol target, it's expected that it
+    // will be pulled from the virtual interface type instead.
+    if (origSymbol->kind == SymbolKind::Modport) {
+        origSymbol = &origSymbol->getParentScope()->asSymbol();
+        origSymbol = origSymbol->as<InstanceBodySymbol>().parentInstance;
+    }
 
     return comp.emplace<ArbitrarySymbolExpression>(*origSymbol, *type, sourceRange);
 }
@@ -1299,14 +1366,15 @@ void Expression::findPotentiallyImplicitNets(
 }
 
 void Expression::contextDetermined(const ASTContext& context, Expression*& expr,
-                                   const Type& newType, SourceLocation assignmentLoc) {
-    PropagationVisitor visitor(context, newType, assignmentLoc);
+                                   const Expression* parentExpr, const Type& newType,
+                                   SourceLocation assignmentLoc) {
+    PropagationVisitor visitor(context, newType, parentExpr, assignmentLoc);
     expr = &expr->visit(visitor);
 }
 
 void Expression::selfDetermined(const ASTContext& context, Expression*& expr) {
     SLANG_ASSERT(expr->type);
-    PropagationVisitor visitor(context, *expr->type, {});
+    PropagationVisitor visitor(context, *expr->type, nullptr, {});
     expr = &expr->visit(visitor);
 }
 

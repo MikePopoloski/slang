@@ -371,7 +371,7 @@ void registerSymbols(py::module_& m) {
         .def_property_readonly("isInvalid", &InterfacePortSymbol::isInvalid);
 
     py::class_<PortConnection>(m, "PortConnection")
-        .def_property_readonly("ifaceInstance", &PortConnection::getIfaceInstance)
+        .def_property_readonly("ifaceConn", &PortConnection::getIfaceConn)
         .def_property_readonly("expression", &PortConnection::getExpression)
         .def_property_readonly("port", [](const PortConnection& self) { return &self.port; });
 

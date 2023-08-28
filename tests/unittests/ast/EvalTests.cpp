@@ -24,7 +24,7 @@ TEST_CASE("Eval function calls") {
     ScriptSession session;
     session.eval(R"(
 function logic [15:0] foo(int a, int b);
-    return 16'(a + b);
+    return 16'($unsigned(a + b));
 endfunction
 )");
 
@@ -198,13 +198,14 @@ endfunction
 TEST_CASE("Eval nested for loop") {
     ScriptSession session;
     session.eval(R"(
-function automatic logic [15:0] foo(int a);
-    logic [15:0] result = 1;
+typedef logic[15:0] result_t;
+function automatic result_t foo(int a);
+    result_t result = 1;
     int temp = 0;
     for (int i = 0; i < a; i+=1) begin
         temp = i * 2;
         for (int j = temp + 1; j < 10; j++)
-            result += 16'(j);
+            result += result_t'(j);
     end
     return result;
 endfunction
@@ -424,16 +425,16 @@ TEST_CASE("Unary inc-dec operators") {
 TEST_CASE("Constant eval errors") {
     ScriptSession session;
     session.eval("logic f = 1;");
-    session.eval("function int foo(int a); return f + a; endfunction");
+    session.eval("function int foo(int a); return int'(f) + a; endfunction");
     session.eval("function int bar(int b); return foo(b + 1); endfunction");
 
     CHECK(!session.eval("localparam int p = bar(1);"));
 
     std::string msg = "\n" + report(session.getDiagnostics());
     CHECK(msg == R"(
-source:1:33: error: all identifiers that are not parameters or enums must be declared locally to a constant function
-function int foo(int a); return f + a; endfunction
-                                ^
+source:1:38: error: all identifiers that are not parameters or enums must be declared locally to a constant function
+function int foo(int a); return int'(f) + a; endfunction
+                                     ^
 source:1:33: note: in call to 'foo(2)'
 function int bar(int b); return foo(b + 1); endfunction
                                 ^
@@ -659,7 +660,7 @@ TEST_CASE("Associative array eval") {
     CHECK(session.eval("arr.or").integer() == 0);
 
     session.eval(R"(
-function int func(int i, integer arr[string]);
+function int func(logic [31:0] i, integer arr[string]);
     case (i) inside
         [5'd1:5'd2]: return 1;
         arr: return 2;
@@ -722,7 +723,7 @@ TEST_CASE("Queue eval") {
     CHECK(session.eval("$size(arr)").integer() == 5);
 
     session.eval(R"(
-function int func(int i, int arr[$]);
+function int func(int unsigned i, int arr[$]);
     case (i) inside
         [5'd1:5'd2]: return 1;
         arr: return 2;
@@ -940,7 +941,9 @@ TEST_CASE("Dynamic string ops") {
 
     CHECK(session.eval("int'(str2)").integer() == 0x69427965);
 
-    NO_SESSION_ERRORS;
+    auto diags = session.getDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::ConstantConversion);
 }
 
 TEST_CASE("Ambiguous numeric literals") {
@@ -1186,6 +1189,8 @@ endfunction
     CHECK(sformatf("%v", "1'bx") == "StX");
     CHECK(sformatf("%v", "1'bz") == "HiZ");
     CHECK(sformatf("%v", "3'b1z0") == "St1 HiZ St0");
+
+    CHECK(sformatf("%t", "12345") == "               12345");
 }
 
 TEST_CASE("sformatf with trailing percent") {
@@ -1503,8 +1508,8 @@ TEST_CASE("Eval inside expressions") {
     session.eval("int arr1[3] = '{ 1, 2, 3 };");
     session.eval("int arr2[3] = '{ 1, 2, 4 };");
 
-    CHECK(session.eval("i inside { 1, 2, 3, 3'b101, arr1 }").integer() == 0);
-    CHECK(session.eval("i inside { 3'b101, arr2 }").integer() == 1);
+    CHECK(session.eval("i inside { 1, 2, 3, 3'sb101, arr1 }").integer() == 0);
+    CHECK(session.eval("i inside { 3'sb101, arr2 }").integer() == 1);
     CHECK_THAT((logic_t)session.eval("3'bx10 inside { 3'b101, arr2 }").integer(),
                exactlyEquals(logic_t::x));
     CHECK(session.eval("3'bx10 inside { 3'bxx0, arr2 }").integer() == 1);
@@ -1784,7 +1789,7 @@ union { int i[4]; bit [18:0] j; } u;
 TEST_CASE("bit-stream cast evaluation") {
     ScriptSession session;
     session.eval(R"(
-localparam struct {bit a[$]; shortint b; string c; logic[3:0]d;} a = '{{1,2,3,4}, 67, "$", 4'b1x1z};
+localparam struct {bit a[$]; shortint b; string c; logic[3:0]d;} a = '{{1,0,1,0}, 67, "$", 4'b1x1z};
 localparam integer tab [string] = '{"Peter":20, "Paul":22, "Mary":23, default:-1 };
 typedef int b[5:7];
 localparam string str = "hello!!";
@@ -2051,7 +2056,7 @@ endfunction
 TEST_CASE("Recursive function call") {
     ScriptSession session;
     session.eval(R"(
-function automatic integer factorial (input [31:0] operand);
+function automatic integer factorial (input signed [31:0] operand);
     if (operand >= 2)
         factorial = factorial (operand - 1) * operand;
     else
@@ -2355,7 +2360,9 @@ struct {
     session.eval("logic [11:0] r = '{12{4'd3}};");
     CHECK(session.eval("r").integer() == 4095);
 
-    NO_SESSION_ERRORS;
+    auto diags = session.getDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::ConstantConversion);
 }
 
 TEST_CASE("foreach loop extended name eval") {
@@ -2422,7 +2429,7 @@ function automatic int f1;
 
     if (e matches (tagged Jmp (tagged JmpC '{cc:.c,addr:.a}))
         &&& (rf[c] != 0))
-        return c + a;
+        return int'(c + a);
     else
         return 1;
 endfunction
@@ -2470,14 +2477,14 @@ function automatic int f2;
         tagged Add '{reg1:0}: return 2;
         tagged Jmp tagged JmpC '{2, 0}: return 3;
         tagged Jmp tagged JmpC '{.a, 137} &&& rf[0] > 0: return 4;
-        tagged Jmp tagged JmpC '{.a, .b} &&& rf[2] == 1: return a + b + i;
+        tagged Jmp tagged JmpC '{.a, .b} &&& rf[2] == 1: return int'(a + b + unsigned'(i));
         default: return 0;
     endcase
 endfunction
 )");
 
     session.eval(R"(
-function automatic int f3;
+function automatic logic[31:0] f3;
     Instr e = tagged Jmp tagged JmpC '{2, 137};
     int rf[3] = '{0, 0, 1};
     return e matches (tagged Jmp (tagged JmpC '{cc:.c,addr:.a})) &&& rf[c] != 0 ? c + a : 1;
@@ -2486,7 +2493,7 @@ endfunction
 
     CHECK(session.eval("f1();").toString() == "139");
     CHECK(session.eval("f2();").toString() == "169");
-    CHECK(session.eval("f3();").toString() == "139");
+    CHECK(session.eval("f3();").integer() == 139);
 
     auto diags = session.getDiagnostics();
     REQUIRE(diags.size() == 2);

@@ -354,14 +354,12 @@ bool lookupDownward(std::span<const NamePlusLoc> nameParts, NameComponents name,
                                     !isCBOrVirtualIface;
         }
 
-        std::string_view modportName;
+        const ModportSymbol* modport = nullptr;
         if (symbol->kind == SymbolKind::InterfacePort) {
             auto& ifacePort = symbol->as<InterfacePortSymbol>();
-            symbol = ifacePort.getConnection();
+            std::tie(symbol, modport) = ifacePort.getConnection();
             if (!symbol)
                 return false;
-
-            modportName = ifacePort.modport;
         }
 
         if ((!symbol->isScope() && symbol->kind != SymbolKind::Instance) || symbol->isType() ||
@@ -418,6 +416,16 @@ bool lookupDownward(std::span<const NamePlusLoc> nameParts, NameComponents name,
             auto& body = symbol->as<InstanceSymbol>().body;
             symbol = &body;
 
+            // If we had a modport restriction on an interface port lookup
+            // we should switch to doing the next lookup in that modport's scope.
+            // We need to re-lookup the modport symbol because the one we have
+            // is just representative; the real one depends on the result of the
+            // selectChild call we made above in the case of an interface array.
+            if (modport) {
+                symbol = body.find(modport->name);
+                SLANG_ASSERT(symbol);
+            }
+
             // If we're descending into a program instance, verify that
             // the original scope for the lookup is also within a program.
             if (body.getDefinition().definitionKind == DefinitionKind::Program &&
@@ -432,23 +440,6 @@ bool lookupDownward(std::span<const NamePlusLoc> nameParts, NameComponents name,
             // Don't allow lookups into uninstantiated generate blocks, but do return
             // true so that the lookup can continue elsewhere.
             return true;
-        }
-
-        // If there is a modport name restricting our lookup, translate to that
-        // modport's scope now. It's possible we're already looking at the modport
-        // here, if the interface port symbol was explicitly connected to a modport
-        // instead of an instance. In that case we don't have to translate anything.
-        //
-        // Also check if we're looking at an array of instances -- it's possible to hit
-        // this in an invalid lookup scenario and we want to make sure we fall through
-        // to the normal scope lookup below in order to issue an error. For example:
-        //    module (I.mod i[3]);
-        //        virtual I.mod j = i.blah;
-        //    endmodule
-        if (!modportName.empty() && symbol->kind == SymbolKind::InstanceBody) {
-            symbol = symbol->as<Scope>().find(modportName);
-            if (!symbol)
-                return false;
         }
 
         name = it->name;
@@ -484,7 +475,8 @@ bool lookupDownward(std::span<const NamePlusLoc> nameParts, NameComponents name,
             // Other symbols aren't permitted in a modport, so they are allowed
             // to be accessed through it as if we had accessed the interface
             // instance itself.
-            if (SemanticFacts::isAllowedInModport(symbol->kind)) {
+            if (SemanticFacts::isAllowedInModport(symbol->kind) ||
+                symbol->kind == SymbolKind::Modport) {
                 // This is an error, the modport disallows access.
                 auto def = prevSym.getDeclaringDefinition();
                 SLANG_ASSERT(def);

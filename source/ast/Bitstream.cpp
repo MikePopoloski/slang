@@ -10,6 +10,7 @@
 #include <numeric>
 
 #include "slang/ast/Compilation.h"
+#include "slang/ast/EvalContext.h"
 #include "slang/ast/expressions/OperatorExpressions.h"
 #include "slang/ast/symbols/ClassSymbols.h"
 #include "slang/ast/symbols/VariableSymbols.h"
@@ -881,9 +882,10 @@ ConstantValue Bitstream::convertToBitVector(ConstantValue&& value, SourceRange s
         return value;
 
     // TODO: worry about width overflow?
-    size_t width = value.bitstreamWidth();
-    auto& type = context.compilation.getType(bitwidth_t(width),
-                                             IntegralFlags::FourState | IntegralFlags::Unsigned);
+    const size_t width = value.bitstreamWidth();
+    auto& type = context.getCompilation().getType(bitwidth_t(width), IntegralFlags::FourState |
+                                                                         IntegralFlags::Unsigned);
+
     return evaluateCast(type, std::move(value), sourceRange, context, /* isImplicit */ true);
 }
 

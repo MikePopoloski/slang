@@ -140,6 +140,8 @@ void Driver::addStandardArgs() {
     cmdLine.add("--allow-dup-initial-drivers", options.allowDupInitialDrivers,
                 "Allow signals driven in an always_comb or always_ff block to also be driven "
                 "by initial blocks.");
+    cmdLine.add("--allow-toplevel-iface-ports", options.allowTopLevelIfacePorts,
+                "Allow top-level modules to have interface ports.");
     cmdLine.add("--strict-driver-checking", options.strictDriverChecking,
                 "Perform strict driver checking, which currently means disabling "
                 "procedural 'for' loop unrolling.");
@@ -629,7 +631,6 @@ void Driver::addParseOptions(Bag& bag) const {
 void Driver::addCompilationOptions(Bag& bag) const {
     CompilationOptions coptions;
     coptions.suppressUnused = false;
-    coptions.scriptMode = false;
     if (options.maxInstanceDepth.has_value())
         coptions.maxInstanceDepth = *options.maxInstanceDepth;
     if (options.maxGenerateSteps.has_value())
@@ -660,6 +661,8 @@ void Driver::addCompilationOptions(Bag& bag) const {
         coptions.ignoreUnknownModules = true;
     if (options.allowUseBeforeDeclare == true)
         coptions.allowUseBeforeDeclare = true;
+    if (options.allowTopLevelIfacePorts != true)
+        coptions.allowTopLevelIfacePorts = false;
 
     for (auto& name : options.topModules)
         coptions.topModules.emplace(name);

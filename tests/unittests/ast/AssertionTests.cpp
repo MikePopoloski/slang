@@ -1488,25 +1488,26 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 18);
+    REQUIRE(diags.size() == 19);
     CHECK(diags[0].code == diag::ExpectedIdentifier);
     CHECK(diags[1].code == diag::CheckerArgCannotBeEmpty);
     CHECK(diags[2].code == diag::ExpressionNotAssignable);
-    CHECK(diags[3].code == diag::WidthExpand);
-    CHECK(diags[4].code == diag::TooManyPortConnections);
-    CHECK(diags[5].code == diag::UnconnectedArg);
+    CHECK(diags[3].code == diag::SignConversion);
+    CHECK(diags[4].code == diag::WidthExpand);
+    CHECK(diags[5].code == diag::TooManyPortConnections);
     CHECK(diags[6].code == diag::UnconnectedArg);
     CHECK(diags[7].code == diag::UnconnectedArg);
     CHECK(diags[8].code == diag::UnconnectedArg);
-    CHECK(diags[9].code == diag::CheckerArgCannotBeEmpty);
-    CHECK(diags[10].code == diag::PortDoesNotExist);
-    CHECK(diags[11].code == diag::ImplicitNamedPortNotFound);
-    CHECK(diags[12].code == diag::UsedBeforeDeclared);
-    CHECK(diags[13].code == diag::CheckerArgCannotBeEmpty);
+    CHECK(diags[9].code == diag::UnconnectedArg);
+    CHECK(diags[10].code == diag::CheckerArgCannotBeEmpty);
+    CHECK(diags[11].code == diag::PortDoesNotExist);
+    CHECK(diags[12].code == diag::ImplicitNamedPortNotFound);
+    CHECK(diags[13].code == diag::UsedBeforeDeclared);
     CHECK(diags[14].code == diag::CheckerArgCannotBeEmpty);
-    CHECK(diags[15].code == diag::MixingOrderedAndNamedPorts);
-    CHECK(diags[16].code == diag::UndeclaredIdentifier);
-    CHECK(diags[16].code == diag::UndeclaredIdentifier);
+    CHECK(diags[15].code == diag::CheckerArgCannotBeEmpty);
+    CHECK(diags[16].code == diag::MixingOrderedAndNamedPorts);
+    CHECK(diags[17].code == diag::UndeclaredIdentifier);
+    CHECK(diags[18].code == diag::UndeclaredIdentifier);
 }
 
 TEST_CASE("Checker invalid instantiations") {

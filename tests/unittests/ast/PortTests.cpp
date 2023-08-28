@@ -1249,7 +1249,7 @@ module top;
     m m3((* foo = 1 *));
     m m4((* foo = 2 *) .x);
     m m5((* foo = 3 *) .*);
-    n n1(.c(2));
+    n n1(.c(0));
     o o1(.i(), .foo(2));
     o o2((* baz = 3 *) .i);
     o o3((* baz = 3 *) .i(i));
@@ -1264,7 +1264,7 @@ module top;
     u u1(.z(z.mod));
     u u2(.z(arr));
 
-    logic qq;
+    logic signed [1:0] qq;
     v v1(.qq);
 
     w w1(t);
@@ -1279,7 +1279,7 @@ endmodule
     auto& m1 = compilation.getRoot().lookupName<InstanceSymbol>("top.m1");
     auto& m1_i = m1.body.findPort("x")->as<PortSymbol>();
     CHECK(!m1_i.getInternalExpr());
-    CHECK(!m1.getPortConnection(m1_i)->getIfaceInstance());
+    CHECK(!m1.getPortConnection(m1_i)->getIfaceConn().first);
 
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 15);
@@ -1386,7 +1386,7 @@ nettype integer nt1;
 module m(nt1 foo, bar, input nt1 baz);
 endmodule
 
-module n(input foo);
+module n(input signed foo);
 endmodule
 
 module o(nt1 a);
@@ -1397,12 +1397,12 @@ module p({a, b});
 endmodule
 
 module top;
-    wire [5:0] a;
+    wire signed [5:0] a;
     wire integer b;
 
     m m1(a, b, b);
 
-    nettype logic[5:0] nt2;
+    nettype logic signed[5:0] nt2;
     nt2 c;
     n n1(c);
 

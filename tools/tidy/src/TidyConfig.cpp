@@ -30,6 +30,8 @@ TidyConfig::TidyConfig() {
     synthesisChecks.emplace("NoLatchesOnDesign", CheckStatus::ENABLED);
     synthesisChecks.emplace("OnlyAssignedOnReset", CheckStatus::ENABLED);
     synthesisChecks.emplace("RegisterHasNoReset", CheckStatus::ENABLED);
+    synthesisChecks.emplace("XilinxDoNotCareValues", CheckStatus::ENABLED);
+    synthesisChecks.emplace("CastSignedIndex", CheckStatus::ENABLED);
     checkKinds.insert({slang::TidyKind::Synthesis, synthesisChecks});
 }
 

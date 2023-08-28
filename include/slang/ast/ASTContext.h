@@ -9,7 +9,6 @@
 
 #include <tuple>
 
-#include "slang/ast/EvalContext.h"
 #include "slang/ast/Lookup.h"
 #include "slang/ast/Scope.h"
 #include "slang/ast/SemanticFacts.h"
@@ -24,6 +23,7 @@ class Expression;
 class InstanceSymbolBase;
 class ProceduralBlockSymbol;
 class Statement;
+class SubroutineSymbol;
 class TempVarSymbol;
 class Type;
 class ValueSymbol;
@@ -194,6 +194,33 @@ SLANG_BITMASK(ASTFlags, NoReference)
 // clang-format on
 SLANG_ENUM(DimensionKind, DK)
 #undef DK
+
+/// Various flags that can be applied to a constant expression evaluation.
+enum class SLANG_EXPORT EvalFlags : uint8_t {
+    /// No special flags specified.
+    None = 0,
+
+    /// This evaluation is happening inside of a script, so some
+    /// language rules should be relaxed.
+    IsScript = 1 << 0,
+
+    /// The results of the evaluation can be cached in each expression's
+    /// `constant` pointer.
+    CacheResults = 1 << 1,
+
+    /// Specparams are allowed during evaluation.
+    SpecparamsAllowed = 1 << 2,
+
+    /// Evaluation is for a covergroup expression, which allows some
+    /// forms of non-constant variables to be referenced.
+    CovergroupExpr = 1 << 3,
+
+    /// For parameter evaluation, allow unbounded literals to evaluate to
+    /// the placeholder value. Other expressions that have an unbounded literal
+    /// without a queue target will return an invalid value.
+    AllowUnboundedPlaceholder = 1 << 4
+};
+SLANG_BITMASK(EvalFlags, AllowUnboundedPlaceholder)
 
 /// The result of evaluating dimension syntax nodes.
 struct SLANG_EXPORT EvaluatedDimension {

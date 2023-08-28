@@ -17,6 +17,7 @@
 #include "slang/diagnostics/ConstEvalDiags.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/syntax/AllSyntax.h"
+#include "slang/util/ScopeGuard.h"
 
 namespace slang::ast {
 
@@ -295,24 +296,12 @@ static const Symbol* checkDefparamHierarchy(const Symbol& target, const Scope& d
         // We are also disallowed from having defparams inside an instance that has interface
         // ports that connect to an array from extending outside that hierarchy.
         for (auto conn : body.parentInstance->getPortConnections()) {
-            if (auto connSym = conn->getIfaceInstance()) {
-                if (connSym->kind == SymbolKind::Modport) {
-                    auto parent = connSym->getParentScope();
-                    SLANG_ASSERT(parent);
-                    connSym = &parent->asSymbol();
-                }
-
-                if (connSym->kind == SymbolKind::InstanceBody) {
-                    auto& connBody = connSym->as<InstanceBodySymbol>();
-                    SLANG_ASSERT(connBody.parentInstance);
-                    connSym = connBody.parentInstance;
-                }
-
-                if (connSym->kind == SymbolKind::InstanceArray ||
-                    (connSym->getParentScope() &&
-                     connSym->getParentScope()->asSymbol().kind == SymbolKind::InstanceArray)) {
-                    return body.parentInstance;
-                }
+            auto [connSym, modport] = conn->getIfaceConn();
+            if (connSym &&
+                (connSym->kind == SymbolKind::InstanceArray ||
+                 (connSym->getParentScope() &&
+                  connSym->getParentScope()->asSymbol().kind == SymbolKind::InstanceArray))) {
+                return body.parentInstance;
             }
         }
     } while (scope);

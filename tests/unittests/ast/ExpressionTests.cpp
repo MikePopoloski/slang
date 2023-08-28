@@ -3,6 +3,7 @@
 
 #include "Test.h"
 
+#include "slang/ast/EvalContext.h"
 #include "slang/ast/Expression.h"
 #include "slang/ast/expressions/AssignmentExpressions.h"
 #include "slang/ast/expressions/MiscExpressions.h"
@@ -52,23 +53,24 @@ TEST_CASE("Evaluate assignment expression") {
 
     // Bind the expression tree to the symbol
     scope.addMember(local);
-    auto& bound = Expression::bind(syntax->root().as<ExpressionSyntax>(),
-                                   ASTContext(scope, LookupLocation::max),
+
+    ASTContext astCtx(scope, LookupLocation::max);
+    auto& bound = Expression::bind(syntax->root().as<ExpressionSyntax>(), astCtx,
                                    ASTFlags::AssignmentAllowed);
     REQUIRE(syntax->diagnostics().empty());
 
     // Initialize `i` to 1.
-    EvalContext context(compilation);
-    context.pushEmptyFrame();
+    EvalContext evalCtx(astCtx);
+    evalCtx.pushEmptyFrame();
 
-    auto i = context.createLocal(&local, SVInt(32, 1, true));
+    auto i = evalCtx.createLocal(&local, SVInt(32, 1, true));
 
     // Evaluate the expression tree.
-    bound.eval(context);
+    bound.eval(evalCtx);
     CHECK(i->integer() == 4);
 
     // Run it again, results should be as you'd expect
-    bound.eval(context);
+    bound.eval(evalCtx);
     CHECK(i->integer() == 7);
     NO_COMPILATION_ERRORS;
 }
@@ -356,7 +358,7 @@ TEST_CASE("Expression types") {
     CHECK(typeof("uu1 !== uu2") == "<error>");
     CHECK(typeof("1 ? uu1 : uu2") == "<error>");
 
-    auto& diags = compilation.getAllDiagnostics();
+    auto diags = filterWarnings(compilation.getAllDiagnostics());
     REQUIRE(diags.size() == 11);
     CHECK(diags[0].code == diag::BadUnaryExpression);
     CHECK(diags[1].code == diag::BadBinaryExpression);
@@ -542,6 +544,9 @@ endmodule
     auto& diagnostics = compilation.getAllDiagnostics();
     std::string result = "\n" + report(diagnostics);
     CHECK(result == R"(
+source:7:13: warning: implicit conversion from 'bit[34:0]' to 'int' changes value from 35'h22c6d1fba to 745349050 [-Wconstant-conversion]
+    int i = 35'd123498234978234;
+            ^~~~~~~~~~~~~~~~~~~
 source:7:17: warning: vector literal too large for the given number of bits [-Wvector-overflow]
     int i = 35'd123498234978234;
                 ^
@@ -615,8 +620,9 @@ TEST_CASE("Crazy long hex literal") {
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 1);
-    CHECK(diags[0].code == diag::LiteralSizeTooLarge);
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::ConstantConversion);
+    CHECK(diags[1].code == diag::LiteralSizeTooLarge);
 }
 
 TEST_CASE("Simple assignment patterns") {
@@ -1148,15 +1154,16 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 8);
+    REQUIRE(diags.size() == 9);
     CHECK(diags[0].code == diag::BadAssignment);
     CHECK(diags[1].code == diag::BadAssignment);
     CHECK(diags[2].code == diag::NoImplicitConversion);
     CHECK(diags[3].code == diag::UnpackedConcatSize);
-    CHECK(diags[4].code == diag::UnsizedInConcat);
-    CHECK(diags[5].code == diag::AssignmentPatternNoContext);
-    CHECK(diags[6].code == diag::UnpackedConcatAssociative);
-    CHECK(diags[7].code == diag::BadConcatExpression);
+    CHECK(diags[4].code == diag::ConstantConversion);
+    CHECK(diags[5].code == diag::UnsizedInConcat);
+    CHECK(diags[6].code == diag::AssignmentPatternNoContext);
+    CHECK(diags[7].code == diag::UnpackedConcatAssociative);
+    CHECK(diags[8].code == diag::BadConcatExpression);
 }
 
 TEST_CASE("Empty array concatenations") {
@@ -1415,13 +1422,17 @@ dest_t b = dest_t'(a);
         asso x = asso'(64'b0);
 )"};
 
-    for (const auto& code : illegal)
-        CHECK(testBitstream(code, diag::BadConversion) == 1);
+    for (const auto& code : illegal) {
+        auto count = testBitstream(code, diag::BadConversion);
+        if (count != 1) {
+            FAIL_CHECK("Bitstream check failed (" << count << "): " << code);
+        }
+    }
 
     std::string legal[] = {
         R"(
 // Illegal conversion from 20-bit struct to int (32 bits) - run time error
-struct {bit a[$]; shortint b;} a = '{{1,2,3,4}, 67};
+struct {bit a[$]; shortint b;} a = '{{1,0,1,0}, 67};
 int b = int'(a);
 )",
         R"(
@@ -1443,13 +1454,17 @@ channel_type channel = channel_type'(genPkt);
 Packet p = Packet'( channel[0 : 1] );
 )"};
 
-    for (const auto& code : legal)
-        CHECK(testBitstream(code) == 0);
+    for (const auto& code : legal) {
+        auto count = testBitstream(code);
+        if (count != 0) {
+            FAIL_CHECK("Bitstream check failed (" << count << "): " << code);
+        }
+    }
 
     std::string eval[] = {
         R"(
 // Illegal conversion from 20-bit struct to int (32 bits) - run time error
-localparam struct {bit a[$]; shortint b;} a = '{{1,2,3,4}, 67};
+localparam struct {bit a[$]; shortint b;} a = '{{1,0,1,0}, 67};
 localparam b = int'(a);
 )",
         R"(
@@ -1463,8 +1478,12 @@ typedef struct { shortint a[]; byte b[1:0]; } c;
 localparam c d = c'(str);
 )"};
 
-    for (const auto& code : eval)
-        CHECK(testBitstream(code, diag::ConstEvalBitstreamCastSize) == 1);
+    for (const auto& code : eval) {
+        auto count = testBitstream(code, diag::ConstEvalBitstreamCastSize);
+        if (count != 1) {
+            FAIL_CHECK("Bitstream check failed (" << count << "): " << code);
+        }
+    }
 
     CHECK(testBitstream("byte a[2]; localparam b = shortint'(a);",
                         diag::ConstEvalNonConstVariable) == 1);
@@ -1950,10 +1969,11 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 3);
+    REQUIRE(diags.size() == 4);
     CHECK(diags[0].code == diag::ImplicitConvert);
     CHECK(diags[1].code == diag::WidthExpand);
-    CHECK(diags[2].code == diag::WidthTruncate);
+    CHECK(diags[2].code == diag::SignConversion);
+    CHECK(diags[3].code == diag::WidthTruncate);
 }
 
 TEST_CASE("Assign to net in procedural context") {
@@ -2900,6 +2920,38 @@ endmodule
 
     // This tests a crash due to invalidating iterators while
     // iterating the variable's driver map.
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("String constant expression error regress GH #811") {
+    auto tree = SyntaxTree::fromText(R"(
+class A;
+    string s3[string];
+    function void f();
+        if (s3.exists("abcdef")) begin
+        end
+    endfunction
+endclass
+
+class C;
+    A a;
+    function void f();
+        string s1 = "abcdef";
+        string s2 = "abc";
+        a = new();
+
+        if (s1.substr(0, 2) == s2) begin
+        end
+        if (s1 == s2) begin
+        end
+        if (a.s3.exists("abcdef")) begin
+        end
+    endfunction
+endclass
+)");
+
     Compilation compilation;
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;

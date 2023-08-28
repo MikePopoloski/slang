@@ -34,6 +34,7 @@ public:
 
 private:
     std::vector<std::shared_ptr<syntax::SyntaxTree>> syntaxTrees;
+    ASTContext astCtx;
     EvalContext evalContext;
 };
 

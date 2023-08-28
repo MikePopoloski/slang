@@ -951,7 +951,7 @@ module top;
     Z z(.*);
 
     initial begin
-        int unsigned result, max;
+        int result;
         real r;
         result = $coverage_control(`SV_COV_RESET, `SV_COV_TOGGLE, `SV_COV_MODULE, "A", "B"); // too many args
         result = $coverage_control(`SV_COV_RESET, `SV_COV_TOGGLE, `SV_COV_MODULE, 4);        // bad type
@@ -978,7 +978,7 @@ module top;
     end
 
     initial begin
-        int unsigned result;
+        int result;
         result = $coverage_control(0, 0, 0, $root);
     end
 

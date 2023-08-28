@@ -1220,7 +1220,10 @@ const Type& Type::fromLookupResult(Compilation& compilation, const LookupResult&
     const Type* finalType = &symbol->as<Type>();
     size_t count = result.selectors.size();
     for (size_t i = 0; i < count; i++) {
-        // TODO: handle dotted selectors
+        // It's not possible to have dotted selectors here because the Lookup
+        // operation will error if we try to dot into a type, and will only
+        // return selectors if the symbol is value-like, in which case we will
+        // fail the isType() check above.
         auto selectSyntax = std::get<const ElementSelectSyntax*>(result.selectors[count - i - 1]);
         auto dim = context.evalPackedDimension(*selectSyntax);
         finalType = &PackedArrayType::fromSyntax(*context.scope, *finalType, dim, *selectSyntax);

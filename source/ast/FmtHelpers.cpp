@@ -8,12 +8,13 @@
 #include "FmtHelpers.h"
 
 #include "slang/ast/Definition.h"
+#include "slang/ast/EvalContext.h"
 #include "slang/ast/Expression.h"
+#include "slang/ast/SFormat.h"
 #include "slang/ast/expressions/LiteralExpressions.h"
 #include "slang/ast/symbols/VariableSymbols.h"
 #include "slang/ast/types/AllTypes.h"
 #include "slang/diagnostics/SysFuncsDiags.h"
-#include "slang/text/SFormat.h"
 #include "slang/util/String.h"
 
 namespace slang::ast {

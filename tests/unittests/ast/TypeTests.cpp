@@ -1277,10 +1277,12 @@ program T (A_Bus.STB b1, A_Bus.STB b2 );
         s.sb.req <= 0;
     endtask
 
+    typedef logic [7:0] addr_t;
+
     assert property (b1.sb.p1);
     initial begin
-        drive( b1, 8'($random), 8'($random) );
-        drive( b2, 8'($random), 8'($random) );
+        drive( b1, addr_t'($random), addr_t'($random) );
+        drive( b2, addr_t'($random), addr_t'($random) );
     end
 endprogram
 )");
@@ -1947,9 +1949,6 @@ module m(I.m a[3][4], I.m b, I c, I d);
     virtual I o = b;
     virtual I.m p = b;
 
-    virtual I q = b.m;
-    virtual I.m r = b.m;
-
     virtual I s = c;
     virtual I.m t = c;
 
@@ -1958,9 +1957,6 @@ module m(I.m a[3][4], I.m b, I c, I d);
 
     virtual I w = d;
     virtual I.m x = d;
-
-    virtual I y = d.m;
-    virtual I.m z = d.m;
 endmodule
 
 module top;
@@ -1973,18 +1969,16 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 11);
+    REQUIRE(diags.size() == 9);
     CHECK(diags[0].code == diag::BadAssignment);
     CHECK(diags[1].code == diag::BadAssignment);
     CHECK(diags[2].code == diag::BadAssignment);
     CHECK(diags[3].code == diag::BadAssignment);
-    CHECK(diags[4].code == diag::CouldNotResolveHierarchicalPath);
+    CHECK(diags[4].code == diag::InvalidModportAccess);
     CHECK(diags[5].code == diag::BadAssignment);
     CHECK(diags[6].code == diag::BadAssignment);
     CHECK(diags[7].code == diag::BadAssignment);
     CHECK(diags[8].code == diag::BadAssignment);
-    CHECK(diags[9].code == diag::BadAssignment);
-    CHECK(diags[10].code == diag::BadAssignment);
 }
 
 TEST_CASE("Virtual interface type restrictions") {
@@ -2060,4 +2054,43 @@ endmodule
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::PackedTypeTooLarge);
+}
+
+TEST_CASE("Struct implicit conversion warning regress") {
+    auto tree = SyntaxTree::fromText(R"(
+module m #(parameter type t = struct packed { logic l; })(input t t1);
+endmodule
+
+module top;
+    struct packed { logic signed l; } t;
+    m m1(t);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::ImplicitConvert);
+}
+
+TEST_CASE("No implicit conv warning for identical structs") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    struct packed { logic a; } s1;
+    struct packed { logic a; } s2;
+    struct packed { logic b; } s3;
+
+    assign s1 = s2;
+    assign s2 = s3;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::ImplicitConvert);
 }

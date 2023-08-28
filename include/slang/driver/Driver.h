@@ -161,6 +161,9 @@ public:
         /// also drive such signals.
         std::optional<bool> allowDupInitialDrivers;
 
+        /// If true, allow top-level modules to have interface ports.
+        std::optional<bool> allowTopLevelIfacePorts;
+
         /// If true, perform strict checking of variable drivers, which currently
         /// means not taking into account procedural for loop unrolling.
         std::optional<bool> strictDriverChecking;

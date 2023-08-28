@@ -152,3 +152,50 @@ endmodule
     bool result = visitor->check(root);
     CHECK(result);
 }
+
+TEST_CASE("NoOldAlwaysSyntax: Legit use of old always") {
+    auto tree = SyntaxTree::fromText(R"(
+module top(input logic clk, input logic rst);
+    logic busy, start, n, pause;
+
+    always @(posedge clk) begin
+        automatic int f;
+        if (busy) begin
+            assume (!start);
+            assume ($stable(n));
+        end
+
+        if (done) begin
+            case ($past(n))
+                0: assert (f == 1);
+                1: assert (f == 1);
+                2: assert (f == 2);
+                3: assert (f == 3);
+                4: assert (f == 5);
+                5: assert (f == 8);
+            endcase
+            cover (f == 13);
+            cover (f == 144);
+            cover ($past(n) == 15);
+        end
+
+        assume property (s_eventually !pause);
+
+        if (start && !pause)
+            assert property (s_eventually done);
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    compilation.getAllDiagnostics();
+    auto& root = compilation.getRoot();
+
+    TidyConfig config;
+    Registry::setConfig(config);
+    Registry::setSourceManager(compilation.getSourceManager());
+    auto visitor = Registry::create("NoOldAlwaysSyntax");
+    bool result = visitor->check(root);
+    CHECK(result);
+}

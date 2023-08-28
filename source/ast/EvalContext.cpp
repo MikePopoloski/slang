@@ -24,7 +24,9 @@ void EvalContext::reset() {
     stack.clear();
     lvalStack.clear();
     diags.clear();
+    warnings.clear();
     disableRange = {};
+    backtraceReported = false;
 }
 
 ConstantValue* EvalContext::createLocal(const ValueSymbol* symbol, ConstantValue value) {
@@ -63,7 +65,7 @@ void EvalContext::deleteLocal(const ValueSymbol* symbol) {
 
 bool EvalContext::pushFrame(const SubroutineSymbol& subroutine, SourceLocation callLocation,
                             LookupLocation lookupLocation) {
-    const uint32_t maxDepth = compilation.getOptions().maxConstexprDepth;
+    const uint32_t maxDepth = getCompilation().getOptions().maxConstexprDepth;
     if (stack.size() >= maxDepth) {
         addDiag(diag::ConstEvalExceededMaxCallDepth, subroutine.location) << maxDepth;
         return false;
@@ -101,7 +103,7 @@ LValue* EvalContext::getTopLValue() const {
 }
 
 bool EvalContext::step(SourceLocation loc) {
-    if (++steps < compilation.getOptions().maxConstexprSteps)
+    if (++steps < getCompilation().getOptions().maxConstexprSteps)
         return true;
 
     addDiag(diag::ConstEvalExceededMaxSteps, loc);
@@ -119,41 +121,46 @@ std::string EvalContext::dumpStack() const {
     return buffer.str();
 }
 
+Diagnostics EvalContext::getAllDiagnostics() const {
+    Diagnostics results;
+    results.append_range(diags);
+    results.append_range(warnings);
+    return results;
+}
+
 Diagnostic& EvalContext::addDiag(DiagCode code, SourceLocation location) {
-    auto& diag = diags.add(code, location);
+    const bool isError = getDefaultSeverity(code) >= DiagnosticSeverity::Error;
+    auto& diag = isError ? diags.add(code, location) : warnings.add(code, location);
     reportStack(diag);
     return diag;
 }
 
 Diagnostic& EvalContext::addDiag(DiagCode code, SourceRange range) {
-    auto& diag = diags.add(code, range);
+    const bool isError = getDefaultSeverity(code) >= DiagnosticSeverity::Error;
+    auto& diag = isError ? diags.add(code, range) : warnings.add(code, range);
     reportStack(diag);
     return diag;
 }
 
-void EvalContext::addDiags(const Diagnostics& additional) {
-    bool first = true;
-    for (auto& diag : additional) {
-        if (first) {
-            Diagnostic copy = diag;
-            reportStack(copy);
-            diags.emplace_back(std::move(copy));
-            first = false;
-        }
-        else {
-            diags.push_back(diag);
-        }
-    }
+void EvalContext::reportAllDiags() {
+    reportDiags(diags);
+    reportWarnings();
 }
 
-void EvalContext::reportDiags(const ASTContext& context) {
-    if (diags.empty())
-        return;
+void EvalContext::reportWarnings() {
+    reportDiags(warnings);
+}
 
-    if (context.assertionInstance)
-        context.addAssertionBacktrace(diags[0]);
+void EvalContext::reportDiags(Diagnostics& diagSet) {
+    if (!diagSet.empty()) {
+        if (astCtx.assertionInstance && !backtraceReported) {
+            astCtx.addAssertionBacktrace(diagSet[0]);
+            backtraceReported = true;
+        }
 
-    context.scope->addDiags(diags);
+        astCtx.scope->addDiags(diagSet);
+        diagSet.clear();
+    }
 }
 
 static void reportFrame(Diagnostic& diag, const EvalContext::Frame& frame) {
@@ -178,7 +185,7 @@ static void reportFrame(Diagnostic& diag, const EvalContext::Frame& frame) {
 }
 
 void EvalContext::reportStack(Diagnostic& diag) const {
-    const size_t limit = compilation.getOptions().maxConstexprBacktrace;
+    const size_t limit = getCompilation().getOptions().maxConstexprBacktrace;
     if (stack.size() <= limit || limit == 0) {
         FormatBuffer buffer;
         for (const Frame& frame : std::views::reverse(stack))

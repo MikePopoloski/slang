@@ -128,6 +128,11 @@ struct SLANG_EXPORT CompilationOptions {
     /// also drive such signals.
     bool allowDupInitialDrivers = false;
 
+    /// If true, allow top-level modules to have interface ports. This is
+    /// not allowed in standard SystemVerilog but it defaults to true to make
+    /// using the API in scripting / programmatic modes more convenient.
+    bool allowTopLevelIfacePorts = true;
+
     /// If true, perform strict checking of variable drivers, which currently
     /// means not taking into account procedural for loop unrolling.
     bool strictDriverChecking = false;
@@ -142,11 +147,6 @@ struct SLANG_EXPORT CompilationOptions {
     /// If true, don't issue an error when encountering an instantiation
     /// for an unknown definition.
     bool ignoreUnknownModules = false;
-
-    /// When in script mode, suppress some errors that are otherwise pretty
-    /// annoying when not in a batch context. For example, top-level modules
-    /// that have interface ports will cause an error if this is not set.
-    bool scriptMode = true;
 
     /// The default time scale to use for design elements that don't specify
     /// one explicitly.

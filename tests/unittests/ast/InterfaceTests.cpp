@@ -8,6 +8,8 @@
 #include "slang/ast/symbols/InstanceSymbols.h"
 #include "slang/ast/symbols/MemberSymbols.h"
 #include "slang/ast/symbols/ParameterSymbols.h"
+#include "slang/ast/symbols/VariableSymbols.h"
+#include "slang/ast/types/Type.h"
 
 TEST_CASE("Interface instantiation") {
     auto tree = SyntaxTree::fromText(R"(
@@ -354,8 +356,8 @@ interface I;
 endinterface
 
 module n (I.m m);
-    longint i = m.k;
-    assign m.o = i;
+    longint i = signed'(m.k);
+    assign m.o = unsigned'(i);
     int q = m.s;
 endmodule
 
@@ -463,4 +465,190 @@ endmodule
     Compilation compilation;
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Selecting modport from modport-ed iface port") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I;
+    int i;
+    modport m(input i);
+    modport n(output i);
+endinterface
+
+module o #(q) (I i);
+endmodule
+
+module m #(q) (I.m i);
+    assign i.n.i = 1;
+    o #(q) o1(i.n);
+endmodule
+
+module n;
+    I i();
+    m #(3) m1(i);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::InvalidModportAccess);
+    CHECK(diags[1].code == diag::InvalidModportAccess);
+}
+
+TEST_CASE("Connecting explicit modport on array of ifaces") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I;
+    int i;
+    modport m(input i);
+    modport n(output i);
+endinterface
+
+module o #(q) (I i[3]);
+    int j = i[0].i;
+endmodule
+
+module m #(q) (I.m i[3]);
+    int j = i[0].i;
+    o #(q) o1(i.n);
+endmodule
+
+module n #(q) (I i[3]);
+    int j = i[0].i;
+    o #(q) o1(i.n);
+endmodule
+
+module p;
+    I i [3] ();
+    m #(3) m1(i.m);
+    o #(3) o1(i.m);
+    o #(3) o2(i.unknown);
+    n #(3) n1(i.m);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::InvalidModportAccess);
+    CHECK(diags[1].code == diag::InvalidModportAccess);
+    CHECK(diags[2].code == diag::NotAModport);
+}
+
+TEST_CASE("Iface array explicit modport actually restricts lookup") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I;
+    int i;
+    int j;
+    modport m(input i);
+endinterface
+
+module m(I.m i[3]);
+    int j = i[0].j;
+endmodule
+
+module n(I i[3]);
+    int j = i[0].j;
+endmodule
+
+module o(I.m i[4][3]);
+    n n1(i[0]);
+endmodule
+
+module p;
+    I i [4][3] ();
+    m m1(i[0].m), m2(i[2]);
+    n n1(i[1].m), n2(i[3]);
+    o o1(i);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::InvalidModportAccess);
+    CHECK(diags[1].code == diag::InvalidModportAccess);
+}
+
+TEST_CASE("Top-level module with interface ports") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I #(parameter int q = 1);
+    int i, j;
+    modport m(input i);
+endinterface
+
+module m(I.m i);
+    if (i.q == 1) begin
+        int j = i.j;
+    end
+endmodule
+
+interface J #(parameter int r);
+endinterface
+
+module n(J j);
+    if (j.r == 1) begin
+        int j = asdf;
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::InvalidModportAccess);
+    CHECK(diags[1].code == diag::ParamHasNoValue);
+}
+
+TEST_CASE("Interface array multi-driven error regress") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I;
+    int i;
+    modport m(output i);
+endinterface
+
+module mod(I.m arr[3]);
+    for (genvar i = 0; i < 3; i++) begin
+        always_comb arr[i].i = i;
+    end
+endmodule
+
+module top;
+    I i [3]();
+    mod m1(i);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Interface-based typedef") {
+    auto tree = SyntaxTree::fromText(R"(
+interface intf_i;
+    typedef int data_t;
+endinterface
+
+module sub(intf_i p);
+    typedef p.data_t my_data_t;
+    my_data_t data;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& type = compilation.getRoot().lookupName<VariableSymbol>("sub.data").getType();
+    CHECK(type.name == "my_data_t");
+    CHECK(type.getCanonicalType().name == "int");
 }

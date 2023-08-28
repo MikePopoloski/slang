@@ -17,6 +17,7 @@ namespace slang::ast {
 class AttributeSymbol;
 class Definition;
 class InstanceSymbol;
+class ModportSymbol;
 
 /// Represents the public-facing side of a module / program / interface port.
 /// The port symbol itself is not directly referenceable from within the instance;
@@ -122,6 +123,8 @@ private:
 /// that is also a connection to an interface instance (optionally with a modport restriction).
 class SLANG_EXPORT InterfacePortSymbol : public Symbol {
 public:
+    using IfaceConn = std::pair<const Symbol*, const ModportSymbol*>;
+
     /// A pointer to the definition for the interface.
     const Definition* interfaceDef = nullptr;
 
@@ -132,17 +135,21 @@ public:
     /// to any interface type. If true, @a interfaceDef will be nullptr.
     bool isGeneric = false;
 
+    InterfacePortSymbol(std::string_view name, SourceLocation loc) :
+        Symbol(SymbolKind::InterfacePort, name, loc) {}
+
+    bool isInvalid() const { return !interfaceDef && !isGeneric; }
+
     /// Gets the set of dimensions for specifying interface arrays.
     /// Returns nullopt if an error occurs evaluating the dimensions.
     std::optional<std::span<const ConstantRange>> getDeclaredRange() const;
 
     /// Gets the interface instance that this port connects to.
-    const Symbol* getConnection() const;
+    IfaceConn getConnection() const;
 
-    InterfacePortSymbol(std::string_view name, SourceLocation loc) :
-        Symbol(SymbolKind::InterfacePort, name, loc) {}
+    const ModportSymbol* getModport(const ASTContext& context, const InstanceSymbol& instance,
+                                    syntax::DeferredSourceRange sourceRange) const;
 
-    bool isInvalid() const { return !interfaceDef && !isGeneric; }
     void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::InterfacePort; }
@@ -153,16 +160,19 @@ private:
 
 class SLANG_EXPORT PortConnection {
 public:
+    using IfaceConn = InterfacePortSymbol::IfaceConn;
+
     const Symbol& port;
 
     PortConnection(const Symbol& port);
     PortConnection(const Symbol& port, const syntax::ExpressionSyntax& expr);
     PortConnection(const Symbol& port, bool useDefault);
-    PortConnection(const InterfacePortSymbol& port, const Symbol* connectedSymbol);
+    PortConnection(const InterfacePortSymbol& port, const Symbol* connectedSymbol,
+                   const ModportSymbol* modport);
     PortConnection(const Symbol& port, const Symbol* connectedSymbol,
                    SourceRange implicitNameRange);
 
-    const Symbol* getIfaceInstance() const;
+    IfaceConn getIfaceConn() const;
     const Expression* getExpression() const;
     void checkSimulatedNetTypes() const;
 
@@ -192,7 +202,10 @@ private:
     const InstanceSymbol& getParentInstance() const;
 
     const Symbol* connectedSymbol = nullptr;
-    mutable const Expression* expr = nullptr;
+    union {
+        mutable const Expression* expr = nullptr;
+        const ModportSymbol* modport;
+    };
     union {
         const syntax::ExpressionSyntax* exprSyntax = nullptr;
         SourceRange implicitNameRange;

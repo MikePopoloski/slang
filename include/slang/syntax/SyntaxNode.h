@@ -176,6 +176,7 @@ T* deepClone(const T& node, BumpAllocator& alloc) {
 /// range of a node unless it's actually needed.
 class DeferredSourceRange {
 public:
+    DeferredSourceRange() = default;
     DeferredSourceRange(SourceRange range) : range(range), node(nullptr, true) {}
     DeferredSourceRange(const SyntaxNode& node) : node(&node, false) {}
     DeferredSourceRange(const SyntaxNode& node, SourceRange range) :
@@ -183,13 +184,14 @@ public:
 
     SourceRange get() const {
         if (!node.getInt()) {
-            auto ptr = node.getPointer();
-            SLANG_ASSERT(ptr);
-            range = ptr->sourceRange();
+            if (auto ptr = node.getPointer())
+                range = ptr->sourceRange();
             node.setInt(true);
         }
         return range;
     }
+
+    SourceRange operator*() const { return get(); }
 
     const SyntaxNode* syntax() const { return node.getPointer(); }
 

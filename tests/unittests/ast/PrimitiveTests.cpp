@@ -39,12 +39,12 @@ TEST_CASE("Gates") {
 module m;
     wire foo;
     pullup (supply0, pull1) (foo);
-    pmos #3 asdf [3:0][4][5] (foo, 2, 3), blah (foo, 4, 5), (foo, 5, 6);
-    rtranif1 (foo, foo, 1), asdf2(foo, foo, 2);
+    pmos #3 asdf [3:0][4][5] (foo, 1, 0), blah (foo, 1, 0), (foo, 1, 0);
+    rtranif1 (foo, foo, 1), asdf2(foo, foo, 0);
 
     pmos #6 (a, b, c);
 
-    and (a, 1, 2, 3, 4, 5, 6, 7, 8);
+    and (a, 1, 0, 1, 0, 0, 0, 1, 0);
     buf (a, b, c, 1);
 
     logic [3:0] out, in, en;

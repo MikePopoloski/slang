@@ -1059,3 +1059,22 @@ module n;
     m m1(.p);
 endmodule
 ```
+
+-Wconstant-conversion
+A constant value is changed (truncated) by an implicit conversion.
+```
+module m;
+    logic [9:0] a = 9000;
+endmodule
+```
+
+-Wsign-conversion
+An implicit conversion changes the signedness of an integer type
+(from signed to unsigned or vice versa).
+```
+module m;
+    logic signed [31:0] a;
+    logic [31:0] b;
+    assign b = a;
+endmodule
+```

@@ -74,7 +74,6 @@ add_library(
   text/CharInfo.cpp
   text/Glob.cpp
   text/Json.cpp
-  text/SFormat.cpp
   text/SourceLocation.cpp
   text/SourceManager.cpp
   util/BumpAllocator.cpp

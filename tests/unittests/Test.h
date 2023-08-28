@@ -61,12 +61,12 @@ using namespace slang::ast;
         }                                              \
     } while (0)
 
-#define NO_SESSION_ERRORS                      \
-    do {                                       \
-        auto diags = session.getDiagnostics(); \
-        if (!diags.empty()) {                  \
-            FAIL_CHECK(report(diags));         \
-        }                                      \
+#define NO_SESSION_ERRORS                                                      \
+    do {                                                                       \
+        auto diags = session.getDiagnostics();                                 \
+        if (std::ranges::any_of(diags, [](auto& d) { return d.isError(); })) { \
+            FAIL_CHECK(report(diags));                                         \
+        }                                                                      \
     } while (0)
 
 std::string findTestDir();
@@ -78,6 +78,8 @@ bool withinUlp(double a, double b);
 std::string report(const Diagnostics& diags);
 std::string reportGlobalDiags();
 std::string to_string(const Diagnostic& diag);
+
+Diagnostics filterWarnings(const Diagnostics& diags);
 
 Token lexToken(std::string_view text);
 Token lexRawToken(std::string_view text);

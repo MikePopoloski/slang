@@ -87,14 +87,9 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
             // modport has export methods, store it in a list for later
             // processing and checking.
             if (!symbol.modport.empty()) {
-                auto conn = symbol.getConnection();
-                if (conn) {
-                    if (conn->kind == SymbolKind::Instance)
-                        conn = conn->as<InstanceSymbol>().body.find(symbol.modport);
-
-                    if (conn && conn->kind == SymbolKind::Modport)
-                        modportsWithExports.push_back({&symbol, &conn->as<ModportSymbol>()});
-                }
+                auto [_, modport] = symbol.getConnection();
+                if (modport)
+                    modportsWithExports.push_back({&symbol, modport});
             }
         }
     }

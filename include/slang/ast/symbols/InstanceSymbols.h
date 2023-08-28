@@ -68,6 +68,7 @@ public:
     const Definition& getDefinition() const;
     bool isModule() const;
     bool isInterface() const;
+    bool isTopLevel() const;
 
     const PortConnection* getPortConnection(const PortSymbol& port) const;
     const PortConnection* getPortConnection(const MultiPortSymbol& port) const;
@@ -88,7 +89,8 @@ public:
     /// Creates a default-instantiated instance of the given definition. All parameters must
     /// have defaults specified.
     static InstanceSymbol& createDefault(Compilation& compilation, const Definition& definition,
-                                         const HierarchyOverrideNode* hierarchyOverrideNode);
+                                         const HierarchyOverrideNode* hierarchyOverrideNode,
+                                         SourceLocation locationOverride = {});
 
     /// Creates a placeholder instance for a virtual interface type declaration.
     static InstanceSymbol& createVirtual(
@@ -106,6 +108,7 @@ public:
 
 private:
     void resolvePortConnections() const;
+    void connectDefaultIfacePorts() const;
 
     mutable PointerMap* connectionMap = nullptr;
     mutable std::span<const PortConnection* const> connections;
@@ -149,7 +152,8 @@ public:
     bool hasSameType(const InstanceBodySymbol& other) const;
 
     static InstanceBodySymbol& fromDefinition(Compilation& compilation,
-                                              const Definition& definition, bool isUninstantiated,
+                                              const Definition& definition,
+                                              SourceLocation instanceLoc, bool isUninstantiated,
                                               const HierarchyOverrideNode* hierarchyOverrideNode);
 
     static InstanceBodySymbol& fromDefinition(Compilation& compilation,

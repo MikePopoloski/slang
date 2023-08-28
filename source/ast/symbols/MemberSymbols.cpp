@@ -13,6 +13,7 @@
 #include "slang/ast/ASTSerializer.h"
 #include "slang/ast/ASTVisitor.h"
 #include "slang/ast/Compilation.h"
+#include "slang/ast/EvalContext.h"
 #include "slang/ast/Expression.h"
 #include "slang/ast/TimingControl.h"
 #include "slang/ast/expressions/AssignmentExpressions.h"
@@ -622,10 +623,9 @@ std::optional<std::string_view> ElabSystemTaskSymbol::createMessage(
         return {};
 
     // Format the message to string.
-    auto& comp = context.getCompilation();
-    EvalContext evalCtx(comp);
+    EvalContext evalCtx(context);
     std::optional<std::string> str = FmtHelpers::formatDisplay(*context.scope, evalCtx, args);
-    evalCtx.reportDiags(context);
+    evalCtx.reportAllDiags();
 
     if (!str)
         return {};
@@ -636,7 +636,7 @@ std::optional<std::string_view> ElabSystemTaskSymbol::createMessage(
     str->insert(0, ": ");
 
     // Copy the string into permanent memory.
-    auto mem = comp.allocate(str->size(), alignof(char));
+    auto mem = context.getCompilation().allocate(str->size(), alignof(char));
     memcpy(mem, str->data(), str->size());
 
     return std::string_view(reinterpret_cast<char*>(mem), str->size());
@@ -659,16 +659,20 @@ static void reduceComparison(const BinaryExpression& expr, Diagnostic& result) {
             return;
     }
 
-    SLANG_ASSERT(expr.syntax);
-    auto& syntax = expr.syntax->as<BinaryExpressionSyntax>();
+    auto syntax = expr.syntax;
+    SLANG_ASSERT(syntax);
+    while (syntax->kind == SyntaxKind::ParenthesizedExpression)
+        syntax = syntax->as<ParenthesizedExpressionSyntax>().expression;
+
+    auto opToken = syntax->as<BinaryExpressionSyntax>().operatorToken;
 
     auto lc = expr.left().constant;
     auto rc = expr.right().constant;
     SLANG_ASSERT(lc && rc);
 
-    auto& note = result.addNote(diag::NoteComparisonReduces, syntax.operatorToken.location());
+    auto& note = result.addNote(diag::NoteComparisonReduces, opToken.location());
     note << expr.sourceRange;
-    note << *lc << syntax.operatorToken.rawText() << *rc;
+    note << *lc << opToken.rawText() << *rc;
 }
 
 void ElabSystemTaskSymbol::reportStaticAssert(const Scope& scope, SourceLocation loc,

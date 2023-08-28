@@ -9,53 +9,25 @@
 
 #include <map>
 
-#include "slang/ast/Lookup.h"
+#include "slang/ast/ASTContext.h"
 #include "slang/numeric/ConstantValue.h"
 #include "slang/text/SourceLocation.h"
 #include "slang/util/ScopeGuard.h"
 
 namespace slang::ast {
 
-class ASTContext;
 class Compilation;
 class LValue;
 class SubroutineSymbol;
 class ValueSymbol;
-
-/// Various flags that can be applied to a constant expression evaluation.
-enum class SLANG_EXPORT EvalFlags : uint8_t {
-    /// No special flags specified.
-    None = 0,
-
-    /// This evaluation is happening inside of a script, so some
-    /// language rules should be relaxed.
-    IsScript = 1 << 0,
-
-    /// The results of the evaluation can be cached in each expression's
-    /// `constant` pointer.
-    CacheResults = 1 << 1,
-
-    /// Specparams are allowed during evaluation.
-    SpecparamsAllowed = 1 << 2,
-
-    /// Evaluation is for a covergroup expression, which allows some
-    /// forms of non-constant variables to be referenced.
-    CovergroupExpr = 1 << 3,
-
-    /// For parameter evaluation, allow unbounded literals to evaluate to
-    /// the placeholder value. Other expressions that have an unbounded literal
-    /// without a queue target will return an invalid value.
-    AllowUnboundedPlaceholder = 1 << 4
-};
-SLANG_BITMASK(EvalFlags, AllowUnboundedPlaceholder)
 
 /// A container for all context required to evaluate a statement or expression.
 /// Mostly this involves tracking the callstack and maintaining
 /// storage for local variables.
 class SLANG_EXPORT EvalContext {
 public:
-    /// The parent compilation.
-    Compilation& compilation;
+    /// The AST context in which the evaluation is occurring.
+    ASTContext astCtx;
 
     /// Flags that control evaluation.
     bitmask<EvalFlags> flags;
@@ -77,8 +49,11 @@ public:
     };
 
     /// Constructs a new EvalContext instance.
-    explicit EvalContext(Compilation& compilation, bitmask<EvalFlags> flags = {}) :
-        compilation(compilation), flags(flags) {}
+    explicit EvalContext(const ASTContext& astCtx, bitmask<EvalFlags> flags = {}) :
+        astCtx(astCtx), flags(flags) {}
+
+    /// Gets the compilation associated with the context.
+    Compilation& getCompilation() const { return astCtx.getCompilation(); }
 
     /// Resets the evaluation context back to an initial constructed state.
     void reset();
@@ -183,7 +158,7 @@ public:
     std::string dumpStack() const;
 
     /// Gets the set of diagnostics that have been produced during constant evaluation.
-    const Diagnostics& getDiagnostics() const { return diags; }
+    Diagnostics getAllDiagnostics() const;
 
     /// Records a diagnostic under the current evaluation context.
     Diagnostic& addDiag(DiagCode code, SourceLocation location);
@@ -191,23 +166,27 @@ public:
     /// Records a diagnostic under the current evaluation context.
     Diagnostic& addDiag(DiagCode code, SourceRange range);
 
-    /// Records the given set of diagnostics under the current evaluation context.
-    void addDiags(const Diagnostics& diags);
+    /// Issues all recorded diagnostics to the associated AST context.
+    void reportAllDiags();
 
-    /// Issues all recorded diagnostics to the given AST context.
-    void reportDiags(const ASTContext& context);
+    /// Issues only warnings to the associated AST context.
+    void reportWarnings();
 
     /// Reports the current function call stack as notes to the given diagnostic.
     void reportStack(Diagnostic& diag) const;
 
 private:
+    void reportDiags(Diagnostics& diagSet);
+
     uint32_t steps = 0;
     const Symbol* disableTarget = nullptr;
     const ConstantValue* queueTarget = nullptr;
     SmallVector<Frame> stack;
     SmallVector<LValue*> lvalStack;
     Diagnostics diags;
+    Diagnostics warnings;
     SourceRange disableRange;
+    bool backtraceReported = false;
 };
 
 } // namespace slang::ast

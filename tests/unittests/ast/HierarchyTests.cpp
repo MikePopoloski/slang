@@ -1576,7 +1576,7 @@ module top(input d, ck, pr, clr, output q, nq);
     ff3 i3();
 
     wire i = ff2.q2;
-    wire [31:0] j = i3.b;
+    wire signed [31:0] j = i3.b;
 
     module ff1; endmodule
 endmodule

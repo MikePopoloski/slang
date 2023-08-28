@@ -12,6 +12,7 @@
 #include "slang/ast/ASTSerializer.h"
 #include "slang/ast/Bitstream.h"
 #include "slang/ast/Compilation.h"
+#include "slang/ast/EvalContext.h"
 #include "slang/ast/Patterns.h"
 #include "slang/ast/Statements.h"
 #include "slang/ast/expressions/AssignmentExpressions.h"
@@ -285,7 +286,7 @@ bool Expression::bindMembershipExpressions(const ASTContext& context, TokenKind 
         Expression* expr = const_cast<Expression*>(result);
 
         if ((type->isNumeric() || type->isString()) && !expr->type->isUnpackedArray())
-            contextDetermined(context, expr, *type);
+            contextDetermined(context, expr, nullptr, *type);
         else
             selfDetermined(context, expr);
 
@@ -419,7 +420,7 @@ bool UnaryExpression::propagateType(const ASTContext& context, const Type& newTy
         case UnaryOperator::Minus:
         case UnaryOperator::BitwiseNot:
             type = &newType;
-            contextDetermined(context, operand_, newType);
+            contextDetermined(context, operand_, this, newType);
             return true;
         case UnaryOperator::BitwiseAnd:
         case UnaryOperator::BitwiseOr:
@@ -673,7 +674,7 @@ Expression& BinaryExpression::fromComponents(Expression& lhs, Expression& rhs, B
             good = bothNumeric;
             if (lt->isFloating() || rt->isFloating()) {
                 result->type = binaryOperatorType(compilation, lt, rt, false);
-                contextDetermined(context, result->right_, *result->type);
+                contextDetermined(context, result->right_, result, *result->type);
             }
             else {
                 // Result is forced to 4-state because result can be X.
@@ -693,8 +694,8 @@ Expression& BinaryExpression::fromComponents(Expression& lhs, Expression& rhs, B
             // other context-determined operators.
             auto nt = (good && !bothNumeric) ? &compilation.getStringType()
                                              : binaryOperatorType(compilation, lt, rt, false);
-            contextDetermined(context, result->left_, *nt);
-            contextDetermined(context, result->right_, *nt);
+            contextDetermined(context, result->left_, result, *nt);
+            contextDetermined(context, result->right_, result, *nt);
             break;
         }
         case BinaryOperator::LogicalAnd:
@@ -741,8 +742,8 @@ Expression& BinaryExpression::fromComponents(Expression& lhs, Expression& rhs, B
                 // Result type is fixed but the two operands affect each other as they would
                 // in other context-determined operators.
                 auto nt = binaryOperatorType(compilation, lt, rt, false);
-                contextDetermined(context, result->left_, *nt);
-                contextDetermined(context, result->right_, *nt);
+                contextDetermined(context, result->left_, result, *nt);
+                contextDetermined(context, result->right_, result, *nt);
             }
             else {
                 bool isContext = false;
@@ -755,8 +756,8 @@ Expression& BinaryExpression::fromComponents(Expression& lhs, Expression& rhs, B
 
                     // If there is a literal involved, make sure it's converted to string.
                     isContext = true;
-                    contextDetermined(context, result->left_, compilation.getStringType());
-                    contextDetermined(context, result->right_, compilation.getStringType());
+                    contextDetermined(context, result->left_, result, compilation.getStringType());
+                    contextDetermined(context, result->right_, result, compilation.getStringType());
                 }
                 else if (lt->isAggregate() && lt->isEquivalent(*rt) && !lt->isUnpackedUnion()) {
                     good = !isWildcard;
@@ -826,8 +827,8 @@ bool BinaryExpression::propagateType(const ASTContext& context, const Type& newT
         case BinaryOperator::BinaryXor:
         case BinaryOperator::BinaryXnor:
             type = &newType;
-            contextDetermined(context, left_, newType);
-            contextDetermined(context, right_, newType);
+            contextDetermined(context, left_, this, newType);
+            contextDetermined(context, right_, this, newType);
             return true;
         case BinaryOperator::Equality:
         case BinaryOperator::Inequality:
@@ -852,7 +853,7 @@ bool BinaryExpression::propagateType(const ASTContext& context, const Type& newT
         case BinaryOperator::Power:
             // Only the left hand side gets propagated; the rhs is self determined.
             type = &newType;
-            contextDetermined(context, left_, newType);
+            contextDetermined(context, left_, this, newType);
             return true;
     }
     SLANG_UNREACHABLE;
@@ -1059,8 +1060,8 @@ Expression& ConditionalExpression::fromSyntax(Compilation& comp,
 bool ConditionalExpression::propagateType(const ASTContext& context, const Type& newType) {
     // The predicate is self determined so no need to handle it here.
     type = &newType;
-    contextDetermined(context, left_, newType);
-    contextDetermined(context, right_, newType);
+    contextDetermined(context, left_, this, newType);
+    contextDetermined(context, right_, this, newType);
     return true;
 }
 
@@ -1388,7 +1389,7 @@ Expression& ConcatenationExpression::fromSyntax(Compilation& compilation,
                 else if (expr->isImplicitString()) {
                     expr = &ConversionExpression::makeImplicit(context, compilation.getStringType(),
                                                                ConversionKind::Implicit, *expr,
-                                                               expr->sourceRange.start());
+                                                               nullptr, expr->sourceRange.start());
                 }
                 else {
                     errored = true;
@@ -1576,16 +1577,16 @@ Expression& ReplicationExpression::fromSyntax(Compilation& compilation,
     }
 
     // If the multiplier isn't constant this must be a string replication.
-    EvalContext evalCtx(compilation, EvalFlags::CacheResults);
+    EvalContext evalCtx(context, EvalFlags::CacheResults);
     if (ConstantValue leftVal = left.eval(evalCtx); !leftVal) {
         if (!right->isImplicitString()) {
             // They probably meant for this to be a constant (non-string) replication,
             // so do the normal error reporting for that case.
-            evalCtx.reportDiags(context);
+            evalCtx.reportAllDiags();
             return badExpr(compilation, result);
         }
 
-        contextDetermined(context, right, compilation.getStringType());
+        contextDetermined(context, right, result, compilation.getStringType());
 
         result->concat_ = right;
         result->type = &compilation.getStringType();
@@ -1759,7 +1760,7 @@ Expression& StreamingConcatenationExpression::fromSyntax(
                 return badResult();
 
             // Try to get the bounds of the selection, if they are constant.
-            EvalContext evalCtx(comp);
+            EvalContext evalCtx(context);
             auto range = withExpr->evalSelector(evalCtx);
             if (range)
                 constantWithWidth = range->width();
@@ -1922,8 +1923,8 @@ Expression& OpenRangeExpression::fromSyntax(Compilation& comp,
 }
 
 bool OpenRangeExpression::propagateType(const ASTContext& context, const Type& newType) {
-    contextDetermined(context, left_, newType);
-    contextDetermined(context, right_, newType);
+    contextDetermined(context, left_, this, newType);
+    contextDetermined(context, right_, this, newType);
     return true;
 }
 

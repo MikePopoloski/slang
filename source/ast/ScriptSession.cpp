@@ -27,7 +27,7 @@ static CompilationOptions createOptions() {
 
 ScriptSession::ScriptSession() :
     compilation(createOptions()), scope(compilation.createScriptScope()),
-    evalContext(compilation, EvalFlags::IsScript) {
+    astCtx(scope, LookupLocation::max), evalContext(astCtx, EvalFlags::IsScript) {
     evalContext.pushEmptyFrame();
 }
 
@@ -102,7 +102,7 @@ Diagnostics ScriptSession::getDiagnostics() {
         result.append_range(tree->diagnostics());
 
     result.append_range(compilation.getAllDiagnostics());
-    result.append_range(evalContext.getDiagnostics());
+    result.append_range(evalContext.getAllDiagnostics());
     result.sort(SyntaxTree::getDefaultSourceManager());
     return result;
 }

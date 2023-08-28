@@ -978,7 +978,7 @@ module m;
     n n1(asdf, asdf);
     n n2(.a(asdf), .b(foobar));
 
-    assign foo = 1, bar = 2;
+    assign foo = 1, bar = 0;
 
     reg i;
     assign tmp = i;
@@ -1019,7 +1019,7 @@ TEST_CASE("Implicit param with unpacked dimensions") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
     parameter foo[3] = '{1,2,3};
-    parameter signed bar[2] = '{1,2};
+    parameter signed bar[2] = '{-1,2};
     parameter [31:0] baz[2] = '{1,2};
 endmodule
 )");
@@ -1028,8 +1028,9 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 1);
+    REQUIRE(diags.size() == 2);
     CHECK(diags[0].code == diag::UnpackedArrayParamType);
+    CHECK(diags[1].code == diag::ConstantConversion);
 }
 
 TEST_CASE("Implicit param types") {
@@ -1166,8 +1167,8 @@ module m;
     specparam s2 = 3.14;
     specparam [31:0] s3 = s1 + s2;
 
-    int i = s3;
-    localparam int j = s3;
+    logic [31:0] i = s3;
+    localparam logic [31:0] j = s3;
 
     specify
         specparam s4 = 2:3:4;
@@ -1472,7 +1473,7 @@ module m #(parameter foo = 1, parameter [foo-1:0] bar = '0)();
 endmodule
 
 module n;
-    m #(.bar(50)) m1();
+    m #(.bar(1)) m1();
 endmodule
 )");
 
@@ -1545,7 +1546,7 @@ module m;
 
     initial begin
         $static_assert(foo > $bits(bar));
-        $static_assert(foo < $bits(bar));
+        $static_assert((foo < $bits(bar)));
     end
 endmodule
 )");
@@ -1572,11 +1573,11 @@ source:9:41: note: declared here
     struct packed { logic [4:1] a, b; } bar;
                                         ^
 source:18:9: error: static assertion failed
-        $static_assert(foo < $bits(bar));
+        $static_assert((foo < $bits(bar)));
         ^
-source:18:28: note: comparison reduces to (12 < 8)
-        $static_assert(foo < $bits(bar));
-                       ~~~~^~~~~~~~~~~~
+source:18:29: note: comparison reduces to (12 < 8)
+        $static_assert((foo < $bits(bar)));
+                        ~~~~^~~~~~~~~~~~
 )");
 }
 

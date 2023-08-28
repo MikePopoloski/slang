@@ -9,6 +9,7 @@
 
 #include "slang/ast/ASTVisitor.h"
 #include "slang/ast/Compilation.h"
+#include "slang/ast/EvalContext.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/diagnostics/ExpressionsDiags.h"
 #include "slang/diagnostics/StatementsDiags.h"
@@ -426,7 +427,7 @@ void TimingPathSymbol::checkDuplicatePaths(TimingPathMap& timingPathMap) const {
     auto parent = getParentScope();
     SLANG_ASSERT(parent);
 
-    EvalContext evalCtx(parent->getCompilation(), EvalFlags::CacheResults);
+    EvalContext evalCtx(ASTContext(*parent, LookupLocation::max), EvalFlags::CacheResults);
 
     auto terminalOverlaps = [&](const Symbol& ourTerminal,
                                 const std::optional<ConstantRange>& ourRange,

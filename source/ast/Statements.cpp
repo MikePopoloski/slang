@@ -10,6 +10,7 @@
 #include "slang/ast/ASTSerializer.h"
 #include "slang/ast/ASTVisitor.h"
 #include "slang/ast/Compilation.h"
+#include "slang/ast/EvalContext.h"
 #include "slang/ast/Expression.h"
 #include "slang/ast/TimingControl.h"
 #include "slang/ast/expressions/CallExpression.h"
@@ -1461,7 +1462,7 @@ public:
     bool setupMode = true;
 
     explicit UnrollVisitor(const ASTContext& astCtx) :
-        evalCtx(astCtx.getCompilation()), astCtx(astCtx), comp(astCtx.getCompilation()) {
+        evalCtx(astCtx), astCtx(astCtx), comp(astCtx.getCompilation()) {
         evalCtx.pushEmptyFrame();
     }
 

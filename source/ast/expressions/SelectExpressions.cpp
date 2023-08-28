@@ -9,6 +9,7 @@
 
 #include "slang/ast/ASTSerializer.h"
 #include "slang/ast/Compilation.h"
+#include "slang/ast/EvalContext.h"
 #include "slang/ast/expressions/CallExpression.h"
 #include "slang/ast/expressions/LiteralExpressions.h"
 #include "slang/ast/expressions/MiscExpressions.h"
@@ -110,7 +111,7 @@ bool requireLValueHelper(const T& expr, const ASTContext& context, SourceLocatio
             longestStaticPrefix = &expr;
     }
     else {
-        EvalContext evalCtx(context.getCompilation(), EvalFlags::CacheResults);
+        EvalContext evalCtx(context, EvalFlags::CacheResults);
         if (expr.isConstantSelect(evalCtx)) {
             if (!longestStaticPrefix)
                 longestStaticPrefix = &expr;

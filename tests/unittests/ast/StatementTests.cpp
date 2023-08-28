@@ -1066,7 +1066,7 @@ module m;
     initial begin
         assign a = 5;
         deassign a;
-        force b = 5;
+        force b = 1;
         release b;
         force c = 4;
         release c;
@@ -1700,7 +1700,7 @@ TEST_CASE("Conditional statement / expression pattern matching") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
     localparam int foo = 2;
-    int e, j;
+    int unsigned e, j;
     initial begin
         if (e matches foo &&& j > 0 &&& e matches .* &&& e matches .baz &&& baz > 2) begin
             j = baz;

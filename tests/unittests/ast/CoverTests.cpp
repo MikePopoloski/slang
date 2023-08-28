@@ -432,7 +432,7 @@ TEST_CASE("Covergroup expression errors") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
     int asdf;
-    wire [31:0] w;
+    wire signed [31:0] w;
     covergroup cg1 (int a, ref int r);
         coverpoint a {
             bins b = {r, asdf, w, foo()};
@@ -589,11 +589,11 @@ module m;
             endfunction
 
             bins one = myFunc1(cg_lim);
-            bins two = myFunc2(cg_lim);
+            bins two = myFunc2(unsigned'(cg_lim));
 
             function CrossQueueType myFunc2(logic [31:0] f_lim);
                 for (logic [31:0] i = 0; i < f_lim; ++i)
-                    myFunc2.push_back('{2*i,2*i});
+                    myFunc2.push_back('{int'(2*i),int'(2*i)});
             endfunction
         }
     endgroup

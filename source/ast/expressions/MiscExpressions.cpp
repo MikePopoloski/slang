@@ -9,6 +9,7 @@
 
 #include "slang/ast/ASTSerializer.h"
 #include "slang/ast/Compilation.h"
+#include "slang/ast/EvalContext.h"
 #include "slang/ast/TimingControl.h"
 #include "slang/ast/expressions/AssertionExpr.h"
 #include "slang/ast/expressions/AssignmentExpressions.h"
@@ -448,7 +449,7 @@ bool NamedValueExpression::checkConstant(EvalContext& context) const {
 }
 
 ConstantValue HierarchicalValueExpression::evalImpl(EvalContext& context) const {
-    if (!context.compilation.getOptions().allowHierarchicalConst) {
+    if (!context.getCompilation().getOptions().allowHierarchicalConst) {
         context.addDiag(diag::ConstEvalHierarchicalName, sourceRange) << symbol.name;
         return nullptr;
     }
@@ -1263,7 +1264,7 @@ Expression& MinTypMaxExpression::fromSyntax(Compilation& compilation,
 bool MinTypMaxExpression::propagateType(const ASTContext& context, const Type& newType) {
     // Only the selected expression gets a propagated type.
     type = &newType;
-    contextDetermined(context, selected_, newType);
+    contextDetermined(context, selected_, this, newType);
     return true;
 }
 

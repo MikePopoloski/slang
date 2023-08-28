@@ -174,24 +174,17 @@ void DiagnosticEngine::issue(const Diagnostic& diagnostic) {
     if (issuedOverLimitErr)
         return;
 
-    DiagnosticSeverity severity = getSeverity(diagnostic.code, diagnostic.location);
-    switch (severity) {
-        case DiagnosticSeverity::Ignored:
-            return;
-        case DiagnosticSeverity::Note:
-        case DiagnosticSeverity::Warning:
-            break;
-        case DiagnosticSeverity::Error:
-        case DiagnosticSeverity::Fatal:
-            if (errorLimit && numErrors >= errorLimit) {
-                Diagnostic diag(diag::TooManyErrors, SourceLocation::NoLocation);
-                issueImpl(diag, DiagnosticSeverity::Fatal);
-                issuedOverLimitErr = true;
-                return;
-            }
+    const DiagnosticSeverity severity = getSeverity(diagnostic.code, diagnostic.location);
+    if (severity == DiagnosticSeverity::Ignored)
+        return;
 
-            numErrors++;
-            break;
+    const bool isError = severity == DiagnosticSeverity::Error ||
+                         severity == DiagnosticSeverity::Fatal;
+    if (isError && errorLimit && numErrors >= errorLimit) {
+        Diagnostic diag(diag::TooManyErrors, SourceLocation::NoLocation);
+        issueImpl(diag, DiagnosticSeverity::Fatal);
+        issuedOverLimitErr = true;
+        return;
     }
 
     if (!issueImpl(diagnostic, severity))
@@ -199,6 +192,8 @@ void DiagnosticEngine::issue(const Diagnostic& diagnostic) {
 
     if (severity == DiagnosticSeverity::Warning)
         numWarnings++;
+    else if (isError)
+        numErrors++;
 }
 
 bool DiagnosticEngine::issueImpl(const Diagnostic& diagnostic, DiagnosticSeverity severity) {

@@ -246,10 +246,12 @@ InstanceSymbol::InstanceSymbol(Compilation& compilation, std::string_view name, 
 
 InstanceSymbol& InstanceSymbol::createDefault(Compilation& compilation,
                                               const Definition& definition,
-                                              const HierarchyOverrideNode* hierarchyOverrideNode) {
+                                              const HierarchyOverrideNode* hierarchyOverrideNode,
+                                              SourceLocation locationOverride) {
+    auto loc = locationOverride ? locationOverride : definition.location;
     return *compilation.emplace<InstanceSymbol>(
-        definition.name, definition.location,
-        InstanceBodySymbol::fromDefinition(compilation, definition,
+        definition.name, loc,
+        InstanceBodySymbol::fromDefinition(compilation, definition, loc,
                                            /* isUninstantiated */ false, hierarchyOverrideNode));
 }
 
@@ -280,7 +282,7 @@ InstanceSymbol& InstanceSymbol::createInvalid(Compilation& compilation,
     // Give this instance an empty name so that it can't be referenced by name.
     return *compilation.emplace<InstanceSymbol>(
         "", SourceLocation::NoLocation,
-        InstanceBodySymbol::fromDefinition(compilation, definition,
+        InstanceBodySymbol::fromDefinition(compilation, definition, definition.location,
                                            /* isUninstantiated */ true, nullptr));
 }
 
@@ -505,6 +507,11 @@ bool InstanceSymbol::isInterface() const {
     return getDefinition().definitionKind == DefinitionKind::Interface;
 }
 
+bool InstanceSymbol::isTopLevel() const {
+    auto parent = getParentScope();
+    return parent && parent->asSymbol().kind == SymbolKind::Root && !body.isUninstantiated;
+}
+
 const PortConnection* InstanceSymbol::getPortConnection(const PortSymbol& port) const {
     if (!connectionMap)
         resolvePortConnections();
@@ -573,8 +580,14 @@ void InstanceSymbol::resolvePortConnections() const {
     connectionMap = comp.allocPointerMap();
 
     auto syntax = getSyntax();
-    if (!syntax)
+    if (!syntax) {
+        // If this is a top level module and we have interface ports, the user has
+        // the option of allowing it by automatically instantiating interface instances
+        // to connect them to.
+        if (isTopLevel() && comp.getOptions().allowTopLevelIfacePorts)
+            connectDefaultIfacePorts();
         return;
+    }
 
     SmallVector<const PortConnection*> conns;
     PortConnection::makeConnections(*this, portList,
@@ -588,6 +601,34 @@ void InstanceSymbol::resolvePortConnections() const {
     }
 
     SLANG_ASSERT(portIt == portList.end());
+    connections = conns.copy(comp);
+}
+
+void InstanceSymbol::connectDefaultIfacePorts() const {
+    auto parent = getParentScope();
+    SLANG_ASSERT(parent);
+
+    auto& comp = parent->getCompilation();
+    ASTContext context(*parent, LookupLocation::max);
+
+    SmallVector<const PortConnection*> conns;
+    for (auto port : body.getPortList()) {
+        if (port->kind == SymbolKind::InterfacePort) {
+            auto& ifacePort = port->as<InterfacePortSymbol>();
+            if (ifacePort.interfaceDef) {
+                auto& inst = createDefault(comp, *ifacePort.interfaceDef, nullptr, port->location);
+                inst.setParent(*parent);
+
+                auto portRange = SourceRange{ifacePort.location,
+                                             ifacePort.location + ifacePort.name.length()};
+                auto modport = ifacePort.getModport(context, inst, portRange);
+
+                conns.emplace_back(comp.emplace<PortConnection>(ifacePort, &inst, modport));
+                connectionMap->emplace(reinterpret_cast<uintptr_t>(port),
+                                       reinterpret_cast<uintptr_t>(conns.back()));
+            }
+        }
+    }
     connections = conns.copy(comp);
 }
 
@@ -613,16 +654,16 @@ InstanceBodySymbol::InstanceBodySymbol(Compilation& compilation, const Definitio
 }
 
 InstanceBodySymbol& InstanceBodySymbol::fromDefinition(
-    Compilation& compilation, const Definition& definition, bool isUninstantiated,
-    const HierarchyOverrideNode* hierarchyOverrideNode) {
+    Compilation& compilation, const Definition& definition, SourceLocation instanceLoc,
+    bool isUninstantiated, const HierarchyOverrideNode* hierarchyOverrideNode) {
 
     ParameterBuilder paramBuilder(definition.scope, definition.name, definition.parameters);
     paramBuilder.setForceInvalidValues(isUninstantiated);
     if (hierarchyOverrideNode)
         paramBuilder.setOverrides(hierarchyOverrideNode);
 
-    return fromDefinition(compilation, definition, definition.location, paramBuilder,
-                          isUninstantiated, /* isFromBind */ false);
+    return fromDefinition(compilation, definition, instanceLoc, paramBuilder, isUninstantiated,
+                          /* isFromBind */ false);
 }
 
 InstanceBodySymbol& InstanceBodySymbol::fromDefinition(Compilation& comp,

@@ -984,9 +984,10 @@ private:
         return conn;
     }
 
-    PortConnection* createConnection(const InterfacePortSymbol& port, const Symbol* ifaceInst,
+    PortConnection* createConnection(const InterfacePortSymbol& port,
+                                     PortConnection::IfaceConn ifaceConn,
                                      std::span<const AttributeSymbol* const> attributes) {
-        auto conn = comp.emplace<PortConnection>(port, ifaceInst);
+        auto conn = comp.emplace<PortConnection>(port, ifaceConn.first, ifaceConn.second);
         if (!attributes.empty())
             comp.setAttributes(*conn, attributes);
 
@@ -1072,18 +1073,18 @@ private:
         return true;
     }
 
-    const Symbol* getInterfaceConn(ASTContext& context, const InterfacePortSymbol& port,
-                                   const ExpressionSyntax& syntax) {
+    PortConnection::IfaceConn getInterfaceConn(ASTContext& context, const InterfacePortSymbol& port,
+                                               const ExpressionSyntax& syntax) {
         SLANG_ASSERT(!port.isInvalid());
 
         auto portDims = port.getDeclaredRange();
         if (!portDims)
-            return nullptr;
+            return {nullptr, nullptr};
 
         auto expr = Expression::tryBindInterfaceRef(context, syntax,
                                                     /* isInterfacePort */ true);
         if (!expr || expr->bad())
-            return nullptr;
+            return {nullptr, nullptr};
 
         // Pull out the expression type, which should always be a virtual interface or
         // array of such types, and decompose into dims and interface info.
@@ -1097,6 +1098,7 @@ private:
         auto& vit = type->as<VirtualInterfaceType>();
         auto& connDef = vit.iface.getDefinition();
 
+        SLANG_ASSERT(vit.isRealIface);
         SLANG_ASSERT(port.isGeneric || port.interfaceDef);
         if (&connDef != port.interfaceDef && !port.isGeneric) {
             std::string path;
@@ -1105,32 +1107,31 @@ private:
             auto& diag = context.addDiag(diag::InterfacePortTypeMismatch, syntax.sourceRange());
             diag << path << port.interfaceDef->name;
             diag.addNote(diag::NoteDeclarationHere, port.location);
-            return nullptr;
+            return {nullptr, nullptr};
         }
 
         // Modport must match the specified requirement, if we have one.
-        if (vit.modport && !port.modport.empty() && vit.modport->name != port.modport) {
-            auto& diag = context.addDiag(diag::ModportConnMismatch, syntax.sourceRange());
-            diag << connDef.name << vit.modport->name;
-            diag << (port.isGeneric ? "interface"sv : port.interfaceDef->name);
-            diag << port.modport;
-            return nullptr;
-        }
-
-        if (port.isGeneric && !port.modport.empty() && !vit.modport) {
-            if (auto it = connDef.modports.find(port.modport); it == connDef.modports.end()) {
-                auto& diag = context.addDiag(diag::NotAModport, syntax.sourceRange());
+        auto modport = vit.modport;
+        if (!port.modport.empty()) {
+            if (modport && modport->name != port.modport) {
+                auto& diag = context.addDiag(diag::ModportConnMismatch, syntax.sourceRange());
+                diag << connDef.name << modport->name;
+                diag << (port.isGeneric ? "interface"sv : port.interfaceDef->name);
                 diag << port.modport;
-                diag << connDef.name;
-                diag.addNote(diag::NoteReferencedHere, port.location);
-                return nullptr;
+                return {nullptr, nullptr};
             }
+
+            auto sym = port.getModport(context, vit.iface, syntax);
+            if (!sym)
+                return {nullptr, nullptr};
+
+            modport = sym;
         }
 
         // Make the connection if the dimensions match exactly what the port is expecting.
         const Symbol* symbol = expr->as<ArbitrarySymbolExpression>().symbol;
         if (areDimSizesEqual(*portDims, dims))
-            return symbol;
+            return {symbol, modport};
 
         // Otherwise, if the instance being instantiated is part of an array of instances *and*
         // the symbol we're connecting to is an array of interfaces, we need to check to see whether
@@ -1159,13 +1160,13 @@ private:
                 symbol = array.elements[size_t(index)];
             }
 
-            return symbol;
+            return {symbol, modport};
         }
 
         auto& diag = scope.addDiag(diag::PortConnDimensionsMismatch, syntax.sourceRange())
                      << port.name;
         diag.addNote(diag::NoteDeclarationHere, port.location);
-        return nullptr;
+        return {nullptr, nullptr};
     }
 
     const Scope& scope;
@@ -1567,7 +1568,7 @@ std::optional<std::span<const ConstantRange>> InterfacePortSymbol::getDeclaredRa
     return *range;
 }
 
-const Symbol* InterfacePortSymbol::getConnection() const {
+InterfacePortSymbol::IfaceConn InterfacePortSymbol::getConnection() const {
     auto scope = getParentScope();
     SLANG_ASSERT(scope);
 
@@ -1576,9 +1577,27 @@ const Symbol* InterfacePortSymbol::getConnection() const {
 
     auto conn = body.parentInstance->getPortConnection(*this);
     if (!conn)
+        return {nullptr, nullptr};
+
+    return conn->getIfaceConn();
+}
+
+const ModportSymbol* InterfacePortSymbol::getModport(const ASTContext& context,
+                                                     const InstanceSymbol& instance,
+                                                     DeferredSourceRange sourceRange) const {
+    if (modport.empty())
         return nullptr;
 
-    return conn->getIfaceInstance();
+    auto sym = instance.body.find(modport);
+    if (!sym || sym->kind != SymbolKind::Modport) {
+        auto& diag = context.addDiag(diag::NotAModport, *sourceRange);
+        diag << modport;
+        diag << instance.getDefinition().name;
+        diag.addNote(diag::NoteReferencedHere, location);
+        return nullptr;
+    }
+
+    return &sym->as<ModportSymbol>();
 }
 
 void InterfacePortSymbol::serializeTo(ASTSerializer& serializer) const {
@@ -1600,8 +1619,10 @@ PortConnection::PortConnection(const Symbol& port, bool useDefault) :
     port(port), useDefault(useDefault) {
 }
 
-PortConnection::PortConnection(const InterfacePortSymbol& port, const Symbol* connectedSymbol) :
-    port(port), connectedSymbol(connectedSymbol) {
+PortConnection::PortConnection(const InterfacePortSymbol& port, const Symbol* connectedSymbol,
+                               const ModportSymbol* modport) :
+    port(port),
+    connectedSymbol(connectedSymbol), modport(modport) {
 }
 
 PortConnection::PortConnection(const Symbol& port, const Symbol* connectedSymbol,
@@ -1610,10 +1631,10 @@ PortConnection::PortConnection(const Symbol& port, const Symbol* connectedSymbol
     connectedSymbol(connectedSymbol), implicitNameRange(implicitNameRange) {
 }
 
-const Symbol* PortConnection::getIfaceInstance() const {
+PortConnection::IfaceConn PortConnection::getIfaceConn() const {
     if (port.kind == SymbolKind::InterfacePort)
-        return connectedSymbol;
-    return nullptr;
+        return {connectedSymbol, modport};
+    return {nullptr, nullptr};
 }
 
 const InstanceSymbol& PortConnection::getParentInstance() const {
@@ -1638,7 +1659,10 @@ static std::pair<ArgumentDirection, const Type*> getDirAndType(const Symbol& por
 }
 
 const Expression* PortConnection::getExpression() const {
-    if (expr || port.kind == SymbolKind::InterfacePort)
+    if (port.kind == SymbolKind::InterfacePort)
+        return nullptr;
+
+    if (expr)
         return expr;
 
     if (connectedSymbol || exprSyntax) {
@@ -1729,8 +1753,7 @@ static const Symbol* findAnyVars(const Expression& expr) {
 }
 
 void PortConnection::checkSimulatedNetTypes() const {
-    getExpression();
-    if (!expr || expr->bad())
+    if (!getExpression() || expr->bad())
         return;
 
     SmallVector<PortSymbol::NetTypeRange, 4> internal;
@@ -2006,6 +2029,8 @@ void PortConnection::serializeTo(ASTSerializer& serializer) const {
     if (port.kind == SymbolKind::InterfacePort) {
         if (connectedSymbol)
             serializer.writeLink("ifaceInstance", *connectedSymbol);
+        if (modport)
+            serializer.writeLink("modport", *modport);
     }
     else {
         if (auto e = getExpression())
