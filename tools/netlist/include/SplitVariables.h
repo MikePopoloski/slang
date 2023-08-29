@@ -89,8 +89,13 @@ public:
         }
     }
 
-    ConstantRange handleScalarElementSelect(const slang::ast::Type &type, ConstantRange range) {
+    ConstantRange handleScalarElementSelect(const slang::ast::Type& type, ConstantRange range) {
         const auto& elementSelector = selectorsIt->get()->as<VariableElementSelect>();
+        if (!elementSelector.indexIsConstant()) {
+          // If the selector is not a constant, then return the whole scalar as
+          // the range.
+          return {range.lower(), (int32_t) type.getBitWidth()};
+        }
         SLANG_ASSERT(elementSelector.getIndexInt() >= range.lower());
         SLANG_ASSERT(elementSelector.getIndexInt() <= range.upper());
         int32_t index = range.lower() + elementSelector.getIndexInt();
@@ -99,8 +104,10 @@ public:
 
     ConstantRange handleScalarRangeSelect(const slang::ast::Type &type, ConstantRange range) {
         const auto& rangeSelector = selectorsIt->get()->as<VariableRangeSelect>();
-        int32_t leftIndex = rangeSelector.getLeftIndexInt();
         int32_t rightIndex = rangeSelector.getRightIndexInt();
+        int32_t leftIndex = rangeSelector.getLeftIndexInt();
+        //if (!rangeSelector.leftIndexIsConstant()) {
+        //}
         SLANG_ASSERT(rightIndex <= leftIndex);
         SLANG_ASSERT(rightIndex >= range.lower());
         SLANG_ASSERT(leftIndex <= range.upper());
@@ -114,8 +121,19 @@ public:
         }
     }
 
+    ConstantRange handleScalarRangeSelectUp(const slang::ast::Type &type, ConstantRange range) {
+    }
+
+    ConstantRange handleScalarRangeSelectDown(const slang::ast::Type &type, ConstantRange range) {
+    }
+
     ConstantRange handleArrayElementSelect(const slang::ast::Type &type, ConstantRange range) {
         const auto& elementSelector = selectorsIt->get()->as<VariableElementSelect>();
+        if (!elementSelector.indexIsConstant()) {
+          // If the selector is not a constant, then return the whole scalar as
+          // the range.
+          return {range.lower(), (int32_t) type.getBitWidth()};
+        }
         int32_t index = elementSelector.getIndexInt();
         auto arrayRange = getArrayRange(type);
         SLANG_ASSERT(index >= arrayRange.lower());
@@ -155,6 +173,12 @@ public:
         }
     }
 
+    ConstantRange handleArrayRangeSelectUp(const slang::ast::Type &type, ConstantRange range) {
+    }
+
+    ConstantRange handleArrayRangeSelectDown(const slang::ast::Type &type, ConstantRange range) {
+    }
+
     ConstantRange handleStructMemberAccess(const slang::ast::Type &type, ConstantRange range) {
         //const auto& packedStruct = type.getCanonicalType().as<slang::ast::PackedStructType>();
         //SLANG_ASSERT(selectorsIt->get()->kind == VariableSelectorKind::MemberAccess);
@@ -174,6 +198,15 @@ public:
         return {0, 0};
     }
 
+
+    // Multiple range selectors have only the effect of the last one.
+    // Eg x[3:0][2:1] <=> x[2:1] or x[2:1][2] <=> x[2].
+    inline bool ignoreSelector() {
+        return selectorsIt->get()->isRangeSelect() &&
+               std::next(selectorsIt) != node.selectors.end() &&
+               std::next(selectorsIt)->get()->isArraySelect();
+    }
+
     /// Given a variable reference with zero or more selectors, determine the
     /// bit range that is accessed.
     ConstantRange getBitRangeImpl(const slang::ast::Type &type, ConstantRange range) {
@@ -183,12 +216,7 @@ public:
         }
         // Simple vector
         if (type.isPredefinedInteger() || type.isScalar()) {
-            if (selectorsIt->get()->isRangeSelect() &&
-                std::next(selectorsIt) != node.selectors.end() &&
-                std::next(selectorsIt)->get()->isArraySelect()) {
-                // Multiple range selectors have only the effect of
-                // the last one. Eg x[3:0][2:1] <=> x[2:1] or x[2:1][2] <=>
-                // x[2].
+            if (ignoreSelector()) {
                 selectorsIt++;
                 return getBitRangeImpl(type, range);
             }
@@ -196,7 +224,16 @@ public:
                 return handleScalarElementSelect(type, range);
             }
             else if (selectorsIt->get()->isRangeSelect()) {
-                return handleScalarRangeSelect(type, range);
+                switch (selectorsIt->get()->as<VariableRangeSelect>().selectionKind) {
+                  case ast::RangeSelectionKind::Simple:
+                    return handleScalarRangeSelect(type, range);
+                  case ast::RangeSelectionKind::IndexedUp:
+                    return handleScalarRangeSelectUp(type, range);
+                  case ast::RangeSelectionKind::IndexedDown:
+                    return handleScalarRangeSelectDown(type, range);
+                  default:
+                    SLANG_UNREACHABLE;
+                }
             }
             else {
                 SLANG_ASSERT(0 && "unsupported scalar selector");
@@ -204,10 +241,7 @@ public:
         }
         // Packed or unpacked array
         else if (type.isArray()) {
-            if (selectorsIt->get()->isRangeSelect() &&
-                std::next(selectorsIt) != node.selectors.end() &&
-                std::next(selectorsIt)->get()->isArraySelect()) {
-                // Multiple range selectors.
+            if (ignoreSelector()) {
                 selectorsIt++;
                 return getBitRangeImpl(type, range);
             }
@@ -215,7 +249,16 @@ public:
                 return handleArrayElementSelect(type, range);
             }
             else if (selectorsIt->get()->isRangeSelect()) {
-                return handleArrayRangeSelect(type, range);
+                switch (selectorsIt->get()->as<VariableRangeSelect>().selectionKind) {
+                  case ast::RangeSelectionKind::Simple:
+                    return handleArrayRangeSelect(type, range);
+                  case ast::RangeSelectionKind::IndexedUp:
+                    return handleArrayRangeSelectUp(type, range);
+                  case ast::RangeSelectionKind::IndexedDown:
+                    return handleArrayRangeSelectDown(type, range);
+                  default:
+                    SLANG_UNREACHABLE;
+                }
             }
             else {
                 SLANG_ASSERT(0 && "unsupported array selector");

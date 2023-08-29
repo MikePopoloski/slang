@@ -23,7 +23,7 @@ ConstantRange getBitRange(Netlist &netlist, std::string_view variableSyntax) {
 
 TEST_CASE("Scalar element and range") {
     auto tree = SyntaxTree::fromText(R"(
-module m;
+module m (input int a);
   int foo;
   always_comb begin
     foo = 0;
@@ -37,6 +37,7 @@ module m;
     foo[7:4][6:5] = 0;
     foo[3:1][2:1][1] = 0;
     foo[7:4][6:5][5] = 0;
+    foo[a] = 0;
   end
 endmodule
 )");
@@ -55,6 +56,8 @@ endmodule
     CHECK(getBitRange(netlist, "foo[7:4][6:5]") == ConstantRange(5, 6));
     CHECK(getBitRange(netlist, "foo[3:1][2:1][1]") == ConstantRange(1, 1));
     CHECK(getBitRange(netlist, "foo[7:4][6:5][5]") == ConstantRange(5, 5));
+    // Can't lookup foo[a] in the netlist.
+    //CHECK(getBitRange(netlist, "foo[a]") == ConstantRange(0, 31));
 }
 
 TEST_CASE("Packed 1D array element and range") {

@@ -76,6 +76,10 @@ struct VariableElementSelect : public VariableSelectorBase {
         return otherKind == VariableSelectorKind::ElementSelect;
     }
 
+    bool indexIsConstant() const {
+        return !index.bad();
+    }
+
     int32_t getIndexInt() const {
         auto intValue = index.integer().as<int32_t>();
         SLANG_ASSERT(intValue && "could not convert index to int32_t");
@@ -90,12 +94,22 @@ struct VariableRangeSelect : public VariableSelectorBase {
     ConstantValue leftIndex, rightIndex;
     ast::RangeSelectionKind selectionKind;
 
-    VariableRangeSelect(ConstantValue leftIndex, ConstantValue rightIndex, ast::RangeSelectionKind selectionKind) :
-        VariableSelectorBase(VariableSelectorKind::RangeSelect), leftIndex(std::move(leftIndex)),
-        rightIndex(std::move(rightIndex)), selectionKind(selectionKind) {}
+    VariableRangeSelect(ConstantValue leftIndex, ConstantValue rightIndex,
+                        ast::RangeSelectionKind selectionKind) :
+        VariableSelectorBase(VariableSelectorKind::RangeSelect),
+        leftIndex(std::move(leftIndex)), rightIndex(std::move(rightIndex)),
+        selectionKind(selectionKind) {}
 
     static bool isKind(VariableSelectorKind otherKind) {
         return otherKind == VariableSelectorKind::RangeSelect;
+    }
+
+    bool leftIndexIsConstant() const {
+        return !leftIndex.bad();
+    }
+
+    bool rightIndexIsConstant() const {
+        return !rightIndex.bad();
     }
 
     int32_t getLeftIndexInt() const {
