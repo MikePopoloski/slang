@@ -613,6 +613,7 @@ TEST_CASE("Implicit conversions with constants") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
     logic [9:0] a = 9000;
+    shortint b = -32769;
 endmodule
 )");
 
@@ -620,6 +621,7 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 1);
+    REQUIRE(diags.size() == 2);
     CHECK(diags[0].code == diag::ConstantConversion);
+    CHECK(diags[1].code == diag::ConstantConversion);
 }

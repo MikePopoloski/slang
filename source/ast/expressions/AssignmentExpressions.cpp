@@ -112,8 +112,13 @@ void checkImplicitConversions(const ASTContext& context, const Type& sourceType,
     };
 
     auto expr = &op;
-    while (expr->kind == ExpressionKind::Conversion)
-        expr = &expr->as<ConversionExpression>().operand();
+    while (expr->kind == ExpressionKind::Conversion) {
+        auto& conv = expr->as<ConversionExpression>();
+        if (!conv.isImplicit())
+            break;
+
+        expr = &conv.operand();
+    }
 
     if (expr->kind == ExpressionKind::LValueReference)
         return;
@@ -140,14 +145,14 @@ void checkImplicitConversions(const ASTContext& context, const Type& sourceType,
             return;
         }
 
+        // Check to rule out false positives: try to eval as a constant.
+        // We'll ignore any constants, because they will get their own more
+        // fine grained warning during eval.
+        if (context.tryEval(op))
+            return;
+
         // Warn for sign conversions.
-        bool isKnownNotConst = false;
         if (lt.isSigned() != rt.isSigned()) {
-            if (context.tryEval(op))
-                return;
-
-            isKnownNotConst = true;
-
             // Comparisons get their own warning elsewhere.
             bool isComparison = false;
             if (parentExpr && parentExpr->kind == ExpressionKind::BinaryOp) {
@@ -201,20 +206,12 @@ void checkImplicitConversions(const ASTContext& context, const Type& sourceType,
         // effective and the actual width.
         SLANG_ASSERT(effective <= actualWidth);
         if (targetWidth < effective || targetWidth > actualWidth) {
-            // Final check to rule out false positives: try to eval as a constant.
-            // We'll ignore any constants, because as described above they
-            // will get their own more fine grained warning later during eval.
-            if (isKnownNotConst || !context.tryEval(op)) {
-                DiagCode code;
-                if (context.getInstance()) {
-                    code = targetWidth < effective ? diag::PortWidthTruncate
-                                                   : diag::PortWidthExpand;
-                }
-                else {
-                    code = targetWidth < effective ? diag::WidthTruncate : diag::WidthExpand;
-                }
-                context.addDiag(code, loc) << actualWidth << targetWidth << op.sourceRange;
-            }
+            DiagCode code;
+            if (context.getInstance())
+                code = targetWidth < effective ? diag::PortWidthTruncate : diag::PortWidthExpand;
+            else
+                code = targetWidth < effective ? diag::WidthTruncate : diag::WidthExpand;
+            context.addDiag(code, loc) << actualWidth << targetWidth << op.sourceRange;
         }
     }
 }
