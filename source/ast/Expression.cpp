@@ -388,7 +388,7 @@ std::tuple<const Expression*, const Type*> Expression::bindImplicitParam(
         if (lhsType->isIntegral()) {
             bitwidth_t bits = lhsType->getBitWidth();
             if (expr.isUnsizedInteger())
-                bits = 32;
+                bits = std::max(bits, 32u);
 
             // Keep the signed flag but force four state.
             auto flags = lhsType->getIntegralFlags();

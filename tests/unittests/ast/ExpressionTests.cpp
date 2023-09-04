@@ -2956,3 +2956,18 @@ endclass
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Type of unsized based literal") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    parameter p = 'd999999999999;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& p = compilation.getRoot().lookupName<ParameterSymbol>("m.p");
+    CHECK(p.getType().toString() == "logic[39:0]");
+}
