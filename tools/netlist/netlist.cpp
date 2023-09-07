@@ -174,6 +174,7 @@ void reportPath(Compilation& compilation, const NetlistPath& path) {
 }
 
 int main(int argc, char** argv) {
+    OS::setupConsole();
 
     driver::Driver driver;
     driver.addStandardArgs();

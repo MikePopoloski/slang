@@ -19,6 +19,9 @@ namespace slang {
 /// A collection of various OS-specific utility functions.
 class SLANG_EXPORT OS {
 public:
+    /// Does initial one-time setup of OS console.
+    static void setupConsole();
+
     /// Tries to enable color output support for stdout and stderr.
     /// @return true if successful and false otherwise.
     static bool tryEnableColors();

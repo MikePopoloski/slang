@@ -48,6 +48,10 @@ if(SLANG_CI_BUILD)
   target_compile_definitions(unittests PRIVATE CI_BUILD)
 endif()
 
+if(CMAKE_SYSTEM_NAME MATCHES "Windows")
+  target_sources(unittests PRIVATE ${PROJECT_SOURCE_DIR}/scripts/win32.manifest)
+endif()
+
 # Copy the data directory for running tests from the build folder.
 add_custom_command(
   TARGET unittests

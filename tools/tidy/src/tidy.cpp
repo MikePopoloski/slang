@@ -24,6 +24,8 @@ std::optional<std::filesystem::path> project_slang_tidy_config();
 using namespace slang;
 
 int main(int argc, char** argv) {
+    OS::setupConsole();
+
     driver::Driver driver;
     driver.addStandardArgs();
 

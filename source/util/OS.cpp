@@ -16,6 +16,9 @@
 #    ifndef NOMINMAX
 #        define NOMINMAX
 #    endif
+#    ifndef STRICT
+#        define STRICT
+#    endif
 #    include <Windows.h>
 #    include <fcntl.h>
 #    include <io.h>
@@ -33,6 +36,16 @@ namespace fs = std::filesystem;
 namespace slang {
 
 #if defined(_WIN32)
+
+void OS::setupConsole() {
+    // The application needs to be built with a manifest
+    // specifying the ActiveCodePage as UTF-8.
+    SLANG_ASSERT(GetACP() == 65001);
+
+    SetConsoleCP(CP_UTF8);
+    SetConsoleOutputCP(CP_UTF8);
+    setvbuf(stdout, nullptr, _IOFBF, 1000);
+}
 
 bool OS::tryEnableColors() {
     auto tryEnable = [](DWORD handle) {
@@ -163,6 +176,10 @@ std::error_code OS::readFile(const fs::path& path, SmallVector<char>& buffer) {
 }
 
 #else
+
+void OS::setupConsole() {
+    // Nothing to do.
+}
 
 bool OS::tryEnableColors() {
     return true;

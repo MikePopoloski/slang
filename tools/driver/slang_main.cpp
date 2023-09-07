@@ -49,6 +49,7 @@ void printJson(Compilation& compilation, const std::string& fileName,
 template<typename TArgs>
 int driverMain(int argc, TArgs argv) {
     SLANG_TRY {
+        OS::setupConsole();
         OS::tryEnableColors();
 
         Driver driver;

@@ -17,11 +17,14 @@
 
 #include "slang/syntax/SyntaxPrinter.h"
 #include "slang/syntax/SyntaxTree.h"
+#include "slang/util/OS.h"
 
 using namespace slang;
 using namespace slang::syntax;
 
 int main(int argc, char** argv) {
+    OS::setupConsole();
+
     SLANG_TRY {
         if (argc != 2) {
             fmt::print(stderr, "usage: rewriter file\n");
