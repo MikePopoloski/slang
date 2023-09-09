@@ -290,12 +290,6 @@ public:
     /// @return true on success, false if an errors occurs.
     bool parse(int argc, const char* const argv[]);
 
-#if defined(_WIN32)
-    /// Parse the provided command line (MSVC wchar-style).
-    /// @return true on success, false if an errors occurs.
-    bool parse(int argc, const wchar_t* const argv[]);
-#endif
-
     /// Contains various options to control parsing of command flags.
     struct ParseOptions {
         /// If set to true, comments will be parsed and ignored.

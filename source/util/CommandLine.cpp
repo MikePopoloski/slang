@@ -167,21 +167,6 @@ bool CommandLine::parse(int argc, const char* const argv[]) {
     return parse(args);
 }
 
-#if defined(_WIN32)
-
-bool CommandLine::parse(int argc, const wchar_t* const argv[]) {
-    SmallVector<std::string, 8> storage{size_t(argc), UninitializedTag()};
-    SmallVector<std::string_view, 8> args{size_t(argc), UninitializedTag()};
-    for (int i = 0; i < argc; i++) {
-        storage.push_back(narrow(argv[i]));
-        args.push_back(storage.back());
-    }
-
-    return parse(args);
-}
-
-#endif
-
 bool CommandLine::parse(std::string_view argList, ParseOptions options) {
     bool hasArg = false;
     std::string current;
@@ -316,7 +301,7 @@ bool CommandLine::parse(std::span<const std::string_view> args, ParseOptions opt
         if (args.empty())
             SLANG_THROW(std::runtime_error("Expected at least one argument"));
 
-        programName = getU8Str(fs::path(widen(args[0])).filename());
+        programName = getU8Str(fs::path(args[0]).filename());
         args = args.subspan(1);
     }
 
@@ -641,7 +626,7 @@ std::string CommandLine::Option::set(std::string_view name, std::string_view val
     std::string pathMem;
     if (flags.has(CommandLineFlags::FilePath) && !value.empty() && value != "-") {
         std::error_code ec;
-        fs::path path = fs::weakly_canonical(widen(value), ec);
+        fs::path path = fs::weakly_canonical(value, ec);
         if (!ec) {
             pathMem = getU8Str(path);
             value = pathMem;

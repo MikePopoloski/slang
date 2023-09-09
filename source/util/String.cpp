@@ -12,16 +12,6 @@
 
 #include "slang/util/SmallVector.h"
 
-#if defined(_WIN32)
-#    ifndef WIN32_LEAN_AND_MEAN
-#        define WIN32_LEAN_AND_MEAN
-#    endif
-#    ifndef NOMINMAX
-#        define NOMINMAX
-#    endif
-#    include <Windows.h>
-#endif
-
 namespace slang {
 
 template<typename T>
@@ -127,43 +117,5 @@ int editDistance(std::string_view left, std::string_view right, bool allowReplac
 
     return row[n];
 }
-
-std::string getU8Str(const std::filesystem::path& path) {
-    return std::string(narrow(path.native()));
-}
-
-#if defined(_WIN32)
-
-std::wstring widen(std::string_view str) {
-    if (str.empty())
-        return L"";
-
-    int sz = MultiByteToWideChar(CP_UTF8, 0, str.data(), (int)str.size(), NULL, 0);
-    if (sz <= 0)
-        SLANG_THROW(std::runtime_error("Failed to convert string to UTF16"));
-
-    std::wstring result;
-    result.resize(sz);
-
-    MultiByteToWideChar(CP_UTF8, 0, str.data(), (int)str.length(), result.data(), sz);
-    return result;
-}
-
-std::string narrow(std::wstring_view str) {
-    if (str.empty())
-        return "";
-
-    int sz = WideCharToMultiByte(CP_UTF8, 0, str.data(), (int)str.size(), NULL, 0, NULL, NULL);
-    if (sz <= 0)
-        SLANG_THROW(std::runtime_error("Failed to convert string to UTF8"));
-
-    std::string result;
-    result.resize(sz);
-
-    WideCharToMultiByte(CP_UTF8, 0, str.data(), (int)str.size(), result.data(), sz, NULL, NULL);
-    return result;
-}
-
-#endif
 
 } // namespace slang

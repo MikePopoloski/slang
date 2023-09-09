@@ -42,6 +42,9 @@ public:
     /// Note that the buffer will be null-terminated.
     static std::error_code readFile(const std::filesystem::path& path, SmallVector<char>& buffer);
 
+    /// Writes the given contents to the specified file.
+    static void writeFile(const std::filesystem::path& path, std::string_view contents);
+
     /// Prints text to stdout.
     static void print(std::string_view text);
 

@@ -7,6 +7,8 @@
 //------------------------------------------------------------------------------
 #include "slang/util/OS.h"
 
+#include <iostream>
+
 #include "slang/text/CharInfo.h"
 
 #if defined(_WIN32)
@@ -283,6 +285,19 @@ std::error_code OS::readFile(const fs::path& path, SmallVector<char>& buffer) {
 }
 
 #endif
+
+void OS::writeFile(const fs::path& path, std::string_view contents) {
+    if (path == "-") {
+        std::cout.write(contents.data(), contents.size());
+        std::cout.flush();
+    }
+    else {
+        std::ofstream file(path);
+        file.exceptions(std::ios::failbit | std::ios::badbit);
+        file.write(contents.data(), contents.size());
+        file.flush();
+    }
+}
 
 void OS::print(std::string_view text) {
     if (capturingOutput)

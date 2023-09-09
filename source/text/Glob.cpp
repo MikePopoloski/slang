@@ -88,7 +88,7 @@ static void globDir(const fs::path& path, std::string_view pattern, SmallVector<
 
     results.reserve(results.size() + local.size());
     for (auto&& p : local) {
-        if (matches(narrow(p.filename().native()), pattern))
+        if (matches(getU8Str(p.filename()), pattern))
             results.emplace_back(std::move(p));
     }
 }
@@ -220,10 +220,10 @@ SLANG_EXPORT GlobRank svGlob(const fs::path& basePath, std::string_view pattern,
                 patternStr.push_back(c);
         }
 
-        patternPath = fs::path(widen(patternStr));
+        patternPath = fs::path(patternStr);
     }
     else {
-        patternPath = fs::path(widen(pattern));
+        patternPath = fs::path(pattern);
     }
 
     // Normalize the path to remove duplicate separators, figure out
@@ -234,11 +234,11 @@ SLANG_EXPORT GlobRank svGlob(const fs::path& basePath, std::string_view pattern,
     GlobRank rank;
     bool anyWildcards = false;
     if (patternPath.has_root_path()) {
-        rank = svGlobInternal(patternPath.root_path(), narrow(patternPath.relative_path().native()),
-                              mode, local, anyWildcards);
+        rank = svGlobInternal(patternPath.root_path(), getU8Str(patternPath.relative_path()), mode,
+                              local, anyWildcards);
     }
     else {
-        rank = svGlobInternal(basePath, narrow(patternPath.native()), mode, local, anyWildcards);
+        rank = svGlobInternal(basePath, getU8Str(patternPath), mode, local, anyWildcards);
     }
 
     // Results paths are always made canonical.

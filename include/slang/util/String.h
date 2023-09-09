@@ -75,28 +75,18 @@ inline char charToLower(char c) {
 int editDistance(std::string_view left, std::string_view right, bool allowReplacements = true,
                  int maxDistance = 0);
 
-/// C++20 is dumb and provides no way to get a std::string with the UTF-8
-/// contents of a fs::path, so we have to use this method to copy the chars :(
-std::string getU8Str(const std::filesystem::path& path);
-
 #if defined(_WIN32)
 
-/// Widens the provided UTF8 string into UTF16 wchars.
-SLANG_EXPORT std::wstring widen(std::string_view str);
-
-/// Narrows the provided UTF16 string into UTF8.
-SLANG_EXPORT std::string narrow(std::wstring_view str);
+/// Gets a string representation of the given path, in UTF-8 encoding.
+inline std::string getU8Str(const std::filesystem::path& path) {
+    return path.string();
+}
 
 #else
 
-/// Widens the provided UTF8 string into UTF16 wchars.
-inline std::string_view widen(std::string_view str) {
-    return str;
-}
-
-/// Narrows the provided UTF16 string into UTF8.
-inline std::string_view narrow(std::string_view str) {
-    return str;
+/// Gets a string representation of the given path, in UTF-8 encoding.
+inline const std::string& getU8Str(const std::filesystem::path& path) {
+    return path.native();
 }
 
 #endif
