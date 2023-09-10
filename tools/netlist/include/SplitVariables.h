@@ -224,7 +224,7 @@ public:
                 return handleScalarElementSelect(type, range);
             }
             else if (selectorsIt->get()->isRangeSelect()) {
-                switch (selectorsIt->get()->as<VariableRangeSelect>().selectionKind) {
+                switch (selectorsIt->get()->as<VariableRangeSelect>().expr.getSelectionKind()) {
                   case ast::RangeSelectionKind::Simple:
                     return handleScalarRangeSelect(type, range);
                   case ast::RangeSelectionKind::IndexedUp:
@@ -249,7 +249,7 @@ public:
                 return handleArrayElementSelect(type, range);
             }
             else if (selectorsIt->get()->isRangeSelect()) {
-                switch (selectorsIt->get()->as<VariableRangeSelect>().selectionKind) {
+                switch (selectorsIt->get()->as<VariableRangeSelect>().expr.getSelectionKind()) {
                   case ast::RangeSelectionKind::Simple:
                     return handleArrayRangeSelect(type, range);
                   case ast::RangeSelectionKind::IndexedUp:

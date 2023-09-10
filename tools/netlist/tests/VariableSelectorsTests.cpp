@@ -38,6 +38,8 @@ module m (input int a);
     foo[3:1][2:1][1] = 0;
     foo[7:4][6:5][5] = 0;
     foo[a] = 0;
+    foo[a+:2][a] = 0;
+    foo[a+:2][a+:2][a] = 0;
   end
 endmodule
 )");
@@ -45,6 +47,12 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
     auto netlist = createNetlist(compilation);
+    //For (auto &node : netlist) {
+    //  if (node->kind == NodeKind::VariableReference)
+    //  {
+    //    std::cout << "node " << node->as<NetlistVariableReference>().toString()<<"\n";
+    //  }
+    //}
     CHECK(getBitRange(netlist, "foo") == ConstantRange(0, 31));
     CHECK(getBitRange(netlist, "foo[0]") == ConstantRange(0, 0));
     CHECK(getBitRange(netlist, "foo[1]") == ConstantRange(1, 1));
@@ -56,8 +64,7 @@ endmodule
     CHECK(getBitRange(netlist, "foo[7:4][6:5]") == ConstantRange(5, 6));
     CHECK(getBitRange(netlist, "foo[3:1][2:1][1]") == ConstantRange(1, 1));
     CHECK(getBitRange(netlist, "foo[7:4][6:5][5]") == ConstantRange(5, 5));
-    // Can't lookup foo[a] in the netlist.
-    //CHECK(getBitRange(netlist, "foo[a]") == ConstantRange(0, 31));
+    CHECK(getBitRange(netlist, "foo[a]") == ConstantRange(0, 31));
 }
 
 TEST_CASE("Packed 1D array element and range") {

@@ -76,14 +76,15 @@ public:
         varList.push_back(&node);
         for (auto* selector : selectors) {
             if (selector->kind == ast::ExpressionKind::ElementSelect) {
-                auto index = selector->as<ast::ElementSelectExpression>().selector().eval(evalCtx);
-                node.addElementSelect(index);
+                const auto& expr = selector->as<ast::ElementSelectExpression>();
+                auto index = expr.selector().eval(evalCtx);
+                node.addElementSelect(expr, index);
             }
             else if (selector->kind == ast::ExpressionKind::RangeSelect) {
-                auto& rangeSelectExpr = selector->as<ast::RangeSelectExpression>();
-                auto leftIndex = rangeSelectExpr.left().eval(evalCtx);
-                auto rightIndex = rangeSelectExpr.right().eval(evalCtx);
-                node.addRangeSelect(leftIndex, rightIndex, rangeSelectExpr.getSelectionKind());
+                const auto& expr = selector->as<ast::RangeSelectExpression>();
+                auto leftIndex = expr.left().eval(evalCtx);
+                auto rightIndex = expr.right().eval(evalCtx);
+                node.addRangeSelect(expr, leftIndex, rightIndex);
             }
             else if (selector->kind == ast::ExpressionKind::MemberAccess) {
                 node.addMemberAccess(selector->as<ast::MemberAccessExpression>().member.name);

@@ -67,10 +67,12 @@ struct VariableSelectorBase {
 
 /// A variable selector representing an element selector.
 struct VariableElementSelect : public VariableSelectorBase {
+    const ast::ElementSelectExpression &expr;
     ConstantValue index;
 
-    VariableElementSelect(ConstantValue index) :
-        VariableSelectorBase(VariableSelectorKind::ElementSelect), index(std::move(index)) {}
+    VariableElementSelect(ast::ElementSelectExpression const& expr, ConstantValue index) :
+        VariableSelectorBase(VariableSelectorKind::ElementSelect), expr(expr),
+        index(std::move(index)) {}
 
     static bool isKind(VariableSelectorKind otherKind) {
         return otherKind == VariableSelectorKind::ElementSelect;
@@ -86,19 +88,24 @@ struct VariableElementSelect : public VariableSelectorBase {
         return *intValue;
     }
 
-    std::string toString() const override { return fmt::format("[{}]", index.toString()); }
+    std::string toString() const override {
+      if (indexIsConstant()) {
+        return fmt::format("[{}]", index.toString());
+      } else {
+        return fmt::format("[{}]", expr.syntax->toString());
+      }
+    }
 };
 
 /// A variable selector representing a range selector.
 struct VariableRangeSelect : public VariableSelectorBase {
+    const ast::RangeSelectExpression &expr;
     ConstantValue leftIndex, rightIndex;
-    ast::RangeSelectionKind selectionKind;
 
-    VariableRangeSelect(ConstantValue leftIndex, ConstantValue rightIndex,
-                        ast::RangeSelectionKind selectionKind) :
+    VariableRangeSelect(ast::RangeSelectExpression const& expr, ConstantValue leftIndex,
+                        ConstantValue rightIndex) :
         VariableSelectorBase(VariableSelectorKind::RangeSelect),
-        leftIndex(std::move(leftIndex)), rightIndex(std::move(rightIndex)),
-        selectionKind(selectionKind) {}
+        expr(expr), leftIndex(std::move(leftIndex)), rightIndex(std::move(rightIndex)) {}
 
     static bool isKind(VariableSelectorKind otherKind) {
         return otherKind == VariableSelectorKind::RangeSelect;
@@ -125,7 +132,28 @@ struct VariableRangeSelect : public VariableSelectorBase {
     }
 
     std::string toString() const override {
-        return fmt::format("[{}:{}]", leftIndex.toString(), rightIndex.toString());
+        std::string left;
+        if (leftIndexIsConstant()) {
+          left = leftIndex.toString();
+        } else {
+          left = expr.left().syntax->toString();
+        }
+        std::string right;
+        if (rightIndexIsConstant()) {
+          right = rightIndex.toString();
+        } else {
+          right = expr.right().syntax->toString();
+        }
+        switch (expr.getSelectionKind()) {
+          case ast::RangeSelectionKind::Simple:
+              return fmt::format("[{}:{}]", left, right);
+          case ast::RangeSelectionKind::IndexedUp:
+              return fmt::format("[{}+:{}]", left, right);
+          case ast::RangeSelectionKind::IndexedDown:
+              return fmt::format("[{}-:{}]", left, right);
+          default:
+              SLANG_UNREACHABLE;
+        }
     }
 };
 
@@ -243,12 +271,17 @@ public:
         NetlistNode(NodeKind::VariableReference, symbol),
         expression(expr), leftOperand(leftOperand) {}
 
-    void addElementSelect(const ConstantValue& index) {
-        selectors.emplace_back(std::make_unique<VariableElementSelect>(index));
+    void addElementSelect(ast::ElementSelectExpression const &expr, const ConstantValue& index) {
+        selectors.emplace_back(std::make_unique<VariableElementSelect>(expr, index));
+        //std::cout << "Add elem select "<< expr.syntax->toString() << "\n";
     }
-    void addRangeSelect(const ConstantValue& leftIndex, const ConstantValue& rightIndex, ast::RangeSelectionKind selectionKind) {
-        selectors.emplace_back(std::make_unique<VariableRangeSelect>(leftIndex, rightIndex, selectionKind));
+
+    void addRangeSelect(ast::RangeSelectExpression const& expr,
+                        const ConstantValue& leftIndex, const ConstantValue& rightIndex) {
+        selectors.emplace_back(std::make_unique<VariableRangeSelect>(expr, leftIndex, rightIndex));
+        //std::cout << "Add range select "<< expr.left().syntax->toString() << " : " << expr.right().syntax->toString() << "\n";
     }
+
     void addMemberAccess(std::string_view name) {
         selectors.emplace_back(std::make_unique<VariableMemberAccess>(name));
     }

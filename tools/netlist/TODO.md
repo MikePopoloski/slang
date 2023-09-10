@@ -3,6 +3,11 @@ To dos
 
 - Bug report:
 
+  In ast::ElementSelectExpr.syntax does not correspond to selector source
+  range and includes entire variable reference + selectors.
+
+- Bug report:
+
   module m;
     logic [7:4] [3:2] foo;
     always_comb begin
