@@ -184,9 +184,14 @@ Token NumberParser::finishValue(Token firstToken, bool singleToken) {
         // Otherwise, optimize for this case by reusing the integer value already
         // computed by the token itself.
         if (!hasUnknown) {
+            bitwidth_t width = decimalValue.getBitWidth();
+            if (signFlag) {
+                width++;
+                decimalValue = decimalValue.resize(width);
+            }
+
             // If no size was specified, just return the value as-is. Otherwise,
             // resize it to match the desired size. Warn if that will truncate.
-            bitwidth_t width = decimalValue.getBitWidth();
             SVInt result;
             if (!sizeBits) {
                 // Unsized numbers are required to be at least 32 bits by the spec.
@@ -197,7 +202,7 @@ Token NumberParser::finishValue(Token firstToken, bool singleToken) {
             }
             else if (width != sizeBits) {
                 if (width > sizeBits)
-                    addDiag(diag::VectorLiteralOverflow, firstLocation);
+                    addDiag(diag::VectorLiteralOverflow, firstLocation) << width;
 
                 result = decimalValue.resize(sizeBits);
             }
@@ -240,6 +245,10 @@ Token NumberParser::finishValue(Token firstToken, bool singleToken) {
         if (!digits[0].isUnknown())
             bits += (bitwidth_t)std::bit_width(digits[0].value);
 
+        // Signed numbers need an extra bit for the sign.
+        if (signFlag)
+            bits++;
+
         if (bits > sizeBits) {
             if (sizeBits == 0) {
                 if (bits > SVInt::MAX_BITS) {
@@ -252,7 +261,7 @@ Token NumberParser::finishValue(Token firstToken, bool singleToken) {
             else {
                 // We should warn about overflow here, but the spec says it is valid and
                 // the literal gets truncated. Definitely a warning though.
-                addDiag(diag::VectorLiteralOverflow, firstLocation);
+                addDiag(diag::VectorLiteralOverflow, firstLocation) << bits;
             }
         }
     }

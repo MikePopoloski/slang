@@ -54,7 +54,7 @@ error ValueOutOfRange "{} is out of allowed range ({} to {})"
 error ExpectedVectorDigits "expected vector literal digits"
 warning real-underflow RealLiteralUnderflow "value of real literal is too small; minimum is {:.5e}"
 warning real-overflow RealLiteralOverflow "value of real literal is too large; maximum is {:.5e}"
-warning vector-overflow VectorLiteralOverflow "vector literal too large for the given number of bits"
+warning vector-overflow VectorLiteralOverflow "vector literal too large for the given number of bits ({} bits needed)"
 warning int-overflow SignedIntegerOverflow "signed integer literal overflows 32 bits, will be truncated to {}"
 
 subsystem Preprocessor

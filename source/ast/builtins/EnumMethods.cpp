@@ -29,8 +29,10 @@ public:
 
     ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
                        const CallExpression::SystemCallInfo&) const final {
+        if (!noHierarchical(context, *args[0]))
+            return nullptr;
+
         // Expression isn't actually evaluated here; we know the value to return at compile time.
-        noHierarchical(context, *args[0]);
         const EnumType& type = args[0]->type->getCanonicalType().as<EnumType>();
 
         auto range = type.values();
@@ -161,8 +163,10 @@ public:
 
     ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
                        const CallExpression::SystemCallInfo&) const final {
+        if (!noHierarchical(context, *args[0]))
+            return nullptr;
+
         // Expression isn't actually evaluated here; we know the value to return at compile time.
-        noHierarchical(context, *args[0]);
         const EnumType& type = args[0]->type->getCanonicalType().as<EnumType>();
         return SVInt(32, (uint64_t)std::ranges::distance(type.values()), true);
     }

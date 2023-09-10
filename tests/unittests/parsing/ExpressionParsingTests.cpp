@@ -911,3 +911,19 @@ endmodule
     REQUIRE(diagnostics.size() == 1);
     CHECK(diagnostics[0].code == diag::AttributesNotAllowed);
 }
+
+TEST_CASE("Vector literal overflow parsing") {
+    auto& text = R"(
+shortint a = -16'sd32769;
+int b = -32'sd2147483649;
+int c = 32'd4294967297;
+int d = 9'so777;
+)";
+    parseCompilationUnit(text);
+
+    REQUIRE(diagnostics.size() == 4);
+    CHECK(diagnostics[0].code == diag::VectorLiteralOverflow);
+    CHECK(diagnostics[1].code == diag::VectorLiteralOverflow);
+    CHECK(diagnostics[2].code == diag::VectorLiteralOverflow);
+    CHECK(diagnostics[3].code == diag::VectorLiteralOverflow);
+}

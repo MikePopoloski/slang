@@ -47,7 +47,8 @@ public:
 
     ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
                        const CallExpression::SystemCallInfo&) const final {
-        noHierarchical(context, *args[0]);
+        if (!noHierarchical(context, *args[0]))
+            return nullptr;
 
         size_t width;
         if (args[0]->type->isFixedSize()) {
@@ -90,7 +91,8 @@ public:
 
     ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
                        const CallExpression::SystemCallInfo&) const final {
-        noHierarchical(context, *args[0]);
+        if (!noHierarchical(context, *args[0]))
+            return nullptr;
 
         TypePrinter printer;
         printer.append(*args[0]->type);
@@ -120,7 +122,8 @@ public:
 
     ConstantValue eval(EvalContext& context, const Args& args, SourceRange range,
                        const CallExpression::SystemCallInfo&) const final {
-        noHierarchical(context, *args[0]);
+        if (!noHierarchical(context, *args[0]))
+            return nullptr;
 
         if (args[0]->type->isUnbounded())
             return SVInt(1, 1, false);
@@ -225,7 +228,8 @@ protected:
     };
 
     DimResult getDim(EvalContext& context, const Args& args) const {
-        noHierarchical(context, *args[0]);
+        if (!noHierarchical(context, *args[0]))
+            return {};
 
         // If an index expression is provided, evaluate it. Otherwise default to 1.
         ConstantValue iv;
@@ -497,7 +501,8 @@ public:
 
     ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
                        const CallExpression::SystemCallInfo&) const final {
-        noHierarchical(context, *args[0]);
+        if (!noHierarchical(context, *args[0]))
+            return nullptr;
 
         // Count the number of dimensions by unwrapping arrays.
         uint64_t count = 0;

@@ -547,7 +547,7 @@ endmodule
 source:7:13: warning: implicit conversion from 'bit[34:0]' to 'int' changes value from 35'h22c6d1fba to 745349050 [-Wconstant-conversion]
     int i = 35'd123498234978234;
             ^~~~~~~~~~~~~~~~~~~
-source:7:17: warning: vector literal too large for the given number of bits [-Wvector-overflow]
+source:7:17: warning: vector literal too large for the given number of bits (47 bits needed) [-Wvector-overflow]
     int i = 35'd123498234978234;
                 ^
 source:8:13: error: size of vector literal cannot be zero
@@ -577,7 +577,7 @@ source:19:16: error: expected decimal digit
 source:20:16: error: expected hexadecimal digit
     int v = 'h g;
                ^
-source:21:17: warning: vector literal too large for the given number of bits [-Wvector-overflow]
+source:21:17: warning: vector literal too large for the given number of bits (4 bits needed) [-Wvector-overflow]
     int w = 3'h f;
                 ^
 source:22:15: error: expected vector literal digits
@@ -2955,4 +2955,19 @@ endclass
     Compilation compilation;
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Type of unsized based literal") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    parameter p = 'd999999999999;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& p = compilation.getRoot().lookupName<ParameterSymbol>("m.p");
+    CHECK(p.getType().toString() == "logic[39:0]");
 }
