@@ -2021,19 +2021,25 @@ module m;
         $display(bar[-2147483647:2147483647]);
     end
 endmodule
+
+class C;
+    logic a[2147483647];
+    logic b[2147483647];
+endclass
 )");
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 6);
+    REQUIRE(diags.size() == 7);
     CHECK(diags[0].code == diag::ObjectTooLarge);
     CHECK(diags[1].code == diag::ObjectTooLarge);
     CHECK(diags[2].code == diag::PackedTypeTooLarge);
     CHECK(diags[3].code == diag::RangeOOB);
     CHECK(diags[4].code == diag::PackedTypeTooLarge);
     CHECK(diags[5].code == diag::ObjectTooLarge);
+    CHECK(diags[6].code == diag::ObjectTooLarge);
 }
 
 TEST_CASE("Giant string literal overflow") {

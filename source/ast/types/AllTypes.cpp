@@ -691,10 +691,9 @@ const Type& FixedSizeUnpackedArrayType::fromDim(const Scope& scope, const Type& 
 
     auto& comp = scope.getCompilation();
     auto width = checkedMulU32(elementType.getSelectableWidth(), dim.width());
-    const uint32_t maxWidth = uint32_t(INT32_MAX) + 1;
-    if (!width || width > maxWidth) {
+    if (!width || width > MaxBitWidth) {
         uint64_t fullWidth = uint64_t(elementType.getSelectableWidth()) * dim.width();
-        scope.addDiag(diag::ObjectTooLarge, sourceRange.get()) << fullWidth << maxWidth;
+        scope.addDiag(diag::ObjectTooLarge, sourceRange.get()) << fullWidth << MaxBitWidth;
         return comp.getErrorType();
     }
 
@@ -887,10 +886,9 @@ const Type& UnpackedStructType::fromSyntax(const ASTContext& context,
             fields.push_back(field);
 
             bitOffset += field->getType().getSelectableWidth();
-            const uint32_t maxWidth = uint32_t(INT32_MAX) + 1;
-            if (bitOffset > maxWidth) {
+            if (bitOffset > MaxBitWidth) {
                 context.addDiag(diag::ObjectTooLarge, syntax.sourceRange())
-                    << bitOffset << maxWidth;
+                    << bitOffset << MaxBitWidth;
                 return comp.getErrorType();
             }
         }

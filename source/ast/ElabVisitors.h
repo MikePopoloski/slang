@@ -159,6 +159,7 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
             return;
 
         symbol.getBaseConstructorCall();
+        symbol.bitstreamWidth();
     }
 
     void handle(const CovergroupType& symbol) {
@@ -385,7 +386,7 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
         // Once everything has been visited, go back over and check things that might
         // have been influenced by visiting later symbols. Unfortunately visiting
         // a specialization can trigger more specializations to be made for the
-        // same or other generic classs, so we need to be careful here when iterating.
+        // same or other generic class, so we need to be careful here when iterating.
         SmallSet<const Type*, 8> visitedSpecs;
         SmallVector<const Type*> toVisit;
         bool didSomething;

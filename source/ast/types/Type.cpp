@@ -127,15 +127,10 @@ size_t Type::bitstreamWidth() const {
         return width;
     }
 
-    if (ct.isClass()) {
-        auto& classType = ct.as<ClassType>();
-        if (classType.isInterface)
-            return 0;
-
-        for (auto& prop : classType.membersOfType<ClassPropertySymbol>())
-            width += prop.getType().bitstreamWidth();
-        return width;
-    }
+    // Class types reimplement the bitstreamWidth method
+    // to use their stored computed size, so defer to that.
+    if (ct.isClass())
+        return ct.as<ClassType>().bitstreamWidth();
 
     return 0;
 }
@@ -332,17 +327,8 @@ bool Type::isFixedSize() const {
         return true;
     }
 
-    if (ct.isClass()) {
-        auto& classType = ct.as<ClassType>();
-        if (classType.isInterface)
-            return false;
-
-        for (auto& prop : classType.membersOfType<ClassPropertySymbol>()) {
-            if (!prop.getType().isFixedSize())
-                return false;
-        }
-        return true;
-    }
+    if (ct.isClass())
+        return ct.as<ClassType>().bitstreamWidth() > 0;
 
     return false;
 }
