@@ -727,7 +727,7 @@ void ClassType::computeSize() const {
 
         totalWidth += width;
         if (totalWidth > MaxBitWidth) {
-            context.addDiag(diag::ObjectTooLarge, location) << totalWidth << MaxBitWidth;
+            context.addDiag(diag::ObjectTooLarge, location) << MaxBitWidth;
             return;
         }
     }
