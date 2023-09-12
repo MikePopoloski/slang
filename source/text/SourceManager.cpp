@@ -353,7 +353,7 @@ void SourceManager::addLineDirective(SourceLocation location, size_t lineNum, st
         full = fs::path(info->data->name).replace_filename(linePath);
 
     size_t sourceLineNum = getRawLineNumber(fileLocation, lock);
-    info->lineDirectives.emplace_back(getU8Str(full), sourceLineNum, lineNum, level);
+    info->lineDirectives.emplace_back(std::string(getU8Str(full)), sourceLineNum, lineNum, level);
 }
 
 void SourceManager::addDiagnosticDirective(SourceLocation location, std::string_view name,

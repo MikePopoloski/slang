@@ -288,13 +288,13 @@ std::error_code OS::readFile(const fs::path& path, SmallVector<char>& buffer) {
 
 void OS::writeFile(const fs::path& path, std::string_view contents) {
     if (path == "-") {
-        std::cout.write(contents.data(), contents.size());
+        std::cout.write(contents.data(), (std::streamsize)contents.size());
         std::cout.flush();
     }
     else {
         std::ofstream file(path);
         file.exceptions(std::ios::failbit | std::ios::badbit);
-        file.write(contents.data(), contents.size());
+        file.write(contents.data(), (std::streamsize)contents.size());
         file.flush();
     }
 }
