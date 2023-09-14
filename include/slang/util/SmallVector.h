@@ -453,7 +453,7 @@ public:
 
     /// Indicates whether we are still "small", which means we are still on the stack.
     [[nodiscard]] constexpr bool isSmall() const noexcept {
-        return (void*)data_ == (void*)firstElement;
+        return (const void*)data_ == (const void*)firstElement;
     }
 
 protected:
