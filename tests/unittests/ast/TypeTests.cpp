@@ -2026,13 +2026,22 @@ class C;
     logic a[2147483647];
     logic b[2147483647];
 endclass
+
+class D;
+    int foo[9999999];
+endclass
+
+module n;
+    D d[1000];
+    struct { int a; D d; } asdf [1000];
+endmodule
 )");
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 7);
+    REQUIRE(diags.size() == 9);
     CHECK(diags[0].code == diag::ObjectTooLarge);
     CHECK(diags[1].code == diag::ObjectTooLarge);
     CHECK(diags[2].code == diag::PackedTypeTooLarge);
@@ -2040,6 +2049,8 @@ endclass
     CHECK(diags[4].code == diag::PackedTypeTooLarge);
     CHECK(diags[5].code == diag::ObjectTooLarge);
     CHECK(diags[6].code == diag::ObjectTooLarge);
+    CHECK(diags[7].code == diag::ObjectTooLarge);
+    CHECK(diags[8].code == diag::ObjectTooLarge);
 }
 
 TEST_CASE("Giant string literal overflow") {

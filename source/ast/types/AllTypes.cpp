@@ -667,9 +667,11 @@ const Type& PackedArrayType::fromDim(const Scope& scope, const Type& elementType
 }
 
 FixedSizeUnpackedArrayType::FixedSizeUnpackedArrayType(const Type& elementType, ConstantRange range,
-                                                       uint32_t selectableWidth) :
+                                                       uint32_t selectableWidth,
+                                                       uint32_t bitstreamWidth) :
     Type(SymbolKind::FixedSizeUnpackedArrayType, "", SourceLocation()),
-    elementType(elementType), range(range), selectableWidth(selectableWidth) {
+    elementType(elementType), range(range), selectableWidth(selectableWidth),
+    bitstreamWidth(bitstreamWidth) {
 }
 
 const Type& FixedSizeUnpackedArrayType::fromDims(const Scope& scope, const Type& elementType,
@@ -690,13 +692,17 @@ const Type& FixedSizeUnpackedArrayType::fromDim(const Scope& scope, const Type& 
         return elementType;
 
     auto& comp = scope.getCompilation();
-    auto width = checkedMulU32(elementType.getSelectableWidth(), dim.width());
-    if (!width || width > MaxBitWidth) {
+    auto selectableWidth = checkedMulU32(elementType.getSelectableWidth(), dim.width());
+    auto bitstreamWidth = checkedMulU32((uint32_t)elementType.bitstreamWidth(), dim.width());
+
+    if (!selectableWidth || selectableWidth > MaxBitWidth || !bitstreamWidth ||
+        bitstreamWidth > MaxBitWidth) {
         scope.addDiag(diag::ObjectTooLarge, sourceRange.get()) << MaxBitWidth;
         return comp.getErrorType();
     }
 
-    auto result = comp.emplace<FixedSizeUnpackedArrayType>(elementType, dim, *width);
+    auto result = comp.emplace<FixedSizeUnpackedArrayType>(elementType, dim, *selectableWidth,
+                                                           *bitstreamWidth);
     if (auto syntax = sourceRange.syntax())
         result->setSyntax(*syntax);
 
@@ -856,6 +862,7 @@ const Type& UnpackedStructType::fromSyntax(const ASTContext& context,
     auto result = comp.emplace<UnpackedStructType>(comp, syntax.keyword.location(), context);
 
     uint32_t bitOffset = 0;
+    uint64_t bitstreamWidth = 0;
     SmallVector<const FieldSymbol*> fields;
     for (auto member : syntax.members) {
         RandMode randMode = RandMode::None;
@@ -885,7 +892,8 @@ const Type& UnpackedStructType::fromSyntax(const ASTContext& context,
             fields.push_back(field);
 
             bitOffset += field->getType().getSelectableWidth();
-            if (bitOffset > MaxBitWidth) {
+            bitstreamWidth += field->getType().bitstreamWidth();
+            if (bitOffset > MaxBitWidth || bitstreamWidth > MaxBitWidth) {
                 context.addDiag(diag::ObjectTooLarge, syntax.sourceRange()) << MaxBitWidth;
                 return comp.getErrorType();
             }
@@ -893,6 +901,7 @@ const Type& UnpackedStructType::fromSyntax(const ASTContext& context,
     }
 
     result->selectableWidth = bitOffset;
+    result->bitstreamWidth = (uint32_t)bitstreamWidth;
     result->fields = fields.copy(comp);
     for (auto field : result->fields) {
         // Force resolution of the initializer right away, otherwise nothing
@@ -1043,6 +1052,8 @@ const Type& UnpackedUnionType::fromSyntax(const ASTContext& context,
 
             result->selectableWidth = std::max(result->selectableWidth,
                                                field->getType().getSelectableWidth());
+            result->bitstreamWidth = std::max(result->bitstreamWidth,
+                                              (uint32_t)field->getType().bitstreamWidth());
         }
     }
 

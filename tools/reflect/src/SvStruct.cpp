@@ -18,12 +18,7 @@ void SvStruct::toCpp(HppFile& hppFile, std::string_view _namespace, const SvAlia
 
     std::vector<std::pair<std::string, SvType>> members;
 
-    size_t structSize = 0;
-    if (type.isUnpackedStruct())
-        structSize = type.getCanonicalType().as<slang::ast::UnpackedStructType>().bitstreamWidth();
-    else
-        structSize = type.getCanonicalType().as<slang::ast::PackedStructType>().bitstreamWidth();
-
+    size_t structSize = type.bitstreamWidth();
     auto cppType = CppType::fromSize(structSize);
 
     if (cppType == CppType::SC_BV && noSystemC) {

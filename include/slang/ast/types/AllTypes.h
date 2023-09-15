@@ -164,9 +164,10 @@ public:
     const Type& elementType;
     ConstantRange range;
     uint32_t selectableWidth;
+    uint32_t bitstreamWidth;
 
     FixedSizeUnpackedArrayType(const Type& elementType, ConstantRange range,
-                               uint32_t selectableWidth);
+                               uint32_t selectableWidth, uint32_t bitstreamWidth);
 
     static const Type& fromDims(const Scope& scope, const Type& elementType,
                                 std::span<const ConstantRange> dimensions,
@@ -253,6 +254,7 @@ class SLANG_EXPORT UnpackedStructType : public Type, public Scope {
 public:
     std::span<const FieldSymbol* const> fields;
     uint32_t selectableWidth = 0;
+    uint32_t bitstreamWidth = 0;
     int systemId;
 
     UnpackedStructType(Compilation& compilation, SourceLocation loc, const ASTContext& context);
@@ -287,6 +289,7 @@ class SLANG_EXPORT UnpackedUnionType : public Type, public Scope {
 public:
     std::span<const FieldSymbol* const> fields;
     uint32_t selectableWidth = 0;
+    uint32_t bitstreamWidth = 0;
     int systemId;
     bool isTagged;
 

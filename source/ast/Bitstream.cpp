@@ -705,9 +705,9 @@ static bool unpackConcatenation(const StreamingConcatenationExpression& lhs, Pac
                 auto elemType = arrayType.getArrayElementType();
                 SLANG_ASSERT(elemType);
 
+                // TODO: overflow
+                auto withSize = elemType->bitstreamWidth() * with.width();
                 if (dynamicSize > 0 && !stream.constantWithWidth) {
-                    // TODO: overflow
-                    auto withSize = elemType->bitstreamWidth() * with.width();
                     if (withSize >= dynamicSize)
                         dynamicSize = 0;
                     else
@@ -721,7 +721,8 @@ static bool unpackConcatenation(const StreamingConcatenationExpression& lhs, Pac
                     // We already checked for overflow earlier so it's fine to create this
                     // temporary array result type as-is.
                     FixedSizeUnpackedArrayType rvalueType(
-                        *elemType, with, elemType->getSelectableWidth() * with.width());
+                        *elemType, with, elemType->getSelectableWidth() * with.width(),
+                        (uint32_t)withSize);
 
                     rvalue = unpackBitstream(rvalueType, iter, iterEnd, bitOffset, dynamicSize);
                 }
