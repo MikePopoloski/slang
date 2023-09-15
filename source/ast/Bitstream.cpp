@@ -117,7 +117,6 @@ static std::pair<size_t, size_t> dynamicBitstreamSize(
             }
             else {
                 multiplierStream = fixedSizeElem;
-                fixedSizeStream = fixedSizeElem;
             }
         }
         else {

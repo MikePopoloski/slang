@@ -2971,3 +2971,26 @@ endmodule
     auto& p = compilation.getRoot().lookupName<ParameterSymbol>("m.p");
     CHECK(p.getType().toString() == "logic[39:0]");
 }
+
+TEST_CASE("Stream operator size overflow") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int i[];
+    int j[9999999];
+    assign i = {<< {j, j, j with [0+:50000000]}};
+
+    int k[$];
+    int l[];
+    always_comb l = {<< {k with [0+:999999999]}};
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::ObjectTooLarge);
+    CHECK(diags[1].code == diag::RangeOOB);
+    CHECK(diags[2].code == diag::ObjectTooLarge);
+}
