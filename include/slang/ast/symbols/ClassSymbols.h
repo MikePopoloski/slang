@@ -87,7 +87,7 @@ public:
     const Expression* getBaseConstructorCall() const;
 
     /// Gets $bits of the type. Returns zero if the type does not have a statically known size.
-    size_t getBitstreamWidth() const {
+    uint32_t getBitstreamWidth() const {
         if (!cachedBitstreamWidth)
             computeSize();
         return *cachedBitstreamWidth;

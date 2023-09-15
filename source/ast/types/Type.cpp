@@ -96,7 +96,7 @@ bitwidth_t Type::getBitWidth() const {
     return 0;
 }
 
-size_t Type::getBitstreamWidth() const {
+uint32_t Type::getBitstreamWidth() const {
     auto& ct = getCanonicalType();
     switch (ct.kind) {
         case SymbolKind::FixedSizeUnpackedArrayType:

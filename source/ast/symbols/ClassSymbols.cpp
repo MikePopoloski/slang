@@ -718,10 +718,10 @@ void ClassType::computeSize() const {
 
     ASTContext context(*this, LookupLocation(this, uint32_t(headerIndex)));
 
-    size_t totalWidth = 0;
+    uint64_t totalWidth = 0;
     bool hasDynamic = false;
     for (auto& prop : membersOfType<ClassPropertySymbol>()) {
-        size_t width = prop.getType().getBitstreamWidth();
+        uint32_t width = prop.getType().getBitstreamWidth();
         if (width == 0)
             hasDynamic = true;
 
