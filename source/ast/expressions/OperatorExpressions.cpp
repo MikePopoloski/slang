@@ -1703,7 +1703,7 @@ Expression& StreamingConcatenationExpression::fromSyntax(
                     diag.addNote(diag::NoteDeclarationHere, sliceExpr.type->location);
                 return badResult();
             }
-            sliceSize = sliceExpr.type->bitstreamWidth();
+            sliceSize = sliceExpr.type->getBitstreamWidth();
         }
         else {
             // It shall be an error for the value to be zero or negative.
@@ -1855,26 +1855,26 @@ bool StreamingConcatenationExpression::isFixedSize() const {
     return true;
 }
 
-size_t StreamingConcatenationExpression::bitstreamWidth() const {
+size_t StreamingConcatenationExpression::getBitstreamWidth() const {
     size_t width = 0;
     for (auto& stream : streams()) {
         auto& operand = *stream.operand;
         if (operand.kind == ExpressionKind::Streaming) {
-            width += operand.as<StreamingConcatenationExpression>().bitstreamWidth();
+            width += operand.as<StreamingConcatenationExpression>().getBitstreamWidth();
         }
         else if (stream.withExpr) {
             // TODO: overflow
             size_t count = stream.constantWithWidth.value_or(1);
-            width += count * operand.type->getArrayElementType()->bitstreamWidth();
+            width += count * operand.type->getArrayElementType()->getBitstreamWidth();
         }
         else if (operand.type->isUnpackedUnion()) {
             auto& uu = operand.type->getCanonicalType().as<UnpackedUnionType>();
             auto members = uu.members();
             if (members.begin() != members.end())
-                width += members.begin()->as<ValueSymbol>().getType().bitstreamWidth();
+                width += members.begin()->as<ValueSymbol>().getType().getBitstreamWidth();
         }
         else {
-            width += operand.type->bitstreamWidth();
+            width += operand.type->getBitstreamWidth();
         }
     }
     return width;

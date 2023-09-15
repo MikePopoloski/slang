@@ -96,7 +96,7 @@ bitwidth_t Type::getBitWidth() const {
     return 0;
 }
 
-size_t Type::bitstreamWidth() const {
+size_t Type::getBitstreamWidth() const {
     auto& ct = getCanonicalType();
     switch (ct.kind) {
         case SymbolKind::FixedSizeUnpackedArrayType:
@@ -106,7 +106,7 @@ size_t Type::bitstreamWidth() const {
         case SymbolKind::UnpackedUnionType:
             return ct.as<UnpackedUnionType>().bitstreamWidth;
         case SymbolKind::ClassType:
-            return ct.as<ClassType>().bitstreamWidth();
+            return ct.as<ClassType>().getBitstreamWidth();
         default:
             return ct.getBitWidth();
     }
@@ -305,7 +305,7 @@ bool Type::isFixedSize() const {
     }
 
     if (ct.isClass())
-        return ct.as<ClassType>().bitstreamWidth() > 0;
+        return ct.as<ClassType>().getBitstreamWidth() > 0;
 
     return false;
 }
@@ -646,7 +646,7 @@ bool Type::isBitstreamCastable(const Type& rhs) const {
     const Type* r = &rhs.getCanonicalType();
     if (l->isBitstreamType(true) && r->isBitstreamType()) {
         if (l->isFixedSize() && r->isFixedSize())
-            return l->bitstreamWidth() == r->bitstreamWidth();
+            return l->getBitstreamWidth() == r->getBitstreamWidth();
         else
             return Bitstream::dynamicSizesMatch(*l, *r);
     }

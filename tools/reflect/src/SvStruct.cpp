@@ -18,7 +18,7 @@ void SvStruct::toCpp(HppFile& hppFile, std::string_view _namespace, const SvAlia
 
     std::vector<std::pair<std::string, SvType>> members;
 
-    size_t structSize = type.bitstreamWidth();
+    size_t structSize = type.getBitstreamWidth();
     auto cppType = CppType::fromSize(structSize);
 
     if (cppType == CppType::SC_BV && noSystemC) {
@@ -116,7 +116,7 @@ void SvStruct::toCpp(HppFile& hppFile, std::string_view _namespace, const SvAlia
     // sc_bv
     if (!noSystemC && structSize <= 64) {
         hppFile.addWithIndent(
-            fmt::format("{}(const sc_bv<{}>& data) {{\n", structName, type.bitstreamWidth()));
+            fmt::format("{}(const sc_bv<{}>& data) {{\n", structName, type.getBitstreamWidth()));
 
         hppFile.increaseIndent();
 

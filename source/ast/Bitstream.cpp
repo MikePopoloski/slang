@@ -98,7 +98,7 @@ static std::pair<size_t, size_t> dynamicBitstreamSize(const Type& type, Bitstrea
 static std::pair<size_t, size_t> dynamicBitstreamSize(
     const StreamingConcatenationExpression& concat, BitstreamSizeMode mode) {
     if (concat.isFixedSize())
-        return {0, concat.bitstreamWidth()};
+        return {0, concat.getBitstreamWidth()};
 
     size_t multiplier = 0, fixedSize = 0;
     for (auto& stream : concat.streams()) {
@@ -197,7 +197,7 @@ bool Bitstream::dynamicSizesMatch(const T1& destination, const T2& source) {
 template<typename T>
 static size_t bitstreamCastRemainingSize(const T& destination, size_t srcSize) {
     if (destination.isFixedSize()) {
-        auto destSize = destination.bitstreamWidth();
+        auto destSize = destination.getBitstreamWidth();
         if (destSize != srcSize)
             return srcSize + 1; // cannot fit
 
@@ -375,7 +375,7 @@ static ConstantValue unpackBitstream(const Type& type, PackIterator& iter,
             // empty.
             if (dynamicSize > 0) {
                 auto elemWidth = type.getArrayElementType()->isFixedSize()
-                                     ? type.getArrayElementType()->bitstreamWidth()
+                                     ? type.getArrayElementType()->getBitstreamWidth()
                                      : dynamicSize;
 
                 // If element is dynamically sized, num = 1
@@ -428,7 +428,7 @@ ConstantValue Bitstream::evaluateCast(const Type& type, ConstantValue&& value,
         }
     }
     else { // implicit streaming concatenation conversion
-        auto targetWidth = type.bitstreamWidth();
+        auto targetWidth = type.getBitstreamWidth();
         if (targetWidth < srcSize) {
             if (type.isFixedSize()) {
                 context.addDiag(diag::BadStreamSize, sourceRange) << targetWidth << srcSize;
@@ -488,7 +488,7 @@ bool Bitstream::canBeTarget(const StreamingConcatenationExpression& lhs, const E
     if (context.inUnevaluatedBranch())
         return true; // No size check in an unevaluated conditional branch
 
-    size_t targetWidth = lhs.bitstreamWidth();
+    size_t targetWidth = lhs.getBitstreamWidth();
     size_t sourceWidth;
     bool good = true;
 
@@ -496,12 +496,12 @@ bool Bitstream::canBeTarget(const StreamingConcatenationExpression& lhs, const E
         if (!rhs.type->isFixedSize())
             return true; // Sizes checked at constant evaluation or runtime
 
-        sourceWidth = rhs.type->bitstreamWidth();
+        sourceWidth = rhs.type->getBitstreamWidth();
         good = targetWidth <= sourceWidth;
     }
     else {
         auto& source = rhs.as<StreamingConcatenationExpression>();
-        sourceWidth = source.bitstreamWidth();
+        sourceWidth = source.getBitstreamWidth();
         if (lhs.isFixedSize() && source.isFixedSize())
             good = targetWidth == sourceWidth;
         else
@@ -538,8 +538,8 @@ bool Bitstream::canBeSource(const Type& target, const StreamingConcatenationExpr
     if (!target.isFixedSize())
         return true; // Sizes checked at constant evaluation or runtime
 
-    auto targetWidth = target.bitstreamWidth();
-    auto sourceWidth = rhs.bitstreamWidth();
+    auto targetWidth = target.getBitstreamWidth();
+    auto sourceWidth = rhs.getBitstreamWidth();
     if (targetWidth < sourceWidth) {
         auto& diag = context.addDiag(diag::BadStreamSize, assignLoc) << targetWidth << sourceWidth;
         diag << rhs.sourceRange;
@@ -554,7 +554,7 @@ bool Bitstream::isBitstreamCast(const Type& type, const StreamingConcatenationEx
         return false;
 
     if (type.isFixedSize() && arg.isFixedSize())
-        return type.bitstreamWidth() == arg.bitstreamWidth();
+        return type.getBitstreamWidth() == arg.getBitstreamWidth();
 
     return dynamicSizesMatch(type, arg);
 }
@@ -706,7 +706,7 @@ static bool unpackConcatenation(const StreamingConcatenationExpression& lhs, Pac
                 SLANG_ASSERT(elemType);
 
                 // TODO: overflow
-                auto withSize = elemType->bitstreamWidth() * with.width();
+                auto withSize = elemType->getBitstreamWidth() * with.width();
                 if (dynamicSize > 0 && !stream.constantWithWidth) {
                     if (withSize >= dynamicSize)
                         dynamicSize = 0;
@@ -778,7 +778,7 @@ ConstantValue Bitstream::evaluateTarget(const StreamingConcatenationExpression& 
         return nullptr;
 
     auto srcSize = rvalue.bitstreamWidth();
-    auto targetWidth = lhs.bitstreamWidth();
+    auto targetWidth = lhs.getBitstreamWidth();
     size_t dynamicSize = 0;
 
     if (rhs.kind == ExpressionKind::Streaming) {

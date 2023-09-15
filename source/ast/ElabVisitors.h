@@ -159,7 +159,7 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
             return;
 
         symbol.getBaseConstructorCall();
-        symbol.bitstreamWidth();
+        symbol.getBitstreamWidth();
     }
 
     void handle(const CovergroupType& symbol) {

@@ -268,7 +268,7 @@ public:
         sliceSize(sliceSize), streams_(streams) {}
 
     bool isFixedSize() const;
-    size_t bitstreamWidth() const;
+    size_t getBitstreamWidth() const;
 
     std::span<const StreamExpression> streams() const { return streams_; }
 

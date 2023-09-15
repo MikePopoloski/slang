@@ -62,7 +62,7 @@ public:
     bitwidth_t getBitWidth() const;
 
     /// Gets $bits of the type. Returns zero if the type does not have a statically known size.
-    size_t bitstreamWidth() const;
+    size_t getBitstreamWidth() const;
 
     /// Gets the "selectable" width of the type. This is the size of the object when determining
     /// whether assignments to the static portions overlap with each other. Dynamically sized

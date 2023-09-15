@@ -23,7 +23,7 @@ public:
                                         : std::string(parameter.name);
         hppFile.addWithIndent(
             fmt::format("static constexpr {} {} = {};\n",
-                        toString(CppType::fromSize(parameter.getType().bitstreamWidth())),
+                        toString(CppType::fromSize(parameter.getType().getBitstreamWidth())),
                         parameterName, *parameter.getValue().integer().getRawPtr()));
     }
 

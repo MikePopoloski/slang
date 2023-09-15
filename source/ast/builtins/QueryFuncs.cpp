@@ -52,7 +52,7 @@ public:
 
         size_t width;
         if (args[0]->type->isFixedSize()) {
-            width = args[0]->type->bitstreamWidth();
+            width = args[0]->type->getBitstreamWidth();
         }
         else {
             ConstantValue cv = args[0]->eval(context);

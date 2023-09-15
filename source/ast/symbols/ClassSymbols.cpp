@@ -721,7 +721,7 @@ void ClassType::computeSize() const {
     size_t totalWidth = 0;
     bool hasDynamic = false;
     for (auto& prop : membersOfType<ClassPropertySymbol>()) {
-        size_t width = prop.getType().bitstreamWidth();
+        size_t width = prop.getType().getBitstreamWidth();
         if (width == 0)
             hasDynamic = true;
 

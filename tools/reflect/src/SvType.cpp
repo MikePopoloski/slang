@@ -12,7 +12,7 @@
 using namespace slang::ast;
 
 SvType::SvType(const Type& type) {
-    size = type.bitstreamWidth();
+    size = type.getBitstreamWidth();
     name = type.name;
     if (type.isScalar() || type.isArray())
         cppType = CppType::fromSize(size);

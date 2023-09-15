@@ -693,7 +693,7 @@ const Type& FixedSizeUnpackedArrayType::fromDim(const Scope& scope, const Type& 
 
     auto& comp = scope.getCompilation();
     auto selectableWidth = checkedMulU32(elementType.getSelectableWidth(), dim.width());
-    auto bitstreamWidth = checkedMulU32((uint32_t)elementType.bitstreamWidth(), dim.width());
+    auto bitstreamWidth = checkedMulU32((uint32_t)elementType.getBitstreamWidth(), dim.width());
 
     if (!selectableWidth || selectableWidth > MaxBitWidth || !bitstreamWidth ||
         bitstreamWidth > MaxBitWidth) {
@@ -892,7 +892,7 @@ const Type& UnpackedStructType::fromSyntax(const ASTContext& context,
             fields.push_back(field);
 
             bitOffset += field->getType().getSelectableWidth();
-            bitstreamWidth += field->getType().bitstreamWidth();
+            bitstreamWidth += field->getType().getBitstreamWidth();
             if (bitOffset > MaxBitWidth || bitstreamWidth > MaxBitWidth) {
                 context.addDiag(diag::ObjectTooLarge, syntax.sourceRange()) << MaxBitWidth;
                 return comp.getErrorType();
@@ -1053,7 +1053,7 @@ const Type& UnpackedUnionType::fromSyntax(const ASTContext& context,
             result->selectableWidth = std::max(result->selectableWidth,
                                                field->getType().getSelectableWidth());
             result->bitstreamWidth = std::max(result->bitstreamWidth,
-                                              (uint32_t)field->getType().bitstreamWidth());
+                                              (uint32_t)field->getType().getBitstreamWidth());
         }
     }
 
