@@ -17,6 +17,8 @@
 using namespace slang;
 
 int main(int argc, char** argv) {
+    OS::setupConsole();
+
     driver::Driver driver;
     driver.addStandardArgs();
     std::optional<bool> showHelp;

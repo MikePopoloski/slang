@@ -24,8 +24,6 @@ using namespace slang;
 using namespace slang::ast;
 using namespace slang::driver;
 
-void writeToFile(std::string_view fileName, std::string_view contents);
-
 void printJson(Compilation& compilation, const std::string& fileName,
                const std::vector<std::string>& scopes) {
     JsonWriter writer;
@@ -43,12 +41,13 @@ void printJson(Compilation& compilation, const std::string& fileName,
         }
     }
 
-    writeToFile(fileName, writer.view());
+    OS::writeFile(fileName, writer.view());
 }
 
 template<typename TArgs>
 int driverMain(int argc, TArgs argv) {
     SLANG_TRY {
+        OS::setupConsole();
         OS::tryEnableColors();
 
         Driver driver;
@@ -166,11 +165,7 @@ int driverMain(int argc, TArgs argv) {
         }
 
         if (timeTrace) {
-#if defined(_WIN32)
-            std::ofstream file(widen(*timeTrace));
-#else
             std::ofstream file(*timeTrace);
-#endif
             TimeTrace::write(file);
             if (!file.flush()) {
                 SLANG_THROW(std::runtime_error(
@@ -188,54 +183,15 @@ int driverMain(int argc, TArgs argv) {
     }
 }
 
-template<typename Stream, typename String>
-void writeToFile(Stream& os, std::string_view fileName, String contents) {
-    os.write(contents.data(), contents.size());
-    os.flush();
-    if (!os)
-        SLANG_THROW(std::runtime_error(fmt::format("Unable to write AST to '{}'", fileName)));
-}
+#ifndef FUZZ_TARGET
 
-#if defined(_WIN32)
-
-void writeToFile(std::string_view fileName, std::string_view contents) {
-    if (fileName == "-") {
-        writeToFile(std::wcout, "stdout", widen(contents));
-    }
-    else {
-        std::ofstream file(widen(fileName));
-        writeToFile(file, fileName, contents);
-    }
-}
-
-#    ifndef FUZZ_TARGET
-int wmain(int argc, wchar_t** argv) {
-    return driverMain(argc, argv);
-}
-#    endif
-
-#else
-
-void writeToFile(std::string_view fileName, std::string_view contents) {
-    if (fileName == "-") {
-        writeToFile(std::cout, "stdout", contents);
-    }
-    else {
-        std::ofstream file{std::string(fileName)};
-        writeToFile(file, fileName, contents);
-    }
-}
-
-#    ifndef FUZZ_TARGET
 int main(int argc, char** argv) {
     return driverMain(argc, argv);
 }
-#    endif
 
-#endif
+#else
 
 // When fuzzing with libFuzzer, this is the entry point.
-#ifdef FUZZ_TARGET
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
     auto& sourceManager = SyntaxTree::getDefaultSourceManager();
 
@@ -253,4 +209,5 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
 
     return 0;
 }
+
 #endif

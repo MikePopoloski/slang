@@ -253,7 +253,7 @@ class SLANG_EXPORT StreamingConcatenationExpression : public Expression {
 public:
     /// The size of the blocks to slice and reorder: if 0, this is a left-to-right
     /// concatenation. Otherwise, it's a right-to-left concatenation.
-    const size_t sliceSize;
+    const uint32_t sliceSize;
 
     struct StreamExpression {
         not_null<const Expression*> operand;
@@ -261,14 +261,14 @@ public:
         std::optional<bitwidth_t> constantWithWidth;
     };
 
-    StreamingConcatenationExpression(const Type& type, size_t sliceSize,
+    StreamingConcatenationExpression(const Type& type, uint32_t sliceSize, uint32_t bitstreamWidth,
                                      std::span<const StreamExpression> streams,
                                      SourceRange sourceRange) :
         Expression(ExpressionKind::Streaming, type, sourceRange),
-        sliceSize(sliceSize), streams_(streams) {}
+        sliceSize(sliceSize), streams_(streams), bitstreamWidth(bitstreamWidth) {}
 
     bool isFixedSize() const;
-    size_t bitstreamWidth() const;
+    uint32_t getBitstreamWidth() const { return bitstreamWidth; }
 
     std::span<const StreamExpression> streams() const { return streams_; }
 
@@ -293,6 +293,7 @@ public:
 
 private:
     std::span<const StreamExpression> streams_;
+    uint32_t bitstreamWidth;
 };
 
 /// Denotes a range of values by providing expressions for the lower and upper

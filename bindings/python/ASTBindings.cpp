@@ -429,7 +429,8 @@ void registerAST(py::module_& m) {
         m, "StreamingConcatenationExpression");
     streamConcatExpr.def_readonly("sliceSize", &StreamingConcatenationExpression::sliceSize)
         .def_property_readonly("isFixedSize", &StreamingConcatenationExpression::isFixedSize)
-        .def_property_readonly("bitstreamWidth", &StreamingConcatenationExpression::bitstreamWidth)
+        .def_property_readonly("bitstreamWidth",
+                               &StreamingConcatenationExpression::getBitstreamWidth)
         .def_property_readonly("streams", &StreamingConcatenationExpression::streams);
 
     py::class_<StreamingConcatenationExpression::StreamExpression>(streamConcatExpr,

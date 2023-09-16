@@ -257,7 +257,7 @@ SourceBuffer SourceManager::assignBuffer(std::string_view bufferPath, SmallVecto
                                          SourceLocation includedFrom,
                                          const SourceLibrary* library) {
     // first see if we have this file cached
-    fs::path path(widen(bufferPath));
+    fs::path path(bufferPath);
     auto pathStr = getU8Str(path);
     {
         std::shared_lock lock(mutex);
@@ -283,7 +283,7 @@ SourceManager::BufferOrError SourceManager::readHeader(std::string_view path,
                                                        bool isSystemPath) {
     // if the header is specified as an absolute path, just do a straight lookup
     SLANG_ASSERT(!path.empty());
-    fs::path p = widen(path);
+    fs::path p = path;
     if (p.is_absolute())
         return openCached(p, includedFrom, library);
 
@@ -345,15 +345,15 @@ void SourceManager::addLineDirective(SourceLocation location, size_t lineNum, st
         return;
 
     fs::path full;
-    fs::path linePath = widen(name);
+    fs::path linePath = name;
     std::error_code ec;
     if (!disableProximatePaths && linePath.has_relative_path())
         full = linePath.lexically_proximate(fs::current_path(ec));
     else
-        full = fs::path(widen(info->data->name)).replace_filename(linePath);
+        full = fs::path(info->data->name).replace_filename(linePath);
 
     size_t sourceLineNum = getRawLineNumber(fileLocation, lock);
-    info->lineDirectives.emplace_back(getU8Str(full), sourceLineNum, lineNum, level);
+    info->lineDirectives.emplace_back(std::string(getU8Str(full)), sourceLineNum, lineNum, level);
 }
 
 void SourceManager::addDiagnosticDirective(SourceLocation location, std::string_view name,

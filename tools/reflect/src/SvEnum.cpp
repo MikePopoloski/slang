@@ -8,13 +8,13 @@
 
 void SvEnum::toCpp(HppFile& hppFile, std::string_view, const SvAliases&, bool) const {
     auto underlyingType = [&]() {
-        if (type.bitstreamWidth() <= 8)
+        if (type.getBitstreamWidth() <= 8)
             return "uint8_t"sv;
-        if (type.bitstreamWidth() <= 16)
+        if (type.getBitstreamWidth() <= 16)
             return "uint16_t"sv;
-        if (type.bitstreamWidth() <= 32)
+        if (type.getBitstreamWidth() <= 32)
             return "uint32_t"sv;
-        if (type.bitstreamWidth() <= 64)
+        if (type.getBitstreamWidth() <= 64)
             return "uint64_t"sv;
         else
             SLANG_THROW(
@@ -49,7 +49,7 @@ void SvEnum::toCpp(HppFile& hppFile, std::string_view, const SvAliases&, bool) c
 
     //** SIZE **/
     hppFile.addWithIndent(
-        fmt::format("static constexpr size_t _size = {};\n\n", type.bitstreamWidth()));
+        fmt::format("static constexpr size_t _size = {};\n\n", type.getBitstreamWidth()));
 
     //** LOCAL **//
     hppFile.addWithIndent("Type type;\n");

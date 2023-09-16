@@ -86,6 +86,13 @@ public:
     /// invoke that method. Otherwise returns nullptr.
     const Expression* getBaseConstructorCall() const;
 
+    /// Gets $bits of the type. Returns zero if the type does not have a statically known size.
+    uint32_t getBitstreamWidth() const {
+        if (!cachedBitstreamWidth)
+            computeSize();
+        return *cachedBitstreamWidth;
+    }
+
     static const Symbol& fromSyntax(const Scope& scope,
                                     const syntax::ClassDeclarationSyntax& syntax);
 
@@ -113,13 +120,15 @@ private:
     void handleImplements(const syntax::ImplementsClauseSyntax& implementsClause,
                           const ASTContext& context,
                           function_ref<void(const Symbol&)> insertCB) const;
+    void computeSize() const;
 
     mutable const Type* baseClass = nullptr;
     mutable const Symbol* baseConstructor = nullptr;
-    mutable std::optional<const Expression*> baseConstructorCall;
     mutable const ForwardingTypedefSymbol* firstForward = nullptr;
     mutable std::span<const Type* const> implementsIfaces;
     mutable std::span<const Type* const> declaredIfaces;
+    mutable std::optional<const Expression*> baseConstructorCall;
+    mutable std::optional<uint32_t> cachedBitstreamWidth;
     SymbolIndex headerIndex;
 };
 

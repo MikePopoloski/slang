@@ -7,6 +7,8 @@
 //------------------------------------------------------------------------------
 #include "slang/util/OS.h"
 
+#include <iostream>
+
 #include "slang/text/CharInfo.h"
 
 #if defined(_WIN32)
@@ -15,6 +17,9 @@
 #    endif
 #    ifndef NOMINMAX
 #        define NOMINMAX
+#    endif
+#    ifndef STRICT
+#        define STRICT
 #    endif
 #    include <Windows.h>
 #    include <fcntl.h>
@@ -33,6 +38,16 @@ namespace fs = std::filesystem;
 namespace slang {
 
 #if defined(_WIN32)
+
+void OS::setupConsole() {
+    // The application needs to be built with a manifest
+    // specifying the ActiveCodePage as UTF-8.
+    SLANG_ASSERT(GetACP() == 65001);
+
+    SetConsoleCP(CP_UTF8);
+    SetConsoleOutputCP(CP_UTF8);
+    setvbuf(stdout, nullptr, _IOFBF, 1000);
+}
 
 bool OS::tryEnableColors() {
     auto tryEnable = [](DWORD handle) {
@@ -164,6 +179,10 @@ std::error_code OS::readFile(const fs::path& path, SmallVector<char>& buffer) {
 
 #else
 
+void OS::setupConsole() {
+    // Nothing to do.
+}
+
 bool OS::tryEnableColors() {
     return true;
 }
@@ -266,6 +285,19 @@ std::error_code OS::readFile(const fs::path& path, SmallVector<char>& buffer) {
 }
 
 #endif
+
+void OS::writeFile(const fs::path& path, std::string_view contents) {
+    if (path == "-") {
+        std::cout.write(contents.data(), (std::streamsize)contents.size());
+        std::cout.flush();
+    }
+    else {
+        std::ofstream file(path);
+        file.exceptions(std::ios::failbit | std::ios::badbit);
+        file.write(contents.data(), (std::streamsize)contents.size());
+        file.flush();
+    }
+}
 
 void OS::print(std::string_view text) {
     if (capturingOutput)

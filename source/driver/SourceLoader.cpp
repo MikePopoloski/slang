@@ -27,7 +27,7 @@ SourceLoader::SourceLoader(SourceManager& sourceManager) : sourceManager(sourceM
     uniqueExtensions.emplace(".v"sv);
     uniqueExtensions.emplace(".sv"sv);
     for (auto ext : uniqueExtensions)
-        searchExtensions.emplace_back(widen(ext));
+        searchExtensions.emplace_back(ext);
 }
 
 void SourceLoader::addFiles(std::string_view pattern) {
@@ -45,7 +45,7 @@ void SourceLoader::addSearchDirectories(std::string_view pattern) {
     std::error_code ec;
     svGlob({}, pattern, GlobMode::Directories, directories, /* expandEnvVars */ false, ec);
     if (ec) {
-        addError(widen(pattern), ec);
+        addError(pattern, ec);
         return;
     }
 
@@ -54,7 +54,7 @@ void SourceLoader::addSearchDirectories(std::string_view pattern) {
 
 void SourceLoader::addSearchExtension(std::string_view extension) {
     if (uniqueExtensions.emplace(extension).second)
-        searchExtensions.emplace_back(widen(extension));
+        searchExtensions.emplace_back(extension);
 }
 
 static std::string_view getPathFromSpec(const FilePathSpecSyntax& syntax) {
@@ -79,7 +79,7 @@ void SourceLoader::addLibraryMapsInternal(std::string_view pattern, const fs::pa
     svGlob(basePath, pattern, GlobMode::Files, files, expandEnvVars, ec);
 
     if (ec) {
-        addError(widen(pattern), ec);
+        addError(pattern, ec);
         return;
     }
 
@@ -368,7 +368,7 @@ void SourceLoader::addFilesInternal(std::string_view pattern, const fs::path& ba
     std::error_code ec;
     auto rank = svGlob(basePath, pattern, GlobMode::Files, files, expandEnvVars, ec);
     if (ec) {
-        addError(widen(pattern), ec);
+        addError(pattern, ec);
         return;
     }
 
@@ -425,7 +425,7 @@ void SourceLoader::createLibrary(const LibraryDeclarationSyntax& syntax, const f
                        /* expandEnvVars */ true, ec);
 
                 if (ec) {
-                    addError(widen(spec), ec);
+                    addError(spec, ec);
                 }
                 else {
                     auto& lid = library->includeDirs;

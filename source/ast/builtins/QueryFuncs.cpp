@@ -52,12 +52,7 @@ public:
 
         size_t width;
         if (args[0]->type->isFixedSize()) {
-            width = args[0]->type->bitstreamWidth();
-        }
-        else if (args[0]->kind == ExpressionKind::DataType) {
-            auto& diag = context.addDiag(diag::ConstEvalBitsNotFixedSize, args[0]->sourceRange);
-            diag << *args[0]->type;
-            return nullptr;
+            width = args[0]->type->getBitstreamWidth();
         }
         else {
             ConstantValue cv = args[0]->eval(context);

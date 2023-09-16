@@ -25,3 +25,8 @@ target_compile_definitions(tidy_unittests PRIVATE UNITTESTS)
 target_include_directories(tidy_unittests PRIVATE ../../../tests/unittests)
 
 add_test(NAME tidy_unittests COMMAND tidy_unittests)
+
+if(CMAKE_SYSTEM_NAME MATCHES "Windows")
+  target_sources(tidy_unittests
+                 PRIVATE ${PROJECT_SOURCE_DIR}/scripts/win32.manifest)
+endif()

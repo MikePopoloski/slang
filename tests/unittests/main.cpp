@@ -7,10 +7,7 @@
 #include "slang/syntax/SyntaxTree.h"
 #include "slang/text/SourceManager.h"
 #include "slang/util/BumpAllocator.h"
-
-#if defined(_WIN32)
-#    include <Windows.h>
-#endif
+#include "slang/util/OS.h"
 
 namespace slang {
 
@@ -20,10 +17,7 @@ Diagnostics diagnostics;
 } // namespace slang
 
 int main(int argc, char* argv[]) {
-#if defined(_WIN32)
-    SetConsoleOutputCP(CP_UTF8);
-    setvbuf(stdout, nullptr, _IOFBF, 1000);
-#endif
+    slang::OS::setupConsole();
 
     slang::syntax::SyntaxTree::getDefaultSourceManager().setDisableProximatePaths(true);
 

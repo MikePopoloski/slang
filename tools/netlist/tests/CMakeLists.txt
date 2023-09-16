@@ -22,3 +22,8 @@ target_include_directories(
                             ../../../tests/unittests)
 
 add_test(NAME netlist_unittests COMMAND netlist_unittests)
+
+if(CMAKE_SYSTEM_NAME MATCHES "Windows")
+  target_sources(netlist_unittests
+                 PRIVATE ${PROJECT_SOURCE_DIR}/scripts/win32.manifest)
+endif()

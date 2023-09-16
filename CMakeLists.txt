@@ -133,7 +133,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # target_ specific commands.
 if(CMAKE_SYSTEM_NAME MATCHES "Windows")
   add_compile_definitions(WIN32 _WINDOWS NTDDI_VERSION=0x06010000
-                          _WIN32_WINNT=0x0601 UNICODE _UNICODE)
+                          _WIN32_WINNT=0x0601)
   add_compile_definitions(_SCL_SECURE_NO_WARNINGS _CRT_SECURE_NO_WARNINGS)
   add_compile_definitions(_CRT_SECURE_NO_DEPRECATE _CRT_NONSTDC_NO_WARNINGS)
 endif()

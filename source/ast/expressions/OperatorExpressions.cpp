@@ -20,6 +20,8 @@
 #include "slang/ast/types/AllTypes.h"
 #include "slang/diagnostics/ConstEvalDiags.h"
 #include "slang/diagnostics/ExpressionsDiags.h"
+#include "slang/diagnostics/TypesDiags.h"
+#include "slang/numeric/MathUtils.h"
 #include "slang/parsing/LexerFacts.h"
 #include "slang/syntax/AllSyntax.h"
 
@@ -359,8 +361,6 @@ Expression& UnaryExpression::fromSyntax(Compilation& compilation,
 
             // Supported for both integral and real types. Result is same as input type.
             // The operand must also be an assignable lvalue.
-            // TODO: detect and warn for multiple reads and writes of a single variable in an
-            // expression
             good = type->isNumeric();
             result->type = type;
             if (!operand.requireLValue(context, syntax.operatorToken.location())) {
@@ -1259,7 +1259,6 @@ Expression& ConcatenationExpression::fromSyntax(Compilation& compilation,
             return badExpr(compilation, nullptr);
         }
 
-        // TODO: check overflow handling
         bool bad = false;
         bool anyDynamic = false;
         size_t totalElems = 0;
@@ -1674,13 +1673,12 @@ Expression& StreamingConcatenationExpression::fromSyntax(
     // Streaming concatenation is self-determined and its size/type should not be affected
     // by assignmentTarget.
     const bool isDestination = !assignmentTarget;
-
     const bool isRightToLeft = syntax.operatorToken.kind == TokenKind::LeftShift;
-    size_t sliceSize = 0;
+    uint32_t sliceSize = 0;
 
     auto badResult = [&]() -> Expression& {
         return badExpr(comp, comp.emplace<StreamingConcatenationExpression>(
-                                 comp.getErrorType(), sliceSize,
+                                 comp.getErrorType(), sliceSize, 0u,
                                  std::span<const StreamExpression>(), syntax.sourceRange()));
     };
 
@@ -1703,14 +1701,14 @@ Expression& StreamingConcatenationExpression::fromSyntax(
                     diag.addNote(diag::NoteDeclarationHere, sliceExpr.type->location);
                 return badResult();
             }
-            sliceSize = sliceExpr.type->bitstreamWidth();
+            sliceSize = sliceExpr.type->getBitstreamWidth();
         }
         else {
             // It shall be an error for the value to be zero or negative.
             std::optional<int32_t> count = context.evalInteger(sliceExpr);
             if (!context.requireGtZero(count, sliceExpr.sourceRange))
                 return badResult();
-            sliceSize = static_cast<size_t>(*count);
+            sliceSize = static_cast<uint32_t>(*count);
         }
 
         if (!isRightToLeft) {
@@ -1725,6 +1723,7 @@ Expression& StreamingConcatenationExpression::fromSyntax(
         sliceSize = 1;
     }
 
+    uint64_t bitstreamWidth = 0;
     SmallVector<StreamExpression, 4> buffer;
     for (const auto argSyntax : syntax.expressions) {
         Expression* arg;
@@ -1741,15 +1740,14 @@ Expression& StreamingConcatenationExpression::fromSyntax(
         if (arg->bad())
             return badResult();
 
+        const Type* argType = arg->type;
         const Expression* withExpr = nullptr;
         std::optional<bitwidth_t> constantWithWidth;
         if (argSyntax->withRange) {
             // The expression before the with can be any one-dimensional unpacked array
-            // (including a queue). Interpreted as fixed-sized unpacked arrays,
-            // dynamic arrays, or queues of fixed-size elements.
-            auto& arrayType = *arg->type;
-            if (!arrayType.isUnpackedArray() || arrayType.isAssociativeArray() ||
-                !arrayType.getArrayElementType()->isFixedSize()) {
+            // (including a queue).
+            if (!argType->isUnpackedArray() || argType->isAssociativeArray() ||
+                !argType->getArrayElementType()->isFixedSize()) {
                 context.addDiag(diag::BadStreamWithType, arg->sourceRange);
                 return badResult();
             }
@@ -1760,6 +1758,8 @@ Expression& StreamingConcatenationExpression::fromSyntax(
                 return badResult();
 
             // Try to get the bounds of the selection, if they are constant.
+            // If they are constant, we've already done bounds checking and
+            // max size checking on them.
             EvalContext evalCtx(context);
             auto range = withExpr->evalSelector(evalCtx);
             if (range)
@@ -1768,18 +1768,44 @@ Expression& StreamingConcatenationExpression::fromSyntax(
 
         if (argSyntax->expression->kind != SyntaxKind::StreamingConcatenationExpression) {
             // Unpacked unions get "unwrapped" to their first member when streaming.
-            const Type* type = arg->type;
-            if (type->isUnpackedUnion() && !type->isTaggedUnion()) {
-                auto& uu = type->getCanonicalType().as<UnpackedUnionType>();
+            if (argType->isUnpackedUnion() && !argType->isTaggedUnion()) {
+                auto& uu = argType->getCanonicalType().as<UnpackedUnionType>();
                 auto members = uu.members();
                 if (members.begin() != members.end())
-                    type = &members.begin()->as<ValueSymbol>().getType();
+                    argType = &members.begin()->as<ValueSymbol>().getType();
             }
 
-            if (!type->isBitstreamType(isDestination)) {
+            if (!argType->isBitstreamType(isDestination)) {
                 context.addDiag(diag::BadStreamExprType, arg->sourceRange) << *arg->type;
                 return badResult();
             }
+        }
+
+        uint32_t argWidth = 0;
+        if (arg->kind == ExpressionKind::Streaming) {
+            argWidth = arg->as<StreamingConcatenationExpression>().getBitstreamWidth();
+        }
+        else if (withExpr) {
+            if (constantWithWidth) {
+                auto rangeBits = checkedMulU32(argType->getArrayElementType()->getBitstreamWidth(),
+                                               *constantWithWidth);
+                if (!rangeBits || rangeBits > Type::MaxBitWidth) {
+                    context.addDiag(diag::ObjectTooLarge, withExpr->sourceRange)
+                        << Type::MaxBitWidth;
+                    return badResult();
+                }
+
+                argWidth = *rangeBits;
+            }
+        }
+        else {
+            argWidth = argType->getBitstreamWidth();
+        }
+
+        bitstreamWidth += argWidth;
+        if (bitstreamWidth > Type::MaxBitWidth) {
+            context.addDiag(diag::ObjectTooLarge, syntax.sourceRange()) << Type::MaxBitWidth;
+            return badResult();
         }
 
         buffer.push_back({arg, withExpr, constantWithWidth});
@@ -1788,6 +1814,7 @@ Expression& StreamingConcatenationExpression::fromSyntax(
     // Streaming concatenation has no explicit type. Use void to prevent problems when
     // its type is passed to context-determined expressions.
     return *comp.emplace<StreamingConcatenationExpression>(comp.getVoidType(), sliceSize,
+                                                           (uint32_t)bitstreamWidth,
                                                            buffer.ccopy(comp),
                                                            syntax.sourceRange());
 }
@@ -1853,31 +1880,6 @@ bool StreamingConcatenationExpression::isFixedSize() const {
         }
     }
     return true;
-}
-
-size_t StreamingConcatenationExpression::bitstreamWidth() const {
-    size_t width = 0;
-    for (auto& stream : streams()) {
-        auto& operand = *stream.operand;
-        if (operand.kind == ExpressionKind::Streaming) {
-            width += operand.as<StreamingConcatenationExpression>().bitstreamWidth();
-        }
-        else if (stream.withExpr) {
-            // TODO: overflow
-            size_t count = stream.constantWithWidth.value_or(1);
-            width += count * operand.type->getArrayElementType()->bitstreamWidth();
-        }
-        else if (operand.type->isUnpackedUnion()) {
-            auto& uu = operand.type->getCanonicalType().as<UnpackedUnionType>();
-            auto members = uu.members();
-            if (members.begin() != members.end())
-                width += members.begin()->as<ValueSymbol>().getType().bitstreamWidth();
-        }
-        else {
-            width += operand.type->bitstreamWidth();
-        }
-    }
-    return width;
 }
 
 Expression& OpenRangeExpression::fromSyntax(Compilation& comp,

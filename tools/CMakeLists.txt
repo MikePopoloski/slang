@@ -24,6 +24,12 @@ if(SLANG_INCLUDE_INSTALL)
   install(TARGETS slang_driver RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 endif()
 
+if(CMAKE_SYSTEM_NAME MATCHES "Windows")
+  target_sources(slang_driver
+                 PRIVATE ${PROJECT_SOURCE_DIR}/scripts/win32.manifest)
+  target_sources(rewriter PRIVATE ${PROJECT_SOURCE_DIR}/scripts/win32.manifest)
+endif()
+
 add_subdirectory(netlist)
 add_subdirectory(tidy)
 add_subdirectory(reflect)

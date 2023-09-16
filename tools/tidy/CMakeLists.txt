@@ -29,6 +29,11 @@ add_executable(slang::tidy ALIAS slang_tidy)
 target_link_libraries(slang_tidy PRIVATE slang_tidy_obj_lib)
 set_target_properties(slang_tidy PROPERTIES OUTPUT_NAME "slang-tidy")
 
+if(CMAKE_SYSTEM_NAME MATCHES "Windows")
+  target_sources(slang_tidy
+                 PRIVATE ${PROJECT_SOURCE_DIR}/scripts/win32.manifest)
+endif()
+
 if(SLANG_INCLUDE_INSTALL)
   install(TARGETS slang_tidy RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 endif()

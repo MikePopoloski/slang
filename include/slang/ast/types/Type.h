@@ -47,6 +47,9 @@ SLANG_BITMASK(IntegralFlags, Reg)
 ///
 class SLANG_EXPORT Type : public Symbol {
 public:
+    /// The maximum size in bits of any fixed size type.
+    static constexpr uint32_t MaxBitWidth = uint32_t(INT32_MAX);
+
     /// Gets the canonical type for this type, which involves unwrapping any type aliases.
     const Type& getCanonicalType() const {
         if (!canonical)
@@ -59,7 +62,7 @@ public:
     bitwidth_t getBitWidth() const;
 
     /// Gets $bits of the type. Returns zero if the type does not have a statically known size.
-    size_t bitstreamWidth() const;
+    uint32_t getBitstreamWidth() const;
 
     /// Gets the "selectable" width of the type. This is the size of the object when determining
     /// whether assignments to the static portions overlap with each other. Dynamically sized

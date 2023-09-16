@@ -710,6 +710,32 @@ void ClassType::handleImplements(const ImplementsClauseSyntax& implementsClause,
     implementsIfaces = implementsIfacesBuf.copy(comp);
 }
 
+void ClassType::computeSize() const {
+    ensureElaborated();
+    cachedBitstreamWidth = 0;
+    if (isInterface)
+        return;
+
+    ASTContext context(*this, LookupLocation(this, uint32_t(headerIndex)));
+
+    uint64_t totalWidth = 0;
+    bool hasDynamic = false;
+    for (auto& prop : membersOfType<ClassPropertySymbol>()) {
+        uint32_t width = prop.getType().getBitstreamWidth();
+        if (width == 0)
+            hasDynamic = true;
+
+        totalWidth += width;
+        if (totalWidth > MaxBitWidth) {
+            context.addDiag(diag::ObjectTooLarge, location) << MaxBitWidth;
+            return;
+        }
+    }
+
+    if (!hasDynamic)
+        cachedBitstreamWidth = uint32_t(totalWidth);
+}
+
 void ClassType::serializeTo(ASTSerializer& serializer) const {
     serializer.write("isAbstract", isAbstract);
     serializer.write("isInterface", isInterface);
