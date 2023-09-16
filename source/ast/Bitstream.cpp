@@ -17,6 +17,7 @@
 #include "slang/ast/types/AllTypes.h"
 #include "slang/diagnostics/ConstEvalDiags.h"
 #include "slang/diagnostics/ExpressionsDiags.h"
+#include "slang/diagnostics/TypesDiags.h"
 #include "slang/numeric/MathUtils.h"
 #include "slang/text/FormatBuffer.h"
 
@@ -404,7 +405,6 @@ static ConstantValue unpackBitstream(const Type& type, PackIterator& iter,
         if (!bit && iter != iterEnd && (*iter)->isString() && (*iter)->str().length() == width)
             return std::move(**iter);
 
-        // TODO: overflow
         return ConstantValue(concatPacked(width * CHAR_BIT, false)).convertToStr();
     }
 
@@ -750,13 +750,18 @@ static bool unpackConcatenation(const StreamingConcatenationExpression& lhs, Pac
                 auto elemType = arrayType.getArrayElementType();
                 SLANG_ASSERT(elemType);
 
-                // TODO: overflow
-                auto withSize = elemType->getBitstreamWidth() * with.width();
+                auto withSize = checkedMulU32(elemType->getBitstreamWidth(), with.width());
+                if (!withSize || withSize > Type::MaxBitWidth) {
+                    context.addDiag(diag::ObjectTooLarge, stream.withExpr->sourceRange)
+                        << Type::MaxBitWidth;
+                    return false;
+                }
+
                 if (dynamicSize > 0 && !stream.constantWithWidth) {
                     if (withSize >= dynamicSize)
                         dynamicSize = 0;
                     else
-                        dynamicSize -= withSize;
+                        dynamicSize -= *withSize;
                 }
 
                 if (with.left == with.right) {
@@ -766,7 +771,7 @@ static bool unpackConcatenation(const StreamingConcatenationExpression& lhs, Pac
                     // We already checked for overflow earlier so it's fine to create this
                     // temporary array result type as-is.
                     FixedSizeUnpackedArrayType rvalueType(
-                        *elemType, with, elemType->getSelectableWidth() * with.width(), withSize);
+                        *elemType, with, elemType->getSelectableWidth() * with.width(), *withSize);
 
                     rvalue = unpackBitstream(rvalueType, iter, iterEnd, bitOffset, dynamicSize);
                 }

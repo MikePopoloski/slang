@@ -261,7 +261,7 @@ public:
                                      std::span<const StreamExpression> streams,
                                      SourceRange sourceRange) :
         Expression(ExpressionKind::Streaming, type, sourceRange),
-        sliceSize(sliceSize), streams_(streams), bitstreamWidth(bitstreamWidth) {}
+        streams_(streams), sliceSize(sliceSize), bitstreamWidth(bitstreamWidth) {}
 
     bool isFixedSize() const;
     uint32_t getBitstreamWidth() const { return bitstreamWidth; }
