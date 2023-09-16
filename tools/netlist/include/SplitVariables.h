@@ -155,7 +155,7 @@ public:
         if (!elementSelector.indexIsConstant()) {
           // If the selector is not a constant, then return the whole scalar as
           // the range.
-          return {range.lower(), (int32_t) type.getBitWidth()};
+          return {range.lower(), (int32_t) type.getBitWidth() - 1};
         }
         int32_t index = elementSelector.getIndexInt();
         auto arrayRange = getArrayRange(type);
@@ -196,10 +196,8 @@ public:
         }
     }
 
-    ConstantRange handleArrayRangeSelectUp(const slang::ast::Type &type, ConstantRange range) {
-    }
-
-    ConstantRange handleArrayRangeSelectDown(const slang::ast::Type &type, ConstantRange range) {
+    ConstantRange handleArrayRangeSelectIncr(const slang::ast::Type &type, ConstantRange range, bool isUp) {
+        return {0,0};
     }
 
     ConstantRange handleStructMemberAccess(const slang::ast::Type &type, ConstantRange range) {
@@ -276,9 +274,9 @@ public:
                   case ast::RangeSelectionKind::Simple:
                     return handleArrayRangeSelect(type, range);
                   case ast::RangeSelectionKind::IndexedUp:
-                    return handleArrayRangeSelectUp(type, range);
+                    return handleArrayRangeSelectIncr(type, range, true);
                   case ast::RangeSelectionKind::IndexedDown:
-                    return handleArrayRangeSelectDown(type, range);
+                    return handleArrayRangeSelectIncr(type, range, false);
                   default:
                     SLANG_UNREACHABLE;
                 }
