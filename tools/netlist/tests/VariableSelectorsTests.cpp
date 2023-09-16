@@ -113,17 +113,17 @@ endmodule
     CHECK(getBitRange(netlist, "foo[3:1][2:1][1]") == ConstantRange(1, 1));
     // Dynamic indices.
     CHECK(getBitRange(netlist, "foo[a]") == ConstantRange(0, 3));
-    //CHECK(getBitRange(netlist, "foo[a+:1]") == ConstantRange(0, 3));
-    //CHECK(getBitRange(netlist, "foo[a-:1]") == ConstantRange(0, 3));
+    CHECK(getBitRange(netlist, "foo[a+:1]") == ConstantRange(0, 3));
+    CHECK(getBitRange(netlist, "foo[a-:1]") == ConstantRange(0, 3));
     CHECK(getBitRange(netlist, "foo[a+:1][a]") == ConstantRange(0, 3));
     CHECK(getBitRange(netlist, "foo[a-:1][a]") == ConstantRange(0, 3));
-    //CHECK(getBitRange(netlist, "foo[a+:1][a-:1]") == ConstantRange(0, 3));
+    CHECK(getBitRange(netlist, "foo[a+:1][a-:1]") == ConstantRange(0, 3));
     CHECK(getBitRange(netlist, "foo[a+:1][a-:1][a]") == ConstantRange(0, 3));
 }
 
 TEST_CASE("Packed 1D array element and range non-zero indexed") {
     auto tree = SyntaxTree::fromText(R"(
-module m;
+module m (input int a);
   logic [7:4] foo;
   always_comb begin
     foo = 0;
@@ -136,6 +136,9 @@ module m;
     foo[7:4] = 0;
     foo[6:5] = 0;
     foo[7:4][6:5][5] = 0;
+    foo[a] = 0;
+    foo[a+:1] = 0;
+    foo[a-:1] = 0;
   end
 endmodule
 )");
@@ -153,11 +156,15 @@ endmodule
     CHECK(getBitRange(netlist, "foo[7:4]") == ConstantRange(0, 3));
     CHECK(getBitRange(netlist, "foo[6:5]") == ConstantRange(1, 2));
     CHECK(getBitRange(netlist, "foo[7:4][6:5][5]") == ConstantRange(1, 1));
+    // Dynamic indices.
+    CHECK(getBitRange(netlist, "foo[a]") == ConstantRange(0, 3));
+    CHECK(getBitRange(netlist, "foo[a+:1]") == ConstantRange(0, 3));
+    CHECK(getBitRange(netlist, "foo[a-:1]") == ConstantRange(0, 3));
 }
 
 TEST_CASE("Packed 2D array element and range") {
     auto tree = SyntaxTree::fromText(R"(
-module m;
+module m (input int a);
   logic [3:0] [1:0] foo;
   always_comb begin
     foo = 0;
@@ -173,6 +180,16 @@ module m;
     foo[3:2] = 0;
     foo[3:0][2:1] = 0;
     foo[3:0][2:1][1] = 0;
+    foo[a] = 0;
+    foo[a][1] = 0;
+    foo[a][a] = 0;
+    foo[a+:1] = 0;
+    foo[a-:1] = 0;
+    //foo[a+:1][1] = 0;
+    //foo[a-:1][1] = 0;
+    foo[1][a] = 0;
+    foo[1][a+:1] = 0;
+    foo[1][a-:1] = 0;
   end
 endmodule
 )");
@@ -193,11 +210,22 @@ endmodule
     CHECK(getBitRange(netlist, "foo[3:2]") == ConstantRange(4, 7));
     CHECK(getBitRange(netlist, "foo[3:0][2:1]") == ConstantRange(2, 5));
     CHECK(getBitRange(netlist, "foo[3:0][2:1][1]") == ConstantRange(2, 3));
+    // Dynamic indices.
+    CHECK(getBitRange(netlist, "foo[a]") == ConstantRange(0, 7));
+    CHECK(getBitRange(netlist, "foo[a][1]") == ConstantRange(0, 7));
+    CHECK(getBitRange(netlist, "foo[a][a]") == ConstantRange(0, 7));
+    CHECK(getBitRange(netlist, "foo[a+:1]") == ConstantRange(0, 7));
+    CHECK(getBitRange(netlist, "foo[a-:1]") == ConstantRange(0, 7));
+    //CHECK(getBitRange(netlist, "foo[a+:1][1]") == ConstantRange(0, 7));
+    //CHECK(getBitRange(netlist, "foo[a-:1][1]") == ConstantRange(0, 7));
+    CHECK(getBitRange(netlist, "foo[1][a]") == ConstantRange(2, 3));
+    CHECK(getBitRange(netlist, "foo[1][a+:1]") == ConstantRange(2, 3));
+    CHECK(getBitRange(netlist, "foo[1][a-:1]") == ConstantRange(2, 3));
 }
 
 TEST_CASE("Packed 2D array element and range, non-zero indexing") {
     auto tree = SyntaxTree::fromText(R"(
-module m;
+module m (input int a);
   logic [7:4] [3:2] foo;
   always_comb begin
     foo = 0;
@@ -206,6 +234,12 @@ module m;
     foo[5:4] = 0;
     foo[7:4][6:5] = 0;
     foo[7:5][6:5][5] = 0;
+    foo[a] = 0;
+    foo[a+:1] = 0;
+    foo[a-:1] = 0;
+    foo[5][a] = 0;
+    foo[5][a+:1] = 0;
+    foo[5][a-:1] = 0;
   end
 endmodule
 )");
@@ -219,17 +253,27 @@ endmodule
     CHECK(getBitRange(netlist, "foo[5:4]") == ConstantRange(0, 3));
     CHECK(getBitRange(netlist, "foo[7:4][6:5]") == ConstantRange(2, 5));
     CHECK(getBitRange(netlist, "foo[7:5][6:5][5]") == ConstantRange(2, 3));
+    // Dynamic indices.
+    CHECK(getBitRange(netlist, "foo[a]") == ConstantRange(0, 7));
+    CHECK(getBitRange(netlist, "foo[a+:1]") == ConstantRange(0, 7));
+    CHECK(getBitRange(netlist, "foo[a-:1]") == ConstantRange(0, 7));
+    CHECK(getBitRange(netlist, "foo[5][a]") == ConstantRange(2, 3));
+    CHECK(getBitRange(netlist, "foo[5][a+:1]") == ConstantRange(2, 3));
+    CHECK(getBitRange(netlist, "foo[5][a-:1]") == ConstantRange(2, 3));
 }
 
 TEST_CASE("Unpacked 1D array element") {
     auto tree = SyntaxTree::fromText(R"(
-module m;
+module m (input int a);
   logic foo [1:0];
   logic bar [1:0];
   always_comb begin
     foo = bar;
     foo[0] = 0;
     foo[1] = 0;
+    foo[a] = 0;
+    foo[a+:1] = '{0};
+    foo[a-:2] = '{0, 0};
   end
 endmodule
 )");
@@ -240,11 +284,15 @@ endmodule
     CHECK(getBitRange(netlist, "foo") == ConstantRange(0, 1));
     CHECK(getBitRange(netlist, "foo[0]") == ConstantRange(0, 0));
     CHECK(getBitRange(netlist, "foo[1]") == ConstantRange(1, 1));
+    // Dynamic indices.
+    CHECK(getBitRange(netlist, "foo[a]") == ConstantRange(0, 1));
+    CHECK(getBitRange(netlist, "foo[a+:1]") == ConstantRange(0, 1));
+    CHECK(getBitRange(netlist, "foo[a-:2]") == ConstantRange(0, 1));
 }
 
-TEST_CASE("Unpacked 2D array element") {
+TEST_CASE("Unpacked 2D array element and range") {
     auto tree = SyntaxTree::fromText(R"(
-module m;
+module m (input int a);
   logic foo [3:0] [1:0];
   logic bar [1:0];
   always_comb begin
@@ -256,6 +304,16 @@ module m;
     foo[1][1] = 0;
     foo[2][1] = 0;
     foo[3][1] = 0;
+    foo[a] = bar;
+    foo[a][1] = 0;
+    foo[a][a] = 0;
+    foo[a+:1] = '{'{0, 0}};
+    foo[a-:2] = '{'{0, 0}, '{0, 0}};
+    //foo[a+:1][1] = 0;
+    //foo[a-:1][1] = 0;
+    foo[1][a] = 0;
+    foo[1][a+:1] = '{0};
+    foo[1][a-:2] = '{0, 0};
   end
 endmodule
 )");
@@ -269,6 +327,17 @@ endmodule
     CHECK(getBitRange(netlist, "foo[1][1]") == ConstantRange(3, 3));
     CHECK(getBitRange(netlist, "foo[2][1]") == ConstantRange(5, 5));
     CHECK(getBitRange(netlist, "foo[3][1]") == ConstantRange(7, 7));
+    // Dynamic indices.
+    CHECK(getBitRange(netlist, "foo[a]") == ConstantRange(0, 7));
+    CHECK(getBitRange(netlist, "foo[a][1]") == ConstantRange(0, 7));
+    CHECK(getBitRange(netlist, "foo[a][a]") == ConstantRange(0, 7));
+    CHECK(getBitRange(netlist, "foo[a+:1]") == ConstantRange(0, 7));
+    CHECK(getBitRange(netlist, "foo[a-:2]") == ConstantRange(0, 7));
+    //CHECK(getBitRange(netlist, "foo[a+:1][1]") == ConstantRange(0, 7));
+    //CHECK(getBitRange(netlist, "foo[a-:1][1]") == ConstantRange(0, 7));
+    CHECK(getBitRange(netlist, "foo[1][a]") == ConstantRange(2, 3));
+    CHECK(getBitRange(netlist, "foo[1][a+:1]") == ConstantRange(2, 3));
+    CHECK(getBitRange(netlist, "foo[1][a-:2]") == ConstantRange(2, 3));
 }
 
 //===---------------------------------------------------------------------===//

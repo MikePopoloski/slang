@@ -3,8 +3,40 @@ To dos
 
 - Bug report:
 
-  In ast::ElementSelectExpr.syntax does not correspond to selector source
-  range and includes entire variable reference + selectors.
+  module m (input int a);
+    logic [3:0] [1:0] foo;
+    always_comb begin
+      foo[a+:1][1] = 0;
+      foo[a-:1][1] = 0;
+    end
+  endmodule
+
+/home/jamie/slang/tools/netlist/tests/VariableSelectorsTests.cpp:198: FAILED:
+explicitly with message:
+  source:23:15: warning: cannot refer to element 1 of 'logic[0:0][1:0]' [-
+  Windex-oob]
+      foo[a+:1][1] = 0;
+                ^
+  source:24:15: warning: cannot refer to element 1 of 'logic[3:3][1:0]' [-
+  Windex-oob]
+      foo[a-:1][1] = 0;
+
+Similar, baz and bat assignents not valid:
+
+  module m (input int a);
+    logic foo [1:0];
+    logic bar [1:0];
+    logic baz [0:0];
+    logic bat [1:1];
+    always_comb begin
+      foo = bar;
+      foo[0] = 0;
+      foo[1] = 0;
+      foo[a] = 0;
+      foo[a+:1] = baz;
+      foo[a-:1] = bat;
+    end
+  endmodule
 
 - Bug report:
 

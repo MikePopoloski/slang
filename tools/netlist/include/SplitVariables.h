@@ -69,7 +69,7 @@ public:
             if (member.name == fieldName) {
                 return {(int32_t) offset, (int32_t) offset + fieldWidth};
             };
-            offset += fieldWidth;;
+            offset += fieldWidth;
         }
         SLANG_UNREACHABLE;
     }
@@ -93,8 +93,9 @@ public:
         const auto& elementSelector = selectorsIt->get()->as<VariableElementSelect>();
         if (!elementSelector.indexIsConstant()) {
           // If the selector is not a constant, then return the whole scalar as
-          // the range.
-          return {range.lower(), (int32_t) type.getBitWidth() - 1};
+          // the range. No further selectors expected.
+          SLANG_ASSERT(std::next(selectorsIt) == node.selectors.end());
+          return {range.lower(), range.lower() + (int32_t)type.getBitWidth() - 1};
         }
         SLANG_ASSERT(elementSelector.getIndexInt() >= range.lower());
         SLANG_ASSERT(elementSelector.getIndexInt() <= range.upper());
@@ -128,13 +129,14 @@ public:
         const auto& rangeSelector = selectorsIt->get()->as<VariableRangeSelect>();
         if (!rangeSelector.leftIndexIsConstant()) {
           // If the selector base is not constant, then return the whole scalar
-          // as the range.
-          return {range.lower(), (int32_t) type.getBitWidth() - 1};
+          // as the range and halt analysis of any further selectors.
+          selectorsIt = node.selectors.end();
+          return {range.lower(), range.lower() + (int32_t)type.getBitWidth() - 1};
         }
-        int32_t rightIndex = rangeSelector.getRightIndexInt();
-        int32_t leftIndex = rangeSelector.getLeftIndexInt();
         // Right index must be constant.
         SLANG_ASSERT(rangeSelector.rightIndexIsConstant());
+        int32_t rightIndex = rangeSelector.getRightIndexInt();
+        int32_t leftIndex = rangeSelector.getLeftIndexInt();
         // Assert left and right index values make sense and create the new
         // range.
         auto rangeEnd = isUp ? rightIndex + leftIndex : rightIndex - leftIndex;
@@ -154,8 +156,9 @@ public:
         const auto& elementSelector = selectorsIt->get()->as<VariableElementSelect>();
         if (!elementSelector.indexIsConstant()) {
           // If the selector is not a constant, then return the whole scalar as
-          // the range.
-          return {range.lower(), (int32_t) type.getBitWidth() - 1};
+          // the range and halt analysis of any further selectors.
+          selectorsIt = node.selectors.end();
+          return {range.lower(), range.lower() + getTypeBitWidth(type) - 1};
         }
         int32_t index = elementSelector.getIndexInt();
         auto arrayRange = getArrayRange(type);
@@ -179,6 +182,10 @@ public:
         int32_t leftIndex = rangeSelector.getLeftIndexInt();
         int32_t rightIndex = rangeSelector.getRightIndexInt();
         auto arrayRange = getArrayRange(type);
+        // Left and right indices must be constant.
+        SLANG_ASSERT(rangeSelector.leftIndexIsConstant());
+        SLANG_ASSERT(rangeSelector.rightIndexIsConstant());
+        // Assert left and right index values make sense.
         SLANG_ASSERT(rightIndex >= arrayRange.lower());
         SLANG_ASSERT(leftIndex <= arrayRange.upper());
         SLANG_ASSERT(rightIndex <= leftIndex);
@@ -197,7 +204,35 @@ public:
     }
 
     ConstantRange handleArrayRangeSelectIncr(const slang::ast::Type &type, ConstantRange range, bool isUp) {
-        return {0,0};
+        const auto& rangeSelector = selectorsIt->get()->as<VariableRangeSelect>();
+        auto* elementType = type.getArrayElementType();
+        auto arrayRange = getArrayRange(type);
+        if (!rangeSelector.leftIndexIsConstant()) {
+          // If the selector base is not constant, then return the whole array
+          // as the range and halt analysis of any further selectors.
+          selectorsIt = node.selectors.end();
+          return {range.lower(),
+                  range.lower() + (getTypeBitWidth(*elementType) * (int32_t)arrayRange.width()) - 1};
+        }
+        // Right index must be constant.
+        SLANG_ASSERT(rangeSelector.rightIndexIsConstant());
+        int32_t rightIndex = rangeSelector.getRightIndexInt();
+        int32_t leftIndex = rangeSelector.getLeftIndexInt();
+        // Assert left and right index values make sense.
+        SLANG_ASSERT(rightIndex >= arrayRange.lower());
+        SLANG_ASSERT(leftIndex <= arrayRange.upper());
+        SLANG_ASSERT(rightIndex <= leftIndex);
+        // Adjust for non-zero array indexing.
+        leftIndex -= arrayRange.lower();
+        rightIndex -= arrayRange.lower();
+        ConstantRange newRange = {range.lower() + (rightIndex * getTypeBitWidth(*elementType)),
+                                  range.lower() + ((leftIndex + 1) * getTypeBitWidth(*elementType)) - 1};
+        if (std::next(selectorsIt) != node.selectors.end()) {
+            selectorsIt++;
+            return getBitRangeImpl(type, newRange);
+        } else {
+            return newRange;
+        }
     }
 
     ConstantRange handleStructMemberAccess(const slang::ast::Type &type, ConstantRange range) {
