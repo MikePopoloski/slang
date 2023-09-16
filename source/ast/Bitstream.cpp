@@ -135,20 +135,16 @@ static DynamicSize dynamicBitstreamSize(const StreamingConcatenationExpression& 
         auto& operand = *stream.operand;
 
         if (stream.withExpr) {
+            // With expression creation checks for a fixed size type so
+            // we should always get a valid result here.
             opSize = dynamicBitstreamSize(*operand.type->getArrayElementType(), mode);
-            if (!opSize)
-                return opSize;
-
+            SLANG_ASSERT(opSize);
             SLANG_ASSERT(!opSize.multiplier);
-            if (stream.constantWithWidth) {
-                auto rw = *stream.constantWithWidth;
-                auto mul = checkedMulU32(opSize.multiplier, rw);
-                auto fixed = checkedMulU32(opSize.fixed, rw);
-                if (!mul || !fixed || mul > Type::MaxBitWidth || fixed > Type::MaxBitWidth)
-                    return {};
 
-                opSize.multiplier = *mul;
-                opSize.fixed = *fixed;
+            if (stream.constantWithWidth) {
+                // Overflow is checked at stream expression creation time.
+                opSize.multiplier = 0;
+                opSize.fixed *= *stream.constantWithWidth;
             }
             else {
                 opSize.multiplier = opSize.fixed;

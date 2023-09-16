@@ -2983,10 +2983,47 @@ module m;
     int l[];
     always_comb l = {<< {k with [0+:999999999]}};
 
-    typedef struct { int i[9999999]; } asdf;
-    asdf n [999999][];
+    typedef struct { int i[50000000]; logic l[$]; } asdf;
+    asdf n [999999][][999999][];
     int o[];
-    always_comb {<< {o}} = {<< {n}};
+    always {<< {o}} = {<< {n}};
+
+    struct { asdf a[]; int i[50000000]; logic l; } p;
+    always {<< {p}} = {<< {o}};
+
+    class C;
+        asdf n [999999][][999999][];
+    endclass
+    C c;
+    always {<< {o}} = {<< {c}};
+
+    class D;
+        int a[];
+        int b[50000000];
+    endclass
+    D d;
+    always {<< {o}} = {<< {d, d, d}};
+endmodule
+
+function automatic int func1;
+    typedef struct { int a[]; int i[50000000]; logic l; } asdf;
+    struct { asdf a[]; bit b; asdf c; } p[];
+    int o[] = {1};
+    {<< {p}} = {<< {o}};
+    return 0;
+endfunction
+
+function automatic int func2;
+    typedef struct { int a[]; int i[50000000]; logic l; } asdf;
+    struct { asdf a[]; bit b; asdf c; } p[];
+    int o[] = {1};
+    {<< {p}} = o;
+    return 0;
+endfunction
+
+module n;
+    localparam int q = func1();
+    localparam int r = func2();
 endmodule
 )");
 
@@ -2994,9 +3031,14 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 4);
+    REQUIRE(diags.size() == 9);
     CHECK(diags[0].code == diag::ObjectTooLarge);
     CHECK(diags[1].code == diag::RangeOOB);
     CHECK(diags[2].code == diag::ObjectTooLarge);
     CHECK(diags[3].code == diag::BadStreamSize);
+    CHECK(diags[4].code == diag::BadStreamSize);
+    CHECK(diags[5].code == diag::BadStreamSize);
+    CHECK(diags[6].code == diag::BadStreamSize);
+    CHECK(diags[7].code == diag::BadStreamSize);
+    CHECK(diags[8].code == diag::BadStreamSize);
 }
