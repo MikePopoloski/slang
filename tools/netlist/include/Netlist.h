@@ -67,10 +67,10 @@ struct VariableSelectorBase {
 
 /// A variable selector representing an element selector.
 struct VariableElementSelect : public VariableSelectorBase {
-    const ast::ElementSelectExpression &expr;
+    const ast::Expression &expr;
     ConstantValue index;
 
-    VariableElementSelect(ast::ElementSelectExpression const& expr, ConstantValue index) :
+    VariableElementSelect(ast::Expression const& expr, ConstantValue index) :
         VariableSelectorBase(VariableSelectorKind::ElementSelect), expr(expr),
         index(std::move(index)) {}
 
@@ -272,14 +272,12 @@ public:
         expression(expr), leftOperand(leftOperand) {}
 
     void addElementSelect(ast::ElementSelectExpression const &expr, const ConstantValue& index) {
-        selectors.emplace_back(std::make_unique<VariableElementSelect>(expr, index));
-        //std::cout << "Add elem select "<< expr.syntax->toString() << "\n";
+        selectors.emplace_back(std::make_unique<VariableElementSelect>(expr.selector(), index));
     }
 
     void addRangeSelect(ast::RangeSelectExpression const& expr,
                         const ConstantValue& leftIndex, const ConstantValue& rightIndex) {
         selectors.emplace_back(std::make_unique<VariableRangeSelect>(expr, leftIndex, rightIndex));
-        //std::cout << "Add range select "<< expr.left().syntax->toString() << " : " << expr.right().syntax->toString() << "\n";
     }
 
     void addMemberAccess(std::string_view name) {

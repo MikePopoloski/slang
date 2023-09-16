@@ -94,7 +94,7 @@ public:
         if (!elementSelector.indexIsConstant()) {
           // If the selector is not a constant, then return the whole scalar as
           // the range.
-          return {range.lower(), (int32_t) type.getBitWidth()};
+          return {range.lower(), (int32_t) type.getBitWidth() - 1};
         }
         SLANG_ASSERT(elementSelector.getIndexInt() >= range.lower());
         SLANG_ASSERT(elementSelector.getIndexInt() <= range.upper());
@@ -106,8 +106,11 @@ public:
         const auto& rangeSelector = selectorsIt->get()->as<VariableRangeSelect>();
         int32_t rightIndex = rangeSelector.getRightIndexInt();
         int32_t leftIndex = rangeSelector.getLeftIndexInt();
-        //if (!rangeSelector.leftIndexIsConstant()) {
-        //}
+        // Left and right indices must be constant.
+        SLANG_ASSERT(rangeSelector.leftIndexIsConstant());
+        SLANG_ASSERT(rangeSelector.rightIndexIsConstant());
+        // Assert left and right index values make sense and create the new
+        // range.
         SLANG_ASSERT(rightIndex <= leftIndex);
         SLANG_ASSERT(rightIndex >= range.lower());
         SLANG_ASSERT(leftIndex <= range.upper());
@@ -121,10 +124,30 @@ public:
         }
     }
 
-    ConstantRange handleScalarRangeSelectUp(const slang::ast::Type &type, ConstantRange range) {
-    }
-
-    ConstantRange handleScalarRangeSelectDown(const slang::ast::Type &type, ConstantRange range) {
+    ConstantRange handleScalarRangeSelectIncr(const slang::ast::Type &type, ConstantRange range, bool isUp) {
+        const auto& rangeSelector = selectorsIt->get()->as<VariableRangeSelect>();
+        if (!rangeSelector.leftIndexIsConstant()) {
+          // If the selector base is not constant, then return the whole scalar
+          // as the range.
+          return {range.lower(), (int32_t) type.getBitWidth() - 1};
+        }
+        int32_t rightIndex = rangeSelector.getRightIndexInt();
+        int32_t leftIndex = rangeSelector.getLeftIndexInt();
+        // Right index must be constant.
+        SLANG_ASSERT(rangeSelector.rightIndexIsConstant());
+        // Assert left and right index values make sense and create the new
+        // range.
+        auto rangeEnd = isUp ? rightIndex + leftIndex : rightIndex - leftIndex;
+        SLANG_ASSERT(rightIndex >= range.lower());
+        SLANG_ASSERT(rangeEnd <= range.upper());
+        ConstantRange newRange = {range.lower() + rightIndex,
+                                  range.lower() + rangeEnd};
+        if (std::next(selectorsIt) != node.selectors.end()) {
+            selectorsIt++;
+            return getBitRangeImpl(type, newRange);
+        } else {
+            return newRange;
+        }
     }
 
     ConstantRange handleArrayElementSelect(const slang::ast::Type &type, ConstantRange range) {
@@ -228,9 +251,9 @@ public:
                   case ast::RangeSelectionKind::Simple:
                     return handleScalarRangeSelect(type, range);
                   case ast::RangeSelectionKind::IndexedUp:
-                    return handleScalarRangeSelectUp(type, range);
+                    return handleScalarRangeSelectIncr(type, range, true);
                   case ast::RangeSelectionKind::IndexedDown:
-                    return handleScalarRangeSelectDown(type, range);
+                    return handleScalarRangeSelectIncr(type, range, false);
                   default:
                     SLANG_UNREACHABLE;
                 }
