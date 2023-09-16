@@ -273,7 +273,7 @@ void registerNumeric(py::module_& m) {
         .def("isTrue", &ConstantValue::isTrue)
         .def("isFalse", &ConstantValue::isFalse)
         .def("hasUnknown", &ConstantValue::hasUnknown)
-        .def("bitstreamWidth", &ConstantValue::bitstreamWidth)
+        .def("bitstreamWidth", &ConstantValue::getBitstreamWidth)
         .def("getSlice", &ConstantValue::getSlice, "upper"_a, "lower"_a, "defaultValue"_a)
         .def("empty", &ConstantValue::empty)
         .def("size", &ConstantValue::size)

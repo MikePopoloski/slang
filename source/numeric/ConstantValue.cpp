@@ -479,29 +479,29 @@ ConstantValue ConstantValue::convertToByteQueue(bool isSigned) const {
     return queue;
 }
 
-size_t ConstantValue::bitstreamWidth() const {
+uint32_t ConstantValue::getBitstreamWidth() const {
     if (isInteger())
         return integer().getBitWidth();
 
     // TODO: check for overflow
     if (isString())
-        return str().length() * CHAR_BIT;
+        return uint32_t(str().length() * CHAR_BIT);
 
-    size_t width = 0;
+    uint32_t width = 0;
     if (isUnpacked()) {
         for (const auto& cv : elements())
-            width += cv.bitstreamWidth();
+            width += cv.getBitstreamWidth();
     }
     else if (isMap()) {
         for (const auto& kv : *map())
-            width += kv.second.bitstreamWidth();
+            width += kv.second.getBitstreamWidth();
     }
     else if (isQueue()) {
         for (const auto& cv : *queue())
-            width += cv.bitstreamWidth();
+            width += cv.getBitstreamWidth();
     }
     else if (isUnion()) {
-        width = unionVal()->value.bitstreamWidth();
+        width = unionVal()->value.getBitstreamWidth();
     }
 
     return width;

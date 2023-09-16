@@ -416,13 +416,13 @@ static ConstantValue unpackBitstream(const Type& type, PackIterator& iter,
 ConstantValue Bitstream::evaluateCast(const Type& type, ConstantValue&& value,
                                       SourceRange sourceRange, EvalContext& context,
                                       bool isImplicit) {
-    auto srcSize = value.bitstreamWidth();
+    auto srcSize = value.getBitstreamWidth();
     size_t dynamicSize = 0;
     if (!isImplicit) { // Explicit bit-stream casting
         dynamicSize = bitstreamCastRemainingSize(type, srcSize);
         if (dynamicSize > srcSize) {
             context.addDiag(diag::ConstEvalBitstreamCastSize, sourceRange)
-                << value.bitstreamWidth() << type;
+                << value.getBitstreamWidth() << type;
             return nullptr;
         }
     }
@@ -559,7 +559,7 @@ bool Bitstream::isBitstreamCast(const Type& type, const StreamingConcatenationEx
 }
 
 ConstantValue Bitstream::reOrder(ConstantValue&& value, size_t sliceSize, size_t unpackWidth) {
-    size_t totalWidth = value.bitstreamWidth();
+    size_t totalWidth = value.getBitstreamWidth();
     SLANG_ASSERT(unpackWidth <= totalWidth);
 
     size_t numBlocks = ((unpackWidth ? unpackWidth : totalWidth) + sliceSize - 1) / sliceSize;
@@ -572,7 +572,7 @@ ConstantValue Bitstream::reOrder(ConstantValue&& value, size_t sliceSize, size_t
         return std::move(value);
 
     size_t rightIndex = packed.size() - 1; // Right-to-left
-    bitwidth_t rightWidth = static_cast<bitwidth_t>(packed.back()->bitstreamWidth());
+    bitwidth_t rightWidth = static_cast<bitwidth_t>(packed.back()->getBitstreamWidth());
     size_t extraBits = 0;
 
     if (unpackWidth) {
@@ -581,7 +581,7 @@ ConstantValue Bitstream::reOrder(ConstantValue&& value, size_t sliceSize, size_t
             while (trimWidth >= rightWidth) {
                 rightIndex--;
                 trimWidth -= rightWidth;
-                rightWidth = static_cast<bitwidth_t>(packed[rightIndex]->bitstreamWidth());
+                rightWidth = static_cast<bitwidth_t>(packed[rightIndex]->getBitstreamWidth());
             }
             rightWidth -= static_cast<bitwidth_t>(trimWidth);
         }
@@ -594,7 +594,7 @@ ConstantValue Bitstream::reOrder(ConstantValue&& value, size_t sliceSize, size_t
     std::vector<ConstantValue> result;
     result.reserve(std::max(packed.size(), numBlocks));
     auto sliceOrAppend = [&](PackIterator iter) {
-        if (rightWidth == (*iter)->bitstreamWidth())
+        if (rightWidth == (*iter)->getBitstreamWidth())
             result.emplace_back(std::move(**iter));
         else {
             bitwidth_t bit = 0;
@@ -613,7 +613,7 @@ ConstantValue Bitstream::reOrder(ConstantValue&& value, size_t sliceSize, size_t
         while (slice >= width) {
             index--;
             slice -= width;
-            width = static_cast<bitwidth_t>(packed[index]->bitstreamWidth());
+            width = static_cast<bitwidth_t>(packed[index]->getBitstreamWidth());
         }
 
         // A block composed of bits from the last "slice" bits of packed[index] to the first
@@ -657,7 +657,7 @@ static bool unpackConcatenation(const StreamingConcatenationExpression& lhs, Pac
         auto& operand = *stream.operand;
         if (operand.kind == ExpressionKind::Streaming) {
             auto& concat = operand.as<StreamingConcatenationExpression>();
-            if (dryRun || !concat.sliceSize) {
+            if (dryRun || !concat.getSliceSize()) {
                 if (!unpackConcatenation(concat, iter, iterEnd, bitOffset, dynamicSize, context,
                                          dryRun))
                     return false;
@@ -674,7 +674,8 @@ static bool unpackConcatenation(const StreamingConcatenationExpression& lhs, Pac
 
             // Re-order to a new rvalue with the slice size
             ConstantValue cv = std::vector(toBeOrdered.begin(), toBeOrdered.end());
-            auto rvalue = Bitstream::reOrder(std::move(cv), concat.sliceSize, cv.bitstreamWidth());
+            auto rvalue = Bitstream::reOrder(std::move(cv), concat.getSliceSize(),
+                                             cv.getBitstreamWidth());
 
             SmallVector<ConstantValue*> packed;
             packBitstream(rvalue, packed);
@@ -776,7 +777,7 @@ ConstantValue Bitstream::evaluateTarget(const StreamingConcatenationExpression& 
     if (!rvalue)
         return nullptr;
 
-    auto srcSize = rvalue.bitstreamWidth();
+    auto srcSize = rvalue.getBitstreamWidth();
     auto targetWidth = lhs.getBitstreamWidth();
     size_t dynamicSize = 0;
 
@@ -806,8 +807,8 @@ ConstantValue Bitstream::evaluateTarget(const StreamingConcatenationExpression& 
         }
     }
 
-    if (lhs.sliceSize > 0)
-        rvalue = reOrder(std::move(rvalue), lhs.sliceSize, targetWidth + dynamicSize);
+    if (lhs.getSliceSize() > 0)
+        rvalue = reOrder(std::move(rvalue), lhs.getSliceSize(), targetWidth + dynamicSize);
 
     SmallVector<ConstantValue*> packed;
     packBitstream(rvalue, packed);
@@ -828,10 +829,10 @@ ConstantValue Bitstream::evaluateTarget(const StreamingConcatenationExpression& 
     }
     else if (rhs.kind == ExpressionKind::Streaming) {
         // Target shorter than source; this is legal unless rhs is a streaming concatenation.
-        SLANG_ASSERT(srcSize >= (*iter)->bitstreamWidth());
-        auto tSize = srcSize - (*iter++)->bitstreamWidth() + bitOffset;
+        SLANG_ASSERT(srcSize >= (*iter)->getBitstreamWidth());
+        auto tSize = srcSize - (*iter++)->getBitstreamWidth() + bitOffset;
         while (iter != iterEnd)
-            tSize -= (*iter++)->bitstreamWidth();
+            tSize -= (*iter++)->getBitstreamWidth();
         context.addDiag(diag::BadStreamSize, lhs.sourceRange) << tSize << srcSize;
     }
 
@@ -882,7 +883,7 @@ ConstantValue Bitstream::convertToBitVector(ConstantValue&& value, SourceRange s
         return value;
 
     // TODO: worry about width overflow?
-    const size_t width = value.bitstreamWidth();
+    const size_t width = value.getBitstreamWidth();
     auto& type = context.getCompilation().getType(bitwidth_t(width), IntegralFlags::FourState |
                                                                          IntegralFlags::Unsigned);
 
