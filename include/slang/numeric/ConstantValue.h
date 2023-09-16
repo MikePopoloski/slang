@@ -345,6 +345,9 @@ struct SLANG_EXPORT ConstantRange {
     /// Determines whether the given point is within the range.
     bool containsPoint(int32_t index) const;
 
+    /// Determines whether the given range is wholly contained within this one.
+    bool contains(ConstantRange other) const;
+
     /// Determines whether the given range overlaps with this one
     /// (including cases where one is wholly contained in the other).
     bool overlaps(ConstantRange other) const;

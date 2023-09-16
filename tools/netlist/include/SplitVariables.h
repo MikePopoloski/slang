@@ -60,18 +60,41 @@ public:
        return (int32_t) (multiplierElem * fixedSizeElem);
     }
 
+    /// Given a scope, return the type of the named field.
+    slang::ast::Type const& getScopeFieldType(const slang::ast::Scope& scope,
+                                               const std::string_view name) const {
+        auto* symbol = scope.find(name);
+        SLANG_ASSERT(symbol != nullptr);
+        return symbol->getDeclaredType()->getType();
+    }
+
     /// Given a packed struct type, return the bit position of the named field.
-    ConstantRange getFieldRange(const slang::ast::PackedStructType &packedStruct,
-                               const std::string_view fieldName) const {
-        size_t offset = 0;
+    ConstantRange getStructFieldRange(const slang::ast::PackedStructType &packedStruct,
+                                      const std::string_view fieldName) const {
+        int32_t offset = 0;
         for (auto &member : packedStruct.members()) {
             int32_t fieldWidth = member.getDeclaredType()->getType().getBitWidth();
             if (member.name == fieldName) {
-                return {(int32_t) offset, (int32_t) offset + fieldWidth};
+                return {offset, offset + fieldWidth - 1};
             };
             offset += fieldWidth;
         }
         SLANG_UNREACHABLE;
+    }
+
+    /// Given a packed union type, return the bit position of the named field.
+    ConstantRange getUnionFieldRange(const slang::ast::PackedUnionType &packedUnion,
+                                     const std::string_view fieldName) const {
+        auto* symbol = packedUnion.find(fieldName);
+        SLANG_ASSERT(symbol != nullptr);
+        int32_t fieldWidth = symbol->getDeclaredType()->getType().getBitWidth();
+        return {0, fieldWidth - 1};
+    }
+
+    /// Given an enumeration type, return the bit position of the named field.
+    ConstantRange getEnumRange(const slang::ast::EnumType& enumeration) {
+        auto fieldRange = enumeration.getBitVectorRange();
+        return {0, (int32_t)fieldRange.width() - 1};
     }
 
     /// Given an array type, return the range from which the array is indexed.
@@ -97,9 +120,9 @@ public:
           SLANG_ASSERT(std::next(selectorsIt) == node.selectors.end());
           return {range.lower(), range.lower() + (int32_t)type.getBitWidth() - 1};
         }
-        SLANG_ASSERT(elementSelector.getIndexInt() >= range.lower());
-        SLANG_ASSERT(elementSelector.getIndexInt() <= range.upper());
+        // Create a new range.
         int32_t index = range.lower() + elementSelector.getIndexInt();
+        SLANG_ASSERT(range.containsPoint(index));
         return {index, index};
     }
 
@@ -110,13 +133,10 @@ public:
         // Left and right indices must be constant.
         SLANG_ASSERT(rangeSelector.leftIndexIsConstant());
         SLANG_ASSERT(rangeSelector.rightIndexIsConstant());
-        // Assert left and right index values make sense and create the new
-        // range.
-        SLANG_ASSERT(rightIndex <= leftIndex);
-        SLANG_ASSERT(rightIndex >= range.lower());
-        SLANG_ASSERT(leftIndex <= range.upper());
+        // Create a new range.
         ConstantRange newRange = {range.lower() + rightIndex,
                                   range.lower() + leftIndex};
+        SLANG_ASSERT(range.contains(newRange));
         if (std::next(selectorsIt) != node.selectors.end()) {
             selectorsIt++;
             return getBitRangeImpl(type, newRange);
@@ -137,13 +157,11 @@ public:
         SLANG_ASSERT(rangeSelector.rightIndexIsConstant());
         int32_t rightIndex = rangeSelector.getRightIndexInt();
         int32_t leftIndex = rangeSelector.getLeftIndexInt();
-        // Assert left and right index values make sense and create the new
-        // range.
+        // Create a new range.
         auto rangeEnd = isUp ? rightIndex + leftIndex : rightIndex - leftIndex;
-        SLANG_ASSERT(rightIndex >= range.lower());
-        SLANG_ASSERT(rangeEnd <= range.upper());
         ConstantRange newRange = {range.lower() + rightIndex,
                                   range.lower() + rangeEnd};
+        SLANG_ASSERT(range.contains(newRange));
         if (std::next(selectorsIt) != node.selectors.end()) {
             selectorsIt++;
             return getBitRangeImpl(type, newRange);
@@ -162,13 +180,14 @@ public:
         }
         int32_t index = elementSelector.getIndexInt();
         auto arrayRange = getArrayRange(type);
-        SLANG_ASSERT(index >= arrayRange.lower());
-        SLANG_ASSERT(index <= arrayRange.upper());
+        SLANG_ASSERT(arrayRange.containsPoint(index));
         // Adjust for non-zero array indexing.
         index -= arrayRange.lower();
+        // Create a new range.
         auto* elementType = type.getArrayElementType();
         ConstantRange newRange = {range.lower() + (index * getTypeBitWidth(*elementType)),
                                   range.lower() + ((index + 1) * getTypeBitWidth(*elementType)) - 1};
+        SLANG_ASSERT(range.contains(newRange));
         if (std::next(selectorsIt) != node.selectors.end()) {
             selectorsIt++;
             return getBitRangeImpl(*elementType, newRange);
@@ -185,16 +204,14 @@ public:
         // Left and right indices must be constant.
         SLANG_ASSERT(rangeSelector.leftIndexIsConstant());
         SLANG_ASSERT(rangeSelector.rightIndexIsConstant());
-        // Assert left and right index values make sense.
-        SLANG_ASSERT(rightIndex >= arrayRange.lower());
-        SLANG_ASSERT(leftIndex <= arrayRange.upper());
-        SLANG_ASSERT(rightIndex <= leftIndex);
         // Adjust for non-zero array indexing.
         leftIndex -= arrayRange.lower();
         rightIndex -= arrayRange.lower();
+        // Create a new range.
         auto* elementType = type.getArrayElementType();
         ConstantRange newRange = {range.lower() + (rightIndex * getTypeBitWidth(*elementType)),
                                   range.lower() + ((leftIndex + 1) * getTypeBitWidth(*elementType)) - 1};
+        SLANG_ASSERT(range.contains(newRange));
         if (std::next(selectorsIt) != node.selectors.end()) {
             selectorsIt++;
             return getBitRangeImpl(type, newRange);
@@ -218,15 +235,13 @@ public:
         SLANG_ASSERT(rangeSelector.rightIndexIsConstant());
         int32_t rightIndex = rangeSelector.getRightIndexInt();
         int32_t leftIndex = rangeSelector.getLeftIndexInt();
-        // Assert left and right index values make sense.
-        SLANG_ASSERT(rightIndex >= arrayRange.lower());
-        SLANG_ASSERT(leftIndex <= arrayRange.upper());
-        SLANG_ASSERT(rightIndex <= leftIndex);
         // Adjust for non-zero array indexing.
         leftIndex -= arrayRange.lower();
         rightIndex -= arrayRange.lower();
+        // Create a new range.
         ConstantRange newRange = {range.lower() + (rightIndex * getTypeBitWidth(*elementType)),
                                   range.lower() + ((leftIndex + 1) * getTypeBitWidth(*elementType)) - 1};
+        SLANG_ASSERT(range.contains(newRange));
         if (std::next(selectorsIt) != node.selectors.end()) {
             selectorsIt++;
             return getBitRangeImpl(type, newRange);
@@ -236,24 +251,55 @@ public:
     }
 
     ConstantRange handleStructMemberAccess(const slang::ast::Type &type, ConstantRange range) {
-        //const auto& packedStruct = type.getCanonicalType().as<slang::ast::PackedStructType>();
-        //SLANG_ASSERT(selectorsIt->get()->kind == VariableSelectorKind::MemberAccess);
-        //const auto& memberAccessSelector = selectorsIt->get()->as<VariableMemberAccess>();
-        //auto fieldRange = getFieldRange(packedStruct, memberAccessSelector.name);
-        //SLANG_ASSERT(range.contains(fieldRange));
-        //auto fieldType = packedStruct.getNameMap()[memberAccessSelector.name];
-        //return getBitRange(fieldType, fieldRange.start, fieldRange.end);
-        return {0, 0};
+        const auto& memberAccessSelector = selectorsIt->get()->as<VariableMemberAccess>();
+        const auto& packedStruct = type.getCanonicalType().as<slang::ast::PackedStructType>();
+        auto fieldRange = getStructFieldRange(packedStruct, memberAccessSelector.name);
+        // Create a new range.
+        ConstantRange newRange = {range.lower() + fieldRange.lower(),
+                                  range.lower() + fieldRange.upper()};
+        SLANG_ASSERT(range.contains(newRange));
+        if (std::next(selectorsIt) != node.selectors.end()) {
+          selectorsIt++;
+          const auto& fieldType = getScopeFieldType(packedStruct, memberAccessSelector.name);
+          return getBitRangeImpl(fieldType, fieldRange);
+        } else {
+          return newRange;
+        }
     }
 
     ConstantRange handleUnionMemberAccess(const slang::ast::Type &type, ConstantRange range) {
-        return {0, 0};
+        const auto& memberAccessSelector = selectorsIt->get()->as<VariableMemberAccess>();
+        const auto& packedUnion = type.getCanonicalType().as<slang::ast::PackedUnionType>();
+        auto fieldRange = getUnionFieldRange(packedUnion, memberAccessSelector.name);
+        // Create a new range.
+        ConstantRange newRange = {range.lower() + fieldRange.lower(),
+                                  range.lower() + fieldRange.upper()};
+        SLANG_ASSERT(range.contains(newRange));
+        if (std::next(selectorsIt) != node.selectors.end()) {
+          selectorsIt++;
+          const auto& fieldType = getScopeFieldType(packedUnion, memberAccessSelector.name);
+          return getBitRangeImpl(fieldType, fieldRange);
+        } else {
+          return newRange;
+        }
     }
 
     ConstantRange handleEnumMemberAccess(const slang::ast::Type &type, ConstantRange range) {
-        return {0, 0};
+        const auto& memberAccessSelector = selectorsIt->get()->as<VariableMemberAccess>();
+        const auto& enumeration = type.getCanonicalType().as<slang::ast::EnumType>();
+        auto fieldRange = getEnumRange(enumeration);
+        // Create a new range.
+        ConstantRange newRange = {range.lower() + fieldRange.lower(),
+                                  range.lower() + fieldRange.upper()};
+        SLANG_ASSERT(range.contains(newRange));
+        if (std::next(selectorsIt) != node.selectors.end()) {
+          selectorsIt++;
+          const auto& fieldType = getScopeFieldType(enumeration, memberAccessSelector.name);
+          return getBitRangeImpl(fieldType, fieldRange);
+        } else {
+          return newRange;
+        }
     }
-
 
     // Multiple range selectors have only the effect of the last one.
     // Eg x[3:0][2:1] <=> x[2:1] or x[2:1][2] <=> x[2].
