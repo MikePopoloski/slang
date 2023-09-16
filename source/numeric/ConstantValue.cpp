@@ -320,7 +320,6 @@ ConstantValue ConstantValue::convertToInt() const {
     if (isShortReal())
         return convertToInt(32, true, false);
     if (isString()) {
-        // TODO: overflow
         bitwidth_t bits = bitwidth_t(str().length() * 8);
         if (!bits)
             bits = 8;
@@ -480,10 +479,12 @@ ConstantValue ConstantValue::convertToByteQueue(bool isSigned) const {
 }
 
 uint32_t ConstantValue::getBitstreamWidth() const {
+    // Note that we don't have to worry about overflow in this
+    // method because we won't ever construct constant values large
+    // enough to overflow a 32-bit integer.
     if (isInteger())
         return integer().getBitWidth();
 
-    // TODO: check for overflow
     if (isString())
         return uint32_t(str().length() * CHAR_BIT);
 

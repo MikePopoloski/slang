@@ -2982,6 +2982,11 @@ module m;
     int k[$];
     int l[];
     always_comb l = {<< {k with [0+:999999999]}};
+
+    typedef struct { int i[9999999]; } asdf;
+    asdf n [999999][];
+    int o[];
+    always_comb {<< {o}} = {<< {n}};
 endmodule
 )");
 
@@ -2989,8 +2994,9 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 3);
+    REQUIRE(diags.size() == 4);
     CHECK(diags[0].code == diag::ObjectTooLarge);
     CHECK(diags[1].code == diag::RangeOOB);
     CHECK(diags[2].code == diag::ObjectTooLarge);
+    CHECK(diags[3].code == diag::BadStreamSize);
 }
