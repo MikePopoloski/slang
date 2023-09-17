@@ -317,11 +317,15 @@ public:
             return {0, getTypeBitWidth(node.symbol.getDeclaredType()->getType()) - 1};
         }
         // Simple vector
-        if (type.isPredefinedInteger() || type.isScalar()) {
+        if (type.isPredefinedInteger() || type.isScalar() ||
+            (type.isStruct() && !type.isUnpackedStruct()) || type.isPackedUnion() ||
+            type.isEnum()) {
+
             if (ignoreSelector()) {
                 selectorsIt++;
                 return getBitRangeImpl(type, range);
             }
+
             if (selectorsIt->get()->isElementSelect()) {
                 return handleScalarElementSelect(type, range);
             }
@@ -336,8 +340,17 @@ public:
                   default:
                     SLANG_UNREACHABLE;
                 }
-            }
-            else {
+            } else if (selectorsIt->get()->isMemberAccess()) {
+                if (type.isStruct()) {
+                    return handleStructMemberAccess(type, range);
+                } else if (type.isPackedUnion()) {
+                    return handleUnionMemberAccess(type, range);
+                } else if (type.isEnum()) {
+                    return handleEnumMemberAccess(type, range);
+                } else {
+                    SLANG_ASSERT(0 && "unsupported member selector");
+                }
+            } else {
                 SLANG_ASSERT(0 && "unsupported scalar selector");
             }
         }
@@ -364,30 +377,6 @@ public:
             }
             else {
                 SLANG_ASSERT(0 && "unsupported array selector");
-            }
-        }
-        // Packed struct
-        else if (type.isStruct() && !type.isUnpackedStruct()) {
-            if (selectorsIt->get()->isMemberAccess()) {
-                return handleStructMemberAccess(type, range);
-            } else {
-                SLANG_ASSERT(0 && "unsupported struct selector");
-            }
-        }
-        // Packed union
-        else if (type.isPackedUnion()) {
-            if (selectorsIt->get()->isMemberAccess()) {
-                return handleUnionMemberAccess(type, range);
-            } else {
-                SLANG_ASSERT(0 && "unsupported union selector");
-            }
-        }
-        // Enum
-        else if (type.isEnum()) {
-            if (selectorsIt->get()->isMemberAccess()) {
-                return handleEnumMemberAccess(type, range);
-            } else {
-                SLANG_ASSERT(0 && "unsupported enum selector");
             }
         }
         else {

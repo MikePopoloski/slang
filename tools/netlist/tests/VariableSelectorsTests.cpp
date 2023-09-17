@@ -408,9 +408,9 @@ endmodule
 
 TEST_CASE("Enum member") {
     auto tree = SyntaxTree::fromText(R"(
-module m (output int o);
-  typedef enum logic [7:0] { A, B, C } Foo;
-  Foo foo;
+module m;
+  typedef enum logic [7:0] { A, B, C } foo_t;
+  foo_t foo;
   assign foo = A;
 endmodule
 )");
@@ -425,3 +425,28 @@ endmodule
 // Combine selection of types with arrays, structs, unions and enums.
 //===---------------------------------------------------------------------===//
 
+TEST_CASE("Struct with packed array members") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+  struct packed {
+    logic [3:0] a, b;
+  } foo;
+  always_comb begin
+    foo = 0;
+    foo[1] = 0;
+    foo[5:1] = 0;
+    foo.a[2:1] = 0;
+    foo.b[2:1] = 0;
+  end
+endmodule
+)");
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+    auto netlist = createNetlist(compilation);
+    CHECK(getBitRange(netlist, "foo") == ConstantRange(0, 7));
+    CHECK(getBitRange(netlist, "foo[1]") == ConstantRange(1, 1));
+    CHECK(getBitRange(netlist, "foo[5:1]") == ConstantRange(1, 5));
+    CHECK(getBitRange(netlist, "foo.a[2:1]") == ConstantRange(1, 2));
+    CHECK(getBitRange(netlist, "foo.b[2:1]") == ConstantRange(5, 6));
+}
