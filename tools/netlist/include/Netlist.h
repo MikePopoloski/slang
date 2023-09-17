@@ -299,7 +299,13 @@ public:
     }
 
     /// Return a string representation of this variable reference.
-    std::string toString() const { return fmt::format("{}{}", getName(), selectorString()); }
+    std::string toString() const {
+      if (selectors.empty()) {
+          return fmt::format("{}", getName());
+      } else {
+          return fmt::format("{}{}", getName(), selectorString());
+      }
+    }
 
 public:
     /// The expression containing the variable reference.

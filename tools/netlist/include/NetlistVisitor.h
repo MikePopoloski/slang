@@ -39,20 +39,20 @@ static std::string getSymbolHierPath(const ast::Symbol& symbol) {
     return buffer;
 }
 
-static void connectDeclToVar(Netlist& netlist, NetlistNode& varNode,
+static void connectDeclToVar(Netlist& netlist, NetlistNode& declNode,
                              const std::string& hierarchicalPath) {
-    auto* variableNode = netlist.lookupVariable(hierarchicalPath);
-    netlist.addEdge(*variableNode, varNode);
+    auto* varNode = netlist.lookupVariable(hierarchicalPath);
+    netlist.addEdge(*varNode, declNode);
     DEBUG_PRINT(
-        fmt::format("Edge decl {} to ref {}\n", variableNode->getName(), varNode.getName()));
+        fmt::format("Edge decl {} to ref {}\n", varNode->getName(), declNode.getName()));
 }
 
 static void connectVarToDecl(Netlist& netlist, NetlistNode& varNode,
                              const std::string& hierarchicalPath) {
-    auto* portNode = netlist.lookupVariable(hierarchicalPath);
-    netlist.addEdge(varNode, *portNode);
+    auto* declNode = netlist.lookupVariable(hierarchicalPath);
+    netlist.addEdge(varNode, *declNode);
     DEBUG_PRINT(
-        fmt::format("Edge ref {} to port ref {}\n", varNode.getName(), portNode->getName()));
+        fmt::format("Edge ref {} to decl {}\n", varNode.getName(), declNode->getName()));
 }
 
 static void connectVarToVar(Netlist& netlist, NetlistNode& sourceVarNode,
@@ -72,6 +72,11 @@ public:
         evalCtx(evalCtx), leftOperand(leftOperand) {}
 
     void handle(const ast::NamedValueExpression& expr) {
+        if (!expr.eval(evalCtx).bad()) {
+          // If the symbol reference is to a constant (eg a parameter or enum
+          // value), then skip it.
+          return;
+        }
         auto& node = netlist.addVariableReference(expr.symbol, expr, leftOperand);
         varList.push_back(&node);
         for (auto* selector : selectors) {

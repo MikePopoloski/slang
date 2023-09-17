@@ -356,6 +356,71 @@ endmodule
 // Struct, union and enum selectors.
 //===---------------------------------------------------------------------===//
 
+TEST_CASE("Struct member") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+  struct packed {
+    logic a;
+    int b;
+    longint c;
+  } foo;
+  always_comb begin
+    foo = 0;
+    foo.a = 0;
+    foo.b = 0;
+    foo.c = 0;
+  end
+endmodule
+)");
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+    auto netlist = createNetlist(compilation);
+    CHECK(getBitRange(netlist, "foo") == ConstantRange(0, 96));
+    CHECK(getBitRange(netlist, "foo.a") == ConstantRange(0, 0));
+    CHECK(getBitRange(netlist, "foo.b") == ConstantRange(1, 32));
+    CHECK(getBitRange(netlist, "foo.c") == ConstantRange(33, 96));
+}
+
+TEST_CASE("Union member") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+  union packed {
+    int a, b, c;
+  } foo;
+  always_comb begin
+    foo = 0;
+    foo.a = 0;
+    foo.b = 0;
+    foo.c = 0;
+  end
+endmodule
+)");
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+    auto netlist = createNetlist(compilation);
+    CHECK(getBitRange(netlist, "foo") == ConstantRange(0, 31));
+    CHECK(getBitRange(netlist, "foo.a") == ConstantRange(0, 31));
+    CHECK(getBitRange(netlist, "foo.b") == ConstantRange(0, 31));
+    CHECK(getBitRange(netlist, "foo.c") == ConstantRange(0, 31));
+}
+
+TEST_CASE("Enum member") {
+    auto tree = SyntaxTree::fromText(R"(
+module m (output int o);
+  typedef enum logic [7:0] { A, B, C } Foo;
+  Foo foo;
+  assign foo = A;
+endmodule
+)");
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+    auto netlist = createNetlist(compilation);
+    CHECK(getBitRange(netlist, "foo") == ConstantRange(0, 7));
+}
+
 //===---------------------------------------------------------------------===//
 // Combine selection of types with arrays, structs, unions and enums.
 //===---------------------------------------------------------------------===//
