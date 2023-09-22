@@ -1811,7 +1811,7 @@ void Compilation::resolveDefParamsAndBinds() {
         const SyntaxNode* targetSyntax = nullptr;
         const SyntaxNode* defparamSyntax = nullptr;
         ConstantValue value;
-        std::string pathStr; // TODO: should be able to avoid storing the stringified path here
+        std::string pathStr;
     };
     SmallVector<OverrideEntry, 4> overrides;
 
