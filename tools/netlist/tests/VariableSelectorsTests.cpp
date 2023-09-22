@@ -450,3 +450,31 @@ endmodule
     CHECK(getBitRange(netlist, "foo.a[2:1]") == ConstantRange(1, 2));
     CHECK(getBitRange(netlist, "foo.b[2:1]") == ConstantRange(5, 6));
 }
+
+TEST_CASE("Struct with packed union members") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+  struct packed {
+    union packed {
+      logic [3:0] a, b;
+    } u;
+  } foo;
+  always_comb begin
+    foo = 0;
+    foo[1] = 0;
+    foo.u[2:1] = 0;
+    foo.u.a[2:1] = 0;
+    foo.u.b[2:1] = 0;
+  end
+endmodule
+)");
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+    auto netlist = createNetlist(compilation);
+    CHECK(getBitRange(netlist, "foo") == ConstantRange(0, 3));
+    CHECK(getBitRange(netlist, "foo[1]") == ConstantRange(1, 1));
+    CHECK(getBitRange(netlist, "foo.u[2:1]") == ConstantRange(1, 2));
+    CHECK(getBitRange(netlist, "foo.u.a[2:1]") == ConstantRange(1, 2));
+    CHECK(getBitRange(netlist, "foo.u.b[2:1]") == ConstantRange(1, 2));
+}
