@@ -734,7 +734,8 @@ private:
 
     // The name map for all module, interface, and program definitions.
     // The key is a combination of definition name + the scope in which it was declared.
-    flat_hash_map<std::tuple<std::string_view, const Scope*>, Definition*> definitionMap;
+    flat_hash_map<std::tuple<std::string_view, const Scope*>, std::vector<Definition*>>
+        definitionMap;
 
     // A list of all created definitions, as storage for their memory.
     std::vector<std::unique_ptr<Definition>> definitionMemory;

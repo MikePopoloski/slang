@@ -138,6 +138,10 @@ public:
     /// outside of any specific syntax tree.
     const syntax::SyntaxTree* syntaxTree;
 
+    /// The source library that contains the definition, or nullptr for the
+    /// default library.
+    const SourceLibrary* sourceLibrary;
+
     /// Indicates whether this definition has non-ansi port declarations.
     bool hasNonAnsiPorts;
 
@@ -145,7 +149,7 @@ public:
     Definition(const Scope& scope, LookupLocation lookupLocation,
                const syntax::ModuleDeclarationSyntax& syntax, const NetType& defaultNetType,
                UnconnectedDrive unconnectedDrive, std::optional<TimeScale> directiveTimeScale,
-               const syntax::SyntaxTree* syntaxTree);
+               const syntax::SyntaxTree* syntaxTree, const SourceLibrary* sourceLibrary);
 
     /// Returns a string description of the definition kind, such as "module",
     /// "interface", or "program".

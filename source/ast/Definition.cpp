@@ -92,10 +92,11 @@ bool Definition::ParameterDecl::hasDefault() const {
 Definition::Definition(const Scope& scope, LookupLocation lookupLocation,
                        const ModuleDeclarationSyntax& syntax, const NetType& defaultNetType,
                        UnconnectedDrive unconnectedDrive,
-                       std::optional<TimeScale> directiveTimeScale, const SyntaxTree* syntaxTree) :
+                       std::optional<TimeScale> directiveTimeScale, const SyntaxTree* syntaxTree,
+                       const SourceLibrary* sourceLibrary) :
     syntax(syntax),
     defaultNetType(defaultNetType), scope(scope), unconnectedDrive(unconnectedDrive),
-    syntaxTree(syntaxTree) {
+    syntaxTree(syntaxTree), sourceLibrary(sourceLibrary) {
 
     // Extract and save various properties of the definition.
     name = syntax.header->name.valueText();

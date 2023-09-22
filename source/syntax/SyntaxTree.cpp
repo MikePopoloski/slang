@@ -66,8 +66,8 @@ std::shared_ptr<SyntaxTree> SyntaxTree::fromText(std::string_view text, std::str
 std::shared_ptr<SyntaxTree> SyntaxTree::fromText(std::string_view text,
                                                  SourceManager& sourceManager,
                                                  std::string_view name, std::string_view path,
-                                                 const Bag& options) {
-    SourceBuffer buffer = sourceManager.assignText(path, text);
+                                                 const Bag& options, const SourceLibrary* library) {
+    SourceBuffer buffer = sourceManager.assignText(path, text, {}, library);
     if (!buffer)
         return nullptr;
 

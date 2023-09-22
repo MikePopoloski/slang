@@ -99,8 +99,8 @@ public:
     /// @return the created and parsed syntax tree.
     static std::shared_ptr<SyntaxTree> fromText(std::string_view text, SourceManager& sourceManager,
                                                 std::string_view name = "source"sv,
-                                                std::string_view path = "",
-                                                const Bag& options = {});
+                                                std::string_view path = "", const Bag& options = {},
+                                                const SourceLibrary* library = nullptr);
 
     /// Creates a syntax tree from a full compilation unit already in memory.
     /// @a text is the actual source code text.

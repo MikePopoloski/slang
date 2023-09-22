@@ -574,7 +574,7 @@ TEST_CASE("Driver library map in compilation") {
     auto compilation = driver.createCompilation();
     CHECK(driver.reportCompilation(*compilation, false));
     CHECK(stdoutContains("Build succeeded"));
-    CHECK(stdoutContains("0 errors, 1 warning"));
+    CHECK(stdoutContains("0 errors, 2 warnings"));
 }
 
 TEST_CASE("Driver checking for infinite command file includes") {

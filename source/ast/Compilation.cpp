@@ -303,62 +303,75 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamsAndBinds) {
     // since that can cause changes to the definition map itself.
     SmallVector<const Definition*> topDefs;
     if (options.topModules.empty()) {
-        for (auto& [key, def] : definitionMap) {
-            // Ignore definitions that are not top level. Top level definitions are:
-            // - Modules and programs
-            // - Not nested
-            // - Have no non-defaulted parameters
-            // - Not instantiated anywhere
-            if (std::get<1>(key) != root.get() ||
-                globalInstantiations.find(def->name) != globalInstantiations.end()) {
+        for (auto& [key, defList] : definitionMap) {
+            if (std::get<1>(key) != root.get())
                 continue;
-            }
 
-            // Library definitions are never automatically instantiated in any capacity.
-            if (!def->syntaxTree || !def->syntaxTree->isLibrary) {
-                if (def->definitionKind == DefinitionKind::Module ||
-                    def->definitionKind == DefinitionKind::Program) {
-                    if (isValidTop(*def)) {
-                        // This definition can be automatically instantiated.
-                        topDefs.push_back(def);
-                        continue;
+            for (auto def : defList) {
+                // Ignore definitions that are not top level. Top level definitions are:
+                // - Modules and programs
+                // - Not nested
+                // - Have no non-defaulted parameters
+                // - Not instantiated anywhere
+                // - Not in a library
+                if (def->sourceLibrary ||
+                    globalInstantiations.find(def->name) != globalInstantiations.end()) {
+                    continue;
+                }
+
+                // Library definitions are never automatically instantiated in any capacity.
+                if (!def->syntaxTree || !def->syntaxTree->isLibrary) {
+                    if (def->definitionKind == DefinitionKind::Module ||
+                        def->definitionKind == DefinitionKind::Program) {
+                        if (isValidTop(*def)) {
+                            // This definition can be automatically instantiated.
+                            topDefs.push_back(def);
+                            continue;
+                        }
                     }
                 }
-            }
 
-            // Otherwise this definition is unreferenced and not automatically instantiated.
-            unreferencedDefs.push_back(def);
+                // Otherwise this definition is unreferenced and not automatically instantiated.
+                unreferencedDefs.push_back(def);
+            }
         }
     }
     else {
         // If the list of top modules has already been provided we just need to
         // find and instantiate them.
         auto& tm = options.topModules;
-        for (auto& [key, def] : definitionMap) {
+        for (auto& [key, defList] : definitionMap) {
             if (std::get<1>(key) != root.get())
                 continue;
 
-            if (def->definitionKind == DefinitionKind::Module ||
-                def->definitionKind == DefinitionKind::Program) {
-                if (auto it = tm.find(def->name); it != tm.end()) {
-                    // Remove from the top modules set so that we know we visited it.
-                    tm.erase(it);
+            for (auto def : defList) {
+                // TODO: allow these to include a library name
+                if (def->sourceLibrary)
+                    continue;
 
-                    // Make sure this is actually valid as a top-level module.
-                    if (isValidTop(*def)) {
-                        topDefs.push_back(def);
-                        continue;
+                if (def->definitionKind == DefinitionKind::Module ||
+                    def->definitionKind == DefinitionKind::Program) {
+                    if (auto it = tm.find(def->name); it != tm.end()) {
+                        // Remove from the top modules set so that we know we visited it.
+                        tm.erase(it);
+
+                        // Make sure this is actually valid as a top-level module.
+                        if (isValidTop(*def)) {
+                            topDefs.push_back(def);
+                            continue;
+                        }
+
+                        // Otherwise, issue an error because the user asked us to instantiate this.
+                        def->scope.addDiag(diag::InvalidTopModule, SourceLocation::NoLocation)
+                            << def->name;
                     }
-
-                    // Otherwise, issue an error because the user asked us to instantiate this.
-                    def->scope.addDiag(diag::InvalidTopModule, SourceLocation::NoLocation)
-                        << def->name;
                 }
-            }
 
-            // Otherwise this definition might be unreferenced and not automatically instantiated.
-            if (globalInstantiations.find(def->name) == globalInstantiations.end())
-                unreferencedDefs.push_back(def);
+                // Otherwise this definition might be unreferenced and not automatically
+                // instantiated.
+                if (globalInstantiations.find(def->name) == globalInstantiations.end())
+                    unreferencedDefs.push_back(def);
+            }
         }
 
         // If any top modules were not found, issue an error.
@@ -443,7 +456,7 @@ const Definition* Compilation::getDefinition(std::string_view lookupName,
     do {
         auto it = definitionMap.find(std::make_tuple(lookupName, searchScope));
         if (it != definitionMap.end())
-            return it->second;
+            return it->second.front();
 
         searchScope = searchScope->asSymbol().getParentScope();
     } while (searchScope);
@@ -453,7 +466,7 @@ const Definition* Compilation::getDefinition(std::string_view lookupName,
 
 const Definition* Compilation::getDefinition(const ModuleDeclarationSyntax& syntax) const {
     if (auto it = definitionFromSyntax.find(&syntax); it != definitionFromSyntax.end()) {
-        // If this definition is no longer referenced by the definitionsMap
+        // If this definition is no longer referenced by the definitionMap
         // it probably got booted by an (illegal) duplicate definition.
         // We don't want to return anything in that case.
         auto def = it->second;
@@ -461,8 +474,10 @@ const Definition* Compilation::getDefinition(const ModuleDeclarationSyntax& synt
                                                                                      : &def->scope;
 
         auto dmIt = definitionMap.find(std::make_tuple(def->name, targetScope));
-        if (dmIt != definitionMap.end() && dmIt->second == def)
+        if (dmIt != definitionMap.end() &&
+            std::ranges::find(dmIt->second, def) != dmIt->second.end()) {
             return def;
+        }
     }
     return nullptr;
 }
@@ -533,29 +548,60 @@ void Compilation::createDefinition(const Scope& scope, LookupLocation location,
         metadata.defaultNetType = &scope.getDefaultNetType();
 
     auto def = definitionMemory
-                   .emplace_back(std::make_unique<Definition>(scope, location, syntax,
-                                                              *metadata.defaultNetType,
-                                                              metadata.unconnectedDrive,
-                                                              metadata.timeScale, metadata.tree))
+                   .emplace_back(std::make_unique<Definition>(
+                       scope, location, syntax, *metadata.defaultNetType, metadata.unconnectedDrive,
+                       metadata.timeScale, metadata.tree, metadata.library))
                    .get();
     definitionFromSyntax[&syntax] = def;
 
     // Record that the given scope contains this definition. If the scope is a compilation unit, add
     // it to the root scope instead so that lookups from other compilation units will find it.
     auto targetScope = scope.asSymbol().kind == SymbolKind::CompilationUnit ? root.get() : &scope;
-    auto [it, inserted] = definitionMap.emplace(std::tuple(def->name, targetScope), def);
-    if (!inserted) {
-        reportRedefinition(scope, *def, it->second->location, diag::DuplicateDefinition);
-        return;
+    const bool isRoot = targetScope == root.get();
+    bool isFirst;
+
+    auto key = std::tuple(def->name, targetScope);
+    auto it = definitionMap.find(key);
+    if (it == definitionMap.end()) {
+        definitionMap.emplace(key, std::vector{def});
+        isFirst = true;
+    }
+    else {
+        // There is already a definition with this name in this scope.
+        // If we're not at the root scope, it's a straightforward error.
+        if (!isRoot) {
+            reportRedefinition(scope, *def, it->second[0]->location, diag::DuplicateDefinition);
+            return;
+        }
+
+        // Otherwise, if they're in the same source library we take the
+        // latter one (with a warning) and if not then we store both
+        // and resolve them later via config or library ordering.
+        auto vecIt = std::ranges::lower_bound(it->second, def, [](Definition* a, Definition* b) {
+            // TODO: library ordering
+            return a->sourceLibrary < b->sourceLibrary;
+        });
+
+        if (vecIt != it->second.end() && (*vecIt)->sourceLibrary == def->sourceLibrary) {
+            // TODO: take the second one instead of the first?
+            reportRedefinition(scope, *def, (*vecIt)->location, diag::DuplicateDefinition);
+            return;
+        }
+
+        isFirst = vecIt == it->second.begin();
+        it->second.insert(vecIt, def);
     }
 
-    if (targetScope == root.get()) {
-        topDefinitions[def->name].first = def;
+    if (isRoot) {
+        if (isFirst)
+            topDefinitions[def->name].first = def;
+
         if (auto primIt = udpMap.find(def->name); primIt != udpMap.end())
             reportRedefinition(scope, *def, primIt->second->location, diag::Redefinition);
         else if (auto prim = getExternPrimitive(def->name, scope))
             reportRedefinition(scope, *def, prim->name.location(), diag::Redefinition);
         else if (auto externMod = getExternModule(def->name, scope)) {
+            // TODO: how do extern modules work with libraries?
             checkExternModMatch(scope, *externMod->header, *syntax.header,
                                 diag::ExternDeclMismatchImpl);
         }
