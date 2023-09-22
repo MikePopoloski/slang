@@ -449,7 +449,7 @@ bool NamedValueExpression::checkConstant(EvalContext& context) const {
 }
 
 ConstantValue HierarchicalValueExpression::evalImpl(EvalContext& context) const {
-    if (!context.getCompilation().getOptions().allowHierarchicalConst) {
+    if (!context.getCompilation().hasFlag(CompilationFlags::AllowHierarchicalConst)) {
         context.addDiag(diag::ConstEvalHierarchicalName, sourceRange) << symbol.name;
         return nullptr;
     }

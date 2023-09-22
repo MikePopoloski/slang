@@ -380,7 +380,7 @@ bool Expression::isImplicitlyAssignableTo(Compilation& compilation, const Type& 
 
     if (targetType.isEnum()) {
         return isSameEnum(*this, targetType) ||
-               (type->isIntegral() && compilation.getOptions().relaxEnumConversions);
+               (type->isIntegral() && compilation.hasFlag(CompilationFlags::RelaxEnumConversions));
     }
 
     return false;

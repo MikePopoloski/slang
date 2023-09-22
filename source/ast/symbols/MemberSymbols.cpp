@@ -69,7 +69,7 @@ static const PackageSymbol* findPackage(std::string_view packageName, const Scop
                                         SourceLocation errorLoc) {
     auto& comp = lookupScope.getCompilation();
     auto package = comp.getPackage(packageName);
-    if (!package && !packageName.empty() && !comp.getOptions().lintMode)
+    if (!package && !packageName.empty() && !comp.hasFlag(CompilationFlags::LintMode))
         lookupScope.addDiag(diag::UnknownPackage, errorLoc) << packageName;
     return package;
 }

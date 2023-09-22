@@ -68,8 +68,54 @@ enum class SLANG_EXPORT MinTypMax {
     Max
 };
 
+/// Defines flags that control compilation behavior.
+enum class SLANG_EXPORT CompilationFlags {
+    /// No flags specified.
+    None = 0,
+
+    /// Allow hierarchical names in constant expressions.
+    AllowHierarchicalConst = 1 << 0,
+
+    /// Allow all integral types to convert implicitly to enum types.
+    RelaxEnumConversions = 1 << 1,
+
+    /// Allow symbols to be referenced before they're declared,
+    /// even if that would otherwise be an error in SystemVerilog.
+    AllowUseBeforeDeclare = 1 << 2,
+
+    /// Signals driven by an always_comb are normally not allowed to be driven
+    /// by any other process. This flag allows initial blocks to
+    /// also drive such signals.
+    AllowDupInitialDrivers = 1 << 3,
+
+    /// Allow top-level modules to have interface ports. This is not allowed in
+    /// standard SystemVerilog but it defaults to true to make using the API in
+    /// scripting / programmatic modes more convenient.
+    AllowTopLevelIfacePorts = 1 << 4,
+
+    /// Perform strict checking of variable drivers, which currently
+    /// means not taking into account procedural for loop unrolling.
+    StrictDriverChecking = 1 << 5,
+
+    /// Compile in "linting" mode where we suppress errors that could
+    /// be caused by not having an elaborated design.
+    LintMode = 1 << 6,
+
+    /// Suppress warnings about unused code elements.
+    SuppressUnused = 1 << 7,
+
+    /// Don't issue an error when encountering an instantiation
+    /// for an unknown definition.
+    IgnoreUnknownModules = 1 << 8,
+};
+SLANG_BITMASK(CompilationFlags, IgnoreUnknownModules)
+
 /// Contains various options that can control compilation behavior.
 struct SLANG_EXPORT CompilationOptions {
+    /// Various flags that control compilation behavior.
+    bitmask<CompilationFlags> flags = CompilationFlags::AllowTopLevelIfacePorts |
+                                      CompilationFlags::SuppressUnused;
+
     /// The maximum depth of nested module instances (and interfaces/programs),
     /// to detect infinite recursion.
     uint32_t maxInstanceDepth = 128;
@@ -112,41 +158,6 @@ struct SLANG_EXPORT CompilationOptions {
     /// Specifies which set of min:typ:max expressions should
     /// be used during compilation.
     MinTypMax minTypMax = MinTypMax::Typ;
-
-    /// If true, allow hierarchical names in constant expressions.
-    bool allowHierarchicalConst = false;
-
-    /// If true, allow all integral types to convert implicitly to enum types.
-    bool relaxEnumConversions = false;
-
-    /// If true, allow symbols to be referenced before they're declared,
-    /// even if that would otherwise be an error in SystemVerilog.
-    bool allowUseBeforeDeclare = false;
-
-    /// Signals driven by an always_comb are normally not allowed to be driven
-    /// by any other process. Setting this option allows initial blocks to
-    /// also drive such signals.
-    bool allowDupInitialDrivers = false;
-
-    /// If true, allow top-level modules to have interface ports. This is
-    /// not allowed in standard SystemVerilog but it defaults to true to make
-    /// using the API in scripting / programmatic modes more convenient.
-    bool allowTopLevelIfacePorts = true;
-
-    /// If true, perform strict checking of variable drivers, which currently
-    /// means not taking into account procedural for loop unrolling.
-    bool strictDriverChecking = false;
-
-    /// If true, compile in "linting" mode where we suppress errors that could
-    /// be caused by not having an elaborated design.
-    bool lintMode = false;
-
-    /// If true, suppress warnings about unused code elements.
-    bool suppressUnused = true;
-
-    /// If true, don't issue an error when encountering an instantiation
-    /// for an unknown definition.
-    bool ignoreUnknownModules = false;
 
     /// The default time scale to use for design elements that don't specify
     /// one explicitly.
@@ -204,6 +215,9 @@ public:
 
     /// Gets the set of options used to construct the compilation.
     const CompilationOptions& getOptions() const { return options; }
+
+    /// Returns true if the given flag(s) are enabled for this compilation.
+    bool hasFlag(bitmask<CompilationFlags> flags) const { return options.flags.has(flags); }
 
     /// Gets the source manager associated with the compilation. If no syntax trees have
     /// been added to the design this method will return nullptr.

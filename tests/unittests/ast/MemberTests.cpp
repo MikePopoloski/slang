@@ -1837,7 +1837,7 @@ endmodule
 )");
 
     CompilationOptions options;
-    options.allowDupInitialDrivers = true;
+    options.flags |= CompilationFlags::AllowDupInitialDrivers;
 
     Compilation compilation(options);
     compilation.addSyntaxTree(tree);

@@ -21,7 +21,7 @@ using namespace syntax;
 
 static CompilationOptions createOptions() {
     CompilationOptions options;
-    options.allowHierarchicalConst = true;
+    options.flags |= CompilationFlags::AllowHierarchicalConst;
     return options;
 }
 

@@ -846,7 +846,7 @@ endmodule
 )");
 
     CompilationOptions coptions;
-    coptions.suppressUnused = false;
+    coptions.flags &= ~CompilationFlags::SuppressUnused;
     coptions.topModules.emplace("invalid"sv);
     coptions.topModules.emplace("unknown"sv);
     coptions.topModules.emplace("top"sv);
@@ -870,7 +870,7 @@ TEST_CASE("No top warning") {
 )");
 
     CompilationOptions coptions;
-    coptions.suppressUnused = false;
+    coptions.flags &= ~CompilationFlags::SuppressUnused;
 
     Bag options;
     options.set(coptions);
@@ -1472,7 +1472,7 @@ endmodule
 )");
 
     CompilationOptions options;
-    options.allowHierarchicalConst = true;
+    options.flags |= CompilationFlags::AllowHierarchicalConst;
 
     Compilation compilation(options);
     compilation.addSyntaxTree(tree);
@@ -1514,7 +1514,7 @@ endmodule
 )");
 
     CompilationOptions options;
-    options.allowHierarchicalConst = true;
+    options.flags |= CompilationFlags::AllowHierarchicalConst;
 
     Compilation compilation(options);
     compilation.addSyntaxTree(tree);

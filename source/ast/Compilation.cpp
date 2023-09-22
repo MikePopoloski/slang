@@ -403,7 +403,7 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamsAndBinds) {
         topList.push_back(&instance);
     }
 
-    if (!options.suppressUnused && topDefs.empty())
+    if (!hasFlag(CompilationFlags::SuppressUnused) && topDefs.empty())
         root->addDiag(diag::NoTopModules, SourceLocation::NoLocation);
 
     // For unreferenced definitions, go through and instantiate them with all empty
@@ -1109,7 +1109,7 @@ const Diagnostics& Compilation::getSemanticDiagnostics() {
             }
         }
 
-        if (!options.allowTopLevelIfacePorts) {
+        if (!hasFlag(CompilationFlags::AllowTopLevelIfacePorts)) {
             // Top level instances cannot have interface or ref ports.
             for (auto inst : getRoot().topInstances) {
                 for (auto port : inst->body.getPortList()) {
@@ -1140,7 +1140,7 @@ const Diagnostics& Compilation::getSemanticDiagnostics() {
             }
         }
 
-        if (!options.suppressUnused) {
+        if (!hasFlag(CompilationFlags::SuppressUnused)) {
             // Report on unused definitions.
             for (auto def : unreferencedDefs) {
                 // If this is an interface, it may have been referenced in a port.

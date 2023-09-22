@@ -318,7 +318,7 @@ void ValueSymbol::addDriver(std::pair<uint32_t, uint32_t> bounds, const ValueDri
                      curr->containingSymbol->kind == SymbolKind::ProceduralBlock &&
                      driver.containingSymbol->kind == SymbolKind::ProceduralBlock &&
                      (curr->isInSingleDriverProcedure() || driver.isInSingleDriverProcedure()) &&
-                     (!comp.getOptions().allowDupInitialDrivers ||
+                     (!comp.hasFlag(CompilationFlags::AllowDupInitialDrivers) ||
                       (!curr->isInInitialBlock() && !driver.isInInitialBlock()))) {
                 isProblem = true;
             }

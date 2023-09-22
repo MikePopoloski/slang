@@ -1748,7 +1748,7 @@ Statement& ForLoopStatement::fromSyntax(Compilation& compilation,
 
     // If this is the top-level unrollable for loop, attempt the unrolling now.
     // If not top-level, just pop up the stack and let the parent loop handle us.
-    if (wasFirst && !compilation.getOptions().strictDriverChecking &&
+    if (wasFirst && !compilation.hasFlag(CompilationFlags::StrictDriverChecking) &&
         !context.scope->isUninstantiated()) {
         UnrollVisitor::run(context, *result);
     }
@@ -2260,7 +2260,7 @@ Statement& ExpressionStatement::fromSyntax(Compilation& compilation,
     bitmask<ASTFlags> extraFlags = ASTFlags::AssignmentAllowed | ASTFlags::TopLevelStatement;
     if (stmtCtx.flags.has(StatementFlags::InForLoop) &&
         BinaryExpressionSyntax::isKind(syntax.expr->kind) &&
-        !compilation.getOptions().strictDriverChecking) {
+        !compilation.hasFlag(CompilationFlags::StrictDriverChecking)) {
         extraFlags |= ASTFlags::NotADriver;
     }
 
