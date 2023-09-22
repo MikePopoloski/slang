@@ -142,6 +142,8 @@ void Driver::addStandardArgs() {
                 "interface, and programs.");
     addCompFlag(CompilationFlags::RelaxEnumConversions, "--relax-enum-conversions",
                 "Allow all integral types to convert implicitly to enum types.");
+    addCompFlag(CompilationFlags::RelaxStringConversions, "--relax-string-conversions",
+                "Allow string types to convert implicitly to integral types.");
     addCompFlag(CompilationFlags::AllowHierarchicalConst, "--allow-hierarchical-const",
                 "Allow hierarchical references in constant expressions.");
     addCompFlag(CompilationFlags::AllowDupInitialDrivers, "--allow-dup-initial-drivers",
@@ -382,7 +384,8 @@ bool Driver::processOptions() {
         if (options.compat == "vcs") {
             auto vcsCompatFlags = {CompilationFlags::AllowHierarchicalConst,
                                    CompilationFlags::AllowUseBeforeDeclare,
-                                   CompilationFlags::RelaxEnumConversions};
+                                   CompilationFlags::RelaxEnumConversions,
+                                   CompilationFlags::RelaxStringConversions};
 
             for (auto flag : vcsCompatFlags) {
                 auto& option = options.compilationFlags.at(flag);

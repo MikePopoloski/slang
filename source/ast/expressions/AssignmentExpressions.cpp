@@ -383,6 +383,11 @@ bool Expression::isImplicitlyAssignableTo(Compilation& compilation, const Type& 
                (type->isIntegral() && compilation.hasFlag(CompilationFlags::RelaxEnumConversions));
     }
 
+    if (type->isString() && targetType.isIntegral() &&
+        compilation.hasFlag(CompilationFlags::RelaxStringConversions)) {
+        return true;
+    }
+
     return false;
 }
 

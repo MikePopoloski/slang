@@ -107,8 +107,11 @@ enum class SLANG_EXPORT CompilationFlags {
     /// Don't issue an error when encountering an instantiation
     /// for an unknown definition.
     IgnoreUnknownModules = 1 << 8,
+
+    /// Allow strings to implicitly convert to integers.
+    RelaxStringConversions = 1 << 9,
 };
-SLANG_BITMASK(CompilationFlags, IgnoreUnknownModules)
+SLANG_BITMASK(CompilationFlags, RelaxStringConversions)
 
 /// Contains various options that can control compilation behavior.
 struct SLANG_EXPORT CompilationOptions {
