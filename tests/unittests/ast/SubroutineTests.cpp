@@ -612,6 +612,44 @@ endmodule
     CHECK(diags[10].code == diag::NotAnInterfaceOrPort);
 }
 
+TEST_CASE("Extern iface method for iface array") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I;
+    extern function void foo(int i, real r);
+    modport m(export foo);
+endinterface
+
+module n(I.m a[3]);
+    initial begin
+        a[0].foo(42, 3.14);
+    end
+
+    I j [3]();
+
+    function void a.foo(int i, real r);
+    endfunction
+
+    function void j.foo(int i, real r);
+    endfunction
+endmodule
+
+module m;
+    I i1 [3]();
+    n n1(i1);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 4);
+    CHECK(diags[0].code == diag::MissingExternImpl);
+    CHECK(diags[1].code == diag::MissingExportImpl);
+    CHECK(diags[2].code == diag::ExternIfaceArrayMethod);
+    CHECK(diags[3].code == diag::ExternIfaceArrayMethod);
+}
+
 TEST_CASE("Function non-ansi port defaults are illegal") {
     auto tree = SyntaxTree::fromText(R"(
 function foo;
