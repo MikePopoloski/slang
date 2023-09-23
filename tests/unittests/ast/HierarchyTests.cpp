@@ -3,6 +3,7 @@
 
 #include "Test.h"
 
+#include "slang/ast/Definition.h"
 #include "slang/ast/symbols/BlockSymbols.h"
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
 #include "slang/ast/symbols/InstanceSymbols.h"
@@ -846,7 +847,7 @@ endmodule
 )");
 
     CompilationOptions coptions;
-    coptions.suppressUnused = false;
+    coptions.flags &= ~CompilationFlags::SuppressUnused;
     coptions.topModules.emplace("invalid"sv);
     coptions.topModules.emplace("unknown"sv);
     coptions.topModules.emplace("top"sv);
@@ -870,7 +871,7 @@ TEST_CASE("No top warning") {
 )");
 
     CompilationOptions coptions;
-    coptions.suppressUnused = false;
+    coptions.flags &= ~CompilationFlags::SuppressUnused;
 
     Bag options;
     options.set(coptions);
@@ -1472,7 +1473,7 @@ endmodule
 )");
 
     CompilationOptions options;
-    options.allowHierarchicalConst = true;
+    options.flags |= CompilationFlags::AllowHierarchicalConst;
 
     Compilation compilation(options);
     compilation.addSyntaxTree(tree);
@@ -1514,7 +1515,7 @@ endmodule
 )");
 
     CompilationOptions options;
-    options.allowHierarchicalConst = true;
+    options.flags |= CompilationFlags::AllowHierarchicalConst;
 
     Compilation compilation(options);
     compilation.addSyntaxTree(tree);
@@ -2225,4 +2226,38 @@ endprimitive
     CHECK(diags[1].code == diag::ExternWildcardPortList);
     CHECK(diags[2].code == diag::MissingExternWildcardPorts);
     CHECK(diags[3].code == diag::MissingExternWildcardPorts);
+}
+
+TEST_CASE("Duplicate modules in different source libraries") {
+    auto lib1 = std::make_unique<SourceLibrary>("lib1");
+    auto lib2 = std::make_unique<SourceLibrary>("lib2");
+
+    auto tree1 = SyntaxTree::fromText(R"(
+module mod;
+endmodule
+)",
+                                      SyntaxTree::getDefaultSourceManager(), "source", "", {},
+                                      lib1.get());
+    auto tree2 = SyntaxTree::fromText(R"(
+module mod;
+endmodule
+)",
+                                      SyntaxTree::getDefaultSourceManager(), "source", "", {},
+                                      lib2.get());
+    auto tree3 = SyntaxTree::fromText(R"(
+module top;
+    mod m();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree1);
+    compilation.addSyntaxTree(tree2);
+    compilation.addSyntaxTree(tree3);
+    NO_COMPILATION_ERRORS;
+
+    auto expected = lib1.get() < lib2.get() ? lib1.get() : lib2.get();
+    auto lib =
+        compilation.getRoot().lookupName<InstanceSymbol>("top.m").getDefinition().sourceLibrary;
+    CHECK(lib == expected);
 }

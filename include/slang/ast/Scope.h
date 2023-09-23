@@ -190,6 +190,7 @@ public:
     }
 
     const SymbolMap& getUnelaboratedNameMap() const { return *nameMap; }
+    void reportNameConflict(const Symbol& member, const Symbol& existing) const;
 
     std::span<const WildcardImportSymbol* const> getWildcardImports() const;
 
@@ -271,7 +272,6 @@ private:
     void handleUserDefinedNet(const syntax::UserDefinedNetDeclarationSyntax& syntax);
     void handleNestedDefinition(const syntax::ModuleDeclarationSyntax& syntax) const;
     void handleExportedMethods(std::span<Symbol* const> deferredMembers) const;
-    void reportNameConflict(const Symbol& member, const Symbol& existing) const;
     void checkImportConflict(const Symbol& member, const Symbol& existing) const;
     void addWildcardImport(const syntax::PackageImportItemSyntax& item,
                            std::span<const syntax::AttributeInstanceSyntax* const> attributes);

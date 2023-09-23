@@ -675,7 +675,7 @@ endmodule
 )");
 
     CompilationOptions options;
-    options.lintMode = true;
+    options.flags |= CompilationFlags::LintMode;
     tree->isLibrary = true;
 
     Compilation compilation(options);

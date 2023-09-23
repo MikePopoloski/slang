@@ -637,7 +637,11 @@ void SubroutineSymbol::connectExternInterfacePrototype() const {
         if (!conn)
             return;
 
-        // TODO: what if conn is for an iface array?
+        if (conn->kind == SymbolKind::InstanceArray) {
+            scope->addDiag(diag::ExternIfaceArrayMethod, nameToken.range());
+            return;
+        }
+
         inst = &conn->as<InstanceSymbol>();
     }
     else if (symbol->kind == SymbolKind::Instance) {
@@ -646,6 +650,10 @@ void SubroutineSymbol::connectExternInterfacePrototype() const {
             scope->addDiag(diag::NotAnInterfaceOrPort, nameToken.range()) << ifaceName;
             return;
         }
+    }
+    else if (symbol->kind == SymbolKind::InstanceArray) {
+        scope->addDiag(diag::ExternIfaceArrayMethod, nameToken.range());
+        return;
     }
     else {
         if (symbol->kind != SymbolKind::UninstantiatedDef)

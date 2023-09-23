@@ -25,7 +25,8 @@ SyntaxPrinter& SyntaxPrinter::print(Trivia trivia) {
             if (includeDirectives)
                 print(*trivia.syntax());
             else if (includePreprocessed) {
-                for (const auto& t : trivia.syntax()->getFirstToken().trivia())
+                auto nestedTrivia = trivia.syntax()->getFirstToken().trivia();
+                for (const auto& t : nestedTrivia)
                     print(t);
             }
             break;

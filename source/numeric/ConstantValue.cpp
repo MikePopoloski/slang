@@ -320,7 +320,6 @@ ConstantValue ConstantValue::convertToInt() const {
     if (isShortReal())
         return convertToInt(32, true, false);
     if (isString()) {
-        // TODO: overflow
         bitwidth_t bits = bitwidth_t(str().length() * 8);
         if (!bits)
             bits = 8;
@@ -479,29 +478,31 @@ ConstantValue ConstantValue::convertToByteQueue(bool isSigned) const {
     return queue;
 }
 
-size_t ConstantValue::bitstreamWidth() const {
+uint32_t ConstantValue::getBitstreamWidth() const {
+    // Note that we don't have to worry about overflow in this
+    // method because we won't ever construct constant values large
+    // enough to overflow a 32-bit integer.
     if (isInteger())
         return integer().getBitWidth();
 
-    // TODO: check for overflow
     if (isString())
-        return str().length() * CHAR_BIT;
+        return uint32_t(str().length() * CHAR_BIT);
 
-    size_t width = 0;
+    uint32_t width = 0;
     if (isUnpacked()) {
         for (const auto& cv : elements())
-            width += cv.bitstreamWidth();
+            width += cv.getBitstreamWidth();
     }
     else if (isMap()) {
         for (const auto& kv : *map())
-            width += kv.second.bitstreamWidth();
+            width += kv.second.getBitstreamWidth();
     }
     else if (isQueue()) {
         for (const auto& cv : *queue())
-            width += cv.bitstreamWidth();
+            width += cv.getBitstreamWidth();
     }
     else if (isUnion()) {
-        width = unionVal()->value.bitstreamWidth();
+        width = unionVal()->value.getBitstreamWidth();
     }
 
     return width;
@@ -563,7 +564,7 @@ bool operator==(const ConstantValue& lhs, const ConstantValue& rhs) {
 
 std::partial_ordering operator<=>(const ConstantValue& lhs, const ConstantValue& rhs) {
     return std::visit(
-        [&](auto&& arg) {
+        [&](auto&& arg) -> std::partial_ordering {
             constexpr auto unordered = std::partial_ordering::unordered;
             using T = std::decay_t<decltype(arg)>;
             if constexpr (std::is_same_v<T, std::monostate>)
@@ -595,14 +596,10 @@ std::partial_ordering operator<=>(const ConstantValue& lhs, const ConstantValue&
                 return arg <=> std::get<ConstantValue::Elements>(rhs.value);
             }
             else if constexpr (std::is_same_v<T, std::string>) {
-                // TODO: clean this up once Xcode / libc++ get their act together
                 if (!rhs.isString())
                     return unordered;
 
-                int cmp = arg.compare(rhs.str());
-                return cmp < 0    ? std::partial_ordering::less
-                       : cmp == 0 ? std::partial_ordering::equivalent
-                                  : std::partial_ordering::greater;
+                return arg <=> rhs.str();
             }
             else if constexpr (std::is_same_v<T, ConstantValue::Map>) {
                 if (!rhs.isMap())
@@ -620,13 +617,7 @@ std::partial_ordering operator<=>(const ConstantValue& lhs, const ConstantValue&
                 if (!rhs.isUnion())
                     return unordered;
 
-                // TODO: clean this up once Xcode / libc++ get their act together
-                auto& ru = rhs.unionVal();
-                if (arg->activeMember < ru->activeMember)
-                    return std::partial_ordering::less;
-                if (arg->activeMember > ru->activeMember)
-                    return std::partial_ordering::greater;
-                return arg->value <=> ru->value;
+                return *arg <=> *rhs.unionVal();
             }
             else {
                 static_assert(always_false<T>::value, "Missing case");

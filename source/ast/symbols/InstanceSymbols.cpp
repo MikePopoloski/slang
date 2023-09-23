@@ -403,7 +403,7 @@ void InstanceSymbol::fromSyntax(Compilation& comp, const HierarchyInstantiationS
             // If not set, we error about the missing module, unless we see an extern
             // module or UDP declaration for this name, in which case we provide a
             // slightly different error.
-            if (!comp.getOptions().ignoreUnknownModules &&
+            if (!comp.hasFlag(CompilationFlags::IgnoreUnknownModules) &&
                 !comp.errorIfMissingExternModule(syntax.type.valueText(), *context.scope,
                                                  syntax.type.range()) &&
                 !comp.errorIfMissingExternPrimitive(syntax.type.valueText(), *context.scope,
@@ -584,7 +584,7 @@ void InstanceSymbol::resolvePortConnections() const {
         // If this is a top level module and we have interface ports, the user has
         // the option of allowing it by automatically instantiating interface instances
         // to connect them to.
-        if (isTopLevel() && comp.getOptions().allowTopLevelIfacePorts)
+        if (isTopLevel() && comp.hasFlag(CompilationFlags::AllowTopLevelIfacePorts))
             connectDefaultIfacePorts();
         return;
     }

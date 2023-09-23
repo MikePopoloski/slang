@@ -25,8 +25,11 @@ class SyntaxTree;
 }
 
 namespace slang::ast {
+
 class Compilation;
-}
+enum class CompilationFlags;
+
+} // namespace slang::ast
 
 namespace slang::driver {
 
@@ -73,7 +76,7 @@ public:
 
     /// A container for various options that can be parsed and applied
     /// to the compilation process.
-    struct Options {
+    struct SLANG_EXPORT Options {
         /// @name Preprocessing
         /// @{
 
@@ -144,32 +147,8 @@ public:
         /// any design elements that don't specify one explicitly.
         std::optional<std::string> timeScale;
 
-        /// If true, allow various to be referenced before they are declared.
-        std::optional<bool> allowUseBeforeDeclare;
-
-        /// If true, ignore errors about unknown modules.
-        std::optional<bool> ignoreUnknownModules;
-
-        /// If true, allow all integral types to convert implicitly to enum types.
-        std::optional<bool> relaxEnumConversions;
-
-        /// If true, allow hierarchical names in constant expressions.
-        std::optional<bool> allowHierarchicalConst;
-
-        /// Signals driven by an always_comb are normally not allowed to be driven
-        /// by any other process. Setting this option allows initial blocks to
-        /// also drive such signals.
-        std::optional<bool> allowDupInitialDrivers;
-
-        /// If true, allow top-level modules to have interface ports.
-        std::optional<bool> allowTopLevelIfacePorts;
-
-        /// If true, perform strict checking of variable drivers, which currently
-        /// means not taking into account procedural for loop unrolling.
-        std::optional<bool> strictDriverChecking;
-
-        /// If true, only perform linting of code, don't try to elaborate a full hierarchy.
-        std::optional<bool> onlyLint;
+        /// A collection of flags that control compilation.
+        std::map<ast::CompilationFlags, std::optional<bool>> compilationFlags;
 
         /// If non-empty, specifies the list of modules that should serve as the
         /// top modules in the design. If empty, this will be automatically determined
@@ -226,6 +205,9 @@ public:
         flat_hash_set<std::string> excludeExts;
 
         /// @}
+
+        /// Returns true if the lintMode option is provided.
+        bool lintMode() const;
     } options;
 
     /// Constructs a new instance of the @a Driver class.

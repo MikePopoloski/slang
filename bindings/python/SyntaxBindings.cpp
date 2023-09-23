@@ -224,9 +224,10 @@ void registerSyntax(py::module_& m) {
                     "text"_a, "name"_a = "source", "path"_a = "")
         .def_static("fromText",
                     py::overload_cast<std::string_view, SourceManager&, std::string_view,
-                                      std::string_view, const Bag&>(&SyntaxTree::fromText),
+                                      std::string_view, const Bag&, const SourceLibrary*>(
+                        &SyntaxTree::fromText),
                     "text"_a, "sourceManager"_a, "name"_a = "source", "path"_a = "",
-                    "options"_a = Bag())
+                    "options"_a = Bag(), "library"_a = nullptr)
         .def_static("fromFileInMemory", &SyntaxTree::fromFileInMemory, "text"_a, "sourceManager"_a,
                     "name"_a = "source", "path"_a = "", "options"_a = Bag())
         .def_static("fromBuffer", &SyntaxTree::fromBuffer, "buffer"_a, "sourceManager"_a,

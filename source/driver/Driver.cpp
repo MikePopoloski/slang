@@ -128,25 +128,35 @@ void Driver::addStandardArgs() {
     cmdLine.add("--timescale", options.timeScale,
                 "Default time scale to use for design elements that don't specify one explicitly",
                 "<base>/<precision>");
-    cmdLine.add("--allow-use-before-declare", options.allowUseBeforeDeclare,
+
+    auto addCompFlag = [&](CompilationFlags flag, std::string_view name, std::string_view desc) {
+        auto [it, inserted] = options.compilationFlags.emplace(flag, std::nullopt);
+        SLANG_ASSERT(inserted);
+        cmdLine.add(name, it->second, desc);
+    };
+
+    addCompFlag(CompilationFlags::AllowUseBeforeDeclare, "--allow-use-before-declare",
                 "Don't issue an error for use of names before their declarations.");
-    cmdLine.add("--ignore-unknown-modules", options.ignoreUnknownModules,
+    addCompFlag(CompilationFlags::IgnoreUnknownModules, "--ignore-unknown-modules",
                 "Don't issue an error for instantiations of unknown modules, "
                 "interface, and programs.");
-    cmdLine.add("--relax-enum-conversions", options.relaxEnumConversions,
+    addCompFlag(CompilationFlags::RelaxEnumConversions, "--relax-enum-conversions",
                 "Allow all integral types to convert implicitly to enum types.");
-    cmdLine.add("--allow-hierarchical-const", options.allowHierarchicalConst,
+    addCompFlag(CompilationFlags::RelaxStringConversions, "--relax-string-conversions",
+                "Allow string types to convert implicitly to integral types.");
+    addCompFlag(CompilationFlags::AllowHierarchicalConst, "--allow-hierarchical-const",
                 "Allow hierarchical references in constant expressions.");
-    cmdLine.add("--allow-dup-initial-drivers", options.allowDupInitialDrivers,
+    addCompFlag(CompilationFlags::AllowDupInitialDrivers, "--allow-dup-initial-drivers",
                 "Allow signals driven in an always_comb or always_ff block to also be driven "
                 "by initial blocks.");
-    cmdLine.add("--allow-toplevel-iface-ports", options.allowTopLevelIfacePorts,
+    addCompFlag(CompilationFlags::AllowTopLevelIfacePorts, "--allow-toplevel-iface-ports",
                 "Allow top-level modules to have interface ports.");
-    cmdLine.add("--strict-driver-checking", options.strictDriverChecking,
+    addCompFlag(CompilationFlags::StrictDriverChecking, "--strict-driver-checking",
                 "Perform strict driver checking, which currently means disabling "
                 "procedural 'for' loop unrolling.");
-    cmdLine.add("--lint-only", options.onlyLint,
+    addCompFlag(CompilationFlags::LintMode, "--lint-only",
                 "Only perform linting of code, don't try to elaborate a full hierarchy");
+
     cmdLine.add("--top", options.topModules,
                 "One or more top-level modules to instantiate "
                 "(instead of figuring it out automatically)",
@@ -372,12 +382,16 @@ bool Driver::processOptions() {
 
     if (options.compat.has_value()) {
         if (options.compat == "vcs") {
-            if (!options.allowHierarchicalConst.has_value())
-                options.allowHierarchicalConst = true;
-            if (!options.allowUseBeforeDeclare.has_value())
-                options.allowUseBeforeDeclare = true;
-            if (!options.relaxEnumConversions.has_value())
-                options.relaxEnumConversions = true;
+            auto vcsCompatFlags = {CompilationFlags::AllowHierarchicalConst,
+                                   CompilationFlags::AllowUseBeforeDeclare,
+                                   CompilationFlags::RelaxEnumConversions,
+                                   CompilationFlags::RelaxStringConversions};
+
+            for (auto flag : vcsCompatFlags) {
+                auto& option = options.compilationFlags.at(flag);
+                if (!option.has_value())
+                    option = true;
+            }
         }
         else {
             printError(fmt::format("invalid value for compat option: '{}'", *options.compat));
@@ -401,8 +415,11 @@ bool Driver::processOptions() {
         return false;
     }
 
-    if (options.onlyLint == true && !options.ignoreUnknownModules.has_value())
-        options.ignoreUnknownModules = true;
+    if (options.lintMode()) {
+        auto& opt = options.compilationFlags.at(CompilationFlags::IgnoreUnknownModules);
+        if (!opt.has_value())
+            opt = true;
+    }
 
     if (!reportLoadErrors())
         return false;
@@ -602,7 +619,7 @@ void Driver::addParseOptions(Bag& bag) const {
     SourceOptions soptions;
     soptions.numThreads = options.numThreads;
     soptions.singleUnit = options.singleUnit == true;
-    soptions.onlyLint = options.onlyLint == true;
+    soptions.onlyLint = options.lintMode();
     soptions.librariesInheritMacros = options.librariesInheritMacros == true;
 
     PreprocessorOptions ppoptions;
@@ -630,7 +647,7 @@ void Driver::addParseOptions(Bag& bag) const {
 
 void Driver::addCompilationOptions(Bag& bag) const {
     CompilationOptions coptions;
-    coptions.suppressUnused = false;
+    coptions.flags = CompilationFlags::None;
     if (options.maxInstanceDepth.has_value())
         coptions.maxInstanceDepth = *options.maxInstanceDepth;
     if (options.maxGenerateSteps.has_value())
@@ -645,24 +662,14 @@ void Driver::addCompilationOptions(Bag& bag) const {
         coptions.maxInstanceArray = *options.maxInstanceArray;
     if (options.errorLimit.has_value())
         coptions.errorLimit = *options.errorLimit * 2;
-    if (options.onlyLint == true) {
-        coptions.suppressUnused = true;
-        coptions.lintMode = true;
+
+    for (auto& [flag, value] : options.compilationFlags) {
+        if (value == true)
+            coptions.flags |= flag;
     }
-    if (options.allowHierarchicalConst == true)
-        coptions.allowHierarchicalConst = true;
-    if (options.allowDupInitialDrivers == true)
-        coptions.allowDupInitialDrivers = true;
-    if (options.relaxEnumConversions == true)
-        coptions.relaxEnumConversions = true;
-    if (options.strictDriverChecking == true)
-        coptions.strictDriverChecking = true;
-    if (options.ignoreUnknownModules == true)
-        coptions.ignoreUnknownModules = true;
-    if (options.allowUseBeforeDeclare == true)
-        coptions.allowUseBeforeDeclare = true;
-    if (options.allowTopLevelIfacePorts != true)
-        coptions.allowTopLevelIfacePorts = false;
+
+    if (options.lintMode())
+        coptions.flags |= CompilationFlags::SuppressUnused;
 
     for (auto& name : options.topModules)
         coptions.topModules.emplace(name);
@@ -778,6 +785,10 @@ void Driver::printWarning(const std::string& message) {
     OS::printE(fg(diagClient->warningColor), "warning: ");
     OS::printE(message);
     OS::printE("\n");
+}
+
+bool Driver::Options::lintMode() const {
+    return compilationFlags.at(CompilationFlags::LintMode) == true;
 }
 
 } // namespace slang::driver

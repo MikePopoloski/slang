@@ -275,6 +275,11 @@ but many popular tools allow it anyway so this flag can be used for compatibilit
 Allow all integral types to convert implicitly to enum types in assignments. SystemVerilog doesn't
 permit this, but some tools allow it anyway so this flag can be used for compatibility purposes.
 
+`--relax-string-conversions`
+
+Allow string types to convert implicitly to integral types in assignments. SystemVerilog doesn't
+permit this, but some tools allow it anyway so this flag can be used for compatibility purposes.
+
 `--allow-dup-initial-drivers`
 
 Allow signals driven by always_comb or always_ff procedures to also be driven by initial blocks.

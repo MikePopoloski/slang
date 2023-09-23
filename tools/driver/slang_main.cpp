@@ -118,7 +118,7 @@ int driverMain(int argc, TArgs argv) {
             return 2;
 
         if (onlyParse.has_value() + onlyPreprocess.has_value() + onlyMacros.has_value() +
-                driver.options.onlyLint.has_value() >
+                driver.options.lintMode() >
             1) {
             OS::printE(fg(driver.diagClient->errorColor), "error: ");
             OS::printE("can only specify one of --preprocess, --macros-only, "

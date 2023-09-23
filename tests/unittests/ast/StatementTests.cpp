@@ -1626,7 +1626,7 @@ endmodule
 )");
 
     CompilationOptions options;
-    options.strictDriverChecking = true;
+    options.flags |= CompilationFlags::StrictDriverChecking;
 
     Compilation compilation(options);
     compilation.addSyntaxTree(tree);

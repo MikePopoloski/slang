@@ -90,14 +90,14 @@
       "name": "gcc-flags",
       "hidden": true,
       "cacheVariables": {
-        "SLANG_WARN_FLAGS": "-Wall;-Wextra;-Werror;-Wunused-value;-Wformat-security;-Wimplicit-fallthrough=5;-Walloc-zero;-Wlogical-op;-Wlogical-not-parentheses;-Wvla;-Wduplicated-cond;-Wtype-limits;-Wno-maybe-uninitialized"
+        "SLANG_WARN_FLAGS": "-Wall;-Wextra;-Werror;-Wunused-value;-Wformat-security;-Wimplicit-fallthrough=5;-Walloc-zero;-Wlogical-op;-Wlogical-not-parentheses;-Wvla;-Wduplicated-cond;-Wtype-limits;-Wno-maybe-uninitialized;-Wno-alloc-size-larger-than;-Wno-dangling-reference;-Wno-stringop-overflow"
       }
     },
     {
       "name": "clang-flags",
       "hidden": true,
       "cacheVariables": {
-        "SLANG_WARN_FLAGS": "-Wall;-Wextra;-Werror;-Warray-bounds-pointer-arithmetic;-Wassign-enum;-Wbad-function-cast;-Wcast-qual;-Wchar-subscripts;-Wcomma;-Wconditional-uninitialized;-Wconversion;-Wdelete-non-virtual-dtor;-Wdeprecated;-Wduplicate-enum;-Wduplicate-method-arg;-Wembedded-directive;-Wfor-loop-analysis;-Wformat-pedantic;-Widiomatic-parentheses;-Wimplicit-fallthrough;-Wpedantic;-Wrange-loop-analysis;-Wredundant-parens;-Wreserved-id-macro;-Wshadow;-Wundefined-reinterpret-cast;-Wunreachable-code-aggressive;-Wno-missing-braces"
+        "SLANG_WARN_FLAGS": "-Wall;-Wextra;-Werror;-Warray-bounds-pointer-arithmetic;-Wassign-enum;-Wbad-function-cast;-Wcast-qual;-Wchar-subscripts;-Wcomma;-Wconditional-uninitialized;-Wconversion;-Wdelete-non-virtual-dtor;-Wdeprecated;-Wduplicate-enum;-Wduplicate-method-arg;-Wembedded-directive;-Wfor-loop-analysis;-Wformat-pedantic;-Widiomatic-parentheses;-Wimplicit-fallthrough;-Wpedantic;-Wrange-loop-analysis;-Wredundant-parens;-Wreserved-id-macro;-Wshadow;-Wundefined-reinterpret-cast;-Wunreachable-code-aggressive;-Wno-missing-braces;-Wno-deprecated-literal-operator"
       }
     },
     {
@@ -121,7 +121,7 @@
       ],
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
-        "CMAKE_CXX_COMPILER": "clang++-16"
+        "CMAKE_CXX_COMPILER": "clang++-17"
       }
     },
     {
@@ -133,7 +133,7 @@
       ],
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "CMAKE_CXX_COMPILER": "clang++-16"
+        "CMAKE_CXX_COMPILER": "clang++-17"
       }
     },
     {
@@ -146,11 +146,11 @@
       ],
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "RelWithDebInfo",
-        "CMAKE_CXX_COMPILER": "clang++-16",
+        "CMAKE_CXX_COMPILER": "clang++-17",
         "CMAKE_CXX_FLAGS": "-fsanitize=undefined,address -fno-sanitize-recover=undefined -fno-omit-frame-pointer -fno-common",
         "CMAKE_EXE_LINKER_FLAGS": "-fsanitize=undefined,address -fno-sanitize-recover=undefined",
         "CMAKE_SHARED_LINKER_FLAGS": "-fsanitize=undefined,address -fno-sanitize-recover=undefined",
-        "SLANG_CLANG_TIDY": "clang-tidy-16"
+        "SLANG_CLANG_TIDY": "clang-tidy-17"
       }
     },
     {
@@ -162,7 +162,7 @@
       ],
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
-        "CMAKE_CXX_COMPILER": "g++-12",
+        "CMAKE_CXX_COMPILER": "g++-13",
         "BUILD_SHARED_LIBS": "ON"
       }
     },
@@ -176,7 +176,7 @@
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
         "CMAKE_CXX_FLAGS": "-fno-exceptions -fno-rtti",
-        "CMAKE_CXX_COMPILER": "g++-12"
+        "CMAKE_CXX_COMPILER": "g++-13"
       }
     },
     {
@@ -188,11 +188,11 @@
       ],
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "CMAKE_CXX_COMPILER": "g++-12"
+        "CMAKE_CXX_COMPILER": "g++-13"
       }
     },
     {
-      "name": "gcc-10-release",
+      "name": "gcc-11-release",
       "displayName": "GCC Release",
       "inherits": [
         "linux-base",
@@ -200,7 +200,7 @@
       ],
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "CMAKE_CXX_COMPILER": "g++-10"
+        "CMAKE_CXX_COMPILER": "g++-11"
       }
     },
     {
@@ -211,12 +211,12 @@
       ],
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Coverage",
-        "CMAKE_CXX_COMPILER": "g++-12",
+        "CMAKE_CXX_COMPILER": "g++-13",
         "CMAKE_CXX_FLAGS_COVERAGE": "-Og -g --coverage -DSLANG_ASSERT_ENABLED=0 -fno-omit-frame-pointer -fno-optimize-sibling-calls -fno-inline -fno-inline-small-functions -fno-default-inline",
         "CMAKE_EXE_LINKER_FLAGS_COVERAGE": "--coverage",
         "CMAKE_SHARED_LINKER_FLAGS_COVERAGE": "--coverage",
         "SLANG_INCLUDE_COVERAGE": "ON",
-        "COVERAGE_GCOV_TOOL": "gcov-12"
+        "COVERAGE_GCOV_TOOL": "gcov-13"
       }
     },
     {

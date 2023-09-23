@@ -1905,7 +1905,7 @@ endgroup
 )");
 
     CompilationOptions options;
-    options.allowUseBeforeDeclare = true;
+    options.flags |= CompilationFlags::AllowUseBeforeDeclare;
 
     Compilation compilation(options);
     compilation.addSyntaxTree(tree);

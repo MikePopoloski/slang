@@ -2241,3 +2241,22 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::CheckerFuncArg);
 }
+
+TEST_CASE("Duplicate assertion local variable error") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    sequence s;
+        int foo;
+        int foo;
+        1;
+    endsequence
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::Redefinition);
+}

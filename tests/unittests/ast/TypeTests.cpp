@@ -2111,3 +2111,22 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::ImplicitConvert);
 }
+
+TEST_CASE("Implicit string conversion compat flag") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    string strValue;
+    integer intValue;
+    initial begin
+        intValue = strValue;
+    end
+endmodule
+)");
+
+    CompilationOptions options;
+    options.flags |= CompilationFlags::RelaxStringConversions;
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

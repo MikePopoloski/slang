@@ -9,20 +9,6 @@
 #include "slang/ast/SystemSubroutine.h"
 #include "slang/ast/types/Type.h"
 
-// TODO: remove once AppleClang finally adds support for this
-template<typename Dest, typename Source>
-inline Dest bit_cast(const Source& src) noexcept {
-    static_assert(sizeof(Dest) == sizeof(Source),
-                  "bit_cast requires source and destination to be the same size");
-    static_assert(std::is_trivially_copyable<Dest>::value,
-                  "bit_cast requires the destination type to be copyable");
-    static_assert(std::is_trivially_copyable<Source>::value,
-                  "bit_cast requires the source type to be copyable");
-    Dest dst;
-    std::memcpy(&dst, &src, sizeof(Dest));
-    return dst;
-}
-
 namespace slang::ast::builtins {
 
 class SignedConversionFunction : public SystemSubroutine {
@@ -115,7 +101,7 @@ public:
         if (!val)
             return nullptr;
 
-        return SVInt(64, bit_cast<uint64_t>(val.real()), false);
+        return SVInt(64, std::bit_cast<uint64_t>(val.real()), false);
     }
 };
 
@@ -133,7 +119,7 @@ public:
             return nullptr;
 
         uint64_t i = val.integer().as<uint64_t>().value_or(0);
-        return real_t(bit_cast<double>(i));
+        return real_t(std::bit_cast<double>(i));
     }
 };
 
@@ -150,7 +136,7 @@ public:
         if (!val)
             return nullptr;
 
-        return SVInt(32, bit_cast<uint32_t>(val.shortReal()), false);
+        return SVInt(32, std::bit_cast<uint32_t>(val.shortReal()), false);
     }
 };
 
@@ -168,7 +154,7 @@ public:
             return nullptr;
 
         uint32_t i = val.integer().as<uint32_t>().value_or(0);
-        return shortreal_t(bit_cast<float>(i));
+        return shortreal_t(std::bit_cast<float>(i));
     }
 };
 

@@ -26,8 +26,7 @@ endmodule
 )");
 
     CompilationOptions coptions;
-    coptions.suppressUnused = false;
-    coptions.allowTopLevelIfacePorts = false;
+    coptions.flags = CompilationFlags::None;
 
     Compilation compilation(coptions);
     compilation.addSyntaxTree(tree);
@@ -80,7 +79,7 @@ endmodule
 )");
 
     CompilationOptions coptions;
-    coptions.suppressUnused = false;
+    coptions.flags &= ~CompilationFlags::SuppressUnused;
 
     Compilation compilation(coptions);
     compilation.addSyntaxTree(tree);
@@ -203,7 +202,7 @@ endclass
 )");
 
     CompilationOptions coptions;
-    coptions.suppressUnused = false;
+    coptions.flags = CompilationFlags::None;
 
     Compilation compilation(coptions);
     compilation.addSyntaxTree(tree);
@@ -228,7 +227,7 @@ endmodule
 )");
 
     CompilationOptions coptions;
-    coptions.suppressUnused = false;
+    coptions.flags = CompilationFlags::None;
 
     Compilation compilation(coptions);
     compilation.addSyntaxTree(tree);
@@ -286,7 +285,7 @@ endmodule
 )");
 
     CompilationOptions coptions;
-    coptions.suppressUnused = false;
+    coptions.flags = CompilationFlags::None;
 
     Compilation compilation(coptions);
     compilation.addSyntaxTree(tree);
@@ -332,7 +331,7 @@ endmodule
 )");
 
     CompilationOptions coptions;
-    coptions.suppressUnused = false;
+    coptions.flags = CompilationFlags::None;
 
     Compilation compilation(coptions);
     compilation.addSyntaxTree(tree);
@@ -350,7 +349,7 @@ endmodule
 )");
 
     CompilationOptions coptions;
-    coptions.suppressUnused = false;
+    coptions.flags = CompilationFlags::None;
 
     Compilation compilation(coptions);
     compilation.addSyntaxTree(tree);
@@ -385,7 +384,7 @@ endmodule
 )");
 
     CompilationOptions coptions;
-    coptions.suppressUnused = false;
+    coptions.flags = CompilationFlags::None;
 
     Compilation compilation(coptions);
     compilation.addSyntaxTree(tree);
@@ -414,7 +413,7 @@ endmodule
 )");
 
     CompilationOptions coptions;
-    coptions.suppressUnused = false;
+    coptions.flags = CompilationFlags::None;
 
     Compilation compilation(coptions);
     compilation.addSyntaxTree(tree);
@@ -455,7 +454,7 @@ endmodule
 )");
 
     CompilationOptions coptions;
-    coptions.suppressUnused = false;
+    coptions.flags = CompilationFlags::None;
 
     Compilation compilation(coptions);
     compilation.addSyntaxTree(tree);
@@ -471,7 +470,7 @@ endmodule
 )");
 
     CompilationOptions coptions;
-    coptions.suppressUnused = false;
+    coptions.flags = CompilationFlags::None;
 
     Compilation compilation(coptions);
     compilation.addSyntaxTree(tree);
@@ -487,7 +486,7 @@ endmodule
 )");
 
     CompilationOptions coptions;
-    coptions.suppressUnused = false;
+    coptions.flags = CompilationFlags::None;
 
     Compilation compilation(coptions);
     compilation.addSyntaxTree(tree);
@@ -520,7 +519,7 @@ endmodule
 )");
 
     CompilationOptions coptions;
-    coptions.suppressUnused = false;
+    coptions.flags = CompilationFlags::None;
 
     Compilation compilation(coptions);
     compilation.addSyntaxTree(tree);
@@ -552,7 +551,7 @@ endmodule
 )");
 
     CompilationOptions coptions;
-    coptions.suppressUnused = false;
+    coptions.flags = CompilationFlags::None;
 
     Compilation compilation(coptions);
     compilation.addSyntaxTree(tree);
@@ -569,7 +568,7 @@ endmodule
 )");
 
     CompilationOptions coptions;
-    coptions.suppressUnused = false;
+    coptions.flags = CompilationFlags::None;
 
     Compilation compilation(coptions);
     compilation.addSyntaxTree(tree);
@@ -597,7 +596,7 @@ endmodule
 )");
 
     CompilationOptions coptions;
-    coptions.suppressUnused = false;
+    coptions.flags = CompilationFlags::None;
 
     Compilation compilation(coptions);
     compilation.addSyntaxTree(tree);

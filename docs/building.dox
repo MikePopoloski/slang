@@ -15,11 +15,11 @@ git clone https://github.com/MikePopoloski/slang.git
 
 slang requires the following tools in order to build:
 - [python 3](https://www.python.org/)
-- [CMake](https://cmake.org/) (3.15 or later)
+- [CMake](https://cmake.org/) (3.20 or later)
 - C++20 compatible compiler. Minimum supported compiler versions:
-    - GCC 10
+    - GCC 11
     - clang 16
-    - XCode 14.3
+    - Xcode 15
     - MSVC support is tested only against the most recent update of VS 2022
 
 @section building-start Quick Start

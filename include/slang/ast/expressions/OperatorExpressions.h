@@ -251,10 +251,6 @@ private:
 /// Represents a streaming concatenation.
 class SLANG_EXPORT StreamingConcatenationExpression : public Expression {
 public:
-    /// The size of the blocks to slice and reorder: if 0, this is a left-to-right
-    /// concatenation. Otherwise, it's a right-to-left concatenation.
-    const uint32_t sliceSize;
-
     struct StreamExpression {
         not_null<const Expression*> operand;
         const Expression* withExpr;
@@ -265,10 +261,14 @@ public:
                                      std::span<const StreamExpression> streams,
                                      SourceRange sourceRange) :
         Expression(ExpressionKind::Streaming, type, sourceRange),
-        sliceSize(sliceSize), streams_(streams), bitstreamWidth(bitstreamWidth) {}
+        streams_(streams), sliceSize(sliceSize), bitstreamWidth(bitstreamWidth) {}
 
     bool isFixedSize() const;
     uint32_t getBitstreamWidth() const { return bitstreamWidth; }
+
+    /// Gets the size of the blocks to slice and reorder: if 0, this is a left-to-right
+    /// concatenation. Otherwise, it's a right-to-left concatenation.
+    uint32_t getSliceSize() const { return sliceSize; }
 
     std::span<const StreamExpression> streams() const { return streams_; }
 
@@ -293,6 +293,7 @@ public:
 
 private:
     std::span<const StreamExpression> streams_;
+    uint32_t sliceSize;
     uint32_t bitstreamWidth;
 };
 

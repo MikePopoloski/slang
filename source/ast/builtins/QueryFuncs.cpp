@@ -50,7 +50,7 @@ public:
         if (!noHierarchical(context, *args[0]))
             return nullptr;
 
-        size_t width;
+        uint32_t width;
         if (args[0]->type->isFixedSize()) {
             width = args[0]->type->getBitstreamWidth();
         }
@@ -58,10 +58,9 @@ public:
             ConstantValue cv = args[0]->eval(context);
             if (!cv)
                 return nullptr;
-            width = cv.bitstreamWidth();
+            width = cv.getBitstreamWidth();
         }
 
-        // TODO: width > INT_MAX
         return SVInt(32, width, true);
     }
 };

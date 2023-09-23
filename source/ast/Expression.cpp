@@ -920,8 +920,10 @@ Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syn
                                  const ArrayOrRandomizeMethodExpressionSyntax* withClause,
                                  const ASTContext& context) {
     bitmask<LookupFlags> flags = LookupFlags::None;
-    if ((invocation && invocation->arguments) || compilation.getOptions().allowUseBeforeDeclare)
+    if ((invocation && invocation->arguments) ||
+        compilation.hasFlag(CompilationFlags::AllowUseBeforeDeclare)) {
         flags |= LookupFlags::AllowDeclaredAfter;
+    }
 
     // Special case scenarios: temporary variables, class-scoped randomize calls,
     // and expanding sequences and properties.

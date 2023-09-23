@@ -65,8 +65,21 @@ void registerCompilation(py::module_& m) {
         .value("Typ", MinTypMax::Typ)
         .value("Max", MinTypMax::Max);
 
+    py::enum_<CompilationFlags>(m, "CompilationFlags")
+        .value("None", CompilationFlags::None)
+        .value("AllowHierarchicalConst", CompilationFlags::AllowHierarchicalConst)
+        .value("RelaxEnumConversions", CompilationFlags::RelaxEnumConversions)
+        .value("AllowUseBeforeDeclare", CompilationFlags::AllowUseBeforeDeclare)
+        .value("AllowDupInitialDrivers", CompilationFlags::AllowDupInitialDrivers)
+        .value("AllowTopLevelIfacePorts", CompilationFlags::AllowTopLevelIfacePorts)
+        .value("StrictDriverChecking", CompilationFlags::StrictDriverChecking)
+        .value("LintMode", CompilationFlags::LintMode)
+        .value("SuppressUnused", CompilationFlags::SuppressUnused)
+        .value("IgnoreUnknownModules", CompilationFlags::IgnoreUnknownModules);
+
     py::class_<CompilationOptions>(m, "CompilationOptions")
         .def(py::init<>())
+        .def_readwrite("flags", &CompilationOptions::flags)
         .def_readwrite("maxInstanceDepth", &CompilationOptions::maxInstanceDepth)
         .def_readwrite("maxGenerateSteps", &CompilationOptions::maxGenerateSteps)
         .def_readwrite("maxConstexprDepth", &CompilationOptions::maxConstexprDepth)
@@ -77,15 +90,6 @@ void registerCompilation(py::module_& m) {
         .def_readwrite("errorLimit", &CompilationOptions::errorLimit)
         .def_readwrite("typoCorrectionLimit", &CompilationOptions::typoCorrectionLimit)
         .def_readwrite("minTypMax", &CompilationOptions::minTypMax)
-        .def_readwrite("allowHierarchicalConst", &CompilationOptions::allowHierarchicalConst)
-        .def_readwrite("relaxEnumConversions", &CompilationOptions::relaxEnumConversions)
-        .def_readwrite("allowUseBeforeDeclare", &CompilationOptions::allowUseBeforeDeclare)
-        .def_readwrite("allowDupInitialDrivers", &CompilationOptions::allowDupInitialDrivers)
-        .def_readwrite("allowTopLevelIfacePorts", &CompilationOptions::allowTopLevelIfacePorts)
-        .def_readwrite("strictDriverChecking", &CompilationOptions::strictDriverChecking)
-        .def_readwrite("lintMode", &CompilationOptions::lintMode)
-        .def_readwrite("suppressUnused", &CompilationOptions::suppressUnused)
-        .def_readwrite("ignoreUnknownModules", &CompilationOptions::ignoreUnknownModules)
         .def_readwrite("defaultTimeScale", &CompilationOptions::defaultTimeScale)
         .def_readwrite("topModules", &CompilationOptions::topModules)
         .def_readwrite("paramOverrides", &CompilationOptions::paramOverrides);

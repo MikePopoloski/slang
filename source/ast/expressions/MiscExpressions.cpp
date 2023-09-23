@@ -449,7 +449,7 @@ bool NamedValueExpression::checkConstant(EvalContext& context) const {
 }
 
 ConstantValue HierarchicalValueExpression::evalImpl(EvalContext& context) const {
-    if (!context.getCompilation().getOptions().allowHierarchicalConst) {
+    if (!context.getCompilation().hasFlag(CompilationFlags::AllowHierarchicalConst)) {
         context.addDiag(diag::ConstEvalHierarchicalName, sourceRange) << symbol.name;
         return nullptr;
     }
@@ -702,10 +702,12 @@ static const AssertionExpr& bindAssertionBody(const Symbol& symbol, const Syntax
             LocalAssertionVarSymbol::fromSyntax(*context.scope, *varSyntax, vars);
             for (auto var : vars) {
                 var->getDeclaredType()->forceResolveAt(context);
-                localVars.push_back(var);
                 if (!var->name.empty()) {
-                    // TODO: check duplicates
-                    instance.localVars.emplace(var->name, var);
+                    auto [it, inserted] = instance.localVars.emplace(var->name, var);
+                    if (inserted)
+                        localVars.push_back(var);
+                    else
+                        context.scope->reportNameConflict(*var, *it->second);
                 }
             }
         }
