@@ -117,7 +117,7 @@ public:
 
     Trivia clone(BumpAllocator& alloc) const;
 };
-#if !defined(_M_IX86)
+#if !defined(_M_IX86) && !defined(__clang_analyzer__)
 static_assert(sizeof(Trivia) == 16);
 #endif
 
