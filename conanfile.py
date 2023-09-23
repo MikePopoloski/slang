@@ -8,9 +8,9 @@ class CompressorRecipe(ConanFile):
 
     def requirements(self):
         self.requires("mimalloc/2.1.2")
-        self.requires("catch2/3.3.2")
-        self.requires("pybind11/2.10.4")
-        self.requires("fmt/10.0.0")
+        self.requires("catch2/3.4.0")
+        self.requires("pybind11/2.11.1")
+        self.requires("fmt/10.1.1")
 
     def layout(self):
         self.folders.build_folder_vars = [
