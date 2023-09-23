@@ -67,7 +67,7 @@ struct VariableSelectorBase {
 
 /// A variable selector representing an element selector.
 struct VariableElementSelect : public VariableSelectorBase {
-    const ast::Expression &expr;
+    const ast::Expression& expr;
     ConstantValue index;
 
     VariableElementSelect(ast::Expression const& expr, ConstantValue index) :
@@ -78,9 +78,7 @@ struct VariableElementSelect : public VariableSelectorBase {
         return otherKind == VariableSelectorKind::ElementSelect;
     }
 
-    bool indexIsConstant() const {
-        return !index.bad();
-    }
+    bool indexIsConstant() const { return !index.bad(); }
 
     int32_t getIndexInt() const {
         auto intValue = index.integer().as<int32_t>();
@@ -89,17 +87,18 @@ struct VariableElementSelect : public VariableSelectorBase {
     }
 
     std::string toString() const override {
-      if (indexIsConstant()) {
-        return fmt::format("[{}]", index.toString());
-      } else {
-        return fmt::format("[{}]", expr.syntax->toString());
-      }
+        if (indexIsConstant()) {
+            return fmt::format("[{}]", index.toString());
+        }
+        else {
+            return fmt::format("[{}]", expr.syntax->toString());
+        }
     }
 };
 
 /// A variable selector representing a range selector.
 struct VariableRangeSelect : public VariableSelectorBase {
-    const ast::RangeSelectExpression &expr;
+    const ast::RangeSelectExpression& expr;
     ConstantValue leftIndex, rightIndex;
 
     VariableRangeSelect(ast::RangeSelectExpression const& expr, ConstantValue leftIndex,
@@ -111,13 +110,9 @@ struct VariableRangeSelect : public VariableSelectorBase {
         return otherKind == VariableSelectorKind::RangeSelect;
     }
 
-    bool leftIndexIsConstant() const {
-        return !leftIndex.bad();
-    }
+    bool leftIndexIsConstant() const { return !leftIndex.bad(); }
 
-    bool rightIndexIsConstant() const {
-        return !rightIndex.bad();
-    }
+    bool rightIndexIsConstant() const { return !rightIndex.bad(); }
 
     int32_t getLeftIndexInt() const {
         auto intValue = leftIndex.integer().as<int32_t>();
@@ -134,25 +129,27 @@ struct VariableRangeSelect : public VariableSelectorBase {
     std::string toString() const override {
         std::string left;
         if (leftIndexIsConstant()) {
-          left = leftIndex.toString();
-        } else {
-          left = expr.left().syntax->toString();
+            left = leftIndex.toString();
+        }
+        else {
+            left = expr.left().syntax->toString();
         }
         std::string right;
         if (rightIndexIsConstant()) {
-          right = rightIndex.toString();
-        } else {
-          right = expr.right().syntax->toString();
+            right = rightIndex.toString();
+        }
+        else {
+            right = expr.right().syntax->toString();
         }
         switch (expr.getSelectionKind()) {
-          case ast::RangeSelectionKind::Simple:
-              return fmt::format("[{}:{}]", left, right);
-          case ast::RangeSelectionKind::IndexedUp:
-              return fmt::format("[{}+:{}]", left, right);
-          case ast::RangeSelectionKind::IndexedDown:
-              return fmt::format("[{}-:{}]", left, right);
-          default:
-              SLANG_UNREACHABLE;
+            case ast::RangeSelectionKind::Simple:
+                return fmt::format("[{}:{}]", left, right);
+            case ast::RangeSelectionKind::IndexedUp:
+                return fmt::format("[{}+:{}]", left, right);
+            case ast::RangeSelectionKind::IndexedDown:
+                return fmt::format("[{}-:{}]", left, right);
+            default:
+                SLANG_UNREACHABLE;
         }
     }
 };
@@ -271,12 +268,12 @@ public:
         NetlistNode(NodeKind::VariableReference, symbol),
         expression(expr), leftOperand(leftOperand) {}
 
-    void addElementSelect(ast::ElementSelectExpression const &expr, const ConstantValue& index) {
+    void addElementSelect(ast::ElementSelectExpression const& expr, const ConstantValue& index) {
         selectors.emplace_back(std::make_unique<VariableElementSelect>(expr.selector(), index));
     }
 
-    void addRangeSelect(ast::RangeSelectExpression const& expr,
-                        const ConstantValue& leftIndex, const ConstantValue& rightIndex) {
+    void addRangeSelect(ast::RangeSelectExpression const& expr, const ConstantValue& leftIndex,
+                        const ConstantValue& rightIndex) {
         selectors.emplace_back(std::make_unique<VariableRangeSelect>(expr, leftIndex, rightIndex));
     }
 
@@ -300,11 +297,12 @@ public:
 
     /// Return a string representation of this variable reference.
     std::string toString() const {
-      if (selectors.empty()) {
-          return fmt::format("{}", getName());
-      } else {
-          return fmt::format("{}{}", getName(), selectorString());
-      }
+        if (selectors.empty()) {
+            return fmt::format("{}", getName());
+        }
+        else {
+            return fmt::format("{}{}", getName(), selectorString());
+        }
     }
 
 public:

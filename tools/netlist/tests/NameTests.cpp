@@ -55,4 +55,3 @@ endmodule
     auto netlist = createNetlist(compilation);
     CHECK(netlist.numNodes() > 0);
 }
-

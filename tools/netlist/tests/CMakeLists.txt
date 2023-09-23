@@ -5,9 +5,13 @@
 
 add_executable(
   netlist_unittests
-  ../../../tests/unittests/main.cpp ../../../tests/unittests/Test.cpp
+  ../../../tests/unittests/main.cpp
+  ../../../tests/unittests/Test.cpp
   ../source/Netlist.cpp
-  DepthFirstSearchTests.cpp DirectedGraphTests.cpp NameTests.cpp PathTests.cpp
+  DepthFirstSearchTests.cpp
+  DirectedGraphTests.cpp
+  NameTests.cpp
+  PathTests.cpp
   VariableSelectorsTests.cpp)
 
 target_link_libraries(

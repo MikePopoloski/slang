@@ -10,13 +10,12 @@
 #include "SplitVariables.h"
 #include <stdexcept>
 
-
 /// Helper method to extract a variable reference from a netlist and return the
 /// bit range associated with it.
-ConstantRange getBitRange(Netlist &netlist, std::string_view variableSyntax) {
+ConstantRange getBitRange(Netlist& netlist, std::string_view variableSyntax) {
     auto* node = netlist.lookupVariableReference(variableSyntax);
     if (node == nullptr) {
-      throw std::runtime_error(fmt::format("Could not find node {}", variableSyntax));
+        throw std::runtime_error(fmt::format("Could not find node {}", variableSyntax));
     }
     return AnalyseVariableReference::create(*node).getBitRange();
 }
@@ -418,7 +417,7 @@ endmodule
 //===---------------------------------------------------------------------===//
 
 TEST_CASE("Struct with packed array members") {
-  // Test recursion from packed struct.
+    // Test recursion from packed struct.
     auto tree = SyntaxTree::fromText(R"(
 module m;
   struct packed {
@@ -445,7 +444,7 @@ endmodule
 }
 
 TEST_CASE("Packed struct with packed union and enum members") {
-  // Test recursion from packed struct.
+    // Test recursion from packed struct.
     auto tree = SyntaxTree::fromText(R"(
 module m;
   typedef enum int { A, B, C } enum_t;
@@ -480,7 +479,7 @@ endmodule
 }
 
 TEST_CASE("Packed arrays of structs etc") {
-  // Test recursion from packed packed array, packed struct, packed union.
+    // Test recursion from packed packed array, packed struct, packed union.
     auto tree = SyntaxTree::fromText(R"(
 module m;
   typedef enum int { A, B, C } enum_t;

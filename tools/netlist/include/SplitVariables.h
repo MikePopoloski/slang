@@ -20,7 +20,6 @@
 #include "slang/numeric/SVInt.h"
 #include "slang/util/Util.h"
 
-
 namespace netlist {
 
 class AnalyseVariableReference {
@@ -29,12 +28,12 @@ private:
     NetlistVariableReference::SelectorsListType::iterator selectorsIt;
 
 public:
-    static AnalyseVariableReference create(NetlistVariableReference &node) {
+    static AnalyseVariableReference create(NetlistVariableReference& node) {
         return AnalyseVariableReference(node);
     }
 
-    AnalyseVariableReference(NetlistVariableReference &node) :
-      node(node), selectorsIt(node.selectors.begin()) {}
+    AnalyseVariableReference(NetlistVariableReference& node) :
+        node(node), selectorsIt(node.selectors.begin()) {}
 
     std::pair<size_t, size_t> getTypeBitWidthImpl(slang::ast::Type const& type) {
         size_t fixedSize = type.getBitWidth();
@@ -55,24 +54,24 @@ public:
 
     /// Return the bit width of a slang type, treating unpacked arrays as
     /// as if they were packed.
-    int32_t getTypeBitWidth(slang::ast::Type const &type) {
-       auto [multiplierElem, fixedSizeElem] =  getTypeBitWidthImpl(type);
-       return (int32_t) (multiplierElem * fixedSizeElem);
+    int32_t getTypeBitWidth(slang::ast::Type const& type) {
+        auto [multiplierElem, fixedSizeElem] = getTypeBitWidthImpl(type);
+        return (int32_t)(multiplierElem * fixedSizeElem);
     }
 
     /// Given a scope, return the type of the named field.
     slang::ast::Type const& getScopeFieldType(const slang::ast::Scope& scope,
-                                               const std::string_view name) const {
+                                              const std::string_view name) const {
         auto* symbol = scope.find(name);
         SLANG_ASSERT(symbol != nullptr);
         return symbol->getDeclaredType()->getType();
     }
 
     /// Given a packed struct type, return the bit position of the named field.
-    ConstantRange getStructFieldRange(const slang::ast::PackedStructType &packedStruct,
+    ConstantRange getStructFieldRange(const slang::ast::PackedStructType& packedStruct,
                                       const std::string_view fieldName) const {
         int32_t offset = 0;
-        for (auto &member : packedStruct.members()) {
+        for (auto& member : packedStruct.members()) {
             int32_t fieldWidth = member.getDeclaredType()->getType().getBitWidth();
             if (member.name == fieldName) {
                 return {offset, offset + fieldWidth - 1};
@@ -83,7 +82,7 @@ public:
     }
 
     /// Given a packed union type, return the bit position of the named field.
-    ConstantRange getUnionFieldRange(const slang::ast::PackedUnionType &packedUnion,
+    ConstantRange getUnionFieldRange(const slang::ast::PackedUnionType& packedUnion,
                                      const std::string_view fieldName) const {
         auto* symbol = packedUnion.find(fieldName);
         SLANG_ASSERT(symbol != nullptr);
@@ -98,7 +97,7 @@ public:
     }
 
     /// Given an array type, return the range from which the array is indexed.
-    ConstantRange getArrayRange(const slang::ast::Type &type) {
+    ConstantRange getArrayRange(const slang::ast::Type& type) {
         if (type.kind == slang::ast::SymbolKind::PackedArrayType) {
             auto& arrayType = type.as<slang::ast::PackedArrayType>();
             return arrayType.range;
@@ -108,17 +107,17 @@ public:
             return arrayType.range;
         }
         else {
-          SLANG_ASSERT(0 && "unexpected array type");
+            SLANG_ASSERT(0 && "unexpected array type");
         }
     }
 
     ConstantRange handleScalarElementSelect(const slang::ast::Type& type, ConstantRange range) {
         const auto& elementSelector = selectorsIt->get()->as<VariableElementSelect>();
         if (!elementSelector.indexIsConstant()) {
-          // If the selector is not a constant, then return the whole scalar as
-          // the range. No further selectors expected.
-          SLANG_ASSERT(std::next(selectorsIt) == node.selectors.end());
-          return {range.lower(), range.lower() + (int32_t)type.getBitWidth() - 1};
+            // If the selector is not a constant, then return the whole scalar as
+            // the range. No further selectors expected.
+            SLANG_ASSERT(std::next(selectorsIt) == node.selectors.end());
+            return {range.lower(), range.lower() + (int32_t)type.getBitWidth() - 1};
         }
         // Create a new range.
         int32_t index = range.lower() + elementSelector.getIndexInt();
@@ -126,7 +125,7 @@ public:
         return {index, index};
     }
 
-    ConstantRange handleScalarRangeSelect(const slang::ast::Type &type, ConstantRange range) {
+    ConstantRange handleScalarRangeSelect(const slang::ast::Type& type, ConstantRange range) {
         const auto& rangeSelector = selectorsIt->get()->as<VariableRangeSelect>();
         int32_t rightIndex = rangeSelector.getRightIndexInt();
         int32_t leftIndex = rangeSelector.getLeftIndexInt();
@@ -134,24 +133,25 @@ public:
         SLANG_ASSERT(rangeSelector.leftIndexIsConstant());
         SLANG_ASSERT(rangeSelector.rightIndexIsConstant());
         // Create a new range.
-        ConstantRange newRange = {range.lower() + rightIndex,
-                                  range.lower() + leftIndex};
+        ConstantRange newRange = {range.lower() + rightIndex, range.lower() + leftIndex};
         SLANG_ASSERT(range.contains(newRange));
         if (std::next(selectorsIt) != node.selectors.end()) {
             selectorsIt++;
             return getBitRangeImpl(type, newRange);
-        } else {
+        }
+        else {
             return newRange;
         }
     }
 
-    ConstantRange handleScalarRangeSelectIncr(const slang::ast::Type &type, ConstantRange range, bool isUp) {
+    ConstantRange handleScalarRangeSelectIncr(const slang::ast::Type& type, ConstantRange range,
+                                              bool isUp) {
         const auto& rangeSelector = selectorsIt->get()->as<VariableRangeSelect>();
         if (!rangeSelector.leftIndexIsConstant()) {
-          // If the selector base is not constant, then return the whole scalar
-          // as the range and halt analysis of any further selectors.
-          selectorsIt = node.selectors.end();
-          return {range.lower(), range.lower() + (int32_t)type.getBitWidth() - 1};
+            // If the selector base is not constant, then return the whole scalar
+            // as the range and halt analysis of any further selectors.
+            selectorsIt = node.selectors.end();
+            return {range.lower(), range.lower() + (int32_t)type.getBitWidth() - 1};
         }
         // Right index must be constant.
         SLANG_ASSERT(rangeSelector.rightIndexIsConstant());
@@ -159,24 +159,24 @@ public:
         int32_t leftIndex = rangeSelector.getLeftIndexInt();
         // Create a new range.
         auto rangeEnd = isUp ? rightIndex + leftIndex : rightIndex - leftIndex;
-        ConstantRange newRange = {range.lower() + rightIndex,
-                                  range.lower() + rangeEnd};
+        ConstantRange newRange = {range.lower() + rightIndex, range.lower() + rangeEnd};
         SLANG_ASSERT(range.contains(newRange));
         if (std::next(selectorsIt) != node.selectors.end()) {
             selectorsIt++;
             return getBitRangeImpl(type, newRange);
-        } else {
+        }
+        else {
             return newRange;
         }
     }
 
-    ConstantRange handleArrayElementSelect(const slang::ast::Type &type, ConstantRange range) {
+    ConstantRange handleArrayElementSelect(const slang::ast::Type& type, ConstantRange range) {
         const auto& elementSelector = selectorsIt->get()->as<VariableElementSelect>();
         if (!elementSelector.indexIsConstant()) {
-          // If the selector is not a constant, then return the whole scalar as
-          // the range and halt analysis of any further selectors.
-          selectorsIt = node.selectors.end();
-          return {range.lower(), range.lower() + getTypeBitWidth(type) - 1};
+            // If the selector is not a constant, then return the whole scalar as
+            // the range and halt analysis of any further selectors.
+            selectorsIt = node.selectors.end();
+            return {range.lower(), range.lower() + getTypeBitWidth(type) - 1};
         }
         int32_t index = elementSelector.getIndexInt();
         auto arrayRange = getArrayRange(type);
@@ -186,17 +186,19 @@ public:
         // Create a new range.
         auto* elementType = type.getArrayElementType();
         ConstantRange newRange = {range.lower() + (index * getTypeBitWidth(*elementType)),
-                                  range.lower() + ((index + 1) * getTypeBitWidth(*elementType)) - 1};
+                                  range.lower() + ((index + 1) * getTypeBitWidth(*elementType)) -
+                                      1};
         SLANG_ASSERT(range.contains(newRange));
         if (std::next(selectorsIt) != node.selectors.end()) {
             selectorsIt++;
             return getBitRangeImpl(*elementType, newRange);
-        } else {
+        }
+        else {
             return newRange;
         }
     }
 
-    ConstantRange handleArrayRangeSelect(const slang::ast::Type &type, ConstantRange range) {
+    ConstantRange handleArrayRangeSelect(const slang::ast::Type& type, ConstantRange range) {
         const auto& rangeSelector = selectorsIt->get()->as<VariableRangeSelect>();
         int32_t leftIndex = rangeSelector.getLeftIndexInt();
         int32_t rightIndex = rangeSelector.getRightIndexInt();
@@ -210,26 +212,30 @@ public:
         // Create a new range.
         auto* elementType = type.getArrayElementType();
         ConstantRange newRange = {range.lower() + (rightIndex * getTypeBitWidth(*elementType)),
-                                  range.lower() + ((leftIndex + 1) * getTypeBitWidth(*elementType)) - 1};
+                                  range.lower() +
+                                      ((leftIndex + 1) * getTypeBitWidth(*elementType)) - 1};
         SLANG_ASSERT(range.contains(newRange));
         if (std::next(selectorsIt) != node.selectors.end()) {
             selectorsIt++;
             return getBitRangeImpl(type, newRange);
-        } else {
+        }
+        else {
             return newRange;
         }
     }
 
-    ConstantRange handleArrayRangeSelectIncr(const slang::ast::Type &type, ConstantRange range, bool isUp) {
+    ConstantRange handleArrayRangeSelectIncr(const slang::ast::Type& type, ConstantRange range,
+                                             bool isUp) {
         const auto& rangeSelector = selectorsIt->get()->as<VariableRangeSelect>();
         auto* elementType = type.getArrayElementType();
         auto arrayRange = getArrayRange(type);
         if (!rangeSelector.leftIndexIsConstant()) {
-          // If the selector base is not constant, then return the whole array
-          // as the range and halt analysis of any further selectors.
-          selectorsIt = node.selectors.end();
-          return {range.lower(),
-                  range.lower() + (getTypeBitWidth(*elementType) * (int32_t)arrayRange.width()) - 1};
+            // If the selector base is not constant, then return the whole array
+            // as the range and halt analysis of any further selectors.
+            selectorsIt = node.selectors.end();
+            return {range.lower(),
+                    range.lower() + (getTypeBitWidth(*elementType) * (int32_t)arrayRange.width()) -
+                        1};
         }
         // Right index must be constant.
         SLANG_ASSERT(rangeSelector.rightIndexIsConstant());
@@ -240,17 +246,19 @@ public:
         rightIndex -= arrayRange.lower();
         // Create a new range.
         ConstantRange newRange = {range.lower() + (rightIndex * getTypeBitWidth(*elementType)),
-                                  range.lower() + ((leftIndex + 1) * getTypeBitWidth(*elementType)) - 1};
+                                  range.lower() +
+                                      ((leftIndex + 1) * getTypeBitWidth(*elementType)) - 1};
         SLANG_ASSERT(range.contains(newRange));
         if (std::next(selectorsIt) != node.selectors.end()) {
             selectorsIt++;
             return getBitRangeImpl(type, newRange);
-        } else {
+        }
+        else {
             return newRange;
         }
     }
 
-    ConstantRange handleStructMemberAccess(const slang::ast::Type &type, ConstantRange range) {
+    ConstantRange handleStructMemberAccess(const slang::ast::Type& type, ConstantRange range) {
         const auto& memberAccessSelector = selectorsIt->get()->as<VariableMemberAccess>();
         const auto& packedStruct = type.getCanonicalType().as<slang::ast::PackedStructType>();
         auto fieldRange = getStructFieldRange(packedStruct, memberAccessSelector.name);
@@ -259,15 +267,16 @@ public:
                                   range.lower() + fieldRange.upper()};
         SLANG_ASSERT(range.contains(newRange));
         if (std::next(selectorsIt) != node.selectors.end()) {
-          selectorsIt++;
-          const auto& fieldType = getScopeFieldType(packedStruct, memberAccessSelector.name);
-          return getBitRangeImpl(fieldType, newRange);
-        } else {
-          return newRange;
+            selectorsIt++;
+            const auto& fieldType = getScopeFieldType(packedStruct, memberAccessSelector.name);
+            return getBitRangeImpl(fieldType, newRange);
+        }
+        else {
+            return newRange;
         }
     }
 
-    ConstantRange handleUnionMemberAccess(const slang::ast::Type &type, ConstantRange range) {
+    ConstantRange handleUnionMemberAccess(const slang::ast::Type& type, ConstantRange range) {
         const auto& memberAccessSelector = selectorsIt->get()->as<VariableMemberAccess>();
         const auto& packedUnion = type.getCanonicalType().as<slang::ast::PackedUnionType>();
         auto fieldRange = getUnionFieldRange(packedUnion, memberAccessSelector.name);
@@ -276,15 +285,16 @@ public:
                                   range.lower() + fieldRange.upper()};
         SLANG_ASSERT(range.contains(newRange));
         if (std::next(selectorsIt) != node.selectors.end()) {
-          selectorsIt++;
-          const auto& fieldType = getScopeFieldType(packedUnion, memberAccessSelector.name);
-          return getBitRangeImpl(fieldType, newRange);
-        } else {
-          return newRange;
+            selectorsIt++;
+            const auto& fieldType = getScopeFieldType(packedUnion, memberAccessSelector.name);
+            return getBitRangeImpl(fieldType, newRange);
+        }
+        else {
+            return newRange;
         }
     }
 
-    ConstantRange handleEnumMemberAccess(const slang::ast::Type &type, ConstantRange range) {
+    ConstantRange handleEnumMemberAccess(const slang::ast::Type& type, ConstantRange range) {
         const auto& memberAccessSelector = selectorsIt->get()->as<VariableMemberAccess>();
         const auto& enumeration = type.getCanonicalType().as<slang::ast::EnumType>();
         auto fieldRange = getEnumRange(enumeration);
@@ -306,7 +316,7 @@ public:
 
     /// Given a variable reference with zero or more selectors, determine the
     /// bit range that is accessed.
-    ConstantRange getBitRangeImpl(const slang::ast::Type &type, ConstantRange range) {
+    ConstantRange getBitRangeImpl(const slang::ast::Type& type, ConstantRange range) {
         // No selectors
         if (node.selectors.empty()) {
             return {0, getTypeBitWidth(node.symbol.getDeclaredType()->getType()) - 1};
@@ -326,26 +336,31 @@ public:
             }
             else if (selectorsIt->get()->isRangeSelect()) {
                 switch (selectorsIt->get()->as<VariableRangeSelect>().expr.getSelectionKind()) {
-                  case ast::RangeSelectionKind::Simple:
-                    return handleScalarRangeSelect(type, range);
-                  case ast::RangeSelectionKind::IndexedUp:
-                    return handleScalarRangeSelectIncr(type, range, true);
-                  case ast::RangeSelectionKind::IndexedDown:
-                    return handleScalarRangeSelectIncr(type, range, false);
-                  default:
-                    SLANG_UNREACHABLE;
+                    case ast::RangeSelectionKind::Simple:
+                        return handleScalarRangeSelect(type, range);
+                    case ast::RangeSelectionKind::IndexedUp:
+                        return handleScalarRangeSelectIncr(type, range, true);
+                    case ast::RangeSelectionKind::IndexedDown:
+                        return handleScalarRangeSelectIncr(type, range, false);
+                    default:
+                        SLANG_UNREACHABLE;
                 }
-            } else if (selectorsIt->get()->isMemberAccess()) {
+            }
+            else if (selectorsIt->get()->isMemberAccess()) {
                 if (type.isStruct()) {
                     return handleStructMemberAccess(type, range);
-                } else if (type.isPackedUnion()) {
+                }
+                else if (type.isPackedUnion()) {
                     return handleUnionMemberAccess(type, range);
-                } else if (type.isEnum()) {
+                }
+                else if (type.isEnum()) {
                     return handleEnumMemberAccess(type, range);
-                } else {
+                }
+                else {
                     SLANG_ASSERT(0 && "unsupported member selector");
                 }
-            } else {
+            }
+            else {
                 SLANG_ASSERT(0 && "unsupported scalar selector");
             }
         }
@@ -360,14 +375,14 @@ public:
             }
             else if (selectorsIt->get()->isRangeSelect()) {
                 switch (selectorsIt->get()->as<VariableRangeSelect>().expr.getSelectionKind()) {
-                  case ast::RangeSelectionKind::Simple:
-                    return handleArrayRangeSelect(type, range);
-                  case ast::RangeSelectionKind::IndexedUp:
-                    return handleArrayRangeSelectIncr(type, range, true);
-                  case ast::RangeSelectionKind::IndexedDown:
-                    return handleArrayRangeSelectIncr(type, range, false);
-                  default:
-                    SLANG_UNREACHABLE;
+                    case ast::RangeSelectionKind::Simple:
+                        return handleArrayRangeSelect(type, range);
+                    case ast::RangeSelectionKind::IndexedUp:
+                        return handleArrayRangeSelectIncr(type, range, true);
+                    case ast::RangeSelectionKind::IndexedDown:
+                        return handleArrayRangeSelectIncr(type, range, false);
+                    default:
+                        SLANG_UNREACHABLE;
                 }
             }
             else {
@@ -394,13 +409,13 @@ public:
     SplitVariables(Netlist& netlist) : netlist(netlist) { split(); }
 
 private:
-
     /// Return true if the selection made by the target node intersects with the
     /// selection made by the source node.
     bool isIntersectingSelection(NetlistVariableReference& sourceNode,
                                  NetlistVariableReference& targetNode) const {
-        return AnalyseVariableReference(sourceNode).getBitRange().overlaps(
-                   AnalyseVariableReference(targetNode).getBitRange());
+        return AnalyseVariableReference(sourceNode)
+            .getBitRange()
+            .overlaps(AnalyseVariableReference(targetNode).getBitRange());
     }
 
     void split() {

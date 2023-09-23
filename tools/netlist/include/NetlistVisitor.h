@@ -43,16 +43,14 @@ static void connectDeclToVar(Netlist& netlist, NetlistNode& declNode,
                              const std::string& hierarchicalPath) {
     auto* varNode = netlist.lookupVariable(hierarchicalPath);
     netlist.addEdge(*varNode, declNode);
-    DEBUG_PRINT(
-        fmt::format("Edge decl {} to ref {}\n", varNode->getName(), declNode.getName()));
+    DEBUG_PRINT(fmt::format("Edge decl {} to ref {}\n", varNode->getName(), declNode.getName()));
 }
 
 static void connectVarToDecl(Netlist& netlist, NetlistNode& varNode,
                              const std::string& hierarchicalPath) {
     auto* declNode = netlist.lookupVariable(hierarchicalPath);
     netlist.addEdge(varNode, *declNode);
-    DEBUG_PRINT(
-        fmt::format("Edge ref {} to decl {}\n", varNode.getName(), declNode->getName()));
+    DEBUG_PRINT(fmt::format("Edge ref {} to decl {}\n", varNode.getName(), declNode->getName()));
 }
 
 static void connectVarToVar(Netlist& netlist, NetlistNode& sourceVarNode,
@@ -73,9 +71,9 @@ public:
 
     void handle(const ast::NamedValueExpression& expr) {
         if (!expr.eval(evalCtx).bad()) {
-          // If the symbol reference is to a constant (eg a parameter or enum
-          // value), then skip it.
-          return;
+            // If the symbol reference is to a constant (eg a parameter or enum
+            // value), then skip it.
+            return;
         }
         auto& node = netlist.addVariableReference(expr.symbol, expr, leftOperand);
         varList.push_back(&node);
