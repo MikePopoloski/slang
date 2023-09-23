@@ -22,6 +22,7 @@ Checks: >
     -bugprone-not-null-terminated-result,
     -bugprone-unchecked-optional-access,
     -bugprone-assignment-in-if-condition,
+    -bugprone-switch-missing-default-case,
     -clang-analyzer-cplusplus.NewDelete*,
     -clang-analyzer-cplusplus.InnerPointer,
     -clang-analyzer-core.NullDereference,
