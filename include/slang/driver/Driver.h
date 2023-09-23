@@ -76,7 +76,7 @@ public:
 
     /// A container for various options that can be parsed and applied
     /// to the compilation process.
-    struct Options {
+    struct SLANG_EXPORT Options {
         /// @name Preprocessing
         /// @{
 
