@@ -995,7 +995,7 @@ const Type& PackedUnionType::fromSyntax(Compilation& comp, const StructUnionType
 
     // In tagged unions the tag contributes to the total number of packed bits.
     if (isTagged && fieldIndex) {
-        unionType->tagBits = std::bit_width(fieldIndex - 1);
+        unionType->tagBits = (uint32_t)std::bit_width(fieldIndex - 1);
         unionType->bitWidth += unionType->tagBits;
     }
 

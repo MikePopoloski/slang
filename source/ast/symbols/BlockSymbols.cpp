@@ -611,10 +611,10 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(Compilation& comp
     }
 
     SmallVector<const GenerateBlockSymbol*> entries;
-    auto createBlock = [&, loc = loc](ConstantValue value, bool isUninstantiated) {
+    auto createBlock = [&, blockLoc = loc](ConstantValue value, bool isUninstantiated) {
         // Spec: each generate block gets their own scope, with an implicit
         // localparam of the same name as the genvar.
-        auto block = compilation.emplace<GenerateBlockSymbol>(compilation, "", loc,
+        auto block = compilation.emplace<GenerateBlockSymbol>(compilation, "", blockLoc,
                                                               (uint32_t)entries.size(),
                                                               isUninstantiated);
         auto implicitParam = compilation.emplace<ParameterSymbol>(
