@@ -6,9 +6,30 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 ### Language Support
+* Added support for specifying a modport when connecting an interface array port
+
 ### General Features
+* Minimum required compiler versions have been bumped to GCC 11, clang 16, and Xcode 15 (should be the last bump for a while)
+* Minimum required cmake version has been bumped to 3.20
+* Added `--allow-toplevel-iface-ports` to allow top level modules that have interface ports
+* Added `--relax-string-conversions` (included in "vcs" compat mode) to allow strings to implicitly convert to integers
+* Added [-Wconstant-conversion](https://sv-lang.com/warning-ref.html#constant-conversion) which warns about conversions inside constant expressions that lose information
+* Added [-Wsign-conversion](https://sv-lang.com/warning-ref.html#sign-conversion) which warns about implicit integral conversions that change sign
+
 ### Improvements
+* Made several improvements to -Wimplicit-conv to make it less noisy
+* Cleaned up internal code related to wide character support for Windows. slang now relies on the relatively new utf-8 code page support in Windows; this does mean that Unicode paths will now only be handled correctly on or after Windows Version 1903 (May 2019 Update).
+
 ### Fixes
+* Fixed a case where -Wimplicit-conv would not be issued for mismatching struct types
+* Fixed a crash when $static_assert condition is parenthesized
+* Fixed the count of compilation errors reported when using -Werror along with `--suppress-warnings`
+* Fixed -Wvector-overflow to work correctly with signed literals
+* Fixed the type infered for parameters that are assigned vector literals larger than 32-bits wide
+* SystemVerilog class types (and other types that contain them) are now limited to the max object size supported by slang (the same limit for structs and arrays that was already present)
+* Fixed a few places where large types or expressions could result in internal overflow of variables tracking their sizes, which could cause crashes or other strange behavior. Now a proper error is issued.
+* A proper error is now issued for duplicate local variables inside of properties and sequences
+* Fixed a crash when trying to connect an extern subroutine implementation to an interface array port
 
 
 ## [v4.0] - 2023-08-10
