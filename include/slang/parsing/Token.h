@@ -50,7 +50,9 @@ struct SLANG_EXPORT NumericTokenFlags {
 /// character, or a comment.
 class SLANG_EXPORT Trivia {
 private:
-#pragma pack(push, 4)
+#ifndef __clang_analyzer__
+#    pragma pack(push, 4)
+#endif
     struct ShortStringView {
         const char* ptr;
         uint32_t len;
@@ -70,7 +72,9 @@ private:
         syntax::SyntaxNode* syntaxNode;
         FullLocation* fullLocation;
     };
-#pragma pack(pop)
+#ifndef __clang_analyzer__
+#    pragma pack(pop)
+#endif
 
     // The vast majority of trivia lives alongside the token it's attached to, so if
     // you want to know its source location just walk backward from the parent location.
