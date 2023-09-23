@@ -564,7 +564,7 @@ bool operator==(const ConstantValue& lhs, const ConstantValue& rhs) {
 
 std::partial_ordering operator<=>(const ConstantValue& lhs, const ConstantValue& rhs) {
     return std::visit(
-        [&](auto&& arg) {
+        [&](auto&& arg) -> std::partial_ordering {
             constexpr auto unordered = std::partial_ordering::unordered;
             using T = std::decay_t<decltype(arg)>;
             if constexpr (std::is_same_v<T, std::monostate>)
@@ -596,14 +596,10 @@ std::partial_ordering operator<=>(const ConstantValue& lhs, const ConstantValue&
                 return arg <=> std::get<ConstantValue::Elements>(rhs.value);
             }
             else if constexpr (std::is_same_v<T, std::string>) {
-                // TODO: clean this up once Xcode / libc++ get their act together
                 if (!rhs.isString())
                     return unordered;
 
-                int cmp = arg.compare(rhs.str());
-                return cmp < 0    ? std::partial_ordering::less
-                       : cmp == 0 ? std::partial_ordering::equivalent
-                                  : std::partial_ordering::greater;
+                return arg <=> rhs.str();
             }
             else if constexpr (std::is_same_v<T, ConstantValue::Map>) {
                 if (!rhs.isMap())
@@ -621,13 +617,7 @@ std::partial_ordering operator<=>(const ConstantValue& lhs, const ConstantValue&
                 if (!rhs.isUnion())
                     return unordered;
 
-                // TODO: clean this up once Xcode / libc++ get their act together
-                auto& ru = rhs.unionVal();
-                if (arg->activeMember < ru->activeMember)
-                    return std::partial_ordering::less;
-                if (arg->activeMember > ru->activeMember)
-                    return std::partial_ordering::greater;
-                return arg->value <=> ru->value;
+                return *arg <=> *rhs.unionVal();
             }
             else {
                 static_assert(always_false<T>::value, "Missing case");

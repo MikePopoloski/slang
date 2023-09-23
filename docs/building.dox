@@ -19,7 +19,7 @@ slang requires the following tools in order to build:
 - C++20 compatible compiler. Minimum supported compiler versions:
     - GCC 10
     - clang 16
-    - XCode 14.3
+    - Xcode 15
     - MSVC support is tested only against the most recent update of VS 2022
 
 @section building-start Quick Start
