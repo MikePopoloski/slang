@@ -1,6 +1,7 @@
 To dos
 ======
 
+- Support descending ranges in split variable type handling, eg [0:3].
 - Dumping of a dot file outputs random characters at the end.
 - Support for more procedural statements, the full list is:
 

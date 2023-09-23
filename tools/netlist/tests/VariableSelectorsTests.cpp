@@ -193,8 +193,6 @@ module m (input int a);
     foo[a][a] = 0;
     foo[a+:1] = 0;
     foo[a-:1] = 0;
-    //foo[a+:1][1] = 0;
-    //foo[a-:1][1] = 0;
     foo[1][a] = 0;
     foo[1][a+:1] = 0;
     foo[1][a-:1] = 0;
@@ -224,8 +222,6 @@ endmodule
     CHECK(getBitRange(netlist, "foo[a][a]") == ConstantRange(0, 7));
     CHECK(getBitRange(netlist, "foo[a+:1]") == ConstantRange(0, 7));
     CHECK(getBitRange(netlist, "foo[a-:1]") == ConstantRange(0, 7));
-    //CHECK(getBitRange(netlist, "foo[a+:1][1]") == ConstantRange(0, 7));
-    //CHECK(getBitRange(netlist, "foo[a-:1][1]") == ConstantRange(0, 7));
     CHECK(getBitRange(netlist, "foo[1][a]") == ConstantRange(2, 3));
     CHECK(getBitRange(netlist, "foo[1][a+:1]") == ConstantRange(2, 3));
     CHECK(getBitRange(netlist, "foo[1][a-:1]") == ConstantRange(2, 3));
@@ -321,8 +317,6 @@ module m (input int a);
     foo[a][a] = 0;
     foo[a+:1] = '{'{0, 0}};
     foo[a-:2] = '{'{0, 0}, '{0, 0}};
-    //foo[a+:1][1] = 0;
-    //foo[a-:1][1] = 0;
     foo[1][a] = 0;
     foo[1][a+:1] = '{0};
     foo[1][a-:2] = '{0, 0};
@@ -345,8 +339,6 @@ endmodule
     CHECK(getBitRange(netlist, "foo[a][a]") == ConstantRange(0, 7));
     CHECK(getBitRange(netlist, "foo[a+:1]") == ConstantRange(0, 7));
     CHECK(getBitRange(netlist, "foo[a-:2]") == ConstantRange(0, 7));
-    //CHECK(getBitRange(netlist, "foo[a+:1][1]") == ConstantRange(0, 7));
-    //CHECK(getBitRange(netlist, "foo[a-:1][1]") == ConstantRange(0, 7));
     CHECK(getBitRange(netlist, "foo[1][a]") == ConstantRange(2, 3));
     CHECK(getBitRange(netlist, "foo[1][a+:1]") == ConstantRange(2, 3));
     CHECK(getBitRange(netlist, "foo[1][a-:2]") == ConstantRange(2, 3));
@@ -426,6 +418,7 @@ endmodule
 //===---------------------------------------------------------------------===//
 
 TEST_CASE("Struct with packed array members") {
+  // Test recursion from packed struct.
     auto tree = SyntaxTree::fromText(R"(
 module m;
   struct packed {
@@ -451,20 +444,25 @@ endmodule
     CHECK(getBitRange(netlist, "foo.b[2:1]") == ConstantRange(5, 6));
 }
 
-TEST_CASE("Struct with packed union members") {
+TEST_CASE("Packed struct with packed union and enum members") {
+  // Test recursion from packed struct.
     auto tree = SyntaxTree::fromText(R"(
 module m;
+  typedef enum int { A, B, C } enum_t;
   struct packed {
     union packed {
       logic [3:0] a, b;
     } u;
+    enum_t c;
   } foo;
   always_comb begin
     foo = 0;
     foo[1] = 0;
+    foo.u = 0;
     foo.u[2:1] = 0;
     foo.u.a[2:1] = 0;
     foo.u.b[2:1] = 0;
+    foo.c = A;
   end
 endmodule
 )");
@@ -472,9 +470,108 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
     auto netlist = createNetlist(compilation);
-    CHECK(getBitRange(netlist, "foo") == ConstantRange(0, 3));
+    CHECK(getBitRange(netlist, "foo") == ConstantRange(0, 35));
     CHECK(getBitRange(netlist, "foo[1]") == ConstantRange(1, 1));
+    CHECK(getBitRange(netlist, "foo.u") == ConstantRange(0, 3));
     CHECK(getBitRange(netlist, "foo.u[2:1]") == ConstantRange(1, 2));
     CHECK(getBitRange(netlist, "foo.u.a[2:1]") == ConstantRange(1, 2));
     CHECK(getBitRange(netlist, "foo.u.b[2:1]") == ConstantRange(1, 2));
+    CHECK(getBitRange(netlist, "foo.c") == ConstantRange(4, 35));
+}
+
+TEST_CASE("Packed arrays of structs etc") {
+  // Test recursion from packed packed array, packed struct, packed union.
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+  typedef enum int { A, B, C } enum_t;
+  typedef struct packed {
+    union packed {
+      logic [3:0] a, b;
+    } u;
+    logic [1:0] c;
+    enum_t d;
+  } foo_t;
+  foo_t [3:0] [1:0] foo;
+  always_comb begin
+    foo = 0;
+    foo[0] = 0;
+    foo[1] = 0;
+    foo[0][0] = 0;
+    foo[0][1] = 0;
+    foo[0][0].u.a = 0;
+    foo[0][1].u.a = 0;
+    foo[0][0].u.b = 0;
+    foo[0][1].u.b = 0;
+    foo[0][0].c = 0;
+    foo[0][1].c = 0;
+    foo[0][0].d = A;
+    foo[0][1].d = A;
+    foo[3][1] = 0;
+    foo[3][1].u.a = 0;
+    foo[3][1].u.b = 0;
+    foo[3][1].c = 0;
+    foo[3][1].d = A;
+  end
+endmodule
+)");
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+    auto netlist = createNetlist(compilation);
+    CHECK(getBitRange(netlist, "foo") == ConstantRange(0, 303));
+    CHECK(getBitRange(netlist, "foo[0]") == ConstantRange(0, 75));
+    CHECK(getBitRange(netlist, "foo[1]") == ConstantRange(76, 151));
+    CHECK(getBitRange(netlist, "foo[0][0]") == ConstantRange(0, 37));
+    CHECK(getBitRange(netlist, "foo[0][1]") == ConstantRange(38, 75));
+    CHECK(getBitRange(netlist, "foo[0][0].u.a") == ConstantRange(0, 3));
+    CHECK(getBitRange(netlist, "foo[0][1].u.a") == ConstantRange(38, 41));
+    CHECK(getBitRange(netlist, "foo[0][0].u.b") == ConstantRange(0, 3));
+    CHECK(getBitRange(netlist, "foo[0][1].u.b") == ConstantRange(38, 41));
+    CHECK(getBitRange(netlist, "foo[0][0].c") == ConstantRange(4, 5));
+    CHECK(getBitRange(netlist, "foo[0][1].c") == ConstantRange(42, 43));
+    CHECK(getBitRange(netlist, "foo[0][0].d") == ConstantRange(6, 37));
+    CHECK(getBitRange(netlist, "foo[0][1].d") == ConstantRange(44, 75));
+    CHECK(getBitRange(netlist, "foo[3][1]") == ConstantRange(266, 303));
+    CHECK(getBitRange(netlist, "foo[3][1].u.a") == ConstantRange(266, 269));
+    CHECK(getBitRange(netlist, "foo[3][1].u.b") == ConstantRange(266, 269));
+    CHECK(getBitRange(netlist, "foo[3][1].c") == ConstantRange(270, 271));
+    CHECK(getBitRange(netlist, "foo[3][1].d") == ConstantRange(272, 303));
+}
+
+TEST_CASE("Union with packed struct members") {
+    // Test recursion from packed union, packed struct.
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+  typedef enum int { A, B, C } enum_t;
+  union packed {
+    struct packed {
+      logic [3:0] a, b;
+    } x, y;
+  } [3:0] foo;
+  always_comb begin
+    foo = 0;
+    foo[0].x.a = 0;
+    foo[0].x.b = 0;
+    foo[0].y.a = 0;
+    foo[0].y.b = 0;
+    foo[3].x.a = 0;
+    foo[3].x.b = 0;
+    foo[3].y.a = 0;
+    foo[3].y.b = 0;
+  end
+endmodule
+)");
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+    auto netlist = createNetlist(compilation);
+    CHECK(getBitRange(netlist, "foo") == ConstantRange(0, 31));
+    CHECK(getBitRange(netlist, "foo[0].x.a") == ConstantRange(0, 3));
+    CHECK(getBitRange(netlist, "foo[0].x.b") == ConstantRange(4, 7));
+    CHECK(getBitRange(netlist, "foo[0].y.a") == ConstantRange(0, 3));
+    CHECK(getBitRange(netlist, "foo[0].y.b") == ConstantRange(4, 7));
+    CHECK(getBitRange(netlist, "foo[3].x.a") == ConstantRange(24, 27));
+    CHECK(getBitRange(netlist, "foo[3].x.b") == ConstantRange(28, 31));
+    CHECK(getBitRange(netlist, "foo[3].y.a") == ConstantRange(24, 27));
+    CHECK(getBitRange(netlist, "foo[3].y.b") == ConstantRange(28, 31));
 }

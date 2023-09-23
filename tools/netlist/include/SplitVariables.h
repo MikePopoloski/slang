@@ -261,7 +261,7 @@ public:
         if (std::next(selectorsIt) != node.selectors.end()) {
           selectorsIt++;
           const auto& fieldType = getScopeFieldType(packedStruct, memberAccessSelector.name);
-          return getBitRangeImpl(fieldType, fieldRange);
+          return getBitRangeImpl(fieldType, newRange);
         } else {
           return newRange;
         }
@@ -278,7 +278,7 @@ public:
         if (std::next(selectorsIt) != node.selectors.end()) {
           selectorsIt++;
           const auto& fieldType = getScopeFieldType(packedUnion, memberAccessSelector.name);
-          return getBitRangeImpl(fieldType, fieldRange);
+          return getBitRangeImpl(fieldType, newRange);
         } else {
           return newRange;
         }
@@ -292,13 +292,8 @@ public:
         ConstantRange newRange = {range.lower() + fieldRange.lower(),
                                   range.lower() + fieldRange.upper()};
         SLANG_ASSERT(range.contains(newRange));
-        if (std::next(selectorsIt) != node.selectors.end()) {
-          selectorsIt++;
-          const auto& fieldType = getScopeFieldType(enumeration, memberAccessSelector.name);
-          return getBitRangeImpl(fieldType, fieldRange);
-        } else {
-          return newRange;
-        }
+        SLANG_ASSERT(std::next(selectorsIt) == node.selectors.end());
+        return newRange;
     }
 
     // Multiple range selectors have only the effect of the last one.
