@@ -6,21 +6,7 @@
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
 
-#include "Netlist.h"
-#include "NetlistVisitor.h"
-#include "PathFinder.h"
-#include "SplitVariables.h"
-#include "Test.h"
-
-using namespace netlist;
-
-Netlist createNetlist(Compilation& compilation) {
-    Netlist netlist;
-    NetlistVisitor visitor(compilation, netlist);
-    compilation.getRoot().visit(visitor);
-    SplitVariables splitVariables(netlist);
-    return netlist;
-}
+#include "NetlistTest.h"
 
 //===---------------------------------------------------------------------===//
 // Basic tests
@@ -109,6 +95,158 @@ endmodule
     CHECK(*path.findVariable("chain_vars.e") == 9);
 }
 
+TEST_CASE("Chain of assignments in a sequence using a vector") {
+    // As above but this time using a packed array.
+    auto tree = SyntaxTree::fromText(R"(
+module chain_array (input logic i_value, output logic o_value);
+
+  logic [4:0] x;
+
+  assign x[0] = i_value;
+
+  always_comb begin
+    x[1] = x[0];
+    x[2] = x[1];
+    x[3] = x[2];
+  end
+
+  assign x[4] = x[3];
+  assign o_value = x[4];
+
+endmodule
+)");
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+    auto netlist = createNetlist(compilation);
+    PathFinder pathFinder(netlist);
+    auto path = pathFinder.find(*netlist.lookupPort("chain_array.i_value"),
+                                *netlist.lookupPort("chain_array.o_value"));
+    CHECK(*path.findVariable("chain_array.x[0]") == 1);
+    CHECK(*path.findVariable("chain_array.x[1]") == 3);
+    CHECK(*path.findVariable("chain_array.x[2]") == 5);
+    CHECK(*path.findVariable("chain_array.x[3]") == 7);
+    CHECK(*path.findVariable("chain_array.x[4]") == 9);
+}
+
+TEST_CASE("Passthrough two signals via ranges in a shared vector") {
+    auto tree = SyntaxTree::fromText(R"(
+module passthrough_ranges (
+  input  logic [1:0] i_value_a,
+  input  logic [1:0] i_value_b,
+  output logic [1:0] o_value_a,
+  output logic [1:0] o_value_b
+);
+
+  logic [3:0] foo;
+
+  assign foo[1:0] = i_value_a;
+  assign foo[3:2] = i_value_b;
+
+  assign o_value_a = foo[1:0];
+  assign o_value_b = foo[3:2];
+
+endmodule
+)");
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+    auto netlist = createNetlist(compilation);
+    auto* inPortA = netlist.lookupPort("passthrough_ranges.i_value_a");
+    auto* inPortB = netlist.lookupPort("passthrough_ranges.i_value_b");
+    auto* outPortA = netlist.lookupPort("passthrough_ranges.o_value_a");
+    auto* outPortB = netlist.lookupPort("passthrough_ranges.o_value_b");
+    PathFinder pathFinder(netlist);
+    // Valid paths.
+    CHECK(pathFinder.find(*inPortA, *outPortA).size() == 4);
+    CHECK(pathFinder.find(*inPortB, *outPortB).size() == 4);
+    // Invalid paths.
+    CHECK(pathFinder.find(*inPortA, *outPortB).empty());
+    CHECK(pathFinder.find(*inPortB, *outPortA).empty());
+}
+
+TEST_CASE("Passthrough two signals via a shared struct") {
+    auto tree = SyntaxTree::fromText(R"(
+module passthrough_member_access (
+  input logic i_value_a,
+  input logic i_value_b,
+  output logic o_value_a,
+  output logic o_value_b
+);
+
+  struct packed {
+    logic a;
+    logic b;
+  } foo;
+
+  assign foo.a = i_value_a;
+  assign foo.b = i_value_b;
+
+  assign o_value_a = foo.a;
+  assign o_value_b = foo.b;
+
+endmodule
+)");
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+    auto netlist = createNetlist(compilation);
+    auto* inPortA = netlist.lookupPort("passthrough_member_access.i_value_a");
+    auto* inPortB = netlist.lookupPort("passthrough_member_access.i_value_b");
+    auto* outPortA = netlist.lookupPort("passthrough_member_access.o_value_a");
+    auto* outPortB = netlist.lookupPort("passthrough_member_access.o_value_b");
+    PathFinder pathFinder(netlist);
+    // Valid paths.
+    CHECK(pathFinder.find(*inPortA, *outPortA).size() == 4);
+    CHECK(pathFinder.find(*inPortB, *outPortB).size() == 4);
+    // Invalid paths.
+    CHECK(pathFinder.find(*inPortA, *outPortB).empty());
+    CHECK(pathFinder.find(*inPortB, *outPortA).empty());
+}
+
+TEST_CASE("Passthrough two signals via a shared union") {
+    auto tree = SyntaxTree::fromText(R"(
+module passthrough_member_access (
+  input logic i_value_a,
+  input logic i_value_b,
+  output logic o_value_a,
+  output logic o_value_b,
+  output logic o_value_c
+);
+
+  union packed {
+    logic [1:0] a;
+    logic [1:0] b;
+  } foo;
+
+  assign foo.a[0] = i_value_a;
+  assign foo.b[1] = i_value_b;
+
+  assign o_value_a = foo.a[0];
+  assign o_value_b = foo.b[1];
+  assign o_value_c = foo.b[0]; // Overlapping with a in union.
+
+endmodule
+)");
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+    auto netlist = createNetlist(compilation);
+    auto* inPortA = netlist.lookupPort("passthrough_member_access.i_value_a");
+    auto* inPortB = netlist.lookupPort("passthrough_member_access.i_value_b");
+    auto* outPortA = netlist.lookupPort("passthrough_member_access.o_value_a");
+    auto* outPortB = netlist.lookupPort("passthrough_member_access.o_value_b");
+    auto* outPortC = netlist.lookupPort("passthrough_member_access.o_value_c");
+    PathFinder pathFinder(netlist);
+    // Valid paths.
+    CHECK(pathFinder.find(*inPortA, *outPortA).size() == 4);
+    CHECK(pathFinder.find(*inPortB, *outPortB).size() == 4);
+    CHECK(pathFinder.find(*inPortA, *outPortC).size() == 4); // Extra path.
+    // Invalid paths.
+    CHECK(pathFinder.find(*inPortA, *outPortB).empty());
+    CHECK(pathFinder.find(*inPortB, *outPortA).empty());
+}
+
 //===---------------------------------------------------------------------===//
 // Tests for module instance connectivity.
 //===---------------------------------------------------------------------===//
@@ -169,27 +307,21 @@ endmodule
 }
 
 //===---------------------------------------------------------------------===//
-// Tests for variable splitting
+// Tests for conditional variables in procedural blocks.
 //===---------------------------------------------------------------------===//
 
-TEST_CASE("Chain of assignments in a sequence using a vector") {
-    // As above but this time using a packed array.
+TEST_CASE("Mux") {
+    // Test that the variable in a conditional block is correctly added as a
+    // dependency on the output variable controlled by that block.
     auto tree = SyntaxTree::fromText(R"(
-module chain_array (input logic i_value, output logic o_value);
-
-  logic [4:0] x;
-
-  assign x[0] = i_value;
-
-  always_comb begin
-    x[1] = x[0];
-    x[2] = x[1];
-    x[3] = x[2];
+module mux(input a, input b, input sel, output reg f);
+  always @(*) begin
+    if (sel == 1'b0) begin
+      f = a;
+    end else begin
+      f = b;
+    end
   end
-
-  assign x[4] = x[3];
-  assign o_value = x[4];
-
 endmodule
 )");
     Compilation compilation;
@@ -197,88 +329,35 @@ endmodule
     NO_COMPILATION_ERRORS;
     auto netlist = createNetlist(compilation);
     PathFinder pathFinder(netlist);
-    auto path = pathFinder.find(*netlist.lookupPort("chain_array.i_value"),
-                                *netlist.lookupPort("chain_array.o_value"));
-    CHECK(*path.findVariable("chain_array.x[0]") == 1);
-    CHECK(*path.findVariable("chain_array.x[1]") == 3);
-    CHECK(*path.findVariable("chain_array.x[2]") == 5);
-    CHECK(*path.findVariable("chain_array.x[3]") == 7);
-    CHECK(*path.findVariable("chain_array.x[4]") == 9);
+    CHECK(!pathFinder.find(*netlist.lookupPort("mux.sel"), *netlist.lookupPort("mux.f")).empty());
 }
 
-TEST_CASE("Passthrough two signals via a shared structure") {
+TEST_CASE("Nested muxing") {
+    // Test that the variables in multiple nested levels of conditions are
+    // correctly added as dependencies of the output variable.
     auto tree = SyntaxTree::fromText(R"(
-module passthrough_member_access (
-  input logic i_value_a,
-  input logic i_value_b,
-  output logic o_value_a,
-  output logic o_value_b
-);
-
-  struct packed {
-    logic a;
-    logic b;
-  } foo;
-
-  assign foo.a = i_value_a;
-  assign foo.b = i_value_b;
-
-  assign o_value_a = foo.a;
-  assign o_value_b = foo.b;
-
+module mux(input a, input b, input c,
+           input sel_a, input sel_b,
+           output reg f);
+  always @(*) begin
+    if (sel_a == 1'b0) begin
+      if (sel_b == 1'b0)
+        f = a;
+      else
+        f = b;
+    end else begin
+      f = c;
+    end
+  end
 endmodule
 )");
     Compilation compilation;
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
     auto netlist = createNetlist(compilation);
-    auto* inPortA = netlist.lookupPort("passthrough_member_access.i_value_a");
-    auto* inPortB = netlist.lookupPort("passthrough_member_access.i_value_b");
-    auto* outPortA = netlist.lookupPort("passthrough_member_access.o_value_a");
-    auto* outPortB = netlist.lookupPort("passthrough_member_access.o_value_b");
     PathFinder pathFinder(netlist);
-    // Valid paths.
-    CHECK(pathFinder.find(*inPortA, *outPortA).size() == 4);
-    CHECK(pathFinder.find(*inPortB, *outPortB).size() == 4);
-    // Invalid paths.
-    CHECK(pathFinder.find(*inPortA, *outPortB).empty());
-    CHECK(pathFinder.find(*inPortB, *outPortA).empty());
-}
-
-TEST_CASE("Passthrough two signals via ranges in a shared vector") {
-    auto tree = SyntaxTree::fromText(R"(
-module passthrough_ranges (
-  input  logic [1:0] i_value_a,
-  input  logic [1:0] i_value_b,
-  output logic [1:0] o_value_a,
-  output logic [1:0] o_value_b
-);
-
-  logic [3:0] foo;
-
-  assign foo[1:0] = i_value_a;
-  assign foo[3:2] = i_value_b;
-
-  assign o_value_a = foo[1:0];
-  assign o_value_b = foo[3:2];
-
-endmodule
-)");
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-    NO_COMPILATION_ERRORS;
-    auto netlist = createNetlist(compilation);
-    auto* inPortA = netlist.lookupPort("passthrough_ranges.i_value_a");
-    auto* inPortB = netlist.lookupPort("passthrough_ranges.i_value_b");
-    auto* outPortA = netlist.lookupPort("passthrough_ranges.o_value_a");
-    auto* outPortB = netlist.lookupPort("passthrough_ranges.o_value_b");
-    PathFinder pathFinder(netlist);
-    // Valid paths.
-    CHECK(pathFinder.find(*inPortA, *outPortA).size() == 4);
-    CHECK(pathFinder.find(*inPortB, *outPortB).size() == 4);
-    // Invalid paths.
-    CHECK(pathFinder.find(*inPortA, *outPortB).empty());
-    CHECK(pathFinder.find(*inPortB, *outPortA).empty());
+    CHECK(!pathFinder.find(*netlist.lookupPort("mux.sel_a"), *netlist.lookupPort("mux.f")).empty());
+    CHECK(!pathFinder.find(*netlist.lookupPort("mux.sel_b"), *netlist.lookupPort("mux.f")).empty());
 }
 
 //===---------------------------------------------------------------------===//
@@ -412,103 +491,37 @@ endmodule
 }
 
 //===---------------------------------------------------------------------===//
-// Tests for conditional variables in procedural blocks.
+// Test case for #792 (bus expression in ports)
 //===---------------------------------------------------------------------===//
 
-TEST_CASE("Mux") {
-    // Test that the variable in a conditional block is correctly added as a
-    // dependency on the output variable controlled by that block.
+TEST_CASE("Test case for #792 (bus expression in ports)") {
     auto tree = SyntaxTree::fromText(R"(
-module mux(input a, input b, input sel, output reg f);
-  always @(*) begin
-    if (sel == 1'b0) begin
-      f = a;
-    end else begin
-      f = b;
-    end
-  end
+module test (input [1:0] in_i,
+             output [1:0] out_o);
+
+   wire [1:0] in_s;
+
+   assign in_s = in_i;
+
+   nop i_nop(.in_i(in_s[1:0]), // ok: in_s, in_i, {in_i[1], in_i[0]}
+             .out_o(out_o));
+endmodule
+
+module nop (input [1:0]  in_i,
+            output [1:0] out_o);
+
+   // individual bits access; ok: out_o = in_i;
+   assign out_o[0] = in_i[0];
+   assign out_o[1] = in_i[1];
 endmodule
 )");
     Compilation compilation;
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
     auto netlist = createNetlist(compilation);
+    auto* inPort = netlist.lookupPort("test.in_i");
+    auto* outPort = netlist.lookupPort("test.out_o");
     PathFinder pathFinder(netlist);
-    CHECK(!pathFinder.find(*netlist.lookupPort("mux.sel"), *netlist.lookupPort("mux.f")).empty());
-}
-
-TEST_CASE("Nested muxing") {
-    // Test that the variables in multiple nested levels of conditions are
-    // correctly added as dependencies of the output variable.
-    auto tree = SyntaxTree::fromText(R"(
-module mux(input a, input b, input c,
-           input sel_a, input sel_b,
-           output reg f);
-  always @(*) begin
-    if (sel_a == 1'b0) begin
-      if (sel_b == 1'b0)
-        f = a;
-      else
-        f = b;
-    end else begin
-      f = c;
-    end
-  end
-endmodule
-)");
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-    NO_COMPILATION_ERRORS;
-    auto netlist = createNetlist(compilation);
-    PathFinder pathFinder(netlist);
-    CHECK(!pathFinder.find(*netlist.lookupPort("mux.sel_a"), *netlist.lookupPort("mux.f")).empty());
-    CHECK(!pathFinder.find(*netlist.lookupPort("mux.sel_b"), *netlist.lookupPort("mux.f")).empty());
-}
-
-//===---------------------------------------------------------------------===//
-// Tests for name resolution
-//===---------------------------------------------------------------------===//
-
-TEST_CASE("Unused modules") {
-    // Test that unused modules are not visited by the netlist builder.
-    // See Issue #793.
-    auto tree = SyntaxTree::fromText(R"(
-module test (input i1,
-             input i2,
-             output o1
-             );
-   cell_a i_cell_a(.d1(i1),
-                   .d2(i2),
-                   .c(o1));
-endmodule
-
-module cell_a(input  d1,
-              input  d2,
-              output c);
-   assign c = d1 + d2;
-endmodule
-
-// unused
-module cell_b(input  a,
-              input  b,
-              output z);
-   assign z = a || b;
-endmodule
-
-// unused
-module cell_c(input  a,
-              input  b,
-              output z);
-   assign z = (!a) && b;
-endmodule
-)");
-    CompilationOptions coptions;
-    coptions.topModules.emplace("test"sv);
-    Bag options;
-    options.set(coptions);
-    Compilation compilation(options);
-    compilation.addSyntaxTree(tree);
-    NO_COMPILATION_ERRORS;
-    auto netlist = createNetlist(compilation);
-    CHECK(netlist.numNodes() > 0);
+    // Valid paths.
+    CHECK(!pathFinder.find(*inPort, *outPort).empty());
 }

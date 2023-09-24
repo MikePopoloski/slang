@@ -15,6 +15,7 @@
 #include <iostream>
 
 #include "slang/ast/ASTVisitor.h"
+#include "slang/ast/Expression.h"
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
 #include "slang/diagnostics/TextDiagnosticClient.h"
 #include "slang/syntax/SyntaxTree.h"
@@ -46,6 +47,11 @@ struct VariableSelectorBase {
     virtual ~VariableSelectorBase() = default;
     virtual std::string toString() const = 0;
 
+    bool isElementSelect() const { return kind == VariableSelectorKind::ElementSelect; }
+    bool isRangeSelect() const { return kind == VariableSelectorKind::RangeSelect; }
+    bool isMemberAccess() const { return kind == VariableSelectorKind::MemberAccess; }
+    bool isArraySelect() const { return isElementSelect() || isRangeSelect(); }
+
     template<typename T>
     T& as() {
         SLANG_ASSERT(T::isKind(kind));
@@ -61,58 +67,98 @@ struct VariableSelectorBase {
 
 /// A variable selector representing an element selector.
 struct VariableElementSelect : public VariableSelectorBase {
+    const ast::Expression& expr;
     ConstantValue index;
 
-    VariableElementSelect(ConstantValue index) :
-        VariableSelectorBase(VariableSelectorKind::ElementSelect), index(std::move(index)) {}
+    VariableElementSelect(ast::Expression const& expr, ConstantValue index) :
+        VariableSelectorBase(VariableSelectorKind::ElementSelect), expr(expr),
+        index(std::move(index)) {}
 
     static bool isKind(VariableSelectorKind otherKind) {
         return otherKind == VariableSelectorKind::ElementSelect;
     }
 
-    size_t getIndexInt() const {
-        auto intValue = index.integer().as<size_t>();
-        SLANG_ASSERT(intValue && "could not convert index to size_t");
+    bool indexIsConstant() const { return !index.bad(); }
+
+    int32_t getIndexInt() const {
+        auto intValue = index.integer().as<int32_t>();
+        SLANG_ASSERT(intValue && "could not convert index to int32_t");
         return *intValue;
     }
 
-    std::string toString() const override { return fmt::format("[{}]", index.toString()); }
+    std::string toString() const override {
+        if (indexIsConstant()) {
+            return fmt::format("[{}]", index.toString());
+        }
+        else {
+            return fmt::format("[{}]", expr.syntax->toString());
+        }
+    }
 };
 
 /// A variable selector representing a range selector.
 struct VariableRangeSelect : public VariableSelectorBase {
+    const ast::RangeSelectExpression& expr;
     ConstantValue leftIndex, rightIndex;
 
-    VariableRangeSelect(ConstantValue leftIndex, ConstantValue rightIndex) :
-        VariableSelectorBase(VariableSelectorKind::RangeSelect), leftIndex(std::move(leftIndex)),
-        rightIndex(std::move(rightIndex)) {}
+    VariableRangeSelect(ast::RangeSelectExpression const& expr, ConstantValue leftIndex,
+                        ConstantValue rightIndex) :
+        VariableSelectorBase(VariableSelectorKind::RangeSelect),
+        expr(expr), leftIndex(std::move(leftIndex)), rightIndex(std::move(rightIndex)) {}
 
     static bool isKind(VariableSelectorKind otherKind) {
         return otherKind == VariableSelectorKind::RangeSelect;
     }
 
-    size_t getLeftIndexInt() const {
-        auto intValue = leftIndex.integer().as<size_t>();
-        SLANG_ASSERT(intValue && "could not convert left index to size_t");
+    bool leftIndexIsConstant() const { return !leftIndex.bad(); }
+
+    bool rightIndexIsConstant() const { return !rightIndex.bad(); }
+
+    int32_t getLeftIndexInt() const {
+        auto intValue = leftIndex.integer().as<int32_t>();
+        SLANG_ASSERT(intValue && "could not convert left index to int32_t");
         return *intValue;
     }
 
-    size_t getRightIndexInt() const {
-        auto intValue = rightIndex.integer().as<size_t>();
-        SLANG_ASSERT(intValue && "could not convert right index to size_t");
+    int32_t getRightIndexInt() const {
+        auto intValue = rightIndex.integer().as<int32_t>();
+        SLANG_ASSERT(intValue && "could not convert right index to int32_t");
         return *intValue;
     }
 
     std::string toString() const override {
-        return fmt::format("[{}:{}]", leftIndex.toString(), rightIndex.toString());
+        std::string left;
+        if (leftIndexIsConstant()) {
+            left = leftIndex.toString();
+        }
+        else {
+            left = expr.left().syntax->toString();
+        }
+        std::string right;
+        if (rightIndexIsConstant()) {
+            right = rightIndex.toString();
+        }
+        else {
+            right = expr.right().syntax->toString();
+        }
+        switch (expr.getSelectionKind()) {
+            case ast::RangeSelectionKind::Simple:
+                return fmt::format("[{}:{}]", left, right);
+            case ast::RangeSelectionKind::IndexedUp:
+                return fmt::format("[{}+:{}]", left, right);
+            case ast::RangeSelectionKind::IndexedDown:
+                return fmt::format("[{}-:{}]", left, right);
+            default:
+                SLANG_UNREACHABLE;
+        }
     }
 };
 
 /// A variable selector representing member access of a structure.
 struct VariableMemberAccess : public VariableSelectorBase {
-    std::string_view name;
+    const std::string_view name;
 
-    VariableMemberAccess(std::string_view name) :
+    VariableMemberAccess(const std::string_view name) :
         VariableSelectorBase(VariableSelectorKind::MemberAccess), name(name) {}
 
     static bool isKind(VariableSelectorKind otherKind) {
@@ -176,8 +222,6 @@ private:
     static size_t nextID;
 };
 
-size_t NetlistNode::nextID = 0;
-
 /// A class representing a port declaration.
 class NetlistPortDeclaration : public NetlistNode {
 public:
@@ -224,12 +268,15 @@ public:
         NetlistNode(NodeKind::VariableReference, symbol),
         expression(expr), leftOperand(leftOperand) {}
 
-    void addElementSelect(const ConstantValue& index) {
-        selectors.emplace_back(std::make_unique<VariableElementSelect>(index));
+    void addElementSelect(ast::ElementSelectExpression const& expr, const ConstantValue& index) {
+        selectors.emplace_back(std::make_unique<VariableElementSelect>(expr.selector(), index));
     }
-    void addRangeSelect(const ConstantValue& leftIndex, const ConstantValue& rightIndex) {
-        selectors.emplace_back(std::make_unique<VariableRangeSelect>(leftIndex, rightIndex));
+
+    void addRangeSelect(ast::RangeSelectExpression const& expr, const ConstantValue& leftIndex,
+                        const ConstantValue& rightIndex) {
+        selectors.emplace_back(std::make_unique<VariableRangeSelect>(expr, leftIndex, rightIndex));
     }
+
     void addMemberAccess(std::string_view name) {
         selectors.emplace_back(std::make_unique<VariableMemberAccess>(name));
     }
@@ -249,7 +296,14 @@ public:
     }
 
     /// Return a string representation of this variable reference.
-    std::string toString() const { return fmt::format("{}{}", getName(), selectorString()); }
+    std::string toString() const {
+        if (selectors.empty()) {
+            return fmt::format("{}", getName());
+        }
+        else {
+            return fmt::format("{}{}", getName(), selectorString());
+        }
+    }
 
 public:
     /// The expression containing the variable reference.
@@ -310,26 +364,37 @@ public:
         return node;
     }
 
-    /// Find a variable declaration node in the netlist by hierarchical path.
-    /// TODO? Optimise this lookup by maintaining a list of declaration nodes.
-    NetlistNode* lookupVariable(const std::string& hierarchicalPath) {
-        auto compareNode = [&hierarchicalPath](const std::unique_ptr<NetlistNode>& node) {
-            return node->kind == NodeKind::VariableDeclaration &&
-                   node->as<NetlistVariableDeclaration>().hierarchicalPath == hierarchicalPath;
-        };
-        auto it = std::ranges::find_if(*this, compareNode);
-        return it != end() ? it->get() : nullptr;
-    }
-
     /// Find a port declaration node in the netlist by hierarchical path.
-    /// TODO? Optimise this lookup by maintaining a list of port nodes.
-    NetlistNode* lookupPort(const std::string& hierarchicalPath) {
+    NetlistPortDeclaration* lookupPort(std::string_view hierarchicalPath) {
         auto compareNode = [&hierarchicalPath](const std::unique_ptr<NetlistNode>& node) {
             return node->kind == NodeKind::PortDeclaration &&
                    node->as<NetlistPortDeclaration>().hierarchicalPath == hierarchicalPath;
         };
         auto it = std::ranges::find_if(*this, compareNode);
-        return it != end() ? it->get() : nullptr;
+        return it != end() ? &it->get()->as<NetlistPortDeclaration>() : nullptr;
+    }
+
+    /// Find a variable declaration node in the netlist by hierarchical path.
+    /// Note that this does not lookup alias nodes.
+    NetlistVariableDeclaration* lookupVariable(std::string_view hierarchicalPath) {
+        auto compareNode = [&hierarchicalPath](const std::unique_ptr<NetlistNode>& node) {
+            return node->kind == NodeKind::VariableDeclaration &&
+                   node->as<NetlistVariableDeclaration>().hierarchicalPath == hierarchicalPath;
+        };
+        auto it = std::ranges::find_if(*this, compareNode);
+        return it != end() ? &it->get()->as<NetlistVariableDeclaration>() : nullptr;
+    }
+
+    /// Find a variable reference node in the netlist by its syntax.
+    /// Note that this does not include the hierarchical path, which is only
+    /// associated with the corresponding variable declaration nodes.
+    NetlistVariableReference* lookupVariableReference(std::string_view syntax) {
+        auto compareNode = [&syntax](const std::unique_ptr<NetlistNode>& node) {
+            return node->kind == NodeKind::VariableReference &&
+                   node->as<NetlistVariableReference>().toString() == syntax;
+        };
+        auto it = std::ranges::find_if(*this, compareNode);
+        return it != end() ? &it->get()->as<NetlistVariableReference>() : nullptr;
     }
 };
 

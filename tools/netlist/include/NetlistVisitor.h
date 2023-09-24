@@ -13,6 +13,7 @@
 #include "Netlist.h"
 #include "fmt/color.h"
 #include "fmt/format.h"
+#include <algorithm>
 #include <iostream>
 
 #include "slang/ast/ASTContext.h"
@@ -38,20 +39,18 @@ static std::string getSymbolHierPath(const ast::Symbol& symbol) {
     return buffer;
 }
 
-static void connectDeclToVar(Netlist& netlist, NetlistNode& varNode,
+static void connectDeclToVar(Netlist& netlist, NetlistNode& declNode,
                              const std::string& hierarchicalPath) {
-    auto* variableNode = netlist.lookupVariable(hierarchicalPath);
-    netlist.addEdge(*variableNode, varNode);
-    DEBUG_PRINT(
-        fmt::format("Edge decl {} to ref {}\n", variableNode->getName(), varNode.getName()));
+    auto* varNode = netlist.lookupVariable(hierarchicalPath);
+    netlist.addEdge(*varNode, declNode);
+    DEBUG_PRINT(fmt::format("Edge decl {} to ref {}\n", varNode->getName(), declNode.getName()));
 }
 
 static void connectVarToDecl(Netlist& netlist, NetlistNode& varNode,
                              const std::string& hierarchicalPath) {
-    auto* portNode = netlist.lookupVariable(hierarchicalPath);
-    netlist.addEdge(varNode, *portNode);
-    DEBUG_PRINT(
-        fmt::format("Edge ref {} to port ref {}\n", varNode.getName(), portNode->getName()));
+    auto* declNode = netlist.lookupVariable(hierarchicalPath);
+    netlist.addEdge(varNode, *declNode);
+    DEBUG_PRINT(fmt::format("Edge ref {} to decl {}\n", varNode.getName(), declNode->getName()));
 }
 
 static void connectVarToVar(Netlist& netlist, NetlistNode& sourceVarNode,
@@ -71,23 +70,30 @@ public:
         evalCtx(evalCtx), leftOperand(leftOperand) {}
 
     void handle(const ast::NamedValueExpression& expr) {
+        if (!expr.eval(evalCtx).bad()) {
+            // If the symbol reference is to a constant (eg a parameter or enum
+            // value), then skip it.
+            return;
+        }
         auto& node = netlist.addVariableReference(expr.symbol, expr, leftOperand);
         varList.push_back(&node);
         for (auto* selector : selectors) {
             if (selector->kind == ast::ExpressionKind::ElementSelect) {
-                auto index = selector->as<ast::ElementSelectExpression>().selector().eval(evalCtx);
-                node.addElementSelect(index);
+                const auto& expr = selector->as<ast::ElementSelectExpression>();
+                auto index = expr.selector().eval(evalCtx);
+                node.addElementSelect(expr, index);
             }
             else if (selector->kind == ast::ExpressionKind::RangeSelect) {
-                auto& rangeSelectExpr = selector->as<ast::RangeSelectExpression>();
-                auto leftIndex = rangeSelectExpr.left().eval(evalCtx);
-                auto rightIndex = rangeSelectExpr.right().eval(evalCtx);
-                node.addRangeSelect(leftIndex, rightIndex);
+                const auto& expr = selector->as<ast::RangeSelectExpression>();
+                auto leftIndex = expr.left().eval(evalCtx);
+                auto rightIndex = expr.right().eval(evalCtx);
+                node.addRangeSelect(expr, leftIndex, rightIndex);
             }
             else if (selector->kind == ast::ExpressionKind::MemberAccess) {
                 node.addMemberAccess(selector->as<ast::MemberAccessExpression>().member.name);
             }
         }
+        std::reverse(node.selectors.begin(), node.selectors.end());
         selectors.clear();
     }
 

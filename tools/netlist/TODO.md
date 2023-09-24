@@ -1,6 +1,8 @@
 To dos
 ======
 
+- Support descending ranges in split variable type handling, eg [0:3].
+- Dumping of a dot file outputs random characters at the end.
 - Support for more procedural statements, the full list is:
 
     InvalidStatement
@@ -36,7 +38,8 @@ To dos
     RandSequenceStatement
     ProceduralCheckerStatement
 
-- Dumping of a dot file outputs random characters at the end.
+- Optimise lookups of nodes in the netlist by adding tables for variable
+  declarations, variable references, ports etc.
 - Reporting of variables in the netlist (by type, matching patterns).
 - Infer sequential elements in the netlist (ie non-blocking assignment and
   sensitive to a clock edge).

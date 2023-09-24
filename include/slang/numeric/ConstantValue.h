@@ -311,6 +311,9 @@ struct SLANG_EXPORT ConstantRange {
     int32_t left = 0;
     int32_t right = 0;
 
+    ConstantRange() = default;
+    ConstantRange(int32_t left, int32_t right) : left(left), right(right) {}
+
     /// Gets the width of the range, regardless of the order in which
     /// the bounds are specified.
     bitwidth_t width() const {
@@ -344,6 +347,9 @@ struct SLANG_EXPORT ConstantRange {
 
     /// Determines whether the given point is within the range.
     bool containsPoint(int32_t index) const;
+
+    /// Determines whether the given range is wholly contained within this one.
+    bool contains(ConstantRange other) const;
 
     /// Determines whether the given range overlaps with this one
     /// (including cases where one is wholly contained in the other).

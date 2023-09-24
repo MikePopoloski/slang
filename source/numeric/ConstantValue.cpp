@@ -650,6 +650,10 @@ bool ConstantRange::containsPoint(int32_t index) const {
     return index >= lower() && index <= upper();
 }
 
+bool ConstantRange::contains(ConstantRange other) const {
+    return other.lower() >= lower() && other.upper() <= upper();
+}
+
 bool ConstantRange::overlaps(ConstantRange other) const {
     return lower() <= other.upper() && upper() >= other.lower();
 }
