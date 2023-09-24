@@ -358,18 +358,19 @@ std::tuple<const Expression*, const Type*> Expression::bindImplicitParam(
     const DataTypeSyntax& typeSyntax, const ExpressionSyntax& rhs, SourceLocation location,
     const ASTContext& exprContext, const ASTContext& typeContext, bitmask<ASTFlags> extraFlags) {
 
-    Compilation& comp = exprContext.getCompilation();
-    Expression& expr = create(comp, rhs, exprContext, extraFlags);
-    const Type* lhsType = expr.type;
-
     // Rules are described in [6.20.2].
+    Compilation& comp = exprContext.getCompilation();
     auto& it = typeSyntax.as<ImplicitTypeSyntax>();
     if (!it.dimensions.empty()) {
         // If we have a range provided, the result is always an integral value
         // of the provided width -- getType() will do what we want here.
-        lhsType = &comp.getType(typeSyntax, typeContext);
+        auto lhsType = &comp.getType(typeSyntax, typeContext);
+        return {&bindRValue(*lhsType, rhs, location, exprContext, extraFlags), lhsType};
     }
-    else if (it.signing) {
+
+    Expression& expr = create(comp, rhs, exprContext, extraFlags);
+    const Type* lhsType = expr.type;
+    if (it.signing) {
         // If signing is provided, the result is always integral but we infer the width.
         // If the type is non-integral or unsized, infer a width of 32.
         bitwidth_t bits = lhsType->getBitWidth();
@@ -859,8 +860,9 @@ Expression& Expression::create(Compilation& compilation, const ExpressionSyntax&
                                                  context);
             break;
         case SyntaxKind::TimingControlExpression:
-            // Valid cases of this expression type are handled in AssignmentExpression. If we reach
-            // this block here, the expression is invalid so always report an error.
+            // Valid cases of this expression type are handled in AssignmentExpression.
+            // If we reach this block here, the expression is invalid so always report
+            // an error.
             context.addDiag(diag::TimingControlNotAllowed, syntax.sourceRange());
             result = &badExpr(compilation, nullptr);
             break;
