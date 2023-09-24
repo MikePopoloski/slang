@@ -2261,3 +2261,28 @@ endmodule
         compilation.getRoot().lookupName<InstanceSymbol>("top.m").getDefinition().sourceLibrary;
     CHECK(lib == expected);
 }
+
+TEST_CASE("Driver in uninstantiated generate block regress") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I;
+    int q;
+    function automatic void foo(int r);
+        q = r;
+    endfunction
+endinterface
+
+module m #(parameter int i)(I intf);
+    if (i == 1) always_comb intf.foo(1);
+    else always_comb intf.foo(2);
+endmodule
+
+module top;
+    I intf();
+    m #(1) m1(intf);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
