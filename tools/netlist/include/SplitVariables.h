@@ -49,7 +49,7 @@ public:
             return {multiplierElem * rw, fixedSizeElem};
         }
 
-        SLANG_ASSERT(0 && "unsupported type for getTypeBitWidth");
+        SLANG_UNREACHABLE;
     }
 
     /// Return the bit width of a slang type, treating unpacked arrays as
@@ -107,7 +107,7 @@ public:
             return arrayType.range;
         }
         else {
-            SLANG_ASSERT(0 && "unexpected array type");
+          SLANG_UNREACHABLE;
         }
     }
 

@@ -311,6 +311,8 @@ struct SLANG_EXPORT ConstantRange {
     int32_t left = 0;
     int32_t right = 0;
 
+    ConstantRange(int32_t left, int32_t right) : left(left), right(right) {}
+
     /// Gets the width of the range, regardless of the order in which
     /// the bounds are specified.
     bitwidth_t width() const {
