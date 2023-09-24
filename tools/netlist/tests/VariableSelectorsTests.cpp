@@ -8,15 +8,16 @@
 
 #include "NetlistTest.h"
 #include "SplitVariables.h"
-#include "slang/util/Util.h"
 #include <stdexcept>
+
+#include "slang/util/Util.h"
 
 /// Helper method to extract a variable reference from a netlist and return the
 /// bit range associated with it.
 ConstantRange getBitRange(Netlist& netlist, std::string_view variableSyntax) {
     auto* node = netlist.lookupVariableReference(variableSyntax);
     if (node == nullptr) {
-      SLANG_THROW(fmt::format("Could not find node {}", variableSyntax));
+        SLANG_THROW(fmt::format("Could not find node {}", variableSyntax));
     }
     return AnalyseVariableReference::create(*node).getBitRange();
 }

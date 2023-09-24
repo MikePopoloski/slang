@@ -107,7 +107,7 @@ public:
             return arrayType.range;
         }
         else {
-          SLANG_UNREACHABLE;
+            SLANG_UNREACHABLE;
         }
     }
 
