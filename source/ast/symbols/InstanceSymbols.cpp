@@ -878,6 +878,7 @@ static const AssertionExpr* bindUnknownPortConn(const ASTContext& context,
     // We have to check for a simple reference to an interface instance or port here,
     // since we don't know whether this is an interface port connection or even
     // a normal connection with a virtual interface type.
+    const auto flags = ASTFlags::AllowUnboundedLiteral | ASTFlags::StreamingAllowed;
     const SyntaxNode* node = &syntax;
     if (node->kind == SyntaxKind::SimplePropertyExpr) {
         node = node->as<SimplePropertyExprSyntax>().expr;
@@ -906,15 +907,14 @@ static const AssertionExpr* bindUnknownPortConn(const ASTContext& context,
                     }
                 }
 
-                return comp.emplace<SimpleAssertionExpr>(
-                    Expression::bind(*expr, context, ASTFlags::AllowUnboundedLiteral),
-                    std::nullopt);
+                return comp.emplace<SimpleAssertionExpr>(Expression::bind(*expr, context, flags),
+                                                         std::nullopt);
             }
         }
     }
 
-    return &AssertionExpr::bind(syntax, context.resetFlags(ASTFlags::AssertionInstanceArgCheck |
-                                                           ASTFlags::AllowUnboundedLiteral));
+    return &AssertionExpr::bind(syntax,
+                                context.resetFlags(ASTFlags::AssertionInstanceArgCheck | flags));
 }
 
 std::span<const AssertionExpr* const> UninstantiatedDefSymbol::getPortConnections() const {

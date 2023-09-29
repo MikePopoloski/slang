@@ -2286,3 +2286,17 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Streaming op in uninstantiated module regress") {
+    auto tree = SyntaxTree::fromText(R"(
+module m #(parameter int i);
+    foo f(.a({<< {a}}));
+endmodule
+
+module top; endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
