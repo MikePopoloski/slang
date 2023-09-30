@@ -116,6 +116,7 @@ static DynamicSize dynamicBitstreamSize(const Type& type, BitstreamSizeMode mode
     }
     else if (type.isClass()) {
         auto& ct = type.getCanonicalType().as<ClassType>();
+        SLANG_ASSERT(!ct.hasCycles());
         for (auto& prop : ct.membersOfType<ClassPropertySymbol>()) {
             if (!handleField(prop))
                 return {};

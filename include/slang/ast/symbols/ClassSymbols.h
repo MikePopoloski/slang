@@ -93,6 +93,15 @@ public:
         return *cachedBitstreamWidth;
     }
 
+    /// Returns true if this class type has recursive cycles in its
+    /// properties (i.e. properties with the same type as this class,
+    /// directly or indirectly).
+    bool hasCycles() const {
+        if (!cachedHasCycles)
+            computeCycles();
+        return *cachedHasCycles;
+    }
+
     static const Symbol& fromSyntax(const Scope& scope,
                                     const syntax::ClassDeclarationSyntax& syntax);
 
@@ -121,6 +130,7 @@ private:
                           const ASTContext& context,
                           function_ref<void(const Symbol&)> insertCB) const;
     void computeSize() const;
+    void computeCycles() const;
 
     mutable const Type* baseClass = nullptr;
     mutable const Symbol* baseConstructor = nullptr;
@@ -129,6 +139,7 @@ private:
     mutable std::span<const Type* const> declaredIfaces;
     mutable std::optional<const Expression*> baseConstructorCall;
     mutable std::optional<uint32_t> cachedBitstreamWidth;
+    mutable std::optional<bool> cachedHasCycles;
     SymbolIndex headerIndex;
 };
 

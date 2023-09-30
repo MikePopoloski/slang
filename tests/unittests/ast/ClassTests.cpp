@@ -2732,3 +2732,25 @@ endmodule
     for (int i = 0; i < 20; i++)
         CHECK(diags[i].code == diag::UndeclaredIdentifier);
 }
+
+TEST_CASE("Class with cycles crashes") {
+    auto tree = SyntaxTree::fromText(R"(
+class A;
+    A a;
+    int b;
+endclass
+
+module m;
+    A a = new;
+    A b[2];
+    int i = int'(a);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::BadConversion);
+}

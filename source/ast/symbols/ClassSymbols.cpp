@@ -718,6 +718,8 @@ void ClassType::computeSize() const {
 
     ASTContext context(*this, LookupLocation(this, uint32_t(headerIndex)));
 
+    // Note: no worry of class cycles here because we set cachedBitstreamWidth
+    // to zero up above, which will avoid re-entering this function.
     uint64_t totalWidth = 0;
     bool hasDynamic = false;
     for (auto& prop : membersOfType<ClassPropertySymbol>()) {
@@ -734,6 +736,21 @@ void ClassType::computeSize() const {
 
     if (!hasDynamic)
         cachedBitstreamWidth = uint32_t(totalWidth);
+}
+
+void ClassType::computeCycles() const {
+    // Start out by setting hasCycles to true, so that if we call into
+    // hasCycles() in a re-entrant fashion we'll see this result right away.
+    ensureElaborated();
+    cachedHasCycles = true;
+
+    for (auto& prop : membersOfType<ClassPropertySymbol>()) {
+        auto& propType = prop.getType().getCanonicalType();
+        if (propType.isClass() && propType.as<ClassType>().hasCycles())
+            return;
+    }
+
+    cachedHasCycles = false;
 }
 
 void ClassType::serializeTo(ASTSerializer& serializer) const {
