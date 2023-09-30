@@ -1138,3 +1138,18 @@ library rtlLib /a/b/c, f/...*?/asdf*.v,
     diagnostics = tree->diagnostics();
     CHECK_DIAGNOSTICS_EMPTY;
 }
+
+TEST_CASE("Genblock parsing regress") {
+    auto& text = R"(
+module m;
+    if (1) else if (1) else
+endmodule
+)";
+
+    parseCompilationUnit(text);
+
+    REQUIRE(diagnostics.size() == 3);
+    CHECK(diagnostics[0].code == diag::ExpectedMember);
+    CHECK(diagnostics[1].code == diag::ExpectedMember);
+    CHECK(diagnostics[2].code == diag::ExpectedMember);
+}

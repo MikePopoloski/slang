@@ -881,8 +881,9 @@ MemberSyntax& Parser::parseGenerateBlock() {
 
             // If there was some syntax error that caused parseMember to return null, fabricate an
             // empty member here and let our caller sort it out.
-            return factory.emptyMember(nullptr, nullptr,
-                                       missingToken(TokenKind::Semicolon, peek().location()));
+            auto loc = peek().location();
+            addDiag(diag::ExpectedMember, loc);
+            return factory.emptyMember(nullptr, nullptr, missingToken(TokenKind::Semicolon, loc));
         }
 
         auto name = consume();
