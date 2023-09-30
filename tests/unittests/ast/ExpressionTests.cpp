@@ -3050,3 +3050,18 @@ endmodule
     CHECK(diags[9].code == diag::RangeOOB);
     CHECK(diags[10].code == diag::ObjectTooLarge);
 }
+
+TEST_CASE("Index OOB unevaluated context when checking implicit conversions") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    localparam logic foo[10] = '{default:0};
+    for (genvar i = 0; i < 10; i++) begin
+        localparam int k = i == 0 ? 9 : foo[i - 1];
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

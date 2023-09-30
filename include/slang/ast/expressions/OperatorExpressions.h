@@ -106,9 +106,9 @@ public:
     std::span<const Condition> conditions;
 
     ConditionalExpression(const Type& type, std::span<const Condition> conditions, Expression& left,
-                          Expression& right, SourceRange sourceRange) :
+                          Expression& right, SourceRange sourceRange, bool isConst, bool isTrue) :
         Expression(ExpressionKind::ConditionalOp, type, sourceRange),
-        conditions(conditions), left_(&left), right_(&right) {}
+        conditions(conditions), left_(&left), right_(&right), isConst(isConst), isTrue(isTrue) {}
 
     const Expression& left() const { return *left_; }
     Expression& left() { return *left_; }
@@ -143,6 +143,8 @@ public:
 private:
     Expression* left_;
     Expression* right_;
+    bool isConst;
+    bool isTrue;
 };
 
 /// Represents a set membership operator expression.

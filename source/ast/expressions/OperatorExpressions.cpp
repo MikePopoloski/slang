@@ -1005,7 +1005,7 @@ Expression& ConditionalExpression::fromSyntax(Compilation& comp,
     // Force four-state return type for ambiguous condition case.
     const Type* resultType = binaryOperatorType(comp, lt, rt, isFourState);
     auto result = comp.emplace<ConditionalExpression>(*resultType, conditions.copy(comp), left,
-                                                      right, syntax.sourceRange());
+                                                      right, syntax.sourceRange(), isConst, isTrue);
     if (bad)
         return badExpr(comp, result);
 
@@ -1060,8 +1060,18 @@ Expression& ConditionalExpression::fromSyntax(Compilation& comp,
 bool ConditionalExpression::propagateType(const ASTContext& context, const Type& newType) {
     // The predicate is self determined so no need to handle it here.
     type = &newType;
-    contextDetermined(context, left_, this, newType);
-    contextDetermined(context, right_, this, newType);
+
+    bitmask<ASTFlags> leftFlags = ASTFlags::None;
+    bitmask<ASTFlags> rightFlags = ASTFlags::None;
+    if (isConst) {
+        if (isTrue)
+            rightFlags = ASTFlags::UnevaluatedBranch;
+        else
+            leftFlags = ASTFlags::UnevaluatedBranch;
+    }
+
+    contextDetermined(context.resetFlags(leftFlags), left_, this, newType);
+    contextDetermined(context.resetFlags(rightFlags), right_, this, newType);
     return true;
 }
 
