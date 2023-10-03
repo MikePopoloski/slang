@@ -75,7 +75,7 @@ void SvStruct::toCpp(HppFile& hppFile, std::string_view _namespace, const SvAlia
     {
         hppFile.addWithIndent(fmt::format("{}(", structName));
 
-        hppFile.add(fmt::format("const {}& data) {{\n", cppTypeStr));
+        hppFile.add(fmt::format("const {}& __data) {{\n", cppTypeStr));
 
         hppFile.increaseIndent();
 
@@ -84,15 +84,15 @@ void SvStruct::toCpp(HppFile& hppFile, std::string_view _namespace, const SvAlia
         if (structSize > 64) {
             for (const auto& member : members) {
                 if (member.second.size == 1)
-                    values.emplace_back(fmt::format("data.get_bit({0}_s)", member.first));
+                    values.emplace_back(fmt::format("__data.get_bit({0}_s)", member.first));
                 else
                     values.emplace_back(fmt::format(
-                        "data.range({0}_s + {0}_w - 1, {0}_s).to_uint64()", member.first));
+                        "__data.range({0}_s + {0}_w - 1, {0}_s).to_uint64()", member.first));
             }
         }
         else {
             for (const auto& member : members)
-                values.emplace_back(fmt::format("(data >> {0}_s) & (~0ULL >> (64 - {1}))",
+                values.emplace_back(fmt::format("(__data >> {0}_s) & (~0ULL >> (64 - {1}))",
                                                 member.first, member.second.size));
         }
 
@@ -116,16 +116,16 @@ void SvStruct::toCpp(HppFile& hppFile, std::string_view _namespace, const SvAlia
     // sc_bv
     if (!noSystemC && structSize <= 64) {
         hppFile.addWithIndent(
-            fmt::format("{}(const sc_bv<{}>& data) {{\n", structName, type.getBitstreamWidth()));
+            fmt::format("{}(const sc_bv<{}>& __data) {{\n", structName, type.getBitstreamWidth()));
 
         hppFile.increaseIndent();
 
         for (const auto& member : members) {
             std::string value;
             if (member.second.size == 1)
-                value = fmt::format("data.get_bit({0}_s)", member.first);
+                value = fmt::format("__data.get_bit({0}_s)", member.first);
             else
-                value = fmt::format("data.range({0}_s + {0}_w - 1, {0}_s).to_uint64()",
+                value = fmt::format("__data.range({0}_s + {0}_w - 1, {0}_s).to_uint64()",
                                     member.first);
 
             if (member.second.isStructOrEnum())
@@ -219,23 +219,23 @@ void SvStruct::toCpp(HppFile& hppFile, std::string_view _namespace, const SvAlia
 
     //* OVERLOAD << OPERATOR *//
     hppFile.addWithIndent(fmt::format(
-        "friend std::ostream& operator<<(std::ostream& os, const {}& data) {{\n", structName));
+        "friend std::ostream& operator<<(std::ostream& os, const {}& __data) {{\n", structName));
     hppFile.increaseIndent();
-    hppFile.addWithIndent("os << data.to_string();\n");
+    hppFile.addWithIndent("os << __data.to_string();\n");
     hppFile.addWithIndent("return os;\n");
     hppFile.decreaseIndent();
     hppFile.addWithIndent("}\n");
 
     //* STATIC GET FUNCTIONS *//
     for (const auto& member : members) {
-        hppFile.addWithIndent(fmt::format("static {} get_{} (const {}& data) {{\n",
+        hppFile.addWithIndent(fmt::format("static {} get_{} (const {}& __data) {{\n",
                                           member.second.toString(), member.first, cppTypeStr));
         hppFile.increaseIndent();
         std::string value;
         if (cppType == CppType::SC_BV)
-            value = fmt::format("data.range({0}_s + {0}_w - 1, {0}_s).to_uint64()", member.first);
+            value = fmt::format("__data.range({0}_s + {0}_w - 1, {0}_s).to_uint64()", member.first);
         else
-            value = fmt::format("(data >> {0}_s) & (~0ULL >> (64 - {1}))", member.first,
+            value = fmt::format("(__data >> {0}_s) & (~0ULL >> (64 - {1}))", member.first,
                                 member.second.size);
 
         if (member.second.isStructOrEnum())

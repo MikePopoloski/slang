@@ -58,9 +58,9 @@ void SvEnum::toCpp(HppFile& hppFile, std::string_view, const SvAliases&, bool) c
     hppFile.addWithIndent(fmt::format("{}() = default;\n", type.name));
 
     //** CONSTRUCTOR **//
-    hppFile.addWithIndent(fmt::format("{} ({} data) {{\n", type.name, underlyingType()));
+    hppFile.addWithIndent(fmt::format("{} ({} __data) {{\n", type.name, underlyingType()));
     hppFile.increaseIndent();
-    hppFile.addWithIndent("switch (data) {\n");
+    hppFile.addWithIndent("switch (__data) {\n");
     hppFile.increaseIndent();
     for (const auto& member : members)
         hppFile.addWithIndent(
@@ -78,9 +78,9 @@ void SvEnum::toCpp(HppFile& hppFile, std::string_view, const SvAliases&, bool) c
 
     //** OVERLOAD << OPERATOR **//
     hppFile.addWithIndent(fmt::format(
-        "friend std::ostream& operator<<(std::ostream& os, const {}& data) {{\n", type.name));
+        "friend std::ostream& operator<<(std::ostream& os, const {}& __data) {{\n", type.name));
     hppFile.increaseIndent();
-    hppFile.addWithIndent("switch (data.type) {\n");
+    hppFile.addWithIndent("switch (__data.type) {\n");
     hppFile.increaseIndent();
     for (const auto& member : members)
         hppFile.addWithIndent(fmt::format("case Type::{0}: os << \"{0}\"; break;\n", member.first));
