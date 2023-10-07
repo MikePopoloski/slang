@@ -578,8 +578,11 @@ void Compilation::createDefinition(const Scope& scope, LookupLocation location,
         // latter one (with a warning) and if not then we store both
         // and resolve them later via config or library ordering.
         auto vecIt = std::ranges::lower_bound(it->second, def, [](Definition* a, Definition* b) {
-            // TODO: library ordering
-            return a->sourceLibrary < b->sourceLibrary;
+            if (!a->sourceLibrary)
+                return false;
+            if (!b->sourceLibrary)
+                return true;
+            return a->sourceLibrary->priority < b->sourceLibrary->priority;
         });
 
         if (vecIt != it->second.end() && (*vecIt)->sourceLibrary == def->sourceLibrary) {

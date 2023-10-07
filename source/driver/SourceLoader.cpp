@@ -71,6 +71,17 @@ void SourceLoader::addLibraryMaps(std::string_view pattern, const fs::path& base
     addLibraryMapsInternal(pattern, basePath, optionBag, /* expandEnvVars */ false, seenMaps);
 }
 
+void SourceLoader::setLibraryOrder(const std::vector<std::string>& libraryOrder) {
+    int priority = (int)libraryOrder.size() * -1;
+    for (auto& name : libraryOrder) {
+        if (auto it = libraries.find(name); it != libraries.end())
+            it->second->priority = priority;
+
+        libraryPriorityMap[name] = priority;
+        priority++;
+    }
+}
+
 void SourceLoader::addLibraryMapsInternal(std::string_view pattern, const fs::path& basePath,
                                           const Bag& optionBag, bool expandEnvVars,
                                           flat_hash_set<fs::path>& seenMaps) {
@@ -355,8 +366,15 @@ SourceLibrary* SourceLoader::getOrAddLibrary(std::string_view name) {
 
     auto nameStr = std::string(name);
     auto& lib = libraries[nameStr];
-    if (!lib)
-        lib = std::make_unique<SourceLibrary>(std::move(nameStr));
+    if (!lib) {
+        int priority = (int)libraryPriorityMap.size();
+        if (auto it = libraryPriorityMap.find(nameStr); it != libraryPriorityMap.end())
+            priority = it->second;
+        else
+            libraryPriorityMap.emplace(nameStr, priority);
+
+        lib = std::make_unique<SourceLibrary>(std::move(nameStr), priority);
+    }
 
     return lib.get();
 }

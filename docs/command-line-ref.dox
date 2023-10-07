@@ -204,6 +204,15 @@ specified must not have any non-defaulted parameters or interface ports.
 If no top modules are specified manually, they will be automatically inferred by
 finding all modules that are not instantiated elsewhere in the design.
 
+`-L <library>[,...]`
+
+A list of library names in the order in which they should be used to resolve
+module names. Libraries that are earlier in the list will be searched before
+ones later in the list.
+
+If no explicit ordering is given the default order is
+the order in which the libraries are specified to the tool.
+
 `--max-hierarchy-depth <depth>`
 
 Set the maximum depth of the design hierarchy. Used to detect infinite

@@ -159,6 +159,10 @@ public:
         /// for now at least this only applies to parameters in top-level modules.
         std::vector<std::string> paramOverrides;
 
+        /// A list of library names specifying the order in which module lookup
+        /// should be resolved between libraries.
+        std::vector<std::string> libraryOrder;
+
         /// @}
         /// @name Diagnostics control
         /// @{

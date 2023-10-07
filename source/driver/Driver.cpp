@@ -165,6 +165,9 @@ void Driver::addStandardArgs() {
                 "One or more parameter overrides to apply when "
                 "instantiating top-level modules",
                 "<name>=<value>");
+    cmdLine.add("-L", options.libraryOrder,
+                "A list of library names that controls the priority order for module lookup",
+                "<library>", CommandLineFlags::CommaList);
 
     // Diagnostics control
     cmdLine.add("-W", options.warningOptions, "Control the specified warning", "<warning>");
@@ -420,6 +423,8 @@ bool Driver::processOptions() {
         if (!opt.has_value())
             opt = true;
     }
+
+    sourceLoader.setLibraryOrder(options.libraryOrder);
 
     if (!reportLoadErrors())
         return false;

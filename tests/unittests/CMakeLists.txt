@@ -7,6 +7,7 @@ add_executable(
   unittests
   ast/AssertionTests.cpp
   ast/ClassTests.cpp
+  ast/ConfigTests.cpp
   ast/CoverTests.cpp
   ast/EvalTests.cpp
   ast/ExpressionTests.cpp

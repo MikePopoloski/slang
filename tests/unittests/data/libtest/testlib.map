@@ -1,0 +1,2 @@
+library lib1 mod1.sv;
+library lib2 mod2.sv;

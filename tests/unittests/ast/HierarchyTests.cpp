@@ -2228,40 +2228,6 @@ endprimitive
     CHECK(diags[3].code == diag::MissingExternWildcardPorts);
 }
 
-TEST_CASE("Duplicate modules in different source libraries") {
-    auto lib1 = std::make_unique<SourceLibrary>("lib1");
-    auto lib2 = std::make_unique<SourceLibrary>("lib2");
-
-    auto tree1 = SyntaxTree::fromText(R"(
-module mod;
-endmodule
-)",
-                                      SyntaxTree::getDefaultSourceManager(), "source", "", {},
-                                      lib1.get());
-    auto tree2 = SyntaxTree::fromText(R"(
-module mod;
-endmodule
-)",
-                                      SyntaxTree::getDefaultSourceManager(), "source", "", {},
-                                      lib2.get());
-    auto tree3 = SyntaxTree::fromText(R"(
-module top;
-    mod m();
-endmodule
-)");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree1);
-    compilation.addSyntaxTree(tree2);
-    compilation.addSyntaxTree(tree3);
-    NO_COMPILATION_ERRORS;
-
-    auto expected = lib1.get() < lib2.get() ? lib1.get() : lib2.get();
-    auto lib =
-        compilation.getRoot().lookupName<InstanceSymbol>("top.m").getDefinition().sourceLibrary;
-    CHECK(lib == expected);
-}
-
 TEST_CASE("Driver in uninstantiated generate block regress") {
     auto tree = SyntaxTree::fromText(R"(
 interface I;
