@@ -47,7 +47,7 @@ module mh22(ref wire x); endmodule
         auto def = compilation.getRoot().find(moduleName);    \
         REQUIRE(def);                                         \
         auto& body = def->as<InstanceSymbol>().body;          \
-        auto& port = body.findPort(name)->as<PortSymbol>();   \
+        auto& port = body.findPort(name) -> as<PortSymbol>(); \
         CHECK(port.direction == ArgumentDirection::dir);      \
         CHECK(port.getType().toString() == (type));           \
         if (nt) {                                             \
@@ -125,7 +125,7 @@ module m6(I.bar bar); endmodule
         auto def = compilation.getDefinition(moduleName, compilation.getRoot()); \
         REQUIRE(def);                                                            \
         auto& inst = InstanceSymbol::createDefault(compilation, *def, nullptr);  \
-        auto& port = inst.body.findPort(name)->as<PortSymbol>();                 \
+        auto& port = inst.body.findPort(name) -> as<PortSymbol>();               \
         CHECK(port.direction == ArgumentDirection::dir);                         \
         CHECK(port.getType().toString() == (type));                              \
         if (nt) {                                                                \
@@ -139,7 +139,7 @@ module m6(I.bar bar); endmodule
         auto def = compilation.getDefinition(moduleName, compilation.getRoot()); \
         REQUIRE(def);                                                            \
         auto& inst = InstanceSymbol::createDefault(compilation, *def, nullptr);  \
-        auto& port = inst.body.findPort(portName)->as<InterfacePortSymbol>();    \
+        auto& port = inst.body.findPort(portName) -> as<InterfacePortSymbol>();  \
         REQUIRE(port.interfaceDef);                                              \
         CHECK(port.interfaceDef->name == (ifaceName));                           \
         if (*(modportName)) {                                                    \
