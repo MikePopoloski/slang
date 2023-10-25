@@ -374,9 +374,48 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamsAndBinds) {
             }
         }
 
-        // If any top modules were not found, issue an error.
-        for (auto& name : tm)
+        // Any names still in the map were not found as module definitions.
+        for (auto& name : tm) {
+            // This might be a config block instead.
+            if (auto confIt = configBlocks.find(name); confIt != configBlocks.end()) {
+                const ConfigBlockSymbol* foundConf = nullptr;
+                for (auto conf : confIt->second) {
+                    // TODO: handle configs in libraries
+                    if (!conf->sourceLibrary) {
+                        foundConf = conf;
+                        break;
+                    }
+                }
+
+                if (foundConf) {
+                    // TODO: handle other rules for this block
+                    const Scope* rootScope = root.get();
+                    for (auto [lib, cell] : foundConf->topCells) {
+                        // TODO: support lib names
+                        if (auto defIt = definitionMap.find(std::tuple{cell, rootScope});
+                            defIt != definitionMap.end()) {
+
+                            const Definition* foundDef = nullptr;
+                            for (auto def : defIt->second) {
+                                if (def->sourceLibrary == foundConf->sourceLibrary) {
+                                    foundDef = def;
+                                    break;
+                                }
+                            }
+
+                            if (foundDef) {
+                                topDefs.push_back(foundDef);
+                                continue;
+                            }
+                        }
+                        // TODO: error
+                    }
+                    continue;
+                }
+            }
+
             root->addDiag(diag::InvalidTopModule, SourceLocation::NoLocation) << name;
+        }
     }
 
     // Sort the list of definitions so that we get deterministic ordering of instances;
@@ -648,7 +687,29 @@ const PackageSymbol& Compilation::createPackage(const Scope& scope,
 
 const ConfigBlockSymbol& Compilation::createConfigBlock(const Scope& scope,
                                                         const ConfigDeclarationSyntax& syntax) {
-    return ConfigBlockSymbol::fromSyntax(scope, syntax);
+    // TODO: set sourcelibrary pointer
+    auto& config = ConfigBlockSymbol::fromSyntax(scope, syntax);
+
+    auto it = configBlocks.find(config.name);
+    if (it == configBlocks.end()) {
+        configBlocks.emplace(config.name, std::vector<const ConfigBlockSymbol*>{&config});
+    }
+    else {
+        auto findIt = std::ranges::find_if(it->second, [&](const ConfigBlockSymbol* elem) {
+            return elem->sourceLibrary == config.sourceLibrary;
+        });
+
+        if (findIt != it->second.end()) {
+            auto& diag = scope.addDiag(diag::Redefinition, config.location);
+            diag << config.name;
+            diag.addNote(diag::NotePreviousDefinition, (*findIt)->location);
+        }
+        else {
+            it->second.emplace_back(&config);
+        }
+    }
+
+    return config;
 }
 
 const PrimitiveSymbol* Compilation::getPrimitive(std::string_view lookupName) const {

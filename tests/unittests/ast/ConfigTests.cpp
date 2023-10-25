@@ -82,3 +82,28 @@ TEST_CASE("Driver library explicit ordering") {
     auto& m = compilation->getRoot().lookupName<InstanceSymbol>("top.m");
     CHECK(m.getDefinition().sourceLibrary->name == "lib2");
 }
+
+TEST_CASE("Config block top modules") {
+    auto tree = SyntaxTree::fromText(R"(
+config cfg1;
+    localparam int i = 1;
+    design frob;
+endconfig
+
+module frob;
+endmodule
+
+module bar;
+endmodule
+)");
+    CompilationOptions options;
+    options.topModules.emplace("cfg1");
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto topInstances = compilation.getRoot().topInstances;
+    CHECK(topInstances.size() == 1);
+    CHECK(topInstances[0]->name == "frob");
+}

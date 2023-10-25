@@ -830,6 +830,9 @@ private:
     // A map of scopes to default disable declarations.
     flat_hash_map<const Scope*, const Expression*> defaultDisableMap;
 
+    // A map of config blocks.
+    flat_hash_map<std::string_view, std::vector<const ConfigBlockSymbol*>> configBlocks;
+
     // A set of instances that have global definition-based bind directives applied.
     // This is pretty rare and only used for checking of type params.
     flat_hash_map<const Definition*, std::vector<const Symbol*>> instancesWithDefBinds;

@@ -85,6 +85,9 @@ public:
 /// Represents a config block declaration.
 class SLANG_EXPORT ConfigBlockSymbol : public Symbol, public Scope {
 public:
+    const SourceLibrary* sourceLibrary = nullptr;
+    std::span<std::pair<std::string_view, std::string_view>> topCells;
+
     ConfigBlockSymbol(Compilation& compilation, std::string_view name, SourceLocation loc) :
         Symbol(SymbolKind::ConfigBlock, name, loc), Scope(compilation, this) {}
 
