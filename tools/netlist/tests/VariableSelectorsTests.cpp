@@ -344,8 +344,8 @@ endmodule
     CHECK(getBitRange(netlist, "foo[a+:1]") == ConstantRange(0, 7));
     CHECK(getBitRange(netlist, "foo[a-:2]") == ConstantRange(0, 7));
     CHECK(getBitRange(netlist, "foo[1][a]") == ConstantRange(4, 5));
-    CHECK(getBitRange(netlist, "foo[1][a+:1]") == ConstantRange(2, 3));
-    CHECK(getBitRange(netlist, "foo[1][a-:2]") == ConstantRange(2, 3));
+    CHECK(getBitRange(netlist, "foo[1][a+:1]") == ConstantRange(4, 5));
+    CHECK(getBitRange(netlist, "foo[1][a-:2]") == ConstantRange(4, 5));
 }
 
 //===---------------------------------------------------------------------===//
