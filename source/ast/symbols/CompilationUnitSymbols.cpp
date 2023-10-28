@@ -169,10 +169,13 @@ ConfigBlockSymbol& ConfigBlockSymbol::fromSyntax(const Scope& scope,
     for (auto param : syntax.localparams)
         result->addMembers(*param);
 
-    SmallVector<std::pair<std::string_view, std::string_view>> topCells;
-    for (auto cellId : syntax.topCells)
-        topCells.emplace_back(cellId->library.valueText(), cellId->cell.valueText());
-
+    SmallVector<TopCell> topCells;
+    for (auto cellId : syntax.topCells) {
+        if (!cellId->cell.valueText().empty()) {
+            topCells.emplace_back(cellId->library.valueText(), cellId->cell.valueText(),
+                                  cellId->sourceRange());
+        }
+    }
     result->topCells = topCells.copy(comp);
 
     return *result;

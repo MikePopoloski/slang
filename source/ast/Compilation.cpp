@@ -413,14 +413,15 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamsAndBinds) {
                 if (foundConf) {
                     // TODO: handle other rules for this block
                     const Scope* rootScope = root.get();
-                    for (auto [lib, cell] : foundConf->topCells) {
-                        // TODO: support lib names
-                        if (auto defIt = definitionMap.find(std::tuple{cell, rootScope});
+                    for (auto& cell : foundConf->topCells) {
+                        if (auto defIt = definitionMap.find(std::tuple{cell.name, rootScope});
                             defIt != definitionMap.end()) {
 
                             const Definition* foundDef = nullptr;
                             for (auto def : defIt->second) {
-                                if (def->sourceLibrary == foundConf->sourceLibrary) {
+                                if ((cell.lib.empty() &&
+                                     def->sourceLibrary == foundConf->sourceLibrary) ||
+                                    (def->sourceLibrary && def->sourceLibrary->name == cell.lib)) {
                                     foundDef = def;
                                     break;
                                 }
@@ -431,7 +432,14 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamsAndBinds) {
                                 continue;
                             }
                         }
-                        // TODO: error
+
+                        std::string errorName;
+                        if (!cell.lib.empty())
+                            errorName = fmt::format("{}.{}", cell.lib, cell.name);
+                        else
+                            errorName = cell.name;
+
+                        root->addDiag(diag::InvalidTopModule, cell.sourceRange) << errorName;
                     }
                     continue;
                 }

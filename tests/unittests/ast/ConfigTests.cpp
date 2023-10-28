@@ -184,3 +184,45 @@ endconfig
     CHECK(top->name == "mod");
     CHECK(top->getDefinition().sourceLibrary->name == "lib2");
 }
+
+TEST_CASE("Config that targets library cell") {
+    auto lib1 = std::make_unique<SourceLibrary>("lib1", 1);
+
+    auto tree1 = SyntaxTree::fromText(R"(
+module mod;
+endmodule
+)",
+                                      SyntaxTree::getDefaultSourceManager(), "source", "", {},
+                                      lib1.get());
+    auto tree2 = SyntaxTree::fromText(R"(
+config cfg;
+    design lib1.mod;
+endconfig
+)");
+
+    CompilationOptions options;
+    options.topModules.emplace("cfg");
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree1);
+    compilation.addSyntaxTree(tree2);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Config block error missing module") {
+    auto tree = SyntaxTree::fromText(R"(
+config cfg1;
+    design frob libfoo.bar;
+endconfig
+)");
+    CompilationOptions options;
+    options.topModules.emplace("cfg1");
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::InvalidTopModule);
+    CHECK(diags[1].code == diag::InvalidTopModule);
+}
