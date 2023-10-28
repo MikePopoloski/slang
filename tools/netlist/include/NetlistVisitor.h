@@ -24,6 +24,7 @@
 #include "slang/ast/Symbol.h"
 #include "slang/ast/symbols/BlockSymbols.h"
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
+#include "slang/ast/symbols/ValueSymbol.h"
 #include "slang/diagnostics/TextDiagnosticClient.h"
 #include "slang/syntax/SyntaxTree.h"
 #include "slang/syntax/SyntaxVisitor.h"
@@ -43,21 +44,20 @@ static void connectDeclToVar(Netlist& netlist, NetlistNode& declNode,
                              const std::string& hierarchicalPath) {
     auto* varNode = netlist.lookupVariable(hierarchicalPath);
     netlist.addEdge(*varNode, declNode);
-    DEBUG_PRINT(fmt::format("Edge decl {} to ref {}\n", varNode->getName(), declNode.getName()));
+    DEBUG_PRINT("Edge decl {} to ref {}\n", varNode->getName(), declNode.getName());
 }
 
 static void connectVarToDecl(Netlist& netlist, NetlistNode& varNode,
                              const std::string& hierarchicalPath) {
     auto* declNode = netlist.lookupVariable(hierarchicalPath);
     netlist.addEdge(varNode, *declNode);
-    DEBUG_PRINT(fmt::format("Edge ref {} to decl {}\n", varNode.getName(), declNode->getName()));
+    DEBUG_PRINT("Edge ref {} to decl {}\n", varNode.getName(), declNode->getName());
 }
 
 static void connectVarToVar(Netlist& netlist, NetlistNode& sourceVarNode,
                             NetlistNode& targetVarNode) {
     netlist.addEdge(sourceVarNode, targetVarNode);
-    DEBUG_PRINT(
-        fmt::format("Edge ref {} to ref {}\n", sourceVarNode.getName(), targetVarNode.getName()));
+    DEBUG_PRINT("Edge ref {} to ref {}\n", sourceVarNode.getName(), targetVarNode.getName());
 }
 
 /// An AST visitor to identify variable references with selectors in
@@ -70,11 +70,14 @@ public:
         evalCtx(evalCtx), leftOperand(leftOperand) {}
 
     void handle(const ast::NamedValueExpression& expr) {
+
+        // If the symbol reference is to a constant (eg a parameter or enum
+        // value), then skip it.
         if (!expr.eval(evalCtx).bad()) {
-            // If the symbol reference is to a constant (eg a parameter or enum
-            // value), then skip it.
             return;
         }
+
+        // Add the variable reference to the netlist.
         auto& node = netlist.addVariableReference(expr.symbol, expr, leftOperand);
         varList.push_back(&node);
         for (auto* selector : selectors) {
@@ -93,7 +96,29 @@ public:
                 node.addMemberAccess(selector->as<ast::MemberAccessExpression>().member.name);
             }
         }
+
+        // Reverse the selectors.
         std::reverse(node.selectors.begin(), node.selectors.end());
+
+        // Determine the access range to the variable.
+        if (!selectors.empty()) {
+            SmallVector<std::pair<const slang::ast::ValueSymbol*, const slang::ast::Expression*>>
+                prefixes;
+            selectors.front()->getLongestStaticPrefixes(prefixes, evalCtx);
+            SLANG_ASSERT(prefixes.size() == 1);
+            auto [prefixSymbol, prefixExpr] = prefixes.back();
+            auto bounds = slang::ast::ValueDriver::getBounds(*prefixExpr, evalCtx,
+                                                             prefixSymbol->getType());
+            node.bounds = {static_cast<int32_t>(bounds->first),
+                           static_cast<int32_t>(bounds->second)};
+        }
+        else {
+            node.bounds = {0, getTypeBitWidth(expr.symbol.getType()) - 1};
+        }
+        DEBUG_PRINT("Variable reference: {} bounds {}:{}\n", node.toString(), node.bounds.lower(),
+                    node.bounds.upper());
+
+        // Clear the selectors for the next named value.
         selectors.clear();
     }
 
@@ -121,6 +146,30 @@ private:
     bool leftOperand;
     std::vector<NetlistNode*> varList;
     std::vector<const ast::Expression*> selectors;
+
+    std::pair<size_t, size_t> getTypeBitWidthImpl(slang::ast::Type const& type) {
+        size_t fixedSize = type.getBitWidth();
+        if (fixedSize > 0) {
+            return {1, fixedSize};
+        }
+
+        size_t multiplier = 0;
+        const auto& ct = type.getCanonicalType();
+        if (ct.kind == slang::ast::SymbolKind::FixedSizeUnpackedArrayType) {
+            auto [multiplierElem, fixedSizeElem] = getTypeBitWidthImpl(*type.getArrayElementType());
+            auto rw = ct.as<slang::ast::FixedSizeUnpackedArrayType>().range.width();
+            return {multiplierElem * rw, fixedSizeElem};
+        }
+
+        SLANG_UNREACHABLE;
+    }
+
+    /// Return the bit width of a slang type, treating unpacked arrays as
+    /// as if they were packed.
+    int32_t getTypeBitWidth(slang::ast::Type const& type) {
+        auto [multiplierElem, fixedSizeElem] = getTypeBitWidthImpl(type);
+        return (int32_t)(multiplierElem * fixedSizeElem);
+    }
 };
 
 /// An AST visitor to create dependencies between occurrances of variables
@@ -145,7 +194,7 @@ public:
             for (auto* rightNode : visitorRHS.getVars()) {
                 // Add edge from variable declaration to RHS variable reference.
                 connectDeclToVar(netlist, *rightNode, getSymbolHierPath(rightNode->symbol));
-                // Add edge form RHS expression term to LHS expression terms.
+                // Add edge from RHS expression term to LHS expression terms.
                 connectVarToVar(netlist, *rightNode, *leftNode);
             }
         }
@@ -371,7 +420,7 @@ public:
 
     /// Instance.
     void handle(const ast::InstanceSymbol& symbol) {
-        DEBUG_PRINT(fmt::format("Instance {}\n", symbol.name));
+        DEBUG_PRINT("Instance {}\n", symbol.name);
         if (symbol.name.empty()) {
             // An instance without a name has been excluded from the design.
             // This can happen when the --top option is used and there is an

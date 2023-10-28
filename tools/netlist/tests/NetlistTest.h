@@ -4,7 +4,6 @@
 #include "Netlist.h"
 #include "NetlistVisitor.h"
 #include "PathFinder.h"
-#include "SplitVariables.h"
 #include "Test.h"
 #include <string>
 
@@ -14,7 +13,7 @@ inline Netlist createNetlist(Compilation& compilation) {
     Netlist netlist;
     NetlistVisitor visitor(compilation, netlist);
     compilation.getRoot().visit(visitor);
-    SplitVariables splitVariables(netlist);
+    netlist.split();
     return netlist;
 }
 

@@ -12,7 +12,8 @@ namespace netlist {
 /// A singleton to hold global configuration options.
 class Config {
 public:
-    bool debugEnabled{};
+    bool debugEnabled{false};
+    bool quietEnabled{false};
 
     Config() = default;
 

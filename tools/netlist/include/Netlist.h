@@ -13,11 +13,17 @@
 #include "fmt/color.h"
 #include "fmt/format.h"
 #include <iostream>
+#include <utility>
 
 #include "slang/ast/ASTVisitor.h"
 #include "slang/ast/Expression.h"
+#include "slang/ast/Symbol.h"
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
+#include "slang/ast/types/AllTypes.h"
+#include "slang/ast/types/Type.h"
 #include "slang/diagnostics/TextDiagnosticClient.h"
+#include "slang/numeric/ConstantValue.h"
+#include "slang/numeric/SVInt.h"
 #include "slang/syntax/SyntaxTree.h"
 #include "slang/syntax/SyntaxVisitor.h"
 #include "slang/util/Util.h"
@@ -313,6 +319,8 @@ public:
     bool leftOperand;
     /// Selectors applied to the variable reference.
     SelectorsListType selectors;
+    // Access bounds.
+    ConstantRange bounds;
 };
 
 /// A class representing the design netlist.
@@ -328,7 +336,7 @@ public:
         SLANG_ASSERT(lookupPort(nodePtr->hierarchicalPath) == nullptr &&
                      "Port declaration already exists");
         nodes.push_back(std::move(nodePtr));
-        DEBUG_PRINT("Add port decl " << node.hierarchicalPath << "\n");
+        DEBUG_PRINT("Add port decl {}\n", node.hierarchicalPath);
         return node;
     }
 
@@ -340,7 +348,7 @@ public:
         SLANG_ASSERT(lookupVariable(nodePtr->hierarchicalPath) == nullptr &&
                      "Variable declaration already exists");
         nodes.push_back(std::move(nodePtr));
-        DEBUG_PRINT("Add var decl " << node.hierarchicalPath << "\n");
+        DEBUG_PRINT("Add var decl {}\n", node.hierarchicalPath);
         return node;
     }
 
@@ -350,7 +358,7 @@ public:
         auto& node = nodePtr->as<NetlistVariableAlias>();
         symbol.getHierarchicalPath(node.hierarchicalPath);
         nodes.push_back(std::move(nodePtr));
-        DEBUG_PRINT("Add var alias " << node.hierarchicalPath << "\n");
+        DEBUG_PRINT("Add var alias {}\n", node.hierarchicalPath);
         return node;
     }
 
@@ -360,7 +368,7 @@ public:
         auto nodePtr = std::make_unique<NetlistVariableReference>(symbol, expr, leftOperand);
         auto& node = nodePtr->as<NetlistVariableReference>();
         nodes.push_back(std::move(nodePtr));
-        DEBUG_PRINT("Add var ref " << symbol.name << "\n");
+        DEBUG_PRINT("Add var ref ", symbol.name);
         return node;
     }
 
@@ -395,6 +403,66 @@ public:
         };
         auto it = std::ranges::find_if(*this, compareNode);
         return it != end() ? &it->get()->as<NetlistVariableReference>() : nullptr;
+    }
+
+    /// Perform a transformation on the netlist graph to split variable /
+    /// declaration nodes into multiple parts corresponding to / the access ranges of
+    /// references to the variable incoming (l-values) and outgoing edges (r-values).
+    void split() {
+        std::vector<std::tuple<NetlistVariableDeclaration*, NetlistEdge*, NetlistEdge*>>
+            modifications;
+        // Find each variable declaration nodes in the graph that has multiple
+        // outgoing edges.
+        for (auto& node : nodes) {
+            if (node->kind == NodeKind::VariableDeclaration && node->outDegree() > 1) {
+                auto& varDeclNode = node->as<NetlistVariableDeclaration>();
+                auto& varType = varDeclNode.symbol.getDeclaredType()->getType();
+                DEBUG_PRINT("Variable {} has type {}\n", varDeclNode.hierarchicalPath,
+                            varType.toString());
+                std::vector<NetlistEdge*> inEdges;
+                getInEdgesToNode(*node, inEdges);
+                // Find pairs of input and output edges that are attached to variable
+                // refertence nodes. Eg.
+                //   var ref -> var decl -> var ref
+                // If the variable references select the same part of a structured
+                // variable, then transform them into:
+                //   var ref -> var alias -> var ref
+                // And mark the original edges as disabled.
+                for (auto* inEdge : inEdges) {
+                    for (auto& outEdge : *node) {
+                        if (inEdge->getSourceNode().kind == NodeKind::VariableReference &&
+                            outEdge->getTargetNode().kind == NodeKind::VariableReference) {
+                            auto& sourceVarRef =
+                                inEdge->getSourceNode().as<NetlistVariableReference>();
+                            auto& targetVarRef =
+                                outEdge->getTargetNode().as<NetlistVariableReference>();
+                            // Match if the selection made by the target node intersects with the
+                            // selection made by the source node.
+                            auto match = sourceVarRef.bounds.overlaps(targetVarRef.bounds);
+                            if (match) {
+                                DEBUG_PRINT("New dependency through variable {} -> {}\n",
+                                            sourceVarRef.toString(), targetVarRef.toString());
+                                modifications.emplace_back(&varDeclNode, inEdge, outEdge.get());
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        // Apply the operations to the graph.
+        for (auto& modification : modifications) {
+            auto* varDeclNode = std::get<0>(modification);
+            auto* inEdge = std::get<1>(modification);
+            auto* outEdge = std::get<2>(modification);
+            // Disable the existing edges.
+            inEdge->disable();
+            outEdge->disable();
+            // Create a new node that aliases the variable declaration.
+            auto& varAliasNode = addVariableAlias(varDeclNode->symbol);
+            // Create edges through the new node.
+            inEdge->getSourceNode().addEdge(varAliasNode);
+            varAliasNode.addEdge(outEdge->getTargetNode());
+        }
     }
 };
 
