@@ -9,7 +9,6 @@
 
 #include "NetlistVisitor.h"
 #include "PathFinder.h"
-#include "SplitVariables.h"
 #include "fmt/color.h"
 #include "fmt/format.h"
 #include <fstream>
@@ -200,6 +199,10 @@ int main(int argc, char** argv) {
         Config::getInstance().debugEnabled = true;
     }
 
+    if (quiet) {
+        Config::getInstance().quietEnabled = true;
+    }
+
     SLANG_TRY {
 
         bool ok = driver.parseAllSources();
@@ -220,9 +223,8 @@ int main(int argc, char** argv) {
         Netlist netlist;
         NetlistVisitor visitor(*compilation, netlist);
         compilation->getRoot().visit(visitor);
-        SplitVariables splitVariables(netlist);
-        DEBUG_PRINT(fmt::format("Netlist has {} nodes and {} edges\n", netlist.numNodes(),
-                                netlist.numEdges()));
+        netlist.split();
+        DEBUG_PRINT("Netlist has {} nodes and {} edges\n", netlist.numNodes(), netlist.numEdges());
 
         // Output a DOT file of the netlist.
         if (netlistDotFile) {
