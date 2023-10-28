@@ -111,10 +111,12 @@ public:
                                                              prefixSymbol->getType());
             node.bounds = {static_cast<int32_t>(bounds->first),
                            static_cast<int32_t>(bounds->second)};
-        } else {
+        }
+        else {
             node.bounds = {0, getTypeBitWidth(expr.symbol.getType()) - 1};
         }
-        DEBUG_PRINT("Variable reference: {} bounds {}:{}\n", node.toString(), node.bounds.lower(), node.bounds.upper());
+        DEBUG_PRINT("Variable reference: {} bounds {}:{}\n", node.toString(), node.bounds.lower(),
+                    node.bounds.upper());
 
         // Clear the selectors for the next named value.
         selectors.clear();

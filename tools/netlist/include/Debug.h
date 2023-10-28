@@ -7,20 +7,20 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include <fmt/core.h>
-
 #include "Config.h"
+#include <fmt/core.h>
 
 namespace netlist {
 
-template <typename... T>
-void DebugMessage(const char *filename, const int line, fmt::format_string<T...> fmt, T &&...args) {
-  fmt::print("{}:{}: ", filename, line);
-  fmt::print(fmt, std::forward<T>(args)...);
+template<typename... T>
+void DebugMessage(const char* filename, const int line, fmt::format_string<T...> fmt, T&&... args) {
+    fmt::print("{}:{}: ", filename, line);
+    fmt::print(fmt, std::forward<T>(args)...);
 }
 
-template <typename... T> void InfoMessage(fmt::format_string<T...> fmt, T &&...args) {
-  fmt::print(fmt, std::forward<T>(args)...);
+template<typename... T>
+void InfoMessage(fmt::format_string<T...> fmt, T&&... args) {
+    fmt::print(fmt, std::forward<T>(args)...);
 }
 
 } // namespace netlist
@@ -35,6 +35,6 @@ template <typename... T> void InfoMessage(fmt::format_string<T...> fmt, T &&...a
 #endif
 
 #define INFO_PRINT(str, ...)                         \
-    if (!Config::getInstance().quietEnabled) {     \
+    if (!Config::getInstance().quietEnabled) {       \
         InfoMessage(str __VA_OPT__(, ) __VA_ARGS__); \
     }
