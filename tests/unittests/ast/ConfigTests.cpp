@@ -83,6 +83,33 @@ TEST_CASE("Driver library explicit ordering") {
     CHECK(m.getDefinition().sourceLibrary->name == "lib2");
 }
 
+TEST_CASE("Top module in a library") {
+    auto lib1 = std::make_unique<SourceLibrary>("lib1", 1);
+
+    auto tree1 = SyntaxTree::fromText(R"(
+module mod;
+endmodule
+)",
+                                      SyntaxTree::getDefaultSourceManager(), "source", "", {},
+                                      lib1.get());
+    auto tree2 = SyntaxTree::fromText(R"(
+module top;
+endmodule
+)");
+
+    CompilationOptions options;
+    options.topModules.emplace("lib1.mod");
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree1);
+    compilation.addSyntaxTree(tree2);
+    NO_COMPILATION_ERRORS;
+
+    auto topInstances = compilation.getRoot().topInstances;
+    CHECK(topInstances.size() == 1);
+    CHECK(topInstances[0]->name == "mod");
+}
+
 TEST_CASE("Config block top modules") {
     auto tree = SyntaxTree::fromText(R"(
 config cfg1;
@@ -106,4 +133,54 @@ endmodule
     auto topInstances = compilation.getRoot().topInstances;
     CHECK(topInstances.size() == 1);
     CHECK(topInstances[0]->name == "frob");
+}
+
+TEST_CASE("Config in library, disambiguate with module name") {
+    auto lib1 = std::make_unique<SourceLibrary>("lib1", 1);
+    auto lib2 = std::make_unique<SourceLibrary>("lib2", 2);
+
+    auto tree1 = SyntaxTree::fromText(R"(
+module mod;
+endmodule
+
+config cfg;
+    design mod;
+endconfig
+)",
+                                      SyntaxTree::getDefaultSourceManager(), "source", "", {},
+                                      lib1.get());
+    auto tree2 = SyntaxTree::fromText(R"(
+module mod;
+endmodule
+
+module cfg;
+endmodule
+
+config cfg;
+    design mod;
+endconfig
+)",
+                                      SyntaxTree::getDefaultSourceManager(), "source", "", {},
+                                      lib2.get());
+    auto tree3 = SyntaxTree::fromText(R"(
+module mod;
+endmodule
+
+config cfg;
+    design mod;
+endconfig
+)");
+
+    CompilationOptions options;
+    options.topModules.emplace("lib2.cfg:config");
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree1);
+    compilation.addSyntaxTree(tree2);
+    compilation.addSyntaxTree(tree3);
+    NO_COMPILATION_ERRORS;
+
+    auto top = compilation.getRoot().topInstances[0];
+    CHECK(top->name == "mod");
+    CHECK(top->getDefinition().sourceLibrary->name == "lib2");
 }

@@ -3398,6 +3398,10 @@ ConfigDeclarationSyntax& Parser::parseConfigDeclaration(AttrList attributes) {
     auto name = expect(TokenKind::Identifier);
     auto semi1 = expect(TokenKind::Semicolon);
 
+    auto& pp = getPP();
+    ParserMetadata::Node node{pp.getCurrentLibrary(), pp.getDefaultNetType(),
+                              pp.getUnconnectedDrive(), pp.getTimeScale()};
+
     SmallVector<ParameterDeclarationStatementSyntax*> localparams;
     while (peek(TokenKind::LocalParamKeyword)) {
         Token paramSemi;
@@ -3465,9 +3469,11 @@ ConfigDeclarationSyntax& Parser::parseConfigDeclaration(AttrList attributes) {
     auto blockName = parseNamedBlockClause();
     checkBlockNames(name, blockName);
 
-    return factory.configDeclaration(attributes, config, name, semi1, localparams.copy(alloc),
-                                     design, topCells.copy(alloc), semi2, rules.copy(alloc),
-                                     endconfig, blockName);
+    auto& result = factory.configDeclaration(attributes, config, name, semi1,
+                                             localparams.copy(alloc), design, topCells.copy(alloc),
+                                             semi2, rules.copy(alloc), endconfig, blockName);
+    meta.nodeMap[&result] = node;
+    return result;
 }
 
 MemberSyntax* Parser::parseLibraryMember() {

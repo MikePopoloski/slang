@@ -724,7 +724,7 @@ private:
     // module has ever been instantiated to know whether it should be considered top-level.
     flat_hash_set<std::string_view> globalInstantiations;
 
-    struct DefinitionMetadata {
+    struct SyntaxMetadata {
         const syntax::SyntaxTree* tree = nullptr;
         const SourceLibrary* library = nullptr;
         const NetType* defaultNetType = nullptr;
@@ -733,7 +733,7 @@ private:
     };
 
     // Map from syntax nodes to parse-time metadata about them.
-    flat_hash_map<const syntax::ModuleDeclarationSyntax*, DefinitionMetadata> definitionMetadata;
+    flat_hash_map<const syntax::SyntaxNode*, SyntaxMetadata> syntaxMetadata;
 
     // The name map for all module, interface, and program definitions.
     // The key is a combination of definition name + the scope in which it was declared.

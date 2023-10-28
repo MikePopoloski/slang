@@ -96,6 +96,11 @@ public:
         meta.nodeMap[&syntax] = {library, defaultNetType, unconnectedDrive, timeScale};
     }
 
+    void handle(const ConfigDeclarationSyntax& syntax) {
+        visitDefault(syntax);
+        meta.nodeMap[&syntax] = {library, defaultNetType, unconnectedDrive, timeScale};
+    }
+
     void visitToken(Token token) {
         // Look through the token's trivia for any preprocessor directives
         // that might need to be captured in the metadata for module decls.

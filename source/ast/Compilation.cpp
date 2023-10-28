@@ -208,8 +208,7 @@ void Compilation::addSyntaxTree(std::shared_ptr<SyntaxTree> tree) {
     compilationUnits.push_back(unit);
 
     for (auto& [n, meta] : tree->getMetadata().nodeMap) {
-        auto decl = &n->as<ModuleDeclarationSyntax>();
-        DefinitionMetadata result;
+        SyntaxMetadata result;
         result.tree = tree.get();
         result.library = meta.library;
         result.defaultNetType = &getNetType(meta.defaultNetType);
@@ -227,7 +226,7 @@ void Compilation::addSyntaxTree(std::shared_ptr<SyntaxTree> tree) {
                 break;
         }
 
-        definitionMetadata[decl] = result;
+        syntaxMetadata[n] = result;
     }
 
     for (auto& name : tree->getMetadata().globalInstances)
@@ -345,13 +344,21 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamsAndBinds) {
                 continue;
 
             for (auto def : defList) {
-                // TODO: allow these to include a library name
-                if (def->sourceLibrary)
-                    continue;
-
                 if (def->definitionKind == DefinitionKind::Module ||
                     def->definitionKind == DefinitionKind::Program) {
-                    if (auto it = tm.find(def->name); it != tm.end()) {
+
+                    // If this definition is in a library, it can only be targeted as
+                    // a top module by the user including the library name in the string.
+                    flat_hash_set<std::string_view>::iterator it;
+                    if (def->sourceLibrary) {
+                        auto target = fmt::format("{}.{}", def->sourceLibrary->name, def->name);
+                        it = tm.find(target);
+                    }
+                    else {
+                        it = tm.find(def->name);
+                    }
+
+                    if (it != tm.end()) {
                         // Remove from the top modules set so that we know we visited it.
                         tm.erase(it);
 
@@ -368,20 +375,36 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamsAndBinds) {
                 }
 
                 // Otherwise this definition might be unreferenced and not automatically
-                // instantiated.
-                if (globalInstantiations.find(def->name) == globalInstantiations.end())
+                // instantiated (don't add library definitions to this list though).
+                if (globalInstantiations.find(def->name) == globalInstantiations.end() &&
+                    !def->sourceLibrary) {
                     unreferencedDefs.push_back(def);
+                }
             }
         }
 
         // Any names still in the map were not found as module definitions.
-        for (auto& name : tm) {
-            // This might be a config block instead.
-            if (auto confIt = configBlocks.find(name); confIt != configBlocks.end()) {
+        for (auto& userProvidedName : tm) {
+            // This might be a config block instead. If it has a dot, assume that's
+            // the library designator.
+            std::string confLib;
+            std::string confName(userProvidedName);
+            if (auto pos = confName.find_first_of('.'); pos != std::string::npos) {
+                confLib = confName.substr(0, pos);
+                confName = confName.substr(pos + 1);
+            }
+
+            // A trailing ':config' is stripped -- it's there to allow the user
+            // to disambiguate modules and config blocks.
+            constexpr std::string_view configSuffix = ":config";
+            if (confName.ends_with(configSuffix))
+                confName = confName.substr(0, confName.length() - configSuffix.length());
+
+            if (auto confIt = configBlocks.find(confName); confIt != configBlocks.end()) {
                 const ConfigBlockSymbol* foundConf = nullptr;
                 for (auto conf : confIt->second) {
-                    // TODO: handle configs in libraries
-                    if (!conf->sourceLibrary) {
+                    if ((!conf->sourceLibrary && confLib.empty()) ||
+                        (conf->sourceLibrary && conf->sourceLibrary->name == confLib)) {
                         foundConf = conf;
                         break;
                     }
@@ -414,7 +437,7 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamsAndBinds) {
                 }
             }
 
-            root->addDiag(diag::InvalidTopModule, SourceLocation::NoLocation) << name;
+            root->addDiag(diag::InvalidTopModule, SourceLocation::NoLocation) << userProvidedName;
         }
     }
 
@@ -582,7 +605,7 @@ void Compilation::createDefinition(const Scope& scope, LookupLocation location,
     // We can only be missing metadata if the definition is created programmatically
     // (i.e. not via the parser) so we just fill in the parent's default net type
     // so that it's not a null pointer.
-    auto& metadata = definitionMetadata[&syntax];
+    auto& metadata = syntaxMetadata[&syntax];
     if (!metadata.defaultNetType)
         metadata.defaultNetType = &scope.getDefaultNetType();
 
@@ -665,7 +688,7 @@ const PackageSymbol* Compilation::getPackage(std::string_view lookupName) const 
 
 const PackageSymbol& Compilation::createPackage(const Scope& scope,
                                                 const ModuleDeclarationSyntax& syntax) {
-    auto& metadata = definitionMetadata[&syntax];
+    auto& metadata = syntaxMetadata[&syntax];
     if (!metadata.defaultNetType)
         metadata.defaultNetType = &scope.getDefaultNetType();
 
@@ -687,8 +710,9 @@ const PackageSymbol& Compilation::createPackage(const Scope& scope,
 
 const ConfigBlockSymbol& Compilation::createConfigBlock(const Scope& scope,
                                                         const ConfigDeclarationSyntax& syntax) {
-    // TODO: set sourcelibrary pointer
+    auto& metadata = syntaxMetadata[&syntax];
     auto& config = ConfigBlockSymbol::fromSyntax(scope, syntax);
+    config.sourceLibrary = metadata.library;
 
     auto it = configBlocks.find(config.name);
     if (it == configBlocks.end()) {
