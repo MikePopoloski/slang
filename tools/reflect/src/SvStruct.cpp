@@ -85,6 +85,9 @@ void SvStruct::toCpp(HppFile& hppFile, std::string_view _namespace, const SvAlia
             for (const auto& member : members) {
                 if (member.second.size == 1)
                     values.emplace_back(fmt::format("__data.get_bit({0}_s)", member.first));
+                else if (member.second.size > 64)
+                    values.emplace_back(
+                        fmt::format("__data.range({0}_s + {0}_w - 1, {0}_s)", member.first));
                 else
                     values.emplace_back(fmt::format(
                         "__data.range({0}_s + {0}_w - 1, {0}_s).to_uint64()", member.first));
@@ -228,15 +231,30 @@ void SvStruct::toCpp(HppFile& hppFile, std::string_view _namespace, const SvAlia
 
     //* STATIC GET FUNCTIONS *//
     for (const auto& member : members) {
-        hppFile.addWithIndent(fmt::format("static {} get_{} (const {}& __data) {{\n",
-                                          member.second.toString(), member.first, cppTypeStr));
+        if (member.second.isStructOrEnum() && _namespace != member.second._namespace) {
+            hppFile.addWithIndent(fmt::format("static {}::{} get_{} (const {}& __data) {{\n",
+                                              member.second._namespace, member.second.toString(),
+                                              member.first, cppTypeStr));
+        }
+        else {
+            hppFile.addWithIndent(fmt::format("static {} get_{} (const {}& __data) {{\n",
+                                              member.second.toString(), member.first, cppTypeStr));
+        }
         hppFile.increaseIndent();
         std::string value;
-        if (cppType == CppType::SC_BV)
-            value = fmt::format("__data.range({0}_s + {0}_w - 1, {0}_s).to_uint64()", member.first);
-        else
+        if (cppType == CppType::SC_BV) {
+            if (member.second.size == 1)
+                value = fmt::format("__data.get_bit({0}_s)", member.first);
+            else if (member.second.size > 64)
+                value = fmt::format("__data.range({0}_s + {0}_w - 1, {0}_s)", member.first);
+            else
+                value = fmt::format("__data.range({0}_s + {0}_w - 1, {0}_s).to_uint64()",
+                                    member.first);
+        }
+        else {
             value = fmt::format("(__data >> {0}_s) & (~0ULL >> (64 - {1}))", member.first,
                                 member.second.size);
+        }
 
         if (member.second.isStructOrEnum())
             hppFile.addWithIndent(fmt::format("return {}({});\n", member.second.toString(), value));
