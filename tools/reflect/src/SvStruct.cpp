@@ -231,8 +231,15 @@ void SvStruct::toCpp(HppFile& hppFile, std::string_view _namespace, const SvAlia
 
     //* STATIC GET FUNCTIONS *//
     for (const auto& member : members) {
-        hppFile.addWithIndent(fmt::format("static {} get_{} (const {}& __data) {{\n",
-                                          member.second.toString(), member.first, cppTypeStr));
+        if (member.second.isStructOrEnum() && _namespace != member.second._namespace) {
+            hppFile.addWithIndent(fmt::format("static {}::{} get_{} (const {}& __data) {{\n",
+                                              member.second._namespace, member.second.toString(),
+                                              member.first, cppTypeStr));
+        }
+        else {
+            hppFile.addWithIndent(fmt::format("static {} get_{} (const {}& __data) {{\n",
+                                              member.second.toString(), member.first, cppTypeStr));
+        }
         hppFile.increaseIndent();
         std::string value;
         if (cppType == CppType::SC_BV) {
