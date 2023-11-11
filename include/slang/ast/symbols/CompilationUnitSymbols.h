@@ -89,6 +89,9 @@ public:
         std::string_view lib;
         std::string_view name;
         SourceRange sourceRange;
+
+        TopCell(std::string_view lib, std::string_view name, SourceRange sourceRange) :
+            lib(lib), name(name), sourceRange(sourceRange) {}
     };
 
     const SourceLibrary* sourceLibrary = nullptr;
