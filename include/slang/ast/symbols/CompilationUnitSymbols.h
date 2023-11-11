@@ -93,6 +93,7 @@ public:
 
     const SourceLibrary* sourceLibrary = nullptr;
     std::span<const TopCell> topCells;
+    std::span<const SourceLibrary* const> defaultLiblist;
 
     ConfigBlockSymbol(Compilation& compilation, std::string_view name, SourceLocation loc) :
         Symbol(SymbolKind::ConfigBlock, name, loc), Scope(compilation, this) {}

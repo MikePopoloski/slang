@@ -288,6 +288,9 @@ public:
     /// Gets the set of compilation units that have been added to the compilation.
     std::span<const CompilationUnitSymbol* const> getCompilationUnits() const;
 
+    /// Gets the source library with the given name, or nullptr if there is no such library.
+    const SourceLibrary* getSourceLibrary(std::string_view name) const;
+
     /// Gets the definition with the given name, or nullptr if there is no such definition.
     /// This takes into account the given scope so that nested definitions are found
     /// before more global ones.
@@ -693,10 +696,15 @@ private:
     // for things like variables and nets.
     flat_hash_map<const syntax::SyntaxNode*, std::pair<bool, bool>> referenceStatusMap;
 
-    // The lookup table for top-level modules. The value is a pair, with the second
-    // element being a boolean indicating whether there exists at least one nested
-    // module with the given name (requiring a more involved lookup).
-    flat_hash_map<std::string_view, std::pair<Definition*, bool>> topDefinitions;
+    // The name map for all module, interface, and program definitions.
+    // The key is a combination of definition name + the scope in which it was declared.
+    // The value is a pair -- the first element is a list of definitions that share
+    // the given name / scope (which can happen for multiple libraries at the root scope),
+    // and the second element is a boolean that indicates whether there exists at least
+    // one nested module with the given name (requiring a more involved lookup).
+    flat_hash_map<std::tuple<std::string_view, const Scope*>,
+                  std::pair<std::vector<Definition*>, bool>>
+        definitionMap;
 
     // A cache of vector types, keyed on various properties such as bit width.
     flat_hash_map<uint32_t, const Type*> vectorTypeCache;
@@ -720,10 +728,6 @@ private:
     // Map from pointers (to symbols, statements, expressions) to their associated attributes.
     flat_hash_map<const void*, std::span<const AttributeSymbol* const>> attributeMap;
 
-    // A set of all instantiated names in the design; used for determining whether a given
-    // module has ever been instantiated to know whether it should be considered top-level.
-    flat_hash_set<std::string_view> globalInstantiations;
-
     struct SyntaxMetadata {
         const syntax::SyntaxTree* tree = nullptr;
         const SourceLibrary* library = nullptr;
@@ -735,13 +739,11 @@ private:
     // Map from syntax nodes to parse-time metadata about them.
     flat_hash_map<const syntax::SyntaxNode*, SyntaxMetadata> syntaxMetadata;
 
-    // The name map for all module, interface, and program definitions.
-    // The key is a combination of definition name + the scope in which it was declared.
-    flat_hash_map<std::tuple<std::string_view, const Scope*>, std::vector<Definition*>>
-        definitionMap;
-
     // A list of all created definitions, as storage for their memory.
     std::vector<std::unique_ptr<Definition>> definitionMemory;
+
+    // A map of config blocks to use for a given scope.
+    flat_hash_map<const Scope*, const ConfigBlockSymbol*> configForScope;
 
     // A map from diag code + location to the diagnostics that have occurred at that location.
     // This is used to collapse duplicate diagnostics across instantiations into a single report.
@@ -804,6 +806,10 @@ private:
     // than other ways of looking up definitions which is why it's lower down here.
     flat_hash_map<const syntax::ModuleDeclarationSyntax*, Definition*> definitionFromSyntax;
 
+    // A set of all instantiated names in the design; used for determining whether a given
+    // module has ever been instantiated to know whether it should be considered top-level.
+    flat_hash_set<std::string_view> globalInstantiations;
+
     // A tree of overrides to apply when elaborating.
     // Note that instances store pointers into this tree so it must not be
     // modified after elaboration begins.
@@ -832,6 +838,9 @@ private:
 
     // A map of config blocks.
     flat_hash_map<std::string_view, std::vector<const ConfigBlockSymbol*>> configBlocks;
+
+    // A map of library names to their actual source library pointers.
+    flat_hash_map<std::string_view, const SourceLibrary*> libraryNameMap;
 
     // A set of instances that have global definition-based bind directives applied.
     // This is pretty rare and only used for checking of type params.

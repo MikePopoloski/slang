@@ -176,8 +176,27 @@ ConfigBlockSymbol& ConfigBlockSymbol::fromSyntax(const Scope& scope,
                                   cellId->sourceRange());
         }
     }
-    result->topCells = topCells.copy(comp);
 
+    SmallVector<const SourceLibrary*> defaultLibs;
+    for (auto rule : syntax.rules) {
+        switch (rule->kind) {
+            case SyntaxKind::DefaultConfigRule:
+                for (auto token : rule->as<DefaultConfigRuleSyntax>().liblist->libraries) {
+                    if (auto lib = comp.getSourceLibrary(token.valueText()))
+                        defaultLibs.push_back(lib);
+                }
+                break;
+            case SyntaxKind::CellConfigRule:
+            case SyntaxKind::InstanceConfigRule:
+                // TODO: handle other rules
+                break;
+            default:
+                SLANG_UNREACHABLE;
+        }
+    }
+
+    result->topCells = topCells.copy(comp);
+    result->defaultLiblist = defaultLibs.copy(comp);
     return *result;
 }
 

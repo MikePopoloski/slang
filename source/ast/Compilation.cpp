@@ -227,6 +227,8 @@ void Compilation::addSyntaxTree(std::shared_ptr<SyntaxTree> tree) {
         }
 
         syntaxMetadata[n] = result;
+        if (result.library)
+            libraryNameMap[result.library->name] = result.library;
     }
 
     for (auto& name : tree->getMetadata().globalInstances)
@@ -254,6 +256,12 @@ std::span<const std::shared_ptr<SyntaxTree>> Compilation::getSyntaxTrees() const
 
 std::span<const CompilationUnitSymbol* const> Compilation::getCompilationUnits() const {
     return compilationUnits;
+}
+
+const SourceLibrary* Compilation::getSourceLibrary(std::string_view name) const {
+    if (auto it = libraryNameMap.find(name); it != libraryNameMap.end())
+        return it->second;
+    return nullptr;
 }
 
 const RootSymbol& Compilation::getRoot() {
@@ -300,13 +308,13 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamsAndBinds) {
     // Find top level modules (and programs) that form the root of the design.
     // Iterate the definitions map before instantiating any top level modules,
     // since that can cause changes to the definition map itself.
-    SmallVector<const Definition*> topDefs;
+    SmallVector<std::pair<const Definition*, const ConfigBlockSymbol*>> topDefs;
     if (options.topModules.empty()) {
         for (auto& [key, defList] : definitionMap) {
             if (std::get<1>(key) != root.get())
                 continue;
 
-            for (auto def : defList) {
+            for (auto def : defList.first) {
                 // Ignore definitions that are not top level. Top level definitions are:
                 // - Modules and programs
                 // - Not nested
@@ -324,7 +332,7 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamsAndBinds) {
                         def->definitionKind == DefinitionKind::Program) {
                         if (isValidTop(*def)) {
                             // This definition can be automatically instantiated.
-                            topDefs.push_back(def);
+                            topDefs.push_back({def, nullptr});
                             continue;
                         }
                     }
@@ -343,7 +351,7 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamsAndBinds) {
             if (std::get<1>(key) != root.get())
                 continue;
 
-            for (auto def : defList) {
+            for (auto def : defList.first) {
                 if (def->definitionKind == DefinitionKind::Module ||
                     def->definitionKind == DefinitionKind::Program) {
 
@@ -364,7 +372,7 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamsAndBinds) {
 
                         // Make sure this is actually valid as a top-level module.
                         if (isValidTop(*def)) {
-                            topDefs.push_back(def);
+                            topDefs.push_back({def, nullptr});
                             continue;
                         }
 
@@ -418,7 +426,7 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamsAndBinds) {
                             defIt != definitionMap.end()) {
 
                             const Definition* foundDef = nullptr;
-                            for (auto def : defIt->second) {
+                            for (auto def : defIt->second.first) {
                                 if ((cell.lib.empty() &&
                                      def->sourceLibrary == foundConf->sourceLibrary) ||
                                     (def->sourceLibrary && def->sourceLibrary->name == cell.lib)) {
@@ -428,7 +436,7 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamsAndBinds) {
                             }
 
                             if (foundDef) {
-                                topDefs.push_back(foundDef);
+                                topDefs.push_back({foundDef, foundConf});
                                 continue;
                             }
                         }
@@ -451,14 +459,13 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamsAndBinds) {
 
     // Sort the list of definitions so that we get deterministic ordering of instances;
     // the order is otherwise dependent on iterating over a hash table.
-    auto byName = [](auto a, auto b) { return a->name < b->name; };
-    std::ranges::sort(topDefs, byName);
-    std::ranges::sort(unreferencedDefs, byName);
+    std::ranges::sort(topDefs, [](auto a, auto b) { return a.first->name < b.first->name; });
+    std::ranges::sort(unreferencedDefs, [](auto a, auto b) { return a->name < b->name; });
 
     // If we have any cli param overrides we should apply them to
     // each top-level instance.
     if (!cliOverrides.empty()) {
-        for (auto def : topDefs) {
+        for (auto [def, config] : topDefs) {
             for (auto& param : def->parameters) {
                 if (!param.isTypeParam && param.hasSyntax) {
                     auto it = cliOverrides.find(param.name);
@@ -472,7 +479,7 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamsAndBinds) {
     }
 
     SmallVector<const InstanceSymbol*> topList;
-    for (auto def : topDefs) {
+    for (auto [def, config] : topDefs) {
         const HierarchyOverrideNode* hierarchyOverrideNode = nullptr;
         if (!hierarchyOverrides.childNodes.empty()) {
             if (auto it = hierarchyOverrides.childNodes.find(def->syntax);
@@ -484,6 +491,9 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamsAndBinds) {
         auto& instance = InstanceSymbol::createDefault(*this, *def, hierarchyOverrideNode);
         root->addMember(instance);
         topList.push_back(&instance);
+
+        if (config)
+            configForScope.emplace(&instance.body, config);
     }
 
     if (!hasFlag(CompilationFlags::SuppressUnused) && topDefs.empty())
@@ -514,24 +524,69 @@ const CompilationUnitSymbol* Compilation::getCompilationUnit(
 
 const Definition* Compilation::getDefinition(std::string_view lookupName,
                                              const Scope& scope) const {
-    // First try to do a quick lookup in the top definitions map (most definitions are global).
-    // If the flag is set it means we have to do a full scope lookup instead.
-    if (auto it = topDefinitions.find(lookupName); it != topDefinitions.end()) {
-        if (!it->second.second)
-            return it->second.first;
+    // Try to find a config block for this scope to help choose the right definition.
+    // TODO: use the config rules
+    const ConfigBlockSymbol* config = nullptr;
+    if (!configForScope.empty()) {
+        auto searchScope = &scope;
+        do {
+            auto it = configForScope.find(searchScope);
+            if (it != configForScope.end()) {
+                config = it->second;
+                break;
+            }
+
+            searchScope = searchScope->asSymbol().getParentScope();
+        } while (searchScope);
     }
 
-    // There are nested modules somewhere with this same name, so we need to do the full search.
-    const Scope* searchScope = &scope;
-    do {
-        auto it = definitionMap.find(std::make_tuple(lookupName, searchScope));
-        if (it != definitionMap.end())
-            return it->second.front();
+    // Always search in the root scope to start. Most definitions are global.
+    auto it = definitionMap.find({lookupName, root.get()});
+    if (it == definitionMap.end())
+        return nullptr;
 
-        searchScope = searchScope->asSymbol().getParentScope();
-    } while (searchScope);
+    // If the second flag is set it means there are nested modules
+    // with this name, so we need to do full scope resolution.
+    if (it->second.second) {
+        auto searchScope = &scope;
+        do {
+            auto scopeIt = definitionMap.find({lookupName, searchScope});
+            if (scopeIt != definitionMap.end()) {
+                it = scopeIt;
+                break;
+            }
 
-    return nullptr;
+            searchScope = searchScope->asSymbol().getParentScope();
+        } while (searchScope && searchScope != root.get());
+    }
+
+    // The common case is no configurations in use, one definition
+    // in the default library, so just return that.
+    auto& defList = it->second.first;
+    if (!config && defList.size() == 1 && !defList.front()->sourceLibrary)
+        return defList.front();
+
+    if (config) {
+        // This search is O(n^2) but both lists should be small
+        // (or even just one element each) in basically all cases.
+        for (auto lib : config->defaultLiblist) {
+            for (auto def : defList) {
+                if (def->sourceLibrary == lib)
+                    return def;
+            }
+        }
+    }
+
+    // Fall back to picking based on the parent instance's library.
+    // TODO: incorporate default compilation liblist selection here
+    if (auto parentDef = scope.asSymbol().getDeclaringDefinition()) {
+        for (auto def : defList) {
+            if (def->sourceLibrary == parentDef->sourceLibrary)
+                return def;
+        }
+    }
+
+    return defList.empty() ? nullptr : defList.front();
 }
 
 const Definition* Compilation::getDefinition(const ModuleDeclarationSyntax& syntax) const {
@@ -545,7 +600,7 @@ const Definition* Compilation::getDefinition(const ModuleDeclarationSyntax& synt
 
         auto dmIt = definitionMap.find(std::make_tuple(def->name, targetScope));
         if (dmIt != definitionMap.end() &&
-            std::ranges::find(dmIt->second, def) != dmIt->second.end()) {
+            std::ranges::find(dmIt->second.first, def) != dmIt->second.first.end()) {
             return def;
         }
     }
@@ -628,26 +683,26 @@ void Compilation::createDefinition(const Scope& scope, LookupLocation location,
     // it to the root scope instead so that lookups from other compilation units will find it.
     auto targetScope = scope.asSymbol().kind == SymbolKind::CompilationUnit ? root.get() : &scope;
     const bool isRoot = targetScope == root.get();
-    bool isFirst;
 
     auto key = std::tuple(def->name, targetScope);
     auto it = definitionMap.find(key);
     if (it == definitionMap.end()) {
-        definitionMap.emplace(key, std::vector{def});
-        isFirst = true;
+        definitionMap.emplace(key, std::pair{std::vector{def}, !isRoot});
     }
     else {
         // There is already a definition with this name in this scope.
         // If we're not at the root scope, it's a straightforward error.
         if (!isRoot) {
-            reportRedefinition(scope, *def, it->second[0]->location, diag::DuplicateDefinition);
+            reportRedefinition(scope, *def, it->second.first[0]->location,
+                               diag::DuplicateDefinition);
             return;
         }
 
         // Otherwise, if they're in the same source library we take the
         // latter one (with a warning) and if not then we store both
         // and resolve them later via config or library ordering.
-        auto vecIt = std::ranges::lower_bound(it->second, def, [](Definition* a, Definition* b) {
+        auto& defList = it->second.first;
+        auto vecIt = std::ranges::lower_bound(defList, def, [](Definition* a, Definition* b) {
             if (!a->sourceLibrary)
                 return false;
             if (!b->sourceLibrary)
@@ -655,20 +710,16 @@ void Compilation::createDefinition(const Scope& scope, LookupLocation location,
             return a->sourceLibrary->priority < b->sourceLibrary->priority;
         });
 
-        if (vecIt != it->second.end() && (*vecIt)->sourceLibrary == def->sourceLibrary) {
+        if (vecIt != defList.end() && (*vecIt)->sourceLibrary == def->sourceLibrary) {
             // TODO: take the second one instead of the first?
             reportRedefinition(scope, *def, (*vecIt)->location, diag::DuplicateDefinition);
             return;
         }
 
-        isFirst = vecIt == it->second.begin();
-        it->second.insert(vecIt, def);
+        defList.insert(vecIt, def);
     }
 
     if (isRoot) {
-        if (isFirst)
-            topDefinitions[def->name].first = def;
-
         if (auto primIt = udpMap.find(def->name); primIt != udpMap.end())
             reportRedefinition(scope, *def, primIt->second->location, diag::Redefinition);
         else if (auto prim = getExternPrimitive(def->name, scope))
@@ -683,7 +734,7 @@ void Compilation::createDefinition(const Scope& scope, LookupLocation location,
     }
     else {
         // Record the fact that we have nested modules with this given name.
-        topDefinitions[def->name].second = true;
+        definitionMap[std::tuple(def->name, root.get())].second = true;
     }
 }
 
@@ -752,6 +803,7 @@ const PrimitiveSymbol* Compilation::getPrimitive(std::string_view lookupName) co
 
 const PrimitiveSymbol& Compilation::createPrimitive(const Scope& scope,
                                                     const UdpDeclarationSyntax& syntax) {
+    // TODO: handle primitives in libraries
     auto& prim = PrimitiveSymbol::fromSyntax(scope, syntax);
     if (!prim.name.empty()) {
         auto [it, inserted] = udpMap.emplace(prim.name, &prim);
@@ -759,8 +811,11 @@ const PrimitiveSymbol& Compilation::createPrimitive(const Scope& scope,
             reportRedefinition(*root, prim, it->second->location, diag::DuplicateDefinition);
         }
         else {
-            if (auto defIt = topDefinitions.find(prim.name); defIt != topDefinitions.end()) {
-                reportRedefinition(*root, prim, defIt->second.first->location, diag::Redefinition);
+            if (auto defIt = definitionMap.find({prim.name, root.get()});
+                defIt != definitionMap.end() && !defIt->second.first.empty()) {
+                // TODO: only error for same library?
+                reportRedefinition(*root, prim, defIt->second.first.front()->location,
+                                   diag::Redefinition);
             }
             else if (auto externMod = getExternModule(prim.name, scope)) {
                 reportRedefinition(*root, prim, externMod->header->name.location(),

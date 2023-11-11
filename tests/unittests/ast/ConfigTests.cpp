@@ -226,3 +226,40 @@ endconfig
     CHECK(diags[0].code == diag::InvalidTopModule);
     CHECK(diags[1].code == diag::InvalidTopModule);
 }
+
+TEST_CASE("Config default liblist") {
+    auto lib1 = std::make_unique<SourceLibrary>("lib1", 1);
+
+    auto tree1 = SyntaxTree::fromText(R"(
+module mod;
+endmodule
+)",
+                                      SyntaxTree::getDefaultSourceManager(), "source", "", {},
+                                      lib1.get());
+    auto tree2 = SyntaxTree::fromText(R"(
+module mod;
+endmodule
+
+module top;
+    mod m1();
+endmodule
+
+config cfg;
+    design top;
+    default liblist lib1;
+endconfig
+)");
+
+    CompilationOptions options;
+    options.topModules.emplace("cfg");
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree1);
+    compilation.addSyntaxTree(tree2);
+    NO_COMPILATION_ERRORS;
+
+    auto& m1 = compilation.getRoot().lookupName<InstanceSymbol>("top.m1");
+    auto lib = m1.getDefinition().sourceLibrary;
+    REQUIRE(lib);
+    CHECK(lib->name == "lib1");
+}
