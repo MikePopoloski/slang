@@ -1232,6 +1232,11 @@ Expression& Expression::bindAssignmentPattern(Compilation& comp,
     }
 
     const AssignmentPatternSyntax& p = *syntax.pattern;
+    if (context.flags.has(ASTFlags::LValue) && p.kind != SyntaxKind::SimpleAssignmentPattern) {
+        context.addDiag(diag::ExpressionNotAssignable, range);
+        return badExpr(comp, nullptr);
+    }
+
     if (structScope) {
         switch (p.kind) {
             case SyntaxKind::SimpleAssignmentPattern:
@@ -1403,17 +1408,19 @@ Expression& SimpleAssignmentPatternExpression::forStruct(
         return badExpr(comp, nullptr);
     }
 
+    const bool isLValue = context.flags.has(ASTFlags::LValue);
+    auto direction = isLValue ? ArgumentDirection::Out : ArgumentDirection::In;
+
     bool bad = false;
     uint32_t index = 0;
     SmallVector<const Expression*> elems;
     for (auto item : syntax.items) {
-        auto& expr = Expression::bindRValue(*types[index++], *item,
-                                            item->getFirstToken().location(), context);
+        auto& expr = Expression::bindArgument(*types[index++], direction, *item, context);
         elems.push_back(&expr);
         bad |= expr.bad();
     }
 
-    auto result = comp.emplace<SimpleAssignmentPatternExpression>(type, elems.copy(comp),
+    auto result = comp.emplace<SimpleAssignmentPatternExpression>(type, isLValue, elems.copy(comp),
                                                                   sourceRange);
     if (bad)
         return badExpr(comp, result);
@@ -1426,10 +1433,12 @@ static std::span<const Expression* const> bindExpressionList(
     const SeparatedSyntaxList<ExpressionSyntax>& items, const ASTContext& context,
     SourceRange sourceRange, bool& bad) {
 
+    const bool isLValue = context.flags.has(ASTFlags::LValue);
+    auto direction = isLValue ? ArgumentDirection::Out : ArgumentDirection::In;
+
     SmallVector<const Expression*> elems;
     for (auto item : items) {
-        auto& expr = Expression::bindRValue(elementType, *item, item->getFirstToken().location(),
-                                            context);
+        auto& expr = Expression::bindArgument(elementType, direction, *item, context);
         elems.push_back(&expr);
         bad |= expr.bad();
     }
@@ -1451,7 +1460,9 @@ Expression& SimpleAssignmentPatternExpression::forFixedArray(
     auto elems = bindExpressionList(type, elementType, 1, numElements, syntax.items, context,
                                     sourceRange, bad);
 
-    auto result = comp.emplace<SimpleAssignmentPatternExpression>(type, elems, sourceRange);
+    const bool isLValue = context.flags.has(ASTFlags::LValue);
+    auto result = comp.emplace<SimpleAssignmentPatternExpression>(type, isLValue, elems,
+                                                                  sourceRange);
     if (bad)
         return badExpr(comp, result);
 
@@ -1462,15 +1473,37 @@ Expression& SimpleAssignmentPatternExpression::forDynamicArray(
     Compilation& comp, const SimpleAssignmentPatternSyntax& syntax, const ASTContext& context,
     const Type& type, const Type& elementType, SourceRange sourceRange) {
 
+    const bool isLValue = context.flags.has(ASTFlags::LValue);
+    if (isLValue) {
+        context.addDiag(diag::AssignmentPatternLValueDynamic, sourceRange);
+        return badExpr(comp, nullptr);
+    }
+
     bool bad = false;
     auto elems = bindExpressionList(type, elementType, 1, 0, syntax.items, context, sourceRange,
                                     bad);
 
-    auto result = comp.emplace<SimpleAssignmentPatternExpression>(type, elems, sourceRange);
+    auto result = comp.emplace<SimpleAssignmentPatternExpression>(type, isLValue, elems,
+                                                                  sourceRange);
     if (bad)
         return badExpr(comp, result);
 
     return *result;
+}
+
+LValue SimpleAssignmentPatternExpression::evalLValueImpl(EvalContext& context) const {
+    std::vector<LValue> lvals;
+    lvals.reserve(elements().size());
+    for (auto elem : elements()) {
+        LValue lval = elem->as<AssignmentExpression>().left().evalLValue(context);
+        if (!lval)
+            return nullptr;
+
+        lvals.emplace_back(std::move(lval));
+    }
+
+    auto lvalKind = type->isIntegral() ? LValue::Concat::Packed : LValue::Concat::Unpacked;
+    return LValue(std::move(lvals), lvalKind);
 }
 
 static const Expression* matchElementValue(
@@ -1544,8 +1577,8 @@ static const Expression* matchElementValue(
         }
 
         auto& comp = context.getCompilation();
-        return comp.emplace<SimpleAssignmentPatternExpression>(elementType, elements.copy(comp),
-                                                               sourceRange);
+        return comp.emplace<SimpleAssignmentPatternExpression>(elementType, /* isLValue */ false,
+                                                               elements.copy(comp), sourceRange);
     }
 
     if (elementType.isArray() && elementType.hasFixedRange()) {
@@ -1563,8 +1596,8 @@ static const Expression* matchElementValue(
             elements.push_back(elemExpr);
 
         auto& comp = context.getCompilation();
-        return comp.emplace<SimpleAssignmentPatternExpression>(elementType, elements.copy(comp),
-                                                               sourceRange);
+        return comp.emplace<SimpleAssignmentPatternExpression>(elementType, /* isLValue */ false,
+                                                               elements.copy(comp), sourceRange);
     }
 
     // Finally, if we have a default then it must now be assignment compatible.

@@ -18,15 +18,22 @@ namespace slang::ast {
 class SLANG_EXPORT LValue {
 public:
     /// A concatenation of lvalues is also an lvalue and can be assigned to.
-    using Concat = std::vector<LValue>;
+    struct Concat {
+        std::vector<LValue> elems;
+        enum Kind { Packed, Unpacked } kind;
+
+        Concat(std::vector<LValue>&& elems, Kind kind) : elems(std::move(elems)), kind(kind) {}
+    };
 
     LValue() = default;
     LValue(nullptr_t) {}
     LValue(const LValue&) = delete;
     LValue(LValue&& other) = default;
 
-    explicit LValue(Concat&& concat) : value(std::move(concat)) {}
     explicit LValue(ConstantValue& base) : value(Path{base}) {}
+
+    LValue(std::vector<LValue>&& elems, Concat::Kind kind) :
+        value(Concat(std::move(elems), kind)) {}
 
     bool bad() const { return std::holds_alternative<std::monostate>(value); }
     explicit operator bool() const { return !bad(); }

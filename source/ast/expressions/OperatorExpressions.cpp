@@ -1553,7 +1553,7 @@ LValue ConcatenationExpression::evalLValueImpl(EvalContext& context) const {
         lvals.emplace_back(std::move(lval));
     }
 
-    return LValue(std::move(lvals));
+    return LValue(std::move(lvals), LValue::Concat::Packed);
 }
 
 void ConcatenationExpression::serializeTo(ASTSerializer& serializer) const {

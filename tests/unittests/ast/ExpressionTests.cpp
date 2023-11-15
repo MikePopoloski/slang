@@ -3065,3 +3065,81 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Assignment patterns as lvalues") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    typedef byte U[3];
+    function automatic U f1;
+        var U A = '{1, 2, 3};
+        var byte a, b, c;
+        '{a, b, c} = A;
+        U'{c, a, b} = '{a+1, b+1, c+1};
+        return {a, b, c};
+    endfunction
+
+    typedef struct packed { int i; logic j; } V;
+    function automatic V f2;
+        V v = '{32, 1};
+        int i;
+        logic j;
+        '{i, j} = v;
+        return '{i, j};
+    endfunction
+
+    typedef struct { real r; string s; } W;
+    function automatic W f3;
+        W w = '{3.14, "Hello World"};
+        real r;
+        string s;
+        '{r, s} = w;
+        return '{r, s};
+    endfunction
+
+    localparam U u = f1();
+    localparam V v = f2();
+    localparam W w = f3();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& root = compilation.getRoot();
+    auto& u = root.lookupName<ParameterSymbol>("m.u");
+    CHECK(u.getValue().toString() == "[8'sd3,8'sd4,8'sd2]");
+
+    auto& v = root.lookupName<ParameterSymbol>("m.v");
+    CHECK(v.getValue().integer() == 65);
+
+    auto& w = root.lookupName<ParameterSymbol>("m.w");
+    CHECK(w.getValue().toString() == "[3.14,\"Hello World\"]");
+}
+
+TEST_CASE("Invalid assigment pattern lvalues") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    typedef struct { real r; string s; } U;
+    function automatic void f1;
+        real r;
+        string s;
+        U'{r:r, s:s} = '{3.14, "Hello World"};
+    endfunction
+
+    function automatic void f2;
+        int i[];
+        int j, k;
+        '{j, k} = i;
+    endfunction
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::ExpressionNotAssignable);
+    CHECK(diags[1].code == diag::AssignmentPatternLValueDynamic);
+}

@@ -34,10 +34,20 @@ ConstantValue LValue::load() const {
 
     auto concat = std::get_if<Concat>(&value);
     if (concat) {
-        SmallVector<SVInt> vals;
-        for (auto& elem : *concat)
-            vals.push_back(elem.load().integer());
-        return SVInt::concat(vals);
+        if (concat->kind == Concat::Packed) {
+            SmallVector<SVInt> vals;
+            vals.reserve(concat->elems.size());
+            for (auto& elem : concat->elems)
+                vals.push_back(elem.load().integer());
+            return SVInt::concat(vals);
+        }
+        else {
+            std::vector<ConstantValue> vals;
+            vals.reserve(concat->elems.size());
+            for (auto& elem : concat->elems)
+                vals.push_back(elem.load());
+            return vals;
+        }
     }
 
     // Otherwise, we have an lvalue path. Walk the path and apply each element.
@@ -114,13 +124,22 @@ void LValue::store(const ConstantValue& newValue) {
 
     auto concat = std::get_if<Concat>(&value);
     if (concat) {
-        // Divide up the value among all of the concatenated lvalues.
-        auto& sv = newValue.integer();
-        int32_t msb = (int32_t)sv.getBitWidth() - 1;
-        for (auto& elem : *concat) {
-            int32_t width = (int32_t)elem.load().integer().getBitWidth();
-            elem.store(sv.slice(msb, msb - width + 1));
-            msb -= width;
+        if (concat->kind == Concat::Packed) {
+            // Divide up the value among all of the concatenated lvalues.
+            auto& sv = newValue.integer();
+            int32_t msb = (int32_t)sv.getBitWidth() - 1;
+            for (auto& elem : concat->elems) {
+                int32_t width = (int32_t)elem.load().integer().getBitWidth();
+                elem.store(sv.slice(msb, msb - width + 1));
+                msb -= width;
+            }
+        }
+        else {
+            auto newElems = newValue.elements();
+            auto& lvalElems = concat->elems;
+            SLANG_ASSERT(newElems.size() == lvalElems.size());
+            for (size_t i = 0; i < lvalElems.size(); i++)
+                lvalElems[i].store(newElems[i]);
         }
         return;
     }

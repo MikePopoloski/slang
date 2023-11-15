@@ -198,9 +198,8 @@ const Expression& Expression::bindLValue(const ExpressionSyntax& lhs, const Type
             astFlags |= ASTFlags::LAndRValue;
 
         lhsExpr = &create(comp, lhs, context, astFlags, rhsExpr->type);
+        selfDetermined(context, lhsExpr);
     }
-
-    selfDetermined(context, lhsExpr);
 
     bitmask<AssignFlags> assignFlags;
     if (instance) {
@@ -466,6 +465,8 @@ bool Expression::requireLValue(const ASTContext& context, SourceLocation locatio
             }
             return true;
         }
+        case ExpressionKind::SimpleAssignmentPattern:
+            return as<SimpleAssignmentPatternExpression>().isLValue;
         case ExpressionKind::Streaming: {
             SLANG_ASSERT(!longestStaticPrefix);
             auto& stream = as<StreamingConcatenationExpression>();

@@ -247,10 +247,16 @@ private:
 /// Represents an assignment pattern expression.
 class SLANG_EXPORT SimpleAssignmentPatternExpression : public AssignmentPatternExpressionBase {
 public:
-    SimpleAssignmentPatternExpression(const Type& type, std::span<const Expression* const> elements,
+    bool isLValue;
+
+    SimpleAssignmentPatternExpression(const Type& type, bool isLValue,
+                                      std::span<const Expression* const> elements,
                                       SourceRange sourceRange) :
         AssignmentPatternExpressionBase(ExpressionKind::SimpleAssignmentPattern, type, elements,
-                                        sourceRange) {}
+                                        sourceRange),
+        isLValue(isLValue) {}
+
+    LValue evalLValueImpl(EvalContext& context) const;
 
     static Expression& forStruct(Compilation& compilation,
                                  const syntax::SimpleAssignmentPatternSyntax& syntax,
