@@ -1277,16 +1277,6 @@ LValue MemberAccessExpression::evalLValueImpl(EvalContext& context) const {
     return lval;
 }
 
-std::optional<ConstantRange> MemberAccessExpression::getSelectRange() const {
-    if (member.kind != SymbolKind::Field)
-        return std::nullopt;
-
-    auto& field = member.as<FieldSymbol>();
-    int32_t io = (int32_t)field.bitOffset;
-    int32_t width = (int32_t)type->getSelectableWidth();
-    return ConstantRange{width + io - 1, io};
-}
-
 static bool isWithinCovergroup(const Symbol& field, const Scope& usageScope) {
     const Scope* scope = field.getParentScope();
     while (scope) {

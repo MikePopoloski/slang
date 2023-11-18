@@ -424,8 +424,6 @@ std::optional<ConstantRange> Expression::evalSelector(EvalContext& context) cons
             return as<ElementSelectExpression>().evalIndex(context, nullptr, unused1, unused2);
         case ExpressionKind::RangeSelect:
             return as<RangeSelectExpression>().evalRange(context, nullptr);
-        case ExpressionKind::MemberAccess:
-            return as<MemberAccessExpression>().getSelectRange();
         default:
             return {};
     }

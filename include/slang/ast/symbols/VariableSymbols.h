@@ -134,7 +134,7 @@ public:
     /// For unpacked types this offset is in "selectable bits" which is how overlapping
     /// drivers to a given field are expressed, but don't necessarily correspond to
     /// how many bits would be used if the entire type were serialized.
-    uint32_t bitOffset;
+    uint64_t bitOffset;
 
     /// The index of the field within its parent structure.
     uint32_t fieldIndex;
@@ -142,7 +142,7 @@ public:
     /// If this field was marked with random qualifier, the mode indicated by that qualifier.
     RandMode randMode = RandMode::None;
 
-    FieldSymbol(std::string_view name, SourceLocation loc, uint32_t bitOffset,
+    FieldSymbol(std::string_view name, SourceLocation loc, uint64_t bitOffset,
                 uint32_t fieldIndex) :
         VariableSymbol(SymbolKind::Field, name, loc, VariableLifetime::Automatic),
         bitOffset(bitOffset), fieldIndex(fieldIndex) {}

@@ -112,7 +112,7 @@ uint32_t Type::getBitstreamWidth() const {
     }
 }
 
-uint32_t Type::getSelectableWidth() const {
+uint64_t Type::getSelectableWidth() const {
     auto& ct = getCanonicalType();
     switch (ct.kind) {
         case SymbolKind::FixedSizeUnpackedArrayType:

@@ -667,7 +667,7 @@ const Type& PackedArrayType::fromDim(const Scope& scope, const Type& elementType
 }
 
 FixedSizeUnpackedArrayType::FixedSizeUnpackedArrayType(const Type& elementType, ConstantRange range,
-                                                       uint32_t selectableWidth,
+                                                       uint64_t selectableWidth,
                                                        uint32_t bitstreamWidth) :
     Type(SymbolKind::FixedSizeUnpackedArrayType, "", SourceLocation()),
     elementType(elementType), range(range), selectableWidth(selectableWidth),
@@ -692,7 +692,7 @@ const Type& FixedSizeUnpackedArrayType::fromDim(const Scope& scope, const Type& 
         return elementType;
 
     auto& comp = scope.getCompilation();
-    auto selectableWidth = checkedMulU32(elementType.getSelectableWidth(), dim.width());
+    auto selectableWidth = checkedMulU64(elementType.getSelectableWidth(), dim.width());
     auto bitstreamWidth = checkedMulU32(elementType.getBitstreamWidth(), dim.width());
 
     if (!selectableWidth || selectableWidth > MaxBitWidth || !bitstreamWidth ||
@@ -861,7 +861,7 @@ const Type& UnpackedStructType::fromSyntax(const ASTContext& context,
     auto& comp = context.getCompilation();
     auto result = comp.emplace<UnpackedStructType>(comp, syntax.keyword.location(), context);
 
-    uint32_t bitOffset = 0;
+    uint64_t bitOffset = 0;
     uint64_t bitstreamWidth = 0;
     SmallVector<const FieldSymbol*> fields;
     for (auto member : syntax.members) {

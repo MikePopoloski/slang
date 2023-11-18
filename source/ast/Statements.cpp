@@ -1662,7 +1662,7 @@ private:
         not_null<const Expression*> longestStaticPrefix;
         not_null<const ValueSymbol*> symbol;
         not_null<const Type*> rootType;
-        IntervalMap<uint32_t, std::monostate> intervals;
+        UnrollIntervalMap intervals;
 
         PerAssignDriverState(const Expression& expr, const ValueSymbol& symbol) :
             longestStaticPrefix(&expr), symbol(&symbol), rootType(&symbol.getType()) {}

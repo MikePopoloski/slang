@@ -67,7 +67,7 @@ public:
     /// Gets the "selectable" width of the type. This is the size of the object when determining
     /// whether assignments to the static portions overlap with each other. Dynamically sized
     /// types are given the size of 1 for selection purposes.
-    uint32_t getSelectableWidth() const;
+    uint64_t getSelectableWidth() const;
 
     /// Indicates whether the type can represent negative numeric values. For non-numeric types,
     /// this always returns false.

@@ -140,8 +140,6 @@ public:
         SmallVector<std::pair<const ValueSymbol*, const Expression*>>& results,
         EvalContext& evalContext, const Expression* longestStaticPrefix) const;
 
-    std::optional<ConstantRange> getSelectRange() const;
-
     void serializeTo(ASTSerializer& serializer) const;
 
     static Expression& fromSelector(

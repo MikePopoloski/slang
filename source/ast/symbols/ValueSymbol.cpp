@@ -205,7 +205,7 @@ void ValueSymbol::addDriver(DriverKind driverKind, const Expression& longestStat
     addDriver(*bounds, *driver);
 }
 
-void ValueSymbol::addDriver(DriverKind driverKind, std::pair<uint32_t, uint32_t> bounds,
+void ValueSymbol::addDriver(DriverKind driverKind, DriverBitRange bounds,
                             const Expression& longestStaticPrefix, const Symbol& containingSymbol,
                             const Expression& procCallExpression) const {
     auto scope = getParentScope();
@@ -219,7 +219,7 @@ void ValueSymbol::addDriver(DriverKind driverKind, std::pair<uint32_t, uint32_t>
     addDriver(bounds, *driver);
 }
 
-void ValueSymbol::addDriver(std::pair<uint32_t, uint32_t> bounds, const ValueDriver& driver) const {
+void ValueSymbol::addDriver(DriverBitRange bounds, const ValueDriver& driver) const {
     auto scope = getParentScope();
     SLANG_ASSERT(scope);
 
@@ -232,7 +232,7 @@ void ValueSymbol::addDriver(std::pair<uint32_t, uint32_t> bounds, const ValueDri
             auto& valExpr = *comp.emplace<NamedValueExpression>(
                 *this, SourceRange{location, location + name.length()});
 
-            std::pair<uint32_t, uint32_t> initBounds{0, getType().getSelectableWidth() - 1};
+            DriverBitRange initBounds{0, getType().getSelectableWidth() - 1};
             auto initDriver = comp.emplace<ValueDriver>(driverKind, valExpr, scope->asSymbol(),
                                                         AssignFlags::None);
 
@@ -417,35 +417,48 @@ SourceRange ValueDriver::getSourceRange() const {
     return prefixExpression->sourceRange;
 }
 
-std::optional<std::pair<uint32_t, uint32_t>> ValueDriver::getBounds(
-    const Expression& prefixExpression, EvalContext& evalContext, const Type& rootType) {
-
+std::optional<DriverBitRange> ValueDriver::getBounds(const Expression& prefixExpression,
+                                                     EvalContext& evalContext,
+                                                     const Type& rootType) {
     auto type = &rootType.getCanonicalType();
-    std::pair<uint32_t, uint32_t> result{0, type->getSelectableWidth() - 1};
+    DriverBitRange result{0, type->getSelectableWidth() - 1};
 
     SmallVector<const Expression*> path;
     visitPrefixExpressions(prefixExpression,
                            [&](const Expression& expr) { path.push_back(&expr); });
 
     for (size_t i = path.size(); i > 0; i--) {
+        uint64_t start, width;
         auto& elem = *path[i - 1];
-        auto elemRange = elem.evalSelector(evalContext);
-        if (!elemRange)
-            return std::nullopt;
+        if (elem.kind == ExpressionKind::MemberAccess) {
+            auto& member = elem.as<MemberAccessExpression>().member;
+            if (member.kind != SymbolKind::Field)
+                return std::nullopt;
 
-        auto range = *elemRange;
-        SLANG_ASSERT(range.left >= 0 && range.right >= 0);
+            auto& field = member.as<FieldSymbol>();
+            start = field.bitOffset;
+            width = elem.type->getSelectableWidth();
+        }
+        else {
+            auto elemRange = elem.evalSelector(evalContext);
+            if (!elemRange)
+                return std::nullopt;
+
+            SLANG_ASSERT(elemRange->left >= 0 && elemRange->right >= 0);
+            start = elemRange->lower();
+            width = elemRange->width();
+        }
 
         if (type->kind == SymbolKind::FixedSizeUnpackedArrayType) {
             // Unpacked arrays need their selection adjusted since they
             // return a simple index instead of a bit offset.
-            uint32_t elemWidth = elem.type->getSelectableWidth();
-            result.first += (uint32_t)range.lower() * elemWidth;
+            uint64_t elemWidth = elem.type->getSelectableWidth();
+            result.first += start * elemWidth;
             result.second = result.first + elemWidth - 1;
         }
         else {
-            result.first += (uint32_t)range.lower();
-            result.second = result.first + range.width() - 1;
+            result.first += start;
+            result.second = result.first + width - 1;
         }
 
         type = &elem.type->getCanonicalType();

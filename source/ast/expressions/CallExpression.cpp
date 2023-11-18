@@ -886,7 +886,7 @@ public:
 
         // If the target symbol is driven by the subroutine we're inspecting,
         // add another driver for the procedure we're originally called from.
-        SmallVector<std::pair<std::pair<uint32_t, uint32_t>, const ValueDriver*>> drivers;
+        SmallVector<std::pair<DriverBitRange, const ValueDriver*>> drivers;
         auto range = expr.symbol.drivers();
         for (auto it = range.begin(); it != range.end(); ++it) {
             if ((*it)->containingSymbol == &sub)

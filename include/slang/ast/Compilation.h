@@ -47,8 +47,8 @@ class SystemSubroutine;
 class ValueDriver;
 struct AssertionInstanceDetails;
 
-using DriverIntervalMap = IntervalMap<uint32_t, const ValueDriver*>;
-using UnrollIntervalMap = IntervalMap<uint32_t, std::monostate>;
+using DriverIntervalMap = IntervalMap<uint64_t, const ValueDriver*>;
+using UnrollIntervalMap = IntervalMap<uint64_t, std::monostate>;
 
 enum class IntegralFlags : uint8_t;
 enum class SymbolIndex : uint32_t;

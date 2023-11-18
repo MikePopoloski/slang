@@ -18,7 +18,8 @@ class EvalContext;
 class PortSymbol;
 class ValueDriver;
 
-using DriverIntervalMap = IntervalMap<uint32_t, const ValueDriver*>;
+using DriverIntervalMap = IntervalMap<uint64_t, const ValueDriver*>;
+using DriverBitRange = std::pair<uint64_t, uint64_t>;
 
 /// A base class for symbols that represent a value (for example a variable or a parameter).
 /// The common functionality is that they all have a type.
@@ -63,11 +64,10 @@ public:
     void addDriver(DriverKind kind, const Expression& longestStaticPrefix,
                    const Symbol& containingSymbol, bitmask<AssignFlags> flags) const;
 
-    void addDriver(DriverKind kind, std::pair<uint32_t, uint32_t> bounds,
-                   const Expression& longestStaticPrefix, const Symbol& containingSymbol,
-                   const Expression& procCallExpression) const;
+    void addDriver(DriverKind kind, DriverBitRange bounds, const Expression& longestStaticPrefix,
+                   const Symbol& containingSymbol, const Expression& procCallExpression) const;
 
-    void addDriver(std::pair<uint32_t, uint32_t> bounds, const ValueDriver& driver) const;
+    void addDriver(DriverBitRange bounds, const ValueDriver& driver) const;
 
     std::ranges::subrange<DriverIntervalMap::const_iterator> drivers() const {
         return {driverMap.begin(), driverMap.end()};
@@ -157,8 +157,8 @@ public:
     SourceRange getSourceRange() const;
 
     /// Computes bounds for a driver given its longest static prefix expression.
-    static std::optional<std::pair<uint32_t, uint32_t>> getBounds(
-        const Expression& prefixExpression, EvalContext& evalContext, const Type& rootType);
+    static std::optional<DriverBitRange> getBounds(const Expression& prefixExpression,
+                                                   EvalContext& evalContext, const Type& rootType);
 };
 
 } // namespace slang::ast
