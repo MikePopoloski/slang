@@ -1684,7 +1684,7 @@ Expression& StreamingConcatenationExpression::fromSyntax(
     // by assignmentTarget.
     const bool isDestination = !assignmentTarget;
     const bool isRightToLeft = syntax.operatorToken.kind == TokenKind::LeftShift;
-    uint32_t sliceSize = 0;
+    uint64_t sliceSize = 0;
 
     auto badResult = [&]() -> Expression& {
         return badExpr(comp, comp.emplace<StreamingConcatenationExpression>(
@@ -1791,13 +1791,13 @@ Expression& StreamingConcatenationExpression::fromSyntax(
             }
         }
 
-        uint32_t argWidth = 0;
+        uint64_t argWidth = 0;
         if (arg->kind == ExpressionKind::Streaming) {
             argWidth = arg->as<StreamingConcatenationExpression>().getBitstreamWidth();
         }
         else if (withExpr) {
             if (constantWithWidth) {
-                auto rangeBits = checkedMulU32(argType->getArrayElementType()->getBitstreamWidth(),
+                auto rangeBits = checkedMulU64(argType->getArrayElementType()->getBitstreamWidth(),
                                                *constantWithWidth);
                 if (!rangeBits || rangeBits > Type::MaxBitWidth) {
                     context.addDiag(diag::ObjectTooLarge, withExpr->sourceRange)
@@ -1824,8 +1824,7 @@ Expression& StreamingConcatenationExpression::fromSyntax(
     // Streaming concatenation has no explicit type. Use void to prevent problems when
     // its type is passed to context-determined expressions.
     return *comp.emplace<StreamingConcatenationExpression>(comp.getVoidType(), sliceSize,
-                                                           (uint32_t)bitstreamWidth,
-                                                           buffer.ccopy(comp),
+                                                           bitstreamWidth, buffer.ccopy(comp),
                                                            syntax.sourceRange());
 }
 

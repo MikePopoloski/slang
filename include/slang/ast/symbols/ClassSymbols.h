@@ -87,7 +87,7 @@ public:
     const Expression* getBaseConstructorCall() const;
 
     /// Gets $bits of the type. Returns zero if the type does not have a statically known size.
-    uint32_t getBitstreamWidth() const {
+    uint64_t getBitstreamWidth() const {
         if (!cachedBitstreamWidth)
             computeSize();
         return *cachedBitstreamWidth;
@@ -138,7 +138,7 @@ private:
     mutable std::span<const Type* const> implementsIfaces;
     mutable std::span<const Type* const> declaredIfaces;
     mutable std::optional<const Expression*> baseConstructorCall;
-    mutable std::optional<uint32_t> cachedBitstreamWidth;
+    mutable std::optional<uint64_t> cachedBitstreamWidth;
     mutable std::optional<bool> cachedHasCycles;
     SymbolIndex headerIndex;
 };

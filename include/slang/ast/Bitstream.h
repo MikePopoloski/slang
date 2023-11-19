@@ -49,8 +49,8 @@ public:
 
     /// Re-ordering of the generic stream. For source/packed concatenation, unpackWidth = 0. For
     /// target/unpacked concatenation, unpackWidth is the total width of target.
-    static ConstantValue reOrder(ConstantValue&& value, uint32_t sliceSize,
-                                 uint32_t unpackWidth = 0);
+    static ConstantValue reOrder(ConstantValue&& value, uint64_t sliceSize,
+                                 uint64_t unpackWidth = 0);
 
     /// Performs constant evaluation of an assignment with a streaming concatenation as the target.
     static ConstantValue evaluateTarget(const StreamingConcatenationExpression& lhs,

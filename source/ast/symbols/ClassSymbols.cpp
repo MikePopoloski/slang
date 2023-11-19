@@ -723,7 +723,7 @@ void ClassType::computeSize() const {
     uint64_t totalWidth = 0;
     bool hasDynamic = false;
     for (auto& prop : membersOfType<ClassPropertySymbol>()) {
-        uint32_t width = prop.getType().getBitstreamWidth();
+        uint64_t width = prop.getType().getBitstreamWidth();
         if (width == 0)
             hasDynamic = true;
 
@@ -735,7 +735,7 @@ void ClassType::computeSize() const {
     }
 
     if (!hasDynamic)
-        cachedBitstreamWidth = uint32_t(totalWidth);
+        cachedBitstreamWidth = totalWidth;
 }
 
 void ClassType::computeCycles() const {

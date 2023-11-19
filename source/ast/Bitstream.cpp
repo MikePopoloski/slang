@@ -28,12 +28,12 @@ enum class BitstreamSizeMode { Source, DestEmpty, DestFill };
 /// Represents {a, b} to model the size of a dynamic type with "aR+b"
 /// where "a" and "b" are compile-time constants and "R" is runtime determined.
 struct DynamicSize {
-    uint32_t multiplier = 0;
-    uint32_t fixed = 0;
+    uint64_t multiplier = 0;
+    uint64_t fixed = 0;
     bool isValid = false;
 
     DynamicSize() = default;
-    DynamicSize(uint32_t multiplier, uint32_t fixed) :
+    DynamicSize(uint64_t multiplier, uint64_t fixed) :
         multiplier(multiplier), fixed(fixed), isValid(true) {}
 
     explicit operator bool() const { return isValid; }
@@ -53,8 +53,8 @@ struct DynamicSize {
 ///   "b" is the sum of all fixed sizes plus sizes of siblings of the first
 ///       item when their common parent is dynamically sized.
 static DynamicSize dynamicBitstreamSize(const Type& type, BitstreamSizeMode mode) {
-    uint32_t multiplier = 0;
-    uint32_t fixedSize = type.getBitWidth();
+    uint64_t multiplier = 0;
+    uint64_t fixedSize = type.getBitWidth();
     if (fixedSize > 0)
         return {0, fixedSize};
 
@@ -86,8 +86,8 @@ static DynamicSize dynamicBitstreamSize(const Type& type, BitstreamSizeMode mode
         const auto& ct = type.getCanonicalType();
         if (ct.kind == SymbolKind::FixedSizeUnpackedArrayType) {
             auto rw = ct.as<FixedSizeUnpackedArrayType>().range.width();
-            auto mul = checkedMulU32(elemSize.multiplier, rw);
-            auto fixed = checkedMulU32(elemSize.fixed, rw);
+            auto mul = checkedMulU64(elemSize.multiplier, rw);
+            auto fixed = checkedMulU64(elemSize.fixed, rw);
             if (!mul || !fixed || mul > Type::MaxBitWidth || fixed > Type::MaxBitWidth)
                 return {};
 
@@ -222,7 +222,7 @@ bool Bitstream::dynamicSizesMatch(const T1& destination, const T2& source) {
      // destFillMultiplier=8 destFillFixedSize=1
      */
 
-    uint32_t remaining;
+    uint64_t remaining;
     if (sourceSize.fixed > destFill.fixed)
         remaining = sourceSize.fixed - destFill.fixed;
     else
@@ -236,11 +236,11 @@ bool Bitstream::dynamicSizesMatch(const T1& destination, const T2& source) {
 
 /// Validates sizes and returns remaining size for the first dynamic item in constant evaluation
 template<typename T>
-static uint32_t bitstreamCastRemainingSize(const T& destination, uint32_t srcSize) {
+static uint64_t bitstreamCastRemainingSize(const T& destination, uint64_t srcSize) {
     if (destination.isFixedSize()) {
         auto destSize = destination.getBitstreamWidth();
         if (destSize != srcSize)
-            return UINT32_MAX;
+            return UINT64_MAX;
 
         return 0;
     }
@@ -248,7 +248,7 @@ static uint32_t bitstreamCastRemainingSize(const T& destination, uint32_t srcSiz
     // Check for the source size being too small to fill destination fixed size.
     auto destEmpty = dynamicBitstreamSize(destination, BitstreamSizeMode::DestEmpty);
     if (!destEmpty || destEmpty.fixed > srcSize)
-        return UINT32_MAX;
+        return UINT64_MAX;
 
     if (destEmpty.fixed == srcSize)
         return 0;
@@ -256,14 +256,14 @@ static uint32_t bitstreamCastRemainingSize(const T& destination, uint32_t srcSiz
     // Calculate remaining size to dynamically fill.
     auto destFill = dynamicBitstreamSize(destination, BitstreamSizeMode::DestFill);
     if (!destFill)
-        return UINT32_MAX;
+        return UINT64_MAX;
 
     if (srcSize < destFill.fixed ||
         (destFill.multiplier > 0 && (srcSize - destFill.fixed) % destFill.multiplier != 0)) {
         if (destEmpty.multiplier > 0 && (srcSize - destEmpty.fixed) % destEmpty.multiplier == 0)
             return 0; // only for "with" range
 
-        return UINT32_MAX;
+        return UINT64_MAX;
     }
 
     // Size to fill the first dynamically sized item.
@@ -333,12 +333,12 @@ static void packBitstream(ConstantValue& value, SmallVectorBase<ConstantValue*>&
 
 using PackIterator = ConstantValue* const*;
 
-static SVInt slicePacked(PackIterator& iter, const PackIterator iterEnd, bitwidth_t& bit,
-                         bitwidth_t width) {
+static SVInt slicePacked(PackIterator& iter, const PackIterator iterEnd, uint64_t& bit,
+                         uint64_t width) {
     if (iter == iterEnd) {
         // Only for implicit streaming concatenation conversion
-        bit += width;                  // Informs the caller how many zeros are appended.
-        return SVInt(width, 0, false); // filling with zero bits on the right
+        bit += width; // Informs the caller how many zeros are appended.
+        return SVInt(bitwidth_t(width), 0, false); // filling with zero bits on the right
     }
 
     ConstantValue cp = **iter;
@@ -347,8 +347,8 @@ static SVInt slicePacked(PackIterator& iter, const PackIterator iterEnd, bitwidt
 
     auto& ci = cp.integer();
     SLANG_ASSERT(bit < ci.getBitWidth());
-    bitwidth_t msb = ci.getBitWidth() - bit - 1;
-    bitwidth_t lsb = std::min(bit + width, ci.getBitWidth());
+    uint64_t msb = ci.getBitWidth() - bit - 1;
+    uint64_t lsb = std::min<uint64_t>(bit + width, ci.getBitWidth());
     lsb = ci.getBitWidth() - lsb;
     bit += msb - lsb + 1;
 
@@ -366,8 +366,8 @@ static SVInt slicePacked(PackIterator& iter, const PackIterator iterEnd, bitwidt
 
 /// Performs unpack operation on a bit-stream.
 static ConstantValue unpackBitstream(const Type& type, PackIterator& iter,
-                                     const PackIterator iterEnd, uint32_t& bit,
-                                     uint32_t& dynamicSize) {
+                                     const PackIterator iterEnd, uint64_t& bit,
+                                     uint64_t& dynamicSize) {
 
     auto concatPacked = [&](bitwidth_t width, bool isFourState) {
         SmallVector<SVInt> buffer;
@@ -406,7 +406,7 @@ static ConstantValue unpackBitstream(const Type& type, PackIterator& iter,
         if (!bit && iter != iterEnd && (*iter)->isString() && (*iter)->str().length() == width)
             return std::move(**iter);
 
-        return ConstantValue(concatPacked(width * CHAR_BIT, false)).convertToStr();
+        return ConstantValue(concatPacked(bitwidth_t(width * CHAR_BIT), false)).convertToStr();
     }
 
     if (type.isUnpackedArray()) {
@@ -426,8 +426,8 @@ static ConstantValue unpackBitstream(const Type& type, PackIterator& iter,
                 // For bit-stream casting, dynamicSize % elemWidth == 0 and num = dynamicSize /
                 // elemWidth. For implicit streaming concatenation conversion, num is the smallest
                 // number of elements that make it as wide as or wider than dynamicSize.
-                uint32_t num = (dynamicSize + elemWidth - 1) / elemWidth;
-                for (uint32_t i = num; i > 0; i--) {
+                uint64_t num = (dynamicSize + elemWidth - 1) / elemWidth;
+                for (uint64_t i = num; i > 0; i--) {
                     buffer.emplace_back(unpackBitstream(*type.getArrayElementType(), iter, iterEnd,
                                                         bit, dynamicSize));
                 }
@@ -463,7 +463,7 @@ ConstantValue Bitstream::evaluateCast(const Type& type, ConstantValue&& value,
                                       SourceRange sourceRange, EvalContext& context,
                                       bool isImplicit) {
     auto srcSize = value.getBitstreamWidth();
-    uint32_t dynamicSize = 0;
+    uint64_t dynamicSize = 0;
     if (!isImplicit) { // Explicit bit-stream casting
         dynamicSize = bitstreamCastRemainingSize(type, srcSize);
         if (dynamicSize > srcSize) {
@@ -486,7 +486,7 @@ ConstantValue Bitstream::evaluateCast(const Type& type, ConstantValue&& value,
     SmallVector<ConstantValue*> packed;
     packBitstream(value, packed);
 
-    bitwidth_t bitOffset = 0;
+    uint64_t bitOffset = 0;
     auto iter = std::cbegin(packed);
     auto cv = unpackBitstream(type, iter, std::cend(packed), bitOffset, dynamicSize);
     SLANG_ASSERT(!dynamicSize);
@@ -533,8 +533,8 @@ bool Bitstream::canBeTarget(const StreamingConcatenationExpression& lhs, const E
     if (context.inUnevaluatedBranch())
         return true; // No size check in an unevaluated conditional branch
 
-    uint32_t targetWidth = lhs.getBitstreamWidth();
-    uint32_t sourceWidth;
+    uint64_t targetWidth = lhs.getBitstreamWidth();
+    uint64_t sourceWidth;
     bool good = true;
 
     if (rhs.kind != ExpressionKind::Streaming) {
@@ -604,11 +604,11 @@ bool Bitstream::isBitstreamCast(const Type& type, const StreamingConcatenationEx
     return dynamicSizesMatch(type, arg);
 }
 
-ConstantValue Bitstream::reOrder(ConstantValue&& value, uint32_t sliceSize, uint32_t unpackWidth) {
-    uint32_t totalWidth = value.getBitstreamWidth();
+ConstantValue Bitstream::reOrder(ConstantValue&& value, uint64_t sliceSize, uint64_t unpackWidth) {
+    uint64_t totalWidth = value.getBitstreamWidth();
     SLANG_ASSERT(unpackWidth <= totalWidth);
 
-    uint32_t numBlocks = ((unpackWidth ? unpackWidth : totalWidth) + sliceSize - 1) / sliceSize;
+    uint64_t numBlocks = ((unpackWidth ? unpackWidth : totalWidth) + sliceSize - 1) / sliceSize;
     if (numBlocks <= 1)
         return std::move(value);
 
@@ -618,8 +618,8 @@ ConstantValue Bitstream::reOrder(ConstantValue&& value, uint32_t sliceSize, uint
         return std::move(value);
 
     size_t rightIndex = packed.size() - 1; // Right-to-left
-    uint32_t rightWidth = packed.back()->getBitstreamWidth();
-    uint32_t extraBits = 0;
+    uint64_t rightWidth = packed.back()->getBitstreamWidth();
+    uint64_t extraBits = 0;
 
     if (unpackWidth) {
         if (unpackWidth < totalWidth) { // left-aligned so trim rightmost
@@ -643,15 +643,15 @@ ConstantValue Bitstream::reOrder(ConstantValue&& value, uint32_t sliceSize, uint
         if (rightWidth == (*iter)->getBitstreamWidth())
             result.emplace_back(std::move(**iter));
         else {
-            bitwidth_t bit = 0;
+            uint64_t bit = 0;
             result.emplace_back(slicePacked(iter, std::cend(packed), bit, rightWidth));
         }
     };
 
     while (numBlocks > 1) {
         size_t index = rightIndex;
-        uint32_t width = rightWidth;
-        uint32_t slice = sliceSize;
+        uint64_t width = rightWidth;
+        uint64_t slice = sliceSize;
         if (extraBits) {
             slice = extraBits;
             extraBits = 0;
@@ -695,8 +695,8 @@ ConstantValue Bitstream::reOrder(ConstantValue&& value, uint32_t sliceSize, uint
 
 /// Performs unpack operation of streaming concatenation target on a bit-stream.
 static bool unpackConcatenation(const StreamingConcatenationExpression& lhs, PackIterator& iter,
-                                const PackIterator iterEnd, bitwidth_t& bitOffset,
-                                uint32_t& dynamicSize, EvalContext& context,
+                                const PackIterator iterEnd, uint64_t& bitOffset,
+                                uint64_t& dynamicSize, EvalContext& context,
                                 SmallVectorBase<ConstantValue>* dryRun = nullptr) {
     for (auto& stream : lhs.streams()) {
         auto& operand = *stream.operand;
@@ -711,7 +711,7 @@ static bool unpackConcatenation(const StreamingConcatenationExpression& lhs, Pac
             }
 
             // A dry run collects rvalue without storing lvalue
-            uint32_t dynamicSizeSave = dynamicSize;
+            uint64_t dynamicSizeSave = dynamicSize;
             SmallVector<ConstantValue> toBeOrdered;
             if (!unpackConcatenation(concat, iter, iterEnd, bitOffset, dynamicSize, context,
                                      &toBeOrdered)) {
@@ -720,7 +720,7 @@ static bool unpackConcatenation(const StreamingConcatenationExpression& lhs, Pac
 
             // Re-order to a new rvalue with the slice size
             ConstantValue cv = std::vector(toBeOrdered.begin(), toBeOrdered.end());
-            uint32_t streamWidth = cv.getBitstreamWidth();
+            uint64_t streamWidth = cv.getBitstreamWidth();
             auto rvalue = Bitstream::reOrder(std::move(cv), concat.getSliceSize(), streamWidth);
 
             SmallVector<ConstantValue*> packed;
@@ -728,7 +728,7 @@ static bool unpackConcatenation(const StreamingConcatenationExpression& lhs, Pac
 
             // A real pass stores lvalue from new rvalue
             auto iterConcat = std::cbegin(packed);
-            bitwidth_t bit = 0;
+            uint64_t bit = 0;
             if (!unpackConcatenation(concat, iterConcat, std::cend(packed), bit, dynamicSizeSave,
                                      context)) {
                 return false;
@@ -751,7 +751,7 @@ static bool unpackConcatenation(const StreamingConcatenationExpression& lhs, Pac
                 auto elemType = arrayType.getArrayElementType();
                 SLANG_ASSERT(elemType);
 
-                auto withSize = checkedMulU32(elemType->getBitstreamWidth(), with.width());
+                auto withSize = checkedMulU64(elemType->getBitstreamWidth(), with.width());
                 if (!withSize || withSize > Type::MaxBitWidth) {
                     context.addDiag(diag::ObjectTooLarge, stream.withExpr->sourceRange)
                         << Type::MaxBitWidth;
@@ -829,7 +829,7 @@ ConstantValue Bitstream::evaluateTarget(const StreamingConcatenationExpression& 
 
     auto srcSize = rvalue.getBitstreamWidth();
     auto targetWidth = lhs.getBitstreamWidth();
-    uint32_t dynamicSize = 0;
+    uint64_t dynamicSize = 0;
 
     if (rhs.kind == ExpressionKind::Streaming) {
         // Check srcSize == targetWidth + dynamicSize, then issue an error if not.
@@ -869,7 +869,7 @@ ConstantValue Bitstream::evaluateTarget(const StreamingConcatenationExpression& 
     SmallVector<ConstantValue*> packed;
     packBitstream(rvalue, packed);
 
-    bitwidth_t bitOffset = 0;
+    uint64_t bitOffset = 0;
     auto iter = std::cbegin(packed);
     auto iterEnd = std::cend(packed);
     if (!unpackConcatenation(lhs, iter, iterEnd, bitOffset, dynamicSize, context))
@@ -940,7 +940,7 @@ ConstantValue Bitstream::convertToBitVector(ConstantValue&& value, SourceRange s
 
     // We don't worry about width being too large for an integral type here because we limit
     // how large any constant value can be.
-    const uint32_t width = value.getBitstreamWidth();
+    const uint64_t width = value.getBitstreamWidth();
     auto& type = context.getCompilation().getType(bitwidth_t(width), IntegralFlags::FourState |
                                                                          IntegralFlags::Unsigned);
 

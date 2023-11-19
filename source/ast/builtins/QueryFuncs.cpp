@@ -50,7 +50,7 @@ public:
         if (!noHierarchical(context, *args[0]))
             return nullptr;
 
-        uint32_t width;
+        uint64_t width;
         if (args[0]->type->isFixedSize()) {
             width = args[0]->type->getBitstreamWidth();
         }
@@ -61,6 +61,7 @@ public:
             width = cv.getBitstreamWidth();
         }
 
+        // TODO: handle overflow of 32 bits
         return SVInt(32, width, true);
     }
 };

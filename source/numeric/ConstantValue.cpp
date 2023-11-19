@@ -478,17 +478,18 @@ ConstantValue ConstantValue::convertToByteQueue(bool isSigned) const {
     return queue;
 }
 
-uint32_t ConstantValue::getBitstreamWidth() const {
+uint64_t ConstantValue::getBitstreamWidth() const {
     // Note that we don't have to worry about overflow in this
-    // method because we won't ever construct constant values large
-    // enough to overflow a 32-bit integer.
+    // method because we have an artificial limit on how
+    // large constant values are allowed to be.
+    // TODO: actually implement the mentioned limit
     if (isInteger())
         return integer().getBitWidth();
 
     if (isString())
-        return uint32_t(str().length() * CHAR_BIT);
+        return str().length() * CHAR_BIT;
 
-    uint32_t width = 0;
+    uint64_t width = 0;
     if (isUnpacked()) {
         for (const auto& cv : elements())
             width += cv.getBitstreamWidth();

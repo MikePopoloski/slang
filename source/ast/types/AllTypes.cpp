@@ -668,7 +668,7 @@ const Type& PackedArrayType::fromDim(const Scope& scope, const Type& elementType
 
 FixedSizeUnpackedArrayType::FixedSizeUnpackedArrayType(const Type& elementType, ConstantRange range,
                                                        uint64_t selectableWidth,
-                                                       uint32_t bitstreamWidth) :
+                                                       uint64_t bitstreamWidth) :
     Type(SymbolKind::FixedSizeUnpackedArrayType, "", SourceLocation()),
     elementType(elementType), range(range), selectableWidth(selectableWidth),
     bitstreamWidth(bitstreamWidth) {
@@ -693,7 +693,7 @@ const Type& FixedSizeUnpackedArrayType::fromDim(const Scope& scope, const Type& 
 
     auto& comp = scope.getCompilation();
     auto selectableWidth = checkedMulU64(elementType.getSelectableWidth(), dim.width());
-    auto bitstreamWidth = checkedMulU32(elementType.getBitstreamWidth(), dim.width());
+    auto bitstreamWidth = checkedMulU64(elementType.getBitstreamWidth(), dim.width());
 
     if (!selectableWidth || selectableWidth > MaxBitWidth || !bitstreamWidth ||
         bitstreamWidth > MaxBitWidth) {
@@ -901,7 +901,7 @@ const Type& UnpackedStructType::fromSyntax(const ASTContext& context,
     }
 
     result->selectableWidth = bitOffset;
-    result->bitstreamWidth = (uint32_t)bitstreamWidth;
+    result->bitstreamWidth = bitstreamWidth;
     result->fields = fields.copy(comp);
     for (auto field : result->fields) {
         // Force resolution of the initializer right away, otherwise nothing
