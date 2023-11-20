@@ -48,7 +48,7 @@ SLANG_BITMASK(IntegralFlags, Reg)
 class SLANG_EXPORT Type : public Symbol {
 public:
     /// The maximum size in bits of any fixed size type.
-    static constexpr uint64_t MaxBitWidth = uint64_t(INT32_MAX);
+    static constexpr uint64_t MaxBitWidth = uint64_t(INT32_MAX) * 8;
 
     /// Gets the canonical type for this type, which involves unwrapping any type aliases.
     const Type& getCanonicalType() const {

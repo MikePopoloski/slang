@@ -1800,8 +1800,7 @@ Expression& StreamingConcatenationExpression::fromSyntax(
                 auto rangeBits = checkedMulU64(argType->getArrayElementType()->getBitstreamWidth(),
                                                *constantWithWidth);
                 if (!rangeBits || rangeBits > Type::MaxBitWidth) {
-                    context.addDiag(diag::ObjectTooLarge, withExpr->sourceRange)
-                        << Type::MaxBitWidth;
+                    context.addDiag(diag::ObjectTooLarge, withExpr->sourceRange);
                     return badResult();
                 }
 
@@ -1814,7 +1813,7 @@ Expression& StreamingConcatenationExpression::fromSyntax(
 
         bitstreamWidth += argWidth;
         if (bitstreamWidth > Type::MaxBitWidth) {
-            context.addDiag(diag::ObjectTooLarge, syntax.sourceRange()) << Type::MaxBitWidth;
+            context.addDiag(diag::ObjectTooLarge, syntax.sourceRange());
             return badResult();
         }
 

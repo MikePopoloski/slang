@@ -753,8 +753,7 @@ static bool unpackConcatenation(const StreamingConcatenationExpression& lhs, Pac
 
                 auto withSize = checkedMulU64(elemType->getBitstreamWidth(), with.width());
                 if (!withSize || withSize > Type::MaxBitWidth) {
-                    context.addDiag(diag::ObjectTooLarge, stream.withExpr->sourceRange)
-                        << Type::MaxBitWidth;
+                    context.addDiag(diag::ObjectTooLarge, stream.withExpr->sourceRange);
                     return false;
                 }
 

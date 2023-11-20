@@ -2976,19 +2976,19 @@ TEST_CASE("Stream operator size overflow") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
     int i[];
-    int j[9999999];
-    assign i = {<< {j, j, j with [0+:50000000]}};
+    int j[99999999];
+    assign i = {<< {j, j, j with [0+:400000000]}};
 
     int k[$];
     int l[];
     always_comb l = {<< {k with [0+:999999999]}};
 
-    typedef struct { int i[50000000]; logic l[$]; } asdf;
+    typedef struct { int i[400000000]; logic l[$]; } asdf;
     asdf n [999999][][999999][];
     int o[];
     always {<< {o}} = {<< {n}};
 
-    struct { asdf a[]; int i[50000000]; logic l; } p;
+    struct { asdf a[]; int i[400000000]; logic l; } p;
     always {<< {p}} = {<< {o}};
 
     class C;
@@ -2999,14 +2999,14 @@ module m;
 
     class D;
         int a[];
-        int b[50000000];
+        int b[400000000];
     endclass
     D d;
     always {<< {o}} = {<< {d, d, d}};
 endmodule
 
 function automatic int func1;
-    typedef struct { int a[]; int i[50000000]; logic l; } asdf;
+    typedef struct { int a[]; int i[400000000]; logic l; } asdf;
     struct { asdf a[]; bit b; asdf c; } p[];
     int o[] = {1};
     {<< {p}} = {<< {o}};
@@ -3014,7 +3014,7 @@ function automatic int func1;
 endfunction
 
 function automatic int func2;
-    typedef struct { int a[]; int i[50000000]; logic l; } asdf;
+    typedef struct { int a[]; int i[400000000]; logic l; } asdf;
     struct { asdf a[]; bit b; asdf c; } p[];
     int o[] = {1};
     {<< {p}} = o;
@@ -3029,7 +3029,7 @@ endfunction
 module n;
     localparam int q = func1();
     localparam int r = func2();
-    localparam int s = func3(1, 100000000);
+    localparam int s = func3(1, 1000000000);
 endmodule
 )");
 

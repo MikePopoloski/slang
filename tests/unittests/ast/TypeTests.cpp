@@ -2011,9 +2011,9 @@ TEST_CASE("Max object size tests") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
     logic [7:0] foo;
-    logic bar[];
+    logic [7:0] bar[];
     int baz[999999999];
-    struct { logic a[2147483647]; logic b[2147483647]; } biz;
+    struct { logic a[2147483647]; logic [7:0] b[2147483647]; } biz;
     struct packed { logic [16777214:0] a; logic [16777214:0] b; } boz;
 
     initial begin
@@ -2024,7 +2024,7 @@ endmodule
 
 class C;
     logic a[2147483647];
-    logic b[2147483647];
+    logic [7:0] b[2147483647];
 endclass
 
 class D;

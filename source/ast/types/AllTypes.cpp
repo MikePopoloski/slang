@@ -697,7 +697,7 @@ const Type& FixedSizeUnpackedArrayType::fromDim(const Scope& scope, const Type& 
 
     if (!selectableWidth || selectableWidth > MaxBitWidth || !bitstreamWidth ||
         bitstreamWidth > MaxBitWidth) {
-        scope.addDiag(diag::ObjectTooLarge, sourceRange.get()) << MaxBitWidth;
+        scope.addDiag(diag::ObjectTooLarge, sourceRange.get());
         return comp.getErrorType();
     }
 
@@ -894,7 +894,7 @@ const Type& UnpackedStructType::fromSyntax(const ASTContext& context,
             bitOffset += field->getType().getSelectableWidth();
             bitstreamWidth += field->getType().getBitstreamWidth();
             if (bitOffset > MaxBitWidth || bitstreamWidth > MaxBitWidth) {
-                context.addDiag(diag::ObjectTooLarge, syntax.sourceRange()) << MaxBitWidth;
+                context.addDiag(diag::ObjectTooLarge, syntax.sourceRange());
                 return comp.getErrorType();
             }
         }
