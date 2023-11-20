@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ## [Unreleased]
 ### Language Support
 * Added support for specifying a modport when connecting an interface array port
+* Implicitly typed parameters that have range specifications are now considered assignment-like contexts (this behavior is not specified in the LRM but more intuitively matches user expectations)
+* Added support for using assignment patterns as lvalues (which finally finishes full support for assignment patterns)
 
 ### General Features
 * Minimum required compiler versions have been bumped to GCC 11, clang 16, and Xcode 15 (should be the last bump for a while)
@@ -15,6 +17,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Added `--relax-string-conversions` (included in "vcs" compat mode) to allow strings to implicitly convert to integers
 * Added [-Wconstant-conversion](https://sv-lang.com/warning-ref.html#constant-conversion) which warns about conversions inside constant expressions that lose information
 * Added [-Wsign-conversion](https://sv-lang.com/warning-ref.html#sign-conversion) which warns about implicit integral conversions that change sign
+* Added a `-L` option to control the default [source library](https://sv-lang.com/user-manual.html#source-libraries) search order
 
 ### Improvements
 * Made several improvements to -Wimplicit-conv to make it less noisy
@@ -30,6 +33,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Fixed a few places where large types or expressions could result in internal overflow of variables tracking their sizes, which could cause crashes or other strange behavior. Now a proper error is issued.
 * A proper error is now issued for duplicate local variables inside of properties and sequences
 * Fixed a crash when trying to connect an extern subroutine implementation to an interface array port
+* Fixed a spurious error about signals being multi-driven from uninstantiated generate blocks
+* Fixed a spurious error when streaming concatenations are used in port connections of uninstantiated modules
+* An appropriate parse error is now issued for generate blocks that are missing a body
+* Fixed a crash when classes with cycles in their members are used in a cast expression
 
 
 ## [v4.0] - 2023-08-10
