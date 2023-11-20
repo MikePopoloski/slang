@@ -349,8 +349,8 @@ public:
     /// requires <code>Derived::distance_to()</code>
     template<detail::has_distance_to<self_type> T>
     [[nodiscard]] friend constexpr decltype(auto) operator-(
-        const T & left,
-        const self_type & right) noexcept(detail::has_nothrow_distance_to<T, self_type>) {
+        const T& left,
+        const self_type& right) noexcept(detail::has_nothrow_distance_to<T, self_type>) {
         return right.distance_to(left);
     }
 
@@ -358,8 +358,8 @@ public:
     /// requires <code>Derived::distance_to()</code>
     template<detail::has_distance_to<self_type> Sentinel>
     [[nodiscard]] friend constexpr decltype(auto) operator-(
-        const self_type & left,
-        const Sentinel & right) noexcept(detail::has_nothrow_distance_to<Sentinel, self_type>) {
+        const self_type& left,
+        const Sentinel& right) noexcept(detail::has_nothrow_distance_to<Sentinel, self_type>) {
         return -(right - left);
     }
 
