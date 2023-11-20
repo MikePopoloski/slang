@@ -445,7 +445,7 @@ std::optional<DriverBitRange> ValueDriver::getBounds(const Expression& prefixExp
                 return std::nullopt;
 
             SLANG_ASSERT(elemRange->left >= 0 && elemRange->right >= 0);
-            start = elemRange->lower();
+            start = (uint64_t)elemRange->lower();
             width = elemRange->width();
         }
 
