@@ -104,8 +104,13 @@ void SvStruct::toCpp(HppFile& hppFile, std::string_view _namespace, const SvAlia
             const auto& value = values[i];
 
             if (member.second.isStructOrEnum())
-                hppFile.addWithIndent(
-                    fmt::format("{} = {}({});\n", member.first, member.second.toString(), value));
+                if (_namespace != member.second._namespace)
+                    hppFile.addWithIndent(fmt::format("{} = {}::{}({});\n", member.first,
+                                                      member.second._namespace,
+                                                      member.second.toString(), value));
+                else
+                    hppFile.addWithIndent(fmt::format("{} = {}({});\n", member.first,
+                                                      member.second.toString(), value));
             else
                 hppFile.addWithIndent(fmt::format("{} = {};\n", member.first, value));
         }
@@ -132,8 +137,13 @@ void SvStruct::toCpp(HppFile& hppFile, std::string_view _namespace, const SvAlia
                                     member.first);
 
             if (member.second.isStructOrEnum())
-                hppFile.addWithIndent(
-                    fmt::format("{} = {}({});\n", member.first, member.second.toString(), value));
+                if (_namespace != member.second._namespace)
+                    hppFile.addWithIndent(fmt::format("{} = {}::{}({});\n", member.first,
+                                                      member.second._namespace,
+                                                      member.second.toString(), value));
+                else
+                    hppFile.addWithIndent(fmt::format("{} = {}({});\n", member.first,
+                                                      member.second.toString(), value));
             else
                 hppFile.addWithIndent(fmt::format("{} = {};\n", member.first, value));
         }
@@ -257,7 +267,12 @@ void SvStruct::toCpp(HppFile& hppFile, std::string_view _namespace, const SvAlia
         }
 
         if (member.second.isStructOrEnum())
-            hppFile.addWithIndent(fmt::format("return {}({});\n", member.second.toString(), value));
+            if (_namespace != member.second._namespace)
+                hppFile.addWithIndent(fmt::format("return {}::{}({});\n", member.second._namespace,
+                                                  member.second.toString(), value));
+            else
+                hppFile.addWithIndent(
+                    fmt::format("return {}({});\n", member.second.toString(), value));
         else
             hppFile.addWithIndent(fmt::format("return {};\n", value));
 
