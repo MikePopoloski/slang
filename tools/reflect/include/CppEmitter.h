@@ -55,7 +55,7 @@ public:
         auto headersTransform = std::views::transform(headers, [](const auto& h) {
             return fmt::format("#include \"{}.h\"", h);
         });
-        return fmt::format("// {}\n#pragma once\n\n{}{}\n\n{}", fileName,
+        return fmt::format("// {}\n#pragma once\n\n{}\n{}\n\n{}", fileName,
                            fmt::join(includesTransform, "\n"), fmt::join(headersTransform, "\n"),
                            hpp.str());
     }
