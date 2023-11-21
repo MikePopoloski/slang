@@ -1024,8 +1024,13 @@ Expression& Expression::bindLookupResult(Compilation& compilation, LookupResult&
     // If we've found a function's return value variable and have parentheses for
     // a call expression, translate that symbol to be the subroutine itself to
     // allow for recursive function calls.
-    if (invocation && symbol->kind == SymbolKind::Variable && result.selectors.empty()) {
-        if (auto scope = symbol->getParentScope()) {
+    if (symbol->kind == SymbolKind::Variable && result.selectors.empty() &&
+        symbol->as<VariableSymbol>().flags.has(VariableFlags::CompilerGenerated)) {
+
+        auto scope = symbol->getParentScope();
+        if (scope &&
+            (invocation || (context.flags.has(ASTFlags::TopLevelStatement) &&
+                            compilation.hasFlag(CompilationFlags::AllowRecursiveImplicitCall)))) {
             auto& sym = scope->asSymbol();
             if (sym.kind == SymbolKind::Subroutine &&
                 sym.as<SubroutineSymbol>().returnValVar == symbol) {

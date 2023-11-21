@@ -151,6 +151,8 @@ void Driver::addStandardArgs() {
                 "by initial blocks.");
     addCompFlag(CompilationFlags::AllowTopLevelIfacePorts, "--allow-toplevel-iface-ports",
                 "Allow top-level modules to have interface ports.");
+    addCompFlag(CompilationFlags::AllowRecursiveImplicitCall, "--allow-recursive-implicit-call",
+                "Allow implicit call expressions to be recursive function calls.");
     addCompFlag(CompilationFlags::StrictDriverChecking, "--strict-driver-checking",
                 "Perform strict driver checking, which currently means disabling "
                 "procedural 'for' loop unrolling.");
@@ -388,7 +390,8 @@ bool Driver::processOptions() {
             auto vcsCompatFlags = {CompilationFlags::AllowHierarchicalConst,
                                    CompilationFlags::AllowUseBeforeDeclare,
                                    CompilationFlags::RelaxEnumConversions,
-                                   CompilationFlags::RelaxStringConversions};
+                                   CompilationFlags::RelaxStringConversions,
+                                   CompilationFlags::AllowRecursiveImplicitCall};
 
             for (auto flag : vcsCompatFlags) {
                 auto& option = options.compilationFlags.at(flag);

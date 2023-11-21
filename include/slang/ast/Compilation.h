@@ -110,8 +110,11 @@ enum class SLANG_EXPORT CompilationFlags {
 
     /// Allow strings to implicitly convert to integers.
     RelaxStringConversions = 1 << 9,
+
+    /// Allow implicit call expressions (lacking parentheses) to be recursive function calls.
+    AllowRecursiveImplicitCall = 1 << 10
 };
-SLANG_BITMASK(CompilationFlags, RelaxStringConversions)
+SLANG_BITMASK(CompilationFlags, AllowRecursiveImplicitCall)
 
 /// Contains various options that can control compilation behavior.
 struct SLANG_EXPORT CompilationOptions {

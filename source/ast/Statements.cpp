@@ -2314,7 +2314,7 @@ Statement& ExpressionStatement::fromSyntax(Compilation& compilation,
 Statement& ExpressionStatement::fromSyntax(Compilation& compilation,
                                            const VoidCastedCallStatementSyntax& syntax,
                                            const ASTContext& context) {
-    auto& expr = Expression::bind(*syntax.expr, context);
+    auto& expr = Expression::bind(*syntax.expr, context, ASTFlags::TopLevelStatement);
     auto result = compilation.emplace<ExpressionStatement>(expr, syntax.sourceRange());
     if (expr.bad())
         return badStmt(compilation, result);

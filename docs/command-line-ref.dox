@@ -300,6 +300,12 @@ compatibility purposes.
 Allow top-level modules to have interface ports. SystemVerilog doesn't permit this, but some tools
 allow it anyway so this flag can be used for compatibility purposes.
 
+`--allow-recursive-implicit-call`
+
+Allow implicit call expressions (ones that lack parentheses) to be recursive function calls.
+The LRM states that directly recursive function calls require parentheses but many other tools
+allow this anyway so this flag can be used for compatibility purposes.
+
 `--strict-driver-checking`
 
 Perform strict driver checking, which currently means disabling procedural 'for' @ref loop-unroll

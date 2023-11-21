@@ -1934,3 +1934,41 @@ endmodule
     CHECK(diags[0].code == diag::StatementNotInLoop);
     CHECK(diags[1].code == diag::StatementNotInLoop);
 }
+
+TEST_CASE("Implicit call in recursive function") {
+    auto tree = SyntaxTree::fromText(R"(
+class Packet;
+	bit [3:0] command;
+	integer status;
+
+	function integer current_status();
+		current_status = status;
+	endfunction
+
+	int incr = 0;
+
+	function integer update_status();
+		update_status = status;
+		if (incr < 2) begin
+			incr = incr + 1;
+			update_status;
+		end
+
+		if (update_status == 0)
+			if (this.update_status)
+				command[update_status] = 1'b0;
+		return update_status;
+	endfunction
+endclass
+)");
+
+    CompilationOptions options;
+    options.flags |= CompilationFlags::AllowRecursiveImplicitCall;
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::UnusedResult);
+}
