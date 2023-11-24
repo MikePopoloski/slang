@@ -161,32 +161,59 @@ void PackageSymbol::noteImport(const Symbol& symbol) const {
 ConfigBlockSymbol& ConfigBlockSymbol::fromSyntax(const Scope& scope,
                                                  const ConfigDeclarationSyntax& syntax) {
     auto& comp = scope.getCompilation();
-    auto result = comp.emplace<ConfigBlockSymbol>(comp, syntax.name.valueText(),
-                                                  syntax.name.location());
+    auto result = comp.allocConfigBlock(syntax.name.valueText(), syntax.name.location());
     result->setSyntax(syntax);
     result->setAttributes(scope, syntax.attributes);
 
     for (auto param : syntax.localparams)
         result->addMembers(*param);
 
-    SmallVector<TopCell> topCells;
+    SmallVector<CellId> topCells;
     for (auto cellId : syntax.topCells) {
         if (!cellId->cell.valueText().empty()) {
             topCells.emplace_back(cellId->library.valueText(), cellId->cell.valueText(),
                                   cellId->sourceRange());
         }
     }
+    result->topCells = topCells.copy(comp);
 
-    SmallVector<const SourceLibrary*> defaultLibs;
+    auto buildLiblist = [&](const ConfigLiblistSyntax& cll) {
+        SmallVector<const SourceLibrary*> buf;
+        for (auto token : cll.libraries) {
+            if (auto lib = comp.getSourceLibrary(token.valueText()))
+                buf.push_back(lib);
+        }
+        return buf.copy(comp);
+    };
+
     for (auto rule : syntax.rules) {
         switch (rule->kind) {
             case SyntaxKind::DefaultConfigRule:
-                for (auto token : rule->as<DefaultConfigRuleSyntax>().liblist->libraries) {
-                    if (auto lib = comp.getSourceLibrary(token.valueText()))
-                        defaultLibs.push_back(lib);
-                }
+                result->defaultLiblist = buildLiblist(*rule->as<DefaultConfigRuleSyntax>().liblist);
                 break;
-            case SyntaxKind::CellConfigRule:
+            case SyntaxKind::CellConfigRule: {
+                auto& ccr = rule->as<CellConfigRuleSyntax>();
+                auto cellName = ccr.name->cell.valueText();
+
+                CellOverride co;
+                if (auto libName = ccr.name->library.valueText(); !libName.empty())
+                    co.specificLib = comp.getSourceLibrary(libName);
+
+                if (ccr.ruleClause->kind == SyntaxKind::ConfigUseClause) {
+                    // TODO: handle other parts of this
+                    auto& cuc = ccr.ruleClause->as<ConfigUseClauseSyntax>();
+                    if (cuc.name && !cuc.name->cell.valueText().empty()) {
+                        co.cell = CellId(cuc.name->library.valueText(), cuc.name->cell.valueText(),
+                                         cuc.name->sourceRange());
+                    }
+                }
+                else {
+                    co.liblist = buildLiblist(ccr.ruleClause->as<ConfigLiblistSyntax>());
+                }
+
+                result->cellOverrides[cellName].push_back(co);
+                break;
+            }
             case SyntaxKind::InstanceConfigRule:
                 // TODO: handle other rules
                 break;
@@ -195,8 +222,6 @@ ConfigBlockSymbol& ConfigBlockSymbol::fromSyntax(const Scope& scope,
         }
     }
 
-    result->topCells = topCells.copy(comp);
-    result->defaultLiblist = defaultLibs.copy(comp);
     return *result;
 }
 

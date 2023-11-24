@@ -619,6 +619,9 @@ public:
         return genericClassAllocator.emplace(std::forward<Args>(args)...);
     }
 
+    /// Allocates a config block symbol.
+    ConfigBlockSymbol* allocConfigBlock(std::string_view name, SourceLocation loc);
+
     /// Gets the driver map allocator.
     DriverIntervalMap::allocator_type& getDriverMapAllocator() { return driverMapAllocator; }
 
@@ -661,6 +664,9 @@ private:
     void checkBindTargetParams(const syntax::BindDirectiveSyntax& syntax, const Scope& scope,
                                std::span<const Symbol* const> instTargets,
                                const Definition* defTarget);
+    const Definition* resolveConfigRules(std::string_view name, const Scope& scope,
+                                         const ConfigBlockSymbol& config,
+                                         const std::vector<Definition*>& defList) const;
 
     // Stored options object.
     CompilationOptions options;
@@ -669,8 +675,6 @@ private:
     TypedBumpAllocator<SymbolMap> symbolMapAllocator;
     TypedBumpAllocator<PointerMap> pointerMapAllocator;
     TypedBumpAllocator<ConstantValue> constantAllocator;
-    TypedBumpAllocator<GenericClassDefSymbol> genericClassAllocator;
-    TypedBumpAllocator<AssertionInstanceDetails> assertionDetailsAllocator;
     DriverIntervalMap::allocator_type driverMapAllocator;
     UnrollIntervalMap::allocator_type unrollIntervalMapAllocator;
 
@@ -784,6 +788,10 @@ private:
     int nextEnumSystemId = 1;
     int nextStructSystemId = 1;
     int nextUnionSystemId = 1;
+
+    TypedBumpAllocator<GenericClassDefSymbol> genericClassAllocator;
+    TypedBumpAllocator<AssertionInstanceDetails> assertionDetailsAllocator;
+    TypedBumpAllocator<ConfigBlockSymbol> configBlockAllocator;
 
     // This is storage for a temporary diagnostic that is being constructed.
     // Typically this is done in-place within the diagMap, but for diagnostics

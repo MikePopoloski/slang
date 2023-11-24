@@ -532,7 +532,6 @@ const CompilationUnitSymbol* Compilation::getCompilationUnit(
 const Definition* Compilation::getDefinition(std::string_view lookupName,
                                              const Scope& scope) const {
     // Try to find a config block for this scope to help choose the right definition.
-    // TODO: use the config rules
     const ConfigBlockSymbol* config = nullptr;
     if (!configForScope.empty()) {
         auto searchScope = &scope;
@@ -549,8 +548,13 @@ const Definition* Compilation::getDefinition(std::string_view lookupName,
 
     // Always search in the root scope to start. Most definitions are global.
     auto it = definitionMap.find({lookupName, root.get()});
-    if (it == definitionMap.end())
+    if (it == definitionMap.end()) {
+        // If there's a config it might be able to provide an
+        // override for this cell name.
+        if (config)
+            return resolveConfigRules(lookupName, scope, *config, {});
         return nullptr;
+    }
 
     // If the second flag is set it means there are nested modules
     // with this name, so we need to do full scope resolution.
@@ -568,40 +572,20 @@ const Definition* Compilation::getDefinition(std::string_view lookupName,
     }
 
     auto& defList = it->second.first;
-    if (config) {
-        // This search is O(n^2) but both lists should be small
-        // (or even just one element each) in basically all cases.
-        for (auto lib : config->defaultLiblist) {
-            for (auto def : defList) {
-                if (def->sourceLibrary == lib)
-                    return def;
-            }
-        }
+    if (config)
+        return resolveConfigRules(lookupName, scope, *config, defList);
 
-        // Fall back to picking based on the parent instance's library.
-        if (auto parentDef = scope.asSymbol().getDeclaringDefinition()) {
-            for (auto def : defList) {
-                if (def->sourceLibrary == parentDef->sourceLibrary)
-                    return def;
-            }
+    // If there is a global priority list try to use that.
+    for (auto lib : defaultLiblist) {
+        for (auto def : defList) {
+            if (def->sourceLibrary == lib)
+                return def;
         }
     }
-    else {
-        // If there is a global priority list try to use that.
-        for (auto lib : defaultLiblist) {
-            for (auto def : defList) {
-                if (def->sourceLibrary == lib)
-                    return def;
-            }
-        }
 
-        // Otherwise return the first definition in the list -- it's already
-        // sorted in priority order.
-        if (!defList.empty())
-            return defList.front();
-    }
-
-    return nullptr;
+    // Otherwise return the first definition in the list -- it's already
+    // sorted in priority order.
+    return defList.empty() ? nullptr : defList.front();
 }
 
 const Definition* Compilation::getDefinition(const ModuleDeclarationSyntax& syntax) const {
@@ -1520,6 +1504,10 @@ AssertionInstanceDetails* Compilation::allocAssertionDetails() {
     return assertionDetailsAllocator.emplace();
 }
 
+ConfigBlockSymbol* Compilation::allocConfigBlock(std::string_view name, SourceLocation loc) {
+    return configBlockAllocator.emplace(*this, name, loc);
+}
+
 const ImplicitTypeSyntax& Compilation::createEmptyTypeSyntax(SourceLocation loc) {
     return *emplace<ImplicitTypeSyntax>(Token(), nullptr,
                                         Token(*this, TokenKind::Placeholder, {}, {}, loc));
@@ -2221,6 +2209,71 @@ void Compilation::resolveDefParamsAndBinds() {
 
     // We have our final overrides; copy them into the main compilation unit.
     copyStateInto(*this, true);
+}
+
+const Definition* Compilation::resolveConfigRules(std::string_view lookupName, const Scope& scope,
+                                                  const ConfigBlockSymbol& config,
+                                                  const std::vector<Definition*>& defList) const {
+    auto findDefByLib = [](auto& defList, const SourceLibrary* target) -> Definition* {
+        for (auto def : defList) {
+            if (def->sourceLibrary == target)
+                return def;
+        }
+        return nullptr;
+    };
+
+    auto liblist = config.defaultLiblist;
+    if (auto overrideIt = config.cellOverrides.find(lookupName);
+        overrideIt != config.cellOverrides.end()) {
+
+        // There is at least one cell override with this name; look through the
+        // list and take the first one that matches our library restrictions.
+        for (auto& cellOverride : overrideIt->second) {
+            // TODO: support this
+            if (cellOverride.specificLib)
+                continue;
+
+            auto& id = cellOverride.cell;
+            if (!id.name.empty()) {
+                auto overrideDefIt = definitionMap.find({id.name, root.get()});
+                if (overrideDefIt == definitionMap.end()) {
+                    // TODO: error here?
+                    return nullptr;
+                }
+
+                const SourceLibrary* overrideLib = nullptr;
+                if (id.lib.empty()) {
+                    if (auto parentDef = scope.asSymbol().getDeclaringDefinition())
+                        overrideLib = parentDef->sourceLibrary;
+                }
+                else {
+                    overrideLib = getSourceLibrary(id.lib);
+                }
+
+                // TODO: error if not found?
+                return findDefByLib(overrideDefIt->second.first, overrideLib);
+            }
+
+            // No name, so this is just a custom liblist -- search through it below.
+            liblist = cellOverride.liblist;
+            break;
+        }
+    }
+
+    // This search is O(n^2) but both lists should be small
+    // (or even just one element each) in basically all cases.
+    for (auto lib : liblist) {
+        if (auto def = findDefByLib(defList, lib))
+            return def;
+    }
+
+    // Fall back to picking based on the parent instance's library.
+    if (auto parentDef = scope.asSymbol().getDeclaringDefinition()) {
+        if (auto def = findDefByLib(defList, parentDef->sourceLibrary))
+            return def;
+    }
+
+    return nullptr;
 }
 
 } // namespace slang::ast

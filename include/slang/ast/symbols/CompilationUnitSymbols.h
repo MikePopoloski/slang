@@ -85,18 +85,26 @@ public:
 /// Represents a config block declaration.
 class SLANG_EXPORT ConfigBlockSymbol : public Symbol, public Scope {
 public:
-    struct TopCell {
+    struct CellId {
         std::string_view lib;
         std::string_view name;
         SourceRange sourceRange;
 
-        TopCell(std::string_view lib, std::string_view name, SourceRange sourceRange) :
+        CellId() = default;
+        CellId(std::string_view lib, std::string_view name, SourceRange sourceRange) :
             lib(lib), name(name), sourceRange(sourceRange) {}
     };
 
+    struct CellOverride {
+        const SourceLibrary* specificLib = nullptr;
+        std::span<const SourceLibrary* const> liblist;
+        CellId cell;
+    };
+
     const SourceLibrary* sourceLibrary = nullptr;
-    std::span<const TopCell> topCells;
+    std::span<const CellId> topCells;
     std::span<const SourceLibrary* const> defaultLiblist;
+    flat_hash_map<std::string_view, std::vector<CellOverride>> cellOverrides;
 
     ConfigBlockSymbol(Compilation& compilation, std::string_view name, SourceLocation loc) :
         Symbol(SymbolKind::ConfigBlock, name, loc), Scope(compilation, this) {}

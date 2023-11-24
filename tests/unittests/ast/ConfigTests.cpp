@@ -263,3 +263,43 @@ endconfig
     REQUIRE(lib);
     CHECK(lib->name == "lib1");
 }
+
+TEST_CASE("Config cell overrides") {
+    auto lib1 = std::make_unique<SourceLibrary>("lib1", 1);
+
+    auto tree1 = SyntaxTree::fromText(R"(
+module mod;
+endmodule
+)",
+                                      SyntaxTree::getDefaultSourceManager(), "source", "", {},
+                                      lib1.get());
+    auto tree2 = SyntaxTree::fromText(R"(
+module mmm;
+endmodule
+
+module nnn;
+endmodule
+
+module top;
+    mod m1();
+    foo f1();
+    bar b1();
+    nnn n1();
+endmodule
+
+config cfg;
+    design top;
+    cell mod liblist lib1;
+    cell foo use mmm;
+    cell bar use lib1.mod;
+endconfig
+)");
+
+    CompilationOptions options;
+    options.topModules.emplace("cfg");
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree1);
+    compilation.addSyntaxTree(tree2);
+    NO_COMPILATION_ERRORS;
+}
