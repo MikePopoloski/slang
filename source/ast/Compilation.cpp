@@ -272,6 +272,13 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamsAndBinds) {
     if (finalized)
         return *root;
 
+    // Resolve default lib list now that we have all syntax trees added.
+    defaultLiblist.reserve(options.defaultLiblist.size());
+    for (auto& libName : options.defaultLiblist) {
+        if (auto lib = getSourceLibrary(libName))
+            defaultLiblist.push_back(lib);
+    }
+
     // If any top-level parameter overrides were provided, parse them now.
     flat_hash_map<std::string_view, const ConstantValue*> cliOverrides;
     parseParamOverrides(cliOverrides);
@@ -560,12 +567,7 @@ const Definition* Compilation::getDefinition(std::string_view lookupName,
         } while (searchScope && searchScope != root.get());
     }
 
-    // The common case is no configurations in use, one definition
-    // in the default library, so just return that.
     auto& defList = it->second.first;
-    if (!config && defList.size() == 1 && !defList.front()->sourceLibrary)
-        return defList.front();
-
     if (config) {
         // This search is O(n^2) but both lists should be small
         // (or even just one element each) in basically all cases.
@@ -575,18 +577,31 @@ const Definition* Compilation::getDefinition(std::string_view lookupName,
                     return def;
             }
         }
-    }
 
-    // Fall back to picking based on the parent instance's library.
-    // TODO: incorporate default compilation liblist selection here
-    if (auto parentDef = scope.asSymbol().getDeclaringDefinition()) {
-        for (auto def : defList) {
-            if (def->sourceLibrary == parentDef->sourceLibrary)
-                return def;
+        // Fall back to picking based on the parent instance's library.
+        if (auto parentDef = scope.asSymbol().getDeclaringDefinition()) {
+            for (auto def : defList) {
+                if (def->sourceLibrary == parentDef->sourceLibrary)
+                    return def;
+            }
         }
     }
+    else {
+        // If there is a global priority list try to use that.
+        for (auto lib : defaultLiblist) {
+            for (auto def : defList) {
+                if (def->sourceLibrary == lib)
+                    return def;
+            }
+        }
 
-    return defList.empty() ? nullptr : defList.front();
+        // Otherwise return the first definition in the list -- it's already
+        // sorted in priority order.
+        if (!defList.empty())
+            return defList.front();
+    }
+
+    return nullptr;
 }
 
 const Definition* Compilation::getDefinition(const ModuleDeclarationSyntax& syntax) const {
@@ -692,16 +707,15 @@ void Compilation::createDefinition(const Scope& scope, LookupLocation location,
     else {
         // There is already a definition with this name in this scope.
         // If we're not at the root scope, it's a straightforward error.
+        auto& defList = it->second.first;
         if (!isRoot) {
-            reportRedefinition(scope, *def, it->second.first[0]->location,
-                               diag::DuplicateDefinition);
+            reportRedefinition(scope, *def, defList[0]->location, diag::DuplicateDefinition);
             return;
         }
 
         // Otherwise, if they're in the same source library we take the
         // latter one (with a warning) and if not then we store both
         // and resolve them later via config or library ordering.
-        auto& defList = it->second.first;
         auto vecIt = std::ranges::lower_bound(defList, def, [](Definition* a, Definition* b) {
             if (!a->sourceLibrary)
                 return false;

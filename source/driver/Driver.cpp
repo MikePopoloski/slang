@@ -427,8 +427,6 @@ bool Driver::processOptions() {
             opt = true;
     }
 
-    sourceLoader.setLibraryOrder(options.libraryOrder);
-
     if (!reportLoadErrors())
         return false;
 
@@ -683,6 +681,8 @@ void Driver::addCompilationOptions(Bag& bag) const {
         coptions.topModules.emplace(name);
     for (auto& opt : options.paramOverrides)
         coptions.paramOverrides.emplace_back(opt);
+    for (auto& lib : options.libraryOrder)
+        coptions.defaultLiblist.emplace_back(lib);
 
     if (options.minTypMax.has_value()) {
         if (options.minTypMax == "min")

@@ -177,6 +177,10 @@ struct SLANG_EXPORT CompilationOptions {
     /// A list of parameters to override, of the form &lt;name>=&lt;value> -- note that
     /// for now at least this only applies to parameters in top-level modules.
     std::vector<std::string> paramOverrides;
+
+    /// A list of library names, in the order in which they should be searched
+    /// when binding cells to instances.
+    std::vector<std::string> defaultLiblist;
 };
 
 /// A node in a tree representing an instance in the design
@@ -752,6 +756,9 @@ private:
     // This is used to collapse duplicate diagnostics across instantiations into a single report.
     using DiagMap = flat_hash_map<std::tuple<DiagCode, SourceLocation>, std::vector<Diagnostic>>;
     DiagMap diagMap;
+
+    // A list of libraries that control the order in which we search for cell bindings.
+    std::vector<const SourceLibrary*> defaultLiblist;
 
     // A map of packages to the set of names that are candidates for being
     // exported from those packages.

@@ -110,10 +110,6 @@ public:
     void addLibraryMaps(std::string_view pattern, const std::filesystem::path& basePath,
                         const Bag& optionBag);
 
-    /// Sets the order in which libraries should be considered when
-    /// resolving a definition.
-    void setLibraryOrder(const std::vector<std::string>& libraries);
-
     /// Returns a list of all library map syntax trees that have been loaded and parsed.
     const SyntaxTreeList& getLibraryMaps() const { return libraryMapTrees; }
 
@@ -190,7 +186,6 @@ private:
     std::vector<FileEntry> fileEntries;
     flat_hash_map<std::filesystem::path, size_t> fileIndex;
     flat_hash_map<std::string, std::unique_ptr<SourceLibrary>> libraries;
-    flat_hash_map<std::string, int> libraryPriorityMap;
     std::vector<std::filesystem::path> searchDirectories;
     std::vector<std::filesystem::path> searchExtensions;
     flat_hash_set<std::string_view> uniqueExtensions;
