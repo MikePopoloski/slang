@@ -1376,8 +1376,14 @@ const Diagnostics& Compilation::getSemanticDiagnostics() {
         const Diagnostic* found = nullptr;
         const Symbol* inst = nullptr;
         size_t count = 0;
+        bool differingArgs = false;
 
         for (auto& diag : diagList) {
+            if (found && *found != diag) {
+                differingArgs = true;
+                break;
+            }
+
             auto symbol = diag.symbol;
             while (symbol && symbol->kind != SymbolKind::InstanceBody) {
                 const Scope* scope;
@@ -1416,23 +1422,36 @@ const Diagnostics& Compilation::getSemanticDiagnostics() {
             }
         }
 
-        // If the diagnostic is present in all instances, don't bother
-        // providing specific instantiation info.
-        if (found &&
+        if (!differingArgs && found &&
             elabVisitor.instanceCount[&inst->as<InstanceSymbol>().getDefinition()] > count) {
+            // The diagnostic is present only in some instances, so include the coalescing
+            // information to point the user towards the right ones.
             Diagnostic diag = *found;
             diag.symbol = inst;
             diag.coalesceCount = count;
             results.emplace_back(std::move(diag));
         }
         else {
+            // Otherwise no coalescing. If we had differing arguments then set each
+            // diagnostic's coalesce count to 1 (as opposed to letting it stay nullopt)
+            // so that we get the instance path to it printed automatically.
             auto it = diagList.begin();
             SLANG_ASSERT(it != diagList.end());
 
-            results.emplace_back(*it);
+            {
+                Diagnostic d = *it;
+                if (differingArgs)
+                    d.coalesceCount = 1;
+                results.emplace_back(std::move(d));
+            }
+
             for (++it; it != diagList.end(); ++it) {
-                if (*it != results.back())
-                    results.emplace_back(*it);
+                Diagnostic d = *it;
+                if (d != results.back()) {
+                    if (differingArgs)
+                        d.coalesceCount = 1;
+                    results.emplace_back(std::move(d));
+                }
             }
         }
     }
