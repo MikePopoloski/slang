@@ -188,7 +188,7 @@ void Driver::addStandardArgs() {
     cmdLine.add("--diag-macro-expansion", options.diagMacroExpansion,
                 "Show macro expansion backtraces in diagnostic output.");
     cmdLine.add("--diag-hierarchy", options.diagHierarchy,
-                "Show hierarchy locations in diagnostic output.");
+                "Show hierarchy locations in diagnostic output.", "always|never|auto");
     cmdLine.add("--error-limit", options.errorLimit,
                 "Limit on the number of errors that will be printed. Setting this to zero will "
                 "disable the limit.",
@@ -411,6 +411,13 @@ bool Driver::processOptions() {
         return false;
     }
 
+    if (options.diagHierarchy.has_value() && options.diagHierarchy != "always" &&
+        options.diagHierarchy != "never" && options.diagHierarchy != "auto") {
+        printError(
+            fmt::format("invalid value for diag-hierarchy option: '{}'", *options.diagHierarchy));
+        return false;
+    }
+
     if (options.librariesInheritMacros == true && !options.singleUnit.value_or(false)) {
         printError("--single-unit must be set when --libraries-inherit-macros is used");
         return false;
@@ -443,7 +450,11 @@ bool Driver::processOptions() {
     dc.showOptionName(options.diagOptionName.value_or(true));
     dc.showIncludeStack(options.diagIncludeStack.value_or(true));
     dc.showMacroExpansion(options.diagMacroExpansion.value_or(true));
-    dc.showHierarchyInstance(options.diagHierarchy.value_or(true));
+
+    if (options.diagHierarchy == "always")
+        dc.showHierarchyInstance(ShowHierarchyPathOption::Always);
+    else if (options.diagHierarchy == "never")
+        dc.showHierarchyInstance(ShowHierarchyPathOption::Never);
 
     diagEngine.setErrorLimit((int)options.errorLimit.value_or(20));
     diagEngine.setDefaultWarnings();

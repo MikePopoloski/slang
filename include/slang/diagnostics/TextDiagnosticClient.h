@@ -21,6 +21,8 @@ namespace ast {
 class Symbol;
 }
 
+enum class ShowHierarchyPathOption { Auto, Always, Never };
+
 class SLANG_EXPORT TextDiagnosticClient : public DiagnosticClient {
 public:
     fmt::terminal_color noteColor;
@@ -41,7 +43,7 @@ public:
     void showOptionName(bool show) { includeOptionName = show; }
     void showIncludeStack(bool show) { includeFileStack = show; }
     void showMacroExpansion(bool show) { includeExpansion = show; }
-    void showHierarchyInstance(bool show) { includeHierarchy = show; }
+    void showHierarchyInstance(ShowHierarchyPathOption option) { includeHierarchy = option; }
 
     template<typename TFunc>
     void setSymbolPathCB(TFunc&& func) {
@@ -68,7 +70,7 @@ private:
     bool includeOptionName = true;
     bool includeFileStack = true;
     bool includeExpansion = true;
-    bool includeHierarchy = true;
+    ShowHierarchyPathOption includeHierarchy = ShowHierarchyPathOption::Auto;
 
     using SymbolPathCB = std::function<std::string(const ast::Symbol&)>;
     SymbolPathCB symbolPathCB;

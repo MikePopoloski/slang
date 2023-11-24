@@ -113,7 +113,7 @@ void reportPath(Compilation& compilation, const NetlistPath& path) {
     textDiagClient->showColors(true);
     textDiagClient->showLocation(true);
     textDiagClient->showSourceLine(true);
-    textDiagClient->showHierarchyInstance(true);
+    textDiagClient->showHierarchyInstance(ShowHierarchyPathOption::Always);
     diagEngine.addClient(textDiagClient);
     for (auto* node : path) {
         auto* SM = compilation.getSourceManager();

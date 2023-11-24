@@ -62,6 +62,18 @@ TEST_CASE("Driver invalid timing") {
     CHECK(stderrContains("invalid value for timing option"));
 }
 
+TEST_CASE("Driver invalid diagHierarchy") {
+    auto guard = OS::captureOutput();
+
+    Driver driver;
+    driver.addStandardArgs();
+
+    const char* argv[] = {"testfoo", "--diag-hierarchy=foo"};
+    CHECK(driver.parseCommandLine(2, argv));
+    CHECK(!driver.processOptions());
+    CHECK(stderrContains("invalid value for diag-hierarchy option"));
+}
+
 TEST_CASE("Driver invalid timescale") {
     auto guard = OS::captureOutput();
 

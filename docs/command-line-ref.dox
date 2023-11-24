@@ -341,9 +341,11 @@ Show or hide file include stacks in diagnostic output. The default is to show.
 
 Show or hide macro expansion backtraces in diagnostic output. The default is to show.
 
-`--diag-hierarchy`
+`--diag-hierarchy always|never|auto`
 
-Show or hide hierarchy locations in diagnostic output. The default is to show.
+Show or hide hierarchy locations in diagnostic output. The default is 'auto', which decides whether to
+show the hierarchical path based on heuristics. 'always' will show the paths on every diagnostic,
+and 'never' will suppress them.
 
 `--suppress-warnings <file-pattern>[,...]`
 

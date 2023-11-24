@@ -188,8 +188,9 @@ public:
         /// If true, include macro expansion information in printed diagnostics.
         std::optional<bool> diagMacroExpansion;
 
-        /// If true, include hierarchy paths in printed diagnostics.
-        std::optional<bool> diagHierarchy;
+        /// One of the ShowHierarchyPathOption values that control whether to
+        /// include hierarchy paths in printed diagnostics.
+        std::optional<std::string> diagHierarchy;
 
         /// The maximum number of errors to print before giving up.
         std::optional<uint32_t> errorLimit;
