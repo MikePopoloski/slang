@@ -2799,7 +2799,7 @@ module m;
 
     function automatic int f1;
         int a = -1;
-        int b = y[a+:3][0];
+        int b[] = y[a+:3];
         w[0:1] = {1,1};
     endfunction
 
@@ -3142,4 +3142,24 @@ endmodule
     REQUIRE(diags.size() == 2);
     CHECK(diags[0].code == diag::ExpressionNotAssignable);
     CHECK(diags[1].code == diag::AssignmentPatternLValueDynamic);
+}
+
+TEST_CASE("Invalid select after range select") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    function int foo; return 1; endfunction
+
+    int i;
+    int j = i[3:0][0];
+    int k = foo()[3:0][0];
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::SelectAfterRangeSelect);
+    CHECK(diags[1].code == diag::SelectAfterRangeSelect);
 }

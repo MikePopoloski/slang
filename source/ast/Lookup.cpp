@@ -1205,6 +1205,7 @@ const Symbol* Lookup::selectChild(const Symbol& initialSymbol,
                                   std::span<const ElementSelectSyntax* const> selectors,
                                   const ASTContext& context, LookupResult& result) {
     const Symbol* symbol = &initialSymbol;
+    const SyntaxNode* prevRangeSelect = nullptr;
     for (const ElementSelectSyntax* syntax : selectors) {
         if (symbol->kind != SymbolKind::InstanceArray &&
             symbol->kind != SymbolKind::GenerateBlockArray) {
@@ -1226,6 +1227,12 @@ const Symbol* Lookup::selectChild(const Symbol& initialSymbol,
         if (!syntax->selector)
             return selectorError();
 
+        if (prevRangeSelect) {
+            result.addDiag(*context.scope, diag::SelectAfterRangeSelect, syntax->sourceRange())
+                << prevRangeSelect->sourceRange();
+            return nullptr;
+        }
+
         switch (syntax->selector->kind) {
             case SyntaxKind::BitSelect:
                 symbol = selectSingleChild(*symbol, syntax->selector->as<BitSelectSyntax>(),
@@ -1236,6 +1243,7 @@ const Symbol* Lookup::selectChild(const Symbol& initialSymbol,
             case SyntaxKind::SimpleRangeSelect:
             case SyntaxKind::AscendingRangeSelect:
             case SyntaxKind::DescendingRangeSelect:
+                prevRangeSelect = syntax;
                 if (symbol->kind != SymbolKind::InstanceArray)
                     return selectorError();
 

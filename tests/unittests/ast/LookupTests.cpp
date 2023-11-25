@@ -529,13 +529,14 @@ module m;
 
     I arrayInv [-4:a] ();
     always_comb arrayInv[-4:-1][0].foo = 1;
-    always_comb array[-4:a][0].foo = 1;
+    always_comb array[-4:-1][0].foo = 1;
+    always_comb array[-4:a].foo = 1;
 
-    always_comb array[-1:-4][0].foo = 1;
-    always_comb array[-1+:-4][0].foo = 1;
-    always_comb array[-1+:4][0].foo = 1;
+    always_comb array[-1:-4].foo = 1;
+    always_comb array[-1+:-4].foo = 1;
+    always_comb array[-1+:4].foo = 1;
 
-    always_comb array[-2147483647-:3][0].foo = 1;
+    always_comb array[-2147483647-:3].foo = 1;
 endmodule
 )");
 
@@ -548,6 +549,7 @@ endmodule
     CHECK((it++)->code == diag::InvalidScopeIndexExpression);
     CHECK((it++)->code == diag::ScopeNotIndexable);
     CHECK((it++)->code == diag::UndeclaredIdentifier);
+    CHECK((it++)->code == diag::SelectAfterRangeSelect);
     CHECK((it++)->code == diag::UndeclaredIdentifier);
     CHECK((it++)->code == diag::InstanceArrayEndianMismatch);
     CHECK((it++)->code == diag::ValueMustBePositive);

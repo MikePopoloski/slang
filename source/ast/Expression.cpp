@@ -1153,6 +1153,11 @@ Expression& Expression::bindSelector(Compilation& compilation, Expression& value
         return badExpr(compilation, nullptr);
     }
 
+    if (value.kind == ExpressionKind::RangeSelect) {
+        context.addDiag(diag::SelectAfterRangeSelect, syntax.sourceRange()) << value.sourceRange;
+        return badExpr(compilation, nullptr);
+    }
+
     // The full source range of the expression includes the value and the selector syntax.
     SourceRange fullRange = {value.sourceRange.start(), syntax.sourceRange().end()};
 
