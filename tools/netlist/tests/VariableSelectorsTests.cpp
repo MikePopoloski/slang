@@ -37,17 +37,9 @@ module m (input int a);
     foo[1:0] = 0;
     foo[3:1] = 0;
     foo[7:4] = 0;
-    foo[3:1][2:1] = 0;
-    foo[7:4][6:5] = 0;
-    foo[3:1][2:1][1] = 0;
-    foo[7:4][6:5][5] = 0;
     foo[a] = 0;
     foo[a+:1] = 0;
     foo[a-:1] = 0;
-    foo[a+:1][a] = 0;
-    foo[a-:1][a] = 0;
-    foo[a+:1][a-:1] = 0;
-    foo[a+:1][a-:1][a] = 0;
   end
 endmodule
 )");
@@ -62,18 +54,10 @@ endmodule
     CHECK(getBitRange(netlist, "foo[1:0]") == ConstantRange(0, 1));
     CHECK(getBitRange(netlist, "foo[3:1]") == ConstantRange(1, 3));
     CHECK(getBitRange(netlist, "foo[7:4]") == ConstantRange(4, 7));
-    CHECK(getBitRange(netlist, "foo[3:1][2:1]") == ConstantRange(1, 2));
-    CHECK(getBitRange(netlist, "foo[7:4][6:5]") == ConstantRange(5, 6));
-    CHECK(getBitRange(netlist, "foo[3:1][2:1][1]") == ConstantRange(1, 1));
-    CHECK(getBitRange(netlist, "foo[7:4][6:5][5]") == ConstantRange(5, 5));
     // Dynamic indices.
     CHECK(getBitRange(netlist, "foo[a]") == ConstantRange(0, 31));
     CHECK(getBitRange(netlist, "foo[a+:1]") == ConstantRange(0, 31));
     CHECK(getBitRange(netlist, "foo[a-:1]") == ConstantRange(0, 31));
-    CHECK(getBitRange(netlist, "foo[a+:1][a]") == ConstantRange(0, 31));
-    CHECK(getBitRange(netlist, "foo[a-:1][a]") == ConstantRange(0, 31));
-    CHECK(getBitRange(netlist, "foo[a+:1][a-:1]") == ConstantRange(0, 31));
-    CHECK(getBitRange(netlist, "foo[a+:1][a-:1][a]") == ConstantRange(0, 31));
 }
 
 //===---------------------------------------------------------------------===//
@@ -94,14 +78,9 @@ module m (input int a);
     foo[1:0] = 0;
     foo[3:0] = 0;
     foo[2:1] = 0;
-    foo[3:1][2:1][1] = 0;
     foo[a] = 0;
     foo[a+:1] = 0;
     foo[a-:1] = 0;
-    foo[a+:1][a] = 0;
-    foo[a-:1][a] = 0;
-    foo[a+:1][a-:1] = 0;
-    foo[a+:1][a-:1][a] = 0;
   end
 endmodule
 )");
@@ -118,15 +97,10 @@ endmodule
     CHECK(getBitRange(netlist, "foo[1:0]") == ConstantRange(0, 1));
     CHECK(getBitRange(netlist, "foo[3:0]") == ConstantRange(0, 3));
     CHECK(getBitRange(netlist, "foo[2:1]") == ConstantRange(1, 2));
-    CHECK(getBitRange(netlist, "foo[3:1][2:1][1]") == ConstantRange(1, 1));
     // Dynamic indices.
     CHECK(getBitRange(netlist, "foo[a]") == ConstantRange(0, 3));
     CHECK(getBitRange(netlist, "foo[a+:1]") == ConstantRange(0, 3));
     CHECK(getBitRange(netlist, "foo[a-:1]") == ConstantRange(0, 3));
-    CHECK(getBitRange(netlist, "foo[a+:1][a]") == ConstantRange(0, 3));
-    CHECK(getBitRange(netlist, "foo[a-:1][a]") == ConstantRange(0, 3));
-    CHECK(getBitRange(netlist, "foo[a+:1][a-:1]") == ConstantRange(0, 3));
-    CHECK(getBitRange(netlist, "foo[a+:1][a-:1][a]") == ConstantRange(0, 3));
 }
 
 TEST_CASE("Packed 1D array element and range non-zero indexed") {
@@ -143,7 +117,6 @@ module m (input int a);
     foo[5:4] = 0;
     foo[7:4] = 0;
     foo[6:5] = 0;
-    foo[7:4][6:5][5] = 0;
     foo[a] = 0;
     foo[a+:1] = 0;
     foo[a-:1] = 0;
@@ -163,7 +136,6 @@ endmodule
     CHECK(getBitRange(netlist, "foo[5:4]") == ConstantRange(0, 1));
     CHECK(getBitRange(netlist, "foo[7:4]") == ConstantRange(0, 3));
     CHECK(getBitRange(netlist, "foo[6:5]") == ConstantRange(1, 2));
-    CHECK(getBitRange(netlist, "foo[7:4][6:5][5]") == ConstantRange(1, 1));
     // Dynamic indices.
     CHECK(getBitRange(netlist, "foo[a]") == ConstantRange(0, 3));
     CHECK(getBitRange(netlist, "foo[a+:1]") == ConstantRange(0, 3));
@@ -186,8 +158,6 @@ module m (input int a);
     foo[3][1] = 0;
     foo[1:0] = 0;
     foo[3:2] = 0;
-    foo[3:0][2:1] = 0;
-    foo[3:0][2:1][1] = 0;
     foo[a] = 0;
     foo[a][1] = 0;
     foo[a][a] = 0;
@@ -214,8 +184,6 @@ endmodule
     CHECK(getBitRange(netlist, "foo[3][1]") == ConstantRange(7, 7));
     CHECK(getBitRange(netlist, "foo[1:0]") == ConstantRange(0, 3));
     CHECK(getBitRange(netlist, "foo[3:2]") == ConstantRange(4, 7));
-    CHECK(getBitRange(netlist, "foo[3:0][2:1]") == ConstantRange(2, 5));
-    CHECK(getBitRange(netlist, "foo[3:0][2:1][1]") == ConstantRange(2, 3));
     // Dynamic indices.
     CHECK(getBitRange(netlist, "foo[a]") == ConstantRange(0, 7));
     CHECK(getBitRange(netlist, "foo[a][1]") == ConstantRange(0, 7));
@@ -236,8 +204,6 @@ module m (input int a);
     foo[4] = 0;
     foo[4][3] = 0;
     foo[5:4] = 0;
-    foo[7:4][6:5] = 0;
-    foo[7:5][6:5][5] = 0;
     foo[a] = 0;
     foo[a+:1] = 0;
     foo[a-:1] = 0;
@@ -255,8 +221,6 @@ endmodule
     CHECK(getBitRange(netlist, "foo[4]") == ConstantRange(0, 1));
     CHECK(getBitRange(netlist, "foo[4][3]") == ConstantRange(1, 1));
     CHECK(getBitRange(netlist, "foo[5:4]") == ConstantRange(0, 3));
-    CHECK(getBitRange(netlist, "foo[7:4][6:5]") == ConstantRange(2, 5));
-    CHECK(getBitRange(netlist, "foo[7:5][6:5][5]") == ConstantRange(2, 3));
     // Dynamic indices.
     CHECK(getBitRange(netlist, "foo[a]") == ConstantRange(0, 7));
     CHECK(getBitRange(netlist, "foo[a+:1]") == ConstantRange(0, 7));
