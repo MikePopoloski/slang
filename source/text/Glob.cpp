@@ -284,4 +284,52 @@ SLANG_EXPORT GlobRank svGlob(const fs::path& basePath, std::string_view pattern,
     return rank;
 }
 
+static std::string_view nextSegment(std::string_view& path) {
+    for (size_t i = 0; i < path.size(); i++) {
+        if (path[i] == fs::path::preferred_separator || path[i] == '/') {
+            auto result = path.substr(0, i);
+            path = path.substr(i + 1);
+            return result;
+        }
+    }
+
+    auto result = path;
+    path = {};
+    return result;
+}
+
+static bool svGlobMatchesInternal(std::string_view path, std::string_view pattern) {
+    while (!pattern.empty() && !path.empty()) {
+        // Special case for recursive directory search.
+        if (pattern.starts_with("..."sv)) {
+            pattern = pattern.substr(3);
+            do {
+                if (svGlobMatchesInternal(path, pattern))
+                    return true;
+
+                nextSegment(path);
+            } while (!path.empty());
+
+            return false;
+        }
+
+        // If the next segments don't match then we don't match overall.
+        if (!matches(nextSegment(path), nextSegment(pattern))) {
+            return false;
+        }
+    }
+
+    // We match if:
+    // 1) we used up the whole pattern
+    // 2) pattern ended in a separator and the next path segment is the last (i.e. the file name)
+    //    -- OR --
+    //    pattern didn't end in a separator and we matched the whole path (so it's empty now)
+    nextSegment(path);
+    return pattern.empty() && path.empty();
+}
+
+bool svGlobMatches(const fs::path& path, const fs::path& pattern) {
+    return svGlobMatchesInternal(getU8Str(path), getU8Str(pattern));
+}
+
 } // namespace slang

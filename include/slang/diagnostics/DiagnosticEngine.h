@@ -259,9 +259,9 @@ private:
     // These correspond to `pragma diagnostic entries in the source code.
     flat_hash_map<DiagCode, flat_hash_map<BufferID, std::vector<DiagnosticMapping>>> diagMappings;
 
-    // A set of paths in which to suppress warnings.
-    flat_hash_set<std::filesystem::path> ignoreWarnPaths;
-    flat_hash_set<std::filesystem::path> ignoreMacroWarnPaths;
+    // A list of path patterns in which to suppress warnings.
+    std::vector<std::filesystem::path> ignoreWarnPatterns;
+    std::vector<std::filesystem::path> ignoreMacroWarnPatterns;
 
     // A list of all registered clients that receive issued diagnostics.
     std::vector<std::shared_ptr<DiagnosticClient>> clients;

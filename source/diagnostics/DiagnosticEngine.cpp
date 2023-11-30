@@ -125,23 +125,22 @@ void DiagnosticEngine::clearMappings(DiagnosticSeverity severity) {
     erase_if(severityTable, [severity](auto& pair) { return pair.second == severity; });
 }
 
-static std::error_code addPathsImpl(std::string_view pattern, flat_hash_set<fs::path>& set) {
-    SmallVector<fs::path> files;
+std::error_code DiagnosticEngine::addIgnorePaths(std::string_view pattern) {
     std::error_code ec;
-    svGlob({}, pattern, GlobMode::Files, files, /* expandEnvVars */ false, ec);
-
-    for (auto&& path : files)
-        set.emplace(std::move(path));
+    auto p = fs::weakly_canonical(pattern, ec);
+    if (!ec)
+        ignoreWarnPatterns.emplace_back(std::move(p));
 
     return ec;
 }
 
-std::error_code DiagnosticEngine::addIgnorePaths(std::string_view pattern) {
-    return addPathsImpl(pattern, ignoreWarnPaths);
-}
-
 std::error_code DiagnosticEngine::addIgnoreMacroPaths(std::string_view pattern) {
-    return addPathsImpl(pattern, ignoreMacroWarnPaths);
+    std::error_code ec;
+    auto p = fs::weakly_canonical(pattern, ec);
+    if (!ec)
+        ignoreMacroWarnPatterns.emplace_back(std::move(p));
+
+    return ec;
 }
 
 // Checks that all of the given ranges are in the same macro argument expansion as `loc`
@@ -221,22 +220,27 @@ bool DiagnosticEngine::issueImpl(const Diagnostic& diagnostic, DiagnosticSeverit
 
         showIncludeStack = reportedIncludeStack.emplace(loc.buffer()).second;
 
-        auto checkSuppressed = [&](const flat_hash_set<fs::path>& paths, SourceLocation loc) {
-            if (paths.empty())
+        auto checkSuppressed = [&](const std::vector<fs::path>& patterns, SourceLocation loc) {
+            if (patterns.empty())
                 return false;
 
-            return paths.contains(sourceManager.getFullPath(loc.buffer()));
+            auto& path = sourceManager.getFullPath(loc.buffer());
+            for (auto& pattern : patterns) {
+                if (svGlobMatches(path, pattern))
+                    return true;
+            }
+            return false;
         };
 
         if (getDefaultSeverity(diagnostic.code) == DiagnosticSeverity::Warning) {
-            if (checkSuppressed(ignoreWarnPaths, loc))
+            if (checkSuppressed(ignoreWarnPatterns, loc))
                 return false;
 
-            if (ignoreExpansionsUntil < expansionLocs.size() && !ignoreMacroWarnPaths.empty()) {
+            if (ignoreExpansionsUntil < expansionLocs.size() && !ignoreMacroWarnPatterns.empty()) {
                 auto originalLoc = sourceManager.getFullyOriginalLoc(
                     expansionLocs[ignoreExpansionsUntil]);
 
-                if (checkSuppressed(ignoreMacroWarnPaths, originalLoc))
+                if (checkSuppressed(ignoreMacroWarnPatterns, originalLoc))
                     return false;
             }
         }

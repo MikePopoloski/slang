@@ -65,4 +65,8 @@ SLANG_EXPORT GlobRank svGlob(const std::filesystem::path& basePath, std::string_
                              GlobMode mode, SmallVector<std::filesystem::path>& results,
                              bool expandEnvVars, std::error_code& ec);
 
+/// Checks whether the given path matches the supplied pattern.
+SLANG_EXPORT bool svGlobMatches(const std::filesystem::path& path,
+                                const std::filesystem::path& pattern);
+
 } // namespace slang

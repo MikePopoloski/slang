@@ -173,6 +173,14 @@ TEST_CASE("File glob infinite recursion") {
     fs::remove_all("sandbox", ec);
 }
 
+TEST_CASE("In-memory glob matching") {
+    CHECK(svGlobMatches("foo/bar/baz.txt", "foo/bar/*.txt"));
+    CHECK(svGlobMatches("foo/bar/baz.txt", "foo/bar/"));
+    CHECK(!svGlobMatches("foo/bar/baz.txt", "foo/bar/*.dat"));
+    CHECK(!svGlobMatches("foo/bar/baz.txt", "foo/...bat.txt"));
+    CHECK(svGlobMatches("foo/bar/baz.txt", "...baz.txt"));
+}
+
 TEST_CASE("Config Blocks") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
