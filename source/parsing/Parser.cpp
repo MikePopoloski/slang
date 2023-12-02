@@ -1028,8 +1028,13 @@ ParameterDeclarationBaseSyntax& Parser::parseParameterDecl(Token keyword, Token*
                 // an identifier type and an optional packed dimension list. If it's not the
                 // former we will bail out and let our parent parse a new parameter.
                 uint32_t index = 2;
-                if (!scanDimensionList(index) || peek(index).kind == TokenKind::Identifier)
+                if (!scanDimensionList(index))
                     break;
+
+                if (auto nk = peek(index).kind; nk != TokenKind::Comma && nk != TokenKind::Equals &&
+                                                nk != TokenKind::CloseParenthesis) {
+                    break;
+                }
 
                 buffer.push_back(consume());
             }

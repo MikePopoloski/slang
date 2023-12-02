@@ -2449,3 +2449,18 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Parameter port with package scoped type regress") {
+    auto tree = SyntaxTree::fromText(R"(
+package p;
+    typedef int i;
+endpackage
+
+module m #(parameter int a, p::i b);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
