@@ -37,6 +37,9 @@ using namespace parsing;
 using namespace syntax;
 
 Driver::Driver() : diagEngine(sourceManager), sourceLoader(sourceManager) {
+    // Construct a compilation object here before the TextDiagnosticClient
+    // to ensure that static formatter callbacks are registered.
+    Compilation compilation;
     diagClient = std::make_shared<TextDiagnosticClient>();
     diagEngine.addClient(diagClient);
 }
