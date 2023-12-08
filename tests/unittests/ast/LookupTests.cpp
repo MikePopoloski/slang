@@ -2025,3 +2025,23 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Error for dotting into instance array") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int i;
+endmodule
+
+module n;
+    m m1[3] ();
+    initial m1.i = 1;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::DotIntoInstArray);
+}

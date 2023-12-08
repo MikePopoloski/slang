@@ -464,10 +464,21 @@ bool lookupDownward(std::span<const NamePlusLoc> nameParts, NameComponents name,
                     return false;
                 }
 
-                auto& diag = result.addDiag(*context.scope, diag::CouldNotResolveHierarchicalPath,
-                                            it->dotLocation);
-                diag << name.text;
-                diag << name.range;
+                // Which error we report depends on whether this is an array
+                // (in which case the user needs to use an index expression instead
+                // of dot access) or just some other symbol that is missing the
+                // requested member.
+                if (prevSym.kind == SymbolKind::GenerateBlockArray ||
+                    prevSym.kind == SymbolKind::InstanceArray) {
+                    result.addDiag(*context.scope, diag::DotIntoInstArray, it->dotLocation);
+                }
+                else {
+                    auto& diag = result.addDiag(*context.scope,
+                                                diag::CouldNotResolveHierarchicalPath,
+                                                it->dotLocation);
+                    diag << name.text;
+                    diag << name.range;
+                }
                 return true;
             }
 
