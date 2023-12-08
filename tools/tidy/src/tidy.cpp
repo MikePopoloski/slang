@@ -70,10 +70,15 @@ int main(int argc, char** argv) {
     // Create the config class and populate it with the config file if provided
     TidyConfig tidyConfig;
     if (tidyConfigFile) {
-        if (!exists(std::filesystem::path(tidyConfigFile.value())))
+        if (!exists(std::filesystem::path(tidyConfigFile.value()))) {
             slang::OS::printE(fmt::format("the path provided for the config file does not exist {}",
                                           tidyConfigFile.value()));
-        tidyConfig = TidyConfigParser(tidyConfigFile.value()).getConfig();
+            tidyConfig = TidyConfigParser(tidyConfigFile.value()).getConfig();
+        }
+        else {
+            tidyConfig =
+                TidyConfigParser(std::filesystem::path(tidyConfigFile.value())).getConfig();
+        }
     }
     else if (auto path = project_slang_tidy_config()) {
         tidyConfig = TidyConfigParser(path.value()).getConfig();
