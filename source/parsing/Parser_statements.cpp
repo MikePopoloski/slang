@@ -169,7 +169,12 @@ StatementSyntax& Parser::parseStatement(bool allowEmpty, bool allowSuperNew) {
 ElseClauseSyntax* Parser::parseElseClause() {
     if (peek(TokenKind::ElseKeyword)) {
         auto elseKeyword = consume();
-        return &factory.elseClause(elseKeyword, parseStatement());
+        auto& stmt = parseStatement();
+        if (stmt.kind == SyntaxKind::ConditionalStatement) {
+            if (auto tok = stmt.as<ConditionalStatementSyntax>().uniqueOrPriority)
+                addDiag(diag::UniquePriorityAfterElse, tok.range());
+        }
+        return &factory.elseClause(elseKeyword, stmt);
     }
     return nullptr;
 }

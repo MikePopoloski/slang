@@ -327,3 +327,18 @@ endmodule
     CHECK(diagnostics[3].code == diag::RandJoinProdItem);
     CHECK(diagnostics[4].code == diag::ExpectedRsRule);
 }
+
+TEST_CASE("Unique / priority after else parsing") {
+    auto& text = R"(
+module m;
+    initial begin
+        unique if (1) begin end
+        else unique if (1) begin end
+    end
+endmodule
+)";
+    parseCompilationUnit(text);
+
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics[0].code == diag::UniquePriorityAfterElse);
+}

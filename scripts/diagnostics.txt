@@ -278,6 +278,7 @@ error UdpDupTransition "cannot have more than one input transition per row in a 
 error UdpCombState "combinational primitive row should not have a current state field"
 error UdpSequentialState "sequential primitive row is missing a current state field"
 error ExternWildcardPortList "extern declaration cannot have a wildcard port list"
+error UniquePriorityAfterElse "cannot use 'unique' or 'priority' keyword after 'else'"
 warning nonstandard-generate NonStandardGenBlock "standalone generate block without loop or condition is not allowed in SystemVerilog"
 warning empty-pattern EmptyAssignmentPattern "empty assignment patterns are disallowed by SystemVerilog"
 warning nonstandard-foreach NonstandardForeach "non-standard foreach loop variable list"
