@@ -652,3 +652,30 @@ endmodule
     CHECK(type.name == "my_data_t");
     CHECK(type.getCanonicalType().name == "int");
 }
+
+TEST_CASE("Hierarchical interface port resolution error") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I;
+endinterface
+
+module m(I i);
+endmodule
+
+module othertop;
+    if (1) begin : foo
+        I i[3]();
+    end
+endmodule
+
+module top;
+    m m1(othertop.foo.i[0]);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::InvalidHierarchicalIfacePortConn);
+}

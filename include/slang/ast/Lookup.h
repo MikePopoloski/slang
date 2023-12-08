@@ -64,10 +64,13 @@ enum class SLANG_EXPORT LookupFlags {
     /// Lookup is allowed to return the root symbol via the '$root' scope specifier.
     AllowRoot = 1 << 8,
 
+    /// Lookup is resolving an interface port connection expression.
+    IfacePortConn = 1 << 9,
+
     /// Treat this lookup as hierarchical even if it's a simple name.
     ForceHierarchical = AllowDeclaredAfter | NoUndeclaredErrorIfUninstantiated
 };
-SLANG_BITMASK(LookupFlags, AllowRoot)
+SLANG_BITMASK(LookupFlags, IfacePortConn)
 
 /// This type denotes the ordering of symbols within a particular scope, for the purposes of
 /// determining whether a found symbol is visible compared to the given location.

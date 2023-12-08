@@ -1193,7 +1193,8 @@ Expression* Expression::tryBindInterfaceRef(const ASTContext& context,
 
     // Try to look up that name.
     LookupResult result;
-    Lookup::name(expr->as<NameSyntax>(), context, LookupFlags::None, result);
+    auto flags = isInterfacePort ? LookupFlags::IfacePortConn : LookupFlags::None;
+    Lookup::name(expr->as<NameSyntax>(), context, flags, result);
 
     DeferredSourceRange modportRange;
     std::string_view arrayModportName;
