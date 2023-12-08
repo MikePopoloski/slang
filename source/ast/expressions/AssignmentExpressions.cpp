@@ -774,6 +774,9 @@ Expression& ConversionExpression::fromSyntax(Compilation& compilation,
     }
 
     if (!type->isCastCompatible(*operand.type)) {
+        if (!Bitstream::checkClassAccess(*type, context, targetExpr.sourceRange)) {
+            return badExpr(compilation, result());
+        }
         if (operand.kind == ExpressionKind::Streaming) {
             if (!Bitstream::isBitstreamCast(*type,
                                             operand.as<StreamingConcatenationExpression>())) {
@@ -787,6 +790,9 @@ Expression& ConversionExpression::fromSyntax(Compilation& compilation,
             auto& diag = context.addDiag(diag::BadConversion, syntax.apostrophe.location());
             diag << *operand.type << *type;
             diag << targetExpr.sourceRange << operand.sourceRange;
+            return badExpr(compilation, result());
+        }
+        else if (!Bitstream::checkClassAccess(*operand.type, context, operand.sourceRange)) {
             return badExpr(compilation, result());
         }
 

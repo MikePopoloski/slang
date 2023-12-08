@@ -47,6 +47,13 @@ public:
     /// Compile-time check that bit-streaming cast on a streaming operator is valid.
     static bool isBitstreamCast(const Type& type, const StreamingConcatenationExpression& arg);
 
+    /// Checks that the given type is accessible for bit-stream casting from the provided
+    /// scope. This is always true unless the type is a class type with private or protected
+    /// members that are not visible from the given scope. If false, a diagnostic will be
+    /// issued using the provided context.
+    static bool checkClassAccess(const Type& type, const ASTContext& context,
+                                 SourceRange sourceRange);
+
     /// Re-ordering of the generic stream. For source/packed concatenation, unpackWidth = 0. For
     /// target/unpacked concatenation, unpackWidth is the total width of target.
     static ConstantValue reOrder(ConstantValue&& value, uint64_t sliceSize,

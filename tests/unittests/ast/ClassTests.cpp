@@ -2754,3 +2754,44 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::BadConversion);
 }
+
+TEST_CASE("Class bistream restrictions") {
+    auto tree = SyntaxTree::fromText(R"(
+class C;
+    local int i;
+
+    function void foo;
+        C c = this;
+        int j = int'(c);
+        int k = {<<{c}};
+        int l = $countones(c);
+    endfunction
+endclass
+
+module m;
+    C c;
+    int j = int'(c);
+    int k = {<<{c}};
+    int l = $countones(c);
+    int n = $isunknown(c);
+    int o = $countbits(c, 0);
+    initial begin
+        c = C'(o);
+        {<<{o}} = c;
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 7);
+    CHECK(diags[0].code == diag::ClassPrivateMembersBitstream);
+    CHECK(diags[1].code == diag::ClassPrivateMembersBitstream);
+    CHECK(diags[2].code == diag::ClassPrivateMembersBitstream);
+    CHECK(diags[3].code == diag::ClassPrivateMembersBitstream);
+    CHECK(diags[4].code == diag::ClassPrivateMembersBitstream);
+    CHECK(diags[5].code == diag::ClassPrivateMembersBitstream);
+    CHECK(diags[6].code == diag::ClassPrivateMembersBitstream);
+}

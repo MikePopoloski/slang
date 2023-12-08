@@ -519,9 +519,14 @@ static bool withAfterDynamic(const StreamingConcatenationExpression& lhs,
 
 bool Bitstream::canBeTarget(const StreamingConcatenationExpression& lhs, const Expression& rhs,
                             SourceLocation assignLoc, const ASTContext& context) {
-    if (rhs.kind != ExpressionKind::Streaming && !rhs.type->isBitstreamType()) {
-        context.addDiag(diag::BadStreamSourceType, assignLoc) << *rhs.type << lhs.sourceRange;
-        return false;
+    if (rhs.kind != ExpressionKind::Streaming) {
+        if (!rhs.type->isBitstreamType()) {
+            context.addDiag(diag::BadStreamSourceType, assignLoc) << *rhs.type << lhs.sourceRange;
+            return false;
+        }
+
+        if (!checkClassAccess(*rhs.type, context, rhs.sourceRange))
+            return false;
     }
 
     const SourceRange *dynamic = nullptr, *with = nullptr;
@@ -573,6 +578,8 @@ bool Bitstream::canBeTarget(const StreamingConcatenationExpression& lhs, const E
 
 bool Bitstream::canBeSource(const Type& target, const StreamingConcatenationExpression& rhs,
                             SourceLocation assignLoc, const ASTContext& context) {
+    // No need to checkClassAccess here because a class is never a valid
+    // destination bitstream type.
     if (!target.isBitstreamType(true)) {
         context.addDiag(diag::BadStreamTargetType, assignLoc) << target << rhs.sourceRange;
         return false;
@@ -602,6 +609,23 @@ bool Bitstream::isBitstreamCast(const Type& type, const StreamingConcatenationEx
         return type.getBitstreamWidth() == arg.getBitstreamWidth();
 
     return dynamicSizesMatch(type, arg);
+}
+
+bool Bitstream::checkClassAccess(const Type& type, const ASTContext& context,
+                                 SourceRange sourceRange) {
+    if (!type.isClass())
+        return true;
+
+    auto& ct = type.getCanonicalType().as<ClassType>();
+    for (auto& prop : ct.membersOfType<ClassPropertySymbol>()) {
+        if (prop.visibility != Visibility::Public && prop.lifetime == VariableLifetime::Automatic) {
+            if (!Lookup::isVisibleFrom(prop, *context.scope)) {
+                context.addDiag(diag::ClassPrivateMembersBitstream, sourceRange) << type;
+                return false;
+            }
+        }
+    }
+    return true;
 }
 
 ConstantValue Bitstream::reOrder(ConstantValue&& value, uint64_t sliceSize, uint64_t unpackWidth) {

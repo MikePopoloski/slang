@@ -1789,6 +1789,9 @@ Expression& StreamingConcatenationExpression::fromSyntax(
                 context.addDiag(diag::BadStreamExprType, arg->sourceRange) << *arg->type;
                 return badResult();
             }
+
+            if (!Bitstream::checkClassAccess(*argType, context, arg->sourceRange))
+                return badResult();
         }
 
         uint64_t argWidth = 0;

@@ -55,6 +55,9 @@ public:
         if (!args[0]->type->isBitstreamType())
             return badArg(context, *args[0]);
 
+        if (!Bitstream::checkClassAccess(*args[0]->type, context, args[0]->sourceRange))
+            return comp.getErrorType();
+
         for (auto arg : args.subspan(1)) {
             if (!arg->type->isIntegral())
                 return badArg(context, *arg);
@@ -127,6 +130,9 @@ public:
         if (!args[0]->type->isBitstreamType())
             return badArg(context, *args[0]);
 
+        if (!Bitstream::checkClassAccess(*args[0]->type, context, args[0]->sourceRange))
+            return comp.getErrorType();
+
         return comp.getIntType();
     }
 
@@ -157,6 +163,9 @@ public:
 
         if (!args[0]->type->isBitstreamType())
             return badArg(context, *args[0]);
+
+        if (!Bitstream::checkClassAccess(*args[0]->type, context, args[0]->sourceRange))
+            return comp.getErrorType();
 
         return comp.getBitType();
     }
