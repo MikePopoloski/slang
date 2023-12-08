@@ -455,8 +455,8 @@ static ConstantValue unpackBitstream(const Type& type, PackIterator& iter,
         return constContainer(ct, buffer);
     }
 
-    // TODO: unions?
-    return nullptr;
+    // All other types should have been filtered out as errors before getting here.
+    SLANG_UNREACHABLE;
 }
 
 ConstantValue Bitstream::evaluateCast(const Type& type, ConstantValue&& value,
