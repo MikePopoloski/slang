@@ -168,7 +168,7 @@ ConfigBlockSymbol& ConfigBlockSymbol::fromSyntax(const Scope& scope,
     for (auto param : syntax.localparams)
         result->addMembers(*param);
 
-    SmallVector<CellId> topCells;
+    SmallVector<ConfigCellId> topCells;
     for (auto cellId : syntax.topCells) {
         if (!cellId->cell.valueText().empty()) {
             topCells.emplace_back(cellId->library.valueText(), cellId->cell.valueText(),
@@ -186,6 +186,23 @@ ConfigBlockSymbol& ConfigBlockSymbol::fromSyntax(const Scope& scope,
         return buf.copy(comp);
     };
 
+    auto buildRule = [&](const ConfigRuleClauseSyntax& rule) {
+        ConfigRule result;
+        if (rule.kind == SyntaxKind::ConfigUseClause) {
+            // TODO: handle other parts of this
+            auto& cuc = rule.as<ConfigUseClauseSyntax>();
+            if (cuc.name && !cuc.name->cell.valueText().empty()) {
+                result.useCell = ConfigCellId(cuc.name->library.valueText(),
+                                              cuc.name->cell.valueText(), cuc.name->sourceRange());
+            }
+        }
+        else {
+            result.liblist = buildLiblist(rule.as<ConfigLiblistSyntax>());
+        }
+        return result;
+    };
+
+    SmallVector<InstanceOverride> instOverrides;
     for (auto rule : syntax.rules) {
         switch (rule->kind) {
             case SyntaxKind::DefaultConfigRule:
@@ -199,29 +216,29 @@ ConfigBlockSymbol& ConfigBlockSymbol::fromSyntax(const Scope& scope,
                 if (auto libName = ccr.name->library.valueText(); !libName.empty())
                     co.specificLib = comp.getSourceLibrary(libName);
 
-                if (ccr.ruleClause->kind == SyntaxKind::ConfigUseClause) {
-                    // TODO: handle other parts of this
-                    auto& cuc = ccr.ruleClause->as<ConfigUseClauseSyntax>();
-                    if (cuc.name && !cuc.name->cell.valueText().empty()) {
-                        co.cell = CellId(cuc.name->library.valueText(), cuc.name->cell.valueText(),
-                                         cuc.name->sourceRange());
-                    }
-                }
-                else {
-                    co.liblist = buildLiblist(ccr.ruleClause->as<ConfigLiblistSyntax>());
-                }
-
+                co.rule = buildRule(*ccr.ruleClause);
                 result->cellOverrides[cellName].push_back(co);
                 break;
             }
-            case SyntaxKind::InstanceConfigRule:
-                // TODO: handle other rules
+            case SyntaxKind::InstanceConfigRule: {
+                SmallVector<std::string_view> pathBuf;
+                auto& icr = rule->as<InstanceConfigRuleSyntax>();
+                pathBuf.push_back(icr.topModule.valueText());
+                for (auto& part : icr.instanceNames)
+                    pathBuf.push_back(part->name.valueText());
+
+                InstanceOverride io;
+                io.path = pathBuf.copy(comp);
+                io.rule = buildRule(*icr.ruleClause);
+                instOverrides.emplace_back(std::move(io));
                 break;
+            }
             default:
                 SLANG_UNREACHABLE;
         }
     }
 
+    result->instanceOverrides = instOverrides.copy(comp);
     return *result;
 }
 

@@ -46,6 +46,7 @@ class Symbol;
 class SystemSubroutine;
 class ValueDriver;
 struct AssertionInstanceDetails;
+struct ConfigRule;
 
 using DriverIntervalMap = IntervalMap<uint64_t, const ValueDriver*>;
 using UnrollIntervalMap = IntervalMap<uint64_t, std::monostate>;
@@ -194,13 +195,25 @@ struct HierarchyOverrideNode {
     /// the first element of which is the value to set the parameter to and the second
     /// is the source defparam doing the overriding, if any (can be null).
     flat_hash_map<const syntax::SyntaxNode*, std::pair<ConstantValue, const syntax::SyntaxNode*>>
-        overrides;
+        overridesBySyntax;
 
-    /// A map of child scopes that also contain overrides.
-    flat_hash_map<InstancePath::Entry, HierarchyOverrideNode> childNodes;
+    /// A map of parameters to override, keyed by name.
+    flat_hash_map<std::string_view, ConstantValue> overridesByName;
+
+    /// A map of child scopes that also contain overrides, keyed by syntax.
+    flat_hash_map<InstancePath::Entry, HierarchyOverrideNode> childrenBySyntax;
+
+    /// A map of child scopes that also contain overrides, keyed by name.
+    flat_hash_map<std::string_view, HierarchyOverrideNode> childrenByName;
 
     /// A list of bind directives to apply in this scope.
     std::vector<const syntax::BindDirectiveSyntax*> binds;
+
+    /// A config rule that should be applied to this hierarchy instance.
+    const ConfigRule* configRule = nullptr;
+
+    /// Set to true if any direct child nodes have config rules supplied.
+    bool anyChildConfigRules = false;
 };
 
 /// A centralized location for creating and caching symbols. This includes
@@ -305,6 +318,10 @@ public:
 
     /// Gets the definition for the given syntax node, or nullptr if it does not exist.
     const Definition* getDefinition(const syntax::ModuleDeclarationSyntax& syntax) const;
+
+    /// Gets the definition indicated by the given config rule, or nullptr if it does not exist.
+    const Definition* getDefinition(std::string_view name, const Scope& scope,
+                                    const ConfigRule& configRule) const;
 
     /// Gets the package with the give name, or nullptr if there is no such package.
     const PackageSymbol* getPackage(std::string_view name) const;
@@ -665,7 +682,8 @@ private:
                                std::span<const Symbol* const> instTargets,
                                const Definition* defTarget);
     const Definition* resolveConfigRules(std::string_view name, const Scope& scope,
-                                         const ConfigBlockSymbol& config,
+                                         const ConfigBlockSymbol* config,
+                                         const ConfigRule* configRule,
                                          const std::vector<Definition*>& defList) const;
 
     // Stored options object.

@@ -82,28 +82,49 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Root; }
 };
 
+/// Identifies a specific cell as part of a config rule.
+struct ConfigCellId {
+    /// The library containing the cell (or empty to specify
+    /// that other logic should be used to find the library).
+    std::string_view lib;
+
+    /// The name of the cell.
+    std::string_view name;
+
+    /// The source range where this cell id was declared.
+    SourceRange sourceRange;
+
+    ConfigCellId() = default;
+    ConfigCellId(std::string_view lib, std::string_view name, SourceRange sourceRange) :
+        lib(lib), name(name), sourceRange(sourceRange) {}
+};
+
+/// A rule that controls how a specific cell or instance in the design is configured.
+struct ConfigRule {
+    /// A list of libraries to use to look up definitions.
+    std::span<const SourceLibrary* const> liblist;
+
+    /// A specific cell to use for this instance or definition lookup.
+    ConfigCellId useCell;
+};
+
 /// Represents a config block declaration.
 class SLANG_EXPORT ConfigBlockSymbol : public Symbol, public Scope {
 public:
-    struct CellId {
-        std::string_view lib;
-        std::string_view name;
-        SourceRange sourceRange;
-
-        CellId() = default;
-        CellId(std::string_view lib, std::string_view name, SourceRange sourceRange) :
-            lib(lib), name(name), sourceRange(sourceRange) {}
-    };
-
     struct CellOverride {
         const SourceLibrary* specificLib = nullptr;
-        std::span<const SourceLibrary* const> liblist;
-        CellId cell;
+        ConfigRule rule;
+    };
+
+    struct InstanceOverride {
+        std::span<const std::string_view> path;
+        ConfigRule rule;
     };
 
     const SourceLibrary* sourceLibrary = nullptr;
-    std::span<const CellId> topCells;
+    std::span<const ConfigCellId> topCells;
     std::span<const SourceLibrary* const> defaultLiblist;
+    std::span<const InstanceOverride> instanceOverrides;
     flat_hash_map<std::string_view, std::vector<CellOverride>> cellOverrides;
 
     ConfigBlockSymbol(Compilation& compilation, std::string_view name, SourceLocation loc) :

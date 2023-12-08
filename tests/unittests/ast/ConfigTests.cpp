@@ -303,3 +303,35 @@ endconfig
     compilation.addSyntaxTree(tree2);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Config instance overrides") {
+    auto tree = SyntaxTree::fromText(R"(
+config cfg1;
+    design top;
+    instance top.b.f2 use bar;
+endconfig
+
+module foo;
+endmodule
+
+module bar;
+endmodule
+
+module baz;
+    foo f1(), f2();
+endmodule
+
+module top;
+    baz b();
+endmodule
+)");
+    CompilationOptions options;
+    options.topModules.emplace("cfg1");
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& inst = compilation.getRoot().lookupName<InstanceSymbol>("top.b.f2");
+    CHECK(inst.getDefinition().name == "bar");
+}

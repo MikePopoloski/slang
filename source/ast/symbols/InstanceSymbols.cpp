@@ -72,9 +72,14 @@ public:
 
         const HierarchyOverrideNode* overrideNode = nullptr;
         if (parentOverrideNode) {
-            if (auto it = parentOverrideNode->childNodes.find(syntax);
-                it != parentOverrideNode->childNodes.end()) {
-                overrideNode = &it->second;
+            if (auto sit = parentOverrideNode->childrenBySyntax.find(syntax);
+                sit != parentOverrideNode->childrenBySyntax.end()) {
+                overrideNode = &sit->second;
+            }
+            else if (auto nit = parentOverrideNode->childrenByName.find(
+                         syntax.decl->name.valueText());
+                     nit != parentOverrideNode->childrenByName.end()) {
+                overrideNode = &nit->second;
             }
         }
 
@@ -143,8 +148,8 @@ private:
         for (uint32_t i = 0; i < range.width(); i++) {
             const HierarchyOverrideNode* childOverrides = nullptr;
             if (overrideNode) {
-                auto nodeIt = overrideNode->childNodes.find(i);
-                if (nodeIt != overrideNode->childNodes.end())
+                auto nodeIt = overrideNode->childrenBySyntax.find(i);
+                if (nodeIt != overrideNode->childrenBySyntax.end())
                     childOverrides = &nodeIt->second;
             }
 
@@ -301,8 +306,8 @@ static const HierarchyOverrideNode* findParentOverrideNode(const Scope& scope) {
     if (sym.kind == SymbolKind::GenerateBlock &&
         parentScope->asSymbol().kind == SymbolKind::GenerateBlockArray) {
 
-        auto it = node->childNodes.find(sym.as<GenerateBlockSymbol>().constructIndex);
-        if (it == node->childNodes.end())
+        auto it = node->childrenBySyntax.find(sym.as<GenerateBlockSymbol>().constructIndex);
+        if (it == node->childrenBySyntax.end())
             return nullptr;
 
         return &it->second;
@@ -311,18 +316,20 @@ static const HierarchyOverrideNode* findParentOverrideNode(const Scope& scope) {
     auto syntax = sym.getSyntax();
     SLANG_ASSERT(syntax);
 
-    auto it = node->childNodes.find(*syntax);
-    if (it == node->childNodes.end())
-        return nullptr;
+    if (auto it = node->childrenBySyntax.find(*syntax); it != node->childrenBySyntax.end())
+        return &it->second;
 
-    return &it->second;
+    if (auto it = node->childrenByName.find(sym.name); it != node->childrenByName.end())
+        return &it->second;
+
+    return nullptr;
 }
 
 void InstanceSymbol::fromSyntax(Compilation& comp, const HierarchyInstantiationSyntax& syntax,
                                 const ASTContext& context, SmallVectorBase<const Symbol*>& results,
                                 SmallVectorBase<const Symbol*>& implicitNets, bool isFromBind) {
-    TimeTraceScope timeScope("createInstances"sv,
-                             [&] { return std::string(syntax.type.valueText()); });
+    auto defName = syntax.type.valueText();
+    TimeTraceScope timeScope("createInstances"sv, [&] { return std::string(defName); });
 
     // Find our parent instance, if there is one.
     bool isUninstantiated = false;
@@ -361,8 +368,7 @@ void InstanceSymbol::fromSyntax(Compilation& comp, const HierarchyInstantiationS
     // Unfortunately this instantiation could be for a checker instead of a
     // module/interface/program, so we're forced to do a real name lookup here
     // in the local scope before doing a global definition lookup.
-    if (auto sym = Lookup::unqualified(*context.scope, syntax.type.valueText(),
-                                       LookupFlags::AllowDeclaredAfter)) {
+    if (auto sym = Lookup::unqualified(*context.scope, defName, LookupFlags::AllowDeclaredAfter)) {
         if (sym->kind == SymbolKind::Checker) {
             CheckerInstanceSymbol::fromSyntax(sym->as<CheckerSymbol>(), syntax, context, results,
                                               implicitNets, isFromBind);
@@ -372,6 +378,99 @@ void InstanceSymbol::fromSyntax(Compilation& comp, const HierarchyInstantiationS
 
     const Definition* owningDefinition = nullptr;
     const HierarchyOverrideNode* parentOverrideNode = nullptr;
+    const Definition* explicitDef = nullptr;
+
+    // Does a lookup for the definition that was explicitly provided in
+    // the instantiation syntax node.
+    auto resolveExplicitDef = [&] {
+        explicitDef = comp.getDefinition(defName, *context.scope);
+        if (!explicitDef) {
+            // This might actually be a user-defined primitive instantiation.
+            if (auto prim = comp.getPrimitive(defName)) {
+                PrimitiveInstanceSymbol::fromSyntax(*prim, syntax, context, results, implicitNets);
+                if (!results.empty()) {
+                    if (!owningDefinition ||
+                        owningDefinition->definitionKind != DefinitionKind::Module || inChecker) {
+                        context.addDiag(diag::InvalidPrimInstanceForParent, syntax.type.range());
+                    }
+                    else if (isFromBind) {
+                        context.addDiag(diag::BindTargetPrimitive, syntax.type.range());
+                    }
+                }
+            }
+            else {
+                // A compilation option can prevent errors in this scenario.
+                // If not set, we error about the missing module, unless we see an extern
+                // module or UDP declaration for this name, in which case we provide a
+                // slightly different error.
+                if (!comp.hasFlag(CompilationFlags::IgnoreUnknownModules) &&
+                    !comp.errorIfMissingExternModule(defName, *context.scope,
+                                                     syntax.type.range()) &&
+                    !comp.errorIfMissingExternPrimitive(defName, *context.scope,
+                                                        syntax.type.range())) {
+                    context.addDiag(diag::UnknownModule, syntax.type.range()) << defName;
+                }
+                UninstantiatedDefSymbol::fromSyntax(comp, syntax, context, results, implicitNets);
+            }
+        }
+    };
+
+    // Creates instance symbols -- if specificInstance is provided then only that
+    // instance will be created, otherwise all instances in the original syntax
+    // node will be created in one go.
+    auto createInstances = [&](const Definition& definition,
+                               const HierarchicalInstanceSyntax* specificInstance) {
+        definition.noteInstantiated();
+
+        if (inChecker) {
+            context.addDiag(diag::InvalidInstanceForParent, syntax.type.range())
+                << definition.getArticleKindString() << "a checker"sv;
+        }
+        else if (owningDefinition) {
+            auto owningKind = owningDefinition->definitionKind;
+            if (owningKind == DefinitionKind::Program ||
+                (owningKind == DefinitionKind::Interface &&
+                 definition.definitionKind == DefinitionKind::Module)) {
+                context.addDiag(diag::InvalidInstanceForParent, syntax.type.range())
+                    << definition.getArticleKindString()
+                    << owningDefinition->getArticleKindString();
+            }
+        }
+
+        if (parentInst && parentInst->isFromBind) {
+            if (isFromBind) {
+                context.addDiag(diag::BindUnderBind, syntax.type.range());
+                return;
+            }
+
+            // If our parent is from a bind statement, pass down the flag
+            // so that we prevent further binds below us too.
+            isFromBind = true;
+        }
+
+        SmallSet<std::string_view, 8> implicitNetNames;
+        auto& netType = context.scope->getDefaultNetType();
+
+        ParameterBuilder paramBuilder(*context.scope, definition.name, definition.parameters);
+        if (syntax.parameters)
+            paramBuilder.setAssignments(*syntax.parameters);
+
+        InstanceBuilder builder(context, definition, paramBuilder, parentOverrideNode,
+                                syntax.attributes, isFromBind);
+
+        if (specificInstance) {
+            createImplicitNets(*specificInstance, context, netType, implicitNetNames, implicitNets);
+            results.push_back(builder.create(*specificInstance));
+        }
+        else {
+            for (auto instanceSyntax : syntax.instances) {
+                createImplicitNets(*instanceSyntax, context, netType, implicitNetNames,
+                                   implicitNets);
+                results.push_back(builder.create(*instanceSyntax));
+            }
+        }
+    };
+
     if (parentInst) {
         owningDefinition = &parentInst->getDefinition();
 
@@ -379,85 +478,51 @@ void InstanceSymbol::fromSyntax(Compilation& comp, const HierarchyInstantiationS
         // node set, we need to go back and make sure we account for any
         // generate blocks that might actually be along the parent path for
         // the new instances we're creating.
-        if (parentInst->hierarchyOverrideNode)
+        if (parentInst->hierarchyOverrideNode) {
             parentOverrideNode = findParentOverrideNode(*context.scope);
-    }
+            if (parentOverrideNode && parentOverrideNode->anyChildConfigRules) {
+                // We need to handle each instance separately, as the config
+                // rules allow the entire definition and parameter values
+                // to be overridden on a per-instance basis.
+                for (auto instanceSyntax : syntax.instances) {
+                    auto instName = instanceSyntax->decl ? instanceSyntax->decl->name.valueText()
+                                                         : ""sv;
+                    if (auto overrideIt = parentOverrideNode->childrenByName.find(instName);
+                        overrideIt != parentOverrideNode->childrenByName.end() &&
+                        overrideIt->second.configRule) {
 
-    auto definition = comp.getDefinition(syntax.type.valueText(), *context.scope);
-    if (!definition) {
-        // This might actually be a user-defined primitive instantiation.
-        if (auto prim = comp.getPrimitive(syntax.type.valueText())) {
-            PrimitiveInstanceSymbol::fromSyntax(*prim, syntax, context, results, implicitNets);
-            if (!results.empty()) {
-                if (!owningDefinition ||
-                    owningDefinition->definitionKind != DefinitionKind::Module || inChecker) {
-                    context.addDiag(diag::InvalidPrimInstanceForParent, syntax.type.range());
+                        // We have an override rule, so use it to lookup the def.
+                        auto def = comp.getDefinition(defName, *context.scope,
+                                                      *overrideIt->second.configRule);
+                        if (!def) {
+                            // TODO: only error for this specific instance
+                            UninstantiatedDefSymbol::fromSyntax(comp, syntax, context, results,
+                                                                implicitNets);
+                        }
+                        else {
+                            createInstances(*def, instanceSyntax);
+                        }
+                    }
+                    else {
+                        // No specific config rule, so use the default lookup behavior.
+                        if (!explicitDef) {
+                            // TODO: only error for this specific instance
+                            resolveExplicitDef();
+                            if (!explicitDef)
+                                return;
+                        }
+
+                        createInstances(*explicitDef, instanceSyntax);
+                    }
                 }
-                else if (isFromBind) {
-                    context.addDiag(diag::BindTargetPrimitive, syntax.type.range());
-                }
+                return;
             }
         }
-        else {
-            // A compilation option can prevent errors in this scenario.
-            // If not set, we error about the missing module, unless we see an extern
-            // module or UDP declaration for this name, in which case we provide a
-            // slightly different error.
-            if (!comp.hasFlag(CompilationFlags::IgnoreUnknownModules) &&
-                !comp.errorIfMissingExternModule(syntax.type.valueText(), *context.scope,
-                                                 syntax.type.range()) &&
-                !comp.errorIfMissingExternPrimitive(syntax.type.valueText(), *context.scope,
-                                                    syntax.type.range())) {
-
-                context.addDiag(diag::UnknownModule, syntax.type.range())
-                    << syntax.type.valueText();
-            }
-            UninstantiatedDefSymbol::fromSyntax(comp, syntax, context, results, implicitNets);
-        }
-        return;
     }
 
-    definition->noteInstantiated();
-
-    if (inChecker) {
-        context.addDiag(diag::InvalidInstanceForParent, syntax.type.range())
-            << definition->getArticleKindString() << "a checker"sv;
-    }
-    else if (owningDefinition) {
-        auto owningKind = owningDefinition->definitionKind;
-        if (owningKind == DefinitionKind::Program ||
-            (owningKind == DefinitionKind::Interface &&
-             definition->definitionKind == DefinitionKind::Module)) {
-            context.addDiag(diag::InvalidInstanceForParent, syntax.type.range())
-                << definition->getArticleKindString() << owningDefinition->getArticleKindString();
-        }
-    }
-
-    if (parentInst && parentInst->isFromBind) {
-        if (isFromBind) {
-            context.addDiag(diag::BindUnderBind, syntax.type.range());
-            return;
-        }
-
-        // If our parent is from a bind statement, pass down the flag
-        // so that we prevent further binds below us too.
-        isFromBind = true;
-    }
-
-    SmallSet<std::string_view, 8> implicitNetNames;
-    auto& netType = context.scope->getDefaultNetType();
-
-    ParameterBuilder paramBuilder(*context.scope, definition->name, definition->parameters);
-    if (syntax.parameters)
-        paramBuilder.setAssignments(*syntax.parameters);
-
-    InstanceBuilder builder(context, *definition, paramBuilder, parentOverrideNode,
-                            syntax.attributes, isFromBind);
-
-    for (auto instanceSyntax : syntax.instances) {
-        createImplicitNets(*instanceSyntax, context, netType, implicitNetNames, implicitNets);
-        results.push_back(builder.create(*instanceSyntax));
-    }
+    resolveExplicitDef();
+    if (explicitDef)
+        createInstances(*explicitDef, nullptr);
 }
 
 void InstanceSymbol::fromFixupSyntax(Compilation& comp, const Definition& definition,
@@ -835,9 +900,10 @@ void UninstantiatedDefSymbol::fromSyntax(Compilation& compilation,
     if (syntax.parameters) {
         for (auto expr : syntax.parameters->parameters) {
             // Empty expressions are just ignored here.
-            if (expr->kind == SyntaxKind::OrderedParamAssignment)
+            if (expr->kind == SyntaxKind::OrderedParamAssignment) {
                 params.push_back(
                     &Expression::bind(*expr->as<OrderedParamAssignmentSyntax>().expr, context));
+            }
             else if (expr->kind == SyntaxKind::NamedParamAssignment) {
                 if (auto ex = expr->as<NamedParamAssignmentSyntax>().expr)
                     params.push_back(&Expression::bind(*ex, context, ASTFlags::AllowDataType));

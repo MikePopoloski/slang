@@ -235,9 +235,15 @@ const ParameterSymbolBase& ParameterBuilder::createParam(const Definition::Param
 
         // If there is an override node, see if this parameter is in it.
         if (auto paramSyntax = param->getSyntax(); overrideNode && paramSyntax) {
-            auto& map = overrideNode->overrides;
-            if (auto it = map.find(paramSyntax); it != map.end()) {
+            if (auto it = overrideNode->overridesBySyntax.find(paramSyntax);
+                it != overrideNode->overridesBySyntax.end()) {
                 param->setValue(comp, it->second.first, /* needsCoercion */ true);
+                return *param;
+            }
+
+            if (auto it = overrideNode->overridesByName.find(param->name);
+                it != overrideNode->overridesByName.end()) {
+                param->setValue(comp, it->second, /* needsCoercion */ true);
                 return *param;
             }
         }

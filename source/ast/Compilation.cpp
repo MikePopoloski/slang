@@ -316,6 +316,7 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamsAndBinds) {
     // Iterate the definitions map before instantiating any top level modules,
     // since that can cause changes to the definition map itself.
     SmallVector<std::pair<const Definition*, const ConfigBlockSymbol*>> topDefs;
+    SmallSet<const ConfigBlockSymbol*, 2> selectedConfigs;
     if (options.topModules.empty()) {
         for (auto& [key, defList] : definitionMap) {
             if (std::get<1>(key) != root.get())
@@ -443,6 +444,7 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamsAndBinds) {
                             }
 
                             if (foundDef) {
+                                selectedConfigs.emplace(foundConf);
                                 topDefs.push_back({foundDef, foundConf});
                                 continue;
                             }
@@ -477,7 +479,7 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamsAndBinds) {
                 if (!param.isTypeParam && param.hasSyntax) {
                     auto it = cliOverrides.find(param.name);
                     if (it != cliOverrides.end()) {
-                        hierarchyOverrides.childNodes[def->syntax].overrides.emplace(
+                        hierarchyOverrides.childrenBySyntax[def->syntax].overridesBySyntax.emplace(
                             param.valueDecl, std::pair{*it->second, nullptr});
                     }
                 }
@@ -485,14 +487,32 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamsAndBinds) {
         }
     }
 
+    // If there are configs selected we need to apply all instance path
+    // rules to our hierarchy overrides before we start creating top instances.
+    for (auto config : selectedConfigs) {
+        for (auto& instOverride : config->instanceOverrides) {
+            HierarchyOverrideNode* node = &hierarchyOverrides;
+            HierarchyOverrideNode* prev = node;
+            for (auto name : instOverride.path) {
+                prev = node;
+                node = &node->childrenByName[name];
+            }
+
+            node->configRule = &instOverride.rule;
+            prev->anyChildConfigRules = true;
+        }
+    }
+
     SmallVector<const InstanceSymbol*> topList;
     for (auto [def, config] : topDefs) {
-        const HierarchyOverrideNode* hierarchyOverrideNode = nullptr;
-        if (!hierarchyOverrides.childNodes.empty()) {
-            if (auto it = hierarchyOverrides.childNodes.find(def->syntax);
-                it != hierarchyOverrides.childNodes.end()) {
-                hierarchyOverrideNode = &it->second;
-            }
+        HierarchyOverrideNode* hierarchyOverrideNode = nullptr;
+        if (auto sit = hierarchyOverrides.childrenBySyntax.find(def->syntax);
+            sit != hierarchyOverrides.childrenBySyntax.end()) {
+            hierarchyOverrideNode = &sit->second;
+        }
+        else if (auto nit = hierarchyOverrides.childrenByName.find(def->name);
+                 nit != hierarchyOverrides.childrenByName.end()) {
+            hierarchyOverrideNode = &nit->second;
         }
 
         auto& instance = InstanceSymbol::createDefault(*this, *def, hierarchyOverrideNode);
@@ -552,7 +572,7 @@ const Definition* Compilation::getDefinition(std::string_view lookupName,
         // If there's a config it might be able to provide an
         // override for this cell name.
         if (config)
-            return resolveConfigRules(lookupName, scope, *config, {});
+            return resolveConfigRules(lookupName, scope, config, nullptr, {});
         return nullptr;
     }
 
@@ -573,7 +593,7 @@ const Definition* Compilation::getDefinition(std::string_view lookupName,
 
     auto& defList = it->second.first;
     if (config)
-        return resolveConfigRules(lookupName, scope, *config, defList);
+        return resolveConfigRules(lookupName, scope, config, nullptr, defList);
 
     // If there is a global priority list try to use that.
     for (auto lib : defaultLiblist) {
@@ -604,6 +624,16 @@ const Definition* Compilation::getDefinition(const ModuleDeclarationSyntax& synt
         }
     }
     return nullptr;
+}
+
+const Definition* Compilation::getDefinition(std::string_view lookupName, const Scope& scope,
+                                             const ConfigRule& configRule) const {
+    // TODO: handle error cases
+    auto it = definitionMap.find({lookupName, root.get()});
+    if (it == definitionMap.end())
+        return resolveConfigRules(lookupName, scope, nullptr, &configRule, {});
+    else
+        return resolveConfigRules(lookupName, scope, nullptr, &configRule, it->second.first);
 }
 
 template<typename T>
@@ -2043,7 +2073,7 @@ void Compilation::resolveDefParamsAndBinds() {
     auto getNodeFor = [](const InstancePath& path, Compilation& c) {
         HierarchyOverrideNode* node = &c.hierarchyOverrides;
         for (auto& entry : path.entries)
-            node = &node->childNodes[entry];
+            node = &node->childrenBySyntax[entry];
         return node;
     };
 
@@ -2055,7 +2085,7 @@ void Compilation::resolveDefParamsAndBinds() {
             SLANG_ASSERT(entry.defparamSyntax);
 
             auto node = getNodeFor(entry.path, c);
-            auto [it, inserted] = node->overrides.emplace(
+            auto [it, inserted] = node->overridesBySyntax.emplace(
                 entry.targetSyntax, std::pair{entry.value, entry.defparamSyntax});
 
             if (!inserted && isFinal) {
@@ -2231,7 +2261,8 @@ void Compilation::resolveDefParamsAndBinds() {
 }
 
 const Definition* Compilation::resolveConfigRules(std::string_view lookupName, const Scope& scope,
-                                                  const ConfigBlockSymbol& config,
+                                                  const ConfigBlockSymbol* config,
+                                                  const ConfigRule* rule,
                                                   const std::vector<Definition*>& defList) const {
     auto findDefByLib = [](auto& defList, const SourceLibrary* target) -> Definition* {
         for (auto def : defList) {
@@ -2241,42 +2272,50 @@ const Definition* Compilation::resolveConfigRules(std::string_view lookupName, c
         return nullptr;
     };
 
-    auto liblist = config.defaultLiblist;
-    if (auto overrideIt = config.cellOverrides.find(lookupName);
-        overrideIt != config.cellOverrides.end()) {
+    std::span<const SourceLibrary* const> liblist;
+    if (!rule) {
+        SLANG_ASSERT(config);
+        liblist = config->defaultLiblist;
+        if (auto overrideIt = config->cellOverrides.find(lookupName);
+            overrideIt != config->cellOverrides.end()) {
 
-        // There is at least one cell override with this name; look through the
-        // list and take the first one that matches our library restrictions.
-        for (auto& cellOverride : overrideIt->second) {
-            // TODO: support this
-            if (cellOverride.specificLib)
-                continue;
+            // There is at least one cell override with this name; look through the
+            // list and take the first one that matches our library restrictions.
+            for (auto& cellOverride : overrideIt->second) {
+                // TODO: support this
+                if (cellOverride.specificLib)
+                    continue;
 
-            auto& id = cellOverride.cell;
-            if (!id.name.empty()) {
-                auto overrideDefIt = definitionMap.find({id.name, root.get()});
-                if (overrideDefIt == definitionMap.end()) {
-                    // TODO: error here?
-                    return nullptr;
-                }
+                rule = &cellOverride.rule;
+                break;
+            }
+        }
+    }
 
-                const SourceLibrary* overrideLib = nullptr;
-                if (id.lib.empty()) {
-                    if (auto parentDef = scope.asSymbol().getDeclaringDefinition())
-                        overrideLib = parentDef->sourceLibrary;
-                }
-                else {
-                    overrideLib = getSourceLibrary(id.lib);
-                }
-
-                // TODO: error if not found?
-                return findDefByLib(overrideDefIt->second.first, overrideLib);
+    if (rule) {
+        auto& id = rule->useCell;
+        if (!id.name.empty()) {
+            auto overrideDefIt = definitionMap.find({id.name, root.get()});
+            if (overrideDefIt == definitionMap.end()) {
+                // TODO: error here?
+                return nullptr;
             }
 
-            // No name, so this is just a custom liblist -- search through it below.
-            liblist = cellOverride.liblist;
-            break;
+            const SourceLibrary* overrideLib = nullptr;
+            if (id.lib.empty()) {
+                if (auto parentDef = scope.asSymbol().getDeclaringDefinition())
+                    overrideLib = parentDef->sourceLibrary;
+            }
+            else {
+                overrideLib = getSourceLibrary(id.lib);
+            }
+
+            // TODO: error if not found?
+            return findDefByLib(overrideDefIt->second.first, overrideLib);
         }
+
+        // No name, so this is just a custom liblist -- search through it below.
+        liblist = rule->liblist;
     }
 
     // This search is O(n^2) but both lists should be small
