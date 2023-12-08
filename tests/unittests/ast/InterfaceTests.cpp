@@ -679,3 +679,25 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::InvalidHierarchicalIfacePortConn);
 }
+
+TEST_CASE("Wildcard connection to generic interface port") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I;
+endinterface
+
+module m(interface a);
+endmodule
+
+module top;
+    I a();
+    m m1(.*);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::WildcardPortGenericIface);
+}

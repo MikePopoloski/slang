@@ -883,8 +883,10 @@ public:
 
         auto it = connMap.namedConns.find(port.name);
         if (it == connMap.namedConns.end()) {
-            if (connMap.hasWildcard)
-                return getImplicitInterface(port, connMap.wildcardRange, connMap.wildcardAttrs);
+            if (connMap.hasWildcard) {
+                return getImplicitInterface(port, connMap.wildcardRange, connMap.wildcardAttrs,
+                                            /* isWildcard */ true);
+            }
 
             return reportUnconnected();
         }
@@ -904,7 +906,7 @@ public:
             return getInterfaceExpr(port, *conn.expr, attributes);
         }
 
-        return getImplicitInterface(port, conn.name.range(), attributes);
+        return getImplicitInterface(port, conn.name.range(), attributes, /* isWildcard */ false);
     }
 
     void finalize() {
@@ -1042,11 +1044,17 @@ private:
     }
 
     PortConnection* getImplicitInterface(const InterfacePortSymbol& port, SourceRange range,
-                                         std::span<const AttributeSymbol* const> attributes) {
+                                         std::span<const AttributeSymbol* const> attributes,
+                                         bool isWildcard) {
         auto symbol = Lookup::unqualified(scope, port.name);
         if (!symbol) {
             scope.addDiag(diag::ImplicitNamedPortNotFound, range) << port.name;
             return emptyConnection(port);
+        }
+
+        if (isWildcard && port.isGeneric) {
+            auto& diag = scope.addDiag(diag::WildcardPortGenericIface, range) << port.name;
+            diag.addNote(diag::NoteDeclarationHere, port.location);
         }
 
         // This is a bit inefficient but it simplifies the implementation to just

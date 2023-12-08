@@ -336,6 +336,7 @@ error TimeScaleFirstInScope "time scale declaration must come before all other i
 error GenvarDuplicate "loop generation value {} repeats more than once"
 error GenvarUnknownBits "value of {} is invalid for loop generation value"
 error ImplicitNamedPortNotFound "could not find connection for implicit named port '{}'"
+error WildcardPortGenericIface "cannot use wildcard connection for generic interface port '{}' (use a named connection instead)"
 error MaxGenerateStepsExceeded "generate loop hit maximum step limit; possible infinite loop?"
 error MixingSubroutinePortKinds "port declarations not allowed when subroutine defines a formal argument list"
 error UnpackedArrayParamType "unpacked array parameter requires explicit data type"
