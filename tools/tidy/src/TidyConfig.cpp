@@ -24,6 +24,8 @@ TidyConfig::TidyConfig() {
     styleChecks.emplace("NoOldAlwaysSyntax", CheckStatus::ENABLED);
     styleChecks.emplace("EnforceModuleInstantiationPrefix", CheckStatus::ENABLED);
     styleChecks.emplace("OnlyANSIPortDecl", CheckStatus::ENABLED);
+    styleChecks.emplace("NoDotStarInPortConnection", CheckStatus::ENABLED);
+    styleChecks.emplace("NoImplicitPortNameInPortConnection", CheckStatus::ENABLED);
     checkKinds.insert({slang::TidyKind::Style, styleChecks});
 
     auto synthesisChecks = std::unordered_map<std::string, CheckStatus>();
