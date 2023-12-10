@@ -180,6 +180,20 @@ void registerSymbols(py::module_& m) {
         .def_readonly("topInstances", &RootSymbol::topInstances)
         .def_readonly("compilationUnits", &RootSymbol::compilationUnits);
 
+    py::class_<DefinitionSymbol, Symbol>(m, "DefinitionSymbol")
+        .def_readonly("definitionKind", &DefinitionSymbol::definitionKind)
+        .def_readonly("defaultLifetime", &DefinitionSymbol::defaultLifetime)
+        .def_readonly("unconnectedDrive", &DefinitionSymbol::unconnectedDrive)
+        .def_readonly("timeScale", &DefinitionSymbol::timeScale)
+        .def_property_readonly("defaultNetType",
+                               [](const DefinitionSymbol& self) { return &self.defaultNetType; })
+        .def_property_readonly("isInstantiated", &DefinitionSymbol::isInstantiated)
+        .def("getKindString", &DefinitionSymbol::getKindString)
+        .def("getArticleKindString", &DefinitionSymbol::getArticleKindString)
+        .def("__repr__", [](const DefinitionSymbol& self) {
+            return fmt::format("DefinitionSymbol(\"{}\")", self.name);
+        });
+
     py::class_<ValueSymbol, Symbol>(m, "ValueSymbol")
         .def_property_readonly("type", &ValueSymbol::getType)
         .def_property_readonly("initializer", &ValueSymbol::getInitializer)

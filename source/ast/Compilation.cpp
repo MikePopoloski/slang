@@ -382,7 +382,8 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamsAndBinds) {
                         }
 
                         // Otherwise, issue an error because the user asked us to instantiate this.
-                        def->scope.addDiag(diag::InvalidTopModule, SourceLocation::NoLocation)
+                        def->getParentScope()->addDiag(diag::InvalidTopModule,
+                                                       SourceLocation::NoLocation)
                             << def->name;
                     }
                 }
@@ -477,8 +478,9 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamsAndBinds) {
                 if (!param.isTypeParam && param.hasSyntax) {
                     auto it = cliOverrides.find(param.name);
                     if (it != cliOverrides.end()) {
-                        hierarchyOverrides.childrenBySyntax[def->syntax].overridesBySyntax.emplace(
-                            param.valueDecl, std::pair{*it->second, nullptr});
+                        hierarchyOverrides.childrenBySyntax[*def->getSyntax()]
+                            .overridesBySyntax.emplace(param.valueDecl,
+                                                       std::pair{*it->second, nullptr});
                     }
                 }
             }
@@ -504,7 +506,7 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamsAndBinds) {
     SmallVector<const InstanceSymbol*> topList;
     for (auto [def, config] : topDefs) {
         HierarchyOverrideNode* hierarchyOverrideNode = nullptr;
-        if (auto sit = hierarchyOverrides.childrenBySyntax.find(def->syntax);
+        if (auto sit = hierarchyOverrides.childrenBySyntax.find(*def->getSyntax());
             sit != hierarchyOverrides.childrenBySyntax.end()) {
             hierarchyOverrideNode = &sit->second;
         }
@@ -612,8 +614,9 @@ const DefinitionSymbol* Compilation::getDefinition(const ModuleDeclarationSyntax
         // it probably got booted by an (illegal) duplicate definition.
         // We don't want to return anything in that case.
         auto def = it->second;
-        auto targetScope = def->scope.asSymbol().kind == SymbolKind::CompilationUnit ? root.get()
-                                                                                     : &def->scope;
+        auto& defScope = *def->getParentScope();
+        auto targetScope = defScope.asSymbol().kind == SymbolKind::CompilationUnit ? root.get()
+                                                                                   : &defScope;
 
         auto dmIt = definitionMap.find(std::make_tuple(def->name, targetScope));
         if (dmIt != definitionMap.end() &&
@@ -1372,7 +1375,7 @@ const Diagnostics& Compilation::getSemanticDiagnostics() {
                     continue;
 
                 auto hasUnusedAttrib = [&] {
-                    for (auto attr : def->attributes) {
+                    for (auto attr : getAttributes(*def)) {
                         if (attr->name == "unused"sv || attr->name == "maybe_unused"sv)
                             return attr->getValue().isTrue();
                     }
@@ -1380,7 +1383,7 @@ const Diagnostics& Compilation::getSemanticDiagnostics() {
                 };
 
                 if (!def->name.empty() && def->name != "_"sv && !hasUnusedAttrib())
-                    def->scope.addDiag(diag::UnusedDefinition, def->location)
+                    def->getParentScope()->addDiag(diag::UnusedDefinition, def->location)
                         << def->getKindString();
             }
 
@@ -1895,8 +1898,10 @@ void Compilation::checkElemTimeScale(std::optional<TimeScale> timeScale, SourceR
             return;
 
         anyElemsWithTimescales = true;
-        for (auto& def : definitionMemory)
-            checkElemTimeScale(def->timeScale, def->syntax.header->name.range());
+        for (auto& def : definitionMemory) {
+            auto& syntax = def->getSyntax()->as<ModuleDeclarationSyntax>();
+            checkElemTimeScale(def->timeScale, syntax.header->name.range());
+        }
 
         for (auto [name, package] : packageMap) {
             if (auto syntax = package->getSyntax()) {
@@ -2141,8 +2146,10 @@ void Compilation::resolveDefParamsAndBinds() {
             for (auto target : instTargets)
                 binds.emplace_back(BindEntry{InstancePath(*target), syntax});
 
-            if (defTarget)
-                binds.emplace_back(BindEntry{{}, syntax, &defTarget->syntax});
+            if (defTarget) {
+                auto& modSyntax = defTarget->getSyntax()->as<ModuleDeclarationSyntax>();
+                binds.emplace_back(BindEntry{{}, syntax, &modSyntax});
+            }
         }
     };
 

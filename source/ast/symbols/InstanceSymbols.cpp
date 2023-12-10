@@ -714,14 +714,16 @@ InstanceBodySymbol::InstanceBodySymbol(Compilation& compilation, const Definitio
     Symbol(SymbolKind::InstanceBody, definition.name, definition.location),
     Scope(compilation, this), hierarchyOverrideNode(hierarchyOverrideNode),
     isUninstantiated(isUninstantiated), isFromBind(isFromBind), definition(definition) {
-    setParent(definition.scope, definition.indexInScope);
+
+    setParent(*definition.getParentScope(), definition.getIndex());
 }
 
 InstanceBodySymbol& InstanceBodySymbol::fromDefinition(
     Compilation& compilation, const DefinitionSymbol& definition, SourceLocation instanceLoc,
     bool isUninstantiated, const HierarchyOverrideNode* hierarchyOverrideNode) {
 
-    ParameterBuilder paramBuilder(definition.scope, definition.name, definition.parameters);
+    ParameterBuilder paramBuilder(*definition.getParentScope(), definition.name,
+                                  definition.parameters);
     paramBuilder.setForceInvalidValues(isUninstantiated);
     if (hierarchyOverrideNode)
         paramBuilder.setOverrides(hierarchyOverrideNode);
@@ -739,7 +741,7 @@ InstanceBodySymbol& InstanceBodySymbol::fromDefinition(Compilation& comp,
     auto result = comp.emplace<InstanceBodySymbol>(comp, definition, overrideNode, isUninstantiated,
                                                    isFromBind);
 
-    auto& declSyntax = definition.syntax;
+    auto& declSyntax = definition.getSyntax()->as<ModuleDeclarationSyntax>();
     result->setSyntax(declSyntax);
 
     // Package imports from the header always come first.

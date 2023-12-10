@@ -10,7 +10,6 @@
 #include "ParameterBuilder.h"
 
 #include "slang/ast/Compilation.h"
-#include "slang/ast/symbols/AttributeSymbol.h"
 #include "slang/ast/symbols/MemberSymbols.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/syntax/AllSyntax.h"
@@ -237,18 +236,18 @@ DefinitionSymbol::DefinitionSymbol(const Scope& scope, LookupLocation lookupLoca
                                    std::optional<TimeScale> directiveTimeScale,
                                    const SyntaxTree* syntaxTree,
                                    const SourceLibrary* sourceLibrary) :
-    syntax(syntax),
-    defaultNetType(defaultNetType), scope(scope), unconnectedDrive(unconnectedDrive),
-    syntaxTree(syntaxTree), sourceLibrary(sourceLibrary) {
+    Symbol(SymbolKind::Definition, syntax.header->name.valueText(), syntax.header->name.location()),
+    defaultNetType(defaultNetType), unconnectedDrive(unconnectedDrive), syntaxTree(syntaxTree),
+    sourceLibrary(sourceLibrary) {
 
     // Extract and save various properties of the definition.
-    name = syntax.header->name.valueText();
-    location = syntax.header->name.location();
-    indexInScope = lookupLocation.getIndex();
+    setParent(scope, lookupLocation.getIndex());
+    setSyntax(syntax);
+    setAttributes(scope, syntax.attributes);
+
     definitionKind = SemanticFacts::getDefinitionKind(syntax.kind);
     defaultLifetime = SemanticFacts::getVariableLifetime(syntax.header->lifetime)
                           .value_or(VariableLifetime::Static);
-    attributes = AttributeSymbol::fromSyntax(syntax.attributes, scope, lookupLocation);
 
     auto header = syntax.header.get();
     if (header->ports && header->ports->kind == SyntaxKind::WildcardPortList) {
@@ -328,14 +327,8 @@ std::string_view DefinitionSymbol::getArticleKindString() const {
     }
 }
 
-void DefinitionSymbol::getHierarchicalPath(std::string& buffer) const {
-    auto& parentSym = scope.asSymbol();
-    if (parentSym.kind != SymbolKind::Root && parentSym.kind != SymbolKind::CompilationUnit) {
-        parentSym.getHierarchicalPath(buffer);
-        buffer.append(".");
-    }
-
-    buffer.append(name);
+void DefinitionSymbol::serializeTo(ASTSerializer&) const {
+    // TODO:
 }
 
 ConfigBlockSymbol& ConfigBlockSymbol::fromSyntax(const Scope& scope,
@@ -423,6 +416,7 @@ ConfigBlockSymbol& ConfigBlockSymbol::fromSyntax(const Scope& scope,
 }
 
 void ConfigBlockSymbol::serializeTo(ASTSerializer&) const {
+    // TODO:
 }
 
 } // namespace slang::ast

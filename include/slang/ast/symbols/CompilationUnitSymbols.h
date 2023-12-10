@@ -17,7 +17,6 @@ class SyntaxTree;
 
 namespace slang::ast {
 
-class AttributeSymbol;
 class Expression;
 class InstanceSymbol;
 class Type;
@@ -90,7 +89,7 @@ public:
 };
 
 /// Represents a module, interface, or program definition.
-class SLANG_EXPORT DefinitionSymbol {
+class SLANG_EXPORT DefinitionSymbol : public Symbol {
 public:
     /// Information about a single parameter declaration.
     struct ParameterDecl {
@@ -150,23 +149,8 @@ public:
         bool hasDefault() const;
     };
 
-    /// The name of the definition.
-    std::string_view name;
-
-    /// The source location where the definition is declared.
-    SourceLocation location;
-
-    /// The syntax node describing the definition.
-    const syntax::ModuleDeclarationSyntax& syntax;
-
     /// The default nettype for implicit nets within this definition.
     const NetType& defaultNetType;
-
-    /// The scope containing the definition.
-    const Scope& scope;
-
-    /// The index of this definition within its parent scope.
-    SymbolIndex indexInScope;
 
     /// The kind of definition (module, interface, or program).
     DefinitionKind definitionKind;
@@ -189,9 +173,6 @@ public:
 
     /// A set of modport names declared by this definition.
     flat_hash_set<std::string_view> modports;
-
-    /// A set of attributes associated with this definition.
-    std::span<const AttributeSymbol* const> attributes;
 
     /// A set of bind directives that apply to all instances of this definition.
     std::vector<const syntax::BindDirectiveSyntax*> bindDirectives;
@@ -227,9 +208,9 @@ public:
     /// Notes that the definition has been instantiated.
     void noteInstantiated() const { instantiated = true; }
 
-    /// Gets the hierarchical path to the definition, appending it
-    /// to the provided string.
-    void getHierarchicalPath(std::string& buffer) const;
+    void serializeTo(ASTSerializer& serializer) const;
+
+    static bool isKind(SymbolKind kind) { return kind == SymbolKind::Definition; }
 
 private:
     mutable bool instantiated = false;
