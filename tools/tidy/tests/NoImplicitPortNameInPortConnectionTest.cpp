@@ -4,7 +4,8 @@
 #include "Test.h"
 #include "TidyFactory.h"
 
-TEST_CASE("NoImplicitPortNameInPortConnection: Only port name specified in module port connection") {
+TEST_CASE(
+    "NoImplicitPortNameInPortConnection: Only port name specified in module port connection") {
     auto tree = SyntaxTree::fromText(R"(
 module test (input clk, input rst);
 endmodule
