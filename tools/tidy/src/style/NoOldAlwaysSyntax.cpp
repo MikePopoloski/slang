@@ -55,11 +55,11 @@ public:
 
     DiagCode diagCode() const override { return diag::NoOldAlwaysSyntax; }
 
-    std::string diagString() const override { return "Use of old always verilog syntax"; }
+    std::string diagString() const override { return "use of old always verilog syntax"; }
 
     DiagnosticSeverity diagSeverity() const override { return DiagnosticSeverity::Warning; }
 
-    std::string name() const override { return "NoOldAlwaysSyntax "; }
+    std::string name() const override { return "NoOldAlwaysSyntax"; }
 
     std::string description() const override { return shortDescription(); }
 

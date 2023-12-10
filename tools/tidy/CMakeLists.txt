@@ -18,7 +18,9 @@ add_library(
   src/style/EnforceModuleInstantiationPrefix.cpp
   src/style/OnlyANSIPortDecl.cpp
   src/synthesis/XilinxDoNotCareValues.cpp
-  src/synthesis/CastSignedIndex.cpp)
+  src/synthesis/CastSignedIndex.cpp
+  src/style/NoDotStarInPortConnection.cpp
+  src/style/NoImplicitPortNameInPortConnection.cpp)
 
 target_include_directories(slang_tidy_obj_lib PUBLIC include ../../include)
 target_link_libraries(slang_tidy_obj_lib PUBLIC slang::slang)

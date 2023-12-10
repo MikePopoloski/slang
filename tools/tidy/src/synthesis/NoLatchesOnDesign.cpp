@@ -44,7 +44,7 @@ public:
 
     DiagCode diagCode() const override { return diag::NoLatchesOnDesign; }
 
-    std::string diagString() const override { return "Latches are not allowed in this design"; }
+    std::string diagString() const override { return "latches are not allowed in this design"; }
 
     DiagnosticSeverity diagSeverity() const override { return DiagnosticSeverity::Error; }
 

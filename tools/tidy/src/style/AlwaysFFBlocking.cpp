@@ -61,7 +61,7 @@ public:
     std::string diagString() const override {
         return "use of a blocking assignment for a non local variables inside always_ff";
     }
-    std::string name() const override { return "AlwaysCombNonBlocking"; }
+    std::string name() const override { return "AlwaysFFBlocking"; }
     std::string description() const override { return shortDescription(); }
     std::string shortDescription() const override {
         return "Enforces that blocking assignments are not being used inside always_ff "
