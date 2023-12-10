@@ -7,7 +7,7 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include "slang/ast/Definition.h"
+#include "slang/ast/symbols/CompilationUnitSymbols.h"
 
 namespace slang::ast {
 

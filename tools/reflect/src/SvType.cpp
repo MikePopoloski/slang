@@ -6,7 +6,6 @@
 #include <fmt/format.h>
 #include <iostream>
 
-#include "slang/ast/Definition.h"
 #include "slang/ast/Scope.h"
 
 using namespace slang::ast;

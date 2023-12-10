@@ -9,10 +9,10 @@
 
 #include "slang/ast/ASTSerializer.h"
 #include "slang/ast/Compilation.h"
-#include "slang/ast/Definition.h"
 #include "slang/ast/EvalContext.h"
 #include "slang/ast/Expression.h"
 #include "slang/ast/expressions/MiscExpressions.h"
+#include "slang/ast/symbols/CompilationUnitSymbols.h"
 #include "slang/ast/symbols/MemberSymbols.h"
 #include "slang/ast/symbols/ParameterSymbols.h"
 #include "slang/ast/symbols/SubroutineSymbols.h"

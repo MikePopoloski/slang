@@ -49,7 +49,6 @@ target_sources(
           Bitstream.cpp
           Compilation.cpp
           Constraints.cpp
-          Definition.cpp
           EvalContext.cpp
           Expression.cpp
           FmtHelpers.cpp

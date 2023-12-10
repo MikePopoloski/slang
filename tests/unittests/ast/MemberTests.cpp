@@ -4,7 +4,6 @@
 #include "Test.h"
 
 #include "slang/ast/ASTSerializer.h"
-#include "slang/ast/Definition.h"
 #include "slang/ast/Statements.h"
 #include "slang/ast/expressions/AssignmentExpressions.h"
 #include "slang/ast/expressions/CallExpression.h"

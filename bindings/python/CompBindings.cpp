@@ -6,7 +6,6 @@
 #include "pyslang.h"
 
 #include "slang/ast/Compilation.h"
-#include "slang/ast/Definition.h"
 #include "slang/ast/ScriptSession.h"
 #include "slang/ast/SystemSubroutine.h"
 #include "slang/ast/symbols/AttributeSymbol.h"

@@ -3,7 +3,6 @@
 
 #include "Test.h"
 
-#include "slang/ast/Definition.h"
 #include "slang/ast/symbols/BlockSymbols.h"
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
 #include "slang/ast/symbols/InstanceSymbols.h"

@@ -22,6 +22,7 @@ enum class RandMode;
 #define SYMBOLKIND(x) \
     x(Unknown) \
     x(Root) \
+    x(Definition) \
     x(CompilationUnit) \
     x(DeferredMember) \
     x(TransparentMember) \

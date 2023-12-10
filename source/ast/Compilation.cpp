@@ -11,7 +11,6 @@
 #include <fmt/core.h>
 #include <mutex>
 
-#include "slang/ast/Definition.h"
 #include "slang/ast/ScriptSession.h"
 #include "slang/ast/SystemSubroutine.h"
 #include "slang/ast/types/TypePrinter.h"
@@ -285,17 +284,15 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamsAndBinds) {
 
     // If there are defparams we need to fully resolve their values up front before
     // we start elaborating any instances.
-    bool anyDefParamsOrBinds = false;
-    for (auto& tree : syntaxTrees) {
-        auto& meta = tree->getMetadata();
-        if (meta.hasDefparams || meta.hasBindDirectives) {
-            anyDefParamsOrBinds = true;
-            break;
+    if (!skipDefParamsAndBinds) {
+        for (auto& tree : syntaxTrees) {
+            auto& meta = tree->getMetadata();
+            if (meta.hasDefparams || meta.hasBindDirectives) {
+                resolveDefParamsAndBinds();
+                break;
+            }
         }
     }
-
-    if (!skipDefParamsAndBinds && anyDefParamsOrBinds)
-        resolveDefParamsAndBinds();
 
     SLANG_ASSERT(!finalizing);
     finalizing = true;
@@ -473,6 +470,7 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamsAndBinds) {
 
     // If we have any cli param overrides we should apply them to
     // each top-level instance.
+    // TODO: generalize these to full hierarchical paths
     if (!cliOverrides.empty()) {
         for (auto [def, config] : topDefs) {
             for (auto& param : def->parameters) {

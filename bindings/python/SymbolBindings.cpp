@@ -7,7 +7,6 @@
 #include "pyslang.h"
 
 #include "slang/ast/Compilation.h"
-#include "slang/ast/Definition.h"
 #include "slang/ast/Scope.h"
 #include "slang/ast/Symbol.h"
 #include "slang/ast/SystemSubroutine.h"
