@@ -122,9 +122,9 @@ void ParameterBuilder::setAssignments(const ParameterValueAssignmentSyntax& synt
     }
 }
 
-const ParameterSymbolBase& ParameterBuilder::createParam(const Definition::ParameterDecl& decl,
-                                                         Scope& newScope,
-                                                         SourceLocation instanceLoc) {
+const ParameterSymbolBase& ParameterBuilder::createParam(
+    const DefinitionSymbol::ParameterDecl& decl, Scope& newScope, SourceLocation instanceLoc) {
+
     auto reportError = [&](auto& param) {
         anyErrors = true;
         if (!suppressErrors && !param.name.empty()) {

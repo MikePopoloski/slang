@@ -21,7 +21,7 @@ struct HierarchyOverrideNode;
 /// generic class definitions.
 class ParameterBuilder {
 public:
-    using Decl = Definition::ParameterDecl;
+    using Decl = DefinitionSymbol::ParameterDecl;
 
     ParameterBuilder(const Scope& scope, std::string_view definitionName,
                      std::span<const Decl> parameterDecls);
@@ -36,8 +36,8 @@ public:
 
     const HierarchyOverrideNode* getOverrides() const { return overrideNode; }
 
-    const ParameterSymbolBase& createParam(const Definition::ParameterDecl& decl, Scope& newScope,
-                                           SourceLocation instanceLoc);
+    const ParameterSymbolBase& createParam(const DefinitionSymbol::ParameterDecl& decl,
+                                           Scope& newScope, SourceLocation instanceLoc);
 
     static void createDecls(const Scope& scope,
                             const syntax::ParameterDeclarationBaseSyntax& syntax, bool isLocal,

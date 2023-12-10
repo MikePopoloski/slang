@@ -42,7 +42,7 @@ const NetType& getDefaultNetType(const Scope& scope, SourceLocation location) {
     return scope.getCompilation().getWireNetType();
 }
 
-std::tuple<const Definition*, std::string_view> getInterfacePortInfo(
+std::tuple<const DefinitionSymbol*, std::string_view> getInterfacePortInfo(
     const Scope& scope, const InterfacePortHeaderSyntax& header) {
 
     auto& comp = scope.getCompilation();
@@ -291,8 +291,9 @@ private:
         return port;
     }
 
-    Symbol* add(const DeclaratorSyntax& decl, const Definition* iface, std::string_view modport,
-                bool isGeneric, std::span<const AttributeInstanceSyntax* const> attrs) {
+    Symbol* add(const DeclaratorSyntax& decl, const DefinitionSymbol* iface,
+                std::string_view modport, bool isGeneric,
+                std::span<const AttributeInstanceSyntax* const> attrs) {
         auto port = comp.emplace<InterfacePortSymbol>(decl.name.valueText(), decl.name.location());
         port->interfaceDef = iface;
         port->modport = modport;
@@ -320,7 +321,7 @@ private:
     ArgumentDirection lastDirection = ArgumentDirection::InOut;
     const DataTypeSyntax* lastType = nullptr;
     const NetType* lastNetType = nullptr;
-    const Definition* lastInterface = nullptr;
+    const DefinitionSymbol* lastInterface = nullptr;
     std::string_view lastModport;
     bool lastGenericIface = false;
 };
@@ -453,7 +454,7 @@ private:
         std::span<const AttributeInstanceSyntax* const> attrs;
         const Symbol* internalSymbol = nullptr;
         const Symbol* insertionPoint = nullptr;
-        const Definition* ifaceDef = nullptr;
+        const DefinitionSymbol* ifaceDef = nullptr;
         std::string_view modport;
         ArgumentDirection direction = ArgumentDirection::In;
         bool used = false;

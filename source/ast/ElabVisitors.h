@@ -420,9 +420,9 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
     const size_t& numErrors;
     uint32_t errorLimit;
     bool hierarchyProblem = false;
-    flat_hash_map<const Definition*, size_t> instanceCount;
+    flat_hash_map<const DefinitionSymbol*, size_t> instanceCount;
     flat_hash_set<const InstanceBodySymbol*> activeInstanceBodies;
-    flat_hash_set<const Definition*> usedIfacePorts;
+    flat_hash_set<const DefinitionSymbol*> usedIfacePorts;
     SmallVector<const GenericClassDefSymbol*> genericClasses;
     SmallVector<const SubroutineSymbol*> dpiImports;
     SmallVector<const MethodPrototypeSymbol*> externIfaceProtos;
@@ -524,7 +524,7 @@ struct DefParamVisitor : public ASTVisitor<DefParamVisitor, false, false> {
     void handle(const T&) {}
 
     SmallVector<const DefParamSymbol*> found;
-    flat_hash_set<const Definition*> activeInstances;
+    flat_hash_set<const DefinitionSymbol*> activeInstances;
     size_t instanceDepth = 0;
     size_t maxInstanceDepth = 0;
     size_t generateLevel = 0;

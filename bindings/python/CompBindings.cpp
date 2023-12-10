@@ -35,29 +35,30 @@ void registerCompilation(py::module_& m) {
     EXPOSE_ENUM(m, PrimitivePortDirection);
     EXPOSE_ENUM(m, DriverKind);
 
-    py::class_<Definition>(m, "Definition")
-        .def_readonly("name", &Definition::name)
-        .def_readonly("location", &Definition::location)
-        .def_readonly("definitionKind", &Definition::definitionKind)
-        .def_readonly("defaultLifetime", &Definition::defaultLifetime)
-        .def_readonly("unconnectedDrive", &Definition::unconnectedDrive)
-        .def_readonly("timeScale", &Definition::timeScale)
-        .def_readonly("attributes", &Definition::attributes)
-        .def_property_readonly("syntax", [](const Definition& self) { return &self.syntax; })
+    py::class_<DefinitionSymbol>(m, "DefinitionSymbol")
+        .def_readonly("name", &DefinitionSymbol::name)
+        .def_readonly("location", &DefinitionSymbol::location)
+        .def_readonly("definitionKind", &DefinitionSymbol::definitionKind)
+        .def_readonly("defaultLifetime", &DefinitionSymbol::defaultLifetime)
+        .def_readonly("unconnectedDrive", &DefinitionSymbol::unconnectedDrive)
+        .def_readonly("timeScale", &DefinitionSymbol::timeScale)
+        .def_readonly("attributes", &DefinitionSymbol::attributes)
+        .def_property_readonly("syntax", [](const DefinitionSymbol& self) { return &self.syntax; })
         .def_property_readonly("defaultNetType",
-                               [](const Definition& self) { return &self.defaultNetType; })
-        .def_property_readonly("scope", [](const Definition& self) { return &self.scope; })
+                               [](const DefinitionSymbol& self) { return &self.defaultNetType; })
+        .def_property_readonly("scope", [](const DefinitionSymbol& self) { return &self.scope; })
         .def_property_readonly("hierarchicalPath",
-                               [](const Definition& self) {
+                               [](const DefinitionSymbol& self) {
                                    std::string str;
                                    self.getHierarchicalPath(str);
                                    return str;
                                })
-        .def_property_readonly("isInstantiated", &Definition::isInstantiated)
-        .def("getKindString", &Definition::getKindString)
-        .def("getArticleKindString", &Definition::getArticleKindString)
-        .def("__repr__",
-             [](const Definition& self) { return fmt::format("Definition(\"{}\")", self.name); });
+        .def_property_readonly("isInstantiated", &DefinitionSymbol::isInstantiated)
+        .def("getKindString", &DefinitionSymbol::getKindString)
+        .def("getArticleKindString", &DefinitionSymbol::getArticleKindString)
+        .def("__repr__", [](const DefinitionSymbol& self) {
+            return fmt::format("DefinitionSymbol(\"{}\")", self.name);
+        });
 
     py::enum_<MinTypMax>(m, "MinTypMax")
         .value("Min", MinTypMax::Min)

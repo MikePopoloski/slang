@@ -189,7 +189,7 @@ public:
     /// Adds a new parameter declaration to the generic class. This is only used for
     /// programmatically constructed generic classes (not sourced from syntax).
     /// Behavior is undefined if this generic class has already been instantiated and used.
-    void addParameterDecl(const Definition::ParameterDecl& decl);
+    void addParameterDecl(const DefinitionSymbol::ParameterDecl& decl);
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -224,7 +224,7 @@ private:
                                       bool forceInvalidParams,
                                       const syntax::ParameterValueAssignmentSyntax* syntax) const;
 
-    SmallVector<Definition::ParameterDecl, 8> paramDecls;
+    SmallVector<DefinitionSymbol::ParameterDecl, 8> paramDecls;
 
     using SpecMap = flat_hash_map<SpecializationKey, const Type*, Hasher>;
     mutable SpecMap specMap;

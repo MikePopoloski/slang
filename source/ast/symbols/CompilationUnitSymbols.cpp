@@ -162,7 +162,7 @@ void PackageSymbol::noteImport(const Symbol& symbol) const {
     }
 }
 
-Definition::ParameterDecl::ParameterDecl(
+DefinitionSymbol::ParameterDecl::ParameterDecl(
     const Scope& scope, const ParameterDeclarationSyntax& syntax, const DeclaratorSyntax& decl,
     bool isLocal, bool isPort, std::span<const syntax::AttributeInstanceSyntax* const> attributes) :
     valueSyntax(&syntax),
@@ -180,7 +180,7 @@ Definition::ParameterDecl::ParameterDecl(
     }
 }
 
-Definition::ParameterDecl::ParameterDecl(
+DefinitionSymbol::ParameterDecl::ParameterDecl(
     const Scope& scope, const TypeParameterDeclarationSyntax& syntax,
     const TypeAssignmentSyntax& decl, bool isLocal, bool isPort,
     std::span<const syntax::AttributeInstanceSyntax* const> attributes) :
@@ -199,24 +199,24 @@ Definition::ParameterDecl::ParameterDecl(
     }
 }
 
-Definition::ParameterDecl::ParameterDecl(std::string_view name, SourceLocation location,
-                                         const Type& givenType, bool isLocal, bool isPort,
-                                         const Expression* givenInitializer) :
+DefinitionSymbol::ParameterDecl::ParameterDecl(std::string_view name, SourceLocation location,
+                                               const Type& givenType, bool isLocal, bool isPort,
+                                               const Expression* givenInitializer) :
     givenType(&givenType),
     givenInitializer(givenInitializer), name(name), location(location), isTypeParam(false),
     isLocalParam(isLocal), isPortParam(isPort), hasSyntax(false) {
     SLANG_ASSERT(givenInitializer || (isPort && !isLocal));
 }
 
-Definition::ParameterDecl::ParameterDecl(std::string_view name, SourceLocation location,
-                                         bool isLocal, bool isPort, const Type* defaultType) :
+DefinitionSymbol::ParameterDecl::ParameterDecl(std::string_view name, SourceLocation location,
+                                               bool isLocal, bool isPort, const Type* defaultType) :
     givenType(defaultType),
     name(name), location(location), isTypeParam(true), isLocalParam(isLocal), isPortParam(isPort),
     hasSyntax(false) {
     SLANG_ASSERT(givenType || (isPort && !isLocal));
 }
 
-bool Definition::ParameterDecl::hasDefault() const {
+bool DefinitionSymbol::ParameterDecl::hasDefault() const {
     if (hasSyntax) {
         if (isTypeParam)
             return typeDecl && typeDecl->assignment != nullptr;
@@ -231,11 +231,12 @@ bool Definition::ParameterDecl::hasDefault() const {
     }
 }
 
-Definition::Definition(const Scope& scope, LookupLocation lookupLocation,
-                       const ModuleDeclarationSyntax& syntax, const NetType& defaultNetType,
-                       UnconnectedDrive unconnectedDrive,
-                       std::optional<TimeScale> directiveTimeScale, const SyntaxTree* syntaxTree,
-                       const SourceLibrary* sourceLibrary) :
+DefinitionSymbol::DefinitionSymbol(const Scope& scope, LookupLocation lookupLocation,
+                                   const ModuleDeclarationSyntax& syntax,
+                                   const NetType& defaultNetType, UnconnectedDrive unconnectedDrive,
+                                   std::optional<TimeScale> directiveTimeScale,
+                                   const SyntaxTree* syntaxTree,
+                                   const SourceLibrary* sourceLibrary) :
     syntax(syntax),
     defaultNetType(defaultNetType), scope(scope), unconnectedDrive(unconnectedDrive),
     syntaxTree(syntaxTree), sourceLibrary(sourceLibrary) {
@@ -301,7 +302,7 @@ Definition::Definition(const Scope& scope, LookupLocation lookupLocation,
                                      precisionRange);
 }
 
-std::string_view Definition::getKindString() const {
+std::string_view DefinitionSymbol::getKindString() const {
     switch (definitionKind) {
         case DefinitionKind::Module:
             return "module"sv;
@@ -314,7 +315,7 @@ std::string_view Definition::getKindString() const {
     }
 }
 
-std::string_view Definition::getArticleKindString() const {
+std::string_view DefinitionSymbol::getArticleKindString() const {
     switch (definitionKind) {
         case DefinitionKind::Module:
             return "a module"sv;
@@ -327,7 +328,7 @@ std::string_view Definition::getArticleKindString() const {
     }
 }
 
-void Definition::getHierarchicalPath(std::string& buffer) const {
+void DefinitionSymbol::getHierarchicalPath(std::string& buffer) const {
     auto& parentSym = scope.asSymbol();
     if (parentSym.kind != SymbolKind::Root && parentSym.kind != SymbolKind::CompilationUnit) {
         parentSym.getHierarchicalPath(buffer);

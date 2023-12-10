@@ -90,7 +90,7 @@ public:
 };
 
 /// Represents a module, interface, or program definition.
-class SLANG_EXPORT Definition {
+class SLANG_EXPORT DefinitionSymbol {
 public:
     /// Information about a single parameter declaration.
     struct ParameterDecl {
@@ -207,11 +207,11 @@ public:
     /// Indicates whether this definition has non-ansi port declarations.
     bool hasNonAnsiPorts;
 
-    /// Constructs a new instance of the Definition class.
-    Definition(const Scope& scope, LookupLocation lookupLocation,
-               const syntax::ModuleDeclarationSyntax& syntax, const NetType& defaultNetType,
-               UnconnectedDrive unconnectedDrive, std::optional<TimeScale> directiveTimeScale,
-               const syntax::SyntaxTree* syntaxTree, const SourceLibrary* sourceLibrary);
+    /// Constructs a new instance of the DefinitionSymbol class.
+    DefinitionSymbol(const Scope& scope, LookupLocation lookupLocation,
+                     const syntax::ModuleDeclarationSyntax& syntax, const NetType& defaultNetType,
+                     UnconnectedDrive unconnectedDrive, std::optional<TimeScale> directiveTimeScale,
+                     const syntax::SyntaxTree* syntaxTree, const SourceLibrary* sourceLibrary);
 
     /// Returns a string description of the definition kind, such as "module",
     /// "interface", or "program".

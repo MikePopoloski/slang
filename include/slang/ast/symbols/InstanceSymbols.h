@@ -19,7 +19,7 @@ class AssertionExpr;
 class AttributeSymbol;
 class CheckerSymbol;
 class CheckerInstanceBodySymbol;
-class Definition;
+class DefinitionSymbol;
 class Expression;
 class InstanceBodySymbol;
 class InterfacePortSymbol;
@@ -62,10 +62,10 @@ public:
     InstanceSymbol(std::string_view name, SourceLocation loc, InstanceBodySymbol& body);
 
     InstanceSymbol(Compilation& compilation, std::string_view name, SourceLocation loc,
-                   const Definition& definition, ParameterBuilder& paramBuilder,
+                   const DefinitionSymbol& definition, ParameterBuilder& paramBuilder,
                    bool isUninstantiated, bool isFromBind);
 
-    const Definition& getDefinition() const;
+    const DefinitionSymbol& getDefinition() const;
     bool isModule() const;
     bool isInterface() const;
     bool isTopLevel() const;
@@ -82,24 +82,26 @@ public:
                            const ASTContext& context, SmallVectorBase<const Symbol*>& results,
                            SmallVectorBase<const Symbol*>& implicitNets, bool isFromBind);
 
-    static void fromFixupSyntax(Compilation& compilation, const Definition& definition,
+    static void fromFixupSyntax(Compilation& compilation, const DefinitionSymbol& definition,
                                 const syntax::DataDeclarationSyntax& syntax,
                                 const ASTContext& context, SmallVectorBase<const Symbol*>& results);
 
     /// Creates a default-instantiated instance of the given definition. All parameters must
     /// have defaults specified.
-    static InstanceSymbol& createDefault(Compilation& compilation, const Definition& definition,
+    static InstanceSymbol& createDefault(Compilation& compilation,
+                                         const DefinitionSymbol& definition,
                                          const HierarchyOverrideNode* hierarchyOverrideNode,
                                          SourceLocation locationOverride = {});
 
     /// Creates a placeholder instance for a virtual interface type declaration.
     static InstanceSymbol& createVirtual(
-        const ASTContext& context, SourceLocation loc, const Definition& definition,
+        const ASTContext& context, SourceLocation loc, const DefinitionSymbol& definition,
         const syntax::ParameterValueAssignmentSyntax* paramAssignments);
 
     /// Creates an intentionally invalid instance by forcing all parameters to null values.
     /// This allows type checking instance members as long as they don't depend on any parameters.
-    static InstanceSymbol& createInvalid(Compilation& compilation, const Definition& definition);
+    static InstanceSymbol& createInvalid(Compilation& compilation,
+                                         const DefinitionSymbol& definition);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Instance; }
 
@@ -136,7 +138,7 @@ public:
     /// instead of a typical instantiation.
     bool isFromBind = false;
 
-    InstanceBodySymbol(Compilation& compilation, const Definition& definition,
+    InstanceBodySymbol(Compilation& compilation, const DefinitionSymbol& definition,
                        const HierarchyOverrideNode* hierarchyOverrideNode, bool isUninstantiated,
                        bool isFromBind);
 
@@ -147,17 +149,17 @@ public:
 
     const Symbol* findPort(std::string_view name) const;
 
-    const Definition& getDefinition() const { return definition; }
+    const DefinitionSymbol& getDefinition() const { return definition; }
 
     bool hasSameType(const InstanceBodySymbol& other) const;
 
     static InstanceBodySymbol& fromDefinition(Compilation& compilation,
-                                              const Definition& definition,
+                                              const DefinitionSymbol& definition,
                                               SourceLocation instanceLoc, bool isUninstantiated,
                                               const HierarchyOverrideNode* hierarchyOverrideNode);
 
     static InstanceBodySymbol& fromDefinition(Compilation& compilation,
-                                              const Definition& definition,
+                                              const DefinitionSymbol& definition,
                                               SourceLocation instanceLoc,
                                               ParameterBuilder& paramBuilder, bool isUninstantiated,
                                               bool isFromBind);
@@ -171,7 +173,7 @@ private:
 
     void setPorts(std::span<const Symbol* const> ports) const { portList = ports; }
 
-    const Definition& definition;
+    const DefinitionSymbol& definition;
     mutable std::span<const Symbol* const> portList;
 };
 

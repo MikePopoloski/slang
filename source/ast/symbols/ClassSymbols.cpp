@@ -908,7 +908,7 @@ void GenericClassDefSymbol::checkForwardDecls() const {
     }
 }
 
-void GenericClassDefSymbol::addParameterDecl(const Definition::ParameterDecl& decl) {
+void GenericClassDefSymbol::addParameterDecl(const DefinitionSymbol::ParameterDecl& decl) {
     paramDecls.push_back(decl);
 }
 

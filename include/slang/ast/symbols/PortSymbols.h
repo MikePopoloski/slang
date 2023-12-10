@@ -15,7 +15,7 @@
 namespace slang::ast {
 
 class AttributeSymbol;
-class Definition;
+class DefinitionSymbol;
 class InstanceSymbol;
 class ModportSymbol;
 
@@ -126,7 +126,7 @@ public:
     using IfaceConn = std::pair<const Symbol*, const ModportSymbol*>;
 
     /// A pointer to the definition for the interface.
-    const Definition* interfaceDef = nullptr;
+    const DefinitionSymbol* interfaceDef = nullptr;
 
     /// If non-empty, the name of the modport that restricts which interface signals are accessible.
     std::string_view modport;

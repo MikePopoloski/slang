@@ -54,7 +54,7 @@ std::pair<std::string_view, SourceLocation> getNameLoc(const HierarchicalInstanc
 
 class InstanceBuilder {
 public:
-    InstanceBuilder(const ASTContext& context, const Definition& definition,
+    InstanceBuilder(const ASTContext& context, const DefinitionSymbol& definition,
                     ParameterBuilder& paramBuilder, const HierarchyOverrideNode* parentOverrideNode,
                     std::span<const AttributeInstanceSyntax* const> attributes, bool isFromBind) :
         compilation(context.getCompilation()),
@@ -91,7 +91,7 @@ private:
 
     Compilation& compilation;
     const ASTContext& context;
-    const Definition& definition;
+    const DefinitionSymbol& definition;
     SmallVector<int32_t> path;
     ParameterBuilder& paramBuilder;
     const HierarchyOverrideNode* parentOverrideNode;
@@ -241,7 +241,7 @@ InstanceSymbol::InstanceSymbol(std::string_view name, SourceLocation loc,
 }
 
 InstanceSymbol::InstanceSymbol(Compilation& compilation, std::string_view name, SourceLocation loc,
-                               const Definition& definition, ParameterBuilder& paramBuilder,
+                               const DefinitionSymbol& definition, ParameterBuilder& paramBuilder,
                                bool isUninstantiated, bool isFromBind) :
     InstanceSymbol(name, loc,
                    InstanceBodySymbol::fromDefinition(compilation, definition, loc, paramBuilder,
@@ -249,7 +249,7 @@ InstanceSymbol::InstanceSymbol(Compilation& compilation, std::string_view name, 
 }
 
 InstanceSymbol& InstanceSymbol::createDefault(Compilation& compilation,
-                                              const Definition& definition,
+                                              const DefinitionSymbol& definition,
                                               const HierarchyOverrideNode* hierarchyOverrideNode,
                                               SourceLocation locationOverride) {
     auto loc = locationOverride ? locationOverride : definition.location;
@@ -260,7 +260,7 @@ InstanceSymbol& InstanceSymbol::createDefault(Compilation& compilation,
 }
 
 InstanceSymbol& InstanceSymbol::createVirtual(
-    const ASTContext& context, SourceLocation loc, const Definition& definition,
+    const ASTContext& context, SourceLocation loc, const DefinitionSymbol& definition,
     const ParameterValueAssignmentSyntax* paramAssignments) {
 
     ParameterBuilder paramBuilder(*context.scope, definition.name, definition.parameters);
@@ -282,7 +282,7 @@ InstanceSymbol& InstanceSymbol::createVirtual(
 }
 
 InstanceSymbol& InstanceSymbol::createInvalid(Compilation& compilation,
-                                              const Definition& definition) {
+                                              const DefinitionSymbol& definition) {
     // Give this instance an empty name so that it can't be referenced by name.
     return *compilation.emplace<InstanceSymbol>(
         "", SourceLocation::NoLocation,
@@ -375,9 +375,9 @@ void InstanceSymbol::fromSyntax(Compilation& comp, const HierarchyInstantiationS
         }
     }
 
-    const Definition* owningDefinition = nullptr;
+    const DefinitionSymbol* owningDefinition = nullptr;
     const HierarchyOverrideNode* parentOverrideNode = nullptr;
-    const Definition* explicitDef = nullptr;
+    const DefinitionSymbol* explicitDef = nullptr;
 
     // Does a lookup for the definition that was explicitly provided in
     // the instantiation syntax node.
@@ -417,7 +417,7 @@ void InstanceSymbol::fromSyntax(Compilation& comp, const HierarchyInstantiationS
     // Creates instance symbols -- if specificInstance is provided then only that
     // instance will be created, otherwise all instances in the original syntax
     // node will be created in one go.
-    auto createInstances = [&](const Definition& definition,
+    auto createInstances = [&](const DefinitionSymbol& definition,
                                const HierarchicalInstanceSyntax* specificInstance) {
         definition.noteInstantiated();
 
@@ -524,7 +524,7 @@ void InstanceSymbol::fromSyntax(Compilation& comp, const HierarchyInstantiationS
         createInstances(*explicitDef, nullptr);
 }
 
-void InstanceSymbol::fromFixupSyntax(Compilation& comp, const Definition& definition,
+void InstanceSymbol::fromFixupSyntax(Compilation& comp, const DefinitionSymbol& definition,
                                      const DataDeclarationSyntax& syntax, const ASTContext& context,
                                      SmallVectorBase<const Symbol*>& results) {
     auto missing = [&](TokenKind tk, SourceLocation loc) {
@@ -559,7 +559,7 @@ void InstanceSymbol::fromFixupSyntax(Compilation& comp, const Definition& defini
     SLANG_ASSERT(implicitNets.empty());
 }
 
-const Definition& InstanceSymbol::getDefinition() const {
+const DefinitionSymbol& InstanceSymbol::getDefinition() const {
     return body.getDefinition();
 }
 
@@ -708,7 +708,7 @@ void InstanceSymbol::serializeTo(ASTSerializer& serializer) const {
     serializer.endArray();
 }
 
-InstanceBodySymbol::InstanceBodySymbol(Compilation& compilation, const Definition& definition,
+InstanceBodySymbol::InstanceBodySymbol(Compilation& compilation, const DefinitionSymbol& definition,
                                        const HierarchyOverrideNode* hierarchyOverrideNode,
                                        bool isUninstantiated, bool isFromBind) :
     Symbol(SymbolKind::InstanceBody, definition.name, definition.location),
@@ -718,7 +718,7 @@ InstanceBodySymbol::InstanceBodySymbol(Compilation& compilation, const Definitio
 }
 
 InstanceBodySymbol& InstanceBodySymbol::fromDefinition(
-    Compilation& compilation, const Definition& definition, SourceLocation instanceLoc,
+    Compilation& compilation, const DefinitionSymbol& definition, SourceLocation instanceLoc,
     bool isUninstantiated, const HierarchyOverrideNode* hierarchyOverrideNode) {
 
     ParameterBuilder paramBuilder(definition.scope, definition.name, definition.parameters);
@@ -731,7 +731,7 @@ InstanceBodySymbol& InstanceBodySymbol::fromDefinition(
 }
 
 InstanceBodySymbol& InstanceBodySymbol::fromDefinition(Compilation& comp,
-                                                       const Definition& definition,
+                                                       const DefinitionSymbol& definition,
                                                        SourceLocation instanceLoc,
                                                        ParameterBuilder& paramBuilder,
                                                        bool isUninstantiated, bool isFromBind) {

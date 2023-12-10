@@ -233,7 +233,7 @@ std::optional<bool> Symbol::isDeclaredBefore(LookupLocation target) const {
     return std::nullopt;
 }
 
-const Definition* Symbol::getDeclaringDefinition() const {
+const DefinitionSymbol* Symbol::getDeclaringDefinition() const {
     auto curr = this;
     while (curr->kind != SymbolKind::InstanceBody) {
         auto scope = curr->getParentScope();

@@ -30,7 +30,7 @@ class AttributeSymbol;
 class ASTContext;
 class CompilationUnitSymbol;
 class ConfigBlockSymbol;
-class Definition;
+class DefinitionSymbol;
 class Expression;
 class GenericClassDefSymbol;
 class InterfacePortSymbol;
@@ -314,14 +314,14 @@ public:
     /// Gets the definition with the given name, or nullptr if there is no such definition.
     /// This takes into account the given scope so that nested definitions are found
     /// before more global ones.
-    const Definition* getDefinition(std::string_view name, const Scope& scope) const;
+    const DefinitionSymbol* getDefinition(std::string_view name, const Scope& scope) const;
 
     /// Gets the definition for the given syntax node, or nullptr if it does not exist.
-    const Definition* getDefinition(const syntax::ModuleDeclarationSyntax& syntax) const;
+    const DefinitionSymbol* getDefinition(const syntax::ModuleDeclarationSyntax& syntax) const;
 
     /// Gets the definition indicated by the given config rule, or nullptr if it does not exist.
-    const Definition* getDefinition(std::string_view name, const Scope& scope,
-                                    const ConfigRule& configRule) const;
+    const DefinitionSymbol* getDefinition(std::string_view name, const Scope& scope,
+                                          const ConfigRule& configRule) const;
 
     /// Gets the package with the give name, or nullptr if there is no such package.
     const PackageSymbol* getPackage(std::string_view name) const;
@@ -677,14 +677,15 @@ private:
     void checkElemTimeScale(std::optional<TimeScale> timeScale, SourceRange sourceRange);
     void resolveDefParamsAndBinds();
     void resolveBindTargets(const syntax::BindDirectiveSyntax& syntax, const Scope& scope,
-                            SmallVector<const Symbol*>& instTargets, const Definition** defTarget);
+                            SmallVector<const Symbol*>& instTargets,
+                            const DefinitionSymbol** defTarget);
     void checkBindTargetParams(const syntax::BindDirectiveSyntax& syntax, const Scope& scope,
                                std::span<const Symbol* const> instTargets,
-                               const Definition* defTarget);
-    const Definition* resolveConfigRules(std::string_view name, const Scope& scope,
-                                         const ConfigBlockSymbol* config,
-                                         const ConfigRule* configRule,
-                                         const std::vector<Definition*>& defList) const;
+                               const DefinitionSymbol* defTarget);
+    const DefinitionSymbol* resolveConfigRules(std::string_view name, const Scope& scope,
+                                               const ConfigBlockSymbol* config,
+                                               const ConfigRule* configRule,
+                                               const std::vector<DefinitionSymbol*>& defList) const;
 
     // Stored options object.
     CompilationOptions options;
@@ -732,7 +733,7 @@ private:
     // and the second element is a boolean that indicates whether there exists at least
     // one nested module with the given name (requiring a more involved lookup).
     flat_hash_map<std::tuple<std::string_view, const Scope*>,
-                  std::pair<std::vector<Definition*>, bool>>
+                  std::pair<std::vector<DefinitionSymbol*>, bool>>
         definitionMap;
 
     // A cache of vector types, keyed on various properties such as bit width.
@@ -769,7 +770,7 @@ private:
     flat_hash_map<const syntax::SyntaxNode*, SyntaxMetadata> syntaxMetadata;
 
     // A list of all created definitions, as storage for their memory.
-    std::vector<std::unique_ptr<Definition>> definitionMemory;
+    std::vector<std::unique_ptr<DefinitionSymbol>> definitionMemory;
 
     // A map of config blocks to use for a given scope.
     flat_hash_map<const Scope*, const ConfigBlockSymbol*> configForScope;
@@ -828,7 +829,7 @@ private:
 
     // A list of definitions that are unreferenced in any instantiations and
     // are also not automatically instantiated as top-level.
-    std::vector<const Definition*> unreferencedDefs;
+    std::vector<const DefinitionSymbol*> unreferencedDefs;
 
     // The name map for user-defined primitive definitions.
     flat_hash_map<std::string_view, const PrimitiveSymbol*> udpMap;
@@ -840,7 +841,7 @@ private:
 
     // A map from syntax node to the definition it represents. Used much less frequently
     // than other ways of looking up definitions which is why it's lower down here.
-    flat_hash_map<const syntax::ModuleDeclarationSyntax*, Definition*> definitionFromSyntax;
+    flat_hash_map<const syntax::ModuleDeclarationSyntax*, DefinitionSymbol*> definitionFromSyntax;
 
     // A set of all instantiated names in the design; used for determining whether a given
     // module has ever been instantiated to know whether it should be considered top-level.
@@ -880,7 +881,7 @@ private:
 
     // A set of instances that have global definition-based bind directives applied.
     // This is pretty rare and only used for checking of type params.
-    flat_hash_map<const Definition*, std::vector<const Symbol*>> instancesWithDefBinds;
+    flat_hash_map<const DefinitionSymbol*, std::vector<const Symbol*>> instancesWithDefBinds;
 
     // The name map for extern module declarations.
     // The key is a combination of definition name + the scope in which it was declared.

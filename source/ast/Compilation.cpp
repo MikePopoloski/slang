@@ -312,7 +312,7 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamsAndBinds) {
     // Find top level modules (and programs) that form the root of the design.
     // Iterate the definitions map before instantiating any top level modules,
     // since that can cause changes to the definition map itself.
-    SmallVector<std::pair<const Definition*, const ConfigBlockSymbol*>> topDefs;
+    SmallVector<std::pair<const DefinitionSymbol*, const ConfigBlockSymbol*>> topDefs;
     SmallSet<const ConfigBlockSymbol*, 2> selectedConfigs;
     if (options.topModules.empty()) {
         for (auto& [key, defList] : definitionMap) {
@@ -430,7 +430,7 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamsAndBinds) {
                         if (auto defIt = definitionMap.find(std::tuple{cell.name, rootScope});
                             defIt != definitionMap.end()) {
 
-                            const Definition* foundDef = nullptr;
+                            const DefinitionSymbol* foundDef = nullptr;
                             for (auto def : defIt->second.first) {
                                 if ((cell.lib.empty() &&
                                      def->sourceLibrary == foundConf->sourceLibrary) ||
@@ -547,8 +547,8 @@ const CompilationUnitSymbol* Compilation::getCompilationUnit(
     return nullptr;
 }
 
-const Definition* Compilation::getDefinition(std::string_view lookupName,
-                                             const Scope& scope) const {
+const DefinitionSymbol* Compilation::getDefinition(std::string_view lookupName,
+                                                   const Scope& scope) const {
     // Try to find a config block for this scope to help choose the right definition.
     const ConfigBlockSymbol* config = nullptr;
     if (!configForScope.empty()) {
@@ -606,7 +606,7 @@ const Definition* Compilation::getDefinition(std::string_view lookupName,
     return defList.empty() ? nullptr : defList.front();
 }
 
-const Definition* Compilation::getDefinition(const ModuleDeclarationSyntax& syntax) const {
+const DefinitionSymbol* Compilation::getDefinition(const ModuleDeclarationSyntax& syntax) const {
     if (auto it = definitionFromSyntax.find(&syntax); it != definitionFromSyntax.end()) {
         // If this definition is no longer referenced by the definitionMap
         // it probably got booted by an (illegal) duplicate definition.
@@ -624,8 +624,8 @@ const Definition* Compilation::getDefinition(const ModuleDeclarationSyntax& synt
     return nullptr;
 }
 
-const Definition* Compilation::getDefinition(std::string_view lookupName, const Scope& scope,
-                                             const ConfigRule& configRule) const {
+const DefinitionSymbol* Compilation::getDefinition(std::string_view lookupName, const Scope& scope,
+                                                   const ConfigRule& configRule) const {
     // TODO: handle error cases
     auto it = definitionMap.find({lookupName, root.get()});
     if (it == definitionMap.end())
@@ -700,7 +700,7 @@ void Compilation::createDefinition(const Scope& scope, LookupLocation location,
         metadata.defaultNetType = &scope.getDefaultNetType();
 
     auto def = definitionMemory
-                   .emplace_back(std::make_unique<Definition>(
+                   .emplace_back(std::make_unique<DefinitionSymbol>(
                        scope, location, syntax, *metadata.defaultNetType, metadata.unconnectedDrive,
                        metadata.timeScale, metadata.tree, metadata.library))
                    .get();
@@ -728,13 +728,14 @@ void Compilation::createDefinition(const Scope& scope, LookupLocation location,
         // Otherwise, if they're in the same source library we take the
         // latter one (with a warning) and if not then we store both
         // and resolve them later via config or library ordering.
-        auto vecIt = std::ranges::lower_bound(defList, def, [](Definition* a, Definition* b) {
-            if (!a->sourceLibrary)
-                return false;
-            if (!b->sourceLibrary)
-                return true;
-            return a->sourceLibrary->priority < b->sourceLibrary->priority;
-        });
+        auto vecIt =
+            std::ranges::lower_bound(defList, def, [](DefinitionSymbol* a, DefinitionSymbol* b) {
+                if (!a->sourceLibrary)
+                    return false;
+                if (!b->sourceLibrary)
+                    return true;
+                return a->sourceLibrary->priority < b->sourceLibrary->priority;
+            });
 
         if (vecIt != defList.end() && (*vecIt)->sourceLibrary == def->sourceLibrary) {
             // TODO: take the second one instead of the first?
@@ -1290,7 +1291,7 @@ const Diagnostics& Compilation::getSemanticDiagnostics() {
         // issued so we need to check again.
         for (auto [directive, scope] : bindDirectives) {
             SmallVector<const Symbol*> instTargets;
-            const Definition* defTarget = nullptr;
+            const DefinitionSymbol* defTarget = nullptr;
             resolveBindTargets(*directive, *scope, instTargets, &defTarget);
             checkBindTargetParams(*directive, *scope, instTargets, defTarget);
         }
@@ -1911,7 +1912,7 @@ void Compilation::checkElemTimeScale(std::optional<TimeScale> timeScale, SourceR
 
 void Compilation::resolveBindTargets(const BindDirectiveSyntax& syntax, const Scope& scope,
                                      SmallVector<const Symbol*>& instTargets,
-                                     const Definition** defTarget) {
+                                     const DefinitionSymbol** defTarget) {
     auto checkValidTarget = [&](const Symbol& symbol, const SyntaxNode& nameSyntax) {
         if (symbol.kind == SymbolKind::Instance) {
             auto defKind = symbol.as<InstanceSymbol>().getDefinition().definitionKind;
@@ -1992,7 +1993,7 @@ void Compilation::resolveBindTargets(const BindDirectiveSyntax& syntax, const Sc
 void Compilation::checkBindTargetParams(const syntax::BindDirectiveSyntax& syntax,
                                         const Scope& scope,
                                         std::span<const Symbol* const> instTargets,
-                                        const Definition* defTarget) {
+                                        const DefinitionSymbol* defTarget) {
     // This method checks the following rule from the LRM:
     //    User-defined type names that are used to override type parameters must be
     //    visible and matching in both the scope containing the bind statement and in
@@ -2134,7 +2135,7 @@ void Compilation::resolveDefParamsAndBinds() {
         binds.clear();
         for (auto [syntax, scope] : c.bindDirectives) {
             SmallVector<const Symbol*> instTargets;
-            const Definition* defTarget = nullptr;
+            const DefinitionSymbol* defTarget = nullptr;
             c.resolveBindTargets(*syntax, *scope, instTargets, &defTarget);
 
             for (auto target : instTargets)
@@ -2258,11 +2259,11 @@ void Compilation::resolveDefParamsAndBinds() {
     copyStateInto(*this, true);
 }
 
-const Definition* Compilation::resolveConfigRules(std::string_view lookupName, const Scope& scope,
-                                                  const ConfigBlockSymbol* config,
-                                                  const ConfigRule* rule,
-                                                  const std::vector<Definition*>& defList) const {
-    auto findDefByLib = [](auto& defList, const SourceLibrary* target) -> Definition* {
+const DefinitionSymbol* Compilation::resolveConfigRules(
+    std::string_view lookupName, const Scope& scope, const ConfigBlockSymbol* config,
+    const ConfigRule* rule, const std::vector<DefinitionSymbol*>& defList) const {
+
+    auto findDefByLib = [](auto& defList, const SourceLibrary* target) -> DefinitionSymbol* {
         for (auto def : defList) {
             if (def->sourceLibrary == target)
                 return def;
