@@ -210,6 +210,8 @@ void registerUtil(py::module_& m) {
         .def_readonly("code", &Diagnostic::code)
         .def_readonly("location", &Diagnostic::location)
         .def_readonly("symbol", &Diagnostic::symbol)
+        .def_readonly("args", &Diagnostic::args)
+        .def_readonly("ranges", &Diagnostic::ranges)
         .def("isError", &Diagnostic::isError)
         .def(py::self == py::self)
         .def(py::self != py::self);
