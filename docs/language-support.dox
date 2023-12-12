@@ -492,13 +492,13 @@ IEEE 1800-2017 SystemVerilog Language Reference Manual (LRM).
 
 {{w:15%}} LRM | Feature | {{w:15%}} Supported
 --- | ------- | ---------
-{{m-danger}}  33.2 | Overview | no
-{{m-danger}}  33.3 | Libraries | no
-{{m-danger}}  33.4 | Configurations | no
-{{m-danger}}  33.5 | Using libraries and configs | no
-{{m-danger}}  33.6 | Configuration examples | no
-{{m-danger}}  33.7 | Displaying library binding information | no
-{{m-danger}}  33.8 | Library mapping examples | no
+{{m-warning}} 33.2 | Overview | partial
+{{m-success}} 33.3 | Libraries | v4.0
+{{m-warning}} 33.4 | Configurations | partial
+{{m-success}} 33.5 | Using libraries and configs | v5.0
+{{m-warning}} 33.6 | Configuration examples | partial
+{{m-warning}} 33.7 | Displaying library binding information | partial
+{{m-success}} 33.8 | Library mapping examples | v4.0
 
 ## 34. Protected envelopes
 
