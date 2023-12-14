@@ -488,6 +488,7 @@ bool Driver::processOptions() {
         diagEngine.setSeverity(diag::RangeWidthOOB, DiagnosticSeverity::Error);
         diagEngine.setSeverity(diag::ImplicitNamedPortTypeMismatch, DiagnosticSeverity::Error);
         diagEngine.setSeverity(diag::SplitDistWeightOp, DiagnosticSeverity::Error);
+        diagEngine.setSeverity(diag::DPIPureTask, DiagnosticSeverity::Error);
     }
 
     Diagnostics optionDiags = diagEngine.setWarningOptions(options.warningOptions);

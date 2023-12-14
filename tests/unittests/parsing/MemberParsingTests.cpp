@@ -1153,3 +1153,14 @@ endmodule
     CHECK(diagnostics[1].code == diag::ExpectedMember);
     CHECK(diagnostics[2].code == diag::ExpectedMember);
 }
+
+TEST_CASE("DPI pure task parsing compatibility") {
+    auto& text = R"(
+import "DPI-C" pure task bad_pure_dpi_t (logic [3:0] a);
+)";
+
+    parseCompilationUnit(text);
+
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics[0].code == diag::DPIPureTask);
+}

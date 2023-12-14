@@ -474,7 +474,6 @@ MemberSyntax& Parser::parseModportSubroutinePortList(AttrList attributes) {
         if (peek(TokenKind::FunctionKeyword) || peek(TokenKind::TaskKeyword)) {
             auto& proto = parseFunctionPrototype(SyntaxKind::Unknown,
                                                  FunctionOptions::AllowEmptyArgNames |
-                                                     FunctionOptions::AllowTasks |
                                                      FunctionOptions::IsPrototype);
             buffer.push_back(&factory.modportSubroutinePort(proto));
         }
@@ -643,7 +642,7 @@ FunctionPrototypeSyntax& Parser::parseFunctionPrototype(SyntaxKind parentKind,
                                                         bitmask<FunctionOptions> options,
                                                         bool* isConstructor) {
     Token keyword;
-    if (options.has(FunctionOptions::AllowTasks) && peek(TokenKind::TaskKeyword))
+    if (peek(TokenKind::TaskKeyword))
         keyword = consume();
     else
         keyword = expect(TokenKind::FunctionKeyword);
@@ -711,9 +710,7 @@ FunctionDeclarationSyntax& Parser::parseFunctionDeclaration(AttrList attributes,
                                                             SyntaxKind parentKind) {
     Token end;
     bool isConstructor;
-    auto& prototype = parseFunctionPrototype(parentKind,
-                                             FunctionOptions::AllowImplicitReturn |
-                                                 FunctionOptions::AllowTasks,
+    auto& prototype = parseFunctionPrototype(parentKind, FunctionOptions::AllowImplicitReturn,
                                              &isConstructor);
 
     auto semi = expect(TokenKind::Semicolon);
@@ -1215,8 +1212,7 @@ MemberSyntax* Parser::parseClassMember(bool isIfaceClass) {
         // Pure or extern functions don't have bodies.
         if (isPureOrExtern) {
             auto& proto = parseFunctionPrototype(SyntaxKind::ClassDeclaration,
-                                                 FunctionOptions::AllowTasks |
-                                                     FunctionOptions::IsPrototype);
+                                                 FunctionOptions::IsPrototype);
             checkProto(proto, false);
 
             return &factory.classMethodPrototype(attributes, qualifiers, proto,
@@ -2094,12 +2090,12 @@ DPIImportSyntax& Parser::parseDPIImport(AttrList attributes) {
         equals = expect(TokenKind::Equals);
     }
 
-    bitmask<FunctionOptions> options = FunctionOptions::AllowEmptyArgNames |
-                                       FunctionOptions::IsPrototype;
-    if (property.kind != TokenKind::PureKeyword)
-        options |= FunctionOptions::AllowTasks;
+    auto& method = parseFunctionPrototype(SyntaxKind::Unknown, FunctionOptions::AllowEmptyArgNames |
+                                                                   FunctionOptions::IsPrototype);
 
-    auto& method = parseFunctionPrototype(SyntaxKind::Unknown, options);
+    if (property.kind == TokenKind::PureKeyword && method.keyword.kind == TokenKind::TaskKeyword)
+        addDiag(diag::DPIPureTask, method.keyword.range()) << property.range();
+
     Token semi = expect(TokenKind::Semicolon);
     return factory.dPIImport(attributes, keyword, specString, property, c_identifier, equals,
                              method, semi);
@@ -3345,8 +3341,7 @@ MemberSyntax* Parser::parseExternMember(SyntaxKind parentKind, AttrList attribut
 
             auto keyword = consume();
             auto forkJoin = consumeIf(TokenKind::ForkJoinKeyword);
-            auto& proto = parseFunctionPrototype(parentKind, FunctionOptions::AllowTasks |
-                                                                 FunctionOptions::IsPrototype);
+            auto& proto = parseFunctionPrototype(parentKind, FunctionOptions::IsPrototype);
             auto semi = expect(TokenKind::Semicolon);
             return &factory.externInterfaceMethod(attributes, keyword, forkJoin, proto, semi);
         }

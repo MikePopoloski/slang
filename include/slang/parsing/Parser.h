@@ -103,20 +103,17 @@ enum class FunctionOptions {
     /// No special options specified.
     None = 0,
 
-    /// Allow tasks (as opposed to just functions).
-    AllowTasks = 1,
-
     /// Allow formal argument names to be ommitted.
-    AllowEmptyArgNames = 2,
+    AllowEmptyArgNames = 1 << 0,
 
     /// Allow the return type to be ommitted.
-    AllowImplicitReturn = 4,
+    AllowImplicitReturn = 1 << 1,
 
     /// The function header is for a prototype, so parsing rules
     /// are slightly different.
-    IsPrototype = 8
+    IsPrototype = 1 << 2
 };
-SLANG_BITMASK(FunctionOptions, AllowImplicitReturn)
+SLANG_BITMASK(FunctionOptions, IsPrototype)
 
 } // namespace detail
 
