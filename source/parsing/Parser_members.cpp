@@ -2090,8 +2090,10 @@ DPIImportSyntax& Parser::parseDPIImport(AttrList attributes) {
         equals = expect(TokenKind::Equals);
     }
 
-    auto& method = parseFunctionPrototype(SyntaxKind::Unknown, FunctionOptions::AllowEmptyArgNames |
-                                                                   FunctionOptions::IsPrototype);
+    auto& method = parseFunctionPrototype(SyntaxKind::Unknown,
+                                          FunctionOptions::AllowEmptyArgNames |
+                                              FunctionOptions::AllowImplicitReturn |
+                                              FunctionOptions::IsPrototype);
 
     if (property.kind == TokenKind::PureKeyword && method.keyword.kind == TokenKind::TaskKeyword)
         addDiag(diag::DPIPureTask, method.keyword.range()) << property.range();

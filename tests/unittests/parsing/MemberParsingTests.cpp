@@ -1164,3 +1164,12 @@ import "DPI-C" pure task bad_pure_dpi_t (logic [3:0] a);
     REQUIRE(diagnostics.size() == 1);
     CHECK(diagnostics[0].code == diag::DPIPureTask);
 }
+
+TEST_CASE("DPI implicit return parsing") {
+    auto& text = R"(
+import "DPI-C" function dpi_f (logic [3:0] a);
+)";
+
+    parseCompilationUnit(text);
+    CHECK_DIAGNOSTICS_EMPTY;
+}
