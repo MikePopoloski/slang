@@ -1078,3 +1078,10 @@ module m;
     assign b = a;
 endmodule
 ```
+
+-Wdpi-pure-task
+A DPI import task is marked 'pure', which is disallowed by SystemVerilog but can be
+downgraded to a warning to support code compatibility with other tools.
+```
+import "DPI-C" pure task func(logic [3:0] a);
+```
