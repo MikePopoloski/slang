@@ -34,6 +34,7 @@ namespace {
 
 using namespace slang;
 using namespace slang::ast;
+using namespace slang::syntax;
 
 bool checkEnumInitializer(const ASTContext& context, const Type& lt, const Expression& rhs) {
     // [6.19] says that the initializer for an enum value must be an integer expression that
@@ -155,8 +156,10 @@ void checkImplicitConversions(const ASTContext& context, const Type& sourceType,
         if (lt.isSigned() != rt.isSigned()) {
             // Comparisons get their own warning elsewhere.
             bool isComparison = false;
+            const BinaryExpression* binExpr = nullptr;
             if (parentExpr && parentExpr->kind == ExpressionKind::BinaryOp) {
-                switch (parentExpr->as<BinaryExpression>().op) {
+                binExpr = &parentExpr->as<BinaryExpression>();
+                switch (binExpr->op) {
                     case BinaryOperator::Equality:
                     case BinaryOperator::Inequality:
                     case BinaryOperator::CaseEquality:
@@ -175,8 +178,12 @@ void checkImplicitConversions(const ASTContext& context, const Type& sourceType,
             }
 
             if (!isComparison) {
-                context.addDiag(diag::SignConversion, loc)
-                    << sourceType << targetType << op.sourceRange;
+                auto& diag = context.addDiag(diag::SignConversion, loc);
+                diag << sourceType << targetType << op.sourceRange;
+                if (binExpr && binExpr->syntax &&
+                    BinaryExpressionSyntax::isKind(binExpr->syntax->kind)) {
+                    diag << binExpr->syntax->as<BinaryExpressionSyntax>().operatorToken.range();
+                }
             }
         }
 
