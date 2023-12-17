@@ -653,3 +653,25 @@ source:4:16: warning: implicit conversion from 'logic[31:0]' to 'logic[4:0]' cha
                ^~~~~~~~~~~~
 )");
 }
+
+TEST_CASE("Constant conversion to/from reals") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int i = 3.14;
+    int j = shortreal'(3.14);
+    real k = 3;
+    shortreal l = 16777217;
+    shortreal n = 3.14;
+    shortreal o = 16777217.123;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::ConstantConversion);
+    CHECK(diags[1].code == diag::ConstantConversion);
+    CHECK(diags[2].code == diag::ConstantConversion);
+}

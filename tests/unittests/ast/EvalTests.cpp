@@ -1757,8 +1757,10 @@ TEST_CASE("Unpacked array concat") {
     CHECK(session.eval("SA = {SAD}").bad());
 
     auto diags = session.getDiagnostics();
-    REQUIRE(diags.size() == 1);
-    CHECK(diags[0].code == diag::UnpackedConcatSize);
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::ConstantConversion);
+    CHECK(diags[1].code == diag::ConstantConversion);
+    CHECK(diags[2].code == diag::UnpackedConcatSize);
 }
 
 TEST_CASE("$bits unpacked types") {
@@ -2496,9 +2498,10 @@ endfunction
     CHECK(session.eval("f3();").integer() == 139);
 
     auto diags = session.getDiagnostics();
-    REQUIRE(diags.size() == 2);
+    REQUIRE(diags.size() == 3);
     CHECK(diags[0].code == diag::ConstEvalNoCaseItemsMatched);
     CHECK(diags[1].code == diag::ConstEvalCaseItemsNotUnique);
+    CHECK(diags[2].code == diag::ConstantConversion);
 }
 
 TEST_CASE("case statement eval regression") {

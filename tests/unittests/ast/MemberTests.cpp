@@ -1047,7 +1047,12 @@ endmodule
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
-    NO_COMPILATION_ERRORS;
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::ConstantConversion);
+    CHECK(diags[1].code == diag::ConstantConversion);
+    CHECK(diags[2].code == diag::ConstantConversion);
 
     auto typeof = [&](auto name) {
         return compilation.getRoot().lookupName<ParameterSymbol>("m."s + name).getType().toString();
@@ -1182,9 +1187,10 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 2);
-    CHECK(diags[0].code == diag::SpecparamInConstant);
-    CHECK(diags[1].code == diag::SpecifyBlockParam);
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::ConstantConversion);
+    CHECK(diags[1].code == diag::SpecparamInConstant);
+    CHECK(diags[2].code == diag::SpecifyBlockParam);
 }
 
 TEST_CASE("Net initializer in package") {

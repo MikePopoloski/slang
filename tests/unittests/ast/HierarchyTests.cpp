@@ -906,7 +906,7 @@ endmodule
 TEST_CASE("Options to override top-level params") {
     auto tree = SyntaxTree::fromText(R"(
 module m #(parameter int foo, string bar, real baz);
-    localparam int j = foo + (bar == "asdf" ? baz : 0);
+    localparam int j = foo + int'(bar == "asdf" ? baz : 0);
 endmodule
 )");
 

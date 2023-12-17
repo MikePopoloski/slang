@@ -221,6 +221,13 @@ void checkImplicitConversions(const ASTContext& context, const Type& sourceType,
             context.addDiag(code, loc) << actualWidth << targetWidth << op.sourceRange;
         }
     }
+    else if (lt.isNumeric() && rt.isNumeric()) {
+        // Don't warn for constexprs.
+        if (context.tryEval(op))
+            return;
+
+        // TODO: check other conversions here
+    }
 }
 
 } // namespace
@@ -904,20 +911,32 @@ ConstantValue ConversionExpression::convert(EvalContext& context, const Type& fr
                         << from << to << oldInt << newInt;
                 }
             }
+            else if (value.isReal() || value.isShortReal()) {
+                const bool differs = value.isReal()
+                                         ? value.real() != result.integer().toDouble()
+                                         : value.shortReal() != result.integer().toFloat();
+                if (differs) {
+                    context.addDiag(diag::ConstantConversion, sourceRange)
+                        << from << to << value << result;
+                }
+            }
         }
 
         return result;
     }
 
     if (to.isFloating()) {
-        switch (to.getBitWidth()) {
-            case 32:
-                return value.convertToShortReal();
-            case 64:
-                return value.convertToReal();
-            default:
-                SLANG_UNREACHABLE;
+        auto result = to.getBitWidth() == 32 ? value.convertToShortReal() : value.convertToReal();
+        if (conversionKind == ConversionKind::Implicit && value.isInteger()) {
+            const bool differs = result.isReal()
+                                     ? (int64_t)result.real() != value.integer().as<int64_t>()
+                                     : (int32_t)result.shortReal() != value.integer().as<int32_t>();
+            if (differs) {
+                context.addDiag(diag::ConstantConversion, sourceRange)
+                    << from << to << value << result;
+            }
         }
+        return result;
     }
 
     if (to.isString())
