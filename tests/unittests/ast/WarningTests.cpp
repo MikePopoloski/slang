@@ -675,3 +675,33 @@ endmodule
     CHECK(diags[1].code == diag::ConstantConversion);
     CHECK(diags[2].code == diag::ConstantConversion);
 }
+
+TEST_CASE("Assigning member to union does not warn") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    typedef struct packed {
+        logic a, b;
+    } s_t;
+    s_t s;
+
+    union packed {
+        s_t s;
+        logic [1:0] l;
+    } u;
+
+    struct packed { logic d, e; } other;
+
+    initial begin
+        u = s;
+        u = other;
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::ImplicitConvert);
+}

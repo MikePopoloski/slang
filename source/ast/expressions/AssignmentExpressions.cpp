@@ -103,6 +103,20 @@ bool isSameStructUnion(const Type& left, const Type& right) {
     return rit == rr.end();
 }
 
+bool isUnionMemberType(const Type& left, const Type& right) {
+    const Type& lt = left.getCanonicalType();
+    const Type& rt = right.getCanonicalType();
+    if (!lt.isPackedUnion())
+        return false;
+
+    for (auto& field : lt.as<Scope>().membersOfType<FieldSymbol>()) {
+        auto& ft = field.getType();
+        if (ft.isMatching(rt) || isUnionMemberType(ft, rt))
+            return true;
+    }
+    return false;
+}
+
 void checkImplicitConversions(const ASTContext& context, const Type& sourceType,
                               const Type& targetType, const Expression& op,
                               const Expression* parentExpr, SourceLocation loc,
@@ -139,7 +153,7 @@ void checkImplicitConversions(const ASTContext& context, const Type& sourceType,
     if (lt.isIntegral() && rt.isIntegral()) {
         // Warn for conversions between different enums/structs/unions.
         if (isStructUnionEnum(lt) && isStructUnionEnum(rt) && !lt.isMatching(rt)) {
-            if (!isSameStructUnion(lt, rt)) {
+            if (!isSameStructUnion(lt, rt) && !isUnionMemberType(lt, rt)) {
                 context.addDiag(diag::ImplicitConvert, loc)
                     << sourceType << targetType << op.sourceRange;
             }
