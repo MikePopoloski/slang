@@ -39,9 +39,9 @@ char TidyConfigParser::nextChar() {
     char c;
     do {
         fileStream >> std::noskipws >> c;
+        if (fileStream.eof())
+            return 0;
     } while (c == ' ' || c == '\t');
-    if (fileStream.eof())
-        return 0;
     col++;
 #if defined(_WIN32)
     if (c == '\r' && fileStream.peek() == '\n') {
