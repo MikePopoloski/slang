@@ -9,19 +9,30 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Added support for specifying a modport when connecting an interface array port
 * Implicitly typed parameters that have range specifications are now considered assignment-like contexts (this behavior is not specified in the LRM but more intuitively matches user expectations)
 * Added support for using assignment patterns as lvalues (which finally finishes full support for assignment patterns)
+* Added partial support for SystemVerilog configurations. Support is incomplete and may be buggy.
+* Index selects after range/part selects are now disallowed, to conform to the LRM as well as match the behavior of other tools
+* An error is now issued for interface ports that connect hierarchically through a generate or instance array, as mandated by the LRM
+* An error is now issued for generic interface ports that are connected via a wildcard connection, as mandated by the LRM
+* Rules about where classes with private members are allowed to be used in bitstream casts are now enforced
+* Relaxed requirement that DPI import declarations have an explicit return type to match behavior of other tools
+* Added `-Wdpi-pure-task` to allow downgrading the error that DPI import tasks cannot be marked `pure`
+* Added `--relax-string-conversions` (included in "vcs" compat mode) to allow strings to implicitly convert to integers
+* Added `--allow-recursive-implicit-call` to allow implicit call expressions to be recursive function calls for compatibility with other tools
 
 ### General Features
 * Minimum required compiler versions have been bumped to GCC 11, clang 16, and Xcode 15 (should be the last bump for a while)
 * Minimum required cmake version has been bumped to 3.20
 * Added `--allow-toplevel-iface-ports` to allow top level modules that have interface ports
-* Added `--relax-string-conversions` (included in "vcs" compat mode) to allow strings to implicitly convert to integers
 * Added [-Wconstant-conversion](https://sv-lang.com/warning-ref.html#constant-conversion) which warns about conversions inside constant expressions that lose information
 * Added [-Wsign-conversion](https://sv-lang.com/warning-ref.html#sign-conversion) which warns about implicit integral conversions that change sign
 * Added a `-L` option to control the default [source library](https://sv-lang.com/user-manual.html#source-libraries) search order
+* The `--diag-hierarchy` option now takes a parameter of "always", "never", or "auto" to allow forcing or hiding instance paths in diagnostics
 
 ### Improvements
 * Made several improvements to -Wimplicit-conv to make it less noisy
 * Cleaned up internal code related to wide character support for Windows. slang now relies on the relatively new utf-8 code page support in Windows; this does mean that Unicode paths will now only be handled correctly on or after Windows Version 1903 (May 2019 Update).
+* The maximum size of a type has been increased to 2^31 bytes (which matches VCS)
+* The `--suppress-warnings` feature has been optimized to not perform unnecessary filesystem operations
 
 ### Fixes
 * Fixed a case where -Wimplicit-conv would not be issued for mismatching struct types
@@ -37,6 +48,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Fixed a spurious error when streaming concatenations are used in port connections of uninstantiated modules
 * An appropriate parse error is now issued for generate blocks that are missing a body
 * Fixed a crash when classes with cycles in their members are used in a cast expression
+* Fixed a bug in parsing parameter ports when their type was explicitly package scoped and the parameter keyword was elided
+* Fixed a bug in the slang driver that prevented showing instance paths in diagnostics
+* An error is now issued for invalid use of the unique and priority keywords in `else` blocks
 
 
 ## [v4.0] - 2023-08-10
