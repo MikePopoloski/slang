@@ -886,12 +886,12 @@ Expression& ConversionExpression::makeImplicit(const ASTContext& context, const 
 
 ConstantValue ConversionExpression::evalImpl(EvalContext& context) const {
     return convert(context, *operand().type, *type, sourceRange, operand().eval(context),
-                   conversionKind);
+                   conversionKind, &operand());
 }
 
 ConstantValue ConversionExpression::convert(EvalContext& context, const Type& from, const Type& to,
                                             SourceRange sourceRange, ConstantValue&& value,
-                                            ConversionKind conversionKind) {
+                                            ConversionKind conversionKind, const Expression* expr) {
     if (!value)
         return nullptr;
 
@@ -914,15 +914,19 @@ ConstantValue ConversionExpression::convert(EvalContext& context, const Type& fr
         auto result = value.convertToInt(to.getBitWidth(), to.isSigned(), to.isFourState());
         if (conversionKind == ConversionKind::Implicit) {
             if (value.isInteger()) {
-                // We warn if the conversion changes the value, but not if
-                // that value change is only due to a sign conversion.
-                // (Sign conversion warnings are handled elsewhere).
                 auto& oldInt = value.integer();
                 auto& newInt = result.integer();
-                if (!oldInt.hasUnknown() && !newInt.hasUnknown() &&
-                    oldInt.getBitWidth() != newInt.getBitWidth() && oldInt != newInt) {
-                    context.addDiag(diag::ConstantConversion, sourceRange)
-                        << from << to << oldInt << newInt;
+                if (!oldInt.hasUnknown() && !newInt.hasUnknown() && oldInt != newInt) {
+                    if (oldInt.getBitWidth() != newInt.getBitWidth()) {
+                        context.addDiag(diag::ConstantConversion, sourceRange)
+                            << from << to << oldInt << newInt;
+                    }
+                    else {
+                        SLANG_ASSERT(oldInt.isSigned() != newInt.isSigned());
+                        if (!expr || expr->getEffectiveSign() != newInt.isSigned()) {
+                            context.addDiag(diag::SignConversion, sourceRange) << from << to;
+                        }
+                    }
                 }
             }
             else if (value.isReal() || value.isShortReal()) {
@@ -1014,6 +1018,12 @@ std::optional<bitwidth_t> ConversionExpression::getEffectiveWidthImpl() const {
     if (isImplicit())
         return operand().getEffectiveWidth();
     return type->getBitWidth();
+}
+
+bool ConversionExpression::getEffectiveSignImpl() const {
+    if (isImplicit())
+        return operand().getEffectiveSign();
+    return type->isSigned();
 }
 
 void ConversionExpression::serializeTo(ASTSerializer& serializer) const {

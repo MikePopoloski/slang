@@ -705,3 +705,26 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::ImplicitConvert);
 }
+
+TEST_CASE("Sign conversion warnings in constexprs") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    typedef logic [1:0] l2;
+    logic signed [1:0] i = l2'(3);
+    logic signed [1:0] j = 2'd3;
+    logic signed [1:0] k = '1;
+    logic signed [1:0] l = (2'd3:2'd1:-3);
+    logic signed m = (2'd1 == 2'd1);
+    logic signed [1:0] n = 2'd1 << 1;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::SignConversion);
+    CHECK(diags[0].code == diag::SignConversion);
+    CHECK(diags[0].code == diag::SignConversion);
+}

@@ -84,6 +84,22 @@ public:
     }
 };
 
+class EffectiveSignVisitor {
+public:
+    template<typename T>
+    bool visit(const T& expr) {
+        if constexpr (requires { expr.getEffectiveSignImpl(); }) {
+            if (expr.bad())
+                return false;
+
+            return expr.getEffectiveSignImpl();
+        }
+        else {
+            return expr.type->isSigned();
+        }
+    }
+};
+
 struct HierarchicalVisitor {
     bool any = false;
 
@@ -552,6 +568,11 @@ void Expression::getLongestStaticPrefixes(
 
 std::optional<bitwidth_t> Expression::getEffectiveWidth() const {
     EffectiveWidthVisitor visitor;
+    return visit(visitor);
+}
+
+bool Expression::getEffectiveSign() const {
+    EffectiveSignVisitor visitor;
     return visit(visitor);
 }
 

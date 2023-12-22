@@ -450,6 +450,17 @@ std::optional<bitwidth_t> UnaryExpression::getEffectiveWidthImpl() const {
     }
 }
 
+bool UnaryExpression::getEffectiveSignImpl() const {
+    switch (op) {
+        case UnaryOperator::Plus:
+        case UnaryOperator::Minus:
+        case UnaryOperator::BitwiseNot:
+            return operand().getEffectiveSign();
+        default:
+            return type->isSigned();
+    }
+}
+
 ConstantValue UnaryExpression::evalImpl(EvalContext& context) const {
     // Handle operations that require an lvalue up front.
     if (isLValueOp(op)) {
@@ -871,15 +882,66 @@ std::optional<bitwidth_t> BinaryExpression::getEffectiveWidthImpl() const {
         case BinaryOperator::BinaryXor:
         case BinaryOperator::BinaryXnor:
             return std::max(left().getEffectiveWidth(), right().getEffectiveWidth());
+        case BinaryOperator::Equality:
+        case BinaryOperator::Inequality:
+        case BinaryOperator::CaseEquality:
+        case BinaryOperator::CaseInequality:
+        case BinaryOperator::GreaterThanEqual:
+        case BinaryOperator::GreaterThan:
+        case BinaryOperator::LessThanEqual:
+        case BinaryOperator::LessThan:
+        case BinaryOperator::WildcardEquality:
+        case BinaryOperator::WildcardInequality:
+        case BinaryOperator::LogicalAnd:
+        case BinaryOperator::LogicalOr:
+        case BinaryOperator::LogicalImplication:
+        case BinaryOperator::LogicalEquivalence:
+            return 1;
         case BinaryOperator::LogicalShiftLeft:
         case BinaryOperator::LogicalShiftRight:
         case BinaryOperator::ArithmeticShiftLeft:
         case BinaryOperator::ArithmeticShiftRight:
         case BinaryOperator::Power:
             return left().getEffectiveWidth();
-        default:
-            return type->getBitWidth();
     }
+    SLANG_UNREACHABLE;
+}
+
+bool BinaryExpression::getEffectiveSignImpl() const {
+    switch (op) {
+        case BinaryOperator::Add:
+        case BinaryOperator::Subtract:
+        case BinaryOperator::Multiply:
+        case BinaryOperator::Divide:
+        case BinaryOperator::Mod:
+        case BinaryOperator::BinaryAnd:
+        case BinaryOperator::BinaryOr:
+        case BinaryOperator::BinaryXor:
+        case BinaryOperator::BinaryXnor:
+            return left().getEffectiveSign() && right().getEffectiveSign();
+        case BinaryOperator::Equality:
+        case BinaryOperator::Inequality:
+        case BinaryOperator::CaseEquality:
+        case BinaryOperator::CaseInequality:
+        case BinaryOperator::GreaterThanEqual:
+        case BinaryOperator::GreaterThan:
+        case BinaryOperator::LessThanEqual:
+        case BinaryOperator::LessThan:
+        case BinaryOperator::WildcardEquality:
+        case BinaryOperator::WildcardInequality:
+        case BinaryOperator::LogicalAnd:
+        case BinaryOperator::LogicalOr:
+        case BinaryOperator::LogicalImplication:
+        case BinaryOperator::LogicalEquivalence:
+            return true;
+        case BinaryOperator::LogicalShiftLeft:
+        case BinaryOperator::LogicalShiftRight:
+        case BinaryOperator::ArithmeticShiftLeft:
+        case BinaryOperator::ArithmeticShiftRight:
+        case BinaryOperator::Power:
+            return left().getEffectiveSign();
+    }
+    SLANG_UNREACHABLE;
 }
 
 ConstantValue BinaryExpression::evalImpl(EvalContext& context) const {
@@ -1076,7 +1138,15 @@ bool ConditionalExpression::propagateType(const ASTContext& context, const Type&
 }
 
 std::optional<bitwidth_t> ConditionalExpression::getEffectiveWidthImpl() const {
+    if (auto branch = knownSide())
+        return branch->getEffectiveWidth();
     return std::max(left().getEffectiveWidth(), right().getEffectiveWidth());
+}
+
+bool ConditionalExpression::getEffectiveSignImpl() const {
+    if (auto branch = knownSide())
+        return branch->getEffectiveSign();
+    return left().getEffectiveSign() && right().getEffectiveSign();
 }
 
 ConstantValue ConditionalExpression::evalImpl(EvalContext& context) const {

@@ -85,6 +85,18 @@ std::optional<bitwidth_t> IntegerLiteral::getEffectiveWidthImpl() const {
     return val.getActiveBits();
 }
 
+bool IntegerLiteral::getEffectiveSignImpl() const {
+    // We will say that this literal could have been signed if doing
+    // so would not change its logical value (i.e. it either already
+    // was marked signed, or it's a positive value that would remain
+    // positive given a cast to a signed type).
+    auto&& val = getValue();
+    if (val.isSigned())
+        return true;
+
+    return val.getActiveBits() < type->getBitWidth() - 1;
+}
+
 void IntegerLiteral::serializeTo(ASTSerializer& serializer) const {
     serializer.write("value", getValue());
 }
@@ -177,6 +189,13 @@ ConstantValue UnbasedUnsizedIntegerLiteral::evalImpl(EvalContext&) const {
 
 std::optional<bitwidth_t> UnbasedUnsizedIntegerLiteral::getEffectiveWidthImpl() const {
     return 1;
+}
+
+bool UnbasedUnsizedIntegerLiteral::getEffectiveSignImpl() const {
+    // We don't really want warnings for things like this:
+    // logic signed [1:0] k = '1;
+    // ...so we'll just say this could always be signed.
+    return true;
 }
 
 void UnbasedUnsizedIntegerLiteral::serializeTo(ASTSerializer& serializer) const {

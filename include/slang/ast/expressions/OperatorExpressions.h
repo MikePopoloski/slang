@@ -31,6 +31,7 @@ public:
     ConstantValue evalImpl(EvalContext& context) const;
     bool propagateType(const ASTContext& context, const Type& newType);
     std::optional<bitwidth_t> getEffectiveWidthImpl() const;
+    bool getEffectiveSignImpl() const;
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -72,6 +73,7 @@ public:
     ConstantValue evalImpl(EvalContext& context) const;
     bool propagateType(const ASTContext& context, const Type& newType);
     std::optional<bitwidth_t> getEffectiveWidthImpl() const;
+    bool getEffectiveSignImpl() const;
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -119,6 +121,12 @@ public:
     ConstantValue evalImpl(EvalContext& context) const;
     bool propagateType(const ASTContext& context, const Type& newType);
     std::optional<bitwidth_t> getEffectiveWidthImpl() const;
+    bool getEffectiveSignImpl() const;
+
+    /// If the condition for this expression is a known constant value,
+    /// this method returns the side of the expression that will be selected
+    /// (i.e. the left or right expression). Otherwise returns nullptr.
+    const Expression* knownSide() const { return isConst ? (isTrue ? left_ : right_) : nullptr; }
 
     void serializeTo(ASTSerializer& serializer) const;
 

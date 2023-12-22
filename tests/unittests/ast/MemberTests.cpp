@@ -1038,7 +1038,7 @@ module m;
     parameter [9:1] a = 9'b0;
     parameter b = '1;
     parameter c = 3.4;
-    parameter signed d = 2'b10;
+    parameter signed d = 2'b01;
     parameter signed e = 3.4;
     parameter unsigned f = 3.4;
     parameter signed [3:5] g = 3.4;

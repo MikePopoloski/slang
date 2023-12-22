@@ -1953,7 +1953,7 @@ typedef union {
 } u_t;
 
 function u_t f;
-    f.b = 8'b10011100;
+    f.b = byte'(8'b10011100);
 endfunction
 
 function u_t g;

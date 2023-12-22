@@ -96,6 +96,7 @@ public:
 
     ConstantValue evalImpl(EvalContext& context) const;
     std::optional<bitwidth_t> getEffectiveWidthImpl() const;
+    bool getEffectiveSignImpl() const;
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -112,7 +113,7 @@ public:
 
     static ConstantValue convert(EvalContext& context, const Type& from, const Type& to,
                                  SourceRange sourceRange, ConstantValue&& value,
-                                 ConversionKind conversionKind);
+                                 ConversionKind conversionKind, const Expression* expr = nullptr);
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::Conversion; }
 

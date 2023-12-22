@@ -323,6 +323,10 @@ public:
     /// represent them. If any encountered expressions have errors, returns nullopt.
     std::optional<bitwidth_t> getEffectiveWidth() const;
 
+    /// Traverses the expression tree and determines whether all operands are known
+    /// to be signed, even if the types involved end up being computed as unsigned.
+    bool getEffectiveSign() const;
+
     /// If this expression is a reference to a symbol, returns a pointer to that symbol.
     /// If the expression is a member access of a struct or class, returns the member
     /// being accessed. If it's a select of an array, returns the root array variable.
