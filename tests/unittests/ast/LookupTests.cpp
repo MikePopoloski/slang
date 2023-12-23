@@ -2045,3 +2045,21 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::DotIntoInstArray);
 }
+
+TEST_CASE("Undeclared identifier -- package correction") {
+    auto tree = SyntaxTree::fromText(R"(
+package my_pkg;
+endpackage
+
+module m;
+    int i = my_pkg;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::UndeclaredButFoundPackage);
+}

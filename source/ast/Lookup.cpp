@@ -2169,8 +2169,7 @@ void Lookup::reportUndeclared(const Scope& initialScope, std::string_view name, 
     }
 
     // Otherwise, check if this names a definition, in which case we can give a nicer error.
-    auto def = initialScope.getCompilation().getDefinition(name, initialScope);
-    if (def) {
+    if (auto def = comp.getDefinition(name, initialScope)) {
         if (isHierarchical) {
             result.addDiag(initialScope, diag::CouldNotResolveHierarchicalPath, range) << name;
         }
@@ -2179,6 +2178,12 @@ void Lookup::reportUndeclared(const Scope& initialScope, std::string_view name, 
                                                      : diag::DefinitionUsedAsValue;
             result.addDiag(initialScope, code, range) << name << def->getArticleKindString();
         }
+        return;
+    }
+
+    // Also check for a package with this name.
+    if (auto pkg = comp.getPackage(name)) {
+        result.addDiag(initialScope, diag::UndeclaredButFoundPackage, range.end()) << name << range;
         return;
     }
 
