@@ -2182,7 +2182,7 @@ void Lookup::reportUndeclared(const Scope& initialScope, std::string_view name, 
     }
 
     // Also check for a package with this name.
-    if (auto pkg = comp.getPackage(name)) {
+    if (comp.getPackage(name)) {
         result.addDiag(initialScope, diag::UndeclaredButFoundPackage, range.end()) << name << range;
         return;
     }
