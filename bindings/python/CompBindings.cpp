@@ -50,7 +50,9 @@ void registerCompilation(py::module_& m) {
         .value("StrictDriverChecking", CompilationFlags::StrictDriverChecking)
         .value("LintMode", CompilationFlags::LintMode)
         .value("SuppressUnused", CompilationFlags::SuppressUnused)
-        .value("IgnoreUnknownModules", CompilationFlags::IgnoreUnknownModules);
+        .value("IgnoreUnknownModules", CompilationFlags::IgnoreUnknownModules)
+        .value("RelaxStringConversions", CompilationFlags::RelaxStringConversions)
+        .value("AllowRecursiveImplicitCall", CompilationFlags::AllowRecursiveImplicitCall);
 
     py::class_<CompilationOptions>(m, "CompilationOptions")
         .def(py::init<>())
@@ -67,7 +69,8 @@ void registerCompilation(py::module_& m) {
         .def_readwrite("minTypMax", &CompilationOptions::minTypMax)
         .def_readwrite("defaultTimeScale", &CompilationOptions::defaultTimeScale)
         .def_readwrite("topModules", &CompilationOptions::topModules)
-        .def_readwrite("paramOverrides", &CompilationOptions::paramOverrides);
+        .def_readwrite("paramOverrides", &CompilationOptions::paramOverrides)
+        .def_readwrite("defaultLiblist", &CompilationOptions::defaultLiblist);
 
     py::class_<Compilation>(m, "Compilation")
         .def(py::init<>())
@@ -93,6 +96,36 @@ void registerCompilation(py::module_& m) {
         .def("getSemanticDiagnostics", &Compilation::getSemanticDiagnostics, byrefint)
         .def("getAllDiagnostics", &Compilation::getAllDiagnostics, byrefint)
         .def("addDiagnostics", &Compilation::addDiagnostics, "diagnostics"_a)
+        .def("getCompilationUnit", &Compilation::getCompilationUnit, byrefint, "syntax"_a)
+        .def("getCompilationUnits", &Compilation::getCompilationUnits, byrefint)
+        .def("getSourceLibrary", &Compilation::getSourceLibrary, byrefint, "name"_a)
+        .def("getDefinition",
+             py::overload_cast<std::string_view, const Scope&>(&Compilation::getDefinition,
+                                                               py::const_),
+             byrefint, "name"_a, "scope"_a)
+        .def("getDefinition",
+             py::overload_cast<const ModuleDeclarationSyntax&>(&Compilation::getDefinition,
+                                                               py::const_),
+             byrefint, "syntax"_a)
+        .def("getDefinitions", &Compilation::getDefinitions, byrefint)
+        .def("getPackage", &Compilation::getPackage, byrefint, "name"_a)
+        .def("getStdPackage", &Compilation::getStdPackage, byrefint)
+        .def("getPackages", &Compilation::getPackages, byrefint)
+        .def("getPrimitive", &Compilation::getPrimitive, byrefint, "name"_a)
+        .def("getGateType", &Compilation::getGateType, byrefint, "name"_a)
+        .def("getPrimitives", &Compilation::getPrimitives, byrefint)
+        .def("getAttributes",
+             py::overload_cast<const Symbol&>(&Compilation::getAttributes, py::const_), byrefint,
+             "symbol"_a)
+        .def("getAttributes",
+             py::overload_cast<const Statement&>(&Compilation::getAttributes, py::const_), byrefint,
+             "stmt"_a)
+        .def("getAttributes",
+             py::overload_cast<const Expression&>(&Compilation::getAttributes, py::const_),
+             byrefint, "expr"_a)
+        .def("getAttributes",
+             py::overload_cast<const PortConnection&>(&Compilation::getAttributes, py::const_),
+             byrefint, "conn"_a)
         .def("getType", py::overload_cast<SyntaxKind>(&Compilation::getType, py::const_), byrefint,
              "kind"_a)
         .def("getNetType", &Compilation::getNetType, byrefint, "kind"_a)

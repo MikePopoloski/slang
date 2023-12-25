@@ -6,6 +6,7 @@
 #include "slang/ast/symbols/BlockSymbols.h"
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
 #include "slang/ast/symbols/InstanceSymbols.h"
+#include "slang/ast/symbols/MemberSymbols.h"
 #include "slang/ast/symbols/ParameterSymbols.h"
 #include "slang/text/SourceManager.h"
 
@@ -2264,4 +2265,42 @@ module top; endmodule
     Compilation compilation;
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Compilation def / package retrieval API") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    module n;
+    endmodule
+endmodule
+
+package p;
+endpackage
+
+primitive p2 (output reg a = 1'bx, input b, input c);
+    table 00:0:0; endtable
+endprimitive
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto defs = compilation.getDefinitions();
+    REQUIRE(defs.size() == 2);
+    CHECK(defs[0]->name == "m");
+    CHECK(defs[1]->name == "n");
+
+    auto pkgs = compilation.getPackages();
+    REQUIRE(pkgs.size() == 2);
+    CHECK(pkgs[0]->name == "std");
+    CHECK(pkgs[1]->name == "p");
+
+    auto prims = compilation.getPrimitives();
+    REQUIRE(prims.size() == 1);
+    CHECK(prims[0]->name == "p2");
+
+    auto cus = compilation.getCompilationUnits();
+    REQUIRE(cus.size() == 1);
+    CHECK(cus[0]->members().front().name == "p");
 }

@@ -257,6 +257,27 @@ std::span<const CompilationUnitSymbol* const> Compilation::getCompilationUnits()
     return compilationUnits;
 }
 
+std::vector<const DefinitionSymbol*> Compilation::getDefinitions() const {
+    std::vector<const DefinitionSymbol*> result;
+    for (auto& def : definitionMemory)
+        result.push_back(def.get());
+    return result;
+}
+
+std::vector<const PackageSymbol*> Compilation::getPackages() const {
+    std::vector<const PackageSymbol*> result;
+    for (auto& [name, pkg] : packageMap)
+        result.push_back(pkg);
+    return result;
+}
+
+std::vector<const PrimitiveSymbol*> Compilation::getPrimitives() const {
+    std::vector<const PrimitiveSymbol*> result;
+    for (auto& [name, prim] : udpMap)
+        result.push_back(prim);
+    return result;
+}
+
 const SourceLibrary* Compilation::getSourceLibrary(std::string_view name) const {
     if (auto it = libraryNameMap.find(name); it != libraryNameMap.end())
         return it->second;

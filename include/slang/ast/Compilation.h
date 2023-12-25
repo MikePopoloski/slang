@@ -323,17 +323,26 @@ public:
     const DefinitionSymbol* getDefinition(std::string_view name, const Scope& scope,
                                           const ConfigRule& configRule) const;
 
+    /// Gets a list of all definitions in the design.
+    std::vector<const DefinitionSymbol*> getDefinitions() const;
+
     /// Gets the package with the give name, or nullptr if there is no such package.
     const PackageSymbol* getPackage(std::string_view name) const;
 
     /// Gets the built-in 'std' package.
     const PackageSymbol& getStdPackage() const { return *stdPkg; }
 
+    /// Gets a list of all packages in the design.
+    std::vector<const PackageSymbol*> getPackages() const;
+
     /// Gets the primitive with the given name, or nullptr if there is no such primitive.
     const PrimitiveSymbol* getPrimitive(std::string_view name) const;
 
     /// Gets the built-in gate type with the given name, or nullptr if there is no such gate.
     const PrimitiveSymbol* getGateType(std::string_view name) const;
+
+    /// Gets a list of all primitives in the design.
+    std::vector<const PrimitiveSymbol*> getPrimitives() const;
 
     /// @}
     /// @name System function management
