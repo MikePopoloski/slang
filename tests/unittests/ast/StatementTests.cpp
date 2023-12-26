@@ -220,7 +220,7 @@ module m;
 
     always @i;
     always @(i);
-    always @((i / 2) or blah, r, (posedge blah or negedge i), edge i);
+    always @((i / 2) or blah, r, (posedge blah or negedge i[0]), edge i[0]);
 
     always @*;
     always @ *;
@@ -230,7 +230,7 @@ module m;
     // warning about constant expr
     localparam int param = 4;
     always @(3);
-    always @(posedge param + 2 / 3);
+    always @(posedge 1'(param + 2 / 3));
 
     // following are invalid
     always @;
@@ -662,7 +662,7 @@ module m;
     int g;
     initial begin
         j <= #2 2;
-        g = @(posedge j) 3;
+        g = @(posedge j[0]) 3;
     end
 endmodule
 )");

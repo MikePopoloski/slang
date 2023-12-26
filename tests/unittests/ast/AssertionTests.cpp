@@ -47,7 +47,8 @@ TEST_CASE("Concurrent assertion expressions") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
     string a;
-    int b,c,d,e;
+    logic b;
+    int c,d,e;
 
     foo: assert property (a);
     assert property (a ##1 b ##[+] c ##[*] d ##[1:5] e);

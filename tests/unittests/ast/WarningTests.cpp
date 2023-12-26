@@ -728,3 +728,19 @@ endmodule
     CHECK(diags[0].code == diag::SignConversion);
     CHECK(diags[0].code == diag::SignConversion);
 }
+
+TEST_CASE("Edge of multibit type") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int i;
+    always @(posedge i) begin end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::MultiBitEdge);
+}
