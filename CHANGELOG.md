@@ -6,6 +6,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 ### Language Support
+### General Features
+### Improvements
+### Fixes
+
+
+## [v5.0] - 2023-12-26
+### Language Support
 * Added support for specifying a modport when connecting an interface array port
 * Implicitly typed parameters that have range specifications are now considered assignment-like contexts (this behavior is not specified in the LRM but more intuitively matches user expectations)
 * Added support for using assignment patterns as lvalues (which finally finishes full support for assignment patterns)
