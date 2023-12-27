@@ -156,7 +156,7 @@ module m;
 
     // Would be disallowed because 4-state 'i' forces a 4-state result.
     // We carve out an exception for this.
-    initial foo = i ? A : B;
+    initial foo = i != 0 ? A : B;
 endmodule
 )");
 

@@ -42,7 +42,7 @@ module m;
     C c;
     initial begin
         foreach (c.asdf[i,j,,k]) begin
-            if (c.asdf[i][j][0]) begin
+            if (c.asdf[i][j][0] != 0) begin
                 string s;
                 s = string'(c.asdf[i][j][0][k]);
                 foreach (c.asdf[a]) begin
@@ -377,10 +377,10 @@ module m;
         assert (i > 0) i++; else i--;
         assume #0 (i < 0) else bar();
         assume #0 (i < 0);
-        cover final (i) bar();
+        cover final (i != 0) bar();
 
-        assert (foo);                      // not boolean
-        cover (i) else $fatal(1, "SDF");   // fail stmt not allowed
+        assert (foo);                           // not boolean
+        cover (i != 0) else $fatal(1, "SDF");   // fail stmt not allowed
     end
 
     function void bar(); endfunction
@@ -533,13 +533,13 @@ module m;
     endfunction
 
     function int func3();
-        while (foo) begin
+        while (foo > 0) begin
         end
         return 1;
     endfunction
 
     function int func4();
-        do begin end while (foo);
+        do begin end while (foo > 0);
         return 1;
     endfunction
 
@@ -1172,7 +1172,7 @@ function f;
         static int j = i;
         i++;
     join_any
-    wait (3) i = 1;
+    wait (i != 0) i = 1;
     wait_order(a, b, c);
     t();
 endfunction
@@ -1429,7 +1429,7 @@ module m;
             void A1 : { cnt = 1; } B repeat(5) C B
             { $display("c=%d, b1=%d, b2=%d", C, B[1], B[2]); }
             ;
-            void A2 : if (a) D(5) else D(20)
+            void A2 : if (a != 0) D(5) else D(20)
             { $display("d1=%d, d2=%d", D[1], D[2]); }
             ;
             int B : C { return C;}
@@ -1788,7 +1788,7 @@ module m;
             tagged Add '{.r1, .r2, .rd} &&& (rd != 0) : rf[rd] = rf[r1] + rf[r2];
             tagged Jmp .j : case (j) matches
                                 tagged JmpU .a : pc = pc + a;
-                                tagged JmpC '{.c, .a}: if (rf[c]) pc = a;
+                                tagged JmpC '{.c, .a}: if (rf[c] != 0) pc = a;
                             endcase
         endcase
 
@@ -1797,7 +1797,7 @@ module m;
             tagged Add '{.r1, .r2, .rd} : rf[rd] = rf[r1] + rf[r2];
             tagged Jmp .j : case (j) matches
                                 tagged JmpU .a : pc = pc + a;
-                                tagged JmpC '{.c, .a} : if (rf[c]) pc = a;
+                                tagged JmpC '{.c, .a} : if (rf[c] != 0) pc = a;
                             endcase
         endcase
 
@@ -1808,7 +1808,7 @@ module m;
                           endcase
             tagged Jmp .j: case (j) matches
                                 tagged JmpU .a : pc = pc + a;
-                                tagged JmpC '{.c, .a} : if (rf[c]) pc = a;
+                                tagged JmpC '{.c, .a} : if (rf[c] != 0) pc = a;
                                 default: begin end
                            endcase
         endcase
@@ -1816,14 +1816,14 @@ module m;
         case (instr) matches
             tagged Add '{.r1, .r2, .rd} &&& (rd != 0) : rf[rd] = rf[r1] + rf[r2];
             tagged Jmp (tagged JmpU .a) : pc = pc + a;
-            tagged Jmp (tagged JmpC '{.c, .a}) : if (rf[c]) pc = a;
+            tagged Jmp (tagged JmpC '{.c, .a}) : if (rf[c] != 0) pc = a;
         endcase
 
         case (instr) matches
             tagged Add '{reg2:.r2,regd:.rd,reg1:.r1} &&& (rd != 0):
                                                         rf[rd] = rf[r1] + rf[r2];
             tagged Jmp (tagged JmpU .a) : pc = pc + a;
-            tagged Jmp (tagged JmpC '{addr:.a,cc:.c}) : if (rf[c]) pc = a;
+            tagged Jmp (tagged JmpC '{addr:.a,cc:.c}) : if (rf[c] != 0) pc = a;
         endcase
     end
 endmodule
@@ -1955,7 +1955,7 @@ class Packet;
 		end
 
 		if (update_status == 0)
-			if (this.update_status)
+			if (this.update_status != 0)
 				command[update_status] = 1'b0;
 		return update_status;
 	endfunction

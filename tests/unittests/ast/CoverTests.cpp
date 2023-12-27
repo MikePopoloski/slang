@@ -270,7 +270,7 @@ module m;
     covergroup cg1 (ref int x, ref int y, input int c, int fa2[]);
         coverpoint x {
             bins a = { [0:63],65 } iff (arr);
-            ignore_bins b[4] = { [127:150],[148:191] } iff (c);
+            ignore_bins b[4] = { [127:150],[148:191] } iff (c != 0);
             illegal_bins cbins[] = { 200,201,202 };
             wildcard bins d = { [1000:$] };
             bins e = { [$:$] };

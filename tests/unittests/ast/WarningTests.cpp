@@ -365,7 +365,7 @@ class C;
     function bit f();
         bit a;
         int rc = std::randomize(a);
-        assert(rc);
+        assert(rc != 0);
         return a;
     endfunction
 endclass
@@ -743,4 +743,29 @@ endmodule
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::MultiBitEdge);
+}
+
+TEST_CASE("Implicit boolean conversion warnings") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    real r;
+    initial if (r) begin end
+
+    int i;
+    initial if (i + 2) begin end
+
+    // These don't warn
+    initial if (i >> 2) begin end
+    initial if (i & 2) begin end
+    initial if (i ^ 2) begin end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::FloatBoolConv);
+    CHECK(diags[1].code == diag::IntBoolConv);
 }

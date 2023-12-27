@@ -301,8 +301,8 @@ endmodule
 
 module n;
     int a, b;
-    default disable iff a;
-    default disable iff b;
+    default disable iff a > 0;
+    default disable iff b > 0;
 endmodule
 )");
 

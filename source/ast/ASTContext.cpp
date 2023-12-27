@@ -10,6 +10,7 @@
 #include "slang/ast/Compilation.h"
 #include "slang/ast/EvalContext.h"
 #include "slang/ast/expressions/MiscExpressions.h"
+#include "slang/ast/expressions/OperatorExpressions.h"
 #include "slang/ast/symbols/AttributeSymbol.h"
 #include "slang/ast/symbols/BlockSymbols.h"
 #include "slang/ast/symbols/InstanceSymbols.h"
@@ -235,6 +236,29 @@ bool ASTContext::requireBooleanConvertible(const Expression& expr) const {
         addDiag(diag::NotBooleanConvertible, expr.sourceRange) << *expr.type;
         return false;
     }
+    else if (expr.type->isFloating()) {
+        addDiag(diag::FloatBoolConv, expr.sourceRange) << *expr.type;
+    }
+    else if (expr.type->isIntegral() && expr.type->getBitWidth() > 1 &&
+             expr.getEffectiveWidth() > 1u) {
+        // Suppress the warning for cases of right shift and bitwise-AND,
+        // as it's common practice to check for non-zero results like this:
+        //   if (a & b) begin end
+        //   if (a >> 2) begin end
+        auto isMaskOrRShift = [&] {
+            if (expr.kind == ExpressionKind::BinaryOp) {
+                auto op = expr.as<BinaryExpression>().op;
+                return op == BinaryOperator::BinaryAnd || op == BinaryOperator::LogicalShiftRight ||
+                       op == BinaryOperator::ArithmeticShiftRight ||
+                       op == BinaryOperator::BinaryXor || op == BinaryOperator::BinaryXnor;
+            }
+            return false;
+        };
+
+        if (!isMaskOrRShift())
+            addDiag(diag::IntBoolConv, expr.sourceRange) << *expr.type;
+    }
+
     return true;
 }
 

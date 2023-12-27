@@ -2245,7 +2245,7 @@ class C;
         randsequence( main )
             main : first second third;
             first : { x = x + 10; };
-            second : { if(x) break; } fourth;
+            second : { if (x != 0) break; } fourth;
             third : { x = x + 10; };
             fourth : { x = x + 15; };
         endsequence

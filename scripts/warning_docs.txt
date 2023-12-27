@@ -1085,3 +1085,35 @@ downgraded to a warning to support code compatibility with other tools.
 ```
 import "DPI-C" pure task func(logic [3:0] a);
 ```
+
+-Wmultibit-edge
+A timing control edge expression (posedge, negedge, etc) is wider than one bit,
+which can indicate a mistake since only changes to the first bit will trigger the edge.
+```
+module m;
+    int i;
+    always @(posedge i) begin end
+endmodule
+```
+
+-Wfloat-bool-conv
+A floating point value is implicitly converted to a boolean predicate (such as in an
+if statement or loop condition). This is not necessarily wrong but can indicate
+mistakes where you intended to compare the value to something.
+```
+module m;
+    real r;
+    initial if (r) begin end // Did you mean r != 0 or something else?
+endmodule
+```
+
+-Wint-bool-conv
+A multi-bit integer value is implicitly converted to a boolean predicate (such as in an
+if statement or loop condition). This is not necessarily wrong but can indicate
+mistakes where you intended to compare the value to something.
+```
+module m;
+    int i;
+    initial if (i + 2) begin end // Did you mean i + 2 != 0 or something else?
+endmodule
+```

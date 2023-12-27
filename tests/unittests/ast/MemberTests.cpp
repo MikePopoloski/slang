@@ -1545,9 +1545,9 @@ module m;
     struct packed { logic [4:1] a, b; } bar;
 
     $static_assert(foo < $bits(bar));
-    $static_assert(foo * 0, "Stuff %0d", foo / 2);
-    $static_assert(foo, "Stuff Stuff %0d", foo / 2);
-    $static_assert(bar);
+    $static_assert(foo & 0, "Stuff %0d", foo / 2);
+    $static_assert(foo != 0, "Stuff Stuff %0d", foo / 2);
+    $static_assert(bar > 0);
 
     initial begin
         $static_assert(foo > $bits(bar));
@@ -1569,10 +1569,10 @@ source:11:24: note: comparison reduces to (12 < 8)
     $static_assert(foo < $bits(bar));
                    ~~~~^~~~~~~~~~~~
 source:12:5: error: static assertion failed: Stuff 6
-    $static_assert(foo * 0, "Stuff %0d", foo / 2);
+    $static_assert(foo & 0, "Stuff %0d", foo / 2);
     ^
 source:14:20: error: reference to non-constant variable 'bar' is not allowed in a constant expression
-    $static_assert(bar);
+    $static_assert(bar > 0);
                    ^~~
 source:9:41: note: declared here
     struct packed { logic [4:1] a, b; } bar;
@@ -2168,11 +2168,11 @@ module m(input a, clk, data, output b);
         specparam tSU = 1, tHLD = 3:4:5;
         $setup(posedge clk, data, 42);
         $hold(posedge clk, data, 42, );
-        $setuphold(posedge clk, data, tSU, tHLD, notify, 1:2:3, bar, dclk, ddata);
+        $setuphold(posedge clk, data, tSU, tHLD, notify, 0:1:0, bar, dclk, ddata);
         $recovery(posedge clk, data, 42);
         $removal(posedge clk, data, 42, );
-        $recrem(posedge clk, data, tSU, tHLD, notify, 1:2:3, bar, dclk);
-        $recrem(posedge clk, data, tSU, tHLD, notify, 1:2:3, bar, w[0], ddata);
+        $recrem(posedge clk, data, tSU, tHLD, notify, 0:1:0, bar, dclk);
+        $recrem(posedge clk, data, tSU, tHLD, notify, 0:1:0, bar, w[0], ddata);
         $skew(posedge clk, data, 42);
         $timeskew(posedge clk, negedge data, 42, , 1, 0:1:0);
         $fullskew(posedge clk, negedge data, 42, 32, , 1, 0:1:0);

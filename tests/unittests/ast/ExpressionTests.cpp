@@ -2138,7 +2138,7 @@ module m;
         q = { q[0:pos], e, q[pos+1:$] };
         q = q[2:$];
         q = q[1:$-1'b1];
-        q = q[1:e ? u+1 : v-1];
+        q = q[1:e != 0 ? u+1 : v-1];
 
         // These are disallowed.
         e = $;
@@ -2621,12 +2621,12 @@ module top;
   integer ones;
 
   function automatic integer count_by_one(input integer start);
-    if (start) count_by_one = (value[start] ? 1 : 0) + count_ones(start-1);
+    if (start != 0) count_by_one = (value[start] ? 1 : 0) + count_ones(start-1);
     else count_by_one = value[start] ? 1 : 0;
   endfunction
 
   function automatic integer count_ones(input integer start);
-    if (start) count_ones = (value[start] ? 1 : 0) + count_by_one(start-1);
+    if (start != 0) count_ones = (value[start] ? 1 : 0) + count_by_one(start-1);
     else count_ones = value[start] ? 1 : 0;
   endfunction
 

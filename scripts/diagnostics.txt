@@ -695,6 +695,8 @@ warning range-width-oob RangeWidthOOB "cannot select range of {} elements from {
 warning specify-param SpecifyBlockParam "parameters cannot be used in specify blocks"
 warning negative-timing-limit NegativeTimingLimit "timing check limit value '{}' should not be negative"
 warning sign-conversion SignConversion "implicit conversion changes signedness from {} to {}"
+warning float-bool-conv FloatBoolConv "implicit conversion from floating point type {} to boolean value"
+warning int-bool-conv IntBoolConv "implicit conversion from {} to boolean value"
 
 subsystem Statements
 error ReturnNotInSubroutine "return statement is only valid inside task and function blocks"
@@ -1052,13 +1054,13 @@ group default = { real-underflow real-overflow vector-overflow int-overflow unco
 
 group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-none case-gen-dup
                 unused-result format-real ignored-slice task-ignored width-trunc dup-attr event-const
-                ineffective-sign port-width-trunc constant-conversion }
+                ineffective-sign port-width-trunc constant-conversion float-bool-conv int-bool-conv }
 
 group pedantic = { empty-pattern implicit-net-port nonstandard-escape-code nonstandard-generate format-multibit-strength
                    nonstandard-sys-func nonstandard-foreach nonstandard-dist }
 
 group conversion = { width-trunc width-expand port-width-trunc port-width-expand implicit-conv
-                     constant-conversion sign-conversion }
+                     constant-conversion sign-conversion float-bool-conv int-bool-conv }
 
 group unused = { unused-def unused-net unused-implicit-net unused-variable undriven-net unassigned-variable
                  unused-but-set-net unused-but-set-variable unused-port undriven-port unused-argument
