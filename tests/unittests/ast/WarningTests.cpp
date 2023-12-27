@@ -769,3 +769,23 @@ endmodule
     CHECK(diags[0].code == diag::FloatBoolConv);
     CHECK(diags[1].code == diag::IntBoolConv);
 }
+
+TEST_CASE("Useless cast warnings") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int i, j;
+    assign i = int'(j);
+
+    logic [3:0] k, l;
+    assign k = 4'(l);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::UselessCast);
+    CHECK(diags[1].code == diag::UselessCast);
+}

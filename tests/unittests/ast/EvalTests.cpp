@@ -931,7 +931,7 @@ TEST_CASE("Dynamic string ops") {
     CHECK(session.eval("{\"Hi\",str2}").str() == "Hiaaaaa");
     CHECK(session.eval("str2 = {\"Hi\", \"Bye\"}").str() == "HiBye");
 
-    CHECK(session.eval("string'(str1)").str() == "a");
+    CHECK(session.eval("str1").str() == "a");
 
     session.eval("byte ba[] = \"asdf\";");
     CHECK(session.eval("string'(ba)").str() == "asdf");

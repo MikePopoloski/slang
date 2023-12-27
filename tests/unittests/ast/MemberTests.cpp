@@ -2065,7 +2065,7 @@ module m(input [4:0] a, output [4:0] b, z[6], output [5:0] l, I.m foo, I bar);
 
         if (k < 2) (a => z[1]) = 1;
         if (1 < 2) (a => z[2]) = 1;
-        if (int'(g) == 1) (a => z[3]) = 1;
+        if (byte'(g) == 1) (a => z[3]) = 1;
         if (+g == 1) (a => z[4]) = 1;
         if (g inside { 1, 2 }) (a => z[5]) = 1;
 

@@ -1117,3 +1117,12 @@ module m;
     initial if (i + 2) begin end // Did you mean i + 2 != 0 or something else?
 endmodule
 ```
+
+-Wuseless-cast
+An explicit cast converts an expression to the same type, so the cast does nothing.
+```
+module m;
+    int i, j;
+    assign i = int'(j);
+endmodule
+```
