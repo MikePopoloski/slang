@@ -13,14 +13,17 @@
 #include "slang/ast/symbols/MemberSymbols.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/syntax/AllSyntax.h"
+#include "slang/syntax/SyntaxTree.h"
 
 namespace slang::ast {
 
 using namespace parsing;
 using namespace syntax;
 
-CompilationUnitSymbol::CompilationUnitSymbol(Compilation& compilation) :
-    Symbol(SymbolKind::CompilationUnit, "", SourceLocation()), Scope(compilation, this) {
+CompilationUnitSymbol::CompilationUnitSymbol(Compilation& compilation,
+                                             const SourceLibrary* sourceLibrary) :
+    Symbol(SymbolKind::CompilationUnit, "", SourceLocation()),
+    Scope(compilation, this), sourceLibrary(sourceLibrary) {
 
     // Default the time scale to the compilation default. If it turns out
     // this scope has a time unit declaration it will overwrite the member.
@@ -234,11 +237,10 @@ DefinitionSymbol::DefinitionSymbol(const Scope& scope, LookupLocation lookupLoca
                                    const ModuleDeclarationSyntax& syntax,
                                    const NetType& defaultNetType, UnconnectedDrive unconnectedDrive,
                                    std::optional<TimeScale> directiveTimeScale,
-                                   const SyntaxTree* syntaxTree,
-                                   const SourceLibrary* sourceLibrary) :
+                                   const SyntaxTree* syntaxTree) :
     Symbol(SymbolKind::Definition, syntax.header->name.valueText(), syntax.header->name.location()),
     defaultNetType(defaultNetType), unconnectedDrive(unconnectedDrive), syntaxTree(syntaxTree),
-    sourceLibrary(sourceLibrary) {
+    sourceLibrary(syntaxTree ? syntaxTree->getSourceLibrary() : nullptr) {
 
     // Extract and save various properties of the definition.
     setParent(scope, lookupLocation.getIndex());
@@ -332,11 +334,9 @@ void DefinitionSymbol::serializeTo(ASTSerializer&) const {
 }
 
 ConfigBlockSymbol& ConfigBlockSymbol::fromSyntax(const Scope& scope,
-                                                 const ConfigDeclarationSyntax& syntax,
-                                                 const SourceLibrary* sourceLibrary) {
+                                                 const ConfigDeclarationSyntax& syntax) {
     auto& comp = scope.getCompilation();
-    auto result = comp.allocConfigBlock(syntax.name.valueText(), syntax.name.location(),
-                                        sourceLibrary);
+    auto result = comp.allocConfigBlock(syntax.name.valueText(), syntax.name.location());
     result->setSyntax(syntax);
     result->setAttributes(scope, syntax.attributes);
 

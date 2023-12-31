@@ -247,17 +247,21 @@ const DefinitionSymbol* Symbol::getDeclaringDefinition() const {
 }
 
 const SourceLibrary* Symbol::getSourceLibrary() const {
-    switch (kind) {
-        case SymbolKind::Definition:
-            return as<DefinitionSymbol>().sourceLibrary;
-        case SymbolKind::Primitive:
-            return as<PrimitiveSymbol>().sourceLibrary;
-        case SymbolKind::ConfigBlock:
-            return as<ConfigBlockSymbol>().sourceLibrary;
-        default:
-            if (auto def = getDeclaringDefinition())
-                return def->sourceLibrary;
-            return nullptr;
+    auto curr = this;
+    while (true) {
+        switch (curr->kind) {
+            case SymbolKind::Definition:
+                return curr->as<DefinitionSymbol>().sourceLibrary;
+            case SymbolKind::CompilationUnit:
+                return curr->as<CompilationUnitSymbol>().sourceLibrary;
+            default:
+                auto scope = curr->getParentScope();
+                if (!scope)
+                    return nullptr;
+
+                curr = &scope->asSymbol();
+                break;
+        }
     }
 }
 

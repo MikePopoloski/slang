@@ -44,7 +44,7 @@ public:
 
     /// Indicates whether this syntax tree represents a "library" compilation unit,
     /// which means that modules declared within it are not automatically instantiated.
-    bool isLibrary = false;
+    bool isLibraryUnit = false;
 
     SyntaxTree(SyntaxNode* root, SourceManager& sourceManager, BumpAllocator&& alloc,
                const SourceLibrary* library, std::shared_ptr<SyntaxTree> parent = nullptr);
@@ -181,6 +181,9 @@ public:
     /// Gets the source manager used to build the syntax tree.
     const SourceManager& sourceManager() const { return sourceMan; }
 
+    /// Gets the source library with which the syntax tree is associated.
+    const SourceLibrary* getSourceLibrary() const { return library; }
+
     /// Gets the root of the syntax tree.
     SyntaxNode& root() { return *rootNode; }
 
@@ -209,8 +212,8 @@ public:
     static SourceManager& getDefaultSourceManager();
 
 private:
-    SyntaxTree(SyntaxNode* root, SourceManager& sourceManager, BumpAllocator&& alloc,
-               Diagnostics&& diagnostics, parsing::ParserMetadata&& metadata,
+    SyntaxTree(SyntaxNode* root, const SourceLibrary* library, SourceManager& sourceManager,
+               BumpAllocator&& alloc, Diagnostics&& diagnostics, parsing::ParserMetadata&& metadata,
                std::vector<const DefineDirectiveSyntax*>&& macros, Bag options);
 
     static std::shared_ptr<SyntaxTree> create(SourceManager& sourceManager,
@@ -219,6 +222,7 @@ private:
                                               bool guess);
 
     SyntaxNode* rootNode;
+    const SourceLibrary* library;
     SourceManager& sourceMan;
     BumpAllocator alloc;
     Diagnostics diagnosticsBuffer;

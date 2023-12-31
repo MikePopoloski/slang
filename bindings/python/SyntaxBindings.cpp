@@ -180,7 +180,7 @@ void registerSyntax(py::module_& m) {
         .def("__str__", &SyntaxNode::toString);
 
     py::class_<SyntaxTree, std::shared_ptr<SyntaxTree>>(m, "SyntaxTree")
-        .def_readonly("isLibrary", &SyntaxTree::isLibrary)
+        .def_readonly("isLibraryUnit", &SyntaxTree::isLibraryUnit)
         .def_static(
             "fromFile",
             [](std::string_view path) {
@@ -244,6 +244,7 @@ void registerSyntax(py::module_& m) {
         .def_property_readonly("sourceManager", py::overload_cast<>(&SyntaxTree::sourceManager))
         .def_property_readonly("root", py::overload_cast<>(&SyntaxTree::root))
         .def_property_readonly("options", &SyntaxTree::options)
+        .def_property_readonly("sourceLibrary", &SyntaxTree::getSourceLibrary)
         .def_static("getDefaultSourceManager", &SyntaxTree::getDefaultSourceManager, byref);
 
     py::class_<LexerOptions>(m, "LexerOptions")

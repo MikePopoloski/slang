@@ -948,12 +948,12 @@ static void createTableEntries(const Scope& scope, const UdpEntrySyntax& syntax,
     expandTableEntries(scope, syntax, fields, currEntry, 0, entry, results, rowDupMap);
 }
 
-PrimitiveSymbol& PrimitiveSymbol::fromSyntax(const Scope& scope, const UdpDeclarationSyntax& syntax,
-                                             const SourceLibrary* sourceLibrary) {
+PrimitiveSymbol& PrimitiveSymbol::fromSyntax(const Scope& scope,
+                                             const UdpDeclarationSyntax& syntax) {
     auto& comp = scope.getCompilation();
     auto primName = syntax.name.valueText();
     auto prim = comp.emplace<PrimitiveSymbol>(comp, primName, syntax.name.location(),
-                                              PrimitiveSymbol::UserDefined, sourceLibrary);
+                                              PrimitiveSymbol::UserDefined);
     prim->setAttributes(scope, syntax.attributes);
     prim->setSyntax(syntax);
 

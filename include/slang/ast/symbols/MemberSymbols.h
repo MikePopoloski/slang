@@ -268,7 +268,6 @@ public:
         TableField output;
     };
 
-    const SourceLibrary* sourceLibrary;
     std::span<const PrimitivePortSymbol* const> ports;
     std::span<const TableEntry> table;
     const ConstantValue* initVal = nullptr;
@@ -276,13 +275,12 @@ public:
     enum PrimitiveKind { UserDefined, Fixed, NInput, NOutput } primitiveKind;
 
     PrimitiveSymbol(Compilation& compilation, std::string_view name, SourceLocation loc,
-                    PrimitiveKind primitiveKind, const SourceLibrary* sourceLibrary) :
+                    PrimitiveKind primitiveKind) :
         Symbol(SymbolKind::Primitive, name, loc),
-        Scope(compilation, this), sourceLibrary(sourceLibrary), primitiveKind(primitiveKind) {}
+        Scope(compilation, this), primitiveKind(primitiveKind) {}
 
     static PrimitiveSymbol& fromSyntax(const Scope& scope,
-                                       const syntax::UdpDeclarationSyntax& syntax,
-                                       const SourceLibrary* sourceLibrary);
+                                       const syntax::UdpDeclarationSyntax& syntax);
 
     void serializeTo(ASTSerializer& serializer) const;
 

@@ -73,8 +73,7 @@ MemberSyntax& Parser::parseModule(AttrList attributes, SyntaxKind parentKind,
     }
 
     SyntaxKind declKind = getModuleDeclarationKind(header.moduleKeyword.kind);
-    ParserMetadata::Node node{pp.getCurrentLibrary(), pp.getDefaultNetType(),
-                              pp.getUnconnectedDrive(), pp.getTimeScale()};
+    ParserMetadata::Node node{pp.getDefaultNetType(), pp.getUnconnectedDrive(), pp.getTimeScale()};
 
     auto savedDefinitionKind = currentDefinitionKind;
     currentDefinitionKind = declKind;
@@ -3395,10 +3394,6 @@ ConfigDeclarationSyntax& Parser::parseConfigDeclaration(AttrList attributes) {
     auto name = expect(TokenKind::Identifier);
     auto semi1 = expect(TokenKind::Semicolon);
 
-    auto& pp = getPP();
-    ParserMetadata::Node node{pp.getCurrentLibrary(), pp.getDefaultNetType(),
-                              pp.getUnconnectedDrive(), pp.getTimeScale()};
-
     SmallVector<ParameterDeclarationStatementSyntax*> localparams;
     while (peek(TokenKind::LocalParamKeyword)) {
         Token paramSemi;
@@ -3466,11 +3461,9 @@ ConfigDeclarationSyntax& Parser::parseConfigDeclaration(AttrList attributes) {
     auto blockName = parseNamedBlockClause();
     checkBlockNames(name, blockName);
 
-    auto& result = factory.configDeclaration(attributes, config, name, semi1,
-                                             localparams.copy(alloc), design, topCells.copy(alloc),
-                                             semi2, rules.copy(alloc), endconfig, blockName);
-    meta.nodeMap[&result] = node;
-    return result;
+    return factory.configDeclaration(attributes, config, name, semi1, localparams.copy(alloc),
+                                     design, topCells.copy(alloc), semi2, rules.copy(alloc),
+                                     endconfig, blockName);
 }
 
 MemberSyntax* Parser::parseLibraryMember() {

@@ -20,7 +20,6 @@ namespace slang::parsing {
 struct SLANG_EXPORT ParserMetadata {
     /// Collection of metadata that can be associated with a syntax node at parse time.
     struct Node {
-        const SourceLibrary* library = nullptr;
         TokenKind defaultNetType;
         TokenKind unconnectedDrive;
         std::optional<TimeScale> timeScale;
@@ -59,7 +58,7 @@ struct SLANG_EXPORT ParserMetadata {
     bool hasBindDirectives = false;
 
     /// Constructs a new set of parser metadata by walking the provided syntax tree.
-    static ParserMetadata fromSyntax(const syntax::SyntaxNode& root, const SourceLibrary* library);
+    static ParserMetadata fromSyntax(const syntax::SyntaxNode& root);
 };
 
 } // namespace slang::parsing

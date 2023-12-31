@@ -180,7 +180,7 @@ SourceLoader::SyntaxTreeList SourceLoader::loadAndParseSources(const Bag& option
         if (!buffers.empty()) {
             auto tree = SyntaxTree::fromBuffers(buffers, sourceManager, optionBag);
             if (srcOptions.onlyLint)
-                tree->isLibrary = true;
+                tree->isLibraryUnit = true;
 
             syntaxTrees.emplace_back(std::move(tree));
             inheritedMacros = syntaxTrees.back()->getDefinedMacros();
@@ -219,7 +219,7 @@ SourceLoader::SyntaxTreeList SourceLoader::loadAndParseSources(const Bag& option
                                         auto tree = SyntaxTree::fromBuffer(deferredLibBuffers[i],
                                                                            sourceManager, optionBag,
                                                                            inheritedMacros);
-                                        tree->isLibrary = true;
+                                        tree->isLibraryUnit = true;
                                         syntaxTrees[i + numTrees] = std::move(tree);
                                     }
                                 });
@@ -239,7 +239,7 @@ SourceLoader::SyntaxTreeList SourceLoader::loadAndParseSources(const Bag& option
             for (auto& buffer : deferredLibBuffers) {
                 auto tree = SyntaxTree::fromBuffer(buffer, sourceManager, optionBag,
                                                    inheritedMacros);
-                tree->isLibrary = true;
+                tree->isLibraryUnit = true;
                 syntaxTrees.emplace_back(std::move(tree));
             }
         }
@@ -330,7 +330,7 @@ SourceLoader::SyntaxTreeList SourceLoader::loadAndParseSources(const Bag& option
                 if (buffer) {
                     auto tree = SyntaxTree::fromBuffer(buffer, sourceManager, optionBag,
                                                        inheritedMacros);
-                    tree->isLibrary = true;
+                    tree->isLibraryUnit = true;
                     syntaxTrees.emplace_back(tree);
 
                     addKnownNames(tree);
@@ -461,7 +461,7 @@ SourceLoader::LoadResult SourceLoader::loadAndParse(const FileEntry& entry, cons
         // Otherwise we can parse right away.
         auto tree = SyntaxTree::fromBuffer(*buffer, sourceManager, optionBag);
         if (entry.isLibraryFile || srcOptions.onlyLint)
-            tree->isLibrary = true;
+            tree->isLibraryUnit = true;
 
         return tree;
     }

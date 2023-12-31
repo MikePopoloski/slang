@@ -106,6 +106,7 @@ void registerSymbols(py::module_& m) {
         .def_property_readonly("declaringDefinition", &Symbol::getDeclaringDefinition)
         .def_property_readonly("randMode", &Symbol::getRandMode)
         .def_property_readonly("nextSibling", &Symbol::getNextSibling)
+        .def_property_readonly("sourceLibrary", &Symbol::getSourceLibrary)
         .def_property_readonly("hierarchicalPath",
                                [](const Symbol& self) {
                                    std::string str;

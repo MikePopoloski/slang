@@ -628,8 +628,7 @@ public:
     }
 
     /// Allocates a config block symbol.
-    ConfigBlockSymbol* allocConfigBlock(std::string_view name, SourceLocation loc,
-                                        const SourceLibrary* sourceLibrary);
+    ConfigBlockSymbol* allocConfigBlock(std::string_view name, SourceLocation loc);
 
     /// Gets the driver map allocator.
     DriverIntervalMap::allocator_type& getDriverMapAllocator() { return driverMapAllocator; }
@@ -751,7 +750,6 @@ private:
 
     struct SyntaxMetadata {
         const syntax::SyntaxTree* tree = nullptr;
-        const SourceLibrary* library = nullptr;
         const NetType* defaultNetType = nullptr;
         std::optional<TimeScale> timeScale;
         UnconnectedDrive unconnectedDrive = UnconnectedDrive::None;

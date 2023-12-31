@@ -25,8 +25,9 @@ class Type;
 class SLANG_EXPORT CompilationUnitSymbol : public Symbol, public Scope {
 public:
     std::optional<TimeScale> timeScale;
+    const SourceLibrary* sourceLibrary;
 
-    explicit CompilationUnitSymbol(Compilation& compilation);
+    CompilationUnitSymbol(Compilation& compilation, const SourceLibrary* sourceLibrary);
 
     void addMembers(const syntax::SyntaxNode& syntax);
 
@@ -192,7 +193,7 @@ public:
     DefinitionSymbol(const Scope& scope, LookupLocation lookupLocation,
                      const syntax::ModuleDeclarationSyntax& syntax, const NetType& defaultNetType,
                      UnconnectedDrive unconnectedDrive, std::optional<TimeScale> directiveTimeScale,
-                     const syntax::SyntaxTree* syntaxTree, const SourceLibrary* sourceLibrary);
+                     const syntax::SyntaxTree* syntaxTree);
 
     /// Returns a string description of the definition kind, such as "module",
     /// "interface", or "program".
@@ -255,20 +256,16 @@ public:
         ConfigRule rule;
     };
 
-    const SourceLibrary* sourceLibrary;
     std::span<const ConfigCellId> topCells;
     std::span<const SourceLibrary* const> defaultLiblist;
     std::span<const InstanceOverride> instanceOverrides;
     flat_hash_map<std::string_view, std::vector<CellOverride>> cellOverrides;
 
-    ConfigBlockSymbol(Compilation& compilation, std::string_view name, SourceLocation loc,
-                      const SourceLibrary* sourceLibrary) :
-        Symbol(SymbolKind::ConfigBlock, name, loc),
-        Scope(compilation, this), sourceLibrary(sourceLibrary) {}
+    ConfigBlockSymbol(Compilation& compilation, std::string_view name, SourceLocation loc) :
+        Symbol(SymbolKind::ConfigBlock, name, loc), Scope(compilation, this) {}
 
     static ConfigBlockSymbol& fromSyntax(const Scope& scope,
-                                         const syntax::ConfigDeclarationSyntax& syntax,
-                                         const SourceLibrary* sourceLibrary);
+                                         const syntax::ConfigDeclarationSyntax& syntax);
 
     void serializeTo(ASTSerializer& serialize) const;
 

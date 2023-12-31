@@ -196,12 +196,15 @@ void Compilation::addSyntaxTree(std::shared_ptr<SyntaxTree> tree) {
         }
     }
 
+    if (auto lib = tree->getSourceLibrary())
+        libraryNameMap[lib->name] = lib;
+
     const SyntaxNode& node = tree->root();
     const SyntaxNode* topNode = &node;
     while (topNode->parent)
         topNode = topNode->parent;
 
-    auto unit = emplace<CompilationUnitSymbol>(*this);
+    auto unit = emplace<CompilationUnitSymbol>(*this, tree->getSourceLibrary());
     unit->setSyntax(*topNode);
     root->addMember(*unit);
     compilationUnits.push_back(unit);
@@ -209,7 +212,6 @@ void Compilation::addSyntaxTree(std::shared_ptr<SyntaxTree> tree) {
     for (auto& [n, meta] : tree->getMetadata().nodeMap) {
         SyntaxMetadata result;
         result.tree = tree.get();
-        result.library = meta.library;
         result.defaultNetType = &getNetType(meta.defaultNetType);
         result.timeScale = meta.timeScale;
 
@@ -226,8 +228,6 @@ void Compilation::addSyntaxTree(std::shared_ptr<SyntaxTree> tree) {
         }
 
         syntaxMetadata[n] = result;
-        if (result.library)
-            libraryNameMap[result.library->name] = result.library;
     }
 
     for (auto& name : tree->getMetadata().globalInstances)
@@ -358,7 +358,7 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamsAndBinds) {
                 }
 
                 // Library definitions are never automatically instantiated in any capacity.
-                if (!def.syntaxTree || !def.syntaxTree->isLibrary) {
+                if (!def.syntaxTree || !def.syntaxTree->isLibraryUnit) {
                     if (def.definitionKind == DefinitionKind::Module ||
                         def.definitionKind == DefinitionKind::Program) {
                         if (isValidTop(def)) {
@@ -447,8 +447,8 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamsAndBinds) {
             if (auto confIt = configBlocks.find(confName); confIt != configBlocks.end()) {
                 const ConfigBlockSymbol* foundConf = nullptr;
                 for (auto conf : confIt->second) {
-                    if ((!conf->sourceLibrary && confLib.empty()) ||
-                        (conf->sourceLibrary && conf->sourceLibrary->name == confLib)) {
+                    if ((!conf->getSourceLibrary() && confLib.empty()) ||
+                        (conf->getSourceLibrary() && conf->getSourceLibrary()->name == confLib)) {
                         foundConf = conf;
                         break;
                     }
@@ -468,7 +468,7 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamsAndBinds) {
 
                                 auto& def = defSym->as<DefinitionSymbol>();
                                 if ((cell.lib.empty() &&
-                                     def.sourceLibrary == foundConf->sourceLibrary) ||
+                                     def.sourceLibrary == foundConf->getSourceLibrary()) ||
                                     (def.sourceLibrary && def.sourceLibrary->name == cell.lib)) {
                                     foundDef = &def;
                                     break;
@@ -757,7 +757,7 @@ void Compilation::createDefinition(const Scope& scope, LookupLocation location,
     auto def = definitionMemory
                    .emplace_back(std::make_unique<DefinitionSymbol>(
                        scope, location, syntax, *metadata.defaultNetType, metadata.unconnectedDrive,
-                       metadata.timeScale, metadata.tree, metadata.library))
+                       metadata.timeScale, metadata.tree))
                    .get();
     definitionFromSyntax[&syntax] = def;
 
@@ -906,8 +906,7 @@ const PackageSymbol& Compilation::createPackage(const Scope& scope,
 
 const ConfigBlockSymbol& Compilation::createConfigBlock(const Scope& scope,
                                                         const ConfigDeclarationSyntax& syntax) {
-    auto& metadata = syntaxMetadata[&syntax];
-    auto& config = ConfigBlockSymbol::fromSyntax(scope, syntax, metadata.library);
+    auto& config = ConfigBlockSymbol::fromSyntax(scope, syntax);
 
     auto it = configBlocks.find(config.name);
     if (it == configBlocks.end()) {
@@ -915,7 +914,7 @@ const ConfigBlockSymbol& Compilation::createConfigBlock(const Scope& scope,
     }
     else {
         auto findIt = std::ranges::find_if(it->second, [&](const ConfigBlockSymbol* elem) {
-            return elem->sourceLibrary == config.sourceLibrary;
+            return elem->getSourceLibrary() == config.getSourceLibrary();
         });
 
         if (findIt != it->second.end()) {
@@ -933,11 +932,8 @@ const ConfigBlockSymbol& Compilation::createConfigBlock(const Scope& scope,
 
 const PrimitiveSymbol& Compilation::createPrimitive(const Scope& scope,
                                                     const UdpDeclarationSyntax& syntax) {
-    // TODO: handle primitives in libraries
-    const SourceLibrary* sourceLibrary = nullptr;
-    auto& prim = PrimitiveSymbol::fromSyntax(scope, syntax, sourceLibrary);
+    auto& prim = PrimitiveSymbol::fromSyntax(scope, syntax);
     insertDefinition(prim, scope);
-
     return prim;
 }
 
@@ -1260,7 +1256,7 @@ const NameSyntax& Compilation::tryParseName(std::string_view name, Diagnostics& 
 }
 
 CompilationUnitSymbol& Compilation::createScriptScope() {
-    auto unit = emplace<CompilationUnitSymbol>(*this);
+    auto unit = emplace<CompilationUnitSymbol>(*this, nullptr);
     root->addMember(*unit);
     return *unit;
 }
@@ -1580,9 +1576,8 @@ AssertionInstanceDetails* Compilation::allocAssertionDetails() {
     return assertionDetailsAllocator.emplace();
 }
 
-ConfigBlockSymbol* Compilation::allocConfigBlock(std::string_view name, SourceLocation loc,
-                                                 const SourceLibrary* sourceLibrary) {
-    return configBlockAllocator.emplace(*this, name, loc, sourceLibrary);
+ConfigBlockSymbol* Compilation::allocConfigBlock(std::string_view name, SourceLocation loc) {
+    return configBlockAllocator.emplace(*this, name, loc);
 }
 
 const ImplicitTypeSyntax& Compilation::createEmptyTypeSyntax(SourceLocation loc) {

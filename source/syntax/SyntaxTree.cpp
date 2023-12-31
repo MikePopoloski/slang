@@ -20,8 +20,9 @@ using namespace parsing;
 SyntaxTree::SyntaxTree(SyntaxNode* root, SourceManager& sourceManager, BumpAllocator&& alloc,
                        const SourceLibrary* library, std::shared_ptr<SyntaxTree> parent) :
     rootNode(root),
-    sourceMan(sourceManager), alloc(std::move(alloc)), parentTree(std::move(parent)) {
-    metadata = std::make_unique<ParserMetadata>(ParserMetadata::fromSyntax(*root, library));
+    library(library), sourceMan(sourceManager), alloc(std::move(alloc)),
+    parentTree(std::move(parent)) {
+    metadata = std::make_unique<ParserMetadata>(ParserMetadata::fromSyntax(*root));
     if (!metadata->eofToken && parentTree)
         metadata->eofToken = parentTree->getMetadata().eofToken;
 }
@@ -109,13 +110,13 @@ SourceManager& SyntaxTree::getDefaultSourceManager() {
     return instance;
 }
 
-SyntaxTree::SyntaxTree(SyntaxNode* root, SourceManager& sourceManager, BumpAllocator&& alloc,
-                       Diagnostics&& diagnostics, ParserMetadata&& metadata,
+SyntaxTree::SyntaxTree(SyntaxNode* root, const SourceLibrary* library, SourceManager& sourceManager,
+                       BumpAllocator&& alloc, Diagnostics&& diagnostics, ParserMetadata&& metadata,
                        std::vector<const DefineDirectiveSyntax*>&& macros, Bag options) :
     rootNode(root),
-    sourceMan(sourceManager), alloc(std::move(alloc)), diagnosticsBuffer(std::move(diagnostics)),
-    options_(std::move(options)), metadata(std::make_unique<ParserMetadata>(std::move(metadata))),
-    macros(std::move(macros)) {
+    library(library), sourceMan(sourceManager), alloc(std::move(alloc)),
+    diagnosticsBuffer(std::move(diagnostics)), options_(std::move(options)),
+    metadata(std::make_unique<ParserMetadata>(std::move(metadata))), macros(std::move(macros)) {
 }
 
 std::shared_ptr<SyntaxTree> SyntaxTree::create(SourceManager& sourceManager,
@@ -136,8 +137,17 @@ std::shared_ptr<SyntaxTree> SyntaxTree::create(SourceManager& sourceManager,
     Diagnostics diagnostics;
     Preprocessor preprocessor(sourceManager, alloc, diagnostics, options, inheritedMacros);
 
-    for (auto it = sources.rbegin(); it != sources.rend(); it++)
+    const SourceLibrary* library = nullptr;
+    for (auto it = sources.rbegin(); it != sources.rend(); it++) {
         preprocessor.pushSource(*it);
+
+        if (it != sources.rbegin() && library != it->library) {
+            SLANG_THROW(std::invalid_argument("All sources provided to a single SyntaxTree must be "
+                                              "from the same source library"));
+        }
+
+        library = it->library;
+    }
 
     Parser parser(preprocessor, options);
 
@@ -150,9 +160,9 @@ std::shared_ptr<SyntaxTree> SyntaxTree::create(SourceManager& sourceManager,
             return create(sourceManager, sources, options, inheritedMacros, false);
     }
 
-    return std::shared_ptr<SyntaxTree>(new SyntaxTree(root, sourceManager, std::move(alloc),
-                                                      std::move(diagnostics), parser.getMetadata(),
-                                                      preprocessor.getDefinedMacros(), options));
+    return std::shared_ptr<SyntaxTree>(
+        new SyntaxTree(root, library, sourceManager, std::move(alloc), std::move(diagnostics),
+                       parser.getMetadata(), preprocessor.getDefinedMacros(), options));
 }
 
 std::shared_ptr<SyntaxTree> SyntaxTree::fromLibraryMapFile(std::string_view path,
@@ -191,9 +201,9 @@ std::shared_ptr<SyntaxTree> SyntaxTree::fromLibraryMapBuffer(const SourceBuffer&
     Parser parser(preprocessor, options);
     auto& root = parser.parseLibraryMap();
 
-    return std::shared_ptr<SyntaxTree>(new SyntaxTree(&root, sourceManager, std::move(alloc),
-                                                      std::move(diagnostics), parser.getMetadata(),
-                                                      preprocessor.getDefinedMacros(), options));
+    return std::shared_ptr<SyntaxTree>(
+        new SyntaxTree(&root, nullptr, sourceManager, std::move(alloc), std::move(diagnostics),
+                       parser.getMetadata(), preprocessor.getDefinedMacros(), options));
 }
 
 } // namespace slang::syntax

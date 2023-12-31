@@ -677,7 +677,7 @@ endmodule
 
     CompilationOptions options;
     options.flags |= CompilationFlags::LintMode;
-    tree->isLibrary = true;
+    tree->isLibraryUnit = true;
 
     Compilation compilation(options);
     compilation.addSyntaxTree(tree);
