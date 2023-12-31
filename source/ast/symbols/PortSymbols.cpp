@@ -47,30 +47,36 @@ std::tuple<const DefinitionSymbol*, std::string_view> getInterfacePortInfo(
 
     auto& comp = scope.getCompilation();
     auto token = header.nameOrKeyword;
-    auto def = comp.getDefinition(token.valueText(), scope);
-    std::string_view modport;
-
-    if (!def) {
-        scope.addDiag(diag::UnknownInterface, token.range()) << token.valueText();
+    auto def = comp.getDefinition(token.valueText(), scope, token.range(), diag::UnknownInterface);
+    if (!def || def->kind != SymbolKind::Definition) {
+        // If we got a result then getDefinition didn't error, so do it ourselves.
+        if (def)
+            scope.addDiag(diag::UnknownInterface, token.range()) << token.valueText();
+        return {nullptr, {}};
     }
-    else if (def->definitionKind != DefinitionKind::Interface) {
+
+    std::string_view modport;
+    auto defSym = &def->as<DefinitionSymbol>();
+
+    if (defSym->definitionKind != DefinitionKind::Interface) {
         auto& diag = scope.addDiag(diag::PortTypeNotInterfaceOrData, header.nameOrKeyword.range());
-        diag << def->name;
-        diag.addNote(diag::NoteDeclarationHere, def->location);
-        def = nullptr;
+        diag << defSym->name;
+        diag.addNote(diag::NoteDeclarationHere, defSym->location);
+        defSym = nullptr;
     }
     else if (header.modport) {
         auto member = header.modport->member;
         modport = member.valueText();
-        if (auto it = def->modports.find(modport); it == def->modports.end() && !modport.empty()) {
+        if (auto it = defSym->modports.find(modport);
+            it == defSym->modports.end() && !modport.empty()) {
             auto& diag = scope.addDiag(diag::NotAModport, member.range());
             diag << modport;
-            diag << def->name;
+            diag << defSym->name;
             modport = {};
         }
     }
 
-    return {def, modport};
+    return {defSym, modport};
 }
 
 // Helper class to build up lists of port symbols.
@@ -115,13 +121,16 @@ public:
 
                     // If we didn't find a valid type, try to find a definition.
                     if (!found || !found->isType()) {
-                        if (auto definition = comp.getDefinition(simpleName, scope)) {
-                            if (definition->definitionKind != DefinitionKind::Interface) {
+                        if (auto def = comp.tryGetDefinition(simpleName, scope);
+                            def && def->kind == SymbolKind::Definition) {
+
+                            auto defSym = &def->as<DefinitionSymbol>();
+                            if (defSym->definitionKind != DefinitionKind::Interface) {
                                 auto& diag = scope.addDiag(diag::PortTypeNotInterfaceOrData,
                                                            header.dataType->sourceRange());
-                                diag << definition->name;
-                                diag.addNote(diag::NoteDeclarationHere, definition->location);
-                                definition = nullptr;
+                                diag << defSym->name;
+                                diag.addNote(diag::NoteDeclarationHere, defSym->location);
+                                defSym = nullptr;
                             }
                             else {
                                 if (header.varKeyword) {
@@ -135,7 +144,7 @@ public:
                                 }
                             }
 
-                            return add(decl, definition, ""sv, /* isGeneric */ false,
+                            return add(decl, defSym, ""sv, /* isGeneric */ false,
                                        syntax.attributes);
                         }
                     }
@@ -361,9 +370,12 @@ public:
                 auto& data = syntax->as<DataDeclarationSyntax>();
                 auto& namedType = data.type->as<NamedTypeSyntax>();
                 auto typeName = namedType.name->as<IdentifierNameSyntax>().identifier.valueText();
-                auto def = comp.getDefinition(typeName, scope);
+                auto def = comp.tryGetDefinition(typeName, scope);
 
-                SLANG_ASSERT(def && def->definitionKind == DefinitionKind::Interface);
+                SLANG_ASSERT(def && def->kind == SymbolKind::Definition);
+
+                auto& defSym = def->as<DefinitionSymbol>();
+                SLANG_ASSERT(defSym.definitionKind == DefinitionKind::Interface);
 
                 for (auto decl : data.declarators) {
                     if (auto name = decl->name; !name.isMissing()) {
@@ -373,7 +385,7 @@ public:
                         if (inserted) {
                             auto& info = it->second;
                             info.isIface = true;
-                            info.ifaceDef = def;
+                            info.ifaceDef = &defSym;
                             info.insertionPoint = insertionPoint;
 
                             if (decl->initializer) {

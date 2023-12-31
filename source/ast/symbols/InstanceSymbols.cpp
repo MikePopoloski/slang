@@ -382,35 +382,26 @@ void InstanceSymbol::fromSyntax(Compilation& comp, const HierarchyInstantiationS
     // Does a lookup for the definition that was explicitly provided in
     // the instantiation syntax node.
     auto resolveExplicitDef = [&] {
-        explicitDef = comp.getDefinition(defName, *context.scope);
-        if (!explicitDef) {
-            // This might actually be a user-defined primitive instantiation.
-            if (auto prim = comp.getPrimitive(defName)) {
-                PrimitiveInstanceSymbol::fromSyntax(*prim, syntax, context, results, implicitNets);
-                if (!results.empty()) {
-                    if (!owningDefinition ||
-                        owningDefinition->definitionKind != DefinitionKind::Module || inChecker) {
-                        context.addDiag(diag::InvalidPrimInstanceForParent, syntax.type.range());
-                    }
-                    else if (isFromBind) {
-                        context.addDiag(diag::BindTargetPrimitive, syntax.type.range());
-                    }
+        auto def = comp.getDefinition(defName, *context.scope, syntax.type.range(),
+                                      diag::UnknownModule);
+        if (!def) {
+            UninstantiatedDefSymbol::fromSyntax(comp, syntax, context, results, implicitNets);
+        }
+        else if (def->kind == SymbolKind::Primitive) {
+            PrimitiveInstanceSymbol::fromSyntax(def->as<PrimitiveSymbol>(), syntax, context,
+                                                results, implicitNets);
+            if (!results.empty()) {
+                if (!owningDefinition ||
+                    owningDefinition->definitionKind != DefinitionKind::Module || inChecker) {
+                    context.addDiag(diag::InvalidPrimInstanceForParent, syntax.type.range());
+                }
+                else if (isFromBind) {
+                    context.addDiag(diag::BindTargetPrimitive, syntax.type.range());
                 }
             }
-            else {
-                // A compilation option can prevent errors in this scenario.
-                // If not set, we error about the missing module, unless we see an extern
-                // module or UDP declaration for this name, in which case we provide a
-                // slightly different error.
-                if (!comp.hasFlag(CompilationFlags::IgnoreUnknownModules) &&
-                    !comp.errorIfMissingExternModule(defName, *context.scope,
-                                                     syntax.type.range()) &&
-                    !comp.errorIfMissingExternPrimitive(defName, *context.scope,
-                                                        syntax.type.range())) {
-                    context.addDiag(diag::UnknownModule, syntax.type.range()) << defName;
-                }
-                UninstantiatedDefSymbol::fromSyntax(comp, syntax, context, results, implicitNets);
-            }
+        }
+        else {
+            explicitDef = &def->as<DefinitionSymbol>();
         }
     };
 
@@ -493,13 +484,14 @@ void InstanceSymbol::fromSyntax(Compilation& comp, const HierarchyInstantiationS
                         // We have an override rule, so use it to lookup the def.
                         auto def = comp.getDefinition(defName, *context.scope,
                                                       *overrideIt->second.configRule);
-                        if (!def) {
+                        if (!def || def->kind != SymbolKind::Definition) {
                             // TODO: only error for this specific instance
+                            // TODO: handle primitives
                             UninstantiatedDefSymbol::fromSyntax(comp, syntax, context, results,
                                                                 implicitNets);
                         }
                         else {
-                            createInstances(*def, instanceSyntax);
+                            createInstances(def->as<DefinitionSymbol>(), instanceSyntax);
                         }
                     }
                     else {
@@ -1180,32 +1172,35 @@ void PrimitiveInstanceSymbol::fromSyntax(const PrimitiveInstantiationSyntax& syn
                                          SmallVectorBase<const Symbol*>& implicitNets) {
     auto& comp = context.getCompilation();
     auto name = syntax.type.valueText();
-    auto prim = syntax.type.kind == TokenKind::Identifier ? comp.getPrimitive(name)
-                                                          : comp.getGateType(name);
 
-    if (!prim) {
-        // See if there is a definition with this name, which indicates an error
-        // in providing a drive strength or net delay.
-        if (comp.getDefinition(name, *context.scope)) {
-            SLANG_ASSERT(syntax.strength || syntax.delay);
-            if (syntax.strength) {
-                context.addDiag(diag::InstanceWithStrength, syntax.strength->sourceRange()) << name;
+    if (syntax.type.kind == TokenKind::Identifier) {
+        auto def = comp.getDefinition(name, *context.scope, syntax.type.range(),
+                                      diag::UnknownPrimitive);
+        if (def) {
+            if (def->kind == SymbolKind::Primitive) {
+                createPrimitives(def->as<PrimitiveSymbol>(), syntax, context, results,
+                                 implicitNets);
+                return;
             }
             else {
-                context.addDiag(diag::InstanceWithDelay,
-                                syntax.delay->getFirstToken().location() + 1);
+                SLANG_ASSERT(syntax.strength || syntax.delay);
+                if (syntax.strength) {
+                    context.addDiag(diag::InstanceWithStrength, syntax.strength->sourceRange())
+                        << name;
+                }
+                else {
+                    context.addDiag(diag::InstanceWithDelay,
+                                    syntax.delay->getFirstToken().location() + 1);
+                }
             }
         }
-        else if (!context.scope->isUninstantiated() &&
-                 !comp.errorIfMissingExternPrimitive(name, *context.scope, syntax.type.range())) {
-            context.addDiag(diag::UnknownPrimitive, syntax.type.range()) << name;
-        }
-
         UninstantiatedDefSymbol::fromSyntax(comp, syntax, context, results, implicitNets);
-        return;
     }
-
-    createPrimitives(*prim, syntax, context, results, implicitNets);
+    else {
+        auto prim = comp.getGateType(name);
+        SLANG_ASSERT(prim);
+        createPrimitives(*prim, syntax, context, results, implicitNets);
+    }
 }
 
 std::span<const Expression* const> PrimitiveInstanceSymbol::getPortConnections() const {

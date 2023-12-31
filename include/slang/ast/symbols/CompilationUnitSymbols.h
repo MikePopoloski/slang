@@ -255,17 +255,20 @@ public:
         ConfigRule rule;
     };
 
-    const SourceLibrary* sourceLibrary = nullptr;
+    const SourceLibrary* sourceLibrary;
     std::span<const ConfigCellId> topCells;
     std::span<const SourceLibrary* const> defaultLiblist;
     std::span<const InstanceOverride> instanceOverrides;
     flat_hash_map<std::string_view, std::vector<CellOverride>> cellOverrides;
 
-    ConfigBlockSymbol(Compilation& compilation, std::string_view name, SourceLocation loc) :
-        Symbol(SymbolKind::ConfigBlock, name, loc), Scope(compilation, this) {}
+    ConfigBlockSymbol(Compilation& compilation, std::string_view name, SourceLocation loc,
+                      const SourceLibrary* sourceLibrary) :
+        Symbol(SymbolKind::ConfigBlock, name, loc),
+        Scope(compilation, this), sourceLibrary(sourceLibrary) {}
 
     static ConfigBlockSymbol& fromSyntax(const Scope& scope,
-                                         const syntax::ConfigDeclarationSyntax& syntax);
+                                         const syntax::ConfigDeclarationSyntax& syntax,
+                                         const SourceLibrary* sourceLibrary);
 
     void serializeTo(ASTSerializer& serialize) const;
 

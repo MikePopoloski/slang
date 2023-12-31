@@ -15,7 +15,7 @@ namespace slang::ast::builtins {
 static void gate(Compilation& c, std::string_view name,
                  std::initializer_list<PrimitivePortDirection> portDirs,
                  PrimitiveSymbol::PrimitiveKind primitiveKind = PrimitiveSymbol::Fixed) {
-    auto& prim = *c.emplace<PrimitiveSymbol>(c, name, NL, primitiveKind);
+    auto& prim = *c.emplace<PrimitiveSymbol>(c, name, NL, primitiveKind, nullptr);
     c.addGateType(prim);
 
     SmallVector<const PrimitivePortSymbol*> ports;

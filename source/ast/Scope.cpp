@@ -529,10 +529,8 @@ void Scope::addMembers(const SyntaxNode& syntax) {
                 AnonymousProgramSymbol::fromSyntax(*this, syntax.as<AnonymousProgramSyntax>()));
             break;
         case SyntaxKind::ExternModuleDecl:
-            compilation.noteExternModule(*this, syntax.as<ExternModuleDeclSyntax>());
-            break;
         case SyntaxKind::ExternUdpDecl:
-            compilation.noteExternPrimitive(*this, syntax.as<ExternUdpDeclSyntax>());
+            compilation.noteExternDefinition(*this, syntax);
             break;
         case SyntaxKind::WildcardPortList:
             // If we hit this case we've run into an error elsewhere.
@@ -1263,13 +1261,13 @@ bool Scope::handleDataDeclaration(const DataDeclarationSyntax& syntax) {
     if (symbol || namedType.name->kind != SyntaxKind::IdentifierName)
         return false;
 
-    auto def = compilation.getDefinition(name, *this);
-    if (!def)
+    auto def = compilation.tryGetDefinition(name, *this);
+    if (!def || def->kind != SymbolKind::Definition)
         return false;
 
     // If we're in an instance and have non-ansi ports then assume that this is
     // a non-ansi interface port definition.
-    if (def->definitionKind == DefinitionKind::Interface &&
+    if (def->as<DefinitionSymbol>().definitionKind == DefinitionKind::Interface &&
         asSymbol().kind == SymbolKind::InstanceBody &&
         asSymbol().as<InstanceBodySymbol>().getDefinition().hasNonAnsiPorts) {
 
@@ -1295,20 +1293,21 @@ void Scope::tryFixupInstances(const DataDeclarationSyntax& syntax, const ASTCont
                               SmallVectorBase<const Symbol*>& results) const {
     auto& namedType = syntax.type->as<NamedTypeSyntax>();
     std::string_view name = getIdentifierName(namedType);
-    auto def = compilation.getDefinition(name, *this);
-    if (!def)
+    auto def = compilation.tryGetDefinition(name, *this);
+    if (!def || def->kind != SymbolKind::Definition)
         return;
 
     // Matching the check in handleDataDeclaration -- if this is true we
     // handle this as a non-ansi interface port declaration instead.
-    if (def->definitionKind == DefinitionKind::Interface &&
+    auto& defSym = def->as<DefinitionSymbol>();
+    if (defSym.definitionKind == DefinitionKind::Interface &&
         asSymbol().kind == SymbolKind::InstanceBody &&
         asSymbol().as<InstanceBodySymbol>().getDefinition().hasNonAnsiPorts) {
         return;
     }
 
     // Assume this is malformed instantiation syntax and create the instances anyway.
-    InstanceSymbol::fromFixupSyntax(compilation, *def, syntax, context, results);
+    InstanceSymbol::fromFixupSyntax(compilation, defSym, syntax, context, results);
 }
 
 void Scope::handleUserDefinedNet(const UserDefinedNetDeclarationSyntax& syntax) {

@@ -314,17 +314,22 @@ public:
     /// Gets the definition with the given name, or nullptr if there is no such definition.
     /// This takes into account the given scope so that nested definitions are found
     /// before more global ones.
-    const DefinitionSymbol* getDefinition(std::string_view name, const Scope& scope) const;
+    const Symbol* tryGetDefinition(std::string_view name, const Scope& scope) const;
+
+    /// Gets the definition with the given name, or nullptr if there is no such definition.
+    /// If no definition is found an appropriate diagnostic will be issued.
+    const Symbol* getDefinition(std::string_view name, const Scope& scope, SourceRange sourceRange,
+                                DiagCode code) const;
 
     /// Gets the definition for the given syntax node, or nullptr if it does not exist.
     const DefinitionSymbol* getDefinition(const syntax::ModuleDeclarationSyntax& syntax) const;
 
     /// Gets the definition indicated by the given config rule, or nullptr if it does not exist.
-    const DefinitionSymbol* getDefinition(std::string_view name, const Scope& scope,
-                                          const ConfigRule& configRule) const;
+    const Symbol* getDefinition(std::string_view name, const Scope& scope,
+                                const ConfigRule& configRule) const;
 
-    /// Gets a list of all definitions in the design.
-    std::vector<const DefinitionSymbol*> getDefinitions() const;
+    /// Gets a list of all definitions (including primitives) in the design.
+    std::vector<const Symbol*> getDefinitions() const;
 
     /// Gets the package with the give name, or nullptr if there is no such package.
     const PackageSymbol* getPackage(std::string_view name) const;
@@ -335,14 +340,8 @@ public:
     /// Gets a list of all packages in the design.
     std::vector<const PackageSymbol*> getPackages() const;
 
-    /// Gets the primitive with the given name, or nullptr if there is no such primitive.
-    const PrimitiveSymbol* getPrimitive(std::string_view name) const;
-
     /// Gets the built-in gate type with the given name, or nullptr if there is no such gate.
     const PrimitiveSymbol* getGateType(std::string_view name) const;
-
-    /// Gets a list of all primitives in the design.
-    std::vector<const PrimitiveSymbol*> getPrimitives() const;
 
     /// @}
     /// @name System function management
@@ -483,29 +482,12 @@ public:
     /// if no such declaration is in effect.
     const Expression* getDefaultDisable(const Scope& scope) const;
 
-    /// Notes the existence of an extern module/interface/program declaration.
-    void noteExternModule(const Scope& scope, const syntax::ExternModuleDeclSyntax& syntax);
+    /// Notes the existence of an extern module/interface/program/primitive declaration.
+    void noteExternDefinition(const Scope& scope, const syntax::SyntaxNode& syntax);
 
-    /// Performs a lookup for an extern module declaration of the given name.
-    const syntax::ExternModuleDeclSyntax* getExternModule(std::string_view name,
-                                                          const Scope& scope) const;
-
-    /// Reports an error about a missing implementation if there exists an
-    /// extern module declaration for the given name.
-    bool errorIfMissingExternModule(std::string_view name, const Scope& scope,
-                                    SourceRange sourceRange);
-
-    /// Notes the existence of an extern primitive declaration.
-    void noteExternPrimitive(const Scope& scope, const syntax::ExternUdpDeclSyntax& syntax);
-
-    /// Performs a lookup for an extern primitive declaration of the given name.
-    const syntax::ExternUdpDeclSyntax* getExternPrimitive(std::string_view name,
-                                                          const Scope& scope) const;
-
-    /// Reports an error about a missing implementation if there exists an
-    /// extern primitive declaration for the given name.
-    bool errorIfMissingExternPrimitive(std::string_view name, const Scope& scope,
-                                       SourceRange sourceRange);
+    /// Performs a lookup for an extern module/interface/program/primitive declaration
+    /// of the given name.
+    const syntax::SyntaxNode* getExternDefinition(std::string_view name, const Scope& scope) const;
 
     /// Notes that the given syntax node is "referenced" somewhere in the AST.
     /// This is used to diagnose unused variables, nets, etc. The @a isLValue parameter
@@ -646,7 +628,8 @@ public:
     }
 
     /// Allocates a config block symbol.
-    ConfigBlockSymbol* allocConfigBlock(std::string_view name, SourceLocation loc);
+    ConfigBlockSymbol* allocConfigBlock(std::string_view name, SourceLocation loc,
+                                        const SourceLibrary* sourceLibrary);
 
     /// Gets the driver map allocator.
     DriverIntervalMap::allocator_type& getDriverMapAllocator() { return driverMapAllocator; }
@@ -678,6 +661,7 @@ private:
     Diagnostic& addDiag(Diagnostic diag);
 
     const RootSymbol& getRoot(bool skipDefParamsAndBinds);
+    void insertDefinition(Symbol& symbol, const Scope& scope);
     void parseParamOverrides(flat_hash_map<std::string_view, const ConstantValue*>& results);
     void checkDPIMethods(std::span<const SubroutineSymbol* const> dpiImports);
     void checkExternIfaceMethods(std::span<const MethodPrototypeSymbol* const> protos);
@@ -691,10 +675,9 @@ private:
     void checkBindTargetParams(const syntax::BindDirectiveSyntax& syntax, const Scope& scope,
                                std::span<const Symbol* const> instTargets,
                                const DefinitionSymbol* defTarget);
-    const DefinitionSymbol* resolveConfigRules(std::string_view name, const Scope& scope,
-                                               const ConfigBlockSymbol* config,
-                                               const ConfigRule* configRule,
-                                               const std::vector<DefinitionSymbol*>& defList) const;
+    const Symbol* resolveConfigRules(std::string_view name, const Scope& scope,
+                                     const ConfigBlockSymbol* config, const ConfigRule* configRule,
+                                     const std::vector<Symbol*>& defList) const;
 
     // Stored options object.
     CompilationOptions options;
@@ -735,14 +718,13 @@ private:
     // for things like variables and nets.
     flat_hash_map<const syntax::SyntaxNode*, std::pair<bool, bool>> referenceStatusMap;
 
-    // The name map for all module, interface, and program definitions.
+    // The name map for all module, interface, program, and primitive definitions.
     // The key is a combination of definition name + the scope in which it was declared.
     // The value is a pair -- the first element is a list of definitions that share
     // the given name / scope (which can happen for multiple libraries at the root scope),
     // and the second element is a boolean that indicates whether there exists at least
     // one nested module with the given name (requiring a more involved lookup).
-    flat_hash_map<std::tuple<std::string_view, const Scope*>,
-                  std::pair<std::vector<DefinitionSymbol*>, bool>>
+    flat_hash_map<std::tuple<std::string_view, const Scope*>, std::pair<std::vector<Symbol*>, bool>>
         definitionMap;
 
     // A cache of vector types, keyed on various properties such as bit width.
@@ -840,9 +822,6 @@ private:
     // are also not automatically instantiated as top-level.
     std::vector<const DefinitionSymbol*> unreferencedDefs;
 
-    // The name map for user-defined primitive definitions.
-    flat_hash_map<std::string_view, const PrimitiveSymbol*> udpMap;
-
     // The name map for built-in primitive definitions. These are stored in a separate
     // map because they are distinguished by keyword names that may otherwise collide
     // with escaped identifiers used by user code.
@@ -892,14 +871,10 @@ private:
     // This is pretty rare and only used for checking of type params.
     flat_hash_map<const DefinitionSymbol*, std::vector<const Symbol*>> instancesWithDefBinds;
 
-    // The name map for extern module declarations.
+    // The name map for extern module/interface/program/primitive declarations.
     // The key is a combination of definition name + the scope in which it was declared.
-    flat_hash_map<std::tuple<std::string_view, const Scope*>, const syntax::ExternModuleDeclSyntax*>
-        externModuleMap;
-
-    // The name map for extern user-defined primitive declarations.
-    flat_hash_map<std::tuple<std::string_view, const Scope*>, const syntax::ExternUdpDeclSyntax*>
-        externUdpMap;
+    flat_hash_map<std::tuple<std::string_view, const Scope*>, const syntax::SyntaxNode*>
+        externDefMap;
 
     // Storage for system subroutine instances.
     std::vector<std::unique_ptr<SystemSubroutine>> subroutineStorage;

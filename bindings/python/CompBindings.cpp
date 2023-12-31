@@ -99,10 +99,7 @@ void registerCompilation(py::module_& m) {
         .def("getCompilationUnit", &Compilation::getCompilationUnit, byrefint, "syntax"_a)
         .def("getCompilationUnits", &Compilation::getCompilationUnits, byrefint)
         .def("getSourceLibrary", &Compilation::getSourceLibrary, byrefint, "name"_a)
-        .def("getDefinition",
-             py::overload_cast<std::string_view, const Scope&>(&Compilation::getDefinition,
-                                                               py::const_),
-             byrefint, "name"_a, "scope"_a)
+        .def("tryGetDefinition", &Compilation::tryGetDefinition, byrefint, "name"_a, "scope"_a)
         .def("getDefinition",
              py::overload_cast<const ModuleDeclarationSyntax&>(&Compilation::getDefinition,
                                                                py::const_),
@@ -111,9 +108,7 @@ void registerCompilation(py::module_& m) {
         .def("getPackage", &Compilation::getPackage, byrefint, "name"_a)
         .def("getStdPackage", &Compilation::getStdPackage, byrefint)
         .def("getPackages", &Compilation::getPackages, byrefint)
-        .def("getPrimitive", &Compilation::getPrimitive, byrefint, "name"_a)
         .def("getGateType", &Compilation::getGateType, byrefint, "name"_a)
-        .def("getPrimitives", &Compilation::getPrimitives, byrefint)
         .def("getAttributes",
              py::overload_cast<const Symbol&>(&Compilation::getAttributes, py::const_), byrefint,
              "symbol"_a)

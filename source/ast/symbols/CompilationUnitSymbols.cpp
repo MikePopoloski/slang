@@ -252,11 +252,11 @@ DefinitionSymbol::DefinitionSymbol(const Scope& scope, LookupLocation lookupLoca
     auto header = syntax.header.get();
     if (header->ports && header->ports->kind == SyntaxKind::WildcardPortList) {
         auto& comp = scope.getCompilation();
-        auto externMod = comp.getExternModule(name, scope);
-        if (!externMod)
+        auto externMod = comp.getExternDefinition(name, scope);
+        if (!externMod || externMod->kind != SyntaxKind::ExternModuleDecl)
             scope.addDiag(diag::MissingExternWildcardPorts, header->ports->sourceRange()) << name;
         else
-            header = externMod->header;
+            header = externMod->as<ExternModuleDeclSyntax>().header;
     }
 
     portList = header->ports;
@@ -332,9 +332,11 @@ void DefinitionSymbol::serializeTo(ASTSerializer&) const {
 }
 
 ConfigBlockSymbol& ConfigBlockSymbol::fromSyntax(const Scope& scope,
-                                                 const ConfigDeclarationSyntax& syntax) {
+                                                 const ConfigDeclarationSyntax& syntax,
+                                                 const SourceLibrary* sourceLibrary) {
     auto& comp = scope.getCompilation();
-    auto result = comp.allocConfigBlock(syntax.name.valueText(), syntax.name.location());
+    auto result = comp.allocConfigBlock(syntax.name.valueText(), syntax.name.location(),
+                                        sourceLibrary);
     result->setSyntax(syntax);
     result->setAttributes(scope, syntax.attributes);
 

@@ -1103,16 +1103,22 @@ const Type& VirtualInterfaceType::fromSyntax(const ASTContext& context,
     if (ifaceName.empty())
         return comp.getErrorType();
 
-    auto definition = comp.getDefinition(ifaceName, *context.scope);
-    if (!definition || definition->definitionKind != DefinitionKind::Interface) {
-        if (!comp.errorIfMissingExternModule(ifaceName, *context.scope, syntax.name.range())) {
+    auto def = comp.getDefinition(ifaceName, *context.scope, syntax.name.range(),
+                                  diag::UnknownInterface);
+
+    if (!def || def->kind != SymbolKind::Definition ||
+        def->as<DefinitionSymbol>().definitionKind != DefinitionKind::Interface) {
+
+        // If we got a result from getDefinition then it didn't error, so issue
+        // one ourselves since we didn't find an interface.
+        if (def)
             context.addDiag(diag::UnknownInterface, syntax.name.range()) << ifaceName;
-        }
         return comp.getErrorType();
     }
 
     auto loc = syntax.name.location();
-    auto& iface = InstanceSymbol::createVirtual(context, loc, *definition, syntax.parameters);
+    auto& iface = InstanceSymbol::createVirtual(context, loc, def->as<DefinitionSymbol>(),
+                                                syntax.parameters);
 
     const ModportSymbol* modport = nullptr;
     std::string_view modportName = syntax.modport ? syntax.modport->member.valueText() : ""sv;
@@ -1122,7 +1128,7 @@ const Type& VirtualInterfaceType::fromSyntax(const ASTContext& context,
             SLANG_ASSERT(syntax.modport);
             auto& diag = context.addDiag(diag::NotAModport, syntax.modport->member.range());
             diag << modportName;
-            diag << definition->name;
+            diag << def->name;
         }
         else {
             modport = &sym->as<ModportSymbol>();

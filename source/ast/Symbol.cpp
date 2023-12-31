@@ -246,6 +246,21 @@ const DefinitionSymbol* Symbol::getDeclaringDefinition() const {
     return &curr->as<InstanceBodySymbol>().getDefinition();
 }
 
+const SourceLibrary* Symbol::getSourceLibrary() const {
+    switch (kind) {
+        case SymbolKind::Definition:
+            return as<DefinitionSymbol>().sourceLibrary;
+        case SymbolKind::Primitive:
+            return as<PrimitiveSymbol>().sourceLibrary;
+        case SymbolKind::ConfigBlock:
+            return as<ConfigBlockSymbol>().sourceLibrary;
+        default:
+            if (auto def = getDeclaringDefinition())
+                return def->sourceLibrary;
+            return nullptr;
+    }
+}
+
 RandMode Symbol::getRandMode() const {
     switch (kind) {
         case SymbolKind::ClassProperty:

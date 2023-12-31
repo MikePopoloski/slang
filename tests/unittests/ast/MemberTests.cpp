@@ -665,9 +665,15 @@ endpackage
 
     auto ts = [](std::string_view str) { return TimeScale::fromString(str).value(); };
 
-    CHECK(compilation.getDefinition("m", compilation.getRoot())->timeScale == ts("10ns/10ps"));
-    CHECK(compilation.getDefinition("n", compilation.getRoot())->timeScale == ts("10us/1ns"));
-    CHECK(compilation.getDefinition("o", compilation.getRoot())->timeScale == ts("100s/10fs"));
+    auto getDefTS = [&](std::string_view name) {
+        auto def = compilation.tryGetDefinition(name, compilation.getRoot());
+        REQUIRE(def);
+        return def->as<DefinitionSymbol>().timeScale;
+    };
+
+    CHECK(getDefTS("m") == ts("10ns/10ps"));
+    CHECK(getDefTS("n") == ts("10us/1ns"));
+    CHECK(getDefTS("o") == ts("100s/10fs"));
     CHECK(compilation.getPackage("p")->getTimeScale() == ts("100s/1ps"));
 }
 

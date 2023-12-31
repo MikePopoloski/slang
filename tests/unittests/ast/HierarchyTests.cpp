@@ -1866,7 +1866,7 @@ endmodule
     CHECK(diags[2].code == diag::WrongBindTargetDef);
     CHECK(diags[3].code == diag::Redefinition);
     CHECK(diags[4].code == diag::UnknownModule);
-    CHECK(diags[5].code == diag::UndeclaredIdentifier);
+    CHECK(diags[5].code == diag::UnknownModule);
     CHECK(diags[6].code == diag::BindTargetPrimitive);
     CHECK(diags[7].code == diag::InvalidInstanceForParent);
 }
@@ -2287,18 +2287,15 @@ endprimitive
     NO_COMPILATION_ERRORS;
 
     auto defs = compilation.getDefinitions();
-    REQUIRE(defs.size() == 2);
+    REQUIRE(defs.size() == 3);
     CHECK(defs[0]->name == "m");
     CHECK(defs[1]->name == "n");
+    CHECK(defs[2]->name == "p2");
 
     auto pkgs = compilation.getPackages();
     REQUIRE(pkgs.size() == 2);
-    CHECK(pkgs[0]->name == "std");
-    CHECK(pkgs[1]->name == "p");
-
-    auto prims = compilation.getPrimitives();
-    REQUIRE(prims.size() == 1);
-    CHECK(prims[0]->name == "p2");
+    CHECK(pkgs[0]->name == "p");
+    CHECK(pkgs[1]->name == "std");
 
     auto cus = compilation.getCompilationUnits();
     REQUIRE(cus.size() == 1);

@@ -948,22 +948,22 @@ static void createTableEntries(const Scope& scope, const UdpEntrySyntax& syntax,
     expandTableEntries(scope, syntax, fields, currEntry, 0, entry, results, rowDupMap);
 }
 
-PrimitiveSymbol& PrimitiveSymbol::fromSyntax(const Scope& scope,
-                                             const UdpDeclarationSyntax& syntax) {
+PrimitiveSymbol& PrimitiveSymbol::fromSyntax(const Scope& scope, const UdpDeclarationSyntax& syntax,
+                                             const SourceLibrary* sourceLibrary) {
     auto& comp = scope.getCompilation();
     auto primName = syntax.name.valueText();
     auto prim = comp.emplace<PrimitiveSymbol>(comp, primName, syntax.name.location(),
-                                              PrimitiveSymbol::UserDefined);
+                                              PrimitiveSymbol::UserDefined, sourceLibrary);
     prim->setAttributes(scope, syntax.attributes);
     prim->setSyntax(syntax);
 
     auto portList = syntax.portList.get();
     if (portList->kind == SyntaxKind::WildcardUdpPortList) {
-        auto externPrim = comp.getExternPrimitive(primName, scope);
-        if (!externPrim)
+        auto externPrim = comp.getExternDefinition(primName, scope);
+        if (!externPrim || externPrim->kind != SyntaxKind::ExternUdpDecl)
             scope.addDiag(diag::MissingExternWildcardPorts, portList->sourceRange()) << primName;
         else
-            portList = externPrim->portList;
+            portList = externPrim->as<ExternUdpDeclSyntax>().portList;
     }
 
     SmallVector<const PrimitivePortSymbol*> ports;

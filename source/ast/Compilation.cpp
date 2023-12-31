@@ -257,24 +257,25 @@ std::span<const CompilationUnitSymbol* const> Compilation::getCompilationUnits()
     return compilationUnits;
 }
 
-std::vector<const DefinitionSymbol*> Compilation::getDefinitions() const {
-    std::vector<const DefinitionSymbol*> result;
-    for (auto& def : definitionMemory)
-        result.push_back(def.get());
+std::vector<const Symbol*> Compilation::getDefinitions() const {
+    std::vector<const Symbol*> result;
+    for (auto& [key, val] : definitionMap) {
+        for (auto sym : val.first) {
+            result.insert(std::ranges::upper_bound(result, sym->name, {},
+                                                   [](auto item) { return item->name; }),
+                          sym);
+        }
+    }
+
     return result;
 }
 
 std::vector<const PackageSymbol*> Compilation::getPackages() const {
     std::vector<const PackageSymbol*> result;
-    for (auto& [name, pkg] : packageMap)
-        result.push_back(pkg);
-    return result;
-}
-
-std::vector<const PrimitiveSymbol*> Compilation::getPrimitives() const {
-    std::vector<const PrimitiveSymbol*> result;
-    for (auto& [name, prim] : udpMap)
-        result.push_back(prim);
+    for (auto& [name, pkg] : packageMap) {
+        result.insert(
+            std::ranges::upper_bound(result, name, {}, [](auto item) { return item->name; }), pkg);
+    }
     return result;
 }
 
@@ -340,32 +341,36 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamsAndBinds) {
             if (std::get<1>(key) != root.get())
                 continue;
 
-            for (auto def : defList.first) {
+            for (auto defSym : defList.first) {
                 // Ignore definitions that are not top level. Top level definitions are:
                 // - Modules and programs
                 // - Not nested
                 // - Have no non-defaulted parameters
                 // - Not instantiated anywhere
                 // - Not in a library
-                if (def->sourceLibrary ||
-                    globalInstantiations.find(def->name) != globalInstantiations.end()) {
+                if (defSym->kind != SymbolKind::Definition)
+                    continue;
+
+                auto& def = defSym->as<DefinitionSymbol>();
+                if (def.sourceLibrary ||
+                    globalInstantiations.find(def.name) != globalInstantiations.end()) {
                     continue;
                 }
 
                 // Library definitions are never automatically instantiated in any capacity.
-                if (!def->syntaxTree || !def->syntaxTree->isLibrary) {
-                    if (def->definitionKind == DefinitionKind::Module ||
-                        def->definitionKind == DefinitionKind::Program) {
-                        if (isValidTop(*def)) {
+                if (!def.syntaxTree || !def.syntaxTree->isLibrary) {
+                    if (def.definitionKind == DefinitionKind::Module ||
+                        def.definitionKind == DefinitionKind::Program) {
+                        if (isValidTop(def)) {
                             // This definition can be automatically instantiated.
-                            topDefs.push_back({def, nullptr});
+                            topDefs.push_back({&def, nullptr});
                             continue;
                         }
                     }
                 }
 
                 // Otherwise this definition is unreferenced and not automatically instantiated.
-                unreferencedDefs.push_back(def);
+                unreferencedDefs.push_back(&def);
             }
         }
     }
@@ -377,19 +382,23 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamsAndBinds) {
             if (std::get<1>(key) != root.get())
                 continue;
 
-            for (auto def : defList.first) {
-                if (def->definitionKind == DefinitionKind::Module ||
-                    def->definitionKind == DefinitionKind::Program) {
+            for (auto defSym : defList.first) {
+                if (defSym->kind != SymbolKind::Definition)
+                    continue;
+
+                auto& def = defSym->as<DefinitionSymbol>();
+                if (def.definitionKind == DefinitionKind::Module ||
+                    def.definitionKind == DefinitionKind::Program) {
 
                     // If this definition is in a library, it can only be targeted as
                     // a top module by the user including the library name in the string.
                     flat_hash_set<std::string_view>::iterator it;
-                    if (def->sourceLibrary) {
-                        auto target = fmt::format("{}.{}", def->sourceLibrary->name, def->name);
+                    if (def.sourceLibrary) {
+                        auto target = fmt::format("{}.{}", def.sourceLibrary->name, def.name);
                         it = tm.find(target);
                     }
                     else {
-                        it = tm.find(def->name);
+                        it = tm.find(def.name);
                     }
 
                     if (it != tm.end()) {
@@ -397,23 +406,23 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamsAndBinds) {
                         tm.erase(it);
 
                         // Make sure this is actually valid as a top-level module.
-                        if (isValidTop(*def)) {
-                            topDefs.push_back({def, nullptr});
+                        if (isValidTop(def)) {
+                            topDefs.push_back({&def, nullptr});
                             continue;
                         }
 
                         // Otherwise, issue an error because the user asked us to instantiate this.
-                        def->getParentScope()->addDiag(diag::InvalidTopModule,
-                                                       SourceLocation::NoLocation)
-                            << def->name;
+                        def.getParentScope()->addDiag(diag::InvalidTopModule,
+                                                      SourceLocation::NoLocation)
+                            << def.name;
                     }
                 }
 
                 // Otherwise this definition might be unreferenced and not automatically
                 // instantiated (don't add library definitions to this list though).
-                if (globalInstantiations.find(def->name) == globalInstantiations.end() &&
-                    !def->sourceLibrary) {
-                    unreferencedDefs.push_back(def);
+                if (globalInstantiations.find(def.name) == globalInstantiations.end() &&
+                    !def.sourceLibrary) {
+                    unreferencedDefs.push_back(&def);
                 }
             }
         }
@@ -453,11 +462,15 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamsAndBinds) {
                             defIt != definitionMap.end()) {
 
                             const DefinitionSymbol* foundDef = nullptr;
-                            for (auto def : defIt->second.first) {
+                            for (auto defSym : defIt->second.first) {
+                                if (defSym->kind != SymbolKind::Definition)
+                                    continue;
+
+                                auto& def = defSym->as<DefinitionSymbol>();
                                 if ((cell.lib.empty() &&
-                                     def->sourceLibrary == foundConf->sourceLibrary) ||
-                                    (def->sourceLibrary && def->sourceLibrary->name == cell.lib)) {
-                                    foundDef = def;
+                                     def.sourceLibrary == foundConf->sourceLibrary) ||
+                                    (def.sourceLibrary && def.sourceLibrary->name == cell.lib)) {
+                                    foundDef = &def;
                                     break;
                                 }
                             }
@@ -570,8 +583,7 @@ const CompilationUnitSymbol* Compilation::getCompilationUnit(
     return nullptr;
 }
 
-const DefinitionSymbol* Compilation::getDefinition(std::string_view lookupName,
-                                                   const Scope& scope) const {
+const Symbol* Compilation::tryGetDefinition(std::string_view lookupName, const Scope& scope) const {
     // Try to find a config block for this scope to help choose the right definition.
     const ConfigBlockSymbol* config = nullptr;
     if (!configForScope.empty()) {
@@ -619,7 +631,7 @@ const DefinitionSymbol* Compilation::getDefinition(std::string_view lookupName,
     // If there is a global priority list try to use that.
     for (auto lib : defaultLiblist) {
         for (auto def : defList) {
-            if (def->sourceLibrary == lib)
+            if (def->getSourceLibrary() == lib)
                 return def;
         }
     }
@@ -627,6 +639,35 @@ const DefinitionSymbol* Compilation::getDefinition(std::string_view lookupName,
     // Otherwise return the first definition in the list -- it's already
     // sorted in priority order.
     return defList.empty() ? nullptr : defList.front();
+}
+
+static Token getExternNameToken(const SyntaxNode& sn) {
+    return sn.kind == SyntaxKind::ExternModuleDecl ? sn.as<ExternModuleDeclSyntax>().header->name
+                                                   : sn.as<ExternUdpDeclSyntax>().name;
+}
+
+const Symbol* Compilation::getDefinition(std::string_view name, const Scope& scope,
+                                         SourceRange sourceRange, DiagCode code) const {
+    if (auto def = tryGetDefinition(name, scope))
+        return def;
+
+    if (hasFlag(CompilationFlags::IgnoreUnknownModules) || scope.isUninstantiated())
+        return nullptr;
+
+    if (auto def = getExternDefinition(name, scope)) {
+        auto& diag = scope.addDiag(diag::MissingExternModuleImpl, getExternNameToken(*def).range());
+        if (def->kind == SyntaxKind::ExternModuleDecl)
+            diag << def->as<ExternModuleDeclSyntax>().header->moduleKeyword.valueText();
+        else
+            diag << "primitive"sv;
+
+        diag << name;
+        diag.addNote(diag::NoteReferencedHere, sourceRange);
+        return nullptr;
+    }
+
+    scope.addDiag(code, sourceRange) << name;
+    return nullptr;
 }
 
 const DefinitionSymbol* Compilation::getDefinition(const ModuleDeclarationSyntax& syntax) const {
@@ -648,24 +689,14 @@ const DefinitionSymbol* Compilation::getDefinition(const ModuleDeclarationSyntax
     return nullptr;
 }
 
-const DefinitionSymbol* Compilation::getDefinition(std::string_view lookupName, const Scope& scope,
-                                                   const ConfigRule& configRule) const {
+const Symbol* Compilation::getDefinition(std::string_view lookupName, const Scope& scope,
+                                         const ConfigRule& configRule) const {
     // TODO: handle error cases
     auto it = definitionMap.find({lookupName, root.get()});
     if (it == definitionMap.end())
         return resolveConfigRules(lookupName, scope, nullptr, &configRule, {});
     else
         return resolveConfigRules(lookupName, scope, nullptr, &configRule, it->second.first);
-}
-
-template<typename T>
-static void reportRedefinition(const Scope& scope, const T& newSym, SourceLocation oldLoc,
-                               DiagCode code) {
-    if (!newSym.name.empty()) {
-        auto& diag = scope.addDiag(code, newSym.location);
-        diag << newSym.name;
-        diag.addNote(diag::NotePreviousDefinition, oldLoc);
-    }
 }
 
 static void checkExternModMatch(const Scope& scope, const ModuleHeaderSyntax& externNode,
@@ -730,62 +761,117 @@ void Compilation::createDefinition(const Scope& scope, LookupLocation location,
                    .get();
     definitionFromSyntax[&syntax] = def;
 
+    insertDefinition(*def, scope);
+
+    auto targetScope = scope.asSymbol().kind == SymbolKind::CompilationUnit ? root.get() : &scope;
+    const bool isRoot = targetScope == root.get();
+    if (isRoot)
+        checkElemTimeScale(def->timeScale, syntax.header->name.range());
+}
+
+void Compilation::insertDefinition(Symbol& symbol, const Scope& scope) {
+    auto reportRedefinition = [&](SourceLocation oldLoc, DiagCode code) {
+        if (!symbol.name.empty()) {
+            auto& diag = scope.addDiag(code, symbol.location);
+            diag << symbol.name;
+            diag.addNote(diag::NotePreviousDefinition, oldLoc);
+        }
+    };
+
     // Record that the given scope contains this definition. If the scope is a compilation unit, add
     // it to the root scope instead so that lookups from other compilation units will find it.
     auto targetScope = scope.asSymbol().kind == SymbolKind::CompilationUnit ? root.get() : &scope;
     const bool isRoot = targetScope == root.get();
-
-    auto key = std::tuple(def->name, targetScope);
-    auto it = definitionMap.find(key);
-    if (it == definitionMap.end()) {
-        definitionMap.emplace(key, std::pair{std::vector{def}, !isRoot});
-    }
-    else {
+    auto key = std::tuple(symbol.name, targetScope);
+    if (auto it = definitionMap.find(key); it != definitionMap.end()) {
         // There is already a definition with this name in this scope.
         // If we're not at the root scope, it's a straightforward error.
         auto& defList = it->second.first;
         if (!isRoot) {
-            reportRedefinition(scope, *def, defList[0]->location, diag::DuplicateDefinition);
+            SLANG_ASSERT(defList[0]);
+            reportRedefinition(defList[0]->location, diag::DuplicateDefinition);
             return;
         }
 
-        // Otherwise, if they're in the same source library we take the
-        // latter one (with a warning) and if not then we store both
-        // and resolve them later via config or library ordering.
-        auto vecIt =
-            std::ranges::lower_bound(defList, def, [](DefinitionSymbol* a, DefinitionSymbol* b) {
-                if (!a->sourceLibrary)
-                    return false;
-                if (!b->sourceLibrary)
-                    return true;
-                return a->sourceLibrary->priority < b->sourceLibrary->priority;
-            });
+        // Otherwise we have a duplicate at the root scope; figure out where
+        // we should insert this definition. If they are in different libraries
+        // then keep them sorted in priority order. If they're in the same library
+        // then we want to error (or maybe warn).
+        auto vecIt = std::ranges::lower_bound(defList, &symbol, [](auto a, auto b) {
+            auto libA = a->getSourceLibrary();
+            auto libB = b->getSourceLibrary();
+            if (!libA)
+                return false;
+            if (!libB)
+                return true;
+            return libA->priority < libB->priority;
+        });
 
-        if (vecIt != defList.end() && (*vecIt)->sourceLibrary == def->sourceLibrary) {
-            // TODO: take the second one instead of the first?
-            reportRedefinition(scope, *def, (*vecIt)->location, diag::DuplicateDefinition);
-            return;
+        if (vecIt != defList.end()) {
+            bool warned = false;
+            auto symLib = symbol.getSourceLibrary();
+            for (auto v = vecIt; v != defList.end(); v++) {
+                auto vSym = *v;
+                auto vLib = vSym->getSourceLibrary();
+                if (vLib == symLib) {
+                    // Duplicate in the same library. If they are both the same kind
+                    // then we report a warning and take the first one, otherwise
+                    // we give a hard error.
+                    // TODO: take the second one instead of the first?
+                    if (vSym->kind == symbol.kind) {
+                        if (!warned) {
+                            // We keep going after this because there might also
+                            // be a mismatching primitive / definition worth erroring about
+                            // and the DuplicateDefinition warning can be suppressed.
+                            reportRedefinition(vSym->location, diag::DuplicateDefinition);
+                            warned = true;
+                        }
+                    }
+                    else {
+                        reportRedefinition(vSym->location, diag::Redefinition);
+                        return;
+                    }
+                }
+                else if (!vLib || !symLib || vLib->priority != symLib->priority) {
+                    // We know for sure there are no more duplicates because the
+                    // library and/or the priority has changed.
+                    break;
+                }
+            }
         }
 
-        defList.insert(vecIt, def);
+        defList.insert(vecIt, &symbol);
+    }
+    else {
+        definitionMap.emplace(key, std::pair{std::vector{&symbol}, !isRoot});
     }
 
     if (isRoot) {
-        if (auto primIt = udpMap.find(def->name); primIt != udpMap.end())
-            reportRedefinition(scope, *def, primIt->second->location, diag::Redefinition);
-        else if (auto prim = getExternPrimitive(def->name, scope))
-            reportRedefinition(scope, *def, prim->name.location(), diag::Redefinition);
-        else if (auto externMod = getExternModule(def->name, scope)) {
-            // TODO: how do extern modules work with libraries?
-            checkExternModMatch(scope, *externMod->header, *syntax.header,
-                                diag::ExternDeclMismatchImpl);
-        }
+        // TODO: how do extern modules work with libraries?
+        if (auto externDef = getExternDefinition(symbol.name, scope)) {
+            auto syntax = symbol.getSyntax();
+            SLANG_ASSERT(syntax);
 
-        checkElemTimeScale(def->timeScale, syntax.header->name.range());
+            if (externDef->kind == SyntaxKind::ExternModuleDecl &&
+                symbol.kind == SymbolKind::Definition) {
+                checkExternModMatch(scope, *externDef->as<ExternModuleDeclSyntax>().header,
+                                    *syntax->as<ModuleDeclarationSyntax>().header,
+                                    diag::ExternDeclMismatchImpl);
+            }
+            else if (externDef->kind == SyntaxKind::ExternUdpDecl &&
+                     symbol.kind == SymbolKind::Primitive) {
+                checkExternUdpMatch(scope, *externDef->as<ExternUdpDeclSyntax>().portList,
+                                    *syntax->as<UdpDeclarationSyntax>().portList, symbol.name,
+                                    diag::ExternDeclMismatchImpl);
+            }
+            else {
+                reportRedefinition(getExternNameToken(*externDef).location(), diag::Redefinition);
+            }
+        }
     }
     else {
-        // Record the fact that we have nested modules with this given name.
-        definitionMap[std::tuple(def->name, root.get())].second = true;
+        // Record the fact that we have nested modules with this name.
+        definitionMap[std::tuple(symbol.name, root.get())].second = true;
     }
 }
 
@@ -821,8 +907,7 @@ const PackageSymbol& Compilation::createPackage(const Scope& scope,
 const ConfigBlockSymbol& Compilation::createConfigBlock(const Scope& scope,
                                                         const ConfigDeclarationSyntax& syntax) {
     auto& metadata = syntaxMetadata[&syntax];
-    auto& config = ConfigBlockSymbol::fromSyntax(scope, syntax);
-    config.sourceLibrary = metadata.library;
+    auto& config = ConfigBlockSymbol::fromSyntax(scope, syntax, metadata.library);
 
     auto it = configBlocks.find(config.name);
     if (it == configBlocks.end()) {
@@ -846,38 +931,12 @@ const ConfigBlockSymbol& Compilation::createConfigBlock(const Scope& scope,
     return config;
 }
 
-const PrimitiveSymbol* Compilation::getPrimitive(std::string_view lookupName) const {
-    if (auto it = udpMap.find(lookupName); it != udpMap.end())
-        return it->second;
-    return nullptr;
-}
-
 const PrimitiveSymbol& Compilation::createPrimitive(const Scope& scope,
                                                     const UdpDeclarationSyntax& syntax) {
     // TODO: handle primitives in libraries
-    auto& prim = PrimitiveSymbol::fromSyntax(scope, syntax);
-    if (!prim.name.empty()) {
-        auto [it, inserted] = udpMap.emplace(prim.name, &prim);
-        if (!inserted) {
-            reportRedefinition(*root, prim, it->second->location, diag::DuplicateDefinition);
-        }
-        else {
-            if (auto defIt = definitionMap.find({prim.name, root.get()});
-                defIt != definitionMap.end() && !defIt->second.first.empty()) {
-                // TODO: only error for same library?
-                reportRedefinition(*root, prim, defIt->second.first.front()->location,
-                                   diag::Redefinition);
-            }
-            else if (auto externMod = getExternModule(prim.name, scope)) {
-                reportRedefinition(*root, prim, externMod->header->name.location(),
-                                   diag::Redefinition);
-            }
-            else if (auto externPrim = getExternPrimitive(prim.name, scope)) {
-                checkExternUdpMatch(scope, *externPrim->portList, *syntax.portList, prim.name,
-                                    diag::ExternDeclMismatchImpl);
-            }
-        }
-    }
+    const SourceLibrary* sourceLibrary = nullptr;
+    auto& prim = PrimitiveSymbol::fromSyntax(scope, syntax, sourceLibrary);
+    insertDefinition(prim, scope);
 
     return prim;
 }
@@ -1116,100 +1175,45 @@ const Expression* Compilation::getDefaultDisable(const Scope& scope) const {
     }
 }
 
-void Compilation::noteExternModule(const Scope& scope, const ExternModuleDeclSyntax& syntax) {
-    auto name = syntax.header->name.valueText();
+void Compilation::noteExternDefinition(const Scope& scope, const SyntaxNode& syntax) {
+    auto nameToken = getExternNameToken(syntax);
+    auto name = nameToken.valueText();
     if (name.empty())
         return;
 
     auto targetScope = scope.asSymbol().kind == SymbolKind::CompilationUnit ? root.get() : &scope;
-    auto [it, inserted] = externModuleMap.emplace(std::tuple(name, targetScope), &syntax);
+    auto [it, inserted] = externDefMap.emplace(std::tuple(name, targetScope), &syntax);
     if (!inserted) {
-        checkExternModMatch(scope, *syntax.header, *it->second->header,
-                            diag::ExternDeclMismatchPrev);
-        return;
-    }
-
-    if (auto udpIt = externUdpMap.find(std::tuple(name, targetScope));
-        udpIt != externUdpMap.end()) {
-        auto& diag = scope.addDiag(diag::Redefinition, syntax.header->name.location());
-        diag << name;
-        diag.addNote(diag::NotePreviousDefinition, udpIt->second->name.location());
+        if (syntax.kind != it->second->kind) {
+            auto& diag = scope.addDiag(diag::Redefinition, nameToken.location());
+            diag << name;
+            diag.addNote(diag::NotePreviousDefinition, getExternNameToken(*it->second).location());
+        }
+        else if (syntax.kind == SyntaxKind::ExternModuleDecl) {
+            checkExternModMatch(scope, *syntax.as<ExternModuleDeclSyntax>().header,
+                                *it->second->as<ExternModuleDeclSyntax>().header,
+                                diag::ExternDeclMismatchPrev);
+        }
+        else {
+            checkExternUdpMatch(scope, *syntax.as<ExternUdpDeclSyntax>().portList,
+                                *it->second->as<ExternUdpDeclSyntax>().portList, name,
+                                diag::ExternDeclMismatchPrev);
+        }
     }
 }
 
-const ExternModuleDeclSyntax* Compilation::getExternModule(std::string_view name,
-                                                           const Scope& scope) const {
+const SyntaxNode* Compilation::getExternDefinition(std::string_view name,
+                                                   const Scope& scope) const {
     const Scope* searchScope = &scope;
     do {
-        auto it = externModuleMap.find(std::make_tuple(name, searchScope));
-        if (it != externModuleMap.end())
+        auto it = externDefMap.find(std::make_tuple(name, searchScope));
+        if (it != externDefMap.end())
             return it->second;
 
         searchScope = searchScope->asSymbol().getParentScope();
     } while (searchScope);
 
     return nullptr;
-}
-
-bool Compilation::errorIfMissingExternModule(std::string_view name, const Scope& scope,
-                                             SourceRange sourceRange) {
-    auto decl = getExternModule(name, scope);
-    if (!decl)
-        return false;
-
-    auto& diag = scope.addDiag(diag::MissingExternModuleImpl, decl->header->name.range());
-    diag << decl->header->moduleKeyword.valueText();
-    diag << name;
-    diag.addNote(diag::NoteReferencedHere, sourceRange);
-    return true;
-}
-
-void Compilation::noteExternPrimitive(const Scope& scope, const ExternUdpDeclSyntax& syntax) {
-    auto name = syntax.name.valueText();
-    if (name.empty())
-        return;
-
-    auto targetScope = scope.asSymbol().kind == SymbolKind::CompilationUnit ? root.get() : &scope;
-    auto [it, inserted] = externUdpMap.emplace(std::tuple(name, targetScope), &syntax);
-    if (!inserted) {
-        checkExternUdpMatch(scope, *syntax.portList, *it->second->portList, name,
-                            diag::ExternDeclMismatchPrev);
-        return;
-    }
-
-    if (auto modIt = externModuleMap.find(std::tuple(name, targetScope));
-        modIt != externModuleMap.end()) {
-        auto& diag = scope.addDiag(diag::Redefinition, syntax.name.location());
-        diag << name;
-        diag.addNote(diag::NotePreviousDefinition, modIt->second->header->name.location());
-    }
-}
-
-const ExternUdpDeclSyntax* Compilation::getExternPrimitive(std::string_view name,
-                                                           const Scope& scope) const {
-    const Scope* searchScope = &scope;
-    do {
-        auto it = externUdpMap.find(std::make_tuple(name, searchScope));
-        if (it != externUdpMap.end())
-            return it->second;
-
-        searchScope = searchScope->asSymbol().getParentScope();
-    } while (searchScope);
-
-    return nullptr;
-}
-
-bool Compilation::errorIfMissingExternPrimitive(std::string_view name, const Scope& scope,
-                                                SourceRange sourceRange) {
-    auto decl = getExternPrimitive(name, scope);
-    if (!decl)
-        return false;
-
-    auto& diag = scope.addDiag(diag::MissingExternModuleImpl, decl->name.range());
-    diag << "primitive"sv;
-    diag << name;
-    diag.addNote(diag::NoteReferencedHere, sourceRange);
-    return true;
 }
 
 void Compilation::noteReference(const SyntaxNode& node, bool isLValue) {
@@ -1576,8 +1580,9 @@ AssertionInstanceDetails* Compilation::allocAssertionDetails() {
     return assertionDetailsAllocator.emplace();
 }
 
-ConfigBlockSymbol* Compilation::allocConfigBlock(std::string_view name, SourceLocation loc) {
-    return configBlockAllocator.emplace(*this, name, loc);
+ConfigBlockSymbol* Compilation::allocConfigBlock(std::string_view name, SourceLocation loc,
+                                                 const SourceLibrary* sourceLibrary) {
+    return configBlockAllocator.emplace(*this, name, loc, sourceLibrary);
 }
 
 const ImplicitTypeSyntax& Compilation::createEmptyTypeSyntax(SourceLocation loc) {
@@ -1964,12 +1969,9 @@ void Compilation::resolveBindTargets(const BindDirectiveSyntax& syntax, const Sc
             return;
 
         Token name = syntax.target->as<IdentifierNameSyntax>().identifier;
-        auto targetDef = getDefinition(name.valueText(), scope);
-        if (!targetDef) {
-            if (!errorIfMissingExternModule(name.valueText(), scope, name.range()))
-                scope.addDiag(diag::UnknownModule, name.range()) << name.valueText();
+        auto targetDef = getDefinition(name.valueText(), scope, name.range(), diag::UnknownModule);
+        if (!targetDef)
             return;
-        }
 
         for (auto inst : syntax.targetInstances->targets) {
             LookupResult result;
@@ -2001,18 +2003,19 @@ void Compilation::resolveBindTargets(const BindDirectiveSyntax& syntax, const Sc
             // If we didn't find the name as an instance, try as a definition.
             if (syntax.target->kind == SyntaxKind::IdentifierName) {
                 Token name = syntax.target->as<IdentifierNameSyntax>().identifier;
-                if (auto def = getDefinition(name.valueText(), scope)) {
-                    *defTarget = def;
+                auto def = getDefinition(name.valueText(), scope, name.range(),
+                                         diag::UnknownModule);
+                if (!def)
+                    return;
+
+                if (def->kind == SymbolKind::Definition) {
+                    *defTarget = &def->as<DefinitionSymbol>();
                     return;
                 }
-
-                if (errorIfMissingExternModule(name.valueText(), scope, name.range()))
-                    return;
             }
-
-            // If no name and no definition, report an error.
-            result.reportDiags(context);
         }
+
+        result.reportDiags(context);
     }
 }
 
@@ -2287,13 +2290,13 @@ void Compilation::resolveDefParamsAndBinds() {
     copyStateInto(*this, true);
 }
 
-const DefinitionSymbol* Compilation::resolveConfigRules(
-    std::string_view lookupName, const Scope& scope, const ConfigBlockSymbol* config,
-    const ConfigRule* rule, const std::vector<DefinitionSymbol*>& defList) const {
-
-    auto findDefByLib = [](auto& defList, const SourceLibrary* target) -> DefinitionSymbol* {
+const Symbol* Compilation::resolveConfigRules(std::string_view lookupName, const Scope& scope,
+                                              const ConfigBlockSymbol* config,
+                                              const ConfigRule* rule,
+                                              const std::vector<Symbol*>& defList) const {
+    auto findDefByLib = [](auto& defList, const SourceLibrary* target) -> Symbol* {
         for (auto def : defList) {
-            if (def->sourceLibrary == target)
+            if (def->getSourceLibrary() == target)
                 return def;
         }
         return nullptr;
