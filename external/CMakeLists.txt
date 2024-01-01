@@ -6,7 +6,7 @@
 # Required minimum versions for dependencies
 set(fmt_min_version "10.1")
 set(mimalloc_min_version "2.1")
-set(catch2_min_version "3.4")
+set(catch2_min_version "3.5")
 
 # --- fmt lib ---
 set(find_pkg_args "")
@@ -106,7 +106,7 @@ if(SLANG_USE_MIMALLOC)
   endif()
 
   if(mimalloc_FOUND)
-    message(STATUS "Found system mimalloc version: ${Catch2_VERSION}")
+    message(STATUS "Found system mimalloc version: ${mimalloc_VERSION}")
   else()
     message(STATUS "Using remote mimalloc library")
     if(IS_DIRECTORY "${mimalloc_SOURCE_DIR}")
@@ -135,7 +135,7 @@ if(SLANG_INCLUDE_TESTS)
   FetchContent_Declare(
     Catch2
     GIT_REPOSITORY https://github.com/catchorg/Catch2.git
-    GIT_TAG v3.4.0
+    GIT_TAG v3.5.1
     GIT_SHALLOW ON
     ${find_pkg_args})
   FetchContent_MakeAvailable(Catch2)
