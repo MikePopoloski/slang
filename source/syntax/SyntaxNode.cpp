@@ -33,6 +33,10 @@ struct GetChildVisitor {
 
 namespace slang::syntax {
 
+SourceRange ConstTokenOrSyntax::range() const {
+    return isNode() ? node()->sourceRange() : token().range();
+}
+
 std::string SyntaxNode::toString() const {
     return SyntaxPrinter().print(*this).str();
 }

@@ -40,6 +40,9 @@ struct SLANG_EXPORT ConstTokenOrSyntax : public std::variant<parsing::Token, con
     /// Gets access to the object as a syntax node (throwing an exception
     /// if it's not actually a syntax node).
     const SyntaxNode* node() const { return std::get<1>(*this); }
+
+    /// Gets the source range for the token or syntax node.
+    SourceRange range() const;
 };
 
 /// A token or a syntax node.
