@@ -1126,3 +1126,14 @@ module m;
     assign i = int'(j);
 endmodule
 ```
+
+-Wunknown-sys-name
+An unknown system task or function is called. This is an error by default but can
+be downgraded to allow analyzing code using special system names defined by other tools.
+```
+module m;
+    always_comb begin
+        if (!$somename) begin end
+    end
+endmodule
+```

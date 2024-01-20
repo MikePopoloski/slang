@@ -467,10 +467,9 @@ bool Driver::processOptions() {
     // suppressible warning that we promote to an error by default. This allows
     // the user to turn this back into a warning, or turn it off altogether.
 
-    // allow ignoring duplicate module/interface/program definitions,
     diagEngine.setSeverity(diag::DuplicateDefinition, DiagnosticSeverity::Error);
-    // allow procedural force on variable part-select
     diagEngine.setSeverity(diag::BadProceduralForce, DiagnosticSeverity::Error);
+    diagEngine.setSeverity(diag::UnknownSystemName, DiagnosticSeverity::Error);
 
     if (options.compat == "vcs") {
         diagEngine.setSeverity(diag::StaticInitializerMustBeExplicit, DiagnosticSeverity::Ignored);

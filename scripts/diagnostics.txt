@@ -829,7 +829,6 @@ note NoteImportedFrom "imported from here"
 error ImportNameCollision "import of '{}' collides with an existing declaration"
 error UndeclaredIdentifier "use of undeclared identifier '{}'"
 error TypoIdentifier "use of undeclared identifier '{}'; did you mean '{}'?"
-error UnknownSystemName "unknown system name '{}'"
 error UnknownClassOrPackage "unknown class or package '{}'"
 error UsedBeforeDeclared "identifier '{}' used before its declaration"
 error NotAType "'{}' is not a type"
@@ -887,6 +886,7 @@ error IllegalReferenceToProgramItem "cannot reference program item from outside 
 error HierarchicalFromPackage "cannot use hierarchical reference from within a package"
 error CompilationUnitFromPackage "cannot reference compilation unit item from within a package"
 error InvalidHierarchicalIfacePortConn "cannot connect interface port hierarchically through a generate block or instance array"
+warning unknown-sys-name UnknownSystemName "unknown system name '{}'"
 warning dup-import DuplicateImport "duplicate import declaration is redundant"
 warning duplicate-definition DuplicateDefinition "duplicate definition of '{}'"
 
@@ -1052,7 +1052,7 @@ group default = { real-underflow real-overflow vector-overflow int-overflow unco
                   invalid-pragma-viewport duplicate-definition protect-encoding-bytes invalid-encoding-byte
                   raw-protect-eof protected-envelope specify-param dup-timing-path invalid-pulsestyle
                   negative-timing-limit bad-procedural-force duplicate-defparam implicit-port-type-mismatch
-                  split-distweight-op dpi-pure-task multibit-edge }
+                  split-distweight-op dpi-pure-task multibit-edge unknown-sys-name }
 
 group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-none case-gen-dup
                 unused-result format-real ignored-slice task-ignored width-trunc dup-attr event-const
