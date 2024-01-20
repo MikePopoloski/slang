@@ -241,6 +241,9 @@ struct ConfigRule {
 
     /// A specific cell to use for this instance or definition lookup.
     ConfigCellId useCell;
+
+    /// The source range where this rule was declared.
+    SourceRange sourceRange;
 };
 
 /// Represents a config block declaration.

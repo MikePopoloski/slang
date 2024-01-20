@@ -363,6 +363,7 @@ ConfigBlockSymbol& ConfigBlockSymbol::fromSyntax(const Scope& scope,
 
     auto buildRule = [&](const ConfigRuleClauseSyntax& rule) {
         ConfigRule result;
+        result.sourceRange = rule.parent->sourceRange();
         if (rule.kind == SyntaxKind::ConfigUseClause) {
             // TODO: handle other parts of this
             auto& cuc = rule.as<ConfigUseClauseSyntax>();

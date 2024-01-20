@@ -377,43 +377,56 @@ void InstanceSymbol::fromSyntax(Compilation& comp, const HierarchyInstantiationS
 
     const DefinitionSymbol* owningDefinition = nullptr;
     const HierarchyOverrideNode* parentOverrideNode = nullptr;
-    const DefinitionSymbol* explicitDef = nullptr;
+    SmallSet<std::string_view, 8> implicitNetNames;
+    auto& netType = context.scope->getDefaultNetType();
 
-    // Does a lookup for the definition that was explicitly provided in
-    // the instantiation syntax node.
-    auto resolveExplicitDef = [&] {
-        auto def = comp.getDefinition(defName, *context.scope, syntax.type.range(),
-                                      diag::UnknownModule);
+    // Creates instance symbols -- if specificInstance is provided then only that
+    // instance will be created, otherwise all instances in the original syntax
+    // node will be created in one go.
+    auto createInstances = [&](const Symbol* def,
+                               const HierarchicalInstanceSyntax* specificInstance,
+                               const ConfigRule* configRule) {
         if (!def) {
-            UninstantiatedDefSymbol::fromSyntax(comp, syntax, context, results, implicitNets);
+            UninstantiatedDefSymbol::fromSyntax(comp, syntax, specificInstance, context, results,
+                                                implicitNets, implicitNetNames, netType);
+            return;
         }
-        else if (def->kind == SymbolKind::Primitive) {
+
+        auto addDiag = [&](DiagCode code) -> Diagnostic& {
+            if (configRule) {
+                SLANG_ASSERT(specificInstance);
+                auto& diag = context.addDiag(code, specificInstance->sourceRange());
+                diag.addNote(diag::NoteConfigRule, configRule->sourceRange);
+                return diag;
+            }
+            else {
+                auto& diag = context.addDiag(code, syntax.type.range());
+                if (specificInstance)
+                    diag << specificInstance->sourceRange();
+                return diag;
+            }
+        };
+
+        if (def->kind == SymbolKind::Primitive) {
             PrimitiveInstanceSymbol::fromSyntax(def->as<PrimitiveSymbol>(), syntax, context,
                                                 results, implicitNets);
             if (!results.empty()) {
                 if (!owningDefinition ||
                     owningDefinition->definitionKind != DefinitionKind::Module || inChecker) {
-                    context.addDiag(diag::InvalidPrimInstanceForParent, syntax.type.range());
+                    addDiag(diag::InvalidPrimInstanceForParent);
                 }
                 else if (isFromBind) {
-                    context.addDiag(diag::BindTargetPrimitive, syntax.type.range());
+                    addDiag(diag::BindTargetPrimitive);
                 }
             }
+            return;
         }
-        else {
-            explicitDef = &def->as<DefinitionSymbol>();
-        }
-    };
 
-    // Creates instance symbols -- if specificInstance is provided then only that
-    // instance will be created, otherwise all instances in the original syntax
-    // node will be created in one go.
-    auto createInstances = [&](const DefinitionSymbol& definition,
-                               const HierarchicalInstanceSyntax* specificInstance) {
+        auto& definition = def->as<DefinitionSymbol>();
         definition.noteInstantiated();
 
         if (inChecker) {
-            context.addDiag(diag::InvalidInstanceForParent, syntax.type.range())
+            addDiag(diag::InvalidInstanceForParent)
                 << definition.getArticleKindString() << "a checker"sv;
         }
         else if (owningDefinition) {
@@ -421,15 +434,14 @@ void InstanceSymbol::fromSyntax(Compilation& comp, const HierarchyInstantiationS
             if (owningKind == DefinitionKind::Program ||
                 (owningKind == DefinitionKind::Interface &&
                  definition.definitionKind == DefinitionKind::Module)) {
-                context.addDiag(diag::InvalidInstanceForParent, syntax.type.range())
-                    << definition.getArticleKindString()
-                    << owningDefinition->getArticleKindString();
+                addDiag(diag::InvalidInstanceForParent) << definition.getArticleKindString()
+                                                        << owningDefinition->getArticleKindString();
             }
         }
 
         if (parentInst && parentInst->isFromBind) {
             if (isFromBind) {
-                context.addDiag(diag::BindUnderBind, syntax.type.range());
+                addDiag(diag::BindUnderBind);
                 return;
             }
 
@@ -437,9 +449,6 @@ void InstanceSymbol::fromSyntax(Compilation& comp, const HierarchyInstantiationS
             // so that we prevent further binds below us too.
             isFromBind = true;
         }
-
-        SmallSet<std::string_view, 8> implicitNetNames;
-        auto& netType = context.scope->getDefaultNetType();
 
         ParameterBuilder paramBuilder(*context.scope, definition.name, definition.parameters);
         if (syntax.parameters)
@@ -474,6 +483,7 @@ void InstanceSymbol::fromSyntax(Compilation& comp, const HierarchyInstantiationS
                 // We need to handle each instance separately, as the config
                 // rules allow the entire definition and parameter values
                 // to be overridden on a per-instance basis.
+                std::optional<const Symbol*> explicitDef;
                 for (auto instanceSyntax : syntax.instances) {
                     auto instName = instanceSyntax->decl ? instanceSyntax->decl->name.valueText()
                                                          : ""sv;
@@ -482,28 +492,18 @@ void InstanceSymbol::fromSyntax(Compilation& comp, const HierarchyInstantiationS
                         overrideIt->second.configRule) {
 
                         // We have an override rule, so use it to lookup the def.
-                        auto def = comp.getDefinition(defName, *context.scope,
-                                                      *overrideIt->second.configRule);
-                        if (!def || def->kind != SymbolKind::Definition) {
-                            // TODO: only error for this specific instance
-                            // TODO: handle primitives
-                            UninstantiatedDefSymbol::fromSyntax(comp, syntax, context, results,
-                                                                implicitNets);
-                        }
-                        else {
-                            createInstances(def->as<DefinitionSymbol>(), instanceSyntax);
-                        }
+                        auto rule = overrideIt->second.configRule;
+                        auto def = comp.getDefinition(defName, *context.scope, *rule);
+                        createInstances(def, instanceSyntax, rule);
                     }
                     else {
                         // No specific config rule, so use the default lookup behavior.
                         if (!explicitDef) {
-                            // TODO: only error for this specific instance
-                            resolveExplicitDef();
-                            if (!explicitDef)
-                                return;
+                            explicitDef = comp.getDefinition(defName, *context.scope,
+                                                             syntax.type.range(),
+                                                             diag::UnknownModule);
                         }
-
-                        createInstances(*explicitDef, instanceSyntax);
+                        createInstances(*explicitDef, instanceSyntax, nullptr);
                     }
                 }
                 return;
@@ -511,9 +511,10 @@ void InstanceSymbol::fromSyntax(Compilation& comp, const HierarchyInstantiationS
         }
     }
 
-    resolveExplicitDef();
-    if (explicitDef)
-        createInstances(*explicitDef, nullptr);
+    // Simple case: look up the definition and create all instances in one go.
+    auto def = comp.getDefinition(defName, *context.scope, syntax.type.range(),
+                                  diag::UnknownModule);
+    createInstances(def, nullptr, nullptr);
 }
 
 void InstanceSymbol::fromFixupSyntax(Compilation& comp, const DefinitionSymbol& definition,
@@ -864,6 +865,24 @@ void InstanceArraySymbol::serializeTo(ASTSerializer& serializer) const {
 }
 
 template<typename TSyntax>
+static void createUninstantiatedDef(Compilation& compilation, const TSyntax& syntax,
+                                    const HierarchicalInstanceSyntax* instanceSyntax,
+                                    std::string_view moduleName, const ASTContext& context,
+                                    std::span<const Expression* const> params,
+                                    SmallVectorBase<const Symbol*>& results,
+                                    SmallVectorBase<const Symbol*>& implicitNets,
+                                    SmallSet<std::string_view, 8>& implicitNetNames,
+                                    const NetType& netType) {
+    createImplicitNets(*instanceSyntax, context, netType, implicitNetNames, implicitNets);
+
+    auto [name, loc] = getNameLoc(*instanceSyntax);
+    auto sym = compilation.emplace<UninstantiatedDefSymbol>(name, loc, moduleName, params);
+    sym->setSyntax(*instanceSyntax);
+    sym->setAttributes(*context.scope, syntax.attributes);
+    results.push_back(sym);
+}
+
+template<typename TSyntax>
 static void createUninstantiatedDefs(Compilation& compilation, const TSyntax& syntax,
                                      std::string_view moduleName, const ASTContext& context,
                                      std::span<const Expression* const> params,
@@ -872,24 +891,15 @@ static void createUninstantiatedDefs(Compilation& compilation, const TSyntax& sy
     SmallSet<std::string_view, 8> implicitNetNames;
     auto& netType = context.scope->getDefaultNetType();
     for (auto instanceSyntax : syntax.instances) {
-        createImplicitNets(*instanceSyntax, context, netType, implicitNetNames, implicitNets);
-
-        auto [name, loc] = getNameLoc(*instanceSyntax);
-        auto sym = compilation.emplace<UninstantiatedDefSymbol>(name, loc, moduleName, params);
-        sym->setSyntax(*instanceSyntax);
-        sym->setAttributes(*context.scope, syntax.attributes);
-        results.push_back(sym);
+        createUninstantiatedDef(compilation, syntax, instanceSyntax, moduleName, context, params,
+                                results, implicitNets, implicitNetNames, netType);
     }
 }
 
-void UninstantiatedDefSymbol::fromSyntax(Compilation& compilation,
-                                         const HierarchyInstantiationSyntax& syntax,
-                                         const ASTContext& parentContext,
-                                         SmallVectorBase<const Symbol*>& results,
-                                         SmallVectorBase<const Symbol*>& implicitNets) {
-    SmallVector<const Expression*> params;
-    ASTContext context = parentContext.resetFlags(ASTFlags::NonProcedural);
+static std::span<const Expression* const> createUninstantiatedParams(
+    const HierarchyInstantiationSyntax& syntax, const ASTContext& context) {
 
+    SmallVector<const Expression*> params;
     if (syntax.parameters) {
         for (auto expr : syntax.parameters->parameters) {
             // Empty expressions are just ignored here.
@@ -904,9 +914,41 @@ void UninstantiatedDefSymbol::fromSyntax(Compilation& compilation,
         }
     }
 
-    auto paramSpan = params.copy(compilation);
-    createUninstantiatedDefs(compilation, syntax, syntax.type.valueText(), context, paramSpan,
-                             results, implicitNets);
+    return params.copy(context.getCompilation());
+}
+
+void UninstantiatedDefSymbol::fromSyntax(Compilation& compilation,
+                                         const HierarchyInstantiationSyntax& syntax,
+                                         const ASTContext& parentContext,
+                                         SmallVectorBase<const Symbol*>& results,
+                                         SmallVectorBase<const Symbol*>& implicitNets) {
+    ASTContext context = parentContext.resetFlags(ASTFlags::NonProcedural);
+    auto params = createUninstantiatedParams(syntax, context);
+
+    createUninstantiatedDefs(compilation, syntax, syntax.type.valueText(), context, params, results,
+                             implicitNets);
+}
+
+void UninstantiatedDefSymbol::fromSyntax(
+    Compilation& compilation, const syntax::HierarchyInstantiationSyntax& syntax,
+    const syntax::HierarchicalInstanceSyntax* specificInstance, const ASTContext& parentContext,
+    SmallVectorBase<const Symbol*>& results, SmallVectorBase<const Symbol*>& implicitNets,
+    SmallSet<std::string_view, 8>& implicitNetNames, const NetType& netType) {
+
+    ASTContext context = parentContext.resetFlags(ASTFlags::NonProcedural);
+    auto params = createUninstantiatedParams(syntax, context);
+
+    if (specificInstance) {
+        createUninstantiatedDef(compilation, syntax, specificInstance, syntax.type.valueText(),
+                                context, params, results, implicitNets, implicitNetNames, netType);
+    }
+    else {
+        for (auto instanceSyntax : syntax.instances) {
+            createUninstantiatedDef(compilation, syntax, instanceSyntax, syntax.type.valueText(),
+                                    context, params, results, implicitNets, implicitNetNames,
+                                    netType);
+        }
+    }
 }
 
 void UninstantiatedDefSymbol::fromSyntax(Compilation& compilation,

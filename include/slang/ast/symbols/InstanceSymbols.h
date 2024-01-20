@@ -235,6 +235,13 @@ public:
                            SmallVectorBase<const Symbol*>& implicitNets);
 
     static void fromSyntax(Compilation& compilation,
+                           const syntax::HierarchyInstantiationSyntax& syntax,
+                           const syntax::HierarchicalInstanceSyntax* specificInstance,
+                           const ASTContext& context, SmallVectorBase<const Symbol*>& results,
+                           SmallVectorBase<const Symbol*>& implicitNets,
+                           SmallSet<std::string_view, 8>& implicitNetNames, const NetType& netType);
+
+    static void fromSyntax(Compilation& compilation,
                            const syntax::PrimitiveInstantiationSyntax& syntax,
                            const ASTContext& context, SmallVectorBase<const Symbol*>& results,
                            SmallVectorBase<const Symbol*>& implicitNets);

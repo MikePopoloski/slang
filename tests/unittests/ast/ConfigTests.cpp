@@ -334,3 +334,41 @@ endmodule
     auto& inst = compilation.getRoot().lookupName<InstanceSymbol>("top.b.f2");
     CHECK(inst.getDefinition().name == "bar");
 }
+
+TEST_CASE("Config instance override errors") {
+    auto tree = SyntaxTree::fromText(R"(
+config cfg1;
+    design top;
+    instance top.b.f2 use bar;
+    instance top.i.p use foo;
+endconfig
+
+module foo;
+endmodule
+
+module baz;
+    foo f1(), f2();
+endmodule
+
+module top;
+    baz b();
+    I i();
+endmodule
+
+program prog;
+endprogram
+
+interface I;
+    prog p(), q();
+endinterface
+)");
+    CompilationOptions options;
+    options.topModules.emplace("cfg1");
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::InvalidInstanceForParent);
+}

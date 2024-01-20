@@ -11,6 +11,7 @@ note NoteReferencedHere "referenced here"
 note NoteAssignedHere "also assigned here"
 note NoteDrivenHere "driven here"
 note NoteOriginalAssign "original assignment here"
+note NoteConfigRule "from configuration here"
 note NoteFromHere2 "from '{}' and '{}'"
 error AttributesNotAllowed "attributes are not allowed here"
 
