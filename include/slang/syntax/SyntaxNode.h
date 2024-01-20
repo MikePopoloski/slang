@@ -158,14 +158,33 @@ private:
     TokenOrSyntax getChild(size_t index);
 };
 
-SLANG_EXPORT SyntaxNode* clone(const SyntaxNode&, BumpAllocator&);
-SLANG_EXPORT SyntaxNode* deepClone(const SyntaxNode&, BumpAllocator&);
+/// @brief Performs a shallow clone of the given syntax node.
+///
+/// All members will be simply copied to the new instance.
+/// The instance will be allocated with the provided allocator.
+SLANG_EXPORT SyntaxNode* clone(const SyntaxNode& node, BumpAllocator& alloc);
 
+/// @brief Performs a deep clone of the given syntax node.
+///
+/// All members will be cloned recursively to create a complete new
+/// copy of the syntax tree. All cloned instances will be allocated
+/// with the provided allocator.
+SLANG_EXPORT SyntaxNode* deepClone(const SyntaxNode& node, BumpAllocator& alloc);
+
+/// @brief Performs a shallow clone of the given syntax node.
+///
+/// All members will be simply copied to the new instance.
+/// The instance will be allocated with the provided allocator.
 template<std::derived_from<SyntaxNode> T>
 T* clone(const T& node, BumpAllocator& alloc) {
     return static_cast<T*>(clone(static_cast<const SyntaxNode&>(node), alloc));
 }
 
+/// @brief Performs a deep clone of the given syntax node.
+///
+/// All members will be cloned recursively to create a complete new
+/// copy of the syntax tree. All cloned instances will be allocated
+/// with the provided allocator.
 template<std::derived_from<SyntaxNode> T>
 T* deepClone(const T& node, BumpAllocator& alloc) {
     return static_cast<T*>(deepClone(static_cast<const SyntaxNode&>(node), alloc));
