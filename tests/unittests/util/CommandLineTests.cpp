@@ -468,8 +468,9 @@ TEST_CASE("Test CommandLine -- check setIgnoreCommand()") {
     cmdLine.addIgnoreCommand("--xxx,0");
     cmdLine.addIgnoreCommand("--yyy,2");
     cmdLine.addIgnoreCommand("+zzz,0");
+    cmdLine.addIgnoreCommand("-baz,0");
 
-    CHECK(cmdLine.parse("prog --yyy --foo 456 --foo 123 --xxx +zzz+123+abc+456"));
+    CHECK(cmdLine.parse("prog --yyy --foo 456 --foo 123 --xxx +zzz+123+abc+456 -baz=blah"));
     // --foo 456 is skipped because it's not a real flag, it's --yyy's two parameters,
     // which are ignored
     CHECK(foo == 123);
@@ -488,7 +489,7 @@ TEST_CASE("Test CommandLine -- check setRenameCommand()") {
     cmdLine.addRenameCommand("--xxx,--foo");
     cmdLine.addRenameCommand("--yyy,--bar");
 
-    CHECK(cmdLine.parse("prog --xxx 123 --yyy 456"));
+    CHECK(cmdLine.parse("prog --xxx 123 --yyy=456"));
     CHECK(foo == 123);
     CHECK(bar == 456);
 

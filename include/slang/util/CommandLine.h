@@ -398,6 +398,8 @@ private:
     void parseStr(std::string_view argList, ParseOptions options, bool& hasArg,
                   std::string& current, SmallVectorBase<std::string>& storage);
 
+    void handleArg(std::string_view arg, Option*& expectingVal, std::string& expectingValName,
+                   bool& hadUnknowns, ParseOptions options);
     void handlePlusArg(std::string_view arg, ParseOptions options, bool& hadUnknowns);
 
     Option* findOption(std::string_view arg, std::string_view& value) const;

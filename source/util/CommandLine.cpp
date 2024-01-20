@@ -306,14 +306,14 @@ bool CommandLine::parse(std::span<const std::string_view> args, ParseOptions opt
     }
 
     Option* expectingVal = nullptr;
-    std::string_view expectingValName;
+    std::string expectingValName;
     bool doubleDash = false;
     bool hadUnknowns = false;
     std::string_view firstPositional;
 
     int skip = 0;
     for (auto arg : args) {
-        // Skip N arguments if needed (set by the cmdIgnore feature)
+        // Skip N arguments if needed (set by the cmdIgnore feature).
         if (skip) {
             skip--;
             continue;
@@ -349,84 +349,45 @@ bool CommandLine::parse(std::span<const std::string_view> args, ParseOptions opt
             continue;
         }
 
-        // Check if arg is in the list of commands to skip.
-        if (!cmdIgnore.empty()) {
-            // If we ignore a vendor command of the form +xx ,
-            // we match on any +xx+yyy command as +yy is the command's argument.
+        // Check if arg is in the list of commands to skip or translate.
+        if (!cmdIgnore.empty() || !cmdRename.empty()) {
             std::string_view ignoreArg = arg;
+            std::string_view remainder;
             if (arg[0] == '+') {
-                size_t plusIndex = arg.substr(1).find_first_of('+');
+                // If we ignore a vendor command of the form +xx ,
+                // we match on any +xx+yyy command as +yy is the command's argument.
+                size_t plusIndex = arg.find_first_of('+', 1);
                 if (plusIndex != std::string_view::npos) {
-                    ignoreArg = arg.substr(0, plusIndex +
-                                                  1); // +1 because we started from arg.substr(1)
+                    ignoreArg = arg.substr(0, plusIndex);
+                    remainder = arg.substr(plusIndex);
+                }
+            }
+            else {
+                // Otherwise we look up to the first equals for the name to ignore.
+                size_t equalsIndex = arg.find_first_of('=');
+                if (equalsIndex != std::string_view::npos) {
+                    ignoreArg = arg.substr(0, equalsIndex);
+                    remainder = arg.substr(equalsIndex);
                 }
             }
 
-            if (auto it = cmdIgnore.find(std::string(ignoreArg)); it != cmdIgnore.end()) {
-                // if yes, find how many args to skip
+            auto lookupStr = std::string(ignoreArg);
+            if (auto it = cmdIgnore.find(lookupStr); it != cmdIgnore.end()) {
+                // If yes, find how many args to skip.
                 skip = it->second;
+                continue;
+            }
+
+            if (auto it = cmdRename.find(lookupStr); it != cmdRename.end()) {
+                // If yes, rename argument.
+                auto renamed = it->second + std::string(remainder);
+                handleArg(renamed, expectingVal, expectingValName, hadUnknowns, options);
                 continue;
             }
         }
 
-        // Check if arg is in the list of commands to translate.
-        if (!cmdRename.empty()) {
-            if (auto it = cmdRename.find(std::string(arg)); it != cmdRename.end()) {
-                // if yes, rename argument
-                arg = it->second;
-            }
-        }
-
-        // Handle plus args, which are treated differently from all others.
-        if (arg[0] == '+') {
-            handlePlusArg(arg, options, hadUnknowns);
-            continue;
-        }
-
-        // Get the raw name without leading dashes.
-        bool longName = false;
-        std::string_view name = arg.substr(1);
-        if (name[0] == '-') {
-            longName = true;
-            name = name.substr(1);
-        }
-
-        std::string_view value;
-        auto option = findOption(name, value);
-
-        // If we didn't find the option and there was only a single dash,
-        // maybe this was actually a group of single-char options or a prefixed value.
-        if (!option && !longName) {
-            option = tryGroupOrPrefix(name, value, options);
-            if (option)
-                arg = name;
-        }
-
-        // If we still didn't find it, that's an error.
-        if (!option) {
-            // Try to find something close to give a better error message.
-            auto error = fmt::format("{}: unknown command line argument '{}'"sv, programName, arg);
-            auto nearest = findNearestMatch(arg);
-            if (!nearest.empty())
-                error += fmt::format(", did you mean '{}'?"sv, nearest);
-
-            hadUnknowns = true;
-            errors.emplace_back(std::move(error));
-            continue;
-        }
-
-        // Otherwise, we found what we wanted. If we have a value already, go ahead
-        // and set it. Otherwise if we're expecting a value, assume that it will come
-        // in the next argument.
-        if (value.empty() && option->expectsValue()) {
-            expectingVal = option;
-            expectingValName = arg;
-        }
-        else {
-            std::string result = option->set(arg, value, options.ignoreDuplicates);
-            if (!result.empty())
-                errors.emplace_back(fmt::format("{}: {}", programName, result));
-        }
+        // Otherwise just handle the argument.
+        handleArg(arg, expectingVal, expectingValName, hadUnknowns, options);
     }
 
     if (expectingVal) {
@@ -441,6 +402,61 @@ bool CommandLine::parse(std::span<const std::string_view> args, ParseOptions opt
     }
 
     return errors.empty();
+}
+
+void CommandLine::handleArg(std::string_view arg, Option*& expectingVal,
+                            std::string& expectingValName, bool& hadUnknowns,
+                            ParseOptions options) {
+    // Handle plus args, which are treated differently from all others.
+    if (arg[0] == '+') {
+        handlePlusArg(arg, options, hadUnknowns);
+        return;
+    }
+
+    // Get the raw name without leading dashes.
+    bool longName = false;
+    std::string_view name = arg.substr(1);
+    if (name[0] == '-') {
+        longName = true;
+        name = name.substr(1);
+    }
+
+    std::string_view value;
+    auto option = findOption(name, value);
+
+    // If we didn't find the option and there was only a single dash,
+    // maybe this was actually a group of single-char options or a prefixed value.
+    if (!option && !longName) {
+        option = tryGroupOrPrefix(name, value, options);
+        if (option)
+            arg = name;
+    }
+
+    // If we still didn't find it, that's an error.
+    if (!option) {
+        // Try to find something close to give a better error message.
+        auto error = fmt::format("{}: unknown command line argument '{}'"sv, programName, arg);
+        auto nearest = findNearestMatch(arg);
+        if (!nearest.empty())
+            error += fmt::format(", did you mean '{}'?"sv, nearest);
+
+        hadUnknowns = true;
+        errors.emplace_back(std::move(error));
+        return;
+    }
+
+    // Otherwise, we found what we wanted. If we have a value already, go ahead
+    // and set it. Otherwise if we're expecting a value, assume that it will come
+    // in the next argument.
+    if (value.empty() && option->expectsValue()) {
+        expectingVal = option;
+        expectingValName = arg;
+    }
+    else {
+        std::string result = option->set(arg, value, options.ignoreDuplicates);
+        if (!result.empty())
+            errors.emplace_back(fmt::format("{}: {}", programName, result));
+    }
 }
 
 std::string CommandLine::getHelpText(std::string_view overview) const {
