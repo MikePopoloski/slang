@@ -184,3 +184,16 @@ TEST_CASE("TidyParser: Parse array") {
     CHECK(config.getCheckConfigs().inoutPortSuffix == std::vector<std::string>{"_a"});
     CHECK(config.getCheckConfigs().outputPortSuffix == std::vector<std::string>{});
 }
+
+TEST_CASE("TidyParser: Support for moduleInstantiationPrefix") {
+    auto config_str = std::string(R"(CheckConfigs:
+    clkName: clock,
+    inputPortSuffix: ,
+    outputPortSuffix: ,
+    moduleInstantiationPrefix: asdf,
+    resetIsActiveHigh: true)");
+    TidyConfigParser parser(config_str);
+
+    auto config = parser.getConfig();
+    CHECK(config.getCheckConfigs().moduleInstantiationPrefix == "asdf");
+}
