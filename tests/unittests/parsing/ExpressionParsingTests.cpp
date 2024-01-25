@@ -918,12 +918,25 @@ shortint a = -16'sd32769;
 int b = -32'sd2147483649;
 int c = 32'd4294967297;
 int d = 9'so777;
+shortint e = 16'sd32768;
 )";
     parseCompilationUnit(text);
 
-    REQUIRE(diagnostics.size() == 4);
+    REQUIRE(diagnostics.size() == 5);
     CHECK(diagnostics[0].code == diag::VectorLiteralOverflow);
     CHECK(diagnostics[1].code == diag::VectorLiteralOverflow);
     CHECK(diagnostics[2].code == diag::VectorLiteralOverflow);
     CHECK(diagnostics[3].code == diag::VectorLiteralOverflow);
+    CHECK(diagnostics[4].code == diag::VectorLiteralOverflow);
+}
+
+TEST_CASE("Vector literal bounary value parsing not overflowing") {
+    auto& text = R"(
+shortint a0 = -16'sd32767;
+shortint a1 = -16'sd32768;
+shortint a2 =  16'sd32767;
+)";
+    parseCompilationUnit(text);
+
+    REQUIRE(diagnostics.size() == 0);
 }
