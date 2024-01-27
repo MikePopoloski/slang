@@ -493,7 +493,9 @@ void InstanceSymbol::fromSyntax(Compilation& comp, const HierarchyInstantiationS
 
                         // We have an override rule, so use it to lookup the def.
                         auto rule = overrideIt->second.configRule;
-                        auto def = comp.getDefinition(defName, *context.scope, *rule);
+                        auto def = comp.getDefinition(defName, *context.scope, *rule,
+                                                      instanceSyntax->sourceRange(),
+                                                      diag::UnknownModule);
                         createInstances(def, instanceSyntax, rule);
                     }
                     else {

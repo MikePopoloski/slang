@@ -325,8 +325,10 @@ public:
     const DefinitionSymbol* getDefinition(const syntax::ModuleDeclarationSyntax& syntax) const;
 
     /// Gets the definition indicated by the given config rule, or nullptr if it does not exist.
+    /// If no definition is found an appropriate diagnostic will be issued.
     const Symbol* getDefinition(std::string_view name, const Scope& scope,
-                                const ConfigRule& configRule) const;
+                                const ConfigRule& configRule, SourceRange sourceRange,
+                                DiagCode code) const;
 
     /// Gets a list of all definitions (including primitives) in the design.
     std::vector<const Symbol*> getDefinitions() const;
@@ -674,9 +676,12 @@ private:
     void checkBindTargetParams(const syntax::BindDirectiveSyntax& syntax, const Scope& scope,
                                std::span<const Symbol* const> instTargets,
                                const DefinitionSymbol* defTarget);
-    const Symbol* resolveConfigRules(std::string_view name, const Scope& scope,
-                                     const ConfigBlockSymbol* config, const ConfigRule* configRule,
-                                     const std::vector<Symbol*>& defList) const;
+    std::pair<const Symbol*, bool> resolveConfigRules(std::string_view name, const Scope& scope,
+                                                      const ConfigBlockSymbol* config,
+                                                      const ConfigRule* configRule,
+                                                      const std::vector<Symbol*>& defList) const;
+    Diagnostic* errorMissingDef(std::string_view name, const Scope& scope, SourceRange sourceRange,
+                                DiagCode code) const;
 
     // Stored options object.
     CompilationOptions options;

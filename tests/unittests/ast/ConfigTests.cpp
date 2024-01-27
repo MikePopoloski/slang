@@ -336,10 +336,23 @@ endmodule
 }
 
 TEST_CASE("Config instance override errors") {
-    auto tree = SyntaxTree::fromText(R"(
+    auto lib1 = std::make_unique<SourceLibrary>("lib1", 1);
+
+    auto tree1 = SyntaxTree::fromText(R"(
+module mod;
+endmodule
+)",
+                                      SyntaxTree::getDefaultSourceManager(), "source", "", {},
+                                      lib1.get());
+
+    auto tree2 = SyntaxTree::fromText(R"(
 config cfg1;
     design top;
     instance top.b.f2 use bar;
+    instance top.b.f3 use somelib.foo;
+    instance top.b.f4 use lib1.mod;
+    instance top.b.f5 use lib1.foo;
+    instance top.b.f6 liblist lib1;
     instance top.i.p use foo;
 endconfig
 
@@ -348,6 +361,7 @@ endmodule
 
 module baz;
     foo f1(), f2();
+    foo f3(), f4(), f5(), f6();
 endmodule
 
 module top;
@@ -366,9 +380,14 @@ endinterface
     options.topModules.emplace("cfg1");
 
     Compilation compilation(options);
-    compilation.addSyntaxTree(tree);
+    compilation.addSyntaxTree(tree1);
+    compilation.addSyntaxTree(tree2);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 1);
-    CHECK(diags[0].code == diag::InvalidInstanceForParent);
+    REQUIRE(diags.size() == 5);
+    CHECK(diags[0].code == diag::UnknownModule);
+    CHECK(diags[1].code == diag::UnknownLibrary);
+    CHECK(diags[2].code == diag::UnknownModule);
+    CHECK(diags[3].code == diag::UnknownModule);
+    CHECK(diags[4].code == diag::InvalidInstanceForParent);
 }
