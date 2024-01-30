@@ -197,3 +197,13 @@ TEST_CASE("TidyParser: Support for moduleInstantiationPrefix") {
     auto config = parser.getConfig();
     CHECK(config.getCheckConfigs().moduleInstantiationPrefix == "asdf");
 }
+
+TEST_CASE("TidyParser: existing checker in the wrong group") {
+    auto config_str = std::string(R"(Checks:
+    -style-enforce-port-suffix)");
+    TidyConfigParser parser(config_str);
+
+    auto config = parser.getConfig();
+
+    CHECK_FALSE(config.isCheckEnabled(slang::TidyKind::Style, "EnforcePortSuffix"));
+}
