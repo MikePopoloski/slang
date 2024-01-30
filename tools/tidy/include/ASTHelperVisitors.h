@@ -55,7 +55,8 @@ struct CollectIdentifiers : public slang::ast::ASTVisitor<CollectIdentifiers, fa
 /// ASTVisitor that will collect all LHS assignment symbols under a node
 struct CollectLHSSymbols : public slang::ast::ASTVisitor<CollectLHSSymbols, true, true> {
     void handle(const slang::ast::AssignmentExpression& expression) {
-        symbols.push_back(expression.left().getSymbolReference());
+        if (const auto symbol = expression.left().getSymbolReference(); symbol)
+            symbols.push_back(symbol);
     }
 
     std::vector<const slang::ast::Symbol*> symbols;
