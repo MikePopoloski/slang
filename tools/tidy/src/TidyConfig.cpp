@@ -74,8 +74,15 @@ bool TidyConfig::toggleCheck(slang::TidyKind kind, const std::string& checkName,
         registeredChecks.end()) {
         return false;
     }
-    checkKinds.at(kind).at(checkName) = status;
-    return true;
+
+    auto& checkNames = checkKinds.at(kind);
+    // Check that checker name is presence at target group
+    if (checkNames.count(checkName)) {
+        checkNames.at(checkName) = status;
+        return true;
+    }
+
+    return false;
 }
 
 bool TidyConfig::isCheckEnabled(slang::TidyKind kind, const std::string& checkName) const {
