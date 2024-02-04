@@ -277,10 +277,10 @@ SourceManager::BufferOrError SourceManager::readSource(const fs::path& path,
     return openCached(path, SourceLocation(), library);
 }
 
-SourceManager::BufferOrError SourceManager::readHeader(std::string_view path,
-                                                       SourceLocation includedFrom,
-                                                       const SourceLibrary* library,
-                                                       bool isSystemPath) {
+SourceManager::BufferOrError SourceManager::readHeader(
+    std::string_view path, SourceLocation includedFrom, const SourceLibrary* library,
+    bool isSystemPath, std::span<std::filesystem::path const> additionalIncludePaths) {
+
     // if the header is specified as an absolute path, just do a straight lookup
     SLANG_ASSERT(!path.empty());
     fs::path p = path;
@@ -312,6 +312,12 @@ SourceManager::BufferOrError SourceManager::readHeader(std::string_view path,
 
     if (currFileDir) {
         auto result = openCached(*currFileDir / p, includedFrom, library);
+        if (result)
+            return result;
+    }
+
+    for (auto& dir : additionalIncludePaths) {
+        auto result = openCached(dir / p, includedFrom, library);
         if (result)
             return result;
     }

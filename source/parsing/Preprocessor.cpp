@@ -466,7 +466,7 @@ Trivia Preprocessor::handleIncludeDirective(Token directive) {
         path = path.substr(1, path.length() - 2);
 
         auto buffer = sourceManager.readHeader(path, directive.location(), getCurrentLibrary(),
-                                               isSystem);
+                                               isSystem, options.additionalIncludePaths);
         if (!buffer) {
             addDiag(diag::CouldNotOpenIncludeFile, fileName.range())
                 << path << buffer.error().message();

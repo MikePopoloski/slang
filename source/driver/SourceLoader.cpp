@@ -9,6 +9,7 @@
 
 #include <fmt/core.h>
 
+#include "slang/parsing/Preprocessor.h"
 #include "slang/syntax/AllSyntax.h"
 #include "slang/syntax/SyntaxTree.h"
 #include "slang/text/SourceManager.h"
@@ -76,12 +77,19 @@ void SourceLoader::addLibraryMaps(std::string_view pattern, const fs::path& base
 void SourceLoader::addSeparateUnit(std::span<const std::string> filePatterns,
                                    std::vector<std::string> includePaths,
                                    std::vector<std::string> defines, std::string libraryName) {
+    std::error_code ec;
+    SmallVector<fs::path> includeDirs;
+    for (auto& str : includePaths)
+        svGlob({}, str, GlobMode::Directories, includeDirs, /* expandEnvVars */ false, ec);
+
     auto& unit = unitEntries.emplace_back();
-    unit.includePaths = std::move(includePaths);
     unit.defines = std::move(defines);
     unit.library = getOrAddLibrary(libraryName);
-    const bool isLibraryFile = unit.library != nullptr;
 
+    for (auto&& path : includeDirs)
+        unit.includePaths.emplace_back(std::move(path));
+
+    const bool isLibraryFile = unit.library != nullptr;
     for (auto pattern : filePatterns) {
         addFilesInternal(pattern, {}, isLibraryFile, unit.library, &unit,
                          /* expandEnvVars */ false);
@@ -217,8 +225,14 @@ SourceLoader::SyntaxTreeList SourceLoader::loadAndParseSources(const Bag& option
     };
 
     auto parseSeparateUnit = [&](const UnitEntry& unit, const std::vector<SourceBuffer>& buffers) {
-        // TODO: handle other unit features
-        auto tree = SyntaxTree::fromBuffers(buffers, sourceManager, optionBag, inheritedMacros);
+        auto unitOptions = optionBag;
+        auto& ppOptions = unitOptions.insertOrGet<parsing::PreprocessorOptions>();
+        ppOptions.predefines.insert(ppOptions.predefines.end(), unit.defines.begin(),
+                                    unit.defines.end());
+        ppOptions.additionalIncludePaths.insert(ppOptions.additionalIncludePaths.end(),
+                                                unit.includePaths.begin(), unit.includePaths.end());
+
+        auto tree = SyntaxTree::fromBuffers(buffers, sourceManager, unitOptions, inheritedMacros);
         tree->isLibraryUnit = srcOptions.onlyLint || unit.library != nullptr;
         return tree;
     };

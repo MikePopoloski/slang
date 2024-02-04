@@ -28,17 +28,17 @@ TEST_CASE("Read header (absolute)") {
     std::string testPath = getTestInclude();
 
     // check load failure
-    auto result = manager.readHeader("X:\\nonsense.txt", SourceLocation(), nullptr, false);
+    auto result = manager.readHeader("X:\\nonsense.txt", SourceLocation(), nullptr, false, {});
     CHECK(!result);
     CHECK(result.error() == std::errc::no_such_file_or_directory);
 
     // successful load
-    auto buffer1 = manager.readHeader(testPath, SourceLocation(), nullptr, false);
+    auto buffer1 = manager.readHeader(testPath, SourceLocation(), nullptr, false, {});
     REQUIRE(buffer1);
     CHECK(!buffer1->data.empty());
 
     // next load should be cached
-    auto buffer2 = manager.readHeader(testPath, SourceLocation(), nullptr, false);
+    auto buffer2 = manager.readHeader(testPath, SourceLocation(), nullptr, false, {});
     REQUIRE(buffer2);
     CHECK(!buffer2->data.empty());
     CHECK(buffer1->data.data() == buffer2->data.data());
@@ -48,45 +48,47 @@ TEST_CASE("Read header (relative)") {
     SourceManager manager;
 
     // relative to nothing should never return anything
-    auto result = manager.readHeader("relative", SourceLocation(), nullptr, false);
+    auto result = manager.readHeader("relative", SourceLocation(), nullptr, false, {});
     CHECK(!result);
     CHECK(result.error() == std::errc::no_such_file_or_directory);
 
     // get a file ID to load relative to
-    auto buffer1 = manager.readHeader(getTestInclude(), SourceLocation(), nullptr, false);
+    auto buffer1 = manager.readHeader(getTestInclude(), SourceLocation(), nullptr, false, {});
     REQUIRE(buffer1);
 
     // reading the same header by name should return the same data pointer
-    auto buffer2 = manager.readHeader("include.svh", SourceLocation(buffer1->id, 0), nullptr,
-                                      false);
+    auto buffer2 = manager.readHeader("include.svh", SourceLocation(buffer1->id, 0), nullptr, false,
+                                      {});
     CHECK(buffer2->data.data() == buffer1->data.data());
 
     // should be able to load relative
-    buffer2 = manager.readHeader("nested/file.svh", SourceLocation(buffer1->id, 0), nullptr, false);
+    buffer2 = manager.readHeader("nested/file.svh", SourceLocation(buffer1->id, 0), nullptr, false,
+                                 {});
     REQUIRE(buffer2);
     CHECK(!buffer2->data.empty());
 
     // load another level of relative
-    CHECK(manager.readHeader("nested_local.svh", SourceLocation(buffer2->id, 0), nullptr, false));
+    CHECK(
+        manager.readHeader("nested_local.svh", SourceLocation(buffer2->id, 0), nullptr, false, {}));
 }
 
 TEST_CASE("Read header (include dirs)") {
     SourceManager manager;
     CHECK(!manager.addSystemDirectories(findTestDir()));
 
-    auto buffer = manager.readHeader("include.svh", SourceLocation(), nullptr, true);
+    auto buffer = manager.readHeader("include.svh", SourceLocation(), nullptr, true, {});
     REQUIRE(buffer);
 
     CHECK(!manager.addUserDirectories(findTestDir() + "/nested"));
     buffer = manager.readHeader("../infinite_chain.svh", SourceLocation(buffer->id, 0), nullptr,
-                                false);
+                                false, {});
     CHECK(buffer);
 }
 
 TEST_CASE("Read header (dev/null)") {
     if (fs::exists("/dev/null")) {
         SourceManager manager;
-        auto buffer = manager.readHeader("/dev/null", SourceLocation(), nullptr, true);
+        auto buffer = manager.readHeader("/dev/null", SourceLocation(), nullptr, true, {});
         CHECK(buffer);
     }
 }

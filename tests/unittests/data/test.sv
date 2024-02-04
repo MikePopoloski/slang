@@ -8,3 +8,7 @@ module m;
 
     begin end
 endmodule
+
+`ifdef FOOBAR
+`include "mod1.sv"
+`endif

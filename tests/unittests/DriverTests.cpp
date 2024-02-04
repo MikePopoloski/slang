@@ -645,4 +645,11 @@ TEST_CASE("Driver separate unit listing") {
     REQUIRE(units[2]->getSourceLibrary() != nullptr);
     CHECK(units[1]->getSourceLibrary()->name == "lib2");
     CHECK(units[2]->getSourceLibrary()->name == "mylib");
+
+    auto defs = compilation->getDefinitions();
+    auto it = std::ranges::find_if(defs, [](auto sym) {
+        return sym->kind == SymbolKind::Definition && sym->name == "mod1" &&
+               sym->getSourceLibrary() && sym->getSourceLibrary()->name == "mylib";
+    });
+    CHECK(it != defs.end());
 }

@@ -156,7 +156,8 @@ public:
 
     /// Read in a header file from disk.
     BufferOrError readHeader(std::string_view path, SourceLocation includedFrom,
-                             const SourceLibrary* library, bool isSystemPath);
+                             const SourceLibrary* library, bool isSystemPath,
+                             std::span<std::filesystem::path const> additionalIncludePaths);
 
     /// Returns true if the given file path is already loaded and cached in the source manager.
     bool isCached(const std::filesystem::path& path) const;

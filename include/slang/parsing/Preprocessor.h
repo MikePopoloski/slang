@@ -48,6 +48,9 @@ struct SLANG_EXPORT PreprocessorOptions {
     /// A set of macro names to undefine at the start of file preprocessing.
     std::vector<std::string> undefines;
 
+    /// Additional include paths to use when preprocessing.
+    std::vector<std::filesystem::path> additionalIncludePaths;
+
     /// A set of preprocessor directives to be ignored.
     flat_hash_set<std::string_view> ignoreDirectives;
 };

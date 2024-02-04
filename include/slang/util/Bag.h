@@ -56,6 +56,14 @@ public:
     }
 
     /// Gets an element of type T from the bag, if it exists.
+    /// Otherwise adds a default constructed element to the bag
+    /// and returns a reference to it.
+    template<typename T>
+    T& insertOrGet() {
+        return *std::any_cast<T>(&items[SLANG_TYPEOF(T)]);
+    }
+
+    /// Gets an element of type T from the bag, if it exists.
     /// Otherwise returns a default constructed T.
     template<typename T>
     T getOrDefault() const {

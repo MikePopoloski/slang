@@ -145,7 +145,7 @@ private:
     // One entry per unit of files + options to compile them.
     // Only used for addSeparateUnit.
     struct UnitEntry {
-        std::vector<std::string> includePaths;
+        std::vector<std::filesystem::path> includePaths;
         std::vector<std::string> defines;
         const SourceLibrary* library = nullptr;
     };
