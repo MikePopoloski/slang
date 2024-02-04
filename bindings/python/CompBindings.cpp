@@ -170,7 +170,8 @@ void registerCompilation(py::module_& m) {
                 return self.parseCommandLine(arg, parseOptions);
             },
             "arg"_a, "parseOptions"_a = CommandLine::ParseOptions{})
-        .def("processCommandFiles", &Driver::processCommandFiles, "fileName"_a, "makeRelative"_a)
+        .def("processCommandFiles", &Driver::processCommandFiles, "fileName"_a, "makeRelative"_a,
+             "separateUnit"_a)
         .def("processOptions", &Driver::processOptions)
         .def("runPreprocessor", &Driver::runPreprocessor, "includeComments"_a,
              "includeDirectives"_a, "obfuscateIds"_a, "useFixedObfuscationSeed"_a = false)
@@ -196,6 +197,8 @@ void registerCompilation(py::module_& m) {
         .def("addSearchExtension", &SourceLoader::addSearchExtension, "extension"_a)
         .def("addLibraryMaps", &SourceLoader::addLibraryMaps, "pattern"_a, "basePath"_a,
              "optionBag"_a)
+        .def("addSeparateUnit", &SourceLoader::addSeparateUnit, "filePatterns"_a, "includePaths"_a,
+             "defines"_a, "libraryName"_a)
         .def("loadSources", &SourceLoader::loadSources)
         .def("loadAndParseSources", &SourceLoader::loadAndParseSources, "optionBag"_a)
         .def_property_readonly("hasFiles", &SourceLoader::hasFiles)

@@ -105,6 +105,17 @@ void Driver::addStandardArgs() {
     cmdLine.add("-j,--threads", options.numThreads,
                 "The number of threads to use to parallelize parsing", "<count>");
 
+    cmdLine.add(
+        "-C",
+        [this](std::string_view value) {
+            processCommandFiles(value, /* makeRelative */ true, /* separateUnit */ true);
+            return "";
+        },
+        "One or more files containing independent compilation unit listings. "
+        "The files accept a subset of options that pertain specifically to parsing "
+        "that unit and optionally including it in a library.",
+        "<file-pattern>[,...]", CommandLineFlags::CommaList);
+
     // Compilation
     cmdLine.add("--max-hierarchy-depth", options.maxInstanceDepth,
                 "Maximum depth of the design hierarchy", "<depth>");
@@ -289,7 +300,7 @@ void Driver::addStandardArgs() {
     cmdLine.add(
         "-f",
         [this](std::string_view value) {
-            processCommandFiles(value, /* makeRelative */ false);
+            processCommandFiles(value, /* makeRelative */ false, /* separateUnit */ false);
             return "";
         },
         "One or more command files containing additional program options. "
@@ -299,7 +310,7 @@ void Driver::addStandardArgs() {
     cmdLine.add(
         "-F",
         [this](std::string_view value) {
-            processCommandFiles(value, /* makeRelative */ true);
+            processCommandFiles(value, /* makeRelative */ true, /* separateUnit */ false);
             return "";
         },
         "One or more command files containing additional program options. "
@@ -317,7 +328,7 @@ void Driver::addStandardArgs() {
     return !anyFailedLoads;
 }
 
-bool Driver::processCommandFiles(std::string_view pattern, bool makeRelative) {
+bool Driver::processCommandFiles(std::string_view pattern, bool makeRelative, bool separateUnit) {
     auto onError = [this](const auto& name, std::error_code ec) {
         printError(fmt::format("command file '{}': {}", name, ec.message()));
         anyFailedLoads = true;
@@ -349,17 +360,22 @@ bool Driver::processCommandFiles(std::string_view pattern, bool makeRelative) {
             fs::current_path(path.parent_path(), ec);
         }
 
-        CommandLine::ParseOptions parseOpts;
-        parseOpts.expandEnvVars = true;
-        parseOpts.ignoreProgramName = true;
-        parseOpts.supportComments = true;
-        parseOpts.ignoreDuplicates = true;
-
         SLANG_ASSERT(!buffer.empty());
         buffer.pop_back();
-
         std::string_view argStr(buffer.data(), buffer.size());
-        const bool result = parseCommandLine(argStr, parseOpts);
+
+        bool result;
+        if (separateUnit) {
+            result = parseUnitListing(argStr);
+        }
+        else {
+            CommandLine::ParseOptions parseOpts;
+            parseOpts.expandEnvVars = true;
+            parseOpts.ignoreProgramName = true;
+            parseOpts.supportComments = true;
+            parseOpts.ignoreDuplicates = true;
+            result = parseCommandLine(argStr, parseOpts);
+        }
 
         if (makeRelative)
             fs::current_path(currPath, ec);
@@ -773,6 +789,59 @@ bool Driver::reportCompilation(Compilation& compilation, bool quiet) {
     }
 
     return succeeded;
+}
+
+bool Driver::parseUnitListing(std::string_view text) {
+    CommandLine unitCmdLine;
+    std::vector<std::string> includes;
+    unitCmdLine.add("-I,--include-directory,+incdir", includes, "", "",
+                    CommandLineFlags::CommaList);
+
+    std::vector<std::string> defines;
+    unitCmdLine.add("-D,--define-macro,+define", defines, "");
+
+    std::optional<std::string> libraryName;
+    unitCmdLine.add("--library", libraryName, "");
+
+    unitCmdLine.add(
+        "-C",
+        [this](std::string_view value) {
+            processCommandFiles(value, /* makeRelative */ true, /* separateUnit */ true);
+            return "";
+        },
+        "", "", CommandLineFlags::CommaList);
+
+    std::vector<std::string> files;
+    unitCmdLine.setPositional(
+        [&](std::string_view value) {
+            if (!options.excludeExts.empty()) {
+                if (size_t extIndex = value.find_last_of('.'); extIndex != std::string_view::npos) {
+                    if (options.excludeExts.count(std::string(value.substr(extIndex + 1))))
+                        return "";
+                }
+            }
+
+            files.push_back(std::string(value));
+            return "";
+        },
+        "");
+
+    CommandLine::ParseOptions parseOpts;
+    parseOpts.expandEnvVars = true;
+    parseOpts.ignoreProgramName = true;
+    parseOpts.supportComments = true;
+    parseOpts.ignoreDuplicates = true;
+
+    if (!unitCmdLine.parse(text, parseOpts)) {
+        for (auto& err : unitCmdLine.getErrors())
+            OS::printE(fmt::format("{}\n", err));
+        return false;
+    }
+
+    sourceLoader.addSeparateUnit(files, std::move(includes), std::move(defines),
+                                 std::move(libraryName).value_or(std::string()));
+
+    return true;
 }
 
 void Driver::addLibraryFiles(std::string_view pattern) {

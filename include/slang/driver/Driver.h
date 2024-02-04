@@ -250,8 +250,11 @@ public:
     /// @param pattern a file path pattern indicating the command file(s) to process.
     /// @param makeRelative indicates whether paths in the file are relative to the file
     ///                     itself or to the current working directory.
+    /// @param separateUnit if true, the file is a separate compilation unit listing;
+    ///                     options within it apply only to that unit and not the
+    ///                     broader compilation.
     /// @returns true on success and false if errors were encountered.
-    bool processCommandFiles(std::string_view pattern, bool makeRelative);
+    bool processCommandFiles(std::string_view pattern, bool makeRelative, bool separateUnit);
 
     /// Processes and applies all configured options.
     /// @returns true on success and false if errors were encountered.
@@ -297,6 +300,7 @@ public:
     [[nodiscard]] bool reportCompilation(ast::Compilation& compilation, bool quiet);
 
 private:
+    bool parseUnitListing(std::string_view text);
     void addLibraryFiles(std::string_view pattern);
     void addParseOptions(Bag& bag) const;
     void addCompilationOptions(Bag& bag) const;

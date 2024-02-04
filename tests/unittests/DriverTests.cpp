@@ -5,6 +5,8 @@
 #include <fmt/core.h>
 #include <regex>
 
+#include "slang/ast/symbols/CompilationUnitSymbols.h"
+#include "slang/ast/symbols/InstanceSymbols.h"
 #include "slang/driver/Driver.h"
 
 using namespace slang::driver;
@@ -614,4 +616,33 @@ TEST_CASE("Driver checking for infinite library map includes") {
     CHECK(!driver.processOptions());
     CHECK(stderrContains("error: library map "));
     CHECK(stderrContains("includes itself recursively"));
+}
+
+TEST_CASE("Driver separate unit listing") {
+    auto guard = OS::captureOutput();
+
+    Driver driver;
+    driver.addStandardArgs();
+
+    auto args = fmt::format("testfoo \"{0}test5.sv\" -C \"{0}unit.f\" -v \"lib2={0}test6.sv\"",
+                            findTestDir());
+    CHECK(driver.parseCommandLine(args));
+    CHECK(driver.processOptions());
+    CHECK(driver.parseAllSources());
+
+    auto compilation = driver.createCompilation();
+    CHECK(driver.reportCompilation(*compilation, false));
+    CHECK(stdoutContains("Build succeeded"));
+
+    auto& root = compilation->getRoot();
+    REQUIRE(root.topInstances.size() == 1);
+    CHECK(root.topInstances[0]->getSourceLibrary() == nullptr);
+    CHECK(root.topInstances[0]->name == "k");
+
+    auto units = compilation->getCompilationUnits();
+    REQUIRE(units.size() == 3);
+    REQUIRE(units[1]->getSourceLibrary() != nullptr);
+    REQUIRE(units[2]->getSourceLibrary() != nullptr);
+    CHECK(units[1]->getSourceLibrary()->name == "lib2");
+    CHECK(units[2]->getSourceLibrary()->name == "mylib");
 }
