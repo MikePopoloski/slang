@@ -26,7 +26,7 @@ Paths to files (using @ref file-patterns "file patterns") that should be include
 Causes the tool to treat all input files as being part of a single compilation unit.
 By default all files are considered to be separate compilation units and ordering between them
 does not matter. When this option is provided, all files are concatenated together, in order, to
-produce a single compilation unit.
+produce a single compilation unit. See @ref compilation-units for more discussion.
 
 `-v,--libfile <file-pattern>[,...]`
 
@@ -50,6 +50,14 @@ addition to the ones provided on the command line itself. Any file paths in
 the files are relative to the command file itself.
 
 See @ref command-files for more information about command files.
+
+`-C <file-pattern>[,...]`
+
+Opens the given "compilation unit listing files" containing lists of files
+and arguments used to create separate compilation units. Any file paths in
+the files are relative to the unit listing file itself.
+
+See @ref unit-listing for more information about compilation unit listings.
 
 `--exclude-ext <ext>`
 

@@ -73,14 +73,27 @@ unintuitive results.
 
 @section compilation-units Compilation Units
 
+A "compilation unit" is a one or more input source files that are parsed together
+as an independent unit (note that preprocessing, including macros, is performed during
+parsing and so the effects of it are limited in scope to the compilation unit).
+Because they are self contained, each compilation unit can be parsed in parallel with all
+other compilation units. Once all compilation units are parsed, elaboration is performed
+to build the final design. Top-level modules, interfaces, programs, primitives, and packages
+are visible across compilation units, but other declarations are not.
+
 By default `slang` treats all input files as separate SystemVerilog compilation units.
 This is the preferred method both because it keeps the code logically separate (it doesn't
 require a specific ordering of files on the command line in order to compile correctly) and
 because internally the tool can parse files in parallel if it knows they don't have to be
-parsed in a specific order.
+parsed in a specific order. You can instead choose to have all input files combined into
+a single compilation unit by using the `--single-unit` flag, which mirrors the default behavior
+of many other SystemVerilog tools.
 
-If you have an older project where file ordering does matter, you can pass the `--single-unit`
-option to have all input files treated as a single compilation unit.
+Additionally you can control compilation units at a more fine grained level via several mechanisms.
+Library units, passed via `-v`, discovered via @ref library-search or specified via a `--libmap`,
+are always separate compilation units. Also you can use a @ref unit-listing to specify a
+specific set of files that should form a compilation unit, along with additional flags that
+control parsing behavior at the level of that specific compilation unit.
 
 @section source-libraries Source Libraries
 
@@ -164,6 +177,45 @@ like any other form of whitespace. Some important features are as follows:
 -  Command files can further include other command files by using -f or -F.
 -  Arguments set in a command file are overridden by anything set on the command line if they would
    otherwise conflict.
+
+@section unit-listing Compilation Unit Listing
+
+Similar to command files, there exists another type of file called a "compilation unit listing"
+that can be passed to slang using the `-C` command line flag. The syntax of the file is the same
+as for a command file, except that only a limited subset of flags are allowed. The contents of
+the file are used to specify a complete compilation unit, including the files that should comprise
+it as well as flags that control how it should be parsed. Note that paths specified in the file
+are always relative to the file itself.
+
+The flags allowed in compilation unit listings are:
+
+`positional arguments`
+
+Paths to files (using @ref file-patterns "file patterns") that should be included in the compilation unit.
+
+```
+-I,--include-directory <dir-pattern>[,...]
++incdir+<dir>[+<dir>...]
+```
+
+Add the given directory paths to the list of directories searched by \`include directives that use
+quotes to specify the path.
+
+```
+-D,--define-macro <macro>=<value>
++define+<macro>=<value>[+<macro>=<value>...]
+```
+
+Define \<macro\> to \<value\> (or `1` if \<value\> is ommitted) at the start of all source files.
+
+```
+--library <library-name>
+```
+
+Specifies the name of the library in which the compilation unit should be included. If the library
+has already been specified elsewhere this appends the compilation unit to that library. If this flag
+is not provided, the compilation unit is assumed to be in the default library.
+
 
 @section built-in-macros Built-in Macros
 
