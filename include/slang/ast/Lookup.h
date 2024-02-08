@@ -67,10 +67,13 @@ enum class SLANG_EXPORT LookupFlags {
     /// Lookup is resolving an interface port connection expression.
     IfacePortConn = 1 << 9,
 
+    /// Lookup is within a static initializer expression.
+    StaticInitializer = 1 << 10,
+
     /// Treat this lookup as hierarchical even if it's a simple name.
     ForceHierarchical = AllowDeclaredAfter | NoUndeclaredErrorIfUninstantiated
 };
-SLANG_BITMASK(LookupFlags, IfacePortConn)
+SLANG_BITMASK(LookupFlags, StaticInitializer)
 
 /// This type denotes the ordering of symbols within a particular scope, for the purposes of
 /// determining whether a found symbol is visible compared to the given location.

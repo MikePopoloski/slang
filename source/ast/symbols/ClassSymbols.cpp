@@ -239,6 +239,14 @@ void ClassType::populate(const Scope& scope, const ClassDeclarationSyntax& synta
     if (constraint_mode)
         constraint_mode->addArg("on_ff", comp.getBitType());
 
+    // Give this class a "thisVar" that can be used by non-static class
+    // property initializers to refer to their own instance.
+    auto tv = comp.emplace<VariableSymbol>("this", location, VariableLifetime::Automatic);
+    tv->setType(*this);
+    tv->flags |= VariableFlags::Const | VariableFlags::CompilerGenerated;
+    tv->setParent(*this);
+    thisVar = tv;
+
     // This needs to happen last, otherwise setting "needs elaboration" before
     // trying to access the name map can cause infinite recursion.
     if (syntax.extendsClause || syntax.implementsClause)

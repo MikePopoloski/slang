@@ -46,6 +46,12 @@ public:
     /// a pointer to that generic class definition.
     const GenericClassDefSymbol* genericClass = nullptr;
 
+    /// A variable that points to the instance of this class itself, which is
+    /// used by non-static class property initializers that refers to the
+    /// special "this" handle. Subroutines and constraint blocks have their
+    /// own "thisVar" members.
+    const VariableSymbol* thisVar = nullptr;
+
     /// Set to true if the class is an abstract class (declared with the
     /// "virtual" keyword).
     bool isAbstract = false;

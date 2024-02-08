@@ -249,18 +249,27 @@ public:
     /// Returns the next sibling symbol in the parent scope, if one exists.
     const Symbol* getNextSibling() const { return nextInScope; }
 
+    /// Sets the parent scope of this symbol.
+    ///
+    /// Typically this is not called directly; add the symbol to the scope
+    /// via the Scope::addMember method.
+    void setParent(const Scope& scope) { parentScope = &scope; }
+
+    /// Sets the parent scope of this symbol.
+    ///
+    /// Typically this is not called directly; add the symbol to the scope
+    /// via the Scope::addMember method.
+    void setParent(const Scope& scope, SymbolIndex index) {
+        setParent(scope);
+        indexInScope = index;
+    }
+
     template<typename TVisitor, typename... Args>
     decltype(auto) visit(TVisitor&& visitor, Args&&... args) const;
 
 protected:
     Symbol(SymbolKind kind, std::string_view name, SourceLocation location) :
         kind(kind), name(name), location(location) {}
-
-    void setParent(const Scope& scope) { parentScope = &scope; }
-    void setParent(const Scope& scope, SymbolIndex index) {
-        setParent(scope);
-        indexInScope = index;
-    }
 
 private:
     friend class Scope;

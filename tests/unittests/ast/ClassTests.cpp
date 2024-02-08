@@ -2795,3 +2795,65 @@ endmodule
     CHECK(diags[5].code == diag::ClassPrivateMembersBitstream);
     CHECK(diags[6].code == diag::ClassPrivateMembersBitstream);
 }
+
+TEST_CASE("Using this keyword in class property intializer") {
+    auto tree = SyntaxTree::fromText(R"(
+typedef class B;
+class A;
+    B b;
+    function new(B b);
+        this.b = b;
+    endfunction
+endclass
+
+class B;
+    A a1 = new(this);
+    static A a2 = new(this);
+endclass
+
+class C extends B;
+    A a1 = super.a1;
+    static A a2 = super.a1;
+    static A a3 = super.a2;
+endclass
+
+module test;
+    B b = new();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::InvalidThisHandle);
+    CHECK(diags[1].code == diag::NonStaticClassProperty);
+    CHECK(diags[2].code == diag::NonStaticClassProperty);
+}
+
+TEST_CASE("Super handle and class randomize used from static contexts") {
+    auto tree = SyntaxTree::fromText(R"(
+class A;
+    static int blah;
+endclass
+
+class B extends A;
+    static int i = randomize;
+
+    static function void foo;
+        int i = super.blah;
+        int j = randomize;
+    endfunction
+endclass
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::NonStaticClassMethod);
+    CHECK(diags[1].code == diag::NonStaticClassProperty);
+    CHECK(diags[2].code == diag::NonStaticClassMethod);
+}

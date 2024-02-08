@@ -947,6 +947,9 @@ Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syn
         flags |= LookupFlags::AllowDeclaredAfter;
     }
 
+    if (context.flags.has(ASTFlags::StaticInitializer))
+        flags |= LookupFlags::StaticInitializer;
+
     // Special case scenarios: temporary variables, class-scoped randomize calls,
     // and expanding sequences and properties.
     if (context.firstTempVar || context.randomizeDetails || context.assertionInstance) {

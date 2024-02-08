@@ -914,7 +914,8 @@ void unwrapResult(const Scope& scope, std::optional<SourceRange> range, LookupRe
     }
 }
 
-const Symbol* findThisHandle(const Scope& scope, SourceRange range, LookupResult& result) {
+const Symbol* findThisHandle(const Scope& scope, bitmask<LookupFlags> flags, SourceRange range,
+                             LookupResult& result) {
     // Find the parent method, if we can.
     const Symbol* parent = &scope.asSymbol();
     while (parent->kind == SymbolKind::StatementBlock ||
@@ -929,21 +930,29 @@ const Symbol* findThisHandle(const Scope& scope, SourceRange range, LookupResult
         if (sub.thisVar)
             return sub.thisVar;
     }
-
-    if (parent->kind == SymbolKind::ConstraintBlock) {
+    else if (parent->kind == SymbolKind::ConstraintBlock) {
         auto thisVar = parent->as<ConstraintBlockSymbol>().thisVar;
         if (thisVar)
             return thisVar;
+    }
+    else if (parent->kind == SymbolKind::ClassType && !flags.has(LookupFlags::StaticInitializer)) {
+        return parent->as<ClassType>().thisVar;
     }
 
     result.addDiag(scope, diag::InvalidThisHandle, range);
     return nullptr;
 }
 
-const Symbol* findSuperHandle(const Scope& scope, SourceRange range, LookupResult& result) {
-    auto [parent, _] = Lookup::getContainingClass(scope);
+const Symbol* findSuperHandle(const Scope& scope, bitmask<LookupFlags> flags, SourceRange range,
+                              LookupResult& result) {
+    auto [parent, inStatic] = Lookup::getContainingClass(scope);
     if (!parent) {
         result.addDiag(scope, diag::SuperOutsideClass, range);
+        return nullptr;
+    }
+
+    if (inStatic || flags.has(LookupFlags::StaticInitializer)) {
+        result.addDiag(scope, diag::NonStaticClassProperty, range) << "super"sv;
         return nullptr;
     }
 
@@ -998,7 +1007,7 @@ void Lookup::name(const NameSyntax& syntax, const ASTContext& context, bitmask<L
                 result.errorIfSelectors(context);
             return;
         case SyntaxKind::ThisHandle:
-            result.found = findThisHandle(scope, syntax.sourceRange(), result);
+            result.found = findThisHandle(scope, flags, syntax.sourceRange(), result);
             return;
         case SyntaxKind::SystemName: {
             // If this is a system name, look up directly in the compilation.
@@ -1540,19 +1549,19 @@ bool Lookup::withinClassRandomize(const ASTContext& context, const NameSyntax& s
         case SyntaxKind::ThisHandle:
             result.found = details.thisVar;
             if (!result.found)
-                result.found = findThisHandle(*context.scope, name.range, result);
+                result.found = findThisHandle(*context.scope, flags, name.range, result);
 
             if (result.found && nameParts.back().kind == SyntaxKind::SuperHandle) {
                 // Handle "this.super.whatever" the same as if the user had just
                 // written "super.whatever".
                 name = nameParts.back().name;
                 nameParts.pop_back();
-                result.found = findSuperHandle(findSuperScope(), name.range, result);
+                result.found = findSuperHandle(findSuperScope(), flags, name.range, result);
                 colonParts = 1;
             }
             break;
         case SyntaxKind::SuperHandle:
-            result.found = findSuperHandle(findSuperScope(), name.range, result);
+            result.found = findSuperHandle(findSuperScope(), flags, name.range, result);
             colonParts = 1; // pretend we used colon access to resolve class scoped name
             break;
         default:
@@ -1665,7 +1674,10 @@ void Lookup::unqualifiedImpl(const Scope& scope, std::string_view name, LookupLo
                         return;
                     }
 
-                    locationGood = sub.getReturnType().isVoid();
+                    // Also allow built-ins to always be found; they don't really
+                    // have a location since they're intrinsically defined.
+                    locationGood = sub.getReturnType().isVoid() ||
+                                   sub.flags.has(MethodFlags::BuiltIn);
                     break;
                 }
                 case SymbolKind::MethodPrototype: {
@@ -1676,7 +1688,8 @@ void Lookup::unqualifiedImpl(const Scope& scope, std::string_view name, LookupLo
                         return;
                     }
 
-                    locationGood = sub.getReturnType().isVoid();
+                    locationGood = sub.getReturnType().isVoid() ||
+                                   sub.flags.has(MethodFlags::BuiltIn);
                     break;
                 }
                 case SymbolKind::Sequence:
@@ -1959,18 +1972,18 @@ void Lookup::qualified(const ScopedNameSyntax& syntax, const ASTContext& context
             lookupDownward(nameParts, first, context, flags, result);
             return;
         case SyntaxKind::ThisHandle:
-            result.found = findThisHandle(scope, first.range, result);
+            result.found = findThisHandle(scope, flags, first.range, result);
             if (result.found && nameParts.back().kind == SyntaxKind::SuperHandle) {
                 // Handle "this.super.whatever" the same as if the user had just
                 // written "super.whatever".
                 first = nameParts.back().name;
                 nameParts.pop_back();
-                result.found = findSuperHandle(scope, first.range, result);
+                result.found = findSuperHandle(scope, flags, first.range, result);
                 colonParts = 1;
             }
             break;
         case SyntaxKind::SuperHandle:
-            result.found = findSuperHandle(scope, first.range, result);
+            result.found = findSuperHandle(scope, flags, first.range, result);
             colonParts = 1; // pretend we used colon access to resolve class scoped name
             break;
         case SyntaxKind::LocalScope:
