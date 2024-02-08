@@ -31,7 +31,15 @@ void printJson(Compilation& compilation, const std::string& fileName,
 
     ASTSerializer serializer(compilation, writer);
     if (scopes.empty()) {
+        serializer.startObject();
+        serializer.writeProperty("design");
         serializer.serialize(compilation.getRoot());
+        serializer.writeProperty("definitions");
+        serializer.startArray();
+        for (auto def : compilation.getDefinitions())
+            serializer.serialize(*def);
+        serializer.endArray();
+        serializer.endObject();
     }
     else {
         for (auto& scopeName : scopes) {
@@ -41,6 +49,7 @@ void printJson(Compilation& compilation, const std::string& fileName,
         }
     }
 
+    writer.writeNewLine();
     OS::writeFile(fileName, writer.view());
 }
 

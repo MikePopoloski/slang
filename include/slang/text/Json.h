@@ -74,6 +74,9 @@ public:
     /// Writes an array or property boolean value ("true" or "false").
     void writeValue(bool value);
 
+    /// Writes a newline character into the buffer.
+    void writeNewLine();
+
 private:
     void endValue();
     size_t findLastComma() const;

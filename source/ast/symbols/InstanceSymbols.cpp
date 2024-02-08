@@ -851,7 +851,7 @@ bool InstanceBodySymbol::hasSameType(const InstanceBodySymbol& other) const {
 }
 
 void InstanceBodySymbol::serializeTo(ASTSerializer& serializer) const {
-    serializer.write("definition", definition.name);
+    serializer.writeLink("definition", definition);
 }
 
 std::string_view InstanceArraySymbol::getArrayName() const {

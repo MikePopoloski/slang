@@ -9,8 +9,10 @@
 
 #include "ParameterBuilder.h"
 
+#include "slang/ast/ASTSerializer.h"
 #include "slang/ast/Compilation.h"
 #include "slang/ast/symbols/MemberSymbols.h"
+#include "slang/ast/types/NetType.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/syntax/AllSyntax.h"
 #include "slang/syntax/SyntaxTree.h"
@@ -329,8 +331,17 @@ std::string_view DefinitionSymbol::getArticleKindString() const {
     }
 }
 
-void DefinitionSymbol::serializeTo(ASTSerializer&) const {
-    // TODO:
+void DefinitionSymbol::serializeTo(ASTSerializer& serializer) const {
+    serializer.writeLink("defaultNetType", defaultNetType);
+    serializer.write("definitionKind", toString(definitionKind));
+    serializer.write("defaultLifetime", toString(defaultLifetime));
+    serializer.write("unconnectedDrive", toString(unconnectedDrive));
+
+    if (timeScale)
+        serializer.write("timeScale", timeScale->toString());
+
+    if (sourceLibrary)
+        serializer.write("sourceLibrary", sourceLibrary->name);
 }
 
 ConfigBlockSymbol& ConfigBlockSymbol::fromSyntax(const Scope& scope,
