@@ -364,11 +364,18 @@ Token Preprocessor::nextRaw() {
     if (token.kind != TokenKind::EndOfFile)
         return token;
 
+    auto checkBranchStack = [&] {
+        if (!branchStack.empty())
+            addDiag(diag::MissingEndIfDirective, branchStack.back().directive.range());
+    };
+
     // don't return EndOfFile tokens for included files, fall
     // through to loop to merge trivia
     popSource();
-    if (lexerStack.empty())
+    if (lexerStack.empty()) {
+        checkBranchStack();
         return token;
+    }
 
     // Rare case: we have an EoF from an include file... we don't want to return
     // that one, but we do want to merge its trivia with whatever comes next.
@@ -389,8 +396,10 @@ Token Preprocessor::nextRaw() {
             break;
 
         popSource();
-        if (lexerStack.empty())
+        if (lexerStack.empty()) {
+            checkBranchStack();
             break;
+        }
     }
 
     // finally found a real token to return, so update trivia and get out of here
@@ -630,7 +639,7 @@ Trivia Preprocessor::handleIfDefDirective(Token directive, bool inverted) {
             take = !take;
     }
 
-    branchStack.emplace_back(BranchEntry(take));
+    branchStack.emplace_back(BranchEntry(directive, take));
 
     return parseBranchDirective(directive, name, take);
 }
@@ -688,7 +697,6 @@ Trivia Preprocessor::parseBranchDirective(Token directive, Token condition, bool
             // EoF or conditional directive stops the skipping process
             bool done = false;
             if (token.kind == TokenKind::EndOfFile) {
-                addDiag(diag::MissingEndIfDirective, directive.range());
                 done = true;
             }
             else if (token.kind == TokenKind::Directive) {

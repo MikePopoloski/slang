@@ -306,6 +306,8 @@ private:
     // This is a small collection of state used to keep track of where we are in a tree of
     // nested conditional directives.
     struct BranchEntry {
+        Token directive;
+
         // Whether any of the sibling directives in this branch have been taken; used to decide
         // whether to take an `elsif or `else branch.
         bool anyTaken;
@@ -317,7 +319,8 @@ private:
         // for any other directives in the current level to come after that.
         bool hasElse = false;
 
-        BranchEntry(bool taken) : anyTaken(taken), currentActive(taken) {}
+        BranchEntry(Token directive, bool taken) :
+            directive(directive), anyTaken(taken), currentActive(taken) {}
     };
 
     // Helper class for parsing macro arguments. There's a lot of otherwise overlapping code that

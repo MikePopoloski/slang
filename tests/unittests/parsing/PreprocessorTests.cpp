@@ -2220,3 +2220,15 @@ TEST_CASE("Unknown but ignored directive") {
                                      ppOptions);
     CHECK(SyntaxPrinter::printFile(*tree) == text);
 }
+
+TEST_CASE("Include with missing endif") {
+    auto& text = R"(
+`ifdef __slang__
+module m;
+endmodule
+)";
+
+    preprocess(text);
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics.back().code == diag::MissingEndIfDirective);
+}
