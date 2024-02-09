@@ -188,7 +188,7 @@ void Driver::addStandardArgs() {
     // Diagnostics control
     cmdLine.add("-W", options.warningOptions, "Control the specified warning", "<warning>");
     cmdLine.add("--color-diagnostics", options.colorDiags,
-                "Always print diagnostics in color."
+                "Always print diagnostics in color. "
                 "If this option is unset, colors will be enabled if a color-capable "
                 "terminal is detected.");
     cmdLine.add("--diag-column", options.diagColumn, "Show column numbers in diagnostic output.");
