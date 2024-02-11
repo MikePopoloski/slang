@@ -163,9 +163,7 @@ public:
     SourceLocation end() const { return endLoc; }
 
     /// @return true if @a location is within the range, boundaries included.
-    bool contains(const SourceLocation& loc) const { 
-        return loc >= startLoc && loc <= endLoc; 
-    }
+    bool contains(const SourceLocation& loc) const { return loc >= startLoc && loc <= endLoc; }
 
     bool operator==(const SourceRange& rhs) const = default;
 
