@@ -162,6 +162,11 @@ public:
     /// @return the end of the range.
     SourceLocation end() const { return endLoc; }
 
+    /// @return true if @a location is within the range, boundaries included.
+    bool contains(const SourceLocation& loc) const { 
+        return loc >= startLoc && loc <= endLoc; 
+    }
+
     bool operator==(const SourceRange& rhs) const = default;
 
     /// A range that is reserved to represent "no location" at all.
