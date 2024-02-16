@@ -1217,6 +1217,10 @@ void PrimitiveInstanceSymbol::fromSyntax(const PrimitiveInstantiationSyntax& syn
     auto& comp = context.getCompilation();
     auto name = syntax.type.valueText();
 
+    auto missing = [&](TokenKind tk, SourceLocation loc) {
+        return Token::createMissing(comp, tk, loc);
+    };
+
     if (syntax.type.kind == TokenKind::Identifier) {
         auto def = comp.getDefinition(name, *context.scope, syntax.type.range(),
                                       diag::UnknownPrimitive);
@@ -1226,16 +1230,36 @@ void PrimitiveInstanceSymbol::fromSyntax(const PrimitiveInstantiationSyntax& syn
                                  implicitNets);
                 return;
             }
+
+            SLANG_ASSERT(syntax.strength || syntax.delay);
+            if (syntax.strength) {
+                context.addDiag(diag::InstanceWithStrength, syntax.strength->sourceRange()) << name;
+            }
+            else if (comp.hasFlag(CompilationFlags::AllowBareValParamAssignment) &&
+                     syntax.delay->kind == SyntaxKind::DelayControl) {
+                // We're allowing this to be a hierarchical instantiation with a single param
+                // assignment, and just pretending the parentheses were provided.
+                auto& delay = syntax.delay->as<DelaySyntax>();
+                auto& delayVal = *delay.delayValue;
+
+                SmallVector<TokenOrSyntax> parameters;
+                parameters.push_back(comp.emplace<OrderedParamAssignmentSyntax>(delayVal));
+
+                auto pvas = comp.emplace<ParameterValueAssignmentSyntax>(
+                    delay.hash,
+                    missing(TokenKind::OpenParenthesis, delayVal.getFirstToken().location()),
+                    parameters.copy(comp),
+                    missing(TokenKind::CloseParenthesis, delayVal.getLastToken().location()));
+
+                auto instantiation = comp.emplace<HierarchyInstantiationSyntax>(
+                    syntax.attributes, syntax.type, pvas, syntax.instances, syntax.semi);
+                InstanceSymbol::fromSyntax(comp, *instantiation, context, results, implicitNets,
+                                           /* isFromBind */ false);
+                return;
+            }
             else {
-                SLANG_ASSERT(syntax.strength || syntax.delay);
-                if (syntax.strength) {
-                    context.addDiag(diag::InstanceWithStrength, syntax.strength->sourceRange())
-                        << name;
-                }
-                else {
-                    context.addDiag(diag::InstanceWithDelay,
-                                    syntax.delay->getFirstToken().location() + 1);
-                }
+                context.addDiag(diag::InstanceWithDelay,
+                                syntax.delay->getFirstToken().location() + 1);
             }
         }
         UninstantiatedDefSymbol::fromSyntax(comp, syntax, context, results, implicitNets);

@@ -113,9 +113,12 @@ enum class SLANG_EXPORT CompilationFlags {
     RelaxStringConversions = 1 << 9,
 
     /// Allow implicit call expressions (lacking parentheses) to be recursive function calls.
-    AllowRecursiveImplicitCall = 1 << 10
+    AllowRecursiveImplicitCall = 1 << 10,
+
+    /// Allow module parameter assignments to elide the parentheses.
+    AllowBareValParamAssignment = 1 << 11
 };
-SLANG_BITMASK(CompilationFlags, AllowRecursiveImplicitCall)
+SLANG_BITMASK(CompilationFlags, AllowBareValParamAssignment)
 
 /// Contains various options that can control compilation behavior.
 struct SLANG_EXPORT CompilationOptions {

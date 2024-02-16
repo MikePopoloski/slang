@@ -167,6 +167,8 @@ void Driver::addStandardArgs() {
                 "Allow top-level modules to have interface ports.");
     addCompFlag(CompilationFlags::AllowRecursiveImplicitCall, "--allow-recursive-implicit-call",
                 "Allow implicit call expressions to be recursive function calls.");
+    addCompFlag(CompilationFlags::AllowBareValParamAssignment, "--allow-bare-value-param-assigment",
+                "Allow module parameter assignments to elide the parentheses.");
     addCompFlag(CompilationFlags::StrictDriverChecking, "--strict-driver-checking",
                 "Perform strict driver checking, which currently means disabling "
                 "procedural 'for' loop unrolling.");
@@ -410,7 +412,8 @@ bool Driver::processOptions() {
                                    CompilationFlags::AllowUseBeforeDeclare,
                                    CompilationFlags::RelaxEnumConversions,
                                    CompilationFlags::RelaxStringConversions,
-                                   CompilationFlags::AllowRecursiveImplicitCall};
+                                   CompilationFlags::AllowRecursiveImplicitCall,
+                                   CompilationFlags::AllowBareValParamAssignment};
 
             for (auto flag : vcsCompatFlags) {
                 auto& option = options.compilationFlags.at(flag);

@@ -52,7 +52,8 @@ void registerCompilation(py::module_& m) {
         .value("SuppressUnused", CompilationFlags::SuppressUnused)
         .value("IgnoreUnknownModules", CompilationFlags::IgnoreUnknownModules)
         .value("RelaxStringConversions", CompilationFlags::RelaxStringConversions)
-        .value("AllowRecursiveImplicitCall", CompilationFlags::AllowRecursiveImplicitCall);
+        .value("AllowRecursiveImplicitCall", CompilationFlags::AllowRecursiveImplicitCall)
+        .value("AllowBareValParamAssignment", CompilationFlags::AllowBareValParamAssignment);
 
     py::class_<CompilationOptions>(m, "CompilationOptions")
         .def(py::init<>())
