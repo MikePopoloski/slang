@@ -34,8 +34,10 @@ void SvLocalParam::toCpp(HppFile& hppFile, std::string_view, const SvAliases&, b
             unwrapUnpackedArray(parameter.getValue().elements(), unpackedArrays, biggestSize);
         }
         SLANG_CATCH(const std::runtime_error& error) {
+#if __cpp_exceptions
             SLANG_THROW(std::runtime_error(fmt::format(
                 "There has been an error while reflecting {}: {}", parameterName, error.what())));
+#endif
         }
         if (unpackedArrays.empty())
             SLANG_THROW(std::runtime_error(
