@@ -121,8 +121,8 @@ public:
     /// in the library of that name; otherwise it will be included in the
     /// default library and be considered a non-library unit.
     void addSeparateUnit(std::span<const std::string> filePatterns,
-                         std::vector<std::string> includePaths, std::vector<std::string> defines,
-                         std::string libraryName);
+                         const std::vector<std::string>& includePaths,
+                         std::vector<std::string> defines, const std::string& libraryName);
 
     /// Returns a list of all library map syntax trees that have been loaded and parsed.
     const SyntaxTreeList& getLibraryMaps() const { return libraryMapTrees; }

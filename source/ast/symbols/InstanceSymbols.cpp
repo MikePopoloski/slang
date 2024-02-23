@@ -389,7 +389,7 @@ void InstanceSymbol::fromSyntax(Compilation& comp, const HierarchyInstantiationS
     // node will be created in one go.
     auto createInstances = [&](const Symbol* def,
                                const HierarchicalInstanceSyntax* specificInstance,
-                               const ConfigRule* configRule) {
+                               const ConfigRule* confRule) {
         if (!def) {
             UninstantiatedDefSymbol::fromSyntax(comp, syntax, specificInstance, context, results,
                                                 implicitNets, implicitNetNames, netType);
@@ -397,10 +397,10 @@ void InstanceSymbol::fromSyntax(Compilation& comp, const HierarchyInstantiationS
         }
 
         auto addDiag = [&](DiagCode code) -> Diagnostic& {
-            if (configRule) {
+            if (confRule) {
                 SLANG_ASSERT(specificInstance);
                 auto& diag = context.addDiag(code, specificInstance->sourceRange());
-                diag.addNote(diag::NoteConfigRule, configRule->sourceRange);
+                diag.addNote(diag::NoteConfigRule, confRule->sourceRange);
                 return diag;
             }
             else {
@@ -458,8 +458,8 @@ void InstanceSymbol::fromSyntax(Compilation& comp, const HierarchyInstantiationS
         if (syntax.parameters)
             paramBuilder.setAssignments(*syntax.parameters);
 
-        auto instConfigRule = configRule;
-        if (!configRule && parentInst && parentInst->parentInstance)
+        auto instConfigRule = confRule;
+        if (!confRule && parentInst && parentInst->parentInstance)
             instConfigRule = parentInst->parentInstance->configRule;
 
         InstanceBuilder builder(context, definition, paramBuilder, parentOverrideNode,

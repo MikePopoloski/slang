@@ -75,8 +75,9 @@ void SourceLoader::addLibraryMaps(std::string_view pattern, const fs::path& base
 }
 
 void SourceLoader::addSeparateUnit(std::span<const std::string> filePatterns,
-                                   std::vector<std::string> includePaths,
-                                   std::vector<std::string> defines, std::string libraryName) {
+                                   const std::vector<std::string>& includePaths,
+                                   std::vector<std::string> defines,
+                                   const std::string& libraryName) {
     std::error_code ec;
     SmallVector<fs::path> includeDirs;
     for (auto& str : includePaths)
@@ -90,7 +91,7 @@ void SourceLoader::addSeparateUnit(std::span<const std::string> filePatterns,
         unit.includePaths.emplace_back(std::move(path));
 
     const bool isLibraryFile = unit.library != nullptr;
-    for (auto pattern : filePatterns) {
+    for (auto& pattern : filePatterns) {
         addFilesInternal(pattern, {}, isLibraryFile, unit.library, &unit,
                          /* expandEnvVars */ false);
     }

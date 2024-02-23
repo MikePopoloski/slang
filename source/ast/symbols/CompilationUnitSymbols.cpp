@@ -349,9 +349,6 @@ void DefinitionSymbol::serializeTo(ASTSerializer& serializer) const {
     if (timeScale)
         serializer.write("timeScale", timeScale->toString());
 
-    auto scope = getParentScope();
-    SLANG_ASSERT(scope);
-
     if (!sourceLibrary.isDefault)
         serializer.write("sourceLibrary", sourceLibrary.name);
 }
@@ -429,7 +426,7 @@ ConfigBlockSymbol& ConfigBlockSymbol::fromSyntax(const Scope& scope,
                 InstanceOverride io;
                 io.path = pathBuf.copy(comp);
                 io.rule = buildRule(*icr.ruleClause);
-                instOverrides.emplace_back(std::move(io));
+                instOverrides.emplace_back(io);
                 break;
             }
             default:
