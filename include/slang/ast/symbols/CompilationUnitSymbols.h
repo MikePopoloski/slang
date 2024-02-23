@@ -26,9 +26,9 @@ class Type;
 class SLANG_EXPORT CompilationUnitSymbol : public Symbol, public Scope {
 public:
     std::optional<TimeScale> timeScale;
-    const SourceLibrary* sourceLibrary;
+    const SourceLibrary& sourceLibrary;
 
-    CompilationUnitSymbol(Compilation& compilation, const SourceLibrary* sourceLibrary);
+    CompilationUnitSymbol(Compilation& compilation, const SourceLibrary& sourceLibrary);
 
     void addMembers(const syntax::SyntaxNode& syntax);
 
@@ -183,9 +183,8 @@ public:
     /// outside of any specific syntax tree.
     const syntax::SyntaxTree* syntaxTree;
 
-    /// The source library that contains the definition, or nullptr for the
-    /// default library.
-    const SourceLibrary* sourceLibrary;
+    /// The source library that contains the definition.
+    const SourceLibrary& sourceLibrary;
 
     /// Indicates whether this definition has non-ansi port declarations.
     bool hasNonAnsiPorts;

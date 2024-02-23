@@ -185,6 +185,9 @@ struct SLANG_EXPORT CompilationOptions {
     /// A list of library names, in the order in which they should be searched
     /// when binding cells to instances.
     std::vector<std::string> defaultLiblist;
+
+    /// The name of the default library.
+    std::string defaultLibName = "work";
 };
 
 /// A node in a tree representing an instance in the design
@@ -314,6 +317,9 @@ public:
     /// Gets the source library with the given name, or nullptr if there is no such library.
     const SourceLibrary* getSourceLibrary(std::string_view name) const;
 
+    /// Gets the default library object.
+    const SourceLibrary& getDefaultLibrary() const { return *defaultLib; }
+
     /// Gets the definition with the given name, or nullptr if there is no such definition.
     /// This takes into account the given scope so that nested definitions are found
     /// before more global ones.
@@ -405,7 +411,7 @@ public:
                                                const syntax::ConfigDeclarationSyntax& syntax);
 
     /// Creates a new primitive in the given scope based on the given syntax.
-    const PrimitiveSymbol& createPrimitive(const Scope& scope,
+    const PrimitiveSymbol& createPrimitive(Scope& scope,
                                            const syntax::UdpDeclarationSyntax& syntax);
 
     /// Registers a built-in gate symbol.
@@ -883,6 +889,9 @@ private:
 
     // The built-in std package.
     const PackageSymbol* stdPkg = nullptr;
+
+    // The default library.
+    std::unique_ptr<SourceLibrary> defaultLib;
 };
 
 } // namespace slang::ast

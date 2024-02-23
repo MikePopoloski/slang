@@ -251,9 +251,9 @@ const SourceLibrary* Symbol::getSourceLibrary() const {
     while (true) {
         switch (curr->kind) {
             case SymbolKind::Definition:
-                return curr->as<DefinitionSymbol>().sourceLibrary;
+                return &curr->as<DefinitionSymbol>().sourceLibrary;
             case SymbolKind::CompilationUnit:
-                return curr->as<CompilationUnitSymbol>().sourceLibrary;
+                return &curr->as<CompilationUnitSymbol>().sourceLibrary;
             default:
                 auto scope = curr->getParentScope();
                 if (!scope)

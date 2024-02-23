@@ -23,7 +23,7 @@ using namespace parsing;
 using namespace syntax;
 
 CompilationUnitSymbol::CompilationUnitSymbol(Compilation& compilation,
-                                             const SourceLibrary* sourceLibrary) :
+                                             const SourceLibrary& sourceLibrary) :
     Symbol(SymbolKind::CompilationUnit, "", SourceLocation()),
     Scope(compilation, this), sourceLibrary(sourceLibrary) {
 
@@ -235,6 +235,15 @@ bool DefinitionSymbol::ParameterDecl::hasDefault() const {
     }
 }
 
+static const SourceLibrary& getLibForDef(const Scope& scope, const SyntaxTree* syntaxTree) {
+    if (syntaxTree) {
+        if (auto lib = syntaxTree->getSourceLibrary())
+            return *lib;
+    }
+
+    return scope.getCompilation().getDefaultLibrary();
+}
+
 DefinitionSymbol::DefinitionSymbol(const Scope& scope, LookupLocation lookupLocation,
                                    const ModuleDeclarationSyntax& syntax,
                                    const NetType& defaultNetType, UnconnectedDrive unconnectedDrive,
@@ -242,7 +251,7 @@ DefinitionSymbol::DefinitionSymbol(const Scope& scope, LookupLocation lookupLoca
                                    const SyntaxTree* syntaxTree) :
     Symbol(SymbolKind::Definition, syntax.header->name.valueText(), syntax.header->name.location()),
     defaultNetType(defaultNetType), unconnectedDrive(unconnectedDrive), syntaxTree(syntaxTree),
-    sourceLibrary(syntaxTree ? syntaxTree->getSourceLibrary() : nullptr) {
+    sourceLibrary(getLibForDef(scope, syntaxTree)) {
 
     // Extract and save various properties of the definition.
     setParent(scope, lookupLocation.getIndex());
@@ -340,8 +349,11 @@ void DefinitionSymbol::serializeTo(ASTSerializer& serializer) const {
     if (timeScale)
         serializer.write("timeScale", timeScale->toString());
 
-    if (sourceLibrary)
-        serializer.write("sourceLibrary", sourceLibrary->name);
+    auto scope = getParentScope();
+    SLANG_ASSERT(scope);
+
+    if (&sourceLibrary != &scope->getCompilation().getDefaultLibrary())
+        serializer.write("sourceLibrary", sourceLibrary.name);
 }
 
 ConfigBlockSymbol& ConfigBlockSymbol::fromSyntax(const Scope& scope,

@@ -79,6 +79,7 @@ void registerCompilation(py::module_& m) {
         .def_property_readonly("options", &Compilation::getOptions)
         .def_property_readonly("isFinalized", &Compilation::isFinalized)
         .def_property_readonly("sourceManager", &Compilation::getSourceManager)
+        .def_property_readonly("defaultLibrary", &Compilation::getDefaultLibrary)
         .def("addSyntaxTree", &Compilation::addSyntaxTree, "tree"_a)
         .def("getSyntaxTrees", &Compilation::getSyntaxTrees)
         .def("getRoot", py::overload_cast<>(&Compilation::getRoot), byrefint)

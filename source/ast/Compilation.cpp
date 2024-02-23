@@ -160,6 +160,10 @@ Compilation::Compilation(const Bag& options) :
     // Register the built-in gate types.
     builtins::registerGateTypes(*this);
 
+    // Register the default library.
+    defaultLib = std::make_unique<SourceLibrary>(this->options.defaultLibName, INT_MAX);
+    libraryNameMap[defaultLib->name] = defaultLib.get();
+
     // Set a default handler for printing types and symbol paths, for convenience.
     static std::once_flag onceFlag;
     std::call_once(onceFlag, [] {
@@ -196,15 +200,18 @@ void Compilation::addSyntaxTree(std::shared_ptr<SyntaxTree> tree) {
         }
     }
 
-    if (auto lib = tree->getSourceLibrary())
+    auto lib = tree->getSourceLibrary();
+    if (lib)
         libraryNameMap[lib->name] = lib;
+    else
+        lib = defaultLib.get();
 
     const SyntaxNode& node = tree->root();
     const SyntaxNode* topNode = &node;
     while (topNode->parent)
         topNode = topNode->parent;
 
-    auto unit = emplace<CompilationUnitSymbol>(*this, tree->getSourceLibrary());
+    auto unit = emplace<CompilationUnitSymbol>(*this, *lib);
     unit->setSyntax(*topNode);
     root->addMember(*unit);
     compilationUnits.push_back(unit);
@@ -352,7 +359,7 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamsAndBinds) {
                     continue;
 
                 auto& def = defSym->as<DefinitionSymbol>();
-                if (def.sourceLibrary ||
+                if (&def.sourceLibrary != defaultLib.get() ||
                     globalInstantiations.find(def.name) != globalInstantiations.end()) {
                     continue;
                 }
@@ -393,8 +400,8 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamsAndBinds) {
                     // If this definition is in a library, it can only be targeted as
                     // a top module by the user including the library name in the string.
                     flat_hash_set<std::string_view>::iterator it;
-                    if (def.sourceLibrary) {
-                        auto target = fmt::format("{}.{}", def.sourceLibrary->name, def.name);
+                    if (&def.sourceLibrary != defaultLib.get()) {
+                        auto target = fmt::format("{}.{}", def.sourceLibrary.name, def.name);
                         it = tm.find(target);
                     }
                     else {
@@ -421,7 +428,7 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamsAndBinds) {
                 // Otherwise this definition might be unreferenced and not automatically
                 // instantiated (don't add library definitions to this list though).
                 if (globalInstantiations.find(def.name) == globalInstantiations.end() &&
-                    !def.sourceLibrary) {
+                    &def.sourceLibrary == defaultLib.get()) {
                     unreferencedDefs.push_back(&def);
                 }
             }
@@ -447,8 +454,10 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamsAndBinds) {
             if (auto confIt = configBlocks.find(confName); confIt != configBlocks.end()) {
                 const ConfigBlockSymbol* foundConf = nullptr;
                 for (auto conf : confIt->second) {
-                    if ((!conf->getSourceLibrary() && confLib.empty()) ||
-                        (conf->getSourceLibrary() && conf->getSourceLibrary()->name == confLib)) {
+                    auto lib = conf->getSourceLibrary();
+                    SLANG_ASSERT(lib);
+
+                    if (lib->name == confLib || (confLib.empty() && lib == defaultLib.get())) {
                         foundConf = conf;
                         break;
                     }
@@ -467,9 +476,9 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamsAndBinds) {
                                     continue;
 
                                 auto& def = defSym->as<DefinitionSymbol>();
-                                if ((cell.lib.empty() &&
-                                     def.sourceLibrary == foundConf->getSourceLibrary()) ||
-                                    (def.sourceLibrary && def.sourceLibrary->name == cell.lib)) {
+                                if (def.sourceLibrary.name == cell.lib ||
+                                    (cell.lib.empty() &&
+                                     &def.sourceLibrary == foundConf->getSourceLibrary())) {
                                     foundDef = &def;
                                     break;
                                 }
@@ -787,10 +796,7 @@ void Compilation::insertDefinition(Symbol& symbol, const Scope& scope) {
         auto vecIt = std::ranges::lower_bound(defList, &symbol, [](auto a, auto b) {
             auto libA = a->getSourceLibrary();
             auto libB = b->getSourceLibrary();
-            if (!libA)
-                return false;
-            if (!libB)
-                return true;
+            SLANG_ASSERT(libA && libB);
             return libA->priority < libB->priority;
         });
 
@@ -819,7 +825,7 @@ void Compilation::insertDefinition(Symbol& symbol, const Scope& scope) {
                         return;
                     }
                 }
-                else if (!vLib || !symLib || vLib->priority != symLib->priority) {
+                else if (vLib->priority != symLib->priority) {
                     // We know for sure there are no more duplicates because the
                     // library and/or the priority has changed.
                     break;
@@ -917,9 +923,10 @@ const ConfigBlockSymbol& Compilation::createConfigBlock(const Scope& scope,
     return config;
 }
 
-const PrimitiveSymbol& Compilation::createPrimitive(const Scope& scope,
+const PrimitiveSymbol& Compilation::createPrimitive(Scope& scope,
                                                     const UdpDeclarationSyntax& syntax) {
     auto& prim = PrimitiveSymbol::fromSyntax(scope, syntax);
+    scope.addMember(prim);
     insertDefinition(prim, scope);
     return prim;
 }
@@ -1243,7 +1250,7 @@ const NameSyntax& Compilation::tryParseName(std::string_view name, Diagnostics& 
 }
 
 CompilationUnitSymbol& Compilation::createScriptScope() {
-    auto unit = emplace<CompilationUnitSymbol>(*this, nullptr);
+    auto unit = emplace<CompilationUnitSymbol>(*this, getDefaultLibrary());
     root->addMember(*unit);
     return *unit;
 }
@@ -2276,9 +2283,9 @@ std::pair<const Symbol*, bool> Compilation::resolveConfigRules(
     std::string_view lookupName, const Scope& scope, const ConfigRule& initialRule,
     const std::vector<Symbol*>& defList) const {
 
-    auto findDefByLib = [](auto& defList, const SourceLibrary* target) -> Symbol* {
+    auto findDefByLib = [](auto& defList, const SourceLibrary& target) -> Symbol* {
         for (auto def : defList) {
-            if (def->getSourceLibrary() == target)
+            if (def->getSourceLibrary() == &target)
                 return def;
         }
         return nullptr;
@@ -2318,10 +2325,10 @@ std::pair<const Symbol*, bool> Compilation::resolveConfigRules(
             return {nullptr, true};
         }
 
-        const SourceLibrary* overrideLib = nullptr;
+        const SourceLibrary* overrideLib = defaultLib.get();
         if (id.lib.empty()) {
             if (auto parentDef = scope.asSymbol().getDeclaringDefinition())
-                overrideLib = parentDef->sourceLibrary;
+                overrideLib = &parentDef->sourceLibrary;
         }
         else {
             overrideLib = getSourceLibrary(id.lib);
@@ -2331,7 +2338,7 @@ std::pair<const Symbol*, bool> Compilation::resolveConfigRules(
             }
         }
 
-        auto result = findDefByLib(overrideDefIt->second.first, overrideLib);
+        auto result = findDefByLib(overrideDefIt->second.first, *overrideLib);
         if (!result)
             errorMissingDef(id.name, *root, id.sourceRange, diag::UnknownModule);
         return {result, true};
@@ -2340,7 +2347,7 @@ std::pair<const Symbol*, bool> Compilation::resolveConfigRules(
     // This search is O(n^2) but both lists should be small
     // (or even just one element each) in basically all cases.
     for (auto lib : liblist) {
-        if (auto def = findDefByLib(defList, lib))
+        if (auto def = findDefByLib(defList, *lib))
             return {def, false};
     }
 

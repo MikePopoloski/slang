@@ -37,9 +37,9 @@ endmodule
     compilation.addSyntaxTree(tree3);
     NO_COMPILATION_ERRORS;
 
-    auto lib =
+    auto& lib =
         compilation.getRoot().lookupName<InstanceSymbol>("top.m").getDefinition().sourceLibrary;
-    CHECK(lib == lib1.get());
+    CHECK(&lib == lib1.get());
 }
 
 TEST_CASE("Driver library default ordering") {
@@ -59,7 +59,7 @@ TEST_CASE("Driver library default ordering") {
     CHECK(driver.reportCompilation(*compilation, false));
 
     auto& m = compilation->getRoot().lookupName<InstanceSymbol>("top.m");
-    CHECK(m.getDefinition().sourceLibrary->name == "lib1");
+    CHECK(m.getDefinition().sourceLibrary.name == "lib1");
 }
 
 TEST_CASE("Driver library explicit ordering") {
@@ -79,7 +79,7 @@ TEST_CASE("Driver library explicit ordering") {
     CHECK(driver.reportCompilation(*compilation, false));
 
     auto& m = compilation->getRoot().lookupName<InstanceSymbol>("top.m");
-    CHECK(m.getDefinition().sourceLibrary->name == "lib2");
+    CHECK(m.getDefinition().sourceLibrary.name == "lib2");
 }
 
 TEST_CASE("Top module in a library") {
@@ -181,7 +181,7 @@ endconfig
 
     auto top = compilation.getRoot().topInstances[0];
     CHECK(top->name == "mod");
-    CHECK(top->getDefinition().sourceLibrary->name == "lib2");
+    CHECK(top->getDefinition().sourceLibrary.name == "lib2");
 }
 
 TEST_CASE("Config that targets library cell") {
@@ -258,9 +258,8 @@ endconfig
     NO_COMPILATION_ERRORS;
 
     auto& m1 = compilation.getRoot().lookupName<InstanceSymbol>("top.m1");
-    auto lib = m1.getDefinition().sourceLibrary;
-    REQUIRE(lib);
-    CHECK(lib->name == "lib1");
+    auto& lib = m1.getDefinition().sourceLibrary;
+    CHECK(lib.name == "lib1");
 }
 
 TEST_CASE("Config cell overrides") {

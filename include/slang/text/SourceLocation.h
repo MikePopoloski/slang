@@ -196,7 +196,7 @@ struct SLANG_EXPORT SourceLibrary {
     SourceLibrary() = default;
 
     /// Constructs a new source library object with the given name.
-    SourceLibrary(std::string&& name, int priority) : name(std::move(name)), priority(priority) {}
+    SourceLibrary(std::string name, int priority) : name(std::move(name)), priority(priority) {}
 };
 
 /// Represents a source buffer; that is, the actual text of the source

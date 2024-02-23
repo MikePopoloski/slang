@@ -191,8 +191,7 @@ public:
     /// declared in a definition, returns nullptr.
     const DefinitionSymbol* getDeclaringDefinition() const;
 
-    /// Gets the source library that contains this symbol. Returns nullptr
-    /// if the symbol is in the default library.
+    /// Gets the source library that contains this symbol.
     const SourceLibrary* getSourceLibrary() const;
 
     /// If this symbol is a random variable, returns its mode.

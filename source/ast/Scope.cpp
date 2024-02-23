@@ -200,7 +200,7 @@ void Scope::addMembers(const SyntaxNode& syntax) {
         }
         case SyntaxKind::UdpDeclaration:
             // Primitives exist in their own namespace and are tracked in the Compilation.
-            addMember(compilation.createPrimitive(*this, syntax.as<UdpDeclarationSyntax>()));
+            compilation.createPrimitive(*this, syntax.as<UdpDeclarationSyntax>());
             break;
         case SyntaxKind::ConfigDeclaration:
             // Config blocks exist in their own namespace and are tracked in the Compilation.
