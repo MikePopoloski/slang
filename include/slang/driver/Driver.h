@@ -163,6 +163,9 @@ public:
         /// should be resolved between libraries.
         std::vector<std::string> libraryOrder;
 
+        /// The name of the default library; if not set, defaults to "work".
+        std::optional<std::string> defaultLibName;
+
         /// @}
         /// @name Diagnostics control
         /// @{
@@ -287,7 +290,7 @@ public:
     [[nodiscard]] Bag createOptionBag() const;
 
     /// Creates a compilation object from all of the current loaded state of the driver.
-    [[nodiscard]] std::unique_ptr<ast::Compilation> createCompilation() const;
+    [[nodiscard]] std::unique_ptr<ast::Compilation> createCompilation();
 
     /// Reports all parsing diagnostics found in all of the @a syntaxTrees
     /// @returns true on success and false if errors were encountered.

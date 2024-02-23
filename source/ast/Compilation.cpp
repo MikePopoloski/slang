@@ -46,9 +46,9 @@ const PackageSymbol& createStdPackage(Compilation&);
 
 namespace slang::ast {
 
-Compilation::Compilation(const Bag& options) :
+Compilation::Compilation(const Bag& options, const SourceLibrary* defaultLib) :
     options(options.getOrDefault<CompilationOptions>()), driverMapAllocator(*this),
-    unrollIntervalMapAllocator(*this), tempDiag({}, {}) {
+    unrollIntervalMapAllocator(*this), tempDiag({}, {}), defaultLibPtr(defaultLib) {
 
     // Construct all built-in types.
     bitType = emplace<ScalarType>(ScalarType::Bit);
@@ -161,8 +161,15 @@ Compilation::Compilation(const Bag& options) :
     builtins::registerGateTypes(*this);
 
     // Register the default library.
-    defaultLib = std::make_unique<SourceLibrary>(this->options.defaultLibName, INT_MAX);
-    libraryNameMap[defaultLib->name] = defaultLib.get();
+    if (defaultLibPtr) {
+        SLANG_ASSERT(defaultLibPtr->isDefault);
+    }
+    else {
+        defaultLibMem = std::make_unique<SourceLibrary>("work"s, INT_MAX);
+        defaultLibMem->isDefault = true;
+        defaultLibPtr = defaultLibMem.get();
+        libraryNameMap[defaultLibPtr->name] = defaultLibPtr;
+    }
 
     // Set a default handler for printing types and symbol paths, for convenience.
     static std::once_flag onceFlag;
@@ -201,10 +208,14 @@ void Compilation::addSyntaxTree(std::shared_ptr<SyntaxTree> tree) {
     }
 
     auto lib = tree->getSourceLibrary();
-    if (lib)
-        libraryNameMap[lib->name] = lib;
-    else
-        lib = defaultLib.get();
+    if (lib) {
+        auto& entry = libraryNameMap[lib->name];
+        SLANG_ASSERT(entry == nullptr || entry == lib);
+        entry = lib;
+    }
+    else {
+        lib = defaultLibPtr;
+    }
 
     const SyntaxNode& node = tree->root();
     const SyntaxNode* topNode = &node;
@@ -359,7 +370,7 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamsAndBinds) {
                     continue;
 
                 auto& def = defSym->as<DefinitionSymbol>();
-                if (&def.sourceLibrary != defaultLib.get() ||
+                if (!def.sourceLibrary.isDefault ||
                     globalInstantiations.find(def.name) != globalInstantiations.end()) {
                     continue;
                 }
@@ -399,14 +410,9 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamsAndBinds) {
 
                     // If this definition is in a library, it can only be targeted as
                     // a top module by the user including the library name in the string.
-                    flat_hash_set<std::string_view>::iterator it;
-                    if (&def.sourceLibrary != defaultLib.get()) {
-                        auto target = fmt::format("{}.{}", def.sourceLibrary.name, def.name);
-                        it = tm.find(target);
-                    }
-                    else {
+                    auto it = tm.find(fmt::format("{}.{}", def.sourceLibrary.name, def.name));
+                    if (it == tm.end() && def.sourceLibrary.isDefault)
                         it = tm.find(def.name);
-                    }
 
                     if (it != tm.end()) {
                         // Remove from the top modules set so that we know we visited it.
@@ -428,7 +434,7 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamsAndBinds) {
                 // Otherwise this definition might be unreferenced and not automatically
                 // instantiated (don't add library definitions to this list though).
                 if (globalInstantiations.find(def.name) == globalInstantiations.end() &&
-                    &def.sourceLibrary == defaultLib.get()) {
+                    def.sourceLibrary.isDefault) {
                     unreferencedDefs.push_back(&def);
                 }
             }
@@ -457,7 +463,7 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamsAndBinds) {
                     auto lib = conf->getSourceLibrary();
                     SLANG_ASSERT(lib);
 
-                    if (lib->name == confLib || (confLib.empty() && lib == defaultLib.get())) {
+                    if (lib->name == confLib || (confLib.empty() && lib->isDefault)) {
                         foundConf = conf;
                         break;
                     }
@@ -2325,7 +2331,7 @@ std::pair<const Symbol*, bool> Compilation::resolveConfigRules(
             return {nullptr, true};
         }
 
-        const SourceLibrary* overrideLib = defaultLib.get();
+        const SourceLibrary* overrideLib = defaultLibPtr;
         if (id.lib.empty()) {
             if (auto parentDef = scope.asSymbol().getDeclaringDefinition())
                 overrideLib = &parentDef->sourceLibrary;

@@ -221,6 +221,10 @@ ones later in the list.
 If no explicit ordering is given the default order is
 the order in which the libraries are specified to the tool.
 
+`--defaultLibName <name>`
+
+Sets the name of the default library. If not set, defaults to "work".
+
 `--max-hierarchy-depth <depth>`
 
 Set the maximum depth of the design hierarchy. Used to detect infinite

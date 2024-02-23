@@ -254,6 +254,10 @@ const SourceLibrary* Symbol::getSourceLibrary() const {
                 return &curr->as<DefinitionSymbol>().sourceLibrary;
             case SymbolKind::CompilationUnit:
                 return &curr->as<CompilationUnitSymbol>().sourceLibrary;
+            case SymbolKind::InstanceBody:
+                return &curr->as<InstanceBodySymbol>().getDefinition().sourceLibrary;
+            case SymbolKind::Instance:
+                return &curr->as<InstanceSymbol>().getDefinition().sourceLibrary;
             default:
                 auto scope = curr->getParentScope();
                 if (!scope)

@@ -636,7 +636,7 @@ TEST_CASE("Driver separate unit listing") {
 
     auto& root = compilation->getRoot();
     REQUIRE(root.topInstances.size() == 1);
-    CHECK(root.topInstances[0]->getSourceLibrary() == nullptr);
+    CHECK(root.topInstances[0]->getSourceLibrary()->name == "work");
     CHECK(root.topInstances[0]->name == "k");
 
     auto units = compilation->getCompilationUnits();
@@ -652,4 +652,33 @@ TEST_CASE("Driver separate unit listing") {
                sym->getSourceLibrary() && sym->getSourceLibrary()->name == "mylib";
     });
     CHECK(it != defs.end());
+}
+
+TEST_CASE("Driver customize default lib name") {
+    auto guard = OS::captureOutput();
+
+    Driver driver;
+    driver.addStandardArgs();
+
+    auto args = fmt::format("testfoo \"{0}test5.sv\" -v \"blah={0}test6.sv\" --defaultLibName blah",
+                            findTestDir());
+    CHECK(driver.parseCommandLine(args));
+    CHECK(driver.processOptions());
+    CHECK(driver.parseAllSources());
+
+    auto compilation = driver.createCompilation();
+    CHECK(driver.reportCompilation(*compilation, false));
+    CHECK(stdoutContains("Build succeeded"));
+
+    auto& root = compilation->getRoot();
+    REQUIRE(root.topInstances.size() == 1);
+    CHECK(root.topInstances[0]->getSourceLibrary()->name == "blah");
+    CHECK(root.topInstances[0]->name == "k");
+
+    auto units = compilation->getCompilationUnits();
+    REQUIRE(units.size() == 2);
+    REQUIRE(units[0]->getSourceLibrary() != nullptr);
+    REQUIRE(units[1]->getSourceLibrary() != nullptr);
+    CHECK(units[0]->getSourceLibrary()->name == "blah");
+    CHECK(units[1]->getSourceLibrary()->name == "blah");
 }

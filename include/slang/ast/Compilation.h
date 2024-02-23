@@ -185,9 +185,6 @@ struct SLANG_EXPORT CompilationOptions {
     /// A list of library names, in the order in which they should be searched
     /// when binding cells to instances.
     std::vector<std::string> defaultLiblist;
-
-    /// The name of the default library.
-    std::string defaultLibName = "work";
 };
 
 /// A node in a tree representing an instance in the design
@@ -234,7 +231,7 @@ struct HierarchyOverrideNode {
 class SLANG_EXPORT Compilation : public BumpAllocator {
 public:
     /// Constructs a new instance of the Compilation class.
-    explicit Compilation(const Bag& options = {});
+    explicit Compilation(const Bag& options = {}, const SourceLibrary* defaultLib = nullptr);
     Compilation(const Compilation& other) = delete;
     Compilation(Compilation&& other) = delete;
     ~Compilation();
@@ -318,7 +315,7 @@ public:
     const SourceLibrary* getSourceLibrary(std::string_view name) const;
 
     /// Gets the default library object.
-    const SourceLibrary& getDefaultLibrary() const { return *defaultLib; }
+    const SourceLibrary& getDefaultLibrary() const { return *defaultLibPtr; }
 
     /// Gets the definition with the given name, or nullptr if there is no such definition.
     /// This takes into account the given scope so that nested definitions are found
@@ -891,7 +888,8 @@ private:
     const PackageSymbol* stdPkg = nullptr;
 
     // The default library.
-    std::unique_ptr<SourceLibrary> defaultLib;
+    std::unique_ptr<SourceLibrary> defaultLibMem;
+    const SourceLibrary* defaultLibPtr;
 };
 
 } // namespace slang::ast

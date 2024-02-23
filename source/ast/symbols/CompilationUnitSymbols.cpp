@@ -352,7 +352,7 @@ void DefinitionSymbol::serializeTo(ASTSerializer& serializer) const {
     auto scope = getParentScope();
     SLANG_ASSERT(scope);
 
-    if (&sourceLibrary != &scope->getCompilation().getDefaultLibrary())
+    if (!sourceLibrary.isDefault)
         serializer.write("sourceLibrary", sourceLibrary.name);
 }
 

@@ -186,6 +186,8 @@ void Driver::addStandardArgs() {
     cmdLine.add("-L", options.libraryOrder,
                 "A list of library names that controls the priority order for module lookup",
                 "<library>", CommandLineFlags::CommaList);
+    cmdLine.add("--defaultLibName", options.defaultLibName, "Sets the name of the default library",
+                "<name>");
 
     // Diagnostics control
     cmdLine.add("-W", options.warningOptions, "Control the specified warning", "<warning>");
@@ -732,8 +734,17 @@ void Driver::addCompilationOptions(Bag& bag) const {
     bag.set(coptions);
 }
 
-std::unique_ptr<Compilation> Driver::createCompilation() const {
-    auto compilation = std::make_unique<Compilation>(createOptionBag());
+std::unique_ptr<Compilation> Driver::createCompilation() {
+    SourceLibrary* defaultLib;
+    if (options.defaultLibName && !options.defaultLibName->empty())
+        defaultLib = sourceLoader.getOrAddLibrary(*options.defaultLibName);
+    else
+        defaultLib = sourceLoader.getOrAddLibrary("work");
+
+    SLANG_ASSERT(defaultLib);
+    defaultLib->isDefault = true;
+
+    auto compilation = std::make_unique<Compilation>(createOptionBag(), defaultLib);
     for (auto& tree : sourceLoader.getLibraryMaps())
         compilation->addSyntaxTree(tree);
     for (auto& tree : syntaxTrees)

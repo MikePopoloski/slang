@@ -192,11 +192,14 @@ struct SLANG_EXPORT SourceLibrary {
     /// search order. Lower numbers are higher priority.
     int priority = 0;
 
+    /// Set to true if this is the default library.
+    bool isDefault = false;
+
     /// Default constructor.
     SourceLibrary() = default;
 
     /// Constructs a new source library object with the given name.
-    SourceLibrary(std::string name, int priority) : name(std::move(name)), priority(priority) {}
+    SourceLibrary(std::string&& name, int priority) : name(std::move(name)), priority(priority) {}
 };
 
 /// Represents a source buffer; that is, the actual text of the source

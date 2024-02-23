@@ -141,6 +141,10 @@ public:
     /// Gets the list of errors that have occurred while loading files.
     std::span<const std::string> getErrors() const { return errors; }
 
+    /// Gets a pointer to the source library with the given name, or adds it if
+    /// it does not exist. Returns nullptr if @a name is empty.
+    SourceLibrary* getOrAddLibrary(std::string_view name);
+
 private:
     // One entry per unit of files + options to compile them.
     // Only used for addSeparateUnit.
@@ -196,7 +200,6 @@ private:
                      std::pair<const FileEntry*, std::error_code>,
                      std::pair<SourceBuffer, const UnitEntry*>>;
 
-    SourceLibrary* getOrAddLibrary(std::string_view name);
     void addFilesInternal(std::string_view pattern, const std::filesystem::path& basePath,
                           bool isLibraryFile, const SourceLibrary* library, const UnitEntry* unit,
                           bool expandEnvVars);
