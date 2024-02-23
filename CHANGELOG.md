@@ -6,9 +6,26 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 ### Language Support
+* Added `--allow-bare-value-param-assigment` (included in 'vcs' compat mode) to allow a non-standard module instantiation syntax where a single parameter value can be supplied without including parentheses
+
 ### General Features
+* Added [-Wmultibit-edge](https://sv-lang.com/warning-ref.html#multibit-edge) (on by default) to warn about clock edge triggers on multibit expressions
+* Added [-Wint-bool-conv](https://sv-lang.com/warning-ref.html#int-bool-conv) and [-Wfloat-bool-conv](https://sv-lang.com/warning-ref.html#float-bool-conv) to warn about multibit integer and floating point expressions used in a boolean context
+* Added [-Wuseless-cast](https://sv-lang.com/warning-ref.html#useless-cast) to warn about explicit casts to the same type as the underlying expression
+* Added [-Wunknown-sys-name](https://sv-lang.com/warning-ref.html#unknown-sys-name) to allow downgrading the error that occurs when referencing an unknown system task or function
+* Added [compilation unit listings](https://sv-lang.com/user-manual.html#unit-listing) to allow fine grained control over how sources are parsed into separate compilation units (including separating macro defines and include directories on a per-unit basis)
+* Added `--defaultLibName` to control the name of the default source library
+
 ### Improvements
+* `--cmd-ignore` and `--cmd-rename` now also work with options that include a value via an equals expression
+* Information about module/interface/program definitions are now included in AST JSON output
+* slang-reflect has been improved to support reflecting more complex types for local parameters (thanks to @Sustrak)
+
 ### Fixes
+* Fixed several crashes in slang-tidy (thanks to @likeamahoney)
+* Fixed a bug where a missing `endif directive didn't always cause an error to be issued
+* Fixed the use of the `this` handle in non-static class property initializer expressions
+* Fixed a bug where use of the unqualified `randomize` would sometimes find std::randomize when it should have found a class-local randomize method
 
 
 ## [v5.0] - 2023-12-26
