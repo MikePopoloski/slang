@@ -391,3 +391,42 @@ endinterface
     CHECK(diags[3].code == diag::UnknownModule);
     CHECK(diags[4].code == diag::InvalidInstanceForParent);
 }
+
+TEST_CASE("Config inherited liblist") {
+    auto lib1 = std::make_unique<SourceLibrary>("lib1", 1);
+    auto lib2 = std::make_unique<SourceLibrary>("lib2", 2);
+
+    auto tree1 = SyntaxTree::fromText(R"(
+module mod;
+endmodule
+)",
+                                      SyntaxTree::getDefaultSourceManager(), "source", "", {},
+                                      lib1.get());
+
+    auto tree2 = SyntaxTree::fromText(R"(
+module baz;
+    mod m();
+endmodule
+)",
+                                      SyntaxTree::getDefaultSourceManager(), "source", "", {},
+                                      lib2.get());
+
+    auto tree3 = SyntaxTree::fromText(R"(
+config cfg1;
+    design top;
+    instance top.b liblist lib1 lib2;
+endconfig
+
+module top;
+    baz b();
+endmodule
+)");
+    CompilationOptions options;
+    options.topModules.emplace("cfg1");
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree1);
+    compilation.addSyntaxTree(tree2);
+    compilation.addSyntaxTree(tree3);
+    NO_COMPILATION_ERRORS;
+}

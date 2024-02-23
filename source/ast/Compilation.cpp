@@ -553,8 +553,11 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamsAndBinds) {
         root->addMember(instance);
         topList.push_back(&instance);
 
-        if (config)
-            configForScope.emplace(&instance.body, config);
+        if (config) {
+            auto rule = emplace<ConfigRule>();
+            rule->useConfig = config;
+            instance.configRule = rule;
+        }
     }
 
     if (!hasFlag(CompilationFlags::SuppressUnused) && topDefs.empty())
@@ -585,27 +588,17 @@ const CompilationUnitSymbol* Compilation::getCompilationUnit(
 
 const Symbol* Compilation::tryGetDefinition(std::string_view lookupName, const Scope& scope) const {
     // Try to find a config block for this scope to help choose the right definition.
-    const ConfigBlockSymbol* config = nullptr;
-    if (!configForScope.empty()) {
-        auto searchScope = &scope;
-        do {
-            auto it = configForScope.find(searchScope);
-            if (it != configForScope.end()) {
-                config = it->second;
-                break;
-            }
-
-            searchScope = searchScope->asSymbol().getParentScope();
-        } while (searchScope);
-    }
+    const ConfigRule* configRule = nullptr;
+    if (auto inst = scope.getContainingInstance(); inst && inst->parentInstance)
+        configRule = inst->parentInstance->configRule;
 
     // Always search in the root scope to start. Most definitions are global.
     auto it = definitionMap.find({lookupName, root.get()});
     if (it == definitionMap.end()) {
         // If there's a config it might be able to provide an
         // override for this cell name.
-        if (config)
-            return resolveConfigRules(lookupName, scope, config, nullptr, {}).first;
+        if (configRule)
+            return resolveConfigRules(lookupName, scope, *configRule, {}).first;
         return nullptr;
     }
 
@@ -625,8 +618,8 @@ const Symbol* Compilation::tryGetDefinition(std::string_view lookupName, const S
     }
 
     auto& defList = it->second.first;
-    if (config)
-        return resolveConfigRules(lookupName, scope, config, nullptr, defList).first;
+    if (configRule)
+        return resolveConfigRules(lookupName, scope, *configRule, defList).first;
 
     // If there is a global priority list try to use that.
     for (auto lib : defaultLiblist) {
@@ -679,9 +672,9 @@ const Symbol* Compilation::getDefinition(std::string_view lookupName, const Scop
                                          DiagCode code) const {
     std::pair<const Symbol*, bool> result;
     if (auto it = definitionMap.find({lookupName, root.get()}); it != definitionMap.end())
-        result = resolveConfigRules(lookupName, scope, nullptr, &configRule, it->second.first);
+        result = resolveConfigRules(lookupName, scope, configRule, it->second.first);
     else
-        result = resolveConfigRules(lookupName, scope, nullptr, &configRule, {});
+        result = resolveConfigRules(lookupName, scope, configRule, {});
 
     if (!result.first && !result.second) {
         // No definition found and no error issued, so issue one ourselves.
@@ -2280,8 +2273,9 @@ void Compilation::resolveDefParamsAndBinds() {
 }
 
 std::pair<const Symbol*, bool> Compilation::resolveConfigRules(
-    std::string_view lookupName, const Scope& scope, const ConfigBlockSymbol* config,
-    const ConfigRule* rule, const std::vector<Symbol*>& defList) const {
+    std::string_view lookupName, const Scope& scope, const ConfigRule& initialRule,
+    const std::vector<Symbol*>& defList) const {
+
     auto findDefByLib = [](auto& defList, const SourceLibrary* target) -> Symbol* {
         for (auto def : defList) {
             if (def->getSourceLibrary() == target)
@@ -2290,10 +2284,15 @@ std::pair<const Symbol*, bool> Compilation::resolveConfigRules(
         return nullptr;
     };
 
-    std::span<const SourceLibrary* const> liblist;
-    if (!rule) {
-        SLANG_ASSERT(config);
+    auto rule = &initialRule;
+    auto liblist = rule->liblist;
+
+    // The config rule might specify that we use a specific
+    // configuration for this instance.
+    if (auto config = initialRule.useConfig) {
+        // By default we use the liblist from this config block.
         liblist = config->defaultLiblist;
+
         if (auto overrideIt = config->cellOverrides.find(lookupName);
             overrideIt != config->cellOverrides.end()) {
 
@@ -2305,41 +2304,37 @@ std::pair<const Symbol*, bool> Compilation::resolveConfigRules(
                     continue;
 
                 rule = &cellOverride.rule;
+                liblist = rule->liblist;
                 break;
             }
         }
     }
 
-    if (rule) {
-        auto& id = rule->useCell;
-        if (!id.name.empty()) {
-            auto overrideDefIt = definitionMap.find({id.name, root.get()});
-            if (overrideDefIt == definitionMap.end()) {
-                errorMissingDef(id.name, *root, id.sourceRange, diag::UnknownModule);
-                return {nullptr, true};
-            }
-
-            const SourceLibrary* overrideLib = nullptr;
-            if (id.lib.empty()) {
-                if (auto parentDef = scope.asSymbol().getDeclaringDefinition())
-                    overrideLib = parentDef->sourceLibrary;
-            }
-            else {
-                overrideLib = getSourceLibrary(id.lib);
-                if (!overrideLib) {
-                    root->addDiag(diag::UnknownLibrary, id.sourceRange) << id.lib;
-                    return {nullptr, true};
-                }
-            }
-
-            auto result = findDefByLib(overrideDefIt->second.first, overrideLib);
-            if (!result)
-                errorMissingDef(id.name, *root, id.sourceRange, diag::UnknownModule);
-            return {result, true};
+    // The rule can specify a specific definition to use.
+    if (auto& id = rule->useCell; !id.name.empty()) {
+        auto overrideDefIt = definitionMap.find({id.name, root.get()});
+        if (overrideDefIt == definitionMap.end()) {
+            errorMissingDef(id.name, *root, id.sourceRange, diag::UnknownModule);
+            return {nullptr, true};
         }
 
-        // No name, so this is just a custom liblist -- search through it below.
-        liblist = rule->liblist;
+        const SourceLibrary* overrideLib = nullptr;
+        if (id.lib.empty()) {
+            if (auto parentDef = scope.asSymbol().getDeclaringDefinition())
+                overrideLib = parentDef->sourceLibrary;
+        }
+        else {
+            overrideLib = getSourceLibrary(id.lib);
+            if (!overrideLib) {
+                root->addDiag(diag::UnknownLibrary, id.sourceRange) << id.lib;
+                return {nullptr, true};
+            }
+        }
+
+        auto result = findDefByLib(overrideDefIt->second.first, overrideLib);
+        if (!result)
+            errorMissingDef(id.name, *root, id.sourceRange, diag::UnknownModule);
+        return {result, true};
     }
 
     // This search is O(n^2) but both lists should be small

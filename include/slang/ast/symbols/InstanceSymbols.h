@@ -30,6 +30,7 @@ class PortConnection;
 class PortSymbol;
 class PrimitiveSymbol;
 class TimingControl;
+struct ConfigRule;
 struct HierarchyOverrideNode;
 enum class DriveStrength : int;
 
@@ -58,6 +59,10 @@ protected:
 class SLANG_EXPORT InstanceSymbol : public InstanceSymbolBase {
 public:
     const InstanceBodySymbol& body;
+
+    /// A config rule that applies to this instance, or a pointer to
+    /// the parent instance's config rule if there is one up the stack.
+    const ConfigRule* configRule = nullptr;
 
     InstanceSymbol(std::string_view name, SourceLocation loc, InstanceBodySymbol& body);
 

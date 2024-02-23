@@ -56,10 +56,12 @@ class InstanceBuilder {
 public:
     InstanceBuilder(const ASTContext& context, const DefinitionSymbol& definition,
                     ParameterBuilder& paramBuilder, const HierarchyOverrideNode* parentOverrideNode,
-                    std::span<const AttributeInstanceSyntax* const> attributes, bool isFromBind) :
+                    std::span<const AttributeInstanceSyntax* const> attributes,
+                    const ConfigRule* configRule, bool isFromBind) :
         compilation(context.getCompilation()),
         context(context), definition(definition), paramBuilder(paramBuilder),
-        parentOverrideNode(parentOverrideNode), attributes(attributes), isFromBind(isFromBind) {}
+        parentOverrideNode(parentOverrideNode), attributes(attributes), configRule(configRule),
+        isFromBind(isFromBind) {}
 
     Symbol* create(const HierarchicalInstanceSyntax& syntax) {
         path.clear();
@@ -96,6 +98,7 @@ private:
     ParameterBuilder& paramBuilder;
     const HierarchyOverrideNode* parentOverrideNode;
     std::span<const AttributeInstanceSyntax* const> attributes;
+    const ConfigRule* configRule;
     bool isFromBind;
 
     Symbol* createInstance(const HierarchicalInstanceSyntax& syntax,
@@ -106,6 +109,7 @@ private:
                                                         paramBuilder, /* isUninstantiated */ false,
                                                         isFromBind);
 
+        inst->configRule = configRule;
         inst->arrayPath = path.copy(compilation);
         inst->setSyntax(syntax);
         inst->setAttributes(*context.scope, attributes);
@@ -454,8 +458,12 @@ void InstanceSymbol::fromSyntax(Compilation& comp, const HierarchyInstantiationS
         if (syntax.parameters)
             paramBuilder.setAssignments(*syntax.parameters);
 
+        auto instConfigRule = configRule;
+        if (!configRule && parentInst && parentInst->parentInstance)
+            instConfigRule = parentInst->parentInstance->configRule;
+
         InstanceBuilder builder(context, definition, paramBuilder, parentOverrideNode,
-                                syntax.attributes, isFromBind);
+                                syntax.attributes, instConfigRule, isFromBind);
 
         if (specificInstance) {
             createImplicitNets(*specificInstance, context, netType, implicitNetNames, implicitNets);

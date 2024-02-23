@@ -680,8 +680,7 @@ private:
                                std::span<const Symbol* const> instTargets,
                                const DefinitionSymbol* defTarget);
     std::pair<const Symbol*, bool> resolveConfigRules(std::string_view name, const Scope& scope,
-                                                      const ConfigBlockSymbol* config,
-                                                      const ConfigRule* configRule,
+                                                      const ConfigRule& configRule,
                                                       const std::vector<Symbol*>& defList) const;
     Diagnostic* errorMissingDef(std::string_view name, const Scope& scope, SourceRange sourceRange,
                                 DiagCode code) const;
@@ -768,9 +767,6 @@ private:
 
     // A list of all created definitions, as storage for their memory.
     std::vector<std::unique_ptr<DefinitionSymbol>> definitionMemory;
-
-    // A map of config blocks to use for a given scope.
-    flat_hash_map<const Scope*, const ConfigBlockSymbol*> configForScope;
 
     // A map from diag code + location to the diagnostics that have occurred at that location.
     // This is used to collapse duplicate diagnostics across instantiations into a single report.

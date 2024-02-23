@@ -17,6 +17,7 @@ class SyntaxTree;
 
 namespace slang::ast {
 
+class ConfigBlockSymbol;
 class Expression;
 class InstanceSymbol;
 class Type;
@@ -241,6 +242,9 @@ struct ConfigRule {
 
     /// A specific cell to use for this instance or definition lookup.
     ConfigCellId useCell;
+
+    /// A specific config block to use for this instance and child instances.
+    const ConfigBlockSymbol* useConfig = nullptr;
 
     /// The source range where this rule was declared.
     SourceRange sourceRange;
