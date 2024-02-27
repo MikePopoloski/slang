@@ -46,7 +46,9 @@ class Symbol;
 class SystemSubroutine;
 class ValueDriver;
 struct AssertionInstanceDetails;
+struct ConfigCellId;
 struct ConfigRule;
+struct ResolvedConfig;
 
 using DriverIntervalMap = IntervalMap<uint64_t, const ValueDriver*>;
 using UnrollIntervalMap = IntervalMap<uint64_t, std::monostate>;
@@ -211,12 +213,6 @@ struct HierarchyOverrideNode {
 
     /// A list of bind directives to apply in this scope.
     std::vector<const syntax::BindDirectiveSyntax*> binds;
-
-    /// A config rule that should be applied to this hierarchy instance.
-    const ConfigRule* configRule = nullptr;
-
-    /// Set to true if any direct child nodes have config rules supplied.
-    bool anyChildConfigRules = false;
 };
 
 /// A centralized location for creating and caching symbols. This includes
@@ -335,6 +331,11 @@ public:
     const Symbol* getDefinition(std::string_view name, const Scope& scope,
                                 const ConfigRule& configRule, SourceRange sourceRange,
                                 DiagCode code) const;
+
+    /// Gets the definition indicated by the given config and cell ID, or nullptr
+    /// if it does not exist. If no definition is found an appropriate diagnostic will be issued.
+    const DefinitionSymbol* getDefinition(const ConfigBlockSymbol& config,
+                                          const ConfigCellId& cell) const;
 
     /// Gets a list of all definitions (including primitives) in the design.
     std::vector<const Symbol*> getDefinitions() const;
@@ -683,7 +684,8 @@ private:
                                std::span<const Symbol* const> instTargets,
                                const DefinitionSymbol* defTarget);
     std::pair<const Symbol*, bool> resolveConfigRules(std::string_view name, const Scope& scope,
-                                                      const ConfigRule& configRule,
+                                                      const ResolvedConfig* parentConfig,
+                                                      const ConfigRule* configRule,
                                                       const std::vector<Symbol*>& defList) const;
     Diagnostic* errorMissingDef(std::string_view name, const Scope& scope, SourceRange sourceRange,
                                 DiagCode code) const;

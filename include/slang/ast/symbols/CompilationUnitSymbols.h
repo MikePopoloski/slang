@@ -229,6 +229,9 @@ struct ConfigCellId {
     /// The source range where this cell id was declared.
     SourceRange sourceRange;
 
+    /// If true, this ID targets a config block specifically.
+    bool targetConfig = false;
+
     ConfigCellId() = default;
     ConfigCellId(std::string_view lib, std::string_view name, SourceRange sourceRange) :
         lib(lib), name(name), sourceRange(sourceRange) {}
@@ -242,11 +245,26 @@ struct ConfigRule {
     /// A specific cell to use for this instance or definition lookup.
     ConfigCellId useCell;
 
-    /// A specific config block to use for this instance and child instances.
-    const ConfigBlockSymbol* useConfig = nullptr;
-
     /// The source range where this rule was declared.
     SourceRange sourceRange;
+};
+
+/// Contains information about a resolved configuration rule
+/// that affects an instance and the hierarchy underneath it.
+struct ResolvedConfig {
+    /// A specific configuration to use for this hierarchy.
+    const ConfigBlockSymbol& useConfig;
+
+    /// The root instance of this particular configuration hierarchy.
+    const InstanceSymbol& rootInstance;
+
+    /// A list of libraries to use to look up definitions.
+    std::span<const SourceLibrary* const> liblist;
+
+    /// The original rule that was resolved.
+    const ConfigRule* configRule = nullptr;
+
+    ResolvedConfig(const ConfigBlockSymbol& useConfig, const InstanceSymbol& rootInstance);
 };
 
 /// Represents a config block declaration.

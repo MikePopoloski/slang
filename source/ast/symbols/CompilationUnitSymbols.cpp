@@ -353,6 +353,12 @@ void DefinitionSymbol::serializeTo(ASTSerializer& serializer) const {
         serializer.write("sourceLibrary", sourceLibrary.name);
 }
 
+ResolvedConfig::ResolvedConfig(const ConfigBlockSymbol& useConfig,
+                               const InstanceSymbol& rootInstance) :
+    useConfig(useConfig),
+    rootInstance(rootInstance), liblist(useConfig.defaultLiblist) {
+}
+
 ConfigBlockSymbol& ConfigBlockSymbol::fromSyntax(const Scope& scope,
                                                  const ConfigDeclarationSyntax& syntax) {
     auto& comp = scope.getCompilation();
@@ -390,6 +396,8 @@ ConfigBlockSymbol& ConfigBlockSymbol::fromSyntax(const Scope& scope,
             if (cuc.name && !cuc.name->cell.valueText().empty()) {
                 result.useCell = ConfigCellId(cuc.name->library.valueText(),
                                               cuc.name->cell.valueText(), cuc.name->sourceRange());
+                if (cuc.config)
+                    result.useCell.targetConfig = true;
             }
         }
         else {

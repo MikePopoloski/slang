@@ -429,3 +429,34 @@ endmodule
     compilation.addSyntaxTree(tree3);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Config hierarchical config target") {
+    auto tree = SyntaxTree::fromText(R"(
+config cfg1;
+    design top;
+    instance top.b use cfg2;
+endconfig
+
+config cfg2;
+    design baz;
+    instance baz.f1 use mod;
+endconfig
+
+module mod;
+endmodule
+
+module baz;
+    foo f1();
+endmodule
+
+module top;
+    baz b();
+endmodule
+)");
+    CompilationOptions options;
+    options.topModules.emplace("cfg1");
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

@@ -57,11 +57,12 @@ public:
     InstanceBuilder(const ASTContext& context, const DefinitionSymbol& definition,
                     ParameterBuilder& paramBuilder, const HierarchyOverrideNode* parentOverrideNode,
                     std::span<const AttributeInstanceSyntax* const> attributes,
-                    const ConfigRule* configRule, bool isFromBind) :
+                    const ResolvedConfig* resolvedConfig, const ConfigBlockSymbol* newConfigRoot,
+                    bool isFromBind) :
         compilation(context.getCompilation()),
         context(context), definition(definition), paramBuilder(paramBuilder),
-        parentOverrideNode(parentOverrideNode), attributes(attributes), configRule(configRule),
-        isFromBind(isFromBind) {}
+        parentOverrideNode(parentOverrideNode), attributes(attributes),
+        resolvedConfig(resolvedConfig), newConfigRoot(newConfigRoot), isFromBind(isFromBind) {}
 
     Symbol* create(const HierarchicalInstanceSyntax& syntax) {
         path.clear();
@@ -98,7 +99,8 @@ private:
     ParameterBuilder& paramBuilder;
     const HierarchyOverrideNode* parentOverrideNode;
     std::span<const AttributeInstanceSyntax* const> attributes;
-    const ConfigRule* configRule;
+    const ResolvedConfig* resolvedConfig;
+    const ConfigBlockSymbol* newConfigRoot;
     bool isFromBind;
 
     Symbol* createInstance(const HierarchicalInstanceSyntax& syntax,
@@ -108,11 +110,21 @@ private:
         auto inst = compilation.emplace<InstanceSymbol>(compilation, name, loc, definition,
                                                         paramBuilder, /* isUninstantiated */ false,
                                                         isFromBind);
-
-        inst->configRule = configRule;
         inst->arrayPath = path.copy(compilation);
         inst->setSyntax(syntax);
         inst->setAttributes(*context.scope, attributes);
+
+        if (resolvedConfig) {
+            if (newConfigRoot) {
+                auto rc = compilation.emplace<ResolvedConfig>(*newConfigRoot, *inst);
+                rc->configRule = resolvedConfig->configRule;
+                inst->resolvedConfig = rc;
+            }
+            else {
+                inst->resolvedConfig = resolvedConfig;
+            }
+        }
+
         return inst;
     }
 
@@ -381,6 +393,7 @@ void InstanceSymbol::fromSyntax(Compilation& comp, const HierarchyInstantiationS
 
     const DefinitionSymbol* owningDefinition = nullptr;
     const HierarchyOverrideNode* parentOverrideNode = nullptr;
+    const ResolvedConfig* resolvedConfig = nullptr;
     SmallSet<std::string_view, 8> implicitNetNames;
     auto& netType = context.scope->getDefaultNetType();
 
@@ -389,7 +402,7 @@ void InstanceSymbol::fromSyntax(Compilation& comp, const HierarchyInstantiationS
     // node will be created in one go.
     auto createInstances = [&](const Symbol* def,
                                const HierarchicalInstanceSyntax* specificInstance,
-                               const ConfigRule* confRule) {
+                               const ConfigRule* confRule, const ConfigBlockSymbol* newConfigRoot) {
         if (!def) {
             UninstantiatedDefSymbol::fromSyntax(comp, syntax, specificInstance, context, results,
                                                 implicitNets, implicitNetNames, netType);
@@ -458,12 +471,18 @@ void InstanceSymbol::fromSyntax(Compilation& comp, const HierarchyInstantiationS
         if (syntax.parameters)
             paramBuilder.setAssignments(*syntax.parameters);
 
-        auto instConfigRule = confRule;
-        if (!confRule && parentInst && parentInst->parentInstance)
-            instConfigRule = parentInst->parentInstance->configRule;
+        auto localConfig = resolvedConfig;
+        if (confRule) {
+            SLANG_ASSERT(resolvedConfig);
+            auto rc = comp.emplace<ResolvedConfig>(*resolvedConfig);
+            rc->configRule = confRule;
+            if (!confRule->liblist.empty())
+                rc->liblist = confRule->liblist;
+            localConfig = rc;
+        }
 
         InstanceBuilder builder(context, definition, paramBuilder, parentOverrideNode,
-                                syntax.attributes, instConfigRule, isFromBind);
+                                syntax.attributes, localConfig, newConfigRoot, isFromBind);
 
         if (specificInstance) {
             createImplicitNets(*specificInstance, context, netType, implicitNetNames, implicitNets);
@@ -485,38 +504,95 @@ void InstanceSymbol::fromSyntax(Compilation& comp, const HierarchyInstantiationS
         // node set, we need to go back and make sure we account for any
         // generate blocks that might actually be along the parent path for
         // the new instances we're creating.
-        if (parentInst->hierarchyOverrideNode) {
+        if (parentInst->hierarchyOverrideNode)
             parentOverrideNode = findParentOverrideNode(*context.scope);
-            if (parentOverrideNode && parentOverrideNode->anyChildConfigRules) {
-                // We need to handle each instance separately, as the config
-                // rules allow the entire definition and parameter values
-                // to be overridden on a per-instance basis.
-                std::optional<const Symbol*> explicitDef;
-                for (auto instanceSyntax : syntax.instances) {
-                    auto instName = instanceSyntax->decl ? instanceSyntax->decl->name.valueText()
-                                                         : ""sv;
-                    if (auto overrideIt = parentOverrideNode->childrenByName.find(instName);
-                        overrideIt != parentOverrideNode->childrenByName.end() &&
-                        overrideIt->second.configRule) {
 
-                        // We have an override rule, so use it to lookup the def.
-                        auto rule = overrideIt->second.configRule;
-                        auto def = comp.getDefinition(defName, *context.scope, *rule,
-                                                      instanceSyntax->sourceRange(),
-                                                      diag::UnknownModule);
-                        createInstances(def, instanceSyntax, rule);
-                    }
-                    else {
-                        // No specific config rule, so use the default lookup behavior.
-                        if (!explicitDef) {
-                            explicitDef = comp.getDefinition(defName, *context.scope,
-                                                             syntax.type.range(),
-                                                             diag::UnknownModule);
+        // Check if our parent has a configuration applied. If so, and if
+        // that configuration has instance overrides, we need to check if
+        // any of them apply to the instances we're about to create.
+        if (parentInst->parentInstance) {
+            resolvedConfig = parentInst->parentInstance->resolvedConfig;
+            if (resolvedConfig && !resolvedConfig->useConfig.instanceOverrides.empty()) {
+                // Find all instance paths that should apply to our instances.
+                SmallMap<std::string_view, const ConfigRule*, 4> ruleMap;
+                for (auto& instOverride : resolvedConfig->useConfig.instanceOverrides) {
+                    // Check if the path matches, ignoring the final entry
+                    // since that applies to the instances we're about to create.
+                    const Scope* scope = context.scope;
+                    auto path = instOverride.path;
+                    if (path.size() > 1) {
+                        bool matches = false;
+                        for (size_t i = path.size() - 1; i > 0; i--) {
+                            auto sym = &scope->asSymbol();
+                            if (sym->kind == SymbolKind::InstanceBody) {
+                                sym = sym->as<InstanceBodySymbol>().parentInstance;
+                                SLANG_ASSERT(sym);
+                            }
+
+                            // We've only successfully matched if this is the final entry
+                            // and it's also the root of our particular resolved config.
+                            // We check this before we check for a name match below because
+                            // the root of the path can have a different name from the actual
+                            // instance (the root just says the name of the cell).
+                            if (&resolvedConfig->rootInstance == sym) {
+                                matches = i == 1;
+                                break;
+                            }
+
+                            scope = sym->getParentScope();
+                            if (!scope || path[i - 1] != sym->name)
+                                break;
                         }
-                        createInstances(*explicitDef, instanceSyntax, nullptr);
+
+                        if (matches)
+                            ruleMap.emplace(path[path.size() - 1], &instOverride.rule);
                     }
                 }
-                return;
+
+                if (!ruleMap.empty()) {
+                    // We need to handle each instance separately, as the config
+                    // rules allow the entire definition and parameter values
+                    // to be overridden on a per-instance basis.
+                    std::optional<const Symbol*> explicitDef;
+                    for (auto instSyntax : syntax.instances) {
+                        auto instName = instSyntax->decl ? instSyntax->decl->name.valueText()
+                                                         : ""sv;
+                        if (auto ruleIt = ruleMap.find(instName); ruleIt != ruleMap.end()) {
+                            // We have an override rule, so use it to lookup the def.
+                            auto rule = ruleIt->second;
+                            auto def = comp.getDefinition(defName, *context.scope, *rule,
+                                                          instSyntax->sourceRange(),
+                                                          diag::UnknownModule);
+
+                            // If we got back a config block as the new root we need
+                            // to resolve that to an actual def based on the top cell
+                            // listed in the config.
+                            const ConfigBlockSymbol* newRoot = nullptr;
+                            if (def && def->kind == SymbolKind::ConfigBlock) {
+                                newRoot = &def->as<ConfigBlockSymbol>();
+                                if (newRoot->topCells.size() != 1) {
+                                    // TODO: error
+                                    def = nullptr;
+                                }
+                                else {
+                                    def = comp.getDefinition(*newRoot, newRoot->topCells[0]);
+                                }
+                            }
+
+                            createInstances(def, instSyntax, rule, newRoot);
+                        }
+                        else {
+                            // No specific config rule, so use the default lookup behavior.
+                            if (!explicitDef) {
+                                explicitDef = comp.getDefinition(defName, *context.scope,
+                                                                 syntax.type.range(),
+                                                                 diag::UnknownModule);
+                            }
+                            createInstances(*explicitDef, instSyntax, nullptr, nullptr);
+                        }
+                    }
+                    return;
+                }
             }
         }
     }
@@ -524,7 +600,7 @@ void InstanceSymbol::fromSyntax(Compilation& comp, const HierarchyInstantiationS
     // Simple case: look up the definition and create all instances in one go.
     auto def = comp.getDefinition(defName, *context.scope, syntax.type.range(),
                                   diag::UnknownModule);
-    createInstances(def, nullptr, nullptr);
+    createInstances(def, nullptr, nullptr, nullptr);
 }
 
 void InstanceSymbol::fromFixupSyntax(Compilation& comp, const DefinitionSymbol& definition,

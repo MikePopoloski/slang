@@ -19,6 +19,7 @@ class AssertionExpr;
 class AttributeSymbol;
 class CheckerSymbol;
 class CheckerInstanceBodySymbol;
+class ConfigBlockSymbol;
 class DefinitionSymbol;
 class Expression;
 class InstanceBodySymbol;
@@ -30,7 +31,7 @@ class PortConnection;
 class PortSymbol;
 class PrimitiveSymbol;
 class TimingControl;
-struct ConfigRule;
+struct ResolvedConfig;
 struct HierarchyOverrideNode;
 enum class DriveStrength : int;
 
@@ -56,13 +57,14 @@ protected:
     using Symbol::Symbol;
 };
 
+/// Represents an instance of a module, interface, or program.
 class SLANG_EXPORT InstanceSymbol : public InstanceSymbolBase {
 public:
     const InstanceBodySymbol& body;
 
     /// A config rule that applies to this instance, or a pointer to
     /// the parent instance's config rule if there is one up the stack.
-    const ConfigRule* configRule = nullptr;
+    const ResolvedConfig* resolvedConfig = nullptr;
 
     InstanceSymbol(std::string_view name, SourceLocation loc, InstanceBodySymbol& body);
 
