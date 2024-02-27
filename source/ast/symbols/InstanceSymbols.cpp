@@ -340,6 +340,51 @@ static const HierarchyOverrideNode* findParentOverrideNode(const Scope& scope) {
     return nullptr;
 }
 
+static const ConfigBlockSymbol::InstanceOverride* findInstanceOverrideNode(
+    const ResolvedConfig& resolvedConfig, const Scope* scope) {
+    auto& instOverrides = resolvedConfig.useConfig.instanceOverrides;
+    if (instOverrides.empty())
+        return nullptr;
+
+    // Start by walking up our parent stack and recording each symbol
+    // so we can walk back downward in the correct order when traversing
+    // the instanceOverrides tree.
+    SmallVector<const Symbol*> parentStack;
+    while (true) {
+        auto sym = &scope->asSymbol();
+        if (sym->kind == SymbolKind::InstanceBody) {
+            sym = sym->as<InstanceBodySymbol>().parentInstance;
+            SLANG_ASSERT(sym);
+        }
+
+        parentStack.push_back(sym);
+
+        scope = sym->getParentScope();
+        if (!scope || &resolvedConfig.rootInstance == sym)
+            break;
+    }
+
+    auto rootSym = parentStack.back();
+    auto rootName = rootSym->kind == SymbolKind::Instance
+                        ? rootSym->as<InstanceSymbol>().getDefinition().name
+                        : rootSym->name;
+
+    auto rootIt = instOverrides.find(rootName);
+    if (rootIt == instOverrides.end())
+        return nullptr;
+
+    auto node = &rootIt->second;
+    for (size_t i = parentStack.size() - 1; i > 0; i--) {
+        auto childIt = node->childNodes.find(parentStack[i - 1]->name);
+        if (childIt == node->childNodes.end())
+            return nullptr;
+
+        node = &childIt->second;
+    }
+
+    return node->childNodes.empty() ? nullptr : node;
+}
+
 void InstanceSymbol::fromSyntax(Compilation& comp, const HierarchyInstantiationSyntax& syntax,
                                 const ASTContext& context, SmallVectorBase<const Symbol*>& results,
                                 SmallVectorBase<const Symbol*>& implicitNets, bool isFromBind) {
@@ -476,8 +521,8 @@ void InstanceSymbol::fromSyntax(Compilation& comp, const HierarchyInstantiationS
             SLANG_ASSERT(resolvedConfig);
             auto rc = comp.emplace<ResolvedConfig>(*resolvedConfig);
             rc->configRule = confRule;
-            if (!confRule->liblist.empty())
-                rc->liblist = confRule->liblist;
+            if (confRule->liblist)
+                rc->liblist = *confRule->liblist;
             localConfig = rc;
         }
 
@@ -512,60 +557,21 @@ void InstanceSymbol::fromSyntax(Compilation& comp, const HierarchyInstantiationS
         // any of them apply to the instances we're about to create.
         if (parentInst->parentInstance) {
             resolvedConfig = parentInst->parentInstance->resolvedConfig;
-            if (resolvedConfig && !resolvedConfig->useConfig.instanceOverrides.empty()) {
-                // Find all instance paths that should apply to our instances.
-                SmallMap<std::string_view, const ConfigRule*, 4> ruleMap;
-                for (auto& instOverride : resolvedConfig->useConfig.instanceOverrides) {
-                    // Check if the path matches, ignoring the final entry
-                    // since that applies to the instances we're about to create.
-                    const Scope* scope = context.scope;
-                    auto path = instOverride.path;
-                    if (path.size() > 1) {
-                        bool matches = false;
-                        for (size_t i = path.size() - 1; i > 0; i--) {
-                            auto sym = &scope->asSymbol();
-                            std::string_view instDefName;
-                            if (sym->kind == SymbolKind::InstanceBody) {
-                                auto& ibs = sym->as<InstanceBodySymbol>();
-                                instDefName = ibs.getDefinition().name;
-                                sym = ibs.parentInstance;
-                                SLANG_ASSERT(sym);
-                            }
-
-                            // We've only successfully matched if this is the final entry
-                            // and it's also the root of our particular resolved config.
-                            // We check this before we check for a name match below because
-                            // the root of the path can have a different name from the actual
-                            // instance (the root just says the name of the cell).
-                            if (&resolvedConfig->rootInstance == sym) {
-                                matches = i == 1 && path[0] == instDefName;
-                                break;
-                            }
-
-                            scope = sym->getParentScope();
-                            if (!scope || path[i - 1] != sym->name)
-                                break;
-                        }
-
-                        if (matches) {
-                            auto [it, inserted] = ruleMap.emplace(path[path.size() - 1],
-                                                                  &instOverride.rule);
-                            SLANG_ASSERT(inserted);
-                        }
-                    }
-                }
-
-                if (!ruleMap.empty()) {
+            if (resolvedConfig) {
+                auto overrideNode = findInstanceOverrideNode(*resolvedConfig, context.scope);
+                if (overrideNode) {
                     // We need to handle each instance separately, as the config
                     // rules allow the entire definition and parameter values
                     // to be overridden on a per-instance basis.
                     std::optional<const Symbol*> explicitDef;
+                    auto& overrideMap = overrideNode->childNodes;
                     for (auto instSyntax : syntax.instances) {
                         auto instName = instSyntax->decl ? instSyntax->decl->name.valueText()
                                                          : ""sv;
-                        if (auto ruleIt = ruleMap.find(instName); ruleIt != ruleMap.end()) {
+                        if (auto ruleIt = overrideMap.find(instName);
+                            ruleIt != overrideMap.end() && ruleIt->second.rule) {
                             // We have an override rule, so use it to lookup the def.
-                            auto rule = ruleIt->second;
+                            auto rule = ruleIt->second.rule;
                             auto def = comp.getDefinition(defName, *context.scope, *rule,
                                                           instSyntax->sourceRange(),
                                                           diag::UnknownModule);

@@ -240,10 +240,13 @@ struct ConfigCellId {
 /// A rule that controls how a specific cell or instance in the design is configured.
 struct ConfigRule {
     /// A list of libraries to use to look up definitions.
-    std::span<const SourceLibrary* const> liblist;
+    std::optional<std::span<const SourceLibrary* const>> liblist;
 
     /// A specific cell to use for this instance or definition lookup.
     ConfigCellId useCell;
+
+    /// Parameter overrides to apply to the instance.
+    const syntax::ParameterValueAssignmentSyntax* paramOverrides = nullptr;
 
     /// The source range where this rule was declared.
     SourceRange sourceRange;
@@ -276,14 +279,14 @@ public:
     };
 
     struct InstanceOverride {
-        std::span<const std::string_view> path;
-        ConfigRule rule;
+        flat_hash_map<std::string_view, InstanceOverride> childNodes;
+        ConfigRule* rule = nullptr;
     };
 
     std::span<const ConfigCellId> topCells;
     std::span<const SourceLibrary* const> defaultLiblist;
-    std::span<const InstanceOverride> instanceOverrides;
     flat_hash_map<std::string_view, std::vector<CellOverride>> cellOverrides;
+    flat_hash_map<std::string_view, InstanceOverride> instanceOverrides;
 
     ConfigBlockSymbol(Compilation& compilation, std::string_view name, SourceLocation loc) :
         Symbol(SymbolKind::ConfigBlock, name, loc), Scope(compilation, this) {}

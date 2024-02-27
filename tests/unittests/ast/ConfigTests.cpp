@@ -431,7 +431,16 @@ endmodule
 }
 
 TEST_CASE("Config hierarchical config target") {
-    auto tree = SyntaxTree::fromText(R"(
+    auto lib1 = std::make_unique<SourceLibrary>("lib1", 1);
+
+    auto tree1 = SyntaxTree::fromText(R"(
+module qq;
+endmodule
+)",
+                                      SyntaxTree::getDefaultSourceManager(), "source", "", {},
+                                      lib1.get());
+
+    auto tree2 = SyntaxTree::fromText(R"(
 config cfg1;
     design top;
     instance top.b use cfg2;
@@ -440,9 +449,11 @@ endconfig
 config cfg2;
     design baz;
     instance baz.f1 use mod;
+    instance baz.f1 liblist lib1;
 endconfig
 
 module mod;
+    qq q1();
 endmodule
 
 module baz;
@@ -457,7 +468,8 @@ endmodule
     options.topModules.emplace("cfg1");
 
     Compilation compilation(options);
-    compilation.addSyntaxTree(tree);
+    compilation.addSyntaxTree(tree1);
+    compilation.addSyntaxTree(tree2);
     NO_COMPILATION_ERRORS;
 }
 

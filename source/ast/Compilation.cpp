@@ -2306,7 +2306,9 @@ std::pair<const Symbol*, bool> Compilation::resolveConfigRules(
     }
 
     if (rule) {
-        liblist = rule->liblist;
+        if (rule->liblist)
+            liblist = *rule->liblist;
+
         if (auto& id = rule->useCell; !id.name.empty()) {
             // Figure out the target library.
             const SourceLibrary* overrideLib = defaultLibPtr;

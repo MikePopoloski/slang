@@ -391,8 +391,8 @@ ConfigBlockSymbol& ConfigBlockSymbol::fromSyntax(const Scope& scope,
         ConfigRule result;
         result.sourceRange = rule.parent->sourceRange();
         if (rule.kind == SyntaxKind::ConfigUseClause) {
-            // TODO: handle other parts of this
             auto& cuc = rule.as<ConfigUseClauseSyntax>();
+            result.paramOverrides = cuc.paramAssignments;
             if (cuc.name && !cuc.name->cell.valueText().empty()) {
                 result.useCell = ConfigCellId(cuc.name->library.valueText(),
                                               cuc.name->cell.valueText(), cuc.name->sourceRange());
@@ -406,14 +406,14 @@ ConfigBlockSymbol& ConfigBlockSymbol::fromSyntax(const Scope& scope,
         return result;
     };
 
-    SmallVector<InstanceOverride> instOverrides;
-    for (auto rule : syntax.rules) {
-        switch (rule->kind) {
+    for (auto ruleSyntax : syntax.rules) {
+        switch (ruleSyntax->kind) {
             case SyntaxKind::DefaultConfigRule:
-                result->defaultLiblist = buildLiblist(*rule->as<DefaultConfigRuleSyntax>().liblist);
+                result->defaultLiblist = buildLiblist(
+                    *ruleSyntax->as<DefaultConfigRuleSyntax>().liblist);
                 break;
             case SyntaxKind::CellConfigRule: {
-                auto& ccr = rule->as<CellConfigRuleSyntax>();
+                auto& ccr = ruleSyntax->as<CellConfigRuleSyntax>();
                 auto cellName = ccr.name->cell.valueText();
 
                 CellOverride co;
@@ -425,16 +425,34 @@ ConfigBlockSymbol& ConfigBlockSymbol::fromSyntax(const Scope& scope,
                 break;
             }
             case SyntaxKind::InstanceConfigRule: {
-                SmallVector<std::string_view> pathBuf;
-                auto& icr = rule->as<InstanceConfigRuleSyntax>();
-                pathBuf.push_back(icr.topModule.valueText());
+                // TODO: check that topModule here is valid
+                auto& icr = ruleSyntax->as<InstanceConfigRuleSyntax>();
+                auto node = &result->instanceOverrides[icr.topModule.valueText()];
                 for (auto& part : icr.instanceNames)
-                    pathBuf.push_back(part->name.valueText());
+                    node = &node->childNodes[part->name.valueText()];
 
-                InstanceOverride io;
-                io.path = pathBuf.copy(comp);
-                io.rule = buildRule(*icr.ruleClause);
-                instOverrides.emplace_back(io);
+                auto rule = buildRule(*icr.ruleClause);
+                if (!node->rule) {
+                    // No rule here yet; copy into our allocator and save it.
+                    node->rule = comp.emplace<ConfigRule>(rule);
+                }
+                else {
+                    // Already a rule; see if we can merge or if it's an error.
+                    auto& nr = *node->rule;
+                    if ((bool(rule.paramOverrides) && bool(nr.paramOverrides)) ||
+                        (rule.liblist.has_value() && nr.liblist.has_value()) ||
+                        (!rule.useCell.name.empty() && !nr.useCell.name.empty())) {
+                        // TODO: error
+                    }
+                    else {
+                        if (rule.paramOverrides)
+                            nr.paramOverrides = rule.paramOverrides;
+                        if (rule.liblist)
+                            nr.liblist = rule.liblist;
+                        if (!rule.useCell.name.empty())
+                            nr.useCell = rule.useCell;
+                    }
+                }
                 break;
             }
             default:
@@ -442,7 +460,6 @@ ConfigBlockSymbol& ConfigBlockSymbol::fromSyntax(const Scope& scope,
         }
     }
 
-    result->instanceOverrides = instOverrides.copy(comp);
     return *result;
 }
 
