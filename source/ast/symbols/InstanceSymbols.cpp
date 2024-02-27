@@ -524,8 +524,11 @@ void InstanceSymbol::fromSyntax(Compilation& comp, const HierarchyInstantiationS
                         bool matches = false;
                         for (size_t i = path.size() - 1; i > 0; i--) {
                             auto sym = &scope->asSymbol();
+                            std::string_view instDefName;
                             if (sym->kind == SymbolKind::InstanceBody) {
-                                sym = sym->as<InstanceBodySymbol>().parentInstance;
+                                auto& ibs = sym->as<InstanceBodySymbol>();
+                                instDefName = ibs.getDefinition().name;
+                                sym = ibs.parentInstance;
                                 SLANG_ASSERT(sym);
                             }
 
@@ -535,7 +538,7 @@ void InstanceSymbol::fromSyntax(Compilation& comp, const HierarchyInstantiationS
                             // the root of the path can have a different name from the actual
                             // instance (the root just says the name of the cell).
                             if (&resolvedConfig->rootInstance == sym) {
-                                matches = i == 1;
+                                matches = i == 1 && path[0] == instDefName;
                                 break;
                             }
 
@@ -544,8 +547,11 @@ void InstanceSymbol::fromSyntax(Compilation& comp, const HierarchyInstantiationS
                                 break;
                         }
 
-                        if (matches)
-                            ruleMap.emplace(path[path.size() - 1], &instOverride.rule);
+                        if (matches) {
+                            auto [it, inserted] = ruleMap.emplace(path[path.size() - 1],
+                                                                  &instOverride.rule);
+                            SLANG_ASSERT(inserted);
+                        }
                     }
                 }
 

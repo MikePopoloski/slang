@@ -460,3 +460,40 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Config instance paths with two roots") {
+    auto tree = SyntaxTree::fromText(R"(
+config cfg1;
+    design foo bar;
+    instance foo.a use m1;
+    instance bar.a use m2;
+endconfig
+
+module m1;
+endmodule
+
+module m2;
+endmodule
+
+module foo;
+    some_mod a();
+endmodule
+
+module bar;
+    some_mod a();
+endmodule
+)");
+    CompilationOptions options;
+    options.topModules.emplace("cfg1");
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& root = compilation.getRoot();
+    auto& fooA = root.lookupName<InstanceSymbol>("foo.a");
+    CHECK(fooA.getDefinition().name == "m1");
+
+    auto& barA = root.lookupName<InstanceSymbol>("bar.a");
+    CHECK(barA.getDefinition().name == "m2");
+}
