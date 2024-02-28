@@ -239,7 +239,7 @@ public:
     ///
     /// @param name a comma separated list of long form and short form names
     ///             (including the dashes) that are accepted for this option
-    /// @param cb a calback that will be invoked if the option is provided
+    /// @param cb a callback that will be invoked if the option is provided
     /// @param desc a human-friendly description for printing help text
     /// @param valueName an example name for the value when printing help text
     /// @param flags additional flags that control how the option behaves
