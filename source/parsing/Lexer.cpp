@@ -775,7 +775,7 @@ Token Lexer::lexEscapeSequence(bool isMacroName) {
             return create(TokenKind::LineContinuation);
         }
 
-        addDiag(diag::EscapedWhitespace, currentOffset());
+        // Error issued in the Preprocessor
         return create(TokenKind::Unknown);
     }
 
@@ -815,13 +815,11 @@ Token Lexer::lexDirective() {
         return lexEscapeSequence(true);
     }
 
-    // store the offset before scanning in order to easily report error locations
-    size_t startingOffset = currentOffset();
     scanIdentifier();
 
     // if length is 1, we just have a grave character on its own, which is an error
     if (lexemeLength() == 1) {
-        addDiag(diag::MisplacedDirectiveChar, startingOffset);
+        // Error issued in the Preprocessor
         return create(TokenKind::Unknown);
     }
 
@@ -881,9 +879,6 @@ Token Lexer::lexNumericLiteral() {
         populateChars();
         floatChars.push_back('.');
 
-        if (peek() == '_')
-            addDiag(diag::DigitsLeadingUnderscore, currentOffset());
-
         bool any = false;
         while (true) {
             char c = peek();
@@ -898,10 +893,8 @@ Token Lexer::lexNumericLiteral() {
             }
         }
 
-        if (!any) {
-            addDiag(diag::MissingFractionalDigits, currentOffset());
+        if (!any)
             floatChars.push_back('0');
-        }
     }
 
     // Check for an exponent. Note that this case can be indistinguishable from
@@ -930,9 +923,6 @@ Token Lexer::lexNumericLiteral() {
             c = peek(++index);
         }
 
-        if (c == '_' && hasDecimal)
-            addDiag(diag::DigitsLeadingUnderscore, currentOffset());
-
         bool any = false;
         while (true) {
             if (c == '_')
@@ -948,10 +938,8 @@ Token Lexer::lexNumericLiteral() {
 
         if (any || hasDecimal) {
             advance(index);
-            if (!any) {
-                addDiag(diag::MissingExponentDigits, currentOffset());
+            if (!any)
                 floatChars.push_back('1');
-            }
         }
         else {
             // This isn't a float, it's probably a hex literal. Back up (by not calling advance)
@@ -1026,13 +1014,10 @@ Token Lexer::lexApostrophe() {
         case 'S': {
             advance();
             LiteralBase base;
-            if (!literalBaseFromChar(peek(), base)) {
-                addDiag(diag::ExpectedIntegerBaseAfterSigned, currentOffset());
+            if (!literalBaseFromChar(peek(), base))
                 base = LiteralBase::Decimal;
-            }
-            else {
+            else
                 advance();
-            }
             return create(TokenKind::IntegerBase, base, true);
         }
         default: {

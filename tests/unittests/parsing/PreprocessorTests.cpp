@@ -342,7 +342,7 @@ TEST_CASE("Macro pasting (weird)") {
     Token token = lexToken(text);
 
     CHECK(token.kind == TokenKind::Unknown);
-    REQUIRE(diagnostics.size() == 2);
+    REQUIRE(diagnostics.size() == 1);
 }
 
 TEST_CASE("Macro pasting (weird 2)") {
@@ -2231,4 +2231,43 @@ endmodule
     preprocess(text);
     REQUIRE(diagnostics.size() == 1);
     CHECK(diagnostics.back().code == diag::MissingEndIfDirective);
+}
+
+TEST_CASE("Spurious errors inside stringified macro expansion regression") {
+    auto& text = R"(
+`define FOO(x) `" x `"
+`FOO('s)
+`FOO(`)
+`FOO(\ )
+`FOO(`\ )
+`FOO(3._e_)
+)";
+
+    auto& expected = R"(
+" 's"
+" `"
+" \"
+" `\"
+" 3._e_"
+)";
+
+    std::string result = preprocess(text);
+    CHECK(result == expected);
+    CHECK_DIAGNOSTICS_EMPTY;
+}
+
+TEST_CASE("Invalid tokens still error after macro expansion") {
+    auto& text = R"(
+`define FOO(x) x
+`FOO(`)
+`FOO(\ )
+`FOO(`\ )
+)";
+
+    preprocess(text);
+
+    REQUIRE(diagnostics.size() == 3);
+    CHECK(diagnostics[0].code == diag::MisplacedDirectiveChar);
+    CHECK(diagnostics[1].code == diag::EscapedWhitespace);
+    CHECK(diagnostics[2].code == diag::EscapedWhitespace);
 }

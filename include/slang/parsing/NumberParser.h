@@ -14,6 +14,7 @@
 #include "slang/numeric/SVInt.h"
 #include "slang/parsing/Token.h"
 #include "slang/syntax/SyntaxFacts.h"
+#include "slang/text/CharInfo.h"
 #include "slang/text/SourceLocation.h"
 #include "slang/util/SmallVector.h"
 
@@ -133,6 +134,34 @@ public:
                     << real_t(std::numeric_limits<double>::max());
             }
         }
+
+        // Enforce extra rules about where digits and underscores
+        // are allowed to go in a real literal.
+        auto raw = literal.rawText();
+        auto len = raw.length();
+        for (size_t i = 0; i < len; i++) {
+            char c = raw[i];
+            size_t j = i + 1;
+
+            auto checkForDigit = [&](DiagCode missingCode) {
+                if (j == len || !isDecimalDigit(raw[j])) {
+                    auto code = (j < len && raw[j] == '_') ? diag::DigitsLeadingUnderscore
+                                                           : missingCode;
+                    addDiag(code, literal.location() + j);
+                }
+            };
+
+            if (c == '.') {
+                checkForDigit(diag::MissingFractionalDigits);
+            }
+            else if (c == 'e' || c == 'E') {
+                if (j < len && (raw[j] == '+' || raw[j] == '-'))
+                    j++;
+
+                checkForDigit(diag::MissingExponentDigits);
+            }
+        }
+
         return literal;
     }
 

@@ -497,16 +497,6 @@ TEST_CASE("Vector bases") {
     checkVectorBase("'SH", LiteralBase::Hex, true);
 }
 
-TEST_CASE("Vector base (bad)") {
-    Token token = lexToken("'sf");
-
-    CHECK(token.kind == TokenKind::IntegerBase);
-    CHECK(token.numericFlags().base() == LiteralBase::Decimal);
-    CHECK(token.toString() == "'s");
-    REQUIRE(diagnostics.size() == 1);
-    CHECK(diagnostics.back().code == diag::ExpectedIntegerBaseAfterSigned);
-}
-
 TEST_CASE("Unbased unsized literal") {
     auto& text = "'1";
     Token token = lexToken(text);
@@ -525,17 +515,6 @@ TEST_CASE("Real literal (fraction)") {
     CHECK(token.toString() == text);
     CHECK(withinUlp(token.realValue(), 32.57));
     CHECK_DIAGNOSTICS_EMPTY;
-}
-
-TEST_CASE("Real literal (missing fraction)") {
-    auto& text = "32.";
-    Token token = lexToken(text);
-
-    CHECK(token.kind == TokenKind::RealLiteral);
-    CHECK(token.toString() == text);
-    REQUIRE(!diagnostics.empty());
-    CHECK(diagnostics.back().code == diag::MissingFractionalDigits);
-    CHECK(token.realValue() == 32);
 }
 
 TEST_CASE("Real literal (exponent)") {
@@ -585,9 +564,7 @@ TEST_CASE("Real literal (underscores)") {
     CHECK(token.kind == TokenKind::RealLiteral);
     CHECK(token.toString() == text);
     CHECK(withinUlp(token.realValue(), 32.3456e57));
-    REQUIRE(diagnostics.size() == 2);
-    CHECK(diagnostics[0].code == diag::DigitsLeadingUnderscore);
-    CHECK(diagnostics[1].code == diag::DigitsLeadingUnderscore);
+    CHECK_DIAGNOSTICS_EMPTY;
 }
 
 TEST_CASE("Real literal (exponent overflow)") {
@@ -618,8 +595,7 @@ TEST_CASE("Real literal (bad exponent)") {
 
     CHECK(token.kind == TokenKind::RealLiteral);
     CHECK(token.toString() == "32.234e");
-    REQUIRE(diagnostics.size() == 1);
-    CHECK(diagnostics.back().code == diag::MissingExponentDigits);
+    CHECK_DIAGNOSTICS_EMPTY;
 }
 
 TEST_CASE("Real literal (digit overflow)") {
@@ -692,16 +668,6 @@ TEST_CASE("Colon") {
         CHECK(token.toString() == ":");
         CHECK_DIAGNOSTICS_EMPTY;
     }
-}
-
-TEST_CASE("Misplaced directive char") {
-    auto& text = "`";
-    Token token = lexRawToken(text);
-
-    CHECK(token.kind == TokenKind::Unknown);
-    CHECK(token.toString() == text);
-    REQUIRE(!diagnostics.empty());
-    CHECK(diagnostics.back().code == diag::MisplacedDirectiveChar);
 }
 
 TEST_CASE("Directive continuation") {

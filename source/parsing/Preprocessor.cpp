@@ -7,6 +7,7 @@
 //------------------------------------------------------------------------------
 #include "slang/parsing/Preprocessor.h"
 
+#include "slang/diagnostics/LexerDiags.h"
 #include "slang/diagnostics/PreprocessorDiags.h"
 #include "slang/syntax/AllSyntax.h"
 #include "slang/text/SourceManager.h"
@@ -231,6 +232,7 @@ Token Preprocessor::nextProcessed() {
         case TokenKind::MacroEscapedQuote:
         case TokenKind::MacroPaste:
         case TokenKind::LineContinuation:
+        case TokenKind::Unknown:
             return handleDirectives(token);
         default:
             return token;
@@ -252,6 +254,19 @@ Token Preprocessor::handleDirectives(Token token) {
                 trivia.push_back(Trivia(TriviaKind::SkippedTokens, tokens.copy(alloc)));
                 addDiag(diag::MacroOpsOutsideDefinition, token.range());
                 break;
+            }
+            case TokenKind::Unknown: {
+                // This is an error in the lexer. See if we should issue any more
+                // specific diagnostics here (that were deferred until we know we're
+                // not inside a macro) and then return the token.
+                auto raw = token.rawText();
+                if (raw == "\\" || raw == "`\\")
+                    addDiag(diag::EscapedWhitespace, token.location() + 1);
+                else if (raw == "`")
+                    addDiag(diag::MisplacedDirectiveChar, token.location());
+
+                trivia.append_range(token.trivia());
+                return token.withTrivia(alloc, trivia.copy(alloc));
             }
             case TokenKind::Directive:
                 switch (token.directiveKind()) {

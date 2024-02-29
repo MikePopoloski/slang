@@ -927,3 +927,28 @@ int d = 9'so777;
     CHECK(diagnostics[2].code == diag::VectorLiteralOverflow);
     CHECK(diagnostics[3].code == diag::VectorLiteralOverflow);
 }
+
+TEST_CASE("Diagnosing missing base after signed specifier parsing") {
+    auto& text = R"(
+int i = 's3;
+)";
+    parseCompilationUnit(text);
+
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics[0].code == diag::ExpectedIntegerBaseAfterSigned);
+}
+
+TEST_CASE("Diagnosing real literal parsing errors") {
+    auto& text = R"(
+real r = 3.;
+real s = 3._e+;
+real s = 3e+_3;
+)";
+    parseCompilationUnit(text);
+
+    REQUIRE(diagnostics.size() == 4);
+    CHECK(diagnostics[0].code == diag::MissingFractionalDigits);
+    CHECK(diagnostics[1].code == diag::DigitsLeadingUnderscore);
+    CHECK(diagnostics[2].code == diag::MissingExponentDigits);
+    CHECK(diagnostics[3].code == diag::DigitsLeadingUnderscore);
+}

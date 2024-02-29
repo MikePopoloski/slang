@@ -41,6 +41,10 @@ void NumberParser::startVector(Token baseToken, Token sizeToken) {
     literalBase = baseFlags.base();
     signFlag = baseFlags.isSigned();
 
+    // Diagnose errors where they only provided a sign and no base.
+    if (auto baseRaw = baseToken.rawText(); baseRaw.length() == 2 && ::tolower(baseRaw[1]) == 's')
+        addDiag(diag::ExpectedIntegerBaseAfterSigned, baseToken.location() + 1);
+
     sizeBits = 0;
     if (sizeToken) {
         const SVInt& sizeVal = sizeToken.intValue();
