@@ -708,3 +708,83 @@ endmodule
     CHECK(diags[0].code == diag::MultipleAlwaysAssigns);
     CHECK(diags[1].code == diag::MultipleAlwaysAssigns);
 }
+
+TEST_CASE("driver checking applied to static function args (always_ff and always_ff)") {
+    auto tree = SyntaxTree::fromText(R"(
+module m(input clk, input rst);
+    function logic f(logic a);
+        logic b;
+        b = a;
+        return b;
+    endfunction
+
+    logic i, j;
+    always_ff @(posedge clk) begin
+        i <= f(i);
+    end
+    always_ff @(posedge rst) begin
+        j <= f(j);
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::MultipleAlwaysAssigns);
+}
+
+TEST_CASE("driver checking applied to static function local variables (always_ff and always)") {
+    auto tree = SyntaxTree::fromText(R"(
+module m(input clk, input rst);
+    function logic f(logic a);
+        logic b;
+        b = a;
+        return b;
+    endfunction
+
+    logic i, j;
+    always @(posedge clk) begin
+        i <= f(i);
+    end
+    always_ff @(posedge rst) begin
+        j <= f(j);
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::MultipleAlwaysAssigns);
+}
+
+TEST_CASE("driver checking applied to static function local variables (always and always)") {
+    auto tree = SyntaxTree::fromText(R"(
+module m(input clk, input rst);
+    function logic f(logic a);
+        logic b;
+        b = a;
+        return b;
+    endfunction
+
+    logic i, j;
+    always @(posedge clk) begin
+        i <= f(i);
+    end
+    always @(posedge rst) begin
+        j <= f(j);
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 0);
+}

@@ -661,7 +661,6 @@ error InOutVarPortConn "'{}' cannot be connected to 'inout' port (only nets are 
 error InOutUWireConn "'uwire' net '{}' cannot be connected to 'inout' port"
 error MixedVarAssigns "cannot mix continuous and procedural assignments to variable '{}'"
 error MultipleContAssigns "cannot have multiple continuous assignments to variable '{}'"
-error MultipleAlwaysAssigns "variable '{}' driven by {} procedure cannot be written to by any other process"
 error MultipleUWireDrivers "'uwire' net '{}' cannot have multiple drivers"
 error MultipleUDNTDrivers "net '{}' with user-defined nettype '{}' cannot have multiple drivers because it does not specify a resolution function"
 error InputPortAssign "cannot assign to input port '{}'"
@@ -701,6 +700,7 @@ warning sign-conversion SignConversion "implicit conversion changes signedness f
 warning float-bool-conv FloatBoolConv "implicit conversion from floating point type {} to boolean value"
 warning int-bool-conv IntBoolConv "implicit conversion from {} to boolean value"
 warning useless-cast UselessCast "useless cast from {} to the same type"
+warning multiple-always-assigns MultipleAlwaysAssigns "variable '{}' driven by {} procedure cannot be written to by any other process"
 
 subsystem Statements
 error ReturnNotInSubroutine "return statement is only valid inside task and function blocks"

@@ -1915,7 +1915,7 @@ endmodule
     auto& diags = compilation.getAllDiagnostics();
     std::string result = "\n" + report(diags);
     CHECK(result == R"(
-source:14:17: error: variable 'foo' driven by always_comb procedure cannot be written to by any other process
+source:14:17: warning: variable 'foo' driven by always_comb procedure cannot be written to by any other process [-Wmultiple-always-assigns]
     always_comb i.foo = 1;
                 ^~~~~
 note: from 'm.n2' and 'm.n1'
