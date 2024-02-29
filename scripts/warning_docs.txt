@@ -1137,3 +1137,18 @@ module m;
     end
 endmodule
 ```
+
+-Wmultiple-always-assigns
+Detects that variables on the left-hand side of assignments within an procedure blocks,
+including variables from the contents of a called functions, shall not be written to by any other process.
+```
+module m(input clk, input rst);
+    logic i;
+    always_ff @(posedge clk) begin
+        i <= 1;
+    end
+    always_ff @(posedge rst) begin
+        i <= 2;
+    end
+endmodule
+```
