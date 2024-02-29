@@ -3384,6 +3384,9 @@ ConfigUseClauseSyntax& Parser::parseConfigUseClause() {
     if (peek(TokenKind::Colon)) {
         colon = consume();
         config = expect(TokenKind::ConfigKeyword);
+
+        if (!name && !config.isMissing())
+            addDiag(diag::ConfigMissingName, config.range());
     }
 
     return factory.configUseClause(use, name, paramAssignments, colon, config);
@@ -3408,16 +3411,26 @@ ConfigDeclarationSyntax& Parser::parseConfigDeclaration(AttrList attributes) {
     while (peek(TokenKind::Identifier))
         topCells.push_back(&parseConfigCellIdentifier());
 
+    if (topCells.empty())
+        addDiag(diag::ExpectedIdentifier, peek().location());
+
     auto semi2 = expect(TokenKind::Semicolon);
 
+    const ConfigRuleSyntax* defaultRule = nullptr;
     SmallVector<ConfigRuleSyntax*> rules;
     while (true) {
         auto token = peek();
         if (token.kind == TokenKind::DefaultKeyword) {
+            if (defaultRule) {
+                auto& diag = addDiag(diag::MultipleDefaultRules, token.range());
+                diag.addNote(diag::NotePreviousDefinition, defaultRule->sourceRange());
+            }
+
             consume();
             auto& liblist = parseConfigLiblist();
             rules.push_back(
                 &factory.defaultConfigRule(token, liblist, expect(TokenKind::Semicolon)));
+            defaultRule = rules.back();
         }
         else if (token.kind == TokenKind::CellKeyword) {
             consume();

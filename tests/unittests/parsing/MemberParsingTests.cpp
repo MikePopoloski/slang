@@ -1173,3 +1173,21 @@ import "DPI-C" function dpi_f (logic [3:0] a);
     parseCompilationUnit(text);
     CHECK_DIAGNOSTICS_EMPTY;
 }
+
+TEST_CASE("Config parsing errors") {
+    auto& text = R"(
+config cfg;
+    design;
+    default liblist a;
+    instance foo.bar use #() : config;
+    default liblist b;
+endconfig
+)";
+
+    parseCompilationUnit(text);
+
+    REQUIRE(diagnostics.size() == 3);
+    CHECK(diagnostics[0].code == diag::ExpectedIdentifier);
+    CHECK(diagnostics[1].code == diag::ConfigMissingName);
+    CHECK(diagnostics[2].code == diag::MultipleDefaultRules);
+}
