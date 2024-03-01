@@ -20,6 +20,32 @@ namespace slang::syntax {
 
 class SyntaxNode;
 
+/// A token pointer or a syntax node.
+struct SLANG_EXPORT PtrTokenOrSyntax : public std::variant<parsing::Token*, SyntaxNode*> {
+    using Base = std::variant<parsing::Token*, SyntaxNode*>;
+    PtrTokenOrSyntax(parsing::Token* token) : Base(token) {}
+    PtrTokenOrSyntax(SyntaxNode* node) : Base(node) {}
+    PtrTokenOrSyntax(nullptr_t) : Base((parsing::Token*)nullptr) {}
+
+    /// @return true if the object is a token.
+    bool isToken() const { return this->index() == 0; }
+
+    /// @return true if the object is a syntax node.
+    bool isNode() const { return this->index() == 1; }
+
+    /// Gets access to the object as a token (throwing an exception
+    /// if it's not actually a token).
+    parsing::Token* token() const { return std::get<0>(*this); }
+
+    /// Gets access to the object as a syntax node (throwing an exception
+    /// if it's not actually a syntax node).
+    SyntaxNode* node() const { return std::get<1>(*this); }
+
+    /// Gets the source range for the token or syntax node or NoLocation if it
+    /// points to nullptr.
+    SourceRange range() const;
+};
+
 /// A token or a constant syntax node.
 struct SLANG_EXPORT ConstTokenOrSyntax : public std::variant<parsing::Token, const SyntaxNode*> {
     using Base = std::variant<parsing::Token, const SyntaxNode*>;

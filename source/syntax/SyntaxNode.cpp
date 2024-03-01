@@ -33,6 +33,17 @@ struct GetChildVisitor {
 
 namespace slang::syntax {
 
+SourceRange PtrTokenOrSyntax::range() const {
+    if(isNode())
+        return node()->sourceRange();
+    else {
+        if(token() == nullptr)
+            return SourceRange::NoLocation;
+        else 
+            return token()->range();
+    }
+}
+
 SourceRange ConstTokenOrSyntax::range() const {
     return isNode() ? node()->sourceRange() : token().range();
 }
