@@ -169,6 +169,13 @@ parsing::Token SyntaxNode::childToken(size_t index) const {
     return child.token();
 }
 
+parsing::Token* SyntaxNode::childTokenPtr(size_t index) {
+    auto child = getChildPtr(index);
+    if (!child.isToken())
+        return nullptr;
+    return child.token();
+}
+
 bool SyntaxNode::isEquivalentTo(const SyntaxNode& other) const {
     size_t childCount = getChildCount();
     if (kind != other.kind || childCount != other.getChildCount())

@@ -129,6 +129,11 @@ public:
     /// an empty Token.
     Token childToken(size_t index) const;
 
+    /// Gets a pointer to the child token at the specified index. If the
+    /// child at the given index is not a token (probably a node) then 
+    /// this returns null.
+    Token* childTokenPtr(size_t index);
+
     /// Gets the number of (direct) children underneath this node in the tree.
     size_t getChildCount() const; // Note: implemented in AllSyntax.cpp
 
