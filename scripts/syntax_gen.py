@@ -482,10 +482,17 @@ size_t SyntaxNode::getChildCount() const {
         cppf.write("}\n\n")
 
         if v.members or v.final != "":
-            for returnType in ("TokenOrSyntax", "ConstTokenOrSyntax", "PtrTokenOrSyntax"):
+            for returnType in (
+                "TokenOrSyntax",
+                "ConstTokenOrSyntax",
+                "PtrTokenOrSyntax",
+            ):
                 cppf.write(
                     "{} {}::getChild{}(size_t index){} {{\n".format(
-                        returnType, k, ("Ptr" if returnType.startswith("Ptr") else ""), "" if not returnType.startswith("Const") else " const"
+                        returnType,
+                        k,
+                        ("Ptr" if returnType.startswith("Ptr") else ""),
+                        "" if not returnType.startswith("Const") else " const",
                     )
                 )
 
@@ -497,12 +504,12 @@ size_t SyntaxNode::getChildCount() const {
                     index = 0
                     for m in v.combinedMembers:
                         addr = ""
-                        if returnPointer :
+                        if returnPointer:
                             if m[0] == "Token" or (m[1] in v.pointerMembers):
                                 addr = "&"
-                        elif m[1] in v.pointerMembers :
+                        elif m[1] in v.pointerMembers:
                             addr = "&"
-                            
+
                         # addr = "&" if  != (returnPointer and not (m[1] in v.notNullMembers)) else ""
                         get = ".get()" if m[1] in v.notNullMembers else ""
                         cppf.write(

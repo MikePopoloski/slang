@@ -108,7 +108,7 @@ public:
     Token getLastToken() const;
 
     /// Get the first leaf token as a mutable pointer in this subtree.
-    Token* getFirstTokenPtr(); 
+    Token* getFirstTokenPtr();
 
     /// Get the last leaf token a mutable pointer in this subtree.
     Token* getLastTokenPtr();
@@ -130,7 +130,7 @@ public:
     Token childToken(size_t index) const;
 
     /// Gets a pointer to the child token at the specified index. If the
-    /// child at the given index is not a token (probably a node) then 
+    /// child at the given index is not a token (probably a node) then
     /// this returns null.
     Token* childTokenPtr(size_t index);
 
@@ -304,7 +304,7 @@ public:
 private:
     TokenOrSyntax getChild(size_t index) final { return (*this)[index]; }
     ConstTokenOrSyntax getChild(size_t index) const final { return (*this)[index]; }
-    PtrTokenOrSyntax getChildPtr(size_t index) final {return (*this)[index];};
+    PtrTokenOrSyntax getChildPtr(size_t index) final { return (*this)[index]; };
 
     void setChild(size_t index, TokenOrSyntax child) final {
         (*this)[index] = &child.node()->as<T>();
@@ -343,7 +343,7 @@ public:
 private:
     TokenOrSyntax getChild(size_t index) final { return (*this)[index]; }
     ConstTokenOrSyntax getChild(size_t index) const final { return (*this)[index]; }
-    PtrTokenOrSyntax getChildPtr(size_t index) final {return &(*this)[index];};
+    PtrTokenOrSyntax getChildPtr(size_t index) final { return &(*this)[index]; };
     void setChild(size_t index, TokenOrSyntax child) final { (*this)[index] = child.token(); }
 
     SyntaxListBase* clone(BumpAllocator& alloc) const final {
@@ -436,11 +436,11 @@ private:
     TokenOrSyntax getChild(size_t index) final { return elements[index]; }
     ConstTokenOrSyntax getChild(size_t index) const final { return elements[index]; }
     PtrTokenOrSyntax getChildPtr(size_t index) final {
-        if(elements[index].isNode())
+        if (elements[index].isNode())
             return elements[index].node();
         else
             return &(std::get<parsing::Token>(elements[index]));
-        }
+    }
     void setChild(size_t index, TokenOrSyntax child) final { elements[index] = child; }
 
     SyntaxListBase* clone(BumpAllocator& alloc) const final {

@@ -41,12 +41,12 @@ struct GetChildVisitor {
 namespace slang::syntax {
 
 SourceRange PtrTokenOrSyntax::range() const {
-    if(isNode())
+    if (isNode())
         return node()->sourceRange();
     else {
-        if(token() == nullptr)
+        if (token() == nullptr)
             return SourceRange::NoLocation;
-        else 
+        else
             return token()->range();
     }
 }
