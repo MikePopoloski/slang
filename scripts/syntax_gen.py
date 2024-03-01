@@ -367,6 +367,7 @@ namespace slang::syntax {
 
             outf.write("    TokenOrSyntax getChild(size_t index);\n")
             outf.write("    ConstTokenOrSyntax getChild(size_t index) const;\n")
+            outf.write("    PtrTokenOrSyntax getChildPtr(size_t index);\n")
             outf.write("    void setChild(size_t index, TokenOrSyntax child);\n\n")
 
             docf.write(
@@ -379,6 +380,14 @@ namespace slang::syntax {
             )
             docf.write(
                 "    @fn ConstTokenOrSyntax slang::syntax::{}::getChild(size_t index) const\n".format(
+                    name
+                )
+            )
+            docf.write(
+                "    @brief Gets the child member (token or syntax node) as a pointer at the provided index within this struct\n"
+            )
+            docf.write(
+                "    @fn PtrTokenOrSyntax slang::syntax::{}::getChildPtr(size_t index)\n".format(
                     name
                 )
             )
@@ -473,23 +482,32 @@ size_t SyntaxNode::getChildCount() const {
         cppf.write("}\n\n")
 
         if v.members or v.final != "":
-            for returnType in ("TokenOrSyntax", "ConstTokenOrSyntax"):
+            for returnType in ("TokenOrSyntax", "ConstTokenOrSyntax", "PtrTokenOrSyntax"):
                 cppf.write(
-                    "{} {}::getChild(size_t index){} {{\n".format(
-                        returnType, k, "" if returnType == "TokenOrSyntax" else " const"
+                    "{} {}::getChild{}(size_t index){} {{\n".format(
+                        returnType, k, ("Ptr" if returnType.startswith("Ptr") else ""), "" if not returnType.startswith("Const") else " const"
                     )
                 )
+
+                returnPointer = returnType == "PtrTokenOrSyntax"
 
                 if v.combinedMembers:
                     cppf.write("    switch (index) {\n")
 
                     index = 0
                     for m in v.combinedMembers:
-                        addr = "&" if m[1] in v.pointerMembers else ""
+                        addr = ""
+                        if returnPointer :
+                            if m[0] == "Token" or (m[1] in v.pointerMembers):
+                                addr = "&"
+                        elif m[1] in v.pointerMembers :
+                            addr = "&"
+                            
+                        # addr = "&" if  != (returnPointer and not (m[1] in v.notNullMembers)) else ""
                         get = ".get()" if m[1] in v.notNullMembers else ""
                         cppf.write(
-                            "        case {}: return {}{}{};\n".format(
-                                index, addr, m[1], get
+                            "        case {}: return {}{}{}; //{}\n".format(
+                                index, addr, m[1], get, f"ptr = {m[1] in v.pointerMembers}, nn={m[1] in v.notNullMembers}"
                             )
                         )
                         index += 1
@@ -636,6 +654,7 @@ const std::type_info* typeFromSyntaxKind(SyntaxKind kind) {
     )
     outf.write("    TokenOrSyntax getChild(size_t) { return nullptr; }\n")
     outf.write("    ConstTokenOrSyntax getChild(size_t) const { return nullptr; }\n")
+    outf.write("    PtrTokenOrSyntax getChildPtr(size_t) { return nullptr; }\n")
     outf.write("    void setChild(size_t, TokenOrSyntax) {}\n")
     outf.write("};\n\n")
 
