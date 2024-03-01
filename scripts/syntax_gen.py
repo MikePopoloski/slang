@@ -506,8 +506,8 @@ size_t SyntaxNode::getChildCount() const {
                         # addr = "&" if  != (returnPointer and not (m[1] in v.notNullMembers)) else ""
                         get = ".get()" if m[1] in v.notNullMembers else ""
                         cppf.write(
-                            "        case {}: return {}{}{}; //{}\n".format(
-                                index, addr, m[1], get, f"ptr = {m[1] in v.pointerMembers}, nn={m[1] in v.notNullMembers}"
+                            "        case {}: return {}{}{};\n".format(
+                                index, addr, m[1], get
                             )
                         )
                         index += 1
