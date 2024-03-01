@@ -15,6 +15,13 @@ namespace {
 using namespace slang;
 using namespace slang::syntax;
 
+struct PtrGetChildVisitor {
+    template<typename T>
+    PtrTokenOrSyntax visit(T& node, size_t index) {
+        return node.getChildPtr(index);
+    }
+};
+
 struct ConstGetChildVisitor {
     template<typename T>
     ConstTokenOrSyntax visit(const T& node, size_t index) {
@@ -32,6 +39,17 @@ struct GetChildVisitor {
 } // namespace
 
 namespace slang::syntax {
+
+SourceRange PtrTokenOrSyntax::range() const {
+    if (isNode())
+        return node()->sourceRange();
+    else {
+        if (token() == nullptr)
+            return SourceRange::NoLocation;
+        else
+            return token()->range();
+    }
+}
 
 SourceRange ConstTokenOrSyntax::range() const {
     return isNode() ? node()->sourceRange() : token().range();
@@ -75,6 +93,40 @@ parsing::Token SyntaxNode::getLastToken() const {
     return Token();
 }
 
+parsing::Token* SyntaxNode::getFirstTokenPtr() {
+    size_t childCount = getChildCount();
+    for (size_t i = 0; i < childCount; i++) {
+        auto child = getChildPtr(i);
+        if (child.isToken()) {
+            if (child.token())
+                return child.token();
+        }
+        else if (child.node()) {
+            auto result = child.node()->getFirstTokenPtr();
+            if (result)
+                return result;
+        }
+    }
+    return nullptr;
+}
+
+parsing::Token* SyntaxNode::getLastTokenPtr() {
+    size_t childCount = getChildCount();
+    for (ptrdiff_t i = ptrdiff_t(childCount) - 1; i >= 0; i--) {
+        auto child = getChildPtr(size_t(i));
+        if (child.isToken()) {
+            if (child.token())
+                return child.token();
+        }
+        else if (child.node()) {
+            auto result = child.node()->getLastTokenPtr();
+            if (result)
+                return result;
+        }
+    }
+    return nullptr;
+}
+
 SourceRange SyntaxNode::sourceRange() const {
     Token firstToken = getFirstToken();
     Token lastToken = getLastToken();
@@ -83,6 +135,11 @@ SourceRange SyntaxNode::sourceRange() const {
 
 ConstTokenOrSyntax SyntaxNode::getChild(size_t index) const {
     ConstGetChildVisitor visitor;
+    return visit(visitor, index);
+}
+
+PtrTokenOrSyntax SyntaxNode::getChildPtr(size_t index) {
+    PtrGetChildVisitor visitor;
     return visit(visitor, index);
 }
 
@@ -109,6 +166,13 @@ parsing::Token SyntaxNode::childToken(size_t index) const {
     auto child = getChild(index);
     if (!child.isToken())
         return Token();
+    return child.token();
+}
+
+parsing::Token* SyntaxNode::childTokenPtr(size_t index) {
+    auto child = getChildPtr(index);
+    if (!child.isToken())
+        return nullptr;
     return child.token();
 }
 
