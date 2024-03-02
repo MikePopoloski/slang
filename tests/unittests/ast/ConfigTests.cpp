@@ -557,9 +557,64 @@ config cfg1;
     instance top use #(.WIDTH(32));
     instance top.a1 use #(.W(top.WIDTH));
 endconfig
+
+module top4 ();
+    parameter S = 16;
+    adder #(.ID("a1")) a1();
+    adder #(.ID("a2")) a2();
+    adder #(.ID("a3")) a3();
+    adder #(.ID("a4")) a4();
+endmodule
+
+config cfg2;
+    localparam S = 24;
+    design top4;
+    instance top4.a1 use #(.W(top4.S));
+    instance top4.a2 use #(.W(S));
+endconfig
+
+module top5 ();
+    parameter WIDTH = 64, DEPTH = 1024, ID = "A1";
+    adder #(.ID(ID), .W(WIDTH), .D(DEPTH)) a1();
+endmodule
+
+config cfg3;
+    design top5;
+    instance top5.a1 use #(.W());
+endconfig
+
+module top6 ();
+    adder #(.W(64), .D(1024)) a1();
+endmodule
+
+config cfg4;
+    design top6;
+    instance top6.a1 use #();
+endconfig
+
+module test;
+    top8 t();
+    defparam t.WIDTH = 64;
+    defparam t.a1.W = 16;
+endmodule
+
+module top8 ();
+    parameter WIDTH = 32;
+    adder #(.ID("a1")) a1();
+    adder #(.ID("a2"), .W(WIDTH)) a2();
+endmodule
+
+config cfg6;
+    design test;
+    instance test.t use #(.WIDTH(48));
+endconfig
 )");
     CompilationOptions options;
     options.topModules.emplace("cfg1");
+    options.topModules.emplace("cfg2");
+    options.topModules.emplace("cfg3");
+    options.topModules.emplace("cfg4");
+    options.topModules.emplace("cfg6");
 
     Compilation compilation(options);
     compilation.addSyntaxTree(tree);
@@ -572,4 +627,12 @@ endconfig
 
     CHECK(getParam("top.a1.W").integer() == 32);
     CHECK(getParam("top.a1.D").integer() == 512);
+    CHECK(getParam("top4.a1.W").integer() == 16);
+    CHECK(getParam("top4.a2.W").integer() == 24);
+    CHECK(getParam("top5.a1.W").integer() == 8);
+    CHECK(getParam("top5.a1.D").integer() == 1024);
+    CHECK(getParam("top6.a1.W").integer() == 8);
+    CHECK(getParam("top6.a1.D").integer() == 512);
+    CHECK(getParam("test.t.a1.W").integer() == 16);
+    CHECK(getParam("test.t.a2.W").integer() == 48);
 }

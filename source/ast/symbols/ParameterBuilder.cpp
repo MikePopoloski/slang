@@ -26,6 +26,13 @@ ParameterBuilder::ParameterBuilder(const Scope& scope, std::string_view definiti
 
 void ParameterBuilder::setAssignments(const ParameterValueAssignmentSyntax& syntax,
                                       bool isFromConfig) {
+    // Special case for config param assignments: if the assignment
+    // syntax list is empty, we set all params back to their defaults.
+    if (isFromConfig && syntax.parameters.empty()) {
+        assignments.clear();
+        return;
+    }
+
     // Build up data structures to easily index the parameter assignments. We need to handle
     // both ordered assignment as well as named assignment, though a specific instance can only
     // use one method or the other.
@@ -102,11 +109,6 @@ void ParameterBuilder::setAssignments(const ParameterValueAssignmentSyntax& synt
                 diag.addNote(diag::NoteDeclarationHere, param.location);
                 continue;
             }
-
-            // It's allowed to have no initializer in the assignment;
-            // it means to just use the default.
-            if (!arg->expr)
-                continue;
 
             assignments[param.name] = {arg->expr, isFromConfig};
         }
