@@ -1181,15 +1181,13 @@ config cfg;
     default liblist a;
     instance foo.bar use #() : config;
     default liblist b;
-    instance foo use foo;
 endconfig
 )";
 
     parseCompilationUnit(text);
 
-    REQUIRE(diagnostics.size() == 4);
+    REQUIRE(diagnostics.size() == 3);
     CHECK(diagnostics[0].code == diag::ExpectedIdentifier);
     CHECK(diagnostics[1].code == diag::ConfigMissingName);
     CHECK(diagnostics[2].code == diag::MultipleDefaultRules);
-    CHECK(diagnostics[3].code == diag::ConfigInstanceRuleRoot);
 }

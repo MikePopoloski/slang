@@ -282,7 +282,7 @@ InstanceSymbol& InstanceSymbol::createVirtual(
     ParameterBuilder paramBuilder(*context.scope, definition.name, definition.parameters);
     paramBuilder.setInstanceContext(context);
     if (paramAssignments)
-        paramBuilder.setAssignments(*paramAssignments);
+        paramBuilder.setAssignments(*paramAssignments, /* isFromConfig */ false);
 
     auto& comp = context.getCompilation();
     auto& result = *comp.emplace<InstanceSymbol>(comp, definition.name, loc, definition,
@@ -514,7 +514,7 @@ void InstanceSymbol::fromSyntax(Compilation& comp, const HierarchyInstantiationS
 
         ParameterBuilder paramBuilder(*context.scope, definition.name, definition.parameters);
         if (syntax.parameters)
-            paramBuilder.setAssignments(*syntax.parameters);
+            paramBuilder.setAssignments(*syntax.parameters, /* isFromConfig */ false);
 
         auto localConfig = resolvedConfig;
         if (confRule) {
@@ -524,6 +524,11 @@ void InstanceSymbol::fromSyntax(Compilation& comp, const HierarchyInstantiationS
             if (confRule->liblist)
                 rc->liblist = *confRule->liblist;
             localConfig = rc;
+
+            if (confRule->paramOverrides) {
+                paramBuilder.setConfigScope(rc->useConfig);
+                paramBuilder.setAssignments(*confRule->paramOverrides, /* isFromConfig */ true);
+            }
         }
 
         InstanceBuilder builder(context, definition, paramBuilder, parentOverrideNode,

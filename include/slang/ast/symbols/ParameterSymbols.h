@@ -52,6 +52,9 @@ public:
     bool isImplicitString(SourceRange referencingRange) const;
     bool isOverridden() const;
 
+    bool isFromConfig() const { return isFromConf; }
+    void setIsFromConfig(bool newIsFromConf) { isFromConf = newIsFromConf; }
+
     void serializeTo(ASTSerializer& serializer) const;
 
 private:
@@ -59,6 +62,7 @@ private:
     mutable bool fromStringLit = false;
     mutable bool needsCoercion = false;
     mutable bool evaluating = false;
+    bool isFromConf = false;
 };
 
 class SLANG_EXPORT TypeParameterSymbol : public Symbol, public ParameterSymbolBase {

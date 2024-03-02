@@ -7,6 +7,7 @@
 //------------------------------------------------------------------------------
 #include "ParameterBuilder.h"
 
+#include "slang/ast/ASTContext.h"
 #include "slang/ast/Compilation.h"
 #include "slang/ast/Scope.h"
 #include "slang/ast/symbols/ParameterSymbols.h"
@@ -23,7 +24,8 @@ ParameterBuilder::ParameterBuilder(const Scope& scope, std::string_view definiti
     definitionName(definitionName), parameterDecls(parameterDecls) {
 }
 
-void ParameterBuilder::setAssignments(const ParameterValueAssignmentSyntax& syntax) {
+void ParameterBuilder::setAssignments(const ParameterValueAssignmentSyntax& syntax,
+                                      bool isFromConfig) {
     // Build up data structures to easily index the parameter assignments. We need to handle
     // both ordered assignment as well as named assignment, though a specific instance can only
     // use one method or the other.
@@ -70,7 +72,7 @@ void ParameterBuilder::setAssignments(const ParameterValueAssignmentSyntax& synt
             if (param.isLocalParam)
                 continue;
 
-            assignments.emplace(param.name, orderedParams[orderedIndex++]->expr);
+            assignments[param.name] = {orderedParams[orderedIndex++]->expr, isFromConfig};
         }
 
         // Make sure there aren't extra param assignments for non-existent params.
@@ -101,12 +103,12 @@ void ParameterBuilder::setAssignments(const ParameterValueAssignmentSyntax& synt
                 continue;
             }
 
-            // It's allowed to have no initializer in the assignment; it means to just use the
-            // default.
+            // It's allowed to have no initializer in the assignment;
+            // it means to just use the default.
             if (!arg->expr)
                 continue;
 
-            assignments.emplace(param.name, arg->expr);
+            assignments[param.name] = {arg->expr, isFromConfig};
         }
 
         for (auto& pair : namedParams) {
@@ -136,8 +138,9 @@ const ParameterSymbolBase& ParameterBuilder::createParam(
 
     auto& comp = scope.getCompilation();
     const ExpressionSyntax* newInitializer = nullptr;
+    bool isFromConfig = false;
     if (auto it = assignments.find(decl.name); it != assignments.end())
-        newInitializer = it->second;
+        std::tie(newInitializer, isFromConfig) = it->second;
 
     if (decl.isTypeParam) {
         auto param = comp.emplace<TypeParameterSymbol>(decl.name, decl.location, decl.isLocalParam,
@@ -190,8 +193,14 @@ const ParameterSymbolBase& ParameterBuilder::createParam(
                 tt.setType(comp.getErrorType());
             }
             else if (newInitializer) {
-                if (instanceContext)
+                if (isFromConfig) {
+                    SLANG_ASSERT(configScope);
+                    tt.forceResolveAt(
+                        ASTContext(*configScope, LookupLocation::max, ASTFlags::ConfigParam));
+                }
+                else if (instanceContext) {
                     tt.forceResolveAt(*instanceContext);
+                }
             }
             else if (param->isPortParam() && !tt.getTypeSyntax() &&
                      (decl.hasSyntax || !decl.givenType)) {
@@ -234,7 +243,9 @@ const ParameterSymbolBase& ParameterBuilder::createParam(
         newScope.addMember(*param);
 
         // If there is an override node, see if this parameter is in it.
-        if (auto paramSyntax = param->getSyntax(); overrideNode && paramSyntax) {
+        // Note that we ignore the override node if this is from a configuration,
+        // as the LRM says config overrides take precedence over defparams.
+        if (auto paramSyntax = param->getSyntax(); overrideNode && paramSyntax && !isFromConfig) {
             if (auto it = overrideNode->overridesBySyntax.find(paramSyntax);
                 it != overrideNode->overridesBySyntax.end()) {
                 param->setValue(comp, it->second.first, /* needsCoercion */ true);
@@ -253,8 +264,15 @@ const ParameterSymbolBase& ParameterBuilder::createParam(
                 param->setValue(comp, nullptr, /* needsCoercion */ false);
             }
             else if (newInitializer) {
-                if (instanceContext)
+                if (isFromConfig) {
+                    SLANG_ASSERT(configScope);
+                    param->setIsFromConfig(true);
+                    declType.resolveAt(
+                        ASTContext(*configScope, LookupLocation::max, ASTFlags::ConfigParam));
+                }
+                else if (instanceContext) {
                     declType.resolveAt(*instanceContext);
+                }
             }
             else if (param->isPortParam() && !declType.getInitializerSyntax()) {
                 reportError(*param);

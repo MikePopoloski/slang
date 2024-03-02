@@ -282,7 +282,6 @@ error ExternWildcardPortList "extern declaration cannot have a wildcard port lis
 error UniquePriorityAfterElse "cannot use 'unique' or 'priority' keyword after 'else'"
 error MultipleDefaultRules "configuration cannot have more than one default rule"
 error ConfigMissingName "cannot use 'config' without also specifying a target name"
-error ConfigInstanceRuleRoot "config instance rule cannot target a root module"
 warning dpi-pure-task DPIPureTask "DPI tasks cannot be marked 'pure'"
 warning nonstandard-generate NonStandardGenBlock "standalone generate block without loop or condition is not allowed in SystemVerilog"
 warning empty-pattern EmptyAssignmentPattern "empty assignment patterns are disallowed by SystemVerilog"

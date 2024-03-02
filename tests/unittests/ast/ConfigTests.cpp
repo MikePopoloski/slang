@@ -5,6 +5,7 @@
 
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
 #include "slang/ast/symbols/InstanceSymbols.h"
+#include "slang/ast/symbols/ParameterSymbols.h"
 #include "slang/driver/Driver.h"
 
 using namespace slang::driver;
@@ -538,4 +539,38 @@ endmodule
     CHECK(diags[2].code == diag::DupConfigRule);
     CHECK(diags[3].code == diag::DupConfigRule);
     CHECK(diags[4].code == diag::ConfigInstanceWrongTop);
+}
+
+TEST_CASE("Config rules with param overrides") {
+    auto tree = SyntaxTree::fromText(R"(
+module adder #(parameter ID = "id", W = 8, D = 512)();
+    initial $display("ID = %s, W = %d, D = %d", ID, W, D);
+endmodule : adder
+
+module top;
+    parameter WIDTH = 16;
+    adder a1();
+endmodule
+
+config cfg1;
+    design work.top;
+    instance top use #(.WIDTH(32));
+    instance top.a1 use #(.W(top.WIDTH));
+endconfig
+)");
+    CompilationOptions options;
+    options.topModules.emplace("cfg1");
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto getParam = [&](std::string_view name) {
+        auto& param = compilation.getRoot().lookupName<ParameterSymbol>(name);
+        return param.getValue();
+    };
+
+    // TODO: this should be 32
+    CHECK(getParam("top.a1.W").integer() == 16);
+    CHECK(getParam("top.a1.D").integer() == 512);
 }

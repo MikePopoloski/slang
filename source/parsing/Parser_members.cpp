@@ -3456,9 +3456,6 @@ ConfigDeclarationSyntax& Parser::parseConfigDeclaration(AttrList attributes) {
                     &factory.configInstanceIdentifier(dot, expect(TokenKind::Identifier)));
             }
 
-            if (instanceNames.empty() && !topModule.isMissing())
-                addDiag(diag::ConfigInstanceRuleRoot, topModule.range());
-
             ConfigRuleClauseSyntax* rule;
             if (peek(TokenKind::UseKeyword))
                 rule = &parseConfigUseClause();
