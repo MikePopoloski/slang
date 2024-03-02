@@ -470,7 +470,7 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamsAndBinds) {
                 }
 
                 if (foundConf) {
-                    for (auto& cell : foundConf->topCells) {
+                    for (auto& cell : foundConf->getTopCells()) {
                         if (auto def = getDefinition(*foundConf, cell)) {
                             selectedConfigs.emplace(foundConf);
                             topDefs.push_back({def, foundConf});
@@ -2289,9 +2289,8 @@ std::pair<const Symbol*, bool> Compilation::resolveConfigRules(
         liblist = parentConfig->liblist;
 
         auto& conf = parentConfig->useConfig;
-        if (auto overrideIt = conf.cellOverrides.find(lookupName);
-            overrideIt != conf.cellOverrides.end()) {
-
+        auto& overrides = conf.getCellOverrides();
+        if (auto overrideIt = overrides.find(lookupName); overrideIt != overrides.end()) {
             // There is at least one cell override with this name; look through the
             // list and take the first one that matches our library restrictions.
             for (auto& cellOverride : overrideIt->second) {

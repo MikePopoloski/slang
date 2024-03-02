@@ -468,8 +468,8 @@ endmodule
     options.topModules.emplace("cfg1");
 
     Compilation compilation(options);
-    compilation.addSyntaxTree(tree1);
     compilation.addSyntaxTree(tree2);
+    compilation.addSyntaxTree(tree1);
     NO_COMPILATION_ERRORS;
 }
 
@@ -508,4 +508,34 @@ endmodule
 
     auto& barA = root.lookupName<InstanceSymbol>("bar.a");
     CHECK(barA.getDefinition().name == "m2");
+}
+
+TEST_CASE("Config warning cases") {
+    auto tree = SyntaxTree::fromText(R"(
+config cfg1;
+    design top lib2.top;
+    default liblist foo;
+    cell b use c;
+    cell b use d;
+    instance top.foo use lib1.c;
+    instance top.foo use d;
+    instance foo.bar use e;
+endconfig
+
+module top;
+endmodule
+)");
+    CompilationOptions options;
+    options.topModules.emplace("cfg1");
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 5);
+    CHECK(diags[0].code == diag::ConfigDupTop);
+    CHECK(diags[1].code == diag::WarnUnknownLibrary);
+    CHECK(diags[2].code == diag::DupConfigRule);
+    CHECK(diags[3].code == diag::DupConfigRule);
+    CHECK(diags[4].code == diag::ConfigInstanceWrongTop);
 }

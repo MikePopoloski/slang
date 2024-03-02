@@ -283,13 +283,32 @@ public:
         ConfigRule* rule = nullptr;
     };
 
-    std::span<const ConfigCellId> topCells;
-    std::span<const SourceLibrary* const> defaultLiblist;
-    flat_hash_map<std::string_view, std::vector<CellOverride>> cellOverrides;
-    flat_hash_map<std::string_view, InstanceOverride> instanceOverrides;
-
     ConfigBlockSymbol(Compilation& compilation, std::string_view name, SourceLocation loc) :
         Symbol(SymbolKind::ConfigBlock, name, loc), Scope(compilation, this) {}
+
+    std::span<const ConfigCellId> getTopCells() const {
+        if (!resolved)
+            resolve();
+        return topCells;
+    }
+
+    std::span<const SourceLibrary* const> getDefaultLiblist() const {
+        if (!resolved)
+            resolve();
+        return defaultLiblist;
+    }
+
+    const flat_hash_map<std::string_view, std::vector<CellOverride>>& getCellOverrides() const {
+        if (!resolved)
+            resolve();
+        return cellOverrides;
+    }
+
+    const flat_hash_map<std::string_view, InstanceOverride>& getInstanceOverrides() const {
+        if (!resolved)
+            resolve();
+        return instanceOverrides;
+    }
 
     static ConfigBlockSymbol& fromSyntax(const Scope& scope,
                                          const syntax::ConfigDeclarationSyntax& syntax);
@@ -297,6 +316,15 @@ public:
     void serializeTo(ASTSerializer& serialize) const;
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::ConfigBlock; }
+
+private:
+    void resolve() const;
+
+    mutable std::span<const ConfigCellId> topCells;
+    mutable std::span<const SourceLibrary* const> defaultLiblist;
+    mutable flat_hash_map<std::string_view, std::vector<CellOverride>> cellOverrides;
+    mutable flat_hash_map<std::string_view, InstanceOverride> instanceOverrides;
+    mutable bool resolved = false;
 };
 
 } // namespace slang::ast

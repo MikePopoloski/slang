@@ -356,7 +356,7 @@ void DefinitionSymbol::serializeTo(ASTSerializer& serializer) const {
 ResolvedConfig::ResolvedConfig(const ConfigBlockSymbol& useConfig,
                                const InstanceSymbol& rootInstance) :
     useConfig(useConfig),
-    rootInstance(rootInstance), liblist(useConfig.defaultLiblist) {
+    rootInstance(rootInstance), liblist(useConfig.getDefaultLiblist()) {
 }
 
 ConfigBlockSymbol& ConfigBlockSymbol::fromSyntax(const Scope& scope,
@@ -369,20 +369,45 @@ ConfigBlockSymbol& ConfigBlockSymbol::fromSyntax(const Scope& scope,
     for (auto param : syntax.localparams)
         result->addMembers(*param);
 
-    SmallVector<ConfigCellId> topCells;
+    return *result;
+}
+
+void ConfigBlockSymbol::resolve() const {
+    SLANG_ASSERT(!resolved);
+    resolved = true;
+
+    auto scope = getParentScope();
+    SLANG_ASSERT(getSyntax() && scope);
+
+    auto& comp = scope->getCompilation();
+    auto& syntax = getSyntax()->as<ConfigDeclarationSyntax>();
+
+    SmallSet<std::string_view, 2> topCellNames;
+    SmallVector<ConfigCellId> topCellsBuf;
     for (auto cellId : syntax.topCells) {
-        if (!cellId->cell.valueText().empty()) {
-            topCells.emplace_back(cellId->library.valueText(), cellId->cell.valueText(),
-                                  cellId->sourceRange());
+        auto cellName = cellId->cell.valueText();
+        if (!cellName.empty()) {
+            auto [it, inserted] = topCellNames.emplace(cellName);
+            if (inserted) {
+                topCellsBuf.emplace_back(cellId->library.valueText(), cellName,
+                                         cellId->sourceRange());
+            }
+            else {
+                scope->addDiag(diag::ConfigDupTop, cellId->cell.range()) << cellName;
+            }
         }
     }
-    result->topCells = topCells.copy(comp);
+    topCells = topCellsBuf.copy(comp);
 
     auto buildLiblist = [&](const ConfigLiblistSyntax& cll) {
         SmallVector<const SourceLibrary*> buf;
         for (auto token : cll.libraries) {
-            if (auto lib = comp.getSourceLibrary(token.valueText()))
-                buf.push_back(lib);
+            if (auto name = token.valueText(); !name.empty()) {
+                if (auto lib = comp.getSourceLibrary(name))
+                    buf.push_back(lib);
+                else
+                    scope->addDiag(diag::WarnUnknownLibrary, token.range()) << name;
+            }
         }
         return buf.copy(comp);
     };
@@ -406,30 +431,90 @@ ConfigBlockSymbol& ConfigBlockSymbol::fromSyntax(const Scope& scope,
         return result;
     };
 
+    auto mergeRules = [&](ConfigRule& curRule, const ConfigRule& newRule, auto&& nameGetter) {
+        if ((bool(newRule.paramOverrides) && bool(curRule.paramOverrides)) ||
+            (newRule.liblist.has_value() && curRule.liblist.has_value()) ||
+            (!newRule.useCell.name.empty() && !curRule.useCell.name.empty())) {
+
+            auto& diag = scope->addDiag(diag::DupConfigRule, newRule.sourceRange) << nameGetter();
+            diag.addNote(diag::NotePreviousDefinition, curRule.sourceRange);
+        }
+        else {
+            if (newRule.paramOverrides)
+                curRule.paramOverrides = newRule.paramOverrides;
+            if (newRule.liblist)
+                curRule.liblist = newRule.liblist;
+            if (!newRule.useCell.name.empty())
+                curRule.useCell = newRule.useCell;
+        }
+    };
+
     for (auto ruleSyntax : syntax.rules) {
         switch (ruleSyntax->kind) {
             case SyntaxKind::DefaultConfigRule:
-                result->defaultLiblist = buildLiblist(
-                    *ruleSyntax->as<DefaultConfigRuleSyntax>().liblist);
+                defaultLiblist = buildLiblist(*ruleSyntax->as<DefaultConfigRuleSyntax>().liblist);
                 break;
             case SyntaxKind::CellConfigRule: {
                 auto& ccr = ruleSyntax->as<CellConfigRuleSyntax>();
                 auto cellName = ccr.name->cell.valueText();
+                if (cellName.empty())
+                    break;
 
                 CellOverride co;
-                if (auto libName = ccr.name->library.valueText(); !libName.empty())
+                if (auto libName = ccr.name->library.valueText(); !libName.empty()) {
                     co.specificLib = comp.getSourceLibrary(libName);
+                    if (!co.specificLib) {
+                        scope->addDiag(diag::WarnUnknownLibrary, ccr.name->library.range())
+                            << libName;
+                        break;
+                    }
+                }
 
                 co.rule = buildRule(*ccr.ruleClause);
-                result->cellOverrides[cellName].push_back(co);
+
+                auto& overrides = cellOverrides[cellName];
+                auto it = std::ranges::find_if(overrides, [&](auto& item) {
+                    return item.specificLib == co.specificLib;
+                });
+
+                if (it != overrides.end()) {
+                    mergeRules(it->rule, co.rule, [&] {
+                        std::string name = "cell '";
+                        if (co.specificLib) {
+                            name += ccr.name->library.valueText();
+                            name.push_back('.');
+                        }
+                        name += cellName;
+                        name.push_back('\'');
+                        return name;
+                    });
+                }
+                else {
+                    overrides.push_back(co);
+                }
                 break;
             }
             case SyntaxKind::InstanceConfigRule: {
-                // TODO: check that topModule here is valid
                 auto& icr = ruleSyntax->as<InstanceConfigRuleSyntax>();
-                auto node = &result->instanceOverrides[icr.topModule.valueText()];
-                for (auto& part : icr.instanceNames)
-                    node = &node->childNodes[part->name.valueText()];
+                const auto topName = icr.topModule.valueText();
+                if (topName.empty() || icr.instanceNames.empty())
+                    break;
+
+                if (!topCellNames.contains(topName)) {
+                    scope->addDiag(diag::ConfigInstanceWrongTop, icr.topModule.range());
+                    break;
+                }
+
+                bool bad = false;
+                auto node = &instanceOverrides[topName];
+                for (auto& part : icr.instanceNames) {
+                    auto partName = part->name.valueText();
+                    bad |= partName.empty();
+                    node = &node->childNodes[partName];
+                }
+
+                if (bad)
+                    break;
 
                 auto rule = buildRule(*icr.ruleClause);
                 if (!node->rule) {
@@ -437,21 +522,17 @@ ConfigBlockSymbol& ConfigBlockSymbol::fromSyntax(const Scope& scope,
                     node->rule = comp.emplace<ConfigRule>(rule);
                 }
                 else {
-                    // Already a rule; see if we can merge or if it's an error.
-                    auto& nr = *node->rule;
-                    if ((bool(rule.paramOverrides) && bool(nr.paramOverrides)) ||
-                        (rule.liblist.has_value() && nr.liblist.has_value()) ||
-                        (!rule.useCell.name.empty() && !nr.useCell.name.empty())) {
-                        // TODO: error
-                    }
-                    else {
-                        if (rule.paramOverrides)
-                            nr.paramOverrides = rule.paramOverrides;
-                        if (rule.liblist)
-                            nr.liblist = rule.liblist;
-                        if (!rule.useCell.name.empty())
-                            nr.useCell = rule.useCell;
-                    }
+                    // Merge the two rules, or warn if we cannot.
+                    mergeRules(*node->rule, rule, [&] {
+                        std::string name = "instance '";
+                        name += topName;
+                        for (auto& part : icr.instanceNames) {
+                            name.push_back('.');
+                            name += part->name.valueText();
+                        }
+                        name.push_back('\'');
+                        return name;
+                    });
                 }
                 break;
             }
@@ -459,8 +540,6 @@ ConfigBlockSymbol& ConfigBlockSymbol::fromSyntax(const Scope& scope,
                 SLANG_UNREACHABLE;
         }
     }
-
-    return *result;
 }
 
 void ConfigBlockSymbol::serializeTo(ASTSerializer&) const {

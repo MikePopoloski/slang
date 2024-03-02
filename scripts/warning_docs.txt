@@ -1137,3 +1137,25 @@ module m;
     end
 endmodule
 ```
+
+-Wunknown-library
+A configuration library list references an unknown library.
+@options --top=cfg
+```
+config cfg;
+    design d;
+    default liblist foo;
+endconfig
+```
+
+-Wdup-config-rule
+More than one rule in a configuration targets the same cell or instance. They can't both
+be used, so slang takes the first one and ignores all others.
+@options --top=cfg
+```
+config cfg;
+    design d;
+    instance d.foo use bar;
+    instance d.foo use baz;
+endconfig
+```

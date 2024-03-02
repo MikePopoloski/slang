@@ -342,7 +342,7 @@ static const HierarchyOverrideNode* findParentOverrideNode(const Scope& scope) {
 
 static const ConfigBlockSymbol::InstanceOverride* findInstanceOverrideNode(
     const ResolvedConfig& resolvedConfig, const Scope* scope) {
-    auto& instOverrides = resolvedConfig.useConfig.instanceOverrides;
+    auto& instOverrides = resolvedConfig.useConfig.getInstanceOverrides();
     if (instOverrides.empty())
         return nullptr;
 
@@ -582,12 +582,13 @@ void InstanceSymbol::fromSyntax(Compilation& comp, const HierarchyInstantiationS
                             const ConfigBlockSymbol* newRoot = nullptr;
                             if (def && def->kind == SymbolKind::ConfigBlock) {
                                 newRoot = &def->as<ConfigBlockSymbol>();
-                                if (newRoot->topCells.size() != 1) {
+                                auto topCells = newRoot->getTopCells();
+                                if (topCells.size() != 1) {
                                     // TODO: error
                                     def = nullptr;
                                 }
                                 else {
-                                    def = comp.getDefinition(*newRoot, newRoot->topCells[0]);
+                                    def = comp.getDefinition(*newRoot, topCells[0]);
                                 }
                             }
 

@@ -1062,8 +1062,8 @@ TEST_CASE("Config declaration parsing") {
     auto& text = R"(
 config cfgl;
     design rtlLib.top;
-    instance top use #(.WIDTH(32));
-    instance top.a1 use #(.W(top.WIDTH));
+    instance top.a1 use #(.WIDTH(32));
+    instance top.a2 use #(.W(top.WIDTH));
 endconfig
 
 config cfg2;
@@ -1121,8 +1121,8 @@ TEST_CASE("Library map parsing") {
     auto tree = SyntaxTree::fromLibraryMapText(R"(
 config cfgl;
     design rtlLib.top;
-    instance top use #(.WIDTH(32));
-    instance top.a1 use #(.W(top.WIDTH));
+    instance top.a1 use #(.WIDTH(32));
+    instance top.a2 use #(.W(top.WIDTH));
 endconfig
 
 ;;
@@ -1181,13 +1181,15 @@ config cfg;
     default liblist a;
     instance foo.bar use #() : config;
     default liblist b;
+    instance foo use foo;
 endconfig
 )";
 
     parseCompilationUnit(text);
 
-    REQUIRE(diagnostics.size() == 3);
+    REQUIRE(diagnostics.size() == 4);
     CHECK(diagnostics[0].code == diag::ExpectedIdentifier);
     CHECK(diagnostics[1].code == diag::ConfigMissingName);
     CHECK(diagnostics[2].code == diag::MultipleDefaultRules);
+    CHECK(diagnostics[3].code == diag::ConfigInstanceRuleRoot);
 }
