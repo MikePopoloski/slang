@@ -856,7 +856,7 @@ const Type* GenericClassDefSymbol::getSpecializationImpl(
     paramBuilder.setSuppressErrors(isForDefault);
     paramBuilder.setInstanceContext(context);
     if (syntax)
-        paramBuilder.setAssignments(*syntax);
+        paramBuilder.setAssignments(*syntax, /* isFromConfig */ false);
 
     SourceRange instRange = {instanceLoc, instanceLoc + 1};
 

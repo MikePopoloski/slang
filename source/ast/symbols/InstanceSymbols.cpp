@@ -264,15 +264,22 @@ InstanceSymbol::InstanceSymbol(Compilation& compilation, std::string_view name, 
                                                       isUninstantiated, isFromBind)) {
 }
 
-InstanceSymbol& InstanceSymbol::createDefault(Compilation& compilation,
-                                              const DefinitionSymbol& definition,
+InstanceSymbol& InstanceSymbol::createDefault(Compilation& comp, const DefinitionSymbol& definition,
                                               const HierarchyOverrideNode* hierarchyOverrideNode,
+                                              const ConfigBlockSymbol* configBlock,
+                                              const ConfigRule* configRule,
                                               SourceLocation locationOverride) {
     auto loc = locationOverride ? locationOverride : definition.location;
-    return *compilation.emplace<InstanceSymbol>(
+    auto& result = *comp.emplace<InstanceSymbol>(
         definition.name, loc,
-        InstanceBodySymbol::fromDefinition(compilation, definition, loc,
-                                           /* isUninstantiated */ false, hierarchyOverrideNode));
+        InstanceBodySymbol::fromDefinition(comp, definition, loc,
+                                           /* isUninstantiated */ false, hierarchyOverrideNode,
+                                           configBlock, configRule));
+
+    if (configBlock)
+        result.resolvedConfig = comp.emplace<ResolvedConfig>(*configBlock, result);
+
+    return result;
 }
 
 InstanceSymbol& InstanceSymbol::createVirtual(
@@ -282,7 +289,7 @@ InstanceSymbol& InstanceSymbol::createVirtual(
     ParameterBuilder paramBuilder(*context.scope, definition.name, definition.parameters);
     paramBuilder.setInstanceContext(context);
     if (paramAssignments)
-        paramBuilder.setAssignments(*paramAssignments);
+        paramBuilder.setAssignments(*paramAssignments, /* isFromConfig */ false);
 
     auto& comp = context.getCompilation();
     auto& result = *comp.emplace<InstanceSymbol>(comp, definition.name, loc, definition,
@@ -303,7 +310,7 @@ InstanceSymbol& InstanceSymbol::createInvalid(Compilation& compilation,
     return *compilation.emplace<InstanceSymbol>(
         "", SourceLocation::NoLocation,
         InstanceBodySymbol::fromDefinition(compilation, definition, definition.location,
-                                           /* isUninstantiated */ true, nullptr));
+                                           /* isUninstantiated */ true, nullptr, nullptr, nullptr));
 }
 
 static const HierarchyOverrideNode* findParentOverrideNode(const Scope& scope) {
@@ -342,7 +349,7 @@ static const HierarchyOverrideNode* findParentOverrideNode(const Scope& scope) {
 
 static const ConfigBlockSymbol::InstanceOverride* findInstanceOverrideNode(
     const ResolvedConfig& resolvedConfig, const Scope* scope) {
-    auto& instOverrides = resolvedConfig.useConfig.instanceOverrides;
+    auto& instOverrides = resolvedConfig.useConfig.getInstanceOverrides();
     if (instOverrides.empty())
         return nullptr;
 
@@ -514,7 +521,7 @@ void InstanceSymbol::fromSyntax(Compilation& comp, const HierarchyInstantiationS
 
         ParameterBuilder paramBuilder(*context.scope, definition.name, definition.parameters);
         if (syntax.parameters)
-            paramBuilder.setAssignments(*syntax.parameters);
+            paramBuilder.setAssignments(*syntax.parameters, /* isFromConfig */ false);
 
         auto localConfig = resolvedConfig;
         if (confRule) {
@@ -524,6 +531,11 @@ void InstanceSymbol::fromSyntax(Compilation& comp, const HierarchyInstantiationS
             if (confRule->liblist)
                 rc->liblist = *confRule->liblist;
             localConfig = rc;
+
+            if (confRule->paramOverrides) {
+                paramBuilder.setConfigScope(rc->useConfig);
+                paramBuilder.setAssignments(*confRule->paramOverrides, /* isFromConfig */ true);
+            }
         }
 
         InstanceBuilder builder(context, definition, paramBuilder, parentOverrideNode,
@@ -582,12 +594,13 @@ void InstanceSymbol::fromSyntax(Compilation& comp, const HierarchyInstantiationS
                             const ConfigBlockSymbol* newRoot = nullptr;
                             if (def && def->kind == SymbolKind::ConfigBlock) {
                                 newRoot = &def->as<ConfigBlockSymbol>();
-                                if (newRoot->topCells.size() != 1) {
+                                auto topCells = newRoot->getTopCells();
+                                if (topCells.size() != 1) {
                                     // TODO: error
                                     def = nullptr;
                                 }
                                 else {
-                                    def = comp.getDefinition(*newRoot, newRoot->topCells[0]);
+                                    def = &topCells[0].definition;
                                 }
                             }
 
@@ -771,7 +784,8 @@ void InstanceSymbol::connectDefaultIfacePorts() const {
         if (port->kind == SymbolKind::InterfacePort) {
             auto& ifacePort = port->as<InterfacePortSymbol>();
             if (ifacePort.interfaceDef) {
-                auto& inst = createDefault(comp, *ifacePort.interfaceDef, nullptr, port->location);
+                auto& inst = createDefault(comp, *ifacePort.interfaceDef, nullptr, nullptr, nullptr,
+                                           port->location);
                 inst.setParent(*parent);
 
                 auto portRange = SourceRange{ifacePort.location,
@@ -811,13 +825,20 @@ InstanceBodySymbol::InstanceBodySymbol(Compilation& compilation, const Definitio
 
 InstanceBodySymbol& InstanceBodySymbol::fromDefinition(
     Compilation& compilation, const DefinitionSymbol& definition, SourceLocation instanceLoc,
-    bool isUninstantiated, const HierarchyOverrideNode* hierarchyOverrideNode) {
+    bool isUninstantiated, const HierarchyOverrideNode* hierarchyOverrideNode,
+    const ConfigBlockSymbol* configBlock, const ConfigRule* configRule) {
 
     ParameterBuilder paramBuilder(*definition.getParentScope(), definition.name,
                                   definition.parameters);
     paramBuilder.setForceInvalidValues(isUninstantiated);
     if (hierarchyOverrideNode)
         paramBuilder.setOverrides(hierarchyOverrideNode);
+
+    if (configRule && configRule->paramOverrides) {
+        SLANG_ASSERT(configBlock);
+        paramBuilder.setConfigScope(*configBlock);
+        paramBuilder.setAssignments(*configRule->paramOverrides, /* isFromConfig */ true);
+    }
 
     return fromDefinition(compilation, definition, instanceLoc, paramBuilder, isUninstantiated,
                           /* isFromBind */ false);

@@ -28,11 +28,12 @@ public:
 
     bool hasErrors() const { return anyErrors; }
 
-    void setAssignments(const syntax::ParameterValueAssignmentSyntax& syntax);
+    void setAssignments(const syntax::ParameterValueAssignmentSyntax& syntax, bool isFromConfig);
     void setOverrides(const HierarchyOverrideNode* newVal) { overrideNode = newVal; }
     void setForceInvalidValues(bool set) { forceInvalidValues = set; }
     void setSuppressErrors(bool set) { suppressErrors = set; }
     void setInstanceContext(const ASTContext& context) { instanceContext = &context; }
+    void setConfigScope(const Scope& confScope) { configScope = &confScope; }
 
     const HierarchyOverrideNode* getOverrides() const { return overrideNode; }
 
@@ -51,9 +52,10 @@ private:
     const Scope& scope;
     std::string_view definitionName;
     std::span<const Decl> parameterDecls;
-    SmallMap<std::string_view, const syntax::ExpressionSyntax*, 8> assignments;
+    SmallMap<std::string_view, std::pair<const syntax::ExpressionSyntax*, bool>, 8> assignments;
     const ASTContext* instanceContext = nullptr;
     const HierarchyOverrideNode* overrideNode = nullptr;
+    const Scope* configScope = nullptr;
     bool forceInvalidValues = false;
     bool suppressErrors = false;
     bool anyErrors = false;

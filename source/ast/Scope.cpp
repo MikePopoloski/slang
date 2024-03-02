@@ -1352,7 +1352,7 @@ void Scope::handleNestedDefinition(const ModuleDeclarationSyntax& syntax) const 
     if (!def || def->isInstantiated())
         return;
 
-    auto& inst = InstanceSymbol::createDefault(compilation, *def, nullptr);
+    auto& inst = InstanceSymbol::createDefault(compilation, *def, nullptr, nullptr, nullptr);
     insertMember(&inst, lastMember, /* isElaborating */ true, /* incrementIndex */ true);
 }
 

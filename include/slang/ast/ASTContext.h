@@ -178,9 +178,12 @@ enum class SLANG_EXPORT ASTFlags : uint64_t {
     /// AST binding should not count symbol references towards that symbol being "used".
     /// If this flag is not set, accessing a variable or net in an expression will count
     /// that symbol as being "used".
-    NoReference = 1ull << 40
+    NoReference = 1ull << 40,
+
+    /// AST binding is for a parameter inside a SystemVerilog configuration.
+    ConfigParam = 1ull << 41
 };
-SLANG_BITMASK(ASTFlags, NoReference)
+SLANG_BITMASK(ASTFlags, ConfigParam)
 
 // clang-format off
 #define DK(x) \

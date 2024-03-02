@@ -335,7 +335,8 @@ public:
     /// Gets the definition indicated by the given config and cell ID, or nullptr
     /// if it does not exist. If no definition is found an appropriate diagnostic will be issued.
     const DefinitionSymbol* getDefinition(const ConfigBlockSymbol& config,
-                                          const ConfigCellId& cell) const;
+                                          std::string_view cellName, std::string_view libName,
+                                          SourceRange sourceRange) const;
 
     /// Gets a list of all definitions (including primitives) in the design.
     std::vector<const Symbol*> getDefinitions() const;

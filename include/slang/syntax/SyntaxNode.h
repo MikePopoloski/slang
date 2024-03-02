@@ -20,6 +20,32 @@ namespace slang::syntax {
 
 class SyntaxNode;
 
+/// A token pointer or a syntax node.
+struct SLANG_EXPORT PtrTokenOrSyntax : public std::variant<parsing::Token*, SyntaxNode*> {
+    using Base = std::variant<parsing::Token*, SyntaxNode*>;
+    PtrTokenOrSyntax(parsing::Token* token) : Base(token) {}
+    PtrTokenOrSyntax(SyntaxNode* node) : Base(node) {}
+    PtrTokenOrSyntax(nullptr_t) : Base((parsing::Token*)nullptr) {}
+
+    /// @return true if the object is a token.
+    bool isToken() const { return this->index() == 0; }
+
+    /// @return true if the object is a syntax node.
+    bool isNode() const { return this->index() == 1; }
+
+    /// Gets access to the object as a token (throwing an exception
+    /// if it's not actually a token).
+    parsing::Token* token() const { return std::get<0>(*this); }
+
+    /// Gets access to the object as a syntax node (throwing an exception
+    /// if it's not actually a syntax node).
+    SyntaxNode* node() const { return std::get<1>(*this); }
+
+    /// Gets the source range for the token or syntax node or NoLocation if it
+    /// points to nullptr.
+    SourceRange range() const;
+};
+
 /// A token or a constant syntax node.
 struct SLANG_EXPORT ConstTokenOrSyntax : public std::variant<parsing::Token, const SyntaxNode*> {
     using Base = std::variant<parsing::Token, const SyntaxNode*>;
@@ -81,6 +107,12 @@ public:
     /// Get the last leaf token in this subtree.
     Token getLastToken() const;
 
+    /// Get the first leaf token as a mutable pointer in this subtree.
+    Token* getFirstTokenPtr();
+
+    /// Get the last leaf token a mutable pointer in this subtree.
+    Token* getLastTokenPtr();
+
     /// Get the source range of the node.
     SourceRange sourceRange() const;
 
@@ -96,6 +128,11 @@ public:
     /// the given index is not a token (probably a node) then this returns
     /// an empty Token.
     Token childToken(size_t index) const;
+
+    /// Gets a pointer to the child token at the specified index. If the
+    /// child at the given index is not a token (probably a node) then
+    /// this returns null.
+    Token* childTokenPtr(size_t index);
 
     /// Gets the number of (direct) children underneath this node in the tree.
     size_t getChildCount() const; // Note: implemented in AllSyntax.cpp
@@ -159,6 +196,7 @@ protected:
 private:
     ConstTokenOrSyntax getChild(size_t index) const;
     TokenOrSyntax getChild(size_t index);
+    PtrTokenOrSyntax getChildPtr(size_t index);
 };
 
 /// @brief Performs a shallow clone of the given syntax node.
@@ -234,6 +272,9 @@ public:
     /// Gets the child (token or node) at the given index.
     virtual ConstTokenOrSyntax getChild(size_t index) const = 0;
 
+    // Gets the child pointer (token or node) at given index.
+    virtual PtrTokenOrSyntax getChildPtr(size_t index) = 0;
+
     /// Sets the child (token or node) at the given index.
     virtual void setChild(size_t index, TokenOrSyntax child) = 0;
 
@@ -263,6 +304,7 @@ public:
 private:
     TokenOrSyntax getChild(size_t index) final { return (*this)[index]; }
     ConstTokenOrSyntax getChild(size_t index) const final { return (*this)[index]; }
+    PtrTokenOrSyntax getChildPtr(size_t index) final { return (*this)[index]; };
 
     void setChild(size_t index, TokenOrSyntax child) final {
         (*this)[index] = &child.node()->as<T>();
@@ -301,6 +343,7 @@ public:
 private:
     TokenOrSyntax getChild(size_t index) final { return (*this)[index]; }
     ConstTokenOrSyntax getChild(size_t index) const final { return (*this)[index]; }
+    PtrTokenOrSyntax getChildPtr(size_t index) final { return &(*this)[index]; };
     void setChild(size_t index, TokenOrSyntax child) final { (*this)[index] = child.token(); }
 
     SyntaxListBase* clone(BumpAllocator& alloc) const final {
@@ -392,6 +435,12 @@ public:
 private:
     TokenOrSyntax getChild(size_t index) final { return elements[index]; }
     ConstTokenOrSyntax getChild(size_t index) const final { return elements[index]; }
+    PtrTokenOrSyntax getChildPtr(size_t index) final {
+        if (elements[index].isNode())
+            return elements[index].node();
+        else
+            return &(std::get<parsing::Token>(elements[index]));
+    }
     void setChild(size_t index, TokenOrSyntax child) final { elements[index] = child; }
 
     SyntaxListBase* clone(BumpAllocator& alloc) const final {

@@ -1062,8 +1062,8 @@ TEST_CASE("Config declaration parsing") {
     auto& text = R"(
 config cfgl;
     design rtlLib.top;
-    instance top use #(.WIDTH(32));
-    instance top.a1 use #(.W(top.WIDTH));
+    instance top.a1 use #(.WIDTH(32));
+    instance top.a2 use #(.W(top.WIDTH));
 endconfig
 
 config cfg2;
@@ -1121,8 +1121,8 @@ TEST_CASE("Library map parsing") {
     auto tree = SyntaxTree::fromLibraryMapText(R"(
 config cfgl;
     design rtlLib.top;
-    instance top use #(.WIDTH(32));
-    instance top.a1 use #(.W(top.WIDTH));
+    instance top.a1 use #(.WIDTH(32));
+    instance top.a2 use #(.W(top.WIDTH));
 endconfig
 
 ;;

@@ -352,7 +352,8 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamsAndBinds) {
     // Find top level modules (and programs) that form the root of the design.
     // Iterate the definitions map before instantiating any top level modules,
     // since that can cause changes to the definition map itself.
-    SmallVector<std::pair<const DefinitionSymbol*, const ConfigBlockSymbol*>> topDefs;
+    SmallVector<std::tuple<const DefinitionSymbol*, const ConfigBlockSymbol*, const ConfigRule*>>
+        topDefs;
     SmallSet<const ConfigBlockSymbol*, 2> selectedConfigs;
     if (options.topModules.empty()) {
         for (auto& [key, defList] : definitionMap) {
@@ -381,7 +382,7 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamsAndBinds) {
                         def.definitionKind == DefinitionKind::Program) {
                         if (isValidTop(def)) {
                             // This definition can be automatically instantiated.
-                            topDefs.push_back({&def, nullptr});
+                            topDefs.push_back({&def, nullptr, nullptr});
                             continue;
                         }
                     }
@@ -420,7 +421,7 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamsAndBinds) {
 
                         // Make sure this is actually valid as a top-level module.
                         if (isValidTop(def)) {
-                            topDefs.push_back({&def, nullptr});
+                            topDefs.push_back({&def, nullptr, nullptr});
                             continue;
                         }
 
@@ -470,11 +471,9 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamsAndBinds) {
                 }
 
                 if (foundConf) {
-                    for (auto& cell : foundConf->topCells) {
-                        if (auto def = getDefinition(*foundConf, cell)) {
-                            selectedConfigs.emplace(foundConf);
-                            topDefs.push_back({def, foundConf});
-                        }
+                    for (auto& cell : foundConf->getTopCells()) {
+                        selectedConfigs.emplace(foundConf);
+                        topDefs.push_back({&cell.definition, foundConf, cell.rule});
                     }
                     continue;
                 }
@@ -486,14 +485,15 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamsAndBinds) {
 
     // Sort the list of definitions so that we get deterministic ordering of instances;
     // the order is otherwise dependent on iterating over a hash table.
-    std::ranges::sort(topDefs, [](auto a, auto b) { return a.first->name < b.first->name; });
+    std::ranges::sort(topDefs,
+                      [](auto a, auto b) { return std::get<0>(a)->name < std::get<0>(b)->name; });
     std::ranges::sort(unreferencedDefs, [](auto a, auto b) { return a->name < b->name; });
 
     // If we have any cli param overrides we should apply them to
     // each top-level instance.
     // TODO: generalize these to full hierarchical paths
     if (!cliOverrides.empty()) {
-        for (auto [def, config] : topDefs) {
+        for (auto [def, config, configRule] : topDefs) {
             for (auto& param : def->parameters) {
                 if (!param.isTypeParam && param.hasSyntax) {
                     auto it = cliOverrides.find(param.name);
@@ -508,7 +508,7 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamsAndBinds) {
     }
 
     SmallVector<const InstanceSymbol*> topList;
-    for (auto [def, config] : topDefs) {
+    for (auto [def, config, configRule] : topDefs) {
         HierarchyOverrideNode* hierarchyOverrideNode = nullptr;
         if (auto sit = hierarchyOverrides.childrenBySyntax.find(*def->getSyntax());
             sit != hierarchyOverrides.childrenBySyntax.end()) {
@@ -519,12 +519,10 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamsAndBinds) {
             hierarchyOverrideNode = &nit->second;
         }
 
-        auto& instance = InstanceSymbol::createDefault(*this, *def, hierarchyOverrideNode);
+        auto& instance = InstanceSymbol::createDefault(*this, *def, hierarchyOverrideNode, config,
+                                                       configRule);
         root->addMember(instance);
         topList.push_back(&instance);
-
-        if (config)
-            instance.resolvedConfig = emplace<ResolvedConfig>(*config, instance);
     }
 
     if (!hasFlag(CompilationFlags::SuppressUnused) && topDefs.empty())
@@ -654,8 +652,10 @@ const Symbol* Compilation::getDefinition(std::string_view lookupName, const Scop
 }
 
 const DefinitionSymbol* Compilation::getDefinition(const ConfigBlockSymbol& config,
-                                                   const ConfigCellId& cell) const {
-    if (auto defIt = definitionMap.find(std::tuple{cell.name, root.get()});
+                                                   std::string_view cellName,
+                                                   std::string_view libName,
+                                                   SourceRange sourceRange) const {
+    if (auto defIt = definitionMap.find(std::tuple{cellName, root.get()});
         defIt != definitionMap.end()) {
 
         const DefinitionSymbol* foundDef = nullptr;
@@ -664,24 +664,26 @@ const DefinitionSymbol* Compilation::getDefinition(const ConfigBlockSymbol& conf
                 continue;
 
             auto& def = defSym->as<DefinitionSymbol>();
-            if (def.sourceLibrary.name == cell.lib ||
-                (cell.lib.empty() && &def.sourceLibrary == config.getSourceLibrary())) {
+            if (def.sourceLibrary.name == libName ||
+                (libName.empty() && &def.sourceLibrary == config.getSourceLibrary())) {
                 foundDef = &def;
                 break;
             }
         }
 
-        if (foundDef)
+        if (foundDef && (foundDef->definitionKind == DefinitionKind::Module ||
+                         foundDef->definitionKind == DefinitionKind::Program)) {
             return foundDef;
+        }
     }
 
     std::string errorName;
-    if (!cell.lib.empty())
-        errorName = fmt::format("{}.{}", cell.lib, cell.name);
+    if (!libName.empty())
+        errorName = fmt::format("{}.{}", libName, cellName);
     else
-        errorName = cell.name;
+        errorName = cellName;
 
-    root->addDiag(diag::InvalidTopModule, cell.sourceRange) << errorName;
+    root->addDiag(diag::InvalidTopModule, sourceRange) << errorName;
     return nullptr;
 }
 
@@ -2289,9 +2291,8 @@ std::pair<const Symbol*, bool> Compilation::resolveConfigRules(
         liblist = parentConfig->liblist;
 
         auto& conf = parentConfig->useConfig;
-        if (auto overrideIt = conf.cellOverrides.find(lookupName);
-            overrideIt != conf.cellOverrides.end()) {
-
+        auto& overrides = conf.getCellOverrides();
+        if (auto overrideIt = overrides.find(lookupName); overrideIt != overrides.end()) {
             // There is at least one cell override with this name; look through the
             // list and take the first one that matches our library restrictions.
             for (auto& cellOverride : overrideIt->second) {

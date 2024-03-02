@@ -494,6 +494,8 @@ error NetAliasNotANet "'{}' is not a net and so cannot be used in a net alias st
 error NetAliasCommonNetType "all nets in a net alias statement must have a common nettype -- '{}' has nettype '{}' but previously saw '{}'"
 error MissingExternWildcardPorts "could not find extern declaration for '{}' from which to take port list"
 error ExternIfaceArrayMethod "cannot connect extern subroutine to interface array"
+error ConfigInstanceWrongTop "config instance path must start with one of the cells named in the 'design' statement"
+error ConfigDupTop "config design specifies more than one top module named '{}'"
 error FatalTask "$fatal encountered{}"
 error ErrorTask "$error encountered{}"
 error StaticAssert "static assertion failed{}"
@@ -518,6 +520,8 @@ warning net-inconsistent NetRangeInconsistent "net type '{}' of connection bits 
 warning dup-timing-path DupTimingPath "duplicate timing path"
 warning invalid-pulsestyle InvalidPulseStyle "invalid use of {} for '{}' since it has previously appeared in a path declaration"
 warning implicit-port-type-mismatch ImplicitNamedPortTypeMismatch "implicit named port '{}' of type {} connects to value of inequivalent type {}"
+warning unknown-library WarnUnknownLibrary "unknown library '{}'"
+warning dup-config-rule DupConfigRule "duplicate config rule for {} -- ignoring this one"
 
 subsystem Expressions
 error BadUnaryExpression "invalid operand type {} to unary expression"
@@ -1055,7 +1059,8 @@ group default = { real-underflow real-overflow vector-overflow int-overflow unco
                   invalid-pragma-viewport duplicate-definition protect-encoding-bytes invalid-encoding-byte
                   raw-protect-eof protected-envelope specify-param dup-timing-path invalid-pulsestyle
                   negative-timing-limit bad-procedural-force duplicate-defparam implicit-port-type-mismatch
-                  split-distweight-op dpi-pure-task multibit-edge unknown-sys-name multiple-always-assigns }
+                  split-distweight-op dpi-pure-task multibit-edge unknown-sys-name unknown-library
+                  dup-config-rule multiple-always-assigns }
 
 group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-none case-gen-dup
                 unused-result format-real ignored-slice task-ignored width-trunc dup-attr event-const

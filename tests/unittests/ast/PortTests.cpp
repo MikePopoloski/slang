@@ -123,7 +123,7 @@ module m6(I.bar bar); endmodule
         auto def = compilation.tryGetDefinition(defName, compilation.getRoot());
         REQUIRE(def);
         auto& inst = InstanceSymbol::createDefault(compilation, def->as<DefinitionSymbol>(),
-                                                   nullptr);
+                                                   nullptr, nullptr, nullptr);
         return inst.body.findPort(portName);
     };
 

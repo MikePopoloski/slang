@@ -93,6 +93,8 @@ const ConstantValue& ParameterSymbol::getValue(SourceRange referencingRange) con
             SLANG_ASSERT(scope);
 
             ASTContext ctx(*scope, LookupLocation::max);
+            if (isFromConf)
+                ctx.flags |= ASTFlags::ConfigParam;
 
             if (evaluating) {
                 SLANG_ASSERT(referencingRange.start());
