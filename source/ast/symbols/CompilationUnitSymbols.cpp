@@ -382,22 +382,23 @@ void ConfigBlockSymbol::resolve() const {
     auto& comp = scope->getCompilation();
     auto& syntax = getSyntax()->as<ConfigDeclarationSyntax>();
 
-    SmallSet<std::string_view, 2> topCellNames;
-    SmallVector<ConfigCellId> topCellsBuf;
+    SmallMap<std::string_view, size_t, 2> topCellNames;
+    SmallVector<TopCell> topCellsBuf;
     for (auto cellId : syntax.topCells) {
         auto cellName = cellId->cell.valueText();
         if (!cellName.empty()) {
-            auto [it, inserted] = topCellNames.emplace(cellName);
-            if (inserted) {
-                topCellsBuf.emplace_back(cellId->library.valueText(), cellName,
-                                         cellId->sourceRange());
-            }
-            else {
+            auto def = comp.getDefinition(*this, cellName, cellId->library.valueText(),
+                                          cellId->sourceRange());
+            if (!def)
+                continue;
+
+            auto [it, inserted] = topCellNames.emplace(cellName, topCellsBuf.size());
+            if (inserted)
+                topCellsBuf.emplace_back(*def);
+            else
                 scope->addDiag(diag::ConfigDupTop, cellId->cell.range()) << cellName;
-            }
         }
     }
-    topCells = topCellsBuf.copy(comp);
 
     auto buildLiblist = [&](const ConfigLiblistSyntax& cll) {
         SmallVector<const SourceLibrary*> buf;
@@ -497,7 +498,7 @@ void ConfigBlockSymbol::resolve() const {
             case SyntaxKind::InstanceConfigRule: {
                 auto& icr = ruleSyntax->as<InstanceConfigRuleSyntax>();
                 const auto topName = icr.topModule.valueText();
-                if (topName.empty() || icr.instanceNames.empty())
+                if (topName.empty())
                     break;
 
                 if (!topCellNames.contains(topName)) {
@@ -540,6 +541,41 @@ void ConfigBlockSymbol::resolve() const {
                 SLANG_UNREACHABLE;
         }
     }
+
+    // Check if any overrides should apply to the root instances.
+    // TODO: check validity of overrides here as applied to a root instance
+    for (auto& [cellName, instOverride] : instanceOverrides) {
+        if (instOverride.rule) {
+            auto it = topCellNames.find(cellName);
+            SLANG_ASSERT(it != topCellNames.end());
+            topCellsBuf[it->second].rule = instOverride.rule;
+        }
+    }
+
+    for (auto& topCell : topCellsBuf) {
+        // If we already set a rule for this cell via an instance
+        // override we don't need a less specific cell override.
+        if (topCell.rule)
+            continue;
+
+        if (auto it = cellOverrides.find(topCell.definition.name); it != cellOverrides.end()) {
+            CellOverride* defaultOverride = nullptr;
+            for (auto& co : it->second) {
+                if (!co.specificLib) {
+                    defaultOverride = &co;
+                }
+                else if (co.specificLib == &topCell.definition.sourceLibrary) {
+                    topCell.rule = &co.rule;
+                    break;
+                }
+            }
+
+            if (!topCell.rule && defaultOverride)
+                topCell.rule = &defaultOverride->rule;
+        }
+    }
+
+    topCells = topCellsBuf.copy(comp);
 }
 
 void ConfigBlockSymbol::serializeTo(ASTSerializer&) const {

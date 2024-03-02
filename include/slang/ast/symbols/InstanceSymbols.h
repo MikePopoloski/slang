@@ -31,6 +31,7 @@ class PortConnection;
 class PortSymbol;
 class PrimitiveSymbol;
 class TimingControl;
+struct ConfigRule;
 struct ResolvedConfig;
 struct HierarchyOverrideNode;
 enum class DriveStrength : int;
@@ -98,6 +99,8 @@ public:
     static InstanceSymbol& createDefault(Compilation& compilation,
                                          const DefinitionSymbol& definition,
                                          const HierarchyOverrideNode* hierarchyOverrideNode,
+                                         const ConfigBlockSymbol* configBlock,
+                                         const ConfigRule* configRule,
                                          SourceLocation locationOverride = {});
 
     /// Creates a placeholder instance for a virtual interface type declaration.
@@ -163,7 +166,9 @@ public:
     static InstanceBodySymbol& fromDefinition(Compilation& compilation,
                                               const DefinitionSymbol& definition,
                                               SourceLocation instanceLoc, bool isUninstantiated,
-                                              const HierarchyOverrideNode* hierarchyOverrideNode);
+                                              const HierarchyOverrideNode* hierarchyOverrideNode,
+                                              const ConfigBlockSymbol* configBlock,
+                                              const ConfigRule* configRule);
 
     static InstanceBodySymbol& fromDefinition(Compilation& compilation,
                                               const DefinitionSymbol& definition,

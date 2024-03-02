@@ -218,7 +218,7 @@ private:
 };
 
 /// Identifies a specific cell as part of a config rule.
-struct ConfigCellId {
+struct SLANG_EXPORT ConfigCellId {
     /// The library containing the cell (or empty to specify
     /// that other logic should be used to find the library).
     std::string_view lib;
@@ -238,7 +238,7 @@ struct ConfigCellId {
 };
 
 /// A rule that controls how a specific cell or instance in the design is configured.
-struct ConfigRule {
+struct SLANG_EXPORT ConfigRule {
     /// A list of libraries to use to look up definitions.
     std::optional<std::span<const SourceLibrary* const>> liblist;
 
@@ -254,7 +254,7 @@ struct ConfigRule {
 
 /// Contains information about a resolved configuration rule
 /// that affects an instance and the hierarchy underneath it.
-struct ResolvedConfig {
+struct SLANG_EXPORT ResolvedConfig {
     /// A specific configuration to use for this hierarchy.
     const ConfigBlockSymbol& useConfig;
 
@@ -273,6 +273,13 @@ struct ResolvedConfig {
 /// Represents a config block declaration.
 class SLANG_EXPORT ConfigBlockSymbol : public Symbol, public Scope {
 public:
+    struct TopCell {
+        const DefinitionSymbol& definition;
+        ConfigRule* rule = nullptr;
+
+        explicit TopCell(const DefinitionSymbol& definition) : definition(definition) {}
+    };
+
     struct CellOverride {
         const SourceLibrary* specificLib = nullptr;
         ConfigRule rule;
@@ -286,7 +293,7 @@ public:
     ConfigBlockSymbol(Compilation& compilation, std::string_view name, SourceLocation loc) :
         Symbol(SymbolKind::ConfigBlock, name, loc), Scope(compilation, this) {}
 
-    std::span<const ConfigCellId> getTopCells() const {
+    std::span<const TopCell> getTopCells() const {
         if (!resolved)
             resolve();
         return topCells;
@@ -320,7 +327,7 @@ public:
 private:
     void resolve() const;
 
-    mutable std::span<const ConfigCellId> topCells;
+    mutable std::span<const TopCell> topCells;
     mutable std::span<const SourceLibrary* const> defaultLiblist;
     mutable flat_hash_map<std::string_view, std::vector<CellOverride>> cellOverrides;
     mutable flat_hash_map<std::string_view, InstanceOverride> instanceOverrides;

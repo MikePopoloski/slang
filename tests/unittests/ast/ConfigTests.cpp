@@ -514,7 +514,7 @@ endmodule
 TEST_CASE("Config warning cases") {
     auto tree = SyntaxTree::fromText(R"(
 config cfg1;
-    design top lib2.top;
+    design top top;
     default liblist foo;
     cell b use c;
     cell b use d;
@@ -570,7 +570,6 @@ endconfig
         return param.getValue();
     };
 
-    // TODO: this should be 32
-    CHECK(getParam("top.a1.W").integer() == 16);
+    CHECK(getParam("top.a1.W").integer() == 32);
     CHECK(getParam("top.a1.D").integer() == 512);
 }
