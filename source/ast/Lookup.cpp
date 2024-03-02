@@ -2182,7 +2182,7 @@ void Lookup::reportUndeclared(const Scope& initialScope, std::string_view name, 
     }
 
     // Otherwise, check if this names a definition, in which case we can give a nicer error.
-    if (auto def = comp.tryGetDefinition(name, initialScope);
+    if (auto def = comp.tryGetDefinition(name, initialScope).definition;
         def && def->kind == SymbolKind::Definition) {
         if (isHierarchical) {
             result.addDiag(initialScope, diag::CouldNotResolveHierarchicalPath, range) << name;

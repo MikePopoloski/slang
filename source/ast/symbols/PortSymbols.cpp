@@ -47,7 +47,8 @@ std::tuple<const DefinitionSymbol*, std::string_view> getInterfacePortInfo(
 
     auto& comp = scope.getCompilation();
     auto token = header.nameOrKeyword;
-    auto def = comp.getDefinition(token.valueText(), scope, token.range(), diag::UnknownInterface);
+    auto def = comp.getDefinition(token.valueText(), scope, token.range(), diag::UnknownInterface)
+                   .definition;
     if (!def || def->kind != SymbolKind::Definition) {
         // If we got a result then getDefinition didn't error, so do it ourselves.
         if (def)
@@ -121,7 +122,7 @@ public:
 
                     // If we didn't find a valid type, try to find a definition.
                     if (!found || !found->isType()) {
-                        if (auto def = comp.tryGetDefinition(simpleName, scope);
+                        if (auto def = comp.tryGetDefinition(simpleName, scope).definition;
                             def && def->kind == SymbolKind::Definition) {
 
                             auto defSym = &def->as<DefinitionSymbol>();
@@ -370,7 +371,7 @@ public:
                 auto& data = syntax->as<DataDeclarationSyntax>();
                 auto& namedType = data.type->as<NamedTypeSyntax>();
                 auto typeName = namedType.name->as<IdentifierNameSyntax>().identifier.valueText();
-                auto def = comp.tryGetDefinition(typeName, scope);
+                auto def = comp.tryGetDefinition(typeName, scope).definition;
 
                 SLANG_ASSERT(def && def->kind == SymbolKind::Definition);
 

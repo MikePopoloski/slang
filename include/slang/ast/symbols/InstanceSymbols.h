@@ -96,12 +96,11 @@ public:
 
     /// Creates a default-instantiated instance of the given definition. All parameters must
     /// have defaults specified.
-    static InstanceSymbol& createDefault(Compilation& compilation,
-                                         const DefinitionSymbol& definition,
-                                         const HierarchyOverrideNode* hierarchyOverrideNode,
-                                         const ConfigBlockSymbol* configBlock,
-                                         const ConfigRule* configRule,
-                                         SourceLocation locationOverride = {});
+    static InstanceSymbol& createDefault(
+        Compilation& compilation, const DefinitionSymbol& definition,
+        const HierarchyOverrideNode* hierarchyOverrideNode = nullptr,
+        const ConfigBlockSymbol* configBlock = nullptr, const ConfigRule* configRule = nullptr,
+        SourceLocation locationOverride = {});
 
     /// Creates a placeholder instance for a virtual interface type declaration.
     static InstanceSymbol& createVirtual(

@@ -313,24 +313,38 @@ public:
     /// Gets the default library object.
     const SourceLibrary& getDefaultLibrary() const { return *defaultLibPtr; }
 
+    /// A struct containing the result of a definition lookup.
+    struct DefinitionLookupResult {
+        /// The definition that was found, or nullptr if none was found.
+        const Symbol* definition = nullptr;
+
+        /// A new config root that applies to this definition and
+        /// any hierarchy underneath it, or nullptr if none.
+        const ConfigBlockSymbol* configRoot = nullptr;
+
+        /// A config rule that applies to instances using this
+        /// definition, or nullptr if none.
+        const ConfigRule* configRule = nullptr;
+    };
+
     /// Gets the definition with the given name, or nullptr if there is no such definition.
     /// This takes into account the given scope so that nested definitions are found
     /// before more global ones.
-    const Symbol* tryGetDefinition(std::string_view name, const Scope& scope) const;
+    DefinitionLookupResult tryGetDefinition(std::string_view name, const Scope& scope) const;
 
     /// Gets the definition with the given name, or nullptr if there is no such definition.
     /// If no definition is found an appropriate diagnostic will be issued.
-    const Symbol* getDefinition(std::string_view name, const Scope& scope, SourceRange sourceRange,
-                                DiagCode code) const;
-
-    /// Gets the definition for the given syntax node, or nullptr if it does not exist.
-    const DefinitionSymbol* getDefinition(const syntax::ModuleDeclarationSyntax& syntax) const;
+    DefinitionLookupResult getDefinition(std::string_view name, const Scope& scope,
+                                         SourceRange sourceRange, DiagCode code) const;
 
     /// Gets the definition indicated by the given config rule, or nullptr if it does not exist.
     /// If no definition is found an appropriate diagnostic will be issued.
-    const Symbol* getDefinition(std::string_view name, const Scope& scope,
-                                const ConfigRule& configRule, SourceRange sourceRange,
-                                DiagCode code) const;
+    DefinitionLookupResult getDefinition(std::string_view name, const Scope& scope,
+                                         const ConfigRule& configRule, SourceRange sourceRange,
+                                         DiagCode code) const;
+
+    /// Gets the definition for the given syntax node, or nullptr if it does not exist.
+    const DefinitionSymbol* getDefinition(const syntax::ModuleDeclarationSyntax& syntax) const;
 
     /// Gets the definition indicated by the given config and cell ID, or nullptr
     /// if it does not exist. If no definition is found an appropriate diagnostic will be issued.
@@ -684,10 +698,9 @@ private:
     void checkBindTargetParams(const syntax::BindDirectiveSyntax& syntax, const Scope& scope,
                                std::span<const Symbol* const> instTargets,
                                const DefinitionSymbol* defTarget);
-    std::pair<const Symbol*, bool> resolveConfigRules(std::string_view name, const Scope& scope,
-                                                      const ResolvedConfig* parentConfig,
-                                                      const ConfigRule* configRule,
-                                                      const std::vector<Symbol*>& defList) const;
+    std::pair<DefinitionLookupResult, bool> resolveConfigRules(
+        std::string_view name, const Scope& scope, const ResolvedConfig* parentConfig,
+        const ConfigRule* configRule, const std::vector<Symbol*>& defList) const;
     Diagnostic* errorMissingDef(std::string_view name, const Scope& scope, SourceRange sourceRange,
                                 DiagCode code) const;
 

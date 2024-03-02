@@ -666,7 +666,7 @@ endpackage
     auto ts = [](std::string_view str) { return TimeScale::fromString(str).value(); };
 
     auto getDefTS = [&](std::string_view name) {
-        auto def = compilation.tryGetDefinition(name, compilation.getRoot());
+        auto def = compilation.tryGetDefinition(name, compilation.getRoot()).definition;
         REQUIRE(def);
         return def->as<DefinitionSymbol>().timeScale;
     };

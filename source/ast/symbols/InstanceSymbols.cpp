@@ -452,15 +452,16 @@ void InstanceSymbol::fromSyntax(Compilation& comp, const HierarchyInstantiationS
     // Creates instance symbols -- if specificInstance is provided then only that
     // instance will be created, otherwise all instances in the original syntax
     // node will be created in one go.
-    auto createInstances = [&](const Symbol* def,
-                               const HierarchicalInstanceSyntax* specificInstance,
-                               const ConfigRule* confRule, const ConfigBlockSymbol* newConfigRoot) {
+    auto createInstances = [&](const Compilation::DefinitionLookupResult& defResult,
+                               const HierarchicalInstanceSyntax* specificInstance) {
+        auto def = defResult.definition;
         if (!def) {
             UninstantiatedDefSymbol::fromSyntax(comp, syntax, specificInstance, context, results,
                                                 implicitNets, implicitNetNames, netType);
             return;
         }
 
+        auto confRule = defResult.configRule;
         auto addDiag = [&](DiagCode code) -> Diagnostic& {
             if (confRule) {
                 SLANG_ASSERT(specificInstance);
@@ -539,7 +540,7 @@ void InstanceSymbol::fromSyntax(Compilation& comp, const HierarchyInstantiationS
         }
 
         InstanceBuilder builder(context, definition, paramBuilder, parentOverrideNode,
-                                syntax.attributes, localConfig, newConfigRoot, isFromBind);
+                                syntax.attributes, localConfig, defResult.configRoot, isFromBind);
 
         if (specificInstance) {
             createImplicitNets(*specificInstance, context, netType, implicitNetNames, implicitNets);
@@ -575,7 +576,7 @@ void InstanceSymbol::fromSyntax(Compilation& comp, const HierarchyInstantiationS
                     // We need to handle each instance separately, as the config
                     // rules allow the entire definition and parameter values
                     // to be overridden on a per-instance basis.
-                    std::optional<const Symbol*> explicitDef;
+                    std::optional<Compilation::DefinitionLookupResult> explicitDef;
                     auto& overrideMap = overrideNode->childNodes;
                     for (auto instSyntax : syntax.instances) {
                         auto instName = instSyntax->decl ? instSyntax->decl->name.valueText()
@@ -583,28 +584,11 @@ void InstanceSymbol::fromSyntax(Compilation& comp, const HierarchyInstantiationS
                         if (auto ruleIt = overrideMap.find(instName);
                             ruleIt != overrideMap.end() && ruleIt->second.rule) {
                             // We have an override rule, so use it to lookup the def.
-                            auto rule = ruleIt->second.rule;
-                            auto def = comp.getDefinition(defName, *context.scope, *rule,
-                                                          instSyntax->sourceRange(),
-                                                          diag::UnknownModule);
-
-                            // If we got back a config block as the new root we need
-                            // to resolve that to an actual def based on the top cell
-                            // listed in the config.
-                            const ConfigBlockSymbol* newRoot = nullptr;
-                            if (def && def->kind == SymbolKind::ConfigBlock) {
-                                newRoot = &def->as<ConfigBlockSymbol>();
-                                auto topCells = newRoot->getTopCells();
-                                if (topCells.size() != 1) {
-                                    // TODO: error
-                                    def = nullptr;
-                                }
-                                else {
-                                    def = &topCells[0].definition;
-                                }
-                            }
-
-                            createInstances(def, instSyntax, rule, newRoot);
+                            auto defResult = comp.getDefinition(defName, *context.scope,
+                                                                *ruleIt->second.rule,
+                                                                instSyntax->sourceRange(),
+                                                                diag::UnknownModule);
+                            createInstances(defResult, instSyntax);
                         }
                         else {
                             // No specific config rule, so use the default lookup behavior.
@@ -613,7 +597,7 @@ void InstanceSymbol::fromSyntax(Compilation& comp, const HierarchyInstantiationS
                                                                  syntax.type.range(),
                                                                  diag::UnknownModule);
                             }
-                            createInstances(*explicitDef, instSyntax, nullptr, nullptr);
+                            createInstances(*explicitDef, instSyntax);
                         }
                     }
                     return;
@@ -623,9 +607,9 @@ void InstanceSymbol::fromSyntax(Compilation& comp, const HierarchyInstantiationS
     }
 
     // Simple case: look up the definition and create all instances in one go.
-    auto def = comp.getDefinition(defName, *context.scope, syntax.type.range(),
-                                  diag::UnknownModule);
-    createInstances(def, nullptr, nullptr, nullptr);
+    auto defResult = comp.getDefinition(defName, *context.scope, syntax.type.range(),
+                                        diag::UnknownModule);
+    createInstances(defResult, nullptr);
 }
 
 void InstanceSymbol::fromFixupSyntax(Compilation& comp, const DefinitionSymbol& definition,
@@ -1340,7 +1324,8 @@ void PrimitiveInstanceSymbol::fromSyntax(const PrimitiveInstantiationSyntax& syn
 
     if (syntax.type.kind == TokenKind::Identifier) {
         auto def = comp.getDefinition(name, *context.scope, syntax.type.range(),
-                                      diag::UnknownPrimitive);
+                                      diag::UnknownPrimitive)
+                       .definition;
         if (def) {
             if (def->kind == SymbolKind::Primitive) {
                 createPrimitives(def->as<PrimitiveSymbol>(), syntax, context, results,

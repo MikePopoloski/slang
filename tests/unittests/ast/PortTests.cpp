@@ -120,10 +120,9 @@ module m6(I.bar bar); endmodule
     compilation.addSyntaxTree(tree);
 
     auto getPort = [&](std::string_view defName, std::string_view portName) {
-        auto def = compilation.tryGetDefinition(defName, compilation.getRoot());
+        auto def = compilation.tryGetDefinition(defName, compilation.getRoot()).definition;
         REQUIRE(def);
-        auto& inst = InstanceSymbol::createDefault(compilation, def->as<DefinitionSymbol>(),
-                                                   nullptr, nullptr, nullptr);
+        auto& inst = InstanceSymbol::createDefault(compilation, def->as<DefinitionSymbol>());
         return inst.body.findPort(portName);
     };
 

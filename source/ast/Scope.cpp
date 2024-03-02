@@ -1261,7 +1261,7 @@ bool Scope::handleDataDeclaration(const DataDeclarationSyntax& syntax) {
     if (symbol || namedType.name->kind != SyntaxKind::IdentifierName)
         return false;
 
-    auto def = compilation.tryGetDefinition(name, *this);
+    auto def = compilation.tryGetDefinition(name, *this).definition;
     if (!def || def->kind != SymbolKind::Definition)
         return false;
 
@@ -1293,7 +1293,7 @@ void Scope::tryFixupInstances(const DataDeclarationSyntax& syntax, const ASTCont
                               SmallVectorBase<const Symbol*>& results) const {
     auto& namedType = syntax.type->as<NamedTypeSyntax>();
     std::string_view name = getIdentifierName(namedType);
-    auto def = compilation.tryGetDefinition(name, *this);
+    auto def = compilation.tryGetDefinition(name, *this).definition;
     if (!def || def->kind != SymbolKind::Definition)
         return;
 
@@ -1352,7 +1352,7 @@ void Scope::handleNestedDefinition(const ModuleDeclarationSyntax& syntax) const 
     if (!def || def->isInstantiated())
         return;
 
-    auto& inst = InstanceSymbol::createDefault(compilation, *def, nullptr, nullptr, nullptr);
+    auto& inst = InstanceSymbol::createDefault(compilation, *def);
     insertMember(&inst, lastMember, /* isElaborating */ true, /* incrementIndex */ true);
 }
 

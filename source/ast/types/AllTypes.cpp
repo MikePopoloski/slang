@@ -1104,7 +1104,8 @@ const Type& VirtualInterfaceType::fromSyntax(const ASTContext& context,
         return comp.getErrorType();
 
     auto def = comp.getDefinition(ifaceName, *context.scope, syntax.name.range(),
-                                  diag::UnknownInterface);
+                                  diag::UnknownInterface)
+                   .definition;
 
     if (!def || def->kind != SymbolKind::Definition ||
         def->as<DefinitionSymbol>().definitionKind != DefinitionKind::Interface) {

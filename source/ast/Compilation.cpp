@@ -551,7 +551,8 @@ const CompilationUnitSymbol* Compilation::getCompilationUnit(
     return nullptr;
 }
 
-const Symbol* Compilation::tryGetDefinition(std::string_view lookupName, const Scope& scope) const {
+Compilation::DefinitionLookupResult Compilation::tryGetDefinition(std::string_view lookupName,
+                                                                  const Scope& scope) const {
     // Try to find a config block for this scope to help choose the right definition.
     const ResolvedConfig* resolvedConfig = nullptr;
     if (auto inst = scope.getContainingInstance(); inst && inst->parentInstance)
@@ -564,7 +565,7 @@ const Symbol* Compilation::tryGetDefinition(std::string_view lookupName, const S
         // override for this cell name.
         if (resolvedConfig)
             return resolveConfigRules(lookupName, scope, resolvedConfig, nullptr, {}).first;
-        return nullptr;
+        return {};
     }
 
     // If the second flag is set it means there are nested modules
@@ -590,13 +591,14 @@ const Symbol* Compilation::tryGetDefinition(std::string_view lookupName, const S
     for (auto lib : defaultLiblist) {
         for (auto def : defList) {
             if (def->getSourceLibrary() == lib)
-                return def;
+                return {def, nullptr, nullptr};
         }
     }
 
     // Otherwise return the first definition in the list -- it's already
     // sorted in priority order.
-    return defList.empty() ? nullptr : defList.front();
+    return defList.empty() ? DefinitionLookupResult{}
+                           : DefinitionLookupResult{defList.front(), nullptr, nullptr};
 }
 
 static Token getExternNameToken(const SyntaxNode& sn) {
@@ -604,13 +606,36 @@ static Token getExternNameToken(const SyntaxNode& sn) {
                                                    : sn.as<ExternUdpDeclSyntax>().name;
 }
 
-const Symbol* Compilation::getDefinition(std::string_view name, const Scope& scope,
-                                         SourceRange sourceRange, DiagCode code) const {
-    if (auto def = tryGetDefinition(name, scope))
-        return def;
+Compilation::DefinitionLookupResult Compilation::getDefinition(std::string_view name,
+                                                               const Scope& scope,
+                                                               SourceRange sourceRange,
+                                                               DiagCode code) const {
+    if (auto result = tryGetDefinition(name, scope); result.definition)
+        return result;
 
     errorMissingDef(name, scope, sourceRange, code);
-    return nullptr;
+    return {};
+}
+
+Compilation::DefinitionLookupResult Compilation::getDefinition(std::string_view lookupName,
+                                                               const Scope& scope,
+                                                               const ConfigRule& configRule,
+                                                               SourceRange sourceRange,
+                                                               DiagCode code) const {
+    std::pair<DefinitionLookupResult, bool> result;
+    if (auto it = definitionMap.find({lookupName, root.get()}); it != definitionMap.end())
+        result = resolveConfigRules(lookupName, scope, nullptr, &configRule, it->second.first);
+    else
+        result = resolveConfigRules(lookupName, scope, nullptr, &configRule, {});
+
+    if (!result.first.definition && !result.second) {
+        // No definition found and no error issued, so issue one ourselves.
+        auto diag = errorMissingDef(lookupName, scope, sourceRange, code);
+        if (diag)
+            diag->addNote(diag::NoteConfigRule, configRule.sourceRange);
+    }
+
+    return result.first;
 }
 
 const DefinitionSymbol* Compilation::getDefinition(const ModuleDeclarationSyntax& syntax) const {
@@ -630,25 +655,6 @@ const DefinitionSymbol* Compilation::getDefinition(const ModuleDeclarationSyntax
         }
     }
     return nullptr;
-}
-
-const Symbol* Compilation::getDefinition(std::string_view lookupName, const Scope& scope,
-                                         const ConfigRule& configRule, SourceRange sourceRange,
-                                         DiagCode code) const {
-    std::pair<const Symbol*, bool> result;
-    if (auto it = definitionMap.find({lookupName, root.get()}); it != definitionMap.end())
-        result = resolveConfigRules(lookupName, scope, nullptr, &configRule, it->second.first);
-    else
-        result = resolveConfigRules(lookupName, scope, nullptr, &configRule, {});
-
-    if (!result.first && !result.second) {
-        // No definition found and no error issued, so issue one ourselves.
-        auto diag = errorMissingDef(lookupName, scope, sourceRange, code);
-        if (diag)
-            diag->addNote(diag::NoteConfigRule, configRule.sourceRange);
-    }
-
-    return result.first;
 }
 
 const DefinitionSymbol* Compilation::getDefinition(const ConfigBlockSymbol& config,
@@ -1950,7 +1956,8 @@ void Compilation::resolveBindTargets(const BindDirectiveSyntax& syntax, const Sc
             return;
 
         Token name = syntax.target->as<IdentifierNameSyntax>().identifier;
-        auto targetDef = getDefinition(name.valueText(), scope, name.range(), diag::UnknownModule);
+        auto targetDef =
+            getDefinition(name.valueText(), scope, name.range(), diag::UnknownModule).definition;
         if (!targetDef)
             return;
 
@@ -1984,8 +1991,8 @@ void Compilation::resolveBindTargets(const BindDirectiveSyntax& syntax, const Sc
             // If we didn't find the name as an instance, try as a definition.
             if (syntax.target->kind == SyntaxKind::IdentifierName) {
                 Token name = syntax.target->as<IdentifierNameSyntax>().identifier;
-                auto def = getDefinition(name.valueText(), scope, name.range(),
-                                         diag::UnknownModule);
+                auto def = getDefinition(name.valueText(), scope, name.range(), diag::UnknownModule)
+                               .definition;
                 if (!def)
                     return;
 
@@ -2271,7 +2278,7 @@ void Compilation::resolveDefParamsAndBinds() {
     copyStateInto(*this, true);
 }
 
-std::pair<const Symbol*, bool> Compilation::resolveConfigRules(
+std::pair<Compilation::DefinitionLookupResult, bool> Compilation::resolveConfigRules(
     std::string_view lookupName, const Scope& scope, const ResolvedConfig* parentConfig,
     const ConfigRule* rule, const std::vector<Symbol*>& defList) const {
 
@@ -2321,7 +2328,7 @@ std::pair<const Symbol*, bool> Compilation::resolveConfigRules(
                 overrideLib = getSourceLibrary(id.lib);
                 if (!overrideLib) {
                     root->addDiag(diag::UnknownLibrary, id.sourceRange) << id.lib;
-                    return {nullptr, true};
+                    return {{}, true};
                 }
             }
 
@@ -2332,20 +2339,27 @@ std::pair<const Symbol*, bool> Compilation::resolveConfigRules(
                     // matches our target library.
                     auto result = findDefByLib(overrideDefIt->second.first, *overrideLib);
                     if (result)
-                        return {result, true};
+                        return {{result, nullptr, rule}, true};
                 }
             }
 
             // If we didn't find a target definition, try to look for a config.
             if (auto configIt = configBlocks.find(id.name); configIt != configBlocks.end()) {
                 auto result = findDefByLib(configIt->second, *overrideLib);
-                if (result)
-                    return {result, true};
+                if (result) {
+                    auto topCells = result->getTopCells();
+                    if (topCells.size() != 1) {
+                        // TODO: error
+                        return {{}, true};
+                    }
+
+                    return {{&topCells[0].definition, result, nullptr}, true};
+                }
             }
 
             // Otherwise we have an error.
             errorMissingDef(id.name, *root, id.sourceRange, diag::UnknownModule);
-            return {nullptr, true};
+            return {{}, true};
         }
     }
 
@@ -2354,16 +2368,16 @@ std::pair<const Symbol*, bool> Compilation::resolveConfigRules(
         // (or even just one element each) in basically all cases.
         for (auto lib : liblist) {
             if (auto def = findDefByLib(defList, *lib))
-                return {def, false};
+                return {{def, nullptr, rule}, false};
         }
     }
     else if (auto parentDef = scope.asSymbol().getDeclaringDefinition()) {
         // Fall back to picking based on the parent instance's library.
         if (auto def = findDefByLib(defList, parentDef->sourceLibrary))
-            return {def, false};
+            return {{def, nullptr, rule}, false};
     }
 
-    return {nullptr, false};
+    return {{}, false};
 }
 
 Diagnostic* Compilation::errorMissingDef(std::string_view name, const Scope& scope,

@@ -636,3 +636,34 @@ endconfig
     CHECK(getParam("test.t.a1.W").integer() == 16);
     CHECK(getParam("test.t.a2.W").integer() == 48);
 }
+
+TEST_CASE("Config cell overrides with param assignments") {
+    auto tree = SyntaxTree::fromText(R"(
+config cfg1;
+    design top;
+    cell top use #(.A(1));
+    cell f use #(.B(2));
+endconfig
+
+module f #(parameter int B);
+endmodule
+
+module top #(parameter int A);
+    f foo();
+endmodule
+)");
+    CompilationOptions options;
+    options.topModules.emplace("cfg1");
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto getParam = [&](std::string_view name) {
+        auto& param = compilation.getRoot().lookupName<ParameterSymbol>(name);
+        return param.getValue();
+    };
+
+    CHECK(getParam("top.A").integer() == 1);
+    CHECK(getParam("top.foo.B").integer() == 2);
+}
