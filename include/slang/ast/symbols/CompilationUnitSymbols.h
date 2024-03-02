@@ -278,8 +278,8 @@ public:
     };
 
     struct CellOverride {
-        const SourceLibrary* specificLib = nullptr;
-        ConfigRule rule;
+        flat_hash_map<const SourceLibrary*, ConfigRule*> specificLibRules;
+        ConfigRule* defaultRule = nullptr;
     };
 
     struct InstanceOverride {
@@ -302,7 +302,7 @@ public:
         return defaultLiblist;
     }
 
-    const flat_hash_map<std::string_view, std::vector<CellOverride>>& getCellOverrides() const {
+    const flat_hash_map<std::string_view, CellOverride>& getCellOverrides() const {
         if (!resolved)
             resolve();
         return cellOverrides;
@@ -326,7 +326,7 @@ private:
 
     mutable std::span<const TopCell> topCells;
     mutable std::span<const SourceLibrary* const> defaultLiblist;
-    mutable flat_hash_map<std::string_view, std::vector<CellOverride>> cellOverrides;
+    mutable flat_hash_map<std::string_view, CellOverride> cellOverrides;
     mutable flat_hash_map<std::string_view, InstanceOverride> instanceOverrides;
     mutable bool resolved = false;
 };

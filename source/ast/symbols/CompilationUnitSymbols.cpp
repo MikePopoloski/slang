@@ -8,6 +8,7 @@
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
 
 #include "ParameterBuilder.h"
+#include <fmt/format.h>
 
 #include "slang/ast/ASTSerializer.h"
 #include "slang/ast/Compilation.h"
@@ -466,37 +467,30 @@ void ConfigBlockSymbol::resolve() const {
                 if (cellName.empty())
                     break;
 
-                CellOverride co;
+                auto rule = comp.emplace<ConfigRule>(buildRule(*ccr.ruleClause));
+
+                auto& overrides = cellOverrides[cellName];
                 if (auto libName = ccr.name->library.valueText(); !libName.empty()) {
-                    co.specificLib = comp.getSourceLibrary(libName);
-                    if (!co.specificLib) {
+                    auto specificLib = comp.getSourceLibrary(libName);
+                    if (!specificLib) {
                         scope->addDiag(diag::WarnUnknownLibrary, ccr.name->library.range())
                             << libName;
                         break;
                     }
+
+                    auto [it, inserted] = overrides.specificLibRules.emplace(specificLib, rule);
+                    if (!inserted) {
+                        mergeRules(*it->second, *rule, [&] {
+                            return fmt::format("cell '{}.{}'", specificLib->name, cellName);
+                        });
+                    }
                 }
-
-                co.rule = buildRule(*ccr.ruleClause);
-
-                auto& overrides = cellOverrides[cellName];
-                auto it = std::ranges::find_if(overrides, [&](auto& item) {
-                    return item.specificLib == co.specificLib;
-                });
-
-                if (it != overrides.end()) {
-                    mergeRules(it->rule, co.rule, [&] {
-                        std::string name = "cell '";
-                        if (co.specificLib) {
-                            name += ccr.name->library.valueText();
-                            name.push_back('.');
-                        }
-                        name += cellName;
-                        name.push_back('\'');
-                        return name;
-                    });
+                else if (overrides.defaultRule) {
+                    mergeRules(*overrides.defaultRule, *rule,
+                               [&] { return fmt::format("cell '{}'", cellName); });
                 }
                 else {
-                    overrides.push_back(co);
+                    overrides.defaultRule = rule;
                 }
                 break;
             }
@@ -564,19 +558,12 @@ void ConfigBlockSymbol::resolve() const {
             continue;
 
         if (auto it = cellOverrides.find(topCell.definition.name); it != cellOverrides.end()) {
-            CellOverride* defaultOverride = nullptr;
-            for (auto& co : it->second) {
-                if (!co.specificLib) {
-                    defaultOverride = &co;
-                }
-                else if (co.specificLib == &topCell.definition.sourceLibrary) {
-                    topCell.rule = &co.rule;
-                    break;
-                }
+            topCell.rule = it->second.defaultRule;
+            auto& specificLibRules = it->second.specificLibRules;
+            if (auto specificIt = specificLibRules.find(&topCell.definition.sourceLibrary);
+                specificIt != specificLibRules.end()) {
+                topCell.rule = specificIt->second;
             }
-
-            if (!topCell.rule && defaultOverride)
-                topCell.rule = &defaultOverride->rule;
         }
     }
 

@@ -2278,20 +2278,83 @@ void Compilation::resolveDefParamsAndBinds() {
     copyStateInto(*this, true);
 }
 
+template<typename TDefList>
+auto findDefByLib(TDefList& defList, const SourceLibrary& target)
+    -> std::remove_reference_t<decltype(defList[0])> {
+    for (auto def : defList) {
+        if (def->getSourceLibrary() == &target)
+            return def;
+    }
+    return nullptr;
+}
+
+std::pair<Compilation::DefinitionLookupResult, bool> Compilation::resolveConfigRule(
+    const Scope& scope, const ConfigRule& rule) const {
+
+    auto& id = rule.useCell;
+    SLANG_ASSERT(!id.name.empty());
+
+    // Figure out the target library.
+    const SourceLibrary* overrideLib = defaultLibPtr;
+    if (id.lib.empty()) {
+        if (auto parentDef = scope.asSymbol().getDeclaringDefinition())
+            overrideLib = &parentDef->sourceLibrary;
+    }
+    else {
+        overrideLib = getSourceLibrary(id.lib);
+        if (!overrideLib) {
+            root->addDiag(diag::UnknownLibrary, id.sourceRange) << id.lib;
+            return {{}, true};
+        }
+    }
+
+    if (!id.targetConfig) {
+        if (auto overrideDefIt = definitionMap.find({id.name, root.get()});
+            overrideDefIt != definitionMap.end()) {
+            // There are definitions with this name; find the one that
+            // matches our target library.
+            auto result = findDefByLib(overrideDefIt->second.first, *overrideLib);
+            if (result)
+                return {{result, nullptr, &rule}, true};
+        }
+    }
+
+    // If we didn't find a target definition, try to look for a config.
+    if (auto configIt = configBlocks.find(id.name); configIt != configBlocks.end()) {
+        auto result = findDefByLib(configIt->second, *overrideLib);
+        if (result) {
+            auto topCells = result->getTopCells();
+            if (topCells.size() != 1) {
+                auto syntax = result->getSyntax();
+                SLANG_ASSERT(syntax);
+
+                auto range = syntax->as<ConfigDeclarationSyntax>().topCells.sourceRange();
+                auto& diag = scope.addDiag(diag::NestedConfigMultipleTops, range);
+                diag << result->name;
+                diag.addNote(diag::NoteConfigRule, rule.sourceRange);
+
+                return {{}, true};
+            }
+
+            if (rule.paramOverrides) {
+                scope.addDiag(diag::ConfigParamsIgnored, rule.paramOverrides->sourceRange())
+                    << result->name;
+            }
+
+            return {{&topCells[0].definition, result, topCells[0].rule}, true};
+        }
+    }
+
+    // Otherwise we have an error.
+    errorMissingDef(id.name, *root, id.sourceRange, diag::UnknownModule);
+    return {{}, true};
+}
+
 std::pair<Compilation::DefinitionLookupResult, bool> Compilation::resolveConfigRules(
     std::string_view lookupName, const Scope& scope, const ResolvedConfig* parentConfig,
     const ConfigRule* rule, const std::vector<Symbol*>& defList) const {
 
-    auto findDefByLib =
-        [](auto& defList,
-           const SourceLibrary& target) -> std::remove_reference_t<decltype(defList[0])> {
-        for (auto def : defList) {
-            if (def->getSourceLibrary() == &target)
-                return def;
-        }
-        return nullptr;
-    };
-
+    const ConfigBlockSymbol::CellOverride* cellOverride = nullptr;
     std::span<const SourceLibrary* const> liblist;
     if (parentConfig) {
         SLANG_ASSERT(!rule);
@@ -2300,94 +2363,50 @@ std::pair<Compilation::DefinitionLookupResult, bool> Compilation::resolveConfigR
         auto& conf = parentConfig->useConfig;
         auto& overrides = conf.getCellOverrides();
         if (auto overrideIt = overrides.find(lookupName); overrideIt != overrides.end()) {
-            // There is at least one cell override with this name; look through the
-            // list and take the first one that matches our library restrictions.
-            for (auto& cellOverride : overrideIt->second) {
-                // TODO: support this
-                if (cellOverride.specificLib)
-                    continue;
-
-                rule = &cellOverride.rule;
-                break;
-            }
+            cellOverride = &overrideIt->second;
+            rule = cellOverride->defaultRule;
         }
     }
 
     if (rule) {
+        if (auto& id = rule->useCell; !id.name.empty())
+            return resolveConfigRule(scope, *rule);
+
         if (rule->liblist)
             liblist = *rule->liblist;
-
-        if (auto& id = rule->useCell; !id.name.empty()) {
-            // Figure out the target library.
-            const SourceLibrary* overrideLib = defaultLibPtr;
-            if (id.lib.empty()) {
-                if (auto parentDef = scope.asSymbol().getDeclaringDefinition())
-                    overrideLib = &parentDef->sourceLibrary;
-            }
-            else {
-                overrideLib = getSourceLibrary(id.lib);
-                if (!overrideLib) {
-                    root->addDiag(diag::UnknownLibrary, id.sourceRange) << id.lib;
-                    return {{}, true};
-                }
-            }
-
-            if (!id.targetConfig) {
-                if (auto overrideDefIt = definitionMap.find({id.name, root.get()});
-                    overrideDefIt != definitionMap.end()) {
-                    // There are definitions with this name; find the one that
-                    // matches our target library.
-                    auto result = findDefByLib(overrideDefIt->second.first, *overrideLib);
-                    if (result)
-                        return {{result, nullptr, rule}, true};
-                }
-            }
-
-            // If we didn't find a target definition, try to look for a config.
-            if (auto configIt = configBlocks.find(id.name); configIt != configBlocks.end()) {
-                auto result = findDefByLib(configIt->second, *overrideLib);
-                if (result) {
-                    auto topCells = result->getTopCells();
-                    if (topCells.size() != 1) {
-                        auto syntax = result->getSyntax();
-                        SLANG_ASSERT(syntax);
-
-                        auto range = syntax->as<ConfigDeclarationSyntax>().topCells.sourceRange();
-                        auto& diag = scope.addDiag(diag::NestedConfigMultipleTops, range);
-                        diag << result->name;
-                        diag.addNote(diag::NoteConfigRule, rule->sourceRange);
-
-                        return {{}, true};
-                    }
-
-                    if (rule->paramOverrides) {
-                        scope.addDiag(diag::ConfigParamsIgnored,
-                                      rule->paramOverrides->sourceRange())
-                            << result->name;
-                    }
-
-                    return {{&topCells[0].definition, result, topCells[0].rule}, true};
-                }
-            }
-
-            // Otherwise we have an error.
-            errorMissingDef(id.name, *root, id.sourceRange, diag::UnknownModule);
-            return {{}, true};
-        }
     }
+
+    auto findDefWithOverride = [&](const SourceLibrary& targetLib)
+        -> std::optional<std::pair<Compilation::DefinitionLookupResult, bool>> {
+        // If we have a cell override that specifically targets
+        // this lib then we should just return that directly.
+        if (cellOverride) {
+            if (auto it = cellOverride->specificLibRules.find(&targetLib);
+                it != cellOverride->specificLibRules.end()) {
+                return resolveConfigRule(scope, *it->second);
+            }
+        }
+
+        // Otherwise try to find the def in our list.
+        if (auto def = findDefByLib(defList, targetLib)) {
+            return std::pair<Compilation::DefinitionLookupResult, bool>{{def, nullptr, rule},
+                                                                        false};
+        }
+        return std::nullopt;
+    };
 
     if (!liblist.empty()) {
         // This search is O(n^2) but both lists should be small
         // (or even just one element each) in basically all cases.
         for (auto lib : liblist) {
-            if (auto def = findDefByLib(defList, *lib))
-                return {{def, nullptr, rule}, false};
+            if (auto result = findDefWithOverride(*lib))
+                return *result;
         }
     }
     else if (auto parentDef = scope.asSymbol().getDeclaringDefinition()) {
         // Fall back to picking based on the parent instance's library.
-        if (auto def = findDefByLib(defList, parentDef->sourceLibrary))
-            return {{def, nullptr, rule}, false};
+        if (auto result = findDefWithOverride(parentDef->sourceLibrary))
+            return *result;
     }
 
     return {{}, false};

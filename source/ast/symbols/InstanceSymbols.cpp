@@ -271,8 +271,12 @@ InstanceSymbol& InstanceSymbol::createDefault(Compilation& comp, const Definitio
                                            /* isUninstantiated */ false, hierarchyOverrideNode,
                                            configBlock, configRule));
 
-    if (configBlock)
-        result.resolvedConfig = comp.emplace<ResolvedConfig>(*configBlock, result);
+    if (configBlock) {
+        auto rc = comp.emplace<ResolvedConfig>(*configBlock, result);
+        if (configRule && configRule->liblist)
+            rc->liblist = *configRule->liblist;
+        result.resolvedConfig = rc;
+    }
 
     return result;
 }

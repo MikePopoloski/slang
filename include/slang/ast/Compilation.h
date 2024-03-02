@@ -46,7 +46,6 @@ class Symbol;
 class SystemSubroutine;
 class ValueDriver;
 struct AssertionInstanceDetails;
-struct ConfigCellId;
 struct ConfigRule;
 struct ResolvedConfig;
 
@@ -698,6 +697,8 @@ private:
     void checkBindTargetParams(const syntax::BindDirectiveSyntax& syntax, const Scope& scope,
                                std::span<const Symbol* const> instTargets,
                                const DefinitionSymbol* defTarget);
+    std::pair<DefinitionLookupResult, bool> resolveConfigRule(const Scope& scope,
+                                                              const ConfigRule& rule) const;
     std::pair<DefinitionLookupResult, bool> resolveConfigRules(
         std::string_view name, const Scope& scope, const ResolvedConfig* parentConfig,
         const ConfigRule* configRule, const std::vector<Symbol*>& defList) const;
