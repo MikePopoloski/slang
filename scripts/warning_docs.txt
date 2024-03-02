@@ -1153,6 +1153,9 @@ More than one rule in a configuration targets the same cell or instance. They ca
 be used, so slang takes the first one and ignores all others.
 @options --top=cfg
 ```
+module d;
+endmodule
+
 config cfg;
     design d;
     instance d.foo use bar;
