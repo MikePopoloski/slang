@@ -3365,8 +3365,11 @@ ConfigLiblistSyntax& Parser::parseConfigLiblist() {
     auto liblist = expect(TokenKind::LibListKeyword);
 
     SmallVector<Token, 4> tokens;
-    while (peek(TokenKind::Identifier))
+    while (peek(TokenKind::Identifier)) {
         tokens.push_back(consume());
+        if (peek(TokenKind::Comma))
+            skipToken(diag::NoCommaInList);
+    }
 
     return factory.configLiblist(liblist, tokens.copy(alloc));
 }
@@ -3379,6 +3382,10 @@ ConfigUseClauseSyntax& Parser::parseConfigUseClause() {
         name = &parseConfigCellIdentifier();
 
     auto paramAssignments = parseParameterValueAssignment();
+    if (paramAssignments && !paramAssignments->parameters.empty() &&
+        paramAssignments->parameters[0]->kind == SyntaxKind::OrderedParamAssignment) {
+        addDiag(diag::ConfigParamsOrdered, paramAssignments->parameters[0]->sourceRange());
+    }
 
     Token colon, config;
     if (peek(TokenKind::Colon)) {
@@ -3408,8 +3415,11 @@ ConfigDeclarationSyntax& Parser::parseConfigDeclaration(AttrList attributes) {
     auto design = expect(TokenKind::DesignKeyword);
 
     SmallVector<ConfigCellIdentifierSyntax*> topCells;
-    while (peek(TokenKind::Identifier))
+    while (peek(TokenKind::Identifier)) {
         topCells.push_back(&parseConfigCellIdentifier());
+        if (peek(TokenKind::Comma))
+            skipToken(diag::NoCommaInList);
+    }
 
     if (topCells.empty())
         addDiag(diag::ExpectedIdentifier, peek().location());

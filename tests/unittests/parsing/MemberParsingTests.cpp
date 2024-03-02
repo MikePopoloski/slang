@@ -1181,13 +1181,30 @@ config cfg;
     default liblist a;
     instance foo.bar use #() : config;
     default liblist b;
+    instance foo.bar use #(3, 4);
 endconfig
 )";
 
     parseCompilationUnit(text);
 
-    REQUIRE(diagnostics.size() == 3);
+    REQUIRE(diagnostics.size() == 4);
     CHECK(diagnostics[0].code == diag::ExpectedIdentifier);
     CHECK(diagnostics[1].code == diag::ConfigMissingName);
     CHECK(diagnostics[2].code == diag::MultipleDefaultRules);
+    CHECK(diagnostics[3].code == diag::ConfigParamsOrdered);
+}
+
+TEST_CASE("Config specific parse error for extraneous commas") {
+    auto& text = R"(
+config cfg;
+    design a, b;
+    default liblist c, d;
+endconfig
+)";
+
+    parseCompilationUnit(text);
+
+    REQUIRE(diagnostics.size() == 2);
+    CHECK(diagnostics[0].code == diag::NoCommaInList);
+    CHECK(diagnostics[1].code == diag::NoCommaInList);
 }
