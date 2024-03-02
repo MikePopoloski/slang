@@ -59,7 +59,7 @@ public:
                     std::span<const AttributeInstanceSyntax* const> attributes,
                     const ResolvedConfig* resolvedConfig, const ConfigBlockSymbol* newConfigRoot,
                     bool isFromBind) :
-        compilation(context.getCompilation()),
+        comp(context.getCompilation()),
         context(context), definition(definition), paramBuilder(paramBuilder),
         parentOverrideNode(parentOverrideNode), attributes(attributes),
         resolvedConfig(resolvedConfig), newConfigRoot(newConfigRoot), isFromBind(isFromBind) {}
@@ -92,7 +92,7 @@ public:
 private:
     using DimIterator = std::span<VariableDimensionSyntax*>::iterator;
 
-    Compilation& compilation;
+    Compilation& comp;
     const ASTContext& context;
     const DefinitionSymbol& definition;
     SmallVector<int32_t> path;
@@ -107,22 +107,17 @@ private:
                            const HierarchyOverrideNode* overrideNode) {
         paramBuilder.setOverrides(overrideNode);
         auto [name, loc] = getNameLoc(syntax);
-        auto inst = compilation.emplace<InstanceSymbol>(compilation, name, loc, definition,
-                                                        paramBuilder, /* isUninstantiated */ false,
-                                                        isFromBind);
-        inst->arrayPath = path.copy(compilation);
+        auto inst = comp.emplace<InstanceSymbol>(comp, name, loc, definition, paramBuilder,
+                                                 /* isUninstantiated */ false, isFromBind);
+        inst->arrayPath = path.copy(comp);
         inst->setSyntax(syntax);
         inst->setAttributes(*context.scope, attributes);
 
         if (resolvedConfig) {
-            if (newConfigRoot) {
-                auto rc = compilation.emplace<ResolvedConfig>(*newConfigRoot, *inst);
-                rc->configRule = resolvedConfig->configRule;
-                inst->resolvedConfig = rc;
-            }
-            else {
+            if (newConfigRoot)
+                inst->resolvedConfig = comp.emplace<ResolvedConfig>(*newConfigRoot, *inst);
+            else
                 inst->resolvedConfig = resolvedConfig;
-            }
         }
 
         return inst;
@@ -136,10 +131,10 @@ private:
         SLANG_ASSERT(syntax.decl);
         auto nameToken = syntax.decl->name;
         auto createEmpty = [&]() {
-            return compilation.emplace<InstanceArraySymbol>(compilation, nameToken.valueText(),
-                                                            nameToken.location(),
-                                                            std::span<const Symbol* const>{},
-                                                            ConstantRange());
+            return comp.emplace<InstanceArraySymbol>(comp, nameToken.valueText(),
+                                                     nameToken.location(),
+                                                     std::span<const Symbol* const>{},
+                                                     ConstantRange());
         };
 
         auto& dimSyntax = **it;
@@ -153,9 +148,9 @@ private:
             return createEmpty();
 
         ConstantRange range = dim.range;
-        if (range.width() > compilation.getOptions().maxInstanceArray) {
+        if (range.width() > comp.getOptions().maxInstanceArray) {
             auto& diag = context.addDiag(diag::MaxInstanceArrayExceeded, dimSyntax.sourceRange());
-            diag << definition.getKindString() << compilation.getOptions().maxInstanceArray;
+            diag << definition.getKindString() << comp.getOptions().maxInstanceArray;
             return createEmpty();
         }
 
@@ -176,9 +171,9 @@ private:
             elements.push_back(symbol);
         }
 
-        auto result = compilation.emplace<InstanceArraySymbol>(compilation, nameToken.valueText(),
-                                                               nameToken.location(),
-                                                               elements.copy(compilation), range);
+        auto result = comp.emplace<InstanceArraySymbol>(comp, nameToken.valueText(),
+                                                        nameToken.location(), elements.copy(comp),
+                                                        range);
         result->setSyntax(syntax);
 
         for (auto element : elements)
@@ -528,7 +523,6 @@ void InstanceSymbol::fromSyntax(Compilation& comp, const HierarchyInstantiationS
         if (confRule) {
             SLANG_ASSERT(resolvedConfig);
             auto rc = comp.emplace<ResolvedConfig>(*resolvedConfig);
-            rc->configRule = confRule;
             if (confRule->liblist)
                 rc->liblist = *confRule->liblist;
             localConfig = rc;

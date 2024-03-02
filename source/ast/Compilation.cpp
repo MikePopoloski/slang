@@ -2349,11 +2349,24 @@ std::pair<Compilation::DefinitionLookupResult, bool> Compilation::resolveConfigR
                 if (result) {
                     auto topCells = result->getTopCells();
                     if (topCells.size() != 1) {
-                        // TODO: error
+                        auto syntax = result->getSyntax();
+                        SLANG_ASSERT(syntax);
+
+                        auto range = syntax->as<ConfigDeclarationSyntax>().topCells.sourceRange();
+                        auto& diag = scope.addDiag(diag::NestedConfigMultipleTops, range);
+                        diag << result->name;
+                        diag.addNote(diag::NoteConfigRule, rule->sourceRange);
+
                         return {{}, true};
                     }
 
-                    return {{&topCells[0].definition, result, nullptr}, true};
+                    if (rule->paramOverrides) {
+                        scope.addDiag(diag::ConfigParamsIgnored,
+                                      rule->paramOverrides->sourceRange())
+                            << result->name;
+                    }
+
+                    return {{&topCells[0].definition, result, topCells[0].rule}, true};
                 }
             }
 

@@ -511,7 +511,7 @@ endmodule
     CHECK(barA.getDefinition().name == "m2");
 }
 
-TEST_CASE("Config warning cases") {
+TEST_CASE("Config warning / error cases") {
     auto tree = SyntaxTree::fromText(R"(
 config cfg1;
     design top top;
@@ -521,9 +521,25 @@ config cfg1;
     instance top.foo use lib1.c;
     instance top.foo use d;
     instance foo.bar use e;
+    instance top.blah1 use qq;
+    instance top.blah2 use rr;
+    instance top.blah2 use #(.A(1));
+endconfig
+
+module a; endmodule
+module b; endmodule
+
+config qq;
+    design a b;
+endconfig
+
+config rr;
+    design a;
 endconfig
 
 module top;
+    asdf blah1();
+    asdf blah2();
 endmodule
 )");
     CompilationOptions options;
@@ -533,12 +549,14 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 5);
+    REQUIRE(diags.size() == 7);
     CHECK(diags[0].code == diag::ConfigDupTop);
     CHECK(diags[1].code == diag::WarnUnknownLibrary);
     CHECK(diags[2].code == diag::DupConfigRule);
     CHECK(diags[3].code == diag::DupConfigRule);
     CHECK(diags[4].code == diag::ConfigInstanceWrongTop);
+    CHECK(diags[5].code == diag::ConfigParamsIgnored);
+    CHECK(diags[6].code == diag::NestedConfigMultipleTops);
 }
 
 TEST_CASE("Config rules with param overrides") {
@@ -666,4 +684,38 @@ endmodule
 
     CHECK(getParam("top.A").integer() == 1);
     CHECK(getParam("top.foo.B").integer() == 2);
+}
+
+TEST_CASE("Config param overrides with nested config path") {
+    auto tree = SyntaxTree::fromText(R"(
+config cfg1;
+    design top;
+    cell f use cfg2;
+endconfig
+
+config cfg2;
+    design f;
+    cell f use #(.B(5));
+endconfig
+
+module f #(parameter int B);
+endmodule
+
+module top;
+    f foo();
+endmodule
+)");
+    CompilationOptions options;
+    options.topModules.emplace("cfg1");
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto getParam = [&](std::string_view name) {
+        auto& param = compilation.getRoot().lookupName<ParameterSymbol>(name);
+        return param.getValue();
+    };
+
+    CHECK(getParam("top.foo.B").integer() == 5);
 }

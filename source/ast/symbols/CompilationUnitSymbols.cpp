@@ -445,8 +445,13 @@ void ConfigBlockSymbol::resolve() const {
                 curRule.paramOverrides = newRule.paramOverrides;
             if (newRule.liblist)
                 curRule.liblist = newRule.liblist;
-            if (!newRule.useCell.name.empty())
+            if (!newRule.useCell.name.empty()) {
+                // Note: prefer the source range to come from the rule that
+                // supplies a use cell name, to make other reported errors easier
+                // to understand.
                 curRule.useCell = newRule.useCell;
+                curRule.sourceRange = newRule.sourceRange;
+            }
         }
     };
 
