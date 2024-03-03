@@ -217,33 +217,29 @@ private:
     mutable bool instantiated = false;
 };
 
-/// Identifies a specific cell as part of a config rule.
-struct SLANG_EXPORT ConfigCellId {
-    /// The library containing the cell (or empty to specify
-    /// that other logic should be used to find the library).
-    std::string_view lib;
-
-    /// The name of the cell.
-    std::string_view name;
-
-    /// The source range where this cell id was declared.
-    SourceRange sourceRange;
-
-    /// If true, this ID targets a config block specifically.
-    bool targetConfig = false;
-
-    ConfigCellId() = default;
-    ConfigCellId(std::string_view lib, std::string_view name, SourceRange sourceRange) :
-        lib(lib), name(name), sourceRange(sourceRange) {}
-};
-
 /// A rule that controls how a specific cell or instance in the design is configured.
 struct SLANG_EXPORT ConfigRule {
     /// A list of libraries to use to look up definitions.
     std::optional<std::span<const SourceLibrary* const>> liblist;
 
+    /// Contains information about how to look up a specific cell for this rule.
+    struct CellId {
+        /// The library containing the cell (or empty to specify
+        /// that other logic should be used to find the library).
+        std::string_view lib;
+
+        /// The name of the cell.
+        std::string_view name;
+
+        /// The source range where this cell id was declared.
+        SourceRange sourceRange;
+
+        /// If true, this ID targets a config block specifically.
+        bool targetConfig = false;
+    };
+
     /// A specific cell to use for this instance or definition lookup.
-    ConfigCellId useCell;
+    CellId useCell;
 
     /// Parameter overrides to apply to the instance.
     const syntax::ParameterValueAssignmentSyntax* paramOverrides = nullptr;

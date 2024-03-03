@@ -421,8 +421,9 @@ void ConfigBlockSymbol::resolve() const {
             auto& cuc = rule.as<ConfigUseClauseSyntax>();
             result.paramOverrides = cuc.paramAssignments;
             if (cuc.name && !cuc.name->cell.valueText().empty()) {
-                result.useCell = ConfigCellId(cuc.name->library.valueText(),
-                                              cuc.name->cell.valueText(), cuc.name->sourceRange());
+                result.useCell.lib = cuc.name->library.valueText();
+                result.useCell.name = cuc.name->cell.valueText();
+                result.useCell.sourceRange = cuc.name->sourceRange();
                 if (cuc.config)
                     result.useCell.targetConfig = true;
             }
@@ -541,12 +542,17 @@ void ConfigBlockSymbol::resolve() const {
         }
     }
 
+    auto checkTopOverride = [&](const ConfigRule& rule) {
+        if (!rule.useCell.name.empty())
+            scope->addDiag(diag::ConfigOverrideTop, rule.sourceRange);
+    };
+
     // Check if any overrides should apply to the root instances.
-    // TODO: check validity of overrides here as applied to a root instance
     for (auto& [cellName, instOverride] : instanceOverrides) {
         if (instOverride.rule) {
             auto it = topCellNames.find(cellName);
             SLANG_ASSERT(it != topCellNames.end());
+            checkTopOverride(*instOverride.rule);
             topCellsBuf[it->second].rule = instOverride.rule;
         }
     }
@@ -564,6 +570,9 @@ void ConfigBlockSymbol::resolve() const {
                 specificIt != specificLibRules.end()) {
                 topCell.rule = specificIt->second;
             }
+
+            if (topCell.rule)
+                checkTopOverride(*topCell.rule);
         }
     }
 

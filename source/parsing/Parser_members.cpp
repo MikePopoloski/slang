@@ -3452,6 +3452,11 @@ ConfigDeclarationSyntax& Parser::parseConfigDeclaration(AttrList attributes) {
             else
                 rule = &parseConfigLiblist();
 
+            if (!cellName.library.valueText().empty() && rule->kind == SyntaxKind::ConfigLiblist) {
+                addDiag(diag::ConfigSpecificCellLiblist, rule->sourceRange())
+                    << cellName.library.range();
+            }
+
             rules.push_back(
                 &factory.cellConfigRule(token, cellName, *rule, expect(TokenKind::Semicolon)));
         }

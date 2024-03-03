@@ -524,6 +524,7 @@ config cfg1;
     instance top.blah1 use qq;
     instance top.blah2 use rr;
     instance top.blah2 use #(.A(1));
+    cell foo.bar use baz;
 endconfig
 
 module a; endmodule
@@ -549,14 +550,15 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 7);
+    REQUIRE(diags.size() == 8);
     CHECK(diags[0].code == diag::ConfigDupTop);
     CHECK(diags[1].code == diag::WarnUnknownLibrary);
     CHECK(diags[2].code == diag::DupConfigRule);
     CHECK(diags[3].code == diag::DupConfigRule);
     CHECK(diags[4].code == diag::ConfigInstanceWrongTop);
     CHECK(diags[5].code == diag::ConfigParamsIgnored);
-    CHECK(diags[6].code == diag::NestedConfigMultipleTops);
+    CHECK(diags[6].code == diag::WarnUnknownLibrary);
+    CHECK(diags[7].code == diag::NestedConfigMultipleTops);
 }
 
 TEST_CASE("Config rules with param overrides") {
@@ -690,7 +692,7 @@ TEST_CASE("Config param overrides with nested config path") {
     auto tree = SyntaxTree::fromText(R"(
 config cfg1;
     design top;
-    cell f use cfg2;
+    cell f use cfg2 : config;
 endconfig
 
 config cfg2;
@@ -733,11 +735,12 @@ endmodule
     auto tree2 = SyntaxTree::fromText(R"(
 config cfg1;
     design top;
+    cell lib1.f use #(.A(4));
     cell lib1.f use baz;
     cell top liblist lib1;
 endconfig
 
-module baz;
+module baz #(parameter int A);
 endmodule
 
 module top;
@@ -751,4 +754,95 @@ endmodule
     compilation.addSyntaxTree(tree2);
     compilation.addSyntaxTree(tree1);
     NO_COMPILATION_ERRORS;
+
+    auto getParam = [&](std::string_view name) {
+        auto& param = compilation.getRoot().lookupName<ParameterSymbol>(name);
+        return param.getValue();
+    };
+
+    CHECK(getParam("top.foo.A").integer() == 4);
+}
+
+TEST_CASE("Config override top cell with specific target lib") {
+    auto lib1 = std::make_unique<SourceLibrary>("lib1", 1);
+
+    auto tree1 = SyntaxTree::fromText(R"(
+module qq #(parameter int A);
+endmodule
+)",
+                                      SyntaxTree::getDefaultSourceManager(), "source", "", {},
+                                      lib1.get());
+
+    auto tree2 = SyntaxTree::fromText(R"(
+config cfg1;
+    design lib1.qq;
+    cell lib1.qq use #(.A(4));
+    cell qq use #(.A(5));
+endconfig
+)");
+    CompilationOptions options;
+    options.topModules.emplace("cfg1");
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree2);
+    compilation.addSyntaxTree(tree1);
+    NO_COMPILATION_ERRORS;
+
+    auto getParam = [&](std::string_view name) {
+        auto& param = compilation.getRoot().lookupName<ParameterSymbol>(name);
+        return param.getValue();
+    };
+
+    CHECK(getParam("qq.A").integer() == 4);
+}
+
+TEST_CASE("Config invalid top cell override rule") {
+    auto tree = SyntaxTree::fromText(R"(
+config cfg1;
+    design top;
+    instance top use foo;
+endconfig
+
+config cfg2;
+    design top2;
+    cell top2 use foo;
+endconfig
+
+module top;
+endmodule
+
+module top2;
+endmodule
+)");
+    CompilationOptions options;
+    options.topModules.emplace("cfg1");
+    options.topModules.emplace("cfg2");
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::ConfigOverrideTop);
+    CHECK(diags[1].code == diag::ConfigOverrideTop);
+}
+
+TEST_CASE("Duplicate config blocks") {
+    auto tree = SyntaxTree::fromText(R"(
+config cfg1;
+    design top;
+    instance top use foo;
+endconfig
+
+config cfg1;
+    design top;
+endconfig
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::Redefinition);
 }

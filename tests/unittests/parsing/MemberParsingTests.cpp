@@ -1182,16 +1182,18 @@ config cfg;
     instance foo.bar use #() : config;
     default liblist b;
     instance foo.bar use #(3, 4);
+    cell foo.bar liblist l;
 endconfig
 )";
 
     parseCompilationUnit(text);
 
-    REQUIRE(diagnostics.size() == 4);
+    REQUIRE(diagnostics.size() == 5);
     CHECK(diagnostics[0].code == diag::ExpectedIdentifier);
     CHECK(diagnostics[1].code == diag::ConfigMissingName);
     CHECK(diagnostics[2].code == diag::MultipleDefaultRules);
     CHECK(diagnostics[3].code == diag::ConfigParamsOrdered);
+    CHECK(diagnostics[4].code == diag::ConfigSpecificCellLiblist);
 }
 
 TEST_CASE("Config specific parse error for extraneous commas") {
