@@ -550,15 +550,17 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 8);
+    REQUIRE(diags.size() == 10);
     CHECK(diags[0].code == diag::ConfigDupTop);
     CHECK(diags[1].code == diag::WarnUnknownLibrary);
-    CHECK(diags[2].code == diag::DupConfigRule);
+    CHECK(diags[2].code == diag::UnusedConfigCell);
     CHECK(diags[3].code == diag::DupConfigRule);
-    CHECK(diags[4].code == diag::ConfigInstanceWrongTop);
-    CHECK(diags[5].code == diag::ConfigParamsIgnored);
-    CHECK(diags[6].code == diag::WarnUnknownLibrary);
-    CHECK(diags[7].code == diag::NestedConfigMultipleTops);
+    CHECK(diags[4].code == diag::UnusedConfigInstance);
+    CHECK(diags[5].code == diag::DupConfigRule);
+    CHECK(diags[6].code == diag::ConfigInstanceWrongTop);
+    CHECK(diags[7].code == diag::ConfigParamsIgnored);
+    CHECK(diags[8].code == diag::WarnUnknownLibrary);
+    CHECK(diags[9].code == diag::NestedConfigMultipleTops);
 }
 
 TEST_CASE("Config rules with param overrides") {
@@ -786,7 +788,10 @@ endconfig
     Compilation compilation(options);
     compilation.addSyntaxTree(tree2);
     compilation.addSyntaxTree(tree1);
-    NO_COMPILATION_ERRORS;
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::UnusedConfigCell);
 
     auto getParam = [&](std::string_view name) {
         auto& param = compilation.getRoot().lookupName<ParameterSymbol>(name);

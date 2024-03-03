@@ -1162,3 +1162,29 @@ config cfg;
     instance d.foo use baz;
 endconfig
 ```
+
+-Wunused-config-cell
+A configuration cell rule is unused, which may mean that there's a typo in the target name.
+@options --top=cfg
+```
+config cfg;
+    design top;
+    cell foo liblist l;
+endconfig
+
+module top;
+endmodule
+```
+
+-Wunused-config-instance
+A configuration instance rule is unused, which means that target path does not exist in the design.
+@options --top=cfg
+```
+config cfg;
+    design top;
+    instance top.foo liblist l;
+endconfig
+
+module top;
+endmodule
+```

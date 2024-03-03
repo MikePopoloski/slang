@@ -273,8 +273,11 @@ InstanceSymbol& InstanceSymbol::createDefault(Compilation& comp, const Definitio
 
     if (configBlock) {
         auto rc = comp.emplace<ResolvedConfig>(*configBlock, result);
-        if (configRule && configRule->liblist)
-            rc->liblist = *configRule->liblist;
+        if (configRule) {
+            configRule->isUsed = true;
+            if (configRule->liblist)
+                rc->liblist = *configRule->liblist;
+        }
         result.resolvedConfig = rc;
     }
 
@@ -527,6 +530,7 @@ void InstanceSymbol::fromSyntax(Compilation& comp, const HierarchyInstantiationS
         if (confRule) {
             SLANG_ASSERT(resolvedConfig);
             auto rc = comp.emplace<ResolvedConfig>(*resolvedConfig);
+            confRule->isUsed = true;
             if (confRule->liblist)
                 rc->liblist = *confRule->liblist;
             localConfig = rc;

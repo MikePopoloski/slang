@@ -471,6 +471,7 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamsAndBinds) {
                 }
 
                 if (foundConf) {
+                    foundConf->isUsed = true;
                     for (auto& cell : foundConf->getTopCells()) {
                         selectedConfigs.emplace(foundConf);
                         topDefs.push_back({&cell.definition, foundConf, cell.rule});
@@ -1346,6 +1347,16 @@ const Diagnostics& Compilation::getSemanticDiagnostics() {
                             diag << className;
                         }
                     }
+                }
+            }
+        }
+
+        // Report on unused config rules.
+        if (!configBlocks.empty()) {
+            for (auto& [name, confList] : configBlocks) {
+                for (auto config : confList) {
+                    if (config->isUsed)
+                        config->checkUnusedRules();
                 }
             }
         }
@@ -2292,6 +2303,7 @@ auto findDefByLib(TDefList& defList, const SourceLibrary& target)
 std::pair<Compilation::DefinitionLookupResult, bool> Compilation::resolveConfigRule(
     const Scope& scope, const ConfigRule& rule) const {
 
+    rule.isUsed = true;
     auto& id = rule.useCell;
     SLANG_ASSERT(!id.name.empty());
 
@@ -2324,6 +2336,7 @@ std::pair<Compilation::DefinitionLookupResult, bool> Compilation::resolveConfigR
     if (auto configIt = configBlocks.find(id.name); configIt != configBlocks.end()) {
         auto result = findDefByLib(configIt->second, *overrideLib);
         if (result) {
+            result->isUsed = true;
             auto topCells = result->getTopCells();
             if (topCells.size() != 1) {
                 auto syntax = result->getSyntax();
@@ -2373,6 +2386,7 @@ std::pair<Compilation::DefinitionLookupResult, bool> Compilation::resolveConfigR
         if (auto& id = rule->useCell; !id.name.empty())
             return resolveConfigRule(scope, *rule);
 
+        rule->isUsed = true;
         if (rule->liblist)
             liblist = *rule->liblist;
     }

@@ -246,6 +246,9 @@ struct SLANG_EXPORT ConfigRule {
 
     /// The source range where this rule was declared.
     SourceRange sourceRange;
+
+    /// A flag that marks whether this rule has been used during elaboration.
+    mutable bool isUsed = false;
 };
 
 /// Contains information about a resolved configuration rule
@@ -283,6 +286,9 @@ public:
         ConfigRule* rule = nullptr;
     };
 
+    /// A flag that marks whether this config block has been used during elaboration.
+    mutable bool isUsed = false;
+
     ConfigBlockSymbol(Compilation& compilation, std::string_view name, SourceLocation loc) :
         Symbol(SymbolKind::ConfigBlock, name, loc), Scope(compilation, this) {}
 
@@ -309,6 +315,8 @@ public:
             resolve();
         return instanceOverrides;
     }
+
+    void checkUnusedRules() const;
 
     static ConfigBlockSymbol& fromSyntax(const Scope& scope,
                                          const syntax::ConfigDeclarationSyntax& syntax);

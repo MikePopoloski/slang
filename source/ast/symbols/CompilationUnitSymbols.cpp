@@ -373,6 +373,34 @@ ConfigBlockSymbol& ConfigBlockSymbol::fromSyntax(const Scope& scope,
     return *result;
 }
 
+static void checkRuleUnused(const Scope& scope, const ConfigRule& rule, bool isCell) {
+    if (!rule.isUsed) {
+        scope.addDiag(isCell ? diag::UnusedConfigCell : diag::UnusedConfigInstance,
+                      rule.sourceRange);
+    }
+}
+
+static void checkNodeUnused(const Scope& scope, const ConfigBlockSymbol::InstanceOverride& node) {
+    if (node.rule)
+        checkRuleUnused(scope, *node.rule, false);
+
+    for (auto& [name, child] : node.childNodes)
+        checkNodeUnused(scope, child);
+}
+
+void ConfigBlockSymbol::checkUnusedRules() const {
+    for (auto& [_, cellOverride] : getCellOverrides()) {
+        if (cellOverride.defaultRule)
+            checkRuleUnused(*this, *cellOverride.defaultRule, true);
+
+        for (auto& [lib, rule] : cellOverride.specificLibRules)
+            checkRuleUnused(*this, *rule, true);
+    }
+
+    for (auto& [_, instOverride] : getInstanceOverrides())
+        checkNodeUnused(*this, instOverride);
+}
+
 void ConfigBlockSymbol::resolve() const {
     SLANG_ASSERT(!resolved);
     resolved = true;

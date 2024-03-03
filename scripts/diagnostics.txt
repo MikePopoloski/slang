@@ -526,6 +526,8 @@ warning invalid-pulsestyle InvalidPulseStyle "invalid use of {} for '{}' since i
 warning implicit-port-type-mismatch ImplicitNamedPortTypeMismatch "implicit named port '{}' of type {} connects to value of inequivalent type {}"
 warning unknown-library WarnUnknownLibrary "unknown library '{}'"
 warning dup-config-rule DupConfigRule "duplicate config rule for {} -- ignoring this one"
+warning unused-config-cell UnusedConfigCell "unused cell config rule"
+warning unused-config-instance UnusedConfigInstance "unused config rule -- instance path does not exist in the design"
 
 subsystem Expressions
 error BadUnaryExpression "invalid operand type {} to unary expression"
@@ -1066,7 +1068,7 @@ group default = { real-underflow real-overflow vector-overflow int-overflow unco
                   raw-protect-eof protected-envelope specify-param dup-timing-path invalid-pulsestyle
                   negative-timing-limit bad-procedural-force duplicate-defparam implicit-port-type-mismatch
                   split-distweight-op dpi-pure-task multibit-edge unknown-sys-name unknown-library
-                  dup-config-rule }
+                  dup-config-rule unused-config-cell unused-config-instance }
 
 group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-none case-gen-dup
                 unused-result format-real ignored-slice task-ignored width-trunc dup-attr event-const
@@ -1082,4 +1084,4 @@ group conversion = { width-trunc width-expand port-width-trunc port-width-expand
 group unused = { unused-def unused-net unused-implicit-net unused-variable undriven-net unassigned-variable
                  unused-but-set-net unused-but-set-variable unused-port undriven-port unused-argument
                  unused-parameter unused-type-parameter unused-typedef unused-genvar unused-assertion-decl
-                 unused-but-set-port }
+                 unused-but-set-port unused-config-cell unused-config-instance }
