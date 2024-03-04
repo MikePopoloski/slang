@@ -851,3 +851,33 @@ endconfig
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::Redefinition);
 }
+
+TEST_CASE("Config instance path underneath a hierarchical config error") {
+    auto tree = SyntaxTree::fromText(R"(
+config cfg1;
+    design top;
+    cell f use cfg2 : config;
+    instance top.foo.q use l;
+endconfig
+
+config cfg2;
+    design bar;
+endconfig
+
+module bar;
+endmodule
+
+module top;
+    f foo();
+endmodule
+)");
+    CompilationOptions options;
+    options.topModules.emplace("cfg1");
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::ConfigInstanceUnderOtherConfig);
+}

@@ -500,6 +500,7 @@ error ExternIfaceArrayMethod "cannot connect extern subroutine to interface arra
 error ConfigInstanceWrongTop "config instance path must start with one of the cells named in the 'design' statement"
 error ConfigDupTop "config design specifies more than one top cell named '{}'"
 error ConfigOverrideTop "config rule can't override a top cell with a different target"
+error ConfigInstanceUnderOtherConfig "config instance rule applies to an instance that is within a hierarchy specified by another config"
 error FatalTask "$fatal encountered{}"
 error ErrorTask "$error encountered{}"
 error StaticAssert "static assertion failed{}"

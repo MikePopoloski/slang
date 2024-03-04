@@ -272,8 +272,10 @@ public:
     struct TopCell {
         const DefinitionSymbol& definition;
         ConfigRule* rule = nullptr;
+        SourceRange sourceRange;
 
-        explicit TopCell(const DefinitionSymbol& definition) : definition(definition) {}
+        TopCell(const DefinitionSymbol& definition, SourceRange sourceRange) :
+            definition(definition), sourceRange(sourceRange) {}
     };
 
     struct CellOverride {

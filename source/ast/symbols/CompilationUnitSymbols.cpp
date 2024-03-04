@@ -423,7 +423,7 @@ void ConfigBlockSymbol::resolve() const {
 
             auto [it, inserted] = topCellNames.emplace(cellName, topCellsBuf.size());
             if (inserted)
-                topCellsBuf.emplace_back(*def);
+                topCellsBuf.emplace_back(*def, cellId->sourceRange());
             else
                 scope->addDiag(diag::ConfigDupTop, cellId->cell.range()) << cellName;
         }

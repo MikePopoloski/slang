@@ -394,6 +394,22 @@ static const ConfigBlockSymbol::InstanceOverride* findInstanceOverrideNode(
     return node->childNodes.empty() ? nullptr : node;
 }
 
+static void checkForInvalidNestedConfigNodes(const ASTContext& context,
+                                             const ConfigBlockSymbol::InstanceOverride& node,
+                                             const ConfigBlockSymbol& configBlock) {
+    if (node.rule) {
+        // Mark the rule as used so we don't also get a warning
+        // about this rule when we're going to give a hard error anyway.
+        node.rule->isUsed = true;
+
+        auto& diag = context.addDiag(diag::ConfigInstanceUnderOtherConfig, node.rule->sourceRange);
+        diag.addNote(diag::NoteConfigRule, configBlock.getTopCells()[0].sourceRange);
+    }
+
+    for (auto& [_, child] : node.childNodes)
+        checkForInvalidNestedConfigNodes(context, child, configBlock);
+}
+
 void InstanceSymbol::fromSyntax(Compilation& comp, const HierarchyInstantiationSyntax& syntax,
                                 const ASTContext& context, SmallVectorBase<const Symbol*>& results,
                                 SmallVectorBase<const Symbol*>& implicitNets, bool isFromBind) {
@@ -581,16 +597,19 @@ void InstanceSymbol::fromSyntax(Compilation& comp, const HierarchyInstantiationS
                     std::optional<Compilation::DefinitionLookupResult> explicitDef;
                     auto& overrideMap = overrideNode->childNodes;
                     for (auto instSyntax : syntax.instances) {
+                        const ConfigBlockSymbol* nestedConfig = nullptr;
                         auto instName = instSyntax->decl ? instSyntax->decl->name.valueText()
                                                          : ""sv;
-                        if (auto ruleIt = overrideMap.find(instName);
-                            ruleIt != overrideMap.end() && ruleIt->second.rule) {
+
+                        auto ruleIt = overrideMap.find(instName);
+                        if (ruleIt != overrideMap.end() && ruleIt->second.rule) {
                             // We have an override rule, so use it to lookup the def.
                             auto defResult = comp.getDefinition(defName, *context.scope,
                                                                 *ruleIt->second.rule,
                                                                 instSyntax->sourceRange(),
                                                                 diag::UnknownModule);
                             createInstances(defResult, instSyntax);
+                            nestedConfig = defResult.configRoot;
                         }
                         else {
                             // No specific config rule, so use the default lookup behavior.
@@ -600,6 +619,15 @@ void InstanceSymbol::fromSyntax(Compilation& comp, const HierarchyInstantiationS
                                                                  diag::UnknownModule);
                             }
                             createInstances(*explicitDef, instSyntax);
+                            nestedConfig = explicitDef->configRoot;
+                        }
+
+                        // If we found a new nested config block that applies hierarchically
+                        // to our instance and children, any other rules that would apply
+                        // further down the tree from the original config are invalid.
+                        if (nestedConfig && ruleIt != overrideMap.end()) {
+                            for (auto& [_, child] : ruleIt->second.childNodes)
+                                checkForInvalidNestedConfigNodes(context, child, *nestedConfig);
                         }
                     }
                     return;
