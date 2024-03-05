@@ -284,6 +284,7 @@ error MultipleDefaultRules "configuration cannot have more than one default rule
 error ConfigMissingName "cannot use 'config' without also specifying a target name"
 error ConfigParamsOrdered "parameter assignments in configurations must use explicit name notation, not positional notation"
 error ConfigSpecificCellLiblist "cannot specify a liblist when using a cell rule that targets a specific library already"
+error ConfigParamLiteral "parameters in configurations can only be set to literal values"
 error NoCommaInList "this list is delimited by spaces, not commas"
 warning dpi-pure-task DPIPureTask "DPI tasks cannot be marked 'pure'"
 warning nonstandard-generate NonStandardGenBlock "standalone generate block without loop or condition is not allowed in SystemVerilog"

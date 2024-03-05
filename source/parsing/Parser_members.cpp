@@ -3410,6 +3410,30 @@ ConfigDeclarationSyntax& Parser::parseConfigDeclaration(AttrList attributes) {
         auto& paramBase = parseParameterDecl(consume(), &paramSemi);
         localparams.push_back(
             &factory.parameterDeclarationStatement(nullptr, paramBase, paramSemi));
+
+        if (paramBase.kind == SyntaxKind::ParameterDeclaration) {
+            for (auto decl : paramBase.as<ParameterDeclarationSyntax>().declarators) {
+                if (decl->initializer) {
+                    auto expr = decl->initializer->expr;
+                    if (expr->kind == SyntaxKind::ParenthesizedExpression)
+                        expr = expr->as<ParenthesizedExpressionSyntax>().expression;
+
+                    switch (expr->kind) {
+                        case SyntaxKind::NullLiteralExpression:
+                        case SyntaxKind::StringLiteralExpression:
+                        case SyntaxKind::RealLiteralExpression:
+                        case SyntaxKind::TimeLiteralExpression:
+                        case SyntaxKind::IntegerLiteralExpression:
+                        case SyntaxKind::UnbasedUnsizedLiteralExpression:
+                        case SyntaxKind::IntegerVectorExpression:
+                            break;
+                        default:
+                            addDiag(diag::ConfigParamLiteral, expr->sourceRange());
+                            break;
+                    }
+                }
+            }
+        }
     }
 
     auto design = expect(TokenKind::DesignKeyword);

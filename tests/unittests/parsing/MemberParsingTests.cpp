@@ -1177,6 +1177,7 @@ import "DPI-C" function dpi_f (logic [3:0] a);
 TEST_CASE("Config parsing errors") {
     auto& text = R"(
 config cfg;
+    localparam S = (3 + 2);
     design;
     default liblist a;
     instance foo.bar use #() : config;
@@ -1188,12 +1189,13 @@ endconfig
 
     parseCompilationUnit(text);
 
-    REQUIRE(diagnostics.size() == 5);
-    CHECK(diagnostics[0].code == diag::ExpectedIdentifier);
-    CHECK(diagnostics[1].code == diag::ConfigMissingName);
-    CHECK(diagnostics[2].code == diag::MultipleDefaultRules);
-    CHECK(diagnostics[3].code == diag::ConfigParamsOrdered);
-    CHECK(diagnostics[4].code == diag::ConfigSpecificCellLiblist);
+    REQUIRE(diagnostics.size() == 6);
+    CHECK(diagnostics[0].code == diag::ConfigParamLiteral);
+    CHECK(diagnostics[1].code == diag::ExpectedIdentifier);
+    CHECK(diagnostics[2].code == diag::ConfigMissingName);
+    CHECK(diagnostics[3].code == diag::MultipleDefaultRules);
+    CHECK(diagnostics[4].code == diag::ConfigParamsOrdered);
+    CHECK(diagnostics[5].code == diag::ConfigSpecificCellLiblist);
 }
 
 TEST_CASE("Config specific parse error for extraneous commas") {
