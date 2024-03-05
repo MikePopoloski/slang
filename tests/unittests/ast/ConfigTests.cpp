@@ -1000,3 +1000,56 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Config prim instance with module override") {
+    auto tree = SyntaxTree::fromText(R"(
+config cfg1;
+    design top;
+    cell foo use m;
+    instance top.b2 use m;
+endconfig
+
+module m #(parameter int A);
+endmodule
+
+module top;
+    foo (supply0, pull1) b1();
+    baz #3 b2(), b3();
+endmodule
+)");
+    CompilationOptions options;
+    options.topModules.emplace("cfg1");
+    options.flags |= CompilationFlags::AllowBareValParamAssignment;
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::InstanceWithStrength);
+    CHECK(diags[1].code == diag::UnknownPrimitive);
+}
+
+TEST_CASE("Config target multiple primitives with explicit primitive syntax") {
+    auto tree = SyntaxTree::fromText(R"(
+config cfg1;
+    design top;
+    instance top.b1 use p1;
+    instance top.b2 use p1;
+endconfig
+
+primitive p1 (output c, input a, b);
+    table 00:0; endtable
+endprimitive
+
+module top;
+    bar (supply0, pull1) b1(c, a, b), b2(c, a, b);
+endmodule
+)");
+    CompilationOptions options;
+    options.topModules.emplace("cfg1");
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

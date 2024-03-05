@@ -294,8 +294,9 @@ void checkForInvalidNestedConfigNodes(const ASTContext& context,
 using ResolvedInstanceRules =
     SmallVector<std::pair<Compilation::DefinitionLookupResult, const HierarchicalInstanceSyntax*>>;
 
+template<typename TSyntax>
 void resolveInstanceOverrides(const ResolvedConfig& resolvedConfig, const ASTContext& context,
-                              const HierarchyInstantiationSyntax& syntax, std::string_view defName,
+                              const TSyntax& syntax, std::string_view defName, DiagCode missingCode,
                               ResolvedInstanceRules& results) {
     auto& instOverrides = resolvedConfig.useConfig.getInstanceOverrides();
     if (instOverrides.empty())
@@ -359,7 +360,7 @@ void resolveInstanceOverrides(const ResolvedConfig& resolvedConfig, const ASTCon
         if (ruleIt != overrideMap.end() && ruleIt->second.rule) {
             // We have an override rule, so use it to lookup the def.
             auto defResult = comp.getDefinition(defName, *context.scope, *ruleIt->second.rule,
-                                                instSyntax->sourceRange(), diag::UnknownModule);
+                                                instSyntax->sourceRange(), missingCode);
             results.push_back({defResult, instSyntax});
             nestedConfig = defResult.configRoot;
         }
@@ -367,7 +368,7 @@ void resolveInstanceOverrides(const ResolvedConfig& resolvedConfig, const ASTCon
             // No specific config rule, so use the default lookup behavior.
             if (!explicitDef) {
                 explicitDef = comp.getDefinition(defName, *context.scope, syntax.type.range(),
-                                                 diag::UnknownModule);
+                                                 missingCode);
             }
             results.push_back({*explicitDef, instSyntax});
             nestedConfig = explicitDef->configRoot;
@@ -654,7 +655,8 @@ void InstanceSymbol::fromSyntax(Compilation& comp, const HierarchyInstantiationS
 
     if (resolvedConfig) {
         ResolvedInstanceRules instanceRules;
-        resolveInstanceOverrides(*resolvedConfig, context, syntax, defName, instanceRules);
+        resolveInstanceOverrides(*resolvedConfig, context, syntax, defName, diag::UnknownModule,
+                                 instanceRules);
         if (!instanceRules.empty()) {
             for (auto& [defResult, instSyntax] : instanceRules)
                 createInstances(defResult, instSyntax);
@@ -1112,12 +1114,24 @@ void UninstantiatedDefSymbol::fromSyntax(
 
 void UninstantiatedDefSymbol::fromSyntax(Compilation& compilation,
                                          const PrimitiveInstantiationSyntax& syntax,
+                                         const syntax::HierarchicalInstanceSyntax* specificInstance,
                                          const ASTContext& parentContext,
                                          SmallVectorBase<const Symbol*>& results,
-                                         SmallVectorBase<const Symbol*>& implicitNets) {
+                                         SmallVectorBase<const Symbol*>& implicitNets,
+                                         SmallSet<std::string_view, 8>& implicitNetNames) {
     ASTContext context = parentContext.resetFlags(ASTFlags::NonProcedural);
-    createUninstantiatedDefs(compilation, syntax, syntax.type.valueText(), context, {}, results,
-                             implicitNets);
+    auto& netType = context.scope->getDefaultNetType();
+
+    if (specificInstance) {
+        createUninstantiatedDef(compilation, syntax, specificInstance, syntax.type.valueText(),
+                                context, {}, results, implicitNets, implicitNetNames, netType);
+    }
+    else {
+        for (auto instanceSyntax : syntax.instances) {
+            createUninstantiatedDef(compilation, syntax, instanceSyntax, syntax.type.valueText(),
+                                    context, {}, results, implicitNets, implicitNetNames, netType);
+        }
+    }
 }
 
 void UninstantiatedDefSymbol::fromSyntax(Compilation& compilation,
@@ -1387,20 +1401,34 @@ void PrimitiveInstanceSymbol::fromSyntax(const PrimitiveInstantiationSyntax& syn
     auto& comp = context.getCompilation();
     auto name = syntax.type.valueText();
 
-    if (syntax.type.kind == TokenKind::Identifier) {
-        auto def = comp.getDefinition(name, *context.scope, syntax.type.range(),
-                                      diag::UnknownPrimitive)
-                       .definition;
+    // If the type is not an identifier then it should be a gate keyword.
+    if (syntax.type.kind != TokenKind::Identifier) {
+        auto prim = comp.getGateType(name);
+        SLANG_ASSERT(prim);
+        createPrimitives(*prim, syntax, nullptr, context, results, implicitNets, implicitNetNames);
+        return;
+    }
+
+    auto createPrims = [&](const Compilation::DefinitionLookupResult& defResult,
+                           const HierarchicalInstanceSyntax* specificInstance) {
+        if (defResult.configRule)
+            defResult.configRule->isUsed = true;
+
+        auto def = defResult.definition;
         if (def) {
             if (def->kind == SymbolKind::Primitive) {
-                createPrimitives(def->as<PrimitiveSymbol>(), syntax, nullptr, context, results,
-                                 implicitNets, implicitNetNames);
+                createPrimitives(def->as<PrimitiveSymbol>(), syntax, specificInstance, context,
+                                 results, implicitNets, implicitNetNames);
                 return;
             }
 
             SLANG_ASSERT(syntax.strength || syntax.delay);
             if (syntax.strength) {
-                context.addDiag(diag::InstanceWithStrength, syntax.strength->sourceRange()) << name;
+                auto& diag = context.addDiag(diag::InstanceWithStrength,
+                                             syntax.strength->sourceRange());
+                diag << def->name;
+                if (specificInstance)
+                    diag << specificInstance->sourceRange();
             }
             else if (comp.hasFlag(CompilationFlags::AllowBareValParamAssignment) &&
                      syntax.delay->kind == SyntaxKind::DelayControl) {
@@ -1422,24 +1450,52 @@ void PrimitiveInstanceSymbol::fromSyntax(const PrimitiveInstantiationSyntax& syn
                     parameters.copy(comp),
                     missing(TokenKind::CloseParenthesis, delayVal.getLastToken().location()));
 
+                // Rebuild the instance list. The const_casts are fine because
+                // we're going to immediately treat them as const again below.
+                SmallVector<TokenOrSyntax> instanceBuf;
+                if (specificInstance) {
+                    instanceBuf.push_back(
+                        const_cast<HierarchicalInstanceSyntax*>(specificInstance));
+                }
+                else {
+                    for (auto inst : syntax.instances)
+                        instanceBuf.push_back(const_cast<HierarchicalInstanceSyntax*>(inst));
+                }
+
                 auto instantiation = comp.emplace<HierarchyInstantiationSyntax>(
-                    syntax.attributes, syntax.type, pvas, syntax.instances, syntax.semi);
+                    syntax.attributes, syntax.type, pvas, instanceBuf.copy(comp), syntax.semi);
                 InstanceSymbol::fromSyntax(comp, *instantiation, context, results, implicitNets,
                                            /* isFromBind */ false);
                 return;
             }
             else {
-                context.addDiag(diag::InstanceWithDelay,
-                                syntax.delay->getFirstToken().location() + 1);
+                auto& diag = context.addDiag(diag::InstanceWithDelay,
+                                             syntax.delay->getFirstToken().location() + 1);
+                if (specificInstance)
+                    diag << specificInstance->sourceRange();
             }
         }
-        UninstantiatedDefSymbol::fromSyntax(comp, syntax, context, results, implicitNets);
+        UninstantiatedDefSymbol::fromSyntax(comp, syntax, specificInstance, context, results,
+                                            implicitNets, implicitNetNames);
+    };
+
+    // Check if there are configuration instance override paths to check.
+    auto parentInst = context.scope->getContainingInstance();
+    if (parentInst && parentInst->parentInstance && parentInst->parentInstance->resolvedConfig) {
+        ResolvedInstanceRules instanceRules;
+        resolveInstanceOverrides(*parentInst->parentInstance->resolvedConfig, context, syntax, name,
+                                 diag::UnknownPrimitive, instanceRules);
+        if (!instanceRules.empty()) {
+            for (auto& [defResult, instSyntax] : instanceRules)
+                createPrims(defResult, instSyntax);
+            return;
+        }
     }
-    else {
-        auto prim = comp.getGateType(name);
-        SLANG_ASSERT(prim);
-        createPrimitives(*prim, syntax, nullptr, context, results, implicitNets, implicitNetNames);
-    }
+
+    // Simple case; just create the primitive instances.
+    auto defResult = comp.getDefinition(name, *context.scope, syntax.type.range(),
+                                        diag::UnknownPrimitive);
+    createPrims(defResult, nullptr);
 }
 
 std::span<const Expression* const> PrimitiveInstanceSymbol::getPortConnections() const {

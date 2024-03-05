@@ -254,8 +254,10 @@ public:
 
     static void fromSyntax(Compilation& compilation,
                            const syntax::PrimitiveInstantiationSyntax& syntax,
+                           const syntax::HierarchicalInstanceSyntax* specificInstance,
                            const ASTContext& context, SmallVectorBase<const Symbol*>& results,
-                           SmallVectorBase<const Symbol*>& implicitNets);
+                           SmallVectorBase<const Symbol*>& implicitNets,
+                           SmallSet<std::string_view, 8>& implicitNetNames);
 
     static void fromSyntax(Compilation& compilation,
                            const syntax::CheckerInstantiationSyntax& syntax,
