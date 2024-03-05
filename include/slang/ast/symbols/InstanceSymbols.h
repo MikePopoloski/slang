@@ -287,8 +287,10 @@ public:
 
     static void fromSyntax(const PrimitiveSymbol& primitive,
                            const syntax::HierarchyInstantiationSyntax& syntax,
+                           const syntax::HierarchicalInstanceSyntax* specificInstance,
                            const ASTContext& context, SmallVectorBase<const Symbol*>& results,
-                           SmallVectorBase<const Symbol*>& implicitNets);
+                           SmallVectorBase<const Symbol*>& implicitNets,
+                           SmallSet<std::string_view, 8>& implicitNetNames);
 
     static void fromSyntax(const syntax::PrimitiveInstantiationSyntax& syntax,
                            const ASTContext& context, SmallVectorBase<const Symbol*>& results,

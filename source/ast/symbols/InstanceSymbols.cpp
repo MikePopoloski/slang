@@ -587,8 +587,9 @@ void InstanceSymbol::fromSyntax(Compilation& comp, const HierarchyInstantiationS
         };
 
         if (def->kind == SymbolKind::Primitive) {
-            PrimitiveInstanceSymbol::fromSyntax(def->as<PrimitiveSymbol>(), syntax, context,
-                                                results, implicitNets);
+            PrimitiveInstanceSymbol::fromSyntax(def->as<PrimitiveSymbol>(), syntax,
+                                                specificInstance, context, results, implicitNets,
+                                                builder.implicitNetNames);
             if (!results.empty()) {
                 if (!owningDefinition ||
                     owningDefinition->definitionKind != DefinitionKind::Module || inChecker) {
@@ -1331,15 +1332,16 @@ Symbol* recursePrimArray(Compilation& compilation, const PrimitiveSymbol& primit
 
 template<typename TSyntax>
 void createPrimitives(const PrimitiveSymbol& primitive, const TSyntax& syntax,
+                      const syntax::HierarchicalInstanceSyntax* specificInstance,
                       const ASTContext& context, SmallVectorBase<const Symbol*>& results,
-                      SmallVectorBase<const Symbol*>& implicitNets) {
-    SmallSet<std::string_view, 8> implicitNetNames;
+                      SmallVectorBase<const Symbol*>& implicitNets,
+                      SmallSet<std::string_view, 8>& implicitNetNames) {
     SmallVector<int32_t> path;
 
     auto& comp = context.getCompilation();
     auto& netType = context.scope->getDefaultNetType();
 
-    for (auto instance : syntax.instances) {
+    auto createInst = [&](const syntax::HierarchicalInstanceSyntax* instance) {
         path.clear();
         createImplicitNets(*instance, context, netType, implicitNetNames, implicitNets);
 
@@ -1353,6 +1355,14 @@ void createPrimitives(const PrimitiveSymbol& primitive, const TSyntax& syntax,
                                            dims.end(), syntax.attributes, path);
             results.push_back(symbol);
         }
+    };
+
+    if (specificInstance) {
+        createInst(specificInstance);
+    }
+    else {
+        for (auto instance : syntax.instances)
+            createInst(instance);
     }
 }
 
@@ -1360,22 +1370,22 @@ void createPrimitives(const PrimitiveSymbol& primitive, const TSyntax& syntax,
 
 void PrimitiveInstanceSymbol::fromSyntax(const PrimitiveSymbol& primitive,
                                          const HierarchyInstantiationSyntax& syntax,
+                                         const syntax::HierarchicalInstanceSyntax* specificInstance,
                                          const ASTContext& context,
                                          SmallVectorBase<const Symbol*>& results,
-                                         SmallVectorBase<const Symbol*>& implicitNets) {
-    createPrimitives(primitive, syntax, context, results, implicitNets);
+                                         SmallVectorBase<const Symbol*>& implicitNets,
+                                         SmallSet<std::string_view, 8>& implicitNetNames) {
+    createPrimitives(primitive, syntax, specificInstance, context, results, implicitNets,
+                     implicitNetNames);
 }
 
 void PrimitiveInstanceSymbol::fromSyntax(const PrimitiveInstantiationSyntax& syntax,
                                          const ASTContext& context,
                                          SmallVectorBase<const Symbol*>& results,
                                          SmallVectorBase<const Symbol*>& implicitNets) {
+    SmallSet<std::string_view, 8> implicitNetNames;
     auto& comp = context.getCompilation();
     auto name = syntax.type.valueText();
-
-    auto missing = [&](TokenKind tk, SourceLocation loc) {
-        return Token::createMissing(comp, tk, loc);
-    };
 
     if (syntax.type.kind == TokenKind::Identifier) {
         auto def = comp.getDefinition(name, *context.scope, syntax.type.range(),
@@ -1383,8 +1393,8 @@ void PrimitiveInstanceSymbol::fromSyntax(const PrimitiveInstantiationSyntax& syn
                        .definition;
         if (def) {
             if (def->kind == SymbolKind::Primitive) {
-                createPrimitives(def->as<PrimitiveSymbol>(), syntax, context, results,
-                                 implicitNets);
+                createPrimitives(def->as<PrimitiveSymbol>(), syntax, nullptr, context, results,
+                                 implicitNets, implicitNetNames);
                 return;
             }
 
@@ -1401,6 +1411,10 @@ void PrimitiveInstanceSymbol::fromSyntax(const PrimitiveInstantiationSyntax& syn
 
                 SmallVector<TokenOrSyntax> parameters;
                 parameters.push_back(comp.emplace<OrderedParamAssignmentSyntax>(delayVal));
+
+                auto missing = [&](TokenKind tk, SourceLocation loc) {
+                    return Token::createMissing(comp, tk, loc);
+                };
 
                 auto pvas = comp.emplace<ParameterValueAssignmentSyntax>(
                     delay.hash,
@@ -1424,7 +1438,7 @@ void PrimitiveInstanceSymbol::fromSyntax(const PrimitiveInstantiationSyntax& syn
     else {
         auto prim = comp.getGateType(name);
         SLANG_ASSERT(prim);
-        createPrimitives(*prim, syntax, context, results, implicitNets);
+        createPrimitives(*prim, syntax, nullptr, context, results, implicitNets, implicitNetNames);
     }
 }
 

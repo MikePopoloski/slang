@@ -942,7 +942,7 @@ endmodule
     CHECK(param.getValue().str() == "lib1.foo");
 }
 
-TEST_CASE("Config target primitives") {
+TEST_CASE("Config params target primitives") {
     auto tree = SyntaxTree::fromText(R"(
 config cfg1;
     design top;
@@ -975,4 +975,28 @@ endmodule
     REQUIRE(diags.size() == 2);
     CHECK(diags[0].code == diag::ConfigParamsForPrimitive);
     CHECK(diags[1].code == diag::ConfigParamsForPrimitive);
+}
+
+TEST_CASE("Config target multiple primitives") {
+    auto tree = SyntaxTree::fromText(R"(
+config cfg1;
+    design top;
+    instance top.b1 use p1;
+    instance top.b2 use p1;
+endconfig
+
+primitive p1 (output c, input a, b);
+    table 00:0; endtable
+endprimitive
+
+module top;
+    bar b1(c, a, b), b2(c, a, b);
+endmodule
+)");
+    CompilationOptions options;
+    options.topModules.emplace("cfg1");
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
 }
