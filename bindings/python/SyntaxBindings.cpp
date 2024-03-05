@@ -22,6 +22,24 @@ namespace {
 struct PySyntaxVisitor : public PyVisitorBase<PySyntaxVisitor, SyntaxVisitor> {
     using PyVisitorBase::PyVisitorBase;
 
+    template<typename T>
+    void handle(const T& t) {
+        if (this->interrupted)
+            return;
+
+        // Note: the cast to SyntaxNode here is very important.
+        // It means that the object Python sees is of type SyntaxNode,
+        // forcing them to go through the polymorphic downcaster to get
+        // at the actual type.
+        py::object result = this->f(static_cast<const SyntaxNode*>(&t));
+        if (result.equal(py::cast(VisitAction::Interrupt))) {
+            this->interrupted = true;
+            return;
+        }
+        if (result.not_equal(py::cast(VisitAction::Skip)))
+            this->visitDefault(t);
+    }
+
     void visitToken(parsing::Token t) {
         if (this->interrupted)
             return;
