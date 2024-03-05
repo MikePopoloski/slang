@@ -199,12 +199,18 @@ bool FmtHelpers::checkSFormatArgs(const ASTContext& context, const Args& args) {
 
 static bool formatSpecialArg(char spec, const Scope& scope, std::string& result) {
     switch (charToLower(spec)) {
-        case 'l':
-            if (auto def = scope.asSymbol().getDeclaringDefinition())
+        case 'l': {
+            auto& sym = scope.asSymbol();
+            if (auto lib = sym.getSourceLibrary()) {
+                result += lib->name;
+                result.push_back('.');
+            }
+            if (auto def = sym.getDeclaringDefinition())
                 result += def->name;
             else
                 result += "$unit";
             return true;
+        }
         case 'm':
             scope.asSymbol().getHierarchicalPath(result);
             return true;

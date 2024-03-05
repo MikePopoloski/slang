@@ -908,3 +908,36 @@ endmodule
     CHECK(diags[0].code == diag::MultipleTopDupName);
     CHECK(diags[1].code == diag::MultipleTopDupName);
 }
+
+TEST_CASE("Displaying library binding info") {
+    auto lib1 = std::make_unique<SourceLibrary>("lib1", 1);
+
+    auto tree1 = SyntaxTree::fromText(R"(
+module foo;
+    localparam string S = $sformatf("%L");
+endmodule
+)",
+                                      SyntaxTree::getDefaultSourceManager(), "source", "", {},
+                                      lib1.get());
+
+    auto tree2 = SyntaxTree::fromText(R"(
+config cfg1;
+    design top;
+    instance top.foo use lib1.foo;
+endconfig
+
+module top;
+    f foo();
+endmodule
+)");
+    CompilationOptions options;
+    options.topModules.emplace("cfg1");
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree1);
+    compilation.addSyntaxTree(tree2);
+    NO_COMPILATION_ERRORS;
+
+    auto& param = compilation.getRoot().lookupName<ParameterSymbol>("top.foo.S");
+    CHECK(param.getValue().str() == "lib1.foo");
+}
