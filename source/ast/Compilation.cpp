@@ -352,9 +352,7 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamsAndBinds) {
     // Find top level modules (and programs) that form the root of the design.
     // Iterate the definitions map before instantiating any top level modules,
     // since that can cause changes to the definition map itself.
-    SmallVector<std::tuple<const DefinitionSymbol*, const ConfigBlockSymbol*, const ConfigRule*>>
-        topDefs;
-    SmallSet<const ConfigBlockSymbol*, 2> selectedConfigs;
+    SmallVector<std::pair<DefinitionLookupResult, SourceRange>> topDefs;
     if (options.topModules.empty()) {
         for (auto& [key, defList] : definitionMap) {
             if (std::get<1>(key) != root.get())
@@ -382,7 +380,7 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamsAndBinds) {
                         def.definitionKind == DefinitionKind::Program) {
                         if (isValidTop(def)) {
                             // This definition can be automatically instantiated.
-                            topDefs.push_back({&def, nullptr, nullptr});
+                            topDefs.push_back({{&def}, {}});
                             continue;
                         }
                     }
@@ -394,9 +392,117 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamsAndBinds) {
         }
     }
     else {
+        SmallMap<std::string_view, size_t, 4> topNameMap;
+        auto tryAddTop = [&](DefinitionLookupResult result, SourceRange sourceRange) {
+            // Make sure this definition's name doesn't collide with a top
+            // module we already previously selected.
+            auto def = result.definition;
+            auto [it, inserted] = topNameMap.emplace(def->name, topDefs.size());
+            if (inserted) {
+                topDefs.push_back({result, sourceRange});
+                SLANG_ASSERT(def->kind == SymbolKind::Definition);
+                def->as<DefinitionSymbol>().noteInstantiated();
+            }
+            else {
+                auto& diag = root->addDiag(diag::MultipleTopDupName, sourceRange.start()
+                                                                         ? sourceRange
+                                                                         : SourceRange::NoLocation);
+                diag << def->name;
+
+                auto& entry = topDefs[it->second];
+                if (entry.first.configRoot)
+                    diag.addNote(diag::NoteConfigRule, entry.second);
+            }
+        };
+
         // If the list of top modules has already been provided we just need to
         // find and instantiate them.
-        auto& tm = options.topModules;
+        for (auto userProvidedName : options.topModules) {
+            // Find the target library, if there is one specified.
+            auto searchName = userProvidedName;
+            const SourceLibrary* targetLib = nullptr;
+            if (auto idx = searchName.find('.'); idx != std::string_view::npos) {
+                targetLib = getSourceLibrary(searchName.substr(0, idx));
+                if (!targetLib) {
+                    root->addDiag(diag::InvalidTopModule, SourceLocation::NoLocation)
+                        << userProvidedName;
+                    continue;
+                }
+
+                searchName = searchName.substr(idx + 1);
+            }
+
+            // A trailing ':config' is stripped -- it's there to allow the user
+            // to disambiguate modules and config blocks.
+            bool onlyConfig = false;
+            constexpr std::string_view configSuffix = ":config";
+            if (searchName.ends_with(configSuffix)) {
+                onlyConfig = true;
+                searchName = searchName.substr(0, searchName.length() - configSuffix.length());
+            }
+
+            if (!onlyConfig) {
+                if (auto defIt = definitionMap.find(std::tuple{searchName, root.get()});
+                    defIt != definitionMap.end()) {
+
+                    const DefinitionSymbol* foundDef = nullptr;
+                    for (auto defSym : defIt->second.first) {
+                        if (defSym->kind != SymbolKind::Definition)
+                            continue;
+
+                        auto& def = defSym->as<DefinitionSymbol>();
+                        if (&def.sourceLibrary == targetLib ||
+                            (!targetLib && def.sourceLibrary.isDefault)) {
+                            foundDef = &def;
+                            break;
+                        }
+                    }
+
+                    if (foundDef) {
+                        if ((foundDef->definitionKind == DefinitionKind::Module ||
+                             foundDef->definitionKind == DefinitionKind::Program) &&
+                            isValidTop(*foundDef)) {
+
+                            tryAddTop({foundDef}, {});
+                        }
+                        else {
+                            // Otherwise, issue an error because the user asked us to instantiate
+                            // this.
+                            foundDef->getParentScope()->addDiag(diag::InvalidTopModule,
+                                                                SourceLocation::NoLocation)
+                                << userProvidedName;
+                        }
+                        continue;
+                    }
+                }
+            }
+
+            if (auto confIt = configBlocks.find(searchName); confIt != configBlocks.end()) {
+                const ConfigBlockSymbol* foundConf = nullptr;
+                for (auto conf : confIt->second) {
+                    auto lib = conf->getSourceLibrary();
+                    SLANG_ASSERT(lib);
+
+                    if (lib == targetLib || (!targetLib && lib->isDefault)) {
+                        foundConf = conf;
+                        break;
+                    }
+                }
+
+                if (foundConf) {
+                    foundConf->isUsed = true;
+                    for (auto& cell : foundConf->getTopCells())
+                        tryAddTop({&cell.definition, foundConf, cell.rule}, cell.sourceRange);
+                    continue;
+                }
+            }
+
+            root->addDiag(diag::InvalidTopModule, SourceLocation::NoLocation) << userProvidedName;
+        }
+
+        // Go back through the definition map and find all definitions that are unused,
+        // unreferenced in the design, and candidates for instantiating in unreferenced
+        // form to get some error checking of their contents.
         for (auto& [key, defList] : definitionMap) {
             if (std::get<1>(key) != root.get())
                 continue;
@@ -406,100 +512,32 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamsAndBinds) {
                     continue;
 
                 auto& def = defSym->as<DefinitionSymbol>();
-                if (def.definitionKind == DefinitionKind::Module ||
-                    def.definitionKind == DefinitionKind::Program) {
-
-                    // If this definition is in a library, it can only be targeted as
-                    // a top module by the user including the library name in the string.
-                    auto it = tm.find(fmt::format("{}.{}", def.sourceLibrary.name, def.name));
-                    if (it == tm.end() && def.sourceLibrary.isDefault)
-                        it = tm.find(def.name);
-
-                    if (it != tm.end()) {
-                        // Remove from the top modules set so that we know we visited it.
-                        tm.erase(it);
-
-                        // Make sure this is actually valid as a top-level module.
-                        if (isValidTop(def)) {
-                            topDefs.push_back({&def, nullptr, nullptr});
-                            continue;
-                        }
-
-                        // Otherwise, issue an error because the user asked us to instantiate this.
-                        def.getParentScope()->addDiag(diag::InvalidTopModule,
-                                                      SourceLocation::NoLocation)
-                            << def.name;
-                    }
-                }
-
-                // Otherwise this definition might be unreferenced and not automatically
-                // instantiated (don't add library definitions to this list though).
                 if (globalInstantiations.find(def.name) == globalInstantiations.end() &&
-                    def.sourceLibrary.isDefault) {
+                    def.sourceLibrary.isDefault && !def.isInstantiated()) {
                     unreferencedDefs.push_back(&def);
                 }
             }
-        }
-
-        // Any names still in the map were not found as module definitions.
-        for (auto& userProvidedName : tm) {
-            // This might be a config block instead. If it has a dot, assume that's
-            // the library designator.
-            std::string confLib;
-            std::string confName(userProvidedName);
-            if (auto pos = confName.find_first_of('.'); pos != std::string::npos) {
-                confLib = confName.substr(0, pos);
-                confName = confName.substr(pos + 1);
-            }
-
-            // A trailing ':config' is stripped -- it's there to allow the user
-            // to disambiguate modules and config blocks.
-            constexpr std::string_view configSuffix = ":config";
-            if (confName.ends_with(configSuffix))
-                confName = confName.substr(0, confName.length() - configSuffix.length());
-
-            if (auto confIt = configBlocks.find(confName); confIt != configBlocks.end()) {
-                const ConfigBlockSymbol* foundConf = nullptr;
-                for (auto conf : confIt->second) {
-                    auto lib = conf->getSourceLibrary();
-                    SLANG_ASSERT(lib);
-
-                    if (lib->name == confLib || (confLib.empty() && lib->isDefault)) {
-                        foundConf = conf;
-                        break;
-                    }
-                }
-
-                if (foundConf) {
-                    foundConf->isUsed = true;
-                    for (auto& cell : foundConf->getTopCells()) {
-                        selectedConfigs.emplace(foundConf);
-                        topDefs.push_back({&cell.definition, foundConf, cell.rule});
-                    }
-                    continue;
-                }
-            }
-
-            root->addDiag(diag::InvalidTopModule, SourceLocation::NoLocation) << userProvidedName;
         }
     }
 
     // Sort the list of definitions so that we get deterministic ordering of instances;
     // the order is otherwise dependent on iterating over a hash table.
-    std::ranges::sort(topDefs,
-                      [](auto a, auto b) { return std::get<0>(a)->name < std::get<0>(b)->name; });
+    std::ranges::sort(topDefs, [](auto a, auto b) {
+        return a.first.definition->name < b.first.definition->name;
+    });
     std::ranges::sort(unreferencedDefs, [](auto a, auto b) { return a->name < b->name; });
 
     // If we have any cli param overrides we should apply them to
     // each top-level instance.
     // TODO: generalize these to full hierarchical paths
     if (!cliOverrides.empty()) {
-        for (auto [def, config, configRule] : topDefs) {
-            for (auto& param : def->parameters) {
+        for (auto [result, _] : topDefs) {
+            auto& def = result.definition->as<DefinitionSymbol>();
+            for (auto& param : def.parameters) {
                 if (!param.isTypeParam && param.hasSyntax) {
                     auto it = cliOverrides.find(param.name);
                     if (it != cliOverrides.end()) {
-                        hierarchyOverrides.childrenBySyntax[*def->getSyntax()]
+                        hierarchyOverrides.childrenBySyntax[*def.getSyntax()]
                             .overridesBySyntax.emplace(param.valueDecl,
                                                        std::pair{*it->second, nullptr});
                     }
@@ -509,19 +547,20 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamsAndBinds) {
     }
 
     SmallVector<const InstanceSymbol*> topList;
-    for (auto [def, config, configRule] : topDefs) {
+    for (auto [result, _] : topDefs) {
+        auto& def = result.definition->as<DefinitionSymbol>();
         HierarchyOverrideNode* hierarchyOverrideNode = nullptr;
-        if (auto sit = hierarchyOverrides.childrenBySyntax.find(*def->getSyntax());
+        if (auto sit = hierarchyOverrides.childrenBySyntax.find(*def.getSyntax());
             sit != hierarchyOverrides.childrenBySyntax.end()) {
             hierarchyOverrideNode = &sit->second;
         }
-        else if (auto nit = hierarchyOverrides.childrenByName.find(def->name);
+        else if (auto nit = hierarchyOverrides.childrenByName.find(def.name);
                  nit != hierarchyOverrides.childrenByName.end()) {
             hierarchyOverrideNode = &nit->second;
         }
 
-        auto& instance = InstanceSymbol::createDefault(*this, *def, hierarchyOverrideNode, config,
-                                                       configRule);
+        auto& instance = InstanceSymbol::createDefault(*this, def, hierarchyOverrideNode,
+                                                       result.configRoot, result.configRule);
         root->addMember(instance);
         topList.push_back(&instance);
     }
@@ -592,14 +631,13 @@ Compilation::DefinitionLookupResult Compilation::tryGetDefinition(std::string_vi
     for (auto lib : defaultLiblist) {
         for (auto def : defList) {
             if (def->getSourceLibrary() == lib)
-                return {def, nullptr, nullptr};
+                return def;
         }
     }
 
     // Otherwise return the first definition in the list -- it's already
     // sorted in priority order.
-    return defList.empty() ? DefinitionLookupResult{}
-                           : DefinitionLookupResult{defList.front(), nullptr, nullptr};
+    return defList.empty() ? DefinitionLookupResult{} : DefinitionLookupResult{defList.front()};
 }
 
 static Token getExternNameToken(const SyntaxNode& sn) {

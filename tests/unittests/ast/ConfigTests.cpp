@@ -881,3 +881,30 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::ConfigInstanceUnderOtherConfig);
 }
+
+TEST_CASE("Multiple tops with same name error") {
+    auto tree = SyntaxTree::fromText(R"(
+config cfg1;
+    design top;
+endconfig
+
+config cfg2;
+    design top;
+endconfig
+
+module top;
+endmodule
+)");
+    CompilationOptions options;
+    options.topModules.emplace("cfg1");
+    options.topModules.emplace("cfg2");
+    options.topModules.emplace("top");
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::MultipleTopDupName);
+    CHECK(diags[1].code == diag::MultipleTopDupName);
+}

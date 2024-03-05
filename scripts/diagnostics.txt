@@ -1029,6 +1029,7 @@ error ExternDeclMismatchPrev "extern {} '{}' does not match previous extern defi
 error UnknownLibrary "unknown library '{}'"
 error NestedConfigMultipleTops "non-top config '{}' has more than one top cell specified"
 error ConfigParamsIgnored "parameter overrides provided by config rule are ignored because the target instance is using a different nested config '{}'"
+error MultipleTopDupName "more than one top module specified with the name '{}'"
 warning unused-def UnusedDefinition "{} definition is unused"
 warning unused-net UnusedNet "unused net '{}'"
 warning unused-implicit-net UnusedImplicitNet "implicit net '{}' is unused elsewhere"

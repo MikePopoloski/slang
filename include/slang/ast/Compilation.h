@@ -324,6 +324,15 @@ public:
         /// A config rule that applies to instances using this
         /// definition, or nullptr if none.
         const ConfigRule* configRule = nullptr;
+
+        DefinitionLookupResult() = default;
+
+        DefinitionLookupResult(const Symbol* definition) : definition(definition) {}
+
+        DefinitionLookupResult(const Symbol* definition, const ConfigBlockSymbol* configRoot,
+                               const ConfigRule* configRule) :
+            definition(definition),
+            configRoot(configRoot), configRule(configRule) {}
     };
 
     /// Gets the definition with the given name, or nullptr if there is no such definition.
