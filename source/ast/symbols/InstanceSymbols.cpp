@@ -52,19 +52,64 @@ std::pair<std::string_view, SourceLocation> getNameLoc(const HierarchicalInstanc
     return std::make_pair(name, loc);
 }
 
+void createImplicitNets(const HierarchicalInstanceSyntax& instance, const ASTContext& context,
+                        const NetType& netType, SmallSet<std::string_view, 8>& implicitNetNames,
+                        SmallVectorBase<const Symbol*>& results) {
+    // If no default nettype is set, we don't create implicit nets.
+    if (netType.isError())
+        return;
+
+    for (auto conn : instance.connections) {
+        const PropertyExprSyntax* expr = nullptr;
+        switch (conn->kind) {
+            case SyntaxKind::OrderedPortConnection:
+                expr = conn->as<OrderedPortConnectionSyntax>().expr;
+                break;
+            case SyntaxKind::NamedPortConnection:
+                expr = conn->as<NamedPortConnectionSyntax>().expr;
+                break;
+            default:
+                break;
+        }
+
+        if (!expr)
+            continue;
+
+        SmallVector<const IdentifierNameSyntax*> implicitNets;
+        Expression::findPotentiallyImplicitNets(*expr, context, implicitNets);
+
+        auto& comp = context.getCompilation();
+        for (auto ins : implicitNets) {
+            if (implicitNetNames.emplace(ins->identifier.valueText()).second)
+                results.push_back(&NetSymbol::createImplicit(comp, *ins, netType));
+        }
+    }
+}
+
+// A helper class for building instances of definitions (modules/interfaces/programs).
 class InstanceBuilder {
 public:
-    InstanceBuilder(const ASTContext& context, const DefinitionSymbol& definition,
-                    ParameterBuilder& paramBuilder, const HierarchyOverrideNode* parentOverrideNode,
-                    std::span<const AttributeInstanceSyntax* const> attributes,
-                    const ResolvedConfig* resolvedConfig, const ConfigBlockSymbol* newConfigRoot,
-                    bool isFromBind) :
-        comp(context.getCompilation()),
-        context(context), definition(definition), paramBuilder(paramBuilder),
-        parentOverrideNode(parentOverrideNode), attributes(attributes),
-        resolvedConfig(resolvedConfig), newConfigRoot(newConfigRoot), isFromBind(isFromBind) {}
+    InstanceBuilder(const ASTContext& context, SmallVectorBase<const Symbol*>& implicitNets,
+                    const HierarchyOverrideNode* parentOverrideNode,
+                    std::span<const AttributeInstanceSyntax* const> attributes, bool isFromBind) :
+        netType(context.scope->getDefaultNetType()),
+        comp(context.getCompilation()), context(context), parentOverrideNode(parentOverrideNode),
+        implicitNets(implicitNets), attributes(attributes), isFromBind(isFromBind) {}
 
+    // Resets the builder to be ready to create more instances with different settings.
+    // Must be called at least once prior to creating instances.
+    void reset(const DefinitionSymbol& def_, ParameterBuilder& paramBuilder_,
+               const ResolvedConfig* resolvedConfig_, const ConfigBlockSymbol* newConfigRoot_) {
+        definition = &def_;
+        paramBuilder = &paramBuilder_;
+        resolvedConfig = resolvedConfig_;
+        newConfigRoot = newConfigRoot_;
+    }
+
+    // Creates instance(s) for the given syntax node.
     Symbol* create(const HierarchicalInstanceSyntax& syntax) {
+        createImplicitNets(syntax, context, netType, implicitNetNames, implicitNets);
+
         path.clear();
 
         if (!syntax.decl) {
@@ -89,25 +134,29 @@ public:
         return recurse(syntax, overrideNode, dims.begin(), dims.end());
     }
 
+    SmallSet<std::string_view, 8> implicitNetNames;
+    const NetType& netType;
+
 private:
     using DimIterator = std::span<VariableDimensionSyntax*>::iterator;
 
     Compilation& comp;
     const ASTContext& context;
-    const DefinitionSymbol& definition;
+    const DefinitionSymbol* definition = nullptr;
+    ParameterBuilder* paramBuilder = nullptr;
+    const HierarchyOverrideNode* parentOverrideNode = nullptr;
+    const ResolvedConfig* resolvedConfig = nullptr;
+    const ConfigBlockSymbol* newConfigRoot = nullptr;
+    SmallVectorBase<const Symbol*>& implicitNets;
     SmallVector<int32_t> path;
-    ParameterBuilder& paramBuilder;
-    const HierarchyOverrideNode* parentOverrideNode;
     std::span<const AttributeInstanceSyntax* const> attributes;
-    const ResolvedConfig* resolvedConfig;
-    const ConfigBlockSymbol* newConfigRoot;
     bool isFromBind;
 
     Symbol* createInstance(const HierarchicalInstanceSyntax& syntax,
                            const HierarchyOverrideNode* overrideNode) {
-        paramBuilder.setOverrides(overrideNode);
+        paramBuilder->setOverrides(overrideNode);
         auto [name, loc] = getNameLoc(syntax);
-        auto inst = comp.emplace<InstanceSymbol>(comp, name, loc, definition, paramBuilder,
+        auto inst = comp.emplace<InstanceSymbol>(comp, name, loc, *definition, *paramBuilder,
                                                  /* isUninstantiated */ false, isFromBind);
         inst->arrayPath = path.copy(comp);
         inst->setSyntax(syntax);
@@ -150,7 +199,7 @@ private:
         ConstantRange range = dim.range;
         if (range.width() > comp.getOptions().maxInstanceArray) {
             auto& diag = context.addDiag(diag::MaxInstanceArrayExceeded, dimSyntax.sourceRange());
-            diag << definition.getKindString() << comp.getOptions().maxInstanceArray;
+            diag << definition->getKindString() << comp.getOptions().maxInstanceArray;
             return createEmpty();
         }
 
@@ -183,40 +232,6 @@ private:
     }
 };
 
-void createImplicitNets(const HierarchicalInstanceSyntax& instance, const ASTContext& context,
-                        const NetType& netType, SmallSet<std::string_view, 8>& implicitNetNames,
-                        SmallVectorBase<const Symbol*>& results) {
-    // If no default nettype is set, we don't create implicit nets.
-    if (netType.isError())
-        return;
-
-    for (auto conn : instance.connections) {
-        const PropertyExprSyntax* expr = nullptr;
-        switch (conn->kind) {
-            case SyntaxKind::OrderedPortConnection:
-                expr = conn->as<OrderedPortConnectionSyntax>().expr;
-                break;
-            case SyntaxKind::NamedPortConnection:
-                expr = conn->as<NamedPortConnectionSyntax>().expr;
-                break;
-            default:
-                break;
-        }
-
-        if (!expr)
-            continue;
-
-        SmallVector<const IdentifierNameSyntax*> implicitNets;
-        Expression::findPotentiallyImplicitNets(*expr, context, implicitNets);
-
-        auto& comp = context.getCompilation();
-        for (auto ins : implicitNets) {
-            if (implicitNetNames.emplace(ins->identifier.valueText()).second)
-                results.push_back(&NetSymbol::createImplicit(comp, *ins, netType));
-        }
-    }
-}
-
 void getInstanceArrayDimensions(const InstanceArraySymbol& array,
                                 SmallVectorBase<ConstantRange>& dimensions) {
     auto scope = array.getParentScope();
@@ -224,6 +239,148 @@ void getInstanceArrayDimensions(const InstanceArraySymbol& array,
         getInstanceArrayDimensions(scope->asSymbol().as<InstanceArraySymbol>(), dimensions);
 
     dimensions.push_back(array.range);
+}
+
+const HierarchyOverrideNode* findParentOverrideNode(const Scope& scope) {
+    auto& sym = scope.asSymbol();
+    if (sym.kind == SymbolKind::InstanceBody)
+        return sym.as<InstanceBodySymbol>().hierarchyOverrideNode;
+
+    auto parentScope = sym.getParentScope();
+    SLANG_ASSERT(parentScope);
+
+    auto node = findParentOverrideNode(*parentScope);
+    if (!node)
+        return nullptr;
+
+    if (sym.kind == SymbolKind::GenerateBlock &&
+        parentScope->asSymbol().kind == SymbolKind::GenerateBlockArray) {
+
+        auto it = node->childrenBySyntax.find(sym.as<GenerateBlockSymbol>().constructIndex);
+        if (it == node->childrenBySyntax.end())
+            return nullptr;
+
+        return &it->second;
+    }
+
+    auto syntax = sym.getSyntax();
+    SLANG_ASSERT(syntax);
+
+    if (auto it = node->childrenBySyntax.find(*syntax); it != node->childrenBySyntax.end())
+        return &it->second;
+
+    if (auto it = node->childrenByName.find(sym.name); it != node->childrenByName.end())
+        return &it->second;
+
+    return nullptr;
+}
+
+void checkForInvalidNestedConfigNodes(const ASTContext& context,
+                                      const ConfigBlockSymbol::InstanceOverride& node,
+                                      const ConfigBlockSymbol& configBlock) {
+    if (node.rule) {
+        // Mark the rule as used so we don't also get a warning
+        // about this rule when we're going to give a hard error anyway.
+        node.rule->isUsed = true;
+
+        auto& diag = context.addDiag(diag::ConfigInstanceUnderOtherConfig, node.rule->sourceRange);
+        diag.addNote(diag::NoteConfigRule, configBlock.getTopCells()[0].sourceRange);
+    }
+
+    for (auto& [_, child] : node.childNodes)
+        checkForInvalidNestedConfigNodes(context, child, configBlock);
+}
+
+using ResolvedInstanceRules =
+    SmallVector<std::pair<Compilation::DefinitionLookupResult, const HierarchicalInstanceSyntax*>>;
+
+void resolveInstanceOverrides(const ResolvedConfig& resolvedConfig, const ASTContext& context,
+                              const HierarchyInstantiationSyntax& syntax, std::string_view defName,
+                              ResolvedInstanceRules& results) {
+    auto& instOverrides = resolvedConfig.useConfig.getInstanceOverrides();
+    if (instOverrides.empty())
+        return;
+
+    // Start by walking up our parent stack and recording each symbol
+    // so we can walk back downward in the correct order when traversing
+    // the instanceOverrides tree.
+    const Scope* scope = context.scope;
+    SmallVector<const Symbol*> parentStack;
+    while (true) {
+        auto sym = &scope->asSymbol();
+        if (sym->kind == SymbolKind::InstanceBody) {
+            sym = sym->as<InstanceBodySymbol>().parentInstance;
+            SLANG_ASSERT(sym);
+        }
+
+        parentStack.push_back(sym);
+
+        scope = sym->getParentScope();
+        if (!scope || &resolvedConfig.rootInstance == sym)
+            break;
+    }
+
+    // Start going down the instance path tree, from the root.
+    auto rootSym = parentStack.back();
+    auto rootName = rootSym->kind == SymbolKind::Instance
+                        ? rootSym->as<InstanceSymbol>().getDefinition().name
+                        : rootSym->name;
+
+    auto rootIt = instOverrides.find(rootName);
+    if (rootIt == instOverrides.end())
+        return;
+
+    // Then through child nodes.
+    auto overrideNode = &rootIt->second;
+    for (size_t i = parentStack.size() - 1; i > 0; i--) {
+        auto childIt = overrideNode->childNodes.find(parentStack[i - 1]->name);
+        if (childIt == overrideNode->childNodes.end())
+            return;
+
+        overrideNode = &childIt->second;
+    }
+
+    // If we reached this point and have child nodes then there's more work
+    // to figure out each individual instance.
+    if (overrideNode->childNodes.empty())
+        return;
+
+    // We need to handle each instance separately, as the config
+    // rules allow the entire definition and parameter values
+    // to be overridden on a per-instance basis.
+    std::optional<Compilation::DefinitionLookupResult> explicitDef;
+    auto& comp = context.getCompilation();
+    auto& overrideMap = overrideNode->childNodes;
+    for (auto instSyntax : syntax.instances) {
+        const ConfigBlockSymbol* nestedConfig = nullptr;
+        auto instName = instSyntax->decl ? instSyntax->decl->name.valueText() : ""sv;
+
+        auto ruleIt = overrideMap.find(instName);
+        if (ruleIt != overrideMap.end() && ruleIt->second.rule) {
+            // We have an override rule, so use it to lookup the def.
+            auto defResult = comp.getDefinition(defName, *context.scope, *ruleIt->second.rule,
+                                                instSyntax->sourceRange(), diag::UnknownModule);
+            results.push_back({defResult, instSyntax});
+            nestedConfig = defResult.configRoot;
+        }
+        else {
+            // No specific config rule, so use the default lookup behavior.
+            if (!explicitDef) {
+                explicitDef = comp.getDefinition(defName, *context.scope, syntax.type.range(),
+                                                 diag::UnknownModule);
+            }
+            results.push_back({*explicitDef, instSyntax});
+            nestedConfig = explicitDef->configRoot;
+        }
+
+        // If we found a new nested config block that applies hierarchically
+        // to our instance and children, any other rules that would apply
+        // further down the tree from the original config are invalid.
+        if (nestedConfig && ruleIt != overrideMap.end()) {
+            for (auto& [_, child] : ruleIt->second.childNodes)
+                checkForInvalidNestedConfigNodes(context, child, *nestedConfig);
+        }
+    }
 }
 
 } // namespace
@@ -315,101 +472,6 @@ InstanceSymbol& InstanceSymbol::createInvalid(Compilation& compilation,
                                            /* isUninstantiated */ true, nullptr, nullptr, nullptr));
 }
 
-static const HierarchyOverrideNode* findParentOverrideNode(const Scope& scope) {
-    auto& sym = scope.asSymbol();
-    if (sym.kind == SymbolKind::InstanceBody)
-        return sym.as<InstanceBodySymbol>().hierarchyOverrideNode;
-
-    auto parentScope = sym.getParentScope();
-    SLANG_ASSERT(parentScope);
-
-    auto node = findParentOverrideNode(*parentScope);
-    if (!node)
-        return nullptr;
-
-    if (sym.kind == SymbolKind::GenerateBlock &&
-        parentScope->asSymbol().kind == SymbolKind::GenerateBlockArray) {
-
-        auto it = node->childrenBySyntax.find(sym.as<GenerateBlockSymbol>().constructIndex);
-        if (it == node->childrenBySyntax.end())
-            return nullptr;
-
-        return &it->second;
-    }
-
-    auto syntax = sym.getSyntax();
-    SLANG_ASSERT(syntax);
-
-    if (auto it = node->childrenBySyntax.find(*syntax); it != node->childrenBySyntax.end())
-        return &it->second;
-
-    if (auto it = node->childrenByName.find(sym.name); it != node->childrenByName.end())
-        return &it->second;
-
-    return nullptr;
-}
-
-static const ConfigBlockSymbol::InstanceOverride* findInstanceOverrideNode(
-    const ResolvedConfig& resolvedConfig, const Scope* scope) {
-    auto& instOverrides = resolvedConfig.useConfig.getInstanceOverrides();
-    if (instOverrides.empty())
-        return nullptr;
-
-    // Start by walking up our parent stack and recording each symbol
-    // so we can walk back downward in the correct order when traversing
-    // the instanceOverrides tree.
-    SmallVector<const Symbol*> parentStack;
-    while (true) {
-        auto sym = &scope->asSymbol();
-        if (sym->kind == SymbolKind::InstanceBody) {
-            sym = sym->as<InstanceBodySymbol>().parentInstance;
-            SLANG_ASSERT(sym);
-        }
-
-        parentStack.push_back(sym);
-
-        scope = sym->getParentScope();
-        if (!scope || &resolvedConfig.rootInstance == sym)
-            break;
-    }
-
-    auto rootSym = parentStack.back();
-    auto rootName = rootSym->kind == SymbolKind::Instance
-                        ? rootSym->as<InstanceSymbol>().getDefinition().name
-                        : rootSym->name;
-
-    auto rootIt = instOverrides.find(rootName);
-    if (rootIt == instOverrides.end())
-        return nullptr;
-
-    auto node = &rootIt->second;
-    for (size_t i = parentStack.size() - 1; i > 0; i--) {
-        auto childIt = node->childNodes.find(parentStack[i - 1]->name);
-        if (childIt == node->childNodes.end())
-            return nullptr;
-
-        node = &childIt->second;
-    }
-
-    return node->childNodes.empty() ? nullptr : node;
-}
-
-static void checkForInvalidNestedConfigNodes(const ASTContext& context,
-                                             const ConfigBlockSymbol::InstanceOverride& node,
-                                             const ConfigBlockSymbol& configBlock) {
-    if (node.rule) {
-        // Mark the rule as used so we don't also get a warning
-        // about this rule when we're going to give a hard error anyway.
-        node.rule->isUsed = true;
-
-        auto& diag = context.addDiag(diag::ConfigInstanceUnderOtherConfig, node.rule->sourceRange);
-        diag.addNote(diag::NoteConfigRule, configBlock.getTopCells()[0].sourceRange);
-    }
-
-    for (auto& [_, child] : node.childNodes)
-        checkForInvalidNestedConfigNodes(context, child, configBlock);
-}
-
 void InstanceSymbol::fromSyntax(Compilation& comp, const HierarchyInstantiationSyntax& syntax,
                                 const ASTContext& context, SmallVectorBase<const Symbol*>& results,
                                 SmallVectorBase<const Symbol*>& implicitNets, bool isFromBind) {
@@ -464,8 +526,36 @@ void InstanceSymbol::fromSyntax(Compilation& comp, const HierarchyInstantiationS
     const DefinitionSymbol* owningDefinition = nullptr;
     const HierarchyOverrideNode* parentOverrideNode = nullptr;
     const ResolvedConfig* resolvedConfig = nullptr;
-    SmallSet<std::string_view, 8> implicitNetNames;
-    auto& netType = context.scope->getDefaultNetType();
+    if (parentInst) {
+        owningDefinition = &parentInst->getDefinition();
+
+        // In the uncommon case that our parent instance has an override
+        // node set, we need to go back and make sure we account for any
+        // generate blocks that might actually be along the parent path for
+        // the new instances we're creating.
+        if (parentInst->hierarchyOverrideNode)
+            parentOverrideNode = findParentOverrideNode(*context.scope);
+
+        // Check if our parent has a configuration applied. If so, and if
+        // that configuration has instance overrides, we need to check if
+        // any of them apply to the instances we're about to create.
+        if (parentInst->parentInstance)
+            resolvedConfig = parentInst->parentInstance->resolvedConfig;
+
+        if (parentInst->isFromBind) {
+            if (isFromBind) {
+                context.addDiag(diag::BindUnderBind, syntax.type.range());
+                return;
+            }
+
+            // If our parent is from a bind statement, pass down the flag
+            // so that we prevent further binds below us too.
+            isFromBind = true;
+        }
+    }
+
+    InstanceBuilder builder(context, implicitNets, parentOverrideNode, syntax.attributes,
+                            isFromBind);
 
     // Creates instance symbols -- if specificInstance is provided then only that
     // instance will be created, otherwise all instances in the original syntax
@@ -475,7 +565,8 @@ void InstanceSymbol::fromSyntax(Compilation& comp, const HierarchyInstantiationS
         auto def = defResult.definition;
         if (!def) {
             UninstantiatedDefSymbol::fromSyntax(comp, syntax, specificInstance, context, results,
-                                                implicitNets, implicitNetNames, netType);
+                                                implicitNets, builder.implicitNetNames,
+                                                builder.netType);
             return;
         }
 
@@ -530,17 +621,6 @@ void InstanceSymbol::fromSyntax(Compilation& comp, const HierarchyInstantiationS
             }
         }
 
-        if (parentInst && parentInst->isFromBind) {
-            if (isFromBind) {
-                addDiag(diag::BindUnderBind);
-                return;
-            }
-
-            // If our parent is from a bind statement, pass down the flag
-            // so that we prevent further binds below us too.
-            isFromBind = true;
-        }
-
         ParameterBuilder paramBuilder(*context.scope, definition.name, definition.parameters);
         if (syntax.parameters)
             paramBuilder.setAssignments(*syntax.parameters, /* isFromConfig */ false);
@@ -560,82 +640,24 @@ void InstanceSymbol::fromSyntax(Compilation& comp, const HierarchyInstantiationS
             }
         }
 
-        InstanceBuilder builder(context, definition, paramBuilder, parentOverrideNode,
-                                syntax.attributes, localConfig, defResult.configRoot, isFromBind);
+        builder.reset(definition, paramBuilder, localConfig, defResult.configRoot);
 
         if (specificInstance) {
-            createImplicitNets(*specificInstance, context, netType, implicitNetNames, implicitNets);
             results.push_back(builder.create(*specificInstance));
         }
         else {
-            for (auto instanceSyntax : syntax.instances) {
-                createImplicitNets(*instanceSyntax, context, netType, implicitNetNames,
-                                   implicitNets);
+            for (auto instanceSyntax : syntax.instances)
                 results.push_back(builder.create(*instanceSyntax));
-            }
         }
     };
 
-    if (parentInst) {
-        owningDefinition = &parentInst->getDefinition();
-
-        // In the uncommon case that our parent instance has an override
-        // node set, we need to go back and make sure we account for any
-        // generate blocks that might actually be along the parent path for
-        // the new instances we're creating.
-        if (parentInst->hierarchyOverrideNode)
-            parentOverrideNode = findParentOverrideNode(*context.scope);
-
-        // Check if our parent has a configuration applied. If so, and if
-        // that configuration has instance overrides, we need to check if
-        // any of them apply to the instances we're about to create.
-        if (parentInst->parentInstance) {
-            resolvedConfig = parentInst->parentInstance->resolvedConfig;
-            if (resolvedConfig) {
-                auto overrideNode = findInstanceOverrideNode(*resolvedConfig, context.scope);
-                if (overrideNode) {
-                    // We need to handle each instance separately, as the config
-                    // rules allow the entire definition and parameter values
-                    // to be overridden on a per-instance basis.
-                    std::optional<Compilation::DefinitionLookupResult> explicitDef;
-                    auto& overrideMap = overrideNode->childNodes;
-                    for (auto instSyntax : syntax.instances) {
-                        const ConfigBlockSymbol* nestedConfig = nullptr;
-                        auto instName = instSyntax->decl ? instSyntax->decl->name.valueText()
-                                                         : ""sv;
-
-                        auto ruleIt = overrideMap.find(instName);
-                        if (ruleIt != overrideMap.end() && ruleIt->second.rule) {
-                            // We have an override rule, so use it to lookup the def.
-                            auto defResult = comp.getDefinition(defName, *context.scope,
-                                                                *ruleIt->second.rule,
-                                                                instSyntax->sourceRange(),
-                                                                diag::UnknownModule);
-                            createInstances(defResult, instSyntax);
-                            nestedConfig = defResult.configRoot;
-                        }
-                        else {
-                            // No specific config rule, so use the default lookup behavior.
-                            if (!explicitDef) {
-                                explicitDef = comp.getDefinition(defName, *context.scope,
-                                                                 syntax.type.range(),
-                                                                 diag::UnknownModule);
-                            }
-                            createInstances(*explicitDef, instSyntax);
-                            nestedConfig = explicitDef->configRoot;
-                        }
-
-                        // If we found a new nested config block that applies hierarchically
-                        // to our instance and children, any other rules that would apply
-                        // further down the tree from the original config are invalid.
-                        if (nestedConfig && ruleIt != overrideMap.end()) {
-                            for (auto& [_, child] : ruleIt->second.childNodes)
-                                checkForInvalidNestedConfigNodes(context, child, *nestedConfig);
-                        }
-                    }
-                    return;
-                }
-            }
+    if (resolvedConfig) {
+        ResolvedInstanceRules instanceRules;
+        resolveInstanceOverrides(*resolvedConfig, context, syntax, defName, instanceRules);
+        if (!instanceRules.empty()) {
+            for (auto& [defResult, instSyntax] : instanceRules)
+                createInstances(defResult, instSyntax);
+            return;
         }
     }
 
