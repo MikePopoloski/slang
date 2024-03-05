@@ -506,6 +506,9 @@ void InstanceSymbol::fromSyntax(Compilation& comp, const HierarchyInstantiationS
                 else if (isFromBind) {
                     addDiag(diag::BindTargetPrimitive);
                 }
+                else if (confRule && confRule->paramOverrides) {
+                    addDiag(diag::ConfigParamsForPrimitive);
+                }
             }
             return;
         }

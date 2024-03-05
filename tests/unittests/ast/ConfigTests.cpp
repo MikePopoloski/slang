@@ -941,3 +941,38 @@ endmodule
     auto& param = compilation.getRoot().lookupName<ParameterSymbol>("top.foo.S");
     CHECK(param.getValue().str() == "lib1.foo");
 }
+
+TEST_CASE("Config target primitives") {
+    auto tree = SyntaxTree::fromText(R"(
+config cfg1;
+    design top;
+    instance top.foo use p1;
+    cell bar use p2;
+    cell bar use #(.A(1));
+    instance top.foo use #(.B(1));
+endconfig
+
+primitive p1 (output c, input a, b);
+    table 00:0; endtable
+endprimitive
+
+primitive p2 (output c, input a, b);
+    table 00:0; endtable
+endprimitive
+
+module top;
+    f foo(c, a, b);
+    bar bar(c, a, b);
+endmodule
+)");
+    CompilationOptions options;
+    options.topModules.emplace("cfg1");
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::ConfigParamsForPrimitive);
+    CHECK(diags[1].code == diag::ConfigParamsForPrimitive);
+}
