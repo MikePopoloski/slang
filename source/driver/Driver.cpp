@@ -852,7 +852,7 @@ bool Driver::parseUnitListing(std::string_view text) {
         return false;
     }
 
-    sourceLoader.addSeparateUnit(files, std::move(includes), std::move(defines),
+    sourceLoader.addSeparateUnit(files, includes, std::move(defines),
                                  std::move(libraryName).value_or(std::string()));
 
     return true;

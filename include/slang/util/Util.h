@@ -103,8 +103,10 @@
 // Compiler-specific macros for warnings and suppressions
 #ifdef __clang__
 #    define SLANG_NO_SANITIZE(warningName) __attribute__((no_sanitize(warningName)))
+#    define SLANG_SUPPRESS [[clang::suppress]]
 #else
 #    define SLANG_NO_SANITIZE(warningName)
+#    define SLANG_SUPPRESS
 #endif
 
 using namespace std::literals;

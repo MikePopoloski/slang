@@ -647,10 +647,11 @@ void InstanceSymbol::fromSyntax(Compilation& comp, const HierarchyInstantiationS
         if (specificInstance) {
             results.push_back(builder.create(*specificInstance));
         }
-        else {
-            for (auto instanceSyntax : syntax.instances)
-                results.push_back(builder.create(*instanceSyntax));
-        }
+        else
+            SLANG_SUPPRESS {
+                for (auto instanceSyntax : syntax.instances)
+                    results.push_back(builder.create(*instanceSyntax));
+            }
     };
 
     if (resolvedConfig) {
@@ -1434,8 +1435,8 @@ void PrimitiveInstanceSymbol::fromSyntax(const PrimitiveInstantiationSyntax& syn
                      syntax.delay->kind == SyntaxKind::DelayControl) {
                 // We're allowing this to be a hierarchical instantiation with a single param
                 // assignment, and just pretending the parentheses were provided.
-                auto& delay = syntax.delay->as<DelaySyntax>();
-                auto& delayVal = *delay.delayValue;
+                auto& delaySyntax = syntax.delay->as<DelaySyntax>();
+                auto& delayVal = *delaySyntax.delayValue;
 
                 SmallVector<TokenOrSyntax> parameters;
                 parameters.push_back(comp.emplace<OrderedParamAssignmentSyntax>(delayVal));
@@ -1445,7 +1446,7 @@ void PrimitiveInstanceSymbol::fromSyntax(const PrimitiveInstantiationSyntax& syn
                 };
 
                 auto pvas = comp.emplace<ParameterValueAssignmentSyntax>(
-                    delay.hash,
+                    delaySyntax.hash,
                     missing(TokenKind::OpenParenthesis, delayVal.getFirstToken().location()),
                     parameters.copy(comp),
                     missing(TokenKind::CloseParenthesis, delayVal.getLastToken().location()));
