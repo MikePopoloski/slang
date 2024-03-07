@@ -113,7 +113,7 @@ std::string TimeScaleValue::toString() const {
 
 std::strong_ordering TimeScaleValue::operator<=>(const TimeScaleValue& rhs) const {
     // Unit enum is specified in reverse order, so check in the opposite direction.
-    if (auto cmp = rhs.unit <=> unit; cmp != 0)
+    if (auto cmp = rhs.unit <=> unit; cmp != 0) // NOLINT
         return cmp;
     return magnitude <=> rhs.magnitude;
 }

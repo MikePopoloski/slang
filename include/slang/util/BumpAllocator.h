@@ -7,6 +7,7 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include <cstring>
 #include <new>
 #include <span>
 
@@ -59,7 +60,7 @@ public:
             return {};
 
         auto dest = reinterpret_cast<T*>(allocate(len * sizeof(T), alignof(T)));
-        memcpy(dest, src.data(), len * sizeof(T));
+        std::memcpy(dest, src.data(), len * sizeof(T));
 
         return std::span<T>(dest, len);
     }

@@ -647,11 +647,11 @@ void InstanceSymbol::fromSyntax(Compilation& comp, const HierarchyInstantiationS
         if (specificInstance) {
             results.push_back(builder.create(*specificInstance));
         }
-        else
-            SLANG_SUPPRESS {
-                for (auto instanceSyntax : syntax.instances)
-                    results.push_back(builder.create(*instanceSyntax));
-            }
+        else {
+            // NOLINTNEXTLINE
+            for (auto instanceSyntax : syntax.instances)
+                results.push_back(builder.create(*instanceSyntax));
+        }
     };
 
     // If we came here from a bind directive we need to make use

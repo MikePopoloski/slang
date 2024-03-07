@@ -286,6 +286,7 @@ SLANG_EXPORT GlobRank svGlob(const fs::path& basePath, std::string_view pattern,
 
 static std::string_view nextSegment(std::string_view& path) {
     for (size_t i = 0; i < path.size(); i++) {
+        // NOLINTNEXTLINE
         if (path[i] == fs::path::preferred_separator || path[i] == '/') {
             auto result = path.substr(0, i);
             path = path.substr(i + 1);

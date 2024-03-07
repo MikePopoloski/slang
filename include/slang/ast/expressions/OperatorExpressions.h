@@ -112,10 +112,10 @@ public:
         Expression(ExpressionKind::ConditionalOp, type, sourceRange),
         conditions(conditions), left_(&left), right_(&right), isConst(isConst), isTrue(isTrue) {}
 
-    const Expression& left() const { SLANG_SUPPRESS return *left_; }
+    const Expression& left() const { return *left_; } // NOLINT
     Expression& left() { return *left_; }
 
-    const Expression& right() const { SLANG_SUPPRESS return *right_; }
+    const Expression& right() const { return *right_; } // NOLINT
     Expression& right() { return *right_; }
 
     ConstantValue evalImpl(EvalContext& context) const;
