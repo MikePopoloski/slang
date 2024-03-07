@@ -168,8 +168,8 @@ Compilation::Compilation(const Bag& options, const SourceLibrary* defaultLib) :
         defaultLibMem = std::make_unique<SourceLibrary>("work"s, INT_MAX);
         defaultLibMem->isDefault = true;
         defaultLibPtr = defaultLibMem.get();
-        libraryNameMap[defaultLibPtr->name] = defaultLibPtr;
     }
+    libraryNameMap[defaultLibPtr->name] = defaultLibPtr;
 
     // Set a default handler for printing types and symbol paths, for convenience.
     static std::once_flag onceFlag;
@@ -671,10 +671,48 @@ Compilation::DefinitionLookupResult Compilation::getDefinition(std::string_view 
         // No definition found and no error issued, so issue one ourselves.
         auto diag = errorMissingDef(lookupName, scope, sourceRange, code);
         if (diag)
-            diag->addNote(diag::NoteConfigRule, configRule.sourceRange);
+            diag->addNote(diag::NoteConfigRule, configRule.syntax->sourceRange());
     }
 
     return result.first;
+}
+
+Compilation::DefinitionLookupResult Compilation::getDefinition(
+    std::string_view name, const Scope& scope, SourceRange sourceRange,
+    const BindDirectiveInfo& bindInfo) const {
+
+    DefinitionLookupResult result;
+    if (bindInfo.instantiationDefSyntax) {
+        switch (bindInfo.instantiationDefSyntax->kind) {
+            case SyntaxKind::ModuleDeclaration:
+            case SyntaxKind::InterfaceDeclaration:
+            case SyntaxKind::ProgramDeclaration: {
+                auto& mds = bindInfo.instantiationDefSyntax->as<ModuleDeclarationSyntax>();
+                result.definition = getDefinition(mds);
+                if (!result.definition)
+                    errorMissingDef(name, scope, sourceRange, diag::UnknownModule);
+                break;
+            }
+            case SyntaxKind::UdpDeclaration:
+                scope.addDiag(diag::BindTargetPrimitive, sourceRange);
+                break;
+            default:
+                SLANG_UNREACHABLE;
+        }
+    }
+    else {
+        errorMissingDef(name, scope, sourceRange, diag::UnknownModule);
+    }
+
+    if (auto it = configBySyntax.find(bindInfo.configBlockSyntax); it != configBySyntax.end())
+        result.configRoot = it->second;
+
+    if (auto it = configBySyntax.find(bindInfo.configRuleSyntax); it != configBySyntax.end()) {
+        // This rule maps to a config block, so map further to the actual rule object.
+        result.configRule = it->second->findRuleFromSyntax(*bindInfo.configRuleSyntax);
+    }
+
+    return result;
 }
 
 const DefinitionSymbol* Compilation::getDefinition(const ModuleDeclarationSyntax& syntax) const {
@@ -937,6 +975,13 @@ const PackageSymbol& Compilation::createPackage(const Scope& scope,
 const ConfigBlockSymbol& Compilation::createConfigBlock(const Scope& scope,
                                                         const ConfigDeclarationSyntax& syntax) {
     auto& config = ConfigBlockSymbol::fromSyntax(scope, syntax);
+
+    // Register lookups by syntax node. Note that we register rule entries here
+    // by looking directly at the syntax so that we don't trigger resolution
+    // of the config block early, which could cause spurious errors.
+    configBySyntax[config.getSyntax()] = &config;
+    for (auto ruleSyntax : syntax.rules)
+        configBySyntax[ruleSyntax] = &config;
 
     auto it = configBlocks.find(config.name);
     if (it == configBlocks.end()) {
@@ -1346,10 +1391,9 @@ const Diagnostics& Compilation::getSemanticDiagnostics() {
         // resolve prior to full elaboration but their diagnostics were not
         // issued so we need to check again.
         for (auto [directive, scope] : bindDirectives) {
-            SmallVector<const Symbol*> instTargets;
-            const DefinitionSymbol* defTarget = nullptr;
-            resolveBindTargets(*directive, *scope, instTargets, &defTarget);
-            checkBindTargetParams(*directive, *scope, instTargets, defTarget);
+            ResolvedBind resolvedBind;
+            resolveBindTargets(*directive, *scope, resolvedBind);
+            checkBindTargetParams(*directive, *scope, resolvedBind);
         }
 
         // Report any lingering name conflicts.
@@ -1979,8 +2023,7 @@ void Compilation::checkElemTimeScale(std::optional<TimeScale> timeScale, SourceR
 }
 
 void Compilation::resolveBindTargets(const BindDirectiveSyntax& syntax, const Scope& scope,
-                                     SmallVector<const Symbol*>& instTargets,
-                                     const DefinitionSymbol** defTarget) {
+                                     ResolvedBind& resolvedBind) {
     auto checkValidTarget = [&](const Symbol& symbol, const SyntaxNode& nameSyntax) {
         if (symbol.kind == SymbolKind::Instance) {
             auto defKind = symbol.as<InstanceSymbol>().getDefinition().definitionKind;
@@ -2024,7 +2067,7 @@ void Compilation::resolveBindTargets(const BindDirectiveSyntax& syntax, const Sc
                         diag << syntax.target->sourceRange();
                         diag.addNote(diag::NoteDeclarationHere, result.found->location);
                     }
-                    instTargets.push_back(result.found);
+                    resolvedBind.instTargets.push_back(result.found);
                 }
             }
         }
@@ -2035,7 +2078,7 @@ void Compilation::resolveBindTargets(const BindDirectiveSyntax& syntax, const Sc
 
         if (result.found) {
             if (checkValidTarget(*result.found, *syntax.target))
-                instTargets.push_back(result.found);
+                resolvedBind.instTargets.push_back(result.found);
         }
         else {
             // If we didn't find the name as an instance, try as a definition.
@@ -2046,21 +2089,34 @@ void Compilation::resolveBindTargets(const BindDirectiveSyntax& syntax, const Sc
                 if (!def)
                     return;
 
-                if (def->kind == SymbolKind::Definition) {
-                    *defTarget = &def->as<DefinitionSymbol>();
-                    return;
-                }
+                if (def->kind == SymbolKind::Definition)
+                    resolvedBind.defTarget = &def->as<DefinitionSymbol>();
             }
         }
 
-        result.reportDiags(context);
+        if (!resolvedBind.defTarget)
+            result.reportDiags(context);
+    }
+
+    // Resolve the actual instantiation definition now, since it depends on the current
+    // config mapping, not the mapping of the target scope(s).
+    if (syntax.instantiation->kind == SyntaxKind::HierarchyInstantiation) {
+        auto& his = syntax.instantiation->as<HierarchyInstantiationSyntax>();
+        resolvedBind.instanceDef = tryGetDefinition(his.type.valueText(), scope);
+
+        // If we did not directly resolve to a new config root, look for a config
+        // in our parent scope. If there is one, pretend we've created a new
+        // config root at the targeted bind instance, so that modules underneath
+        // the bound instance get the correct config.
+        if (!resolvedBind.instanceDef.configRoot) {
+            if (auto inst = scope.getContainingInstance(); inst && inst->parentInstance)
+                resolvedBind.resolvedConfig = inst->parentInstance->resolvedConfig;
+        }
     }
 }
 
 void Compilation::checkBindTargetParams(const syntax::BindDirectiveSyntax& syntax,
-                                        const Scope& scope,
-                                        std::span<const Symbol* const> instTargets,
-                                        const DefinitionSymbol* defTarget) {
+                                        const Scope& scope, const ResolvedBind& resolvedBind) {
     // This method checks the following rule from the LRM:
     //    User-defined type names that are used to override type parameters must be
     //    visible and matching in both the scope containing the bind statement and in
@@ -2105,11 +2161,11 @@ void Compilation::checkBindTargetParams(const syntax::BindDirectiveSyntax& synta
         }
     };
 
-    for (auto target : instTargets)
+    for (auto target : resolvedBind.instTargets)
         doCheck(target->as<InstanceSymbol>().body);
 
-    if (defTarget) {
-        auto it = instancesWithDefBinds.find(defTarget);
+    if (resolvedBind.defTarget) {
+        auto it = instancesWithDefBinds.find(resolvedBind.defTarget);
         if (it != instancesWithDefBinds.end()) {
             for (auto target : it->second)
                 doCheck(target->as<InstanceBodySymbol>());
@@ -2131,8 +2187,8 @@ void Compilation::resolveDefParamsAndBinds() {
 
     struct BindEntry {
         InstancePath path;
-        const BindDirectiveSyntax* syntax = nullptr;
         const ModuleDeclarationSyntax* definitionTarget = nullptr;
+        BindDirectiveInfo info;
     };
     SmallVector<BindEntry> binds;
 
@@ -2166,11 +2222,11 @@ void Compilation::resolveDefParamsAndBinds() {
             if (entry.definitionTarget) {
                 auto it = c.definitionFromSyntax.find(entry.definitionTarget);
                 SLANG_ASSERT(it != c.definitionFromSyntax.end());
-                it->second->bindDirectives.push_back(entry.syntax);
+                it->second->bindDirectives.push_back(entry.info);
             }
             else {
                 auto node = getNodeFor(entry.path, c);
-                node->binds.push_back(entry.syntax);
+                node->binds.push_back(entry.info);
             }
         }
     };
@@ -2201,16 +2257,32 @@ void Compilation::resolveDefParamsAndBinds() {
 
         binds.clear();
         for (auto [syntax, scope] : c.bindDirectives) {
-            SmallVector<const Symbol*> instTargets;
-            const DefinitionSymbol* defTarget = nullptr;
-            c.resolveBindTargets(*syntax, *scope, instTargets, &defTarget);
+            ResolvedBind resolvedBind;
+            c.resolveBindTargets(*syntax, *scope, resolvedBind);
 
-            for (auto target : instTargets)
-                binds.emplace_back(BindEntry{InstancePath(*target), syntax});
+            BindDirectiveInfo info;
+            info.bindSyntax = syntax;
 
-            if (defTarget) {
-                auto& modSyntax = defTarget->getSyntax()->as<ModuleDeclarationSyntax>();
-                binds.emplace_back(BindEntry{{}, syntax, &modSyntax});
+            auto& def = resolvedBind.instanceDef;
+            info.configRuleSyntax = def.configRule ? def.configRule->syntax.get() : nullptr;
+            info.configBlockSyntax = def.configRoot ? def.configRoot->getSyntax() : nullptr;
+            info.instantiationDefSyntax = def.definition ? def.definition->getSyntax() : nullptr;
+            info.isNewConfigRoot = def.configRoot != nullptr;
+            if (!info.isNewConfigRoot && resolvedBind.resolvedConfig) {
+                info.configBlockSyntax = resolvedBind.resolvedConfig->useConfig.getSyntax();
+
+                // Make a copy of the list; the memory for it is owned by
+                // the old compilation that is going away.
+                info.liblist = copyFrom(resolvedBind.resolvedConfig->liblist);
+            }
+
+            for (auto target : resolvedBind.instTargets)
+                binds.emplace_back(BindEntry{InstancePath(*target), nullptr, info});
+
+            if (resolvedBind.defTarget) {
+                auto& modSyntax =
+                    resolvedBind.defTarget->getSyntax()->as<ModuleDeclarationSyntax>();
+                binds.emplace_back(BindEntry{{}, &modSyntax, info});
             }
         }
     };
@@ -2239,7 +2311,7 @@ void Compilation::resolveDefParamsAndBinds() {
         // constantly mucking with parameter values in ways that can change the actual
         // hierarchy that gets instantiated. Cloning lets us do that in an isolated context
         // and throw that work away once we know the final parameter values.
-        Compilation initialClone;
+        Compilation initialClone({}, defaultLibPtr);
         cloneInto(initialClone);
 
         DefParamVisitor initialVisitor(options.maxInstanceDepth, generateLevel);
@@ -2261,7 +2333,7 @@ void Compilation::resolveDefParamsAndBinds() {
         // give up due to the potential of cyclical references.
         bool allSame = true;
         for (uint32_t i = 0; i < options.maxDefParamSteps; i++) {
-            Compilation c;
+            Compilation c({}, defaultLibPtr);
             cloneInto(c);
 
             DefParamVisitor v(options.maxInstanceDepth, generateLevel);
@@ -2383,7 +2455,7 @@ std::pair<Compilation::DefinitionLookupResult, bool> Compilation::resolveConfigR
                 auto range = syntax->as<ConfigDeclarationSyntax>().topCells.sourceRange();
                 auto& diag = scope.addDiag(diag::NestedConfigMultipleTops, range);
                 diag << result->name;
-                diag.addNote(diag::NoteConfigRule, rule.sourceRange);
+                diag.addNote(diag::NoteConfigRule, rule.syntax->sourceRange());
 
                 return {{}, true};
             }

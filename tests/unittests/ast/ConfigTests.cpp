@@ -1053,3 +1053,61 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Configs with binds") {
+    auto lib1 = std::make_unique<SourceLibrary>("lib1", 1);
+    auto lib2 = std::make_unique<SourceLibrary>("lib2", 2);
+
+    auto tree1 = SyntaxTree::fromText(R"(
+module mod;
+endmodule
+
+module baz #(parameter int A);
+endmodule
+)",
+                                      SyntaxTree::getDefaultSourceManager(), "source", "", {},
+                                      lib1.get());
+
+    auto tree2 = SyntaxTree::fromText(R"(
+module foo;
+    m m2();
+endmodule
+)",
+                                      SyntaxTree::getDefaultSourceManager(), "source", "", {},
+                                      lib2.get());
+
+    auto tree3 = SyntaxTree::fromText(R"(
+config cfg1;
+    design top;
+    instance top.m1 liblist lib1;
+    cell next liblist work lib2;
+    cell baz liblist lib1;
+    cell baz use #(.A(1));
+endconfig
+
+module m;
+    localparam int J = 9;
+endmodule
+
+module next;
+    bind top.m1 foo f1();
+    bind top.m1 baz baz1();
+endmodule
+
+module top;
+    mod m1();
+    next n1();
+endmodule
+)");
+    CompilationOptions options;
+    options.topModules.emplace("cfg1");
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree1);
+    compilation.addSyntaxTree(tree3);
+    compilation.addSyntaxTree(tree2);
+    NO_COMPILATION_ERRORS;
+
+    auto& param = compilation.getRoot().lookupName<ParameterSymbol>("top.m1.f1.m2.J");
+    CHECK(param.getValue().integer() == 9);
+}

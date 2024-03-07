@@ -283,7 +283,8 @@ void checkForInvalidNestedConfigNodes(const ASTContext& context,
         // about this rule when we're going to give a hard error anyway.
         node.rule->isUsed = true;
 
-        auto& diag = context.addDiag(diag::ConfigInstanceUnderOtherConfig, node.rule->sourceRange);
+        auto& diag = context.addDiag(diag::ConfigInstanceUnderOtherConfig,
+                                     node.rule->syntax->sourceRange());
         diag.addNote(diag::NoteConfigRule, configBlock.getTopCells()[0].sourceRange);
     }
 
@@ -475,7 +476,8 @@ InstanceSymbol& InstanceSymbol::createInvalid(Compilation& compilation,
 
 void InstanceSymbol::fromSyntax(Compilation& comp, const HierarchyInstantiationSyntax& syntax,
                                 const ASTContext& context, SmallVectorBase<const Symbol*>& results,
-                                SmallVectorBase<const Symbol*>& implicitNets, bool isFromBind) {
+                                SmallVectorBase<const Symbol*>& implicitNets,
+                                const BindDirectiveInfo* bindInfo) {
     auto defName = syntax.type.valueText();
     TimeTraceScope timeScope("createInstances"sv, [&] { return std::string(defName); });
 
@@ -519,7 +521,7 @@ void InstanceSymbol::fromSyntax(Compilation& comp, const HierarchyInstantiationS
     if (auto sym = Lookup::unqualified(*context.scope, defName, LookupFlags::AllowDeclaredAfter)) {
         if (sym->kind == SymbolKind::Checker) {
             CheckerInstanceSymbol::fromSyntax(sym->as<CheckerSymbol>(), syntax, context, results,
-                                              implicitNets, isFromBind);
+                                              implicitNets, bindInfo != nullptr);
             return;
         }
     }
@@ -527,6 +529,7 @@ void InstanceSymbol::fromSyntax(Compilation& comp, const HierarchyInstantiationS
     const DefinitionSymbol* owningDefinition = nullptr;
     const HierarchyOverrideNode* parentOverrideNode = nullptr;
     const ResolvedConfig* resolvedConfig = nullptr;
+    bool isFromBind = bindInfo != nullptr;
     if (parentInst) {
         owningDefinition = &parentInst->getDefinition();
 
@@ -576,7 +579,7 @@ void InstanceSymbol::fromSyntax(Compilation& comp, const HierarchyInstantiationS
             if (confRule) {
                 SLANG_ASSERT(specificInstance);
                 auto& diag = context.addDiag(code, specificInstance->sourceRange());
-                diag.addNote(diag::NoteConfigRule, confRule->sourceRange);
+                diag.addNote(diag::NoteConfigRule, confRule->syntax->sourceRange());
                 return diag;
             }
             else {
@@ -595,9 +598,6 @@ void InstanceSymbol::fromSyntax(Compilation& comp, const HierarchyInstantiationS
                 if (!owningDefinition ||
                     owningDefinition->definitionKind != DefinitionKind::Module || inChecker) {
                     addDiag(diag::InvalidPrimInstanceForParent);
-                }
-                else if (isFromBind) {
-                    addDiag(diag::BindTargetPrimitive);
                 }
                 else if (confRule && confRule->paramOverrides) {
                     addDiag(diag::ConfigParamsForPrimitive);
@@ -654,6 +654,31 @@ void InstanceSymbol::fromSyntax(Compilation& comp, const HierarchyInstantiationS
             }
     };
 
+    // If we came here from a bind directive we need to make use
+    // of the definition / config info that has already been resolved.
+    if (bindInfo) {
+        auto defResult = comp.getDefinition(defName, *context.scope, syntax.type.range(),
+                                            *bindInfo);
+        if (defResult.configRoot) {
+            SLANG_ASSERT(parentInst && parentInst->parentInstance);
+            auto rc = comp.emplace<ResolvedConfig>(*defResult.configRoot,
+                                                   *parentInst->parentInstance);
+            resolvedConfig = rc;
+
+            if (!bindInfo->isNewConfigRoot) {
+                // This is not a new config root, so normally we'd use our parent's
+                // config. For binds though we don't know the right parent scope
+                // because it's the scope that contains the bind directive, not the
+                // one that contains the instance, so recreate it here.
+                defResult.configRoot = nullptr;
+                rc->liblist = bindInfo->liblist;
+            }
+        }
+
+        createInstances(defResult, nullptr);
+        return;
+    }
+
     if (resolvedConfig) {
         ResolvedInstanceRules instanceRules;
         resolveInstanceOverrides(*resolvedConfig, context, syntax, defName, diag::UnknownModule,
@@ -702,7 +727,7 @@ void InstanceSymbol::fromFixupSyntax(Compilation& comp, const DefinitionSymbol& 
         instances.copy(comp), syntax.semi);
 
     SmallVector<const Symbol*> implicitNets;
-    fromSyntax(comp, *instantiation, context, results, implicitNets, /* isFromBind */ false);
+    fromSyntax(comp, *instantiation, context, results, implicitNets);
     SLANG_ASSERT(implicitNets.empty());
 }
 
@@ -953,13 +978,13 @@ InstanceBodySymbol& InstanceBodySymbol::fromDefinition(Compilation& comp,
     // If there are any bind directives targeting this instance,
     // add them to the end of the scope now.
     if (overrideNode) {
-        for (auto bindSyntax : overrideNode->binds)
-            result->addDeferredMembers(*bindSyntax);
+        for (auto& bindInfo : overrideNode->binds)
+            result->addDeferredMembers(*bindInfo.bindSyntax);
     }
 
     if (!definition.bindDirectives.empty()) {
-        for (auto bindSyntax : definition.bindDirectives)
-            result->addDeferredMembers(*bindSyntax);
+        for (auto& bindInfo : definition.bindDirectives)
+            result->addDeferredMembers(*bindInfo.bindSyntax);
         comp.noteInstanceWithDefBind(*result);
     }
 
@@ -1465,8 +1490,7 @@ void PrimitiveInstanceSymbol::fromSyntax(const PrimitiveInstantiationSyntax& syn
 
                 auto instantiation = comp.emplace<HierarchyInstantiationSyntax>(
                     syntax.attributes, syntax.type, pvas, instanceBuf.copy(comp), syntax.semi);
-                InstanceSymbol::fromSyntax(comp, *instantiation, context, results, implicitNets,
-                                           /* isFromBind */ false);
+                InstanceSymbol::fromSyntax(comp, *instantiation, context, results, implicitNets);
                 return;
             }
             else {

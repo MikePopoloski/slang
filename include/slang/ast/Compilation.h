@@ -188,6 +188,34 @@ struct SLANG_EXPORT CompilationOptions {
     std::vector<std::string> defaultLiblist;
 };
 
+/// Information about how a bind directive applies to some definition
+/// or specific target node.
+struct BindDirectiveInfo {
+    /// The syntax node of the bind directive.
+    const syntax::BindDirectiveSyntax* bindSyntax = nullptr;
+
+    /// The syntax node for a config rule that applies
+    /// to the target instance, if any.
+    const syntax::SyntaxNode* configRuleSyntax = nullptr;
+
+    /// The syntax node for a config block that applies
+    /// to the target instance, if any.
+    const syntax::SyntaxNode* configBlockSyntax = nullptr;
+
+    /// The syntax node for the resolved definition,
+    /// if definition name resolution succeeded.
+    const syntax::SyntaxNode* instantiationDefSyntax = nullptr;
+
+    /// A liblist that applies to the newly bound instance.
+    std::span<const SourceLibrary* const> liblist;
+
+    /// If true, the new instance is also a new config root,
+    /// and @a configRootSyntax points to the config block
+    /// for that root. Otherwise, it points either to nullptr,
+    /// or to its parent's config root.
+    bool isNewConfigRoot = false;
+};
+
 /// A node in a tree representing an instance in the design
 /// hierarchy where parameters should be overriden and/or
 /// bind directives should be applied. These are assembled
@@ -211,7 +239,7 @@ struct HierarchyOverrideNode {
     flat_hash_map<std::string_view, HierarchyOverrideNode> childrenByName;
 
     /// A list of bind directives to apply in this scope.
-    std::vector<const syntax::BindDirectiveSyntax*> binds;
+    std::vector<BindDirectiveInfo> binds;
 };
 
 /// A centralized location for creating and caching symbols. This includes
@@ -350,6 +378,11 @@ public:
     DefinitionLookupResult getDefinition(std::string_view name, const Scope& scope,
                                          const ConfigRule& configRule, SourceRange sourceRange,
                                          DiagCode code) const;
+
+    /// Gets the definition indicated by the given bind directive info.
+    DefinitionLookupResult getDefinition(std::string_view name, const Scope& scope,
+                                         SourceRange sourceRange,
+                                         const BindDirectiveInfo& bindInfo) const;
 
     /// Gets the definition for the given syntax node, or nullptr if it does not exist.
     const DefinitionSymbol* getDefinition(const syntax::ModuleDeclarationSyntax& syntax) const;
@@ -679,6 +712,14 @@ private:
     friend class Lookup;
     friend class Scope;
 
+    // Collected information about a resolved bind directive.
+    struct ResolvedBind {
+        SmallVector<const Symbol*> instTargets;
+        DefinitionLookupResult instanceDef;
+        const DefinitionSymbol* defTarget = nullptr;
+        const ResolvedConfig* resolvedConfig = nullptr;
+    };
+
     // These functions are called by Scopes to create and track various members.
     Scope::DeferredMemberData& getOrAddDeferredData(Scope::DeferredMemberIndex& index);
     void trackImport(Scope::ImportDataIndex& index, const WildcardImportSymbol& import);
@@ -701,11 +742,9 @@ private:
     void checkElemTimeScale(std::optional<TimeScale> timeScale, SourceRange sourceRange);
     void resolveDefParamsAndBinds();
     void resolveBindTargets(const syntax::BindDirectiveSyntax& syntax, const Scope& scope,
-                            SmallVector<const Symbol*>& instTargets,
-                            const DefinitionSymbol** defTarget);
+                            ResolvedBind& resolvedBind);
     void checkBindTargetParams(const syntax::BindDirectiveSyntax& syntax, const Scope& scope,
-                               std::span<const Symbol* const> instTargets,
-                               const DefinitionSymbol* defTarget);
+                               const ResolvedBind& resolvedBind);
     std::pair<DefinitionLookupResult, bool> resolveConfigRule(const Scope& scope,
                                                               const ConfigRule& rule) const;
     std::pair<DefinitionLookupResult, bool> resolveConfigRules(
@@ -894,6 +933,7 @@ private:
 
     // A map of config blocks.
     flat_hash_map<std::string_view, std::vector<const ConfigBlockSymbol*>> configBlocks;
+    flat_hash_map<const syntax::SyntaxNode*, const ConfigBlockSymbol*> configBySyntax;
 
     // A map of library names to their actual source library pointers.
     flat_hash_map<std::string_view, const SourceLibrary*> libraryNameMap;

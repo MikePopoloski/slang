@@ -21,6 +21,7 @@ class ConfigBlockSymbol;
 class Expression;
 class InstanceSymbol;
 class Type;
+struct BindDirectiveInfo;
 
 /// The root of a single compilation unit.
 class SLANG_EXPORT CompilationUnitSymbol : public Symbol, public Scope {
@@ -177,7 +178,7 @@ public:
     flat_hash_set<std::string_view> modports;
 
     /// A set of bind directives that apply to all instances of this definition.
-    std::vector<const syntax::BindDirectiveSyntax*> bindDirectives;
+    std::vector<BindDirectiveInfo> bindDirectives;
 
     /// The syntax tree that contains this definition, or nullptr if constructed
     /// outside of any specific syntax tree.
@@ -244,11 +245,13 @@ struct SLANG_EXPORT ConfigRule {
     /// Parameter overrides to apply to the instance.
     const syntax::ParameterValueAssignmentSyntax* paramOverrides = nullptr;
 
-    /// The source range where this rule was declared.
-    SourceRange sourceRange;
+    /// The syntax node that created this config rule.
+    not_null<const syntax::SyntaxNode*> syntax;
 
     /// A flag that marks whether this rule has been used during elaboration.
     mutable bool isUsed = false;
+
+    explicit ConfigRule(const syntax::SyntaxNode& syntax) : syntax(&syntax) {}
 };
 
 /// Contains information about a resolved configuration rule
@@ -318,6 +321,8 @@ public:
         return instanceOverrides;
     }
 
+    const ConfigRule* findRuleFromSyntax(const syntax::SyntaxNode& syntax) const;
+
     void checkUnusedRules() const;
 
     static ConfigBlockSymbol& fromSyntax(const Scope& scope,
@@ -329,11 +334,13 @@ public:
 
 private:
     void resolve() const;
+    void registerRules(const InstanceOverride& node) const;
 
     mutable std::span<const TopCell> topCells;
     mutable std::span<const SourceLibrary* const> defaultLiblist;
     mutable flat_hash_map<std::string_view, CellOverride> cellOverrides;
     mutable flat_hash_map<std::string_view, InstanceOverride> instanceOverrides;
+    mutable flat_hash_map<const syntax::SyntaxNode*, const ConfigRule*> ruleBySyntax;
     mutable bool resolved = false;
 };
 

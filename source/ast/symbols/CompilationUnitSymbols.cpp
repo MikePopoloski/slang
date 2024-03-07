@@ -376,7 +376,7 @@ ConfigBlockSymbol& ConfigBlockSymbol::fromSyntax(const Scope& scope,
 static void checkRuleUnused(const Scope& scope, const ConfigRule& rule, bool isCell) {
     if (!rule.isUsed) {
         scope.addDiag(isCell ? diag::UnusedConfigCell : diag::UnusedConfigInstance,
-                      rule.sourceRange);
+                      rule.syntax->sourceRange());
     }
 }
 
@@ -399,6 +399,15 @@ void ConfigBlockSymbol::checkUnusedRules() const {
 
     for (auto& [_, instOverride] : getInstanceOverrides())
         checkNodeUnused(*this, instOverride);
+}
+
+const ConfigRule* ConfigBlockSymbol::findRuleFromSyntax(const syntax::SyntaxNode& syntax) const {
+    if (!resolved)
+        resolve();
+
+    if (auto it = ruleBySyntax.find(&syntax); it != ruleBySyntax.end())
+        return it->second;
+    return nullptr;
 }
 
 void ConfigBlockSymbol::resolve() const {
@@ -443,8 +452,7 @@ void ConfigBlockSymbol::resolve() const {
     };
 
     auto buildRule = [&](const ConfigRuleClauseSyntax& rule) {
-        ConfigRule result;
-        result.sourceRange = rule.parent->sourceRange();
+        ConfigRule result(*rule.parent);
         if (rule.kind == SyntaxKind::ConfigUseClause) {
             auto& cuc = rule.as<ConfigUseClauseSyntax>();
             result.paramOverrides = cuc.paramAssignments;
@@ -467,8 +475,9 @@ void ConfigBlockSymbol::resolve() const {
             (newRule.liblist.has_value() && curRule.liblist.has_value()) ||
             (!newRule.useCell.name.empty() && !curRule.useCell.name.empty())) {
 
-            auto& diag = scope->addDiag(diag::DupConfigRule, newRule.sourceRange) << nameGetter();
-            diag.addNote(diag::NotePreviousDefinition, curRule.sourceRange);
+            auto& diag = scope->addDiag(diag::DupConfigRule, newRule.syntax->sourceRange())
+                         << nameGetter();
+            diag.addNote(diag::NotePreviousDefinition, curRule.syntax->sourceRange());
         }
         else {
             if (newRule.paramOverrides)
@@ -480,7 +489,7 @@ void ConfigBlockSymbol::resolve() const {
                 // supplies a use cell name, to make other reported errors easier
                 // to understand.
                 curRule.useCell = newRule.useCell;
-                curRule.sourceRange = newRule.sourceRange;
+                curRule.syntax = newRule.syntax;
             }
         }
     };
@@ -572,7 +581,7 @@ void ConfigBlockSymbol::resolve() const {
 
     auto checkTopOverride = [&](const ConfigRule& rule) {
         if (!rule.useCell.name.empty())
-            scope->addDiag(diag::ConfigOverrideTop, rule.sourceRange);
+            scope->addDiag(diag::ConfigOverrideTop, rule.syntax->sourceRange());
     };
 
     // Check if any overrides should apply to the root instances.
@@ -605,6 +614,27 @@ void ConfigBlockSymbol::resolve() const {
     }
 
     topCells = topCellsBuf.copy(comp);
+
+    // Now that all rules have been resolved, go back through and
+    // register them for later lookup by syntax.
+    for (auto& [_, cellOverride] : cellOverrides) {
+        if (cellOverride.defaultRule)
+            ruleBySyntax[cellOverride.defaultRule->syntax] = cellOverride.defaultRule;
+
+        for (auto& [lib, rule] : cellOverride.specificLibRules)
+            ruleBySyntax[rule->syntax] = rule;
+    }
+
+    for (auto& [_, instOverride] : getInstanceOverrides())
+        registerRules(instOverride);
+}
+
+void ConfigBlockSymbol::registerRules(const InstanceOverride& node) const {
+    if (node.rule)
+        ruleBySyntax[node.rule->syntax] = node.rule;
+
+    for (auto& [_, child] : node.childNodes)
+        registerRules(child);
 }
 
 void ConfigBlockSymbol::serializeTo(ASTSerializer&) const {

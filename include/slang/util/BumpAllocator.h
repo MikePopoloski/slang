@@ -8,6 +8,7 @@
 #pragma once
 
 #include <new>
+#include <span>
 
 #include "slang/util/Util.h"
 
@@ -47,6 +48,20 @@ public:
 
         head->current = next;
         return base;
+    }
+
+    /// Copies the contents of the given span into a new memory region
+    /// allocated and owned by this allocator and returns a span pointing to it.
+    template<typename T>
+    [[nodiscard]] std::span<T> copyFrom(std::span<const T> src) {
+        auto len = src.size();
+        if (len == 0)
+            return {};
+
+        auto dest = reinterpret_cast<T*>(allocate(len * sizeof(T), alignof(T)));
+        memcpy(dest, src.data(), len * sizeof(T));
+
+        return std::span<T>(dest, len);
     }
 
     /// Steals ownership of all of the memory contents of the given allocator.

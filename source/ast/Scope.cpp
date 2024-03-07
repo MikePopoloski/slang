@@ -906,6 +906,7 @@ void Scope::elaborate() const {
     // Go through deferred instances and elaborate them now.
     bool usedPorts = false;
     bool hasNestedDefs = false;
+    bool hasBinds = false;
     uint32_t constructIndex = 1;
 
     for (auto symbol : deferred) {
@@ -918,7 +919,7 @@ void Scope::elaborate() const {
                 SmallVector<const Symbol*> implicitNets;
                 InstanceSymbol::fromSyntax(compilation,
                                            member.node.as<HierarchyInstantiationSyntax>(), context,
-                                           instances, implicitNets, /* isFromBind */ false);
+                                           instances, implicitNets);
                 insertMembersAndNets(instances, implicitNets, symbol);
                 break;
             }
@@ -1074,24 +1075,8 @@ void Scope::elaborate() const {
                 break;
             }
             case SyntaxKind::BindDirective: {
-                // We only find a bind directive in our deferred members list if that
-                // directive is *targeting* this scope, so we should go ahead and
-                // create the instances here.
-                SmallVector<const Symbol*> instances;
-                SmallVector<const Symbol*> implicitNets;
-                auto& bind = member.node.as<BindDirectiveSyntax>();
-                if (bind.instantiation->kind == SyntaxKind::CheckerInstantiation) {
-                    CheckerInstanceSymbol::fromSyntax(
-                        bind.instantiation->as<CheckerInstantiationSyntax>(), context, instances,
-                        implicitNets,
-                        /* isFromBind */ true);
-                }
-                else {
-                    InstanceSymbol::fromSyntax(
-                        compilation, bind.instantiation->as<HierarchyInstantiationSyntax>(),
-                        context, instances, implicitNets, /* isFromBind */ true);
-                }
-                insertMembersAndNets(instances, implicitNets, symbol);
+                // Process bind directives below after everything else.
+                hasBinds = true;
                 break;
             }
             default:
@@ -1143,6 +1128,43 @@ void Scope::elaborate() const {
                     break;
                 }
             }
+        }
+    }
+
+    // If there are bind directives, reach up into the instance body
+    // and pull out the extra bind metadata from its override node.
+    if (hasBinds) {
+        ASTContext context(*this, LookupLocation::max);
+        auto handleBind = [&](const BindDirectiveInfo& info) {
+            SmallVector<const Symbol*> instances;
+            SmallVector<const Symbol*> implicitNets;
+            if (info.bindSyntax->instantiation->kind == SyntaxKind::CheckerInstantiation) {
+                CheckerInstanceSymbol::fromSyntax(
+                    info.bindSyntax->instantiation->as<CheckerInstantiationSyntax>(), context,
+                    instances, implicitNets,
+                    /* isFromBind */ true);
+            }
+            else {
+                InstanceSymbol::fromSyntax(
+                    compilation, info.bindSyntax->instantiation->as<HierarchyInstantiationSyntax>(),
+                    context, instances, implicitNets, &info);
+            }
+
+            for (auto sym : implicitNets)
+                insertMember(sym, lastMember, true, false);
+            for (auto sym : instances)
+                insertMember(sym, lastMember, true, true);
+        };
+
+        auto& instanceBody = asSymbol().as<InstanceBodySymbol>();
+        if (auto node = instanceBody.hierarchyOverrideNode) {
+            for (auto& bindInfo : node->binds)
+                handleBind(bindInfo);
+        }
+
+        if (!instanceBody.getDefinition().bindDirectives.empty()) {
+            for (auto& bindInfo : instanceBody.getDefinition().bindDirectives)
+                handleBind(bindInfo);
         }
     }
 

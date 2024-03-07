@@ -31,6 +31,7 @@ class PortConnection;
 class PortSymbol;
 class PrimitiveSymbol;
 class TimingControl;
+struct BindDirectiveInfo;
 struct ConfigRule;
 struct ResolvedConfig;
 struct HierarchyOverrideNode;
@@ -88,7 +89,8 @@ public:
     static void fromSyntax(Compilation& compilation,
                            const syntax::HierarchyInstantiationSyntax& syntax,
                            const ASTContext& context, SmallVectorBase<const Symbol*>& results,
-                           SmallVectorBase<const Symbol*>& implicitNets, bool isFromBind);
+                           SmallVectorBase<const Symbol*>& implicitNets,
+                           const BindDirectiveInfo* bindInfo = nullptr);
 
     static void fromFixupSyntax(Compilation& compilation, const DefinitionSymbol& definition,
                                 const syntax::DataDeclarationSyntax& syntax,
