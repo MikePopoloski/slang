@@ -7,6 +7,7 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include "slang/ast/Compilation.h"
 #include "slang/ast/Scope.h"
 #include "slang/ast/Symbol.h"
 #include "slang/syntax/SyntaxFwd.h"
@@ -21,7 +22,6 @@ class ConfigBlockSymbol;
 class Expression;
 class InstanceSymbol;
 class Type;
-struct BindDirectiveInfo;
 
 /// The root of a single compilation unit.
 class SLANG_EXPORT CompilationUnitSymbol : public Symbol, public Scope {

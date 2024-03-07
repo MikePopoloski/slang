@@ -190,7 +190,7 @@ struct SLANG_EXPORT CompilationOptions {
 
 /// Information about how a bind directive applies to some definition
 /// or specific target node.
-struct BindDirectiveInfo {
+struct SLANG_EXPORT BindDirectiveInfo {
     /// The syntax node of the bind directive.
     const syntax::BindDirectiveSyntax* bindSyntax = nullptr;
 
@@ -221,7 +221,7 @@ struct BindDirectiveInfo {
 /// bind directives should be applied. These are assembled
 /// from defparam values, bind directives, and command-line
 /// specified overrides.
-struct HierarchyOverrideNode {
+struct SLANG_EXPORT HierarchyOverrideNode {
     /// A map of parameters in the current scope to override.
     /// The key is the syntax node representing the parameter and the value is a pair,
     /// the first element of which is the value to set the parameter to and the second
