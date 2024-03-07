@@ -638,7 +638,9 @@ void ConfigBlockSymbol::registerRules(const InstanceOverride& node) const {
 }
 
 void ConfigBlockSymbol::serializeTo(ASTSerializer&) const {
-    // TODO:
+    // We don't serialize config blocks; they're never visited as
+    // part of visiting the AST, they get resolved as part of
+    // elaboration looking up definitions.
 }
 
 } // namespace slang::ast

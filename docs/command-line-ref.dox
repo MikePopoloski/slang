@@ -205,9 +205,16 @@ symbols are dumped.
 
 `--top <name>`
 
-Specifies the name of a module that should be instantiated at the root of the design.
-Can be specified more than once to instantiate multiple top-level modules. The module
-specified must not have any non-defaulted parameters or interface ports.
+Specifies the name of a module or program that should be instantiated at the root
+of the design. Can be specified more than once to instantiate multiple top-level modules.
+The module (or program) specified must not have any non-defaulted parameters or
+interface ports.
+
+Additionally, you can specify the name of one or more SystemVerilog configurations.
+The cells specified in the `design` statement of those configurations will become
+the top levels of the design. If the name of a configuration overlaps with that of
+a module/interface/program definition, the latter will be taken by default. You can use
+a `:config` suffix on the name to explicitly select the configuration.
 
 If no top modules are specified manually, they will be automatically inferred by
 finding all modules that are not instantiated elsewhere in the design.

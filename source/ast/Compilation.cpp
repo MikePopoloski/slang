@@ -885,7 +885,6 @@ void Compilation::insertDefinition(Symbol& symbol, const Scope& scope) {
                     // Duplicate in the same library. If they are both the same kind
                     // then we report a warning and take the first one, otherwise
                     // we give a hard error.
-                    // TODO: take the second one instead of the first?
                     if (vSym->kind == symbol.kind) {
                         if (!warned) {
                             // We keep going after this because there might also

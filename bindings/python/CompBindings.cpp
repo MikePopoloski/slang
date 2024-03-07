@@ -73,8 +73,8 @@ void registerCompilation(py::module_& m) {
         .def_readwrite("paramOverrides", &CompilationOptions::paramOverrides)
         .def_readwrite("defaultLiblist", &CompilationOptions::defaultLiblist);
 
-    py::class_<Compilation>(m, "Compilation")
-        .def(py::init<>())
+    py::class_<Compilation> comp(m, "Compilation");
+    comp.def(py::init<>())
         .def(py::init<const Bag&>(), "options"_a)
         .def_property_readonly("options", &Compilation::getOptions)
         .def_property_readonly("isFinalized", &Compilation::isFinalized)
@@ -142,6 +142,12 @@ void registerCompilation(py::module_& m) {
         .def_property_readonly("unboundedType", &Compilation::getUnboundedType)
         .def_property_readonly("typeRefType", &Compilation::getTypeRefType)
         .def_property_readonly("wireNetType", &Compilation::getWireNetType);
+
+    py::class_<Compilation::DefinitionLookupResult>(comp, "DefinitionLookupResult")
+        .def(py::init<>())
+        .def_readwrite("definition", &Compilation::DefinitionLookupResult::definition)
+        .def_readwrite("configRoot", &Compilation::DefinitionLookupResult::configRoot)
+        .def_readwrite("configRule", &Compilation::DefinitionLookupResult::configRule);
 
     py::class_<ScriptSession>(m, "ScriptSession")
         .def(py::init<>())

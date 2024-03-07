@@ -719,4 +719,6 @@ void registerSymbols(py::module_& m) {
         .def_readonly("options", &CoverCrossSymbol::options)
         .def_readonly("targets", &CoverCrossSymbol::targets)
         .def_property_readonly("iffExpr", &CoverCrossSymbol::getIffExpr);
+
+    py::class_<ConfigBlockSymbol, Symbol, Scope>(m, "ConfigBlockSymbol");
 }
