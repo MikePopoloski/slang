@@ -121,9 +121,12 @@ enum class SLANG_EXPORT CompilationFlags {
 
     /// Allow self-determined streaming concatenation expressions; normally these
     /// can only be used in specific assignment-like contexts.
-    AllowSelfDeterminedStreamConcat = 1 << 12
+    AllowSelfDeterminedStreamConcat = 1 << 12,
+
+    /// Allow multi-driven subroutine local variables.
+    AllowMultiDrivenLocals = 1 << 13
 };
-SLANG_BITMASK(CompilationFlags, AllowSelfDeterminedStreamConcat)
+SLANG_BITMASK(CompilationFlags, AllowMultiDrivenLocals)
 
 /// Contains various options that can control compilation behavior.
 struct SLANG_EXPORT CompilationOptions {

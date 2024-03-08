@@ -54,8 +54,8 @@ void registerCompilation(py::module_& m) {
         .value("RelaxStringConversions", CompilationFlags::RelaxStringConversions)
         .value("AllowRecursiveImplicitCall", CompilationFlags::AllowRecursiveImplicitCall)
         .value("AllowBareValParamAssignment", CompilationFlags::AllowBareValParamAssignment)
-        .value("AllowSelfDeterminedStreamConcat",
-               CompilationFlags::AllowSelfDeterminedStreamConcat);
+        .value("AllowSelfDeterminedStreamConcat", CompilationFlags::AllowSelfDeterminedStreamConcat)
+        .value("AllowMultiDrivenLocals", CompilationFlags::AllowMultiDrivenLocals);
 
     py::class_<CompilationOptions>(m, "CompilationOptions")
         .def(py::init<>())

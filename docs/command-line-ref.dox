@@ -337,6 +337,12 @@ Allow self-determined streaming concatenation expressions. SystemVerilog only pe
 expressions in assignment-like contexts but some tools allow it anyway so this flag can be
 used for compatibility purposes.
 
+`--allow-multi-driven-locals`
+
+Allow subroutine local variables to be driven from multiple always_comb/always_ff blocks.
+The LRM does not make an exception for local variables in assignment rules but
+most tools allow it anyway so this flag exists for compatibility with those tools.
+
 `--strict-driver-checking`
 
 Perform strict driver checking, which currently means disabling procedural 'for' @ref loop-unroll

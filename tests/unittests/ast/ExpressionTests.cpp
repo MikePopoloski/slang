@@ -3219,3 +3219,31 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::MultipleAlwaysAssigns);
 }
+
+TEST_CASE("Multi-driven subroutine local var option to allow") {
+    auto tree = SyntaxTree::fromText(R"(
+module top(input clk, input reset);
+    function logic m(logic d);
+        logic c;
+        c = d;
+        return c;
+    endfunction
+
+    logic a, b;
+    always_ff @(posedge clk) begin
+        a <= m(a);
+    end
+
+    always @(posedge reset) begin
+        b <= m(a);
+    end
+endmodule
+)");
+
+    CompilationOptions options;
+    options.flags |= CompilationFlags::AllowMultiDrivenLocals;
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

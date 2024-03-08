@@ -172,6 +172,9 @@ void Driver::addStandardArgs() {
     addCompFlag(CompilationFlags::AllowSelfDeterminedStreamConcat,
                 "--allow-self-determined-stream-concat",
                 "Allow self-determined streaming concatenation expressions");
+    addCompFlag(
+        CompilationFlags::AllowMultiDrivenLocals, "--allow-multi-driven-locals",
+        "Allow subroutine local variables to be driven from multiple always_comb/_ff blocks");
     addCompFlag(CompilationFlags::StrictDriverChecking, "--strict-driver-checking",
                 "Perform strict driver checking, which currently means disabling "
                 "procedural 'for' loop unrolling.");
@@ -419,7 +422,8 @@ bool Driver::processOptions() {
                                    CompilationFlags::RelaxStringConversions,
                                    CompilationFlags::AllowRecursiveImplicitCall,
                                    CompilationFlags::AllowBareValParamAssignment,
-                                   CompilationFlags::AllowSelfDeterminedStreamConcat};
+                                   CompilationFlags::AllowSelfDeterminedStreamConcat,
+                                   CompilationFlags::AllowMultiDrivenLocals};
 
             for (auto flag : vcsCompatFlags) {
                 auto& option = options.compilationFlags.at(flag);

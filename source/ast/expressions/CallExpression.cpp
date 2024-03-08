@@ -879,13 +879,26 @@ public:
     }
 
     void handle(const ValueExpressionBase& expr) {
-        if (!visitedValues.emplace(&expr.symbol).second)
+        auto& sym = expr.symbol;
+        if (!visitedValues.emplace(&sym).second)
             return;
+
+        if (sub.getCompilation().hasFlag(CompilationFlags::AllowMultiDrivenLocals)) {
+            auto scope = sym.getParentScope();
+            while (scope && scope->asSymbol().kind == SymbolKind::StatementBlock)
+                scope = scope->asSymbol().getParentScope();
+
+            if (scope == &sub) {
+                // This is a local variable of the subroutine,
+                // so don't do driver checking.
+                return;
+            }
+        }
 
         // If the target symbol is driven by the subroutine we're inspecting,
         // add another driver for the procedure we're originally called from.
         SmallVector<std::pair<DriverBitRange, const ValueDriver*>> drivers;
-        auto range = expr.symbol.drivers();
+        auto range = sym.drivers();
         for (auto it = range.begin(); it != range.end(); ++it) {
             if ((*it)->containingSymbol == &sub)
                 drivers.push_back({it.bounds(), *it});
@@ -894,8 +907,8 @@ public:
         // This needs to be a separate loop to avoid mutating the driver map
         // while iterating over it.
         for (auto [bounds, driver] : drivers) {
-            expr.symbol.addDriver(DriverKind::Procedural, bounds, *driver->prefixExpression,
-                                  procedure, callExpr);
+            sym.addDriver(DriverKind::Procedural, bounds, *driver->prefixExpression, procedure,
+                          callExpr);
         }
     }
 };
