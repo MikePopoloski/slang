@@ -556,8 +556,12 @@ public:
                     return badArg(context, *args[i]);
             }
             else {
+                auto isScope = [](const Symbol& symbol) {
+                    return symbol.isScope() || symbol.kind == SymbolKind::Instance;
+                };
+
                 if (args[i]->kind != ExpressionKind::ArbitrarySymbol ||
-                    !args[i]->as<ArbitrarySymbolExpression>().symbol->isScope()) {
+                    !isScope(*args[i]->as<ArbitrarySymbolExpression>().symbol)) {
                     if (!context.scope->isUninstantiated())
                         context.addDiag(diag::ExpectedScopeOrAssert, args[i]->sourceRange);
                     return comp.getErrorType();

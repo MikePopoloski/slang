@@ -1099,3 +1099,33 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Assert control functions referencing instances") {
+    auto tree = SyntaxTree::fromText(R"(
+module M(
+    input logic clk,
+    input logic rst_b
+);
+    myprop: assert property(@(posedge clk) disable iff (rst_b) ~1);
+endmodule
+
+module top;
+    logic clk;
+    logic rst_b;
+
+    M m(
+        .clk   (clk),
+        .rst_b (rst_b)
+    );
+
+    initial begin
+        $assertoff(0, m);
+        $assertoff(0, m.myprop);
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
