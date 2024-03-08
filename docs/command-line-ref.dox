@@ -331,6 +331,12 @@ Allow module instantiations to provide a single parameter value assignment witho
 in parentheses. SystemVerilog doesn't permit this, but some tools allow it anyway so this flag
 can be used for compatibility purposes.
 
+`--allow-self-determined-stream-concat`
+
+Allow self-determined streaming concatenation expressions. SystemVerilog only permits these
+expressions in assignment-like contexts but some tools allow it anyway so this flag can be
+used for compatibility purposes.
+
 `--strict-driver-checking`
 
 Perform strict driver checking, which currently means disabling procedural 'for' @ref loop-unroll

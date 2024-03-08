@@ -169,6 +169,9 @@ void Driver::addStandardArgs() {
                 "Allow implicit call expressions to be recursive function calls.");
     addCompFlag(CompilationFlags::AllowBareValParamAssignment, "--allow-bare-value-param-assigment",
                 "Allow module parameter assignments to elide the parentheses.");
+    addCompFlag(CompilationFlags::AllowSelfDeterminedStreamConcat,
+                "--allow-self-determined-stream-concat",
+                "Allow self-determined streaming concatenation expressions");
     addCompFlag(CompilationFlags::StrictDriverChecking, "--strict-driver-checking",
                 "Perform strict driver checking, which currently means disabling "
                 "procedural 'for' loop unrolling.");
@@ -415,7 +418,8 @@ bool Driver::processOptions() {
                                    CompilationFlags::RelaxEnumConversions,
                                    CompilationFlags::RelaxStringConversions,
                                    CompilationFlags::AllowRecursiveImplicitCall,
-                                   CompilationFlags::AllowBareValParamAssignment};
+                                   CompilationFlags::AllowBareValParamAssignment,
+                                   CompilationFlags::AllowSelfDeterminedStreamConcat};
 
             for (auto flag : vcsCompatFlags) {
                 auto& option = options.compilationFlags.at(flag);

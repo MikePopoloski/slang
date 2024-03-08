@@ -117,9 +117,13 @@ enum class SLANG_EXPORT CompilationFlags {
     AllowRecursiveImplicitCall = 1 << 10,
 
     /// Allow module parameter assignments to elide the parentheses.
-    AllowBareValParamAssignment = 1 << 11
+    AllowBareValParamAssignment = 1 << 11,
+
+    /// Allow self-determined streaming concatenation expressions; normally these
+    /// can only be used in specific assignment-like contexts.
+    AllowSelfDeterminedStreamConcat = 1 << 12
 };
-SLANG_BITMASK(CompilationFlags, AllowBareValParamAssignment)
+SLANG_BITMASK(CompilationFlags, AllowSelfDeterminedStreamConcat)
 
 /// Contains various options that can control compilation behavior.
 struct SLANG_EXPORT CompilationOptions {

@@ -1578,7 +1578,7 @@ module sub(input byte b);
     };
 
     for (const auto& test : illegal) {
-        if (testBitstream(test.sv, test.msg) != 1) {
+        if (testBitstream(test.sv, test.msg) == 0) {
             FAIL_CHECK(test.sv);
         }
     }
@@ -3162,4 +3162,32 @@ endmodule
     REQUIRE(diags.size() == 2);
     CHECK(diags[0].code == diag::SelectAfterRangeSelect);
     CHECK(diags[1].code == diag::SelectAfterRangeSelect);
+}
+
+TEST_CASE("Streaming concat in non-stream context") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    logic [16777214:0] a;
+    int i = {<<{a, a}} + 1;
+
+    let known(sig) = (!($isunknown({>>{sig}})));
+
+    property known_prop(sig, clk);
+      @(clk) (!($isunknown({>>{sig}})));
+    endproperty
+
+    wire clk;
+    assert property (known_prop(known(clk), clk));
+endmodule
+)");
+
+    CompilationOptions options;
+    options.flags |= CompilationFlags::AllowSelfDeterminedStreamConcat;
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::BadStreamSize);
 }

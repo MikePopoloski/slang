@@ -53,7 +53,9 @@ void registerCompilation(py::module_& m) {
         .value("IgnoreUnknownModules", CompilationFlags::IgnoreUnknownModules)
         .value("RelaxStringConversions", CompilationFlags::RelaxStringConversions)
         .value("AllowRecursiveImplicitCall", CompilationFlags::AllowRecursiveImplicitCall)
-        .value("AllowBareValParamAssignment", CompilationFlags::AllowBareValParamAssignment);
+        .value("AllowBareValParamAssignment", CompilationFlags::AllowBareValParamAssignment)
+        .value("AllowSelfDeterminedStreamConcat",
+               CompilationFlags::AllowSelfDeterminedStreamConcat);
 
     py::class_<CompilationOptions>(m, "CompilationOptions")
         .def(py::init<>())

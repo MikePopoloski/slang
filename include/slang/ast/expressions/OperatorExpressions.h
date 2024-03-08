@@ -288,7 +288,7 @@ public:
 
     static Expression& fromSyntax(Compilation& compilation,
                                   const syntax::StreamingConcatenationExpressionSyntax& syntax,
-                                  const ASTContext& context, const Type* assignmentTarget);
+                                  const ASTContext& context);
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::Streaming; }
 
