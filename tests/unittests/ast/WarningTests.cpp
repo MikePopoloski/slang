@@ -753,6 +753,7 @@ module m;
 
     int i;
     initial if (i + 2) begin end
+    initial if (i || r) begin end
 
     // These don't warn
     initial if (i >> 2) begin end
@@ -765,9 +766,11 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 2);
+    REQUIRE(diags.size() == 4);
     CHECK(diags[0].code == diag::FloatBoolConv);
     CHECK(diags[1].code == diag::IntBoolConv);
+    CHECK(diags[2].code == diag::IntBoolConv);
+    CHECK(diags[3].code == diag::FloatBoolConv);
 }
 
 TEST_CASE("Useless cast warnings") {

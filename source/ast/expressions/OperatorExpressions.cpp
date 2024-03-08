@@ -718,6 +718,11 @@ Expression& BinaryExpression::fromComponents(Expression& lhs, Expression& rhs, B
             result->type = singleBitType(compilation, lt, rt);
             selfDetermined(context, result->left_);
             selfDetermined(context, result->right_);
+            if (good) {
+                // Call this just to get warnings about boolean conversions.
+                context.requireBooleanConvertible(*result->left_);
+                context.requireBooleanConvertible(*result->right_);
+            }
             break;
         case BinaryOperator::Equality:
         case BinaryOperator::Inequality:

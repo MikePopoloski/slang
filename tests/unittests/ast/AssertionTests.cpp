@@ -338,7 +338,7 @@ TEST_CASE("Local vars in assertions") {
 module m;
     sequence s(int i);
         int j, k = j;
-        (i && j, j = 1, j++)[*0:1];
+        (i > 0 && j > 0, j = 1, j++)[*0:1];
     endsequence
 
     int baz;
@@ -373,7 +373,7 @@ TEST_CASE("Local vars default values") {
 module m;
     sequence s(i);
         int j, k = j, l = i, m = baz;
-        (i && j, j = 1, j++)[*1:2];
+        (i > 0 && j > 0, j = 1, j++)[*1:2];
     endsequence
     assert property (s(3));
 endmodule
@@ -837,7 +837,7 @@ module m;
 
     sequence sub_seq2(local inout int lv);
         (a ##1 !a, lv += data_in)
-        ##1 !b[*0:$] ##1 b && (data_out == lv);
+        ##1 !b[*0:$] ##1 b > 0 && (data_out == lv);
     endsequence
 
     sequence seq2;
@@ -990,7 +990,7 @@ module m;
 
     wire clk;
     property p;
-        int a;
+        bit a;
         @(posedge clk) disable iff (a || s.matched) 1;
     endproperty
 endmodule
@@ -1014,7 +1014,7 @@ module m;
 
     wire clk;
     property p;
-        int a;
+        bit a;
         @(posedge clk) accept_on (a || s.matched) 1;
     endproperty
 endmodule
