@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ## [Unreleased]
 ### Language Support
 * Added `--allow-bare-value-param-assigment` (included in 'vcs' compat mode) to allow a non-standard module instantiation syntax where a single parameter value can be supplied without including parentheses
+* Added `--allow-self-determined-stream-concat` (included in 'vcs' compat mode) to allow the use of streaming concatenation expressions in self-determined contexts (instead of just in assignments)
+* Added `--allow-multi-driven-locals` (included in 'vcs' compat mode) to allow subroutine local variables to be driven by multiple always_ff / always_comb blocks
+* Added full support for SystemVerilog libraries and configurations
 
 ### General Features
 * Added [-Wmultibit-edge](https://sv-lang.com/warning-ref.html#multibit-edge) (on by default) to warn about clock edge triggers on multibit expressions
@@ -26,6 +29,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Fixed a bug where a missing `endif directive didn't always cause an error to be issued
 * Fixed the use of the `this` handle in non-static class property initializer expressions
 * Fixed a bug where use of the unqualified `randomize` would sometimes find std::randomize when it should have found a class-local randomize method
+* Fixed several spurious lexer errors when otherwise invalid tokens are used inside stringified macro expansion
+* Fixed a crash in the Python SyntaxVisitor bindings
+* Correctly allow instance paths to be used in assert control system function arguments
+* Fixed a bug where multi-driver checks for called subroutines didn't apply when one of the source procedures was a plain always block
 
 
 ## [v5.0] - 2023-12-26
