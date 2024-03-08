@@ -372,10 +372,8 @@ Expression& CallExpression::fromArgs(Compilation& compilation, const Subroutine&
     // If this subroutine is invoked from a procedure, register drivers for this
     // particular procedure to detect multiple driver violations.
     if (!thisClass) {
-        if (auto proc = context.getProceduralBlock();
-            proc && proc->isSingleDriverBlock() && !context.scope->isUninstantiated()) {
+        if (auto proc = context.getProceduralBlock(); proc && !context.scope->isUninstantiated())
             addSubroutineDrivers(*proc, symbol, *result);
-        }
     }
 
     return *result;

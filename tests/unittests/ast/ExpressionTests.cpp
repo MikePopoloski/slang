@@ -3191,3 +3191,31 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::BadStreamSize);
 }
+
+TEST_CASE("Multi-driven errors through call expressions from normal always block") {
+    auto tree = SyntaxTree::fromText(R"(
+module top(input clk, input reset);
+    logic c;
+    function logic m(logic d);
+        c = d;
+        return c;
+    endfunction
+
+    logic a, b;
+    always_ff @(posedge clk) begin
+        a <= m(a);
+    end
+
+    always @(posedge reset) begin
+        b <= m(a);
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::MultipleAlwaysAssigns);
+}
