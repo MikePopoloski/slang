@@ -45,6 +45,10 @@ Driver::Driver() : diagEngine(sourceManager), sourceLoader(sourceManager) {
 }
 
 void Driver::addStandardArgs() {
+    cmdLine.add("--std", options.languageVersion,
+                "The version of the SystemVerilog language to use",
+                "(1800-2017 | 1800-2023 | latest)");
+
     // Include paths
     cmdLine.add(
         "-I,--include-directory,+incdir",
@@ -412,6 +416,18 @@ bool Driver::processOptions() {
         OS::setStderrColorsEnabled(true);
         if (OS::fileSupportsColors(stdout))
             OS::setStdoutColorsEnabled(true);
+    }
+
+    if (options.languageVersion.has_value()) {
+        if (options.languageVersion == "1800-2017")
+            languageVersion = LanguageVersion::v1800_2017;
+        else if (options.languageVersion == "1800-2023" || options.languageVersion == "latest")
+            languageVersion = LanguageVersion::v1800_2023;
+        else {
+            printError(
+                fmt::format("invalid value for --std option: '{}'", *options.languageVersion));
+            return false;
+        }
     }
 
     if (options.compat.has_value()) {

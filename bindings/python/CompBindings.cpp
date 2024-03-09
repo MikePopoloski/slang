@@ -166,6 +166,10 @@ void registerCompilation(py::module_& m) {
         .def_readwrite("expandEnvVars", &CommandLine::ParseOptions::expandEnvVars)
         .def_readwrite("ignoreDuplicates", &CommandLine::ParseOptions::ignoreDuplicates);
 
+    py::enum_<LanguageVersion>(m, "LanguageVersion")
+        .value("v1800_2017", LanguageVersion::v1800_2017)
+        .value("v1800_2023", LanguageVersion::v1800_2023);
+
     py::class_<Driver>(m, "Driver")
         .def(py::init<>())
         .def_readonly("sourceManager", &Driver::sourceManager)
@@ -173,6 +177,7 @@ void registerCompilation(py::module_& m) {
         .def_readonly("diagClient", &Driver::diagClient)
         .def_readonly("sourceLoader", &Driver::sourceLoader)
         .def_readonly("syntaxTrees", &Driver::syntaxTrees)
+        .def_readwrite("languageVersion", &Driver::languageVersion)
         .def("addStandardArgs", &Driver::addStandardArgs)
         .def(
             "parseCommandLine",

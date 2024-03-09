@@ -12,7 +12,7 @@
 #include <optional>
 
 #include "slang/driver/Driver.h"
-#include "slang/util/Version.h"
+#include "slang/util/VersionInfo.h"
 
 using namespace slang;
 

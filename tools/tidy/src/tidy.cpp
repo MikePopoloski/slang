@@ -16,7 +16,7 @@
 #include "slang/ast/Compilation.h"
 #include "slang/diagnostics/TextDiagnosticClient.h"
 #include "slang/driver/Driver.h"
-#include "slang/util/Version.h"
+#include "slang/util/VersionInfo.h"
 
 /// Performs a search for the .slang-tidy file on the current directory. If the file is not found,
 /// tries on the parent directory until the root.

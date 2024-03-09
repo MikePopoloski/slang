@@ -18,7 +18,7 @@
 #include "slang/text/SourceManager.h"
 #include "slang/util/Bag.h"
 #include "slang/util/BumpAllocator.h"
-#include "slang/util/Version.h"
+#include "slang/util/VersionInfo.h"
 
 namespace fs = std::filesystem;
 

@@ -18,7 +18,7 @@
 #include "slang/text/Json.h"
 #include "slang/util/String.h"
 #include "slang/util/TimeTrace.h"
-#include "slang/util/Version.h"
+#include "slang/util/VersionInfo.h"
 
 using namespace slang;
 using namespace slang::ast;

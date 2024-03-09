@@ -17,6 +17,13 @@ Display slang version information and exit.
 
 Don't print non-essential output status.
 
+`--std (1800-2017 | 1800-2023 | latest)`
+
+Sets the version of the SystemVerilog language to use. This changes how the code is parsed
+and elaborated and which language features are available to use. The current default is
+1800-2017, though this may change in the future. Using "latest" will use the latest available
+version, currently 1800-2023.
+
 `positional arguments`
 
 Paths to files (using @ref file-patterns "file patterns") that should be included in the compilation.

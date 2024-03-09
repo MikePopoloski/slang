@@ -13,6 +13,7 @@
 #include "slang/text/SourceManager.h"
 #include "slang/util/Bag.h"
 #include "slang/util/CommandLine.h"
+#include "slang/util/LanguageVersion.h"
 #include "slang/util/OS.h"
 #include "slang/util/Util.h"
 
@@ -74,9 +75,15 @@ public:
     /// A list of syntax trees that have been parsed.
     std::vector<std::shared_ptr<syntax::SyntaxTree>> syntaxTrees;
 
+    /// The version of the SystemVerilog language to use.
+    LanguageVersion languageVersion = LanguageVersion::v1800_2017;
+
     /// A container for various options that can be parsed and applied
     /// to the compilation process.
     struct SLANG_EXPORT Options {
+        /// The version of the SystemVerilog language to use.
+        std::optional<std::string> languageVersion;
+
         /// @name Preprocessing
         /// @{
 
