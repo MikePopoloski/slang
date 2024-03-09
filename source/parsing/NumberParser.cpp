@@ -29,8 +29,8 @@ static logic_t getLogicCharValue(char c) {
 
 NumberParser::NumberParser(Diagnostics& diagnostics, BumpAllocator& alloc,
                            LanguageVersion languageVersion) :
-    diagnostics(diagnostics),
-    alloc(alloc), languageVersion(languageVersion) {
+    languageVersion(languageVersion),
+    diagnostics(diagnostics), alloc(alloc) {
 }
 
 void NumberParser::startVector(Token baseToken, Token sizeToken) {
