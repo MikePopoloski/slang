@@ -89,6 +89,7 @@ extern "C" {
 #define vpiPropertyTypespec 697
 #define vpiEventTypespec 698
 #define vpiInterfaceTypespec 906
+
 #define vpiClockingBlock 650
 #define vpiClockingIODecl 651
 #define vpiClassDefn 652
@@ -105,6 +106,7 @@ extern "C" {
 #define vpiAssume 687
 #define vpiCover 688
 #define vpiRestrict 901
+
 #define vpiDisableCondition 689
 #define vpiClockingEvent 690
 /* property decl, spec */
@@ -147,10 +149,21 @@ extern "C" {
 #define vpiIntegerNet 681
 #define vpiLogicNet vpiNet
 #define vpiTimeNet 682
+#define vpiUnionNet 525
+#define vpiShortRealNet 526
+#define vpiRealNet 527
+#define vpiByteNet 528
+#define vpiShortIntNet 529
+#define vpiIntNet 530
+#define vpiLongIntNet 531
+#define vpiBitNet 532
+#define vpiInterconnectNet 533
+#define vpiInterconnectArray 534
 #define vpiStructNet 683
 #define vpiBreak 684
 #define vpiContinue 685
 #define vpiPackedArrayNet 693
+#define vpiNettypeDecl 523
 #define vpiConstraintExpr 747
 #define vpiElseConst 748
 #define vpiImplication 749
@@ -164,19 +177,27 @@ extern "C" {
 /******************************** METHODS *********************************/
 /************* methods used to traverse 1 to 1 relationships **************/
 #define vpiActual 700
+
 #define vpiTypedefAlias 701
+
 #define vpiIndexTypespec 702
 #define vpiBaseTypespec 703
 #define vpiElemTypespec 704
+
+#define vpiNetTypedefAlias 705
+
 #define vpiInputSkew 706
 #define vpiOutputSkew 707
 #define vpiGlobalClocking 708
 #define vpiDefaultClocking 709
 #define vpiDefaultDisableIff 710
+
 #define vpiOrigin 713
 #define vpiPrefix 714
 #define vpiWith 715
+
 #define vpiProperty 718
+
 #define vpiValueRange 720
 #define vpiPattern 721
 #define vpiWeight 722
@@ -187,13 +208,17 @@ extern "C" {
 #define vpiImport 726
 #define vpiDerivedClasses 727
 #define vpiInterfaceDecl vpiVirtualInterfaceVar /* interface decl deprecated */
+
 #define vpiMethods 730
 #define vpiSolveBefore 731
 #define vpiSolveAfter 732
+
 #define vpiWaitingProcesses 734
 #define vpiMessages 735
 #define vpiLoopVars 737
-#define vpiConcurrentAssertions 740
+
+#define vpiConcurrentAssertion 740
+#define vpiConcurrentAssertions vpiConcurrentAssertion
 #define vpiMatchItem 741
 #define vpiMember 742
 #define vpiElement 743
@@ -209,22 +234,27 @@ extern "C" {
 /**************************************************************************/
 
 #define vpiTop 600
+
 #define vpiUnit 602
+
 #define vpiJoinType 603
 #define vpiJoin 0
 #define vpiJoinNone 1
 #define vpiJoinAny 2
+
 #define vpiAccessType 604
 #define vpiForkJoinAcc 1
 #define vpiExternAcc 2
 #define vpiDPIExportAcc 3
 #define vpiDPIImportAcc 4
+
 #define vpiArrayType 606
 #define vpiStaticArray 1
 #define vpiDynamicArray 2
 #define vpiAssocArray 3
 #define vpiQueueArray 4
 #define vpiArrayMember 607
+
 #define vpiIsRandomized 608
 #define vpiLocalVarDecls 609
 #define vpiOpStrong 656 /* strength of temporal operator */
@@ -236,6 +266,7 @@ extern "C" {
 #define vpiInterfacePort 1
 #define vpiModportPort 2
 /* vpiPort is also a port type. It is defined in vpi_user.h */
+
 #define vpiConstantVariable 612
 #define vpiStructUnionMember 615
 #define vpiVisibility 620
@@ -247,13 +278,16 @@ extern "C" {
 #define vpiOneStepConst 9
 #define vpiUnboundedConst 10
 #define vpiNullConst 11
+
 #define vpiAlwaysType 624
 #define vpiAlwaysComb 2
 #define vpiAlwaysFF 3
 #define vpiAlwaysLatch 4
+
 #define vpiDistType 625
 #define vpiEqualDist 1 /* constraint equal distribution */
 #define vpiDivDist 2   /* constraint divided distribution */
+
 #define vpiPacked 630
 #define vpiTagged 632
 #define vpiRef 6 /* Return value for vpiDirection property */
@@ -261,11 +295,13 @@ extern "C" {
 #define vpiHasActual 636
 #define vpiIsConstraintEnabled 638
 #define vpiSoft 639
+
 #define vpiClassType 640
 #define vpiMailboxClass 1
 #define vpiSemaphoreClass 2
 #define vpiUserDefinedClass 3
 #define vpiProcessClass 4
+
 #define vpiMethod 645
 #define vpiIsClockInferred 649
 #define vpiIsDeferred 657
@@ -278,8 +314,15 @@ extern "C" {
 #define vpiTaggedQualifier 4
 #define vpiRandQualifier 8
 #define vpiInsideQualifier 16
-#define vpiInputEdge 651  /* returns vpiNoEdge, vpiPosedge, vpiNegedge */
-#define vpiOutputEdge 652 /* returns vpiNoEdge, vpiPosedge, vpiNegedge */
+
+#define vpiInputEdge                        \
+    651 /* returns vpiNoEdge, vpiPosedge,   \
+                                          \ \
+vpiNegedge */
+#define vpiOutputEdge                       \
+    652 /* returns vpiNoEdge, vpiPosedge,   \
+                                          \ \
+vpiNegedge */
 #define vpiGeneric 653
 
 /* Compatibility-mode property and values (object argument == NULL) */
@@ -289,6 +332,7 @@ extern "C" {
 #define vpiMode1364v2005 3
 #define vpiMode1800v2005 4
 #define vpiMode1800v2009 5
+
 #define vpiPackedArrayMember 655
 #define vpiStartLine 661
 #define vpiColumn 662
@@ -300,7 +344,9 @@ extern "C" {
 #define vpiAutomaticScheme 1
 #define vpiDynamicScheme 2
 #define vpiOtherScheme 3
+
 #define vpiObjId 660
+
 #define vpiDPIPure 665
 #define vpiDPIContext 666
 #define vpiDPICStr 667
@@ -310,40 +356,45 @@ extern "C" {
 #define vpiIsModPort 669
 
 /******************************** Operators *******************************/
-#define vpiImplyOp 50                  /* -> implication operator */
-#define vpiNonOverlapImplyOp 51        /* |=> nonoverlapped implication */
-#define vpiOverlapImplyOp 52           /* |-> overlapped implication operator */
-#define vpiAcceptOnOp 83               /* accept_on operator */
-#define vpiRejectOnOp 84               /* reject_on operator */
-#define vpiSyncAcceptOnOp 85           /* sync_accept_on operator */
-#define vpiSyncRejectOnOp 86           /* sync_reject_on operator */
-#define vpiOverlapFollowedByOp 87      /* overlapped followed_by operator */
-#define vpiNonOverlapFollowedByOp 88   /* nonoverlapped followed_by operator */
-#define vpiNexttimeOp 89               /* nexttime operator */
-#define vpiAlwaysOp 90                 /* always operator */
-#define vpiEventuallyOp 91             /* eventually operator */
-#define vpiUntilOp 92                  /* until operator */
-#define vpiUntilWithOp 93              /* until_with operator */
-#define vpiUnaryCycleDelayOp 53        /* binary cycle delay (##) operator */
-#define vpiCycleDelayOp 54             /* binary cycle delay (##) operator */
-#define vpiIntersectOp 55              /* intersection operator */
-#define vpiFirstMatchOp 56             /* first_match operator */
-#define vpiThroughoutOp 57             /* throughout operator */
-#define vpiWithinOp 58                 /* within operator */
-#define vpiRepeatOp 59                 /* [=] nonconsecutive repetition */
-#define vpiConsecutiveRepeatOp 60      /* [*] consecutive repetition */
-#define vpiGotoRepeatOp 61             /* [->] goto repetition */
-#define vpiPostIncOp 62                /* ++ post-increment */
-#define vpiPreIncOp 63                 /* ++ pre-increment */
-#define vpiPostDecOp 64                /* -- post-decrement */
-#define vpiPreDecOp 65                 /* -- pre-decrement */
-#define vpiMatchOp 66                  /* match() operator */
-#define vpiCastOp 67                   /* type'() operator */
-#define vpiIffOp 68                    /* iff operator */
-#define vpiWildEqOp 69                 /* ==? operator */
-#define vpiWildNeqOp 70                /* !=? operator */
-#define vpiStreamLROp 71               /* left-to-right streaming {>>} operator */
-#define vpiStreamRLOp 72               /* right-to-left streaming {<<} operator */
+#define vpiImplyOp 50                /* -> implication operator */
+#define vpiNonOverlapImplyOp 51      /* |=> nonoverlapped implication */
+#define vpiOverlapImplyOp 52         /* |-> overlapped implication operator */
+#define vpiAcceptOnOp 83             /* accept_on operator */
+#define vpiRejectOnOp 84             /* reject_on operator */
+#define vpiSyncAcceptOnOp 85         /* sync_accept_on operator */
+#define vpiSyncRejectOnOp 86         /* sync_reject_on operator */
+#define vpiOverlapFollowedByOp 87    /* overlapped followed_by operator */
+#define vpiNonOverlapFollowedByOp 88 /* nonoverlapped followed_by operator */
+#define vpiNexttimeOp 89             /* nexttime operator */
+#define vpiAlwaysOp 90               /* always operator */
+#define vpiEventuallyOp 91           /* eventually operator */
+#define vpiUntilOp 92                /* until operator */
+#define vpiUntilWithOp 93            /* until_with operator */
+
+#define vpiUnaryCycleDelayOp 53   /* binary cycle delay (##) operator */
+#define vpiCycleDelayOp 54        /* binary cycle delay (##) operator */
+#define vpiIntersectOp 55         /* intersection operator */
+#define vpiFirstMatchOp 56        /* first_match operator */
+#define vpiThroughoutOp 57        /* throughout operator */
+#define vpiWithinOp 58            /* within operator */
+#define vpiRepeatOp 59            /* [=] nonconsecutive repetition */
+#define vpiConsecutiveRepeatOp 60 /* [*] consecutive repetition */
+#define vpiGotoRepeatOp 61        /* [->] goto repetition */
+
+#define vpiPostIncOp 62 /* ++ post-increment */
+#define vpiPreIncOp 63  /* ++ pre-increment */
+#define vpiPostDecOp 64 /* -- post-decrement */
+#define vpiPreDecOp 65  /* -- pre-decrement */
+
+#define vpiMatchOp 66   /* match() operator */
+#define vpiCastOp 67    /* type'() operator */
+#define vpiIffOp 68     /* iff operator */
+#define vpiWildEqOp 69  /* ==? operator */
+#define vpiWildNeqOp 70 /* !=? operator */
+
+#define vpiStreamLROp 71 /* left-to-right streaming {>>} operator */
+#define vpiStreamRLOp 72 /* right-to-left streaming {<<} operator */
+
 #define vpiMatchedOp 73                /* the .matched sequence operation */
 #define vpiTriggeredOp 74              /* the .triggered sequence operation */
 #define vpiAssignmentPatternOp 75      /* '{} assignment pattern */
@@ -376,8 +427,10 @@ extern "C" {
 #define cbEndOfFrame 604    /* callback on frame exit */
 #define cbSizeChange 605    /* callback on array variable size change */
 #define cbCreateObj 700     /* callback on class object creation */
-#define cbReclaimObj 701    /* callback on class object reclaimed by automatic memory management */
-#define cbEndOfObject 702   /* callback on transient object deletion */
+#define cbReclaimObj                                               \
+    701                   /* callback on class object reclaimed by \
+                                      automatic memory management */
+#define cbEndOfObject 702 /* callback on transient object deletion */
 
 /************************* FUNCTION DECLARATIONS **************************/
 
@@ -524,5 +577,4 @@ vpiHandle vpi_register_assertion_cb(vpiHandle assertion, /* handle to assertion 
 #ifdef __cplusplus
 }
 #endif
-
 #endif

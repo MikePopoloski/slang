@@ -273,7 +273,7 @@ typedef PLI_UINT32* vpiHandle;
 
 /************************ methods added with 1364-2005 ************************/
 
-#define vpiBaseExpr 131  /* Indexed part-select's base expression */
+#define vpiBaseExpr 131  /* Indexed part-select's base expression  */
 #define vpiWidthExpr 132 /* Indexed part-select's width expression */
 
 /************************ methods added with 1800-2009 ************************/
@@ -341,16 +341,20 @@ typedef PLI_UINT32* vpiHandle;
 #define vpiSupply0 11          /* supply-0 net */
 #define vpiNone 12             /* no default net type (1364-2001) */
 #define vpiUwire 13            /* unresolved wire net (1364-2005) */
+#define vpiNettypeNet 14       /* user-defined nettype net */
+#define vpiNettypeNetSelect 15 /* user-defined nettype net subelement */
+#define vpiInterconnect 16     /* interconnect net */
+
 #define vpiExplicitScalared 23 /* explicitly scalared (Boolean) */
 #define vpiExplicitVectored 24 /* explicitly vectored (Boolean) */
 #define vpiExpanded 25         /* expanded vector net (Boolean) */
 #define vpiImplicitDecl 26     /* implicitly declared net (Boolean) */
 #define vpiChargeStrength 27   /* charge decay strength of net */
 
-/* Defined as part of strengths section.
-#define vpiLargeCharge 0x10
-#define vpiMediumCharge 0x04
-#define vpiSmallCharge 0x02
+/*  Defined as part of strengths section.
+#define vpiLargeCharge             0x10
+#define vpiMediumCharge            0x04
+#define vpiSmallCharge             0x02
 */
 
 #define vpiArray 28     /* variable array (Boolean) */
@@ -422,8 +426,8 @@ typedef PLI_UINT32* vpiHandle;
 #define vpiNoChange 7     /* $nochange */
 #define vpiSetupHold 8    /* $setuphold */
 #define vpiFullskew 9     /* $fullskew -- added for 1364-2001 */
-#define vpiRecrem 10      /* $recrem -- added for 1364-2001 */
-#define vpiRemoval 11     /* $removal -- added for 1364-2001 */
+#define vpiRecrem 10      /* $recrem   -- added for 1364-2001 */
+#define vpiRemoval 11     /* $removal  -- added for 1364-2001 */
 #define vpiTimeskew 12    /* $timeskew -- added for 1364-2001 */
 
 /**************************** expression properties ***************************/
@@ -470,9 +474,9 @@ typedef PLI_UINT32* vpiHandle;
 #define vpiMinTypMaxOp 38         /* min:typ:max: delay expression */
 #define vpiPosedgeOp 39           /* posedge */
 #define vpiNegedgeOp 40           /* negedge */
-#define vpiArithLShiftOp 41       /* arithmetic left shift (1364-2001) */
+#define vpiArithLShiftOp 41       /* arithmetic left shift  (1364-2001) */
 #define vpiArithRShiftOp 42       /* arithmetic right shift (1364-2001) */
-#define vpiPowerOp 43             /* arithmetic power op (1364-2001) */
+#define vpiPowerOp 43             /* arithmetic power op    (1364-2001) */
 #define vpiConstType 40           /* constant subtypes: */
 #define vpiDecConst 1             /* decimal integer */
 #define vpiRealConst 2            /* real */
@@ -514,9 +518,10 @@ typedef PLI_UINT32* vpiHandle;
 #define vpiAutomatic 50 /* task/func obj is automatic */
 #define vpiCell 51      /* configuration cell */
 #define vpiConfig 52    /* configuration config file */
-#define vpiConstantSelect \
-    53                  /* (Boolean) bit-select or part-select indices are constant expressions */
-#define vpiDecompile 54 /* decompile the object */
+#define vpiConstantSelect                                             \
+    53                         /* (Boolean) bit-select or part-select \
+                                  indices are constant expressions */
+#define vpiDecompile 54        /* decompile the object */
 #define vpiDefAttribute 55     /* Attribute defined for the obj */
 #define vpiDelayType 56        /* delay subtype */
 #define vpiModPathDelay 1      /* module path delay */
@@ -525,18 +530,25 @@ typedef PLI_UINT32* vpiHandle;
 #define vpiIteratorType 57     /* object type of an iterator */
 #define vpiLibrary 58          /* configuration library */
 #define vpiOffset 60           /* offset from LSB */
-#define vpiResolvedNetType \
-    61                      /* net subtype after resolution, returns same subtypes as vpiNetType */
-#define vpiSaveRestartID 62 /* unique ID for save/restart data */
+#define vpiResolvedNetType                                                 \
+    61                            /* net subtype after resolution, returns \
+                                     same subtypes as vpiNetType */
+#define vpiSaveRestartID 62       /* unique ID for save/restart data */
 #define vpiSaveRestartLocation 63 /* name of save/restart data file */
 /* vpiValid,vpiValidTrue,vpiValidFalse were deprecated in 1800-2009 */
-#define vpiValid 64 /* reentrant task/func frame or automatic variable is valid */
+#define vpiValid                                   \
+    64 /* reentrant task/func frame or automatic   \
+                                                 \ \
+variable is valid */
 #define vpiValidFalse 0
 #define vpiValidTrue 1
-#define vpiSigned                                                                                  \
-    65 /* TRUE for vpiIODecl and any object in the expression class if the object has the signed \ \
-          \ \ \ attribute */
-#define vpiLocalParam 70       /* TRUE when a param is declared as a localparam */
+#define vpiSigned                              \
+    65 /* TRUE for vpiIODecl and any object in \
+          the expression class if the object   \
+          has the signed attribute */
+#define vpiLocalParam                                                \
+    70                         /* TRUE when a param is declared as a \
+                                  localparam */
 #define vpiModPathHasIfNone 71 /* Mod path has an ifnone statement */
 
 /*********************** properties added with 1364-2005 **********************/
@@ -562,25 +574,32 @@ typedef PLI_UINT32* vpiHandle;
 
 /******************************* time structure *******************************/
 
+#ifndef VPI_TIME /* added in 1800-2023 */
+#    define VPI_TIME
+
 typedef struct t_vpi_time {
     PLI_INT32 type;       /* [vpiScaledRealTime, vpiSimTime,
-          vpiSuppressTime] */
+                              vpiSuppressTime] */
     PLI_UINT32 high, low; /* for vpiSimTime */
     double real;          /* for vpiScaledRealTime */
 } s_vpi_time, *p_vpi_time;
 
 /* time types */
 
-#define vpiScaledRealTime 1
-#define vpiSimTime 2
-#define vpiSuppressTime 3
+#    define vpiScaledRealTime 1
+#    define vpiSimTime 2
+#    define vpiSuppressTime 3
+
+#endif
 
 /****************************** delay structures ******************************/
 
 typedef struct t_vpi_delay {
-    struct t_vpi_time* da;  /* pointer to application-allocated array of delay values */
+    struct t_vpi_time* da;  /* pointer to application-allocated
+                               array of delay values */
     PLI_INT32 no_of_delays; /* number of delays */
-    PLI_INT32 time_type;    /* [vpiScaledRealTime, vpiSimTime, vpiSuppressTime] */
+    PLI_INT32 time_type;    /* [vpiScaledRealTime, vpiSimTime,
+                                vpiSuppressTime] */
     PLI_INT32 mtm_flag;     /* true for mtm values */
     PLI_INT32 append_flag;  /* true for append */
     PLI_INT32 pulsere_flag; /* true for pulsere values */
@@ -622,7 +641,7 @@ typedef struct t_vpi_strengthval {
 
 typedef struct t_vpi_value {
     PLI_INT32 format; /* vpi[[Bin,Oct,Dec,Hex]Str,Scalar,Int,Real,String,
-    Vector,Strength,Suppress,Time,ObjType]Val */
+                             Vector,Strength,Suppress,Time,ObjType]Val */
     union {
         PLI_BYTE8* str;                     /* string value */
         PLI_INT32 scalar;                   /* vpi[0,1,X,Z] */
@@ -637,7 +656,7 @@ typedef struct t_vpi_value {
 
 typedef struct t_vpi_arrayvalue {
     PLI_UINT32 format; /* vpi[Int,Real,Time,ShortInt,LongInt,ShortReal,
-    RawTwoState,RawFourState]Val */
+                          RawTwoState,RawFourState]Val */
     PLI_UINT32 flags;  /* array bit flags- vpiUserAllocFlag */
     union {
         PLI_INT32* integers;          /* integer values */
@@ -711,17 +730,16 @@ typedef struct t_vpi_arrayvalue {
 #define vpiL 5
 #define vpiDontCare 6
 /*
-#define vpiNoChange 7 Defined under vpiTchkType, but
-can be used here.
+#define vpiNoChange           7   Defined under vpiTchkType, but
+                                  can be used here.
 */
 
 /*********************** system task/function structure ***********************/
 
 typedef struct t_vpi_systf_data {
     PLI_INT32 type;        /* vpiSysTask, vpiSysFunc */
-    PLI_INT32 sysfunctype; /* vpiSysTask, vpi[Int,Real,Time,Sized,
-    SizedSigned]Func */
-    PLI_BYTE8* tfname;     /* first character must be '$' */
+    PLI_INT32 sysfunctype; /* vpi[Int,Real,Time,Sized,SizedSigned]Func */
+    PLI_BYTE8* tfname;     /* first character has to be '$' */
     PLI_INT32 (*calltf)(PLI_BYTE8*);
     PLI_INT32 (*compiletf)(PLI_BYTE8*);
     PLI_INT32 (*sizetf)(PLI_BYTE8*); /* for sized function callbacks only */
@@ -778,7 +796,8 @@ typedef struct t_cb_data {
     vpiHandle obj;                          /* trigger object */
     p_vpi_time time;                        /* callback time */
     p_vpi_value value;                      /* trigger object value */
-    PLI_INT32 index; /* index of the memory word or var select that changed */
+    PLI_INT32 index;                        /* index of the memory word or
+                                               var select that changed */
     PLI_BYTE8* user_data;
 } s_cb_data, *p_cb_data;
 
@@ -872,8 +891,11 @@ XXTERN void vpi_put_delays PROTO_PARAMS((vpiHandle object, p_vpi_delay delay_p))
 XXTERN void vpi_get_value PROTO_PARAMS((vpiHandle expr, p_vpi_value value_p));
 XXTERN vpiHandle vpi_put_value PROTO_PARAMS((vpiHandle object, p_vpi_value value_p,
                                              p_vpi_time time_p, PLI_INT32 flags));
-XXTERN void vpi_get_value_array PROTO_PARAMS((vpiHandle object, p_vpi_arrayvalue arrayvalue_p,
-                                              PLI_INT32* index_p, PLI_UINT32 num));
+XXTERN void vpi_get_value_array PROTO_PARAMS((vpiHandle object,
+
+                                              p_vpi_arrayvalue arrayvalue_p, PLI_INT32* index_p,
+                                              PLI_UINT32 num));
+
 XXTERN void vpi_put_value_array PROTO_PARAMS((vpiHandle object, p_vpi_arrayvalue arrayvalue_p,
                                               PLI_INT32* index_p, PLI_UINT32 num));
 
