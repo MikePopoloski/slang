@@ -14,6 +14,7 @@ note NoteOriginalAssign "original assignment here"
 note NoteConfigRule "from configuration here"
 note NoteFromHere2 "from '{}' and '{}'"
 error AttributesNotAllowed "attributes are not allowed here"
+error WrongLanguageVersion "language feature is not supported in version {}; use the --std option to select a supported language version"
 
 subsystem Lexer
 error NonPrintableChar "non-printable control character in source text"

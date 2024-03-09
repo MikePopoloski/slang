@@ -635,8 +635,12 @@ Token Lexer::lexToken(KeywordVersion keywordVersion) {
 
 Token Lexer::lexStringLiteral() {
     bool tripleQuoted = false;
-    if (peek() == '"' && peek(1) == '"' && options.languageVersion >= LanguageVersion::v1800_2023) {
+    if (peek() == '"' && peek(1) == '"') {
         // New in v1800-2023: triple quoted string literals
+        if (options.languageVersion < LanguageVersion::v1800_2023) {
+            addDiag(diag::WrongLanguageVersion, currentOffset() - 1)
+                << toString(options.languageVersion);
+        }
         tripleQuoted = true;
         advance(2);
     }
