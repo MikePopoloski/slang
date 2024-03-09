@@ -634,6 +634,13 @@ Token Lexer::lexToken(KeywordVersion keywordVersion) {
 }
 
 Token Lexer::lexStringLiteral() {
+    bool tripleQuoted = false;
+    if (peek() == '"' && peek(1) == '"' && options.languageVersion >= LanguageVersion::v1800_2023) {
+        // New in v1800-2023: triple quoted string literals
+        tripleQuoted = true;
+        advance(2);
+    }
+
     stringBuffer.clear();
     bool sawUTF8Error = false;
     while (true) {
@@ -719,10 +726,23 @@ Token Lexer::lexStringLiteral() {
             }
         }
         else if (c == '"') {
-            advance();
-            break;
+            if (tripleQuoted) {
+                if (peek(1) == '"' && peek(2) == '"') {
+                    advance(3);
+                    break;
+                }
+                else {
+                    advance();
+                    stringBuffer.push_back(c);
+                    sawUTF8Error = false;
+                }
+            }
+            else {
+                advance();
+                break;
+            }
         }
-        else if (isNewline(c)) {
+        else if (isNewline(c) && !tripleQuoted) {
             addDiag(diag::ExpectedClosingQuote, offset);
             break;
         }

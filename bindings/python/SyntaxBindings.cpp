@@ -267,7 +267,8 @@ void registerSyntax(py::module_& m) {
 
     py::class_<LexerOptions>(m, "LexerOptions")
         .def(py::init<>())
-        .def_readwrite("maxErrors", &LexerOptions::maxErrors);
+        .def_readwrite("maxErrors", &LexerOptions::maxErrors)
+        .def_readwrite("languageVersion", &LexerOptions::languageVersion);
 
     py::class_<PreprocessorOptions>(m, "PreprocessorOptions")
         .def(py::init<>())

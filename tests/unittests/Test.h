@@ -81,7 +81,8 @@ std::string to_string(const Diagnostic& diag);
 
 Diagnostics filterWarnings(const Diagnostics& diags);
 
-Token lexToken(std::string_view text);
+Token lexToken(std::string_view text,
+               LanguageVersion languageVersion = LanguageVersion::v1800_2017);
 Token lexRawToken(std::string_view text);
 
 const ModuleDeclarationSyntax& parseModule(const std::string& text);

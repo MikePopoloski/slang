@@ -74,10 +74,16 @@ Diagnostics filterWarnings(const Diagnostics& diags) {
     return results;
 }
 
-Token lexToken(std::string_view text) {
+Token lexToken(std::string_view text, LanguageVersion languageVersion) {
     diagnostics.clear();
 
-    Preprocessor preprocessor(getSourceManager(), alloc, diagnostics);
+    LexerOptions lo;
+    lo.languageVersion = languageVersion;
+
+    PreprocessorOptions po;
+    po.languageVersion = languageVersion;
+
+    Preprocessor preprocessor(getSourceManager(), alloc, diagnostics, Bag(lo, po));
     preprocessor.pushSource(text);
 
     Token token = preprocessor.next();

@@ -11,6 +11,7 @@
 #include "slang/parsing/LexerFacts.h"
 #include "slang/parsing/Token.h"
 #include "slang/text/SourceLocation.h"
+#include "slang/util/LanguageVersion.h"
 #include "slang/util/SmallVector.h"
 #include "slang/util/Util.h"
 
@@ -27,6 +28,9 @@ struct SLANG_EXPORT LexerOptions {
     /// The maximum number of errors that can occur before the rest of the source
     /// buffer is skipped.
     uint32_t maxErrors = 16;
+
+    /// The version of the SystemVerilog language to use.
+    LanguageVersion languageVersion = LanguageVersion::Default;
 };
 
 /// Possible encodings for encrypted text used in a pragma protect region.

@@ -466,6 +466,31 @@ TEST_CASE("String literal (UTF8 escape)") {
     CHECK(diagnostics.back().code == diag::UnknownEscapeCode);
 }
 
+TEST_CASE("String literal (triple quoted)") {
+    auto& text = R"("""Humpty Dumpty sat on a "wall".
+Humpty Dumpty had a great fall.""")";
+
+    Token token = lexToken(text, LanguageVersion::v1800_2023);
+
+    CHECK(token.kind == TokenKind::StringLiteral);
+    CHECK(token.toString() == text);
+    CHECK(token.valueText() == R"(Humpty Dumpty sat on a "wall".
+Humpty Dumpty had a great fall.)");
+    CHECK_DIAGNOSTICS_EMPTY;
+}
+
+TEST_CASE("String literal (triple quoted with escaped newline)") {
+    auto& text = R"("""Humpty Dumpty sat on a "wall". \
+Humpty Dumpty had a great fall.""")";
+
+    Token token = lexToken(text, LanguageVersion::v1800_2023);
+
+    CHECK(token.kind == TokenKind::StringLiteral);
+    CHECK(token.toString() == text);
+    CHECK(token.valueText() == R"(Humpty Dumpty sat on a "wall". Humpty Dumpty had a great fall.)");
+    CHECK_DIAGNOSTICS_EMPTY;
+}
+
 TEST_CASE("Integer literal") {
     auto& text = "19248";
     Token token = lexToken(text);

@@ -80,7 +80,8 @@ Preprocessor::Preprocessor(SourceManager& sourceManager, BumpAllocator& alloc,
 
 Preprocessor::Preprocessor(const Preprocessor& other) :
     sourceManager(other.sourceManager), alloc(other.alloc), diagnostics(other.diagnostics),
-    options(other.options), numberParser(diagnostics, alloc, options.languageVersion) {
+    options(other.options), lexerOptions(other.lexerOptions),
+    numberParser(diagnostics, alloc, options.languageVersion) {
 
     keywordVersionStack.push_back(LF::getDefaultKeywordVersion());
 }
