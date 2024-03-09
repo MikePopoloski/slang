@@ -1111,3 +1111,135 @@ endmodule
     auto& param = compilation.getRoot().lookupName<ParameterSymbol>("top.m1.f1.m2.J");
     CHECK(param.getValue().integer() == 9);
 }
+
+TEST_CASE("Configs with libraries and interconnect busses example") {
+    auto realLib = std::make_unique<SourceLibrary>("realLib", 1);
+    auto logicLib = std::make_unique<SourceLibrary>("logicLib", 2);
+
+    auto cfgs = SyntaxTree::fromText(R"(
+config cfgReal;
+    design logicLib.top;
+    default liblist realLib logicLib;
+endconfig
+
+config cfgLogic;
+    design logicLib.top;
+    default liblist logicLib realLib;
+endconfig
+)");
+
+    auto topSv = SyntaxTree::fromText(R"(
+module top();
+    interconnect aBus[0:3][0:1];
+    logic [0:3] dBus;
+    driver driverArray[0:3](aBus);
+    cmp cmpArray[0:3](aBus,rst,dBus);
+endmodule : top
+)",
+                                      SyntaxTree::getDefaultSourceManager(), "top.sv", "", {},
+                                      logicLib.get());
+
+    auto netsPkg = SyntaxTree::fromText(R"(
+package NetsPkg;
+    nettype real realNet;
+endpackage : NetsPkg
+)");
+
+    auto driverSvr = SyntaxTree::fromText(R"(
+module driver
+    import NetsPkg::*;
+    #(parameter int delay = 30,
+                int iterations = 256)
+    (output realNet out[0:1]);
+    timeunit 1ns / 1ps;
+    real outR[1:0];
+    assign out = outR;
+    initial begin
+        outR[0] = 0.0;
+        outR[1] = 3.3;
+        for (int i = 0; i < iterations; i++) begin
+            #delay outR[0] += 0.2;
+            outR[1] -= 0.2;
+        end
+    end
+endmodule : driver
+)",
+                                          SyntaxTree::getDefaultSourceManager(), "driver.svr", "",
+                                          {}, realLib.get());
+
+    auto driverSv = SyntaxTree::fromText(R"(
+module driver #(parameter int delay = 30,
+                          int iterations = 256)
+               (output wire logic out[0:1]);
+    timeunit 1ns / 1ps;
+    logic [0:1] outvar;
+
+    assign out[0] = outvar[0];
+    assign out[1] = outvar[1];
+
+    initial begin
+        outvar = '0;
+        for (int i = 0; i < iterations; i++)
+            #delay outvar++;
+    end
+endmodule : driver
+)",
+                                         SyntaxTree::getDefaultSourceManager(), "driver.sv", "", {},
+                                         logicLib.get());
+
+    auto cmpSvr = SyntaxTree::fromText(R"(
+module cmp
+    import NetsPkg::*;
+    #(parameter real hyst = 0.65)
+    (input realNet inA[0:1],
+     input logic rst,
+     output logic out);
+    timeunit 1ns / 1ps;
+    real updatePeriod = 100.0;
+
+    initial out = 1'b0;
+
+    always #updatePeriod begin
+        if (rst) out <= 1'b0;
+        else if (inA[0] > inA[1]) out <= 1'b1;
+        else if (inA[0] < inA[1] - hyst) out <= 1'b0;
+    end
+endmodule : cmp
+)",
+                                       SyntaxTree::getDefaultSourceManager(), "cmp.svr", "", {},
+                                       realLib.get());
+
+    auto cmpSv = SyntaxTree::fromText(R"(
+module cmp #(parameter real hyst = 0.65)
+            (input wire logic inA[0:1],
+             input logic rst,
+             output logic out);
+
+    initial out = 1'b0;
+
+    always @(inA[0], inA[1], rst) begin
+        if (rst) out <= 1'b0;
+        else if (inA[0] & ~inA[1]) out <= 1'b1;
+        else out <= 1'b0;
+    end
+endmodule : cmp
+)",
+                                      SyntaxTree::getDefaultSourceManager(), "cmp.sv", "", {},
+                                      logicLib.get());
+
+    for (auto cfgName : {"cfgReal", "cfgLogic"}) {
+        CompilationOptions options;
+        options.topModules.emplace(cfgName);
+        options.defaultTimeScale = TimeScale::fromString("1ns/1ns");
+
+        Compilation compilation(options);
+        compilation.addSyntaxTree(cfgs);
+        compilation.addSyntaxTree(topSv);
+        compilation.addSyntaxTree(netsPkg);
+        compilation.addSyntaxTree(driverSvr);
+        compilation.addSyntaxTree(driverSv);
+        compilation.addSyntaxTree(cmpSvr);
+        compilation.addSyntaxTree(cmpSv);
+        NO_COMPILATION_ERRORS;
+    }
+}
