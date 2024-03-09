@@ -14,6 +14,7 @@
 #include "slang/ast/symbols/ParameterSymbols.h"
 #include "slang/ast/symbols/VariableSymbols.h"
 #include "slang/ast/types/Type.h"
+#include "slang/parsing/Parser.h"
 #include "slang/syntax/AllSyntax.h"
 
 SVInt testParameter(const std::string& text, uint32_t index = 0) {
@@ -3246,4 +3247,36 @@ endmodule
     Compilation compilation(options);
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("v1800-2023: Unsized integer literals can be any bit width") {
+    ParserOptions parseOptions;
+    parseOptions.languageVersion = LanguageVersion::v1800_2023;
+
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    localparam a = 'h7_0000_0000;
+    localparam b = 4294967296;
+endmodule
+)",
+                                     SyntaxTree::getDefaultSourceManager(), "source"sv, "",
+                                     parseOptions);
+
+    CompilationOptions compOptions;
+    compOptions.languageVersion = LanguageVersion::v1800_2023;
+
+    Compilation compilation(compOptions);
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto getParam = [&](std::string_view name) -> decltype(auto) {
+        return compilation.getRoot().lookupName<ParameterSymbol>(name);
+    };
+
+    auto& a = getParam("m.a");
+    auto& b = getParam("m.b");
+    CHECK(a.getType().toString() == "logic[34:0]");
+    CHECK(b.getType().toString() == "logic signed[33:0]");
+    CHECK(a.getValue().integer() == 0x700000000ull);
+    CHECK(b.getValue().integer() == 4294967296ll);
 }

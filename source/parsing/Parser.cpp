@@ -15,7 +15,8 @@ using namespace syntax;
 
 Parser::Parser(Preprocessor& preprocessor, const Bag& options) :
     ParserBase::ParserBase(preprocessor), factory(alloc),
-    parseOptions(options.getOrDefault<ParserOptions>()), numberParser(getDiagnostics(), alloc) {
+    parseOptions(options.getOrDefault<ParserOptions>()),
+    numberParser(getDiagnostics(), alloc, parseOptions.languageVersion) {
 }
 
 SyntaxNode& Parser::parseGuess() {

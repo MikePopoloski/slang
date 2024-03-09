@@ -18,6 +18,7 @@
 #include "slang/util/Bag.h"
 #include "slang/util/BumpAllocator.h"
 #include "slang/util/IntervalMap.h"
+#include "slang/util/LanguageVersion.h"
 #include "slang/util/SafeIndexedVector.h"
 
 namespace slang::syntax {
@@ -176,6 +177,9 @@ struct SLANG_EXPORT CompilationOptions {
     /// Specifies which set of min:typ:max expressions should
     /// be used during compilation.
     MinTypMax minTypMax = MinTypMax::Typ;
+
+    /// The version of the SystemVerilog language to use.
+    LanguageVersion languageVersion = LanguageVersion::Default;
 
     /// The default time scale to use for design elements that don't specify
     /// one explicitly.

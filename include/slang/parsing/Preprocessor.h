@@ -37,6 +37,9 @@ struct SLANG_EXPORT PreprocessorOptions {
     /// a file will result in an error.
     uint32_t maxIncludeDepth = 1024;
 
+    /// The version of the SystemVerilog language to use.
+    LanguageVersion languageVersion = LanguageVersion::Default;
+
     /// The name to associate with errors produced by macros specified
     /// via the @a predefines option.
     std::string predefineSource = "<api>";

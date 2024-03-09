@@ -15,6 +15,7 @@
 #include "slang/syntax/SyntaxFacts.h"
 #include "slang/util/Bag.h"
 #include "slang/util/Hash.h"
+#include "slang/util/LanguageVersion.h"
 
 namespace slang::parsing {
 
@@ -122,6 +123,9 @@ struct SLANG_EXPORT ParserOptions {
     /// The maximum depth of nested language constructs (statements, exceptions) before
     /// we give up for fear of stack overflow.
     uint32_t maxRecursionDepth = 1024;
+
+    /// The version of the SystemVerilog language to use.
+    LanguageVersion languageVersion = LanguageVersion::Default;
 };
 
 /// Implements a full syntax parser for SystemVerilog.

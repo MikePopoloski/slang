@@ -10,6 +10,6 @@
 namespace slang {
 
 /// Specifies SystemVerilog language versions.
-enum class LanguageVersion { v1800_2017, v1800_2023 };
+enum class LanguageVersion { v1800_2017, v1800_2023, Default = v1800_2017 };
 
 } // namespace slang

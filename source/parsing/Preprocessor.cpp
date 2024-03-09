@@ -26,7 +26,8 @@ Preprocessor::Preprocessor(SourceManager& sourceManager, BumpAllocator& alloc,
                            std::span<const DefineDirectiveSyntax* const> inheritedMacros) :
     sourceManager(sourceManager),
     alloc(alloc), diagnostics(diagnostics), options(options_.getOrDefault<PreprocessorOptions>()),
-    lexerOptions(options_.getOrDefault<LexerOptions>()), numberParser(diagnostics, alloc) {
+    lexerOptions(options_.getOrDefault<LexerOptions>()),
+    numberParser(diagnostics, alloc, options.languageVersion) {
 
     keywordVersionStack.push_back(LF::getDefaultKeywordVersion());
     resetAllDirectives();
@@ -79,7 +80,7 @@ Preprocessor::Preprocessor(SourceManager& sourceManager, BumpAllocator& alloc,
 
 Preprocessor::Preprocessor(const Preprocessor& other) :
     sourceManager(other.sourceManager), alloc(other.alloc), diagnostics(other.diagnostics),
-    numberParser(diagnostics, alloc) {
+    options(other.options), numberParser(diagnostics, alloc, options.languageVersion) {
 
     keywordVersionStack.push_back(LF::getDefaultKeywordVersion());
 }

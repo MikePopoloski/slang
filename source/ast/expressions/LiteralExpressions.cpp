@@ -34,15 +34,28 @@ IntegerLiteral::IntegerLiteral(BumpAllocator& alloc, const Type& type, const SVI
     }
 }
 
-Expression& IntegerLiteral::fromSyntax(Compilation& compilation,
-                                       const LiteralExpressionSyntax& syntax) {
+Expression& IntegerLiteral::fromSyntax(Compilation& comp, const LiteralExpressionSyntax& syntax) {
     SLANG_ASSERT(syntax.kind == SyntaxKind::IntegerLiteralExpression);
 
-    SVInt val = syntax.literal.intValue().resize(32);
-    val.setSigned(true);
+    const Type* type;
+    SVInt val = syntax.literal.intValue();
+    if (val.getBitWidth() < 32 || comp.getOptions().languageVersion < LanguageVersion::v1800_2023) {
+        // In v2023 the rule changed to not truncate unsized literals.
+        // Literals smaller than 32 bits are always sized up to 32.
+        val = val.resize(32);
+        val.setSigned(true);
+        type = &comp.getIntType();
+    }
+    else {
+        if (!val.isSigned()) {
+            // Note the +1 here to account for the sign bit we're going to add.
+            val = val.resize(val.getBitWidth() + 1);
+            val.setSigned(true);
+        }
+        type = &comp.getType(val.getBitWidth(), IntegralFlags::Signed);
+    }
 
-    return *compilation.emplace<IntegerLiteral>(compilation, compilation.getIntType(),
-                                                std::move(val), true, syntax.sourceRange());
+    return *comp.emplace<IntegerLiteral>(comp, *type, std::move(val), true, syntax.sourceRange());
 }
 
 Expression& IntegerLiteral::fromSyntax(Compilation& compilation,

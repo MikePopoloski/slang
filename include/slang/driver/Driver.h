@@ -76,7 +76,7 @@ public:
     std::vector<std::shared_ptr<syntax::SyntaxTree>> syntaxTrees;
 
     /// The version of the SystemVerilog language to use.
-    LanguageVersion languageVersion = LanguageVersion::v1800_2017;
+    LanguageVersion languageVersion = LanguageVersion::Default;
 
     /// A container for various options that can be parsed and applied
     /// to the compilation process.

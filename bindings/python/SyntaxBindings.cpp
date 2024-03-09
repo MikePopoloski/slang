@@ -272,13 +272,17 @@ void registerSyntax(py::module_& m) {
     py::class_<PreprocessorOptions>(m, "PreprocessorOptions")
         .def(py::init<>())
         .def_readwrite("maxIncludeDepth", &PreprocessorOptions::maxIncludeDepth)
+        .def_readwrite("languageVersion", &PreprocessorOptions::languageVersion)
         .def_readwrite("predefineSource", &PreprocessorOptions::predefineSource)
         .def_readwrite("predefines", &PreprocessorOptions::predefines)
-        .def_readwrite("undefines", &PreprocessorOptions::undefines);
+        .def_readwrite("undefines", &PreprocessorOptions::undefines)
+        .def_readwrite("additionalIncludePaths", &PreprocessorOptions::additionalIncludePaths)
+        .def_readwrite("ignoreDirectives", &PreprocessorOptions::ignoreDirectives);
 
     py::class_<ParserOptions>(m, "ParserOptions")
         .def(py::init<>())
-        .def_readwrite("maxRecursionDepth", &ParserOptions::maxRecursionDepth);
+        .def_readwrite("maxRecursionDepth", &ParserOptions::maxRecursionDepth)
+        .def_readwrite("languageVersion", &ParserOptions::languageVersion);
 
     py::class_<SyntaxPrinter>(m, "SyntaxPrinter")
         .def(py::init<>())

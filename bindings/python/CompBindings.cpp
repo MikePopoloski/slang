@@ -70,6 +70,7 @@ void registerCompilation(py::module_& m) {
         .def_readwrite("errorLimit", &CompilationOptions::errorLimit)
         .def_readwrite("typoCorrectionLimit", &CompilationOptions::typoCorrectionLimit)
         .def_readwrite("minTypMax", &CompilationOptions::minTypMax)
+        .def_readwrite("languageVersion", &CompilationOptions::languageVersion)
         .def_readwrite("defaultTimeScale", &CompilationOptions::defaultTimeScale)
         .def_readwrite("topModules", &CompilationOptions::topModules)
         .def_readwrite("paramOverrides", &CompilationOptions::paramOverrides)

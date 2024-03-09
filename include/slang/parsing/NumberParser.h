@@ -16,13 +16,14 @@
 #include "slang/syntax/SyntaxFacts.h"
 #include "slang/text/CharInfo.h"
 #include "slang/text/SourceLocation.h"
+#include "slang/util/LanguageVersion.h"
 #include "slang/util/SmallVector.h"
 
 namespace slang::parsing {
 
 class NumberParser {
 public:
-    NumberParser(Diagnostics& diagnostics, BumpAllocator& alloc);
+    NumberParser(Diagnostics& diagnostics, BumpAllocator& alloc, LanguageVersion languageVersion);
 
     struct IntResult {
         Token size;
@@ -40,8 +41,7 @@ public:
     template<typename TStream>
     IntResult parseSimpleInt(TStream& stream) {
         auto token = stream.expect(TokenKind::IntegerLiteral);
-        if (token.intValue() > INT32_MAX)
-            reportIntOverflow(token);
+        checkIntOverflow(token);
         return IntResult::simple(token);
     }
 
@@ -57,8 +57,7 @@ public:
         }
         else {
             auto createSimple = [&] {
-                if (token.intValue() > INT32_MAX)
-                    reportIntOverflow(token);
+                checkIntOverflow(token);
                 return IntResult::simple(token);
             };
 
@@ -166,6 +165,11 @@ public:
     }
 
 private:
+    void checkIntOverflow(Token token) {
+        if (languageVersion < LanguageVersion::v1800_2023 && token.intValue() > INT32_MAX)
+            reportIntOverflow(token);
+    }
+
     void startVector(Token baseToken, Token sizeToken);
     int append(Token token, bool isFirst);
     Token finishValue(Token firstToken, bool singleToken);
@@ -176,6 +180,7 @@ private:
 
     bitwidth_t sizeBits = 0;
     LiteralBase literalBase = LiteralBase::Binary;
+    LanguageVersion languageVersion;
     SourceLocation firstLocation;
     bool signFlag = false;
     bool hasUnknown = false;
