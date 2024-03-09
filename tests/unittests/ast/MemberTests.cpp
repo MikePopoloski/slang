@@ -62,6 +62,19 @@ endmodule
     CHECK(diags[5].code == diag::DelayNotNumeric);
 }
 
+TEST_CASE("Net types can be unpacked unions") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    typedef union { logic l; } u;
+    wire u w;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
 TEST_CASE("Bad signed specifier") {
     auto tree = SyntaxTree::fromText(R"(
 module Top;

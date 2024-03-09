@@ -381,7 +381,7 @@ error InheritFromAbstract "'{}' cannot inherit from virtual class '{}' without p
 error InheritFromAbstractConstraint "'{}' cannot inherit from virtual class '{}' without providing an implementation for pure constraint '{}'"
 error InvalidPortType "{} is not a valid type for a port"
 error InvalidPortSubType "{} is not a valid type for a port because it contains type {}"
-error InvalidNetType "{} is not a valid type for a net; only 4-state integral types and unpacked structs and arrays of such types are allowed"
+error InvalidNetType "{} is not a valid type for a net; only 4-state integral types and unpacked structs/unions and arrays of such types are allowed"
 error InvalidUserDefinedNetType "{} is not a valid type for a user-defined nettype; only integral types, floating types, and unpacked structs, unions, and arrays of such types are allowed"
 error ExtendIfaceFromClass "a normal (or virtual) class cannot extend interface class '{}'"
 error ExtendClassFromIface "an interface class cannot extend non-interface class '{}'"

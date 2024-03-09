@@ -163,6 +163,14 @@ static bool isValidForNet(const Type& type) {
         return true;
     }
 
+    if (ct.isUnpackedUnion()) {
+        for (auto field : ct.as<UnpackedUnionType>().fields) {
+            if (!isValidForNet(field->getType()))
+                return false;
+        }
+        return true;
+    }
+
     return false;
 }
 
