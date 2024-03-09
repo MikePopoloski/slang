@@ -1040,7 +1040,7 @@ endmodule
     NO_COMPILATION_ERRORS;
 
     auto& r = compilation.getRoot().lookupName<ParameterSymbol>("m.r");
-    CHECK(r.getValue().real() == 234.057);
+    CHECK(r.getValue().real() == 234.0567891);
 }
 
 TEST_CASE("Fixed / dynamic array assignments") {
@@ -3279,4 +3279,57 @@ endmodule
     CHECK(b.getType().toString() == "logic signed[33:0]");
     CHECK(a.getValue().integer() == 0x700000000ull);
     CHECK(b.getValue().integer() == 4294967296ll);
+}
+
+TEST_CASE("Change of behavior in time literal rounding") {
+    // 1800-2023 changed the rules for time literals; previously they would
+    // be scaled and rounded to the current time settings, but now they are
+    // only scaled, not rounded. This is a breaking change, but it turns out
+    // they made this change because no other tools ever implemented the
+    // rounding part of the rule, so slang just needs to conform.
+    auto tree = SyntaxTree::fromText(R"x(
+module test();
+  timeunit 1ns/1ps;
+
+    if (1.0 == 1ns)
+      $info("TEST1 PASSED");
+    else
+      $info("TEST1 FAILED");
+
+    if (1fs == 10fs)
+      $info("TEST2 PASSED");
+    else
+      $info("TEST2 FAILED");
+
+    if (1fs == 0.000001)
+      $info("TEST3 FAILED (SCALED/!ROUNDED)");
+    else
+      if (1fs == 0.000000000000001)
+        $info("TEST3 FAILED (!SCALED/!ROUNDED)");
+      else
+        if (1fs == 0.0)
+          $info("TEST3 PASSED");
+        else
+          $info("TEST3 REALLY FAILED");
+endmodule : test
+)x");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    // This used to print TEST PASSED for all three tests,
+    // but now it prints what all other tools print.
+    auto& diags = compilation.getAllDiagnostics();
+    std::string result = "\n" + report(diags);
+    CHECK(result == R"x(
+source:6:7: note: $info encountered: TEST1 PASSED
+      $info("TEST1 PASSED");
+      ^
+source:13:7: note: $info encountered: TEST2 FAILED
+      $info("TEST2 FAILED");
+      ^
+source:16:7: note: $info encountered: TEST3 FAILED (SCALED/!ROUNDED)
+      $info("TEST3 FAILED (SCALED/!ROUNDED)");
+      ^
+)x");
 }

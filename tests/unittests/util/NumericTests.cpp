@@ -759,25 +759,25 @@ TEST_CASE("Time scaling") {
     auto ts = [](std::string_view str) { return TimeScale::fromString(str).value(); };
 
     TimeScale scale = ts("100ns / 1ps");
-    CHECK(scale.apply(234.0567891, TimeUnit::Nanoseconds) == AP(2.34057));
-    CHECK(scale.apply(234.0567891, TimeUnit::Picoseconds) == AP(0.00234));
-    CHECK(scale.apply(234.0567891, TimeUnit::Seconds) == AP(2.340567891e9));
+    CHECK(scale.apply(234.0567891, TimeUnit::Nanoseconds, true) == AP(2.34057));
+    CHECK(scale.apply(234.0567891, TimeUnit::Picoseconds, true) == AP(0.00234));
+    CHECK(scale.apply(234.0567891, TimeUnit::Seconds, true) == AP(2.340567891e9));
 
     scale.base = tv("10ps");
-    CHECK(scale.apply(234.0567891, TimeUnit::Nanoseconds) == AP(23405.7));
-    CHECK(scale.apply(234.0567891, TimeUnit::Picoseconds) == AP(23.4));
-    CHECK(scale.apply(234.0567891, TimeUnit::Seconds) == AP(2.340567891e13));
+    CHECK(scale.apply(234.0567891, TimeUnit::Nanoseconds, true) == AP(23405.7));
+    CHECK(scale.apply(234.0567891, TimeUnit::Picoseconds, true) == AP(23.4));
+    CHECK(scale.apply(234.0567891, TimeUnit::Seconds, true) == AP(2.340567891e13));
 
     scale.base = tv("1ms");
-    CHECK(scale.apply(234.0567891, TimeUnit::Nanoseconds) == AP(0.000234057));
-    CHECK(scale.apply(234.0567891, TimeUnit::Picoseconds) == AP(2.34e-7));
-    CHECK(scale.apply(234.0567891, TimeUnit::Seconds) == AP(234056.7891));
+    CHECK(scale.apply(234.0567891, TimeUnit::Nanoseconds, true) == AP(0.000234057));
+    CHECK(scale.apply(234.0567891, TimeUnit::Picoseconds, true) == AP(2.34e-7));
+    CHECK(scale.apply(234.0567891, TimeUnit::Seconds, true) == AP(234056.7891));
 
     scale.base = tv("1ns");
     scale.precision = tv("1ns");
-    CHECK(scale.apply(234.0567891, TimeUnit::Nanoseconds) == AP(234));
-    CHECK(scale.apply(234.0567891, TimeUnit::Picoseconds) == AP(0));
-    CHECK(scale.apply(234.0567891, TimeUnit::Seconds) == AP(234056789100));
+    CHECK(scale.apply(234.0567891, TimeUnit::Nanoseconds, true) == AP(234));
+    CHECK(scale.apply(234.0567891, TimeUnit::Picoseconds, true) == AP(0));
+    CHECK(scale.apply(234.0567891, TimeUnit::Seconds, true) == AP(234056789100));
 }
 
 TEST_CASE("TimeScale stringify") {

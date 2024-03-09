@@ -63,7 +63,7 @@ struct SLANG_EXPORT TimeScale {
     TimeScale() = default;
     TimeScale(TimeScaleValue base, TimeScaleValue precision) : base(base), precision(precision) {}
 
-    double apply(double value, TimeUnit unit) const;
+    double apply(double value, TimeUnit unit, bool roundToPrecision) const;
 
     std::string toString() const;
 

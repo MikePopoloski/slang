@@ -139,7 +139,7 @@ Expression& TimeLiteral::fromSyntax(const ASTContext& context,
     double value = syntax.literal.realValue();
     TimeUnit unit = syntax.literal.numericFlags().unit();
     TimeScale scale = context.scope->getTimeScale().value_or(TimeScale());
-    value = scale.apply(value, unit);
+    value = scale.apply(value, unit, /* roundToPrecision */ false);
 
     auto& comp = context.getCompilation();
     return *comp.emplace<TimeLiteral>(comp.getType(SyntaxKind::RealTimeType), value,
