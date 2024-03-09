@@ -691,16 +691,19 @@ void Driver::addParseOptions(Bag& bag) const {
     ppoptions.predefines = options.defines;
     ppoptions.undefines = options.undefines;
     ppoptions.predefineSource = "<command-line>";
+    ppoptions.languageVersion = languageVersion;
     if (options.maxIncludeDepth.has_value())
         ppoptions.maxIncludeDepth = *options.maxIncludeDepth;
     for (const auto& d : options.ignoreDirectives)
         ppoptions.ignoreDirectives.emplace(d);
 
     LexerOptions loptions;
+    loptions.languageVersion = languageVersion;
     if (options.maxLexerErrors.has_value())
         loptions.maxErrors = *options.maxLexerErrors;
 
     ParserOptions poptions;
+    poptions.languageVersion = languageVersion;
     if (options.maxParseDepth.has_value())
         poptions.maxRecursionDepth = *options.maxParseDepth;
 
@@ -713,6 +716,7 @@ void Driver::addParseOptions(Bag& bag) const {
 void Driver::addCompilationOptions(Bag& bag) const {
     CompilationOptions coptions;
     coptions.flags = CompilationFlags::None;
+    coptions.languageVersion = languageVersion;
     if (options.maxInstanceDepth.has_value())
         coptions.maxInstanceDepth = *options.maxInstanceDepth;
     if (options.maxGenerateSteps.has_value())
