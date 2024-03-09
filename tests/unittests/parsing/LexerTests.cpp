@@ -501,7 +501,6 @@ Humpty Dumpty had a great fall.""")";
     CHECK(token.toString() == text);
     CHECK(token.valueText() == R"(Humpty Dumpty sat on a "wall".
 Humpty Dumpty had a great fall.)");
-    CHECK_DIAGNOSTICS_EMPTY;
     REQUIRE(!diagnostics.empty());
     CHECK(diagnostics.back().code == diag::WrongLanguageVersion);
 }
