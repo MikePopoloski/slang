@@ -124,7 +124,8 @@ void registerAST(py::module_& m) {
         .value("AssertionDefaultArg", ASTFlags::AssertionDefaultArg)
         .value("LAndRValue", ASTFlags::LAndRValue)
         .value("NoReference", ASTFlags::NoReference)
-        .value("ConfigParam", ASTFlags::ConfigParam);
+        .value("ConfigParam", ASTFlags::ConfigParam)
+        .value("TypeOperator", ASTFlags::TypeOperator);
 
     py::class_<EvaluatedDimension>(m, "EvaluatedDimension")
         .def_readonly("kind", &EvaluatedDimension::kind)

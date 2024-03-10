@@ -158,10 +158,23 @@ void ParameterSymbol::serializeTo(ASTSerializer& serializer) const {
     serializer.write("isBody", isBodyParam());
 }
 
-TypeParameterSymbol::TypeParameterSymbol(std::string_view name, SourceLocation loc, bool isLocal,
-                                         bool isPort) :
+static DeclaredTypeFlags getTypeParamFlags(const Scope& scope) {
+    // v1800-2023: Type parameter assignments are allowed to reference
+    // incomplete forward class types now.
+    if (scope.getCompilation().getOptions().languageVersion >= LanguageVersion::v1800_2023)
+        return DeclaredTypeFlags::TypedefTarget;
+    return DeclaredTypeFlags::None;
+}
+
+TypeParameterSymbol::TypeParameterSymbol(const Scope& scope, std::string_view name,
+                                         SourceLocation loc, bool isLocal, bool isPort) :
     Symbol(SymbolKind::TypeParameter, name, loc),
-    ParameterSymbolBase(*this, isLocal, isPort), targetType(*this) {
+    ParameterSymbolBase(*this, isLocal, isPort), targetType(*this, getTypeParamFlags(scope)) {
+
+    auto alias = scope.getCompilation().emplace<TypeAliasType>(name, loc);
+    alias->setParent(scope);
+    alias->targetType.setLink(targetType);
+    typeAlias = alias;
 }
 
 void TypeParameterSymbol::fromSyntax(const Scope& scope,
@@ -172,7 +185,7 @@ void TypeParameterSymbol::fromSyntax(const Scope& scope,
         auto name = decl->name.valueText();
         auto loc = decl->name.location();
 
-        auto param = comp.emplace<TypeParameterSymbol>(name, loc, isLocal, isPort);
+        auto param = comp.emplace<TypeParameterSymbol>(scope, name, loc, isLocal, isPort);
         param->setSyntax(*decl);
 
         if (!decl->assignment) {
@@ -188,24 +201,6 @@ void TypeParameterSymbol::fromSyntax(const Scope& scope,
 
         results.push_back(param);
     }
-}
-
-const Type& TypeParameterSymbol::getTypeAlias() const {
-    if (typeAlias)
-        return *typeAlias;
-
-    auto scope = getParentScope();
-    SLANG_ASSERT(scope);
-
-    auto alias = scope->getCompilation().emplace<TypeAliasType>(name, location);
-    if (auto syntax = getSyntax())
-        alias->setSyntax(*syntax);
-
-    alias->targetType.setLink(targetType);
-    alias->setParent(*scope, getIndex());
-
-    typeAlias = alias;
-    return *typeAlias;
 }
 
 bool TypeParameterSymbol::isOverridden() const {

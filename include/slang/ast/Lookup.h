@@ -50,9 +50,8 @@ enum class SLANG_EXPORT LookupFlags {
     /// uninstantiated module.
     NoUndeclaredErrorIfUninstantiated = 1 << 4,
 
-    /// The lookup is for a typedef target type, which has a special exemption
-    /// to allow scoped access to incomplete forward class types.
-    TypedefTarget = 1 << 5,
+    /// Allow lookup to resolve to incomplete forward class types.
+    AllowIncompleteForwardTypedefs = 1 << 5,
 
     /// The lookup should not continue looking into parent scopes if the name
     /// is not found in the initial search scope.

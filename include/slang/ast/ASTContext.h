@@ -181,9 +181,12 @@ enum class SLANG_EXPORT ASTFlags : uint64_t {
     NoReference = 1ull << 40,
 
     /// AST binding is for a parameter inside a SystemVerilog configuration.
-    ConfigParam = 1ull << 41
+    ConfigParam = 1ull << 41,
+
+    /// AST binding is for the contents of the type() operator.
+    TypeOperator = 1ull << 42
 };
-SLANG_BITMASK(ASTFlags, ConfigParam)
+SLANG_BITMASK(ASTFlags, TypeOperator)
 
 // clang-format off
 #define DK(x) \

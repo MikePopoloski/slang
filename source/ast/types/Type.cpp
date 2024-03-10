@@ -1026,7 +1026,8 @@ const Type& Type::fromSyntax(Compilation& compilation, const DataTypeSyntax& nod
         }
         case SyntaxKind::TypeReference: {
             auto& exprSyntax = *node.as<TypeReferenceSyntax>().expr;
-            auto& expr = Expression::bind(exprSyntax, context, ASTFlags::AllowDataType);
+            auto& expr = Expression::bind(exprSyntax, context,
+                                          ASTFlags::AllowDataType | ASTFlags::TypeOperator);
             if (expr.hasHierarchicalReference() &&
                 !compilation.hasFlag(CompilationFlags::AllowHierarchicalConst)) {
                 context.addDiag(diag::TypeRefHierarchical, exprSyntax.sourceRange());
@@ -1156,7 +1157,7 @@ const Type& Type::lookupNamedType(Compilation& compilation, const NameSyntax& sy
                                   const ASTContext& context, bool isTypedefTarget) {
     bitmask<LookupFlags> flags = LookupFlags::Type;
     if (isTypedefTarget)
-        flags |= LookupFlags::TypedefTarget;
+        flags |= LookupFlags::AllowIncompleteForwardTypedefs;
 
     LookupResult result;
     Lookup::name(syntax, context, flags, result);

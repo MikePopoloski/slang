@@ -169,7 +169,8 @@ void registerCompilation(py::module_& m) {
 
     py::enum_<LanguageVersion>(m, "LanguageVersion")
         .value("v1800_2017", LanguageVersion::v1800_2017)
-        .value("v1800_2023", LanguageVersion::v1800_2023);
+        .value("v1800_2023", LanguageVersion::v1800_2023)
+        .value("Default", LanguageVersion::Default);
 
     py::class_<Driver>(m, "Driver")
         .def(py::init<>())

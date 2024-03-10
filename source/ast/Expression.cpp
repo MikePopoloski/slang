@@ -936,18 +936,25 @@ Expression& Expression::create(Compilation& compilation, const ExpressionSyntax&
     return *result;
 }
 
-Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syntax,
+Expression& Expression::bindName(Compilation& comp, const NameSyntax& syntax,
                                  const InvocationExpressionSyntax* invocation,
                                  const ArrayOrRandomizeMethodExpressionSyntax* withClause,
                                  const ASTContext& context) {
     bitmask<LookupFlags> flags = LookupFlags::None;
     if ((invocation && invocation->arguments) ||
-        compilation.hasFlag(CompilationFlags::AllowUseBeforeDeclare)) {
+        comp.hasFlag(CompilationFlags::AllowUseBeforeDeclare)) {
         flags |= LookupFlags::AllowDeclaredAfter;
     }
 
     if (context.flags.has(ASTFlags::StaticInitializer))
         flags |= LookupFlags::StaticInitializer;
+
+    if (context.flags.has(ASTFlags::TypeOperator) &&
+        comp.getOptions().languageVersion >= LanguageVersion::v1800_2023) {
+        // v1800-2023: Type operator expressions are allowed to reference
+        // incomplete forward class types now.
+        flags |= LookupFlags::AllowIncompleteForwardTypedefs;
+    }
 
     // Special case scenarios: temporary variables, class-scoped randomize calls,
     // and expanding sequences and properties.
@@ -958,8 +965,8 @@ Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syn
             LookupResult result;
             if (Lookup::findTempVar(*context.scope, *context.firstTempVar, syntax, result)) {
                 result.reportDiags(context);
-                return bindLookupResult(compilation, result, syntax.sourceRange(), invocation,
-                                        withClause, context);
+                return bindLookupResult(comp, result, syntax.sourceRange(), invocation, withClause,
+                                        context);
             }
         }
 
@@ -969,12 +976,12 @@ Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syn
             LookupResult result;
             if (Lookup::withinClassRandomize(context, syntax, flags, result)) {
                 result.reportDiags(context);
-                return bindLookupResult(compilation, result, syntax.sourceRange(), invocation,
-                                        withClause, context);
+                return bindLookupResult(comp, result, syntax.sourceRange(), invocation, withClause,
+                                        context);
             }
             else if (result.hasError()) {
                 result.reportDiags(context);
-                return badExpr(compilation, nullptr);
+                return badExpr(comp, nullptr);
             }
         }
 
@@ -983,8 +990,8 @@ Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syn
             LookupResult result;
             if (Lookup::findAssertionLocalVar(context, syntax, result)) {
                 result.reportDiags(context);
-                return bindLookupResult(compilation, result, syntax.sourceRange(), invocation,
-                                        withClause, context);
+                return bindLookupResult(comp, result, syntax.sourceRange(), invocation, withClause,
+                                        context);
             }
         }
     }
@@ -1000,12 +1007,11 @@ Expression& Expression::bindName(Compilation& compilation, const NameSyntax& syn
 
         SourceRange callRange = invocation ? invocation->sourceRange() : syntax.sourceRange();
         CallExpression::SystemCallInfo callInfo{result.systemSubroutine, context.scope, {}};
-        return CallExpression::fromLookup(compilation, callInfo, nullptr, invocation, withClause,
+        return CallExpression::fromLookup(comp, callInfo, nullptr, invocation, withClause,
                                           callRange, context);
     }
 
-    return bindLookupResult(compilation, result, syntax.sourceRange(), invocation, withClause,
-                            context);
+    return bindLookupResult(comp, result, syntax.sourceRange(), invocation, withClause, context);
 }
 
 Expression& Expression::bindLookupResult(Compilation& compilation, LookupResult& result,

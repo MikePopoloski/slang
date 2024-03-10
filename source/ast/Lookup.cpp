@@ -833,7 +833,8 @@ bool resolveColonNames(SmallVectorBase<NamePlusLoc>& nameParts, int colonParts,
 
     // The initial symbol found cannot be resolved via a forward typedef (i.e. "incomplete")
     // unless this is within a typedef declaration.
-    if (result.fromForwardTypedef && !flags.has(LookupFlags::TypedefTarget) && symbol->isType()) {
+    if (result.fromForwardTypedef && !flags.has(LookupFlags::AllowIncompleteForwardTypedefs) &&
+        symbol->isType()) {
         result.fromForwardTypedef = false;
         result.addDiag(*context.scope, diag::ScopeIncompleteTypedef, name.range);
     }

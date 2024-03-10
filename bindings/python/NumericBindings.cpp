@@ -249,7 +249,7 @@ void registerNumeric(py::module_& m) {
         .def(py::init<TimeScaleValue, TimeScaleValue>(), "base"_a, "precision"_a)
         .def_readwrite("base", &TimeScale::base)
         .def_readwrite("precision", &TimeScale::precision)
-        .def("apply", &TimeScale::apply, "value"_a, "unit"_a)
+        .def("apply", &TimeScale::apply, "value"_a, "unit"_a, "roundToPrecision"_a)
         .def_static("fromString", &TimeScale::fromString, "str"_a)
         .def(py::self == py::self)
         .def(py::self != py::self)

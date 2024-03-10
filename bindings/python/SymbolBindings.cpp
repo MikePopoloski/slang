@@ -29,7 +29,7 @@ void registerSymbols(py::module_& m) {
         .value("DisallowWildcardImport", LookupFlags::DisallowWildcardImport)
         .value("NoUndeclaredError", LookupFlags::NoUndeclaredError)
         .value("NoUndeclaredErrorIfUninstantiated", LookupFlags::NoUndeclaredErrorIfUninstantiated)
-        .value("TypedefTarget", LookupFlags::TypedefTarget)
+        .value("AllowIncompleteForwardTypedefs", LookupFlags::AllowIncompleteForwardTypedefs)
         .value("NoParentScope", LookupFlags::NoParentScope)
         .value("NoSelectors", LookupFlags::NoSelectors)
         .value("AllowRoot", LookupFlags::AllowRoot)

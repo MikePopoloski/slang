@@ -12,6 +12,7 @@
 #include "slang/ast/Scope.h"
 #include "slang/ast/Symbol.h"
 #include "slang/ast/symbols/InstanceSymbols.h"
+#include "slang/ast/symbols/ParameterSymbols.h"
 #include "slang/ast/symbols/SubroutineSymbols.h"
 #include "slang/ast/symbols/VariableSymbols.h"
 #include "slang/ast/types/AllTypes.h"
@@ -135,8 +136,12 @@ void DeclaredType::resolveType(const ASTContext& typeContext,
     }
     else {
         const Type* typedefTarget = nullptr;
-        if (flags.has(DeclaredTypeFlags::TypedefTarget))
-            typedefTarget = &parent.as<Type>();
+        if (flags.has(DeclaredTypeFlags::TypedefTarget)) {
+            if (parent.kind == SymbolKind::TypeParameter)
+                typedefTarget = &parent.as<TypeParameterSymbol>().getTypeAlias();
+            else
+                typedefTarget = &parent.as<Type>();
+        }
 
         type = &comp.getType(*syntax, typeContext, typedefTarget);
         if (dimensions)

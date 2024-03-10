@@ -145,8 +145,8 @@ const ParameterSymbolBase& ParameterBuilder::createParam(
         std::tie(newInitializer, isFromConfig) = it->second;
 
     if (decl.isTypeParam) {
-        auto param = comp.emplace<TypeParameterSymbol>(decl.name, decl.location, decl.isLocalParam,
-                                                       decl.isPortParam);
+        auto param = comp.emplace<TypeParameterSymbol>(newScope, decl.name, decl.location,
+                                                       decl.isLocalParam, decl.isPortParam);
         param->setAttributes(scope, decl.attributes);
 
         auto& tt = param->targetType;

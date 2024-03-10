@@ -69,7 +69,8 @@ class SLANG_EXPORT TypeParameterSymbol : public Symbol, public ParameterSymbolBa
 public:
     DeclaredType targetType;
 
-    TypeParameterSymbol(std::string_view name, SourceLocation loc, bool isLocal, bool isPort);
+    TypeParameterSymbol(const Scope& scope, std::string_view name, SourceLocation loc, bool isLocal,
+                        bool isPort);
 
     static void fromSyntax(const Scope& scope, const syntax::TypeParameterDeclarationSyntax& syntax,
                            bool isLocal, bool isPort,
@@ -77,13 +78,13 @@ public:
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::TypeParameter; }
 
-    const Type& getTypeAlias() const;
+    const Type& getTypeAlias() const { return *typeAlias; }
     bool isOverridden() const;
 
     void serializeTo(ASTSerializer& serializer) const;
 
 private:
-    mutable const Type* typeAlias = nullptr;
+    const Type* typeAlias;
 };
 
 /// Represents a defparam directive.

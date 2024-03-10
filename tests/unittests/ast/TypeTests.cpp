@@ -431,6 +431,26 @@ source:12:26: note: declared here
 )");
 }
 
+TEST_CASE("v1800-2023: forward typedefs allowed in type operator and type param assignments") {
+    auto tree = SyntaxTree::fromText(R"(
+typedef C;
+typedef C::T c_t;
+var type(C::T) foo;
+parameter type PT = C::T;
+
+class C;
+    typedef int T;
+endclass
+)");
+
+    CompilationOptions options;
+    options.languageVersion = LanguageVersion::v1800_2023;
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
 TEST_CASE("Packed arrays") {
     auto tree = SyntaxTree::fromText(R"(
 module Top(logic[0:3][2:1] f);
