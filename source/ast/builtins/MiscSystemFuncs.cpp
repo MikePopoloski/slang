@@ -157,6 +157,9 @@ public:
         return comp.getIntType();
     }
 
+    // Return type is 'int' but the actual value is always either 0 or 1
+    std::optional<bitwidth_t> getEffectiveWidth() const final { return 1; }
+
     ConstantValue eval(EvalContext& context, const Args&, SourceRange range,
                        const CallExpression::SystemCallInfo&) const final {
         notConst(context, range);
@@ -198,6 +201,9 @@ public:
 
         return comp.getIntType();
     }
+
+    // Return type is 'int' but the actual value is always either 0 or 1
+    std::optional<bitwidth_t> getEffectiveWidth() const final { return 1; }
 
     ConstantValue eval(EvalContext& context, const Args&, SourceRange range,
                        const CallExpression::SystemCallInfo&) const final {

@@ -1129,3 +1129,24 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("No width warning for randomize method") {
+    auto tree = SyntaxTree::fromText(R"(
+class C;
+    function bit f();
+        bit x;
+        bit rc = std::randomize(x);
+        assert (rc);
+        return x;
+    endfunction
+endclass
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    // TODO: also shouldn't warn about sign
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::SignConversion);
+}
