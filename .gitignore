@@ -14,3 +14,4 @@ prefix/
 CMakeLists.txt.user
 CMakeUserPresets.json
 .ccls
+_version.py
