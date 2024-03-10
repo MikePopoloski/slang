@@ -617,7 +617,8 @@ ActionBlockSyntax& Parser::parseActionBlock() {
         elseClause = parseElseClause();
     else {
         statement = &parseStatement();
-        elseClause = parseElseClause();
+        if (statement->kind != SyntaxKind::EmptyStatement)
+            elseClause = parseElseClause();
     }
 
     return factory.actionBlock(statement, elseClause);

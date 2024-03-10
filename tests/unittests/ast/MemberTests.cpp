@@ -2518,3 +2518,41 @@ endmodule
     auto& bsize = compilation.getRoot().lookupName<ParameterSymbol>("b.new_adder.B_SIZE");
     CHECK(bsize.getValue().integer() == 66);
 }
+
+TEST_CASE("Action block parsing regress GH #911") {
+    auto tree = SyntaxTree::fromText(R"(
+module M #(
+    A = 1
+);
+logic clk, rst;
+
+property myprop(k);
+   @(posedge clk) disable iff(rst !== 0) k > 0;
+endproperty
+
+genvar k;
+for (k=0; k < 4; k++) begin: m
+    if (A)
+        label1: assert property(myprop(k));
+    else
+        label2: assert property(myprop(k));
+
+    if (A)
+        label3: assert property(myprop(k))
+                else $error("assert failed");
+    else
+        label4: assert property(myprop(k));
+
+    if (A) begin
+        label5: assert property(myprop(k));
+    end else
+        label6: assert property(myprop(k));
+end
+
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
