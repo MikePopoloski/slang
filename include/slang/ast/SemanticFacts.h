@@ -19,6 +19,7 @@ class ASTSerializer;
 class ASTContext;
 class Scope;
 class TimingControl;
+class Type;
 enum class SymbolKind;
 
 #define LIFETIME(x) x(Automatic) x(Static)
@@ -102,6 +103,10 @@ SLANG_ENUM(ChargeStrength, CS)
 SLANG_ENUM(DriveStrength, DS)
 #undef DS
 
+#define FTR(x) x(None) x(Enum) x(Struct) x(Union) x(Class) x(InterfaceClass)
+SLANG_ENUM(ForwardTypeRestriction, FTR);
+#undef FTR
+
 /// A set of flags that control how assignments are checked.
 enum class SLANG_EXPORT AssignFlags : uint8_t {
     /// No special assignment behavior specified.
@@ -164,6 +169,10 @@ public:
 
     static std::pair<std::optional<DriveStrength>, std::optional<DriveStrength>> getDriveStrength(
         const syntax::NetStrengthSyntax& syntax);
+
+    static ForwardTypeRestriction getTypeRestriction(syntax::ForwardTypeRestrictionSyntax& syntax);
+    static ForwardTypeRestriction getTypeRestriction(const Type& type);
+    static std::string_view getTypeRestrictionText(ForwardTypeRestriction typeRestriction);
 
     static void populateTimeScale(TimeScale& timeScale, const Scope& scope,
                                   const syntax::TimeUnitsDeclarationSyntax& syntax,

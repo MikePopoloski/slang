@@ -428,28 +428,21 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::VirtualInterfaceType; }
 };
 
-#define CATEGORY(x) x(None) x(Enum) x(Struct) x(Union) x(Class) x(InterfaceClass)
-SLANG_ENUM(ForwardTypedefCategory, CATEGORY);
-#undef CATEGORY
-
 /// A forward declaration of a user-defined type name. A given type name can have
 /// an arbitrary number of forward declarations in the same scope, so each symbol
 /// forms a linked list, headed by the actual type definition.
 class SLANG_EXPORT ForwardingTypedefSymbol : public Symbol {
 public:
-    ForwardTypedefCategory category;
+    ForwardTypeRestriction typeRestriction;
     std::optional<Visibility> visibility;
 
     ForwardingTypedefSymbol(std::string_view name, SourceLocation loc,
-                            ForwardTypedefCategory category) :
+                            ForwardTypeRestriction typeRestriction) :
         Symbol(SymbolKind::ForwardingTypedef, name, loc),
-        category(category) {}
+        typeRestriction(typeRestriction) {}
 
     static ForwardingTypedefSymbol& fromSyntax(
         const Scope& scope, const syntax::ForwardTypedefDeclarationSyntax& syntax);
-
-    static ForwardingTypedefSymbol& fromSyntax(
-        const Scope& scope, const syntax::ForwardInterfaceClassTypedefDeclarationSyntax& syntax);
 
     static ForwardingTypedefSymbol& fromSyntax(
         const Scope& scope, const syntax::ClassPropertyDeclarationSyntax& syntax);
@@ -457,7 +450,7 @@ public:
     void addForwardDecl(const ForwardingTypedefSymbol& decl) const;
     const ForwardingTypedefSymbol* getNextForwardDecl() const { return next; }
 
-    void checkType(ForwardTypedefCategory checkCategory, Visibility checkVisibility,
+    void checkType(ForwardTypeRestriction checkRestriction, Visibility checkVisibility,
                    SourceLocation declLoc) const;
 
     void serializeTo(ASTSerializer& serializer) const;

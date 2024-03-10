@@ -130,10 +130,10 @@ void ClassType::addForwardDecl(const ForwardingTypedefSymbol& decl) const {
 
 void ClassType::checkForwardDecls() const {
     if (firstForward) {
-        auto category = ForwardTypedefCategory::Class;
+        auto typeRestriction = ForwardTypeRestriction::Class;
         if (isInterface)
-            category = ForwardTypedefCategory::InterfaceClass;
-        firstForward->checkType(category, Visibility::Public, location);
+            typeRestriction = ForwardTypeRestriction::InterfaceClass;
+        firstForward->checkType(typeRestriction, Visibility::Public, location);
     }
 }
 
@@ -909,10 +909,10 @@ void GenericClassDefSymbol::addForwardDecl(const ForwardingTypedefSymbol& decl) 
 
 void GenericClassDefSymbol::checkForwardDecls() const {
     if (firstForward) {
-        auto category = ForwardTypedefCategory::Class;
+        auto typeRestriction = ForwardTypeRestriction::Class;
         if (isInterface)
-            category = ForwardTypedefCategory::InterfaceClass;
-        firstForward->checkType(category, Visibility::Public, location);
+            typeRestriction = ForwardTypeRestriction::InterfaceClass;
+        firstForward->checkType(typeRestriction, Visibility::Public, location);
     }
 }
 

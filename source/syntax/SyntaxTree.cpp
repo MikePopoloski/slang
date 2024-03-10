@@ -64,6 +64,11 @@ std::shared_ptr<SyntaxTree> SyntaxTree::fromText(std::string_view text, std::str
     return fromText(text, getDefaultSourceManager(), name, path);
 }
 
+std::shared_ptr<SyntaxTree> SyntaxTree::fromText(std::string_view text, const Bag& options,
+                                                 std::string_view name, std::string_view path) {
+    return fromText(text, getDefaultSourceManager(), name, path, options);
+}
+
 std::shared_ptr<SyntaxTree> SyntaxTree::fromText(std::string_view text,
                                                  SourceManager& sourceManager,
                                                  std::string_view name, std::string_view path,

@@ -1232,7 +1232,6 @@ static bool isModuleOrPackageDecl(SyntaxKind kind) {
         case SyntaxKind::NetTypeDeclaration:
         case SyntaxKind::TypedefDeclaration:
         case SyntaxKind::ForwardTypedefDeclaration:
-        case SyntaxKind::ForwardInterfaceClassTypedefDeclaration:
         case SyntaxKind::PackageImportDeclaration:
         case SyntaxKind::DataDeclaration:
         case SyntaxKind::TaskDeclaration:
@@ -1439,7 +1438,6 @@ bool SyntaxFacts::isAllowedInChecker(SyntaxKind kind) {
         case SyntaxKind::NetTypeDeclaration:
         case SyntaxKind::TypedefDeclaration:
         case SyntaxKind::ForwardTypedefDeclaration:
-        case SyntaxKind::ForwardInterfaceClassTypedefDeclaration:
         case SyntaxKind::PackageImportDeclaration:
         case SyntaxKind::DataDeclaration:
         case SyntaxKind::FunctionDeclaration:

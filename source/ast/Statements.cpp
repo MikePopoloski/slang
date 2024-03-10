@@ -581,7 +581,6 @@ std::span<const StatementBlockSymbol* const> Statement::createAndAddBlockItems(
             case SyntaxKind::DataDeclaration:
             case SyntaxKind::TypedefDeclaration:
             case SyntaxKind::ForwardTypedefDeclaration:
-            case SyntaxKind::ForwardInterfaceClassTypedefDeclaration:
             case SyntaxKind::PackageImportDeclaration:
             case SyntaxKind::ParameterDeclarationStatement:
             case SyntaxKind::LetDeclaration:

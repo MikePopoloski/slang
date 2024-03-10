@@ -107,6 +107,12 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
         symbol.getType();
     }
 
+    void handle(const TypeParameterSymbol& symbol) {
+        if (!handleDefault(symbol))
+            return;
+        symbol.checkTypeRestriction();
+    }
+
     void handle(const ContinuousAssignSymbol& symbol) {
         if (!handleDefault(symbol))
             return;

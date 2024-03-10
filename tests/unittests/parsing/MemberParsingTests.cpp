@@ -1212,3 +1212,29 @@ endconfig
     CHECK(diagnostics[0].code == diag::NoCommaInList);
     CHECK(diagnostics[1].code == diag::NoCommaInList);
 }
+
+TEST_CASE("type parameter with type restriction parsing disallowed in 2017") {
+    auto& text = R"(
+module m #(parameter type enum foo)();
+endmodule
+)";
+
+    parseCompilationUnit(text);
+
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics[0].code == diag::WrongLanguageVersion);
+}
+
+TEST_CASE("v1800-2023: type parameter with type restriction parsing") {
+    auto& text = R"(
+module m #(parameter type enum foo,
+           type struct s,
+           type union u,
+           type class c,
+           type interface class i)();
+endmodule
+)";
+
+    parseCompilationUnit(text, LanguageVersion::v1800_2023);
+    CHECK_DIAGNOSTICS_EMPTY;
+}

@@ -92,10 +92,21 @@ public:
 
     /// Creates a syntax tree by guessing at what might be in the given source snippet.
     /// @a text is the actual source code text.
+    /// @a options is a bag of lexer, preprocessor, and parser options.
+    /// @a name is an optional name to give to the loaded source buffer.
+    /// @a path is an optional path to give to the loaded source buffer.
+    /// @return the created and parsed syntax tree.
+    static std::shared_ptr<SyntaxTree> fromText(std::string_view text, const Bag& options,
+                                                std::string_view name = "source"sv,
+                                                std::string_view path = "");
+
+    /// Creates a syntax tree by guessing at what might be in the given source snippet.
+    /// @a text is the actual source code text.
     /// @a sourceManager is the manager that owns all of the loaded source code.
     /// @a name is an optional name to give to the loaded source buffer.
     /// @a path is an optional path to give to the loaded source buffer.
     /// @a options is an optional bag of lexer, preprocessor, and parser options.
+    /// @a library the source library to associated with the parsed tree
     /// @return the created and parsed syntax tree.
     static std::shared_ptr<SyntaxTree> fromText(std::string_view text, SourceManager& sourceManager,
                                                 std::string_view name = "source"sv,

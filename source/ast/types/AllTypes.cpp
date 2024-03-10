@@ -1146,40 +1146,13 @@ ConstantValue VirtualInterfaceType::getDefaultValueImpl() const {
 ForwardingTypedefSymbol& ForwardingTypedefSymbol::fromSyntax(
     const Scope& scope, const ForwardTypedefDeclarationSyntax& syntax) {
 
-    ForwardTypedefCategory category;
-    switch (syntax.keyword.kind) {
-        case TokenKind::EnumKeyword:
-            category = ForwardTypedefCategory::Enum;
-            break;
-        case TokenKind::StructKeyword:
-            category = ForwardTypedefCategory::Struct;
-            break;
-        case TokenKind::UnionKeyword:
-            category = ForwardTypedefCategory::Union;
-            break;
-        case TokenKind::ClassKeyword:
-            category = ForwardTypedefCategory::Class;
-            break;
-        default:
-            category = ForwardTypedefCategory::None;
-            break;
-    }
+    auto typeRestriction = ForwardTypeRestriction::None;
+    if (syntax.typeRestriction)
+        typeRestriction = SemanticFacts::getTypeRestriction(*syntax.typeRestriction);
 
     auto& comp = scope.getCompilation();
     auto result = comp.emplace<ForwardingTypedefSymbol>(syntax.name.valueText(),
-                                                        syntax.name.location(), category);
-    result->setSyntax(syntax);
-    result->setAttributes(scope, syntax.attributes);
-    return *result;
-}
-
-ForwardingTypedefSymbol& ForwardingTypedefSymbol::fromSyntax(
-    const Scope& scope, const ForwardInterfaceClassTypedefDeclarationSyntax& syntax) {
-
-    auto& comp = scope.getCompilation();
-    auto result = comp.emplace<ForwardingTypedefSymbol>(syntax.name.valueText(),
-                                                        syntax.name.location(),
-                                                        ForwardTypedefCategory::InterfaceClass);
+                                                        syntax.name.location(), typeRestriction);
     result->setSyntax(syntax);
     result->setAttributes(scope, syntax.attributes);
     return *result;
@@ -1188,22 +1161,14 @@ ForwardingTypedefSymbol& ForwardingTypedefSymbol::fromSyntax(
 ForwardingTypedefSymbol& ForwardingTypedefSymbol::fromSyntax(
     const Scope& scope, const ClassPropertyDeclarationSyntax& syntax) {
 
-    ForwardingTypedefSymbol* result;
-    if (syntax.declaration->kind == SyntaxKind::ForwardInterfaceClassTypedefDeclaration) {
-        result = &fromSyntax(
-            scope, syntax.declaration->as<ForwardInterfaceClassTypedefDeclarationSyntax>());
-    }
-    else {
-        result = &fromSyntax(scope, syntax.declaration->as<ForwardTypedefDeclarationSyntax>());
-    }
-
+    auto& result = fromSyntax(scope, syntax.declaration->as<ForwardTypedefDeclarationSyntax>());
     for (Token qual : syntax.qualifiers) {
         switch (qual.kind) {
             case TokenKind::LocalKeyword:
-                result->visibility = Visibility::Local;
+                result.visibility = Visibility::Local;
                 break;
             case TokenKind::ProtectedKeyword:
-                result->visibility = Visibility::Protected;
+                result.visibility = Visibility::Protected;
                 break;
             default:
                 // Everything else is not allowed on typedefs; the parser will issue
@@ -1212,8 +1177,8 @@ ForwardingTypedefSymbol& ForwardingTypedefSymbol::fromSyntax(
         }
     }
 
-    result->setAttributes(scope, syntax.attributes);
-    return *result;
+    result.setAttributes(scope, syntax.attributes);
+    return result;
 }
 
 void ForwardingTypedefSymbol::addForwardDecl(const ForwardingTypedefSymbol& decl) const {
@@ -1223,30 +1188,12 @@ void ForwardingTypedefSymbol::addForwardDecl(const ForwardingTypedefSymbol& decl
         next->addForwardDecl(decl);
 }
 
-void ForwardingTypedefSymbol::checkType(ForwardTypedefCategory checkCategory,
+void ForwardingTypedefSymbol::checkType(ForwardTypeRestriction checkRestriction,
                                         Visibility checkVisibility, SourceLocation declLoc) const {
-    if (category != ForwardTypedefCategory::None && checkCategory != ForwardTypedefCategory::None &&
-        category != checkCategory) {
+    if (typeRestriction != ForwardTypeRestriction::None &&
+        checkRestriction != ForwardTypeRestriction::None && typeRestriction != checkRestriction) {
         auto& diag = getParentScope()->addDiag(diag::ForwardTypedefDoesNotMatch, location);
-        switch (category) {
-            case ForwardTypedefCategory::Enum:
-                diag << "enum"sv;
-                break;
-            case ForwardTypedefCategory::Struct:
-                diag << "struct"sv;
-                break;
-            case ForwardTypedefCategory::Union:
-                diag << "union"sv;
-                break;
-            case ForwardTypedefCategory::Class:
-                diag << "class"sv;
-                break;
-            case ForwardTypedefCategory::InterfaceClass:
-                diag << "interface class"sv;
-                break;
-            default:
-                SLANG_UNREACHABLE;
-        }
+        diag << SemanticFacts::getTypeRestrictionText(typeRestriction);
         diag.addNote(diag::NoteDeclarationHere, declLoc);
         return;
     }
@@ -1258,11 +1205,11 @@ void ForwardingTypedefSymbol::checkType(ForwardTypedefCategory checkCategory,
     }
 
     if (next)
-        next->checkType(checkCategory, checkVisibility, declLoc);
+        next->checkType(checkRestriction, checkVisibility, declLoc);
 }
 
 void ForwardingTypedefSymbol::serializeTo(ASTSerializer& serializer) const {
-    serializer.write("category", toString(category));
+    serializer.write("category", toString(typeRestriction));
     if (next)
         serializer.write("next", *next);
 }
@@ -1313,32 +1260,10 @@ void TypeAliasType::addForwardDecl(const ForwardingTypedefSymbol& decl) const {
 }
 
 void TypeAliasType::checkForwardDecls() const {
-    auto& ct = targetType.getType().getCanonicalType();
-    ForwardTypedefCategory category;
-    switch (ct.kind) {
-        case SymbolKind::PackedStructType:
-        case SymbolKind::UnpackedStructType:
-            category = ForwardTypedefCategory::Struct;
-            break;
-        case SymbolKind::PackedUnionType:
-        case SymbolKind::UnpackedUnionType:
-            category = ForwardTypedefCategory::Union;
-            break;
-        case SymbolKind::EnumType:
-            category = ForwardTypedefCategory::Enum;
-            break;
-        case SymbolKind::ClassType:
-            category = ForwardTypedefCategory::Class;
-            if (ct.as<ClassType>().isInterface)
-                category = ForwardTypedefCategory::InterfaceClass;
-            break;
-        default:
-            category = ForwardTypedefCategory::None;
-            break;
+    if (firstForward) {
+        firstForward->checkType(SemanticFacts::getTypeRestriction(targetType.getType()), visibility,
+                                location);
     }
-
-    if (firstForward)
-        firstForward->checkType(category, visibility, location);
 }
 
 ConstantValue TypeAliasType::getDefaultValueImpl() const {

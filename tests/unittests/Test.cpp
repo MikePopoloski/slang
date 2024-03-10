@@ -77,13 +77,8 @@ Diagnostics filterWarnings(const Diagnostics& diags) {
 Token lexToken(std::string_view text, LanguageVersion languageVersion) {
     diagnostics.clear();
 
-    LexerOptions lo;
-    lo.languageVersion = languageVersion;
-
-    PreprocessorOptions po;
-    po.languageVersion = languageVersion;
-
-    Preprocessor preprocessor(getSourceManager(), alloc, diagnostics, Bag(lo, po));
+    auto options = optionsFor(languageVersion);
+    Preprocessor preprocessor(getSourceManager(), alloc, diagnostics, options);
     preprocessor.pushSource(text);
 
     Token token = preprocessor.next();
@@ -153,13 +148,31 @@ const ExpressionSyntax& parseExpression(const std::string& text) {
     return parser.parseExpression();
 }
 
-const CompilationUnitSyntax& parseCompilationUnit(const std::string& text) {
+Bag optionsFor(LanguageVersion version) {
+    PreprocessorOptions ppo;
+    ppo.languageVersion = version;
+
+    LexerOptions lo;
+    lo.languageVersion = version;
+
+    ParserOptions po;
+    po.languageVersion = version;
+
+    CompilationOptions co;
+    co.languageVersion = version;
+
+    return {ppo, lo, po, co};
+}
+
+const CompilationUnitSyntax& parseCompilationUnit(const std::string& text,
+                                                  LanguageVersion languageVersion) {
     diagnostics.clear();
 
-    Preprocessor preprocessor(getSourceManager(), alloc, diagnostics);
+    auto options = optionsFor(languageVersion);
+    Preprocessor preprocessor(getSourceManager(), alloc, diagnostics, options);
     preprocessor.pushSource(text);
 
-    Parser parser(preprocessor);
+    Parser parser(preprocessor, options);
     return parser.parseCompilationUnit();
 }
 

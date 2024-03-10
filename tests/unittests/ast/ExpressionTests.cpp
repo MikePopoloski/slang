@@ -3250,22 +3250,16 @@ endmodule
 }
 
 TEST_CASE("v1800-2023: Unsized integer literals can be any bit width") {
-    ParserOptions parseOptions;
-    parseOptions.languageVersion = LanguageVersion::v1800_2023;
-
+    auto options = optionsFor(LanguageVersion::v1800_2023);
     auto tree = SyntaxTree::fromText(R"(
 module m;
     localparam a = 'h7_0000_0000;
     localparam b = 4294967296;
 endmodule
 )",
-                                     SyntaxTree::getDefaultSourceManager(), "source"sv, "",
-                                     parseOptions);
+                                     options);
 
-    CompilationOptions compOptions;
-    compOptions.languageVersion = LanguageVersion::v1800_2023;
-
-    Compilation compilation(compOptions);
+    Compilation compilation(options);
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 

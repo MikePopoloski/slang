@@ -246,10 +246,10 @@ void registerTypes(py::module_& m) {
         .def_property_readonly("modport",
                                [](const VirtualInterfaceType& self) { return self.modport; });
 
-    EXPOSE_ENUM(m, ForwardTypedefCategory);
+    EXPOSE_ENUM(m, ForwardTypeRestriction);
 
     py::class_<ForwardingTypedefSymbol, Symbol>(m, "ForwardingTypedefSymbol")
-        .def_readonly("category", &ForwardingTypedefSymbol::category)
+        .def_readonly("typeRestriction", &ForwardingTypedefSymbol::typeRestriction)
         .def_readonly("visibility", &ForwardingTypedefSymbol::visibility)
         .def_property_readonly("nextForwardDecl", [](const ForwardingTypedefSymbol& self) {
             return self.getNextForwardDecl();

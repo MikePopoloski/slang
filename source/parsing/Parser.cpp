@@ -742,41 +742,38 @@ MemberSyntax& Parser::parseNetDeclaration(AttrList attributes) {
                                   declarators, semi);
 }
 
+ForwardTypeRestrictionSyntax* Parser::parseTypeRestriction(bool isExpected) {
+    switch (peek().kind) {
+        case TokenKind::EnumKeyword:
+        case TokenKind::StructKeyword:
+        case TokenKind::UnionKeyword:
+        case TokenKind::ClassKeyword:
+            if (isExpected ||
+                (peek(1).kind == TokenKind::Identifier && peek(2).kind == TokenKind::Semicolon)) {
+                return &factory.forwardTypeRestriction(consume(), Token());
+            }
+            break;
+        case TokenKind::InterfaceKeyword: {
+            auto interfaceKeyword = consume();
+            auto classKeyword = expect(TokenKind::ClassKeyword);
+            return &factory.forwardTypeRestriction(interfaceKeyword, classKeyword);
+        }
+        default:
+            break;
+    }
+    return nullptr;
+}
+
 MemberSyntax& Parser::parseVariableDeclaration(AttrList attributes) {
     switch (peek().kind) {
         case TokenKind::TypedefKeyword: {
             auto typedefKeyword = consume();
-            switch (peek().kind) {
-                case TokenKind::EnumKeyword:
-                case TokenKind::StructKeyword:
-                case TokenKind::UnionKeyword:
-                case TokenKind::ClassKeyword:
-                    if (peek(1).kind == TokenKind::Identifier &&
-                        peek(2).kind == TokenKind::Semicolon) {
-
-                        auto keyword = consume();
-                        auto name = consume();
-                        return factory.forwardTypedefDeclaration(attributes, typedefKeyword,
-                                                                 keyword, name, consume());
-                    }
-                    break;
-                case TokenKind::InterfaceKeyword: {
-                    auto interfaceKeyword = consume();
-                    auto classKeyword = expect(TokenKind::ClassKeyword);
-                    auto name = expect(TokenKind::Identifier);
-                    return factory.forwardInterfaceClassTypedefDeclaration(
-                        attributes, typedefKeyword, interfaceKeyword, classKeyword, name,
-                        expect(TokenKind::Semicolon));
-                }
-                case TokenKind::Identifier:
-                    if (peek(1).kind == TokenKind::Semicolon) {
-                        auto name = consume();
-                        return factory.forwardTypedefDeclaration(attributes, typedefKeyword,
-                                                                 Token(), name, consume());
-                    }
-                    break;
-                default:
-                    break;
+            auto restriction = parseTypeRestriction(/* isExpected */ false);
+            if (restriction ||
+                (peek(TokenKind::Identifier) && peek(1).kind == TokenKind::Semicolon)) {
+                auto name = expect(TokenKind::Identifier);
+                return factory.forwardTypedefDeclaration(attributes, typedefKeyword, restriction,
+                                                         name, expect(TokenKind::Semicolon));
             }
 
             auto& type = parseDataType();
@@ -985,6 +982,11 @@ ParameterDeclarationBaseSyntax& Parser::parseParameterDecl(Token keyword, Token*
     // this is actually a type reference for a normal parameter.
     if (peek(TokenKind::TypeKeyword) && peek(1).kind != TokenKind::OpenParenthesis) {
         auto typeKeyword = consume();
+        auto restriction = parseTypeRestriction(/* isExpected */ true);
+        if (restriction && parseOptions.languageVersion < LanguageVersion::v1800_2023) {
+            addDiag(diag::WrongLanguageVersion, restriction->sourceRange())
+                << toString(parseOptions.languageVersion);
+        }
 
         SmallVector<TokenOrSyntax, 4> decls;
         if (semi) {
@@ -1005,7 +1007,8 @@ ParameterDeclarationBaseSyntax& Parser::parseParameterDecl(Token keyword, Token*
             }
         }
 
-        return factory.typeParameterDeclaration(keyword, typeKeyword, decls.copy(alloc));
+        return factory.typeParameterDeclaration(keyword, typeKeyword, restriction,
+                                                decls.copy(alloc));
     }
     else {
         auto& type = parseDataType(TypeOptions::AllowImplicit);

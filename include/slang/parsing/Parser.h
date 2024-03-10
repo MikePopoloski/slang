@@ -274,6 +274,7 @@ private:
     syntax::MemberSyntax* parseClockingItem();
     syntax::MemberSyntax& parseClockingDeclaration(AttrList attributes);
     syntax::MemberSyntax& parseDefaultDisable(AttrList attributes);
+    syntax::ForwardTypeRestrictionSyntax* parseTypeRestriction(bool isExpected);
     syntax::MemberSyntax& parseVariableDeclaration(AttrList attributes);
     syntax::DataDeclarationSyntax& parseDataDeclaration(AttrList attributes);
     syntax::LocalVariableDeclarationSyntax& parseLocalVariableDeclaration();

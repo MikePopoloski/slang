@@ -167,9 +167,11 @@ static DeclaredTypeFlags getTypeParamFlags(const Scope& scope) {
 }
 
 TypeParameterSymbol::TypeParameterSymbol(const Scope& scope, std::string_view name,
-                                         SourceLocation loc, bool isLocal, bool isPort) :
+                                         SourceLocation loc, bool isLocal, bool isPort,
+                                         ForwardTypeRestriction typeRestriction) :
     Symbol(SymbolKind::TypeParameter, name, loc),
-    ParameterSymbolBase(*this, isLocal, isPort), targetType(*this, getTypeParamFlags(scope)) {
+    ParameterSymbolBase(*this, isLocal, isPort), targetType(*this, getTypeParamFlags(scope)),
+    typeRestriction(typeRestriction) {
 
     auto alias = scope.getCompilation().emplace<TypeAliasType>(name, loc);
     alias->setParent(scope);
@@ -181,11 +183,16 @@ void TypeParameterSymbol::fromSyntax(const Scope& scope,
                                      const TypeParameterDeclarationSyntax& syntax, bool isLocal,
                                      bool isPort, SmallVectorBase<TypeParameterSymbol*>& results) {
     auto& comp = scope.getCompilation();
+    auto typeRestriction = ForwardTypeRestriction::None;
+    if (syntax.typeRestriction)
+        typeRestriction = SemanticFacts::getTypeRestriction(*syntax.typeRestriction);
+
     for (auto decl : syntax.declarators) {
         auto name = decl->name.valueText();
         auto loc = decl->name.location();
 
-        auto param = comp.emplace<TypeParameterSymbol>(scope, name, loc, isLocal, isPort);
+        auto param = comp.emplace<TypeParameterSymbol>(scope, name, loc, isLocal, isPort,
+                                                       typeRestriction);
         param->setSyntax(*decl);
 
         if (!decl->assignment) {
@@ -200,6 +207,24 @@ void TypeParameterSymbol::fromSyntax(const Scope& scope,
         }
 
         results.push_back(param);
+    }
+}
+
+void TypeParameterSymbol::checkTypeRestriction() const {
+    if (typeRestriction != ForwardTypeRestriction::None) {
+        auto& type = targetType.getType();
+        if (!type.isError() && typeRestriction != SemanticFacts::getTypeRestriction(type)) {
+            auto scope = getParentScope();
+            auto typeSyntax = targetType.getTypeSyntax();
+            SLANG_ASSERT(scope && typeSyntax);
+
+            auto& diag = scope->addDiag(diag::TypeRestrictionMismatch, typeSyntax->sourceRange());
+            diag << SemanticFacts::getTypeRestrictionText(typeRestriction);
+            diag << type;
+
+            if (isOverridden())
+                diag.addNote(diag::NoteDeclarationHere, location);
+        }
     }
 }
 

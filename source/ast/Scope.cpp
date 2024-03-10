@@ -356,13 +356,6 @@ void Scope::addMembers(const SyntaxNode& syntax) {
             getOrAddDeferredData().addForwardingTypedef(symbol);
             break;
         }
-        case SyntaxKind::ForwardInterfaceClassTypedefDeclaration: {
-            auto& symbol = ForwardingTypedefSymbol::fromSyntax(
-                *this, syntax.as<ForwardInterfaceClassTypedefDeclarationSyntax>());
-            addMember(symbol);
-            getOrAddDeferredData().addForwardingTypedef(symbol);
-            break;
-        }
         case SyntaxKind::GenerateRegion:
             for (auto member : syntax.as<GenerateRegionSyntax>().members)
                 addMembers(*member);
@@ -397,8 +390,7 @@ void Scope::addMembers(const SyntaxNode& syntax) {
                 case SyntaxKind::TypedefDeclaration:
                     addMember(TypeAliasType::fromSyntax(*this, cpd));
                     break;
-                case SyntaxKind::ForwardTypedefDeclaration:
-                case SyntaxKind::ForwardInterfaceClassTypedefDeclaration: {
+                case SyntaxKind::ForwardTypedefDeclaration: {
                     auto& symbol = ForwardingTypedefSymbol::fromSyntax(*this, cpd);
                     addMember(symbol);
                     getOrAddDeferredData().addForwardingTypedef(symbol);

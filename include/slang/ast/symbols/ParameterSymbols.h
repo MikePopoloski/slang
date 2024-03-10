@@ -7,6 +7,7 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include "slang/ast/SemanticFacts.h"
 #include "slang/ast/symbols/ValueSymbol.h"
 #include "slang/syntax/SyntaxFwd.h"
 
@@ -68,9 +69,10 @@ private:
 class SLANG_EXPORT TypeParameterSymbol : public Symbol, public ParameterSymbolBase {
 public:
     DeclaredType targetType;
+    ForwardTypeRestriction typeRestriction;
 
     TypeParameterSymbol(const Scope& scope, std::string_view name, SourceLocation loc, bool isLocal,
-                        bool isPort);
+                        bool isPort, ForwardTypeRestriction typeRestriction);
 
     static void fromSyntax(const Scope& scope, const syntax::TypeParameterDeclarationSyntax& syntax,
                            bool isLocal, bool isPort,
@@ -80,6 +82,7 @@ public:
 
     const Type& getTypeAlias() const { return *typeAlias; }
     bool isOverridden() const;
+    void checkTypeRestriction() const;
 
     void serializeTo(ASTSerializer& serializer) const;
 

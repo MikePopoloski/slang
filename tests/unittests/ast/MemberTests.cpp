@@ -2556,3 +2556,29 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("v1800-2023: type parameter with type restriction errors") {
+    auto options = optionsFor(LanguageVersion::v1800_2023);
+    auto tree = SyntaxTree::fromText(R"(
+module m #(parameter type enum foo, type class c)();
+endmodule
+
+class C;
+endclass
+
+module top;
+    typedef struct { logic l; } asdf_t;
+    m #(.foo(enum { A, B }), .c(C)) m1();
+    m #(.foo(int), .c(asdf_t)) m2();
+endmodule
+)",
+                                     options);
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::TypeRestrictionMismatch);
+    CHECK(diags[1].code == diag::TypeRestrictionMismatch);
+}

@@ -145,8 +145,13 @@ const ParameterSymbolBase& ParameterBuilder::createParam(
         std::tie(newInitializer, isFromConfig) = it->second;
 
     if (decl.isTypeParam) {
+        auto typeRestriction = ForwardTypeRestriction::None;
+        if (decl.hasSyntax && decl.typeSyntax && decl.typeSyntax->typeRestriction)
+            typeRestriction = SemanticFacts::getTypeRestriction(*decl.typeSyntax->typeRestriction);
+
         auto param = comp.emplace<TypeParameterSymbol>(newScope, decl.name, decl.location,
-                                                       decl.isLocalParam, decl.isPortParam);
+                                                       decl.isLocalParam, decl.isPortParam,
+                                                       typeRestriction);
         param->setAttributes(scope, decl.attributes);
 
         auto& tt = param->targetType;

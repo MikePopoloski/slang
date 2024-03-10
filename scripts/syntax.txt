@@ -503,6 +503,10 @@ DataType type
 separated_list<Declarator> declarators
 token semi
 
+ForwardTypeRestriction
+token keyword1
+token keyword2
+
 TypedefDeclaration base=Member
 token typedefKeyword
 DataType type
@@ -512,14 +516,7 @@ token semi
 
 ForwardTypedefDeclaration base=Member
 token typedefKeyword
-token keyword
-token name
-token semi
-
-ForwardInterfaceClassTypedefDeclaration base=Member
-token typedefKeyword
-token interfaceKeyword
-token classKeyword
+ForwardTypeRestriction? typeRestriction
 token name
 token semi
 
@@ -608,6 +605,7 @@ EqualsTypeClause? assignment
 
 TypeParameterDeclaration base=ParameterDeclarationBase
 token typeKeyword
+ForwardTypeRestriction? typeRestriction
 separated_list<TypeAssignment> declarators
 
 ParameterDeclarationStatement base=Member
