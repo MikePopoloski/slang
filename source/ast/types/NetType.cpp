@@ -25,6 +25,7 @@ using namespace syntax;
 NetType::NetType(NetKind netKind, std::string_view name, const Type& dataType) :
     Symbol(SymbolKind::NetType, name, SourceLocation()), declaredType(*this), netKind(netKind) {
     declaredType.setType(dataType);
+    resolver = nullptr;
 }
 
 NetType::NetType(std::string_view name, SourceLocation location) :
