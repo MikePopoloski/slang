@@ -302,8 +302,7 @@ bool Preprocessor::applyMacroOps(std::span<Token const> tokens, SmallVectorBase<
                 // Now we have the unfortunate task of re-lexing the remaining stuff after the split
                 // and then appending those tokens to the destination as well.
                 SmallVector<Token, 8> splits;
-                Lexer::splitTokens(alloc, diagnostics, sourceManager, newToken, offset + 2,
-                                   getCurrentKeywordVersion(), splits);
+                splitTokens(newToken, offset + 2, splits);
                 anyNewMacros |= applyMacroOps(splits, dest);
                 continue;
             }
@@ -526,9 +525,7 @@ bool Preprocessor::expandMacro(MacroDef macro, MacroExpansion& expansion,
                     return false;
 
                 SmallVector<Token, 8> splits;
-                Lexer::splitTokens(alloc, diagnostics, sourceManager, token, index,
-                                   getCurrentKeywordVersion(), splits);
-
+                splitTokens(token, index, splits);
                 for (auto t : splits) {
                     if (!handleToken(t))
                         return false;
@@ -836,6 +833,11 @@ Token Preprocessor::MacroParser::expect(TokenKind kind) {
                                      Token());
     }
     return next();
+}
+
+void Preprocessor::splitTokens(Token sourceToken, size_t offset, SmallVectorBase<Token>& results) {
+    Lexer::splitTokens(alloc, diagnostics, sourceManager, sourceToken, offset,
+                       getCurrentKeywordVersion(), results);
 }
 
 static bool isSameToken(Token left, Token right) {

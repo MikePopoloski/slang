@@ -292,6 +292,7 @@ private:
                                SmallSet<const syntax::DefineDirectiveSyntax*, 8>& alreadyExpanded);
     bool applyMacroOps(std::span<Token const> tokens, SmallVectorBase<Token>& dest);
     void createBuiltInMacro(std::string_view name, int value, std::string_view valueStr = {});
+    void splitTokens(Token sourceToken, size_t offset, SmallVectorBase<Token>& results);
 
     static bool isSameMacro(const syntax::DefineDirectiveSyntax& left,
                             const syntax::DefineDirectiveSyntax& right);

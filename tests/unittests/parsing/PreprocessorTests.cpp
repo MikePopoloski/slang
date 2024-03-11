@@ -2311,7 +2311,7 @@ TEST_CASE("Macro triple quoted stringify") {
     auto& text = R"(
 `define TEST(VAL) `"""line1\
 line2 - VAL\
-line3 - backslash\\ \
+line3 - backslash\\\
 line4`""" // end of macro
 
 string s = `TEST(FOO);
@@ -2341,6 +2341,28 @@ TEST_CASE("Triple quoted string inside macro stringification") {
 )";
 
     std::string result = preprocess(text, optionsFor(LanguageVersion::v1800_2023));
+    CHECK(result == expected);
+    CHECK_DIAGNOSTICS_EMPTY;
+}
+
+TEST_CASE("Escaped name at end of macro stringify is a continuation") {
+    auto& text = R"(
+`define TEST(VAL) `"asdf\\\
+VAL`"
+`TEST(FOO)
+
+`define TEST2(VAL) \asdf\\\
+    ,VAL
+`TEST2(FOO)
+)";
+
+    auto& expected = R"(
+"asdf\\FOO"
+\asdf\\
+    ,FOO
+)";
+
+    std::string result = preprocess(text);
     CHECK(result == expected);
     CHECK_DIAGNOSTICS_EMPTY;
 }

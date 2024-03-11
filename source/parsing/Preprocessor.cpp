@@ -554,6 +554,7 @@ Trivia Preprocessor::handleDefineDirective(Token directive) {
 
     // consume all remaining tokens as macro text
     scratchTokenBuffer.clear();
+    bool hasContinuation = false;
     while (true) {
         // Figure out when to stop consuming macro text. This involves looking for new lines in the
         // trivia of each token as we grab it. If there's a new line without a preceeding line
@@ -562,14 +563,13 @@ Trivia Preprocessor::handleDefineDirective(Token directive) {
         if (t.kind == TokenKind::EndOfFile)
             break;
         if (t.kind == TokenKind::LineContinuation) {
+            hasContinuation = false;
             scratchTokenBuffer.push_back(consume());
             continue;
         }
 
-        bool hasContinuation = false;
         bool done = false;
         auto triviaList = t.trivia();
-
         for (const Trivia& trivia : triviaList) {
             switch (trivia.kind) {
                 case TriviaKind::EndOfLine:
@@ -580,10 +580,10 @@ Trivia Preprocessor::handleDefineDirective(Token directive) {
                     break;
                 case TriviaKind::LineComment:
                     // A line comment can have a trailing line continuation.
-                    if (trivia.getRawText().back() == '\\')
-                        hasContinuation = true;
+                    hasContinuation = (trivia.getRawText().back() == '\\');
                     break;
                 default:
+                    hasContinuation = false;
                     break;
             }
             if (done)
@@ -592,7 +592,25 @@ Trivia Preprocessor::handleDefineDirective(Token directive) {
         if (done)
             break;
 
-        scratchTokenBuffer.push_back(consume());
+        consume();
+
+        if (t.kind == TokenKind::Identifier) {
+            // Escaped identifiers that end in a backslash act as a continuation.
+            auto raw = t.rawText();
+            if (!raw.empty() && raw.back() == '\\') {
+                auto nextTrivia = peek().trivia();
+                if (!nextTrivia.empty() && nextTrivia[0].kind == TriviaKind::EndOfLine) {
+                    hasContinuation = true;
+                    scratchTokenBuffer.push_back(
+                        t.withRawText(alloc, raw.substr(0, raw.size() - 1)));
+                    scratchTokenBuffer.push_back(Token(alloc, TokenKind::LineContinuation, {}, "\\",
+                                                       t.location() + raw.size() - 1));
+                    continue;
+                }
+            }
+        }
+
+        scratchTokenBuffer.push_back(t);
     }
     inMacroBody = false;
 
