@@ -853,24 +853,6 @@ baz /* hello */ bar
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
-TEST_CASE("Macro with split block comment") {
-    auto& text = R"(
-`define FOO baz /* hel
-lo */ bar
-`FOO
-)";
-    auto& expected = R"(
- /* hel
-lo */ bar
-baz
-)";
-
-    std::string result = preprocess(text);
-    CHECK(result == expected);
-    REQUIRE(diagnostics.size() == 1);
-    CHECK(diagnostics[0].code == diag::SplitBlockCommentInDirective);
-}
-
 TEST_CASE("IfDef branch (taken)") {
     auto& text = "`define FOO\n`ifdef FOO\n42\n`endif";
     Token token = lexToken(text);
@@ -2270,4 +2252,57 @@ TEST_CASE("Invalid tokens still error after macro expansion") {
     CHECK(diagnostics[0].code == diag::MisplacedDirectiveChar);
     CHECK(diagnostics[1].code == diag::EscapedWhitespace);
     CHECK(diagnostics[2].code == diag::EscapedWhitespace);
+}
+
+TEST_CASE("Newline handling in macros with comments and triple quoted strings") {
+    auto& text = R"(
+`define var_nand(dly) nand #dly     // define a nand with variable delay
+`var_nand(2) g121 (q21, n10, n11);
+
+`define var_nand2(dly) nand          // define a nand with variable delay \
+                                     /* this is a block comment
+                                        embedded in a multi-line macro */ \
+                           #dly      // this is the end of the macro definition
+`var_nand2(2) g122 (q21, n10, n11);
+
+`define var_nand3(dly) nand          /* this is a block comment
+                                        embedded in a multi-line macro */ #dly
+`var_nand3(2) g123 (q21, n10, n11);
+
+module main;
+
+`define TEST """
+many
+many
+more
+lines""" // end of macro
+
+initial $display(`TEST);
+
+endmodule
+)";
+
+    auto& expected = R"(
+     // define a nand with variable delay
+nand #2 g121 (q21, n10, n11);
+      // this is the end of the macro definition
+nand          // define a nand with variable delay \
+                                     /* this is a block comment
+                                        embedded in a multi-line macro */
+                           #2 g122 (q21, n10, n11);
+nand          /* this is a block comment
+                                        embedded in a multi-line macro */ #2 g123 (q21, n10, n11);
+module main;
+ // end of macro
+initial $display("""
+many
+many
+more
+lines""");
+endmodule
+)";
+
+    std::string result = preprocess(text, optionsFor(LanguageVersion::v1800_2023));
+    CHECK(result == expected);
+    CHECK_DIAGNOSTICS_EMPTY;
 }

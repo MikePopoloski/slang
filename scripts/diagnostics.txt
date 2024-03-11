@@ -81,7 +81,6 @@ error InvalidTimeScalePrecision "time precision must be at least as precise as t
 error InvalidInferredTimeScale "invalid inferred time scale of {} for scope; time precision must be at least as precise as the time unit (i.e. it cannot be a longer unit of time)"
 error RecursiveMacro "expansion of macro '{}' is recursive"
 error MacroOpsOutsideDefinition "macro operators may only be used within a macro definition"
-error SplitBlockCommentInDirective "block comments on the same line as a directive must also be terminated on that line"
 error ExpectedIncludeFileName "expected an include file name"
 error ExpectedTimeLiteral "expected time literal"
 error ExpectedMacroStringifyEnd "expected closing quote to end macro stringification"

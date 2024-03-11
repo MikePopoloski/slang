@@ -576,32 +576,11 @@ Trivia Preprocessor::handleDefineDirective(Token directive) {
                     else
                         done = true;
                     break;
-
                 case TriviaKind::LineComment:
                     // A line comment can have a trailing line continuation.
                     if (trivia.getRawText().back() == '\\')
                         hasContinuation = true;
                     break;
-
-                case TriviaKind::BlockComment:
-                    if (size_t offset = trivia.getRawText().find_first_of("\r\n");
-                        offset != std::string_view::npos) {
-
-                        // Getting the location here is annoying; we need to walk
-                        // backward from the token's location.
-                        size_t diff = trivia.getRawText().length() - offset;
-                        for (auto it = triviaList.rbegin(); it != triviaList.rend(); it++) {
-                            if (&(*it) == &trivia)
-                                break;
-                            diff += it->getRawText().length();
-                        }
-
-                        SourceLocation loc = t.location() - diff;
-                        addDiag(diag::SplitBlockCommentInDirective, loc);
-                        done = true;
-                    }
-                    break;
-
                 default:
                     break;
             }
