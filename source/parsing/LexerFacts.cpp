@@ -51,7 +51,8 @@ const static flat_hash_map<std::string_view, KeywordVersion> keywordVersionTable
     { "1800-2005", KeywordVersion::v1800_2005 },
     { "1800-2009", KeywordVersion::v1800_2009 },
     { "1800-2012", KeywordVersion::v1800_2012 },
-    { "1800-2017", KeywordVersion::v1800_2017 }
+    { "1800-2017", KeywordVersion::v1800_2017 },
+    { "1800-2023", KeywordVersion::v1800_2023 }
 };
 
 // Lists of keywords, separated by the specification in which they were first introduced
@@ -320,7 +321,7 @@ const static flat_hash_map<std::string_view, KeywordVersion> keywordVersionTable
 
 // We maintain a separate table of keywords for all the various specifications,
 // to allow for easy switching between them when requested
-const static flat_hash_map<std::string_view, TokenKind> allKeywords[8] =
+const static flat_hash_map<std::string_view, TokenKind> allKeywords[9] =
 { { // IEEE 1364-1995
     KEYWORDS_1364_1995
 }, { // IEEE 1364-2001-noconfig
@@ -357,6 +358,14 @@ const static flat_hash_map<std::string_view, TokenKind> allKeywords[8] =
     NEWKEYWORDS_1800_2009,
     NEWKEYWORDS_1800_2012
 }, { // IEEE 1800-2017
+    KEYWORDS_1364_1995,
+    NEWKEYWORDS_1364_2001_noconfig,
+    NEWKEYWORDS_1364_2001,
+    NEWKEYWORDS_1364_2005,
+    NEWKEYWORDS_1800_2005,
+    NEWKEYWORDS_1800_2009,
+    NEWKEYWORDS_1800_2012
+}, { // IEEE 1800-2023
     KEYWORDS_1364_1995,
     NEWKEYWORDS_1364_2001_noconfig,
     NEWKEYWORDS_1364_2001,
@@ -636,8 +645,15 @@ SyntaxKind LexerFacts::getDirectiveKind(std::string_view directive) {
     return SyntaxKind::MacroUsage;
 }
 
-KeywordVersion LexerFacts::getDefaultKeywordVersion() {
-    return KeywordVersion::v1800_2017;
+KeywordVersion LexerFacts::getDefaultKeywordVersion(LanguageVersion languageVersion) {
+    switch (languageVersion) {
+        case LanguageVersion::v1800_2017:
+            return KeywordVersion::v1800_2017;
+        case LanguageVersion::v1800_2023:
+            return KeywordVersion::v1800_2023;
+        default:
+            SLANG_UNREACHABLE;
+    }
 }
 
 std::optional<KeywordVersion> LexerFacts::getKeywordVersion(std::string_view text) {

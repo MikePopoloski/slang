@@ -29,7 +29,7 @@ Preprocessor::Preprocessor(SourceManager& sourceManager, BumpAllocator& alloc,
     lexerOptions(options_.getOrDefault<LexerOptions>()),
     numberParser(diagnostics, alloc, options.languageVersion) {
 
-    keywordVersionStack.push_back(LF::getDefaultKeywordVersion());
+    keywordVersionStack.push_back(LF::getDefaultKeywordVersion(options.languageVersion));
     resetAllDirectives();
     undefineAll();
 
@@ -83,7 +83,7 @@ Preprocessor::Preprocessor(const Preprocessor& other) :
     options(other.options), lexerOptions(other.lexerOptions),
     numberParser(diagnostics, alloc, options.languageVersion) {
 
-    keywordVersionStack.push_back(LF::getDefaultKeywordVersion());
+    keywordVersionStack.push_back(LF::getDefaultKeywordVersion(options.languageVersion));
 }
 
 void Preprocessor::pushSource(std::string_view source, std::string_view name) {

@@ -54,7 +54,8 @@ public:
     /// Lexes the next token from the source code.
     /// This will never return a null pointer; at the end of the buffer,
     /// an infinite stream of EndOfFile tokens will be generated
-    Token lex(KeywordVersion keywordVersion = LexerFacts::getDefaultKeywordVersion());
+    Token lex();
+    Token lex(KeywordVersion keywordVersion);
 
     /// Looks ahead in the source stream to see if the next token we would lex
     /// is on the same line as the previous token we've lexed.

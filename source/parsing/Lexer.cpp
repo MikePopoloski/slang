@@ -218,6 +218,10 @@ void Lexer::splitTokens(BumpAllocator& alloc, Diagnostics& diagnostics,
     }
 }
 
+Token Lexer::lex() {
+    return lex(LF::getDefaultKeywordVersion(options.languageVersion));
+}
+
 Token Lexer::lex(KeywordVersion keywordVersion) {
     triviaBuffer.clear();
     lexTrivia<false>();

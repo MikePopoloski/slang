@@ -1193,7 +1193,7 @@ TEST_CASE("begin_keywords") {
 }
 
 TEST_CASE("begin_keywords (nested)") {
-    auto& text = "`begin_keywords \"1800-2009\"\n"
+    auto& text = "`begin_keywords \"1800-2023\"\n"
                  "`begin_keywords \"1800-2005\"\n"
                  "`begin_keywords \"1364-2001\"\n"
                  "uwire\n"
