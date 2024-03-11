@@ -2385,3 +2385,15 @@ TEST_CASE("Mismatch macro stringification delimiters") {
     CHECK(result == expected);
     CHECK_DIAGNOSTICS_EMPTY;
 }
+
+TEST_CASE("Triple quoted macro stringification not allowed in 2017") {
+    auto& text = R"(
+`define TEST(x) `""" x `"""
+`TEST(FOO)
+)";
+
+    preprocess(text);
+
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics[0].code == diag::WrongLanguageVersion);
+}

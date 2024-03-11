@@ -156,6 +156,12 @@ bool Preprocessor::applyMacroOps(std::span<Token const> tokens, SmallVectorBase<
                 if (!stringify) {
                     stringify = token;
                     stringifyBuffer.clear();
+
+                    if (token.kind == TokenKind::MacroTripleQuote &&
+                        options.languageVersion < LanguageVersion::v1800_2023) {
+                        addDiag(diag::WrongLanguageVersion, token.location())
+                            << toString(options.languageVersion);
+                    }
                 }
                 else if (token.kind == stringify.kind) {
                     // all done stringifying; convert saved tokens to string
