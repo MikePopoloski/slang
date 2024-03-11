@@ -138,9 +138,9 @@ bool Preprocessor::applyMacroOps(std::span<Token const> tokens, SmallVectorBase<
     SmallVector<Token, 8> commentBuffer;
     Token stringify;
     Token syntheticComment;
+    Token extraToAppend;
     bool anyNewMacros = false;
     bool didConcat = false;
-    bool tripleQuoted = false;
 
     for (size_t i = 0; i < tokens.size(); i++) {
         Token newToken;
@@ -156,13 +156,30 @@ bool Preprocessor::applyMacroOps(std::span<Token const> tokens, SmallVectorBase<
                 if (!stringify) {
                     stringify = token;
                     stringifyBuffer.clear();
-                    tripleQuoted = token.kind == TokenKind::MacroTripleQuote;
                 }
-                else {
+                else if (token.kind == stringify.kind) {
                     // all done stringifying; convert saved tokens to string
                     newToken = Lexer::stringify(*lexerStack.back(), stringify, stringifyBuffer,
                                                 token);
                     stringify = Token();
+                }
+                else if (stringify.kind == TokenKind::MacroTripleQuote) {
+                    // We found a `" inside of a triple quoted stringification.
+                    // Just keep it, let it become part of the string contents.
+                    newToken = token;
+                }
+                else {
+                    // We found a `""" inside of a single quoted stringification.
+                    // The LRM doesn't say what to do, but I think it makes sense to
+                    // split the token, end the previous stringification, and then
+                    // append the essentially empty string literal after it.
+                    // This will cause an error down the line since two string literals
+                    // next to each other isn't ever valid.
+                    newToken = Lexer::stringify(*lexerStack.back(), stringify, stringifyBuffer,
+                                                token);
+                    stringify = Token();
+                    extraToAppend = Token(alloc, TokenKind::StringLiteral, {}, "\"\"",
+                                          token.location() + 2, ""sv);
                 }
                 break;
             case TokenKind::MacroPaste:
@@ -275,10 +292,16 @@ bool Preprocessor::applyMacroOps(std::span<Token const> tokens, SmallVectorBase<
         }
 
         if (!stringify) {
-            if (syntheticComment)
+            if (syntheticComment) {
                 commentBuffer.push_back(newToken);
-            else
+            }
+            else {
                 dest.push_back(newToken);
+                if (extraToAppend) {
+                    dest.push_back(extraToAppend);
+                    extraToAppend = Token();
+                }
+            }
             continue;
         }
 

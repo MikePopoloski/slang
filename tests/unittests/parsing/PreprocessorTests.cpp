@@ -2366,3 +2366,22 @@ VAL`"
     CHECK(result == expected);
     CHECK_DIAGNOSTICS_EMPTY;
 }
+
+TEST_CASE("Mismatch macro stringification delimiters") {
+    auto& text = R"(
+`define TEST(x) `""" x `" `"""
+`TEST(foo)
+
+`define TEST2(x) `" x `"""
+`TEST2(bar)
+)";
+
+    auto& expected = R"(
+""" foo `" """
+" bar """
+)";
+
+    std::string result = preprocess(text, optionsFor(LanguageVersion::v1800_2023));
+    CHECK(result == expected);
+    CHECK_DIAGNOSTICS_EMPTY;
+}
