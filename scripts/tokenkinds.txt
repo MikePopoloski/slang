@@ -346,6 +346,7 @@ Directive
 IncludeFileName
 MacroUsage
 MacroQuote
+MacroTripleQuote
 MacroEscapedQuote
 MacroPaste
 EmptyMacroArgument

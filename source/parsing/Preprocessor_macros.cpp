@@ -140,6 +140,7 @@ bool Preprocessor::applyMacroOps(std::span<Token const> tokens, SmallVectorBase<
     Token syntheticComment;
     bool anyNewMacros = false;
     bool didConcat = false;
+    bool tripleQuoted = false;
 
     for (size_t i = 0; i < tokens.size(); i++) {
         Token newToken;
@@ -151,14 +152,17 @@ bool Preprocessor::applyMacroOps(std::span<Token const> tokens, SmallVectorBase<
         Token token = tokens[i];
         switch (token.kind) {
             case TokenKind::MacroQuote:
+            case TokenKind::MacroTripleQuote:
                 if (!stringify) {
                     stringify = token;
                     stringifyBuffer.clear();
+                    tripleQuoted = token.kind == TokenKind::MacroTripleQuote;
                 }
                 else {
                     // all done stringifying; convert saved tokens to string
                     newToken = Lexer::stringify(alloc, stringify.location(), stringify.trivia(),
-                                                stringifyBuffer.begin(), stringifyBuffer.end());
+                                                stringifyBuffer.begin(), stringifyBuffer.end(),
+                                                tripleQuoted);
                     stringify = Token();
                 }
                 break;
@@ -178,8 +182,10 @@ bool Preprocessor::applyMacroOps(std::span<Token const> tokens, SmallVectorBase<
                 else if (stringify) {
                     // If this is right after the opening quote or right before the closing quote,
                     // we're trying to concatenate something with nothing.
-                    if (stringifyBuffer.empty() || tokens[i + 1].kind == TokenKind::MacroQuote)
+                    if (stringifyBuffer.empty() || tokens[i + 1].kind == TokenKind::MacroQuote ||
+                        tokens[i + 1].kind == TokenKind::MacroTripleQuote) {
                         addDiag(diag::IgnoredMacroPaste, token.location());
+                    }
                     else {
                         newToken = Lexer::concatenateTokens(alloc, stringifyBuffer.back(),
                                                             tokens[i + 1]);
@@ -283,6 +289,7 @@ bool Preprocessor::applyMacroOps(std::span<Token const> tokens, SmallVectorBase<
         if (newToken.kind == TokenKind::Identifier && !newToken.rawText().empty() &&
             newToken.rawText()[0] == '\\') {
 
+            // TODO: triple quotes?
             size_t offset = newToken.rawText().find("`\"");
             if (offset != std::string_view::npos) {
                 // Split the token, finish the stringification.
@@ -291,7 +298,8 @@ bool Preprocessor::applyMacroOps(std::span<Token const> tokens, SmallVectorBase<
                 stringifyBuffer.push_back(split);
 
                 dest.push_back(Lexer::stringify(alloc, stringify.location(), stringify.trivia(),
-                                                stringifyBuffer.begin(), stringifyBuffer.end()));
+                                                stringifyBuffer.begin(), stringifyBuffer.end(),
+                                                tripleQuoted));
                 stringify = Token();
 
                 // Now we have the unfortunate task of re-lexing the remaining stuff after the split

@@ -73,7 +73,8 @@ public:
     /// The @a location and @a trivia parameters are used in the newly created token.
     /// The range of tokens to stringify is given by @a begin and @a end.
     static Token stringify(BumpAllocator& alloc, SourceLocation location,
-                           std::span<Trivia const> trivia, Token* begin, Token* end);
+                           std::span<Trivia const> trivia, Token* begin, Token* end,
+                           bool tripleQuoted);
 
     /// Converts a range of tokens into a block comment; used for macro expansion.
     /// The range of tokens to commentify is given by @a begin and @a end.

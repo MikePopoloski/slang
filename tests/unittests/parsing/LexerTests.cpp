@@ -1131,6 +1131,7 @@ void testDirectivePunctuation(TokenKind kind) {
 
 TEST_CASE("Directive Punctuation") {
     testDirectivePunctuation(TokenKind::MacroQuote);
+    testDirectivePunctuation(TokenKind::MacroTripleQuote);
     testDirectivePunctuation(TokenKind::MacroEscapedQuote);
     testDirectivePunctuation(TokenKind::MacroPaste);
 }

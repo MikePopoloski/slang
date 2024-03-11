@@ -1021,6 +1021,7 @@ std::string_view LexerFacts::getTokenKindText(TokenKind kind) {
 
         // directives
         case TokenKind::MacroQuote: return "`\"";
+        case TokenKind::MacroTripleQuote: return "`\"\"\"";
         case TokenKind::MacroEscapedQuote: return "`\\`\"";
         case TokenKind::MacroPaste: return "``";
 

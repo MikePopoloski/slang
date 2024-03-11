@@ -2306,3 +2306,26 @@ endmodule
     CHECK(result == expected);
     CHECK_DIAGNOSTICS_EMPTY;
 }
+
+TEST_CASE("Macro triple quoted stringify") {
+    auto& text = R"(
+`define TEST(VAL) `"""line1\
+line2 - VAL\
+line3 - backslash\\ \
+line4`""" // end of macro
+
+string s = `TEST(FOO);
+)";
+
+    auto& expected = R"(
+ // end of macro
+string s = """line1
+line2 - FOO
+line3 - backslash\\
+line4""";
+)";
+
+    std::string result = preprocess(text, optionsFor(LanguageVersion::v1800_2023));
+    CHECK(result == expected);
+    CHECK_DIAGNOSTICS_EMPTY;
+}

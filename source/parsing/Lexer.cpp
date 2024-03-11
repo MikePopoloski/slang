@@ -96,16 +96,24 @@ Token Lexer::concatenateTokens(BumpAllocator& alloc, Token left, Token right) {
 }
 
 Token Lexer::stringify(BumpAllocator& alloc, SourceLocation location,
-                       std::span<Trivia const> trivia, Token* begin, Token* end) {
+                       std::span<Trivia const> trivia, Token* begin, Token* end,
+                       bool tripleQuoted) {
     SmallVector<char> text;
     text.push_back('"');
+
+    if (tripleQuoted) {
+        text.push_back('"');
+        text.push_back('"');
+    }
 
     while (begin != end) {
         Token cur = *begin;
 
         for (const Trivia& t : cur.trivia()) {
-            if (t.kind == TriviaKind::Whitespace)
+            if (t.kind == TriviaKind::Whitespace ||
+                (tripleQuoted && t.kind == TriviaKind::EndOfLine)) {
                 text.append_range(t.getRawText());
+            }
         }
 
         if (cur.kind == TokenKind::MacroEscapedQuote) {
@@ -128,6 +136,12 @@ Token Lexer::stringify(BumpAllocator& alloc, SourceLocation location,
         }
         begin++;
     }
+
+    if (tripleQuoted) {
+        text.push_back('"');
+        text.push_back('"');
+    }
+
     text.push_back('"');
     text.push_back('\0');
 
@@ -563,7 +577,13 @@ Token Lexer::lexToken(KeywordVersion keywordVersion) {
             switch (peek()) {
                 case '"':
                     advance();
-                    return create(TokenKind::MacroQuote);
+                    if (peek() == '"' && peek(1) == '"') {
+                        advance(2);
+                        return create(TokenKind::MacroTripleQuote);
+                    }
+                    else {
+                        return create(TokenKind::MacroQuote);
+                    }
                 case '`':
                     advance();
                     return create(TokenKind::MacroPaste);

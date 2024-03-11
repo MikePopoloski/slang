@@ -231,6 +231,7 @@ Token Preprocessor::nextProcessed() {
         // into trivia.
         case TokenKind::Directive:
         case TokenKind::MacroQuote:
+        case TokenKind::MacroTripleQuote:
         case TokenKind::MacroEscapedQuote:
         case TokenKind::MacroPaste:
         case TokenKind::LineContinuation:
@@ -248,6 +249,7 @@ Token Preprocessor::handleDirectives(Token token) {
         lastConsumed = token;
         switch (token.kind) {
             case TokenKind::MacroQuote:
+            case TokenKind::MacroTripleQuote:
             case TokenKind::MacroEscapedQuote:
             case TokenKind::MacroPaste:
             case TokenKind::LineContinuation: {
