@@ -359,7 +359,7 @@ TEST_CASE("Macro stringify") {
     Token token = lexToken(text);
 
     REQUIRE(token.kind == TokenKind::StringLiteral);
-    CHECK(token.valueText() == " \" bar_foo42 \"");
+    CHECK(token.valueText() == " \" bar_foo42 \" ");
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
@@ -2226,11 +2226,11 @@ TEST_CASE("Spurious errors inside stringified macro expansion regression") {
 )";
 
     auto& expected = R"(
-" 's"
-" `"
-" \"
-" `\"
-" 3._e_"
+" 's "
+" ` "
+" \ "
+" `\ "
+" 3._e_ "
 )";
 
     std::string result = preprocess(text);

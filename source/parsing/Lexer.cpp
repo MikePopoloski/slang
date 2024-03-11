@@ -95,26 +95,28 @@ Token Lexer::concatenateTokens(BumpAllocator& alloc, Token left, Token right) {
     return token.clone(alloc, trivia, token.rawText(), location);
 }
 
-Token Lexer::stringify(BumpAllocator& alloc, SourceLocation location,
-                       std::span<Trivia const> trivia, Token* begin, Token* end,
-                       bool tripleQuoted) {
+Token Lexer::stringify(Lexer& parentLexer, Token startToken, std::span<Token> bodyTokens,
+                       Token endToken) {
     SmallVector<char> text;
     text.push_back('"');
 
+    const bool tripleQuoted = startToken.kind == TokenKind::MacroTripleQuote;
     if (tripleQuoted) {
         text.push_back('"');
         text.push_back('"');
     }
 
-    while (begin != end) {
-        Token cur = *begin;
-
+    auto addTrivia = [&](Token cur) {
         for (const Trivia& t : cur.trivia()) {
             if (t.kind == TriviaKind::Whitespace ||
                 (tripleQuoted && t.kind == TriviaKind::EndOfLine)) {
                 text.append_range(t.getRawText());
             }
         }
+    };
+
+    for (auto cur : bodyTokens) {
+        addTrivia(cur);
 
         if (cur.kind == TokenKind::MacroEscapedQuote) {
             text.push_back('\\');
@@ -134,8 +136,10 @@ Token Lexer::stringify(BumpAllocator& alloc, SourceLocation location,
         else if (cur.kind != TokenKind::EmptyMacroArgument) {
             text.append_range(cur.rawText());
         }
-        begin++;
     }
+
+    if (endToken)
+        addTrivia(endToken);
 
     if (tripleQuoted) {
         text.push_back('"');
@@ -145,29 +149,28 @@ Token Lexer::stringify(BumpAllocator& alloc, SourceLocation location,
     text.push_back('"');
     text.push_back('\0');
 
-    std::string_view raw = toStringView(text.copy(alloc));
+    std::string_view raw = toStringView(text.copy(parentLexer.alloc));
 
     Diagnostics unused;
-    Lexer lexer{BufferID::getPlaceholder(), raw, raw.data(), alloc, unused, LexerOptions{}};
+    Lexer lexer{BufferID::getPlaceholder(), raw,    raw.data(),
+                parentLexer.alloc,          unused, parentLexer.options};
 
     auto token = lexer.lex();
     SLANG_ASSERT(token.kind == TokenKind::StringLiteral);
     SLANG_ASSERT(lexer.lex().kind == TokenKind::EndOfFile);
 
-    return token.clone(alloc, trivia, raw.substr(0, raw.length() - 1), location);
+    return token.clone(parentLexer.alloc, startToken.trivia(), raw.substr(0, raw.length() - 1),
+                       startToken.location());
 }
 
-Trivia Lexer::commentify(BumpAllocator& alloc, Token* begin, Token* end) {
+Trivia Lexer::commentify(BumpAllocator& alloc, std::span<Token> tokens) {
     SmallVector<char> text;
-    while (begin != end) {
-        Token cur = *begin;
+    for (auto cur : tokens) {
         for (const Trivia& t : cur.trivia())
             text.append_range(t.getRawText());
 
         if (cur.kind != TokenKind::EmptyMacroArgument)
             text.append_range(cur.rawText());
-
-        begin++;
     }
     text.push_back('\0');
 

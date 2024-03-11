@@ -70,15 +70,11 @@ public:
     static Token concatenateTokens(BumpAllocator& alloc, Token left, Token right);
 
     /// Converts a range of tokens into a string literal; used for macro stringification.
-    /// The @a location and @a trivia parameters are used in the newly created token.
-    /// The range of tokens to stringify is given by @a begin and @a end.
-    static Token stringify(BumpAllocator& alloc, SourceLocation location,
-                           std::span<Trivia const> trivia, Token* begin, Token* end,
-                           bool tripleQuoted);
+    static Token stringify(Lexer& parentLexer, Token startToken, std::span<Token> bodyTokens,
+                           Token endToken);
 
     /// Converts a range of tokens into a block comment; used for macro expansion.
-    /// The range of tokens to commentify is given by @a begin and @a end.
-    static Trivia commentify(BumpAllocator& alloc, Token* begin, Token* end);
+    static Trivia commentify(BumpAllocator& alloc, std::span<Token> tokens);
 
     /// Splits the given token at the specified offset into its raw source text. The trailing
     /// portion of the split is lexed into new tokens and appened to @a results

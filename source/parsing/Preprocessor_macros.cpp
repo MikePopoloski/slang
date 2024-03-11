@@ -160,9 +160,8 @@ bool Preprocessor::applyMacroOps(std::span<Token const> tokens, SmallVectorBase<
                 }
                 else {
                     // all done stringifying; convert saved tokens to string
-                    newToken = Lexer::stringify(alloc, stringify.location(), stringify.trivia(),
-                                                stringifyBuffer.begin(), stringifyBuffer.end(),
-                                                tripleQuoted);
+                    newToken = Lexer::stringify(*lexerStack.back(), stringify, stringifyBuffer,
+                                                token);
                     stringify = Token();
                 }
                 break;
@@ -204,8 +203,7 @@ bool Preprocessor::applyMacroOps(std::span<Token const> tokens, SmallVectorBase<
                         i++;
 
                         emptyArgTrivia.append_range(syntheticComment.trivia());
-                        emptyArgTrivia.push_back(
-                            Lexer::commentify(alloc, commentBuffer.begin(), commentBuffer.end()));
+                        emptyArgTrivia.push_back(Lexer::commentify(alloc, commentBuffer));
                         syntheticComment = Token();
                     }
                 }
@@ -297,9 +295,8 @@ bool Preprocessor::applyMacroOps(std::span<Token const> tokens, SmallVectorBase<
                             newToken.rawText().substr(0, offset), newToken.location());
                 stringifyBuffer.push_back(split);
 
-                dest.push_back(Lexer::stringify(alloc, stringify.location(), stringify.trivia(),
-                                                stringifyBuffer.begin(), stringifyBuffer.end(),
-                                                tripleQuoted));
+                dest.push_back(Lexer::stringify(*lexerStack.back(), stringify, stringifyBuffer,
+                                                Token() /* TODO */));
                 stringify = Token();
 
                 // Now we have the unfortunate task of re-lexing the remaining stuff after the split
