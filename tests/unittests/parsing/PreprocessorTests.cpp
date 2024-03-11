@@ -2397,3 +2397,18 @@ TEST_CASE("Triple quoted macro stringification not allowed in 2017") {
     REQUIRE(diagnostics.size() == 1);
     CHECK(diagnostics[0].code == diag::WrongLanguageVersion);
 }
+
+TEST_CASE("Escaped identifier that turns into triple quoted macro stringification") {
+    auto& text = R"(
+`define TEST(x) `"""x\n`"""
+`TEST(foo)
+)";
+
+    auto& expected = R"(
+"""foo\n"""
+)";
+
+    std::string result = preprocess(text, optionsFor(LanguageVersion::v1800_2023));
+    CHECK(result == expected);
+    CHECK_DIAGNOSTICS_EMPTY;
+}

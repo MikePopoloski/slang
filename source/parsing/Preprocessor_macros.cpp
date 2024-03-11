@@ -313,27 +313,32 @@ bool Preprocessor::applyMacroOps(std::span<Token const> tokens, SmallVectorBase<
 
         // If this is an escaped identifier that includes a `" within it, we need to split the
         // token up to match the behavior of other simulators.
-        if (newToken.kind == TokenKind::Identifier && !newToken.rawText().empty() &&
-            newToken.rawText()[0] == '\\') {
-
-            // TODO: triple quotes?
-            size_t offset = newToken.rawText().find("`\"");
+        auto raw = newToken.rawText();
+        if (newToken.kind == TokenKind::Identifier && !raw.empty() && raw[0] == '\\') {
+            size_t offset = raw.find("`\"");
             if (offset != std::string_view::npos) {
-                // Split the token, finish the stringification.
-                Token split(alloc, TokenKind::Identifier, newToken.trivia(),
-                            newToken.rawText().substr(0, offset), newToken.location());
-                stringifyBuffer.push_back(split);
+                // Like above, we need to handle the case of mismatched delimiters.
+                // If we match, we complete the stringification. If we found a `"
+                // inside a triple quoted string, just keep going. If we found a `"""
+                // inside a single quoted string, split and end.
+                const bool startIsTriple = stringify.kind == TokenKind::MacroTripleQuote;
+                const bool endIsTriple = raw.substr(offset).starts_with(R"(`""")");
+                if (startIsTriple == endIsTriple || !startIsTriple) {
+                    stringifyBuffer.push_back(newToken.withRawText(alloc, raw.substr(0, offset)));
 
-                dest.push_back(Lexer::stringify(*lexerStack.back(), stringify, stringifyBuffer,
-                                                Token() /* TODO */));
-                stringify = Token();
+                    // Note: endToken parameter here doesn't matter,
+                    // we know there is no trivia to take.
+                    dest.push_back(
+                        Lexer::stringify(*lexerStack.back(), stringify, stringifyBuffer, Token()));
+                    stringify = Token();
 
-                // Now we have the unfortunate task of re-lexing the remaining stuff after the split
-                // and then appending those tokens to the destination as well.
-                SmallVector<Token, 8> splits;
-                splitTokens(newToken, offset + 2, splits);
-                anyNewMacros |= applyMacroOps(splits, dest);
-                continue;
+                    // Now we have the unfortunate task of re-lexing the remaining stuff after the
+                    // split and then appending those tokens to the destination as well.
+                    SmallVector<Token, 8> splits;
+                    splitTokens(newToken, offset + (endIsTriple ? 4 : 2), splits);
+                    anyNewMacros |= applyMacroOps(splits, dest);
+                    continue;
+                }
             }
         }
 
