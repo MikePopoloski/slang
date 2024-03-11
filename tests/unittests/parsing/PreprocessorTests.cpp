@@ -2329,3 +2329,18 @@ line4""";
     CHECK(result == expected);
     CHECK_DIAGNOSTICS_EMPTY;
 }
+
+TEST_CASE("Triple quoted string inside macro stringification") {
+    auto& text = R"(
+`define TEST `" """hello""" `"
+`TEST
+)";
+
+    auto& expected = R"(
+" \"\"\"hello\"\"\" "
+)";
+
+    std::string result = preprocess(text, optionsFor(LanguageVersion::v1800_2023));
+    CHECK(result == expected);
+    CHECK_DIAGNOSTICS_EMPTY;
+}

@@ -123,15 +123,23 @@ Token Lexer::stringify(Lexer& parentLexer, Token startToken, std::span<Token> bo
             text.push_back('"');
         }
         else if (cur.kind == TokenKind::StringLiteral) {
-            text.push_back('\\');
-            text.push_back('"');
-
             auto raw = cur.rawText();
-            if (raw.size() > 2)
-                text.append_range(raw.substr(1, raw.size() - 2));
+            const bool nestedHasTriple = raw.starts_with("\"\"\""sv);
+            if (nestedHasTriple) {
+                text.append_range(R"(\"\"\")"sv);
+                raw = raw.substr(3, raw.size() - 6);
+            }
+            else {
+                text.append_range(R"(\")"sv);
+                raw = raw.substr(1, raw.size() - 2);
+            }
 
-            text.push_back('\\');
-            text.push_back('"');
+            text.append_range(raw);
+
+            if (nestedHasTriple)
+                text.append_range(R"(\"\"\")"sv);
+            else
+                text.append_range(R"(\")"sv);
         }
         else if (cur.kind != TokenKind::EmptyMacroArgument) {
             text.append_range(cur.rawText());
