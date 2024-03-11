@@ -2160,3 +2160,18 @@ localparam [1:0][7:0] VALUES_0 = '{1, 2};
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Forward typedef restriction regress") {
+    auto tree = SyntaxTree::fromText(R"(
+typedef struct s;
+
+typedef int s;
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::ForwardTypedefDoesNotMatch);
+}

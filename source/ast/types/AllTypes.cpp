@@ -1190,8 +1190,7 @@ void ForwardingTypedefSymbol::addForwardDecl(const ForwardingTypedefSymbol& decl
 
 void ForwardingTypedefSymbol::checkType(ForwardTypeRestriction checkRestriction,
                                         Visibility checkVisibility, SourceLocation declLoc) const {
-    if (typeRestriction != ForwardTypeRestriction::None &&
-        checkRestriction != ForwardTypeRestriction::None && typeRestriction != checkRestriction) {
+    if (typeRestriction != ForwardTypeRestriction::None && typeRestriction != checkRestriction) {
         auto& diag = getParentScope()->addDiag(diag::ForwardTypedefDoesNotMatch, location);
         diag << SemanticFacts::getTypeRestrictionText(typeRestriction);
         diag.addNote(diag::NoteDeclarationHere, declLoc);
