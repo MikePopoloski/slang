@@ -2150,8 +2150,28 @@ ResetAllDirective UndefineAllDirective
 IncludeDirective base=Directive
 token fileName
 
-ConditionalBranchDirective base=Directive multiKind=true
+ConditionalDirectiveExpression final=false
+empty
+
+NamedConditionalDirectiveExpression base=ConditionalDirectiveExpression
 token name
+
+UnaryConditionalDirectiveExpression base=ConditionalDirectiveExpression
+token op
+ConditionalDirectiveExpression operand
+
+BinaryConditionalDirectiveExpression base=ConditionalDirectiveExpression
+ConditionalDirectiveExpression left
+token op
+ConditionalDirectiveExpression right
+
+ParenthesizedConditionalDirectiveExpression base=ConditionalDirectiveExpression
+token openParen
+ConditionalDirectiveExpression operand
+token closeParen
+
+ConditionalBranchDirective base=Directive multiKind=true
+ConditionalDirectiveExpression expr
 tokenlist disabledTokens
 
 kindmap<ConditionalBranchDirective>

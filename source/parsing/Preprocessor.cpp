@@ -12,6 +12,7 @@
 #include "slang/syntax/AllSyntax.h"
 #include "slang/text/SourceManager.h"
 #include "slang/util/BumpAllocator.h"
+#include "slang/util/ScopeGuard.h"
 #include "slang/util/String.h"
 #include "slang/util/VersionInfo.h"
 
@@ -229,13 +230,26 @@ Token Preprocessor::nextProcessed() {
         // If we found a directive token, process it and pull another. We don't want
         // to return directives to the caller; we handle them ourselves and turn them
         // into trivia.
-        case TokenKind::Directive:
         case TokenKind::MacroQuote:
         case TokenKind::MacroTripleQuote:
         case TokenKind::MacroEscapedQuote:
         case TokenKind::MacroPaste:
         case TokenKind::LineContinuation:
         case TokenKind::Unknown:
+            return handleDirectives(token);
+        case TokenKind::Directive:
+            if (inIfDefCondition) {
+                switch (token.directiveKind()) {
+                    case SyntaxKind::IfDefDirective:
+                    case SyntaxKind::IfNDefDirective:
+                    case SyntaxKind::ElsIfDirective:
+                    case SyntaxKind::ElseDirective:
+                    case SyntaxKind::EndIfDirective:
+                        return token;
+                    default:
+                        break;
+                }
+            }
             return handleDirectives(token);
         default:
             return token;
@@ -645,35 +659,33 @@ std::pair<Trivia, Trivia> Preprocessor::handleMacroUsage(Token directive) {
 }
 
 Trivia Preprocessor::handleIfDefDirective(Token directive, bool inverted) {
-    // next token should be the macro name
-    auto name = expect(TokenKind::Identifier);
+    auto& expr = parseConditionalExprTop();
     bool take = false;
     if (branchStack.empty() || branchStack.back().currentActive) {
         // decide whether the branch is taken or skipped
-        take = macros.find(name.valueText()) != macros.end();
+        take = evalConditionalExpr(expr);
         if (inverted)
             take = !take;
     }
 
     branchStack.emplace_back(BranchEntry(directive, take));
 
-    return parseBranchDirective(directive, name, take);
+    return parseBranchDirective(directive, &expr, take);
 }
 
 Trivia Preprocessor::handleElsIfDirective(Token directive) {
-    // next token should be the macro name
-    auto name = expect(TokenKind::Identifier);
-    bool take = shouldTakeElseBranch(directive.location(), true, name.valueText());
-    return parseBranchDirective(directive, name, take);
+    auto& expr = parseConditionalExprTop();
+    bool take = shouldTakeElseBranch(directive.location(), &expr);
+    return parseBranchDirective(directive, &expr, take);
 }
 
 Trivia Preprocessor::handleElseDirective(Token directive) {
-    bool take = shouldTakeElseBranch(directive.location(), false, "");
-    return parseBranchDirective(directive, Token(), take);
+    bool take = shouldTakeElseBranch(directive.location(), nullptr);
+    return parseBranchDirective(directive, nullptr, take);
 }
 
-bool Preprocessor::shouldTakeElseBranch(SourceLocation location, bool isElseIf,
-                                        std::string_view macroName) {
+bool Preprocessor::shouldTakeElseBranch(SourceLocation location,
+                                        const syntax::ConditionalDirectiveExpressionSyntax* expr) {
     // empty stack is an error
     if (branchStack.empty()) {
         addDiag(diag::UnexpectedConditionalDirective, location);
@@ -691,19 +703,19 @@ bool Preprocessor::shouldTakeElseBranch(SourceLocation location, bool isElseIf,
     bool taken = false;
     if (!branch.anyTaken) {
         // only take this branch if we're the only one in the stack, or our parent is active
-        if (branchStack.size() == 1 || branchStack[branchStack.size() - 2].currentActive) {
-            // if this is an elseif, the macro name needs to be defined
-            taken = !isElseIf || macros.find(macroName) != macros.end();
-        }
+        if (branchStack.size() == 1 || branchStack[branchStack.size() - 2].currentActive)
+            taken = !expr || evalConditionalExpr(*expr);
     }
 
     branch.currentActive = taken;
     branch.anyTaken |= taken;
-    branch.hasElse = !isElseIf;
+    branch.hasElse = !expr;
     return taken;
 }
 
-Trivia Preprocessor::parseBranchDirective(Token directive, Token condition, bool taken) {
+Trivia Preprocessor::parseBranchDirective(Token directive,
+                                          syntax::ConditionalDirectiveExpressionSyntax* expr,
+                                          bool taken) {
     scratchTokenBuffer.clear();
     if (!taken) {
         // skip over everything until we find another conditional compilation directive
@@ -739,9 +751,9 @@ Trivia Preprocessor::parseBranchDirective(Token directive, Token condition, bool
     }
 
     SyntaxNode* syntax;
-    if (condition) {
+    if (expr) {
         syntax = alloc.emplace<ConditionalBranchDirectiveSyntax>(directive.directiveKind(),
-                                                                 directive, condition,
+                                                                 directive, *expr,
                                                                  scratchTokenBuffer.copy(alloc));
     }
     else {
@@ -762,7 +774,7 @@ Trivia Preprocessor::handleEndIfDirective(Token directive) {
         if (!branchStack.empty() && !branchStack.back().currentActive)
             taken = false;
     }
-    return parseBranchDirective(directive, Token(), taken);
+    return parseBranchDirective(directive, nullptr, taken);
 }
 
 bool Preprocessor::expectTimeScaleSpecifier(Token& token, TimeScaleValue& value) {
@@ -1023,6 +1035,112 @@ Trivia Preprocessor::handleNoUnconnectedDriveDirective(Token directive) {
     checkOutsideDesignElement(directive);
     unconnectedDrive = TokenKind::Unknown;
     return createSimpleDirective(directive);
+}
+
+ConditionalDirectiveExpressionSyntax* Preprocessor::parseConditionalExpr() {
+    auto isBinaryOp = [](TokenKind kind) {
+        switch (kind) {
+            case TokenKind::DoubleAnd:
+            case TokenKind::DoubleOr:
+            case TokenKind::MinusArrow:
+            case TokenKind::LessThanMinusArrow:
+                return true;
+            default:
+                return false;
+        }
+    };
+
+    auto parsePrimary = [&]() -> ConditionalDirectiveExpressionSyntax* {
+        Token token = peek();
+        if (token.kind == TokenKind::OpenParenthesis) {
+            auto openParen = consume();
+            auto operand = parseConditionalExpr();
+            auto closeParen = expect(TokenKind::CloseParenthesis);
+            return alloc.emplace<ParenthesizedConditionalDirectiveExpressionSyntax>(openParen,
+                                                                                    *operand,
+                                                                                    closeParen);
+        }
+        else {
+            auto id = expect(TokenKind::Identifier);
+            return alloc.emplace<NamedConditionalDirectiveExpressionSyntax>(id);
+        }
+    };
+
+    ConditionalDirectiveExpressionSyntax* left;
+    if (peek(TokenKind::Exclamation)) {
+        auto op = consume();
+        auto operand = parsePrimary();
+        left = alloc.emplace<UnaryConditionalDirectiveExpressionSyntax>(op, *operand);
+    }
+    else {
+        left = parsePrimary();
+    }
+
+    while (true) {
+        if (!isBinaryOp(peek().kind))
+            break;
+
+        auto op = consume();
+        auto right = parseConditionalExpr();
+        left = alloc.emplace<BinaryConditionalDirectiveExpressionSyntax>(*left, op, *right);
+    }
+
+    return left;
+}
+
+ConditionalDirectiveExpressionSyntax& Preprocessor::parseConditionalExprTop() {
+    SLANG_ASSERT(!inIfDefCondition);
+    auto guard = ScopeGuard([this] { inIfDefCondition = false; });
+    inIfDefCondition = true;
+
+    if (peek(TokenKind::OpenParenthesis)) {
+        auto result = parseConditionalExpr();
+        if (options.languageVersion < LanguageVersion::v1800_2023) {
+            addDiag(diag::WrongLanguageVersion, result->sourceRange())
+                << toString(options.languageVersion);
+        }
+        return *result;
+    }
+
+    auto id = expect(TokenKind::Identifier);
+    return *alloc.emplace<NamedConditionalDirectiveExpressionSyntax>(id);
+}
+
+bool Preprocessor::evalConditionalExpr(
+    const syntax::ConditionalDirectiveExpressionSyntax& expr) const {
+
+    switch (expr.kind) {
+        case SyntaxKind::ParenthesizedConditionalDirectiveExpression:
+            return evalConditionalExpr(
+                *expr.as<ParenthesizedConditionalDirectiveExpressionSyntax>().operand);
+        case SyntaxKind::UnaryConditionalDirectiveExpression:
+            // Only one kind of unary operator.
+            return !evalConditionalExpr(
+                *expr.as<UnaryConditionalDirectiveExpressionSyntax>().operand);
+        case SyntaxKind::BinaryConditionalDirectiveExpression: {
+            auto& bcde = expr.as<BinaryConditionalDirectiveExpressionSyntax>();
+            const bool l = evalConditionalExpr(*bcde.left);
+            const bool r = evalConditionalExpr(*bcde.right);
+            switch (bcde.op.kind) {
+                case TokenKind::DoubleAnd:
+                    return l && r;
+                case TokenKind::DoubleOr:
+                    return l || r;
+                case TokenKind::MinusArrow:
+                    return !l || r;
+                case TokenKind::LessThanMinusArrow:
+                    return l == r;
+                default:
+                    SLANG_UNREACHABLE;
+            }
+        }
+        case SyntaxKind::NamedConditionalDirectiveExpression:
+            return macros.find(
+                       expr.as<NamedConditionalDirectiveExpressionSyntax>().name.valueText()) !=
+                   macros.end();
+        default:
+            SLANG_UNREACHABLE;
+    }
 }
 
 Trivia Preprocessor::createSimpleDirective(Token directive) {

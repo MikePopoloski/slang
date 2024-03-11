@@ -19,6 +19,7 @@
 
 namespace slang::syntax {
 
+struct ConditionalDirectiveExpressionSyntax;
 struct DefineDirectiveSyntax;
 struct MacroActualArgumentListSyntax;
 struct MacroFormalArgumentListSyntax;
@@ -177,11 +178,14 @@ private:
     Trivia createSimpleDirective(Token directive);
     std::pair<Trivia, Trivia> handlePragmaDirective(Token directive);
 
-    // Determines whether the else branch of a conditional directive should be taken
-    bool shouldTakeElseBranch(SourceLocation location, bool isElseIf, std::string_view macroName);
-
     // Handle parsing a branch of a conditional directive
-    Trivia parseBranchDirective(Token directive, Token condition, bool taken);
+    syntax::ConditionalDirectiveExpressionSyntax* parseConditionalExpr();
+    syntax::ConditionalDirectiveExpressionSyntax& parseConditionalExprTop();
+    bool evalConditionalExpr(const syntax::ConditionalDirectiveExpressionSyntax& expr) const;
+    bool shouldTakeElseBranch(SourceLocation location,
+                              const syntax::ConditionalDirectiveExpressionSyntax* expr);
+    Trivia parseBranchDirective(Token directive, syntax::ConditionalDirectiveExpressionSyntax* expr,
+                                bool taken);
 
     // TimeScale specifier parser
     bool expectTimeScaleSpecifier(Token& token, TimeScaleValue& value);
@@ -394,6 +398,9 @@ private:
     // Directives don't get handled when lexing within a macro body
     // (either define or usage).
     bool inMacroBody = false;
+
+    // Special handling for pulling directives when in an ifdef condition expr.
+    bool inIfDefCondition = false;
 
     // A buffer used to hold tokens while we're busy consuming them for directives.
     SmallVector<Token> scratchTokenBuffer;

@@ -2412,3 +2412,70 @@ TEST_CASE("Escaped identifier that turns into triple quoted macro stringificatio
     CHECK(result == expected);
     CHECK_DIAGNOSTICS_EMPTY;
 }
+
+TEST_CASE("Conditional ifdef expression") {
+    auto& text = R"(
+`define A 0
+`define B
+
+`ifdef (!A)
+TEST1
+`endif
+`ifdef (A && B)
+TEST2
+`endif
+`ifdef (A && C)
+TEST3
+`elsif (!A || (!B))
+TEST4
+`else
+TEST5
+`endif
+`ifdef (C -> A)
+TEST6
+`endif
+`ifdef (C <-> A)
+TEST7
+`elsif (C <-> D)
+TEST8
+`endif
+TEST9
+)";
+
+    auto& expected = R"(
+TEST2
+TEST5
+TEST6
+TEST8
+TEST9
+)";
+
+    std::string result = preprocess(text, optionsFor(LanguageVersion::v1800_2023));
+    CHECK(result == expected);
+    CHECK_DIAGNOSTICS_EMPTY;
+}
+
+TEST_CASE("Conditional ifdef expression errors") {
+    auto& text = R"(
+`define A 0
+`define B
+
+`ifdef (!A || )
+`elsif (
+`endif
+FOO
+)";
+
+    auto& expected = R"(
+FOO
+)";
+
+    std::string result = preprocess(text);
+    CHECK(result == expected);
+
+    REQUIRE(diagnostics.size() == 4);
+    CHECK(diagnostics[0].code == diag::ExpectedIdentifier);
+    CHECK(diagnostics[1].code == diag::WrongLanguageVersion);
+    CHECK(diagnostics[2].code == diag::ExpectedIdentifier);
+    CHECK(diagnostics[3].code == diag::WrongLanguageVersion);
+}
