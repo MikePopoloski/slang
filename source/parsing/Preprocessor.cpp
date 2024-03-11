@@ -810,6 +810,9 @@ bool Preprocessor::expectTimeScaleSpecifier(Token& token, TimeScaleValue& value)
 }
 
 Trivia Preprocessor::handleTimeScaleDirective(Token directive) {
+    if (options.languageVersion >= LanguageVersion::v1800_2023)
+        checkOutsideDesignElement(directive);
+
     Token unitToken, precisionToken;
     TimeScaleValue unit, precision;
     bool success = expectTimeScaleSpecifier(unitToken, unit);

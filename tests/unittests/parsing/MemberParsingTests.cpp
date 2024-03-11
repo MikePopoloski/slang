@@ -299,6 +299,19 @@ endmodule
     CHECK(diagnostics[1].code == diag::DirectiveInsideDesignElement);
 }
 
+TEST_CASE("v1800-2023: `timescale not allowed in design element") {
+    auto& text = R"(
+module m1;
+    `timescale 1ns/1ns
+endmodule
+)";
+
+    parseCompilationUnit(text, LanguageVersion::v1800_2023);
+
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics[0].code == diag::DirectiveInsideDesignElement);
+}
+
 TEST_CASE("Module instance -- missing closing paren") {
     auto& text = R"(
 module m #(parameter int i) ();
