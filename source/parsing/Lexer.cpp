@@ -37,9 +37,9 @@ Lexer::Lexer(SourceBuffer buffer, BumpAllocator& alloc, Diagnostics& diagnostics
 
 Lexer::Lexer(BufferID bufferId, std::string_view source, const char* startPtr, BumpAllocator& alloc,
              Diagnostics& diagnostics, LexerOptions options) :
-    alloc(alloc),
-    diagnostics(diagnostics), options(options), bufferId(bufferId), originalBegin(source.data()),
-    sourceBuffer(startPtr), sourceEnd(source.data() + source.length()), marker(nullptr) {
+    alloc(alloc), diagnostics(diagnostics), options(options), bufferId(bufferId),
+    originalBegin(source.data()), sourceBuffer(startPtr),
+    sourceEnd(source.data() + source.length()), marker(nullptr) {
     ptrdiff_t count = sourceEnd - sourceBuffer;
     SLANG_ASSERT(count);
     SLANG_ASSERT(sourceEnd[-1] == '\0');

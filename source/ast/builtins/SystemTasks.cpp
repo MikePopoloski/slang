@@ -580,8 +580,7 @@ class StochasticTask : public SystemSubroutine {
 public:
     StochasticTask(const std::string& name, SubroutineKind subroutineKind, size_t inputArgs,
                    size_t outputArgs) :
-        SystemSubroutine(name, subroutineKind),
-        inputArgs(inputArgs), outputArgs(outputArgs) {
+        SystemSubroutine(name, subroutineKind), inputArgs(inputArgs), outputArgs(outputArgs) {
         hasOutputArgs = outputArgs > 0;
     }
 

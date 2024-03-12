@@ -42,9 +42,8 @@ public:
     CallExpression(const Subroutine& subroutine, const Type& returnType,
                    const Expression* thisClass, std::span<const Expression*> arguments,
                    LookupLocation lookupLocation, SourceRange sourceRange) :
-        Expression(ExpressionKind::Call, returnType, sourceRange),
-        subroutine(subroutine), thisClass_(thisClass), arguments_(arguments),
-        lookupLocation(lookupLocation) {}
+        Expression(ExpressionKind::Call, returnType, sourceRange), subroutine(subroutine),
+        thisClass_(thisClass), arguments_(arguments), lookupLocation(lookupLocation) {}
 
     /// If this call is for a class method, returns the expression representing the
     /// class handle on which the method is being invoked. Otherwise returns nullptr.

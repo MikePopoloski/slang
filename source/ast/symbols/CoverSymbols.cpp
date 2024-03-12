@@ -195,8 +195,7 @@ void CovergroupBodySymbol::serializeTo(ASTSerializer& serializer) const {
 
 CovergroupType::CovergroupType(Compilation& compilation, std::string_view name, SourceLocation loc,
                                const CovergroupBodySymbol& body) :
-    Type(SymbolKind::CovergroupType, name, loc),
-    Scope(compilation, this), body(body) {
+    Type(SymbolKind::CovergroupType, name, loc), Scope(compilation, this), body(body) {
 }
 
 const CovergroupType& CovergroupType::fromSyntax(const Scope& scope,
@@ -785,8 +784,7 @@ void CoverpointSymbol::serializeTo(ASTSerializer& serializer) const {
 
 CoverCrossSymbol::CoverCrossSymbol(Compilation& comp, std::string_view name, SourceLocation loc,
                                    std::span<const CoverpointSymbol* const> targets) :
-    Symbol(SymbolKind::CoverCross, name, loc),
-    Scope(comp, this), targets(targets) {
+    Symbol(SymbolKind::CoverCross, name, loc), Scope(comp, this), targets(targets) {
 
     auto& int_t = comp.getIntType();
     auto& string_t = comp.getStringType();

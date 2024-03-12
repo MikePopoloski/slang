@@ -62,8 +62,8 @@ public:
 
     ExplicitImportSymbol(std::string_view packageName, std::string_view importName,
                          SourceLocation location) :
-        Symbol(SymbolKind::ExplicitImport, importName, location),
-        packageName(packageName), importName(importName) {}
+        Symbol(SymbolKind::ExplicitImport, importName, location), packageName(packageName),
+        importName(importName) {}
 
     const PackageSymbol* package() const;
     const Symbol* importedSymbol() const;
@@ -276,8 +276,8 @@ public:
 
     PrimitiveSymbol(Compilation& compilation, std::string_view name, SourceLocation loc,
                     PrimitiveKind primitiveKind) :
-        Symbol(SymbolKind::Primitive, name, loc),
-        Scope(compilation, this), primitiveKind(primitiveKind) {}
+        Symbol(SymbolKind::Primitive, name, loc), Scope(compilation, this),
+        primitiveKind(primitiveKind) {}
 
     static PrimitiveSymbol& fromSyntax(const Scope& scope,
                                        const syntax::UdpDeclarationSyntax& syntax);
@@ -498,8 +498,7 @@ public:
 
         CaseProd(const Expression& expr, std::span<const CaseItem> items,
                  std::optional<ProdItem> defaultItem) :
-            ProdBase(ProdKind::Case),
-            expr(&expr), items(items), defaultItem(defaultItem) {}
+            ProdBase(ProdKind::Case), expr(&expr), items(items), defaultItem(defaultItem) {}
 
         static bool isKind(ProdKind kind) { return kind == ProdKind::Case; }
     };
@@ -515,9 +514,8 @@ public:
         Rule(const StatementBlockSymbol& ruleBlock, std::span<const ProdBase* const> prods,
              const Expression* weightExpr, const Expression* randJoinExpr,
              std::optional<CodeBlockProd> codeBlock, bool isRandJoin) :
-            ruleBlock(&ruleBlock),
-            prods(prods), weightExpr(weightExpr), randJoinExpr(randJoinExpr), codeBlock(codeBlock),
-            isRandJoin(isRandJoin) {}
+            ruleBlock(&ruleBlock), prods(prods), weightExpr(weightExpr), randJoinExpr(randJoinExpr),
+            codeBlock(codeBlock), isRandJoin(isRandJoin) {}
     };
 
     DeclaredType declaredReturnType;

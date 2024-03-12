@@ -186,8 +186,8 @@ private:
 
         FileEntry(std::filesystem::path&& path, bool isLibraryFile, const SourceLibrary* library,
                   const UnitEntry* unit, GlobRank libraryRank) :
-            path(std::move(path)),
-            library(library), unit(unit), libraryRank(libraryRank), isLibraryFile(isLibraryFile) {}
+            path(std::move(path)), library(library), unit(unit), libraryRank(libraryRank),
+            isLibraryFile(isLibraryFile) {}
     };
 
     // The result of a loadAndParse call.

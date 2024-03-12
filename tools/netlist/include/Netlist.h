@@ -109,8 +109,8 @@ struct VariableRangeSelect : public VariableSelectorBase {
 
     VariableRangeSelect(ast::RangeSelectExpression const& expr, ConstantValue leftIndex,
                         ConstantValue rightIndex) :
-        VariableSelectorBase(VariableSelectorKind::RangeSelect),
-        expr(expr), leftIndex(std::move(leftIndex)), rightIndex(std::move(rightIndex)) {}
+        VariableSelectorBase(VariableSelectorKind::RangeSelect), expr(expr),
+        leftIndex(std::move(leftIndex)), rightIndex(std::move(rightIndex)) {}
 
     static bool isKind(VariableSelectorKind otherKind) {
         return otherKind == VariableSelectorKind::RangeSelect;
@@ -271,8 +271,8 @@ public:
 
     NetlistVariableReference(const ast::Symbol& symbol, const ast::Expression& expr,
                              bool leftOperand) :
-        NetlistNode(NodeKind::VariableReference, symbol),
-        expression(expr), leftOperand(leftOperand) {}
+        NetlistNode(NodeKind::VariableReference, symbol), expression(expr),
+        leftOperand(leftOperand) {}
 
     void addElementSelect(ast::ElementSelectExpression const& expr, const ConstantValue& index) {
         selectors.emplace_back(std::make_unique<VariableElementSelect>(expr.selector(), index));

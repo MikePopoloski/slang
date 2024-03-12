@@ -134,9 +134,8 @@ bool SpecifyBlockSymbol::checkPathTerminal(const ValueSymbol& terminal, const Ty
 TimingPathSymbol::TimingPathSymbol(SourceLocation loc, ConnectionKind connectionKind,
                                    Polarity polarity, Polarity edgePolarity,
                                    EdgeKind edgeIdentifier) :
-    Symbol(SymbolKind::TimingPath, ""sv, loc),
-    connectionKind(connectionKind), polarity(polarity), edgePolarity(edgePolarity),
-    edgeIdentifier(edgeIdentifier) {
+    Symbol(SymbolKind::TimingPath, ""sv, loc), connectionKind(connectionKind), polarity(polarity),
+    edgePolarity(edgePolarity), edgeIdentifier(edgeIdentifier) {
 }
 
 TimingPathSymbol& TimingPathSymbol::fromSyntax(const Scope& parent,
@@ -808,8 +807,7 @@ static void createImplicitNets(const SystemTimingCheckSymbol& timingCheck,
 
 SystemTimingCheckSymbol::SystemTimingCheckSymbol(SourceLocation loc,
                                                  const SystemTimingCheckDef* def) :
-    Symbol(SymbolKind::SystemTimingCheck, ""sv, loc),
-    def(def) {
+    Symbol(SymbolKind::SystemTimingCheck, ""sv, loc), def(def) {
     timingCheckKind = def ? def->kind : SystemTimingCheckKind::Unknown;
 }
 

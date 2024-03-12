@@ -25,8 +25,8 @@ using LF = LexerFacts;
 Preprocessor::Preprocessor(SourceManager& sourceManager, BumpAllocator& alloc,
                            Diagnostics& diagnostics, const Bag& options_,
                            std::span<const DefineDirectiveSyntax* const> inheritedMacros) :
-    sourceManager(sourceManager),
-    alloc(alloc), diagnostics(diagnostics), options(options_.getOrDefault<PreprocessorOptions>()),
+    sourceManager(sourceManager), alloc(alloc), diagnostics(diagnostics),
+    options(options_.getOrDefault<PreprocessorOptions>()),
     lexerOptions(options_.getOrDefault<LexerOptions>()),
     numberParser(diagnostics, alloc, options.languageVersion) {
 

@@ -762,9 +762,9 @@ void SubroutineSymbol::addThisVar(const Type& type) {
 MethodPrototypeSymbol::MethodPrototypeSymbol(Compilation& compilation, std::string_view name,
                                              SourceLocation loc, SubroutineKind subroutineKind,
                                              Visibility visibility, bitmask<MethodFlags> flags) :
-    Symbol(SymbolKind::MethodPrototype, name, loc),
-    Scope(compilation, this), declaredReturnType(*this), subroutineKind(subroutineKind),
-    visibility(visibility), flags(flags) {
+    Symbol(SymbolKind::MethodPrototype, name, loc), Scope(compilation, this),
+    declaredReturnType(*this), subroutineKind(subroutineKind), visibility(visibility),
+    flags(flags) {
 }
 
 MethodPrototypeSymbol& MethodPrototypeSymbol::fromSyntax(const Scope& scope,

@@ -169,9 +169,8 @@ static DeclaredTypeFlags getTypeParamFlags(const Scope& scope) {
 TypeParameterSymbol::TypeParameterSymbol(const Scope& scope, std::string_view name,
                                          SourceLocation loc, bool isLocal, bool isPort,
                                          ForwardTypeRestriction typeRestriction) :
-    Symbol(SymbolKind::TypeParameter, name, loc),
-    ParameterSymbolBase(*this, isLocal, isPort), targetType(*this, getTypeParamFlags(scope)),
-    typeRestriction(typeRestriction) {
+    Symbol(SymbolKind::TypeParameter, name, loc), ParameterSymbolBase(*this, isLocal, isPort),
+    targetType(*this, getTypeParamFlags(scope)), typeRestriction(typeRestriction) {
 
     auto alias = scope.getCompilation().emplace<TypeAliasType>(name, loc);
     alias->setParent(scope);

@@ -22,9 +22,8 @@ public:
     CoverageNameOrHierFunc(const std::string& name, const Type& returnType,
                            unsigned int nameOrHierIndex, size_t requiredArgs = 0,
                            const std::vector<const Type*>& argTypes = {}) :
-        SystemSubroutine(name, SubroutineKind::Function),
-        argTypes(argTypes), returnType(&returnType), nameOrHierIndex(nameOrHierIndex),
-        requiredArgs(requiredArgs) {
+        SystemSubroutine(name, SubroutineKind::Function), argTypes(argTypes),
+        returnType(&returnType), nameOrHierIndex(nameOrHierIndex), requiredArgs(requiredArgs) {
         SLANG_ASSERT(requiredArgs <= argTypes.size());
         SLANG_ASSERT(nameOrHierIndex <= argTypes.size());
         SLANG_ASSERT(requiredArgs > nameOrHierIndex);

@@ -218,8 +218,7 @@ public:
 
 protected:
     TempVarSymbol(SymbolKind childKind, std::string_view name, SourceLocation loc,
-                  VariableLifetime lifetime) :
-        VariableSymbol(childKind, name, loc, lifetime) {}
+                  VariableLifetime lifetime) : VariableSymbol(childKind, name, loc, lifetime) {}
 };
 
 /// Represents an iterator variable created for array manipulation methods.

@@ -19,8 +19,7 @@ using namespace parsing;
 
 SyntaxTree::SyntaxTree(SyntaxNode* root, SourceManager& sourceManager, BumpAllocator&& alloc,
                        const SourceLibrary* library, std::shared_ptr<SyntaxTree> parent) :
-    rootNode(root),
-    library(library), sourceMan(sourceManager), alloc(std::move(alloc)),
+    rootNode(root), library(library), sourceMan(sourceManager), alloc(std::move(alloc)),
     parentTree(std::move(parent)) {
     metadata = std::make_unique<ParserMetadata>(ParserMetadata::fromSyntax(*root));
     if (!metadata->eofToken && parentTree)
@@ -118,8 +117,7 @@ SourceManager& SyntaxTree::getDefaultSourceManager() {
 SyntaxTree::SyntaxTree(SyntaxNode* root, const SourceLibrary* library, SourceManager& sourceManager,
                        BumpAllocator&& alloc, Diagnostics&& diagnostics, ParserMetadata&& metadata,
                        std::vector<const DefineDirectiveSyntax*>&& macros, Bag options) :
-    rootNode(root),
-    library(library), sourceMan(sourceManager), alloc(std::move(alloc)),
+    rootNode(root), library(library), sourceMan(sourceManager), alloc(std::move(alloc)),
     diagnosticsBuffer(std::move(diagnostics)), options_(std::move(options)),
     metadata(std::make_unique<ParserMetadata>(std::move(metadata))), macros(std::move(macros)) {
 }

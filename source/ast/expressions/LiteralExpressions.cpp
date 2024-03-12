@@ -255,8 +255,8 @@ ConstantValue UnboundedLiteral::evalImpl(EvalContext& context) const {
 
 StringLiteral::StringLiteral(const Type& type, std::string_view value, std::string_view rawValue,
                              ConstantValue& intVal, SourceRange sourceRange) :
-    Expression(ExpressionKind::StringLiteral, type, sourceRange),
-    value(value), rawValue(rawValue), intStorage(&intVal) {
+    Expression(ExpressionKind::StringLiteral, type, sourceRange), value(value), rawValue(rawValue),
+    intStorage(&intVal) {
 }
 
 Expression& StringLiteral::fromSyntax(const ASTContext& context,

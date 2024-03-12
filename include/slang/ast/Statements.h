@@ -434,8 +434,8 @@ public:
     ConditionalStatement(std::span<const Condition> conditions, UniquePriorityCheck check,
                          const Statement& ifTrue, const Statement* ifFalse,
                          SourceRange sourceRange) :
-        Statement(StatementKind::Conditional, sourceRange),
-        conditions(conditions), ifTrue(ifTrue), ifFalse(ifFalse), check(check) {}
+        Statement(StatementKind::Conditional, sourceRange), conditions(conditions), ifTrue(ifTrue),
+        ifFalse(ifFalse), check(check) {}
 
     EvalResult evalImpl(EvalContext& context) const;
 
@@ -480,8 +480,8 @@ public:
     CaseStatement(CaseStatementCondition condition, UniquePriorityCheck check,
                   const Expression& expr, std::span<ItemGroup const> items,
                   const Statement* defaultCase, SourceRange sourceRange) :
-        Statement(StatementKind::Case, sourceRange),
-        expr(expr), items(items), defaultCase(defaultCase), condition(condition), check(check) {}
+        Statement(StatementKind::Case, sourceRange), expr(expr), items(items),
+        defaultCase(defaultCase), condition(condition), check(check) {}
 
     EvalResult evalImpl(EvalContext& context) const;
 
@@ -528,8 +528,8 @@ public:
     PatternCaseStatement(CaseStatementCondition condition, UniquePriorityCheck check,
                          const Expression& expr, std::span<ItemGroup const> items,
                          const Statement* defaultCase, SourceRange sourceRange) :
-        Statement(StatementKind::PatternCase, sourceRange),
-        expr(expr), items(items), defaultCase(defaultCase), condition(condition), check(check) {}
+        Statement(StatementKind::PatternCase, sourceRange), expr(expr), items(items),
+        defaultCase(defaultCase), condition(condition), check(check) {}
 
     EvalResult evalImpl(EvalContext& context) const;
 
@@ -571,8 +571,8 @@ public:
     ForLoopStatement(std::span<const Expression* const> initializers, const Expression* stopExpr,
                      std::span<const Expression* const> steps, const Statement& body,
                      SourceRange sourceRange) :
-        Statement(StatementKind::ForLoop, sourceRange),
-        initializers(initializers), stopExpr(stopExpr), steps(steps), body(body) {}
+        Statement(StatementKind::ForLoop, sourceRange), initializers(initializers),
+        stopExpr(stopExpr), steps(steps), body(body) {}
 
     EvalResult evalImpl(EvalContext& context) const;
 
@@ -648,8 +648,8 @@ public:
 
     ForeachLoopStatement(const Expression& arrayRef, std::span<const LoopDim> loopDims,
                          const Statement& body, SourceRange sourceRange) :
-        Statement(StatementKind::ForeachLoop, sourceRange),
-        arrayRef(arrayRef), loopDims(loopDims), body(body) {}
+        Statement(StatementKind::ForeachLoop, sourceRange), arrayRef(arrayRef), loopDims(loopDims),
+        body(body) {}
 
     EvalResult evalImpl(EvalContext& context) const;
 
@@ -828,9 +828,8 @@ public:
     ImmediateAssertionStatement(AssertionKind assertionKind, const Expression& cond,
                                 const Statement* ifTrue, const Statement* ifFalse, bool isDeferred,
                                 bool isFinal, SourceRange sourceRange) :
-        Statement(StatementKind::ImmediateAssertion, sourceRange),
-        cond(cond), ifTrue(ifTrue), ifFalse(ifFalse), assertionKind(assertionKind),
-        isDeferred(isDeferred), isFinal(isFinal) {}
+        Statement(StatementKind::ImmediateAssertion, sourceRange), cond(cond), ifTrue(ifTrue),
+        ifFalse(ifFalse), assertionKind(assertionKind), isDeferred(isDeferred), isFinal(isFinal) {}
 
     EvalResult evalImpl(EvalContext& context) const;
 
@@ -866,9 +865,8 @@ public:
     ConcurrentAssertionStatement(AssertionKind assertionKind, const AssertionExpr& propertySpec,
                                  const Statement* ifTrue, const Statement* ifFalse,
                                  SourceRange sourceRange) :
-        Statement(StatementKind::ConcurrentAssertion, sourceRange),
-        propertySpec(propertySpec), ifTrue(ifTrue), ifFalse(ifFalse), assertionKind(assertionKind) {
-    }
+        Statement(StatementKind::ConcurrentAssertion, sourceRange), propertySpec(propertySpec),
+        ifTrue(ifTrue), ifFalse(ifFalse), assertionKind(assertionKind) {}
 
     EvalResult evalImpl(EvalContext& context) const;
 
@@ -961,8 +959,8 @@ public:
 
     WaitOrderStatement(std::span<const Expression* const> events, const Statement* ifTrue,
                        const Statement* ifFalse, SourceRange sourceRange) :
-        Statement(StatementKind::WaitOrder, sourceRange),
-        events(events), ifTrue(ifTrue), ifFalse(ifFalse) {}
+        Statement(StatementKind::WaitOrder, sourceRange), events(events), ifTrue(ifTrue),
+        ifFalse(ifFalse) {}
 
     EvalResult evalImpl(EvalContext& context) const;
 
@@ -997,8 +995,8 @@ public:
 
     EventTriggerStatement(const Expression& target, const TimingControl* timing, bool isNonBlocking,
                           SourceRange sourceRange) :
-        Statement(StatementKind::EventTrigger, sourceRange),
-        target(target), timing(timing), isNonBlocking(isNonBlocking) {}
+        Statement(StatementKind::EventTrigger, sourceRange), target(target), timing(timing),
+        isNonBlocking(isNonBlocking) {}
 
     EvalResult evalImpl(EvalContext& context) const;
 
