@@ -1260,3 +1260,12 @@ primitive ,*l,
     // Just testing that there's no crash.
     parseCompilationUnit(text);
 }
+
+TEST_CASE("Case parsing crash regress") {
+    auto& text = R"(
+always case(matches matches
+)";
+
+    // Just testing that there's no crash.
+    parseCompilationUnit(text);
+}

@@ -207,7 +207,8 @@ bool Parser::parseCaseItems(TokenKind caseKind, SmallVectorBase<CaseItemSyntax*>
     bool errored = false;
 
     while (true) {
-        auto kind = peek().kind;
+        auto current = peek();
+        auto kind = current.kind;
         if (kind == TokenKind::DefaultKeyword) {
             if (lastDefault && !errored) {
                 auto& diag = addDiag(diag::MultipleDefaultCases, peek().location());
@@ -221,6 +222,11 @@ bool Parser::parseCaseItems(TokenKind caseKind, SmallVectorBase<CaseItemSyntax*>
         }
         else if (isItem(kind)) {
             itemBuffer.push_back(parseItem());
+            if (current == peek()) {
+                // parseItem() didn't consume any tokens, so we'll be stuck
+                // in an infinite loop if we don't skip a token here.
+                skipToken(std::nullopt);
+            }
         }
         else if (kind == TokenKind::EndOfFile || isEndKeyword(kind)) {
             break;
