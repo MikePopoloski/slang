@@ -162,7 +162,7 @@ constexpr int utf8Len(unsigned char first) {
 /// occurs, this pointer will be a guess that depends on the particular
 /// error, but it will always advance at least one byte.
 ///
-constexpr const char* utf8Decode(const char* b, uint32_t* c, int* e) {
+constexpr const char* utf8Decode(const char* b, uint32_t* c, int* e, int& computedLen) {
     constexpr const int masks[] = {0x00, 0x7f, 0x1f, 0x0f, 0x07};
     constexpr const uint32_t mins[] = {4194304, 0, 128, 2048, 65536};
     constexpr const int shiftc[] = {0, 18, 12, 6, 0};
@@ -170,6 +170,7 @@ constexpr const char* utf8Decode(const char* b, uint32_t* c, int* e) {
 
     using uc = unsigned char;
     int len = utf8Len(uc(*b));
+    computedLen = len;
 
     // Compute the pointer to the next character early so that the next
     // iteration can start working on the next character. Neither Clang

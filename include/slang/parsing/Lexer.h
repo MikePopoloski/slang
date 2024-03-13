@@ -104,7 +104,8 @@ private:
     void scanLineComment();
     void scanWhitespace();
     void scanIdentifier();
-    bool scanUTF8Char(bool alreadyErrored, uint32_t* code);
+    bool scanUTF8Char(bool alreadyErrored);
+    bool scanUTF8Char(bool alreadyErrored, uint32_t* code, int& computedLen);
     void scanEncodedText(ProtectEncoding encoding, uint32_t expectedBytes, bool singleLine);
 
     template<typename... Args>

@@ -660,8 +660,7 @@ Token Lexer::lexToken(KeywordVersion keywordVersion) {
 
                 bool sawUTF8Error = false;
                 do {
-                    uint32_t unused;
-                    sawUTF8Error |= !scanUTF8Char(sawUTF8Error, &unused);
+                    sawUTF8Error |= !scanUTF8Char(sawUTF8Error);
                 } while (!isASCII(peek()));
             }
             return create(TokenKind::Unknown);
@@ -742,15 +741,15 @@ Token Lexer::lexStringLiteral() {
                     auto curr = --sourceBuffer;
 
                     uint32_t unicodeChar;
-                    if (scanUTF8Char(sawUTF8Error, &unicodeChar)) {
+                    int unicodeLen;
+                    if (scanUTF8Char(sawUTF8Error, &unicodeChar, unicodeLen)) {
                         if (isPrintableUnicode(unicodeChar)) {
                             // '\%' is not an actual escape code but other tools silently allow it
                             // and major UVM headers use it, so we'll issue a (fairly quiet) warning
                             // about it. Otherwise issue a louder warning (on by default).
                             DiagCode code = c == '%' ? diag::NonstandardEscapeCode
                                                      : diag::UnknownEscapeCode;
-                            addDiag(code, offset)
-                                << std::string_view(curr, (size_t)utf8Len((unsigned char)c));
+                            addDiag(code, offset) << std::string_view(curr, (size_t)unicodeLen);
                         }
                     }
                     else {
@@ -805,17 +804,14 @@ Token Lexer::lexStringLiteral() {
             auto curr = sourceBuffer;
 
             uint32_t unused;
-            sawUTF8Error |= !scanUTF8Char(sawUTF8Error, &unused);
+            int unicodeLen;
+            sawUTF8Error |= !scanUTF8Char(sawUTF8Error, &unused, unicodeLen);
 
             // Regardless of whether the character sequence was valid or not
             // we want to add the bytes to the string, to allow for cases where
             // the source is actually something like latin-1 encoded. Ignoring the
             // warning and carrying on will do the right thing for them.
-            int len = utf8Len((unsigned char)c);
-            if (len == 0)
-                len = 1;
-
-            for (int i = 0; i < len; i++)
+            for (int i = 0; i < unicodeLen; i++)
                 stringBuffer.push_back(curr[i]);
         }
     }
@@ -1214,8 +1210,7 @@ void Lexer::scanLineComment() {
             advance();
         }
         else {
-            uint32_t unused;
-            sawUTF8Error |= !scanUTF8Char(sawUTF8Error, &unused);
+            sawUTF8Error |= !scanUTF8Char(sawUTF8Error);
         }
     }
     addTrivia(TriviaKind::LineComment);
@@ -1252,26 +1247,33 @@ void Lexer::scanBlockComment() {
             }
         }
         else {
-            uint32_t unused;
-            sawUTF8Error |= !scanUTF8Char(sawUTF8Error, &unused);
+            sawUTF8Error |= !scanUTF8Char(sawUTF8Error);
         }
     }
 
     addTrivia(TriviaKind::BlockComment);
 }
 
-bool Lexer::scanUTF8Char(bool alreadyErrored, uint32_t* code) {
+bool Lexer::scanUTF8Char(bool alreadyErrored) {
+    uint32_t unused1;
+    int unused2;
+    return scanUTF8Char(alreadyErrored, &unused1, unused2);
+}
+
+bool Lexer::scanUTF8Char(bool alreadyErrored, uint32_t* code, int& computedLen) {
     int error;
     auto curr = sourceBuffer;
     if (sourceBuffer + 4 < sourceEnd) {
-        sourceBuffer = utf8Decode(sourceBuffer, code, &error);
+        sourceBuffer = utf8Decode(sourceBuffer, code, &error, computedLen);
     }
     else {
         char buf[4] = {};
-        memcpy(buf, sourceBuffer, size_t(sourceEnd - sourceBuffer - 1));
+        auto spaceLeft = sourceEnd - sourceBuffer - 1;
+        memcpy(buf, sourceBuffer, size_t(spaceLeft));
 
-        auto next = utf8Decode(buf, code, &error);
-        sourceBuffer += next - buf;
+        auto next = utf8Decode(buf, code, &error, computedLen);
+        sourceBuffer += std::min(next - buf, spaceLeft);
+        computedLen = std::min(computedLen, (int)spaceLeft);
     }
 
     if (error) {
