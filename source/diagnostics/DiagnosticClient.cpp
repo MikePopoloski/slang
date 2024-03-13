@@ -40,7 +40,7 @@ std::string_view DiagnosticClient::getSourceLine(SourceLocation location, size_t
     const char* start = text.data() + location.offset() - (col - 1);
     const char* curr = start;
     const char* end = text.data() + text.size() - 1;
-    while (curr != end && *curr != '\n' && *curr != '\r' && *curr != '\0')
+    while (curr != end && *curr != '\n' && *curr != '\r')
         curr++;
 
     return std::string_view(start, (size_t)(curr - start));

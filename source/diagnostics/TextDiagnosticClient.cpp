@@ -170,10 +170,10 @@ static bool printableTextForNextChar(std::string_view sourceLine, size_t& index,
 
     if (!isPrintableUnicode(c)) {
         SmallVector<char, 8> buf;
-        while (c) {
+        do {
             buf.push_back(getHexForDigit(c % 16));
             c /= 16;
-        }
+        } while (c);
 
         out.append_range("<U+"sv);
         out.append_range(std::views::reverse(buf));
