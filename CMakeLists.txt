@@ -142,6 +142,10 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
   add_compile_options(/utf-8 /bigobj /permissive-)
 endif()
 
+if(SLANG_FUZZ_TARGET)
+  add_compile_definitions(SLANG_ASSERT_ENABLED)
+endif()
+
 # mimalloc is incompatible with Python bindings
 if(SLANG_INCLUDE_PYLIB)
   set(SLANG_USE_MIMALLOC OFF)

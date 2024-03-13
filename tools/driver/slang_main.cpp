@@ -200,10 +200,11 @@ int main(int argc, char** argv) {
 
 #else
 
+using namespace slang::syntax;
+
 // When fuzzing with libFuzzer, this is the entry point.
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
-    auto& sourceManager = SyntaxTree::getDefaultSourceManager();
-
+    SourceManager sourceManager;
     std::string_view text(reinterpret_cast<const char*>(data), size);
     auto tree = SyntaxTree::fromFileInMemory(text, sourceManager);
 
