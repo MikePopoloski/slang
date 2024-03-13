@@ -723,12 +723,12 @@ Token Lexer::lexStringLiteral() {
                     break;
                 case 'x':
                     c = peek();
-                    advance();
                     if (!isHexDigit(c)) {
                         addDiag(diag::InvalidHexEscapeCode, offset);
-                        stringBuffer.push_back(c);
+                        stringBuffer.push_back('x');
                     }
                     else {
+                        advance();
                         charCode = getHexDigitValue(c);
                         if (isHexDigit(c = peek())) {
                             advance();

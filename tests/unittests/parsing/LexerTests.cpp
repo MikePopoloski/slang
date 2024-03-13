@@ -415,7 +415,7 @@ TEST_CASE("String literal (bad hex escape)") {
 
     CHECK(token.kind == TokenKind::StringLiteral);
     CHECK(token.toString() == text);
-    CHECK(token.valueText() == "literalz");
+    CHECK(token.valueText() == "literalxz");
     REQUIRE(!diagnostics.empty());
     CHECK(diagnostics.back().code == diag::InvalidHexEscapeCode);
 }
@@ -1209,4 +1209,15 @@ TEST_CASE("Missing / expected tokens") {
     testExpect(TokenKind::IntegerLiteral);
     testExpect(TokenKind::TimeLiteral);
     testExpect(TokenKind::WithKeyword);
+}
+
+TEST_CASE("Hex escape corner case") {
+    auto& text = R"("\x)";
+    Token token = lexToken(text);
+
+    CHECK(token.kind == TokenKind::StringLiteral);
+    CHECK(token.toString() == text);
+    REQUIRE(!diagnostics.empty());
+    CHECK(diagnostics[0].code == diag::InvalidHexEscapeCode);
+    CHECK(diagnostics[1].code == diag::ExpectedClosingQuote);
 }
