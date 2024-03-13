@@ -2261,3 +2261,13 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::Redefinition);
 }
+
+TEST_CASE("Checker instantiation infinite loop regress") {
+    auto tree = SyntaxTree::fromText("checker\0module w\0w("sv);
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    // Just check no crashes.
+    compilation.getAllDiagnostics();
+}

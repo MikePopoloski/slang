@@ -2193,7 +2193,7 @@ public:
 
     void handle(const ProceduralBlockSymbol& symbol) {
         // Everything is allowed in final blocks, and implicit procedures created
-        // for asserions should be ignored.
+        // for assertions should be ignored.
         if (symbol.procedureKind == ProceduralBlockKind::Final || symbol.isFromAssertion)
             return;
 
@@ -2361,6 +2361,10 @@ public:
 
         visitDefault(stmt);
     }
+
+    // Ignore instances so we don't go down a rabbit hole for invalid constructions.
+    void handle(const CheckerInstanceSymbol&) {}
+    void handle(const InstanceSymbol&) {}
 
 private:
     const CheckerInstanceBodySymbol& body;
