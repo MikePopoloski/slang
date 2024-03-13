@@ -663,7 +663,8 @@ void SubroutineSymbol::connectExternInterfacePrototype() const {
 
     auto ifaceMethod = inst->body.find(name);
     if (!ifaceMethod) {
-        scope->addDiag(diag::UnknownMember, location) << name << ifaceName;
+        if (!name.empty())
+            scope->addDiag(diag::UnknownMember, location) << name << ifaceName;
         return;
     }
 
@@ -853,9 +854,11 @@ MethodPrototypeSymbol& MethodPrototypeSymbol::createForModport(const Scope& scop
     // Find the target method we're importing or exporting from the parent interface.
     auto target = scope.find(name);
     if (!target) {
-        auto& diag = scope.addDiag(diag::IfaceImportExportTarget, syntax.sourceRange());
-        diag << (isExport ? "export"sv : "import"sv);
-        diag << name;
+        if (!name.empty()) {
+            auto& diag = scope.addDiag(diag::IfaceImportExportTarget, syntax.sourceRange());
+            diag << (isExport ? "export"sv : "import"sv);
+            diag << name;
+        }
 
         result->subroutine = nullptr;
         result->declaredReturnType.setType(comp.getErrorType());

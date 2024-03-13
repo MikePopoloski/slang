@@ -1028,7 +1028,8 @@ PrimitiveSymbol& PrimitiveSymbol::fromSyntax(const Scope& scope,
         for (auto decl : syntax.body->portDecls) {
             if (decl->kind == SyntaxKind::UdpOutputPortDecl) {
                 auto& outputDecl = decl->as<UdpOutputPortDeclSyntax>();
-                if (auto it = portMap.find(outputDecl.name.valueText()); it != portMap.end()) {
+                auto name = outputDecl.name;
+                if (auto it = portMap.find(name.valueText()); it != portMap.end()) {
                     // Standalone "reg" specifiers should be saved and processed at the
                     // end once we've handled all of the regular declarations.
                     if (outputDecl.reg && !outputDecl.keyword) {
@@ -1043,19 +1044,19 @@ PrimitiveSymbol& PrimitiveSymbol::fromSyntax(const Scope& scope,
                     }
 
                     auto port = it->second;
-                    checkDup(port, outputDecl.name);
+                    checkDup(port, name);
 
                     port->direction = PrimitivePortDirection::Out;
                     if (outputDecl.reg)
                         port->direction = PrimitivePortDirection::OutReg;
 
-                    port->location = outputDecl.name.location();
+                    port->location = name.location();
                     port->setSyntax(outputDecl);
                     port->setAttributes(scope, decl->attributes);
                 }
-                else {
-                    auto& diag = scope.addDiag(diag::PrimitivePortUnknown, outputDecl.name.range());
-                    diag << outputDecl.name.valueText();
+                else if (!name.valueText().empty()) {
+                    auto& diag = scope.addDiag(diag::PrimitivePortUnknown, name.range());
+                    diag << name.valueText();
                 }
             }
             else {
@@ -1072,7 +1073,7 @@ PrimitiveSymbol& PrimitiveSymbol::fromSyntax(const Scope& scope,
                         port->setSyntax(*nameSyntax);
                         port->setAttributes(scope, decl->attributes);
                     }
-                    else {
+                    else if (!name.valueText().empty()) {
                         auto& diag = scope.addDiag(diag::PrimitivePortUnknown, name.range());
                         diag << name.valueText();
                     }

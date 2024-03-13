@@ -2540,7 +2540,7 @@ std::pair<Compilation::DefinitionLookupResult, bool> Compilation::resolveConfigR
 
 Diagnostic* Compilation::errorMissingDef(std::string_view name, const Scope& scope,
                                          SourceRange sourceRange, DiagCode code) const {
-    if (hasFlag(CompilationFlags::IgnoreUnknownModules) || scope.isUninstantiated())
+    if (hasFlag(CompilationFlags::IgnoreUnknownModules) || scope.isUninstantiated() || name.empty())
         return nullptr;
 
     if (auto def = getExternDefinition(name, scope)) {
