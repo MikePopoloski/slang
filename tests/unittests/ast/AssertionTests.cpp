@@ -1714,15 +1714,15 @@ endmodule
 
 TEST_CASE("Recursive checker instances -- bad") {
     auto tree = SyntaxTree::fromText(R"(
- package p;
-     checker c(q);
-         c c_next(q + 1);
-     endchecker
- endpackage
+package p;
+    checker c(q);
+        c c_next(q + 1);
+    endchecker
+endpackage
 
- module m;
-     p::c c1(1);
- endmodule
+module m;
+    p::c c1(1);
+endmodule
 )");
 
     Compilation compilation;
@@ -2262,8 +2262,18 @@ endmodule
     CHECK(diags[0].code == diag::Redefinition);
 }
 
-TEST_CASE("Checker instantiation infinite loop regress") {
+TEST_CASE("Checker instantiation infinite loop regress 1") {
     auto tree = SyntaxTree::fromText("checker\0module w\0w("sv);
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    // Just check no crashes.
+    compilation.getAllDiagnostics();
+}
+
+TEST_CASE("Checker instantiation infinite loop regress 2") {
+    auto tree = SyntaxTree::fromText("checker a a(;a(endchecker a("sv);
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);

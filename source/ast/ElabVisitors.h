@@ -245,11 +245,19 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
         for (auto attr : compilation.getAttributes(symbol))
             attr->getValue();
 
-        for (auto& conn : symbol.getPortConnections())
-            conn.getOutputInitialExpr();
-
         visit(symbol.body);
-        symbol.verifyMembers();
+
+        if (!finishedEarly()) {
+            if (symbol.body.instanceDepth >= compilation.getOptions().maxCheckerInstanceDepth) {
+                hierarchyProblem = true;
+                return;
+            }
+
+            for (auto& conn : symbol.getPortConnections())
+                conn.getOutputInitialExpr();
+
+            symbol.verifyMembers();
+        }
     }
 
     void handle(const ClockingBlockSymbol& symbol) {
@@ -281,7 +289,7 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
             conn->checkSimulatedNetTypes();
             for (auto attr : compilation.getAttributes(*conn))
                 attr->getValue();
-        };
+        }
 
         // Detect infinite recursion, which happens if we see this exact
         // instance body somewhere higher up in the stack.
