@@ -2873,8 +2873,16 @@ UdpEntrySyntax& Parser::parseUdpEntry(bool isSequential) {
 UdpBodySyntax& Parser::parseUdpBody(bool isSequential) {
     SmallVector<TokenOrSyntax, 4> portDecls;
     while (isPossibleUdpPort(peek().kind)) {
+        auto current = peek();
         portDecls.push_back(&parseUdpPortDecl(isSequential));
         portDecls.push_back(expect(TokenKind::Semicolon));
+
+        if (current == peek()) {
+            // We didn't consume any tokens, so we're looking at
+            // something invalid. We already issued an error,
+            // just get out of here.
+            break;
+        }
     }
 
     UdpInitialStmtSyntax* initial = nullptr;
