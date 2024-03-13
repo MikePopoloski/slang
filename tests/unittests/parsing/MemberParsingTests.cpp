@@ -1251,3 +1251,12 @@ endmodule
     parseCompilationUnit(text, LanguageVersion::v1800_2023);
     CHECK_DIAGNOSTICS_EMPTY;
 }
+
+TEST_CASE("Primitive parsing crash regress") {
+    auto& text = R"(
+primitive ,*l,
+)";
+
+    // Just testing that there's no crash.
+    parseCompilationUnit(text);
+}

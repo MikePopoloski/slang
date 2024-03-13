@@ -2670,7 +2670,8 @@ UdpPortListSyntax& Parser::parseUdpPortList(bool& isSequential) {
         SmallVector<TokenOrSyntax, 4> ports;
         parseList<isIdentifierOrComma, isEndOfParenList>(
             ports, TokenKind::CloseParenthesis, TokenKind::Comma, closeParen, RequireItems::True,
-            diag::ExpectedUdpPort, [this] { return &factory.identifierName(consume()); });
+            diag::ExpectedUdpPort,
+            [this] { return &factory.identifierName(expect(TokenKind::Identifier)); });
 
         return factory.nonAnsiUdpPortList(openParen, ports.copy(alloc), closeParen,
                                           expect(TokenKind::Semicolon));
