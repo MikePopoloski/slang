@@ -1083,7 +1083,13 @@ bool MethodPrototypeSymbol::checkMethodMatch(const Scope& scope,
         // Names must be identical.
         const FormalArgumentSymbol* da = *di;
         const FormalArgumentSymbol* pa = *pi;
-        if (da->name != pa->name && !da->name.empty() && !pa->name.empty()) {
+
+        // The subroutine itself shouldn't have empty argument names.
+        // If it does the parser already errored.
+        if (da->name.empty())
+            continue;
+
+        if (da->name != pa->name && !pa->name.empty()) {
             auto& diag = scope.addDiag(diag::MethodArgNameMismatch, da->location);
             diag << da->name << pa->name;
             diag.addNote(diag::NoteDeclarationHere, pa->location);
