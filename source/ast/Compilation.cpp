@@ -982,23 +982,25 @@ const ConfigBlockSymbol& Compilation::createConfigBlock(const Scope& scope,
     for (auto ruleSyntax : syntax.rules)
         configBySyntax[ruleSyntax] = &config;
 
-    auto it = configBlocks.find(config.name);
-    if (it == configBlocks.end()) {
-        configBlocks.emplace(config.name, std::vector<const ConfigBlockSymbol*>{&config});
-    }
-    else {
-        auto configLib = scope.asSymbol().getSourceLibrary();
-        auto findIt = std::ranges::find_if(it->second, [&](const ConfigBlockSymbol* elem) {
-            return elem->getSourceLibrary() == configLib;
-        });
-
-        if (findIt != it->second.end()) {
-            auto& diag = scope.addDiag(diag::Redefinition, config.location);
-            diag << config.name;
-            diag.addNote(diag::NotePreviousDefinition, (*findIt)->location);
+    if (!config.name.empty()) {
+        auto it = configBlocks.find(config.name);
+        if (it == configBlocks.end()) {
+            configBlocks.emplace(config.name, std::vector<const ConfigBlockSymbol*>{&config});
         }
         else {
-            it->second.emplace_back(&config);
+            auto configLib = scope.asSymbol().getSourceLibrary();
+            auto findIt = std::ranges::find_if(it->second, [&](const ConfigBlockSymbol* elem) {
+                return elem->getSourceLibrary() == configLib;
+            });
+
+            if (findIt != it->second.end()) {
+                auto& diag = scope.addDiag(diag::Redefinition, config.location);
+                diag << config.name;
+                diag.addNote(diag::NotePreviousDefinition, (*findIt)->location);
+            }
+            else {
+                it->second.emplace_back(&config);
+            }
         }
     }
 

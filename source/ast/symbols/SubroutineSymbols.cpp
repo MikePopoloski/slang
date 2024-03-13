@@ -357,7 +357,7 @@ SubroutineSymbol& SubroutineSymbol::createOutOfBlock(Compilation& compilation,
                 diag.addNote(diag::NoteDeclarationHere, pa->location);
                 return *result;
             }
-            else if (de->syntax && pe->syntax) {
+            else if (de->syntax && pe->syntax && !de->bad() && !pe->bad()) {
                 // Check for "syntactically identical" expressions.
                 if (!de->syntax->isEquivalentTo(*pe->syntax)) {
                     auto& diag = parent.addDiag(diag::MethodArgDefaultMismatch, de->sourceRange);

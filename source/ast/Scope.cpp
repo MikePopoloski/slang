@@ -1018,10 +1018,12 @@ void Scope::elaborate() const {
                 auto& expr = Expression::bind(
                     *member.node.as<DefaultDisableDeclarationSyntax>().expr, context);
 
-                if (!expr.type->isVoid())
-                    context.requireBooleanConvertible(expr);
+                if (!expr.bad()) {
+                    if (!expr.type->isVoid())
+                        context.requireBooleanConvertible(expr);
 
-                compilation.noteDefaultDisable(*this, expr);
+                    compilation.noteDefaultDisable(*this, expr);
+                }
                 break;
             }
             case SyntaxKind::PortDeclaration:
