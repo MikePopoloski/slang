@@ -2660,7 +2660,6 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
-
 TEST_CASE("Instance comparison") {
     auto tree = SyntaxTree::fromText(R"(
 interface PBus1 #(parameter WIDTH=8);
@@ -2684,7 +2683,6 @@ endmodule
     CHECK(diags[0].code == diag::NotAValue);
     CHECK(diags[1].code == diag::NotAValue);
 }
-
 
 TEST_CASE("Virtual interfaces of different types comparison") {
     auto tree = SyntaxTree::fromText(R"(
