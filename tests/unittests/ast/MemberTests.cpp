@@ -2582,3 +2582,55 @@ endmodule
     CHECK(diags[0].code == diag::TypeRestrictionMismatch);
     CHECK(diags[1].code == diag::TypeRestrictionMismatch);
 }
+
+TEST_CASE("Function result chaining is allowed") {
+    auto tree = SyntaxTree::fromText(R"(
+class Node;
+    typedef bit [15:10] value_t;
+    protected Node m_next;
+    protected value_t m_val;
+
+    function new(value_t v); m_val = v; endfunction
+    function void set_next(Node n); m_next = n; endfunction
+    function Node get_next(); return m_next; endfunction
+    function value_t get_val(); return m_val; endfunction
+endclass
+
+function Node get_first_node();
+    Node n1, n2;
+    n1 = new(6'h00);
+    n2 = new(6'h3F);
+    n1.set_next(n2);
+    return n1;
+endfunction
+
+module m;
+    initial begin
+        bit [3:0] my_bits;
+        my_bits = get_first_node().get_next().get_val()[13:10];
+    end
+endmodule
+
+class A;
+    real member=1;
+endclass
+
+module top;
+    A a;
+    function A F;
+        int member;
+        a = new();
+        return a;
+    endfunction
+
+    initial begin
+        $display(F.member);
+        $display(F().member);
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
