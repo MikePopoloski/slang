@@ -248,16 +248,23 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
         visit(symbol.body);
 
         if (!finishedEarly()) {
-            if (symbol.body.instanceDepth >= compilation.getOptions().maxCheckerInstanceDepth) {
-                hierarchyProblem = true;
-                return;
-            }
-
             for (auto& conn : symbol.getPortConnections())
                 conn.getOutputInitialExpr();
 
             symbol.verifyMembers();
         }
+    }
+
+    void handle(const CheckerInstanceBodySymbol& symbol) {
+        if (finishedEarly())
+            return;
+
+        if (symbol.instanceDepth > compilation.getOptions().maxCheckerInstanceDepth) {
+            hierarchyProblem = true;
+            return;
+        }
+
+        visitDefault(symbol);
     }
 
     void handle(const ClockingBlockSymbol& symbol) {
@@ -357,7 +364,7 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
         if (!handleDefault(symbol))
             return;
 
-        auto& result = CheckerInstanceSymbol::createInvalid(symbol);
+        auto& result = CheckerInstanceSymbol::createInvalid(symbol, 0);
         result.visit(*this);
     }
 

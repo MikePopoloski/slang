@@ -2281,3 +2281,21 @@ TEST_CASE("Checker instantiation infinite loop regress 2") {
     // Just check no crashes.
     compilation.getAllDiagnostics();
 }
+
+TEST_CASE("Checker instantiation infinite loop regress 3") {
+    auto tree = SyntaxTree::fromText(R"(
+checker a waty (p_window) else $error(error_msg);
+
+module m5;
+    a aw1(1ss
+endmodule
+
+a aw1(1ss
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    // Just check no crashes.
+    compilation.getAllDiagnostics();
+}

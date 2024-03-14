@@ -353,7 +353,7 @@ public:
     /// Creates an intentionally invalid instance by forcing all port connections to
     /// null values. This allows type checking instance members as long as they don't
     /// depend on any port expansion.
-    static CheckerInstanceSymbol& createInvalid(const CheckerSymbol& checker);
+    static CheckerInstanceSymbol& createInvalid(const CheckerSymbol& checker, uint32_t depth);
 
     static CheckerInstanceSymbol& fromSyntax(
         Compilation& compilation, const ASTContext& context, const CheckerSymbol& checker,

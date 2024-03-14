@@ -1896,7 +1896,7 @@ CheckerInstanceSymbol& CheckerInstanceSymbol::fromSyntax(
                 auto& diag = context.addDiag(diag::MaxInstanceDepthExceeded, loc);
                 diag << "checker"sv;
                 diag << comp.getOptions().maxCheckerInstanceDepth;
-                return createInvalid(checker);
+                return createInvalid(checker, depth);
             }
 
             parentIsFromBind = checkerBody.isFromBind;
@@ -1909,7 +1909,7 @@ CheckerInstanceSymbol& CheckerInstanceSymbol::fromSyntax(
     if (parentIsFromBind) {
         if (isFromBind) {
             context.addDiag(diag::BindUnderBind, syntax.sourceRange());
-            return createInvalid(checker);
+            return createInvalid(checker, depth);
         }
 
         // If our parent is from a bind statement, pass down the flag
@@ -2090,7 +2090,8 @@ CheckerInstanceSymbol& CheckerInstanceSymbol::fromSyntax(
     return *instance;
 }
 
-CheckerInstanceSymbol& CheckerInstanceSymbol::createInvalid(const CheckerSymbol& checker) {
+CheckerInstanceSymbol& CheckerInstanceSymbol::createInvalid(const CheckerSymbol& checker,
+                                                            uint32_t depth) {
     auto scope = checker.getParentScope();
     SLANG_ASSERT(scope);
 
@@ -2101,7 +2102,7 @@ CheckerInstanceSymbol& CheckerInstanceSymbol::createInvalid(const CheckerSymbol&
 
     ASTContext context(*scope, LookupLocation::after(checker));
     auto body = comp.emplace<CheckerInstanceBodySymbol>(comp, checker, *assertionDetails, context,
-                                                        0u,
+                                                        depth,
                                                         /* isProcedural */ false,
                                                         /* isFromBind */ false,
                                                         /* isUninstantiated */ true);
