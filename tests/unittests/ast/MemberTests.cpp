@@ -2679,9 +2679,8 @@ endmodule
     Compilation compilation;
     compilation.addSyntaxTree(tree);
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 2);
-    CHECK(diags[0].code == diag::NotAValue);
-    CHECK(diags[1].code == diag::NotAValue);
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::CannotCompareTwoInstances);
 }
 
 TEST_CASE("Virtual interfaces of different types comparison") {

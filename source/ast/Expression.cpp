@@ -1229,7 +1229,7 @@ Expression* Expression::tryBindInterfaceRef(const ASTContext& context,
     if (!result.found) {
         // We didn't find the name as-is. This might be a case where the user has
         // provided an explicit modport name on top of an array of interfaces,
-        // which we should support by looking up the name again withotu the trailing
+        // which we should support by looking up the name again without the trailing
         // name component and taking the result if it's an iface array.
         if (expr->kind == SyntaxKind::ScopedName) {
             auto& scoped = expr->as<ScopedNameSyntax>();

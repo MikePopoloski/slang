@@ -697,6 +697,7 @@ error InterfacePortInvalidExpression "invalid expression for interface port conn
 error AssignmentPatternLValueDynamic "lvalue assignment patterns cannot be assigned from dynamic arrays"
 error SelectAfterRangeSelect "cannot chain select expressions after a range select"
 error ClassPrivateMembersBitstream "cannot use class type {} as a bit-stream because it has local or protected members that are not accessible in this context"
+error CannotCompareTwoInstances "cannot compare two instances to each other; at least one side must be a virtual interface"
 warning ignored-slice IgnoredSlice "slice size ignored for left-to-right streaming operator"
 warning unsized-concat UnsizedInConcat "unsized integer in concat; using a width of {}"
 warning width-expand WidthExpand "implicit conversion expands from {} to {} bits"

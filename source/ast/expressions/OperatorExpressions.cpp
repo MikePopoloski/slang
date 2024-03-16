@@ -592,38 +592,45 @@ Expression& BinaryExpression::fromSyntax(Compilation& compilation,
         flags = ASTFlags::AllowUnboundedLiteral;
     }
 
+    Expression *lhs, *rhs;
+    auto& syntaxLeft = *syntax.left;
+    auto& syntaxRight = *syntax.right;
+
     auto op = getBinaryOperator(syntax.kind);
     if (op == BinaryOperator::Equality || op == BinaryOperator::Inequality ||
         op == BinaryOperator::CaseEquality || op == BinaryOperator::CaseInequality) {
         flags |= ASTFlags::AllowTypeReferences;
-    }
 
-    Expression *lhs = nullptr, *rhs = nullptr;
-    ExpressionSyntax* syntaxLeft = syntax.left;
-    ExpressionSyntax* syntaxRight = syntax.right;
-    bool notVirtIface = true;
+        // Special case to handle comparing a virtual interface with an
+        // actual instance. We can't normally bind to an instance from
+        // an expression so we need to explicitly try that separately here.
+        lhs = tryBindInterfaceRef(context, syntaxLeft, /* isInterfacePort */ false);
+        if (!lhs)
+            lhs = &create(compilation, syntaxLeft, context, flags);
 
-    // Check that there is a comparison with at least one virtual interface.
-    // See IEEE 1800-2017 25.9 clause.
-    if (op == BinaryOperator::Equality || op == BinaryOperator::Inequality) {
-        lhs = tryBindInterfaceRef(context, *syntaxLeft, /* isInterfacePort */ false);
-        if (lhs) {
-            rhs = &selfDetermined(compilation, *syntaxRight, context, flags);
-            notVirtIface = !rhs->type->isVirtualInterface();
-        }
-
-        if (!rhs) {
-            rhs = tryBindInterfaceRef(context, *syntaxRight, /* isInterfacePort */ false);
-            if (rhs) {
-                lhs = &selfDetermined(compilation, *syntaxLeft, context, flags);
-                notVirtIface = !lhs->type->isVirtualInterface();
+        // If we found a virtual interface on the lhs we can also try for an instance
+        // on the rhs. Otherwise we know we're doing normal expression binding.
+        if (lhs->type->isVirtualInterface()) {
+            rhs = tryBindInterfaceRef(context, syntaxRight, /* isInterfacePort */ false);
+            if (!rhs) {
+                rhs = &create(compilation, syntaxRight, context, flags);
+            }
+            else if (lhs->kind == ExpressionKind::ArbitrarySymbol &&
+                     rhs->kind == ExpressionKind::ArbitrarySymbol) {
+                // Having an instance on both sides is not allowed. One side must be
+                // an actual virtual interface.
+                context.addDiag(diag::CannotCompareTwoInstances, syntax.operatorToken.location())
+                    << lhs->sourceRange << rhs->sourceRange;
+                return badExpr(compilation, nullptr);
             }
         }
+        else {
+            rhs = &create(compilation, syntaxRight, context, flags);
+        }
     }
-
-    if (!lhs || !rhs || notVirtIface) {
-        lhs = &create(compilation, *syntaxLeft, context, flags);
-        rhs = &create(compilation, *syntaxRight, context, flags);
+    else {
+        lhs = &create(compilation, syntaxLeft, context, flags);
+        rhs = &create(compilation, syntaxRight, context, flags);
     }
 
     auto& result = fromComponents(*lhs, *rhs, op, syntax.operatorToken.location(),
