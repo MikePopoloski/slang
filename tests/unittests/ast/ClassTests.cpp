@@ -2857,3 +2857,28 @@ endclass
     CHECK(diags[1].code == diag::NonStaticClassProperty);
     CHECK(diags[2].code == diag::NonStaticClassMethod);
 }
+
+TEST_CASE("Type of this handle works") {
+    auto tree = SyntaxTree::fromText(R"(
+class registry #(type T=int);
+    static function type(this) get();
+        var static type(this) m_inst;
+        if (m_inst == null)
+            m_inst = new();
+        return m_inst;
+    endfunction
+endclass
+
+class my_int_registry extends registry #();
+    function type(this) other();
+    endfunction
+endclass
+)");
+
+    CompilationOptions options;
+    options.languageVersion = LanguageVersion::v1800_2023;
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

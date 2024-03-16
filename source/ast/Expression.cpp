@@ -952,7 +952,7 @@ Expression& Expression::bindName(Compilation& comp, const NameSyntax& syntax,
         comp.getOptions().languageVersion >= LanguageVersion::v1800_2023) {
         // v1800-2023: Type operator expressions are allowed to reference
         // incomplete forward class types now.
-        flags |= LookupFlags::AllowIncompleteForwardTypedefs;
+        flags |= LookupFlags::AllowIncompleteForwardTypedefs | LookupFlags::TypeReference;
     }
 
     // Special case scenarios: temporary variables, class-scoped randomize calls,

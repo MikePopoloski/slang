@@ -917,27 +917,44 @@ void unwrapResult(const Scope& scope, std::optional<SourceRange> range, LookupRe
 
 const Symbol* findThisHandle(const Scope& scope, bitmask<LookupFlags> flags, SourceRange range,
                              LookupResult& result) {
-    // Find the parent method, if we can.
-    const Symbol* parent = &scope.asSymbol();
-    while (parent->kind == SymbolKind::StatementBlock ||
-           parent->kind == SymbolKind::RandSeqProduction) {
-        auto parentScope = parent->getParentScope();
-        SLANG_ASSERT(parentScope);
-        parent = &parentScope->asSymbol();
-    }
+    if (flags.has(LookupFlags::TypeReference)) {
+        // type(this) is allowed to work anywhere within a class, regardless of whether
+        // it's a static context or not.
+        auto parent = &scope.asSymbol();
+        while (parent->kind != SymbolKind::ClassType && parent->kind != SymbolKind::InstanceBody) {
+            auto parentScope = parent->getParentScope();
+            if (!parentScope)
+                break;
+            parent = &parentScope->asSymbol();
+        }
 
-    if (parent->kind == SymbolKind::Subroutine) {
-        auto& sub = parent->as<SubroutineSymbol>();
-        if (sub.thisVar)
-            return sub.thisVar;
+        if (parent->kind == SymbolKind::ClassType)
+            return &parent->as<ClassType>();
     }
-    else if (parent->kind == SymbolKind::ConstraintBlock) {
-        auto thisVar = parent->as<ConstraintBlockSymbol>().thisVar;
-        if (thisVar)
-            return thisVar;
-    }
-    else if (parent->kind == SymbolKind::ClassType && !flags.has(LookupFlags::StaticInitializer)) {
-        return parent->as<ClassType>().thisVar;
+    else {
+        // Find the parent method, if we can.
+        const Symbol* parent = &scope.asSymbol();
+        while (parent->kind == SymbolKind::StatementBlock ||
+               parent->kind == SymbolKind::RandSeqProduction) {
+            auto parentScope = parent->getParentScope();
+            SLANG_ASSERT(parentScope);
+            parent = &parentScope->asSymbol();
+        }
+
+        if (parent->kind == SymbolKind::Subroutine) {
+            auto& sub = parent->as<SubroutineSymbol>();
+            if (sub.thisVar)
+                return sub.thisVar;
+        }
+        else if (parent->kind == SymbolKind::ConstraintBlock) {
+            auto thisVar = parent->as<ConstraintBlockSymbol>().thisVar;
+            if (thisVar)
+                return thisVar;
+        }
+        else if (parent->kind == SymbolKind::ClassType &&
+                 !flags.has(LookupFlags::StaticInitializer)) {
+            return parent->as<ClassType>().thisVar;
+        }
     }
 
     result.addDiag(scope, diag::InvalidThisHandle, range);

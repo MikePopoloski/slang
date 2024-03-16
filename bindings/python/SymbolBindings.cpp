@@ -35,7 +35,8 @@ void registerSymbols(py::module_& m) {
         .value("AllowRoot", LookupFlags::AllowRoot)
         .value("IfacePortConn", LookupFlags::IfacePortConn)
         .value("StaticInitializer", LookupFlags::StaticInitializer)
-        .value("ForceHierarchical", LookupFlags::ForceHierarchical);
+        .value("ForceHierarchical", LookupFlags::ForceHierarchical)
+        .value("TypeReference", LookupFlags::TypeReference);
 
     py::class_<LookupLocation>(m, "LookupLocation")
         .def(py::init<>())

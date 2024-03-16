@@ -69,10 +69,13 @@ enum class SLANG_EXPORT LookupFlags {
     /// Lookup is within a static initializer expression.
     StaticInitializer = 1 << 10,
 
+    /// Lookup is happening within a type reference expression.
+    TypeReference = 1 << 11,
+
     /// Treat this lookup as hierarchical even if it's a simple name.
     ForceHierarchical = AllowDeclaredAfter | NoUndeclaredErrorIfUninstantiated
 };
-SLANG_BITMASK(LookupFlags, StaticInitializer)
+SLANG_BITMASK(LookupFlags, TypeReference)
 
 /// This type denotes the ordering of symbols within a particular scope, for the purposes of
 /// determining whether a found symbol is visible compared to the given location.
