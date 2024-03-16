@@ -633,6 +633,29 @@ Expression& BinaryExpression::fromSyntax(Compilation& compilation,
     }
     else {
         lhs = &create(compilation, syntaxLeft, context, flags);
+
+        if (isShortCircuitOp(op)) {
+            // We want to evaluate the lhs as a constant if possible, to know whether
+            // the rhs is for sure in an unevaluated context. This is required for
+            // correctness in cases where the condition on the lhs gates off otherwise
+            // invalid code on the rhs.
+            if (auto val = context.tryEval(*lhs)) {
+                switch (op) {
+                    case BinaryOperator::LogicalAnd:
+                    case BinaryOperator::LogicalImplication:
+                        if (val.isFalse())
+                            flags |= ASTFlags::UnevaluatedBranch;
+                        break;
+                    case BinaryOperator::LogicalOr:
+                        if (val.isTrue())
+                            flags |= ASTFlags::UnevaluatedBranch;
+                        break;
+                    default:
+                        SLANG_UNREACHABLE;
+                }
+            }
+        }
+
         rhs = &create(compilation, syntaxRight, context, flags);
     }
 

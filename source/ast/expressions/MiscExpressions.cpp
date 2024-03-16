@@ -36,6 +36,7 @@ Expression& ValueExpressionBase::fromSymbol(const ASTContext& context, const Sym
                                             bool isHierarchical, SourceRange sourceRange,
                                             bool constraintAllowed, bool isDottedAccess) {
     // Automatic variables have additional restrictions.
+    bool isUnbounded = false;
     Compilation& comp = context.getCompilation();
     if (VariableSymbol::isKind(symbol.kind) &&
         symbol.as<VariableSymbol>().lifetime == VariableLifetime::Automatic) {
@@ -74,8 +75,9 @@ Expression& ValueExpressionBase::fromSymbol(const ASTContext& context, const Sym
             Lookup::ensureAccessible(symbol, context, sourceRange);
     }
     else if (symbol.kind == SymbolKind::Parameter) {
-        if (!context.flags.has(ASTFlags::AllowUnboundedLiteral) &&
-            symbol.as<ParameterSymbol>().getValue(sourceRange).isUnbounded()) {
+        isUnbounded = symbol.as<ParameterSymbol>().getValue(sourceRange).isUnbounded();
+        if (!context.flags.has(ASTFlags::AllowUnboundedLiteral) && isUnbounded &&
+            !context.inUnevaluatedBranch()) {
             context.addDiag(diag::UnboundedNotAllowed, sourceRange);
             return badExpr(comp, nullptr);
         }
@@ -136,10 +138,15 @@ Expression& ValueExpressionBase::fromSymbol(const ASTContext& context, const Sym
             comp.noteReference(*syntax, /* isLValue */ false);
     }
 
+    Expression* result;
     if (isHierarchical)
-        return *comp.emplace<HierarchicalValueExpression>(value, sourceRange);
+        result = comp.emplace<HierarchicalValueExpression>(value, sourceRange);
     else
-        return *comp.emplace<NamedValueExpression>(value, sourceRange);
+        result = comp.emplace<NamedValueExpression>(value, sourceRange);
+
+    if (isUnbounded)
+        result->type = &comp.getUnboundedType();
+    return *result;
 }
 
 bool ValueExpressionBase::requireLValueImpl(const ASTContext& context, SourceLocation location,

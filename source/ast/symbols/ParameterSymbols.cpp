@@ -85,28 +85,28 @@ void ParameterSymbol::fromSyntax(const Scope& scope, const ParameterDeclarationS
 
 const ConstantValue& ParameterSymbol::getValue(SourceRange referencingRange) const {
     if (!value) {
+        auto scope = getParentScope();
+        SLANG_ASSERT(scope);
+
+        ASTContext ctx(*scope, LookupLocation::max);
+        if (isFromConf)
+            ctx.flags |= ASTFlags::ConfigParam;
+
+        if (evaluating) {
+            SLANG_ASSERT(referencingRange.start());
+
+            auto& diag = ctx.addDiag(diag::ConstEvalParamCycle, location) << name;
+            diag.addNote(diag::NoteReferencedHere, referencingRange);
+            return ConstantValue::Invalid;
+        }
+
+        evaluating = true;
+        auto guard = ScopeGuard([this] { evaluating = false; });
+
         // If no value has been explicitly set, try to set it
         // from our initializer.
         auto init = getInitializer();
         if (init) {
-            auto scope = getParentScope();
-            SLANG_ASSERT(scope);
-
-            ASTContext ctx(*scope, LookupLocation::max);
-            if (isFromConf)
-                ctx.flags |= ASTFlags::ConfigParam;
-
-            if (evaluating) {
-                SLANG_ASSERT(referencingRange.start());
-
-                auto& diag = ctx.addDiag(diag::ConstEvalParamCycle, location) << name;
-                diag.addNote(diag::NoteReferencedHere, referencingRange);
-                return ConstantValue::Invalid;
-            }
-
-            evaluating = true;
-            auto guard = ScopeGuard([this] { evaluating = false; });
-
             value = scope->getCompilation().allocConstant(
                 ctx.eval(*init, EvalFlags::AllowUnboundedPlaceholder));
 
@@ -410,26 +410,26 @@ SpecparamSymbol::SpecparamSymbol(std::string_view name, SourceLocation loc) :
 
 const ConstantValue& SpecparamSymbol::getValue(SourceRange referencingRange) const {
     if (!value1) {
+        auto scope = getParentScope();
+        SLANG_ASSERT(scope);
+
+        ASTContext ctx(*scope, LookupLocation::before(*this));
+
+        if (evaluating) {
+            SLANG_ASSERT(referencingRange.start());
+
+            auto& diag = ctx.addDiag(diag::ConstEvalParamCycle, location) << name;
+            diag.addNote(diag::NoteReferencedHere, referencingRange);
+            return ConstantValue::Invalid;
+        }
+
+        evaluating = true;
+        auto guard = ScopeGuard([this] { evaluating = false; });
+
         // If no value has been explicitly set, try to set it
         // from our initializer.
         auto init = getInitializer();
         if (init) {
-            auto scope = getParentScope();
-            SLANG_ASSERT(scope);
-
-            ASTContext ctx(*scope, LookupLocation::before(*this));
-
-            if (evaluating) {
-                SLANG_ASSERT(referencingRange.start());
-
-                auto& diag = ctx.addDiag(diag::ConstEvalParamCycle, location) << name;
-                diag.addNote(diag::NoteReferencedHere, referencingRange);
-                return ConstantValue::Invalid;
-            }
-
-            evaluating = true;
-            auto guard = ScopeGuard([this] { evaluating = false; });
-
             auto& comp = scope->getCompilation();
             value1 = comp.allocConstant(ctx.eval(*init, EvalFlags::SpecparamsAllowed));
 

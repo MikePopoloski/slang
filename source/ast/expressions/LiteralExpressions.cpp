@@ -230,7 +230,7 @@ Expression& UnboundedLiteral::fromSyntax(const ASTContext& context,
     SLANG_ASSERT(syntax.kind == SyntaxKind::WildcardLiteralExpression);
 
     auto& comp = context.getCompilation();
-    if (!context.flags.has(ASTFlags::AllowUnboundedLiteral)) {
+    if (!context.flags.has(ASTFlags::AllowUnboundedLiteral) && !context.inUnevaluatedBranch()) {
         context.addDiag(diag::UnboundedNotAllowed, syntax.sourceRange());
         return badExpr(comp, nullptr);
     }
