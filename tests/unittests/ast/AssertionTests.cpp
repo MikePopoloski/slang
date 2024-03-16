@@ -2275,7 +2275,10 @@ TEST_CASE("Checker instantiation infinite loop regress 1") {
 TEST_CASE("Checker instantiation infinite loop regress 2") {
     auto tree = SyntaxTree::fromText("checker a a(;a(endchecker a("sv);
 
-    Compilation compilation;
+    CompilationOptions options;
+    options.maxCheckerInstanceDepth = 16;
+
+    Compilation compilation(options);
     compilation.addSyntaxTree(tree);
 
     // Just check no crashes.

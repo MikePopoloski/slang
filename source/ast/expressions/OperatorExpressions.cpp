@@ -209,6 +209,9 @@ bool Expression::bindMembershipExpressions(const ASTContext& context, TokenKind 
         else if (bt.isTypeRefType() && type->isTypeRefType()) {
             // ok
         }
+        else if (bt.isUnbounded() && (type->isNumeric() || type->isString())) {
+            // ok
+        }
         else if (canBeStrings) {
             // If canBeStrings is still true, it means either this specific type or
             // the common type (or both) are of type string. This is ok, but force
@@ -2005,14 +2008,9 @@ bool StreamingConcatenationExpression::isFixedSize() const {
 Expression& ValueRangeExpression::fromSyntax(Compilation& comp,
                                              const ValueRangeExpressionSyntax& syntax,
                                              const ASTContext& context) {
-    // If we are allowed unbounded literals here, pass that along to subexpressions.
-    bitmask<ASTFlags> flags = ASTFlags::None;
-    if (context.flags.has(ASTFlags::AllowUnboundedLiteral))
-        flags = ASTFlags::AllowUnboundedLiteral;
-
-    Expression& left = create(comp, *syntax.left, context, flags);
-    Expression& right = create(comp, *syntax.right, context, flags);
-
+    // Note: value ranges always allow unbounded literals.
+    auto& left = create(comp, *syntax.left, context, ASTFlags::AllowUnboundedLiteral);
+    auto& right = create(comp, *syntax.right, context, ASTFlags::AllowUnboundedLiteral);
     auto result = comp.emplace<ValueRangeExpression>(comp.getVoidType(), left, right,
                                                      syntax.sourceRange());
     if (left.bad() || right.bad())
@@ -2062,8 +2060,17 @@ ConstantValue ValueRangeExpression::checkInside(EvalContext& context,
     if (!cvl || !cvr)
         return nullptr;
 
-    cvl = evalBinaryOperator(BinaryOperator::GreaterThanEqual, val, cvl);
-    cvr = evalBinaryOperator(BinaryOperator::LessThanEqual, val, cvr);
+    // If a side is unbounded, that comparison is just always true.
+    if (cvl.isUnbounded())
+        cvl = SVInt(1);
+    else
+        cvl = evalBinaryOperator(BinaryOperator::GreaterThanEqual, val, cvl);
+
+    if (cvr.isUnbounded())
+        cvr = SVInt(1);
+    else
+        cvr = evalBinaryOperator(BinaryOperator::LessThanEqual, val, cvr);
+
     return evalLogicalOp(BinaryOperator::LogicalAnd, cvl.integer(), cvr.integer());
 }
 

@@ -528,14 +528,8 @@ void CoverageBinSymbol::resolve() const {
         case SyntaxKind::RangeCoverageBinInitializer: {
             SmallVector<const Expression*> buffer;
             auto& rcbis = init->as<RangeCoverageBinInitializerSyntax>();
-            for (auto elem : rcbis.ranges->valueRanges) {
-                bitmask<ASTFlags> flags;
-                if (elem->kind == SyntaxKind::ValueRangeExpression)
-                    flags = ASTFlags::AllowUnboundedLiteral;
-
-                auto& expr = bindCovergroupExpr(*elem, context, &type, flags);
-                buffer.push_back(&expr);
-            }
+            for (auto elem : rcbis.ranges->valueRanges)
+                buffer.push_back(&bindCovergroupExpr(*elem, context, &type));
             values = buffer.copy(comp);
 
             if (rcbis.withClause)
@@ -981,14 +975,8 @@ BinsSelectExpr& ConditionBinsSelectExpr::fromSyntax(const BinsSelectConditionExp
             type = &sym->getParentScope()->asSymbol().as<CoverpointSymbol>().declaredType.getType();
 
         SmallVector<const Expression*> buffer;
-        for (auto elem : syntax.intersects->ranges->valueRanges) {
-            bitmask<ASTFlags> flags;
-            if (elem->kind == SyntaxKind::ValueRangeExpression)
-                flags = ASTFlags::AllowUnboundedLiteral;
-
-            auto& elemExpr = bindCovergroupExpr(*elem, context, type, flags);
-            buffer.push_back(&elemExpr);
-        }
+        for (auto elem : syntax.intersects->ranges->valueRanges)
+            buffer.push_back(&bindCovergroupExpr(*elem, context, type));
         expr->intersects = buffer.copy(comp);
     }
 

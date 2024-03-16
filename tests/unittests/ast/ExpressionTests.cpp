@@ -3329,3 +3329,20 @@ source:16:7: note: $info encountered: TEST3 FAILED (SCALED/!ROUNDED)
       ^
 )x");
 }
+
+TEST_CASE("Set membership can use unbounded literals") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    localparam a = $;
+    localparam b = 10;
+    localparam c = 15 inside {[b:a]};
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& c = compilation.getRoot().lookupName<ParameterSymbol>("m.c");
+    CHECK(c.getValue().integer() == 1);
+}
