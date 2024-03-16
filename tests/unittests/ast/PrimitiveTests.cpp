@@ -388,3 +388,52 @@ endprimitive
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Primitive with large number of inputs") {
+    auto tree = SyntaxTree::fromText(R"(
+ primitive p(output o, input i0, i1, i2, i3, i4, i5, i6, i7,
+                             i8, i9, i10, i11, i12, i13, i14,
+                             i15, i16, i17, i18, i19, i20);
+   table
+     bbbbbbbbbbbbbbbbbbbbb:1;
+   endtable
+ endprimitive
+
+ module top;
+   p p1(o, i0, i1, i2, i3, i4, i5, i6, i7, i8, i9, i10,
+           i11, i12, i13, i14, i15, i16, i17, i18, i19, i20);
+ endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("More UDP overlapping row errors") {
+    auto tree = SyntaxTree::fromText(R"(
+primitive p(output reg o, input a, b);
+  table
+    *x:1:1;
+    (x1)1:1:0;
+    p1:1:x;
+    (x0)1:1:1;
+    *1:1:0;
+    n1:1:0;
+  endtable
+endprimitive
+
+module top;
+  p p1(o, a, b);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::UdpDupDiffOutput);
+    CHECK(diags[1].code == diag::UdpDupDiffOutput);
+    CHECK(diags[2].code == diag::UdpDupDiffOutput);
+}

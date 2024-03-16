@@ -28,6 +28,7 @@
 #include "slang/diagnostics/LookupDiags.h"
 #include "slang/diagnostics/TypesDiags.h"
 #include "slang/syntax/AllSyntax.h"
+#include "slang/util/PoolAllocator.h"
 #include "slang/util/String.h"
 
 namespace slang::ast {
@@ -749,201 +750,316 @@ void PrimitivePortSymbol::serializeTo(ASTSerializer& serializer) const {
     serializer.write("direction", toString(direction));
 }
 
-static char getUdpFieldChar(const UdpFieldBaseSyntax* base) {
-    if (base && base->kind == SyntaxKind::UdpSimpleField) {
-        auto raw = base->as<UdpSimpleFieldSyntax>().field.rawText();
-        if (!raw.empty())
-            return raw[0];
-    }
-    return 0;
-}
+// A trie node used to detect duplicate primitive rows.
+// Each 'bit' is one input value in the row.
+class BitTrie {
+public:
+    // Tries to insert the row. Returns nullptr if the row is
+    // successfully inserted, and a pointer to the previously
+    // inserted row with the same bit pattern if a collision
+    // is found.
+    template<typename TAllocator>
+    const UdpEntrySyntax* insert(const UdpEntrySyntax& syntax, std::span<const char> inputs,
+                                 char stateChar, TAllocator& allocator) {
+        SmallVector<BitTrie*> nodes;
+        BitTrie* primary = this;
+        nodes.push_back(this);
 
-static void expandTableEntries(const Scope& scope, const UdpEntrySyntax& syntax,
-                               const SmallVector<PrimitiveSymbol::TableField>& fields,
-                               SmallVector<PrimitiveSymbol::TableField>& currEntry,
-                               size_t fieldIndex, PrimitiveSymbol::TableEntry& baseEntry,
-                               SmallVector<PrimitiveSymbol::TableEntry>& results,
-                               SmallMap<std::string, const UdpEntrySyntax*, 4>& rowDupMap) {
-    if (fieldIndex == fields.size()) {
-        // Build a key out of inputs and current state (if present) that
-        // let us determine if this combination has already been added to the table.
-        std::string key;
-        bool allX = true;
-        for (auto& field : currEntry) {
-            allX &= charToLower(field.value) == 'x';
-            if (field.transitionTo) {
-                key.push_back('(');
-                key.push_back(field.value);
-                key.push_back(field.transitionTo);
-                key.push_back(')');
-                allX &= charToLower(field.transitionTo) == 'x';
-            }
-            else {
-                key.push_back(field.value);
-            }
-        }
+        auto advance = [&](char c) {
+            SmallVector<BitTrie*> nextNodes;
+            for (auto node : nodes)
+                node->nextNodesFor(c, nextNodes, primary, allocator);
+            nodes = std::move(nextNodes);
+        };
 
-        if (baseEntry.state.value)
-            key.push_back(baseEntry.state.value);
+        for (char c : inputs) {
+            // Skip the closing paren, since it doesn't add
+            // any additional signal to the bitstring.
+            if (c == ')')
+                continue;
 
-        auto [it, inserted] = rowDupMap.emplace(std::move(key), &syntax);
-        if (!inserted) {
-            // This is an error if the existing row has a different output,
-            // otherwise it's just silently ignored.
-            auto existing = getUdpFieldChar(it->second->next);
-            if (existing != baseEntry.output.value && existing && baseEntry.output.value) {
-                auto& diag = scope.addDiag(diag::UdpDupDiffOutput, syntax.sourceRange());
-                diag.addNote(diag::NotePreviousDefinition, it->second->sourceRange());
-            }
-        }
-        else {
-            if (allX && !currEntry.empty() && charToLower(baseEntry.output.value) != 'x')
-                scope.addDiag(diag::UdpAllX, syntax.sourceRange());
+            // Advance along the path.
+            advance(c);
 
-            baseEntry.inputs = currEntry.copy(scope.getCompilation());
-            results.push_back(baseEntry);
-        }
-        return;
-    }
-
-    auto next = [&](SmallVector<PrimitiveSymbol::TableField>& nextFieldList) {
-        expandTableEntries(scope, syntax, fields, nextFieldList, fieldIndex + 1, baseEntry, results,
-                           rowDupMap);
-    };
-
-    auto& field = fields[fieldIndex];
-    const char v = charToLower(field.value);
-
-    if (field.transitionTo) {
-        const char w = charToLower(field.transitionTo);
-
-        SmallVector<char> firstChars;
-        SmallVector<char> secondChars;
-        for (int i = 0; i < 2; i++) {
-            auto currVec = i ? &secondChars : &firstChars;
-            auto c = i ? w : v;
+            // Check if we need special handling for this character.
             switch (c) {
-                case '?':
-                    for (auto d : {'0', '1', 'x'})
-                        currVec->push_back(d);
+                case '*':
+                    advance('?');
+                    advance('?');
                     break;
-                case 'b':
-                    for (auto d : {'0', '1'})
-                        currVec->push_back(d);
+                case 'r':
+                    advance('0');
+                    advance('1');
                     break;
-                default:
-                    currVec->push_back(c);
+                case 'f':
+                    advance('1');
+                    advance('0');
                     break;
-            }
-        }
-
-        for (auto c : firstChars) {
-            for (auto d : secondChars) {
-                // Don't insert invalid double-x transition entries
-                // even if the expansion of an iteration character would
-                // otherwise cause us to do so.
-                if (c == 'x' && d == 'x')
-                    continue;
-
-                auto copiedEntry = currEntry;
-                copiedEntry.push_back({c, d});
-                next(copiedEntry);
-            }
-        }
-    }
-    else {
-        switch (v) {
-            case '?':
-                for (auto c : {'0', '1', 'x'}) {
-                    auto copiedEntry = currEntry;
-                    copiedEntry.push_back({c});
-                    next(copiedEntry);
+                case 'p':
+                case 'n': {
+                    // Special handling for iteration of edge specifiers.
+                    SmallVector<BitTrie*> nextNodes;
+                    for (auto node : nodes)
+                        node->nextNodesForEdge(c, nextNodes, primary, allocator);
+                    nodes = std::move(nextNodes);
+                    break;
                 }
+                default:
+                    break;
+            }
+        }
+
+        // Include the state field if present.
+        if (stateChar)
+            advance(stateChar);
+
+        // If any of our nodes have entries we won't insert,
+        // as it means we have a duplicate.
+        for (auto node : nodes) {
+            if (node->entry)
+                return node->entry;
+        }
+
+        // If we have an empty node set we saw an error somewhere,
+        // in which case don't insert. Otherwise we've found the
+        // correct place to insert, pointed to by the primary.
+        if (!nodes.empty())
+            primary->entry = &syntax;
+        return nullptr;
+    }
+
+private:
+    template<typename TAllocator>
+    void nextNodesFor(char c, SmallVector<BitTrie*>& nextNodes, BitTrie*& primaryNode,
+                      TAllocator& allocator) {
+        // Map the character to one or more of our child entries.
+        // The "primary" entry is the one that directly matches the
+        // character, and there can be several secondary entries that
+        // can match based on wildcard values.
+        //
+        // If we are handling a primary and the current node is also
+        // the primary node we should allocate if missing, otherwise
+        // we only add if it already exists.
+        auto handle = [&](int index, bool primary = false) {
+            if (primary && primaryNode == this) {
+                if (!children[index])
+                    children[index] = allocator.emplace();
+                primaryNode = children[index];
+            }
+
+            if (children[index])
+                nextNodes.push_back(children[index]);
+        };
+
+        switch (c) {
+            case '0':
+                handle(0, true);
+                handle(3);
+                handle(4);
+                break;
+            case '1':
+                handle(1, true);
+                handle(3);
+                handle(4);
+                break;
+            case 'x':
+                handle(2, true);
+                handle(3);
+                break;
+            case '?':
+                handle(3, true);
+                handle(0);
+                handle(1);
+                handle(2);
+                handle(4);
                 break;
             case 'b':
-                for (auto c : {'0', '1'}) {
-                    auto copiedEntry = currEntry;
-                    copiedEntry.push_back({c});
-                    next(copiedEntry);
-                }
+                handle(4, true);
+                handle(0);
+                handle(1);
+                handle(3);
                 break;
-            case 'p':
-                for (auto c : {"01", "0x", "x1"}) {
-                    auto copiedEntry = currEntry;
-                    copiedEntry.push_back({c[0], c[1]});
-                    next(copiedEntry);
-                }
-                break;
-            case 'n':
-                for (auto c : {"10", "1x", "x0"}) {
-                    auto copiedEntry = currEntry;
-                    copiedEntry.push_back({c[0], c[1]});
-                    next(copiedEntry);
-                }
-                break;
+            case '(':
             case '*':
-                for (auto c : {"01", "0x", "x1", "10", "1x", "x0"}) {
-                    auto copiedEntry = currEntry;
-                    copiedEntry.push_back({c[0], c[1]});
-                    next(copiedEntry);
-                }
-                break;
             case 'r':
-                currEntry.push_back({'0', '1'});
-                next(currEntry);
-                break;
             case 'f':
-                currEntry.push_back({'1', '0'});
-                next(currEntry);
+            case 'p':
+            case 'n':
+                handle(5, true);
                 break;
             default:
-                currEntry.push_back({v});
-                next(currEntry);
+                // On error clear all nodes. Assume someone else
+                // (the parser) has reported the error already.
+                nextNodes.clear();
                 break;
         }
     }
-}
 
-static void createTableEntries(const Scope& scope, const UdpEntrySyntax& syntax,
-                               SmallVector<PrimitiveSymbol::TableEntry>& results,
-                               SmallMap<std::string, const UdpEntrySyntax*, 4>& rowDupMap,
-                               size_t numPorts) {
-    SmallVector<PrimitiveSymbol::TableField> fields;
+    template<typename TAllocator>
+    void nextNodesForEdge(char c, SmallVector<BitTrie*>& nextNodes, BitTrie*& primaryNode,
+                          TAllocator& allocator) {
+        SmallVector<BitTrie*> results;
+        auto handle = [&](char first, char second) {
+            // We have to do this in two steps when expanding the edge char.
+            BitTrie* unused = nullptr;
+            SmallVector<BitTrie*> temp;
+            nextNodesFor(first, temp, primaryNode, allocator);
+            for (auto node : temp) {
+                for (char d : {second, 'x'})
+                    node->nextNodesFor(d, results, d == second ? primaryNode : unused, allocator);
+            }
+
+            temp.clear();
+            nextNodesFor('x', temp, unused, allocator);
+            for (auto node : temp)
+                node->nextNodesFor(second, results, unused, allocator);
+        };
+
+        if (c == 'p')
+            handle('0', '1');
+        else
+            handle('1', '0');
+
+        // We have to de-dup now because we iterated multiple times
+        // for the same slot.
+        SmallSet<BitTrie*, 4> set;
+        for (auto node : results) {
+            if (set.emplace(node).second)
+                nextNodes.push_back(node);
+        }
+    }
+
+    BitTrie* children[6] = {};
+    const UdpEntrySyntax* entry = nullptr;
+};
+
+static void createTableRow(const Scope& scope, const UdpEntrySyntax& syntax,
+                           SmallVector<PrimitiveSymbol::TableEntry>& table, size_t numPorts,
+                           BitTrie& trie, PoolAllocator<BitTrie>& trieAlloc) {
+    // Normalize all of the inputs into a single string.
+    SmallVector<char> inputs;
+    size_t numInputs = 0;
+    bool allX = true;
     for (auto input : syntax.inputs) {
         if (input->kind == SyntaxKind::UdpEdgeField) {
             auto& edge = input->as<UdpEdgeFieldSyntax>();
+            inputs.push_back('(');
 
-            SmallVector<char, 4> chars;
-            chars.append_range(edge.first.rawText());
-            chars.append_range(edge.second.rawText());
+            SmallVector<char> buf;
+            for (char c : edge.first.rawText())
+                buf.push_back(charToLower(c));
+            for (char c : edge.second.rawText())
+                buf.push_back(charToLower(c));
 
-            PrimitiveSymbol::TableField field;
-            if (chars.size() > 0)
-                field.value = chars[0];
-            if (chars.size() > 1)
-                field.transitionTo = chars[1];
+            if (buf.size() != 2)
+                return;
 
-            fields.push_back(field);
+            // Special case for (x?) and (?x) -- pretend these were
+            // written as (xb) and (bx), otherwise they're guaranteed
+            // to error about the overlap between ? and the 'x' value.
+            if (buf[0] == 'x' && buf[1] == '?') {
+                inputs.push_back('x');
+                inputs.push_back('b');
+                allX = false;
+            }
+            else if (buf[0] == '?' && buf[1] == 'x') {
+                inputs.push_back('b');
+                inputs.push_back('x');
+                allX = false;
+            }
+            else {
+                inputs.push_back(buf[0]);
+                inputs.push_back(buf[1]);
+                allX &= buf[0] == 'x';
+                allX &= buf[1] == 'x';
+            }
+
+            inputs.push_back(')');
+            numInputs++;
         }
         else {
             auto tok = input->as<UdpSimpleFieldSyntax>().field;
-            for (auto c : tok.rawText())
-                fields.push_back({c, 0});
+            for (auto c : tok.rawText()) {
+                auto d = charToLower(c);
+                inputs.push_back(d);
+                numInputs++;
+                allX &= d == 'x';
+            }
         }
     }
 
-    if (numPorts >= 2 && fields.size() != numPorts - 1) {
+    if (numPorts >= 2 && numInputs != numPorts - 1) {
         auto& diag = scope.addDiag(diag::UdpWrongInputCount, syntax.inputs.sourceRange());
-        diag << fields.size();
+        diag << numInputs;
         diag << numPorts - 1;
+        return;
     }
 
-    PrimitiveSymbol::TableEntry entry;
-    entry.state.value = getUdpFieldChar(syntax.current);
-    entry.output.value = getUdpFieldChar(syntax.next);
+    char stateChar = 0;
+    if (syntax.current) {
+        if (syntax.current->kind == SyntaxKind::UdpSimpleField) {
+            auto raw = syntax.current->as<UdpSimpleFieldSyntax>().field.rawText();
+            if (raw.size() == 1) {
+                auto c = charToLower(raw[0]);
+                switch (c) {
+                    case '0':
+                    case '1':
+                    case 'x':
+                    case '?':
+                    case 'b':
+                        stateChar = c;
+                        break;
+                    default:
+                        break;
+                }
+            }
+        }
 
-    SmallVector<PrimitiveSymbol::TableField> currEntry;
-    expandTableEntries(scope, syntax, fields, currEntry, 0, entry, results, rowDupMap);
+        if (!stateChar)
+            return;
+    }
+
+    auto getOutputChar = [](const UdpFieldBaseSyntax* base) -> char {
+        if (base && base->kind == SyntaxKind::UdpSimpleField) {
+            auto raw = base->as<UdpSimpleFieldSyntax>().field.rawText();
+            if (raw.size() == 1) {
+                auto c = charToLower(raw[0]);
+                switch (c) {
+                    case '-':
+                    case '0':
+                    case '1':
+                    case 'x':
+                        return c;
+                    default:
+                        break;
+                }
+            }
+        }
+        return 0;
+    };
+
+    auto outputChar = getOutputChar(syntax.next);
+    if (!outputChar)
+        return;
+
+    auto existing = trie.insert(syntax, inputs, stateChar, trieAlloc);
+    if (existing) {
+        // This is an error if the existing row has a different output,
+        // otherwise it's just silently ignored.
+        auto existingOutput = getOutputChar(existing->next);
+        if (existingOutput != outputChar) {
+            auto& diag = scope.addDiag(diag::UdpDupDiffOutput, syntax.sourceRange());
+            diag.addNote(diag::NotePreviousDefinition, existing->sourceRange());
+            return;
+        }
+    }
+    else if (allX && outputChar != 'x') {
+        scope.addDiag(diag::UdpAllX, syntax.sourceRange());
+        return;
+    }
+
+    auto inputSpan = inputs.copy(scope.getCompilation());
+    table.push_back({std::string_view(inputSpan.data(), inputSpan.size()), stateChar, outputChar});
 }
 
 PrimitiveSymbol& PrimitiveSymbol::fromSyntax(const Scope& scope,
@@ -1181,15 +1297,18 @@ PrimitiveSymbol& PrimitiveSymbol::fromSyntax(const Scope& scope,
                     scope.addDiag(diag::PrimitiveInitVal, expr.sourceRange);
             }
         }
+
+        BitTrie trie;
+        BumpAllocator alloc;
+        PoolAllocator<BitTrie> trieAlloc(alloc);
+        SmallVector<TableEntry> table;
+        for (auto entry : syntax.body->entries)
+            createTableRow(scope, *entry, table, ports.size(), trie, trieAlloc);
+
+        prim->table = table.copy(comp);
     }
 
-    SmallMap<std::string, const UdpEntrySyntax*, 4> rowDupMap;
-    SmallVector<TableEntry> table;
-    for (auto entry : syntax.body->entries)
-        createTableEntries(scope, *entry, table, rowDupMap, ports.size());
-
     prim->ports = ports.copy(comp);
-    prim->table = table.copy(comp);
     return *prim;
 }
 
@@ -1202,17 +1321,10 @@ void PrimitiveSymbol::serializeTo(ASTSerializer& serializer) const {
         serializer.startArray("table");
         for (auto& row : table) {
             serializer.startObject();
-            serializer.startArray("inputs");
-            for (auto& entry : row.inputs) {
-                if (entry.transitionTo)
-                    serializer.serialize(fmt::format("({}{})", entry.value, entry.transitionTo));
-                else
-                    serializer.serialize(std::string_view(&entry.value, 1));
-            }
-            serializer.endArray();
-            if (row.state.value)
-                serializer.write("state", std::string_view(&row.state.value, 1));
-            serializer.write("output", std::string_view(&row.output.value, 1));
+            serializer.write("inputs", row.inputs);
+            if (row.state)
+                serializer.write("state", std::string_view(&row.state, 1));
+            serializer.write("output", std::string_view(&row.output, 1));
             serializer.endObject();
         }
         serializer.endArray();

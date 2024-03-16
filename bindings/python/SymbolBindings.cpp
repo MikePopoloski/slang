@@ -545,10 +545,6 @@ void registerSymbols(py::module_& m) {
         .value("NOutput", PrimitiveSymbol::PrimitiveKind::NOutput)
         .export_values();
 
-    py::class_<PrimitiveSymbol::TableField>(primitiveSym, "TableField")
-        .def_readonly("value", &PrimitiveSymbol::TableField::value)
-        .def_readonly("transitionTo", &PrimitiveSymbol::TableField::transitionTo);
-
     py::class_<PrimitiveSymbol::TableEntry>(primitiveSym, "TableEntry")
         .def_readonly("inputs", &PrimitiveSymbol::TableEntry::inputs)
         .def_readonly("state", &PrimitiveSymbol::TableEntry::state)
