@@ -40,10 +40,10 @@ jobs:
       if: matrix.os == 'ubuntu-22.04'
       run: |
         wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
-        sudo add-apt-repository "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-17 main"
+        sudo add-apt-repository "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-18 main"
         sudo add-apt-repository ppa:ubuntu-toolchain-r/test
         sudo apt-get update
-        sudo apt-get install -y g++-13 g++-11 clang-17 clang-tidy-17
+        sudo apt-get install -y g++-13 g++-11 clang-18 clang-tidy-18
     - uses: ilammy/msvc-dev-cmd@v1
       if: matrix.os == 'windows-latest'
     - uses: maxim-lobanov/setup-xcode@v1

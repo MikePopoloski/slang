@@ -97,7 +97,8 @@
       "name": "clang-flags",
       "hidden": true,
       "cacheVariables": {
-        "SLANG_WARN_FLAGS": "-Wall;-Wextra;-Werror;-Warray-bounds-pointer-arithmetic;-Wassign-enum;-Wbad-function-cast;-Wcast-qual;-Wchar-subscripts;-Wcomma;-Wconditional-uninitialized;-Wconversion;-Wdelete-non-virtual-dtor;-Wdeprecated;-Wduplicate-enum;-Wduplicate-method-arg;-Wembedded-directive;-Wfor-loop-analysis;-Wformat-pedantic;-Widiomatic-parentheses;-Wimplicit-fallthrough;-Wpedantic;-Wrange-loop-analysis;-Wredundant-parens;-Wreserved-id-macro;-Wshadow;-Wundefined-reinterpret-cast;-Wunreachable-code-aggressive;-Wno-missing-braces;-Wno-deprecated-literal-operator"
+        "SLANG_WARN_FLAGS": "-Wall;-Wextra;-Werror;-Warray-bounds-pointer-arithmetic;-Wassign-enum;-Wbad-function-cast;-Wcast-qual;-Wchar-subscripts;-Wcomma;-Wconditional-uninitialized;-Wconversion;-Wdelete-non-virtual-dtor;-Wdeprecated;-Wduplicate-enum;-Wduplicate-method-arg;-Wembedded-directive;-Wfor-loop-analysis;-Wformat-pedantic;-Widiomatic-parentheses;-Wimplicit-fallthrough;-Wpedantic;-Wrange-loop-analysis;-Wredundant-parens;-Wreserved-id-macro;-Wshadow;-Wundefined-reinterpret-cast;-Wunreachable-code-aggressive;-Wno-missing-braces;-Wno-deprecated-literal-operator",
+        "CMAKE_CXX_FLAGS": "-Wno-deprecated-declarations"
       }
     },
     {
@@ -121,7 +122,7 @@
       ],
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
-        "CMAKE_CXX_COMPILER": "clang++-17"
+        "CMAKE_CXX_COMPILER": "clang++-18"
       }
     },
     {
@@ -133,7 +134,7 @@
       ],
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "CMAKE_CXX_COMPILER": "clang++-17"
+        "CMAKE_CXX_COMPILER": "clang++-18"
       }
     },
     {
@@ -146,11 +147,11 @@
       ],
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "RelWithDebInfo",
-        "CMAKE_CXX_COMPILER": "clang++-17",
-        "CMAKE_CXX_FLAGS": "-fsanitize=undefined,address -fno-sanitize-recover=undefined -fno-omit-frame-pointer -fno-common",
+        "CMAKE_CXX_COMPILER": "clang++-18",
+        "CMAKE_CXX_FLAGS": "-fsanitize=undefined,address -fno-sanitize-recover=undefined -fno-omit-frame-pointer -fno-common -Wno-deprecated-declarations",
         "CMAKE_EXE_LINKER_FLAGS": "-fsanitize=undefined,address -fno-sanitize-recover=undefined",
         "CMAKE_SHARED_LINKER_FLAGS": "-fsanitize=undefined,address -fno-sanitize-recover=undefined",
-        "SLANG_CLANG_TIDY": "clang-tidy-17"
+        "SLANG_CLANG_TIDY": "clang-tidy-18"
       }
     },
     {
