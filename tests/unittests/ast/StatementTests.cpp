@@ -1600,7 +1600,10 @@ TEST_CASE("Unrollable for loop drivers") {
  endmodule
 )");
 
-    Compilation compilation;
+    CompilationOptions options;
+    options.maxConstexprSteps = 10000;
+
+    Compilation compilation(options);
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();

@@ -2293,7 +2293,10 @@ endmodule
 a aw1(1ss
 )");
 
-    Compilation compilation;
+    CompilationOptions options;
+    options.maxCheckerInstanceDepth = 16;
+
+    Compilation compilation(options);
     compilation.addSyntaxTree(tree);
 
     // Just check no crashes.

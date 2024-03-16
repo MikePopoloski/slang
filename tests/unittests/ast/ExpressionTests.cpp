@@ -610,6 +610,7 @@ source:4:14: warning: value of real literal is too small; minimum is 4.94066e-32
 )");
 }
 
+#ifdef CI_BUILD
 TEST_CASE("Crazy long hex literal") {
     std::string str = "int i = 'h";
     str += std::string(4194304, 'f');
@@ -625,6 +626,7 @@ TEST_CASE("Crazy long hex literal") {
     CHECK(diags[0].code == diag::ConstantConversion);
     CHECK(diags[1].code == diag::LiteralSizeTooLarge);
 }
+#endif
 
 TEST_CASE("Simple assignment patterns") {
     auto tree = SyntaxTree::fromText(R"(

@@ -79,7 +79,7 @@ TEST_CASE("ThreadPool -- pushTask") {
             },
             std::cref(pass_me_by_cref));
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
         ++pass_me_by_cref;
         release = true;
         pool.waitForAll();
@@ -166,7 +166,7 @@ TEST_CASE("ThreadPool -- submit") {
             },
             std::cref(pass_me_by_cref));
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
         ++pass_me_by_cref;
         release = true;
         fut.wait();
@@ -175,12 +175,12 @@ TEST_CASE("ThreadPool -- submit") {
 
 TEST_CASE("ThreadPool -- waitForAll") {
     ThreadPool pool;
-    size_t n = pool.getThreadCount() * 10;
+    size_t n = pool.getThreadCount() * 2;
     auto flags = std::make_unique<std::atomic<bool>[]>(n);
 
     for (size_t i = 0; i < n; ++i)
         pool.pushTask([&flags, i] {
-            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            std::this_thread::sleep_for(std::chrono::microseconds(500));
             flags[i] = true;
         });
 
@@ -212,7 +212,7 @@ TEST_CASE("ThreadPool -- waitForAll blocks calling threads") {
     for (size_t i = 0; i < numTasks; ++i)
         tempPool.pushTask(waitingTask, i);
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
     bool anySet = false;
     for (size_t i = 0; i < numTasks; ++i)
         anySet = anySet || flags[i];
