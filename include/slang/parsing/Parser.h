@@ -180,8 +180,8 @@ private:
     syntax::ConcatenationExpressionSyntax& parseConcatenation(Token openBrace, syntax::ExpressionSyntax* first);
     syntax::StreamingConcatenationExpressionSyntax& parseStreamConcatenation(Token openBrace);
     syntax::StreamExpressionSyntax& parseStreamExpression();
-    syntax::OpenRangeListSyntax& parseOpenRangeList();
-    syntax::ExpressionSyntax& parseOpenRangeElement(bitmask<ExpressionOptions> options = {});
+    syntax::RangeListSyntax& parseRangeList();
+    syntax::ExpressionSyntax& parseValueRangeElement(bitmask<ExpressionOptions> options = {});
     syntax::ElementSelectSyntax& parseElementSelect();
     syntax::SelectorSyntax* parseElementSelector();
     syntax::NameSyntax& parseName(bitmask<NameOptions> options);

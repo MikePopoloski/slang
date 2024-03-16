@@ -220,14 +220,14 @@ token tagged
 token member
 Expression? expr
 
-OpenRangeExpression base=Expression
+ValueRangeExpression base=Expression
 token openBracket
 Expression left
 token colon
 Expression right
 token closeBracket
 
-OpenRangeList
+RangeList
 token openBrace
 separated_list<Expression> valueRanges
 token closeBrace
@@ -235,7 +235,7 @@ token closeBrace
 InsideExpression base=Expression
 Expression expr
 token inside
-OpenRangeList ranges
+RangeList ranges
 
 ConditionalExpression base=Expression
 ConditionalPredicate predicate
@@ -1709,7 +1709,7 @@ token semi
 
 UniquenessConstraint base=ConstraintItem
 token unique
-OpenRangeList ranges
+RangeList ranges
 token semi
 
 ImplicationConstraint base=ConstraintItem
@@ -1849,7 +1849,7 @@ ExpressionCoverageBinInitializer base=CoverageBinInitializer
 Expression expr
 
 RangeCoverageBinInitializer base=CoverageBinInitializer
-OpenRangeList ranges
+RangeList ranges
 WithClause? withClause
 
 IdWithExprCoverageBinInitializer base=CoverageBinInitializer
@@ -1904,7 +1904,7 @@ empty
 
 IntersectClause
 token intersect
-OpenRangeList ranges
+RangeList ranges
 
 BinsSelectConditionExpr base=BinsSelectExpression
 token binsof

@@ -1137,10 +1137,10 @@ Statement& CaseStatement::fromSyntax(Compilation& compilation, const CaseStateme
     bool isInside = syntax.matchesOrInside.kind == TokenKind::InsideKeyword;
     bool wildcard = !isInside && keyword != TokenKind::CaseKeyword;
     bool allowTypeRefs = !isInside && keyword == TokenKind::CaseKeyword;
-    bool allowOpenRange = !wildcard;
+    bool allowValueRange = !wildcard;
 
     bad |= !Expression::bindMembershipExpressions(context, keyword, wildcard, isInside,
-                                                  allowTypeRefs, allowOpenRange, *syntax.expr,
+                                                  allowTypeRefs, allowValueRange, *syntax.expr,
                                                   expressions, bound);
 
     auto condition = getCondition(syntax.caseKeyword.kind);
@@ -1236,8 +1236,8 @@ ER CaseStatement::evalImpl(EvalContext& context) const {
     for (auto& group : items) {
         for (auto item : group.expressions) {
             bool matched;
-            if (item->kind == ExpressionKind::OpenRange) {
-                ConstantValue val = item->as<OpenRangeExpression>().checkInside(context, cv);
+            if (item->kind == ExpressionKind::ValueRange) {
+                ConstantValue val = item->as<ValueRangeExpression>().checkInside(context, cv);
                 if (!val)
                     return ER::Fail;
 

@@ -1491,7 +1491,7 @@ MemberSyntax* Parser::parseCoverpointMember() {
 
     switch (peek().kind) {
         case TokenKind::OpenBrace: {
-            auto& ranges = parseOpenRangeList();
+            auto& ranges = parseRangeList();
             auto with = parseWithClause();
             initializer = &factory.rangeCoverageBinInitializer(ranges, with);
             break;
@@ -1546,7 +1546,7 @@ MemberSyntax* Parser::parseCoverpointMember() {
 TransRangeSyntax& Parser::parseTransRange() {
     SmallVector<TokenOrSyntax, 8> buffer;
     while (true) {
-        buffer.push_back(&parseOpenRangeElement(ExpressionOptions::SequenceExpr));
+        buffer.push_back(&parseValueRangeElement(ExpressionOptions::SequenceExpr));
         if (!peek(TokenKind::Comma))
             break;
 
@@ -1671,7 +1671,7 @@ BinsSelectExpressionSyntax& Parser::parseBinsSelectPrimary() {
         IntersectClauseSyntax* intersectClause = nullptr;
         if (peek(TokenKind::IntersectKeyword)) {
             auto intersect = consume();
-            auto& ranges = parseOpenRangeList();
+            auto& ranges = parseRangeList();
             intersectClause = &factory.intersectClause(intersect, ranges);
         }
 
@@ -1932,7 +1932,7 @@ ConstraintItemSyntax* Parser::parseConstraintItem(bool allowBlock, bool isTopLev
         }
         case TokenKind::UniqueKeyword: {
             auto keyword = consume();
-            auto& list = parseOpenRangeList();
+            auto& list = parseRangeList();
             return &factory.uniquenessConstraint(keyword, list, expect(TokenKind::Semicolon));
         }
         case TokenKind::SoftKeyword: {
@@ -1985,7 +1985,7 @@ DistConstraintListSyntax& Parser::parseDistConstraintList() {
     Token closeBrace;
     std::span<TokenOrSyntax> list;
 
-    parseList<isPossibleOpenRangeElement, isEndOfBracedList>(
+    parseList<isPossibleValueRangeElement, isEndOfBracedList>(
         TokenKind::OpenBrace, TokenKind::CloseBrace, TokenKind::Comma, openBrace, list, closeBrace,
         RequireItems::True, diag::ExpectedDistItem, [this] { return &parseDistItem(); });
 
@@ -1993,7 +1993,7 @@ DistConstraintListSyntax& Parser::parseDistConstraintList() {
 }
 
 DistItemSyntax& Parser::parseDistItem() {
-    auto& range = parseOpenRangeElement();
+    auto& range = parseValueRangeElement();
 
     DistWeightSyntax* weight = nullptr;
     if (peek(TokenKind::ColonEquals) || peek(TokenKind::ColonSlash)) {

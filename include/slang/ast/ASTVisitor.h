@@ -351,7 +351,7 @@ decltype(auto) Expression::visitExpression(TExpression* expr, TVisitor&& visitor
         CASE(StructuredAssignmentPattern, StructuredAssignmentPatternExpression);
         CASE(ReplicatedAssignmentPattern, ReplicatedAssignmentPatternExpression);
         CASE(EmptyArgument, EmptyArgumentExpression);
-        CASE(OpenRange, OpenRangeExpression);
+        CASE(ValueRange, ValueRangeExpression);
         CASE(Dist, DistExpression);
         CASE(NewArray, NewArrayExpression);
         CASE(NewClass, NewClassExpression);

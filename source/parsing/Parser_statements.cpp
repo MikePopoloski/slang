@@ -277,15 +277,15 @@ CaseStatementSyntax& Parser::parseCaseStatement(NamedLabelSyntax* label, AttrLis
             matchesOrInside = consume();
             errored = parseCaseItems(
                 caseKeyword.kind, itemBuffer,
-                [](auto kind) { return isPossibleOpenRangeElement(kind); },
+                [](auto kind) { return isPossibleValueRangeElement(kind); },
                 [this] {
                     Token colon;
                     SmallVector<TokenOrSyntax, 8> buffer;
 
-                    parseList<isPossibleOpenRangeElement, isEndOfCaseItem>(
+                    parseList<isPossibleValueRangeElement, isEndOfCaseItem>(
                         buffer, TokenKind::Colon, TokenKind::Comma, colon, RequireItems::True,
-                        diag::ExpectedOpenRangeElement,
-                        [this] { return &parseOpenRangeElement(); });
+                        diag::ExpectedValueRangeElement,
+                        [this] { return &parseValueRangeElement(); });
                     return &factory.standardCaseItem(buffer.copy(alloc), colon, parseStatement());
                 });
             break;

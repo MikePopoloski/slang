@@ -52,7 +52,7 @@ class ValueSymbol;
     x(StructuredAssignmentPattern) \
     x(ReplicatedAssignmentPattern) \
     x(EmptyArgument) \
-    x(OpenRange) \
+    x(ValueRange) \
     x(Dist) \
     x(NewArray) \
     x(NewClass) \
@@ -232,7 +232,7 @@ public:
     /// @param unwrapUnpacked If set to true, unpacked arrays will be unwrapped to
     ///                       their element types to find the type to check against.
     ///                       Otherwise, all aggregates are illegal.
-    /// @param allowOpenRange If set to true, open range expressions will be allowed.
+    /// @param allowValueRange If set to true, value range expressions will be allowed.
     ///                       Otherwise an error will be issued for them.
     /// @param allowTypeReferences If set to true the created expressions are allowed to
     ///                            be type reference expressions. Otherwise an error will
@@ -244,7 +244,7 @@ public:
     ///
     static bool bindMembershipExpressions(const ASTContext& context, parsing::TokenKind keyword,
                                           bool requireIntegral, bool unwrapUnpacked,
-                                          bool allowTypeReferences, bool allowOpenRange,
+                                          bool allowTypeReferences, bool allowValueRange,
                                           const ExpressionSyntax& valueExpr,
                                           std::span<const ExpressionSyntax* const> expressions,
                                           SmallVectorBase<const Expression*>& results);

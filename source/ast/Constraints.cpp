@@ -198,7 +198,7 @@ struct ConstraintExprVisitor {
                     }
                     break;
                 }
-                case ExpressionKind::OpenRange:
+                case ExpressionKind::ValueRange:
                     return true;
                 case ExpressionKind::Dist: {
                     // Additional restrictions on dist expressions:

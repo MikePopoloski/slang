@@ -443,9 +443,9 @@ void registerAST(py::module_& m) {
         .def_readonly("constantWithWidth",
                       &StreamingConcatenationExpression::StreamExpression::constantWithWidth);
 
-    py::class_<OpenRangeExpression, Expression>(m, "OpenRangeExpression")
-        .def_property_readonly("left", py::overload_cast<>(&OpenRangeExpression::left))
-        .def_property_readonly("right", py::overload_cast<>(&OpenRangeExpression::right));
+    py::class_<ValueRangeExpression, Expression>(m, "ValueRangeExpression")
+        .def_property_readonly("left", py::overload_cast<>(&ValueRangeExpression::left))
+        .def_property_readonly("right", py::overload_cast<>(&ValueRangeExpression::right));
 
     py::class_<ElementSelectExpression, Expression>(m, "ElementSelectExpression")
         .def_property_readonly("value", py::overload_cast<>(&ElementSelectExpression::value))

@@ -22,7 +22,8 @@ public:
 
     UnaryExpression(UnaryOperator op, const Type& type, Expression& operand,
                     SourceRange sourceRange) :
-        Expression(ExpressionKind::UnaryOp, type, sourceRange), op(op), operand_(&operand) {}
+        Expression(ExpressionKind::UnaryOp, type, sourceRange),
+        op(op), operand_(&operand) {}
 
     const Expression& operand() const { return *operand_; }
     Expression& operand() { return *operand_; }
@@ -60,8 +61,8 @@ public:
 
     BinaryExpression(BinaryOperator op, const Type& type, Expression& left, Expression& right,
                      SourceRange sourceRange) :
-        Expression(ExpressionKind::BinaryOp, type, sourceRange), op(op), left_(&left),
-        right_(&right) {}
+        Expression(ExpressionKind::BinaryOp, type, sourceRange),
+        op(op), left_(&left), right_(&right) {}
 
     const Expression& left() const { return *left_; }
     Expression& left() { return *left_; }
@@ -108,8 +109,8 @@ public:
 
     ConditionalExpression(const Type& type, std::span<const Condition> conditions, Expression& left,
                           Expression& right, SourceRange sourceRange, bool isConst, bool isTrue) :
-        Expression(ExpressionKind::ConditionalOp, type, sourceRange), conditions(conditions),
-        left_(&left), right_(&right), isConst(isConst), isTrue(isTrue) {}
+        Expression(ExpressionKind::ConditionalOp, type, sourceRange),
+        conditions(conditions), left_(&left), right_(&right), isConst(isConst), isTrue(isTrue) {}
 
     const Expression& left() const { return *left_; } // NOLINT
     Expression& left() { return *left_; }
@@ -159,8 +160,8 @@ class SLANG_EXPORT InsideExpression : public Expression {
 public:
     InsideExpression(const Type& type, const Expression& left,
                      std::span<const Expression* const> rangeList, SourceRange sourceRange) :
-        Expression(ExpressionKind::Inside, type, sourceRange), left_(&left), rangeList_(rangeList) {
-    }
+        Expression(ExpressionKind::Inside, type, sourceRange),
+        left_(&left), rangeList_(rangeList) {}
 
     const Expression& left() const { return *left_; }
 
@@ -193,7 +194,8 @@ class SLANG_EXPORT ConcatenationExpression : public Expression {
 public:
     ConcatenationExpression(const Type& type, std::span<const Expression* const> operands,
                             SourceRange sourceRange) :
-        Expression(ExpressionKind::Concatenation, type, sourceRange), operands_(operands) {}
+        Expression(ExpressionKind::Concatenation, type, sourceRange),
+        operands_(operands) {}
 
     std::span<const Expression* const> operands() const { return operands_; }
 
@@ -227,8 +229,8 @@ class SLANG_EXPORT ReplicationExpression : public Expression {
 public:
     ReplicationExpression(const Type& type, const Expression& count, Expression& concat,
                           SourceRange sourceRange) :
-        Expression(ExpressionKind::Replication, type, sourceRange), count_(&count),
-        concat_(&concat) {}
+        Expression(ExpressionKind::Replication, type, sourceRange),
+        count_(&count), concat_(&concat) {}
 
     const Expression& count() const { return *count_; }
 
@@ -268,8 +270,8 @@ public:
     StreamingConcatenationExpression(const Type& type, uint64_t sliceSize, uint64_t bitstreamWidth,
                                      std::span<const StreamExpression> streams,
                                      SourceRange sourceRange) :
-        Expression(ExpressionKind::Streaming, type, sourceRange), streams_(streams),
-        sliceSize(sliceSize), bitstreamWidth(bitstreamWidth) {}
+        Expression(ExpressionKind::Streaming, type, sourceRange),
+        streams_(streams), sliceSize(sliceSize), bitstreamWidth(bitstreamWidth) {}
 
     bool isFixedSize() const;
     uint64_t getBitstreamWidth() const { return bitstreamWidth; }
@@ -308,11 +310,12 @@ private:
 /// Denotes a range of values by providing expressions for the lower and upper
 /// bounds of the range. This expression needs special handling in the various
 /// places that allow it, since it doesn't really have a type.
-class SLANG_EXPORT OpenRangeExpression : public Expression {
+class SLANG_EXPORT ValueRangeExpression : public Expression {
 public:
-    OpenRangeExpression(const Type& type, Expression& left, Expression& right,
-                        SourceRange sourceRange) :
-        Expression(ExpressionKind::OpenRange, type, sourceRange), left_(&left), right_(&right) {}
+    ValueRangeExpression(const Type& type, Expression& left, Expression& right,
+                         SourceRange sourceRange) :
+        Expression(ExpressionKind::ValueRange, type, sourceRange),
+        left_(&left), right_(&right) {}
 
     const Expression& left() const { return *left_; }
     Expression& left() { return *left_; }
@@ -328,10 +331,10 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static Expression& fromSyntax(Compilation& comp,
-                                  const syntax::OpenRangeExpressionSyntax& syntax,
+                                  const syntax::ValueRangeExpressionSyntax& syntax,
                                   const ASTContext& context);
 
-    static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::OpenRange; }
+    static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::ValueRange; }
 
     template<typename TVisitor>
     void visitExprs(TVisitor&& visitor) const {

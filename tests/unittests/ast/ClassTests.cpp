@@ -2613,7 +2613,7 @@ endclass
 
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 1);
-    CHECK(diags[0].code == diag::ReversedOpenRange);
+    CHECK(diags[0].code == diag::ReversedValueRange);
 }
 
 TEST_CASE("Access to static class data member with incomplete forward typedef") {

@@ -499,15 +499,15 @@ Expression& Expression::convertAssignment(const ASTContext& context, const Type&
             }
             return badExpr(comp, &expr);
         }
-        else if (expr.kind == ExpressionKind::OpenRange) {
+        else if (expr.kind == ExpressionKind::ValueRange) {
             // Convert each side of the range and return that as a new range.
-            auto& ore = expr.as<OpenRangeExpression>();
+            auto& ore = expr.as<ValueRangeExpression>();
             auto& left = convertAssignment(context, type, ore.left(), location, lhsExpr,
                                            assignFlags);
             auto& right = convertAssignment(context, type, ore.right(), location, lhsExpr,
                                             assignFlags);
 
-            result = comp.emplace<OpenRangeExpression>(*expr.type, left, right, expr.sourceRange);
+            result = comp.emplace<ValueRangeExpression>(*expr.type, left, right, expr.sourceRange);
             result->syntax = expr.syntax;
             return *result;
         }

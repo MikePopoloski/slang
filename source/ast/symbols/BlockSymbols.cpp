@@ -427,7 +427,7 @@ void GenerateBlockSymbol::fromSyntax(Compilation& compilation, const CaseGenerat
     SmallVector<const Expression*> bound;
     if (!Expression::bindMembershipExpressions(
             context, TokenKind::CaseKeyword, /* requireIntegral */ false,
-            /* unwrapUnpacked */ false, /* allowTypeReferences */ true, /* allowOpenRange */ true,
+            /* unwrapUnpacked */ false, /* allowTypeReferences */ true, /* allowValueRange */ true,
             *syntax.condition, expressions, bound)) {
         return;
     }

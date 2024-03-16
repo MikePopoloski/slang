@@ -530,7 +530,7 @@ void CoverageBinSymbol::resolve() const {
             auto& rcbis = init->as<RangeCoverageBinInitializerSyntax>();
             for (auto elem : rcbis.ranges->valueRanges) {
                 bitmask<ASTFlags> flags;
-                if (elem->kind == SyntaxKind::OpenRangeExpression)
+                if (elem->kind == SyntaxKind::ValueRangeExpression)
                     flags = ASTFlags::AllowUnboundedLiteral;
 
                 auto& expr = bindCovergroupExpr(*elem, context, &type, flags);
@@ -983,7 +983,7 @@ BinsSelectExpr& ConditionBinsSelectExpr::fromSyntax(const BinsSelectConditionExp
         SmallVector<const Expression*> buffer;
         for (auto elem : syntax.intersects->ranges->valueRanges) {
             bitmask<ASTFlags> flags;
-            if (elem->kind == SyntaxKind::OpenRangeExpression)
+            if (elem->kind == SyntaxKind::ValueRangeExpression)
                 flags = ASTFlags::AllowUnboundedLiteral;
 
             auto& elemExpr = bindCovergroupExpr(*elem, context, type, flags);

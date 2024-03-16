@@ -168,7 +168,7 @@ const Type* Expression::binaryOperatorType(Compilation& compilation, const Type*
 
 bool Expression::bindMembershipExpressions(const ASTContext& context, TokenKind keyword,
                                            bool requireIntegral, bool unwrapUnpacked,
-                                           bool allowTypeReferences, bool allowOpenRange,
+                                           bool allowTypeReferences, bool allowValueRange,
                                            const ExpressionSyntax& valueExpr,
                                            std::span<const ExpressionSyntax* const> expressions,
                                            SmallVectorBase<const Expression*>& results) {
@@ -239,13 +239,13 @@ bool Expression::bindMembershipExpressions(const ASTContext& context, TokenKind 
         if (bad)
             continue;
 
-        // Special handling for open range expressions -- they don't have
+        // Special handling for value range expressions -- they don't have
         // a real type on their own, we need to check their bounds.
-        if (allowOpenRange && bound->kind == ExpressionKind::OpenRange) {
+        if (allowValueRange && bound->kind == ExpressionKind::ValueRange) {
             if (canBeStrings && !bound->isImplicitString())
                 canBeStrings = false;
 
-            auto& range = bound->as<OpenRangeExpression>();
+            auto& range = bound->as<ValueRangeExpression>();
             checkType(range.left(), *range.left().type);
             checkType(range.right(), *range.right().type);
             continue;
@@ -1278,7 +1278,7 @@ Expression& InsideExpression::fromSyntax(Compilation& compilation,
     bool bad =
         !bindMembershipExpressions(context, TokenKind::InsideKeyword, /* requireIntegral */ false,
                                    /* unwrapUnpacked */ true, /* allowTypeReferences */ false,
-                                   /* allowOpenRange */ true, *syntax.expr, expressions, bound);
+                                   /* allowValueRange */ true, *syntax.expr, expressions, bound);
 
     auto boundSpan = bound.copy(compilation);
     auto result = compilation.emplace<InsideExpression>(compilation.getLogicType(), *boundSpan[0],
@@ -1321,8 +1321,8 @@ ConstantValue InsideExpression::evalImpl(EvalContext& context) const {
     bool anyUnknown = false;
     for (auto elem : rangeList()) {
         logic_t result;
-        if (elem->kind == ExpressionKind::OpenRange) {
-            ConstantValue cvr = elem->as<OpenRangeExpression>().checkInside(context, cvl);
+        if (elem->kind == ExpressionKind::ValueRange) {
+            ConstantValue cvr = elem->as<ValueRangeExpression>().checkInside(context, cvl);
             if (!cvr)
                 return nullptr;
 
@@ -1995,9 +1995,9 @@ bool StreamingConcatenationExpression::isFixedSize() const {
     return true;
 }
 
-Expression& OpenRangeExpression::fromSyntax(Compilation& comp,
-                                            const OpenRangeExpressionSyntax& syntax,
-                                            const ASTContext& context) {
+Expression& ValueRangeExpression::fromSyntax(Compilation& comp,
+                                             const ValueRangeExpressionSyntax& syntax,
+                                             const ASTContext& context) {
     // If we are allowed unbounded literals here, pass that along to subexpressions.
     bitmask<ASTFlags> flags = ASTFlags::None;
     if (context.flags.has(ASTFlags::AllowUnboundedLiteral))
@@ -2006,8 +2006,8 @@ Expression& OpenRangeExpression::fromSyntax(Compilation& comp,
     Expression& left = create(comp, *syntax.left, context, flags);
     Expression& right = create(comp, *syntax.right, context, flags);
 
-    auto result = comp.emplace<OpenRangeExpression>(comp.getVoidType(), left, right,
-                                                    syntax.sourceRange());
+    auto result = comp.emplace<ValueRangeExpression>(comp.getVoidType(), left, right,
+                                                     syntax.sourceRange());
     if (left.bad() || right.bad())
         return badExpr(comp, result);
 
@@ -2016,7 +2016,7 @@ Expression& OpenRangeExpression::fromSyntax(Compilation& comp,
     if (lt->isUnbounded()) {
         lt = &comp.getIntType();
         if (rt->isUnbounded())
-            context.addDiag(diag::OpenRangeUnbounded, result->sourceRange);
+            context.addDiag(diag::ValueRangeUnbounded, result->sourceRange);
     }
 
     if (rt->isUnbounded())
@@ -2024,7 +2024,7 @@ Expression& OpenRangeExpression::fromSyntax(Compilation& comp,
 
     if (!(lt->isNumeric() && rt->isNumeric()) &&
         !(left.isImplicitString() && right.isImplicitString())) {
-        auto& diag = context.addDiag(diag::BadOpenRange, syntax.colon.location());
+        auto& diag = context.addDiag(diag::BadValueRange, syntax.colon.location());
         diag << left.sourceRange << right.sourceRange << *lt << *rt;
         return badExpr(comp, result);
     }
@@ -2032,24 +2032,24 @@ Expression& OpenRangeExpression::fromSyntax(Compilation& comp,
     auto cvl = context.tryEval(left);
     auto cvr = context.tryEval(right);
     if (cvl.isInteger() && cvr.isInteger() && bool(cvl.integer() > cvr.integer()))
-        context.addDiag(diag::ReversedOpenRange, result->sourceRange);
+        context.addDiag(diag::ReversedValueRange, result->sourceRange);
 
     return *result;
 }
 
-bool OpenRangeExpression::propagateType(const ASTContext& context, const Type& newType) {
+bool ValueRangeExpression::propagateType(const ASTContext& context, const Type& newType) {
     contextDetermined(context, left_, this, newType);
     contextDetermined(context, right_, this, newType);
     return true;
 }
 
-ConstantValue OpenRangeExpression::evalImpl(EvalContext&) const {
+ConstantValue ValueRangeExpression::evalImpl(EvalContext&) const {
     // Should never enter this expecting a real result.
     return nullptr;
 }
 
-ConstantValue OpenRangeExpression::checkInside(EvalContext& context,
-                                               const ConstantValue& val) const {
+ConstantValue ValueRangeExpression::checkInside(EvalContext& context,
+                                                const ConstantValue& val) const {
     ConstantValue cvl = left().eval(context);
     ConstantValue cvr = right().eval(context);
     if (!cvl || !cvr)
@@ -2060,7 +2060,7 @@ ConstantValue OpenRangeExpression::checkInside(EvalContext& context,
     return evalLogicalOp(BinaryOperator::LogicalAnd, cvl.integer(), cvr.integer());
 }
 
-void OpenRangeExpression::serializeTo(ASTSerializer& serializer) const {
+void ValueRangeExpression::serializeTo(ASTSerializer& serializer) const {
     serializer.write("left", left());
     serializer.write("right", right());
 }

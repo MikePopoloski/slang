@@ -311,24 +311,24 @@ void Parser::handleExponentSplit(Token token, size_t offset) {
 
 ExpressionSyntax& Parser::parseInsideExpression(ExpressionSyntax& expr) {
     auto inside = expect(TokenKind::InsideKeyword);
-    auto& list = parseOpenRangeList();
+    auto& list = parseRangeList();
     return factory.insideExpression(expr, inside, list);
 }
 
-OpenRangeListSyntax& Parser::parseOpenRangeList() {
+RangeListSyntax& Parser::parseRangeList() {
     Token openBrace;
     Token closeBrace;
     std::span<TokenOrSyntax> list;
 
-    parseList<isPossibleOpenRangeElement, isEndOfBracedList>(
+    parseList<isPossibleValueRangeElement, isEndOfBracedList>(
         TokenKind::OpenBrace, TokenKind::CloseBrace, TokenKind::Comma, openBrace, list, closeBrace,
-        RequireItems::True, diag::ExpectedOpenRangeElement,
-        [this] { return &parseOpenRangeElement(); });
+        RequireItems::True, diag::ExpectedValueRangeElement,
+        [this] { return &parseValueRangeElement(); });
 
-    return factory.openRangeList(openBrace, list, closeBrace);
+    return factory.rangeList(openBrace, list, closeBrace);
 }
 
-ExpressionSyntax& Parser::parseOpenRangeElement(bitmask<ExpressionOptions> options) {
+ExpressionSyntax& Parser::parseValueRangeElement(bitmask<ExpressionOptions> options) {
     if (!peek(TokenKind::OpenBracket))
         return parseSubExpression(options, 0);
 
@@ -337,7 +337,7 @@ ExpressionSyntax& Parser::parseOpenRangeElement(bitmask<ExpressionOptions> optio
     auto colon = expect(TokenKind::Colon);
     auto& right = parseExpression();
     auto closeBracket = expect(TokenKind::CloseBracket);
-    return factory.openRangeExpression(openBracket, left, colon, right, closeBracket);
+    return factory.valueRangeExpression(openBracket, left, colon, right, closeBracket);
 }
 
 ConcatenationExpressionSyntax& Parser::parseConcatenation(Token openBrace,

@@ -155,7 +155,7 @@ struct Expression::PropagationVisitor {
         if constexpr (requires { expr.propagateType(context, newType); }) {
             if ((newType.isFloating() && expr.type->isFloating()) ||
                 (newType.isIntegral() && expr.type->isIntegral()) || newType.isString() ||
-                expr.kind == ExpressionKind::OpenRange) {
+                expr.kind == ExpressionKind::ValueRange) {
 
                 if (expr.propagateType(context, newType))
                     needConversion = false;
@@ -651,8 +651,8 @@ bool Expression::isImplicitString() const {
             auto& repl = as<ReplicationExpression>();
             return repl.concat().isImplicitString();
         }
-        case ExpressionKind::OpenRange: {
-            auto& range = as<OpenRangeExpression>();
+        case ExpressionKind::ValueRange: {
+            auto& range = as<ValueRangeExpression>();
             return range.left().isImplicitString() || range.right().isImplicitString();
         }
         case ExpressionKind::MinTypMax: {
@@ -868,10 +868,10 @@ Expression& Expression::create(Compilation& compilation, const ExpressionSyntax&
                                             syntax.as<AssignmentPatternExpressionSyntax>(), context,
                                             assignmentTarget);
             break;
-        case SyntaxKind::OpenRangeExpression:
-            result = &OpenRangeExpression::fromSyntax(compilation,
-                                                      syntax.as<OpenRangeExpressionSyntax>(),
-                                                      context);
+        case SyntaxKind::ValueRangeExpression:
+            result = &ValueRangeExpression::fromSyntax(compilation,
+                                                       syntax.as<ValueRangeExpressionSyntax>(),
+                                                       context);
             break;
         case SyntaxKind::ExpressionOrDist:
             result = &DistExpression::fromSyntax(compilation, syntax.as<ExpressionOrDistSyntax>(),

@@ -1323,7 +1323,7 @@ Expression& DistExpression::fromSyntax(Compilation& comp, const ExpressionOrDist
     bool bad =
         !bindMembershipExpressions(context, TokenKind::DistKeyword, /* requireIntegral */ true,
                                    /* unwrapUnpacked */ false, /* allowTypeReferences */ false,
-                                   /* allowOpenRange */ true, *syntax.expr, expressions, bound);
+                                   /* allowValueRange */ true, *syntax.expr, expressions, bound);
 
     SmallVector<DistItem, 4> items;
     size_t index = 1;

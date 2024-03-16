@@ -304,7 +304,7 @@ endmodule
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 12);
     CHECK(diags[0].code == diag::NotBooleanConvertible);
-    CHECK(diags[1].code == diag::OpenRangeUnbounded);
+    CHECK(diags[1].code == diag::ValueRangeUnbounded);
     CHECK(diags[2].code == diag::ExprMustBeIntegral);
     CHECK(diags[3].code == diag::CoverageBinDefaultWildcard);
     CHECK(diags[4].code == diag::CoverageBinDefSeqSize);

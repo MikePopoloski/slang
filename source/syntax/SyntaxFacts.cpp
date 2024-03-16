@@ -738,7 +738,7 @@ bool SyntaxFacts::isPossibleForInitializer(TokenKind kind) {
     return kind == TokenKind::Comma || kind == TokenKind::VarKeyword || isPossibleExpression(kind);
 }
 
-bool SyntaxFacts::isPossibleOpenRangeElement(TokenKind kind) {
+bool SyntaxFacts::isPossibleValueRangeElement(TokenKind kind) {
     switch (kind) {
         case TokenKind::OpenBracket:
         case TokenKind::Comma:
