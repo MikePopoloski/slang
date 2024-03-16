@@ -221,6 +221,7 @@ void registerTypes(py::module_& m) {
     py::class_<PackedUnionType, IntegralType, Scope>(m, "PackedUnionType")
         .def_readonly("systemId", &PackedUnionType::systemId)
         .def_readonly("isTagged", &PackedUnionType::isTagged)
+        .def_readonly("isSoft", &PackedUnionType::isSoft)
         .def_readonly("tagBits", &PackedUnionType::tagBits);
 
     py::class_<UnpackedUnionType, Type, Scope>(m, "UnpackedUnionType")

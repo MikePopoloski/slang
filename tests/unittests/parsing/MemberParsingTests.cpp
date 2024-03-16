@@ -1269,3 +1269,14 @@ always case(matches matches
     // Just testing that there's no crash.
     parseCompilationUnit(text);
 }
+
+TEST_CASE("Soft packed unions only allowed in 1800-2023") {
+    auto& text = R"(
+union soft { logic a; int b; } foo;
+)";
+
+    parseCompilationUnit(text);
+
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics[0].code == diag::WrongLanguageVersion);
+}

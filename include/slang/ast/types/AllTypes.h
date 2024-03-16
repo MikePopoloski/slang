@@ -272,10 +272,11 @@ class SLANG_EXPORT PackedUnionType : public IntegralType, public Scope {
 public:
     int systemId;
     bool isTagged;
+    bool isSoft;
     uint32_t tagBits;
 
-    PackedUnionType(Compilation& compilation, bool isSigned, bool isTagged, SourceLocation loc,
-                    const ASTContext& context);
+    PackedUnionType(Compilation& compilation, bool isSigned, bool isTagged, bool isSoft,
+                    SourceLocation loc, const ASTContext& context);
 
     static const Type& fromSyntax(Compilation& compilation,
                                   const syntax::StructUnionTypeSyntax& syntax,

@@ -413,7 +413,11 @@ DotMemberClauseSyntax* Parser::parseDotMemberClause() {
 
 StructUnionTypeSyntax& Parser::parseStructUnion(SyntaxKind syntaxKind) {
     auto keyword = consume();
-    auto tagged = consumeIf(TokenKind::TaggedKeyword);
+
+    Token taggedOrSoft;
+    if (peek(TokenKind::TaggedKeyword) || peek(TokenKind::SoftKeyword))
+        taggedOrSoft = consume();
+
     auto packed = consumeIf(TokenKind::PackedKeyword);
     auto signing = parseSigning();
     auto openBrace = expect(TokenKind::OpenBrace);
@@ -443,8 +447,10 @@ StructUnionTypeSyntax& Parser::parseStructUnion(SyntaxKind syntaxKind) {
             }
 
             bitmask<TypeOptions> typeOptions;
-            if (tagged.valid() && keyword.kind == TokenKind::UnionKeyword)
+            if (taggedOrSoft.kind == TokenKind::TaggedKeyword &&
+                keyword.kind == TokenKind::UnionKeyword) {
                 typeOptions = TypeOptions::AllowVoid;
+            }
 
             auto& type = parseDataType(typeOptions);
 
@@ -481,10 +487,16 @@ StructUnionTypeSyntax& Parser::parseStructUnion(SyntaxKind syntaxKind) {
             addDiag(diag::UnpackedSigned, signing.range());
     }
 
-    if (keyword.kind == TokenKind::StructKeyword && tagged.valid())
-        addDiag(diag::TaggedStruct, tagged.range());
+    if (keyword.kind == TokenKind::StructKeyword && taggedOrSoft.valid()) {
+        addDiag(diag::TaggedStruct, taggedOrSoft.range()) << taggedOrSoft.valueText();
+    }
+    else if (taggedOrSoft.kind == TokenKind::SoftKeyword &&
+             parseOptions.languageVersion < LanguageVersion::v1800_2023) {
+        addDiag(diag::WrongLanguageVersion, taggedOrSoft.range())
+            << toString(parseOptions.languageVersion);
+    }
 
-    return factory.structUnionType(syntaxKind, keyword, tagged, packed, signing, openBrace,
+    return factory.structUnionType(syntaxKind, keyword, taggedOrSoft, packed, signing, openBrace,
                                    buffer.copy(alloc), closeBrace, dims);
 }
 

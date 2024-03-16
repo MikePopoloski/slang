@@ -912,10 +912,10 @@ const Type& UnpackedStructType::fromSyntax(const ASTContext& context,
 }
 
 PackedUnionType::PackedUnionType(Compilation& compilation, bool isSigned, bool isTagged,
-                                 SourceLocation loc, const ASTContext& context) :
+                                 bool isSoft, SourceLocation loc, const ASTContext& context) :
     IntegralType(SymbolKind::PackedUnionType, "", loc, 0, isSigned, false),
     Scope(compilation, this), systemId(compilation.getNextUnionSystemId()), isTagged(isTagged),
-    tagBits(0) {
+    isSoft(isSoft), tagBits(0) {
 
     // Union types don't live as members of the parent scope (they're "owned" by
     // the declaration containing them) but we hook up the parent pointer so that
@@ -925,13 +925,13 @@ PackedUnionType::PackedUnionType(Compilation& compilation, bool isSigned, bool i
 
 const Type& PackedUnionType::fromSyntax(Compilation& comp, const StructUnionTypeSyntax& syntax,
                                         const ASTContext& parentContext) {
-    SLANG_ASSERT(syntax.packed);
     const bool isSigned = syntax.signing.kind == TokenKind::SignedKeyword;
-    const bool isTagged = syntax.tagged.valid();
+    const bool isTagged = syntax.taggedOrSoft.kind == TokenKind::TaggedKeyword;
+    const bool isSoft = syntax.taggedOrSoft.kind == TokenKind::SoftKeyword;
     bool issuedError = false;
     uint32_t fieldIndex = 0;
 
-    auto unionType = comp.emplace<PackedUnionType>(comp, isSigned, isTagged,
+    auto unionType = comp.emplace<PackedUnionType>(comp, isSigned, isTagged, isSoft,
                                                    syntax.keyword.location(), parentContext);
     unionType->setSyntax(syntax);
 
@@ -972,7 +972,7 @@ const Type& PackedUnionType::fromSyntax(Compilation& comp, const StructUnionType
             if (!unionType->bitWidth) {
                 unionType->bitWidth = type.getBitWidth();
             }
-            else if (isTagged) {
+            else if (isTagged || isSoft) {
                 // In tagged unions the members don't all have to have the same width.
                 unionType->bitWidth = std::max(unionType->bitWidth, type.getBitWidth());
             }
@@ -1033,7 +1033,7 @@ const Type& UnpackedUnionType::fromSyntax(const ASTContext& context,
     SLANG_ASSERT(!syntax.packed);
 
     auto& comp = context.getCompilation();
-    bool isTagged = syntax.tagged.valid();
+    bool isTagged = syntax.taggedOrSoft.kind == TokenKind::TaggedKeyword;
     auto result = comp.emplace<UnpackedUnionType>(comp, isTagged, syntax.keyword.location(),
                                                   context);
 

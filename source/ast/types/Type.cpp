@@ -1011,7 +1011,7 @@ const Type& Type::fromSyntax(Compilation& compilation, const DataTypeSyntax& nod
         }
         case SyntaxKind::UnionType: {
             const auto& structUnion = node.as<StructUnionTypeSyntax>();
-            return structUnion.packed
+            return (structUnion.packed || structUnion.taggedOrSoft.kind == TokenKind::SoftKeyword)
                        ? PackedUnionType::fromSyntax(compilation, structUnion, context)
                        : UnpackedUnionType::fromSyntax(context, structUnion);
         }

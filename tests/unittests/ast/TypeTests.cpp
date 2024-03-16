@@ -2188,3 +2188,24 @@ parameter real r = $;
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::BadAssignment);
 }
+
+TEST_CASE("Soft packed unions") {
+    auto options = optionsFor(LanguageVersion::v1800_2023);
+    auto tree = SyntaxTree::fromText(R"(
+function automatic logic[7:0] foo;
+    union soft { logic [7:0] a; logic [5:0] b; } u;
+    u.a = 8'hff;
+    u.b = 6'd0;
+    return u;
+endfunction
+
+module m;
+    localparam p = foo();
+endmodule
+)",
+                                     options);
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

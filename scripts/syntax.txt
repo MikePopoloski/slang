@@ -668,7 +668,7 @@ token semi
 
 StructUnionType base=DataType multiKind=true
 token keyword
-token tagged
+token taggedOrSoft
 token packed
 token signing
 token openBrace
