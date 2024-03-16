@@ -564,17 +564,14 @@ module m;
     initial begin
         $cast(a, b);
         if ($cast(i, r)) begin end
-        $cast(i, da); // error
+        $cast(i, da);
     end
 endmodule
 )");
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
-
-    auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 1);
-    CHECK(diags[0].code == diag::CastArgSingular);
+    NO_COMPILATION_ERRORS;
 }
 
 TEST_CASE("Associative array non-const methods") {

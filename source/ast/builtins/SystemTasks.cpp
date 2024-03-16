@@ -511,16 +511,6 @@ public:
         if (!checkArgCount(context, false, args, range, 2, 2))
             return comp.getErrorType();
 
-        if (!args[0]->type->isSingular()) {
-            context.addDiag(diag::CastArgSingular, args[0]->sourceRange) << *args[0]->type;
-            return comp.getErrorType();
-        }
-
-        if (!args[1]->type->isSingular()) {
-            context.addDiag(diag::CastArgSingular, args[1]->sourceRange) << *args[1]->type;
-            return comp.getErrorType();
-        }
-
         return comp.getIntType();
     }
 };
