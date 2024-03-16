@@ -2141,7 +2141,7 @@ module m;
         q = { q[0:pos], e, q[pos+1:$] };
         q = q[2:$];
         q = q[1:$-1'b1];
-        q = q[1:e != 0 ? u+1 : v-1];
+        q = q[1:e != 0 ? $+1 : $-1];
 
         // These are disallowed.
         e = $;

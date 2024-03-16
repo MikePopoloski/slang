@@ -75,9 +75,13 @@ Expression& ValueExpressionBase::fromSymbol(const ASTContext& context, const Sym
             Lookup::ensureAccessible(symbol, context, sourceRange);
     }
     else if (symbol.kind == SymbolKind::Parameter) {
+        // A note on the flags check: parameters with an unbounded value are allowed
+        // anywhere that an unbounded literal is allowed, *except* for queue expressions,
+        // which is indicated here by the AllowUnboundedLiteralArithmetic flag.
         isUnbounded = symbol.as<ParameterSymbol>().getValue(sourceRange).isUnbounded();
-        if (!context.flags.has(ASTFlags::AllowUnboundedLiteral) && isUnbounded &&
-            !context.inUnevaluatedBranch()) {
+        if ((!context.flags.has(ASTFlags::AllowUnboundedLiteral) ||
+             context.flags.has(ASTFlags::AllowUnboundedLiteralArithmetic)) &&
+            isUnbounded && !context.inUnevaluatedBranch()) {
             context.addDiag(diag::UnboundedNotAllowed, sourceRange);
             return badExpr(comp, nullptr);
         }
