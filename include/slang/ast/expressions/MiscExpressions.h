@@ -174,8 +174,8 @@ public:
 
     ClockingEventExpression(const Type& type, const TimingControl& timingControl,
                             SourceRange sourceRange) :
-        Expression(ExpressionKind::ClockingEvent, type, sourceRange),
-        timingControl(timingControl) {}
+        Expression(ExpressionKind::ClockingEvent, type, sourceRange), timingControl(timingControl) {
+    }
 
     ConstantValue evalImpl(EvalContext&) const { return nullptr; }
 
@@ -206,8 +206,8 @@ public:
 
     AssertionInstanceExpression(const Type& type, const Symbol& symbol, const AssertionExpr& body,
                                 bool isRecursiveProperty, SourceRange sourceRange) :
-        Expression(ExpressionKind::AssertionInstance, type, sourceRange),
-        symbol(symbol), body(body), isRecursiveProperty(isRecursiveProperty) {}
+        Expression(ExpressionKind::AssertionInstance, type, sourceRange), symbol(symbol),
+        body(body), isRecursiveProperty(isRecursiveProperty) {}
 
     ConstantValue evalImpl(EvalContext&) const { return nullptr; }
 
@@ -244,8 +244,8 @@ class SLANG_EXPORT MinTypMaxExpression : public Expression {
 public:
     MinTypMaxExpression(const Type& type, Expression& min, Expression& typ, Expression& max,
                         Expression* selected, SourceRange sourceRange) :
-        Expression(ExpressionKind::MinTypMax, type, sourceRange),
-        selected_(selected), min_(&min), typ_(&typ), max_(&max) {}
+        Expression(ExpressionKind::MinTypMax, type, sourceRange), selected_(selected), min_(&min),
+        typ_(&typ), max_(&max) {}
 
     const Expression& min() const { return *min_; }
     Expression& min() { return *min_; }
@@ -330,8 +330,7 @@ public:
 
     DistExpression(const Type& type, const Expression& left, std::span<DistItem> items,
                    SourceRange sourceRange) :
-        Expression(ExpressionKind::Dist, type, sourceRange),
-        left_(&left), items_(items) {}
+        Expression(ExpressionKind::Dist, type, sourceRange), left_(&left), items_(items) {}
 
     const Expression& left() const { return *left_; }
     std::span<DistItem const> items() const { return items_; }
@@ -368,8 +367,8 @@ public:
 
     TaggedUnionExpression(const Type& type, const Symbol& member, const Expression* valueExpr,
                           SourceRange sourceRange) :
-        Expression(ExpressionKind::TaggedUnion, type, sourceRange),
-        member(member), valueExpr(valueExpr) {}
+        Expression(ExpressionKind::TaggedUnion, type, sourceRange), member(member),
+        valueExpr(valueExpr) {}
 
     ConstantValue evalImpl(EvalContext& context) const;
 

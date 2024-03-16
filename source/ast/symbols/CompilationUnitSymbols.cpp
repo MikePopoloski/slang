@@ -25,8 +25,8 @@ using namespace syntax;
 
 CompilationUnitSymbol::CompilationUnitSymbol(Compilation& compilation,
                                              const SourceLibrary& sourceLibrary) :
-    Symbol(SymbolKind::CompilationUnit, "", SourceLocation()),
-    Scope(compilation, this), sourceLibrary(sourceLibrary) {
+    Symbol(SymbolKind::CompilationUnit, "", SourceLocation()), Scope(compilation, this),
+    sourceLibrary(sourceLibrary) {
 
     // Default the time scale to the compilation default. If it turns out
     // this scope has a time unit declaration it will overwrite the member.
@@ -64,8 +64,8 @@ void CompilationUnitSymbol::addMembers(const SyntaxNode& syntax) {
 
 PackageSymbol::PackageSymbol(Compilation& compilation, std::string_view name, SourceLocation loc,
                              const NetType& defaultNetType, VariableLifetime defaultLifetime) :
-    Symbol(SymbolKind::Package, name, loc),
-    Scope(compilation, this), defaultNetType(defaultNetType), defaultLifetime(defaultLifetime) {
+    Symbol(SymbolKind::Package, name, loc), Scope(compilation, this),
+    defaultNetType(defaultNetType), defaultLifetime(defaultLifetime) {
 }
 
 PackageSymbol& PackageSymbol::fromSyntax(const Scope& scope, const ModuleDeclarationSyntax& syntax,
@@ -170,9 +170,8 @@ void PackageSymbol::noteImport(const Symbol& symbol) const {
 DefinitionSymbol::ParameterDecl::ParameterDecl(
     const Scope& scope, const ParameterDeclarationSyntax& syntax, const DeclaratorSyntax& decl,
     bool isLocal, bool isPort, std::span<const syntax::AttributeInstanceSyntax* const> attributes) :
-    valueSyntax(&syntax),
-    valueDecl(&decl), attributes(attributes), isTypeParam(false), isLocalParam(isLocal),
-    isPortParam(isPort), hasSyntax(true) {
+    valueSyntax(&syntax), valueDecl(&decl), attributes(attributes), isTypeParam(false),
+    isLocalParam(isLocal), isPortParam(isPort), hasSyntax(true) {
 
     name = decl.name.valueText();
     location = decl.name.location();
@@ -189,9 +188,8 @@ DefinitionSymbol::ParameterDecl::ParameterDecl(
     const Scope& scope, const TypeParameterDeclarationSyntax& syntax,
     const TypeAssignmentSyntax& decl, bool isLocal, bool isPort,
     std::span<const syntax::AttributeInstanceSyntax* const> attributes) :
-    typeSyntax(&syntax),
-    typeDecl(&decl), attributes(attributes), isTypeParam(true), isLocalParam(isLocal),
-    isPortParam(isPort), hasSyntax(true) {
+    typeSyntax(&syntax), typeDecl(&decl), attributes(attributes), isTypeParam(true),
+    isLocalParam(isLocal), isPortParam(isPort), hasSyntax(true) {
 
     name = decl.name.valueText();
     location = decl.name.location();
@@ -207,17 +205,15 @@ DefinitionSymbol::ParameterDecl::ParameterDecl(
 DefinitionSymbol::ParameterDecl::ParameterDecl(std::string_view name, SourceLocation location,
                                                const Type& givenType, bool isLocal, bool isPort,
                                                const Expression* givenInitializer) :
-    givenType(&givenType),
-    givenInitializer(givenInitializer), name(name), location(location), isTypeParam(false),
-    isLocalParam(isLocal), isPortParam(isPort), hasSyntax(false) {
+    givenType(&givenType), givenInitializer(givenInitializer), name(name), location(location),
+    isTypeParam(false), isLocalParam(isLocal), isPortParam(isPort), hasSyntax(false) {
     SLANG_ASSERT(givenInitializer || (isPort && !isLocal));
 }
 
 DefinitionSymbol::ParameterDecl::ParameterDecl(std::string_view name, SourceLocation location,
                                                bool isLocal, bool isPort, const Type* defaultType) :
-    givenType(defaultType),
-    name(name), location(location), isTypeParam(true), isLocalParam(isLocal), isPortParam(isPort),
-    hasSyntax(false) {
+    givenType(defaultType), name(name), location(location), isTypeParam(true),
+    isLocalParam(isLocal), isPortParam(isPort), hasSyntax(false) {
     SLANG_ASSERT(givenType || (isPort && !isLocal));
 }
 
@@ -356,8 +352,7 @@ void DefinitionSymbol::serializeTo(ASTSerializer& serializer) const {
 
 ResolvedConfig::ResolvedConfig(const ConfigBlockSymbol& useConfig,
                                const InstanceSymbol& rootInstance) :
-    useConfig(useConfig),
-    rootInstance(rootInstance), liblist(useConfig.getDefaultLiblist()) {
+    useConfig(useConfig), rootInstance(rootInstance), liblist(useConfig.getDefaultLiblist()) {
 }
 
 ConfigBlockSymbol& ConfigBlockSymbol::fromSyntax(const Scope& scope,

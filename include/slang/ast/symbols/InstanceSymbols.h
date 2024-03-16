@@ -197,8 +197,8 @@ public:
 
     InstanceArraySymbol(Compilation& compilation, std::string_view name, SourceLocation loc,
                         std::span<const Symbol* const> elements, ConstantRange range) :
-        Symbol(SymbolKind::InstanceArray, name, loc),
-        Scope(compilation, this), elements(elements), range(range) {}
+        Symbol(SymbolKind::InstanceArray, name, loc), Scope(compilation, this), elements(elements),
+        range(range) {}
 
     /// If this array is part of a multidimensional array, walk upward to find
     /// the root array's name. Otherwise returns the name of this symbol itself.
@@ -225,8 +225,8 @@ public:
     UninstantiatedDefSymbol(std::string_view name, SourceLocation loc,
                             std::string_view definitionName,
                             std::span<const Expression* const> params) :
-        Symbol(SymbolKind::UninstantiatedDef, name, loc),
-        definitionName(definitionName), paramExpressions(params) {}
+        Symbol(SymbolKind::UninstantiatedDef, name, loc), definitionName(definitionName),
+        paramExpressions(params) {}
 
     /// Gets the self-determined expressions that are assigned to the ports
     /// in the instantiation. These aren't necessarily correctly typed
@@ -282,8 +282,8 @@ public:
 
     PrimitiveInstanceSymbol(std::string_view name, SourceLocation loc,
                             const PrimitiveSymbol& primitiveType) :
-        InstanceSymbolBase(SymbolKind::PrimitiveInstance, name, loc),
-        primitiveType(primitiveType) {}
+        InstanceSymbolBase(SymbolKind::PrimitiveInstance, name, loc), primitiveType(primitiveType) {
+    }
 
     std::span<const Expression* const> getPortConnections() const;
     const TimingControl* getDelay() const;
@@ -329,8 +329,8 @@ public:
         Connection(const CheckerInstanceBodySymbol& parent, const Symbol& formal,
                    const syntax::ExpressionSyntax* outputInitialSyntax,
                    std::span<const AttributeSymbol* const> attributes) :
-            parent(parent),
-            formal(formal), attributes(attributes), outputInitialSyntax(outputInitialSyntax) {}
+            parent(parent), formal(formal), attributes(attributes),
+            outputInitialSyntax(outputInitialSyntax) {}
 
         const Expression* getOutputInitialExpr() const;
 

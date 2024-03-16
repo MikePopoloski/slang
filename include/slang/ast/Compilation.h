@@ -370,8 +370,7 @@ public:
 
         DefinitionLookupResult(const Symbol* definition, const ConfigBlockSymbol* configRoot,
                                const ConfigRule* configRule) :
-            definition(definition),
-            configRoot(configRoot), configRule(configRule) {}
+            definition(definition), configRoot(configRoot), configRule(configRule) {}
     };
 
     /// Gets the definition with the given name, or nullptr if there is no such definition.

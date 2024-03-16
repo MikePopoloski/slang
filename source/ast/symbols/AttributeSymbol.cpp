@@ -19,20 +19,18 @@ using namespace syntax;
 
 AttributeSymbol::AttributeSymbol(std::string_view name, SourceLocation loc, const Symbol& symbol,
                                  const ExpressionSyntax& expr) :
-    Symbol(SymbolKind::Attribute, name, loc),
-    symbol(&symbol), expr(&expr) {
+    Symbol(SymbolKind::Attribute, name, loc), symbol(&symbol), expr(&expr) {
 }
 
 AttributeSymbol::AttributeSymbol(std::string_view name, SourceLocation loc, const Scope& scope,
                                  LookupLocation lookupLocation, const ExpressionSyntax& expr) :
-    Symbol(SymbolKind::Attribute, name, loc),
-    scope(&scope), expr(&expr), lookupLocation(lookupLocation) {
+    Symbol(SymbolKind::Attribute, name, loc), scope(&scope), expr(&expr),
+    lookupLocation(lookupLocation) {
 }
 
 AttributeSymbol::AttributeSymbol(std::string_view name, SourceLocation loc,
                                  const ConstantValue& value) :
-    Symbol(SymbolKind::Attribute, name, loc),
-    value(&value) {
+    Symbol(SymbolKind::Attribute, name, loc), value(&value) {
 }
 
 const ConstantValue& AttributeSymbol::getValue() const {

@@ -27,8 +27,7 @@ using namespace syntax;
 
 ValueSymbol::ValueSymbol(SymbolKind kind, std::string_view name, SourceLocation location,
                          bitmask<DeclaredTypeFlags> flags) :
-    Symbol(kind, name, location),
-    declaredType(*this, flags) {
+    Symbol(kind, name, location), declaredType(*this, flags) {
 }
 
 void ValueSymbol::setFromDeclarator(const DeclaratorSyntax& decl) {

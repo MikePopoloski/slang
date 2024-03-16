@@ -242,8 +242,8 @@ void StatementBlockSymbol::elaborateVariables(function_ref<void(const Symbol&)> 
 
 ProceduralBlockSymbol::ProceduralBlockSymbol(SourceLocation loc, ProceduralBlockKind procedureKind,
                                              bool isFromAssertion) :
-    Symbol(SymbolKind::ProceduralBlock, "", loc),
-    procedureKind(procedureKind), isFromAssertion(isFromAssertion) {
+    Symbol(SymbolKind::ProceduralBlock, "", loc), procedureKind(procedureKind),
+    isFromAssertion(isFromAssertion) {
 }
 
 const Statement& ProceduralBlockSymbol::getBody() const {

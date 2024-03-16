@@ -350,8 +350,7 @@ public:
     /// @param flags Flags that control AST creation
     ASTContext(const Scope& scope, LookupLocation lookupLocation,
                bitmask<ASTFlags> flags = ASTFlags::None) :
-        scope(&scope),
-        lookupIndex(lookupLocation.getIndex()), flags(flags) {
+        scope(&scope), lookupIndex(lookupLocation.getIndex()), flags(flags) {
         SLANG_ASSERT(!lookupLocation.getScope() || lookupLocation.getScope() == &scope);
     }
 

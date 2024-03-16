@@ -86,8 +86,8 @@ public:
 
     SubroutineSymbol(Compilation& compilation, std::string_view name, SourceLocation loc,
                      VariableLifetime defaultLifetime, SubroutineKind subroutineKind) :
-        Symbol(SymbolKind::Subroutine, name, loc),
-        Scope(compilation, this), declaredReturnType(*this), defaultLifetime(defaultLifetime),
+        Symbol(SymbolKind::Subroutine, name, loc), Scope(compilation, this),
+        declaredReturnType(*this), defaultLifetime(defaultLifetime),
         subroutineKind(subroutineKind) {}
 
     ArgList getArguments() const {

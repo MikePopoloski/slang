@@ -17,8 +17,8 @@ class SLANG_EXPORT ElementSelectExpression : public Expression {
 public:
     ElementSelectExpression(const Type& type, Expression& value, const Expression& selector,
                             SourceRange sourceRange) :
-        Expression(ExpressionKind::ElementSelect, type, sourceRange),
-        value_(&value), selector_(&selector) {}
+        Expression(ExpressionKind::ElementSelect, type, sourceRange), value_(&value),
+        selector_(&selector) {}
 
     const Expression& value() const { return *value_; }
     Expression& value() { return *value_; }
@@ -68,8 +68,8 @@ public:
     RangeSelectExpression(RangeSelectionKind selectionKind, const Type& type, Expression& value,
                           const Expression& left, const Expression& right,
                           SourceRange sourceRange) :
-        Expression(ExpressionKind::RangeSelect, type, sourceRange),
-        value_(&value), left_(&left), right_(&right), selectionKind(selectionKind) {}
+        Expression(ExpressionKind::RangeSelect, type, sourceRange), value_(&value), left_(&left),
+        right_(&right), selectionKind(selectionKind) {}
 
     const Expression& value() const { return *value_; }
     Expression& value() { return *value_; }
@@ -125,8 +125,8 @@ public:
 
     MemberAccessExpression(const Type& type, Expression& value, const Symbol& member,
                            SourceRange sourceRange) :
-        Expression(ExpressionKind::MemberAccess, type, sourceRange),
-        member(member), value_(&value) {}
+        Expression(ExpressionKind::MemberAccess, type, sourceRange), member(member),
+        value_(&value) {}
 
     const Expression& value() const { return *value_; }
     Expression& value() { return *value_; }

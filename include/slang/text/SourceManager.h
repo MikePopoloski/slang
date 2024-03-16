@@ -189,8 +189,7 @@ public:
 
         DiagnosticDirectiveInfo(std::string_view name, size_t offset,
                                 DiagnosticSeverity severity) noexcept :
-            name(name),
-            offset(offset), severity(severity) {}
+            name(name), offset(offset), severity(severity) {}
     };
 
     /// Visits each buffer that contains diagnostic directives and invokes the provided
@@ -236,8 +235,8 @@ private:
 
         FileData(const std::filesystem::path* directory, std::string name, SmallVector<char>&& data,
                  std::filesystem::path fullPath) :
-            name(std::move(name)),
-            mem(std::move(data)), directory(directory), fullPath(std::move(fullPath)) {}
+            name(std::move(name)), mem(std::move(data)), directory(directory),
+            fullPath(std::move(fullPath)) {}
     };
 
     // Stores a pointer to file data along with information about where we included it.
@@ -277,8 +276,7 @@ private:
 
         ExpansionInfo(SourceLocation originalLoc, SourceRange expansionRange,
                       std::string_view macroName) :
-            originalLoc(originalLoc),
-            expansionRange(expansionRange), macroName(macroName) {}
+            originalLoc(originalLoc), expansionRange(expansionRange), macroName(macroName) {}
     };
 
     // This mutex protects pretty much everything in this class.

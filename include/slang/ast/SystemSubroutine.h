@@ -72,9 +72,8 @@ protected:
     SimpleSystemSubroutine(const std::string& name, SubroutineKind kind, size_t requiredArgs,
                            const std::vector<const Type*>& argTypes, const Type& returnType,
                            bool isMethod, bool isFirstArgLValue = false) :
-        SystemSubroutine(name, kind),
-        argTypes(argTypes), returnType(&returnType), requiredArgs(requiredArgs), isMethod(isMethod),
-        isFirstArgLValue(isFirstArgLValue) {
+        SystemSubroutine(name, kind), argTypes(argTypes), returnType(&returnType),
+        requiredArgs(requiredArgs), isMethod(isMethod), isFirstArgLValue(isFirstArgLValue) {
         SLANG_ASSERT(requiredArgs <= argTypes.size());
     }
 

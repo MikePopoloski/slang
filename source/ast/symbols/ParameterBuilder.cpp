@@ -20,8 +20,7 @@ using namespace syntax;
 
 ParameterBuilder::ParameterBuilder(const Scope& scope, std::string_view definitionName,
                                    std::span<const Decl> parameterDecls) :
-    scope(scope),
-    definitionName(definitionName), parameterDecls(parameterDecls) {
+    scope(scope), definitionName(definitionName), parameterDecls(parameterDecls) {
 }
 
 void ParameterBuilder::setAssignments(const ParameterValueAssignmentSyntax& syntax,

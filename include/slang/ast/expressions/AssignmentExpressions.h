@@ -24,9 +24,8 @@ public:
     AssignmentExpression(std::optional<BinaryOperator> op, bool nonBlocking, const Type& type,
                          Expression& left, Expression& right, const TimingControl* timingControl,
                          SourceRange sourceRange) :
-        Expression(ExpressionKind::Assignment, type, sourceRange),
-        op(op), timingControl(timingControl), left_(&left), right_(&right),
-        nonBlocking(nonBlocking) {}
+        Expression(ExpressionKind::Assignment, type, sourceRange), op(op),
+        timingControl(timingControl), left_(&left), right_(&right), nonBlocking(nonBlocking) {}
 
     bool isCompound() const { return op.has_value(); }
     bool isNonBlocking() const { return nonBlocking; }
@@ -86,8 +85,8 @@ public:
 
     ConversionExpression(const Type& type, ConversionKind conversionKind, Expression& operand,
                          SourceRange sourceRange) :
-        Expression(ExpressionKind::Conversion, type, sourceRange),
-        conversionKind(conversionKind), operand_(&operand) {}
+        Expression(ExpressionKind::Conversion, type, sourceRange), conversionKind(conversionKind),
+        operand_(&operand) {}
 
     bool isImplicit() const { return conversionKind < ConversionKind::Explicit; }
 
@@ -131,8 +130,8 @@ class SLANG_EXPORT NewArrayExpression : public Expression {
 public:
     NewArrayExpression(const Type& type, const Expression& sizeExpr, const Expression* initializer,
                        SourceRange sourceRange) :
-        Expression(ExpressionKind::NewArray, type, sourceRange),
-        sizeExpr_(&sizeExpr), initializer_(initializer) {}
+        Expression(ExpressionKind::NewArray, type, sourceRange), sizeExpr_(&sizeExpr),
+        initializer_(initializer) {}
 
     const Expression& sizeExpr() const { return *sizeExpr_; }
     const Expression* initExpr() const { return initializer_; }
@@ -167,8 +166,8 @@ public:
 
     NewClassExpression(const Type& type, const Expression* constructorCall, bool isSuperClass,
                        SourceRange sourceRange) :
-        Expression(ExpressionKind::NewClass, type, sourceRange),
-        isSuperClass(isSuperClass), constructorCall_(constructorCall) {}
+        Expression(ExpressionKind::NewClass, type, sourceRange), isSuperClass(isSuperClass),
+        constructorCall_(constructorCall) {}
 
     const Expression* constructorCall() const { return constructorCall_; }
 
@@ -199,8 +198,7 @@ public:
 
     NewCovergroupExpression(const Type& type, std::span<const Expression* const> arguments,
                             SourceRange sourceRange) :
-        Expression(ExpressionKind::NewCovergroup, type, sourceRange),
-        arguments(arguments) {}
+        Expression(ExpressionKind::NewCovergroup, type, sourceRange), arguments(arguments) {}
 
     ConstantValue evalImpl(EvalContext& context) const;
 
@@ -238,8 +236,7 @@ protected:
     AssignmentPatternExpressionBase(ExpressionKind kind, const Type& type,
                                     std::span<const Expression* const> elements,
                                     SourceRange sourceRange) :
-        Expression(kind, type, sourceRange),
-        elements_(elements) {}
+        Expression(kind, type, sourceRange), elements_(elements) {}
 
 private:
     std::span<const Expression* const> elements_;

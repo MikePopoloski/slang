@@ -865,8 +865,7 @@ public:
 
     DriverVisitor(const Symbol& procedure, SmallSet<const SubroutineSymbol*, 4>& visitedSubs,
                   const SubroutineSymbol& sub, const Expression& callExpr) :
-        procedure(procedure),
-        sub(sub), callExpr(callExpr), visitedSubs(visitedSubs) {}
+        procedure(procedure), sub(sub), callExpr(callExpr), visitedSubs(visitedSubs) {}
 
     void handle(const CallExpression& expr) {
         if (!expr.isSystemCall() && !expr.thisClass()) {

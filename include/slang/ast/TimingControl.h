@@ -131,8 +131,8 @@ public:
 
     Delay3Control(const Expression& expr1, const Expression* expr2, const Expression* expr3,
                   SourceRange sourceRange) :
-        TimingControl(TimingControlKind::Delay3, sourceRange),
-        expr1(expr1), expr2(expr2), expr3(expr3) {}
+        TimingControl(TimingControlKind::Delay3, sourceRange), expr1(expr1), expr2(expr2),
+        expr3(expr3) {}
 
     static TimingControl& fromSyntax(Compilation& compilation, const syntax::Delay3Syntax& syntax,
                                      const ASTContext& context);
@@ -163,8 +163,8 @@ public:
 
     SignalEventControl(EdgeKind edge, const Expression& expr, const Expression* iffCondition,
                        SourceRange sourceRange) :
-        TimingControl(TimingControlKind::SignalEvent, sourceRange),
-        expr(expr), iffCondition(iffCondition), edge(edge) {}
+        TimingControl(TimingControlKind::SignalEvent, sourceRange), expr(expr),
+        iffCondition(iffCondition), edge(edge) {}
 
     static TimingControl& fromSyntax(Compilation& compilation,
                                      const syntax::SignalEventExpressionSyntax& syntax,
@@ -241,8 +241,7 @@ public:
 
     RepeatedEventControl(const Expression& expr, const TimingControl& event,
                          SourceRange sourceRange) :
-        TimingControl(TimingControlKind::RepeatedEvent, sourceRange),
-        expr(expr), event(event) {}
+        TimingControl(TimingControlKind::RepeatedEvent, sourceRange), expr(expr), event(event) {}
 
     static TimingControl& fromSyntax(Compilation& compilation,
                                      const syntax::RepeatedEventControlSyntax& syntax,

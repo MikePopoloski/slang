@@ -161,8 +161,7 @@ public:
         Symbol(SymbolKind::GenericClassDef, name, loc) {}
     GenericClassDefSymbol(std::string_view name, SourceLocation loc,
                           function_ref<void(Compilation&, ClassType&)> specializeFunc) :
-        Symbol(SymbolKind::GenericClassDef, name, loc),
-        specializeFunc{specializeFunc} {}
+        Symbol(SymbolKind::GenericClassDef, name, loc), specializeFunc{specializeFunc} {}
 
     /// Gets the default specialization for the class, or nullptr if the generic
     /// class has no default specialization (because some parameters are not defaulted).

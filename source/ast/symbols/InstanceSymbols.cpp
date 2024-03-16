@@ -92,9 +92,9 @@ public:
     InstanceBuilder(const ASTContext& context, SmallVectorBase<const Symbol*>& implicitNets,
                     const HierarchyOverrideNode* parentOverrideNode,
                     std::span<const AttributeInstanceSyntax* const> attributes, bool isFromBind) :
-        netType(context.scope->getDefaultNetType()),
-        comp(context.getCompilation()), context(context), parentOverrideNode(parentOverrideNode),
-        implicitNets(implicitNets), attributes(attributes), isFromBind(isFromBind) {}
+        netType(context.scope->getDefaultNetType()), comp(context.getCompilation()),
+        context(context), parentOverrideNode(parentOverrideNode), implicitNets(implicitNets),
+        attributes(attributes), isFromBind(isFromBind) {}
 
     // Resets the builder to be ready to create more instances with different settings.
     // Must be called at least once prior to creating instances.
@@ -405,8 +405,7 @@ void InstanceSymbolBase::getArrayDimensions(SmallVectorBase<ConstantRange>& dime
 
 InstanceSymbol::InstanceSymbol(std::string_view name, SourceLocation loc,
                                InstanceBodySymbol& body) :
-    InstanceSymbolBase(SymbolKind::Instance, name, loc),
-    body(body) {
+    InstanceSymbolBase(SymbolKind::Instance, name, loc), body(body) {
     body.parentInstance = this;
 }
 
@@ -1782,8 +1781,7 @@ void createCheckers(const CheckerSymbol& checker, const TSyntax& syntax, const A
 
 CheckerInstanceSymbol::CheckerInstanceSymbol(std::string_view name, SourceLocation loc,
                                              CheckerInstanceBodySymbol& body) :
-    InstanceSymbolBase(SymbolKind::CheckerInstance, name, loc),
-    body(body) {
+    InstanceSymbolBase(SymbolKind::CheckerInstance, name, loc), body(body) {
     body.parentInstance = this;
 }
 

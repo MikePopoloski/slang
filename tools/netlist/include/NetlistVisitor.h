@@ -66,8 +66,7 @@ class VariableReferenceVisitor : public ast::ASTVisitor<VariableReferenceVisitor
 public:
     explicit VariableReferenceVisitor(Netlist& netlist, ast::EvalContext& evalCtx,
                                       bool leftOperand = false) :
-        netlist(netlist),
-        evalCtx(evalCtx), leftOperand(leftOperand) {}
+        netlist(netlist), evalCtx(evalCtx), leftOperand(leftOperand) {}
 
     void handle(const ast::NamedValueExpression& expr) {
 
@@ -178,8 +177,7 @@ class AssignmentVisitor : public ast::ASTVisitor<AssignmentVisitor, false, true>
 public:
     explicit AssignmentVisitor(Netlist& netlist, ast::EvalContext& evalCtx,
                                SmallVector<NetlistNode*>& condVars) :
-        netlist(netlist),
-        evalCtx(evalCtx), condVars(condVars) {}
+        netlist(netlist), evalCtx(evalCtx), condVars(condVars) {}
 
     void handle(const ast::AssignmentExpression& expr) {
         // Collect variable references on the left-hand side of the assignment.

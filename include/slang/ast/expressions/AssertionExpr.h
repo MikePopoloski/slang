@@ -255,8 +255,8 @@ public:
 
     SequenceWithMatchExpr(const AssertionExpr& expr, std::optional<SequenceRepetition> repetition,
                           std::span<const Expression* const> matchItems) :
-        AssertionExpr(AssertionExprKind::SequenceWithMatch),
-        expr(expr), repetition(repetition), matchItems(matchItems) {}
+        AssertionExpr(AssertionExprKind::SequenceWithMatch), expr(expr), repetition(repetition),
+        matchItems(matchItems) {}
 
     bool admitsEmptyImpl() const;
 
@@ -286,8 +286,7 @@ public:
 
     UnaryAssertionExpr(UnaryAssertionOperator op, const AssertionExpr& expr,
                        std::optional<SequenceRange> range) :
-        AssertionExpr(AssertionExprKind::Unary),
-        op(op), expr(expr), range(range) {}
+        AssertionExpr(AssertionExprKind::Unary), op(op), expr(expr), range(range) {}
 
     bool admitsEmptyImpl() const { return false; }
 
@@ -316,8 +315,7 @@ public:
 
     BinaryAssertionExpr(BinaryAssertionOperator op, const AssertionExpr& left,
                         const AssertionExpr& right) :
-        AssertionExpr(AssertionExprKind::Binary),
-        op(op), left(left), right(right) {}
+        AssertionExpr(AssertionExprKind::Binary), op(op), left(left), right(right) {}
 
     void requireSequence(const ASTContext& context, DiagCode code) const;
     bool admitsEmptyImpl() const;
@@ -347,8 +345,7 @@ public:
 
     FirstMatchAssertionExpr(const AssertionExpr& seq,
                             std::span<const Expression* const> matchItems) :
-        AssertionExpr(AssertionExprKind::FirstMatch),
-        seq(seq), matchItems(matchItems) {}
+        AssertionExpr(AssertionExprKind::FirstMatch), seq(seq), matchItems(matchItems) {}
 
     bool admitsEmptyImpl() const;
 
@@ -435,8 +432,8 @@ public:
 
     AbortAssertionExpr(const Expression& condition, const AssertionExpr& expr, Action action,
                        bool isSync) :
-        AssertionExpr(AssertionExprKind::Abort),
-        condition(condition), expr(expr), action(action), isSync(isSync) {}
+        AssertionExpr(AssertionExprKind::Abort), condition(condition), expr(expr), action(action),
+        isSync(isSync) {}
 
     bool admitsEmptyImpl() const { return false; }
 
@@ -463,8 +460,8 @@ public:
 
     ConditionalAssertionExpr(const Expression& condition, const AssertionExpr& ifExpr,
                              const AssertionExpr* elseExpr) :
-        AssertionExpr(AssertionExprKind::Conditional),
-        condition(condition), ifExpr(ifExpr), elseExpr(elseExpr) {}
+        AssertionExpr(AssertionExprKind::Conditional), condition(condition), ifExpr(ifExpr),
+        elseExpr(elseExpr) {}
 
     bool admitsEmptyImpl() const { return false; }
 
@@ -498,8 +495,8 @@ public:
 
     CaseAssertionExpr(const Expression& expr, std::span<const ItemGroup> items,
                       const AssertionExpr* defaultCase) :
-        AssertionExpr(AssertionExprKind::Case),
-        expr(expr), items(items), defaultCase(defaultCase) {}
+        AssertionExpr(AssertionExprKind::Case), expr(expr), items(items), defaultCase(defaultCase) {
+    }
 
     bool admitsEmptyImpl() const { return false; }
 

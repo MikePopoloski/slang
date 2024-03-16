@@ -46,7 +46,7 @@ module mh22(ref wire x); endmodule
         auto def = compilation.getRoot().find(moduleName);    \
         REQUIRE(def);                                         \
         auto& body = def->as<InstanceSymbol>().body;          \
-        auto& port = body.findPort(name) -> as<PortSymbol>(); \
+        auto& port = body.findPort(name)->as<PortSymbol>();   \
         CHECK(port.direction == ArgumentDirection::dir);      \
         CHECK(port.getType().toString() == (type));           \
         if (nt) {                                             \
@@ -126,28 +126,28 @@ module m6(I.bar bar); endmodule
         return inst.body.findPort(portName);
     };
 
-#define checkWirePort(moduleName, name, dir, nt, type)              \
-    {                                                               \
-        auto& port = getPort(moduleName, name) -> as<PortSymbol>(); \
-        CHECK(port.direction == ArgumentDirection::dir);            \
-        CHECK(port.getType().toString() == (type));                 \
-        if (nt) {                                                   \
-            auto& net = port.internalSymbol->as<NetSymbol>();       \
-            CHECK(&net.netType == (nt));                            \
-        }                                                           \
+#define checkWirePort(moduleName, name, dir, nt, type)            \
+    {                                                             \
+        auto& port = getPort(moduleName, name)->as<PortSymbol>(); \
+        CHECK(port.direction == ArgumentDirection::dir);          \
+        CHECK(port.getType().toString() == (type));               \
+        if (nt) {                                                 \
+            auto& net = port.internalSymbol->as<NetSymbol>();     \
+            CHECK(&net.netType == (nt));                          \
+        }                                                         \
     };
 
-#define checkIfacePort(moduleName, portName, ifaceName, modportName)             \
-    {                                                                            \
-        auto& port = getPort(moduleName, portName) -> as<InterfacePortSymbol>(); \
-        REQUIRE(port.interfaceDef);                                              \
-        CHECK(port.interfaceDef->name == (ifaceName));                           \
-        if (*(modportName)) {                                                    \
-            CHECK(port.modport == (modportName));                                \
-        }                                                                        \
-        else {                                                                   \
-            CHECK(port.modport.empty());                                         \
-        }                                                                        \
+#define checkIfacePort(moduleName, portName, ifaceName, modportName)           \
+    {                                                                          \
+        auto& port = getPort(moduleName, portName)->as<InterfacePortSymbol>(); \
+        REQUIRE(port.interfaceDef);                                            \
+        CHECK(port.interfaceDef->name == (ifaceName));                         \
+        if (*(modportName)) {                                                  \
+            CHECK(port.modport == (modportName));                              \
+        }                                                                      \
+        else {                                                                 \
+            CHECK(port.modport.empty());                                       \
+        }                                                                      \
     };
 
     auto wire = &compilation.getWireNetType();

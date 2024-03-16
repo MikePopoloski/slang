@@ -31,8 +31,7 @@ using namespace syntax;
 
 ClassPropertySymbol::ClassPropertySymbol(std::string_view name, SourceLocation loc,
                                          VariableLifetime lifetime, Visibility visibility) :
-    VariableSymbol(SymbolKind::ClassProperty, name, loc, lifetime),
-    visibility(visibility) {
+    VariableSymbol(SymbolKind::ClassProperty, name, loc, lifetime), visibility(visibility) {
 }
 
 void ClassPropertySymbol::fromSyntax(const Scope& scope,
@@ -928,8 +927,7 @@ void GenericClassDefSymbol::serializeTo(ASTSerializer& serializer) const {
 GenericClassDefSymbol::SpecializationKey::SpecializationKey(
     const GenericClassDefSymbol& def, std::span<const ConstantValue* const> paramValues,
     std::span<const Type* const> typeParams) :
-    definition(&def),
-    paramValues(paramValues), typeParams(typeParams) {
+    definition(&def), paramValues(paramValues), typeParams(typeParams) {
 
     // Precompute the hash.
     size_t h = 0;
@@ -981,8 +979,7 @@ bool GenericClassDefSymbol::SpecializationKey::operator==(const SpecializationKe
 
 ConstraintBlockSymbol::ConstraintBlockSymbol(Compilation& c, std::string_view name,
                                              SourceLocation loc) :
-    Symbol(SymbolKind::ConstraintBlock, name, loc),
-    Scope(c, this) {
+    Symbol(SymbolKind::ConstraintBlock, name, loc), Scope(c, this) {
 }
 
 ConstraintBlockSymbol* ConstraintBlockSymbol::fromSyntax(

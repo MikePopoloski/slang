@@ -172,8 +172,7 @@ public:
         Arg(const Expression& expr) : expr(&expr) {}
         Arg(const Expression& expr, const Expression* condition, EdgeKind edge,
             std::span<const EdgeDescriptor> edgeDescriptors) :
-            expr(&expr),
-            condition(condition), edge(edge), edgeDescriptors(edgeDescriptors) {}
+            expr(&expr), condition(condition), edge(edge), edgeDescriptors(edgeDescriptors) {}
     };
 
     SystemTimingCheckKind timingCheckKind;

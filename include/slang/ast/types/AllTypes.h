@@ -417,8 +417,8 @@ public:
 
     VirtualInterfaceType(const InstanceSymbol& iface, const ModportSymbol* modport,
                          bool isRealIface, SourceLocation loc) :
-        Type(SymbolKind::VirtualInterfaceType, "", loc),
-        iface(iface), modport(modport), isRealIface(isRealIface) {}
+        Type(SymbolKind::VirtualInterfaceType, "", loc), iface(iface), modport(modport),
+        isRealIface(isRealIface) {}
 
     ConstantValue getDefaultValueImpl() const;
 
@@ -438,8 +438,7 @@ public:
 
     ForwardingTypedefSymbol(std::string_view name, SourceLocation loc,
                             ForwardTypeRestriction typeRestriction) :
-        Symbol(SymbolKind::ForwardingTypedef, name, loc),
-        typeRestriction(typeRestriction) {}
+        Symbol(SymbolKind::ForwardingTypedef, name, loc), typeRestriction(typeRestriction) {}
 
     static ForwardingTypedefSymbol& fromSyntax(
         const Scope& scope, const syntax::ForwardTypedefDeclarationSyntax& syntax);

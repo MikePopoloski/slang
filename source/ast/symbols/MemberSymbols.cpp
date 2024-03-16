@@ -152,8 +152,7 @@ void WildcardImportSymbol::serializeTo(ASTSerializer& serializer) const {
 
 ModportPortSymbol::ModportPortSymbol(std::string_view name, SourceLocation loc,
                                      ArgumentDirection direction) :
-    ValueSymbol(SymbolKind::ModportPort, name, loc),
-    direction(direction) {
+    ValueSymbol(SymbolKind::ModportPort, name, loc), direction(direction) {
 }
 
 ModportPortSymbol& ModportPortSymbol::fromSyntax(const ASTContext& context,
@@ -741,8 +740,7 @@ void ElabSystemTaskSymbol::serializeTo(ASTSerializer& serializer) const {
 
 PrimitivePortSymbol::PrimitivePortSymbol(Compilation& compilation, std::string_view name,
                                          SourceLocation loc, PrimitivePortDirection direction) :
-    ValueSymbol(SymbolKind::PrimitivePort, name, loc),
-    direction(direction) {
+    ValueSymbol(SymbolKind::PrimitivePort, name, loc), direction(direction) {
     // All primitive ports are single bit logic types.
     setType(compilation.getLogicType());
 }
@@ -1337,8 +1335,7 @@ void AssertionPortSymbol::serializeTo(ASTSerializer& serializer) const {
 
 SequenceSymbol::SequenceSymbol(Compilation& compilation, std::string_view name,
                                SourceLocation loc) :
-    Symbol(SymbolKind::Sequence, name, loc),
-    Scope(compilation, this) {
+    Symbol(SymbolKind::Sequence, name, loc), Scope(compilation, this) {
 }
 
 SequenceSymbol& SequenceSymbol::fromSyntax(const Scope& scope,
@@ -1363,8 +1360,7 @@ void SequenceSymbol::makeDefaultInstance() const {
 
 PropertySymbol::PropertySymbol(Compilation& compilation, std::string_view name,
                                SourceLocation loc) :
-    Symbol(SymbolKind::Property, name, loc),
-    Scope(compilation, this) {
+    Symbol(SymbolKind::Property, name, loc), Scope(compilation, this) {
 }
 
 PropertySymbol& PropertySymbol::fromSyntax(const Scope& scope,
@@ -1389,8 +1385,7 @@ void PropertySymbol::makeDefaultInstance() const {
 
 LetDeclSymbol::LetDeclSymbol(Compilation& compilation, const ExpressionSyntax& exprSyntax,
                              std::string_view name, SourceLocation loc) :
-    Symbol(SymbolKind::LetDecl, name, loc),
-    Scope(compilation, this), exprSyntax(&exprSyntax) {
+    Symbol(SymbolKind::LetDecl, name, loc), Scope(compilation, this), exprSyntax(&exprSyntax) {
 }
 
 LetDeclSymbol& LetDeclSymbol::fromSyntax(const Scope& scope, const LetDeclarationSyntax& syntax) {
@@ -1496,8 +1491,7 @@ CheckerSymbol& CheckerSymbol::fromSyntax(const Scope& scope,
 
 ClockingBlockSymbol::ClockingBlockSymbol(Compilation& compilation, std::string_view name,
                                          SourceLocation loc) :
-    Symbol(SymbolKind::ClockingBlock, name, loc),
-    Scope(compilation, this) {
+    Symbol(SymbolKind::ClockingBlock, name, loc), Scope(compilation, this) {
 }
 
 ClockingBlockSymbol& ClockingBlockSymbol::fromSyntax(const Scope& scope,
@@ -1622,8 +1616,8 @@ void ClockingBlockSymbol::serializeTo(ASTSerializer& serializer) const {
 
 RandSeqProductionSymbol::RandSeqProductionSymbol(Compilation& compilation, std::string_view name,
                                                  SourceLocation loc) :
-    Symbol(SymbolKind::RandSeqProduction, name, loc),
-    Scope(compilation, this), declaredReturnType(*this) {
+    Symbol(SymbolKind::RandSeqProduction, name, loc), Scope(compilation, this),
+    declaredReturnType(*this) {
 }
 
 RandSeqProductionSymbol& RandSeqProductionSymbol::fromSyntax(Compilation& compilation,

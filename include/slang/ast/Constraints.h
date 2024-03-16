@@ -169,8 +169,8 @@ public:
 
     ConditionalConstraint(const Expression& predicate, const Constraint& ifBody,
                           const Constraint* elseBody) :
-        Constraint(ConstraintKind::Conditional),
-        predicate(predicate), ifBody(ifBody), elseBody(elseBody) {}
+        Constraint(ConstraintKind::Conditional), predicate(predicate), ifBody(ifBody),
+        elseBody(elseBody) {}
 
     static Constraint& fromSyntax(const syntax::ConditionalConstraintSyntax& syntax,
                                   const ASTContext& context);
@@ -239,8 +239,7 @@ public:
 
     SolveBeforeConstraint(std::span<const Expression* const> solve,
                           std::span<const Expression* const> before) :
-        Constraint(ConstraintKind::SolveBefore),
-        solve(solve), before(before) {}
+        Constraint(ConstraintKind::SolveBefore), solve(solve), before(before) {}
 
     static Constraint& fromSyntax(const syntax::SolveBeforeConstraintSyntax& syntax,
                                   const ASTContext& context);
@@ -268,8 +267,7 @@ public:
     ForeachConstraint(const Expression& arrayRef,
                       std::span<const ForeachLoopStatement::LoopDim> loopDims,
                       const Constraint& body) :
-        Constraint(ConstraintKind::Foreach),
-        arrayRef(arrayRef), loopDims(loopDims), body(body) {}
+        Constraint(ConstraintKind::Foreach), arrayRef(arrayRef), loopDims(loopDims), body(body) {}
 
     static Constraint& fromSyntax(const syntax::LoopConstraintSyntax& syntax,
                                   const ASTContext& context);

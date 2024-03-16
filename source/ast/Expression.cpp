@@ -135,8 +135,7 @@ struct Expression::PropagationVisitor {
 
     PropagationVisitor(const ASTContext& context, const Type& newType, const Expression* parentExpr,
                        SourceLocation assignmentLoc) :
-        context(context),
-        newType(newType), parentExpr(parentExpr), assignmentLoc(assignmentLoc) {}
+        context(context), newType(newType), parentExpr(parentExpr), assignmentLoc(assignmentLoc) {}
 
     template<typename T>
     Expression& visit(T& expr) {

@@ -265,8 +265,8 @@ private:
     public:
         MacroExpansion(SourceManager& sourceManager, BumpAllocator& alloc,
                        SmallVectorBase<Token>& dest, Token usageSite, bool isTopLevel) :
-            sourceManager(sourceManager),
-            alloc(alloc), dest(dest), usageSite(usageSite), isTopLevel(isTopLevel) {}
+            sourceManager(sourceManager), alloc(alloc), dest(dest), usageSite(usageSite),
+            isTopLevel(isTopLevel) {}
 
         SourceRange getRange() const;
 

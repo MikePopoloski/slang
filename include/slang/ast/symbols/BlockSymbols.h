@@ -22,8 +22,8 @@ public:
 
     StatementBlockSymbol(Compilation& compilation, std::string_view name, SourceLocation loc,
                          StatementBlockKind blockKind, VariableLifetime defaultLifetime) :
-        Symbol(SymbolKind::StatementBlock, name, loc),
-        Scope(compilation, this), blockKind(blockKind), defaultLifetime(defaultLifetime) {}
+        Symbol(SymbolKind::StatementBlock, name, loc), Scope(compilation, this),
+        blockKind(blockKind), defaultLifetime(defaultLifetime) {}
 
     void setTemporaryParent(const Scope& scope, SymbolIndex index) { setParent(scope, index); }
     const Statement& getStatement(const ASTContext& context,
@@ -112,9 +112,8 @@ public:
 
     GenerateBlockSymbol(Compilation& compilation, std::string_view name, SourceLocation loc,
                         uint32_t constructIndex, bool isUninstantiated) :
-        Symbol(SymbolKind::GenerateBlock, name, loc),
-        Scope(compilation, this), constructIndex(constructIndex),
-        isUninstantiated(isUninstantiated) {}
+        Symbol(SymbolKind::GenerateBlock, name, loc), Scope(compilation, this),
+        constructIndex(constructIndex), isUninstantiated(isUninstantiated) {}
 
     std::string getExternalName() const;
 
@@ -144,8 +143,8 @@ public:
 
     GenerateBlockArraySymbol(Compilation& compilation, std::string_view name, SourceLocation loc,
                              uint32_t constructIndex) :
-        Symbol(SymbolKind::GenerateBlockArray, name, loc),
-        Scope(compilation, this), constructIndex(constructIndex) {}
+        Symbol(SymbolKind::GenerateBlockArray, name, loc), Scope(compilation, this),
+        constructIndex(constructIndex) {}
 
     std::string getExternalName() const;
 
