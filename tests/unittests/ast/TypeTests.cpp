@@ -2175,3 +2175,16 @@ typedef int s;
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::ForwardTypedefDoesNotMatch);
 }
+
+TEST_CASE("Unbounded literals can only be converted to simple bit vector types") {
+    auto tree = SyntaxTree::fromText(R"(
+parameter real r = $;
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::BadAssignment);
+}
