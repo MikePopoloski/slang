@@ -598,10 +598,35 @@ Expression& BinaryExpression::fromSyntax(Compilation& compilation,
         flags |= ASTFlags::AllowTypeReferences;
     }
 
-    Expression& lhs = create(compilation, *syntax.left, context, flags);
-    Expression& rhs = create(compilation, *syntax.right, context, flags);
+    Expression *lhs = nullptr, *rhs = nullptr;
+    ExpressionSyntax* syntaxLeft = syntax.left;
+    ExpressionSyntax* syntaxRight = syntax.right;
+    bool notVirtIface = true;
 
-    auto& result = fromComponents(lhs, rhs, op, syntax.operatorToken.location(),
+    // Check that there is a comparison with at least one virtual interface.
+    // See IEEE 1800-2017 25.9 clause.
+    if (op == BinaryOperator::Equality || op == BinaryOperator::Inequality) {
+        lhs = tryBindInterfaceRef(context, *syntaxLeft, /* isInterfacePort */ false);
+        if (lhs) {
+            rhs = &selfDetermined(compilation, *syntaxRight, context, flags);
+            notVirtIface = !rhs->type->isVirtualInterface();
+        }
+
+        if (!rhs) {
+            rhs = tryBindInterfaceRef(context, *syntaxRight, /* isInterfacePort */ false);
+            if (rhs) {
+                lhs = &selfDetermined(compilation, *syntaxLeft, context, flags);
+                notVirtIface = !lhs->type->isVirtualInterface();
+            }
+        }
+    }
+
+    if (!lhs || !rhs || notVirtIface) {
+        lhs = &create(compilation, *syntaxLeft, context, flags);
+        rhs = &create(compilation, *syntaxRight, context, flags);
+    }
+
+    auto& result = fromComponents(*lhs, *rhs, op, syntax.operatorToken.location(),
                                   syntax.sourceRange(), context);
     context.setAttributes(result, syntax.attributes);
 

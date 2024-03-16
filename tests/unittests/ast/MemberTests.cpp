@@ -2634,3 +2634,85 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Virtual interface comparison") {
+    auto tree = SyntaxTree::fromText(R"(
+interface PBus1 #(parameter WIDTH=8);
+        logic req, grant;
+        logic [WIDTH-1:0] addr, data;
+        modport phy(input addr, ref data);
+endinterface
+
+module top;
+        PBus1 #(16) p16();
+        virtual PBus1 #(16) v16;
+
+        initial begin
+                if (p16 == v16) begin end
+                if (v16 == p16) begin end
+                if (v16 == v16) begin end
+        end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Instance comparison") {
+    auto tree = SyntaxTree::fromText(R"(
+interface PBus1 #(parameter WIDTH=8);
+        logic req, grant;
+        logic [WIDTH-1:0] addr, data;
+        modport phy(input addr, ref data);
+endinterface
+
+module top;
+        PBus1 #(16) p16();
+        initial begin
+                if (p16 == p16) begin end
+        end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::NotAValue);
+    CHECK(diags[1].code == diag::NotAValue);
+}
+
+TEST_CASE("Virtual interfaces of different types comparison") {
+    auto tree = SyntaxTree::fromText(R"(
+interface PBus1 #(parameter WIDTH=8);
+        logic req, grant;
+        logic [WIDTH-1:0] addr, data;
+        modport phy(input addr, ref data);
+endinterface
+
+interface PBus2 #(parameter WIDTH=8);
+        logic req, grant;
+        logic [WIDTH-1:0] addr, data;
+        modport phy(input addr, ref data);
+endinterface
+
+module top;
+        virtual PBus1 #(16) v16;
+        virtual PBus2 #(16) v26;
+        PBus1 #(16) p16();
+        initial begin
+                if (p16 == v26) begin end
+                if (v16 == v26) begin end
+        end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::BadBinaryExpression);
+    CHECK(diags[1].code == diag::BadBinaryExpression);
+}
