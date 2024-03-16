@@ -437,3 +437,27 @@ endmodule
     CHECK(diags[1].code == diag::UdpDupDiffOutput);
     CHECK(diags[2].code == diag::UdpDupDiffOutput);
 }
+
+TEST_CASE("More UDP error cases") {
+    auto tree = SyntaxTree::fromText(R"(
+primitive p1(output reg o, input a);
+  table
+    (11):1:1;
+  endtable
+endprimitive
+
+primitive p2(output o, input a);
+  table
+    p:1;
+  endtable
+endprimitive
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::UdpTransSameChar);
+    CHECK(diags[1].code == diag::UdpEdgeInComb);
+}

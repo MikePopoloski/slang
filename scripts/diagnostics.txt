@@ -276,6 +276,8 @@ error UdpInvalidInputOnly "'{}' is only allowed in input fields of sequential pr
 error UdpInvalidMinus "'-' is only allowed in the output field of a sequential primitive"
 error UdpInvalidOutput "'{}' is not allowed in output field of state table"
 error UdpDupTransition "cannot have more than one input transition per row in a state table"
+error UdpTransSameChar "edge transition must be between two different values"
+error UdpEdgeInComb "edge transition can only be used in a sequential primitive -- are you missing a 'reg' specifier on the output port?"
 error UdpCombState "combinational primitive row should not have a current state field"
 error UdpSequentialState "sequential primitive row is missing a current state field"
 error ExternWildcardPortList "extern declaration cannot have a wildcard port list"

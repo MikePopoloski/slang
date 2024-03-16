@@ -2678,12 +2678,20 @@ UdpPortListSyntax& Parser::parseUdpPortList(bool& isSequential) {
     }
 }
 
-UdpFieldBaseSyntax* Parser::parseUdpField(bool required, bool isInput, bool& sawTransition) {
+UdpFieldBaseSyntax* Parser::parseUdpField(bool required, bool isInput, bool isSequential,
+                                          bool& sawTransition) {
     auto checkTransition = [&](std::optional<SourceLocation> loc = {}) {
-        if (isInput && sawTransition) {
-            if (!loc)
-                loc = peek().location();
-            addDiag(diag::UdpDupTransition, *loc);
+        if (isInput) {
+            if (sawTransition) {
+                if (!loc)
+                    loc = peek().location();
+                addDiag(diag::UdpDupTransition, *loc);
+            }
+            else if (!isSequential) {
+                if (!loc)
+                    loc = peek().location();
+                addDiag(diag::UdpEdgeInComb, *loc);
+            }
         }
         sawTransition = true;
     };
@@ -2759,6 +2767,8 @@ UdpFieldBaseSyntax* Parser::parseUdpField(bool required, bool isInput, bool& saw
                     addDiag(diag::UdpTransitionLength, result->sourceRange());
                 }
                 else {
+                    char chars[2] = {};
+                    int idx = 0;
                     for (auto tok : {first, second}) {
                         auto text = tok.rawText();
                         for (size_t i = 0; i < text.length(); i++) {
@@ -2769,6 +2779,7 @@ UdpFieldBaseSyntax* Parser::parseUdpField(bool required, bool isInput, bool& saw
                                 case 'x':
                                 case 'b':
                                 case '?':
+                                    chars[idx++] = c;
                                     break;
                                 default:
                                     addDiag(diag::UdpInvalidEdgeSymbol, tok.location() + i) << c;
@@ -2776,6 +2787,9 @@ UdpFieldBaseSyntax* Parser::parseUdpField(bool required, bool isInput, bool& saw
                             }
                         }
                     }
+
+                    if (idx == 2 && chars[0] == chars[1] && chars[0] != 'b' && chars[0] != '?')
+                        addDiag(diag::UdpTransSameChar, result->sourceRange());
                 }
             }
         }
@@ -2816,7 +2830,7 @@ UdpEntrySyntax& Parser::parseUdpEntry(bool isSequential) {
     bool sawTransition = false;
     SmallVector<UdpFieldBaseSyntax*, 4> inputs;
     while (true) {
-        auto field = parseUdpField(inputs.empty(), /* isInput */ true, sawTransition);
+        auto field = parseUdpField(inputs.empty(), /* isInput */ true, isSequential, sawTransition);
         if (!field)
             break;
 
@@ -2824,14 +2838,14 @@ UdpEntrySyntax& Parser::parseUdpEntry(bool isSequential) {
     }
 
     auto colon1 = expect(TokenKind::Colon);
-    auto nextState = parseUdpField(true, /* isInput */ false, sawTransition);
+    auto nextState = parseUdpField(true, /* isInput */ false, isSequential, sawTransition);
 
     Token colon2;
     UdpFieldBaseSyntax* currentState = nullptr;
     if (peek(TokenKind::Colon)) {
         colon2 = consume();
-        currentState = std::exchange(nextState,
-                                     parseUdpField(true, /* isInput */ false, sawTransition));
+        currentState = std::exchange(nextState, parseUdpField(true, /* isInput */ false,
+                                                              isSequential, sawTransition));
     }
 
     auto checkNonInput = [&](const UdpFieldBaseSyntax* syntax, bool isOutput) {

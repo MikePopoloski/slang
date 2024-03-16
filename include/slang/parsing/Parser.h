@@ -334,7 +334,7 @@ private:
     syntax::UdpDeclarationSyntax& parseUdpDeclaration(AttrList attributes);
     syntax::UdpPortDeclSyntax& parseUdpPortDecl(bool& isReg);
     syntax::UdpBodySyntax& parseUdpBody(bool isSequential);
-    syntax::UdpFieldBaseSyntax* parseUdpField(bool required, bool isInput, bool& sawTransition);
+    syntax::UdpFieldBaseSyntax* parseUdpField(bool required, bool isInput, bool isSequential, bool& sawTransition);
     syntax::UdpEntrySyntax& parseUdpEntry(bool isSequential);
     syntax::SpecparamDeclaratorSyntax& parseSpecparamDeclarator(syntax::SyntaxKind parentKind);
     syntax::SpecparamDeclarationSyntax& parseSpecparam(AttrList attributes, syntax::SyntaxKind parentKind);
