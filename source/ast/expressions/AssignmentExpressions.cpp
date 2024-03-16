@@ -1820,7 +1820,7 @@ static std::optional<int32_t> bindArrayIndexSetter(
     }
 
     indexSetters.push_back({&keyExpr, &expr});
-    return *index;
+    return index;
 }
 
 Expression& StructuredAssignmentPatternExpression::forFixedArray(

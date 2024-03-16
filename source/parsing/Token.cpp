@@ -311,7 +311,7 @@ std::span<Trivia const> Token::trivia() const {
 
     const Trivia* trivia;
     byte* ptr = info->extra() + getExtraSize(kind);
-    memcpy(&trivia, ptr, sizeof(trivia));
+    memcpy(reinterpret_cast<void*>(&trivia), ptr, sizeof(trivia));
 
     if (triviaCountSmall == MaxTriviaSmallCount + 1) {
         size_t size;
@@ -445,7 +445,7 @@ void Token::init(BumpAllocator& alloc, TokenKind kind_, std::span<Trivia const> 
     if (!trivia.empty()) {
         const Trivia* triviaPtr = trivia.data();
         byte* dest = info->extra() + extra;
-        memcpy(dest, &triviaPtr, sizeof(triviaPtr));
+        memcpy(dest, reinterpret_cast<const void*>(&triviaPtr), sizeof(triviaPtr));
 
         if (trivia.size() > MaxTriviaSmallCount) {
             size = trivia.size();

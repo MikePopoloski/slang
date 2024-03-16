@@ -1556,11 +1556,11 @@ void MultiPortSymbol::serializeTo(ASTSerializer& serializer) const {
 
 std::optional<std::span<const ConstantRange>> InterfacePortSymbol::getDeclaredRange() const {
     if (range)
-        return *range;
+        return range;
 
     if (isInvalid()) {
         range.emplace();
-        return *range;
+        return range;
     }
 
     auto syntax = getSyntax();
@@ -1581,7 +1581,7 @@ std::optional<std::span<const ConstantRange>> InterfacePortSymbol::getDeclaredRa
     }
 
     range = buffer.copy(scope->getCompilation());
-    return *range;
+    return range;
 }
 
 InterfacePortSymbol::IfaceConn InterfacePortSymbol::getConnection() const {
