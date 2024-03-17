@@ -31,6 +31,9 @@ public:
         (set(std::forward<decltype(items)>(items)), ...);
     }
 
+    /// Returns true if there are no items in the bag.
+    [[nodiscard]] bool empty() const { return items.empty(); }
+
     /// Adds or overwrites an existing element of type T in the bag
     /// (making a copy in the process).
     template<typename T>
@@ -60,7 +63,10 @@ public:
     /// and returns a reference to it.
     template<typename T>
     T& insertOrGet() {
-        return *std::any_cast<T>(&items[SLANG_TYPEOF(T)]);
+        auto& item = items[SLANG_TYPEOF(T)];
+        if (!item.has_value())
+            item.emplace<T>();
+        return *std::any_cast<T>(&item);
     }
 
     /// Gets an element of type T from the bag, if it exists.

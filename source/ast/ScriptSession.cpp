@@ -19,20 +19,21 @@ namespace slang::ast {
 
 using namespace syntax;
 
-static CompilationOptions createOptions() {
-    CompilationOptions options;
-    options.flags |= CompilationFlags::AllowHierarchicalConst;
+static Bag& createOptions(Bag& options) {
+    auto& co = options.insertOrGet<CompilationOptions>();
+    co.flags |= CompilationFlags::AllowHierarchicalConst;
     return options;
 }
 
-ScriptSession::ScriptSession() :
-    compilation(createOptions()), scope(compilation.createScriptScope()),
-    astCtx(scope, LookupLocation::max), evalContext(astCtx, EvalFlags::IsScript) {
+ScriptSession::ScriptSession(const Bag& options) :
+    options(options), compilation(createOptions(this->options)),
+    scope(compilation.createScriptScope()), astCtx(scope, LookupLocation::max),
+    evalContext(astCtx, EvalFlags::IsScript) {
     evalContext.pushEmptyFrame();
 }
 
 ConstantValue ScriptSession::eval(std::string_view text) {
-    syntaxTrees.emplace_back(SyntaxTree::fromText(text));
+    syntaxTrees.emplace_back(SyntaxTree::fromText(text, options));
 
     const auto& node = syntaxTrees.back()->root();
     switch (node.kind) {

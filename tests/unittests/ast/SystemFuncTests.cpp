@@ -1147,3 +1147,40 @@ endclass
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::SignConversion);
 }
+
+TEST_CASE("Array map method") {
+    auto options = optionsFor(LanguageVersion::v1800_2023);
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int A[] = {1,2,3}, B[] = {2,3,5}, C[$];
+    bit Compare[];
+
+    initial begin
+        A = A.map() with (item + 1); // A = {2,3,4}
+        C = A.map(a) with (a + B[a.index]); // C = {4,6,9}
+        Compare = A.map(a) with (a == B[a.index]); // Compare = {1,1,0}
+    end
+endmodule
+)",
+                                     options);
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Array map method not allowed in 2017") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int A[] = {1,2,3};
+    int B[] = A.map with (item);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::WrongLanguageVersion);
+}

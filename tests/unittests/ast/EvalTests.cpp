@@ -2522,3 +2522,17 @@ endfunction
     CHECK(session.eval("calc(400);").integer() == 0);
     NO_SESSION_ERRORS;
 }
+
+TEST_CASE("Array map eval") {
+    ScriptSession session(optionsFor(LanguageVersion::v1800_2023));
+    session.eval(R"(int A[] = {1,2,3}, B[3] = {2,3,5};)");
+    session.eval(R"(real C[$] = {3.14};)");
+    session.eval(R"(int D[string] = '{"Hello": -1, "World": 5};)");
+
+    CHECK(session.eval("A.map with (item * 2.5)").toString() == "[2.5,5,7.5]");
+    CHECK(session.eval("B.map with (1)").toString() == "[1,1,1]");
+    CHECK(session.eval("C.map with (int'(item))").toString() == "[3]");
+    CHECK(session.eval("D.map with (item * 3)").toString() == R"(["Hello":-3,"World":15])");
+
+    NO_SESSION_ERRORS;
+}

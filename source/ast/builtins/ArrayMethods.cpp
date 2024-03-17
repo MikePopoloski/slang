@@ -952,6 +952,101 @@ public:
     }
 };
 
+class ArrayMapMethod : public SystemSubroutine {
+public:
+    ArrayMapMethod() : SystemSubroutine("map", SubroutineKind::Function) {
+        withClauseMode = WithClauseMode::Iterator;
+    }
+
+    const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
+                               const Expression* iterExpr) const final {
+        auto& comp = context.getCompilation();
+        if (!checkArgCount(context, true, args, range, 0, 0))
+            return comp.getErrorType();
+
+        if (!iterExpr) {
+            context.addDiag(diag::ArrayLocatorWithClause, range) << name;
+            return comp.getErrorType();
+        }
+
+        auto languageVersion = comp.getOptions().languageVersion;
+        if (languageVersion < LanguageVersion::v1800_2023)
+            context.addDiag(diag::WrongLanguageVersion, range) << toString(languageVersion);
+
+        auto& arrayType = args[0]->type->getCanonicalType();
+        auto& elemType = *iterExpr->type;
+        switch (arrayType.kind) {
+            case SymbolKind::FixedSizeUnpackedArrayType: {
+                auto& fsuat = arrayType.as<FixedSizeUnpackedArrayType>();
+                return FixedSizeUnpackedArrayType::fromDim(*context.scope, elemType, fsuat.range,
+                                                           iterExpr->sourceRange);
+            }
+            case SymbolKind::DynamicArrayType:
+                return *comp.emplace<DynamicArrayType>(elemType);
+            case SymbolKind::AssociativeArrayType: {
+                auto& aat = arrayType.as<AssociativeArrayType>();
+                return *comp.emplace<AssociativeArrayType>(elemType, aat.indexType);
+            }
+            case SymbolKind::QueueType: {
+                auto& qt = arrayType.as<QueueType>();
+                return *comp.emplace<QueueType>(elemType, qt.maxBound);
+            }
+            default:
+                SLANG_UNREACHABLE;
+        }
+    }
+
+    ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
+                       const CallExpression::SystemCallInfo& callInfo) const final {
+        ConstantValue arr = args[0]->eval(context);
+        if (!arr)
+            return nullptr;
+
+        auto [iterExpr, iterVar] = callInfo.getIteratorInfo();
+        auto guard = context.disableCaching();
+        auto iterVal = context.createLocal(iterVar);
+
+        if (arr.isMap()) {
+            AssociativeArray results;
+            for (auto& [key, val] : *arr.map()) {
+                *iterVal = val;
+                ConstantValue cv = iterExpr->eval(context);
+                if (!cv)
+                    return nullptr;
+
+                results.emplace(std::move(key), std::move(cv));
+            }
+            return results;
+        }
+        else {
+            auto doMap = [&, ie = iterExpr](auto& container, auto& results) {
+                for (auto& elem : container) {
+                    *iterVal = elem;
+                    ConstantValue cv = ie->eval(context);
+                    if (!cv)
+                        return false;
+
+                    results.emplace_back(std::move(cv));
+                }
+                return true;
+            };
+
+            if (arr.isQueue()) {
+                SVQueue results;
+                if (!doMap(*arr.queue(), results))
+                    return nullptr;
+                return results;
+            }
+            else {
+                ConstantValue::Elements results;
+                if (!doMap(std::get<ConstantValue::Elements>(arr.getVariant()), results))
+                    return nullptr;
+                return results;
+            }
+        }
+    }
+};
+
 void registerArrayMethods(Compilation& c) {
 #define REGISTER(kind, name, ...) \
     c.addSystemMethod(kind, std::make_unique<name##Method>(__VA_ARGS__))
@@ -976,6 +1071,8 @@ void registerArrayMethods(Compilation& c) {
 
         REGISTER(kind, ArrayUnique, "unique", false);
         REGISTER(kind, ArrayUnique, "unique_index", true);
+
+        REGISTER(kind, ArrayMap, );
     }
 
     for (auto kind :

@@ -21,10 +21,11 @@ namespace slang::ast {
 /// source code and maintaining state across multiple eval calls.
 class SLANG_EXPORT ScriptSession {
 public:
+    Bag options;
     Compilation compilation;
     CompilationUnitSymbol& scope;
 
-    ScriptSession();
+    explicit ScriptSession(const Bag& options = {});
 
     ConstantValue eval(std::string_view text);
     ConstantValue evalExpression(const syntax::ExpressionSyntax& expr);
