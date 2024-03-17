@@ -10,6 +10,26 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Added `--allow-self-determined-stream-concat` (included in 'vcs' compat mode) to allow the use of streaming concatenation expressions in self-determined contexts (instead of just in assignments)
 * Added `--allow-multi-driven-locals` (included in 'vcs' compat mode) to allow subroutine local variables to be driven by multiple always_ff / always_comb blocks
 * Added full support for SystemVerilog libraries and configurations
+* Added support for equality comparisons between virtual interfaces and actual interface instances
+#### Clarifications in IEEE 1800-2023
+* Unsized integer literals can be any bit width, not just capped at 32 bits.
+* Unpacked unions are allowed as net types
+* Time literals should be scaled but *not* rounded to the current time precision
+* Multiline block comments are allowed in macro definitions
+* Set membership operations (case statements, inside operator) always allow unbounded literals
+* Unbounded literals can only be assigned to parameters with simple bit vector types
+* $cast arguments don't need to be singular at compile time
+#### New Features in IEEE 1800-2023
+* Triple quoted (multiline) string literals
+* Macro stringification with triple quoted strings
+* Type parameters and the type() operator can now refer to incomplete forward typedefs
+* Type parameters can now specify a type restriction just like forward typedefs
+* The `timescale directive is disallowed inside design elements
+* Boolean expressions in conditional directives (ifdef, ifndef)
+* Function call expressions can be chained (slang already supported this but several issues related to it were fixed)
+* type(this) is now allowed in static contexts within class declarations
+* Soft packed unions
+* The `index` method of array iterators can be renamed via an argument to the method call
 
 ### General Features
 * Added [-Wmultibit-edge](https://sv-lang.com/warning-ref.html#multibit-edge) (on by default) to warn about clock edge triggers on multibit expressions
@@ -18,11 +38,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Added [-Wunknown-sys-name](https://sv-lang.com/warning-ref.html#unknown-sys-name) to allow downgrading the error that occurs when referencing an unknown system task or function
 * Added [compilation unit listings](https://sv-lang.com/user-manual.html#unit-listing) to allow fine grained control over how sources are parsed into separate compilation units (including separating macro defines and include directories on a per-unit basis)
 * Added `--defaultLibName` to control the name of the default source library
+* Added `--std` to choose which version of the LRM slang should conform to. By default this is "1800-2017" but can be set to "1800-2023" to enable new features added in the recently published update to the SystemVerilog LRM.
 
 ### Improvements
 * `--cmd-ignore` and `--cmd-rename` now also work with options that include a value via an equals expression
 * Information about module/interface/program definitions are now included in AST JSON output
 * slang-reflect has been improved to support reflecting more complex types for local parameters (thanks to @Sustrak)
+* Rewrote analysis of user-defined primitive tables to be much more efficient; previously primitives with large numbers of inputs could take a very long time to analyze
 
 ### Fixes
 * Fixed several crashes in slang-tidy (thanks to @likeamahoney)
@@ -33,6 +55,20 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Fixed a crash in the Python SyntaxVisitor bindings
 * Correctly allow instance paths to be used in assert control system function arguments
 * Fixed a bug where multi-driver checks for called subroutines didn't apply when one of the source procedures was a plain always block
+* Fixed bug in parsing empty action blocks for sequences and properties
+* Fixed the Python bindings for Type::isBitstreamType
+* Fixed a crash when calling getResolutionFunction on built-in net types
+* Fixed a bug in the checking of forward typedef type restrictions
+* Fixed the end spacing of stringified macro expansions
+* Fixed a macro expansion corner case where an escaped identifier that ends in a backslash was not considered as a line continuation for the macro body
+* Fixed several cases where invalid syntax could lead to follow on errors with malformed messages
+* Fixed several crashes related to corrupted source files containing embedded null characters or invalid UTF8 sequences
+* Fixed a crash that could occur when a source file ended in an invalid hex escape inside a string literal
+* Fixed an infinite loop when parsing a malformed list of terminals in a primitive declaration
+* Fixed an infinite loop caused by malformed recursive checker instantiations
+* Fixed an infinite loop when parsing case statements with malformed pattern items
+* Added checking for several missing invalid corner cases in user-defined primitive declarations
+* Fixed the propagation of unbounded literals through parameters used in expressions
 
 
 ## [v5.0] - 2023-12-26
