@@ -145,8 +145,8 @@ public:
     static Expression& fromSelector(
         Compilation& compilation, Expression& expr, const LookupResult::MemberSelector& selector,
         const syntax::InvocationExpressionSyntax* invocation,
-        const syntax::ArrayOrRandomizeMethodExpressionSyntax* withClause,
-        const ASTContext& context);
+        const syntax::ArrayOrRandomizeMethodExpressionSyntax* withClause, const ASTContext& context,
+        bool isFromLookupChain);
 
     static Expression& fromSyntax(Compilation& compilation,
                                   const syntax::MemberAccessExpressionSyntax& syntax,

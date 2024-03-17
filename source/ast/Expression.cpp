@@ -1141,7 +1141,8 @@ Expression& Expression::bindLookupResult(Compilation& compilation, LookupResult&
 
             if (i == result.selectors.size() - 1) {
                 expr = &MemberAccessExpression::fromSelector(compilation, *expr, *memberSelect,
-                                                             invocation, withClause, context);
+                                                             invocation, withClause, context,
+                                                             /* isFromLookupChain */ true);
 
                 if (expr->kind == ExpressionKind::Call) {
                     invocation = nullptr;
@@ -1150,7 +1151,8 @@ Expression& Expression::bindLookupResult(Compilation& compilation, LookupResult&
             }
             else {
                 expr = &MemberAccessExpression::fromSelector(compilation, *expr, *memberSelect,
-                                                             nullptr, nullptr, context);
+                                                             nullptr, nullptr, context,
+                                                             /* isFromLookupChain */ true);
             }
         }
         else {

@@ -2527,7 +2527,7 @@ endclass
 
 module m;
     A bar;
-    int i = bar.func.foo(3);
+    int i = bar.func().foo(3);
 endmodule
 )");
 
@@ -3411,4 +3411,19 @@ endmodule
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::WarningTask);
+}
+
+TEST_CASE("Chained method calls require parentheses") {
+    auto tree = SyntaxTree::fromText(R"(
+string sa[10];
+int i = sa.unique.size;
+int j = sa.unique().size;
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::ChainedMethodParens);
 }

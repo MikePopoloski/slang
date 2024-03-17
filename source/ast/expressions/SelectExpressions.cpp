@@ -851,7 +851,8 @@ static Expression* tryBindSpecialMethod(Compilation& compilation, const Expressi
 Expression& MemberAccessExpression::fromSelector(
     Compilation& compilation, Expression& expr, const LookupResult::MemberSelector& selector,
     const InvocationExpressionSyntax* invocation,
-    const ArrayOrRandomizeMethodExpressionSyntax* withClause, const ASTContext& context) {
+    const ArrayOrRandomizeMethodExpressionSyntax* withClause, const ASTContext& context,
+    bool isFromLookupChain) {
 
     // If the selector name is invalid just give up early.
     if (selector.name.empty())
@@ -870,6 +871,12 @@ Expression& MemberAccessExpression::fromSelector(
             if (result)
                 return *result;
         }
+    }
+    else if (expr.kind == ExpressionKind::Call && isFromLookupChain) {
+        // It's an error to dot select from a call expression that
+        // doesn't include parentheses, which it doesn't if we're
+        // in this method to begin with.
+        context.addDiag(diag::ChainedMethodParens, range);
     }
 
     auto errorIfNotProcedural = [&] {
@@ -1039,7 +1046,9 @@ Expression& MemberAccessExpression::fromSyntax(
     selector.dotLocation = syntax.dot.location();
     selector.nameRange = syntax.name.range();
 
-    auto& result = fromSelector(compilation, lhs, selector, invocation, withClause, context);
+    auto& result = fromSelector(compilation, lhs, selector, invocation, withClause, context,
+                                /* isFromLookupChain */ false);
+
     if (result.kind != ExpressionKind::Call && !result.bad()) {
         if (invocation) {
             auto& diag = context.addDiag(diag::ExpressionNotCallable, invocation->sourceRange());
