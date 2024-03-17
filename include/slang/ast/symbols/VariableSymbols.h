@@ -227,8 +227,13 @@ public:
     /// The type of the array that this iterator traverses.
     const Type& arrayType;
 
+    /// The name of the built-in "index" method, which can be customized
+    /// by the user. Some uses of IteratorSymbol don't allow an index method
+    /// and set this value to the empty string.
+    std::string_view indexMethodName;
+
     IteratorSymbol(const Scope& scope, std::string_view name, SourceLocation loc,
-                   const Type& arrayType);
+                   const Type& arrayType, std::string_view indexMethodName);
     IteratorSymbol(std::string_view name, SourceLocation loc, const Type& arrayType,
                    const Type& indexType);
 

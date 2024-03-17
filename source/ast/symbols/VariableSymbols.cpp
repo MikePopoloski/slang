@@ -429,9 +429,9 @@ void NetSymbol::serializeTo(ASTSerializer& serializer) const {
 }
 
 IteratorSymbol::IteratorSymbol(const Scope& scope, std::string_view name, SourceLocation loc,
-                               const Type& arrayType) :
+                               const Type& arrayType, std::string_view indexMethodName) :
     TempVarSymbol(SymbolKind::Iterator, name, loc, VariableLifetime::Automatic),
-    arrayType(arrayType) {
+    arrayType(arrayType), indexMethodName(indexMethodName) {
 
     flags |= VariableFlags::Const;
     setParent(scope);

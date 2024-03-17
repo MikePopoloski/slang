@@ -24,6 +24,7 @@
 
 namespace slang::ast {
 
+using namespace parsing;
 using namespace syntax;
 
 Expression& CallExpression::fromSyntax(Compilation& compilation,
@@ -406,10 +407,10 @@ Expression& CallExpression::fromSystemMethod(
 
 Expression* CallExpression::fromBuiltInMethod(
     Compilation& compilation, SymbolKind rootKind, const Expression& expr,
-    const LookupResult::MemberSelector& selector, const InvocationExpressionSyntax* syntax,
+    std::string_view methodName, const InvocationExpressionSyntax* syntax,
     const ArrayOrRandomizeMethodExpressionSyntax* withClause, const ASTContext& context) {
 
-    auto subroutine = compilation.getSystemMethod(rootKind, selector.name);
+    auto subroutine = compilation.getSystemMethod(rootKind, methodName);
     if (!subroutine)
         return nullptr;
 
@@ -417,7 +418,71 @@ Expression* CallExpression::fromBuiltInMethod(
                              syntax ? syntax->sourceRange() : expr.sourceRange, context);
 }
 
-static const Expression* bindIteratorExpr(Compilation& compilation,
+static bool getIteratorParams(std::string_view subroutineName, const ArgumentListSyntax& arguments,
+                              const ASTContext& context, std::string_view& iteratorName,
+                              std::string_view& indexMethodName, SourceLocation& iteratorLoc) {
+    auto actualArgs = arguments.parameters;
+    if (actualArgs.empty())
+        return true;
+
+    if (actualArgs.size() > 2) {
+        auto& diag = context.addDiag(diag::TooManyArguments, arguments.sourceRange());
+        diag << subroutineName;
+        diag << 2;
+        diag << actualArgs.size();
+        return false;
+    }
+
+    auto getId = [&](const ArgumentSyntax& argSyntax) -> Token {
+        switch (argSyntax.kind) {
+            case SyntaxKind::OrderedArgument: {
+                auto exSyn = context.requireSimpleExpr(*argSyntax.as<OrderedArgumentSyntax>().expr);
+                if (!exSyn)
+                    return Token();
+
+                if (exSyn->kind != SyntaxKind::IdentifierName) {
+                    context.addDiag(diag::ExpectedIteratorName, exSyn->sourceRange());
+                    return Token();
+                }
+
+                return exSyn->as<IdentifierNameSyntax>().identifier;
+            }
+            case SyntaxKind::NamedArgument:
+                context.addDiag(diag::NamedArgNotAllowed, argSyntax.sourceRange());
+                return Token();
+            case SyntaxKind::EmptyArgument:
+                context.addDiag(diag::EmptyArgNotAllowed, argSyntax.sourceRange());
+                return Token();
+            default:
+                SLANG_UNREACHABLE;
+        }
+    };
+
+    auto iteratorTok = getId(*actualArgs[0]);
+    if (!iteratorTok || iteratorTok.isMissing())
+        return false;
+
+    if (actualArgs.size() > 1) {
+        auto indexTok = getId(*actualArgs[1]);
+        if (!indexTok || indexTok.isMissing())
+            return false;
+
+        indexMethodName = indexTok.valueText();
+
+        auto languageVersion = context.getCompilation().getOptions().languageVersion;
+        if (languageVersion < LanguageVersion::v1800_2023) {
+            context.addDiag(diag::WrongLanguageVersion, actualArgs[1]->sourceRange())
+                << toString(languageVersion);
+        }
+    }
+
+    iteratorName = iteratorTok.valueText();
+    iteratorLoc = iteratorTok.location();
+
+    return true;
+}
+
+static const Expression* bindIteratorExpr(Compilation& compilation, std::string_view subroutineName,
                                           const InvocationExpressionSyntax* invocation,
                                           const ArrayOrRandomizeMethodExpressionSyntax& withClause,
                                           const Type& arrayType, const ASTContext& context,
@@ -438,42 +503,24 @@ static const Expression* bindIteratorExpr(Compilation& compilation,
         return nullptr;
     }
 
-    // If arguments are provided, there should be only one and it should
-    // be the name of the iterator symbol. Otherwise, we need to automatically
-    // generate an iterator symbol named 'item'.
+    // If arguments are provided, there can be one or two.
+    // The first is the name of iterator, and the second is the name
+    // of the index method on that iterator. Otherwise we use defaults
+    // for those names.
     SourceLocation iteratorLoc = SourceLocation::NoLocation;
-    std::string_view iteratorName;
+    std::string_view iteratorName = "item"sv;
+    std::string_view indexMethodName = "index"sv;
     if (invocation && invocation->arguments) {
-        auto actualArgs = invocation->arguments->parameters;
-        if (actualArgs.size() == 1 && actualArgs[0]->kind == SyntaxKind::OrderedArgument) {
-            auto& arg = actualArgs[0]->as<OrderedArgumentSyntax>();
-            if (auto exSyn = context.requireSimpleExpr(*arg.expr)) {
-                if (exSyn->kind == SyntaxKind::IdentifierName) {
-                    auto id = exSyn->as<IdentifierNameSyntax>().identifier;
-                    iteratorLoc = id.location();
-                    iteratorName = id.valueText();
-                    if (iteratorName.empty())
-                        return nullptr;
-                }
-            }
-            else {
-                return nullptr;
-            }
-        }
-
-        if (iteratorName.empty() && !actualArgs.empty()) {
-            context.addDiag(diag::ExpectedIteratorName, invocation->arguments->sourceRange());
+        if (!getIteratorParams(subroutineName, *invocation->arguments, context, iteratorName,
+                               indexMethodName, iteratorLoc)) {
             return nullptr;
         }
     }
 
-    if (iteratorName.empty())
-        iteratorName = "item"sv;
-
     // Create the iterator variable and set it up with an AST context so that it
     // can be found by the iteration expression.
     auto it = compilation.emplace<IteratorSymbol>(*context.scope, iteratorName, iteratorLoc,
-                                                  arrayType);
+                                                  arrayType, indexMethodName);
     iterVar = it;
 
     ASTContext iterCtx = context;
@@ -509,8 +556,8 @@ Expression& CallExpression::createSystemCall(
             }
         }
         else if (firstArg) {
-            iterOrThis = bindIteratorExpr(compilation, syntax, *withClause, *firstArg->type,
-                                          context, iterVar);
+            iterOrThis = bindIteratorExpr(compilation, subroutine.name, syntax, *withClause,
+                                          *firstArg->type, context, iterVar);
             if (!iterOrThis || iterOrThis->bad())
                 return badExpr(compilation, iterOrThis);
 

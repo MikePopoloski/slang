@@ -841,11 +841,11 @@ static Expression* tryBindSpecialMethod(Compilation& compilation, const Expressi
             return nullptr;
 
         return CallExpression::fromBuiltInMethod(compilation, SymbolKind::ClassProperty, expr,
-                                                 selector, invocation, withClause, context);
+                                                 selector.name, invocation, withClause, context);
     }
 
-    return CallExpression::fromBuiltInMethod(compilation, sym->kind, expr, selector, invocation,
-                                             withClause, context);
+    return CallExpression::fromBuiltInMethod(compilation, sym->kind, expr, selector.name,
+                                             invocation, withClause, context);
 }
 
 Expression& MemberAccessExpression::fromSelector(
@@ -864,18 +864,23 @@ Expression& MemberAccessExpression::fromSelector(
     // Special cases for built-in iterator methods that don't cleanly fit the general
     // mold of looking up members via the type of the expression.
     if (expr.kind == ExpressionKind::NamedValue) {
-        auto symKind = expr.as<NamedValueExpression>().symbol.kind;
+        auto& sym = expr.as<NamedValueExpression>().symbol;
+        auto symKind = sym.kind;
         if (symKind == SymbolKind::Iterator) {
-            auto result = CallExpression::fromBuiltInMethod(compilation, symKind, expr, selector,
-                                                            invocation, withClause, context);
-            if (result)
-                return *result;
+            auto& iter = sym.as<IteratorSymbol>();
+            if (iter.indexMethodName == selector.name) {
+                auto result = CallExpression::fromBuiltInMethod(compilation, symKind, expr,
+                                                                "index"sv, invocation, withClause,
+                                                                context);
+                if (result)
+                    return *result;
+            }
         }
     }
     else if (expr.kind == ExpressionKind::Call && isFromLookupChain) {
         // It's an error to dot select from a call expression that
-        // doesn't include parentheses, which it doesn't if we're
-        // in this method to begin with.
+        // doesn't include parentheses, which it doesn't iff
+        // isFromLookupChain is set.
         context.addDiag(diag::ChainedMethodParens, range);
     }
 

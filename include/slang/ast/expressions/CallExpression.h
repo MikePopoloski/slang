@@ -92,8 +92,7 @@ public:
 
     static Expression* fromBuiltInMethod(
         Compilation& compilation, SymbolKind rootKind, const Expression& expr,
-        const LookupResult::MemberSelector& selector,
-        const syntax::InvocationExpressionSyntax* syntax,
+        std::string_view methodName, const syntax::InvocationExpressionSyntax* syntax,
         const syntax::ArrayOrRandomizeMethodExpressionSyntax* withClause,
         const ASTContext& context);
 

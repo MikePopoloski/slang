@@ -2077,13 +2077,15 @@ module m;
     int r = o.and with (1) { 1; };
     int s = o.and with;
     int t = o.and with (a, b);
-    int u = o.and(a, b) with (a == 1);
+    int u = o.and(a, b, c) with (a == 1);
     int v = o.and(a[1]) with (a == 1);
     int w = o.and(,) with (a == 1);
+    int x = o.and(a, .foo()) with (a == 1);
+    int y = o.and(posedge clk) with (a == 1);
 
     // These are ok.
-    int x = o.and(b) with (b + 1);
-    int y = o.and with (item + x);
+    int z = o.and(b) with (b + 1);
+    int aa = o.and with (item + x);
 endmodule
 )");
 
@@ -2091,7 +2093,7 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 12);
+    REQUIRE(diags.size() == 14);
     CHECK(diags[0].code == diag::ExpressionNotCallable);
     CHECK(diags[1].code == diag::UnexpectedWithClause);
     CHECK(diags[2].code == diag::UnexpectedWithClause);
@@ -2101,9 +2103,11 @@ endmodule
     CHECK(diags[6].code == diag::UnexpectedConstraintBlock);
     CHECK(diags[7].code == diag::ExpectedIterationExpression);
     CHECK(diags[8].code == diag::ExpectedIterationExpression);
-    CHECK(diags[9].code == diag::ExpectedIteratorName);
+    CHECK(diags[9].code == diag::TooManyArguments);
     CHECK(diags[10].code == diag::ExpectedIteratorName);
-    CHECK(diags[11].code == diag::ExpectedIteratorName);
+    CHECK(diags[11].code == diag::EmptyArgNotAllowed);
+    CHECK(diags[12].code == diag::NamedArgNotAllowed);
+    CHECK(diags[13].code == diag::InvalidArgumentExpr);
 }
 
 TEST_CASE("Iterator index method") {
@@ -3429,4 +3433,37 @@ int k[$] = ia.find(x) with (x > 5).unique;
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::ChainedMethodParens);
+}
+
+TEST_CASE("v1800-2023: override name of index method") {
+    auto options = optionsFor(LanguageVersion::v1800_2023);
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    typedef struct {int index;} idx_type;
+    idx_type arr1[4];
+    idx_type arr2[$] = arr1.find(item, iter_index) with (item.index != item.iter_index);
+endmodule
+)",
+                                     options);
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Overriding index method name not allowed in 1800-2017") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    typedef struct {int index;} idx_type;
+    idx_type arr1[4];
+    idx_type arr2[$] = arr1.find(item, iter_index) with (item.index != item.iter_index);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::WrongLanguageVersion);
 }
