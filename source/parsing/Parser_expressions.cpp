@@ -564,7 +564,20 @@ ExpressionSyntax& Parser::parsePostfixExpression(ExpressionSyntax& lhs,
                 break;
             case TokenKind::Dot: {
                 auto dot = consume();
-                auto name = expect(TokenKind::Identifier);
+
+                Token name;
+                switch (peek().kind) {
+                    case TokenKind::UniqueKeyword:
+                    case TokenKind::AndKeyword:
+                    case TokenKind::OrKeyword:
+                    case TokenKind::XorKeyword:
+                        name = consume();
+                        break;
+                    default:
+                        name = expect(TokenKind::Identifier);
+                        break;
+                }
+
                 expr = &factory.memberAccessExpression(*expr, dot, name);
                 break;
             }

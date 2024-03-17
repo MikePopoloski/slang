@@ -3418,6 +3418,9 @@ TEST_CASE("Chained method calls require parentheses") {
 string sa[10];
 int i = sa.unique.size;
 int j = sa.unique().size;
+
+int ia[10];
+int k[$] = ia.find(x) with (x > 5).unique;
 )");
 
     Compilation compilation;
