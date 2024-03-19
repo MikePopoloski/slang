@@ -435,7 +435,7 @@ Token Preprocessor::nextRaw() {
         }
     }
 
-    // Ensure EoF at the end of trivia to prevent inlining issues
+    // Ensure EoL at the end of trivia to prevent inlining issues
     if (trivia.empty() || trivia.back().kind != TriviaKind::EndOfLine)
         trivia.push_back(Trivia(TriviaKind::EndOfLine, ""sv));
 
