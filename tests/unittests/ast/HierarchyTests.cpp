@@ -2343,6 +2343,18 @@ TEST_CASE("Nested modules with infinite recursion regress") {
     compilation.getAllDiagnostics();
 }
 
+TEST_CASE("Bind corner case crash regress") {
+    auto tree = SyntaxTree::fromText(R"(
+module AL i,bind d,i AL,i
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    // Check that it doesn't crash.
+    compilation.getAllDiagnostics();
+}
+
 TEST_CASE("Nested modules with binds, parameterized, info task") {
     auto tree = SyntaxTree::fromText(R"(
 module m #(parameter P);

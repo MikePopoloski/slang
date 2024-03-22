@@ -2270,8 +2270,12 @@ void Compilation::resolveDefParamsAndBinds() {
             }
         }
 
+        // We make a copy of the bind directives list here because resolveBindTargets
+        // can cause the compilation to add more entries to the list (for recursive
+        // module instantiations).
         binds.clear();
-        for (auto [syntax, scope] : c.bindDirectives) {
+        auto bindDirs = c.bindDirectives;
+        for (auto [syntax, scope] : bindDirs) {
             ResolvedBind resolvedBind;
             c.resolveBindTargets(*syntax, *scope, resolvedBind);
 
