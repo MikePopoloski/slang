@@ -59,7 +59,6 @@ target_sources(
           Scope.cpp
           ScriptSession.cpp
           SemanticFacts.cpp
-          SemanticModel.cpp
           SFormat.cpp
           Statements.cpp
           Symbol.cpp
