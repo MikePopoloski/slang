@@ -1152,8 +1152,10 @@ void Scope::elaborate() const {
 
         auto& instanceBody = asSymbol().as<InstanceBodySymbol>();
         if (auto node = instanceBody.hierarchyOverrideNode) {
-            for (auto& bindInfo : node->binds)
-                handleBind(bindInfo);
+            for (auto& [bindInfo, targetDefSyntax] : node->binds) {
+                if (!targetDefSyntax)
+                    handleBind(bindInfo);
+            }
         }
 
         if (!instanceBody.getDefinition().bindDirectives.empty()) {

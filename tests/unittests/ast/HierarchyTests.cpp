@@ -2371,3 +2371,36 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::InfoTask);
 }
+
+TEST_CASE("Nested modules with binds, parameterized, explicit instantiation") {
+    auto tree = SyntaxTree::fromText(R"(
+module m #(parameter P);
+  module n;
+    int i;
+  endmodule
+  if (P == 2) begin
+    bind n foo f();
+  end
+  n n1();
+endmodule
+
+module foo;
+  $info("%m");
+endmodule
+
+module top;
+  m #(1) m1();
+  m #(2) m2();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    CHECK("\n" + report(diags) == R"(
+source:13:3: note: $info encountered: top.m2.n1.f
+  $info("%m");
+  ^
+)");
+}

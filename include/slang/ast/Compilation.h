@@ -244,7 +244,11 @@ struct SLANG_EXPORT HierarchyOverrideNode {
     flat_hash_map<InstancePath::Entry, HierarchyOverrideNode> childNodes;
 
     /// A list of bind directives to apply in this scope.
-    std::vector<BindDirectiveInfo> binds;
+    /// The first entry is info about the bind instantiation, and the
+    /// second is an optional pointer to the definition it targets.
+    /// If the target is null, then the bind is actually targeting the
+    /// scope represented by this override node.
+    std::vector<std::pair<BindDirectiveInfo, const syntax::SyntaxNode*>> binds;
 };
 
 /// A centralized location for creating and caching symbols. This includes

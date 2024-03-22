@@ -1015,8 +1015,19 @@ InstanceBodySymbol& InstanceBodySymbol::fromDefinition(Compilation& comp,
     // If there are any bind directives targeting this instance,
     // add them to the end of the scope now.
     if (overrideNode) {
-        for (auto& bindInfo : overrideNode->binds)
-            result->addDeferredMembers(*bindInfo.bindSyntax);
+        for (auto& [bindInfo, targetDefSyntax] : overrideNode->binds) {
+            if (targetDefSyntax) {
+                auto def = comp.getDefinition(*result,
+                                              targetDefSyntax->as<ModuleDeclarationSyntax>());
+                SLANG_ASSERT(def);
+
+                // const_cast is ok; we just created this definition in an addMembers call above.
+                const_cast<DefinitionSymbol*>(def)->bindDirectives.push_back(bindInfo);
+            }
+            else {
+                result->addDeferredMembers(*bindInfo.bindSyntax);
+            }
+        }
     }
 
     if (!definition.bindDirectives.empty()) {

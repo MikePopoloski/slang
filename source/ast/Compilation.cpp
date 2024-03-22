@@ -713,8 +713,6 @@ Compilation::DefinitionLookupResult Compilation::getDefinition(
 const DefinitionSymbol* Compilation::getDefinition(const Scope& scope,
                                                    const ModuleDeclarationSyntax& syntax) const {
     if (auto it = definitionFromSyntax.find(&syntax); it != definitionFromSyntax.end()) {
-        SmallSet<const Scope*, 4> scopes;
-
         SmallMap<const Scope*, const DefinitionSymbol*, 4> scopeMap;
         for (auto def : it->second) {
             auto insertScope = def->getParentScope();
@@ -731,20 +729,6 @@ const DefinitionSymbol* Compilation::getDefinition(const Scope& scope,
 
             lookupScope = lookupScope->asSymbol().getParentScope();
         } while (lookupScope);
-
-        // If this definition is no longer referenced by the definitionMap
-        // it probably got booted by an (illegal) duplicate definition.
-        // We don't want to return anything in that case.
-        /*auto def = it->second;
-        auto& defScope = *def->getParentScope();
-        auto targetScope = defScope.asSymbol().kind == SymbolKind::CompilationUnit ? root.get()
-                                                                                   : &defScope;
-
-        auto dmIt = definitionMap.find(std::make_tuple(def->name, targetScope));
-        if (dmIt != definitionMap.end() &&
-            std::ranges::find(dmIt->second.first, def) != dmIt->second.first.end()) {
-            return def;
-        }*/
     }
     return nullptr;
 }
@@ -869,6 +853,9 @@ void Compilation::insertDefinition(Symbol& symbol, const Scope& scope) {
     auto targetScope = scope.asSymbol().kind == SymbolKind::CompilationUnit ? root.get() : &scope;
     const bool isRoot = targetScope == root.get();
     auto key = std::tuple(symbol.name, targetScope);
+    if (symbol.name.empty())
+        return;
+
     if (auto it = definitionMap.find(key); it != definitionMap.end()) {
         // There is already a definition with this name in this scope.
         // If we're not at the root scope, it's a straightforward error.
@@ -2237,14 +2224,24 @@ void Compilation::resolveDefParamsAndBinds() {
 
         for (auto& entry : binds) {
             if (entry.definitionTarget) {
-                // TODO: fix when there are multiple defs
-                auto it = c.definitionFromSyntax.find(entry.definitionTarget);
-                SLANG_ASSERT(it != c.definitionFromSyntax.end() && !it->second.empty());
-                it->second.front()->bindDirectives.push_back(entry.info);
+                if (!entry.path.empty()) {
+                    // This is a nested definition, so we need to put the
+                    // bind into the override node.
+                    auto node = getNodeFor(entry.path, c);
+                    node->binds.push_back({entry.info, entry.definitionTarget});
+                }
+                else {
+                    auto def = c.getDefinition(*c.root, *entry.definitionTarget);
+                    SLANG_ASSERT(def);
+
+                    // const_cast is fine; we accessed the private data of the compilation
+                    // through a public interface that added the const on top.
+                    const_cast<DefinitionSymbol*>(def)->bindDirectives.push_back(entry.info);
+                }
             }
             else {
                 auto node = getNodeFor(entry.path, c);
-                node->binds.push_back(entry.info);
+                node->binds.push_back({entry.info, nullptr});
             }
         }
     };
@@ -2297,10 +2294,21 @@ void Compilation::resolveDefParamsAndBinds() {
             for (auto target : resolvedBind.instTargets)
                 binds.emplace_back(BindEntry{InstancePath(*target), nullptr, info});
 
-            if (resolvedBind.defTarget) {
-                auto& modSyntax =
-                    resolvedBind.defTarget->getSyntax()->as<ModuleDeclarationSyntax>();
-                binds.emplace_back(BindEntry{{}, &modSyntax, info});
+            if (auto defTarget = resolvedBind.defTarget) {
+                auto parentScope = defTarget->getParentScope();
+                auto defSyntax = defTarget->getSyntax();
+                SLANG_ASSERT(parentScope && defSyntax);
+
+                // If this is a nested definition we'll put it into the
+                // override node of the parent scope that contains the
+                // definition. Otherwise it's a globally targeted bind.
+                InstancePath path;
+                auto& parentSym = parentScope->asSymbol();
+                if (parentSym.kind != SymbolKind::CompilationUnit)
+                    path = InstancePath(parentSym);
+
+                binds.emplace_back(
+                    BindEntry{std::move(path), &defSyntax->as<ModuleDeclarationSyntax>(), info});
             }
         }
     };

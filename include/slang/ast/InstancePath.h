@@ -22,6 +22,8 @@ public:
     InstancePath() = default;
     explicit InstancePath(const Symbol& symbol);
 
+    [[nodiscard]] bool empty() const { return entries.empty(); }
+
     class Entry {
     public:
         Entry() : value(0) {}
