@@ -238,16 +238,10 @@ struct SLANG_EXPORT HierarchyOverrideNode {
     /// the first element of which is the value to set the parameter to and the second
     /// is the source defparam doing the overriding, if any (can be null).
     flat_hash_map<const syntax::SyntaxNode*, std::pair<ConstantValue, const syntax::SyntaxNode*>>
-        overridesBySyntax;
+        paramOverrides;
 
-    /// A map of parameters to override, keyed by name.
-    flat_hash_map<std::string_view, ConstantValue> overridesByName;
-
-    /// A map of child scopes that also contain overrides, keyed by syntax.
-    flat_hash_map<InstancePath::Entry, HierarchyOverrideNode> childrenBySyntax;
-
-    /// A map of child scopes that also contain overrides, keyed by name.
-    flat_hash_map<std::string_view, HierarchyOverrideNode> childrenByName;
+    /// A map of child scopes that also contain overrides.
+    flat_hash_map<InstancePath::Entry, HierarchyOverrideNode> childNodes;
 
     /// A list of bind directives to apply in this scope.
     std::vector<BindDirectiveInfo> binds;

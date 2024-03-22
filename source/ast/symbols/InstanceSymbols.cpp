@@ -119,14 +119,9 @@ public:
 
         const HierarchyOverrideNode* overrideNode = nullptr;
         if (parentOverrideNode) {
-            if (auto sit = parentOverrideNode->childrenBySyntax.find(syntax);
-                sit != parentOverrideNode->childrenBySyntax.end()) {
+            if (auto sit = parentOverrideNode->childNodes.find(syntax);
+                sit != parentOverrideNode->childNodes.end()) {
                 overrideNode = &sit->second;
-            }
-            else if (auto nit = parentOverrideNode->childrenByName.find(
-                         syntax.decl->name.valueText());
-                     nit != parentOverrideNode->childrenByName.end()) {
-                overrideNode = &nit->second;
             }
         }
 
@@ -207,8 +202,8 @@ private:
         for (uint32_t i = 0; i < range.width(); i++) {
             const HierarchyOverrideNode* childOverrides = nullptr;
             if (overrideNode) {
-                auto nodeIt = overrideNode->childrenBySyntax.find(i);
-                if (nodeIt != overrideNode->childrenBySyntax.end())
+                auto nodeIt = overrideNode->childNodes.find(i);
+                if (nodeIt != overrideNode->childNodes.end())
                     childOverrides = &nodeIt->second;
             }
 
@@ -256,8 +251,8 @@ const HierarchyOverrideNode* findParentOverrideNode(const Scope& scope) {
     if (sym.kind == SymbolKind::GenerateBlock &&
         parentScope->asSymbol().kind == SymbolKind::GenerateBlockArray) {
 
-        auto it = node->childrenBySyntax.find(sym.as<GenerateBlockSymbol>().constructIndex);
-        if (it == node->childrenBySyntax.end())
+        auto it = node->childNodes.find(sym.as<GenerateBlockSymbol>().constructIndex);
+        if (it == node->childNodes.end())
             return nullptr;
 
         return &it->second;
@@ -266,10 +261,7 @@ const HierarchyOverrideNode* findParentOverrideNode(const Scope& scope) {
     auto syntax = sym.getSyntax();
     SLANG_ASSERT(syntax);
 
-    if (auto it = node->childrenBySyntax.find(*syntax); it != node->childrenBySyntax.end())
-        return &it->second;
-
-    if (auto it = node->childrenByName.find(sym.name); it != node->childrenByName.end())
+    if (auto it = node->childNodes.find(*syntax); it != node->childNodes.end())
         return &it->second;
 
     return nullptr;

@@ -252,15 +252,9 @@ const ParameterSymbolBase& ParameterBuilder::createParam(
         // Note that we ignore the override node if this is from a configuration,
         // as the LRM says config overrides take precedence over defparams.
         if (auto paramSyntax = param->getSyntax(); overrideNode && paramSyntax && !isFromConfig) {
-            if (auto it = overrideNode->overridesBySyntax.find(paramSyntax);
-                it != overrideNode->overridesBySyntax.end()) {
+            if (auto it = overrideNode->paramOverrides.find(paramSyntax);
+                it != overrideNode->paramOverrides.end()) {
                 param->setValue(comp, it->second.first, /* needsCoercion */ true);
-                return *param;
-            }
-
-            if (auto it = overrideNode->overridesByName.find(param->name);
-                it != overrideNode->overridesByName.end()) {
-                param->setValue(comp, it->second, /* needsCoercion */ true);
                 return *param;
             }
         }

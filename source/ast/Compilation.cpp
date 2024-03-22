@@ -537,9 +537,8 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamsAndBinds) {
                 if (!param.isTypeParam && param.hasSyntax) {
                     auto it = cliOverrides.find(param.name);
                     if (it != cliOverrides.end()) {
-                        hierarchyOverrides.childrenBySyntax[*def.getSyntax()]
-                            .overridesBySyntax.emplace(param.valueDecl,
-                                                       std::pair{*it->second, nullptr});
+                        hierarchyOverrides.childNodes[*def.getSyntax()].paramOverrides.emplace(
+                            param.valueDecl, std::pair{*it->second, nullptr});
                     }
                 }
             }
@@ -550,13 +549,9 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamsAndBinds) {
     for (auto [result, _] : topDefs) {
         auto& def = result.definition->as<DefinitionSymbol>();
         HierarchyOverrideNode* hierarchyOverrideNode = nullptr;
-        if (auto sit = hierarchyOverrides.childrenBySyntax.find(*def.getSyntax());
-            sit != hierarchyOverrides.childrenBySyntax.end()) {
+        if (auto sit = hierarchyOverrides.childNodes.find(*def.getSyntax());
+            sit != hierarchyOverrides.childNodes.end()) {
             hierarchyOverrideNode = &sit->second;
-        }
-        else if (auto nit = hierarchyOverrides.childrenByName.find(def.name);
-                 nit != hierarchyOverrides.childrenByName.end()) {
-            hierarchyOverrideNode = &nit->second;
         }
 
         auto& instance = InstanceSymbol::createDefault(*this, def, hierarchyOverrideNode,
@@ -2196,7 +2191,7 @@ void Compilation::resolveDefParamsAndBinds() {
     auto getNodeFor = [](const InstancePath& path, Compilation& c) {
         HierarchyOverrideNode* node = &c.hierarchyOverrides;
         for (auto& entry : path.entries)
-            node = &node->childrenBySyntax[entry];
+            node = &node->childNodes[entry];
         return node;
     };
 
@@ -2208,7 +2203,7 @@ void Compilation::resolveDefParamsAndBinds() {
             SLANG_ASSERT(entry.defparamSyntax);
 
             auto node = getNodeFor(entry.path, c);
-            auto [it, inserted] = node->overridesBySyntax.emplace(
+            auto [it, inserted] = node->paramOverrides.emplace(
                 entry.targetSyntax, std::pair{entry.value, entry.defparamSyntax});
 
             if (!inserted && isFinal) {
