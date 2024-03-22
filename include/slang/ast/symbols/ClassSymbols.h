@@ -235,6 +235,7 @@ private:
     mutable SpecMap specMap;
     mutable std::optional<const Type*> defaultSpecialization;
     mutable const ForwardingTypedefSymbol* firstForward = nullptr;
+    mutable uint32_t recursionDepth = 0;
     function_ref<void(Compilation&, ClassType&)> specializeFunc;
 };
 

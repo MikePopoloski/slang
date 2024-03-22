@@ -839,6 +839,7 @@ error NTResolveClass "resolution function for nettype '{}' cannot be a non-stati
 error NTResolveUserDef "resolution function for nettype '{}' must be a normal user-defined function"
 error NTResolveArgModify "resolution function for nettype '{}' cannot modify its input argument '{}'"
 error MultiplePackedOpenArrays "cannot declare more than one packed dimension when using an open array"
+error RecursiveClassSpecialization "potentially infinitely recursive specialization of class '{}'"
 warning enum-range EnumRangeLiteral "enum element ranges must be integer literals"
 
 subsystem Lookup

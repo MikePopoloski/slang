@@ -839,6 +839,12 @@ const Type* GenericClassDefSymbol::getSpecializationImpl(
     auto scope = getParentScope();
     SLANG_ASSERT(scope);
 
+    auto guard = ScopeGuard([this] { recursionDepth--; });
+    if (++recursionDepth > comp.getOptions().maxRecursiveClassSpecialization) {
+        context.addDiag(diag::RecursiveClassSpecialization, instanceLoc) << name;
+        return &comp.getErrorType();
+    }
+
     // Create a class type instance to hold the parameters. If it turns out we already
     // have this specialization cached we'll throw it away, but that's not a big deal.
     auto classType = comp.emplace<ClassType>(comp, name, location);

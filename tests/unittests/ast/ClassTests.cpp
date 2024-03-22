@@ -2882,3 +2882,34 @@ endclass
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Invalid generic class handle lookup regress") {
+    auto tree = SyntaxTree::fromText(R"(
+class G#(t)function-G#
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    // Just observe no crash.
+    compilation.getAllDiagnostics();
+}
+
+TEST_CASE("Invalid recursive generic class specialization") {
+    auto tree = SyntaxTree::fromText(R"(
+class G#(G #(null) o); endclass
+class H#(type a = H); endclass
+
+module m;
+    H h;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::RecursiveClassSpecialization);
+    CHECK(diags[1].code == diag::RecursiveClassSpecialization);
+}
