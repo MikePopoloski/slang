@@ -28,7 +28,12 @@ public:
         else if (syntax.kind == SyntaxKind::ModuleDeclaration ||
                  syntax.kind == SyntaxKind::InterfaceDeclaration ||
                  syntax.kind == SyntaxKind::ProgramDeclaration) {
-            auto def = compilation.getDefinition(syntax.as<ModuleDeclarationSyntax>());
+            auto [parentScope, parentSym] = getParent(syntax);
+            if (!parentScope)
+                parentScope = &compilation.getRoot();
+
+            auto def = compilation.getDefinition(*parentScope,
+                                                 syntax.as<ModuleDeclarationSyntax>());
             if (!def)
                 return nullptr;
 
@@ -39,13 +44,13 @@ public:
         }
 
         // Otherwise try to find the parent symbol first.
-        auto parent = syntax.parent ? getDeclaredSymbol(*syntax.parent) : nullptr;
-        if (!parent)
+        auto [parentScope, parentSym] = getParent(syntax);
+        if (!parentSym)
             return nullptr;
 
         // If this is a type alias, unwrap its target type to look at the syntax node.
-        if (parent->kind == SymbolKind::TypeAlias) {
-            auto& target = parent->as<TypeAliasType>().targetType.getType();
+        if (parentSym->kind == SymbolKind::TypeAlias) {
+            auto& target = parentSym->as<TypeAliasType>().targetType.getType();
             if (target.getSyntax() == &syntax) {
                 symbolCache.emplace(&syntax, &target);
                 return &target;
@@ -53,13 +58,11 @@ public:
             return nullptr;
         }
 
-        if (parent->kind == SymbolKind::Instance)
-            parent = &parent->as<InstanceSymbol>().body;
-        else if (!parent->isScope())
+        if (!parentScope)
             return nullptr;
 
         // Search among the parent's children to see if we can find ourself.
-        for (auto& child : parent->as<Scope>().members()) {
+        for (auto& child : parentScope->members()) {
             if (child.getSyntax() == &syntax) {
                 // We found ourselves, hurray.
                 symbolCache.emplace(&syntax, &child);
@@ -116,8 +119,20 @@ public:
     }
 
 private:
-    Compilation& compilation;
+    std::pair<const Scope*, const Symbol*> getParent(const SyntaxNode& syntax) {
+        auto parent = syntax.parent ? getDeclaredSymbol(*syntax.parent) : nullptr;
+        if (!parent)
+            return {nullptr, nullptr};
 
+        if (parent->kind == SymbolKind::Instance)
+            parent = &parent->as<InstanceSymbol>().body;
+        else if (!parent->isScope())
+            return {nullptr, parent};
+
+        return {&parent->as<Scope>(), parent};
+    }
+
+    Compilation& compilation;
     flat_hash_map<const syntax::SyntaxNode*, const Symbol*> symbolCache;
 };
 

@@ -105,10 +105,6 @@ void registerCompilation(py::module_& m) {
         .def("getCompilationUnits", &Compilation::getCompilationUnits, byrefint)
         .def("getSourceLibrary", &Compilation::getSourceLibrary, byrefint, "name"_a)
         .def("tryGetDefinition", &Compilation::tryGetDefinition, byrefint, "name"_a, "scope"_a)
-        .def("getDefinition",
-             py::overload_cast<const ModuleDeclarationSyntax&>(&Compilation::getDefinition,
-                                                               py::const_),
-             byrefint, "syntax"_a)
         .def("getDefinitions", &Compilation::getDefinitions, byrefint)
         .def("getPackage", &Compilation::getPackage, byrefint, "name"_a)
         .def("getStdPackage", &Compilation::getStdPackage, byrefint)

@@ -1216,7 +1216,7 @@ PrimitiveSymbol& PrimitiveSymbol::fromSyntax(const Scope& scope,
         }
 
         for (auto port : ports) {
-            if (!port->getSyntax()) {
+            if (!port->getSyntax() && !port->name.empty()) {
                 auto& diag = scope.addDiag(diag::PrimitivePortMissing, port->location);
                 diag << port->name;
             }

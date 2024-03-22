@@ -1592,7 +1592,7 @@ endmodule
 
     auto& top = compilation.getRoot().lookupName<InstanceSymbol>("top").body;
     auto instances = top.membersOfType<InstanceSymbol>();
-    REQUIRE(std::ranges::equal(instances, std::array{"i1", "i3", "ff2"}, {}, &Symbol::name));
+    REQUIRE(std::ranges::equal(instances, std::array{"i1", "i3", "ff2", "ff1"}, {}, &Symbol::name));
 }
 
 TEST_CASE("Instance array size limits") {
@@ -2300,4 +2300,74 @@ endprimitive
     auto cus = compilation.getCompilationUnits();
     REQUIRE(cus.size() == 1);
     CHECK(cus[0]->members().front().name == "p");
+}
+
+TEST_CASE("Nested modules multi-driven regress") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int foo;
+    module n;
+        assign foo = 1;
+    endmodule
+endmodule
+
+module top;
+    m m1();
+    m m2();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Nested modules with infinite recursion regress") {
+    auto tree = SyntaxTree::fromText(R"(
+ interface I;
+     I d;
+     module n;
+        g g;
+     endmodule
+ endinterface
+
+ module top;
+     I i();
+ endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    // Check that it doesn't crash.
+    compilation.getAllDiagnostics();
+}
+
+TEST_CASE("Nested modules with binds, parameterized, info task") {
+    auto tree = SyntaxTree::fromText(R"(
+module m #(parameter P);
+  module n;
+    int i;
+  endmodule
+  if (P == 2) begin
+  	bind n foo f();
+  end
+endmodule
+
+module foo;
+  $info("%m");
+endmodule
+
+module top;
+  m #(1) m1();
+  m #(2) m2();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::InfoTask);
 }

@@ -1616,11 +1616,12 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 4);
+    REQUIRE(diags.size() == 5);
     CHECK(diags[0].code == diag::NotAllowedInChecker);
-    CHECK(diags[1].code == diag::NotAllowedInChecker);
-    CHECK(diags[2].code == diag::InvalidInstanceForParent);
-    CHECK(diags[3].code == diag::UndeclaredIdentifier);
+    CHECK(diags[1].code == diag::InvalidInstanceForParent);
+    CHECK(diags[2].code == diag::NotAllowedInChecker);
+    CHECK(diags[3].code == diag::InvalidInstanceForParent);
+    CHECK(diags[4].code == diag::UndeclaredIdentifier);
 }
 
 TEST_CASE("Upward lookup from checkers") {

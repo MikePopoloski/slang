@@ -683,7 +683,7 @@ Compilation::DefinitionLookupResult Compilation::getDefinition(
             case SyntaxKind::InterfaceDeclaration:
             case SyntaxKind::ProgramDeclaration: {
                 auto& mds = bindInfo.instantiationDefSyntax->as<ModuleDeclarationSyntax>();
-                result.definition = getDefinition(mds);
+                result.definition = getDefinition(scope, mds);
                 if (!result.definition)
                     errorMissingDef(name, scope, sourceRange, diag::UnknownModule);
                 break;
@@ -710,12 +710,32 @@ Compilation::DefinitionLookupResult Compilation::getDefinition(
     return result;
 }
 
-const DefinitionSymbol* Compilation::getDefinition(const ModuleDeclarationSyntax& syntax) const {
+const DefinitionSymbol* Compilation::getDefinition(const Scope& scope,
+                                                   const ModuleDeclarationSyntax& syntax) const {
     if (auto it = definitionFromSyntax.find(&syntax); it != definitionFromSyntax.end()) {
+        SmallSet<const Scope*, 4> scopes;
+
+        SmallMap<const Scope*, const DefinitionSymbol*, 4> scopeMap;
+        for (auto def : it->second) {
+            auto insertScope = def->getParentScope();
+            if (insertScope && insertScope->asSymbol().kind == SymbolKind::CompilationUnit)
+                insertScope = root.get();
+
+            scopeMap[insertScope] = def;
+        }
+
+        auto lookupScope = &scope;
+        do {
+            if (auto scopeIt = scopeMap.find(lookupScope); scopeIt != scopeMap.end())
+                return scopeIt->second;
+
+            lookupScope = lookupScope->asSymbol().getParentScope();
+        } while (lookupScope);
+
         // If this definition is no longer referenced by the definitionMap
         // it probably got booted by an (illegal) duplicate definition.
         // We don't want to return anything in that case.
-        auto def = it->second;
+        /*auto def = it->second;
         auto& defScope = *def->getParentScope();
         auto targetScope = defScope.asSymbol().kind == SymbolKind::CompilationUnit ? root.get()
                                                                                    : &defScope;
@@ -724,7 +744,7 @@ const DefinitionSymbol* Compilation::getDefinition(const ModuleDeclarationSyntax
         if (dmIt != definitionMap.end() &&
             std::ranges::find(dmIt->second.first, def) != dmIt->second.first.end()) {
             return def;
-        }
+        }*/
     }
     return nullptr;
 }
@@ -825,7 +845,7 @@ void Compilation::createDefinition(const Scope& scope, LookupLocation location,
                        scope, location, syntax, *metadata.defaultNetType, metadata.unconnectedDrive,
                        metadata.timeScale, metadata.tree))
                    .get();
-    definitionFromSyntax[&syntax] = def;
+    definitionFromSyntax[&syntax].push_back(def);
 
     insertDefinition(*def, scope);
 
@@ -1115,7 +1135,8 @@ const Symbol* Compilation::findPackageExportCandidate(const PackageSymbol& packa
 }
 
 void Compilation::noteBindDirective(const BindDirectiveSyntax& syntax, const Scope& scope) {
-    bindDirectives.emplace_back(&syntax, &scope);
+    if (!scope.isUninstantiated())
+        bindDirectives.emplace_back(&syntax, &scope);
 }
 
 void Compilation::noteInstanceWithDefBind(const Symbol& instance) {
@@ -2216,9 +2237,10 @@ void Compilation::resolveDefParamsAndBinds() {
 
         for (auto& entry : binds) {
             if (entry.definitionTarget) {
+                // TODO: fix when there are multiple defs
                 auto it = c.definitionFromSyntax.find(entry.definitionTarget);
-                SLANG_ASSERT(it != c.definitionFromSyntax.end());
-                it->second->bindDirectives.push_back(entry.info);
+                SLANG_ASSERT(it != c.definitionFromSyntax.end() && !it->second.empty());
+                it->second.front()->bindDirectives.push_back(entry.info);
             }
             else {
                 auto node = getNodeFor(entry.path, c);

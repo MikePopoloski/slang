@@ -1342,7 +1342,7 @@ void Scope::handleUserDefinedNet(const UserDefinedNetDeclarationSyntax& syntax) 
 }
 
 void Scope::handleNestedDefinition(const ModuleDeclarationSyntax& syntax) const {
-    // We implicitly instantiated this definition if it has no parameters
+    // We implicitly instantiate this definition if it has no parameters
     // and no ports and hasn't been instantiated elsewhere.
     auto& header = *syntax.header;
     if (header.parameters && !header.parameters->declarations.empty())
@@ -1362,13 +1362,11 @@ void Scope::handleNestedDefinition(const ModuleDeclarationSyntax& syntax) const 
         }
     }
 
-    // This can return nullptr if we had more than one nested declaration
-    // with the same name (so only one got stored in the compilation's map).
-    auto def = compilation.getDefinition(syntax);
+    auto def = compilation.getDefinition(*this, syntax);
     if (!def || def->isInstantiated())
         return;
 
-    auto& inst = InstanceSymbol::createDefault(compilation, *def);
+    auto& inst = InstanceSymbol::createDefaultNested(*this, syntax);
     insertMember(&inst, lastMember, /* isElaborating */ true, /* incrementIndex */ true);
 }
 

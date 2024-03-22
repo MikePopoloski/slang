@@ -389,7 +389,8 @@ public:
                                          const BindDirectiveInfo& bindInfo) const;
 
     /// Gets the definition for the given syntax node, or nullptr if it does not exist.
-    const DefinitionSymbol* getDefinition(const syntax::ModuleDeclarationSyntax& syntax) const;
+    const DefinitionSymbol* getDefinition(const Scope& scope,
+                                          const syntax::ModuleDeclarationSyntax& syntax) const;
 
     /// Gets the definition indicated by the given config and cell ID, or nullptr
     /// if it does not exist. If no definition is found an appropriate diagnostic will be issued.
@@ -903,7 +904,8 @@ private:
 
     // A map from syntax node to the definition it represents. Used much less frequently
     // than other ways of looking up definitions which is why it's lower down here.
-    flat_hash_map<const syntax::ModuleDeclarationSyntax*, DefinitionSymbol*> definitionFromSyntax;
+    flat_hash_map<const syntax::ModuleDeclarationSyntax*, std::vector<DefinitionSymbol*>>
+        definitionFromSyntax;
 
     // A set of all instantiated names in the design; used for determining whether a given
     // module has ever been instantiated to know whether it should be considered top-level.

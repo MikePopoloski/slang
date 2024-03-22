@@ -91,10 +91,11 @@ class InstanceBuilder {
 public:
     InstanceBuilder(const ASTContext& context, SmallVectorBase<const Symbol*>& implicitNets,
                     const HierarchyOverrideNode* parentOverrideNode,
-                    std::span<const AttributeInstanceSyntax* const> attributes, bool isFromBind) :
+                    std::span<const AttributeInstanceSyntax* const> attributes, bool isFromBind,
+                    const SyntaxNode* overrideSyntax) :
         netType(context.scope->getDefaultNetType()), comp(context.getCompilation()),
-        context(context), parentOverrideNode(parentOverrideNode), implicitNets(implicitNets),
-        attributes(attributes), isFromBind(isFromBind) {}
+        context(context), parentOverrideNode(parentOverrideNode), overrideSyntax(overrideSyntax),
+        implicitNets(implicitNets), attributes(attributes), isFromBind(isFromBind) {}
 
     // Resets the builder to be ready to create more instances with different settings.
     // Must be called at least once prior to creating instances.
@@ -119,7 +120,8 @@ public:
 
         const HierarchyOverrideNode* overrideNode = nullptr;
         if (parentOverrideNode) {
-            if (auto sit = parentOverrideNode->childNodes.find(syntax);
+            if (auto sit = parentOverrideNode->childNodes.find(overrideSyntax ? *overrideSyntax
+                                                                              : syntax);
                 sit != parentOverrideNode->childNodes.end()) {
                 overrideNode = &sit->second;
             }
@@ -142,6 +144,7 @@ private:
     const HierarchyOverrideNode* parentOverrideNode = nullptr;
     const ResolvedConfig* resolvedConfig = nullptr;
     const ConfigBlockSymbol* newConfigRoot = nullptr;
+    const SyntaxNode* overrideSyntax;
     SmallVectorBase<const Symbol*>& implicitNets;
     SmallVector<int32_t> path;
     std::span<const AttributeInstanceSyntax* const> attributes;
@@ -456,6 +459,48 @@ InstanceSymbol& InstanceSymbol::createVirtual(
     return result;
 }
 
+Symbol& InstanceSymbol::createDefaultNested(const Scope& scope,
+                                            const ModuleDeclarationSyntax& syntax) {
+    auto& comp = scope.getCompilation();
+    auto missing = [&](TokenKind tk, SourceLocation loc) {
+        return Token::createMissing(comp, tk, loc);
+    };
+
+    // Fabricate a fake instantiation syntax to let us reuse all of the real logic
+    // with this nested module case as well.
+    SmallVector<TokenOrSyntax, 4> instances;
+    auto& header = *syntax.header;
+    auto loc = header.name.location();
+    auto instName = comp.emplace<InstanceNameSyntax>(header.name,
+                                                     std::span<VariableDimensionSyntax*>());
+    auto instance = comp.emplace<HierarchicalInstanceSyntax>(
+        instName, missing(TokenKind::OpenParenthesis, loc), std::span<TokenOrSyntax>(),
+        missing(TokenKind::CloseParenthesis, loc));
+
+    instances.push_back(instance);
+
+    auto instantiation = comp.emplace<HierarchyInstantiationSyntax>(
+        std::span<AttributeInstanceSyntax*>(), header.name, nullptr, instances.copy(comp),
+        header.semi);
+
+    ASTContext context(scope, LookupLocation::max);
+    SmallVector<const Symbol*> results;
+    SmallVector<const Symbol*> implicitNets;
+    fromSyntax(comp, *instantiation, context, results, implicitNets, nullptr, &syntax);
+    SLANG_ASSERT(implicitNets.empty());
+    SLANG_ASSERT(results.size() == 1);
+
+    // We just created this symbol; it's safe to const cast it here.
+    auto& result = const_cast<Symbol&>(*results[0]);
+
+    // Swap the syntax back to our original definition syntax
+    // so that it's findable in bind directives via the original
+    // syntax and not one we just made up.
+    if (result.kind == SymbolKind::Instance)
+        result.setSyntax(syntax);
+    return result;
+}
+
 InstanceSymbol& InstanceSymbol::createInvalid(Compilation& compilation,
                                               const DefinitionSymbol& definition) {
     // Give this instance an empty name so that it can't be referenced by name.
@@ -468,7 +513,8 @@ InstanceSymbol& InstanceSymbol::createInvalid(Compilation& compilation,
 void InstanceSymbol::fromSyntax(Compilation& comp, const HierarchyInstantiationSyntax& syntax,
                                 const ASTContext& context, SmallVectorBase<const Symbol*>& results,
                                 SmallVectorBase<const Symbol*>& implicitNets,
-                                const BindDirectiveInfo* bindInfo) {
+                                const BindDirectiveInfo* bindInfo,
+                                const SyntaxNode* overrideSyntax) {
     auto defName = syntax.type.valueText();
     TimeTraceScope timeScope("createInstances"sv, [&] { return std::string(defName); });
 
@@ -550,7 +596,7 @@ void InstanceSymbol::fromSyntax(Compilation& comp, const HierarchyInstantiationS
     }
 
     InstanceBuilder builder(context, implicitNets, parentOverrideNode, syntax.attributes,
-                            isFromBind);
+                            isFromBind, overrideSyntax);
 
     // Creates instance symbols -- if specificInstance is provided then only that
     // instance will be created, otherwise all instances in the original syntax
@@ -807,7 +853,7 @@ void InstanceSymbol::resolvePortConnections() const {
     connectionMap = comp.allocPointerMap();
 
     auto syntax = getSyntax();
-    if (!syntax) {
+    if (!syntax || syntax->kind != SyntaxKind::HierarchicalInstance) {
         // If this is a top level module and we have interface ports, the user has
         // the option of allowing it by automatically instantiating interface instances
         // to connect them to.

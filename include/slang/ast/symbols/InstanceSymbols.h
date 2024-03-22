@@ -90,7 +90,8 @@ public:
                            const syntax::HierarchyInstantiationSyntax& syntax,
                            const ASTContext& context, SmallVectorBase<const Symbol*>& results,
                            SmallVectorBase<const Symbol*>& implicitNets,
-                           const BindDirectiveInfo* bindInfo = nullptr);
+                           const BindDirectiveInfo* bindInfo = nullptr,
+                           const syntax::SyntaxNode* overrideSyntax = nullptr);
 
     static void fromFixupSyntax(Compilation& compilation, const DefinitionSymbol& definition,
                                 const syntax::DataDeclarationSyntax& syntax,
@@ -108,6 +109,10 @@ public:
     static InstanceSymbol& createVirtual(
         const ASTContext& context, SourceLocation loc, const DefinitionSymbol& definition,
         const syntax::ParameterValueAssignmentSyntax* paramAssignments);
+
+    /// Creates a default-instantiated instance of a nested definition in the provided scope.
+    static Symbol& createDefaultNested(const Scope& scope,
+                                       const syntax::ModuleDeclarationSyntax& syntax);
 
     /// Creates an intentionally invalid instance by forcing all parameters to null values.
     /// This allows type checking instance members as long as they don't depend on any parameters.
