@@ -2306,3 +2306,15 @@ a aw1(1ss
     // Just check no crashes.
     compilation.getAllDiagnostics();
 }
+
+TEST_CASE("Checker port binding crash regress") {
+    auto tree = SyntaxTree::fromText(R"(
+checker(_e,[_e
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    // Just check no crashes.
+    compilation.getAllDiagnostics();
+}

@@ -116,8 +116,14 @@ Expression& ValueExpressionBase::fromSymbol(const ASTContext& context, const Sym
                                                             sourceRange);
         }
 
-        auto& diag = context.addDiag(diag::NotAValue, sourceRange) << symbol.name;
-        diag.addNote(diag::NoteDeclarationHere, symbol.location);
+        // It's possible for the name to be empty here in cases
+        // where we looked up something like a generic class type
+        // and there was some error in resolving it to a real type,
+        // in which case `symbol` will be the ErrorType with an empty name.
+        if (!symbol.name.empty()) {
+            auto& diag = context.addDiag(diag::NotAValue, sourceRange) << symbol.name;
+            diag.addNote(diag::NoteDeclarationHere, symbol.location);
+        }
         return badExpr(comp, nullptr);
     }
 
@@ -1084,7 +1090,9 @@ Expression& AssertionInstanceExpression::bindPort(const Symbol& symbol, SourceRa
         auto sym = &instanceCtx.scope->asSymbol();
         while (sym->kind != SymbolKind::CheckerInstanceBody) {
             auto scope = sym->getParentScope();
-            SLANG_ASSERT(scope);
+            if (!scope)
+                return badExpr(comp, nullptr);
+
             sym = &scope->asSymbol();
         }
 

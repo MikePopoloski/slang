@@ -125,8 +125,9 @@ void ASTContext::setAttributes(const Expression& expr,
     if (syntax.empty())
         return;
 
-    if (flags & ASTFlags::NoAttributes) {
-        addDiag(diag::AttributesNotAllowed, expr.sourceRange);
+    if (flags.has(ASTFlags::NoAttributes)) {
+        if (!expr.bad())
+            addDiag(diag::AttributesNotAllowed, expr.sourceRange);
         return;
     }
 
