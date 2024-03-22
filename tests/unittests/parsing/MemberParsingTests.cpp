@@ -1252,9 +1252,18 @@ endmodule
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
-TEST_CASE("Primitive parsing crash regress") {
+TEST_CASE("Primitive parsing crash regress 1") {
     auto& text = R"(
 primitive ,*l,
+)";
+
+    // Just testing that there's no crash.
+    parseCompilationUnit(text);
+}
+
+TEST_CASE("Primitive parsing crash regress 2") {
+    auto& text = R"(
+primitive'b
 )";
 
     // Just testing that there's no crash.

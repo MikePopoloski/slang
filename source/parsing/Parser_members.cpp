@@ -2838,7 +2838,8 @@ UdpEntrySyntax& Parser::parseUdpEntry(bool isSequential) {
     }
 
     auto colon1 = expect(TokenKind::Colon);
-    auto nextState = parseUdpField(true, /* isInput */ false, isSequential, sawTransition);
+    auto nextState = parseUdpField(!inputs.empty(), /* isInput */ false, isSequential,
+                                   sawTransition);
 
     Token colon2;
     UdpFieldBaseSyntax* currentState = nullptr;
@@ -2893,9 +2894,8 @@ UdpBodySyntax& Parser::parseUdpBody(bool isSequential) {
 
         if (current == peek()) {
             // We didn't consume any tokens, so we're looking at
-            // something invalid. We already issued an error,
-            // just get out of here.
-            break;
+            // something invalid.
+            skipToken({});
         }
     }
 
@@ -2912,8 +2912,16 @@ UdpBodySyntax& Parser::parseUdpBody(bool isSequential) {
     auto table = expect(TokenKind::TableKeyword);
 
     SmallVector<UdpEntrySyntax*> entries;
-    while (isPossibleUdpEntry(peek().kind))
+    while (isPossibleUdpEntry(peek().kind)) {
+        auto current = peek();
         entries.push_back(&parseUdpEntry(isSequential));
+
+        if (current == peek()) {
+            // We didn't consume any tokens, so we're looking at
+            // something invalid.
+            skipToken({});
+        }
+    }
 
     auto endtable = expect(TokenKind::EndTableKeyword);
     return factory.udpBody(portDecls.copy(alloc), initial, table, entries.copy(alloc), endtable);
