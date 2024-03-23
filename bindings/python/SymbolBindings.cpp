@@ -334,7 +334,10 @@ void registerSymbols(py::module_& m) {
         .value("BuiltIn", MethodFlags::BuiltIn)
         .value("Randomize", MethodFlags::Randomize)
         .value("ForkJoin", MethodFlags::ForkJoin)
-        .value("DefaultedSuperArg", MethodFlags::DefaultedSuperArg);
+        .value("DefaultedSuperArg", MethodFlags::DefaultedSuperArg)
+        .value("Initial", MethodFlags::Initial)
+        .value("Extends", MethodFlags::Extends)
+        .value("Final", MethodFlags::Final);
 
     py::class_<SubroutineSymbol, Symbol, Scope>(m, "SubroutineSymbol")
         .def_readonly("defaultLifetime", &SubroutineSymbol::defaultLifetime)

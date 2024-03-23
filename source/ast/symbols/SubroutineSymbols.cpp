@@ -183,33 +183,27 @@ SubroutineSymbol* SubroutineSymbol::fromSyntax(Compilation& compilation,
     return result;
 }
 
-SubroutineSymbol* SubroutineSymbol::fromSyntax(Compilation& compilation,
-                                               const ClassMethodDeclarationSyntax& syntax,
-                                               const Scope& parent) {
-    auto result = fromSyntax(compilation, *syntax.declaration, parent, /* outOfBlock */ false);
-    if (!result)
-        return nullptr;
+static std::pair<bitmask<MethodFlags>, Visibility> getMethodFlags(
+    const TokenList& qualifiers, const FunctionPrototypeSyntax& proto) {
 
-    result->setAttributes(parent, syntax.attributes);
-
-    for (Token qual : syntax.qualifiers) {
+    bitmask<MethodFlags> flags;
+    auto visibility = Visibility::Public;
+    for (Token qual : qualifiers) {
         switch (qual.kind) {
             case TokenKind::LocalKeyword:
-                result->visibility = Visibility::Local;
+                visibility = Visibility::Local;
                 break;
             case TokenKind::ProtectedKeyword:
-                result->visibility = Visibility::Protected;
+                visibility = Visibility::Protected;
                 break;
             case TokenKind::StaticKeyword:
-                result->flags |= MethodFlags::Static;
+                flags |= MethodFlags::Static;
                 break;
             case TokenKind::PureKeyword:
-                // This is unreachable in valid code, because a pure method cannot
-                // have an implementation body. The parser checks this for us.
-                result->flags |= MethodFlags::Pure;
+                flags |= MethodFlags::Pure;
                 break;
             case TokenKind::VirtualKeyword:
-                result->flags |= MethodFlags::Virtual;
+                flags |= MethodFlags::Virtual;
                 break;
             case TokenKind::ConstKeyword:
             case TokenKind::ExternKeyword:
@@ -221,7 +215,41 @@ SubroutineSymbol* SubroutineSymbol::fromSyntax(Compilation& compilation,
         }
     }
 
-    if ((result->flags & MethodFlags::Static) == 0)
+    for (auto specifier : proto.specifiers) {
+        if (!specifier->keyword.isMissing()) {
+            switch (specifier->keyword.kind) {
+                case TokenKind::InitialKeyword:
+                    flags |= MethodFlags::Initial;
+                    break;
+                case TokenKind::ExtendsKeyword:
+                    flags |= MethodFlags::Extends;
+                    break;
+                case TokenKind::FinalKeyword:
+                    flags |= MethodFlags::Final;
+                    break;
+                default:
+                    SLANG_UNREACHABLE;
+            }
+        }
+    }
+
+    return {flags, visibility};
+}
+
+SubroutineSymbol* SubroutineSymbol::fromSyntax(Compilation& compilation,
+                                               const ClassMethodDeclarationSyntax& syntax,
+                                               const Scope& parent) {
+    auto result = fromSyntax(compilation, *syntax.declaration, parent, /* outOfBlock */ false);
+    if (!result)
+        return nullptr;
+
+    result->setAttributes(parent, syntax.attributes);
+
+    auto [flags, visibility] = getMethodFlags(syntax.qualifiers, *syntax.declaration->prototype);
+    result->visibility = visibility;
+    result->flags |= flags;
+
+    if (!result->flags.has(MethodFlags::Static))
         result->addThisVar(parent.asSymbol().as<ClassType>());
 
     return result;
@@ -818,6 +846,41 @@ void SubroutineSymbol::connectExternInterfacePrototype() const {
     }
 }
 
+static std::string flagsToStr(bitmask<MethodFlags> flags) {
+    std::string str;
+    if (flags.has(MethodFlags::Virtual))
+        str += "virtual,";
+    if (flags.has(MethodFlags::Pure))
+        str += "pure,";
+    if (flags.has(MethodFlags::Static))
+        str += "static,";
+    if (flags.has(MethodFlags::Constructor))
+        str += "ctor,";
+    if (flags.has(MethodFlags::InterfaceExtern))
+        str += "ifaceExtern,";
+    if (flags.has(MethodFlags::ModportImport))
+        str += "modportImport,";
+    if (flags.has(MethodFlags::ModportExport))
+        str += "modportExport,";
+    if (flags.has(MethodFlags::DPIImport))
+        str += "dpi,";
+    if (flags.has(MethodFlags::DPIContext))
+        str += "context,";
+    if (flags.has(MethodFlags::ForkJoin))
+        str += "forkJoin,";
+    if (flags.has(MethodFlags::DefaultedSuperArg))
+        str += "defaultedSuperArg,";
+    if (flags.has(MethodFlags::Initial))
+        str += "initial,";
+    if (flags.has(MethodFlags::Extends))
+        str += "extends,";
+    if (flags.has(MethodFlags::Final))
+        str += "final,";
+    if (!str.empty())
+        str.pop_back();
+    return str;
+}
+
 void SubroutineSymbol::serializeTo(ASTSerializer& serializer) const {
     serializer.write("returnType", getReturnType());
     serializer.write("defaultLifetime", toString(defaultLifetime));
@@ -830,35 +893,8 @@ void SubroutineSymbol::serializeTo(ASTSerializer& serializer) const {
         serializer.serialize(*arg);
     serializer.endArray();
 
-    if (flags) {
-        std::string str;
-        if (flags.has(MethodFlags::Virtual))
-            str += "virtual,";
-        if (flags.has(MethodFlags::Pure))
-            str += "pure,";
-        if (flags.has(MethodFlags::Static))
-            str += "static,";
-        if (flags.has(MethodFlags::Constructor))
-            str += "ctor,";
-        if (flags.has(MethodFlags::InterfaceExtern))
-            str += "ifaceExtern,";
-        if (flags.has(MethodFlags::ModportImport))
-            str += "modportImport,";
-        if (flags.has(MethodFlags::ModportExport))
-            str += "modportExport,";
-        if (flags.has(MethodFlags::DPIImport))
-            str += "dpi,";
-        if (flags.has(MethodFlags::DPIContext))
-            str += "context,";
-        if (flags.has(MethodFlags::ForkJoin))
-            str += "forkJoin,";
-        if (flags.has(MethodFlags::DefaultedSuperArg))
-            str += "defaultedSuperArg,";
-        if (!str.empty()) {
-            str.pop_back();
-            serializer.write("flags", str);
-        }
-    }
+    if (flags)
+        serializer.write("flags", flagsToStr(flags));
 }
 
 void SubroutineSymbol::addThisVar(const Type& type) {
@@ -882,40 +918,11 @@ MethodPrototypeSymbol& MethodPrototypeSymbol::fromSyntax(const Scope& scope,
                                                          const ClassMethodPrototypeSyntax& syntax) {
     auto& comp = scope.getCompilation();
     auto& proto = *syntax.prototype;
-
-    Visibility visibility = Visibility::Public;
-    bitmask<MethodFlags> flags;
-    Token nameToken = proto.name->getLastToken();
+    auto [flags, visibility] = getMethodFlags(syntax.qualifiers, proto);
     auto subroutineKind = proto.keyword.kind == TokenKind::TaskKeyword ? SubroutineKind::Task
                                                                        : SubroutineKind::Function;
 
-    for (Token qual : syntax.qualifiers) {
-        switch (qual.kind) {
-            case TokenKind::LocalKeyword:
-                visibility = Visibility::Local;
-                break;
-            case TokenKind::ProtectedKeyword:
-                visibility = Visibility::Protected;
-                break;
-            case TokenKind::StaticKeyword:
-                flags |= MethodFlags::Static;
-                break;
-            case TokenKind::PureKeyword:
-                flags |= MethodFlags::Pure;
-                break;
-            case TokenKind::VirtualKeyword:
-                flags |= MethodFlags::Virtual;
-                break;
-            case TokenKind::ConstKeyword:
-            case TokenKind::ExternKeyword:
-            case TokenKind::RandKeyword:
-                // Parser already issued errors for these, so just ignore them here.
-                break;
-            default:
-                SLANG_UNREACHABLE;
-        }
-    }
-
+    Token nameToken = proto.name->getLastToken();
     if (nameToken.kind == TokenKind::NewKeyword)
         flags |= MethodFlags::Constructor;
 
@@ -931,7 +938,7 @@ MethodPrototypeSymbol& MethodPrototypeSymbol::fromSyntax(const Scope& scope,
         result->declaredReturnType.setType(comp.getVoidType());
 
     // Pure virtual methods can only appear in virtual or interface classes.
-    if (flags & MethodFlags::Pure) {
+    if (flags.has(MethodFlags::Pure)) {
         auto& classType = scope.asSymbol().as<ClassType>();
         if (!classType.isAbstract && !classType.isInterface) {
             scope.addDiag(diag::PureInAbstract, nameToken.range());
@@ -1242,6 +1249,9 @@ void MethodPrototypeSymbol::serializeTo(ASTSerializer& serializer) const {
     for (auto arg : arguments)
         serializer.serialize(*arg);
     serializer.endArray();
+
+    if (flags)
+        serializer.write("flags", flagsToStr(flags));
 }
 
 } // namespace slang::ast

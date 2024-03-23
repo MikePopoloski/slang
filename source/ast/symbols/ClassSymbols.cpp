@@ -346,7 +346,7 @@ void ClassType::handleExtends(const ExtendsClauseSyntax& extendsClause, const AS
         // an abstract class, issue an error.
         if (!isAbstract && toWrap->kind == SymbolKind::MethodPrototype) {
             auto& sub = toWrap->as<MethodPrototypeSymbol>();
-            if (sub.flags & MethodFlags::Pure) {
+            if (sub.flags.has(MethodFlags::Pure)) {
                 if (!pureVirtualError) {
                     auto& diag = context.addDiag(diag::InheritFromAbstract,
                                                  extendsClause.sourceRange());
@@ -383,6 +383,22 @@ void ClassType::handleExtends(const ExtendsClauseSyntax& extendsClause, const AS
         insertCB(*wrapper);
     }
 
+    auto checkOverrideSpecifiers = [&](auto& base, auto& derived) {
+        if (derived.flags.has(MethodFlags::Initial) && base.isVirtual()) {
+            auto& diag = context.addDiag(diag::OverridingInitial, derived.location);
+            diag << derived.name;
+            diag.addNote(diag::NoteDeclarationHere, base.location);
+        }
+        else if (base.flags.has(MethodFlags::Final)) {
+            auto& diag = context.addDiag(diag::OverridingFinal, derived.location);
+            diag << derived.name;
+            diag.addNote(diag::NoteDeclarationHere, base.location);
+        }
+        else if (!base.isVirtual() && derived.flags.has(MethodFlags::Extends)) {
+            context.addDiag(diag::OverridingExtends, derived.location) << derived.name;
+        }
+    };
+
     auto checkForOverride = [&](auto& member) {
         // Constructors and static methods can never be virtual.
         if (member.flags.has(MethodFlags::Constructor | MethodFlags::Static))
@@ -395,25 +411,34 @@ void ClassType::handleExtends(const ExtendsClauseSyntax& extendsClause, const AS
             if (found) {
                 if (found->kind == SymbolKind::Subroutine) {
                     auto& baseSub = found->as<SubroutineSymbol>();
+                    checkOverrideSpecifiers(baseSub, member);
                     if (baseSub.isVirtual())
                         member.setOverride(baseSub);
                 }
-                break;
+                return;
             }
 
             // Otherwise it could be inherited from a higher-level base.
             auto possibleBase = currentBase->getBaseClass();
-            if (!possibleBase || possibleBase->isError())
+            if (!possibleBase)
                 break;
+
+            if (possibleBase->isError())
+                return;
 
             currentBase = &possibleBase->getCanonicalType().as<ClassType>();
         }
+
+        // No base method found; if our member is marked 'extends' it's an error.
+        if (member.flags.has(MethodFlags::Extends))
+            context.addDiag(diag::OverridingExtends, member.location) << member.name;
     };
 
     // Check all methods in our class for overriding virtual methods in parent classes.
     for (auto& member : members()) {
-        if (member.kind == SymbolKind::Subroutine)
+        if (member.kind == SymbolKind::Subroutine) {
             checkForOverride(member.as<SubroutineSymbol>());
+        }
         else if (member.kind == SymbolKind::MethodPrototype) {
             auto& proto = member.as<MethodPrototypeSymbol>();
             checkForOverride(proto);

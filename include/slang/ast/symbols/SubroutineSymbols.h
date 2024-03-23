@@ -67,9 +67,21 @@ enum class SLANG_EXPORT MethodFlags : uint16_t {
 
     /// The method is a constructor that has a 'default' argument
     /// indicating that the parent class's argument list should be inserted.
-    DefaultedSuperArg = 1 << 12
+    DefaultedSuperArg = 1 << 12,
+
+    /// The method is marked 'initial', which means it should not
+    /// override a base class method.
+    Initial = 1 << 13,
+
+    /// The method is marked 'extends', which means it must override
+    /// a base class method (and also it will be virtual).
+    Extends = 1 << 14,
+
+    /// The method is marked 'final', which means it cannot be
+    /// overridden in a derived class.
+    Final = 1 << 15
 };
-SLANG_BITMASK(MethodFlags, DefaultedSuperArg)
+SLANG_BITMASK(MethodFlags, Final)
 
 class MethodPrototypeSymbol;
 
@@ -116,7 +128,9 @@ public:
     const MethodPrototypeSymbol* getPrototype() const { return prototype; }
     void connectExternInterfacePrototype() const;
 
-    bool isVirtual() const { return flags.has(MethodFlags::Virtual) || overrides != nullptr; }
+    bool isVirtual() const {
+        return flags.has(MethodFlags::Virtual | MethodFlags::Extends) || overrides != nullptr;
+    }
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -190,7 +204,9 @@ public:
     void setOverride(const Symbol& overrideTarget) const { overrides = &overrideTarget; }
     const Symbol* getOverride() const { return overrides; }
 
-    bool isVirtual() const { return flags.has(MethodFlags::Virtual) || overrides != nullptr; }
+    bool isVirtual() const {
+        return flags.has(MethodFlags::Virtual | MethodFlags::Extends) || overrides != nullptr;
+    }
 
     bool checkMethodMatch(const Scope& scope, const SubroutineSymbol& method) const;
 

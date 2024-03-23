@@ -3110,3 +3110,68 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Class override specifiers") {
+    auto options = optionsFor(LanguageVersion::v1800_2023);
+    auto tree = SyntaxTree::fromText(R"(
+virtual class base;
+    function void f1(); endfunction             // non-virtual
+    virtual function void f2(); endfunction     // virtual
+    pure virtual function void f3();            // pure virtual
+endclass : base
+
+virtual class A extends base;
+    function :initial void f1(); endfunction
+    // OK: base::f1 is not a virtual method
+
+    virtual function :extends :final void f2(); endfunction
+    // OK: f2 shall not be overridden in subclasses of A
+
+    function :final void f4(); endfunction
+    // OK: f4 shall not be overridden in subclasses of A
+
+    virtual function :extends void f5(); endfunction
+    // NOT OK: f5 is not a virtual override
+endclass : A
+
+virtual class B extends A;
+    virtual function :initial void f1(); endfunction
+    // OK: A::f1 is not a virtual method
+
+    virtual function void f2(); endfunction
+    // NOT OK: f2 is specified final in A
+
+    function void f4(); endfunction
+    // NOT OK: A::f4 is specified final
+endclass : B
+
+class C extends base;
+    function :initial void f2(); endfunction
+    // NOT OK: f2 is a virtual override from base::f2
+
+    function :initial void f3(); endfunction
+    // NOT OK: f3 is a virtual override from pure virtual base::f3
+
+    extern function :initial void f5();
+    // OK: f5 is not a virtual override
+
+    function :extends void f1(); endfunction
+    // NOT OK: base::f1 is not virtual
+endclass : C
+
+function void C::f5(); endfunction
+)",
+                                     options);
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 6);
+    CHECK(diags[0].code == diag::OverridingExtends);
+    CHECK(diags[1].code == diag::OverridingFinal);
+    CHECK(diags[2].code == diag::OverridingFinal);
+    CHECK(diags[3].code == diag::OverridingInitial);
+    CHECK(diags[4].code == diag::OverridingInitial);
+    CHECK(diags[5].code == diag::OverridingExtends);
+}
