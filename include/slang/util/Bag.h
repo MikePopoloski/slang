@@ -65,7 +65,7 @@ public:
     T& insertOrGet() {
         auto& item = items[SLANG_TYPEOF(T)];
         if (!item.has_value())
-            item.emplace<T>();
+            item.template emplace<T>();
         return *std::any_cast<T>(&item);
     }
 
