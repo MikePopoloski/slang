@@ -3010,6 +3010,11 @@ class B extends Base(default);
         this.size = size;
     endfunction : new
 endclass : B
+
+module m;
+    int id;
+    A a = new("Hello", id);
+endmodule
 )",
                                      options);
 

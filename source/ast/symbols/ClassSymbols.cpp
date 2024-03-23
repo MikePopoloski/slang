@@ -542,7 +542,8 @@ const Expression* ClassType::getBaseConstructorCall() const {
         }
     }
     else if (extendsClause.defaultedArg) {
-        if (ourConstructor && !constructorHasDefault) {
+        SLANG_ASSERT(ourConstructor);
+        if (!constructorHasDefault) {
             auto& diag = context.addDiag(diag::InvalidExtendsDefault, ourConstructor->location);
             diag.addNote(diag::NotePreviousUsage, extendsClause.defaultedArg->sourceRange());
         }
@@ -579,6 +580,27 @@ const SubroutineSymbol* ClassType::getConstructor() const {
         if (sub.flags.has(MethodFlags::Constructor))
             return &sub;
     }
+
+    // If our extends clause specifies 'default' for the argument list
+    // we will auto-generate an appropriate constructor if the user
+    // has not provided one.
+    auto syntax = getSyntax();
+    auto scope = getParentScope();
+    if (syntax && scope) {
+        auto extendsClause = syntax->as<ClassDeclarationSyntax>().extendsClause;
+        if (extendsClause && extendsClause->defaultedArg) {
+            auto& comp = scope->getCompilation();
+            MethodBuilder builder(comp, "new", comp.getVoidType(), SubroutineKind::Function);
+            builder.addFlags(MethodFlags::Constructor | MethodFlags::DefaultedSuperArg);
+
+            SubroutineSymbol::inheritDefaultedArgList(builder.symbol, *this,
+                                                      *extendsClause->defaultedArg, builder.args);
+
+            insertMember(&builder.symbol, getLastMember(), true, true);
+            return &builder.symbol;
+        }
+    }
+
     return nullptr;
 }
 

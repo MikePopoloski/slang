@@ -580,12 +580,11 @@ struct LocalVarCheckVisitor {
     }
 };
 
-static bitmask<MethodFlags> inheritArgList(
+void SubroutineSymbol::inheritDefaultedArgList(
     Scope& scope, const Scope& parentScope, const SyntaxNode& syntax,
     SmallVectorBase<const FormalArgumentSymbol*>& arguments) {
 
     auto& comp = scope.getCompilation();
-    bitmask<MethodFlags> resultFlags;
     if (parentScope.asSymbol().kind == SymbolKind::ClassType) {
         auto& ct = parentScope.asSymbol().as<ClassType>();
         auto baseClass = ct.getBaseClass();
@@ -599,8 +598,6 @@ static bitmask<MethodFlags> inheritArgList(
             if (auto constructor = baseCt.getConstructor()) {
                 // We found the base class's constructor.
                 // Pull in all arguments from it.
-                resultFlags |= MethodFlags::DefaultedSuperArg;
-
                 bool anyErrors = false;
                 for (auto arg : constructor->getArguments()) {
                     // It's an error if any of the inherited arguments
@@ -620,8 +617,6 @@ static bitmask<MethodFlags> inheritArgList(
             }
         }
     }
-
-    return resultFlags;
 }
 
 bitmask<MethodFlags> SubroutineSymbol::buildArguments(
@@ -645,7 +640,8 @@ bitmask<MethodFlags> SubroutineSymbol::buildArguments(
             }
             else {
                 explicitDefault = portBase;
-                resultFlags |= inheritArgList(scope, parentScope, *portBase, arguments);
+                inheritDefaultedArgList(scope, parentScope, *portBase, arguments);
+                resultFlags |= MethodFlags::DefaultedSuperArg;
             }
             continue;
         }

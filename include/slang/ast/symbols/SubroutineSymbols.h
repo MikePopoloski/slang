@@ -141,6 +141,10 @@ public:
                                                  const MethodPrototypeSymbol& prototype,
                                                  const Scope& parent);
 
+    static void inheritDefaultedArgList(Scope& scope, const Scope& parentScope,
+                                        const syntax::SyntaxNode& syntax,
+                                        SmallVectorBase<const FormalArgumentSymbol*>& arguments);
+
     static bitmask<MethodFlags> buildArguments(
         Scope& scope, const Scope& parentScope, const syntax::FunctionPortListSyntax& syntax,
         VariableLifetime defaultLifetime, SmallVectorBase<const FormalArgumentSymbol*>& arguments);

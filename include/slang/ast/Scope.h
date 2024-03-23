@@ -211,6 +211,8 @@ protected:
     void addWildcardImport(const WildcardImportSymbol& item);
 
     void addDeferredMembers(const syntax::SyntaxNode& syntax);
+    void insertMember(const Symbol* member, const Symbol* at, bool isElaborating,
+                      bool incrementIndex) const;
 
 private:
     friend class Compilation;
@@ -259,9 +261,6 @@ private:
 
     // Sideband collection of wildcard imports stored in the Compilation object.
     using ImportData = std::vector<const WildcardImportSymbol*>;
-
-    void insertMember(const Symbol* member, const Symbol* at, bool isElaborating,
-                      bool incrementIndex) const;
 
     DeferredMemberData& getOrAddDeferredData() const;
     void elaborate() const;

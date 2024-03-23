@@ -43,7 +43,6 @@ public:
     /// Adds flags to the method.
     void addFlags(bitmask<MethodFlags> flags);
 
-private:
     SmallVector<const FormalArgumentSymbol*> args;
 };
 
