@@ -1191,7 +1191,7 @@ Expression& NewClassExpression::fromSyntax(Compilation& comp,
         return badExpr(comp, nullptr);
 
     Expression* constructorCall = nullptr;
-    if (auto constructor = classType->find("new")) {
+    if (auto constructor = classType->getConstructor()) {
         Lookup::ensureVisible(*constructor, context, range);
         constructorCall = &CallExpression::fromArgs(comp, &constructor->as<SubroutineSymbol>(),
                                                     nullptr, syntax.argList, range, context);

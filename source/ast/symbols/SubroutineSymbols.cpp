@@ -130,7 +130,7 @@ SubroutineSymbol* SubroutineSymbol::fromSyntax(Compilation& compilation,
     if (proto->portList)
         result->flags |= buildArguments(*result, parent, *proto->portList, *lifetime, arguments);
 
-    if (result->name == "new") {
+    if (nameToken.kind == TokenKind::NewKeyword) {
         result->flags |= MethodFlags::Constructor;
         result->declaredReturnType.setType(compilation.getVoidType());
     }
@@ -850,7 +850,7 @@ MethodPrototypeSymbol& MethodPrototypeSymbol::fromSyntax(const Scope& scope,
         }
     }
 
-    if (nameToken.valueText() == "new")
+    if (nameToken.kind == TokenKind::NewKeyword)
         flags |= MethodFlags::Constructor;
 
     auto result = comp.emplace<MethodPrototypeSymbol>(comp, nameToken.valueText(),

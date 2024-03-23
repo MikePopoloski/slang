@@ -2976,3 +2976,19 @@ endclass : C
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Class property named 'new'") {
+    auto tree = SyntaxTree::fromText(R"(
+class A;
+  int \new ;
+endclass
+
+module m;
+  A a = new;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

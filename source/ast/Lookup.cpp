@@ -652,7 +652,9 @@ bool checkVisibility(const Symbol& symbol, const Scope& scope,
     }
 
     if (sourceRange) {
-        if (symbol.name == "new") {
+        if (symbol.kind == SymbolKind::Subroutine &&
+            symbol.as<SubroutineSymbol>().flags.has(MethodFlags::Constructor)) {
+
             auto& diag = result.addDiag(scope, diag::InvalidConstructorAccess, *sourceRange);
             diag << targetParent.name;
             if (visibility == Visibility::Local)
