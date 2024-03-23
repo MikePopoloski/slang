@@ -1184,3 +1184,21 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::WrongLanguageVersion);
 }
+
+TEST_CASE("Assert control functions force hierarchical lookup") {
+    auto tree = SyntaxTree::fromText(R"(
+module top();
+  m m1();
+endmodule
+
+module m();
+  initial begin
+    $assertoff(0, m);
+  end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

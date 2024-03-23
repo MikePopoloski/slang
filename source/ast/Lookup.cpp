@@ -1078,8 +1078,16 @@ void Lookup::name(const NameSyntax& syntax, const ASTContext& context, bitmask<L
 
     // Perform the lookup.
     unqualifiedImpl(scope, name.text, context.getLocation(), name.range, flags, {}, result, scope);
-    if (!result.found && !result.hasError())
-        reportUndeclared(scope, name.text, name.range, flags, false, result);
+
+    if (!result.found) {
+        if (flags.has(LookupFlags::AlwaysAllowUpward)) {
+            if (!lookupUpward({}, name, context, flags, result))
+                return;
+        }
+
+        if (!result.found && !result.hasError())
+            reportUndeclared(scope, name.text, name.range, flags, false, result);
+    }
 
     if (result.found && name.paramAssignments) {
         if (result.found->kind != SymbolKind::GenericClassDef) {

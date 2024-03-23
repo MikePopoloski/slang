@@ -528,7 +528,8 @@ public:
         }
 
         return ArbitrarySymbolExpression::fromSyntax(context.getCompilation(),
-                                                     syntax.as<NameSyntax>(), context);
+                                                     syntax.as<NameSyntax>(), context,
+                                                     LookupFlags::AlwaysAllowUpward);
     }
 
     const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
