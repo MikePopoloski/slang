@@ -245,6 +245,15 @@ const Expression* FormalArgumentSymbol::getDefaultValue() const {
     return defaultVal;
 }
 
+FormalArgumentSymbol& FormalArgumentSymbol::clone(Compilation& comp) const {
+    auto result = comp.emplace<FormalArgumentSymbol>(name, location, direction, lifetime);
+    result->flags = flags;
+    result->defaultVal = defaultVal;
+    result->defaultValSyntax = defaultValSyntax;
+    result->getDeclaredType()->setLink(*getDeclaredType());
+    return *result;
+}
+
 void FormalArgumentSymbol::serializeTo(ASTSerializer& serializer) const {
     VariableSymbol::serializeTo(serializer);
 

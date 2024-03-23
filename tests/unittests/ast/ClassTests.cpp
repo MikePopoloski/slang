@@ -2932,3 +2932,47 @@ endclass
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::ExtendFromFinal);
 }
+
+TEST_CASE("Derived class default argument list") {
+    auto options = optionsFor(LanguageVersion::v1800_2023);
+    auto tree = SyntaxTree::fromText(R"(
+class Base;
+    string name;
+    local int m_id;
+    function new(string name, output int id);
+        this.name = name;
+        id = m_id++;
+    endfunction : new
+endclass : Base
+
+// Class A does not add any additional arguments before the default keyword
+class A extends Base;
+    function new(default);
+        // Compiler automatically calls super.new(default)
+    endfunction : new
+endclass : A
+
+// Class B adds additional arguments before the default keyword
+class B extends Base;
+    int size;
+    function new(int size, default);
+        super.new(default); // Optional explicit use of super.new
+        this.size = size;
+    endfunction : new
+endclass : B
+
+// Class C adds additional arguments after the default keyword
+class C extends B;
+    bit enable;
+    function new(default, bit enable);
+        super.new(default); // Optional explicit use of super.new
+        this.enable = enable; // enable is an input by default
+    endfunction : new
+endclass : C
+)",
+                                     options);
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

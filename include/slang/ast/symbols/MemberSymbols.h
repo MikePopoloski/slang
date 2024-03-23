@@ -523,7 +523,7 @@ public:
 
     void serializeTo(ASTSerializer& serializer) const;
 
-    static RandSeqProductionSymbol& fromSyntax(Compilation& compilation,
+    static RandSeqProductionSymbol& fromSyntax(const Scope& scope,
                                                const syntax::ProductionSyntax& syntax);
 
     static const RandSeqProductionSymbol* findProduction(std::string_view name,

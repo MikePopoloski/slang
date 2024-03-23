@@ -128,7 +128,7 @@ SubroutineSymbol* SubroutineSymbol::fromSyntax(Compilation& compilation,
 
     SmallVector<const FormalArgumentSymbol*> arguments;
     if (proto->portList)
-        buildArguments(*result, *proto->portList, *lifetime, arguments);
+        result->flags |= buildArguments(*result, parent, *proto->portList, *lifetime, arguments);
 
     if (result->name == "new") {
         result->flags |= MethodFlags::Constructor;
@@ -264,8 +264,8 @@ SubroutineSymbol& SubroutineSymbol::fromSyntax(Compilation& compilation,
 
     SmallVector<const FormalArgumentSymbol*> arguments;
     if (proto.portList) {
-        SubroutineSymbol::buildArguments(*result, *proto.portList, VariableLifetime::Automatic,
-                                         arguments);
+        result->flags |= SubroutineSymbol::buildArguments(*result, parent, *proto.portList,
+                                                          VariableLifetime::Automatic, arguments);
     }
 
     // Check arguments for extra rules imposed by DPI imports.
@@ -533,16 +533,50 @@ void SubroutineSymbol::checkVirtualMethodMatch(const Scope& scope,
     }
 }
 
-void SubroutineSymbol::buildArguments(Scope& scope, const FunctionPortListSyntax& syntax,
-                                      VariableLifetime defaultLifetime,
-                                      SmallVectorBase<const FormalArgumentSymbol*>& arguments) {
+bitmask<MethodFlags> SubroutineSymbol::buildArguments(
+    Scope& scope, const Scope& parentScope, const FunctionPortListSyntax& syntax,
+    VariableLifetime defaultLifetime, SmallVectorBase<const FormalArgumentSymbol*>& arguments) {
+
     auto& comp = scope.getCompilation();
     const DataTypeSyntax* lastType = nullptr;
+    const SyntaxNode* explicitDefault = nullptr;
     auto lastDirection = ArgumentDirection::In;
+    bitmask<MethodFlags> resultFlags;
 
     for (auto portBase : syntax.ports) {
         if (portBase->kind == SyntaxKind::DefaultFunctionPort) {
-            // TODO: handle this
+            lastDirection = ArgumentDirection::In;
+            lastType = nullptr;
+
+            if (explicitDefault) {
+                // Ignore a duplicate default.
+                scope.addDiag(diag::MultipleDefaultConstructorArg, portBase->sourceRange());
+                continue;
+            }
+            explicitDefault = portBase;
+
+            if (parentScope.asSymbol().kind == SymbolKind::ClassType) {
+                auto& ct = parentScope.asSymbol().as<ClassType>();
+                auto baseClass = ct.getBaseClass();
+                if (!baseClass) {
+                    scope.addDiag(diag::SuperNoBase, portBase->sourceRange()) << ct.name;
+                }
+                else if (baseClass->isClass()) {
+                    // Note: we check isClass() above to skip over cases where
+                    // the baseClass is the ErrorType.
+                    auto& baseCt = baseClass->getCanonicalType().as<ClassType>();
+                    if (auto constructor = baseCt.getConstructor()) {
+                        // We found the base class's constructor.
+                        // Pull in all arguments from it.
+                        resultFlags |= MethodFlags::DefaultedSuperArg;
+                        for (auto arg : constructor->getArguments()) {
+                            auto& cloned = arg->clone(comp);
+                            scope.addMember(cloned);
+                            arguments.push_back(&cloned);
+                        }
+                    }
+                }
+            }
             continue;
         }
 
@@ -600,6 +634,8 @@ void SubroutineSymbol::buildArguments(Scope& scope, const FunctionPortListSyntax
         arguments.push_back(arg);
         lastDirection = direction;
     }
+
+    return resultFlags;
 }
 
 bool SubroutineSymbol::hasOutputArgs() const {
@@ -750,6 +786,8 @@ void SubroutineSymbol::serializeTo(ASTSerializer& serializer) const {
             str += "context,";
         if (flags.has(MethodFlags::ForkJoin))
             str += "forkJoin,";
+        if (flags.has(MethodFlags::DefaultedSuperArg))
+            str += "defaultedSuperArg,";
         if (!str.empty()) {
             str.pop_back();
             serializer.write("flags", str);
@@ -837,8 +875,8 @@ MethodPrototypeSymbol& MethodPrototypeSymbol::fromSyntax(const Scope& scope,
 
     SmallVector<const FormalArgumentSymbol*> arguments;
     if (proto.portList) {
-        SubroutineSymbol::buildArguments(*result, *proto.portList, VariableLifetime::Automatic,
-                                         arguments);
+        result->flags |= SubroutineSymbol::buildArguments(*result, scope, *proto.portList,
+                                                          VariableLifetime::Automatic, arguments);
     }
 
     result->arguments = arguments.copy(comp);
@@ -908,8 +946,8 @@ MethodPrototypeSymbol& MethodPrototypeSymbol::fromSyntax(const Scope& scope,
 
     SmallVector<const FormalArgumentSymbol*> arguments;
     if (proto.portList) {
-        SubroutineSymbol::buildArguments(result, *proto.portList, VariableLifetime::Automatic,
-                                         arguments);
+        result.flags |= SubroutineSymbol::buildArguments(result, scope, *proto.portList,
+                                                         VariableLifetime::Automatic, arguments);
     }
 
     result.arguments = arguments.copy(comp);
@@ -954,8 +992,8 @@ MethodPrototypeSymbol& MethodPrototypeSymbol::createExternIfaceMethod(const Scop
 
     SmallVector<const FormalArgumentSymbol*> arguments;
     if (proto.portList) {
-        SubroutineSymbol::buildArguments(*result, *proto.portList, VariableLifetime::Automatic,
-                                         arguments);
+        result->flags |= SubroutineSymbol::buildArguments(*result, scope, *proto.portList,
+                                                          VariableLifetime::Automatic, arguments);
     }
 
     result->arguments = arguments.copy(comp);

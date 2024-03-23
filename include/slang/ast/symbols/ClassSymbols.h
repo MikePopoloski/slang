@@ -95,6 +95,10 @@ public:
     /// invoke that method. Otherwise returns nullptr.
     const Expression* getBaseConstructorCall() const;
 
+    /// Gets the class constructor function, if it has an explicit constructor.
+    /// Otherwise returns nullptr.
+    const SubroutineSymbol* getConstructor() const;
+
     /// Gets $bits of the type. Returns zero if the type does not have a statically known size.
     uint64_t getBitstreamWidth() const {
         if (!cachedBitstreamWidth)

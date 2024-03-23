@@ -479,7 +479,8 @@ const Expression* ClassType::getBaseConstructorCall() const {
         return nullptr;
 
     // If we have a constructor, find whether it invokes super.new in its body.
-    if (auto ourConstructor = find("new")) {
+    bool constructorHasDefault = false;
+    if (auto ourConstructor = getConstructor()) {
         auto checkForSuperNew = [&](const Statement& stmt) {
             if (stmt.kind == StatementKind::ExpressionStatement) {
                 auto& expr = stmt.as<ExpressionStatement>().expr;
@@ -492,12 +493,14 @@ const Expression* ClassType::getBaseConstructorCall() const {
 
         // If the body is invalid, early out now so we don't report
         // spurious errors on top of it.
-        auto& body = ourConstructor->as<SubroutineSymbol>().getBody();
+        constructorHasDefault = ourConstructor->flags.has(MethodFlags::DefaultedSuperArg);
+        auto& body = ourConstructor->getBody();
         if (body.bad())
             return nullptr;
 
-        if (body.kind != StatementKind::List)
+        if (body.kind != StatementKind::List) {
             checkForSuperNew(body);
+        }
         else {
             for (auto stmt : body.as<StatementList>().list) {
                 if (stmt->kind != StatementKind::VariableDeclaration) {
@@ -538,7 +541,9 @@ const Expression* ClassType::getBaseConstructorCall() const {
 
     // If we have a base class constructor and nothing called it, make sure
     // it has no arguments or all of the arguments have default values.
-    if (baseConstructor && !callExpr) {
+    // If our own constructor declares a 'default' arg then this requirement
+    // is removed since we will insert the appropriate call arguments automatically.
+    if (baseConstructor && !callExpr && !constructorHasDefault) {
         for (auto arg : baseConstructor->as<SubroutineSymbol>().getArguments()) {
             if (!arg->getDefaultValue()) {
                 auto& diag = context.addDiag(diag::BaseConstructorNotCalled,
@@ -554,6 +559,16 @@ const Expression* ClassType::getBaseConstructorCall() const {
 
     baseConstructorCall = callExpr;
     return callExpr;
+}
+
+const SubroutineSymbol* ClassType::getConstructor() const {
+    if (auto constructor = find("new");
+        constructor && constructor->kind == SymbolKind::Subroutine) {
+        auto& sub = constructor->as<SubroutineSymbol>();
+        if (sub.flags.has(MethodFlags::Constructor))
+            return &sub;
+    }
+    return nullptr;
 }
 
 // Recursively finds interface classes that are implemented and adds them

@@ -272,6 +272,7 @@ void registerTypes(py::module_& m) {
         .def_property_readonly("baseClass", &ClassType::getBaseClass)
         .def_property_readonly("implementedInterfaces", &ClassType::getImplementedInterfaces)
         .def_property_readonly("baseConstructorCall", &ClassType::getBaseConstructorCall)
+        .def_property_readonly("constructor", &ClassType::getConstructor)
         .def_property_readonly("firstForwardDecl", &ClassType::getFirstForwardDecl);
 
     py::class_<GenericClassDefSymbol, Symbol>(m, "GenericClassDefSymbol")

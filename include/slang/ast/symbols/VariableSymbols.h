@@ -108,6 +108,8 @@ public:
     const syntax::ExpressionSyntax* getDefaultValueSyntax() const { return defaultValSyntax; }
     const Expression* getDefaultValue() const;
 
+    FormalArgumentSymbol& clone(Compilation& compilation) const;
+
     void serializeTo(ASTSerializer& serializer) const;
 
     static void fromSyntax(const Scope& scope, const syntax::PortDeclarationSyntax& syntax,

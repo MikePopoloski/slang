@@ -412,9 +412,12 @@ void Scope::addMembers(const SyntaxNode& syntax) {
             break;
         }
         case SyntaxKind::ClassMethodDeclaration: {
-            auto subroutine = SubroutineSymbol::fromSyntax(
-                compilation, syntax.as<ClassMethodDeclarationSyntax>(), *this);
-            if (subroutine)
+            // Constructors need to be deferred because they may need to
+            // inherit arguments from their base class.
+            auto& cmds = syntax.as<ClassMethodDeclarationSyntax>();
+            if (cmds.declaration->prototype->name->getLastToken().kind == TokenKind::NewKeyword)
+                addDeferredMembers(syntax);
+            else if (auto subroutine = SubroutineSymbol::fromSyntax(compilation, cmds, *this))
                 addMember(*subroutine);
             break;
         }
@@ -1073,6 +1076,13 @@ void Scope::elaborate() const {
                 hasBinds = true;
                 break;
             }
+            case SyntaxKind::ClassMethodDeclaration: {
+                auto subroutine = SubroutineSymbol::fromSyntax(
+                    compilation, member.node.as<ClassMethodDeclarationSyntax>(), *this);
+                if (subroutine)
+                    insertMember(subroutine, symbol, true, true);
+                break;
+            }
             default:
                 SLANG_UNREACHABLE;
         }
@@ -1581,6 +1591,7 @@ static size_t countMembers(const SyntaxNode& syntax) {
         case SyntaxKind::DefaultDisableDeclaration:
         case SyntaxKind::ModuleDeclaration:
         case SyntaxKind::ProgramDeclaration:
+        case SyntaxKind::ClassMethodDeclaration:
             return 1;
         case SyntaxKind::SpecifyBlock:
         case SyntaxKind::CoverCross:

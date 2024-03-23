@@ -214,8 +214,8 @@ const CovergroupType& CovergroupType::fromSyntax(const Scope& scope,
 
     if (syntax.portList) {
         SmallVector<const FormalArgumentSymbol*> args;
-        SubroutineSymbol::buildArguments(*result, *syntax.portList, VariableLifetime::Automatic,
-                                         args);
+        SubroutineSymbol::buildArguments(*result, scope, *syntax.portList,
+                                         VariableLifetime::Automatic, args);
         result->arguments = args.copy(comp);
 
         for (auto arg : result->arguments) {
@@ -233,8 +233,8 @@ const CovergroupType& CovergroupType::fromSyntax(const Scope& scope,
         auto& wfs = syntax.event->as<WithFunctionSampleSyntax>();
         if (wfs.portList) {
             SmallVector<const FormalArgumentSymbol*> args;
-            SubroutineSymbol::buildArguments(*result, *wfs.portList, VariableLifetime::Automatic,
-                                             args);
+            SubroutineSymbol::buildArguments(*result, scope, *wfs.portList,
+                                             VariableLifetime::Automatic, args);
 
             result->sampleArguments = args.copy(comp);
 

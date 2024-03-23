@@ -63,9 +63,13 @@ enum class SLANG_EXPORT MethodFlags : uint16_t {
 
     /// Used with InterfaceExtern methods to indicate that more than one
     /// module is allowed to export the same task.
-    ForkJoin = 1 << 11
+    ForkJoin = 1 << 11,
+
+    /// The method is a constructor that has a 'default' argument
+    /// indicating that the parent class's argument list should be inserted.
+    DefaultedSuperArg = 1 << 12
 };
-SLANG_BITMASK(MethodFlags, ForkJoin)
+SLANG_BITMASK(MethodFlags, DefaultedSuperArg)
 
 class MethodPrototypeSymbol;
 
@@ -137,9 +141,9 @@ public:
                                                  const MethodPrototypeSymbol& prototype,
                                                  const Scope& parent);
 
-    static void buildArguments(Scope& scope, const syntax::FunctionPortListSyntax& syntax,
-                               VariableLifetime defaultLifetime,
-                               SmallVectorBase<const FormalArgumentSymbol*>& arguments);
+    static bitmask<MethodFlags> buildArguments(
+        Scope& scope, const Scope& parentScope, const syntax::FunctionPortListSyntax& syntax,
+        VariableLifetime defaultLifetime, SmallVectorBase<const FormalArgumentSymbol*>& arguments);
 
     static void checkVirtualMethodMatch(const Scope& scope, const SubroutineSymbol& parentMethod,
                                         const SubroutineSymbol& derivedMethod,

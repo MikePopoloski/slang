@@ -152,12 +152,11 @@ StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
     auto result = createBlock(scope, syntax, name, loc, StatementBlockKind::Sequential,
                               VariableLifetime::Automatic);
 
-    auto& comp = scope.getCompilation();
     for (auto prod : syntax.productions) {
         if (prod->name.valueText().empty())
             continue;
 
-        auto& symbol = RandSeqProductionSymbol::fromSyntax(comp, *prod);
+        auto& symbol = RandSeqProductionSymbol::fromSyntax(scope, *prod);
         result->addMember(symbol);
     }
 

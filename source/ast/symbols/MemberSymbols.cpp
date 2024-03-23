@@ -1732,22 +1732,23 @@ RandSeqProductionSymbol::RandSeqProductionSymbol(Compilation& compilation, std::
     declaredReturnType(*this) {
 }
 
-RandSeqProductionSymbol& RandSeqProductionSymbol::fromSyntax(Compilation& compilation,
+RandSeqProductionSymbol& RandSeqProductionSymbol::fromSyntax(const Scope& scope,
                                                              const ProductionSyntax& syntax) {
-    auto result = compilation.emplace<RandSeqProductionSymbol>(compilation, syntax.name.valueText(),
-                                                               syntax.name.location());
+    auto& comp = scope.getCompilation();
+    auto result = comp.emplace<RandSeqProductionSymbol>(comp, syntax.name.valueText(),
+                                                        syntax.name.location());
     result->setSyntax(syntax);
 
     if (syntax.dataType)
         result->declaredReturnType.setTypeSyntax(*syntax.dataType);
     else
-        result->declaredReturnType.setType(compilation.getVoidType());
+        result->declaredReturnType.setType(comp.getVoidType());
 
     if (syntax.portList) {
         SmallVector<const FormalArgumentSymbol*> args;
-        SubroutineSymbol::buildArguments(*result, *syntax.portList, VariableLifetime::Automatic,
-                                         args);
-        result->arguments = args.copy(compilation);
+        SubroutineSymbol::buildArguments(*result, scope, *syntax.portList,
+                                         VariableLifetime::Automatic, args);
+        result->arguments = args.copy(comp);
     }
 
     for (auto rule : syntax.rules) {
