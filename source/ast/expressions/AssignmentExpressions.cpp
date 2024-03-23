@@ -1108,31 +1108,25 @@ void NewArrayExpression::serializeTo(ASTSerializer& serializer) const {
         serializer.write("initExpr", *initExpr());
 }
 
-Expression& NewClassExpression::fromSyntax(Compilation& compilation,
-                                           const NewClassExpressionSyntax& syntax,
-                                           const ASTContext& context,
-                                           const Type* assignmentTarget) {
+static std::pair<const ClassType*, bool> resolveNewClassTarget(const NameSyntax& nameSyntax,
+                                                               const ASTContext& context,
+                                                               const Type*& assignmentTarget,
+                                                               SourceRange range) {
     // If the new expression is typed, look up that type as the target.
     // Otherwise, the target must come from the expression context.
     bool isSuperClass = false;
     const ClassType* classType = nullptr;
-    if (syntax.scopedNew->kind == SyntaxKind::ConstructorName) {
-        // The new keyword can also be used to create covergroups.
-        if (assignmentTarget && assignmentTarget->isCovergroup()) {
-            return NewCovergroupExpression::fromSyntax(compilation, syntax, context,
-                                                       *assignmentTarget);
-        }
-
+    if (nameSyntax.kind == SyntaxKind::ConstructorName) {
         if (!assignmentTarget || !assignmentTarget->isClass()) {
             if (!assignmentTarget || !assignmentTarget->isError())
-                context.addDiag(diag::NewClassTarget, syntax.sourceRange());
-            return badExpr(compilation, nullptr);
+                context.addDiag(diag::NewClassTarget, range);
+            return {nullptr, false};
         }
 
         classType = &assignmentTarget->getCanonicalType().as<ClassType>();
     }
     else {
-        auto& scoped = syntax.scopedNew->as<ScopedNameSyntax>();
+        auto& scoped = nameSyntax.as<ScopedNameSyntax>();
         if (scoped.left->getLastToken().kind == TokenKind::SuperKeyword) {
             // This is a super.new invocation, so find the base class's
             // constructor. This is relative to our current context, not
@@ -1141,50 +1135,66 @@ Expression& NewClassExpression::fromSyntax(Compilation& compilation,
             classType = ct;
             if (!classType || classType->name.empty()) {
                 // Parser already emitted an error for this case.
-                return badExpr(compilation, nullptr);
+                return {nullptr, false};
             }
 
             auto base = classType->getBaseClass();
             if (!base) {
-                context.addDiag(diag::SuperNoBase, syntax.scopedNew->sourceRange())
-                    << classType->name;
-                return badExpr(compilation, nullptr);
+                context.addDiag(diag::SuperNoBase, nameSyntax.sourceRange()) << classType->name;
+                return {nullptr, false};
             }
 
             if (base->isError())
-                return badExpr(compilation, nullptr);
+                return {nullptr, false};
 
             classType = &base->as<Type>().getCanonicalType().as<ClassType>();
-            assignmentTarget = &compilation.getVoidType();
+            assignmentTarget = &context.getCompilation().getVoidType();
             isSuperClass = true;
         }
         else {
-            auto& className = *syntax.scopedNew->as<ScopedNameSyntax>().left;
+            auto& className = *nameSyntax.as<ScopedNameSyntax>().left;
             classType = Lookup::findClass(className, context);
             if (!classType)
-                return badExpr(compilation, nullptr);
+                return {nullptr, false};
 
             assignmentTarget = classType;
         }
     }
 
     if (!isSuperClass && classType->isAbstract) {
-        context.addDiag(diag::NewVirtualClass, syntax.sourceRange()) << classType->name;
-        return badExpr(compilation, nullptr);
+        context.addDiag(diag::NewVirtualClass, range) << classType->name;
+        return {nullptr, false};
     }
 
     if (!isSuperClass && classType->isInterface) {
-        context.addDiag(diag::NewInterfaceClass, syntax.sourceRange()) << classType->name;
-        return badExpr(compilation, nullptr);
+        context.addDiag(diag::NewInterfaceClass, range) << classType->name;
+        return {nullptr, false};
+    }
+
+    return {classType, isSuperClass};
+}
+
+Expression& NewClassExpression::fromSyntax(Compilation& comp,
+                                           const NewClassExpressionSyntax& syntax,
+                                           const ASTContext& context,
+                                           const Type* assignmentTarget) {
+    // The new keyword can also be used to create covergroups.
+    if (syntax.scopedNew->kind == SyntaxKind::ConstructorName && assignmentTarget &&
+        assignmentTarget->isCovergroup()) {
+        return NewCovergroupExpression::fromSyntax(comp, syntax, context, *assignmentTarget);
     }
 
     SourceRange range = syntax.sourceRange();
+    auto [classType, isSuperClass] = resolveNewClassTarget(*syntax.scopedNew, context,
+                                                           assignmentTarget, range);
+    if (!classType)
+        return badExpr(comp, nullptr);
+
     Expression* constructorCall = nullptr;
     if (auto constructor = classType->find("new")) {
         Lookup::ensureVisible(*constructor, context, range);
-        constructorCall = &CallExpression::fromArgs(compilation,
-                                                    &constructor->as<SubroutineSymbol>(), nullptr,
-                                                    syntax.argList, range, context);
+        constructorCall = &CallExpression::fromArgs(comp, &constructor->as<SubroutineSymbol>(),
+                                                    nullptr, syntax.argList, range, context);
     }
     else if (syntax.argList && !syntax.argList->parameters.empty()) {
         auto& diag = context.addDiag(diag::TooManyArguments, syntax.argList->sourceRange());
@@ -1193,9 +1203,25 @@ Expression& NewClassExpression::fromSyntax(Compilation& compilation,
         diag << syntax.argList->parameters.size();
     }
 
-    auto result = compilation.emplace<NewClassExpression>(*assignmentTarget, constructorCall,
-                                                          isSuperClass, range);
-    return *result;
+    return *comp.emplace<NewClassExpression>(*assignmentTarget, constructorCall, isSuperClass,
+                                             range);
+}
+
+Expression& NewClassExpression::fromSyntax(Compilation& comp,
+                                           const SuperNewDefaultedArgsExpressionSyntax& syntax,
+                                           const ASTContext& context,
+                                           const Type* assignmentTarget) {
+    SourceRange range = syntax.sourceRange();
+    auto [classType, isSuperClass] = resolveNewClassTarget(*syntax.scopedNew, context,
+                                                           assignmentTarget, range);
+    if (!classType)
+        return badExpr(comp, nullptr);
+
+    SLANG_ASSERT(isSuperClass);
+
+    // TODO: create constructor call
+
+    return *comp.emplace<NewClassExpression>(*assignmentTarget, nullptr, isSuperClass, range);
 }
 
 ConstantValue NewClassExpression::evalImpl(EvalContext& context) const {

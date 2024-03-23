@@ -976,7 +976,7 @@ ProductionSyntax& Parser::parseProduction() {
     }
 
     auto name = expect(TokenKind::Identifier);
-    auto ports = parseFunctionPortList(/* allowEmptyNames */ false);
+    auto ports = parseFunctionPortList({});
     auto colon = expect(TokenKind::Colon);
 
     Token semi;

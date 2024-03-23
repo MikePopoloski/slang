@@ -577,7 +577,19 @@ ModportDeclarationSyntax& Parser::parseModportDeclaration(AttrList attributes) {
     return factory.modportDeclaration(attributes, keyword, buffer.copy(alloc), semi);
 }
 
-FunctionPortSyntax& Parser::parseFunctionPort(bool allowEmptyName) {
+FunctionPortBaseSyntax& Parser::parseFunctionPort(bitmask<FunctionOptions> options) {
+    if (peek(TokenKind::DefaultKeyword)) {
+        auto keyword = consume();
+        if (!options.has(FunctionOptions::AllowDefaultArg)) {
+            addDiag(diag::DefaultArgNotAllowed, keyword.range());
+        }
+        else if (parseOptions.languageVersion < LanguageVersion::v1800_2023) {
+            addDiag(diag::WrongLanguageVersion, keyword.range())
+                << toString(parseOptions.languageVersion);
+        }
+        return factory.defaultFunctionPort(keyword);
+    }
+
     auto attributes = parseAttributes();
     auto constKeyword = consumeIf(TokenKind::ConstKeyword);
 
@@ -601,11 +613,13 @@ FunctionPortSyntax& Parser::parseFunctionPort(bool allowEmptyName) {
         dataType = &parseDataType();
 
     DeclaratorSyntax* decl;
-    if (!allowEmptyName || peek(TokenKind::Identifier) || peek(TokenKind::Equals))
+    if (!options.has(FunctionOptions::AllowEmptyArgNames) || peek(TokenKind::Identifier) ||
+        peek(TokenKind::Equals)) {
         decl = &parseDeclarator();
-    else
+    }
+    else {
         decl = &factory.declarator(placeholderToken(), nullptr, nullptr);
-
+    }
     return factory.functionPort(attributes, constKeyword, direction, varKeyword, dataType, *decl);
 }
 
@@ -622,7 +636,7 @@ static bool checkSubroutineName(const NameSyntax& name) {
     return checkKind(name);
 }
 
-FunctionPortListSyntax* Parser::parseFunctionPortList(bool allowEmptyNames) {
+FunctionPortListSyntax* Parser::parseFunctionPortList(bitmask<FunctionOptions> options) {
     if (!peek(TokenKind::OpenParenthesis))
         return nullptr;
 
@@ -631,8 +645,7 @@ FunctionPortListSyntax* Parser::parseFunctionPortList(bool allowEmptyNames) {
     SmallVector<TokenOrSyntax, 8> buffer;
     parseList<isPossibleFunctionPort, isEndOfParenList>(
         buffer, TokenKind::CloseParenthesis, TokenKind::Comma, closeParen, RequireItems::False,
-        diag::ExpectedFunctionPort,
-        [this, allowEmptyNames] { return &parseFunctionPort(allowEmptyNames); });
+        diag::ExpectedFunctionPort, [this, options] { return &parseFunctionPort(options); });
 
     return &factory.functionPortList(openParen, buffer.copy(alloc), closeParen);
 }
@@ -680,6 +693,9 @@ FunctionPrototypeSyntax& Parser::parseFunctionPrototype(SyntaxKind parentKind,
     if (isConstructor)
         *isConstructor = constructor;
 
+    if (constructor)
+        options |= FunctionOptions::AllowDefaultArg;
+
     if (keyword.kind == TokenKind::TaskKeyword) {
         if (returnType->kind != SyntaxKind::ImplicitType)
             addDiag(diag::TaskReturnType, keyword.location()) << returnType->sourceRange();
@@ -699,7 +715,7 @@ FunctionPrototypeSyntax& Parser::parseFunctionPrototype(SyntaxKind parentKind,
         addDiag(diag::ImplicitNotAllowed, name.getFirstToken().location());
     }
 
-    auto portList = parseFunctionPortList(options.has(FunctionOptions::AllowEmptyArgNames));
+    auto portList = parseFunctionPortList(options);
     return factory.functionPrototype(keyword, lifetime, *returnType, name, portList);
 }
 
@@ -1824,7 +1840,7 @@ MemberSyntax* Parser::parseCoverCrossMember() {
 CovergroupDeclarationSyntax& Parser::parseCovergroupDeclaration(AttrList attributes) {
     auto keyword = consume();
     auto name = expect(TokenKind::Identifier);
-    auto portList = parseFunctionPortList(/* allowEmptyNames */ false);
+    auto portList = parseFunctionPortList({});
 
     SyntaxNode* event = nullptr;
     switch (peek().kind) {
@@ -1849,7 +1865,7 @@ CovergroupDeclarationSyntax& Parser::parseCovergroupDeclaration(AttrList attribu
             if (!sample.isMissing() && sample.valueText() != "sample"sv)
                 addDiag(diag::ExpectedSampleKeyword, sample.location());
 
-            auto samplePortList = parseFunctionPortList(/* allowEmptyNames */ false);
+            auto samplePortList = parseFunctionPortList({});
             if (!samplePortList)
                 addDiag(diag::ExpectedFunctionPortList, peek().location());
 

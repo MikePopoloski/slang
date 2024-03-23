@@ -540,15 +540,21 @@ void SubroutineSymbol::buildArguments(Scope& scope, const FunctionPortListSyntax
     const DataTypeSyntax* lastType = nullptr;
     auto lastDirection = ArgumentDirection::In;
 
-    for (const FunctionPortSyntax* portSyntax : syntax.ports) {
+    for (auto portBase : syntax.ports) {
+        if (portBase->kind == SyntaxKind::DefaultFunctionPort) {
+            // TODO: handle this
+            continue;
+        }
+
         ArgumentDirection direction;
         bool directionSpecified;
-        if (portSyntax->direction) {
+        auto& fps = portBase->as<FunctionPortSyntax>();
+        if (fps.direction) {
             directionSpecified = true;
-            direction = SemanticFacts::getDirection(portSyntax->direction.kind);
+            direction = SemanticFacts::getDirection(fps.direction.kind);
 
             if (direction == ArgumentDirection::Ref && defaultLifetime == VariableLifetime::Static)
-                scope.addDiag(diag::RefArgAutomaticFunc, portSyntax->direction.range());
+                scope.addDiag(diag::RefArgAutomaticFunc, fps.direction.range());
         }
         else {
             // Otherwise, we "inherit" the previous argument
@@ -556,21 +562,21 @@ void SubroutineSymbol::buildArguments(Scope& scope, const FunctionPortListSyntax
             direction = lastDirection;
         }
 
-        auto declarator = portSyntax->declarator;
+        auto declarator = fps.declarator;
         auto arg = comp.emplace<FormalArgumentSymbol>(declarator->name.valueText(),
                                                       declarator->name.location(), direction,
                                                       defaultLifetime);
 
-        if (portSyntax->constKeyword) {
+        if (fps.constKeyword) {
             SLANG_ASSERT(direction == ArgumentDirection::Ref);
             arg->flags |= VariableFlags::Const;
         }
 
         // If we're given a type, use that. Otherwise, if we were given a
         // direction, default to logic. Otherwise, use the last type.
-        if (portSyntax->dataType) {
-            arg->setDeclaredType(*portSyntax->dataType);
-            lastType = portSyntax->dataType;
+        if (fps.dataType) {
+            arg->setDeclaredType(*fps.dataType);
+            lastType = fps.dataType;
         }
         else if (directionSpecified || !lastType) {
             arg->setDeclaredType(
@@ -581,7 +587,7 @@ void SubroutineSymbol::buildArguments(Scope& scope, const FunctionPortListSyntax
             arg->setDeclaredType(*lastType);
         }
 
-        arg->setAttributes(scope, portSyntax->attributes);
+        arg->setAttributes(scope, fps.attributes);
         arg->setSyntax(*declarator);
 
         if (!declarator->dimensions.empty())

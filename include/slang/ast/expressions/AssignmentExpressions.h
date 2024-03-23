@@ -179,6 +179,10 @@ public:
                                   const syntax::NewClassExpressionSyntax& syntax,
                                   const ASTContext& context, const Type* assignmentTarget);
 
+    static Expression& fromSyntax(Compilation& compilation,
+                                  const syntax::SuperNewDefaultedArgsExpressionSyntax& syntax,
+                                  const ASTContext& context, const Type* assignmentTarget);
+
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::NewClass; }
 
     template<typename TVisitor>

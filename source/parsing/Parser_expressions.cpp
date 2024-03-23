@@ -1065,11 +1065,13 @@ ExpressionSyntax& Parser::parseNewExpression(NameSyntax& newKeyword,
     }
 
     // Enforce rules for super.new placement.
+    bool isSuperNew = false;
     if (newKeyword.kind == SyntaxKind::ScopedName) {
         auto& scoped = newKeyword.as<ScopedNameSyntax>();
         if (scoped.right->kind == SyntaxKind::ConstructorName &&
             scoped.left->getLastToken().kind == TokenKind::SuperKeyword) {
-            if ((options & ExpressionOptions::AllowSuperNewCall) == 0) {
+            isSuperNew = true;
+            if (!options.has(ExpressionOptions::AllowSuperNewCall)) {
                 addDiag(diag::InvalidSuperNew, scoped.right->getFirstToken().location())
                     << newKeyword.sourceRange();
             }
@@ -1080,8 +1082,23 @@ ExpressionSyntax& Parser::parseNewExpression(NameSyntax& newKeyword,
     // new-class has an optional argument list, copy-class has a required expression.
     // An open paren here would be ambiguous between an arg list and a parenthesized
     // expression -- we resolve by always taking the arg list.
-    if (kind == TokenKind::OpenParenthesis)
+    if (kind == TokenKind::OpenParenthesis) {
+        // 1800-2023 added the construct super.new(default) -- check for that here.
+        if (isSuperNew && peek(1).kind == TokenKind::DefaultKeyword) {
+            auto openParen = consume();
+            auto defaultKeyword = consume();
+            auto& result = factory.superNewDefaultedArgsExpression(
+                newKeyword, openParen, defaultKeyword, expect(TokenKind::CloseParenthesis));
+
+            if (parseOptions.languageVersion < LanguageVersion::v1800_2023) {
+                addDiag(diag::WrongLanguageVersion, result.sourceRange())
+                    << toString(parseOptions.languageVersion);
+            }
+
+            return result;
+        }
         return factory.newClassExpression(newKeyword, &parseArgumentList());
+    }
 
     if (isPossibleExpression(kind)) {
         if (newKeyword.kind != SyntaxKind::ConstructorName)

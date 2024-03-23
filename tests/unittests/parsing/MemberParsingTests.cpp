@@ -1336,3 +1336,23 @@ endclass
     CHECK(diagnostics[0].code == diag::WrongLanguageVersion);
     CHECK(diagnostics[1].code == diag::ExpectedToken);
 }
+
+TEST_CASE("Constructor defaulted arg list errors") {
+    auto& text = R"(
+class A;
+    function new(default);
+        super.new(default);
+    endfunction
+
+    function foo(default);
+    endfunction
+endclass
+)";
+
+    parseCompilationUnit(text);
+
+    REQUIRE(diagnostics.size() == 3);
+    CHECK(diagnostics[0].code == diag::WrongLanguageVersion);
+    CHECK(diagnostics[1].code == diag::WrongLanguageVersion);
+    CHECK(diagnostics[2].code == diag::DefaultArgNotAllowed);
+}

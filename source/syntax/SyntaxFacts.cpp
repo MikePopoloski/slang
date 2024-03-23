@@ -692,6 +692,7 @@ bool SyntaxFacts::isPossibleFunctionPort(TokenKind kind) {
         case TokenKind::VarKeyword:
         case TokenKind::ConstKeyword:
         case TokenKind::OpenParenthesisStar:
+        case TokenKind::DefaultKeyword:
             return true;
         default:
             return isPossibleDataType(kind);

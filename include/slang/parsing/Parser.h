@@ -112,9 +112,12 @@ enum class FunctionOptions {
 
     /// The function header is for a prototype, so parsing rules
     /// are slightly different.
-    IsPrototype = 1 << 2
+    IsPrototype = 1 << 2,
+
+    /// Allow use of the 'default' argument.
+    AllowDefaultArg = 1 << 3
 };
-SLANG_BITMASK(FunctionOptions, IsPrototype)
+SLANG_BITMASK(FunctionOptions, AllowDefaultArg)
 
 } // namespace detail
 
@@ -287,8 +290,8 @@ private:
     syntax::PrimitiveInstantiationSyntax& parsePrimitiveInstantiation(AttrList attributes);
     syntax::CheckerInstantiationSyntax& parseCheckerInstantiation(AttrList attributes);
     syntax::PortConnectionSyntax& parsePortConnection();
-    syntax::FunctionPortSyntax& parseFunctionPort(bool allowEmptyName);
-    syntax::FunctionPortListSyntax* parseFunctionPortList(bool allowEmptyNames);
+    syntax::FunctionPortBaseSyntax& parseFunctionPort(bitmask<FunctionOptions> options);
+    syntax::FunctionPortListSyntax* parseFunctionPortList(bitmask<FunctionOptions> options);
     syntax::FunctionPrototypeSyntax& parseFunctionPrototype(syntax::SyntaxKind parentKind, bitmask<FunctionOptions> options, bool* isConstructor = nullptr);
     syntax::FunctionDeclarationSyntax& parseFunctionDeclaration(AttrList attributes, syntax::SyntaxKind functionKind, TokenKind endKind, syntax::SyntaxKind parentKind);
     Token parseLifetime();

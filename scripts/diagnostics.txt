@@ -289,6 +289,7 @@ error ConfigSpecificCellLiblist "cannot specify a liblist when using a cell rule
 error ConfigParamLiteral "parameters in configurations can only be set to literal values"
 error NoCommaInList "this list is delimited by spaces, not commas"
 error ExpectedClassSpecifier "expected class specifier"
+error DefaultArgNotAllowed "'default' argument is not allowed here"
 warning dpi-pure-task DPIPureTask "DPI tasks cannot be marked 'pure'"
 warning nonstandard-generate NonStandardGenBlock "standalone generate block without loop or condition is not allowed in SystemVerilog"
 warning empty-pattern EmptyAssignmentPattern "empty assignment patterns are disallowed by SystemVerilog"

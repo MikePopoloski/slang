@@ -894,6 +894,11 @@ Expression& Expression::create(Compilation& compilation, const ExpressionSyntax&
                                                      syntax.as<NewClassExpressionSyntax>(), context,
                                                      assignmentTarget);
             break;
+        case SyntaxKind::SuperNewDefaultedArgsExpression:
+            result = &NewClassExpression::fromSyntax(
+                compilation, syntax.as<SuperNewDefaultedArgsExpressionSyntax>(), context,
+                assignmentTarget);
+            break;
         case SyntaxKind::CopyClassExpression:
             result = &CopyClassExpression::fromSyntax(compilation,
                                                       syntax.as<CopyClassExpressionSyntax>(),

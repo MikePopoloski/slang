@@ -372,6 +372,12 @@ CopyClassExpression base=Expression
 Name scopedNew
 Expression expr
 
+SuperNewDefaultedArgsExpression base=Expression
+Name scopedNew
+token openParen
+token defaultKeyword
+token closeParen
+
 // ----- POSTFIX EXPRESSIONS -----
 
 ElementSelectExpression base=Expression
@@ -625,7 +631,13 @@ token keyword
 separated_list<IdentifierName> identifiers
 token semi
 
-FunctionPort
+FunctionPortBase final=false
+empty
+
+DefaultFunctionPort base=FunctionPortBase
+token keyword
+
+FunctionPort base=FunctionPortBase
 list<AttributeInstance> attributes
 token constKeyword
 token direction
@@ -635,7 +647,7 @@ Declarator declarator
 
 FunctionPortList
 token openParen
-separated_list<FunctionPort> ports
+separated_list<FunctionPortBase> ports
 token closeParen
 
 // ----- TYPES -----
