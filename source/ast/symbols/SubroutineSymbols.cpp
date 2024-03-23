@@ -553,11 +553,11 @@ struct LocalVarCheckVisitor {
             if (ValueExpressionBase::isKind(expr.kind)) {
                 if (auto sym = expr.getSymbolReference();
                     sym && sym->kind == SymbolKind::ClassProperty) {
-                    checkVisibility(*sym, expr, sym->as<ClassPropertySymbol>().visibility);
+                    checkVisibility(*sym, expr, sym->template as<ClassPropertySymbol>().visibility);
                 }
             }
             else if (expr.kind == ExpressionKind::Call) {
-                auto& call = expr.as<CallExpression>();
+                auto& call = expr.template as<CallExpression>();
                 if (!call.isSystemCall()) {
                     auto& sub = *std::get<const SubroutineSymbol*>(call.subroutine);
                     checkVisibility(sub, expr, sub.visibility);
