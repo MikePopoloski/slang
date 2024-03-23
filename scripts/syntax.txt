@@ -1331,10 +1331,14 @@ ImplementsClause
 token keyword
 separated_list<Name> interfaces
 
+ClassSpecifier
+token colon
+token keyword
+
 ClassDeclaration base=Member
 token virtualOrInterface
 token classKeyword
-token lifetime
+ClassSpecifier? finalSpecifier
 token name
 ParameterPortList? parameters
 ExtendsClause? extendsClause

@@ -423,6 +423,7 @@ endmodule
             ],
             "isAbstract": false,
             "isInterface": false,
+            "isFinal": false,
             "implements": [
             ]
           },

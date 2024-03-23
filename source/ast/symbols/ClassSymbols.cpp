@@ -170,6 +170,9 @@ void ClassType::populate(const Scope& scope, const ClassDeclarationSyntax& synta
     else if (syntax.virtualOrInterface.kind == TokenKind::InterfaceKeyword)
         isInterface = true;
 
+    if (syntax.finalSpecifier && syntax.finalSpecifier->keyword.kind == TokenKind::FinalKeyword)
+        isFinal = true;
+
     setSyntax(syntax);
     for (auto member : syntax.items)
         addMembers(*member);
@@ -280,6 +283,12 @@ void ClassType::handleExtends(const ExtendsClauseSyntax& extendsClause, const AS
     if (baseType->isInterface) {
         baseClass = &comp.getErrorType();
         context.addDiag(diag::ExtendIfaceFromClass, extendsClause.sourceRange()) << baseType->name;
+        return;
+    }
+
+    if (baseType->isFinal) {
+        baseClass = &comp.getErrorType();
+        context.addDiag(diag::ExtendFromFinal, extendsClause.sourceRange()) << baseType->name;
         return;
     }
 
@@ -763,6 +772,7 @@ void ClassType::computeCycles() const {
 void ClassType::serializeTo(ASTSerializer& serializer) const {
     serializer.write("isAbstract", isAbstract);
     serializer.write("isInterface", isInterface);
+    serializer.write("isFinal", isFinal);
     if (firstForward)
         serializer.write("forward", *firstForward);
     if (genericClass)

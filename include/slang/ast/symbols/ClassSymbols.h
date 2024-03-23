@@ -59,6 +59,9 @@ public:
     /// Set to true if the class is an interface class.
     bool isInterface = false;
 
+    /// Set to true if this class is marked final (i.e. it cannot be extended).
+    bool isFinal = false;
+
     ClassType(Compilation& compilation, std::string_view name, SourceLocation loc);
 
     /// If this class derives from a base class, returns that type. Otherwise returns null.

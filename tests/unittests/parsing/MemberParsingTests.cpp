@@ -1289,3 +1289,50 @@ union soft { logic a; int b; } foo;
     REQUIRE(diagnostics.size() == 1);
     CHECK(diagnostics[0].code == diag::WrongLanguageVersion);
 }
+
+TEST_CASE("Class lifetime is allowed but ignored in 1800-2017") {
+    auto& text = R"(
+class static foo;
+endclass
+)";
+
+    parseCompilationUnit(text);
+    CHECK_DIAGNOSTICS_EMPTY;
+}
+
+TEST_CASE("Class lifetime is error in 1800-2023") {
+    auto& text = R"(
+class static foo;
+endclass
+)";
+
+    parseCompilationUnit(text, LanguageVersion::v1800_2023);
+
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics[0].code == diag::ExpectedIdentifier);
+}
+
+TEST_CASE("Invalid class specifier") {
+    auto& text = R"(
+class :stuff foo;
+endclass
+)";
+
+    parseCompilationUnit(text, LanguageVersion::v1800_2023);
+
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics[0].code == diag::ExpectedClassSpecifier);
+}
+
+TEST_CASE("Invalid class final specifier") {
+    auto& text = R"(
+class :initial foo;
+endclass
+)";
+
+    parseCompilationUnit(text);
+
+    REQUIRE(diagnostics.size() == 2);
+    CHECK(diagnostics[0].code == diag::WrongLanguageVersion);
+    CHECK(diagnostics[1].code == diag::ExpectedToken);
+}

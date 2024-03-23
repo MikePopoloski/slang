@@ -268,6 +268,7 @@ void registerTypes(py::module_& m) {
         .def_readonly("genericClass", &ClassType::genericClass)
         .def_readonly("isAbstract", &ClassType::isAbstract)
         .def_readonly("isInterface", &ClassType::isInterface)
+        .def_readonly("isFinal", &ClassType::isFinal)
         .def_property_readonly("baseClass", &ClassType::getBaseClass)
         .def_property_readonly("implementedInterfaces", &ClassType::getImplementedInterfaces)
         .def_property_readonly("baseConstructorCall", &ClassType::getBaseConstructorCall)

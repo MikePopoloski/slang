@@ -2913,3 +2913,22 @@ endmodule
     CHECK(diags[0].code == diag::RecursiveClassSpecialization);
     CHECK(diags[1].code == diag::RecursiveClassSpecialization);
 }
+
+TEST_CASE("Extend from final class") {
+    auto options = optionsFor(LanguageVersion::v1800_2023);
+    auto tree = SyntaxTree::fromText(R"(
+class :final A;
+endclass
+
+class B extends A;
+endclass
+)",
+                                     options);
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::ExtendFromFinal);
+}

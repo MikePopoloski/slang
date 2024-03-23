@@ -299,6 +299,7 @@ private:
     syntax::CaseGenerateSyntax& parseCaseGenerateConstruct(AttrList attributes);
     syntax::MemberSyntax& parseGenerateBlock();
     syntax::ImplementsClauseSyntax* parseImplementsClause(TokenKind keywordKind, Token& semi);
+    syntax::ClassSpecifierSyntax* parseClassSpecifier();
     syntax::ClassDeclarationSyntax& parseClassDeclaration(AttrList attributes, Token virtualOrInterface);
     syntax::MemberSyntax* parseClassMember(bool isIfaceClass);
     syntax::ContinuousAssignSyntax& parseContinuousAssign(AttrList attributes);

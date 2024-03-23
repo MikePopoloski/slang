@@ -919,10 +919,57 @@ ImplementsClauseSyntax* Parser::parseImplementsClause(TokenKind keywordKind, Tok
     return &factory.implementsClause(implements, buffer.copy(alloc));
 }
 
+ClassSpecifierSyntax* Parser::parseClassSpecifier() {
+    if (peek(TokenKind::Colon)) {
+        auto colon = consume();
+
+        Token keyword;
+        switch (peek().kind) {
+            case TokenKind::InitialKeyword:
+            case TokenKind::ExtendsKeyword:
+            case TokenKind::FinalKeyword:
+                keyword = consume();
+                break;
+            default:
+                skipToken(diag::ExpectedClassSpecifier);
+                break;
+        }
+
+        auto& result = factory.classSpecifier(colon, keyword);
+        if (parseOptions.languageVersion < LanguageVersion::v1800_2023 && keyword) {
+            addDiag(diag::WrongLanguageVersion, result.sourceRange())
+                << toString(parseOptions.languageVersion);
+        }
+
+        return &result;
+    }
+    return nullptr;
+}
+
 ClassDeclarationSyntax& Parser::parseClassDeclaration(AttrList attributes,
                                                       Token virtualOrInterface) {
     auto classKeyword = consume();
-    auto lifetime = parseLifetime();
+
+    ClassSpecifierSyntax* finalSpecifier = nullptr;
+    if (virtualOrInterface.kind != TokenKind::InterfaceKeyword) {
+        auto next = peek();
+        if (next.kind == TokenKind::StaticKeyword || next.kind == TokenKind::AutomaticKeyword) {
+            // This was allowed in 1800-2017 but did nothing, so silently skip it.
+            // It was removed in 1800-2023 so issue an error.
+            if (parseOptions.languageVersion < LanguageVersion::v1800_2023)
+                skipToken({});
+            else
+                skipToken(diag::ExpectedIdentifier);
+            next = peek();
+        }
+
+        finalSpecifier = parseClassSpecifier();
+        if (finalSpecifier && finalSpecifier->keyword &&
+            finalSpecifier->keyword.kind != TokenKind::FinalKeyword) {
+            addDiag(diag::ExpectedToken, finalSpecifier->keyword.location()) << "final"sv;
+        }
+    }
+
     auto name = expect(TokenKind::Identifier);
     auto parameterList = parseParameterPortList();
 
@@ -956,9 +1003,10 @@ ClassDeclarationSyntax& Parser::parseClassDeclaration(AttrList attributes,
     auto endBlockName = parseNamedBlockClause();
     checkBlockNames(name, endBlockName);
 
-    auto& result = factory.classDeclaration(attributes, virtualOrInterface, classKeyword, lifetime,
-                                            name, parameterList, extendsClause, implementsClause,
-                                            semi, members, endClass, endBlockName);
+    auto& result = factory.classDeclaration(attributes, virtualOrInterface, classKeyword,
+                                            finalSpecifier, name, parameterList, extendsClause,
+                                            implementsClause, semi, members, endClass,
+                                            endBlockName);
     meta.classDecls.push_back(&result);
     return result;
 }
