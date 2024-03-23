@@ -1219,7 +1219,13 @@ Expression& NewClassExpression::fromSyntax(Compilation& comp,
 
     SLANG_ASSERT(isSuperClass);
 
-    // TODO: create constructor call
+    // The containing constructor (should be our parent scope)
+    // must have a 'default' argument as well.
+    if (context.scope->asSymbol().kind == SymbolKind::Subroutine) {
+        auto& sub = context.scope->asSymbol().as<SubroutineSymbol>();
+        if (!sub.flags.has(MethodFlags::DefaultedSuperArg))
+            context.addDiag(diag::InvalidSuperNewDefault, range);
+    }
 
     return *comp.emplace<NewClassExpression>(*assignmentTarget, nullptr, isSuperClass, range);
 }

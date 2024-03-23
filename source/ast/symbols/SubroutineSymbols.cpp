@@ -8,7 +8,9 @@
 #include "slang/ast/symbols/SubroutineSymbols.h"
 
 #include "slang/ast/ASTSerializer.h"
+#include "slang/ast/ASTVisitor.h"
 #include "slang/ast/Compilation.h"
+#include "slang/ast/expressions/MiscExpressions.h"
 #include "slang/ast/symbols/ClassSymbols.h"
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
 #include "slang/ast/symbols/InstanceSymbols.h"
@@ -533,6 +535,95 @@ void SubroutineSymbol::checkVirtualMethodMatch(const Scope& scope,
     }
 }
 
+struct LocalVarCheckVisitor {
+    const Scope& scope;
+    const SyntaxNode& syntax;
+    std::string_view argName;
+    bool anyErrors = false;
+
+    LocalVarCheckVisitor(const Scope& scope, const SyntaxNode& syntax, std::string_view argName) :
+        scope(scope), syntax(syntax), argName(argName) {}
+
+    template<typename T>
+    void visit(const T& expr) {
+        if (anyErrors)
+            return;
+
+        if constexpr (std::is_base_of_v<Expression, T>) {
+            if (ValueExpressionBase::isKind(expr.kind)) {
+                if (auto sym = expr.getSymbolReference();
+                    sym && sym->kind == SymbolKind::ClassProperty) {
+                    checkVisibility(*sym, expr, sym->as<ClassPropertySymbol>().visibility);
+                }
+            }
+            else if (expr.kind == ExpressionKind::Call) {
+                auto& call = expr.as<CallExpression>();
+                if (!call.isSystemCall()) {
+                    auto& sub = *std::get<const SubroutineSymbol*>(call.subroutine);
+                    checkVisibility(sub, expr, sub.visibility);
+                }
+            }
+
+            if constexpr (HasVisitExprs<T, LocalVarCheckVisitor>) {
+                expr.visitExprs(*this);
+            }
+        }
+    }
+
+    void checkVisibility(const Symbol& symbol, const Expression& expr, Visibility visibility) {
+        if (visibility == Visibility::Local) {
+            auto& diag = scope.addDiag(diag::DefaultSuperArgLocalReference, syntax.sourceRange());
+            diag << argName << symbol.name;
+            diag.addNote(diag::NoteReferencedHere, expr.sourceRange);
+            anyErrors = true;
+        }
+    }
+};
+
+static bitmask<MethodFlags> inheritArgList(
+    Scope& scope, const Scope& parentScope, const SyntaxNode& syntax,
+    SmallVectorBase<const FormalArgumentSymbol*>& arguments) {
+
+    auto& comp = scope.getCompilation();
+    bitmask<MethodFlags> resultFlags;
+    if (parentScope.asSymbol().kind == SymbolKind::ClassType) {
+        auto& ct = parentScope.asSymbol().as<ClassType>();
+        auto baseClass = ct.getBaseClass();
+        if (!baseClass) {
+            scope.addDiag(diag::SuperNoBase, syntax.sourceRange()) << ct.name;
+        }
+        else if (baseClass->isClass()) {
+            // Note: we check isClass() above to skip over cases where
+            // the baseClass is the ErrorType.
+            auto& baseCt = baseClass->getCanonicalType().as<ClassType>();
+            if (auto constructor = baseCt.getConstructor()) {
+                // We found the base class's constructor.
+                // Pull in all arguments from it.
+                resultFlags |= MethodFlags::DefaultedSuperArg;
+
+                bool anyErrors = false;
+                for (auto arg : constructor->getArguments()) {
+                    // It's an error if any of the inherited arguments
+                    // have default values that refer to local members
+                    // of the parent class.
+                    if (auto defVal = arg->getDefaultValue();
+                        !anyErrors && defVal && !arg->name.empty()) {
+                        LocalVarCheckVisitor visitor(scope, syntax, arg->name);
+                        defVal->visit(visitor);
+                        anyErrors |= visitor.anyErrors;
+                    }
+
+                    auto& cloned = arg->clone(comp);
+                    scope.addMember(cloned);
+                    arguments.push_back(&cloned);
+                }
+            }
+        }
+    }
+
+    return resultFlags;
+}
+
 bitmask<MethodFlags> SubroutineSymbol::buildArguments(
     Scope& scope, const Scope& parentScope, const FunctionPortListSyntax& syntax,
     VariableLifetime defaultLifetime, SmallVectorBase<const FormalArgumentSymbol*>& arguments) {
@@ -551,31 +642,10 @@ bitmask<MethodFlags> SubroutineSymbol::buildArguments(
             if (explicitDefault) {
                 // Ignore a duplicate default.
                 scope.addDiag(diag::MultipleDefaultConstructorArg, portBase->sourceRange());
-                continue;
             }
-            explicitDefault = portBase;
-
-            if (parentScope.asSymbol().kind == SymbolKind::ClassType) {
-                auto& ct = parentScope.asSymbol().as<ClassType>();
-                auto baseClass = ct.getBaseClass();
-                if (!baseClass) {
-                    scope.addDiag(diag::SuperNoBase, portBase->sourceRange()) << ct.name;
-                }
-                else if (baseClass->isClass()) {
-                    // Note: we check isClass() above to skip over cases where
-                    // the baseClass is the ErrorType.
-                    auto& baseCt = baseClass->getCanonicalType().as<ClassType>();
-                    if (auto constructor = baseCt.getConstructor()) {
-                        // We found the base class's constructor.
-                        // Pull in all arguments from it.
-                        resultFlags |= MethodFlags::DefaultedSuperArg;
-                        for (auto arg : constructor->getArguments()) {
-                            auto& cloned = arg->clone(comp);
-                            scope.addMember(cloned);
-                            arguments.push_back(&cloned);
-                        }
-                    }
-                }
+            else {
+                explicitDefault = portBase;
+                resultFlags |= inheritArgList(scope, parentScope, *portBase, arguments);
             }
             continue;
         }

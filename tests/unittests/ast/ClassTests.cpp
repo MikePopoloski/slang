@@ -2969,12 +2969,85 @@ class C extends B;
         this.enable = enable; // enable is an input by default
     endfunction : new
 endclass : C
+
+module m;
+    int id;
+    A a = new("Hello", id);
+    B b = new(3, "World", id);
+    C c = new(4, "!", id, 1);
+endmodule
 )",
                                      options);
 
     Compilation compilation(options);
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Derived class default argument list errors") {
+    auto options = optionsFor(LanguageVersion::v1800_2023);
+    auto tree = SyntaxTree::fromText(R"(
+class Base;
+    string name;
+    local int m_id;
+    function new(string name, output int id);
+        this.name = name;
+        id = m_id++;
+    endfunction : new
+endclass : Base
+
+class A extends Base;
+    function new(default, int i, default);
+    endfunction
+endclass
+
+class B;
+    function new(default);
+    endfunction
+endclass
+
+class BadBase1;
+    local int j;
+
+    function new(int i = 1 + j);
+    endfunction
+endclass
+
+class C extends BadBase1;
+    function new(default);
+    endfunction
+endclass
+
+class BadBase2;
+    local function int bar; return 1; endfunction
+
+    function new(int i = 1 + bar());
+    endfunction
+endclass
+
+class D extends BadBase2;
+    function new(default);
+    endfunction
+endclass
+
+class E extends Base;
+    function new(int i);
+        super.new(default);
+    endfunction
+endclass
+)",
+                                     options);
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 5);
+    CHECK(diags[0].code == diag::MultipleDefaultConstructorArg);
+    CHECK(diags[1].code == diag::SuperNoBase);
+    CHECK(diags[2].code == diag::DefaultSuperArgLocalReference);
+    CHECK(diags[3].code == diag::DefaultSuperArgLocalReference);
+    CHECK(diags[4].code == diag::InvalidSuperNewDefault);
 }
 
 TEST_CASE("Class property named 'new'") {
