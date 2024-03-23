@@ -705,6 +705,7 @@ error SelectAfterRangeSelect "cannot chain select expressions after a range sele
 error ClassPrivateMembersBitstream "cannot use class type {} as a bit-stream because it has local or protected members that are not accessible in this context"
 error CannotCompareTwoInstances "cannot compare two instances to each other; at least one side must be a virtual interface"
 error InvalidSuperNewDefault "cannot use 'default' in super.new since the containing constructor does not use 'default' in its argument list"
+error InvalidExtendsDefault "constructor must use 'default' in its argument list since 'extends' specifies 'default' for its argument list"
 warning ignored-slice IgnoredSlice "slice size ignored for left-to-right streaming operator"
 warning unsized-concat UnsizedInConcat "unsized integer in concat; using a width of {}"
 warning width-expand WidthExpand "implicit conversion expands from {} to {} bits"

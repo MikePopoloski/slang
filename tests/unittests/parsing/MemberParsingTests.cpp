@@ -1339,7 +1339,7 @@ endclass
 
 TEST_CASE("Constructor defaulted arg list errors") {
     auto& text = R"(
-class A;
+class A extends B(default);
     function new(default);
         super.new(default);
     endfunction
@@ -1351,8 +1351,9 @@ endclass
 
     parseCompilationUnit(text);
 
-    REQUIRE(diagnostics.size() == 3);
+    REQUIRE(diagnostics.size() == 4);
     CHECK(diagnostics[0].code == diag::WrongLanguageVersion);
     CHECK(diagnostics[1].code == diag::WrongLanguageVersion);
-    CHECK(diagnostics[2].code == diag::DefaultArgNotAllowed);
+    CHECK(diagnostics[2].code == diag::WrongLanguageVersion);
+    CHECK(diagnostics[3].code == diag::DefaultArgNotAllowed);
 }

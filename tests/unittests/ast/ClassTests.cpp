@@ -2984,6 +2984,40 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
+TEST_CASE("Extends clause defaulted argument list") {
+    auto options = optionsFor(LanguageVersion::v1800_2023);
+    auto tree = SyntaxTree::fromText(R"(
+class Base;
+    string name;
+    local int m_id;
+    function new(string name, output int id);
+        this.name = name;
+        id = m_id++;
+    endfunction : new
+endclass : Base
+
+// Class A does not require an explicit constructor;
+// the implicit new() method has the argument list of Base::new.
+class A extends Base(default);
+endclass : A
+
+// Class B still requires an explicit constructor,
+// as additional arguments are provided.
+class B extends Base(default);
+    int size;
+    function new(int size, default);
+        // Implicit call to super.new(default) from Base(default)
+        this.size = size;
+    endfunction : new
+endclass : B
+)",
+                                     options);
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
 TEST_CASE("Derived class default argument list errors") {
     auto options = optionsFor(LanguageVersion::v1800_2023);
     auto tree = SyntaxTree::fromText(R"(
@@ -3035,6 +3069,11 @@ class E extends Base;
         super.new(default);
     endfunction
 endclass
+
+class F extends Base(default);
+    function new;
+    endfunction
+endclass
 )",
                                      options);
 
@@ -3042,12 +3081,13 @@ endclass
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 5);
+    REQUIRE(diags.size() == 6);
     CHECK(diags[0].code == diag::MultipleDefaultConstructorArg);
     CHECK(diags[1].code == diag::SuperNoBase);
     CHECK(diags[2].code == diag::DefaultSuperArgLocalReference);
     CHECK(diags[3].code == diag::DefaultSuperArgLocalReference);
     CHECK(diags[4].code == diag::InvalidSuperNewDefault);
+    CHECK(diags[5].code == diag::InvalidExtendsDefault);
 }
 
 TEST_CASE("Class property named 'new'") {

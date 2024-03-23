@@ -966,8 +966,9 @@ ClassDeclarationSyntax& Parser::parseClassDeclaration(AttrList attributes,
                                                       Token virtualOrInterface) {
     auto classKeyword = consume();
 
+    const bool isIfaceClass = virtualOrInterface.kind == TokenKind::InterfaceKeyword;
     ClassSpecifierSyntax* finalSpecifier = nullptr;
-    if (virtualOrInterface.kind != TokenKind::InterfaceKeyword) {
+    if (!isIfaceClass) {
         auto next = peek();
         if (next.kind == TokenKind::StaticKeyword || next.kind == TokenKind::AutomaticKeyword) {
             // This was allowed in 1800-2017 but did nothing, so silently skip it.
@@ -994,19 +995,34 @@ ClassDeclarationSyntax& Parser::parseClassDeclaration(AttrList attributes,
     ImplementsClauseSyntax* implementsClause = nullptr;
 
     // interface classes treat "extends" as the implements list
-    bool isIfaceClass = virtualOrInterface.kind == TokenKind::InterfaceKeyword;
-    if (isIfaceClass)
+    if (isIfaceClass) {
         implementsClause = parseImplementsClause(TokenKind::ExtendsKeyword, semi);
+    }
     else {
         if (peek(TokenKind::ExtendsKeyword)) {
             auto extends = consume();
             auto& baseName = parseName();
 
             ArgumentListSyntax* arguments = nullptr;
-            if (peek(TokenKind::OpenParenthesis))
-                arguments = &parseArgumentList();
+            DefaultExtendsClauseArgSyntax* defaultedArg = nullptr;
+            if (peek(TokenKind::OpenParenthesis)) {
+                if (peek(1).kind == TokenKind::DefaultKeyword) {
+                    auto openParen = consume();
+                    auto defaultKeyword = consume();
+                    defaultedArg = &factory.defaultExtendsClauseArg(
+                        openParen, defaultKeyword, expect(TokenKind::CloseParenthesis));
 
-            extendsClause = &factory.extendsClause(extends, baseName, arguments);
+                    if (parseOptions.languageVersion < LanguageVersion::v1800_2023) {
+                        addDiag(diag::WrongLanguageVersion, defaultedArg->sourceRange())
+                            << toString(parseOptions.languageVersion);
+                    }
+                }
+                else {
+                    arguments = &parseArgumentList();
+                }
+            }
+
+            extendsClause = &factory.extendsClause(extends, baseName, arguments, defaultedArg);
         }
         implementsClause = parseImplementsClause(TokenKind::ImplementsKeyword, semi);
     }

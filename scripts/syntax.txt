@@ -1334,10 +1334,16 @@ token equals
 Expression expr
 token semi
 
+DefaultExtendsClauseArg
+token openParen
+token defaultKeyword
+token closeParen
+
 ExtendsClause
 token keyword
 Name baseName
 ArgumentList? arguments
+DefaultExtendsClauseArg? defaultedArg
 
 ImplementsClause
 token keyword

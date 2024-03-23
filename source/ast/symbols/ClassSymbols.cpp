@@ -480,7 +480,8 @@ const Expression* ClassType::getBaseConstructorCall() const {
 
     // If we have a constructor, find whether it invokes super.new in its body.
     bool constructorHasDefault = false;
-    if (auto ourConstructor = getConstructor()) {
+    auto ourConstructor = getConstructor();
+    if (ourConstructor) {
         auto checkForSuperNew = [&](const Statement& stmt) {
             if (stmt.kind == StatementKind::ExpressionStatement) {
                 auto& expr = stmt.as<ExpressionStatement>().expr;
@@ -514,14 +515,16 @@ const Expression* ClassType::getBaseConstructorCall() const {
     ASTContext context(*this, LookupLocation(this, uint32_t(headerIndex)));
     auto& extendsClause = *classSyntax.extendsClause;
 
-    if (auto extendsArgs = extendsClause.arguments) {
-        // Can't have both a super.new and extends arguments.
-        if (callExpr) {
-            auto& diag = context.addDiag(diag::BaseConstructorDuplicate, callExpr->sourceRange);
-            diag.addNote(diag::NotePreviousUsage, extendsArgs->getFirstToken().location());
-            return nullptr;
-        }
+    // Can't have both a super.new and extends arguments.
+    if (callExpr && (extendsClause.arguments || extendsClause.defaultedArg)) {
+        auto argSyntax = extendsClause.arguments ? (const SyntaxNode*)extendsClause.arguments
+                                                 : extendsClause.defaultedArg;
+        auto& diag = context.addDiag(diag::BaseConstructorDuplicate, callExpr->sourceRange);
+        diag.addNote(diag::NotePreviousUsage, argSyntax->getFirstToken().location());
+        return nullptr;
+    }
 
+    if (auto extendsArgs = extendsClause.arguments) {
         // If we have a base class constructor, create the call to it.
         if (baseConstructor) {
             SourceRange range = extendsClause.sourceRange();
@@ -537,6 +540,14 @@ const Expression* ClassType::getBaseConstructorCall() const {
             diag << 0;
             diag << extendsArgs->parameters.size();
         }
+    }
+    else if (extendsClause.defaultedArg) {
+        if (ourConstructor && !constructorHasDefault) {
+            auto& diag = context.addDiag(diag::InvalidExtendsDefault, ourConstructor->location);
+            diag.addNote(diag::NotePreviousUsage, extendsClause.defaultedArg->sourceRange());
+        }
+
+        constructorHasDefault = true;
     }
 
     // If we have a base class constructor and nothing called it, make sure
