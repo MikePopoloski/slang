@@ -435,6 +435,10 @@ Token Preprocessor::nextRaw() {
         }
     }
 
+    // Ensure EoL at the end of trivia to prevent inlining issues
+    if (trivia.empty() || trivia.back().kind != TriviaKind::EndOfLine)
+        trivia.push_back(Trivia(TriviaKind::EndOfLine, ""sv));
+
     // finally found a real token to return, so update trivia and get out of here
     return token.withTrivia(alloc, trivia.copy(alloc));
 }

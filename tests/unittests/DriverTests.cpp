@@ -241,6 +241,19 @@ TEST_CASE("Driver single-unit parsing") {
     CHECK(driver.reportParseDiags());
 }
 
+TEST_CASE("Driver single-unit parsing files with no EOL") {
+    Driver driver;
+    driver.addStandardArgs();
+
+    auto args = fmt::format("testfoo \"{0}file_with_no_eol.sv\" "
+                            "\"{0}file_uses_define_in_file_with_no_eol.sv\" --single-unit",
+                            findTestDir());
+    CHECK(driver.parseCommandLine(args));
+    CHECK(driver.processOptions());
+    CHECK(driver.parseAllSources());
+    CHECK(driver.reportParseDiags());
+}
+
 TEST_CASE("Driver parsing with library modules") {
     auto guard = OS::captureOutput();
 
