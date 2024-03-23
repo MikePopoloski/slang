@@ -1357,3 +1357,32 @@ endclass
     CHECK(diagnostics[2].code == diag::WrongLanguageVersion);
     CHECK(diagnostics[3].code == diag::DefaultArgNotAllowed);
 }
+
+TEST_CASE("Class method override specifier parsing") {
+    auto& text = R"(
+class A;
+    function :initial :final foo();
+    endfunction
+endclass
+
+class B;
+    extern task :extends bar();
+
+    function :final :initial :initial :extends func1; endfunction
+
+    pure virtual function :final int blah();
+endclass
+
+function :extends B::bar();
+endfunction
+)";
+
+    parseCompilationUnit(text, LanguageVersion::v1800_2023);
+
+    REQUIRE(diagnostics.size() == 5);
+    CHECK(diagnostics[0].code == diag::FinalSpecifierLast);
+    CHECK(diagnostics[1].code == diag::DuplicateClassSpecifier);
+    CHECK(diagnostics[2].code == diag::ClassSpecifierConflict);
+    CHECK(diagnostics[3].code == diag::FinalWithPure);
+    CHECK(diagnostics[4].code == diag::SpecifiersNotAllowed);
+}

@@ -1291,8 +1291,13 @@ Name target
 BindTargetList? targetInstances
 Member instantiation
 
+ClassSpecifier
+token colon
+token keyword
+
 FunctionPrototype
 token keyword
+list<ClassSpecifier> specifiers
 token lifetime
 DataType returnType
 Name name
@@ -1348,10 +1353,6 @@ DefaultExtendsClauseArg? defaultedArg
 ImplementsClause
 token keyword
 separated_list<Name> interfaces
-
-ClassSpecifier
-token colon
-token keyword
 
 ClassDeclaration base=Member
 token virtualOrInterface

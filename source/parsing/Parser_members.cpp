@@ -659,6 +659,44 @@ FunctionPrototypeSyntax& Parser::parseFunctionPrototype(SyntaxKind parentKind,
     else
         keyword = expect(TokenKind::FunctionKeyword);
 
+    bool erroredOnFinal = false;
+    SmallVector<ClassSpecifierSyntax*> specifiers;
+    while (peek(TokenKind::Colon)) {
+        auto specifier = parseClassSpecifier();
+        SLANG_ASSERT(specifier);
+
+        if (!specifier->keyword.isMissing()) {
+            if (specifiers.empty() && !options.has(FunctionOptions::AllowOverrideSpecifiers))
+                addDiag(diag::SpecifiersNotAllowed, specifier->sourceRange());
+
+            for (auto other : specifiers) {
+                const auto sk = specifier->keyword;
+                const auto ok = other->keyword;
+
+                if (sk.kind == ok.kind) {
+                    addDiag(diag::DuplicateClassSpecifier, sk.range())
+                        << sk.valueText() << ok.range();
+                    break;
+                }
+
+                if (ok.kind == TokenKind::FinalKeyword && !erroredOnFinal) {
+                    erroredOnFinal = true;
+                    addDiag(diag::FinalSpecifierLast, ok.range());
+                    break;
+                }
+
+                if (!ok.isMissing() && ok.kind != TokenKind::FinalKeyword &&
+                    sk.kind != TokenKind::FinalKeyword) {
+                    addDiag(diag::ClassSpecifierConflict, sk.range())
+                        << sk.valueText() << ok.range() << ok.valueText();
+                    break;
+                }
+            }
+        }
+
+        specifiers.push_back(specifier);
+    }
+
     auto lifetime = parseLifetime();
     if (lifetime && options.has(FunctionOptions::IsPrototype))
         addDiag(diag::LifetimeForPrototype, lifetime.range());
@@ -716,16 +754,19 @@ FunctionPrototypeSyntax& Parser::parseFunctionPrototype(SyntaxKind parentKind,
     }
 
     auto portList = parseFunctionPortList(options);
-    return factory.functionPrototype(keyword, lifetime, *returnType, name, portList);
+    return factory.functionPrototype(keyword, specifiers.copy(alloc), lifetime, *returnType, name,
+                                     portList);
 }
 
 FunctionDeclarationSyntax& Parser::parseFunctionDeclaration(AttrList attributes,
                                                             SyntaxKind functionKind,
                                                             TokenKind endKind,
-                                                            SyntaxKind parentKind) {
+                                                            SyntaxKind parentKind,
+                                                            bitmask<FunctionOptions> options) {
     Token end;
     bool isConstructor;
-    auto& prototype = parseFunctionPrototype(parentKind, FunctionOptions::AllowImplicitReturn,
+    auto& prototype = parseFunctionPrototype(parentKind,
+                                             options | FunctionOptions::AllowImplicitReturn,
                                              &isConstructor);
 
     auto semi = expect(TokenKind::Semicolon);
@@ -1256,7 +1297,6 @@ MemberSyntax* Parser::parseClassMember(bool isIfaceClass) {
             if (!isMethodQualifier(qual.kind)) {
                 auto& diag = addDiag(diag::InvalidMethodQualifier, qual.range());
                 diag << qual.rawText();
-                isPure = true;
                 break;
             }
 
@@ -1288,11 +1328,25 @@ MemberSyntax* Parser::parseClassMember(bool isIfaceClass) {
             }
         };
 
+        bitmask<FunctionOptions> funcOptions;
+        if (!isIfaceClass)
+            funcOptions = FunctionOptions::AllowOverrideSpecifiers;
+
         // Pure or extern functions don't have bodies.
         if (isPureOrExtern) {
             auto& proto = parseFunctionPrototype(SyntaxKind::ClassDeclaration,
-                                                 FunctionOptions::IsPrototype);
+                                                 funcOptions | FunctionOptions::IsPrototype);
             checkProto(proto, false);
+
+            // Final specifier is illegal on pure virtual methods.
+            if (isPure) {
+                for (auto specifier : proto.specifiers) {
+                    if (specifier->keyword.kind == TokenKind::FinalKeyword) {
+                        addDiag(diag::FinalWithPure, specifier->sourceRange());
+                        break;
+                    }
+                }
+            }
 
             return &factory.classMethodPrototype(attributes, qualifiers, proto,
                                                  expect(TokenKind::Semicolon));
@@ -1303,7 +1357,7 @@ MemberSyntax* Parser::parseClassMember(bool isIfaceClass) {
             auto endKind = kind == TokenKind::TaskKeyword ? TokenKind::EndTaskKeyword
                                                           : TokenKind::EndFunctionKeyword;
             auto& funcDecl = parseFunctionDeclaration({}, declKind, endKind,
-                                                      SyntaxKind::ClassDeclaration);
+                                                      SyntaxKind::ClassDeclaration, funcOptions);
             checkProto(*funcDecl.prototype, true);
 
             // If this is a scoped name, it should be an out-of-block definition for

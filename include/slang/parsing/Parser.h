@@ -115,9 +115,12 @@ enum class FunctionOptions {
     IsPrototype = 1 << 2,
 
     /// Allow use of the 'default' argument.
-    AllowDefaultArg = 1 << 3
+    AllowDefaultArg = 1 << 3,
+
+    /// Allow override specifiers to be declared on the function prototype.
+    AllowOverrideSpecifiers = 1 << 4
 };
-SLANG_BITMASK(FunctionOptions, AllowDefaultArg)
+SLANG_BITMASK(FunctionOptions, AllowOverrideSpecifiers)
 
 } // namespace detail
 
@@ -293,7 +296,7 @@ private:
     syntax::FunctionPortBaseSyntax& parseFunctionPort(bitmask<FunctionOptions> options);
     syntax::FunctionPortListSyntax* parseFunctionPortList(bitmask<FunctionOptions> options);
     syntax::FunctionPrototypeSyntax& parseFunctionPrototype(syntax::SyntaxKind parentKind, bitmask<FunctionOptions> options, bool* isConstructor = nullptr);
-    syntax::FunctionDeclarationSyntax& parseFunctionDeclaration(AttrList attributes, syntax::SyntaxKind functionKind, TokenKind endKind, syntax::SyntaxKind parentKind);
+    syntax::FunctionDeclarationSyntax& parseFunctionDeclaration(AttrList attributes, syntax::SyntaxKind functionKind, TokenKind endKind, syntax::SyntaxKind parentKind, bitmask<FunctionOptions> options = {});
     Token parseLifetime();
     std::span<syntax::SyntaxNode*> parseBlockItems(TokenKind endKind, Token& end, bool inConstructor);
     syntax::GenvarDeclarationSyntax& parseGenvarDeclaration(AttrList attributes);
