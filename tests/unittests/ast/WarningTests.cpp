@@ -781,6 +781,22 @@ module m;
 
     logic [3:0] k, l;
     assign k = 4'(l);
+
+    logic [7:0] n;
+    assign n = type(n)'({k, l});
+
+    // This one isn't useless.
+    typedef int DA[];
+    localparam p1 = DA'({1, 2, 3});
+
+    // This one is.
+    localparam DA p2 = DA'({1, 2, 3});
+
+    // Not useless.
+    localparam p3 = DA'(1 ? '{1, 2, 3} : p1);
+
+    // Useless.
+    localparam p4 = int'(1 ? 2 : 3);
 endmodule
 )");
 
@@ -788,7 +804,7 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 2);
-    CHECK(diags[0].code == diag::UselessCast);
-    CHECK(diags[1].code == diag::UselessCast);
+    REQUIRE(diags.size() == 5);
+    for (size_t i = 0; i < 5; i++)
+        CHECK(diags[i].code == diag::UselessCast);
 }

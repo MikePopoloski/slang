@@ -759,78 +759,117 @@ void AssignmentExpression::serializeTo(ASTSerializer& serializer) const {
         serializer.write("timingControl", *timingControl);
 }
 
-Expression& ConversionExpression::fromSyntax(Compilation& compilation,
-                                             const CastExpressionSyntax& syntax,
-                                             const ASTContext& context) {
+static bool actuallyNeededCast(const Type& type, const Expression& operand) {
+    // Check whether a cast was needed for the given operand to
+    // reach the final type. This is true when the operand requires
+    // an assignment-like context to determine its result.
+    switch (operand.kind) {
+        case ExpressionKind::NewArray:
+        case ExpressionKind::NewClass:
+        case ExpressionKind::NewCovergroup:
+        case ExpressionKind::SimpleAssignmentPattern:
+        case ExpressionKind::StructuredAssignmentPattern:
+        case ExpressionKind::ReplicatedAssignmentPattern:
+        case ExpressionKind::TaggedUnion:
+            return true;
+        case ExpressionKind::Concatenation:
+            return operand.type->isUnpackedArray();
+        case ExpressionKind::MinTypMax:
+            return actuallyNeededCast(type, operand.as<MinTypMaxExpression>().selected());
+        case ExpressionKind::ConditionalOp: {
+            auto& cond = operand.as<ConditionalExpression>();
+            return actuallyNeededCast(type, cond.left()) || actuallyNeededCast(type, cond.right());
+        }
+        default:
+            return false;
+    }
+}
+
+Expression& ConversionExpression::fromSyntax(Compilation& comp, const CastExpressionSyntax& syntax,
+                                             const ASTContext& context,
+                                             const Type* assignmentTarget) {
     auto& targetExpr = bind(*syntax.left, context, ASTFlags::AllowDataType);
-    auto& operand = selfDetermined(compilation, *syntax.right, context, ASTFlags::StreamingAllowed);
+    if (targetExpr.bad())
+        return badExpr(comp, nullptr);
 
-    const auto* type = &compilation.getErrorType();
-    auto result = [&](ConversionKind cast = ConversionKind::Explicit) {
-        return compilation.emplace<ConversionExpression>(*type, cast, operand,
-                                                         syntax.sourceRange());
-    };
-
-    if (targetExpr.bad() || operand.bad())
-        return badExpr(compilation, result());
-
+    auto type = &comp.getErrorType();
+    Expression* operand;
     if (targetExpr.kind == ExpressionKind::DataType) {
         type = targetExpr.type;
         if (!type->isSimpleType() && !type->isError() && !type->isString() &&
             syntax.left->kind != SyntaxKind::TypeReference) {
             context.addDiag(diag::BadCastType, targetExpr.sourceRange) << *type;
-            return badExpr(compilation, result());
+            return badExpr(comp, nullptr);
         }
+
+        operand = &create(comp, *syntax.right, context, ASTFlags::StreamingAllowed, type);
+        selfDetermined(context, operand);
+
+        if (operand->bad())
+            return badExpr(comp, nullptr);
     }
     else {
         auto val = context.evalInteger(targetExpr);
         if (!val || !context.requireGtZero(val, targetExpr.sourceRange))
-            return badExpr(compilation, result());
+            return badExpr(comp, nullptr);
 
         bitwidth_t width = bitwidth_t(*val);
         if (!context.requireValidBitWidth(width, targetExpr.sourceRange))
-            return badExpr(compilation, result());
+            return badExpr(comp, nullptr);
 
-        if (!operand.type->isIntegral()) {
+        operand = &selfDetermined(comp, *syntax.right, context, ASTFlags::StreamingAllowed);
+        if (operand->bad())
+            return badExpr(comp, nullptr);
+
+        if (!operand->type->isIntegral()) {
             auto& diag = context.addDiag(diag::BadIntegerCast, syntax.apostrophe.location());
-            diag << *operand.type;
-            diag << targetExpr.sourceRange << operand.sourceRange;
-            return badExpr(compilation, result());
+            diag << *operand->type;
+            diag << targetExpr.sourceRange << operand->sourceRange;
+            return badExpr(comp, nullptr);
         }
 
-        type = &compilation.getType(width, operand.type->getIntegralFlags());
+        type = &comp.getType(width, operand->type->getIntegralFlags());
     }
 
-    if (!type->isCastCompatible(*operand.type)) {
+    auto result = [&](ConversionKind cast = ConversionKind::Explicit) {
+        return comp.emplace<ConversionExpression>(*type, cast, *operand, syntax.sourceRange());
+    };
+
+    if (!type->isCastCompatible(*operand->type)) {
         if (!Bitstream::checkClassAccess(*type, context, targetExpr.sourceRange)) {
-            return badExpr(compilation, result());
+            return badExpr(comp, result());
         }
 
-        if (operand.kind == ExpressionKind::Streaming) {
+        if (operand->kind == ExpressionKind::Streaming) {
             if (!Bitstream::isBitstreamCast(*type,
-                                            operand.as<StreamingConcatenationExpression>())) {
+                                            operand->as<StreamingConcatenationExpression>())) {
                 auto& diag = context.addDiag(diag::BadStreamCast, syntax.apostrophe.location());
                 diag << *type;
-                diag << targetExpr.sourceRange << operand.sourceRange;
-                return badExpr(compilation, result());
+                diag << targetExpr.sourceRange << operand->sourceRange;
+                return badExpr(comp, result());
             }
         }
-        else if (!type->isBitstreamCastable(*operand.type)) {
+        else if (!type->isBitstreamCastable(*operand->type)) {
             auto& diag = context.addDiag(diag::BadConversion, syntax.apostrophe.location());
-            diag << *operand.type << *type;
-            diag << targetExpr.sourceRange << operand.sourceRange;
-            return badExpr(compilation, result());
+            diag << *operand->type << *type;
+            diag << targetExpr.sourceRange << operand->sourceRange;
+            return badExpr(comp, result());
         }
-        else if (!Bitstream::checkClassAccess(*operand.type, context, operand.sourceRange)) {
-            return badExpr(compilation, result());
+        else if (!Bitstream::checkClassAccess(*operand->type, context, operand->sourceRange)) {
+            return badExpr(comp, result());
         }
 
         return *result(ConversionKind::BitstreamCast);
     }
 
-    if (type->isMatching(*operand.type)) {
+    // We have a useless cast if the type of the operand matches what we're casting to, unless:
+    // - We needed the assignment-like context of the cast (like for an unpacked array concat)
+    // - We weren't already in an assignment-like context of the correct type
+    if (type->isMatching(*operand->type) &&
+        ((assignmentTarget && assignmentTarget->isMatching(*type)) ||
+         !actuallyNeededCast(*type, *operand))) {
         context.addDiag(diag::UselessCast, syntax.apostrophe.location())
-            << *operand.type << targetExpr.sourceRange << operand.sourceRange;
+            << *operand->type << targetExpr.sourceRange << operand->sourceRange;
     }
 
     return *result();

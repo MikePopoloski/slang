@@ -3503,3 +3503,16 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::NonblockingDynamicAssign);
 }
+
+TEST_CASE("v1800-2023 clarification: static casts are assignment-like contexts") {
+    auto tree = SyntaxTree::fromText(R"(
+module top;
+  typedef int DA[];
+  localparam p = DA'('{1, 2, 3});
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

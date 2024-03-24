@@ -856,7 +856,8 @@ Expression& Expression::create(Compilation& compilation, const ExpressionSyntax&
             break;
         case SyntaxKind::CastExpression:
             result = &ConversionExpression::fromSyntax(compilation,
-                                                       syntax.as<CastExpressionSyntax>(), context);
+                                                       syntax.as<CastExpressionSyntax>(), context,
+                                                       assignmentTarget);
             break;
         case SyntaxKind::SignedCastExpression:
             result = &ConversionExpression::fromSyntax(compilation,

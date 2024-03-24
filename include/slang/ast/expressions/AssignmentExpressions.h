@@ -101,7 +101,7 @@ public:
 
     static Expression& fromSyntax(Compilation& compilation,
                                   const syntax::CastExpressionSyntax& syntax,
-                                  const ASTContext& context);
+                                  const ASTContext& context, const Type* assignmentTarget);
     static Expression& fromSyntax(Compilation& compilation,
                                   const syntax::SignedCastExpressionSyntax& syntax,
                                   const ASTContext& context);
