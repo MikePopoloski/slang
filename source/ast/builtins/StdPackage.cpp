@@ -24,6 +24,7 @@ using namespace syntax;
 static const Symbol& createProcessClass(Compilation& c) {
     ClassBuilder builder(c, "process");
     builder.type.isAbstract = true;
+    builder.type.isFinal = true;
 
     ASTContext enumCtx(builder.type, LookupLocation(&builder.type, 1));
     auto stateEnum = c.emplace<EnumType>(c, NL, c.getIntType(), enumCtx);
