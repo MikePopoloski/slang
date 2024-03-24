@@ -19,6 +19,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Set membership operations (case statements, inside operator) always allow unbounded literals
 * Unbounded literals can only be assigned to parameters with simple bit vector types
 * $cast arguments don't need to be singular at compile time
+* Checking for multi-driven variables in subroutines invoked from always_comb/_latch/_ff doesn't apply to tasks, only functions
+* Non-blocking assignments to elements of dynamic arrays are not allowed
+* Static casts are assignment-like contexts
+* Tagged union expressions must be primaries only (binary expressions are not allowed)
 #### New Features in IEEE 1800-2023
 * Triple quoted (multiline) string literals
 * Macro stringification with triple quoted strings
@@ -27,9 +31,16 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * The `timescale directive is disallowed inside design elements
 * Boolean expressions in conditional directives (ifdef, ifndef)
 * Function call expressions can be chained (slang already supported this but several issues related to it were fixed)
-* type(this) is now allowed in static contexts within class declarations
+* `type(this)` is now allowed in static contexts within class declarations
 * Soft packed unions
 * The `index` method of array iterators can be renamed via an argument to the method call
+* Unpacked arrays have a built-in `map` method
+* Classes can be declared `final`
+* Class constructor argument lists and `extends` argument lists can be declared `default`
+* Class methods can be declared `initial`, `extends`, and `final`
+* Added the `weak_reference` built-in class
+* Interface classes can be declared within other classes
+* The built-in `process` class is declared `final`
 
 ### General Features
 * Added [-Wmultibit-edge](https://sv-lang.com/warning-ref.html#multibit-edge) (on by default) to warn about clock edge triggers on multibit expressions
@@ -69,6 +80,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Fixed an infinite loop when parsing case statements with malformed pattern items
 * Added checking for several missing invalid corner cases in user-defined primitive declarations
 * Fixed the propagation of unbounded literals through parameters used in expressions
+* Fixed handling of nested modules to be properly independent of each other when there are multiple instances of their parent module
+* Fixed handling of bind directives that target nested modules
+* Fixed handling of bind directives that appear in uninstantiated generate blocks
+* Fixed handling of include files that don't contain a newline character (thanks to @ihathbeer)
+* Fixed handling of classes that declare a member named "\new" with an escaped identifier
+* chandles are properly allowed in non-edge event expressions
 
 
 ## [v5.0] - 2023-12-26
