@@ -321,7 +321,7 @@ TimingControl& SignalEventControl::fromExpr(Compilation& compilation, EdgeKind e
                             expr.kind == ExpressionKind::ClockingEvent;
 
     if (edge == EdgeKind::None) {
-        if (expr.type->isAggregate() || expr.type->isCHandle() || expr.type->isPropertyType() ||
+        if (expr.type->isAggregate() || expr.type->isPropertyType() ||
             (expr.type->isVoid() && !isClocking)) {
             context.addDiag(diag::InvalidEventExpression, expr.sourceRange) << *expr.type;
             return badCtrl(compilation, result);
