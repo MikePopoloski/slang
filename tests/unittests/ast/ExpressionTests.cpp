@@ -3255,6 +3255,24 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
+TEST_CASE("v1800-2023 clarification: multi-driven subroutine checking doesn't apply to tasks") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int i;
+    task t;
+        i <= 1;
+    endtask
+
+    always_comb t();
+    always_comb t();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
 TEST_CASE("v1800-2023: Unsized integer literals can be any bit width") {
     auto options = optionsFor(LanguageVersion::v1800_2023);
     auto tree = SyntaxTree::fromText(R"(

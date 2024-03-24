@@ -372,7 +372,7 @@ Expression& CallExpression::fromArgs(Compilation& compilation, const Subroutine&
 
     // If this subroutine is invoked from a procedure, register drivers for this
     // particular procedure to detect multiple driver violations.
-    if (!thisClass) {
+    if (!thisClass && symbol.subroutineKind == SubroutineKind::Function) {
         if (auto proc = context.getProceduralBlock(); proc && !context.scope->isUninstantiated())
             addSubroutineDrivers(*proc, symbol, *result);
     }
@@ -917,7 +917,9 @@ public:
     void handle(const CallExpression& expr) {
         if (!expr.isSystemCall() && !expr.thisClass()) {
             auto& subroutine = *std::get<0>(expr.subroutine);
-            if (visitedSubs.emplace(&subroutine).second) {
+            if (subroutine.subroutineKind == SubroutineKind::Function &&
+                visitedSubs.emplace(&subroutine).second) {
+
                 DriverVisitor visitor(procedure, visitedSubs, subroutine, callExpr);
                 subroutine.getBody().visit(visitor);
             }
