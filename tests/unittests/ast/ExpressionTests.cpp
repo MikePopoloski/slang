@@ -3484,3 +3484,22 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::WrongLanguageVersion);
 }
+
+TEST_CASE("v1800-2023 clarification: non-blocking assignments to elements of dynamic arrays are "
+          "not allowed") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int i[];
+    initial begin
+        i[0] <= 1;
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::NonblockingDynamicAssign);
+}
