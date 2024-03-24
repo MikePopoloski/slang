@@ -63,8 +63,12 @@ ExpressionSyntax& Parser::parseSubExpression(bitmask<ExpressionOptions> options,
         auto member = expect(TokenKind::Identifier);
 
         ExpressionSyntax* expr = nullptr;
-        if (isPossibleExpression(peek().kind))
-            expr = &parseExpression();
+        if (isPossibleExpression(peek().kind)) {
+            // This is not allowed to be a binary expression,
+            // so use a high precedence to avoid taking any
+            // binary operators that may trail our tag expr.
+            expr = &parseSubExpression(ExpressionOptions::None, INT_MAX);
+        }
 
         return factory.taggedUnionExpression(tagged, member, expr);
     }
