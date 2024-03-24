@@ -1202,3 +1202,50 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Weak References") {
+    auto options = optionsFor(LanguageVersion::v1800_2023);
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    class A;
+    endclass
+
+    A a = new;
+    weak_reference #(A) ref1 = new (a);
+    weak_reference #(A) ref2 = new (a);
+
+    longint l = weak_reference #(A)::get_id(a);
+
+    initial begin
+        assert(ref1 != ref2);
+        assert(ref1.get() == ref2.get());
+
+        ref1.clear();
+        ref2.clear();
+    end
+endmodule
+)",
+                                     options);
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Weak reference errors") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    weak_reference a;
+    weak_reference #(int) b;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::NoDefaultSpecialization);
+    CHECK(diags[1].code == diag::WrongLanguageVersion);
+    CHECK(diags[2].code == diag::TypeIsNotAClass);
+}

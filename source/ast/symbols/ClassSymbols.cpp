@@ -981,7 +981,7 @@ const Type* GenericClassDefSymbol::getSpecializationImpl(
     // specialization for later lookup. If we have a specialization function,
     // call that instead of trying to create from our syntax node.
     if (specializeFunc)
-        specializeFunc(comp, *classType);
+        specializeFunc(comp, *classType, instanceLoc);
     else
         classType->populate(*scope, getSyntax()->as<ClassDeclarationSyntax>());
     specMap.emplace(key, classType);

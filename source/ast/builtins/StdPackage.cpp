@@ -13,6 +13,7 @@
 #include "slang/ast/symbols/SubroutineSymbols.h"
 #include "slang/ast/symbols/SymbolBuilders.h"
 #include "slang/ast/types/AllTypes.h"
+#include "slang/diagnostics/SysFuncsDiags.h"
 
 namespace slang::ast::builtins {
 
@@ -88,7 +89,7 @@ static const Symbol& createSemaphoreClass(Compilation& c) {
 }
 
 static const Symbol& createMailboxClass(Compilation& c) {
-    auto specialize = [](Compilation& c, ClassType& ct) {
+    auto specialize = [](Compilation& c, ClassType& ct, SourceLocation) {
         // Get a reference to the type parameter so we can use it
         // for functions that we build.
         auto& typeParam = ct.find<TypeParameterSymbol>("T");
@@ -139,12 +140,48 @@ static const Symbol& createRandomizeFunc(Compilation& c) {
     return builder.symbol;
 }
 
+static const Symbol& createWeakReference(Compilation& c) {
+    auto specialize = [](Compilation& c, ClassType& ct, SourceLocation instanceLoc) {
+        // Get a reference to the type parameter so we can use it
+        // for functions that we build.
+        auto& typeParam = ct.find<TypeParameterSymbol>("T");
+        auto& t = typeParam.targetType.getType();
+
+        if (!t.isClass() && !t.isError())
+            ct.addDiag(diag::TypeIsNotAClass, instanceLoc) << t;
+
+        if (auto lv = c.getOptions().languageVersion; lv < LanguageVersion::v1800_2023)
+            ct.addDiag(diag::WrongLanguageVersion, instanceLoc) << toString(lv);
+
+        ClassBuilder builder(c, ct);
+
+        auto& void_t = c.getVoidType();
+
+        auto ctor = builder.addMethod("new", void_t);
+        ctor.addFlags(MethodFlags::Constructor);
+        ctor.addArg("referent", t, ArgumentDirection::In);
+
+        builder.addMethod("get", t);
+        builder.addMethod("clear", void_t);
+
+        auto get_id = builder.addMethod("get_id", c.getType(SyntaxKind::LongIntType));
+        get_id.addArg("obj", t, ArgumentDirection::In);
+        get_id.addFlags(MethodFlags::Static);
+    };
+
+    auto& weakRef = *c.allocGenericClass("weak_reference", NL, specialize);
+    weakRef.addParameterDecl(DefinitionSymbol::ParameterDecl("T", NL, false, true, nullptr));
+
+    return weakRef;
+}
+
 const PackageSymbol& createStdPackage(Compilation& c) {
     auto pkg = c.emplace<PackageSymbol>(c, "std", NL, c.getWireNetType(), VariableLifetime::Static);
     pkg->addMember(createProcessClass(c));
     pkg->addMember(createSemaphoreClass(c));
     pkg->addMember(createMailboxClass(c));
     pkg->addMember(createRandomizeFunc(c));
+    pkg->addMember(createWeakReference(c));
 
     return *pkg;
 }

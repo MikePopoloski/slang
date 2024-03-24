@@ -124,7 +124,7 @@ IEEE 1800-2017 SystemVerilog Language Reference Manual (LRM).
 {{m-success}} 8.27 | Typedef class | v0.5
 {{m-dim}}     8.28 | Classes and structures | N/A
 {{m-dim}}     8.29 | Memory management | N/A
-{{m-danger}}  8.30 | Weak references | no
+{{m-success}} 8.30 | Weak references | v6.0
 
 ## 9. Processes
 

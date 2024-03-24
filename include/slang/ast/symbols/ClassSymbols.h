@@ -161,13 +161,15 @@ private:
 /// must first be specialized in order to be a type usable in expressions and declarations.
 class SLANG_EXPORT GenericClassDefSymbol : public Symbol {
 public:
+    using SpecializeFunc = function_ref<void(Compilation&, ClassType&, SourceLocation)>;
+
     /// Set to true if the generic class is an interface class.
     bool isInterface = false;
 
     GenericClassDefSymbol(std::string_view name, SourceLocation loc) :
         Symbol(SymbolKind::GenericClassDef, name, loc) {}
     GenericClassDefSymbol(std::string_view name, SourceLocation loc,
-                          function_ref<void(Compilation&, ClassType&)> specializeFunc) :
+                          SpecializeFunc specializeFunc) :
         Symbol(SymbolKind::GenericClassDef, name, loc), specializeFunc{specializeFunc} {}
 
     /// Gets the default specialization for the class, or nullptr if the generic
@@ -243,7 +245,7 @@ private:
     mutable std::optional<const Type*> defaultSpecialization;
     mutable const ForwardingTypedefSymbol* firstForward = nullptr;
     mutable uint32_t recursionDepth = 0;
-    function_ref<void(Compilation&, ClassType&)> specializeFunc;
+    SpecializeFunc specializeFunc;
 };
 
 /// Represents a named constraint block declaration within a class.
