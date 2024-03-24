@@ -3175,3 +3175,18 @@ function void C::f5(); endfunction
     CHECK(diags[4].code == diag::OverridingInitial);
     CHECK(diags[5].code == diag::OverridingExtends);
 }
+
+TEST_CASE("v1800-2023: Interface class can be declared inside a class") {
+    auto options = optionsFor(LanguageVersion::v1800_2023);
+    auto tree = SyntaxTree::fromText(R"(
+class A;
+  interface class B;
+  endclass
+endclass
+)",
+                                     options);
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
