@@ -3516,3 +3516,29 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("v1800-2023: value range expressions with tolerance operators") {
+    auto options = optionsFor(LanguageVersion::v1800_2023);
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    localparam a = 5.3 inside { "ASDF", 5.0, [4.0+/-2] };
+    localparam b = 5.3 inside { "ASDF", 5.0, [7.0+%-25] };
+    localparam c = 5 inside { [7+%-25] };
+    localparam d = -6 inside { [-7+%-25] };
+endmodule
+)",
+                                     options);
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto getValue = [&](std::string_view name) {
+        return compilation.getRoot().lookupName<ParameterSymbol>(name).getValue();
+    };
+
+    CHECK(getValue("m.a").integer() == 1);
+    CHECK(getValue("m.b").integer() == 1);
+    CHECK(getValue("m.c").integer() == 0);
+    CHECK(getValue("m.d").integer() == 1);
+}

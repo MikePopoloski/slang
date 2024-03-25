@@ -397,6 +397,18 @@ Token Lexer::lexToken(KeywordVersion keywordVersion) {
                 case ':':
                     advance();
                     return create(TokenKind::PlusColon);
+                case '/':
+                    if (peek(1) == '-') {
+                        advance(2);
+                        return create(TokenKind::PlusDivMinus);
+                    }
+                    break;
+                case '%':
+                    if (peek(1) == '-') {
+                        advance(2);
+                        return create(TokenKind::PlusModMinus);
+                    }
+                    break;
             }
             return create(TokenKind::Plus);
         case ',':

@@ -110,8 +110,10 @@ void registerNumeric(py::module_& m) {
         .def_static("createFillZ", &SVInt::createFillZ, "bitWidth"_a, "isSigned"_a)
         .def_static("fromDigits", &SVInt::fromDigits, "bits"_a, "base"_a, "isSigned"_a,
                     "anyUnknown"_a, "digits"_a)
-        .def_static("fromDouble", &SVInt::fromDouble, "bits"_a, "value"_a, "isSigned"_a)
-        .def_static("fromFloat", &SVInt::fromFloat, "bits"_a, "value"_a, "isSigned"_a)
+        .def_static("fromDouble", &SVInt::fromDouble, "bits"_a, "value"_a, "isSigned"_a,
+                    "round"_a = true)
+        .def_static("fromFloat", &SVInt::fromFloat, "bits"_a, "value"_a, "isSigned"_a,
+                    "round"_a = true)
         .def_static("conditional", &SVInt::conditional, "condition"_a, "lhs"_a, "rhs"_a)
         .def_static("logicalImpl", &SVInt::logicalImpl, "lhs"_a, "rhs"_a)
         .def_static("logicalEquiv", &SVInt::logicalEquiv, "lhs"_a, "rhs"_a)

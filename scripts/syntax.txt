@@ -223,7 +223,7 @@ Expression? expr
 ValueRangeExpression base=Expression
 token openBracket
 Expression left
-token colon
+token op
 Expression right
 token closeBracket
 

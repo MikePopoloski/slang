@@ -516,8 +516,8 @@ public:
                             std::span<logic_t const> digits);
 
     /// Construct from a floating point value.
-    static SVInt fromDouble(bitwidth_t bits, double value, bool isSigned);
-    static SVInt fromFloat(bitwidth_t bits, float value, bool isSigned);
+    static SVInt fromDouble(bitwidth_t bits, double value, bool isSigned, bool round = true);
+    static SVInt fromFloat(bitwidth_t bits, float value, bool isSigned, bool round = true);
 
     /// Evaluates a conditional expression; i.e. condition ? left : right
     static SVInt conditional(const SVInt& condition, const SVInt& lhs, const SVInt& rhs);

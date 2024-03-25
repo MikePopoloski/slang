@@ -722,6 +722,8 @@ std::string_view LexerFacts::getTokenKindText(TokenKind kind) {
         case TokenKind::Plus: return "+";
         case TokenKind::DoublePlus: return "++";
         case TokenKind::PlusColon: return "+:";
+        case TokenKind::PlusDivMinus: return "+/-";
+        case TokenKind::PlusModMinus: return "+%-";
         case TokenKind::Minus: return "-";
         case TokenKind::DoubleMinus: return "--";
         case TokenKind::MinusColon: return "-:";

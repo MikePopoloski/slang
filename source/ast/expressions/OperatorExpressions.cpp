@@ -250,7 +250,8 @@ bool Expression::bindMembershipExpressions(const ASTContext& context, TokenKind 
 
             auto& range = bound->as<ValueRangeExpression>();
             checkType(range.left(), *range.left().type);
-            checkType(range.right(), *range.right().type);
+            if (range.rangeKind == ValueRangeKind::Simple)
+                checkType(range.right(), *range.right().type);
             continue;
         }
 
@@ -2031,43 +2032,71 @@ bool StreamingConcatenationExpression::isFixedSize() const {
 Expression& ValueRangeExpression::fromSyntax(Compilation& comp,
                                              const ValueRangeExpressionSyntax& syntax,
                                              const ASTContext& context) {
-    // Note: value ranges always allow unbounded literals.
-    auto& left = create(comp, *syntax.left, context, ASTFlags::AllowUnboundedLiteral);
-    auto& right = create(comp, *syntax.right, context, ASTFlags::AllowUnboundedLiteral);
-    auto result = comp.emplace<ValueRangeExpression>(comp.getVoidType(), left, right,
+    ValueRangeKind rangeKind;
+    switch (syntax.op.kind) {
+        case TokenKind::PlusDivMinus:
+            rangeKind = ValueRangeKind::AbsoluteTolerance;
+            break;
+        case TokenKind::PlusModMinus:
+            rangeKind = ValueRangeKind::RelativeTolerance;
+            break;
+        default:
+            rangeKind = ValueRangeKind::Simple;
+            break;
+    }
+
+    // Unbounded literals are allowed if we are not a tolerance range.
+    const auto flags = rangeKind == ValueRangeKind::Simple ? ASTFlags::AllowUnboundedLiteral
+                                                           : ASTFlags::None;
+    auto& left = create(comp, *syntax.left, context, flags);
+    auto& right = create(comp, *syntax.right, context, flags);
+    auto result = comp.emplace<ValueRangeExpression>(comp.getVoidType(), rangeKind, left, right,
                                                      syntax.sourceRange());
     if (left.bad() || right.bad())
         return badExpr(comp, result);
 
     auto lt = left.type;
     auto rt = right.type;
-    if (lt->isUnbounded()) {
-        lt = &comp.getIntType();
+
+    if (rangeKind == ValueRangeKind::Simple) {
+        if (lt->isUnbounded()) {
+            lt = &comp.getIntType();
+            if (rt->isUnbounded())
+                context.addDiag(diag::ValueRangeUnbounded, result->sourceRange);
+        }
+
         if (rt->isUnbounded())
-            context.addDiag(diag::ValueRangeUnbounded, result->sourceRange);
+            rt = &comp.getIntType();
+
+        if (!(lt->isNumeric() && rt->isNumeric()) &&
+            !(left.isImplicitString() && right.isImplicitString())) {
+            auto& diag = context.addDiag(diag::BadValueRange, syntax.op.location());
+            diag << left.sourceRange << right.sourceRange << *lt << *rt;
+            return badExpr(comp, result);
+        }
+
+        auto cvl = context.tryEval(left);
+        auto cvr = context.tryEval(right);
+        if (cvl.isInteger() && cvr.isInteger() && bool(cvl.integer() > cvr.integer()))
+            context.addDiag(diag::ReversedValueRange, result->sourceRange);
     }
+    else {
+        if (!lt->isNumeric() || !rt->isNumeric()) {
+            auto& diag = context.addDiag(diag::BadValueRange, syntax.op.location());
+            diag << left.sourceRange << right.sourceRange << *lt << *rt;
+            return badExpr(comp, result);
+        }
 
-    if (rt->isUnbounded())
-        rt = &comp.getIntType();
-
-    if (!(lt->isNumeric() && rt->isNumeric()) &&
-        !(left.isImplicitString() && right.isImplicitString())) {
-        auto& diag = context.addDiag(diag::BadValueRange, syntax.colon.location());
-        diag << left.sourceRange << right.sourceRange << *lt << *rt;
-        return badExpr(comp, result);
+        selfDetermined(context, result->right_);
     }
-
-    auto cvl = context.tryEval(left);
-    auto cvr = context.tryEval(right);
-    if (cvl.isInteger() && cvr.isInteger() && bool(cvl.integer() > cvr.integer()))
-        context.addDiag(diag::ReversedValueRange, result->sourceRange);
 
     return *result;
 }
 
 bool ValueRangeExpression::propagateType(const ASTContext& context, const Type& newType) {
     contextDetermined(context, left_, this, newType);
-    contextDetermined(context, right_, this, newType);
+    if (rangeKind == ValueRangeKind::Simple)
+        contextDetermined(context, right_, this, newType);
     return true;
 }
 
@@ -2082,6 +2111,55 @@ ConstantValue ValueRangeExpression::checkInside(EvalContext& context,
     ConstantValue cvr = right().eval(context);
     if (!cvl || !cvr)
         return nullptr;
+
+    auto convert = [&](const Type& from, const Type& to, SourceRange range, ConstantValue&& cv) {
+        return ConversionExpression::convert(context, from, to, range, std::move(cv),
+                                             ConversionKind::Propagated);
+    };
+
+    if (rangeKind != ValueRangeKind::Simple) {
+        auto& comp = context.getCompilation();
+        if (rangeKind == ValueRangeKind::RelativeTolerance) {
+            // Convert both sides to the common type so we can scale them together.
+            auto l = cvl;
+            auto& lt = *left().type;
+            auto common = binaryOperatorType(comp, &lt, right().type, false);
+            l = convert(lt, *common, left().sourceRange, std::move(l));
+            cvr = convert(*right().type, *common, right().sourceRange, std::move(cvr));
+
+            // Final equation looks like:
+            // cvr = left'(common'(cvl) * common'(cvr) / 100.0);
+            cvr = evalBinaryOperator(BinaryOperator::Multiply, l, cvr).convertToReal();
+            cvr = evalBinaryOperator(BinaryOperator::Divide, cvr, real_t(100.0));
+
+            // Special case for the conversion: LRM says that real -> int truncates
+            // instead of rounding unlike every other case in the language. shrug?
+            if (lt.isIntegral()) {
+                cvr = SVInt::fromDouble(lt.getBitWidth(), cvr.real(), lt.isSigned(),
+                                        /* round */ false);
+            }
+            else {
+                cvr = convert(comp.getRealType(), lt, right().sourceRange, std::move(cvr));
+            }
+        }
+        else {
+            // Convert the rhs to the lhs type.
+            cvr = convert(*right().type, *left().type, right().sourceRange, std::move(cvr));
+        }
+
+        // Form the range, [A - B : A + B], swapping A and B if needed
+        // to form a non-empty range.
+        auto lower = evalBinaryOperator(BinaryOperator::Subtract, cvl, cvr);
+        auto upper = evalBinaryOperator(BinaryOperator::Add, cvl, cvr);
+        if (evalBinaryOperator(BinaryOperator::LessThan, upper, lower).isTrue()) {
+            cvl = std::move(upper);
+            cvr = std::move(lower);
+        }
+        else {
+            cvl = std::move(lower);
+            cvr = std::move(upper);
+        }
+    }
 
     // If a side is unbounded, that comparison is just always true.
     if (cvl.isUnbounded())
@@ -2100,6 +2178,7 @@ ConstantValue ValueRangeExpression::checkInside(EvalContext& context,
 void ValueRangeExpression::serializeTo(ASTSerializer& serializer) const {
     serializer.write("left", left());
     serializer.write("right", right());
+    serializer.write("rangeKind", toString(rangeKind));
 }
 
 UnaryOperator Expression::getUnaryOperator(SyntaxKind kind) {

@@ -305,14 +305,26 @@ private:
     uint64_t bitstreamWidth;
 };
 
+// clang-format off
+#define VRK(x) \
+    x(Simple) \
+    x(AbsoluteTolerance) \
+    x(RelativeTolerance)
+// clang-format on
+SLANG_ENUM(ValueRangeKind, VRK)
+#undef VRK
+
 /// Denotes a range of values by providing expressions for the lower and upper
 /// bounds of the range. This expression needs special handling in the various
 /// places that allow it, since it doesn't really have a type.
 class SLANG_EXPORT ValueRangeExpression : public Expression {
 public:
-    ValueRangeExpression(const Type& type, Expression& left, Expression& right,
-                         SourceRange sourceRange) :
-        Expression(ExpressionKind::ValueRange, type, sourceRange), left_(&left), right_(&right) {}
+    ValueRangeKind rangeKind;
+
+    ValueRangeExpression(const Type& type, ValueRangeKind rangeKind, Expression& left,
+                         Expression& right, SourceRange sourceRange) :
+        Expression(ExpressionKind::ValueRange, type, sourceRange), rangeKind(rangeKind),
+        left_(&left), right_(&right) {}
 
     const Expression& left() const { return *left_; }
     Expression& left() { return *left_; }

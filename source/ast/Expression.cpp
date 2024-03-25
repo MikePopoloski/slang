@@ -653,7 +653,8 @@ bool Expression::isImplicitString() const {
         }
         case ExpressionKind::ValueRange: {
             auto& range = as<ValueRangeExpression>();
-            return range.left().isImplicitString() || range.right().isImplicitString();
+            return range.left().isImplicitString() ||
+                   (range.rangeKind == ValueRangeKind::Simple && range.right().isImplicitString());
         }
         case ExpressionKind::MinTypMax: {
             auto& mtm = as<MinTypMaxExpression>();

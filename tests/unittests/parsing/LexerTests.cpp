@@ -1055,6 +1055,8 @@ TEST_CASE("All Punctuation") {
     testPunctuation(TokenKind::Plus);
     testPunctuation(TokenKind::DoublePlus);
     testPunctuation(TokenKind::PlusColon);
+    testPunctuation(TokenKind::PlusDivMinus);
+    testPunctuation(TokenKind::PlusModMinus);
     testPunctuation(TokenKind::Minus);
     testPunctuation(TokenKind::DoubleMinus);
     testPunctuation(TokenKind::MinusColon);

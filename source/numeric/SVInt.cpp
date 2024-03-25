@@ -402,12 +402,12 @@ SVInt SVInt::fromPow2Digits(bitwidth_t bits, bool isSigned, bool anyUnknown, uin
     return result;
 }
 
-SVInt SVInt::fromDouble(bitwidth_t bits, double value, bool isSigned) {
-    return fromIEEE754<double, 11, 52, 1023>(bits, value, isSigned);
+SVInt SVInt::fromDouble(bitwidth_t bits, double value, bool isSigned, bool round) {
+    return fromIEEE754<double, 11, 52, 1023>(bits, value, isSigned, round);
 }
 
-SVInt SVInt::fromFloat(bitwidth_t bits, float value, bool isSigned) {
-    return fromIEEE754<float, 8, 23, 127>(bits, value, isSigned);
+SVInt SVInt::fromFloat(bitwidth_t bits, float value, bool isSigned, bool round) {
+    return fromIEEE754<float, 8, 23, 127>(bits, value, isSigned, round);
 }
 
 double SVInt::toDouble() const {

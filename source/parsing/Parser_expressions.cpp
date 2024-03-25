@@ -338,10 +338,22 @@ ExpressionSyntax& Parser::parseValueRangeElement(bitmask<ExpressionOptions> opti
 
     auto openBracket = consume();
     auto& left = parseExpression();
-    auto colon = expect(TokenKind::Colon);
+
+    Token op;
+    if (peek(TokenKind::PlusDivMinus) || peek(TokenKind::PlusModMinus)) {
+        op = consume();
+        if (parseOptions.languageVersion < LanguageVersion::v1800_2023) {
+            addDiag(diag::WrongLanguageVersion, op.range())
+                << toString(parseOptions.languageVersion);
+        }
+    }
+    else {
+        op = expect(TokenKind::Colon);
+    }
+
     auto& right = parseExpression();
     auto closeBracket = expect(TokenKind::CloseBracket);
-    return factory.valueRangeExpression(openBracket, left, colon, right, closeBracket);
+    return factory.valueRangeExpression(openBracket, left, op, right, closeBracket);
 }
 
 ConcatenationExpressionSyntax& Parser::parseConcatenation(Token openBrace,

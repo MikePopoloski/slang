@@ -28,6 +28,7 @@ void registerAST(py::module_& m) {
     EXPOSE_ENUM(m, BinaryAssertionOperator);
     EXPOSE_ENUM(m, BinsSelectExprKind);
     EXPOSE_ENUM(m, DimensionKind);
+    EXPOSE_ENUM(m, ValueRangeKind);
 
     py::enum_<VisitAction>(m, "VisitAction")
         .value("Advance", VisitAction::Advance)
