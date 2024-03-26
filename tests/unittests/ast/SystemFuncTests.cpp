@@ -1249,3 +1249,22 @@ endmodule
     CHECK(diags[1].code == diag::WrongLanguageVersion);
     CHECK(diags[2].code == diag::TypeIsNotAClass);
 }
+
+TEST_CASE("v1800-2023 clarification: severity system tasks should work in constant functions") {
+    auto tree = SyntaxTree::fromText(R"(
+function foo(int i);
+    assert(i > 10) else $info("Not greater than 10: %0d", i);
+    assert(i > 9) else $fatal(2);
+endfunction
+
+localparam p = foo(8);
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::InfoTask);
+    CHECK(diags[1].code == diag::FatalTask);
+}
