@@ -461,6 +461,10 @@ public:
     /// @returns true if the width is valid as a bit width and false otherwise
     bool requireValidBitWidth(bitwidth_t width, SourceRange range) const;
 
+    /// Reports an error if time-controlling statements are not allowed in this context.
+    /// @returns true if time-controlling statements are allowed and false otherwise
+    bool requireTimingAllowed(SourceRange range) const;
+
     /// Reports an error if the given width is a valid bit width.
     /// @returns A bitwidth if the provided integer is a valid bit width,
     ///          and std::nullopt otherwise.

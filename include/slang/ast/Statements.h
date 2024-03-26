@@ -944,7 +944,8 @@ public:
     EvalResult evalImpl(EvalContext& context) const;
 
     static Statement& fromSyntax(Compilation& compilation,
-                                 const syntax::WaitForkStatementSyntax& syntax);
+                                 const syntax::WaitForkStatementSyntax& syntax,
+                                 const ASTContext& context);
 
     void serializeTo(const ASTSerializer&) const {}
 

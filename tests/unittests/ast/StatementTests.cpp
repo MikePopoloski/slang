@@ -1222,6 +1222,8 @@ module m;
         @(posedge i) i = 1;
         fork join_any
         t();
+        wait fork;
+        expect(i == 0);
     end
 endmodule
 )");
@@ -1230,11 +1232,13 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 4);
+    REQUIRE(diags.size() == 6);
     CHECK(diags[0].code == diag::TimingInFuncNotAllowed);
     CHECK(diags[1].code == diag::TimingInFuncNotAllowed);
     CHECK(diags[2].code == diag::TimingInFuncNotAllowed);
     CHECK(diags[3].code == diag::TaskFromFinal);
+    CHECK(diags[4].code == diag::TimingInFuncNotAllowed);
+    CHECK(diags[5].code == diag::TimingInFuncNotAllowed);
 }
 
 TEST_CASE("Non-blocking timing control reference to auto") {

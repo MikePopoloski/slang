@@ -225,7 +225,8 @@ const Statement& Statement::bind(const StatementSyntax& syntax, const ASTContext
                                                 stmtCtx);
             break;
         case SyntaxKind::WaitForkStatement:
-            result = &WaitForkStatement::fromSyntax(comp, syntax.as<WaitForkStatementSyntax>());
+            result = &WaitForkStatement::fromSyntax(comp, syntax.as<WaitForkStatementSyntax>(),
+                                                    context);
             break;
         case SyntaxKind::WaitOrderStatement:
             result = &WaitOrderStatement::fromSyntax(comp, syntax.as<WaitOrderStatementSyntax>(),
@@ -2531,6 +2532,9 @@ Statement& ConcurrentAssertionStatement::fromSyntax(
     if (bad || (ifTrue && ifTrue->bad()) || (ifFalse && ifFalse->bad()))
         return badStmt(compilation, result);
 
+    if (assertKind == AssertionKind::Expect && !context.requireTimingAllowed(result->sourceRange))
+        return badStmt(compilation, result);
+
     return *result;
 }
 
@@ -2569,10 +2573,8 @@ Statement& WaitStatement::fromSyntax(Compilation& compilation, const WaitStateme
     if (!context.requireBooleanConvertible(cond))
         return badStmt(compilation, result);
 
-    if (context.flags.has(ASTFlags::Function | ASTFlags::Final) || context.inAlwaysCombLatch()) {
-        context.addDiag(diag::TimingInFuncNotAllowed, syntax.sourceRange());
+    if (!context.requireTimingAllowed(result->sourceRange))
         return badStmt(compilation, result);
-    }
 
     return *result;
 }
@@ -2588,8 +2590,14 @@ void WaitStatement::serializeTo(ASTSerializer& serializer) const {
 }
 
 Statement& WaitForkStatement::fromSyntax(Compilation& compilation,
-                                         const WaitForkStatementSyntax& syntax) {
-    return *compilation.emplace<WaitForkStatement>(syntax.sourceRange());
+                                         const WaitForkStatementSyntax& syntax,
+                                         const ASTContext& context) {
+    auto result = compilation.emplace<WaitForkStatement>(syntax.sourceRange());
+
+    if (!context.requireTimingAllowed(result->sourceRange))
+        return badStmt(compilation, result);
+
+    return *result;
 }
 
 ER WaitForkStatement::evalImpl(EvalContext& context) const {
@@ -2626,11 +2634,9 @@ Statement& WaitOrderStatement::fromSyntax(Compilation& compilation,
 
     auto result = compilation.emplace<WaitOrderStatement>(events.copy(compilation), ifTrue, ifFalse,
                                                           syntax.sourceRange());
-    if (context.flags.has(ASTFlags::Function) || context.flags.has(ASTFlags::Final) ||
-        context.inAlwaysCombLatch()) {
-        context.addDiag(diag::TimingInFuncNotAllowed, syntax.sourceRange());
+
+    if (!context.requireTimingAllowed(result->sourceRange))
         return badStmt(compilation, result);
-    }
 
     return *result;
 }

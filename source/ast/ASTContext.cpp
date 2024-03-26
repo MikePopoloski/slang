@@ -271,6 +271,14 @@ bool ASTContext::requireValidBitWidth(bitwidth_t width, SourceRange range) const
     return true;
 }
 
+bool ASTContext::requireTimingAllowed(SourceRange range) const {
+    if (flags.has(ASTFlags::Function | ASTFlags::Final) || inAlwaysCombLatch()) {
+        addDiag(diag::TimingInFuncNotAllowed, range);
+        return false;
+    }
+    return true;
+}
+
 ConstantValue ASTContext::eval(const Expression& expr, bitmask<EvalFlags> extraFlags) const {
     extraFlags |= EvalFlags::CacheResults;
     if (flags.has(ASTFlags::SpecifyBlock))
