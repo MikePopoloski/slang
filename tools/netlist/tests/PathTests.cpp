@@ -537,7 +537,7 @@ endmodule
 
 module top ();
 
-  u_top top(.i_in());
+  foo u_foo(.i_in());
 
 endmodule
 )");
