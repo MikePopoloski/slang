@@ -452,6 +452,10 @@ public:
             bool isLeftOperand = portDirection == ast::ArgumentDirection::In ||
                                  portDirection == ast::ArgumentDirection::InOut;
             VariableReferenceVisitor visitor(netlist, evalCtx, isLeftOperand);
+            if (portConnection->getExpression() == nullptr) {
+                // Empty port hookup so skip.
+                continue;
+            }
             portConnection->getExpression()->visit(visitor);
             // Given a port hookup of the form:
             //   .foo(expr(x, y))
