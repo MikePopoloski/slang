@@ -453,8 +453,8 @@ public:
                                  portDirection == ast::ArgumentDirection::InOut;
             VariableReferenceVisitor visitor(netlist, evalCtx, isLeftOperand);
             if (portConnection->getExpression() == nullptr) {
-              // Empty port hookup so skip.
-              continue;
+                // Empty port hookup so skip.
+                continue;
             }
             portConnection->getExpression()->visit(visitor);
             // Given a port hookup of the form:
