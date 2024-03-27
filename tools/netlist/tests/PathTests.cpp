@@ -525,3 +525,30 @@ endmodule
     // Valid paths.
     CHECK(!pathFinder.find(*inPort, *outPort).empty());
 }
+
+
+//===---------------------------------------------------------------------===//
+// Test case for #919 (empty port hookup)
+//===---------------------------------------------------------------------===//
+
+TEST_CASE("Test case for #919 (empty port hookup)") {
+    auto tree = SyntaxTree::fromText(R"(
+module foo (input logic i_in);
+endmodule
+
+module top ();
+
+  u_top top(.i_in());
+
+endmodule
+)");
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+    auto netlist = createNetlist(compilation);
+    auto* inPort = netlist.lookupPort("test.in_i");
+    auto* outPort = netlist.lookupPort("test.out_o");
+    PathFinder pathFinder(netlist);
+    // Valid paths.
+    CHECK(!pathFinder.find(*inPort, *outPort).empty());
+}
