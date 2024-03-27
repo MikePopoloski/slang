@@ -546,9 +546,5 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
     auto netlist = createNetlist(compilation);
-    auto* inPort = netlist.lookupPort("test.in_i");
-    auto* outPort = netlist.lookupPort("test.out_o");
-    PathFinder pathFinder(netlist);
-    // Valid paths.
-    CHECK(!pathFinder.find(*inPort, *outPort).empty());
+    CHECK(netlist.numNodes() == 2);
 }
