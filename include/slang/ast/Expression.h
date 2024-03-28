@@ -338,7 +338,8 @@ public:
     /// Returns true if any subexpression of this expression is a hierarchical reference.
     bool hasHierarchicalReference() const;
 
-    /// Casts this expression to the given concrete derived type.
+    /// @brief Casts this expression to the given concrete derived type.
+    ///
     /// Asserts that the type is appropriate given this expression's kind.
     template<typename T>
     T& as() {
@@ -346,7 +347,8 @@ public:
         return *static_cast<T*>(this);
     }
 
-    /// Casts this expression to the given concrete derived type.
+    /// @brief Casts this expression to the given concrete derived type.
+    ///
     /// Asserts that the type is appropriate given this expression's kind.
     template<typename T>
     const T& as() const {
@@ -354,7 +356,8 @@ public:
         return *static_cast<const T*>(this);
     }
 
-    /// Tries to cast this expression to the given concrete derived type.
+    /// @brief Tries to cast this expression to the given concrete derived type.
+    ///
     /// If the type is not appropriate given this expression's kind, returns nullptr.
     template<typename T>
     T* as_if() {
@@ -363,7 +366,8 @@ public:
         return static_cast<T*>(this);
     }
 
-    /// Tries to cast this expression to the given concrete derived type.
+    /// @brief Tries to cast this expression to the given concrete derived type.
+    ///
     /// If the type is not appropriate given this expression's kind, returns nullptr.
     template<typename T>
     const T* as_if() const {
@@ -448,8 +452,10 @@ protected:
                             NamedArgMap& namedArgs);
 };
 
-/// Represents an invalid expression, which is usually generated and inserted
-/// into an expression tree due to violation of language semantics or type checking.
+/// @brief Represents an invalid expression
+///
+/// Usually generated and inserted into an expression tree due
+/// to violation of language semantics or type checking.
 class SLANG_EXPORT InvalidExpression : public Expression {
 public:
     /// A wrapped sub-expression that is considered invalid.

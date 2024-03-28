@@ -432,11 +432,11 @@ Constraint& SolveBeforeConstraint::fromSyntax(const SolveBeforeConstraintSyntax&
 
     auto& comp = context.getCompilation();
     SmallVector<const Expression*> solve;
-    SmallVector<const Expression*> before;
+    SmallVector<const Expression*> after;
     bindExprs(syntax.beforeExpr, solve);
-    bindExprs(syntax.afterExpr, before);
+    bindExprs(syntax.afterExpr, after);
 
-    auto result = comp.emplace<SolveBeforeConstraint>(solve.copy(comp), before.copy(comp));
+    auto result = comp.emplace<SolveBeforeConstraint>(solve.copy(comp), after.copy(comp));
     if (bad)
         return badConstraint(comp, result);
 
@@ -449,8 +449,8 @@ void SolveBeforeConstraint::serializeTo(ASTSerializer& serializer) const {
         serializer.serialize(*item);
     serializer.endArray();
 
-    serializer.startArray("before");
-    for (auto item : before)
+    serializer.startArray("after");
+    for (auto item : after)
         serializer.serialize(*item);
     serializer.endArray();
 }

@@ -18,25 +18,43 @@ class FormalArgumentSymbol;
 /// Represents a subroutine call.
 class SLANG_EXPORT CallExpression : public Expression {
 public:
+    /// Extra information associated with an iterator method call.
     struct IteratorCallInfo {
+        /// The iterator expression specified with the call.
         const Expression* iterExpr = nullptr;
+
+        /// The iterator variable.
         const ValueSymbol* iterVar = nullptr;
     };
 
+    /// Extra information associated with a randomize method call.
     struct RandomizeCallInfo {
+        /// Inline constraints specified with the call, if any.
         const Constraint* inlineConstraints = nullptr;
+
+        /// Extra constraint restrictions that apply, if any.
         std::span<const std::string_view> constraintRestrictions;
     };
 
+    /// Additional context that applies to system subroutine calls.
     struct SystemCallInfo {
+        /// The system subroutine being called.
         not_null<const SystemSubroutine*> subroutine;
+
+        /// The scope in which the call occurs.
         not_null<const Scope*> scope;
+
+        /// Additional information that applies to the call.
         std::variant<std::monostate, IteratorCallInfo, RandomizeCallInfo> extraInfo;
 
+        /// @returns the extra info if this is for an iterator call, and
+        /// an empty pair of nullptr if not.
         std::pair<const Expression*, const ValueSymbol*> getIteratorInfo() const;
     };
 
     using Subroutine = std::variant<const SubroutineSymbol*, SystemCallInfo>;
+
+    /// The subroutine that is being called.
     Subroutine subroutine;
 
     CallExpression(const Subroutine& subroutine, const Type& returnType,
@@ -49,13 +67,22 @@ public:
     /// class handle on which the method is being invoked. Otherwise returns nullptr.
     const Expression* thisClass() const { return thisClass_; }
 
+    /// @returns the arguments to the call.
     std::span<const Expression* const> arguments() const { return arguments_; }
+
+    /// @returns the arguments to the call.
     std::span<const Expression*> arguments() { return arguments_; }
 
+    /// @returns true if this is a call of a system subroutine.
     bool isSystemCall() const { return subroutine.index() == 1; }
 
+    /// @returns the name of the subroutine being called.
     std::string_view getSubroutineName() const;
+
+    /// @returns the kind of subroutine being called.
     SubroutineKind getSubroutineKind() const;
+
+    /// @returns true if the called subroutine has output (or inout / ref) arguments.
     bool hasOutputArgs() const;
 
     ConstantValue evalImpl(EvalContext& context) const;

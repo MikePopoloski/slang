@@ -22,6 +22,7 @@ public:
     IntegerLiteral(BumpAllocator& alloc, const Type& type, const SVInt& value,
                    bool isDeclaredUnsized, SourceRange sourceRange);
 
+    /// Gets the value of the literal.
     SVInt getValue() const { return valueStorage; }
 
     ConstantValue evalImpl(EvalContext& context) const;
@@ -48,6 +49,7 @@ public:
     RealLiteral(const Type& type, double value, SourceRange sourceRange) :
         Expression(ExpressionKind::RealLiteral, type, sourceRange), value(value) {}
 
+    /// Gets the value of the literal.
     double getValue() const { return value; }
 
     ConstantValue evalImpl(EvalContext& context) const;
@@ -69,6 +71,7 @@ public:
     TimeLiteral(const Type& type, double value, SourceRange sourceRange) :
         Expression(ExpressionKind::TimeLiteral, type, sourceRange), value(value) {}
 
+    /// Gets the value of the literal.
     double getValue() const { return value; }
 
     ConstantValue evalImpl(EvalContext& context) const;
@@ -90,7 +93,10 @@ public:
     UnbasedUnsizedIntegerLiteral(const Type& type, logic_t value, SourceRange sourceRange) :
         Expression(ExpressionKind::UnbasedUnsizedIntegerLiteral, type, sourceRange), value(value) {}
 
+    /// Gets the value of the literal as a single bit.
     logic_t getLiteralValue() const { return value; }
+
+    /// Gets the value of the literal sized to the type of the expression.
     SVInt getValue() const;
 
     ConstantValue evalImpl(EvalContext& context) const;
@@ -127,7 +133,7 @@ public:
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::NullLiteral; }
 };
 
-/// Represents the unboudned queue or range literal.
+/// Represents the unbounded queue or range literal.
 class SLANG_EXPORT UnboundedLiteral : public Expression {
 public:
     UnboundedLiteral(const Type& type, SourceRange sourceRange) :
@@ -149,8 +155,13 @@ public:
     StringLiteral(const Type& type, std::string_view value, std::string_view rawValue,
                   ConstantValue& intVal, SourceRange sourceRange);
 
+    /// Gets the value of the literal.
     std::string_view getValue() const { return value; }
+
+    /// Gets the raw unprocessed text of the string literal token.
     std::string_view getRawValue() const { return rawValue; }
+
+    /// Gets the value of the string literal interpretted as an integer constant.
     const ConstantValue& getIntValue() const;
 
     ConstantValue evalImpl(EvalContext& context) const;

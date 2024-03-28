@@ -21,6 +21,7 @@ class VariableSymbol;
 /// Common base class for both NamedValueExpression and HierarchicalValueExpression.
 class SLANG_EXPORT ValueExpressionBase : public Expression {
 public:
+    /// The symbol referred to by name.
     const ValueSymbol& symbol;
 
     bool requireLValueImpl(const ASTContext& context, SourceLocation location,
@@ -78,9 +79,11 @@ public:
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::HierarchicalValue; }
 };
 
-/// Adapts a data type for use in an expression tree. This is for cases where both an expression
-/// and a data type is valid; for example, as an argument to a $bits() call or as a parameter
-/// assignment (because of type parameters).
+/// @brief Adapts a data type for use in an expression tree.
+///
+/// This is for cases where both an expression and a data type is
+/// valid; for example, as an argument to a $bits() call or as a
+/// parameter assignment (because of type parameters).
 class SLANG_EXPORT DataTypeExpression : public Expression {
 public:
     DataTypeExpression(const Type& type, SourceRange sourceRange) :
@@ -96,11 +99,13 @@ public:
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::DataType; }
 };
 
-/// An expression that gets the type of a nested expression using the type() operator.
+/// @brief An expression that gets the type of a nested expression using the type() operator.
+///
 /// The result is only allowed in a few places in the grammar, namely in comparisons
 /// with other type reference expressions.
 class SLANG_EXPORT TypeReferenceExpression : public Expression {
 public:
+    /// The target type of the type reference.
     const Type& targetType;
 
     TypeReferenceExpression(const Type& typeRefType, const Type& targetType,
@@ -115,12 +120,14 @@ public:
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::TypeReference; }
 };
 
-/// Adapts an arbitrary symbol reference for use in an expression tree. This is for cases
-/// like the $printtimescale system function that require a module name to be passed.
-/// This is not a NamedValueExpression because the symbol in question is not a value
-/// and is not normally usable in an expression.
+/// @brief Adapts an arbitrary symbol reference for use in an expression tree.
+///
+/// This is for cases like the $printtimescale system function that require a
+/// module name to be passed. This is not a NamedValueExpression because the
+/// symbol in question is not a value and is not normally usable in an expression.
 class SLANG_EXPORT ArbitrarySymbolExpression : public Expression {
 public:
+    /// The symbol being referenced.
     not_null<const Symbol*> symbol;
 
     ArbitrarySymbolExpression(const Symbol& symbol, const Type& type, SourceRange sourceRange) :
@@ -137,9 +144,12 @@ public:
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::ArbitrarySymbol; }
 };
 
-/// A placeholder expression that is generated to take the place of one side of
-/// a compound assignment expression's binary operator. It indicates to the constant
-/// evaluator that it should look on the lvalue stack for the value to use.
+/// @brief A placeholder expression that is generated to take the
+/// place of one side of a compound assignment expression's binary
+/// operator.
+///
+/// It indicates to the constant evaluator that it should look on
+/// the lvalue stack for the value to use.
 class SLANG_EXPORT LValueReferenceExpression : public Expression {
 public:
     LValueReferenceExpression(const Type& type, SourceRange sourceRange) :
@@ -152,8 +162,10 @@ public:
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::LValueReference; }
 };
 
-/// Represents an empty argument. There's no actual syntax to go along with this,
-/// but we use this as a placeholder to hold the fact that the argument is empty.
+/// @brief Represents an empty argument.
+///
+/// There's no actual syntax to go along with this, but we use this
+/// as a placeholder to hold the fact that the argument is empty.
 class SLANG_EXPORT EmptyArgumentExpression : public Expression {
 public:
     EmptyArgumentExpression(const Type& type, SourceRange sourceRange) :
@@ -166,10 +178,13 @@ public:
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::EmptyArgument; }
 };
 
-/// Represents a clocking event expression. This is a special kind of expression that is only
-/// allowed with the sampled value system functions and assertion instance arguments.
+/// @brief Represents a clocking event expression.
+///
+/// This is a special kind of expression that is only allowed with the
+/// sampled value system functions and assertion instance arguments.
 class SLANG_EXPORT ClockingEventExpression : public Expression {
 public:
+    /// The clocking event.
     const TimingControl& timingControl;
 
     ClockingEventExpression(const Type& type, const TimingControl& timingControl,
@@ -198,10 +213,19 @@ class SLANG_EXPORT AssertionInstanceExpression : public Expression {
 public:
     using ActualArg = std::variant<const Expression*, const AssertionExpr*, const TimingControl*>;
 
+    /// The assertion symbol.
     const Symbol& symbol;
+
+    /// The expanded body of the assertion item.
     const AssertionExpr& body;
+
+    /// Arguments to the assertion item.
     std::span<std::tuple<const Symbol*, ActualArg> const> arguments;
+
+    /// Local variables materialized in the body of the assertion item.
     std::span<const Symbol* const> localVars;
+
+    /// True if this is a recursive property instantiation.
     bool isRecursiveProperty;
 
     AssertionInstanceExpression(const Type& type, const Symbol& symbol, const AssertionExpr& body,
@@ -247,16 +271,30 @@ public:
         Expression(ExpressionKind::MinTypMax, type, sourceRange), selected_(selected), min_(&min),
         typ_(&typ), max_(&max) {}
 
+    /// The `min` value of the expression.
     const Expression& min() const { return *min_; }
+
+    /// The `min` value of the expression.
     Expression& min() { return *min_; }
 
+    /// The `typ` value of the expression.
     const Expression& typ() const { return *typ_; }
+
+    /// The `typ` value of the expression.
     Expression& typ() { return *typ_; }
 
+    /// The `max` value of the expression.
     const Expression& max() const { return *max_; }
+
+    /// The `max` value of the expression.
     Expression& max() { return *max_; }
 
+    /// The actual selected value of the expression, based on which
+    /// compilation options are in effect.
     const Expression& selected() const { return *selected_; }
+
+    /// The actual selected value of the expression, based on which
+    /// compilation options are in effect.
     Expression& selected() { return *selected_; }
 
     ConstantValue evalImpl(EvalContext& context) const;
@@ -292,6 +330,7 @@ public:
     CopyClassExpression(const Type& type, const Expression& sourceExpr, SourceRange sourceRange) :
         Expression(ExpressionKind::CopyClass, type, sourceRange), sourceExpr_(sourceExpr) {}
 
+    /// @returns the expression representing the source of the copy.
     const Expression& sourceExpr() const { return sourceExpr_; }
 
     ConstantValue evalImpl(EvalContext& context) const;
@@ -313,18 +352,28 @@ private:
     const Expression& sourceExpr_;
 };
 
-/// Denotes an expression along with a distribution of probabilities for that
-/// expression. This can't occur in normal expression code; it's used as part
+/// @brief Denotes an expression along with a distribution of
+/// probabilities for that expression.
+///
+/// This can't occur in normal expression code; it's used as part
 /// of constraints and properties (and always has the type 'void').
 class SLANG_EXPORT DistExpression : public Expression {
 public:
+    /// A weight to apply to a distribution.
     struct DistWeight {
+        /// The kind of weight (per value or per range).
         enum Kind { PerValue, PerRange } kind;
+
+        /// The weight expression.
         const Expression& expr;
     };
 
+    /// A single distribution item.
     struct DistItem {
+        /// The expression being modified.
         const Expression& value;
+
+        /// The weight to apply to the expression.
         std::optional<DistWeight> weight;
     };
 
@@ -332,7 +381,10 @@ public:
                    SourceRange sourceRange) :
         Expression(ExpressionKind::Dist, type, sourceRange), left_(&left), items_(items) {}
 
+    /// @returns the left-hand side of the distribution operator.
     const Expression& left() const { return *left_; }
+
+    /// @returns the distribution items with their associated weights.
     std::span<DistItem const> items() const { return items_; }
 
     ConstantValue evalImpl(EvalContext&) const { return nullptr; }
@@ -362,7 +414,11 @@ private:
 /// Represents a tagged union member setter expression.
 class SLANG_EXPORT TaggedUnionExpression : public Expression {
 public:
+    /// The member being set.
     const Symbol& member;
+
+    /// An expression setting the value of the member, or nullptr
+    /// if it's a void member.
     const Expression* valueExpr;
 
     TaggedUnionExpression(const Type& type, const Symbol& member, const Expression* valueExpr,

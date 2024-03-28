@@ -59,6 +59,7 @@ protected:
 /// Represents the single-bit scalar types.
 class SLANG_EXPORT ScalarType : public IntegralType {
 public:
+    /// The kind of scalar type.
     enum Kind { Bit, Logic, Reg } scalarKind;
 
     ScalarType(Kind scalarKind);
@@ -70,6 +71,7 @@ public:
 /// Represents the predefined integer types, which are essentially predefined vector types.
 class SLANG_EXPORT PredefinedIntegerType : public IntegralType {
 public:
+    /// The kind of predefined integer type.
     enum Kind { ShortInt, Int, LongInt, Byte, Integer, Time } integerKind;
 
     PredefinedIntegerType(Kind integerKind);
@@ -80,10 +82,11 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::PredefinedIntegerType; }
 };
 
-/// Represents one of the predefined floating point types, which are used for representing real
-/// numbers.
+/// Represents one of the predefined floating point types,
+/// which are used for representing real numbers.
 class SLANG_EXPORT FloatingType : public Type {
 public:
+    /// The kind of floating point type.
     enum Kind { Real, ShortReal, RealTime } floatKind;
 
     explicit FloatingType(Kind floatKind);
@@ -98,7 +101,10 @@ class EnumValueSymbol;
 /// Represents an enumerated type.
 class SLANG_EXPORT EnumType : public IntegralType, public Scope {
 public:
+    /// The base type of the enum.
     const Type& baseType;
+
+    /// The system-generated ID.
     int systemId;
 
     EnumType(Compilation& compilation, SourceLocation loc, const Type& baseType,
@@ -122,7 +128,10 @@ class SLANG_EXPORT EnumValueSymbol : public ValueSymbol {
 public:
     EnumValueSymbol(std::string_view name, SourceLocation loc);
 
+    /// Gets the value of the enum member.
     const ConstantValue& getValue(SourceRange referencingRange = {}) const;
+
+    /// Sets the value of the enum member.
     void setValue(ConstantValue value);
 
     void serializeTo(ASTSerializer& serializer) const;
@@ -138,11 +147,14 @@ private:
     mutable bool evaluating = false;
 };
 
-/// Represents a packed array of some simple element type (vectors, packed structures, other packed
-/// arrays).
+/// Represents a packed array of some simple element type
+/// (vectors, packed structures, other packed arrays).
 class SLANG_EXPORT PackedArrayType : public IntegralType {
 public:
+    /// The underlying element type.
     const Type& elementType;
+
+    /// The range of the array.
     ConstantRange range;
 
     PackedArrayType(const Type& elementType, ConstantRange range, bitwidth_t fullWidth);
@@ -157,13 +169,20 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::PackedArrayType; }
 };
 
-/// Represents a fixed size unpacked array (as opposed to a dynamically sized unpacked
-/// array, associative array, or queue).
+/// Represents a fixed size unpacked array (as opposed to a
+/// dynamically sized unpacked array, associative array, or queue).
 class SLANG_EXPORT FixedSizeUnpackedArrayType : public Type {
 public:
+    /// The underlying element type.
     const Type& elementType;
+
+    /// The range of the array.
     ConstantRange range;
+
+    /// The selectable width of the array, in bits.
     uint64_t selectableWidth;
+
+    /// The bitstream width of the array.
     uint64_t bitstreamWidth;
 
     FixedSizeUnpackedArrayType(const Type& elementType, ConstantRange range,
@@ -184,6 +203,7 @@ public:
 /// Represents a dynamically sized unpacked array.
 class SLANG_EXPORT DynamicArrayType : public Type {
 public:
+    /// The underlying element type.
     const Type& elementType;
 
     explicit DynamicArrayType(const Type& elementType);
@@ -197,7 +217,10 @@ public:
 /// It's not otherwise possible to declare a variable with this type.
 class SLANG_EXPORT DPIOpenArrayType : public Type {
 public:
+    /// The underlying element type.
     const Type& elementType;
+
+    /// True if this is a packed open array, and false if it's unpacked.
     bool isPacked;
 
     DPIOpenArrayType(const Type& elementType, bool isPacked);
@@ -210,11 +233,16 @@ public:
 /// Represents an unpacked array that provides associative lookup.
 class SLANG_EXPORT AssociativeArrayType : public Type {
 public:
+    /// The underlying element type.
     const Type& elementType;
+
+    /// The type used to index the associative array, or nullptr if
+    /// it's a "wildcard" integral index.
     const Type* indexType = nullptr;
 
     AssociativeArrayType(const Type& elementType, const Type* indexType);
 
+    /// @returns true if the array has a wildcard index type
     bool hasWildcardIndexType() const { return indexType == nullptr; }
     ConstantValue getDefaultValueImpl() const;
 
@@ -224,7 +252,10 @@ public:
 /// Represents an unpacked array that provides queue semantics.
 class SLANG_EXPORT QueueType : public Type {
 public:
+    /// The underlying element type.
     const Type& elementType;
+
+    /// The maximum number of elements allowed in the queue.
     uint32_t maxBound;
 
     QueueType(const Type& elementType, uint32_t maxBound);
@@ -237,6 +268,7 @@ public:
 /// Represents a packed structure of members.
 class SLANG_EXPORT PackedStructType : public IntegralType, public Scope {
 public:
+    /// The system-generated ID.
     int systemId;
 
     PackedStructType(Compilation& compilation, bool isSigned, SourceLocation loc,
@@ -252,9 +284,16 @@ public:
 /// Represents an unpacked structure of members.
 class SLANG_EXPORT UnpackedStructType : public Type, public Scope {
 public:
+    /// The fields contained in the struct.
     std::span<const FieldSymbol* const> fields;
+
+    /// The selectable width of the struct, in bits.
     uint64_t selectableWidth = 0;
+
+    /// The bitstream width of the struct.
     uint64_t bitstreamWidth = 0;
+
+    /// The system-generated ID.
     int systemId;
 
     UnpackedStructType(Compilation& compilation, SourceLocation loc, const ASTContext& context);
@@ -270,9 +309,17 @@ public:
 /// Represents a packed union of members.
 class SLANG_EXPORT PackedUnionType : public IntegralType, public Scope {
 public:
+    /// The system-generated ID.
     int systemId;
+
+    /// True if this is a tagged union.
     bool isTagged;
+
+    /// True if this is a "soft" packed union.
     bool isSoft;
+
+    /// The number of bits reserved for the tag, if this is
+    /// a tagged union.
     uint32_t tagBits;
 
     PackedUnionType(Compilation& compilation, bool isSigned, bool isTagged, bool isSoft,
@@ -288,10 +335,19 @@ public:
 /// Represents an unpacked union of members.
 class SLANG_EXPORT UnpackedUnionType : public Type, public Scope {
 public:
+    /// The fields contained in the union.
     std::span<const FieldSymbol* const> fields;
+
+    /// The selectable width of the union, in bits.
     uint64_t selectableWidth = 0;
+
+    /// The bitstream width of the union.
     uint64_t bitstreamWidth = 0;
+
+    /// The system-generated ID.
     int systemId;
+
+    /// True if this is a tagged union.
     bool isTagged;
 
     UnpackedUnionType(Compilation& compilation, bool isTagged, SourceLocation loc,
@@ -305,7 +361,9 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::UnpackedUnionType; }
 };
 
-/// Represents the Void (or lack of a) type. This can be used as the return type of functions
+/// @brief Represents the Void (or lack of a) type.
+///
+/// This can be used as the return type of functions
 /// and as the type of members in tagged unions.
 class SLANG_EXPORT VoidType : public Type {
 public:
@@ -316,7 +374,9 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::VoidType; }
 };
 
-/// Represents the Null type. This can be used as a literal for setting class handles and
+/// @brief Represents the Null type.
+///
+/// This can be used as a literal for setting class handles and
 /// chandles to null (or the default value).
 class SLANG_EXPORT NullType : public Type {
 public:
@@ -337,7 +397,7 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::CHandleType; }
 };
 
-/// Represents an ASCII string type.
+/// Represents the built-in ASCII string type.
 class SLANG_EXPORT StringType : public Type {
 public:
     StringType() : Type(SymbolKind::StringType, "string", SourceLocation()) {}
@@ -412,8 +472,14 @@ public:
 /// Represents a virtual interface type.
 class SLANG_EXPORT VirtualInterfaceType : public Type {
 public:
+    /// The type of interfaces that can be assigned to this virtual interface.
     const InstanceSymbol& iface;
+
+    /// An optional modport restriction.
     const ModportSymbol* modport;
+
+    /// True if this is a wrapper for a real interface instance, and false
+    /// if it's declared as an actual virtual interface type.
     bool isRealIface;
 
     VirtualInterfaceType(const InstanceSymbol& iface, const ModportSymbol* modport,
@@ -429,12 +495,17 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::VirtualInterfaceType; }
 };
 
-/// A forward declaration of a user-defined type name. A given type name can have
-/// an arbitrary number of forward declarations in the same scope, so each symbol
-/// forms a linked list, headed by the actual type definition.
+/// @brief A forward declaration of a user-defined type name.
+///
+/// A given type name can have an arbitrary number of forward declarations
+/// in the same scope, so each symbol forms a linked list, headed by the
+/// actual type definition.
 class SLANG_EXPORT ForwardingTypedefSymbol : public Symbol {
 public:
+    /// An optional restriction for the kind of type this can resolve to.
     ForwardTypeRestriction typeRestriction;
+
+    /// An optional visibility modifier.
     std::optional<Visibility> visibility;
 
     ForwardingTypedefSymbol(std::string_view name, SourceLocation loc,
@@ -464,7 +535,10 @@ private:
 /// Represents a type alias, which is introduced via a typedef or type parameter.
 class SLANG_EXPORT TypeAliasType : public Type {
 public:
+    /// The declared type target of the alias.
     DeclaredType targetType;
+
+    /// The visibility of the alias.
     Visibility visibility = Visibility::Public;
 
     TypeAliasType(std::string_view name, SourceLocation loc);

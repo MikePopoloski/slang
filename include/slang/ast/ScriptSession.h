@@ -21,16 +21,31 @@ namespace slang::ast {
 /// source code and maintaining state across multiple eval calls.
 class SLANG_EXPORT ScriptSession {
 public:
+    /// A bag of options to apply to the various evaluated snippets.
     Bag options;
+
+    /// A compilation object that holds state across evaluation calls.
     Compilation compilation;
+
+    /// A compilation unit that acts as a scope for evaluation.
     CompilationUnitSymbol& scope;
 
+    /// Constructs a new ScriptSession.
     explicit ScriptSession(const Bag& options = {});
 
+    /// Tries to evaluate the given snippet of SystemVerilog code
+    /// and returns the result as a constant value.
     ConstantValue eval(std::string_view text);
+
+    /// Tries to evaluate the given expression tree and returns the
+    /// result as a constant value.
     ConstantValue evalExpression(const syntax::ExpressionSyntax& expr);
+
+    /// Tries to evaluate the given statement tree and returns the
+    /// result as a constant value.
     void evalStatement(const syntax::StatementSyntax& expr);
 
+    /// Gets any diagnostics that have been issued during evaluation calls.
     Diagnostics getDiagnostics();
 
 private:

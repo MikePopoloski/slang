@@ -71,18 +71,27 @@ public:
     /// in a module that is not used in the design.
     bool isUninstantiated() const;
 
+    /// Reports a new diagnostic under this scope.
     Diagnostic& addDiag(DiagCode code, SourceLocation location) const;
+
+    /// Reports a new diagnostic under this scope.
     Diagnostic& addDiag(DiagCode code, SourceRange sourceRange) const;
+
+    /// Reports the given set of diagnostics under this scope.
     void addDiags(const Diagnostics& diags) const;
 
-    /// Finds a direct child member with the given name. This won't return anything weird like
-    /// forwarding typedefs or imported symbols, but will return things like transparent enum
-    /// members. If no symbol is found with the given name, nullptr is returned.
+    /// @brief Finds a direct child member with the given name.
+    ///
+    /// This won't return anything weird like forwarding typedefs or imported symbols,
+    /// but will return things like transparent enum members. If no symbol is found with
+    /// the given name, nullptr is returned.
     const Symbol* find(std::string_view name) const;
 
-    /// Finds a direct child member with the given name. This won't return anything weird like
-    /// forwarding typedefs or imported symbols, but will return things like transparent enum
-    /// members. This method expects that the symbol will be found and be of the given type `T`.
+    /// @brief Finds a direct child member with the given name.
+    ///
+    /// This won't return anything weird like forwarding typedefs or imported symbols,
+    /// but will return things like transparent enum members. This method asserts that
+    /// the symbol is found and is of the given type `T`.
     template<typename T>
     const T& find(std::string_view name) const {
         const Symbol* sym = find(name);
@@ -119,31 +128,50 @@ public:
     /// An iterator for members in the scope.
     class iterator : public iterator_facade<iterator> {
     public:
+        /// Constructs a default iterator that points nowhere.
         iterator() : current(nullptr) {}
+
+        /// Constructs an iterator pointing at the given child symbol in the scope.
         iterator(const Symbol* firstSymbol) : current(firstSymbol) {}
 
+        /// Dereferences the iterator, resolving it to a symbol.
         const Symbol& dereference() const { return *current; }
+
+        /// Advances the iterator to the next symbol in the scope.
         void increment() { current = current->nextInScope; }
+
+        /// @returns true if the given iterator is equal to this one.
         bool equals(const iterator& other) const { return current == other.current; }
 
     private:
         const Symbol* current;
     };
 
+    /// An iterator for members in the scope of the specified type.
     template<typename SpecificType>
     class specific_symbol_iterator
         : public iterator_facade<specific_symbol_iterator<SpecificType>> {
     public:
+        /// Constructs a default iterator that points nowhere.
         specific_symbol_iterator() : current(nullptr) {}
+
+        /// Constructs an iterator pointing at the given child symbol in the scope.
+        ///
+        /// @note If the given symbol is not of the desired type the iterator
+        /// will be advanced until one is found or the end of the scope is reached.
         specific_symbol_iterator(const Symbol* firstSymbol) : current(firstSymbol) { skipToNext(); }
 
+        /// Dereferences the iterator, resolving it to a symbol.
         const SpecificType& dereference() const { return current->as<SpecificType>(); }
 
+        /// Advances the iterator to the next symbol in the scope
+        /// that is of the desired type.
         void increment() {
             current = current->nextInScope;
             skipToNext();
         }
 
+        /// @returns true if the given iterator is equal to this one.
         bool equals(const specific_symbol_iterator& other) const {
             return current == other.current;
         }
@@ -176,22 +204,30 @@ public:
         return {firstMember, nullptr};
     }
 
-    /// Gets a pointer to the first member in the scope. Note that this does not
-    /// force elaboration of the scope.
+    /// @brief Gets a pointer to the first member in the scope.
+    ///
+    /// @note This does not force elaboration of the scope.
     const Symbol* getFirstMember() const { return firstMember; }
 
-    /// Gets a pointer to the last member in the scope. Note that this does not
-    /// force elaboration of the scope.
+    /// @brief Gets a pointer to the last member in the scope.
+    ///
+    /// @note This does not force elaboration of the scope.
     const Symbol* getLastMember() const { return lastMember; }
 
+    /// Gets the map of names for child symbols in this scope.
     const SymbolMap& getNameMap() const {
         ensureElaborated();
         return *nameMap;
     }
 
+    /// Gets the map of names for child symbols in this scope without
+    /// forcing elaboration of the scope.
     const SymbolMap& getUnelaboratedNameMap() const { return *nameMap; }
+
+    /// Reports a name conflict between the two given symbols in this scope.
     void reportNameConflict(const Symbol& member, const Symbol& existing) const;
 
+    /// Gets the list of wildcard imports declared in this scope.
     std::span<const WildcardImportSymbol* const> getWildcardImports() const;
 
 protected:

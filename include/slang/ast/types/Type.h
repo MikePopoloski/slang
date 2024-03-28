@@ -38,7 +38,7 @@ enum class SLANG_EXPORT IntegralFlags : uint8_t {
 };
 SLANG_BITMASK(IntegralFlags, Reg)
 
-/// Base class for all data types in SystemVerilog.
+/// @brief Base class for all data types in SystemVerilog.
 ///
 /// Note that this can actually be an alias for some other type (such as with typedefs or
 /// type parameters). Each type knows its "canonical" type, which in the case of most types
@@ -310,7 +310,10 @@ public:
     /// Coerces the given constant into one that is appropriate for this type.
     ConstantValue coerceValue(const ConstantValue& value) const;
 
+    /// @returns a human-friendly string representation of the type.
     std::string toString() const;
+
+    /// @returns a hash value for the type.
     size_t hash() const;
 
     /// If the two given types are both class types and have a common base class somewhere

@@ -68,17 +68,26 @@ SLANG_ENUM(BinaryAssertionOperator, OP)
 class ASTContext;
 class CallExpression;
 
+/// The base class for assertion expressions (sequences and properties).
 class SLANG_EXPORT AssertionExpr {
 public:
+    /// The kind of expression; indicates the type of derived class.
     AssertionExprKind kind;
 
+    /// The syntax used to create the expression, if any. An expression tree can
+    /// be created manually in which case it may not have a syntax representation.
     const syntax::SyntaxNode* syntax = nullptr;
 
+    /// Reports an error if the assertion expression is not valid in a sequence.
     void requireSequence(const ASTContext& context) const;
+
+    /// Reports an error if the assertion expression is not valid in a sequence.
     void requireSequence(const ASTContext& context, DiagCode code) const;
+
+    /// Indicates whether the expression is invalid.
     bool bad() const { return kind == AssertionExprKind::Invalid; }
 
-    /// Returns true if this is a sequence expression that admits an empty match,
+    /// @returns true if this is a sequence expression that admits an empty match,
     /// and false otherwise.
     bool admitsEmpty() const;
 
@@ -100,18 +109,27 @@ public:
                                       bool isFutureGlobal, DiagCode localVarCode,
                                       DiagCode matchedCode);
 
+    /// @brief Casts this expression to the given concrete derived type.
+    ///
+    /// Asserts that the type is appropriate given this expression's kind.
     template<typename T>
     T& as() {
         SLANG_ASSERT(T::isKind(kind));
         return *static_cast<T*>(this);
     }
 
+    /// @brief Casts this expression to the given concrete derived type.
+    ///
+    /// Asserts that the type is appropriate given this expression's kind.
     template<typename T>
     const T& as() const {
         SLANG_ASSERT(T::isKind(kind));
         return *static_cast<const T*>(this);
     }
 
+    /// @brief Tries to cast this expression to the given concrete derived type.
+    ///
+    /// If the type is not appropriate given this expression's kind, returns nullptr.
     template<typename T>
     T* as_if() {
         if (!T::isKind(kind))
@@ -119,6 +137,9 @@ public:
         return static_cast<T*>(this);
     }
 
+    /// @brief Tries to cast this expression to the given concrete derived type.
+    ///
+    /// If the type is not appropriate given this expression's kind, returns nullptr.
     template<typename T>
     const T* as_if() const {
         if (!T::isKind(kind))
@@ -126,6 +147,7 @@ public:
         return static_cast<const T*>(this);
     }
 
+    /// Visits this expression's concrete derived type via the provided visitor object.
     template<typename TVisitor, typename... Args>
     decltype(auto) visit(TVisitor& visitor, Args&&... args) const;
 
@@ -135,8 +157,13 @@ protected:
     static AssertionExpr& badExpr(Compilation& compilation, const AssertionExpr* expr);
 };
 
+/// @brief Represents an invalid expression
+///
+/// Usually generated and inserted into an expression tree due
+/// to violation of language semantics or type checking.
 class SLANG_EXPORT InvalidAssertionExpr : public AssertionExpr {
 public:
+    /// A wrapped sub-expression that is considered invalid.
     const AssertionExpr* child;
 
     explicit InvalidAssertionExpr(const AssertionExpr* child) :
@@ -185,7 +212,19 @@ struct SequenceRepetition {
 
     SequenceRepetition(const syntax::SequenceRepetitionSyntax& syntax, const ASTContext& context);
 
-    enum class AdmitsEmpty { Yes, No, Depends };
+    /// Defines ways in which a sequence may admit an empty match.
+    enum class AdmitsEmpty {
+        /// Yes, the sequence admits an empty match.
+        Yes,
+
+        /// No, the sequence does not admit an empty match.
+        No,
+
+        /// The sequence may or may not admit an empty match.
+        Depends
+    };
+
+    /// Classifies the repetition as admitting an empty match or not.
     AdmitsEmpty admitsEmpty() const;
 
     void serializeTo(ASTSerializer& serializer) const;
@@ -194,7 +233,10 @@ struct SequenceRepetition {
 /// Represents an assertion expression defined as a simple regular expression.
 class SLANG_EXPORT SimpleAssertionExpr : public AssertionExpr {
 public:
+    /// The expression that constitutes the sequence.
     const Expression& expr;
+
+    /// An optional repetition of the sequence.
     std::optional<SequenceRepetition> repetition;
 
     SimpleAssertionExpr(const Expression& expr, std::optional<SequenceRepetition> repetition) :
@@ -219,11 +261,16 @@ public:
 /// Represents an assertion expression defined as a delayed concatenation of other expressions.
 class SLANG_EXPORT SequenceConcatExpr : public AssertionExpr {
 public:
+    /// An element of a sequence concatenation.
     struct Element {
+        /// A delay that applies to the element.
         SequenceRange delay;
+
+        /// The element expression.
         not_null<const AssertionExpr*> sequence;
     };
 
+    /// The elements of the concatenation.
     std::span<const Element> elements;
 
     explicit SequenceConcatExpr(std::span<const Element> elements) :
@@ -249,8 +296,13 @@ public:
 /// and/or instructions for repetition.
 class SLANG_EXPORT SequenceWithMatchExpr : public AssertionExpr {
 public:
+    /// The sequence expression.
     const AssertionExpr& expr;
+
+    /// An optional repetition to apply to the expression.
     std::optional<SequenceRepetition> repetition;
+
+    /// Match items to apply upon matching the sequence.
     std::span<const Expression* const> matchItems;
 
     SequenceWithMatchExpr(const AssertionExpr& expr, std::optional<SequenceRepetition> repetition,
@@ -280,8 +332,13 @@ public:
 /// Represents a unary operator in a property expression.
 class SLANG_EXPORT UnaryAssertionExpr : public AssertionExpr {
 public:
+    /// The operator.
     UnaryAssertionOperator op;
+
+    /// The operand.
     const AssertionExpr& expr;
+
+    /// An optional sequence range.
     std::optional<SequenceRange> range;
 
     UnaryAssertionExpr(UnaryAssertionOperator op, const AssertionExpr& expr,
@@ -309,8 +366,13 @@ public:
 /// Represents a binary operator in a sequence or property expression.
 class SLANG_EXPORT BinaryAssertionExpr : public AssertionExpr {
 public:
+    /// The operator.
     BinaryAssertionOperator op;
+
+    /// The left operand.
     const AssertionExpr& left;
+
+    /// The right operand.
     const AssertionExpr& right;
 
     BinaryAssertionExpr(BinaryAssertionOperator op, const AssertionExpr& left,
@@ -340,7 +402,10 @@ public:
 /// Represents a first_match operator in a sequence expression.
 class SLANG_EXPORT FirstMatchAssertionExpr : public AssertionExpr {
 public:
+    /// The operand.
     const AssertionExpr& seq;
+
+    /// Match items that apply upon matching the sequence.
     std::span<const Expression* const> matchItems;
 
     FirstMatchAssertionExpr(const AssertionExpr& seq,
@@ -367,7 +432,10 @@ public:
 /// Represents an assertion expression with attached clocking control.
 class SLANG_EXPORT ClockingAssertionExpr : public AssertionExpr {
 public:
+    /// The clocking control.
     const TimingControl& clocking;
+
+    /// The expression controlled by the clocking.
     const AssertionExpr& expr;
 
     ClockingAssertionExpr(const TimingControl& clocking, const AssertionExpr& expr) :
@@ -401,7 +469,10 @@ public:
 /// Represents a strong or weak operator in a property expression.
 class SLANG_EXPORT StrongWeakAssertionExpr : public AssertionExpr {
 public:
+    /// The expression that is being modified.
     const AssertionExpr& expr;
+
+    /// The kind of expression -- strong or weak.
     enum Strength { Strong, Weak } strength;
 
     StrongWeakAssertionExpr(const AssertionExpr& expr, Strength strength) :
@@ -425,9 +496,16 @@ public:
 /// Represents an abort (accept_on / reject_on) property expression.
 class SLANG_EXPORT AbortAssertionExpr : public AssertionExpr {
 public:
+    /// The condition of the abort.
     const Expression& condition;
+
+    /// The expression being controlled.
     const AssertionExpr& expr;
+
+    /// The action to take upon condition success (accept or reject).
     enum Action { Accept, Reject } action;
+
+    /// True if this is a "synchronized" variant of the operator.
     bool isSync;
 
     AbortAssertionExpr(const Expression& condition, const AssertionExpr& expr, Action action,
@@ -454,8 +532,13 @@ public:
 /// Represents a conditional operator in a property expression.
 class SLANG_EXPORT ConditionalAssertionExpr : public AssertionExpr {
 public:
+    /// The condition expression.
     const Expression& condition;
+
+    /// The expression that applies if the condition is true.
     const AssertionExpr& ifExpr;
+
+    /// An optional expression that applies if the condition is false.
     const AssertionExpr* elseExpr;
 
     ConditionalAssertionExpr(const Expression& condition, const AssertionExpr& ifExpr,
@@ -484,13 +567,22 @@ public:
 /// Represents a case operator in a property expression.
 class SLANG_EXPORT CaseAssertionExpr : public AssertionExpr {
 public:
+    /// A group of items that match one case item.
     struct ItemGroup {
+        /// The expressions that are checked for matching.
         std::span<const Expression* const> expressions;
+
+        /// The expression that applies if an item matches.
         not_null<const AssertionExpr*> body;
     };
 
+    /// The controlling case expression.
     const Expression& expr;
+
+    /// The list of case items that get checked for a match.
     std::span<const ItemGroup> items;
+
+    /// An optional default case that applies if no items match.
     const AssertionExpr* defaultCase = nullptr;
 
     CaseAssertionExpr(const Expression& expr, std::span<const ItemGroup> items,
@@ -524,7 +616,10 @@ public:
 /// Represents a disable iff condition in a property spec.
 class SLANG_EXPORT DisableIffAssertionExpr : public AssertionExpr {
 public:
+    /// The disable condition expression.
     const Expression& condition;
+
+    /// The assertion expression being disabled.
     const AssertionExpr& expr;
 
     DisableIffAssertionExpr(const Expression& condition, const AssertionExpr& expr) :

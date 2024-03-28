@@ -50,8 +50,16 @@
 @brief Root namespace
 */
 
+/** @namespace slang::assert
+@brief Assertion-related utilities
+*/
+
 /** @namespace slang::ast
 @brief The SystemVerilog AST
+*/
+
+/** @namespace slang::::SFormat
+@brief Utility methods for formatting strings using SystemVerilog formatting styles
 */
 
 /** @namespace slang::driver

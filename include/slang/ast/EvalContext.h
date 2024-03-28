@@ -21,7 +21,8 @@ class LValue;
 class SubroutineSymbol;
 class ValueSymbol;
 
-/// A container for all context required to evaluate a statement or expression.
+/// @brief A container for all context required to evaluate a statement or expression.
+///
 /// Mostly this involves tracking the callstack and maintaining
 /// storage for local variables.
 class SLANG_EXPORT EvalContext {

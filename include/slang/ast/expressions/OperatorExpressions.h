@@ -18,13 +18,17 @@ class Pattern;
 /// Represents a unary operator expression.
 class SLANG_EXPORT UnaryExpression : public Expression {
 public:
+    /// The operator.
     UnaryOperator op;
 
     UnaryExpression(UnaryOperator op, const Type& type, Expression& operand,
                     SourceRange sourceRange) :
         Expression(ExpressionKind::UnaryOp, type, sourceRange), op(op), operand_(&operand) {}
 
+    /// @returns the operand
     const Expression& operand() const { return *operand_; }
+
+    /// @returns the operand
     Expression& operand() { return *operand_; }
 
     ConstantValue evalImpl(EvalContext& context) const;
@@ -56,6 +60,7 @@ private:
 /// Represents a binary operator expression.
 class SLANG_EXPORT BinaryExpression : public Expression {
 public:
+    /// The operator.
     BinaryOperator op;
 
     BinaryExpression(BinaryOperator op, const Type& type, Expression& left, Expression& right,
@@ -63,10 +68,16 @@ public:
         Expression(ExpressionKind::BinaryOp, type, sourceRange), op(op), left_(&left),
         right_(&right) {}
 
+    /// @returns the left-hand side of the expression
     const Expression& left() const { return *left_; }
+
+    /// @returns the left-hand side of the expression
     Expression& left() { return *left_; }
 
+    /// @returns the right-hand side of the expression
     const Expression& right() const { return *right_; }
+
+    /// @returns the right-hand side of the expression
     Expression& right() { return *right_; }
 
     ConstantValue evalImpl(EvalContext& context) const;
@@ -100,10 +111,16 @@ private:
 /// Represents a conditional operator expression.
 class SLANG_EXPORT ConditionalExpression : public Expression {
 public:
+    /// A condition.
     struct Condition {
+        /// The expression representing the condition.
         not_null<const Expression*> expr;
+
+        /// An optional pattern to apply to the condition.
         const Pattern* pattern = nullptr;
     };
+
+    /// The list of conditions controlling the expression.
     std::span<const Condition> conditions;
 
     ConditionalExpression(const Type& type, std::span<const Condition> conditions, Expression& left,
@@ -111,10 +128,16 @@ public:
         Expression(ExpressionKind::ConditionalOp, type, sourceRange), conditions(conditions),
         left_(&left), right_(&right), isConst(isConst), isTrue(isTrue) {}
 
+    /// @returns the left-hand side operand
     const Expression& left() const { return *left_; } // NOLINT
+
+    /// @returns the left-hand side operand
     Expression& left() { return *left_; }
 
+    /// @returns the right-hand side operand
     const Expression& right() const { return *right_; } // NOLINT
+
+    /// @returns the right-hand side operand
     Expression& right() { return *right_; }
 
     ConstantValue evalImpl(EvalContext& context) const;
@@ -162,8 +185,10 @@ public:
         Expression(ExpressionKind::Inside, type, sourceRange), left_(&left), rangeList_(rangeList) {
     }
 
+    /// @returns the left-hand side operand
     const Expression& left() const { return *left_; }
 
+    /// @returns the lsit of ranges denoting the set to check for membership.
     std::span<const Expression* const> rangeList() const { return rangeList_; }
 
     ConstantValue evalImpl(EvalContext& context) const;
@@ -195,6 +220,7 @@ public:
                             SourceRange sourceRange) :
         Expression(ExpressionKind::Concatenation, type, sourceRange), operands_(operands) {}
 
+    /// @returns the list of operands in the concatenation
     std::span<const Expression* const> operands() const { return operands_; }
 
     ConstantValue evalImpl(EvalContext& context) const;
@@ -230,9 +256,13 @@ public:
         Expression(ExpressionKind::Replication, type, sourceRange), count_(&count),
         concat_(&concat) {}
 
+    /// @returns the expression denoting the number of times to replicate
     const Expression& count() const { return *count_; }
 
+    /// @returns the concatenation that will be replicated
     const Expression& concat() const { return *concat_; }
+
+    /// @returns the concatenation that will be replicated
     Expression& concat() { return *concat_; }
 
     ConstantValue evalImpl(EvalContext& context) const;
@@ -259,9 +289,16 @@ private:
 /// Represents a streaming concatenation.
 class SLANG_EXPORT StreamingConcatenationExpression : public Expression {
 public:
+    /// A single stream expression within the concatenation.
     struct StreamExpression {
+        /// The operand expression.
         not_null<const Expression*> operand;
+
+        /// An optional `with` clause selecting a range for the operand.
         const Expression* withExpr;
+
+        /// If there is a @a withExpr and it has a constant value, this is
+        /// the width of the selection.
         std::optional<bitwidth_t> constantWithWidth;
     };
 
@@ -271,13 +308,18 @@ public:
         Expression(ExpressionKind::Streaming, type, sourceRange), streams_(streams),
         sliceSize(sliceSize), bitstreamWidth(bitstreamWidth) {}
 
+    /// @returns true if the expression has a fixed size, and false if it
+    /// involves dynamically sized elements.
     bool isFixedSize() const;
+
+    /// @returns the bitstream width of the expression.
     uint64_t getBitstreamWidth() const { return bitstreamWidth; }
 
     /// Gets the size of the blocks to slice and reorder: if 0, this is a left-to-right
     /// concatenation. Otherwise, it's a right-to-left concatenation.
     uint64_t getSliceSize() const { return sliceSize; }
 
+    /// @returns the stream elements that make up the concatenation
     std::span<const StreamExpression> streams() const { return streams_; }
 
     ConstantValue evalImpl(EvalContext& context) const;
@@ -314,9 +356,11 @@ private:
 SLANG_ENUM(ValueRangeKind, VRK)
 #undef VRK
 
-/// Denotes a range of values by providing expressions for the lower and upper
-/// bounds of the range. This expression needs special handling in the various
-/// places that allow it, since it doesn't really have a type.
+/// @brief Denotes a range of values by providing expressions for the lower and upper
+/// bounds of the range.
+///
+/// @note This expression needs special handling in the various places that allow it,
+/// since it doesn't really have a type.
 class SLANG_EXPORT ValueRangeExpression : public Expression {
 public:
     ValueRangeKind rangeKind;

@@ -107,8 +107,10 @@ public:
     /// A special location that should always compare before any other.
     static const LookupLocation min;
 
+    /// Default equality operator.
     bool operator==(const LookupLocation& other) const = default;
 
+    /// Default comparison operator.
     std::strong_ordering operator<=>(const LookupLocation& other) const {
         SLANG_ASSERT(scope == other.scope || !scope || !other.scope);
         return index <=> other.index;
