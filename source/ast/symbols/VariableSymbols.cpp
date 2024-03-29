@@ -157,6 +157,8 @@ void VariableSymbol::serializeTo(ASTSerializer& serializer) const {
             str += "formal_cov_sample,";
         if (flags.has(VariableFlags::CheckerFreeVariable))
             str += "checker_free,";
+        if (flags.has(VariableFlags::RefStatic))
+            str += "ref_static,";
         if (!str.empty()) {
             str.pop_back();
             serializer.write("flags", str);

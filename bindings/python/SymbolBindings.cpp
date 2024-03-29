@@ -272,7 +272,8 @@ void registerSymbols(py::module_& m) {
         .value("CompilerGenerated", VariableFlags::CompilerGenerated)
         .value("ImmutableCoverageOption", VariableFlags::ImmutableCoverageOption)
         .value("CoverageSampleFormal", VariableFlags::CoverageSampleFormal)
-        .value("CheckerFreeVariable", VariableFlags::CheckerFreeVariable);
+        .value("CheckerFreeVariable", VariableFlags::CheckerFreeVariable)
+        .value("RefStatic", VariableFlags::RefStatic);
 
     py::class_<VariableSymbol, ValueSymbol>(m, "VariableSymbol")
         .def_readonly("lifetime", &VariableSymbol::lifetime)

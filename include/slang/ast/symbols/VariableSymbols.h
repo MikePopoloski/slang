@@ -38,9 +38,12 @@ enum class SLANG_EXPORT VariableFlags : uint16_t {
 
     /// This is a checker "free variable", which may behave nondeterministically
     /// in simulation and participate differently in formal verification.
-    CheckerFreeVariable = 1 << 4
+    CheckerFreeVariable = 1 << 4,
+
+    /// The variable is a function port with direction 'ref static'.
+    RefStatic = 1 << 5
 };
-SLANG_BITMASK(VariableFlags, CheckerFreeVariable)
+SLANG_BITMASK(VariableFlags, RefStatic)
 
 /// Represents a variable declaration.
 class SLANG_EXPORT VariableSymbol : public ValueSymbol {

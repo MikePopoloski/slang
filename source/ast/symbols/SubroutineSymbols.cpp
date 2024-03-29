@@ -655,6 +655,7 @@ bitmask<MethodFlags> SubroutineSymbol::buildArguments(
     const DataTypeSyntax* lastType = nullptr;
     const SyntaxNode* explicitDefault = nullptr;
     auto lastDirection = ArgumentDirection::In;
+    bitmask<VariableFlags> lastFlags;
     bitmask<MethodFlags> resultFlags;
 
     for (auto portBase : syntax.ports) {
@@ -674,31 +675,31 @@ bitmask<MethodFlags> SubroutineSymbol::buildArguments(
             continue;
         }
 
-        ArgumentDirection direction;
-        bool directionSpecified;
+        auto direction = lastDirection;
+        auto flags = lastFlags;
+        bool directionSpecified = false;
         auto& fps = portBase->as<FunctionPortSyntax>();
         if (fps.direction) {
             directionSpecified = true;
             direction = SemanticFacts::getDirection(fps.direction.kind);
+            flags = {};
 
-            if (direction == ArgumentDirection::Ref && defaultLifetime == VariableLifetime::Static)
-                scope.addDiag(diag::RefArgAutomaticFunc, fps.direction.range());
-        }
-        else {
-            // Otherwise, we "inherit" the previous argument
-            directionSpecified = false;
-            direction = lastDirection;
+            if (direction == ArgumentDirection::Ref) {
+                if (defaultLifetime == VariableLifetime::Static)
+                    scope.addDiag(diag::RefArgAutomaticFunc, fps.direction.range());
+
+                if (fps.constKeyword)
+                    flags |= VariableFlags::Const;
+
+                if (fps.staticKeyword)
+                    flags |= VariableFlags::RefStatic;
+            }
         }
 
-        auto declarator = fps.declarator;
-        auto arg = comp.emplace<FormalArgumentSymbol>(declarator->name.valueText(),
-                                                      declarator->name.location(), direction,
-                                                      defaultLifetime);
-
-        if (fps.constKeyword) {
-            SLANG_ASSERT(direction == ArgumentDirection::Ref);
-            arg->flags |= VariableFlags::Const;
-        }
+        auto& decl = *fps.declarator;
+        auto arg = comp.emplace<FormalArgumentSymbol>(decl.name.valueText(), decl.name.location(),
+                                                      direction, defaultLifetime);
+        arg->flags |= flags;
 
         // If we're given a type, use that. Otherwise, if we were given a
         // direction, default to logic. Otherwise, use the last type.
@@ -707,8 +708,7 @@ bitmask<MethodFlags> SubroutineSymbol::buildArguments(
             lastType = fps.dataType;
         }
         else if (directionSpecified || !lastType) {
-            arg->setDeclaredType(
-                comp.createEmptyTypeSyntax(declarator->getFirstToken().location()));
+            arg->setDeclaredType(comp.createEmptyTypeSyntax(decl.getFirstToken().location()));
             lastType = nullptr;
         }
         else {
@@ -716,17 +716,19 @@ bitmask<MethodFlags> SubroutineSymbol::buildArguments(
         }
 
         arg->setAttributes(scope, fps.attributes);
-        arg->setSyntax(*declarator);
+        arg->setSyntax(decl);
 
-        if (!declarator->dimensions.empty())
-            arg->getDeclaredType()->setDimensionSyntax(declarator->dimensions);
+        if (!decl.dimensions.empty())
+            arg->getDeclaredType()->setDimensionSyntax(decl.dimensions);
 
-        if (declarator->initializer)
-            arg->setDefaultValueSyntax(*declarator->initializer->expr);
+        if (decl.initializer)
+            arg->setDefaultValueSyntax(*decl.initializer->expr);
 
         scope.addMember(*arg);
         arguments.push_back(arg);
+
         lastDirection = direction;
+        lastFlags = flags;
     }
 
     return resultFlags;

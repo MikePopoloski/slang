@@ -1386,3 +1386,15 @@ endfunction
     CHECK(diagnostics[3].code == diag::FinalWithPure);
     CHECK(diagnostics[4].code == diag::SpecifiersNotAllowed);
 }
+
+TEST_CASE("v1800-2023: ref static errors") {
+    auto& text = R"(
+function foo(ref static r);
+endfunction
+)";
+
+    parseCompilationUnit(text);
+
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics[0].code == diag::WrongLanguageVersion);
+}

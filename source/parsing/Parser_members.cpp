@@ -602,6 +602,15 @@ FunctionPortBaseSyntax& Parser::parseFunctionPort(bitmask<FunctionOptions> optio
         addDiag(diag::ConstFunctionPortRequiresRef, location);
     }
 
+    Token staticKeyword;
+    if (direction.kind == TokenKind::RefKeyword && peek(TokenKind::StaticKeyword)) {
+        staticKeyword = consume();
+        if (parseOptions.languageVersion < LanguageVersion::v1800_2023) {
+            addDiag(diag::WrongLanguageVersion, staticKeyword.range())
+                << toString(parseOptions.languageVersion);
+        }
+    }
+
     Token varKeyword = consumeIf(TokenKind::VarKeyword);
 
     // The data type is fully optional; if we see an identifier here we need
@@ -620,7 +629,8 @@ FunctionPortBaseSyntax& Parser::parseFunctionPort(bitmask<FunctionOptions> optio
     else {
         decl = &factory.declarator(placeholderToken(), nullptr, nullptr);
     }
-    return factory.functionPort(attributes, constKeyword, direction, varKeyword, dataType, *decl);
+    return factory.functionPort(attributes, constKeyword, direction, staticKeyword, varKeyword,
+                                dataType, *decl);
 }
 
 static bool checkSubroutineName(const NameSyntax& name) {

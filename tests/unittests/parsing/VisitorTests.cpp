@@ -136,7 +136,17 @@ private:
     flat_hash_map<const syntax::SyntaxNode*, const Symbol*> symbolCache;
 };
 
-class TestRewriter : public SyntaxRewriter<TestRewriter> {
+template<typename T>
+class RewriterBase : public SyntaxRewriter<T> {
+public:
+    FunctionPortSyntax& makeArg(std::string_view name) {
+        return this->factory.functionPort(nullptr, {}, {}, {}, {}, nullptr,
+                                          this->factory.declarator(this->makeId(name), nullptr,
+                                                                   nullptr));
+    }
+};
+
+class TestRewriter : public RewriterBase<TestRewriter> {
 public:
     Compilation compilation;
     SemanticModel model;
@@ -164,13 +174,8 @@ public:
         if (!portList)
             return;
 
-        auto& argA = factory.functionPort(nullptr, {}, {}, {}, nullptr,
-                                          factory.declarator(makeId("argA"), nullptr, nullptr));
-        insertAtFront(portList->ports, argA, makeComma());
-
-        auto& argZ = factory.functionPort(nullptr, {}, {}, {}, nullptr,
-                                          factory.declarator(makeId("argZ"), nullptr, nullptr));
-        insertAtBack(portList->ports, argZ, makeComma());
+        insertAtFront(portList->ports, makeArg("argA"), makeComma());
+        insertAtBack(portList->ports, makeArg("argZ"), makeComma());
     }
 };
 
@@ -247,7 +252,7 @@ endmodule
 
 TEST_CASE("Advanced rewriting") {
     SECTION("Insert multiple newNodes surrounding oldNodes") {
-        class MultipleRewriter : public SyntaxRewriter<MultipleRewriter> {
+        class MultipleRewriter : public RewriterBase<MultipleRewriter> {
         public:
             Compilation compilation;
             SemanticModel model;
@@ -284,15 +289,8 @@ TEST_CASE("Advanced rewriting") {
                 if (!portList)
                     return;
 
-                auto& argA = factory.functionPort(nullptr, {}, {}, {}, nullptr,
-                                                  factory.declarator(makeId("argA"), nullptr,
-                                                                     nullptr));
-                insertAtFront(portList->ports, argA, makeComma());
-
-                auto& argZ = factory.functionPort(nullptr, {}, {}, {}, nullptr,
-                                                  factory.declarator(makeId("argZ"), nullptr,
-                                                                     nullptr));
-                insertAtBack(portList->ports, argZ, makeComma());
+                insertAtFront(portList->ports, makeArg("argA"), makeComma());
+                insertAtBack(portList->ports, makeArg("argZ"), makeComma());
             }
         };
 
@@ -321,7 +319,7 @@ endmodule
 )");
     }
     SECTION("Combine insert and replace operation on oldNodes") {
-        class InterleavedRewriter : public SyntaxRewriter<InterleavedRewriter> {
+        class InterleavedRewriter : public RewriterBase<InterleavedRewriter> {
         public:
             Compilation compilation;
             SemanticModel model;
@@ -355,15 +353,8 @@ endmodule
                 if (!portList)
                     return;
 
-                auto& argA = factory.functionPort(nullptr, {}, {}, {}, nullptr,
-                                                  factory.declarator(makeId("argA"), nullptr,
-                                                                     nullptr));
-                insertAtFront(portList->ports, argA, makeComma());
-
-                auto& argZ = factory.functionPort(nullptr, {}, {}, {}, nullptr,
-                                                  factory.declarator(makeId("argZ"), nullptr,
-                                                                     nullptr));
-                insertAtBack(portList->ports, argZ, makeComma());
+                insertAtFront(portList->ports, makeArg("argA"), makeComma());
+                insertAtBack(portList->ports, makeArg("argZ"), makeComma());
             }
         };
 
@@ -389,7 +380,7 @@ endmodule
 )");
     }
     SECTION("Combine insert and remove operation on oldNodes") {
-        class InterleavedRewriter : public SyntaxRewriter<InterleavedRewriter> {
+        class InterleavedRewriter : public RewriterBase<InterleavedRewriter> {
         public:
             Compilation compilation;
             SemanticModel model;
@@ -421,15 +412,8 @@ endmodule
                 if (!portList)
                     return;
 
-                auto& argA = factory.functionPort(nullptr, {}, {}, {}, nullptr,
-                                                  factory.declarator(makeId("argA"), nullptr,
-                                                                     nullptr));
-                insertAtFront(portList->ports, argA, makeComma());
-
-                auto& argZ = factory.functionPort(nullptr, {}, {}, {}, nullptr,
-                                                  factory.declarator(makeId("argZ"), nullptr,
-                                                                     nullptr));
-                insertAtBack(portList->ports, argZ, makeComma());
+                insertAtFront(portList->ports, makeArg("argA"), makeComma());
+                insertAtBack(portList->ports, makeArg("argZ"), makeComma());
             }
         };
 
