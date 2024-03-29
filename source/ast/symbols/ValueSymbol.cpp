@@ -451,16 +451,16 @@ std::optional<DriverBitRange> ValueDriver::getBounds(const Expression& prefixExp
         if (type->kind == SymbolKind::FixedSizeUnpackedArrayType) {
             // Unpacked arrays need their selection adjusted since they
             // return a simple index instead of a bit offset.
-            uint64_t elemWidth = elem.type->getSelectableWidth();
+            type = &type->getArrayElementType()->getCanonicalType();
+            uint64_t elemWidth = type->getSelectableWidth();
             result.first += start * elemWidth;
             result.second = result.first + elemWidth - 1;
         }
         else {
+            type = &elem.type->getCanonicalType();
             result.first += start;
             result.second = result.first + width - 1;
         }
-
-        type = &elem.type->getCanonicalType();
     }
 
     return result;
