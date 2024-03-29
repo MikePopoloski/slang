@@ -752,7 +752,7 @@ void registerAST(py::module_& m) {
 
     py::class_<SolveBeforeConstraint, Constraint>(m, "SolveBeforeConstraint")
         .def_readonly("solve", &SolveBeforeConstraint::solve)
-        .def_readonly("before", &SolveBeforeConstraint::before);
+        .def_readonly("after", &SolveBeforeConstraint::after);
 
     py::class_<ForeachConstraint, Constraint>(m, "ForeachConstraint")
         .def_property_readonly("arrayRef",
