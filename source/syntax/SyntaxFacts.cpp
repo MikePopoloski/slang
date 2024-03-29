@@ -508,7 +508,7 @@ parsing::TokenKind SyntaxFacts::getDelimCloseKind(TokenKind kind) {
         case TokenKind::OpenBrace: return TokenKind::CloseBrace;
         case TokenKind::OpenBracket: return TokenKind::CloseBracket;
         case TokenKind::ApostropheOpenBrace: return TokenKind::CloseBrace;
-        case TokenKind::OpenParenthesisStar: return TokenKind::StarCloseParenthesis;
+        case TokenKind::OpenParenthesisStar: return TokenKind::CloseParenthesis;
         default: return TokenKind::Unknown;
     }
 }

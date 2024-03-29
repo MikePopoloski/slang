@@ -353,11 +353,12 @@ private:
 
     private:
         template<typename TFunc>
-        void parseArgumentList(SmallVectorBase<syntax::TokenOrSyntax>& buffer, TFunc&& parseItem);
+        void parseArgumentList(SmallVectorBase<syntax::TokenOrSyntax>& buffer, TFunc&& parseItem,
+                               Token& closeParen);
 
-        syntax::MacroActualArgumentSyntax* parseActualArgument();
+        syntax::MacroActualArgumentSyntax* parseActualArgument(Token firstToken);
         syntax::MacroFormalArgumentSyntax* parseFormalArgument();
-        std::span<Token> parseTokenList(bool allowNewlines);
+        std::span<Token> parseTokenList(bool allowNewlines, Token firstToken);
 
         Token peek();
         Token consume();

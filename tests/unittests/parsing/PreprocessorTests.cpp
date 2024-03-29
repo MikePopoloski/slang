@@ -2479,3 +2479,25 @@ FOO
     CHECK(diagnostics[2].code == diag::ExpectedIdentifier);
     CHECK(diagnostics[3].code == diag::WrongLanguageVersion);
 }
+
+TEST_CASE("Macro expansion with asterisks regress") {
+    auto& text = R"(
+`define FOO(x) x
+`define BAR(x=(*)) x
+`FOO(*)
+`FOO( *)
+`FOO( * )
+`BAR()
+)";
+
+    auto& expected = R"(
+*
+*
+*
+(*)
+)";
+
+    std::string result = preprocess(text);
+    CHECK(result == expected);
+    CHECK_DIAGNOSTICS_EMPTY;
+}
