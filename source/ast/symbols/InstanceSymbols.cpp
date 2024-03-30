@@ -1626,7 +1626,7 @@ std::span<const Expression* const> PrimitiveInstanceSymbol::getPortConnections()
 
                 SLANG_ASSERT(conns[i]);
                 results.push_back(
-                    &Expression::bindArgument(comp.getLogicType(), dir, *conns[i], context));
+                    &Expression::bindArgument(comp.getLogicType(), dir, {}, *conns[i], context));
             }
         }
         else {
@@ -1657,7 +1657,7 @@ std::span<const Expression* const> PrimitiveInstanceSymbol::getPortConnections()
                         break;
                 }
                 results.push_back(
-                    &Expression::bindArgument(comp.getLogicType(), dir, *conns[i], context));
+                    &Expression::bindArgument(comp.getLogicType(), dir, {}, *conns[i], context));
             }
         }
 
@@ -2214,8 +2214,8 @@ std::span<const CheckerInstanceSymbol::Connection> CheckerInstanceSymbol::getPor
                 context.flags |= ASTFlags::NonProcedural;
 
             auto& formal = conn.formal.as<FormalArgumentSymbol>();
-            conn.actual = &Expression::bindArgument(formal.getType(), formal.direction, *exprSyntax,
-                                                    context);
+            conn.actual = &Expression::bindArgument(formal.getType(), formal.direction, {},
+                                                    *exprSyntax, context);
         }
     }
 

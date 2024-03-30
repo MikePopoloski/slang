@@ -7,6 +7,7 @@
 //------------------------------------------------------------------------------
 #include "slang/ast/Compilation.h"
 #include "slang/ast/SystemSubroutine.h"
+#include "slang/ast/symbols/VariableSymbols.h"
 #include "slang/ast/types/AllTypes.h"
 
 namespace slang::ast::builtins {
@@ -71,7 +72,7 @@ public:
             return SystemSubroutine::bindArgument(argIndex, context, syntax, args);
 
         return Expression::bindArgument(context.getCompilation().getUnsignedIntType(),
-                                        ArgumentDirection::In, syntax, context);
+                                        ArgumentDirection::In, {}, syntax, context);
     }
 
     const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,

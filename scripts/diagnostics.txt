@@ -646,6 +646,7 @@ error ExpectedNetDelay "invalid net delay; expected min:typ:max or single expres
 error InvalidRefArg "invalid expression for pass by reference; only variables, class properties, and members of unpacked structs and arrays are allowed"
 error RefTypeMismatch "argument of type {} connects to 'ref' port of inequivalent type {}"
 error ConstVarToRef "cannot bind const variable to 'ref' argument"
+error AutoVarToRefStatic "cannot pass automatic variables or elements of dynamically sized arrays to 'ref static' argument"
 error MissingInvocationParens "parentheses are required when invoking function '{}'"
 error ChainedMethodParens "parentheses are required when chaining method calls"
 error NameListWithScopeRandomize "lookup restriction list not allowed for std::randomize call"

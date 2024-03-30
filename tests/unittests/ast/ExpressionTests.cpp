@@ -3575,3 +3575,59 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("v1800-2023: ref static arguments") {
+    auto options = optionsFor(LanguageVersion::v1800_2023);
+    auto tree = SyntaxTree::fromText(R"(
+function automatic foo(ref static a, r);
+    static logic l = r;
+endfunction
+
+module m;
+    logic a, r;
+    logic b = foo(a, r);
+endmodule
+)",
+                                     options);
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("v1800-2023: ref static errors") {
+    auto options = optionsFor(LanguageVersion::v1800_2023);
+    auto tree = SyntaxTree::fromText(R"(
+function automatic void bar(ref static a);
+endfunction
+
+function automatic void foo(ref static a, r);
+    bar(a);
+endfunction
+
+class C;
+    static logic a;
+    logic b;
+endclass
+
+module m;
+    logic r[];
+    C c;
+    initial begin
+        automatic logic a;
+        foo(a, r[0]);
+        foo(c.a, c.b);
+    end
+endmodule
+)",
+                                     options);
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::AutoVarToRefStatic);
+    CHECK(diags[1].code == diag::AutoVarToRefStatic);
+    CHECK(diags[2].code == diag::AutoVarToRefStatic);
+}

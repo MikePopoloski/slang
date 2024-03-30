@@ -18,6 +18,7 @@ class EvalContext;
 class InstanceSymbolBase;
 class Type;
 class ValueSymbol;
+enum class VariableFlags : uint16_t;
 
 // clang-format off
 #define EXPRESSION(x) \
@@ -175,14 +176,15 @@ public:
                                         bitmask<ASTFlags> extraFlags = ASTFlags::None);
 
     /// Binds a connection to a ref argument from the given syntax nodes.
-    static const Expression& bindRefArg(const Type& lhs, bool isConstRef,
+    static const Expression& bindRefArg(const Type& lhs, bitmask<VariableFlags> argFlags,
                                         const ExpressionSyntax& rhs, SourceLocation location,
                                         const ASTContext& context);
 
     /// Binds an argument or port connection with the given direction.
     static const Expression& bindArgument(const Type& argType, ArgumentDirection direction,
-                                          const ExpressionSyntax& syntax, const ASTContext& context,
-                                          bool isConstRef = false);
+                                          bitmask<VariableFlags> argFlags,
+                                          const ExpressionSyntax& syntax,
+                                          const ASTContext& context);
 
     /// Checks that the given expression is valid for the specified connection direction.
     /// @returns true if the connection is valid and false otherwise.

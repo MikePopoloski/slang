@@ -1550,7 +1550,7 @@ Expression& SimpleAssignmentPatternExpression::forStruct(
     uint32_t index = 0;
     SmallVector<const Expression*> elems;
     for (auto item : syntax.items) {
-        auto& expr = Expression::bindArgument(*types[index++], direction, *item, context);
+        auto& expr = Expression::bindArgument(*types[index++], direction, {}, *item, context);
         elems.push_back(&expr);
         bad |= expr.bad();
     }
@@ -1573,7 +1573,7 @@ static std::span<const Expression* const> bindExpressionList(
 
     SmallVector<const Expression*> elems;
     for (auto item : items) {
-        auto& expr = Expression::bindArgument(elementType, direction, *item, context);
+        auto& expr = Expression::bindArgument(elementType, direction, {}, *item, context);
         elems.push_back(&expr);
         bad |= expr.bad();
     }

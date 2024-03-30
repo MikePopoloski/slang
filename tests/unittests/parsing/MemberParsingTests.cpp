@@ -1387,7 +1387,7 @@ endfunction
     CHECK(diagnostics[4].code == diag::SpecifiersNotAllowed);
 }
 
-TEST_CASE("v1800-2023: ref static errors") {
+TEST_CASE("v1800-2023: ref static parsing errors") {
     auto& text = R"(
 function foo(ref static r);
 endfunction

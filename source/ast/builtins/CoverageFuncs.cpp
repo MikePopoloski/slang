@@ -9,6 +9,7 @@
 #include "slang/ast/SystemSubroutine.h"
 #include "slang/ast/expressions/MiscExpressions.h"
 #include "slang/ast/symbols/InstanceSymbols.h"
+#include "slang/ast/symbols/VariableSymbols.h"
 #include "slang/ast/types/Type.h"
 #include "slang/diagnostics/SysFuncsDiags.h"
 #include "slang/syntax/AllSyntax.h"
@@ -40,7 +41,7 @@ public:
                                                          LookupFlags::AllowRoot);
         }
 
-        return Expression::bindArgument(*argTypes[argIndex], ArgumentDirection::In, syntax,
+        return Expression::bindArgument(*argTypes[argIndex], ArgumentDirection::In, {}, syntax,
                                         context);
     }
 

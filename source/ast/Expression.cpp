@@ -262,16 +262,28 @@ const Expression& Expression::bindRValue(const Type& lhs, const ExpressionSyntax
     return convertAssignment(ctx, lhs, expr, location);
 }
 
-static bool canConnectToRefArg(const Expression& expr, bool isConstRef,
-                               bool allowConstClassHandle = false) {
+static bool canConnectToRefArg(const ASTContext& context, const Expression& expr,
+                               bitmask<VariableFlags> argFlags, bool allowConstClassHandle = false,
+                               bool disallowDynamicArrays = false) {
     auto sym = expr.getSymbolReference(/* allowPacked */ false);
     if (!sym || !VariableSymbol::isKind(sym->kind))
         return false;
 
     auto& var = sym->as<VariableSymbol>();
-    if (!isConstRef && var.flags.has(VariableFlags::Const) &&
+    if (!argFlags.has(VariableFlags::Const) && var.flags.has(VariableFlags::Const) &&
         (!allowConstClassHandle || !var.getType().isClass())) {
         return false;
+    }
+
+    const bool isRefStatic = argFlags.has(VariableFlags::RefStatic);
+    if (isRefStatic) {
+        if (var.lifetime == VariableLifetime::Automatic &&
+            !var.flags.has(VariableFlags::RefStatic)) {
+            return false;
+        }
+
+        if (disallowDynamicArrays && var.getType().isDynamicallySizedArray())
+            return false;
     }
 
     // Need to recursively check the left hand side of element selects and member accesses
@@ -279,18 +291,20 @@ static bool canConnectToRefArg(const Expression& expr, bool isConstRef,
     // function call or something.
     switch (expr.kind) {
         case ExpressionKind::ElementSelect:
-            return canConnectToRefArg(expr.as<ElementSelectExpression>().value(), isConstRef,
-                                      false);
+            return canConnectToRefArg(context, expr.as<ElementSelectExpression>().value(), argFlags,
+                                      false, isRefStatic);
         case ExpressionKind::RangeSelect:
-            return canConnectToRefArg(expr.as<RangeSelectExpression>().value(), isConstRef, false);
+            return canConnectToRefArg(context, expr.as<RangeSelectExpression>().value(), argFlags,
+                                      false, isRefStatic);
         case ExpressionKind::MemberAccess:
-            return canConnectToRefArg(expr.as<MemberAccessExpression>().value(), isConstRef, true);
+            return canConnectToRefArg(context, expr.as<MemberAccessExpression>().value(), argFlags,
+                                      true);
         default:
             return true;
     }
 }
 
-const Expression& Expression::bindRefArg(const Type& lhs, bool isConstRef,
+const Expression& Expression::bindRefArg(const Type& lhs, bitmask<VariableFlags> argFlags,
                                          const ExpressionSyntax& rhs, SourceLocation location,
                                          const ASTContext& context) {
     Compilation& comp = context.getCompilation();
@@ -301,12 +315,19 @@ const Expression& Expression::bindRefArg(const Type& lhs, bool isConstRef,
     if (lhs.isError())
         return badExpr(comp, &expr);
 
-    if (!canConnectToRefArg(expr, isConstRef)) {
-        // If we can't bind to ref but we can bind to 'const ref', issue a more
-        // specific error about constness.
+    const bool isConstRef = argFlags.has(VariableFlags::Const);
+    if (!canConnectToRefArg(context, expr, argFlags)) {
         DiagCode code = diag::InvalidRefArg;
-        if (!isConstRef && canConnectToRefArg(expr, true))
+        if (!isConstRef && canConnectToRefArg(context, expr, argFlags | VariableFlags::Const)) {
+            // If we can't bind to ref but we can bind to 'const ref', issue a more
+            // specific error about constness.
             code = diag::ConstVarToRef;
+        }
+        else if (argFlags.has(VariableFlags::RefStatic) &&
+                 canConnectToRefArg(context, expr, argFlags & ~VariableFlags::RefStatic)) {
+            // Same idea, but for ref static restrictions.
+            code = diag::AutoVarToRefStatic;
+        }
 
         context.addDiag(code, location) << expr.sourceRange;
         return badExpr(comp, &expr);
@@ -332,8 +353,9 @@ const Expression& Expression::bindRefArg(const Type& lhs, bool isConstRef,
 }
 
 const Expression& Expression::bindArgument(const Type& argType, ArgumentDirection direction,
+                                           bitmask<VariableFlags> argFlags,
                                            const ExpressionSyntax& syntax,
-                                           const ASTContext& context, bool isConstRef) {
+                                           const ASTContext& context) {
     auto loc = syntax.getFirstToken().location();
     switch (direction) {
         case ArgumentDirection::In:
@@ -342,7 +364,7 @@ const Expression& Expression::bindArgument(const Type& argType, ArgumentDirectio
         case ArgumentDirection::InOut:
             return bindLValue(syntax, argType, loc, context, direction == ArgumentDirection::InOut);
         case ArgumentDirection::Ref:
-            return bindRefArg(argType, isConstRef, syntax, loc, context);
+            return bindRefArg(argType, argFlags, syntax, loc, context);
     }
     SLANG_UNREACHABLE;
 }
@@ -359,7 +381,7 @@ bool Expression::checkConnectionDirection(const Expression& expr, ArgumentDirect
         case ArgumentDirection::InOut:
             return expr.requireLValue(context, loc, flags | AssignFlags::InOutPort);
         case ArgumentDirection::Ref:
-            if (!canConnectToRefArg(expr, /* isConstRef */ false)) {
+            if (!canConnectToRefArg(context, expr, VariableFlags::None)) {
                 context.addDiag(diag::InvalidRefArg, loc) << expr.sourceRange;
                 return false;
             }

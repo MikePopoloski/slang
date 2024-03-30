@@ -573,8 +573,10 @@ public:
         // Argument type comes from the index type of the previous argument.
         if (argIndex == 1) {
             auto indexType = args[0]->type->getAssociativeIndexType();
-            if (indexType)
-                return Expression::bindArgument(*indexType, ArgumentDirection::In, syntax, context);
+            if (indexType) {
+                return Expression::bindArgument(*indexType, ArgumentDirection::In, {}, syntax,
+                                                context);
+            }
         }
 
         return SystemSubroutine::bindArgument(argIndex, context, syntax, args);
@@ -633,8 +635,10 @@ public:
         // Argument type comes from the index type of the previous argument.
         if (argIndex == 1) {
             auto indexType = args[0]->type->getAssociativeIndexType();
-            if (indexType)
-                return Expression::bindArgument(*indexType, ArgumentDirection::In, syntax, context);
+            if (indexType) {
+                return Expression::bindArgument(*indexType, ArgumentDirection::In, {}, syntax,
+                                                context);
+            }
         }
 
         return SystemSubroutine::bindArgument(argIndex, context, syntax, args);
@@ -681,9 +685,10 @@ public:
         // Argument type comes from the index type of the previous argument.
         if (argIndex == 1) {
             auto indexType = args[0]->type->getAssociativeIndexType();
-            if (indexType)
-                return Expression::bindArgument(*indexType, ArgumentDirection::Ref, syntax,
+            if (indexType) {
+                return Expression::bindArgument(*indexType, ArgumentDirection::Ref, {}, syntax,
                                                 context);
+            }
         }
 
         return SystemSubroutine::bindArgument(argIndex, context, syntax, args);
@@ -770,8 +775,10 @@ public:
         // Argument type comes from the element type of the queue.
         if (argIndex == 1) {
             auto elemType = args[0]->type->getArrayElementType();
-            if (elemType)
-                return Expression::bindArgument(*elemType, ArgumentDirection::In, syntax, context);
+            if (elemType) {
+                return Expression::bindArgument(*elemType, ArgumentDirection::In, {}, syntax,
+                                                context);
+            }
         }
 
         return SystemSubroutine::bindArgument(argIndex, context, syntax, args);
@@ -822,8 +829,10 @@ public:
         // Argument type comes from the element type of the queue.
         if (argIndex == 2) {
             auto elemType = args[0]->type->getArrayElementType();
-            if (elemType)
-                return Expression::bindArgument(*elemType, ArgumentDirection::In, syntax, context);
+            if (elemType) {
+                return Expression::bindArgument(*elemType, ArgumentDirection::In, {}, syntax,
+                                                context);
+            }
         }
 
         return SystemSubroutine::bindArgument(argIndex, context, syntax, args);

@@ -1741,7 +1741,7 @@ const Expression* PortConnection::getExpression() const {
             }
         }
         else {
-            expr = &Expression::bindArgument(*type, direction, *exprSyntax, context);
+            expr = &Expression::bindArgument(*type, direction, {}, *exprSyntax, context);
         }
     }
     else if (useDefault) {

@@ -248,8 +248,8 @@ bool CallExpression::bindArgs(const ArgumentListSyntax* argSyntax,
                     addDefaultDriver(*expr, *formal);
             }
             else if (auto exSyn = context.requireSimpleExpr(arg->as<PropertyExprSyntax>())) {
-                expr = &Expression::bindArgument(formal->getType(), formal->direction, *exSyn,
-                                                 context, formal->flags.has(VariableFlags::Const));
+                expr = &Expression::bindArgument(formal->getType(), formal->direction,
+                                                 formal->flags, *exSyn, context);
             }
 
             // Make sure there isn't also a named value for this argument.
@@ -280,8 +280,8 @@ bool CallExpression::bindArgs(const ArgumentListSyntax* argSyntax,
                 }
             }
             else if (auto exSyn = context.requireSimpleExpr(*arg)) {
-                expr = &Expression::bindArgument(formal->getType(), formal->direction, *exSyn,
-                                                 context, formal->flags.has(VariableFlags::Const));
+                expr = &Expression::bindArgument(formal->getType(), formal->direction,
+                                                 formal->flags, *exSyn, context);
             }
         }
         else {

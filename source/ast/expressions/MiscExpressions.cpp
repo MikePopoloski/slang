@@ -32,39 +32,50 @@ namespace slang::ast {
 using namespace parsing;
 using namespace syntax;
 
+static constexpr bitmask<ASTFlags> DisallowedAutoVarContexts = ASTFlags::NonProcedural |
+                                                               ASTFlags::StaticInitializer |
+                                                               ASTFlags::NonBlockingTimingControl;
+
 Expression& ValueExpressionBase::fromSymbol(const ASTContext& context, const Symbol& symbol,
                                             bool isHierarchical, SourceRange sourceRange,
                                             bool constraintAllowed, bool isDottedAccess) {
     // Automatic variables have additional restrictions.
     bool isUnbounded = false;
-    Compilation& comp = context.getCompilation();
+    auto& comp = context.getCompilation();
+    auto flags = context.flags;
     if (VariableSymbol::isKind(symbol.kind) &&
         symbol.as<VariableSymbol>().lifetime == VariableLifetime::Automatic) {
 
         // If this is actually a class property, check that no static methods,
         // initializers, or nested classes are accessing it.
+        auto& var = symbol.as<VariableSymbol>();
         if (symbol.kind == SymbolKind::ClassProperty) {
             if (!Lookup::ensureAccessible(symbol, context, sourceRange))
                 return badExpr(comp, nullptr);
         }
-        else if (context.flags.has(ASTFlags::NonProcedural)) {
-            context.addDiag(diag::AutoFromNonProcedural, sourceRange) << symbol.name;
-            return badExpr(comp, nullptr);
+        else if (!var.flags.has(VariableFlags::RefStatic) && flags.has(DisallowedAutoVarContexts)) {
+            if (flags.has(ASTFlags::NonProcedural)) {
+                context.addDiag(diag::AutoFromNonProcedural, sourceRange) << symbol.name;
+                return badExpr(comp, nullptr);
+            }
+            else if (flags.has(ASTFlags::StaticInitializer)) {
+                context.addDiag(diag::AutoFromStaticInit, sourceRange) << symbol.name;
+                return badExpr(comp, nullptr);
+            }
+            else if (flags.has(ASTFlags::NonBlockingTimingControl)) {
+                context.addDiag(diag::AutoFromNonBlockingTiming, sourceRange) << symbol.name;
+                return badExpr(comp, nullptr);
+            }
+            else {
+                SLANG_UNREACHABLE;
+            }
         }
-        else if (context.flags.has(ASTFlags::StaticInitializer)) {
-            context.addDiag(diag::AutoFromStaticInit, sourceRange) << symbol.name;
-            return badExpr(comp, nullptr);
-        }
-        else if (context.flags.has(ASTFlags::NonBlockingTimingControl)) {
-            context.addDiag(diag::AutoFromNonBlockingTiming, sourceRange) << symbol.name;
-            return badExpr(comp, nullptr);
-        }
-        else if (!context.flags.has(ASTFlags::AllowCoverageSampleFormal) &&
-                 symbol.as<VariableSymbol>().flags.has(VariableFlags::CoverageSampleFormal)) {
+        else if (!flags.has(ASTFlags::AllowCoverageSampleFormal) &&
+                 var.flags.has(VariableFlags::CoverageSampleFormal)) {
             context.addDiag(diag::CoverageSampleFormal, sourceRange) << symbol.name;
             return badExpr(comp, nullptr);
         }
-        else if (context.flags.has(ASTFlags::EventExpression) &&
+        else if (flags.has(ASTFlags::EventExpression) &&
                  symbol.kind == SymbolKind::LocalAssertionVar) {
             context.addDiag(diag::LocalVarEventExpr, sourceRange) << symbol.name;
             return badExpr(comp, nullptr);
@@ -79,23 +90,23 @@ Expression& ValueExpressionBase::fromSymbol(const ASTContext& context, const Sym
         // anywhere that an unbounded literal is allowed, *except* for queue expressions,
         // which is indicated here by the AllowUnboundedLiteralArithmetic flag.
         isUnbounded = symbol.as<ParameterSymbol>().getValue(sourceRange).isUnbounded();
-        if ((!context.flags.has(ASTFlags::AllowUnboundedLiteral) ||
-             context.flags.has(ASTFlags::AllowUnboundedLiteralArithmetic)) &&
+        if ((!flags.has(ASTFlags::AllowUnboundedLiteral) ||
+             flags.has(ASTFlags::AllowUnboundedLiteralArithmetic)) &&
             isUnbounded && !context.inUnevaluatedBranch()) {
             context.addDiag(diag::UnboundedNotAllowed, sourceRange);
             return badExpr(comp, nullptr);
         }
 
-        if (context.flags.has(ASTFlags::SpecifyBlock))
+        if (flags.has(ASTFlags::SpecifyBlock))
             context.addDiag(diag::SpecifyBlockParam, sourceRange);
     }
     else if (symbol.kind == SymbolKind::Net &&
              symbol.as<NetSymbol>().netType.netKind == NetType::Interconnect &&
-             !context.flags.has(ASTFlags::AllowInterconnect)) {
+             !flags.has(ASTFlags::AllowInterconnect)) {
         context.addDiag(diag::InterconnectReference, sourceRange) << symbol.name;
         return badExpr(comp, nullptr);
     }
-    else if (symbol.kind == SymbolKind::ClockVar && !context.flags.has(ASTFlags::LValue) &&
+    else if (symbol.kind == SymbolKind::ClockVar && !flags.has(ASTFlags::LValue) &&
              symbol.as<ClockVarSymbol>().direction == ArgumentDirection::Out) {
         context.addDiag(diag::ClockVarOutputRead, sourceRange) << symbol.name;
         return badExpr(comp, nullptr);
@@ -106,11 +117,9 @@ Expression& ValueExpressionBase::fromSymbol(const ASTContext& context, const Sym
     }
 
     if (!symbol.isValue()) {
-        if ((symbol.kind == SymbolKind::ClockingBlock &&
-             context.flags.has(ASTFlags::AllowClockingBlock)) ||
+        if ((symbol.kind == SymbolKind::ClockingBlock && flags.has(ASTFlags::AllowClockingBlock)) ||
             (symbol.kind == SymbolKind::ConstraintBlock && constraintAllowed) ||
-            (symbol.kind == SymbolKind::Coverpoint &&
-             context.flags.has(ASTFlags::AllowCoverpoint))) {
+            (symbol.kind == SymbolKind::Coverpoint && flags.has(ASTFlags::AllowCoverpoint))) {
             // Special case for event expressions and constraint block built-in methods.
             return *comp.emplace<ArbitrarySymbolExpression>(symbol, comp.getVoidType(),
                                                             sourceRange);
@@ -129,13 +138,13 @@ Expression& ValueExpressionBase::fromSymbol(const ASTContext& context, const Sym
 
     // chandles can't be referenced in sequence expressions
     auto& value = symbol.as<ValueSymbol>();
-    if (context.flags.has(ASTFlags::AssertionExpr) && value.getType().isCHandle()) {
+    if (flags.has(ASTFlags::AssertionExpr) && value.getType().isCHandle()) {
         context.addDiag(diag::CHandleInAssertion, sourceRange);
         return badExpr(comp, nullptr);
     }
 
-    if (auto syntax = symbol.getSyntax(); syntax && !context.flags.has(ASTFlags::NoReference)) {
-        bool isLValue = context.flags.has(ASTFlags::LValue);
+    if (auto syntax = symbol.getSyntax(); syntax && !flags.has(ASTFlags::NoReference)) {
+        bool isLValue = flags.has(ASTFlags::LValue);
         if (isDottedAccess) {
             auto& type = value.getType();
             if (type.isClass() || type.isCovergroup())
@@ -144,7 +153,7 @@ Expression& ValueExpressionBase::fromSymbol(const ASTContext& context, const Sym
 
         comp.noteReference(*syntax, isLValue);
 
-        if (isLValue && context.flags.has(ASTFlags::LAndRValue))
+        if (isLValue && flags.has(ASTFlags::LAndRValue))
             comp.noteReference(*syntax, /* isLValue */ false);
     }
 
