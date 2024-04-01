@@ -260,6 +260,8 @@ TEST_CASE("Comparison") {
     CHECK("100'sd99999999999999999999999999"_si >= "-120'sd999999999999977789999"_si);
     CHECK("100'd99999999999999999999999999"_si < "-120'sd999999999999977789999"_si);
     CHECK("100'd99999999999999999999999999"_si >= -50);
+    CHECK(SVInt(32, -2147483648, 1) < SVInt(32, -1, 1));
+    CHECK(SVInt(32, -1, 1) > SVInt(32, -2147483648, 1));
 
     CHECK(bool("100'd1234"_si && "100'd09809345"_si));
     CHECK(bool("100'd1234"_si || "100'd0"_si));
@@ -827,4 +829,11 @@ value = value >> 1
     Compilation compilation;
     compilation.addSyntaxTree(tree);
     compilation.getAllDiagnostics();
+}
+TEST_CASE("Get minimum and maximum value") {
+    CHECK(slang::getMaxValue(32, 0) == 4294967295);
+    CHECK(slang::getMinValue(32, 0) == 0);
+
+    CHECK(slang::getMaxValue(32, 1) == 2147483647);
+    CHECK(slang::getMinValue(32, 1) == -2147483648);
 }

@@ -684,6 +684,14 @@ inline SLANG_EXPORT uint32_t clog2(const SVInt& v) {
     return v.getBitWidth() - (v - SVInt::One).countLeadingZeros();
 }
 
+// Returns maximum value of signed or unsugned int
+SVInt getMinValue(const SVInt& Int);
+SVInt getMinValue(bitwidth_t bitwidth, bool isSigned);
+
+// Returns minimum value of signed or unsugned int
+SVInt getMaxValue(const SVInt& Int);
+SVInt getMaxValue(bitwidth_t bitwidth, bool isSigned);
+
 inline namespace literals {
 
 inline SVInt operator""_si(const char* str, size_t size) {

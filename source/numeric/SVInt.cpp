@@ -1399,7 +1399,7 @@ logic_t SVInt::operator<(const SVInt& rhs) const {
         // handle negatives
         if (isNegative()) {
             if (rhs.isNegative())
-                return -(*this) > -rhs;
+                return ~(*this) > ~rhs;
             else
                 return logic_t(true);
         }
@@ -2431,6 +2431,34 @@ bool caseZWildcardEqual(const SVInt& lhs, const SVInt& rhs) {
     }
 
     return true;
+}
+
+SVInt getMinValue(const SVInt& Int) {
+    return getMinValue(Int.getBitWidth(), Int.isSigned());
+}
+
+SVInt getMinValue(bitwidth_t bitwidth, bool isSigned) {
+    if (!isSigned)
+        return SVInt(bitwidth, 0, isSigned);
+
+    SVInt out(bitwidth, 0, isSigned);
+    out.setAllOnes();
+    out = out.lshr(1);
+    out = ~out;
+    return out;
+}
+
+SVInt getMaxValue(const SVInt& Int) {
+    return getMaxValue(Int.getBitWidth(), Int.isSigned());
+}
+
+SVInt getMaxValue(bitwidth_t bitwidth, bool isSigned) {
+    SVInt out(bitwidth, 0, isSigned);
+    out.setAllOnes();
+    if (isSigned)
+        out = out.lshr(1);
+
+    return out;
 }
 
 } // namespace slang
