@@ -1,9 +1,8 @@
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
 
-#include <algorithm>
-
 #include "Test.h"
+#include <algorithm>
 
 #include "slang/parsing/Preprocessor.h"
 #include "slang/syntax/AllSyntax.h"
