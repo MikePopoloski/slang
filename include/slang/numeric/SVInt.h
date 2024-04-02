@@ -303,14 +303,6 @@ public:
     static SVInt createFillX(bitwidth_t bitWidth, bool isSigned);
     static SVInt createFillZ(bitwidth_t bitWidth, bool isSigned);
 
-    // Returns maximum value of signed or unsugned int
-    SLANG_EXPORT static SVInt getMinValue(const SVInt& Int);
-    SLANG_EXPORT static SVInt getMinValue(bitwidth_t bitwidth, bool isSigned);
-
-    // Returns minimum value of signed or unsugned int
-    SLANG_EXPORT static SVInt getMaxValue(const SVInt& Int);
-    SLANG_EXPORT static SVInt getMaxValue(bitwidth_t bitwidth, bool isSigned);
-
     [[nodiscard]] size_t hash() const;
     void writeTo(SmallVectorBase<char>& buffer, LiteralBase base,
                  bitwidth_t abbreviateThresholdBits = DefaultStringAbbreviationThresholdBits) const;

@@ -1394,19 +1394,12 @@ logic_t SVInt::operator<(const SVInt& rhs) const {
         else
             return *this < rhs.extend(bitWidth, bothSigned);
     }
+    // handle signed negatives
+    if (bothSigned && isNegative() ^ rhs.isNegative())
+        return logic_t(isNegative());
 
-    if (bothSigned) {
-        // handle negatives
-        if (isNegative()) {
-            if (rhs.isNegative())
-                return ~(*this) > ~rhs;
-            else
-                return logic_t(true);
-        }
-        if (rhs.isNegative())
-            return logic_t(false);
-    }
-
+    // both are positive or both are negative
+    // or not both are signed
     if (isSingleWord())
         return logic_t(val < rhs.val);
 
@@ -2431,34 +2424,6 @@ bool caseZWildcardEqual(const SVInt& lhs, const SVInt& rhs) {
     }
 
     return true;
-}
-
-SVInt SVInt::getMinValue(const SVInt& Int) {
-    return getMinValue(Int.getBitWidth(), Int.isSigned());
-}
-
-SVInt SVInt::getMinValue(bitwidth_t bitwidth, bool isSigned) {
-    if (!isSigned)
-        return SVInt(bitwidth, 0, isSigned);
-
-    SVInt out(bitwidth, 0, isSigned);
-    out.setAllOnes();
-    out = out.lshr(1);
-    out = ~out;
-    return out;
-}
-
-SVInt SVInt::getMaxValue(const SVInt& Int) {
-    return getMaxValue(Int.getBitWidth(), Int.isSigned());
-}
-
-SVInt SVInt::getMaxValue(bitwidth_t bitwidth, bool isSigned) {
-    SVInt out(bitwidth, 0, isSigned);
-    out.setAllOnes();
-    if (isSigned)
-        out = out.lshr(1);
-
-    return out;
 }
 
 } // namespace slang
