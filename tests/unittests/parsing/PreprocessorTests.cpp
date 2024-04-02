@@ -1,6 +1,8 @@
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
 
+#include <algorithm>
+
 #include "Test.h"
 
 #include "slang/parsing/Preprocessor.h"
@@ -1380,6 +1382,41 @@ TEST_CASE("Preprocessor API") {
 
     pp.setKeywordVersion(KeywordVersion::v1364_2001);
     CHECK(pp.getDefinedMacros().size() == 19);
+}
+
+TEST_CASE("Command-line defines priority over `define") {
+    PreprocessorOptions ppOptions;
+    ppOptions.predefines.emplace_back("A=2");
+    ppOptions.predefines.emplace_back("B=2");
+    ppOptions.predefines.emplace_back("C=2");
+
+    Bag options;
+    options.set(ppOptions);
+
+    auto& text = R"(
+`define A 1
+`undef B
+`undef C
+`define C 1
+)";
+    Preprocessor preprocessor(getSourceManager(), alloc, diagnostics, options);
+    preprocessor.pushSource(text);
+
+    while (true) {
+        Token token = preprocessor.next();
+        if (token.kind == TokenKind::EndOfFile)
+            break;
+    }
+
+    CHECK(!preprocessor.isDefined("B"));
+    CHECK(preprocessor.isDefined("A"));
+    CHECK(preprocessor.isDefined("C"));
+    for (auto macro : preprocessor.getDefinedMacros()) {
+        if (macro->name.toString() == "A")
+            CHECK(macro->body[0].toString() == "2");
+        if (macro->name.toString() == "C")
+            CHECK(macro->body[0].toString() == "1");
+    }
 }
 
 TEST_CASE("Undef builtin") {
