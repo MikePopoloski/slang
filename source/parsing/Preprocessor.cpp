@@ -643,7 +643,7 @@ Trivia Preprocessor::handleDefineDirective(Token directive) {
             bad = true;
         }
         else if (it->second.commandLine)
-            bad = true;
+            bad = true; // not really bad, but commandLine args has precedence so we skip this
         else if (!bad && it->second.valid() && !isSameMacro(*result, *it->second.syntax)) {
             auto& diag = addDiag(diag::RedefiningMacro, name.range());
             diag << name.valueText();
