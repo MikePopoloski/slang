@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: MIT
 
 #include "Test.h"
-#include <algorithm>
 
 #include "slang/parsing/Preprocessor.h"
 #include "slang/syntax/AllSyntax.h"
