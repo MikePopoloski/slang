@@ -444,7 +444,7 @@ TEST_CASE("UDP overlapping inputs with compatible outputs") {
           output reg q;
           input clk, d, _c, _s;
           table
-          // clk in  _c  _s  : Qt  : Qt+1                             
+          // clk in  _c  _s  : Qt  : Qt+1
             r    0    1   1  : ?   :  0;
             *    0    ?   1  : 0   :  -;
           endtable
@@ -453,7 +453,7 @@ TEST_CASE("UDP overlapping inputs with compatible outputs") {
           output reg q;
           input clk, d, _c, _s;
           table
-          // clk in  _c  _s  : Qt  : Qt+1                             
+          // clk in  _c  _s  : Qt  : Qt+1
             r    0    1   1  : 1   :  -;
             *    0    ?   1  : ?   :  1;
           endtable

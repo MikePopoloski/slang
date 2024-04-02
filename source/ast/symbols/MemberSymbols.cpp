@@ -1014,10 +1014,10 @@ static void createTableRow(const Scope& scope, const UdpEntrySyntax& syntax,
         }
         return 0;
     };
-    
+
     auto stateChar = getstateChar(syntax.current);
     if (!stateChar)
-            return;
+        return;
 
     auto getOutputChar = [](const UdpFieldBaseSyntax* base) -> char {
         if (base && base->kind == SyntaxKind::UdpSimpleField) {
@@ -1049,7 +1049,7 @@ static void createTableRow(const Scope& scope, const UdpEntrySyntax& syntax,
         auto existingOutput = getOutputChar(existing->next);
         auto existingState = getstateChar(existing->current);
         if (!((existingOutput == outputChar) ||
-              (existingOutput == '-') && (existingState == outputChar) || 
+              (existingOutput == '-') && (existingState == outputChar) ||
               (outputChar == '-') && (stateChar == existingOutput))) {
             auto& diag = scope.addDiag(diag::UdpDupDiffOutput, syntax.sourceRange());
             diag.addNote(diag::NotePreviousDefinition, existing->sourceRange());
