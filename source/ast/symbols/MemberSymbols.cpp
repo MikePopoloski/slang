@@ -995,10 +995,9 @@ static void createTableRow(const Scope& scope, const UdpEntrySyntax& syntax,
         return;
     }
 
-    char stateChar = 0;
-    if (syntax.current) {
-        if (syntax.current->kind == SyntaxKind::UdpSimpleField) {
-            auto raw = syntax.current->as<UdpSimpleFieldSyntax>().field.rawText();
+    auto getstateChar = [](const UdpFieldBaseSyntax* base) -> char {
+        if (base && base->kind == SyntaxKind::UdpSimpleField) {
+            auto raw = base->as<UdpSimpleFieldSyntax>().field.rawText();
             if (raw.size() == 1) {
                 auto c = charToLower(raw[0]);
                 switch (c) {
@@ -1007,17 +1006,18 @@ static void createTableRow(const Scope& scope, const UdpEntrySyntax& syntax,
                     case 'x':
                     case '?':
                     case 'b':
-                        stateChar = c;
-                        break;
+                        return c;
                     default:
                         break;
                 }
             }
         }
-
-        if (!stateChar)
+        return 0;
+    };
+    
+    auto stateChar = getstateChar(syntax.current);
+    if (!stateChar)
             return;
-    }
 
     auto getOutputChar = [](const UdpFieldBaseSyntax* base) -> char {
         if (base && base->kind == SyntaxKind::UdpSimpleField) {
@@ -1047,7 +1047,10 @@ static void createTableRow(const Scope& scope, const UdpEntrySyntax& syntax,
         // This is an error if the existing row has a different output,
         // otherwise it's just silently ignored.
         auto existingOutput = getOutputChar(existing->next);
-        if (existingOutput != outputChar) {
+        auto existingState = getstateChar(existing->current);
+        if (!((existingOutput == outputChar) ||
+              (existingOutput == '-') && (existingState == outputChar) || 
+              (outputChar == '-') && (stateChar == existingOutput))) {
             auto& diag = scope.addDiag(diag::UdpDupDiffOutput, syntax.sourceRange());
             diag.addNote(diag::NotePreviousDefinition, existing->sourceRange());
             return;

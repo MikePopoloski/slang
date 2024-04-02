@@ -438,6 +438,35 @@ endmodule
     CHECK(diags[2].code == diag::UdpDupDiffOutput);
 }
 
+TEST_CASE("UDP overlapping inputs with compatible outputs") {
+    auto tree = SyntaxTree::fromText(R"(
+ primitive D1 (q, clk, d, _c, _s);
+          output reg q;
+          input clk, d, _c, _s;
+          table
+          // clk in  _c  _s  : Qt  : Qt+1                             
+            r    0    1   1  : ?   :  0;
+            *    0    ?   1  : 0   :  -;
+          endtable
+ endprimitive
+ primitive D2 (q, clk, d, _c, _s);
+          output reg q;
+          input clk, d, _c, _s;
+          table
+          // clk in  _c  _s  : Qt  : Qt+1                             
+            r    0    1   1  : 1   :  -;
+            *    0    ?   1  : ?   :  1;
+          endtable
+ endprimitive
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 0);
+}
+
 TEST_CASE("More UDP error cases") {
     auto tree = SyntaxTree::fromText(R"(
 primitive p1(output reg o, input a);
