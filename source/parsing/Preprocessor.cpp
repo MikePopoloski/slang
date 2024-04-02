@@ -119,9 +119,11 @@ void Preprocessor::predefine(const std::string& definition, std::string_view nam
     // Look for the macro in the temporary preprocessor's macro map.
     // Any macros found that are not the built-in intrinsic macros should
     // be copied over to our own map.
-    for (const auto& pair : pp.macros) {
-        if (!pair.second.isIntrinsic())
+    for (auto& pair : pp.macros) {
+        if (!pair.second.isIntrinsic()) {
+            pair.second.commandLine = true;
             macros.insert(pair);
+        }
     }
 }
 
@@ -640,6 +642,8 @@ Trivia Preprocessor::handleDefineDirective(Token directive) {
             addDiag(diag::InvalidMacroName, name.range());
             bad = true;
         }
+        else if (it->second.commandLine)
+            bad = true; // not really bad, but commandLine args has precedence so we skip this
         else if (!bad && it->second.valid() && !isSameMacro(*result, *it->second.syntax)) {
             auto& diag = addDiag(diag::RedefiningMacro, name.range());
             diag << name.valueText();

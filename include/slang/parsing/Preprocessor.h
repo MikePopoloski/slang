@@ -250,6 +250,7 @@ private:
         const syntax::DefineDirectiveSyntax* syntax = nullptr;
         MacroIntrinsic intrinsic = MacroIntrinsic::None;
         bool builtIn = false;
+        bool commandLine = false;
 
         MacroDef() = default;
         MacroDef(const syntax::DefineDirectiveSyntax* syntax) : syntax(syntax) {}
