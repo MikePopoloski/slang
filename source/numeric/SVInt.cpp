@@ -2433,11 +2433,11 @@ bool caseZWildcardEqual(const SVInt& lhs, const SVInt& rhs) {
     return true;
 }
 
-SVInt getMinValue(const SVInt& Int) {
+SVInt SVInt::getMinValue(const SVInt& Int) {
     return getMinValue(Int.getBitWidth(), Int.isSigned());
 }
 
-SVInt getMinValue(bitwidth_t bitwidth, bool isSigned) {
+SVInt SVInt::getMinValue(bitwidth_t bitwidth, bool isSigned) {
     if (!isSigned)
         return SVInt(bitwidth, 0, isSigned);
 
@@ -2448,11 +2448,11 @@ SVInt getMinValue(bitwidth_t bitwidth, bool isSigned) {
     return out;
 }
 
-SVInt getMaxValue(const SVInt& Int) {
+SVInt SVInt::getMaxValue(const SVInt& Int) {
     return getMaxValue(Int.getBitWidth(), Int.isSigned());
 }
 
-SVInt getMaxValue(bitwidth_t bitwidth, bool isSigned) {
+SVInt SVInt::getMaxValue(bitwidth_t bitwidth, bool isSigned) {
     SVInt out(bitwidth, 0, isSigned);
     out.setAllOnes();
     if (isSigned)

@@ -830,10 +830,17 @@ value = value >> 1
     compilation.addSyntaxTree(tree);
     compilation.getAllDiagnostics();
 }
-TEST_CASE("Get minimum and maximum value") {
-    CHECK(slang::getMaxValue(32, 0) == 4294967295);
-    CHECK(slang::getMinValue(32, 0) == 0);
 
-    CHECK(slang::getMaxValue(32, 1) == 2147483647);
-    CHECK(slang::getMinValue(32, 1) == -2147483648);
+TEST_CASE("Get minimum and maximum value") {
+    CHECK(slang::SVInt::getMaxValue(32, 0) == 4294967295);
+    CHECK(slang::SVInt::getMinValue(32, 0) == 0);
+
+    CHECK(slang::SVInt::getMaxValue(32, 1) == 2147483647);
+    CHECK(slang::SVInt::getMinValue(32, 1) == -2147483648);
+
+    CHECK(slang::SVInt::getMaxValue(SVInt(4, 0, 0)) == 15);
+    CHECK(slang::SVInt::getMinValue(SVInt(4, 0, 0)) == 0);
+
+    CHECK(slang::SVInt::getMaxValue(SVInt(4, 0, 1)) == 7);
+    CHECK(slang::SVInt::getMinValue(SVInt(4, 0, 1)) == -8);
 }
