@@ -1394,19 +1394,12 @@ logic_t SVInt::operator<(const SVInt& rhs) const {
         else
             return *this < rhs.extend(bitWidth, bothSigned);
     }
+    // handle signed negatives
+    if (bothSigned && isNegative() ^ rhs.isNegative())
+        return logic_t(isNegative());
 
-    if (bothSigned) {
-        // handle negatives
-        if (isNegative()) {
-            if (rhs.isNegative())
-                return -(*this) > -rhs;
-            else
-                return logic_t(true);
-        }
-        if (rhs.isNegative())
-            return logic_t(false);
-    }
-
+    // both are positive or both are negative
+    // or not both are signed
     if (isSingleWord())
         return logic_t(val < rhs.val);
 
