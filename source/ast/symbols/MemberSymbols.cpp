@@ -1049,8 +1049,8 @@ static void createTableRow(const Scope& scope, const UdpEntrySyntax& syntax,
         auto existingOutput = getOutputChar(existing->next);
         auto existingState = getstateChar(existing->current);
         if (!((existingOutput == outputChar) ||
-              (existingOutput == '-') && (existingState == outputChar) ||
-              (outputChar == '-') && (stateChar == existingOutput))) {
+              ((existingOutput == '-') && (existingState == outputChar)) ||
+              ((outputChar == '-') && (stateChar == existingOutput)))) {
             auto& diag = scope.addDiag(diag::UdpDupDiffOutput, syntax.sourceRange());
             diag.addNote(diag::NotePreviousDefinition, existing->sourceRange());
             return;
