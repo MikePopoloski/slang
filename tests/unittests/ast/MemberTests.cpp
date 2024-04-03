@@ -1723,6 +1723,48 @@ endmodule
     CHECK(diags[5].code == diag::TimingInFuncNotAllowed);
 }
 
+TEST_CASE("always_ff timing (pass)") {
+    auto tree = SyntaxTree::fromText(R"(
+module x;
+reg a;
+wire clk;
+always_ff @(posedge clk)
+  a <= #1 1'b0;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 0);
+}
+
+TEST_CASE("always_ff timing (fail)") {
+    auto tree = SyntaxTree::fromText(R"(
+module x1;
+reg a;
+wire clk;
+always_ff @(posedge clk)
+  #1 a <= 1'b0;
+endmodule
+module x2;
+reg a;
+wire clk;
+always_ff @(posedge clk)
+  a = #1 1'b0;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::BlockingInAlwaysFF);
+    CHECK(diags[1].code == diag::BlockingInAlwaysFF);
+}
+
 TEST_CASE("always_comb drivers within nested functions") {
     auto tree = SyntaxTree::fromText(R"(
 module m;

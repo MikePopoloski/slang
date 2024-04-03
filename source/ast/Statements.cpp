@@ -2281,12 +2281,14 @@ Statement& ExpressionStatement::fromSyntax(Compilation& compilation,
             ok = true;
             break;
         }
-        case ExpressionKind::Assignment:
-            if (auto timing = expr.as<AssignmentExpression>().timingControl)
-                stmtCtx.observeTiming(*timing);
+        case ExpressionKind::Assignment: {
+            const AssignmentExpression& ae = expr.as<AssignmentExpression>();
+            if (ae.isBlocking() && ae.timingControl)
+                stmtCtx.observeTiming(*ae.timingControl);
 
             ok = true;
             break;
+        }
         case ExpressionKind::NewClass:
             ok = true;
             break;
