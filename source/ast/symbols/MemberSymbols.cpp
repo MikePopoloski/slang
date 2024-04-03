@@ -1042,6 +1042,23 @@ static void createTableRow(const Scope& scope, const UdpEntrySyntax& syntax,
     if (!outputChar)
         return;
 
+    auto matchOutput = [](char state1, char output1, char output2) -> bool {
+        if (output1 != '-')
+            return false;
+        switch (state1) {
+            case '0':
+            case '1':
+            case 'x':
+                return (output2 == state1);
+            case 'b':
+                return (output2 == '0' || output2 == '1');
+            case '?':
+                return (output2 == '0' || output2 == '1' || output2 == 'x');
+            default:
+                return false; // should never happen
+        }
+    };
+
     auto existing = trie.insert(syntax, inputs, stateChar, trieAlloc);
     if (existing) {
         // This is an error if the existing row has a different output,
@@ -1049,8 +1066,8 @@ static void createTableRow(const Scope& scope, const UdpEntrySyntax& syntax,
         auto existingOutput = getOutputChar(existing->next);
         auto existingState = getstateChar(existing->current);
         if (!((existingOutput == outputChar) ||
-              ((existingOutput == '-') && (existingState == outputChar)) ||
-              ((outputChar == '-') && (stateChar == existingOutput)))) {
+              matchOutput(existingState, existingOutput, outputChar) ||
+              matchOutput(stateChar, outputChar, existingOutput))) {
             auto& diag = scope.addDiag(diag::UdpDupDiffOutput, syntax.sourceRange());
             diag.addNote(diag::NotePreviousDefinition, existing->sourceRange());
             return;

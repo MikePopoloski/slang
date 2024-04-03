@@ -440,23 +440,78 @@ endmodule
 
 TEST_CASE("UDP overlapping inputs with compatible outputs") {
     auto tree = SyntaxTree::fromText(R"(
- primitive D1 (q, clk, d, _c, _s);
-          output reg q;
-          input clk, d, _c, _s;
-          table
-          // clk in  _c  _s  : Qt  : Qt+1
-            r    0    1   1  : ?   :  0;
-            *    0    ?   1  : 0   :  -;
-          endtable
+ primitive X1 (q, clk, d);
+    output reg q;
+    input clk, d;
+    table
+    // clk in  : Qt  : Qt+1
+    r    0   : ?   :  0;
+    *    0   : 0   :  -;
+    endtable
  endprimitive
- primitive D2 (q, clk, d, _c, _s);
-          output reg q;
-          input clk, d, _c, _s;
-          table
-          // clk in  _c  _s  : Qt  : Qt+1
-            r    0    1   1  : 1   :  -;
-            *    0    ?   1  : ?   :  1;
-          endtable
+ primitive X2 (q, clk, d);
+    output reg q;
+    input clk, d;
+    table
+    // clk in  : Qt  : Qt+1
+    r    0   : 1   :  -;
+    *    0   : ?   :  1;
+    endtable
+ endprimitive
+ primitive X3 (q, clk, d);
+    output reg q;
+    input clk, d;
+    table
+    // clk in  : Qt  : Qt+1
+    r    0   : ?   :  -;
+    *    0   : ?   :  0;
+    *    1   : ?   :  0;
+    r    1   : ?   :  -;
+    endtable
+ endprimitive
+ primitive X4 (q, clk, d);
+    output reg q;
+    input clk, d;
+    table
+    // clk in  : Qt  : Qt+1
+    r    0   : ?   :  -;
+    *    0   : ?   :  1;
+    *    1   : ?   :  1;
+    r    1   : ?   :  -;
+    endtable
+ endprimitive
+ primitive X5 (q, clk, d);
+    output reg q;
+    input clk, d;
+    table
+    // clk in  : Qt  : Qt+1
+    r    0   : ?   :  -;
+    *    0   : ?   :  x;
+    *    1   : ?   :  x;
+    r    1   : ?   :  -;
+    endtable
+ endprimitive
+ primitive X6 (q, clk, d);
+    output reg q;
+    input clk, d;
+    table
+    // clk in  : Qt  : Qt+1
+    r    0   : b   :  -;
+    *    0   : ?   :  0;
+    *    1   : ?   :  0;
+    r    1   : b   :  -;
+    endtable
+ endprimitive
+primitive X7 (q, clk, d);
+    output reg q;
+    input clk, d;
+    table
+    // clk in  : Qt  : Qt+1
+    r    0   : b   :  -;
+    *    0   : ?   :  1;
+    *    1   : ?   :  1;
+    r    1   : b   :  -;
+    endtable
  endprimitive
 )");
 
