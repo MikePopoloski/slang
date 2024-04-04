@@ -176,13 +176,22 @@ primitive p14 (a, b, c);
         xx:0:0;
     endtable
 endprimitive
+
+primitive p15 (a, b);
+    output a;
+    input b;
+    table
+        0:0;
+        0:1;
+    endtable
+endprimitive
 )");
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 24);
+    REQUIRE(diags.size() == 25);
     CHECK(diags[0].code == diag::PrimitiveOutputFirst);
     CHECK(diags[1].code == diag::PrimitiveAnsiMix);
     CHECK(diags[2].code == diag::DuplicateDefinition);
@@ -207,6 +216,7 @@ endprimitive
     CHECK(diags[21].code == diag::UdpWrongInputCount);
     CHECK(diags[22].code == diag::UdpDupDiffOutput);
     CHECK(diags[23].code == diag::UdpAllX);
+    CHECK(diags[24].code == diag::UdpDupDiffOutput);
 }
 
 TEST_CASE("UDP instances error checking") {
