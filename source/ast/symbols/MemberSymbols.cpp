@@ -995,7 +995,7 @@ static void createTableRow(const Scope& scope, const UdpEntrySyntax& syntax,
         return;
     }
 
-    auto getstateChar = [](const UdpFieldBaseSyntax* base) -> char {
+    auto getStateChar = [](const UdpFieldBaseSyntax* base) -> char {
         if (base && base->kind == SyntaxKind::UdpSimpleField) {
             auto raw = base->as<UdpSimpleFieldSyntax>().field.rawText();
             if (raw.size() == 1) {
@@ -1015,7 +1015,7 @@ static void createTableRow(const Scope& scope, const UdpEntrySyntax& syntax,
         return 0;
     };
 
-    auto stateChar = getstateChar(syntax.current);
+    auto stateChar = getStateChar(syntax.current);
     if (!stateChar)
         return;
 
@@ -1064,7 +1064,7 @@ static void createTableRow(const Scope& scope, const UdpEntrySyntax& syntax,
         // This is an error if the existing row has a different output,
         // otherwise it's just silently ignored.
         auto existingOutput = getOutputChar(existing->next);
-        auto existingState = getstateChar(existing->current);
+        auto existingState = getStateChar(existing->current);
         if (!((existingOutput == outputChar) ||
               matchOutput(existingState, existingOutput, outputChar) ||
               matchOutput(stateChar, outputChar, existingOutput))) {
