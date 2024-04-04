@@ -995,10 +995,9 @@ static void createTableRow(const Scope& scope, const UdpEntrySyntax& syntax,
         return;
     }
 
-    char stateChar = 0;
-    if (syntax.current) {
-        if (syntax.current->kind == SyntaxKind::UdpSimpleField) {
-            auto raw = syntax.current->as<UdpSimpleFieldSyntax>().field.rawText();
+    auto getStateChar = [](const UdpFieldBaseSyntax* base) -> char {
+        if (base && base->kind == SyntaxKind::UdpSimpleField) {
+            auto raw = base->as<UdpSimpleFieldSyntax>().field.rawText();
             if (raw.size() == 1) {
                 auto c = charToLower(raw[0]);
                 switch (c) {
@@ -1007,14 +1006,18 @@ static void createTableRow(const Scope& scope, const UdpEntrySyntax& syntax,
                     case 'x':
                     case '?':
                     case 'b':
-                        stateChar = c;
-                        break;
+                        return c;
                     default:
                         break;
                 }
             }
         }
+        return 0;
+    };
 
+    char stateChar = 0;
+    if (syntax.current) {
+        stateChar = getStateChar(syntax.current);
         if (!stateChar)
             return;
     }
@@ -1042,12 +1045,32 @@ static void createTableRow(const Scope& scope, const UdpEntrySyntax& syntax,
     if (!outputChar)
         return;
 
+    auto matchOutput = [](char state1, char output1, char output2) -> bool {
+        if (output1 != '-')
+            return false;
+        switch (state1) {
+            case '0':
+            case '1':
+            case 'x':
+                return (output2 == state1);
+            case 'b':
+                return (output2 == '0' || output2 == '1');
+            case '?':
+                return (output2 == '0' || output2 == '1' || output2 == 'x');
+            default:
+                return false; // should never happen
+        }
+    };
+
     auto existing = trie.insert(syntax, inputs, stateChar, trieAlloc);
     if (existing) {
         // This is an error if the existing row has a different output,
         // otherwise it's just silently ignored.
         auto existingOutput = getOutputChar(existing->next);
-        if (existingOutput != outputChar) {
+        auto existingState = getStateChar(existing->current);
+        if (!((existingOutput == outputChar) ||
+              matchOutput(existingState, existingOutput, outputChar) ||
+              matchOutput(stateChar, outputChar, existingOutput))) {
             auto& diag = scope.addDiag(diag::UdpDupDiffOutput, syntax.sourceRange());
             diag.addNote(diag::NotePreviousDefinition, existing->sourceRange());
             return;
