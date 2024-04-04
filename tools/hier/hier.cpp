@@ -2,7 +2,7 @@
 #include "slang/ast/ASTVisitor.h"
 #include "slang/ast/symbols/InstanceSymbols.h"
 #include "slang/driver/Driver.h"
-#include "slang/util/Version.h"
+#include "slang/util/VersionInfo.h"
 
 using namespace slang;
 using namespace slang::driver;
