@@ -1015,9 +1015,12 @@ static void createTableRow(const Scope& scope, const UdpEntrySyntax& syntax,
         return 0;
     };
 
-    auto stateChar = getStateChar(syntax.current);
-    if (!stateChar)
-        return;
+    char stateChar = 0;
+    if (syntax.current) {
+        stateChar = getStateChar(syntax.current);
+        if (!stateChar)
+            return;
+    }
 
     auto getOutputChar = [](const UdpFieldBaseSyntax* base) -> char {
         if (base && base->kind == SyntaxKind::UdpSimpleField) {
