@@ -46,8 +46,23 @@ int main(int argc, char** argv) {
             if (type.isModule()) {
                 std::string tmp_path;
                 type.getHierarchicalPath(tmp_path);
-                OS::print(fmt::fg(fmt::color::yellow_green),
-                            fmt::format("Instance (Module): {} ({})\n", tmp_path, type.getDefinition().name));
+                OS::print(fmt::format("Module=\"{}\" Instance=\"{}\" ", type.getDefinition().name, tmp_path));
+                int size = type.body.parameters.size();
+                if (size) {
+                    OS::print(fmt::format("Parameters: "));
+                    for (auto p : type.body.parameters) {
+                        std::string v;
+                        size--;
+                        if (p->symbol.kind == SymbolKind::Parameter)
+                            v = p->symbol.as<ParameterSymbol>().getValue().toString();
+                        else if (p->symbol.kind == SymbolKind::TypeParameter)
+                            v = p->symbol.as<TypeParameterSymbol>().targetType.getType().toString();
+                        else
+                            v = "?";
+                        OS::print(fmt::format("{}={}{}", p->symbol.name, v, size ? ", " : ""));
+                    }
+                }
+                OS::print("\n");
                 visitor.visitDefault(type);
             }
         }));
