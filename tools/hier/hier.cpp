@@ -45,21 +45,10 @@ int main(int argc, char** argv) {
         i->visit(makeVisitor([&](auto& visitor, const InstanceSymbol& type) {
             if (type.isModule()) {
                 std::string tmp_path;
-                //std::string tmp_path2;
                 type.getHierarchicalPath(tmp_path);
-                //type.getLexicalPath(tmp_path2);
-                //static std::string path;
-                //int len = path.length();
-                //path.reserve(len + 1 + type.name.size());  // Reserve enough space
-                //if (len)
-                //    path.append(".");
-                //path.append(type.name);
-                //OS::print(fmt::fg(fmt::color::yellow_green),
-                //            fmt::format("Module: {} Instance: {}\n", type.getDefinition().name, path));
                 OS::print(fmt::fg(fmt::color::yellow_green),
                             fmt::format("Instance (Module): {} ({})\n", tmp_path, type.getDefinition().name));
                 visitor.visitDefault(type);
-                //path.resize(len);
             }
         }));
 
