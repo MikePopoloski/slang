@@ -927,7 +927,7 @@ endmodule
 
 TEST_CASE("Subroutine match items") {
     auto tree = SyntaxTree::fromText(R"(
-function automatic int foo(logic v, ref logic w);
+function automatic void foo(logic v, ref logic w);
 endfunction
 
 function int bar(output v);
@@ -949,9 +949,10 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 2);
+    REQUIRE(diags.size() == 3);
     CHECK(diags[0].code == diag::SubroutineMatchAutoRefArg);
-    CHECK(diags[1].code == diag::SubroutineMatchOutArg);
+    CHECK(diags[1].code == diag::SubroutineMatchNonVoid);
+    CHECK(diags[2].code == diag::SubroutineMatchOutArg);
 }
 
 TEST_CASE("Illegal disable iff instantiations") {

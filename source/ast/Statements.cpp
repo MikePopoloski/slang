@@ -2393,11 +2393,11 @@ static void checkDeferredAssertAction(const Statement& stmt, const ASTContext& c
 
     // The subroutine being called has some restrictions:
     // - No output or inout arguments
-    // - If a system call, must be a task
+    // - If a system call, must be a task or void returning
     // - Any ref arguments cannot reference automatic or dynamic variables
     auto& call = stmt.as<ExpressionStatement>().expr.as<CallExpression>();
     AssertionExpr::checkAssertionCall(call, context, diag::DeferredAssertOutArg,
-                                      diag::DeferredAssertAutoRefArg, diag::DeferredAssertSysTask,
+                                      diag::DeferredAssertAutoRefArg, diag::DeferredAssertNonVoid,
                                       stmt.sourceRange);
 }
 

@@ -254,14 +254,14 @@ AssertionExpr& AssertionExpr::badExpr(Compilation& compilation, const AssertionE
 
 bool AssertionExpr::checkAssertionCall(const CallExpression& call, const ASTContext& context,
                                        DiagCode outArgCode, DiagCode refArgCode,
-                                       std::optional<DiagCode> sysTaskCode, SourceRange range) {
+                                       DiagCode nonVoidCode, SourceRange range) {
+    if (call.getSubroutineKind() == SubroutineKind::Function && !call.type->isVoid() &&
+        !call.type->isError()) {
+        context.addDiag(nonVoidCode, range) << call.getSubroutineName();
+    }
+
     if (call.isSystemCall()) {
         auto& sub = *std::get<1>(call.subroutine).subroutine;
-        if (sub.kind == SubroutineKind::Function && sysTaskCode) {
-            context.addDiag(*sysTaskCode, range);
-            return false;
-        }
-
         if (sub.hasOutputArgs) {
             context.addDiag(outArgCode, range);
             return false;
@@ -683,8 +683,8 @@ static std::span<const Expression* const> bindMatchItems(const SequenceMatchList
             case ExpressionKind::Call: {
                 AssertionExpr::checkAssertionCall(expr.as<CallExpression>(), context,
                                                   diag::SubroutineMatchOutArg,
-                                                  diag::SubroutineMatchAutoRefArg, std::nullopt,
-                                                  expr.sourceRange);
+                                                  diag::SubroutineMatchAutoRefArg,
+                                                  diag::SubroutineMatchNonVoid, expr.sourceRange);
                 break;
             }
             case ExpressionKind::Invalid:

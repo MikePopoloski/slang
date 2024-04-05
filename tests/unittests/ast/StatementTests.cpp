@@ -449,7 +449,7 @@ endmodule
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 5);
     CHECK(diags[0].code == diag::InvalidDeferredAssertAction);
-    CHECK(diags[1].code == diag::DeferredAssertSysTask);
+    CHECK(diags[1].code == diag::DeferredAssertNonVoid);
     CHECK(diags[2].code == diag::DeferredAssertOutArg);
     CHECK(diags[3].code == diag::DeferredAssertAutoRefArg);
     CHECK(diags[4].code == diag::DeferredAssertOutArg);

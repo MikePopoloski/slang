@@ -1268,3 +1268,19 @@ localparam p = foo(8);
     CHECK(diags[0].code == diag::InfoTask);
     CHECK(diags[1].code == diag::FatalTask);
 }
+
+TEST_CASE("Deferred assertion void-returning system funcs allowed regress GH #925") {
+    auto tree = SyntaxTree::fromText(R"(
+module Test;
+  function logic my_func();
+    static logic my_var = 1'b1;
+    assert final (my_var == 1'b1)
+      else $error();
+  endfunction
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
