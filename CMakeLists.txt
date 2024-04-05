@@ -4,7 +4,7 @@
 # ~~~
 
 # slang - cmake entry point
-cmake_minimum_required(VERSION 3.20...3.26)
+cmake_minimum_required(VERSION 3.20...3.29)
 
 # Determine if slang is built as a subproject (using add_subdirectory) or if it
 # is the master project.
