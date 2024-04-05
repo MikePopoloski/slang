@@ -102,8 +102,8 @@ public:
                                      const ASTContext& context);
 
     static bool checkAssertionCall(const CallExpression& call, const ASTContext& context,
-                                   DiagCode outArgCode, DiagCode refArgCode,
-                                   std::optional<DiagCode> sysTaskCode, SourceRange range);
+                                   DiagCode outArgCode, DiagCode refArgCode, DiagCode nonVoidCode,
+                                   SourceRange range);
 
     static void checkSampledValueExpr(const Expression& expr, const ASTContext& context,
                                       bool isFutureGlobal, DiagCode localVarCode,
