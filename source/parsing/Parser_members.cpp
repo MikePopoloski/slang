@@ -3008,7 +3008,7 @@ UdpEntrySyntax& Parser::parseUdpEntry(bool isSequential) {
                         addDiag(diag::UdpInvalidOutput, tok.location()) << raw[0];
                     break;
                 case '-':
-                    if (!isOutput)
+                    if (!isOutput || !isSequential)
                         addDiag(diag::UdpInvalidMinus, tok.location());
                     break;
                 default:
