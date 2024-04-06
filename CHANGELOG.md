@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Added `--allow-self-determined-stream-concat` (included in 'vcs' compat mode) to allow the use of streaming concatenation expressions in self-determined contexts (instead of just in assignments)
 * Added `--allow-multi-driven-locals` (included in 'vcs' compat mode) to allow subroutine local variables to be driven by multiple always_ff / always_comb blocks
 * Added full support for SystemVerilog libraries and configurations
-* Added support for equality comparisons between virtual interfaces and actual interface instances
+* Added support for equality comparisons between virtual interfaces and actual interface instances (thanks to @likeamahoney)
 #### Clarifications in IEEE 1800-2023
 * Unsized integer literals can be any bit width, not just capped at 32 bits.
 * Unpacked unions are allowed as net types
@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Non-blocking assignments to elements of dynamic arrays are not allowed
 * Static casts are assignment-like contexts
 * Tagged union expressions must be primaries only (binary expressions are not allowed)
+* Severity system tasks should work in constant functions (and behave as elaboration-time tasks)
 #### New Features in IEEE 1800-2023
 * Triple quoted (multiline) string literals
 * Macro stringification with triple quoted strings
@@ -41,6 +42,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Added the `weak_reference` built-in class
 * Interface classes can be declared within other classes
 * The built-in `process` class is declared `final`
+* Value ranges gain new absolute / relative tolerance operators
+* `ref static` subroutine arguments
 
 ### General Features
 * Added [-Wmultibit-edge](https://sv-lang.com/warning-ref.html#multibit-edge) (on by default) to warn about clock edge triggers on multibit expressions
@@ -56,6 +59,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Information about module/interface/program definitions are now included in AST JSON output
 * slang-reflect has been improved to support reflecting more complex types for local parameters (thanks to @Sustrak)
 * Rewrote analysis of user-defined primitive tables to be much more efficient; previously primitives with large numbers of inputs could take a very long time to analyze
+* Command line defines now take precedence over defines in Verilog source files, which matches the behavior of other tools (thanks to @udif)
 
 ### Fixes
 * Fixed several crashes in slang-tidy (thanks to @likeamahoney)
@@ -86,6 +90,15 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Fixed handling of include files that don't contain a newline character (thanks to @ihathbeer)
 * Fixed handling of classes that declare a member named "\new" with an escaped identifier
 * chandles are properly allowed in non-edge event expressions
+* Correctly disallow `wait fork` and `expect` in functions and final blocks
+* Fixed bug in computing bounds for assigmments to slices of unpacked arrays
+* Fixed macro argument parsing when there are '(*' and '*)' tokens in them
+* Fixed a bug in SVInt::operator< when comparing the smallest possible negative integer (thanks to @Krym4s)
+* Correctly allow non-blocking assignments with a timing delay to be used in always_ff blocks (thanks to @udif)
+* Fixed checking of overlapping primitive table rows when the '-' output character is used (thanks to @udif)
+* Fixed checking for which kinds of functions are allowed in deferred assertion actions and sequence match items
+* Fixed a couple of places where range selects were not properly checked for overflow
+* Fixed sorting of diagnostics when buffers are loaded in non-deterministic order
 
 
 ## [v5.0] - 2023-12-26
