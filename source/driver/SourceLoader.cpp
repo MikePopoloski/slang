@@ -250,7 +250,7 @@ SourceLoader::SyntaxTreeList SourceLoader::loadAndParseSources(const Bag& option
         // or via library maps.
         threadPool.pushLoop(size_t(0), fileEntries.size(), [&](size_t start, size_t end) {
             for (size_t i = start; i < end; i++)
-                loadResults[i] = loadAndParse(fileEntries[i], optionBag, srcOptions);
+                loadResults[i] = loadAndParse(fileEntries[i], optionBag, srcOptions, i);
         });
         threadPool.waitForAll();
 
@@ -523,10 +523,11 @@ void SourceLoader::createLibrary(const LibraryDeclarationSyntax& syntax, const f
 }
 
 SourceLoader::LoadResult SourceLoader::loadAndParse(const FileEntry& entry, const Bag& optionBag,
-                                                    const SourceOptions& srcOptions) {
+                                                    const SourceOptions& srcOptions,
+                                                    uint64_t fileSortKey) {
     // TODO: error if secondLib is set
 
-    auto buffer = sourceManager.readSource(entry.path, entry.library);
+    auto buffer = sourceManager.readSource(entry.path, entry.library, fileSortKey);
     if (!buffer)
         return std::pair{&entry, buffer.error()};
 
