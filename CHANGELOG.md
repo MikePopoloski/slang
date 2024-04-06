@@ -92,7 +92,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * chandles are properly allowed in non-edge event expressions
 * Correctly disallow `wait fork` and `expect` in functions and final blocks
 * Fixed bug in computing bounds for assigmments to slices of unpacked arrays
-* Fixed macro argument parsing when there are '(*' and '*)' tokens in them
+* Fixed macro argument parsing when there are `(*` and `*)` tokens in them
 * Fixed a bug in SVInt::operator< when comparing the smallest possible negative integer (thanks to @Krym4s)
 * Correctly allow non-blocking assignments with a timing delay to be used in always_ff blocks (thanks to @udif)
 * Fixed checking of overlapping primitive table rows when the '-' output character is used (thanks to @udif)
