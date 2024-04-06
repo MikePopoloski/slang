@@ -47,6 +47,8 @@ public:
 
     template<typename TStream, bool RequireSameLine = false>
     IntResult parseInteger(TStream& stream) {
+        const bool isNegated = stream.getLastConsumed().kind == TokenKind::Minus;
+
         Token sizeToken;
         Token baseToken;
 
@@ -115,7 +117,7 @@ public:
             next = stream.peek();
         } while (syntax::SyntaxFacts::isPossibleVectorDigit(next.kind) && next.trivia().empty());
 
-        return IntResult::vector(sizeToken, baseToken, finishValue(first, count == 1));
+        return IntResult::vector(sizeToken, baseToken, finishValue(first, count == 1, isNegated));
     }
 
     template<typename TStream>
@@ -172,7 +174,7 @@ private:
 
     void startVector(Token baseToken, Token sizeToken);
     int append(Token token, bool isFirst);
-    Token finishValue(Token firstToken, bool singleToken);
+    Token finishValue(Token firstToken, bool singleToken, bool isNegated);
     void addDigit(logic_t digit, int maxValue);
     Diagnostic& addDiag(DiagCode code, SourceLocation location);
     IntResult reportMissingDigits(Token sizeToken, Token baseToken, Token first);
