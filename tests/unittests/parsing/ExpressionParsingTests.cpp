@@ -952,3 +952,12 @@ real s = 3e+_3;
     CHECK(diagnostics[2].code == diag::MissingExponentDigits);
     CHECK(diagnostics[3].code == diag::DigitsLeadingUnderscore);
 }
+
+TEST_CASE("Special case for literal overflow warning at int min") {
+    auto& text = R"(
+wire [15:0] x = -16'sd32768;
+wire [15:0] x = -16'sh8000;
+)";
+    parseCompilationUnit(text);
+    CHECK_DIAGNOSTICS_EMPTY;
+}
