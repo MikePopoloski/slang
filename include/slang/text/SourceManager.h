@@ -127,6 +127,10 @@ public:
     /// Gets the actual source text for a given file buffer.
     std::string_view getSourceText(BufferID buffer) const;
 
+    /// Gets a value that can be used to sort a given buffer when comparing
+    /// to other buffers.
+    uint64_t getSortKey(BufferID buffer) const;
+
     /// Creates a macro expansion location; used by the preprocessor.
     SourceLocation createExpansionLoc(SourceLocation originalLoc, SourceRange expansionRange,
                                       bool isMacroArg);
@@ -152,7 +156,8 @@ public:
                               const SourceLibrary* library = nullptr);
 
     /// Read in a source file from disk.
-    BufferOrError readSource(const std::filesystem::path& path, const SourceLibrary* library);
+    BufferOrError readSource(const std::filesystem::path& path, const SourceLibrary* library,
+                             uint64_t sortKey = UINT64_MAX);
 
     /// Read in a header file from disk.
     BufferOrError readHeader(std::string_view path, SourceLocation includedFrom,
@@ -245,11 +250,13 @@ private:
         FileData* data = nullptr;
         const SourceLibrary* library = nullptr;
         SourceLocation includedFrom;
+        uint64_t sortKey;
         std::vector<LineDirectiveInfo> lineDirectives;
 
         FileInfo() {}
-        FileInfo(FileData* data, const SourceLibrary* library, SourceLocation includedFrom) :
-            data(data), library(library), includedFrom(includedFrom) {}
+        FileInfo(FileData* data, const SourceLibrary* library, SourceLocation includedFrom,
+                 uint64_t sortKey) :
+            data(data), library(library), includedFrom(includedFrom), sortKey(sortKey) {}
 
         // Returns a pointer to the LineDirectiveInfo for the nearest enclosing
         // line directive of the given raw line number, or nullptr if there is none
@@ -312,14 +319,14 @@ private:
     const FileInfo* getFileInfo(BufferID buffer, TLock& lock) const;
 
     SourceBuffer createBufferEntry(FileData* fd, SourceLocation includedFrom,
-                                   const SourceLibrary* library,
+                                   const SourceLibrary* library, uint64_t sortKey,
                                    std::unique_lock<std::shared_mutex>& lock);
 
     BufferOrError openCached(const std::filesystem::path& fullPath, SourceLocation includedFrom,
-                             const SourceLibrary* library);
+                             const SourceLibrary* library, uint64_t sortKey = UINT64_MAX);
     SourceBuffer cacheBuffer(std::filesystem::path&& path, std::string&& pathStr,
                              SourceLocation includedFrom, const SourceLibrary* library,
-                             SmallVector<char>&& buffer);
+                             uint64_t sortKey, SmallVector<char>&& buffer);
 
     template<IsLock TLock>
     size_t getRawLineNumber(SourceLocation location, TLock& lock) const;

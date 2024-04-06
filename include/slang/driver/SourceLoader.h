@@ -209,7 +209,7 @@ private:
     void createLibrary(const syntax::LibraryDeclarationSyntax& syntax,
                        const std::filesystem::path& basePath);
     LoadResult loadAndParse(const FileEntry& fileEntry, const Bag& optionBag,
-                            const SourceOptions& srcOptions);
+                            const SourceOptions& srcOptions, uint64_t fileSortKey = UINT64_MAX);
     void addError(const std::filesystem::path& path, std::error_code ec);
 
     SourceManager& sourceManager;
