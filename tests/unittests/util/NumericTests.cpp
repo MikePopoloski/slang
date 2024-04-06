@@ -205,6 +205,7 @@ TEST_CASE("SVInt to string (and back)") {
     checkRoundTrip("-999989", LiteralBase::Decimal);
     checkRoundTrip("12'b101x101z1", LiteralBase::Binary);
     checkRoundTrip("999999999", LiteralBase::Decimal);
+    checkRoundTrip("-2147483648", LiteralBase::Decimal);
 
     std::ostringstream ss;
     ss << "96'd192834"_si;
@@ -391,6 +392,7 @@ TEST_CASE("Division") {
     CHECK("-50"_si / "25"_si == -2);
     CHECK("-50"_si % "-40"_si == -10);
     CHECK("-50"_si % "40"_si == -10);
+    CHECK("-4'sd8"_si / "-4'sd7"_si == 1);
 
     SVInt v7 = "19823'd234098234098234098234"_si;
     CHECK("300'd0"_si / "10"_si == 0);

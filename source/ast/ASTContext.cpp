@@ -523,15 +523,17 @@ void ASTContext::evalRangeDimension(const SelectorSyntax& syntax, bool isPacked,
             addDiag(diag::PackedDimsRequireFullRange, syntax.sourceRange());
             result.kind = DimensionKind::Unknown;
         }
-        else if (isPacked && result.range.width() > SVInt::MAX_BITS) {
-            addDiag(diag::PackedTypeTooLarge, syntax.sourceRange())
-                << result.range.width() << (int)SVInt::MAX_BITS;
-            result.kind = DimensionKind::Unknown;
-        }
-        else if (!isPacked && result.range.width() > INT32_MAX) {
-            addDiag(diag::ArrayDimTooLarge, syntax.sourceRange())
-                << result.range.width() << INT32_MAX;
-            result.kind = DimensionKind::Unknown;
+        else {
+            auto fullWidth = result.range.fullWidth();
+            if (isPacked && fullWidth > SVInt::MAX_BITS) {
+                addDiag(diag::PackedTypeTooLarge, syntax.sourceRange())
+                    << fullWidth << (int)SVInt::MAX_BITS;
+                result.kind = DimensionKind::Unknown;
+            }
+            else if (!isPacked && fullWidth > INT32_MAX) {
+                addDiag(diag::ArrayDimTooLarge, syntax.sourceRange()) << fullWidth << INT32_MAX;
+                result.kind = DimensionKind::Unknown;
+            }
         }
     }
 }
