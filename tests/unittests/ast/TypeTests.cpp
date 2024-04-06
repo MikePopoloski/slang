@@ -2037,7 +2037,7 @@ module m;
     struct packed { logic [16777214:0] a; logic [16777214:0] b; } boz;
 
     initial begin
-        $display(foo[2147483647:-2147483647]);
+        $display(foo[2147483647:1]);
         $display(bar[-2147483647:2147483647]);
     end
 endmodule
@@ -2189,7 +2189,7 @@ parameter real r = $;
     CHECK(diags[0].code == diag::BadAssignment);
 }
 
-TEST_CASE("Soft packed unions") {
+TEST_CASE("v1800-2023: Soft packed unions") {
     auto options = optionsFor(LanguageVersion::v1800_2023);
     auto tree = SyntaxTree::fromText(R"(
 function automatic logic[7:0] foo;
@@ -2208,4 +2208,19 @@ endmodule
     Compilation compilation(options);
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Type dimension overflow regress") {
+    auto tree = SyntaxTree::fromText(R"(
+logic [-2147483648:-2147483649] a;
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::PackedTypeTooLarge);
+    CHECK(diags[1].code == diag::SignedIntegerOverflow);
+    CHECK(diags[2].code == diag::SignedIntegerOverflow);
 }

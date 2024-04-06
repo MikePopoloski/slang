@@ -417,6 +417,15 @@ void ElementSelectExpression::serializeTo(ASTSerializer& serializer) const {
     serializer.write("selector", selector());
 }
 
+template<typename TContext>
+static bool checkRangeOverflow(ConstantRange range, TContext& context, SourceRange sourceRange) {
+    if (range.fullWidth() > INT32_MAX) {
+        context.addDiag(diag::RangeWidthOverflow, sourceRange);
+        return true;
+    }
+    return false;
+}
+
 Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expression& value,
                                               const RangeSelectSyntax& syntax,
                                               SourceRange fullRange, const ASTContext& context) {
@@ -528,6 +537,9 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expressi
                 return badExpr(compilation, result);
 
             selectionRange = {*lv, *rv};
+            if (checkRangeOverflow(selectionRange, context, errorRange))
+                return badExpr(compilation, result);
+
             if (selectionRange.isLittleEndian() != valueRange.isLittleEndian() &&
                 selectionRange.width() > 1) {
                 auto& diag = context.addDiag(diag::SelectEndianMismatch, errorRange);
@@ -740,6 +752,8 @@ std::optional<ConstantRange> RangeSelectExpression::evalRange(EvalContext& conte
     ConstantRange result;
     if (selectionKind == RangeSelectionKind::Simple) {
         result = {*li, *ri};
+        if (checkRangeOverflow(result, context, sourceRange))
+            return std::nullopt;
     }
     else {
         bool isLittleEndian = false;

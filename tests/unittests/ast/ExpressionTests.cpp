@@ -3631,3 +3631,19 @@ endmodule
     CHECK(diags[1].code == diag::AutoVarToRefStatic);
     CHECK(diags[2].code == diag::AutoVarToRefStatic);
 }
+
+TEST_CASE("Out of range select regress") {
+    auto tree = SyntaxTree::fromText(R"(
+localparam p = -4'd8;
+$info(p[-2147483648:-2147483649]);
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::RangeWidthOverflow);
+    CHECK(diags[1].code == diag::SignedIntegerOverflow);
+    CHECK(diags[2].code == diag::SignedIntegerOverflow);
+}
