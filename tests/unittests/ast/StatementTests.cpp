@@ -1979,3 +1979,26 @@ endclass
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::UnusedResult);
 }
+
+TEST_CASE("Ref args in fork-join blocks") {
+    auto options = optionsFor(LanguageVersion::v1800_2023);
+    auto tree = SyntaxTree::fromText(R"(
+function automatic foo(ref a, ref static b);
+    fork
+        automatic int k = a;
+        begin : foo
+            $display(a);
+            $display(b);
+        end
+    join_none
+endfunction
+)",
+                                     options);
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::RefArgForkJoin);
+}

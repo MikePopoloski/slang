@@ -184,9 +184,12 @@ enum class SLANG_EXPORT ASTFlags : uint64_t {
     ConfigParam = 1ull << 41,
 
     /// AST binding is for the contents of the type() operator.
-    TypeOperator = 1ull << 42
+    TypeOperator = 1ull << 42,
+
+    /// AST binding is inside a fork-join_any or fork-join_none block.
+    ForkJoinAnyNone = 1ull << 43
 };
-SLANG_BITMASK(ASTFlags, TypeOperator)
+SLANG_BITMASK(ASTFlags, ForkJoinAnyNone)
 
 // clang-format off
 #define DK(x) \

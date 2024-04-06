@@ -706,6 +706,9 @@ Statement& BlockStatement::fromSyntax(Compilation& comp, const BlockStatementSyn
     if (addInitializers)
         bindScopeInitializers(context, buffer);
 
+    if (blockKind == StatementBlockKind::JoinAny || blockKind == StatementBlockKind::JoinNone)
+        context.flags |= ASTFlags::ForkJoinAnyNone;
+
     for (auto item : syntax.items) {
         if (StatementSyntax::isKind(item->kind)) {
             auto& stmt = Statement::bind(item->as<StatementSyntax>(), context, stmtCtx,
