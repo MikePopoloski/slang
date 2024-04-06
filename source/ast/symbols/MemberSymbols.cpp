@@ -1048,17 +1048,19 @@ static void createTableRow(const Scope& scope, const UdpEntrySyntax& syntax,
     auto matchOutput = [](char state1, char output1, char output2) -> bool {
         if (output1 != '-')
             return false;
+
         switch (state1) {
             case '0':
             case '1':
             case 'x':
-                return (output2 == state1);
+                return output2 == state1;
             case 'b':
-                return (output2 == '0' || output2 == '1');
+                return output2 == '0' || output2 == '1';
             case '?':
-                return (output2 == '0' || output2 == '1' || output2 == 'x');
+                return output2 == '0' || output2 == '1' || output2 == 'x';
             default:
-                return false; // should never happen
+                // Can happen if e.g. the UDP doesn't have a state char (combinational).
+                return false;
         }
     };
 
@@ -1068,7 +1070,7 @@ static void createTableRow(const Scope& scope, const UdpEntrySyntax& syntax,
         // otherwise it's just silently ignored.
         auto existingOutput = getOutputChar(existing->next);
         auto existingState = getStateChar(existing->current);
-        if (!((existingOutput == outputChar) ||
+        if (!(existingOutput == outputChar ||
               matchOutput(existingState, existingOutput, outputChar) ||
               matchOutput(stateChar, outputChar, existingOutput))) {
             auto& diag = scope.addDiag(diag::UdpDupDiffOutput, syntax.sourceRange());

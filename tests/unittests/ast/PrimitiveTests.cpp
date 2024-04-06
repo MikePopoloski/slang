@@ -543,6 +543,7 @@ endprimitive
 primitive p2(output o, input a);
   table
     p:1;
+    1:-;
   endtable
 endprimitive
 )");
@@ -551,7 +552,8 @@ endprimitive
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 2);
+    REQUIRE(diags.size() == 3);
     CHECK(diags[0].code == diag::UdpTransSameChar);
     CHECK(diags[1].code == diag::UdpEdgeInComb);
+    CHECK(diags[2].code == diag::UdpInvalidMinus);
 }
