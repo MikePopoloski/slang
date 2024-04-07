@@ -2443,3 +2443,37 @@ source:13:3: note: $info encountered: top.m2.n1.f
   ^
 )");
 }
+
+TEST_CASE("Virtual interface invalid due to defaram to target instance") {
+    auto tree = SyntaxTree::fromText(R"(
+interface J;
+    parameter q = 1;
+endinterface
+
+interface I;
+    J j();
+endinterface
+
+interface K;
+endinterface
+
+module m;
+    I i1();
+    I i2();
+
+    virtual I vi1 = i1;
+    virtual I vi2 = i2;
+
+    defparam i1.j.q = 2;
+    bind i2.j K k();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::VirtualIfaceDefparam);
+    CHECK(diags[1].code == diag::VirtualIfaceDefparam);
+}
