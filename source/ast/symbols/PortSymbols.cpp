@@ -556,9 +556,11 @@ private:
                 break;
             }
             case SyntaxKind::InterfacePortHeader: {
+                // Iface header here should always be an identifier, except if there is
+                // invalid syntax resulting in the generic 'interface' which will be
+                // diagnosed by the parser itself.
                 auto& ifaceHeader = header.as<InterfacePortHeaderSyntax>();
                 auto [definition, modport] = getInterfacePortInfo(scope, ifaceHeader);
-                SLANG_ASSERT(ifaceHeader.nameOrKeyword.kind == TokenKind::Identifier);
                 info.isIface = true;
                 info.ifaceDef = definition;
                 info.modport = modport;
