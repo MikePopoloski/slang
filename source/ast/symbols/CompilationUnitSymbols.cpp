@@ -116,55 +116,66 @@ PackageSymbol& PackageSymbol::fromSyntax(const Scope& scope, const ModuleDeclara
 }
 
 const Symbol* PackageSymbol::findForImport(std::string_view lookupName) const {
-    auto sym = find(lookupName);
-    if (sym)
-        return sym;
+    auto& scopeNameMap = getNameMap();
+    if (auto it = scopeNameMap.find(lookupName); it != scopeNameMap.end()) {
+        auto symbol = it->second;
+        while (symbol->kind == SymbolKind::TransparentMember)
+            symbol = &symbol->as<TransparentMemberSymbol>().wrapped;
 
-    if (!hasExportAll && exportDecls.empty())
+        switch (symbol->kind) {
+            case SymbolKind::ExplicitImport:
+                return symbol->as<ExplicitImportSymbol>().importedSymbol();
+            case SymbolKind::ForwardingTypedef:
+                return nullptr;
+            default:
+                return symbol;
+        }
+    }
+
+    auto wildcardData = getWildcardImportData();
+    if (!wildcardData || (!hasExportAll && exportDecls.empty()))
         return nullptr;
 
     // We need to force-elaborate the entire package body because any
     // lookups that result in a wildcard import could add to our export list.
-    auto& comp = getCompilation();
     if (!hasForceElaborated) {
         hasForceElaborated = true;
-        comp.forceElaborate(*this);
+        getCompilation().forceElaborate(*this);
     }
 
-    return comp.findPackageExportCandidate(*this, lookupName);
-}
+    // Look through symbols that have been wildcard imported with this name.
+    if (auto it = wildcardData->importedSymbols.find(lookupName);
+        it != wildcardData->importedSymbols.end()) {
 
-void PackageSymbol::noteImport(const Symbol& symbol) const {
-    // If we have an export directive for this symbol then add it to the list of export candidates.
-    auto& comp = getCompilation();
-    if (hasExportAll) {
-        comp.notePackageExportCandidate(*this, symbol);
-        return;
-    }
+        auto symbol = it->second;
+        if (hasExportAll)
+            return symbol;
 
-    if (exportDecls.empty())
-        return;
+        // If we don't have an export-all directive then we need to check
+        // whether we wanted to actually export this symbol.
+        // First find the package that owns the target symbol.
+        const Symbol* packageParent;
+        auto targetScope = symbol->getParentScope();
+        while (true) {
+            SLANG_ASSERT(targetScope);
+            packageParent = &targetScope->asSymbol();
+            if (packageParent->kind == SymbolKind::Package)
+                break;
 
-    const Symbol* packageParent;
-    auto targetScope = symbol.getParentScope();
-    while (true) {
-        SLANG_ASSERT(targetScope);
-        packageParent = &targetScope->asSymbol();
-        if (packageParent->kind == SymbolKind::Package)
-            break;
+            targetScope = packageParent->getParentScope();
+        }
 
-        targetScope = packageParent->getParentScope();
-    }
+        // Now look for a matching export.
+        for (auto decl : exportDecls) {
+            if (decl->package.valueText() != packageParent->name)
+                continue;
 
-    for (auto decl : exportDecls) {
-        if (decl->package.valueText() != packageParent->name)
-            continue;
-
-        if (decl->item.kind == TokenKind::Star || decl->item.valueText() == symbol.name) {
-            comp.notePackageExportCandidate(*this, symbol);
-            return;
+            if (decl->item.kind == TokenKind::Star || decl->item.valueText() == symbol->name)
+                return symbol;
         }
     }
+
+    return nullptr;
 }
 
 DefinitionSymbol::ParameterDecl::ParameterDecl(

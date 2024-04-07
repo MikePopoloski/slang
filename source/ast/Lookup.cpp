@@ -1811,8 +1811,8 @@ void Lookup::unqualifiedImpl(const Scope& scope, std::string_view name, LookupLo
 
     // Look through any wildcard imports prior to the lookup point and see if their packages
     // contain the name we're looking for.
-    auto wildcardImports = scope.getWildcardImports();
-    if (!wildcardImports.empty()) {
+    auto wildcardImportData = scope.getWildcardImportData();
+    if (wildcardImportData) {
         struct Import {
             const Symbol* imported;
             const WildcardImportSymbol* import;
@@ -1820,7 +1820,7 @@ void Lookup::unqualifiedImpl(const Scope& scope, std::string_view name, LookupLo
         SmallVector<Import, 4> imports;
         SmallSet<const Symbol*, 2> importDedup;
 
-        for (auto import : wildcardImports) {
+        for (auto import : wildcardImportData->wildcardImports) {
             if (location < LookupLocation::after(*import))
                 break;
 
@@ -1864,20 +1864,7 @@ void Lookup::unqualifiedImpl(const Scope& scope, std::string_view name, LookupLo
 
             result.wasImported = true;
             result.found = imports[0].imported;
-
-            // If we are doing this lookup from a scope that is within a package declaration
-            // we should note that fact so that it can later be exported if desired.
-            auto currScope = &scope;
-            do {
-                auto& sym = currScope->asSymbol();
-                if (sym.kind == SymbolKind::Package) {
-                    sym.as<PackageSymbol>().noteImport(*result.found);
-                    break;
-                }
-
-                currScope = sym.getParentScope();
-            } while (currScope);
-
+            wildcardImportData->importedSymbols.try_emplace(result.found->name, result.found);
             return;
         }
     }
@@ -2190,10 +2177,12 @@ void Lookup::reportUndeclared(const Scope& initialScope, std::string_view name, 
             checkMembers(*scope);
 
             // Also search in package imports.
-            for (auto import : scope->getWildcardImports()) {
-                auto package = import->getPackage();
-                if (package)
-                    checkMembers(*package);
+            if (auto importData = scope->getWildcardImportData()) {
+                for (auto import : importData->wildcardImports) {
+                    auto package = import->getPackage();
+                    if (package)
+                        checkMembers(*package);
+                }
             }
         }
 

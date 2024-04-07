@@ -101,19 +101,6 @@ const Symbol* ExplicitImportSymbol::importedSymbol() const {
                 diag << importName << packageName;
             }
         }
-        else {
-            // If we are doing this lookup from a scope that is within a package declaration
-            // we should note that fact so that it can later be exported if desired.
-            do {
-                auto& sym = scope->asSymbol();
-                if (sym.kind == SymbolKind::Package) {
-                    sym.as<PackageSymbol>().noteImport(*import);
-                    break;
-                }
-
-                scope = sym.getParentScope();
-            } while (scope);
-        }
     }
     return import;
 }

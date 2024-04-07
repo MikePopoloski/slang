@@ -227,8 +227,15 @@ public:
     /// Reports a name conflict between the two given symbols in this scope.
     void reportNameConflict(const Symbol& member, const Symbol& existing) const;
 
-    /// Gets the list of wildcard imports declared in this scope.
-    std::span<const WildcardImportSymbol* const> getWildcardImports() const;
+    /// Collection of information about wildcard imports in a scope.
+    class WildcardImportData {
+    public:
+        std::vector<const WildcardImportSymbol*> wildcardImports;
+        SymbolMap importedSymbols;
+    };
+
+    /// Gets the wildcard import data declared in this scope.
+    WildcardImportData* getWildcardImportData() const { return importData; }
 
 protected:
     Scope(Compilation& compilation_, const Symbol* thisSym_);
@@ -256,10 +263,6 @@ private:
     // Strongly typed index type which is used in a sideband list in the Compilation object
     // to store information about deferred members in this scope.
     enum class DeferredMemberIndex : uint32_t { Invalid = 0 };
-
-    // Strongly typed index type which is used in a sideband list in the Compilation object
-    // to store information about wildcard imports in this scope.
-    enum class ImportDataIndex : uint32_t { Invalid = 0 };
 
     // Data stored in sideband tables in the Compilation object for deferred members.
     class DeferredMemberData {
@@ -294,9 +297,6 @@ private:
         // elaborated we'll go back and make sure they're valid.
         std::vector<std::pair<const syntax::SyntaxNode*, const Symbol*>> portDecls;
     };
-
-    // Sideband collection of wildcard imports stored in the Compilation object.
-    using ImportData = std::vector<const WildcardImportSymbol*>;
 
     DeferredMemberData& getOrAddDeferredData() const;
     void elaborate() const;
@@ -334,8 +334,8 @@ private:
     mutable DeferredMemberIndex deferredMemberIndex{0};
 
     // If this scope has any wildcard import directives we'll keep track of them
-    // in a sideband list in the compilation object.
-    ImportDataIndex importDataIndex{0};
+    // in a sideband object.
+    WildcardImportData* importData = nullptr;
 };
 
 } // namespace slang::ast

@@ -1106,21 +1106,6 @@ std::span<const AttributeSymbol* const> Compilation::getAttributes(const void* p
     return it->second;
 }
 
-void Compilation::notePackageExportCandidate(const PackageSymbol& packageScope,
-                                             const Symbol& symbol) {
-    packageExportCandidateMap[&packageScope][symbol.name] = &symbol;
-}
-
-const Symbol* Compilation::findPackageExportCandidate(const PackageSymbol& packageScope,
-                                                      std::string_view name) const {
-    if (auto it = packageExportCandidateMap.find(&packageScope);
-        it != packageExportCandidateMap.end()) {
-        if (auto symIt = it->second.find(name); symIt != it->second.end())
-            return symIt->second;
-    }
-    return nullptr;
-}
-
 void Compilation::noteBindDirective(const BindDirectiveSyntax& syntax, const Scope& scope) {
     if (!scope.isUninstantiated())
         bindDirectives.emplace_back(&syntax, &scope);
@@ -1670,6 +1655,10 @@ ConfigBlockSymbol* Compilation::allocConfigBlock(std::string_view name, SourceLo
     return configBlockAllocator.emplace(*this, name, loc);
 }
 
+Scope::WildcardImportData* Compilation::allocWildcardImportData() {
+    return wildcardImportAllocator.emplace();
+}
+
 const ImplicitTypeSyntax& Compilation::createEmptyTypeSyntax(SourceLocation loc) {
     return *emplace<ImplicitTypeSyntax>(Token(), nullptr,
                                         Token(*this, TokenKind::Placeholder, {}, {}, loc));
@@ -1743,19 +1732,6 @@ Scope::DeferredMemberData& Compilation::getOrAddDeferredData(Scope::DeferredMemb
     if (index == Scope::DeferredMemberIndex::Invalid)
         index = deferredData.emplace();
     return deferredData[index];
-}
-
-void Compilation::trackImport(Scope::ImportDataIndex& index, const WildcardImportSymbol& import) {
-    if (index != Scope::ImportDataIndex::Invalid)
-        importData[index].push_back(&import);
-    else
-        index = importData.add({&import});
-}
-
-std::span<const WildcardImportSymbol*> Compilation::queryImports(Scope::ImportDataIndex index) {
-    if (index == Scope::ImportDataIndex::Invalid)
-        return {};
-    return importData[index];
 }
 
 void Compilation::parseParamOverrides(
