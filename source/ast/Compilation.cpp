@@ -1667,6 +1667,7 @@ const ImplicitTypeSyntax& Compilation::createEmptyTypeSyntax(SourceLocation loc)
 void Compilation::forceElaborate(const Symbol& symbol) {
     DiagnosticVisitor visitor(*this, numErrors,
                               options.errorLimit == 0 ? UINT32_MAX : options.errorLimit);
+    visitor.visitInstances = false;
     symbol.visit(visitor);
 }
 
