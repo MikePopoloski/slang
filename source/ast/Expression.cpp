@@ -1236,6 +1236,29 @@ Expression& Expression::bindSelector(Compilation& compilation, Expression& value
     }
 }
 
+static const SyntaxNode* findOverrideNodeSource(const HierarchyOverrideNode& node) {
+    // Try to find some concrete syntax node (defparam or bind directive) that
+    // caused us to have this override node.
+    if (!node.paramOverrides.empty()) {
+        for (auto& [_, val] : node.paramOverrides) {
+            if (val.second)
+                return val.second;
+        }
+    }
+
+    for (auto& [info, _] : node.binds) {
+        if (info.bindSyntax)
+            return info.bindSyntax;
+    }
+
+    for (auto& [_, val] : node.childNodes) {
+        if (auto result = findOverrideNodeSource(val))
+            return result;
+    }
+
+    return nullptr;
+}
+
 Expression* Expression::tryBindInterfaceRef(const ASTContext& context,
                                             const ExpressionSyntax& syntax, bool isInterfacePort) {
     // Unwrap the expression; parentheses are superfluous.
@@ -1358,6 +1381,7 @@ Expression* Expression::tryBindInterfaceRef(const ASTContext& context,
     result.reportDiags(context);
     result.errorIfSelectors(context);
 
+    auto sourceRange = syntax.sourceRange();
     const InstanceBodySymbol* iface = nullptr;
     if (symbol->kind == SymbolKind::Modport) {
         modport = &symbol->as<ModportSymbol>();
@@ -1365,6 +1389,12 @@ Expression* Expression::tryBindInterfaceRef(const ASTContext& context,
     }
     else {
         iface = &symbol->as<InstanceSymbol>().body;
+    }
+
+    if (iface->hierarchyOverrideNode) {
+        auto& diag = context.addDiag(diag::VirtualIfaceDefparam, sourceRange);
+        if (auto source = findOverrideNodeSource(*iface->hierarchyOverrideNode))
+            diag.addNote(diag::NoteDeclarationHere, source->sourceRange());
     }
 
     if (!arrayModportName.empty()) {
@@ -1393,7 +1423,6 @@ Expression* Expression::tryBindInterfaceRef(const ASTContext& context,
     // Now make sure the interface or modport we found matches the target type.
     // Fabricate a virtual interface type for the rhs that we can use for matching.
     SLANG_ASSERT(iface->parentInstance);
-    auto sourceRange = syntax.sourceRange();
     const Type* type = comp.emplace<VirtualInterfaceType>(*iface->parentInstance, modport,
                                                           /* isRealIface */ true,
                                                           sourceRange.start());
