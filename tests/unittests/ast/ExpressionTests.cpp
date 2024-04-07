@@ -3647,3 +3647,36 @@ $info(p[-2147483648:-2147483649]);
     CHECK(diags[1].code == diag::SignedIntegerOverflow);
     CHECK(diags[2].code == diag::SignedIntegerOverflow);
 }
+
+TEST_CASE("Assigning void in expressions is illegal") {
+    auto tree = SyntaxTree::fromText(R"(
+function void foo;
+endfunction
+
+module m;
+     union tagged {
+        void a;
+        type(a) b;
+    } u;
+
+    var type(foo) a;
+    var type(u.a) b;
+
+    initial begin
+        a = foo();
+        u.a = foo();
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 5);
+    CHECK(diags[0].code == diag::TypeRefVoid);
+    CHECK(diags[1].code == diag::TypeRefVoid);
+    CHECK(diags[2].code == diag::TypeRefVoid);
+    CHECK(diags[3].code == diag::VoidAssignment);
+    CHECK(diags[4].code == diag::VoidAssignment);
+}

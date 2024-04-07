@@ -1028,10 +1028,17 @@ const Type& Type::fromSyntax(Compilation& compilation, const DataTypeSyntax& nod
             auto& exprSyntax = *node.as<TypeReferenceSyntax>().expr;
             auto& expr = Expression::bind(exprSyntax, context,
                                           ASTFlags::AllowDataType | ASTFlags::TypeOperator);
-            if (expr.hasHierarchicalReference() &&
-                !compilation.hasFlag(CompilationFlags::AllowHierarchicalConst)) {
-                context.addDiag(diag::TypeRefHierarchical, exprSyntax.sourceRange());
+
+            if (!expr.bad()) {
+                if (expr.hasHierarchicalReference() &&
+                    !compilation.hasFlag(CompilationFlags::AllowHierarchicalConst)) {
+                    context.addDiag(diag::TypeRefHierarchical, exprSyntax.sourceRange());
+                }
+
+                if (expr.type->isVoid())
+                    context.addDiag(diag::TypeRefVoid, exprSyntax.sourceRange());
             }
+
             return *expr.type;
         }
         case SyntaxKind::VirtualInterfaceType:
