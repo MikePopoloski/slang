@@ -3680,3 +3680,45 @@ endmodule
     CHECK(diags[3].code == diag::VoidAssignment);
     CHECK(diags[4].code == diag::VoidAssignment);
 }
+
+TEST_CASE("Virtual interface array concat") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I;
+endinterface
+
+module m;
+    virtual I i[3];
+    I i1();
+    I i2 [2] ();
+    assign i = {i1, i2};
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Virtual interface array concat errors") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I;
+endinterface
+
+interface J;
+endinterface
+
+module m;
+    virtual I i[3];
+    I i1();
+    J i2 [2] ();
+    assign i = {i1, i2};
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::BadConcatExpression);
+}
