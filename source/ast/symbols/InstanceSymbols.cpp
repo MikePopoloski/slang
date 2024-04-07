@@ -1019,10 +1019,11 @@ InstanceBodySymbol& InstanceBodySymbol::fromDefinition(Compilation& comp,
             if (targetDefSyntax) {
                 auto def = comp.getDefinition(*result,
                                               targetDefSyntax->as<ModuleDeclarationSyntax>());
-                SLANG_ASSERT(def);
-
-                // const_cast is ok; we just created this definition in an addMembers call above.
-                const_cast<DefinitionSymbol*>(def)->bindDirectives.push_back(bindInfo);
+                if (def) {
+                    // const_cast is ok; we just created this definition in an addMembers call
+                    // above.
+                    const_cast<DefinitionSymbol*>(def)->bindDirectives.push_back(bindInfo);
+                }
             }
             else {
                 result->addDeferredMembers(*bindInfo.bindSyntax);
