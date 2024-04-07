@@ -434,6 +434,9 @@ Expression& Expression::convertAssignment(const ASTContext& context, const Type&
     if (type.isEquivalent(*rt)) {
         selfDetermined(context, result);
 
+        if (type.isVoid())
+            context.addDiag(diag::VoidAssignment, expr.sourceRange);
+
         // If the types are not actually matching we might still want
         // to issue conversion warnings.
         if (!context.inUnevaluatedBranch() && !type.isMatching(*rt)) {
