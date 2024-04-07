@@ -2209,11 +2209,11 @@ void Compilation::resolveDefParamsAndBinds() {
                 }
                 else {
                     auto def = c.getDefinition(*c.root, *entry.definitionTarget);
-                    SLANG_ASSERT(def);
-
-                    // const_cast is fine; we accessed the private data of the compilation
-                    // through a public interface that added the const on top.
-                    const_cast<DefinitionSymbol*>(def)->bindDirectives.push_back(entry.info);
+                    if (def) {
+                        // const_cast is fine; we accessed the private data of the compilation
+                        // through a public interface that added the const on top.
+                        const_cast<DefinitionSymbol*>(def)->bindDirectives.push_back(entry.info);
+                    }
                 }
             }
             else {

@@ -2343,10 +2343,24 @@ TEST_CASE("Nested modules with infinite recursion regress") {
     compilation.getAllDiagnostics();
 }
 
-TEST_CASE("Bind corner case crash regress") {
+TEST_CASE("Bind corner case crash regress 1") {
     auto tree = SyntaxTree::fromText(R"(
 module AL i,bind d,i AL,i
 )");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    // Check that it doesn't crash.
+    compilation.getAllDiagnostics();
+}
+
+TEST_CASE("Bind corner case crash regress 2") {
+    auto tree = SyntaxTree::fromFileInMemory(R"(
+begin
+program p(a,endprogram bind p
+)",
+                                             SyntaxTree::getDefaultSourceManager());
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
