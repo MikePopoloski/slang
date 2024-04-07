@@ -138,8 +138,8 @@ const Symbol* PackageSymbol::findForImport(std::string_view lookupName) const {
 
     // We need to force-elaborate the entire package body because any
     // lookups that result in a wildcard import could add to our export list.
-    if (!hasForceElaborated) {
-        hasForceElaborated = true;
+    if (!wildcardData->hasForceElaborated) {
+        wildcardData->hasForceElaborated = true;
         getCompilation().forceElaborate(*this);
     }
 

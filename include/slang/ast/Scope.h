@@ -230,8 +230,16 @@ public:
     /// Collection of information about wildcard imports in a scope.
     class WildcardImportData {
     public:
+        /// A list of wildcard import directives in the scope.
         std::vector<const WildcardImportSymbol*> wildcardImports;
+
+        /// A name map of symbols that have imported thus far.
+        /// This is mutated as the scope is elaborated.
         SymbolMap importedSymbols;
+
+        /// True if we have called forceElaborate on this scope to
+        /// ensure that we've seen all imported names.
+        bool hasForceElaborated = false;
     };
 
     /// Gets the wildcard import data declared in this scope.

@@ -256,7 +256,7 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
     }
 
     void handle(const CheckerInstanceBodySymbol& symbol) {
-        if (finishedEarly())
+        if (!visitInstances || finishedEarly())
             return;
 
         if (symbol.instanceDepth > compilation.getOptions().maxCheckerInstanceDepth) {
@@ -320,7 +320,8 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
             return;
         }
 
-        visit(symbol.body);
+        if (visitInstances)
+            visit(symbol.body);
     }
 
     void handle(const SubroutineSymbol& symbol) {
@@ -340,28 +341,28 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
     }
 
     void handle(const SequenceSymbol& symbol) {
-        if (!handleDefault(symbol))
+        if (!visitInstances || !handleDefault(symbol))
             return;
 
         symbol.makeDefaultInstance();
     }
 
     void handle(const PropertySymbol& symbol) {
-        if (!handleDefault(symbol))
+        if (!visitInstances || !handleDefault(symbol))
             return;
 
         symbol.makeDefaultInstance();
     }
 
     void handle(const LetDeclSymbol& symbol) {
-        if (!handleDefault(symbol))
+        if (!visitInstances || !handleDefault(symbol))
             return;
 
         symbol.makeDefaultInstance();
     }
 
     void handle(const CheckerSymbol& symbol) {
-        if (!handleDefault(symbol))
+        if (!visitInstances || !handleDefault(symbol))
             return;
 
         auto& result = CheckerInstanceSymbol::createInvalid(symbol, 0);
@@ -440,6 +441,7 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
     Compilation& compilation;
     const size_t& numErrors;
     uint32_t errorLimit;
+    bool visitInstances = true;
     bool hierarchyProblem = false;
     flat_hash_map<const DefinitionSymbol*, size_t> instanceCount;
     flat_hash_set<const InstanceBodySymbol*> activeInstanceBodies;

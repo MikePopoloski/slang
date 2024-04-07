@@ -69,9 +69,6 @@ public:
                                      std::optional<TimeScale> directiveTimeScale);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Package; }
-
-private:
-    mutable bool hasForceElaborated = false;
 };
 
 /// Represents the entirety of a design, along with all contained compilation units.

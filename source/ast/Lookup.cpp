@@ -1811,61 +1811,81 @@ void Lookup::unqualifiedImpl(const Scope& scope, std::string_view name, LookupLo
 
     // Look through any wildcard imports prior to the lookup point and see if their packages
     // contain the name we're looking for.
-    auto wildcardImportData = scope.getWildcardImportData();
-    if (wildcardImportData) {
-        struct Import {
-            const Symbol* imported;
-            const WildcardImportSymbol* import;
-        };
-        SmallVector<Import, 4> imports;
-        SmallSet<const Symbol*, 2> importDedup;
-
-        for (auto import : wildcardImportData->wildcardImports) {
-            if (location < LookupLocation::after(*import))
-                break;
-
-            auto package = import->getPackage();
-            if (!package) {
-                result.suppressUndeclared = true;
-                continue;
+    if (auto wildcardImportData = scope.getWildcardImportData()) {
+        if (flags.has(LookupFlags::DisallowWildcardImport)) {
+            // We're in a context that disallows new imports via wildcard imports,
+            // but we can still reference any symbols that were previously imported
+            // that way from some other lookup. In order to be sure we've seen all of
+            // those lookups we need to force elaborate the scope first.
+            if (!wildcardImportData->hasForceElaborated) {
+                wildcardImportData->hasForceElaborated = true;
+                scope.getCompilation().forceElaborate(scope.asSymbol());
             }
 
-            const Symbol* imported = package->findForImport(name);
-            if (imported && importDedup.emplace(imported).second)
-                imports.emplace_back(Import{imported, import});
-        }
-
-        if (!imports.empty()) {
-            if (imports.size() > 1) {
-                if (sourceRange) {
-                    auto& diag = result.addDiag(scope, diag::AmbiguousWildcardImport, *sourceRange);
-                    diag << name;
-                    for (const auto& pair : imports) {
-                        diag.addNote(diag::NoteImportedFrom, pair.import->location);
-                        diag.addNote(diag::NoteDeclarationHere, pair.imported->location);
-                    }
-                }
+            if (auto it = wildcardImportData->importedSymbols.find(name);
+                it != wildcardImportData->importedSymbols.end()) {
+                result.wasImported = true;
+                result.found = it->second;
                 return;
             }
+        }
+        else {
+            struct Import {
+                const Symbol* imported;
+                const WildcardImportSymbol* import;
+            };
+            SmallVector<Import, 4> imports;
+            SmallSet<const Symbol*, 2> importDedup;
 
-            if (symbol && sourceRange) {
-                // The existing symbol might be an import for the thing we just imported
-                // via wildcard, which is fine so don't error for that case.
-                if (symbol->kind != SymbolKind::ExplicitImport ||
-                    symbol->as<ExplicitImportSymbol>().importedSymbol() != imports[0].imported) {
+            for (auto import : wildcardImportData->wildcardImports) {
+                if (location < LookupLocation::after(*import))
+                    break;
 
-                    auto& diag = result.addDiag(scope, diag::ImportNameCollision, *sourceRange);
-                    diag << name;
-                    diag.addNote(diag::NoteDeclarationHere, symbol->location);
-                    diag.addNote(diag::NoteImportedFrom, imports[0].import->location);
-                    diag.addNote(diag::NoteDeclarationHere, imports[0].imported->location);
+                auto package = import->getPackage();
+                if (!package) {
+                    result.suppressUndeclared = true;
+                    continue;
                 }
+
+                const Symbol* imported = package->findForImport(name);
+                if (imported && importDedup.emplace(imported).second)
+                    imports.emplace_back(Import{imported, import});
             }
 
-            result.wasImported = true;
-            result.found = imports[0].imported;
-            wildcardImportData->importedSymbols.try_emplace(result.found->name, result.found);
-            return;
+            if (!imports.empty()) {
+                if (imports.size() > 1) {
+                    if (sourceRange) {
+                        auto& diag = result.addDiag(scope, diag::AmbiguousWildcardImport,
+                                                    *sourceRange);
+                        diag << name;
+                        for (const auto& pair : imports) {
+                            diag.addNote(diag::NoteImportedFrom, pair.import->location);
+                            diag.addNote(diag::NoteDeclarationHere, pair.imported->location);
+                        }
+                    }
+                    return;
+                }
+
+                if (symbol && sourceRange) {
+                    // The existing symbol might be an import for the thing we just imported
+                    // via wildcard, which is fine so don't error for that case.
+                    if (symbol->kind != SymbolKind::ExplicitImport ||
+                        symbol->as<ExplicitImportSymbol>().importedSymbol() !=
+                            imports[0].imported) {
+
+                        auto& diag = result.addDiag(scope, diag::ImportNameCollision, *sourceRange);
+                        diag << name;
+                        diag.addNote(diag::NoteDeclarationHere, symbol->location);
+                        diag.addNote(diag::NoteImportedFrom, imports[0].import->location);
+                        diag.addNote(diag::NoteDeclarationHere, imports[0].imported->location);
+                    }
+                }
+
+                result.wasImported = true;
+                result.found = imports[0].imported;
+                wildcardImportData->importedSymbols.try_emplace(result.found->name, result.found);
+                return;
+            }
         }
     }
 

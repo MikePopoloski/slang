@@ -2063,3 +2063,50 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::UndeclaredButFoundPackage);
 }
+
+TEST_CASE("Wildcard lookup doesn't import from packages") {
+    auto tree = SyntaxTree::fromText(R"(
+package p;
+    int i;
+endpackage
+
+module n(input int i);
+endmodule
+
+module m;
+    import p::*;
+    n n1(.*);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::ImplicitNamedPortNotFound);
+}
+
+TEST_CASE("Wildcard lookup uses existing imports") {
+    auto tree = SyntaxTree::fromText(R"(
+package p;
+    int i;
+endpackage
+
+module n(input int i);
+endmodule
+
+module m;
+    import p::*;
+    n n1(.*);
+
+    if (1) begin
+        int j = i;
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
