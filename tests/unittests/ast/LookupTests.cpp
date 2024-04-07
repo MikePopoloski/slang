@@ -2110,3 +2110,19 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Package self-import loop") {
+    auto tree = SyntaxTree::fromText(R"(
+package p;
+    export m;
+    import p::*;
+    K[1] t;
+endpackage
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    // Check no crash.
+    compilation.getAllDiagnostics();
+}

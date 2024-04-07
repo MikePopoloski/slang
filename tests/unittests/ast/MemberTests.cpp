@@ -2721,6 +2721,7 @@ endmodule
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
+
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::CannotCompareTwoInstances);
@@ -2753,8 +2754,36 @@ endmodule
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
+
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 2);
     CHECK(diags[0].code == diag::BadBinaryExpression);
     CHECK(diags[1].code == diag::BadBinaryExpression);
+}
+
+TEST_CASE("Package import / export from self") {
+    auto tree = SyntaxTree::fromText(R"(
+package p;
+    int i;
+
+    function foo;
+        import p::i;
+        import p::*;
+    endfunction
+
+    export p::i;
+    export p::*;
+endpackage
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 5);
+    CHECK(diags[0].code == diag::PackageImportSelf);
+    CHECK(diags[1].code == diag::PackageImportSelf);
+    CHECK(diags[2].code == diag::PackageExportSelf);
+    CHECK(diags[3].code == diag::Redefinition);
+    CHECK(diags[4].code == diag::PackageExportSelf);
 }

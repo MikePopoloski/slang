@@ -67,11 +67,30 @@ const PackageSymbol* ExplicitImportSymbol::package() const {
 }
 
 static const PackageSymbol* findPackage(std::string_view packageName, const Scope& lookupScope,
-                                        SourceLocation errorLoc) {
+                                        SourceLocation errorLoc, bool isFromExport) {
     auto& comp = lookupScope.getCompilation();
     auto package = comp.getPackage(packageName);
-    if (!package && !packageName.empty() && !comp.hasFlag(CompilationFlags::LintMode))
-        lookupScope.addDiag(diag::UnknownPackage, errorLoc) << packageName;
+    if (!package) {
+        if (!packageName.empty() && !comp.hasFlag(CompilationFlags::LintMode))
+            lookupScope.addDiag(diag::UnknownPackage, errorLoc) << packageName;
+    }
+    else {
+        // Make sure we aren't trying to import/export our own package.
+        auto currScope = &lookupScope;
+        do {
+            auto& sym = currScope->asSymbol();
+            if (package == &sym) {
+                if (isFromExport)
+                    lookupScope.addDiag(diag::PackageExportSelf, errorLoc);
+                else
+                    lookupScope.addDiag(diag::PackageImportSelf, errorLoc);
+                return nullptr;
+            }
+
+            currScope = sym.getParentScope();
+        } while (currScope);
+    }
+
     return package;
 }
 
@@ -86,7 +105,7 @@ const Symbol* ExplicitImportSymbol::importedSymbol() const {
         if (auto syntax = getSyntax())
             loc = syntax->as<PackageImportItemSyntax>().package.location();
 
-        package_ = findPackage(packageName, *scope, loc);
+        package_ = findPackage(packageName, *scope, loc, isFromExport);
         if (!package_)
             return nullptr;
 
@@ -127,7 +146,7 @@ const PackageSymbol* WildcardImportSymbol::getPackage() const {
         if (auto syntax = getSyntax(); syntax)
             loc = syntax->as<PackageImportItemSyntax>().package.location();
 
-        package = findPackage(packageName, *scope, loc);
+        package = findPackage(packageName, *scope, loc, isFromExport);
     }
     return *package;
 }
