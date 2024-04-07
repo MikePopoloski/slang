@@ -496,16 +496,6 @@ public:
     void setAttributes(const PortConnection& conn,
                        std::span<const AttributeSymbol* const> attributes);
 
-    /// Notes that the given symbol was imported into the current scope via a package import,
-    /// and further that the current scope is within a package declaration. These symbols are
-    /// candidates for being exported from that package.
-    void notePackageExportCandidate(const PackageSymbol& packageScope, const Symbol& symbol);
-
-    /// Tries to find a symbol that can be exported from the given package to satisfy an import
-    /// of a given name from that package. Returns nullptr if no such symbol can be found.
-    const Symbol* findPackageExportCandidate(const PackageSymbol& packageScope,
-                                             std::string_view name) const;
-
     /// Notes the presence of a bind directive. These can be later checked during
     /// scope elaboration to include the newly bound instances.
     void noteBindDirective(const syntax::BindDirectiveSyntax& syntax, const Scope& scope);
@@ -589,7 +579,7 @@ public:
     /// Adds a set of diagnostics to the compilation's list of semantic diagnostics.
     void addDiagnostics(const Diagnostics& diagnostics);
 
-    /// Forces the given symbol and all children underneath it in the hierarchy to
+    /// Forces the given symbol and all scopes underneath it to
     /// be elaborated and any relevant diagnostics to be issued.
     void forceElaborate(const Symbol& symbol);
 
@@ -707,6 +697,9 @@ public:
     /// Allocates a config block symbol.
     ConfigBlockSymbol* allocConfigBlock(std::string_view name, SourceLocation loc);
 
+    /// Allocates a scope's wildcard import data object.
+    Scope::WildcardImportData* allocWildcardImportData();
+
     /// Gets the driver map allocator.
     DriverIntervalMap::allocator_type& getDriverMapAllocator() { return driverMapAllocator; }
 
@@ -734,8 +727,6 @@ private:
 
     // These functions are called by Scopes to create and track various members.
     Scope::DeferredMemberData& getOrAddDeferredData(Scope::DeferredMemberIndex& index);
-    void trackImport(Scope::ImportDataIndex& index, const WildcardImportSymbol& import);
-    std::span<const WildcardImportSymbol*> queryImports(Scope::ImportDataIndex index);
 
     bool doTypoCorrection() const { return typoCorrections < options.typoCorrectionLimit; }
     void didTypoCorrection() { typoCorrections++; }
@@ -795,10 +786,6 @@ private:
     // Sideband data for scopes that have deferred members.
     SafeIndexedVector<Scope::DeferredMemberData, Scope::DeferredMemberIndex> deferredData;
 
-    // Sideband data for scopes that have wildcard imports. The list of imports
-    // is stored here and queried during name lookups.
-    SafeIndexedVector<Scope::ImportData, Scope::ImportDataIndex> importData;
-
     // A map of syntax nodes that have been referenced in the AST.
     // The value indicates whether the node has been used as an lvalue vs non-lvalue,
     // for things like variables and nets.
@@ -856,11 +843,6 @@ private:
     // A list of libraries that control the order in which we search for cell bindings.
     std::vector<const SourceLibrary*> defaultLiblist;
 
-    // A map of packages to the set of names that are candidates for being
-    // exported from those packages.
-    flat_hash_map<const PackageSymbol*, flat_hash_map<std::string_view, const Symbol*>>
-        packageExportCandidateMap;
-
     // A map from class name + decl name + scope to out-of-block declarations. These get
     // registered when we find the initial declaration and later get used when we see
     // the class prototype. The value also includes a boolean indicating whether anything
@@ -884,6 +866,7 @@ private:
     TypedBumpAllocator<GenericClassDefSymbol> genericClassAllocator;
     TypedBumpAllocator<AssertionInstanceDetails> assertionDetailsAllocator;
     TypedBumpAllocator<ConfigBlockSymbol> configBlockAllocator;
+    TypedBumpAllocator<Scope::WildcardImportData> wildcardImportAllocator;
 
     // This is storage for a temporary diagnostic that is being constructed.
     // Typically this is done in-place within the diagMap, but for diagnostics

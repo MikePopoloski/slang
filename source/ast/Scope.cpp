@@ -576,10 +576,6 @@ const Symbol* Scope::lookupName(std::string_view name, LookupLocation location,
     return result.found;
 }
 
-std::span<const WildcardImportSymbol* const> Scope::getWildcardImports() const {
-    return compilation.queryImports(importDataIndex);
-}
-
 Scope::DeferredMemberData& Scope::getOrAddDeferredData() const {
     return compilation.getOrAddDeferredData(deferredMemberIndex);
 }
@@ -1455,14 +1451,16 @@ void Scope::handleExportedMethods(std::span<Symbol* const> deferredMembers) cons
 
 void Scope::addWildcardImport(const PackageImportItemSyntax& item,
                               std::span<const AttributeInstanceSyntax* const> attributes) {
-    // Check for redundant import statements.
-    for (auto import : compilation.queryImports(importDataIndex)) {
-        if (import->packageName == item.package.valueText()) {
-            if (!import->packageName.empty()) {
-                auto& diag = addDiag(diag::DuplicateImport, item.item.location());
-                diag.addNote(diag::NotePreviousDefinition, import->location);
+    if (importData) {
+        // Check for redundant import statements.
+        for (auto import : importData->wildcardImports) {
+            if (import->packageName == item.package.valueText()) {
+                if (!import->packageName.empty()) {
+                    auto& diag = addDiag(diag::DuplicateImport, item.item.location());
+                    diag.addNote(diag::NotePreviousDefinition, import->location);
+                }
+                return;
             }
-            return;
         }
     }
 
@@ -1476,7 +1474,9 @@ void Scope::addWildcardImport(const PackageImportItemSyntax& item,
 }
 
 void Scope::addWildcardImport(const WildcardImportSymbol& item) {
-    compilation.trackImport(importDataIndex, item);
+    if (!importData)
+        importData = compilation.allocWildcardImportData();
+    importData->wildcardImports.push_back(&item);
 }
 
 void Scope::DeferredMemberData::addMember(Symbol* symbol) {
