@@ -12,6 +12,20 @@ add_custom_command(
     ${CMAKE_CURRENT_BINARY_DIR} --srcDir ${CMAKE_CURRENT_SOURCE_DIR} --incDir
     ${CMAKE_CURRENT_SOURCE_DIR}/../include/slang
   OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/slang/diagnostics/AllDiags.h
+         ${CMAKE_CURRENT_BINARY_DIR}/slang/diagnostics/CompilationDiags.h
+         ${CMAKE_CURRENT_BINARY_DIR}/slang/diagnostics/ConstEvalDiags.h
+         ${CMAKE_CURRENT_BINARY_DIR}/slang/diagnostics/DeclarationsDiags.h
+         ${CMAKE_CURRENT_BINARY_DIR}/slang/diagnostics/ExpressionsDiags.h
+         ${CMAKE_CURRENT_BINARY_DIR}/slang/diagnostics/GeneralDiags.h
+         ${CMAKE_CURRENT_BINARY_DIR}/slang/diagnostics/LexerDiags.h
+         ${CMAKE_CURRENT_BINARY_DIR}/slang/diagnostics/LookupDiags.h
+         ${CMAKE_CURRENT_BINARY_DIR}/slang/diagnostics/MetaDiags.h
+         ${CMAKE_CURRENT_BINARY_DIR}/slang/diagnostics/NumericDiags.h
+         ${CMAKE_CURRENT_BINARY_DIR}/slang/diagnostics/ParserDiags.h
+         ${CMAKE_CURRENT_BINARY_DIR}/slang/diagnostics/PreprocessorDiags.h
+         ${CMAKE_CURRENT_BINARY_DIR}/slang/diagnostics/StatementsDiags.h
+         ${CMAKE_CURRENT_BINARY_DIR}/slang/diagnostics/SysFuncsDiags.h
+         ${CMAKE_CURRENT_BINARY_DIR}/slang/diagnostics/TypesDiags.h
          ${CMAKE_CURRENT_BINARY_DIR}/DiagCode.cpp
   DEPENDS ${SCRIPTS_DIR}/diagnostic_gen.py ${SCRIPTS_DIR}/diagnostics.txt
   COMMENT "Generating diagnostics")
