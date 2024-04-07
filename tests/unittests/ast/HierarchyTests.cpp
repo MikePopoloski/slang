@@ -2369,6 +2369,19 @@ program p(a,endprogram bind p
     compilation.getAllDiagnostics();
 }
 
+TEST_CASE("Bind corner case crash regress 3") {
+    auto tree = SyntaxTree::fromText(R"(
+module n begin
+bind p program p(s
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    // Check that it doesn't crash.
+    compilation.getAllDiagnostics();
+}
+
 TEST_CASE("Nested modules with binds, parameterized, info task") {
     auto tree = SyntaxTree::fromText(R"(
 module m #(parameter P);
