@@ -1686,3 +1686,15 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Non-ansi iface port crash regress") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I(.;input interface I
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    // No crash.
+    compilation.getAllDiagnostics();
+}
