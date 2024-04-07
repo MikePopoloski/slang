@@ -1408,10 +1408,19 @@ Expression& ConcatenationExpression::fromSyntax(Compilation& compilation,
         size_t totalElems = 0;
         const Type& type = *assignmentTarget;
         const Type& elemType = *type.getArrayElementType();
+        const bool isVirtualIface = elemType.isVirtualInterface();
         SmallVector<Expression*> buffer;
 
         for (auto argSyntax : syntax.expressions) {
-            Expression* arg = &create(compilation, *argSyntax, context);
+            Expression* arg = nullptr;
+            if (isVirtualIface) {
+                arg = tryBindInterfaceRef(context, *argSyntax,
+                                          /* isInterfacePort */ false);
+            }
+
+            if (!arg)
+                arg = &create(compilation, *argSyntax, context);
+
             if (arg->bad()) {
                 bad = true;
                 continue;
