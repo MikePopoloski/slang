@@ -2158,7 +2158,7 @@ void Compilation::resolveDefParamsAndBinds() {
     TimeTraceScope timeScope("resolveDefParamsAndBinds"sv, ""sv);
 
     struct OverrideEntry {
-        InstancePath path;
+        OpaqueInstancePath path;
         const SyntaxNode* targetSyntax = nullptr;
         const SyntaxNode* defparamSyntax = nullptr;
         ConstantValue value;
@@ -2167,13 +2167,13 @@ void Compilation::resolveDefParamsAndBinds() {
     SmallVector<OverrideEntry, 4> overrides;
 
     struct BindEntry {
-        InstancePath path;
+        OpaqueInstancePath path;
         const ModuleDeclarationSyntax* definitionTarget = nullptr;
         BindDirectiveInfo info;
     };
     SmallVector<BindEntry> binds;
 
-    auto getNodeFor = [](const InstancePath& path, Compilation& c) {
+    auto getNodeFor = [](const OpaqueInstancePath& path, Compilation& c) {
         HierarchyOverrideNode* node = &c.hierarchyOverrides;
         for (auto& entry : path.entries)
             node = &node->childNodes[entry];
@@ -2242,7 +2242,7 @@ void Compilation::resolveDefParamsAndBinds() {
                 std::string path;
                 target->getHierarchicalPath(path);
 
-                overrides.push_back({InstancePath(*target), target->getSyntax(),
+                overrides.push_back({OpaqueInstancePath(*target), target->getSyntax(),
                                      defparam->getSyntax(), defparam->getValue(), std::move(path)});
             }
         }
@@ -2273,7 +2273,7 @@ void Compilation::resolveDefParamsAndBinds() {
             }
 
             for (auto target : resolvedBind.instTargets)
-                binds.emplace_back(BindEntry{InstancePath(*target), nullptr, info});
+                binds.emplace_back(BindEntry{OpaqueInstancePath(*target), nullptr, info});
 
             if (auto defTarget = resolvedBind.defTarget) {
                 auto parentScope = defTarget->getParentScope();
@@ -2283,10 +2283,10 @@ void Compilation::resolveDefParamsAndBinds() {
                 // If this is a nested definition we'll put it into the
                 // override node of the parent scope that contains the
                 // definition. Otherwise it's a globally targeted bind.
-                InstancePath path;
+                OpaqueInstancePath path;
                 auto& parentSym = parentScope->asSymbol();
                 if (parentSym.kind != SymbolKind::CompilationUnit)
-                    path = InstancePath(parentSym);
+                    path = OpaqueInstancePath(parentSym);
 
                 binds.emplace_back(
                     BindEntry{std::move(path), &defSyntax->as<ModuleDeclarationSyntax>(), info});

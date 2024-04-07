@@ -1,18 +1,18 @@
 //------------------------------------------------------------------------------
-// InstancePath.cpp
-// Helper type for representing a hierarchical path to an instance
+// OpaqueInstancePath.cpp
+// Helper type for representing an opaque path to an instance
 //
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
-#include "slang/ast/InstancePath.h"
+#include "slang/ast/OpaqueInstancePath.h"
 
 #include "slang/ast/symbols/BlockSymbols.h"
 #include "slang/ast/symbols/InstanceSymbols.h"
 
 namespace slang::ast {
 
-InstancePath::InstancePath(const Symbol& symbol) {
+OpaqueInstancePath::OpaqueInstancePath(const Symbol& symbol) {
     auto curr = &symbol;
     if (symbol.kind != SymbolKind::Instance) {
         while (curr->kind != SymbolKind::InstanceBody) {
@@ -26,7 +26,7 @@ InstancePath::InstancePath(const Symbol& symbol) {
     buildPath(*curr);
 }
 
-void InstancePath::buildPath(const Symbol& symbol) {
+void OpaqueInstancePath::buildPath(const Symbol& symbol) {
     auto scope = symbol.getHierarchicalParent();
     const Symbol* current;
     if (symbol.kind == SymbolKind::InstanceBody)

@@ -52,9 +52,9 @@ target_sources(
           EvalContext.cpp
           Expression.cpp
           FmtHelpers.cpp
-          InstancePath.cpp
           Lookup.cpp
           LValue.cpp
+          OpaqueInstancePath.cpp
           Patterns.cpp
           Scope.cpp
           ScriptSession.cpp

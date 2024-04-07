@@ -1,6 +1,6 @@
 //------------------------------------------------------------------------------
-//! @file InstancePath.h
-//! @brief Helper type for representing a hierarchical path to an instance
+//! @file OpaqueInstancePath.h
+//! @brief Helper type for representing an opaque path to an instance
 //
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
@@ -22,16 +22,16 @@ class Symbol;
 /// The path is stored only via opaque syntax nodes, to allow it to generalize
 /// across compilations (and so different sets of AST nodes) that share the
 /// same underlying syntax.
-class InstancePath {
+class OpaqueInstancePath {
 public:
     /// Constructs an empty instance path.
-    InstancePath() = default;
+    OpaqueInstancePath() = default;
 
     /// @brief Constructs a path to the given symbol.
     ///
     /// If the given symbol is not an instance, the path will point to the
     /// nearest parent instance.
-    explicit InstancePath(const Symbol& symbol);
+    explicit OpaqueInstancePath(const Symbol& symbol);
 
     /// @returns true if the path is empty
     [[nodiscard]] bool empty() const { return entries.empty(); }
@@ -77,8 +77,8 @@ private:
 namespace std {
 
 template<>
-struct hash<slang::ast::InstancePath::Entry> {
-    size_t operator()(const slang::ast::InstancePath::Entry& entry) const {
+struct hash<slang::ast::OpaqueInstancePath::Entry> {
+    size_t operator()(const slang::ast::OpaqueInstancePath::Entry& entry) const {
         return size_t(entry.getOpaqueValue());
     }
 };

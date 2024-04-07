@@ -9,7 +9,7 @@
 
 #include <memory>
 
-#include "slang/ast/InstancePath.h"
+#include "slang/ast/OpaqueInstancePath.h"
 #include "slang/ast/Scope.h"
 #include "slang/diagnostics/Diagnostics.h"
 #include "slang/numeric/Time.h"
@@ -244,7 +244,7 @@ struct SLANG_EXPORT HierarchyOverrideNode {
         paramOverrides;
 
     /// A map of child scopes that also contain overrides.
-    flat_hash_map<InstancePath::Entry, HierarchyOverrideNode> childNodes;
+    flat_hash_map<OpaqueInstancePath::Entry, HierarchyOverrideNode> childNodes;
 
     /// A list of bind directives to apply in this scope.
     /// The first entry is info about the bind instantiation, and the
