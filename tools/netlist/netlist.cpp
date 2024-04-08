@@ -102,7 +102,7 @@ void printDOT(const Netlist& netlist, const std::string& fileName) {
         }
     }
     buffer.append("}\n");
-    OS::writeFile(fileName, buffer.data());
+    OS::writeFile(fileName, buffer.str());
 }
 
 void reportPath(Compilation& compilation, const NetlistPath& path) {
