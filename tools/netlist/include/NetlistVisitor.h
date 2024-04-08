@@ -64,8 +64,7 @@ static std::string resolveSymbolHierPath(const ast::Symbol& symbol) {
     return buffer;
 }
 
-static void connectDeclToVar(Netlist& netlist, NetlistNode& declNode,
-                             const ast::Symbol &variable) {
+static void connectDeclToVar(Netlist& netlist, NetlistNode& declNode, const ast::Symbol& variable) {
     auto* varNode = netlist.lookupVariable(resolveSymbolHierPath(variable));
     netlist.addEdge(*varNode, declNode);
     DEBUG_PRINT("Edge decl {} to ref {}\n", varNode->getName(), declNode.getName());
@@ -503,7 +502,7 @@ public:
 
     // Handle making connections from the port connections to the port
     // declarations of an instance.
-    auto handleInstanceExtPorts(ast::InstanceSymbol const &symbol) {
+    auto handleInstanceExtPorts(ast::InstanceSymbol const& symbol) {
 
         for (auto* portConnection : symbol.getPortConnections()) {
 
@@ -512,29 +511,30 @@ public:
                 auto direction = portConnection->port.as<ast::PortSymbol>().direction;
 
                 ast::EvalContext evalCtx(
-                  ast::ASTContext(compilation.getRoot(), ast::LookupLocation::max));
+                    ast::ASTContext(compilation.getRoot(), ast::LookupLocation::max));
 
                 // The port is the target of an assignment if it is an input.
                 bool isLeftOperand = direction == ast::ArgumentDirection::In ||
                                      direction == ast::ArgumentDirection::InOut;
 
-                 if (portConnection->getExpression() == nullptr) {
-                     // Empty port hookup so skip.
-                     continue;
-                 }
+                if (portConnection->getExpression() == nullptr) {
+                    // Empty port hookup so skip.
+                    continue;
+                }
 
                 // Collect variable references in the port expression.
                 VariableReferenceVisitor visitor(netlist, evalCtx, isLeftOperand);
                 portConnection->getExpression()->visit(visitor);
 
                 for (auto* node : visitor.getVars()) {
-                  connectPortExternal(node, portConnection->port, direction);
+                    connectPortExternal(node, portConnection->port, direction);
                 }
             }
             else if (portConnection->port.kind == ast::SymbolKind::InterfacePort) {
-              // Skip
-            } else {
-              SLANG_UNREACHABLE;
+                // Skip
+            }
+            else {
+                SLANG_UNREACHABLE;
             }
         }
     }
@@ -543,7 +543,7 @@ public:
     /// declarations. This must be called before 'handleInstanceExtPortConn'
     /// becuase it creates the port declarations in the netlist that are
     /// connected to externally.
-    auto handleInstanceIntVars(ast::InstanceSymbol const &symbol) {
+    auto handleInstanceIntVars(ast::InstanceSymbol const& symbol) {
 
         for (auto& member : symbol.body.members()) {
             if (member.kind == ast::SymbolKind::Variable || member.kind == ast::SymbolKind::Net) {
@@ -556,7 +556,7 @@ public:
     /// declarations. This must be called before 'handleInstanceExtPortConn'
     /// becuase it creates the port declarations in the netlist that are
     /// connected to externally.
-    auto handleInstanceIntPorts(ast::InstanceSymbol const &symbol) {
+    auto handleInstanceIntPorts(ast::InstanceSymbol const& symbol) {
 
         for (auto& member : symbol.body.members()) {
             if (member.kind == ast::SymbolKind::Port) {

@@ -619,4 +619,3 @@ endmodule
     PathFinder pathFinder(netlist);
     CHECK(!pathFinder.find(*inPort, *outPort).empty());
 }
-
