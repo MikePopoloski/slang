@@ -86,8 +86,12 @@ void printDOT(const Netlist& netlist, const std::string& fileName) {
             }
             case NodeKind::VariableReference: {
                 auto& varRef = node->as<NetlistVariableReference>();
-                buffer.format("  N{} [label=\"{}\\n{}\"]\n", node->ID, varRef.toString(),
-                              varRef.isLeftOperand() ? "[Assigned to]" : "");
+                if (!varRef.isLeftOperand())
+                    buffer.format("  N{} [label=\"{}\\n\"]\n", node->ID, varRef.toString());
+                else if (node->edgeKind == EdgeKind::None)
+                    buffer.format("  N{} [label=\"{}\\n[Assigned to]\"]\n", node->ID, varRef.toString());
+                else
+                    buffer.format("  N{} [label=\"{}\\n[Assigned to @({})]\"]\n", node->ID, varRef.toString(), toString(node->edgeKind));
                 break;
             }
             default:

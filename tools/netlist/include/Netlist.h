@@ -184,6 +184,7 @@ public:
 
 public:
     bool disabled{};
+    ast::EdgeKind edgeKind;
 };
 
 /// A class representing a node in the netlist, corresponding to the appearance
@@ -223,6 +224,7 @@ public:
     size_t ID;
     NodeKind kind;
     const ast::Symbol& symbol;
+    ast::EdgeKind edgeKind;
 
 private:
     static size_t nextID;

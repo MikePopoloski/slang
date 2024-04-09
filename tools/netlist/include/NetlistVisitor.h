@@ -21,6 +21,7 @@
 #include "slang/ast/Compilation.h"
 #include "slang/ast/EvalContext.h"
 #include "slang/ast/SemanticFacts.h"
+#include "slang/ast/Statements.h"
 #include "slang/ast/Symbol.h"
 #include "slang/ast/symbols/BlockSymbols.h"
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
@@ -78,9 +79,11 @@ static void connectVarToDecl(Netlist& netlist, NetlistNode& varNode,
 }
 
 static void connectVarToVar(Netlist& netlist, NetlistNode& sourceVarNode,
-                            NetlistNode& targetVarNode) {
-    netlist.addEdge(sourceVarNode, targetVarNode);
-    DEBUG_PRINT("Edge ref {} to ref {}\n", sourceVarNode.getName(), targetVarNode.getName());
+                            NetlistNode& targetVarNode, ast::EdgeKind edgeKind) {
+    auto& edge = netlist.addEdge(sourceVarNode, targetVarNode);
+    edge.edgeKind = edgeKind;
+    targetVarNode.edgeKind = edgeKind;
+    DEBUG_PRINT("Edge ref {} to ref {} by edge {}\n", sourceVarNode.getName(), targetVarNode.getName(), toString(edgeKind));
 }
 
 /// An AST visitor to identify variable references with selectors in
@@ -199,8 +202,8 @@ private:
 class AssignmentVisitor : public ast::ASTVisitor<AssignmentVisitor, false, true> {
 public:
     explicit AssignmentVisitor(Netlist& netlist, ast::EvalContext& evalCtx,
-                               SmallVector<NetlistNode*>& condVars) :
-        netlist(netlist), evalCtx(evalCtx), condVars(condVars) {}
+                               SmallVector<NetlistNode*>& condVars, ast::EdgeKind edgeKind) :
+        netlist(netlist), evalCtx(evalCtx), condVars(condVars), edgeKind(edgeKind) {}
 
     void handle(const ast::AssignmentExpression& expr) {
         // Collect variable references on the left-hand side of the assignment.
@@ -216,7 +219,7 @@ public:
                 // Add edge from variable declaration to RHS variable reference.
                 connectDeclToVar(netlist, *rightNode, rightNode->symbol);
                 // Add edge from RHS expression term to LHS expression terms.
-                connectVarToVar(netlist, *rightNode, *leftNode);
+                connectVarToVar(netlist, *rightNode, *leftNode, edgeKind);
             }
         }
         for (auto* condNode : condVars) {
@@ -224,7 +227,7 @@ public:
             connectDeclToVar(netlist, *condNode, condNode->symbol);
             for (auto* leftNode : visitorLHS.getVars()) {
                 // Add edge from conditional variable to the LHS variable.
-                connectVarToVar(netlist, *condNode, *leftNode);
+                connectVarToVar(netlist, *condNode, *leftNode, edgeKind);
             }
         }
     }
@@ -233,6 +236,7 @@ private:
     Netlist& netlist;
     ast::EvalContext& evalCtx;
     SmallVector<NetlistNode*>& condVars;
+    ast::EdgeKind edgeKind;
 };
 
 /// An AST visitor for proceural blocks that performs loop unrolling.
@@ -240,9 +244,10 @@ class ProceduralBlockVisitor : public ast::ASTVisitor<ProceduralBlockVisitor, tr
 public:
     bool anyErrors = false;
 
-    explicit ProceduralBlockVisitor(ast::Compilation& compilation, Netlist& netlist) :
+    explicit ProceduralBlockVisitor(ast::Compilation& compilation, Netlist& netlist, ast::EdgeKind edgeKind) :
         netlist(netlist),
-        evalCtx(ast::ASTContext(compilation.getRoot(), ast::LookupLocation::max)) {
+        evalCtx(ast::ASTContext(compilation.getRoot(), ast::LookupLocation::max)),
+        edgeKind(edgeKind) {
         evalCtx.pushEmptyFrame();
     }
 
@@ -380,7 +385,7 @@ public:
 
     void handle(const ast::ExpressionStatement& stmt) {
         step();
-        AssignmentVisitor visitor(netlist, evalCtx, condVarsStack);
+        AssignmentVisitor visitor(netlist, evalCtx, condVarsStack, edgeKind);
         stmt.visit(visitor);
     }
 
@@ -396,6 +401,7 @@ private:
     Netlist& netlist;
     ast::EvalContext evalCtx;
     SmallVector<NetlistNode*> condVarsStack;
+    ast::EdgeKind edgeKind;
 };
 
 /// A visitor that traverses the AST and builds a netlist representation.
@@ -597,15 +603,24 @@ public:
 
     /// Procedural block.
     void handle(const ast::ProceduralBlockSymbol& symbol) {
-        ProceduralBlockVisitor visitor(compilation, netlist);
+        ast::EdgeKind edgeKind;
+        if ((symbol.procedureKind == ast::ProceduralBlockKind::AlwaysFF ||
+             symbol.procedureKind == ast::ProceduralBlockKind::Always) &&
+            symbol.getBody().as<ast::TimedStatement>().timing.kind == ast::TimingControlKind::SignalEvent) {
+            edgeKind = symbol.getBody().as<ast::TimedStatement>().timing.as<ast::SignalEventControl>().edge;
+        } else {
+            edgeKind = ast::EdgeKind::None;
+        }
+        ProceduralBlockVisitor visitor(compilation, netlist, edgeKind);
         symbol.visit(visitor);
     }
 
     /// Continuous assignment statement.
     void handle(const ast::ContinuousAssignSymbol& symbol) {
+        ast::EdgeKind edgeKind = ast::EdgeKind::None;
         ast::EvalContext evalCtx(ast::ASTContext(compilation.getRoot(), ast::LookupLocation::max));
         SmallVector<NetlistNode*> condVars;
-        AssignmentVisitor visitor(netlist, evalCtx, condVars);
+        AssignmentVisitor visitor(netlist, evalCtx, condVars, edgeKind);
         symbol.visit(visitor);
     }
 
