@@ -547,3 +547,75 @@ endmodule
     auto netlist = createNetlist(compilation);
     CHECK(netlist.numNodes() == 2);
 }
+
+//===---------------------------------------------------------------------===//
+// Test cases for for #855 (instances with interfaces)
+//===---------------------------------------------------------------------===//
+
+TEST_CASE("Instance with an interface") {
+    auto tree = SyntaxTree::fromText(R"(
+interface my_if();
+  logic [31:0] a;
+  logic [31:0] b;
+  logic [31:0] sum;
+  logic        co;
+
+  modport test (
+    input  a,
+    input  b,
+    output sum,
+    output co
+  );
+endinterface
+
+module adder(my_if.test i);
+  logic [31:0] sum;
+  logic co;
+  assign {co, sum} = i.a + i.b;
+  assign i.sum = sum;
+  assign i.co = co;
+endmodule
+
+module top();
+  my_if i ();
+  adder adder0 (i);
+endmodule
+)");
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+    auto netlist = createNetlist(compilation);
+    CHECK(netlist.numNodes());
+}
+
+TEST_CASE("Interface array") {
+    auto tree = SyntaxTree::fromText(R"(
+interface if_foo();
+  logic [31:0] a;
+  modport produce (output a);
+  modport consume (input a);
+endinterface
+
+module produce(if_foo.produce i, input logic [31:0] x);
+  assign i.a = x;
+endmodule
+
+module consume(if_foo.consume i, output logic [31:0] x);
+  assign x = i.a;
+endmodule
+
+module top(input logic [31:0] in, output logic [31:0] out);
+  if_foo i [2] [3] ();
+  produce p (i[0][0], in);
+  consume c (i[0][0], out);
+endmodule
+)");
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+    auto netlist = createNetlist(compilation);
+    auto* inPort = netlist.lookupPort("top.in");
+    auto* outPort = netlist.lookupPort("top.out");
+    PathFinder pathFinder(netlist);
+    CHECK(!pathFinder.find(*inPort, *outPort).empty());
+}
