@@ -209,6 +209,9 @@ public:
     /// the root array's name. Otherwise returns the name of this symbol itself.
     std::string_view getArrayName() const;
 
+    static InstanceArraySymbol& createEmpty(Compilation& compilation, std::string_view name,
+                                            SourceLocation loc);
+
     void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::InstanceArray; }

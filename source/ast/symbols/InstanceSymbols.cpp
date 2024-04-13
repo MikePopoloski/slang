@@ -177,13 +177,6 @@ private:
 
         SLANG_ASSERT(syntax.decl);
         auto nameToken = syntax.decl->name;
-        auto createEmpty = [&]() {
-            return comp.emplace<InstanceArraySymbol>(comp, nameToken.valueText(),
-                                                     nameToken.location(),
-                                                     std::span<const Symbol* const>{},
-                                                     ConstantRange());
-        };
-
         auto& dimSyntax = **it;
         ++it;
 
@@ -192,13 +185,15 @@ private:
         // things try to reference this symbol.
         auto dim = context.evalDimension(dimSyntax, /* requireRange */ true, /* isPacked */ false);
         if (!dim.isRange())
-            return createEmpty();
+            return &InstanceArraySymbol::createEmpty(comp, nameToken.valueText(),
+                                                     nameToken.location());
 
         ConstantRange range = dim.range;
         if (range.width() > comp.getOptions().maxInstanceArray) {
             auto& diag = context.addDiag(diag::MaxInstanceArrayExceeded, dimSyntax.sourceRange());
             diag << definition->getKindString() << comp.getOptions().maxInstanceArray;
-            return createEmpty();
+            return &InstanceArraySymbol::createEmpty(comp, nameToken.valueText(),
+                                                     nameToken.location());
         }
 
         SmallVector<const Symbol*> elements;
@@ -877,6 +872,38 @@ void InstanceSymbol::resolvePortConnections() const {
     connections = conns.copy(comp);
 }
 
+static Symbol* recurseDefaultIfaceInst(Compilation& comp, const InterfacePortSymbol& port,
+                                       const InstanceSymbol*& firstInst,
+                                       std::span<const ConstantRange>::iterator it,
+                                       std::span<const ConstantRange>::iterator end) {
+    if (it == end) {
+        auto& result = InstanceSymbol::createDefault(comp, *port.interfaceDef, nullptr, nullptr,
+                                                     nullptr, port.location);
+
+        if (!firstInst)
+            firstInst = &result;
+        return &result;
+    }
+
+    ConstantRange range = *it++;
+    if (range.width() > comp.getOptions().maxInstanceArray)
+        return &InstanceArraySymbol::createEmpty(comp, port.name, port.location);
+
+    SmallVector<const Symbol*> elements;
+    for (uint32_t i = 0; i < range.width(); i++) {
+        auto symbol = recurseDefaultIfaceInst(comp, port, firstInst, it, end);
+        symbol->name = "";
+        elements.push_back(symbol);
+    }
+
+    auto result = comp.emplace<InstanceArraySymbol>(comp, port.name, port.location,
+                                                    elements.copy(comp), range);
+    for (auto element : elements)
+        result->addMember(*element);
+
+    return result;
+}
+
 void InstanceSymbol::connectDefaultIfacePorts() const {
     auto parent = getParentScope();
     SLANG_ASSERT(parent);
@@ -889,15 +916,25 @@ void InstanceSymbol::connectDefaultIfacePorts() const {
         if (port->kind == SymbolKind::InterfacePort) {
             auto& ifacePort = port->as<InterfacePortSymbol>();
             if (ifacePort.interfaceDef) {
-                auto& inst = createDefault(comp, *ifacePort.interfaceDef, nullptr, nullptr, nullptr,
-                                           port->location);
-                inst.setParent(*parent);
+                Symbol* inst;
+                const ModportSymbol* modport = nullptr;
+                if (auto dims = ifacePort.getDeclaredRange()) {
+                    const InstanceSymbol* firstInst = nullptr;
+                    inst = recurseDefaultIfaceInst(comp, ifacePort, firstInst, dims->begin(),
+                                                   dims->end());
 
-                auto portRange = SourceRange{ifacePort.location,
-                                             ifacePort.location + ifacePort.name.length()};
-                auto modport = ifacePort.getModport(context, inst, portRange);
+                    if (firstInst) {
+                        auto portRange = SourceRange{port->location,
+                                                     port->location + port->name.length()};
+                        modport = ifacePort.getModport(context, *firstInst, portRange);
+                    }
+                }
+                else {
+                    inst = &InstanceArraySymbol::createEmpty(comp, port->name, port->location);
+                }
 
-                conns.emplace_back(comp.emplace<PortConnection>(ifacePort, &inst, modport));
+                inst->setParent(*parent);
+                conns.emplace_back(comp.emplace<PortConnection>(ifacePort, inst, modport));
                 connectionMap->emplace(reinterpret_cast<uintptr_t>(port),
                                        reinterpret_cast<uintptr_t>(conns.back()));
             }
@@ -1094,6 +1131,13 @@ std::string_view InstanceArraySymbol::getArrayName() const {
         return scope->asSymbol().as<InstanceArraySymbol>().getArrayName();
 
     return name;
+}
+
+InstanceArraySymbol& InstanceArraySymbol::createEmpty(Compilation& compilation,
+                                                      std::string_view name, SourceLocation loc) {
+    return *compilation.emplace<InstanceArraySymbol>(compilation, name, loc,
+                                                     std::span<const Symbol* const>{},
+                                                     ConstantRange());
 }
 
 void InstanceArraySymbol::serializeTo(ASTSerializer& serializer) const {
@@ -1365,23 +1409,16 @@ PrimitiveInstanceSymbol* createPrimInst(Compilation& compilation, const Scope& s
 
 using DimIterator = std::span<VariableDimensionSyntax*>::iterator;
 
-Symbol* recursePrimArray(Compilation& compilation, const PrimitiveSymbol& primitive,
+Symbol* recursePrimArray(Compilation& comp, const PrimitiveSymbol& primitive,
                          const HierarchicalInstanceSyntax& instance, const ASTContext& context,
                          DimIterator it, DimIterator end,
                          std::span<const AttributeInstanceSyntax* const> attributes,
                          SmallVectorBase<int32_t>& path) {
     if (it == end)
-        return createPrimInst(compilation, *context.scope, primitive, instance, attributes, path);
+        return createPrimInst(comp, *context.scope, primitive, instance, attributes, path);
 
     SLANG_ASSERT(instance.decl);
     auto nameToken = instance.decl->name;
-    auto createEmpty = [&]() {
-        return compilation.emplace<InstanceArraySymbol>(compilation, nameToken.valueText(),
-                                                        nameToken.location(),
-                                                        std::span<const Symbol* const>{},
-                                                        ConstantRange());
-    };
-
     auto& dimSyntax = **it;
     ++it;
 
@@ -1390,29 +1427,29 @@ Symbol* recursePrimArray(Compilation& compilation, const PrimitiveSymbol& primit
     // things try to reference this symbol.
     auto dim = context.evalDimension(dimSyntax, /* requireRange */ true, /* isPacked */ false);
     if (!dim.isRange())
-        return createEmpty();
+        return &InstanceArraySymbol::createEmpty(comp, nameToken.valueText(), nameToken.location());
 
     ConstantRange range = dim.range;
-    if (range.width() > compilation.getOptions().maxInstanceArray) {
+    if (range.width() > comp.getOptions().maxInstanceArray) {
         auto& diag = context.addDiag(diag::MaxInstanceArrayExceeded, dimSyntax.sourceRange());
-        diag << "primitive"sv << compilation.getOptions().maxInstanceArray;
-        return createEmpty();
+        diag << "primitive"sv << comp.getOptions().maxInstanceArray;
+        return &InstanceArraySymbol::createEmpty(comp, nameToken.valueText(), nameToken.location());
     }
 
     SmallVector<const Symbol*> elements;
     for (int32_t i = range.lower(); i <= range.upper(); i++) {
         path.push_back(i);
-        auto symbol = recursePrimArray(compilation, primitive, instance, context, it, end,
-                                       attributes, path);
+        auto symbol = recursePrimArray(comp, primitive, instance, context, it, end, attributes,
+                                       path);
         path.pop_back();
 
         symbol->name = "";
         elements.push_back(symbol);
     }
 
-    auto result = compilation.emplace<InstanceArraySymbol>(compilation, nameToken.valueText(),
-                                                           nameToken.location(),
-                                                           elements.copy(compilation), range);
+    auto result = comp.emplace<InstanceArraySymbol>(comp, nameToken.valueText(),
+                                                    nameToken.location(), elements.copy(comp),
+                                                    range);
     for (auto element : elements)
         result->addMember(*element);
 
@@ -1749,11 +1786,6 @@ Symbol* recurseCheckerArray(Compilation& comp, const CheckerSymbol& checker,
 
     SLANG_ASSERT(instance.decl);
     auto nameToken = instance.decl->name;
-    auto createEmpty = [&]() {
-        return comp.emplace<InstanceArraySymbol>(comp, nameToken.valueText(), nameToken.location(),
-                                                 std::span<const Symbol* const>{}, ConstantRange());
-    };
-
     auto& dimSyntax = **it;
     ++it;
 
@@ -1762,13 +1794,13 @@ Symbol* recurseCheckerArray(Compilation& comp, const CheckerSymbol& checker,
     // things try to reference this symbol.
     auto dim = context.evalDimension(dimSyntax, /* requireRange */ true, /* isPacked */ false);
     if (!dim.isRange())
-        return createEmpty();
+        return &InstanceArraySymbol::createEmpty(comp, nameToken.valueText(), nameToken.location());
 
     ConstantRange range = dim.range;
     if (range.width() > comp.getOptions().maxInstanceArray) {
         auto& diag = context.addDiag(diag::MaxInstanceArrayExceeded, dimSyntax.sourceRange());
         diag << "checker"sv << comp.getOptions().maxInstanceArray;
-        return createEmpty();
+        return &InstanceArraySymbol::createEmpty(comp, nameToken.valueText(), nameToken.location());
     }
 
     SmallVector<const Symbol*> elements;

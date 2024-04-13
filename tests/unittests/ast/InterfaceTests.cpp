@@ -701,3 +701,26 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::WildcardPortGenericIface);
 }
+
+TEST_CASE("Top-level iface port array index regress") {
+    auto tree = SyntaxTree::fromText(R"(
+interface J;
+    int foo;
+endinterface
+
+module m #(parameter int i = 2)(J j[i]);
+    assign j[0].foo = 1;
+endmodule
+
+module n #(parameter int i = bar)(J j[i]);
+    assign j[0].foo = 1;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::UndeclaredIdentifier);
+}
