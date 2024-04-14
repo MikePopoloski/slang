@@ -22,6 +22,7 @@ module top2({a[1:0], a[3:2]});
 endmodule
 
 module top3(ref int a);
+    assign a = 1;
 endmodule
 )");
 

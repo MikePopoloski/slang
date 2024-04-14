@@ -1483,7 +1483,7 @@ const Diagnostics& Compilation::getSemanticDiagnostics() {
                         << def->getKindString();
             }
 
-            if (!elabVisitor.hierarchyProblem && numErrors == 0) {
+            if (!elabVisitor.hierarchyProblem) {
                 PostElabVisitor postElabVisitor(*this);
                 getRoot().visit(postElabVisitor);
             }
