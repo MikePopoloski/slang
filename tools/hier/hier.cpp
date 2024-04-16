@@ -60,7 +60,7 @@ int main(int argc, char** argv) {
                 // if no hierPath, pathLength is 0, and this check will never take place, so hierPath.value() is safe
                 // if index >= pathLength we satisfied the full hierPath. from now on we are limited only by max-depth
                 if (index < pathLength) {
-                    if (type.name != hierPath.value().substr(index, std::min(pathLength, index+len))) {
+                    if (type.name != hierPath.value().substr(index, std::min(pathLength-index, len))) {
                         // current instance name did not match
                         return;
                     }
