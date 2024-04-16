@@ -1,11 +1,11 @@
+#include <algorithm>
+#include <regex>
+
 #include "slang/ast/ASTVisitor.h"
 #include "slang/ast/Compilation.h"
 #include "slang/ast/symbols/InstanceSymbols.h"
 #include "slang/driver/Driver.h"
 #include "slang/util/VersionInfo.h"
-
-#include <algorithm>
-#include <regex>
 
 using namespace slang;
 using namespace slang::driver;
@@ -26,10 +26,10 @@ int main(int argc, char** argv) {
     driver.cmdLine.add("-h,--help", showHelp, "Display available options");
     driver.cmdLine.add("--version", showVersion, "Display version information and exit");
     driver.cmdLine.add("--params", params, "Display instance parameter values");
-    driver.cmdLine.add("--max-depth", maxDepth,
-                       "Maximum instance depth to be printed", "<depth>");
+    driver.cmdLine.add("--max-depth", maxDepth, "Maximum instance depth to be printed", "<depth>");
     driver.cmdLine.add("--inst-prefix", instPrefix,
-                       "Skip all instance subtrees not under this prefix (inst.sub_inst...)", "<inst-prefix>");
+                       "Skip all instance subtrees not under this prefix (inst.sub_inst...)",
+                       "<inst-prefix>");
     driver.cmdLine.add("--inst-regex", instRegex,
                        "Show only instances matched by regex (scans whole tree)", "<inst-regex>");
 
@@ -66,22 +66,24 @@ int main(int argc, char** argv) {
                 std::string tmp_path;
                 int len = type.name.length();
                 int save_index = index;
-                // if no instPrefix, pathLength is 0, and this check will never take place, so instPrefix.value() is safe
-                // if index >= pathLength we satisfied the full instPrefix. from now on we are limited only by max-depth
+                // if no instPrefix, pathLength is 0, and this check will never take place, so
+                // instPrefix.value() is safe if index >= pathLength we satisfied the full
+                // instPrefix. from now on we are limited only by max-depth
                 if (index < pathLength) {
-                    if (type.name != instPrefix.value().substr(index, std::min(pathLength-index, len))) {
+                    if (type.name !=
+                        instPrefix.value().substr(index, std::min(pathLength - index, len))) {
                         // current instance name did not match
                         return;
                     }
                     index += len;
                     if (index < pathLength && instPrefix.value()[index] != '.')
                         return; // separator needed, but didn't find one
-                    index++; // adjust for '.'
+                    index++;    // adjust for '.'
                 }
                 type.getHierarchicalPath(tmp_path);
                 if (!instRegex.has_value() || std::regex_search(tmp_path, match, regex)) {
-                    OS::print(fmt::format("Module=\"{}\" Instance=\"{}\" ", type.getDefinition().name,
-                                        tmp_path));
+                    OS::print(fmt::format("Module=\"{}\" Instance=\"{}\" ",
+                                          type.getDefinition().name, tmp_path));
                     int size = type.body.parameters.size();
                     if (size && params.value_or(false)) {
                         OS::print(fmt::format("Parameters: "));
@@ -91,7 +93,9 @@ int main(int argc, char** argv) {
                             if (p->symbol.kind == SymbolKind::Parameter)
                                 v = p->symbol.as<ParameterSymbol>().getValue().toString();
                             else if (p->symbol.kind == SymbolKind::TypeParameter)
-                                v = p->symbol.as<TypeParameterSymbol>().targetType.getType().toString();
+                                v = p->symbol.as<TypeParameterSymbol>()
+                                        .targetType.getType()
+                                        .toString();
                             else
                                 v = "?";
                             OS::print(fmt::format("{}={}{}", p->symbol.name, v, size ? ", " : ""));
