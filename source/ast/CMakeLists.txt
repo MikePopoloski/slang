@@ -52,6 +52,7 @@ target_sources(
           EvalContext.cpp
           Expression.cpp
           FmtHelpers.cpp
+          HierarchicalReference.cpp
           Lookup.cpp
           LValue.cpp
           OpaqueInstancePath.cpp

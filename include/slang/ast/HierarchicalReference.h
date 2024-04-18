@@ -11,7 +11,6 @@
 #include <string_view>
 #include <variant>
 
-#include "slang/numeric/SVInt.h"
 #include "slang/util/Util.h"
 
 namespace slang::ast {
@@ -26,7 +25,10 @@ public:
     struct Element {
         /// The symbol through which the path traverses.
         not_null<const Symbol*> symbol;
-        std::variant<SVInt, std::string_view> selector;
+        std::variant<int32_t, std::string_view> selector;
+
+        Element(const Symbol& symbol);
+        Element(const Symbol& symbol, int32_t index);
     };
 
     const Symbol* target = nullptr;

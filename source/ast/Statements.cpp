@@ -865,8 +865,8 @@ Statement& DisableStatement::fromSyntax(Compilation& compilation,
         return badStmt(compilation, nullptr);
     }
 
-    return *compilation.emplace<DisableStatement>(*symbol, result.isHierarchical,
-                                                  syntax.sourceRange());
+    return *compilation.emplace<DisableStatement>(
+        *symbol, result.flags.has(LookupResultFlags::IsHierarchical), syntax.sourceRange());
 }
 
 ER DisableStatement::evalImpl(EvalContext& context) const {

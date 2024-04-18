@@ -1118,7 +1118,8 @@ Expression& Expression::bindLookupResult(Compilation& compilation, LookupResult&
             expr = &AssertionInstanceExpression::fromLookup(*symbol, localInvoke, sourceRange,
                                                             context);
 
-            if (symbol->kind == SymbolKind::LetDecl && result.isHierarchical) {
+            if (symbol->kind == SymbolKind::LetDecl &&
+                result.flags.has(LookupResultFlags::IsHierarchical)) {
                 SourceRange callRange = localInvoke ? localInvoke->sourceRange() : sourceRange;
                 context.addDiag(diag::LetHierarchical, callRange);
             }
@@ -1131,8 +1132,9 @@ Expression& Expression::bindLookupResult(Compilation& compilation, LookupResult&
             // If there are selectors then this is ok -- either they will be valid because
             // they're accessing a built-in method or they will issue an error.
             const bool constraintAllowed = !result.selectors.empty();
-            expr = &ValueExpressionBase::fromSymbol(context, *symbol, result.isHierarchical,
-                                                    sourceRange, constraintAllowed);
+            expr = &ValueExpressionBase::fromSymbol(
+                context, *symbol, result.flags.has(LookupResultFlags::IsHierarchical), sourceRange,
+                constraintAllowed);
             break;
         }
         default: {
@@ -1140,9 +1142,9 @@ Expression& Expression::bindLookupResult(Compilation& compilation, LookupResult&
                 context.flags.has(ASTFlags::LValue) && !result.selectors.empty() &&
                 std::get_if<LookupResult::MemberSelector>(&result.selectors[0]) != nullptr;
 
-            expr = &ValueExpressionBase::fromSymbol(context, *symbol, result.isHierarchical,
-                                                    sourceRange, /* constraintAllowed */ false,
-                                                    isDottedAccess);
+            expr = &ValueExpressionBase::fromSymbol(
+                context, *symbol, result.flags.has(LookupResultFlags::IsHierarchical), sourceRange,
+                /* constraintAllowed */ false, isDottedAccess);
             break;
         }
     }
@@ -1297,7 +1299,7 @@ Expression* Expression::tryBindInterfaceRef(const ASTContext& context,
                 if (found && !arrayModportName.empty() &&
                     (found->kind == SymbolKind::InterfacePort ||
                      found->kind == SymbolKind::InstanceArray)) {
-                    result.copyFrom(result2);
+                    result = result2;
                     modportRange = *scoped.right;
                 }
             }

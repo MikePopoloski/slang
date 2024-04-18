@@ -33,7 +33,7 @@ import Foo::x;
     ASTContext context(*unit, LookupLocation::max);
     Lookup::name(compilation.parseName("x"), context, LookupFlags::None, result);
 
-    CHECK(result.wasImported);
+    CHECK(result.flags.has(LookupResultFlags::WasImported));
     REQUIRE(result.found);
     CHECK(result.found->kind == SymbolKind::Parameter);
     CHECK(result.found->as<ParameterSymbol>().getValue().integer() == 4);
@@ -73,7 +73,7 @@ endmodule
     Lookup::name(compilation.parseName("x"), context, LookupFlags::None, result);
 
     const Symbol* symbol = result.found;
-    CHECK(!result.wasImported);
+    CHECK(!result.flags.has(LookupResultFlags::WasImported));
     REQUIRE(symbol);
     CHECK(symbol->kind == SymbolKind::Parameter);
     CHECK(symbol == &param);
@@ -84,7 +84,7 @@ endmodule
     Lookup::name(compilation.parseName("x"), context, LookupFlags::None, result);
     symbol = result.found;
 
-    CHECK(result.wasImported);
+    CHECK(result.flags.has(LookupResultFlags::WasImported));
     REQUIRE(symbol);
     REQUIRE(symbol->kind == SymbolKind::Parameter);
     CHECK(symbol->as<ParameterSymbol>().getValue().integer() == 4);

@@ -39,6 +39,14 @@ void registerSymbols(py::module_& m) {
         .value("TypeReference", LookupFlags::TypeReference)
         .value("AlwaysAllowUpward", LookupFlags::AlwaysAllowUpward);
 
+    py::enum_<LookupResultFlags>(m, "LookupResultFlags")
+        .value("None", LookupResultFlags::None)
+        .value("WasImported", LookupResultFlags::WasImported)
+        .value("IsHierarchical", LookupResultFlags::IsHierarchical)
+        .value("SuppressUndeclared", LookupResultFlags::SuppressUndeclared)
+        .value("FromTypeParam", LookupResultFlags::FromTypeParam)
+        .value("FromForwardTypedef", LookupResultFlags::FromForwardTypedef);
+
     py::class_<LookupLocation>(m, "LookupLocation")
         .def(py::init<>())
         .def(py::init<const Scope*, uint32_t>(), "scope"_a, "index"_a)
@@ -55,16 +63,12 @@ void registerSymbols(py::module_& m) {
     lookupResult.def(py::init<>())
         .def_readonly("found", &LookupResult::found)
         .def_readonly("systemSubroutine", &LookupResult::systemSubroutine)
-        .def_readonly("wasImported", &LookupResult::wasImported)
-        .def_readonly("isHierarchical", &LookupResult::isHierarchical)
-        .def_readonly("suppressUndeclared", &LookupResult::suppressUndeclared)
-        .def_readonly("fromTypeParam", &LookupResult::fromTypeParam)
-        .def_readonly("fromForwardTypedef", &LookupResult::fromForwardTypedef)
+        .def_readonly("upwardCount", &LookupResult::upwardCount)
+        .def_readonly("flags", &LookupResult::flags)
         .def_readonly("selectors", &LookupResult::selectors)
         .def_property_readonly("diagnostics", &LookupResult::getDiagnostics)
         .def_property_readonly("hasError", &LookupResult::hasError)
         .def("clear", &LookupResult::clear)
-        .def("copyFrom", &LookupResult::copyFrom, "other"_a)
         .def("reportDiags", &LookupResult::reportDiags, "context"_a)
         .def("errorIfSelectors", &LookupResult::errorIfSelectors, "context"_a);
 

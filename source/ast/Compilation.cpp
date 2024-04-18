@@ -1377,7 +1377,7 @@ const Diagnostics& Compilation::getSemanticDiagnostics() {
             checkModportExports(elabVisitor.modportsWithExports);
 
         // Double check any bind directives for correctness. These were already
-        // resolve prior to full elaboration but their diagnostics were not
+        // resolved prior to full elaboration but their diagnostics were not
         // issued so we need to check again.
         for (auto [directive, scope] : bindDirectives) {
             ResolvedBind resolvedBind;
