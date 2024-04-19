@@ -52,14 +52,14 @@ concept HasVisitExprs = requires(const T& t, TVisitor&& visitor) { t.visitExprs(
 /// visited -- you can include that behavior by invoking @a visitDefault
 /// in your handler.
 ///
-template<typename TDerived, bool VisitStatements, bool VisitExpressions>
+template<typename TDerived, bool VisitStatements, bool VisitExpressions, bool VisitBad = false>
 class ASTVisitor {
 #define DERIVED *static_cast<TDerived*>(this)
 public:
     /// The visit() entry point for visiting AST nodes.
     template<typename T>
     void visit(const T& t) {
-        if constexpr (requires { t.bad(); }) {
+        if constexpr (!VisitBad && requires { t.bad(); }) {
             if (t.bad())
                 return;
         }
