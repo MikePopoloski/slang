@@ -11,6 +11,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Added `--allow-multi-driven-locals` (included in 'vcs' compat mode) to allow subroutine local variables to be driven by multiple always_ff / always_comb blocks
 * Added full support for SystemVerilog libraries and configurations
 * Added support for equality comparisons between virtual interfaces and actual interface instances (thanks to @likeamahoney)
+* Ref args are now correctly disallowed in fork-join_any and join_none blocks
+* Wildcard port connections now correctly avoid importing new symbols into a scope via wildcard imports
+* Added support for referencing interface instances in unpacked array concatenations involving virtual interface arrays
 #### Clarifications in IEEE 1800-2023
 * Unsized integer literals can be any bit width, not just capped at 32 bits.
 * Unpacked unions are allowed as net types
@@ -53,6 +56,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Added [compilation unit listings](https://sv-lang.com/user-manual.html#unit-listing) to allow fine grained control over how sources are parsed into separate compilation units (including separating macro defines and include directories on a per-unit basis)
 * Added `--defaultLibName` to control the name of the default source library
 * Added `--std` to choose which version of the LRM slang should conform to. By default this is "1800-2017" but can be set to "1800-2023" to enable new features added in the recently published update to the SystemVerilog LRM.
+* Added a new experimental tool, slang-hier, that prints elaborated instances in a design (thanks to @udif)
 
 ### Improvements
 * `--cmd-ignore` and `--cmd-rename` now also work with options that include a value via an equals expression
@@ -60,6 +64,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * slang-reflect has been improved to support reflecting more complex types for local parameters (thanks to @Sustrak)
 * Rewrote analysis of user-defined primitive tables to be much more efficient; previously primitives with large numbers of inputs could take a very long time to analyze
 * Command line defines now take precedence over defines in Verilog source files, which matches the behavior of other tools (thanks to @udif)
+* -Wvector-overflow has been improved to not warn when forming minimum negative integer literals
 
 ### Fixes
 * Fixed several crashes in slang-tidy (thanks to @likeamahoney)
@@ -93,12 +98,16 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Correctly disallow `wait fork` and `expect` in functions and final blocks
 * Fixed bug in computing bounds for assigmments to slices of unpacked arrays
 * Fixed macro argument parsing when there are `(*` and `*)` tokens in them
-* Fixed a bug in SVInt::operator< when comparing the smallest possible negative integer (thanks to @Krym4s)
+* Fixed a bug in `SVInt::operator<` when comparing the smallest possible negative integer (thanks to @Krym4s)
 * Correctly allow non-blocking assignments with a timing delay to be used in always_ff blocks (thanks to @udif)
 * Fixed checking of overlapping primitive table rows when the '-' output character is used (thanks to @udif)
 * Fixed checking for which kinds of functions are allowed in deferred assertion actions and sequence match items
 * Fixed a couple of places where range selects were not properly checked for overflow
 * Fixed sorting of diagnostics when buffers are loaded in non-deterministic order
+* Added error handling for packages that try to import themselves
+* Type references and assignments of type `void` are now correctly disallowed
+* Fixed several bugs in slang-netlist (thanks to @jameshanlon)
+* Fixed `--allow-toplevel-iface-ports` when used with interface arrays
 
 
 ## [v5.0] - 2023-12-26
