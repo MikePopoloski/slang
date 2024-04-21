@@ -65,6 +65,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Rewrote analysis of user-defined primitive tables to be much more efficient; previously primitives with large numbers of inputs could take a very long time to analyze
 * Command line defines now take precedence over defines in Verilog source files, which matches the behavior of other tools (thanks to @udif)
 * -Wvector-overflow has been improved to not warn when forming minimum negative integer literals
+* Backslashes at the end of lines in command files are now ignored instead of causing errors (thanks to @udif)
 
 ### Fixes
 * Fixed several crashes in slang-tidy (thanks to @likeamahoney)
@@ -74,16 +75,16 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Fixed several spurious lexer errors when otherwise invalid tokens are used inside stringified macro expansion
 * Fixed a crash in the Python SyntaxVisitor bindings
 * Correctly allow instance paths to be used in assert control system function arguments
-* Fixed a bug where multi-driver checks for called subroutines didn't apply when one of the source procedures was a plain always block
+* Fixed a bug where multi-driver checks for called subroutines didn't apply when one of the source procedures was a plain `always` block
 * Fixed bug in parsing empty action blocks for sequences and properties
-* Fixed the Python bindings for Type::isBitstreamType
-* Fixed a crash when calling getResolutionFunction on built-in net types
+* Fixed the Python bindings for `Type::isBitstreamType`
+* Fixed a crash when calling `getResolutionFunction` on built-in net types
 * Fixed a bug in the checking of forward typedef type restrictions
 * Fixed the end spacing of stringified macro expansions
 * Fixed a macro expansion corner case where an escaped identifier that ends in a backslash was not considered as a line continuation for the macro body
 * Fixed several cases where invalid syntax could lead to follow on errors with malformed messages
 * Fixed several crashes related to corrupted source files containing embedded null characters or invalid UTF8 sequences
-* Fixed a crash that could occur when a source file ended in an invalid hex escape inside a string literal
+* Fixed a crash that could occur when a source file ended in an invalid hex escape inside an unterminated string literal
 * Fixed an infinite loop when parsing a malformed list of terminals in a primitive declaration
 * Fixed an infinite loop caused by malformed recursive checker instantiations
 * Fixed an infinite loop when parsing case statements with malformed pattern items
@@ -96,10 +97,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Fixed handling of classes that declare a member named "\new" with an escaped identifier
 * chandles are properly allowed in non-edge event expressions
 * Correctly disallow `wait fork` and `expect` in functions and final blocks
-* Fixed bug in computing bounds for assigmments to slices of unpacked arrays
+* Fixed bug in computing bounds for assignments to slices of unpacked arrays
 * Fixed macro argument parsing when there are `(*` and `*)` tokens in them
 * Fixed a bug in `SVInt::operator<` when comparing the smallest possible negative integer (thanks to @Krym4s)
-* Correctly allow non-blocking assignments with a timing delay to be used in always_ff blocks (thanks to @udif)
+* Correctly allow non-blocking assignments with a timing delay to be used in `always_ff` blocks (thanks to @udif)
 * Fixed checking of overlapping primitive table rows when the '-' output character is used (thanks to @udif)
 * Fixed checking for which kinds of functions are allowed in deferred assertion actions and sequence match items
 * Fixed a couple of places where range selects were not properly checked for overflow
