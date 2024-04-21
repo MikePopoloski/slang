@@ -250,11 +250,10 @@ void CommandLine::parseStr(std::string_view argList, ParseOptions options, bool&
 
         // Escape character preserves the value of the next character.
         if (c == '\\') {
-            if (ptr == end || (*ptr == '\n'))
-                continue;
-            current += *ptr++;
-            // Any non-whitespace character here means we are building an argument.
-            hasArg = true;
+            if (ptr != end && *ptr != '\n' && *ptr != '\r') {
+                current += *ptr++;
+                hasArg = true;
+            }
             continue;
         }
 
