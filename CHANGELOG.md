@@ -6,6 +6,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 ### Language Support
+### General Features
+### Improvements
+### Fixes
+
+
+## [v6.0] - 2024-04-21
+### Language Support
 * Added `--allow-bare-value-param-assigment` (included in 'vcs' compat mode) to allow a non-standard module instantiation syntax where a single parameter value can be supplied without including parentheses
 * Added `--allow-self-determined-stream-concat` (included in 'vcs' compat mode) to allow the use of streaming concatenation expressions in self-determined contexts (instead of just in assignments)
 * Added `--allow-multi-driven-locals` (included in 'vcs' compat mode) to allow subroutine local variables to be driven by multiple always_ff / always_comb blocks
