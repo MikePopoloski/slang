@@ -118,6 +118,24 @@ OPTIONS:
 )");
 }
 
+TEST_CASE("Test CommandLine -- backslash at EOL") {
+    std::optional<bool> a, b, c;
+    CommandLine cmdLine;
+    cmdLine.add("-a", a, "SDF");
+    cmdLine.add("-b", b, "SDF");
+    cmdLine.add("-c", c, "SDF");
+
+    // Check for backslash at EOL
+    // Check for backslash plus whitespace(s) at EOL
+    // Check for backslash at end of command line args
+    CHECK(cmdLine.parse(
+        "prog -a\\\n -b -c\\"sv));
+    CHECK(cmdLine.getProgramName() == "prog");
+    CHECK(a);
+    CHECK(b);
+    CHECK(c);
+}
+
 TEST_CASE("Test CommandLine -- nonspan") {
     std::optional<bool> a;
     CommandLine cmdLine;

@@ -248,15 +248,18 @@ void CommandLine::parseStr(std::string_view argList, ParseOptions options, bool&
             continue;
         }
 
-        // Any non-whitespace character here means we are building an argument.
-        hasArg = true;
-
         // Escape character preserves the value of the next character.
         if (c == '\\') {
-            if (ptr != end)
-                current += *ptr++;
+            if (ptr == end || (*ptr == '\n'))
+                continue;
+            current += *ptr++;
+            // Any non-whitespace character here means we are building an argument.
+            hasArg = true;
             continue;
         }
+
+        // Any non-whitespace character here means we are building an argument.
+        hasArg = true;
 
         // Single quotes consume all characters until the next single quote.
         if (c == '\'') {
