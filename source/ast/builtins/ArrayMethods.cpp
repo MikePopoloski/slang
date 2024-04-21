@@ -1023,7 +1023,7 @@ public:
                 if (!cv)
                     return nullptr;
 
-                results.emplace(std::move(key), std::move(cv));
+                results.emplace(key, std::move(cv));
             }
             return results;
         }

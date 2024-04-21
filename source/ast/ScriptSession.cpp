@@ -25,8 +25,8 @@ static Bag& createOptions(Bag& options) {
     return options;
 }
 
-ScriptSession::ScriptSession(const Bag& options) :
-    options(options), compilation(createOptions(this->options)),
+ScriptSession::ScriptSession(Bag options) :
+    options(std::move(options)), compilation(createOptions(this->options)),
     scope(compilation.createScriptScope()), astCtx(scope, LookupLocation::max),
     evalContext(astCtx, EvalFlags::IsScript) {
     evalContext.pushEmptyFrame();

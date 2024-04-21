@@ -31,7 +31,7 @@ public:
     CompilationUnitSymbol& scope;
 
     /// Constructs a new ScriptSession.
-    explicit ScriptSession(const Bag& options = {});
+    explicit ScriptSession(Bag options = {});
 
     /// Tries to evaluate the given snippet of SystemVerilog code
     /// and returns the result as a constant value.

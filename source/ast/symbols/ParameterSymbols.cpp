@@ -136,8 +136,10 @@ const ConstantValue& ParameterSymbol::getValue(SourceRange referencingRange) con
 }
 
 bool ParameterSymbol::isImplicitString(SourceRange referencingRange) const {
-    if (!value)
+    if (!value) {
         getValue(referencingRange);
+        SLANG_ASSERT(value);
+    }
     return fromStringLit || value->bad();
 }
 
