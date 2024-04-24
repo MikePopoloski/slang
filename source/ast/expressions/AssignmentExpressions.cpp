@@ -1282,6 +1282,7 @@ ConstantValue NewClassExpression::evalImpl(EvalContext& context) const {
 void NewClassExpression::serializeTo(ASTSerializer& serializer) const {
     if (constructorCall())
         serializer.write("constructorCall", *constructorCall());
+    serializer.write("isSuperClass", isSuperClass);
 }
 
 Expression& NewCovergroupExpression::fromSyntax(Compilation& compilation,
