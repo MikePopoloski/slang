@@ -433,7 +433,8 @@ endmodule
             "type": "C",
             "initializer": {
               "kind": "NewClass",
-              "type": "C"
+              "type": "C",
+              "isSuperClass": false
             },
             "lifetime": "Static"
           }
