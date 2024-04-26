@@ -53,6 +53,7 @@ int main(int argc, char** argv) {
     bool ok = driver.parseAllSources();
 
     auto compilation = driver.createCompilation();
+    ok &= driver.reportCompilation(*compilation, /* quiet */ false);
 
     if (instRegex.has_value())
         regex = instRegex.value();
@@ -111,7 +112,6 @@ int main(int argc, char** argv) {
             }
         }));
     }
-    ok &= driver.reportCompilation(*compilation, /* quiet */ false);
 
     return ok ? 0 : 3;
 }
