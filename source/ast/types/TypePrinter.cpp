@@ -363,7 +363,7 @@ void TypePrinter::visit(const VirtualInterfaceType& type, std::string_view) {
 
     buffer->append(type.iface.getDefinition().name);
 
-    auto params = type.iface.body.parameters;
+    auto params = type.iface.body.getParameters();
     if (!params.empty()) {
         buffer->append("#(");
         for (auto param : params) {

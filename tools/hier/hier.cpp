@@ -84,10 +84,10 @@ int main(int argc, char** argv) {
                 if (!instRegex.has_value() || std::regex_search(tmp_path, match, regex)) {
                     OS::print(fmt::format("Module=\"{}\" Instance=\"{}\" ",
                                           type.getDefinition().name, tmp_path));
-                    int size = type.body.parameters.size();
+                    int size = type.body.getParameters().size();
                     if (size && params.value_or(false)) {
                         OS::print(fmt::format("Parameters: "));
-                        for (auto p : type.body.parameters) {
+                        for (auto p : type.body.getParameters()) {
                             std::string v;
                             size--;
                             if (p->symbol.kind == SymbolKind::Parameter)

@@ -142,7 +142,6 @@ public:
     const HierarchyOverrideNode* hierarchyOverrideNode = nullptr;
 
     /// A copy of all port parameter symbols used to construct the instance body.
-    std::span<const ParameterSymbolBase* const> parameters;
 
     /// Indicates whether the module isn't actually instantiated in the design.
     /// This might be because it was created with invalid parameters simply to
@@ -157,6 +156,11 @@ public:
     InstanceBodySymbol(Compilation& compilation, const DefinitionSymbol& definition,
                        const HierarchyOverrideNode* hierarchyOverrideNode, bool isUninstantiated,
                        bool isFromBind);
+
+    std::span<const ParameterSymbolBase* const> getParameters() const {
+        ensureElaborated();
+        return parameters;
+    }
 
     std::span<const Symbol* const> getPortList() const {
         ensureElaborated();
@@ -193,6 +197,7 @@ private:
 
     const DefinitionSymbol& definition;
     mutable std::span<const Symbol* const> portList;
+    std::span<const ParameterSymbolBase* const> parameters;
 };
 
 class SLANG_EXPORT InstanceArraySymbol : public Symbol, public Scope {

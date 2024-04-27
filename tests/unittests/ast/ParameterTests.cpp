@@ -1149,3 +1149,20 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Parameter type evaluation loop regress") {
+    auto tree = SyntaxTree::fromText(R"(
+module m #(parameter I=3, W=I+1)
+          (output [W-1:0] w);
+    assign w = {W{1'b0}};
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    for (auto param : compilation.getRoot().topInstances[0]->body.getParameters())
+        param->symbol.as<ParameterSymbol>().getValue();
+
+    NO_COMPILATION_ERRORS;
+}

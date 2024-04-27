@@ -425,8 +425,8 @@ void registerSymbols(py::module_& m) {
 
     py::class_<InstanceBodySymbol, Symbol, Scope>(m, "InstanceBodySymbol")
         .def_readonly("parentInstance", &InstanceBodySymbol::parentInstance)
-        .def_readonly("parameters", &InstanceBodySymbol::parameters)
         .def_readonly("isUninstantiated", &InstanceBodySymbol::isUninstantiated)
+        .def_property_readonly("parameters", &InstanceBodySymbol::getParameters)
         .def_property_readonly("portList", &InstanceBodySymbol::getPortList)
         .def_property_readonly("definition", &InstanceBodySymbol::getDefinition)
         .def("findPort", &InstanceBodySymbol::findPort, byrefint, "portName"_a)

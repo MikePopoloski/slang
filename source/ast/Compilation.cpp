@@ -2120,7 +2120,7 @@ void Compilation::checkBindTargetParams(const syntax::BindDirectiveSyntax& synta
                 continue;
 
             auto& inst = sym->as<InstanceSymbol>();
-            for (auto param : inst.body.parameters) {
+            for (auto param : inst.body.getParameters()) {
                 if (param->symbol.kind == SymbolKind::TypeParameter) {
                     auto& typeParam = param->symbol.as<TypeParameterSymbol>();
                     auto& type = typeParam.targetType.getType();
