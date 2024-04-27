@@ -17,29 +17,6 @@
 #include "slang/parsing/Parser.h"
 #include "slang/syntax/AllSyntax.h"
 
-SVInt testParameter(const std::string& text, uint32_t index = 0) {
-    const auto& fullText = "module Top; " + text + " endmodule";
-    auto tree = SyntaxTree::fromText(fullText);
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-
-    const auto& module = *compilation.getRoot().topInstances[0];
-    if (!tree->diagnostics().empty())
-        WARN(report(tree->diagnostics()));
-
-    const ParameterSymbol& param = module.body.memberAt<ParameterSymbol>(index);
-    return param.getValue().integer();
-}
-
-TEST_CASE("Bind parameter") {
-    CHECK(testParameter("parameter foo = 4;") == 4);
-    CHECK(testParameter("parameter foo = 4 + 5;") == 9);
-    CHECK(testParameter("parameter bar = 9, foo = bar + 1;", 1) == 10);
-    CHECK(testParameter("parameter logic [3:0] foo = 4;") == 4);
-    CHECK(testParameter("parameter logic [3:0] foo = 4'b100;") == 4);
-}
-
 TEST_CASE("Evaluate assignment expression") {
     // Evaluate an assignment expression (has an LValue we can observe)
     auto syntax = SyntaxTree::fromText("i = i + 3");
@@ -2310,24 +2287,6 @@ i_data [ 12 : 9
     compilation.getAllDiagnostics();
 }
 
-TEST_CASE("Invalid param assign regress GH #420") {
-    auto tree = SyntaxTree::fromText(R"(
-typedef ctrl_reg_t;
-parameter CTRL_RESET = $;
-endpackage
-module shadow # (
-  RESVAL
-endmodule;
-shadow # (CTRL_RESET) (
-)");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-
-    // Just check no assertion.
-    compilation.getAllDiagnostics();
-}
-
 TEST_CASE("Tagged union expressions") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
@@ -3366,72 +3325,6 @@ endmodule
 
     auto& c = compilation.getRoot().lookupName<ParameterSymbol>("m.c");
     CHECK(c.getValue().integer() == 1);
-}
-
-TEST_CASE("Unbounded parameters example") {
-    auto tree = SyntaxTree::fromText(R"(
-interface quiet_time_checker #(parameter int min_quiet = 0,
-                               parameter int max_quiet = 0)
-                              (input logic clk, reset_n, logic [1:0] en);
-    generate
-        if (!$isunbounded(max_quiet) && (max_quiet == 0)) begin
-            property quiet_time;
-                @(posedge clk) reset_n |-> ($countones(en) == 1);
-            endproperty
-            a1: assert property (quiet_time);
-        end
-        else begin
-            property quiet_time;
-                @(posedge clk)
-                    (reset_n && ($past(en) != 0) && en == 0)
-                    |->(en == 0)[*min_quiet:max_quiet]
-                ##1 ($countones(en) == 1);
-            endproperty
-            a1: assert property (quiet_time);
-        end
-        if ((min_quiet == 0) && $isunbounded(max_quiet))
-            $warning("Some warning");
-    endgenerate
-endinterface
-
-interface width_checker #(parameter min_cks = 1, parameter max_cks = 1)
-                         (input logic clk, reset_n, logic [1:0] expr);
-    generate
-        if ($isunbounded(max_cks)) begin
-            property width;
-                @(posedge clk)
-                    (reset_n && $rose(expr)) |-> (expr [*min_cks]);
-            endproperty
-            a2: assert property (width);
-        end
-        else begin
-            property width;
-                @(posedge clk)
-                    (reset_n && $rose(expr)) |-> (expr[*min_cks:max_cks])
-                        ##1 (!expr);
-            endproperty
-            a2: assert property (width);
-        end
-    endgenerate
-endinterface
-
-module m;
-    logic [1:0] enables;
-    quiet_time_checker #(0, 0) quiet_never (clk,1,enables);
-    quiet_time_checker #(2, 4) quiet_in_window (clk,1,enables);
-    quiet_time_checker #(0, $) quiet_any (clk,1,enables);
-
-    width_checker #(3, $) max_width_unspecified (clk,1,enables);
-    width_checker #(2, 4) width_specified (clk,1,enables);
-endmodule
-)");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-
-    auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 1);
-    CHECK(diags[0].code == diag::WarningTask);
 }
 
 TEST_CASE("Chained method calls require parentheses") {

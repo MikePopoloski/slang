@@ -2151,16 +2151,6 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
-TEST_CASE("Inferred parameter type with range specification -- assignment-like context") {
-    auto tree = SyntaxTree::fromText(R"(
-localparam [1:0][7:0] VALUES_0 = '{1, 2};
-)");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-    NO_COMPILATION_ERRORS;
-}
-
 TEST_CASE("Forward typedef restriction regress") {
     auto tree = SyntaxTree::fromText(R"(
 typedef struct s;

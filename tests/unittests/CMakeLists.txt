@@ -15,6 +15,7 @@ add_executable(
   ast/InterfaceTests.cpp
   ast/LookupTests.cpp
   ast/MemberTests.cpp
+  ast/ParameterTests.cpp
   ast/PortTests.cpp
   ast/PrimitiveTests.cpp
   ast/StatementTests.cpp
