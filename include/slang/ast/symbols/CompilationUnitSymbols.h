@@ -198,18 +198,19 @@ public:
     /// indefinite article. e.g. "a module", "an interface".
     std::string_view getArticleKindString() const;
 
-    /// Returns true if the definition has been instantiated anywhere in the design.
-    bool isInstantiated() const { return instantiated; }
+    /// Returns the number of times the definition has been instantiated so far
+    /// in the visited design.
+    size_t getInstanceCount() const { return instanceCount; }
 
     /// Notes that the definition has been instantiated.
-    void noteInstantiated() const { instantiated = true; }
+    void noteInstantiated() const { instanceCount++; }
 
     void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Definition; }
 
 private:
-    mutable bool instantiated = false;
+    mutable size_t instanceCount = 0;
 };
 
 /// A rule that controls how a specific cell or instance in the design is configured.

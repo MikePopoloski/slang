@@ -18,11 +18,13 @@ class Compilation;
 class SLANG_EXPORT ParameterSymbolBase {
 public:
     const Symbol& symbol;
+    const syntax::SyntaxNode* defaultValSyntax = nullptr;
 
     bool isLocalParam() const { return isLocal; }
     bool isPortParam() const { return isPort; }
     bool isBodyParam() const { return !isPortParam(); }
-    bool hasDefault() const;
+
+    void checkDefaultExpression() const;
 
     static void fromLocalSyntax(const Scope& scope,
                                 const syntax::ParameterDeclarationStatementSyntax& syntax,

@@ -421,6 +421,9 @@ class SmallSet : private Alloc::Storage, public flat_hash_set<T, hash<T>, std::e
 
 public:
     SmallSet() : BaseType(Alloc(*this)) {}
+
+    template<typename TIterator>
+    SmallSet(TIterator first, TIterator last) : BaseType(first, last, Alloc(*this)) {}
 };
 
 } // namespace slang

@@ -153,6 +153,9 @@ const ParameterSymbolBase& ParameterBuilder::createParam(
                                                        typeRestriction);
         param->setAttributes(scope, decl.attributes);
 
+        if (decl.hasSyntax && decl.typeDecl && decl.typeDecl->assignment)
+            param->defaultValSyntax = decl.typeDecl->assignment->type;
+
         auto& tt = param->targetType;
         if (newInitializer) {
             // If this is a NameSyntax, the parser didn't know we were assigning to
@@ -220,6 +223,9 @@ const ParameterSymbolBase& ParameterBuilder::createParam(
         auto param = comp.emplace<ParameterSymbol>(decl.name, decl.location, decl.isLocalParam,
                                                    decl.isPortParam);
         param->setAttributes(scope, decl.attributes);
+
+        if (decl.hasSyntax)
+            param->defaultValSyntax = decl.valueDecl;
 
         auto& declType = *param->getDeclaredType();
         if (newInitializer)

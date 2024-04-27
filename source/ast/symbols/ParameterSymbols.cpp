@@ -10,6 +10,7 @@
 #include "slang/ast/ASTSerializer.h"
 #include "slang/ast/Compilation.h"
 #include "slang/ast/Expression.h"
+#include "slang/ast/expressions/MiscExpressions.h"
 #include "slang/ast/symbols/InstanceSymbols.h"
 #include "slang/ast/symbols/PortSymbols.h"
 #include "slang/ast/symbols/SpecifySymbols.h"
@@ -17,6 +18,7 @@
 #include "slang/diagnostics/ConstEvalDiags.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/syntax/AllSyntax.h"
+#include "slang/syntax/SyntaxVisitor.h"
 #include "slang/util/ScopeGuard.h"
 
 namespace slang::ast {
@@ -47,11 +49,30 @@ void ParameterSymbolBase::fromLocalSyntax(const Scope& scope,
     }
 }
 
-bool ParameterSymbolBase::hasDefault() const {
-    if (symbol.kind == SymbolKind::Parameter)
-        return symbol.as<ParameterSymbol>().getDeclaredType()->getInitializerSyntax();
-    else
-        return symbol.as<TypeParameterSymbol>().targetType.getTypeSyntax();
+void ParameterSymbolBase::checkDefaultExpression() const {
+    // A visitor that finds all Name expressions and
+    // performs a lookup to ensure that they resolve.
+    struct Visitor : public SyntaxVisitor<Visitor> {
+        explicit Visitor(const ASTContext& context) : context(context) {}
+
+        void handle(const NameSyntax& syntax) {
+            ArbitrarySymbolExpression::fromSyntax(context.getCompilation(), syntax, context);
+        }
+
+        const ASTContext& context;
+    };
+
+    if (defaultValSyntax) {
+        // We can't properly bind this default expression because it may
+        // rely on other parameters that have been overridden in conflicting
+        // ways, so the best we can do is resolve names and mark them used.
+        auto scope = symbol.getParentScope();
+        SLANG_ASSERT(scope);
+
+        ASTContext context(*scope, LookupLocation::before(symbol));
+        Visitor visitor(context);
+        defaultValSyntax->visit(visitor);
+    }
 }
 
 ParameterSymbol::ParameterSymbol(std::string_view name, SourceLocation loc, bool isLocal,

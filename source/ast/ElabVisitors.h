@@ -41,8 +41,7 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
                 declaredType->getInitializer();
             }
 
-            if constexpr (std::is_same_v<ParameterSymbol, T> ||
-                          std::is_same_v<EnumValueSymbol, T> ||
+            if constexpr (std::is_same_v<EnumValueSymbol, T> ||
                           std::is_same_v<SpecparamSymbol, T>) {
                 symbol.getValue();
             }
@@ -107,10 +106,22 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
         symbol.getType();
     }
 
+    void handle(const ParameterSymbol& symbol) {
+        if (!handleDefault(symbol))
+            return;
+
+        symbol.getValue();
+        if (symbol.isOverridden())
+            symbol.checkDefaultExpression();
+    }
+
     void handle(const TypeParameterSymbol& symbol) {
         if (!handleDefault(symbol))
             return;
+
         symbol.checkTypeRestriction();
+        if (symbol.isOverridden())
+            symbol.checkDefaultExpression();
     }
 
     void handle(const ContinuousAssignSymbol& symbol) {
@@ -286,8 +297,6 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
             return buffer;
         });
 
-        instanceCount[&symbol.getDefinition()]++;
-
         for (auto attr : compilation.getAttributes(symbol))
             attr->getValue();
 
@@ -443,7 +452,6 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
     uint32_t errorLimit;
     bool visitInstances = true;
     bool hierarchyProblem = false;
-    flat_hash_map<const DefinitionSymbol*, size_t> instanceCount;
     flat_hash_set<const InstanceBodySymbol*> activeInstanceBodies;
     flat_hash_set<const DefinitionSymbol*> usedIfacePorts;
     SmallVector<const GenericClassDefSymbol*> genericClasses;

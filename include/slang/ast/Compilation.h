@@ -736,6 +736,7 @@ private:
     Diagnostic& addDiag(Diagnostic diag);
 
     const RootSymbol& getRoot(bool skipDefParamsAndBinds);
+    void elaborate();
     void insertDefinition(Symbol& symbol, const Scope& scope);
     void parseParamOverrides(flat_hash_map<std::string_view, const ConstantValue*>& results);
     void checkDPIMethods(std::span<const SubroutineSymbol* const> dpiImports);

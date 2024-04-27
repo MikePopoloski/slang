@@ -2788,3 +2788,36 @@ endpackage
     CHECK(diags[3].code == diag::Redefinition);
     CHECK(diags[4].code == diag::PackageExportSelf);
 }
+
+TEST_CASE("Unused param defaults are still checked for correctness") {
+    auto tree = SyntaxTree::fromText(R"(
+module top;
+   m #(.T(int), .i(1), .j(new[3]), .k(tagged A)) m1();
+endmodule
+
+module m;
+    parameter type T = struct{int i = foo;};
+    parameter T i = foo;
+    parameter int j[] = {};
+    parameter union tagged {void A; int B;} k = tagged B foo;
+    C #(3) c = new;
+endmodule
+
+class C #(parameter int i = bar);
+endclass
+
+class D #(parameter int i = bar);
+endclass
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 5);
+    CHECK(diags[0].code == diag::UndeclaredIdentifier);
+    CHECK(diags[1].code == diag::UndeclaredIdentifier);
+    CHECK(diags[2].code == diag::UndeclaredIdentifier);
+    CHECK(diags[3].code == diag::UndeclaredIdentifier);
+    CHECK(diags[4].code == diag::UndeclaredIdentifier);
+}

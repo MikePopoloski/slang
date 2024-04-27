@@ -195,7 +195,7 @@ void registerSymbols(py::module_& m) {
         .def_readonly("timeScale", &DefinitionSymbol::timeScale)
         .def_property_readonly("defaultNetType",
                                [](const DefinitionSymbol& self) { return &self.defaultNetType; })
-        .def_property_readonly("isInstantiated", &DefinitionSymbol::isInstantiated)
+        .def_property_readonly("instanceCount", &DefinitionSymbol::getInstanceCount)
         .def("getKindString", &DefinitionSymbol::getKindString)
         .def("getArticleKindString", &DefinitionSymbol::getArticleKindString)
         .def("__repr__", [](const DefinitionSymbol& self) {
@@ -235,8 +235,7 @@ void registerSymbols(py::module_& m) {
     py::class_<ParameterSymbolBase>(m, "ParameterSymbolBase")
         .def_property_readonly("isLocalParam", &ParameterSymbolBase::isLocalParam)
         .def_property_readonly("isPortParam", &ParameterSymbolBase::isPortParam)
-        .def_property_readonly("isBodyParam", &ParameterSymbolBase::isBodyParam)
-        .def_property_readonly("hasDefault", &ParameterSymbolBase::hasDefault);
+        .def_property_readonly("isBodyParam", &ParameterSymbolBase::isBodyParam);
 
     py::class_<ParameterSymbol, ValueSymbol, ParameterSymbolBase>(m, "ParameterSymbol")
         .def_property_readonly("value", [](const ParameterSymbol& self) { return self.getValue(); })

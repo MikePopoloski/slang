@@ -1371,7 +1371,7 @@ void Scope::handleNestedDefinition(const ModuleDeclarationSyntax& syntax) const 
     }
 
     auto def = compilation.getDefinition(*this, syntax);
-    if (!def || def->isInstantiated())
+    if (!def || def->getInstanceCount() > 0)
         return;
 
     auto& inst = InstanceSymbol::createDefaultNested(*this, syntax);
