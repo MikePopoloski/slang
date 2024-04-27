@@ -5,6 +5,7 @@
 # SPDX-License-Identifier: MIT
 
 import argparse
+import math
 import os
 
 
@@ -1045,10 +1046,15 @@ namespace slang::parsing {
 
 
 def generatePyBindings(builddir, alltypes):
-    outf = open(os.path.join(builddir, "PySyntaxBindings.cpp"), "w")
-    outf.write(
-        """//------------------------------------------------------------------------------
-// PySyntaxBindings.cpp
+    numfiles = 4
+    items = list(alltypes.items())
+    perfile = math.ceil(len(items) / numfiles)
+
+    for i in range(numfiles):
+        outf = open(os.path.join(builddir, f"PySyntaxBindings{i}.cpp"), "w")
+        outf.write(
+            """//------------------------------------------------------------------------------
+// PySyntaxBindings{0}.cpp
 // Generated Python bindings for syntax types
 //
 // SPDX-FileCopyrightText: Michael Popoloski
@@ -1058,20 +1064,25 @@ def generatePyBindings(builddir, alltypes):
 
 #include "slang/syntax/AllSyntax.h"
 
-void registerSyntaxNodes(py::module_& m) {
-"""
-    )
+void registerSyntaxNodes{0}(py::module_& m) {{
+""".format(
+                i
+            )
+        )
 
-    for k, v in alltypes.items():
-        if k == "SyntaxNode":
-            continue
+        idx = i * perfile
+        for k, v in items[idx : idx + perfile]:
+            if k == "SyntaxNode":
+                continue
 
-        outf.write('    py::class_<{}, {}>(m, "{}")'.format(k, v.base, k))
-        for m in v.members:
-            outf.write('\n        .def_readwrite("{}", &{}::{})'.format(m[1], k, m[1]))
-        outf.write(";\n\n")
+            outf.write('    py::class_<{}, {}>(m, "{}")'.format(k, v.base, k))
+            for m in v.members:
+                outf.write(
+                    '\n        .def_readwrite("{}", &{}::{})'.format(m[1], k, m[1])
+                )
+            outf.write(";\n\n")
 
-    outf.write("}\n")
+        outf.write("}\n")
 
 
 if __name__ == "__main__":
