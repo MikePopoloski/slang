@@ -2446,3 +2446,23 @@ endpackage
     CHECK(diags[3].code == diag::Redefinition);
     CHECK(diags[4].code == diag::PackageExportSelf);
 }
+
+TEST_CASE("DPI task import has correct return type") {
+    auto tree = SyntaxTree::fromText(R"(
+module t;
+    task task1;
+    endtask
+
+    import "DPI-C" context task dpi_init;
+
+    initial begin
+        dpi_init;
+        task1;
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
