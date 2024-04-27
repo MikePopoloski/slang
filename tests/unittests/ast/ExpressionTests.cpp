@@ -186,6 +186,7 @@ TEST_CASE("Expression types") {
 
     declare("logic [7:0] l;");
     declare("logic signed [7:0] sl;");
+    declare("logic signed [2:0][7:0] sla;");
     declare("logic [7:0][3:2] pa;");
     declare("bit [2:10] b1;");
     declare("int i;");
@@ -249,7 +250,7 @@ TEST_CASE("Expression types") {
     declare("bit [7:0] arr1 [2];");
     declare("bit [7:0] arr2 [2:0];");
     declare("bit [7:0] arr3 [3];");
-    declare("logic [7:0] arr4 [3];");
+    declare("logic signed [7:0] arr4 [3];");
     CHECK(typeof("arr1 == arr2") == "<error>");
     CHECK(typeof("arr2 == arr3") == "bit");
     CHECK(typeof("arr2 == arr4") == "<error>");
@@ -304,6 +305,9 @@ TEST_CASE("Expression types") {
     // Selections
     CHECK(typeof("l[0:0]") == "logic[0:0]");
     CHECK(typeof("b1[2:2]") == "bit[2:2]");
+    CHECK(typeof("sl[7:0]") == "logic[7:0]");
+    CHECK(typeof("sla[0]") == "logic[7:0]");
+    CHECK(typeof("arr4[0]") == "logic signed[7:0]");
 
     // Casts
     declare("parameter int FOO = 1;");

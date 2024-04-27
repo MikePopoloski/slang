@@ -33,7 +33,11 @@ static const Type& getIndexedType(Compilation& compilation, const ASTContext& co
                                   SourceRange valueRange, bool isRangeSelect) {
     const Type& ct = valueType.getCanonicalType();
     if (ct.isArray()) {
-        return *ct.getArrayElementType();
+        auto& elemType = *ct.getArrayElementType();
+        if (valueType.kind == SymbolKind::PackedArrayType && valueType.isSigned())
+            return elemType.makeUnsigned(compilation);
+
+        return elemType;
     }
     else if (ct.kind == SymbolKind::StringType && !isRangeSelect) {
         return compilation.getByteType();

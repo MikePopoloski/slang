@@ -310,6 +310,16 @@ public:
     /// Coerces the given constant into one that is appropriate for this type.
     ConstantValue coerceValue(const ConstantValue& value) const;
 
+    /// If this is an integral type, returns the same type converted
+    /// to a signed integral type (properly descending through sub arrays).
+    /// Otherwise returns `*this`.
+    const Type& makeSigned(Compilation& compilation) const;
+
+    /// If this is an integral type, returns the same type converted
+    /// to an unsigned integral type (properly descending through sub arrays).
+    /// Otherwise returns `*this`.
+    const Type& makeUnsigned(Compilation& compilation) const;
+
     /// @returns a human-friendly string representation of the type.
     std::string toString() const;
 

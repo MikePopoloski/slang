@@ -290,35 +290,6 @@ void DeclaredType::checkType(const ASTContext& context) const {
     }
 }
 
-static const Type* makeSigned(Compilation& compilation, const Type& type) {
-    // This deliberately does not look at the canonical type; type aliases
-    // are not convertible to a different signedness.
-    SmallVector<ConstantRange, 4> dims;
-    const Type* curr = &type;
-    while (curr->kind == SymbolKind::PackedArrayType) {
-        dims.push_back(curr->getFixedRange());
-        curr = curr->getArrayElementType();
-    }
-
-    if (curr->kind != SymbolKind::ScalarType)
-        return &type;
-
-    auto flags = curr->getIntegralFlags() | IntegralFlags::Signed;
-    if (dims.size() == 1)
-        return &compilation.getType(type.getBitWidth(), flags);
-
-    // Rebuild the array with the new element type.
-    curr = &compilation.getScalarType(flags);
-    size_t count = dims.size();
-    for (size_t i = 0; i < count; i++) {
-        // There's no worry about size overflow here because we started with a valid type.
-        ConstantRange dim = dims[count - i - 1];
-        curr = compilation.emplace<PackedArrayType>(*curr, dim, curr->getBitWidth() * dim.width());
-    }
-
-    return curr;
-}
-
 void DeclaredType::mergePortTypes(
     const ASTContext& context, const ValueSymbol& sourceSymbol, const ImplicitTypeSyntax& implicit,
     SourceLocation location,
@@ -371,7 +342,7 @@ void DeclaredType::mergePortTypes(
 
         bool shouldBeSigned = implicit.signing.kind == TokenKind::SignedKeyword;
         if (shouldBeSigned && !sourceType->isSigned()) {
-            sourceType = makeSigned(context.getCompilation(), *sourceType);
+            sourceType = &sourceType->makeSigned(context.getCompilation());
             if (!sourceType->isSigned()) {
                 warnSignedness();
             }

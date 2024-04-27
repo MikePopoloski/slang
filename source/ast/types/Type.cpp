@@ -867,6 +867,48 @@ ConstantValue Type::coerceValue(const ConstantValue& value) const {
     return nullptr;
 }
 
+static const Type* changeSign(Compilation& compilation, const Type& type, bool set) {
+    // This deliberately does not look at the canonical type; type aliases
+    // are not convertible to a different signedness.
+    SmallVector<ConstantRange, 4> dims;
+    const Type* curr = &type;
+    while (curr->kind == SymbolKind::PackedArrayType) {
+        dims.push_back(curr->getFixedRange());
+        curr = curr->getArrayElementType();
+    }
+
+    if (curr->kind != SymbolKind::ScalarType)
+        return &type;
+
+    auto flags = curr->getIntegralFlags();
+    if (set)
+        flags |= IntegralFlags::Signed;
+    else
+        flags &= ~IntegralFlags::Signed;
+
+    if (dims.size() == 1)
+        return &compilation.getType(type.getBitWidth(), flags);
+
+    // Rebuild the array with the new element type.
+    curr = &compilation.getScalarType(flags);
+    size_t count = dims.size();
+    for (size_t i = 0; i < count; i++) {
+        // There's no worry about size overflow here because we started with a valid type.
+        ConstantRange dim = dims[count - i - 1];
+        curr = compilation.emplace<PackedArrayType>(*curr, dim, curr->getBitWidth() * dim.width());
+    }
+
+    return curr;
+}
+
+const Type& Type::makeSigned(Compilation& compilation) const {
+    return *changeSign(compilation, *this, true);
+}
+
+const Type& Type::makeUnsigned(Compilation& compilation) const {
+    return *changeSign(compilation, *this, false);
+}
+
 std::string Type::toString() const {
     TypePrinter printer;
     printer.append(*this);
