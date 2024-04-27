@@ -1188,3 +1188,13 @@ endconfig
 module top;
 endmodule
 ```
+
+-Wunsigned-arith-shift
+An arithmetic right shift of an unsigned integral type will always shift in zeros, which can be
+confusing since typically this operator is used to shift in the value of the most significant bit.
+If this is intended behavior use the logical right shift operator which does the same.
+```
+function bit[31:0] f1(int unsigned i);
+    return i >>> 5;
+endfunction
+```

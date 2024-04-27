@@ -933,6 +933,8 @@ bool BinaryExpression::propagateType(const ASTContext& context, const Type& newT
             // Only the left hand side gets propagated; the rhs is self determined.
             type = &newType;
             contextDetermined(context, left_, this, newType, opRange);
+            if (op == BinaryOperator::ArithmeticShiftRight && !type->isSigned())
+                context.addDiag(diag::UnsignedArithShift, left_->sourceRange) << *type;
             return true;
     }
     SLANG_UNREACHABLE;

@@ -818,7 +818,7 @@ endfunction
 
 function automatic int f2(int i);
     int unsigned j;
-    j += (i >>> 31);
+    j += (i + 31);
     return j;
 endfunction
 )");
@@ -827,8 +827,9 @@ endfunction
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 3);
+    REQUIRE(diags.size() == 4);
     CHECK(diags[0].code == diag::SignConversion);
-    CHECK(diags[1].code == diag::SignConversion);
+    CHECK(diags[1].code == diag::UnsignedArithShift);
     CHECK(diags[2].code == diag::SignConversion);
+    CHECK(diags[3].code == diag::SignConversion);
 }
