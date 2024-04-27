@@ -177,7 +177,7 @@ public:
             bitWidth = 1;
         }
         else {
-            bitWidth = (bitwidth_t)std::bit_width(value);
+            bitWidth = (bitwidth_t)std::bit_width(std::make_unsigned_t<T>(value));
         }
 
         if (bitWidth == 0) {
