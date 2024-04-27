@@ -155,10 +155,8 @@ Expression& ElementSelectExpression::fromSyntax(Compilation& compilation, Expres
     const Expression* selector = nullptr;
     if (valueType.isAssociativeArray()) {
         auto indexType = valueType.getAssociativeIndexType();
-        if (indexType) {
-            selector = &bindRValue(*indexType, syntax, syntax.getFirstToken().location(),
-                                   selectorCtx);
-        }
+        if (indexType)
+            selector = &bindRValue(*indexType, syntax, {}, selectorCtx);
     }
 
     if (!selector) {

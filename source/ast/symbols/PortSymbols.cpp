@@ -1341,8 +1341,8 @@ const Expression* PortSymbol::getInitializer() const {
             ll = LookupLocation::after(*internalSymbol);
 
         ASTContext context(*scope, ll, ASTFlags::NonProcedural | ASTFlags::StaticInitializer);
-        initializer = &Expression::bindRValue(getType(), *initializerSyntax, initializerLoc,
-                                              context);
+        initializer = &Expression::bindRValue(getType(), *initializerSyntax,
+                                              {initializerLoc, initializerLoc + 1}, context);
         context.eval(*initializer);
     }
 
@@ -1711,13 +1711,12 @@ const Expression* PortConnection::getExpression() const {
                 auto& comp = context.getCompilation();
                 auto exprType = e->type;
                 if (direction == ArgumentDirection::In) {
-                    e = &Expression::convertAssignment(context, *type, *e,
-                                                       implicitNameRange.start());
+                    e = &Expression::convertAssignment(context, *type, *e, implicitNameRange);
                 }
                 else if (direction != ArgumentDirection::Ref) {
                     auto rhs = comp.emplace<EmptyArgumentExpression>(*type, implicitNameRange);
-                    Expression::convertAssignment(context, *e->type, *rhs,
-                                                  implicitNameRange.start(), &e, &assignFlags);
+                    Expression::convertAssignment(context, *e->type, *rhs, implicitNameRange, &e,
+                                                  &assignFlags);
                 }
 
                 // We should warn for this case unless convertAssignment already issued an error,

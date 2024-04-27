@@ -395,7 +395,7 @@ void DiagnosticEngine::mapSourceRanges(SourceLocation loc, std::span<const Sourc
         // Find a common parent for start and end. Start with `start` and
         // walk upwards until we find `end`s buffer or run out of expansions.
         SmallMap<BufferID, SourceLocation, 8> startMap;
-        while (sm.isMacroLoc(start) && start.buffer() != end.buffer()) {
+        while (start.buffer() != end.buffer() && sm.isMacroLoc(start)) {
             startMap[start.buffer()] = start;
             start = sm.getExpansionLoc(start);
         }

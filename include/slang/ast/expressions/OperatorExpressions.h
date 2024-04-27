@@ -32,7 +32,7 @@ public:
     Expression& operand() { return *operand_; }
 
     ConstantValue evalImpl(EvalContext& context) const;
-    bool propagateType(const ASTContext& context, const Type& newType);
+    bool propagateType(const ASTContext& context, const Type& newType, SourceRange opRange);
     std::optional<bitwidth_t> getEffectiveWidthImpl() const;
     bool getEffectiveSignImpl() const;
 
@@ -81,7 +81,7 @@ public:
     Expression& right() { return *right_; }
 
     ConstantValue evalImpl(EvalContext& context) const;
-    bool propagateType(const ASTContext& context, const Type& newType);
+    bool propagateType(const ASTContext& context, const Type& newType, SourceRange opRange);
     std::optional<bitwidth_t> getEffectiveWidthImpl() const;
     bool getEffectiveSignImpl() const;
 
@@ -92,7 +92,7 @@ public:
                                   const ASTContext& context);
 
     static Expression& fromComponents(Expression& lhs, Expression& rhs, BinaryOperator op,
-                                      SourceLocation opLoc, SourceRange sourceRange,
+                                      SourceRange opRange, SourceRange sourceRange,
                                       const ASTContext& context);
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::BinaryOp; }
@@ -141,7 +141,7 @@ public:
     Expression& right() { return *right_; }
 
     ConstantValue evalImpl(EvalContext& context) const;
-    bool propagateType(const ASTContext& context, const Type& newType);
+    bool propagateType(const ASTContext& context, const Type& newType, SourceRange opRange);
     std::optional<bitwidth_t> getEffectiveWidthImpl() const;
     bool getEffectiveSignImpl() const;
 
@@ -377,7 +377,7 @@ public:
     Expression& right() { return *right_; }
 
     ConstantValue evalImpl(EvalContext& context) const;
-    bool propagateType(const ASTContext& context, const Type& newType);
+    bool propagateType(const ASTContext& context, const Type& newType, SourceRange opRange);
 
     ConstantValue checkInside(EvalContext& context, const ConstantValue& val) const;
 

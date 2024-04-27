@@ -67,7 +67,7 @@ public:
 
     static Expression& fromComponents(Compilation& compilation, std::optional<BinaryOperator> op,
                                       bitmask<AssignFlags> flags, Expression& lhs, Expression& rhs,
-                                      SourceLocation assignLoc, const TimingControl* timingControl,
+                                      SourceRange opRange, const TimingControl* timingControl,
                                       SourceRange sourceRange, const ASTContext& context);
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::Assignment; }
@@ -132,7 +132,7 @@ public:
 
     static Expression& makeImplicit(const ASTContext& context, const Type& targetType,
                                     ConversionKind conversionKind, Expression& expr,
-                                    const Expression* parentExpr, SourceLocation loc);
+                                    const Expression* parentExpr, SourceRange opRange);
 
     static ConstantValue convert(EvalContext& context, const Type& from, const Type& to,
                                  SourceRange sourceRange, ConstantValue&& value,

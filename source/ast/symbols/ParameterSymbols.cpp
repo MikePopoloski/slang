@@ -401,18 +401,19 @@ void DefParamSymbol::resolve() const {
     // We need to know the parameter's type (or lack thereof) in order to
     // correctly bind a value for it.
     auto& exprSyntax = *assignment.setter->expr;
-    auto equalsLoc = assignment.setter->equals.location();
+    auto equalsRange = assignment.setter->equals.range();
     auto declType = param.getDeclaredType();
     auto typeSyntax = declType->getTypeSyntax();
 
     if (typeSyntax && typeSyntax->kind == SyntaxKind::ImplicitType) {
         ASTContext typeContext(*param.getParentScope(), LookupLocation::before(param));
-        auto [expr, type] = Expression::bindImplicitParam(*typeSyntax, exprSyntax, equalsLoc,
+        auto [expr, type] = Expression::bindImplicitParam(*typeSyntax, exprSyntax, equalsRange,
                                                           context, typeContext);
         initializer = expr;
     }
     else {
-        initializer = &Expression::bindRValue(declType->getType(), exprSyntax, equalsLoc, context);
+        initializer = &Expression::bindRValue(declType->getType(), exprSyntax, equalsRange,
+                                              context);
     }
 
     context.eval(*initializer);
@@ -462,7 +463,7 @@ const ConstantValue& SpecparamSymbol::getValue(SourceRange referencingRange) con
 
             auto& decl = syntax->as<SpecparamDeclaratorSyntax>();
             if (auto exprSyntax = decl.value2) {
-                auto& expr2 = Expression::bindRValue(getType(), *exprSyntax, decl.equals.location(),
+                auto& expr2 = Expression::bindRValue(getType(), *exprSyntax, decl.equals.range(),
                                                      ctx);
                 value2 = comp.allocConstant(ctx.eval(expr2, EvalFlags::SpecparamsAllowed));
             }

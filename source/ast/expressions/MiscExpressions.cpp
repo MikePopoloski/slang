@@ -1299,10 +1299,11 @@ Expression& MinTypMaxExpression::fromSyntax(Compilation& compilation,
     return *result;
 }
 
-bool MinTypMaxExpression::propagateType(const ASTContext& context, const Type& newType) {
+bool MinTypMaxExpression::propagateType(const ASTContext& context, const Type& newType,
+                                        SourceRange opRange) {
     // Only the selected expression gets a propagated type.
     type = &newType;
-    contextDetermined(context, selected_, this, newType);
+    contextDetermined(context, selected_, this, newType, opRange);
     return true;
 }
 
@@ -1430,8 +1431,7 @@ Expression& TaggedUnionExpression::fromSyntax(Compilation& compilation,
 
     const Expression* valueExpr = nullptr;
     if (syntax.expr) {
-        valueExpr = &bindRValue(field.getType(), *syntax.expr,
-                                syntax.expr->getFirstToken().location(), context);
+        valueExpr = &bindRValue(field.getType(), *syntax.expr, {}, context);
     }
     else if (!field.getType().isVoid()) {
         context.addDiag(diag::TaggedUnionMissingInit, syntax.sourceRange()) << field.name;

@@ -167,7 +167,8 @@ Expression& UnbasedUnsizedIntegerLiteral::fromSyntax(Compilation& compilation,
         val, syntax.sourceRange());
 }
 
-bool UnbasedUnsizedIntegerLiteral::propagateType(const ASTContext&, const Type& newType) {
+bool UnbasedUnsizedIntegerLiteral::propagateType(const ASTContext&, const Type& newType,
+                                                 SourceRange) {
     SLANG_ASSERT(newType.isIntegral());
     SLANG_ASSERT(newType.getBitWidth());
 

@@ -107,10 +107,9 @@ void DeclaredType::resolveType(const ASTContext& typeContext,
             if (flags.has(DeclaredTypeFlags::AllowUnboundedLiteral))
                 extraFlags = ASTFlags::AllowUnboundedLiteral;
 
-            std::tie(initializer, type) = Expression::bindImplicitParam(*syntax, *initializerSyntax,
-                                                                        initializerLocation,
-                                                                        initializerContext,
-                                                                        typeContext, extraFlags);
+            std::tie(initializer, type) = Expression::bindImplicitParam(
+                *syntax, *initializerSyntax, {initializerLocation, initializerLocation + 1},
+                initializerContext, typeContext, extraFlags);
             SLANG_ASSERT(initializer);
         }
     }
@@ -426,8 +425,9 @@ void DeclaredType::resolveAt(const ASTContext& context) const {
         extraFlags = ASTFlags::AllowUnboundedLiteral;
     }
 
-    initializer = &Expression::bindRValue(*targetType, *initializerSyntax, initializerLocation,
-                                          context, extraFlags);
+    initializer = &Expression::bindRValue(*targetType, *initializerSyntax,
+                                          {initializerLocation, initializerLocation + 1}, context,
+                                          extraFlags);
 }
 
 void DeclaredType::forceResolveAt(const ASTContext& context) const {

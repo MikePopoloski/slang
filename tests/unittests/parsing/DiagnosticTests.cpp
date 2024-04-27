@@ -209,10 +209,10 @@ endmodule
     CHECK(result == R"(
 source:9:13: error: invalid operands to binary expression ('<unnamed unpacked struct>' and '<unnamed unpacked struct>')
     int i = `BAR(asdf, bar);
-            ^    ~~~~  ~~~
+            ^~~~~~~~~~~~~~~
 source:4:26: note: expanded from macro 'BAR'
 `define BAR(blah, flurb) `FOO(blah, flurb)
-                         ^    ~~~~  ~~~~~
+                         ^~~~~~~~~~~~~~~~~
 source:3:30: note: expanded from macro 'FOO'
 `define FOO(blah, flurb) blah+`BAZ(flurb)
                          ~~~~^     ~~~~~
@@ -239,7 +239,7 @@ endmodule
     CHECK(result == R"(
 source:8:13: error: invalid operands to binary expression ('<unnamed unpacked struct>' and '<unnamed unpacked struct>')
     int i = `BAR(asdf, bar);
-            ^    ~~~~  ~~~
+            ^~~~~~~~~~~~~~~
 source:3:36: note: expanded from macro 'BAR'
 `define BAR(blah, flurb) `FOO(blah + flurb)
                               ~~~~ ^ ~~~~~

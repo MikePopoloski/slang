@@ -518,10 +518,11 @@ static bool withAfterDynamic(const StreamingConcatenationExpression& lhs,
 }
 
 bool Bitstream::canBeTarget(const StreamingConcatenationExpression& lhs, const Expression& rhs,
-                            SourceLocation assignLoc, const ASTContext& context) {
+                            SourceRange assignmentRange, const ASTContext& context) {
     if (rhs.kind != ExpressionKind::Streaming) {
         if (!rhs.type->isBitstreamType()) {
-            context.addDiag(diag::BadStreamSourceType, assignLoc) << *rhs.type << lhs.sourceRange;
+            context.addDiag(diag::BadStreamSourceType, assignmentRange)
+                << *rhs.type << lhs.sourceRange;
             return false;
         }
 
@@ -559,7 +560,7 @@ bool Bitstream::canBeTarget(const StreamingConcatenationExpression& lhs, const E
     }
 
     if (!good) {
-        auto& diag = context.addDiag(diag::BadStreamSize, assignLoc);
+        auto& diag = context.addDiag(diag::BadStreamSize, assignmentRange);
         if (rhs.kind != ExpressionKind::Streaming)
             diag << targetWidth << sourceWidth;
         else {
@@ -577,11 +578,11 @@ bool Bitstream::canBeTarget(const StreamingConcatenationExpression& lhs, const E
 }
 
 bool Bitstream::canBeSource(const Type& target, const StreamingConcatenationExpression& rhs,
-                            SourceLocation assignLoc, const ASTContext& context) {
+                            SourceRange assignmentRange, const ASTContext& context) {
     // No need to checkClassAccess here because a class is never a valid
     // destination bitstream type.
     if (!target.isBitstreamType(true)) {
-        context.addDiag(diag::BadStreamTargetType, assignLoc) << target << rhs.sourceRange;
+        context.addDiag(diag::BadStreamTargetType, assignmentRange) << target << rhs.sourceRange;
         return false;
     }
 
@@ -593,7 +594,8 @@ bool Bitstream::canBeSource(const Type& target, const StreamingConcatenationExpr
     auto targetWidth = target.getBitstreamWidth();
     auto sourceWidth = rhs.getBitstreamWidth();
     if (targetWidth < sourceWidth) {
-        auto& diag = context.addDiag(diag::BadStreamSize, assignLoc) << targetWidth << sourceWidth;
+        auto& diag = context.addDiag(diag::BadStreamSize, assignmentRange)
+                     << targetWidth << sourceWidth;
         diag << rhs.sourceRange;
         return false;
     }

@@ -773,17 +773,17 @@ Statement& ReturnStatement::fromSyntax(Compilation& compilation,
     while (scope->asSymbol().kind == SymbolKind::StatementBlock)
         scope = scope->asSymbol().getParentScope();
 
-    auto stmtLoc = syntax.returnKeyword.location();
+    auto stmtRange = syntax.returnKeyword.range();
     auto& symbol = scope->asSymbol();
     if (symbol.kind != SymbolKind::Subroutine && symbol.kind != SymbolKind::RandSeqProduction) {
-        context.addDiag(diag::ReturnNotInSubroutine, stmtLoc);
+        context.addDiag(diag::ReturnNotInSubroutine, stmtRange);
         return badStmt(compilation, nullptr);
     }
 
     auto& returnType = symbol.getDeclaredType()->getType();
     const Expression* retExpr = nullptr;
     if (syntax.returnValue) {
-        retExpr = &Expression::bindRValue(returnType, *syntax.returnValue, stmtLoc, context);
+        retExpr = &Expression::bindRValue(returnType, *syntax.returnValue, stmtRange, context);
     }
     else if (!returnType.isVoid()) {
         DiagCode code = symbol.kind == SymbolKind::Subroutine ? diag::MissingReturnValue

@@ -131,11 +131,13 @@ struct Expression::PropagationVisitor {
     const ASTContext& context;
     const Type& newType;
     const Expression* parentExpr;
-    SourceLocation assignmentLoc;
+    SourceRange opRange;
+    bool isAssignment;
 
     PropagationVisitor(const ASTContext& context, const Type& newType, const Expression* parentExpr,
-                       SourceLocation assignmentLoc) :
-        context(context), newType(newType), parentExpr(parentExpr), assignmentLoc(assignmentLoc) {}
+                       SourceRange opRange, bool isAssignment) :
+        context(context), newType(newType), parentExpr(parentExpr), opRange(opRange),
+        isAssignment(isAssignment) {}
 
     template<typename T>
     Expression& visit(T& expr) {
@@ -152,28 +154,22 @@ struct Expression::PropagationVisitor {
         // check if the conversion should be pushed further down the tree. Otherwise we
         // should insert the implicit conversion here.
         bool needConversion = !newType.isEquivalent(*expr.type);
-        if constexpr (requires { expr.propagateType(context, newType); }) {
+        if constexpr (requires { expr.propagateType(context, newType, opRange); }) {
             if ((newType.isFloating() && expr.type->isFloating()) ||
                 (newType.isIntegral() && expr.type->isIntegral()) || newType.isString() ||
                 expr.kind == ExpressionKind::ValueRange) {
 
-                if (expr.propagateType(context, newType))
+                if (expr.propagateType(context, newType, opRange))
                     needConversion = false;
             }
         }
 
         Expression* result = &expr;
         if (needConversion) {
-            if (assignmentLoc) {
-                result = &ConversionExpression::makeImplicit(context, newType,
-                                                             ConversionKind::Implicit, expr,
-                                                             parentExpr, assignmentLoc);
-            }
-            else {
-                result = &ConversionExpression::makeImplicit(context, newType,
-                                                             ConversionKind::Propagated, expr,
-                                                             parentExpr, expr.sourceRange.start());
-            }
+            auto conversionKind = isAssignment ? ConversionKind::Implicit
+                                               : ConversionKind::Propagated;
+            result = &ConversionExpression::makeImplicit(context, newType, conversionKind, expr,
+                                                         parentExpr, opRange);
         }
 
         return *result;
@@ -230,8 +226,7 @@ const Expression& Expression::bindLValue(const ExpressionSyntax& lhs, const Type
 
     SourceRange lhsRange = lhs.sourceRange();
     return AssignmentExpression::fromComponents(comp, std::nullopt, assignFlags, *lhsExpr, *rhsExpr,
-                                                lhsRange.start(),
-                                                /* timingControl */ nullptr, lhsRange,
+                                                lhsRange, /* timingControl */ nullptr, lhsRange,
                                                 context.resetFlags(astFlags));
 }
 
@@ -244,14 +239,17 @@ const Expression& Expression::bindLValue(const ExpressionSyntax& syntax,
 }
 
 const Expression& Expression::bindRValue(const Type& lhs, const ExpressionSyntax& rhs,
-                                         SourceLocation location, const ASTContext& context,
+                                         SourceRange assignmentRange, const ASTContext& context,
                                          bitmask<ASTFlags> extraFlags) {
     Compilation& comp = context.getCompilation();
 
     ASTContext ctx = context.resetFlags(extraFlags);
     if (lhs.isVirtualInterfaceOrArray()) {
-        if (auto ref = tryBindInterfaceRef(ctx, rhs, /* isInterfacePort */ false))
-            return convertAssignment(ctx, lhs, *ref, location);
+        if (auto ref = tryBindInterfaceRef(ctx, rhs, /* isInterfacePort */ false)) {
+            if (!assignmentRange.start())
+                assignmentRange = ref->sourceRange;
+            return convertAssignment(ctx, lhs, *ref, assignmentRange);
+        }
     }
 
     auto instance = context.getInstance();
@@ -259,7 +257,10 @@ const Expression& Expression::bindRValue(const Type& lhs, const ExpressionSyntax
         extraFlags |= ASTFlags::StreamingAllowed;
 
     Expression& expr = create(comp, rhs, ctx, extraFlags, &lhs);
-    return convertAssignment(ctx, lhs, expr, location);
+    if (!assignmentRange.start())
+        assignmentRange = expr.sourceRange;
+
+    return convertAssignment(ctx, lhs, expr, assignmentRange);
 }
 
 static bool canConnectToRefArg(const ASTContext& context, const Expression& expr,
@@ -356,15 +357,16 @@ const Expression& Expression::bindArgument(const Type& argType, ArgumentDirectio
                                            bitmask<VariableFlags> argFlags,
                                            const ExpressionSyntax& syntax,
                                            const ASTContext& context) {
-    auto loc = syntax.getFirstToken().location();
     switch (direction) {
         case ArgumentDirection::In:
-            return bindRValue(argType, syntax, loc, context);
+            return bindRValue(argType, syntax, {}, context);
         case ArgumentDirection::Out:
         case ArgumentDirection::InOut:
-            return bindLValue(syntax, argType, loc, context, direction == ArgumentDirection::InOut);
+            return bindLValue(syntax, argType, syntax.getFirstToken().location(), context,
+                              direction == ArgumentDirection::InOut);
         case ArgumentDirection::Ref:
-            return bindRefArg(argType, argFlags, syntax, loc, context);
+            return bindRefArg(argType, argFlags, syntax, syntax.getFirstToken().location(),
+                              context);
     }
     SLANG_UNREACHABLE;
 }
@@ -391,7 +393,7 @@ bool Expression::checkConnectionDirection(const Expression& expr, ArgumentDirect
 }
 
 std::tuple<const Expression*, const Type*> Expression::bindImplicitParam(
-    const DataTypeSyntax& typeSyntax, const ExpressionSyntax& rhs, SourceLocation location,
+    const DataTypeSyntax& typeSyntax, const ExpressionSyntax& rhs, SourceRange assignmentRange,
     const ASTContext& exprContext, const ASTContext& typeContext, bitmask<ASTFlags> extraFlags) {
 
     // Rules are described in [6.20.2].
@@ -401,7 +403,7 @@ std::tuple<const Expression*, const Type*> Expression::bindImplicitParam(
         // If we have a range provided, the result is always an integral value
         // of the provided width -- getType() will do what we want here.
         auto lhsType = &comp.getType(typeSyntax, typeContext);
-        return {&bindRValue(*lhsType, rhs, location, exprContext, extraFlags), lhsType};
+        return {&bindRValue(*lhsType, rhs, assignmentRange, exprContext, extraFlags), lhsType};
     }
 
     Expression& expr = create(comp, rhs, exprContext, extraFlags);
@@ -435,7 +437,7 @@ std::tuple<const Expression*, const Type*> Expression::bindImplicitParam(
         }
     }
 
-    return {&convertAssignment(exprContext, *lhsType, expr, location), lhsType};
+    return {&convertAssignment(exprContext, *lhsType, expr, assignmentRange), lhsType};
 }
 
 const Expression& Expression::bindSelector(Expression& value, const ElementSelectSyntax& syntax,
@@ -1471,14 +1473,14 @@ void Expression::findPotentiallyImplicitNets(
 
 void Expression::contextDetermined(const ASTContext& context, Expression*& expr,
                                    const Expression* parentExpr, const Type& newType,
-                                   SourceLocation assignmentLoc) {
-    PropagationVisitor visitor(context, newType, parentExpr, assignmentLoc);
+                                   SourceRange opRange, bool isAssignment) {
+    PropagationVisitor visitor(context, newType, parentExpr, opRange, isAssignment);
     expr = &expr->visit(visitor);
 }
 
 void Expression::selfDetermined(const ASTContext& context, Expression*& expr) {
     SLANG_ASSERT(expr->type);
-    PropagationVisitor visitor(context, *expr->type, nullptr, {});
+    PropagationVisitor visitor(context, *expr->type, nullptr, {}, false);
     expr = &expr->visit(visitor);
 }
 

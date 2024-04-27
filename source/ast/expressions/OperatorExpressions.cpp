@@ -292,7 +292,7 @@ bool Expression::bindMembershipExpressions(const ASTContext& context, TokenKind 
         Expression* expr = const_cast<Expression*>(result);
 
         if ((type->isNumeric() || type->isString()) && !expr->type->isUnpackedArray())
-            contextDetermined(context, expr, nullptr, *type);
+            contextDetermined(context, expr, nullptr, *type, {});
         else
             selfDetermined(context, expr);
 
@@ -418,13 +418,14 @@ Expression& UnaryExpression::fromSyntax(Compilation& compilation,
     return *result;
 }
 
-bool UnaryExpression::propagateType(const ASTContext& context, const Type& newType) {
+bool UnaryExpression::propagateType(const ASTContext& context, const Type& newType,
+                                    SourceRange opRange) {
     switch (op) {
         case UnaryOperator::Plus:
         case UnaryOperator::Minus:
         case UnaryOperator::BitwiseNot:
             type = &newType;
-            contextDetermined(context, operand_, this, newType);
+            contextDetermined(context, operand_, this, newType, opRange);
             return true;
         case UnaryOperator::BitwiseAnd:
         case UnaryOperator::BitwiseOr:
@@ -660,7 +661,7 @@ Expression& BinaryExpression::fromSyntax(Compilation& compilation,
         rhs = &create(compilation, syntaxRight, context, flags);
     }
 
-    auto& result = fromComponents(*lhs, *rhs, op, syntax.operatorToken.location(),
+    auto& result = fromComponents(*lhs, *rhs, op, syntax.operatorToken.range(),
                                   syntax.sourceRange(), context);
     context.setAttributes(result, syntax.attributes);
 
@@ -668,7 +669,7 @@ Expression& BinaryExpression::fromSyntax(Compilation& compilation,
 }
 
 Expression& BinaryExpression::fromComponents(Expression& lhs, Expression& rhs, BinaryOperator op,
-                                             SourceLocation opLoc, SourceRange sourceRange,
+                                             SourceRange opRange, SourceRange sourceRange,
                                              const ASTContext& context) {
     auto& compilation = context.getCompilation();
     const Type* lt = lhs.type;
@@ -744,7 +745,7 @@ Expression& BinaryExpression::fromComponents(Expression& lhs, Expression& rhs, B
             good = bothNumeric;
             if (lt->isFloating() || rt->isFloating()) {
                 result->type = binaryOperatorType(compilation, lt, rt, false);
-                contextDetermined(context, result->right_, result, *result->type);
+                contextDetermined(context, result->right_, result, *result->type, opRange);
             }
             else {
                 // Result is forced to 4-state because result can be X.
@@ -764,8 +765,8 @@ Expression& BinaryExpression::fromComponents(Expression& lhs, Expression& rhs, B
             // other context-determined operators.
             auto nt = (good && !bothNumeric) ? &compilation.getStringType()
                                              : binaryOperatorType(compilation, lt, rt, false);
-            contextDetermined(context, result->left_, result, *nt);
-            contextDetermined(context, result->right_, result, *nt);
+            contextDetermined(context, result->left_, result, *nt, opRange);
+            contextDetermined(context, result->right_, result, *nt, opRange);
             break;
         }
         case BinaryOperator::LogicalAnd:
@@ -817,8 +818,8 @@ Expression& BinaryExpression::fromComponents(Expression& lhs, Expression& rhs, B
                 // Result type is fixed but the two operands affect each other as they would
                 // in other context-determined operators.
                 auto nt = binaryOperatorType(compilation, lt, rt, false);
-                contextDetermined(context, result->left_, result, *nt);
-                contextDetermined(context, result->right_, result, *nt);
+                contextDetermined(context, result->left_, result, *nt, opRange);
+                contextDetermined(context, result->right_, result, *nt, opRange);
             }
             else {
                 bool isContext = false;
@@ -831,8 +832,10 @@ Expression& BinaryExpression::fromComponents(Expression& lhs, Expression& rhs, B
 
                     // If there is a literal involved, make sure it's converted to string.
                     isContext = true;
-                    contextDetermined(context, result->left_, result, compilation.getStringType());
-                    contextDetermined(context, result->right_, result, compilation.getStringType());
+                    contextDetermined(context, result->left_, result, compilation.getStringType(),
+                                      opRange);
+                    contextDetermined(context, result->right_, result, compilation.getStringType(),
+                                      opRange);
                 }
                 else if (lt->isAggregate() && lt->isEquivalent(*rt) && !lt->isUnpackedUnion()) {
                     good = !isWildcard;
@@ -880,7 +883,7 @@ Expression& BinaryExpression::fromComponents(Expression& lhs, Expression& rhs, B
     }
 
     if (!good) {
-        auto& diag = context.addDiag(diag::BadBinaryExpression, opLoc);
+        auto& diag = context.addDiag(diag::BadBinaryExpression, opRange);
         diag << *lt << *rt;
         diag << lhs.sourceRange;
         diag << rhs.sourceRange;
@@ -890,7 +893,8 @@ Expression& BinaryExpression::fromComponents(Expression& lhs, Expression& rhs, B
     return *result;
 }
 
-bool BinaryExpression::propagateType(const ASTContext& context, const Type& newType) {
+bool BinaryExpression::propagateType(const ASTContext& context, const Type& newType,
+                                     SourceRange opRange) {
     switch (op) {
         case BinaryOperator::Add:
         case BinaryOperator::Subtract:
@@ -902,8 +906,8 @@ bool BinaryExpression::propagateType(const ASTContext& context, const Type& newT
         case BinaryOperator::BinaryXor:
         case BinaryOperator::BinaryXnor:
             type = &newType;
-            contextDetermined(context, left_, this, newType);
-            contextDetermined(context, right_, this, newType);
+            contextDetermined(context, left_, this, newType, opRange);
+            contextDetermined(context, right_, this, newType, opRange);
             return true;
         case BinaryOperator::Equality:
         case BinaryOperator::Inequality:
@@ -928,7 +932,7 @@ bool BinaryExpression::propagateType(const ASTContext& context, const Type& newT
         case BinaryOperator::Power:
             // Only the left hand side gets propagated; the rhs is self determined.
             type = &newType;
-            contextDetermined(context, left_, this, newType);
+            contextDetermined(context, left_, this, newType, opRange);
             return true;
     }
     SLANG_UNREACHABLE;
@@ -1183,7 +1187,8 @@ Expression& ConditionalExpression::fromSyntax(Compilation& comp,
     return *result;
 }
 
-bool ConditionalExpression::propagateType(const ASTContext& context, const Type& newType) {
+bool ConditionalExpression::propagateType(const ASTContext& context, const Type& newType,
+                                          SourceRange opRange) {
     // The predicate is self determined so no need to handle it here.
     type = &newType;
 
@@ -1196,8 +1201,8 @@ bool ConditionalExpression::propagateType(const ASTContext& context, const Type&
             leftFlags = ASTFlags::UnevaluatedBranch;
     }
 
-    contextDetermined(context.resetFlags(leftFlags), left_, this, newType);
-    contextDetermined(context.resetFlags(rightFlags), right_, this, newType);
+    contextDetermined(context.resetFlags(leftFlags), left_, this, newType, opRange);
+    contextDetermined(context.resetFlags(rightFlags), right_, this, newType, opRange);
     return true;
 }
 
@@ -1427,8 +1432,7 @@ Expression& ConcatenationExpression::fromSyntax(Compilation& compilation,
             }
 
             if (arg->isImplicitlyAssignableTo(compilation, elemType)) {
-                buffer.push_back(&convertAssignment(context, elemType, *arg,
-                                                    argSyntax->getFirstToken().location()));
+                buffer.push_back(&convertAssignment(context, elemType, *arg, arg->sourceRange));
                 totalElems++;
                 continue;
             }
@@ -1541,7 +1545,7 @@ Expression& ConcatenationExpression::fromSyntax(Compilation& compilation,
                 else if (expr->isImplicitString()) {
                     expr = &ConversionExpression::makeImplicit(context, compilation.getStringType(),
                                                                ConversionKind::Implicit, *expr,
-                                                               nullptr, expr->sourceRange.start());
+                                                               nullptr, {});
                 }
                 else {
                     errored = true;
@@ -1738,7 +1742,7 @@ Expression& ReplicationExpression::fromSyntax(Compilation& compilation,
             return badExpr(compilation, result);
         }
 
-        contextDetermined(context, right, result, compilation.getStringType());
+        contextDetermined(context, right, result, compilation.getStringType(), {});
 
         result->concat_ = right;
         result->type = &compilation.getStringType();
@@ -1969,7 +1973,7 @@ Expression& StreamingConcatenationExpression::fromSyntax(
         // since the target width will be less than the source width.
         auto width = std::min(bitstreamWidth, (uint64_t)SVInt::MAX_BITS);
         auto& type = comp.getType(bitwidth_t(width), IntegralFlags::FourState);
-        return convertAssignment(context, type, result, result.sourceRange.start());
+        return convertAssignment(context, type, result, result.sourceRange);
     }
 
     return result;
@@ -2102,10 +2106,11 @@ Expression& ValueRangeExpression::fromSyntax(Compilation& comp,
     return *result;
 }
 
-bool ValueRangeExpression::propagateType(const ASTContext& context, const Type& newType) {
-    contextDetermined(context, left_, this, newType);
+bool ValueRangeExpression::propagateType(const ASTContext& context, const Type& newType,
+                                         SourceRange opRange) {
+    contextDetermined(context, left_, this, newType, opRange);
     if (rangeKind == ValueRangeKind::Simple)
-        contextDetermined(context, right_, this, newType);
+        contextDetermined(context, right_, this, newType, opRange);
     return true;
 }
 

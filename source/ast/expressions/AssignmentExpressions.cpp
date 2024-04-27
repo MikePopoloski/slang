@@ -119,11 +119,18 @@ bool isUnionMemberType(const Type& left, const Type& right) {
 
 void checkImplicitConversions(const ASTContext& context, const Type& sourceType,
                               const Type& targetType, const Expression& op,
-                              const Expression* parentExpr, SourceLocation loc,
+                              const Expression* parentExpr, SourceRange operatorRange,
                               ConversionKind conversionKind) {
     auto isStructUnionEnum = [](const Type& t) {
         return t.kind == SymbolKind::PackedStructType || t.kind == SymbolKind::PackedUnionType ||
                t.kind == SymbolKind::EnumType;
+    };
+
+    auto addDiag = [&](DiagCode code) -> Diagnostic& {
+        auto& diag = context.addDiag(code, op.sourceRange);
+        if (operatorRange.start())
+            diag << operatorRange;
+        return diag;
     };
 
     auto expr = &op;
@@ -153,10 +160,8 @@ void checkImplicitConversions(const ASTContext& context, const Type& sourceType,
     if (lt.isIntegral() && rt.isIntegral()) {
         // Warn for conversions between different enums/structs/unions.
         if (isStructUnionEnum(lt) && isStructUnionEnum(rt) && !lt.isMatching(rt)) {
-            if (!isSameStructUnion(lt, rt) && !isUnionMemberType(lt, rt)) {
-                context.addDiag(diag::ImplicitConvert, loc)
-                    << sourceType << targetType << op.sourceRange;
-            }
+            if (!isSameStructUnion(lt, rt) && !isUnionMemberType(lt, rt))
+                addDiag(diag::ImplicitConvert) << sourceType << targetType;
             return;
         }
 
@@ -191,14 +196,8 @@ void checkImplicitConversions(const ASTContext& context, const Type& sourceType,
                 }
             }
 
-            if (!isComparison) {
-                auto& diag = context.addDiag(diag::SignConversion, loc);
-                diag << sourceType << targetType << op.sourceRange;
-                if (binExpr && binExpr->syntax &&
-                    BinaryExpressionSyntax::isKind(binExpr->syntax->kind)) {
-                    diag << binExpr->syntax->as<BinaryExpressionSyntax>().operatorToken.range();
-                }
-            }
+            if (!isComparison)
+                addDiag(diag::SignConversion) << sourceType << targetType;
         }
 
         // Don't issue width warnings for propagated conversions, as they would
@@ -232,7 +231,7 @@ void checkImplicitConversions(const ASTContext& context, const Type& sourceType,
                 code = targetWidth < effective ? diag::PortWidthTruncate : diag::PortWidthExpand;
             else
                 code = targetWidth < effective ? diag::WidthTruncate : diag::WidthExpand;
-            context.addDiag(code, loc) << actualWidth << targetWidth << op.sourceRange;
+            addDiag(code) << actualWidth << targetWidth;
         }
     }
     else if (lt.isNumeric() && rt.isNumeric()) {
@@ -377,7 +376,7 @@ Expression* Expression::tryConnectPortArray(const ASTContext& context, const Typ
     // without this conversion.
     result = &ConversionExpression::makeImplicit(
         context, comp.getType(*instPortWidth, result->type->getIntegralFlags()),
-        ConversionKind::Implicit, *result, nullptr, result->sourceRange.start());
+        ConversionKind::Implicit, *result, nullptr, {});
 
     // We have enough bits to assign each port on each instance, so now we just need
     // to pick the right ones. The spec says we start with all right hand indices
@@ -420,7 +419,7 @@ bool Expression::isImplicitlyAssignableTo(Compilation& compilation, const Type& 
 }
 
 Expression& Expression::convertAssignment(const ASTContext& context, const Type& type,
-                                          Expression& expr, SourceLocation location,
+                                          Expression& expr, SourceRange assignmentRange,
                                           Expression** lhsExpr, bitmask<AssignFlags>* assignFlags) {
     if (expr.bad())
         return expr;
@@ -432,7 +431,7 @@ Expression& Expression::convertAssignment(const ASTContext& context, const Type&
     Expression* result = &expr;
     const Type* rt = expr.type;
     if (type.isEquivalent(*rt)) {
-        selfDetermined(context, result);
+        contextDetermined(context, result, nullptr, *rt, assignmentRange, /* isAssignment */ true);
 
         if (type.isVoid())
             context.addDiag(diag::VoidAssignment, expr.sourceRange);
@@ -440,7 +439,7 @@ Expression& Expression::convertAssignment(const ASTContext& context, const Type&
         // If the types are not actually matching we might still want
         // to issue conversion warnings.
         if (!context.inUnevaluatedBranch() && !type.isMatching(*rt)) {
-            checkImplicitConversions(context, *rt, type, *result, nullptr, location,
+            checkImplicitConversions(context, *rt, type, *result, nullptr, assignmentRange,
                                      ConversionKind::Implicit);
         }
 
@@ -486,12 +485,12 @@ Expression& Expression::convertAssignment(const ASTContext& context, const Type&
     if (!type.isAssignmentCompatible(*rt)) {
         if (expr.isImplicitlyAssignableTo(comp, type)) {
             return ConversionExpression::makeImplicit(context, type, ConversionKind::Implicit,
-                                                      *result, nullptr, location);
+                                                      *result, nullptr, assignmentRange);
         }
 
         if (expr.kind == ExpressionKind::Streaming) {
-            if (Bitstream::canBeSource(type, expr.as<StreamingConcatenationExpression>(), location,
-                                       context)) {
+            if (Bitstream::canBeSource(type, expr.as<StreamingConcatenationExpression>(),
+                                       assignmentRange, context)) {
                 // Add an implicit bit-stream casting otherwise types are not assignment compatible.
                 // The size rule is not identical to explicit bit-stream casting so a different
                 // ConversionKind is used.
@@ -506,9 +505,9 @@ Expression& Expression::convertAssignment(const ASTContext& context, const Type&
         if (expr.kind == ExpressionKind::ValueRange) {
             // Convert each side of the range and return that as a new range.
             auto& vre = expr.as<ValueRangeExpression>();
-            auto& left = convertAssignment(context, type, vre.left(), location, lhsExpr,
+            auto& left = convertAssignment(context, type, vre.left(), assignmentRange, lhsExpr,
                                            assignFlags);
-            auto& right = convertAssignment(context, type, vre.right(), location, lhsExpr,
+            auto& right = convertAssignment(context, type, vre.right(), assignmentRange, lhsExpr,
                                             assignFlags);
 
             result = comp.emplace<ValueRangeExpression>(*expr.type, vre.rangeKind, left, right,
@@ -523,7 +522,7 @@ Expression& Expression::convertAssignment(const ASTContext& context, const Type&
             code = diag::NoImplicitConversion;
         }
 
-        auto& diag = context.addDiag(code, location);
+        auto& diag = context.addDiag(code, assignmentRange);
         diag << *rt << type;
         if (lhsExpr)
             diag << (*lhsExpr)->sourceRange;
@@ -546,7 +545,7 @@ Expression& Expression::convertAssignment(const ASTContext& context, const Type&
         if (expanding)
             rt = &type;
 
-        contextDetermined(context, result, nullptr, *rt, location);
+        contextDetermined(context, result, nullptr, *rt, assignmentRange, /* isAssignment */ true);
         if (expanding)
             return *result;
 
@@ -558,7 +557,7 @@ Expression& Expression::convertAssignment(const ASTContext& context, const Type&
     }
 
     return ConversionExpression::makeImplicit(context, type, ConversionKind::Implicit, *result,
-                                              nullptr, location);
+                                              nullptr, assignmentRange);
 }
 
 Expression& AssignmentExpression::fromSyntax(Compilation& compilation,
@@ -630,8 +629,8 @@ Expression& AssignmentExpression::fromSyntax(Compilation& compilation,
             selfDetermined(context, lhs);
 
             return fromComponents(compilation, op, assignFlags, *lhs, *rhs,
-                                  syntax.operatorToken.location(), timingControl,
-                                  syntax.sourceRange(), context);
+                                  syntax.operatorToken.range(), timingControl, syntax.sourceRange(),
+                                  context);
         }
     }
 
@@ -656,13 +655,13 @@ Expression& AssignmentExpression::fromSyntax(Compilation& compilation,
         }
     }
 
-    return fromComponents(compilation, op, assignFlags, lhs, *rhs, syntax.operatorToken.location(),
+    return fromComponents(compilation, op, assignFlags, lhs, *rhs, syntax.operatorToken.range(),
                           timingControl, syntax.sourceRange(), context);
 }
 
 Expression& AssignmentExpression::fromComponents(
     Compilation& compilation, std::optional<BinaryOperator> op, bitmask<AssignFlags> flags,
-    Expression& lhs, Expression& rhs, SourceLocation assignLoc, const TimingControl* timingControl,
+    Expression& lhs, Expression& rhs, SourceRange opRange, const TimingControl* timingControl,
     SourceRange sourceRange, const ASTContext& context) {
 
     auto result = compilation.emplace<AssignmentExpression>(op, flags.has(AssignFlags::NonBlocking),
@@ -673,12 +672,12 @@ Expression& AssignmentExpression::fromComponents(
         return badExpr(compilation, result);
 
     if (lhs.kind == ExpressionKind::Streaming) {
-        if (!Bitstream::canBeTarget(lhs.as<StreamingConcatenationExpression>(), rhs, assignLoc,
+        if (!Bitstream::canBeTarget(lhs.as<StreamingConcatenationExpression>(), rhs, opRange,
                                     context)) {
             return badExpr(compilation, result);
         }
 
-        if (!lhs.requireLValue(context, assignLoc, flags))
+        if (!lhs.requireLValue(context, opRange.start(), flags))
             return badExpr(compilation, result);
 
         return *result;
@@ -688,16 +687,16 @@ Expression& AssignmentExpression::fromComponents(
     // apply the operator for us on the right hand side.
     if (op) {
         auto lvalRef = compilation.emplace<LValueReferenceExpression>(*lhs.type, lhs.sourceRange);
-        result->right_ = &BinaryExpression::fromComponents(*lvalRef, *result->right_, *op,
-                                                           assignLoc, sourceRange, context);
+        result->right_ = &BinaryExpression::fromComponents(*lvalRef, *result->right_, *op, opRange,
+                                                           sourceRange, context);
     }
 
-    result->right_ = &convertAssignment(context, *lhs.type, *result->right_, assignLoc,
+    result->right_ = &convertAssignment(context, *lhs.type, *result->right_, opRange,
                                         &result->left_, &flags);
     if (result->right_->bad())
         return badExpr(compilation, result);
 
-    if (!result->left_->requireLValue(context, assignLoc, flags))
+    if (!result->left_->requireLValue(context, opRange.start(), flags))
         return badExpr(compilation, result);
 
     if (timingControl) {
@@ -914,7 +913,8 @@ Expression& ConversionExpression::fromSyntax(Compilation& compilation,
 
 Expression& ConversionExpression::makeImplicit(const ASTContext& context, const Type& targetType,
                                                ConversionKind conversionKind, Expression& expr,
-                                               const Expression* parentExpr, SourceLocation loc) {
+                                               const Expression* parentExpr,
+                                               SourceRange operatorRange) {
     auto& comp = context.getCompilation();
     SLANG_ASSERT(expr.isImplicitlyAssignableTo(comp, targetType));
 
@@ -927,7 +927,7 @@ Expression& ConversionExpression::makeImplicit(const ASTContext& context, const 
     if ((conversionKind == ConversionKind::Implicit ||
          conversionKind == ConversionKind::Propagated) &&
         !context.inUnevaluatedBranch()) {
-        checkImplicitConversions(context, *op->type, targetType, *result, parentExpr, loc,
+        checkImplicitConversions(context, *op->type, targetType, *result, parentExpr, operatorRange,
                                  conversionKind);
     }
 
@@ -1096,10 +1096,8 @@ Expression& NewArrayExpression::fromSyntax(Compilation& compilation,
 
     auto& sizeExpr = selfDetermined(compilation, *syntax.sizeExpr, context);
     const Expression* initExpr = nullptr;
-    if (syntax.initializer) {
-        initExpr = &bindRValue(*assignmentTarget, *syntax.initializer->expression,
-                               syntax.initializer->getFirstToken().location(), context);
-    }
+    if (syntax.initializer)
+        initExpr = &bindRValue(*assignmentTarget, *syntax.initializer->expression, {}, context);
 
     auto result = compilation.emplace<NewArrayExpression>(*assignmentTarget, sizeExpr, initExpr,
                                                           syntax.sourceRange());
@@ -1687,8 +1685,7 @@ static const Expression* matchElementValue(
 
         if (elementType.isSimpleBitVector() &&
             elementType.isAssignmentCompatible(*defaultSetter->type)) {
-            return &Expression::bindRValue(elementType, *defaultSyntax,
-                                           defaultSyntax->getFirstToken().location(), context);
+            return &Expression::bindRValue(elementType, *defaultSyntax, {}, context);
         }
     }
 
@@ -1740,10 +1737,8 @@ static const Expression* matchElementValue(
     }
 
     // Finally, if we have a default then it must now be assignment compatible.
-    if (defaultSetter) {
-        return &Expression::bindRValue(elementType, *defaultSyntax,
-                                       defaultSyntax->getFirstToken().location(), context);
-    }
+    if (defaultSetter)
+        return &Expression::bindRValue(elementType, *defaultSyntax, {}, context);
 
     // Otherwise there's no setter for this element, which is an error.
     if (targetField) {
@@ -1788,7 +1783,7 @@ Expression& StructuredAssignmentPatternExpression::forStruct(
             const Symbol* member = structScope.find(name);
             if (member) {
                 auto& expr = bindRValue(member->as<FieldSymbol>().getType(), *item->expr,
-                                        nameToken.location(), context);
+                                        nameToken.range(), context);
                 bad |= expr.bad();
 
                 auto [it, inserted] = memberMap.emplace(member, &expr);
@@ -1806,7 +1801,7 @@ Expression& StructuredAssignmentPatternExpression::forStruct(
             else {
                 auto found = Lookup::unqualified(*context.scope, name, LookupFlags::Type);
                 if (found && found->isType()) {
-                    auto& expr = bindRValue(found->as<Type>(), *item->expr, nameToken.location(),
+                    auto& expr = bindRValue(found->as<Type>(), *item->expr, nameToken.range(),
                                             context);
                     bad |= expr.bad();
 
@@ -1823,9 +1818,7 @@ Expression& StructuredAssignmentPatternExpression::forStruct(
         else if (DataTypeSyntax::isKind(item->key->kind)) {
             const Type& typeKey = comp.getType(item->key->as<DataTypeSyntax>(), context);
             if (typeKey.isSimpleType()) {
-                auto& expr = bindRValue(typeKey, *item->expr,
-                                        item->expr->getFirstToken().location(), context);
-
+                auto& expr = bindRValue(typeKey, *item->expr, {}, context);
                 typeSetters.emplace_back(TypeSetter{&typeKey, &expr});
                 bad |= expr.bad();
             }
@@ -1883,8 +1876,7 @@ static std::optional<int32_t> bindArrayIndexSetter(
     if (!index)
         return std::nullopt;
 
-    auto& expr = Expression::bindRValue(elementType, valueSyntax,
-                                        valueSyntax.getFirstToken().location(), context);
+    auto& expr = Expression::bindRValue(elementType, valueSyntax, {}, context);
     if (expr.bad())
         return std::nullopt;
 
@@ -1931,9 +1923,7 @@ Expression& StructuredAssignmentPatternExpression::forFixedArray(
         if (keyExpr.kind == ExpressionKind::DataType) {
             const Type& typeKey = *keyExpr.type;
             if (typeKey.isSimpleType()) {
-                auto& expr = bindRValue(typeKey, *item->expr,
-                                        item->expr->getFirstToken().location(), context);
-
+                auto& expr = bindRValue(typeKey, *item->expr, {}, context);
                 typeSetters.emplace_back(TypeSetter{&typeKey, &expr});
                 bad |= expr.bad();
             }
@@ -2083,13 +2073,10 @@ Expression& StructuredAssignmentPatternExpression::forAssociativeArray(
         }
         else {
             const Expression* indexExpr;
-            if (indexType) {
-                indexExpr = &bindRValue(*indexType, *item->key,
-                                        item->key->getFirstToken().location(), context);
-            }
-            else {
+            if (indexType)
+                indexExpr = &bindRValue(*indexType, *item->key, {}, context);
+            else
                 indexExpr = &Expression::bind(*item->key, context);
-            }
 
             if (!indexExpr->bad()) {
                 auto cv = context.eval(*indexExpr);
@@ -2107,8 +2094,7 @@ Expression& StructuredAssignmentPatternExpression::forAssociativeArray(
                 }
             }
 
-            auto& expr = bindRValue(elementType, *item->expr,
-                                    item->expr->getFirstToken().location(), context);
+            auto& expr = bindRValue(elementType, *item->expr, {}, context);
             bad |= expr.bad() || indexExpr->bad();
 
             indexSetters.push_back(IndexSetter{indexExpr, &expr});
@@ -2198,8 +2184,7 @@ Expression& ReplicatedAssignmentPatternExpression::forStruct(
     size_t index = 0;
     SmallVector<const Expression*> elems;
     for (auto item : syntax.items) {
-        auto& expr = Expression::bindRValue(*types[index++], *item,
-                                            item->getFirstToken().location(), context);
+        auto& expr = Expression::bindRValue(*types[index++], *item, {}, context);
         elems.push_back(&expr);
         bad |= expr.bad();
     }

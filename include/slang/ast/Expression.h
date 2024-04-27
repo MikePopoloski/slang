@@ -168,11 +168,11 @@ public:
     /// Binds the right hand side of an assignment-like expression from the given syntax nodes.
     /// @param lhs The type of the left hand side, for type checking
     /// @param rhs The syntax node representing the expression to bind
-    /// @param location The location of the assignment, for reporting diagnostics
+    /// @param assignmentRange The source range of the assignment, for reporting diagnostics
     /// @param context The AST context under which binding is performed
     /// @param extraFlags Extra flags to apply when binding
     static const Expression& bindRValue(const Type& lhs, const ExpressionSyntax& rhs,
-                                        SourceLocation location, const ASTContext& context,
+                                        SourceRange assignmentRange, const ASTContext& context,
                                         bitmask<ASTFlags> extraFlags = ASTFlags::None);
 
     /// Binds a connection to a ref argument from the given syntax nodes.
@@ -196,7 +196,7 @@ public:
     ///
     /// @param implicitType The implicit type syntax for the parameter
     /// @param rhs The initializer expression to bind
-    /// @param location The location of the initializer, for reporting diagnostics
+    /// @param assignmentRange The source range of the assignment, for reporting diagnostics
     /// @param exprContext The AST context to use for binding the initializer
     /// @param typeContext The AST context to use for binding the type
     /// @param extraFlags Extra flags to apply to AST creation
@@ -206,7 +206,7 @@ public:
     ///
     static std::tuple<const Expression*, const Type*> bindImplicitParam(
         const syntax::DataTypeSyntax& implicitType, const ExpressionSyntax& rhs,
-        SourceLocation location, const ASTContext& exprContext, const ASTContext& typeContext,
+        SourceRange assignmentRange, const ASTContext& exprContext, const ASTContext& typeContext,
         bitmask<ASTFlags> extraFlags = ASTFlags::None);
 
     /// Bind a selector expression given an already existing value expression to select from.
@@ -263,7 +263,7 @@ public:
     /// @param context The AST context
     /// @param type The type to convert to
     /// @param expr The expression being converted
-    /// @param location The location where conversion is happening, for reporting diagnostics
+    /// @param assignmentRange The source range of the assignment, for reporting diagnostics
     /// @param lhsExpr If the conversion is for an output port, this is a pointer to
     ///                the left-hand side expression. The pointer will be reassigned if
     ///                array port slicing occurs.
@@ -271,7 +271,7 @@ public:
     ///                    It will the @a AssignFlags::SlicedPort flag added to it if array
     ///                    port slicing occurs.
     static Expression& convertAssignment(const ASTContext& context, const Type& type,
-                                         Expression& expr, SourceLocation location,
+                                         Expression& expr, SourceRange assignmentRange,
                                          Expression** lhsExpr = nullptr,
                                          bitmask<AssignFlags>* assignFlags = nullptr);
 
@@ -434,7 +434,7 @@ protected:
     // Perform type propagation and constant folding of a context-determined subexpression.
     static void contextDetermined(const ASTContext& context, Expression*& expr,
                                   const Expression* parentExpr, const Type& newType,
-                                  SourceLocation assignmentLoc = {});
+                                  SourceRange operatorRange, bool isAssignment = false);
 
     // Perform type propagation and constant folding of a self-determined subexpression.
     static void selfDetermined(const ASTContext& context, Expression*& expr);

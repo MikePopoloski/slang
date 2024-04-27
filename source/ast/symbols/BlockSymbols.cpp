@@ -633,7 +633,7 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(Compilation& comp
 
     // Bind the initialization expression.
     auto& initial = Expression::bindRValue(compilation.getIntegerType(), *syntax.initialExpr,
-                                           syntax.equals.location(), context);
+                                           syntax.equals.range(), context);
     ConstantValue initialVal = context.eval(initial);
     if (!initialVal)
         return *result;

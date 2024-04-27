@@ -461,13 +461,10 @@ static const Expression& bindCovergroupExpr(const ExpressionSyntax& syntax,
                                             const Type* lvalueType = nullptr,
                                             bitmask<ASTFlags> extraFlags = {}) {
     const Expression* expr;
-    if (lvalueType) {
-        expr = &Expression::bindRValue(*lvalueType, syntax, syntax.getFirstToken().location(),
-                                       context, extraFlags);
-    }
-    else {
+    if (lvalueType)
+        expr = &Expression::bindRValue(*lvalueType, syntax, {}, context, extraFlags);
+    else
         expr = &Expression::bind(syntax, context, extraFlags);
-    }
 
     context.eval(*expr, EvalFlags::CovergroupExpr);
     return *expr;
@@ -1051,9 +1048,7 @@ BinsSelectExpr& SetExprBinsSelectExpr::fromSyntax(const SimpleBinsSelectExprSynt
             context.requireIntegral(*matches);
     }
 
-    auto& expr = Expression::bindRValue(*body.crossQueueType, *syntax.expr,
-                                        syntax.expr->getFirstToken().location(), context);
-
+    auto& expr = Expression::bindRValue(*body.crossQueueType, *syntax.expr, {}, context);
     return *comp.emplace<SetExprBinsSelectExpr>(expr, matches);
 }
 

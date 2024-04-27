@@ -809,3 +809,26 @@ endmodule
     for (size_t i = 0; i < 5; i++)
         CHECK(diags[i].code == diag::UselessCast);
 }
+
+TEST_CASE("Propagated type conversion warnings point to the right operator") {
+    auto tree = SyntaxTree::fromText(R"(
+function f1(int i);
+    return (i >>> 31) == '1;
+endfunction
+
+function automatic int f2(int i);
+    int unsigned j;
+    j += (i >>> 31);
+    return j;
+endfunction
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::SignConversion);
+    CHECK(diags[1].code == diag::SignConversion);
+    CHECK(diags[2].code == diag::SignConversion);
+}
