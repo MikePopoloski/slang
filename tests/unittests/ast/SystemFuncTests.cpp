@@ -1284,3 +1284,22 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("System function call args are not considered 'top-level' statements") {
+    auto tree = SyntaxTree::fromText(R"(
+module my_mod;
+  function automatic logic my_func();
+    my_func = 1'b1;
+    assert (my_func === 1'b1)
+      else $error("Expect my_func to return 1 but got %0b", my_func);
+  endfunction
+endmodule
+)");
+
+    CompilationOptions options;
+    options.flags |= CompilationFlags::AllowRecursiveImplicitCall;
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

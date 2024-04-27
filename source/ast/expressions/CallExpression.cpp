@@ -566,7 +566,7 @@ Expression& CallExpression::createSystemCall(
     }
     else {
         ASTContext::RandomizeDetails randomizeDetails;
-        ASTContext argContext = context;
+        ASTContext argContext = context.resetFlags({});
 
         if (subroutine.withClauseMode == WithClauseMode::Randomize) {
             // If this is a class-scoped randomize call, setup the scope properly
