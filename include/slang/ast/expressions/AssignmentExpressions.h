@@ -109,7 +109,7 @@ public:
         operand_(&operand) {}
 
     /// @returns true if this is an implicit conversion
-    bool isImplicit() const { return conversionKind < ConversionKind::Explicit; }
+    bool isImplicit() const { return conversionKind < ConversionKind::StreamingConcat; }
 
     /// @returns the operand of the conversion
     const Expression& operand() const { return *operand_; }

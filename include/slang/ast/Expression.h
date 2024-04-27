@@ -340,6 +340,10 @@ public:
     /// Returns true if any subexpression of this expression is a hierarchical reference.
     bool hasHierarchicalReference() const;
 
+    /// If this expression is an implicit conversion, recursively unwraps to the
+    /// target operand. Otherwise returns `*this`.
+    const Expression& unwrapImplicitConversions() const;
+
     /// @brief Casts this expression to the given concrete derived type.
     ///
     /// Asserts that the type is appropriate given this expression's kind.

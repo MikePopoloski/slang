@@ -11,13 +11,16 @@
 #include "slang/ast/ASTSerializer.h"
 #include "slang/ast/Compilation.h"
 #include "slang/ast/Expression.h"
+#include "slang/ast/expressions/LiteralExpressions.h"
 #include "slang/ast/symbols/ClassSymbols.h"
 #include "slang/ast/symbols/InstanceSymbols.h"
 #include "slang/ast/symbols/MemberSymbols.h"
 #include "slang/ast/symbols/VariableSymbols.h"
 #include "slang/diagnostics/ConstEvalDiags.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
+#include "slang/diagnostics/ExpressionsDiags.h"
 #include "slang/diagnostics/LookupDiags.h"
+#include "slang/diagnostics/NumericDiags.h"
 #include "slang/diagnostics/TypesDiags.h"
 #include "slang/numeric/MathUtils.h"
 #include "slang/syntax/AllSyntax.h"
@@ -335,24 +338,43 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
 
     // For enumerands that have an initializer, set it up appropriately.
     auto setInitializer = [&](EnumValueSymbol& ev, const EqualsValueClauseSyntax& initializer) {
-        ev.setInitializerSyntax(*initializer.expr, initializer.equals.location());
-
+        // Clear our previous state in case there's an error and we need to exit early.
         first = false;
-        previous = ev.getValue();
-        previousRange = ev.getInitializer()->sourceRange;
+        previous = nullptr;
 
-        if (!previous)
+        // Create the initializer expression.
+        ev.setInitializerSyntax(*initializer.expr, initializer.equals.location());
+        auto initExpr = ev.getInitializer();
+        SLANG_ASSERT(initExpr);
+
+        // Drill down to the original initializer before any conversions are applied.
+        initExpr = &initExpr->unwrapImplicitConversions();
+        previousRange = initExpr->sourceRange;
+
+        // [6.19] says that the initializer for an enum value must be an integer expression that
+        // does not truncate any bits. Furthermore, if a sized literal constant is used, it must
+        // be sized exactly to the size of the enum base type.
+        auto& rt = *initExpr->type;
+        if (!rt.isIntegral()) {
+            context.addDiag(diag::ValueMustBeIntegral, previousRange);
             return;
+        }
 
-        auto loc = previousRange.start();
-        auto& value = previous.integer(); // checkEnumInitializer ensures previous is integral
+        if (bitWidth != rt.getBitWidth() && initExpr->kind == ExpressionKind::IntegerLiteral &&
+            !initExpr->as<IntegerLiteral>().isDeclaredUnsized) {
+            auto& diag = context.addDiag(diag::EnumValueSizeMismatch, previousRange);
+            diag << rt.getBitWidth() << bitWidth;
+        }
+
+        ev.getValue();
+        if (!initExpr->constant)
+            return;
 
         // An enumerated name with x or z assignments assigned to an enum with no explicit data type
         // or an explicit 2-state declaration shall be a syntax error.
+        auto& value = initExpr->constant->integer();
         if (!base->isFourState() && value.hasUnknown()) {
-            context.addDiag(diag::EnumValueUnknownBits, loc) << value << *base;
-            ev.setValue(nullptr);
-            previous = nullptr;
+            context.addDiag(diag::EnumValueUnknownBits, previousRange) << value << *base;
             return;
         }
 
@@ -372,26 +394,13 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
             }
 
             if (!good) {
-                context.addDiag(diag::EnumValueOutOfRange, loc) << value << *base;
-                ev.setValue(nullptr);
-                previous = nullptr;
+                context.addDiag(diag::EnumValueOutOfRange, previousRange) << value << *base;
                 return;
             }
         }
 
-        // Implicit casting to base type to ensure value matches the underlying type.
-        if (value.getBitWidth() != bitWidth) {
-            auto cv = previous.convertToInt(bitWidth, base->isSigned(), base->isFourState());
-            ev.setValue(cv);
-            previous = std::move(cv);
-        }
-        else {
-            if (!base->isFourState())
-                value.flattenUnknowns();
-            value.setSigned(base->isSigned());
-        }
-
-        checkValue(previous, loc);
+        previous = ev.getValue();
+        checkValue(previous, previousRange.start());
     };
 
     // For enumerands that have no initializer, infer the value via this function.
@@ -573,7 +582,10 @@ const ConstantValue& EnumValueSymbol::getValue(SourceRange referencingRange) con
             auto scope = getParentScope();
             SLANG_ASSERT(scope);
 
-            ASTContext ctx(*scope, LookupLocation::max);
+            // We set UnevaluatedBranch here so that we don't get any implicit
+            // conversion warnings, since we check those manually in the enum
+            // value creation path.
+            ASTContext ctx(*scope, LookupLocation::max, ASTFlags::UnevaluatedBranch);
 
             if (evaluating) {
                 SLANG_ASSERT(referencingRange.start());

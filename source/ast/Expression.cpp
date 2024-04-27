@@ -717,6 +717,18 @@ bool Expression::hasHierarchicalReference() const {
     return visitor.any;
 }
 
+const Expression& Expression::unwrapImplicitConversions() const {
+    auto expr = this;
+    while (expr->kind == ExpressionKind::Conversion) {
+        auto& conv = expr->as<ConversionExpression>();
+        if (!conv.isImplicit())
+            break;
+
+        expr = &conv.operand();
+    }
+    return *expr;
+}
+
 Expression& Expression::create(Compilation& compilation, const ExpressionSyntax& syntax,
                                const ASTContext& ctx, bitmask<ASTFlags> extraFlags,
                                const Type* assignmentTarget) {

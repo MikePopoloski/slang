@@ -36,26 +36,6 @@ using namespace slang;
 using namespace slang::ast;
 using namespace slang::syntax;
 
-bool checkEnumInitializer(const ASTContext& context, const Type& lt, const Expression& rhs) {
-    // [6.19] says that the initializer for an enum value must be an integer expression that
-    // does not truncate any bits. Furthermore, if a sized literal constant is used, it must
-    // be sized exactly to the size of the enum base type.
-    const Type& rt = *rhs.type;
-    if (!rt.isIntegral()) {
-        context.addDiag(diag::ValueMustBeIntegral, rhs.sourceRange);
-        return false;
-    }
-
-    if (lt.getBitWidth() != rt.getBitWidth() && rhs.kind == ExpressionKind::IntegerLiteral &&
-        !rhs.as<IntegerLiteral>().isDeclaredUnsized) {
-        auto& diag = context.addDiag(diag::EnumValueSizeMismatch, rhs.sourceRange);
-        diag << rt.getBitWidth() << lt.getBitWidth();
-        return false;
-    }
-
-    return true;
-}
-
 // This function exists to handle a case like:
 //      integer i;
 //      enum { A, B } foo;
@@ -133,27 +113,18 @@ void checkImplicitConversions(const ASTContext& context, const Type& sourceType,
         return diag;
     };
 
-    auto expr = &op;
-    while (expr->kind == ExpressionKind::Conversion) {
-        auto& conv = expr->as<ConversionExpression>();
-        if (!conv.isImplicit())
-            break;
-
-        expr = &conv.operand();
-    }
-
-    if (expr->kind == ExpressionKind::LValueReference)
-        return;
-
     // Don't warn about conversions in compound assignment operators.
-    if (expr->kind == ExpressionKind::BinaryOp) {
-        auto left = &expr->as<BinaryExpression>().left();
-        while (left->kind == ExpressionKind::Conversion)
-            left = &left->as<ConversionExpression>().operand();
+    auto isCompoundAssign = [&] {
+        auto& expr = op.unwrapImplicitConversions();
+        if (expr.kind == ExpressionKind::LValueReference)
+            return true;
 
-        if (left->kind == ExpressionKind::LValueReference)
-            return;
-    }
+        return expr.kind == ExpressionKind::BinaryOp &&
+               expr.as<BinaryExpression>().left().unwrapImplicitConversions().kind ==
+                   ExpressionKind::LValueReference;
+    };
+    if (isCompoundAssign())
+        return;
 
     const Type& lt = targetType.getCanonicalType();
     const Type& rt = sourceType.getCanonicalType();
@@ -175,10 +146,8 @@ void checkImplicitConversions(const ASTContext& context, const Type& sourceType,
         if (lt.isSigned() != rt.isSigned()) {
             // Comparisons get their own warning elsewhere.
             bool isComparison = false;
-            const BinaryExpression* binExpr = nullptr;
             if (parentExpr && parentExpr->kind == ExpressionKind::BinaryOp) {
-                binExpr = &parentExpr->as<BinaryExpression>();
-                switch (binExpr->op) {
+                switch (parentExpr->as<BinaryExpression>().op) {
                     case BinaryOperator::Equality:
                     case BinaryOperator::Inequality:
                     case BinaryOperator::CaseEquality:
@@ -430,8 +399,13 @@ Expression& Expression::convertAssignment(const ASTContext& context, const Type&
 
     Expression* result = &expr;
     const Type* rt = expr.type;
+
+    auto finalizeType = [&](const Type& t) {
+        contextDetermined(context, result, nullptr, t, assignmentRange, /* isAssignment */ true);
+    };
+
     if (type.isEquivalent(*rt)) {
-        contextDetermined(context, result, nullptr, *rt, assignmentRange, /* isAssignment */ true);
+        finalizeType(*rt);
 
         if (type.isVoid())
             context.addDiag(diag::VoidAssignment, expr.sourceRange);
@@ -532,28 +506,28 @@ Expression& Expression::convertAssignment(const ASTContext& context, const Type&
     }
 
     if (type.isNumeric() && rt->isNumeric()) {
-        if (context.flags.has(ASTFlags::EnumInitializer) &&
-            !checkEnumInitializer(context, type, *result)) {
-            return badExpr(comp, &expr);
-        }
-
         // The "signednessFromRt" flag is important here; only the width of the lhs is
         // propagated down to operands, not the sign flag. Once the expression is appropriately
         // sized, the makeImplicit call down below will convert the sign for us.
         rt = binaryOperatorType(comp, &type, rt, false, /* signednessFromRt */ true);
-        bool expanding = type.isEquivalent(*rt);
-        if (expanding)
-            rt = &type;
 
-        contextDetermined(context, result, nullptr, *rt, assignmentRange, /* isAssignment */ true);
-        if (expanding)
-            return *result;
-
-        // Do not convert (truncate) enum initializer so out of range value can be checked.
-        if (context.flags.has(ASTFlags::EnumInitializer)) {
-            selfDetermined(context, result);
+        // If the final type is the same type (or equivalent) of the lhs, we know we're
+        // performing an expansion of the rhs. The propagation performed by contextDetermined
+        // will ensure that the expression has the correct resulting type, so we don't need an
+        // additional implicit conversion. What's not obvious here is that simple assignments like:
+        //      logic [3:0] a;
+        //      logic [8:0] b;
+        //      initial b = a;
+        // will still result in an appropriate conversion warning because the type propagation
+        // visitor will see that we're in an assignment and insert an implicit conversion for us.
+        if (type.isEquivalent(*rt)) {
+            finalizeType(type);
             return *result;
         }
+
+        // Otherwise use the common type and fall through to get an implicit conversion
+        // created for us.
+        finalizeType(*rt);
     }
 
     return ConversionExpression::makeImplicit(context, type, ConversionKind::Implicit, *result,
@@ -954,6 +928,9 @@ ConstantValue ConversionExpression::convert(EvalContext& context, const Type& fr
                                        conversionKind == ConversionKind::StreamingConcat);
     }
 
+    const bool checkImplicit = conversionKind == ConversionKind::Implicit &&
+                               !context.astCtx.flags.has(ASTFlags::UnevaluatedBranch);
+
     if (to.isIntegral()) {
         // [11.8.2] last bullet says: the operand shall be sign-extended only if the propagated type
         // is signed. It is different from [11.8.3] ConstantValue::convertToInt uses.
@@ -962,7 +939,7 @@ ConstantValue ConversionExpression::convert(EvalContext& context, const Type& fr
             value.integer().setSigned(to.isSigned());
 
         auto result = value.convertToInt(to.getBitWidth(), to.isSigned(), to.isFourState());
-        if (conversionKind == ConversionKind::Implicit) {
+        if (checkImplicit) {
             if (value.isInteger()) {
                 auto& oldInt = value.integer();
                 auto& newInt = result.integer();
@@ -995,7 +972,7 @@ ConstantValue ConversionExpression::convert(EvalContext& context, const Type& fr
 
     if (to.isFloating()) {
         auto result = to.getBitWidth() == 32 ? value.convertToShortReal() : value.convertToReal();
-        if (conversionKind == ConversionKind::Implicit && value.isInteger()) {
+        if (checkImplicit && value.isInteger()) {
             const bool differs = result.isReal()
                                      ? (int64_t)result.real() != value.integer().as<int64_t>()
                                      : (int32_t)result.shortReal() != value.integer().as<int32_t>();

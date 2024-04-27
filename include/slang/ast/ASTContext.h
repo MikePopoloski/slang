@@ -46,148 +46,145 @@ enum class SLANG_EXPORT ASTFlags : uint64_t {
     /// the first argument to system methods like $bits
     AllowDataType = 1ull << 2,
 
-    /// The expression being created is an enum value initializer.
-    EnumInitializer = 1ull << 3,
-
     /// Attributes are disallowed on expressions in this context.
-    NoAttributes = 1ull << 4,
+    NoAttributes = 1ull << 3,
 
     /// Assignment is allowed in this context. This flag is cleared
     /// for nested subexpressions, unless they are directly parenthesized.
-    AssignmentAllowed = 1ull << 5,
+    AssignmentAllowed = 1ull << 4,
 
     /// Assignments are disallowed in this context. As opposed to the AssignmentAllowed
     /// flag, this is not cleared and overrides that fact even if we are in a
     /// procedural context and would otherwise be allowed to modify variables.
-    AssignmentDisallowed = 1ull << 6,
+    AssignmentDisallowed = 1ull << 5,
 
     /// Expression is not inside a procedural context.
-    NonProcedural = 1ull << 7,
+    NonProcedural = 1ull << 6,
 
     /// Expression is for a static variable's initializer. References to automatic
     /// variables will be disallowed.
-    StaticInitializer = 1ull << 8,
+    StaticInitializer = 1ull << 7,
 
     /// Streaming operator is allowed in assignment target, assignment source, bit-stream casting
     /// argument, or stream expressions of another streaming concatenation. This flag is cleared for
     /// nested subexpressions, unless they are directly parenthesized.
-    StreamingAllowed = 1ull << 9,
+    StreamingAllowed = 1ull << 8,
 
     /// This is the first expression appearing as an expression statement; potentially this
     /// indicates whether a subroutine invocation is as a task (if set) or as a function (unset).
     /// Cleared for nested subexpressions.
-    TopLevelStatement = 1ull << 10,
+    TopLevelStatement = 1ull << 9,
 
     /// Expression is allowed to be the unbounded literal '$' such as inside a queue select.
-    AllowUnboundedLiteral = 1ull << 11,
+    AllowUnboundedLiteral = 1ull << 10,
 
     /// Expression is allowed to do arithmetic with an unbounded literal.
-    AllowUnboundedLiteralArithmetic = 1ull << 12,
+    AllowUnboundedLiteralArithmetic = 1ull << 11,
 
     /// AST creation is happening within a function body
-    Function = 1ull << 13,
+    Function = 1ull << 12,
 
     /// AST creation is happening within a final block.
-    Final = 1ull << 14,
+    Final = 1ull << 13,
 
     /// AST creation is happening within the intra-assignment timing control of
     /// a non-blocking assignment expression.
-    NonBlockingTimingControl = 1ull << 15,
+    NonBlockingTimingControl = 1ull << 14,
 
     /// AST creation is happening within an event expression.
-    EventExpression = 1ull << 16,
+    EventExpression = 1ull << 15,
 
     /// AST creation is in a context where type reference expressions are allowed.
-    AllowTypeReferences = 1ull << 17,
+    AllowTypeReferences = 1ull << 16,
 
     /// AST creation is happening within an assertion expression (sequence or property).
-    AssertionExpr = 1ull << 18,
+    AssertionExpr = 1ull << 17,
 
     /// Allow binding a clocking block as part of a top-level event expression.
-    AllowClockingBlock = 1ull << 19,
+    AllowClockingBlock = 1ull << 18,
 
     /// AST creation is for checking an assertion argument, prior to it being expanded as
     /// part of an actual instance.
-    AssertionInstanceArgCheck = 1ull << 20,
+    AssertionInstanceArgCheck = 1ull << 19,
 
     /// AST creation is for a cycle delay or sequence repetition, where references to
     /// assertion formal ports have specific type requirements.
-    AssertionDelayOrRepetition = 1ull << 21,
+    AssertionDelayOrRepetition = 1ull << 20,
 
     /// AST creation is for the left hand side of an assignment operation.
-    LValue = 1ull << 22,
+    LValue = 1ull << 21,
 
     /// AST creation is for the negation of a property, which disallows recursive
     /// instantiations.
-    PropertyNegation = 1ull << 23,
+    PropertyNegation = 1ull << 22,
 
     /// AST creation is for a property that has come after a positive advancement
     /// of time within the parent property definition.
-    PropertyTimeAdvance = 1ull << 24,
+    PropertyTimeAdvance = 1ull << 23,
 
     /// AST creation is for an argument passed to a recursive property instance.
-    RecursivePropertyArg = 1ull << 25,
+    RecursivePropertyArg = 1ull << 24,
 
     /// AST creation is inside a concurrent assertion's action block.
-    ConcurrentAssertActionBlock = 1ull << 26,
+    ConcurrentAssertActionBlock = 1ull << 25,
 
     /// AST creation is for a covergroup expression that permits referencing a
     /// formal argument of an overridden sample method.
-    AllowCoverageSampleFormal = 1ull << 27,
+    AllowCoverageSampleFormal = 1ull << 26,
 
     /// Expressions are allowed to reference coverpoint objects directly.
-    AllowCoverpoint = 1ull << 28,
+    AllowCoverpoint = 1ull << 27,
 
     /// User-defined nettypes are allowed to be looked up in this context.
-    AllowNetType = 1ull << 29,
+    AllowNetType = 1ull << 28,
 
     /// AST creation is for an output (or inout) port or function argument.
-    OutputArg = 1ull << 30,
+    OutputArg = 1ull << 29,
 
     /// AST creation is for a procedural assign statement.
-    ProceduralAssign = 1ull << 31,
+    ProceduralAssign = 1ull << 30,
 
     /// AST creation is for a procedural force / release / deassign statement.
-    ProceduralForceRelease = 1ull << 32,
+    ProceduralForceRelease = 1ull << 31,
 
     /// AST creation is in a context that allows interconnect nets.
-    AllowInterconnect = 1ull << 33,
+    AllowInterconnect = 1ull << 32,
 
     /// AST creation is in a context where drivers should not be registered for
     /// lvalues, even if they otherwise would normally be. This is used, for example,
     /// in potentially unrollable for loops to let the loop unroller handle the drivers.
-    NotADriver = 1ull << 34,
+    NotADriver = 1ull << 33,
 
     /// AST creation is for a range expression inside a streaming concatenation operator.
-    StreamingWithRange = 1ull << 35,
+    StreamingWithRange = 1ull << 34,
 
     /// AST creation is happening inside a specify block.
-    SpecifyBlock = 1ull << 36,
+    SpecifyBlock = 1ull << 35,
 
     /// AST creation is for a DPI argument type.
-    DPIArg = 1ull << 37,
+    DPIArg = 1ull << 36,
 
     /// AST creation is for an assertion instance's default argument.
-    AssertionDefaultArg = 1ull << 38,
+    AssertionDefaultArg = 1ull << 37,
 
     /// AST creation is for an lvalue that also counts as an rvalue. Only valid
     /// when combined with the LValue flag -- used for things like the pre & post
     /// increment and decrement operators.
-    LAndRValue = 1ull << 39,
+    LAndRValue = 1ull << 38,
 
     /// AST binding should not count symbol references towards that symbol being "used".
     /// If this flag is not set, accessing a variable or net in an expression will count
     /// that symbol as being "used".
-    NoReference = 1ull << 40,
+    NoReference = 1ull << 39,
 
     /// AST binding is for a parameter inside a SystemVerilog configuration.
-    ConfigParam = 1ull << 41,
+    ConfigParam = 1ull << 40,
 
     /// AST binding is for the contents of the type() operator.
-    TypeOperator = 1ull << 42,
+    TypeOperator = 1ull << 41,
 
     /// AST binding is inside a fork-join_any or fork-join_none block.
-    ForkJoinAnyNone = 1ull << 43
+    ForkJoinAnyNone = 1ull << 42
 };
 SLANG_BITMASK(ASTFlags, ForkJoinAnyNone)
 

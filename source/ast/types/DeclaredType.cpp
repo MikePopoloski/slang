@@ -419,7 +419,7 @@ void DeclaredType::resolveAt(const ASTContext& context) const {
     const Type* targetType = type;
     if (targetType->isEnum() && scope.asSymbol().kind == SymbolKind::EnumType) {
         targetType = &targetType->as<EnumType>().baseType;
-        extraFlags = ASTFlags::EnumInitializer;
+        extraFlags = ASTFlags::UnevaluatedBranch;
     }
     else if (flags.has(DeclaredTypeFlags::AllowUnboundedLiteral)) {
         extraFlags = ASTFlags::AllowUnboundedLiteral;
