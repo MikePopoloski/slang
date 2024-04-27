@@ -61,7 +61,9 @@ public:
             width = cv.getBitstreamWidth();
         }
 
-        // TODO: handle overflow of 32 bits
+        // Note: we convert the size down to a 32-bit result. This can result
+        // in (defined) overflow, which matches the behavior of all other
+        // tools that I tried.
         return SVInt(32, width, true);
     }
 };

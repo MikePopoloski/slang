@@ -1303,3 +1303,17 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("$bits of >32bit sized type") {
+    auto tree = SyntaxTree::fromText(R"(
+logic [7:0] a [2147483647];
+localparam p = $bits(a);
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& p = compilation.getCompilationUnits()[0]->find<ParameterSymbol>("p");
+    CHECK(p.getValue().integer() == -8);
+}
