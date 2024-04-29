@@ -19,7 +19,7 @@ size_t nodeIDs = 0;
 
 struct TestNode : public Node<TestNode, TestEdge> {
     size_t ID;
-    TestNode() : ID(nodeIDs++){};
+    TestNode() : ID(nodeIDs++) {};
 };
 
 struct TestEdge : public DirectedEdge<TestNode, TestEdge> {

@@ -723,7 +723,7 @@ public:
 
 class PlaTask : public SystemTaskBase {
 public:
-    PlaTask(const std::string& name) : SystemTaskBase(name){};
+    PlaTask(const std::string& name) : SystemTaskBase(name) {};
 
     const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {

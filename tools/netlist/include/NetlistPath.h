@@ -22,7 +22,7 @@ public:
 
     NetlistPath() = default;
 
-    NetlistPath(NodeListType nodes) : nodes(std::move(nodes)){};
+    NetlistPath(NodeListType nodes) : nodes(std::move(nodes)) {};
 
     const_iterator begin() const { return nodes.begin(); }
     const_iterator end() const { return nodes.end(); }
