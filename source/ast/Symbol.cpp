@@ -193,7 +193,7 @@ void Symbol::getLexicalPath(std::string& buffer) const {
 }
 
 std::optional<bool> Symbol::isDeclaredBefore(const Symbol& target) const {
-    return isDeclaredBefore(LookupLocation::before(target));
+    return isDeclaredBefore(LookupLocation::after(target));
 }
 
 std::optional<bool> Symbol::isDeclaredBefore(LookupLocation target) const {
@@ -201,36 +201,15 @@ std::optional<bool> Symbol::isDeclaredBefore(LookupLocation target) const {
     if (!target.getScope())
         return ll < target;
 
-    // Find a common parent scope for the two symbols. Start with our parent and
-    // walk upwards until we find `target`s scope or run into a compilation unit.
-    SmallMap<const Scope*, LookupLocation, 8> locMap;
-    const Symbol* sym = this;
-    const Scope* scope = ll.getScope();
-
-    while (sym->kind != SymbolKind::CompilationUnit && scope && scope != target.getScope()) {
-        locMap[scope] = ll;
-        sym = &scope->asSymbol();
-        ll = LookupLocation::before(*sym);
-        scope = ll.getScope();
+    // Walk up the target's tree until we find our own scope.
+    while (target.getScope() != ll.getScope()) {
+        auto& sym = target.getScope()->asSymbol();
+        target = LookupLocation::after(sym);
+        if (sym.kind == SymbolKind::CompilationUnit || !target.getScope())
+            return std::nullopt;
     }
 
-    if (scope == target.getScope())
-        return ll < target;
-
-    // If target wasn't in a direct scope of any of our own parents,
-    // repeat the process walking up target's scopes.
-    sym = &target.getScope()->asSymbol();
-    ll = LookupLocation::after(*sym);
-
-    while ((scope = ll.getScope()) != nullptr && sym->kind != SymbolKind::CompilationUnit) {
-        if (auto it = locMap.find(scope); it != locMap.end())
-            return it->second < ll;
-
-        sym = &scope->asSymbol();
-        ll = LookupLocation::after(*sym);
-    }
-
-    return std::nullopt;
+    return ll < target;
 }
 
 const DefinitionSymbol* Symbol::getDeclaringDefinition() const {

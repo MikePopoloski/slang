@@ -160,4 +160,16 @@ void Diagnostics::sort(const SourceManager& sourceManager) {
     std::ranges::stable_sort(*this, compare);
 }
 
+Diagnostics Diagnostics::filter(std::initializer_list<DiagCode> list) const {
+    Diagnostics result;
+    result.reserve(size());
+
+    for (auto& diag : *this) {
+        if (std::ranges::none_of(list, [&](DiagCode code) { return code == diag.code; }))
+            result.push_back(diag);
+    }
+
+    return result;
+}
+
 } // namespace slang

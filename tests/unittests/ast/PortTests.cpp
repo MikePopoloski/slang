@@ -639,7 +639,7 @@ endmodule
 
 module o(I conn);
     m m2(conn);
-    logic foo = conn.a;
+    wire foo = conn.a;
 endmodule
 
 module top;
@@ -832,7 +832,7 @@ module n(x, y);
     I x;
 
     localparam bar = x.foo;
-    int i = y.baz;
+    wire integer i = y.baz;
 
     I.mod y;
 endmodule

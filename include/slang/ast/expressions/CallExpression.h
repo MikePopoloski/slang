@@ -131,7 +131,7 @@ public:
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::Call; }
 
     template<typename TVisitor>
-    void visitExprs(TVisitor&& visitor) const {
+    void visitExprsNoArgs(TVisitor&& visitor) const {
         if (thisClass())
             thisClass()->visit(visitor);
 
@@ -146,7 +146,11 @@ public:
                     constraints->visit(visitor);
             }
         }
+    }
 
+    template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const {
+        visitExprsNoArgs(visitor);
         for (auto arg : arguments())
             arg->visit(visitor);
     }

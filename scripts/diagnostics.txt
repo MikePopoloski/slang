@@ -549,6 +549,8 @@ warning unknown-library WarnUnknownLibrary "unknown library '{}'"
 warning dup-config-rule DupConfigRule "duplicate config rule for {} -- ignoring this one"
 warning unused-config-cell UnusedConfigCell "unused cell config rule"
 warning unused-config-instance UnusedConfigInstance "unused config rule -- instance path does not exist in the design"
+warning static-init-order StaticInitOrder "initializer for static variable '{}' refers to another static variable '{}' which will be initialized in an indeterminate order"
+warning static-init-value StaticInitValue "initializer for static variable '{}' refers to '{}' which will not have a value at initialization time"
 
 subsystem Expressions
 error BadUnaryExpression "invalid operand type {} to unary expression"
@@ -1108,7 +1110,7 @@ group default = { real-underflow real-overflow vector-overflow int-overflow unco
 group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-none case-gen-dup
                 unused-result format-real ignored-slice task-ignored width-trunc dup-attr event-const
                 ineffective-sign port-width-trunc constant-conversion float-bool-conv int-bool-conv
-                useless-cast unsigned-arith-shift }
+                useless-cast unsigned-arith-shift static-init-order static-init-value }
 
 group pedantic = { empty-pattern implicit-net-port nonstandard-escape-code nonstandard-generate format-multibit-strength
                    nonstandard-sys-func nonstandard-foreach nonstandard-dist }

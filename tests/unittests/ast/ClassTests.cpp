@@ -520,7 +520,7 @@ endfunction
 
 module m;
     G #(real) g1;
-    G #(int) g2;
+    G #(int) g2 = new();
 
     int i = g2.foo();
     real r = D::foo();
@@ -2971,7 +2971,7 @@ class C extends B;
 endclass : C
 
 module m;
-    int id;
+    int id = 0;
     A a = new("Hello", id);
     B b = new(3, "World", id);
     C c = new(4, "!", id, 1);
@@ -3012,7 +3012,7 @@ class B extends Base(default);
 endclass : B
 
 module m;
-    int id;
+    int id = 0;
     A a = new("Hello", id);
 endmodule
 )",

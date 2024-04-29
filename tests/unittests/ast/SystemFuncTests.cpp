@@ -793,8 +793,8 @@ TEST_CASE("Invalid clocking argument") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
     wire clk;
-    int i = $bits(@(posedge clk));
-    logic j = $rose(clk, @clk strong(a));
+    wire integer i = $bits(@(posedge clk));
+    wire logic j = $rose(clk, @clk strong(a));
 endmodule
 )");
 
@@ -1045,7 +1045,7 @@ endmodule
 TEST_CASE("Non-standard system funcs") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
-    int foo;
+    int foo = 0;
     string s = $psprintf("%0d", foo);
 endmodule
 )");

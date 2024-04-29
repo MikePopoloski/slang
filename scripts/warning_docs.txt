@@ -1198,3 +1198,28 @@ function bit[31:0] f1(int unsigned i);
     return i >>> 5;
 endfunction
 ```
+
+-Wstatic-init-value
+A static variable's initializer expression refers to an uninitialized variable, a net, a port,
+or a modport member, which won't have a value assigned by the time the initializer runs. The variable
+therefore will always be initialized to the default value.
+```
+module m(input i);
+    logic j = i;
+endmodule
+```
+
+-Wstatic-init-order
+A static variable's initializer refers to another variable that does not have a defined order
+of initialization relative to the first. This means that the initialization may or may not work
+as expected depending on how the tool chooses to schedule the initializers.
+```
+package p;
+    int i = 1;
+endpackage
+
+module m;
+    import p::i;
+    int j = i;
+endmodule
+```

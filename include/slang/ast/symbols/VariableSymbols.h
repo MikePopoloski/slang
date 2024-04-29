@@ -53,6 +53,8 @@ public:
 
     VariableSymbol(std::string_view name, SourceLocation loc, VariableLifetime lifetime);
 
+    void checkInitializer() const;
+
     void serializeTo(ASTSerializer& serializer) const;
 
     /// Constructs all variable symbols specified by the given syntax node. Note that

@@ -221,6 +221,12 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
         symbol.checkInitializer();
     }
 
+    void handle(const VariableSymbol& symbol) {
+        if (!handleDefault(symbol))
+            return;
+        symbol.checkInitializer();
+    }
+
     void handle(const FormalArgumentSymbol& symbol) {
         if (!handleDefault(symbol))
             return;

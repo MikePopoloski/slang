@@ -9,8 +9,10 @@
 
 #include "slang/ast/ASTContext.h"
 #include "slang/ast/ASTSerializer.h"
+#include "slang/ast/ASTVisitor.h"
 #include "slang/ast/Compilation.h"
 #include "slang/ast/Scope.h"
+#include "slang/ast/SystemSubroutine.h"
 #include "slang/ast/TimingControl.h"
 #include "slang/ast/expressions/MiscExpressions.h"
 #include "slang/ast/symbols/BlockSymbols.h"
@@ -140,6 +142,115 @@ VariableSymbol::VariableSymbol(SymbolKind childKind, std::string_view name, Sour
     ValueSymbol(childKind, name, loc), lifetime(lifetime) {
     if (lifetime == VariableLifetime::Automatic)
         getDeclaredType()->addFlags(DeclaredTypeFlags::AutomaticInitializer);
+}
+
+struct StaticInitializerVisitor {
+    const ASTContext& context;
+    const Symbol& sourceVar;
+
+    StaticInitializerVisitor(const ASTContext& context, const Symbol& sourceVar) :
+        context(context), sourceVar(sourceVar) {}
+
+    template<typename T>
+    void visit(const T& expr) {
+        if constexpr (std::is_base_of_v<Expression, T>) {
+            switch (expr.kind) {
+                case ExpressionKind::NamedValue:
+                case ExpressionKind::HierarchicalValue: {
+                    if (auto sym = expr.getSymbolReference()) {
+                        if (sym->kind == SymbolKind::Variable) {
+                            // Don't warn if this is the same var.
+                            auto& var = sym->template as<VariableSymbol>();
+                            if (&var == &sourceVar)
+                                return;
+
+                            const bool hasInit = var.getInitializer();
+                            const bool isFromPort = var.getFirstPortBackref();
+                            const bool isDeclaredBefore = var.isDeclaredBefore(sourceVar).value_or(
+                                false);
+
+                            // We warn unless this var has an initializer, is declared
+                            // before us in the same instance, and isn't attached to a port.
+                            if (hasInit && !isFromPort && isDeclaredBefore)
+                                return;
+
+                            auto code = (hasInit && !isFromPort) ? diag::StaticInitOrder
+                                                                 : diag::StaticInitValue;
+                            auto& diag = context.addDiag(code, expr.sourceRange);
+                            diag << sourceVar.name << var.name;
+                            diag.addNote(diag::NoteDeclarationHere, var.location);
+                        }
+                        else if (sym->kind == SymbolKind::Net ||
+                                 sym->kind == SymbolKind::ModportPort) {
+                            auto& diag = context.addDiag(diag::StaticInitValue, expr.sourceRange);
+                            diag << sourceVar.name << sym->name;
+                            diag.addNote(diag::NoteDeclarationHere, sym->location);
+                        }
+                    }
+                    break;
+                }
+                case ExpressionKind::Call: {
+                    auto& call = expr.template as<CallExpression>();
+                    call.visitExprsNoArgs(*this);
+
+                    if (call.isSystemCall()) {
+                        // Ignore unevaluated arguments to system calls.
+                        auto& sub = *std::get<1>(call.subroutine).subroutine;
+                        auto args = call.arguments();
+                        for (size_t i = 0; i < args.size(); i++) {
+                            if (!sub.isArgUnevaluated(i))
+                                args[i]->visit(*this);
+                        }
+                    }
+                    else {
+                        // Skip over output, inout, and ref args.
+                        auto& sub = *std::get<0>(call.subroutine);
+                        auto formals = sub.getArguments();
+                        auto args = call.arguments();
+                        SLANG_ASSERT(formals.size() == args.size());
+                        for (size_t i = 0; i < args.size(); i++) {
+                            if (formals[i]->direction == ArgumentDirection::In)
+                                args[i]->visit(*this);
+                        }
+                    }
+                    break;
+                }
+                case ExpressionKind::NewCovergroup:
+                    // Ignore new covergroup expressions.
+                    break;
+                default:
+                    if constexpr (HasVisitExprs<T, StaticInitializerVisitor>)
+                        expr.visitExprs(*this);
+                    break;
+            }
+        }
+    }
+};
+
+void VariableSymbol::checkInitializer() const {
+    // Check the initializer expression of static variables
+    // for references to other values that have indeterminate
+    // initialization order.
+    if (kind != SymbolKind::Variable || lifetime != VariableLifetime::Static)
+        return;
+
+    auto scope = getParentScope();
+    SLANG_ASSERT(scope);
+
+    switch (scope->asSymbol().kind) {
+        case SymbolKind::InstanceBody:
+        case SymbolKind::GenerateBlock:
+        case SymbolKind::Package:
+        case SymbolKind::CompilationUnit:
+            if (auto init = getInitializer(); init && !init->bad()) {
+                ASTContext context(*scope, LookupLocation::after(*this));
+                StaticInitializerVisitor visitor(context, *this);
+                init->visit(visitor);
+            }
+            break;
+        default:
+            break;
+    }
 }
 
 void VariableSymbol::serializeTo(ASTSerializer& serializer) const {

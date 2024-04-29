@@ -817,14 +817,17 @@ int foo = a.baz.bar;
 
 module a;
     if (1) begin : baz
-        int bar;
+        int bar = 0;
     end
 endmodule
 )");
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
-    NO_COMPILATION_ERRORS;
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::StaticInitOrder);
 }
 
 TEST_CASE("Non-const name selector") {
@@ -1249,10 +1252,10 @@ TEST_CASE("Lookup in invalid generate block") {
     auto tree = SyntaxTree::fromText(R"(
 module m #(parameter int count);
     for (genvar i = 0; i < count; i++) begin: asdf
-        logic foo;
+        logic foo = 0;
     end
 
-    logic i = asdf[0].foo;
+    wire i = asdf[0].foo;
 endmodule
 
 module n;
@@ -1268,12 +1271,12 @@ endmodule
 TEST_CASE("Package lookup with other symbol of same name") {
     auto tree = SyntaxTree::fromText(R"(
 package p;
-    int x;
+    logic x;
 endpackage
 
 module m;
     enum { p = 1 } sdf;
-    int i = p::x;
+    wire i = p::x;
 endmodule
 )");
 
@@ -1509,7 +1512,7 @@ interface I;
 endinterface
 
 module m(I.m i);
-    logic a = i.f;
+    wire a = i.f;
     logic b = i.g;
     logic c = i.foo;
 endmodule
@@ -1629,8 +1632,9 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 1);
-    CHECK(diags[0].code == diag::UndeclaredIdentifier);
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::StaticInitValue);
+    CHECK(diags[1].code == diag::UndeclaredIdentifier);
 }
 
 TEST_CASE("Package export lookup") {
@@ -1734,7 +1738,8 @@ endmodule
     Compilation compilation;
     compilation.addSyntaxTree(tree);
 
-    auto& diags = compilation.getAllDiagnostics();
+    auto diags = compilation.getAllDiagnostics().filter(
+        {diag::StaticInitOrder, diag::StaticInitValue});
     REQUIRE(diags.size() == 5);
     CHECK(diags[0].code == diag::Redefinition);
     CHECK(diags[1].code == diag::UnknownPackage);
@@ -1938,7 +1943,7 @@ endclass
 
 TEST_CASE("Package cannot refer to $unit or have hierarchical ref") {
     auto tree = SyntaxTree::fromText(R"(
-int i;
+int i = 0;
 
 package p;
     int j = i;
@@ -1955,7 +1960,7 @@ package p;
 endpackage
 
 module m;
-    int l;
+    int l = 0;
 endmodule
 )");
 
@@ -1963,10 +1968,11 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 3);
+    REQUIRE(diags.size() == 4);
     CHECK(diags[0].code == diag::CompilationUnitFromPackage);
     CHECK(diags[1].code == diag::CompilationUnitFromPackage);
-    CHECK(diags[2].code == diag::HierarchicalFromPackage);
+    CHECK(diags[2].code == diag::StaticInitOrder);
+    CHECK(diags[3].code == diag::HierarchicalFromPackage);
 }
 
 TEST_CASE("Virtual interface access is not necessarily hierarchical") {
@@ -2101,7 +2107,7 @@ module m;
     n n1(.*);
 
     if (1) begin
-        int j = i;
+        wire integer j = i;
     end
 endmodule
 )");

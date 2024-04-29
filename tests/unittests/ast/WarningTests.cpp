@@ -85,7 +85,9 @@ endmodule
     Compilation compilation(coptions);
     compilation.addSyntaxTree(tree);
 
-    auto& diags = compilation.getAllDiagnostics();
+    auto diags = compilation.getAllDiagnostics().filter(
+        {diag::StaticInitOrder, diag::StaticInitValue});
+
     REQUIRE(diags.size() == 19);
     CHECK(diags[0].code == diag::UnusedPort);
     CHECK(diags[1].code == diag::UndrivenPort);
@@ -131,7 +133,7 @@ module m(output v);
         assign z = 1;
     end
 
-    int y = z;
+    wire integer y = z;
     initial $dumpvars(m.y);
 
     event e[4];
@@ -373,8 +375,8 @@ endclass
 
 module m;
     int i;
-    string a,s = "a 3";
-    int b;
+    string a = "foo", s = "a 3";
+    int b = 0;
     initial begin
         $cast(i, i);
         void'($sscanf(s, "%s %d", a, b));
@@ -832,4 +834,32 @@ endfunction
     CHECK(diags[1].code == diag::UnsignedArithShift);
     CHECK(diags[2].code == diag::SignConversion);
     CHECK(diags[3].code == diag::SignConversion);
+}
+
+TEST_CASE("Indeterminate variable initialization order") {
+    auto tree = SyntaxTree::fromText(R"(
+package p;
+    int i = 1;
+endpackage
+
+int h = 1;
+
+module m(input int port);
+    import p::*;
+    int j = port;
+    int k = i;
+    int l = h;
+    wire integer m;
+    int n = m;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::StaticInitValue);
+    CHECK(diags[1].code == diag::StaticInitOrder);
+    CHECK(diags[2].code == diag::StaticInitValue);
 }

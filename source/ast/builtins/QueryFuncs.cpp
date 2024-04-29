@@ -21,6 +21,8 @@ class BitsFunction : public SystemSubroutine {
 public:
     BitsFunction() : SystemSubroutine("$bits", SubroutineKind::Function) {}
 
+    bool isArgUnevaluated(size_t) const final { return true; }
+
     const Expression& bindArgument(size_t, const ASTContext& context,
                                    const ExpressionSyntax& syntax, const Args&) const final {
         return Expression::bind(syntax, unevaluatedContext(context), ASTFlags::AllowDataType);
@@ -72,6 +74,8 @@ class TypenameFunction : public SystemSubroutine {
 public:
     TypenameFunction() : SystemSubroutine("$typename", SubroutineKind::Function) {}
 
+    bool isArgUnevaluated(size_t) const final { return true; }
+
     const Expression& bindArgument(size_t, const ASTContext& context,
                                    const ExpressionSyntax& syntax, const Args&) const final {
         return Expression::bind(syntax, unevaluatedContext(context), ASTFlags::AllowDataType);
@@ -101,6 +105,8 @@ public:
 class IsUnboundedFunction : public SystemSubroutine {
 public:
     IsUnboundedFunction() : SystemSubroutine("$isunbounded", SubroutineKind::Function) {}
+
+    bool isArgUnevaluated(size_t) const final { return true; }
 
     const Expression& bindArgument(size_t, const ASTContext& context,
                                    const ExpressionSyntax& syntax, const Args&) const final {
@@ -139,6 +145,8 @@ public:
 class ArrayQueryFunction : public SystemSubroutine {
 public:
     using SystemSubroutine::SystemSubroutine;
+
+    bool isArgUnevaluated(size_t index) const final { return index == 0; }
 
     const Expression& bindArgument(size_t index, const ASTContext& context,
                                    const ExpressionSyntax& syntax, const Args&) const final {
@@ -471,6 +479,8 @@ class ArrayDimensionFunction : public SystemSubroutine {
 public:
     ArrayDimensionFunction(const std::string& name, bool unpackedOnly) :
         SystemSubroutine(name, FUNC), unpackedOnly(unpackedOnly) {}
+
+    bool isArgUnevaluated(size_t) const final { return true; }
 
     const Expression& bindArgument(size_t, const ASTContext& context,
                                    const ExpressionSyntax& syntax, const Args&) const final {

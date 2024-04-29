@@ -61,6 +61,10 @@ public:
     /// passed for the given argument index.
     virtual bool allowClockingArgument(size_t argIndex) const;
 
+    /// @returns true if the given argument is unevaluated by the
+    /// subroutine, and false otherwise.
+    virtual bool isArgUnevaluated(size_t argIndex) const;
+
     /// Allows the subroutine to perform custom argument binding for the given
     /// argument index.
     virtual const Expression& bindArgument(size_t argIndex, const ASTContext& context,

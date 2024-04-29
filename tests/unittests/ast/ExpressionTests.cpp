@@ -980,7 +980,7 @@ module m;
         void'(mutate(k));
     end
 
-    int i;
+    int i = 0;
     int j = mutate(i);
 
     function int mutate(output int f);
@@ -998,8 +998,8 @@ endmodule
 TEST_CASE("Type operator") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
-    logic [3:0] a;
-    logic [4:0] b;
+    logic [3:0] a = 0;
+    logic [4:0] b = 1;
     var type(a + b) foo = a + b;
     int i = type(int)'(a);
 endmodule
@@ -1420,20 +1420,20 @@ struct {bit a[$]; shortint b;} a = '{{1,0,1,0}, 67};
 int b = int'(a);
 )",
         R"(
-struct {bit[15:0] a; shortint b;} a;
+struct {bit[15:0] a; shortint b;} a = '{default:0};
 int b = int'(a);
 )",
         R"(
 typedef struct { shortint address; logic [3:0] code; byte command [2]; } Control;
 typedef bit Bits [36:1];
-Control p;
+Control p = '{default:0};
 Bits stream = Bits'(p);
 Control q = Control'(stream);
 )",
         R"(
 typedef struct { byte length; shortint address; byte payload[]; byte chksum; } Packet;
 typedef byte channel_type[$];
-Packet genPkt;
+Packet genPkt = '{default:0, payload: {1}};
 channel_type channel = channel_type'(genPkt);
 Packet p = Packet'( channel[0 : 1] );
 )"};
@@ -1488,7 +1488,7 @@ TEST_CASE("Streaming operators") {
         {"real a; int b = {<< 5 {a}};", diag::BadStreamExprType},
         {"int a; real b = {<< 2 {a}};", diag::BadStreamTargetType},
         {"int a[2]; real b = $itor(a);", diag::BadSystemSubroutineArg},
-        {"int a; int b = {>> 4 {a}};", diag::IgnoredSlice},
+        {"int a = 0; int b = {>> 4 {a}};", diag::IgnoredSlice},
         {"int a; real b; assign {<< 2 {a}} = b;", diag::BadStreamSourceType},
         {"int a; shortint b; assign {<< 2 {a}} = b;", diag::BadStreamSize},
         {"int a; shortint b; assign b = {<< 4 {a}};", diag::BadStreamSize},
@@ -1568,11 +1568,11 @@ module sub(input byte b);
     }
 
     std::string legal[] = {
-        "int a; byte b[4] = {<<3{a}};",
+        "int a = 0; byte b[4] = {<<3{a}};",
         "int a; byte b[4]; assign {<<3{b}} = a;",
         "int a; byte b[4]; assign {<<3{b}} = {<<5{a}};",
-        "byte b[4]; int a = int'({<<3{b}}) + 5;",
-        "shortint a; byte b[2]; int c = {<<3{a, {<<5{b}}}};",
+        "byte b[4] = '{default:0}; int a = int'({<<3{b}}) + 5;",
+        "shortint a = 0; byte b[2] = '{default:0}; int c = {<<3{a, {<<5{b}}}};",
         "shortint a; byte b[2]; int c; assign {<<3{{<<5{b}}, a}}=c;",
         "struct{bit a[];int b;}a;struct {byte a[];bit b;}b;assign{<<{a}}={>>{b}};",
         "struct{bit a[];int b;}a;int b;assign {>>{a}} = {<<{b}};",
@@ -1597,12 +1597,12 @@ TEST_CASE("Stream expression with") {
         {"byte b[4]; int a = {<<3{b with[]}};", diag::ExpectedExpression},
         {"int a; byte b[4] = {<<3{a with [2]}};", diag::BadStreamWithType},
         {"byte b[4]; int a = {<<3{b with[0.5]}};", diag::ExprMustBeIntegral},
-        {"byte b[4]; int a = {<<3{b with[{65{1'b1}}]}};", diag::IndexOOB},
-        {"byte b[4]; int a = {<<3{b with[4]}};", diag::IndexOOB},
+        {"byte b[4] = '{default:0}; int a = {<<3{b with[{65{1'b1}}]}};", diag::IndexOOB},
+        {"byte b[4] = '{default:0}; int a = {<<3{b with[4]}};", diag::IndexOOB},
         {"byte b[4]; int a = {<<3{b with[2-:-1]}};", diag::ValueMustBePositive},
-        {"byte b[4]; logic [39:0] a = {<<3{b with[2+:5]}};", diag::RangeOOB},
-        {"byte b[3:0]; int a = {<<3{b with[2+:3]}};", diag::RangeOOB},
-        {"byte b[0:3]; int a = {<<3{b with[2:5]}};", diag::RangeOOB},
+        {"byte b[4] = '{default:0}; logic [39:0] a = {<<3{b with[2+:5]}};", diag::RangeOOB},
+        {"byte b[3:0] = '{default:0}; int a = {<<3{b with[2+:3]}};", diag::RangeOOB},
+        {"byte b[0:3] = '{default:0}; int a = {<<3{b with[2:5]}};", diag::RangeOOB},
         {"byte b[]; int a = {<<3{b with[3:2]}};", diag::SelectEndianDynamic},
         {"byte b[], c[4]; always {>>{b, {<<3{c with[b[0]:b[1]]}}}} = 9;", diag::BadStreamWithOrder},
         {"int a[],b[],c[];bit d;always {>>{b}}={<<{a with [2+:3],c,d}};", diag::BadStreamSize},
@@ -1979,8 +1979,8 @@ TEST_CASE("Selects of vectored nets") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
     wire vectored integer i;
-    logic j = i[1];
-    logic [1:0] k = i[1:0];
+    wire j = i[1];
+    wire [1:0] k = i[1:0];
 endmodule
 )");
 
@@ -2043,7 +2043,7 @@ module m;
     function asdf_t foo;
     endfunction
 
-    asdf_t a;
+    asdf_t a = '{default:0};
 
     int j = foo().i();
     int k = foo().i with (bar);
@@ -2051,7 +2051,7 @@ module m;
     int m = foo() with (bar);
     int n = $bits(a) with (bar);
 
-    int o[3];
+    int o[3] = '{default:0};
     int p = o.and(a);
     int q = o.and();
     int r = o.and with (1) { 1; };
@@ -2093,10 +2093,10 @@ endmodule
 TEST_CASE("Iterator index method") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
-    int foo[3];
+    int foo[3] = '{default:0};
     int i = foo.sum(a) with (a + a.index);
 
-    int bar[string];
+    int bar[string] = '{"hello": 0};
     int k = bar.sum(b) with (b.index().atoi);
 endmodule
 )");
@@ -2492,7 +2492,7 @@ class A;
 endclass
 
 module m;
-    A bar;
+    A bar = new;
     int i = bar.func().foo(3);
 endmodule
 )");
@@ -2743,8 +2743,8 @@ module m;
     string s[integer] = '{0: "hello", 2: "world"};
     string t = s[2:1];
 
-    real r;
-    logic [7:0] u;
+    real r = 1.0;
+    logic [7:0] u = 0;
     logic [1:0] v1 = u[r:0];
     logic [1:0] v2 = u[0:r];
     logic [1:0] v3 = u[1:2];
@@ -2753,7 +2753,7 @@ module m;
     logic [1:0] v6 = u['x+:2];
     logic [9:0] v7 = u[u+:10];
 
-    int w[];
+    int w[] = {1};
     int x1[2] = w[u:1];
     int x2[2] = w[u+:-1];
 
@@ -3333,11 +3333,11 @@ endmodule
 
 TEST_CASE("Chained method calls require parentheses") {
     auto tree = SyntaxTree::fromText(R"(
-string sa[10];
+string sa[10] = '{default:"SDF"};
 int i = sa.unique.size;
 int j = sa.unique().size;
 
-int ia[10];
+int ia[10] = '{default:0};
 int k[$] = ia.find(x) with (x > 5).unique;
 )");
 
@@ -3352,11 +3352,11 @@ int k[$] = ia.find(x) with (x > 5).unique;
 TEST_CASE("v1800-2023: override name of index method") {
     auto options = optionsFor(LanguageVersion::v1800_2023);
     auto tree = SyntaxTree::fromText(R"(
-module m;
+function automatic f;
     typedef struct {int index;} idx_type;
     idx_type arr1[4];
     idx_type arr2[$] = arr1.find(item, iter_index) with (item.index != item.iter_index);
-endmodule
+endfunction
 )",
                                      options);
 
@@ -3367,11 +3367,11 @@ endmodule
 
 TEST_CASE("Overriding index method name not allowed in 1800-2017") {
     auto tree = SyntaxTree::fromText(R"(
-module m;
+function automatic f;
     typedef struct {int index;} idx_type;
     idx_type arr1[4];
     idx_type arr2[$] = arr1.find(item, iter_index) with (item.index != item.iter_index);
-endmodule
+endfunction
 )");
 
     Compilation compilation;
