@@ -1428,7 +1428,7 @@ TEST_CASE("Checker port connections") {
 package p;
     real prq;
     checker c(a, b, output bit c, input real r = prq);
-        initial assert(a + b + r > 1);
+        initial assert(real'(a + b) + r > 1);
         always_comb c = 1;
     endchecker
 endpackage

@@ -1315,7 +1315,7 @@ endprogram
 TEST_CASE("Virtual interfaces with nested hierarchical names") {
     auto tree = SyntaxTree::fromText(R"(
 interface clk_generator(output logic clk);
-time period;
+realtime period;
 initial begin
     clk = 0;
     period = 0ns;
@@ -1441,7 +1441,7 @@ endmodule
 TEST_CASE("virtual interfaces member access via nested member") {
     auto tree = SyntaxTree::fromText(R"(
 interface clk_generator(output logic clk);
-time period;
+realtime period;
 initial begin
     clk = 0;
     period = 0ns;

@@ -112,6 +112,7 @@ void registerAST(py::module_& m) {
         .value("NotADriver", ASTFlags::NotADriver)
         .value("StreamingWithRange", ASTFlags::StreamingWithRange)
         .value("SpecifyBlock", ASTFlags::SpecifyBlock)
+        .value("SpecparamInitializer", ASTFlags::SpecparamInitializer)
         .value("DPIArg", ASTFlags::DPIArg)
         .value("AssertionDefaultArg", ASTFlags::AssertionDefaultArg)
         .value("LAndRValue", ASTFlags::LAndRValue)

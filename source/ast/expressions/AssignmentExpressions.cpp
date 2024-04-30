@@ -208,7 +208,19 @@ void checkImplicitConversions(const ASTContext& context, const Type& sourceType,
         if (context.tryEval(op))
             return;
 
-        // TODO: check other conversions here
+        DiagCode code;
+        if (lt.isIntegral())
+            code = diag::FloatIntConv;
+        else if (rt.isIntegral())
+            code = diag::IntFloatConv;
+        else if (lt.getBitWidth() < rt.getBitWidth())
+            code = diag::FloatShrink;
+        else if (lt.getBitWidth() > rt.getBitWidth())
+            code = diag::FloatExpand;
+        else
+            return;
+
+        addDiag(code) << sourceType << targetType;
     }
 }
 

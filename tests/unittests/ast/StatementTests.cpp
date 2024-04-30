@@ -190,7 +190,7 @@ module m;
 
     initial begin
         #3 i++;
-        #(2.1 + i) i++;
+        #(2.1 + real'(i)) i++;
 
         // Invalid
         #foo i++;

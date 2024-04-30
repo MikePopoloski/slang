@@ -675,7 +675,7 @@ Expression& BinaryExpression::fromComponents(Expression& lhs, Expression& rhs, B
     const Type* lt = lhs.type;
     const Type* rt = rhs.type;
 
-    auto result = compilation.emplace<BinaryExpression>(op, *lt, lhs, rhs, sourceRange);
+    auto result = compilation.emplace<BinaryExpression>(op, *lt, lhs, rhs, sourceRange, opRange);
     if (lhs.bad() || rhs.bad())
         return badExpr(compilation, result);
 
@@ -894,7 +894,7 @@ Expression& BinaryExpression::fromComponents(Expression& lhs, Expression& rhs, B
 }
 
 bool BinaryExpression::propagateType(const ASTContext& context, const Type& newType,
-                                     SourceRange opRange) {
+                                     SourceRange propRange) {
     switch (op) {
         case BinaryOperator::Add:
         case BinaryOperator::Subtract:
@@ -906,8 +906,8 @@ bool BinaryExpression::propagateType(const ASTContext& context, const Type& newT
         case BinaryOperator::BinaryXor:
         case BinaryOperator::BinaryXnor:
             type = &newType;
-            contextDetermined(context, left_, this, newType, opRange);
-            contextDetermined(context, right_, this, newType, opRange);
+            contextDetermined(context, left_, this, newType, propRange);
+            contextDetermined(context, right_, this, newType, propRange);
             return true;
         case BinaryOperator::Equality:
         case BinaryOperator::Inequality:
@@ -932,7 +932,7 @@ bool BinaryExpression::propagateType(const ASTContext& context, const Type& newT
         case BinaryOperator::Power:
             // Only the left hand side gets propagated; the rhs is self determined.
             type = &newType;
-            contextDetermined(context, left_, this, newType, opRange);
+            contextDetermined(context, left_, this, newType, propRange);
             if (op == BinaryOperator::ArithmeticShiftRight && !type->isSigned())
                 context.addDiag(diag::UnsignedArithShift, left_->sourceRange) << *type;
             return true;
@@ -1136,8 +1136,9 @@ Expression& ConditionalExpression::fromSyntax(Compilation& comp,
 
     // Force four-state return type for ambiguous condition case.
     const Type* resultType = binaryOperatorType(comp, lt, rt, isFourState);
-    auto result = comp.emplace<ConditionalExpression>(*resultType, conditions.copy(comp), left,
-                                                      right, syntax.sourceRange(), isConst, isTrue);
+    auto result = comp.emplace<ConditionalExpression>(*resultType, conditions.copy(comp),
+                                                      syntax.question.location(), left, right,
+                                                      syntax.sourceRange(), isConst, isTrue);
     if (bad)
         return badExpr(comp, result);
 

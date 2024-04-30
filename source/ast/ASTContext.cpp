@@ -281,7 +281,7 @@ bool ASTContext::requireTimingAllowed(SourceRange range) const {
 
 ConstantValue ASTContext::eval(const Expression& expr, bitmask<EvalFlags> extraFlags) const {
     extraFlags |= EvalFlags::CacheResults;
-    if (flags.has(ASTFlags::SpecifyBlock))
+    if (flags.has(ASTFlags::SpecifyBlock | ASTFlags::SpecparamInitializer))
         extraFlags |= EvalFlags::SpecparamsAllowed;
 
     EvalContext ctx(*this, extraFlags);
@@ -292,7 +292,7 @@ ConstantValue ASTContext::eval(const Expression& expr, bitmask<EvalFlags> extraF
 
 ConstantValue ASTContext::tryEval(const Expression& expr) const {
     bitmask<EvalFlags> extraFlags = EvalFlags::CacheResults;
-    if (flags.has(ASTFlags::SpecifyBlock))
+    if (flags.has(ASTFlags::SpecifyBlock | ASTFlags::SpecparamInitializer))
         extraFlags |= EvalFlags::SpecparamsAllowed;
 
     EvalContext ctx(*this, extraFlags);

@@ -149,15 +149,16 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 8);
+    REQUIRE(diags.size() == 9);
     CHECK(diags[0].code == diag::Redefinition);
     CHECK(diags[1].code == diag::NotBooleanConvertible);
     CHECK(diags[2].code == diag::NonIntegralCoverageExpr);
-    CHECK(diags[3].code == diag::ExpectedToken);
-    CHECK(diags[4].code == diag::Redefinition);
-    CHECK(diags[5].code == diag::NotBooleanConvertible);
-    CHECK(diags[6].code == diag::NonIntegralCoverageExpr);
-    CHECK(diags[7].code == diag::CoverCrossItems);
+    CHECK(diags[3].code == diag::IntFloatConv);
+    CHECK(diags[4].code == diag::ExpectedToken);
+    CHECK(diags[5].code == diag::Redefinition);
+    CHECK(diags[6].code == diag::NotBooleanConvertible);
+    CHECK(diags[7].code == diag::NonIntegralCoverageExpr);
+    CHECK(diags[8].code == diag::CoverCrossItems);
 }
 
 TEST_CASE("Coverpoints and cover cross name lookup") {

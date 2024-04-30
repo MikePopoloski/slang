@@ -437,7 +437,7 @@ const ConstantValue& SpecparamSymbol::getValue(SourceRange referencingRange) con
         auto scope = getParentScope();
         SLANG_ASSERT(scope);
 
-        ASTContext ctx(*scope, LookupLocation::before(*this));
+        ASTContext ctx(*scope, LookupLocation::before(*this), ASTFlags::SpecparamInitializer);
 
         if (evaluating) {
             SLANG_ASSERT(referencingRange.start());
@@ -455,7 +455,7 @@ const ConstantValue& SpecparamSymbol::getValue(SourceRange referencingRange) con
         auto init = getInitializer();
         if (init) {
             auto& comp = scope->getCompilation();
-            value1 = comp.allocConstant(ctx.eval(*init, EvalFlags::SpecparamsAllowed));
+            value1 = comp.allocConstant(ctx.eval(*init));
 
             // Specparams can also be a "PATHPULSE$" which has two values to bind.
             auto syntax = getSyntax();
@@ -465,7 +465,7 @@ const ConstantValue& SpecparamSymbol::getValue(SourceRange referencingRange) con
             if (auto exprSyntax = decl.value2) {
                 auto& expr2 = Expression::bindRValue(getType(), *exprSyntax, decl.equals.range(),
                                                      ctx);
-                value2 = comp.allocConstant(ctx.eval(expr2, EvalFlags::SpecparamsAllowed));
+                value2 = comp.allocConstant(ctx.eval(expr2));
             }
             else {
                 value2 = &ConstantValue::Invalid;

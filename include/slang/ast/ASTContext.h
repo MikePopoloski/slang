@@ -161,30 +161,33 @@ enum class SLANG_EXPORT ASTFlags : uint64_t {
     /// AST creation is happening inside a specify block.
     SpecifyBlock = 1ull << 35,
 
+    /// AST creation is for a specparam initializer expression.
+    SpecparamInitializer = 1ull << 36,
+
     /// AST creation is for a DPI argument type.
-    DPIArg = 1ull << 36,
+    DPIArg = 1ull << 37,
 
     /// AST creation is for an assertion instance's default argument.
-    AssertionDefaultArg = 1ull << 37,
+    AssertionDefaultArg = 1ull << 38,
 
     /// AST creation is for an lvalue that also counts as an rvalue. Only valid
     /// when combined with the LValue flag -- used for things like the pre & post
     /// increment and decrement operators.
-    LAndRValue = 1ull << 38,
+    LAndRValue = 1ull << 39,
 
     /// AST binding should not count symbol references towards that symbol being "used".
     /// If this flag is not set, accessing a variable or net in an expression will count
     /// that symbol as being "used".
-    NoReference = 1ull << 39,
+    NoReference = 1ull << 40,
 
     /// AST binding is for a parameter inside a SystemVerilog configuration.
-    ConfigParam = 1ull << 40,
+    ConfigParam = 1ull << 41,
 
     /// AST binding is for the contents of the type() operator.
-    TypeOperator = 1ull << 41,
+    TypeOperator = 1ull << 42,
 
     /// AST binding is inside a fork-join_any or fork-join_none block.
-    ForkJoinAnyNone = 1ull << 42
+    ForkJoinAnyNone = 1ull << 43
 };
 SLANG_BITMASK(ASTFlags, ForkJoinAnyNone)
 

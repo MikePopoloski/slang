@@ -863,3 +863,24 @@ endmodule
     CHECK(diags[1].code == diag::StaticInitOrder);
     CHECK(diags[2].code == diag::StaticInitValue);
 }
+
+TEST_CASE("Float conversion warnings") {
+    auto tree = SyntaxTree::fromText(R"(
+function automatic f(real r);
+    int i = r;
+    shortreal s = r;
+    real t = i;
+    real u = s;
+endfunction
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 4);
+    CHECK(diags[0].code == diag::FloatIntConv);
+    CHECK(diags[1].code == diag::FloatShrink);
+    CHECK(diags[2].code == diag::IntFloatConv);
+    CHECK(diags[3].code == diag::FloatExpand);
+}

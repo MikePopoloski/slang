@@ -742,6 +742,10 @@ warning negative-timing-limit NegativeTimingLimit "timing check limit value '{}'
 warning sign-conversion SignConversion "implicit conversion changes signedness from {} to {}"
 warning float-bool-conv FloatBoolConv "implicit conversion from floating point type {} to boolean value"
 warning int-bool-conv IntBoolConv "implicit conversion from {} to boolean value"
+warning float-int-conv FloatIntConv "implicit conversion from {} to {}"
+warning int-float-conv IntFloatConv "implicit conversion from {} to {}"
+warning float-expand FloatExpand "implicit conversion expands from {} to {}"
+warning float-shrink FloatShrink "implicit conversion shrinks from {} to {}"
 warning useless-cast UselessCast "useless cast from {} to the same type"
 warning unsigned-arith-shift UnsignedArithShift "arithmetic right shift of unsigned type {} will always shift in zeros (use logical shift if that is intended)"
 
@@ -1110,13 +1114,15 @@ group default = { real-underflow real-overflow vector-overflow int-overflow unco
 group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-none case-gen-dup
                 unused-result format-real ignored-slice task-ignored width-trunc dup-attr event-const
                 ineffective-sign port-width-trunc constant-conversion float-bool-conv int-bool-conv
-                useless-cast unsigned-arith-shift static-init-order static-init-value }
+                useless-cast unsigned-arith-shift static-init-order static-init-value float-int-conv
+                float-shrink }
 
 group pedantic = { empty-pattern implicit-net-port nonstandard-escape-code nonstandard-generate format-multibit-strength
                    nonstandard-sys-func nonstandard-foreach nonstandard-dist }
 
 group conversion = { width-trunc width-expand port-width-trunc port-width-expand implicit-conv
-                     constant-conversion sign-conversion float-bool-conv int-bool-conv }
+                     constant-conversion sign-conversion float-bool-conv int-bool-conv float-int-conv
+                     int-float-conv float-expand float-shrink }
 
 group unused = { unused-def unused-net unused-implicit-net unused-variable undriven-net unassigned-variable
                  unused-but-set-net unused-but-set-variable unused-port undriven-port unused-argument

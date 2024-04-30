@@ -59,14 +59,21 @@ private:
 
 /// Represents a binary operator expression.
 class SLANG_EXPORT BinaryExpression : public Expression {
+private:
+    Expression* left_;
+    Expression* right_;
+
 public:
     /// The operator.
     BinaryOperator op;
 
+    /// The source range of the operator token.
+    SourceRange opRange;
+
     BinaryExpression(BinaryOperator op, const Type& type, Expression& left, Expression& right,
-                     SourceRange sourceRange) :
-        Expression(ExpressionKind::BinaryOp, type, sourceRange), op(op), left_(&left),
-        right_(&right) {}
+                     SourceRange sourceRange, SourceRange opRange) :
+        Expression(ExpressionKind::BinaryOp, type, sourceRange), left_(&left), right_(&right),
+        op(op), opRange(opRange) {}
 
     /// @returns the left-hand side of the expression
     const Expression& left() const { return *left_; }
@@ -102,10 +109,6 @@ public:
         left().visit(visitor);
         right().visit(visitor);
     }
-
-private:
-    Expression* left_;
-    Expression* right_;
 };
 
 /// Represents a conditional operator expression.
@@ -123,10 +126,14 @@ public:
     /// The list of conditions controlling the expression.
     std::span<const Condition> conditions;
 
-    ConditionalExpression(const Type& type, std::span<const Condition> conditions, Expression& left,
-                          Expression& right, SourceRange sourceRange, bool isConst, bool isTrue) :
+    /// The location of the conditional '?' operator token.
+    SourceLocation opLoc;
+
+    ConditionalExpression(const Type& type, std::span<const Condition> conditions,
+                          SourceLocation opLoc, Expression& left, Expression& right,
+                          SourceRange sourceRange, bool isConst, bool isTrue) :
         Expression(ExpressionKind::ConditionalOp, type, sourceRange), conditions(conditions),
-        left_(&left), right_(&right), isConst(isConst), isTrue(isTrue) {}
+        opLoc(opLoc), left_(&left), right_(&right), isConst(isConst), isTrue(isTrue) {}
 
     /// @returns the left-hand side operand
     const Expression& left() const { return *left_; } // NOLINT

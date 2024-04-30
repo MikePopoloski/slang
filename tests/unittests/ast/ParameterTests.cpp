@@ -730,7 +730,7 @@ endmodule
 TEST_CASE("Invalid param override option handling") {
     auto tree = SyntaxTree::fromText(R"(
 module m #(parameter int foo, string bar, real baz);
-    localparam int j = foo + (bar == "asdf" ? baz : 0);
+    localparam int j = foo + int'(bar == "asdf" ? baz : 0);
 endmodule
 )");
 

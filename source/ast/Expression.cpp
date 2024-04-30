@@ -159,6 +159,14 @@ struct Expression::PropagationVisitor {
                 (newType.isIntegral() && expr.type->isIntegral()) || newType.isString() ||
                 expr.kind == ExpressionKind::ValueRange) {
 
+                // If we don't need a conversion here we still need to call propagateType as
+                // one of our child expressions may still need conversion. However, we shouldn't
+                // pass along our given opRange since we didn't need the conversion here, so our
+                // parent operator isn't relevant. We should try to refigure an opRange for our
+                // most immediate parent expression instead.
+                if (!needConversion)
+                    updateRange(expr);
+
                 if (expr.propagateType(context, newType, opRange))
                     needConversion = false;
             }
@@ -173,6 +181,23 @@ struct Expression::PropagationVisitor {
         }
 
         return *result;
+    }
+
+private:
+    void updateRange(const Expression& expr) {
+        opRange = {};
+        switch (expr.kind) {
+            case ExpressionKind::BinaryOp:
+                opRange = expr.as<BinaryExpression>().opRange;
+                break;
+            case ExpressionKind::ConditionalOp: {
+                auto opLoc = expr.as<ConditionalExpression>().opLoc;
+                opRange = {opLoc, opLoc + 1};
+                break;
+            }
+            default:
+                break;
+        }
     }
 };
 
