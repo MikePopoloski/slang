@@ -1254,6 +1254,9 @@ void MethodPrototypeSymbol::serializeTo(ASTSerializer& serializer) const {
 
     if (flags)
         serializer.write("flags", flagsToStr(flags));
+
+    if (auto* sub = getSubroutine())
+        serializer.write("subroutine", *sub);
 }
 
 } // namespace slang::ast
