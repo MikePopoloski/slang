@@ -1068,6 +1068,8 @@ module test;
         default output edge;
         output a = b + 1;
         input f;
+        input #b b;
+        input #(-1) clk;
     endclocking
 
     default clocking cb;
@@ -1086,15 +1088,17 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 8);
+    REQUIRE(diags.size() == 10);
     CHECK(diags[0].code == diag::MultipleDefaultInputSkew);
     CHECK(diags[1].code == diag::MultipleDefaultOutputSkew);
     CHECK(diags[2].code == diag::ExpressionNotAssignable);
     CHECK(diags[3].code == diag::InvalidClockingSignal);
-    CHECK(diags[4].code == diag::MultipleDefaultClocking);
-    CHECK(diags[5].code == diag::NotAClockingBlock);
-    CHECK(diags[6].code == diag::MultipleGlobalClocking);
-    CHECK(diags[7].code == diag::GlobalClockingGenerate);
+    CHECK(diags[4].code == diag::ConstEvalNonConstVariable);
+    CHECK(diags[5].code == diag::ValueMustBePositive);
+    CHECK(diags[6].code == diag::MultipleDefaultClocking);
+    CHECK(diags[7].code == diag::NotAClockingBlock);
+    CHECK(diags[8].code == diag::MultipleGlobalClocking);
+    CHECK(diags[9].code == diag::GlobalClockingGenerate);
 }
 
 TEST_CASE("Multiple clocking blocks with ifaces") {

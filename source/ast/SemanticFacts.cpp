@@ -371,8 +371,14 @@ ClockingSkew ClockingSkew::fromSyntax(const ClockingSkewSyntax& syntax, const AS
     ClockingSkew result;
     result.edge = SemanticFacts::getEdgeKind(syntax.edge.kind);
 
-    if (syntax.delay)
+    if (syntax.delay) {
         result.delay = &TimingControl::bind(*syntax.delay, context);
+        if (result.delay->kind == TimingControlKind::Delay) {
+            auto cv = context.eval(result.delay->as<DelayControl>().expr);
+            if (cv.isInteger())
+                context.requirePositive(cv.integer(), result.delay->sourceRange);
+        }
+    }
 
     return result;
 }
