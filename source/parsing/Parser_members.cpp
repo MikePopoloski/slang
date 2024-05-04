@@ -2793,10 +2793,11 @@ UdpPortDeclSyntax& Parser::parseUdpPortDecl(bool& isReg) {
 UdpPortListSyntax& Parser::parseUdpPortList(bool& isSequential) {
     auto openParen = expect(TokenKind::OpenParenthesis);
 
-    if (peek(TokenKind::DotStar)) {
-        auto dotStar = consume();
+    if (peek(TokenKind::Dot) && peek(1).kind == TokenKind::Star) {
+        auto dot = consume();
+        auto star = consume();
         auto closeParen = expect(TokenKind::CloseParenthesis);
-        return factory.wildcardUdpPortList(openParen, dotStar, closeParen,
+        return factory.wildcardUdpPortList(openParen, dot, star, closeParen,
                                            expect(TokenKind::Semicolon));
     }
     else if (peek(TokenKind::OutputKeyword) || peek(TokenKind::InputKeyword)) {

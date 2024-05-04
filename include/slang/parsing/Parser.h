@@ -415,6 +415,7 @@ private:
     bool scanDimensionList(uint32_t& index);
     bool scanQualifiedName(uint32_t& index, bool allowNew);
     bool scanAttributes(uint32_t& index);
+    bool isStartOfAttrs(uint32_t index);
 
     template<bool (*IsEnd)(TokenKind)>
     bool scanTypePart(uint32_t& index, TokenKind start, TokenKind end);

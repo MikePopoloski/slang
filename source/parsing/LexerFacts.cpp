@@ -704,16 +704,13 @@ std::string_view LexerFacts::getTokenKindText(TokenKind kind) {
         case TokenKind::OpenBracket: return "[";
         case TokenKind::CloseBracket: return "]";
         case TokenKind::OpenParenthesis: return "(";
-        case TokenKind::OpenParenthesisStar: return "(*";
         case TokenKind::CloseParenthesis: return ")";
-        case TokenKind::StarCloseParenthesis: return "*)";
         case TokenKind::Semicolon: return ";";
         case TokenKind::Colon: return ":";
         case TokenKind::ColonEquals: return ":=";
         case TokenKind::ColonSlash: return ":/";
         case TokenKind::DoubleColon: return "::";
         case TokenKind::Comma: return ",";
-        case TokenKind::DotStar: return ".*";
         case TokenKind::Dot: return ".";
         case TokenKind::Slash: return "/";
         case TokenKind::Star: return "*";

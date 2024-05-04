@@ -95,9 +95,10 @@ ModuleHeaderSyntax& Parser::parseModuleHeader() {
     PortListSyntax* ports = nullptr;
     if (peek(TokenKind::OpenParenthesis)) {
         auto openParen = consume();
-        if (peek(TokenKind::DotStar)) {
-            auto dotStar = consume();
-            ports = &factory.wildcardPortList(openParen, dotStar,
+        if (peek(TokenKind::Dot) && peek(1).kind == TokenKind::Star) {
+            auto dot = consume();
+            auto star = consume();
+            ports = &factory.wildcardPortList(openParen, dot, star,
                                               expect(TokenKind::CloseParenthesis));
         }
         else if (isNonAnsiPort()) {
@@ -927,17 +928,23 @@ std::span<TokenOrSyntax> Parser::parseDeclarators(Token& semi, bool allowMinTypM
 
 Parser::AttrList Parser::parseAttributes() {
     SmallVector<AttributeInstanceSyntax*> buffer;
-    while (peek(TokenKind::OpenParenthesisStar)) {
-        Token openParen;
-        Token closeParen;
+    while (isStartOfAttrs(0)) {
+        Token openParen = consume();
+        Token closeParen, openStar, closeStar;
+
         std::span<TokenOrSyntax> list;
-
         parseList<isIdentifierOrComma, isEndOfAttribute>(
-            TokenKind::OpenParenthesisStar, TokenKind::StarCloseParenthesis, TokenKind::Comma,
-            openParen, list, closeParen, RequireItems::True, diag::ExpectedAttribute,
-            [this] { return &parseAttributeSpec(); });
+            TokenKind::Star, TokenKind::Star, TokenKind::Comma, openStar, list, closeStar,
+            RequireItems::True, diag::ExpectedAttribute, [this] { return &parseAttributeSpec(); });
 
-        buffer.push_back(&factory.attributeInstance(openParen, list, closeParen));
+        if (!closeStar.isMissing()) {
+            closeParen = expect(TokenKind::CloseParenthesis);
+            if (!closeParen.isMissing() && !closeParen.trivia().empty())
+                addDiag(diag::ExpectedToken, closeStar.location()) << "*)"sv;
+        }
+
+        buffer.push_back(
+            &factory.attributeInstance(openParen, openStar, list, closeStar, closeParen));
     }
     return buffer.copy(alloc);
 }
@@ -1068,11 +1075,12 @@ PortConnectionSyntax& Parser::parsePortConnection() {
     if (peek(TokenKind::Comma) || peek(TokenKind::CloseParenthesis))
         return factory.emptyPortConnection(attributes, placeholderToken());
 
-    if (peek(TokenKind::DotStar))
-        return factory.wildcardPortConnection(attributes, consume());
-
     if (peek(TokenKind::Dot)) {
         auto dot = consume();
+
+        if (peek(TokenKind::Star))
+            return factory.wildcardPortConnection(attributes, dot, consume());
+
         auto name = expect(TokenKind::Identifier);
 
         PropertyExprSyntax* expr = nullptr;
@@ -1444,18 +1452,27 @@ bool Parser::scanQualifiedName(uint32_t& index, bool allowNew) {
 }
 
 bool Parser::scanAttributes(uint32_t& index) {
-    while (peek(index).kind == TokenKind::OpenParenthesisStar) {
+    while (isStartOfAttrs(index)) {
         // scan over attributes
+        index++;
         while (true) {
             auto kind = peek(++index).kind;
             if (kind == TokenKind::EndOfFile)
                 return false;
-            if (kind == TokenKind::StarCloseParenthesis)
+            if (kind == TokenKind::Star && peek(index + 1).kind == TokenKind::CloseParenthesis)
                 break;
         }
-        index++;
+        index += 2;
     }
     return true;
+}
+
+bool Parser::isStartOfAttrs(uint32_t index) {
+    if (peek(index).kind == TokenKind::OpenParenthesis) {
+        auto t = peek(index + 1);
+        return t.kind == TokenKind::Star && t.trivia().empty();
+    }
+    return false;
 }
 
 void Parser::errorIfAttributes(AttrList attributes) {

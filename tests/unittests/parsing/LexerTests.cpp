@@ -1037,16 +1037,13 @@ TEST_CASE("All Punctuation") {
     testPunctuation(TokenKind::OpenBracket);
     testPunctuation(TokenKind::CloseBracket);
     testPunctuation(TokenKind::OpenParenthesis);
-    testPunctuation(TokenKind::OpenParenthesisStar);
     testPunctuation(TokenKind::CloseParenthesis);
-    testPunctuation(TokenKind::StarCloseParenthesis);
     testPunctuation(TokenKind::Semicolon);
     testPunctuation(TokenKind::Colon);
     testPunctuation(TokenKind::ColonEquals);
     testPunctuation(TokenKind::ColonSlash);
     testPunctuation(TokenKind::DoubleColon);
     testPunctuation(TokenKind::Comma);
-    testPunctuation(TokenKind::DotStar);
     testPunctuation(TokenKind::Dot);
     testPunctuation(TokenKind::Slash);
     testPunctuation(TokenKind::Star);
