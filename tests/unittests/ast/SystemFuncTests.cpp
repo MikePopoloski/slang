@@ -1317,3 +1317,22 @@ localparam p = $bits(a);
     auto& p = compilation.getCompilationUnits()[0]->find<ParameterSymbol>("p");
     CHECK(p.getValue().integer() == -8);
 }
+
+TEST_CASE("Restriction on automatic variables in $past") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    initial begin
+        automatic int b;
+        automatic int c = $past(b, 1, b > 0, @b);
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::AutoFromNonProcedural);
+    CHECK(diags[1].code == diag::AutoFromNonProcedural);
+}

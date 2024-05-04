@@ -53,6 +53,11 @@ Expression& ValueExpressionBase::fromSymbol(const ASTContext& context, const Sym
             if (!Lookup::ensureAccessible(symbol, context, sourceRange))
                 return badExpr(comp, nullptr);
         }
+        else if (flags.has(ASTFlags::EventExpression) &&
+                 symbol.kind == SymbolKind::LocalAssertionVar) {
+            context.addDiag(diag::LocalVarEventExpr, sourceRange) << symbol.name;
+            return badExpr(comp, nullptr);
+        }
         else if (!var.flags.has(VariableFlags::RefStatic) && flags.has(DisallowedAutoVarContexts)) {
             if (flags.has(ASTFlags::NonProcedural)) {
                 context.addDiag(diag::AutoFromNonProcedural, sourceRange) << symbol.name;
@@ -73,11 +78,6 @@ Expression& ValueExpressionBase::fromSymbol(const ASTContext& context, const Sym
         else if (!flags.has(ASTFlags::AllowCoverageSampleFormal) &&
                  var.flags.has(VariableFlags::CoverageSampleFormal)) {
             context.addDiag(diag::CoverageSampleFormal, sourceRange) << symbol.name;
-            return badExpr(comp, nullptr);
-        }
-        else if (flags.has(ASTFlags::EventExpression) &&
-                 symbol.kind == SymbolKind::LocalAssertionVar) {
-            context.addDiag(diag::LocalVarEventExpr, sourceRange) << symbol.name;
             return badExpr(comp, nullptr);
         }
         else if (flags.has(ASTFlags::ForkJoinAnyNone) && !var.flags.has(VariableFlags::RefStatic) &&
@@ -583,6 +583,7 @@ Expression& ClockingEventExpression::fromSyntax(const ClockingPropertyExprSyntax
     // about passing time, so clear out the context's procedure to avoid that.
     ASTContext context(argContext);
     context.clearInstanceAndProc();
+    context.flags |= ASTFlags::NonProcedural;
 
     auto& comp = context.getCompilation();
     auto& timing = TimingControl::bind(*syntax.event, context);

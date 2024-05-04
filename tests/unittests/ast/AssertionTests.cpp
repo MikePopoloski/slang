@@ -2319,3 +2319,21 @@ checker(_e,[_e
     // Just check no crashes.
     compilation.getAllDiagnostics();
 }
+
+TEST_CASE("Assertion clocking events can't reference auto vars") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    initial begin
+        automatic logic p;
+        assert property (@(posedge p) 1);
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::AutoFromNonProcedural);
+}
