@@ -214,9 +214,9 @@ void checkImplicitConversions(const ASTContext& context, const Type& sourceType,
         else if (rt.isIntegral())
             code = diag::IntFloatConv;
         else if (lt.getBitWidth() < rt.getBitWidth())
-            code = diag::FloatShrink;
+            code = diag::FloatNarrow;
         else if (lt.getBitWidth() > rt.getBitWidth())
-            code = diag::FloatExpand;
+            code = diag::FloatWiden;
         else
             return;
 

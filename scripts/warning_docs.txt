@@ -1240,7 +1240,7 @@ function automatic f(int i);
 endfunction
 ```
 
--Wfloat-expand
+-Wfloat-widen
 A floating point value is implicitly converted to a wider floating point type.
 ```
 function automatic f(shortreal s);
@@ -1248,7 +1248,7 @@ function automatic f(shortreal s);
 endfunction
 ```
 
--Wfloat-shrink
+-Wfloat-narrow
 A floating point value is implicitly converted to a narrower floating point type.
 ```
 function automatic f(real r);
