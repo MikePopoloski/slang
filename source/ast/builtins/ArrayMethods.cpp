@@ -978,7 +978,7 @@ public:
             return comp.getErrorType();
         }
 
-        auto languageVersion = comp.getOptions().languageVersion;
+        auto languageVersion = comp.languageVersion();
         if (languageVersion < LanguageVersion::v1800_2023)
             context.addDiag(diag::WrongLanguageVersion, range) << toString(languageVersion);
 

@@ -3190,3 +3190,47 @@ endclass
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("v1800-2023: Constraints with reals") {
+    auto options = optionsFor(LanguageVersion::v1800_2023);
+    auto tree = SyntaxTree::fromText(R"(
+class real_constraint_c;
+    const int ZSTATE = -100;
+    const real VALUE_LOW = 0.70;
+    const real VALUE_MIN = 1.43;
+    const real VALUE_NOM = 3.30;
+    const real VALUE_MAX = 3.65;
+
+    rand real a;
+    rand real b;
+    string s;
+
+    constraint a_constraint {
+        a dist { ZSTATE := 5,
+                 [VALUE_LOW:VALUE_MIN] :/ 1,
+                 [VALUE_NOM +%- 1.0] :/ 13, // equivalent to 3.3 +/- 0.033
+                 [VALUE_MIN:VALUE_MAX] :/ 1
+        };
+    }
+
+    constraint b_constraint {
+        (a inside {[VALUE_LOW:VALUE_MIN]}) -> b == real'(ZSTATE);
+        b dist { ZSTATE := 1,
+                 [VALUE_MIN:VALUE_MAX] :/ 20
+        };
+        s dist { "Hello" := 1 };
+        solve a before b;
+    }
+endclass
+)",
+                                     options);
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::IntFloatConv);
+    CHECK(diags[1].code == diag::IntFloatConv);
+    CHECK(diags[2].code == diag::BadSetMembershipType);
+}

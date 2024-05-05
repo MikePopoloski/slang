@@ -469,7 +469,7 @@ static bool getIteratorParams(std::string_view subroutineName, const ArgumentLis
 
         indexMethodName = indexTok.valueText();
 
-        auto languageVersion = context.getCompilation().getOptions().languageVersion;
+        auto languageVersion = context.getCompilation().languageVersion();
         if (languageVersion < LanguageVersion::v1800_2023) {
             context.addDiag(diag::WrongLanguageVersion, actualArgs[1]->sourceRange())
                 << toString(languageVersion);

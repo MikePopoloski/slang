@@ -193,7 +193,7 @@ public:
 
             auto dt = sym->getDeclaredType();
             SLANG_ASSERT(dt);
-            if (!dt->getType().isValidForRand(RandMode::Rand)) {
+            if (!dt->getType().isValidForRand(RandMode::Rand, comp.languageVersion())) {
                 context.addDiag(diag::InvalidRandType, arg->sourceRange)
                     << dt->getType() << "rand"sv;
             }

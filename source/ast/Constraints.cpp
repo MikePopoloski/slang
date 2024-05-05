@@ -171,8 +171,11 @@ struct ConstraintExprVisitor {
                     return fail();
                 case ExpressionKind::RealLiteral:
                 case ExpressionKind::TimeLiteral:
-                    context.addDiag(diag::NonIntegralConstraintLiteral, expr.sourceRange);
-                    return fail();
+                    if (context.getCompilation().languageVersion() < LanguageVersion::v1800_2023) {
+                        context.addDiag(diag::NonIntegralConstraintLiteral, expr.sourceRange);
+                        return fail();
+                    }
+                    break;
                 case ExpressionKind::IntegerLiteral:
                     if (expr.template as<IntegerLiteral>().getValue().hasUnknown()) {
                         context.addDiag(diag::UnknownConstraintLiteral, expr.sourceRange);
@@ -235,7 +238,8 @@ struct ConstraintExprVisitor {
                     break;
             }
 
-            if (!expr.type->isValidForRand(RandMode::Rand)) {
+            if (!expr.type->isValidForRand(RandMode::Rand,
+                                           context.getCompilation().languageVersion())) {
                 context.addDiag(diag::NonIntegralConstraintExpr, expr.sourceRange) << *expr.type;
                 return fail();
             }

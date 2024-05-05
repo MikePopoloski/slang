@@ -1356,11 +1356,21 @@ Expression& DistExpression::fromSyntax(Compilation& comp, const ExpressionOrDist
     for (auto item : syntax.distribution->items)
         expressions.push_back(item->range);
 
+    const bool allowReal = comp.languageVersion() >= LanguageVersion::v1800_2023;
+
     SmallVector<const Expression*> bound;
-    bool bad =
-        !bindMembershipExpressions(context, TokenKind::DistKeyword, /* requireIntegral */ true,
-                                   /* unwrapUnpacked */ false, /* allowTypeReferences */ false,
-                                   /* allowValueRange */ true, *syntax.expr, expressions, bound);
+    bool bad = !bindMembershipExpressions(
+        context, TokenKind::DistKeyword, /* requireIntegral */ !allowReal,
+        /* unwrapUnpacked */ false, /* allowTypeReferences */ false,
+        /* allowValueRange */ true, *syntax.expr, expressions, bound);
+
+    auto& pred = *bound[0];
+    if (allowReal && !bad) {
+        if (!pred.type->isNumeric()) {
+            context.addDiag(diag::BadSetMembershipType, pred.sourceRange) << *pred.type << "dist"sv;
+            bad = true;
+        }
+    }
 
     SmallVector<DistItem, 4> items;
     size_t index = 1;
@@ -1384,7 +1394,7 @@ Expression& DistExpression::fromSyntax(Compilation& comp, const ExpressionOrDist
         items.emplace_back(di);
     }
 
-    auto result = comp.emplace<DistExpression>(comp.getVoidType(), *bound[0], items.copy(comp),
+    auto result = comp.emplace<DistExpression>(comp.getVoidType(), pred, items.copy(comp),
                                                syntax.sourceRange());
     if (bad)
         return badExpr(comp, result);

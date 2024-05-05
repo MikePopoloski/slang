@@ -755,12 +755,15 @@ bool Type::isIterable() const {
     return (t.hasFixedRange() || t.isArray() || t.isString()) && !t.isScalar();
 }
 
-bool Type::isValidForRand(RandMode mode) const {
+bool Type::isValidForRand(RandMode mode, LanguageVersion languageVersion) const {
     if ((isIntegral() || isNull()) && !isTaggedUnion())
         return true;
 
+    if (isFloating())
+        return mode == RandMode::Rand && languageVersion >= LanguageVersion::v1800_2023;
+
     if (isArray())
-        return getArrayElementType()->isValidForRand(mode);
+        return getArrayElementType()->isValidForRand(mode, languageVersion);
 
     if (isClass() || isUnpackedStruct())
         return mode == RandMode::Rand;

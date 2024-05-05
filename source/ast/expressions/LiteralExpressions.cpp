@@ -39,7 +39,7 @@ Expression& IntegerLiteral::fromSyntax(Compilation& comp, const LiteralExpressio
 
     const Type* type;
     SVInt val = syntax.literal.intValue();
-    if (val.getBitWidth() < 32 || comp.getOptions().languageVersion < LanguageVersion::v1800_2023) {
+    if (val.getBitWidth() < 32 || comp.languageVersion() < LanguageVersion::v1800_2023) {
         // In v2023 the rule changed to not truncate unsized literals.
         // Literals smaller than 32 bits are always sized up to 32.
         val = val.resize(32);

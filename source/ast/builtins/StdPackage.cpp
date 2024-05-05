@@ -151,7 +151,7 @@ static const Symbol& createWeakReference(Compilation& c) {
         if (!t.isClass() && !t.isError())
             ct.addDiag(diag::TypeIsNotAClass, instanceLoc) << t;
 
-        if (auto lv = c.getOptions().languageVersion; lv < LanguageVersion::v1800_2023)
+        if (auto lv = c.languageVersion(); lv < LanguageVersion::v1800_2023)
             ct.addDiag(diag::WrongLanguageVersion, instanceLoc) << toString(lv);
 
         ClassBuilder builder(c, ct);
