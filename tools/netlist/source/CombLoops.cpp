@@ -13,30 +13,34 @@
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
  *
- * Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
- * Redistributions in binary form must reproduce the above copyright notice,
- * this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
+ * Redistributions of source code must retain the above copyright notice, this list of conditions
+ * and the following disclaimer. Redistributions in binary form must reproduce the above copyright
+ * notice, this list of conditions and the following disclaimer in the documentation and/or other
+ * materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
- * INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
- * IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY,
- * OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
- * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
- * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
- * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR
+ * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND
+ * FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY
+ * WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <vector>
-#include <algorithm>
-#include "slang/ast/SemanticFacts.h"
 #include "CombLoops.h"
+
+#include <algorithm>
+#include <vector>
+
+#include "slang/ast/SemanticFacts.h"
 
 using namespace std;
 
 /**
- * This is a helpclass for the search of all elementary cycles in a graph 
+ * This is a helpclass for the search of all elementary cycles in a graph
  * with the algorithm of Johnson. For this it searches for strong connected
- * components, using the algorithm of Tarjan. The constructor gets an 
+ * components, using the algorithm of Tarjan. The constructor gets an
  * adjacency-list of a graph. Based on this graph, it gets a nodenumber s,
  * for which it calculates the subgraph, containing all nodes
  * {s, s + 1, ..., n}, where n is the highest nodenumber in the original
@@ -86,9 +90,11 @@ SCCResult StrongConnectedComponents::getAdjacencyList(int node) {
         if (!this->visited[i]) {
             this->getStrongConnectedComponents(i);
             vector<int> nodes = this->getLowestIdComponent();
-            if (!nodes.empty() && find(nodes.begin(), nodes.end(), node) == nodes.end() && find(nodes.begin(), nodes.end(), node + 1) == nodes.end()) {
+            if (!nodes.empty() && find(nodes.begin(), nodes.end(), node) == nodes.end() &&
+                find(nodes.begin(), nodes.end(), node + 1) == nodes.end()) {
                 return this->getAdjacencyList(node + 1);
-            } else {
+            }
+            else {
                 vector<vector<int>> adjacencyList = this->getAdjList(nodes);
                 if (!adjacencyList.empty()) {
                     for (int j = 0; j < this->adjListOriginal.size(); j++) {
@@ -187,7 +193,8 @@ void StrongConnectedComponents::getStrongConnectedComponents(int root) {
         if (!this->visited[w]) {
             this->getStrongConnectedComponents(w);
             this->lowlink[root] = min(this->lowlink[root], this->lowlink[w]);
-        } else if (this->number[w] < this->number[root]) {
+        }
+        else if (this->number[w] < this->number[root]) {
             if (find(this->stack.begin(), this->stack.end(), w) != this->stack.end()) {
                 this->lowlink[root] = min(this->lowlink[root], this->number[w]);
             }
@@ -214,10 +221,11 @@ void StrongConnectedComponents::getStrongConnectedComponents(int root) {
  * Constructor.
  *
  * @param matrix adjacency-matrix of the graph
- * @param netlist pointer to the full netlist 
+ * @param netlist pointer to the full netlist
  */
 ElementaryCyclesSearch::ElementaryCyclesSearch(std::vector<std::vector<ID_type>>& adjList) :
-    adjList(adjList) { }
+    adjList(adjList) {
+}
 ElementaryCyclesSearch::ElementaryCyclesSearch(Netlist& netlist) {
     int nodes_num = netlist.numNodes();
     adjList.resize(nodes_num);
@@ -272,7 +280,8 @@ std::vector<CycleListType>* ElementaryCyclesSearch::getElementaryCycles() {
 
             this->findCycles(s, s, scc);
             s++;
-        } else {
+        }
+        else {
             break;
         }
     }
@@ -284,7 +293,7 @@ void ElementaryCyclesSearch::getHierName(NetlistNode& node, std::string& buffer)
     switch (node.kind) {
         case NodeKind::PortDeclaration: {
             auto& portDecl = node.as<NetlistPortDeclaration>();
-            buffer ="Port declaration: ";
+            buffer = "Port declaration: ";
             buffer.append(portDecl.hierarchicalPath);
             break;
         }
@@ -348,7 +357,7 @@ void ElementaryCyclesSearch::dumpCyclesList(Netlist& netlist) {
         auto si = cycles[i].size();
         for (int j = 0; j < si; j++) {
             ElementaryCyclesSearch::getHierName(netlist.getNode(cycles[i][j]), buffer);
-            std::cout <<buffer;
+            std::cout << buffer;
             if (j < si - 1) {
                 std::cout << " => ";
             }
@@ -367,7 +376,8 @@ void ElementaryCyclesSearch::dumpCyclesList(Netlist& netlist) {
  * connected component s is part of.
  * @return true, if cycle found; false otherwise
  */
-bool ElementaryCyclesSearch::findCycles(ID_type v, ID_type s, std::vector<std::vector<ID_type>> adjList)  {
+bool ElementaryCyclesSearch::findCycles(ID_type v, ID_type s,
+                                        std::vector<std::vector<ID_type>> adjList) {
     bool f = false;
     this->stack.push_back(v);
     this->blocked[v] = true;
@@ -383,7 +393,8 @@ bool ElementaryCyclesSearch::findCycles(ID_type v, ID_type s, std::vector<std::v
             }
             this->cycles.push_back(cycle);
             f = true;
-        } else if (!this->blocked[w]) {
+        }
+        else if (!this->blocked[w]) {
             if (this->findCycles(w, s, adjList)) {
                 f = true;
             }
@@ -392,7 +403,8 @@ bool ElementaryCyclesSearch::findCycles(ID_type v, ID_type s, std::vector<std::v
 
     if (f) {
         this->unblock(v);
-    } else {
+    }
+    else {
         for (int i = 0; i < adjList[v].size(); i++) {
             ID_type w = adjList[v][i];
             if (find(this->B[w].begin(), this->B[w].end(), v) == this->B[w].end()) {

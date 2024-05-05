@@ -82,7 +82,8 @@ static void connectVarToVar(Netlist& netlist, NetlistNode& sourceVarNode,
                             NetlistNode& targetVarNode, ast::EdgeKind edgeKind) {
     auto& edge = netlist.addEdge(sourceVarNode, targetVarNode);
     targetVarNode.edgeKind = edgeKind;
-    DEBUG_PRINT("Edge ref {} to ref {} by edge {}\n", sourceVarNode.getName(), targetVarNode.getName(), toString(edgeKind));
+    DEBUG_PRINT("Edge ref {} to ref {} by edge {}\n", sourceVarNode.getName(),
+                targetVarNode.getName(), toString(edgeKind));
 }
 
 /// An AST visitor to identify variable references with selectors in
@@ -243,9 +244,9 @@ class ProceduralBlockVisitor : public ast::ASTVisitor<ProceduralBlockVisitor, tr
 public:
     bool anyErrors = false;
 
-    explicit ProceduralBlockVisitor(ast::Compilation& compilation, Netlist& netlist, ast::EdgeKind edgeKind) :
-        netlist(netlist),
-        evalCtx(ast::ASTContext(compilation.getRoot(), ast::LookupLocation::max)),
+    explicit ProceduralBlockVisitor(ast::Compilation& compilation, Netlist& netlist,
+                                    ast::EdgeKind edgeKind) :
+        netlist(netlist), evalCtx(ast::ASTContext(compilation.getRoot(), ast::LookupLocation::max)),
         edgeKind(edgeKind) {
         evalCtx.pushEmptyFrame();
     }
@@ -605,9 +606,14 @@ public:
         ast::EdgeKind edgeKind;
         if ((symbol.procedureKind == ast::ProceduralBlockKind::AlwaysFF ||
              symbol.procedureKind == ast::ProceduralBlockKind::Always) &&
-            symbol.getBody().as<ast::TimedStatement>().timing.kind == ast::TimingControlKind::SignalEvent) {
-            edgeKind = symbol.getBody().as<ast::TimedStatement>().timing.as<ast::SignalEventControl>().edge;
-        } else {
+            symbol.getBody().as<ast::TimedStatement>().timing.kind ==
+                ast::TimingControlKind::SignalEvent) {
+            edgeKind = symbol.getBody()
+                           .as<ast::TimedStatement>()
+                           .timing.as<ast::SignalEventControl>()
+                           .edge;
+        }
+        else {
             edgeKind = ast::EdgeKind::None;
         }
         ProceduralBlockVisitor visitor(compilation, netlist, edgeKind);

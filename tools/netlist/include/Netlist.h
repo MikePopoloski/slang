@@ -192,8 +192,8 @@ class NetlistNode : public Node<NetlistNode, NetlistEdge> {
 public:
     NetlistNode(NodeKind kind, const ast::Symbol& symbol) :
         ID(++nextID), kind(kind), symbol(symbol) {
-            edgeKind = ast::EdgeKind::None;
-        };
+        edgeKind = ast::EdgeKind::None;
+    };
     ~NetlistNode() override = default;
 
     template<typename T>

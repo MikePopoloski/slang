@@ -16,23 +16,24 @@
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
  *
- * Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
- * Redistributions in binary form must reproduce the above copyright notice,
- * this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
+ * Redistributions of source code must retain the above copyright notice, this list of conditions
+ * and the following disclaimer. Redistributions in binary form must reproduce the above copyright
+ * notice, this list of conditions and the following disclaimer in the documentation and/or other
+ * materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
- * INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
- * IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY,
- * OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
- * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
- * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
- * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR
+ * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND
+ * FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY
+ * WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+#include "Netlist.h"
+#include <algorithm>
 #include <any>
 #include <vector>
-#include <algorithm>
-
-#include "Netlist.h"
 
 using namespace netlist;
 using ID_type = int;
@@ -43,20 +44,16 @@ private:
     ID_type lowestNodeId;
 
 public:
-    SCCResult(std::vector<std::vector<ID_type>>& adjList, ID_type lowestNodeId) : adjList(adjList) , lowestNodeId(lowestNodeId) {
-    }
-    inline std::vector<std::vector<ID_type>>& getAdjList() {
-        return this->adjList;
-    }
-    inline ID_type getLowestNodeId() {
-        return this->lowestNodeId;
-    }
+    SCCResult(std::vector<std::vector<ID_type>>& adjList, ID_type lowestNodeId) :
+        adjList(adjList), lowestNodeId(lowestNodeId) {}
+    inline std::vector<std::vector<ID_type>>& getAdjList() { return this->adjList; }
+    inline ID_type getLowestNodeId() { return this->lowestNodeId; }
 };
 
 /**
- * This is a helpclass for the search of all elementary cycles in a graph 
+ * This is a helpclass for the search of all elementary cycles in a graph
  * with the algorithm of Johnson. For this it searches for strong connected
- * components, using the algorithm of Tarjan. The constructor gets an 
+ * components, using the algorithm of Tarjan. The constructor gets an
  * adjacency-list of a graph. Based on this graph, it gets a nodenumber s,
  * for which it calculates the subgraph, containing all nodes
  * {s, s + 1, ..., n}, where n is the highest nodenumber in the original
@@ -81,52 +78,53 @@ public:
 
 class StrongConnectedComponents {
 private:
-
-	/** Adjacency-list of original graph */
+    /** Adjacency-list of original graph */
     std::vector<std::vector<ID_type>>& adjListOriginal;
 
     /** Adjacency-list of currently viewed subgraph */
-    /* node IDs are the same as the original, but some of the nodes will be filtered, below a specific node ID*/
+    /* node IDs are the same as the original, but some of the nodes will be filtered, below a
+     * specific node ID*/
     std::vector<std::vector<ID_type>> adjList;
 
-	/** Helpattribute for finding scc's */
+    /** Helpattribute for finding scc's */
     std::vector<bool> visited;
 
-	/** Helpattribute for finding scc's */
+    /** Helpattribute for finding scc's */
     std::vector<int> stack;
 
-	/** Helpattribute for finding scc's */
+    /** Helpattribute for finding scc's */
     std::vector<int> lowlink;
 
-	/** Helpattribute for finding scc's */
+    /** Helpattribute for finding scc's */
     std::vector<int> number;
 
-	/** Helpattribute for finding scc's */
+    /** Helpattribute for finding scc's */
     int sccCounter = 0;
 
-	/** Helpattribute for finding scc's */
+    /** Helpattribute for finding scc's */
     std::vector<std::vector<ID_type>> currentSCCs;
 
 public:
     static SCCResult dummy;
-	/**
-	 * Constructor.
-	 *
-	 * @param adjList adjacency-list of the graph
-	 */
-    StrongConnectedComponents(std::vector<std::vector<ID_type>>& adjList) : adjListOriginal(adjList) { };
+    /**
+     * Constructor.
+     *
+     * @param adjList adjacency-list of the graph
+     */
+    StrongConnectedComponents(std::vector<std::vector<ID_type>>& adjList) :
+        adjListOriginal(adjList) {};
 
-	/**
-	 * This method returns the adjacency-structure of the strong connected
-	 * component with the least vertex in a subgraph of the original graph
-	 * induced by the nodes {s, s + 1, ..., n}, where s is a given node. Note
-	 * that trivial strong connected components with just one node will not
-	 * be returned.
-	 *
-	 * @param node node s
-	 * @return SCCResult with adjacency-structure of the strong
-	 * connected component; null, if no such component exists
-	 */
+    /**
+     * This method returns the adjacency-structure of the strong connected
+     * component with the least vertex in a subgraph of the original graph
+     * induced by the nodes {s, s + 1, ..., n}, where s is a given node. Note
+     * that trivial strong connected components with just one node will not
+     * be returned.
+     *
+     * @param node node s
+     * @return SCCResult with adjacency-structure of the strong
+     * connected component; null, if no such component exists
+     */
     SCCResult getAdjacencyList(ID_type node);
 
 private:
@@ -142,7 +140,7 @@ private:
  * just needs an array of the objects representing the nodes the graph
  * and an adjacency-matrix of type boolean, representing the edges of the
  * graph. It then calculates based on the adjacency-matrix the elementary
- * cycles and returns a list, which contains lists itself with the objects of the 
+ * cycles and returns a list, which contains lists itself with the objects of the
  * concrete graphnodes-implementation. Each of these lists represents an
  * elementary cycle.<br><br>
  *
@@ -155,7 +153,7 @@ private:
  * components in a graph. For a description of this part see:<br>
  * Robert Tarjan: Depth-first search and linear graph algorithms. In: SIAM
  * Journal on Computing. Volume 1, Nr. 2 (1972), pp. 146-160.<br>
- * 
+ *
  * @author Frank Meyer, web_at_normalisiert_dot_de
  * @version 1.2, 22.03.2009
  *
@@ -164,19 +162,19 @@ using CycleListType = std::vector<ID_type>;
 
 class ElementaryCyclesSearch {
 private:
-	/** List of cycles */
+    /** List of cycles */
     std::vector<CycleListType> cycles;
 
-	/** Adjacency-list of graph */
+    /** Adjacency-list of graph */
     std::vector<std::vector<ID_type>> adjList;
 
-	/** Blocked nodes, used by the algorithm of Johnson */
+    /** Blocked nodes, used by the algorithm of Johnson */
     std::vector<bool> blocked;
 
-	/** B-Lists, used by the algorithm of Johnson */
+    /** B-Lists, used by the algorithm of Johnson */
     std::vector<std::vector<ID_type>> B;
 
-	/** Stack for nodes, used by the algorithm of Johnson */
+    /** Stack for nodes, used by the algorithm of Johnson */
     std::vector<ID_type> stack;
 
 public:
@@ -184,7 +182,7 @@ public:
      * Constructor.
      *
      * @param matrix adjacency-matrix of the graph
-     * @param netlist pointer to the full netlist 
+     * @param netlist pointer to the full netlist
      */
     ElementaryCyclesSearch(std::vector<std::vector<ID_type>>& adjList);
     ElementaryCyclesSearch(Netlist& netlist);

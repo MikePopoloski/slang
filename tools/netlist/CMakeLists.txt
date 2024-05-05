@@ -3,7 +3,8 @@
 # SPDX-License-Identifier: MIT
 # ~~~
 
-add_executable(slang_netlist netlist.cpp source/Netlist.cpp source/CombLoops.cpp)
+add_executable(slang_netlist netlist.cpp source/Netlist.cpp
+                             source/CombLoops.cpp)
 add_executable(slang::netlist ALIAS slang_netlist)
 
 target_link_libraries(

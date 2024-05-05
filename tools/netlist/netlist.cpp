@@ -6,8 +6,8 @@
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
 #include "Netlist.h"
-#include "CombLoops.h"
 
+#include "CombLoops.h"
 #include "NetlistVisitor.h"
 #include "PathFinder.h"
 #include "fmt/color.h"
@@ -90,9 +90,11 @@ void printDOT(const Netlist& netlist, const std::string& fileName) {
                 if (!varRef.isLeftOperand())
                     buffer.format("  N{} [label=\"{}\\n\"]\n", node->ID, varRef.toString());
                 else if (node->edgeKind == EdgeKind::None)
-                    buffer.format("  N{} [label=\"{}\\n[Assigned to]\"]\n", node->ID, varRef.toString());
+                    buffer.format("  N{} [label=\"{}\\n[Assigned to]\"]\n", node->ID,
+                                  varRef.toString());
                 else
-                    buffer.format("  N{} [label=\"{}\\n[Assigned to @({})]\"]\n", node->ID, varRef.toString(), toString(node->edgeKind));
+                    buffer.format("  N{} [label=\"{}\\n[Assigned to @({})]\"]\n", node->ID,
+                                  varRef.toString(), toString(node->edgeKind));
                 break;
             }
             default:
@@ -187,7 +189,7 @@ int main(int argc, char** argv) {
 
     // We don't allow this because in comb loop detection mode we break all netlist loops with edges
     // so any effort to save/analyze said netlist is futile and dangerous
-    //if (combLoops == true && (astJsonFile || netlistDotFile || fromPointName || toPointName))
+    // if (combLoops == true && (astJsonFile || netlistDotFile || fromPointName || toPointName))
     //    SLANG_THROW(std::runtime_error("Cannot use --comb_loops with other modes"));
 
     if (showHelp == true) {
