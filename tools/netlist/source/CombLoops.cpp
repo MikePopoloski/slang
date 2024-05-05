@@ -229,11 +229,13 @@ ElementaryCyclesSearch::ElementaryCyclesSearch(std::vector<std::vector<ID_type>>
 ElementaryCyclesSearch::ElementaryCyclesSearch(Netlist& netlist) {
     int nodes_num = netlist.numNodes();
     adjList.resize(nodes_num);
+    auto net_nodes = nodes_num;
     std::cout << "Nodes: " << nodes_num << std::endl;
     for (size_t i = 0; i < nodes_num; i++) {
         auto& node = netlist.getNode(i);
         if (node.edgeKind != slang::ast::EdgeKind::None) {
             DEBUG_PRINT("skipped node {}\n", node.ID);
+            net_nodes--;
             continue;
         }
         int node_edges_num = node.getEdges().size();
@@ -250,6 +252,8 @@ ElementaryCyclesSearch::ElementaryCyclesSearch(Netlist& netlist) {
             adjList[i].push_back(tnode.ID - 1);
         }
     }
+    std::cout << "Actual active Nodes: " << net_nodes << std::endl;
+
 }
 
 /**
