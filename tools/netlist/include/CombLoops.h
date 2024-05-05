@@ -1,0 +1,249 @@
+#ifndef COMBLOOPS_H
+#define COMBLOOPS_H
+
+#include <any>
+#include <vector>
+#include <algorithm>
+
+#include "Netlist.h"
+
+using namespace netlist;
+using ID_type = int;
+
+#ifdef NOT_USED
+// Base class, do not use
+class BaseEdgeList {
+    BaseEdgeList(int size);
+    ID_type operator[](int index);
+};
+
+// store node IDs separately
+class SAEdgeList : BaseEdgeList {
+    SAEdgeList(int size);
+    ID_type operator[](int index);
+};
+
+// Extract node IDs from existing netlist
+class NetlistEdgeList : BaseEdgeList {
+    NetlistEdgeList(int size);
+    ID_type operator[](int index);
+
+    int operator[](int index) {
+        return nodes[index];
+    }
+
+private:
+    std::vector<ID_type> edges;
+};
+
+class BaseAdjList {
+    BaseAdjList();
+}
+
+// Standalone AdjList
+// Builds a copy of the AdjList and uses it directly
+// Faster but costs more memory
+class SAAdjList : BaseAdjList {
+    SAAdjList();
+}
+
+// Get AdjList data directly frtom Netlist class
+// Slower but saves memory
+class NetlistAdjList : BaseAdjList {
+    NetlistAdjList();
+
+    int operator[](int index) {
+        return nodes[index];
+    }
+
+private:
+    std::vector<NetlistEdgeList> nodes;
+}
+#endif
+
+class SCCResult {
+private:
+    std::vector<std::vector<ID_type>> adjList;
+    ID_type lowestNodeId;
+
+public:
+    SCCResult(std::vector<std::vector<ID_type>>& adjList, ID_type lowestNodeId) : adjList(adjList) , lowestNodeId(lowestNodeId) {
+    }
+    inline std::vector<std::vector<ID_type>>& getAdjList() {
+        return this->adjList;
+    }
+    inline ID_type getLowestNodeId() {
+        return this->lowestNodeId;
+    }
+};
+
+/**
+ * This is a helpclass for the search of all elementary cycles in a graph 
+ * with the algorithm of Johnson. For this it searches for strong connected
+ * components, using the algorithm of Tarjan. The constructor gets an 
+ * adjacency-list of a graph. Based on this graph, it gets a nodenumber s,
+ * for which it calculates the subgraph, containing all nodes
+ * {s, s + 1, ..., n}, where n is the highest nodenumber in the original
+ * graph (e.g. it builds a subgraph with all nodes with higher or same
+ * nodenumbers like the given node s). It returns the strong connected
+ * component of this subgraph which contains the lowest nodenumber of all
+ * nodes in the subgraph.<br><br>
+ *
+ * For a description of the algorithm for calculating the strong connected
+ * components see:<br>
+ * Robert Tarjan: Depth-first search and linear graph algorithms. In: SIAM
+ * Journal on Computing. Volume 1, Nr. 2 (1972), pp. 146-160.<br>
+ * For a description of the algorithm for searching all elementary cycles in
+ * a directed graph see:<br>
+ * Donald B. Johnson: Finding All the Elementary Circuits of a Directed Graph.
+ * SIAM Journal on Computing. Volumne 4, Nr. 1 (1975), pp. 77-84.<br><br>
+ *
+ * @author Frank Meyer, web_at_normalisiert_dot_de
+ * @version 1.1, 22.03.2009
+ *
+ */
+
+class StrongConnectedComponents {
+private:
+
+	/** Adjacency-list of original graph */
+    std::vector<std::vector<ID_type>>& adjListOriginal;
+
+    /** Adjacency-list of currently viewed subgraph */
+    /* node IDs are the same as the original, but some of the nodes will be filtered, below a specific node ID*/
+    std::vector<std::vector<ID_type>> adjList;
+
+	/** Helpattribute for finding scc's */
+    std::vector<bool> visited;
+
+	/** Helpattribute for finding scc's */
+    std::vector<int> stack;
+
+	/** Helpattribute for finding scc's */
+    std::vector<int> lowlink;
+
+	/** Helpattribute for finding scc's */
+    std::vector<int> number;
+
+	/** Helpattribute for finding scc's */
+    int sccCounter = 0;
+
+	/** Helpattribute for finding scc's */
+    std::vector<std::vector<ID_type>> currentSCCs;
+
+public:
+    static SCCResult dummy;
+	/**
+	 * Constructor.
+	 *
+	 * @param adjList adjacency-list of the graph
+	 */
+    StrongConnectedComponents(std::vector<std::vector<ID_type>>& adjList) : adjListOriginal(adjList) { };
+
+	/**
+	 * This method returns the adjacency-structure of the strong connected
+	 * component with the least vertex in a subgraph of the original graph
+	 * induced by the nodes {s, s + 1, ..., n}, where s is a given node. Note
+	 * that trivial strong connected components with just one node will not
+	 * be returned.
+	 *
+	 * @param node node s
+	 * @return SCCResult with adjacency-structure of the strong
+	 * connected component; null, if no such component exists
+	 */
+    SCCResult getAdjacencyList(ID_type node);
+
+private:
+    void makeAdjListSubgraph(ID_type node);
+    std::vector<ID_type> getLowestIdComponent();
+    std::vector<std::vector<ID_type>> getAdjList(std::vector<ID_type> nodes);
+    void getStrongConnectedComponents(ID_type root);
+};
+
+/**
+ * Searchs all elementary cycles in a given directed graph. The implementation
+ * is independent from the concrete objects that represent the graphnodes, it
+ * just needs an array of the objects representing the nodes the graph
+ * and an adjacency-matrix of type boolean, representing the edges of the
+ * graph. It then calculates based on the adjacency-matrix the elementary
+ * cycles and returns a list, which contains lists itself with the objects of the 
+ * concrete graphnodes-implementation. Each of these lists represents an
+ * elementary cycle.<br><br>
+ *
+ * The implementation uses the algorithm of Donald B. Johnson for the search of
+ * the elementary cycles. For a description of the algorithm see:<br>
+ * Donald B. Johnson: Finding All the Elementary Circuits of a Directed Graph.
+ * SIAM Journal on Computing. Volumne 4, Nr. 1 (1975), pp. 77-84.<br><br>
+ *
+ * The algorithm of Johnson is based on the search for strong connected
+ * components in a graph. For a description of this part see:<br>
+ * Robert Tarjan: Depth-first search and linear graph algorithms. In: SIAM
+ * Journal on Computing. Volume 1, Nr. 2 (1972), pp. 146-160.<br>
+ * 
+ * @author Frank Meyer, web_at_normalisiert_dot_de
+ * @version 1.2, 22.03.2009
+ *
+ */
+using CycleListType = std::vector<ID_type>;
+
+class ElementaryCyclesSearch {
+private:
+	/** List of cycles */
+    std::vector<CycleListType> cycles;
+
+	/** Adjacency-list of graph */
+    std::vector<std::vector<ID_type>> adjList;
+
+	/** Blocked nodes, used by the algorithm of Johnson */
+    std::vector<bool> blocked;
+
+	/** B-Lists, used by the algorithm of Johnson */
+    std::vector<std::vector<ID_type>> B;
+
+	/** Stack for nodes, used by the algorithm of Johnson */
+    std::vector<ID_type> stack;
+
+public:
+    /**
+     * Constructor.
+     *
+     * @param matrix adjacency-matrix of the graph
+     * @param netlist pointer to the full netlist 
+     */
+    ElementaryCyclesSearch(std::vector<std::vector<ID_type>>& adjList);
+    ElementaryCyclesSearch(Netlist& netlist);
+    /**
+     * Returns List::List::Object with the Lists of nodes of all elementary
+     * cycles in the graph.
+     *
+     * @return List::List::Object with the Lists of the elementary cycles.
+     */
+    std::vector<CycleListType>* getElementaryCycles();
+    /**
+     * Dumps the cycles found
+     */
+    static void getHierName(NetlistNode& node, std::string& buffer);
+    void dumpAdjList(Netlist& netlist);
+    void dumpCyclesList(Netlist& netlist);
+
+private:
+    /**
+     * Calculates the cycles containing a given node in a strongly connected
+     * component. The method calls itself recursivly.
+     *
+     * @param v
+     * @param s
+     * @param adjList adjacency-list with the subgraph of the strongly
+     * connected component s is part of.
+     * @return true, if cycle found; false otherwise
+     */
+    bool findCycles(ID_type v, ID_type s, std::vector<std::vector<ID_type>> adjList);
+    /**
+     * Unblocks recursivly all blocked nodes, starting with a given node.
+     *
+     * @param node node to unblock
+     */
+    void unblock(ID_type node);
+};
+
+#endif // COMBLOOPS_H

@@ -81,7 +81,6 @@ static void connectVarToDecl(Netlist& netlist, NetlistNode& varNode,
 static void connectVarToVar(Netlist& netlist, NetlistNode& sourceVarNode,
                             NetlistNode& targetVarNode, ast::EdgeKind edgeKind) {
     auto& edge = netlist.addEdge(sourceVarNode, targetVarNode);
-    edge.edgeKind = edgeKind;
     targetVarNode.edgeKind = edgeKind;
     DEBUG_PRINT("Edge ref {} to ref {} by edge {}\n", sourceVarNode.getName(), targetVarNode.getName(), toString(edgeKind));
 }

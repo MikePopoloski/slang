@@ -184,7 +184,6 @@ public:
 
 public:
     bool disabled{};
-    ast::EdgeKind edgeKind;
 };
 
 /// A class representing a node in the netlist, corresponding to the appearance
@@ -192,7 +191,9 @@ public:
 class NetlistNode : public Node<NetlistNode, NetlistEdge> {
 public:
     NetlistNode(NodeKind kind, const ast::Symbol& symbol) :
-        ID(++nextID), kind(kind), symbol(symbol) {};
+        ID(++nextID), kind(kind), symbol(symbol) {
+            edgeKind = ast::EdgeKind::None;
+        };
     ~NetlistNode() override = default;
 
     template<typename T>
@@ -225,6 +226,7 @@ public:
     NodeKind kind;
     const ast::Symbol& symbol;
     ast::EdgeKind edgeKind;
+    bool blocked{};
 
 private:
     static size_t nextID;

@@ -6,6 +6,7 @@
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
 #include "Netlist.h"
+#include "CombLoops.h"
 
 #include "NetlistVisitor.h"
 #include "PathFinder.h"
@@ -149,10 +150,12 @@ int main(int argc, char** argv) {
     std::optional<bool> showVersion;
     std::optional<bool> quiet;
     std::optional<bool> debug;
+    std::optional<bool> combLoops;
     driver.cmdLine.add("-h,--help", showHelp, "Display available options");
     driver.cmdLine.add("--version", showVersion, "Display version information and exit");
     driver.cmdLine.add("-q,--quiet", quiet, "Suppress non-essential output");
     driver.cmdLine.add("-d,--debug", debug, "Output debugging information");
+    driver.cmdLine.add("-c,--comb_loops", combLoops, "Detect combinatorial loops");
 
     std::optional<std::string> astJsonFile;
     driver.cmdLine.add(
@@ -181,6 +184,11 @@ int main(int argc, char** argv) {
     if (!driver.parseCommandLine(argc, argv)) {
         return 1;
     }
+
+    // We don't allow this because in comb loop detection mode we break all netlist loops with edges
+    // so any effort to save/analyze said netlist is futile and dangerous
+    //if (combLoops == true && (astJsonFile || netlistDotFile || fromPointName || toPointName))
+    //    SLANG_THROW(std::runtime_error("Cannot use --comb_loops with other modes"));
 
     if (showHelp == true) {
         std::cout << fmt::format(
@@ -236,6 +244,11 @@ int main(int argc, char** argv) {
             return 0;
         }
 
+        if (combLoops == true) {
+            ElementaryCyclesSearch ecs(netlist);
+            ecs.getElementaryCycles();
+            ecs.dumpCyclesList(netlist);
+        }
         // Find a point-to-point path in the netlist.
         if (fromPointName.has_value() && toPointName.has_value()) {
             if (!fromPointName.has_value()) {
