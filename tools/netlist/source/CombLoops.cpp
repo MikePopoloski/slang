@@ -253,7 +253,6 @@ ElementaryCyclesSearch::ElementaryCyclesSearch(Netlist& netlist) {
         }
     }
     std::cout << "Actual active Nodes: " << net_nodes << std::endl;
-
 }
 
 /**
