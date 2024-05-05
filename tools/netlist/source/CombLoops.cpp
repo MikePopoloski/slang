@@ -203,7 +203,10 @@ ElementaryCyclesSearch::ElementaryCyclesSearch(Netlist& netlist) {
         int node_edges_num = node.getEdges().size();
         adjList[i].clear();
         for (int j = 0; j < node_edges_num; j++) {
-            auto& tnode = node.getEdges()[j]->getTargetNode();
+            auto& edge = *(node.getEdges()[j]);
+            if (edge.disabled)
+                continue;
+            auto& tnode = edge.getTargetNode();
             if (tnode.edgeKind != slang::ast::EdgeKind::None) {
                 DEBUG_PRINT("skipped tnode {}\n", tnode.ID);
                 continue;
