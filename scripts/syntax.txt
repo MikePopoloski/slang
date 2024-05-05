@@ -1718,14 +1718,21 @@ token op
 token extraOp
 Expression expr
 
-DistItem
+DistItemBase final=false
+empty
+
+DistItem base=DistItemBase
 Expression range
+DistWeight? weight
+
+DefaultDistItem base=DistItemBase
+token defaultKeyword
 DistWeight? weight
 
 DistConstraintList
 token dist
 token openBrace
-separated_list<DistItem> items
+separated_list<DistItemBase> items
 token closeBrace
 
 ExpressionOrDist base=Expression

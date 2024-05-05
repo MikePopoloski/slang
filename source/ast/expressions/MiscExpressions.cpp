@@ -1353,8 +1353,10 @@ void CopyClassExpression::serializeTo(ASTSerializer& serializer) const {
 Expression& DistExpression::fromSyntax(Compilation& comp, const ExpressionOrDistSyntax& syntax,
                                        const ASTContext& context) {
     SmallVector<const ExpressionSyntax*> expressions;
-    for (auto item : syntax.distribution->items)
-        expressions.push_back(item->range);
+    for (auto item : syntax.distribution->items) {
+        if (item->kind == SyntaxKind::DistItem)
+            expressions.push_back(item->as<DistItemSyntax>().range);
+    }
 
     const bool allowReal = comp.languageVersion() >= LanguageVersion::v1800_2023;
 
@@ -1372,30 +1374,47 @@ Expression& DistExpression::fromSyntax(Compilation& comp, const ExpressionOrDist
         }
     }
 
+    auto createWeight = [&](const DistWeightSyntax& weight) {
+        auto weightKind = DistWeight::PerValue;
+        if (weight.op.kind == TokenKind::ColonSlash ||
+            (weight.op.kind == TokenKind::Colon && weight.extraOp.kind == TokenKind::Slash)) {
+            weightKind = DistWeight::PerRange;
+        }
+
+        auto& weightExpr = Expression::bind(*weight.expr, context);
+        if (!context.requireIntegral(weightExpr))
+            bad = true;
+
+        return DistWeight{weightKind, &weightExpr};
+    };
+
+    std::optional<DistWeight> defaultWeight;
     SmallVector<DistItem, 4> items;
     size_t index = 1;
     for (auto item : syntax.distribution->items) {
-        DistItem di{*bound[index++], {}};
-        if (item->weight) {
-            auto weightKind = DistWeight::PerValue;
-            if (item->weight->op.kind == TokenKind::ColonSlash ||
-                (item->weight->op.kind == TokenKind::Colon &&
-                 item->weight->extraOp.kind == TokenKind::Slash)) {
-                weightKind = DistWeight::PerRange;
+        if (item->kind != SyntaxKind::DistItem) {
+            if (auto weight = item->as<DefaultDistItemSyntax>().weight) {
+                if (defaultWeight) {
+                    auto& diag = context.addDiag(diag::MultipleDefaultDistWeight,
+                                                 item->sourceRange());
+                    diag.addNote(diag::NotePreviousUsage, defaultWeight->expr->sourceRange);
+                }
+                else {
+                    defaultWeight = createWeight(*weight);
+                }
             }
-
-            auto& weightExpr = Expression::bind(*item->weight->expr, context);
-            di.weight.emplace(DistWeight{weightKind, weightExpr});
-
-            if (!context.requireIntegral(weightExpr))
-                bad = true;
+            continue;
         }
+
+        DistItem di{*bound[index++], {}};
+        if (auto weight = item->as<DistItemSyntax>().weight)
+            di.weight = createWeight(*weight);
 
         items.emplace_back(di);
     }
 
     auto result = comp.emplace<DistExpression>(comp.getVoidType(), pred, items.copy(comp),
-                                               syntax.sourceRange());
+                                               defaultWeight, syntax.sourceRange());
     if (bad)
         return badExpr(comp, result);
 
@@ -1403,19 +1422,28 @@ Expression& DistExpression::fromSyntax(Compilation& comp, const ExpressionOrDist
 }
 
 void DistExpression::serializeTo(ASTSerializer& serializer) const {
+    auto writeWeight = [&](const DistWeight& weight) {
+        serializer.write("kind", weight.kind == DistWeight::PerRange ? "PerRange"sv : "PerValue"sv);
+        serializer.write("weight", *weight.expr);
+    };
+
     serializer.write("left", left());
     serializer.startArray("items");
     for (auto& item : items_) {
         serializer.startObject();
         serializer.write("value", item.value);
-        if (item.weight) {
-            serializer.write("kind", item.weight->kind == DistWeight::PerRange ? "PerRange"sv
-                                                                               : "PerValue"sv);
-            serializer.write("weight", item.weight->expr);
-        }
+        if (item.weight)
+            writeWeight(*item.weight);
         serializer.endObject();
     }
     serializer.endArray();
+
+    if (defaultWeight_) {
+        serializer.writeProperty("defaultWeight");
+        serializer.startObject();
+        writeWeight(*defaultWeight_);
+        serializer.endObject();
+    }
 }
 
 Expression& TaggedUnionExpression::fromSyntax(Compilation& compilation,

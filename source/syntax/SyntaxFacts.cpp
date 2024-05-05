@@ -741,6 +741,7 @@ bool SyntaxFacts::isPossibleValueRangeElement(TokenKind kind) {
     switch (kind) {
         case TokenKind::OpenBracket:
         case TokenKind::Comma:
+        case TokenKind::DefaultKeyword:
             return true;
         default:
             return isPossibleExpression(kind);

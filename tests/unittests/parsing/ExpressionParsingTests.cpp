@@ -961,3 +961,18 @@ wire [15:0] x = -16'sh8000;
     parseCompilationUnit(text);
     CHECK_DIAGNOSTICS_EMPTY;
 }
+
+TEST_CASE("v1800-2023: parsing default dist weight language version") {
+    auto& text = R"(
+class C;
+    constraint c {
+        a dist { default :/ 1 };
+    }
+endclass
+)";
+
+    parseCompilationUnit(text);
+
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics[0].code == diag::WrongLanguageVersion);
+}

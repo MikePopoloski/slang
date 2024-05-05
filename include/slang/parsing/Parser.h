@@ -326,7 +326,7 @@ private:
     syntax::ConstraintBlockSyntax& parseConstraintBlock(bool isTopLevel);
     syntax::ConstraintItemSyntax* parseConstraintItem(bool allowBlock, bool isTopLevel);
     syntax::DistConstraintListSyntax& parseDistConstraintList();
-    syntax::DistItemSyntax& parseDistItem();
+    syntax::DistItemBaseSyntax& parseDistItem();
     syntax::ExpressionSyntax& parseArrayOrRandomizeMethod(syntax::ExpressionSyntax& expr);
     syntax::DefParamAssignmentSyntax& parseDefParamAssignment();
     syntax::DefParamSyntax& parseDefParam(AttrList attributes);

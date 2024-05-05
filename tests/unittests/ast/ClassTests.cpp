@@ -3216,7 +3216,10 @@ class real_constraint_c;
     constraint b_constraint {
         (a inside {[VALUE_LOW:VALUE_MIN]}) -> b == real'(ZSTATE);
         b dist { ZSTATE := 1,
-                 [VALUE_MIN:VALUE_MAX] :/ 20
+                 [VALUE_MIN:VALUE_MAX] :/ 20,
+                 default :/ 1,
+                 default : = 1,
+                 default
         };
         s dist { "Hello" := 1 };
         solve a before b;
@@ -3229,8 +3232,12 @@ endclass
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 3);
+    REQUIRE(diags.size() == 7);
     CHECK(diags[0].code == diag::IntFloatConv);
     CHECK(diags[1].code == diag::IntFloatConv);
-    CHECK(diags[2].code == diag::BadSetMembershipType);
+    CHECK(diags[2].code == diag::MultipleDefaultDistWeight);
+    CHECK(diags[3].code == diag::ExpectedToken);
+    CHECK(diags[4].code == diag::SplitDistWeightOp);
+    CHECK(diags[5].code == diag::ExpectedToken);
+    CHECK(diags[6].code == diag::BadSetMembershipType);
 }
