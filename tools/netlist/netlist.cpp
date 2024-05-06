@@ -142,7 +142,8 @@ void reportPath(Compilation& compilation, const NetlistPath& path) {
     }
 }
 
-void dumpCyclesList(Compilation& compilation, Netlist &netlist, std::vector<CycleListType>* cycles) {
+void dumpCyclesList(Compilation& compilation, Netlist& netlist,
+                    std::vector<CycleListType>* cycles) {
     auto s = cycles->size();
     if (!s) {
         OS::print("No combinatorial loops detected\n");
@@ -163,7 +164,6 @@ void dumpCyclesList(Compilation& compilation, Netlist &netlist, std::vector<Cycl
         path.clear();
     }
 }
-
 
 int main(int argc, char** argv) {
     OS::setupConsole();

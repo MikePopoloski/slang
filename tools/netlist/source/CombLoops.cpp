@@ -29,8 +29,8 @@
  */
 
 #include "CombLoops.h"
-#include "NetlistPath.h"
 
+#include "NetlistPath.h"
 #include <algorithm>
 #include <vector>
 
