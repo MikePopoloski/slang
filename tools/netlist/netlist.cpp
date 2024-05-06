@@ -180,7 +180,7 @@ int main(int argc, char** argv) {
     driver.cmdLine.add("--version", showVersion, "Display version information and exit");
     driver.cmdLine.add("-q,--quiet", quiet, "Suppress non-essential output");
     driver.cmdLine.add("-d,--debug", debug, "Output debugging information");
-    driver.cmdLine.add("-c,--comb_loops", combLoops, "Detect combinatorial loops");
+    driver.cmdLine.add("-c,--comb-loops", combLoops, "Detect combinatorial loops");
 
     std::optional<std::string> astJsonFile;
     driver.cmdLine.add(
