@@ -376,6 +376,16 @@ public:
         return node;
     }
 
+    // without this, the base class method will be hidden,
+    // even when calling netlist.addEdge with only 2 parameters
+    using DirectedGraph<NetlistNode, NetlistEdge>::addEdge;
+
+    NetlistEdge& addEdge(NetlistNode& sourceNode, NetlistNode& targetNode, ast::EdgeKind edgeKind) {
+        auto& edge = DirectedGraph<NetlistNode, NetlistEdge>::addEdge(sourceNode, targetNode);
+        targetNode.edgeKind = edgeKind;
+        return edge;
+    }
+
     /// Find a port declaration node in the netlist by hierarchical path.
     NetlistPortDeclaration* lookupPort(std::string_view hierarchicalPath) {
         auto compareNode = [&hierarchicalPath](const std::unique_ptr<NetlistNode>& node) {
