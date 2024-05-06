@@ -622,7 +622,7 @@ public:
     /// Generate block.
     void handle(const ast::GenerateBlockSymbol& symbol) {
         if (!symbol.isUninstantiated) {
-            ProceduralBlockVisitor visitor(compilation, netlist);
+            ProceduralBlockVisitor visitor(compilation, netlist, ast::EdgeKind::None);
             symbol.visit(visitor);
         }
     }
