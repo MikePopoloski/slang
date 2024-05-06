@@ -142,6 +142,42 @@ void reportPath(Compilation& compilation, const NetlistPath& path) {
     }
 }
 
+void dumpCyclesList(Compilation& compilation, Netlist &netlist, std::vector<CycleListType>* cycles) {
+    std::string buffer;
+    bool first = true;
+    int first_var;
+    auto s = cycles->size();
+    if (!s)
+        return;
+
+    if (s == 1)
+        buffer = ":\n";
+    else
+        buffer = "s:\n";
+    std::cout << "Detected " << s << " combinatorial loop" << buffer;
+    NetlistPath path;
+    for (int i = 0; i < s; i++) {
+        auto si = (*cycles)[i].size();
+        OS::print(fmt::format("Path length: {}\n", si));
+        for (int j = 0; j < si; j++) {
+            auto& node = netlist.getNode((*cycles)[i][j]);
+            if (node.kind == NodeKind::VariableReference) {
+                if (first) first_var = j;
+                first = false;
+                path.add(node);
+                OS::print(fmt::format("Index: {} Node ID: {}\n", j, node.ID));
+            }
+        }
+        // close loop
+        auto& node = netlist.getNode((*cycles)[i][first_var]);
+        path.add(node);
+        OS::print(fmt::format("Index: {} Node ID: {}\n", first_var, node.ID));
+        reportPath(compilation, path);
+        path.clear();
+    }
+}
+
+
 int main(int argc, char** argv) {
     OS::setupConsole();
 
@@ -243,8 +279,8 @@ int main(int argc, char** argv) {
 
         if (combLoops == true) {
             ElementaryCyclesSearch ecs(netlist);
-            ecs.getElementaryCycles();
-            ecs.dumpCyclesList(netlist);
+            std::vector<CycleListType>* cycles = ecs.getElementaryCycles();
+            dumpCyclesList(*compilation, netlist, cycles);
         }
         // Find a point-to-point path in the netlist.
         if (fromPointName.has_value() && toPointName.has_value()) {

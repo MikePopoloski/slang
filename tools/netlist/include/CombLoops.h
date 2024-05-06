@@ -198,7 +198,6 @@ public:
      */
     static void getHierName(NetlistNode& node, std::string& buffer);
     void dumpAdjList(Netlist& netlist);
-    void dumpCyclesList(Netlist& netlist);
 
 private:
     /**
@@ -211,7 +210,7 @@ private:
      * connected component s is part of.
      * @return true, if cycle found; false otherwise
      */
-    bool findCycles(ID_type v, ID_type s, std::vector<std::vector<ID_type>> adjList);
+    bool findCycles(ID_type v, ID_type s, std::vector<std::vector<ID_type>>& adjList);
     /**
      * Unblocks recursivly all blocked nodes, starting with a given node.
      *

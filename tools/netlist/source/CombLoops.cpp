@@ -29,6 +29,7 @@
  */
 
 #include "CombLoops.h"
+#include "NetlistPath.h"
 
 #include <algorithm>
 #include <vector>
@@ -345,30 +346,6 @@ void ElementaryCyclesSearch::dumpAdjList(Netlist& netlist) {
     }
 }
 
-void ElementaryCyclesSearch::dumpCyclesList(Netlist& netlist) {
-    std::string buffer;
-    auto s = cycles.size();
-    if (!s)
-        return;
-
-    if (s == 1)
-        buffer = ":\n";
-    else
-        buffer = "s:\n";
-    std::cout << "Detected " << s << " combinatorial loop" << buffer;
-    for (int i = 0; i < s; i++) {
-        auto si = cycles[i].size();
-        for (int j = 0; j < si; j++) {
-            ElementaryCyclesSearch::getHierName(netlist.getNode(cycles[i][j]), buffer);
-            std::cout << buffer;
-            if (j < si - 1) {
-                std::cout << " => ";
-            }
-        }
-        std::cout << "\n";
-    }
-}
-
 /**
  * Calculates the cycles containing a given node in a strongly connected
  * component. The method calls itself recursivly.
@@ -380,7 +357,7 @@ void ElementaryCyclesSearch::dumpCyclesList(Netlist& netlist) {
  * @return true, if cycle found; false otherwise
  */
 bool ElementaryCyclesSearch::findCycles(ID_type v, ID_type s,
-                                        std::vector<std::vector<ID_type>> adjList) {
+                                        std::vector<std::vector<ID_type>>& adjList) {
     bool f = false;
     this->stack.push_back(v);
     this->blocked[v] = true;
