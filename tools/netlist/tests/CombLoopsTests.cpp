@@ -6,8 +6,8 @@
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
 
-#include "NetlistTest.h"
 #include "CombLoops.h"
+#include "NetlistTest.h"
 
 //===---------------------------------------------------------------------===//
 // Basic tests
@@ -48,6 +48,6 @@ endmodule
     CHECK(cycles.size() == 1);
     CHECK(cycles[0].size() == 10);
     CHECK(std::count_if(cycles[0].begin(), cycles[0].end(), [&netlist](int node) {
-       return (netlist.getNode(node).kind == NodeKind::VariableReference);
-    }) == 6);
+              return (netlist.getNode(node).kind == NodeKind::VariableReference);
+          }) == 6);
 }
