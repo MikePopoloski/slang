@@ -252,7 +252,7 @@ void DeclaredType::checkType(const ASTContext& context) const {
             break;
         case uint32_t(DeclaredTypeFlags::Rand): {
             RandMode mode = parent.getRandMode();
-            if (!type->isValidForRand(mode)) {
+            if (!type->isValidForRand(mode, context.getCompilation().languageVersion())) {
                 auto& diag = context.addDiag(diag::InvalidRandType, parent.location) << *type;
                 if (mode == RandMode::Rand)
                     diag << "rand"sv;

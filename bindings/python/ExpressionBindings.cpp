@@ -183,12 +183,13 @@ void registerExpressions(py::module_& m) {
 
     py::class_<DistExpression, Expression> distExpr(m, "DistExpression");
     distExpr.def_property_readonly("left", &DistExpression::left)
-        .def_property_readonly("items", &DistExpression::items);
+        .def_property_readonly("items", &DistExpression::items)
+        .def_property_readonly("defaultWeight", &DistExpression::defaultWeight);
 
     py::class_<DistExpression::DistWeight> distWeight(distExpr, "DistWeight");
     distWeight.def_readonly("kind", &DistExpression::DistWeight::kind)
         .def_property_readonly("expr",
-                               [](const DistExpression::DistWeight& self) { return &self.expr; });
+                               [](const DistExpression::DistWeight& self) { return self.expr; });
 
     py::enum_<DistExpression::DistWeight::Kind>(distWeight, "Kind")
         .value("PerValue", DistExpression::DistWeight::PerValue)

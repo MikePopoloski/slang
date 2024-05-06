@@ -280,6 +280,9 @@ public:
     /// Returns true if the given flag(s) are enabled for this compilation.
     bool hasFlag(bitmask<CompilationFlags> flags) const { return options.flags.has(flags); }
 
+    /// Gets the language version set in the compilation options.
+    LanguageVersion languageVersion() const { return getOptions().languageVersion; }
+
     /// Gets the source manager associated with the compilation. If no syntax trees have
     /// been added to the design this method will return nullptr.
     const SourceManager* getSourceManager() const { return sourceManager; }

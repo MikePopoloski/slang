@@ -16,16 +16,13 @@ CloseBrace
 OpenBracket
 CloseBracket
 OpenParenthesis
-OpenParenthesisStar
 CloseParenthesis
-StarCloseParenthesis
 Semicolon
 Colon
 ColonEquals
 ColonSlash
 DoubleColon
 Comma
-DotStar
 Dot
 Slash
 Star

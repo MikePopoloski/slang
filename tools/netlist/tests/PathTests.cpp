@@ -619,3 +619,29 @@ endmodule
     PathFinder pathFinder(netlist);
     CHECK(!pathFinder.find(*inPort, *outPort).empty());
 }
+
+//===---------------------------------------------------------------------===//
+// Test case for for #985 (generate blocks)
+//===---------------------------------------------------------------------===//
+
+TEST_CASE("Conditional generate blocks") {
+    // One branch of the generate conditional is uninstantiated.
+    auto tree = SyntaxTree::fromText(R"(
+module top#(parameter X=0)(output logic out);
+generate
+if (X) begin
+  logic foo;
+  assign out = foo;
+end else begin
+  logic foo;
+  assign out = foo;
+end
+endgenerate
+endmodule
+)");
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+    auto netlist = createNetlist(compilation);
+    CHECK(netlist.lookupVariable("top.genblk1.foo"));
+}

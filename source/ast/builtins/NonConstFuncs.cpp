@@ -331,6 +331,9 @@ public:
         if (argIndex == 0 || argIndex == 2)
             extraFlags = ASTFlags::AssertionExpr;
 
+        if (argIndex == 2)
+            extraFlags |= ASTFlags::NonProcedural;
+
         return Expression::bind(syntax, context, extraFlags);
     }
 

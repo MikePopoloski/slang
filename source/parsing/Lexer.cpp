@@ -364,10 +364,7 @@ Token Lexer::lexToken(KeywordVersion keywordVersion) {
             else
                 return lexApostrophe();
         case '(':
-            if (!consume('*'))
-                return create(TokenKind::OpenParenthesis);
-            else
-                return create(TokenKind::OpenParenthesisStar);
+            return create(TokenKind::OpenParenthesis);
         case ')':
             return create(TokenKind::CloseParenthesis);
         case '*':
@@ -381,9 +378,6 @@ Token Lexer::lexToken(KeywordVersion keywordVersion) {
                 case '>':
                     advance();
                     return create(TokenKind::StarArrow);
-                case ')':
-                    advance();
-                    return create(TokenKind::StarCloseParenthesis);
             }
             return create(TokenKind::Star);
         case '+':
@@ -433,10 +427,7 @@ Token Lexer::lexToken(KeywordVersion keywordVersion) {
             }
             return create(TokenKind::Minus);
         case '.':
-            if (consume('*'))
-                return create(TokenKind::DotStar);
-            else
-                return create(TokenKind::Dot);
+            return create(TokenKind::Dot);
         case '/':
             if (consume('='))
                 return create(TokenKind::SlashEqual);

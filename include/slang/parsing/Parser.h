@@ -326,7 +326,7 @@ private:
     syntax::ConstraintBlockSyntax& parseConstraintBlock(bool isTopLevel);
     syntax::ConstraintItemSyntax* parseConstraintItem(bool allowBlock, bool isTopLevel);
     syntax::DistConstraintListSyntax& parseDistConstraintList();
-    syntax::DistItemSyntax& parseDistItem();
+    syntax::DistItemBaseSyntax& parseDistItem();
     syntax::ExpressionSyntax& parseArrayOrRandomizeMethod(syntax::ExpressionSyntax& expr);
     syntax::DefParamAssignmentSyntax& parseDefParamAssignment();
     syntax::DefParamSyntax& parseDefParam(AttrList attributes);
@@ -415,6 +415,7 @@ private:
     bool scanDimensionList(uint32_t& index);
     bool scanQualifiedName(uint32_t& index, bool allowNew);
     bool scanAttributes(uint32_t& index);
+    bool isStartOfAttrs(uint32_t index);
 
     template<bool (*IsEnd)(TokenKind)>
     bool scanTypePart(uint32_t& index, TokenKind start, TokenKind end);

@@ -104,7 +104,7 @@ const MemberSyntax* parseModuleMember(const std::string& text, SyntaxKind kind) 
 }
 
 TEST_CASE("Module members") {
-    parseModuleMember("Foo #(stuff) bar(.*), baz(.clock, .rst(rst + 2));",
+    parseModuleMember("Foo #(stuff) bar( .   *), baz(.clock, .rst(rst + 2));",
                       SyntaxKind::HierarchyInstantiation);
     parseModuleMember("timeunit 30ns / 40ns;", SyntaxKind::TimeUnitsDeclaration);
     parseModuleMember("timeprecision 30ns;", SyntaxKind::TimeUnitsDeclaration);
@@ -1397,4 +1397,17 @@ endfunction
 
     REQUIRE(diagnostics.size() == 1);
     CHECK(diagnostics[0].code == diag::WrongLanguageVersion);
+}
+
+TEST_CASE("Attribute parsing with space in end token") {
+    auto& text = R"(
+module m;
+    (* a = 4, b * ) int i;
+endmodule
+)";
+
+    parseCompilationUnit(text);
+
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics[0].code == diag::ExpectedToken);
 }

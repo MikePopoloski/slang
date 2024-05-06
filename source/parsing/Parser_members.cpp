@@ -2129,7 +2129,6 @@ DistConstraintListSyntax& Parser::parseDistConstraintList() {
     Token openBrace;
     Token closeBrace;
     std::span<TokenOrSyntax> list;
-
     parseList<isPossibleValueRangeElement, isEndOfBracedList>(
         TokenKind::OpenBrace, TokenKind::CloseBrace, TokenKind::Comma, openBrace, list, closeBrace,
         RequireItems::True, diag::ExpectedDistItem, [this] { return &parseDistItem(); });
@@ -2137,8 +2136,19 @@ DistConstraintListSyntax& Parser::parseDistConstraintList() {
     return factory.distConstraintList(dist, openBrace, list, closeBrace);
 }
 
-DistItemSyntax& Parser::parseDistItem() {
-    auto& range = parseValueRangeElement();
+DistItemBaseSyntax& Parser::parseDistItem() {
+    Token defaultKeyword;
+    ExpressionSyntax* elem = nullptr;
+    if (peek(TokenKind::DefaultKeyword)) {
+        defaultKeyword = consume();
+        if (parseOptions.languageVersion < LanguageVersion::v1800_2023) {
+            addDiag(diag::WrongLanguageVersion, defaultKeyword.range())
+                << toString(parseOptions.languageVersion);
+        }
+    }
+    else {
+        elem = &parseValueRangeElement();
+    }
 
     DistWeightSyntax* weight = nullptr;
     if (peek(TokenKind::ColonEquals) || peek(TokenKind::ColonSlash)) {
@@ -2155,7 +2165,17 @@ DistItemSyntax& Parser::parseDistItem() {
         weight = &factory.distWeight(op1, op2, parseExpression());
     }
 
-    return factory.distItem(range, weight);
+    if (elem)
+        return factory.distItem(*elem, weight);
+
+    if (!weight ||
+        (weight->op.kind != TokenKind::ColonSlash && weight->extraOp.kind != TokenKind::Slash)) {
+        auto loc = weight ? weight->op.location()
+                          : defaultKeyword.location() + defaultKeyword.rawText().length();
+        addDiag(diag::ExpectedToken, loc) << ":/"sv;
+    }
+
+    return factory.defaultDistItem(defaultKeyword, weight);
 }
 
 std::span<PackageImportDeclarationSyntax*> Parser::parsePackageImports() {
@@ -2793,10 +2813,11 @@ UdpPortDeclSyntax& Parser::parseUdpPortDecl(bool& isReg) {
 UdpPortListSyntax& Parser::parseUdpPortList(bool& isSequential) {
     auto openParen = expect(TokenKind::OpenParenthesis);
 
-    if (peek(TokenKind::DotStar)) {
-        auto dotStar = consume();
+    if (peek(TokenKind::Dot) && peek(1).kind == TokenKind::Star) {
+        auto dot = consume();
+        auto star = consume();
         auto closeParen = expect(TokenKind::CloseParenthesis);
-        return factory.wildcardUdpPortList(openParen, dotStar, closeParen,
+        return factory.wildcardUdpPortList(openParen, dot, star, closeParen,
                                            expect(TokenKind::Semicolon));
     }
     else if (peek(TokenKind::OutputKeyword) || peek(TokenKind::InputKeyword)) {

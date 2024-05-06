@@ -75,7 +75,7 @@ std::pair<MacroActualArgumentListSyntax*, Trivia> Preprocessor::handleTopLevelMa
 
         // If we see a parenthesis next, let's assume they tried to invoke a function-like macro
         // and skip over the tokens.
-        if (peek(TokenKind::OpenParenthesis) || peek(TokenKind::OpenParenthesisStar))
+        if (peek(TokenKind::OpenParenthesis))
             return {MacroParser(*this).parseActualArgumentList(directive), Trivia()};
         return {nullptr, Trivia()};
     }
@@ -750,22 +750,15 @@ MacroFormalArgumentListSyntax* Preprocessor::MacroParser::parseFormalArgumentLis
 
 MacroActualArgumentListSyntax* Preprocessor::MacroParser::parseActualArgumentList(Token prevToken) {
     // macro has arguments, so we expect to see them here
-    if (auto next = peek();
-        next.kind != TokenKind::OpenParenthesis && next.kind != TokenKind::OpenParenthesisStar) {
+    if (!peek(TokenKind::OpenParenthesis)) {
         pp.addDiag(diag::ExpectedMacroArgs, prevToken.location() + prevToken.rawText().length());
         return nullptr;
     }
 
     auto openParen = consume();
-
-    Token firstToken;
-    if (openParen.kind == TokenKind::OpenParenthesisStar)
-        firstToken = Token(pp.alloc, TokenKind::Star, {}, "*"sv, openParen.location() + 1);
-
     Token closeParen;
     SmallVector<TokenOrSyntax, 8> arguments;
-    parseArgumentList(
-        arguments, [this, firstToken]() { return parseActualArgument(firstToken); }, closeParen);
+    parseArgumentList(arguments, [this]() { return parseActualArgument(); }, closeParen);
 
     return pp.alloc.emplace<MacroActualArgumentListSyntax>(openParen, arguments.copy(pp.alloc),
                                                            closeParen);
@@ -783,21 +776,11 @@ void Preprocessor::MacroParser::parseArgumentList(SmallVectorBase<TokenOrSyntax>
             break;
     }
 
-    if (peek(TokenKind::StarCloseParenthesis)) {
-        // The star portion was already handled by the token list parser.
-        // Just adjust to get a close paren for our list.
-        closeParen = consume();
-        closeParen = Token(pp.alloc, TokenKind::CloseParenthesis, {}, ")"sv,
-                           closeParen.location() + 1);
-    }
-    else {
-        closeParen = expect(TokenKind::CloseParenthesis);
-    }
+    closeParen = expect(TokenKind::CloseParenthesis);
 }
 
-MacroActualArgumentSyntax* Preprocessor::MacroParser::parseActualArgument(Token firstToken) {
-    auto arg = parseTokenList(true, firstToken);
-    return pp.alloc.emplace<MacroActualArgumentSyntax>(arg);
+MacroActualArgumentSyntax* Preprocessor::MacroParser::parseActualArgument() {
+    return pp.alloc.emplace<MacroActualArgumentSyntax>(parseTokenList(true));
 }
 
 MacroFormalArgumentSyntax* Preprocessor::MacroParser::parseFormalArgument() {
@@ -810,18 +793,15 @@ MacroFormalArgumentSyntax* Preprocessor::MacroParser::parseFormalArgument() {
     MacroArgumentDefaultSyntax* argDef = nullptr;
     if (peek(TokenKind::Equals)) {
         auto equals = consume();
-        argDef = pp.alloc.emplace<MacroArgumentDefaultSyntax>(equals,
-                                                              parseTokenList(false, Token()));
+        argDef = pp.alloc.emplace<MacroArgumentDefaultSyntax>(equals, parseTokenList(false));
     }
 
     return pp.alloc.emplace<MacroFormalArgumentSyntax>(arg, argDef);
 }
 
-std::span<Token> Preprocessor::MacroParser::parseTokenList(bool allowNewlines, Token firstToken) {
+std::span<Token> Preprocessor::MacroParser::parseTokenList(bool allowNewlines) {
     SmallVector<Token, 16> tokens;
     SmallVector<TokenKind> delimPairStack;
-    if (firstToken)
-        tokens.push_back(firstToken);
 
     // Comma and right parenthesis only end the default token list if they are
     // not inside a nested pair of (), [], or {}, otherwise, keep swallowing
@@ -837,18 +817,10 @@ std::span<Token> Preprocessor::MacroParser::parseTokenList(bool allowNewlines, T
         }
 
         if (delimPairStack.empty()) {
-            if (kind == TokenKind::StarCloseParenthesis) {
-                tokens.push_back(
-                    Token(pp.alloc, TokenKind::Star, peek().trivia(), "*"sv, peek().location()));
+            if (kind == TokenKind::Comma || kind == TokenKind::CloseParenthesis)
                 break;
-            }
-            else if (kind == TokenKind::Comma || kind == TokenKind::CloseParenthesis) {
-                break;
-            }
         }
-        else if (delimPairStack.back() == kind ||
-                 (delimPairStack.back() == TokenKind::CloseParenthesis &&
-                  kind == TokenKind::StarCloseParenthesis)) {
+        else if (delimPairStack.back() == kind) {
             delimPairStack.pop_back();
         }
 

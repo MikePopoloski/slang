@@ -25,7 +25,9 @@ EqualsValueClause? value
 
 AttributeInstance
 token openParen
+token openStar
 separated_list<AttributeSpec> specs
+token closeStar
 token closeParen
 
 NamedLabel
@@ -96,7 +98,8 @@ token dot
 token variableName
 
 WildcardPattern base=Pattern
-token dotStar
+token dot
+token star
 
 ExpressionPattern base=Pattern
 Expression expr
@@ -1129,7 +1132,8 @@ token closeParen
 
 WildcardPortList base=PortList
 token openParen
-token dotStar
+token dot
+token star
 token closeParen
 
 ParameterPortList
@@ -1248,7 +1252,8 @@ PropertyExpr? expr
 token closeParen
 
 WildcardPortConnection base=PortConnection
-token dotStar
+token dot
+token star
 
 InstanceName
 token name
@@ -1531,7 +1536,8 @@ token semi
 
 WildcardUdpPortList base=UdpPortList
 token openParen
-token dotStar
+token dot
+token star
 token closeParen
 token semi
 
@@ -1712,14 +1718,21 @@ token op
 token extraOp
 Expression expr
 
-DistItem
+DistItemBase final=false
+empty
+
+DistItem base=DistItemBase
 Expression range
+DistWeight? weight
+
+DefaultDistItem base=DistItemBase
+token defaultKeyword
 DistWeight? weight
 
 DistConstraintList
 token dist
 token openBrace
-separated_list<DistItem> items
+separated_list<DistItemBase> items
 token closeBrace
 
 ExpressionOrDist base=Expression

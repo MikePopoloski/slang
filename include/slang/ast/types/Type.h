@@ -10,6 +10,7 @@
 #include "slang/ast/Symbol.h"
 #include "slang/numeric/ConstantValue.h"
 #include "slang/syntax/SyntaxNode.h"
+#include "slang/util/LanguageVersion.h"
 
 namespace slang::ast {
 
@@ -290,7 +291,7 @@ public:
 
     /// Returns true if the type is valid for use as a random variable of
     /// the given mode.
-    bool isValidForRand(RandMode mode) const;
+    bool isValidForRand(RandMode mode, LanguageVersion languageVersion) const;
 
     /// Returns true if the type is valid for use as a DPI return value.
     bool isValidForDPIReturn() const;

@@ -992,7 +992,8 @@ void FirstMatchAssertionExpr::serializeTo(ASTSerializer& serializer) const {
 AssertionExpr& ClockingAssertionExpr::fromSyntax(const ClockingSequenceExprSyntax& syntax,
                                                  const ASTContext& context) {
     auto& comp = context.getCompilation();
-    auto& clocking = TimingControl::bind(*syntax.event, context);
+    auto& clocking = TimingControl::bind(*syntax.event,
+                                         context.resetFlags(ASTFlags::NonProcedural));
     auto& expr = bind(*syntax.expr, context);
     return *comp.emplace<ClockingAssertionExpr>(clocking, expr);
 }
@@ -1000,7 +1001,8 @@ AssertionExpr& ClockingAssertionExpr::fromSyntax(const ClockingSequenceExprSynta
 AssertionExpr& ClockingAssertionExpr::fromSyntax(const ClockingPropertyExprSyntax& syntax,
                                                  const ASTContext& context) {
     auto& comp = context.getCompilation();
-    auto& clocking = TimingControl::bind(*syntax.event, context);
+    auto& clocking = TimingControl::bind(*syntax.event,
+                                         context.resetFlags(ASTFlags::NonProcedural));
 
     if (!syntax.expr) {
         auto last = syntax.getLastToken();
@@ -1023,7 +1025,7 @@ AssertionExpr& ClockingAssertionExpr::fromSyntax(const SignalEventExpressionSynt
         return badExpr(comp, nullptr);
     }
 
-    auto& clocking = TimingControl::bind(syntax, context);
+    auto& clocking = TimingControl::bind(syntax, context.resetFlags(ASTFlags::NonProcedural));
     return *comp.emplace<ClockingAssertionExpr>(clocking, badExpr(comp, nullptr));
 }
 
@@ -1031,7 +1033,7 @@ AssertionExpr& ClockingAssertionExpr::fromSyntax(const TimingControlSyntax& synt
                                                  const AssertionExpr& expr,
                                                  const ASTContext& context) {
     auto& comp = context.getCompilation();
-    auto& clocking = TimingControl::bind(syntax, context);
+    auto& clocking = TimingControl::bind(syntax, context.resetFlags(ASTFlags::NonProcedural));
     return *comp.emplace<ClockingAssertionExpr>(clocking, expr);
 }
 

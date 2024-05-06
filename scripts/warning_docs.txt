@@ -1223,3 +1223,35 @@ module m;
     int j = i;
 endmodule
 ```
+
+-Wfloat-int-conv
+A floating point value (real or shortreal) is implicitly converted to an integer.
+```
+function automatic f(real r);
+    int i = r;
+endfunction
+```
+
+-Wint-float-conv
+A integer value is implicitly converted to a floating point type (real or shortreal).
+```
+function automatic f(int i);
+    real r = i;
+endfunction
+```
+
+-Wfloat-widen
+A floating point value is implicitly converted to a wider floating point type.
+```
+function automatic f(shortreal s);
+    real r = s;
+endfunction
+```
+
+-Wfloat-narrow
+A floating point value is implicitly converted to a narrower floating point type.
+```
+function automatic f(real r);
+    shortreal s = r;
+endfunction
+```

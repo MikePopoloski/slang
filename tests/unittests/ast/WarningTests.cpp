@@ -880,7 +880,7 @@ endfunction
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 4);
     CHECK(diags[0].code == diag::FloatIntConv);
-    CHECK(diags[1].code == diag::FloatShrink);
+    CHECK(diags[1].code == diag::FloatNarrow);
     CHECK(diags[2].code == diag::IntFloatConv);
-    CHECK(diags[3].code == diag::FloatExpand);
+    CHECK(diags[3].code == diag::FloatWiden);
 }

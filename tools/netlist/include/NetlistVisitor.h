@@ -250,6 +250,10 @@ public:
         evalCtx.pushEmptyFrame();
     }
 
+    void handle(const ast::VariableSymbol& symbol) { netlist.addVariableDeclaration(symbol); }
+
+    void handle(const ast::NetSymbol& symbol) { netlist.addVariableDeclaration(symbol); }
+
     void handle(const ast::ForLoopStatement& loop) {
 
         // Conditions this loop cannot be unrolled.
@@ -544,11 +548,8 @@ public:
         }
     }
 
-    /// Handle making connections form port members to internal variable
-    /// declarations. This must be called before 'handleInstanceExtPortConn'
-    /// becuase it creates the port declarations in the netlist that are
-    /// connected to externally.
-    auto handleInstanceIntVars(ast::InstanceSymbol const& symbol) {
+    /// Create instance variable declarations.
+    auto handleInstanceMemberVars(ast::InstanceSymbol const& symbol) {
 
         for (auto& member : symbol.body.members()) {
             if (member.kind == ast::SymbolKind::Variable || member.kind == ast::SymbolKind::Net) {
@@ -557,11 +558,10 @@ public:
         }
     }
 
-    /// Handle making connections form port members to internal variable
-    /// declarations. This must be called before 'handleInstanceExtPortConn'
-    /// becuase it creates the port declarations in the netlist that are
-    /// connected to externally.
-    auto handleInstanceIntPorts(ast::InstanceSymbol const& symbol) {
+    /// Create instance port declarations. Must be called after
+    /// handleInstanceMemberVars() in order that ports can be connected to
+    /// their corresponding variables.
+    auto handleInstanceMemberPorts(ast::InstanceSymbol const& symbol) {
 
         for (auto& member : symbol.body.members()) {
             if (member.kind == ast::SymbolKind::Port) {
@@ -573,13 +573,13 @@ public:
         }
     }
 
-    /// Variable declaration.
+    /// Variable declaration (deferred to handleInstanceMemberVars).
     void handle(const ast::VariableSymbol& symbol) {}
 
-    /// Net declaration.
+    /// Net declaration (deferred to handleInstanceMemberVars).
     void handle(const ast::NetSymbol& symbol) {}
 
-    /// Port declaration.
+    /// Port declaration (deferred to handleInstanceMemberPorts).
     void handle(const ast::PortSymbol& symbol) {}
 
     /// Instance.
@@ -593,8 +593,8 @@ public:
             return;
         }
 
-        handleInstanceIntVars(symbol);
-        handleInstanceIntPorts(symbol);
+        handleInstanceMemberVars(symbol);
+        handleInstanceMemberPorts(symbol);
         handleInstanceExtPorts(symbol);
 
         symbol.body.visit(*this);
@@ -617,6 +617,14 @@ public:
         }
         ProceduralBlockVisitor visitor(compilation, netlist, edgeKind);
         symbol.visit(visitor);
+    }
+
+    /// Generate block.
+    void handle(const ast::GenerateBlockSymbol& symbol) {
+        if (!symbol.isUninstantiated) {
+            ProceduralBlockVisitor visitor(compilation, netlist);
+            symbol.visit(visitor);
+        }
     }
 
     /// Continuous assignment statement.

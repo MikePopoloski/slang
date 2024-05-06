@@ -358,9 +358,9 @@ private:
         void parseArgumentList(SmallVectorBase<syntax::TokenOrSyntax>& buffer, TFunc&& parseItem,
                                Token& closeParen);
 
-        syntax::MacroActualArgumentSyntax* parseActualArgument(Token firstToken);
+        syntax::MacroActualArgumentSyntax* parseActualArgument();
         syntax::MacroFormalArgumentSyntax* parseFormalArgument();
-        std::span<Token> parseTokenList(bool allowNewlines, Token firstToken);
+        std::span<Token> parseTokenList(bool allowNewlines);
 
         Token peek();
         Token consume();

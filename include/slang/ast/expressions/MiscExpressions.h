@@ -365,7 +365,7 @@ public:
         enum Kind { PerValue, PerRange } kind;
 
         /// The weight expression.
-        const Expression& expr;
+        const Expression* expr;
     };
 
     /// A single distribution item.
@@ -378,14 +378,20 @@ public:
     };
 
     DistExpression(const Type& type, const Expression& left, std::span<DistItem> items,
-                   SourceRange sourceRange) :
-        Expression(ExpressionKind::Dist, type, sourceRange), left_(&left), items_(items) {}
+                   std::optional<DistWeight> defaultWeight, SourceRange sourceRange) :
+        Expression(ExpressionKind::Dist, type, sourceRange), left_(&left), items_(items),
+        defaultWeight_(defaultWeight) {}
 
     /// @returns the left-hand side of the distribution operator.
     const Expression& left() const { return *left_; }
 
     /// @returns the distribution items with their associated weights.
     std::span<DistItem const> items() const { return items_; }
+
+    /// @returns the default weight, if one is specified.
+    const DistWeight* defaultWeight() const {
+        return defaultWeight_.has_value() ? &defaultWeight_.value() : nullptr;
+    }
 
     ConstantValue evalImpl(EvalContext&) const { return nullptr; }
 
@@ -402,13 +408,17 @@ public:
         for (auto& item : items_) {
             item.value.visit(visitor);
             if (item.weight)
-                item.weight->expr.visit(visitor);
+                item.weight->expr->visit(visitor);
         }
+
+        if (defaultWeight_)
+            defaultWeight_->expr->visit(visitor);
     }
 
 private:
     const Expression* left_;
     std::span<DistItem> items_;
+    std::optional<DistWeight> defaultWeight_;
 };
 
 /// Represents a tagged union member setter expression.

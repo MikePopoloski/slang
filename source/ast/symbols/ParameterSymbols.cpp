@@ -184,7 +184,7 @@ void ParameterSymbol::serializeTo(ASTSerializer& serializer) const {
 static DeclaredTypeFlags getTypeParamFlags(const Scope& scope) {
     // v1800-2023: Type parameter assignments are allowed to reference
     // incomplete forward class types now.
-    if (scope.getCompilation().getOptions().languageVersion >= LanguageVersion::v1800_2023)
+    if (scope.getCompilation().languageVersion() >= LanguageVersion::v1800_2023)
         return DeclaredTypeFlags::TypedefTarget;
     return DeclaredTypeFlags::None;
 }
