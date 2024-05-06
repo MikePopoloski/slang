@@ -246,13 +246,9 @@ public:
         evalCtx.pushEmptyFrame();
     }
 
-    void handle(const ast::VariableSymbol& symbol) {
-      netlist.addVariableDeclaration(symbol);
-    }
+    void handle(const ast::VariableSymbol& symbol) { netlist.addVariableDeclaration(symbol); }
 
-    void handle(const ast::NetSymbol& symbol) {
-      netlist.addVariableDeclaration(symbol);
-    }
+    void handle(const ast::NetSymbol& symbol) { netlist.addVariableDeclaration(symbol); }
 
     void handle(const ast::ForLoopStatement& loop) {
 
@@ -608,8 +604,8 @@ public:
     /// Generate block.
     void handle(const ast::GenerateBlockSymbol& symbol) {
         if (!symbol.isUninstantiated) {
-        ProceduralBlockVisitor visitor(compilation, netlist);
-        symbol.visit(visitor);
+            ProceduralBlockVisitor visitor(compilation, netlist);
+            symbol.visit(visitor);
         }
     }
 

@@ -625,7 +625,7 @@ endmodule
 //===---------------------------------------------------------------------===//
 
 TEST_CASE("Conditional generate blocks") {
-  // One branch of the generate conditional is uninstantiated.
+    // One branch of the generate conditional is uninstantiated.
     auto tree = SyntaxTree::fromText(R"(
 module top#(parameter X=0)(output logic out);
 generate
@@ -645,4 +645,3 @@ endmodule
     auto netlist = createNetlist(compilation);
     CHECK(netlist.lookupVariable("top.genblk1.foo"));
 }
-
