@@ -77,7 +77,7 @@ SCCResult StrongConnectedComponents::dummy(dummyAadjList, -1);
  * @return SCCResult with adjacency-structure of the strong
  * connected component; null, if no such component exists
  */
-SCCResult StrongConnectedComponents::getAdjacencyList(int node) {
+SCCResult& StrongConnectedComponents::getAdjacencyList(int node) {
     this->visited.resize(this->adjListOriginal.size(), false);
     std::fill(this->visited.begin(), this->visited.end(), false);
     this->lowlink.resize(this->adjListOriginal.size());
@@ -271,7 +271,7 @@ std::vector<CycleListType>* ElementaryCyclesSearch::getElementaryCycles() {
     ID_type s = 0;
 
     while (true) {
-        SCCResult sccResult = sccs.getAdjacencyList(s);
+        SCCResult& sccResult = sccs.getAdjacencyList(s);
         if ((sccResult.getLowestNodeId() != -1) && !sccResult.getAdjList().empty()) {
             std::vector<std::vector<ID_type>> scc = sccResult.getAdjList();
             s = sccResult.getLowestNodeId();
@@ -288,6 +288,7 @@ std::vector<CycleListType>* ElementaryCyclesSearch::getElementaryCycles() {
         else {
             break;
         }
+        delete &sccResult;
     }
 
     return &(this->cycles);

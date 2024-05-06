@@ -125,7 +125,7 @@ public:
      * @return SCCResult with adjacency-structure of the strong
      * connected component; null, if no such component exists
      */
-    SCCResult getAdjacencyList(ID_type node);
+    SCCResult& getAdjacencyList(ID_type node);
 
 private:
     void makeAdjListSubgraph(ID_type node);
