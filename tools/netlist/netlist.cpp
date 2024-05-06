@@ -187,11 +187,6 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    // We don't allow this because in comb loop detection mode we break all netlist loops with edges
-    // so any effort to save/analyze said netlist is futile and dangerous
-    // if (combLoops == true && (astJsonFile || netlistDotFile || fromPointName || toPointName))
-    //    SLANG_THROW(std::runtime_error("Cannot use --comb_loops with other modes"));
-
     if (showHelp == true) {
         std::cout << fmt::format(
             "{}\n", driver.cmdLine.getHelpText("slang SystemVerilog netlist tool").c_str());
