@@ -643,6 +643,6 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
     auto netlist = createNetlist(compilation);
-    CHECK(netlist.lookupVariableReference("top.genblk1.foo"));
+    CHECK(netlist.lookupVariable("top.genblk1.foo"));
 }
 
