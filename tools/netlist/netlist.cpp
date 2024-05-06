@@ -143,35 +143,22 @@ void reportPath(Compilation& compilation, const NetlistPath& path) {
 }
 
 void dumpCyclesList(Compilation& compilation, Netlist &netlist, std::vector<CycleListType>* cycles) {
-    std::string buffer;
-    bool first = true;
-    int first_var;
     auto s = cycles->size();
-    if (!s)
+    if (!s) {
+        OS::print("No combinatorial loops detected\n");
         return;
-
-    if (s == 1)
-        buffer = ":\n";
-    else
-        buffer = "s:\n";
-    std::cout << "Detected " << s << " combinatorial loop" << buffer;
+    }
+    OS::print(fmt::format("Detected {} combinatorial loop{}:\n", s, (s > 1) ? "s" : ""));
     NetlistPath path;
     for (int i = 0; i < s; i++) {
         auto si = (*cycles)[i].size();
-        OS::print(fmt::format("Path length: {}\n", si));
         for (int j = 0; j < si; j++) {
             auto& node = netlist.getNode((*cycles)[i][j]);
             if (node.kind == NodeKind::VariableReference) {
-                if (first) first_var = j;
-                first = false;
                 path.add(node);
-                OS::print(fmt::format("Index: {} Node ID: {}\n", j, node.ID));
             }
         }
-        // close loop
-        auto& node = netlist.getNode((*cycles)[i][first_var]);
-        path.add(node);
-        OS::print(fmt::format("Index: {} Node ID: {}\n", first_var, node.ID));
+        OS::print(fmt::format("Path length: {}\n", path.size()));
         reportPath(compilation, path);
         path.clear();
     }
