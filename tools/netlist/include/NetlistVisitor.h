@@ -602,18 +602,31 @@ public:
 
     /// Procedural block.
     void handle(const ast::ProceduralBlockSymbol& symbol) {
-        ast::EdgeKind edgeKind;
-        if ((symbol.procedureKind == ast::ProceduralBlockKind::AlwaysFF ||
-             symbol.procedureKind == ast::ProceduralBlockKind::Always) &&
-            symbol.getBody().as<ast::TimedStatement>().timing.kind ==
-                ast::TimingControlKind::SignalEvent) {
-            edgeKind = symbol.getBody()
+        ast::EdgeKind edgeKind = ast::EdgeKind::None;
+        if (symbol.procedureKind == ast::ProceduralBlockKind::AlwaysFF ||
+            symbol.procedureKind == ast::ProceduralBlockKind::Always) {
+            auto tck = symbol.getBody().as<ast::TimedStatement>().timing.kind;
+            if (tck == ast::TimingControlKind::SignalEvent) {
+                edgeKind = symbol.getBody()
                            .as<ast::TimedStatement>()
                            .timing.as<ast::SignalEventControl>()
                            .edge;
-        }
-        else {
-            edgeKind = ast::EdgeKind::None;
+            } else if (tck == ast::TimingControlKind::EventList) {
+                auto& events = symbol.getBody()
+                           .as<ast::TimedStatement>()
+                           .timing.as<ast::EventListControl>()
+                           .events;
+                // We need to decide if this has the potential for combinatorial loops
+                // The most strict test is if for any unique signal on the event list only one edge (pos or neg) appears
+                // e.g. "@(posedge x or negedge x)" is potentially combinatorial
+                // At the moment we'll settle for no signal having "None" edge.
+                for (auto e : events) {
+                    edgeKind = e->as<ast::SignalEventControl>().edge;
+                    if (edgeKind == ast::EdgeKind::None)
+                        break;
+                }
+                // if we got here, edgeKind is not "None" which is all we care about
+            }
         }
         ProceduralBlockVisitor visitor(compilation, netlist, edgeKind);
         symbol.visit(visitor);
