@@ -1698,3 +1698,29 @@ interface I(.;input interface I
     // No crash.
     compilation.getAllDiagnostics();
 }
+
+TEST_CASE("Defaultless Parameter Elaboration") {
+    auto tree = SyntaxTree::fromText(R"(
+module TopModule #(
+    parameter int bar
+);
+    SubModule #(
+        .bar(bar),
+        .param_not_here(bar)
+    ) f(
+        .port_not_here(1)
+    );
+
+endmodule
+
+module SubModule #(parameter int bar);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::ParameterDoesNotExist);
+    CHECK(diags[1].code == diag::PortDoesNotExist);
+}
