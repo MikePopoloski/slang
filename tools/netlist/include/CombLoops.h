@@ -38,6 +38,16 @@
 using namespace netlist;
 using ID_type = int;
 
+template <typename T>
+bool contains(const std::vector<T>& vec, const T& val) {
+    return std::find(vec.begin(), vec.end(), val) != vec.end();
+}
+
+template <typename T, typename Predicate>
+bool contains_if(const std::vector<T>& vec, Predicate predicate) {
+    return std::find_if(vec.begin(), vec.end(), predicate) != vec.end();
+}
+
 class SCCResult {
 private:
     std::vector<std::vector<ID_type>> adjList;

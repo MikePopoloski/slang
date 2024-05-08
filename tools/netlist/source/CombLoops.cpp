@@ -28,13 +28,10 @@
  * WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "CombLoops.h"
-
-#include "NetlistPath.h"
-#include <algorithm>
-#include <vector>
-
 #include "slang/ast/SemanticFacts.h"
+#include "CombLoops.h"
+#include "NetlistPath.h"
+
 
 using namespace std;
 
@@ -91,8 +88,7 @@ SCCResult& StrongConnectedComponents::getAdjacencyList(int node) {
         if (!this->visited[i]) {
             this->getStrongConnectedComponents(i);
             vector<int> nodes = this->getLowestIdComponent();
-            if (!nodes.empty() && find(nodes.begin(), nodes.end(), node) == nodes.end() &&
-                find(nodes.begin(), nodes.end(), node + 1) == nodes.end()) {
+            if (!nodes.empty() && !contains(nodes, node) && !contains(nodes, node + 1)) {
                 return this->getAdjacencyList(node + 1);
             }
             else {
@@ -167,7 +163,7 @@ vector<vector<int>> StrongConnectedComponents::getAdjList(vector<int> nodes) {
             int node = nodes[i];
             for (int j = 0; j < this->adjList[node].size(); j++) {
                 int succ = this->adjList[node][j];
-                if (find(nodes.begin(), nodes.end(), succ) != nodes.end()) {
+                if (contains(nodes, succ)) {
                     lowestIdAdjacencyList[node].push_back(succ);
                 }
             }
@@ -196,7 +192,7 @@ void StrongConnectedComponents::getStrongConnectedComponents(int root) {
             this->lowlink[root] = min(this->lowlink[root], this->lowlink[w]);
         }
         else if (this->number[w] < this->number[root]) {
-            if (find(this->stack.begin(), this->stack.end(), w) != this->stack.end()) {
+            if (contains(stack, w)) {
                 this->lowlink[root] = min(this->lowlink[root], this->number[w]);
             }
         }
@@ -388,7 +384,7 @@ bool ElementaryCyclesSearch::findCycles(ID_type v, ID_type s,
     else {
         for (int i = 0; i < adjList[v].size(); i++) {
             ID_type w = adjList[v][i];
-            if (find(this->B[w].begin(), this->B[w].end(), v) == this->B[w].end()) {
+            if (!contains(B[w], v)) {
                 this->B[w].push_back(v);
             }
         }
