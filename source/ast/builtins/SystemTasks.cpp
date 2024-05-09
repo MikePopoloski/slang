@@ -6,6 +6,7 @@
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
 #include "../FmtHelpers.h"
+#include "Builtins.h"
 
 #include "slang/ast/ASTVisitor.h"
 #include "slang/ast/Compilation.h"
@@ -775,8 +776,8 @@ private:
     }
 };
 
-void registerSystemTasks(Compilation& c) {
-#define REGISTER(type, name, base) c.addSystemSubroutine(std::make_unique<type>(name, base))
+void Builtins::registerSystemTasks() {
+#define REGISTER(type, name, base) addSystemSubroutine(std::make_shared<type>(name, base))
     REGISTER(DisplayTask, "$display", LiteralBase::Decimal);
     REGISTER(DisplayTask, "$displayb", LiteralBase::Binary);
     REGISTER(DisplayTask, "$displayo", LiteralBase::Octal);
@@ -795,7 +796,7 @@ void registerSystemTasks(Compilation& c) {
     REGISTER(MonitorTask, "$monitorh", LiteralBase::Hex);
 
 #undef REGISTER
-#define REGISTER(type, name) c.addSystemSubroutine(std::make_unique<type>(name))
+#define REGISTER(type, name) addSystemSubroutine(std::make_shared<type>(name))
     REGISTER(FileDisplayTask, "$fdisplay");
     REGISTER(FileDisplayTask, "$fdisplayb");
     REGISTER(FileDisplayTask, "$fdisplayo");
@@ -831,52 +832,49 @@ void registerSystemTasks(Compilation& c) {
     REGISTER(CastTask, "$cast");
 
 #undef REGISTER
-#define REGISTER(type, name, kind) c.addSystemSubroutine(std::make_unique<type>(name, kind))
+#define REGISTER(type, name, kind) addSystemSubroutine(std::make_shared<type>(name, kind))
     REGISTER(SeverityTask, "$info", ElabSystemTaskKind::Info);
     REGISTER(SeverityTask, "$warning", ElabSystemTaskKind::Warning);
     REGISTER(SeverityTask, "$error", ElabSystemTaskKind::Error);
 
 #undef REGISTER
 
-    auto int_t = &c.getIntType();
-    auto string_t = &c.getStringType();
+    addSystemSubroutine(std::make_shared<ReadWriteMemTask>("$readmemb", true));
+    addSystemSubroutine(std::make_shared<ReadWriteMemTask>("$readmemh", true));
+    addSystemSubroutine(std::make_shared<ReadWriteMemTask>("$writememb", false));
+    addSystemSubroutine(std::make_shared<ReadWriteMemTask>("$writememh", false));
+    addSystemSubroutine(std::make_shared<SimpleSystemTask>("$system", intType, 0,
+                                                           std::vector<const Type*>{&stringType}));
+    addSystemSubroutine(std::make_shared<SdfAnnotateTask>());
+    addSystemSubroutine(std::make_shared<StaticAssertTask>());
+    addSystemSubroutine(std::make_shared<FatalTask>());
 
-    c.addSystemSubroutine(std::make_unique<ReadWriteMemTask>("$readmemb", true));
-    c.addSystemSubroutine(std::make_unique<ReadWriteMemTask>("$readmemh", true));
-    c.addSystemSubroutine(std::make_unique<ReadWriteMemTask>("$writememb", false));
-    c.addSystemSubroutine(std::make_unique<ReadWriteMemTask>("$writememh", false));
-    c.addSystemSubroutine(std::make_unique<SimpleSystemTask>("$system", *int_t, 0,
-                                                             std::vector<const Type*>{string_t}));
-    c.addSystemSubroutine(std::make_unique<SdfAnnotateTask>());
-    c.addSystemSubroutine(std::make_unique<StaticAssertTask>());
-    c.addSystemSubroutine(std::make_unique<FatalTask>());
-
-#define TASK(name, required, ...)                             \
-    c.addSystemSubroutine(std::make_unique<SimpleSystemTask>( \
-        name, c.getVoidType(), required, std::vector<const Type*>{__VA_ARGS__}))
+#define TASK(name, required, ...)                                                    \
+    addSystemSubroutine(std::make_shared<SimpleSystemTask>(name, voidType, required, \
+                                                           std::vector<const Type*>{__VA_ARGS__}))
 
     TASK("$exit", 0, );
 
-    TASK("$timeformat", 0, int_t, int_t, string_t, int_t);
+    TASK("$timeformat", 0, &intType, &intType, &stringType, &intType);
 
     TASK("$monitoron", 0, );
     TASK("$monitoroff", 0, );
 
-    TASK("$dumpfile", 0, string_t);
+    TASK("$dumpfile", 0, &stringType);
     TASK("$dumpon", 0, );
     TASK("$dumpoff", 0, );
     TASK("$dumpall", 0, );
-    TASK("$dumplimit", 1, int_t);
+    TASK("$dumplimit", 1, &intType);
     TASK("$dumpflush", 0, );
-    TASK("$dumpportson", 0, string_t);
-    TASK("$dumpportsoff", 0, string_t);
-    TASK("$dumpportsall", 0, string_t);
-    TASK("$dumpportslimit", 1, int_t, string_t);
-    TASK("$dumpportsflush", 0, string_t);
+    TASK("$dumpportson", 0, &stringType);
+    TASK("$dumpportsoff", 0, &stringType);
+    TASK("$dumpportsall", 0, &stringType);
+    TASK("$dumpportslimit", 1, &intType, &stringType);
+    TASK("$dumpportsflush", 0, &stringType);
 
 #undef TASK
 
-#define ASSERTCTRL(name) c.addSystemSubroutine(std::make_unique<AssertControlTask>(name))
+#define ASSERTCTRL(name) addSystemSubroutine(std::make_shared<AssertControlTask>(name))
     ASSERTCTRL("$assertcontrol");
     ASSERTCTRL("$asserton");
     ASSERTCTRL("$assertoff");
@@ -891,7 +889,7 @@ void registerSystemTasks(Compilation& c) {
 #undef ASSERTCTRL
 
 #define TASK(name, kind, input, output) \
-    c.addSystemSubroutine(std::make_unique<StochasticTask>(name, kind, input, output))
+    addSystemSubroutine(std::make_shared<StochasticTask>(name, kind, input, output))
     TASK("$q_initialize", SubroutineKind::Task, 3, 1);
     TASK("$q_add", SubroutineKind::Task, 3, 1);
     TASK("$q_remove", SubroutineKind::Task, 2, 2);
@@ -900,7 +898,7 @@ void registerSystemTasks(Compilation& c) {
 
 #undef TASK
 
-#define PLA_TASK(name) c.addSystemSubroutine(std::make_unique<PlaTask>(name))
+#define PLA_TASK(name) addSystemSubroutine(std::make_shared<PlaTask>(name))
     for (auto& fmt : {"$array", "$plane"}) {
         for (auto& gate : {"$and", "$or", "$nand", "$nor"}) {
             for (auto& type : {"$async", "$sync"}) {

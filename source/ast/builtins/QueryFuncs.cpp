@@ -5,6 +5,8 @@
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
+#include "Builtins.h"
+
 #include "slang/ast/Compilation.h"
 #include "slang/ast/EvalContext.h"
 #include "slang/ast/SystemSubroutine.h"
@@ -534,8 +536,8 @@ private:
     bool unpackedOnly;
 };
 
-void registerQueryFuncs(Compilation& c) {
-#define REGISTER(name) c.addSystemSubroutine(std::make_unique<name##Function>())
+void Builtins::registerQueryFuncs() {
+#define REGISTER(name) addSystemSubroutine(std::make_shared<name##Function>())
     REGISTER(Bits);
     REGISTER(Typename);
     REGISTER(IsUnbounded);
@@ -547,8 +549,8 @@ void registerQueryFuncs(Compilation& c) {
     REGISTER(Increment);
 #undef REGISTER
 
-    c.addSystemSubroutine(std::make_unique<ArrayDimensionFunction>("$dimensions", false));
-    c.addSystemSubroutine(std::make_unique<ArrayDimensionFunction>("$unpacked_dimensions", true));
+    addSystemSubroutine(std::make_shared<ArrayDimensionFunction>("$dimensions", false));
+    addSystemSubroutine(std::make_shared<ArrayDimensionFunction>("$unpacked_dimensions", true));
 }
 
 } // namespace slang::ast::builtins

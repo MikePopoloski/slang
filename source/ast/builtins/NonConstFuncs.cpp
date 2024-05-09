@@ -5,6 +5,8 @@
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
+#include "Builtins.h"
+
 #include "slang/ast/Compilation.h"
 #include "slang/ast/SystemSubroutine.h"
 #include "slang/ast/types/Type.h"
@@ -423,35 +425,33 @@ private:
     bool isFuture;
 };
 
-void registerNonConstFuncs(Compilation& c) {
-#define REGISTER(...) c.addSystemSubroutine(std::make_unique<NonConstantFunction>(__VA_ARGS__))
+void Builtins::registerNonConstFuncs() {
+#define REGISTER(...) addSystemSubroutine(std::make_shared<NonConstantFunction>(__VA_ARGS__))
 
-    auto& intType = c.getIntType();
-    auto& uintType = c.getUnsignedIntType();
     std::vector<const Type*> intArg = {&intType};
 
-    REGISTER("$time", c.getType(SyntaxKind::TimeType));
-    REGISTER("$stime", c.getUnsignedIntType());
-    REGISTER("$realtime", c.getType(SyntaxKind::RealTimeType));
+    REGISTER("$time", timeType);
+    REGISTER("$stime", uintType);
+    REGISTER("$realtime", realTimeType);
     REGISTER("$random", intType, 0, intArg);
     REGISTER("$urandom", uintType, 0, intArg);
     REGISTER("$urandom_range", uintType, 1, std::vector<const Type*>{&uintType, &uintType});
 
-    REGISTER("$fopen", intType, 1, std::vector{&c.getStringType(), &c.getStringType()});
-    REGISTER("$fclose", c.getVoidType(), 1, intArg);
+    REGISTER("$fopen", intType, 1, std::vector<const Type*>{&stringType, &stringType});
+    REGISTER("$fclose", voidType, 1, intArg);
     REGISTER("$fgetc", intType, 1, intArg);
-    REGISTER("$ungetc", intType, 2, std::vector{&intType, &intType});
+    REGISTER("$ungetc", intType, 2, std::vector<const Type*>{&intType, &intType});
     REGISTER("$ftell", intType, 1, intArg);
-    REGISTER("$fseek", intType, 3, std::vector{&intType, &intType, &intType});
+    REGISTER("$fseek", intType, 3, std::vector<const Type*>{&intType, &intType, &intType});
     REGISTER("$rewind", intType, 1, intArg);
-    REGISTER("$fflush", c.getVoidType(), 0, intArg);
+    REGISTER("$fflush", voidType, 0, intArg);
     REGISTER("$feof", intType, 1, intArg);
 
-    REGISTER("$test$plusargs", intType, 1, std::vector{&c.getStringType()});
+    REGISTER("$test$plusargs", intType, 1, std::vector<const Type*>{&stringType});
 
 #undef REGISTER
 
-#define FUNC(name, numArgs) c.addSystemSubroutine(std::make_unique<DistributionFunc>(name, numArgs))
+#define FUNC(name, numArgs) addSystemSubroutine(std::make_shared<DistributionFunc>(name, numArgs))
     FUNC("$dist_uniform", 3);
     FUNC("$dist_normal", 3);
     FUNC("$dist_exponential", 2);
@@ -461,7 +461,7 @@ void registerNonConstFuncs(Compilation& c) {
     FUNC("$dist_erlang", 3);
 #undef FUNC
 
-#define FUNC(name) c.addSystemSubroutine(std::make_unique<ValueChangeFunc>(name))
+#define FUNC(name) addSystemSubroutine(std::make_shared<ValueChangeFunc>(name))
     FUNC("$rose");
     FUNC("$fell");
     FUNC("$stable");
@@ -469,7 +469,7 @@ void registerNonConstFuncs(Compilation& c) {
 #undef FUNC
 
 #define FUNC(name, isFuture) \
-    c.addSystemSubroutine(std::make_unique<GlobalValueChangeFunc>(name, isFuture))
+    addSystemSubroutine(std::make_shared<GlobalValueChangeFunc>(name, isFuture))
     FUNC("$past_gclk", false);
     FUNC("$rose_gclk", false);
     FUNC("$fell_gclk", false);
@@ -482,22 +482,21 @@ void registerNonConstFuncs(Compilation& c) {
     FUNC("$changing_gclk", true);
 #undef FUNC
 
-    c.addSystemSubroutine(std::make_unique<FErrorFunc>());
-    c.addSystemSubroutine(std::make_unique<FGetsFunc>());
-    c.addSystemSubroutine(std::make_unique<ScanfFunc>(true));
-    c.addSystemSubroutine(std::make_unique<ScanfFunc>(false));
-    c.addSystemSubroutine(std::make_unique<FReadFunc>());
-    c.addSystemSubroutine(std::make_unique<SampledFunc>());
-    c.addSystemSubroutine(std::make_unique<PastFunc>());
+    addSystemSubroutine(std::make_shared<FErrorFunc>());
+    addSystemSubroutine(std::make_shared<FGetsFunc>());
+    addSystemSubroutine(std::make_shared<ScanfFunc>(true));
+    addSystemSubroutine(std::make_shared<ScanfFunc>(false));
+    addSystemSubroutine(std::make_shared<FReadFunc>());
+    addSystemSubroutine(std::make_shared<SampledFunc>());
+    addSystemSubroutine(std::make_shared<PastFunc>());
 
-    c.addSystemMethod(SymbolKind::EventType,
-                      std::make_unique<NonConstantFunction>("triggered", c.getBitType(), 0,
-                                                            std::vector<const Type*>{},
-                                                            /* isMethod */ true));
+    addSystemMethod(SymbolKind::EventType,
+                    std::make_shared<NonConstantFunction>("triggered", bitType, 0,
+                                                          std::vector<const Type*>{},
+                                                          /* isMethod */ true));
 
-    c.addSystemMethod(SymbolKind::ClassProperty, std::make_unique<RandModeFunc>("rand_mode"));
-    c.addSystemMethod(SymbolKind::ConstraintBlock,
-                      std::make_unique<RandModeFunc>("constraint_mode"));
+    addSystemMethod(SymbolKind::ClassProperty, std::make_shared<RandModeFunc>("rand_mode"));
+    addSystemMethod(SymbolKind::ConstraintBlock, std::make_shared<RandModeFunc>("constraint_mode"));
 }
 
 } // namespace slang::ast::builtins

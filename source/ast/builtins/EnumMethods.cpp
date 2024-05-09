@@ -5,6 +5,8 @@
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
+#include "Builtins.h"
+
 #include "slang/ast/Compilation.h"
 #include "slang/ast/SystemSubroutine.h"
 #include "slang/ast/symbols/VariableSymbols.h"
@@ -175,9 +177,9 @@ public:
 
 class EnumNameMethod : public SimpleSystemSubroutine {
 public:
-    explicit EnumNameMethod(Compilation& comp) :
-        SimpleSystemSubroutine("name", SubroutineKind::Function, 0, {}, comp.getStringType(),
-                               true) {}
+    explicit EnumNameMethod(const Builtins& builtins) :
+        SimpleSystemSubroutine("name", SubroutineKind::Function, 0, {}, builtins.stringType, true) {
+    }
 
     ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
                        const CallExpression::SystemCallInfo&) const final {
@@ -201,17 +203,16 @@ public:
     }
 };
 
-void registerEnumMethods(Compilation& c) {
-#define REGISTER(kind, name, ...) \
-    c.addSystemMethod(kind, std::make_unique<name##Method>(__VA_ARGS__))
+void Builtins::registerEnumMethods() {
+#define REGISTER(kind, name, ...) addSystemMethod(kind, std::make_shared<name##Method>(__VA_ARGS__))
     REGISTER(SymbolKind::EnumType, EnumFirstLast, "first", true);
     REGISTER(SymbolKind::EnumType, EnumFirstLast, "last", false);
     REGISTER(SymbolKind::EnumType, EnumNextPrev, "next", true);
     REGISTER(SymbolKind::EnumType, EnumNextPrev, "prev", false);
-    REGISTER(SymbolKind::EnumType, EnumName, c);
+    REGISTER(SymbolKind::EnumType, EnumName, *this);
 #undef REGISTER
 
-    c.addSystemMethod(SymbolKind::EnumType, std::make_unique<EnumNumMethod>());
+    addSystemMethod(SymbolKind::EnumType, std::make_shared<EnumNumMethod>());
 }
 
 } // namespace slang::ast::builtins

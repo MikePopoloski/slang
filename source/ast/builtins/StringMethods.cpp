@@ -5,6 +5,8 @@
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
+#include "Builtins.h"
+
 #include "slang/ast/Compilation.h"
 #include "slang/ast/SystemSubroutine.h"
 #include "slang/util/String.h"
@@ -13,8 +15,8 @@ namespace slang::ast::builtins {
 
 class StringLenMethod : public SimpleSystemSubroutine {
 public:
-    explicit StringLenMethod(Compilation& comp) :
-        SimpleSystemSubroutine("len", SubroutineKind::Function, 0, {}, comp.getIntType(), true) {}
+    explicit StringLenMethod(const Builtins& builtins) :
+        SimpleSystemSubroutine("len", SubroutineKind::Function, 0, {}, builtins.intType, true) {}
 
     ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
                        const CallExpression::SystemCallInfo&) const final {
@@ -28,9 +30,9 @@ public:
 
 class StringPutcMethod : public SimpleSystemSubroutine {
 public:
-    explicit StringPutcMethod(Compilation& comp) :
+    explicit StringPutcMethod(const Builtins& builtins) :
         SimpleSystemSubroutine("putc", SubroutineKind::Function, 2,
-                               {&comp.getIntType(), &comp.getByteType()}, comp.getVoidType(), true,
+                               {&builtins.intType, &builtins.byteType}, builtins.voidType, true,
                                /* isFirstArgLValue */ true) {}
 
     ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
@@ -56,9 +58,9 @@ public:
 
 class StringGetcMethod : public SimpleSystemSubroutine {
 public:
-    explicit StringGetcMethod(Compilation& comp) :
-        SimpleSystemSubroutine("getc", SubroutineKind::Function, 1, {&comp.getIntType()},
-                               comp.getByteType(), true) {}
+    explicit StringGetcMethod(const Builtins& builtins) :
+        SimpleSystemSubroutine("getc", SubroutineKind::Function, 1, {&builtins.intType},
+                               builtins.byteType, true) {}
 
     ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
                        const CallExpression::SystemCallInfo&) const final {
@@ -78,8 +80,8 @@ public:
 
 class StringUpperLowerMethod : public SimpleSystemSubroutine {
 public:
-    StringUpperLowerMethod(Compilation& comp, const std::string& name, bool upper) :
-        SimpleSystemSubroutine(name, SubroutineKind::Function, 0, {}, comp.getStringType(), true),
+    StringUpperLowerMethod(const Builtins& builtins, const std::string& name, bool upper) :
+        SimpleSystemSubroutine(name, SubroutineKind::Function, 0, {}, builtins.stringType, true),
         upper(upper) {}
 
     ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
@@ -102,9 +104,9 @@ private:
 
 class StringCompareMethod : public SimpleSystemSubroutine {
 public:
-    StringCompareMethod(Compilation& comp, const std::string& name, bool ignoreCase) :
-        SimpleSystemSubroutine(name, SubroutineKind::Function, 1, {&comp.getStringType()},
-                               comp.getIntType(), true),
+    StringCompareMethod(const Builtins& builtins, const std::string& name, bool ignoreCase) :
+        SimpleSystemSubroutine(name, SubroutineKind::Function, 1, {&builtins.stringType},
+                               builtins.intType, true),
         ignoreCase(ignoreCase) {}
 
     ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
@@ -144,10 +146,9 @@ private:
 
 class StringSubstrMethod : public SimpleSystemSubroutine {
 public:
-    explicit StringSubstrMethod(Compilation& comp) :
+    explicit StringSubstrMethod(const Builtins& builtins) :
         SimpleSystemSubroutine("substr", SubroutineKind::Function, 2,
-                               {&comp.getIntType(), &comp.getIntType()}, comp.getStringType(),
-                               true) {}
+                               {&builtins.intType, &builtins.intType}, builtins.stringType, true) {}
 
     ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
                        const CallExpression::SystemCallInfo&) const final {
@@ -170,8 +171,8 @@ public:
 
 class StringAtoIMethod : public SimpleSystemSubroutine {
 public:
-    StringAtoIMethod(Compilation& comp, const std::string& name, int base) :
-        SimpleSystemSubroutine(name, SubroutineKind::Function, 0, {}, comp.getIntegerType(), true),
+    StringAtoIMethod(const Builtins& builtins, const std::string& name, int base) :
+        SimpleSystemSubroutine(name, SubroutineKind::Function, 0, {}, builtins.integerType, true),
         base(base) {}
 
     ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
@@ -193,8 +194,8 @@ private:
 
 class StringAtoRealMethod : public SimpleSystemSubroutine {
 public:
-    explicit StringAtoRealMethod(Compilation& comp) :
-        SimpleSystemSubroutine("atoreal", SubroutineKind::Function, 0, {}, comp.getRealType(),
+    explicit StringAtoRealMethod(const Builtins& builtins) :
+        SimpleSystemSubroutine("atoreal", SubroutineKind::Function, 0, {}, builtins.realType,
                                true) {}
 
     ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
@@ -213,9 +214,9 @@ public:
 
 class StringItoAMethod : public SimpleSystemSubroutine {
 public:
-    StringItoAMethod(Compilation& comp, const std::string& name, LiteralBase base) :
-        SimpleSystemSubroutine(name, SubroutineKind::Function, 1, {&comp.getIntegerType()},
-                               comp.getVoidType(), true, /* isFirstArgLValue */ true),
+    StringItoAMethod(const Builtins& builtins, const std::string& name, LiteralBase base) :
+        SimpleSystemSubroutine(name, SubroutineKind::Function, 1, {&builtins.integerType},
+                               builtins.voidType, true, /* isFirstArgLValue */ true),
         base(base) {}
 
     ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
@@ -235,9 +236,9 @@ private:
 
 class StringRealtoAMethod : public SimpleSystemSubroutine {
 public:
-    explicit StringRealtoAMethod(Compilation& comp) :
-        SimpleSystemSubroutine("realtoa", SubroutineKind::Function, 1, {&comp.getRealType()},
-                               comp.getVoidType(), true, /* isFirstArgLValue */ true) {}
+    explicit StringRealtoAMethod(const Builtins& builtins) :
+        SimpleSystemSubroutine("realtoa", SubroutineKind::Function, 1, {&builtins.realType},
+                               builtins.voidType, true, /* isFirstArgLValue */ true) {}
 
     ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
                        const CallExpression::SystemCallInfo&) const final {
@@ -251,27 +252,26 @@ public:
     }
 };
 
-void registerStringMethods(Compilation& c) {
-#define REGISTER(kind, name, ...) \
-    c.addSystemMethod(kind, std::make_unique<name##Method>(__VA_ARGS__))
-    REGISTER(SymbolKind::StringType, StringLen, c);
-    REGISTER(SymbolKind::StringType, StringPutc, c);
-    REGISTER(SymbolKind::StringType, StringGetc, c);
-    REGISTER(SymbolKind::StringType, StringUpperLower, c, "toupper", true);
-    REGISTER(SymbolKind::StringType, StringUpperLower, c, "tolower", false);
-    REGISTER(SymbolKind::StringType, StringCompare, c, "compare", false);
-    REGISTER(SymbolKind::StringType, StringCompare, c, "icompare", true);
-    REGISTER(SymbolKind::StringType, StringSubstr, c);
-    REGISTER(SymbolKind::StringType, StringAtoI, c, "atoi", 10);
-    REGISTER(SymbolKind::StringType, StringAtoI, c, "atohex", 16);
-    REGISTER(SymbolKind::StringType, StringAtoI, c, "atooct", 8);
-    REGISTER(SymbolKind::StringType, StringAtoI, c, "atobin", 2);
-    REGISTER(SymbolKind::StringType, StringAtoReal, c);
-    REGISTER(SymbolKind::StringType, StringItoA, c, "itoa", LiteralBase::Decimal);
-    REGISTER(SymbolKind::StringType, StringItoA, c, "hextoa", LiteralBase::Hex);
-    REGISTER(SymbolKind::StringType, StringItoA, c, "octtoa", LiteralBase::Octal);
-    REGISTER(SymbolKind::StringType, StringItoA, c, "bintoa", LiteralBase::Binary);
-    REGISTER(SymbolKind::StringType, StringRealtoA, c);
+void Builtins::registerStringMethods() {
+#define REGISTER(kind, name, ...) addSystemMethod(kind, std::make_unique<name##Method>(__VA_ARGS__))
+    REGISTER(SymbolKind::StringType, StringLen, *this);
+    REGISTER(SymbolKind::StringType, StringPutc, *this);
+    REGISTER(SymbolKind::StringType, StringGetc, *this);
+    REGISTER(SymbolKind::StringType, StringUpperLower, *this, "toupper", true);
+    REGISTER(SymbolKind::StringType, StringUpperLower, *this, "tolower", false);
+    REGISTER(SymbolKind::StringType, StringCompare, *this, "compare", false);
+    REGISTER(SymbolKind::StringType, StringCompare, *this, "icompare", true);
+    REGISTER(SymbolKind::StringType, StringSubstr, *this);
+    REGISTER(SymbolKind::StringType, StringAtoI, *this, "atoi", 10);
+    REGISTER(SymbolKind::StringType, StringAtoI, *this, "atohex", 16);
+    REGISTER(SymbolKind::StringType, StringAtoI, *this, "atooct", 8);
+    REGISTER(SymbolKind::StringType, StringAtoI, *this, "atobin", 2);
+    REGISTER(SymbolKind::StringType, StringAtoReal, *this);
+    REGISTER(SymbolKind::StringType, StringItoA, *this, "itoa", LiteralBase::Decimal);
+    REGISTER(SymbolKind::StringType, StringItoA, *this, "hextoa", LiteralBase::Hex);
+    REGISTER(SymbolKind::StringType, StringItoA, *this, "octtoa", LiteralBase::Octal);
+    REGISTER(SymbolKind::StringType, StringItoA, *this, "bintoa", LiteralBase::Binary);
+    REGISTER(SymbolKind::StringType, StringRealtoA, *this);
 
 #undef REGISTER
 }

@@ -8,6 +8,7 @@
 #include "slang/ast/Compilation.h"
 
 #include "ElabVisitors.h"
+#include "builtins/Builtins.h"
 #include <fmt/core.h>
 #include <mutex>
 
@@ -29,16 +30,8 @@ using namespace slang::parsing;
 
 namespace slang::ast::builtins {
 
-void registerArrayMethods(Compilation&);
-void registerConversionFuncs(Compilation&);
-void registerCoverageFuncs(Compilation&);
-void registerEnumMethods(Compilation&);
-void registerMathFuncs(Compilation&);
-void registerMiscSystemFuncs(Compilation&);
-void registerNonConstFuncs(Compilation&);
-void registerQueryFuncs(Compilation&);
-void registerStringMethods(Compilation&);
-void registerSystemTasks(Compilation&);
+Builtins Builtins::Instance;
+
 void registerGateTypes(Compilation&);
 const PackageSymbol& createStdPackage(Compilation&);
 
@@ -51,35 +44,37 @@ Compilation::Compilation(const Bag& options, const SourceLibrary* defaultLib) :
     unrollIntervalMapAllocator(*this), tempDiag({}, {}), defaultLibPtr(defaultLib) {
 
     // Construct all built-in types.
-    bitType = emplace<ScalarType>(ScalarType::Bit);
-    logicType = emplace<ScalarType>(ScalarType::Logic);
-    intType = emplace<PredefinedIntegerType>(PredefinedIntegerType::Int);
-    byteType = emplace<PredefinedIntegerType>(PredefinedIntegerType::Byte);
-    integerType = emplace<PredefinedIntegerType>(PredefinedIntegerType::Integer);
-    realType = emplace<FloatingType>(FloatingType::Real);
-    shortRealType = emplace<FloatingType>(FloatingType::ShortReal);
-    stringType = emplace<StringType>();
-    voidType = emplace<VoidType>();
-    errorType = emplace<ErrorType>();
+    auto& bi = slang::ast::builtins::Builtins::Instance;
+    bitType = &bi.bitType;
+    logicType = &bi.logicType;
+    intType = &bi.intType;
+    byteType = &bi.byteType;
+    integerType = &bi.integerType;
+    realType = &bi.realType;
+    shortRealType = &bi.shortRealType;
+    stringType = &bi.stringType;
+    voidType = &bi.voidType;
+    errorType = &bi.errorType;
 
-    auto regType = emplace<ScalarType>(ScalarType::Reg);
-    auto signedBitType = emplace<ScalarType>(ScalarType::Bit, true);
-    auto signedLogicType = emplace<ScalarType>(ScalarType::Logic, true);
-    auto signedRegType = emplace<ScalarType>(ScalarType::Reg, true);
-    auto shortIntType = emplace<PredefinedIntegerType>(PredefinedIntegerType::ShortInt);
-    auto longIntType = emplace<PredefinedIntegerType>(PredefinedIntegerType::LongInt);
-    auto timeType = emplace<PredefinedIntegerType>(PredefinedIntegerType::Time);
-    auto realTimeType = emplace<FloatingType>(FloatingType::RealTime);
-    auto chandleType = emplace<CHandleType>();
-    auto nullType = emplace<NullType>();
-    auto eventType = emplace<EventType>();
-    auto unboundedType = emplace<UnboundedType>();
-    auto typeRefType = emplace<TypeRefType>();
-    auto untypedType = emplace<UntypedType>();
-    auto sequenceType = emplace<SequenceType>();
-    auto propertyType = emplace<PropertyType>();
+    auto regType = &bi.regType;
+    auto signedBitType = &bi.signedBitType;
+    auto signedLogicType = &bi.signedLogicType;
+    auto signedRegType = &bi.signedRegType;
+    auto shortIntType = &bi.shortIntType;
+    auto longIntType = &bi.longIntType;
+    auto timeType = &bi.timeType;
+    auto realTimeType = &bi.realTimeType;
+    auto chandleType = &bi.chandleType;
+    auto nullType = &bi.nullType;
+    auto eventType = &bi.eventType;
+    auto unboundedType = &bi.unboundedType;
+    auto typeRefType = &bi.typeRefType;
+    auto untypedType = &bi.untypedType;
+    auto sequenceType = &bi.sequenceType;
+    auto propertyType = &bi.propertyType;
 
     // Register built-in types for lookup by syntax kind.
+    knownTypes.reserve(32);
     knownTypes[SyntaxKind::ShortIntType] = shortIntType;
     knownTypes[SyntaxKind::IntType] = intType;
     knownTypes[SyntaxKind::LongIntType] = longIntType;
@@ -108,6 +103,7 @@ Compilation::Compilation(const Bag& options, const SourceLibrary* defaultLib) :
     knownNetTypes[TokenKind::type##Keyword] = std::make_unique<NetType>( \
         NetType::type, LexerFacts::getTokenKindText(TokenKind::type##Keyword), *logicType)
 
+    knownNetTypes.reserve(16);
     MAKE_NETTYPE(Wire);
     MAKE_NETTYPE(WAnd);
     MAKE_NETTYPE(WOr);
@@ -141,17 +137,9 @@ Compilation::Compilation(const Bag& options, const SourceLibrary* defaultLib) :
 
     root = std::make_unique<RootSymbol>(*this);
 
-    // Register all system tasks, functions, and methods.
-    builtins::registerArrayMethods(*this);
-    builtins::registerConversionFuncs(*this);
-    builtins::registerCoverageFuncs(*this);
-    builtins::registerEnumMethods(*this);
-    builtins::registerMathFuncs(*this);
-    builtins::registerMiscSystemFuncs(*this);
-    builtins::registerNonConstFuncs(*this);
-    builtins::registerQueryFuncs(*this);
-    builtins::registerStringMethods(*this);
-    builtins::registerSystemTasks(*this);
+    // Copy in all built-in system tasks, functions, and methods.
+    subroutineMap = bi.subroutineMap;
+    methodMap = bi.methodMap;
 
     // Register the built-in std package.
     stdPkg = &builtins::createStdPackage(*this);
@@ -1028,29 +1016,19 @@ void Compilation::addGateType(const PrimitiveSymbol& prim) {
     gateMap.emplace(prim.name, &prim);
 }
 
-void Compilation::addSystemSubroutine(std::unique_ptr<SystemSubroutine> subroutine) {
-    subroutineMap.emplace(subroutine->name, subroutine.get());
-    subroutineStorage.emplace_back(std::move(subroutine));
+void Compilation::addSystemSubroutine(std::shared_ptr<SystemSubroutine> subroutine) {
+    subroutineMap.emplace(subroutine->name, std::move(subroutine));
 }
 
-void Compilation::addSystemSubroutine(const SystemSubroutine& subroutine) {
-    subroutineMap.emplace(subroutine.name, &subroutine);
-}
-
-void Compilation::addSystemMethod(SymbolKind typeKind, std::unique_ptr<SystemSubroutine> method) {
-    methodMap.emplace(std::make_tuple(std::string_view(method->name), typeKind), method.get());
-    subroutineStorage.emplace_back(std::move(method));
-}
-
-void Compilation::addSystemMethod(SymbolKind typeKind, const SystemSubroutine& method) {
-    methodMap.emplace(std::make_tuple(std::string_view(method.name), typeKind), &method);
+void Compilation::addSystemMethod(SymbolKind typeKind, std::shared_ptr<SystemSubroutine> method) {
+    methodMap.emplace(std::make_tuple(std::string_view(method->name), typeKind), std::move(method));
 }
 
 const SystemSubroutine* Compilation::getSystemSubroutine(std::string_view name) const {
     auto it = subroutineMap.find(name);
     if (it == subroutineMap.end())
         return nullptr;
-    return it->second;
+    return it->second.get();
 }
 
 const SystemSubroutine* Compilation::getSystemMethod(SymbolKind typeKind,
@@ -1058,7 +1036,7 @@ const SystemSubroutine* Compilation::getSystemMethod(SymbolKind typeKind,
     auto it = methodMap.find(std::make_tuple(name, typeKind));
     if (it == methodMap.end())
         return nullptr;
-    return it->second;
+    return it->second.get();
 }
 
 void Compilation::setAttributes(const Symbol& symbol,

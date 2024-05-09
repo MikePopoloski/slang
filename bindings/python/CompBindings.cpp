@@ -86,12 +86,8 @@ void registerCompilation(py::module_& m) {
         .def("addSyntaxTree", &Compilation::addSyntaxTree, "tree"_a)
         .def("getSyntaxTrees", &Compilation::getSyntaxTrees)
         .def("getRoot", py::overload_cast<>(&Compilation::getRoot), byrefint)
-        .def("addSystemSubroutine",
-             py::overload_cast<const SystemSubroutine&>(&Compilation::addSystemSubroutine),
-             py::keep_alive<1, 2>(), "subroutine"_a)
-        .def("addSystemMethod",
-             py::overload_cast<SymbolKind, const SystemSubroutine&>(&Compilation::addSystemMethod),
-             py::keep_alive<1, 3>(), "typeKind"_a, "method"_a)
+        .def("addSystemSubroutine", &Compilation::addSystemSubroutine, "subroutine"_a)
+        .def("addSystemMethod", &Compilation::addSystemMethod, "typeKind"_a, "method"_a)
         .def("getSystemSubroutine", &Compilation::getSystemSubroutine, byrefint, "name"_a)
         .def("getSystemMethod", &Compilation::getSystemMethod, byrefint, "typeKind"_a, "name"_a)
         .def("parseName", &Compilation::parseName, byrefint, "name"_a)

@@ -5,6 +5,8 @@
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
+#include "Builtins.h"
+
 #include "slang/ast/Compilation.h"
 #include "slang/ast/SystemSubroutine.h"
 #include "slang/ast/expressions/MiscExpressions.h"
@@ -86,24 +88,24 @@ private:
     size_t requiredArgs;
 };
 
-void registerCoverageFuncs(Compilation& c) {
-#define REGISTER(name, ...) c.addSystemSubroutine(std::make_unique<name>(__VA_ARGS__))
-    REGISTER(CoverageNameOrHierFunc, "$coverage_control", c.getIntType(), 3, 4,
-             std::vector{&c.getIntType(), &c.getIntType(), &c.getIntType(), &c.getStringType()});
-    REGISTER(CoverageNameOrHierFunc, "$coverage_get_max", c.getIntType(), 2, 3,
-             std::vector{&c.getIntType(), &c.getIntType(), &c.getStringType()});
-    REGISTER(CoverageNameOrHierFunc, "$coverage_get", c.getIntType(), 2, 3,
-             std::vector{&c.getIntType(), &c.getIntType(), &c.getStringType()});
+void Builtins::registerCoverageFuncs() {
+#define REGISTER(name, ...) addSystemSubroutine(std::make_shared<name>(__VA_ARGS__))
+    REGISTER(CoverageNameOrHierFunc, "$coverage_control", intType, 3, 4,
+             std::vector<const Type*>{&intType, &intType, &intType, &stringType});
+    REGISTER(CoverageNameOrHierFunc, "$coverage_get_max", intType, 2, 3,
+             std::vector<const Type*>{&intType, &intType, &stringType});
+    REGISTER(CoverageNameOrHierFunc, "$coverage_get", intType, 2, 3,
+             std::vector<const Type*>{&intType, &intType, &stringType});
 
-    REGISTER(NonConstantFunction, "$coverage_merge", c.getIntType(), 2,
-             std::vector{&c.getIntType(), &c.getStringType()});
-    REGISTER(NonConstantFunction, "$coverage_save", c.getIntType(), 2,
-             std::vector{&c.getIntType(), &c.getStringType()});
-    REGISTER(NonConstantFunction, "$get_coverage", c.getRealType());
-    REGISTER(NonConstantFunction, "$set_coverage_db_name", c.getVoidType(), 1,
-             std::vector{&c.getStringType()});
-    REGISTER(NonConstantFunction, "$load_coverage_db", c.getVoidType(), 1,
-             std::vector{&c.getStringType()});
+    REGISTER(NonConstantFunction, "$coverage_merge", intType, 2,
+             std::vector<const Type*>{&intType, &stringType});
+    REGISTER(NonConstantFunction, "$coverage_save", intType, 2,
+             std::vector<const Type*>{&intType, &stringType});
+    REGISTER(NonConstantFunction, "$get_coverage", realType);
+    REGISTER(NonConstantFunction, "$set_coverage_db_name", voidType, 1,
+             std::vector<const Type*>{&stringType});
+    REGISTER(NonConstantFunction, "$load_coverage_db", voidType, 1,
+             std::vector<const Type*>{&stringType});
 #undef REGISTER
 }
 

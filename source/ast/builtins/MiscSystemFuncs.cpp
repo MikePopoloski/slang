@@ -6,6 +6,7 @@
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
 #include "../FmtHelpers.h"
+#include "Builtins.h"
 
 #include "slang/ast/ASTVisitor.h"
 #include "slang/ast/Compilation.h"
@@ -390,22 +391,22 @@ private:
     }
 };
 
-void registerMiscSystemFuncs(Compilation& c) {
-#define REGISTER(name) c.addSystemSubroutine(std::make_unique<name##Function>())
+void Builtins::registerMiscSystemFuncs() {
+#define REGISTER(name) addSystemSubroutine(std::make_shared<name##Function>())
     REGISTER(ValuePlusArgs);
     REGISTER(ScopeRandomize);
     REGISTER(GlobalClock);
 #undef REGISTER
 
-    c.addSystemSubroutine(std::make_unique<SFormatFunction>("$sformatf", false));
-    c.addSystemSubroutine(std::make_unique<SFormatFunction>("$psprintf", true));
+    addSystemSubroutine(std::make_shared<SFormatFunction>("$sformatf", false));
+    addSystemSubroutine(std::make_shared<SFormatFunction>("$psprintf", true));
 
-    c.addSystemSubroutine(std::make_unique<InferredValueFunction>("$inferred_clock", true));
-    c.addSystemSubroutine(std::make_unique<InferredValueFunction>("$inferred_disable", false));
+    addSystemSubroutine(std::make_shared<InferredValueFunction>("$inferred_clock", true));
+    addSystemSubroutine(std::make_shared<InferredValueFunction>("$inferred_disable", false));
 
-    c.addSystemMethod(SymbolKind::ClassType, std::make_unique<ClassRandomizeFunction>());
-    c.addSystemMethod(SymbolKind::SequenceType, std::make_unique<SequenceMethod>("triggered"));
-    c.addSystemMethod(SymbolKind::SequenceType, std::make_unique<SequenceMethod>("matched"));
+    addSystemMethod(SymbolKind::ClassType, std::make_shared<ClassRandomizeFunction>());
+    addSystemMethod(SymbolKind::SequenceType, std::make_shared<SequenceMethod>("triggered"));
+    addSystemMethod(SymbolKind::SequenceType, std::make_shared<SequenceMethod>("matched"));
 }
 
 } // namespace slang::ast::builtins

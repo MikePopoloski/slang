@@ -198,13 +198,13 @@ TEST_CASE("Utility system functions") {
     };
 
     // [18.13] Constrained pseudo-random value generation
-    CHECK(typeof("$urandom") == "bit[31:0]");
-    CHECK(typeof("$urandom_range(1)") == "bit[31:0]");
-    CHECK(typeof("$urandom_range(1, 55)") == "bit[31:0]");
+    CHECK(typeof("$urandom") == "int unsigned");
+    CHECK(typeof("$urandom_range(1)") == "int unsigned");
+    CHECK(typeof("$urandom_range(1, 55)") == "int unsigned");
 
     // [20.3] Simulation time functions
     CHECK(typeof("$time") == "time");
-    CHECK(typeof("$stime") == "bit[31:0]");
+    CHECK(typeof("$stime") == "int unsigned");
     CHECK(typeof("$realtime") == "realtime");
 
     // [20.4] Timescale system tasks

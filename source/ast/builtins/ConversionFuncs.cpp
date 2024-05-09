@@ -5,6 +5,8 @@
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
+#include "Builtins.h"
+
 #include "slang/ast/Compilation.h"
 #include "slang/ast/SystemSubroutine.h"
 #include "slang/ast/types/Type.h"
@@ -49,9 +51,9 @@ private:
 
 class RtoIFunction : public SimpleSystemSubroutine {
 public:
-    explicit RtoIFunction(Compilation& comp) :
-        SimpleSystemSubroutine("$rtoi", SubroutineKind::Function, 1, {&comp.getRealType()},
-                               comp.getIntegerType(), false) {}
+    explicit RtoIFunction(const Builtins& builtins) :
+        SimpleSystemSubroutine("$rtoi", SubroutineKind::Function, 1, {&builtins.realType},
+                               builtins.integerType, false) {}
 
     ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
                        const CallExpression::SystemCallInfo&) const final {
@@ -65,7 +67,7 @@ public:
 
 class ItoRFunction : public SystemSubroutine {
 public:
-    explicit ItoRFunction(Compilation&) : SystemSubroutine("$itor", SubroutineKind::Function) {}
+    ItoRFunction() : SystemSubroutine("$itor", SubroutineKind::Function) {}
 
     const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
@@ -91,9 +93,9 @@ public:
 
 class RealToBitsFunction : public SimpleSystemSubroutine {
 public:
-    explicit RealToBitsFunction(Compilation& comp) :
-        SimpleSystemSubroutine("$realtobits", SubroutineKind::Function, 1, {&comp.getRealType()},
-                               comp.getType(64, IntegralFlags::Unsigned), false) {}
+    explicit RealToBitsFunction(const Builtins& builtins) :
+        SimpleSystemSubroutine("$realtobits", SubroutineKind::Function, 1, {&builtins.realType},
+                               builtins.ulongIntType, false) {}
 
     ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
                        const CallExpression::SystemCallInfo&) const final {
@@ -107,10 +109,9 @@ public:
 
 class BitsToRealFunction : public SimpleSystemSubroutine {
 public:
-    explicit BitsToRealFunction(Compilation& comp) :
-        SimpleSystemSubroutine("$bitstoreal", SubroutineKind::Function, 1,
-                               {&comp.getType(64, IntegralFlags::Unsigned)}, comp.getRealType(),
-                               false) {}
+    explicit BitsToRealFunction(const Builtins& builtins) :
+        SimpleSystemSubroutine("$bitstoreal", SubroutineKind::Function, 1, {&builtins.ulongIntType},
+                               builtins.realType, false) {}
 
     ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
                        const CallExpression::SystemCallInfo&) const final {
@@ -125,10 +126,9 @@ public:
 
 class ShortRealToBitsFunction : public SimpleSystemSubroutine {
 public:
-    explicit ShortRealToBitsFunction(Compilation& comp) :
+    explicit ShortRealToBitsFunction(const Builtins& builtins) :
         SimpleSystemSubroutine("$shortrealtobits", SubroutineKind::Function, 1,
-                               {&comp.getShortRealType()},
-                               comp.getType(32, IntegralFlags::Unsigned), false) {}
+                               {&builtins.shortRealType}, builtins.uintType, false) {}
 
     ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
                        const CallExpression::SystemCallInfo&) const final {
@@ -142,10 +142,9 @@ public:
 
 class BitsToShortRealFunction : public SimpleSystemSubroutine {
 public:
-    explicit BitsToShortRealFunction(Compilation& comp) :
+    explicit BitsToShortRealFunction(const Builtins& builtins) :
         SimpleSystemSubroutine("$bitstoshortreal", SubroutineKind::Function, 1,
-                               {&comp.getType(32, IntegralFlags::Unsigned)},
-                               comp.getShortRealType(), false) {}
+                               {&builtins.uintType}, builtins.shortRealType, false) {}
 
     ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
                        const CallExpression::SystemCallInfo&) const final {
@@ -158,17 +157,17 @@ public:
     }
 };
 
-void registerConversionFuncs(Compilation& c) {
-#define REGISTER(name, ...) c.addSystemSubroutine(std::make_unique<name##Function>(__VA_ARGS__))
+void Builtins::registerConversionFuncs() {
+#define REGISTER(name, ...) addSystemSubroutine(std::make_shared<name##Function>(__VA_ARGS__))
     REGISTER(SignedConversion, "$signed", true);
     REGISTER(SignedConversion, "$unsigned", false);
 
-    REGISTER(RtoI, c);
-    REGISTER(ItoR, c);
-    REGISTER(RealToBits, c);
-    REGISTER(BitsToReal, c);
-    REGISTER(ShortRealToBits, c);
-    REGISTER(BitsToShortReal, c);
+    REGISTER(RtoI, *this);
+    REGISTER(ItoR, );
+    REGISTER(RealToBits, *this);
+    REGISTER(BitsToReal, *this);
+    REGISTER(ShortRealToBits, *this);
+    REGISTER(BitsToShortReal, *this);
 #undef REGISTER
 }
 
