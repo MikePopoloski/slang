@@ -724,6 +724,7 @@ error NonblockingDynamicAssign "nonblocking assignments to elements of dynamical
 error VoidAssignment "expression of type 'void' cannot be used in assignments"
 error VirtualIfaceDefparam "interface instance cannot be assigned to a virtual interface because it is the target of a defparam or bind directive"
 error MultipleDefaultDistWeight "'default' cannot be used more than once in dist item list"
+error DistRealRangeWeight "'dist' for a range of real values must include an explicit weight and must use the ':/' operator"
 warning ignored-slice IgnoredSlice "slice size ignored for left-to-right streaming operator"
 warning unsized-concat UnsizedInConcat "unsized integer in concat; using a width of {}"
 warning width-expand WidthExpand "implicit conversion expands from {} to {} bits"

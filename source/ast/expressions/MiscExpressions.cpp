@@ -13,6 +13,7 @@
 #include "slang/ast/TimingControl.h"
 #include "slang/ast/expressions/AssertionExpr.h"
 #include "slang/ast/expressions/AssignmentExpressions.h"
+#include "slang/ast/expressions/OperatorExpressions.h"
 #include "slang/ast/symbols/ClassSymbols.h"
 #include "slang/ast/symbols/InstanceSymbols.h"
 #include "slang/ast/symbols/MemberSymbols.h"
@@ -1409,6 +1410,14 @@ Expression& DistExpression::fromSyntax(Compilation& comp, const ExpressionOrDist
         DistItem di{*bound[index++], {}};
         if (auto weight = item->as<DistItemSyntax>().weight)
             di.weight = createWeight(*weight);
+
+        if (di.value.kind == ExpressionKind::ValueRange &&
+            di.value.as<ValueRangeExpression>().left().type->isFloating() &&
+            (!di.weight || di.weight->kind != DistWeight::PerRange)) {
+            auto& diag = context.addDiag(diag::DistRealRangeWeight, di.value.sourceRange);
+            if (di.weight && di.weight->expr)
+                diag << di.weight->expr->sourceRange;
+        }
 
         items.emplace_back(di);
     }

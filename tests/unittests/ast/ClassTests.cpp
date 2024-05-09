@@ -3241,3 +3241,24 @@ endclass
     CHECK(diags[5].code == diag::ExpectedToken);
     CHECK(diags[6].code == diag::BadSetMembershipType);
 }
+
+TEST_CASE("Dist range with real values requires a weight") {
+    auto options = optionsFor(LanguageVersion::v1800_2023);
+    auto tree = SyntaxTree::fromText(R"(
+class A;
+    rand real a, b;
+    constraint c {
+        a dist { [a:b], [a:b] := 1};
+    }
+endclass
+)",
+                                     options);
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::DistRealRangeWeight);
+    CHECK(diags[1].code == diag::DistRealRangeWeight);
+}
