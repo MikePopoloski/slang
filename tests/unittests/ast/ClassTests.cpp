@@ -1935,7 +1935,7 @@ endclass
     REQUIRE(diags.size() == 18);
     CHECK(diags[0].code == diag::UnknownConstraintLiteral);
     CHECK(diags[1].code == diag::UnknownConstraintLiteral);
-    CHECK(diags[2].code == diag::NonIntegralConstraintExpr);
+    CHECK(diags[2].code == diag::InvalidConstraintExpr);
     CHECK(diags[3].code == diag::NonIntegralConstraintLiteral);
     CHECK(diags[4].code == diag::ExprNotConstraint);
     CHECK(diags[5].code == diag::RandNeededInDist);
@@ -3261,4 +3261,25 @@ endclass
     REQUIRE(diags.size() == 2);
     CHECK(diags[0].code == diag::DistRealRangeWeight);
     CHECK(diags[1].code == diag::DistRealRangeWeight);
+}
+
+TEST_CASE("v1800-2023: Uniqueness allows real") {
+    auto options = optionsFor(LanguageVersion::v1800_2023);
+    auto tree = SyntaxTree::fromText(R"(
+class A;
+    rand real a, b;
+    event c;
+    constraint C {
+        unique { a, b, c };
+    }
+endclass
+)",
+                                     options);
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::BadUniquenessType);
 }

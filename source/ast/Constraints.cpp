@@ -240,7 +240,7 @@ struct ConstraintExprVisitor {
 
             if (!expr.type->isValidForRand(RandMode::Rand,
                                            context.getCompilation().languageVersion())) {
-                context.addDiag(diag::NonIntegralConstraintExpr, expr.sourceRange) << *expr.type;
+                context.addDiag(diag::InvalidConstraintExpr, expr.sourceRange) << *expr.type;
                 return fail();
             }
         }
@@ -325,12 +325,15 @@ void ConditionalConstraint::serializeTo(ASTSerializer& serializer) const {
         serializer.write("elseBody", *elseBody);
 }
 
-static bool isAllowedForUniqueness(const Type& type) {
+static bool isAllowedForUniqueness(const Type& type, LanguageVersion languageVersion) {
     if (type.isIntegral())
         return true;
 
+    if (languageVersion >= LanguageVersion::v1800_2023 && type.isFloating())
+        return true;
+
     if (type.isUnpackedArray())
-        return isAllowedForUniqueness(*type.getArrayElementType());
+        return isAllowedForUniqueness(*type.getArrayElementType(), languageVersion);
 
     return false;
 }
@@ -338,6 +341,8 @@ static bool isAllowedForUniqueness(const Type& type) {
 Constraint& UniquenessConstraint::fromSyntax(const UniquenessConstraintSyntax& syntax,
                                              const ASTContext& context) {
     auto& comp = context.getCompilation();
+    const auto lv = comp.languageVersion();
+
     bool bad = false;
     const Type* commonType = nullptr;
     SmallVector<const Expression*> items;
@@ -350,8 +355,14 @@ Constraint& UniquenessConstraint::fromSyntax(const UniquenessConstraintSyntax& s
         }
         else {
             auto sym = expr.getSymbolReference();
-            if (!sym || !isAllowedForUniqueness(sym->getDeclaredType()->getType())) {
-                context.addDiag(diag::InvalidUniquenessExpr, expr.sourceRange);
+            if (!sym || !isAllowedForUniqueness(sym->getDeclaredType()->getType(), lv)) {
+                if (!sym) {
+                    context.addDiag(diag::InvalidUniquenessExpr, expr.sourceRange);
+                }
+                else {
+                    context.addDiag(diag::BadUniquenessType, expr.sourceRange)
+                        << sym->getDeclaredType()->getType();
+                }
                 bad = true;
             }
             else {
