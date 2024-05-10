@@ -74,7 +74,7 @@ unintuitive results.
 @section compilation-units Compilation Units
 
 A "compilation unit" is a one or more input source files that are parsed together
-as an independent unit (note that preprocessing, including macros, is performed during
+as an independent unit (note that preprocessing, including macro expansion, is performed during
 parsing and so the effects of it are limited in scope to the compilation unit).
 Because they are self contained, each compilation unit can be parsed in parallel with all
 other compilation units. Once all compilation units are parsed, elaboration is performed
