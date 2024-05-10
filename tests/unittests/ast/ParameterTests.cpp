@@ -1166,3 +1166,18 @@ endmodule
 
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Parameter default checking spurious error regress") {
+    auto tree = SyntaxTree::fromText(R"(
+module m #(parameter foo = '{a: 1, b: 2}, p = 1, type t = logic, bar = t[p]);
+endmodule
+
+module top;
+    m #(1, 1, int, int) m1();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
