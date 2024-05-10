@@ -21,6 +21,7 @@
 #include "slang/ast/types/AllTypes.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/diagnostics/ExpressionsDiags.h"
+#include "slang/diagnostics/ParserDiags.h"
 #include "slang/diagnostics/TypesDiags.h"
 #include "slang/syntax/AllSyntax.h"
 

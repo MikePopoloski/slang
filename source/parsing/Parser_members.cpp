@@ -1081,7 +1081,9 @@ ClassDeclarationSyntax& Parser::parseClassDeclaration(AttrList attributes,
     Token endClass;
     auto members = parseMemberList<MemberSyntax>(
         TokenKind::EndClassKeyword, endClass, SyntaxKind::ClassDeclaration,
-        [this, isIfaceClass](SyntaxKind, bool&) { return parseClassMember(isIfaceClass); });
+        [this, isIfaceClass, extendsClause](SyntaxKind, bool&) {
+            return parseClassMember(isIfaceClass, extendsClause != nullptr);
+        });
 
     auto endBlockName = parseNamedBlockClause();
     checkBlockNames(name, endBlockName);
@@ -1183,7 +1185,7 @@ void Parser::checkClassQualifiers(std::span<const Token> qualifiers, bool isCons
         addDiag(diag::PureRequiresVirtual, lastPure.range());
 }
 
-MemberSyntax* Parser::parseClassMember(bool isIfaceClass) {
+MemberSyntax* Parser::parseClassMember(bool isIfaceClass, bool hasBaseClass) {
     auto errorIfIface = [&](const SyntaxNode& syntax) {
         if (isIfaceClass)
             addDiag(diag::NotAllowedInIfaceClass, syntax.sourceRange());
@@ -1324,7 +1326,7 @@ MemberSyntax* Parser::parseClassMember(bool isIfaceClass) {
         if (isIfaceClass && !isPure)
             addDiag(diag::IfaceMethodPure, peek().location());
 
-        auto checkProto = [this, isStatic, &qualifiers](auto& proto, bool checkLifetime) {
+        auto checkProto = [&](auto& proto, bool checkLifetime) {
             if (checkLifetime && proto.lifetime.kind == TokenKind::StaticKeyword)
                 addDiag(diag::MethodStaticLifetime, proto.lifetime.range());
 
@@ -1332,8 +1334,20 @@ MemberSyntax* Parser::parseClassMember(bool isIfaceClass) {
             if (isStatic && !proto.specifiers.empty())
                 addDiag(diag::StaticFuncSpecifier, proto.specifiers[0]->sourceRange());
 
-            // Additional checking for constructors.
+            // If there's no base class it can't be marked `extends`.
             auto lastNamePart = proto.name->getLastToken();
+            if (!hasBaseClass) {
+                for (auto specifier : proto.specifiers) {
+                    if (specifier->keyword.kind == TokenKind::ExtendsKeyword) {
+                        auto name = lastNamePart.valueText();
+                        if (!name.empty())
+                            addDiag(diag::OverridingExtends, specifier->sourceRange()) << name;
+                        break;
+                    }
+                }
+            }
+
+            // Additional checking for constructors.
             if (lastNamePart.kind == TokenKind::NewKeyword) {
                 for (auto qual : qualifiers) {
                     if (qual.kind == TokenKind::VirtualKeyword ||

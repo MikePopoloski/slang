@@ -307,7 +307,7 @@ private:
     syntax::ImplementsClauseSyntax* parseImplementsClause(TokenKind keywordKind, Token& semi);
     syntax::ClassSpecifierSyntax* parseClassSpecifier();
     syntax::ClassDeclarationSyntax& parseClassDeclaration(AttrList attributes, Token virtualOrInterface);
-    syntax::MemberSyntax* parseClassMember(bool isIfaceClass);
+    syntax::MemberSyntax* parseClassMember(bool isIfaceClass, bool hasBaseClass);
     syntax::ContinuousAssignSyntax& parseContinuousAssign(AttrList attributes);
     syntax::DeclaratorSyntax& parseDeclarator(bool allowMinTypMax = false, bool requireInitializers = false);
     syntax::MemberSyntax* parseCoverageMember();
