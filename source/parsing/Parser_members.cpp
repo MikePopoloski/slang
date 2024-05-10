@@ -338,7 +338,7 @@ MemberSyntax* Parser::parseMember(SyntaxKind parentKind, bool& anyLocalModules) 
             break;
         }
         case TokenKind::ConstraintKeyword:
-            return &parseConstraint(attributes, {});
+            return &parseConstraint(attributes, {}, true);
         case TokenKind::PrimitiveKeyword:
             return &parseUdpDeclaration(attributes);
         case TokenKind::RandKeyword: {
@@ -392,7 +392,7 @@ MemberSyntax* Parser::parseMember(SyntaxKind parentKind, bool& anyLocalModules) 
                     addDiag(diag::ConstraintQualOutOfBlock, qual.range()) << qual.valueText();
             }
 
-            return &parseConstraint(attributes, quals.copy(alloc));
+            return &parseConstraint(attributes, quals.copy(alloc), true);
         }
     }
 
@@ -669,43 +669,8 @@ FunctionPrototypeSyntax& Parser::parseFunctionPrototype(SyntaxKind parentKind,
     else
         keyword = expect(TokenKind::FunctionKeyword);
 
-    bool erroredOnFinal = false;
-    SmallVector<ClassSpecifierSyntax*> specifiers;
-    while (peek(TokenKind::Colon)) {
-        auto specifier = parseClassSpecifier();
-        SLANG_ASSERT(specifier);
-
-        if (!specifier->keyword.isMissing()) {
-            if (specifiers.empty() && !options.has(FunctionOptions::AllowOverrideSpecifiers))
-                addDiag(diag::SpecifiersNotAllowed, specifier->sourceRange());
-
-            for (auto other : specifiers) {
-                const auto sk = specifier->keyword;
-                const auto ok = other->keyword;
-
-                if (sk.kind == ok.kind) {
-                    addDiag(diag::DuplicateClassSpecifier, sk.range())
-                        << sk.valueText() << ok.range();
-                    break;
-                }
-
-                if (ok.kind == TokenKind::FinalKeyword && !erroredOnFinal) {
-                    erroredOnFinal = true;
-                    addDiag(diag::FinalSpecifierLast, ok.range());
-                    break;
-                }
-
-                if (!ok.isMissing() && ok.kind != TokenKind::FinalKeyword &&
-                    sk.kind != TokenKind::FinalKeyword) {
-                    addDiag(diag::ClassSpecifierConflict, sk.range())
-                        << sk.valueText() << ok.range() << ok.valueText();
-                    break;
-                }
-            }
-        }
-
-        specifiers.push_back(specifier);
-    }
+    auto specifiers = parseClassSpecifierList(
+        options.has(FunctionOptions::AllowOverrideSpecifiers));
 
     auto lifetime = parseLifetime();
     if (lifetime && options.has(FunctionOptions::IsPrototype))
@@ -764,8 +729,7 @@ FunctionPrototypeSyntax& Parser::parseFunctionPrototype(SyntaxKind parentKind,
     }
 
     auto portList = parseFunctionPortList(options);
-    return factory.functionPrototype(keyword, specifiers.copy(alloc), lifetime, *returnType, name,
-                                     portList);
+    return factory.functionPrototype(keyword, specifiers, lifetime, *returnType, name, portList);
 }
 
 FunctionDeclarationSyntax& Parser::parseFunctionDeclaration(AttrList attributes,
@@ -1011,6 +975,48 @@ ClassSpecifierSyntax* Parser::parseClassSpecifier() {
         return &result;
     }
     return nullptr;
+}
+
+std::span<syntax::ClassSpecifierSyntax*> Parser::parseClassSpecifierList(bool allowSpecifiers) {
+    bool erroredOnFinal = false;
+    SmallVector<ClassSpecifierSyntax*> specifiers;
+    while (peek(TokenKind::Colon)) {
+        auto specifier = parseClassSpecifier();
+        SLANG_ASSERT(specifier);
+
+        if (!specifier->keyword.isMissing()) {
+            if (specifiers.empty() && !allowSpecifiers)
+                addDiag(diag::SpecifiersNotAllowed, specifier->sourceRange());
+
+            for (auto other : specifiers) {
+                const auto sk = specifier->keyword;
+                const auto ok = other->keyword;
+
+                if (sk.kind == ok.kind) {
+                    addDiag(diag::DuplicateClassSpecifier, sk.range())
+                        << sk.valueText() << ok.range();
+                    break;
+                }
+
+                if (ok.kind == TokenKind::FinalKeyword && !erroredOnFinal) {
+                    erroredOnFinal = true;
+                    addDiag(diag::FinalSpecifierLast, ok.range());
+                    break;
+                }
+
+                if (!ok.isMissing() && ok.kind != TokenKind::FinalKeyword &&
+                    sk.kind != TokenKind::FinalKeyword) {
+                    addDiag(diag::ClassSpecifierConflict, sk.range())
+                        << sk.valueText() << ok.range() << ok.valueText();
+                    break;
+                }
+            }
+        }
+
+        specifiers.push_back(specifier);
+    }
+
+    return specifiers.copy(alloc);
 }
 
 ClassDeclarationSyntax& Parser::parseClassDeclaration(AttrList attributes,
@@ -1402,7 +1408,7 @@ MemberSyntax* Parser::parseClassMember(bool isIfaceClass, bool hasBaseClass) {
     }
 
     if (kind == TokenKind::ConstraintKeyword) {
-        auto& result = parseConstraint(attributes, qualifiers);
+        auto& result = parseConstraint(attributes, qualifiers, hasBaseClass);
         errorIfIface(result);
         return &result;
     }
@@ -2005,8 +2011,16 @@ static bool checkConstraintName(const NameSyntax& name) {
     return name.kind == SyntaxKind::IdentifierName;
 }
 
-MemberSyntax& Parser::parseConstraint(AttrList attributes, std::span<Token> qualifiers) {
+MemberSyntax& Parser::parseConstraint(AttrList attributes, std::span<Token> qualifiers,
+                                      bool hasBaseClass) {
+    bool isStatic = false;
+    bool isPure = false;
     for (auto qual : qualifiers) {
+        if (qual.kind == TokenKind::StaticKeyword)
+            isStatic = true;
+        else if (qual.kind == TokenKind::PureKeyword)
+            isPure = true;
+
         if (!isConstraintQualifier(qual.kind)) {
             auto& diag = addDiag(diag::InvalidConstraintQualifier, qual.range());
             diag << qual.rawText();
@@ -2015,6 +2029,7 @@ MemberSyntax& Parser::parseConstraint(AttrList attributes, std::span<Token> qual
     }
 
     auto keyword = consume();
+    auto specifiers = parseClassSpecifierList(true);
     auto& name = parseName();
 
     bool nameError = false;
@@ -2023,15 +2038,43 @@ MemberSyntax& Parser::parseConstraint(AttrList attributes, std::span<Token> qual
         addDiag(diag::ExpectedConstraintName, keyword.location()) << name.sourceRange();
     }
 
+    if (!specifiers.empty()) {
+        // Specifiers are not allowed on static constraints.
+        if (isStatic)
+            addDiag(diag::StaticFuncSpecifier, specifiers[0]->sourceRange());
+
+        // Final specifier is illegal on pure constraints.
+        if (isPure) {
+            for (auto specifier : specifiers) {
+                if (specifier->keyword.kind == TokenKind::FinalKeyword) {
+                    addDiag(diag::FinalWithPure, specifier->sourceRange());
+                    break;
+                }
+            }
+        }
+
+        // If there's no base class it can't be marked `extends`.
+        if (!hasBaseClass) {
+            for (auto specifier : specifiers) {
+                if (specifier->keyword.kind == TokenKind::ExtendsKeyword) {
+                    auto nameText = name.getLastToken().valueText();
+                    if (!nameText.empty())
+                        addDiag(diag::OverridingExtends, specifier->sourceRange()) << nameText;
+                    break;
+                }
+            }
+        }
+    }
+
     if (peek(TokenKind::OpenBrace)) {
-        return factory.constraintDeclaration(attributes, qualifiers, keyword, name,
+        return factory.constraintDeclaration(attributes, qualifiers, keyword, specifiers, name,
                                              parseConstraintBlock(/* isTopLevel */ true));
     }
 
     if (!nameError && name.kind != SyntaxKind::IdentifierName)
         addDiag(diag::ExpectedIdentifier, name.sourceRange());
 
-    return factory.constraintPrototype(attributes, qualifiers, keyword, name,
+    return factory.constraintPrototype(attributes, qualifiers, keyword, specifiers, name,
                                        expect(TokenKind::Semicolon));
 }
 

@@ -1792,12 +1792,14 @@ token closeBrace
 ConstraintPrototype base=Member
 tokenlist qualifiers
 token keyword
+list<ClassSpecifier> specifiers
 Name name
 token semi
 
 ConstraintDeclaration base=Member
 tokenlist qualifiers
 token keyword
+list<ClassSpecifier> specifiers
 Name name
 ConstraintBlock block
 

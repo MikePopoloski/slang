@@ -297,6 +297,7 @@ private:
     syntax::FunctionPortListSyntax* parseFunctionPortList(bitmask<FunctionOptions> options);
     syntax::FunctionPrototypeSyntax& parseFunctionPrototype(syntax::SyntaxKind parentKind, bitmask<FunctionOptions> options, bool* isConstructor = nullptr);
     syntax::FunctionDeclarationSyntax& parseFunctionDeclaration(AttrList attributes, syntax::SyntaxKind functionKind, TokenKind endKind, syntax::SyntaxKind parentKind, bitmask<FunctionOptions> options = {});
+    std::span<syntax::ClassSpecifierSyntax*> parseClassSpecifierList(bool allowSpecifiers);
     Token parseLifetime();
     std::span<syntax::SyntaxNode*> parseBlockItems(TokenKind endKind, Token& end, bool inConstructor);
     syntax::GenvarDeclarationSyntax& parseGenvarDeclaration(AttrList attributes);
@@ -322,7 +323,7 @@ private:
     syntax::MemberSyntax* parseCoverCrossMember();
     syntax::BinsSelectExpressionSyntax& parseBinsSelectPrimary();
     syntax::BinsSelectExpressionSyntax& parseBinsSelectExpression();
-    syntax::MemberSyntax& parseConstraint(AttrList attributes, std::span<Token> qualifiers);
+    syntax::MemberSyntax& parseConstraint(AttrList attributes, std::span<Token> qualifiers, bool hasBaseClass);
     syntax::ConstraintBlockSyntax& parseConstraintBlock(bool isTopLevel);
     syntax::ConstraintItemSyntax* parseConstraintItem(bool allowBlock, bool isTopLevel);
     syntax::DistConstraintListSyntax& parseDistConstraintList();

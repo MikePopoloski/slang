@@ -1419,3 +1419,21 @@ endmodule
     REQUIRE(diagnostics.size() == 1);
     CHECK(diagnostics[0].code == diag::ExpectedToken);
 }
+
+TEST_CASE("Constraint override specifier parsing") {
+    auto& text = R"(
+class A;
+    constraint :initial c {}
+    constraint :extends d {}
+    pure constraint :final e;
+    static constraint :initial f {}
+endclass
+)";
+
+    parseCompilationUnit(text, LanguageVersion::v1800_2023);
+
+    REQUIRE(diagnostics.size() == 3);
+    CHECK(diagnostics[0].code == diag::OverridingExtends);
+    CHECK(diagnostics[1].code == diag::FinalWithPure);
+    CHECK(diagnostics[2].code == diag::StaticFuncSpecifier);
+}
