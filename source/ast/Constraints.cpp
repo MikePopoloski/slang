@@ -440,7 +440,7 @@ Constraint& SolveBeforeConstraint::fromSyntax(const SolveBeforeConstraintSyntax&
 
             auto sym = expr.getSymbolReference();
             if (expr.kind == ExpressionKind::Call) {
-                auto& call = expr.as<CallExpression>();
+                auto& call = expr.template as<CallExpression>();
                 if (call.isSystemCall() && call.getSubroutineName() == "size"sv &&
                     call.arguments().size() == 1) {
                     sym = call.arguments()[0]->getSymbolReference();
