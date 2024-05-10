@@ -75,26 +75,27 @@ SCCResult StrongConnectedComponents::dummy(dummyAadjList, -1);
  * connected component; null, if no such component exists
  */
 SCCResult& StrongConnectedComponents::getAdjacencyList(int node) {
-    this->visited.resize(this->adjListOriginal.size(), false);
-    std::fill(this->visited.begin(), this->visited.end(), false);
-    this->lowlink.resize(this->adjListOriginal.size());
-    this->number.resize(this->adjListOriginal.size());
-    this->stack.clear();
-    this->currentSCCs.clear();
+    auto adjListOriginal_s = adjListOriginal.size();
+    visited.resize(adjListOriginal_s, false);
+    std::fill(visited.begin(), visited.end(), false);
+    lowlink.resize(adjListOriginal_s);
+    number.resize(adjListOriginal_s);
+    stack.clear();
+    currentSCCs.clear();
 
-    this->makeAdjListSubgraph(node);
+    makeAdjListSubgraph(node);
 
-    for (int i = node; i < this->adjListOriginal.size(); i++) {
-        if (!this->visited[i]) {
-            this->getStrongConnectedComponents(i);
-            vector<int> nodes = this->getLowestIdComponent();
+    for (int i = node; i < adjListOriginal_s; i++) {
+        if (!visited[i]) {
+            getStrongConnectedComponents(i);
+            vector<int> nodes = getLowestIdComponent();
             if (!nodes.empty() && !find_vec(nodes, node) && !find_vec(nodes, node + 1)) {
-                return this->getAdjacencyList(node + 1);
+                return getAdjacencyList(node + 1);
             }
             else {
-                vector<vector<int>> adjacencyList = this->getAdjList(nodes);
+                vector<vector<int>> adjacencyList = getAdjList(nodes);
                 if (!adjacencyList.empty()) {
-                    for (int j = 0; j < this->adjListOriginal.size(); j++) {
+                    for (int j = 0; j < adjListOriginal_s; j++) {
                         if (!adjacencyList[j].empty()) {
                             return *new SCCResult(adjacencyList, j);
                         }
@@ -114,13 +115,16 @@ SCCResult& StrongConnectedComponents::getAdjacencyList(int node) {
  * @param node Node with lowest index in the subgraph
  */
 void StrongConnectedComponents::makeAdjListSubgraph(int node) {
-    this->adjList.clear();
-    this->adjList.resize(this->adjListOriginal.size());
+    adjList.clear();
+    adjList.resize(adjListOriginal.size());
 
-    for (int i = node; i < this->adjList.size(); i++) {
-        for (int j = 0; j < this->adjListOriginal[i].size(); j++) {
-            if (this->adjListOriginal[i][j] >= node) {
-                this->adjList[i].push_back(this->adjListOriginal[i][j]);
+    const int adjListSize = adjList.size();
+    for (int i = node; i < adjListSize; i++) {
+        const int adjListOriginalISize = adjListOriginal[i].size();
+        for (int j = 0; j < adjListOriginalISize; j++) {
+            const int currentNode = adjListOriginal[i][j];
+            if (currentNode >= node) {
+                adjList[i].push_back(currentNode);
             }
         }
     }
@@ -133,14 +137,14 @@ void StrongConnectedComponents::makeAdjListSubgraph(int node) {
  * @return Vector::Integer of the scc containing the lowest nodenumber
  */
 vector<int> StrongConnectedComponents::getLowestIdComponent() {
-    int min = this->adjList.size();
+    int min = adjList.size();
     vector<int> currScc;
 
-    for (int i = 0; i < this->currentSCCs.size(); i++) {
-        for (int j = 0; j < this->currentSCCs[i].size(); j++) {
-            int node = this->currentSCCs[i][j];
+    for (int i = 0; i < currentSCCs.size(); i++) {
+        for (int j = 0; j < currentSCCs[i].size(); j++) {
+            const int node = currentSCCs[i][j];
             if (node < min) {
-                currScc = this->currentSCCs[i];
+                currScc = currentSCCs[i];
                 min = node;
             }
         }
@@ -158,11 +162,11 @@ vector<vector<int>> StrongConnectedComponents::getAdjList(vector<int> nodes) {
     vector<vector<int>> lowestIdAdjacencyList;
 
     if (!nodes.empty()) {
-        lowestIdAdjacencyList.resize(this->adjList.size());
+        lowestIdAdjacencyList.resize(adjList.size());
         for (int i = 0; i < nodes.size(); i++) {
             int node = nodes[i];
-            for (int j = 0; j < this->adjList[node].size(); j++) {
-                int succ = this->adjList[node][j];
+            for (int j = 0; j < adjList[node].size(); j++) {
+                int succ = adjList[node][j];
                 if (find_vec(nodes, succ)) {
                     lowestIdAdjacencyList[node].push_back(succ);
                 }
@@ -179,37 +183,37 @@ vector<vector<int>> StrongConnectedComponents::getAdjList(vector<int> nodes) {
  * @param root node to start from.
  */
 void StrongConnectedComponents::getStrongConnectedComponents(int root) {
-    this->sccCounter++;
-    this->lowlink[root] = this->sccCounter;
-    this->number[root] = this->sccCounter;
-    this->visited[root] = true;
-    this->stack.push_back(root);
+    sccCounter++;
+    lowlink[root] = sccCounter;
+    number[root] = sccCounter;
+    visited[root] = true;
+    stack.push_back(root);
 
-    for (int i = 0; i < this->adjList[root].size(); i++) {
-        int w = this->adjList[root][i];
-        if (!this->visited[w]) {
-            this->getStrongConnectedComponents(w);
-            this->lowlink[root] = min(this->lowlink[root], this->lowlink[w]);
+    for (int i = 0; i < adjList[root].size(); i++) {
+        int w = adjList[root][i];
+        if (!visited[w]) {
+            getStrongConnectedComponents(w);
+            lowlink[root] = min(lowlink[root], lowlink[w]);
         }
-        else if (this->number[w] < this->number[root]) {
+        else if (number[w] < number[root]) {
             if (find_vec(stack, w)) {
-                this->lowlink[root] = min(this->lowlink[root], this->number[w]);
+                lowlink[root] = min(lowlink[root], number[w]);
             }
         }
     }
 
-    if ((this->lowlink[root] == this->number[root]) && !this->stack.empty()) {
+    if ((lowlink[root] == number[root]) && !stack.empty()) {
         int next = -1;
         vector<int> scc;
 
         do {
-            next = this->stack.back();
-            this->stack.pop_back();
+            next = stack.back();
+            stack.pop_back();
             scc.push_back(next);
-        } while (this->number[next] > this->number[root]);
+        } while (number[next] > number[root]);
 
         if (scc.size() > 1) {
-            this->currentSCCs.push_back(scc);
+            currentSCCs.push_back(scc);
         }
     }
 }
@@ -263,7 +267,7 @@ std::vector<CycleListType>* ElementaryCyclesSearch::getElementaryCycles() {
     blocked.resize(adjList.size(), false);
     B.resize(adjList.size());
     stack.clear();
-    StrongConnectedComponents sccs(this->adjList);
+    StrongConnectedComponents sccs(adjList);
     ID_type s = 0;
 
     while (true) {
@@ -278,7 +282,7 @@ std::vector<CycleListType>* ElementaryCyclesSearch::getElementaryCycles() {
                 }
             }
 
-            this->findCycles(s, s, scc);
+            findCycles(s, s, scc);
             s++;
         }
         else {
@@ -356,19 +360,19 @@ void ElementaryCyclesSearch::dumpAdjList(Netlist& netlist) {
 bool ElementaryCyclesSearch::findCycles(ID_type v, ID_type s,
                                         std::vector<std::vector<ID_type>>& adjList) {
     bool f = false;
-    this->stack.push_back(v);
-    this->blocked[v] = true;
+    stack.push_back(v);
+    blocked[v] = true;
 
     for (int i = 0; i < adjList[v].size(); i++) {
         ID_type w = adjList[v][i];
 
         if (w == s) {
             CycleListType cycle;
-            for (int j = 0; j < this->stack.size(); j++) {
-                ID_type index = this->stack[j];
+            for (int j = 0; j < stack.size(); j++) {
+                ID_type index = stack[j];
                 cycle.push_back(index);
             }
-            this->cycles.push_back(cycle);
+            cycles.push_back(cycle);
             f = true;
         }
         else if (!this->blocked[w]) {
@@ -385,12 +389,12 @@ bool ElementaryCyclesSearch::findCycles(ID_type v, ID_type s,
         for (int i = 0; i < adjList[v].size(); i++) {
             ID_type w = adjList[v][i];
             if (!find_vec(B[w], v)) {
-                this->B[w].push_back(v);
+                B[w].push_back(v);
             }
         }
     }
 
-    this->stack.erase(remove(this->stack.begin(), this->stack.end(), v), this->stack.end());
+    stack.erase(remove(stack.begin(), stack.end(), v), stack.end());
     return f;
 }
 
