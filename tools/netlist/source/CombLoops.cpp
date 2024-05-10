@@ -88,7 +88,7 @@ SCCResult& StrongConnectedComponents::getAdjacencyList(int node) {
         if (!this->visited[i]) {
             this->getStrongConnectedComponents(i);
             vector<int> nodes = this->getLowestIdComponent();
-            if (!nodes.empty() && !contains(nodes, node) && !contains(nodes, node + 1)) {
+            if (!nodes.empty() && !find_vec(nodes, node) && !find_vec(nodes, node + 1)) {
                 return this->getAdjacencyList(node + 1);
             }
             else {
@@ -163,7 +163,7 @@ vector<vector<int>> StrongConnectedComponents::getAdjList(vector<int> nodes) {
             int node = nodes[i];
             for (int j = 0; j < this->adjList[node].size(); j++) {
                 int succ = this->adjList[node][j];
-                if (contains(nodes, succ)) {
+                if (find_vec(nodes, succ)) {
                     lowestIdAdjacencyList[node].push_back(succ);
                 }
             }
@@ -192,7 +192,7 @@ void StrongConnectedComponents::getStrongConnectedComponents(int root) {
             this->lowlink[root] = min(this->lowlink[root], this->lowlink[w]);
         }
         else if (this->number[w] < this->number[root]) {
-            if (contains(stack, w)) {
+            if (find_vec(stack, w)) {
                 this->lowlink[root] = min(this->lowlink[root], this->number[w]);
             }
         }
@@ -384,7 +384,7 @@ bool ElementaryCyclesSearch::findCycles(ID_type v, ID_type s,
     else {
         for (int i = 0; i < adjList[v].size(); i++) {
             ID_type w = adjList[v][i];
-            if (!contains(B[w], v)) {
+            if (!find_vec(B[w], v)) {
                 this->B[w].push_back(v);
             }
         }

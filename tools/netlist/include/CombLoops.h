@@ -39,13 +39,17 @@ using namespace netlist;
 using ID_type = int;
 
 template <typename T>
-bool contains(const std::vector<T>& vec, const T& val) {
+bool find_vec(const std::vector<T>& vec, const T& val) {
     return std::find(vec.begin(), vec.end(), val) != vec.end();
 }
 
 template <typename T, typename Predicate>
-bool contains_if(const std::vector<T>& vec, Predicate predicate) {
+bool find_vec_if(const std::vector<T>& vec, Predicate predicate) {
     return std::find_if(vec.begin(), vec.end(), predicate) != vec.end();
+}
+template <typename T, typename Predicate>
+int count_vec_if(const std::vector<T>& vec, Predicate predicate) {
+    return std::count_if(vec.begin(), vec.end(), predicate);
 }
 
 class SCCResult {
