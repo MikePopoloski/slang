@@ -433,15 +433,24 @@ Constraint& SolveBeforeConstraint::fromSyntax(const SolveBeforeConstraintSyntax&
             auto& expr = Expression::bind(*item, context);
             results.push_back(&expr);
 
-            if (expr.bad())
+            if (expr.bad()) {
                 bad = true;
-            else {
-                auto sym = expr.getSymbolReference();
-                if (!sym || context.getRandMode(*sym) == RandMode::None)
-                    context.addDiag(diag::BadSolveBefore, expr.sourceRange);
-                else if (sym && context.getRandMode(*sym) == RandMode::RandC)
-                    context.addDiag(diag::RandCInSolveBefore, expr.sourceRange);
+                continue;
             }
+
+            auto sym = expr.getSymbolReference();
+            if (expr.kind == ExpressionKind::Call) {
+                auto& call = expr.as<CallExpression>();
+                if (call.isSystemCall() && call.getSubroutineName() == "size"sv &&
+                    call.arguments().size() == 1) {
+                    sym = call.arguments()[0]->getSymbolReference();
+                }
+            }
+
+            if (!sym || context.getRandMode(*sym) == RandMode::None)
+                context.addDiag(diag::BadSolveBefore, expr.sourceRange);
+            else if (sym && context.getRandMode(*sym) == RandMode::RandC)
+                context.addDiag(diag::RandCInSolveBefore, expr.sourceRange);
         }
     };
 

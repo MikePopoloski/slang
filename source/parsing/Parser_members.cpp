@@ -2036,14 +2036,13 @@ ConstraintItemSyntax* Parser::parseConstraintItem(bool allowBlock, bool isTopLev
             parseList<isPossibleExpressionOrComma, isBeforeOrSemicolon>(
                 beforeBuffer, TokenKind::BeforeKeyword, TokenKind::Comma, before,
                 RequireItems::True, diag::ExpectedExpression,
-                [this] { return &parsePrimaryExpression(ExpressionOptions::None); });
+                [this] { return &parseExpression(); });
 
             Token semi;
             SmallVector<TokenOrSyntax, 4> afterBuffer;
             parseList<isPossibleExpressionOrComma, isSemicolon>(
                 afterBuffer, TokenKind::Semicolon, TokenKind::Comma, semi, RequireItems::True,
-                diag::ExpectedExpression,
-                [this] { return &parsePrimaryExpression(ExpressionOptions::None); });
+                diag::ExpectedExpression, [this] { return &parseExpression(); });
 
             return &factory.solveBeforeConstraint(solve, beforeBuffer.copy(alloc), before,
                                                   afterBuffer.copy(alloc), semi);

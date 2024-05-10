@@ -3283,3 +3283,26 @@ endclass
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::BadUniquenessType);
 }
+
+TEST_CASE("v1800-2023: solve-before with reals, array sizes") {
+    auto options = optionsFor(LanguageVersion::v1800_2023);
+    auto tree = SyntaxTree::fromText(R"(
+class A;
+    function void foo; endfunction
+
+    rand real a;
+    rand int b[];
+    constraint C {
+        solve a before b.size(), b.size, foo();
+    }
+endclass
+)",
+                                     options);
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::BadSolveBefore);
+}
