@@ -28,10 +28,11 @@
  * WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "slang/ast/SemanticFacts.h"
 #include "CombLoops.h"
+
 #include "NetlistPath.h"
 
+#include "slang/ast/SemanticFacts.h"
 
 using namespace std;
 

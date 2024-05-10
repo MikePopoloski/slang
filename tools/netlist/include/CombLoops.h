@@ -38,16 +38,16 @@
 using namespace netlist;
 using ID_type = int;
 
-template <typename T>
+template<typename T>
 bool find_vec(const std::vector<T>& vec, const T& val) {
     return std::find(vec.begin(), vec.end(), val) != vec.end();
 }
 
-template <typename T, typename Predicate>
+template<typename T, typename Predicate>
 bool find_vec_if(const std::vector<T>& vec, Predicate predicate) {
     return std::find_if(vec.begin(), vec.end(), predicate) != vec.end();
 }
-template <typename T, typename Predicate>
+template<typename T, typename Predicate>
 int count_vec_if(const std::vector<T>& vec, Predicate predicate) {
     return std::count_if(vec.begin(), vec.end(), predicate);
 }
