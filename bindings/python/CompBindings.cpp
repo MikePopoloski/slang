@@ -86,8 +86,10 @@ void registerCompilation(py::module_& m) {
         .def("addSyntaxTree", &Compilation::addSyntaxTree, "tree"_a)
         .def("getSyntaxTrees", &Compilation::getSyntaxTrees)
         .def("getRoot", py::overload_cast<>(&Compilation::getRoot), byrefint)
-        .def("addSystemSubroutine", &Compilation::addSystemSubroutine, "subroutine"_a)
-        .def("addSystemMethod", &Compilation::addSystemMethod, "typeKind"_a, "method"_a)
+        .def("addSystemSubroutine", &Compilation::addSystemSubroutine, py::keep_alive<1, 2>(),
+             "subroutine"_a)
+        .def("addSystemMethod", &Compilation::addSystemMethod, py::keep_alive<1, 3>(), "typeKind"_a,
+             "method"_a)
         .def("getSystemSubroutine", &Compilation::getSystemSubroutine, byrefint, "name"_a)
         .def("getSystemMethod", &Compilation::getSystemMethod, byrefint, "typeKind"_a, "name"_a)
         .def("parseName", &Compilation::parseName, byrefint, "name"_a)
@@ -258,7 +260,8 @@ void registerCompilation(py::module_& m) {
         using SystemSubroutine::unevaluatedContext;
     };
 
-    py::class_<SystemSubroutine, PySystemSubroutine> systemSub(m, "SystemSubroutine");
+    py::class_<SystemSubroutine, PySystemSubroutine, std::shared_ptr<SystemSubroutine>> systemSub(
+        m, "SystemSubroutine");
     systemSub.def(py::init_alias<const std::string&, SubroutineKind>(), "name"_a, "kind"_a)
         .def_readwrite("name", &SystemSubroutine::name)
         .def_readwrite("kind", &SystemSubroutine::kind)
@@ -301,14 +304,15 @@ void registerCompilation(py::module_& m) {
         }
     };
 
-    py::class_<SimpleSystemSubroutine, SystemSubroutine, PySimpleSystemSubroutine>(
-        m, "SimpleSystemSubroutine")
+    py::class_<SimpleSystemSubroutine, SystemSubroutine, PySimpleSystemSubroutine,
+               std::shared_ptr<SimpleSystemSubroutine>>(m, "SimpleSystemSubroutine")
         .def(py::init_alias<const std::string&, SubroutineKind, size_t,
                             const std::vector<const Type*>&, const Type&, bool, bool>(),
              "name"_a, "kind"_a, "requiredArgs"_a, "argTypes"_a, "returnType"_a, "isMethod"_a,
              "isFirstArgLValue"_a = false);
 
-    py::class_<NonConstantFunction, SimpleSystemSubroutine>(m, "NonConstantFunction")
+    py::class_<NonConstantFunction, SimpleSystemSubroutine, std::shared_ptr<NonConstantFunction>>(
+        m, "NonConstantFunction")
         .def(py::init<const std::string&, const Type&, size_t, const std::vector<const Type*>&,
                       bool>(),
              "name"_a, "returnType"_a, "requiredArgs"_a = 0,
