@@ -1698,3 +1698,33 @@ interface I(.;input interface I
     // No crash.
     compilation.getAllDiagnostics();
 }
+
+TEST_CASE("Inout ports are treated as readers and writers") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I;
+    wire integer i;
+    modport m(inout i);
+endinterface
+
+module m(inout wire a);
+    wire local_a;
+    pullup(local_a);
+    tranif1(a, local_a, 1'b1);
+endmodule
+
+module top;
+    I i();
+
+    wire a;
+    m m1(.*);
+    m m2(.*);
+endmodule
+)");
+
+    CompilationOptions options;
+    options.flags &= ~CompilationFlags::SuppressUnused;
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

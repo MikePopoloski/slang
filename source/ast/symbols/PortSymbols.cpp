@@ -1693,8 +1693,11 @@ const Expression* PortConnection::getExpression() const {
         bitmask<ASTFlags> flags = ASTFlags::NonProcedural;
         if (isNetPort)
             flags |= ASTFlags::AllowInterconnect;
-        if (direction == ArgumentDirection::Out || direction == ArgumentDirection::InOut)
+        if (direction == ArgumentDirection::Out || direction == ArgumentDirection::InOut) {
             flags |= ASTFlags::LValue;
+            if (direction == ArgumentDirection::InOut)
+                flags |= ASTFlags::LAndRValue;
+        }
 
         ASTContext context(*scope, ll, flags);
         context.setInstance(parentInstance);

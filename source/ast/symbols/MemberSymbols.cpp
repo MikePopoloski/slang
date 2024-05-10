@@ -200,8 +200,11 @@ ModportPortSymbol& ModportPortSymbol::fromSyntax(const ASTContext& context,
     // Perform checking on the connected symbol to make sure it's allowed
     // given the modport's direction.
     ASTContext checkCtx = context.resetFlags(ASTFlags::NonProcedural | ASTFlags::NotADriver);
-    if (direction != ArgumentDirection::In)
+    if (direction != ArgumentDirection::In) {
         checkCtx.flags |= ASTFlags::LValue;
+        if (direction == ArgumentDirection::InOut)
+            checkCtx.flags |= ASTFlags::LAndRValue;
+    }
 
     auto loc = result->location;
     auto& expr = ValueExpressionBase::fromSymbol(checkCtx, *result->internalSymbol, false,
@@ -227,9 +230,12 @@ ModportPortSymbol& ModportPortSymbol::fromSyntax(const ASTContext& parentContext
         return *result;
     }
 
-    ASTFlags extraFlags = ASTFlags::None;
-    if (direction == ArgumentDirection::Out || direction == ArgumentDirection::InOut)
+    bitmask<ASTFlags> extraFlags;
+    if (direction == ArgumentDirection::Out || direction == ArgumentDirection::InOut) {
         extraFlags = ASTFlags::LValue;
+        if (direction == ArgumentDirection::InOut)
+            extraFlags |= ASTFlags::LAndRValue;
+    }
 
     auto& expr = Expression::bind(*syntax.expr, context, extraFlags);
     result->explicitConnection = &expr;
