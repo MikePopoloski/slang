@@ -414,8 +414,9 @@ void ClassType::handleExtends(const ExtendsClauseSyntax& extendsClause, const AS
                     checkOverrideSpecifiers(baseSub, member);
                     if (baseSub.isVirtual())
                         member.setOverride(baseSub);
+                    return;
                 }
-                return;
+                break;
             }
 
             // Otherwise it could be inherited from a higher-level base.

@@ -1371,6 +1371,8 @@ class B;
     function :final :initial :initial :extends func1; endfunction
 
     pure virtual function :final int blah();
+
+    static function :initial sf1; endfunction
 endclass
 
 function :extends B::bar();
@@ -1379,12 +1381,13 @@ endfunction
 
     parseCompilationUnit(text, LanguageVersion::v1800_2023);
 
-    REQUIRE(diagnostics.size() == 5);
+    REQUIRE(diagnostics.size() == 6);
     CHECK(diagnostics[0].code == diag::FinalSpecifierLast);
     CHECK(diagnostics[1].code == diag::DuplicateClassSpecifier);
     CHECK(diagnostics[2].code == diag::ClassSpecifierConflict);
     CHECK(diagnostics[3].code == diag::FinalWithPure);
-    CHECK(diagnostics[4].code == diag::SpecifiersNotAllowed);
+    CHECK(diagnostics[4].code == diag::StaticFuncSpecifier);
+    CHECK(diagnostics[5].code == diag::SpecifiersNotAllowed);
 }
 
 TEST_CASE("v1800-2023: ref static parsing errors") {

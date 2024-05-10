@@ -1300,9 +1300,12 @@ MemberSyntax* Parser::parseClassMember(bool isIfaceClass) {
     if (kind == TokenKind::TaskKeyword || kind == TokenKind::FunctionKeyword) {
         // Check that qualifiers are allowed specifically for methods.
         bool isPure = false;
+        bool isStatic = false;
         for (auto qual : qualifiers) {
             if (qual.kind == TokenKind::PureKeyword)
                 isPure = true;
+            else if (qual.kind == TokenKind::StaticKeyword)
+                isStatic = true;
 
             if (!isMethodQualifier(qual.kind)) {
                 auto& diag = addDiag(diag::InvalidMethodQualifier, qual.range());
@@ -1321,9 +1324,13 @@ MemberSyntax* Parser::parseClassMember(bool isIfaceClass) {
         if (isIfaceClass && !isPure)
             addDiag(diag::IfaceMethodPure, peek().location());
 
-        auto checkProto = [this, &qualifiers](auto& proto, bool checkLifetime) {
+        auto checkProto = [this, isStatic, &qualifiers](auto& proto, bool checkLifetime) {
             if (checkLifetime && proto.lifetime.kind == TokenKind::StaticKeyword)
                 addDiag(diag::MethodStaticLifetime, proto.lifetime.range());
+
+            // Specifiers are not allowed on static methods.
+            if (isStatic && !proto.specifiers.empty())
+                addDiag(diag::StaticFuncSpecifier, proto.specifiers[0]->sourceRange());
 
             // Additional checking for constructors.
             auto lastNamePart = proto.name->getLastToken();
