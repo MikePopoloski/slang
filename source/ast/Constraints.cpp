@@ -405,6 +405,19 @@ void UniquenessConstraint::serializeTo(ASTSerializer& serializer) const {
     serializer.endArray();
 }
 
+static std::pair<const Symbol*, SourceRange> getConstraintPrimary(const Expression& expr) {
+    auto sym = expr.getSymbolReference();
+    if (expr.kind == ExpressionKind::Call) {
+        auto& call = expr.template as<CallExpression>();
+        if (call.isSystemCall() && call.getSubroutineName() == "size"sv &&
+            call.arguments().size() == 1) {
+            auto& arg0 = *call.arguments()[0];
+            return {arg0.getSymbolReference(), arg0.sourceRange};
+        }
+    }
+    return {sym, expr.sourceRange};
+}
+
 Constraint& DisableSoftConstraint::fromSyntax(const DisableConstraintSyntax& syntax,
                                               const ASTContext& context) {
     auto& comp = context.getCompilation();
@@ -413,9 +426,9 @@ Constraint& DisableSoftConstraint::fromSyntax(const DisableConstraintSyntax& syn
     if (expr.bad())
         return badConstraint(comp, result);
 
-    auto sym = expr.getSymbolReference();
+    auto [sym, sourceRange] = getConstraintPrimary(expr);
     if (!sym || context.getRandMode(*sym) != RandMode::Rand) {
-        context.addDiag(diag::BadDisableSoft, expr.sourceRange);
+        context.addDiag(diag::BadDisableSoft, sourceRange);
         return badConstraint(comp, result);
     }
 
@@ -439,19 +452,11 @@ Constraint& SolveBeforeConstraint::fromSyntax(const SolveBeforeConstraintSyntax&
                 continue;
             }
 
-            auto sym = expr.getSymbolReference();
-            if (expr.kind == ExpressionKind::Call) {
-                auto& call = expr.template as<CallExpression>();
-                if (call.isSystemCall() && call.getSubroutineName() == "size"sv &&
-                    call.arguments().size() == 1) {
-                    sym = call.arguments()[0]->getSymbolReference();
-                }
-            }
-
+            auto [sym, sourceRange] = getConstraintPrimary(expr);
             if (!sym || context.getRandMode(*sym) == RandMode::None)
-                context.addDiag(diag::BadSolveBefore, expr.sourceRange);
+                context.addDiag(diag::BadSolveBefore, sourceRange);
             else if (sym && context.getRandMode(*sym) == RandMode::RandC)
-                context.addDiag(diag::RandCInSolveBefore, expr.sourceRange);
+                context.addDiag(diag::RandCInSolveBefore, sourceRange);
         }
     };
 

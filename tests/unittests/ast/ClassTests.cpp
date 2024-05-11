@@ -3335,6 +3335,24 @@ endclass
     CHECK(diags[0].code == diag::BadSolveBefore);
 }
 
+TEST_CASE("v1800-2023: disable soft with array sizes") {
+    auto options = optionsFor(LanguageVersion::v1800_2023);
+    auto tree = SyntaxTree::fromText(R"(
+class A;
+    rand int b[];
+    constraint C {
+        disable soft b.size;
+        disable soft b.size();
+    }
+endclass
+)",
+                                     options);
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
 TEST_CASE("v1800-2023: extern constraint blocks must match specifiers") {
     auto options = optionsFor(LanguageVersion::v1800_2023);
     auto tree = SyntaxTree::fromText(R"(

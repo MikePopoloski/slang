@@ -1774,7 +1774,7 @@ ConstraintItem constraints
 DisableConstraint base=ConstraintItem
 token disable
 token soft
-Name name
+Expression name
 token semi
 
 SolveBeforeConstraint base=ConstraintItem

@@ -2114,7 +2114,7 @@ ConstraintItemSyntax* Parser::parseConstraintItem(bool allowBlock, bool isTopLev
         case TokenKind::DisableKeyword: {
             auto disable = consume();
             auto soft = expect(TokenKind::SoftKeyword);
-            auto& name = parseName();
+            auto& name = parseExpression();
             return &factory.disableConstraint(disable, soft, name, expect(TokenKind::Semicolon));
         }
         case TokenKind::ForeachKeyword: {
