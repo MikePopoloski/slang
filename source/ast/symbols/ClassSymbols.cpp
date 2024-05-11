@@ -363,7 +363,7 @@ void ClassType::handleExtends(const ExtendsClauseSyntax& extendsClause, const AS
 
         if (!isAbstract && toWrap->kind == SymbolKind::ConstraintBlock) {
             auto& cb = toWrap->as<ConstraintBlockSymbol>();
-            if (cb.isPure) {
+            if (cb.flags.has(ConstraintBlockFlags::Pure)) {
                 if (!pureVirtualError) {
                     auto& diag = context.addDiag(diag::InheritFromAbstractConstraint,
                                                  extendsClause.sourceRange());
@@ -457,18 +457,33 @@ void ClassType::handleExtends(const ExtendsClauseSyntax& extendsClause, const AS
         else if (member.kind == SymbolKind::ConstraintBlock) {
             // Constraint blocks can also be overridden -- check that 'static'ness
             // matches between base and derived if the base is pure.
+            bool isOverridden = false;
             auto currentBase = baseType;
+            auto& derived = member.as<ConstraintBlockSymbol>();
             while (true) {
                 const Symbol* found = currentBase->find(member.name);
                 if (found) {
                     if (found->kind == SymbolKind::ConstraintBlock) {
+                        isOverridden = true;
                         auto& baseConstraint = found->as<ConstraintBlockSymbol>();
-                        if (baseConstraint.isPure &&
-                            baseConstraint.isStatic !=
-                                member.as<ConstraintBlockSymbol>().isStatic) {
+                        if (baseConstraint.flags.has(ConstraintBlockFlags::Pure) &&
+                            baseConstraint.flags.has(ConstraintBlockFlags::Static) !=
+                                member.as<ConstraintBlockSymbol>().flags.has(
+                                    ConstraintBlockFlags::Static)) {
                             auto& diag = context.addDiag(diag::MismatchStaticConstraint,
                                                          member.location);
                             diag.addNote(diag::NoteDeclarationHere, found->location);
+                        }
+
+                        if (derived.flags.has(ConstraintBlockFlags::Initial)) {
+                            auto& diag = context.addDiag(diag::OverridingInitial, derived.location);
+                            diag << derived.name;
+                            diag.addNote(diag::NoteDeclarationHere, baseConstraint.location);
+                        }
+                        else if (baseConstraint.flags.has(ConstraintBlockFlags::Final)) {
+                            auto& diag = context.addDiag(diag::OverridingFinal, derived.location);
+                            diag << derived.name;
+                            diag.addNote(diag::NoteDeclarationHere, baseConstraint.location);
                         }
                     }
                     break;
@@ -481,6 +496,9 @@ void ClassType::handleExtends(const ExtendsClauseSyntax& extendsClause, const AS
 
                 currentBase = &possibleBase->getCanonicalType().as<ClassType>();
             }
+
+            if (!isOverridden && derived.flags.has(ConstraintBlockFlags::Extends))
+                context.addDiag(diag::OverridingExtends, member.location) << member.name;
         }
     }
 }
@@ -1073,6 +1091,27 @@ ConstraintBlockSymbol::ConstraintBlockSymbol(Compilation& c, std::string_view na
     Symbol(SymbolKind::ConstraintBlock, name, loc), Scope(c, this) {
 }
 
+static void addSpecifierFlags(const SyntaxList<ClassSpecifierSyntax>& specifiers,
+                              bitmask<ConstraintBlockFlags>& flags) {
+    for (auto specifier : specifiers) {
+        if (!specifier->keyword.isMissing()) {
+            switch (specifier->keyword.kind) {
+                case TokenKind::InitialKeyword:
+                    flags |= ConstraintBlockFlags::Initial;
+                    break;
+                case TokenKind::ExtendsKeyword:
+                    flags |= ConstraintBlockFlags::Extends;
+                    break;
+                case TokenKind::FinalKeyword:
+                    flags |= ConstraintBlockFlags::Final;
+                    break;
+                default:
+                    SLANG_UNREACHABLE;
+            }
+        }
+    }
+}
+
 ConstraintBlockSymbol* ConstraintBlockSymbol::fromSyntax(
     const Scope& scope, const ConstraintDeclarationSyntax& syntax) {
 
@@ -1101,7 +1140,7 @@ ConstraintBlockSymbol* ConstraintBlockSymbol::fromSyntax(
     // Static is the only allowed qualifier.
     for (auto qual : syntax.qualifiers) {
         if (qual.kind == TokenKind::StaticKeyword)
-            result->isStatic = true;
+            result->flags |= ConstraintBlockFlags::Static;
         else if (qual.kind == TokenKind::PureKeyword || qual.kind == TokenKind::ExternKeyword) {
             // This is an error, pure and extern declarations can't declare bodies.
             scope.addDiag(diag::UnexpectedConstraintBlock, syntax.block->sourceRange())
@@ -1110,8 +1149,12 @@ ConstraintBlockSymbol* ConstraintBlockSymbol::fromSyntax(
         }
     }
 
-    if (!result->isStatic && scope.asSymbol().kind == SymbolKind::ClassType)
+    addSpecifierFlags(syntax.specifiers, result->flags);
+
+    if (!result->flags.has(ConstraintBlockFlags::Static) &&
+        scope.asSymbol().kind == SymbolKind::ClassType) {
         result->addThisVar(scope.asSymbol().as<ClassType>());
+    }
 
     return result;
 }
@@ -1124,18 +1167,20 @@ ConstraintBlockSymbol& ConstraintBlockSymbol::fromSyntax(const Scope& scope,
                                                       nameToken.location());
     result->setSyntax(syntax);
     result->setAttributes(scope, syntax.attributes);
-    result->isExtern = true;
+    result->flags |= ConstraintBlockFlags::Extern;
+
+    addSpecifierFlags(syntax.specifiers, result->flags);
 
     for (auto qual : syntax.qualifiers) {
         switch (qual.kind) {
             case TokenKind::StaticKeyword:
-                result->isStatic = true;
+                result->flags |= ConstraintBlockFlags::Static;
                 break;
             case TokenKind::ExternKeyword:
-                result->isExplicitExtern = true;
+                result->flags |= ConstraintBlockFlags::ExplicitExtern;
                 break;
             case TokenKind::PureKeyword:
-                result->isPure = true;
+                result->flags |= ConstraintBlockFlags::Pure;
                 break;
             default:
                 break;
@@ -1144,10 +1189,10 @@ ConstraintBlockSymbol& ConstraintBlockSymbol::fromSyntax(const Scope& scope,
 
     if (scope.asSymbol().kind == SymbolKind::ClassType) {
         auto& classType = scope.asSymbol().as<ClassType>();
-        if (result->isPure && !classType.isAbstract)
+        if (result->flags.has(ConstraintBlockFlags::Pure) && !classType.isAbstract)
             scope.addDiag(diag::PureConstraintInAbstract, nameToken.range());
 
-        if (!result->isStatic)
+        if (!result->flags.has(ConstraintBlockFlags::Static))
             result->addThisVar(classType);
     }
 
@@ -1171,8 +1216,10 @@ const Constraint& ConstraintBlockSymbol::getConstraints() const {
 
         auto [declSyntax, index, used] = comp.findOutOfBlockDecl(outerScope, parentSym.name, name);
         if (!declSyntax || declSyntax->kind != SyntaxKind::ConstraintDeclaration || name.empty()) {
-            if (!isPure && !name.empty()) {
-                DiagCode code = isExplicitExtern ? diag::NoMemberImplFound : diag::NoConstraintBody;
+            if (!flags.has(ConstraintBlockFlags::Pure) && !name.empty()) {
+                DiagCode code = flags.has(ConstraintBlockFlags::ExplicitExtern)
+                                    ? diag::NoMemberImplFound
+                                    : diag::NoConstraintBody;
                 outerScope.addDiag(code, location) << name;
             }
             constraint = scope->getCompilation().emplace<InvalidConstraint>(nullptr);
@@ -1182,7 +1229,7 @@ const Constraint& ConstraintBlockSymbol::getConstraints() const {
         auto& cds = declSyntax->as<ConstraintDeclarationSyntax>();
         *used = true;
 
-        if (isPure) {
+        if (flags.has(ConstraintBlockFlags::Pure)) {
             auto& diag = outerScope.addDiag(diag::BodyForPureConstraint, cds.name->sourceRange());
             diag.addNote(diag::NoteDeclarationHere, location);
             constraint = scope->getCompilation().emplace<InvalidConstraint>(nullptr);
@@ -1206,7 +1253,7 @@ const Constraint& ConstraintBlockSymbol::getConstraints() const {
             }
         }
 
-        if (declStatic != isStatic) {
+        if (declStatic != flags.has(ConstraintBlockFlags::Static)) {
             auto& diag = outerScope.addDiag(diag::MismatchStaticConstraint,
                                             cds.getFirstToken().location());
             diag.addNote(diag::NoteDeclarationHere, location);
@@ -1220,11 +1267,31 @@ const Constraint& ConstraintBlockSymbol::getConstraints() const {
     return *constraint;
 }
 
+static std::string flagsToStr(bitmask<ConstraintBlockFlags> flags) {
+    std::string str;
+    if (flags.has(ConstraintBlockFlags::Pure))
+        str += "pure,";
+    if (flags.has(ConstraintBlockFlags::Static))
+        str += "static,";
+    if (flags.has(ConstraintBlockFlags::Extern))
+        str += "extern,";
+    if (flags.has(ConstraintBlockFlags::ExplicitExtern))
+        str += "explicitExtern,";
+    if (flags.has(ConstraintBlockFlags::Initial))
+        str += "initial,";
+    if (flags.has(ConstraintBlockFlags::Extends))
+        str += "extends,";
+    if (flags.has(ConstraintBlockFlags::Final))
+        str += "final,";
+    if (!str.empty())
+        str.pop_back();
+    return str;
+}
+
 void ConstraintBlockSymbol::serializeTo(ASTSerializer& serializer) const {
     serializer.write("constraints", getConstraints());
-    serializer.write("isStatic", isStatic);
-    serializer.write("isExtern", isExtern);
-    serializer.write("isExplicitExtern", isExplicitExtern);
+    if (flags)
+        serializer.write("flags", flagsToStr(flags));
 }
 
 void ConstraintBlockSymbol::addThisVar(const Type& type) {

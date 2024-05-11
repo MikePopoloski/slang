@@ -287,12 +287,19 @@ void registerTypes(py::module_& m) {
                                &GenericClassDefSymbol::getDefaultSpecialization)
         .def_property_readonly("firstForwardDecl", &GenericClassDefSymbol::getFirstForwardDecl);
 
+    py::enum_<ConstraintBlockFlags>(m, "ConstraintBlockFlags")
+        .value("None", ConstraintBlockFlags::None)
+        .value("Pure", ConstraintBlockFlags::Pure)
+        .value("Static", ConstraintBlockFlags::Static)
+        .value("Extern", ConstraintBlockFlags::Extern)
+        .value("ExplicitExtern", ConstraintBlockFlags::ExplicitExtern)
+        .value("Initial", ConstraintBlockFlags::Initial)
+        .value("Extends", ConstraintBlockFlags::Extends)
+        .value("Final", ConstraintBlockFlags::Final);
+
     py::class_<ConstraintBlockSymbol, Symbol, Scope>(m, "ConstraintBlockSymbol")
         .def_readonly("thisVar", &ConstraintBlockSymbol::thisVar)
-        .def_readonly("isStatic", &ConstraintBlockSymbol::isStatic)
-        .def_readonly("isExtern", &ConstraintBlockSymbol::isExtern)
-        .def_readonly("isExplicitExtern", &ConstraintBlockSymbol::isExplicitExtern)
-        .def_readonly("isPure", &ConstraintBlockSymbol::isPure)
+        .def_readonly("flags", &ConstraintBlockSymbol::flags)
         .def_property_readonly("constraints", &ConstraintBlockSymbol::getConstraints);
 
     py::class_<CovergroupType, Type, Scope>(m, "CovergroupType")

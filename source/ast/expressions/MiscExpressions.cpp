@@ -90,7 +90,7 @@ Expression& ValueExpressionBase::fromSymbol(const ASTContext& context, const Sym
         }
     }
     else if (symbol.kind == SymbolKind::ConstraintBlock) {
-        if (!symbol.as<ConstraintBlockSymbol>().isStatic)
+        if (!symbol.as<ConstraintBlockSymbol>().flags.has(ConstraintBlockFlags::Static))
             Lookup::ensureAccessible(symbol, context, sourceRange);
     }
     else if (symbol.kind == SymbolKind::Parameter) {

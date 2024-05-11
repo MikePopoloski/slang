@@ -3111,7 +3111,7 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
-TEST_CASE("Class override specifiers") {
+TEST_CASE("v1800-2023: class method override specifiers") {
     auto options = optionsFor(LanguageVersion::v1800_2023);
     auto tree = SyntaxTree::fromText(R"(
 virtual class base;
@@ -3174,6 +3174,34 @@ function void C::f5(); endfunction
     CHECK(diags[3].code == diag::OverridingInitial);
     CHECK(diags[4].code == diag::OverridingInitial);
     CHECK(diags[5].code == diag::OverridingExtends);
+}
+
+TEST_CASE("v1800-2023: class constraint override specifiers") {
+    auto options = optionsFor(LanguageVersion::v1800_2023);
+    auto tree = SyntaxTree::fromText(R"(
+class A;
+    constraint :initial a {}
+    constraint :final b {}
+    constraint d {}
+endclass
+
+class B extends A;
+    constraint :extends a {}
+    constraint :extends b {}
+    constraint :extends c {}
+    constraint :initial d {}
+endclass
+)",
+                                     options);
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::OverridingFinal);
+    CHECK(diags[1].code == diag::OverridingExtends);
+    CHECK(diags[2].code == diag::OverridingInitial);
 }
 
 TEST_CASE("v1800-2023: Interface class can be declared inside a class") {
