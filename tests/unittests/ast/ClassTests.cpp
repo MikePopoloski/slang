@@ -3334,3 +3334,24 @@ endclass
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::BadSolveBefore);
 }
+
+TEST_CASE("v1800-2023: extern constraint blocks must match specifiers") {
+    auto options = optionsFor(LanguageVersion::v1800_2023);
+    auto tree = SyntaxTree::fromText(R"(
+class A;
+    extern constraint :initial a;
+    extern constraint :final b;
+endclass
+
+constraint A::a {}
+constraint :final A::b {}
+)",
+                                     options);
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::MismatchConstraintSpecifiers);
+}

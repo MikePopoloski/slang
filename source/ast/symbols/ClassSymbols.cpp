@@ -1259,6 +1259,16 @@ const Constraint& ConstraintBlockSymbol::getConstraints() const {
             diag.addNote(diag::NoteDeclarationHere, location);
         }
 
+        bitmask<ConstraintBlockFlags> declFlags;
+        addSpecifierFlags(cds.specifiers, declFlags);
+
+        if (declFlags != (flags & (ConstraintBlockFlags::Initial | ConstraintBlockFlags::Extends |
+                                   ConstraintBlockFlags::Final))) {
+            auto& diag = outerScope.addDiag(diag::MismatchConstraintSpecifiers,
+                                            cds.name->getLastToken().location());
+            diag.addNote(diag::NoteDeclarationHere, location);
+        }
+
         constraint = &Constraint::bind(*cds.block, context);
         return *constraint;
     }
