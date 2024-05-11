@@ -1031,6 +1031,10 @@ void GenericClassDefSymbol::addParameterDecl(const DefinitionSymbol::ParameterDe
 void GenericClassDefSymbol::serializeTo(ASTSerializer& serializer) const {
     if (firstForward)
         serializer.write("forward", *firstForward);
+    serializer.startArray("specializations");
+    for (auto&& spec : specializations())
+        serializer.serialize(spec, /* inMembersArray */ true);
+    serializer.endArray();
 }
 
 GenericClassDefSymbol::SpecializationKey::SpecializationKey(
