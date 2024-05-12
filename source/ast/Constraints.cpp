@@ -131,6 +131,8 @@ struct DistVarVisitor {
 struct ConstraintExprVisitor {
     const ASTContext& context;
     bool failed = false;
+    bool isTop = true;
+    bool sawRandVars = false;
     bool isSoft;
 
     ConstraintExprVisitor(const ASTContext& context, bool isSoft) :
@@ -142,13 +144,16 @@ struct ConstraintExprVisitor {
             return fail();
 
         if constexpr (std::is_base_of_v<Expression, T>) {
-            if (isSoft) {
-                if (auto sym = expr.getSymbolReference()) {
-                    RandMode mode = context.getRandMode(*sym);
-                    if (mode == RandMode::RandC)
-                        context.addDiag(diag::RandCInSoft, expr.sourceRange);
-                }
+            if (auto sym = expr.getSymbolReference()) {
+                RandMode mode = context.getRandMode(*sym);
+                if (mode != RandMode::None)
+                    sawRandVars = true;
+
+                if (isSoft && mode == RandMode::RandC)
+                    context.addDiag(diag::RandCInSoft, expr.sourceRange);
             }
+
+            bool childrenHaveRand = false;
 
             if constexpr (HasVisitExprs<T, ConstraintExprVisitor>) {
                 // Inside call and select expressions we don't care about the types.
@@ -158,7 +163,13 @@ struct ConstraintExprVisitor {
                 if (expr.kind != ExpressionKind::ElementSelect &&
                     expr.kind != ExpressionKind::MemberAccess &&
                     expr.kind != ExpressionKind::Call) {
+
+                    const bool oldTop = std::exchange(isTop, false);
+                    const bool oldSawRand = std::exchange(sawRandVars, false);
                     expr.visitExprs(*this);
+                    isTop = oldTop;
+                    childrenHaveRand = sawRandVars;
+                    sawRandVars = oldSawRand;
                 }
             }
 
@@ -189,18 +200,50 @@ struct ConstraintExprVisitor {
                     }
                     return true;
                 case ExpressionKind::BinaryOp: {
-                    switch (expr.template as<BinaryExpression>().op) {
+                    auto& binExpr = expr.template as<BinaryExpression>();
+                    switch (binExpr.op) {
                         case BinaryOperator::CaseEquality:
                         case BinaryOperator::CaseInequality:
                         case BinaryOperator::WildcardEquality:
                         case BinaryOperator::WildcardInequality:
                             context.addDiag(diag::ExprNotConstraint, expr.sourceRange);
                             return fail();
+                        case BinaryOperator::Equality:
+                        case BinaryOperator::Inequality:
+                        case BinaryOperator::GreaterThanEqual:
+                        case BinaryOperator::GreaterThan:
+                        case BinaryOperator::LessThanEqual:
+                        case BinaryOperator::LessThan:
+                        case BinaryOperator::LogicalAnd:
+                        case BinaryOperator::LogicalOr:
+                        case BinaryOperator::LogicalImplication:
+                        case BinaryOperator::LogicalEquivalence:
+                            // We previously ignored invalid types of NamedValues when
+                            // we visited subexpressions. If there were any rand vars
+                            // used in our subexpressions we should re-check named values
+                            // for the stricter integral / numeric type requirements.
+                            if (childrenHaveRand) {
+                                if (ValueExpressionBase::isKind(binExpr.left().kind) &&
+                                    !checkType(binExpr.left())) {
+                                    return fail();
+                                }
+
+                                if (ValueExpressionBase::isKind(binExpr.right().kind) &&
+                                    !checkType(binExpr.right())) {
+                                    return fail();
+                                }
+                            }
+                            break;
                         default:
                             break;
                     }
                     break;
                 }
+                case ExpressionKind::NamedValue:
+                case ExpressionKind::HierarchicalValue:
+                    if (!isTop)
+                        return true;
+                    break;
                 case ExpressionKind::ValueRange:
                     return true;
                 case ExpressionKind::Dist: {
@@ -239,11 +282,8 @@ struct ConstraintExprVisitor {
                     break;
             }
 
-            if (!expr.type->isValidForRand(RandMode::Rand,
-                                           context.getCompilation().languageVersion())) {
-                context.addDiag(diag::InvalidConstraintExpr, expr.sourceRange) << *expr.type;
+            if (!checkType(expr))
                 return fail();
-            }
         }
 
         return true;
@@ -253,6 +293,15 @@ private:
     bool fail() {
         failed = true;
         return false;
+    }
+
+    bool checkType(const Expression& expr) {
+        if (!expr.type->isValidForRand(RandMode::Rand,
+                                       context.getCompilation().languageVersion())) {
+            context.addDiag(diag::InvalidConstraintExpr, expr.sourceRange) << *expr.type;
+            return false;
+        }
+        return true;
     }
 };
 

@@ -3373,3 +3373,23 @@ constraint :final A::b {}
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::MismatchConstraintSpecifiers);
 }
+
+TEST_CASE("Constraint comparisons can be any type as long as no rand vars") {
+    auto tree = SyntaxTree::fromText(R"(
+class A;
+    string a, b;
+    rand int c;
+    constraint C {
+        if (a == b) c > 1;
+        a;
+    }
+endclass
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::InvalidConstraintExpr);
+}
