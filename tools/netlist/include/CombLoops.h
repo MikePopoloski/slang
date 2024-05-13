@@ -60,6 +60,9 @@ private:
 public:
     SCCResult(std::vector<std::vector<ID_type>>& adjList, ID_type lowestNodeId) :
         adjList(adjList), lowestNodeId(lowestNodeId) {}
+    SCCResult(std::vector<std::vector<ID_type>>& adjList) :
+        adjList(adjList), lowestNodeId(-1) {}
+    SCCResult() : lowestNodeId(-1) {}
     inline const std::vector<std::vector<ID_type>>& getAdjList() const { return adjList; }
     inline const ID_type getLowestNodeId() const { return lowestNodeId; }
 };
@@ -119,7 +122,7 @@ private:
     std::vector<std::vector<ID_type>> currentSCCs;
 
 public:
-    static SCCResult dummy;
+    static SCCResult sccr_dummy;
     /**
      * Constructor.
      *
@@ -144,7 +147,7 @@ public:
 private:
     void makeAdjListSubgraph(const ID_type node);
     const std::vector<ID_type>& getLowestIdComponent() const;
-    std::vector<std::vector<ID_type>> getAdjList(const std::vector<ID_type>& nodes) const;
+    std::vector<std::vector<ID_type>> buildAdjList(const std::vector<ID_type>& nodes) const;
     void getStrongConnectedComponents(ID_type root);
 };
 

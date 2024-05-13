@@ -59,8 +59,7 @@ using namespace std;
  * @version 1.1, 22.03.2009
  *
  */
-std::vector<std::vector<int>> dummyAadjList = {};
-SCCResult StrongConnectedComponents::dummy(dummyAadjList, -1);
+SCCResult StrongConnectedComponents::sccr_dummy;
 
 /**
  * This method returns the adjacency-structure of the strong connected
@@ -92,7 +91,7 @@ SCCResult& StrongConnectedComponents::getAdjacencyList(int node) {
                 return getAdjacencyList(node + 1);
             }
             else {
-                vector<vector<int>> adjacencyList = getAdjList(nodes);
+                vector<vector<int>> adjacencyList = buildAdjList(nodes);
                 if (!adjacencyList.empty()) {
                     for (int j = 0; j < adjListOriginal_s; j++) {
                         if (!adjacencyList[j].empty()) {
@@ -104,7 +103,7 @@ SCCResult& StrongConnectedComponents::getAdjacencyList(int node) {
         }
     }
 
-    return StrongConnectedComponents::dummy;
+    return sccr_dummy;
 }
 
 /**
@@ -157,7 +156,7 @@ const vector<int>& StrongConnectedComponents::getLowestIdComponent() const {
  * strong connected component with least vertex in the currently viewed
  * subgraph
  */
-vector<vector<int>> StrongConnectedComponents::getAdjList(const vector<int>& nodes) const {
+vector<vector<int>> StrongConnectedComponents::buildAdjList(const vector<int>& nodes) const {
     vector<vector<int>> lowestIdAdjacencyList;
 
     if (!nodes.empty()) {
