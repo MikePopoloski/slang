@@ -60,8 +60,8 @@ private:
 public:
     SCCResult(std::vector<std::vector<ID_type>>& adjList, ID_type lowestNodeId) :
         adjList(adjList), lowestNodeId(lowestNodeId) {}
-    inline std::vector<std::vector<ID_type>>& getAdjList() { return this->adjList; }
-    inline ID_type getLowestNodeId() { return this->lowestNodeId; }
+    inline const std::vector<std::vector<ID_type>>& getAdjList() const { return adjList; }
+    inline const ID_type getLowestNodeId() const { return lowestNodeId; }
 };
 
 /**
@@ -142,9 +142,9 @@ public:
     SCCResult& getAdjacencyList(ID_type node);
 
 private:
-    void makeAdjListSubgraph(ID_type node);
-    std::vector<ID_type> getLowestIdComponent();
-    std::vector<std::vector<ID_type>> getAdjList(std::vector<ID_type> nodes);
+    void makeAdjListSubgraph(const ID_type node);
+    const std::vector<ID_type>& getLowestIdComponent() const;
+    std::vector<std::vector<ID_type>> getAdjList(const std::vector<ID_type>& nodes) const;
     void getStrongConnectedComponents(ID_type root);
 };
 
@@ -198,7 +198,6 @@ public:
      * @param matrix adjacency-matrix of the graph
      * @param netlist pointer to the full netlist
      */
-    ElementaryCyclesSearch(std::vector<std::vector<ID_type>>& adjList);
     ElementaryCyclesSearch(Netlist& netlist);
     /**
      * Returns List::List::Object with the Lists of nodes of all elementary
@@ -224,7 +223,7 @@ private:
      * connected component s is part of.
      * @return true, if cycle found; false otherwise
      */
-    bool findCycles(ID_type v, ID_type s, std::vector<std::vector<ID_type>>& adjList);
+    bool findCycles(ID_type v, ID_type s, const std::vector<std::vector<ID_type>>& adjList);
     /**
      * Unblocks recursivly all blocked nodes, starting with a given node.
      *

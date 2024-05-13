@@ -28,11 +28,9 @@
  * WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "CombLoops.h"
-
-#include "NetlistPath.h"
-
 #include "slang/ast/SemanticFacts.h"
+#include "CombLoops.h"
+#include "NetlistPath.h"
 
 using namespace std;
 
@@ -89,7 +87,7 @@ SCCResult& StrongConnectedComponents::getAdjacencyList(int node) {
     for (int i = node; i < adjListOriginal_s; i++) {
         if (!visited[i]) {
             getStrongConnectedComponents(i);
-            vector<int> nodes = getLowestIdComponent();
+            const vector<int>& nodes = getLowestIdComponent();
             if (!nodes.empty() && !find_vec(nodes, node) && !find_vec(nodes, node + 1)) {
                 return getAdjacencyList(node + 1);
             }
@@ -115,7 +113,7 @@ SCCResult& StrongConnectedComponents::getAdjacencyList(int node) {
  *
  * @param node Node with lowest index in the subgraph
  */
-void StrongConnectedComponents::makeAdjListSubgraph(int node) {
+void StrongConnectedComponents::makeAdjListSubgraph(const int node) {
     adjList.clear();
     adjList.resize(adjListOriginal.size());
 
@@ -137,21 +135,21 @@ void StrongConnectedComponents::makeAdjListSubgraph(int node) {
  *
  * @return Vector::Integer of the scc containing the lowest nodenumber
  */
-vector<int> StrongConnectedComponents::getLowestIdComponent() {
+const vector<int>& StrongConnectedComponents::getLowestIdComponent() const {
     int min = adjList.size();
-    vector<int> currScc;
+    const vector<int>* currScc;
 
     for (int i = 0; i < currentSCCs.size(); i++) {
         for (int j = 0; j < currentSCCs[i].size(); j++) {
             const int node = currentSCCs[i][j];
             if (node < min) {
-                currScc = currentSCCs[i];
+                currScc = &currentSCCs[i];
                 min = node;
             }
         }
     }
 
-    return currScc;
+    return *currScc;
 }
 
 /**
@@ -159,7 +157,7 @@ vector<int> StrongConnectedComponents::getLowestIdComponent() {
  * strong connected component with least vertex in the currently viewed
  * subgraph
  */
-vector<vector<int>> StrongConnectedComponents::getAdjList(vector<int> nodes) {
+vector<vector<int>> StrongConnectedComponents::getAdjList(const vector<int>& nodes) const {
     vector<vector<int>> lowestIdAdjacencyList;
 
     if (!nodes.empty()) {
@@ -222,12 +220,12 @@ void StrongConnectedComponents::getStrongConnectedComponents(int root) {
 /**
  * Constructor.
  *
+ * Go over the node list in the Netlist object, skipping any nodes
+ * driven on edge (pos or neg), and any edges terminating on such nodes.
+ *
  * @param matrix adjacency-matrix of the graph
  * @param netlist pointer to the full netlist
  */
-ElementaryCyclesSearch::ElementaryCyclesSearch(std::vector<std::vector<ID_type>>& adjList) :
-    adjList(adjList) {
-}
 ElementaryCyclesSearch::ElementaryCyclesSearch(Netlist& netlist) {
     int nodes_num = netlist.numNodes();
     auto node_0 = netlist.getNode(0).ID;
@@ -273,9 +271,9 @@ std::vector<CycleListType>* ElementaryCyclesSearch::getElementaryCycles() {
     ID_type s = 0;
 
     while (true) {
-        SCCResult& sccResult = sccs.getAdjacencyList(s);
+        const SCCResult& sccResult = sccs.getAdjacencyList(s);
         if ((sccResult.getLowestNodeId() != -1) && !sccResult.getAdjList().empty()) {
-            std::vector<std::vector<ID_type>> scc = sccResult.getAdjList();
+            const std::vector<std::vector<ID_type>>& scc = sccResult.getAdjList();
             s = sccResult.getLowestNodeId();
             for (int j = 0; j < scc.size(); j++) {
                 if (!scc[j].empty()) {
@@ -296,6 +294,10 @@ std::vector<CycleListType>* ElementaryCyclesSearch::getElementaryCycles() {
     return &(this->cycles);
 }
 
+#ifdef DEBUG
+//
+// These are useful when debugging but are not needed otherwise
+//
 void ElementaryCyclesSearch::getHierName(NetlistNode& node, std::string& buffer) {
     switch (node.kind) {
         case NodeKind::PortDeclaration: {
@@ -348,6 +350,7 @@ void ElementaryCyclesSearch::dumpAdjList(Netlist& netlist) {
         }
     }
 }
+#endif
 
 /**
  * Calculates the cycles containing a given node in a strongly connected
@@ -360,7 +363,7 @@ void ElementaryCyclesSearch::dumpAdjList(Netlist& netlist) {
  * @return true, if cycle found; false otherwise
  */
 bool ElementaryCyclesSearch::findCycles(ID_type v, ID_type s,
-                                        std::vector<std::vector<ID_type>>& adjList) {
+                                        const std::vector<std::vector<ID_type>>& adjList) {
     bool f = false;
     stack.push_back(v);
     blocked[v] = true;
