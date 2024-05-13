@@ -63,8 +63,11 @@ public:
     SCCResult(std::vector<std::vector<ID_type>>& adjList) :
         adjList(adjList), lowestNodeId(-1) {}
     SCCResult() : lowestNodeId(-1) {}
+    inline std::vector<std::vector<ID_type>>& getAdjListForWrite() { return adjList; }
     inline const std::vector<std::vector<ID_type>>& getAdjList() const { return adjList; }
     inline const ID_type getLowestNodeId() const { return lowestNodeId; }
+    inline void setLowestNodeId(ID_type node_id) { lowestNodeId = node_id; }
+    inline bool isEmpty() const { return lowestNodeId == -1; }
 };
 
 /**
@@ -121,6 +124,10 @@ private:
     /** Helpattribute for finding scc's */
     std::vector<std::vector<ID_type>> currentSCCs;
 
+
+    // we only need one object at a time
+    SCCResult sccr_current;
+
 public:
     static SCCResult sccr_dummy;
     /**
@@ -147,7 +154,8 @@ public:
 private:
     void makeAdjListSubgraph(const ID_type node);
     const std::vector<ID_type>& getLowestIdComponent() const;
-    std::vector<std::vector<ID_type>> buildAdjList(const std::vector<ID_type>& nodes) const;
+    void buildAdjList(const std::vector<ID_type>& nodes, std::vector<std::vector<ID_type>>& lowestIdAdjacencyList) const;
+    //void buildAdjList(const std::vector<ID_type>& nodes, SCCResult& sccr) const;
     void getStrongConnectedComponents(ID_type root);
 };
 

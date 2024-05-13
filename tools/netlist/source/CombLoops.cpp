@@ -59,6 +59,7 @@ using namespace std;
  * @version 1.1, 22.03.2009
  *
  */
+
 SCCResult StrongConnectedComponents::sccr_dummy;
 
 /**
@@ -91,7 +92,8 @@ SCCResult& StrongConnectedComponents::getAdjacencyList(int node) {
                 return getAdjacencyList(node + 1);
             }
             else {
-                vector<vector<int>> adjacencyList = buildAdjList(nodes);
+                vector<vector<int>> adjacencyList;
+                buildAdjList(nodes, adjacencyList);
                 if (!adjacencyList.empty()) {
                     for (int j = 0; j < adjListOriginal_s; j++) {
                         if (!adjacencyList[j].empty()) {
@@ -152,27 +154,28 @@ const vector<int>& StrongConnectedComponents::getLowestIdComponent() const {
 }
 
 /**
- * @return Vector[]::Integer representing the adjacency-structure of the
- * strong connected component with least vertex in the currently viewed
- * subgraph
+ * Fills SCCResult with adjacency list representing the adjacency-structure
+ * of the strong connected component with least vertex in the currently
+ * viewed subgraph
  */
-vector<vector<int>> StrongConnectedComponents::buildAdjList(const vector<int>& nodes) const {
-    vector<vector<int>> lowestIdAdjacencyList;
+void StrongConnectedComponents::buildAdjList(const vector<int>& nodes, vector<vector<int>>& lowestIdAdjacencyList) const {
 
     if (!nodes.empty()) {
         lowestIdAdjacencyList.resize(adjList.size());
         for (int i = 0; i < nodes.size(); i++) {
             int node = nodes[i];
-            for (int j = 0; j < adjList[node].size(); j++) {
-                int succ = adjList[node][j];
+            vector<int>& sccr_adjlist_node = lowestIdAdjacencyList[node];
+            auto& adjList_node = adjList[node];
+            sccr_adjlist_node.clear();
+            const int ns = adjList_node.size();
+            for (int j = 0; j < ns; j++) {
+                int succ = adjList_node[j];
                 if (find_vec(nodes, succ)) {
-                    lowestIdAdjacencyList[node].push_back(succ);
+                    sccr_adjlist_node.push_back(succ);
                 }
             }
         }
     }
-
-    return lowestIdAdjacencyList;
 }
 
 /**
@@ -271,7 +274,7 @@ std::vector<CycleListType>* ElementaryCyclesSearch::getElementaryCycles() {
 
     while (true) {
         const SCCResult& sccResult = sccs.getAdjacencyList(s);
-        if ((sccResult.getLowestNodeId() != -1) && !sccResult.getAdjList().empty()) {
+        if (!sccResult.isEmpty() && !sccResult.getAdjList().empty()) {
             const std::vector<std::vector<ID_type>>& scc = sccResult.getAdjList();
             s = sccResult.getLowestNodeId();
             for (int j = 0; j < scc.size(); j++) {
@@ -283,8 +286,7 @@ std::vector<CycleListType>* ElementaryCyclesSearch::getElementaryCycles() {
 
             findCycles(s, s, scc);
             s++;
-        }
-        else {
+        } else {
             break;
         }
         delete &sccResult;
