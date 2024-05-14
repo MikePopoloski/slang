@@ -687,7 +687,8 @@ NameSyntax& Parser::parseName(bitmask<NameOptions> options) {
             usedDot = true;
         else if (usedDot && !reportedError) {
             reportedError = true;
-            addDiag(diag::InvalidAccessDotColon, separator.location()) << "::"sv << "."sv;
+            addDiag(diag::InvalidAccessDotColon, separator.location()) << "::"sv
+                                                                       << "."sv;
         }
 
         if (kind == TokenKind::DoubleColon && name->kind == SyntaxKind::IdentifierName)
@@ -697,14 +698,16 @@ NameSyntax& Parser::parseName(bitmask<NameOptions> options) {
             case SyntaxKind::UnitScope:
             case SyntaxKind::LocalScope:
                 if (kind != TokenKind::DoubleColon) {
-                    addDiag(diag::InvalidAccessDotColon, separator.location()) << "."sv << "::"sv;
+                    addDiag(diag::InvalidAccessDotColon, separator.location()) << "."sv
+                                                                               << "::"sv;
                 }
                 break;
             case SyntaxKind::RootScope:
             case SyntaxKind::ThisHandle:
             case SyntaxKind::SuperHandle:
                 if (kind != TokenKind::Dot) {
-                    addDiag(diag::InvalidAccessDotColon, separator.location()) << "::"sv << "."sv;
+                    addDiag(diag::InvalidAccessDotColon, separator.location()) << "::"sv
+                                                                               << "."sv;
                 }
                 break;
             case SyntaxKind::ConstructorName:
