@@ -60,8 +60,7 @@ private:
 public:
     SCCResult(std::vector<std::vector<ID_type>>& adjList, ID_type lowestNodeId) :
         adjList(adjList), lowestNodeId(lowestNodeId) {}
-    SCCResult(std::vector<std::vector<ID_type>>& adjList) :
-        adjList(adjList), lowestNodeId(-1) {}
+    SCCResult(std::vector<std::vector<ID_type>>& adjList) : adjList(adjList), lowestNodeId(-1) {}
     SCCResult() : lowestNodeId(-1) {}
     inline std::vector<std::vector<ID_type>>& getAdjListForWrite() { return adjList; }
     inline const std::vector<std::vector<ID_type>>& getAdjList() const { return adjList; }
@@ -123,7 +122,6 @@ private:
 
     /** Helpattribute for finding scc's */
     std::vector<std::vector<ID_type>> currentSCCs;
-
 
     // we only need one object at a time
     SCCResult sccr_current;
