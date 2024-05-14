@@ -32,8 +32,6 @@
 #include "CombLoops.h"
 #include "NetlistPath.h"
 
-using namespace std;
-
 /**
  * This is a helpclass for the search of all elementary cycles in a graph
  * with the algorithm of Johnson. For this it searches for strong connected
@@ -75,37 +73,40 @@ SCCResult StrongConnectedComponents::sccr_dummy;
  */
 SCCResult& StrongConnectedComponents::getAdjacencyList(int node) {
     auto adjListOriginal_s = adjListOriginal.size();
-    visited.resize(adjListOriginal_s, false);
-    std::fill(visited.begin(), visited.end(), false);
     lowlink.resize(adjListOriginal_s);
     number.resize(adjListOriginal_s);
-    stack.clear();
-    currentSCCs.clear();
+    visited.resize(adjListOriginal_s);
 
-    makeAdjListSubgraph(node);
+    while (true) {
+        std::fill(visited.begin(), visited.end(), false);
+        stack.clear();
+        currentSCCs.clear();
 
-    for (int i = node; i < adjListOriginal_s; i++) {
-        if (!visited[i]) {
-            getStrongConnectedComponents(i);
-            const vector<int>& nodes = getLowestIdComponent();
-            if (!nodes.empty() && !find_vec(nodes, node) && !find_vec(nodes, node + 1)) {
-                return getAdjacencyList(node + 1);
-            }
-            else {
-                vector<vector<int>> adjacencyList;
-                buildAdjList(nodes, adjacencyList);
-                if (!adjacencyList.empty()) {
-                    for (int j = 0; j < adjListOriginal_s; j++) {
-                        if (!adjacencyList[j].empty()) {
-                            return *new SCCResult(adjacencyList, j);
+        makeAdjListSubgraph(node);
+        for (int i = node; i < adjListOriginal_s; i++) {
+            if (!visited[i]) {
+                getStrongConnectedComponents(i);
+                const std::vector<int>& nodes = getLowestIdComponent();
+                if (!nodes.empty() && !find_vec(nodes, node) && !find_vec(nodes, node + 1)) {
+                    node++;
+                    continue;
+                }
+                else {
+                    buildAdjList(nodes, sccr_current);
+                    auto& adjacencyList = sccr_current.getAdjListForWrite();
+                    if (!adjacencyList.empty()) {
+                        for (int j = 0; j < adjListOriginal_s; j++) {
+                            if (!adjacencyList[j].empty()) {
+                                sccr_current.setLowestNodeId(j);
+                                return sccr_current;
+                            }
                         }
                     }
                 }
             }
         }
+        return sccr_dummy;
     }
-
-    return sccr_dummy;
 }
 
 /**
@@ -136,9 +137,9 @@ void StrongConnectedComponents::makeAdjListSubgraph(const int node) {
  *
  * @return Vector::Integer of the scc containing the lowest nodenumber
  */
-const vector<int>& StrongConnectedComponents::getLowestIdComponent() const {
+const std::vector<int>& StrongConnectedComponents::getLowestIdComponent() const {
     int min = adjList.size();
-    const vector<int>* currScc;
+    const std::vector<int>* currScc;
 
     for (int i = 0; i < currentSCCs.size(); i++) {
         for (int j = 0; j < currentSCCs[i].size(); j++) {
@@ -158,13 +159,15 @@ const vector<int>& StrongConnectedComponents::getLowestIdComponent() const {
  * of the strong connected component with least vertex in the currently
  * viewed subgraph
  */
-void StrongConnectedComponents::buildAdjList(const vector<int>& nodes, vector<vector<int>>& lowestIdAdjacencyList) const {
-
+void StrongConnectedComponents::buildAdjList(const std::vector<int>& nodes, SCCResult& sccr) const {
+    std::vector<std::vector<int>>& lowestIdAdjacencyList = sccr.getAdjListForWrite();
+    auto nodes_s = nodes.size();
+    lowestIdAdjacencyList.clear();
+    lowestIdAdjacencyList.resize(adjList.size());
     if (!nodes.empty()) {
-        lowestIdAdjacencyList.resize(adjList.size());
-        for (int i = 0; i < nodes.size(); i++) {
+        for (int i = 0; i < nodes_s; i++) {
             int node = nodes[i];
-            vector<int>& sccr_adjlist_node = lowestIdAdjacencyList[node];
+            std::vector<int>& sccr_adjlist_node = lowestIdAdjacencyList[node];
             auto& adjList_node = adjList[node];
             sccr_adjlist_node.clear();
             const int ns = adjList_node.size();
@@ -175,6 +178,9 @@ void StrongConnectedComponents::buildAdjList(const vector<int>& nodes, vector<ve
                 }
             }
         }
+    }
+    else {
+
     }
 }
 
@@ -194,18 +200,18 @@ void StrongConnectedComponents::getStrongConnectedComponents(int root) {
         int w = adjList[root][i];
         if (!visited[w]) {
             getStrongConnectedComponents(w);
-            lowlink[root] = min(lowlink[root], lowlink[w]);
+            lowlink[root] = std::min(lowlink[root], lowlink[w]);
         }
         else if (number[w] < number[root]) {
             if (find_vec(stack, w)) {
-                lowlink[root] = min(lowlink[root], number[w]);
+                lowlink[root] = std::min(lowlink[root], number[w]);
             }
         }
     }
 
     if ((lowlink[root] == number[root]) && !stack.empty()) {
         int next = -1;
-        vector<int> scc;
+        std::vector<int> scc;
 
         do {
             next = stack.back();
@@ -286,19 +292,19 @@ std::vector<CycleListType>* ElementaryCyclesSearch::getElementaryCycles() {
 
             findCycles(s, s, scc);
             s++;
-        } else {
+        }
+        else {
             break;
         }
-        delete &sccResult;
     }
 
     return &(this->cycles);
 }
 
 #ifdef DEBUG
-//
-// These are useful when debugging but are not needed otherwise
-//
+/**
+ * These are useful when debugging but are not needed otherwise
+ */
 void ElementaryCyclesSearch::getHierName(NetlistNode& node, std::string& buffer) {
     switch (node.kind) {
         case NodeKind::PortDeclaration: {

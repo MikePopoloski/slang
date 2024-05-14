@@ -154,8 +154,7 @@ public:
 private:
     void makeAdjListSubgraph(const ID_type node);
     const std::vector<ID_type>& getLowestIdComponent() const;
-    void buildAdjList(const std::vector<ID_type>& nodes, std::vector<std::vector<ID_type>>& lowestIdAdjacencyList) const;
-    //void buildAdjList(const std::vector<ID_type>& nodes, SCCResult& sccr) const;
+    void buildAdjList(const std::vector<ID_type>& nodes, SCCResult& sccr) const;
     void getStrongConnectedComponents(ID_type root);
 };
 
