@@ -22,6 +22,7 @@
 #include "slang/ast/EvalContext.h"
 #include "slang/ast/SemanticFacts.h"
 #include "slang/ast/Symbol.h"
+#include "slang/ast/expressions/AssignmentExpressions.h"
 #include "slang/ast/symbols/BlockSymbols.h"
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
 #include "slang/ast/symbols/ValueSymbol.h"
@@ -203,26 +204,37 @@ public:
         netlist(netlist), evalCtx(evalCtx), condVars(condVars) {}
 
     void handle(const ast::AssignmentExpression& expr) {
-        // Collect variable references on the left-hand side of the assignment.
+
+        // Collect LHS variable references.
         VariableReferenceVisitor visitorLHS(netlist, evalCtx, true);
         expr.left().visit(visitorLHS);
-        // Collect variable references on the right-hand side of the assignment.
+
+        // Collect RHS variable references.
         VariableReferenceVisitor visitorRHS(netlist, evalCtx, false);
         expr.right().visit(visitorRHS);
+
+        // For each variable reference occuring on the LHS of the assignment,
+        // add an edge to variable declaration.
         for (auto* leftNode : visitorLHS.getVars()) {
-            // Add edge from LHS variable refrence to variable declaration.
+
             connectVarToDecl(netlist, *leftNode, leftNode->symbol);
+
+            // For each variable reference occuring on the RHS of the
+            // assignment: add an edge from variable declaration and add an
+            // edge to the LHS reference.
             for (auto* rightNode : visitorRHS.getVars()) {
-                // Add edge from variable declaration to RHS variable reference.
                 connectDeclToVar(netlist, *rightNode, rightNode->symbol);
-                // Add edge from RHS expression term to LHS expression terms.
                 connectVarToVar(netlist, *rightNode, *leftNode);
             }
         }
+
+        // Add edges to the LHS target variables from declarations that
+        // correspond to conditions controlling the assignment.
         for (auto* condNode : condVars) {
-            // Add edge from conditional variable declaraiton to the reference.
+
             connectDeclToVar(netlist, *condNode, condNode->symbol);
             for (auto* leftNode : visitorLHS.getVars()) {
+
                 // Add edge from conditional variable to the LHS variable.
                 connectVarToVar(netlist, *condNode, *leftNode);
             }
@@ -244,6 +256,37 @@ public:
         netlist(netlist),
         evalCtx(ast::ASTContext(compilation.getRoot(), ast::LookupLocation::max)) {
         evalCtx.pushEmptyFrame();
+    }
+
+    /// For the specified variable reference, create a dependency to the declaration or
+    /// last definition.
+    void connectVarToDecl(Netlist& netlist, NetlistNode& varNode,
+                          ast::Symbol const& symbol) {
+        if (targetMap.contains(getSymbolHierPath(symbol))) {
+          auto *declNode =targetMap[getSymbolHierPath(symbol)];
+          netlist.addEdge(varNode, *declNode);
+          DEBUG_PRINT("New edge from var ref {} to previous defn {}\n", varNode.getName(),
+                      declNode->getName());
+        } else {
+          auto* declNode = netlist.lookupVariable(resolveSymbolHierPath(symbol));
+          netlist.addEdge(varNode, *declNode);
+          DEBUG_PRINT("New edge from var ref {} to decl {}\n", varNode.getName(), declNode->getName());
+        }
+    }
+
+    /// For the specified variable reference, create a dependency from the declaration or
+    /// last definition.
+    void connectDeclToVar(Netlist& netlist, NetlistNode& varNode, ast::Symbol const& symbol) {
+        if (targetMap.contains(getSymbolHierPath(symbol))) {
+          auto *declNode = targetMap[getSymbolHierPath(symbol)];
+          netlist.addEdge(*declNode, varNode);
+          DEBUG_PRINT("New edge from previous defn {} to var ref {}\n", declNode->getName(),
+                      varNode.getName());
+        } else {
+          auto* declNode = netlist.lookupVariable(resolveSymbolHierPath(symbol));
+          netlist.addEdge(*declNode, varNode);
+          DEBUG_PRINT("New edge from decl {} to var ref {}\n", declNode->getName(), varNode.getName());
+        }
     }
 
     void handle(const ast::VariableSymbol& symbol) { netlist.addVariableDeclaration(symbol); }
@@ -384,8 +427,51 @@ public:
 
     void handle(const ast::ExpressionStatement& stmt) {
         step();
-        AssignmentVisitor visitor(netlist, evalCtx, condVarsStack);
-        stmt.visit(visitor);
+
+        if (stmt.expr.kind == ast::ExpressionKind::Assignment) {
+          handleAssignment(stmt.expr.as<ast::AssignmentExpression>());
+        }
+    }
+
+    void handleAssignment(const ast::AssignmentExpression& expr) {
+
+        // Collect LHS variable references.
+        VariableReferenceVisitor visitorLHS(netlist, evalCtx, true);
+        expr.left().visit(visitorLHS);
+
+        // Collect RHS variable references.
+        VariableReferenceVisitor visitorRHS(netlist, evalCtx, false);
+        expr.right().visit(visitorRHS);
+
+        // For each variable reference occuring on the LHS of the assignment,
+        // add an edge to variable declaration.
+        for (auto* leftNode : visitorLHS.getVars()) {
+
+            connectVarToDecl(netlist, *leftNode, leftNode->symbol);
+
+            // For each variable reference occuring on the RHS of the
+            // assignment: add an edge from variable declaration and add an
+            // edge to the LHS reference.
+            for (auto* rightNode : visitorRHS.getVars()) {
+                connectDeclToVar(netlist, *rightNode, rightNode->symbol);
+                connectVarToVar(netlist, *rightNode, *leftNode);
+            }
+
+            auto key = getSymbolHierPath(leftNode->symbol);
+            targetMap[key] = leftNode;
+        }
+
+        // Add edges to the LHS target variables from declarations that
+        // correspond to conditions controlling the assignment.
+        for (auto* condNode : condVarsStack) {
+
+            connectDeclToVar(netlist, *condNode, condNode->symbol);
+            for (auto* leftNode : visitorLHS.getVars()) {
+
+                // Add edge from conditional variable to the LHS variable.
+                connectVarToVar(netlist, *condNode, *leftNode);
+            }
+        }
     }
 
 private:
@@ -400,6 +486,7 @@ private:
     Netlist& netlist;
     ast::EvalContext evalCtx;
     SmallVector<NetlistNode*> condVarsStack;
+    std::map<std::string, NetlistNode*> targetMap;
 };
 
 /// A visitor that traverses the AST and builds a netlist representation.
