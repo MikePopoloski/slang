@@ -336,7 +336,7 @@ public:
         SLANG_ASSERT(lookupPort(nodePtr->hierarchicalPath) == nullptr &&
                      "Port declaration already exists");
         nodes.push_back(std::move(nodePtr));
-        DEBUG_PRINT("Add port decl {}\n", node.hierarchicalPath);
+        DEBUG_PRINT("New node: port declaration {}\n", node.hierarchicalPath);
         return node;
     }
 
@@ -348,7 +348,7 @@ public:
         SLANG_ASSERT(lookupVariable(nodePtr->hierarchicalPath) == nullptr &&
                      "Variable declaration already exists");
         nodes.push_back(std::move(nodePtr));
-        DEBUG_PRINT("Add var decl {}\n", node.hierarchicalPath);
+        DEBUG_PRINT("New node: variable declaration {}\n", node.hierarchicalPath);
         return node;
     }
 
@@ -358,7 +358,7 @@ public:
         auto& node = nodePtr->as<NetlistVariableAlias>();
         symbol.getHierarchicalPath(node.hierarchicalPath);
         nodes.push_back(std::move(nodePtr));
-        DEBUG_PRINT("Add var alias {}\n", node.hierarchicalPath);
+        DEBUG_PRINT("New node: variable alias {}\n", node.hierarchicalPath);
         return node;
     }
 
@@ -368,7 +368,7 @@ public:
         auto nodePtr = std::make_unique<NetlistVariableReference>(symbol, expr, leftOperand);
         auto& node = nodePtr->as<NetlistVariableReference>();
         nodes.push_back(std::move(nodePtr));
-        DEBUG_PRINT("Add var ref ", symbol.name);
+        DEBUG_PRINT("New node: variable reference {}\n", symbol.name);
         return node;
     }
 

@@ -495,32 +495,6 @@ public:
     explicit NetlistVisitor(ast::Compilation& compilation, Netlist& netlist) :
         compilation(compilation), netlist(netlist) {}
 
-    /// Connect ports of a module instance to their corresponding variables.
-    void connectInstancePort(NetlistNode& port) {
-        if (auto* internalSymbol = port.symbol.as<ast::PortSymbol>().internalSymbol) {
-            std::string pathBuffer;
-            internalSymbol->getHierarchicalPath(pathBuffer);
-            auto* variableNode = netlist.lookupVariable(pathBuffer);
-            switch (port.symbol.as<ast::PortSymbol>().direction) {
-                case ast::ArgumentDirection::In:
-                    netlist.addEdge(port, *variableNode);
-                    break;
-                case ast::ArgumentDirection::Out:
-                    netlist.addEdge(*variableNode, port);
-                    break;
-                case ast::ArgumentDirection::InOut:
-                    netlist.addEdge(port, *variableNode);
-                    netlist.addEdge(*variableNode, port);
-                    break;
-                case ast::ArgumentDirection::Ref:
-                    break;
-            }
-        }
-        else {
-            SLANG_UNREACHABLE;
-        }
-    }
-
     /// Connect the ports of a module instance to the variables that connect to
     /// it in the parent scope. Given a port hookup of the form:
     ///
@@ -574,13 +548,16 @@ public:
             switch (port.symbol.as<ast::PortSymbol>().direction) {
                 case ast::ArgumentDirection::In:
                     netlist.addEdge(port, *variableNode);
+                    DEBUG_PRINT("New edge: input port {} -> var {}\n", port.symbol.name, pathBuffer);
                     break;
                 case ast::ArgumentDirection::Out:
                     netlist.addEdge(*variableNode, port);
+                    DEBUG_PRINT("New edge: var {} -> output port {}\n", pathBuffer, port.symbol.name);
                     break;
                 case ast::ArgumentDirection::InOut:
                     netlist.addEdge(port, *variableNode);
                     netlist.addEdge(*variableNode, port);
+                    DEBUG_PRINT("New edges: var {} <-> inout port {}\n", pathBuffer, port.symbol.name);
                     break;
                 case ast::ArgumentDirection::Ref:
                     break;
