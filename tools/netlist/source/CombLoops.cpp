@@ -89,7 +89,8 @@ SCCResult& StrongConnectedComponents::getAdjacencyList(int node) {
             if (!visited[i]) {
                 getStrongConnectedComponents(i);
                 const std::vector<int>* nodes = getLowestIdComponent();
-                if (nodes != nullptr && !nodes->empty() && !find_vec(*nodes, node) && !find_vec(*nodes, node + 1)) {
+                if (nodes != nullptr && !nodes->empty() && !find_vec(*nodes, node) &&
+                    !find_vec(*nodes, node + 1)) {
                     node++;
                     continue;
                 }
