@@ -40,16 +40,16 @@ using ID_type = int;
 
 template<typename T>
 bool find_vec(const std::vector<T>& vec, const T& val) {
-    return std::find(vec.begin(), vec.end(), val) != vec.end();
+    return std::find(vec.cbegin(), vec.cend(), val) != vec.end();
 }
 
 template<typename T, typename Predicate>
 bool find_vec_if(const std::vector<T>& vec, Predicate predicate) {
-    return std::find_if(vec.begin(), vec.end(), predicate) != vec.end();
+    return std::find_if(vec.cbegin(), vec.cend(), predicate) != vec.end();
 }
 template<typename T, typename Predicate>
 int count_vec_if(const std::vector<T>& vec, Predicate predicate) {
-    return std::count_if(vec.begin(), vec.end(), predicate);
+    return std::count_if(vec.cbegin(), vec.cend(), predicate);
 }
 
 class SCCResult {
@@ -151,7 +151,7 @@ public:
 
 private:
     void makeAdjListSubgraph(const ID_type node);
-    const std::vector<ID_type>& getLowestIdComponent() const;
+    const std::vector<ID_type>* getLowestIdComponent() const;
     void buildAdjList(const std::vector<ID_type>& nodes, SCCResult& sccr) const;
     void getStrongConnectedComponents(ID_type root);
 };

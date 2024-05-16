@@ -88,13 +88,13 @@ SCCResult& StrongConnectedComponents::getAdjacencyList(int node) {
         for (int i = node; i < adjListOriginal_s; i++) {
             if (!visited[i]) {
                 getStrongConnectedComponents(i);
-                const std::vector<int>& nodes = getLowestIdComponent();
-                if (!nodes.empty() && !find_vec(nodes, node) && !find_vec(nodes, node + 1)) {
+                const std::vector<int>* nodes = getLowestIdComponent();
+                if (nodes != nullptr && !nodes->empty() && !find_vec(*nodes, node) && !find_vec(*nodes, node + 1)) {
                     node++;
                     continue;
                 }
-                else {
-                    buildAdjList(nodes, sccr_current);
+                else if (nodes != nullptr) {
+                    buildAdjList(*nodes, sccr_current);
                     auto& adjacencyList = sccr_current.getAdjListForWrite();
                     if (!adjacencyList.empty()) {
                         for (int j = 0; j < adjListOriginal_s; j++) {
@@ -119,9 +119,9 @@ SCCResult& StrongConnectedComponents::getAdjacencyList(int node) {
  */
 void StrongConnectedComponents::makeAdjListSubgraph(const int node) {
     adjList.clear();
-    adjList.resize(adjListOriginal.size());
+    const int adjListSize = adjListOriginal.size();
+    adjList.resize(adjListSize);
 
-    const int adjListSize = adjList.size();
     for (int i = node; i < adjListSize; i++) {
         const int adjListOriginalISize = adjListOriginal[i].size();
         for (int j = 0; j < adjListOriginalISize; j++) {
@@ -139,9 +139,9 @@ void StrongConnectedComponents::makeAdjListSubgraph(const int node) {
  *
  * @return Vector::Integer of the scc containing the lowest nodenumber
  */
-const std::vector<int>& StrongConnectedComponents::getLowestIdComponent() const {
+const std::vector<int>* StrongConnectedComponents::getLowestIdComponent() const {
     int min = adjList.size();
-    const std::vector<int>* currScc;
+    const std::vector<int>* currScc = nullptr;
 
     for (int i = 0; i < currentSCCs.size(); i++) {
         for (int j = 0; j < currentSCCs[i].size(); j++) {
@@ -153,7 +153,7 @@ const std::vector<int>& StrongConnectedComponents::getLowestIdComponent() const 
         }
     }
 
-    return *currScc;
+    return currScc;
 }
 
 /**
@@ -180,8 +180,6 @@ void StrongConnectedComponents::buildAdjList(const std::vector<int>& nodes, SCCR
                 }
             }
         }
-    }
-    else {
     }
 }
 
@@ -211,7 +209,7 @@ void StrongConnectedComponents::getStrongConnectedComponents(int root) {
     }
 
     if ((lowlink[root] == number[root]) && !stack.empty()) {
-        int next = -1;
+        int next;
         std::vector<int> scc;
 
         do {
