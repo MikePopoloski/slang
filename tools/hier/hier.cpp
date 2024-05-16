@@ -53,6 +53,7 @@ int main(int argc, char** argv) {
     bool ok = driver.parseAllSources();
 
     auto compilation = driver.createCompilation();
+    auto sourceManager = compilation->getSourceManager();
 
     if (instRegex.has_value())
         regex = instRegex.value();
@@ -82,8 +83,8 @@ int main(int argc, char** argv) {
                 }
                 type.getHierarchicalPath(tmp_path);
                 if (!instRegex.has_value() || std::regex_search(tmp_path, match, regex)) {
-                    OS::print(fmt::format("Module=\"{}\" Instance=\"{}\" ",
-                                          type.getDefinition().name, tmp_path));
+                    OS::print(fmt::format("Module=\"{}\" Instance=\"{}\" File=\"{}\" ",
+                                          type.getDefinition().name, tmp_path, sourceManager->getFileName(type.location)));
                     int size = type.body.getParameters().size();
                     if (size && params.value_or(false)) {
                         OS::print(fmt::format("Parameters: "));
