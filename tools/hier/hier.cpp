@@ -23,6 +23,7 @@ int main(int argc, char** argv) {
     std::optional<int> maxDepth;
     std::optional<std::string> instPrefix;
     std::optional<std::string> instRegex;
+    std::optional<std::string> customFormat;
     driver.cmdLine.add("-h,--help", showHelp, "Display available options");
     driver.cmdLine.add("--version", showVersion, "Display version information and exit");
     driver.cmdLine.add("--params", params, "Display instance parameter values");
@@ -32,6 +33,8 @@ int main(int argc, char** argv) {
                        "<inst-prefix>");
     driver.cmdLine.add("--inst-regex", instRegex,
                        "Show only instances matched by regex (scans whole tree)", "<inst-regex>");
+    driver.cmdLine.add("--custom-format", customFormat,
+                       "Use libfmt style strings to format output. argument names are inst, module, file", "<fmt::format string>");
 
     if (!driver.parseCommandLine(argc, argv))
         return 1;
@@ -64,7 +67,7 @@ int main(int argc, char** argv) {
         int index = 0;
         i->visit(makeVisitor([&](auto& visitor, const InstanceSymbol& type) {
             if (type.isModule()) {
-                std::string tmp_path;
+                std::string s_inst;
                 int len = type.name.length();
                 int save_index = index;
                 // if no instPrefix, pathLength is 0, and this check will never take place, so
@@ -81,10 +84,14 @@ int main(int argc, char** argv) {
                         return; // separator needed, but didn't find one
                     index++;    // adjust for '.'
                 }
-                type.getHierarchicalPath(tmp_path);
-                if (!instRegex.has_value() || std::regex_search(tmp_path, match, regex)) {
-                    OS::print(fmt::format("Module=\"{}\" Instance=\"{}\" File=\"{}\" ",
-                                          type.getDefinition().name, tmp_path, sourceManager->getFileName(type.location)));
+                type.getHierarchicalPath(s_inst);
+                if (!instRegex.has_value() || std::regex_search(s_inst, match, regex)) {
+                    auto s_module = type.getDefinition().name;
+                    auto s_file = sourceManager->getFileName(type.getDefinition().location);
+                    if (customFormat.has_value())
+                        OS::print(fmt::format(fmt::runtime(customFormat.value()), fmt::arg("module", s_module), fmt::arg("inst", s_inst), fmt::arg("file", s_file)));
+                    else
+                        OS::print(fmt::format("Module=\"{}\" Instance=\"{}\" File=\"{}\" ", s_module, s_inst, s_file));
                     int size = type.body.getParameters().size();
                     if (size && params.value_or(false)) {
                         OS::print(fmt::format("Parameters: "));
