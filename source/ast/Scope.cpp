@@ -859,6 +859,12 @@ void Scope::elaborate() const {
         thisSym->as<ClassType>().inheritMembers(
             [this](const Symbol& member) { insertMember(&member, nullptr, true, true); });
     }
+    else if (thisSym->kind == SymbolKind::CovergroupType) {
+        // If this is a covergroup type being elaborated, let it inherit members from parent
+        // classes.
+        thisSym->as<CovergroupType>().inheritMembers(
+            [this](const Symbol& member) { insertMember(&member, nullptr, true, true); });
+    }
     else if (thisSym->kind == SymbolKind::InstanceBody &&
              thisSym->as<InstanceBodySymbol>().getDefinition().definitionKind ==
                  DefinitionKind::Interface) {

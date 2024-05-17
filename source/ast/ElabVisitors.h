@@ -50,7 +50,7 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
                 attr->getValue();
         }
 
-        if constexpr (requires { symbol.getBody(); }) {
+        if constexpr (requires { symbol.getBody().bad(); }) {
             auto& body = symbol.getBody();
             if (body.bad())
                 return true;
@@ -184,7 +184,7 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
             return;
 
         symbol.getCoverageEvent();
-        for (auto& option : symbol.body.options)
+        for (auto& option : symbol.getBody().options)
             option.getExpression();
     }
 

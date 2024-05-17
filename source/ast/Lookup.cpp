@@ -794,7 +794,7 @@ bool resolveColonNames(SmallVectorBase<NamePlusLoc>& nameParts, int colonParts,
             result.flags |= LookupResultFlags::WasImported;
         }
         else if (symbol->kind == SymbolKind::CovergroupType) {
-            symbol = symbol->as<CovergroupType>().body.find(name.text);
+            symbol = symbol->as<CovergroupType>().getBody().find(name.text);
         }
         else {
             symbol = symbol->as<Scope>().find(name.text);

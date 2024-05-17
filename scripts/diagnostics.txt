@@ -297,6 +297,7 @@ error FinalSpecifierLast "'final' specifier must come last in a list of class ov
 error FinalWithPure "'final' specifier cannot be used with a pure virtual member"
 error StaticFuncSpecifier "static members cannot have override specifiers"
 error OverridingExtends "'{}' is marked 'extends' but doesn't override a base class virtual member"
+error DerivedCovergroupNotInClass "covergroup inheritance can only be used inside a class"
 warning dpi-pure-task DPIPureTask "DPI tasks cannot be marked 'pure'"
 warning nonstandard-generate NonStandardGenBlock "standalone generate block without loop or condition is not allowed in SystemVerilog"
 warning empty-pattern EmptyAssignmentPattern "empty assignment patterns are disallowed by SystemVerilog"

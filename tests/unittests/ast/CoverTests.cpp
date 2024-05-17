@@ -607,3 +607,50 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("v1800-2023: derived covergroups") {
+    auto options = optionsFor(LanguageVersion::v1800_2023);
+    auto tree = SyntaxTree::fromText(R"(
+class base;
+    enum {red, green, blue} color;
+
+    covergroup g1 (bit [3:0] a) with function sample(bit b);
+        option.weight = 10;
+        option.per_instance = 1;
+        coverpoint a;
+        coverpoint b;
+        c: coverpoint color;
+    endgroup
+
+    function new();
+        g1 = new(3);
+    endfunction
+endclass
+
+class derived extends base;
+    bit d;
+    covergroup extends g1;
+        option.weight = 1;  // overrides the weight from base g1
+                            // uses per_instance=1 from base g1
+        c: coverpoint color // overrides the c coverpoint in base g1
+        {
+            ignore_bins ignore = {blue};
+        }
+        coverpoint d;       // adds new coverpoint
+        cross a, d;         // crosses new coverpoint with inherited one
+        q: coverpoint a[1:0];
+    endgroup :g1
+
+    function new();
+        super.new();
+        g1 = new(4);
+        g1.sample(1);
+    endfunction
+endclass
+)",
+                                     options);
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

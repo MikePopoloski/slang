@@ -303,8 +303,8 @@ void registerTypes(py::module_& m) {
         .def_property_readonly("constraints", &ConstraintBlockSymbol::getConstraints);
 
     py::class_<CovergroupType, Type, Scope>(m, "CovergroupType")
-        .def_readonly("arguments", &CovergroupType::arguments)
-        .def_readonly("sampleArguments", &CovergroupType::sampleArguments)
-        .def_property_readonly("body", [](const CovergroupType& self) { return &self.body; })
+        .def_property_readonly("arguments", &CovergroupType::getArguments)
+        .def_property_readonly("body", [](const CovergroupType& self) { return &self.getBody(); })
+        .def_property_readonly("baseGroup", &CovergroupType::getBaseGroup)
         .def_property_readonly("coverageEvent", &CovergroupType::getCoverageEvent);
 }

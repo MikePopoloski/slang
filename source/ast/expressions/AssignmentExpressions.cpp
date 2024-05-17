@@ -1280,7 +1280,7 @@ Expression& NewCovergroupExpression::fromSyntax(Compilation& compilation,
     auto& coverType = assignmentTarget.getCanonicalType().as<CovergroupType>();
 
     SmallVector<const Expression*> args;
-    if (!CallExpression::bindArgs(syntax.argList, coverType.arguments, "new"sv, range, context,
+    if (!CallExpression::bindArgs(syntax.argList, coverType.getArguments(), "new"sv, range, context,
                                   args, /* isBuiltInMethod */ false)) {
         return badExpr(compilation, nullptr);
     }

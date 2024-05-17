@@ -11,6 +11,7 @@
 #include "slang/ast/TimingControl.h"
 #include "slang/ast/expressions/AssignmentExpressions.h"
 #include "slang/ast/symbols/ClassSymbols.h"
+#include "slang/ast/symbols/MemberSymbols.h"
 #include "slang/ast/symbols/SubroutineSymbols.h"
 #include "slang/ast/symbols/SymbolBuilders.h"
 #include "slang/ast/symbols/VariableSymbols.h"
@@ -182,6 +183,8 @@ CovergroupBodySymbol::CovergroupBodySymbol(Compilation& comp, SourceLocation loc
     addProperty(*this, "type_option"sv, VariableLifetime::Static, type_option);
 
     addBuiltInMethods(*this, true);
+
+    lastBuiltinMember = getLastMember();
 }
 
 void CovergroupBodySymbol::serializeTo(ASTSerializer& serializer) const {
@@ -212,41 +215,41 @@ const CovergroupType& CovergroupType::fromSyntax(const Scope& scope,
     result->setSyntax(syntax);
     result->setAttributes(scope, syntax.attributes);
 
-    if (syntax.portList) {
-        SmallVector<const FormalArgumentSymbol*> args;
-        SubroutineSymbol::buildArguments(*result, scope, *syntax.portList,
-                                         VariableLifetime::Automatic, args);
-        result->arguments = args.copy(comp);
-
-        for (auto arg : result->arguments) {
-            if (arg->direction == ArgumentDirection::Out ||
-                arg->direction == ArgumentDirection::InOut) {
-                scope.addDiag(diag::CovergroupOutArg, arg->location);
-            }
-        }
-    }
-
-    MethodBuilder sample(comp, "sample"sv, comp.getVoidType(), SubroutineKind::Function);
-    body->addMember(sample.symbol);
-
-    if (syntax.event && syntax.event->kind == SyntaxKind::WithFunctionSample) {
-        auto& wfs = syntax.event->as<WithFunctionSampleSyntax>();
-        if (wfs.portList) {
+    if (!syntax.extends) {
+        if (syntax.portList) {
             SmallVector<const FormalArgumentSymbol*> args;
-            SubroutineSymbol::buildArguments(*result, scope, *wfs.portList,
+            SubroutineSymbol::buildArguments(*result, scope, *syntax.portList,
                                              VariableLifetime::Automatic, args);
+            result->arguments = args.copy(comp);
 
-            result->sampleArguments = args.copy(comp);
-
-            for (auto arg : result->sampleArguments) {
+            for (auto arg : result->arguments) {
                 if (arg->direction == ArgumentDirection::Out ||
                     arg->direction == ArgumentDirection::InOut) {
                     scope.addDiag(diag::CovergroupOutArg, arg->location);
                 }
+            }
+        }
 
-                const_cast<FormalArgumentSymbol*>(arg)->flags |=
-                    VariableFlags::CoverageSampleFormal;
-                sample.copyArg(*arg);
+        MethodBuilder sample(comp, "sample"sv, comp.getVoidType(), SubroutineKind::Function);
+        body->addMember(sample.symbol);
+
+        if (syntax.event && syntax.event->kind == SyntaxKind::WithFunctionSample) {
+            auto& wfs = syntax.event->as<WithFunctionSampleSyntax>();
+            if (wfs.portList) {
+                SmallVector<const FormalArgumentSymbol*> args;
+                SubroutineSymbol::buildArguments(*result, scope, *wfs.portList,
+                                                 VariableLifetime::Automatic, args);
+
+                for (auto arg : args) {
+                    if (arg->direction == ArgumentDirection::Out ||
+                        arg->direction == ArgumentDirection::InOut) {
+                        scope.addDiag(diag::CovergroupOutArg, arg->location);
+                    }
+
+                    const_cast<FormalArgumentSymbol*>(arg)->flags |=
+                        VariableFlags::CoverageSampleFormal;
+                    sample.copyArg(*arg);
+                }
             }
         }
     }
@@ -271,9 +274,83 @@ const CovergroupType& CovergroupType::fromSyntax(const Scope& scope,
         var->setType(*result);
         var->flags |= VariableFlags::Const;
         classProperty = var;
+
+        if (syntax.extends)
+            result->setNeedElaboration();
     }
 
     return *result;
+}
+
+void CovergroupType::inheritMembers(function_ref<void(const Symbol&)> insertCB) const {
+    auto syntax = getSyntax();
+    auto scope = getParentScope();
+    SLANG_ASSERT(syntax && scope);
+
+    // If this covergroup doesn't inherit from anything then there's nothing to do.
+    auto& cds = syntax->as<CovergroupDeclarationSyntax>();
+    if (!cds.extends)
+        return;
+
+    auto& comp = scope->getCompilation();
+    baseGroup = &comp.getErrorType();
+
+    // Find the base class's group from which we are inheriting.
+    auto baseClass = scope->asSymbol().as<ClassType>().getBaseClass();
+    if (!baseClass || baseClass->kind != SymbolKind::ClassType)
+        return;
+
+    auto candidateBase = baseClass->as<ClassType>().find(cds.name.valueText());
+    if (candidateBase && candidateBase->kind == SymbolKind::ClassProperty) {
+        auto& ct = candidateBase->as<ClassPropertySymbol>().getType();
+        if (ct.kind == SymbolKind::CovergroupType)
+            baseGroup = &ct;
+    }
+
+    if (baseGroup->isError()) {
+        // TODO: error
+        return;
+    }
+
+    auto& baseCG = baseGroup->as<CovergroupType>();
+    arguments = baseCG.getArguments();
+    event = baseCG.event;
+
+    // We have the base group -- inherit all of the members from it.
+    auto& scopeNameMap = body.getUnelaboratedNameMap();
+    for (auto& member : baseCG.getBody().members()) {
+        if (member.name.empty())
+            continue;
+
+        // Don't inherit if the member is already overridden.
+        if (auto it = scopeNameMap.find(member.name); it != scopeNameMap.end())
+            continue;
+
+        // If the symbol itself was already inherited, create a new wrapper around
+        // it for our own scope.
+        const Symbol* toWrap = &member;
+        if (member.kind == SymbolKind::TransparentMember)
+            toWrap = &member.as<TransparentMemberSymbol>().wrapped;
+
+        // All symbols get inserted into the beginning of the scope using the
+        // provided insertion callback. We insert them as TransparentMemberSymbols
+        // so that we can trace a path back to the actual location they are declared.
+        auto wrapper = comp.emplace<TransparentMemberSymbol>(*toWrap);
+        body.insertMember(wrapper, body.lastBuiltinMember, true, false);
+    }
+
+    // Also inherit any argument symbols are in the base covergroup type itself,
+    // as opposed to the body which we already looked at above.
+    for (auto& member : baseCG.members()) {
+        const Symbol* toWrap = &member;
+        if (member.kind == SymbolKind::TransparentMember)
+            toWrap = &member.as<TransparentMemberSymbol>().wrapped;
+
+        if (toWrap->kind == SymbolKind::FormalArgument) {
+            auto wrapper = comp.emplace<TransparentMemberSymbol>(*toWrap);
+            insertCB(*wrapper);
+        }
+    }
 }
 
 const TimingControl* CovergroupType::getCoverageEvent() const {

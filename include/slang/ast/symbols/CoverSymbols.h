@@ -12,6 +12,7 @@
 #include "slang/ast/types/DeclaredType.h"
 #include "slang/ast/types/Type.h"
 #include "slang/syntax/SyntaxFwd.h"
+#include "slang/util/Function.h"
 
 namespace slang::ast {
 
@@ -50,31 +51,56 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::CovergroupBody; }
+
+private:
+    friend class CovergroupType;
+
+    const Symbol* lastBuiltinMember = nullptr;
 };
 
 /// Represents a covergroup definition type.
 class SLANG_EXPORT CovergroupType : public Type, public Scope {
 public:
-    std::span<const FormalArgumentSymbol* const> arguments;
-    std::span<const FormalArgumentSymbol* const> sampleArguments;
-    const CovergroupBodySymbol& body;
+    using ArgList = std::span<const FormalArgumentSymbol* const>;
 
     CovergroupType(Compilation& compilation, std::string_view name, SourceLocation loc,
                    const CovergroupBodySymbol& body);
 
-    static const CovergroupType& fromSyntax(const Scope& scope,
-                                            const syntax::CovergroupDeclarationSyntax& syntax,
-                                            const Symbol*& classProperty);
+    ArgList getArguments() const {
+        ensureElaborated();
+        return arguments;
+    }
+
+    const CovergroupBodySymbol& getBody() const {
+        ensureElaborated();
+        return body;
+    }
+
+    const Type* getBaseGroup() const {
+        ensureElaborated();
+        return baseGroup;
+    }
 
     const TimingControl* getCoverageEvent() const;
     ConstantValue getDefaultValueImpl() const;
 
     void serializeTo(ASTSerializer& serializer) const;
 
+    static const CovergroupType& fromSyntax(const Scope& scope,
+                                            const syntax::CovergroupDeclarationSyntax& syntax,
+                                            const Symbol*& classProperty);
+
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::CovergroupType; }
 
 private:
+    friend class Scope;
+
+    void inheritMembers(function_ref<void(const Symbol&)> insertCB) const;
+
+    const CovergroupBodySymbol& body;
+    mutable ArgList arguments;
     mutable std::optional<const TimingControl*> event;
+    mutable const Type* baseGroup = nullptr;
 };
 
 class BinsSelectExpr;

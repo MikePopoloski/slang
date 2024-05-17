@@ -1842,6 +1842,7 @@ token closeParen
 
 CovergroupDeclaration base=Member
 token covergroup
+token extends
 token name
 FunctionPortList? portList
 SyntaxNode? event

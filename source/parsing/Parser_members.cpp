@@ -292,7 +292,7 @@ MemberSyntax* Parser::parseMember(SyntaxKind parentKind, bool& anyLocalModules) 
             return &parseFunctionDeclaration(attributes, SyntaxKind::FunctionDeclaration,
                                              TokenKind::EndFunctionKeyword, parentKind);
         case TokenKind::CoverGroupKeyword:
-            return &parseCovergroupDeclaration(attributes);
+            return &parseCovergroupDeclaration(attributes, /* inClass */ false);
         case TokenKind::ClassKeyword:
             return &parseClassDeclaration(attributes, Token());
         case TokenKind::VirtualKeyword:
@@ -1428,7 +1428,7 @@ MemberSyntax* Parser::parseClassMember(bool isIfaceClass, bool hasBaseClass) {
             return &result;
         }
         case TokenKind::CoverGroupKeyword: {
-            auto& result = parseCovergroupDeclaration(attributes);
+            auto& result = parseCovergroupDeclaration(attributes, /* inClass */ true);
             errorIfIface(result);
             return &result;
         }
@@ -1945,8 +1945,9 @@ MemberSyntax* Parser::parseCoverCrossMember() {
                                   expect(TokenKind::Semicolon));
 }
 
-CovergroupDeclarationSyntax& Parser::parseCovergroupDeclaration(AttrList attributes) {
+CovergroupDeclarationSyntax& Parser::parseCovergroupDeclaration(AttrList attributes, bool inClass) {
     auto keyword = consume();
+    auto extends = consumeIf(TokenKind::ExtendsKeyword);
     auto name = expect(TokenKind::Identifier);
     auto portList = parseFunctionPortList({});
 
@@ -1984,6 +1985,23 @@ CovergroupDeclarationSyntax& Parser::parseCovergroupDeclaration(AttrList attribu
             break;
     }
 
+    if (extends) {
+        if (parseOptions.languageVersion < LanguageVersion::v1800_2023) {
+            addDiag(diag::WrongLanguageVersion, extends.range())
+                << toString(parseOptions.languageVersion);
+        }
+
+        if (portList)
+            addDiag(diag::ExpectedToken, portList->getFirstToken().location()) << ";"sv;
+        else if (event)
+            addDiag(diag::ExpectedToken, event->getFirstToken().location()) << ";"sv;
+
+        if (!inClass)
+            addDiag(diag::DerivedCovergroupNotInClass, extends.range());
+
+        // TODO: check no base
+    }
+
     auto semi = expect(TokenKind::Semicolon);
 
     Token endGroup;
@@ -1994,8 +2012,8 @@ CovergroupDeclarationSyntax& Parser::parseCovergroupDeclaration(AttrList attribu
     auto endBlockName = parseNamedBlockClause();
     checkBlockNames(name, endBlockName);
 
-    return factory.covergroupDeclaration(attributes, keyword, name, portList, event, semi, members,
-                                         endGroup, endBlockName);
+    return factory.covergroupDeclaration(attributes, keyword, extends, name, portList, event, semi,
+                                         members, endGroup, endBlockName);
 }
 
 static bool checkConstraintName(const NameSyntax& name) {
