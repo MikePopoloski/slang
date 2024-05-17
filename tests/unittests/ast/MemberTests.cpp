@@ -2265,7 +2265,7 @@ property myprop(k);
 endproperty
 
 genvar k;
-for (k=0; k < 4; k++) begin: m
+for (k=1; k < 4; k++) begin: m
     if (A)
         label1: assert property(myprop(k));
     else

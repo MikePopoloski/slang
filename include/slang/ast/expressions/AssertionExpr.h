@@ -7,6 +7,10 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include <optional>
+#include <set>
+#include <utility>
+
 #include "slang/ast/ASTSerializer.h"
 #include "slang/ast/Expression.h"
 #include "slang/ast/TimingControl.h"
@@ -67,6 +71,7 @@ SLANG_ENUM(BinaryAssertionOperator, OP)
 
 class ASTContext;
 class CallExpression;
+struct SequenceRange;
 
 /// The base class for assertion expressions (sequences and properties).
 class SLANG_EXPORT AssertionExpr {
@@ -91,12 +96,22 @@ public:
     /// and false otherwise.
     bool admitsEmpty() const;
 
+    bool isAdmitsOnlyEmpty() const { return admitsOnlyEmpty; }
+
+    /// Returns true if this is a sequence expression that admits no match,
+    /// and false otherwise.
+    bool admitsNoMatch() const;
+
+    /// Compute possible clock ticks length of sequence under assertion expression
+    std::optional<SequenceRange> computeSequenceLength() const;
+
     static const AssertionExpr& bind(const syntax::SequenceExprSyntax& syntax,
                                      const ASTContext& context, bool allowDisable = false);
 
     static const AssertionExpr& bind(const syntax::PropertyExprSyntax& syntax,
                                      const ASTContext& context, bool allowDisable = false,
-                                     bool allowSeqAdmitEmpty = false);
+                                     bool isFollowedByProp = false, bool isOverlapImpl = false,
+                                     bool isNonOverlapImpl = false);
 
     static const AssertionExpr& bind(const syntax::PropertySpecSyntax& syntax,
                                      const ASTContext& context);
@@ -155,6 +170,10 @@ protected:
     explicit AssertionExpr(AssertionExprKind kind) : kind(kind) {}
 
     static AssertionExpr& badExpr(Compilation& compilation, const AssertionExpr* expr);
+
+    /// Store `true` if sequence admits only empty matches.
+    /// Purpose for `mutable` is to update it in `admitsEmptyImpl` `const` methods.
+    mutable bool admitsOnlyEmpty = false;
 };
 
 /// @brief Represents an invalid expression
@@ -170,6 +189,10 @@ public:
         AssertionExpr(AssertionExprKind::Invalid), child(child) {}
 
     bool admitsEmptyImpl() const { return false; }
+
+    bool admitsNoMatchImpl() const { return false; }
+
+    std::optional<SequenceRange> computeSequenceLengthImpl() const;
 
     static bool isKind(AssertionExprKind kind) { return kind == AssertionExprKind::Invalid; }
 
@@ -190,6 +213,22 @@ struct SequenceRange {
                                     const ASTContext& context, bool allowUnbounded);
 
     void serializeTo(ASTSerializer& serializer) const;
+
+    bool operator!=(const SequenceRange& right) const;
+
+    bool operator==(const SequenceRange& right) const;
+
+    bool operator>(const SequenceRange& right) const;
+
+    bool operator<(const SequenceRange& right) const;
+
+    bool operator>=(const SequenceRange& right) const;
+
+    bool operator<=(const SequenceRange& right) const;
+
+    bool isIntersect(const SequenceRange& other) const;
+
+    bool isWithin(const SequenceRange& other) const;
 };
 
 /// Encodes a repetition of some sub-sequence.
@@ -221,7 +260,10 @@ struct SequenceRepetition {
         No,
 
         /// The sequence may or may not admit an empty match.
-        Depends
+        Depends,
+
+        /// The sequence admits only empty matches and nothing else.
+        Only,
     };
 
     /// Classifies the repetition as admitting an empty match or not.
@@ -239,11 +281,20 @@ public:
     /// An optional repetition of the sequence.
     std::optional<SequenceRepetition> repetition;
 
-    SimpleAssertionExpr(const Expression& expr, std::optional<SequenceRepetition> repetition) :
-        AssertionExpr(AssertionExprKind::Simple), expr(expr), repetition(repetition) {}
+    /// Store `true` if sequence exression is can be evaluated as constant `false` (`0`).
+    bool isNullExpr;
+
+    SimpleAssertionExpr(const Expression& expr, std::optional<SequenceRepetition> repetition,
+                        bool isNullExpr = false) :
+        AssertionExpr(AssertionExprKind::Simple),
+        expr(expr), repetition(repetition), isNullExpr(isNullExpr) {}
 
     void requireSequence(const ASTContext& context, DiagCode code) const;
     bool admitsEmptyImpl() const;
+
+    bool admitsNoMatchImpl() const;
+
+    std::optional<SequenceRange> computeSequenceLengthImpl() const;
 
     static AssertionExpr& fromSyntax(const syntax::SimpleSequenceExprSyntax& syntax,
                                      const ASTContext& context, bool allowDisable);
@@ -278,6 +329,10 @@ public:
 
     bool admitsEmptyImpl() const;
 
+    bool admitsNoMatchImpl() const;
+
+    std::optional<SequenceRange> computeSequenceLengthImpl() const;
+
     static AssertionExpr& fromSyntax(const syntax::DelayedSequenceExprSyntax& syntax,
                                      const ASTContext& context);
 
@@ -311,6 +366,12 @@ public:
         matchItems(matchItems) {}
 
     bool admitsEmptyImpl() const;
+
+    bool admitsNoMatchImpl() const { return expr.admitsNoMatch(); };
+
+    std::optional<SequenceRange> computeSequenceLengthImpl() const {
+        return expr.computeSequenceLength();
+    }
 
     static AssertionExpr& fromSyntax(const syntax::ParenthesizedSequenceExprSyntax& syntax,
                                      const ASTContext& context);
@@ -347,6 +408,12 @@ public:
 
     bool admitsEmptyImpl() const { return false; }
 
+    bool admitsNoMatchImpl() const { return expr.admitsNoMatch(); };
+
+    std::optional<SequenceRange> computeSequenceLengthImpl() const {
+        return expr.computeSequenceLength();
+    }
+
     static AssertionExpr& fromSyntax(const syntax::UnaryPropertyExprSyntax& syntax,
                                      const ASTContext& context);
 
@@ -382,6 +449,10 @@ public:
     void requireSequence(const ASTContext& context, DiagCode code) const;
     bool admitsEmptyImpl() const;
 
+    bool admitsNoMatchImpl() const;
+
+    std::optional<SequenceRange> computeSequenceLengthImpl() const;
+
     static AssertionExpr& fromSyntax(const syntax::BinarySequenceExprSyntax& syntax,
                                      const ASTContext& context);
 
@@ -414,6 +485,12 @@ public:
 
     bool admitsEmptyImpl() const;
 
+    bool admitsNoMatchImpl() const { return seq.admitsNoMatch(); }
+
+    std::optional<SequenceRange> computeSequenceLengthImpl() const {
+        return seq.computeSequenceLength();
+    }
+
     static AssertionExpr& fromSyntax(const syntax::FirstMatchSequenceExprSyntax& syntax,
                                      const ASTContext& context);
 
@@ -442,6 +519,12 @@ public:
         AssertionExpr(AssertionExprKind::Clocking), clocking(clocking), expr(expr) {}
 
     bool admitsEmptyImpl() const;
+
+    bool admitsNoMatchImpl() const { return false; }
+
+    std::optional<SequenceRange> computeSequenceLengthImpl() const {
+        return expr.computeSequenceLength();
+    }
 
     static AssertionExpr& fromSyntax(const syntax::ClockingSequenceExprSyntax& syntax,
                                      const ASTContext& context);
@@ -480,6 +563,12 @@ public:
 
     bool admitsEmptyImpl() const { return false; }
 
+    bool admitsNoMatchImpl() const { return expr.admitsNoMatch(); }
+
+    std::optional<SequenceRange> computeSequenceLengthImpl() const {
+        return expr.computeSequenceLength();
+    }
+
     static AssertionExpr& fromSyntax(const syntax::StrongWeakPropertyExprSyntax& syntax,
                                      const ASTContext& context);
 
@@ -515,6 +604,10 @@ public:
 
     bool admitsEmptyImpl() const { return false; }
 
+    bool admitsNoMatchImpl() const { return false; }
+
+    std::optional<SequenceRange> computeSequenceLengthImpl() const { return expr.computeSequenceLength(); };
+
     static AssertionExpr& fromSyntax(const syntax::AcceptOnPropertyExprSyntax& syntax,
                                      const ASTContext& context);
 
@@ -547,6 +640,10 @@ public:
         elseExpr(elseExpr) {}
 
     bool admitsEmptyImpl() const { return false; }
+
+    bool admitsNoMatchImpl() const { return false; };
+
+    std::optional<SequenceRange> computeSequenceLengthImpl() const;
 
     static AssertionExpr& fromSyntax(const syntax::ConditionalPropertyExprSyntax& syntax,
                                      const ASTContext& context);
@@ -587,10 +684,13 @@ public:
 
     CaseAssertionExpr(const Expression& expr, std::span<const ItemGroup> items,
                       const AssertionExpr* defaultCase) :
-        AssertionExpr(AssertionExprKind::Case), expr(expr), items(items), defaultCase(defaultCase) {
-    }
+        AssertionExpr(AssertionExprKind::Case), expr(expr), items(items), defaultCase(defaultCase) {}
 
     bool admitsEmptyImpl() const { return false; }
+
+    bool admitsNoMatchImpl() const { return false; }
+
+    std::optional<SequenceRange> computeSequenceLengthImpl() const;
 
     static AssertionExpr& fromSyntax(const syntax::CasePropertyExprSyntax& syntax,
                                      const ASTContext& context);
@@ -626,6 +726,10 @@ public:
         AssertionExpr(AssertionExprKind::DisableIff), condition(condition), expr(expr) {}
 
     bool admitsEmptyImpl() const { return false; }
+
+    bool admitsNoMatchImpl() const { return false; };
+
+    std::optional<SequenceRange> computeSequenceLengthImpl() const;
 
     static AssertionExpr& fromSyntax(const syntax::DisableIffSyntax& syntax,
                                      const AssertionExpr& expr, const ASTContext& context);
