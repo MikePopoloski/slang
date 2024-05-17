@@ -993,7 +993,7 @@ const Type* GenericClassDefSymbol::getSpecializationImpl(
         }
     }
 
-    SpecializationKey key(*this, paramValues.copy(comp), typeParams.copy(comp));
+    detail::ClassSpecializationKey key(*this, paramValues.copy(comp), typeParams.copy(comp));
     if (auto it = specMap.find(key); it != specMap.end())
         return it->second;
 
@@ -1037,9 +1037,11 @@ void GenericClassDefSymbol::serializeTo(ASTSerializer& serializer) const {
     serializer.endArray();
 }
 
-GenericClassDefSymbol::SpecializationKey::SpecializationKey(
-    const GenericClassDefSymbol& def, std::span<const ConstantValue* const> paramValues,
-    std::span<const Type* const> typeParams) :
+namespace detail {
+
+ClassSpecializationKey::ClassSpecializationKey(const GenericClassDefSymbol& def,
+                                               std::span<const ConstantValue* const> paramValues,
+                                               std::span<const Type* const> typeParams) :
     definition(&def), paramValues(paramValues), typeParams(typeParams) {
 
     // Precompute the hash.
@@ -1052,7 +1054,7 @@ GenericClassDefSymbol::SpecializationKey::SpecializationKey(
     savedHash = h;
 }
 
-bool GenericClassDefSymbol::SpecializationKey::operator==(const SpecializationKey& other) const {
+bool ClassSpecializationKey::operator==(const ClassSpecializationKey& other) const {
     if (savedHash != other.savedHash || definition != other.definition ||
         paramValues.size() != other.paramValues.size() ||
         typeParams.size() != other.typeParams.size()) {
@@ -1089,6 +1091,8 @@ bool GenericClassDefSymbol::SpecializationKey::operator==(const SpecializationKe
 
     return true;
 }
+
+} // namespace detail
 
 ConstraintBlockSymbol::ConstraintBlockSymbol(Compilation& c, std::string_view name,
                                              SourceLocation loc) :
