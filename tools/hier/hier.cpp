@@ -33,8 +33,10 @@ int main(int argc, char** argv) {
                        "<inst-prefix>");
     driver.cmdLine.add("--inst-regex", instRegex,
                        "Show only instances matched by regex (scans whole tree)", "<inst-regex>");
-    driver.cmdLine.add("--custom-format", customFormat,
-                       "Use libfmt-style strings to format output with {inst}, {module}, {file} as argument names", "<fmt::format string>");
+    driver.cmdLine.add(
+        "--custom-format", customFormat,
+        "Use libfmt-style strings to format output with {inst}, {module}, {file} as argument names",
+        "<fmt::format string>");
 
     if (!driver.parseCommandLine(argc, argv))
         return 1;
@@ -89,9 +91,12 @@ int main(int argc, char** argv) {
                     auto s_module = type.getDefinition().name;
                     auto s_file = sourceManager->getFileName(type.getDefinition().location);
                     if (customFormat.has_value())
-                        OS::print(fmt::format(fmt::runtime(customFormat.value()), fmt::arg("module", s_module), fmt::arg("inst", s_inst), fmt::arg("file", s_file)));
+                        OS::print(fmt::format(fmt::runtime(customFormat.value()),
+                                              fmt::arg("module", s_module),
+                                              fmt::arg("inst", s_inst), fmt::arg("file", s_file)));
                     else
-                        OS::print(fmt::format("Module=\"{}\" Instance=\"{}\" File=\"{}\" ", s_module, s_inst, s_file));
+                        OS::print(fmt::format("Module=\"{}\" Instance=\"{}\" File=\"{}\" ",
+                                              s_module, s_inst, s_file));
                     int size = type.body.getParameters().size();
                     if (size && params.value_or(false)) {
                         OS::print(fmt::format("Parameters: "));
