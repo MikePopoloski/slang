@@ -635,8 +635,11 @@ std::optional<SequenceRange> SimpleAssertionExpr::computeSequenceLengthImpl() co
             return aie.body.computeSequenceLength();
     }
 
+    SequenceRange res;
     // If there is only empty match sequence then it's have a zero delay length
-    return (checkNondegeneracy().has(NondegeneracyStatus::AcceptsOnlyEmpty)) ? SequenceRange(0, 0) : SequenceRange(1, 1);
+    res.min = (checkNondegeneracy().has(NondegeneracyStatus::AcceptsOnlyEmpty)) ? 0 : 1;
+    res.max = res.min;
+    return res;
 }
 
 void SimpleAssertionExpr::serializeTo(ASTSerializer& serializer) const {
@@ -775,7 +778,10 @@ std::optional<SequenceRange> SequenceConcatExpr::computeSequenceLengthImpl() con
                 NondegeneracyStatus::AcceptsOnlyEmpty);
     }
 
-    return SequenceRange(delayMin, delayMax);
+    SequenceRange res;
+    res.min = delayMin;
+    res.max = delayMax;
+    return res;
 }
 
 void SequenceConcatExpr::serializeTo(ASTSerializer& serializer) const {
