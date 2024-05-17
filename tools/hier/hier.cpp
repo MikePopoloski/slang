@@ -34,7 +34,7 @@ int main(int argc, char** argv) {
     driver.cmdLine.add("--inst-regex", instRegex,
                        "Show only instances matched by regex (scans whole tree)", "<inst-regex>");
     driver.cmdLine.add("--custom-format", customFormat,
-                       "Use libfmt style strings to format output. argument names are inst, module, file", "<fmt::format string>");
+                       "Use libfmt-style strings to format output with {inst}, {module}, {file} as argument names", "<fmt::format string>");
 
     if (!driver.parseCommandLine(argc, argv))
         return 1;
