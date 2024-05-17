@@ -300,7 +300,8 @@ void CovergroupType::inheritMembers(function_ref<void(const Symbol&)> insertCB) 
     if (!baseClass || baseClass->kind != SymbolKind::ClassType)
         return;
 
-    auto candidateBase = baseClass->as<ClassType>().find(cds.name.valueText());
+    auto baseName = cds.name.valueText();
+    auto candidateBase = baseClass->as<ClassType>().find(baseName);
     if (candidateBase && candidateBase->kind == SymbolKind::ClassProperty) {
         auto& ct = candidateBase->as<ClassPropertySymbol>().getType();
         if (ct.kind == SymbolKind::CovergroupType)
@@ -308,7 +309,10 @@ void CovergroupType::inheritMembers(function_ref<void(const Symbol&)> insertCB) 
     }
 
     if (baseGroup->isError()) {
-        // TODO: error
+        if (!baseName.empty()) {
+            scope->addDiag(diag::UnknownCovergroupBase, cds.name.range())
+                << baseName << baseClass->name;
+        }
         return;
     }
 
@@ -391,6 +395,8 @@ ConstantValue CovergroupType::getDefaultValueImpl() const {
 void CovergroupType::serializeTo(ASTSerializer& serializer) const {
     if (auto ev = getCoverageEvent())
         serializer.write("event", *ev);
+    if (auto bg = getBaseGroup())
+        serializer.writeLink("baseGroup", *bg);
 }
 
 const Expression* CoverageBinSymbol::getIffExpr() const {

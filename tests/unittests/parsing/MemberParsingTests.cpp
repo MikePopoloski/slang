@@ -1437,3 +1437,25 @@ endclass
     CHECK(diagnostics[1].code == diag::FinalWithPure);
     CHECK(diagnostics[2].code == diag::StaticFuncSpecifier);
 }
+
+TEST_CASE("Covergroup inheritance parsing errors") {
+    auto& text = R"(
+class A;
+    covergroup extends cg(bit a) @b;
+    endgroup
+endclass
+
+covergroup extends foo;
+endgroup
+)";
+
+    parseCompilationUnit(text);
+
+    REQUIRE(diagnostics.size() == 6);
+    CHECK(diagnostics[0].code == diag::WrongLanguageVersion);
+    CHECK(diagnostics[1].code == diag::ExpectedToken);
+    CHECK(diagnostics[2].code == diag::ExpectedToken);
+    CHECK(diagnostics[3].code == diag::DerivedCovergroupNoBase);
+    CHECK(diagnostics[4].code == diag::WrongLanguageVersion);
+    CHECK(diagnostics[5].code == diag::DerivedCovergroupNotInClass);
+}

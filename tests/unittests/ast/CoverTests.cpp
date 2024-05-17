@@ -654,3 +654,29 @@ endclass
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Covergroup missing base") {
+    auto options = optionsFor(LanguageVersion::v1800_2023);
+    auto tree = SyntaxTree::fromText(R"(
+class base;
+    int i;
+endclass
+
+class derived extends base;
+    covergroup extends i;
+    endgroup
+
+    covergroup extends a;
+    endgroup
+endclass
+)",
+                                     options);
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::UnknownCovergroupBase);
+    CHECK(diags[1].code == diag::UnknownCovergroupBase);
+}

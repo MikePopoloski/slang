@@ -292,7 +292,8 @@ MemberSyntax* Parser::parseMember(SyntaxKind parentKind, bool& anyLocalModules) 
             return &parseFunctionDeclaration(attributes, SyntaxKind::FunctionDeclaration,
                                              TokenKind::EndFunctionKeyword, parentKind);
         case TokenKind::CoverGroupKeyword:
-            return &parseCovergroupDeclaration(attributes, /* inClass */ false);
+            return &parseCovergroupDeclaration(attributes, /* inClass */ false,
+                                               /* hasBaseClass */ false);
         case TokenKind::ClassKeyword:
             return &parseClassDeclaration(attributes, Token());
         case TokenKind::VirtualKeyword:
@@ -1428,7 +1429,7 @@ MemberSyntax* Parser::parseClassMember(bool isIfaceClass, bool hasBaseClass) {
             return &result;
         }
         case TokenKind::CoverGroupKeyword: {
-            auto& result = parseCovergroupDeclaration(attributes, /* inClass */ true);
+            auto& result = parseCovergroupDeclaration(attributes, /* inClass */ true, hasBaseClass);
             errorIfIface(result);
             return &result;
         }
@@ -1945,7 +1946,8 @@ MemberSyntax* Parser::parseCoverCrossMember() {
                                   expect(TokenKind::Semicolon));
 }
 
-CovergroupDeclarationSyntax& Parser::parseCovergroupDeclaration(AttrList attributes, bool inClass) {
+CovergroupDeclarationSyntax& Parser::parseCovergroupDeclaration(AttrList attributes, bool inClass,
+                                                                bool hasBaseClass) {
     auto keyword = consume();
     auto extends = consumeIf(TokenKind::ExtendsKeyword);
     auto name = expect(TokenKind::Identifier);
@@ -1993,13 +1995,13 @@ CovergroupDeclarationSyntax& Parser::parseCovergroupDeclaration(AttrList attribu
 
         if (portList)
             addDiag(diag::ExpectedToken, portList->getFirstToken().location()) << ";"sv;
-        else if (event)
+        if (event)
             addDiag(diag::ExpectedToken, event->getFirstToken().location()) << ";"sv;
 
         if (!inClass)
             addDiag(diag::DerivedCovergroupNotInClass, extends.range());
-
-        // TODO: check no base
+        else if (!hasBaseClass)
+            addDiag(diag::DerivedCovergroupNoBase, extends.range());
     }
 
     auto semi = expect(TokenKind::Semicolon);
