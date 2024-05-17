@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 #include "Test.h"
+
 #include "slang/diagnostics/StatementsDiags.h"
 
 TEST_CASE("Named sequences") {

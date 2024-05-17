@@ -286,8 +286,8 @@ public:
 
     SimpleAssertionExpr(const Expression& expr, std::optional<SequenceRepetition> repetition,
                         bool isNullExpr = false) :
-        AssertionExpr(AssertionExprKind::Simple),
-        expr(expr), repetition(repetition), isNullExpr(isNullExpr) {}
+        AssertionExpr(AssertionExprKind::Simple), expr(expr), repetition(repetition),
+        isNullExpr(isNullExpr) {}
 
     void requireSequence(const ASTContext& context, DiagCode code) const;
     bool admitsEmptyImpl() const;
@@ -606,7 +606,9 @@ public:
 
     bool admitsNoMatchImpl() const { return false; }
 
-    std::optional<SequenceRange> computeSequenceLengthImpl() const { return expr.computeSequenceLength(); };
+    std::optional<SequenceRange> computeSequenceLengthImpl() const {
+        return expr.computeSequenceLength();
+    };
 
     static AssertionExpr& fromSyntax(const syntax::AcceptOnPropertyExprSyntax& syntax,
                                      const ASTContext& context);
@@ -684,7 +686,8 @@ public:
 
     CaseAssertionExpr(const Expression& expr, std::span<const ItemGroup> items,
                       const AssertionExpr* defaultCase) :
-        AssertionExpr(AssertionExprKind::Case), expr(expr), items(items), defaultCase(defaultCase) {}
+        AssertionExpr(AssertionExprKind::Case), expr(expr), items(items), defaultCase(defaultCase) {
+    }
 
     bool admitsEmptyImpl() const { return false; }
 

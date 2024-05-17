@@ -376,8 +376,8 @@ struct SampledValueExprVisitor {
 
     SampledValueExprVisitor(const ASTContext& context, bool isFutureGlobal, DiagCode localVarCode,
                             DiagCode matchedCode) :
-        context(context),
-        isFutureGlobal(isFutureGlobal), localVarCode(localVarCode), matchedCode(matchedCode) {}
+        context(context), isFutureGlobal(isFutureGlobal), localVarCode(localVarCode),
+        matchedCode(matchedCode) {}
 
     template<typename T>
     void visit(const T& expr) {
