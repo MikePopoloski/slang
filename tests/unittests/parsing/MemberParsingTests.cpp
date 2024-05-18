@@ -666,7 +666,7 @@ endmodule
 
     parseCompilationUnit(text);
 
-    REQUIRE(diagnostics.size() == 15);
+    REQUIRE(diagnostics.size() == 14);
     CHECK(diagnostics[0].code == diag::InvalidEdgeDescriptor);
     CHECK(diagnostics[1].code == diag::ExpectedToken);
     CHECK(diagnostics[2].code == diag::InvalidEdgeDescriptor);
@@ -675,13 +675,12 @@ endmodule
     CHECK(diagnostics[5].code == diag::ExpectedPathOp);
     CHECK(diagnostics[6].code == diag::ExpectedPathOp);
     CHECK(diagnostics[7].code == diag::ExpectedPathOp);
-    CHECK(diagnostics[8].code == diag::UnexpectedEdgeKeyword);
+    CHECK(diagnostics[8].code == diag::MultipleParallelTerminals);
     CHECK(diagnostics[9].code == diag::MultipleParallelTerminals);
-    CHECK(diagnostics[10].code == diag::MultipleParallelTerminals);
-    CHECK(diagnostics[11].code == diag::WrongSpecifyDelayCount);
-    CHECK(diagnostics[12].code == diag::IfNoneEdgeSensitive);
-    CHECK(diagnostics[13].code == diag::TooManyEdgeDescriptors);
-    CHECK(diagnostics[14].code == diag::EdgeDescWrongKeyword);
+    CHECK(diagnostics[10].code == diag::WrongSpecifyDelayCount);
+    CHECK(diagnostics[11].code == diag::IfNoneEdgeSensitive);
+    CHECK(diagnostics[12].code == diag::TooManyEdgeDescriptors);
+    CHECK(diagnostics[13].code == diag::EdgeDescWrongKeyword);
 }
 
 TEST_CASE("PATHPULSE$ specparams") {

@@ -3346,10 +3346,6 @@ PathDeclarationSyntax& Parser::parsePathDeclaration() {
     else {
         auto outputs = parsePathTerminals();
         suffix = &factory.simplePathSuffix(outputs);
-
-        if (edge)
-            addDiag(diag::UnexpectedEdgeKeyword, edge.range());
-
         checkTerminals(outputs, isFull);
     }
 
