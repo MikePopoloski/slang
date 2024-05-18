@@ -839,6 +839,7 @@ CoverpointSymbol& CoverpointSymbol::fromImplicit(const Scope& scope,
     auto& comp = scope.getCompilation();
     auto result = comp.emplace<CoverpointSymbol>(comp, syntax.identifier.valueText(), loc);
 
+    result->isImplicit = true;
     result->declaredType.setTypeSyntax(comp.createEmptyTypeSyntax(loc));
     result->declaredType.setInitializerSyntax(syntax, loc);
     return *result;
@@ -863,10 +864,13 @@ const Expression* CoverpointSymbol::getIffExpr() const {
 
 void CoverpointSymbol::checkBins() const {
     if (getType().isFloating()) {
-        if (membersOfType<CoverageBinSymbol>().empty()) {
-            auto scope = getParentScope();
-            SLANG_ASSERT(scope);
+        auto scope = getParentScope();
+        SLANG_ASSERT(scope);
 
+        if (isImplicit && !name.empty()) {
+            scope->addDiag(diag::RealCoverpointImplicit, location) << name;
+        }
+        else if (membersOfType<CoverageBinSymbol>().empty()) {
             if (scope->getCompilation().languageVersion() >= LanguageVersion::v1800_2023)
                 scope->addDiag(diag::RealCoverpointBins, location);
         }

@@ -213,6 +213,7 @@ public:
 
 private:
     mutable std::optional<const Expression*> iffExpr;
+    bool isImplicit = false;
 };
 
 /// Represents the body of a cover cross type, separated out because the

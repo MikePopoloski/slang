@@ -531,6 +531,7 @@ error RealCoverpointDefaultArray "default bin for coverpoint of real expression 
 error RealCoverpointWithExpr "'with' expressions are not allowed for bins of a real type"
 error RealCoverpointTransBins "coverpoints of real expressions cannot specify transition bins"
 error RealCoverpointWildcardBins "coverpoints of real expressions cannot be marked 'wildcard'"
+error RealCoverpointImplicit "cannot declare implicit coverpoint for real value '{}'"
 error FatalTask "$fatal encountered{}"
 error ErrorTask "$error encountered{}"
 error StaticAssert "static assertion failed{}"

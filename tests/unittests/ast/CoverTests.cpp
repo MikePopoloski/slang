@@ -726,7 +726,7 @@ endgroup
 TEST_CASE("v1800-2023: real coverpoint errors") {
     auto options = optionsFor(LanguageVersion::v1800_2023);
     auto tree = SyntaxTree::fromText(R"(
-real r;
+real r, q;
 covergroup g;
     coverpoint r;
 
@@ -735,6 +735,8 @@ covergroup g;
         wildcard bins b = {[1:$]} with (item == 1.0);
         bins c = (1.0 => 2.0 => 3.0);
     }
+
+    cross r, q;
 endgroup
 )",
                                      options);
@@ -743,10 +745,11 @@ endgroup
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 5);
+    REQUIRE(diags.size() == 6);
     CHECK(diags[0].code == diag::RealCoverpointBins);
     CHECK(diags[1].code == diag::RealCoverpointDefaultArray);
     CHECK(diags[2].code == diag::RealCoverpointWildcardBins);
     CHECK(diags[3].code == diag::RealCoverpointWithExpr);
     CHECK(diags[4].code == diag::RealCoverpointTransBins);
+    CHECK(diags[5].code == diag::RealCoverpointImplicit);
 }
