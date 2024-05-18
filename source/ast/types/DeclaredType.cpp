@@ -224,6 +224,7 @@ static bool isValidForIfaceVar(const Type& type) {
 }
 
 void DeclaredType::checkType(const ASTContext& context) const {
+    auto lv = context.getCompilation().languageVersion();
     uint32_t masked = (flags & DeclaredTypeFlags::NeedsTypeCheck).bits();
     SLANG_ASSERT(std::popcount(masked) == 1);
 
@@ -252,7 +253,7 @@ void DeclaredType::checkType(const ASTContext& context) const {
             break;
         case uint32_t(DeclaredTypeFlags::Rand): {
             RandMode mode = parent.getRandMode();
-            if (!type->isValidForRand(mode, context.getCompilation().languageVersion())) {
+            if (!type->isValidForRand(mode, lv)) {
                 auto& diag = context.addDiag(diag::InvalidRandType, parent.location) << *type;
                 if (mode == RandMode::Rand)
                     diag << "rand"sv;
@@ -277,8 +278,8 @@ void DeclaredType::checkType(const ASTContext& context) const {
                 context.addDiag(diag::AssertionExprType, parent.location) << *type;
             break;
         case uint32_t(DeclaredTypeFlags::CoverageType):
-            if (!type->isIntegral())
-                context.addDiag(diag::NonIntegralCoverageExpr, parent.location) << *type;
+            if (!type->isIntegral() && (lv < LanguageVersion::v1800_2023 || !type->isFloating()))
+                context.addDiag(diag::InvalidCoverageExpr, parent.location) << *type;
             break;
         case uint32_t(DeclaredTypeFlags::InterfaceVariable):
             if (!isValidForIfaceVar(*type))

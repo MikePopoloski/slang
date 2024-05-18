@@ -490,13 +490,16 @@ Expression& Expression::convertAssignment(const ASTContext& context, const Type&
 
         if (expr.kind == ExpressionKind::ValueRange) {
             // Convert each side of the range and return that as a new range.
-            auto& vre = expr.as<ValueRangeExpression>();
-            auto& left = convertAssignment(context, type, vre.left(), assignmentRange, lhsExpr,
-                                           assignFlags);
-            auto& right = convertAssignment(context, type, vre.right(), assignmentRange, lhsExpr,
-                                            assignFlags);
+            auto convert = [&](Expression& expr) -> Expression& {
+                if (expr.kind == ExpressionKind::UnboundedLiteral)
+                    return expr;
+                return convertAssignment(context, type, expr, assignmentRange, lhsExpr,
+                                         assignFlags);
+            };
 
-            result = comp.emplace<ValueRangeExpression>(*expr.type, vre.rangeKind, left, right,
+            auto& vre = expr.as<ValueRangeExpression>();
+            result = comp.emplace<ValueRangeExpression>(*expr.type, vre.rangeKind,
+                                                        convert(vre.left()), convert(vre.right()),
                                                         expr.sourceRange);
             result->syntax = expr.syntax;
             return *result;

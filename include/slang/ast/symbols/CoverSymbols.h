@@ -196,6 +196,8 @@ public:
 
     const Expression* getIffExpr() const;
 
+    void checkBins() const;
+
     void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Coverpoint; }

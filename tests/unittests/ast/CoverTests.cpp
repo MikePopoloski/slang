@@ -152,12 +152,12 @@ endmodule
     REQUIRE(diags.size() == 9);
     CHECK(diags[0].code == diag::Redefinition);
     CHECK(diags[1].code == diag::NotBooleanConvertible);
-    CHECK(diags[2].code == diag::NonIntegralCoverageExpr);
+    CHECK(diags[2].code == diag::InvalidCoverageExpr);
     CHECK(diags[3].code == diag::IntFloatConv);
     CHECK(diags[4].code == diag::ExpectedToken);
     CHECK(diags[5].code == diag::Redefinition);
     CHECK(diags[6].code == diag::NotBooleanConvertible);
-    CHECK(diags[7].code == diag::NonIntegralCoverageExpr);
+    CHECK(diags[7].code == diag::InvalidCoverageExpr);
     CHECK(diags[8].code == diag::CoverCrossItems);
 }
 
@@ -679,4 +679,74 @@ endclass
     REQUIRE(diags.size() == 2);
     CHECK(diags[0].code == diag::UnknownCovergroupBase);
     CHECK(diags[1].code == diag::UnknownCovergroupBase);
+}
+
+TEST_CASE("v1800-2023: covergroups with real values") {
+    auto options = optionsFor(LanguageVersion::v1800_2023);
+    auto tree = SyntaxTree::fromText(R"(
+real a, b;
+parameter real ZSTATE = -100.0;
+parameter int XSTATE = 100;
+
+covergroup cg_real_value;
+    cvp_a: coverpoint a {
+        bins highz = {[ZSTATE+/-0.1]};
+        bins x_st = {[XSTATE+%-1.0]};
+        bins a1[] = {[0.75:0.85]};
+        bins a2[3] = {[0.75:0.85]};
+        bins a3[] = {[1.0:5.0]};
+        bins a4[] = {[1.0:2.0]};
+        bins a5 = {[0.1:$]};
+        bins a6 = default;
+    }
+
+    cvp_b: coverpoint b {
+        type_option.real_interval = 0.01;
+        bins xstate = {XSTATE};
+        bins b1[] = {[0.75:0.85]};
+        bins b2[] = {[0.75:0.85], [0.90:0.92]};
+        bins b3[] = {[0.75:0.80], 0.902};
+        bins b4[] = {[0.75:0.80], 0.752};
+        bins b5[] = {[0.75:0.85], [0.753+/-0.01], 0.902};
+    }
+
+    ab_cross: cross cvp_a, cvp_b {
+        bins az_and_bx = binsof(cvp_a.highz) && binsof(cvp_b.xstate);
+        ignore_bins others = !binsof(cvp_a.highz) || !binsof(cvp_b.xstate);
+    }
+endgroup
+)",
+                                     options);
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("v1800-2023: real coverpoint errors") {
+    auto options = optionsFor(LanguageVersion::v1800_2023);
+    auto tree = SyntaxTree::fromText(R"(
+real r;
+covergroup g;
+    coverpoint r;
+
+    coverpoint r + 1 {
+        bins a[] = default;
+        wildcard bins b = {[1:$]} with (item == 1.0);
+        bins c = (1.0 => 2.0 => 3.0);
+    }
+endgroup
+)",
+                                     options);
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 5);
+    CHECK(diags[0].code == diag::RealCoverpointBins);
+    CHECK(diags[1].code == diag::RealCoverpointDefaultArray);
+    CHECK(diags[2].code == diag::RealCoverpointWildcardBins);
+    CHECK(diags[3].code == diag::RealCoverpointWithExpr);
+    CHECK(diags[4].code == diag::RealCoverpointTransBins);
 }

@@ -559,6 +559,16 @@ static const Expression& bindCovergroupExpr(const ExpressionSyntax& syntax,
     return *expr;
 }
 
+static const Expression* bindIffExpr(const CoverageIffClauseSyntax* syntax,
+                                     const ASTContext& context) {
+    if (!syntax)
+        return nullptr;
+
+    auto& result = Expression::bind(*syntax->expr, context, ASTFlags::AllowCoverageSampleFormal);
+    context.requireBooleanConvertible(result);
+    return &result;
+}
+
 void CoverageBinSymbol::resolve() const {
     SLANG_ASSERT(!isResolved);
     isResolved = true;
@@ -572,12 +582,7 @@ void CoverageBinSymbol::resolve() const {
 
     if (syntax->kind == SyntaxKind::BinsSelection) {
         auto& binsSyntax = syntax->as<BinsSelectionSyntax>();
-        if (binsSyntax.iff) {
-            iffExpr = &Expression::bind(*binsSyntax.iff->expr, context,
-                                        ASTFlags::AllowCoverageSampleFormal);
-            context.requireBooleanConvertible(*iffExpr);
-        }
-
+        iffExpr = bindIffExpr(binsSyntax.iff, context);
         selectExpr = &BinsSelectExpr::bind(*binsSyntax.expr, context);
         return;
     }
@@ -586,16 +591,15 @@ void CoverageBinSymbol::resolve() const {
     auto& type = coverpoint.getType();
 
     auto& binsSyntax = syntax->as<CoverageBinsSyntax>();
-    if (binsSyntax.iff) {
-        iffExpr = &Expression::bind(*binsSyntax.iff->expr, context,
-                                    ASTFlags::AllowCoverageSampleFormal);
-        context.requireBooleanConvertible(*iffExpr);
-    }
+    iffExpr = bindIffExpr(binsSyntax.iff, context);
 
     if (binsSyntax.size && binsSyntax.size->expr) {
         numberOfBinsExpr = &bindCovergroupExpr(*binsSyntax.size->expr, context);
         context.requireIntegral(*numberOfBinsExpr);
     }
+
+    if (isWildcard && type.isFloating())
+        context.addDiag(diag::RealCoverpointWildcardBins, binsSyntax.wildcard.range());
 
     auto bindWithExpr = [&](const WithClauseSyntax& withSyntax) {
         // Create the iterator variable and set it up with an AST context so that it
@@ -608,6 +612,9 @@ void CoverageBinSymbol::resolve() const {
 
         withExpr = &bindCovergroupExpr(*withSyntax.expr, iterCtx);
         iterCtx.requireBooleanConvertible(*withExpr);
+
+        if (type.isFloating())
+            context.addDiag(diag::RealCoverpointWithExpr, withSyntax.sourceRange());
     };
 
     auto init = binsSyntax.initializer;
@@ -629,7 +636,7 @@ void CoverageBinSymbol::resolve() const {
 
             auto targetName = iwecbi.id.valueText();
             if (!targetName.empty() && targetName != coverpoint.name)
-                context.addDiag(diag::CoverageBinTargetName, iwecbi.id.range()) << coverpoint.name;
+                context.addDiag(diag::CoverageBinTargetName, iwecbi.id.range());
             break;
         }
         case SyntaxKind::TransListCoverageBinInitializer: {
@@ -641,6 +648,10 @@ void CoverageBinSymbol::resolve() const {
                 listBuffer.push_back(setBuffer.copy(comp));
             }
             transList = listBuffer.copy(comp);
+
+            if (type.isFloating())
+                context.addDiag(diag::RealCoverpointTransBins, init->sourceRange());
+
             break;
         }
         case SyntaxKind::ExpressionCoverageBinInitializer:
@@ -654,12 +665,13 @@ void CoverageBinSymbol::resolve() const {
 
                     auto& diag = context.addDiag(diag::CoverageSetType,
                                                  setCoverageExpr->sourceRange);
-                    diag << t << coverpoint.name << type;
+                    diag << t << type;
                 }
             }
             break;
         case SyntaxKind::DefaultCoverageBinInitializer:
-            // Already handled at construction time.
+            if (binsSyntax.size && type.isFloating())
+                context.addDiag(diag::RealCoverpointDefaultArray, binsSyntax.size->sourceRange());
             break;
         default:
             SLANG_UNREACHABLE;
@@ -838,21 +850,27 @@ const Expression* CoverpointSymbol::getIffExpr() const {
         auto syntax = getSyntax();
         SLANG_ASSERT(scope);
 
-        if (!syntax)
+        if (!syntax) {
             iffExpr = nullptr;
+        }
         else {
-            auto iffSyntax = syntax->as<CoverpointSyntax>().iff;
-            if (!iffSyntax)
-                iffExpr = nullptr;
-            else {
-                ASTContext context(*scope, LookupLocation::min);
-                iffExpr = &Expression::bind(*iffSyntax->expr, context,
-                                            ASTFlags::AllowCoverageSampleFormal);
-                context.requireBooleanConvertible(*iffExpr.value());
-            }
+            ASTContext context(*scope, LookupLocation::min);
+            iffExpr = bindIffExpr(syntax->as<CoverpointSyntax>().iff, context);
         }
     }
     return *iffExpr;
+}
+
+void CoverpointSymbol::checkBins() const {
+    if (getType().isFloating()) {
+        if (membersOfType<CoverageBinSymbol>().empty()) {
+            auto scope = getParentScope();
+            SLANG_ASSERT(scope);
+
+            if (scope->getCompilation().languageVersion() >= LanguageVersion::v1800_2023)
+                scope->addDiag(diag::RealCoverpointBins, location);
+        }
+    }
 }
 
 void CoverpointSymbol::serializeTo(ASTSerializer& serializer) const {
@@ -965,18 +983,12 @@ const Expression* CoverCrossSymbol::getIffExpr() const {
         auto syntax = getSyntax();
         SLANG_ASSERT(scope);
 
-        if (!syntax)
+        if (!syntax) {
             iffExpr = nullptr;
+        }
         else {
-            auto iffSyntax = syntax->as<CoverCrossSyntax>().iff;
-            if (!iffSyntax)
-                iffExpr = nullptr;
-            else {
-                ASTContext context(*scope, LookupLocation::min);
-                iffExpr = &Expression::bind(*iffSyntax->expr, context,
-                                            ASTFlags::AllowCoverageSampleFormal);
-                context.requireBooleanConvertible(*iffExpr.value());
-            }
+            ASTContext context(*scope, LookupLocation::min);
+            iffExpr = bindIffExpr(syntax->as<CoverCrossSyntax>().iff, context);
         }
     }
     return *iffExpr;

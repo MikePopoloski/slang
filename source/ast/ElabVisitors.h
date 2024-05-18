@@ -193,6 +193,7 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
             return;
 
         symbol.getIffExpr();
+        symbol.checkBins();
         for (auto& option : symbol.options)
             option.getExpression();
     }
