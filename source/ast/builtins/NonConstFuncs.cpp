@@ -478,6 +478,27 @@ public:
     }
 };
 
+class StacktraceFunc : public SystemSubroutine {
+public:
+    StacktraceFunc() : SystemSubroutine("$stacktrace", SubroutineKind::Function) {}
+
+    const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
+                               const Expression*) const final {
+        auto& comp = context.getCompilation();
+        if (!checkArgCount(context, false, args, range, 0, 0))
+            return comp.getErrorType();
+
+        return context.flags.has(ASTFlags::TopLevelStatement) ? comp.getVoidType()
+                                                              : comp.getStringType();
+    }
+
+    ConstantValue eval(EvalContext& context, const Args&, SourceRange range,
+                       const CallExpression::SystemCallInfo&) const final {
+        notConst(context, range);
+        return nullptr;
+    }
+};
+
 void Builtins::registerNonConstFuncs() {
 #define REGISTER(...) addSystemSubroutine(std::make_shared<NonConstantFunction>(__VA_ARGS__))
 
@@ -542,9 +563,9 @@ void Builtins::registerNonConstFuncs() {
     addSystemSubroutine(std::make_shared<FReadFunc>());
     addSystemSubroutine(std::make_shared<SampledFunc>());
     addSystemSubroutine(std::make_shared<PastFunc>());
-
     addSystemSubroutine(std::make_shared<TimeScaleFunc>("$timeunit"));
     addSystemSubroutine(std::make_shared<TimeScaleFunc>("$timeprecision"));
+    addSystemSubroutine(std::make_shared<StacktraceFunc>());
 
     addSystemMethod(SymbolKind::EventType,
                     std::make_shared<NonConstantFunction>("triggered", bitType, 0,

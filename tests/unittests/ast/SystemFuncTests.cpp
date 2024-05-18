@@ -1366,3 +1366,19 @@ localparam p = $isunbounded(1 + 1);
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::IsUnboundedParamArg);
 }
+
+TEST_CASE("$stacktrace function") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    initial begin
+        string s;
+        $stacktrace;
+        s = $stacktrace;
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
