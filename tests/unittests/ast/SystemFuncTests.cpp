@@ -362,7 +362,8 @@ endmodule
     CHECK(diags[15].code == diag::QueryOnAssociativeWildcard);
 }
 
-TEST_CASE("printtimescale -- errors") {
+TEST_CASE("$printtimescale, $timeunit, $timeprecision") {
+    auto options = optionsFor(LanguageVersion::v1800_2023);
     auto tree = SyntaxTree::fromText(R"(
 module j;
 endmodule
@@ -380,19 +381,33 @@ module m;
         $printtimescale(5);
         $printtimescale(m.k1.j1, 5);
         $printtimescale(foo);
+        $printtimescale($root);
+    end
+
+    initial begin
+        foo = $timeunit;
+        foo = $timeunit(5);
+        foo = $timeprecision(m.k1.j1);
+        foo = $timeprecision(m.k1.j1, 5);
+        foo = $timeprecision(foo);
+        foo = $timeunit($root);
     end
 
 endmodule
-)");
+)",
+                                     options);
 
-    Compilation compilation;
+    Compilation compilation(options);
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 3);
+    REQUIRE(diags.size() == 6);
     CHECK(diags[0].code == diag::ExpectedModuleName);
     CHECK(diags[1].code == diag::TooManyArguments);
     CHECK(diags[2].code == diag::ExpectedModuleName);
+    CHECK(diags[3].code == diag::ExpectedModuleName);
+    CHECK(diags[4].code == diag::TooManyArguments);
+    CHECK(diags[5].code == diag::ExpectedModuleName);
 }
 
 TEST_CASE("dumpvars / dumpports") {

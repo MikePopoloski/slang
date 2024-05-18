@@ -429,7 +429,8 @@ public:
                 return *comp.emplace<InvalidExpression>(nullptr, comp.getErrorType());
             }
 
-            return ArbitrarySymbolExpression::fromSyntax(comp, syntax.as<NameSyntax>(), context);
+            return ArbitrarySymbolExpression::fromSyntax(comp, syntax.as<NameSyntax>(), context,
+                                                         LookupFlags::AllowRoot);
         }
 
         return SystemTaskBase::bindArgument(argIndex, context, syntax, args);
@@ -443,7 +444,8 @@ public:
 
         if (args.size() > 0) {
             auto& sym = *args[0]->as<ArbitrarySymbolExpression>().symbol;
-            if (sym.kind != SymbolKind::Instance || !sym.as<InstanceSymbol>().isModule()) {
+            if (sym.kind != SymbolKind::Instance && sym.kind != SymbolKind::CompilationUnit &&
+                sym.kind != SymbolKind::Root) {
                 if (!context.scope->isUninstantiated())
                     context.addDiag(diag::ExpectedModuleName, args[0]->sourceRange);
                 return comp.getErrorType();
