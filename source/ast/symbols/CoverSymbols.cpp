@@ -159,6 +159,8 @@ CovergroupBodySymbol::CovergroupBodySymbol(Compilation& comp, SourceLocation loc
     auto& int_t = comp.getIntType();
     auto& bit_t = comp.getBitType();
     auto& string_t = comp.getStringType();
+    auto& real_t = comp.getRealType();
+    auto lv = comp.languageVersion();
 
     StructBuilder option(*this, LookupLocation::min);
     option.addField("name"sv, string_t);
@@ -168,6 +170,8 @@ CovergroupBodySymbol::CovergroupBodySymbol(Compilation& comp, SourceLocation loc
     option.addField("at_least"sv, int_t);
     option.addField("auto_bin_max"sv, int_t, VariableFlags::ImmutableCoverageOption);
     option.addField("cross_num_print_missing"sv, int_t);
+    if (lv >= LanguageVersion::v1800_2023)
+        option.addField("cross_retain_auto_bins"sv, bit_t, VariableFlags::ImmutableCoverageOption);
     option.addField("detect_overlap"sv, bit_t, VariableFlags::ImmutableCoverageOption);
     option.addField("per_instance"sv, bit_t, VariableFlags::ImmutableCoverageOption);
     option.addField("get_inst_coverage"sv, bit_t, VariableFlags::ImmutableCoverageOption);
@@ -180,6 +184,8 @@ CovergroupBodySymbol::CovergroupBodySymbol(Compilation& comp, SourceLocation loc
     type_option.addField("strobe"sv, bit_t, VariableFlags::ImmutableCoverageOption);
     type_option.addField("merge_instances"sv, bit_t);
     type_option.addField("distribute_first"sv, bit_t);
+    if (lv >= LanguageVersion::v1800_2023)
+        type_option.addField("real_interval"sv, real_t, VariableFlags::ImmutableCoverageOption);
     addProperty(*this, "type_option"sv, VariableLifetime::Static, type_option);
 
     addBuiltInMethods(*this, true);
@@ -744,6 +750,8 @@ CoverpointSymbol::CoverpointSymbol(Compilation& comp, std::string_view name, Sou
     auto& int_t = comp.getIntType();
     auto& bit_t = comp.getBitType();
     auto& string_t = comp.getStringType();
+    auto& real_t = comp.getRealType();
+    auto lv = comp.languageVersion();
 
     StructBuilder option(*this, LookupLocation::min);
     option.addField("weight"sv, int_t);
@@ -758,6 +766,8 @@ CoverpointSymbol::CoverpointSymbol(Compilation& comp, std::string_view name, Sou
     type_option.addField("weight"sv, int_t);
     type_option.addField("goal"sv, int_t);
     type_option.addField("comment"sv, string_t);
+    if (lv >= LanguageVersion::v1800_2023)
+        type_option.addField("real_interval"sv, real_t, VariableFlags::ImmutableCoverageOption);
     addProperty(*this, "type_option"sv, VariableLifetime::Static, type_option);
 
     addBuiltInMethods(*this, false);
@@ -861,8 +871,10 @@ CoverCrossSymbol::CoverCrossSymbol(Compilation& comp, std::string_view name, Sou
                                    std::span<const CoverpointSymbol* const> targets) :
     Symbol(SymbolKind::CoverCross, name, loc), Scope(comp, this), targets(targets) {
 
+    auto& bit_t = comp.getBitType();
     auto& int_t = comp.getIntType();
     auto& string_t = comp.getStringType();
+    auto lv = comp.languageVersion();
 
     StructBuilder option(*this, LookupLocation::min);
     option.addField("weight"sv, int_t);
@@ -870,6 +882,8 @@ CoverCrossSymbol::CoverCrossSymbol(Compilation& comp, std::string_view name, Sou
     option.addField("comment"sv, string_t);
     option.addField("at_least"sv, int_t);
     option.addField("cross_num_print_missing"sv, int_t);
+    if (lv >= LanguageVersion::v1800_2023)
+        option.addField("cross_retain_auto_bins"sv, bit_t, VariableFlags::ImmutableCoverageOption);
     addProperty(*this, "option"sv, VariableLifetime::Automatic, option);
 
     StructBuilder type_option(*this, LookupLocation::min);
