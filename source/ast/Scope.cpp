@@ -120,6 +120,17 @@ const InstanceBodySymbol* Scope::getContainingInstance() const {
     return nullptr;
 }
 
+const CompilationUnitSymbol* Scope::getCompilationUnit() const {
+    auto currScope = this;
+    while (currScope && currScope->asSymbol().kind != SymbolKind::CompilationUnit)
+        currScope = currScope->asSymbol().getParentScope();
+
+    if (currScope)
+        return &currScope->asSymbol().as<CompilationUnitSymbol>();
+
+    return nullptr;
+}
+
 bool Scope::isUninstantiated() const {
     // In linting mode all contexts are considered uninstantiated.
     if (getCompilation().hasFlag(CompilationFlags::LintMode))

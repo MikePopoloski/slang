@@ -1039,6 +1039,16 @@ void Lookup::name(const NameSyntax& syntax, const ASTContext& context, bitmask<L
             }
             result.found = &scope.getCompilation().getRoot();
             return;
+        case SyntaxKind::UnitScope:
+            if (!flags.has(LookupFlags::AllowUnit)) {
+                auto tok = syntax.getFirstToken();
+                result.addDiag(scope, diag::ExpectedToken,
+                               tok.location() + tok.valueText().length())
+                    << "::"sv;
+                return;
+            }
+            result.found = scope.getCompilationUnit();
+            return;
         case SyntaxKind::ConstructorName:
             result.addDiag(scope, diag::UnexpectedNameToken, syntax.sourceRange())
                 << syntax.getFirstToken().valueText();
@@ -1049,7 +1059,6 @@ void Lookup::name(const NameSyntax& syntax, const ASTContext& context, bitmask<L
             // already issued a diagnostic.
             result.found = nullptr;
             return;
-        case SyntaxKind::UnitScope:
         case SyntaxKind::SuperHandle:
         case SyntaxKind::ArrayUniqueMethod:
         case SyntaxKind::ArrayAndMethod:

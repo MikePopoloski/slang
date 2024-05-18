@@ -382,6 +382,7 @@ module m;
         $printtimescale(m.k1.j1, 5);
         $printtimescale(foo);
         $printtimescale($root);
+        $printtimescale($unit);
     end
 
     initial begin
@@ -391,6 +392,7 @@ module m;
         foo = $timeprecision(m.k1.j1, 5);
         foo = $timeprecision(foo);
         foo = $timeunit($root);
+        foo = $timeunit($unit);
     end
 
 endmodule

@@ -430,7 +430,8 @@ public:
             }
 
             return ArbitrarySymbolExpression::fromSyntax(comp, syntax.as<NameSyntax>(), context,
-                                                         LookupFlags::AllowRoot);
+                                                         LookupFlags::AllowRoot |
+                                                             LookupFlags::AllowUnit);
         }
 
         return SystemTaskBase::bindArgument(argIndex, context, syntax, args);
