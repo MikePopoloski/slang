@@ -1353,3 +1353,16 @@ endmodule
     CHECK(diags[0].code == diag::AutoFromNonProcedural);
     CHECK(diags[1].code == diag::AutoFromNonProcedural);
 }
+
+TEST_CASE("$isunbounded of non-param name") {
+    auto tree = SyntaxTree::fromText(R"(
+localparam p = $isunbounded(1 + 1);
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::IsUnboundedParamArg);
+}

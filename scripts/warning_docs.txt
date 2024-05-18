@@ -1255,3 +1255,11 @@ function automatic f(real r);
     shortreal s = r;
 endfunction
 ```
+
+-Wisunbounded-param-arg
+The SystemVerilog LRM 1800-2023 requires that the argument to the $isunbounded system
+function be a parameter name. This seems needlessly restrictive and conflicts with the
+wording in prior versions so this is implemented as a pedantic warning only.
+```
+localparam p = $isunbounded(1 + 1);
+```

@@ -1002,6 +1002,7 @@ warning finish-num BadFinishNum "finish argument must have value of 0, 1, or 2"
 warning missing-format MissingFormatSpecifier "missing format specifier"
 warning format-multibit-strength FormatMultibitStrength "formatting strength values for multi-bit nets is non-standard"
 warning nonstandard-sys-func NonstandardSysFunc "system function '{}' is non-standard"
+warning isunbounded-param-arg IsUnboundedParamArg "argument to $isunbounded must be the name of a parameter"
 
 subsystem ConstEval
 note NoteInCallTo "in call to '{}'"
@@ -1132,7 +1133,7 @@ group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-
                 float-narrow }
 
 group pedantic = { empty-pattern implicit-net-port nonstandard-escape-code nonstandard-generate format-multibit-strength
-                   nonstandard-sys-func nonstandard-foreach nonstandard-dist }
+                   nonstandard-sys-func nonstandard-foreach nonstandard-dist isunbounded-param-arg }
 
 group conversion = { width-trunc width-expand port-width-trunc port-width-expand implicit-conv
                      constant-conversion sign-conversion float-bool-conv int-bool-conv float-int-conv
