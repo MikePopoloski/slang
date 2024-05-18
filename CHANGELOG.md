@@ -6,9 +6,42 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 ### Language Support
+* Select expressions of packed arrays now always return an unsigned type, as mandated by the LRM
+* Clocking skew delays now properly require a constant value
+* Enforce that static methods can't have override specifiers
+#### Clarifications in IEEE 1800-2023
+* Assertion clocking events can't reference automatic variables
+* The `.*` token sequence is actually two separate tokens that can be separated by whitespace
+* Functions in constraints cannot have `inout` arguments
+* Constraint subexpression can be of any type as long as their final expression type is numeric and they don't reference random variables
+#### New Features in IEEE 1800-2023
+* Constraint expressions and random variables can have `real` types
+* `dist` expressions can have a `default` specifier
+* `dist` expressions can have `real` types
+* solve-before constraints can specify array.size() as well as regular random variables
+* disable soft constraints can target array.size()
+* Constraint blocks can have override specifiers (initial / extends / final)
+* Covergroups can inherit from covergroups in parent classes
+* Coverpoints can have `real` types
+* Covergroups have new options: `cross_retain_auto_bins` and `real_interval`
+
 ### General Features
+* Added [-Wunsigned-arith-shift](https://sv-lang.com/warning-ref.html#unsigned-arith-shift) which warns about suspicious arithmetic right shifts of unsigned types
+* Added [-Wstatic-init-order](https://sv-lang.com/warning-ref.html#static-init-order) and [-Wstatic-init-value](https://sv-lang.com/warning-ref.html#static-init-value) which warn about static initializers that depend on uninitialized values or an undefined order of other static initializers
+* Added [-Wfloat-int-conv](https://sv-lang.com/warning-ref.html#float-int-conv) and [-Wint-float-conv](https://sv-lang.com/warning-ref.html#int-float-conv) which warn about implicit conversions between floating point and integer types
+* Added [-Wfloat-narrow](https://sv-lang.com/warning-ref.html#float-narrow) and [-Wfloat-widen](https://sv-lang.com/warning-ref.html#float-widen) which warn about implicit conversions between floating point types of differing widths
+* slang-netlist has experimental support for detecting combinatorial loops (thanks to @udif)
+
 ### Improvements
+* Default value expressions for parameters that are overridden are now checked for basic correctness and other parameters they reference will not warn for being "unused"
+* Made several minor improvements to the locations reported for propagated type conversion warnings
+* Sped up `Compilation` object construction by reorganizing how system subroutines are created and registered
+
 ### Fixes
+* Fixed several AST serialization methods (thanks to @tdp2110)
+* Fixed the return type of DPI import tasks
+* Fixed a bug that caused some `inout` ports to warn as "unused"
+* Fixed the checking of the `extends` override specifier when the containing class has no base class
 
 
 ## [v6.0] - 2024-04-21
