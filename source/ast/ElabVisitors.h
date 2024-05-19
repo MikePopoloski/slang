@@ -675,6 +675,20 @@ struct PostElabVisitor : public ASTVisitor<PostElabVisitor, false, false> {
     void handle(const LetDeclSymbol& symbol) { checkAssertionDeclUnused(symbol, "let"sv); }
     void handle(const CheckerSymbol& symbol) { checkAssertionDeclUnused(symbol, "checker"sv); }
 
+    void handle(const ExplicitImportSymbol& symbol) { checkUnused(symbol, diag::UnusedImport); }
+
+    void handle(const WildcardImportSymbol& symbol) {
+        auto syntax = symbol.getSyntax();
+        if (!syntax)
+            return;
+
+        auto [used, _] = compilation.isReferenced(*syntax);
+        if (!used) {
+            if (shouldWarn(symbol))
+                symbol.getParentScope()->addDiag(diag::UnusedWildcardImport, symbol.location);
+        }
+    }
+
 private:
     void checkValueUnused(const ValueSymbol& symbol, DiagCode unusedCode,
                           std::optional<DiagCode> unsetCode, std::optional<DiagCode> unreadCode) {

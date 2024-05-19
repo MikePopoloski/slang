@@ -1013,6 +1013,30 @@ module m;
 endmodule
 ```
 
+-Wunused-import
+A package import directive is never used.
+```
+package p;
+    int a;
+endpackage
+
+module m;
+    import p::a;
+endmodule
+```
+
+-Wunused-wildcard-import
+A wildcard package import directive is never used.
+```
+package p;
+    int a;
+endpackage
+
+module m;
+    import p::*;
+endmodule
+```
+
 -Wbad-procedural-force
 According to the Verilog/SystemVerilog standard, it is illegal to procedurally force a
 bit-select or range select of a variable (you can do that with a net, or with a plain

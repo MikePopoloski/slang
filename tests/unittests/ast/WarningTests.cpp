@@ -611,6 +611,30 @@ endmodule
     CHECK(diags[2].code == diag::UnusedAssertionDecl);
 }
 
+TEST_CASE("Unused imports") {
+    auto tree = SyntaxTree::fromText(R"(
+package p;
+    int a;
+endpackage
+
+module m;
+    import p::a;
+    import p::*;
+endmodule
+)");
+
+    CompilationOptions coptions;
+    coptions.flags = CompilationFlags::None;
+
+    Compilation compilation(coptions);
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::UnusedImport);
+    CHECK(diags[1].code == diag::UnusedWildcardImport);
+}
+
 TEST_CASE("Implicit conversions with constants") {
     auto tree = SyntaxTree::fromText(R"(
 module m;

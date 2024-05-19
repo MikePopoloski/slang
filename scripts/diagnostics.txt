@@ -1107,6 +1107,8 @@ warning unused-type-parameter UnusedTypeParameter "unused type parameter '{}'"
 warning unused-typedef UnusedTypedef "unused typedef '{}'"
 warning unused-genvar UnusedGenvar "unused genvar '{}'"
 warning unused-assertion-decl UnusedAssertionDecl "unused {} '{}'"
+warning unused-import UnusedImport "unused import '{}'"
+warning unused-wildcard-import UnusedWildcardImport "unused wildcard import"
 warning missing-top NoTopModules "no top-level modules found in design"
 warning duplicate-defparam DuplicateDefparam "parameter already has a defparam override applied; ignoring this one"
 
@@ -1149,4 +1151,4 @@ group conversion = { width-trunc width-expand port-width-trunc port-width-expand
 group unused = { unused-def unused-net unused-implicit-net unused-variable undriven-net unassigned-variable
                  unused-but-set-net unused-but-set-variable unused-port undriven-port unused-argument
                  unused-parameter unused-type-parameter unused-typedef unused-genvar unused-assertion-decl
-                 unused-but-set-port unused-config-cell unused-config-instance }
+                 unused-but-set-port unused-config-cell unused-config-instance unused-import unused-wildcard-import }

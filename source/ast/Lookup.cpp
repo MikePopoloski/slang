@@ -1767,6 +1767,7 @@ void Lookup::unqualifiedImpl(const Scope& scope, std::string_view name, LookupLo
                 case SymbolKind::ExplicitImport:
                     result.found = symbol->as<ExplicitImportSymbol>().importedSymbol();
                     result.flags |= LookupResultFlags::WasImported;
+                    scope.getCompilation().noteReference(*symbol);
                     break;
                 case SymbolKind::ForwardingTypedef:
                     // If we find a forwarding typedef, the actual typedef was never defined.
@@ -1886,6 +1887,8 @@ void Lookup::unqualifiedImpl(const Scope& scope, std::string_view name, LookupLo
 
                 result.flags |= LookupResultFlags::WasImported;
                 result.found = imports[0].imported;
+                scope.getCompilation().noteReference(*imports[0].import);
+
                 wildcardImportData->importedSymbols.try_emplace(result.found->name, result.found);
                 return;
             }
