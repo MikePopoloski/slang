@@ -1004,7 +1004,10 @@ const Type* GenericClassDefSymbol::getSpecializationImpl(
         specializeFunc(comp, *classType, instanceLoc);
     else
         classType->populate(*scope, getSyntax()->as<ClassDeclarationSyntax>());
-    specMap.emplace(key, classType);
+
+    if (!forceInvalidParams)
+        specMap.emplace(key, classType);
+
     return classType;
 }
 
