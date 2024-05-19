@@ -108,11 +108,17 @@ Expression& ValueExpressionBase::fromSymbol(const ASTContext& context, const Sym
         if (flags.has(ASTFlags::SpecifyBlock))
             context.addDiag(diag::SpecifyBlockParam, sourceRange);
     }
-    else if (symbol.kind == SymbolKind::Net &&
-             symbol.as<NetSymbol>().netType.netKind == NetType::Interconnect &&
-             !flags.has(ASTFlags::AllowInterconnect)) {
-        context.addDiag(diag::InterconnectReference, sourceRange) << symbol.name;
-        return badExpr(comp, nullptr);
+    else if (symbol.kind == SymbolKind::Net) {
+        auto& netType = symbol.as<NetSymbol>().netType;
+        if (netType.netKind == NetType::Interconnect && !flags.has(ASTFlags::AllowInterconnect)) {
+            context.addDiag(diag::InterconnectReference, sourceRange) << symbol.name;
+            return badExpr(comp, nullptr);
+        }
+
+        if (netType.netKind == NetType::UserDefined && flags.has(ASTFlags::DisallowUDNT)) {
+            context.addDiag(diag::GateUDNTConn, sourceRange) << symbol.name;
+            return badExpr(comp, nullptr);
+        }
     }
     else if (symbol.kind == SymbolKind::ClockVar && !flags.has(ASTFlags::LValue) &&
              symbol.as<ClockVarSymbol>().direction == ArgumentDirection::Out) {

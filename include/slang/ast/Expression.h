@@ -163,7 +163,8 @@ public:
 
     /// Binds an lvalue that is not a typical assignment-like context. For example, the
     /// output argument of certain system tasks that accept almost any type.
-    static const Expression& bindLValue(const ExpressionSyntax& syntax, const ASTContext& context);
+    static const Expression& bindLValue(const ExpressionSyntax& syntax, const ASTContext& context,
+                                        bitmask<AssignFlags> assignFlags = {});
 
     /// Binds the right hand side of an assignment-like expression from the given syntax nodes.
     /// @param lhs The type of the left hand side, for type checking

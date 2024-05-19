@@ -255,10 +255,10 @@ const Expression& Expression::bindLValue(const ExpressionSyntax& lhs, const Type
                                                 context.resetFlags(astFlags));
 }
 
-const Expression& Expression::bindLValue(const ExpressionSyntax& syntax,
-                                         const ASTContext& context) {
+const Expression& Expression::bindLValue(const ExpressionSyntax& syntax, const ASTContext& context,
+                                         bitmask<AssignFlags> assignFlags) {
     auto& expr = bind(syntax, context, ASTFlags::LValue);
-    if (!expr.requireLValue(context))
+    if (!expr.requireLValue(context, {}, assignFlags))
         return badExpr(context.getCompilation(), &expr);
     return expr;
 }

@@ -1616,7 +1616,8 @@ std::span<const Expression* const> PrimitiveInstanceSymbol::getPortConnections()
         SLANG_ASSERT(syntax && scope);
 
         auto& comp = scope->getCompilation();
-        ASTContext context(*scope, LookupLocation::after(*this), ASTFlags::NonProcedural);
+        ASTContext context(*scope, LookupLocation::after(*this),
+                           ASTFlags::NonProcedural | ASTFlags::DisallowUDNT);
         context.setInstance(*this);
 
         SmallVector<const ExpressionSyntax*> conns;
@@ -1644,6 +1645,7 @@ std::span<const Expression* const> PrimitiveInstanceSymbol::getPortConnections()
             }
         }
 
+        auto& logic_t = comp.getLogicType();
         SmallVector<const Expression*> results;
         if (primitiveType.primitiveKind == PrimitiveSymbol::NInput ||
             primitiveType.primitiveKind == PrimitiveSymbol::NOutput) {
@@ -1663,8 +1665,7 @@ std::span<const Expression* const> PrimitiveInstanceSymbol::getPortConnections()
                     dir = conns.size() - 1 ? ArgumentDirection::In : ArgumentDirection::Out;
 
                 SLANG_ASSERT(conns[i]);
-                results.push_back(
-                    &Expression::bindArgument(comp.getLogicType(), dir, {}, *conns[i], context));
+                results.push_back(&Expression::bindArgument(logic_t, dir, {}, *conns[i], context));
             }
         }
         else {
@@ -1677,12 +1678,14 @@ std::span<const Expression* const> PrimitiveInstanceSymbol::getPortConnections()
                 return *ports;
             }
 
+            const bool isBiDi = primitiveType.primitiveKind == PrimitiveSymbol::BiDiSwitch;
             for (size_t i = 0; i < conns.size(); i++) {
                 if (!conns[i])
                     continue;
 
                 ArgumentDirection dir = ArgumentDirection::In;
-                switch (primitiveType.ports[i]->direction) {
+                auto& port = *primitiveType.ports[i];
+                switch (port.direction) {
                     case PrimitivePortDirection::In:
                         dir = ArgumentDirection::In;
                         break;
@@ -1694,8 +1697,47 @@ std::span<const Expression* const> PrimitiveInstanceSymbol::getPortConnections()
                         dir = ArgumentDirection::Out;
                         break;
                 }
-                results.push_back(
-                    &Expression::bindArgument(comp.getLogicType(), dir, {}, *conns[i], context));
+
+                if (isBiDi && i < 2) {
+                    // Bidirectional switches allow UDNT connections for their
+                    // first two arguments.
+                    ASTContext argCtx = context;
+                    argCtx.flags &= ~ASTFlags::DisallowUDNT;
+                    argCtx.flags |= ASTFlags::LAndRValue;
+                    results.push_back(
+                        &Expression::bindLValue(*conns[i], argCtx, AssignFlags::InOutPort));
+                }
+                else {
+                    results.push_back(
+                        &Expression::bindArgument(logic_t, dir, {}, *conns[i], context));
+                }
+            }
+
+            // Additional checking for bidi switches: the first two ports
+            // must be both UDNTs or neither.
+            if (isBiDi && results.size() >= 2) {
+                auto sym0 = results[0]->getSymbolReference();
+                auto sym1 = results[1]->getSymbolReference();
+                if (sym0 && sym1 && sym0->kind == SymbolKind::Net &&
+                    sym1->kind == SymbolKind::Net) {
+
+                    auto& nt0 = sym0->as<NetSymbol>().netType;
+                    auto& nt1 = sym1->as<NetSymbol>().netType;
+
+                    auto reportDiag = [&] {
+                        auto& diag = context.addDiag(diag::BiDiSwitchNetTypes, location);
+                        diag << nt0.name << nt1.name;
+                        diag << results[0]->sourceRange << results[1]->sourceRange;
+                    };
+
+                    if (!nt0.isBuiltIn() && !nt1.isBuiltIn()) {
+                        if (&nt0 != &nt1)
+                            reportDiag();
+                    }
+                    else if (!nt0.isBuiltIn() || !nt1.isBuiltIn()) {
+                        reportDiag();
+                    }
+                }
             }
         }
 

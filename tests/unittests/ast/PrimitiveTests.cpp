@@ -557,3 +557,51 @@ endprimitive
     CHECK(diags[1].code == diag::UdpEdgeInComb);
     CHECK(diags[2].code == diag::UdpInvalidMinus);
 }
+
+TEST_CASE("Most gates can't attach to user-defined nettypes") {
+    auto tree = SyntaxTree::fromText(R"(
+primitive p(output o, input i);
+	table
+      1 : 1;
+    endtable
+endprimitive
+
+module m;
+    nettype real ntr;
+    nettype shortreal nts;
+
+    ntr r1, r2;
+    rtranif1(r1, r2, 1);
+
+    ntr r3;
+    and(r3, 1);
+
+    ntr r4;
+    p p1(r4, 1);
+
+    // This one is allowed.
+    ntr r5, r6;
+    tranif1(r5, r6, 1);
+
+    ntr r7;
+    wire r8;
+    tran(r7, r8);
+
+    ntr r9;
+    nts r10;
+    tranif0(r9, r10, 0);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 6);
+    CHECK(diags[0].code == diag::GateUDNTConn);
+    CHECK(diags[1].code == diag::GateUDNTConn);
+    CHECK(diags[2].code == diag::GateUDNTConn);
+    CHECK(diags[3].code == diag::GateUDNTConn);
+    CHECK(diags[4].code == diag::BiDiSwitchNetTypes);
+    CHECK(diags[5].code == diag::BiDiSwitchNetTypes);
+}

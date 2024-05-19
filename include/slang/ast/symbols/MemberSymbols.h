@@ -267,7 +267,7 @@ public:
     std::span<const TableEntry> table;
     const ConstantValue* initVal = nullptr;
     bool isSequential = false;
-    enum PrimitiveKind { UserDefined, Fixed, NInput, NOutput } primitiveKind;
+    enum PrimitiveKind { UserDefined, Fixed, NInput, NOutput, BiDiSwitch } primitiveKind;
 
     PrimitiveSymbol(Compilation& compilation, std::string_view name, SourceLocation loc,
                     PrimitiveKind primitiveKind) :
