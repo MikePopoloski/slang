@@ -1382,3 +1382,61 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Annex D option system tasks and functions") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    wire n = 1;
+    initial begin : baz
+        bit f;
+        int a, b, c, d, e;
+        f = $countdrivers(m.n, a, b, c, d, e);
+        $list;
+        $list(m);
+        $input("asdf");
+        $key("asdf");
+        $nokey;
+        $reset;
+        $reset(0, 1, 2);
+        a = $reset_count;
+        b = $reset_value;
+        $save("SDF");
+        $reset("SDF");
+        $incsave("SDF");
+        $scope(m.baz);
+        c = $scale(m);
+        $showscopes;
+        $showscopes(1);
+        $showvars;
+        $showvars(a, b[0]);
+    end
+
+    logic [1:4] in_mem[100];
+    assign {i1,i2,i3,i4} = $getpattern(in_mem[n]);
+
+    initial begin
+        $sreadmemb(in_mem, 0, 1, "SDF");
+        $sreadmemh(in_mem, 0, 1, "SDF", "BAZ");
+    end
+
+    var v;
+    initial begin
+        bit b;
+        b = $countdrivers(v);
+        $list(m.n);
+        $showvars(v + 1);
+        $sreadmemh(in_mem, 0, 1, "SDF", in_mem);
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 4);
+    CHECK(diags[0].code == diag::ExpectedNetRef);
+    CHECK(diags[1].code == diag::ExpectedScopeName);
+    CHECK(diags[2].code == diag::ExpectedVariableName);
+    CHECK(diags[3].code == diag::BadSystemSubroutineArg);
+}
