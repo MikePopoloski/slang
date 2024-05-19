@@ -77,8 +77,10 @@ Token ParserBase::consume() {
 
     if (SF::isOpenDelimOrKeyword(result.kind))
         openDelims.push_back(result);
-    else if (SF::isCloseDelimOrKeyword(result.kind) && !openDelims.empty())
+    else if (SF::isCloseDelimOrKeyword(result.kind) && !openDelims.empty()) {
+        lastPoppedDelims = {openDelims.back(), result};
         openDelims.pop_back();
+    }
 
     return result;
 }
@@ -107,6 +109,7 @@ Token ParserBase::expect(TokenKind kind) {
             // become unbalanced and flush it.
             openDelims.clear();
         }
+        lastPoppedDelims = {};
     }
 
     Token result = Token::createExpected(alloc, getDiagnostics(), peek(), kind, window.lastConsumed,

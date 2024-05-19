@@ -440,6 +440,18 @@ std::span<TMember*> Parser::parseMemberList(TokenKind endKind, Token& endToken,
             errored = false;
         }
         else {
+            if (isCloseDelimOrKeyword(kind)) {
+                auto& diag = addDiag(diag::UnexpectedEndDelim, peek().range());
+                diag << peek().valueText();
+                errored = true;
+
+                auto& lastBlock = getLastPoppedDelims();
+                if (lastBlock.first && lastBlock.second) {
+                    diag.addNote(diag::NoteLastBlockStarted, lastBlock.first.location());
+                    diag.addNote(diag::NoteLastBlockEnded, lastBlock.second.location());
+                }
+            }
+
             skipToken(errored ? std::nullopt : std::make_optional(diag::ExpectedMember));
             errored = true;
         }

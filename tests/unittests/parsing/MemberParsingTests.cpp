@@ -1458,3 +1458,21 @@ endgroup
     CHECK(diagnostics[4].code == diag::WrongLanguageVersion);
     CHECK(diagnostics[5].code == diag::DerivedCovergroupNotInClass);
 }
+
+TEST_CASE("Parser error recovery with extra end token") {
+    auto& text = R"(
+module m;
+    int i;
+    if (1) begin
+        initial /* begin */
+            i = 1;
+        end
+    end
+endmodule
+)";
+
+    parseCompilationUnit(text);
+
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics[0].code == diag::UnexpectedEndDelim);
+}
