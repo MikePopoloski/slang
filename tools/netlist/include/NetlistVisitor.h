@@ -33,15 +33,6 @@ using namespace slang;
 
 namespace netlist {
 
-static std::string getSymbolHierPath(const ast::Symbol& symbol) {
-
-    // Resolve the hierarchical path of the symbol.
-    std::string buffer;
-    symbol.getHierarchicalPath(buffer);
-
-    return buffer;
-}
-
 static std::string resolveSymbolHierPath(const ast::Symbol& symbol) {
 
     // Resolve the hierarchical path of the symbol.
@@ -63,25 +54,6 @@ static std::string resolveSymbolHierPath(const ast::Symbol& symbol) {
     }
 
     return buffer;
-}
-
-static void connectDeclToVar(Netlist& netlist, NetlistNode& declNode, const ast::Symbol& variable) {
-    auto* varNode = netlist.lookupVariable(resolveSymbolHierPath(variable));
-    netlist.addEdge(*varNode, declNode);
-    DEBUG_PRINT("Edge decl {} to ref {}\n", varNode->getName(), declNode.getName());
-}
-
-static void connectVarToDecl(Netlist& netlist, NetlistNode& varNode,
-                             const ast::Symbol& declaration) {
-    auto* declNode = netlist.lookupVariable(resolveSymbolHierPath(declaration));
-    netlist.addEdge(varNode, *declNode);
-    DEBUG_PRINT("Edge ref {} to decl {}\n", varNode.getName(), declNode->getName());
-}
-
-static void connectVarToVar(Netlist& netlist, NetlistNode& sourceVarNode,
-                            NetlistNode& targetVarNode) {
-    netlist.addEdge(sourceVarNode, targetVarNode);
-    DEBUG_PRINT("Edge ref {} to ref {}\n", sourceVarNode.getName(), targetVarNode.getName());
 }
 
 /// An AST visitor to identify variable references with selectors in
@@ -197,11 +169,31 @@ private:
 
 /// An AST visitor to create dependencies between occurrances of variables
 /// appearing on the left and right hand sides of assignment statements.
-class AssignmentVisitor : public ast::ASTVisitor<AssignmentVisitor, false, true> {
+class ContinuousAssignVisitor : public ast::ASTVisitor<ContinuousAssignVisitor, false, true> {
 public:
-    explicit AssignmentVisitor(Netlist& netlist, ast::EvalContext& evalCtx,
+    explicit ContinuousAssignVisitor(Netlist& netlist, ast::EvalContext& evalCtx,
                                SmallVector<NetlistNode*>& condVars) :
         netlist(netlist), evalCtx(evalCtx), condVars(condVars) {}
+
+    void connectDeclToVar(NetlistNode& declNode, const ast::Symbol& variable) {
+        auto* varNode = netlist.lookupVariable(resolveSymbolHierPath(variable));
+        netlist.addEdge(*varNode, declNode);
+        DEBUG_PRINT("New edge: from declaration {} -> reference {}\n", varNode->hierarchicalPath,
+                    declNode.getName());
+    }
+
+    void connectVarToDecl(NetlistNode& varNode,
+                                 const ast::Symbol& declaration) {
+        auto* declNode = netlist.lookupVariable(resolveSymbolHierPath(declaration));
+        netlist.addEdge(varNode, *declNode);
+        DEBUG_PRINT("New edge: reference {} -> declaration {}\n", varNode.getName(), declNode->hierarchicalPath);
+    }
+
+    void connectVarToVar(NetlistNode& sourceVarNode,
+                                NetlistNode& targetVarNode) {
+        netlist.addEdge(sourceVarNode, targetVarNode);
+        DEBUG_PRINT("New edge: reference {} -> reference {}\n", sourceVarNode.getName(), targetVarNode.getName());
+    }
 
     void handle(const ast::AssignmentExpression& expr) {
 
@@ -217,14 +209,14 @@ public:
         // add an edge to variable declaration.
         for (auto* leftNode : visitorLHS.getVars()) {
 
-            connectVarToDecl(netlist, *leftNode, leftNode->symbol);
+            connectVarToDecl(*leftNode, leftNode->symbol);
 
             // For each variable reference occuring on the RHS of the
             // assignment: add an edge from variable declaration and add an
             // edge to the LHS reference.
             for (auto* rightNode : visitorRHS.getVars()) {
-                connectDeclToVar(netlist, *rightNode, rightNode->symbol);
-                connectVarToVar(netlist, *rightNode, *leftNode);
+                connectDeclToVar(*rightNode, rightNode->symbol);
+                connectVarToVar(*rightNode, *leftNode);
             }
         }
 
@@ -232,11 +224,11 @@ public:
         // correspond to conditions controlling the assignment.
         for (auto* condNode : condVars) {
 
-            connectDeclToVar(netlist, *condNode, condNode->symbol);
+            connectDeclToVar(*condNode, condNode->symbol);
             for (auto* leftNode : visitorLHS.getVars()) {
 
                 // Add edge from conditional variable to the LHS variable.
-                connectVarToVar(netlist, *condNode, *leftNode);
+                connectVarToVar(*condNode, *leftNode);
             }
         }
     }
@@ -247,7 +239,8 @@ private:
     SmallVector<NetlistNode*>& condVars;
 };
 
-/// An AST visitor for proceural blocks that performs loop unrolling.
+/// Visit proceural blocks. This visitor performs loop unrolling and handles
+/// multiple assignments to the same variable.
 class ProceduralBlockVisitor : public ast::ASTVisitor<ProceduralBlockVisitor, true, false> {
 public:
     bool anyErrors = false;
@@ -260,33 +253,39 @@ public:
 
     /// For the specified variable reference, create a dependency to the declaration or
     /// last definition.
-    void connectVarToDecl(Netlist& netlist, NetlistNode& varNode,
+    void connectVarToDecl(NetlistNode& varNode,
                           ast::Symbol const& symbol) {
-        if (targetMap.contains(getSymbolHierPath(symbol))) {
-          auto *declNode =targetMap[getSymbolHierPath(symbol)];
+        /*if (targetMap.contains(getSymbolHierPath(symbol))) {
+          auto *declNode = targetMap[getSymbolHierPath(symbol)];
           netlist.addEdge(varNode, *declNode);
-          DEBUG_PRINT("New edge from var ref {} to previous defn {}\n", varNode.getName(),
-                      declNode->getName());
-        } else {
+          DEBUG_PRINT("New edge: reference {} -> previous defn {}\n", varNode.getName(),
+                      declNode->hierarchicalPath);
+        } else*/ {
           auto* declNode = netlist.lookupVariable(resolveSymbolHierPath(symbol));
           netlist.addEdge(varNode, *declNode);
-          DEBUG_PRINT("New edge from var ref {} to decl {}\n", varNode.getName(), declNode->getName());
+          DEBUG_PRINT("New edge: reference {} -> declaration {}\n", varNode.getName(), declNode->hierarchicalPath);
         }
     }
 
     /// For the specified variable reference, create a dependency from the declaration or
     /// last definition.
-    void connectDeclToVar(Netlist& netlist, NetlistNode& varNode, ast::Symbol const& symbol) {
-        if (targetMap.contains(getSymbolHierPath(symbol))) {
+    void connectDeclToVar(NetlistNode& varNode, ast::Symbol const& symbol) {
+        /*if (targetMap.contains(getSymbolHierPath(symbol))) {
           auto *declNode = targetMap[getSymbolHierPath(symbol)];
           netlist.addEdge(*declNode, varNode);
-          DEBUG_PRINT("New edge from previous defn {} to var ref {}\n", declNode->getName(),
+          DEBUG_PRINT("New edge: previous defn {} -> reference {}\n", declNode->hierarchicalPath,
                       varNode.getName());
-        } else {
+        } else*/ {
           auto* declNode = netlist.lookupVariable(resolveSymbolHierPath(symbol));
           netlist.addEdge(*declNode, varNode);
-          DEBUG_PRINT("New edge from decl {} to var ref {}\n", declNode->getName(), varNode.getName());
+          DEBUG_PRINT("New edge: declaration {} -> reference {}\n", declNode->hierarchicalPath, varNode.getName());
         }
+    }
+
+    void connectVarToVar(NetlistNode& sourceVarNode,
+                         NetlistNode& targetVarNode) {
+        netlist.addEdge(sourceVarNode, targetVarNode);
+        DEBUG_PRINT("New edge: reference {} -> reference {}\n", sourceVarNode.getName(), targetVarNode.getName());
     }
 
     void handle(const ast::VariableSymbol& symbol) { netlist.addVariableDeclaration(symbol); }
@@ -447,14 +446,14 @@ public:
         // add an edge to variable declaration.
         for (auto* leftNode : visitorLHS.getVars()) {
 
-            connectVarToDecl(netlist, *leftNode, leftNode->symbol);
+            connectVarToDecl(*leftNode, leftNode->symbol);
 
             // For each variable reference occuring on the RHS of the
             // assignment: add an edge from variable declaration and add an
             // edge to the LHS reference.
             for (auto* rightNode : visitorRHS.getVars()) {
-                connectDeclToVar(netlist, *rightNode, rightNode->symbol);
-                connectVarToVar(netlist, *rightNode, *leftNode);
+                connectDeclToVar(*rightNode, rightNode->symbol);
+                connectVarToVar(*rightNode, *leftNode);
             }
 
             auto key = getSymbolHierPath(leftNode->symbol);
@@ -465,11 +464,11 @@ public:
         // correspond to conditions controlling the assignment.
         for (auto* condNode : condVarsStack) {
 
-            connectDeclToVar(netlist, *condNode, condNode->symbol);
+            connectDeclToVar(*condNode, condNode->symbol);
             for (auto* leftNode : visitorLHS.getVars()) {
 
                 // Add edge from conditional variable to the LHS variable.
-                connectVarToVar(netlist, *condNode, *leftNode);
+                connectVarToVar(*condNode, *leftNode);
             }
         }
     }
@@ -489,11 +488,68 @@ private:
     std::map<std::string, NetlistNode*> targetMap;
 };
 
-/// A visitor that traverses the AST and builds a netlist representation.
-class NetlistVisitor : public ast::ASTVisitor<NetlistVisitor, true, false> {
+/// Visit generate blocks where new variable and net declarations can be
+/// introduced.
+class GenerateBlockVisitor : public ast::ASTVisitor<GenerateBlockVisitor, true, false> {
 public:
-    explicit NetlistVisitor(ast::Compilation& compilation, Netlist& netlist) :
+    explicit GenerateBlockVisitor(ast::Compilation& compilation, Netlist& netlist) :
         compilation(compilation), netlist(netlist) {}
+
+    /// Variable declaration.
+    void handle(const ast::VariableSymbol& symbol) { netlist.addVariableDeclaration(symbol); }
+
+    /// Net declaration.
+    void handle(const ast::NetSymbol& symbol) { netlist.addVariableDeclaration(symbol); }
+
+    /// Nested generate block.
+    void handle(const ast::GenerateBlockSymbol& symbol) {
+        if (!symbol.isUninstantiated) {
+            GenerateBlockVisitor visitor(compilation, netlist);
+            symbol.visit(visitor);
+        }
+    }
+
+    /// Procedural block.
+    void handle(const ast::ProceduralBlockSymbol& symbol) {
+        ProceduralBlockVisitor visitor(compilation, netlist);
+        symbol.visit(visitor);
+    }
+
+    /// Continuous assignment statement.
+    void handle(const ast::ContinuousAssignSymbol& symbol) {
+        ast::EvalContext evalCtx(ast::ASTContext(compilation.getRoot(), ast::LookupLocation::max));
+        SmallVector<NetlistNode*> condVars;
+        ContinuousAssignVisitor visitor(netlist, evalCtx, condVars);
+        symbol.visit(visitor);
+    }
+
+private:
+    Netlist& netlist;
+    ast::Compilation& compilation;
+};
+
+/// Visit module and interface instances to perform hookup of external
+/// variables to the corresponding ports and then to internally-scoped
+/// variables mirroring the ports.
+class InstanceVisitor : public ast::ASTVisitor<InstanceVisitor, true, false> {
+public:
+    explicit InstanceVisitor(ast::Compilation& compilation, Netlist& netlist) :
+        compilation(compilation), netlist(netlist) {}
+
+    void connectDeclToVar(NetlistNode& declNode, const ast::Symbol& variable) {
+        auto* varNode = netlist.lookupVariable(resolveSymbolHierPath(variable));
+        netlist.addEdge(*varNode, declNode);
+        DEBUG_PRINT("New edge: from declaration {} to reference {}\n", varNode->hierarchicalPath,
+                    declNode.getName());
+    }
+
+    void connectVarToDecl(NetlistNode& varNode,
+                                 const ast::Symbol& declaration) {
+        auto* declNode = netlist.lookupVariable(resolveSymbolHierPath(declaration));
+        netlist.addEdge(varNode, *declNode);
+        DEBUG_PRINT("New edge: reference {} to declaration {}\n", varNode.getName(),
+                    declNode->hierarchicalPath);
+    }
 
     /// Connect the ports of a module instance to the variables that connect to
     /// it in the parent scope. Given a port hookup of the form:
@@ -520,18 +576,18 @@ public:
                              ast::ArgumentDirection direction) {
         switch (direction) {
             case ast::ArgumentDirection::In:
-                connectDeclToVar(netlist, *node, node->symbol);
-                connectVarToDecl(netlist, *node, portSymbol);
+                connectDeclToVar(*node, node->symbol);
+                connectVarToDecl(*node, portSymbol);
                 break;
             case ast::ArgumentDirection::Out:
-                connectDeclToVar(netlist, *node, portSymbol);
-                connectVarToDecl(netlist, *node, node->symbol);
+                connectDeclToVar(*node, portSymbol);
+                connectVarToDecl(*node, node->symbol);
                 break;
             case ast::ArgumentDirection::InOut:
-                connectDeclToVar(netlist, *node, node->symbol);
-                connectDeclToVar(netlist, *node, portSymbol);
-                connectVarToDecl(netlist, *node, node->symbol);
-                connectVarToDecl(netlist, *node, portSymbol);
+                connectDeclToVar(*node, node->symbol);
+                connectDeclToVar(*node, portSymbol);
+                connectVarToDecl(*node, node->symbol);
+                connectVarToDecl(*node, portSymbol);
                 break;
             case ast::ArgumentDirection::Ref:
                 break;
@@ -548,16 +604,16 @@ public:
             switch (port.symbol.as<ast::PortSymbol>().direction) {
                 case ast::ArgumentDirection::In:
                     netlist.addEdge(port, *variableNode);
-                    DEBUG_PRINT("New edge: input port {} -> var {}\n", port.symbol.name, pathBuffer);
+                    DEBUG_PRINT("New edge: input port {} -> variable {}\n", port.symbol.name, pathBuffer);
                     break;
                 case ast::ArgumentDirection::Out:
                     netlist.addEdge(*variableNode, port);
-                    DEBUG_PRINT("New edge: var {} -> output port {}\n", pathBuffer, port.symbol.name);
+                    DEBUG_PRINT("New edge: variable {} -> output port {}\n", pathBuffer, port.symbol.name);
                     break;
                 case ast::ArgumentDirection::InOut:
                     netlist.addEdge(port, *variableNode);
                     netlist.addEdge(*variableNode, port);
-                    DEBUG_PRINT("New edges: var {} <-> inout port {}\n", pathBuffer, port.symbol.name);
+                    DEBUG_PRINT("New edges: variable {} <-> inout port {}\n", pathBuffer, port.symbol.name);
                     break;
                 case ast::ArgumentDirection::Ref:
                     break;
@@ -655,8 +711,6 @@ public:
         handleInstanceMemberVars(symbol);
         handleInstanceMemberPorts(symbol);
         handleInstanceExtPorts(symbol);
-
-        symbol.body.visit(*this);
     }
 
     /// Procedural block.
@@ -668,7 +722,7 @@ public:
     /// Generate block.
     void handle(const ast::GenerateBlockSymbol& symbol) {
         if (!symbol.isUninstantiated) {
-            ProceduralBlockVisitor visitor(compilation, netlist);
+            GenerateBlockVisitor visitor(compilation, netlist);
             symbol.visit(visitor);
         }
     }
@@ -677,7 +731,23 @@ public:
     void handle(const ast::ContinuousAssignSymbol& symbol) {
         ast::EvalContext evalCtx(ast::ASTContext(compilation.getRoot(), ast::LookupLocation::max));
         SmallVector<NetlistNode*> condVars;
-        AssignmentVisitor visitor(netlist, evalCtx, condVars);
+        ContinuousAssignVisitor visitor(netlist, evalCtx, condVars);
+        symbol.visit(visitor);
+    }
+
+private:
+    ast::Compilation& compilation;
+    Netlist& netlist;
+};
+
+/// The top-level visitor that traverses the AST and builds a netlist connectivity graph.
+class NetlistVisitor : public ast::ASTVisitor<NetlistVisitor, true, false> {
+public:
+    explicit NetlistVisitor(ast::Compilation& compilation, Netlist& netlist) :
+        compilation(compilation), netlist(netlist) {}
+
+    void handle(const ast::InstanceSymbol& symbol) {
+        InstanceVisitor visitor(compilation, netlist);
         symbol.visit(visitor);
     }
 

@@ -45,6 +45,15 @@ enum class NodeKind {
 
 enum class VariableSelectorKind { ElementSelect, RangeSelect, MemberAccess };
 
+static std::string getSymbolHierPath(const ast::Symbol& symbol) {
+
+    // Resolve the hierarchical path of the symbol.
+    std::string buffer;
+    symbol.getHierarchicalPath(buffer);
+
+    return buffer;
+}
+
 /// Base class representing various selectors that can be applied to references
 /// to structured variables (eg vectors, structs, unions).
 struct VariableSelectorBase {
