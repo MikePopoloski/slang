@@ -14,6 +14,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * The `.*` token sequence is actually two separate tokens that can be separated by whitespace
 * Functions in constraints cannot have `inout` arguments
 * Constraint subexpression can be of any type as long as their final expression type is numeric and they don't reference random variables
+* The argument to `$isunbounded` must be a parameter name (only enforced as a pedantic warning in slang)
+* Edge-sensitive paths in specify blocks can specify an edge keyword without also including a data source expression
+* Only bidirectional switches allow connections to nets with user-defined net types (other primitives do not)
 #### New Features in IEEE 1800-2023
 * Constraint expressions and random variables can have `real` types
 * `dist` expressions can have a `default` specifier
@@ -24,6 +27,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Covergroups can inherit from covergroups in parent classes
 * Coverpoints can have `real` types
 * Covergroups have new options: `cross_retain_auto_bins` and `real_interval`
+* New system functions `$timeunit`, `$timeprecision`, and `$stacktrace`
 
 ### General Features
 * Added [-Wunsigned-arith-shift](https://sv-lang.com/warning-ref.html#unsigned-arith-shift) which warns about suspicious arithmetic right shifts of unsigned types
