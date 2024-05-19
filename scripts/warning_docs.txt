@@ -1263,3 +1263,16 @@ wording in prior versions so this is implemented as a pedantic warning only.
 ```
 localparam p = $isunbounded(1 + 1);
 ```
+
+-Wspecify-condition-expr
+State-dependent path conditions in specify blocks are restricted to a subset of expression
+types and operators (see Table 30-1 in the LRM for the list of valid operators). This is an
+error by default but can be downgraded to a warning for compatibility with other tools.
+```
+module m(input b, output c);
+    wire integer a;
+    specify
+        if (a === 1 + 1) (b => c) = (0,0);
+    endspecify
+endmodule
+```

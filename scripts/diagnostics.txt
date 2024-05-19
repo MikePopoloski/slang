@@ -722,7 +722,6 @@ error PatternTaggedType "expected pattern type {} is not a tagged union"
 error PatternStructType "structure pattern type {} is not a struct"
 error PatternStructTooFew "structure pattern has too few members for target type {}"
 error PatternStructTooMany "structure pattern has too many members for target type {}"
-error SpecifyPathConditionExpr "expression is not valid in a state-dependent path condition"
 error SpecifyPathBadReference "cannot refer to '{}' in state-dependent path condition expression; only locally defined nets and variables are allowed"
 error PathPulseInExpr "PATHPULSE$ specparams cannot be used in expressions"
 error InterfacePortInvalidExpression "invalid expression for interface port connection"
@@ -762,6 +761,8 @@ warning float-widen FloatWiden "implicit conversion widens from {} to {}"
 warning float-narrow FloatNarrow "implicit conversion narrows from {} to {}"
 warning useless-cast UselessCast "useless cast from {} to the same type"
 warning unsigned-arith-shift UnsignedArithShift "arithmetic right shift of unsigned type {} will always shift in zeros (use logical shift if that is intended)"
+warning specify-condition-expr SpecifyPathConditionExpr "expression is not valid in a state-dependent path condition"
+
 
 subsystem Statements
 error ReturnNotInSubroutine "return statement is only valid inside task and function blocks"
@@ -1125,7 +1126,7 @@ group default = { real-underflow real-overflow vector-overflow int-overflow unco
                   raw-protect-eof protected-envelope specify-param dup-timing-path invalid-pulsestyle
                   negative-timing-limit bad-procedural-force duplicate-defparam implicit-port-type-mismatch
                   split-distweight-op dpi-pure-task multibit-edge unknown-sys-name unknown-library
-                  dup-config-rule unused-config-cell unused-config-instance }
+                  dup-config-rule unused-config-cell unused-config-instance specify-condition-expr }
 
 group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-none case-gen-dup
                 unused-result format-real ignored-slice task-ignored width-trunc dup-attr event-const

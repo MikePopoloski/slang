@@ -1905,7 +1905,7 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 17);
+    REQUIRE(diags.size() == 18);
     CHECK(diags[0].code == diag::InvalidSpecifyDest);
     CHECK(diags[1].code == diag::SpecifyBlockParam);
     CHECK(diags[2].code == diag::InvalidSpecifyPath);
@@ -1921,8 +1921,9 @@ endmodule
     CHECK(diags[12].code == diag::SpecifyPathConditionExpr);
     CHECK(diags[13].code == diag::SpecifyPathConditionExpr);
     CHECK(diags[14].code == diag::SpecifyPathConditionExpr);
-    CHECK(diags[15].code == diag::InvalidSpecifySource);
-    CHECK(diags[16].code == diag::InvalidSpecifyDest);
+    CHECK(diags[15].code == diag::SpecifyPathConditionExpr);
+    CHECK(diags[16].code == diag::InvalidSpecifySource);
+    CHECK(diags[17].code == diag::InvalidSpecifyDest);
 }
 
 TEST_CASE("Pathpulse specparams") {
