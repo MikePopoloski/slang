@@ -262,7 +262,6 @@ Token Preprocessor::handleDirectives(Token token) {
     // burn through any preprocessor directives we find and convert them to trivia
     SmallVector<Trivia, 8> trivia;
     while (true) {
-        lastConsumed = token;
         switch (token.kind) {
             case TokenKind::MacroQuote:
             case TokenKind::MacroTripleQuote:
@@ -288,7 +287,8 @@ Token Preprocessor::handleDirectives(Token token) {
                 trivia.append_range(token.trivia());
                 return token.withTrivia(alloc, trivia.copy(alloc));
             }
-            case TokenKind::Directive:
+            case TokenKind::Directive: {
+                auto savedLast = std::exchange(lastConsumed, token);
                 switch (token.directiveKind()) {
                     case SyntaxKind::IncludeDirective:
                         trivia.push_back(handleIncludeDirective(token));
@@ -355,15 +355,27 @@ Token Preprocessor::handleDirectives(Token token) {
                     case SyntaxKind::NoUnconnectedDriveDirective:
                         trivia.push_back(handleNoUnconnectedDriveDirective(token));
                         break;
+                    case SyntaxKind::DefaultDecayTimeDirective:
+                        trivia.push_back(handleDefaultDecayTimeDirective(token));
+                        break;
+                    case SyntaxKind::DefaultTriregStrengthDirective:
+                        trivia.push_back(handleDefaultTriregStrengthDirective(token));
+                        break;
                     case SyntaxKind::CellDefineDirective:
                     case SyntaxKind::EndCellDefineDirective:
-                        // we don't do anything with celldefine directives
+                    case SyntaxKind::DelayModeDistributedDirective:
+                    case SyntaxKind::DelayModePathDirective:
+                    case SyntaxKind::DelayModeUnitDirective:
+                    case SyntaxKind::DelayModeZeroDirective:
+                        // we don't do anything with these directives currently
                         trivia.push_back(createSimpleDirective(token));
                         break;
                     default:
                         SLANG_UNREACHABLE;
                 }
+                lastConsumed = savedLast;
                 break;
+            }
             default:
                 trivia.append_range(token.trivia());
                 return token.withTrivia(alloc, trivia.copy(alloc));
@@ -912,8 +924,9 @@ Trivia Preprocessor::handleDefaultNetTypeDirective(Token directive) {
     }
 
     if (!netType) {
-        addDiag(diag::ExpectedNetType, peek().location());
-        netType = Token::createMissing(alloc, TokenKind::WireKeyword, peek().location());
+        auto loc = directive.location() + directive.rawText().length();
+        addDiag(diag::ExpectedNetType, loc);
+        netType = Token::createMissing(alloc, TokenKind::WireKeyword, loc);
     }
 
     auto result = alloc.emplace<DefaultNetTypeDirectiveSyntax>(directive, netType);
@@ -972,7 +985,7 @@ Trivia Preprocessor::handleEndKeywordsDirective(Token directive) {
 
 std::pair<Trivia, Trivia> Preprocessor::handlePragmaDirective(Token directive) {
     if (peek().kind != TokenKind::Identifier || !peek().isOnSameLine()) {
-        addDiag(diag::ExpectedPragmaName, directive.location());
+        addDiag(diag::ExpectedPragmaName, directive.location() + directive.rawText().length());
         return {createSimpleDirective(directive), Trivia()};
     }
 
@@ -1031,8 +1044,9 @@ Trivia Preprocessor::handleUnconnectedDriveDirective(Token directive) {
     }
 
     if (!strength) {
-        addDiag(diag::ExpectedDriveStrength, peek().location());
-        strength = Token::createMissing(alloc, TokenKind::Pull0Keyword, peek().location());
+        auto loc = directive.location() + directive.rawText().length();
+        addDiag(diag::ExpectedDriveStrength, loc);
+        strength = Token::createMissing(alloc, TokenKind::Pull0Keyword, loc);
     }
 
     auto result = alloc.emplace<UnconnectedDriveDirectiveSyntax>(directive, strength);
@@ -1043,6 +1057,39 @@ Trivia Preprocessor::handleNoUnconnectedDriveDirective(Token directive) {
     checkOutsideDesignElement(directive);
     unconnectedDrive = TokenKind::Unknown;
     return createSimpleDirective(directive);
+}
+
+Trivia Preprocessor::handleDefaultDecayTimeDirective(Token directive) {
+    checkOutsideDesignElement(directive);
+
+    Token time;
+    switch (peek().kind) {
+        case TokenKind::IntegerLiteral:
+        case TokenKind::RealLiteral:
+            time = consume();
+            break;
+        case TokenKind::Identifier:
+            if (peek().valueText() == "infinite")
+                time = consume();
+            break;
+        default:
+            break;
+    }
+
+    if (!time)
+        time = expect(TokenKind::IntegerLiteral);
+
+    auto result = alloc.emplace<DefaultDecayTimeDirectiveSyntax>(directive, time);
+    return Trivia(TriviaKind::Directive, result);
+}
+
+Trivia Preprocessor::handleDefaultTriregStrengthDirective(Token directive) {
+    checkOutsideDesignElement(directive);
+
+    auto strength = expect(TokenKind::IntegerLiteral);
+
+    auto result = alloc.emplace<DefaultTriregStrengthDirectiveSyntax>(directive, strength);
+    return Trivia(TriviaKind::Directive, result);
 }
 
 ConditionalDirectiveExpressionSyntax* Preprocessor::parseConditionalExpr() {

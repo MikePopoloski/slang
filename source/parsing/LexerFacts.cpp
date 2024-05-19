@@ -40,7 +40,13 @@ const static flat_hash_map<std::string_view, SyntaxKind> directiveTable = {
     { "timescale", SyntaxKind::TimeScaleDirective },
     { "unconnected_drive", SyntaxKind::UnconnectedDriveDirective },
     { "undef", SyntaxKind::UndefDirective },
-    { "undefineall", SyntaxKind::UndefineAllDirective }
+    { "undefineall", SyntaxKind::UndefineAllDirective },
+    { "default_decay_time", SyntaxKind::DefaultDecayTimeDirective },
+    { "default_trireg_strength", SyntaxKind::DefaultTriregStrengthDirective },
+    { "delay_mode_distributed", SyntaxKind::DelayModeDistributedDirective },
+    { "delay_mode_path", SyntaxKind::DelayModePathDirective },
+    { "delay_mode_unit", SyntaxKind::DelayModeUnitDirective },
+    { "delay_mode_zero", SyntaxKind::DelayModeZeroDirective }
 };
 
 const static flat_hash_map<std::string_view, KeywordVersion> keywordVersionTable = {

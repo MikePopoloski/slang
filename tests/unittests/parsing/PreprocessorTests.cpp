@@ -1547,9 +1547,9 @@ TEST_CASE("Pragma expressions -- errors") {
 
     std::string result = "\n" + reportGlobalDiags();
     CHECK(result == R"(
-source:2:1: error: expected pragma name
+source:2:8: error: expected pragma name
 `pragma
-^
+       ^
 source:5:18: error: expected pragma expression
 `pragma bar asdf=
                  ^
@@ -1577,9 +1577,9 @@ source:16:18: error: expected pragma expression
 source:16:9: warning: unknown pragma 'bar' [-Wunknown-pragma]
 `pragma bar 'h 3e+2
         ^~~
-source:17:1: error: expected pragma name
+source:17:8: error: expected pragma name
 `pragma /* asdf
-^
+       ^
 source:20:15: error: expected pragma name
 `pragma reset (asdf, asdf), foo
               ^~~~~~~~~~~~
@@ -2535,4 +2535,46 @@ TEST_CASE("Macro expansion with asterisks regress") {
     std::string result = preprocess(text);
     CHECK(result == expected);
     CHECK_DIAGNOSTICS_EMPTY;
+}
+
+TEST_CASE("Annex E optional directives") {
+    auto& text = R"(
+`default_decay_time 100
+`default_decay_time 1.0
+`default_decay_time infinite
+`default_decay_time
+
+`default_trireg_strength 100
+
+`delay_mode_distributed
+`delay_mode_path
+`delay_mode_unit
+`delay_mode_zero
+)";
+
+    preprocess(text);
+
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics[0].code == diag::ExpectedIntegerLiteral);
+}
+
+TEST_CASE("Locations for missing expected tokens in preprocessor") {
+    auto& text = R"(
+`unconnected_drive
+`resetall
+`include
+`resetall
+)";
+
+    preprocess(text);
+
+    std::string result = "\n" + reportGlobalDiags();
+    CHECK(result == R"(
+source:4:9: error: expected an include file name
+`include
+        ^
+source:2:19: error: expected pull1 or pull0 strength
+`unconnected_drive
+                  ^
+)");
 }

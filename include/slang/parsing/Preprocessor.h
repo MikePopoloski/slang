@@ -175,6 +175,8 @@ private:
     Trivia handleEndKeywordsDirective(Token directive);
     Trivia handleUnconnectedDriveDirective(Token directive);
     Trivia handleNoUnconnectedDriveDirective(Token directive);
+    Trivia handleDefaultDecayTimeDirective(Token directive);
+    Trivia handleDefaultTriregStrengthDirective(Token directive);
     Trivia createSimpleDirective(Token directive);
     std::pair<Trivia, Trivia> handlePragmaDirective(Token directive);
 
