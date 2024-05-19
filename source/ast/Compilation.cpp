@@ -1429,6 +1429,8 @@ void Compilation::elaborate() {
     }
 
     if (!hasFlag(CompilationFlags::SuppressUnused)) {
+        TimeTraceScope timeScope("postElabVisitors"sv, ""sv);
+
         // Report on unused definitions.
         for (auto def : unreferencedDefs) {
             // If this is an interface, it may have been referenced in a port.
