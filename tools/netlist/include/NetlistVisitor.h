@@ -11,6 +11,7 @@
 #include "Config.h"
 #include "Debug.h"
 #include "Netlist.h"
+#include "ScopedSymbolTable.hpp"
 #include "fmt/color.h"
 #include "fmt/format.h"
 #include <algorithm>
@@ -255,12 +256,12 @@ public:
     /// last definition.
     void connectVarToDecl(NetlistNode& varNode,
                           ast::Symbol const& symbol) {
-        /*if (targetMap.contains(getSymbolHierPath(symbol))) {
+        if (targetMap.contains(getSymbolHierPath(symbol))) {
           auto *declNode = targetMap[getSymbolHierPath(symbol)];
           netlist.addEdge(varNode, *declNode);
           DEBUG_PRINT("New edge: reference {} -> previous defn {}\n", varNode.getName(),
-                      declNode->hierarchicalPath);
-        } else*/ {
+                      declNode->getName());
+        } else {
           auto* declNode = netlist.lookupVariable(resolveSymbolHierPath(symbol));
           netlist.addEdge(varNode, *declNode);
           DEBUG_PRINT("New edge: reference {} -> declaration {}\n", varNode.getName(), declNode->hierarchicalPath);
@@ -270,12 +271,12 @@ public:
     /// For the specified variable reference, create a dependency from the declaration or
     /// last definition.
     void connectDeclToVar(NetlistNode& varNode, ast::Symbol const& symbol) {
-        /*if (targetMap.contains(getSymbolHierPath(symbol))) {
+        if (targetMap.contains(getSymbolHierPath(symbol))) {
           auto *declNode = targetMap[getSymbolHierPath(symbol)];
           netlist.addEdge(*declNode, varNode);
-          DEBUG_PRINT("New edge: previous defn {} -> reference {}\n", declNode->hierarchicalPath,
+          DEBUG_PRINT("New edge: previous defn {} -> reference {}\n", declNode->getName(),
                       varNode.getName());
-        } else*/ {
+        } else {
           auto* declNode = netlist.lookupVariable(resolveSymbolHierPath(symbol));
           netlist.addEdge(*declNode, varNode);
           DEBUG_PRINT("New edge: declaration {} -> reference {}\n", declNode->hierarchicalPath, varNode.getName());
@@ -395,7 +396,7 @@ public:
                 stmt.ifFalse->visit(*this);
             }
 
-            // Pop the conditon variables.
+            // Pop the condition variables.
             for (auto& varRef : varRefVisitor.getVars()) {
                 condVarsStack.pop_back();
             }
@@ -456,6 +457,8 @@ public:
                 connectVarToVar(*rightNode, *leftNode);
             }
 
+            // Update the target map to record this assignment being the last
+            // definition of the corresponding variable.
             auto key = getSymbolHierPath(leftNode->symbol);
             targetMap[key] = leftNode;
         }
@@ -485,7 +488,7 @@ private:
     Netlist& netlist;
     ast::EvalContext evalCtx;
     SmallVector<NetlistNode*> condVarsStack;
-    std::map<std::string, NetlistNode*> targetMap;
+    ScopedSymbolTable targetMap;
 };
 
 /// Visit generate blocks where new variable and net declarations can be
@@ -500,14 +503,6 @@ public:
 
     /// Net declaration.
     void handle(const ast::NetSymbol& symbol) { netlist.addVariableDeclaration(symbol); }
-
-    /// Nested generate block.
-    void handle(const ast::GenerateBlockSymbol& symbol) {
-        if (!symbol.isUninstantiated) {
-            GenerateBlockVisitor visitor(compilation, netlist);
-            symbol.visit(visitor);
-        }
-    }
 
     /// Procedural block.
     void handle(const ast::ProceduralBlockSymbol& symbol) {
@@ -536,6 +531,7 @@ public:
     explicit InstanceVisitor(ast::Compilation& compilation, Netlist& netlist) :
         compilation(compilation), netlist(netlist) {}
 
+private:
     void connectDeclToVar(NetlistNode& declNode, const ast::Symbol& variable) {
         auto* varNode = netlist.lookupVariable(resolveSymbolHierPath(variable));
         netlist.addEdge(*varNode, declNode);
@@ -688,6 +684,7 @@ public:
         }
     }
 
+public:
     /// Variable declaration (deferred to handleInstanceMemberVars).
     void handle(const ast::VariableSymbol& symbol) {}
 
@@ -699,7 +696,7 @@ public:
 
     /// Instance.
     void handle(const ast::InstanceSymbol& symbol) {
-        DEBUG_PRINT("Instance {}\n", getSymbolHierPath(symbol));
+        DEBUG_PRINT("Instance: {}\n", getSymbolHierPath(symbol));
 
         if (getSymbolHierPath(symbol) == "$unit") {
             // An instance without a name has been excluded from the design.
@@ -711,6 +708,8 @@ public:
         handleInstanceMemberVars(symbol);
         handleInstanceMemberPorts(symbol);
         handleInstanceExtPorts(symbol);
+
+        symbol.body.visit(*this);
     }
 
     /// Procedural block.
