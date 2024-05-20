@@ -111,7 +111,7 @@ public:
         else {
             node.bounds = {0, getTypeBitWidth(expr.symbol.getType()) - 1};
         }
-        DEBUG_PRINT("Variable reference: {} bounds {}:{}\n", node.toString(), node.bounds.lower(),
+        DEBUG_PRINT("Variable reference: {} bounds [{}:{}]\n", node.toString(), node.bounds.lower(),
                     node.bounds.upper());
 
         // Clear the selectors for the next named value.
@@ -250,17 +250,18 @@ public:
         netlist(netlist),
         evalCtx(ast::ASTContext(compilation.getRoot(), ast::LookupLocation::max)) {
         evalCtx.pushEmptyFrame();
+        DEBUG_PRINT("Procedural block\n");
     }
 
     /// For the specified variable reference, create a dependency to the declaration or
     /// last definition.
     void connectVarToDecl(NetlistNode& varNode,
                           ast::Symbol const& symbol) {
-        if (targetMap.contains(getSymbolHierPath(symbol))) {
-          auto *declNode = targetMap[getSymbolHierPath(symbol)];
-          netlist.addEdge(varNode, *declNode);
+        auto result = targetMap.lookup(getSymbolHierPath(symbol));
+        if (result.has_value()) {
+          netlist.addEdge(varNode, *result.value());
           DEBUG_PRINT("New edge: reference {} -> previous defn {}\n", varNode.getName(),
-                      declNode->getName());
+                      result.value()->getName());
         } else {
           auto* declNode = netlist.lookupVariable(resolveSymbolHierPath(symbol));
           netlist.addEdge(varNode, *declNode);
@@ -271,10 +272,10 @@ public:
     /// For the specified variable reference, create a dependency from the declaration or
     /// last definition.
     void connectDeclToVar(NetlistNode& varNode, ast::Symbol const& symbol) {
-        if (targetMap.contains(getSymbolHierPath(symbol))) {
-          auto *declNode = targetMap[getSymbolHierPath(symbol)];
-          netlist.addEdge(*declNode, varNode);
-          DEBUG_PRINT("New edge: previous defn {} -> reference {}\n", declNode->getName(),
+        auto result = targetMap.lookup(getSymbolHierPath(symbol));
+        if (result.has_value()) {
+          netlist.addEdge(*result.value(), varNode);
+          DEBUG_PRINT("New edge: previous defn {} -> reference {}\n", result.value()->getName(),
                       varNode.getName());
         } else {
           auto* declNode = netlist.lookupVariable(resolveSymbolHierPath(symbol));
@@ -360,7 +361,10 @@ public:
                 *local = std::move(values[i++]);
             }
 
+            targetMap.pushScope();
             loop.body.visit(*this);
+            targetMap.popScope();
+
             if (anyErrors) {
                 return;
             }
@@ -460,7 +464,7 @@ public:
             // Update the target map to record this assignment being the last
             // definition of the corresponding variable.
             auto key = getSymbolHierPath(leftNode->symbol);
-            targetMap[key] = leftNode;
+            targetMap.insert(key, leftNode);
         }
 
         // Add edges to the LHS target variables from declarations that

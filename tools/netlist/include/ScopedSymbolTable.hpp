@@ -3,10 +3,14 @@
 #include <unordered_map>
 #include <stack>
 #include <optional>
+#include <string>
+#include <memory>
+
+#include "Netlist.h"
 
 using namespace slang;
 
-using namespace netlist {
+namespace netlist {
 
 /// Map names to NetlistNodes. Maintain a reference to a parent table, to which
 /// lookups can be deferred if they cannot be resolved in the current symbol
@@ -15,17 +19,18 @@ class SymbolTable {
 public:
     using SymbolMap = std::unordered_map<std::string, NetlistNode*>;
 
-    explicit SymbolTable(std::shared_ptr<SymbolTable> parent) : parent(parent) {}
+    SymbolTable() = default;
+    SymbolTable(std::shared_ptr<SymbolTable> &parent) : parent(parent) {}
 
     auto insert(std::string const &name, NetlistNode *node) {
-      SLANG_ASSERT(symbols.count(name) == 0 && "symbol already exists");
+      //SLANG_ASSERT(symbols.count(name) == 0 && "symbol already exists");
       symbols[name] = node;
     }
 
-    std::optional<std::string> lookup(std::string const&name) {
+    std::optional<NetlistNode*> lookup(std::string const&name) {
       if (symbols.find(name) != symbols.end()) {
         return symbols[name];
-      } else if (parent) {
+      } else if (parent.get() != nullptr) {
         return parent->lookup(name);
       }
       return std::nullopt;
@@ -43,8 +48,8 @@ class ScopedSymbolTable {
 public:
   explicit ScopedSymbolTable() { pushScope(); }
 
-  auto pushScope() {
-    scoped.emplace(std::make_shared<SymbolTable>(currentScope());
+  void pushScope() {
+    scopes.push(std::make_shared<SymbolTable>());
   }
 
   auto popScope() {
@@ -59,12 +64,12 @@ public:
     return currentScope()->insert(name, node);
   }
 
-  std::optional<std::string> lookup(std::string const&name) {
+  std::optional<NetlistNode*> lookup(std::string const&name) {
     return currentScope()->lookup(name);
   }
 
 private:
-  SymTabPtr currentScope() const { return scopes.top(); }
+  SymTabPtr const &currentScope() const { return scopes.top(); }
   std::stack<SymTabPtr> scopes;
 };
 
