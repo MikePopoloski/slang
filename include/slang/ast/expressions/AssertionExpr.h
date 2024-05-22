@@ -232,7 +232,9 @@ struct SequenceRange {
 
     void serializeTo(ASTSerializer& serializer) const;
 
-    auto operator<=>(const SequenceRange&) const = default;
+    bool operator<(const SequenceRange& right) const;
+
+    //auto operator<=>(const SequenceRange&) const = default;
 
     /// `SequenceRange`s intersects if max delay of one range
     /// is greater than min delay of other range.

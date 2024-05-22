@@ -471,6 +471,27 @@ void SequenceRange::serializeTo(ASTSerializer& serializer) const {
         serializer.write("max", "$"sv);
 }
 
+bool SequenceRange::operator<(const SequenceRange& right) const {
+    // if both sequences are unbounded than check min's
+    if (!max.has_value() && !right.max.has_value())
+        return min < right.min;
+
+    // if both sequences are bounded than compare it's diff's
+    if (max.has_value() && right.max.has_value()) {
+        uint32_t maxVal = max.value();
+        uint32_t rightMaxVal = right.max.value();
+        return ((maxVal - min) < (rightMaxVal - right.min)) && (min < right.min);
+    }
+
+    // if only left is bounded than return `true` because right sequence is potentially
+    // have an infinite number of matches
+    if (max.has_value())
+        return true;
+
+    // return `false` otherwise (in case is right sequence if bounded)
+    return false;
+}
+
 bool SequenceRange::isIntersect(const SequenceRange& other) const {
     if (!max.has_value())
         return (other.max.has_value()) ? (min >= other.min && min <= other.max.value())
@@ -1208,7 +1229,7 @@ std::optional<SequenceRange> BinaryAssertionExpr::computeSequenceLengthImpl() co
     if (leftLen.has_value() && rightLen.has_value()) {
         const auto leftLenVal = leftLen.value();
         const auto rightLenVal = rightLen.value();
-        return (leftLenVal > rightLenVal) ? leftLenVal : rightLenVal;
+        return (rightLenVal < leftLenVal) ? leftLenVal : rightLenVal;
     }
     else if (leftLen.has_value()) {
         return leftLen.value();
