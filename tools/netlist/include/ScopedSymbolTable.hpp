@@ -1,7 +1,9 @@
 #pragma once
 
+#include <deque>
 #include <unordered_map>
 #include <stack>
+#include <deque>
 #include <optional>
 #include <string>
 #include <memory>
@@ -12,44 +14,45 @@ using namespace slang;
 
 namespace netlist {
 
-/// Map names to NetlistNodes. Maintain a reference to a parent table, to which
-/// lookups can be deferred if they cannot be resolved in the current symbol
-/// table.
-class SymbolTable {
+/// Hold a stack of symbols and their corresponding netlist nodes that
+/// represents the order of assignments within a procedural block. Provide a
+/// lookup function that matches the name and whether the two assignments are
+/// overlapping. Use a deque container to allow lookups.
+class SymbolStack {
 public:
-    using SymbolMap = std::unordered_map<std::string, NetlistNode*>;
+    SymbolStack() = default;
+    SymbolStack(std::shared_ptr<SymbolStack> &parent) : parent(parent) {}
 
-    SymbolTable() = default;
-    SymbolTable(std::shared_ptr<SymbolTable> &parent) : parent(parent) {}
+    auto push(std::string const& name, NetlistVariableReference* node) { symbols.emplace_back(name, node); }
 
-    auto insert(std::string const &name, NetlistNode *node) {
-      //SLANG_ASSERT(symbols.count(name) == 0 && "symbol already exists");
-      symbols[name] = node;
-    }
-
-    std::optional<NetlistNode*> lookup(std::string const&name) {
-      if (symbols.find(name) != symbols.end()) {
-        return symbols[name];
-      } else if (parent.get() != nullptr) {
-        return parent->lookup(name);
-      }
-      return std::nullopt;
+    std::optional<NetlistVariableReference*> lookup(std::string const&name, ConstantRange const&bounds) {
+        auto it = std::find_if(symbols.begin(), symbols.end(),
+                               [&](std::pair<std::string, NetlistVariableReference*> const& s) {
+                                   return s.first == name && s.second->bounds.overlaps(bounds);
+                               });
+        if (it != symbols.end()) {
+            return it->second;
+        }
+        else if (parent.get() != nullptr) {
+            return parent->lookup(name, bounds);
+        }
+        return std::nullopt;
     }
 
 private:
-  SymbolMap symbols;
-  std::shared_ptr<SymbolTable> parent;
+  std::deque<std::pair<std::string, NetlistVariableReference*>> symbols;
+  std::shared_ptr<SymbolStack> parent;
 };
 
-/// Add scoping to SymbolTable lookups by maintaining a stack of tables.
-class ScopedSymbolTable {
-  using SymTabPtr = std::shared_ptr<SymbolTable>;
+/// Add scoping to SymbolStack lookups by maintaining a stack of tables.
+class ScopedSymbolStack {
+  using SymTabPtr = std::shared_ptr<SymbolStack>;
 
 public:
-  explicit ScopedSymbolTable() { pushScope(); }
+  explicit ScopedSymbolStack() { pushScope(); }
 
   void pushScope() {
-    scopes.push(std::make_shared<SymbolTable>());
+    scopes.push(std::make_shared<SymbolStack>());
   }
 
   auto popScope() {
@@ -60,12 +63,12 @@ public:
     }
   }
 
-  auto insert(std::string const &name, NetlistNode *node) {
-    return currentScope()->insert(name, node);
+  auto push(std::string const &name, NetlistVariableReference *node) {
+    return currentScope()->push(name, node);
   }
 
-  std::optional<NetlistNode*> lookup(std::string const&name) {
-    return currentScope()->lookup(name);
+  std::optional<NetlistVariableReference*> lookup(std::string const&name, ConstantRange const&bounds) {
+    return currentScope()->lookup(name, bounds);
   }
 
 private:

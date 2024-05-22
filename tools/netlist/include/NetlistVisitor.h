@@ -255,9 +255,9 @@ public:
 
     /// For the specified variable reference, create a dependency to the declaration or
     /// last definition.
-    void connectVarToDecl(NetlistNode& varNode,
+    void connectVarToDecl(NetlistVariableReference& varNode,
                           ast::Symbol const& symbol) {
-        auto result = targetMap.lookup(getSymbolHierPath(symbol));
+        auto result = targetMap.lookup(getSymbolHierPath(symbol), varNode.bounds);
         if (result.has_value()) {
           netlist.addEdge(varNode, *result.value());
           DEBUG_PRINT("New edge: reference {} -> previous defn {}\n", varNode.getName(),
@@ -271,8 +271,8 @@ public:
 
     /// For the specified variable reference, create a dependency from the declaration or
     /// last definition.
-    void connectDeclToVar(NetlistNode& varNode, ast::Symbol const& symbol) {
-        auto result = targetMap.lookup(getSymbolHierPath(symbol));
+    void connectDeclToVar(NetlistVariableReference& varNode, ast::Symbol const& symbol) {
+        auto result = targetMap.lookup(getSymbolHierPath(symbol), varNode.bounds);
         if (result.has_value()) {
           netlist.addEdge(*result.value(), varNode);
           DEBUG_PRINT("New edge: previous defn {} -> reference {}\n", result.value()->getName(),
@@ -451,27 +451,30 @@ public:
         // add an edge to variable declaration.
         for (auto* leftNode : visitorLHS.getVars()) {
 
-            connectVarToDecl(*leftNode, leftNode->symbol);
+            auto &LHSVarRef = leftNode->as<NetlistVariableReference>();
+            connectVarToDecl(LHSVarRef, LHSVarRef.symbol);
 
             // For each variable reference occuring on the RHS of the
             // assignment: add an edge from variable declaration and add an
             // edge to the LHS reference.
             for (auto* rightNode : visitorRHS.getVars()) {
-                connectDeclToVar(*rightNode, rightNode->symbol);
-                connectVarToVar(*rightNode, *leftNode);
+                auto &RHSVarRef = rightNode->as<NetlistVariableReference>();
+                connectDeclToVar(RHSVarRef, RHSVarRef.symbol);
+                connectVarToVar(RHSVarRef, LHSVarRef);
             }
 
             // Update the target map to record this assignment being the last
             // definition of the corresponding variable.
             auto key = getSymbolHierPath(leftNode->symbol);
-            targetMap.insert(key, leftNode);
+            targetMap.push(key, &LHSVarRef);
         }
 
         // Add edges to the LHS target variables from declarations that
         // correspond to conditions controlling the assignment.
         for (auto* condNode : condVarsStack) {
+            auto &condVarRef = condNode->as<NetlistVariableReference>();
 
-            connectDeclToVar(*condNode, condNode->symbol);
+            connectDeclToVar(condVarRef, condVarRef.symbol);
             for (auto* leftNode : visitorLHS.getVars()) {
 
                 // Add edge from conditional variable to the LHS variable.
@@ -492,7 +495,7 @@ private:
     Netlist& netlist;
     ast::EvalContext evalCtx;
     SmallVector<NetlistNode*> condVarsStack;
-    ScopedSymbolTable targetMap;
+    ScopedSymbolStack targetMap;
 };
 
 /// Visit generate blocks where new variable and net declarations can be
