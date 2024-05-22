@@ -605,7 +605,7 @@ public:
         ast::EdgeKind edgeKind = ast::EdgeKind::None;
         if (symbol.procedureKind == ast::ProceduralBlockKind::AlwaysFF ||
             symbol.procedureKind == ast::ProceduralBlockKind::Always) {
-            //auto& body = symbol.getBody();
+            // auto& body = symbol.getBody();
             if (symbol.getBody().kind == ast::StatementKind::Block) {
                 auto& block = symbol.getBody().as<ast::BlockStatement>();
                 if (block.blockKind == ast::StatementBlockKind::Sequential &&
