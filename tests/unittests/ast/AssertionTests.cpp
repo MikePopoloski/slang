@@ -2692,7 +2692,7 @@ module top8(input clk);
 
     assert property (if (a) b intersect ##2 b);  // illegal
 
-    assert property (if (a) ##2 b intersect ##2 b);  // illegal
+    assert property (if (a) ##2 b intersect ##2 b);  // legal
 
     assert property (case (b) 1, 2, 3: 1 ##1 b; 4: a and b; default: 1 |-> b; endcase);  // legal
 
@@ -2703,11 +2703,47 @@ module top8(input clk);
     assert property (disable iff (1'b1) a);  // illegal
 
 endmodule
+
+module m9;
+    property p1;
+        1'b1 #=# 1;  // legal
+    endproperty
+    property p2;
+        1'b0 #=# 1;  // illegal
+    endproperty
+    property p3;
+        1[*2] #=# 1;  // legal
+    endproperty
+    property p4;
+        1[*0] #=# 1;  // legal
+    endproperty
+    property p5;
+        1'b1 #-# 1;  // legal
+    endproperty
+    property p6;
+        1'b0 #-# 1;  // illegal
+    endproperty
+    property p7;
+        1[*0] #-# 1;  // illegal
+    endproperty
+    property p8;
+        1[*0:2] #-# 1;  // legal
+    endproperty
+
+    assert property (p1);
+    assert property (p2);
+    assert property (p3);
+    assert property (p4);
+    assert property (p5);
+    assert property (p6);
+    assert property (p7);
+    assert property (p8);
+endmodule
 )");
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 45);
+    REQUIRE(diags.size() == 48);
 }

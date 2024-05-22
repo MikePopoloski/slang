@@ -860,7 +860,7 @@ note NoteWhileExpanding "while expanding {} '{}'"
 note NoteExpandedHere "expanded here"
 note SeqAdmitsEmptyMatches "sequence property admits empty matches"
 note SeqAdmitsNoMatches "sequence property can never be matched"
-note SeqAdmitsOnlyEmptyMatches "sequence property admits only empty matches"
+note SeqAcceptsOnlyEmptyMatches "sequence property admits only empty matches"
 note SeqPropCondAlwaysFalse "condition is always false"
 note DisableIffCondAlwaysTrue "disable iff condition is always true"
 

@@ -73,11 +73,38 @@ class ASTContext;
 class CallExpression;
 struct SequenceRange;
 
+enum class NondegeneracyStatus {
+    None = 0,
+
+    // Sequence admits empty matches
+    AdmitsEmpty = 1 << 0,
+
+    // Sequence accepts only empty matches
+    AcceptsOnlyEmpty = 1 << 1,
+
+    // Sequence admits no match
+    AdmitsNoMatch = 1 << 2
+};
+SLANG_BITMASK(NondegeneracyStatus, AdmitsNoMatch);
+
 /// The base class for assertion expressions (sequences and properties).
 class SLANG_EXPORT AssertionExpr {
 public:
     /// The kind of expression; indicates the type of derived class.
     AssertionExprKind kind;
+
+    enum class NondegeneracyFlags {
+        // In case of overlapping implication or followed by (`#-#`) property
+        // left hand sequence shall be nondegenerate
+        IsOverlapImplOrHashMinus,
+
+        // In case of nonoverlapping implication or followed by (`#=#`) property
+        // left hand sequence shall admit at least one match and can admit only empty matches.
+        // Generally such sequence can be degenerate.
+        IsNonOverlapImplOrHashEq,
+
+        None
+    };
 
     /// The syntax used to create the expression, if any. An expression tree can
     /// be created manually in which case it may not have a syntax representation.
@@ -92,17 +119,13 @@ public:
     /// Indicates whether the expression is invalid.
     bool bad() const { return kind == AssertionExprKind::Invalid; }
 
-    /// @returns true if this is a sequence expression that admits an empty match,
-    /// and false otherwise.
-    bool admitsEmpty() const;
+    // Checks that the sequence matches one of the following:
+    //   - admits empty matches
+    //   - accepts only empty matches
+    //   - admits no matches
+    bitmask<NondegeneracyStatus> checkNondegeneracy() const;
 
-    bool isAdmitsOnlyEmpty() const { return admitsOnlyEmpty; }
-
-    /// Returns true if this is a sequence expression that admits no match,
-    /// and false otherwise.
-    bool admitsNoMatch() const;
-
-    /// Compute possible clock ticks length of sequence under assertion expression
+    /// Computes possible clock ticks (delay) length of sequence under assertion expression
     std::optional<SequenceRange> computeSequenceLength() const;
 
     static const AssertionExpr& bind(const syntax::SequenceExprSyntax& syntax,
@@ -110,8 +133,7 @@ public:
 
     static const AssertionExpr& bind(const syntax::PropertyExprSyntax& syntax,
                                      const ASTContext& context, bool allowDisable = false,
-                                     bool isFollowedByProp = false, bool isOverlapImpl = false,
-                                     bool isNonOverlapImpl = false);
+                                     const NondegeneracyFlags nondegFlags = NondegeneracyFlags::None);
 
     static const AssertionExpr& bind(const syntax::PropertySpecSyntax& syntax,
                                      const ASTContext& context);
@@ -170,10 +192,6 @@ protected:
     explicit AssertionExpr(AssertionExprKind kind) : kind(kind) {}
 
     static AssertionExpr& badExpr(Compilation& compilation, const AssertionExpr* expr);
-
-    /// Store `true` if sequence admits only empty matches.
-    /// Purpose for `mutable` is to update it in `admitsEmptyImpl` `const` methods.
-    mutable bool admitsOnlyEmpty = false;
 };
 
 /// @brief Represents an invalid expression
@@ -188,9 +206,7 @@ public:
     explicit InvalidAssertionExpr(const AssertionExpr* child) :
         AssertionExpr(AssertionExprKind::Invalid), child(child) {}
 
-    bool admitsEmptyImpl() const { return false; }
-
-    bool admitsNoMatchImpl() const { return false; }
+    bitmask<NondegeneracyStatus> checkNondegeneracyImpl() const { return NondegeneracyStatus::None; }
 
     std::optional<SequenceRange> computeSequenceLengthImpl() const;
 
@@ -214,20 +230,16 @@ struct SequenceRange {
 
     void serializeTo(ASTSerializer& serializer) const;
 
-    bool operator!=(const SequenceRange& right) const;
+    auto operator<=>(const SequenceRange&) const = default;
 
-    bool operator==(const SequenceRange& right) const;
-
-    bool operator>(const SequenceRange& right) const;
-
-    bool operator<(const SequenceRange& right) const;
-
-    bool operator>=(const SequenceRange& right) const;
-
-    bool operator<=(const SequenceRange& right) const;
-
+    /// `SequenceRange`s intersects if max delay of one range
+    /// is greater than min delay of other range.
     bool isIntersect(const SequenceRange& other) const;
 
+    /// `SequenceRange` is within other `SequenceRange`
+    /// if min delay of one range is greater or equal than
+    /// min delay of other range and max delay of one range
+    /// is less or equal than max delay of other range.
     bool isWithin(const SequenceRange& other) const;
 };
 
@@ -262,7 +274,7 @@ struct SequenceRepetition {
         /// The sequence may or may not admit an empty match.
         Depends,
 
-        /// The sequence admits only empty matches and nothing else.
+        /// The sequence accepts only empty matches and nothing else.
         Only,
     };
 
@@ -286,13 +298,12 @@ public:
 
     SimpleAssertionExpr(const Expression& expr, std::optional<SequenceRepetition> repetition,
                         bool isNullExpr = false) :
-        AssertionExpr(AssertionExprKind::Simple), expr(expr), repetition(repetition),
-        isNullExpr(isNullExpr) {}
+        AssertionExpr(AssertionExprKind::Simple),
+        expr(expr), repetition(repetition), isNullExpr(isNullExpr) {}
 
     void requireSequence(const ASTContext& context, DiagCode code) const;
-    bool admitsEmptyImpl() const;
 
-    bool admitsNoMatchImpl() const;
+    bitmask<NondegeneracyStatus> checkNondegeneracyImpl() const;
 
     std::optional<SequenceRange> computeSequenceLengthImpl() const;
 
@@ -327,9 +338,7 @@ public:
     explicit SequenceConcatExpr(std::span<const Element> elements) :
         AssertionExpr(AssertionExprKind::SequenceConcat), elements(elements) {}
 
-    bool admitsEmptyImpl() const;
-
-    bool admitsNoMatchImpl() const;
+    bitmask<NondegeneracyStatus> checkNondegeneracyImpl() const;
 
     std::optional<SequenceRange> computeSequenceLengthImpl() const;
 
@@ -365,9 +374,7 @@ public:
         AssertionExpr(AssertionExprKind::SequenceWithMatch), expr(expr), repetition(repetition),
         matchItems(matchItems) {}
 
-    bool admitsEmptyImpl() const;
-
-    bool admitsNoMatchImpl() const { return expr.admitsNoMatch(); };
+    bitmask<NondegeneracyStatus> checkNondegeneracyImpl() const;
 
     std::optional<SequenceRange> computeSequenceLengthImpl() const {
         return expr.computeSequenceLength();
@@ -406,9 +413,7 @@ public:
                        std::optional<SequenceRange> range) :
         AssertionExpr(AssertionExprKind::Unary), op(op), expr(expr), range(range) {}
 
-    bool admitsEmptyImpl() const { return false; }
-
-    bool admitsNoMatchImpl() const { return expr.admitsNoMatch(); };
+    bitmask<NondegeneracyStatus> checkNondegeneracyImpl() const { return expr.checkNondegeneracy(); }
 
     std::optional<SequenceRange> computeSequenceLengthImpl() const {
         return expr.computeSequenceLength();
@@ -447,10 +452,15 @@ public:
         AssertionExpr(AssertionExprKind::Binary), op(op), left(left), right(right) {}
 
     void requireSequence(const ASTContext& context, DiagCode code) const;
-    bool admitsEmptyImpl() const;
 
-    bool admitsNoMatchImpl() const;
+    bitmask<NondegeneracyStatus> checkNondegeneracyImpl() const;
 
+    /// Returns the maximum possible sequence length of the two operands.
+    /// If one of the operands is unbounded, return `nullopt`.
+    /// In case of `through` binary operator it returns `SequenceRange`
+    /// of only right operand because just only right part have a real matches
+    /// unlike the left (left is just formally a condition).
+    /// See 16.9.9 of `SystemVerilog` LRM for details.
     std::optional<SequenceRange> computeSequenceLengthImpl() const;
 
     static AssertionExpr& fromSyntax(const syntax::BinarySequenceExprSyntax& syntax,
@@ -483,9 +493,7 @@ public:
                             std::span<const Expression* const> matchItems) :
         AssertionExpr(AssertionExprKind::FirstMatch), seq(seq), matchItems(matchItems) {}
 
-    bool admitsEmptyImpl() const;
-
-    bool admitsNoMatchImpl() const { return seq.admitsNoMatch(); }
+    bitmask<NondegeneracyStatus> checkNondegeneracyImpl() const;
 
     std::optional<SequenceRange> computeSequenceLengthImpl() const {
         return seq.computeSequenceLength();
@@ -518,9 +526,7 @@ public:
     ClockingAssertionExpr(const TimingControl& clocking, const AssertionExpr& expr) :
         AssertionExpr(AssertionExprKind::Clocking), clocking(clocking), expr(expr) {}
 
-    bool admitsEmptyImpl() const;
-
-    bool admitsNoMatchImpl() const { return false; }
+    bitmask<NondegeneracyStatus> checkNondegeneracyImpl() const;
 
     std::optional<SequenceRange> computeSequenceLengthImpl() const {
         return expr.computeSequenceLength();
@@ -561,9 +567,7 @@ public:
     StrongWeakAssertionExpr(const AssertionExpr& expr, Strength strength) :
         AssertionExpr(AssertionExprKind::StrongWeak), expr(expr), strength(strength) {}
 
-    bool admitsEmptyImpl() const { return false; }
-
-    bool admitsNoMatchImpl() const { return expr.admitsNoMatch(); }
+    bitmask<NondegeneracyStatus> checkNondegeneracyImpl() const { return expr.checkNondegeneracy(); }
 
     std::optional<SequenceRange> computeSequenceLengthImpl() const {
         return expr.computeSequenceLength();
@@ -599,16 +603,16 @@ public:
 
     AbortAssertionExpr(const Expression& condition, const AssertionExpr& expr, Action action,
                        bool isSync) :
-        AssertionExpr(AssertionExprKind::Abort), condition(condition), expr(expr), action(action),
-        isSync(isSync) {}
+        AssertionExpr(AssertionExprKind::Abort),
+        condition(condition), expr(expr), action(action), isSync(isSync) {}
 
-    bool admitsEmptyImpl() const { return false; }
-
-    bool admitsNoMatchImpl() const { return false; }
+    bitmask<NondegeneracyStatus> checkNondegeneracyImpl() const {
+        return expr.checkNondegeneracy();
+    }
 
     std::optional<SequenceRange> computeSequenceLengthImpl() const {
         return expr.computeSequenceLength();
-    };
+    }
 
     static AssertionExpr& fromSyntax(const syntax::AcceptOnPropertyExprSyntax& syntax,
                                      const ASTContext& context);
@@ -641,10 +645,9 @@ public:
         AssertionExpr(AssertionExprKind::Conditional), condition(condition), ifExpr(ifExpr),
         elseExpr(elseExpr) {}
 
-    bool admitsEmptyImpl() const { return false; }
+    bitmask<NondegeneracyStatus> checkNondegeneracyImpl() const { return NondegeneracyStatus::None; }
 
-    bool admitsNoMatchImpl() const { return false; };
-
+    /// Returns maximum possible sequence length beetween `if` and `else` sequence expressions.
     std::optional<SequenceRange> computeSequenceLengthImpl() const;
 
     static AssertionExpr& fromSyntax(const syntax::ConditionalPropertyExprSyntax& syntax,
@@ -686,13 +689,13 @@ public:
 
     CaseAssertionExpr(const Expression& expr, std::span<const ItemGroup> items,
                       const AssertionExpr* defaultCase) :
-        AssertionExpr(AssertionExprKind::Case), expr(expr), items(items), defaultCase(defaultCase) {
-    }
+        AssertionExpr(AssertionExprKind::Case),
+        expr(expr), items(items), defaultCase(defaultCase) {}
 
-    bool admitsEmptyImpl() const { return false; }
+    bitmask<NondegeneracyStatus> checkNondegeneracyImpl() const { return NondegeneracyStatus::None; }
 
-    bool admitsNoMatchImpl() const { return false; }
-
+    /// Returns maximum possible sequence length beetween all case labels sequence expressions
+    /// include `default` label
     std::optional<SequenceRange> computeSequenceLengthImpl() const;
 
     static AssertionExpr& fromSyntax(const syntax::CasePropertyExprSyntax& syntax,
@@ -728,10 +731,9 @@ public:
     DisableIffAssertionExpr(const Expression& condition, const AssertionExpr& expr) :
         AssertionExpr(AssertionExprKind::DisableIff), condition(condition), expr(expr) {}
 
-    bool admitsEmptyImpl() const { return false; }
+    bitmask<NondegeneracyStatus> checkNondegeneracyImpl() const { return NondegeneracyStatus::None; }
 
-    bool admitsNoMatchImpl() const { return false; };
-
+    /// Returns `nullopt` if `disable iff` condition is always `true` (`1`)
     std::optional<SequenceRange> computeSequenceLengthImpl() const;
 
     static AssertionExpr& fromSyntax(const syntax::DisableIffSyntax& syntax,
