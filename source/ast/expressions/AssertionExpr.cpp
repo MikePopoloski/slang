@@ -147,7 +147,7 @@ const AssertionExpr& AssertionExpr::bind(const PropertyExprSyntax& syntax,
                     auto& diag = context.addDiag(diag::OverlapImplNondegenerate,
                                                  syntax.sourceRange());
                     diag.addNote((isSeqAcceptsOnlyEmpty) ? diag::SeqAcceptsOnlyEmptyMatches
-                                                        : diag::SeqAdmitsNoMatches,
+                                                         : diag::SeqAdmitsNoMatches,
                                  syntax.sourceRange());
                 }
             }
@@ -620,7 +620,9 @@ bitmask<NondegeneracyStatus> SimpleAssertionExpr::checkNondegeneracyImpl() const
 
     if (repetition) {
         auto result = repetition->admitsEmpty();
-        res = (result == SequenceRepetition::AdmitsEmpty::Yes) ? res | NondegeneracyStatus::AdmitsEmpty : res;
+        res = (result == SequenceRepetition::AdmitsEmpty::Yes)
+                  ? res | NondegeneracyStatus::AdmitsEmpty
+                  : res;
         if (result == SequenceRepetition::AdmitsEmpty::Only)
             res = res | NondegeneracyStatus::AcceptsOnlyEmpty | NondegeneracyStatus::AdmitsEmpty;
     }
@@ -896,7 +898,9 @@ bitmask<NondegeneracyStatus> SequenceWithMatchExpr::checkNondegeneracyImpl() con
 
     if (repetition) {
         const auto seqRepEmpty = repetition->admitsEmpty();
-        res = (seqRepEmpty == SequenceRepetition::AdmitsEmpty::Yes) ? res | NondegeneracyStatus::AdmitsEmpty : res;
+        res = (seqRepEmpty == SequenceRepetition::AdmitsEmpty::Yes)
+                  ? res | NondegeneracyStatus::AdmitsEmpty
+                  : res;
         if (seqRepEmpty == SequenceRepetition::AdmitsEmpty::Only)
             res = res | NondegeneracyStatus::AcceptsOnlyEmpty | NondegeneracyStatus::AdmitsEmpty;
     }
@@ -1239,7 +1243,8 @@ bitmask<NondegeneracyStatus> FirstMatchAssertionExpr::checkNondegeneracyImpl() c
     auto res = seq.checkNondegeneracy();
     if (!matchItems.empty()) {
         // Clear `admitEmpty` and `acceptOnlyEmpty` bits
-        res = (res.has(NondegeneracyStatus::AdmitsNoMatch)) ? NondegeneracyStatus::AdmitsNoMatch : NondegeneracyStatus::None;
+        res = (res.has(NondegeneracyStatus::AdmitsNoMatch)) ? NondegeneracyStatus::AdmitsNoMatch
+                                                            : NondegeneracyStatus::None;
     }
 
     return res;
