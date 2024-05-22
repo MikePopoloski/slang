@@ -40,8 +40,8 @@ public:
     }
 
 private:
-  std::deque<std::pair<std::string, NetlistVariableReference*>> symbols;
-  std::shared_ptr<SymbolStack> parent;
+    std::deque<std::pair<std::string, NetlistVariableReference*>> symbols;
+    std::shared_ptr<SymbolStack> parent;
 };
 
 /// Add scoping to SymbolStack lookups by maintaining a stack of tables.

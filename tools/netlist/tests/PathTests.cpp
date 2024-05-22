@@ -654,6 +654,7 @@ TEST_CASE("Multiple assignments to the same variable") {
     auto tree = SyntaxTree::fromText(R"(
 module t2 (input clk, output reg [31:0] nq);
   reg [31:0] n;
+
   always_comb begin
     n = nq;
     n = n + 1;
@@ -667,8 +668,8 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
     auto netlist = createNetlist(compilation);
-    auto* inPort = netlist.lookupVariable("t2.n");
-    auto* outPort = netlist.lookupPort("t2.nq");
+    auto* start = netlist.lookupVariable("t2.nq");
+    auto* end = netlist.lookupPort("t2.nq");
     PathFinder pathFinder(netlist);
-    CHECK(!pathFinder.find(*inPort, *outPort).empty());
+    CHECK(!pathFinder.find(*start, *end).empty());
 }
