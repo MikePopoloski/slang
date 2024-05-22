@@ -333,7 +333,7 @@ void registerAST(py::module_& m) {
         .def_readonly("kind", &AssertionExpr::kind)
         .def_readonly("syntax", &AssertionExpr::syntax)
         .def_property_readonly("bad", &AssertionExpr::bad)
-        .def_property_readonly("admitsEmpty", &AssertionExpr::admitsEmpty)
+        .def_property_readonly("checkNondegeneracy", &AssertionExpr::checkNondegeneracy)
         .def("__repr__", [](const AssertionExpr& self) {
             return fmt::format("AssertionExpr(AssertionExprKind.{})", toString(self.kind));
         });
