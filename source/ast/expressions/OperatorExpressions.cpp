@@ -455,14 +455,16 @@ std::optional<bitwidth_t> UnaryExpression::getEffectiveWidthImpl() const {
     }
 }
 
-bool UnaryExpression::getEffectiveSignImpl() const {
+Expression::EffectiveSign UnaryExpression::getEffectiveSignImpl(bool isForConversion) const {
     switch (op) {
         case UnaryOperator::Plus:
-        case UnaryOperator::Minus:
         case UnaryOperator::BitwiseNot:
-            return operand().getEffectiveSign();
+            return operand().getEffectiveSign(isForConversion);
+        case UnaryOperator::Minus:
+            // If we're negating a number it should be signed.
+            return EffectiveSign::Signed;
         default:
-            return type->isSigned();
+            return type->isSigned() ? EffectiveSign::Signed : EffectiveSign::Unsigned;
     }
 }
 
@@ -977,7 +979,7 @@ std::optional<bitwidth_t> BinaryExpression::getEffectiveWidthImpl() const {
     SLANG_UNREACHABLE;
 }
 
-bool BinaryExpression::getEffectiveSignImpl() const {
+Expression::EffectiveSign BinaryExpression::getEffectiveSignImpl(bool isForConversion) const {
     switch (op) {
         case BinaryOperator::Add:
         case BinaryOperator::Subtract:
@@ -988,7 +990,8 @@ bool BinaryExpression::getEffectiveSignImpl() const {
         case BinaryOperator::BinaryOr:
         case BinaryOperator::BinaryXor:
         case BinaryOperator::BinaryXnor:
-            return left().getEffectiveSign() && right().getEffectiveSign();
+            return conjunction(left().getEffectiveSign(isForConversion),
+                               right().getEffectiveSign(isForConversion));
         case BinaryOperator::Equality:
         case BinaryOperator::Inequality:
         case BinaryOperator::CaseEquality:
@@ -1003,13 +1006,13 @@ bool BinaryExpression::getEffectiveSignImpl() const {
         case BinaryOperator::LogicalOr:
         case BinaryOperator::LogicalImplication:
         case BinaryOperator::LogicalEquivalence:
-            return true;
+            return EffectiveSign::Either;
         case BinaryOperator::LogicalShiftLeft:
         case BinaryOperator::LogicalShiftRight:
         case BinaryOperator::ArithmeticShiftLeft:
         case BinaryOperator::ArithmeticShiftRight:
         case BinaryOperator::Power:
-            return left().getEffectiveSign();
+            return left().getEffectiveSign(isForConversion);
     }
     SLANG_UNREACHABLE;
 }
@@ -1215,10 +1218,11 @@ std::optional<bitwidth_t> ConditionalExpression::getEffectiveWidthImpl() const {
     return std::max(left().getEffectiveWidth(), right().getEffectiveWidth());
 }
 
-bool ConditionalExpression::getEffectiveSignImpl() const {
+Expression::EffectiveSign ConditionalExpression::getEffectiveSignImpl(bool isForConversion) const {
     if (auto branch = knownSide())
-        return branch->getEffectiveSign();
-    return left().getEffectiveSign() && right().getEffectiveSign();
+        return branch->getEffectiveSign(isForConversion);
+    return conjunction(left().getEffectiveSign(isForConversion),
+                       right().getEffectiveSign(isForConversion));
 }
 
 ConstantValue ConditionalExpression::evalImpl(EvalContext& context) const {

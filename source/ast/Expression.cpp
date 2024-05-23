@@ -86,16 +86,22 @@ public:
 
 class EffectiveSignVisitor {
 public:
-    template<typename T>
-    bool visit(const T& expr) {
-        if constexpr (requires { expr.getEffectiveSignImpl(); }) {
-            if (expr.bad())
-                return false;
+    using EffectiveSign = Expression::EffectiveSign;
 
-            return expr.getEffectiveSignImpl();
+    bool isForConversion;
+
+    explicit EffectiveSignVisitor(bool isForConversion) : isForConversion(isForConversion) {}
+
+    template<typename T>
+    EffectiveSign visit(const T& expr) {
+        if constexpr (requires { expr.getEffectiveSignImpl(isForConversion); }) {
+            if (expr.bad())
+                return EffectiveSign::Either;
+
+            return expr.getEffectiveSignImpl(isForConversion);
         }
         else {
-            return expr.type->isSigned();
+            return expr.type->isSigned() ? EffectiveSign::Signed : EffectiveSign::Unsigned;
         }
     }
 };
@@ -619,8 +625,8 @@ std::optional<bitwidth_t> Expression::getEffectiveWidth() const {
     return visit(visitor);
 }
 
-bool Expression::getEffectiveSign() const {
-    EffectiveSignVisitor visitor;
+Expression::EffectiveSign Expression::getEffectiveSign(bool isForConversion) const {
+    EffectiveSignVisitor visitor(isForConversion);
     return visit(visitor);
 }
 
@@ -1530,6 +1536,22 @@ Expression& Expression::selfDetermined(Compilation& compilation, const Expressio
 
 Expression& Expression::badExpr(Compilation& compilation, const Expression* expr) {
     return *compilation.emplace<InvalidExpression>(expr, compilation.getErrorType());
+}
+
+Expression::EffectiveSign Expression::conjunction(EffectiveSign left, EffectiveSign right) {
+    if (left == EffectiveSign::Either)
+        return right;
+    if (right == EffectiveSign::Either)
+        return left;
+    if (left == EffectiveSign::Signed && right == EffectiveSign::Signed)
+        return EffectiveSign::Signed;
+    return EffectiveSign::Unsigned;
+}
+
+bool Expression::signMatches(EffectiveSign left, EffectiveSign right) {
+    if (left == EffectiveSign::Either || right == EffectiveSign::Either)
+        return true;
+    return left == right;
 }
 
 void InvalidExpression::serializeTo(ASTSerializer& serializer) const {

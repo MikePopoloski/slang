@@ -1323,8 +1323,8 @@ std::optional<bitwidth_t> MinTypMaxExpression::getEffectiveWidthImpl() const {
     return selected().getEffectiveWidth();
 }
 
-bool MinTypMaxExpression::getEffectiveSignImpl() const {
-    return selected().getEffectiveSign();
+Expression::EffectiveSign MinTypMaxExpression::getEffectiveSignImpl(bool isForConversion) const {
+    return selected().getEffectiveSign(isForConversion);
 }
 
 void MinTypMaxExpression::serializeTo(ASTSerializer& serializer) const {

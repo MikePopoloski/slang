@@ -965,7 +965,9 @@ ConstantValue ConversionExpression::convert(EvalContext& context, const Type& fr
                     }
                     else {
                         SLANG_ASSERT(oldInt.isSigned() != newInt.isSigned());
-                        if (!expr || expr->getEffectiveSign() != newInt.isSigned()) {
+                        if (!expr ||
+                            !signMatches(expr->getEffectiveSign(/* isForConversion */ true),
+                                         EffectiveSign::Signed)) {
                             context.addDiag(diag::SignConversion, sourceRange) << from << to;
                         }
                     }
@@ -1062,10 +1064,10 @@ std::optional<bitwidth_t> ConversionExpression::getEffectiveWidthImpl() const {
     return type->getBitWidth();
 }
 
-bool ConversionExpression::getEffectiveSignImpl() const {
+Expression::EffectiveSign ConversionExpression::getEffectiveSignImpl(bool isForConversion) const {
     if (isImplicit())
-        return operand().getEffectiveSign();
-    return type->isSigned();
+        return operand().getEffectiveSign(isForConversion);
+    return type->isSigned() ? EffectiveSign::Signed : EffectiveSign::Unsigned;
 }
 
 void ConversionExpression::serializeTo(ASTSerializer& serializer) const {
