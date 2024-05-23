@@ -853,11 +853,12 @@ endfunction
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 4);
+    REQUIRE(diags.size() == 5);
     CHECK(diags[0].code == diag::SignConversion);
     CHECK(diags[1].code == diag::UnsignedArithShift);
-    CHECK(diags[2].code == diag::SignConversion);
+    CHECK(diags[2].code == diag::ArithOpMismatch);
     CHECK(diags[3].code == diag::SignConversion);
+    CHECK(diags[4].code == diag::SignConversion);
 }
 
 TEST_CASE("Indeterminate variable initialization order") {
@@ -907,4 +908,39 @@ endfunction
     CHECK(diags[1].code == diag::FloatNarrow);
     CHECK(diags[2].code == diag::IntFloatConv);
     CHECK(diags[3].code == diag::FloatWiden);
+}
+
+TEST_CASE("Binary operator warnings") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    struct packed { logic a; } a;
+    int i;
+    int unsigned j;
+    real r;
+
+    initial begin
+        if (0 == a) begin end
+        i = i + j;
+        if (i == r) begin end
+        if (i < j) begin end
+        if (a & j) begin end
+    end
+
+    localparam int x = 3;
+    localparam real y = 4.1;
+    localparam real z = x + y * x;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 6);
+    CHECK(diags[0].code == diag::SignConversion);
+    CHECK(diags[1].code == diag::ArithOpMismatch);
+    CHECK(diags[2].code == diag::IntFloatConv);
+    CHECK(diags[3].code == diag::ComparisonMismatch);
+    CHECK(diags[4].code == diag::SignCompare);
+    CHECK(diags[5].code == diag::BitwiseOpMismatch);
 }

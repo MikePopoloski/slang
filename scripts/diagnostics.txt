@@ -765,7 +765,10 @@ warning float-narrow FloatNarrow "implicit conversion narrows from {} to {}"
 warning useless-cast UselessCast "useless cast from {} to the same type"
 warning unsigned-arith-shift UnsignedArithShift "arithmetic right shift of unsigned type {} will always shift in zeros (use logical shift if that is intended)"
 warning specify-condition-expr SpecifyPathConditionExpr "expression is not valid in a state-dependent path condition"
-
+warning arith-op-mismatch ArithOpMismatch "arithmetic between operands of different types ({} and {})"
+warning bitwise-op-mismatch BitwiseOpMismatch "bitwise operation between operands of different types ({} and {})"
+warning comparison-mismatch ComparisonMismatch "comparison between operands of different types ({} and {})"
+warning sign-compare SignCompare "comparison of differently signed types ({} and {})"
 
 subsystem Statements
 error ReturnNotInSubroutine "return statement is only valid inside task and function blocks"

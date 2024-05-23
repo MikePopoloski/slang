@@ -290,7 +290,7 @@ module m;
     for (i = 'x; i != 0; i++) begin end                 // unknown in init
     for (i = 0; i < 10; i += 'x) begin end              // unknown in iter
     for (i = 0; i < 10; i += 0) begin end               // repeated val
-    for (i = 0; i < 10; i += arr[i+4]) name: begin end  // bad iter expr
+    for (i = 0; i < 10; i += integer'(arr[i+4])) name: begin end  // bad iter expr
 
     for (i = 0; i != 0; --i) foo: begin : baz end       // name and label
 

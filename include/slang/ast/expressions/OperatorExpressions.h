@@ -109,6 +109,12 @@ public:
         left().visit(visitor);
         right().visit(visitor);
     }
+
+private:
+    static void analyzeOpTypes(const Type& clt, const Type& crt, const Type& originalLt,
+                               const Type& originalRt, const Expression& lhs, const Expression& rhs,
+                               const ASTContext& context, SourceRange opRange, DiagCode code,
+                               bool isComparison);
 };
 
 /// Represents a conditional operator expression.

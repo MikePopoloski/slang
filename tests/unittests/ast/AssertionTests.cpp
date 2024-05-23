@@ -588,7 +588,7 @@ property check_write_data_beat(
     )[->1]
     |-> ((
             (data_valid && (data_valid_tag == tag))
-            |-> (data == expected_data[i*8+:8])
+            |-> (data[0:7] == expected_data[i*8+:8])
         )
         and (
             if (retry && (retry_tag == tag)) (

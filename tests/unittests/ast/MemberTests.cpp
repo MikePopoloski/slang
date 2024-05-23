@@ -1006,10 +1006,11 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 3);
+    REQUIRE(diags.size() == 4);
     CHECK(diags[0].code == diag::ConstantConversion);
-    CHECK(diags[1].code == diag::SpecparamInConstant);
-    CHECK(diags[2].code == diag::SpecifyBlockParam);
+    CHECK(diags[1].code == diag::ArithOpMismatch);
+    CHECK(diags[2].code == diag::SpecparamInConstant);
+    CHECK(diags[3].code == diag::SpecifyBlockParam);
 }
 
 TEST_CASE("Net initializer in package") {
@@ -1842,7 +1843,7 @@ module ALU (o1, i1, i2, opcode);
         specparam s1 = 2;
         if (opcode == 2'b00) (i1,i2 *> o1) = (25.0, 25.0);
         if (opcode == 2'b01) (i1 => o1) = (5.6, 8.0);
-        if (opcode == s1) (i2 => o1) = (5.6, 8.0);
+        if (opcode == s1[1:0]) (i2 => o1) = (5.6, 8.0);
         (opcode *> o1) = (6.1, 6.5);
     endspecify
 endmodule

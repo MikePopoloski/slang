@@ -42,7 +42,11 @@ ConstantValue evalLogicalOp(BinaryOperator op, const TL& l, const TR& r) {
         OP(LogicalImplication, SVInt(SVInt::logicalImpl(l, r)));
         OP(LogicalEquivalence, SVInt(SVInt::logicalEquiv(l, r)));
         default:
-            SLANG_UNREACHABLE;
+            // This should only be reachable when speculatively
+            // evaluating an expression that hasn't had its
+            // type finalized via propagation, which can happen
+            // during an analyzeOpTypes call.
+            return nullptr;
     }
 }
 
@@ -892,7 +896,146 @@ Expression& BinaryExpression::fromComponents(Expression& lhs, Expression& rhs, B
         return badExpr(compilation, result);
     }
 
+    auto& clt = lt->getCanonicalType();
+    auto& crt = rt->getCanonicalType();
+    if (!clt.isMatching(crt)) {
+        auto checkTypes = [&](DiagCode code, bool isComparison) {
+            analyzeOpTypes(clt, crt, *lt, *rt, lhs, rhs, context, opRange, code, isComparison);
+        };
+
+        switch (op) {
+            case BinaryOperator::Add:
+            case BinaryOperator::Subtract:
+            case BinaryOperator::Multiply:
+            case BinaryOperator::Divide:
+            case BinaryOperator::Mod:
+                checkTypes(diag::ArithOpMismatch, false);
+                break;
+            case BinaryOperator::BinaryAnd:
+            case BinaryOperator::BinaryOr:
+            case BinaryOperator::BinaryXor:
+            case BinaryOperator::BinaryXnor:
+                checkTypes(diag::BitwiseOpMismatch, false);
+                break;
+            case BinaryOperator::Equality:
+            case BinaryOperator::Inequality:
+            case BinaryOperator::CaseEquality:
+            case BinaryOperator::CaseInequality:
+            case BinaryOperator::GreaterThanEqual:
+            case BinaryOperator::GreaterThan:
+            case BinaryOperator::LessThanEqual:
+            case BinaryOperator::LessThan:
+            case BinaryOperator::WildcardEquality:
+            case BinaryOperator::WildcardInequality:
+                checkTypes(diag::ComparisonMismatch, true);
+                break;
+            default:
+                // Remaining operations have self determined
+                // operands so the warning wouldn't make sense.
+                break;
+        }
+    }
+
     return *result;
+}
+
+void BinaryExpression::analyzeOpTypes(const Type& clt, const Type& crt, const Type& originalLt,
+                                      const Type& originalRt, const Expression& lhs,
+                                      const Expression& rhs, const ASTContext& context,
+                                      SourceRange opRange, DiagCode code, bool isComparison) {
+    if (clt.isSimpleBitVector() && crt.isSimpleBitVector()) {
+        const bool sameSign = clt.isSigned() == crt.isSigned() ||
+                              signMatches(lhs.getEffectiveSign(/* isForConversion */ false),
+                                          rhs.getEffectiveSign(/* isForConversion */ false));
+
+        if (isComparison) {
+            // Comparisons of bit vectors should warn if the signs differ and
+            // otherwise should not warn, otherwise you can get quite misleading
+            // results like:
+            //      logic [7:0] a, b;
+            //      bit b = a + b < 257;
+            // We don't want a warning for the comparison between logic[7:0] and
+            // int because the addition will actually be promoted correctly and
+            // everything will work as expected.
+            if (sameSign)
+                return;
+
+            if ((clt.getBitWidth() == 8 && clt.isPredefinedInteger() && rhs.isImplicitString()) ||
+                (crt.getBitWidth() == 8 && crt.isPredefinedInteger() && lhs.isImplicitString())) {
+                // Don't warn if the comparison is between `byte` and a string literal.
+                return;
+            }
+
+            auto& diag = context.addDiag(diag::SignCompare, opRange);
+            diag << originalLt << originalRt;
+            diag << lhs.sourceRange << rhs.sourceRange;
+            return;
+        }
+
+        if (sameSign) {
+            // If we have two integers of the same effective sign and size
+            // (using the same ideas as in checkImplicitConversions) then we
+            // should not warn.
+            auto alw = clt.getBitWidth();
+            auto arw = crt.getBitWidth();
+            if (alw == arw)
+                return;
+
+            auto elw = lhs.getEffectiveWidth();
+            auto erw = rhs.getEffectiveWidth();
+            if (!elw || !erw)
+                return;
+
+            if (elw <= arw && alw >= erw)
+                return;
+
+            // If either side is a constant we'll assume the max allowed
+            // width is actually unbounded.
+            EvalContext evalCtx(context);
+            if (lhs.eval(evalCtx))
+                alw = SVInt::MAX_BITS;
+            if (rhs.eval(evalCtx))
+                arw = SVInt::MAX_BITS;
+
+            if (elw <= arw && alw >= erw)
+                return;
+        }
+    }
+    else if (clt.isHandleType() && crt.isHandleType()) {
+        // Ignore operations between handles (like comparing a class handle with null).
+        return;
+    }
+    else if (clt.isNumeric() && crt.isNumeric()) {
+        // If either side is a constant we might want to avoid warning.
+        // The cases that I think make sense are:
+        // - comparing any numeric value against the constant 0
+        // - any floating value operator alongside an integer constant
+        EvalContext evalCtx(context);
+        auto lcv = lhs.eval(evalCtx);
+        auto rcv = rhs.eval(evalCtx);
+        if (lcv || rcv) {
+            if (clt.isFloating() && crt.isIntegral() && rcv)
+                return;
+            if (crt.isFloating() && clt.isIntegral() && lcv)
+                return;
+
+            if (isComparison) {
+                if (lcv.isInteger() && bool(lcv.integer() == 0))
+                    return;
+                if (rcv.isInteger() && bool(rcv.integer() == 0))
+                    return;
+            }
+        }
+    }
+    else if ((clt.isString() && rhs.isImplicitString()) ||
+             (crt.isString() && lhs.isImplicitString())) {
+        // Ignore operations between strings and string literals.
+        return;
+    }
+
+    auto& diag = context.addDiag(code, opRange);
+    diag << originalLt << originalRt;
+    diag << lhs.sourceRange << rhs.sourceRange;
 }
 
 bool BinaryExpression::propagateType(const ASTContext& context, const Type& newType,

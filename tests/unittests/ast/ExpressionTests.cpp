@@ -1000,7 +1000,7 @@ TEST_CASE("Type operator") {
 module m;
     logic [3:0] a = 0;
     logic [4:0] b = 1;
-    var type(a + b) foo = a + b;
+    var type(5'(a) + b) foo = 5'(a) + b;
     int i = type(int)'(a);
 endmodule
 )");
