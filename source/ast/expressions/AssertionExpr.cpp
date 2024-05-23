@@ -575,8 +575,8 @@ AssertionExpr& SequenceConcatExpr::fromSyntax(const DelayedSequenceExprSyntax& s
             else
                 delay.max = delay.min = uint32_t(*val);
         }
-        else if (es->range && es->range->kind == SyntaxKind::SimpleRangeSelect) {
-            delay = SequenceRange::fromSyntax(es->range->as<RangeSelectSyntax>(), context,
+        else if (es->range) {
+            delay = SequenceRange::fromSyntax(*es->range, context,
                                               /* allowUnbounded */ true);
         }
         else if (es->op.kind == TokenKind::Plus) {

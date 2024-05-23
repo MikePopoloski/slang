@@ -2337,3 +2337,22 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::AutoFromNonProcedural);
 }
+
+TEST_CASE("Assertion repetition error checking regress -- GH #1004") {
+    auto tree = SyntaxTree::fromText(R"(
+module test(
+    input logic A,
+    input logic B,
+    input logic clk
+);
+    assert property (@(posedge clk) A |=> ##[C] B);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::UndeclaredIdentifier);
+}
