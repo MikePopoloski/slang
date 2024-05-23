@@ -57,8 +57,7 @@ endmodule
 }
 
 TEST_CASE("Ignore concurrent assertions") {
-    // Test that unused modules are not visited by the netlist builder.
-    // See Issue #793.
+    // Test that we are not confused by timing events inside concurrent assertions
     auto tree = SyntaxTree::fromText(R"(
 module t33 #(
   parameter MODE = 3'd0
