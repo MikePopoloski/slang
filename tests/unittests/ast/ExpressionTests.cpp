@@ -526,9 +526,9 @@ endmodule
     auto& diagnostics = compilation.getAllDiagnostics();
     std::string result = "\n" + report(diagnostics);
     CHECK(result == R"(
-source:7:13: warning: implicit conversion from 'bit[34:0]' to 'int' changes value from 35'h22c6d1fba to 745349050 [-Wconstant-conversion]
+source:7:11: warning: implicit conversion from 'bit[34:0]' to 'int' changes value from 35'h22c6d1fba to 745349050 [-Wconstant-conversion]
     int i = 35'd123498234978234;
-            ^~~~~~~~~~~~~~~~~~~
+          ^ ~~~~~~~~~~~~~~~~~~~
 source:7:17: warning: vector literal too large for the given number of bits (47 bits needed) [-Wvector-overflow]
     int i = 35'd123498234978234;
                 ^

@@ -671,13 +671,13 @@ endmodule
     auto& diags = compilation.getAllDiagnostics();
     CHECK("\n" + report(diags) == R"(
   in instance: top.m1
-source:4:16: warning: implicit conversion from 'logic[31:0]' to 'logic[3:0]' changes value from 32'd4294967295 to 4'b1111 [-Wconstant-conversion]
+source:4:14: warning: implicit conversion from 'logic[31:0]' to 'logic[3:0]' changes value from 32'd4294967295 to 4'b1111 [-Wconstant-conversion]
     assign a = 32'hffffffff;
-               ^~~~~~~~~~~~
+             ^ ~~~~~~~~~~~~
   in instance: top.m2
-source:4:16: warning: implicit conversion from 'logic[31:0]' to 'logic[4:0]' changes value from 32'd4294967295 to 5'b11111 [-Wconstant-conversion]
+source:4:14: warning: implicit conversion from 'logic[31:0]' to 'logic[4:0]' changes value from 32'd4294967295 to 5'b11111 [-Wconstant-conversion]
     assign a = 32'hffffffff;
-               ^~~~~~~~~~~~
+             ^ ~~~~~~~~~~~~
 )");
 }
 

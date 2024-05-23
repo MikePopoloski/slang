@@ -136,7 +136,8 @@ public:
 
     static ConstantValue convert(EvalContext& context, const Type& from, const Type& to,
                                  SourceRange sourceRange, ConstantValue&& value,
-                                 ConversionKind conversionKind, const Expression* expr = nullptr);
+                                 ConversionKind conversionKind, const Expression* expr = nullptr,
+                                 SourceRange implicitOpRange = {});
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::Conversion; }
 
@@ -147,6 +148,7 @@ public:
 
 private:
     Expression* operand_;
+    SourceRange implicitOpRange;
 };
 
 /// Represents a new[] expression that creates a dynamic array.
