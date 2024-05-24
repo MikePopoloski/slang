@@ -7,10 +7,6 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include <optional>
-#include <set>
-#include <utility>
-
 #include "slang/ast/ASTSerializer.h"
 #include "slang/ast/Expression.h"
 #include "slang/ast/TimingControl.h"
@@ -131,9 +127,9 @@ public:
     static const AssertionExpr& bind(const syntax::SequenceExprSyntax& syntax,
                                      const ASTContext& context, bool allowDisable = false);
 
-    static const AssertionExpr& bind(
-        const syntax::PropertyExprSyntax& syntax, const ASTContext& context,
-        bool allowDisable = false, const NondegeneracyFlags nondegFlags = NondegeneracyFlags::None);
+    static const AssertionExpr& bind(const syntax::PropertyExprSyntax& syntax,
+                                     const ASTContext& context, bool allowDisable = false,
+                                     NondegeneracyFlags nondegFlags = NondegeneracyFlags::None);
 
     static const AssertionExpr& bind(const syntax::PropertySpecSyntax& syntax,
                                      const ASTContext& context);
@@ -295,7 +291,7 @@ public:
     /// An optional repetition of the sequence.
     std::optional<SequenceRepetition> repetition;
 
-    /// Store `true` if sequence exression is can be evaluated as constant `false` (`0`).
+    /// Store `true` if sequence exression can be evaluated as constant `false` (`0`).
     bool isNullExpr;
 
     SimpleAssertionExpr(const Expression& expr, std::optional<SequenceRepetition> repetition,
