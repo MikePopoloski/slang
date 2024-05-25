@@ -840,7 +840,9 @@ error DisableIffLocalVar "local variables cannot be used in disable iff conditio
 error DisableIffMatched "'matched' method cannot be used in disable iff conditions"
 error PropAbortLocalVar "local variables cannot be used in property abort conditions"
 error PropAbortMatched "'matched' method cannot be used in property abort conditions"
-error SeqPropAdmitEmpty "sequence properties cannot admit an empty match"
+error SeqPropNondegenerate "any sequence that is used as a property shall be nondegenerate and shall not admit any empty match"
+error OverlapImplNondegenerate "any sequence that is used as the antecedent of an overlapping implication (|->) shall be nondegenerate"
+error NonOverlapImplNondegenerate "any sequence that is used as the antecedent of a nonoverlapping implication (|=>) shall admit at least one match. Such a sequence can admit only empty matches"
 error RecursivePropDisableIff "recursive properties cannot have disable iff conditions"
 error ConcurrentAssertActionBlock "cannot have '{}' statement in the action block of another concurrent assertion"
 error InvalidForStepExpression "for loop step expression must be an assignment, increment/decrement operator, or a subroutine call"
@@ -856,6 +858,11 @@ warning bad-procedural-force BadProceduralForce "lvalue of force/release must be
 warning multibit-edge MultiBitEdge "edge of expression of type {} will only trigger on changes to the first bit"
 note NoteWhileExpanding "while expanding {} '{}'"
 note NoteExpandedHere "expanded here"
+note SeqAdmitsEmptyMatches "sequence property admits empty matches"
+note SeqAdmitsNoMatches "sequence property can never be matched"
+note SeqAcceptsOnlyEmptyMatches "sequence property admits only empty matches"
+note SeqPropCondAlwaysFalse "condition is always false"
+note DisableIffCondAlwaysTrue "disable iff condition is always true"
 
 subsystem Types
 error InvalidEnumBase "invalid enum base type {} (must be a single dimensional integer type)"

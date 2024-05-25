@@ -3,6 +3,8 @@
 
 #include "Test.h"
 
+#include "slang/diagnostics/StatementsDiags.h"
+
 TEST_CASE("Named sequences") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
@@ -52,7 +54,7 @@ module m;
 
     foo: assert property (a);
     assert property (a ##1 b ##[+] c ##[*] d ##[1:5] e);
-    assert property (##0 a[*0:4] ##0 b[=4] ##0 c[->1:2] ##0 c[*] ##1 d[+]);
+    assert property (##0 a[*1:4] ##0 b[=4] ##0 c[->1:2] ##0 c[*] ##1 d[+]);
     assert property (##[1:$] a[*0:$]);
     assert property ((a ##0 b) and (c or d));
     assert property ((a ##0 b) and (c or d));
@@ -1048,8 +1050,8 @@ endmodule
 
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 2);
-    CHECK(diags[0].code == diag::SeqPropAdmitEmpty);
-    CHECK(diags[1].code == diag::SeqPropAdmitEmpty);
+    CHECK(diags[0].code == diag::SeqPropNondegenerate);
+    CHECK(diags[1].code == diag::SeqPropNondegenerate);
 }
 
 TEST_CASE("Illegal property recursion cases") {
@@ -1191,7 +1193,7 @@ TEST_CASE("$past in $bits regress GH #509") {
 module top;
     logic clk, reset, a, b, c;
     assert property(@(posedge clk) disable iff (reset)
-        a |-> {500-$bits($past(b)){1'b0}});
+        a |-> {500-$bits($past(b)){1'b1}});
 endmodule
 )");
 
@@ -2355,4 +2357,393 @@ endmodule
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::UndeclaredIdentifier);
+}
+
+TEST_CASE("Sequence nondegeneracy tests") {
+    auto tree = SyntaxTree::fromText(R"(
+module top();
+    assert property ((1'b1 ##[1:2] 1'b1) intersect (1'b1 ##[2:4] 1'b1));  // legal
+
+    assert property ((1'b1 ##[1:2] 1'b1) intersect (1'b1 ##[3:4] 1'b1));  // illegal
+
+    assert property ((1'b1) intersect (1'b1[*0] ##2 1'b1));  // illegal
+
+    assert property ((1'b1 ##1 1'b1) intersect (1'b1[*0] ##2 1'b1));  // legal
+
+    assert property ((1'b1 ##1 1'b0) intersect (1'b1[*0] ##2 1'b1));  // illegal
+
+    assert property( (1'b1) intersect (1'b1 ##[1:3] 1'b1));  // illegal
+
+    assert property( (1'b1 ##1 1'b1) intersect (1'b1 ##[1:3] 1'b1));  // legal
+
+    assert property( (1'b1 ##0 1'b1) intersect (1'b1 ##[1:3] 1'b1));  // illegal
+
+    assert property( (1'b1[*2]) intersect (1'b1 ##[1:3] 1'b1));  // illegal
+
+    assert property( (##2 1'b1[*2]) intersect (1'b1 ##[1:3] 1'b1));  // legal
+endmodule
+
+module top1();
+    string a;
+    logic b;
+    int c,d,e;
+
+    assert property (##0 a[*0:4] ##0 b[=4] ##0 c[->1:2] ##0 c[*] ##1 d[+]);  // legal
+
+    assert property (##0 a[*0:4] ##0 b[=4] ##0 c[->1:2] ##0 c[*0] ##1 d[+]);  // illegal
+
+    assert property (##0 a[*0] ##0 b[=4] ##0 c[->1:2] ##0 c[*] ##1 d[+]);  // illegal
+endmodule
+
+module top2(input a, input b);
+property p;
+         !(2'b01 - 2'b01 + 3'b010 - 3'b010 + 4'b0010);  // illegal
+endproperty
+
+property pp;
+         2'b01 - 2'b01 + 3'b010 - 3'b010 + 4'b0010;  // legal
+endproperty
+
+property p1;
+	a[*0] |-> b;  // illegal
+endproperty
+
+property pp1;
+	a[*1] |-> b;  // legal
+endproperty
+
+property p2;
+	1'b1 ##1 b;  // legal
+endproperty
+
+assert property (p);
+assert property (pp);
+assert property (p1);
+assert property (p2);
+
+endmodule
+
+module top3(a, b, e);
+    input a;
+    input b;
+    input e;
+    int c, d;
+    property p(int i, foo = 1);
+	    ##1 c ##1 d ##1 i;  // may be legal or not - depends on value of `i`
+    endproperty
+
+    property p1();
+        ##0 c;  // legal
+    endproperty
+
+    property p2();
+        1'b1 ##1 1'b0 ##0 d ##1 1'b1;  // illegal
+    endproperty
+
+    property p3();
+        1'b1 ##1 1'b1 ##0 d ##1 1'b1;  // legal
+    endproperty
+
+    property p4();
+        b ##0 a[*0];  // illegal
+    endproperty
+
+    property pp4();
+        b ##0 a[*1];  // legal
+    endproperty
+
+    property p5();
+        a[*0] ##1 b;  // legal
+    endproperty
+
+    property p6();
+        a ##1 b[*0] ##0 c;  // legal
+    endproperty
+
+    property p7();
+        a ##1(b[*0] ##0 c);  // illegal
+    endproperty
+
+    assert property (p (0, 0));  // illegal
+    assert property (p (1, 0));  // legal
+    assert property (p1);
+    assert property (p2);
+    assert property (p3);
+    assert property (p4);
+    assert property (pp4);
+    assert property (p5);
+    assert property (p6);
+    assert property (p7);
+endmodule
+
+module top4;
+    sequence s(int i);
+        int j, k = j;
+        (i == i, j = 1, j++)[*0:1];  // illegal - empty matches
+    endsequence
+
+    sequence s1(int i);
+        int j, k = j;
+        (i != i, j = 1, j++)[*1:1];  // illegal - always `false` condition
+    endsequence
+
+    sequence s2(int i);
+        int j, k = j;
+        (i != i, j = 1, j++)[*0:1];  // illegal - always `false` condition and empty matches
+    endsequence
+
+    sequence s3(int i);
+        int j, k = j;
+        (i == i, j = 1, j++)[*1:1];  // legal
+    endsequence
+
+    sequence s4(int i);
+        int j, k = j;
+        (i == i, j = 1, j++)[*0:0];  // illegal - only empty matches
+    endsequence
+
+    sequence s5(int i);
+        int j, k = j;
+        (i == i, j = 1, j++)[*0];  // illegal - only empty matches
+    endsequence
+
+    assert property (s(1));   // illegal
+    assert property (s1(1));  // illegal
+    assert property (s2(1));  // illegal
+    assert property (s3(1));  // legal
+    assert property (s4(1));  // illegal
+    assert property (s5(1));  // illegal
+endmodule
+
+module top5(input a, input b);
+    assert property ((1 ##1 0)[*0]);  // illegal
+    assert property ((a[*0] ##1 a[*0])[*1]);  // illegal
+    assert property ((a[*0] ##2 a[*0])[*1]);  // legal
+    assert property (not (a[*0] ##0 b));  // illegal
+    assert property (not (a[*0] ##1 b));  // legal
+endmodule
+
+module top6();
+    logic clk, reset, a, b;
+    assert property(@(posedge clk) disable iff (reset)
+        a |-> {500-$bits($past(b)){1'b0}});  // illegal
+
+    assert property(@(posedge clk) disable iff (reset)
+        {3 - 2{3'b111}});  // legal
+
+    assert property(@(posedge clk) disable iff (reset)
+        {500 - $bits(b){1'b1}});  // legal
+endmodule
+
+module top7;
+    property p;
+        (1'b1) intersect (##[1:3] 1'b1 ##0 1'b1[*0:3] ##[2:3] 1'b1[*1]);  // illegal
+    endproperty
+
+    property p1;
+        (1'b1) intersect (##[1:3] 1'b1 ##0 1'b1[*0:3] ##[2:3] 1'b1[*0]);  // illegal
+    endproperty
+
+    property p2;
+        (1'b1) intersect (##[0:3] 1'b1 ##1 1'b1[*0:2] ##[2:3] 1'b1[*0]);  // illegal
+    endproperty
+
+    property p3;
+        (1'b1) intersect (##[0:3] 1'b1[*0:2]);  // legal
+    endproperty
+
+    property p4;
+        (1'b1) intersect (##[0:3] 1'b1[*0]);  // legal
+    endproperty
+
+    property p5;
+        (1'b1) intersect (##[0:3] 1'b1);  // legal
+    endproperty
+
+    property p6;
+        (1'b1) intersect (1'b1[*0] ##[0:3] 1'b1);  // legal
+    endproperty
+
+    property p7;
+        (1'b1) intersect (1'b1[*0:2] ##[0:3] 1'b1);  // legal
+    endproperty
+
+    property p8;
+        (1'b1) intersect (1'b1 ##[1:3] 1'b1);  // illegal
+    endproperty
+
+    property p9;
+        1'b0 ##2 1'b1;  // illegal
+    endproperty
+
+    property p10;
+        1[*2];  // legal
+    endproperty
+
+    property p11;
+        1[*0];  // illegal
+    endproperty
+
+    property p12;
+        1[*0:2];  // illegal
+    endproperty
+
+    property p13;
+        1'b1;  // legal
+    endproperty
+
+    property p14;
+        1'b0;  // illegal
+    endproperty
+
+    property p15;
+        1'b1 |=> 1;  // legal
+    endproperty
+
+    property p16;
+        1'b0 |=> 1;  // illegal
+    endproperty
+
+    property p17;
+        1[*2] |=> 1;  // legal
+    endproperty
+
+    property p18;
+        1[*0] |=> 1;  // legal
+    endproperty
+
+    property p19;
+        1'b1 |-> 1;  // legal
+    endproperty
+
+    property p20;
+        1'b0 |-> 1;  // illegal
+    endproperty
+
+    property p21;
+        1[*0] |-> 1;  // illegal
+    endproperty
+
+    property p22;
+        1[*0:2] |-> 1;  // legal
+    endproperty
+
+    assert property (p);
+    assert property (p1);
+    assert property (p2);
+    assert property (p3);
+    assert property (p4);
+    assert property (p5);
+    assert property (p6);
+    assert property (p7);
+    assert property (p8);
+    assert property (p9);
+    assert property (p10);
+    assert property (p11);
+    assert property (p12);
+    assert property (p13);
+    assert property (p14);
+    assert property (p15);
+    assert property (p16);
+    assert property (p17);
+    assert property (p18);
+    assert property (p19);
+    assert property (p20);
+    assert property (p21);
+    assert property (p22);
+endmodule
+
+module top8(input clk);
+    logic a, b, c, d, e;
+
+    assert property (first_match(a and b));  // legal
+
+    assert property ((first_match(a and b))[*0]);  // illegal
+
+    assert property (first_match(a and (b[*0] ##0 b)));  // illegal
+
+    assert property (@clk a ##1 b); // legal
+
+    assert property (@clk a[*0] ##0 b); // illegal
+
+    assert property(strong(a ##1 b));  // legal
+
+    assert property(strong(a ##0 b[*0]));  // illegal
+
+    assert property(weak(a intersect b));  // legal
+
+    assert property(weak(a intersect ##2 b));  // illegal
+
+    assert property (accept_on(b) sync_reject_on(c) sync_accept_on(d) reject_on(e) b ##1 c);  // legal
+
+    assert property (accept_on(b) b intersect ##2 b);  // illegal
+
+    assert property (accept_on(b) ##2 b intersect ##2 b);  // legal
+
+    assert property (accept_on(b) b[*0] ##0 b);  // illegal
+
+    assert property (if (b) a ##1 c else d ##1 e);  // legal
+
+    assert property (if (1'b0) a ##1 c else d ##1 e);  // legal
+
+    assert property (if (1'b0) a ##1 c);  // illegal
+
+    assert property (if (1'b1) a ##1 c else d ##1 e);  // legal
+
+    assert property (if (a) b intersect ##2 b);  // illegal
+
+    assert property (if (a) ##2 b intersect ##2 b);  // legal
+
+    assert property (case (b) 1, 2, 3: 1 ##1 b; 4: a and b; default: 1 |-> b; endcase);  // legal
+
+    assert property (case (b) 1, 2, 3: 1 ##1 b; 4: a and b; default: 1[*0] |-> b; endcase);  // illegal
+
+    assert property (disable iff (clk) a);  // legal
+
+    assert property (disable iff (1'b1) a);  // illegal
+
+endmodule
+
+module m9;
+    property p1;
+        1'b1 #=# 1;  // legal
+    endproperty
+    property p2;
+        1'b0 #=# 1;  // illegal
+    endproperty
+    property p3;
+        1[*2] #=# 1;  // legal
+    endproperty
+    property p4;
+        1[*0] #=# 1;  // legal
+    endproperty
+    property p5;
+        1'b1 #-# 1;  // legal
+    endproperty
+    property p6;
+        1'b0 #-# 1;  // illegal
+    endproperty
+    property p7;
+        1[*0] #-# 1;  // illegal
+    endproperty
+    property p8;
+        1[*0:2] #-# 1;  // legal
+    endproperty
+
+    assert property (p1);
+    assert property (p2);
+    assert property (p3);
+    assert property (p4);
+    assert property (p5);
+    assert property (p6);
+    assert property (p7);
+    assert property (p8);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 48);
 }
