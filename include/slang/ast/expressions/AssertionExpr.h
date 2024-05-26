@@ -67,40 +67,54 @@ SLANG_ENUM(BinaryAssertionOperator, OP)
 
 class ASTContext;
 class CallExpression;
-struct SequenceRange;
 
+/// Specifies possible classifications of assertion expressions
+/// as they relate to "nondegeneracy", as described in the LRM.
 enum class NondegeneracyStatus {
+    /// No factors related to nondegeneracy (i.e. the expression
+    /// is nondegenerate).
     None = 0,
 
-    // Sequence admits empty matches
+    /// The sequence admits empty matches.
     AdmitsEmpty = 1 << 0,
 
-    // Sequence accepts only empty matches
+    /// The sequence accepts only empty matches.
     AcceptsOnlyEmpty = 1 << 1,
 
-    // Sequence admits no match
+    /// The sequence definitely admits no match.
     AdmitsNoMatch = 1 << 2
 };
 SLANG_BITMASK(NondegeneracyStatus, AdmitsNoMatch);
+
+/// Represents a range of potential sequence matches.
+struct SequenceRange {
+    /// The minimum length of the range.
+    uint32_t min = 1;
+
+    /// The maximum length of the range. If unset, the maximum is unbounded.
+    std::optional<uint32_t> max;
+
+    static SequenceRange fromSyntax(const syntax::SelectorSyntax& syntax, const ASTContext& context,
+                                    bool allowUnbounded);
+    static SequenceRange fromSyntax(const syntax::RangeSelectSyntax& syntax,
+                                    const ASTContext& context, bool allowUnbounded);
+
+    void serializeTo(ASTSerializer& serializer) const;
+
+    bool operator<(const SequenceRange& right) const;
+
+    /// Determines whether this range intersects with @a other.
+    bool intersects(const SequenceRange& other) const;
+
+    /// Determines whether this range is fully contained within @a other.
+    bool isWithin(const SequenceRange& other) const;
+};
 
 /// The base class for assertion expressions (sequences and properties).
 class SLANG_EXPORT AssertionExpr {
 public:
     /// The kind of expression; indicates the type of derived class.
     AssertionExprKind kind;
-
-    enum class NondegeneracyFlags {
-        // In case of overlapping implication or followed by (`#-#`) property
-        // left hand sequence shall be nondegenerate
-        IsOverlapImplOrHashMinus,
-
-        // In case of nonoverlapping implication or followed by (`#=#`) property
-        // left hand sequence shall admit at least one match and can admit only empty matches.
-        // Generally such sequence can be degenerate.
-        IsNonOverlapImplOrHashEq,
-
-        None
-    };
 
     /// The syntax used to create the expression, if any. An expression tree can
     /// be created manually in which case it may not have a syntax representation.
@@ -115,21 +129,37 @@ public:
     /// Indicates whether the expression is invalid.
     bool bad() const { return kind == AssertionExprKind::Invalid; }
 
-    // Checks that the sequence matches one of the following:
-    //   - admits empty matches
-    //   - accepts only empty matches
-    //   - admits no matches
+    /// Checks whether this assertion expression is nondegenerate or whether it has
+    /// properties of degeneracy (admitting empty matches or no matches at all).
     bitmask<NondegeneracyStatus> checkNondegeneracy() const;
 
-    /// Computes possible clock ticks (delay) length of sequence under assertion expression
+    /// Computes possible clock ticks (delay) length of sequence under assertion expression.
     std::optional<SequenceRange> computeSequenceLength() const;
+
+    /// Specifies binding behavior of property expressions as
+    /// it pertains to nondegeneracy checking.
+    enum class NondegeneracyRequirement {
+        /// Any sequence that is used as a property shall be nondegenerate
+        // and shall not admit any empty match.
+        Default,
+
+        /// Any sequence that is used as the antecedent of an overlapping implication
+        /// or followed-by operator shall be nondegenerate.
+        OverlapOp,
+
+        /// Any sequence that is used as the antecedent of a nonoverlapping implication
+        /// or followed-by operator shall admit at least one match. Such a sequence can
+        /// admit only empty matches.
+        NonOverlapOp,
+    };
 
     static const AssertionExpr& bind(const syntax::SequenceExprSyntax& syntax,
                                      const ASTContext& context, bool allowDisable = false);
 
-    static const AssertionExpr& bind(const syntax::PropertyExprSyntax& syntax,
-                                     const ASTContext& context, bool allowDisable = false,
-                                     NondegeneracyFlags nondegFlags = NondegeneracyFlags::None);
+    static const AssertionExpr& bind(
+        const syntax::PropertyExprSyntax& syntax, const ASTContext& context,
+        bool allowDisable = false,
+        NondegeneracyRequirement nondegRequirement = NondegeneracyRequirement::Default);
 
     static const AssertionExpr& bind(const syntax::PropertySpecSyntax& syntax,
                                      const ASTContext& context);
@@ -206,39 +236,11 @@ public:
         return NondegeneracyStatus::None;
     }
 
-    std::optional<SequenceRange> computeSequenceLengthImpl() const;
+    std::optional<SequenceRange> computeSequenceLengthImpl() const { return {}; }
 
     static bool isKind(AssertionExprKind kind) { return kind == AssertionExprKind::Invalid; }
 
     void serializeTo(ASTSerializer& serializer) const;
-};
-
-/// Represents a range of potential sequence matches.
-struct SequenceRange {
-    /// The minimum length of the range.
-    uint32_t min = 1;
-
-    /// The maximum length of the range. If unset, the maximum is unbounded.
-    std::optional<uint32_t> max;
-
-    static SequenceRange fromSyntax(const syntax::SelectorSyntax& syntax, const ASTContext& context,
-                                    bool allowUnbounded);
-    static SequenceRange fromSyntax(const syntax::RangeSelectSyntax& syntax,
-                                    const ASTContext& context, bool allowUnbounded);
-
-    void serializeTo(ASTSerializer& serializer) const;
-
-    bool operator<(const SequenceRange& right) const;
-
-    /// `SequenceRange`s intersects if max delay of one range
-    /// is greater than min delay of other range.
-    bool isIntersect(const SequenceRange& other) const;
-
-    /// `SequenceRange` is within other `SequenceRange`
-    /// if min delay of one range is greater or equal than
-    /// min delay of other range and max delay of one range
-    /// is less or equal than max delay of other range.
-    bool isWithin(const SequenceRange& other) const;
 };
 
 /// Encodes a repetition of some sub-sequence.
@@ -261,23 +263,9 @@ struct SequenceRepetition {
 
     SequenceRepetition(const syntax::SequenceRepetitionSyntax& syntax, const ASTContext& context);
 
-    /// Defines ways in which a sequence may admit an empty match.
-    enum class AdmitsEmpty {
-        /// Yes, the sequence admits an empty match.
-        Yes,
-
-        /// No, the sequence does not admit an empty match.
-        No,
-
-        /// The sequence may or may not admit an empty match.
-        Depends,
-
-        /// The sequence accepts only empty matches and nothing else.
-        Only,
-    };
-
-    /// Classifies the repetition as admitting an empty match or not.
-    AdmitsEmpty admitsEmpty() const;
+    /// Checks whether this assertion expression is nondegenerate or whether it has
+    /// properties of degeneracy (admitting empty matches or no matches at all).
+    bitmask<NondegeneracyStatus> checkNondegeneracy() const;
 
     void serializeTo(ASTSerializer& serializer) const;
 };
@@ -291,7 +279,7 @@ public:
     /// An optional repetition of the sequence.
     std::optional<SequenceRepetition> repetition;
 
-    /// Store `true` if sequence exression can be evaluated as constant `false` (`0`).
+    /// Set to true if the sequence expression is a known `false` constant value.
     bool isNullExpr;
 
     SimpleAssertionExpr(const Expression& expr, std::optional<SequenceRepetition> repetition,
@@ -300,9 +288,7 @@ public:
         isNullExpr(isNullExpr) {}
 
     void requireSequence(const ASTContext& context, DiagCode code) const;
-
     bitmask<NondegeneracyStatus> checkNondegeneracyImpl() const;
-
     std::optional<SequenceRange> computeSequenceLengthImpl() const;
 
     static AssertionExpr& fromSyntax(const syntax::SimpleSequenceExprSyntax& syntax,
@@ -337,7 +323,6 @@ public:
         AssertionExpr(AssertionExprKind::SequenceConcat), elements(elements) {}
 
     bitmask<NondegeneracyStatus> checkNondegeneracyImpl() const;
-
     std::optional<SequenceRange> computeSequenceLengthImpl() const;
 
     static AssertionExpr& fromSyntax(const syntax::DelayedSequenceExprSyntax& syntax,
@@ -454,13 +439,6 @@ public:
     void requireSequence(const ASTContext& context, DiagCode code) const;
 
     bitmask<NondegeneracyStatus> checkNondegeneracyImpl() const;
-
-    /// Returns the maximum possible sequence length of the two operands.
-    /// If one of the operands is unbounded, return `nullopt`.
-    /// In case of `through` binary operator it returns `SequenceRange`
-    /// of only right operand because just only right part have a real matches
-    /// unlike the left (left is just formally a condition).
-    /// See 16.9.9 of `SystemVerilog` LRM for details.
     std::optional<SequenceRange> computeSequenceLengthImpl() const;
 
     static AssertionExpr& fromSyntax(const syntax::BinarySequenceExprSyntax& syntax,
@@ -526,7 +504,9 @@ public:
     ClockingAssertionExpr(const TimingControl& clocking, const AssertionExpr& expr) :
         AssertionExpr(AssertionExprKind::Clocking), clocking(clocking), expr(expr) {}
 
-    bitmask<NondegeneracyStatus> checkNondegeneracyImpl() const;
+    bitmask<NondegeneracyStatus> checkNondegeneracyImpl() const {
+        return expr.checkNondegeneracy();
+    }
 
     std::optional<SequenceRange> computeSequenceLengthImpl() const {
         return expr.computeSequenceLength();
@@ -651,7 +631,6 @@ public:
         return NondegeneracyStatus::None;
     }
 
-    /// Returns maximum possible sequence length beetween `if` and `else` sequence expressions.
     std::optional<SequenceRange> computeSequenceLengthImpl() const;
 
     static AssertionExpr& fromSyntax(const syntax::ConditionalPropertyExprSyntax& syntax,
@@ -700,8 +679,6 @@ public:
         return NondegeneracyStatus::None;
     }
 
-    /// Returns maximum possible sequence length beetween all case labels sequence expressions
-    /// include `default` label
     std::optional<SequenceRange> computeSequenceLengthImpl() const;
 
     static AssertionExpr& fromSyntax(const syntax::CasePropertyExprSyntax& syntax,
@@ -741,7 +718,6 @@ public:
         return NondegeneracyStatus::None;
     }
 
-    /// Returns `nullopt` if `disable iff` condition is always `true` (`1`)
     std::optional<SequenceRange> computeSequenceLengthImpl() const;
 
     static AssertionExpr& fromSyntax(const syntax::DisableIffSyntax& syntax,

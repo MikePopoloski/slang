@@ -333,7 +333,6 @@ void registerAST(py::module_& m) {
         .def_readonly("kind", &AssertionExpr::kind)
         .def_readonly("syntax", &AssertionExpr::syntax)
         .def_property_readonly("bad", &AssertionExpr::bad)
-        .def_property_readonly("checkNondegeneracy", &AssertionExpr::checkNondegeneracy)
         .def("__repr__", [](const AssertionExpr& self) {
             return fmt::format("AssertionExpr(AssertionExprKind.{})", toString(self.kind));
         });
@@ -346,19 +345,13 @@ void registerAST(py::module_& m) {
 
     py::class_<SequenceRepetition> seqRep(m, "SequenceRepetition");
     seqRep.def_readonly("kind", &SequenceRepetition::kind)
-        .def_readonly("range", &SequenceRepetition::range)
-        .def_property_readonly("admitsEmpty", &SequenceRepetition::admitsEmpty);
+        .def_readonly("range", &SequenceRepetition::range);
 
     py::enum_<SequenceRepetition::Kind>(seqRep, "Kind")
         .value("Consecutive", SequenceRepetition::Kind::Consecutive)
         .value("Nonconsecutive", SequenceRepetition::Kind::Nonconsecutive)
         .value("GoTo", SequenceRepetition::Kind::GoTo)
         .export_values();
-
-    py::enum_<SequenceRepetition::AdmitsEmpty>(seqRep, "AdmitsEmpty")
-        .value("Yes", SequenceRepetition::AdmitsEmpty::Yes)
-        .value("No", SequenceRepetition::AdmitsEmpty::No)
-        .value("Depends", SequenceRepetition::AdmitsEmpty::Depends);
 
     py::class_<SimpleAssertionExpr, AssertionExpr>(m, "SimpleAssertionExpr")
         .def_property_readonly("expr", [](const SimpleAssertionExpr& self) { return &self.expr; })
