@@ -244,7 +244,7 @@ TEST_CASE("Expression types") {
     CHECK(typeof("su2 == su2") == "bit");
     CHECK(typeof("EVAL1 + 5") == "int");
     CHECK(typeof("up + 5") == "logic[31:0]");
-    CHECK(typeof("up + up") == "logic[1:0]");
+    CHECK(typeof("up + up") == "union packed{logic[1:0] a;bit[0:1] b;}u$1");
 
     // Unpacked arrays
     declare("bit [7:0] arr1 [2];");

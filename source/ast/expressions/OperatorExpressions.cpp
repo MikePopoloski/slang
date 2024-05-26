@@ -114,6 +114,14 @@ const Type* Expression::binaryOperatorType(Compilation& compilation, const Type*
     if (!lt->isNumeric() || !rt->isNumeric())
         return &compilation.getErrorType();
 
+    // If both sides are the same type just use that type.
+    // NOTE: This specifically ignores the forceFourState option for enums,
+    // as that better matches expectations. This area of the LRM is underspecified.
+    if (lt->isMatching(*rt)) {
+        if (!forceFourState || lt->isFourState() || lt->isEnum())
+            return lt;
+    }
+
     // Figure out what the result type of an arithmetic binary operator should be. The rules are:
     // - If either operand is real, the result is real
     // - Otherwise, if either operand is shortreal, the result is shortreal
@@ -130,11 +138,6 @@ const Type* Expression::binaryOperatorType(Compilation& compilation, const Type*
         else {
             result = &compilation.getShortRealType();
         }
-    }
-    else if (lt->isEnum() && rt->isEnum() && lt->isMatching(*rt)) {
-        // If both sides are the same enum type, preserve that in the output type.
-        // NOTE: This specifically ignores the forceFourState option.
-        return lt;
     }
     else {
         bitwidth_t width = std::max(lt->getBitWidth(), rt->getBitWidth());

@@ -944,3 +944,24 @@ endmodule
     CHECK(diags[4].code == diag::SignCompare);
     CHECK(diags[5].code == diag::BitwiseOpMismatch);
 }
+
+TEST_CASE("Binary operator with struct type preserves the type") {
+    auto tree = SyntaxTree::fromText(R"(
+module top;
+  typedef struct packed {
+      logic [1:0] a;
+      logic [1:0] b;
+  } s_t;
+
+  s_t a, b, c, d;
+
+  always_comb begin
+      d = a |  b | c;
+  end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
