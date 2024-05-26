@@ -514,9 +514,9 @@ SequenceRepetition::SequenceRepetition(const SequenceRepetitionSyntax& syntax,
 
 bitmask<NondegeneracyStatus> SequenceRepetition::checkNondegeneracy() const {
     bitmask<NondegeneracyStatus> res;
-    if (range.min == 0) {
+    if (range.min == 0u) {
         res = NondegeneracyStatus::AdmitsEmpty;
-        if (range.max == 0)
+        if (range.max == 0u)
             res |= NondegeneracyStatus::AcceptsOnlyEmpty;
     }
     return res;
