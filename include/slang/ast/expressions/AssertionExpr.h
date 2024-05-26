@@ -396,13 +396,8 @@ public:
                        std::optional<SequenceRange> range) :
         AssertionExpr(AssertionExprKind::Unary), op(op), expr(expr), range(range) {}
 
-    bitmask<NondegeneracyStatus> checkNondegeneracyImpl() const {
-        return expr.checkNondegeneracy();
-    }
-
-    std::optional<SequenceRange> computeSequenceLengthImpl() const {
-        return expr.computeSequenceLength();
-    }
+    bitmask<NondegeneracyStatus> checkNondegeneracyImpl() const { return {}; }
+    std::optional<SequenceRange> computeSequenceLengthImpl() const { return {}; }
 
     static AssertionExpr& fromSyntax(const syntax::UnaryPropertyExprSyntax& syntax,
                                      const ASTContext& context);
@@ -547,13 +542,8 @@ public:
     StrongWeakAssertionExpr(const AssertionExpr& expr, Strength strength) :
         AssertionExpr(AssertionExprKind::StrongWeak), expr(expr), strength(strength) {}
 
-    bitmask<NondegeneracyStatus> checkNondegeneracyImpl() const {
-        return expr.checkNondegeneracy();
-    }
-
-    std::optional<SequenceRange> computeSequenceLengthImpl() const {
-        return expr.computeSequenceLength();
-    }
+    bitmask<NondegeneracyStatus> checkNondegeneracyImpl() const { return {}; }
+    std::optional<SequenceRange> computeSequenceLengthImpl() const { return {}; }
 
     static AssertionExpr& fromSyntax(const syntax::StrongWeakPropertyExprSyntax& syntax,
                                      const ASTContext& context);
@@ -588,13 +578,8 @@ public:
         AssertionExpr(AssertionExprKind::Abort), condition(condition), expr(expr), action(action),
         isSync(isSync) {}
 
-    bitmask<NondegeneracyStatus> checkNondegeneracyImpl() const {
-        return expr.checkNondegeneracy();
-    }
-
-    std::optional<SequenceRange> computeSequenceLengthImpl() const {
-        return expr.computeSequenceLength();
-    }
+    bitmask<NondegeneracyStatus> checkNondegeneracyImpl() const { return {}; }
+    std::optional<SequenceRange> computeSequenceLengthImpl() const { return {}; }
 
     static AssertionExpr& fromSyntax(const syntax::AcceptOnPropertyExprSyntax& syntax,
                                      const ASTContext& context);
@@ -627,11 +612,8 @@ public:
         AssertionExpr(AssertionExprKind::Conditional), condition(condition), ifExpr(ifExpr),
         elseExpr(elseExpr) {}
 
-    bitmask<NondegeneracyStatus> checkNondegeneracyImpl() const {
-        return NondegeneracyStatus::None;
-    }
-
-    std::optional<SequenceRange> computeSequenceLengthImpl() const;
+    bitmask<NondegeneracyStatus> checkNondegeneracyImpl() const { return {}; }
+    std::optional<SequenceRange> computeSequenceLengthImpl() const { return {}; }
 
     static AssertionExpr& fromSyntax(const syntax::ConditionalPropertyExprSyntax& syntax,
                                      const ASTContext& context);
@@ -675,11 +657,8 @@ public:
         AssertionExpr(AssertionExprKind::Case), expr(expr), items(items), defaultCase(defaultCase) {
     }
 
-    bitmask<NondegeneracyStatus> checkNondegeneracyImpl() const {
-        return NondegeneracyStatus::None;
-    }
-
-    std::optional<SequenceRange> computeSequenceLengthImpl() const;
+    bitmask<NondegeneracyStatus> checkNondegeneracyImpl() const { return {}; }
+    std::optional<SequenceRange> computeSequenceLengthImpl() const { return {}; }
 
     static AssertionExpr& fromSyntax(const syntax::CasePropertyExprSyntax& syntax,
                                      const ASTContext& context);
@@ -714,11 +693,8 @@ public:
     DisableIffAssertionExpr(const Expression& condition, const AssertionExpr& expr) :
         AssertionExpr(AssertionExprKind::DisableIff), condition(condition), expr(expr) {}
 
-    bitmask<NondegeneracyStatus> checkNondegeneracyImpl() const {
-        return NondegeneracyStatus::None;
-    }
-
-    std::optional<SequenceRange> computeSequenceLengthImpl() const;
+    bitmask<NondegeneracyStatus> checkNondegeneracyImpl() const { return {}; }
+    std::optional<SequenceRange> computeSequenceLengthImpl() const { return {}; }
 
     static AssertionExpr& fromSyntax(const syntax::DisableIffSyntax& syntax,
                                      const AssertionExpr& expr, const ASTContext& context);

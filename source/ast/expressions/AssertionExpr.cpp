@@ -706,7 +706,7 @@ bitmask<NondegeneracyStatus> SequenceConcatExpr::checkNondegeneracyImpl() const 
         if (!rightNondegenSt.has(NondegeneracyStatus::AdmitsEmpty))
             admitsEmpty = false;
 
-        if (right->delay.min == 0 && right->delay.max == 0) {
+        if (right->delay.min == 0u && right->delay.max == 0u) {
             admitsEmpty = false;
 
             // (empty ##0 seq) does not result in a match
@@ -1335,21 +1335,6 @@ void AbortAssertionExpr::serializeTo(ASTSerializer& serializer) const {
     serializer.write("isSync", isSync);
 }
 
-std::optional<SequenceRange> ConditionalAssertionExpr::computeSequenceLengthImpl() const {
-    std::optional<SequenceRange> max;
-    if (const auto ifLen = ifExpr.computeSequenceLength())
-        max = ifLen.value();
-
-    if (elseExpr) {
-        if (const auto elseLen = elseExpr->computeSequenceLength()) {
-            if (const auto elseLenVal = elseLen.value(); !max.has_value() || max < elseLenVal)
-                max = elseLenVal;
-        }
-    }
-
-    return max;
-}
-
 AssertionExpr& ConditionalAssertionExpr::fromSyntax(const ConditionalPropertyExprSyntax& syntax,
                                                     const ASTContext& context) {
     auto& comp = context.getCompilation();
@@ -1377,27 +1362,6 @@ void ConditionalAssertionExpr::serializeTo(ASTSerializer& serializer) const {
     if (elseExpr)
         serializer.write("else", *elseExpr);
 }
-
-std::optional<SequenceRange> CaseAssertionExpr::computeSequenceLengthImpl() const {
-    std::optional<SequenceRange> max;
-    for (const auto& item : items) {
-        if (const auto itemLen = item.body->computeSequenceLength()) {
-            if (const auto itemLenVal = itemLen.value(); !max.has_value() || max < itemLenVal)
-                max = itemLenVal;
-        }
-    }
-
-    if (defaultCase) {
-        if (const auto defaultItemLen = defaultCase->computeSequenceLength()) {
-            if (const auto defaultItemLenVal = defaultItemLen.value();
-                !max.has_value() || max < defaultItemLenVal) {
-                max = defaultItemLenVal;
-            }
-        }
-    }
-
-    return max;
-};
 
 AssertionExpr& CaseAssertionExpr::fromSyntax(const CasePropertyExprSyntax& syntax,
                                              const ASTContext& context) {
@@ -1450,13 +1414,6 @@ void CaseAssertionExpr::serializeTo(ASTSerializer& serializer) const {
 
     if (defaultCase)
         serializer.write("defaultCase", *defaultCase);
-}
-
-std::optional<SequenceRange> DisableIffAssertionExpr::computeSequenceLengthImpl() const {
-    if (condition.constant && condition.constant->isTrue())
-        return std::nullopt;
-
-    return expr.computeSequenceLength();
 }
 
 AssertionExpr& DisableIffAssertionExpr::fromSyntax(const DisableIffSyntax& syntax,
