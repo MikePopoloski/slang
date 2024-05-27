@@ -1345,14 +1345,6 @@ AssertionExpr& ConditionalAssertionExpr::fromSyntax(const ConditionalPropertyExp
     if (syntax.elseClause)
         elseExpr = &bind(*syntax.elseClause->expr, context);
 
-    // If condition is a constant false value then there is never a match.
-    if (!elseExpr) {
-        if (context.tryEval(cond).isFalse()) {
-            auto& diag = context.addDiag(diag::SeqPropNondegenerate, syntax.sourceRange());
-            diag.addNote(diag::SeqPropCondAlwaysFalse, cond.sourceRange);
-        }
-    }
-
     return *comp.emplace<ConditionalAssertionExpr>(cond, ifExpr, elseExpr);
 }
 
@@ -1423,12 +1415,6 @@ AssertionExpr& DisableIffAssertionExpr::fromSyntax(const DisableIffSyntax& synta
     auto& cond = bindExpr(*syntax.expr, context);
 
     checkSampledValueExpr(cond, context, false, diag::DisableIffLocalVar, diag::DisableIffMatched);
-
-    // If condition is always true then there's never a match.
-    if (context.tryEval(cond).isTrue()) {
-        auto& diag = context.addDiag(diag::SeqPropNondegenerate, syntax.sourceRange());
-        diag.addNote(diag::DisableIffCondAlwaysTrue, cond.sourceRange);
-    }
 
     if (context.assertionInstance && context.assertionInstance->isRecursive)
         context.addDiag(diag::RecursivePropDisableIff, syntax.sourceRange());

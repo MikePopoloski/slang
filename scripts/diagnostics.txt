@@ -861,8 +861,6 @@ note NoteExpandedHere "expanded here"
 note SeqAdmitsEmptyMatches "sequence property admits empty matches"
 note SeqAdmitsNoMatches "sequence property can never be matched"
 note SeqAcceptsOnlyEmptyMatches "sequence property admits only empty matches"
-note SeqPropCondAlwaysFalse "condition is always false"
-note DisableIffCondAlwaysTrue "disable iff condition is always true"
 
 subsystem Types
 error InvalidEnumBase "invalid enum base type {} (must be a single dimensional integer type)"

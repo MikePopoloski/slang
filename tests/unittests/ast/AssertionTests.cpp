@@ -2382,7 +2382,9 @@ endmodule
         }
         else if (diags.size() != 1 || diags[0].code != code) {
             FAIL_CHECK(expr);
-            CHECK(diags[0].code == *code);
+            CHECK(diags.size() == 1);
+            if (diags.size() == 1)
+                CHECK(diags[0].code == *code);
         }
     };
 
@@ -2430,7 +2432,9 @@ endmodule
         }
         else if (diags.size() != 1 || diags[0].code != code) {
             FAIL_CHECK(expr);
-            CHECK(diags[0].code == *code);
+            CHECK(diags.size() == 1);
+            if (diags.size() == 1)
+                CHECK(diags[0].code == *code);
         }
     };
 
@@ -2508,7 +2512,6 @@ endmodule
 
     test("if (b) a ##1 c else d ##1 e");
     test("if (1'b0) a ##1 c else d ##1 e");
-    test("if (1'b0) a ##1 c", diag::SeqPropNondegenerate);
     test("if (1'b1) a ##1 c else d ##1 e");
     test("if (a) b intersect ##2 b", diag::SeqPropNondegenerate);
     test("if (a) ##2 b intersect ##2 b");
@@ -2516,7 +2519,6 @@ endmodule
     test("case (b) 1, 2, 3: 1 ##1 b; 4: a and b; default: 1[*0] |-> b; endcase",
          diag::OverlapImplNondegenerate);
     test("disable iff (clk) a");
-    test("disable iff (1'b1) a", diag::SeqPropNondegenerate);
 }
 
 TEST_CASE("Sequence nondegeneracy tests 3") {
@@ -2543,7 +2545,9 @@ endmodule
         }
         else if (diags.size() != 1 || diags[0].code != code) {
             FAIL_CHECK(expr);
-            CHECK(diags[0].code == *code);
+            CHECK(diags.size() == 1);
+            if (diags.size() == 1)
+                CHECK(diags[0].code == *code);
         }
     };
 
