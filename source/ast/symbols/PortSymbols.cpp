@@ -255,29 +255,42 @@ private:
             }
         }
 
+        // Support a compatibility option which allows ANSI ports to still look
+        // up and connect to an identically named net or variable declared in
+        // the definition body instead of creating a new symbol internally.
+        if (comp.hasFlag(CompilationFlags::AllowMergingAnsiPorts)) {
+            if (auto symbol = scope.find(port->name);
+                symbol &&
+                (symbol->kind == SymbolKind::Variable || symbol->kind == SymbolKind::Net)) {
+                port->internalSymbol = symbol;
+            }
+        }
+
         // Create a new symbol to represent this port internally to the instance.
-        ValueSymbol* symbol;
-        if (netType) {
-            symbol = comp.emplace<NetSymbol>(port->name, port->location, *netType);
-        }
-        else {
-            symbol = comp.emplace<VariableSymbol>(port->name, port->location,
-                                                  VariableLifetime::Static);
-        }
+        if (!port->internalSymbol) {
+            ValueSymbol* symbol;
+            if (netType) {
+                symbol = comp.emplace<NetSymbol>(port->name, port->location, *netType);
+            }
+            else {
+                symbol = comp.emplace<VariableSymbol>(port->name, port->location,
+                                                      VariableLifetime::Static);
+            }
 
-        if (type) {
-            symbol->setDeclaredType(*type, decl.dimensions);
-        }
-        else {
-            SLANG_ASSERT(netType);
-            if (!decl.dimensions.empty())
-                symbol->getDeclaredType()->setDimensionSyntax(decl.dimensions);
-        }
+            if (type) {
+                symbol->setDeclaredType(*type, decl.dimensions);
+            }
+            else {
+                SLANG_ASSERT(netType);
+                if (!decl.dimensions.empty())
+                    symbol->getDeclaredType()->setDimensionSyntax(decl.dimensions);
+            }
 
-        symbol->setSyntax(decl);
-        symbol->setAttributes(scope, attrs);
-        port->internalSymbol = symbol;
-        implicitMembers.emplace_back(symbol, port);
+            symbol->setSyntax(decl);
+            symbol->setAttributes(scope, attrs);
+            port->internalSymbol = symbol;
+            implicitMembers.emplace_back(symbol, port);
+        }
 
         if (decl.initializer) {
             if (netType && netType->netKind == NetType::Interconnect) {

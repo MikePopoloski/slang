@@ -179,6 +179,9 @@ void Driver::addStandardArgs() {
     addCompFlag(
         CompilationFlags::AllowMultiDrivenLocals, "--allow-multi-driven-locals",
         "Allow subroutine local variables to be driven from multiple always_comb/_ff blocks");
+    addCompFlag(CompilationFlags::AllowMergingAnsiPorts, "--allow-merging-ansi-ports",
+                "Allow merging ANSI port declarations with nets and variables declared in the "
+                "instance body");
     addCompFlag(CompilationFlags::StrictDriverChecking, "--strict-driver-checking",
                 "Perform strict driver checking, which currently means disabling "
                 "procedural 'for' loop unrolling.");
@@ -439,7 +442,8 @@ bool Driver::processOptions() {
                                    CompilationFlags::AllowRecursiveImplicitCall,
                                    CompilationFlags::AllowBareValParamAssignment,
                                    CompilationFlags::AllowSelfDeterminedStreamConcat,
-                                   CompilationFlags::AllowMultiDrivenLocals};
+                                   CompilationFlags::AllowMultiDrivenLocals,
+                                   CompilationFlags::AllowMergingAnsiPorts};
 
             for (auto flag : vcsCompatFlags) {
                 auto& option = options.compilationFlags.at(flag);

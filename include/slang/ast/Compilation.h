@@ -125,9 +125,13 @@ enum class SLANG_EXPORT CompilationFlags {
     AllowSelfDeterminedStreamConcat = 1 << 12,
 
     /// Allow multi-driven subroutine local variables.
-    AllowMultiDrivenLocals = 1 << 13
+    AllowMultiDrivenLocals = 1 << 13,
+
+    /// Allow merging ANSI port declarations with nets and variables
+    /// declared in the module body.
+    AllowMergingAnsiPorts = 1 << 14
 };
-SLANG_BITMASK(CompilationFlags, AllowMultiDrivenLocals)
+SLANG_BITMASK(CompilationFlags, AllowMergingAnsiPorts)
 
 /// Contains various options that can control compilation behavior.
 struct SLANG_EXPORT CompilationOptions {
