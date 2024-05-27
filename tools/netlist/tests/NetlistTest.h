@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: MIT
 
 #include "Netlist.h"
-#include "NetlistVisitor.h"
 #include "PathFinder.h"
+#include "visitors/NetlistVisitor.h"
 #include "Test.h"
 #include <string>
 

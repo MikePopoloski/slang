@@ -5,10 +5,6 @@
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
-#include "Netlist.h"
-
-#include "NetlistVisitor.h"
-#include "PathFinder.h"
 #include "fmt/color.h"
 #include "fmt/format.h"
 #include <fstream>
@@ -29,6 +25,10 @@
 #include "slang/util/TimeTrace.h"
 #include "slang/util/Util.h"
 #include "slang/util/VersionInfo.h"
+
+#include "Netlist.h"
+#include "PathFinder.h"
+#include "visitors/NetlistVisitor.h"
 
 using namespace slang;
 using namespace slang::ast;

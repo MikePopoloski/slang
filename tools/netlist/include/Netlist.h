@@ -54,6 +54,29 @@ static std::string getSymbolHierPath(const ast::Symbol& symbol) {
     return buffer;
 }
 
+static std::string resolveSymbolHierPath(const ast::Symbol& symbol) {
+
+    // Resolve the hierarchical path of the symbol.
+    std::string buffer;
+    symbol.getHierarchicalPath(buffer);
+
+    // Is the symbol is a modport, use the modport name to adjust the
+    // hierachical path to match the corresponding variable declaration in the
+    // interface.
+    if (symbol.kind == ast::SymbolKind::ModportPort) {
+        auto const& modportSymbol = symbol.getParentScope()->asSymbol();
+        auto& modportName = modportSymbol.name;
+        auto oldSuffix = fmt::format(".{}.{}", modportSymbol.name, symbol.name);
+        auto newSuffix = fmt::format(".{}", symbol.name);
+        DEBUG_PRINT("hierPath={}, oldSuffix={}, newSuffix={}\n", buffer, oldSuffix, newSuffix);
+        SLANG_ASSERT(buffer.ends_with(oldSuffix));
+        buffer.replace(buffer.end() - (ptrdiff_t)oldSuffix.length(), buffer.end(),
+                       newSuffix.begin(), newSuffix.end());
+    }
+
+    return buffer;
+}
+
 /// Base class representing various selectors that can be applied to references
 /// to structured variables (eg vectors, structs, unions).
 struct VariableSelectorBase {
