@@ -11,7 +11,7 @@
 #include "Config.h"
 #include "Debug.h"
 #include "Netlist.h"
-#include "ScopedSymbolTable.hpp"
+#include "AssignmentRanges.hpp"
 #include "fmt/color.h"
 #include "fmt/format.h"
 #include <algorithm>
@@ -257,12 +257,12 @@ public:
     /// last definition.
     void connectVarToDecl(NetlistVariableReference& varNode,
                           ast::Symbol const& symbol) {
-        auto result = targetMap.lookup(getSymbolHierPath(symbol), varNode.bounds);
+        /*auto result = assignmentRanges.lookup(symbol, varNode.bounds);
         if (result.has_value()) {
           netlist.addEdge(varNode, *result.value());
           DEBUG_PRINT("New edge: reference {} -> previous defn {}\n", varNode.getName(),
                       result.value()->getName());
-        } else {
+        } else*/ {
           auto* declNode = netlist.lookupVariable(resolveSymbolHierPath(symbol));
           netlist.addEdge(varNode, *declNode);
           DEBUG_PRINT("New edge: reference {} -> declaration {}\n", varNode.getName(), declNode->hierarchicalPath);
@@ -272,12 +272,12 @@ public:
     /// For the specified variable reference, create a dependency from the declaration or
     /// last definition.
     void connectDeclToVar(NetlistVariableReference& varNode, ast::Symbol const& symbol) {
-        auto result = targetMap.lookup(getSymbolHierPath(symbol), varNode.bounds);
+        /*auto result = assignmentRanges.lookup(symbol, varNode.bounds);
         if (result.has_value()) {
           netlist.addEdge(*result.value(), varNode);
           DEBUG_PRINT("New edge: previous defn {} -> reference {}\n", result.value()->getName(),
                       varNode.getName());
-        } else {
+        } else*/ {
           auto* declNode = netlist.lookupVariable(resolveSymbolHierPath(symbol));
           netlist.addEdge(*declNode, varNode);
           DEBUG_PRINT("New edge: declaration {} -> reference {}\n", declNode->hierarchicalPath, varNode.getName());
@@ -361,9 +361,7 @@ public:
                 *local = std::move(values[i++]);
             }
 
-            targetMap.pushScope();
             loop.body.visit(*this);
-            targetMap.popScope();
 
             if (anyErrors) {
                 return;
@@ -463,10 +461,8 @@ public:
                 connectVarToVar(RHSVarRef, LHSVarRef);
             }
 
-            // Update the target map to record this assignment being the last
-            // definition of the corresponding variable.
-            auto key = getSymbolHierPath(leftNode->symbol);
-            targetMap.push(key, &LHSVarRef);
+            // Record the assignment.
+            assignmentRanges.insert(&LHSVarRef.symbol, LHSVarRef.bounds, &LHSVarRef);
         }
 
         // Add edges to the LHS target variables from declarations that
@@ -495,7 +491,7 @@ private:
     Netlist& netlist;
     ast::EvalContext evalCtx;
     SmallVector<NetlistNode*> condVarsStack;
-    ScopedSymbolStack targetMap;
+    AssignmentRanges assignmentRanges;
 };
 
 /// Visit generate blocks where new variable and net declarations can be
