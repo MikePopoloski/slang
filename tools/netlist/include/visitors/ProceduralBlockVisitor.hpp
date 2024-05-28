@@ -40,7 +40,7 @@ public:
     auto insert(const ast::Symbol* symbol, ConstantRange const& range, NetlistVariableReference* node) {
         DEBUG_PRINT("Assignment (index={}) to {} with bounds [{}:{}]\n", count,
                     resolveSymbolHierPath(*symbol), range.upper(), range.lower());
-        map[symbol].insert(range.lower(), range.upper(), Driver(count++, node), alloc);
+        //map[symbol].insert(range.lower(), range.upper(), Driver(count++, node), alloc);
     }
 
     /// Lookup the drivers within this procedural block for the specified
@@ -148,24 +148,24 @@ public:
         return edgeKind;
     }
 
-    /// For the specified variable reference, create a dependency to the declaration or
-    /// last definition.
-    //void connectVarToDecl(NetlistVariableReference& varNode, ast::Symbol const& symbol) {
-    //    auto drivers = driverMap.getDrivers(&symbol, varNode.bounds);
-    //    if (!drivers.empty()) {
-    //        for (auto& driver : drivers) {
-    //            netlist.addEdge(varNode, *result.value());
-    //            DEBUG_PRINT("New edge: reference {} -> previous defn {}\n", varNode.getName(),
-    //                        result.value()->getName());
-    //        }
-    //    }
-    //    else {
-    //        auto* declNode = netlist.lookupVariable(resolveSymbolHierPath(symbol));
-    //        netlist.addEdge(varNode, *declNode);
-    //        DEBUG_PRINT("New edge: reference {} -> declaration {}\n", varNode.getName(),
-    //                    declNode->hierarchicalPath);
-    //    }
-    //}
+    // For the specified variable reference, create a dependency to the declaration or
+    // last definition.
+    void connectVarToDecl(NetlistVariableReference& varNode, ast::Symbol const& symbol) {
+        /*auto drivers = driverMap.getDrivers(&symbol, varNode.bounds);
+        if (!drivers.empty()) {
+            for (auto& driver : drivers) {
+                netlist.addEdge(varNode, *result.value());
+                DEBUG_PRINT("New edge: reference {} -> previous defn {}\n", varNode.getName(),
+                            result.value()->getName());
+            }
+        }
+        else*/ {
+            auto* declNode = netlist.lookupVariable(resolveSymbolHierPath(symbol));
+            netlist.addEdge(varNode, *declNode);
+            DEBUG_PRINT("New edge: reference {} -> declaration {}\n", varNode.getName(),
+                        declNode->hierarchicalPath);
+        }
+    }
 
     /// For the specified variable reference, create a dependency from the declaration or
     /// last definition.
@@ -353,7 +353,7 @@ public:
 
             auto& LHSVarRef = leftNode->as<NetlistVariableReference>();
             // TODO: fix this by connecting last ranges to declaration.
-            //connectVarToDecl(LHSVarRef, LHSVarRef.symbol);
+            connectVarToDecl(LHSVarRef, LHSVarRef.symbol);
 
             // For each variable reference occuring on the RHS of the
             // assignment: add an edge from variable declaration and add an
