@@ -1,65 +1,107 @@
 #pragma once
 
+#include "Debug.h"
+#include "Netlist.h"
 #include <memory>
 
 #include "slang/ast/symbols/BlockSymbols.h"
 #include "slang/util/IntervalMap.h"
-#include "Netlist.h"
-#include "Debug.h"
 
 using namespace slang;
 
 namespace netlist {
 
-/// Track the assignments and their ordering to each symbol within a procedural block.
-class AssignmentRanges {
+/// Track the map and their ordering to each symbol within a procedural block.
+class DriverMap {
 
-  /// Represent a single assignment to a symbol.
-  class Assignment {
-    friend AssignmentRanges;
+    /// Represent a single assignment to a symbol.
+    class Driver {
+        friend DriverMap;
 
-  public:
-    Assignment() = default;
-    Assignment(int index, NetlistNode *node) : index(index), node(node) {}
+    public:
+        Driver() = default;
+        Driver(int index, NetlistVariableReference* node) : index(index), node(node) {}
 
-    Assignment & operator=(Assignment const& other) {
-      index = other.index;
-      node = other.node;
-      return *this;
-    }
+        Driver& operator=(Driver const& other) {
+            index = other.index;
+            node = other.node;
+            return *this;
+        }
 
-  private:
-    int index;
-    NetlistNode *node;
-  };
+    private:
+        int index;
+        NetlistVariableReference* node;
+    };
 
 public:
-    AssignmentRanges() : alloc(ba) {};
+    DriverMap() : alloc(ba){};
 
-    /// Insert a entry into the map.
-    auto insert(const ast::Symbol* symbol, ConstantRange const &range, NetlistNode* node) {
-    DEBUG_PRINT("Assignment {} to {} with bounds [{}:{}]\n", count, symbol->name,
-                range.upper(), range.lower());
-    assignments[symbol].insert(range.lower(), range.upper(), Assignment(count++, node), alloc);
+    /// Insert a driver into the interval map corresponding to the symbol.
+    auto insert(const ast::Symbol* symbol, ConstantRange const& range, NetlistVariableReference* node) {
+        DEBUG_PRINT("Assignment (index={}) to {} with bounds [{}:{}]\n", count,
+                    resolveSymbolHierPath(*symbol), range.upper(), range.lower());
+        map[symbol].insert(range.lower(), range.upper(), Driver(count++, node), alloc);
     }
 
-    /// Lookup all assignments that contribute to the interval for the symbol.
-    std::optional<NetlistNode*> lookup(const ast::Symbol *symbol, ConstantRange const &range) {
-      if (assignments.count(symbol)) {
-        auto it = assignments[symbol].find(range.lower(), range.upper());
-      }
-      return std::nullopt;
+    /// Lookup the drivers within this procedural block for the specified
+    /// symbol in the specified interval. Return a list of the drivers as
+    /// NetlistVariableReferences instances, or an empty list if there are
+    /// none.
+    SmallVector<NetlistVariableReference*> getDrivers(const ast::Symbol* symbol, ConstantRange const& range) {
+        if (map.count(symbol) == 0) {
+            return {};
+        }
+        auto& boundsMap = map[symbol];
+
+        // Driver lookup returns an iterator of all overlapping driver ranges.
+        auto it = boundsMap.find(range.lower(), range.upper());
+
+        // Create a new list of the drivers.
+        SmallVector<Driver> drivers;
+        for (; it != boundsMap.end(); it++) {
+            auto& driver = *it;
+            drivers.push_back(driver);
+        }
+
+        // Sort the drivers by index, descending.
+        std::ranges::sort(drivers, [](const Driver& left, const Driver& right) {
+            return left.index > right.index;
+        });
+
+        // Determine the 'last' drivers by iterating through each driver
+        // in last to first order and creating a list of drivers that drive
+        // distinct ranges (ie are disjoint or overlapping, but not contained
+        // in one another).
+        SmallVector<Driver> lastDrivers;
+        auto distinct = [&lastDrivers](const Driver& driver) {
+            return std::any_of(lastDrivers.begin(), lastDrivers.end(), [&driver](Driver const& d) {
+                return !d.node->bounds.contains(driver.node->bounds);
+            });
+        };
+        for (auto& driver : drivers) {
+            if (distinct(driver)) {
+                lastDrivers.push_back(driver);
+            }
+        }
+
+        // Create a list of NetlistVariableReferences to return.
+        SmallVector<NetlistVariableReference*> result;
+        for (auto& driver : lastDrivers) {
+            result.push_back(driver.node);
+        }
+
+        return result;
     }
 
 private:
-    BumpAllocator ba;
-    IntervalMap<int64_t, Assignment>::allocator_type alloc;
     int count{0};
-    std::map<const ast::Symbol*, IntervalMap<uint64_t, Assignment>> assignments;
+    BumpAllocator ba;
+    IntervalMap<int64_t, Driver>::allocator_type alloc;
+    std::map<const ast::Symbol*, IntervalMap<uint64_t, Driver>> map;
 };
 
 /// Visit proceural blocks. This visitor performs loop unrolling and handles
-/// multiple assignments to the same variable.
+/// multiple map to the same variable.
 class ProceduralBlockVisitor : public ast::ASTVisitor<ProceduralBlockVisitor, true, false> {
 public:
     bool anyErrors = false;
@@ -69,19 +111,19 @@ public:
         netlist(netlist),
         evalCtx(ast::ASTContext(compilation.getRoot(), ast::LookupLocation::max)),
         edgeKind(edgeKind) {
-      evalCtx.pushEmptyFrame();
-      DEBUG_PRINT("Procedural block\n");
+        evalCtx.pushEmptyFrame();
+        DEBUG_PRINT("Procedural block\n");
     }
 
-    /// Determine the egde type to apply to assignments within a procedrual
+    /// Determine the egde type to apply to map within a procedrual
     /// block.
-    static ast::EdgeKind determineEdgeKind(ast::ProceduralBlockSymbol const &symbol) {
+    static ast::EdgeKind determineEdgeKind(ast::ProceduralBlockSymbol const& symbol) {
         ast::EdgeKind edgeKind = ast::EdgeKind::None;
         if (symbol.procedureKind == ast::ProceduralBlockKind::AlwaysFF ||
             symbol.procedureKind == ast::ProceduralBlockKind::Always) {
             auto tck = symbol.getBody().as<ast::TimedStatement>().timing.kind;
             if (tck == ast::TimingControlKind::SignalEvent) {
-              edgeKind = symbol.getBody()
+                edgeKind = symbol.getBody()
                                .as<ast::TimedStatement>()
                                .timing.as<ast::SignalEventControl>()
                                .edge;
@@ -98,7 +140,7 @@ public:
                 for (auto e : events) {
                     edgeKind = e->as<ast::SignalEventControl>().edge;
                     if (edgeKind == ast::EdgeKind::None)
-                      break;
+                        break;
                 }
                 // if we got here, edgeKind is not "None" which is all we care about
             }
@@ -108,39 +150,46 @@ public:
 
     /// For the specified variable reference, create a dependency to the declaration or
     /// last definition.
-    void connectVarToDecl(NetlistVariableReference& varNode,
-                          ast::Symbol const& symbol) {
-        /*auto result = assignmentRanges.lookup(symbol, varNode.bounds);
-        if (result.has_value()) {
-          netlist.addEdge(varNode, *result.value());
-          DEBUG_PRINT("New edge: reference {} -> previous defn {}\n", varNode.getName(),
-                      result.value()->getName());
-        } else*/ {
-          auto* declNode = netlist.lookupVariable(resolveSymbolHierPath(symbol));
-          netlist.addEdge(varNode, *declNode);
-          DEBUG_PRINT("New edge: reference {} -> declaration {}\n", varNode.getName(), declNode->hierarchicalPath);
-        }
-    }
+    //void connectVarToDecl(NetlistVariableReference& varNode, ast::Symbol const& symbol) {
+    //    auto drivers = driverMap.getDrivers(&symbol, varNode.bounds);
+    //    if (!drivers.empty()) {
+    //        for (auto& driver : drivers) {
+    //            netlist.addEdge(varNode, *result.value());
+    //            DEBUG_PRINT("New edge: reference {} -> previous defn {}\n", varNode.getName(),
+    //                        result.value()->getName());
+    //        }
+    //    }
+    //    else {
+    //        auto* declNode = netlist.lookupVariable(resolveSymbolHierPath(symbol));
+    //        netlist.addEdge(varNode, *declNode);
+    //        DEBUG_PRINT("New edge: reference {} -> declaration {}\n", varNode.getName(),
+    //                    declNode->hierarchicalPath);
+    //    }
+    //}
 
     /// For the specified variable reference, create a dependency from the declaration or
     /// last definition.
     void connectDeclToVar(NetlistVariableReference& varNode, ast::Symbol const& symbol) {
-        /*auto result = assignmentRanges.lookup(symbol, varNode.bounds);
-        if (result.has_value()) {
-          netlist.addEdge(*result.value(), varNode);
-          DEBUG_PRINT("New edge: previous defn {} -> reference {}\n", result.value()->getName(),
-                      varNode.getName());
-        } else*/ {
-          auto* declNode = netlist.lookupVariable(resolveSymbolHierPath(symbol));
-          netlist.addEdge(*declNode, varNode);
-          DEBUG_PRINT("New edge: declaration {} -> reference {}\n", declNode->hierarchicalPath, varNode.getName());
+        auto drivers = driverMap.getDrivers(&symbol, varNode.bounds);
+        if (!drivers.empty()) {
+            for (auto& node : drivers) {
+                netlist.addEdge(*node, varNode);
+                DEBUG_PRINT("New edge: previous defn {} -> reference {}\n",
+                            node->getName(), varNode.getName());
+            }
+        }
+        else {
+            auto* declNode = netlist.lookupVariable(resolveSymbolHierPath(symbol));
+            netlist.addEdge(*declNode, varNode);
+            DEBUG_PRINT("New edge: declaration {} -> reference {}\n", declNode->hierarchicalPath,
+                        varNode.getName());
         }
     }
 
-    void connectVarToVar(NetlistNode& sourceVarNode,
-                         NetlistNode& targetVarNode) {
+    void connectVarToVar(NetlistNode& sourceVarNode, NetlistNode& targetVarNode) {
         netlist.addEdge(sourceVarNode, targetVarNode);
-        DEBUG_PRINT("New edge: reference {} -> reference {}\n", sourceVarNode.getName(), targetVarNode.getName());
+        DEBUG_PRINT("New edge: reference {} -> reference {}\n", sourceVarNode.getName(),
+                    targetVarNode.getName());
     }
 
     void handle(const ast::VariableSymbol& symbol) { netlist.addVariableDeclaration(symbol); }
@@ -284,7 +333,7 @@ public:
         step();
 
         if (stmt.expr.kind == ast::ExpressionKind::Assignment) {
-          handleAssignment(stmt.expr.as<ast::AssignmentExpression>());
+            handleAssignment(stmt.expr.as<ast::AssignmentExpression>());
         }
     }
 
@@ -302,26 +351,27 @@ public:
         // add an edge to variable declaration.
         for (auto* leftNode : visitorLHS.getVars()) {
 
-            auto &LHSVarRef = leftNode->as<NetlistVariableReference>();
-            connectVarToDecl(LHSVarRef, LHSVarRef.symbol);
+            auto& LHSVarRef = leftNode->as<NetlistVariableReference>();
+            // TODO: fix this by connecting last ranges to declaration.
+            //connectVarToDecl(LHSVarRef, LHSVarRef.symbol);
 
             // For each variable reference occuring on the RHS of the
             // assignment: add an edge from variable declaration and add an
             // edge to the LHS reference.
             for (auto* rightNode : visitorRHS.getVars()) {
-                auto &RHSVarRef = rightNode->as<NetlistVariableReference>();
+                auto& RHSVarRef = rightNode->as<NetlistVariableReference>();
                 connectDeclToVar(RHSVarRef, RHSVarRef.symbol);
                 connectVarToVar(RHSVarRef, LHSVarRef);
             }
 
             // Record the assignment.
-            assignmentRanges.insert(&LHSVarRef.symbol, LHSVarRef.bounds, &LHSVarRef);
+            driverMap.insert(&LHSVarRef.symbol, LHSVarRef.bounds, &LHSVarRef);
         }
 
         // Add edges to the LHS target variables from declarations that
         // correspond to conditions controlling the assignment.
         for (auto* condNode : condVarsStack) {
-            auto &condVarRef = condNode->as<NetlistVariableReference>();
+            auto& condVarRef = condNode->as<NetlistVariableReference>();
 
             connectDeclToVar(condVarRef, condVarRef.symbol);
             for (auto* leftNode : visitorLHS.getVars()) {
@@ -345,7 +395,7 @@ private:
     ast::EvalContext evalCtx;
     SmallVector<NetlistNode*> condVarsStack;
     ast::EdgeKind edgeKind;
-    AssignmentRanges assignmentRanges;
+    DriverMap driverMap;
 };
 
 } // namespace netlist
