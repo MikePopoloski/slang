@@ -11,6 +11,7 @@
 #include "slang/ast/TimingControl.h"
 #include "slang/ast/expressions/AssignmentExpressions.h"
 #include "slang/ast/symbols/ClassSymbols.h"
+#include "slang/ast/symbols/MemberSymbols.h"
 #include "slang/ast/symbols/SubroutineSymbols.h"
 #include "slang/ast/symbols/SymbolBuilders.h"
 #include "slang/ast/symbols/VariableSymbols.h"
@@ -158,6 +159,8 @@ CovergroupBodySymbol::CovergroupBodySymbol(Compilation& comp, SourceLocation loc
     auto& int_t = comp.getIntType();
     auto& bit_t = comp.getBitType();
     auto& string_t = comp.getStringType();
+    auto& real_t = comp.getRealType();
+    auto lv = comp.languageVersion();
 
     StructBuilder option(*this, LookupLocation::min);
     option.addField("name"sv, string_t);
@@ -167,6 +170,8 @@ CovergroupBodySymbol::CovergroupBodySymbol(Compilation& comp, SourceLocation loc
     option.addField("at_least"sv, int_t);
     option.addField("auto_bin_max"sv, int_t, VariableFlags::ImmutableCoverageOption);
     option.addField("cross_num_print_missing"sv, int_t);
+    if (lv >= LanguageVersion::v1800_2023)
+        option.addField("cross_retain_auto_bins"sv, bit_t, VariableFlags::ImmutableCoverageOption);
     option.addField("detect_overlap"sv, bit_t, VariableFlags::ImmutableCoverageOption);
     option.addField("per_instance"sv, bit_t, VariableFlags::ImmutableCoverageOption);
     option.addField("get_inst_coverage"sv, bit_t, VariableFlags::ImmutableCoverageOption);
@@ -179,9 +184,13 @@ CovergroupBodySymbol::CovergroupBodySymbol(Compilation& comp, SourceLocation loc
     type_option.addField("strobe"sv, bit_t, VariableFlags::ImmutableCoverageOption);
     type_option.addField("merge_instances"sv, bit_t);
     type_option.addField("distribute_first"sv, bit_t);
+    if (lv >= LanguageVersion::v1800_2023)
+        type_option.addField("real_interval"sv, real_t, VariableFlags::ImmutableCoverageOption);
     addProperty(*this, "type_option"sv, VariableLifetime::Static, type_option);
 
     addBuiltInMethods(*this, true);
+
+    lastBuiltinMember = getLastMember();
 }
 
 void CovergroupBodySymbol::serializeTo(ASTSerializer& serializer) const {
@@ -212,41 +221,41 @@ const CovergroupType& CovergroupType::fromSyntax(const Scope& scope,
     result->setSyntax(syntax);
     result->setAttributes(scope, syntax.attributes);
 
-    if (syntax.portList) {
-        SmallVector<const FormalArgumentSymbol*> args;
-        SubroutineSymbol::buildArguments(*result, scope, *syntax.portList,
-                                         VariableLifetime::Automatic, args);
-        result->arguments = args.copy(comp);
-
-        for (auto arg : result->arguments) {
-            if (arg->direction == ArgumentDirection::Out ||
-                arg->direction == ArgumentDirection::InOut) {
-                scope.addDiag(diag::CovergroupOutArg, arg->location);
-            }
-        }
-    }
-
-    MethodBuilder sample(comp, "sample"sv, comp.getVoidType(), SubroutineKind::Function);
-    body->addMember(sample.symbol);
-
-    if (syntax.event && syntax.event->kind == SyntaxKind::WithFunctionSample) {
-        auto& wfs = syntax.event->as<WithFunctionSampleSyntax>();
-        if (wfs.portList) {
+    if (!syntax.extends) {
+        if (syntax.portList) {
             SmallVector<const FormalArgumentSymbol*> args;
-            SubroutineSymbol::buildArguments(*result, scope, *wfs.portList,
+            SubroutineSymbol::buildArguments(*result, scope, *syntax.portList,
                                              VariableLifetime::Automatic, args);
+            result->arguments = args.copy(comp);
 
-            result->sampleArguments = args.copy(comp);
-
-            for (auto arg : result->sampleArguments) {
+            for (auto arg : result->arguments) {
                 if (arg->direction == ArgumentDirection::Out ||
                     arg->direction == ArgumentDirection::InOut) {
                     scope.addDiag(diag::CovergroupOutArg, arg->location);
                 }
+            }
+        }
 
-                const_cast<FormalArgumentSymbol*>(arg)->flags |=
-                    VariableFlags::CoverageSampleFormal;
-                sample.copyArg(*arg);
+        MethodBuilder sample(comp, "sample"sv, comp.getVoidType(), SubroutineKind::Function);
+        body->addMember(sample.symbol);
+
+        if (syntax.event && syntax.event->kind == SyntaxKind::WithFunctionSample) {
+            auto& wfs = syntax.event->as<WithFunctionSampleSyntax>();
+            if (wfs.portList) {
+                SmallVector<const FormalArgumentSymbol*> args;
+                SubroutineSymbol::buildArguments(*result, scope, *wfs.portList,
+                                                 VariableLifetime::Automatic, args);
+
+                for (auto arg : args) {
+                    if (arg->direction == ArgumentDirection::Out ||
+                        arg->direction == ArgumentDirection::InOut) {
+                        scope.addDiag(diag::CovergroupOutArg, arg->location);
+                    }
+
+                    const_cast<FormalArgumentSymbol*>(arg)->flags |=
+                        VariableFlags::CoverageSampleFormal;
+                    sample.copyArg(*arg);
+                }
             }
         }
     }
@@ -271,9 +280,87 @@ const CovergroupType& CovergroupType::fromSyntax(const Scope& scope,
         var->setType(*result);
         var->flags |= VariableFlags::Const;
         classProperty = var;
+
+        if (syntax.extends)
+            result->setNeedElaboration();
     }
 
     return *result;
+}
+
+void CovergroupType::inheritMembers(function_ref<void(const Symbol&)> insertCB) const {
+    auto syntax = getSyntax();
+    auto scope = getParentScope();
+    SLANG_ASSERT(syntax && scope);
+
+    // If this covergroup doesn't inherit from anything then there's nothing to do.
+    auto& cds = syntax->as<CovergroupDeclarationSyntax>();
+    if (!cds.extends)
+        return;
+
+    auto& comp = scope->getCompilation();
+    baseGroup = &comp.getErrorType();
+
+    // Find the base class's group from which we are inheriting.
+    auto baseClass = scope->asSymbol().as<ClassType>().getBaseClass();
+    if (!baseClass || baseClass->kind != SymbolKind::ClassType)
+        return;
+
+    auto baseName = cds.name.valueText();
+    auto candidateBase = baseClass->as<ClassType>().find(baseName);
+    if (candidateBase && candidateBase->kind == SymbolKind::ClassProperty) {
+        auto& ct = candidateBase->as<ClassPropertySymbol>().getType();
+        if (ct.kind == SymbolKind::CovergroupType)
+            baseGroup = &ct;
+    }
+
+    if (baseGroup->isError()) {
+        if (!baseName.empty()) {
+            scope->addDiag(diag::UnknownCovergroupBase, cds.name.range())
+                << baseName << baseClass->name;
+        }
+        return;
+    }
+
+    auto& baseCG = baseGroup->as<CovergroupType>();
+    arguments = baseCG.getArguments();
+    event = baseCG.event;
+
+    // We have the base group -- inherit all of the members from it.
+    auto& scopeNameMap = body.getUnelaboratedNameMap();
+    for (auto& member : baseCG.getBody().members()) {
+        if (member.name.empty())
+            continue;
+
+        // Don't inherit if the member is already overridden.
+        if (auto it = scopeNameMap.find(member.name); it != scopeNameMap.end())
+            continue;
+
+        // If the symbol itself was already inherited, create a new wrapper around
+        // it for our own scope.
+        const Symbol* toWrap = &member;
+        if (member.kind == SymbolKind::TransparentMember)
+            toWrap = &member.as<TransparentMemberSymbol>().wrapped;
+
+        // All symbols get inserted into the beginning of the scope using the
+        // provided insertion callback. We insert them as TransparentMemberSymbols
+        // so that we can trace a path back to the actual location they are declared.
+        auto wrapper = comp.emplace<TransparentMemberSymbol>(*toWrap);
+        body.insertMember(wrapper, body.lastBuiltinMember, true, false);
+    }
+
+    // Also inherit any argument symbols are in the base covergroup type itself,
+    // as opposed to the body which we already looked at above.
+    for (auto& member : baseCG.members()) {
+        const Symbol* toWrap = &member;
+        if (member.kind == SymbolKind::TransparentMember)
+            toWrap = &member.as<TransparentMemberSymbol>().wrapped;
+
+        if (toWrap->kind == SymbolKind::FormalArgument) {
+            auto wrapper = comp.emplace<TransparentMemberSymbol>(*toWrap);
+            insertCB(*wrapper);
+        }
+    }
 }
 
 const TimingControl* CovergroupType::getCoverageEvent() const {
@@ -314,6 +401,8 @@ ConstantValue CovergroupType::getDefaultValueImpl() const {
 void CovergroupType::serializeTo(ASTSerializer& serializer) const {
     if (auto ev = getCoverageEvent())
         serializer.write("event", *ev);
+    if (auto bg = getBaseGroup())
+        serializer.writeLink("baseGroup", *bg);
 }
 
 const Expression* CoverageBinSymbol::getIffExpr() const {
@@ -470,6 +559,16 @@ static const Expression& bindCovergroupExpr(const ExpressionSyntax& syntax,
     return *expr;
 }
 
+static const Expression* bindIffExpr(const CoverageIffClauseSyntax* syntax,
+                                     const ASTContext& context) {
+    if (!syntax)
+        return nullptr;
+
+    auto& result = Expression::bind(*syntax->expr, context, ASTFlags::AllowCoverageSampleFormal);
+    context.requireBooleanConvertible(result);
+    return &result;
+}
+
 void CoverageBinSymbol::resolve() const {
     SLANG_ASSERT(!isResolved);
     isResolved = true;
@@ -483,12 +582,7 @@ void CoverageBinSymbol::resolve() const {
 
     if (syntax->kind == SyntaxKind::BinsSelection) {
         auto& binsSyntax = syntax->as<BinsSelectionSyntax>();
-        if (binsSyntax.iff) {
-            iffExpr = &Expression::bind(*binsSyntax.iff->expr, context,
-                                        ASTFlags::AllowCoverageSampleFormal);
-            context.requireBooleanConvertible(*iffExpr);
-        }
-
+        iffExpr = bindIffExpr(binsSyntax.iff, context);
         selectExpr = &BinsSelectExpr::bind(*binsSyntax.expr, context);
         return;
     }
@@ -497,28 +591,31 @@ void CoverageBinSymbol::resolve() const {
     auto& type = coverpoint.getType();
 
     auto& binsSyntax = syntax->as<CoverageBinsSyntax>();
-    if (binsSyntax.iff) {
-        iffExpr = &Expression::bind(*binsSyntax.iff->expr, context,
-                                    ASTFlags::AllowCoverageSampleFormal);
-        context.requireBooleanConvertible(*iffExpr);
-    }
+    iffExpr = bindIffExpr(binsSyntax.iff, context);
 
     if (binsSyntax.size && binsSyntax.size->expr) {
         numberOfBinsExpr = &bindCovergroupExpr(*binsSyntax.size->expr, context);
         context.requireIntegral(*numberOfBinsExpr);
     }
 
+    if (isWildcard && type.isFloating())
+        context.addDiag(diag::RealCoverpointWildcardBins, binsSyntax.wildcard.range());
+
     auto bindWithExpr = [&](const WithClauseSyntax& withSyntax) {
         // Create the iterator variable and set it up with an AST context so that it
         // can be found by the iteration expression.
-        auto it = comp.emplace<IteratorSymbol>(*context.scope, "item"sv, coverpoint.location, type,
-                                               ""sv);
+        auto arrayType = comp.emplace<DynamicArrayType>(type);
+        auto it = comp.emplace<IteratorSymbol>(*context.scope, "item"sv, coverpoint.location,
+                                               *arrayType, ""sv);
 
         ASTContext iterCtx = context;
         it->nextTemp = std::exchange(iterCtx.firstTempVar, it);
 
         withExpr = &bindCovergroupExpr(*withSyntax.expr, iterCtx);
         iterCtx.requireBooleanConvertible(*withExpr);
+
+        if (type.isFloating())
+            context.addDiag(diag::RealCoverpointWithExpr, withSyntax.sourceRange());
     };
 
     auto init = binsSyntax.initializer;
@@ -540,7 +637,7 @@ void CoverageBinSymbol::resolve() const {
 
             auto targetName = iwecbi.id.valueText();
             if (!targetName.empty() && targetName != coverpoint.name)
-                context.addDiag(diag::CoverageBinTargetName, iwecbi.id.range()) << coverpoint.name;
+                context.addDiag(diag::CoverageBinTargetName, iwecbi.id.range());
             break;
         }
         case SyntaxKind::TransListCoverageBinInitializer: {
@@ -552,6 +649,10 @@ void CoverageBinSymbol::resolve() const {
                 listBuffer.push_back(setBuffer.copy(comp));
             }
             transList = listBuffer.copy(comp);
+
+            if (type.isFloating())
+                context.addDiag(diag::RealCoverpointTransBins, init->sourceRange());
+
             break;
         }
         case SyntaxKind::ExpressionCoverageBinInitializer:
@@ -565,12 +666,13 @@ void CoverageBinSymbol::resolve() const {
 
                     auto& diag = context.addDiag(diag::CoverageSetType,
                                                  setCoverageExpr->sourceRange);
-                    diag << t << coverpoint.name << type;
+                    diag << t << type;
                 }
             }
             break;
         case SyntaxKind::DefaultCoverageBinInitializer:
-            // Already handled at construction time.
+            if (binsSyntax.size && type.isFloating())
+                context.addDiag(diag::RealCoverpointDefaultArray, binsSyntax.size->sourceRange());
             break;
         default:
             SLANG_UNREACHABLE;
@@ -661,6 +763,8 @@ CoverpointSymbol::CoverpointSymbol(Compilation& comp, std::string_view name, Sou
     auto& int_t = comp.getIntType();
     auto& bit_t = comp.getBitType();
     auto& string_t = comp.getStringType();
+    auto& real_t = comp.getRealType();
+    auto lv = comp.languageVersion();
 
     StructBuilder option(*this, LookupLocation::min);
     option.addField("weight"sv, int_t);
@@ -675,6 +779,8 @@ CoverpointSymbol::CoverpointSymbol(Compilation& comp, std::string_view name, Sou
     type_option.addField("weight"sv, int_t);
     type_option.addField("goal"sv, int_t);
     type_option.addField("comment"sv, string_t);
+    if (lv >= LanguageVersion::v1800_2023)
+        type_option.addField("real_interval"sv, real_t, VariableFlags::ImmutableCoverageOption);
     addProperty(*this, "type_option"sv, VariableLifetime::Static, type_option);
 
     addBuiltInMethods(*this, false);
@@ -734,6 +840,7 @@ CoverpointSymbol& CoverpointSymbol::fromImplicit(const Scope& scope,
     auto& comp = scope.getCompilation();
     auto result = comp.emplace<CoverpointSymbol>(comp, syntax.identifier.valueText(), loc);
 
+    result->isImplicit = true;
     result->declaredType.setTypeSyntax(comp.createEmptyTypeSyntax(loc));
     result->declaredType.setInitializerSyntax(syntax, loc);
     return *result;
@@ -745,21 +852,30 @@ const Expression* CoverpointSymbol::getIffExpr() const {
         auto syntax = getSyntax();
         SLANG_ASSERT(scope);
 
-        if (!syntax)
+        if (!syntax) {
             iffExpr = nullptr;
+        }
         else {
-            auto iffSyntax = syntax->as<CoverpointSyntax>().iff;
-            if (!iffSyntax)
-                iffExpr = nullptr;
-            else {
-                ASTContext context(*scope, LookupLocation::min);
-                iffExpr = &Expression::bind(*iffSyntax->expr, context,
-                                            ASTFlags::AllowCoverageSampleFormal);
-                context.requireBooleanConvertible(*iffExpr.value());
-            }
+            ASTContext context(*scope, LookupLocation::min);
+            iffExpr = bindIffExpr(syntax->as<CoverpointSyntax>().iff, context);
         }
     }
     return *iffExpr;
+}
+
+void CoverpointSymbol::checkBins() const {
+    if (getType().isFloating()) {
+        auto scope = getParentScope();
+        SLANG_ASSERT(scope);
+
+        if (isImplicit && !name.empty()) {
+            scope->addDiag(diag::RealCoverpointImplicit, location) << name;
+        }
+        else if (membersOfType<CoverageBinSymbol>().empty()) {
+            if (scope->getCompilation().languageVersion() >= LanguageVersion::v1800_2023)
+                scope->addDiag(diag::RealCoverpointBins, location);
+        }
+    }
 }
 
 void CoverpointSymbol::serializeTo(ASTSerializer& serializer) const {
@@ -778,8 +894,10 @@ CoverCrossSymbol::CoverCrossSymbol(Compilation& comp, std::string_view name, Sou
                                    std::span<const CoverpointSymbol* const> targets) :
     Symbol(SymbolKind::CoverCross, name, loc), Scope(comp, this), targets(targets) {
 
+    auto& bit_t = comp.getBitType();
     auto& int_t = comp.getIntType();
     auto& string_t = comp.getStringType();
+    auto lv = comp.languageVersion();
 
     StructBuilder option(*this, LookupLocation::min);
     option.addField("weight"sv, int_t);
@@ -787,6 +905,8 @@ CoverCrossSymbol::CoverCrossSymbol(Compilation& comp, std::string_view name, Sou
     option.addField("comment"sv, string_t);
     option.addField("at_least"sv, int_t);
     option.addField("cross_num_print_missing"sv, int_t);
+    if (lv >= LanguageVersion::v1800_2023)
+        option.addField("cross_retain_auto_bins"sv, bit_t, VariableFlags::ImmutableCoverageOption);
     addProperty(*this, "option"sv, VariableLifetime::Automatic, option);
 
     StructBuilder type_option(*this, LookupLocation::min);
@@ -868,18 +988,12 @@ const Expression* CoverCrossSymbol::getIffExpr() const {
         auto syntax = getSyntax();
         SLANG_ASSERT(scope);
 
-        if (!syntax)
+        if (!syntax) {
             iffExpr = nullptr;
+        }
         else {
-            auto iffSyntax = syntax->as<CoverCrossSyntax>().iff;
-            if (!iffSyntax)
-                iffExpr = nullptr;
-            else {
-                ASTContext context(*scope, LookupLocation::min);
-                iffExpr = &Expression::bind(*iffSyntax->expr, context,
-                                            ASTFlags::AllowCoverageSampleFormal);
-                context.requireBooleanConvertible(*iffExpr.value());
-            }
+            ASTContext context(*scope, LookupLocation::min);
+            iffExpr = bindIffExpr(syntax->as<CoverCrossSyntax>().iff, context);
         }
     }
     return *iffExpr;
@@ -1069,8 +1183,9 @@ BinsSelectExpr& BinSelectWithFilterExpr::fromSyntax(const BinSelectWithFilterExp
 
     auto& cross = context.scope->asSymbol().getParentScope()->asSymbol().as<CoverCrossSymbol>();
     for (auto target : cross.targets) {
+        auto arrayType = comp.emplace<DynamicArrayType>(target->getType());
         auto it = comp.emplace<IteratorSymbol>(*context.scope, target->name, target->location,
-                                               target->getType(), ""sv);
+                                               *arrayType, ""sv);
         it->nextTemp = std::exchange(iterCtx.firstTempVar, it);
     }
 

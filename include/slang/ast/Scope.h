@@ -27,6 +27,7 @@ namespace slang::ast {
 
 class ASTContext;
 class Compilation;
+class CompilationUnitSymbol;
 class ForwardingTypedefSymbol;
 class InstanceBodySymbol;
 class NetType;
@@ -66,6 +67,10 @@ public:
     /// Gets the instance body that contains this scope, if applicable.
     /// Otherwise returns nullptr.
     const InstanceBodySymbol* getContainingInstance() const;
+
+    /// Gets the compilation unit that contains this scope, if applicable.
+    /// Otherwise returns nullptr.
+    const CompilationUnitSymbol* getCompilationUnit() const;
 
     /// Returns true if this scope is in an uninstantiated context, like if
     /// in a module that is not used in the design.

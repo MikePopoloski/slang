@@ -33,6 +33,7 @@ void registerSymbols(py::module_& m) {
         .value("NoParentScope", LookupFlags::NoParentScope)
         .value("NoSelectors", LookupFlags::NoSelectors)
         .value("AllowRoot", LookupFlags::AllowRoot)
+        .value("AllowUnit", LookupFlags::AllowUnit)
         .value("IfacePortConn", LookupFlags::IfacePortConn)
         .value("StaticInitializer", LookupFlags::StaticInitializer)
         .value("ForceHierarchical", LookupFlags::ForceHierarchical)
@@ -141,8 +142,8 @@ void registerSymbols(py::module_& m) {
         .def_property_readonly("timeScale", &Scope::getTimeScale)
         .def_property_readonly("isProceduralContext", &Scope::isProceduralContext)
         .def_property_readonly("containingInstance", &Scope::getContainingInstance)
+        .def_property_readonly("compilationUnit", &Scope::getCompilationUnit)
         .def_property_readonly("isUninstantiated", &Scope::isUninstantiated)
-        .def_property_readonly("containingInstance", &Scope::getContainingInstance)
         .def(
             "find", [](const Scope& self, std::string_view arg) { return self.find(arg); },
             byrefint)

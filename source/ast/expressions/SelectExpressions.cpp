@@ -941,7 +941,7 @@ Expression& MemberAccessExpression::fromSelector(
             break;
         }
         case SymbolKind::CovergroupType:
-            scope = &type.as<CovergroupType>().body;
+            scope = &type.as<CovergroupType>().getBody();
             break;
         case SymbolKind::EnumType:
         case SymbolKind::StringType:

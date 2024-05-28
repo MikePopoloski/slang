@@ -64,17 +64,20 @@ enum class SLANG_EXPORT LookupFlags {
     /// Lookup is allowed to return the root symbol via the '$root' scope specifier.
     AllowRoot = 1 << 8,
 
+    /// Lookup is allowed to return the nearest compilation unit via the '$unit' scope specifier.
+    AllowUnit = 1 << 9,
+
     /// Lookup is resolving an interface port connection expression.
-    IfacePortConn = 1 << 9,
+    IfacePortConn = 1 << 10,
 
     /// Lookup is within a static initializer expression.
-    StaticInitializer = 1 << 10,
+    StaticInitializer = 1 << 11,
 
     /// Lookup is happening within a type reference expression.
-    TypeReference = 1 << 11,
+    TypeReference = 1 << 12,
 
     /// Always allow upward name lookup to occur, even with simple identifiers.
-    AlwaysAllowUpward = 1 << 12,
+    AlwaysAllowUpward = 1 << 13,
 
     /// Treat this lookup as hierarchical even if it's a simple name.
     ForceHierarchical = AllowDeclaredAfter | NoUndeclaredErrorIfUninstantiated

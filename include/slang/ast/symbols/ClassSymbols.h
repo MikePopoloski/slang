@@ -156,6 +156,34 @@ private:
     SymbolIndex headerIndex;
 };
 
+namespace detail {
+
+// This would ideally be a private member of GenericClassDefSymbol but
+// MSVC has a bug using the Hasher object in boost::unordered_flat_map
+// when that's the case so it's separated here for now.
+class ClassSpecializationKey {
+public:
+    ClassSpecializationKey(const GenericClassDefSymbol& def,
+                           std::span<const ConstantValue* const> paramValues,
+                           std::span<const Type* const> typeParams);
+
+    size_t hash() const { return savedHash; }
+
+    bool operator==(const ClassSpecializationKey& other) const;
+
+private:
+    const GenericClassDefSymbol* definition;
+    std::span<const ConstantValue* const> paramValues;
+    std::span<const Type* const> typeParams;
+    size_t savedHash;
+};
+
+struct ClassSpecializationHasher {
+    size_t operator()(const ClassSpecializationKey& key) const { return key.hash(); }
+};
+
+} // namespace detail
+
 /// Represents a generic class definition, which is a parameterized class that has not
 /// yet had its parameter values specified. This is a not a type -- the generic class
 /// must first be specialized in order to be a type usable in expressions and declarations.
@@ -213,34 +241,14 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::GenericClassDef; }
 
 private:
-    class SpecializationKey {
-    public:
-        SpecializationKey(const GenericClassDefSymbol& def,
-                          std::span<const ConstantValue* const> paramValues,
-                          std::span<const Type* const> typeParams);
-
-        size_t hash() const { return savedHash; }
-
-        bool operator==(const SpecializationKey& other) const;
-
-    private:
-        const GenericClassDefSymbol* definition;
-        std::span<const ConstantValue* const> paramValues;
-        std::span<const Type* const> typeParams;
-        size_t savedHash;
-    };
-
-    struct Hasher {
-        size_t operator()(const SpecializationKey& key) const { return key.hash(); }
-    };
-
     const Type* getSpecializationImpl(const ASTContext& context, SourceLocation instanceLoc,
                                       bool forceInvalidParams,
                                       const syntax::ParameterValueAssignmentSyntax* syntax) const;
 
     SmallVector<DefinitionSymbol::ParameterDecl, 8> paramDecls;
 
-    using SpecMap = flat_hash_map<SpecializationKey, const Type*, Hasher>;
+    using SpecMap = flat_hash_map<detail::ClassSpecializationKey, const Type*,
+                                  detail::ClassSpecializationHasher>;
     mutable SpecMap specMap;
     mutable std::optional<const Type*> defaultSpecialization;
     mutable const ForwardingTypedefSymbol* firstForward = nullptr;

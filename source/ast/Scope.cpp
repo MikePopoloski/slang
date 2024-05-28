@@ -120,6 +120,17 @@ const InstanceBodySymbol* Scope::getContainingInstance() const {
     return nullptr;
 }
 
+const CompilationUnitSymbol* Scope::getCompilationUnit() const {
+    auto currScope = this;
+    while (currScope && currScope->asSymbol().kind != SymbolKind::CompilationUnit)
+        currScope = currScope->asSymbol().getParentScope();
+
+    if (currScope)
+        return &currScope->asSymbol().as<CompilationUnitSymbol>();
+
+    return nullptr;
+}
+
 bool Scope::isUninstantiated() const {
     // In linting mode all contexts are considered uninstantiated.
     if (getCompilation().hasFlag(CompilationFlags::LintMode))
@@ -857,6 +868,12 @@ void Scope::elaborate() const {
     if (thisSym->kind == SymbolKind::ClassType) {
         // If this is a class type being elaborated, let it inherit members from parent classes.
         thisSym->as<ClassType>().inheritMembers(
+            [this](const Symbol& member) { insertMember(&member, nullptr, true, true); });
+    }
+    else if (thisSym->kind == SymbolKind::CovergroupType) {
+        // If this is a covergroup type being elaborated, let it inherit members from parent
+        // classes.
+        thisSym->as<CovergroupType>().inheritMembers(
             [this](const Symbol& member) { insertMember(&member, nullptr, true, true); });
     }
     else if (thisSym->kind == SymbolKind::InstanceBody &&

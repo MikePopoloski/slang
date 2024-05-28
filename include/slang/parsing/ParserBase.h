@@ -44,6 +44,8 @@ protected:
     Token getLastConsumed() const;
     bool haveDiagAtCurrentLoc();
 
+    const std::pair<Token, Token>& getLastPoppedDelims() const { return lastPoppedDelims; }
+
     Preprocessor& getPP() { return window.tokenSource; }
 
     /// Helper class that maintains a sliding window of tokens, with lookahead.
@@ -236,6 +238,7 @@ private:
     Window window;
     SmallVector<Token> skippedTokens;
     SmallVector<Token> openDelims;
+    std::pair<Token, Token> lastPoppedDelims;
 };
 
 } // namespace slang::parsing

@@ -2,6 +2,9 @@
 // SPDX-License-Identifier: MIT
 
 #include "Test.h"
+#include <fmt/format.h>
+
+#include "slang/diagnostics/StatementsDiags.h"
 
 TEST_CASE("Named sequences") {
     auto tree = SyntaxTree::fromText(R"(
@@ -52,7 +55,7 @@ module m;
 
     foo: assert property (a);
     assert property (a ##1 b ##[+] c ##[*] d ##[1:5] e);
-    assert property (##0 a[*0:4] ##0 b[=4] ##0 c[->1:2] ##0 c[*] ##1 d[+]);
+    assert property (##0 a[*1:4] ##0 b[=4] ##0 c[->1:2] ##0 c[*] ##1 d[+]);
     assert property (##[1:$] a[*0:$]);
     assert property ((a ##0 b) and (c or d));
     assert property ((a ##0 b) and (c or d));
@@ -588,7 +591,7 @@ property check_write_data_beat(
     )[->1]
     |-> ((
             (data_valid && (data_valid_tag == tag))
-            |-> (data == expected_data[i*8+:8])
+            |-> (data[0:7] == expected_data[i*8+:8])
         )
         and (
             if (retry && (retry_tag == tag)) (
@@ -1048,8 +1051,8 @@ endmodule
 
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 2);
-    CHECK(diags[0].code == diag::SeqPropAdmitEmpty);
-    CHECK(diags[1].code == diag::SeqPropAdmitEmpty);
+    CHECK(diags[0].code == diag::SeqPropNondegenerate);
+    CHECK(diags[1].code == diag::SeqPropNondegenerate);
 }
 
 TEST_CASE("Illegal property recursion cases") {
@@ -1191,7 +1194,7 @@ TEST_CASE("$past in $bits regress GH #509") {
 module top;
     logic clk, reset, a, b, c;
     assert property(@(posedge clk) disable iff (reset)
-        a |-> {500-$bits($past(b)){1'b0}});
+        a |-> {500-$bits($past(b)){1'b1}});
 endmodule
 )");
 
@@ -2336,4 +2339,262 @@ endmodule
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::AutoFromNonProcedural);
+}
+
+TEST_CASE("Assertion repetition error checking regress -- GH #1004") {
+    auto tree = SyntaxTree::fromText(R"(
+module test(
+    input logic A,
+    input logic B,
+    input logic clk
+);
+    assert property (@(posedge clk) A |=> ##[C] B);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::UndeclaredIdentifier);
+}
+
+TEST_CASE("Sequence nondegeneracy tests 1") {
+    auto test = [](std::string_view expr, std::optional<DiagCode> code = {}) {
+        auto tree = SyntaxTree::fromText(fmt::format(R"(
+module top;
+    string a;
+    logic b;
+    int c, d, e;
+    assert property ({});
+endmodule
+)",
+                                                     expr));
+        Compilation compilation;
+        compilation.addSyntaxTree(tree);
+
+        auto& diags = compilation.getAllDiagnostics();
+        if (!code) {
+            CHECK(diags.empty());
+            if (!diags.empty())
+                FAIL_CHECK(expr);
+        }
+        else if (diags.size() != 1 || diags[0].code != code) {
+            FAIL_CHECK(expr);
+            CHECK(diags[0].code == *code);
+        }
+    };
+
+    test("(1'b1 ##[1:2] 1'b1) intersect (1'b1 ##[2:4] 1'b1)");
+    test("(1'b1 ##[1:2] 1'b1) intersect (1'b1 ##[3:4] 1'b1)", diag::SeqPropNondegenerate);
+    test("(1'b1) intersect (1'b1[*0] ##2 1'b1)", diag::SeqPropNondegenerate);
+    test("(1'b1 ##1 1'b1) intersect (1'b1[*0] ##2 1'b1)");
+    test("(1'b1 ##1 1'b0) intersect (1'b1[*0] ##2 1'b1)", diag::SeqPropNondegenerate);
+    test("(1'b1) intersect (1'b1 ##[1:3] 1'b1)", diag::SeqPropNondegenerate);
+    test("(1'b1 ##1 1'b1) intersect (1'b1 ##[1:3] 1'b1)");
+    test("(1'b1 ##0 1'b1) intersect (1'b1 ##[1:3] 1'b1)", diag::SeqPropNondegenerate);
+    test("(1'b1[*2]) intersect (1'b1 ##[1:3] 1'b1)", diag::SeqPropNondegenerate);
+    test("(##2 1'b1[*2]) intersect (1'b1 ##[1:3] 1'b1)");
+    test("##0 a[*0:4] ##0 b[=4] ##0 c[->1:2] ##0 c[*] ##1 d[+]");
+    test("##0 a[*0:4] ##0 b[=4] ##0 c[->1:2] ##0 c[*0] ##1 d[+]", diag::SeqPropNondegenerate);
+    test("##0 a[*0] ##0 b[=4] ##0 c[->1:2] ##0 c[*] ##1 d[+]", diag::SeqPropNondegenerate);
+}
+
+TEST_CASE("Sequence nondegeneracy tests 2") {
+    auto test = [](std::string_view expr, std::optional<DiagCode> code = {}) {
+        auto tree = SyntaxTree::fromText(fmt::format(R"(
+module top(a, b, e);
+    input a;
+    input b;
+    input e;
+    int c, d;
+    logic clk;
+
+    property p;
+        {};
+    endproperty
+
+    assert property (p);
+endmodule
+)",
+                                                     expr));
+        Compilation compilation;
+        compilation.addSyntaxTree(tree);
+
+        auto& diags = compilation.getAllDiagnostics();
+        if (!code) {
+            CHECK(diags.empty());
+            if (!diags.empty())
+                FAIL_CHECK(expr);
+        }
+        else if (diags.size() != 1 || diags[0].code != code) {
+            FAIL_CHECK(expr);
+            CHECK(diags[0].code == *code);
+        }
+    };
+
+    test("!(2'b01 - 2'b01 + 3'b010 - 3'b010 + 4'b0010)", diag::SeqPropNondegenerate);
+    test("2'b01 - 2'b01 + 3'b010 - 3'b010 + 4'b0010");
+    test("a[*0] |-> b", diag::OverlapImplNondegenerate);
+    test("a[*1] |-> b");
+    test("1'b1 ##1 b");
+
+    test("##0 c");
+    test("1'b1 ##1 1'b0 ##0 d ##1 1'b1", diag::SeqPropNondegenerate);
+    test("1'b1 ##1 1'b1 ##0 d ##1 1'b1");
+    test("b ##0 a[*0]", diag::SeqPropNondegenerate);
+    test("b ##0 a[*1]");
+    test("a[*0] ##1 b");
+    test("a ##1 b[*0] ##0 c");
+    test("a ##1(b[*0] ##0 c)", diag::SeqPropNondegenerate);
+
+    test("(1 ##1 0)[*0]", diag::SeqPropNondegenerate);
+    test("(a[*0] ##1 a[*0])[*1]", diag::SeqPropNondegenerate);
+    test("(a[*0] ##2 a[*0])[*1]");
+    test("not (a[*0] ##0 b)", diag::SeqPropNondegenerate);
+    test("not (a[*0] ##1 b)");
+
+    test("(1'b1) intersect (##[1:3] 1'b1 ##0 1'b1[*0:3] ##[2:3] 1'b1[*1])",
+         diag::SeqPropNondegenerate);
+    test("(1'b1) intersect (##[1:3] 1'b1 ##0 1'b1[*0:3] ##[2:3] 1'b1[*0])",
+         diag::SeqPropNondegenerate);
+    test("(1'b1) intersect (##[0:3] 1'b1 ##1 1'b1[*0:2] ##[2:3] 1'b1[*0])",
+         diag::SeqPropNondegenerate);
+    test("(1'b1) intersect (##[0:3] 1'b1[*0:2])");
+    test("(1'b1) intersect (##[0:3] 1'b1[*0])");
+    test("(1'b1) intersect (##[0:3] 1'b1)");
+    test("(1'b1) intersect (1'b1[*0] ##[0:3] 1'b1)");
+    test("(1'b1) intersect (1'b1[*0:2] ##[0:3] 1'b1)");
+    test("(1'b1) intersect (1'b1 ##[1:3] 1'b1)", diag::SeqPropNondegenerate);
+    test("1'b0 ##2 1'b1", diag::SeqPropNondegenerate);
+    test("1[*2]");
+    test("1[*0]", diag::SeqPropNondegenerate);
+    test("1[*0:2]", diag::SeqPropNondegenerate);
+    test("1'b1");
+    test("1'b0", diag::SeqPropNondegenerate);
+
+    test("1'b1 |=> 1");
+    test("1'b0 |=> 1", diag::NonOverlapImplNondegenerate);
+    test("1[*2] |=> 1");
+    test("1[*0] |=> 1");
+    test("1'b1 |-> 1");
+    test("1'b0 |-> 1", diag::OverlapImplNondegenerate);
+    test("1[*0] |-> 1", diag::OverlapImplNondegenerate);
+    test("1[*0:2] |-> 1");
+
+    test("1'b1 #=# 1");
+    test("1'b0 #=# 1", diag::NonOverlapImplNondegenerate);
+    test("1[*2] #=# 1");
+    test("1[*0] #=# 1");
+    test("1'b1 #-# 1");
+    test("1'b0 #-# 1", diag::OverlapImplNondegenerate);
+    test("1[*0] #-# 1", diag::OverlapImplNondegenerate);
+    test("1[*0:2] #-# 1");
+
+    test("first_match(a and b)");
+    test("(first_match(a and b))[*0]", diag::SeqPropNondegenerate);
+    test("first_match(a and (b[*0] ##0 b))", diag::SeqPropNondegenerate);
+    test("@clk a ##1 b");
+    test("@clk a[*0] ##0 b", diag::SeqPropNondegenerate);
+    test("strong(a ##1 b)");
+    test("strong(a ##0 b[*0])", diag::SeqPropNondegenerate);
+    test("weak(a intersect b)");
+    test("weak(a intersect ##2 b)", diag::SeqPropNondegenerate);
+    test("accept_on(b) sync_reject_on(c) sync_accept_on(d) reject_on(e) b ##1 c");
+    test("accept_on(b) b intersect ##2 b", diag::SeqPropNondegenerate);
+    test("accept_on(b) ##2 b intersect ##2 b");
+    test("accept_on(b) b[*0] ##0 b", diag::SeqPropNondegenerate);
+
+    test("if (b) a ##1 c else d ##1 e");
+    test("if (1'b0) a ##1 c else d ##1 e");
+    test("if (1'b0) a ##1 c", diag::SeqPropNondegenerate);
+    test("if (1'b1) a ##1 c else d ##1 e");
+    test("if (a) b intersect ##2 b", diag::SeqPropNondegenerate);
+    test("if (a) ##2 b intersect ##2 b");
+    test("case (b) 1, 2, 3: 1 ##1 b; 4: a and b; default: 1 |-> b; endcase");
+    test("case (b) 1, 2, 3: 1 ##1 b; 4: a and b; default: 1[*0] |-> b; endcase",
+         diag::OverlapImplNondegenerate);
+    test("disable iff (clk) a");
+    test("disable iff (1'b1) a", diag::SeqPropNondegenerate);
+}
+
+TEST_CASE("Sequence nondegeneracy tests 3") {
+    auto test = [](std::string_view expr, std::optional<DiagCode> code = {}) {
+        auto tree = SyntaxTree::fromText(fmt::format(R"(
+module top;
+    sequence s(int i);
+        int j, k = j;
+        {};
+    endsequence
+
+    assert property (s(1));
+endmodule
+)",
+                                                     expr));
+        Compilation compilation;
+        compilation.addSyntaxTree(tree);
+
+        auto& diags = compilation.getAllDiagnostics();
+        if (!code) {
+            CHECK(diags.empty());
+            if (!diags.empty())
+                FAIL_CHECK(expr);
+        }
+        else if (diags.size() != 1 || diags[0].code != code) {
+            FAIL_CHECK(expr);
+            CHECK(diags[0].code == *code);
+        }
+    };
+
+    test("(i == i, j = 1, j++)[*0:1]", diag::SeqPropNondegenerate);
+    test("(i != i, j = 1, j++)[*1:1]", diag::SeqPropNondegenerate);
+    test("(i != i, j = 1, j++)[*0:1]", diag::SeqPropNondegenerate);
+    test("(i == i, j = 1, j++)[*1:1]");
+    test("(i == i, j = 1, j++)[*0:0]", diag::SeqPropNondegenerate);
+    test("(i == i, j = 1, j++)[*0]", diag::SeqPropNondegenerate);
+}
+
+TEST_CASE("Sequence nondegeneracy tests 4") {
+    auto tree = SyntaxTree::fromText(R"(
+module top;
+    int c, d;
+    property p(int i, foo = 1);
+	    ##1 c ##1 d ##1 i;  // may be legal or not - depends on value of `i`
+    endproperty
+
+    assert property (p (0, 0));  // illegal
+    assert property (p (1, 0));  // legal
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::SeqPropNondegenerate);
+}
+
+TEST_CASE("Sequence nondegeneracy tests 5") {
+    auto tree = SyntaxTree::fromText(R"(
+module top;
+    logic clk, reset, a, b;
+    assert property(@(posedge clk) disable iff (reset)
+        a |-> {500-$bits($past(b)){1'b0}});  // illegal
+
+    assert property(@(posedge clk) disable iff (reset)
+        {3 - 2{3'b111}});  // legal
+
+    assert property(@(posedge clk) disable iff (reset)
+        {500 - $bits(b){1'b1}});  // legal
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::SeqPropNondegenerate);
 }

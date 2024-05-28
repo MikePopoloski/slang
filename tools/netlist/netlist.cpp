@@ -5,6 +5,7 @@
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
+
 #include "fmt/color.h"
 #include "fmt/format.h"
 #include <fstream>
@@ -27,6 +28,7 @@
 #include "slang/util/VersionInfo.h"
 
 #include "Netlist.h"
+#include "CombLoops.h"
 #include "PathFinder.h"
 #include "visitors/NetlistVisitor.h"
 
@@ -86,8 +88,14 @@ void printDOT(const Netlist& netlist, const std::string& fileName) {
             }
             case NodeKind::VariableReference: {
                 auto& varRef = node->as<NetlistVariableReference>();
-                buffer.format("  N{} [label=\"{}\\n{}\"]\n", node->ID, varRef.toString(),
-                              varRef.isLeftOperand() ? "[Assigned to]" : "");
+                if (!varRef.isLeftOperand())
+                    buffer.format("  N{} [label=\"{}\\n\"]\n", node->ID, varRef.toString());
+                else if (node->edgeKind == EdgeKind::None)
+                    buffer.format("  N{} [label=\"{}\\n[Assigned to]\"]\n", node->ID,
+                                  varRef.toString());
+                else
+                    buffer.format("  N{} [label=\"{}\\n[Assigned to @({})]\"]\n", node->ID,
+                                  varRef.toString(), toString(node->edgeKind));
                 break;
             }
             default:
@@ -135,6 +143,29 @@ void reportPath(Compilation& compilation, const NetlistPath& path) {
     }
 }
 
+void dumpCyclesList(Compilation& compilation, Netlist& netlist,
+                    std::vector<CycleListType>* cycles) {
+    auto s = cycles->size();
+    if (!s) {
+        OS::print("No combinatorial loops detected\n");
+        return;
+    }
+    OS::print(fmt::format("Detected {} combinatorial loop{}:\n", s, (s > 1) ? "s" : ""));
+    NetlistPath path;
+    for (int i = 0; i < s; i++) {
+        auto si = (*cycles)[i].size();
+        for (int j = 0; j < si; j++) {
+            auto& node = netlist.getNode((*cycles)[i][j]);
+            if (node.kind == NodeKind::VariableReference) {
+                path.add(node);
+            }
+        }
+        OS::print(fmt::format("Path length: {}\n", path.size()));
+        reportPath(compilation, path);
+        path.clear();
+    }
+}
+
 int main(int argc, char** argv) {
     OS::setupConsole();
 
@@ -145,10 +176,12 @@ int main(int argc, char** argv) {
     std::optional<bool> showVersion;
     std::optional<bool> quiet;
     std::optional<bool> debug;
+    std::optional<bool> combLoops;
     driver.cmdLine.add("-h,--help", showHelp, "Display available options");
     driver.cmdLine.add("--version", showVersion, "Display version information and exit");
     driver.cmdLine.add("-q,--quiet", quiet, "Suppress non-essential output");
     driver.cmdLine.add("-d,--debug", debug, "Output debugging information");
+    driver.cmdLine.add("-c,--comb-loops", combLoops, "Detect combinatorial loops");
 
     std::optional<std::string> astJsonFile;
     driver.cmdLine.add(
@@ -232,6 +265,11 @@ int main(int argc, char** argv) {
             return 0;
         }
 
+        if (combLoops == true) {
+            ElementaryCyclesSearch ecs(netlist);
+            std::vector<CycleListType>* cycles = ecs.getElementaryCycles();
+            dumpCyclesList(*compilation, netlist, cycles);
+        }
         // Find a point-to-point path in the netlist.
         if (fromPointName.has_value() && toPointName.has_value()) {
             if (!fromPointName.has_value()) {

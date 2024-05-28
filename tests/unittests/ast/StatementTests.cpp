@@ -1734,17 +1734,17 @@ module m;
     Instr instr;
     initial begin
         if (instr matches (tagged Jmp (tagged JmpC '{cc:.c,addr:.a}))) begin
-            j = c + a;
+            j = 10'(c) + a;
         end
 
         if (instr matches (tagged Jmp .j) &&&
             j matches (tagged JmpC '{cc:.c,addr:.a})) begin
-            e = c + a;
+            e = 10'(c) + a;
         end
     end
 
     initial begin
-        e = instr matches tagged Jmp tagged JmpC '{cc:.c,addr:.a} &&& foo > 1 ? a + c : 0;
+        e = instr matches tagged Jmp tagged JmpC '{cc:.c,addr:.a} &&& foo > 1 ? a + 10'(c) : 0;
     end
 endmodule
 )");

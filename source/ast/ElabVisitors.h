@@ -50,7 +50,7 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
                 attr->getValue();
         }
 
-        if constexpr (requires { symbol.getBody(); }) {
+        if constexpr (requires { symbol.getBody().bad(); }) {
             auto& body = symbol.getBody();
             if (body.bad())
                 return true;
@@ -184,7 +184,7 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
             return;
 
         symbol.getCoverageEvent();
-        for (auto& option : symbol.body.options)
+        for (auto& option : symbol.getBody().options)
             option.getExpression();
     }
 
@@ -193,6 +193,7 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
             return;
 
         symbol.getIffExpr();
+        symbol.checkBins();
         for (auto& option : symbol.options)
             option.getExpression();
     }
@@ -673,6 +674,20 @@ struct PostElabVisitor : public ASTVisitor<PostElabVisitor, false, false> {
     void handle(const PropertySymbol& symbol) { checkAssertionDeclUnused(symbol, "property"sv); }
     void handle(const LetDeclSymbol& symbol) { checkAssertionDeclUnused(symbol, "let"sv); }
     void handle(const CheckerSymbol& symbol) { checkAssertionDeclUnused(symbol, "checker"sv); }
+
+    void handle(const ExplicitImportSymbol& symbol) { checkUnused(symbol, diag::UnusedImport); }
+
+    void handle(const WildcardImportSymbol& symbol) {
+        auto syntax = symbol.getSyntax();
+        if (!syntax)
+            return;
+
+        auto [used, _] = compilation.isReferenced(*syntax);
+        if (!used) {
+            if (shouldWarn(symbol))
+                symbol.getParentScope()->addDiag(diag::UnusedWildcardImport, symbol.location);
+        }
+    }
 
 private:
     void checkValueUnused(const ValueSymbol& symbol, DiagCode unusedCode,

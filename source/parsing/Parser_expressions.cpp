@@ -730,10 +730,9 @@ NameSyntax& Parser::parseName(bitmask<NameOptions> options) {
         kind = peek().kind;
     }
 
-    // If we saw $unit, $root, super, or local, make sure the correct token follows it.
+    // If we saw super or local, make sure the correct token follows it.
     TokenKind expectedKind = TokenKind::Unknown;
     switch (name->kind) {
-        case SyntaxKind::UnitScope:
         case SyntaxKind::LocalScope:
             expectedKind = TokenKind::DoubleColon;
             break;

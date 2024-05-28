@@ -163,7 +163,8 @@ public:
 
     /// Binds an lvalue that is not a typical assignment-like context. For example, the
     /// output argument of certain system tasks that accept almost any type.
-    static const Expression& bindLValue(const ExpressionSyntax& syntax, const ASTContext& context);
+    static const Expression& bindLValue(const ExpressionSyntax& syntax, const ASTContext& context,
+                                        bitmask<AssignFlags> assignFlags = {});
 
     /// Binds the right hand side of an assignment-like expression from the given syntax nodes.
     /// @param lhs The type of the left hand side, for type checking
@@ -325,9 +326,22 @@ public:
     /// represent them. If any encountered expressions have errors, returns nullopt.
     std::optional<bitwidth_t> getEffectiveWidth() const;
 
+    /// Specifies possible results of a getEffectiveSign call.
+    enum class EffectiveSign {
+        /// The expression must be unsigned.
+        Unsigned,
+
+        /// The expression must be signed.
+        Signed,
+
+        /// The expression could be either signed or unsigned,
+        /// whichever is most convenient.
+        Either
+    };
+
     /// Traverses the expression tree and determines whether all operands are known
     /// to be signed, even if the types involved end up being computed as unsigned.
-    bool getEffectiveSign() const;
+    EffectiveSign getEffectiveSign(bool isForConversion) const;
 
     /// If this expression is a reference to a symbol, returns a pointer to that symbol.
     /// If the expression is a member access of a struct or class, returns the member
@@ -456,6 +470,9 @@ protected:
     static bool collectArgs(const ASTContext& context, const syntax::ArgumentListSyntax& syntax,
                             SmallVectorBase<const syntax::SyntaxNode*>& orderedArgs,
                             NamedArgMap& namedArgs);
+
+    static EffectiveSign conjunction(EffectiveSign left, EffectiveSign right);
+    static bool signMatches(EffectiveSign left, EffectiveSign right);
 };
 
 /// @brief Represents an invalid expression

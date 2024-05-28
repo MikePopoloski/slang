@@ -10,6 +10,7 @@
 #include "slang/ast/Compilation.h"
 #include "slang/ast/EvalContext.h"
 #include "slang/ast/SystemSubroutine.h"
+#include "slang/ast/expressions/MiscExpressions.h"
 #include "slang/ast/symbols/ParameterSymbols.h"
 #include "slang/ast/types/TypePrinter.h"
 #include "slang/diagnostics/ConstEvalDiags.h"
@@ -121,6 +122,11 @@ public:
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, false, args, range, 1, 1))
             return comp.getErrorType();
+
+        if (!ValueExpressionBase::isKind(args[0]->kind) ||
+            args[0]->as<ValueExpressionBase>().symbol.kind != SymbolKind::Parameter) {
+            context.addDiag(diag::IsUnboundedParamArg, args[0]->sourceRange);
+        }
 
         return comp.getBitType();
     }

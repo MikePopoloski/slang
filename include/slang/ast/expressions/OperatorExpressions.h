@@ -34,7 +34,7 @@ public:
     ConstantValue evalImpl(EvalContext& context) const;
     bool propagateType(const ASTContext& context, const Type& newType, SourceRange opRange);
     std::optional<bitwidth_t> getEffectiveWidthImpl() const;
-    bool getEffectiveSignImpl() const;
+    EffectiveSign getEffectiveSignImpl(bool isForConversion) const;
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -90,7 +90,7 @@ public:
     ConstantValue evalImpl(EvalContext& context) const;
     bool propagateType(const ASTContext& context, const Type& newType, SourceRange opRange);
     std::optional<bitwidth_t> getEffectiveWidthImpl() const;
-    bool getEffectiveSignImpl() const;
+    EffectiveSign getEffectiveSignImpl(bool isForConversion) const;
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -109,6 +109,12 @@ public:
         left().visit(visitor);
         right().visit(visitor);
     }
+
+private:
+    static void analyzeOpTypes(const Type& clt, const Type& crt, const Type& originalLt,
+                               const Type& originalRt, const Expression& lhs, const Expression& rhs,
+                               const ASTContext& context, SourceRange opRange, DiagCode code,
+                               bool isComparison);
 };
 
 /// Represents a conditional operator expression.
@@ -150,7 +156,7 @@ public:
     ConstantValue evalImpl(EvalContext& context) const;
     bool propagateType(const ASTContext& context, const Type& newType, SourceRange opRange);
     std::optional<bitwidth_t> getEffectiveWidthImpl() const;
-    bool getEffectiveSignImpl() const;
+    EffectiveSign getEffectiveSignImpl(bool isForConversion) const;
 
     /// If the condition for this expression is a known constant value,
     /// this method returns the side of the expression that will be selected

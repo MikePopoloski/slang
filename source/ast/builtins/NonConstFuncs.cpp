@@ -9,8 +9,10 @@
 
 #include "slang/ast/Compilation.h"
 #include "slang/ast/SystemSubroutine.h"
+#include "slang/ast/expressions/MiscExpressions.h"
 #include "slang/ast/types/Type.h"
 #include "slang/diagnostics/SysFuncsDiags.h"
+#include "slang/syntax/AllSyntax.h"
 
 namespace slang::ast::builtins {
 
@@ -425,6 +427,146 @@ private:
     bool isFuture;
 };
 
+class TimeScaleFunc : public SystemSubroutine {
+public:
+    TimeScaleFunc(const std::string& name, bool isOptional) :
+        SystemSubroutine(name, SubroutineKind::Function), isOptional(isOptional) {}
+
+    const Expression& bindArgument(size_t argIndex, const ASTContext& context,
+                                   const ExpressionSyntax& syntax, const Args& args) const final {
+        if (argIndex == 0) {
+            auto& comp = context.getCompilation();
+            if (!NameSyntax::isKind(syntax.kind)) {
+                context.addDiag(diag::ExpectedModuleName, syntax.sourceRange());
+                return *comp.emplace<InvalidExpression>(nullptr, comp.getErrorType());
+            }
+
+            bitmask<LookupFlags> extraFlags;
+            if (isOptional)
+                extraFlags = LookupFlags::AllowRoot | LookupFlags::AllowUnit;
+
+            return ArbitrarySymbolExpression::fromSyntax(comp, syntax.as<NameSyntax>(), context,
+                                                         extraFlags);
+        }
+
+        return SystemSubroutine::bindArgument(argIndex, context, syntax, args);
+    }
+
+    const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
+                               const Expression*) const final {
+        auto& comp = context.getCompilation();
+        if (!checkArgCount(context, false, args, range, isOptional ? 0 : 1, 1))
+            return comp.getErrorType();
+
+        if (isOptional) {
+            auto languageVersion = comp.languageVersion();
+            if (languageVersion < LanguageVersion::v1800_2023)
+                context.addDiag(diag::WrongLanguageVersion, range) << toString(languageVersion);
+        }
+
+        if (args.size() > 0) {
+            auto& sym = *args[0]->as<ArbitrarySymbolExpression>().symbol;
+            if (sym.kind != SymbolKind::Instance && sym.kind != SymbolKind::CompilationUnit &&
+                sym.kind != SymbolKind::Root) {
+                if (!context.scope->isUninstantiated())
+                    context.addDiag(diag::ExpectedModuleName, args[0]->sourceRange);
+                return comp.getErrorType();
+            }
+        }
+
+        return comp.getIntType();
+    }
+
+    ConstantValue eval(EvalContext& context, const Args&, SourceRange range,
+                       const CallExpression::SystemCallInfo&) const final {
+        notConst(context, range);
+        return nullptr;
+    }
+
+private:
+    bool isOptional;
+};
+
+class StacktraceFunc : public SystemSubroutine {
+public:
+    StacktraceFunc() : SystemSubroutine("$stacktrace", SubroutineKind::Function) {}
+
+    const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
+                               const Expression*) const final {
+        auto& comp = context.getCompilation();
+        if (!checkArgCount(context, false, args, range, 0, 0))
+            return comp.getErrorType();
+
+        return context.flags.has(ASTFlags::TopLevelStatement) ? comp.getVoidType()
+                                                              : comp.getStringType();
+    }
+
+    ConstantValue eval(EvalContext& context, const Args&, SourceRange range,
+                       const CallExpression::SystemCallInfo&) const final {
+        notConst(context, range);
+        return nullptr;
+    }
+};
+
+class CountDriversFunc : public SystemSubroutine {
+public:
+    CountDriversFunc() : SystemSubroutine("$countdrivers", SubroutineKind::Function) {
+        hasOutputArgs = true;
+    }
+
+    const Expression& bindArgument(size_t argIndex, const ASTContext& context,
+                                   const ExpressionSyntax& syntax, const Args&) const final {
+        if (argIndex > 0) {
+            return Expression::bindLValue(syntax, context.getCompilation().getIntType(),
+                                          syntax.getFirstToken().location(), context,
+                                          /* isInout */ false);
+        }
+        return Expression::bind(syntax, context);
+    }
+
+    const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
+                               const Expression*) const final {
+        auto& comp = context.getCompilation();
+        if (!checkArgCount(context, false, args, range, 1, 6))
+            return comp.getErrorType();
+
+        auto sym = args[0]->getSymbolReference(/* allowPacked */ false);
+        if (!sym || sym->kind != SymbolKind::Net)
+            context.addDiag(diag::ExpectedNetRef, args[0]->sourceRange);
+
+        return comp.getBitType();
+    }
+
+    ConstantValue eval(EvalContext& context, const Args&, SourceRange range,
+                       const CallExpression::SystemCallInfo&) const final {
+        notConst(context, range);
+        return nullptr;
+    }
+};
+
+class GetPatternFunc : public SystemSubroutine {
+public:
+    GetPatternFunc() : SystemSubroutine("$getpattern", SubroutineKind::Function) {}
+
+    const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
+                               const Expression*) const final {
+        auto& comp = context.getCompilation();
+        if (!checkArgCount(context, false, args, range, 1, 1))
+            return comp.getErrorType();
+
+        if (!args[0]->type->isIntegral())
+            return badArg(context, *args[0]);
+
+        return comp.getType(args[0]->type->getBitWidth(), {});
+    }
+
+    ConstantValue eval(EvalContext& context, const Args&, SourceRange range,
+                       const CallExpression::SystemCallInfo&) const final {
+        notConst(context, range);
+        return nullptr;
+    }
+};
+
 void Builtins::registerNonConstFuncs() {
 #define REGISTER(...) addSystemSubroutine(std::make_shared<NonConstantFunction>(__VA_ARGS__))
 
@@ -448,6 +590,9 @@ void Builtins::registerNonConstFuncs() {
     REGISTER("$feof", intType, 1, intArg);
 
     REGISTER("$test$plusargs", intType, 1, std::vector<const Type*>{&stringType});
+
+    REGISTER("$reset_count", intType, 0);
+    REGISTER("$reset_value", intType, 0);
 
 #undef REGISTER
 
@@ -489,6 +634,12 @@ void Builtins::registerNonConstFuncs() {
     addSystemSubroutine(std::make_shared<FReadFunc>());
     addSystemSubroutine(std::make_shared<SampledFunc>());
     addSystemSubroutine(std::make_shared<PastFunc>());
+    addSystemSubroutine(std::make_shared<TimeScaleFunc>("$timeunit", true));
+    addSystemSubroutine(std::make_shared<TimeScaleFunc>("$timeprecision", true));
+    addSystemSubroutine(std::make_shared<TimeScaleFunc>("$scale", false));
+    addSystemSubroutine(std::make_shared<StacktraceFunc>());
+    addSystemSubroutine(std::make_shared<CountDriversFunc>());
+    addSystemSubroutine(std::make_shared<GetPatternFunc>());
 
     addSystemMethod(SymbolKind::EventType,
                     std::make_shared<NonConstantFunction>("triggered", bitType, 0,

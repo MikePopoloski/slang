@@ -64,14 +64,14 @@ void ParameterSymbolBase::checkDefaultExpression() const {
 
             for (auto& selector : result.selectors) {
                 if (auto elemSel = std::get_if<0>(&selector))
-                    visitDefault(**elemSel);
+                    (*elemSel)->visit(*this);
             }
         }
 
         void handle(const AssignmentPatternItemSyntax& syntax) {
             // Avoid visiting the key which can name a struct member
             // and so should not be looked up.
-            visitDefault(*syntax.expr);
+            syntax.expr->visit(*this);
         }
 
         const ASTContext& context;

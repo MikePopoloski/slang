@@ -314,7 +314,7 @@ private:
     syntax::MemberSyntax* parseCoverageMember();
     syntax::BlockEventExpressionSyntax& parseBlockEventExpression();
     syntax::WithClauseSyntax* parseWithClause();
-    syntax::CovergroupDeclarationSyntax& parseCovergroupDeclaration(AttrList attributes);
+    syntax::CovergroupDeclarationSyntax& parseCovergroupDeclaration(AttrList attributes, bool inClass, bool hasBaseClass);
     syntax::CoverpointSyntax* parseCoverpoint(AttrList attributes, syntax::DataTypeSyntax* type, syntax::NamedLabelSyntax* label);
     syntax::CoverCrossSyntax* parseCoverCross(AttrList attributes, syntax::NamedLabelSyntax* label);
     syntax::CoverageOptionSyntax* parseCoverageOption(AttrList attributes);

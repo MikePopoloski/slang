@@ -38,6 +38,7 @@ public:
     size_t size() const { return nodes.size(); }
 
     bool empty() const { return nodes.empty(); }
+    void clear() { nodes.clear(); }
 
     static std::string getSymbolHierPath(const ast::Symbol& symbol) {
         std::string buffer;

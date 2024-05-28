@@ -257,7 +257,6 @@ error InterconnectTypeSyntax "interconnect nets cannot have an explicit type"
 error InterconnectDelaySyntax "interconnect net delays can only be a single value"
 error InterconnectInitializer "interconnect nets cannot have initializers"
 error InvalidEdgeDescriptor "invalid edge descriptor (expected 01, 10, or x/z transitions)"
-error UnexpectedEdgeKeyword "unexpected use of edge keyword with simple module path"
 error MultipleParallelTerminals "cannot specify multiple terminals for parallel path connection"
 error WrongSpecifyDelayCount "expected one, two, three, six, or twelve delay values assigned to module path"
 error IfNoneEdgeSensitive "ifnone specify path cannot be an edge-sensitive path"
@@ -297,6 +296,9 @@ error FinalSpecifierLast "'final' specifier must come last in a list of class ov
 error FinalWithPure "'final' specifier cannot be used with a pure virtual member"
 error StaticFuncSpecifier "static members cannot have override specifiers"
 error OverridingExtends "'{}' is marked 'extends' but doesn't override a base class virtual member"
+error DerivedCovergroupNotInClass "covergroup inheritance can only be used inside a class"
+error DerivedCovergroupNoBase "covergroup is marked 'extends' but is in a class that has no base class"
+error UnexpectedEndDelim "unexpected '{}' delimiter"
 warning dpi-pure-task DPIPureTask "DPI tasks cannot be marked 'pure'"
 warning nonstandard-generate NonStandardGenBlock "standalone generate block without loop or condition is not allowed in SystemVerilog"
 warning empty-pattern EmptyAssignmentPattern "empty assignment patterns are disallowed by SystemVerilog"
@@ -306,6 +308,8 @@ warning nonstandard-dist NonstandardDist "use of parentheses around 'dist' expre
 warning empty-body EmptyBody "{} has empty body (put the semicolon on a separate line to silence this warning)"
 warning split-distweight-op SplitDistWeightOp "split dist weight operator is not allowed; SystemVerilog requires that they be joined together"
 note NoteToMatchThis "to match this '{}'"
+note NoteLastBlockStarted "last complete block started here"
+note NoteLastBlockEnded "and ended here"
 
 subsystem Declarations
 error LocalParamNoInitializer "local parameter is missing an initializer"
@@ -450,8 +454,8 @@ error RandJoinNotNumeric "rand join expression type {} is not numeric"
 error NotAClockingBlock "'{}' is not a clocking block"
 error CovergroupOutArg "covergroups cannot have 'output' or 'inout' arguments"
 error CoverageOptionDup "duplicate option assignment for '{}'"
-error CoverageSetType "invalid set covergroup expression type {} -- expected non-associative array of coverpoint '{}' type {}"
-error CoverageBinTargetName "expected 'with' target name to match the name of the parent coverpoint '{}'"
+error CoverageSetType "invalid set covergroup expression type {} -- expected non-associative array of coverpoint type {}"
+error CoverageBinTargetName "expected 'with' target name to match the name of the parent coverpoint"
 error ConstPortNotAllowed "'const' is not allowed on port declarations"
 error IfacePortInExpr "invalid use of interface port '{}' in port expression"
 error PortConcatInOut "port concatentation can't contain any 'inout' ports because not all of the ports are resolvable nets"
@@ -523,6 +527,14 @@ error OverridingInitial "'{}' is marked 'initial' but overrides a base class mem
 error OverridingFinal "'{}' overrides a base class member that is marked 'final'"
 error PackageImportSelf "package cannot import itself"
 error PackageExportSelf "package cannot export itself"
+error UnknownCovergroupBase "'{}' is not a covergroup in '{}'"
+error RealCoverpointBins "coverpoints of real expressions must specify at least one explicit bin"
+error RealCoverpointDefaultArray "default bin for coverpoint of real expression cannot be an array"
+error RealCoverpointWithExpr "'with' expressions are not allowed for bins of a real type"
+error RealCoverpointTransBins "coverpoints of real expressions cannot specify transition bins"
+error RealCoverpointWildcardBins "coverpoints of real expressions cannot be marked 'wildcard'"
+error RealCoverpointImplicit "cannot declare implicit coverpoint for real value '{}'"
+error BiDiSwitchNetTypes "bidirectional switch cannot connect nets of two different user-defined net types or a user-defined net type and a built-in net type ('{}' and '{}')"
 error FatalTask "$fatal encountered{}"
 error ErrorTask "$error encountered{}"
 error StaticAssert "static assertion failed{}"
@@ -705,6 +717,7 @@ error InputPortAssign "cannot assign to input port '{}'"
 error ClockVarTargetAssign "cannot write to '{}' with a continuous assignment since it's associated with an output clocking signal"
 error LocalFormalVarMultiAssign "cannot bind local variable '{}' to more than one output or inout local variable formal argument"
 error InterconnectReference "cannot reference interconnect net '{}' outside of a net port connection"
+error GateUDNTConn "gate cannot connect to net '{}' with user-defined net type"
 error UserDefPartialDriver "net '{}' with user-defined nettype cannot be partially driven"
 error LocalVarEventExpr "local variable '{}' cannot be referenced in an event expression"
 error RefArgForkJoin "cannot refer to 'ref' argument '{}' inside fork-join_any or fork-join_none block"
@@ -712,7 +725,6 @@ error PatternTaggedType "expected pattern type {} is not a tagged union"
 error PatternStructType "structure pattern type {} is not a struct"
 error PatternStructTooFew "structure pattern has too few members for target type {}"
 error PatternStructTooMany "structure pattern has too many members for target type {}"
-error SpecifyPathConditionExpr "expression is not valid in a state-dependent path condition"
 error SpecifyPathBadReference "cannot refer to '{}' in state-dependent path condition expression; only locally defined nets and variables are allowed"
 error PathPulseInExpr "PATHPULSE$ specparams cannot be used in expressions"
 error InterfacePortInvalidExpression "invalid expression for interface port connection"
@@ -752,6 +764,11 @@ warning float-widen FloatWiden "implicit conversion widens from {} to {}"
 warning float-narrow FloatNarrow "implicit conversion narrows from {} to {}"
 warning useless-cast UselessCast "useless cast from {} to the same type"
 warning unsigned-arith-shift UnsignedArithShift "arithmetic right shift of unsigned type {} will always shift in zeros (use logical shift if that is intended)"
+warning specify-condition-expr SpecifyPathConditionExpr "expression is not valid in a state-dependent path condition"
+warning arith-op-mismatch ArithOpMismatch "arithmetic between operands of different types ({} and {})"
+warning bitwise-op-mismatch BitwiseOpMismatch "bitwise operation between operands of different types ({} and {})"
+warning comparison-mismatch ComparisonMismatch "comparison between operands of different types ({} and {})"
+warning sign-compare SignCompare "comparison of differently signed types ({} and {})"
 
 subsystem Statements
 error ReturnNotInSubroutine "return statement is only valid inside task and function blocks"
@@ -823,7 +840,9 @@ error DisableIffLocalVar "local variables cannot be used in disable iff conditio
 error DisableIffMatched "'matched' method cannot be used in disable iff conditions"
 error PropAbortLocalVar "local variables cannot be used in property abort conditions"
 error PropAbortMatched "'matched' method cannot be used in property abort conditions"
-error SeqPropAdmitEmpty "sequence properties cannot admit an empty match"
+error SeqPropNondegenerate "any sequence that is used as a property shall be nondegenerate and shall not admit any empty match"
+error OverlapImplNondegenerate "any sequence that is used as the antecedent of an overlapping implication (|->) shall be nondegenerate"
+error NonOverlapImplNondegenerate "any sequence that is used as the antecedent of a nonoverlapping implication (|=>) shall admit at least one match. Such a sequence can admit only empty matches"
 error RecursivePropDisableIff "recursive properties cannot have disable iff conditions"
 error ConcurrentAssertActionBlock "cannot have '{}' statement in the action block of another concurrent assertion"
 error InvalidForStepExpression "for loop step expression must be an assignment, increment/decrement operator, or a subroutine call"
@@ -839,6 +858,11 @@ warning bad-procedural-force BadProceduralForce "lvalue of force/release must be
 warning multibit-edge MultiBitEdge "edge of expression of type {} will only trigger on changes to the first bit"
 note NoteWhileExpanding "while expanding {} '{}'"
 note NoteExpandedHere "expanded here"
+note SeqAdmitsEmptyMatches "sequence property admits empty matches"
+note SeqAdmitsNoMatches "sequence property can never be matched"
+note SeqAcceptsOnlyEmptyMatches "sequence property admits only empty matches"
+note SeqPropCondAlwaysFalse "condition is always false"
+note DisableIffCondAlwaysTrue "disable iff condition is always true"
 
 subsystem Types
 error InvalidEnumBase "invalid enum base type {} (must be a single dimensional integer type)"
@@ -864,7 +888,7 @@ error ObjectTooLarge "object size exceeds implementation limit of 2^31 bytes"
 error InvalidUnionMember "untagged unions cannot have members of type {}"
 error VirtualInterfaceUnionMember "virtual interfaces cannot be used as members of unions"
 error InvalidArrayElemType "cannot declare an array with elements of type {}"
-error NonIntegralCoverageExpr "{} is not a valid type for a coverage expression"
+error InvalidCoverageExpr "{} is not a valid type for a coverage expression"
 error TypeRefHierarchical "'type' expression cannot contain hierarchical references"
 error ClassInheritanceCycle "circular dependency in inheritance chain for class '{}'"
 error NTResolveSingleArg "resolution function for nettype '{}' should have a single input argument of type {}"
@@ -971,6 +995,7 @@ error AssociativeWildcardNotAllowed "'{}' cannot be called with an associative a
 error ExpectedModuleName "expected module name"
 error ExpectedModOrVarName "expected module or variable name"
 error ExpectedScopeOrAssert "expected scope or assertion name"
+error ExpectedScopeName "expected scope name"
 error ExpectedClassPropertyName "expected class property name"
 error ExpectedVariableName "expected variable name"
 error ExpectedModuleInstance "expected module instance"
@@ -988,11 +1013,13 @@ error SequenceMethodLocalVar "local variables can only be passed to sequences on
 error PlaRangeInAscendingOrder "must specify dimensions in ascending order for PLA input type {}"
 error SysFuncHierarchicalNotAllowed "hierarchical references are not allowed in calls to '{}'"
 error TypeIsNotAClass "{} is not a class type"
+error ExpectedNetRef "expected a reference to a net"
 warning format-real FormatRealInt "real value provided for integer format specifier '%{}'"
 warning finish-num BadFinishNum "finish argument must have value of 0, 1, or 2"
 warning missing-format MissingFormatSpecifier "missing format specifier"
 warning format-multibit-strength FormatMultibitStrength "formatting strength values for multi-bit nets is non-standard"
 warning nonstandard-sys-func NonstandardSysFunc "system function '{}' is non-standard"
+warning isunbounded-param-arg IsUnboundedParamArg "argument to $isunbounded must be the name of a parameter"
 
 subsystem ConstEval
 note NoteInCallTo "in call to '{}'"
@@ -1090,6 +1117,8 @@ warning unused-type-parameter UnusedTypeParameter "unused type parameter '{}'"
 warning unused-typedef UnusedTypedef "unused typedef '{}'"
 warning unused-genvar UnusedGenvar "unused genvar '{}'"
 warning unused-assertion-decl UnusedAssertionDecl "unused {} '{}'"
+warning unused-import UnusedImport "unused import '{}'"
+warning unused-wildcard-import UnusedWildcardImport "unused wildcard import"
 warning missing-top NoTopModules "no top-level modules found in design"
 warning duplicate-defparam DuplicateDefparam "parameter already has a defparam override applied; ignoring this one"
 
@@ -1114,7 +1143,7 @@ group default = { real-underflow real-overflow vector-overflow int-overflow unco
                   raw-protect-eof protected-envelope specify-param dup-timing-path invalid-pulsestyle
                   negative-timing-limit bad-procedural-force duplicate-defparam implicit-port-type-mismatch
                   split-distweight-op dpi-pure-task multibit-edge unknown-sys-name unknown-library
-                  dup-config-rule unused-config-cell unused-config-instance }
+                  dup-config-rule unused-config-cell unused-config-instance specify-condition-expr }
 
 group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-none case-gen-dup
                 unused-result format-real ignored-slice task-ignored width-trunc dup-attr event-const
@@ -1123,7 +1152,7 @@ group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-
                 float-narrow }
 
 group pedantic = { empty-pattern implicit-net-port nonstandard-escape-code nonstandard-generate format-multibit-strength
-                   nonstandard-sys-func nonstandard-foreach nonstandard-dist }
+                   nonstandard-sys-func nonstandard-foreach nonstandard-dist isunbounded-param-arg }
 
 group conversion = { width-trunc width-expand port-width-trunc port-width-expand implicit-conv
                      constant-conversion sign-conversion float-bool-conv int-bool-conv float-int-conv
@@ -1132,4 +1161,4 @@ group conversion = { width-trunc width-expand port-width-trunc port-width-expand
 group unused = { unused-def unused-net unused-implicit-net unused-variable undriven-net unassigned-variable
                  unused-but-set-net unused-but-set-variable unused-port undriven-port unused-argument
                  unused-parameter unused-type-parameter unused-typedef unused-genvar unused-assertion-decl
-                 unused-but-set-port unused-config-cell unused-config-instance }
+                 unused-but-set-port unused-config-cell unused-config-instance unused-import unused-wildcard-import }

@@ -223,7 +223,9 @@ public:
 class NetlistNode : public Node<NetlistNode, NetlistEdge> {
 public:
     NetlistNode(NodeKind kind, const ast::Symbol& symbol) :
-        ID(++nextID), kind(kind), symbol(symbol) {};
+        ID(++nextID), kind(kind), symbol(symbol) {
+        edgeKind = ast::EdgeKind::None;
+    };
     ~NetlistNode() override = default;
 
     template<typename T>
@@ -255,6 +257,8 @@ public:
     size_t ID;
     NodeKind kind;
     const ast::Symbol& symbol;
+    ast::EdgeKind edgeKind;
+    bool blocked{};
 
 private:
     static size_t nextID;
@@ -402,6 +406,16 @@ public:
         nodes.push_back(std::move(nodePtr));
         DEBUG_PRINT("New node: variable reference {}\n", symbol.name);
         return node;
+    }
+
+    // without this, the base class method will be hidden,
+    // even when calling netlist.addEdge with only 2 parameters
+    using DirectedGraph<NetlistNode, NetlistEdge>::addEdge;
+
+    NetlistEdge& addEdge(NetlistNode& sourceNode, NetlistNode& targetNode, ast::EdgeKind edgeKind) {
+        auto& edge = DirectedGraph<NetlistNode, NetlistEdge>::addEdge(sourceNode, targetNode);
+        targetNode.edgeKind = edgeKind;
+        return edge;
     }
 
     /// Find a port declaration node in the netlist by hierarchical path.

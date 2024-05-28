@@ -362,7 +362,8 @@ endmodule
     CHECK(diags[15].code == diag::QueryOnAssociativeWildcard);
 }
 
-TEST_CASE("printtimescale -- errors") {
+TEST_CASE("$printtimescale, $timeunit, $timeprecision") {
+    auto options = optionsFor(LanguageVersion::v1800_2023);
     auto tree = SyntaxTree::fromText(R"(
 module j;
 endmodule
@@ -380,19 +381,35 @@ module m;
         $printtimescale(5);
         $printtimescale(m.k1.j1, 5);
         $printtimescale(foo);
+        $printtimescale($root);
+        $printtimescale($unit);
+    end
+
+    initial begin
+        foo = $timeunit;
+        foo = $timeunit(5);
+        foo = $timeprecision(m.k1.j1);
+        foo = $timeprecision(m.k1.j1, 5);
+        foo = $timeprecision(foo);
+        foo = $timeunit($root);
+        foo = $timeunit($unit);
     end
 
 endmodule
-)");
+)",
+                                     options);
 
-    Compilation compilation;
+    Compilation compilation(options);
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 3);
+    REQUIRE(diags.size() == 6);
     CHECK(diags[0].code == diag::ExpectedModuleName);
     CHECK(diags[1].code == diag::TooManyArguments);
     CHECK(diags[2].code == diag::ExpectedModuleName);
+    CHECK(diags[3].code == diag::ExpectedModuleName);
+    CHECK(diags[4].code == diag::TooManyArguments);
+    CHECK(diags[5].code == diag::ExpectedModuleName);
 }
 
 TEST_CASE("dumpvars / dumpports") {
@@ -1335,4 +1352,91 @@ endmodule
     REQUIRE(diags.size() == 2);
     CHECK(diags[0].code == diag::AutoFromNonProcedural);
     CHECK(diags[1].code == diag::AutoFromNonProcedural);
+}
+
+TEST_CASE("$isunbounded of non-param name") {
+    auto tree = SyntaxTree::fromText(R"(
+localparam p = $isunbounded(1 + 1);
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::IsUnboundedParamArg);
+}
+
+TEST_CASE("$stacktrace function") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    initial begin
+        string s;
+        $stacktrace;
+        s = $stacktrace;
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Annex D option system tasks and functions") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    wire n = 1;
+    initial begin : baz
+        bit f;
+        int a, b, c, d, e;
+        f = $countdrivers(m.n, a, b, c, d, e);
+        $list;
+        $list(m);
+        $input("asdf");
+        $key("asdf");
+        $nokey;
+        $reset;
+        $reset(0, 1, 2);
+        a = $reset_count;
+        b = $reset_value;
+        $save("SDF");
+        $reset("SDF");
+        $incsave("SDF");
+        $scope(m.baz);
+        c = $scale(m);
+        $showscopes;
+        $showscopes(1);
+        $showvars;
+        $showvars(a, b[0]);
+    end
+
+    logic [1:4] in_mem[100];
+    assign {i1,i2,i3,i4} = $getpattern(in_mem[n]);
+
+    initial begin
+        $sreadmemb(in_mem, 0, 1, "SDF");
+        $sreadmemh(in_mem, 0, 1, "SDF", "BAZ");
+    end
+
+    var v;
+    initial begin
+        bit b;
+        b = $countdrivers(v);
+        $list(m.n);
+        $showvars(v + 1);
+        $sreadmemh(in_mem, 0, 1, "SDF", in_mem);
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 4);
+    CHECK(diags[0].code == diag::ExpectedNetRef);
+    CHECK(diags[1].code == diag::ExpectedScopeName);
+    CHECK(diags[2].code == diag::ExpectedVariableName);
+    CHECK(diags[3].code == diag::BadSystemSubroutineArg);
 }

@@ -611,6 +611,30 @@ endmodule
     CHECK(diags[2].code == diag::UnusedAssertionDecl);
 }
 
+TEST_CASE("Unused imports") {
+    auto tree = SyntaxTree::fromText(R"(
+package p;
+    int a;
+endpackage
+
+module m;
+    import p::a;
+    import p::*;
+endmodule
+)");
+
+    CompilationOptions coptions;
+    coptions.flags = CompilationFlags::None;
+
+    Compilation compilation(coptions);
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::UnusedImport);
+    CHECK(diags[1].code == diag::UnusedWildcardImport);
+}
+
 TEST_CASE("Implicit conversions with constants") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
@@ -647,13 +671,13 @@ endmodule
     auto& diags = compilation.getAllDiagnostics();
     CHECK("\n" + report(diags) == R"(
   in instance: top.m1
-source:4:16: warning: implicit conversion from 'logic[31:0]' to 'logic[3:0]' changes value from 32'd4294967295 to 4'b1111 [-Wconstant-conversion]
+source:4:14: warning: implicit conversion from 'logic[31:0]' to 'logic[3:0]' changes value from 32'd4294967295 to 4'b1111 [-Wconstant-conversion]
     assign a = 32'hffffffff;
-               ^~~~~~~~~~~~
+             ^ ~~~~~~~~~~~~
   in instance: top.m2
-source:4:16: warning: implicit conversion from 'logic[31:0]' to 'logic[4:0]' changes value from 32'd4294967295 to 5'b11111 [-Wconstant-conversion]
+source:4:14: warning: implicit conversion from 'logic[31:0]' to 'logic[4:0]' changes value from 32'd4294967295 to 5'b11111 [-Wconstant-conversion]
     assign a = 32'hffffffff;
-               ^~~~~~~~~~~~
+             ^ ~~~~~~~~~~~~
 )");
 }
 
@@ -829,11 +853,12 @@ endfunction
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 4);
+    REQUIRE(diags.size() == 5);
     CHECK(diags[0].code == diag::SignConversion);
     CHECK(diags[1].code == diag::UnsignedArithShift);
-    CHECK(diags[2].code == diag::SignConversion);
+    CHECK(diags[2].code == diag::ArithOpMismatch);
     CHECK(diags[3].code == diag::SignConversion);
+    CHECK(diags[4].code == diag::SignConversion);
 }
 
 TEST_CASE("Indeterminate variable initialization order") {
@@ -883,4 +908,60 @@ endfunction
     CHECK(diags[1].code == diag::FloatNarrow);
     CHECK(diags[2].code == diag::IntFloatConv);
     CHECK(diags[3].code == diag::FloatWiden);
+}
+
+TEST_CASE("Binary operator warnings") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    struct packed { logic a; } a;
+    int i;
+    int unsigned j;
+    real r;
+
+    initial begin
+        if (0 == a) begin end
+        i = i + j;
+        if (i == r) begin end
+        if (i < j) begin end
+        if (a & j) begin end
+    end
+
+    localparam int x = 3;
+    localparam real y = 4.1;
+    localparam real z = x + y * x;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 6);
+    CHECK(diags[0].code == diag::SignConversion);
+    CHECK(diags[1].code == diag::ArithOpMismatch);
+    CHECK(diags[2].code == diag::IntFloatConv);
+    CHECK(diags[3].code == diag::ComparisonMismatch);
+    CHECK(diags[4].code == diag::SignCompare);
+    CHECK(diags[5].code == diag::BitwiseOpMismatch);
+}
+
+TEST_CASE("Binary operator with struct type preserves the type") {
+    auto tree = SyntaxTree::fromText(R"(
+module top;
+  typedef struct packed {
+      logic [1:0] a;
+      logic [1:0] b;
+  } s_t;
+
+  s_t a, b, c, d;
+
+  always_comb begin
+      d = a |  b | c;
+  end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
 }

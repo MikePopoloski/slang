@@ -794,7 +794,7 @@ bool resolveColonNames(SmallVectorBase<NamePlusLoc>& nameParts, int colonParts,
             result.flags |= LookupResultFlags::WasImported;
         }
         else if (symbol->kind == SymbolKind::CovergroupType) {
-            symbol = symbol->as<CovergroupType>().body.find(name.text);
+            symbol = symbol->as<CovergroupType>().getBody().find(name.text);
         }
         else {
             symbol = symbol->as<Scope>().find(name.text);
@@ -1039,6 +1039,16 @@ void Lookup::name(const NameSyntax& syntax, const ASTContext& context, bitmask<L
             }
             result.found = &scope.getCompilation().getRoot();
             return;
+        case SyntaxKind::UnitScope:
+            if (!flags.has(LookupFlags::AllowUnit)) {
+                auto tok = syntax.getFirstToken();
+                result.addDiag(scope, diag::ExpectedToken,
+                               tok.location() + tok.valueText().length())
+                    << "::"sv;
+                return;
+            }
+            result.found = scope.getCompilationUnit();
+            return;
         case SyntaxKind::ConstructorName:
             result.addDiag(scope, diag::UnexpectedNameToken, syntax.sourceRange())
                 << syntax.getFirstToken().valueText();
@@ -1049,7 +1059,6 @@ void Lookup::name(const NameSyntax& syntax, const ASTContext& context, bitmask<L
             // already issued a diagnostic.
             result.found = nullptr;
             return;
-        case SyntaxKind::UnitScope:
         case SyntaxKind::SuperHandle:
         case SyntaxKind::ArrayUniqueMethod:
         case SyntaxKind::ArrayAndMethod:
@@ -1758,6 +1767,7 @@ void Lookup::unqualifiedImpl(const Scope& scope, std::string_view name, LookupLo
                 case SymbolKind::ExplicitImport:
                     result.found = symbol->as<ExplicitImportSymbol>().importedSymbol();
                     result.flags |= LookupResultFlags::WasImported;
+                    scope.getCompilation().noteReference(*symbol);
                     break;
                 case SymbolKind::ForwardingTypedef:
                     // If we find a forwarding typedef, the actual typedef was never defined.
@@ -1877,6 +1887,8 @@ void Lookup::unqualifiedImpl(const Scope& scope, std::string_view name, LookupLo
 
                 result.flags |= LookupResultFlags::WasImported;
                 result.found = imports[0].imported;
+                scope.getCompilation().noteReference(*imports[0].import);
+
                 wildcardImportData->importedSymbols.try_emplace(result.found->name, result.found);
                 return;
             }

@@ -1013,6 +1013,30 @@ module m;
 endmodule
 ```
 
+-Wunused-import
+A package import directive is never used.
+```
+package p;
+    int a;
+endpackage
+
+module m;
+    import p::a;
+endmodule
+```
+
+-Wunused-wildcard-import
+A wildcard package import directive is never used.
+```
+package p;
+    int a;
+endpackage
+
+module m;
+    import p::*;
+endmodule
+```
+
 -Wbad-procedural-force
 According to the Verilog/SystemVerilog standard, it is illegal to procedurally force a
 bit-select or range select of a variable (you can do that with a net, or with a plain
@@ -1254,4 +1278,78 @@ A floating point value is implicitly converted to a narrower floating point type
 function automatic f(real r);
     shortreal s = r;
 endfunction
+```
+
+-Wisunbounded-param-arg
+The SystemVerilog LRM 1800-2023 requires that the argument to the $isunbounded system
+function be a parameter name. This seems needlessly restrictive and conflicts with the
+wording in prior versions so this is implemented as a pedantic warning only.
+```
+localparam p = $isunbounded(1 + 1);
+```
+
+-Wspecify-condition-expr
+State-dependent path conditions in specify blocks are restricted to a subset of expression
+types and operators (see Table 30-1 in the LRM for the list of valid operators). This is an
+error by default but can be downgraded to a warning for compatibility with other tools.
+```
+module m(input b, output c);
+    wire integer a;
+    specify
+        if (a === 1 + 1) (b => c) = (0,0);
+    endspecify
+endmodule
+```
+
+-Warith-op-mismatch
+An arithmetic operator has operands of different types -- one or both will be converted
+before the operation is performed. This is not necessarily a problem but the warning
+can be helpful if you prefer to be strict about disallowing implicit conversions.
+```
+module m;
+    logic [7:0] a;
+    struct packed { logic [7:0] x; } b;
+    initial a += b;
+endmodule
+```
+
+-Wbitwise-op-mismatch
+A bitwise operator has operands of different types -- one or both will be converted
+before the operation is performed. This is not necessarily a problem but the warning
+can be helpful if you prefer to be strict about disallowing implicit conversions.
+```
+module m;
+    logic [7:0] a;
+    logic [11:1] b;
+    initial a = a | b;
+endmodule
+```
+
+-Wcomparison-mismatch
+A comparison operator has operands of different types -- one or both will be converted
+before the operation is performed. This is not necessarily a problem but the warning
+can be helpful if you prefer to be strict about disallowing implicit conversions.
+```
+module m;
+    logic [7:0] a;
+    struct packed { logic [7:0] x; } b;
+    initial begin
+        if (a == b) begin
+        end
+    end
+endmodule
+```
+
+-Wsign-compare
+A comparison operator has operands of differing signs. The signed operand will be
+treated as unsigned, which can lead to unexpected results.
+```
+module m;
+    int a = -1;
+    int unsigned b = 1;
+    initial begin
+        if (a < b) begin
+        end
+    end
+endmodule
 ```

@@ -2496,10 +2496,14 @@ endfunction
     CHECK(session.eval("f3();").integer() == 139);
 
     auto diags = session.getDiagnostics();
-    REQUIRE(diags.size() == 3);
-    CHECK(diags[0].code == diag::ConstEvalNoCaseItemsMatched);
-    CHECK(diags[1].code == diag::ConstEvalCaseItemsNotUnique);
-    CHECK(diags[2].code == diag::ConstantConversion);
+    REQUIRE(diags.size() == 7);
+    CHECK(diags[0].code == diag::ArithOpMismatch);
+    CHECK(diags[1].code == diag::ConstEvalNoCaseItemsMatched);
+    CHECK(diags[2].code == diag::ConstEvalCaseItemsNotUnique);
+    CHECK(diags[3].code == diag::ConstantConversion);
+    CHECK(diags[4].code == diag::ArithOpMismatch);
+    CHECK(diags[5].code == diag::ArithOpMismatch);
+    CHECK(diags[6].code == diag::ArithOpMismatch);
 }
 
 TEST_CASE("case statement eval regression") {

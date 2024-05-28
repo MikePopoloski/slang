@@ -1842,6 +1842,7 @@ token closeParen
 
 CovergroupDeclaration base=Member
 token covergroup
+token extends
 token name
 FunctionPortList? portList
 SyntaxNode? event
@@ -2184,7 +2185,8 @@ SimpleDirective base=Directive multiKind=true
 
 kindmap<SimpleDirective>
 CellDefineDirective NoUnconnectedDriveDirective EndCellDefineDirective EndKeywordsDirective
-ResetAllDirective UndefineAllDirective
+ResetAllDirective UndefineAllDirective DelayModeDistributedDirective DelayModePathDirective
+DelayModeUnitDirective DelayModeZeroDirective
 
 IncludeDirective base=Directive
 token fileName
@@ -2260,6 +2262,12 @@ DefaultNetTypeDirective base=Directive
 token netType
 
 UnconnectedDriveDirective base=Directive
+token strength
+
+DefaultDecayTimeDirective base=Directive
+token time
+
+DefaultTriregStrengthDirective base=Directive
 token strength
 
 LineDirective base=Directive

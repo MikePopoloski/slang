@@ -162,7 +162,7 @@ TEST_CASE("Function declaration") {
     auto tree = SyntaxTree::fromText(R"(
 module Top;
     function static logic [15:0] foo(a, int b, output logic [15:0] u, v, inout w);
-        return 16'(a + unsigned'(b));
+        return 16'(a + b[0]);
     endfunction
 endmodule
 )");

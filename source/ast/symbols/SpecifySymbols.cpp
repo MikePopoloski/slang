@@ -257,7 +257,7 @@ static std::span<const Expression* const> bindTerminals(
 struct SpecifyConditionVisitor {
     const ASTContext& context;
     const Scope* specifyParentScope;
-    bool hasError = false;
+    bool hasWarned = false;
 
     SpecifyConditionVisitor(const ASTContext& context, const Scope* specifyParentScope) :
         context(context), specifyParentScope(specifyParentScope) {}
@@ -272,7 +272,7 @@ struct SpecifyConditionVisitor {
                 case ExpressionKind::NamedValue:
                     if (auto sym = expr.getSymbolReference()) {
                         // Specparams are always allowed.
-                        if (sym->kind == SymbolKind::Specparam || hasError)
+                        if (sym->kind == SymbolKind::Specparam)
                             break;
 
                         // Other references must be locally defined nets or variables.
@@ -282,7 +282,6 @@ struct SpecifyConditionVisitor {
                                                          expr.sourceRange);
                             diag << sym->name;
                             diag.addNote(diag::NoteDeclarationHere, sym->location);
-                            hasError = true;
                         }
                     }
                     break;
@@ -345,9 +344,9 @@ struct SpecifyConditionVisitor {
     }
 
     void reportError(SourceRange sourceRange) {
-        if (!hasError) {
+        if (!hasWarned) {
             context.addDiag(diag::SpecifyPathConditionExpr, sourceRange);
-            hasError = true;
+            hasWarned = true;
         }
     }
 };

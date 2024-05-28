@@ -187,9 +187,12 @@ enum class SLANG_EXPORT ASTFlags : uint64_t {
     TypeOperator = 1ull << 42,
 
     /// AST binding is inside a fork-join_any or fork-join_none block.
-    ForkJoinAnyNone = 1ull << 43
+    ForkJoinAnyNone = 1ull << 43,
+
+    /// AST binding disallows nets with a user-defined nettype (UDNT).
+    DisallowUDNT = 1ull << 44
 };
-SLANG_BITMASK(ASTFlags, ForkJoinAnyNone)
+SLANG_BITMASK(ASTFlags, DisallowUDNT)
 
 // clang-format off
 #define DK(x) \

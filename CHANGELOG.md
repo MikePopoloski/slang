@@ -6,9 +6,54 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 ### Language Support
+* Select expressions of packed arrays now always return an unsigned type, as mandated by the LRM
+* Clocking skew delays now properly require a constant value
+* Enforce that static methods can't have override specifiers
+* The error for invalid state-dependent path conditions in specify blocks can now be downgraded with -Wspecify-condition-expr for compatibility with other tools
+* Added support for the optional system tasks and functions from Annex D in the LRM: `$countdrivers`, `$list`, `$input`, `$key`, `$nokey`, `$reset`, `$reset_count`, `$reset_value`, `$save`, `$incsave`, `$restart`, `$scope`, `$scale`, `$showscopes`, `$showvars`, `$sreadmemb`, `$sreadmemh`, `$getpattern`
+* Added support for the optional compiler directives from Annex E in the LRM: `` `default_decay_time ``, `` `default_trireg_strength ``, `` `delay_mode_distributed ``, `` `delay_mode_path ``, `` `delay_mode_unit ``, `` `delay_mode_zero ``
+#### Clarifications in IEEE 1800-2023
+* Assertion clocking events can't reference automatic variables
+* The `.*` token sequence is actually two separate tokens that can be separated by whitespace
+* Functions in constraints cannot have `inout` arguments
+* Constraint subexpression can be of any type as long as their final expression type is numeric and they don't reference random variables
+* The argument to `$isunbounded` must be a parameter name (only enforced as a pedantic warning in slang)
+* Edge-sensitive paths in specify blocks can specify an edge keyword without also including a data source expression
+* Only bidirectional switches allow connections to nets with user-defined net types (other primitives do not)
+#### New Features in IEEE 1800-2023
+* Constraint expressions and random variables can have `real` types
+* `dist` expressions can have a `default` specifier
+* `dist` expressions can have `real` types
+* solve-before constraints can specify array.size() as well as regular random variables
+* disable soft constraints can target array.size()
+* Constraint blocks can have override specifiers (initial / extends / final)
+* Covergroups can inherit from covergroups in parent classes
+* Coverpoints can have `real` types
+* Covergroups have new options: `cross_retain_auto_bins` and `real_interval`
+* New system functions `$timeunit`, `$timeprecision`, and `$stacktrace`
+
 ### General Features
+* Added [-Wunsigned-arith-shift](https://sv-lang.com/warning-ref.html#unsigned-arith-shift) which warns about suspicious arithmetic right shifts of unsigned types
+* Added [-Wstatic-init-order](https://sv-lang.com/warning-ref.html#static-init-order) and [-Wstatic-init-value](https://sv-lang.com/warning-ref.html#static-init-value) which warn about static initializers that depend on uninitialized values or an undefined order of other static initializers
+* Added [-Wfloat-int-conv](https://sv-lang.com/warning-ref.html#float-int-conv) and [-Wint-float-conv](https://sv-lang.com/warning-ref.html#int-float-conv) which warn about implicit conversions between floating point and integer types
+* Added [-Wfloat-narrow](https://sv-lang.com/warning-ref.html#float-narrow) and [-Wfloat-widen](https://sv-lang.com/warning-ref.html#float-widen) which warn about implicit conversions between floating point types of differing widths
+* Added [-Wunused-import](https://sv-lang.com/warning-ref.html#unused-import) and [-Wunused-wildcard-import](https://sv-lang.com/warning-ref.html#unused-wildcard-import) which warn about unused import directives
+* Added [-Warith-op-mismatch](https://sv-lang.com/warning-ref.html#arith-op-mismatch), [-Wbitwise-op-mismatch](https://sv-lang.com/warning-ref.html#bitwise-op-mismatch), [-Wcomparison-mismatch](https://sv-lang.com/warning-ref.html#comparison-mismatch), and [-Wsign-compare](https://sv-lang.com/warning-ref.html#sign-compare) which all warn about different cases of mismatched types in binary expressions
+* slang-netlist has experimental support for detecting combinatorial loops (thanks to @udif)
+
 ### Improvements
+* Default value expressions for parameters that are overridden are now checked for basic correctness and other parameters they reference will not warn for being "unused"
+* Made several minor improvements to the locations reported for propagated type conversion warnings
+* Sped up `Compilation` object construction by reorganizing how system subroutines are created and registered
+* Improved the parser error reported when encountering an extraneous end delimiter in a member list
+
 ### Fixes
+* Fixed several AST serialization methods (thanks to @tdp2110)
+* Fixed the return type of DPI import tasks
+* Fixed a bug that caused some `inout` ports to warn as "unused"
+* Fixed the checking of the `extends` override specifier when the containing class has no base class
+* Fixed a case where bracketed delay expressions in sequence concatenations were not checked for correctness
+* Fixed the type of the iterators used in with-expressions for covergroup bins
 
 
 ## [v6.0] - 2024-04-21

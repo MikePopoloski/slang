@@ -64,6 +64,7 @@ void registerTypes(py::module_& m) {
         .def_property_readonly("isSequenceType", &Type::isSequenceType)
         .def_property_readonly("isPropertyType", &Type::isPropertyType)
         .def_property_readonly("isVirtualInterface", &Type::isVirtualInterface)
+        .def_property_readonly("isHandleType", &Type::isHandleType)
         .def_property_readonly("isAlias", &Type::isAlias)
         .def_property_readonly("isError", &Type::isError)
         .def("isMatching", &Type::isMatching, "rhs"_a)
@@ -303,8 +304,8 @@ void registerTypes(py::module_& m) {
         .def_property_readonly("constraints", &ConstraintBlockSymbol::getConstraints);
 
     py::class_<CovergroupType, Type, Scope>(m, "CovergroupType")
-        .def_readonly("arguments", &CovergroupType::arguments)
-        .def_readonly("sampleArguments", &CovergroupType::sampleArguments)
-        .def_property_readonly("body", [](const CovergroupType& self) { return &self.body; })
+        .def_property_readonly("arguments", &CovergroupType::getArguments)
+        .def_property_readonly("body", [](const CovergroupType& self) { return &self.getBody(); })
+        .def_property_readonly("baseGroup", &CovergroupType::getBaseGroup)
         .def_property_readonly("coverageEvent", &CovergroupType::getCoverageEvent);
 }

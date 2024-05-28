@@ -119,7 +119,7 @@ public:
 
     ConstantValue evalImpl(EvalContext& context) const;
     std::optional<bitwidth_t> getEffectiveWidthImpl() const;
-    bool getEffectiveSignImpl() const;
+    EffectiveSign getEffectiveSignImpl(bool isForConversion) const;
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -136,7 +136,8 @@ public:
 
     static ConstantValue convert(EvalContext& context, const Type& from, const Type& to,
                                  SourceRange sourceRange, ConstantValue&& value,
-                                 ConversionKind conversionKind, const Expression* expr = nullptr);
+                                 ConversionKind conversionKind, const Expression* expr = nullptr,
+                                 SourceRange implicitOpRange = {});
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::Conversion; }
 
@@ -147,6 +148,7 @@ public:
 
 private:
     Expression* operand_;
+    SourceRange implicitOpRange;
 };
 
 /// Represents a new[] expression that creates a dynamic array.

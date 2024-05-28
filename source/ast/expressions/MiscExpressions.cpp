@@ -108,11 +108,17 @@ Expression& ValueExpressionBase::fromSymbol(const ASTContext& context, const Sym
         if (flags.has(ASTFlags::SpecifyBlock))
             context.addDiag(diag::SpecifyBlockParam, sourceRange);
     }
-    else if (symbol.kind == SymbolKind::Net &&
-             symbol.as<NetSymbol>().netType.netKind == NetType::Interconnect &&
-             !flags.has(ASTFlags::AllowInterconnect)) {
-        context.addDiag(diag::InterconnectReference, sourceRange) << symbol.name;
-        return badExpr(comp, nullptr);
+    else if (symbol.kind == SymbolKind::Net) {
+        auto& netType = symbol.as<NetSymbol>().netType;
+        if (netType.netKind == NetType::Interconnect && !flags.has(ASTFlags::AllowInterconnect)) {
+            context.addDiag(diag::InterconnectReference, sourceRange) << symbol.name;
+            return badExpr(comp, nullptr);
+        }
+
+        if (netType.netKind == NetType::UserDefined && flags.has(ASTFlags::DisallowUDNT)) {
+            context.addDiag(diag::GateUDNTConn, sourceRange) << symbol.name;
+            return badExpr(comp, nullptr);
+        }
     }
     else if (symbol.kind == SymbolKind::ClockVar && !flags.has(ASTFlags::LValue) &&
              symbol.as<ClockVarSymbol>().direction == ArgumentDirection::Out) {
@@ -756,7 +762,8 @@ static const AssertionExpr& bindAssertionBody(const Symbol& symbol, const Syntax
         auto& result = AssertionExpr::bind(*sds.seqExpr, context);
         result.requireSequence(context);
 
-        if (outputLocalVarArgLoc && result.admitsEmpty()) {
+        if (outputLocalVarArgLoc &&
+            result.checkNondegeneracy().has(NondegeneracyStatus::AdmitsEmpty)) {
             auto& diag = context.addDiag(diag::LocalVarOutputEmptyMatch,
                                          sds.seqExpr->sourceRange());
             diag << symbol.name;
@@ -1317,8 +1324,8 @@ std::optional<bitwidth_t> MinTypMaxExpression::getEffectiveWidthImpl() const {
     return selected().getEffectiveWidth();
 }
 
-bool MinTypMaxExpression::getEffectiveSignImpl() const {
-    return selected().getEffectiveSign();
+Expression::EffectiveSign MinTypMaxExpression::getEffectiveSignImpl(bool isForConversion) const {
+    return selected().getEffectiveSign(isForConversion);
 }
 
 void MinTypMaxExpression::serializeTo(ASTSerializer& serializer) const {
