@@ -30,7 +30,7 @@ public:
 
     void connectVarToVar(NetlistNode& sourceVarNode,
                                 NetlistNode& targetVarNode) {
-        netlist.addEdge(sourceVarNode, targetVarNode);
+        netlist.addEdge(sourceVarNode, targetVarNode, ast::EdgeKind::None);
         DEBUG_PRINT("New edge: reference {} -> reference {}\n", sourceVarNode.getName(), targetVarNode.getName());
     }
 
@@ -76,6 +76,7 @@ private:
     Netlist& netlist;
     ast::EvalContext& evalCtx;
     SmallVector<NetlistNode*>& condVars;
+    ast::EdgeKind edgeKind;
 };
 
 }

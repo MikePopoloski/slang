@@ -2,6 +2,7 @@
 
 #include <memory>
 
+#include "slang/ast/symbols/BlockSymbols.h"
 #include "slang/util/IntervalMap.h"
 #include "Netlist.h"
 #include "Debug.h"
@@ -63,11 +64,46 @@ class ProceduralBlockVisitor : public ast::ASTVisitor<ProceduralBlockVisitor, tr
 public:
     bool anyErrors = false;
 
-    explicit ProceduralBlockVisitor(ast::Compilation& compilation, Netlist& netlist) :
+    explicit ProceduralBlockVisitor(ast::Compilation& compilation, Netlist& netlist,
+                                    ast::EdgeKind edgeKind) :
         netlist(netlist),
-        evalCtx(ast::ASTContext(compilation.getRoot(), ast::LookupLocation::max)) {
-        evalCtx.pushEmptyFrame();
-        DEBUG_PRINT("Procedural block\n");
+        evalCtx(ast::ASTContext(compilation.getRoot(), ast::LookupLocation::max)),
+        edgeKind(edgeKind) {
+      evalCtx.pushEmptyFrame();
+      DEBUG_PRINT("Procedural block\n");
+    }
+
+    /// Determine the egde type to apply to assignments within a procedrual
+    /// block.
+    static ast::EdgeKind determineEdgeKind(ast::ProceduralBlockSymbol const &symbol) {
+        ast::EdgeKind edgeKind = ast::EdgeKind::None;
+        if (symbol.procedureKind == ast::ProceduralBlockKind::AlwaysFF ||
+            symbol.procedureKind == ast::ProceduralBlockKind::Always) {
+            auto tck = symbol.getBody().as<ast::TimedStatement>().timing.kind;
+            if (tck == ast::TimingControlKind::SignalEvent) {
+              edgeKind = symbol.getBody()
+                               .as<ast::TimedStatement>()
+                               .timing.as<ast::SignalEventControl>()
+                               .edge;
+            }
+            else if (tck == ast::TimingControlKind::EventList) {
+                auto& events = symbol.getBody()
+                                   .as<ast::TimedStatement>()
+                                   .timing.as<ast::EventListControl>()
+                                   .events;
+                // We need to decide if this has the potential for combinatorial loops
+                // The most strict test is if for any unique signal on the event list only one edge
+                // (pos or neg) appears e.g. "@(posedge x or negedge x)" is potentially
+                // combinatorial At the moment we'll settle for no signal having "None" edge.
+                for (auto e : events) {
+                    edgeKind = e->as<ast::SignalEventControl>().edge;
+                    if (edgeKind == ast::EdgeKind::None)
+                      break;
+                }
+                // if we got here, edgeKind is not "None" which is all we care about
+            }
+        }
+        return edgeKind;
     }
 
     /// For the specified variable reference, create a dependency to the declaration or
@@ -308,6 +344,7 @@ private:
     Netlist& netlist;
     ast::EvalContext evalCtx;
     SmallVector<NetlistNode*> condVarsStack;
+    ast::EdgeKind edgeKind;
     AssignmentRanges assignmentRanges;
 };
 

@@ -21,7 +21,7 @@ public:
 
     /// Procedural block.
     void handle(const ast::ProceduralBlockSymbol& symbol) {
-        ProceduralBlockVisitor visitor(compilation, netlist);
+        ProceduralBlockVisitor visitor(compilation, netlist, ProceduralBlockVisitor::determineEdgeKind(symbol));
         symbol.visit(visitor);
     }
 
