@@ -219,6 +219,9 @@ public:
         for (auto* leftNode : visitorLHS.getVars()) {
             auto& LHSVarRef = leftNode->as<NetlistVariableReference>();
 
+            // Add edge from LHS variable refrence to variable declaration.
+            connectVarToDecl(netlist, *leftNode, leftNode->symbol);
+
             // For each variable reference occuring on the RHS of the
             // assignment add an edge from variable declaration and add an
             // edge to the LHS reference. This needs to be extended to handle
@@ -251,6 +254,15 @@ private:
             return false;
         }
         return true;
+    }
+
+     /// For the specified variable reference, create a dependency to the declaration or
+     /// last definition.
+    void connectVarToDecl(NetlistVariableReference& varNode,
+                          ast::Symbol const& symbol) {
+        auto* declNode = netlist.lookupVariable(resolveSymbolHierPath(symbol));
+        netlist.addEdge(varNode, *declNode);
+        DEBUG_PRINT("New edge: reference {} -> declaration {}\n", varNode.getName(), declNode->hierarchicalPath);
     }
 
     /// For the specified variable reference, create a dependency from the declaration or
