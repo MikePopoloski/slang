@@ -23,6 +23,7 @@ public:
     void handle(const ast::ProceduralBlockSymbol& symbol) {
         ProceduralBlockVisitor visitor(compilation, netlist, ProceduralBlockVisitor::determineEdgeKind(symbol));
         symbol.visit(visitor);
+        visitor.finish();
     }
 
     /// Continuous assignment statement.

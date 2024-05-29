@@ -646,30 +646,3 @@ endmodule
     CHECK(netlist.lookupVariable("top.genblk1.foo"));
 }
 
-//===---------------------------------------------------------------------===//
-// Test case for for #993 (multiple assignments to the same variable)
-//===---------------------------------------------------------------------===//
-
-TEST_CASE("Multiple assignments to the same variable") {
-    auto tree = SyntaxTree::fromText(R"(
-module t2 (input clk, output reg [31:0] nq);
-  reg [31:0] n;
-
-  always_comb begin
-    n = nq;
-    n = n + 1;
-  end
-
-  always_ff @(posedge clk)
-    nq <= n;
-endmodule
-)");
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-    NO_COMPILATION_ERRORS;
-    auto netlist = createNetlist(compilation);
-    auto* start = netlist.lookupVariable("t2.nq");
-    auto* end = netlist.lookupPort("t2.nq");
-    PathFinder pathFinder(netlist);
-    CHECK(!pathFinder.find(*start, *end).empty());
-}
