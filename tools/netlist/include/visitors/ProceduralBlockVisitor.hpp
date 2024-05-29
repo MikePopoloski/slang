@@ -220,7 +220,7 @@ public:
             auto& LHSVarRef = leftNode->as<NetlistVariableReference>();
 
             // Add edge from LHS variable refrence to variable declaration.
-            connectVarToDecl(netlist, *leftNode, leftNode->symbol);
+            connectVarToDecl(LHSVarRef, leftNode->symbol);
 
             // For each variable reference occuring on the RHS of the
             // assignment add an edge from variable declaration and add an

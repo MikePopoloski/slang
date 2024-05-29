@@ -1,5 +1,8 @@
 #pragma once
 
+#include "visitors/ContinuousAssignVisitor.hpp"
+#include "visitors/GenerateBlockVisitor.hpp"
+
 using namespace slang;
 
 namespace netlist {
@@ -197,7 +200,6 @@ public:
     void handle(const ast::ProceduralBlockSymbol& symbol) {
         ProceduralBlockVisitor visitor(compilation, netlist, ProceduralBlockVisitor::determineEdgeKind(symbol));
         symbol.visit(visitor);
-        visitor.finish();
     }
 
     /// Generate block.

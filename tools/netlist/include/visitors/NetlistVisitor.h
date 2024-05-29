@@ -29,11 +29,7 @@
 #include "Config.h"
 #include "Debug.h"
 #include "Netlist.h"
-#include "visitors/ContinuousAssignVisitor.hpp"
-#include "visitors/GenerateBlockVisitor.hpp"
 #include "visitors/InstanceVisitor.hpp"
-#include "visitors/ProceduralBlockVisitor.hpp"
-#include "visitors/VariableReferenceVisitor.hpp"
 
 using namespace slang;
 
