@@ -671,4 +671,3 @@ endmodule
     auto netlist = createNetlist(compilation);
     CHECK(netlist.lookupVariable("t34.i"));
 }
-
