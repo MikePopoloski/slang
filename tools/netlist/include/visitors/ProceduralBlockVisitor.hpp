@@ -11,8 +11,8 @@
 #include "Netlist.h"
 #include <memory>
 
-#include "slang/ast/symbols/BlockSymbols.h"
 #include "slang/ast/EvalContext.h"
+#include "slang/ast/symbols/BlockSymbols.h"
 #include "slang/util/IntervalMap.h"
 
 using namespace slang;
