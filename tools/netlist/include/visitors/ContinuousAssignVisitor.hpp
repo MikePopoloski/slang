@@ -76,7 +76,6 @@ private:
     Netlist& netlist;
     ast::EvalContext& evalCtx;
     SmallVector<NetlistNode*>& condVars;
-    ast::EdgeKind edgeKind;
 };
 
 }

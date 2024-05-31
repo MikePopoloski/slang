@@ -29,12 +29,12 @@ public:
     /// Determine the egde type to apply to map within a procedrual
     /// block.
     static ast::EdgeKind determineEdgeKind(ast::ProceduralBlockSymbol const& symbol) {
-        ast::EdgeKind edgeKind = ast::EdgeKind::None;
+        ast::EdgeKind result = ast::EdgeKind::None;
         if (symbol.procedureKind == ast::ProceduralBlockKind::AlwaysFF ||
             symbol.procedureKind == ast::ProceduralBlockKind::Always) {
             auto tck = symbol.getBody().as<ast::TimedStatement>().timing.kind;
             if (tck == ast::TimingControlKind::SignalEvent) {
-                edgeKind = symbol.getBody()
+                result = symbol.getBody()
                                .as<ast::TimedStatement>()
                                .timing.as<ast::SignalEventControl>()
                                .edge;
@@ -49,14 +49,14 @@ public:
                 // (pos or neg) appears e.g. "@(posedge x or negedge x)" is potentially
                 // combinatorial At the moment we'll settle for no signal having "None" edge.
                 for (auto e : events) {
-                    edgeKind = e->as<ast::SignalEventControl>().edge;
-                    if (edgeKind == ast::EdgeKind::None)
+                    result = e->as<ast::SignalEventControl>().edge;
+                    if (result == ast::EdgeKind::None)
                         break;
                 }
                 // if we got here, edgeKind is not "None" which is all we care about
             }
         }
-        return edgeKind;
+        return result;
     }
 
     void handle(const ast::VariableSymbol& symbol) { netlist.addVariableDeclaration(symbol); }
