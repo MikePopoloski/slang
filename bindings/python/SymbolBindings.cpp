@@ -38,7 +38,8 @@ void registerSymbols(py::module_& m) {
         .value("StaticInitializer", LookupFlags::StaticInitializer)
         .value("ForceHierarchical", LookupFlags::ForceHierarchical)
         .value("TypeReference", LookupFlags::TypeReference)
-        .value("AlwaysAllowUpward", LookupFlags::AlwaysAllowUpward);
+        .value("AlwaysAllowUpward", LookupFlags::AlwaysAllowUpward)
+        .value("DisallowUnitReferences", LookupFlags::DisallowUnitReferences);
 
     py::enum_<LookupResultFlags>(m, "LookupResultFlags")
         .value("None", LookupResultFlags::None)
@@ -426,7 +427,6 @@ void registerSymbols(py::module_& m) {
 
     py::class_<InstanceBodySymbol, Symbol, Scope>(m, "InstanceBodySymbol")
         .def_readonly("parentInstance", &InstanceBodySymbol::parentInstance)
-        .def_readonly("isUninstantiated", &InstanceBodySymbol::isUninstantiated)
         .def_property_readonly("parameters", &InstanceBodySymbol::getParameters)
         .def_property_readonly("portList", &InstanceBodySymbol::getPortList)
         .def_property_readonly("definition", &InstanceBodySymbol::getDefinition)
@@ -469,7 +469,6 @@ void registerSymbols(py::module_& m) {
 
     py::class_<CheckerInstanceBodySymbol, Symbol, Scope>(m, "CheckerInstanceBodySymbol")
         .def_readonly("parentInstance", &CheckerInstanceBodySymbol::parentInstance)
-        .def_readonly("isUninstantiated", &CheckerInstanceBodySymbol::isUninstantiated)
         .def_property_readonly("checker",
                                [](const CheckerInstanceBodySymbol& self) { return &self.checker; });
 

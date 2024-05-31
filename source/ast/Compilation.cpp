@@ -1505,7 +1505,7 @@ const Diagnostics& Compilation::getSemanticDiagnostics() {
 
                     // Add an expansion note to the diagnostic since
                     // we won't have added it yet for the checker.
-                    if (!checkerBody.isUninstantiated) {
+                    if (!checkerBody.flags.has(InstanceFlags::Uninstantiated)) {
                         diag.addNote(diag::NoteWhileExpanding, checkerBody.parentInstance->location)
                             << "checker"sv << checkerBody.checker.name;
                     }

@@ -1022,6 +1022,9 @@ Expression& Expression::bindName(Compilation& comp, const NameSyntax& syntax,
     if (context.flags.has(ASTFlags::StaticInitializer))
         flags |= LookupFlags::StaticInitializer;
 
+    if (context.flags.has(ASTFlags::BindInstantiation))
+        flags |= LookupFlags::DisallowWildcardImport | LookupFlags::DisallowUnitReferences;
+
     if (context.flags.has(ASTFlags::TypeOperator) &&
         comp.languageVersion() >= LanguageVersion::v1800_2023) {
         // v1800-2023: Type operator expressions are allowed to reference
@@ -1498,9 +1501,13 @@ void Expression::findPotentiallyImplicitNets(
             if (nameSyntax.kind != SyntaxKind::IdentifierName)
                 return;
 
+            bitmask<LookupFlags> flags = LookupFlags::NoUndeclaredError;
+            if (context.flags.has(ASTFlags::BindInstantiation))
+                flags |= LookupFlags::DisallowWildcardImport | LookupFlags::DisallowUnitReferences;
+
             LookupResult result;
             ASTContext ctx(*context.scope, LookupLocation::max);
-            Lookup::name(nameSyntax, ctx, LookupFlags::NoUndeclaredError, result);
+            Lookup::name(nameSyntax, ctx, flags, result);
 
             if (!result.found && !result.hasError())
                 results.push_back(&nameSyntax.as<IdentifierNameSyntax>());

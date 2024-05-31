@@ -140,9 +140,9 @@ bool Scope::isUninstantiated() const {
     do {
         auto& sym = currScope->asSymbol();
         if (sym.kind == SymbolKind::InstanceBody)
-            return sym.as<InstanceBodySymbol>().isUninstantiated;
+            return sym.as<InstanceBodySymbol>().flags.has(InstanceFlags::Uninstantiated);
         if (sym.kind == SymbolKind::CheckerInstanceBody)
-            return sym.as<CheckerInstanceBodySymbol>().isUninstantiated;
+            return sym.as<CheckerInstanceBodySymbol>().flags.has(InstanceFlags::Uninstantiated);
         if (sym.kind == SymbolKind::GenerateBlock)
             return sym.as<GenerateBlockSymbol>().isUninstantiated;
         currScope = sym.getParentScope();
@@ -944,7 +944,7 @@ void Scope::elaborate() const {
                 SmallVector<const Symbol*> implicitNets;
                 CheckerInstanceSymbol::fromSyntax(member.node.as<CheckerInstantiationSyntax>(),
                                                   context, instances, implicitNets,
-                                                  /* isFromBind */ false);
+                                                  InstanceFlags::None);
                 insertMembersAndNets(instances, implicitNets, symbol);
                 break;
             }
@@ -1158,8 +1158,7 @@ void Scope::elaborate() const {
             if (info.bindSyntax->instantiation->kind == SyntaxKind::CheckerInstantiation) {
                 CheckerInstanceSymbol::fromSyntax(
                     info.bindSyntax->instantiation->as<CheckerInstantiationSyntax>(), context,
-                    instances, implicitNets,
-                    /* isFromBind */ true);
+                    instances, implicitNets, InstanceFlags::FromBind);
             }
             else {
                 InstanceSymbol::fromSyntax(

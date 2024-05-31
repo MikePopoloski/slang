@@ -79,10 +79,14 @@ enum class SLANG_EXPORT LookupFlags {
     /// Always allow upward name lookup to occur, even with simple identifiers.
     AlwaysAllowUpward = 1 << 13,
 
+    /// Disallow resolving a name to a member declared or imported into
+    /// the $unit compilation unit scope.
+    DisallowUnitReferences = 1 << 14,
+
     /// Treat this lookup as hierarchical even if it's a simple name.
     ForceHierarchical = AllowDeclaredAfter | NoUndeclaredErrorIfUninstantiated
 };
-SLANG_BITMASK(LookupFlags, AlwaysAllowUpward)
+SLANG_BITMASK(LookupFlags, DisallowUnitReferences)
 
 /// Flags that indicate additional details about the result of a lookup operation.
 enum class SLANG_EXPORT LookupResultFlags : uint8_t {

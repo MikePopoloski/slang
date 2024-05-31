@@ -1030,7 +1030,13 @@ private:
         // - An implicit connection between nets of two dissimilar net types shall issue an
         //   error when it is a warning in an explicit named port connection
 
-        LookupFlags flags = isWildcard ? LookupFlags::DisallowWildcardImport : LookupFlags::None;
+        bitmask<LookupFlags> flags;
+        if (isWildcard)
+            flags |= LookupFlags::DisallowWildcardImport;
+
+        if (instance.body.flags.has(InstanceFlags::FromBind))
+            flags |= LookupFlags::DisallowWildcardImport | LookupFlags::DisallowUnitReferences;
+
         auto symbol = Lookup::unqualified(scope, port.name, flags);
         if (!symbol) {
             // If this is a wildcard connection, we're allowed to use the port's default value,
@@ -1706,11 +1712,15 @@ const Expression* PortConnection::getExpression() const {
         bitmask<ASTFlags> flags = ASTFlags::NonProcedural;
         if (isNetPort)
             flags |= ASTFlags::AllowInterconnect;
+
         if (direction == ArgumentDirection::Out || direction == ArgumentDirection::InOut) {
             flags |= ASTFlags::LValue;
             if (direction == ArgumentDirection::InOut)
                 flags |= ASTFlags::LAndRValue;
         }
+
+        if (parentInstance.body.flags.has(InstanceFlags::FromBind))
+            flags |= ASTFlags::BindInstantiation;
 
         ASTContext context(*scope, ll, flags);
         context.setInstance(parentInstance);

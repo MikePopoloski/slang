@@ -120,7 +120,8 @@ void registerAST(py::module_& m) {
         .value("ConfigParam", ASTFlags::ConfigParam)
         .value("TypeOperator", ASTFlags::TypeOperator)
         .value("ForkJoinAnyNone", ASTFlags::ForkJoinAnyNone)
-        .value("DisallowUDNT", ASTFlags::DisallowUDNT);
+        .value("DisallowUDNT", ASTFlags::DisallowUDNT)
+        .value("BindInstantiation", ASTFlags::BindInstantiation);
 
     py::class_<EvaluatedDimension>(m, "EvaluatedDimension")
         .def_readonly("kind", &EvaluatedDimension::kind)
