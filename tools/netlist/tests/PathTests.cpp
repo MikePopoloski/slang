@@ -645,3 +645,32 @@ endmodule
     auto netlist = createNetlist(compilation);
     CHECK(netlist.lookupVariable("top.genblk1.foo"));
 }
+
+//===---------------------------------------------------------------------===//
+// Test case for for #1007 (variable declarations in procedural blocks).
+//===---------------------------------------------------------------------===//
+
+TEST_CASE("Variable declarations in procedural blocks") {
+    auto tree = SyntaxTree::fromText(R"(
+module t34;
+  reg  [3:0] x;
+  reg   [15:0] v;
+
+  always @(v)
+  begin
+    integer i;
+    x = '0;
+    for (i = 0; i <= 15; i = i + 1)
+      if (v[i] == 1'b0)
+        x = i[3:0];
+  end
+endmodule
+)");
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+    auto netlist = createNetlist(compilation);
+    CHECK(netlist.lookupVariable("t34.i"));
+}
+
+

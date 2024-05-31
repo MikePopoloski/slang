@@ -33,15 +33,6 @@ using namespace slang;
 
 namespace netlist {
 
-static std::string getSymbolHierPath(const ast::Symbol& symbol) {
-
-    // Resolve the hierarchical path of the symbol.
-    std::string buffer;
-    symbol.getHierarchicalPath(buffer);
-
-    return buffer;
-}
-
 static std::string resolveSymbolHierPath(const ast::Symbol& symbol) {
 
     // Resolve the hierarchical path of the symbol.
@@ -253,6 +244,10 @@ public:
     void handle(const ast::VariableSymbol& symbol) { netlist.addVariableDeclaration(symbol); }
 
     void handle(const ast::NetSymbol& symbol) { netlist.addVariableDeclaration(symbol); }
+
+    void handle(const ast::VariableDeclStatement &decl) {
+      netlist.addVariableDeclaration(decl.symbol);
+    }
 
     void handle(const ast::ForLoopStatement& loop) {
 
