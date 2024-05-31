@@ -45,6 +45,38 @@ enum class NodeKind {
 
 enum class VariableSelectorKind { ElementSelect, RangeSelect, MemberAccess };
 
+static std::string getSymbolHierPath(const ast::Symbol& symbol) {
+
+    // Resolve the hierarchical path of the symbol.
+    std::string buffer;
+    symbol.getHierarchicalPath(buffer);
+
+    return buffer;
+}
+
+static std::string resolveSymbolHierPath(const ast::Symbol& symbol) {
+
+    // Resolve the hierarchical path of the symbol.
+    std::string buffer;
+    symbol.getHierarchicalPath(buffer);
+
+    // Is the symbol is a modport, use the modport name to adjust the
+    // hierachical path to match the corresponding variable declaration in the
+    // interface.
+    if (symbol.kind == ast::SymbolKind::ModportPort) {
+        auto const& modportSymbol = symbol.getParentScope()->asSymbol();
+        auto& modportName = modportSymbol.name;
+        auto oldSuffix = fmt::format(".{}.{}", modportSymbol.name, symbol.name);
+        auto newSuffix = fmt::format(".{}", symbol.name);
+        DEBUG_PRINT("hierPath={}, oldSuffix={}, newSuffix={}\n", buffer, oldSuffix, newSuffix);
+        SLANG_ASSERT(buffer.ends_with(oldSuffix));
+        buffer.replace(buffer.end() - (ptrdiff_t)oldSuffix.length(), buffer.end(),
+                       newSuffix.begin(), newSuffix.end());
+    }
+
+    return buffer;
+}
+
 /// Base class representing various selectors that can be applied to references
 /// to structured variables (eg vectors, structs, unions).
 struct VariableSelectorBase {
@@ -191,9 +223,7 @@ public:
 class NetlistNode : public Node<NetlistNode, NetlistEdge> {
 public:
     NetlistNode(NodeKind kind, const ast::Symbol& symbol) :
-        ID(++nextID), kind(kind), symbol(symbol) {
-        edgeKind = ast::EdgeKind::None;
-    };
+        ID(++nextID), kind(kind), symbol(symbol), edgeKind(ast::EdgeKind::None) {};
     ~NetlistNode() override = default;
 
     template<typename T>
@@ -340,7 +370,7 @@ public:
         SLANG_ASSERT(lookupPort(nodePtr->hierarchicalPath) == nullptr &&
                      "Port declaration already exists");
         nodes.push_back(std::move(nodePtr));
-        DEBUG_PRINT("Add port decl {}\n", node.hierarchicalPath);
+        DEBUG_PRINT("New node: port declaration {}\n", node.hierarchicalPath);
         return node;
     }
 
@@ -352,7 +382,7 @@ public:
         SLANG_ASSERT(lookupVariable(nodePtr->hierarchicalPath) == nullptr &&
                      "Variable declaration already exists");
         nodes.push_back(std::move(nodePtr));
-        DEBUG_PRINT("Add var decl {}\n", node.hierarchicalPath);
+        DEBUG_PRINT("New node: variable declaration {}\n", node.hierarchicalPath);
         return node;
     }
 
@@ -362,7 +392,7 @@ public:
         auto& node = nodePtr->as<NetlistVariableAlias>();
         symbol.getHierarchicalPath(node.hierarchicalPath);
         nodes.push_back(std::move(nodePtr));
-        DEBUG_PRINT("Add var alias {}\n", node.hierarchicalPath);
+        DEBUG_PRINT("New node: variable alias {}\n", node.hierarchicalPath);
         return node;
     }
 
@@ -372,7 +402,7 @@ public:
         auto nodePtr = std::make_unique<NetlistVariableReference>(symbol, expr, leftOperand);
         auto& node = nodePtr->as<NetlistVariableReference>();
         nodes.push_back(std::move(nodePtr));
-        DEBUG_PRINT("Add var ref ", symbol.name);
+        DEBUG_PRINT("New node: variable reference {}\n", symbol.name);
         return node;
     }
 
