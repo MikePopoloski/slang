@@ -376,14 +376,19 @@ public:
 
     /// Add a variable declaration node to the netlist.
     NetlistVariableDeclaration& addVariableDeclaration(const ast::Symbol& symbol) {
-        auto nodePtr = std::make_unique<NetlistVariableDeclaration>(symbol);
-        auto& node = nodePtr->as<NetlistVariableDeclaration>();
-        symbol.getHierarchicalPath(node.hierarchicalPath);
-        SLANG_ASSERT(lookupVariable(nodePtr->hierarchicalPath) == nullptr &&
-                     "Variable declaration already exists");
-        nodes.push_back(std::move(nodePtr));
-        DEBUG_PRINT("New node: variable declaration {}\n", node.hierarchicalPath);
-        return node;
+        std::string hierPath = getSymbolHierPath(symbol);
+        if (auto* result = lookupVariable(hierPath)) {
+            DEBUG_PRINT("Variable declaration for {} already exists", hierPath);
+            return *result;
+        }
+        else {
+            auto nodePtr = std::make_unique<NetlistVariableDeclaration>(symbol);
+            nodePtr->hierarchicalPath = hierPath;
+            auto& node = nodePtr->as<NetlistVariableDeclaration>();
+            nodes.push_back(std::move(nodePtr));
+            DEBUG_PRINT("Add var decl {}\n", node.hierarchicalPath);
+            return node;
+        }
     }
 
     /// Add a variable declaration alias node to the netlist.

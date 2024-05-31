@@ -71,6 +71,10 @@ public:
 
     void handle(const ast::NetSymbol& symbol) { netlist.addVariableDeclaration(symbol); }
 
+    void handle(const ast::VariableDeclStatement& decl) {
+        netlist.addVariableDeclaration(decl.symbol);
+    }
+
     void handle(const ast::ForLoopStatement& loop) {
 
         // Conditions this loop cannot be unrolled.
