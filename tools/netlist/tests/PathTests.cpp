@@ -645,4 +645,3 @@ endmodule
     auto netlist = createNetlist(compilation);
     CHECK(netlist.lookupVariable("top.genblk1.foo"));
 }
-

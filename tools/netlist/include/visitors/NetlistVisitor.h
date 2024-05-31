@@ -7,8 +7,12 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include "Config.h"
+#include "Debug.h"
+#include "Netlist.h"
 #include "fmt/color.h"
 #include "fmt/format.h"
+#include "visitors/InstanceVisitor.hpp"
 #include <algorithm>
 #include <iostream>
 
@@ -24,11 +28,6 @@
 #include "slang/ast/symbols/ValueSymbol.h"
 #include "slang/diagnostics/TextDiagnosticClient.h"
 #include "slang/util/Util.h"
-
-#include "Config.h"
-#include "Debug.h"
-#include "Netlist.h"
-#include "visitors/InstanceVisitor.hpp"
 
 using namespace slang;
 

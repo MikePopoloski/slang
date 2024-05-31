@@ -3,8 +3,8 @@
 
 #include "Netlist.h"
 #include "PathFinder.h"
-#include "visitors/NetlistVisitor.h"
 #include "Test.h"
+#include "visitors/NetlistVisitor.h"
 #include <string>
 
 using namespace netlist;

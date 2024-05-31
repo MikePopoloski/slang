@@ -27,8 +27,7 @@ public:
 
     explicit ProceduralBlockVisitor(ast::Compilation& compilation, Netlist& netlist,
                                     ast::EdgeKind edgeKind) :
-        netlist(netlist),
-        evalCtx(ast::ASTContext(compilation.getRoot(), ast::LookupLocation::max)),
+        netlist(netlist), evalCtx(ast::ASTContext(compilation.getRoot(), ast::LookupLocation::max)),
         edgeKind(edgeKind) {
         evalCtx.pushEmptyFrame();
         DEBUG_PRINT("Procedural block\n");
@@ -43,9 +42,9 @@ public:
             auto tck = symbol.getBody().as<ast::TimedStatement>().timing.kind;
             if (tck == ast::TimingControlKind::SignalEvent) {
                 result = symbol.getBody()
-                               .as<ast::TimedStatement>()
-                               .timing.as<ast::SignalEventControl>()
-                               .edge;
+                             .as<ast::TimedStatement>()
+                             .timing.as<ast::SignalEventControl>()
+                             .edge;
             }
             else if (tck == ast::TimingControlKind::EventList) {
                 auto& events = symbol.getBody()
@@ -264,13 +263,13 @@ private:
         return true;
     }
 
-     /// For the specified variable reference, create a dependency to the declaration or
-     /// last definition.
-    void connectVarToDecl(NetlistVariableReference& varNode,
-                          ast::Symbol const& symbol) {
+    /// For the specified variable reference, create a dependency to the declaration or
+    /// last definition.
+    void connectVarToDecl(NetlistVariableReference& varNode, ast::Symbol const& symbol) {
         auto* declNode = netlist.lookupVariable(resolveSymbolHierPath(symbol));
         netlist.addEdge(varNode, *declNode);
-        DEBUG_PRINT("New edge: reference {} -> declaration {}\n", varNode.getName(), declNode->hierarchicalPath);
+        DEBUG_PRINT("New edge: reference {} -> declaration {}\n", varNode.getName(),
+                    declNode->hierarchicalPath);
     }
 
     /// For the specified variable reference, create a dependency from the declaration or

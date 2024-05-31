@@ -30,8 +30,7 @@ private:
                     declNode.getName());
     }
 
-    void connectVarToDecl(NetlistNode& varNode,
-                                 const ast::Symbol& declaration) {
+    void connectVarToDecl(NetlistNode& varNode, const ast::Symbol& declaration) {
         auto* declNode = netlist.lookupVariable(resolveSymbolHierPath(declaration));
         netlist.addEdge(varNode, *declNode);
         DEBUG_PRINT("New edge: reference {} to declaration {}\n", varNode.getName(),
@@ -91,16 +90,19 @@ private:
             switch (port.symbol.as<ast::PortSymbol>().direction) {
                 case ast::ArgumentDirection::In:
                     netlist.addEdge(port, *variableNode);
-                    DEBUG_PRINT("New edge: input port {} -> variable {}\n", port.symbol.name, pathBuffer);
+                    DEBUG_PRINT("New edge: input port {} -> variable {}\n", port.symbol.name,
+                                pathBuffer);
                     break;
                 case ast::ArgumentDirection::Out:
                     netlist.addEdge(*variableNode, port);
-                    DEBUG_PRINT("New edge: variable {} -> output port {}\n", pathBuffer, port.symbol.name);
+                    DEBUG_PRINT("New edge: variable {} -> output port {}\n", pathBuffer,
+                                port.symbol.name);
                     break;
                 case ast::ArgumentDirection::InOut:
                     netlist.addEdge(port, *variableNode);
                     netlist.addEdge(*variableNode, port);
-                    DEBUG_PRINT("New edges: variable {} <-> inout port {}\n", pathBuffer, port.symbol.name);
+                    DEBUG_PRINT("New edges: variable {} <-> inout port {}\n", pathBuffer,
+                                port.symbol.name);
                     break;
                 case ast::ArgumentDirection::Ref:
                     break;
@@ -205,7 +207,8 @@ public:
 
     /// Procedural block.
     void handle(const ast::ProceduralBlockSymbol& symbol) {
-        ProceduralBlockVisitor visitor(compilation, netlist, ProceduralBlockVisitor::determineEdgeKind(symbol));
+        ProceduralBlockVisitor visitor(compilation, netlist,
+                                       ProceduralBlockVisitor::determineEdgeKind(symbol));
         symbol.visit(visitor);
     }
 
@@ -230,4 +233,4 @@ private:
     Netlist& netlist;
 };
 
-}
+} // namespace netlist

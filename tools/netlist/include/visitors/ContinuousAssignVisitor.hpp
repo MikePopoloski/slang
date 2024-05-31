@@ -19,7 +19,7 @@ namespace netlist {
 class ContinuousAssignVisitor : public ast::ASTVisitor<ContinuousAssignVisitor, false, true> {
 public:
     explicit ContinuousAssignVisitor(Netlist& netlist, ast::EvalContext& evalCtx,
-                               SmallVector<NetlistNode*>& condVars) :
+                                     SmallVector<NetlistNode*>& condVars) :
         netlist(netlist), evalCtx(evalCtx), condVars(condVars) {}
 
     void connectDeclToVar(NetlistNode& declNode, const ast::Symbol& variable) {
@@ -29,17 +29,17 @@ public:
                     declNode.getName());
     }
 
-    void connectVarToDecl(NetlistNode& varNode,
-                                 const ast::Symbol& declaration) {
+    void connectVarToDecl(NetlistNode& varNode, const ast::Symbol& declaration) {
         auto* declNode = netlist.lookupVariable(resolveSymbolHierPath(declaration));
         netlist.addEdge(varNode, *declNode);
-        DEBUG_PRINT("New edge: reference {} -> declaration {}\n", varNode.getName(), declNode->hierarchicalPath);
+        DEBUG_PRINT("New edge: reference {} -> declaration {}\n", varNode.getName(),
+                    declNode->hierarchicalPath);
     }
 
-    void connectVarToVar(NetlistNode& sourceVarNode,
-                                NetlistNode& targetVarNode) {
+    void connectVarToVar(NetlistNode& sourceVarNode, NetlistNode& targetVarNode) {
         netlist.addEdge(sourceVarNode, targetVarNode, ast::EdgeKind::None);
-        DEBUG_PRINT("New edge: reference {} -> reference {}\n", sourceVarNode.getName(), targetVarNode.getName());
+        DEBUG_PRINT("New edge: reference {} -> reference {}\n", sourceVarNode.getName(),
+                    targetVarNode.getName());
     }
 
     void handle(const ast::AssignmentExpression& expr) {
@@ -57,7 +57,7 @@ public:
         for (auto* leftNode : visitorLHS.getVars()) {
 
             /// Create a dependency from the LSH variable back to the
-            //declaration.
+            // declaration.
             connectVarToDecl(*leftNode, leftNode->symbol);
 
             // For each variable reference occuring on the RHS of the
@@ -88,4 +88,4 @@ private:
     SmallVector<NetlistNode*>& condVars;
 };
 
-}
+} // namespace netlist
