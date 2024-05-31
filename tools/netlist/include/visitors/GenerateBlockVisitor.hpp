@@ -1,3 +1,10 @@
+//------------------------------------------------------------------------------
+//! @file GenerateBlockVisitor.h
+//! @brief Visit generate blocks as part of the construction of a netlist graph.
+//
+// SPDX-FileCopyrightText: Michael Popoloski
+// SPDX-License-Identifier: MIT
+//------------------------------------------------------------------------------
 #pragma once
 
 #include "visitors/ProceduralBlockVisitor.hpp"
@@ -6,8 +13,9 @@ using namespace slang;
 
 namespace netlist {
 
-/// Visit generate blocks where new variable and net declarations can be
-/// introduced.
+/// Visit generate blocks. When slang elaborates the design, generate loops are unrolled
+/// and conditionals evaluated. Branches in a condition that are not taken are
+/// marked as uninstantiated, and are therefore not visited.
 class GenerateBlockVisitor : public ast::ASTVisitor<GenerateBlockVisitor, true, false> {
 public:
     explicit GenerateBlockVisitor(ast::Compilation& compilation, Netlist& netlist) :

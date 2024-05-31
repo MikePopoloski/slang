@@ -1,3 +1,10 @@
+//------------------------------------------------------------------------------
+//! @file VariableReferenceVisitor.h
+//! @brief Extract variable references from expressions.
+//
+// SPDX-FileCopyrightText: Michael Popoloski
+// SPDX-License-Identifier: MIT
+//------------------------------------------------------------------------------
 #pragma once
 
 using namespace slang;
@@ -5,7 +12,7 @@ using namespace slang;
 namespace netlist {
 
 /// An AST visitor to identify variable references with selectors in
-/// expressions, adding them to a visit list during the traversal.
+/// expressions, adding them to a visit list supplied by the caller.
 class VariableReferenceVisitor : public ast::ASTVisitor<VariableReferenceVisitor, false, true> {
 public:
     explicit VariableReferenceVisitor(Netlist& netlist, ast::EvalContext& evalCtx,

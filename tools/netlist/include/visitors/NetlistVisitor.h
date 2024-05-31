@@ -1,7 +1,6 @@
 //------------------------------------------------------------------------------
 //! @file NetlistVisitor.h
-//! @brief An AST visitor (and sub visitors) to construct a netlist
-//         representation.
+//! @brief An AST visitor to build a netlist graph.
 //
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT

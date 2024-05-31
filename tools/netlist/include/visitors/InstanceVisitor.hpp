@@ -1,3 +1,10 @@
+//------------------------------------------------------------------------------
+//! @file InstanceVisitor.h
+//! @brief Visit instances as part of the construction of a netlist graph.
+//
+// SPDX-FileCopyrightText: Michael Popoloski
+// SPDX-License-Identifier: MIT
+//------------------------------------------------------------------------------
 #pragma once
 
 #include "visitors/ContinuousAssignVisitor.hpp"

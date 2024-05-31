@@ -1,3 +1,10 @@
+//------------------------------------------------------------------------------
+//! @file ProceduralBlockVisitor.h
+//! @brief Visit procedural blocks as part of the construction of a netlist graph.
+//
+// SPDX-FileCopyrightText: Michael Popoloski
+// SPDX-License-Identifier: MIT
+//------------------------------------------------------------------------------
 #pragma once
 
 #include "Debug.h"
@@ -11,8 +18,9 @@ using namespace slang;
 
 namespace netlist {
 
-/// Visit proceural blocks. This visitor performs loop unrolling and handles
-/// multiple map to the same variable.
+/// Visit a proceural block. This visitor performs unrolling of loops and
+/// evaluation of conditionals where the controlloing conditions can be
+/// determined statically.
 class ProceduralBlockVisitor : public ast::ASTVisitor<ProceduralBlockVisitor, true, false> {
 public:
     bool anyErrors = false;
@@ -274,10 +282,12 @@ private:
                     varNode.getName());
     }
 
+    /// For the specified varaible references, create a dependency between
+    /// them. This represents an assignment.
     void connectVarToVar(NetlistNode& sourceVarNode, NetlistNode& targetVarNode) {
-        netlist.addEdge(sourceVarNode, targetVarNode);
-        DEBUG_PRINT("New edge: reference {} -> reference {}\n", sourceVarNode.getName(),
-                    targetVarNode.getName());
+        netlist.addEdge(sourceVarNode, targetVarNode, edgeKind);
+        DEBUG_PRINT("New edge: reference {} -> reference {} by edge {}\n", sourceVarNode.getName(),
+                    targetVarNode.getName(), toString(edgeKind));
     }
 
     Netlist& netlist;

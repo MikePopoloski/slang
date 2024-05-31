@@ -1,3 +1,11 @@
+//------------------------------------------------------------------------------
+//! @file ContinuousAssignVisitor.h
+//! @brief Visit continuous assignments as part of the construction of a netlist
+//         graph.
+//
+// SPDX-FileCopyrightText: Michael Popoloski
+// SPDX-License-Identifier: MIT
+//------------------------------------------------------------------------------
 #pragma once
 
 #include "visitors/VariableReferenceVisitor.hpp"
@@ -7,7 +15,7 @@ using namespace slang;
 namespace netlist {
 
 /// An AST visitor to create dependencies between occurrances of variables
-/// appearing on the left and right hand sides of assignment statements.
+/// appearing on the left and right hand sides of continuous assignment statements.
 class ContinuousAssignVisitor : public ast::ASTVisitor<ContinuousAssignVisitor, false, true> {
 public:
     explicit ContinuousAssignVisitor(Netlist& netlist, ast::EvalContext& evalCtx,
@@ -48,6 +56,8 @@ public:
         // add an edge to variable declaration.
         for (auto* leftNode : visitorLHS.getVars()) {
 
+            /// Create a dependency from the LSH variable back to the
+            //declaration.
             connectVarToDecl(*leftNode, leftNode->symbol);
 
             // For each variable reference occuring on the RHS of the
