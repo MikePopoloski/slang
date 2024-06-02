@@ -13,7 +13,6 @@
 #include <filesystem>
 #include <unordered_set>
 
-#include "slang/ast/Compilation.h"
 #include "slang/diagnostics/TextDiagnosticClient.h"
 #include "slang/driver/Driver.h"
 #include "slang/util/VersionInfo.h"
@@ -51,12 +50,27 @@ int main(int argc, char** argv) {
     std::vector<std::string> skippedPaths;
     driver.cmdLine.add("--skip-path", skippedPaths, "Paths to be skipped by slang-tidy");
 
+    std::optional<bool> quietArg;
+    driver.cmdLine.add("-q,--quiet", quietArg,
+                       "slang-tidy will only print errors. Options that make slang-tidy print "
+                       "information will not be affected by this.");
+    std::optional<bool> superQuietArg;
+    driver.cmdLine.add("--super-quiet", superQuietArg,
+                       "slang-tidy will not print anything. Options that make slang-tidy print "
+                       "information will not be affected by this.");
+
+    std::optional<std::string> infoCode;
+    driver.cmdLine.add("--code", infoCode, "print information about the error or warning.");
+
     if (!driver.parseCommandLine(argc, argv))
         return 1;
 
+    bool superQuiet = superQuietArg.value_or(false);
+    // slang-tidy on superQuiet mode, also implies being in quiet mode
+    bool quiet = quietArg.value_or(false) || superQuiet;
+
     if (showHelp) {
-        slang::OS::print(
-            fmt::format("{}", driver.cmdLine.getHelpText("slang SystemVerilog linter")));
+        OS::print(fmt::format("{}", driver.cmdLine.getHelpText("slang SystemVerilog linter")));
         return 0;
     }
 
@@ -67,28 +81,40 @@ int main(int argc, char** argv) {
         return 0;
     }
 
-    // Create the config class and populate it with the config file if provided
-    TidyConfig tidyConfig;
-    if (tidyConfigFile) {
-        if (!exists(std::filesystem::path(tidyConfigFile.value()))) {
-            slang::OS::printE(fmt::format("the path provided for the config file does not exist {}",
-                                          tidyConfigFile.value()));
-            tidyConfig = TidyConfigParser(tidyConfigFile.value()).getConfig();
-        }
-        else {
-            tidyConfig =
-                TidyConfigParser(std::filesystem::path(tidyConfigFile.value())).getConfig();
-        }
-    }
-    else if (auto path = project_slang_tidy_config()) {
-        tidyConfig = TidyConfigParser(path.value()).getConfig();
-    }
+    if (infoCode) {
+        // Create a sourceManage placeholder
+        auto sm = SourceManager();
+        Registry::setSourceManager(&sm);
 
-    // Add skipped files provided by the cmd args
-    tidyConfig.addSkipFile(skippedFiles);
+        // Get the ID and kind from the check code string
+        auto hypenPos = infoCode->find('-');
+        if (hypenPos == std::string::npos) {
+            OS::printE("Check code has not the correct format. Format should be ABCD-<id>\n");
+            return 1;
+        }
+        auto kindStr = infoCode->substr(0, hypenPos);
 
-    // Add skipped paths provided by the cmd args
-    tidyConfig.addSkipPath(skippedPaths);
+        // Parse the ID and kind
+        auto kind = tidyKindFromStr(kindStr);
+        auto id = stoull(infoCode->substr(hypenPos + 1));
+
+        if (!kind) {
+            OS::printE(fmt::format("Check kind {} does not exist\n", kindStr));
+            return 1;
+        }
+
+        for (const auto& checkName : Registry::getRegisteredChecks()) {
+            const auto check = Registry::create(checkName);
+            if (check->diagCode().getCode() == id && check->getKind() == kind) {
+                OS::print(fmt::format(fmt::emphasis::bold, "[{}]\n", check->name()));
+                OS::print(fmt::format("{}", check->description()));
+                return 0;
+            }
+        }
+
+        OS::printE(fmt::format("Check code {} does not exist\n", *infoCode));
+        return 1;
+    }
 
     // Print (short)descriptions of the checks
     if (printDescriptions || printShortDescriptions) {
@@ -112,6 +138,31 @@ int main(int argc, char** argv) {
         return 0;
     }
 
+    // Create the config class and populate it with the config file if provided
+    TidyConfig tidyConfig;
+    if (tidyConfigFile) {
+        if (!exists(std::filesystem::path(tidyConfigFile.value()))) {
+            if (!superQuiet)
+                OS::printE(fmt::format("the path provided for the config file does not exist {}",
+                                       tidyConfigFile.value()));
+            // Exit with error if the config file cannot be found
+            return 1;
+        }
+        else {
+            tidyConfig =
+                TidyConfigParser(std::filesystem::path(tidyConfigFile.value())).getConfig();
+        }
+    }
+    else if (auto path = project_slang_tidy_config()) {
+        tidyConfig = TidyConfigParser(path.value()).getConfig();
+    }
+
+    // Add skipped files provided by the cmd args
+    tidyConfig.addSkipFile(skippedFiles);
+
+    // Add skipped paths provided by the cmd args
+    tidyConfig.addSkipPath(skippedPaths);
+
     if (!driver.processOptions())
         return 1;
 
@@ -124,13 +175,13 @@ int main(int argc, char** argv) {
     }
     SLANG_CATCH(const std::exception& e) {
 #if __cpp_exceptions
-        slang::OS::printE(fmt::format("internal compiler error: {}\n", e.what()));
+        OS::printE(fmt::format("internal compiler error: {}\n", e.what()));
 #endif
         return 1;
     }
 
     if (!compilationOk) {
-        slang::OS::print("slang-tidy: errors found during compilation\n");
+        OS::printE("slang-tidy: errors found during compilation\n");
         return 1;
     }
 
@@ -144,28 +195,51 @@ int main(int argc, char** argv) {
     // Check all enabled checks
     for (const auto& checkName : Registry::getEnabledChecks()) {
         const auto check = Registry::create(checkName);
-        OS::print(fmt::format("[{}]", check->name()));
 
-        driver.diagEngine.setMessage(check->diagCode(), check->diagString());
+        if (!quiet)
+            OS::print(fmt::format("[{}]", check->name()));
+
+        driver.diagEngine.setMessage(check->diagCode(), check->diagMessage());
         driver.diagEngine.setSeverity(check->diagCode(), check->diagSeverity());
 
         auto checkOk = check->check(compilation->getRoot());
         if (!checkOk) {
             retCode = 1;
-            OS::print(fmt::emphasis::bold | fmt::fg(fmt::color::red), " FAIL\n");
-            for (const auto& diag : check->getDiagnostics())
-                driver.diagEngine.issue(diag);
-            OS::print(fmt::format("{}\n", driver.diagClient->getString()));
-            driver.diagClient->clear();
+
+            if (!quiet) {
+                if (check->diagSeverity() == DiagnosticSeverity::Warning) {
+                    OS::print(fmt::emphasis::bold | fmt::fg(driver.diagClient->getSeverityColor(
+                                                        DiagnosticSeverity::Warning)),
+                              " WARN\n");
+                }
+                else if (check->diagSeverity() == DiagnosticSeverity::Error) {
+                    OS::print(fmt::emphasis::bold | fmt::fg(driver.diagClient->getSeverityColor(
+                                                        DiagnosticSeverity::Error)),
+                              " FAIL\n");
+                }
+                else {
+                    SLANG_UNREACHABLE;
+                }
+            }
+
+            if (!superQuiet) {
+                for (const auto& diag : check->getDiagnostics()) {
+                    driver.diagEngine.issue(diag);
+                }
+                OS::print(fmt::format("{}\n", driver.diagClient->getString()));
+                driver.diagClient->clear();
+            }
         }
         else {
-            OS::print(fmt::emphasis::bold | fmt::fg(fmt::color::green), " PASS\n");
+            if (!quiet)
+                OS::print(fmt::emphasis::bold | fmt::fg(fmt::color::green), " PASS\n");
         }
     }
 
     return retCode;
 }
 
+/// Searches for a .slang-tidy file from the current path until the root '/'
 std::optional<std::filesystem::path> project_slang_tidy_config() {
     std::optional<std::filesystem::path> ret = {};
     auto cwd = std::filesystem::current_path();
