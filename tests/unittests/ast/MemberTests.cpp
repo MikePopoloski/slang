@@ -365,6 +365,7 @@ endmodule
 
     ASTSerializer serializer(compilation, writer);
     serializer.setIncludeAddresses(false);
+    serializer.setIncludeSourceInfo(true);
     serializer.serialize(compilation.getRoot());
 
     std::string result = "\n"s + std::string(writer.view());
@@ -372,36 +373,66 @@ endmodule
 {
   "name": "$root",
   "kind": "Root",
+  "source_file": "",
+  "source_line": 0,
+  "source_column": 0,
   "members": [
     {
       "name": "",
-      "kind": "CompilationUnit"
+      "kind": "CompilationUnit",
+      "source_file": "",
+      "source_line": 0,
+      "source_column": 0
     },
     {
       "name": "test_enum",
       "kind": "Instance",
+      "source_file": "source",
+      "source_line": 2,
+      "source_column": 8,
       "body": {
         "name": "test_enum",
         "kind": "InstanceBody",
+        "source_file": "source",
+        "source_line": 2,
+        "source_column": 8,
         "members": [
           {
             "name": "STATE_0",
-            "kind": "TransparentMember"
+            "kind": "TransparentMember",
+            "source_file": "source",
+            "source_line": 4,
+            "source_column": 9
           },
           {
             "name": "STATE_1",
-            "kind": "TransparentMember"
+            "kind": "TransparentMember",
+            "source_file": "source",
+            "source_line": 5,
+            "source_column": 9
           },
           {
             "name": "STATE",
             "kind": "TypeAlias",
+            "source_file": "source",
+            "source_line": 6,
+            "source_column": 7,
             "target": "enum{STATE_0=1'd0,STATE_1=1'd1}test_enum.e$1"
           },
           {
             "name": "a",
             "kind": "Variable",
+            "source_file": "source",
+            "source_line": 8,
+            "source_column": 11,
             "type": "enum{STATE_0=1'd0,STATE_1=1'd1}test_enum.STATE",
-            "initializer": {
+            "initializer": "source_file_start": "source",
+            "source_file_end": "source",
+            "source_line_start": 8,
+            "source_line_end": 8,
+            "source_column_start": 15,
+            "source_column_end": 22,
+            {
               "kind": "NamedValue",
               "type": "enum{STATE_0=1'd0,STATE_1=1'd1}test_enum.STATE",
               "symbol": "STATE_0",
@@ -412,10 +443,16 @@ endmodule
           {
             "name": "C",
             "kind": "ClassType",
+            "source_file": "source",
+            "source_line": 10,
+            "source_column": 11,
             "members": [
               {
                 "name": "i",
                 "kind": "ClassProperty",
+                "source_file": "source",
+                "source_line": 11,
+                "source_column": 13,
                 "type": "int",
                 "lifetime": "Automatic",
                 "visibility": "Public"
@@ -430,8 +467,17 @@ endmodule
           {
             "name": "c",
             "kind": "Variable",
+            "source_file": "source",
+            "source_line": 14,
+            "source_column": 7,
             "type": "C",
-            "initializer": {
+            "initializer": "source_file_start": "source",
+            "source_file_end": "source",
+            "source_line_start": 14,
+            "source_line_end": 14,
+            "source_column_start": 11,
+            "source_column_end": 14,
+            {
               "kind": "NewClass",
               "type": "C",
               "isSuperClass": false
