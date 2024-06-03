@@ -762,7 +762,8 @@ static const AssertionExpr& bindAssertionBody(const Symbol& symbol, const Syntax
         auto& result = AssertionExpr::bind(*sds.seqExpr, context);
         result.requireSequence(context);
 
-        if (outputLocalVarArgLoc && result.admitsEmpty()) {
+        if (outputLocalVarArgLoc &&
+            result.checkNondegeneracy().has(NondegeneracyStatus::AdmitsEmpty)) {
             auto& diag = context.addDiag(diag::LocalVarOutputEmptyMatch,
                                          sds.seqExpr->sourceRange());
             diag << symbol.name;
@@ -1323,8 +1324,8 @@ std::optional<bitwidth_t> MinTypMaxExpression::getEffectiveWidthImpl() const {
     return selected().getEffectiveWidth();
 }
 
-bool MinTypMaxExpression::getEffectiveSignImpl() const {
-    return selected().getEffectiveSign();
+Expression::EffectiveSign MinTypMaxExpression::getEffectiveSignImpl(bool isForConversion) const {
+    return selected().getEffectiveSign(isForConversion);
 }
 
 void MinTypMaxExpression::serializeTo(ASTSerializer& serializer) const {

@@ -604,8 +604,9 @@ void CoverageBinSymbol::resolve() const {
     auto bindWithExpr = [&](const WithClauseSyntax& withSyntax) {
         // Create the iterator variable and set it up with an AST context so that it
         // can be found by the iteration expression.
-        auto it = comp.emplace<IteratorSymbol>(*context.scope, "item"sv, coverpoint.location, type,
-                                               ""sv);
+        auto arrayType = comp.emplace<DynamicArrayType>(type);
+        auto it = comp.emplace<IteratorSymbol>(*context.scope, "item"sv, coverpoint.location,
+                                               *arrayType, ""sv);
 
         ASTContext iterCtx = context;
         it->nextTemp = std::exchange(iterCtx.firstTempVar, it);
@@ -1182,8 +1183,9 @@ BinsSelectExpr& BinSelectWithFilterExpr::fromSyntax(const BinSelectWithFilterExp
 
     auto& cross = context.scope->asSymbol().getParentScope()->asSymbol().as<CoverCrossSymbol>();
     for (auto target : cross.targets) {
+        auto arrayType = comp.emplace<DynamicArrayType>(target->getType());
         auto it = comp.emplace<IteratorSymbol>(*context.scope, target->name, target->location,
-                                               target->getType(), ""sv);
+                                               *arrayType, ""sv);
         it->nextTemp = std::exchange(iterCtx.firstTempVar, it);
     }
 

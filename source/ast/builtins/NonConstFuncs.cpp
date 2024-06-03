@@ -567,6 +567,16 @@ public:
     }
 };
 
+class TestPlusArgsFunction : public NonConstantFunction {
+public:
+    TestPlusArgsFunction(const Builtins& builtins) :
+        NonConstantFunction("$test$plusargs", builtins.intType, 1,
+                            std::vector<const Type*>{&builtins.stringType}) {}
+
+    // Return type is 'int' but the actual value is always either 0 or 1
+    std::optional<bitwidth_t> getEffectiveWidth() const final { return 1; }
+};
+
 void Builtins::registerNonConstFuncs() {
 #define REGISTER(...) addSystemSubroutine(std::make_shared<NonConstantFunction>(__VA_ARGS__))
 
@@ -588,8 +598,6 @@ void Builtins::registerNonConstFuncs() {
     REGISTER("$rewind", intType, 1, intArg);
     REGISTER("$fflush", voidType, 0, intArg);
     REGISTER("$feof", intType, 1, intArg);
-
-    REGISTER("$test$plusargs", intType, 1, std::vector<const Type*>{&stringType});
 
     REGISTER("$reset_count", intType, 0);
     REGISTER("$reset_value", intType, 0);
@@ -640,6 +648,7 @@ void Builtins::registerNonConstFuncs() {
     addSystemSubroutine(std::make_shared<StacktraceFunc>());
     addSystemSubroutine(std::make_shared<CountDriversFunc>());
     addSystemSubroutine(std::make_shared<GetPatternFunc>());
+    addSystemSubroutine(std::make_shared<TestPlusArgsFunction>(*this));
 
     addSystemMethod(SymbolKind::EventType,
                     std::make_shared<NonConstantFunction>("triggered", bitType, 0,

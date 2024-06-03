@@ -912,6 +912,7 @@ Expression& ConversionExpression::makeImplicit(const ASTContext& context, const 
 
     auto result = comp.emplace<ConversionExpression>(targetType, conversionKind, *op,
                                                      op->sourceRange);
+    result->implicitOpRange = operatorRange;
 
     if ((conversionKind == ConversionKind::Implicit ||
          conversionKind == ConversionKind::Propagated) &&
@@ -925,12 +926,13 @@ Expression& ConversionExpression::makeImplicit(const ASTContext& context, const 
 
 ConstantValue ConversionExpression::evalImpl(EvalContext& context) const {
     return convert(context, *operand().type, *type, sourceRange, operand().eval(context),
-                   conversionKind, &operand());
+                   conversionKind, &operand(), implicitOpRange);
 }
 
 ConstantValue ConversionExpression::convert(EvalContext& context, const Type& from, const Type& to,
                                             SourceRange sourceRange, ConstantValue&& value,
-                                            ConversionKind conversionKind, const Expression* expr) {
+                                            ConversionKind conversionKind, const Expression* expr,
+                                            SourceRange operatorRange) {
     if (!value)
         return nullptr;
 
@@ -946,6 +948,13 @@ ConstantValue ConversionExpression::convert(EvalContext& context, const Type& fr
     const bool checkImplicit = conversionKind == ConversionKind::Implicit &&
                                !context.astCtx.flags.has(ASTFlags::UnevaluatedBranch);
 
+    auto addDiag = [&](DiagCode code) -> Diagnostic& {
+        if (operatorRange.start())
+            return context.addDiag(code, operatorRange) << sourceRange;
+        else
+            return context.addDiag(code, sourceRange);
+    };
+
     if (to.isIntegral()) {
         // [11.8.2] last bullet says: the operand shall be sign-extended only if the propagated type
         // is signed. It is different from [11.8.3] ConstantValue::convertToInt uses.
@@ -960,13 +969,14 @@ ConstantValue ConversionExpression::convert(EvalContext& context, const Type& fr
                 auto& newInt = result.integer();
                 if (!oldInt.hasUnknown() && !newInt.hasUnknown() && oldInt != newInt) {
                     if (oldInt.getBitWidth() != newInt.getBitWidth()) {
-                        context.addDiag(diag::ConstantConversion, sourceRange)
-                            << from << to << oldInt << newInt;
+                        addDiag(diag::ConstantConversion) << from << to << oldInt << newInt;
                     }
                     else {
                         SLANG_ASSERT(oldInt.isSigned() != newInt.isSigned());
-                        if (!expr || expr->getEffectiveSign() != newInt.isSigned()) {
-                            context.addDiag(diag::SignConversion, sourceRange) << from << to;
+                        if (!expr ||
+                            !signMatches(expr->getEffectiveSign(/* isForConversion */ true),
+                                         EffectiveSign::Signed)) {
+                            addDiag(diag::SignConversion) << from << to;
                         }
                     }
                 }
@@ -975,10 +985,8 @@ ConstantValue ConversionExpression::convert(EvalContext& context, const Type& fr
                 const bool differs = value.isReal()
                                          ? value.real() != result.integer().toDouble()
                                          : value.shortReal() != result.integer().toFloat();
-                if (differs) {
-                    context.addDiag(diag::ConstantConversion, sourceRange)
-                        << from << to << value << result;
-                }
+                if (differs)
+                    addDiag(diag::ConstantConversion) << from << to << value << result;
             }
         }
 
@@ -991,10 +999,8 @@ ConstantValue ConversionExpression::convert(EvalContext& context, const Type& fr
             const bool differs = result.isReal()
                                      ? (int64_t)result.real() != value.integer().as<int64_t>()
                                      : (int32_t)result.shortReal() != value.integer().as<int32_t>();
-            if (differs) {
-                context.addDiag(diag::ConstantConversion, sourceRange)
-                    << from << to << value << result;
-            }
+            if (differs)
+                addDiag(diag::ConstantConversion) << from << to << value << result;
         }
         return result;
     }
@@ -1009,8 +1015,7 @@ ConstantValue ConversionExpression::convert(EvalContext& context, const Type& fr
         if (to.hasFixedRange()) {
             size_t size = value.size();
             if (size != to.getFixedRange().width()) {
-                context.addDiag(diag::ConstEvalDynamicToFixedSize, sourceRange)
-                    << from << size << to;
+                addDiag(diag::ConstEvalDynamicToFixedSize) << from << size << to;
                 return nullptr;
             }
         }
@@ -1062,10 +1067,10 @@ std::optional<bitwidth_t> ConversionExpression::getEffectiveWidthImpl() const {
     return type->getBitWidth();
 }
 
-bool ConversionExpression::getEffectiveSignImpl() const {
+Expression::EffectiveSign ConversionExpression::getEffectiveSignImpl(bool isForConversion) const {
     if (isImplicit())
-        return operand().getEffectiveSign();
-    return type->isSigned();
+        return operand().getEffectiveSign(isForConversion);
+    return type->isSigned() ? EffectiveSign::Signed : EffectiveSign::Unsigned;
 }
 
 void ConversionExpression::serializeTo(ASTSerializer& serializer) const {

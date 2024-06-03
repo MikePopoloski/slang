@@ -37,6 +37,26 @@ struct ResolvedConfig;
 struct HierarchyOverrideNode;
 enum class DriveStrength : int;
 
+/// Specifies various flags that describe instance behavior.
+enum class SLANG_EXPORT InstanceFlags : uint8_t {
+    /// No flags specified.
+    None = 0,
+
+    /// The module isn't actually instantiated in the design.
+    /// This might be because it was created with invalid parameters simply to
+    /// check name lookup rules but it's never actually referenced elsewhere
+    /// in the user's code.
+    Uninstantiated = 1 << 0,
+
+    /// The instance was created from a bind directive instead of a typical instantiation.
+    FromBind = 1 << 1,
+
+    /// The instance resides in a parent instance that itself is from a bind directive.
+    /// This applies recursively for the entire bound hierarchy.
+    ParentFromBind = 1 << 2
+};
+SLANG_BITMASK(InstanceFlags, ParentFromBind)
+
 /// Common functionality for module, interface, program, and primitive instances.
 class SLANG_EXPORT InstanceSymbolBase : public Symbol {
 public:
@@ -72,7 +92,7 @@ public:
 
     InstanceSymbol(Compilation& compilation, std::string_view name, SourceLocation loc,
                    const DefinitionSymbol& definition, ParameterBuilder& paramBuilder,
-                   bool isUninstantiated, bool isFromBind);
+                   bitmask<InstanceFlags> flags);
 
     const DefinitionSymbol& getDefinition() const;
     bool isModule() const;
@@ -141,21 +161,12 @@ public:
     /// child instances have overrides that need to be applied.
     const HierarchyOverrideNode* hierarchyOverrideNode = nullptr;
 
-    /// A copy of all port parameter symbols used to construct the instance body.
-
-    /// Indicates whether the module isn't actually instantiated in the design.
-    /// This might be because it was created with invalid parameters simply to
-    /// check name lookup rules but it's never actually referenced elsewhere
-    /// in the user's code.
-    bool isUninstantiated = false;
-
-    /// Indicates whether this instance was created from a bind directive
-    /// instead of a typical instantiation.
-    bool isFromBind = false;
+    /// Flags that describe properties of the instance.
+    bitmask<InstanceFlags> flags;
 
     InstanceBodySymbol(Compilation& compilation, const DefinitionSymbol& definition,
-                       const HierarchyOverrideNode* hierarchyOverrideNode, bool isUninstantiated,
-                       bool isFromBind);
+                       const HierarchyOverrideNode* hierarchyOverrideNode,
+                       bitmask<InstanceFlags> flags);
 
     std::span<const ParameterSymbolBase* const> getParameters() const {
         ensureElaborated();
@@ -173,18 +184,16 @@ public:
 
     bool hasSameType(const InstanceBodySymbol& other) const;
 
-    static InstanceBodySymbol& fromDefinition(Compilation& compilation,
-                                              const DefinitionSymbol& definition,
-                                              SourceLocation instanceLoc, bool isUninstantiated,
-                                              const HierarchyOverrideNode* hierarchyOverrideNode,
-                                              const ConfigBlockSymbol* configBlock,
-                                              const ConfigRule* configRule);
+    static InstanceBodySymbol& fromDefinition(
+        Compilation& compilation, const DefinitionSymbol& definition, SourceLocation instanceLoc,
+        bitmask<InstanceFlags> flags, const HierarchyOverrideNode* hierarchyOverrideNode,
+        const ConfigBlockSymbol* configBlock, const ConfigRule* configRule);
 
     static InstanceBodySymbol& fromDefinition(Compilation& compilation,
                                               const DefinitionSymbol& definition,
                                               SourceLocation instanceLoc,
-                                              ParameterBuilder& paramBuilder, bool isUninstantiated,
-                                              bool isFromBind);
+                                              ParameterBuilder& paramBuilder,
+                                              bitmask<InstanceFlags> flags);
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -357,11 +366,13 @@ public:
     static void fromSyntax(const CheckerSymbol& checker,
                            const syntax::HierarchyInstantiationSyntax& syntax,
                            const ASTContext& context, SmallVectorBase<const Symbol*>& results,
-                           SmallVectorBase<const Symbol*>& implicitNets, bool isFromBind);
+                           SmallVectorBase<const Symbol*>& implicitNets,
+                           bitmask<InstanceFlags> flags);
 
     static void fromSyntax(const syntax::CheckerInstantiationSyntax& syntax,
                            const ASTContext& context, SmallVectorBase<const Symbol*>& results,
-                           SmallVectorBase<const Symbol*>& implicitNets, bool isFromBind);
+                           SmallVectorBase<const Symbol*>& implicitNets,
+                           bitmask<InstanceFlags> flags);
 
     /// Creates an intentionally invalid instance by forcing all port connections to
     /// null values. This allows type checking instance members as long as they don't
@@ -372,7 +383,7 @@ public:
         Compilation& compilation, const ASTContext& context, const CheckerSymbol& checker,
         const syntax::HierarchicalInstanceSyntax& syntax,
         std::span<const syntax::AttributeInstanceSyntax* const> attributes,
-        SmallVectorBase<int32_t>& path, bool isProcedural, bool isFromBind);
+        SmallVectorBase<int32_t>& path, bool isProcedural, bitmask<InstanceFlags> flags);
 
     void verifyMembers() const;
 
@@ -397,21 +408,12 @@ public:
     const AssertionInstanceDetails& assertionDetails;
     uint32_t instanceDepth;
     bool isProcedural;
-
-    /// Indicates whether this instance was created from a bind directive
-    /// instead of a typical instantiation.
-    bool isFromBind = false;
-
-    /// Indicates whether the checker isn't actually instantiated in the design.
-    /// This might be because it was created with invalid port connections simply
-    /// to check name lookup rules but it's never actually referenced elsewhere
-    /// in the user's code.
-    bool isUninstantiated;
+    bitmask<InstanceFlags> flags;
 
     CheckerInstanceBodySymbol(Compilation& compilation, const CheckerSymbol& checker,
                               AssertionInstanceDetails& assertionDetails,
                               const ASTContext& originalContext, uint32_t instanceDepth,
-                              bool isProcedural, bool isFromBind, bool isUninstantiated);
+                              bool isProcedural, bitmask<InstanceFlags> flags);
 
     void serializeTo(ASTSerializer& serializer) const;
 

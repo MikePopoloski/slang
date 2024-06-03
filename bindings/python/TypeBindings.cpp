@@ -64,6 +64,7 @@ void registerTypes(py::module_& m) {
         .def_property_readonly("isSequenceType", &Type::isSequenceType)
         .def_property_readonly("isPropertyType", &Type::isPropertyType)
         .def_property_readonly("isVirtualInterface", &Type::isVirtualInterface)
+        .def_property_readonly("isHandleType", &Type::isHandleType)
         .def_property_readonly("isAlias", &Type::isAlias)
         .def_property_readonly("isError", &Type::isError)
         .def("isMatching", &Type::isMatching, "rhs"_a)

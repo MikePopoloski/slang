@@ -64,14 +64,14 @@ void ParameterSymbolBase::checkDefaultExpression() const {
 
             for (auto& selector : result.selectors) {
                 if (auto elemSel = std::get_if<0>(&selector))
-                    visitDefault(**elemSel);
+                    (*elemSel)->visit(*this);
             }
         }
 
         void handle(const AssignmentPatternItemSyntax& syntax) {
             // Avoid visiting the key which can name a struct member
             // and so should not be looked up.
-            visitDefault(*syntax.expr);
+            syntax.expr->visit(*this);
         }
 
         const ASTContext& context;
@@ -330,7 +330,7 @@ static const Symbol* checkDefparamHierarchy(const Symbol& target, const Scope& d
             // to check whether our common ancestor also is.
             if (isInsideBind) {
                 auto inst = (*it)->getContainingInstance();
-                if (!inst || !inst->isFromBind)
+                if (!inst || !inst->flags.has(InstanceFlags::ParentFromBind))
                     return &scope->asSymbol();
             }
 
@@ -350,7 +350,7 @@ static const Symbol* checkDefparamHierarchy(const Symbol& target, const Scope& d
         SLANG_ASSERT(body.parentInstance);
         scope = body.parentInstance->getParentScope();
 
-        isInsideBind |= body.isFromBind;
+        isInsideBind |= body.flags.has(InstanceFlags::ParentFromBind);
 
         // We are also disallowed from having defparams inside an instance that has interface
         // ports that connect to an array from extending outside that hierarchy.

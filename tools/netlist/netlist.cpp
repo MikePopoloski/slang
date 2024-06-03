@@ -5,13 +5,14 @@
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
+
 #include "Netlist.h"
 
 #include "CombLoops.h"
-#include "NetlistVisitor.h"
 #include "PathFinder.h"
 #include "fmt/color.h"
 #include "fmt/format.h"
+#include "visitors/NetlistVisitor.h"
 #include <fstream>
 #include <iostream>
 #include <stdexcept>
