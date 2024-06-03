@@ -167,7 +167,8 @@ int driverMain(int argc, TArgs argv) {
                     auto compilation = driver.createCompilation();
                     ok &= driver.reportCompilation(*compilation, quiet == true);
                     if (astJsonFile)
-                        printJson(*compilation, *astJsonFile, astJsonScopes, (includeSourceInfo==true));
+                        printJson(*compilation, *astJsonFile, astJsonScopes,
+                                  (includeSourceInfo == true));
                 }
             }
         }
