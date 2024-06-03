@@ -2472,3 +2472,220 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("JSON dump -- sequence with `iff` clause") {
+    auto tree = SyntaxTree::fromText(R"(
+logic x, y;
+
+sequence s (ev);
+    @(ev) x ##1 y;
+endsequence
+
+module m(input y1, input x1, input clk);
+    cover property (s(((x1 iff y1) or negedge clk)));
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    JsonWriter writer;
+    writer.setPrettyPrint(true);
+
+    ASTSerializer serializer(compilation, writer);
+    serializer.setIncludeAddresses(false);
+    serializer.serialize(compilation.getRoot());
+
+    std::string result = "\n"s + std::string(writer.view());
+    CHECK(result == R"(
+{
+  "name": "$root",
+  "kind": "Root",
+  "members": [
+    {
+      "name": "",
+      "kind": "CompilationUnit",
+      "members": [
+        {
+          "name": "x",
+          "kind": "Variable",
+          "type": "logic",
+          "lifetime": "Static"
+        },
+        {
+          "name": "y",
+          "kind": "Variable",
+          "type": "logic",
+          "lifetime": "Static"
+        },
+        {
+          "name": "s",
+          "kind": "Sequence",
+          "members": [
+            {
+              "name": "ev",
+              "kind": "AssertionPort"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "m",
+      "kind": "Instance",
+      "body": {
+        "name": "m",
+        "kind": "InstanceBody",
+        "members": [
+          {
+            "name": "y1",
+            "kind": "Port",
+            "type": "logic",
+            "direction": "In",
+            "internalSymbol": "y1"
+          },
+          {
+            "name": "y1",
+            "kind": "Net",
+            "type": "logic",
+            "netType": {
+              "name": "wire",
+              "kind": "NetType",
+              "type": "logic"
+            }
+          },
+          {
+            "name": "x1",
+            "kind": "Port",
+            "type": "logic",
+            "direction": "In",
+            "internalSymbol": "x1"
+          },
+          {
+            "name": "x1",
+            "kind": "Net",
+            "type": "logic",
+            "netType": {
+              "name": "wire",
+              "kind": "NetType",
+              "type": "logic"
+            }
+          },
+          {
+            "name": "clk",
+            "kind": "Port",
+            "type": "logic",
+            "direction": "In",
+            "internalSymbol": "clk"
+          },
+          {
+            "name": "clk",
+            "kind": "Net",
+            "type": "logic",
+            "netType": {
+              "name": "wire",
+              "kind": "NetType",
+              "type": "logic"
+            }
+          },
+          {
+            "name": "",
+            "kind": "ProceduralBlock",
+            "procedureKind": "Always",
+            "body": {
+              "kind": "ConcurrentAssertion",
+              "propertySpec": {
+                "kind": "Simple",
+                "expr": {
+                  "kind": "AssertionInstance",
+                  "type": "sequence",
+                  "symbol": "s",
+                  "body": {
+                    "kind": "Clocking",
+                    "clocking": {
+                      "kind": "SignalEvent",
+                      "expr": {
+                        "kind": "ClockingEvent",
+                        "type": "void",
+                        "timingControl": {
+                          "kind": "EventList",
+                          "events": [
+                            {
+                              "kind": "SignalEvent",
+                              "expr": {
+                                "kind": "NamedValue",
+                                "type": "logic",
+                                "symbol": "x1"
+                              },
+                              "edge": "None",
+                              "iff": {
+                                "kind": "NamedValue",
+                                "type": "logic",
+                                "symbol": "y1"
+                              }
+                            },
+                            {
+                              "kind": "SignalEvent",
+                              "expr": {
+                                "kind": "NamedValue",
+                                "type": "logic",
+                                "symbol": "clk"
+                              },
+                              "edge": "NegEdge"
+                            }
+                          ]
+                        }
+                      },
+                      "edge": "None"
+                    },
+                    "expr": {
+                      "kind": "SequenceConcat",
+                      "elements": [
+                        {
+                          "sequence": {
+                            "kind": "Simple",
+                            "expr": {
+                              "kind": "NamedValue",
+                              "type": "logic",
+                              "symbol": "x"
+                            }
+                          },
+                          "min": 0,
+                          "max": 0
+                        },
+                        {
+                          "sequence": {
+                            "kind": "Simple",
+                            "expr": {
+                              "kind": "NamedValue",
+                              "type": "logic",
+                              "symbol": "y"
+                            }
+                          },
+                          "min": 1,
+                          "max": 1
+                        }
+                      ]
+                    }
+                  },
+                  "isRecursiveProperty": false,
+                  "localVars": [
+                  ]
+                }
+              },
+              "ifTrue": {
+                "kind": "Empty"
+              },
+              "assertionKind": "CoverProperty"
+            }
+          }
+        ],
+        "definition": "m"
+      },
+      "connections": [
+      ]
+    }
+  ]
+})");
+}
