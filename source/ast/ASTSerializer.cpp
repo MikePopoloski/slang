@@ -177,8 +177,8 @@ template<typename T>
 void ASTSerializer::visit(const T& elem, bool inMembersArray) {
     if constexpr (std::is_base_of_v<Expression, T> || std::is_base_of_v<Statement, T> ||
                   std::is_base_of_v<TimingControl, T> || std::is_base_of_v<Constraint, T> ||
-                  std::is_base_of_v<AssertionExpr, T> ||
-                  std::is_base_of_v<BinsSelectExpr, T> || std::is_base_of_v<Pattern, T>) {
+                  std::is_base_of_v<AssertionExpr, T> || std::is_base_of_v<BinsSelectExpr, T> ||
+                  std::is_base_of_v<Pattern, T>) {
         if (elem.syntax != nullptr && includeSourceInfo) {
             write("source_file_start",
                   compilation.getSourceManager()->getFileName(elem.syntax->sourceRange().start()));
