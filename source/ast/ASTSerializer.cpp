@@ -179,7 +179,7 @@ void ASTSerializer::visit(const T& elem, bool inMembersArray) {
         writer.startObject();
         write("kind", toString(elem.kind));
         write("type", *elem.type);
-        if (elem.syntax != nullptr) {
+        if (elem.syntax != nullptr && includeSourceInfo) {
             write("source_file_start", compilation.getSourceManager()->getFileName(elem.syntax->sourceRange().start()));
             write("source_file_end", compilation.getSourceManager()->getFileName(elem.syntax->sourceRange().end()));
             write("source_line_start", compilation.getSourceManager()->getLineNumber(elem.syntax->sourceRange().start()));
@@ -209,7 +209,7 @@ void ASTSerializer::visit(const T& elem, bool inMembersArray) {
     else if constexpr (std::is_base_of_v<Statement, T>) {
         writer.startObject();
         write("kind", toString(elem.kind));
-        if (elem.syntax != nullptr) {
+        if (elem.syntax != nullptr && includeSourceInfo) {
             write("source_file_start", compilation.getSourceManager()->getFileName(elem.syntax->sourceRange().start()));
             write("source_file_end", compilation.getSourceManager()->getFileName(elem.syntax->sourceRange().end()));
             write("source_line_start", compilation.getSourceManager()->getLineNumber(elem.syntax->sourceRange().start()));
@@ -237,7 +237,7 @@ void ASTSerializer::visit(const T& elem, bool inMembersArray) {
                        std::is_base_of_v<BinsSelectExpr, T> || std::is_base_of_v<Pattern, T>) {
         writer.startObject();
         write("kind", toString(elem.kind));
-        if (elem.syntax != nullptr) {
+        if (elem.syntax != nullptr && includeSourceInfo) {
             write("source_file_start", compilation.getSourceManager()->getFileName(elem.syntax->sourceRange().start()));
             write("source_file_end", compilation.getSourceManager()->getFileName(elem.syntax->sourceRange().end()));
             write("source_line_start", compilation.getSourceManager()->getLineNumber(elem.syntax->sourceRange().start()));
@@ -273,9 +273,11 @@ void ASTSerializer::visit(const T& elem, bool inMembersArray) {
         writer.startObject();
         write("name", elem.name);
         write("kind", toString(elem.kind));
-        write("source_file", compilation.getSourceManager()->getFileName(elem.location));
-        write("source_line", compilation.getSourceManager()->getLineNumber(elem.location));
-        write("source_column", compilation.getSourceManager()->getColumnNumber(elem.location));
+        if (includeSourceInfo) {
+            write("source_file", compilation.getSourceManager()->getFileName(elem.location));
+            write("source_line", compilation.getSourceManager()->getLineNumber(elem.location));
+            write("source_column", compilation.getSourceManager()->getColumnNumber(elem.location));
+        }
 
         if (includeAddrs)
             write("addr", uintptr_t(&elem));
