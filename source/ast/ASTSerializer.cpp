@@ -175,10 +175,10 @@ void ASTSerializer::writeProperty(std::string_view name) {
 
 template<typename T>
 void ASTSerializer::visit(const T& elem, bool inMembersArray) {
-    if constexpr (std::is_base_of_v<Expression, T>) {
-        writer.startObject();
-        write("kind", toString(elem.kind));
-        write("type", *elem.type);
+    if constexpr (std::is_base_of_v<Expression, T> || std::is_base_of_v<Statement, T> ||
+                  std::is_base_of_v<TimingControl, T> || std::is_base_of_v<Constraint, T> ||
+                  std::is_base_of_v<AssertionExpr, T> ||
+                  std::is_base_of_v<BinsSelectExpr, T> || std::is_base_of_v<Pattern, T>) {
         if (elem.syntax != nullptr && includeSourceInfo) {
             write("source_file_start",
                   compilation.getSourceManager()->getFileName(elem.syntax->sourceRange().start()));
@@ -193,6 +193,11 @@ void ASTSerializer::visit(const T& elem, bool inMembersArray) {
             write("source_column_end", compilation.getSourceManager()->getColumnNumber(
                                            elem.syntax->sourceRange().end()));
         }
+    }
+    if constexpr (std::is_base_of_v<Expression, T>) {
+        writer.startObject();
+        write("kind", toString(elem.kind));
+        write("type", *elem.type);
         auto attributes = compilation.getAttributes(elem);
         if (!attributes.empty()) {
             startArray("attributes");
@@ -215,20 +220,6 @@ void ASTSerializer::visit(const T& elem, bool inMembersArray) {
     else if constexpr (std::is_base_of_v<Statement, T>) {
         writer.startObject();
         write("kind", toString(elem.kind));
-        if (elem.syntax != nullptr && includeSourceInfo) {
-            write("source_file_start",
-                  compilation.getSourceManager()->getFileName(elem.syntax->sourceRange().start()));
-            write("source_file_end",
-                  compilation.getSourceManager()->getFileName(elem.syntax->sourceRange().end()));
-            write("source_line_start", compilation.getSourceManager()->getLineNumber(
-                                           elem.syntax->sourceRange().start()));
-            write("source_line_end",
-                  compilation.getSourceManager()->getLineNumber(elem.syntax->sourceRange().end()));
-            write("source_column_start", compilation.getSourceManager()->getColumnNumber(
-                                             elem.syntax->sourceRange().start()));
-            write("source_column_end", compilation.getSourceManager()->getColumnNumber(
-                                           elem.syntax->sourceRange().end()));
-        }
 
         auto attributes = compilation.getAttributes(elem);
         if (!attributes.empty()) {
@@ -249,20 +240,6 @@ void ASTSerializer::visit(const T& elem, bool inMembersArray) {
                        std::is_base_of_v<BinsSelectExpr, T> || std::is_base_of_v<Pattern, T>) {
         writer.startObject();
         write("kind", toString(elem.kind));
-        if (elem.syntax != nullptr && includeSourceInfo) {
-            write("source_file_start",
-                  compilation.getSourceManager()->getFileName(elem.syntax->sourceRange().start()));
-            write("source_file_end",
-                  compilation.getSourceManager()->getFileName(elem.syntax->sourceRange().end()));
-            write("source_line_start", compilation.getSourceManager()->getLineNumber(
-                                           elem.syntax->sourceRange().start()));
-            write("source_line_end",
-                  compilation.getSourceManager()->getLineNumber(elem.syntax->sourceRange().end()));
-            write("source_column_start", compilation.getSourceManager()->getColumnNumber(
-                                             elem.syntax->sourceRange().start()));
-            write("source_column_end", compilation.getSourceManager()->getColumnNumber(
-                                           elem.syntax->sourceRange().end()));
-        }
         if constexpr (!std::is_same_v<TimingControl, T> && !std::is_same_v<Constraint, T> &&
                       !std::is_same_v<AssertionExpr, T> && !std::is_same_v<BinsSelectExpr, T> &&
                       !std::is_same_v<Pattern, T>) {
