@@ -179,6 +179,7 @@ void ASTSerializer::visit(const T& elem, bool inMembersArray) {
                   std::is_base_of_v<TimingControl, T> || std::is_base_of_v<Constraint, T> ||
                   std::is_base_of_v<AssertionExpr, T> || std::is_base_of_v<BinsSelectExpr, T> ||
                   std::is_base_of_v<Pattern, T>) {
+        writer.startObject();
         if (elem.syntax != nullptr && includeSourceInfo) {
             write("source_file_start",
                   compilation.getSourceManager()->getFileName(elem.syntax->sourceRange().start()));
@@ -195,7 +196,6 @@ void ASTSerializer::visit(const T& elem, bool inMembersArray) {
         }
     }
     if constexpr (std::is_base_of_v<Expression, T>) {
-        writer.startObject();
         write("kind", toString(elem.kind));
         write("type", *elem.type);
         auto attributes = compilation.getAttributes(elem);
@@ -218,7 +218,6 @@ void ASTSerializer::visit(const T& elem, bool inMembersArray) {
         writer.endObject();
     }
     else if constexpr (std::is_base_of_v<Statement, T>) {
-        writer.startObject();
         write("kind", toString(elem.kind));
 
         auto attributes = compilation.getAttributes(elem);
@@ -238,7 +237,6 @@ void ASTSerializer::visit(const T& elem, bool inMembersArray) {
     else if constexpr (std::is_base_of_v<TimingControl, T> || std::is_base_of_v<Constraint, T> ||
                        std::is_base_of_v<AssertionExpr, T> ||
                        std::is_base_of_v<BinsSelectExpr, T> || std::is_base_of_v<Pattern, T>) {
-        writer.startObject();
         write("kind", toString(elem.kind));
         if constexpr (!std::is_same_v<TimingControl, T> && !std::is_same_v<Constraint, T> &&
                       !std::is_same_v<AssertionExpr, T> && !std::is_same_v<BinsSelectExpr, T> &&
