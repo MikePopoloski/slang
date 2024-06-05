@@ -387,7 +387,8 @@ void TypePrinter::visit(const TypeAliasType& type, std::string_view overrideName
     if (!overrideName.empty()) {
         type.targetType.getType().visit(*this, overrideName);
     }
-    else if (options.elideScopeNames) {
+    else if (options.elideScopeNames ||
+             options.anonymousTypeStyle == TypePrintingOptions::FriendlyName) {
         type.targetType.getType().visit(*this, type.name);
     }
     else {

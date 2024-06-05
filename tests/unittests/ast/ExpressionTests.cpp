@@ -3619,3 +3619,28 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::BadConcatExpression);
 }
+
+TEST_CASE("Wrong typename in error regress GH #1013") {
+    auto tree = SyntaxTree::fromText(R"(
+module t40;
+typedef struct {
+        logic a;
+        logic b;
+} t;
+t x, y, z;
+assign z = x & y;
+
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    std::string result = "\n" + report(diags);
+    CHECK(result == R"(
+source:8:14: error: invalid operands to binary expression ('t40.t' and 't40.t')
+assign z = x & y;
+           ~ ^ ~
+)");
+}
