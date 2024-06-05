@@ -177,6 +177,9 @@ void TypePrinter::visit(const PackedUnionType& type, std::string_view overrideNa
         if (type.isSigned)
             buffer->append(" signed");
 
+        if (type.isTagged)
+            buffer->append(" tagged");
+
         appendMembers(type);
 
         if (options.skipScopedTypeNames)
@@ -293,6 +296,9 @@ void TypePrinter::visit(const UnpackedUnionType& type, std::string_view override
     }
     else {
         buffer->append("union");
+        if (type.isTagged)
+            buffer->append(" tagged");
+
         appendMembers(type);
 
         if (options.skipScopedTypeNames)
