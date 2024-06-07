@@ -128,7 +128,10 @@ static void enforceNondegeneracy(const AssertionExpr& expr, const ASTContext& co
     const bool admitsNoMatch = seqNondegenSt.has(NondegeneracyStatus::AdmitsNoMatch);
 
     using NR = AssertionExpr::NondegeneracyRequirement;
-    if (nondegRequirement == NR::OverlapOp) {
+    if (nondegRequirement == NR::None) {
+        return;
+    }
+    else if (nondegRequirement == NR::OverlapOp) {
         if (acceptsOnlyEmpty || admitsNoMatch) {
             auto& diag = context.addDiag(diag::OverlapImplNondegenerate, syntax.sourceRange());
             diag.addNote(acceptsOnlyEmpty ? diag::SeqAcceptsOnlyEmptyMatches
@@ -1030,15 +1033,21 @@ AssertionExpr& BinaryAssertionExpr::fromSyntax(const BinaryPropertyExprSyntax& s
         lflags = rflags = ASTFlags::PropertyNegation;
     }
 
-    NondegeneracyRequirement nondegenRequirement = NondegeneracyRequirement::Default;
+    NondegeneracyRequirement nondegenLeftRequirement = NondegeneracyRequirement::Default;
+    NondegeneracyRequirement nondegenRightRequirement = NondegeneracyRequirement::Default;
     if (isOverlapOp)
-        nondegenRequirement = NondegeneracyRequirement::OverlapOp;
+        nondegenLeftRequirement = NondegeneracyRequirement::OverlapOp;
     else if (isNonOverlapOp)
-        nondegenRequirement = NondegeneracyRequirement::NonOverlapOp;
+        nondegenLeftRequirement = NondegeneracyRequirement::NonOverlapOp;
+
+    // Don't perform any checks if right hand is a consequent of implication.
+    // SystemVerilog LRM provide restrictions on implication antecedent only.
+    if (nondegenLeftRequirement != NondegeneracyRequirement::Default)
+        nondegenRightRequirement = NondegeneracyRequirement::None;
 
     auto& comp = context.getCompilation();
-    auto& left = bind(*syntax.left, context.resetFlags(lflags), false, nondegenRequirement);
-    auto& right = bind(*syntax.right, context.resetFlags(rflags));
+    auto& left = bind(*syntax.left, context.resetFlags(lflags), false, nondegenLeftRequirement);
+    auto& right = bind(*syntax.right, context.resetFlags(rflags), false, nondegenRightRequirement);
 
     // clang-format off
     BinaryAssertionOperator op;

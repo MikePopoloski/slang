@@ -2585,7 +2585,13 @@ TEST_CASE("Sequence nondegeneracy tests 5") {
 module top;
     logic clk, reset, a, b;
     assert property(@(posedge clk) disable iff (reset)
-        a |-> {500-$bits($past(b)){1'b0}});  // illegal
+        {500-$bits($past(b)){1'b0}} |-> a);  // illegal
+                                             // antecedent admits only empty matches
+
+    assert property(@(posedge clk) disable iff (reset)
+        a |-> {500-$bits($past(b)){1'b0}});  // legal
+
+    assert property ($fell(a) |-> !$stable(b) within((~a)[*1:$] ##1 a));  // legal
 
     assert property(@(posedge clk) disable iff (reset)
         {3 - 2{3'b111}});  // legal
@@ -2600,5 +2606,5 @@ endmodule
 
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 1);
-    CHECK(diags[0].code == diag::SeqPropNondegenerate);
+    CHECK(diags[0].code == diag::OverlapImplNondegenerate);
 }

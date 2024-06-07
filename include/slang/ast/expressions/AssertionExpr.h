@@ -151,6 +151,9 @@ public:
         /// or followed-by operator shall admit at least one match. Such a sequence can
         /// admit only empty matches.
         NonOverlapOp,
+
+        /// Don't perform any nondegeneracy check
+        None,
     };
 
     static const AssertionExpr& bind(const syntax::SequenceExprSyntax& syntax,
