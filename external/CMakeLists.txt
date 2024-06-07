@@ -99,15 +99,25 @@ if(SLANG_USE_MIMALLOC)
     ${find_pkg_args})
   FetchContent_MakeAvailable(mimalloc)
 
-  if(NOT TARGET mimalloc-static)
-    message(
-      FATAL_ERROR
-        "Could not find mimalloc package, min version: ${mimalloc_min_version}")
-  endif()
-
   if(mimalloc_FOUND)
-    message(STATUS "Found system mimalloc version: ${mimalloc_VERSION}")
+    if(NOT TARGET mimalloc)
+      message(
+        FATAL_ERROR
+          "Could not find mimalloc package, min version: ${mimalloc_min_version}")
+    endif()
+
+    get_target_property(MIMALLOC_CFG mimalloc IMPORTED_CONFIGURATIONS)
+    get_target_property(MIMALLOC_LIB mimalloc IMPORTED_LOCATION_${MIMALLOC_CFG})
+    get_target_property(MIMALLOC_INC mimalloc INTERFACE_INCLUDE_DIRECTORIES)
+    message(STATUS "Found system mimalloc library: ${MIMALLOC_LIB}")
+    message(STATUS "Using system mimalloc include: ${MIMALLOC_INC}")
   else()
+    if(NOT TARGET mimalloc-static)
+      message(
+        FATAL_ERROR
+          "Could not find mimalloc package, min version: ${mimalloc_min_version}")
+    endif()
+
     message(STATUS "Using remote mimalloc library")
     if(IS_DIRECTORY "${mimalloc_SOURCE_DIR}")
       set_property(DIRECTORY ${mimalloc_SOURCE_DIR} PROPERTY EXCLUDE_FROM_ALL

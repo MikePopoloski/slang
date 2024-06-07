@@ -131,7 +131,11 @@ target_link_libraries(slang_slang PUBLIC fmt::fmt Boost::headers
                                          ${CMAKE_THREAD_LIBS_INIT})
 
 if(SLANG_USE_MIMALLOC)
-  target_link_libraries(slang_slang PUBLIC mimalloc-static)
+  if(mimalloc_FOUND)
+    target_link_libraries(slang_slang PUBLIC mimalloc)
+  else()
+    target_link_libraries(slang_slang PUBLIC mimalloc-static)
+  endif()
   target_compile_definitions(slang_slang PUBLIC SLANG_USE_MIMALLOC)
 endif()
 
