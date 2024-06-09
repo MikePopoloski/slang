@@ -615,10 +615,8 @@ std::optional<SequenceRange> SimpleAssertionExpr::computeSequenceLengthImpl() co
 
     if (expr.kind == ExpressionKind::AssertionInstance) {
         if (auto& aie = expr.as<AssertionInstanceExpression>(); aie.type->isSequenceType()) {
-            if (auto aieSeqLength = aie.body.computeSequenceLength();
-                aieSeqLength.has_value() && (res < aieSeqLength.value())) {
-                return aieSeqLength.value();
-            }
+            if (auto aieSeqLength = aie.body.computeSequenceLength(); res < aieSeqLength)
+                return aieSeqLength;
         }
     }
     return res;
@@ -1178,14 +1176,8 @@ std::optional<SequenceRange> BinaryAssertionExpr::computeSequenceLengthImpl() co
         const auto rightLenVal = rightLen.value();
         return (rightLenVal < leftLenVal) ? leftLenVal : rightLenVal;
     }
-    else if (leftLen.has_value()) {
-        return leftLen.value();
-    }
-    else if (rightLen.has_value()) {
-        return rightLen.value();
-    }
 
-    return std::nullopt;
+    return leftLen.has_value() ? leftLen : rightLen;
 }
 
 void BinaryAssertionExpr::serializeTo(ASTSerializer& serializer) const {

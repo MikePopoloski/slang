@@ -432,10 +432,10 @@ public:
     /// @{
 
     /// Registers a system subroutine handler, which can be accessed by compiled code.
-    void addSystemSubroutine(std::shared_ptr<SystemSubroutine> subroutine);
+    void addSystemSubroutine(const std::shared_ptr<SystemSubroutine>& subroutine);
 
     /// Registers a type-based system method handler, which can be accessed by compiled code.
-    void addSystemMethod(SymbolKind typeKind, std::shared_ptr<SystemSubroutine> method);
+    void addSystemMethod(SymbolKind typeKind, const std::shared_ptr<SystemSubroutine>& method);
 
     /// Gets a system subroutine with the given name, or nullptr if there is no such subroutine
     /// registered.
