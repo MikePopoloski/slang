@@ -482,11 +482,9 @@ bool SequenceRange::intersects(const SequenceRange& other) const {
 }
 
 bool SequenceRange::isWithin(const SequenceRange& other) const {
-    if (!other.max.has_value())
-        return max.has_value() ? min == other.min && max == other.min : min == other.min;
-
-    return max.has_value() ? min >= other.min && max <= other.max
-                           : min >= other.min && min <= other.max;
+    // Our sequence is within the other iff the min value is shorter
+    // than the length of the other. Our own max doesn't matter.
+    return min <= other.max.value_or(UINT32_MAX);
 }
 
 SequenceRepetition::SequenceRepetition(const SequenceRepetitionSyntax& syntax,
@@ -1133,8 +1131,8 @@ bitmask<NondegeneracyStatus> BinaryAssertionExpr::checkNondegeneracyImpl() const
             // possible overlap in their length ranges.
             const auto leftLen = left.computeSequenceLength();
             const auto rightLen = right.computeSequenceLength();
-            if (leftAdmitsNoMatch || rightAdmitsNoMatch || !leftLen.has_value() ||
-                !rightLen.has_value() || !leftLen.value().intersects(rightLen.value())) {
+            if (leftAdmitsNoMatch || rightAdmitsNoMatch ||
+                (leftLen && rightLen && !leftLen->intersects(*rightLen))) {
                 res |= NondegeneracyStatus::AdmitsNoMatch;
             }
             break;
@@ -1147,8 +1145,8 @@ bitmask<NondegeneracyStatus> BinaryAssertionExpr::checkNondegeneracyImpl() const
             // right side delay range.
             const auto leftLen = left.computeSequenceLength();
             const auto rightLen = right.computeSequenceLength();
-            if (leftAdmitsNoMatch || rightAdmitsNoMatch || !leftLen.has_value() ||
-                !rightLen.has_value() || !leftLen.value().isWithin(rightLen.value())) {
+            if (leftAdmitsNoMatch || rightAdmitsNoMatch ||
+                (leftLen && rightLen && !leftLen->isWithin(*rightLen))) {
                 res |= NondegeneracyStatus::AdmitsNoMatch;
             }
             break;
