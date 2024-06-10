@@ -221,6 +221,9 @@ public:
 
         /// @}
 
+        /// Disable clock resolution checking
+        std::optional<bool> disableClockResolution;
+
         /// Returns true if the lintMode option is provided.
         bool lintMode() const;
     } options;

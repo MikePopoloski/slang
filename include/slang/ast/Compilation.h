@@ -204,6 +204,24 @@ struct SLANG_EXPORT CompilationOptions {
     /// A list of library names, in the order in which they should be searched
     /// when binding cells to instances.
     std::vector<std::string> defaultLiblist;
+
+    /// Disable clock resolution checking
+    bool disableClockResolution = false;
+
+    // Do not check a multiclocked property with contextually inferred leading clocking event in an
+    // always block in terms of vcs compatibility.
+    // This is only "true" if the compat option have "vcs" value.
+    // This was done to support this case (from 16.16 section):
+    // ```
+    // always @(negedge clk)
+    //   a3: assert property ($fell(c) |=> q2);  // VCS doesn't emits any error on it
+    //   // illegal: multiclocked property with contextually
+    //   // inferred leading clocking event
+    // end
+    // ```
+    // Despite the fact that the LRM says that for the right-hand property of the implication and
+    // followed by property the is ignored the entire property is multi-clock.
+    bool ignoreRightOfBOp = false;
 };
 
 /// Information about how a bind directive applies to some definition

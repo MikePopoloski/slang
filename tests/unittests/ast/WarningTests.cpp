@@ -583,7 +583,10 @@ endmodule
 
 TEST_CASE("Unused assertion decls") {
     auto tree = SyntaxTree::fromText(R"(
-module m;
+module m(input logic clk);
+    default clocking posedge_clk @(posedge clk);
+    endclocking // posedge_clk
+
     sequence s1; 1; endsequence
     property p1; 1; endproperty
     let l1 = 1;

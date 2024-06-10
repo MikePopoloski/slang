@@ -146,6 +146,8 @@ void Driver::addStandardArgs() {
     cmdLine.add("--timescale", options.timeScale,
                 "Default time scale to use for design elements that don't specify one explicitly",
                 "<base>/<precision>");
+    cmdLine.add("--disable-clock-resolution", options.disableClockResolution,
+                "Disable clock resolution checking");
 
     auto addCompFlag = [&](CompilationFlags flag, std::string_view name, std::string_view desc) {
         auto [it, inserted] = options.compilationFlags.emplace(flag, std::nullopt);
@@ -736,6 +738,10 @@ void Driver::addCompilationOptions(Bag& bag) const {
         coptions.maxInstanceArray = *options.maxInstanceArray;
     if (options.errorLimit.has_value())
         coptions.errorLimit = *options.errorLimit * 2;
+    if (options.disableClockResolution.has_value())
+        coptions.disableClockResolution = *options.disableClockResolution;
+    if (options.compat.has_value() && (options.compat == "vcs"))
+        coptions.ignoreRightOfBOp = true;
 
     for (auto& [flag, value] : options.compilationFlags) {
         if (value == true)
