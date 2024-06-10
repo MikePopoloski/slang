@@ -20,6 +20,7 @@
 #include "slang/ast/symbols/VariableSymbols.h"
 #include "slang/ast/types/Type.h"
 #include "slang/diagnostics/StatementsDiags.h"
+#include "slang/numeric/MathUtils.h"
 #include "slang/syntax/AllSyntax.h"
 
 namespace {
@@ -458,31 +459,14 @@ void SequenceRange::serializeTo(ASTSerializer& serializer) const {
         serializer.write("max", "$"sv);
 }
 
-bool SequenceRange::operator<(const SequenceRange& right) const {
-    // if both sequences are unbounded then check mins
-    if (!max.has_value() && !right.max.has_value())
-        return min < right.min;
-
-    // if both sequences are bounded then compare the lengths
-    if (max.has_value() && right.max.has_value())
-        return (*max - min) < (*right.max - right.min) && min < right.min;
-
-    // Otherwise the left is smaller iff it is bounded.
-    return max.has_value();
+bool SequenceRange::canIntersect(const SequenceRange& other) const {
+    // Check whether our range overlaps at any point with the
+    // other range.
+    return max.value_or(UINT32_MAX) >= other.min && min <= other.max.value_or(UINT32_MAX);
 }
 
-bool SequenceRange::intersects(const SequenceRange& other) const {
-    if (!max.has_value())
-        return min >= other.min && min <= other.max.value_or(UINT32_MAX);
-
-    if (!other.max.has_value())
-        return other.min >= min && other.min <= max.value();
-
-    return !(max.value() < other.min || other.max.value() < min);
-}
-
-bool SequenceRange::isWithin(const SequenceRange& other) const {
-    // Our sequence is within the other iff the min value is shorter
+bool SequenceRange::canBeWithin(const SequenceRange& other) const {
+    // Our sequence can be within the other iff the min value is shorter
     // than the length of the other. Our own max doesn't matter.
     return min <= other.max.value_or(UINT32_MAX);
 }
@@ -517,6 +501,16 @@ bitmask<NondegeneracyStatus> SequenceRepetition::checkNondegeneracy() const {
         if (range.max == 0u)
             res |= NondegeneracyStatus::AcceptsOnlyEmpty;
     }
+    return res;
+}
+
+SequenceRange SequenceRepetition::applyTo(SequenceRange res) const {
+    res.min = checkedMulU32(res.min, range.min).value_or(UINT32_MAX);
+    if (res.max && range.max)
+        res.max = checkedMulU32(*res.max, *range.max);
+    else
+        res.max.reset();
+
     return res;
 }
 
@@ -608,17 +602,20 @@ bitmask<NondegeneracyStatus> SimpleAssertionExpr::checkNondegeneracyImpl() const
 }
 
 std::optional<SequenceRange> SimpleAssertionExpr::computeSequenceLengthImpl() const {
-    // If there is only empty match sequence then it has a zero delay length.
     SequenceRange res;
-    res.min = checkNondegeneracy().has(NondegeneracyStatus::AcceptsOnlyEmpty) ? 0 : 1;
-    res.max = res.min;
+    res.min = 1;
+    res.max = 1;
 
     if (expr.kind == ExpressionKind::AssertionInstance) {
         if (auto& aie = expr.as<AssertionInstanceExpression>(); aie.type->isSequenceType()) {
-            if (auto aieSeqLength = aie.body.computeSequenceLength(); res < aieSeqLength)
-                return aieSeqLength;
+            if (auto aieSeqLength = aie.body.computeSequenceLength())
+                res = *aieSeqLength;
         }
     }
+
+    if (repetition)
+        res = repetition->applyTo(res);
+
     return res;
 }
 
@@ -737,20 +734,20 @@ std::optional<SequenceRange> SequenceConcatExpr::computeSequenceLengthImpl() con
     uint32_t delayMin = 0;
     uint32_t delayMax = 0;
     for (auto it = elements.begin(); it != elements.end(); it++) {
-        const bool isAcceptsOnlyEmpty = it->sequence->checkNondegeneracy().has(
+        const bool acceptsOnlyEmpty = it->sequence->checkNondegeneracy().has(
             NondegeneracyStatus::AcceptsOnlyEmpty);
 
         // Default delay length for concat sequence is 1 if it admits a non-empty match.
-        if (it == elements.begin() && !isAcceptsOnlyEmpty)
+        if (it == elements.begin() && !acceptsOnlyEmpty)
             delayMin = delayMax = 1;
 
         // (empty ##n seq), where n is greater than 0, is equivalent to (##(n-1) seq).
         // Also ((##n empty) ; (seq ##n empty)), where n is greater than 0, is equivalent to
         // ((##(n-1) `true) ; (seq ##(n-1) `true))
-        delayMin += (it->delay.min && isAcceptsOnlyEmpty) ? it->delay.min - 1 : it->delay.min;
+        delayMin += (it->delay.min && acceptsOnlyEmpty) ? it->delay.min - 1 : it->delay.min;
         if (it->delay.max.has_value()) {
             const auto maxVal = it->delay.max.value();
-            delayMax += (maxVal && isAcceptsOnlyEmpty) ? maxVal - 1 : maxVal;
+            delayMax += (maxVal && acceptsOnlyEmpty) ? maxVal - 1 : maxVal;
         }
     }
 
@@ -873,6 +870,13 @@ bitmask<NondegeneracyStatus> SequenceWithMatchExpr::checkNondegeneracyImpl() con
         res = repetition->checkNondegeneracy();
 
     return res | expr.checkNondegeneracy();
+}
+
+std::optional<SequenceRange> SequenceWithMatchExpr::computeSequenceLengthImpl() const {
+    auto res = expr.computeSequenceLength();
+    if (res && repetition)
+        res = repetition->applyTo(*res);
+    return res;
 }
 
 void SequenceWithMatchExpr::serializeTo(ASTSerializer& serializer) const {
@@ -1130,7 +1134,7 @@ bitmask<NondegeneracyStatus> BinaryAssertionExpr::checkNondegeneracyImpl() const
             const auto leftLen = left.computeSequenceLength();
             const auto rightLen = right.computeSequenceLength();
             if (leftAdmitsNoMatch || rightAdmitsNoMatch ||
-                (leftLen && rightLen && !leftLen->intersects(*rightLen))) {
+                (leftLen && rightLen && !leftLen->canIntersect(*rightLen))) {
                 res |= NondegeneracyStatus::AdmitsNoMatch;
             }
             break;
@@ -1144,7 +1148,7 @@ bitmask<NondegeneracyStatus> BinaryAssertionExpr::checkNondegeneracyImpl() const
             const auto leftLen = left.computeSequenceLength();
             const auto rightLen = right.computeSequenceLength();
             if (leftAdmitsNoMatch || rightAdmitsNoMatch ||
-                (leftLen && rightLen && !leftLen->isWithin(*rightLen))) {
+                (leftLen && rightLen && !leftLen->canBeWithin(*rightLen))) {
                 res |= NondegeneracyStatus::AdmitsNoMatch;
             }
             break;
@@ -1166,18 +1170,48 @@ bitmask<NondegeneracyStatus> BinaryAssertionExpr::checkNondegeneracyImpl() const
 };
 
 std::optional<SequenceRange> BinaryAssertionExpr::computeSequenceLengthImpl() const {
-    if (op == BinaryAssertionOperator::Throughout)
-        return right.computeSequenceLength();
-
     const auto leftLen = left.computeSequenceLength();
     const auto rightLen = right.computeSequenceLength();
-    if (leftLen.has_value() && rightLen.has_value()) {
-        const auto leftLenVal = leftLen.value();
-        const auto rightLenVal = rightLen.value();
-        return (rightLenVal < leftLenVal) ? leftLenVal : rightLenVal;
-    }
+    if (!leftLen || !rightLen)
+        return {};
 
-    return leftLen.has_value() ? leftLen : rightLen;
+    switch (op) {
+        case BinaryAssertionOperator::Or: {
+            SequenceRange res;
+            res.min = std::min(leftLen->min, rightLen->min);
+            if (leftLen->max && rightLen->max)
+                res.max = std::max(*leftLen->max, *rightLen->max);
+            return res;
+        }
+        case BinaryAssertionOperator::And: {
+            SequenceRange res;
+            res.min = std::max(leftLen->min, rightLen->min);
+            if (leftLen->max && rightLen->max)
+                res.max = std::max(*leftLen->max, *rightLen->max);
+            return res;
+        }
+        case BinaryAssertionOperator::Intersect: {
+            SequenceRange res;
+            res.min = std::max(leftLen->min, rightLen->min);
+            if (leftLen->max && rightLen->max)
+                res.max = std::min(*leftLen->max, *rightLen->max);
+            else if (leftLen->max)
+                res.max = leftLen->max;
+            else
+                res.max = rightLen->max;
+            return res;
+        }
+        case BinaryAssertionOperator::Within: {
+            SequenceRange res;
+            res.min = std::max(leftLen->min, rightLen->min);
+            res.max = rightLen->max;
+            return res;
+        }
+        case BinaryAssertionOperator::Throughout:
+            return rightLen;
+        default:
+            return {};
+    }
 }
 
 void BinaryAssertionExpr::serializeTo(ASTSerializer& serializer) const {

@@ -2396,11 +2396,16 @@ endmodule
     test("(1'b1) intersect (1'b1 ##[1:3] 1'b1)", diag::SeqPropNondegenerate);
     test("(1'b1 ##1 1'b1) intersect (1'b1 ##[1:3] 1'b1)");
     test("(1'b1 ##0 1'b1) intersect (1'b1 ##[1:3] 1'b1)", diag::SeqPropNondegenerate);
-    test("(1'b1[*2]) intersect (1'b1 ##[1:3] 1'b1)", diag::SeqPropNondegenerate);
+    test("(1'b1[*2]) intersect (1'b1 ##[1:3] 1'b1)");
     test("(##2 1'b1[*2]) intersect (1'b1 ##[1:3] 1'b1)");
     test("##0 a[*0:4] ##0 b[=4] ##0 c[->1:2] ##0 c[*] ##1 d[+]");
     test("##0 a[*0:4] ##0 b[=4] ##0 c[->1:2] ##0 c[*0] ##1 d[+]", diag::SeqPropNondegenerate);
     test("##0 a[*0] ##0 b[=4] ##0 c[->1:2] ##0 c[*] ##1 d[+]", diag::SeqPropNondegenerate);
+
+    test("((1 ##5 1) or (1 ##8 1)) intersect (1 ##7 1)");
+    test("(a[->1:$] intersect b[*5]) within 1", diag::SeqPropNondegenerate);
+    test("(a[->1:4] intersect b[->5:$]) within 1", diag::SeqPropNondegenerate);
+    test("(a[->1:4] intersect b[->5:7]) within 1", diag::SeqPropNondegenerate);
 }
 
 TEST_CASE("Sequence nondegeneracy tests 2") {
@@ -2471,6 +2476,7 @@ endmodule
     test("(1'b1) intersect (1'b1[*0] ##[0:3] 1'b1)");
     test("(1'b1) intersect (1'b1[*0:2] ##[0:3] 1'b1)");
     test("(1'b1) intersect (1'b1 ##[1:3] 1'b1)", diag::SeqPropNondegenerate);
+    test("1[+] intersect (1'b1 ##5 1'b1)");
     test("(1'b1 ##4 1'b1) within (1'b1 ##1 1'b1)", diag::SeqPropNondegenerate);
     test("1'b0 ##2 1'b1", diag::SeqPropNondegenerate);
     test("1[*2]");

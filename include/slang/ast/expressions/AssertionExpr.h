@@ -101,13 +101,11 @@ struct SequenceRange {
 
     void serializeTo(ASTSerializer& serializer) const;
 
-    bool operator<(const SequenceRange& right) const;
+    /// Determines whether this range can intersect with @a other.
+    bool canIntersect(const SequenceRange& other) const;
 
-    /// Determines whether this range intersects with @a other.
-    bool intersects(const SequenceRange& other) const;
-
-    /// Determines whether this range is fully contained within @a other.
-    bool isWithin(const SequenceRange& other) const;
+    /// Determines whether this range can be fully contained within @a other.
+    bool canBeWithin(const SequenceRange& other) const;
 };
 
 /// The base class for assertion expressions (sequences and properties).
@@ -267,6 +265,9 @@ struct SequenceRepetition {
     /// properties of degeneracy (admitting empty matches or no matches at all).
     bitmask<NondegeneracyStatus> checkNondegeneracy() const;
 
+    /// Applies the repetition to the given range, scaling it and returning the result.
+    SequenceRange applyTo(SequenceRange other) const;
+
     void serializeTo(ASTSerializer& serializer) const;
 };
 
@@ -358,10 +359,7 @@ public:
         matchItems(matchItems) {}
 
     bitmask<NondegeneracyStatus> checkNondegeneracyImpl() const;
-
-    std::optional<SequenceRange> computeSequenceLengthImpl() const {
-        return expr.computeSequenceLength();
-    }
+    std::optional<SequenceRange> computeSequenceLengthImpl() const;
 
     static AssertionExpr& fromSyntax(const syntax::ParenthesizedSequenceExprSyntax& syntax,
                                      const ASTContext& context);
