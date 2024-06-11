@@ -581,10 +581,11 @@ void InstanceBodyVisitor::handle(const ConcurrentAssertionStatement& stmt) {
 void InstanceBodyVisitor::handle(const ClockingBlockSymbol& clkSym) {
     // Update current `SignalEvent` during visiting members of current clocking block
     clkBlkSEC = clkSym.getEvent().as_if<const SignalEventControl>();
-    SLANG_ASSERT(clkBlkSEC);
-    visitDefault(clkSym);
-    // Empty clocking event means that the clocking block processing is done
-    clkBlkSEC = nullptr;
+    if (clkBlkSEC) {
+        visitDefault(clkSym);
+        // Empty clocking event means that the clocking block processing is done
+        clkBlkSEC = nullptr;
+    }
 }
 
 void ClockResolutionVisitor::handle(const InstanceBodySymbol& body) {
