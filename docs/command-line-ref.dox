@@ -208,6 +208,10 @@ When dumping AST to JSON, include only the scope (or symbol) specified by the gi
 This option can be specified more than once to include more than one scope. If not provided, all
 symbols are dumped.
 
+`--ast-json-source-info`
+
+When dumping AST to JSON, include source line and file information.
+
 @section compilation-limits Compilation
 
 `--top <name>`
