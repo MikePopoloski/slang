@@ -109,6 +109,12 @@ public:
     virtual slang::DiagnosticSeverity diagSeverity() const = 0;
     virtual std::string diagString() const = 0;
 
+    std::string diagMessage() const {
+        auto kindStr = std::string(toString(kind));
+        std::transform(kindStr.begin(), kindStr.end(), kindStr.begin(), ::toupper);
+        return fmt::format("[{}-{}] {}", kindStr, diagCode().getCode(), diagString());
+    }
+
     [[nodiscard]] virtual const slang::Diagnostics& getDiagnostics() const { return diagnostics; }
     [[nodiscard]] virtual const slang::TidyKind getKind() const { return kind; }
 

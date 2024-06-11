@@ -28,7 +28,7 @@ protected:
 
     [[nodiscard]] bool skip(std::string_view path) const {
         auto file = std::filesystem::path(path).filename().string();
-        auto parentPath = weakly_canonical(std::filesystem::path(path));
+        auto parentPath = weakly_canonical(std::filesystem::path(path).parent_path());
         const auto& skipFiles = config.getSkipFiles();
         const auto& skipPaths = config.getSkipPaths();
         return std::find(skipFiles.begin(), skipFiles.end(), file) != skipFiles.end() ||
