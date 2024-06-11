@@ -2471,6 +2471,7 @@ endmodule
     test("(1'b1) intersect (1'b1[*0] ##[0:3] 1'b1)");
     test("(1'b1) intersect (1'b1[*0:2] ##[0:3] 1'b1)");
     test("(1'b1) intersect (1'b1 ##[1:3] 1'b1)", diag::SeqPropNondegenerate);
+    test("(1'b1 ##4 1'b1) within (1'b1 ##1 1'b1)", diag::SeqPropNondegenerate);
     test("1'b0 ##2 1'b1", diag::SeqPropNondegenerate);
     test("1[*2]");
     test("1[*0]", diag::SeqPropNondegenerate);
@@ -2601,4 +2602,26 @@ endmodule
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::SeqPropNondegenerate);
+}
+
+TEST_CASE("Sequence nondegeneracy tests 6") {
+    auto tree = SyntaxTree::fromText(R"(
+module top;
+    logic clk;
+    logic rstb;
+    logic a;
+    logic b;
+
+    property p1(clk, rstb, a, b);
+        @(posedge clk) disable iff(~rstb)
+        $fell(a) |-> !$stable(b) within((~a)[*1:$] ##1 a);
+    endproperty
+
+    LABEL1: assert property(p1(clk, rstb, a, b));
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
 }

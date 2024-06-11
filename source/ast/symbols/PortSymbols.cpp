@@ -1502,6 +1502,9 @@ void PortSymbol::serializeTo(ASTSerializer& serializer) const {
     serializer.write("type", getType());
     serializer.write("direction", toString(direction));
 
+    if (isNullPort)
+        serializer.write("isNullPort", isNullPort);
+
     if (auto init = getInitializer())
         serializer.write("initializer", *init);
 
