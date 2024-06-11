@@ -128,7 +128,7 @@ bool ClockingEvent::operator==(const ClockingEvent& ce) const {
         return false;
 
     // Check simple single clocked clocking events
-    if (unsigned long sz = events.size(); sz != ce.events.size())
+    if (size_t sz = events.size(); sz != ce.events.size())
         return false;
     else if (sz == 1)
         return events[0] == ce.events[0];
@@ -268,7 +268,7 @@ void SequenceVisitor::handle(const SequenceConcatExpr& conExp) {
             if ((elemSeq->checkNondegeneracy() | prevStatus).has(NondegeneracyStatus::AdmitsEmpty))
                 compilation.getRoot().addDiag(diag::MultiClkConcatAdmitsEmpty, sourceRange);
 
-            if (elem.delay.max > 1)
+            if (elem.delay.max > 1U)
                 compilation.getRoot().addDiag(diag::SingleClockDelaySeqExpected, sourceRange)
                     << elem.delay.max.value_or(UINT32_MAX);
         }
