@@ -155,14 +155,15 @@ void ClockingBlockVisitor::handle(const SignalEventControl& se) {
             auto* clkBlkSECSym = clkBlkSECCl ? &clkBlkSECCl->symbol : nullptr;
             if (se.edge != clkBlkSEC->edge || seSym != clkBlkSECSym || clkBlkSECSym == nullptr) {
                 // If a named sequence that is defined outside the clocking block is used, its
-                // clock, if specified, must be identical to the clocking block's clock
+                // clock, if specified, must be identical to the clocking block's clock.
+                // See section 16.16 - "clocking block rules".
                 compilation.getRoot().addDiag(diag::DiffClockInClockinBlock, sLoc);
             }
         }
         else {
             // See SystemVerilog LRM 16.16 section - "clocking block" rules.
             // No explicit event control is allowed in any property or sequence declaration
-            // in clocking block
+            // in clocking block.
             compilation.getRoot().addDiag(diag::ClockinBlockClockEvent, se.sourceRange);
         }
     }
