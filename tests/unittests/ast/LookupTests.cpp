@@ -2132,3 +2132,45 @@ endpackage
     // Check no crash.
     compilation.getAllDiagnostics();
 }
+
+TEST_CASE("Bind instantiation can't see into $unit, can't import") {
+    auto tree = SyntaxTree::fromText(R"(
+`default_nettype none
+
+module m;
+    import p::*;
+endmodule
+
+logic foo;
+logic x;
+int j;
+
+module n #(parameter int i)
+          (input logic a, b, foo);
+endmodule
+
+checker c (logic t, bar);
+endchecker
+
+package p;
+    logic bar;
+endpackage
+
+module top;
+    bind m n #(.i(j)) n1(.a(x), .b(bar), .foo);
+    bind m c c1(.t(x), .bar);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 6);
+    CHECK(diags[0].code == diag::UndeclaredIdentifier);
+    CHECK(diags[1].code == diag::UndeclaredIdentifier);
+    CHECK(diags[2].code == diag::UndeclaredIdentifier);
+    CHECK(diags[3].code == diag::ImplicitNamedPortNotFound);
+    CHECK(diags[4].code == diag::UndeclaredIdentifier);
+    CHECK(diags[5].code == diag::ImplicitNamedPortNotFound);
+}

@@ -208,6 +208,10 @@ When dumping AST to JSON, include only the scope (or symbol) specified by the gi
 This option can be specified more than once to include more than one scope. If not provided, all
 symbols are dumped.
 
+`--ast-json-source-info`
+
+When dumping AST to JSON, include source line and file information.
+
 @section compilation-limits Compilation
 
 `--top <name>`
@@ -349,6 +353,22 @@ used for compatibility purposes.
 Allow subroutine local variables to be driven from multiple always_comb/always_ff blocks.
 The LRM does not make an exception for local variables in assignment rules but
 most tools allow it anyway so this flag exists for compatibility with those tools.
+
+`--allow-merging-ansi-ports`
+
+Allow ANSI port declarations to merge with a net or variable declaration internal to the
+instance, instead of creating a new internal symbol to connect to. This is not allowed in
+SystemVerilog but some tools support it anyway so this flag can be used for compatibility purposes.
+
+For example:
+
+@code{.sv}
+module m(input a, output b);
+    wire [31:0] a;
+    logic [31:0] b;
+    assign b = a;
+endmodule
+@endcode
 
 `--strict-driver-checking`
 

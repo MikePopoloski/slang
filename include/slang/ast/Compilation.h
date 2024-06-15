@@ -125,9 +125,13 @@ enum class SLANG_EXPORT CompilationFlags {
     AllowSelfDeterminedStreamConcat = 1 << 12,
 
     /// Allow multi-driven subroutine local variables.
-    AllowMultiDrivenLocals = 1 << 13
+    AllowMultiDrivenLocals = 1 << 13,
+
+    /// Allow merging ANSI port declarations with nets and variables
+    /// declared in the module body.
+    AllowMergingAnsiPorts = 1 << 14
 };
-SLANG_BITMASK(CompilationFlags, AllowMultiDrivenLocals)
+SLANG_BITMASK(CompilationFlags, AllowMergingAnsiPorts)
 
 /// Contains various options that can control compilation behavior.
 struct SLANG_EXPORT CompilationOptions {
@@ -428,10 +432,10 @@ public:
     /// @{
 
     /// Registers a system subroutine handler, which can be accessed by compiled code.
-    void addSystemSubroutine(std::shared_ptr<SystemSubroutine> subroutine);
+    void addSystemSubroutine(const std::shared_ptr<SystemSubroutine>& subroutine);
 
     /// Registers a type-based system method handler, which can be accessed by compiled code.
-    void addSystemMethod(SymbolKind typeKind, std::shared_ptr<SystemSubroutine> method);
+    void addSystemMethod(SymbolKind typeKind, const std::shared_ptr<SystemSubroutine>& method);
 
     /// Gets a system subroutine with the given name, or nullptr if there is no such subroutine
     /// registered.

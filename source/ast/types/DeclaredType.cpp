@@ -483,11 +483,15 @@ T DeclaredType::getASTContext() const {
     // when resolving.
     if ((IsInitializer && flags.has(DeclaredTypeFlags::InitializerOverridden)) ||
         (!IsInitializer && flags.has(DeclaredTypeFlags::TypeOverridden))) {
-        auto inst = scope->asSymbol().as<InstanceBodySymbol>().parentInstance;
+        auto& instBody = scope->asSymbol().as<InstanceBodySymbol>();
+        auto inst = instBody.parentInstance;
         SLANG_ASSERT(inst);
 
         scope = inst->getParentScope();
         SLANG_ASSERT(scope);
+
+        if (instBody.flags.has(InstanceFlags::FromBind))
+            astFlags |= ASTFlags::BindInstantiation;
 
         return ASTContext(*scope, LookupLocation::before(*inst), astFlags);
     }

@@ -94,20 +94,39 @@ if(SLANG_USE_MIMALLOC)
   FetchContent_Declare(
     mimalloc
     GIT_REPOSITORY https://github.com/microsoft/mimalloc.git
-    GIT_TAG v2.1.2
+    GIT_TAG v2.1.7
     GIT_SHALLOW ON
     ${find_pkg_args})
   FetchContent_MakeAvailable(mimalloc)
 
-  if(NOT TARGET mimalloc-static)
-    message(
-      FATAL_ERROR
-        "Could not find mimalloc package, min version: ${mimalloc_min_version}")
-  endif()
-
   if(mimalloc_FOUND)
-    message(STATUS "Found system mimalloc version: ${mimalloc_VERSION}")
+    if(TARGET mimalloc)
+      set(mimalloc_target "mimalloc")
+    elseif(TARGET mimalloc-static)
+      set(mimalloc_target "mimalloc-static")
+    else()
+      message(
+        FATAL_ERROR
+          "Could not find mimalloc package, min version: ${mimalloc_min_version}"
+      )
+    endif()
+
+    get_target_property(MIMALLOC_CFG ${mimalloc_target} IMPORTED_CONFIGURATIONS)
+    get_target_property(MIMALLOC_LIB ${mimalloc_target}
+                        IMPORTED_LOCATION_${MIMALLOC_CFG})
+    get_target_property(MIMALLOC_INC ${mimalloc_target}
+                        INTERFACE_INCLUDE_DIRECTORIES)
+    message(STATUS "Found system mimalloc library: ${MIMALLOC_LIB}")
+    message(STATUS "Using system mimalloc include: ${MIMALLOC_INC}")
   else()
+    if(NOT TARGET mimalloc-static)
+      message(
+        FATAL_ERROR
+          "Could not find mimalloc package, min version: ${mimalloc_min_version}"
+      )
+    endif()
+    set(mimalloc_target "mimalloc-static")
+
     message(STATUS "Using remote mimalloc library")
     if(IS_DIRECTORY "${mimalloc_SOURCE_DIR}")
       set_property(DIRECTORY ${mimalloc_SOURCE_DIR} PROPERTY EXCLUDE_FROM_ALL

@@ -374,6 +374,21 @@ bool Type::isVirtualInterfaceOrArray() const {
     }
 }
 
+bool Type::isHandleType() const {
+    auto ct = &getCanonicalType();
+    switch (ct->kind) {
+        case SymbolKind::VirtualInterfaceType:
+        case SymbolKind::ClassType:
+        case SymbolKind::CHandleType:
+        case SymbolKind::CovergroupType:
+        case SymbolKind::EventType:
+        case SymbolKind::NullType:
+            return true;
+        default:
+            return false;
+    }
+}
+
 bool Type::isTaggedUnion() const {
     auto& ct = getCanonicalType();
     switch (ct.kind) {

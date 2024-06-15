@@ -281,7 +281,7 @@ TimingControl& SignalEventControl::fromSyntax(Compilation& compilation,
     SLANG_ASSERT(syntax.kind == SyntaxKind::IffPropertyExpr);
 
     auto left = context.requireSimpleExpr(*syntax.left, diag::InvalidSyntaxInEventExpr);
-    auto right = context.requireSimpleExpr(*syntax.left, diag::InvalidSyntaxInEventExpr);
+    auto right = context.requireSimpleExpr(*syntax.right, diag::InvalidSyntaxInEventExpr);
     if (!left || !right)
         return badCtrl(compilation, nullptr);
 
@@ -353,6 +353,9 @@ TimingControl& SignalEventControl::fromExpr(Compilation& compilation, EdgeKind e
 void SignalEventControl::serializeTo(ASTSerializer& serializer) const {
     serializer.write("expr", expr);
     serializer.write("edge", toString(edge));
+
+    if (iffCondition)
+        serializer.write("iff", *iffCondition);
 }
 
 static void collectEvents(const ASTContext& context, const SyntaxNode& expr,

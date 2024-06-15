@@ -25,11 +25,12 @@ using namespace slang::ast;
 using namespace slang::driver;
 
 void printJson(Compilation& compilation, const std::string& fileName,
-               const std::vector<std::string>& scopes) {
+               const std::vector<std::string>& scopes, bool includeSourceInfo = false) {
     JsonWriter writer;
     writer.setPrettyPrint(true);
 
     ASTSerializer serializer(compilation, writer);
+    serializer.setIncludeSourceInfo(includeSourceInfo);
     if (scopes.empty()) {
         serializer.startObject();
         serializer.writeProperty("design");
@@ -101,6 +102,10 @@ int driverMain(int argc, TArgs argv) {
                            "given hierarchical paths",
                            "<path>");
 
+        std::optional<bool> includeSourceInfo;
+        driver.cmdLine.add("--ast-json-source-info", includeSourceInfo,
+                           "When dumping AST to JSON, include source line and file information");
+
         std::optional<std::string> timeTrace;
         driver.cmdLine.add("--time-trace", timeTrace,
                            "Do performance profiling of the slang compiler and output "
@@ -162,7 +167,8 @@ int driverMain(int argc, TArgs argv) {
                     auto compilation = driver.createCompilation();
                     ok &= driver.reportCompilation(*compilation, quiet == true);
                     if (astJsonFile)
-                        printJson(*compilation, *astJsonFile, astJsonScopes);
+                        printJson(*compilation, *astJsonFile, astJsonScopes,
+                                  (includeSourceInfo == true));
                 }
             }
         }

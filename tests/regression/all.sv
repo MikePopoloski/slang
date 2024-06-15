@@ -400,10 +400,60 @@ module m6;
     A b1 = B::new;
     B b2 = new;
     C2 c = new;
+    int depth;
     integer i = b1.f();
     initial begin
         b2.f();
         a = b2;
         c.i = c.j;
+
+        randsequence(main)
+            main : first second;
+            first : add | dec := (1 + 1);
+            second : repeat($urandom_range(2, 6)) first;
+            add : if (depth < 2) first else second;
+            dec : case (depth & 7)
+                0 : add;
+                1, 2 : dec;
+                default : first;
+            endcase;
+            third : rand join first second;
+            fourth(string s = "done") : { if (depth) break; };
+        endsequence
     end
 endmodule
+
+class C3;
+    enum {red, green, blue} color;
+    bit [3:0] pixel_adr, pixel_offset, pixel_hue;
+    logic clk, x, y, c;
+
+    covergroup g2 (string instComment) @(posedge clk);
+        Offset: coverpoint pixel_offset;
+        Hue: coverpoint pixel_hue;
+        AxC: cross color, pixel_adr;
+        all: cross color, Hue, Offset;
+
+        option.comment = instComment;
+
+        e: coverpoint x iff (clk) {
+            option.weight = 2;
+            wildcard bins a = { [0:63],65 };
+            bins b[] = { [127:150],[148:191] }; // note overlapping values
+            bins c[] = { 200,201,202 };
+            bins d = { [1000:$] };
+            bins others[] = default;
+
+            bins sa = (4 => 5 => 6), ([7:9],10 => 11,12);
+            bins sb[] = (12 => 3 [* 1]);
+            bins sc = (12 => 3 [-> 1]);
+            bins sd = (12 => 3 [= 1:2]);
+        }
+        cross e, y {
+            option.weight = c;
+            bins one = '{ '{1,2}, '{3,4}, '{5,6} };
+            ignore_bins others = (!binsof(e.a) || !binsof(y) intersect {1}) with (e > 10);
+        }
+        b: cross y, x;
+    endgroup
+endclass

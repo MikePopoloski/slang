@@ -190,9 +190,12 @@ enum class SLANG_EXPORT ASTFlags : uint64_t {
     ForkJoinAnyNone = 1ull << 43,
 
     /// AST binding disallows nets with a user-defined nettype (UDNT).
-    DisallowUDNT = 1ull << 44
+    DisallowUDNT = 1ull << 44,
+
+    /// AST binding is for a bind instantiation (port connection or param value).
+    BindInstantiation = 1ull << 45
 };
-SLANG_BITMASK(ASTFlags, DisallowUDNT)
+SLANG_BITMASK(ASTFlags, BindInstantiation)
 
 // clang-format off
 #define DK(x) \

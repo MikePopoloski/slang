@@ -223,6 +223,10 @@ public:
     /// A plain virtual interface type will also return true.
     bool isVirtualInterfaceOrArray() const;
 
+    /// Indicates whether this is a type that acts like a handle, which includes
+    /// classes, events, chandles, virtual interfaces, and the null type.
+    bool isHandleType() const;
+
     /// Indicates whether this is a type alias.
     /// Note that unlike other methods, this one does not unwrap to the canonical type.
     bool isAlias() const { return kind == SymbolKind::TypeAlias; }

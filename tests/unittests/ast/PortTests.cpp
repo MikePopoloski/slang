@@ -1728,3 +1728,25 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Ansi duplicate port compatibility option") {
+    auto tree = SyntaxTree::fromText(R"(
+module m(input a, output b);
+    wire [31:0] a;
+    logic [31:0] b;
+    assign b = a;
+endmodule
+
+module top;
+    logic [31:0] a, b;
+    m m1(.a, .b);
+endmodule
+)");
+
+    CompilationOptions options;
+    options.flags |= CompilationFlags::AllowMergingAnsiPorts;
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

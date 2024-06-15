@@ -63,8 +63,8 @@ module t33 #(
   parameter MODE = 3'd0
 ) (
   input wire  clk,
-  input wire  [7:0]l,
-  input wire  [2:0]s,
+  input wire [15:0]l,
+  input wire [15:0]s,
   input wire [15:0]c,
   input wire  [1:0]b,
   input wire       a
@@ -72,7 +72,7 @@ module t33 #(
   reg   [15:0] c_n;
   always @(s or l or c)
   begin : c_inc
-    c_n = c + (l << s);
+    c_n = c + (l ^ s);
   end
 
   property test_prop;

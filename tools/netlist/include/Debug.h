@@ -8,6 +8,7 @@
 #pragma once
 
 #include "Config.h"
+#include <cstring>
 #include <fmt/core.h>
 
 namespace netlist {
@@ -25,10 +26,12 @@ void InfoMessage(fmt::format_string<T...> fmt, T&&... args) {
 
 } // namespace netlist
 
+#define __FILENAME__ (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
+
 #ifdef DEBUG
-#    define DEBUG_PRINT(str, ...)                                             \
-        if (netlist::Config::getInstance().debugEnabled) {                    \
-            DebugMessage(__FILE__, __LINE__, str __VA_OPT__(, ) __VA_ARGS__); \
+#    define DEBUG_PRINT(str, ...)                                                 \
+        if (netlist::Config::getInstance().debugEnabled) {                        \
+            DebugMessage(__FILENAME__, __LINE__, str __VA_OPT__(, ) __VA_ARGS__); \
         }
 #else
 #    define DEBUG_PRINT(str, ...)

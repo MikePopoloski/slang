@@ -365,6 +365,7 @@ endmodule
 
     ASTSerializer serializer(compilation, writer);
     serializer.setIncludeAddresses(false);
+    serializer.setIncludeSourceInfo(true);
     serializer.serialize(compilation.getRoot());
 
     std::string result = "\n"s + std::string(writer.view());
@@ -372,36 +373,66 @@ endmodule
 {
   "name": "$root",
   "kind": "Root",
+  "source_file": "",
+  "source_line": 0,
+  "source_column": 0,
   "members": [
     {
       "name": "",
-      "kind": "CompilationUnit"
+      "kind": "CompilationUnit",
+      "source_file": "",
+      "source_line": 0,
+      "source_column": 0
     },
     {
       "name": "test_enum",
       "kind": "Instance",
+      "source_file": "source",
+      "source_line": 2,
+      "source_column": 8,
       "body": {
         "name": "test_enum",
         "kind": "InstanceBody",
+        "source_file": "source",
+        "source_line": 2,
+        "source_column": 8,
         "members": [
           {
             "name": "STATE_0",
-            "kind": "TransparentMember"
+            "kind": "TransparentMember",
+            "source_file": "source",
+            "source_line": 4,
+            "source_column": 9
           },
           {
             "name": "STATE_1",
-            "kind": "TransparentMember"
+            "kind": "TransparentMember",
+            "source_file": "source",
+            "source_line": 5,
+            "source_column": 9
           },
           {
             "name": "STATE",
             "kind": "TypeAlias",
+            "source_file": "source",
+            "source_line": 6,
+            "source_column": 7,
             "target": "enum{STATE_0=1'd0,STATE_1=1'd1}test_enum.e$1"
           },
           {
             "name": "a",
             "kind": "Variable",
+            "source_file": "source",
+            "source_line": 8,
+            "source_column": 11,
             "type": "enum{STATE_0=1'd0,STATE_1=1'd1}test_enum.STATE",
             "initializer": {
+              "source_file_start": "source",
+              "source_file_end": "source",
+              "source_line_start": 8,
+              "source_line_end": 8,
+              "source_column_start": 15,
+              "source_column_end": 22,
               "kind": "NamedValue",
               "type": "enum{STATE_0=1'd0,STATE_1=1'd1}test_enum.STATE",
               "symbol": "STATE_0",
@@ -412,10 +443,16 @@ endmodule
           {
             "name": "C",
             "kind": "ClassType",
+            "source_file": "source",
+            "source_line": 10,
+            "source_column": 11,
             "members": [
               {
                 "name": "i",
                 "kind": "ClassProperty",
+                "source_file": "source",
+                "source_line": 11,
+                "source_column": 13,
                 "type": "int",
                 "lifetime": "Automatic",
                 "visibility": "Public"
@@ -430,8 +467,17 @@ endmodule
           {
             "name": "c",
             "kind": "Variable",
+            "source_file": "source",
+            "source_line": 14,
+            "source_column": 7,
             "type": "C",
             "initializer": {
+              "source_file_start": "source",
+              "source_file_end": "source",
+              "source_line_start": 14,
+              "source_line_end": 14,
+              "source_column_start": 11,
+              "source_column_end": 14,
               "kind": "NewClass",
               "type": "C",
               "isSuperClass": false
@@ -1006,10 +1052,11 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 3);
+    REQUIRE(diags.size() == 4);
     CHECK(diags[0].code == diag::ConstantConversion);
-    CHECK(diags[1].code == diag::SpecparamInConstant);
-    CHECK(diags[2].code == diag::SpecifyBlockParam);
+    CHECK(diags[1].code == diag::ArithOpMismatch);
+    CHECK(diags[2].code == diag::SpecparamInConstant);
+    CHECK(diags[3].code == diag::SpecifyBlockParam);
 }
 
 TEST_CASE("Net initializer in package") {
@@ -1842,7 +1889,7 @@ module ALU (o1, i1, i2, opcode);
         specparam s1 = 2;
         if (opcode == 2'b00) (i1,i2 *> o1) = (25.0, 25.0);
         if (opcode == 2'b01) (i1 => o1) = (5.6, 8.0);
-        if (opcode == s1) (i2 => o1) = (5.6, 8.0);
+        if (opcode == s1[1:0]) (i2 => o1) = (5.6, 8.0);
         (opcode *> o1) = (6.1, 6.5);
     endspecify
 endmodule
@@ -2264,7 +2311,7 @@ property myprop(k);
 endproperty
 
 genvar k;
-for (k=0; k < 4; k++) begin: m
+for (k=1; k < 4; k++) begin: m
     if (A)
         label1: assert property(myprop(k));
     else
@@ -2470,4 +2517,221 @@ endmodule
     Compilation compilation;
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("JSON dump -- sequence with `iff` clause") {
+    auto tree = SyntaxTree::fromText(R"(
+logic x, y;
+
+sequence s (ev);
+    @(ev) x ##1 y;
+endsequence
+
+module m(input y1, input x1, input clk);
+    cover property (s(((x1 iff y1) or negedge clk)));
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    JsonWriter writer;
+    writer.setPrettyPrint(true);
+
+    ASTSerializer serializer(compilation, writer);
+    serializer.setIncludeAddresses(false);
+    serializer.serialize(compilation.getRoot());
+
+    std::string result = "\n"s + std::string(writer.view());
+    CHECK(result == R"(
+{
+  "name": "$root",
+  "kind": "Root",
+  "members": [
+    {
+      "name": "",
+      "kind": "CompilationUnit",
+      "members": [
+        {
+          "name": "x",
+          "kind": "Variable",
+          "type": "logic",
+          "lifetime": "Static"
+        },
+        {
+          "name": "y",
+          "kind": "Variable",
+          "type": "logic",
+          "lifetime": "Static"
+        },
+        {
+          "name": "s",
+          "kind": "Sequence",
+          "members": [
+            {
+              "name": "ev",
+              "kind": "AssertionPort"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "m",
+      "kind": "Instance",
+      "body": {
+        "name": "m",
+        "kind": "InstanceBody",
+        "members": [
+          {
+            "name": "y1",
+            "kind": "Port",
+            "type": "logic",
+            "direction": "In",
+            "internalSymbol": "y1"
+          },
+          {
+            "name": "y1",
+            "kind": "Net",
+            "type": "logic",
+            "netType": {
+              "name": "wire",
+              "kind": "NetType",
+              "type": "logic"
+            }
+          },
+          {
+            "name": "x1",
+            "kind": "Port",
+            "type": "logic",
+            "direction": "In",
+            "internalSymbol": "x1"
+          },
+          {
+            "name": "x1",
+            "kind": "Net",
+            "type": "logic",
+            "netType": {
+              "name": "wire",
+              "kind": "NetType",
+              "type": "logic"
+            }
+          },
+          {
+            "name": "clk",
+            "kind": "Port",
+            "type": "logic",
+            "direction": "In",
+            "internalSymbol": "clk"
+          },
+          {
+            "name": "clk",
+            "kind": "Net",
+            "type": "logic",
+            "netType": {
+              "name": "wire",
+              "kind": "NetType",
+              "type": "logic"
+            }
+          },
+          {
+            "name": "",
+            "kind": "ProceduralBlock",
+            "procedureKind": "Always",
+            "body": {
+              "kind": "ConcurrentAssertion",
+              "propertySpec": {
+                "kind": "Simple",
+                "expr": {
+                  "kind": "AssertionInstance",
+                  "type": "sequence",
+                  "symbol": "s",
+                  "body": {
+                    "kind": "Clocking",
+                    "clocking": {
+                      "kind": "SignalEvent",
+                      "expr": {
+                        "kind": "ClockingEvent",
+                        "type": "void",
+                        "timingControl": {
+                          "kind": "EventList",
+                          "events": [
+                            {
+                              "kind": "SignalEvent",
+                              "expr": {
+                                "kind": "NamedValue",
+                                "type": "logic",
+                                "symbol": "x1"
+                              },
+                              "edge": "None",
+                              "iff": {
+                                "kind": "NamedValue",
+                                "type": "logic",
+                                "symbol": "y1"
+                              }
+                            },
+                            {
+                              "kind": "SignalEvent",
+                              "expr": {
+                                "kind": "NamedValue",
+                                "type": "logic",
+                                "symbol": "clk"
+                              },
+                              "edge": "NegEdge"
+                            }
+                          ]
+                        }
+                      },
+                      "edge": "None"
+                    },
+                    "expr": {
+                      "kind": "SequenceConcat",
+                      "elements": [
+                        {
+                          "sequence": {
+                            "kind": "Simple",
+                            "expr": {
+                              "kind": "NamedValue",
+                              "type": "logic",
+                              "symbol": "x"
+                            }
+                          },
+                          "min": 0,
+                          "max": 0
+                        },
+                        {
+                          "sequence": {
+                            "kind": "Simple",
+                            "expr": {
+                              "kind": "NamedValue",
+                              "type": "logic",
+                              "symbol": "y"
+                            }
+                          },
+                          "min": 1,
+                          "max": 1
+                        }
+                      ]
+                    }
+                  },
+                  "isRecursiveProperty": false,
+                  "localVars": [
+                  ]
+                }
+              },
+              "ifTrue": {
+                "kind": "Empty"
+              },
+              "assertionKind": "CoverProperty"
+            }
+          }
+        ],
+        "definition": "m"
+      },
+      "connections": [
+      ]
+    }
+  ]
+})");
 }

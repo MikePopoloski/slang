@@ -1181,3 +1181,33 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Parameter default checking error regress -- GH #1009") {
+    auto tree = SyntaxTree::fromText(R"(
+package my_pkg;
+
+typedef enum logic {
+	CaseA
+} unit_t;
+
+typedef struct {
+	unit_t val;
+} struct_t;
+
+endpackage
+
+module param_top #(
+	parameter my_pkg::struct_t Param = '{default: my_pkg::CaseA}
+);
+endmodule
+
+module top;
+param_top f(); // elaborates fine
+param_top #(.Param('{my_pkg::CaseA})) g();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

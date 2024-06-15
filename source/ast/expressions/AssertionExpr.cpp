@@ -26,13 +26,23 @@ namespace {
 
 using namespace slang::ast;
 
-struct AdmitsEmptyVisitor {
+struct NondegeneracyCheckVisitor {
     template<typename T>
-    bool visit(const T& expr) {
+    slang::bitmask<NondegeneracyStatus> visit(const T& expr) {
         if (expr.bad())
-            return false;
+            return NondegeneracyStatus::None;
 
-        return expr.admitsEmptyImpl();
+        return expr.checkNondegeneracyImpl();
+    }
+};
+
+struct SequenceLengthVisitor {
+    template<typename T>
+    std::optional<SequenceRange> visit(const T& expr) {
+        if (expr.bad())
+            return std::nullopt;
+
+        return expr.computeSequenceLengthImpl();
     }
 };
 
@@ -109,21 +119,47 @@ const AssertionExpr& AssertionExpr::bind(const SequenceExprSyntax& syntax,
     return *result;
 }
 
+static void enforceNondegeneracy(const AssertionExpr& expr, const ASTContext& context,
+                                 AssertionExpr::NondegeneracyRequirement nondegRequirement,
+                                 const SyntaxNode& syntax) {
+    const auto seqNondegenSt = expr.checkNondegeneracy();
+    const bool admitsEmpty = seqNondegenSt.has(NondegeneracyStatus::AdmitsEmpty);
+    const bool acceptsOnlyEmpty = seqNondegenSt.has(NondegeneracyStatus::AcceptsOnlyEmpty);
+    const bool admitsNoMatch = seqNondegenSt.has(NondegeneracyStatus::AdmitsNoMatch);
+
+    using NR = AssertionExpr::NondegeneracyRequirement;
+    if (nondegRequirement == NR::OverlapOp) {
+        if (acceptsOnlyEmpty || admitsNoMatch) {
+            auto& diag = context.addDiag(diag::OverlapImplNondegenerate, syntax.sourceRange());
+            diag.addNote(acceptsOnlyEmpty ? diag::SeqAcceptsOnlyEmptyMatches
+                                          : diag::SeqAdmitsNoMatches,
+                         syntax.sourceRange());
+        }
+    }
+    else if (nondegRequirement == NR::NonOverlapOp) {
+        if (admitsNoMatch) {
+            auto& diag = context.addDiag(diag::NonOverlapImplNondegenerate, syntax.sourceRange());
+            diag.addNote(diag::SeqAdmitsNoMatches, syntax.sourceRange());
+        }
+    }
+    else if (admitsEmpty || admitsNoMatch) {
+        auto& diag = context.addDiag(diag::SeqPropNondegenerate, syntax.sourceRange());
+        diag.addNote(admitsEmpty ? diag::SeqAdmitsEmptyMatches : diag::SeqAdmitsNoMatches,
+                     syntax.sourceRange());
+    }
+}
+
 const AssertionExpr& AssertionExpr::bind(const PropertyExprSyntax& syntax,
                                          const ASTContext& context, bool allowDisable,
-                                         bool allowSeqAdmitEmpty) {
+                                         NondegeneracyRequirement nondegRequirement) {
     ASTContext ctx(context);
     ctx.flags |= ASTFlags::AssignmentDisallowed;
 
     AssertionExpr* result;
     switch (syntax.kind) {
         case SyntaxKind::SimplePropertyExpr: {
-            // Just a simple passthrough to creating the sequence expression
-            // contained within.
             auto& seq = bind(*syntax.as<SimplePropertyExprSyntax>().expr, ctx, allowDisable);
-            if (!allowSeqAdmitEmpty && seq.admitsEmpty())
-                context.addDiag(diag::SeqPropAdmitEmpty, syntax.sourceRange());
-
+            enforceNondegeneracy(seq, context, nondegRequirement, syntax);
             return seq;
         }
         case SyntaxKind::AndPropertyExpr:
@@ -243,8 +279,13 @@ void AssertionExpr::requireSequence(const ASTContext& context, DiagCode code) co
     SLANG_UNREACHABLE;
 }
 
-bool AssertionExpr::admitsEmpty() const {
-    AdmitsEmptyVisitor visitor;
+bitmask<NondegeneracyStatus> AssertionExpr::checkNondegeneracy() const {
+    NondegeneracyCheckVisitor visitor;
+    return visit(visitor);
+}
+
+std::optional<SequenceRange> AssertionExpr::computeSequenceLength() const {
+    SequenceLengthVisitor visitor;
     return visit(visitor);
 }
 
@@ -417,6 +458,35 @@ void SequenceRange::serializeTo(ASTSerializer& serializer) const {
         serializer.write("max", "$"sv);
 }
 
+bool SequenceRange::operator<(const SequenceRange& right) const {
+    // if both sequences are unbounded then check mins
+    if (!max.has_value() && !right.max.has_value())
+        return min < right.min;
+
+    // if both sequences are bounded then compare the lengths
+    if (max.has_value() && right.max.has_value())
+        return (*max - min) < (*right.max - right.min) && min < right.min;
+
+    // Otherwise the left is smaller iff it is bounded.
+    return max.has_value();
+}
+
+bool SequenceRange::intersects(const SequenceRange& other) const {
+    if (!max.has_value())
+        return min >= other.min && min <= other.max.value_or(UINT32_MAX);
+
+    if (!other.max.has_value())
+        return other.min >= min && other.min <= max.value();
+
+    return !(max.value() < other.min || other.max.value() < min);
+}
+
+bool SequenceRange::isWithin(const SequenceRange& other) const {
+    // Our sequence is within the other iff the min value is shorter
+    // than the length of the other. Our own max doesn't matter.
+    return min <= other.max.value_or(UINT32_MAX);
+}
+
 SequenceRepetition::SequenceRepetition(const SequenceRepetitionSyntax& syntax,
                                        const ASTContext& context) {
     switch (syntax.op.kind) {
@@ -440,19 +510,14 @@ SequenceRepetition::SequenceRepetition(const SequenceRepetitionSyntax& syntax,
         range = SequenceRange::fromSyntax(*syntax.selector, context, /* allowUnbounded */ true);
 }
 
-SequenceRepetition::AdmitsEmpty SequenceRepetition::admitsEmpty() const {
-    switch (kind) {
-        case Consecutive:
-            if (range.min == 0)
-                return AdmitsEmpty::Yes;
-            return AdmitsEmpty::Depends;
-        case GoTo:
-        case Nonconsecutive:
-            if (range.min == 0)
-                return AdmitsEmpty::Yes;
-            return AdmitsEmpty::No;
+bitmask<NondegeneracyStatus> SequenceRepetition::checkNondegeneracy() const {
+    bitmask<NondegeneracyStatus> res;
+    if (range.min == 0u) {
+        res = NondegeneracyStatus::AdmitsEmpty;
+        if (range.max == 0u)
+            res |= NondegeneracyStatus::AcceptsOnlyEmpty;
     }
-    SLANG_UNREACHABLE;
+    return res;
 }
 
 void SequenceRepetition::serializeTo(ASTSerializer& serializer) const {
@@ -507,7 +572,8 @@ AssertionExpr& SimpleAssertionExpr::fromSyntax(const SimpleSequenceExprSyntax& s
         }
     }
 
-    return *comp.emplace<SimpleAssertionExpr>(expr, repetition);
+    const auto evaluatedValue = context.tryEval(expr);
+    return *comp.emplace<SimpleAssertionExpr>(expr, repetition, evaluatedValue.isFalse());
 }
 
 void SimpleAssertionExpr::requireSequence(const ASTContext& context, DiagCode code) const {
@@ -523,22 +589,37 @@ void SimpleAssertionExpr::requireSequence(const ASTContext& context, DiagCode co
     }
 }
 
-bool SimpleAssertionExpr::admitsEmptyImpl() const {
-    if (repetition) {
-        auto result = repetition->admitsEmpty();
-        if (result == SequenceRepetition::AdmitsEmpty::Yes)
-            return true;
-        if (result == SequenceRepetition::AdmitsEmpty::No)
-            return false;
-    }
+bitmask<NondegeneracyStatus> SimpleAssertionExpr::checkNondegeneracyImpl() const {
+    // If simple sequence expression can be evaluated to false
+    // then it admits no possible match.
+    bitmask<NondegeneracyStatus> res = NondegeneracyStatus::None;
+    if (isNullExpr)
+        res |= NondegeneracyStatus::AdmitsNoMatch;
+
+    if (repetition)
+        res |= repetition->checkNondegeneracy();
 
     if (expr.kind == ExpressionKind::AssertionInstance) {
         auto& aie = expr.as<AssertionInstanceExpression>();
         if (aie.type->isSequenceType())
-            return aie.body.admitsEmpty();
+            res |= aie.body.checkNondegeneracy();
     }
+    return res;
+}
 
-    return false;
+std::optional<SequenceRange> SimpleAssertionExpr::computeSequenceLengthImpl() const {
+    // If there is only empty match sequence then it has a zero delay length.
+    SequenceRange res;
+    res.min = checkNondegeneracy().has(NondegeneracyStatus::AcceptsOnlyEmpty) ? 0 : 1;
+    res.max = res.min;
+
+    if (expr.kind == ExpressionKind::AssertionInstance) {
+        if (auto& aie = expr.as<AssertionInstanceExpression>(); aie.type->isSequenceType()) {
+            if (auto aieSeqLength = aie.body.computeSequenceLength(); res < aieSeqLength)
+                return aieSeqLength;
+        }
+    }
+    return res;
 }
 
 void SimpleAssertionExpr::serializeTo(ASTSerializer& serializer) const {
@@ -575,8 +656,8 @@ AssertionExpr& SequenceConcatExpr::fromSyntax(const DelayedSequenceExprSyntax& s
             else
                 delay.max = delay.min = uint32_t(*val);
         }
-        else if (es->range && es->range->kind == SyntaxKind::SimpleRangeSelect) {
-            delay = SequenceRange::fromSyntax(es->range->as<RangeSelectSyntax>(), context,
+        else if (es->range) {
+            delay = SequenceRange::fromSyntax(*es->range, context,
                                               /* allowUnbounded */ true);
         }
         else if (es->op.kind == TokenKind::Plus) {
@@ -594,26 +675,89 @@ AssertionExpr& SequenceConcatExpr::fromSyntax(const DelayedSequenceExprSyntax& s
     return *result;
 }
 
-bool SequenceConcatExpr::admitsEmptyImpl() const {
-    auto it = elements.begin();
-    SLANG_ASSERT(it != elements.end());
+bitmask<NondegeneracyStatus> SequenceConcatExpr::checkNondegeneracyImpl() const {
+    bool admitsEmpty = true;
+    bool admitsNoMatch = false;
+    auto left = elements.begin();
+    SLANG_ASSERT(left != elements.end());
 
-    // See F.3.4.2.2 for the rules here.
-    if (it->delay.min != 0 || !it->sequence->admitsEmpty())
-        return false;
+    auto leftNondegenSt = left->sequence->checkNondegeneracy();
+    if (left->delay.min != 0 || !leftNondegenSt.has(NondegeneracyStatus::AdmitsEmpty))
+        admitsEmpty = false;
 
-    while (++it != elements.end()) {
-        if (!it->sequence->admitsEmpty())
-            return false;
+    if (leftNondegenSt.has(NondegeneracyStatus::AdmitsNoMatch))
+        admitsNoMatch = true;
 
-        if (it->delay.min == 0u && it->delay.max == 0u)
-            return false;
+    // See SystemVerilog LRM sections 16.9.2.1 and F.3.4.2.2 for details
+    while (admitsEmpty || !admitsNoMatch) {
+        const auto right = left + 1;
+        if (right == elements.end())
+            break;
 
-        if (it->delay.min > 1)
-            return false;
+        // If any element of concat sequence is no match then all concat sequence is no match.
+        const auto rightNondegenSt = right->sequence->checkNondegeneracy();
+        if (rightNondegenSt.has(NondegeneracyStatus::AdmitsNoMatch))
+            admitsNoMatch = true;
+
+        if (!rightNondegenSt.has(NondegeneracyStatus::AdmitsEmpty))
+            admitsEmpty = false;
+
+        if (right->delay.min == 0u && right->delay.max == 0u) {
+            admitsEmpty = false;
+
+            // (empty ##0 seq) does not result in a match
+            // We need to check that case if and only if we are at the start of concat sequence
+            // because empty parts in the middle of concat sequence are processed by the next `if`
+            if (left == elements.begin() &&
+                leftNondegenSt.has(NondegeneracyStatus::AcceptsOnlyEmpty)) {
+                admitsNoMatch = true;
+            }
+
+            // (seq ##0 empty) does not result in a match.
+            if (rightNondegenSt.has(NondegeneracyStatus::AcceptsOnlyEmpty))
+                admitsNoMatch = true;
+        }
+
+        if (right->delay.min > 1)
+            admitsEmpty = false;
+
+        left = right;
+        leftNondegenSt = rightNondegenSt;
     }
 
-    return true;
+    bitmask<NondegeneracyStatus> res;
+    if (admitsEmpty)
+        res |= NondegeneracyStatus::AdmitsEmpty;
+    if (admitsNoMatch)
+        res |= NondegeneracyStatus::AdmitsNoMatch;
+    return res;
+}
+
+std::optional<SequenceRange> SequenceConcatExpr::computeSequenceLengthImpl() const {
+    uint32_t delayMin = 0;
+    uint32_t delayMax = 0;
+    for (auto it = elements.begin(); it != elements.end(); it++) {
+        const bool isAcceptsOnlyEmpty = it->sequence->checkNondegeneracy().has(
+            NondegeneracyStatus::AcceptsOnlyEmpty);
+
+        // Default delay length for concat sequence is 1 if it admits a non-empty match.
+        if (it == elements.begin() && !isAcceptsOnlyEmpty)
+            delayMin = delayMax = 1;
+
+        // (empty ##n seq), where n is greater than 0, is equivalent to (##(n-1) seq).
+        // Also ((##n empty) ; (seq ##n empty)), where n is greater than 0, is equivalent to
+        // ((##(n-1) `true) ; (seq ##(n-1) `true))
+        delayMin += (it->delay.min && isAcceptsOnlyEmpty) ? it->delay.min - 1 : it->delay.min;
+        if (it->delay.max.has_value()) {
+            const auto maxVal = it->delay.max.value();
+            delayMax += (maxVal && isAcceptsOnlyEmpty) ? maxVal - 1 : maxVal;
+        }
+    }
+
+    SequenceRange res;
+    res.min = delayMin;
+    res.max = delayMax;
+    return res;
 }
 
 void SequenceConcatExpr::serializeTo(ASTSerializer& serializer) const {
@@ -695,7 +839,7 @@ static std::span<const Expression* const> bindMatchItems(const SequenceMatchList
         }
     }
 
-    if (sequence.admitsEmpty()) {
+    if (sequence.checkNondegeneracy().has(NondegeneracyStatus::AdmitsEmpty)) {
         auto& diag = context.addDiag(diag::MatchItemsAdmitEmpty, syntax.items.sourceRange());
         if (sequence.syntax)
             diag << sequence.syntax->sourceRange();
@@ -723,10 +867,12 @@ AssertionExpr& SequenceWithMatchExpr::fromSyntax(const ParenthesizedSequenceExpr
     return *context.getCompilation().emplace<SequenceWithMatchExpr>(expr, repetition, matchItems);
 }
 
-bool SequenceWithMatchExpr::admitsEmptyImpl() const {
-    if (repetition && repetition->admitsEmpty() == SequenceRepetition::AdmitsEmpty::Yes)
-        return true;
-    return false;
+bitmask<NondegeneracyStatus> SequenceWithMatchExpr::checkNondegeneracyImpl() const {
+    bitmask<NondegeneracyStatus> res;
+    if (repetition)
+        res = repetition->checkNondegeneracy();
+
+    return res | expr.checkNondegeneracy();
 }
 
 void SequenceWithMatchExpr::serializeTo(ASTSerializer& serializer) const {
@@ -866,11 +1012,13 @@ AssertionExpr& BinaryAssertionExpr::fromSyntax(const BinarySequenceExprSyntax& s
 
 AssertionExpr& BinaryAssertionExpr::fromSyntax(const BinaryPropertyExprSyntax& syntax,
                                                const ASTContext& context) {
-    bool allowSeqAdmitEmpty = syntax.kind == SyntaxKind::ImplicationPropertyExpr ||
-                              syntax.kind == SyntaxKind::FollowedByPropertyExpr;
+    const bool isOverlapOp = (syntax.op.kind == TokenKind::OrMinusArrow) ||
+                             (syntax.op.kind == TokenKind::HashMinusHash);
+    const bool isNonOverlapOp = (syntax.op.kind == TokenKind::OrEqualsArrow) ||
+                                (syntax.op.kind == TokenKind::HashEqualsHash);
 
     bitmask<ASTFlags> lflags, rflags;
-    if (syntax.op.kind == TokenKind::OrEqualsArrow || syntax.op.kind == TokenKind::HashEqualsHash) {
+    if (isNonOverlapOp) {
         rflags = ASTFlags::PropertyTimeAdvance;
     }
     else if (syntax.kind == SyntaxKind::SUntilPropertyExpr ||
@@ -878,8 +1026,14 @@ AssertionExpr& BinaryAssertionExpr::fromSyntax(const BinaryPropertyExprSyntax& s
         lflags = rflags = ASTFlags::PropertyNegation;
     }
 
+    NondegeneracyRequirement nondegenRequirement = NondegeneracyRequirement::Default;
+    if (isOverlapOp)
+        nondegenRequirement = NondegeneracyRequirement::OverlapOp;
+    else if (isNonOverlapOp)
+        nondegenRequirement = NondegeneracyRequirement::NonOverlapOp;
+
     auto& comp = context.getCompilation();
-    auto& left = bind(*syntax.left, context.resetFlags(lflags), false, allowSeqAdmitEmpty);
+    auto& left = bind(*syntax.left, context.resetFlags(lflags), false, nondegenRequirement);
     auto& right = bind(*syntax.right, context.resetFlags(rflags));
 
     // clang-format off
@@ -939,19 +1093,91 @@ void BinaryAssertionExpr::requireSequence(const ASTContext& context, DiagCode co
     SLANG_UNREACHABLE;
 }
 
-bool BinaryAssertionExpr::admitsEmptyImpl() const {
+bitmask<NondegeneracyStatus> BinaryAssertionExpr::checkNondegeneracyImpl() const {
+    const auto leftNondegenSt = left.checkNondegeneracy();
+    const auto rightNondegenSt = right.checkNondegeneracy();
+    const bool leftAdmitsEmpty = leftNondegenSt.has(NondegeneracyStatus::AdmitsEmpty);
+    const bool rightAdmitsEmpty = rightNondegenSt.has(NondegeneracyStatus::AdmitsEmpty);
+    const bool leftAdmitsNoMatch = leftNondegenSt.has(NondegeneracyStatus::AdmitsNoMatch);
+    const bool rightAdmitsNoMatch = rightNondegenSt.has(NondegeneracyStatus::AdmitsNoMatch);
+
+    bitmask<NondegeneracyStatus> res;
     switch (op) {
-        case BinaryAssertionOperator::Or:
-            return left.admitsEmpty() || right.admitsEmpty();
-        case BinaryAssertionOperator::And:
-        case BinaryAssertionOperator::Intersect:
-        case BinaryAssertionOperator::Within:
-            return left.admitsEmpty() && right.admitsEmpty();
-        case BinaryAssertionOperator::Throughout:
-            return right.admitsEmpty();
+        case BinaryAssertionOperator::Or: {
+            if (leftAdmitsEmpty || rightAdmitsEmpty)
+                res |= NondegeneracyStatus::AdmitsEmpty;
+
+            // In case of `or` full sequence is no match if and only if both parts are no match.
+            if (leftAdmitsNoMatch && rightAdmitsNoMatch)
+                res |= NondegeneracyStatus::AdmitsNoMatch;
+            break;
+        }
+        case BinaryAssertionOperator::And: {
+            if (leftAdmitsEmpty && rightAdmitsEmpty)
+                res |= NondegeneracyStatus::AdmitsEmpty;
+
+            // In case of `and` full sequence is no match if and only if any part is no match.
+            if (leftAdmitsNoMatch || rightAdmitsNoMatch)
+                res |= NondegeneracyStatus::AdmitsNoMatch;
+            break;
+        }
+        case BinaryAssertionOperator::Intersect: {
+            if (leftAdmitsEmpty && rightAdmitsEmpty)
+                res |= NondegeneracyStatus::AdmitsEmpty;
+
+            // In case of `intersect` full sequence is no match if both parts don't have any
+            // possible overlap in their length ranges.
+            const auto leftLen = left.computeSequenceLength();
+            const auto rightLen = right.computeSequenceLength();
+            if (leftAdmitsNoMatch || rightAdmitsNoMatch ||
+                (leftLen && rightLen && !leftLen->intersects(*rightLen))) {
+                res |= NondegeneracyStatus::AdmitsNoMatch;
+            }
+            break;
+        }
+        case BinaryAssertionOperator::Within: {
+            if (leftAdmitsEmpty && rightAdmitsEmpty)
+                res |= NondegeneracyStatus::AdmitsEmpty;
+
+            // In case of `within` full sequence is no match if left side delay range is within
+            // right side delay range.
+            const auto leftLen = left.computeSequenceLength();
+            const auto rightLen = right.computeSequenceLength();
+            if (leftAdmitsNoMatch || rightAdmitsNoMatch ||
+                (leftLen && rightLen && !leftLen->isWithin(*rightLen))) {
+                res |= NondegeneracyStatus::AdmitsNoMatch;
+            }
+            break;
+        }
+        case BinaryAssertionOperator::Throughout: {
+            if (rightAdmitsEmpty)
+                res |= NondegeneracyStatus::AdmitsEmpty;
+
+            // In case of `throughout` full sequence is no match if right part is no match
+            if (rightAdmitsNoMatch)
+                res |= NondegeneracyStatus::AdmitsNoMatch;
+            break;
+        }
         default:
-            return false;
+            break;
     }
+
+    return res;
+};
+
+std::optional<SequenceRange> BinaryAssertionExpr::computeSequenceLengthImpl() const {
+    if (op == BinaryAssertionOperator::Throughout)
+        return right.computeSequenceLength();
+
+    const auto leftLen = left.computeSequenceLength();
+    const auto rightLen = right.computeSequenceLength();
+    if (leftLen.has_value() && rightLen.has_value()) {
+        const auto leftLenVal = leftLen.value();
+        const auto rightLenVal = rightLen.value();
+        return (rightLenVal < leftLenVal) ? leftLenVal : rightLenVal;
+    }
+
+    return leftLen.has_value() ? leftLen : rightLen;
 }
 
 void BinaryAssertionExpr::serializeTo(ASTSerializer& serializer) const {
@@ -973,11 +1199,11 @@ AssertionExpr& FirstMatchAssertionExpr::fromSyntax(const FirstMatchSequenceExprS
     return *comp.emplace<FirstMatchAssertionExpr>(seq, matchItems);
 }
 
-bool FirstMatchAssertionExpr::admitsEmptyImpl() const {
+bitmask<NondegeneracyStatus> FirstMatchAssertionExpr::checkNondegeneracyImpl() const {
+    auto res = seq.checkNondegeneracy();
     if (!matchItems.empty())
-        return false;
-
-    return seq.admitsEmpty();
+        res &= ~(NondegeneracyStatus::AdmitsEmpty | NondegeneracyStatus::AcceptsOnlyEmpty);
+    return res;
 }
 
 void FirstMatchAssertionExpr::serializeTo(ASTSerializer& serializer) const {
@@ -1037,10 +1263,6 @@ AssertionExpr& ClockingAssertionExpr::fromSyntax(const TimingControlSyntax& synt
     return *comp.emplace<ClockingAssertionExpr>(clocking, expr);
 }
 
-bool ClockingAssertionExpr::admitsEmptyImpl() const {
-    return expr.admitsEmpty();
-}
-
 void ClockingAssertionExpr::serializeTo(ASTSerializer& serializer) const {
     serializer.write("clocking", clocking);
     serializer.write("expr", expr);
@@ -1051,9 +1273,7 @@ AssertionExpr& StrongWeakAssertionExpr::fromSyntax(const StrongWeakPropertyExprS
     auto& comp = context.getCompilation();
     auto& expr = bind(*syntax.expr, context);
     expr.requireSequence(context);
-
-    if (expr.admitsEmpty())
-        context.addDiag(diag::SeqPropAdmitEmpty, syntax.expr->sourceRange());
+    enforceNondegeneracy(expr, context, NondegeneracyRequirement::Default, syntax);
 
     return *comp.emplace<StrongWeakAssertionExpr>(
         expr, syntax.keyword.kind == TokenKind::StrongKeyword ? Strong : Weak);

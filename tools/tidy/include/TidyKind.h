@@ -25,7 +25,7 @@ SLANG_ENUM(TidyKind, KIND)
 
 inline std::optional<slang::TidyKind> tidyKindFromStr(std::string str) {
     std::transform(str.begin(), str.end(), str.begin(), ::tolower);
-    if (str == "synthesis")
+    if (str == "synthesis" || str == "synth")
         return slang::TidyKind::Synthesis;
     if (str == "style")
         return slang::TidyKind::Style;

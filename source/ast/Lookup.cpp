@@ -1930,6 +1930,10 @@ void Lookup::unqualifiedImpl(const Scope& scope, std::string_view name, LookupLo
         if (baseClass && baseClass->isError())
             result.flags |= LookupResultFlags::SuppressUndeclared;
     }
+    else if (flags.has(LookupFlags::DisallowUnitReferences) &&
+             location.getScope()->asSymbol().kind == SymbolKind::CompilationUnit) {
+        return;
+    }
 
     return unqualifiedImpl(*location.getScope(), name, location, sourceRange, flags,
                            outOfBlockIndex, result, originalScope);
@@ -2124,7 +2128,7 @@ void Lookup::reportUndeclared(const Scope& initialScope, std::string_view name, 
     int bestDistance = INT_MAX;
     bool usedBeforeDeclared = false;
     auto scope = &initialScope;
-    do {
+    while (true) {
         // This lambda returns true if the given symbol is a viable candidate
         // for the kind of lookup that was being performed.
         auto isViable = [flags, &initialScope](const Symbol& sym) {
@@ -2214,7 +2218,11 @@ void Lookup::reportUndeclared(const Scope& initialScope, std::string_view name, 
         }
 
         scope = scope->asSymbol().getParentScope();
-    } while (scope);
+        if (!scope || (scope->asSymbol().kind == SymbolKind::CompilationUnit &&
+                       flags.has(LookupFlags::DisallowUnitReferences))) {
+            break;
+        }
+    }
 
     // If we found the actual named symbol and it's viable for our kind of lookup,
     // report a diagnostic about it being used before declared.

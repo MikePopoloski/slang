@@ -244,7 +244,7 @@ TEST_CASE("Expression types") {
     CHECK(typeof("su2 == su2") == "bit");
     CHECK(typeof("EVAL1 + 5") == "int");
     CHECK(typeof("up + 5") == "logic[31:0]");
-    CHECK(typeof("up + up") == "logic[1:0]");
+    CHECK(typeof("up + up") == "union packed{logic[1:0] a;bit[0:1] b;}u$1");
 
     // Unpacked arrays
     declare("bit [7:0] arr1 [2];");
@@ -526,9 +526,9 @@ endmodule
     auto& diagnostics = compilation.getAllDiagnostics();
     std::string result = "\n" + report(diagnostics);
     CHECK(result == R"(
-source:7:13: warning: implicit conversion from 'bit[34:0]' to 'int' changes value from 35'h22c6d1fba to 745349050 [-Wconstant-conversion]
+source:7:11: warning: implicit conversion from 'bit[34:0]' to 'int' changes value from 35'h22c6d1fba to 745349050 [-Wconstant-conversion]
     int i = 35'd123498234978234;
-            ^~~~~~~~~~~~~~~~~~~
+          ^ ~~~~~~~~~~~~~~~~~~~
 source:7:17: warning: vector literal too large for the given number of bits (47 bits needed) [-Wvector-overflow]
     int i = 35'd123498234978234;
                 ^
@@ -1000,7 +1000,7 @@ TEST_CASE("Type operator") {
 module m;
     logic [3:0] a = 0;
     logic [4:0] b = 1;
-    var type(a + b) foo = a + b;
+    var type(5'(a) + b) foo = 5'(a) + b;
     int i = type(int)'(a);
 endmodule
 )");
@@ -3618,4 +3618,29 @@ endmodule
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::BadConcatExpression);
+}
+
+TEST_CASE("Wrong typename in error regress GH #1013") {
+    auto tree = SyntaxTree::fromText(R"(
+module t40;
+typedef struct {
+        logic a;
+        logic b;
+} t;
+t x, y, z;
+assign z = x & y;
+
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    std::string result = "\n" + report(diags);
+    CHECK(result == R"(
+source:8:14: error: invalid operands to binary expression ('t40.t' and 't40.t')
+assign z = x & y;
+           ~ ^ ~
+)");
 }

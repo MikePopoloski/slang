@@ -1016,12 +1016,13 @@ void Compilation::addGateType(const PrimitiveSymbol& prim) {
     gateMap.emplace(prim.name, &prim);
 }
 
-void Compilation::addSystemSubroutine(std::shared_ptr<SystemSubroutine> subroutine) {
-    subroutineMap.emplace(subroutine->name, std::move(subroutine));
+void Compilation::addSystemSubroutine(const std::shared_ptr<SystemSubroutine>& subroutine) {
+    subroutineMap.emplace(subroutine->name, subroutine);
 }
 
-void Compilation::addSystemMethod(SymbolKind typeKind, std::shared_ptr<SystemSubroutine> method) {
-    methodMap.emplace(std::make_tuple(std::string_view(method->name), typeKind), std::move(method));
+void Compilation::addSystemMethod(SymbolKind typeKind,
+                                  const std::shared_ptr<SystemSubroutine>& method) {
+    methodMap.emplace(std::make_tuple(std::string_view(method->name), typeKind), method);
 }
 
 const SystemSubroutine* Compilation::getSystemSubroutine(std::string_view name) const {
@@ -1505,7 +1506,7 @@ const Diagnostics& Compilation::getSemanticDiagnostics() {
 
                     // Add an expansion note to the diagnostic since
                     // we won't have added it yet for the checker.
-                    if (!checkerBody.isUninstantiated) {
+                    if (!checkerBody.flags.has(InstanceFlags::Uninstantiated)) {
                         diag.addNote(diag::NoteWhileExpanding, checkerBody.parentInstance->location)
                             << "checker"sv << checkerBody.checker.name;
                     }
