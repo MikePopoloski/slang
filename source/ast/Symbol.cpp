@@ -124,7 +124,12 @@ static void getHierarchicalPathImpl(const Symbol& symbol, FormatBuffer& buffer) 
     if (!current->name.empty())
         addName(current->name);
 
-    if (current->kind == SymbolKind::GenerateBlock) {
+    if (current->kind == SymbolKind::GenerateBlockArray) {
+        auto& array = current->as<GenerateBlockArraySymbol>();
+        if (current->name.empty())
+            addName(array.getExternalName());
+    }
+    else if (current->kind == SymbolKind::GenerateBlock) {
         auto& block = current->as<GenerateBlockSymbol>();
         if (auto index = block.arrayIndex) {
             buffer.append("[");
