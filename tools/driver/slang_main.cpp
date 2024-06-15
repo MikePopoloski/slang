@@ -25,7 +25,7 @@ using namespace slang::ast;
 using namespace slang::driver;
 
 void printJson(Compilation& compilation, const std::string& fileName,
-               const std::vector<std::string>& scopes, bool includeSourceInfo = false) {
+               const std::vector<std::string>& scopes, bool includeSourceInfo) {
     JsonWriter writer;
     writer.setPrettyPrint(true);
 
@@ -168,7 +168,7 @@ int driverMain(int argc, TArgs argv) {
                     ok &= driver.reportCompilation(*compilation, quiet == true);
                     if (astJsonFile)
                         printJson(*compilation, *astJsonFile, astJsonScopes,
-                                  (includeSourceInfo == true));
+                                  includeSourceInfo == true);
                 }
             }
         }
