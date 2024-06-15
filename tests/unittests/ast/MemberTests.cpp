@@ -1374,9 +1374,8 @@ endmodule
     NO_COMPILATION_ERRORS;
 
     std::string path;
-    compilation.getRoot().visit(makeVisitor([&](auto& v, const VariableSymbol &sym) {
-        sym.getHierarchicalPath(path);
-    }));
+    compilation.getRoot().visit(
+        makeVisitor([&](auto& v, const VariableSymbol& sym) { sym.getHierarchicalPath(path); }));
     CHECK(path == "top.genblk1[0].a");
 }
 
