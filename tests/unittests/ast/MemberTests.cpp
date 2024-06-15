@@ -4,6 +4,7 @@
 #include "Test.h"
 
 #include "slang/ast/ASTSerializer.h"
+#include "slang/ast/ASTVisitor.h"
 #include "slang/ast/Statements.h"
 #include "slang/ast/expressions/AssignmentExpressions.h"
 #include "slang/ast/expressions/CallExpression.h"
@@ -1356,6 +1357,27 @@ endmodule
     std::string path;
     foo.getHierarchicalPath(path);
     CHECK(path == "top.m1[2][1][3].asdf[1].genblk1.foo");
+}
+
+TEST_CASE("Hierarchical paths with unnamed generate arrays") {
+    auto tree = SyntaxTree::fromText(R"(
+module top;
+  genvar i;
+  for (i = 0; i < 1; i = i + 1) begin
+    logic a;
+  end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    std::string path;
+    compilation.getRoot().visit(makeVisitor([&](auto& v, const VariableSymbol &sym) {
+        sym.getHierarchicalPath(path);
+    }));
+    CHECK(path == "top.genblk1[0].a");
 }
 
 TEST_CASE("$static_assert elab task") {
