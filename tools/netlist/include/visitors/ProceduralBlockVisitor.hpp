@@ -40,6 +40,13 @@ public:
         ast::EdgeKind result = ast::EdgeKind::None;
         if (symbol.procedureKind == ast::ProceduralBlockKind::AlwaysFF ||
             symbol.procedureKind == ast::ProceduralBlockKind::Always) {
+            if (symbol.getBody().kind == ast::StatementKind::Block) {
+                auto& block = symbol.getBody().as<ast::BlockStatement>();
+                if (block.blockKind == ast::StatementBlockKind::Sequential &&
+                    block.body.kind == ast::StatementKind::ConcurrentAssertion) {
+                    return result;
+                }
+            }
             auto tck = symbol.getBody().as<ast::TimedStatement>().timing.kind;
             if (tck == ast::TimingControlKind::SignalEvent) {
                 result = symbol.getBody()
