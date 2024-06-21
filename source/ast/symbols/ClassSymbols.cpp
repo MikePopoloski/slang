@@ -1005,7 +1005,7 @@ const Type* GenericClassDefSymbol::getSpecializationImpl(
     else
         classType->populate(*scope, getSyntax()->as<ClassDeclarationSyntax>());
 
-    if (!forceInvalidParams)
+    if (!forceInvalidParams && !context.scope->isUninstantiated())
         specMap.emplace(key, classType);
 
     return classType;

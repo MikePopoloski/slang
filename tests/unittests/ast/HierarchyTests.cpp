@@ -1827,3 +1827,84 @@ endmodule
     CHECK(diags[0].code == diag::VirtualIfaceDefparam);
     CHECK(diags[1].code == diag::VirtualIfaceDefparam);
 }
+
+TEST_CASE("Spurious errors in uninstantiated blocks, GH #1028") {
+    auto tree = SyntaxTree::fromText(R"(
+typedef struct packed {
+  logic [7:0] r;
+  logic [7:0] g;
+  logic [7:0] b;
+} RGB;
+
+typedef struct packed {
+  logic [7:0] c;
+  logic [7:0] m;
+  logic [7:0] y;
+  logic [7:0] k;
+} CMYK;
+
+typedef logic [7:0] GrayScale;
+
+
+virtual class ColorFunctions #(
+  parameter type T_RGB  = RGB,
+  parameter type T_CMYK = CMYK
+);
+  static function GrayScale rgb_to_grayscale(input T_RGB color);
+    return (color.r * 3 + color.g * 6 + color.b * 1) / 10;
+  endfunction
+
+  static function GrayScale cmyk_to_grayscale(input T_CMYK color);
+    return ((8'hFF - color.c) + (8'hFF - color.m) + (8'hFF - color.y)) / 3 * (8'hFF - color.k) / 8'hFF;
+  endfunction
+endclass
+
+
+module GrayScaleModule #(
+  parameter COLOR_SPACE = "RGB",
+  type T = RGB
+) (
+  input T color,
+  output GrayScale grayscale
+);
+
+  if (COLOR_SPACE == "RGB") begin
+    assign grayscale = ColorFunctions#(.T_RGB(T))::rgb_to_grayscale(color);
+  end
+  else if (COLOR_SPACE == "CMYK") begin
+    assign grayscale = ColorFunctions#(.T_CMYK(T))::cmyk_to_grayscale(color);
+  end
+
+endmodule
+
+
+module Top (
+  input RGB rgb,
+  input CMYK cmyk,
+  output GrayScale grayscale_rgb,
+  output GrayScale grayscale_cmyk
+);
+
+  GrayScaleModule #(
+    .COLOR_SPACE("RGB"),
+    .T(RGB)
+  ) rgb_module (
+    .color(rgb),
+    .grayscale(grayscale_rgb)
+  );
+
+  GrayScaleModule #(
+    .COLOR_SPACE("CMYK"),
+    .T(CMYK)
+  ) cmyk_module (
+    .color(cmyk),
+    .grayscale(grayscale_cmyk)
+  );
+
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
