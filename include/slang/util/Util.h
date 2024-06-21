@@ -61,7 +61,9 @@
 #    define SLANG_RTTI_ENABLED
 #endif
 
-#if defined(SLANG_RTTI_ENABLED)
+// Note: typeid() appears to be broken under libc++ arm64,
+// which is why we use our workaround type for that as well.
+#if defined(SLANG_RTTI_ENABLED) && !defined(__ARM_ARCH_ISA_A64)
 #    define SLANG_TYPEOF(x) std::type_index(typeid(x))
 #    define SLANG_TYPEINDEX std::type_index
 #else

@@ -23,7 +23,7 @@ jobs:
           - preset: gcc-debug-noexcept
             os: ubuntu-latest
           - preset: macos-release
-            os: macos-13
+            os: macos-latest
           - preset: win64-release
             os: windows-latest
           - preset: win64-debug-shared
@@ -47,7 +47,7 @@ jobs:
     - uses: ilammy/msvc-dev-cmd@v1
       if: matrix.os == 'windows-latest'
     - uses: maxim-lobanov/setup-xcode@v1
-      if: matrix.os == 'macos-13'
+      if: matrix.os == 'macos-latest'
       with:
         xcode-version: 'latest'
     - name: Configure
