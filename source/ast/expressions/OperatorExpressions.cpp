@@ -17,6 +17,7 @@
 #include "slang/ast/Statements.h"
 #include "slang/ast/expressions/AssignmentExpressions.h"
 #include "slang/ast/expressions/MiscExpressions.h"
+#include "slang/ast/symbols/VariableSymbols.h"
 #include "slang/ast/types/AllTypes.h"
 #include "slang/diagnostics/ConstEvalDiags.h"
 #include "slang/diagnostics/ExpressionsDiags.h"
@@ -946,6 +947,31 @@ void BinaryExpression::analyzeOpTypes(const Type& clt, const Type& crt, const Ty
                                       const Type& originalRt, const Expression& lhs,
                                       const Expression& rhs, const ASTContext& context,
                                       SourceRange opRange, DiagCode code, bool isComparison) {
+    // Don't warn if either side is a compiler generated variable
+    // (which can be true for genvars).
+    auto isCompGenVar = [](const Symbol* sym) {
+        return sym && sym->kind == SymbolKind::Variable &&
+               sym->as<VariableSymbol>().flags.has(VariableFlags::CompilerGenerated);
+    };
+
+    auto lsym = lhs.getSymbolReference(), rsym = rhs.getSymbolReference();
+    if (isCompGenVar(lsym) || isCompGenVar(rsym))
+        return;
+
+    // Don't warn if either side is an enum value symbol and the
+    // other side is the base type of that enum.
+    auto isEnumBaseCompare = [](const Symbol* sym, const Type& otherType) {
+        if (sym && sym->kind == SymbolKind::EnumValue) {
+            auto& ct = sym->as<EnumValueSymbol>().getType().getCanonicalType();
+            if (ct.kind == SymbolKind::EnumType)
+                return ct.as<EnumType>().baseType.isMatching(otherType);
+        }
+        return false;
+    };
+
+    if (isComparison && (isEnumBaseCompare(lsym, crt) || isEnumBaseCompare(rsym, clt)))
+        return;
+
     if (clt.isSimpleBitVector() && crt.isSimpleBitVector()) {
         const bool sameSign = clt.isSigned() == crt.isSigned() ||
                               signMatches(lhs.getEffectiveSign(/* isForConversion */ false),

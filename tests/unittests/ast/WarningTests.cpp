@@ -929,7 +929,25 @@ module m;
     localparam int x = 3;
     localparam real y = 4.1;
     localparam real z = x + y * x;
+
+    localparam int unsigned NUM_PORTS = 3;
+    genvar g;
+    for (g = 0; g < NUM_PORTS; g++) begin end
 endmodule
+
+class C;
+    typedef enum int {
+        A = 0,
+        C = 2,
+        E = 4
+    } e_t;
+
+    rand bit v[$];
+
+    constraint q {
+        v.size() == E;
+    }
+endclass
 )");
 
     Compilation compilation;
