@@ -123,30 +123,18 @@ const AssertionExpr& AssertionExpr::bind(const SequenceExprSyntax& syntax,
 static void enforceNondegeneracy(const AssertionExpr& expr, const ASTContext& context,
                                  AssertionExpr::NondegeneracyRequirement nondegRequirement,
                                  const SyntaxNode& syntax) {
-    const auto seqNondegenSt = expr.checkNondegeneracy();
-    const bool admitsEmpty = seqNondegenSt.has(NondegeneracyStatus::AdmitsEmpty);
-    const bool acceptsOnlyEmpty = seqNondegenSt.has(NondegeneracyStatus::AcceptsOnlyEmpty);
-    const bool admitsNoMatch = seqNondegenSt.has(NondegeneracyStatus::AdmitsNoMatch);
-
     using NR = AssertionExpr::NondegeneracyRequirement;
-    if (nondegRequirement == NR::OverlapOp) {
-        if (acceptsOnlyEmpty || admitsNoMatch) {
-            auto& diag = context.addDiag(diag::OverlapImplNondegenerate, syntax.sourceRange());
-            diag.addNote(acceptsOnlyEmpty ? diag::SeqAcceptsOnlyEmptyMatches
-                                          : diag::SeqAdmitsNoMatches,
-                         syntax.sourceRange());
-        }
+    const auto seqNondegenSt = expr.checkNondegeneracy();
+    if (seqNondegenSt.has(NondegeneracyStatus::AdmitsNoMatch)) {
+        context.addDiag(diag::SeqNoMatch, syntax.sourceRange());
     }
-    else if (nondegRequirement == NR::NonOverlapOp) {
-        if (admitsNoMatch) {
-            auto& diag = context.addDiag(diag::NonOverlapImplNondegenerate, syntax.sourceRange());
-            diag.addNote(diag::SeqAdmitsNoMatches, syntax.sourceRange());
-        }
+    else if (nondegRequirement == NR::OverlapOp) {
+        if (seqNondegenSt.has(NondegeneracyStatus::AcceptsOnlyEmpty))
+            context.addDiag(diag::SeqOnlyEmpty, syntax.sourceRange());
     }
-    else if (admitsEmpty || admitsNoMatch) {
-        auto& diag = context.addDiag(diag::SeqPropNondegenerate, syntax.sourceRange());
-        diag.addNote(admitsEmpty ? diag::SeqAdmitsEmptyMatches : diag::SeqAdmitsNoMatches,
-                     syntax.sourceRange());
+    else if (nondegRequirement != NR::NonOverlapOp) {
+        if (seqNondegenSt.has(NondegeneracyStatus::AdmitsEmpty))
+            context.addDiag(diag::SeqEmptyMatch, syntax.sourceRange());
     }
 }
 

@@ -1051,8 +1051,8 @@ endmodule
 
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 2);
-    CHECK(diags[0].code == diag::SeqPropNondegenerate);
-    CHECK(diags[1].code == diag::SeqPropNondegenerate);
+    CHECK(diags[0].code == diag::SeqEmptyMatch);
+    CHECK(diags[1].code == diag::SeqEmptyMatch);
 }
 
 TEST_CASE("Illegal property recursion cases") {
@@ -2389,23 +2389,23 @@ endmodule
     };
 
     test("(1'b1 ##[1:2] 1'b1) intersect (1'b1 ##[2:4] 1'b1)");
-    test("(1'b1 ##[1:2] 1'b1) intersect (1'b1 ##[3:4] 1'b1)", diag::SeqPropNondegenerate);
-    test("(1'b1) intersect (1'b1[*0] ##2 1'b1)", diag::SeqPropNondegenerate);
+    test("(1'b1 ##[1:2] 1'b1) intersect (1'b1 ##[3:4] 1'b1)", diag::SeqNoMatch);
+    test("(1'b1) intersect (1'b1[*0] ##2 1'b1)", diag::SeqNoMatch);
     test("(1'b1 ##1 1'b1) intersect (1'b1[*0] ##2 1'b1)");
-    test("(1'b1 ##1 1'b0) intersect (1'b1[*0] ##2 1'b1)", diag::SeqPropNondegenerate);
-    test("(1'b1) intersect (1'b1 ##[1:3] 1'b1)", diag::SeqPropNondegenerate);
+    test("(1'b1 ##1 1'b0) intersect (1'b1[*0] ##2 1'b1)", diag::SeqNoMatch);
+    test("(1'b1) intersect (1'b1 ##[1:3] 1'b1)", diag::SeqNoMatch);
     test("(1'b1 ##1 1'b1) intersect (1'b1 ##[1:3] 1'b1)");
-    test("(1'b1 ##0 1'b1) intersect (1'b1 ##[1:3] 1'b1)", diag::SeqPropNondegenerate);
+    test("(1'b1 ##0 1'b1) intersect (1'b1 ##[1:3] 1'b1)", diag::SeqNoMatch);
     test("(1'b1[*2]) intersect (1'b1 ##[1:3] 1'b1)");
     test("(##2 1'b1[*2]) intersect (1'b1 ##[1:3] 1'b1)");
     test("##0 a[*0:4] ##0 b[=4] ##0 c[->1:2] ##0 c[*] ##1 d[+]");
-    test("##0 a[*0:4] ##0 b[=4] ##0 c[->1:2] ##0 c[*0] ##1 d[+]", diag::SeqPropNondegenerate);
-    test("##0 a[*0] ##0 b[=4] ##0 c[->1:2] ##0 c[*] ##1 d[+]", diag::SeqPropNondegenerate);
+    test("##0 a[*0:4] ##0 b[=4] ##0 c[->1:2] ##0 c[*0] ##1 d[+]", diag::SeqNoMatch);
+    test("##0 a[*0] ##0 b[=4] ##0 c[->1:2] ##0 c[*] ##1 d[+]", diag::SeqNoMatch);
 
     test("((1 ##5 1) or (1 ##8 1)) intersect (1 ##7 1)");
-    test("(a[->1:$] intersect b[*5]) within 1", diag::SeqPropNondegenerate);
-    test("(a[->1:4] intersect b[->5:$]) within 1", diag::SeqPropNondegenerate);
-    test("(a[->1:4] intersect b[->5:7]) within 1", diag::SeqPropNondegenerate);
+    test("(a[->1:$] intersect b[*5]) within 1", diag::SeqNoMatch);
+    test("(a[->1:4] intersect b[->5:$]) within 1", diag::SeqNoMatch);
+    test("(a[->1:4] intersect b[->5:7]) within 1", diag::SeqNoMatch);
 }
 
 TEST_CASE("Sequence nondegeneracy tests 2") {
@@ -2443,88 +2443,85 @@ endmodule
         }
     };
 
-    test("!(2'b01 - 2'b01 + 3'b010 - 3'b010 + 4'b0010)", diag::SeqPropNondegenerate);
+    test("!(2'b01 - 2'b01 + 3'b010 - 3'b010 + 4'b0010)", diag::SeqNoMatch);
     test("2'b01 - 2'b01 + 3'b010 - 3'b010 + 4'b0010");
-    test("a[*0] |-> b", diag::OverlapImplNondegenerate);
+    test("a[*0] |-> b", diag::SeqOnlyEmpty);
     test("a[*1] |-> b");
     test("1'b1 ##1 b");
 
     test("##0 c");
-    test("1'b1 ##1 1'b0 ##0 d ##1 1'b1", diag::SeqPropNondegenerate);
+    test("1'b1 ##1 1'b0 ##0 d ##1 1'b1", diag::SeqNoMatch);
     test("1'b1 ##1 1'b1 ##0 d ##1 1'b1");
-    test("b ##0 a[*0]", diag::SeqPropNondegenerate);
+    test("b ##0 a[*0]", diag::SeqNoMatch);
     test("b ##0 a[*1]");
     test("a[*0] ##1 b");
     test("a ##1 b[*0] ##0 c");
-    test("a ##1(b[*0] ##0 c)", diag::SeqPropNondegenerate);
+    test("a ##1(b[*0] ##0 c)", diag::SeqNoMatch);
 
-    test("(1 ##1 0)[*0]", diag::SeqPropNondegenerate);
-    test("(a[*0] ##1 a[*0])[*1]", diag::SeqPropNondegenerate);
+    test("(1 ##1 0)[*0]", diag::SeqNoMatch);
+    test("(a[*0] ##1 a[*0])[*1]", diag::SeqEmptyMatch);
     test("(a[*0] ##2 a[*0])[*1]");
-    test("not (a[*0] ##0 b)", diag::SeqPropNondegenerate);
+    test("not (a[*0] ##0 b)", diag::SeqNoMatch);
     test("not (a[*0] ##1 b)");
 
-    test("(1'b1) intersect (##[1:3] 1'b1 ##0 1'b1[*0:3] ##[2:3] 1'b1[*1])",
-         diag::SeqPropNondegenerate);
-    test("(1'b1) intersect (##[1:3] 1'b1 ##0 1'b1[*0:3] ##[2:3] 1'b1[*0])",
-         diag::SeqPropNondegenerate);
-    test("(1'b1) intersect (##[0:3] 1'b1 ##1 1'b1[*0:2] ##[2:3] 1'b1[*0])",
-         diag::SeqPropNondegenerate);
+    test("(1'b1) intersect (##[1:3] 1'b1 ##0 1'b1[*0:3] ##[2:3] 1'b1[*1])", diag::SeqNoMatch);
+    test("(1'b1) intersect (##[1:3] 1'b1 ##0 1'b1[*0:3] ##[2:3] 1'b1[*0])", diag::SeqNoMatch);
+    test("(1'b1) intersect (##[0:3] 1'b1 ##1 1'b1[*0:2] ##[2:3] 1'b1[*0])", diag::SeqNoMatch);
     test("(1'b1) intersect (##[0:3] 1'b1[*0:2])");
     test("(1'b1) intersect (##[0:3] 1'b1[*0])");
     test("(1'b1) intersect (##[0:3] 1'b1)");
     test("(1'b1) intersect (1'b1[*0] ##[0:3] 1'b1)");
     test("(1'b1) intersect (1'b1[*0:2] ##[0:3] 1'b1)");
-    test("(1'b1) intersect (1'b1 ##[1:3] 1'b1)", diag::SeqPropNondegenerate);
+    test("(1'b1) intersect (1'b1 ##[1:3] 1'b1)", diag::SeqNoMatch);
     test("1[+] intersect (1'b1 ##5 1'b1)");
-    test("(1'b1 ##4 1'b1) within (1'b1 ##1 1'b1)", diag::SeqPropNondegenerate);
-    test("1'b0 ##2 1'b1", diag::SeqPropNondegenerate);
+    test("(1'b1 ##4 1'b1) within (1'b1 ##1 1'b1)", diag::SeqNoMatch);
+    test("1'b0 ##2 1'b1", diag::SeqNoMatch);
     test("1[*2]");
-    test("1[*0]", diag::SeqPropNondegenerate);
-    test("1[*0:2]", diag::SeqPropNondegenerate);
+    test("1[*0]", diag::SeqEmptyMatch);
+    test("1[*0:2]", diag::SeqEmptyMatch);
     test("1'b1");
-    test("1'b0", diag::SeqPropNondegenerate);
+    test("1'b0", diag::SeqNoMatch);
 
     test("1'b1 |=> 1");
-    test("1'b0 |=> 1", diag::NonOverlapImplNondegenerate);
+    test("1'b0 |=> 1", diag::SeqNoMatch);
     test("1[*2] |=> 1");
     test("1[*0] |=> 1");
     test("1'b1 |-> 1");
-    test("1'b0 |-> 1", diag::OverlapImplNondegenerate);
-    test("1[*0] |-> 1", diag::OverlapImplNondegenerate);
+    test("1'b0 |-> 1", diag::SeqNoMatch);
+    test("1[*0] |-> 1", diag::SeqOnlyEmpty);
     test("1[*0:2] |-> 1");
 
     test("1'b1 #=# 1");
-    test("1'b0 #=# 1", diag::NonOverlapImplNondegenerate);
+    test("1'b0 #=# 1", diag::SeqNoMatch);
     test("1[*2] #=# 1");
     test("1[*0] #=# 1");
     test("1'b1 #-# 1");
-    test("1'b0 #-# 1", diag::OverlapImplNondegenerate);
-    test("1[*0] #-# 1", diag::OverlapImplNondegenerate);
+    test("1'b0 #-# 1", diag::SeqNoMatch);
+    test("1[*0] #-# 1", diag::SeqOnlyEmpty);
     test("1[*0:2] #-# 1");
 
     test("first_match(a and b)");
-    test("(first_match(a and b))[*0]", diag::SeqPropNondegenerate);
-    test("first_match(a and (b[*0] ##0 b))", diag::SeqPropNondegenerate);
+    test("(first_match(a and b))[*0]", diag::SeqEmptyMatch);
+    test("first_match(a and (b[*0] ##0 b))", diag::SeqNoMatch);
     test("@clk a ##1 b");
-    test("@clk a[*0] ##0 b", diag::SeqPropNondegenerate);
+    test("@clk a[*0] ##0 b", diag::SeqNoMatch);
     test("strong(a ##1 b)");
-    test("strong(a ##0 b[*0])", diag::SeqPropNondegenerate);
+    test("strong(a ##0 b[*0])", diag::SeqNoMatch);
     test("weak(a intersect b)");
-    test("weak(a intersect ##2 b)", diag::SeqPropNondegenerate);
+    test("weak(a intersect ##2 b)", diag::SeqNoMatch);
     test("accept_on(b) sync_reject_on(c) sync_accept_on(d) reject_on(e) b ##1 c");
-    test("accept_on(b) b intersect ##2 b", diag::SeqPropNondegenerate);
+    test("accept_on(b) b intersect ##2 b", diag::SeqNoMatch);
     test("accept_on(b) ##2 b intersect ##2 b");
-    test("accept_on(b) b[*0] ##0 b", diag::SeqPropNondegenerate);
+    test("accept_on(b) b[*0] ##0 b", diag::SeqNoMatch);
 
     test("if (b) a ##1 c else d ##1 e");
     test("if (1'b0) a ##1 c else d ##1 e");
     test("if (1'b1) a ##1 c else d ##1 e");
-    test("if (a) b intersect ##2 b", diag::SeqPropNondegenerate);
+    test("if (a) b intersect ##2 b", diag::SeqNoMatch);
     test("if (a) ##2 b intersect ##2 b");
     test("case (b) 1, 2, 3: 1 ##1 b; 4: a and b; default: 1 |-> b; endcase");
     test("case (b) 1, 2, 3: 1 ##1 b; 4: a and b; default: 1[*0] |-> b; endcase",
-         diag::OverlapImplNondegenerate);
+         diag::SeqOnlyEmpty);
     test("disable iff (clk) a");
 }
 
@@ -2558,12 +2555,12 @@ endmodule
         }
     };
 
-    test("(i == i, j = 1, j++)[*0:1]", diag::SeqPropNondegenerate);
-    test("(i != i, j = 1, j++)[*1:1]", diag::SeqPropNondegenerate);
-    test("(i != i, j = 1, j++)[*0:1]", diag::SeqPropNondegenerate);
+    test("(i == i, j = 1, j++)[*0:1]", diag::SeqEmptyMatch);
+    test("(i != i, j = 1, j++)[*1:1]", diag::SeqNoMatch);
+    test("(i != i, j = 1, j++)[*0:1]", diag::SeqNoMatch);
     test("(i == i, j = 1, j++)[*1:1]");
-    test("(i == i, j = 1, j++)[*0:0]", diag::SeqPropNondegenerate);
-    test("(i == i, j = 1, j++)[*0]", diag::SeqPropNondegenerate);
+    test("(i == i, j = 1, j++)[*0:0]", diag::SeqEmptyMatch);
+    test("(i == i, j = 1, j++)[*0]", diag::SeqEmptyMatch);
 }
 
 TEST_CASE("Sequence nondegeneracy tests 4") {
@@ -2584,7 +2581,7 @@ endmodule
 
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 1);
-    CHECK(diags[0].code == diag::SeqPropNondegenerate);
+    CHECK(diags[0].code == diag::SeqNoMatch);
 }
 
 TEST_CASE("Sequence nondegeneracy tests 5") {
@@ -2607,7 +2604,7 @@ endmodule
 
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 1);
-    CHECK(diags[0].code == diag::SeqPropNondegenerate);
+    CHECK(diags[0].code == diag::SeqNoMatch);
 }
 
 TEST_CASE("Sequence nondegeneracy tests 6") {
