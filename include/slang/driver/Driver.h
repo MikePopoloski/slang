@@ -99,6 +99,10 @@ public:
         /// If true, library files will inherit macro definitions from primary source files.
         std::optional<bool> librariesInheritMacros;
 
+        /// If true, the preprocessor will support legacy protected envelope directives,
+        /// for compatibility with old Verilog tools.
+        std::optional<bool> enableLegacyProtect;
+
         /// A set of preprocessor directives to be ignored.
         std::vector<std::string> ignoreDirectives;
 

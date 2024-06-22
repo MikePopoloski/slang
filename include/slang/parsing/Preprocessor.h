@@ -179,6 +179,7 @@ private:
     Trivia handleDefaultTriregStrengthDirective(Token directive);
     Trivia createSimpleDirective(Token directive);
     std::pair<Trivia, Trivia> handlePragmaDirective(Token directive);
+    std::pair<Trivia, Trivia> handleProtectedDirective(Token directive);
 
     // Handle parsing a branch of a conditional directive
     syntax::ConditionalDirectiveExpressionSyntax* parseConditionalExpr();

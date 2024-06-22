@@ -20,33 +20,44 @@ const static flat_hash_map<std::string_view, TokenKind> systemIdentifierKeywords
     { "$unit", TokenKind::UnitSystemName }
 };
 
+#define STANDARD_DIRECTIVES \
+    { "begin_keywords", SyntaxKind::BeginKeywordsDirective },                  \
+    { "celldefine", SyntaxKind::CellDefineDirective },                         \
+    { "default_nettype", SyntaxKind::DefaultNetTypeDirective },                \
+    { "define", SyntaxKind::DefineDirective },                                 \
+    { "else", SyntaxKind::ElseDirective },                                     \
+    { "elsif", SyntaxKind::ElsIfDirective },                                   \
+    { "end_keywords", SyntaxKind::EndKeywordsDirective },                      \
+    { "endcelldefine", SyntaxKind::EndCellDefineDirective },                   \
+    { "endif", SyntaxKind::EndIfDirective },                                   \
+    { "ifdef", SyntaxKind::IfDefDirective },                                   \
+    { "ifndef", SyntaxKind::IfNDefDirective },                                 \
+    { "include", SyntaxKind::IncludeDirective },                               \
+    { "line", SyntaxKind::LineDirective },                                     \
+    { "nounconnected_drive", SyntaxKind::NoUnconnectedDriveDirective },        \
+    { "pragma", SyntaxKind::PragmaDirective },                                 \
+    { "resetall", SyntaxKind::ResetAllDirective },                             \
+    { "timescale", SyntaxKind::TimeScaleDirective },                           \
+    { "unconnected_drive", SyntaxKind::UnconnectedDriveDirective },            \
+    { "undef", SyntaxKind::UndefDirective },                                   \
+    { "undefineall", SyntaxKind::UndefineAllDirective },                       \
+    { "default_decay_time", SyntaxKind::DefaultDecayTimeDirective },           \
+    { "default_trireg_strength", SyntaxKind::DefaultTriregStrengthDirective }, \
+    { "delay_mode_distributed", SyntaxKind::DelayModeDistributedDirective },   \
+    { "delay_mode_path", SyntaxKind::DelayModePathDirective },                 \
+    { "delay_mode_unit", SyntaxKind::DelayModeUnitDirective },                 \
+    { "delay_mode_zero", SyntaxKind::DelayModeZeroDirective },
+
 const static flat_hash_map<std::string_view, SyntaxKind> directiveTable = {
-    { "begin_keywords", SyntaxKind::BeginKeywordsDirective },
-    { "celldefine", SyntaxKind::CellDefineDirective },
-    { "default_nettype", SyntaxKind::DefaultNetTypeDirective },
-    { "define", SyntaxKind::DefineDirective },
-    { "else", SyntaxKind::ElseDirective },
-    { "elsif", SyntaxKind::ElsIfDirective },
-    { "end_keywords", SyntaxKind::EndKeywordsDirective },
-    { "endcelldefine", SyntaxKind::EndCellDefineDirective },
-    { "endif", SyntaxKind::EndIfDirective },
-    { "ifdef", SyntaxKind::IfDefDirective },
-    { "ifndef", SyntaxKind::IfNDefDirective },
-    { "include", SyntaxKind::IncludeDirective },
-    { "line", SyntaxKind::LineDirective },
-    { "nounconnected_drive", SyntaxKind::NoUnconnectedDriveDirective },
-    { "pragma", SyntaxKind::PragmaDirective },
-    { "resetall", SyntaxKind::ResetAllDirective },
-    { "timescale", SyntaxKind::TimeScaleDirective },
-    { "unconnected_drive", SyntaxKind::UnconnectedDriveDirective },
-    { "undef", SyntaxKind::UndefDirective },
-    { "undefineall", SyntaxKind::UndefineAllDirective },
-    { "default_decay_time", SyntaxKind::DefaultDecayTimeDirective },
-    { "default_trireg_strength", SyntaxKind::DefaultTriregStrengthDirective },
-    { "delay_mode_distributed", SyntaxKind::DelayModeDistributedDirective },
-    { "delay_mode_path", SyntaxKind::DelayModePathDirective },
-    { "delay_mode_unit", SyntaxKind::DelayModeUnitDirective },
-    { "delay_mode_zero", SyntaxKind::DelayModeZeroDirective }
+    STANDARD_DIRECTIVES
+};
+
+const static flat_hash_map<std::string_view, SyntaxKind> directivesWithLegacyProtect = {
+    STANDARD_DIRECTIVES
+    { "protect", SyntaxKind::ProtectDirective },
+    { "endprotect", SyntaxKind::EndProtectDirective },
+    { "protected", SyntaxKind::ProtectedDirective },
+    { "endprotected", SyntaxKind::EndProtectedDirective }
 };
 
 const static flat_hash_map<std::string_view, KeywordVersion> keywordVersionTable = {
@@ -645,8 +656,9 @@ TokenKind LexerFacts::getSystemKeywordKind(std::string_view text) {
     return TokenKind::Unknown;
 }
 
-SyntaxKind LexerFacts::getDirectiveKind(std::string_view directive) {
-    if (auto it = directiveTable.find(directive); it != directiveTable.end())
+SyntaxKind LexerFacts::getDirectiveKind(std::string_view directive, bool enableLegacyProtect) {
+    auto& table = enableLegacyProtect ? directivesWithLegacyProtect : directiveTable;
+    if (auto it = table.find(directive); it != table.end())
         return it->second;
     return SyntaxKind::MacroUsage;
 }

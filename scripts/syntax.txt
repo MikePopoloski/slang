@@ -2186,7 +2186,8 @@ SimpleDirective base=Directive multiKind=true
 kindmap<SimpleDirective>
 CellDefineDirective NoUnconnectedDriveDirective EndCellDefineDirective EndKeywordsDirective
 ResetAllDirective UndefineAllDirective DelayModeDistributedDirective DelayModePathDirective
-DelayModeUnitDirective DelayModeZeroDirective
+DelayModeUnitDirective DelayModeZeroDirective ProtectDirective EndProtectDirective
+ProtectedDirective EndProtectedDirective
 
 IncludeDirective base=Directive
 token fileName

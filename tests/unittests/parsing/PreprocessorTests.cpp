@@ -2578,3 +2578,64 @@ source:2:19: error: expected pull1 or pull0 strength
                   ^
 )");
 }
+
+TEST_CASE("Verilog-XL style `protect directives") {
+    auto& text = R"(
+module top_design (a, b, c);
+    bottom inst ();
+    `protect
+        initial $display("Hello");
+    `endprotect
+endmodule
+)";
+
+    auto& expected = R"(
+module top_design (a, b, c);
+    bottom inst ();
+
+        initial $display("Hello");
+
+endmodule
+)";
+
+    LexerOptions lo;
+    lo.enableLegacyProtect = true;
+
+    std::string result = preprocess(text, lo);
+    CHECK(result == expected);
+    CHECK_DIAGNOSTICS_EMPTY;
+}
+
+TEST_CASE("Verilog-XL style `protected directives") {
+    auto& text = R"(
+module top_design (a, b, c);
+    bottom inst ();
+    `protected
+  a*lejodi)dlj@lsfj4gRekv*9l#sIjnd<;pXywUHvow%emhiITvne(@mengTVpe
+  prK58s53<gf:dneURtnd&8ejsWqpsu*ehtsY=wkxOrkp$
+    `endprotected
+endmodule
+
+`protected
+  fkeop*456gjkl@%^&^&s85Kfmv(:wjvdwLSchrmx*2uPQjsu=:wucgwigIWsuxnt
+  pr"W84&@(shxjMvn02:wjd8%&!0s$
+`endprotected
+)";
+
+    auto& expected = R"(
+module top_design (a, b, c);
+    bottom inst ();
+
+endmodule
+)";
+
+    LexerOptions lo;
+    lo.enableLegacyProtect = true;
+
+    std::string result = preprocess(text, lo);
+    CHECK(result == expected);
+
+    REQUIRE(diagnostics.size() == 2);
+    CHECK(diagnostics[0].code == diag::ProtectedEnvelope);
+    CHECK(diagnostics[1].code == diag::ProtectedEnvelope);
+}

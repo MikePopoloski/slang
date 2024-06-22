@@ -83,6 +83,9 @@ void Driver::addStandardArgs() {
     cmdLine.add("--libraries-inherit-macros", options.librariesInheritMacros,
                 "If true, library files will inherit macro definitions from the primary source "
                 "files. --single-unit must also be passed when this option is used.");
+    cmdLine.add("--enable-legacy-protect", options.enableLegacyProtect,
+                "If true, the preprocessor will support legacy protected envelope directives, "
+                "for compatibility with old Verilog tools.");
 
     // Legacy vendor commands support
     cmdLine.add(
@@ -704,6 +707,7 @@ void Driver::addParseOptions(Bag& bag) const {
 
     LexerOptions loptions;
     loptions.languageVersion = languageVersion;
+    loptions.enableLegacyProtect = options.enableLegacyProtect == true;
     if (options.maxLexerErrors.has_value())
         loptions.maxErrors = *options.maxLexerErrors;
 

@@ -31,6 +31,10 @@ struct SLANG_EXPORT LexerOptions {
 
     /// The version of the SystemVerilog language to use.
     LanguageVersion languageVersion = LanguageVersion::Default;
+
+    /// If true, the preprocessor will support legacy protected envelope directives,
+    /// for compatibility with old Verilog tools.
+    bool enableLegacyProtect = false;
 };
 
 /// Possible encodings for encrypted text used in a pragma protect region.
@@ -62,7 +66,8 @@ public:
     bool isNextTokenOnSameLine();
 
     /// Lexes a token that contains encoded text as part of a protected envelope.
-    Token lexEncodedText(ProtectEncoding encoding, uint32_t expectedBytes, bool singleLine);
+    Token lexEncodedText(ProtectEncoding encoding, uint32_t expectedBytes, bool singleLine,
+                         bool legacyProtectedMode);
 
     /// Returns the library with which the lexer's source buffer is associated.
     const SourceLibrary* getLibrary() const { return library; }
@@ -106,7 +111,8 @@ private:
     void scanIdentifier();
     bool scanUTF8Char(bool alreadyErrored);
     bool scanUTF8Char(bool alreadyErrored, uint32_t* code, int& computedLen);
-    void scanEncodedText(ProtectEncoding encoding, uint32_t expectedBytes, bool singleLine);
+    void scanEncodedText(ProtectEncoding encoding, uint32_t expectedBytes, bool singleLine,
+                         bool legacyProtectedMode);
 
     template<typename... Args>
     Token create(TokenKind kind, Args&&... args);

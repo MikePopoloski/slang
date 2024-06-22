@@ -276,11 +276,12 @@ bool Lexer::isNextTokenOnSameLine() {
     }
 }
 
-Token Lexer::lexEncodedText(ProtectEncoding encoding, uint32_t expectedBytes, bool singleLine) {
+Token Lexer::lexEncodedText(ProtectEncoding encoding, uint32_t expectedBytes, bool singleLine,
+                            bool legacyProtectedMode) {
     triviaBuffer.clear();
     lexTrivia<true>();
     mark();
-    scanEncodedText(encoding, expectedBytes, singleLine);
+    scanEncodedText(encoding, expectedBytes, singleLine, legacyProtectedMode);
     return create(TokenKind::Unknown);
 }
 
@@ -881,7 +882,7 @@ Token Lexer::lexDirective() {
         return create(TokenKind::Unknown);
     }
 
-    SyntaxKind directive = LF::getDirectiveKind(lexeme().substr(1));
+    SyntaxKind directive = LF::getDirectiveKind(lexeme().substr(1), options.enableLegacyProtect);
     return create(TokenKind::Directive, directive);
 }
 
@@ -1289,12 +1290,14 @@ bool Lexer::scanUTF8Char(bool alreadyErrored, uint32_t* code, int& computedLen) 
     return true;
 }
 
-void Lexer::scanEncodedText(ProtectEncoding encoding, uint32_t expectedBytes, bool singleLine) {
+void Lexer::scanEncodedText(ProtectEncoding encoding, uint32_t expectedBytes, bool singleLine,
+                            bool legacyProtectedMode) {
     // Helper function that returns true if the current position in the buffer
     // is looking at the string "pragma".
     auto lookingAtPragma = [&] {
         int index = 0;
-        for (char c : "pragma"sv) {
+        auto endStr = legacyProtectedMode ? "endprotected"sv : "pragma"sv;
+        for (char c : endStr) {
             if (peek(++index) != c)
                 return false;
         }

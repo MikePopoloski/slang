@@ -160,6 +160,10 @@ If true, library files will inherit macro definitions from the primary source fi
 By default library files are independent and will not inherit macros from the main project.
 `--single-unit` must also be passed when this option is used.
 
+`--enable-legacy-protect`
+
+Enables use of legacy source protection directives for compatibility with older tools.
+
 `--obfuscate-ids`
 
 Causes all identifiers in the preprocessed output to be replaced with obfuscated

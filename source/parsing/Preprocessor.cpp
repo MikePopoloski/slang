@@ -361,12 +361,22 @@ Token Preprocessor::handleDirectives(Token token) {
                     case SyntaxKind::DefaultTriregStrengthDirective:
                         trivia.push_back(handleDefaultTriregStrengthDirective(token));
                         break;
+                    case SyntaxKind::ProtectedDirective: {
+                        auto [directive, skipped] = handleProtectedDirective(token);
+                        trivia.push_back(directive);
+                        if (skipped)
+                            trivia.push_back(skipped);
+                        break;
+                    }
                     case SyntaxKind::CellDefineDirective:
                     case SyntaxKind::EndCellDefineDirective:
                     case SyntaxKind::DelayModeDistributedDirective:
                     case SyntaxKind::DelayModePathDirective:
                     case SyntaxKind::DelayModeUnitDirective:
                     case SyntaxKind::DelayModeZeroDirective:
+                    case SyntaxKind::ProtectDirective:
+                    case SyntaxKind::EndProtectDirective:
+                    case SyntaxKind::EndProtectedDirective:
                         // we don't do anything with these directives currently
                         trivia.push_back(createSimpleDirective(token));
                         break;
@@ -566,7 +576,8 @@ Trivia Preprocessor::handleDefineDirective(Token directive) {
     if (name.isMissing())
         bad = true;
     else {
-        if (LF::getDirectiveKind(name.valueText()) != SyntaxKind::MacroUsage) {
+        if (LF::getDirectiveKind(name.valueText(), lexerOptions.enableLegacyProtect) !=
+            SyntaxKind::MacroUsage) {
             addDiag(diag::InvalidMacroName, name.range());
             bad = true;
         }
@@ -1027,6 +1038,25 @@ std::pair<Trivia, Trivia> Preprocessor::handlePragmaDirective(Token directive) {
         skippedTrivia = Trivia(TriviaKind::SkippedTokens, skipped.copy(alloc));
 
     return {Trivia(TriviaKind::Directive, result), skippedTrivia};
+}
+
+std::pair<Trivia, Trivia> Preprocessor::handleProtectedDirective(Token directive) {
+    // This is handling legacy Verilog-XL style `protected directives.
+    SmallVector<Token, 4> skipped;
+    skipMacroTokensBeforeProtectRegion(directive, skipped);
+
+    Token token = lexerStack.back()->lexEncodedText(ProtectEncoding::Raw, 0,
+                                                    /* isSingleLine */ false,
+                                                    /* legacyProtectedMode */ true);
+    skipped.push_back(token);
+
+    addDiag(diag::ProtectedEnvelope, token.location());
+
+    Trivia skippedTrivia;
+    if (!skipped.empty())
+        skippedTrivia = Trivia(TriviaKind::SkippedTokens, skipped.copy(alloc));
+
+    return {createSimpleDirective(directive), skippedTrivia};
 }
 
 Trivia Preprocessor::handleUnconnectedDriveDirective(Token directive) {

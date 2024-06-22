@@ -45,7 +45,8 @@ public:
     static const flat_hash_map<std::string_view, TokenKind>* getKeywordTable(
         KeywordVersion version);
 
-    static syntax::SyntaxKind getDirectiveKind(std::string_view directive);
+    static syntax::SyntaxKind getDirectiveKind(std::string_view directive,
+                                               bool enableLegacyProtect);
     static std::string_view getDirectiveText(syntax::SyntaxKind kind);
 
     /// This checks all keywords, regardless of the current keyword table. Should
