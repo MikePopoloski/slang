@@ -12,6 +12,7 @@
 
 #include "slang/diagnostics/LexerDiags.h"
 #include "slang/diagnostics/NumericDiags.h"
+#include "slang/diagnostics/PreprocessorDiags.h"
 #include "slang/syntax/SyntaxKind.h"
 #include "slang/text/CharInfo.h"
 #include "slang/text/SourceManager.h"
@@ -22,6 +23,9 @@
 static_assert(std::numeric_limits<double>::is_iec559, "SystemVerilog requires IEEE 754");
 
 static const double BitsPerDecimal = log2(10.0);
+
+static constexpr std::string_view PragmaBeginProtected = "pragma protect begin_protected"sv;
+static constexpr std::string_view PragmaEndProtected = "pragma protect end_protected"sv;
 
 namespace slang::parsing {
 
@@ -1195,6 +1199,27 @@ void Lexer::scanWhitespace() {
 }
 
 void Lexer::scanLineComment() {
+    if (options.enableLegacyProtect) {
+        // See if we're looking at a pragma protect comment and skip
+        // over it if so.
+        while (peek() == ' ')
+            advance();
+
+        bool found = true;
+        for (char c : PragmaBeginProtected) {
+            if (!consume(c)) {
+                found = false;
+                break;
+            }
+        }
+
+        if (found) {
+            scanProtectComment();
+            addTrivia(TriviaKind::DisabledText);
+            return;
+        }
+    }
+
     bool sawUTF8Error = false;
     while (true) {
         char c = peek();
@@ -1454,6 +1479,36 @@ void Lexer::scanEncodedText(ProtectEncoding encoding, uint32_t expectedBytes, bo
                 break;
             default:
                 SLANG_UNREACHABLE;
+        }
+    }
+}
+
+void Lexer::scanProtectComment() {
+    addDiag(diag::ProtectedEnvelope, currentOffset() - PragmaBeginProtected.size());
+
+    while (true) {
+        char c = peek();
+        if (c == '\0' && reallyAtEnd()) {
+            addDiag(diag::RawProtectEOF, currentOffset() - 1);
+            return;
+        }
+
+        advance();
+        if (c == '/' && peek() == '/') {
+            advance();
+            while (peek() == ' ')
+                advance();
+
+            bool found = true;
+            for (char d : PragmaEndProtected) {
+                if (!consume(d)) {
+                    found = false;
+                    break;
+                }
+            }
+
+            if (found)
+                return;
         }
     }
 }

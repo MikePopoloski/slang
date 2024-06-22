@@ -2639,3 +2639,46 @@ endmodule
     CHECK(diagnostics[0].code == diag::ProtectedEnvelope);
     CHECK(diagnostics[1].code == diag::ProtectedEnvelope);
 }
+
+TEST_CASE("Verilog-A style pragma protect comments") {
+    auto& text = R"(
+module top_design (a, b, c);
+    bottom inst ();
+//    pragma protect begin_protected
+//pragma protect key_keyowner=Cadence Design Systems.
+//pragma protect key_keyname=CDS_KEY
+//pragma protect key_method=RC5
+//pragma protect key_block
+hjQ2rsuJMpL9F3O43Xx7zf656dz2xxBxdnHC0GvJFJG3Y5HL0dSoPcLMN5Zy6Iq+
+ySMMWcOGkowbtoHVjNn3UdcZFD6NFlWHJpb7KIc8Php8iT1uEZmtwTgDSy64yqLL
+SCaqKffWXhnJ5n/936szbTSvc8vs2ILJYG4FnjIZeYARwKjbofvTgA==
+//pragma protect end_key_block
+//pragma protect digest_block
+uilUH9+52Dwx1U6ajpWVBgZque4=
+//pragma protect end_digest_block
+//pragma protect data_block
+jGZcQn3lBzXvF2kCXy+abmSjUdOfUzPOp7g7dfEzgN96O2ZRQP4aN7kqJOCA9shI
+jcvO6pnBhjaTNlxUJBSbBA==
+//pragma protect end_data_block
+//pragma protect digest_block
+tzEpxTPg7KWB9yMYYlqfoVE3lVk=
+//pragma protect end_digest_block
+//  pragma protect end_protected
+endmodule
+)";
+
+    auto& expected = R"(
+module top_design (a, b, c);
+    bottom inst ();
+endmodule
+)";
+
+    LexerOptions lo;
+    lo.enableLegacyProtect = true;
+
+    std::string result = preprocess(text, lo);
+    CHECK(result == expected);
+
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics[0].code == diag::ProtectedEnvelope);
+}

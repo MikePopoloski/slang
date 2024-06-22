@@ -113,6 +113,7 @@ private:
     bool scanUTF8Char(bool alreadyErrored, uint32_t* code, int& computedLen);
     void scanEncodedText(ProtectEncoding encoding, uint32_t expectedBytes, bool singleLine,
                          bool legacyProtectedMode);
+    void scanProtectComment();
 
     template<typename... Args>
     Token create(TokenKind kind, Args&&... args);

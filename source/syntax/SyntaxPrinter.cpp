@@ -40,6 +40,10 @@ SyntaxPrinter& SyntaxPrinter::print(Trivia trivia) {
                     print(t);
             }
             break;
+        case TriviaKind::DisabledText:
+            if (includeSkipped)
+                append(trivia.getRawText());
+            break;
         case TriviaKind::LineComment:
         case TriviaKind::BlockComment:
             if (!includeComments)
