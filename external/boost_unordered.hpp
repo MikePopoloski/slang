@@ -59,17 +59,19 @@
 // This is a minimal header that contains only the small set
 // config entries needed to use boost::unordered, so that the
 // whole boost config lib doesn't need to be pulled in.
-#ifdef _MSC_VER
-#  ifndef BOOST_MSVC
-#    define BOOST_MSVC _MSC_VER
-#  endif
-#elif defined __clang__
+#ifdef __clang__
 #  ifndef BOOST_CLANG
 #    define BOOST_CLANG 1
+#    define BOOST_CLANG_VERSION (__clang_major__ * 10000 + __clang_minor__ * 100 + __clang_patchlevel__ % 100)
 #  endif
 #elif defined(__GNUC__)
 #  ifndef BOOST_GCC
 #    define BOOST_GCC (__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__)
+#    define BOOST_GCC_VERSION BOOST_GCC
+#  endif
+#elif defined(_MSC_VER)
+#  ifndef BOOST_MSVC
+#    define BOOST_MSVC _MSC_VER
 #  endif
 #endif
 
