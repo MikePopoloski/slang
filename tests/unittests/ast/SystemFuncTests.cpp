@@ -1440,3 +1440,22 @@ endmodule
     CHECK(diags[2].code == diag::ExpectedVariableName);
     CHECK(diags[3].code == diag::BadSystemSubroutineArg);
 }
+
+TEST_CASE("$sformat invalid %p call") {
+    auto tree = SyntaxTree::fromText(R"(
+function void void_fn;
+endfunction
+
+module m;
+  initial begin
+    $sformatf("%p", void_fn());
+  end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::FormatMismatchedType);
+}

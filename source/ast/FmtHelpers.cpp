@@ -86,8 +86,9 @@ static bool checkArgType(TContext& context, const Expression& arg, char spec, So
                 return true;
             break;
         case 'p':
-            // Always valid.
-            return true;
+            if (!type.isVoid())
+                return true;
+            break;
         case 's':
             if (type.canBeStringLike())
                 return true;
