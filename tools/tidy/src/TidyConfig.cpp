@@ -38,6 +38,7 @@ TidyConfig::TidyConfig() {
     synthesisChecks.emplace("RegisterHasNoReset", CheckStatus::ENABLED);
     synthesisChecks.emplace("XilinxDoNotCareValues", CheckStatus::ENABLED);
     synthesisChecks.emplace("CastSignedIndex", CheckStatus::ENABLED);
+    synthesisChecks.emplace("AlwaysFFAssignmentOutsideConditional", CheckStatus::ENABLED);
     checkKinds.insert({slang::TidyKind::Synthesis, synthesisChecks});
 }
 

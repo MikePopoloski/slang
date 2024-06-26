@@ -25,6 +25,7 @@ add_library(
   src/style/GenerateNamed.cpp
   src/style/NoDotVarInPortConnection.cpp
   src/style/NoLegacyGenerate.cpp
+  src/synthesis/AlwaysFFAssignmentOutsideConditional.cpp
   )
 
 target_include_directories(slang_tidy_obj_lib PUBLIC include ../../include)
