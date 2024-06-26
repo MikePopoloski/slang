@@ -24,6 +24,7 @@ add_executable(
   AlwaysCombNamedTest.cpp
   GenerateNamedTest.cpp
   NoDotVarInPortConnectionTest.cpp
+  NoLegacyGenerateTest.cpp
   )
 
 target_link_libraries(tidy_unittests PRIVATE Catch2::Catch2 slang_tidy_obj_lib)
