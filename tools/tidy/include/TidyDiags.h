@@ -26,5 +26,6 @@ inline constexpr DiagCode NoDotStarInPortConnection(DiagSubsystem::Tidy, 11);
 inline constexpr DiagCode NoImplicitPortNameInPortConnection(DiagSubsystem::Tidy, 12);
 inline constexpr DiagCode AlwaysCombBlockNamed(DiagSubsystem::Tidy, 13);
 inline constexpr DiagCode GenerateNamed(DiagSubsystem::Tidy, 14);
+inline constexpr DiagCode NoDotVarInPortConnection(DiagSubsystem::Tidy, 15);
 
 } // namespace slang::diag

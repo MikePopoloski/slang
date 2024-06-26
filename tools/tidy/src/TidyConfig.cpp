@@ -28,6 +28,7 @@ TidyConfig::TidyConfig() {
     styleChecks.emplace("NoImplicitPortNameInPortConnection", CheckStatus::ENABLED);
     styleChecks.emplace("AlwaysCombBlockNamed", CheckStatus::ENABLED);
     styleChecks.emplace("GenerateNamed", CheckStatus::ENABLED);
+    styleChecks.emplace("NoDotVarInPortConnection", CheckStatus::ENABLED);
     checkKinds.insert({slang::TidyKind::Style, styleChecks});
 
     auto synthesisChecks = std::unordered_map<std::string, CheckStatus>();

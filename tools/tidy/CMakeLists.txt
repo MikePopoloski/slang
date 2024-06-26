@@ -23,6 +23,7 @@ add_library(
   src/style/NoImplicitPortNameInPortConnection.cpp
   src/style/AlwaysCombNamed.cpp
   src/style/GenerateNamed.cpp
+  src/style/NoDotVarInPortConnection.cpp
   )
 
 target_include_directories(slang_tidy_obj_lib PUBLIC include ../../include)
