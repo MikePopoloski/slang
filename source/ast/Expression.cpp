@@ -69,14 +69,24 @@ public:
 };
 
 class EffectiveWidthVisitor {
+private:
+    const ASTContext* context_ = nullptr;
+
 public:
+    EffectiveWidthVisitor(const ASTContext* context) : context_(context) {}
     template<typename T>
     std::optional<bitwidth_t> visit(const T& expr) {
-        if constexpr (requires { expr.getEffectiveWidthImpl(); }) {
+        if constexpr (requires { expr.getEffectiveWidthImpl(context_); }) {
             if (expr.bad())
                 return std::nullopt;
 
-            return expr.getEffectiveWidthImpl();
+            if (context_) {
+                EvalContext ctx(*context_); 
+                if (const auto constant = expr.eval(ctx); !constant.bad() && constant.isInteger())
+                    return constant.integer().getMinRepresentedBits();
+            }
+
+            return expr.getEffectiveWidthImpl(context_);
         }
         else {
             return expr.type->getBitWidth();
@@ -620,8 +630,8 @@ void Expression::getLongestStaticPrefixes(
     }
 }
 
-std::optional<bitwidth_t> Expression::getEffectiveWidth() const {
-    EffectiveWidthVisitor visitor;
+std::optional<bitwidth_t> Expression::getEffectiveWidth(const ASTContext* context) const {
+    EffectiveWidthVisitor visitor(context);
     return visit(visitor);
 }
 

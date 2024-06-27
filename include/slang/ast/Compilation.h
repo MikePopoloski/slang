@@ -204,6 +204,10 @@ struct SLANG_EXPORT CompilationOptions {
     /// A list of library names, in the order in which they should be searched
     /// when binding cells to instances.
     std::vector<std::string> defaultLiblist;
+
+    /// If set to true, effective width for constant expressions will be
+    /// computed through evaluation, else default computation will be used.
+    bool evalEffectiveWidth = false;
 };
 
 /// Information about how a bind directive applies to some definition

@@ -118,7 +118,7 @@ public:
     Expression& operand() { return *operand_; }
 
     ConstantValue evalImpl(EvalContext& context) const;
-    std::optional<bitwidth_t> getEffectiveWidthImpl() const;
+    std::optional<bitwidth_t> getEffectiveWidthImpl(const ASTContext* context = nullptr) const;
     EffectiveSign getEffectiveSignImpl(bool isForConversion) const;
 
     void serializeTo(ASTSerializer& serializer) const;

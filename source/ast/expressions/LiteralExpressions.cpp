@@ -87,7 +87,7 @@ ConstantValue IntegerLiteral::evalImpl(EvalContext&) const {
     return result;
 }
 
-std::optional<bitwidth_t> IntegerLiteral::getEffectiveWidthImpl() const {
+std::optional<bitwidth_t> IntegerLiteral::getEffectiveWidthImpl(const ASTContext*) const {
     auto&& val = getValue();
     if (val.hasUnknown())
         return val.getBitWidth();
@@ -206,7 +206,7 @@ ConstantValue UnbasedUnsizedIntegerLiteral::evalImpl(EvalContext&) const {
     return getValue();
 }
 
-std::optional<bitwidth_t> UnbasedUnsizedIntegerLiteral::getEffectiveWidthImpl() const {
+std::optional<bitwidth_t> UnbasedUnsizedIntegerLiteral::getEffectiveWidthImpl(const ASTContext*) const {
     return 1;
 }
 

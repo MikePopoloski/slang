@@ -215,7 +215,7 @@ public:
     }
 
     // Return type is 'int' but the actual value is always either 0 or 1
-    std::optional<bitwidth_t> getEffectiveWidth() const final { return 1; }
+    std::optional<bitwidth_t> getEffectiveWidth(const ASTContext* = nullptr) const final { return 1; }
 
     ConstantValue eval(EvalContext& context, const Args&, SourceRange range,
                        const CallExpression::SystemCallInfo&) const final {
@@ -574,7 +574,7 @@ public:
                             std::vector<const Type*>{&builtins.stringType}) {}
 
     // Return type is 'int' but the actual value is always either 0 or 1
-    std::optional<bitwidth_t> getEffectiveWidth() const final { return 1; }
+    std::optional<bitwidth_t> getEffectiveWidth(const ASTContext* = nullptr) const final { return 1; }
 };
 
 void Builtins::registerNonConstFuncs() {

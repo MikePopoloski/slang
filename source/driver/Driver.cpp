@@ -149,6 +149,9 @@ void Driver::addStandardArgs() {
     cmdLine.add("--timescale", options.timeScale,
                 "Default time scale to use for design elements that don't specify one explicitly",
                 "<base>/<precision>");
+    cmdLine.add("--eval-effective-width", options.evalEffectiveWidth,
+                "compute effective width for constant expressions through evaluation");
+
 
     auto addCompFlag = [&](CompilationFlags flag, std::string_view name, std::string_view desc) {
         auto [it, inserted] = options.compilationFlags.emplace(flag, std::nullopt);
@@ -740,6 +743,8 @@ void Driver::addCompilationOptions(Bag& bag) const {
         coptions.maxInstanceArray = *options.maxInstanceArray;
     if (options.errorLimit.has_value())
         coptions.errorLimit = *options.errorLimit * 2;
+    if (options.evalEffectiveWidth.has_value())
+        coptions.evalEffectiveWidth = *options.evalEffectiveWidth;
 
     for (auto& [flag, value] : options.compilationFlags) {
         if (value == true)

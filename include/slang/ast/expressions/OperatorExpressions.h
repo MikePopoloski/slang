@@ -33,7 +33,7 @@ public:
 
     ConstantValue evalImpl(EvalContext& context) const;
     bool propagateType(const ASTContext& context, const Type& newType, SourceRange opRange);
-    std::optional<bitwidth_t> getEffectiveWidthImpl() const;
+    std::optional<bitwidth_t> getEffectiveWidthImpl(const ASTContext* context = nullptr) const;
     EffectiveSign getEffectiveSignImpl(bool isForConversion) const;
 
     void serializeTo(ASTSerializer& serializer) const;
@@ -89,7 +89,7 @@ public:
 
     ConstantValue evalImpl(EvalContext& context) const;
     bool propagateType(const ASTContext& context, const Type& newType, SourceRange opRange);
-    std::optional<bitwidth_t> getEffectiveWidthImpl() const;
+    std::optional<bitwidth_t> getEffectiveWidthImpl(const ASTContext* context = nullptr) const;
     EffectiveSign getEffectiveSignImpl(bool isForConversion) const;
 
     void serializeTo(ASTSerializer& serializer) const;
@@ -155,7 +155,7 @@ public:
 
     ConstantValue evalImpl(EvalContext& context) const;
     bool propagateType(const ASTContext& context, const Type& newType, SourceRange opRange);
-    std::optional<bitwidth_t> getEffectiveWidthImpl() const;
+    std::optional<bitwidth_t> getEffectiveWidthImpl(const ASTContext* context = nullptr) const;
     EffectiveSign getEffectiveSignImpl(bool isForConversion) const;
 
     /// If the condition for this expression is a known constant value,

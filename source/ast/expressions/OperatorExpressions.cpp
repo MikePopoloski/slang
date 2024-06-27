@@ -452,12 +452,12 @@ bool UnaryExpression::propagateType(const ASTContext& context, const Type& newTy
     SLANG_UNREACHABLE;
 }
 
-std::optional<bitwidth_t> UnaryExpression::getEffectiveWidthImpl() const {
+std::optional<bitwidth_t> UnaryExpression::getEffectiveWidthImpl(const ASTContext* context) const {
     switch (op) {
         case UnaryOperator::Plus:
         case UnaryOperator::Minus:
         case UnaryOperator::BitwiseNot:
-            return operand().getEffectiveWidth();
+            return operand().getEffectiveWidth(context);
         default:
             return type->getBitWidth();
     }
@@ -1010,8 +1010,10 @@ void BinaryExpression::analyzeOpTypes(const Type& clt, const Type& crt, const Ty
             if (alw == arw)
                 return;
 
-            auto elw = lhs.getEffectiveWidth();
-            auto erw = rhs.getEffectiveWidth();
+            auto elw = lhs.getEffectiveWidth(
+                context.getCompilation().getOptions().evalEffectiveWidth ? &context : nullptr);
+            auto erw = rhs.getEffectiveWidth(
+                context.getCompilation().getOptions().evalEffectiveWidth ? &context : nullptr);
             if (!elw || !erw)
                 return;
 
@@ -1114,7 +1116,7 @@ bool BinaryExpression::propagateType(const ASTContext& context, const Type& newT
     SLANG_UNREACHABLE;
 }
 
-std::optional<bitwidth_t> BinaryExpression::getEffectiveWidthImpl() const {
+std::optional<bitwidth_t> BinaryExpression::getEffectiveWidthImpl(const ASTContext* context) const {
     switch (op) {
         case BinaryOperator::Add:
         case BinaryOperator::Subtract:
@@ -1125,7 +1127,7 @@ std::optional<bitwidth_t> BinaryExpression::getEffectiveWidthImpl() const {
         case BinaryOperator::BinaryOr:
         case BinaryOperator::BinaryXor:
         case BinaryOperator::BinaryXnor:
-            return std::max(left().getEffectiveWidth(), right().getEffectiveWidth());
+            return std::max(left().getEffectiveWidth(context), right().getEffectiveWidth(context));
         case BinaryOperator::Equality:
         case BinaryOperator::Inequality:
         case BinaryOperator::CaseEquality:
@@ -1146,7 +1148,7 @@ std::optional<bitwidth_t> BinaryExpression::getEffectiveWidthImpl() const {
         case BinaryOperator::ArithmeticShiftLeft:
         case BinaryOperator::ArithmeticShiftRight:
         case BinaryOperator::Power:
-            return left().getEffectiveWidth();
+            return left().getEffectiveWidth(context);
     }
     SLANG_UNREACHABLE;
 }
@@ -1384,10 +1386,10 @@ bool ConditionalExpression::propagateType(const ASTContext& context, const Type&
     return true;
 }
 
-std::optional<bitwidth_t> ConditionalExpression::getEffectiveWidthImpl() const {
+std::optional<bitwidth_t> ConditionalExpression::getEffectiveWidthImpl(const ASTContext* context) const {
     if (auto branch = knownSide())
-        return branch->getEffectiveWidth();
-    return std::max(left().getEffectiveWidth(), right().getEffectiveWidth());
+        return branch->getEffectiveWidth(context);
+    return std::max(left().getEffectiveWidth(context), right().getEffectiveWidth(context));
 }
 
 Expression::EffectiveSign ConditionalExpression::getEffectiveSignImpl(bool isForConversion) const {

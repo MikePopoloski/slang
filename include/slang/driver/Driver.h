@@ -223,6 +223,10 @@ public:
         /// A set of extensions that will be used to exclude files.
         flat_hash_set<std::string> excludeExts;
 
+        /// A flag to control getEffectiveWidth computation more accurately by
+        /// expression evaluation
+        std::optional<bool> evalEffectiveWidth;
+
         /// @}
 
         /// Returns true if the lintMode option is provided.

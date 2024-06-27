@@ -3644,3 +3644,134 @@ assign z = x & y;
            ~ ^ ~
 )");
 }
+
+TEST_CASE("False positive IntBoolConv") {
+    auto tree = SyntaxTree::fromText(R"(
+module m();
+    initial begin
+        if (3'b100 - 2'b11) begin
+        end
+    end
+endmodule
+)");
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::IntBoolConv);
+    std::string result = "\n" + report(diags);
+    CHECK(result == R"(
+source:4:13: warning: implicit conversion from 'bit[2:0]' to boolean value [-Wint-bool-conv]
+        if (3'b100 - 2'b11) begin
+            ^~~~~~~~~~~~~~
+)");
+}
+
+TEST_CASE("Fix false positive IntBoolConv with --eval-effective-width option set to true") {
+    auto tree = SyntaxTree::fromText(R"(
+module m();
+    initial begin
+        if (3'b100 - 2'b11) begin
+        end
+    end
+endmodule
+)");
+    CompilationOptions co;
+    co.evalEffectiveWidth = true;
+
+    Bag options;
+    options.set(co);
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 0);
+}
+
+TEST_CASE("getEffectiveWidth through evaluation") {
+    Compilation compilation;
+    auto& scope = compilation.createScriptScope();
+
+    std::vector<std::pair<std::shared_ptr<SyntaxTree>, bitwidth_t>> tests {
+        // left shift
+        { SyntaxTree::fromText("10'b100  << 3'b100"),  7 },
+        { SyntaxTree::fromText("10'sb100 << 4'sb100"), 8 },
+        // right shift
+        { SyntaxTree::fromText("10'b100  >> 3'b10"),  1 },
+        { SyntaxTree::fromText("10'sb100 >> 3'sb10"), 2 },
+        { SyntaxTree::fromText("-3'b100  >> 3'b10"),  1 }, // -4 to 1
+        { SyntaxTree::fromText("-3'sb100 >> 3'sb10"), 2 },
+        // right arithmetic shift
+        { SyntaxTree::fromText("-3'sb100 >>> 3'sb10"), 1 },  
+        { SyntaxTree::fromText("-3'sb100 >>> 3'sb11"), 1 }, // overflow 
+        // add
+        { SyntaxTree::fromText("32'd1  + 32'd2"),  2 },
+        { SyntaxTree::fromText("32'sd1 + 32'sd2"), 3 },
+        // substruct
+        { SyntaxTree::fromText("32'd15  - 32'd10"),  3 },
+        { SyntaxTree::fromText("32'sd15 - 32'sd10"), 4 },
+        // divide
+        { SyntaxTree::fromText("32'd15  / 32'd5"),  2 },
+        { SyntaxTree::fromText("32'sd15 / 32'sd5"), 2 },
+        //// power
+        { SyntaxTree::fromText("32'd2  ** 32'd10"),  11 },
+        { SyntaxTree::fromText("32'sd2 ** 32'sd10"), 12 },
+    };
+
+    for (const auto& test : tests) {
+        ASTContext astCtx(scope, LookupLocation::max);
+        auto& bound = Expression::bind(test.first->root().as<ExpressionSyntax>(), astCtx);
+        REQUIRE(test.first->diagnostics().empty());
+
+        const auto width = bound.getEffectiveWidth(&astCtx);
+        REQUIRE(width.has_value());
+        CHECK(width.value() == test.second);
+    }
+
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("getEffectiveWidth by default") {
+    Compilation compilation;
+    auto& scope = compilation.createScriptScope();
+
+    std::vector<std::pair<std::shared_ptr<SyntaxTree>, bitwidth_t>> tests {
+        // left shift
+        { SyntaxTree::fromText("10'b100  << 3'b100"),  3 },
+        { SyntaxTree::fromText("10'sb100 << 4'sb100"), 3 },
+        // right shift
+        { SyntaxTree::fromText("10'b100  >> 3'b10"),  3 },
+        { SyntaxTree::fromText("10'sb100 >> 3'sb10"), 3 },
+        { SyntaxTree::fromText("-3'b100  >> 3'b10"),  3 },
+        { SyntaxTree::fromText("-3'sb100 >> 3'sb10"), 3 },
+        // right arithmetic shift
+        { SyntaxTree::fromText("-3'sb100 >>> 3'sb10"), 3 },  
+        { SyntaxTree::fromText("-3'sb100 >>> 3'sb11"), 3 }, 
+        // add
+        { SyntaxTree::fromText("32'd1  + 32'd2"),  2 },
+        { SyntaxTree::fromText("32'sd1 + 32'sd2"), 2 },
+        // substruct
+        { SyntaxTree::fromText("32'd15  - 32'd10"),  4 },
+        { SyntaxTree::fromText("32'sd15 - 32'sd10"), 4 },
+        // divide
+        { SyntaxTree::fromText("32'd15  / 32'd5"),  4 },
+        { SyntaxTree::fromText("32'sd15 / 32'sd5"), 4 },
+        //// power
+        { SyntaxTree::fromText("32'd2  ** 32'd10"),  2 },
+        { SyntaxTree::fromText("32'sd2 ** 32'sd10"), 2 },
+    };
+
+    for (const auto& test : tests) {
+        ASTContext astCtx(scope, LookupLocation::max);
+        auto& bound = Expression::bind(test.first->root().as<ExpressionSyntax>(), astCtx);
+        REQUIRE(test.first->diagnostics().empty());
+
+        const auto width = bound.getEffectiveWidth();
+        REQUIRE(width.has_value());
+        CHECK(width.value() == test.second);
+    }
+
+    NO_COMPILATION_ERRORS;
+}

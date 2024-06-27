@@ -315,7 +315,7 @@ bool ValueExpressionBase::checkVariableAssignment(const ASTContext& context,
     return true;
 }
 
-std::optional<bitwidth_t> ValueExpressionBase::getEffectiveWidthImpl() const {
+std::optional<bitwidth_t> ValueExpressionBase::getEffectiveWidthImpl(const ASTContext*) const {
     auto cvToWidth = [this](const ConstantValue& cv) -> std::optional<bitwidth_t> {
         if (!cv.isInteger())
             return std::nullopt;
@@ -1320,8 +1320,8 @@ ConstantValue MinTypMaxExpression::evalImpl(EvalContext& context) const {
     return selected().eval(context);
 }
 
-std::optional<bitwidth_t> MinTypMaxExpression::getEffectiveWidthImpl() const {
-    return selected().getEffectiveWidth();
+std::optional<bitwidth_t> MinTypMaxExpression::getEffectiveWidthImpl(const ASTContext* context) const {
+    return selected().getEffectiveWidth(context);
 }
 
 Expression::EffectiveSign MinTypMaxExpression::getEffectiveSignImpl(bool isForConversion) const {

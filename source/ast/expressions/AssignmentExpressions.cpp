@@ -186,7 +186,8 @@ void checkImplicitConversions(const ASTContext& context, const Type& sourceType,
         // to the minimum width necessary to represent them. Otherwise, even
         // code as simple as this will result in a warning:
         //    logic [3:0] a = 1;
-        std::optional<bitwidth_t> effective = op.getEffectiveWidth();
+        std::optional<bitwidth_t> effective = op.getEffectiveWidth(
+            context.getCompilation().getOptions().evalEffectiveWidth ? &context : nullptr);
         if (!effective)
             return;
 
@@ -1061,9 +1062,9 @@ ConstantValue ConversionExpression::convert(EvalContext& context, const Type& fr
     SLANG_UNREACHABLE;
 }
 
-std::optional<bitwidth_t> ConversionExpression::getEffectiveWidthImpl() const {
+std::optional<bitwidth_t> ConversionExpression::getEffectiveWidthImpl(const ASTContext* context) const {
     if (isImplicit())
-        return operand().getEffectiveWidth();
+        return operand().getEffectiveWidth(context);
     return type->getBitWidth();
 }
 

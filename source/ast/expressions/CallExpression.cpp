@@ -766,10 +766,10 @@ ConstantValue CallExpression::evalImpl(EvalContext& context) const {
     return result;
 }
 
-std::optional<bitwidth_t> CallExpression::getEffectiveWidthImpl() const {
+std::optional<bitwidth_t> CallExpression::getEffectiveWidthImpl(const ASTContext* context) const {
     if (isSystemCall()) {
         auto& callInfo = std::get<1>(subroutine);
-        if (auto result = callInfo.subroutine->getEffectiveWidth())
+        if (auto result = callInfo.subroutine->getEffectiveWidth(context))
             return result;
     }
     return type->getBitWidth();

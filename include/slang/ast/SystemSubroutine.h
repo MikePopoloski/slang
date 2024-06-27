@@ -76,7 +76,7 @@ public:
     /// This is used to reduce false-positive width conversion warnings for
     /// subroutines defined to return something like an `int` when in reality
     /// they can only ever return 1 or 0.
-    virtual std::optional<bitwidth_t> getEffectiveWidth() const { return {}; }
+    virtual std::optional<bitwidth_t> getEffectiveWidth(const ASTContext* = nullptr) const { return {}; }
 
     /// Allows the subroutine to perform checking of the arguments in a call expression.
     virtual const Type& checkArguments(const ASTContext& context, const Args& args,
