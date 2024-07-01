@@ -16,14 +16,6 @@
 #include "slang/slang_export.h"
 #include "slang/util/Enum.h"
 
-#if defined(__GNUC__) || defined(__INTEL_COMPILER) || defined(__clang__)
-#    define SLANG_LIKELY(x) __builtin_expect(x, 1)
-#    define SLANG_UNLIKELY(x) __builtin_expect(x, 0)
-#else
-#    define SLANG_LIKELY(x) (x)
-#    define SLANG_UNLIKELY(x) (x)
-#endif
-
 #if defined(__GNUC__) || defined(__clang__)
 #    define SLANG_ASSERT_FUNCTION __PRETTY_FUNCTION__
 #elif defined(_MSC_VER)
