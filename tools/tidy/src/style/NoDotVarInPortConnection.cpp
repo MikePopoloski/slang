@@ -11,13 +11,16 @@ using namespace slang;
 using namespace slang::ast;
 using namespace slang::syntax;
 
-namespace no_dot_start_in_port_connection {
+namespace no_dot_var_in_port_connection {
 
 struct PortConnectionVisitor : public SyntaxVisitor<PortConnectionVisitor> {
-    void handle(const WildcardPortConnectionSyntax& port) { foundPorts.push_back(&port); }
+    void handle(const NamedPortConnectionSyntax& port) {
+        if (!port.expr)
+            foundPorts.push_back(&port);
+    }
 
 public:
-    std::vector<const WildcardPortConnectionSyntax*> foundPorts;
+    std::vector<const NamedPortConnectionSyntax*> foundPorts;
 };
 
 struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, true, true> {
@@ -25,19 +28,24 @@ struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, true, true> {
 
     void handle(const InstanceBodySymbol& symbol) {
         NEEDS_SKIP_SYMBOL(symbol)
+        if (!symbol.getSyntax())
+            return;
+
         PortConnectionVisitor visitor;
         symbol.getSyntax()->visit(visitor);
+
         for (const auto port : visitor.foundPorts)
-            diags.add(diag::NoDotStarInPortConnection, port->star.location());
+            diags.add(diag::NoDotVarInPortConnection, port->name.location())
+                << port->toString() << port->toString() << port->name.valueText();
     }
 };
-} // namespace no_dot_start_in_port_connection
+} // namespace no_dot_var_in_port_connection
 
-using namespace no_dot_start_in_port_connection;
+using namespace no_dot_var_in_port_connection;
 
-class NoDotStarInPortConnection : public TidyCheck {
+class NoDotVarInPortConnection : public TidyCheck {
 public:
-    [[maybe_unused]] explicit NoDotStarInPortConnection(TidyKind kind) : TidyCheck(kind) {}
+    [[maybe_unused]] explicit NoDotVarInPortConnection(TidyKind kind) : TidyCheck(kind) {}
 
     bool check(const RootSymbol& root) override {
         MainVisitor visitor(diagnostics);
@@ -45,19 +53,21 @@ public:
         return diagnostics.empty();
     }
 
-    DiagCode diagCode() const override { return diag::NoDotStarInPortConnection; }
+    DiagCode diagCode() const override { return diag::NoDotVarInPortConnection; }
 
-    std::string diagString() const override { return "use of .* in port connection list"; }
+    std::string diagString() const override {
+        return "use of '{}' in port connection list, consider using '{}({})' instead";
+    }
 
     DiagnosticSeverity diagSeverity() const override { return DiagnosticSeverity::Warning; }
 
-    std::string name() const override { return "NoDotStarInPortConnection"; }
+    std::string name() const override { return "NoDotVarInPortConnection"; }
 
     std::string description() const override { return shortDescription(); }
 
     std::string shortDescription() const override {
-        return "Checks if in a module instantiation any port is connected using .* syntax.";
+        return "Checks if in a module instantiation any port is connected using .var syntax.";
     }
 };
 
-REGISTER(NoDotStarInPortConnection, NoDotStarInPortConnection, TidyKind::Style)
+REGISTER(NoDotVarInPortConnection, NoDotVarInPortConnection, TidyKind::Style)
