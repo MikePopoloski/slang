@@ -22,35 +22,35 @@ struct AlwaysFFVisitor : public ASTVisitor<AlwaysFFVisitor, true, true> {
             return;
         }
 
-        // Collect all the identifiers in the conditions
-        CollectIdentifiers collectIdentifiersVisitor;
+        // Check if there is a reset in the conditional statement
+        LookupIdentifier lookupIdentifierVisitor(resetName, false);
         for (const auto& condition : statement.conditions) {
-            condition.expr->visit(collectIdentifiersVisitor);
+            condition.expr->visit(lookupIdentifierVisitor);
+
+            if (lookupIdentifierVisitor.found()) {
+                condStatmenentWithReset = true;
+                return;
+            }
         }
-
-        // Check if one of the identifiers is a reset
-        const auto isReset =
-            std::ranges::any_of(collectIdentifiersVisitor.identifiers, [this](auto id) {
-                return id.find(resetName) != std::string_view::npos;
-            });
-
-        condStatmenentWithReset = isReset;
     }
 
     void handle(const AssignmentExpression& expression) {
         if (LookupLhsIdentifier::hasIdentifier(name, expression)) {
-            assignedOutsideIfWithReset = true;
-            errorLocation = expression.left().syntax->getFirstToken().location();
+            assignedOutsideIfReset = true;
+            errorLocation = getExpressionSourceLocation(expression);
         }
     }
 
-    bool hasError() { return condStatmenentWithReset && assignedOutsideIfWithReset; }
+    bool hasError() { return condStatmenentWithReset && assignedOutsideIfReset; }
 
+    std::optional<SourceLocation> getErrorLocation() const { return errorLocation; }
+
+private:
     const std::string_view name;
     const std::string_view resetName;
     bool condStatmenentWithReset = false;
-    bool assignedOutsideIfWithReset = false;
-    SourceLocation errorLocation = SourceLocation();
+    bool assignedOutsideIfReset = false;
+    std::optional<SourceLocation> errorLocation;
 };
 
 struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, true, true> {
@@ -66,7 +66,9 @@ struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, true, true> {
             AlwaysFFVisitor visitor(symbol.name, config.getCheckConfigs().resetName);
             firstDriver->containingSymbol->visit(visitor);
             if (visitor.hasError()) {
-                diags.add(diag::RegisterNotAssignedOnReset, visitor.errorLocation) << symbol.name;
+                diags.add(diag::RegisterNotAssignedOnReset,
+                          visitor.getErrorLocation().value_or(symbol.location))
+                    << symbol.name;
             }
         }
     }
