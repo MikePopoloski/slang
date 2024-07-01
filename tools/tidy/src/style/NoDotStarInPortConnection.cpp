@@ -42,9 +42,7 @@ public:
     bool check(const RootSymbol& root) override {
         MainVisitor visitor(diagnostics);
         root.visit(visitor);
-        if (!diagnostics.empty())
-            return false;
-        return true;
+        return diagnostics.empty();
     }
 
     DiagCode diagCode() const override { return diag::NoDotStarInPortConnection; }
