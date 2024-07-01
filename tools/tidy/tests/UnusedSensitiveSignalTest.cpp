@@ -9,7 +9,7 @@ TEST_CASE("UnusedSensitiveSignal: Unused sensitive signal in always block") {
 module d_ff_en
 (
     input int a_i, b_i, c_i,
-    
+
     output int sum_o
 ) ;
 always @ (a_i , b_i, c_i ) begin
@@ -36,7 +36,7 @@ TEST_CASE("UnusedSensitiveSignal: Unused sensitive signal in always_ff block") {
 module d_ff_en
 (
     input logic clk_i, rst_i, en_i, c_i, d_i,
-    
+
     output logic q_o
 ) ;
 always_ff @ (posedge clk_i, posedge rst_i, c_i) begin
@@ -66,7 +66,7 @@ TEST_CASE("UnusedSensitiveSignal: All sensitive signal in always_ff block have b
 module d_ff_en
 (
     input logic clk_i, rst_i, en_i, c_i, d_i,
-    
+
     output logic q_o
 ) ;
 always_ff @ (posedge clk_i, posedge rst_i) begin
