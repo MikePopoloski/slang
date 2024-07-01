@@ -29,5 +29,6 @@ inline constexpr DiagCode GenerateNamed(DiagSubsystem::Tidy, 14);
 inline constexpr DiagCode NoDotVarInPortConnection(DiagSubsystem::Tidy, 15);
 inline constexpr DiagCode NoLegacyGenerate(DiagSubsystem::Tidy, 16);
 inline constexpr DiagCode AlwaysFFAssignmentOutsideConditional(DiagSubsystem::Tidy, 17);
+inline constexpr DiagCode UnusedSensitiveSignal(DiagSubsystem::Tidy, 18);
 
 } // namespace slang::diag
