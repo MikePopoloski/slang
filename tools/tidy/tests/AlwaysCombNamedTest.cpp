@@ -59,7 +59,7 @@ module add_or_sub
         input logic add,
         output logic [N-1:0] z_o
     );
-    
+
     always_comb
         if (add)
             z = x + y;
