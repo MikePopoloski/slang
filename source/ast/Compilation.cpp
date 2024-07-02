@@ -12,6 +12,7 @@
 #include <fmt/core.h>
 #include <mutex>
 
+#include "slang/ast/ClockResolution.h"
 #include "slang/ast/ScriptSession.h"
 #include "slang/ast/SystemSubroutine.h"
 #include "slang/ast/types/TypePrinter.h"
@@ -1165,6 +1166,22 @@ const Symbol* Compilation::getDefaultClocking(const Scope& scope) const {
         if (auto it = defaultClockingMap.find(curr); it != defaultClockingMap.end())
             return it->second;
 
+        // Find `default clocking` in inlined `generate` blocks
+        if (const auto* instBody = curr->asSymbol().as_if<const InstanceBodySymbol>()) {
+            for (const auto& memb : instBody->members()) {
+                if (const auto* genBlock = memb.as_if<const GenerateBlockSymbol>()) {
+                    // Skip uninstantiated branches
+                    if (genBlock->isUninstantiated)
+                        continue;
+
+                    if (const auto it = defaultClockingMap.find(genBlock);
+                        it != defaultClockingMap.end()) {
+                        return it->second;
+                    }
+                }
+            }
+        }
+
         curr = curr->asSymbol().getParentScope();
         if (!curr || curr->asSymbol().kind == SymbolKind::CompilationUnit)
             return nullptr;
@@ -1312,11 +1329,22 @@ void Compilation::elaborate() {
     uint32_t errorLimit = options.errorLimit == 0 ? UINT32_MAX : options.errorLimit;
     DiagnosticVisitor elabVisitor(*this, numErrors, errorLimit);
     getRoot().visit(elabVisitor);
+    bool hasHierarchyProblem = elabVisitor.hierarchyProblem;
 
     if (elabVisitor.finishedEarly())
         return;
 
     elabVisitor.finalize();
+
+    // Perform a clock resolution that attempts to visit as much of the elaborated AST as possible
+    // to resolve clocks for each instantiated module. This requires that the AST was built without
+    // any errors to avoid any incorrect assumptions due to invalid AST nodes.
+    if (!hasHierarchyProblem && !numErrors) {
+        if (!options.disableClockResolution) {
+            clk_res::ClockResolutionVisitor clkResVisitor(*this);
+            getRoot().visit(clkResVisitor);
+        }
+    }
 
     // Note for the following checks here: anything that depends on a list
     // stored in the compilation object should think carefully about taking
