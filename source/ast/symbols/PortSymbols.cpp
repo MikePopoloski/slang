@@ -1981,10 +1981,8 @@ void PortConnection::checkSimulatedNetTypes() const {
             }
         }
 
-        if (in == internal.end() || ex == external.end()) {
-            SLANG_ASSERT(in == internal.end() && ex == external.end());
+        if (in == internal.end() || ex == external.end())
             break;
-        }
 
         currBit += width;
     }
@@ -2069,7 +2067,7 @@ void PortConnection::makeConnections(
 }
 
 void PortConnection::serializeTo(ASTSerializer& serializer) const {
-    serializer.writeLink("port", port);
+    serializer.write("port", port);
     if (port.kind == SymbolKind::InterfacePort) {
         if (connectedSymbol)
             serializer.writeLink("ifaceInstance", *connectedSymbol);
