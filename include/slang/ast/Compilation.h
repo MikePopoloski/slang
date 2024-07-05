@@ -610,7 +610,7 @@ public:
                         const ASTContext& context);
 
     /// Gets an integral vector type with the given size and flags.
-    const Type& getType(bitwidth_t width, bitmask<IntegralFlags> flags);
+    const Type& getType(bitwidth_t width, bitmask<IntegralFlags> flags, bool ascOrder = false);
 
     /// Gets a scalar (single bit) type with the given flags.
     const Type& getScalarType(bitmask<IntegralFlags> flags);

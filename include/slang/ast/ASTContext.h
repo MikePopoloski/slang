@@ -193,9 +193,13 @@ enum class SLANG_EXPORT ASTFlags : uint64_t {
     DisallowUDNT = 1ull << 44,
 
     /// AST binding is for a bind instantiation (port connection or param value).
-    BindInstantiation = 1ull << 45
+    BindInstantiation = 1ull << 45,
+
+    // Control AST creation for PLA task argument concatenation expression (PLA task expects args
+    // with ascending bitwidth order)
+    EmitConcatAscOrder = 1ull << 46
 };
-SLANG_BITMASK(ASTFlags, BindInstantiation)
+SLANG_BITMASK(ASTFlags, EmitConcatAscOrder)
 
 // clang-format off
 #define DK(x) \

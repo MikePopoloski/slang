@@ -25,8 +25,8 @@ using namespace syntax;
 
 class SystemTaskBase : public SystemSubroutine {
 public:
-    explicit SystemTaskBase(const std::string& name) :
-        SystemSubroutine(name, SubroutineKind::Task) {}
+    explicit SystemTaskBase(const std::string& name, bool isPLATask = false) :
+        SystemSubroutine(name, SubroutineKind::Task, isPLATask) {}
 
     ConstantValue eval(EvalContext& context, const Args&, SourceRange range,
                        const CallExpression::SystemCallInfo&) const final {
@@ -725,9 +725,9 @@ public:
     }
 };
 
-class PlaTask : public SystemTaskBase {
+class SLANG_EXPORT PlaTask : public SystemTaskBase {
 public:
-    PlaTask(const std::string& name) : SystemTaskBase(name) {};
+    PlaTask(const std::string& name) : SystemTaskBase(name, /* isPLATask =*/true) {};
 
     const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {

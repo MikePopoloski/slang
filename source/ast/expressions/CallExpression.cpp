@@ -7,6 +7,9 @@
 //------------------------------------------------------------------------------
 #include "slang/ast/expressions/CallExpression.h"
 
+#include "../builtins/Builtins.h"
+#include <iostream>
+
 #include "slang/ast/ASTVisitor.h"
 #include "slang/ast/Compilation.h"
 #include "slang/ast/Constraints.h"
@@ -75,8 +78,12 @@ Expression& CallExpression::fromLookup(Compilation& compilation, const Subroutin
     if (subroutine.index() == 1) {
         SLANG_ASSERT(!thisClass);
         const SystemCallInfo& info = std::get<1>(subroutine);
+        ASTContext subCtx = context;
+        if (info.subroutine->isPLATask) {
+            subCtx.flags |= ASTFlags::EmitConcatAscOrder;
+        }
         return createSystemCall(compilation, *info.subroutine, nullptr, syntax, withClause, range,
-                                context);
+                                subCtx);
     }
 
     // If this is a non-static class method make sure we're allowed to call it.
