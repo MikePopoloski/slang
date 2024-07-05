@@ -88,3 +88,4 @@ CheckConfigs:
 4. Create the new tidy diagnostic in the `TidyDiags.h` file.
 5. Add the new check to the corresponding map in the `TidyConfig` constructor.
 6. Update the documentation accordingly
+7. Add the new `cpp` file to CMakeLists.txt
