@@ -3227,7 +3227,7 @@ SpecparamDeclaratorSyntax& Parser::parseSpecparamDeclarator(SyntaxKind parentKin
             if (parentKind != SyntaxKind::SpecifyBlock)
                 addDiag(diag::PulseControlSpecifyParent, name.range());
             else if (!expr2)
-                addDiag(diag::PulseControlTwoValues, expr1.sourceRange()) << name.range();
+                expr2 = &expr1;
         }
         else if (expr2) {
             auto last = expr2->getLastToken();
