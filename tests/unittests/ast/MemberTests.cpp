@@ -2756,3 +2756,25 @@ endmodule
   ]
 })");
 }
+
+TEST_CASE("IEEE 1800 Section 10.9.2 - structure assignment patterns") {
+    auto tree = SyntaxTree::fromText(R"(
+module top;
+   typedef struct {
+      logic [7:0] a;
+      bit b;
+      bit signed [31:0] c;
+      string s;
+   } sa;
+
+   sa s2;
+   initial s2 = '{int:1, default:0, string:""}; // set all to 0 except the
+                                                // array of bits to 1 and
+                                                // string to ""
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
