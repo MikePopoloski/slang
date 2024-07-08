@@ -317,6 +317,7 @@ bool Type::isSimpleType() const {
         case SymbolKind::FloatingType:
         case SymbolKind::TypeAlias:
         case SymbolKind::ClassType:
+        case SymbolKind::StringType:
             return true;
         default:
             return false;
