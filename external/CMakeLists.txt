@@ -4,7 +4,7 @@
 # ~~~
 
 # Required minimum versions for dependencies
-set(fmt_min_version "10.2")
+set(fmt_min_version "11.0")
 set(mimalloc_min_version "2.1")
 set(catch2_min_version "3.6")
 
@@ -17,7 +17,7 @@ endif()
 FetchContent_Declare(
   fmt
   GIT_REPOSITORY https://github.com/fmtlib/fmt.git
-  GIT_TAG 10.2.1
+  GIT_TAG 11.0.1
   GIT_SHALLOW ON
   ${find_pkg_args})
 

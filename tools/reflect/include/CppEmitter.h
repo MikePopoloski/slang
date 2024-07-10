@@ -9,6 +9,7 @@
 #pragma once
 
 #include "fmt/format.h"
+#include "fmt/ranges.h"
 #include <filesystem>
 #include <fstream>
 #include <ranges>
