@@ -749,7 +749,8 @@ public:
                     return badArg(context, *args[i]);
                 }
 
-                if (elemType.hasFixedRange() && !isValidRange(elemType)) {
+                if (elemType.hasFixedRange() && args[i]->kind != ExpressionKind::Concatenation &&
+                    !isValidRange(elemType)) {
                     return badRange(context, *args[i]);
                 }
             }
@@ -759,7 +760,8 @@ public:
                 }
             }
 
-            if (type.hasFixedRange() && !isValidRange(type)) {
+            if (type.hasFixedRange() && args[i]->kind != ExpressionKind::Concatenation &&
+                !isValidRange(type)) {
                 return badRange(context, *args[i]);
             }
         }
