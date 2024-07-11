@@ -262,7 +262,6 @@ error WrongSpecifyDelayCount "expected one, two, three, six, or twelve delay val
 error IfNoneEdgeSensitive "ifnone specify path cannot be an edge-sensitive path"
 error PulseControlSpecifyParent "pulse control specparams can only be declared in specify blocks"
 error PulseControlPATHPULSE "pulse control specparam names must start with 'PATHPULSE$'"
-error PulseControlTwoValues "pulse control specparams must be assigned two values (reject limit and error limit)"
 error TooManyEdgeDescriptors "cannot have more than six pairs of edge transitions in list"
 error EdgeDescWrongKeyword "edge descriptor list cannot be used after '{}'"
 error BindDirectiveInvalidName "bind target name must be a simple module or interface identifier when a list of instances is provided"

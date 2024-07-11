@@ -691,6 +691,20 @@ module m;
         specparam PATHPULSE$a$b = (1:2:3, 4:5:6);
     endspecify
 endmodule
+
+module m1;
+    specify
+        specparam PATHPULSE$ = 1;
+        specparam PATHPULSE$a$b = 1;
+    endspecify
+endmodule
+
+module m2;
+    specify
+        specparam PATHPULSE$ = (1);
+        specparam PATHPULSE$a$b = (1);
+    endspecify
+endmodule
 )";
 
     parseCompilationUnit(text);
@@ -710,10 +724,9 @@ endmodule
 
     parseCompilationUnit(text);
 
-    REQUIRE(diagnostics.size() == 3);
+    REQUIRE(diagnostics.size() == 2);
     CHECK(diagnostics[0].code == diag::PulseControlSpecifyParent);
-    CHECK(diagnostics[1].code == diag::PulseControlTwoValues);
-    CHECK(diagnostics[2].code == diag::PulseControlPATHPULSE);
+    CHECK(diagnostics[1].code == diag::PulseControlPATHPULSE);
 }
 
 TEST_CASE("Invalid package decls") {
