@@ -53,8 +53,6 @@ public:
     /// The way in which the subroutine may use a `with` clause.
     WithClauseMode withClauseMode = WithClauseMode::None;
 
-    bool isPLATask = false;
-
     /// @returns true if the subroutine allows an empty argument to be
     /// passed for the given argument index.
     virtual bool allowEmptyArgument(size_t argIndex) const;
@@ -91,8 +89,7 @@ public:
 
 protected:
     /// Constructs a new system subroutine instance.
-    SystemSubroutine(const std::string& name, SubroutineKind kind, bool isPLATask = false) :
-        name(name), kind(kind), isPLATask(isPLATask) {}
+    SystemSubroutine(const std::string& name, SubroutineKind kind) : name(name), kind(kind) {}
 
     /// @returns a string that says "task" or "function" depending on the kind
     /// of subroutine this is.

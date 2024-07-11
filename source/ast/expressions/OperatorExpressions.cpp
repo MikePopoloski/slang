@@ -1752,8 +1752,7 @@ Expression& ConcatenationExpression::fromSyntax(Compilation& compilation,
     if (anyStrings)
         type = &compilation.getStringType();
     else
-        type = &compilation.getType(totalWidth, flags,
-                                    context.flags.has(ASTFlags::EmitConcatAscOrder));
+        type = &compilation.getType(totalWidth, flags);
 
     return *compilation.emplace<ConcatenationExpression>(*type, buffer.ccopy(compilation),
                                                          syntax.sourceRange());

@@ -25,8 +25,8 @@ using namespace syntax;
 
 class SystemTaskBase : public SystemSubroutine {
 public:
-    explicit SystemTaskBase(const std::string& name, bool isPLATask = false) :
-        SystemSubroutine(name, SubroutineKind::Task, isPLATask) {}
+    explicit SystemTaskBase(const std::string& name) :
+        SystemSubroutine(name, SubroutineKind::Task) {}
 
     ConstantValue eval(EvalContext& context, const Args&, SourceRange range,
                        const CallExpression::SystemCallInfo&) const final {
@@ -725,9 +725,9 @@ public:
     }
 };
 
-class SLANG_EXPORT PlaTask : public SystemTaskBase {
+class PlaTask : public SystemTaskBase {
 public:
-    PlaTask(const std::string& name) : SystemTaskBase(name, /* isPLATask =*/true) {};
+    PlaTask(const std::string& name) : SystemTaskBase(name) {};
 
     const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
@@ -749,7 +749,8 @@ public:
                     return badArg(context, *args[i]);
                 }
 
-                if (elemType.hasFixedRange() && !isValidRange(elemType)) {
+                if (elemType.hasFixedRange() && args[i]->kind != ExpressionKind::Concatenation &&
+                    !isValidRange(elemType)) {
                     return badRange(context, *args[i]);
                 }
             }
@@ -759,7 +760,8 @@ public:
                 }
             }
 
-            if (type.hasFixedRange() && !isValidRange(type)) {
+            if (type.hasFixedRange() && args[i]->kind != ExpressionKind::Concatenation &&
+                !isValidRange(type)) {
                 return badRange(context, *args[i]);
             }
         }
