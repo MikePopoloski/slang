@@ -837,6 +837,19 @@ void unwrapResult(const Scope& scope, std::optional<SourceRange> range, LookupRe
     if (!result.found)
         return;
 
+    if (result.flags.has(LookupResultFlags::IsHierarchical)) {
+        auto declaredType = result.found->getDeclaredType();
+        if (declaredType && declaredType->isEvaluating()) {
+            if (range) {
+                auto& diag = result.addDiag(scope, diag::RecursiveDefinition, *range);
+                diag << result.found->name;
+                diag.addNote(diag::NoteDeclarationHere, result.found->location);
+            }
+            result.found = nullptr;
+            return;
+        }
+    }
+
     checkVisibility(*result.found, scope, range, result);
 
     // Unwrap type parameters into their target type alias.
