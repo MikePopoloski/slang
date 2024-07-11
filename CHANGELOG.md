@@ -12,6 +12,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * The error for invalid state-dependent path conditions in specify blocks can now be downgraded with -Wspecify-condition-expr for compatibility with other tools
 * Added support for the optional system tasks and functions from Annex D in the LRM: `$countdrivers`, `$list`, `$input`, `$key`, `$nokey`, `$reset`, `$reset_count`, `$reset_value`, `$save`, `$incsave`, `$restart`, `$scope`, `$scale`, `$showscopes`, `$showvars`, `$sreadmemb`, `$sreadmemh`, `$getpattern`
 * Added support for the optional compiler directives from Annex E in the LRM: `` `default_decay_time ``, `` `default_trireg_strength ``, `` `delay_mode_distributed ``, `` `delay_mode_path ``, `` `delay_mode_unit ``, `` `delay_mode_zero ``
+* Rules about nondegeneracy of sequences and properties are now enforced (thanks to @likeamahoney)
+* Special case rules about how name resolution works in bind directives are now enforced
+* Changed the definition of "simple types" to include `string` to allow using it as a target for assignment pattern fields (thanks to @likeamahoney)
 #### Clarifications in IEEE 1800-2023
 * Assertion clocking events can't reference automatic variables
 * The `.*` token sequence is actually two separate tokens that can be separated by whitespace
@@ -40,20 +43,33 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Added [-Wunused-import](https://sv-lang.com/warning-ref.html#unused-import) and [-Wunused-wildcard-import](https://sv-lang.com/warning-ref.html#unused-wildcard-import) which warn about unused import directives
 * Added [-Warith-op-mismatch](https://sv-lang.com/warning-ref.html#arith-op-mismatch), [-Wbitwise-op-mismatch](https://sv-lang.com/warning-ref.html#bitwise-op-mismatch), [-Wcomparison-mismatch](https://sv-lang.com/warning-ref.html#comparison-mismatch), and [-Wsign-compare](https://sv-lang.com/warning-ref.html#sign-compare) which all warn about different cases of mismatched types in binary expressions
 * slang-netlist has experimental support for detecting combinatorial loops (thanks to @udif)
+* Added `--allow-merging-ansi-ports` (included in "vcs" compat mode) which allows non-standard behavior in which ANSI module ports can duplicate net and variables declared within the module
+* Added `--ast-json-source-info` which includes source line information when dumping an AST to JSON (thanks to @KennethDRoe)
+* Added `--enable-legacy-protect` which enables support for nonstandard / legacy protected envelopes: Verilog-XL style `` `protect `` directives and Verilog-A style `// pragma protect` comments
 
 ### Improvements
 * Default value expressions for parameters that are overridden are now checked for basic correctness and other parameters they reference will not warn for being "unused"
 * Made several minor improvements to the locations reported for propagated type conversion warnings
 * Sped up `Compilation` object construction by reorganizing how system subroutines are created and registered
 * Improved the parser error reported when encountering an extraneous end delimiter in a member list
+* Various fixes and improvements were made to slang-netlist (thanks to @jameshanlon, @udif)
+* Added options to slang-tidy to better control what gets output (thanks to @Sustrak)
+* Added a bunch of new checks to slang-tidy (thanks to @JoelSole-Semidyn)
 
 ### Fixes
-* Fixed several AST serialization methods (thanks to @tdp2110)
+* Fixed several AST serialization methods (thanks to @tdp2110, @likeamahoney, @Kitaev2003)
 * Fixed the return type of DPI import tasks
 * Fixed a bug that caused some `inout` ports to warn as "unused"
 * Fixed the checking of the `extends` override specifier when the containing class has no base class
 * Fixed a case where bracketed delay expressions in sequence concatenations were not checked for correctness
 * Fixed the type of the iterators used in with-expressions for covergroup bins
+* Fixed a bug that sometimes prevented printing the correct scope for type alias names in diagnostic messages
+* Fixed the hierarchical path string created for symbols inside of unnamed generate blocks (thanks to @povik)
+* Fixed spurious errors that could occur when using generic class instantiations inside uninstantiated generate blocks
+* Correctly disallow passing expressions of `void` type to format style system functions (thanks to @tdp2110)
+* Fixed a bug where parameters that referred to themselves via hierarchical reference would cause a crash instead of reporting a diagnostic
+* Fixed `PATHPULSE$` specparam initializers to allow providing only one value instead of requiring two (thanks to @likeamahoney)
+* Fixed PLA tasks to accept concatenation expressions as arguments without reporting an error about the direction of the argument bounds (thanks to @likeamahoney)
 
 
 ## [v6.0] - 2024-04-21
