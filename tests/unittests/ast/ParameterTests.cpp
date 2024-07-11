@@ -1211,3 +1211,22 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Hierarchical recursive parameter initialization") {
+    auto tree = SyntaxTree::fromText(R"(
+module M ();
+	parameter P0  = M.P1 + 1;
+	parameter P1  = M.P1 + 1;
+	parameter P2  = M.P1 + 1;
+	parameter P3  = M.P1 + 1;
+	initial $display(P0, P1, P2, P3);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::RecursiveDefinition);
+}
