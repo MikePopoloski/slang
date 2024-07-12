@@ -34,6 +34,10 @@ struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, true, true> {
             block.procedureKind != ProceduralBlockKind::Always)
             return;
 
+        if (block.getBody().kind != StatementKind::Timed ||
+            block.getBody().as<TimedStatement>().stmt.kind != StatementKind::Block)
+            return;
+
         CollectAllIdentifiers stmtIdVisitor, timingIdVisitor;
         block.getBody().as<TimedStatement>().stmt.as<BlockStatement>().visitStmts(stmtIdVisitor);
         block.getBody().as<TimedStatement>().timing.visit(timingIdVisitor);
