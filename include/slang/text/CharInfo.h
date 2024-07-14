@@ -200,15 +200,15 @@ constexpr const char* utf8Decode(const char* b, uint32_t* c, int* e, int& comput
         switch (len) {
             case 4:
                 if (uc(b[3]) < 0x20)
-                    next--; //last byte in a 4-byte UTF8 is illegal
-                    // fall through because earlier bytes might also be illegal
+                    next--; // last byte in a 4-byte UTF8 is illegal
+                // fall through because earlier bytes might also be illegal
             case 3:
                 if (uc(b[2]) < 0x20)
                     next--;
             case 2:
                 if (uc(b[1]) < 0x20)
                     next--;
-            // No need for len==1 check because this would not be a unicode
+                // No need for len==1 check because this would not be a unicode
         }
     }
 
