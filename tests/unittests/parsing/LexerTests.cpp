@@ -126,6 +126,17 @@ TEST_CASE("Line Comment (UTF8)") {
     REQUIRE(diagnostics.empty());
 }
 
+TEST_CASE("Embedded control characters in a broken UTF8 comment") {
+    const char text[] = "//\xe0\x80\nendmodule";
+    Token token = lexToken(text);
+
+    CHECK(token.kind == TokenKind::EndModuleKeyword);
+    CHECK(token.trivia().size() == 2);
+    CHECK(token.trivia()[0].kind == TriviaKind::LineComment);
+    CHECK(token.trivia()[1].kind == TriviaKind::EndOfLine);
+    REQUIRE(diagnostics.size() == 1); // Due to UTF8 intended error
+}
+
 TEST_CASE("Block Comment (one line)") {
     auto& text = "/* comment */";
     Token token = lexToken(text);
