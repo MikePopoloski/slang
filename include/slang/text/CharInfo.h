@@ -194,6 +194,23 @@ constexpr const char* utf8Decode(const char* b, uint32_t* c, int* e, int& comput
     *e |= (uc(b[3])) >> 6;
     *e ^= 0x2a; // top two bits of each tail byte correct?
     *e >>= shifte[len];
+    // For normal path, this should not be checked
+    if (*e) {
+        // if error, trim next pointer so that control char is read as next char
+        switch (len) {
+            case 4:
+                if (uc(b[3]) < 0x20)
+                    next--; //last byte in a 4-byte UTF8 is illegal
+                    // fall through because earlier bytes might also be illegal
+            case 3:
+                if (uc(b[2]) < 0x20)
+                    next--;
+            case 2:
+                if (uc(b[1]) < 0x20)
+                    next--;
+            // No need for len==1 check because this would not be a unicode
+        }
+    }
 
     return next;
 }
