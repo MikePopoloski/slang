@@ -197,21 +197,12 @@ constexpr const char* utf8Decode(const char* b, uint32_t* c, int* e, int& comput
     // For normal path, this should not be checked
     if (*e) {
         // if error, trim next pointer so that control char is read as next char
-        switch (len) {
-            case 4:
-                if (uc(b[3]) < 0x20)
-                    next--; // last byte in a 4-byte UTF8 is illegal
-                // fall through because earlier bytes might also be illegal
-                [[fallthrough]];
-            case 3:
-                if (uc(b[2]) < 0x20)
-                    next--;
-                [[fallthrough]];
-            case 2:
-                if (uc(b[1]) < 0x20)
-                    next--;
-                // No need for len==1 check because this would not be a unicode
-        }
+        if ((len > 1) && (uc(b[1]) < 0x20))
+            next = b + 1;
+        else if ((len > 2) && (uc(b[2]) < 0x20))
+            next = b + 2;
+        else if ((len > 3) && (uc(b[3]) < 0x20))
+            next = b + 3;
     }
 
     return next;
