@@ -1239,7 +1239,10 @@ void Lexer::scanLineComment() {
             advance();
         }
         else {
-            sawUTF8Error |= !scanUTF8Char(sawUTF8Error);
+            auto error = !scanUTF8Char(sawUTF8Error);
+            sawUTF8Error |= error;
+            if (error)
+                errorCount--; // counter increment in scanUTF8Char()
         }
     }
     addTrivia(TriviaKind::LineComment);
@@ -1276,7 +1279,10 @@ void Lexer::scanBlockComment() {
             }
         }
         else {
-            sawUTF8Error |= !scanUTF8Char(sawUTF8Error);
+            auto error = !scanUTF8Char(sawUTF8Error);
+            sawUTF8Error |= error;
+            if (error)
+                errorCount--; // counter increment in scanUTF8Char()
         }
     }
 
