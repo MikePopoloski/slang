@@ -195,15 +195,6 @@ constexpr const char* utf8Decode(const char* b, uint32_t* c, int* e, int& comput
     *e ^= 0x2a; // top two bits of each tail byte correct?
     *e >>= shifte[len];
     // For normal path, this should not be checked
-    if (*e) {
-        // if error, trim next pointer so that control char is read as next char
-        if ((len > 1) && (uc(b[1]) < 0x20))
-            next = b + 1;
-        else if ((len > 2) && (uc(b[2]) < 0x20))
-            next = b + 2;
-        else if ((len > 3) && (uc(b[3]) < 0x20))
-            next = b + 3;
-    }
 
     return next;
 }
