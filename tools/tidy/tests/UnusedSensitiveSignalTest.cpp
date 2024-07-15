@@ -93,7 +93,7 @@ endmodule
 
 TEST_CASE("UnusedSensitiveSignal: property assertion") {
     auto tree = SyntaxTree::fromText(R"(
-module top 
+module top
 (
 	input clk_i, foo_i
 );
