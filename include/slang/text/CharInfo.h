@@ -194,7 +194,6 @@ constexpr const char* utf8Decode(const char* b, uint32_t* c, int* e, int& comput
     *e |= (uc(b[3])) >> 6;
     *e ^= 0x2a; // top two bits of each tail byte correct?
     *e >>= shifte[len];
-    // For normal path, this should not be checked
 
     return next;
 }
