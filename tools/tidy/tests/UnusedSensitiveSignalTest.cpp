@@ -90,3 +90,27 @@ endmodule
     bool result = visitor->check(root);
     CHECK(result);
 }
+
+TEST_CASE("UnusedSensitiveSignal: property assertion") {
+    auto tree = SyntaxTree::fromText(R"(
+module top
+(
+	input clk_i, foo_i
+);
+
+prop : assert property (@(posedge clk_i) foo_i);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    compilation.getAllDiagnostics();
+    auto& root = compilation.getRoot();
+
+    TidyConfig config;
+    Registry::setConfig(config);
+    Registry::setSourceManager(compilation.getSourceManager());
+    auto visitor = Registry::create("UnusedSensitiveSignal");
+    bool result = visitor->check(root);
+    CHECK(result);
+}
