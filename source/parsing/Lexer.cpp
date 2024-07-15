@@ -1307,7 +1307,7 @@ bool Lexer::scanUTF8Char(bool alreadyErrored, uint32_t* code, int& computedLen) 
 
     if (error) {
         // if error, trim next pointer so that control char is read as next char
-        if ((computedLen > 1) && (curr[1]< 0x20))
+        if ((computedLen > 1) && (curr[1] < 0x20))
             sourceBuffer = curr + 1;
         else if ((computedLen > 2) && (curr[2] < 0x20))
             sourceBuffer = curr + 2;
