@@ -126,6 +126,49 @@ TEST_CASE("Line Comment (UTF8)") {
     REQUIRE(diagnostics.empty());
 }
 
+TEST_CASE("Embedded control characters in a broken UTF8 comment") {
+    const char text[] = "//\xe0\x80\nendmodule";
+    Token token = lexToken(text);
+
+    CHECK(token.kind == TokenKind::EndModuleKeyword);
+    CHECK(token.trivia().size() == 2);
+    CHECK(token.trivia()[0].kind == TriviaKind::LineComment);
+    CHECK(token.trivia()[1].kind == TriviaKind::EndOfLine);
+    REQUIRE(diagnostics.size() == 1); // Due to UTF8 intended error
+}
+
+TEST_CASE("Embedded control characters in a broken UTF8 comment (2)") {
+    const char text[] = "//\x82\xe8\nendmodule";
+    Token token = lexToken(text);
+
+    CHECK(token.kind == TokenKind::EndModuleKeyword);
+    CHECK(token.trivia().size() == 2);
+    CHECK(token.trivia()[0].kind == TriviaKind::LineComment);
+    CHECK(token.trivia()[1].kind == TriviaKind::EndOfLine);
+    REQUIRE(diagnostics.size() == 1); // Due to UTF8 intended error
+}
+
+TEST_CASE("Embedded control characters in a broken UTF8 comment not affecting lexer errorCount") {
+    auto& text = "//\x82\xe8\n//\x82\xe8\n//\x82\xe8\n//\x82\xe8\n//\x82\xe8\n//\x82\xe8\n//"
+                 "\x82\xe8\n//\x82\xe8\nendmodule\n";
+
+    LexerOptions options;
+    options.maxErrors = 4;
+
+    diagnostics.clear();
+    auto buffer = getSourceManager().assignText(text);
+    Lexer lexer(buffer, alloc, diagnostics, options);
+    Token token = lexer.lex();
+
+    CHECK(token.kind == TokenKind::EndModuleKeyword);
+    CHECK(token.trivia().size() == 16);
+    for (int i = 0; i < 8; i++) {
+        CHECK(token.trivia()[2 * i].kind == TriviaKind::LineComment);
+        CHECK(token.trivia()[2 * i + 1].kind == TriviaKind::EndOfLine);
+    }
+    REQUIRE(diagnostics.size() == 8); // Due to UTF8 intended error
+}
+
 TEST_CASE("Block Comment (one line)") {
     auto& text = "/* comment */";
     Token token = lexToken(text);
