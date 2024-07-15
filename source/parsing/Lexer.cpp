@@ -1239,10 +1239,7 @@ void Lexer::scanLineComment() {
             advance();
         }
         else {
-            auto error = !scanUTF8Char(sawUTF8Error);
-            sawUTF8Error |= error;
-            if (error)
-                errorCount--; // counter increment in scanUTF8Char()
+            sawUTF8Error |= !scanUTF8Char(sawUTF8Error);
         }
     }
     addTrivia(TriviaKind::LineComment);
@@ -1279,10 +1276,7 @@ void Lexer::scanBlockComment() {
             }
         }
         else {
-            auto error = !scanUTF8Char(sawUTF8Error);
-            sawUTF8Error |= error;
-            if (error)
-                errorCount--; // counter increment in scanUTF8Char()
+            sawUTF8Error |= !scanUTF8Char(sawUTF8Error);
         }
     }
 
@@ -1320,7 +1314,6 @@ bool Lexer::scanUTF8Char(bool alreadyErrored, uint32_t* code, int& computedLen) 
         else if ((computedLen > 3) && (curr[3] < 0x20))
             sourceBuffer = curr + 3;
 
-        errorCount++;
         if (!alreadyErrored)
             addDiag(diag::InvalidUTF8Seq, (size_t)(curr - originalBegin));
         return false;
