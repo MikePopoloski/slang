@@ -746,8 +746,12 @@ private:
     }
 
     void addDiag(const Symbol& symbol, DiagCode code) {
-        if (shouldWarn(symbol))
-            symbol.getParentScope()->addDiag(code, symbol.location) << symbol.name;
+        if (shouldWarn(symbol)) {
+            if (auto syntax = symbol.getSyntax())
+                symbol.getParentScope()->addDiag(code, syntax->sourceRange()) << symbol.name;
+            else
+                symbol.getParentScope()->addDiag(code, symbol.location) << symbol.name;
+        }
     }
 
     Compilation& compilation;
