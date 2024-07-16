@@ -711,6 +711,11 @@ public:
     /// Queries if any errors have been issued on any scope within this compilation.
     bool hasIssuedErrors() const { return numErrors > 0; };
 
+    /// Check that provided diagnotic code and location with it's note is exists in the compilation
+    /// diagnostic scope
+    bool checkDiagAndNote(DiagCode diagCode, SourceLocation diagLoc, DiagCode noteCode,
+                          SourceLocation noteLoc);
+
     /// @{
 
 private:

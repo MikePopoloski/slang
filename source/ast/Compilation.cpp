@@ -1631,6 +1631,20 @@ Diagnostic& Compilation::addDiag(Diagnostic diag) {
     return it->second.back();
 }
 
+bool Compilation::checkDiagAndNote(DiagCode diagCode, SourceLocation diagLoc, DiagCode noteCode,
+                                   SourceLocation noteLoc) {
+    if (auto diagIt = diagMap.find({diagCode, diagLoc}); diagIt != diagMap.end()) {
+        for (auto& diag : diagIt->second) {
+            for (auto& note : diag.notes) {
+                if (note.code == noteCode && note.location == noteLoc)
+                    return true;
+            }
+        }
+    }
+
+    return false;
+}
+
 AssertionInstanceDetails* Compilation::allocAssertionDetails() {
     return assertionDetailsAllocator.emplace();
 }

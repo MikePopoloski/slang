@@ -1974,6 +1974,16 @@ module overlap2(inout wire [15:0] bus16, inout wire [11:0] low12, high12);
     alias high12[7:0] = low12[11:4];
 endmodule
 
+module overlap3(inout wire [15:0] bus16, inout wire [11:0] low12, high12);
+    alias low12 = bus16[11:0];
+    alias high12 = bus16[15:4];
+endmodule
+
+module overlap4(inout wire [15:0] bus16, inout wire [11:0] low12, high12);
+    alias {high12, low12[3:0]} = bus16;
+    alias low12[11:4] = high12[7:0];
+endmodule
+
 module lib1_dff(input logic Reset, Clk, Data, Q, Q_Bar);
 endmodule
 
@@ -2006,18 +2016,39 @@ module m;
     alias a = 1;
     alias a = c = m.c = d;
 endmodule
+
+module overlap(inout wire [15:0] bus16, inout wire [11:0] low12, high12, inout wire [32:0] c, inout wire [16:0] b, inout wire [32:0] b2);
+    alias bus16 = {{high12[4:0], high12[6:0]}, bus16[3:0]} = {bus16[15:12], high12};
+    alias low12[0:0] = a;
+    alias low12 = {low12} = {low12};
+    alias a = a;
+    alias b[2:0] = {c[2:0]};
+    alias b1 = {c[1:1]};
+    alias b2 = c;
+    alias bus16 = {high12[11:8], low12};
+    alias bus16 = {high12, low12[3:0]};
+    alias bus16 = {high12, bus16[3:0]} = {bus16[15:12], low12};
+    module overlapnested(inout wire [15:0] bus15);
+        alias bus15 = bus16;
+        alias bus15 = bus16;
+    endmodule
+    overlapnested ov(bus16);
+endmodule
 )");
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 5);
+    REQUIRE(diags.size() == 32);
     CHECK(diags[0].code == diag::NetAliasWidthMismatch);
     CHECK(diags[1].code == diag::ExpressionNotAssignable);
     CHECK(diags[2].code == diag::NetAliasNotANet);
     CHECK(diags[3].code == diag::NetAliasHierarchical);
     CHECK(diags[4].code == diag::NetAliasCommonNetType);
+    CHECK(diags[5].code == diag::MultipleNetAlias);
+    for (size_t i = 6; i < 32; ++i)
+        CHECK(diags[i].code == diag::MultipleNetAlias);
 }
 
 TEST_CASE("Action block parsing regress GH #911") {
