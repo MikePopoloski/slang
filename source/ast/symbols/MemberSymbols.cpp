@@ -2068,6 +2068,7 @@ struct NetAliasVisitor {
     const ASTContext& context;
     const NetType* commonNetType = nullptr;
     bool issuedError = false;
+    SmallMap<const ValueSymbol*, const Expression*, 2> aliasedVals;
 
     NetAliasVisitor(const ASTContext& context) : context(context) {}
 
@@ -2080,6 +2081,10 @@ struct NetAliasVisitor {
                 case ExpressionKind::ElementSelect:
                 case ExpressionKind::RangeSelect: {
                     if (auto sym = expr.getSymbolReference()) {
+                        if (const auto* valSym = sym->template as_if<ValueSymbol>()) {
+                            aliasedVals.insert_or_assign(valSym, &expr);
+                        }
+
                         if (sym->kind != SymbolKind::Net) {
                             context.addDiag(diag::NetAliasNotANet, expr.sourceRange) << sym->name;
                         }
@@ -2119,16 +2124,18 @@ std::span<const Expression* const> NetAliasSymbol::getNetReferences() const {
     auto syntax = getSyntax();
     SLANG_ASSERT(scope && syntax);
 
-    // TODO: there should be a global check somewhere that any given bit
-    // of a net isn't aliased to the same target signal bit multiple times.
     bitwidth_t bitWidth = 0;
     bool issuedError = false;
     SmallVector<const Expression*> buffer;
     ASTContext context(*scope, LookupLocation::after(*this),
                        ASTFlags::NonProcedural | ASTFlags::NotADriver);
     NetAliasVisitor visitor(context);
+    // In order to save the leftmost alias
+    SmallMap<const ValueSymbol*, const Expression*, 2> leftAlias;
 
-    for (auto exprSyntax : syntax->as<NetAliasSyntax>().nets) {
+    const auto nets = syntax->as<NetAliasSyntax>().nets;
+
+    for (auto exprSyntax : nets) {
         auto& netRef = Expression::bind(*exprSyntax, context);
         if (!netRef.requireLValue(context))
             continue;
@@ -2144,6 +2151,24 @@ std::span<const Expression* const> NetAliasSymbol::getNetReferences() const {
 
         netRef.visit(visitor);
         buffer.push_back(&netRef);
+
+        if (exprSyntax != *nets.begin()) {
+            for (const auto& refVal : visitor.aliasedVals) {
+                const auto* sym = refVal.first;
+                // Check that bits of net are aliased to itself
+                if (leftAlias.count(sym)) {
+                    auto& diag = context.addDiag(diag::NetAliasItself, refVal.second->sourceRange);
+                    diag.addNote(diag::NoteAliasHere, leftAlias[sym]->sourceRange);
+                }
+
+                // Check that all bits were not previously aliased
+                context.addDriver(*refVal.first, *refVal.second, {AssignFlags::NetAlias});
+            }
+        }
+        else {
+            leftAlias.insert(visitor.aliasedVals.begin(), visitor.aliasedVals.end());
+        }
+        visitor.aliasedVals.clear();
     }
 
     netRefs = buffer.copy(scope->getCompilation());

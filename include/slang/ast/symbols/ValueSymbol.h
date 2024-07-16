@@ -138,6 +138,9 @@ public:
     /// Indicates whether the driver is for an assertion local variable formal argument.
     bool isLocalVarFormalArg() const { return flags.has(AssignFlags::AssertionLocalVarFormalArg); }
 
+    /// Indicates whether the driver is for a net alias.
+    bool isNetAlias() const { return flags.has(AssignFlags::NetAlias); }
+
     /// Indicates whether the driver is inside a single-driver procedure (such as always_comb).
     bool isInSingleDriverProcedure() const;
 

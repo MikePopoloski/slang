@@ -7,6 +7,8 @@
 //------------------------------------------------------------------------------
 #include "slang/ast/symbols/ValueSymbol.h"
 
+#include <iostream>
+
 #include "slang/ast/Compilation.h"
 #include "slang/ast/EvalContext.h"
 #include "slang/ast/Expression.h"
@@ -172,6 +174,8 @@ static bool handleOverlap(const Scope& scope, std::string_view name, const Value
         code = diag::MultipleUWireDrivers;
     else if (isSingleDriverUDNT)
         code = diag::MultipleUDNTDrivers;
+    else if (driver.isNetAlias())
+        code = diag::MultipleNetAlias;
     else if (driver.kind == DriverKind::Continuous && curr.kind == DriverKind::Continuous)
         code = diag::MultipleContAssigns;
     else
@@ -184,7 +188,10 @@ static bool handleOverlap(const Scope& scope, std::string_view name, const Value
         diag << netType->name;
     }
 
-    addAssignedHereNote(diag);
+    if (!driver.isNetAlias())
+        addAssignedHereNote(diag);
+    else
+        diag.addNote(diag::NoteAliasHere, currRange);
     return false;
 }
 
@@ -300,6 +307,7 @@ void ValueSymbol::addDriver(DriverBitRange bounds, const ValueDriver& driver) co
         //            block to overlap even if the other block is an always_comb/ff.
         // - Assertion local variable formal arguments can't drive more than
         //   one output to the same local variable.
+        // - Net bits are not aliased more than once
         bool isProblem = false;
         auto curr = *it;
 
@@ -326,6 +334,10 @@ void ValueSymbol::addDriver(DriverBitRange bounds, const ValueDriver& driver) co
                 isProblem = true;
             }
         }
+
+        // If one of the drivers is an alias, then perform a check if the second one is an alias
+        if (curr->isNetAlias() || driver.isNetAlias())
+            isProblem = curr->isNetAlias() && driver.isNetAlias();
 
         if (isProblem) {
             if (!handleOverlap(*scope, name, *curr, driver, isNet, isUWire, isSingleDriverUDNT,
@@ -430,6 +442,7 @@ std::optional<DriverBitRange> ValueDriver::getBounds(const Expression& prefixExp
     for (size_t i = path.size(); i > 0; i--) {
         uint64_t start, width;
         auto& elem = *path[i - 1];
+
         if (elem.kind == ExpressionKind::MemberAccess) {
             auto& member = elem.as<MemberAccessExpression>().member;
             if (member.kind != SymbolKind::Field)

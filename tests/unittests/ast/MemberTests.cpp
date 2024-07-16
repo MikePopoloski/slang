@@ -19,6 +19,8 @@
 #include "slang/ast/symbols/VariableSymbols.h"
 #include "slang/ast/types/NetType.h"
 #include "slang/ast/types/Type.h"
+#include "slang/diagnostics/DeclarationsDiags.h"
+#include "slang/diagnostics/ExpressionsDiags.h"
 #include "slang/text/Json.h"
 
 TEST_CASE("Nets") {
@@ -2423,18 +2425,58 @@ module m;
     alias a = 1;
     alias a = c = m.c = d;
 endmodule
+
+module overlap(inout wire [15:0] bus16, inout wire [11:0] low12, high12, inout wire [32:0] c, inout wire [16:0] b, inout wire [32:0] b2);
+    alias bus16 = {{high12[4:0], high12[6:0]}, bus16[3:0]} = {bus16[15:12], high12};
+    alias low12[0:0] = a;
+    alias low12 = {low12} = {low12};
+    alias a = a;
+    alias b[2:0] = {c[2:0]};
+    alias b1 = {c[1:1]};
+    alias b2 = c;
+    alias bus16 = {high12[11:8], low12};
+    alias bus16 = {high12, low12[3:0]};
+    alias bus16 = {high12, bus16[3:0]} = {bus16[15:12], low12};
+    module overlapnested(inout wire [15:0] bus15);
+        alias bus15 = bus16;
+        alias bus15 = bus16;
+    endmodule
+    overlapnested ov(bus16);
+endmodule
 )");
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 5);
+    REQUIRE(diags.size() == 27);
     CHECK(diags[0].code == diag::NetAliasWidthMismatch);
     CHECK(diags[1].code == diag::ExpressionNotAssignable);
     CHECK(diags[2].code == diag::NetAliasNotANet);
     CHECK(diags[3].code == diag::NetAliasHierarchical);
     CHECK(diags[4].code == diag::NetAliasCommonNetType);
+    CHECK(diags[5].code == diag::NetAliasItself);
+    CHECK(diags[6].code == diag::NetAliasItself);
+    CHECK(diags[7].code == diag::MultipleNetAlias);
+    CHECK(diags[8].code == diag::NetAliasItself);
+    CHECK(diags[9].code == diag::NetAliasItself);
+    CHECK(diags[10].code == diag::MultipleNetAlias);
+    CHECK(diags[11].code == diag::NetAliasItself);
+    CHECK(diags[12].code == diag::MultipleNetAlias);
+    CHECK(diags[13].code == diag::MultipleNetAlias);
+    CHECK(diags[14].code == diag::MultipleNetAlias);
+    CHECK(diags[15].code == diag::MultipleNetAlias);
+    CHECK(diags[16].code == diag::MultipleNetAlias);
+    CHECK(diags[17].code == diag::MultipleNetAlias);
+    CHECK(diags[18].code == diag::MultipleNetAlias);
+    CHECK(diags[19].code == diag::MultipleNetAlias);
+    CHECK(diags[20].code == diag::NetAliasItself);
+    CHECK(diags[21].code == diag::MultipleNetAlias);
+    CHECK(diags[22].code == diag::NetAliasItself);
+    CHECK(diags[23].code == diag::MultipleNetAlias);
+    CHECK(diags[24].code == diag::MultipleNetAlias);
+    CHECK(diags[25].code == diag::MultipleNetAlias);
+    CHECK(diags[26].code == diag::MultipleNetAlias);
 }
 
 TEST_CASE("Parameter port wrong / implicit type regression GH #797") {
