@@ -366,11 +366,20 @@ namespace slang::syntax {
         else:
             outf.write("    static bool isKind(SyntaxKind kind);\n\n")
 
+            outf.write("    static bool isChildOptional(size_t index);\n")
             outf.write("    TokenOrSyntax getChild(size_t index);\n")
             outf.write("    ConstTokenOrSyntax getChild(size_t index) const;\n")
             outf.write("    PtrTokenOrSyntax getChildPtr(size_t index);\n")
             outf.write("    void setChild(size_t index, TokenOrSyntax child);\n\n")
 
+            docf.write(
+                "    @fn static bool slang::syntax::{}::isChildOptional(size_t index);\n".format(
+                    name
+                )
+            )
+            docf.write(
+                "    @brief Returns false if child member (token or syntax node) at the provided index within this struct is a syntax node wrapped in not_null<>\n"
+            )
             docf.write(
                 "    @fn TokenOrSyntax slang::syntax::{}::getChild(size_t index)\n".format(
                     name
@@ -483,6 +492,24 @@ size_t SyntaxNode::getChildCount() const {
         cppf.write("}\n\n")
 
         if v.members or v.final != "":
+            cppf.write("bool {}::isChildOptional(size_t index) {{\n".format(k))
+            if v.notNullMembers:
+                cppf.write("    switch (index) {\n")
+
+                index = 0
+                for m in v.combinedMembers:
+                    if m[1] in v.notNullMembers:
+                        cppf.write("        case {}: return false;\n".format(index))
+                    index += 1
+
+                cppf.write("        default: return true;\n")
+                cppf.write("    }\n")
+            else:
+                cppf.write("    (void)index;\n")
+                cppf.write("    return true;\n")
+
+            cppf.write("}\n\n")
+
             for returnType in (
                 "TokenOrSyntax",
                 "ConstTokenOrSyntax",
@@ -660,6 +687,7 @@ const std::type_info* typeFromSyntaxKind(SyntaxKind kind) {
     outf.write(
         "    static bool isKind(SyntaxKind kind) { return kind == SyntaxKind::Unknown; }\n"
     )
+    outf.write("    static bool isChildOptional(size_t) { return true; }\n")
     outf.write("    TokenOrSyntax getChild(size_t) { return nullptr; }\n")
     outf.write("    ConstTokenOrSyntax getChild(size_t) const { return nullptr; }\n")
     outf.write("    PtrTokenOrSyntax getChildPtr(size_t) { return nullptr; }\n")
