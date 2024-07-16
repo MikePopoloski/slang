@@ -54,8 +54,13 @@ struct CloneVisitor {
             if (!child) {
                 if constexpr (IsList) {
                     if (!skipSeparator)
-                        listBuffer.push_back(node.childToken(i));
+                        listBuffer.push_back(node.childToken(i).deepClone(alloc));
                     skipSeparator = false;
+                }
+                else {
+                    if (node.getChild(i).isToken()) { // check since it might be null node
+                        cloned->setChild(i, node.childToken(i).deepClone(alloc));
+                    }
                 }
                 continue;
             }
