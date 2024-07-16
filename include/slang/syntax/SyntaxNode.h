@@ -476,4 +476,12 @@ SeparatedSyntaxList<T>* deepClone(const SeparatedSyntaxList<T>& node, BumpAlloca
     return alloc.emplace<SeparatedSyntaxList<T>>(buffer.copy(alloc));
 }
 
+inline TokenList* deepClone(const TokenList& node, BumpAllocator& alloc) {
+    SmallVector<parsing::Token> buffer(node.size(), UninitializedTag());
+    for (const auto& ele : node) {
+        buffer.push_back(ele.deepClone(alloc));
+    }
+    return alloc.emplace<TokenList>(buffer.copy(alloc));
+}
+
 } // namespace slang::syntax
