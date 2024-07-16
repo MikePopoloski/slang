@@ -437,6 +437,37 @@ module M;
 endmodule
 )");
     }
+
+    SECTION("Reuse same rewriter object") {
+        struct FirstTypedefRemover : public SyntaxRewriter<FirstTypedefRemover> {
+            int index;
+            void handle(const TypedefDeclarationSyntax& decl) {
+                if (index++ == 0)
+                    remove(decl);
+            }
+            std::shared_ptr<SyntaxTree> transform(const std::shared_ptr<SyntaxTree>& tree) {
+                index = 0;
+                return SyntaxRewriter<FirstTypedefRemover>::transform(tree);
+            }
+        };
+        auto tree = SyntaxTree::fromText(R"(
+module M;
+    typedef enum int { FOO = 1 } test_t_1;
+    typedef enum int { BAR = 2 } test_t_2;
+    typedef enum int { BAZ = 3 } test_t_3;
+endmodule
+)");
+
+        FirstTypedefRemover rewriter;
+        tree = rewriter.transform(tree);
+        tree = rewriter.transform(tree);
+
+        CHECK(SyntaxPrinter::printFile(*tree) == R"(
+module M;
+    typedef enum int { BAZ = 3 } test_t_3;
+endmodule
+)");
+    }
 }
 
 TEST_CASE("Test AST visiting") {
