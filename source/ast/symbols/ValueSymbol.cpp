@@ -442,7 +442,6 @@ std::optional<DriverBitRange> ValueDriver::getBounds(const Expression& prefixExp
     for (size_t i = path.size(); i > 0; i--) {
         uint64_t start, width;
         auto& elem = *path[i - 1];
-
         if (elem.kind == ExpressionKind::MemberAccess) {
             auto& member = elem.as<MemberAccessExpression>().member;
             if (member.kind != SymbolKind::Field)
