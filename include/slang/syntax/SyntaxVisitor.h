@@ -115,7 +115,7 @@ public:
         commits.clear();
         tempTrees.clear();
 
-        tree->root().visit(*this);
+        tree->root().visit(*DERIVED);
 
         if (commits.empty())
             return tree;
