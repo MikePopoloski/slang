@@ -77,6 +77,9 @@ public:
     /// Reports a new diagnostic under this scope.
     Diagnostic& addDiag(DiagCode code, SourceRange sourceRange) const;
 
+    /// Reports a new diagnostic under this scope.
+    Diagnostic& addDiag(DiagCode code, const Symbol &symbol) const;
+
     /// Reports the given set of diagnostics under this scope.
     void addDiags(const Diagnostics& diags) const;
 

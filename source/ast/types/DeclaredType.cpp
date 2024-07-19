@@ -232,14 +232,14 @@ void DeclaredType::checkType(const ASTContext& context) const {
         case uint32_t(DeclaredTypeFlags::NetType): {
             auto& net = parent.as<NetSymbol>();
             if (net.netType.netKind != NetType::UserDefined && !isValidForNet(*type))
-                context.addDiag(diag::InvalidNetType, parent.location) << *type;
+                context.addDiag(diag::InvalidNetType, parent) << *type;
             else if (type->getBitWidth() == 1 && net.expansionHint != NetSymbol::None)
-                context.addDiag(diag::SingleBitVectored, parent.location);
+                context.addDiag(diag::SingleBitVectored, parent);
             break;
         }
         case uint32_t(DeclaredTypeFlags::UserDefinedNetType):
             if (!isValidForUserDefinedNet(*type))
-                context.addDiag(diag::InvalidUserDefinedNetType, parent.location) << *type;
+                context.addDiag(diag::InvalidUserDefinedNetType, parent) << *type;
             break;
         case uint32_t(DeclaredTypeFlags::FormalArgMergeVar):
             if (auto var = parent.as<FormalArgumentSymbol>().getMergedVariable()) {
@@ -254,7 +254,7 @@ void DeclaredType::checkType(const ASTContext& context) const {
         case uint32_t(DeclaredTypeFlags::Rand): {
             RandMode mode = parent.getRandMode();
             if (!type->isValidForRand(mode)) {
-                auto& diag = context.addDiag(diag::InvalidRandType, parent.location) << *type;
+                auto& diag = context.addDiag(diag::InvalidRandType, parent) << *type;
                 if (mode == RandMode::Rand)
                     diag << "rand"sv;
                 else
@@ -264,26 +264,26 @@ void DeclaredType::checkType(const ASTContext& context) const {
         }
         case uint32_t(DeclaredTypeFlags::DPIReturnType): {
             if (!type->isValidForDPIReturn())
-                context.addDiag(diag::InvalidDPIReturnType, parent.location) << *type;
+                context.addDiag(diag::InvalidDPIReturnType, parent) << *type;
             else if (parent.as<SubroutineSymbol>().flags.has(MethodFlags::Pure) && type->isVoid())
-                context.addDiag(diag::DPIPureReturn, parent.location);
+                context.addDiag(diag::DPIPureReturn, parent);
             break;
         }
         case uint32_t(DeclaredTypeFlags::DPIArg):
             if (!type->isValidForDPIArg())
-                context.addDiag(diag::InvalidDPIArgType, parent.location) << *type;
+                context.addDiag(diag::InvalidDPIArgType, parent) << *type;
             break;
         case uint32_t(DeclaredTypeFlags::RequireSequenceType):
             if (!type->isValidForSequence())
-                context.addDiag(diag::AssertionExprType, parent.location) << *type;
+                context.addDiag(diag::AssertionExprType, parent) << *type;
             break;
         case uint32_t(DeclaredTypeFlags::CoverageType):
             if (!type->isIntegral())
-                context.addDiag(diag::NonIntegralCoverageExpr, parent.location) << *type;
+                context.addDiag(diag::NonIntegralCoverageExpr, parent) << *type;
             break;
         case uint32_t(DeclaredTypeFlags::InterfaceVariable):
             if (!isValidForIfaceVar(*type))
-                context.addDiag(diag::VirtualInterfaceIfaceMember, parent.location);
+                context.addDiag(diag::VirtualInterfaceIfaceMember, parent);
             break;
         default:
             SLANG_UNREACHABLE;

@@ -802,12 +802,12 @@ void SubroutineSymbol::connectExternInterfacePrototype() const {
     auto ifaceMethod = inst->body.find(name);
     if (!ifaceMethod) {
         if (!name.empty())
-            scope->addDiag(diag::UnknownMember, location) << name << ifaceName;
+            scope->addDiag(diag::UnknownMember, *this) << name << ifaceName;
         return;
     }
 
     if (ifaceMethod->kind != SymbolKind::Subroutine) {
-        auto& diag = scope->addDiag(diag::NotASubroutine, location);
+        auto& diag = scope->addDiag(diag::NotASubroutine, *this);
         diag << name;
         diag.addNote(diag::NoteDeclarationHere, ifaceMethod->location);
         return;
@@ -815,7 +815,7 @@ void SubroutineSymbol::connectExternInterfacePrototype() const {
 
     auto& sub = ifaceMethod->as<SubroutineSymbol>();
     if (!sub.flags.has(MethodFlags::InterfaceExtern)) {
-        auto& diag = scope->addDiag(diag::IfaceMethodNotExtern, location);
+        auto& diag = scope->addDiag(diag::IfaceMethodNotExtern, *this);
         diag << name;
         diag.addNote(diag::NoteDeclarationHere, ifaceMethod->location);
         return;
@@ -825,7 +825,7 @@ void SubroutineSymbol::connectExternInterfacePrototype() const {
     SLANG_ASSERT(proto);
 
     if (!proto->flags.has(MethodFlags::ForkJoin) && proto->getFirstExternImpl() != nullptr) {
-        auto& diag = scope->addDiag(diag::DupInterfaceExternMethod, location);
+        auto& diag = scope->addDiag(diag::DupInterfaceExternMethod, *this);
         diag << (subroutineKind == SubroutineKind::Function ? "function"sv : "task"sv);
         diag << ifaceName << name;
         diag.addNote(diag::NotePreviousDefinition, proto->getFirstExternImpl()->impl->location);
@@ -1146,7 +1146,7 @@ const SubroutineSymbol* MethodPrototypeSymbol::getSubroutine() const {
 
     // Otherwise, there must be a body for any declared prototype.
     if (!syntax) {
-        outerScope.addDiag(diag::NoMemberImplFound, location) << name;
+        outerScope.addDiag(diag::NoMemberImplFound, *this) << name;
         return nullptr;
     }
 
@@ -1166,7 +1166,7 @@ const SubroutineSymbol* MethodPrototypeSymbol::getSubroutine() const {
 bool MethodPrototypeSymbol::checkMethodMatch(const Scope& scope,
                                              const SubroutineSymbol& method) const {
     if (method.subroutineKind != subroutineKind) {
-        auto& diag = scope.addDiag(diag::MethodKindMismatch, location);
+        auto& diag = scope.addDiag(diag::MethodKindMismatch, *this);
         diag.addNote(diag::NoteDeclarationHere, method.location);
         return false;
     }
@@ -1180,7 +1180,7 @@ bool MethodPrototypeSymbol::checkMethodMatch(const Scope& scope,
         if (typeSyntax)
             diag = &scope.addDiag(diag::MethodReturnMismatch, typeSyntax->sourceRange());
         else
-            diag = &scope.addDiag(diag::MethodReturnMismatch, location);
+            diag = &scope.addDiag(diag::MethodReturnMismatch, *this);
 
         (*diag) << defRetType;
         (*diag) << method.name;
@@ -1192,7 +1192,7 @@ bool MethodPrototypeSymbol::checkMethodMatch(const Scope& scope,
     auto defArgs = method.getArguments();
     auto protoArgs = arguments;
     if (defArgs.size() != protoArgs.size()) {
-        auto& diag = scope.addDiag(diag::MethodArgCountMismatch, method.location);
+        auto& diag = scope.addDiag(diag::MethodArgCountMismatch, method);
         diag << name;
         diag.addNote(diag::NoteDeclarationHere, location);
         return false;
@@ -1209,7 +1209,7 @@ bool MethodPrototypeSymbol::checkMethodMatch(const Scope& scope,
             continue;
 
         if (da->name != pa->name && !pa->name.empty()) {
-            auto& diag = scope.addDiag(diag::MethodArgNameMismatch, da->location);
+            auto& diag = scope.addDiag(diag::MethodArgNameMismatch, *da);
             diag << da->name << pa->name;
             diag.addNote(diag::NoteDeclarationHere, pa->location);
             return false;
@@ -1219,7 +1219,7 @@ bool MethodPrototypeSymbol::checkMethodMatch(const Scope& scope,
         const Type& dt = da->getType();
         const Type& pt = pa->getType();
         if (!dt.isMatching(pt) && !dt.isError() && !pt.isError()) {
-            auto& diag = scope.addDiag(diag::MethodArgTypeMismatch, da->location);
+            auto& diag = scope.addDiag(diag::MethodArgTypeMismatch, *da);
             diag << da->name << dt << pt;
             diag.addNote(diag::NoteDeclarationHere, pa->location);
             return false;
@@ -1227,7 +1227,7 @@ bool MethodPrototypeSymbol::checkMethodMatch(const Scope& scope,
 
         // Direction must match.
         if (da->direction != pa->direction) {
-            auto& diag = scope.addDiag(diag::MethodArgDirectionMismatch, da->location);
+            auto& diag = scope.addDiag(diag::MethodArgDirectionMismatch, *da);
             diag << da->name;
             diag.addNote(diag::NoteDeclarationHere, pa->location);
             return false;

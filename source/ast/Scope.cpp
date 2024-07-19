@@ -150,6 +150,13 @@ Diagnostic& Scope::addDiag(DiagCode code, SourceRange sourceRange) const {
     return compilation.addDiag(std::move(diag));
 }
 
+Diagnostic& Scope::addDiag(DiagCode code, const Symbol &symbol) const {
+    if (auto syntax = symbol.getSyntax())
+        return addDiag(code, syntax->sourceRange());
+    else
+        return addDiag(code, symbol.location);
+}
+
 void Scope::addDiags(const Diagnostics& diags) const {
     for (auto& diag : diags) {
         Diagnostic copy = diag;
@@ -769,11 +776,11 @@ void Scope::reportNameConflict(const Symbol& member, const Symbol& existing) con
         const Type& existingType = existing.as<ValueSymbol>().getType();
 
         if (memberType.isError() || existingType.isError() || memberType.isMatching(existingType)) {
-            diag = &addDiag(diag::Redefinition, member.location);
+            diag = &addDiag(diag::Redefinition, member);
             (*diag) << member.name;
         }
         else {
-            diag = &addDiag(diag::RedefinitionDifferentType, member.location);
+            diag = &addDiag(diag::RedefinitionDifferentType, member);
             (*diag) << member.name << memberType << existingType;
         }
     }

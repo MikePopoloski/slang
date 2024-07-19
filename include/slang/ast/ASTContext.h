@@ -425,6 +425,9 @@ public:
     /// Issues a new diagnostic.
     Diagnostic& addDiag(DiagCode code, SourceRange sourceRange) const;
 
+    /// Issues a new diagnostic.
+    Diagnostic& addDiag(DiagCode code, const Symbol& symbol) const;
+
     /// Reports an error if the given expression is not integral.
     /// @returns true if the expression is integral and false otherwise
     bool requireIntegral(const Expression& expr) const;
