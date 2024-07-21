@@ -139,8 +139,10 @@ std::shared_ptr<SyntaxTree> transformTree(BumpAllocator&& alloc,
     for (auto& t : tempTrees)
         alloc.steal(std::move(t->allocator()));
 
-    return std::make_shared<SyntaxTree>(root, tree->sourceManager(), std::move(alloc), library,
-                                        tree);
+    auto newTree = std::make_shared<SyntaxTree>(root, tree->sourceManager(), std::move(alloc),
+                                                library, tree);
+    alloc = BumpAllocator(); // creation of newTree invalidated our old alloc
+    return newTree;
 }
 
 } // namespace slang::syntax::detail
