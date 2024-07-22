@@ -22,8 +22,16 @@ SyntaxTree::SyntaxTree(SyntaxNode* root, SourceManager& sourceManager, BumpAlloc
     rootNode(root), library(library), sourceMan(sourceManager), alloc(std::move(alloc)),
     parentTree(std::move(parent)) {
     metadata = std::make_unique<ParserMetadata>(ParserMetadata::fromSyntax(*root));
-    if (!metadata->eofToken && parentTree)
-        metadata->eofToken = parentTree->getMetadata().eofToken.deepClone(this->alloc);
+    if (parentTree) { // copy parent's info
+        for (size_t i = 0; i < parentTree->macros.size(); ++i) {
+            auto macro = parentTree->macros[i];
+            if (macro)
+                macro = deepClone(*macro, this->alloc);
+            macros.push_back(macro);
+        }
+        if (!metadata->eofToken)
+            metadata->eofToken = parentTree->getMetadata().eofToken.deepClone(this->alloc);
+    }
 }
 
 SyntaxTree::~SyntaxTree() = default;
