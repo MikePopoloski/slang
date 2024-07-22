@@ -216,4 +216,9 @@ bool SyntaxListBase::isKind(SyntaxKind kind) {
     }
 }
 
+bool SyntaxListBase::isChildOptional(size_t index) {
+    (void)index;
+    return true;
+}
+
 } // namespace slang::syntax

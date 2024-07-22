@@ -190,6 +190,10 @@ public:
     /// is compatible with the static type of the object.
     static bool isKind(SyntaxKind) { return true; }
 
+    /// Derived nodes should implement this and return false if child at provided
+    /// index is node wrapped in not_null.
+    static bool isChildOptional(size_t) { return true; }
+
 protected:
     explicit SyntaxNode(SyntaxKind kind) : kind(kind) {}
 
@@ -286,6 +290,8 @@ public:
     virtual void resetAll(BumpAllocator& alloc, std::span<const TokenOrSyntax> children) = 0;
 
     static bool isKind(SyntaxKind kind);
+
+    static bool isChildOptional(size_t index);
 
 protected:
     SyntaxListBase(SyntaxKind kind, size_t childCount) : SyntaxNode(kind), childCount(childCount) {}
