@@ -250,6 +250,39 @@ endmodule
 )");
 }
 
+TEST_CASE("Remove node from comma-separated list") {
+    auto tree = SyntaxTree::fromText(R"(
+    // normal case
+    function void foo1(int a, int b, int c, int d, int e);
+    endfunction
+    // case with trailing comma
+    function void foo2(int a, int b, int c, int d, int e,);
+    endfunction
+    // case with duplicated comma
+    function void foo3(int a, int b,, int c, int d, int e);
+    endfunction
+)");
+    struct RemoveWriter : public SyntaxRewriter<RemoveWriter> {
+        void handle(const FunctionPortBaseSyntax& port) {
+            std::string str = port.toString();
+            str.erase(0, str.find_first_not_of(' ')); // trim left whitespace
+            if (str == "int a" or str == "int c" or str == "int e")
+                remove(port);
+        }
+    };
+    tree = RemoveWriter().transform(tree);
+    CHECK(SyntaxPrinter::printFile(*tree) == R"(
+    // normal case
+    function void foo1( int b, int d);
+    endfunction
+    // case with trailing comma
+    function void foo2( int b, int d,);
+    endfunction
+    // case with duplicated comma
+    function void foo3( int b,, int d);
+    endfunction
+)");
+}
 TEST_CASE("Advanced rewriting") {
     SECTION("Insert multiple newNodes surrounding oldNodes") {
         class MultipleRewriter : public RewriterBase<MultipleRewriter> {
