@@ -7,8 +7,6 @@
 //------------------------------------------------------------------------------
 #include "slang/ast/symbols/ValueSymbol.h"
 
-#include <iostream>
-
 #include "slang/ast/Compilation.h"
 #include "slang/ast/EvalContext.h"
 #include "slang/ast/Expression.h"

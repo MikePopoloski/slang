@@ -136,8 +136,7 @@ void ASTContext::setAttributes(const Expression& expr,
 
 void ASTContext::addDriver(const ValueSymbol& symbol, const Expression& longestStaticPrefix,
                            bitmask<AssignFlags> assignFlags) const {
-    if ((flags.has(ASTFlags::NotADriver) && !assignFlags.has(AssignFlags::NetAlias)) ||
-        scope->isUninstantiated())
+    if (flags.has(ASTFlags::NotADriver) || scope->isUninstantiated())
         return;
 
     symbol.addDriver(getDriverKind(), longestStaticPrefix, getContainingSymbol(), assignFlags);
