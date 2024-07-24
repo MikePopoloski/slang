@@ -789,9 +789,11 @@ void ClassType::handleImplements(const ImplementsClauseSyntax& implementsClause,
 
                 auto impl = find(method.name);
                 if (!impl || impl->kind != SymbolKind::Subroutine) {
-                    auto& diag = context.addDiag(diag::IfaceMethodNoImpl,
-                                                 nameSyntax->sourceRange());
-                    diag << name << method.name << iface->name;
+                    if (!baseClass || !baseClass->isError()) {
+                        auto& diag = context.addDiag(diag::IfaceMethodNoImpl,
+                                                     nameSyntax->sourceRange());
+                        diag << name << method.name << iface->name;
+                    }
                     continue;
                 }
 

@@ -1935,7 +1935,8 @@ void Lookup::unqualifiedImpl(const Scope& scope, std::string_view name, LookupLo
         location = LookupLocation(location.getScope(), uint32_t(outOfBlockIndex));
         outOfBlockIndex = SymbolIndex(0);
     }
-    else if (sym.kind == SymbolKind::ClassType) {
+
+    if (sym.kind == SymbolKind::ClassType) {
         // Suppress errors when we fail to find a symbol inside a class that
         // had a problem resolving its base class, since the symbol may be
         // expected to be defined in the base.
@@ -1943,8 +1944,9 @@ void Lookup::unqualifiedImpl(const Scope& scope, std::string_view name, LookupLo
         if (baseClass && baseClass->isError())
             result.flags |= LookupResultFlags::SuppressUndeclared;
     }
-    else if (flags.has(LookupFlags::DisallowUnitReferences) &&
-             location.getScope()->asSymbol().kind == SymbolKind::CompilationUnit) {
+
+    if (flags.has(LookupFlags::DisallowUnitReferences) &&
+        location.getScope()->asSymbol().kind == SymbolKind::CompilationUnit) {
         return;
     }
 
