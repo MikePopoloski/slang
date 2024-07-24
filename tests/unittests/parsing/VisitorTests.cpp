@@ -587,8 +587,8 @@ endmodule
             }
         };
 
-        tree = CloneRewriter().transform(tree);
-        CHECK(SyntaxPrinter::printFile(*tree) == R"(
+        auto newTree = CloneRewriter().transform(tree);
+        CHECK(SyntaxPrinter::printFile(*newTree) == R"(
 module m;
     reg tmp3;
     reg tmp3;
@@ -689,8 +689,8 @@ class C; endclass
         }
     };
 
-    tree = ModuleChanger().transform(tree);
-    CHECK(SyntaxPrinter::printFile(*tree) == R"(
+    auto newTree = ModuleChanger().transform(tree);
+    CHECK(SyntaxPrinter::printFile(*newTree) == R"(
 `default_nettype none
 `unconnected_drive pull0
 `timescale 1ns/1ps

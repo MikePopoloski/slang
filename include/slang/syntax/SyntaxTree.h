@@ -204,12 +204,6 @@ public:
     /// The options used to construct the syntax tree.
     const Bag& options() const { return options_; }
 
-    /// Gets the parent syntax tree, if there is one. Otherwise returns nullptr.
-    /// Most syntax trees don't have a parent; this is for cases where a given tree is
-    /// derived from another and relies on the parent tree's memory remaining valid for
-    /// the lifetime of the child tree.
-    const SyntaxTree* getParentTree() const { return parentTree.get(); }
-
     /// Gets various bits of metadata collected during parsing.
     const parsing::ParserMetadata& getMetadata() const { return *metadata; }
 
@@ -240,7 +234,6 @@ private:
     Bag options_;
     std::unique_ptr<parsing::ParserMetadata> metadata;
     std::vector<const DefineDirectiveSyntax*> macros;
-    std::shared_ptr<SyntaxTree> parentTree;
 };
 
 } // namespace slang::syntax

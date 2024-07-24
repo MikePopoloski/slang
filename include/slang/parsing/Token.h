@@ -115,7 +115,7 @@ public:
     /// skipped. Otherwise returns an empty span.
     std::span<Token const> getSkippedTokens() const;
 
-    Trivia clone(BumpAllocator& alloc) const;
+    Trivia clone(BumpAllocator& alloc, bool deep = false) const;
 };
 #if !defined(_M_IX86) && !defined(__clang_analyzer__)
 static_assert(sizeof(Trivia) == 16);

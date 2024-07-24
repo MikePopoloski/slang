@@ -892,8 +892,10 @@ SyntaxNode* clone(const SyntaxListBase&, BumpAllocator&) {
                             m[1]
                         )
                     )
-                elif m[0].startswith("SyntaxList") or m[0].startswith(
-                    "SeparatedSyntaxList"
+                elif (
+                    m[0].startswith("SyntaxList")
+                    or m[0].startswith("SeparatedSyntaxList")
+                    or m[0].startswith("TokenList")
                 ):
                     clonef.write("        *deepClone(node.{0}, alloc)".format(m[1]))
                 elif m[0] == "Token":
