@@ -1016,13 +1016,14 @@ endmodule
 }
 
 TEST_CASE("Escaped names in hierarchical path printing") {
-    auto tree = SyntaxTree::fromText(R"(
-module \module. ;
-  if (1) begin : \foo.
-    $info("\"%m\"");
-  end
-endmodule
-)");
+    // The text here is not using a raw string literal to
+    // work around an MSVC bug.
+    auto tree = SyntaxTree::fromText("\n"
+                                     "module \\module. ;\n"
+                                     "  if (1) begin : \\foo.\n"
+                                     "    $info(\"\\\"%m\\\"\");\n"
+                                     "  end\n"
+                                     "endmodule");
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
