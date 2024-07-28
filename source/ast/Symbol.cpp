@@ -11,6 +11,7 @@
 #include "slang/ast/Compilation.h"
 #include "slang/ast/symbols/MemberSymbols.h"
 #include "slang/ast/types/Type.h"
+#include "slang/text/CharInfo.h"
 #include "slang/text/FormatBuffer.h"
 
 namespace {
@@ -115,10 +116,28 @@ static void getHierarchicalPathImpl(const Symbol& symbol, FormatBuffer& buffer) 
         }
     }
 
+    auto needsEscaping = [](std::string_view text) {
+        if (!text.empty()) {
+            if (!isValidCIdChar(text[0]) || isDecimalDigit(text[0]))
+                return true;
+
+            for (size_t i = 1; i < text.length(); i++) {
+                if (!isValidCIdChar(text[i]) && text[i] != '$')
+                    return true;
+            }
+        }
+        return false;
+    };
+
     auto addName = [&](std::string_view text) {
         if (!separator.empty())
             buffer.append(separator);
-        buffer.append(text);
+
+        // If the name requires escaping add that here.
+        if (needsEscaping(text))
+            buffer.format("\\{} ", text);
+        else
+            buffer.append(text);
     };
 
     if (!current->name.empty())

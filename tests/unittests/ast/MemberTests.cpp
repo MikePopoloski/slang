@@ -1015,6 +1015,27 @@ endmodule
     CHECK(diags[0].code == diag::ConstEvalNonConstVariable);
 }
 
+TEST_CASE("Escaped names in hierarchical path printing") {
+    auto tree = SyntaxTree::fromText(R"(
+module \module. ;
+  if (1) begin : \foo.
+    $info("\"%m\"");
+  end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diagnostics = compilation.getAllDiagnostics();
+    std::string result = "\n" + report(diagnostics);
+    CHECK(result == R"(
+source:4:5: note: $info encountered: \"\module. .\foo. \"
+    $info("\"%m\"");
+    ^
+)");
+}
+
 TEST_CASE("Const variable must provide initializer") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
