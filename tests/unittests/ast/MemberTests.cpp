@@ -1016,25 +1016,25 @@ endmodule
 }
 
 TEST_CASE("Escaped names in hierarchical path printing") {
-    // The text here is not using a raw string literal to
-    // work around an MSVC bug.
-    auto tree = SyntaxTree::fromText("\n"
-                                     "module \\module. ;\n"
-                                     "  if (1) begin : \\foo.\n"
-                                     "    $info(\"\\\"%m\\\"\");\n"
-                                     "  end\n"
-                                     "endmodule");
+    auto tree = SyntaxTree::fromText(R"(
+module \module. ;
+  if (1) begin : \foo.
+    $info("\"%m\"");
+  end
+endmodule
+)");
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
 
     auto& diagnostics = compilation.getAllDiagnostics();
-    std::string result = "\n" + report(diagnostics);
-    CHECK(result == R"(
+    auto result = "\n" + report(diagnostics);
+    auto expected = R"(
 source:4:5: note: $info encountered: \"\module. .\foo. \"
     $info("\"%m\"");
     ^
-)");
+)";
+    CHECK(result == expected);
 }
 
 TEST_CASE("Const variable must provide initializer") {
