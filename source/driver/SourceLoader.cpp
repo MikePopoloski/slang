@@ -74,6 +74,11 @@ void SourceLoader::addLibraryMaps(std::string_view pattern, const fs::path& base
     addLibraryMapsInternal(pattern, basePath, optionBag, /* expandEnvVars */ false, seenMaps);
 }
 
+void SourceLoader::addSDFFiles(std::string_view pattern, const fs::path& basePath,
+                                  const Bag& optionBag) {
+    addSDFFilesInternal(pattern, basePath, optionBag);
+}
+
 void SourceLoader::addSeparateUnit(std::span<const std::string> filePatterns,
                                    const std::vector<std::string>& includePaths,
                                    std::vector<std::string> defines,
@@ -149,6 +154,29 @@ void SourceLoader::addLibraryMapsInternal(std::string_view pattern, const fs::pa
         }
 
         seenMaps.erase(path);
+    }
+}
+
+void SourceLoader::addSDFFilesInternal(std::string_view pattern, const fs::path& basePath,
+                                          const Bag& optionBag) {
+    SmallVector<fs::path> files;
+    std::error_code ec;
+    svGlob(basePath, pattern, GlobMode::Files, files, /* expandEnvVars=*/false, ec);
+
+    if (ec) {
+        addError(pattern, ec);
+        return;
+    }
+
+    for (auto& path : files) {
+        auto buffer = sourceManager.readSource(path, /* library */ nullptr);
+        if (!buffer) {
+            addError(path, buffer.error());
+            continue;
+        }
+
+        auto tree = SyntaxTree::fromSDFBuffer(*buffer, sourceManager, optionBag);
+        sdfUnitTrees.push_back(tree);
     }
 }
 

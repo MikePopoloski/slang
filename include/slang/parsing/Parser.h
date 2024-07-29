@@ -7,6 +7,8 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include <set>
+
 #include "slang/parsing/NumberParser.h"
 #include "slang/parsing/ParserBase.h"
 #include "slang/parsing/ParserMetadata.h"
@@ -54,9 +56,15 @@ enum class ExpressionOptions {
     BinsSelectContext = 1 << 6,
 
     /// "dist" expressions are allowed in this context.
-    AllowDist = 1 << 7
+    AllowDist = 1 << 7,
+
+    /// Allows to parse SDF conditional port expressions
+    SDFCondExpr = 1 << 8,
+
+    // Allows to parse SDF timing check conditional expressions
+    SDFTimingCheckCondExpr = 1 << 9,
 };
-SLANG_BITMASK(ExpressionOptions, AllowDist)
+SLANG_BITMASK(ExpressionOptions, SDFTimingCheckCondExpr)
 
 /// Various options for parsing names.
 enum class NameOptions {
@@ -137,6 +145,10 @@ struct SLANG_EXPORT ParserOptions {
 /// Implements a full syntax parser for SystemVerilog.
 class SLANG_EXPORT Parser : ParserBase, syntax::SyntaxFacts {
 public:
+    Parser(const Parser&) = delete;
+    Parser(Parser&&) = delete;
+    Parser& operator=(const Parser&) = delete;
+    Parser& operator=(Parser&&) = delete;
     explicit Parser(Preprocessor& preprocessor, const Bag& options = {});
 
     /// Parse a whole compilation unit.
@@ -144,6 +156,9 @@ public:
 
     /// Parse a library map file.
     syntax::LibraryMapSyntax& parseLibraryMap();
+
+    /// Parse a standard delay format (SDF) file.
+    syntax::SDFUnitSyntax& parseSDFUnit();
 
     /// Parse an expression / statement / module / class / name.
     /// These are mostly for testing; only use if you know that the
@@ -179,17 +194,21 @@ private:
     // clang-format off
     syntax::ExpressionSyntax& parseMinTypMaxExpression(bitmask<ExpressionOptions> options = {});
     syntax::ExpressionSyntax& parsePrimaryExpression(bitmask<ExpressionOptions> options);
+    syntax::ExpressionSyntax& parseSDFPrimaryExpression(bitmask<ExpressionOptions> options);
+    syntax::ExpressionSyntax& parseSDFScalarConstant();
     syntax::ExpressionSyntax& parseIntegerExpression(bool disallowVector);
     syntax::ExpressionSyntax& parseInsideExpression(syntax::ExpressionSyntax& expr);
     syntax::ExpressionSyntax& parsePostfixExpression(syntax::ExpressionSyntax& expr, bitmask<ExpressionOptions> options);
+    syntax::ExpressionSyntax& parseSDFPostfixExpression(syntax::ExpressionSyntax& expr);
     syntax::ExpressionSyntax& parseNewExpression(syntax::NameSyntax& expr, bitmask<ExpressionOptions> options);
-    syntax::ConcatenationExpressionSyntax& parseConcatenation(Token openBrace, syntax::ExpressionSyntax* first);
+    syntax::ConcatenationExpressionSyntax& parseConcatenation(Token openBrace, syntax::ExpressionSyntax* first, bool isSDFCondExpr = false);
     syntax::StreamingConcatenationExpressionSyntax& parseStreamConcatenation(Token openBrace);
     syntax::StreamExpressionSyntax& parseStreamExpression();
     syntax::RangeListSyntax& parseRangeList();
     syntax::ExpressionSyntax& parseValueRangeElement(bitmask<ExpressionOptions> options = {});
     syntax::ElementSelectSyntax& parseElementSelect();
     syntax::SelectorSyntax* parseElementSelector();
+    syntax::NameSyntax& parseSDFHierIdentifier();
     syntax::NameSyntax& parseName(bitmask<NameOptions> options);
     syntax::NameSyntax& parseNamePart(bitmask<NameOptions> options);
     syntax::ParameterValueAssignmentSyntax* parseParameterValueAssignment();
@@ -204,7 +223,7 @@ private:
     syntax::EventExpressionSyntax& parseEventExpression();
     syntax::NamedBlockClauseSyntax* parseNamedBlockClause();
     syntax::TimingControlSyntax* parseTimingControl();
-    syntax::ConditionalPredicateSyntax& parseConditionalPredicate(syntax::ExpressionSyntax& first, TokenKind endKind, Token& end);
+    syntax::ConditionalPredicateSyntax& parseConditionalPredicate(syntax::ExpressionSyntax& first, TokenKind endKind, Token& end, bool isSDFCondPred = false);
     syntax::ConditionalPatternSyntax& parseConditionalPattern();
     syntax::ConditionalStatementSyntax& parseConditionalStatement(syntax::NamedLabelSyntax* label, AttrList attributes, Token uniqueOrPriority);
     syntax::ElseClauseSyntax* parseElseClause();
@@ -378,6 +397,54 @@ private:
     syntax::MemberSyntax* parseLibraryMember();
     syntax::FilePathSpecSyntax& parseFilePathSpec();
     syntax::LibraryDeclarationSyntax& parseLibraryDecl();
+    syntax::SDFTimescaleSyntax *parseSDFTimescale();
+    syntax::SDFCharMemberSyntax *parseSDFCharMember(TokenKind keywordKind, bool weak = true);
+    syntax::SDFValueSyntax *parseSDFValue(const std::set<TokenKind>& endKinds, bool withParens = false, bool isSign = true);
+    syntax::SDFDelayValueSyntax* parseSDFDelayValue();
+    std::span<syntax::SDFDelayValueSyntax*> parseSDFDelayValueList(bool isRetain = false);
+    syntax::SDFValueMemberSyntax *parseSDFValueMember(TokenKind keywordKind);
+    syntax::SDFHeaderSyntax& parseSDFHeader();
+    syntax::SDFNameSyntax* parseSDFName();
+    syntax::SDFPortSpecSyntax* parseSDFPortSpec();
+    syntax::SDFPortSyntax* parseSDFPort();
+    syntax::SDFPortEdgeSyntax* parseSDFPortEdge();
+    syntax::SDFCellInstanceSyntax* parseSDFCellInstance();
+    syntax::SDFExceptionSyntax* parseSDFException();
+    syntax::SDFPathPulseSyntax *parseSDFPathPulse();
+    syntax::SDFRetainSyntax* parseSDFRetain();
+    syntax::SDFIOPathSyntax *parseSDFIOPath();
+    syntax::SDFCondSyntax *parseSDFCond();
+    syntax::SDFCondElseSyntax *parseSDFCondElse();
+    syntax::SDFPortDelayDefSyntax *parseSDFPortDelayDef();
+    syntax::SDFInterconnectSyntax *parseSDFInterconnect();
+    syntax::SDFNetDelaySyntax *parseSDFNetDelay();
+    syntax::SDFDeviceSyntax *parseSDFDevice();
+    syntax::SDFAbsIncDelayTypeSyntax *parseSDFAbsIncDelayType();
+    std::span<syntax::SDFDelayTypeSyntax*> parseSDFDelayTypes();
+    syntax::SDFDelaySpecSyntax *parseSDFDelaySpec();
+    syntax::SDFPathConstraintSyntax *parseSDFPathConstraint();
+    syntax::SDFPeriodConstraintSyntax *parseSDFPeriodConstraint();
+    syntax::SDFConstraintPathSyntax* parseSDFConstraintPath();
+    syntax::SDFSumDiffConstraintSyntax* parseSDFSumDiffConstraint(bool isDiff = false);
+    syntax::SDFSkewConstraintSyntax* parseSDFSkewConstraint();
+    syntax::SDFTimingEnvConstructSyntax* parseSDFTimingEnvConstruct(bool isSlack = false);
+    syntax::SDFEdgeSyntax* parseSDFEdge();
+    syntax::SDFEdgePairSyntax* parseSDFEdgePair();
+    syntax::SDFWaveformSyntax* parseSDFWaveform();
+    std::span<syntax::SDFTimingEnvDefSyntax*> parseSDFTimingEnvDefs();
+    syntax::SDFTimingEnvSyntax *parseSDFTimingEnv();
+    syntax::SDFPortTimingCheckSyntax* parseSDFPortTimingCheck();
+    syntax::SDFTimingCheckConditionSyntax* parseSDFTimingCheckCondition(TokenKind keywordKind);
+    syntax::SDFTimingCheckDefSyntax* parseSDFTimingCheckDef(bool hasTwoPorts, bool hasTwoValues, bool isSign, bool hasConds = false);
+    std::span<syntax::SDFTimingCheckDefSyntax*> parseSDFTimingCheckDefs();
+    syntax::SDFTimingCheckSyntax* parseSDFTimingCheck();
+    syntax::SDFLabelDefSyntax* parseSDFLabelDef();
+    syntax::SDFLabelTypeSyntax* parseSDFLabelType();
+    std::span<syntax::SDFLabelTypeSyntax*> parseSDFLabelTypes();
+    syntax::SDFLabelSyntax *parseSDFLabel();
+    std::span<syntax::SDFTimingSpecSyntax*> parseSDFTimingSpecs();
+    std::span<syntax::SDFCellSyntax*> parseSDFCells();
+    syntax::SDFDelayFileSyntax *parseSDFDelayFile();
     // clang-format on
 
     template<bool (*IsEnd)(TokenKind)>
@@ -389,7 +456,8 @@ private:
 
     template<typename TMember, typename TParseFunc>
     std::span<TMember*> parseMemberList(TokenKind endKind, Token& endToken,
-                                        syntax::SyntaxKind parentKind, TParseFunc&& parseFunc);
+                                        syntax::SyntaxKind parentKind, TParseFunc&& parseFunc,
+                                        uint32_t memberLimit = 0);
 
     template<typename IsItemFunc, typename ParseItemFunc>
     bool parseCaseItems(TokenKind caseKind, SmallVectorBase<syntax::CaseItemSyntax*>& itemBuffer,

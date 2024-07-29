@@ -2176,6 +2176,10 @@ LibraryMap
 list<Member> members
 token endOfFile
 
+SDFUnit
+list<Member> members
+token endOfFile
+
 // ----- DIRECTIVES -----
 
 Directive final=false
@@ -2384,3 +2388,299 @@ LibraryIncludeStatement base=Member
 token include
 FilePathSpec filePath
 token semi
+
+// ----- SDF types common -----
+
+SDFValue
+Expression? min
+Expression? typ
+Expression? max
+
+SDFDelayValue
+list<SDFValue> values
+
+SDFPortTimingCheck final=false
+empty
+
+SDFPortSpec base=SDFPortTimingCheck final=false
+empty
+
+SDFPort base=SDFPortSpec
+Expression portExpr
+
+SDFPortEdge base=SDFPortSpec
+token openParen
+token identifier
+SDFPort port
+token closeParen
+
+SDFValueMember
+token openParen
+token keyword
+SDFValue value
+token closeParen
+
+SDFCharMember
+token openParen
+token keyword
+token value
+token closeParen
+
+SDFName
+token openParen
+token keyword
+LiteralExpression? name
+token closeParen
+
+// ----- SDF expressions -----
+
+// ----- SDF timing specifications -----
+
+SDFRetain
+token openParen
+token keyword
+list<SDFDelayValue> values
+token closeParen
+
+SDFDelayDef final=false
+empty
+
+SDFIOPath base=SDFDelayDef
+token openParen
+token keyword
+list<SDFPortSpec> ports
+SDFRetain? retain
+list<SDFDelayValue> values
+token closeParen
+
+SDFCond base=SDFDelayDef
+token openParen
+token keyword
+LiteralExpression? name
+Expression condition
+SDFIOPath iopath
+token closeParen
+
+SDFCondElse base=SDFDelayDef
+token openParen
+token keyword
+SDFIOPath iopath
+token closeParen
+
+SDFPortDelayDef base=SDFDelayDef
+token openParen
+token keyword
+SDFPort port
+list<SDFDelayValue> values
+token closeParen
+
+SDFInterconnect base=SDFDelayDef
+token openParen
+token keyword
+list<SDFPort> ports
+list<SDFDelayValue> values
+token closeParen
+
+SDFNetDelay base=SDFDelayDef
+token openParen
+token keyword
+SDFPort net
+list<SDFDelayValue> values
+token closeParen
+
+SDFDevice base=SDFDelayDef
+token openParen
+token keyword
+SDFPort? port
+list<SDFDelayValue> values
+token closeParen
+
+SDFDelayType final=false
+empty
+
+SDFPathPulse base=SDFDelayType
+token openParen
+token keyword
+SDFPort? in
+SDFPort? out
+list<SDFValue> values
+token closeParen
+
+SDFAbsIncDelayType base=SDFDelayType
+token openParen
+token keyword
+list<SDFDelayDef> defs
+token closeParen
+
+SDFTimingCheckCondition base=SDFPortTimingCheck
+token openParen
+token keyword
+LiteralExpression? name
+Expression condition
+SDFPortSpec? portSpec
+token closeParen
+
+SDFTimingCheckDef final=false
+empty
+
+SDFTimingCheckDef
+token openParen
+token keyword
+list<SDFPortTimingCheck> ports
+list<SDFValue> values
+list<SDFTimingCheckCondition> conditions
+token closeParen
+
+SDFTimingEnvDef final=false
+empty
+
+SDFPathConstraint base=SDFTimingEnvDef
+token openParen
+token keyword
+SDFName? name
+list<SDFPort> ports
+list<SDFValue> values
+token closeParen
+
+SDFConstraintPath
+token openParen
+list<SDFPort> ports
+token closeParen
+
+SDFSumDiffConstraint base=SDFTimingEnvDef
+token openParen
+token keyword
+list<SDFConstraintPath> pathes
+list<SDFValue> values
+token closeParen
+
+SDFSkewConstraint base=SDFTimingEnvDef
+token openParen
+token keyword
+SDFPortSpec portSpec
+SDFValue value
+token closeParen
+
+SDFTimingEnvConstruct base=SDFTimingEnvDef
+token openParen
+token keyword
+SDFPortEdge? edge
+SDFPort port
+list<SDFValue> values
+Expression? period
+token closeParen
+
+SDFEdge
+token openParen
+token edge
+list<Expression> offsets
+token closeParen
+
+SDFEdgePair
+list<SDFEdge> edges
+
+SDFWaveform base=SDFTimingEnvDef
+token openParen
+token keyword
+SDFPort port
+Expression period
+list<SDFEdgePair> pairs
+token closeParen
+
+SDFLabelDef
+token openParen
+Name identifier
+list<SDFDelayValue> values
+token closeParen
+
+SDFLabelType
+token openParen
+token keyword
+list<SDFLabelDef> defs
+token closeParen
+
+SDFTimingSpec final=false
+empty
+
+SDFDelaySpec base=SDFTimingSpec
+token openParen
+token keyword
+list<SDFDelayType> types
+token closeParen
+
+SDFTimingCheck base=SDFTimingSpec
+token opneParne
+token keyword
+list<SDFTimingCheckDef> defs
+token closeParen
+
+SDFTimingEnv base=SDFTimingSpec
+token openParen
+token keyword
+list<SDFTimingEnvDef> defs
+token closeParen
+
+SDFLabel base=SDFTimingSpec
+token openParen
+token keyword
+list<SDFLabelType> type
+token closeParen
+
+// ----- SDF cells -----
+
+SDFCellInstance
+token openParen
+token keyword
+Name name
+token closeParen
+
+SDFException
+token openParen
+token keyword
+list<SDFCellInstance> instances
+token closeParen
+
+SDFPeriodConstraint base=SDFTimingEnvDef
+token openParen
+token keyword
+SDFPort port
+SDFValue value
+SDFException? exception
+token closeParen
+
+SDFCell
+token openParen
+token keyword
+SDFCharMember type
+SDFCellInstance instance
+list<SDFTimingSpec> specs
+token closeParen
+
+// ----- SDF delay file and header -----
+
+SDFTimescale
+token openParen
+token keyword
+LiteralExpression number
+token unit
+token closeParen
+
+SDFHeader
+SDFCharMember? version
+SDFCharMember? design
+SDFCharMember? date
+SDFCharMember? vendor
+SDFCharMember? programName
+SDFCharMember? programVersion
+SDFCharMember? divider
+SDFValueMember? voltage
+SDFCharMember? process
+SDFValueMember? temperature
+SDFTimescale? timescale
+
+SDFDelayFile base=Member
+token openParen
+token keyword
+SDFHeader header
+list<SDFCell> cells
+token closeParen

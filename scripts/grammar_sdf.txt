@@ -1,0 +1,268 @@
+A.1 Formal syntax definition
+
+A.1.1 SDF delay file and header
+
+delay_file ::= ( DELAYFILE sdf_header cell { cell } )
+
+sdf_header ::=
+sdf_version [ design_name ] [ date ] [ vendor ] [ program_name ] [ program_version ] [hierarchy_divider ] [ voltage ] [ process ] [temperature ] [ time_scale ]
+
+sdf_version ::= ( SDFVERSION qstring )
+
+design_name ::= ( DESIGN qstring )
+
+date ::= ( DATE qstring )
+
+vendor ::= ( VENDOR qstring )
+
+program_name ::= ( PROGRAM qstring )
+
+program_version ::= ( VERSION qstring )
+
+hierarchy_divider ::= ( DIVIDER hchar )
+
+voltage ::= ( VOLTAGE rtriple ) | ( VOLTAGE signed_real_number )
+
+process ::= ( PROCESS qstring )
+
+temperature ::= ( TEMPERATURE rtriple ) | ( TEMPERATURE signed_real_number )
+
+time_scale ::= ( TIMESCALE timescale_number timescale_unit )
+
+timescale_number ::= 1 | 10 | 100 | 1.0 | 10.0 | 100.0
+
+timescale_unit ::= s | ms | us | ns | ps | fs
+
+A.1.2 Cells
+
+cell ::= ( CELL celltype cell_instance { timing_spec } )
+
+celltype ::= ( CELLTYPE qstring )
+
+cell_instance ::= ( INSTANCE [ hierarchical_identifier ] ) | ( INSTANCE * )
+
+A.1.3 Timing specifications
+
+timing_spec ::= del_spec | tc_spec | lbl_spec | te_spec
+
+del_spec ::= ( DELAY deltype { deltype } )
+
+tc_spec ::= ( TIMINGCHECK tchk_def { tchk_def } )
+
+te_spec ::= ( TIMINGENV te_def { te_def } )
+
+lbl_spec ::= ( LABEL lbl_type { lbl_type } )
+
+deltype ::= | absolute_deltype | increment_deltype | pathpulse_deltype | pathpulsepercent_deltype
+
+pathpulse_deltype ::= ( PATHPULSE [ input_output_path ] value [ value ] )
+
+pathpulsepercent_deltype ::= ( PATHPULSEPERCENT [ input_output_path ] value [ value ] )
+
+absolute_deltype ::= ( ABSOLUTE del_def { del_def } )
+
+increment_deltype ::= ( INCREMENT del_def { del_def } )
+
+input_output_path ::= port_instance port_instance
+
+del_def ::= iopath_def | cond_def | condelse_def | port_del | interconnect_def | netdelay_def | device_def
+
+iopath_def ::= ( IOPATH port_spec port_instance { retain_def } delval_list )
+
+retain_def ::= ( RETAIN retval_list )
+
+cond_def ::= ( COND [ qstring ] conditional_port_expr iopath_def )
+
+condelse_def ::= ( CONDELSE iopath_def )
+
+port_def ::= ( PORT port_instance delval_list )
+
+interconnect_def ::= ( INTERCONNECT port_instance port_instance delval_list )
+
+netdelay_def ::= ( NETDELAY net_spec delval_list )
+
+device_def ::= ( DEVICE [ port_instance ] delval_list )
+
+tchk_def ::= setup_timing_check | hold_timing_check | setuphold_timing_check | recovery_timing_check | removal_timing_check | recrem_timing_check | skew_timing_check | bidirectskew_timing_check | width_timing_check | period_timing_check | nochange_timing_check
+
+setup_timing_check ::= ( SETUP port_tchk port_tchk value )
+
+hold_timing_check ::= ( HOLD port_tchk port_tchk value )
+
+setuphold_timing_check ::= ( SETUPHOLD port_tchk port_tchk rvalue rvalue ) | ( SETUPHOLD port_spec port_spec rvalue rvalue [ scond ] [ ccond ] )
+
+recovery_timing_check ::= ( RECOVERY port_tchk port_tchk value )
+
+removal_timing_check ::= ( REMOVAL port_tchk port_tchk value )
+
+recrem_timing_check ::= ( RECREM port_tchk port_tchk rvalue rvalue ) | ( RECREM port_spec port_spec rvalue rvalue [ scond ] [ ccond ] )
+
+skew_timing_check ::= ( SKEW port_tchk port_tchk rvalue )
+
+bidirectskew_timing_check ::= ( BIDIRECTSKEW port_tchk port_tchk value value )
+
+width_timing_check ::= ( WIDTH port_tchk value )
+
+period_timing_check ::= ( PERIOD port_tchk value )
+
+nochange_timing_check ::= ( NOCHANGE port_tchk port_tchk rvalue rvalue )
+
+port_tchk ::= port_spec | ( COND [ qstring ] timing_check_condition port_spec )
+
+scond ::= ( SCOND [ qstring ] timing_check_condition )
+
+ccond ::= ( CCOND [ qstring ] timing_check_condition )
+
+te_def ::= cns_def | tenv_def
+
+cns_def ::= path_constraint | period_constraint | sum_constraint | diff_constraint | skew_constraint
+
+path_constraint ::= ( PATHCONSTRAINT [ name ] port_instance port_instance { port_instance } rvalue rvalue )
+
+period_constraint ::=( PERIODCONSTRAINT port_instance value [ exception ] )
+
+sum_constraint ::= ( SUM constraint_path constraint_path { constraint_path } rvalue [ rvalue ] )
+
+diff_constraint ::= ( DIFF constraint_path constraint_path value [ value ] )
+
+skew_constraint ::= ( SKEWCONSTRAINT port_spec value )
+
+exception ::= ( EXCEPTION cell_instance { cell_instance } )
+
+name ::= ( NAME [ qstring ] )
+
+constraint_path ::= ( port_instance port_instance )
+
+tenv_def ::= arrival_env | departure_env | slack_env | waveform_env
+
+arrival_env ::= ( ARRIVAL [ port_edge ] port_instance rvalue rvalue rvalue rvalue )
+
+departure_env ::= ( DEPARTURE [ port_edge ] port_instance rvalue rvalue rvalue rvalue )
+
+slack_env ::= ( SLACK port_instance rvalue rvalue rvalue rvalue [ real_number ] )
+
+waveform_env ::= ( WAVEFORM port_instance real_number edge_list )
+
+edge_list ::= pos_pair { pos_pair } | neg_pair { neg_pair }
+
+pos_pair ::= ( posedge signed_real_number [ signed_real_number ] ) ( negedge signed_real_number [ signed_real_number ] )
+
+neg_pair ::= ( negedge signed_real_number [ signed_real_number ] ) ( posedge signed_real_number [ signed_real_number ] )
+
+lbl_type ::= ( INCREMENT lbl_def { lbl_def } ) | ( ABSOLUTE lbl_def { lbl_def } )
+
+lbl_def ::= ( identifier delval_list )
+
+port_spec ::= port_instance | port_edge
+
+port_edge ::= ( edge_identifier port_instance )
+
+edge_identifier ::= posedge | negedge | 01 | 10 | 0z | z1 | 1z | z0
+
+port_instance ::= port | hierarchical_identifier hchar port
+
+port ::= scalar_port | bus_port
+
+scalar_port ::= hierarchical_identifier | hierarchical_identifier [ integer ]
+
+bus_port ::= hierarchical_identifier [ integer : integer ]
+
+net_spec ::= port_instance | net_instance
+
+net_instance ::= net | hierarchical_identifier hier_divider_char net
+
+net ::= scalar_net | bus_net
+
+scalar_net ::= hierarchical_identifier | hierarchical_identifier [ integer ]
+
+bus_net ::= hierarchical_identifier [ integer : integer ]
+
+A.1.4 Data values
+
+value ::= ( [ real_number ] ) | ( [triple] )
+
+triple ::= real_number : [ real_number ] : [ real_number ] | [ real_number ] : real_number : [ real_number ] | [ real_number ] : [ real_number ] : real_number
+
+rvalue ::= ( [ signed_real_number ] ) | ( [ rtriple ] )
+
+rtriple ::= signed_real_number : [ signed_real_number ] : [ signed_real_number ] | [ signed_real_number ] : signed_real_number : [ signed_real_number ] | [ signed_real_number ] : [ signed_real_number ] : signed_real_number
+
+delval ::= rvalue | ( rvalue rvalue ) | ( rvalue rvalue rvalue )
+
+delval_list ::= delval | delval delval | delval delval delval | delval delval delval delval [ delval ] [ delval ] | delval delval delval delval delval delval delval [ delval ] [ delval ] [ delval ] [ delval ] [ delval ]
+
+retval_list ::= delval | delval delval | delval delval delval
+
+A.1.5 Conditions for path delays
+
+conditional_port_expr ::= simple_expression | ( conditional_port_expr ) | unary_operator ( conditional_port_expr ) | conditional_port_expr binary_operator conditional_port_expr
+
+simple_expression ::= ( simple_expression ) | unary_operator ( simple_expression ) | port | unary_operator port | scalar_constant | unary_operator scalar_constant | simple_expression ? simple_expression : simple_expression | { simple_expression [ concat_expression ] } | { simple_expression { simple_expression [ concat_expression ] } }
+
+concat_expression ::= , simple_expression
+
+A.1.6 Conditions for timing checks
+
+timing_check_condition ::= scalar_node | inversion_operator scalar_node | scalar_node equality_operator scalar_constant
+
+scalar_node ::= scalar_port | scalar_net
+
+scalar_net ::= hierarchical_identifier
+
+A.1.7 Fundamental lexical elements
+
+identifier ::= character { character }
+
+hierarchical_identifier ::=identifier { hchar identifier }
+
+qstring ::= " { any_character } "
+
+integer ::= decimal_digit { decimal_digit }
+
+real_number ::= integer | integer [ . integer ] | integer [ . integer ] e [ sign ] integer
+
+signed_real_number ::= [ sign ] real_number
+
+sign ::= + | -
+
+hchar ::= . | /
+
+character ::= alphanumeric | escaped_character
+
+escaped_character ::= \ character | \ special_character | \"
+
+any_character ::= character | special_character | \"
+
+decimal_digit ::= 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9
+
+alphanumeric ::= a | b | c | d | e | f | g | h | i | j | k | l | m | n | o | p | q | r | s | t | u | v | w | x | y | z | A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P | Q | R | S | T | U | V | W | X | Y | Z | _ | $ | decimal_digit
+
+special_character ::= ! | # | % | & | « | ( | ) | * | + | , | - | . | / | : | ; | < | = | > | ? | @ | [ | \ | ] | ^ | ‘ | { | | | } | ~
+
+A.1.8 Constants for expressions
+
+scalar_constant ::= 0 | b0 | B0 | 1 b0 | 1 B0 | 1 | b1 | B1 | 1 b1 | 1 B1
+
+A.1.9 Operators for expressions
+
+unary_operator ::= + | - | ! | ~ | & | ~& | | | ~| | ^ | ^~ | ~^
+
+inversion_operator ::= ! | ~
+
+binary_operator ::= + | - | * | / | % | == | != | === | !== | && | || | < | <= | > | >= | & | | | ^ | ^~ | ~^ | >> | <<
+
+equality_operator ::= == | != | === | !==
+
+A.1.10 Precedence rules of SDF operators
+
+! ~
+* / %
++ -
+<< >>
+< <= > >=
+== != === !==
+&
+^ ^~
+|
+&&
+||

@@ -10,11 +10,11 @@ import re
 
 ourdir = os.path.dirname(os.path.realpath(__file__))
 
-inf = open(os.path.join(ourdir, "grammar.txt"))
-outf = open(os.path.join(ourdir, "../docs/grammar.md"), "w")
+infs = [open(os.path.join(ourdir, "grammar.txt")), open(os.path.join(ourdir, "grammar_sdf.txt"))]
+outfs = [open(os.path.join(ourdir, "../docs/grammar.md"), "w"), open(os.path.join(ourdir, "../docs/grammar_sdf.md"), "w")]
 
-outf.write("# SystemVerilog\n")
-
+outfs[0].write("# SystemVerilog\n")
+outfs[1].write("# Standard Delay Format (SDF)\n")
 
 def entry(line):
     match = re.match(r"(\w+) ::=", line)
@@ -48,22 +48,23 @@ def entry(line):
     if saved_match:
         entry(saved_match)
 
+for i, inf in enumerate(infs):
+    outf = outfs[i]
+    for line in inf:
+        line = line.strip()
+        if not line:
+            continue
 
-for line in inf:
-    line = line.strip()
-    if not line:
-        continue
-
-    if line.startswith("A."):
-        count = line.split(" ")[0].count(".")
-        if count == 1:
-            outf.write("## ")
-        elif count == 2:
-            outf.write("### ")
-        elif count == 3:
-            outf.write("#### ")
+        if line.startswith("A."):
+            count = line.split(" ")[0].count(".")
+            if count == 1:
+                outf.write("## ")
+            elif count == 2:
+                outf.write("### ")
+            elif count == 3:
+                outf.write("#### ")
+            else:
+                raise Exception("wut")
+            outf.write(line + "\n")
         else:
-            raise Exception("wut")
-        outf.write(line + "\n")
-    else:
-        entry(line)
+            entry(line)

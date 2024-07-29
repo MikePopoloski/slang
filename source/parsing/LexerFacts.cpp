@@ -69,7 +69,9 @@ const static flat_hash_map<std::string_view, KeywordVersion> keywordVersionTable
     { "1800-2009", KeywordVersion::v1800_2009 },
     { "1800-2012", KeywordVersion::v1800_2012 },
     { "1800-2017", KeywordVersion::v1800_2017 },
-    { "1800-2023", KeywordVersion::v1800_2023 }
+    { "1800-2023", KeywordVersion::v1800_2023 },
+    // SDF standard
+    { "1497-2001", KeywordVersion::v1497_2001 }
 };
 
 // Lists of keywords, separated by the specification in which they were first introduced
@@ -336,9 +338,66 @@ const static flat_hash_map<std::string_view, KeywordVersion> keywordVersionTable
     { "nettype", TokenKind::NetTypeKeyword },\
     { "soft", TokenKind::SoftKeyword }
 
+#define SDFKEYWORDS_1497_2001 \
+    { "DELAYFILE", TokenKind::SDFDelayFileKeyword },\
+    { "SDFVERSION", TokenKind::SDFVersionKeyword },\
+    { "DESIGN", TokenKind::SDFDesignKeyword },\
+    { "DATE", TokenKind::SDFDateKeyword },\
+    { "VENDOR", TokenKind::SDFVendorKeyword },\
+    { "PROGRAM", TokenKind::SDFProgramKeyword },\
+    { "VERSION", TokenKind::SDFProgramVersionKeyword },\
+    { "DIVIDER", TokenKind::SDFDividerKeyword },\
+    { "VOLTAGE", TokenKind::SDFVoltageKeyword },\
+    { "PROCESS", TokenKind::SDFProcessKeyword },\
+    { "TEMPERATURE", TokenKind::SDFTemperatureKeyword },\
+    { "TIMESCALE", TokenKind::SDFTimescaleKeyword },\
+    { "CELL", TokenKind::SDFCellKeyword },\
+    { "CELLTYPE", TokenKind::SDFCellTypeKeyword },\
+    { "INSTANCE", TokenKind::SDFInstanceKeyword },\
+    { "DELAY", TokenKind::SDFDelayKeyword },\
+    { "TIMINGCHECK", TokenKind::SDFTimingCheckKeyword },\
+    { "TIMINGENV", TokenKind::SDFTimingEnvKeyword },\
+    { "LABEL", TokenKind::SDFLabelKeyword },\
+    { "PATHPULSE", TokenKind::SDFPathPulseKeyword },\
+    { "PATHPULSEPERCENT", TokenKind::SDFPathPulsePercentKeyword },\
+    { "ABSOLUTE", TokenKind::SDFAbsoluteKeyword },\
+    { "INCREMENT", TokenKind::SDFIncrementKeyword },\
+    { "IOPATH", TokenKind::SDFIOPathKeyword },\
+    { "RETAIN", TokenKind::SDFRetainKeyword },\
+    { "COND", TokenKind::SDFCondKeyword },\
+    { "CONDELSE", TokenKind::SDFCondElseKeyword },\
+    { "PORT", TokenKind::SDFPortKeyword },\
+    { "INTERCONNECT", TokenKind::SDFInterconnectKeyword },\
+    { "NETDELAY", TokenKind::SDFNetDelayKeyword },\
+    { "DEVICE", TokenKind::SDFDeviceKeyword },\
+    { "SETUP", TokenKind::SDFSetupKeyword },\
+    { "HOLD", TokenKind::SDFHoldKeyword },\
+    { "SETUPHOLD", TokenKind::SDFSetupHoldKeyword },\
+    { "RECOVERY", TokenKind::SDFRecoveryKeyword },\
+    { "REMOVAL", TokenKind::SDFRemovalKeyword },\
+    { "RECREM", TokenKind::SDFRecremKeyword },\
+    { "SKEW", TokenKind::SDFSkewKeyword },\
+    { "BIDIRECTSKEW", TokenKind::SDFBidirectSkewKeyword },\
+    { "WIDTH", TokenKind::SDFWidthKeyword },\
+    { "PERIOD", TokenKind::SDFPeriodKeyword },\
+    { "NOCHANGE", TokenKind::SDFNochangeKeyword },\
+    { "SCOND", TokenKind::SDFSCondKeyword },\
+    { "CCOND", TokenKind::SDFCCondKeyword },\
+    { "PATHCONSTRAINT", TokenKind::SDFPathConstraintKeyword },\
+    { "PERIODCONSTRAINT", TokenKind::SDFPeriodConstraintKeyword },\
+    { "SUM", TokenKind::SDFSumKeyword },\
+    { "DIFF", TokenKind::SDFDiffKeyword },\
+    { "SKEWCONSTRAINT", TokenKind::SDFSkewConstraintKeyword },\
+    { "EXCEPTION", TokenKind::SDFExceptionKeyword },\
+    { "NAME", TokenKind::SDFNameKeyword },\
+    { "ARRIVAL", TokenKind::SDFArrivalKeyword },\
+    { "DEPARTURE", TokenKind::SDFDepartureKeyword },\
+    { "SLACK", TokenKind::SDFSlackKeyword },\
+    { "WAVEFORM", TokenKind::SDFWaveformKeyword }
+
 // We maintain a separate table of keywords for all the various specifications,
 // to allow for easy switching between them when requested
-const static flat_hash_map<std::string_view, TokenKind> allKeywords[9] =
+const static flat_hash_map<std::string_view, TokenKind> allKeywords[10] =
 { { // IEEE 1364-1995
     KEYWORDS_1364_1995
 }, { // IEEE 1364-2001-noconfig
@@ -390,7 +449,9 @@ const static flat_hash_map<std::string_view, TokenKind> allKeywords[9] =
     NEWKEYWORDS_1800_2005,
     NEWKEYWORDS_1800_2009,
     NEWKEYWORDS_1800_2012
-} };
+}, { // IEEE 1497-2001 (SDF)
+    SDFKEYWORDS_1497_2001
+}};
 
 // clang-format on
 bool LexerFacts::isKeyword(TokenKind kind) {
@@ -1058,6 +1119,66 @@ std::string_view LexerFacts::getTokenKindText(TokenKind kind) {
         case TokenKind::MacroEscapedQuote: return "`\\`\"";
         case TokenKind::MacroPaste: return "``";
 
+        // SDF keywords
+        case TokenKind::SDFAbsoluteKeyword: return "ABSOLUTE";
+        case TokenKind::SDFArrivalKeyword: return "ARRIVAL";
+        case TokenKind::SDFBidirectSkewKeyword: return "BIDIRECTSKEW";
+        case TokenKind::SDFCCondKeyword: return "CCOND";
+        case TokenKind::SDFCellKeyword: return "CELL";
+        case TokenKind::SDFCellTypeKeyword: return "CELLTYPE";
+        case TokenKind::SDFCondKeyword: return "COND";
+        case TokenKind::SDFCondElseKeyword: return "CONDELSE";
+        case TokenKind::SDFDateKeyword: return "DATE";
+        case TokenKind::SDFDelayKeyword: return "DELAY";
+        case TokenKind::SDFDelayFileKeyword: return "DELAYFILE";
+        case TokenKind::SDFDepartureKeyword: return "DEPARTURE";
+        case TokenKind::SDFDesignKeyword: return "DESIGN";
+        case TokenKind::SDFDeviceKeyword: return "DEVICE";
+        case TokenKind::SDFDiffKeyword: return "DIFF";
+        case TokenKind::SDFDividerKeyword: return "DIVIDER";
+        case TokenKind::SDFExceptionKeyword: return "EXCEPTION";
+        case TokenKind::SDFHoldKeyword: return "HOLD";
+        case TokenKind::SDFIOPathKeyword: return "IOPATH";
+        case TokenKind::SDFIncrementKeyword: return "INCREMENT";
+        case TokenKind::SDFInstanceKeyword: return "INSTANCE";
+        case TokenKind::SDFInterconnectKeyword: return "INTERCONNECT";
+        case TokenKind::SDFLabelKeyword: return "LABEL";
+        case TokenKind::SDFNameKeyword: return "NAME";
+        case TokenKind::SDFNetDelayKeyword: return "NETDELAY";
+        case TokenKind::SDFNochangeKeyword: return "NOCHANGE";
+        case TokenKind::SDFPathConstraintKeyword: return "PATHCONSTRAINT";
+        case TokenKind::SDFPathPulseKeyword: return "PATHPULSE";
+        case TokenKind::SDFPathPulsePercentKeyword: return "PATHPULSEPERCENT";
+        case TokenKind::SDFPeriodKeyword: return "PERIOD";
+        case TokenKind::SDFPeriodConstraintKeyword: return "PERIODCONSTRAINT";
+        case TokenKind::SDFPortKeyword: return "PORT";
+        case TokenKind::SDFProcessKeyword: return "PROCESS";
+        case TokenKind::SDFProgramKeyword: return "PROGRAM";
+        case TokenKind::SDFProgramVersionKeyword: return "VERSION";
+        case TokenKind::SDFRecoveryKeyword: return "RECOVERY";
+        case TokenKind::SDFRecremKeyword: return "RECREM";
+        case TokenKind::SDFRemovalKeyword: return "REMOVAL";
+        case TokenKind::SDFRetainKeyword: return "RETAIN";
+        case TokenKind::SDFSCondKeyword: return "SCOND";
+        case TokenKind::SDFSetupKeyword: return "SETUP";
+        case TokenKind::SDFSetupHoldKeyword: return "SETUPHOLD";
+        case TokenKind::SDFSkewKeyword: return "SKEW";
+        case TokenKind::SDFSkewConstraintKeyword: return "SKEWCONSTRAINT";
+        case TokenKind::SDFSlackKeyword: return "SLACK";
+        case TokenKind::SDFSumKeyword: return "SUM";
+        case TokenKind::SDFTemperatureKeyword: return "TEMPERATURE";
+        case TokenKind::SDFTimescaleKeyword: return "TIMESCALE";
+        case TokenKind::SDFTimingCheckKeyword: return "TIMINGCHECK";
+        case TokenKind::SDFTimingEnvKeyword: return "TIMINGENV";
+        case TokenKind::SDFVendorKeyword: return "VENDOR";
+        case TokenKind::SDFVersionKeyword: return "SDFVERSION";
+        case TokenKind::SDFVoltageKeyword: return "VOLTAGE";
+        case TokenKind::SDFWaveformKeyword: return "WAVEFORM";
+        case TokenKind::SDFWidthKeyword: return "WIDTH";
+ 
+        // SDF special tokens
+        case TokenKind::SDFEdgeIdent0Z: return "0Z";
+        case TokenKind::SDFEdgeIdent1Z: return "1Z";
         default: return "";
     }
 }

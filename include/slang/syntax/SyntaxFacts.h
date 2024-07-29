@@ -32,12 +32,20 @@ public:
     static SyntaxKind getUnaryPrefixExpression(TokenKind kind);
 
     /// @return the kind of syntax that should be created for the given
+    /// unary prefix operator token of SDF expressions.
+    static SyntaxKind getSDFUnaryPrefixExpression(TokenKind kind);
+
+    /// @return the kind of syntax that should be created for the given
     /// unary postfix operator token.
     static SyntaxKind getUnaryPostfixExpression(TokenKind kind);
 
     /// @return the kind of syntax that should be created for the given
     /// literal token.
     static SyntaxKind getLiteralExpression(TokenKind kind);
+
+    /// @return the kind of syntax that should be created for the given
+    /// binary operator token of SDF expressions.
+    static SyntaxKind getSDFBinaryExpression(TokenKind kind);
 
     /// @return the kind of syntax that should be created for the given
     /// binary operator token.

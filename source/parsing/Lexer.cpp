@@ -448,6 +448,12 @@ Token Lexer::lexToken(KeywordVersion keywordVersion) {
         case '7':
         case '8':
         case '9':
+            // Parse SDF '0z'/'1z' lexemes
+            if (isSDFFile() and peek() == 'z' and (c == '0' or c == '1')) {
+                advance();
+                return (c == '0') ? create(TokenKind::SDFEdgeIdent0Z): create(TokenKind::SDFEdgeIdent1Z);
+            }
+
             // back up so that lexNumericLiteral can look at this digit again
             sourceBuffer--;
             return lexNumericLiteral();
@@ -570,10 +576,23 @@ Token Lexer::lexToken(KeywordVersion keywordVersion) {
         case 'y': case 'z':
         case '_': {
             // clang-format on
+            // Parse SDF scalar constant base which not consist an apostrophe
+            // (due to grammar)
+            if (isSDFFile() && (c == 'b' || c == 'B')) {
+                if (peek() == '0' || peek() == '1') {
+                    advance();
+                    if (!isAlphaNumeric(peek())) {
+                        --sourceBuffer;
+                        LiteralBase base = LiteralBase::Binary;
+                        return create(TokenKind::IntegerBase, base, true);
+                    }
+                }
+            }
             scanIdentifier();
 
             // might be a keyword
-            auto table = LF::getKeywordTable(keywordVersion);
+            auto table = (!isSDFFile()) ? LF::getKeywordTable(keywordVersion) : LF::getKeywordTable(KeywordVersion::v1497_2001);
+
             SLANG_ASSERT(table);
             if (auto it = table->find(lexeme()); it != table->end())
                 return create(it->second);

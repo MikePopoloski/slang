@@ -180,6 +180,37 @@ public:
                                                             SourceManager& sourceManager,
                                                             const Bag& options = {});
 
+    /// Creates a syntax tree from a standard delay format (SDF) file.
+    /// @a path is the path to the source file on disk.
+    /// @a sourceManager is the manager that owns all of the loaded source code.
+    /// @a options is an optional bag of lexer, preprocessor, and parser options.
+    /// @return the created and parsed syntax tree.
+    static std::shared_ptr<SyntaxTree> fromSDFFile(std::string_view path,
+                                                          SourceManager& sourceManager,
+                                                          const Bag& options = {});
+
+    /// Creates a syntax tree from a standard delay format (SDF) located in memory.
+    /// @a text is the actual source code text.
+    /// @a sourceManager is the manager that owns all of the loaded source code.
+    /// @a name is an optional name to give to the loaded source buffer.
+    /// @a path is an optional path to give to the loaded source buffer.
+    /// @a options is an optional bag of lexer, preprocessor, and parser options.
+    /// @return the created and parsed syntax tree.
+    static std::shared_ptr<SyntaxTree> fromSDFText(std::string_view text,
+                                                          SourceManager& sourceManager,
+                                                          std::string_view name = "source"sv,
+                                                          std::string_view path = "",
+                                                          const Bag& options = {});
+
+    /// Creates a syntax tree from a standard delay format (SDF) already loaded into a source buffer.
+    /// @a buffer is the loaded source buffer.
+    /// @a sourceManager is the manager that owns the buffer.
+    /// @a options is an optional bag of lexer, preprocessor, and parser options.
+    /// @return the created and parsed syntax tree.
+    static std::shared_ptr<SyntaxTree> fromSDFBuffer(const SourceBuffer& buffer,
+                                                            SourceManager& sourceManager,
+                                                            const Bag& options = {});
+
     /// Gets any diagnostics generated while parsing.
     Diagnostics& diagnostics() { return diagnosticsBuffer; }
 

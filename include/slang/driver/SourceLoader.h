@@ -111,6 +111,13 @@ public:
     void addLibraryMaps(std::string_view pattern, const std::filesystem::path& basePath,
                         const Bag& optionBag);
 
+    /// @brief Adds SDF files to the loader.
+    ///
+    /// All files that match the given pattern will be loaded and parsed as if
+    /// they were SDF files.
+    void addSDFFiles(std::string_view pattern, const std::filesystem::path& basePath,
+                     const Bag& optionBag);
+
     /// @brief Adds a group of files as a separately compiled compilation unit.
     ///
     /// Unlike files added via the @a addFiles method, files added here are
@@ -123,6 +130,9 @@ public:
     void addSeparateUnit(std::span<const std::string> filePatterns,
                          const std::vector<std::string>& includePaths,
                          std::vector<std::string> defines, const std::string& libraryName);
+
+    /// Returns a list of all library map syntax trees that have been loaded and parsed.
+    const SyntaxTreeList& getSDFUnits() const { return sdfUnitTrees; }
 
     /// Returns a list of all library map syntax trees that have been loaded and parsed.
     const SyntaxTreeList& getLibraryMaps() const { return libraryMapTrees; }
@@ -206,6 +216,8 @@ private:
     void addLibraryMapsInternal(std::string_view pattern, const std::filesystem::path& basePath,
                                 const Bag& optionBag, bool expandEnvVars,
                                 flat_hash_set<std::filesystem::path>& seenMaps);
+    void addSDFFilesInternal(std::string_view pattern, const std::filesystem::path& basePath,
+                                const Bag& optionBag);
     void createLibrary(const syntax::LibraryDeclarationSyntax& syntax,
                        const std::filesystem::path& basePath);
     LoadResult loadAndParse(const FileEntry& fileEntry, const Bag& optionBag,
@@ -223,6 +235,7 @@ private:
     flat_hash_set<std::string_view> uniqueExtensions;
     std::vector<std::string> errors;
     SyntaxTreeList libraryMapTrees;
+    SyntaxTreeList sdfUnitTrees;
 
     static constexpr int MinFilesForThreading = 4;
 };

@@ -42,6 +42,26 @@ SyntaxKind SyntaxFacts::getUnaryPrefixExpression(TokenKind kind) {
     }
 }
 
+// clang-format off
+SyntaxKind SyntaxFacts::getSDFUnaryPrefixExpression(TokenKind kind) {
+    switch (kind) {
+        case TokenKind::Plus: return SyntaxKind::UnaryPlusExpression;
+        case TokenKind::Minus: return SyntaxKind::UnaryMinusExpression;
+        case TokenKind::And: return SyntaxKind::UnaryBitwiseAndExpression;
+        case TokenKind::TildeAnd: return SyntaxKind::UnaryBitwiseNandExpression;
+        case TokenKind::Or: return SyntaxKind::UnaryBitwiseOrExpression;
+        case TokenKind::TildeOr: return SyntaxKind::UnaryBitwiseNorExpression;
+        case TokenKind::Xor: return SyntaxKind::UnaryBitwiseXorExpression;
+        case TokenKind::XorTilde:
+        case TokenKind::TildeXor:
+            return SyntaxKind::UnaryBitwiseXnorExpression;
+        case TokenKind::Tilde: return SyntaxKind::UnaryBitwiseNotExpression;
+        case TokenKind::Exclamation: return SyntaxKind::UnaryLogicalNotExpression;
+        default:
+            return SyntaxKind::Unknown;
+    }
+}
+
 SyntaxKind SyntaxFacts::getUnaryPostfixExpression(TokenKind kind) {
     switch (kind) {
         case TokenKind::DoublePlus: return SyntaxKind::PostincrementExpression;
@@ -59,6 +79,34 @@ SyntaxKind SyntaxFacts::getLiteralExpression(TokenKind kind) {
         case TokenKind::TimeLiteral: return SyntaxKind::TimeLiteralExpression;
         case TokenKind::NullKeyword: return SyntaxKind::NullLiteralExpression;
         case TokenKind::Dollar: return SyntaxKind::WildcardLiteralExpression;
+        default: return SyntaxKind::Unknown;
+    }
+}
+
+SyntaxKind SyntaxFacts::getSDFBinaryExpression(TokenKind kind) {
+    switch (kind) {
+        case TokenKind::Plus: return SyntaxKind::AddExpression;
+        case TokenKind::Minus: return SyntaxKind::SubtractExpression;
+        case TokenKind::Star: return SyntaxKind::MultiplyExpression;
+        case TokenKind::Slash: return SyntaxKind::DivideExpression;
+        case TokenKind::Percent: return SyntaxKind::ModExpression;
+        case TokenKind::DoubleEquals: return SyntaxKind::EqualityExpression;
+        case TokenKind::ExclamationEquals: return SyntaxKind::InequalityExpression;
+        case TokenKind::TripleEquals: return SyntaxKind::CaseEqualityExpression;
+        case TokenKind::ExclamationDoubleEquals: return SyntaxKind::CaseInequalityExpression;
+        case TokenKind::DoubleAnd: return SyntaxKind::LogicalAndExpression;
+        case TokenKind::DoubleOr: return SyntaxKind::LogicalOrExpression;
+        case TokenKind::LessThan: return SyntaxKind::LessThanExpression;
+        case TokenKind::LessThanEquals: return SyntaxKind::LessThanEqualExpression;
+        case TokenKind::GreaterThan: return SyntaxKind::GreaterThanExpression;
+        case TokenKind::GreaterThanEquals: return SyntaxKind::GreaterThanEqualExpression;
+        case TokenKind::And: return SyntaxKind::BinaryAndExpression;
+        case TokenKind::Or: return SyntaxKind::BinaryOrExpression;
+        case TokenKind::Xor: return SyntaxKind::BinaryXorExpression;
+        case TokenKind::XorTilde: return SyntaxKind::BinaryXnorExpression;
+        case TokenKind::TildeXor: return SyntaxKind::BinaryXnorExpression;
+        case TokenKind::RightShift: return SyntaxKind::LogicalShiftRightExpression;
+        case TokenKind::LeftShift: return SyntaxKind::LogicalShiftLeftExpression;
         default: return SyntaxKind::Unknown;
     }
 }

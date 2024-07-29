@@ -209,6 +209,8 @@ void registerCompilation(py::module_& m) {
         .def("addSearchExtension", &SourceLoader::addSearchExtension, "extension"_a)
         .def("addLibraryMaps", &SourceLoader::addLibraryMaps, "pattern"_a, "basePath"_a,
              "optionBag"_a)
+        .def("addSDFFiles", &SourceLoader::addSDFFiles, "pattern"_a, "basePath"_a,
+             "optionBag"_a)
         .def("addSeparateUnit", &SourceLoader::addSeparateUnit, "filePatterns"_a, "includePaths"_a,
              "defines"_a, "libraryName"_a)
         .def("loadSources", &SourceLoader::loadSources)

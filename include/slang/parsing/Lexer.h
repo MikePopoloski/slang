@@ -30,6 +30,8 @@ struct SLANG_EXPORT LexerOptions {
     uint32_t maxErrors = 16;
 
     /// The version of the SystemVerilog language to use.
+    /// If set to LanguageVersion::v1497_2001 preprocessor will support
+    /// SDF keywords and special tokens.
     LanguageVersion languageVersion = LanguageVersion::Default;
 
     /// If true, the preprocessor will support legacy protected envelope directives,
@@ -87,6 +89,8 @@ public:
     static void splitTokens(BumpAllocator& alloc, Diagnostics& diagnostics,
                             const SourceManager& sourceManager, Token sourceToken, size_t offset,
                             KeywordVersion keywordVersion, SmallVectorBase<Token>& results);
+
+    bool isSDFFile() { return options.languageVersion == LanguageVersion::v1497_2001; }
 
 private:
     Lexer(BufferID bufferId, std::string_view source, const char* startPtr, BumpAllocator& alloc,

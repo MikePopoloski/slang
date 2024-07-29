@@ -278,6 +278,20 @@ void Driver::addStandardArgs() {
         "<file-pattern>[,...]", CommandLineFlags::CommaList);
 
     cmdLine.add(
+        "--sdf",
+        [this](std::string_view value) {
+            Bag optionBag;
+            addParseOptions(optionBag);
+            auto lo = optionBag.insertOrGet<LexerOptions>();
+            lo.languageVersion = LanguageVersion::v1497_2001;
+            optionBag.set(lo);
+            sourceLoader.addSDFFiles(value, {}, optionBag);
+            return "";
+        },
+        "One or more standard delay format files to parse",
+        "<file-pattern>[,...]", CommandLineFlags::CommaList);
+
+    cmdLine.add(
         "-y,--libdir",
         [this](std::string_view value) {
             sourceLoader.addSearchDirectories(value);
@@ -782,6 +796,8 @@ std::unique_ptr<Compilation> Driver::createCompilation() {
     defaultLib->isDefault = true;
 
     auto compilation = std::make_unique<Compilation>(createOptionBag(), defaultLib);
+    for (auto& tree : sourceLoader.getSDFUnits())
+        compilation->addSyntaxTree(tree);
     for (auto& tree : sourceLoader.getLibraryMaps())
         compilation->addSyntaxTree(tree);
     for (auto& tree : syntaxTrees)

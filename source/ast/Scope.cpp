@@ -544,8 +544,9 @@ void Scope::addMembers(const SyntaxNode& syntax) {
             break;
         case SyntaxKind::LibraryDeclaration:
         case SyntaxKind::LibraryIncludeStatement:
+        case SyntaxKind::SDFUnit:
             // These are ignored here, they're only processed during
-            // library map construction.
+            // library map or SDF unit construction.
             break;
         default:
             SLANG_UNREACHABLE;

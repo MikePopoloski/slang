@@ -48,17 +48,20 @@ static bool isNewExpr(const ExpressionSyntax* expr) {
 }
 
 ExpressionSyntax& Parser::parseSubExpression(bitmask<ExpressionOptions> options, int precedence) {
+    bool isSDFCondExpr = options.has(ExpressionOptions::SDFCondExpr);
+    bool isSDFTimingCheckExpr = options.has(ExpressionOptions::SDFTimingCheckCondExpr);
+    bool isSDFExpr = isSDFCondExpr || isSDFTimingCheckExpr;
     auto dg = setDepthGuard();
 
     auto current = peek();
-    if (isPossibleDelayOrEventControl(current.kind)) {
+    if (isPossibleDelayOrEventControl(current.kind) && !isSDFExpr) {
         auto timingControl = parseTimingControl();
         SLANG_ASSERT(timingControl);
 
         auto& expr = factory.timingControlExpression(*timingControl, parseExpression());
         return parsePostfixExpression(expr, options);
     }
-    else if (current.kind == TokenKind::TaggedKeyword) {
+    else if (current.kind == TokenKind::TaggedKeyword && !isSDFExpr) {
         auto tagged = consume();
         auto member = expect(TokenKind::Identifier);
 
@@ -74,14 +77,34 @@ ExpressionSyntax& Parser::parseSubExpression(bitmask<ExpressionOptions> options,
     }
 
     ExpressionSyntax* leftOperand;
-    SyntaxKind opKind = getUnaryPrefixExpression(current.kind);
-    if (opKind != SyntaxKind::Unknown) {
-        auto opToken = consume();
-        auto attributes = parseAttributes();
+    SyntaxKind opKind = (!isSDFExpr) ? getUnaryPrefixExpression(current.kind)
+                                     : getSDFUnaryPrefixExpression(current.kind);
 
-        auto& operand = parsePrimaryExpression(options);
-        auto& postfix = parsePostfixExpression(operand, options);
-        leftOperand = &factory.prefixUnaryExpression(opKind, opToken, attributes, postfix);
+    if (opKind != SyntaxKind::Unknown) {
+        if (isSDFTimingCheckExpr && opKind != SyntaxKind::UnaryBitwiseNotExpression &&
+            opKind != SyntaxKind::UnaryLogicalNotExpression)
+            addDiag(diag::InvalidSDFInvOp, current.range());
+
+        auto opToken = consume();
+        AttrList attributes;
+        if (!isSDFExpr)
+            attributes = parseAttributes();
+
+        ExpressionSyntax* postfix = nullptr;
+        if (isSDFCondExpr)
+            postfix = &parseSDFPrimaryExpression(options);
+        else if (isSDFTimingCheckExpr)
+            return factory.prefixUnaryExpression(
+                opKind, opToken, attributes, parseSDFPostfixExpression(parseSDFHierIdentifier()));
+        else
+            postfix = &parsePostfixExpression(parsePrimaryExpression(options), options);
+        leftOperand = &factory.prefixUnaryExpression(opKind, opToken, attributes, *postfix);
+    }
+    else if (isSDFExpr) {
+        if (isSDFCondExpr)
+            leftOperand = &parseSDFPrimaryExpression(options);
+        else
+            leftOperand = &parseSDFPostfixExpression(parseSDFHierIdentifier());
     }
     else {
         leftOperand = &parsePrimaryExpression(options);
@@ -101,10 +124,33 @@ ExpressionSyntax& Parser::parseSubExpression(bitmask<ExpressionOptions> options,
 ExpressionSyntax& Parser::parseBinaryExpression(ExpressionSyntax* left,
                                                 bitmask<ExpressionOptions> options,
                                                 int precedence) {
+    bool isSDFCondExpr = options.has(ExpressionOptions::SDFCondExpr);
+    bool isSDFTimingCheckExpr = options.has(ExpressionOptions::SDFTimingCheckCondExpr);
+
     Token current;
     while (true) {
         // either a binary operator, or we're done
         current = peek();
+
+        if (isSDFCondExpr) {
+            if (current.kind != TokenKind::Question)
+                return *left;
+            // Trying to parse only ternary operator
+            // according to SDF port conditional expression syntax
+            break;
+        }
+
+        if (isSDFTimingCheckExpr) {
+            auto opKind = getSDFBinaryExpression(current.kind);
+            if (opKind == SyntaxKind::Unknown)
+                return *left;
+
+            auto opToken = consume();
+            AttrList attributes;
+            return factory.binaryExpression(opKind, *left, opToken, attributes,
+                                            parseSDFPostfixExpression(parseSDFHierIdentifier()));
+        }
+
         auto opKind = getBinaryExpression(current.kind);
         if (opKind == SyntaxKind::Unknown) {
             break;
@@ -182,8 +228,11 @@ ExpressionSyntax& Parser::parseBinaryExpression(ExpressionSyntax* left,
 
         if (takeConditional) {
             Token question;
-            auto& predicate = parseConditionalPredicate(*left, TokenKind::Question, question);
-            auto attributes = parseAttributes();
+            auto& predicate = parseConditionalPredicate(*left, TokenKind::Question, question,
+                                                        /*isSDFCondPred =*/isSDFCondExpr);
+            AttrList attributes;
+            if (!isSDFCondExpr)
+                attributes = parseAttributes();
             auto& lhs = parseSubExpression(options, logicalOrPrecedence - 1);
             auto colon = expect(TokenKind::Colon);
             auto& rhs = parseSubExpression(options, logicalOrPrecedence - 1);
@@ -301,6 +350,70 @@ ExpressionSyntax& Parser::parsePrimaryExpression(bitmask<ExpressionOptions> opti
     }
 }
 
+ExpressionSyntax& Parser::parseSDFScalarConstant() {
+    // Valid SDF scalar syntax can be present in such forms:
+    // 0, b0, B0, 1 b0, 1 B0, 1, b1, B1, 1 b1, 1 B1
+
+    // Parse value
+    Token tok = peek();
+    Token size;
+    if (tok.kind == TokenKind::IntegerLiteral) {
+        if (tok.valueText() != "0" && tok.valueText() != "1")
+            addDiag(diag::InvalidSDFExprScalar, tok.range());
+        size = consume();
+    }
+
+    static const std::set<std::string_view> validBases = {"b", "B"};
+
+    // Parse base
+    tok = peek();
+    Token base;
+    Token val;
+    // Assume that we lex an SDF syntax scalar constant base form which don't have an apostrophe.
+    if (tok.kind == TokenKind::IntegerBase && validBases.contains(tok.valueText())) {
+        base = consume();
+        val = consume();
+    }
+
+    if (size.kind == TokenKind::Unknown && base.kind == TokenKind::Unknown)
+        addDiag(diag::InvalidSDFExprScalar, tok.range());
+
+    return factory.integerVectorExpression(size, base, val);
+}
+
+ExpressionSyntax& Parser::parseSDFPrimaryExpression(bitmask<ExpressionOptions> options) {
+    TokenKind kind = peek().kind;
+    switch (kind) {
+        case TokenKind::IntegerLiteral:
+        case TokenKind::IntegerBase:
+            return parseSDFScalarConstant();
+        case TokenKind::OpenParenthesis: {
+            auto openParen = consume();
+            auto* expr = &parseSubExpression(options, 0);
+            auto closeParen = expect(TokenKind::CloseParenthesis);
+            return factory.parenthesizedExpression(openParen, *expr, closeParen);
+        }
+        case TokenKind::OpenBrace: {
+            // Parse 2 types of concatentation expressions:
+            // 1. multiple concatenation {expr {concat}}
+            // 2. concatenation {expr, expr}
+            auto openBrace = consume();
+            auto& first = parseSubExpression(options, 0);
+            if (!peek(TokenKind::OpenBrace))
+                return parseConcatenation(openBrace, &first, /*isSDFCondExpr = */ true);
+
+            auto openBraceInner = consume();
+            auto& concat = parseConcatenation(openBraceInner, nullptr,
+                                              /*isSDFCondExpr = */ true);
+            auto closeBrace = expect(TokenKind::CloseBrace);
+            return factory.multipleConcatenationExpression(openBrace, first, concat, closeBrace);
+        }
+        default:
+            // Parse SDF qualified name
+            return parseSDFHierIdentifier();
+    }
+}
+
 ExpressionSyntax& Parser::parseIntegerExpression(bool disallowVector) {
     auto result = disallowVector ? numberParser.parseSimpleInt(*this)
                                  : numberParser.parseInteger(*this);
@@ -362,8 +475,8 @@ ExpressionSyntax& Parser::parseValueRangeElement(bitmask<ExpressionOptions> opti
     return factory.valueRangeExpression(openBracket, left, op, right, closeBracket);
 }
 
-ConcatenationExpressionSyntax& Parser::parseConcatenation(Token openBrace,
-                                                          ExpressionSyntax* first) {
+ConcatenationExpressionSyntax& Parser::parseConcatenation(Token openBrace, ExpressionSyntax* first,
+                                                          bool isSDFCondExpr) {
     SmallVector<TokenOrSyntax, 8> buffer;
     if (first) {
         // it's possible to have just one element in the concatenation list, so check for a close
@@ -378,7 +491,11 @@ ConcatenationExpressionSyntax& Parser::parseConcatenation(Token openBrace,
     Token closeBrace;
     parseList<isPossibleExpressionOrComma, isEndOfBracedList>(
         buffer, TokenKind::CloseBrace, TokenKind::Comma, closeBrace, RequireItems::False,
-        diag::ExpectedExpression, [this] { return &parseExpression(); });
+        diag::ExpectedExpression, [this, isSDFCondExpr] {
+            if (!isSDFCondExpr)
+                return &parseExpression();
+            return &parseSubExpression(ExpressionOptions::SDFCondExpr, 0);
+        });
     return factory.concatenationExpression(openBrace, buffer.copy(alloc), closeBrace);
 }
 
@@ -668,8 +785,50 @@ ExpressionSyntax& Parser::parsePostfixExpression(ExpressionSyntax& lhs,
     }
 }
 
+ExpressionSyntax& Parser::parseSDFPostfixExpression(ExpressionSyntax& expr) {
+    if (peek().kind == TokenKind::OpenBracket) {
+        auto openBracket = expect(TokenKind::OpenBracket);
+        auto* selector = &factory.bitSelect(factory.literalExpression(
+            SyntaxKind::IntegerLiteralExpression, expect(TokenKind::IntegerLiteral)));
+        auto closeBracket = expect(TokenKind::CloseBracket);
+        auto& elemSelect = factory.elementSelect(openBracket, selector, closeBracket);
+        return factory.elementSelectExpression(expr, elemSelect);
+    }
+    return expr;
+}
+
 NameSyntax& Parser::parseName() {
     return parseName(NameOptions::None);
+}
+
+NameSyntax& Parser::parseSDFHierIdentifier() {
+    NameSyntax* name = &factory.identifierName(expect(TokenKind::Identifier));
+    Token sep;
+
+    while (true) {
+        auto curr = peek();
+        if (curr.kind != TokenKind::Dot && curr.kind != TokenKind::Slash)
+            break;
+
+        // Parse separator
+        curr = consume();
+        if (sep.kind == TokenKind::Unknown)
+            sep = curr;
+        else if (curr.kind != sep.kind)
+            addDiag(diag::DifferentSDFNameSeperator, curr.range()) << sep.valueText();
+
+        // Parse name
+        curr = peek();
+        if (curr.kind != TokenKind::Identifier) {
+            addDiag(diag::ExpectedSDFIdentifier, curr.range());
+            break;
+        }
+
+        NameSyntax& rhs = factory.identifierName(consume());
+        name = &factory.scopedName(*name, sep, rhs);
+    }
+
+    return *name;
 }
 
 NameSyntax& Parser::parseName(bitmask<NameOptions> options) {
@@ -980,18 +1139,19 @@ StructurePatternMemberSyntax& Parser::parseMemberPattern() {
 }
 
 ConditionalPredicateSyntax& Parser::parseConditionalPredicate(ExpressionSyntax& first,
-                                                              TokenKind endKind, Token& end) {
+                                                              TokenKind endKind, Token& end,
+                                                              bool isSDFCondPred) {
     SmallVector<TokenOrSyntax, 4> buffer;
 
     MatchesClauseSyntax* matchesClause = nullptr;
-    if (peek(TokenKind::MatchesKeyword)) {
+    if (!isSDFCondPred && peek(TokenKind::MatchesKeyword)) {
         auto matches = consume();
         matchesClause = &factory.matchesClause(matches, parsePattern());
     }
 
     buffer.push_back(&factory.conditionalPattern(first, matchesClause));
 
-    if (peek(TokenKind::TripleAnd)) {
+    if (!isSDFCondPred && peek(TokenKind::TripleAnd)) {
         buffer.push_back(consume());
         parseList<isPossibleExpressionOrTripleAnd, isEndOfConditionalPredicate>(
             buffer, endKind, TokenKind::TripleAnd, end, RequireItems::True,
