@@ -13,6 +13,7 @@ void registerUtil(py::module_& m);
 void registerStatements(py::module_& m);
 void registerSymbols(py::module_& m);
 void registerSyntax(py::module_& m);
+void registerSyntaxFactory(py::module_& m);
 void registerSyntaxNodes0(py::module_& m);
 void registerSyntaxNodes1(py::module_& m);
 void registerSyntaxNodes2(py::module_& m);
@@ -36,6 +37,7 @@ PYBIND11_MODULE(pyslang, m) {
     registerStatements(m);
     registerSymbols(m);
     registerSyntax(m);
+    registerSyntaxFactory(m);
     registerSyntaxNodes0(m);
     registerSyntaxNodes1(m);
     registerSyntaxNodes2(m);
