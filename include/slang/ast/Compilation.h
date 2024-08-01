@@ -11,8 +11,10 @@
 
 #include "slang/ast/InstancePath.h"
 #include "slang/ast/Scope.h"
+#include "slang/ast/symbols/MemberSymbols.h"
 #include "slang/diagnostics/Diagnostics.h"
 #include "slang/numeric/Time.h"
+#include "slang/syntax/AllSyntax.h"
 #include "slang/syntax/SyntaxFwd.h"
 #include "slang/syntax/SyntaxNode.h"
 #include "slang/util/Bag.h"
@@ -650,6 +652,40 @@ public:
     /// Creates an empty ImplicitTypeSyntax object.
     const syntax::ImplicitTypeSyntax& createEmptyTypeSyntax(SourceLocation loc);
 
+    // Checks whether an expression matches an existing alias symbol by comparing the expression
+    // syntaxes as a strings. Returns net alias symbol if the expression was matched with an
+    // existing alias, or nullopt if a new alias symbol was added to map.
+    std::optional<const NetAliasSymbol*> mergeOrAddNetAlias(const NetAliasSymbol* sym,
+                                                            const syntax::ExpressionSyntax* expr) {
+        const NetAliasSymbol* foundedSym = nullptr;
+        for (const auto& alias : aliasedSyms) {
+            for (const auto* aSExpr : alias.second) {
+                if (aSExpr->isEquivalentTo(*expr)) {
+                    foundedSym = alias.first;
+                    break;
+                }
+            }
+
+            if (foundedSym)
+                break;
+        }
+
+        if (foundedSym) {
+            aliasedSyms[foundedSym].push_back(expr);
+            return foundedSym;
+        }
+
+        if (!aliasedSyms.count(sym))
+            aliasedSyms[sym] = {expr};
+        else
+            aliasedSyms[sym].push_back(expr);
+        return std::nullopt;
+    }
+
+    std::map<const NetAliasSymbol*, std::vector<const syntax::ExpressionSyntax*>>& getNetAliases() {
+        return aliasedSyms;
+    }
+
     /// @{
 
 private:
@@ -892,6 +928,10 @@ private:
     // The default library.
     std::unique_ptr<SourceLibrary> defaultLibMem;
     const SourceLibrary* defaultLibPtr;
+
+    // Map for storing information about net alias symbols and the full list of expression syntaxes
+    // that they contain.
+    std::map<const NetAliasSymbol*, std::vector<const syntax::ExpressionSyntax*>> aliasedSyms;
 };
 
 } // namespace slang::ast

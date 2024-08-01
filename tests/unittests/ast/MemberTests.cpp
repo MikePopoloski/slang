@@ -2393,6 +2393,16 @@ module overlap2(inout wire [15:0] bus16, inout wire [11:0] low12, high12);
     alias high12[7:0] = low12[11:4];
 endmodule
 
+module overlap3(inout wire [15:0] bus16, inout wire [11:0] low12, high12);
+    alias low12 = bus16[11:0];
+    alias high12 = bus16[15:4];
+endmodule
+    
+module overlap4(inout wire [15:0] bus16, inout wire [11:0] low12, high12);
+    alias {high12, low12[3:0]} = bus16;
+    alias low12[11:4] = high12[7:0];
+endmodule
+
 module lib1_dff(input logic Reset, Clk, Data, Q, Q_Bar);
 endmodule
 
@@ -2451,20 +2461,19 @@ endmodule
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 29);
     CHECK(diags[0].code == diag::NetAliasWidthMismatch);
-    CHECK(diags[1].code == diag::ExpressionNotAssignable);
-    CHECK(diags[2].code == diag::NetAliasNotANet);
-    CHECK(diags[3].code == diag::NetAliasHierarchical);
-    CHECK(diags[4].code == diag::MultipleNetAlias);
-    CHECK(diags[5].code == diag::NetAliasCommonNetType);
+    CHECK(diags[1].code == diag::MultipleNetAlias);
+    CHECK(diags[2].code == diag::ExpressionNotAssignable);
+    CHECK(diags[3].code == diag::MultipleNetAlias);
+    CHECK(diags[4].code == diag::NetAliasNotANet);
+    CHECK(diags[5].code == diag::NetAliasHierarchical);
     CHECK(diags[6].code == diag::MultipleNetAlias);
-    CHECK(diags[7].code == diag::NetAliasItself);
-    CHECK(diags[8].code == diag::NetAliasItself);
+    CHECK(diags[7].code == diag::NetAliasCommonNetType);
     CHECK(diags[9].code == diag::MultipleNetAlias);
-    CHECK(diags[10].code == diag::NetAliasItself);
-    CHECK(diags[11].code == diag::NetAliasItself);
-    CHECK(diags[11].code == diag::NetAliasItself);
+    CHECK(diags[10].code == diag::MultipleNetAlias);
+    CHECK(diags[11].code == diag::MultipleNetAlias);
+    CHECK(diags[11].code == diag::MultipleNetAlias);
     CHECK(diags[12].code == diag::MultipleNetAlias);
-    CHECK(diags[13].code == diag::NetAliasItself);
+    CHECK(diags[13].code == diag::MultipleNetAlias);
     CHECK(diags[14].code == diag::MultipleNetAlias);
     CHECK(diags[15].code == diag::MultipleNetAlias);
     CHECK(diags[16].code == diag::MultipleNetAlias);
@@ -2473,9 +2482,9 @@ endmodule
     CHECK(diags[19].code == diag::MultipleNetAlias);
     CHECK(diags[20].code == diag::MultipleNetAlias);
     CHECK(diags[21].code == diag::MultipleNetAlias);
-    CHECK(diags[22].code == diag::NetAliasItself);
+    CHECK(diags[22].code == diag::MultipleNetAlias);
     CHECK(diags[23].code == diag::MultipleNetAlias);
-    CHECK(diags[24].code == diag::NetAliasItself);
+    CHECK(diags[24].code == diag::MultipleNetAlias);
     CHECK(diags[25].code == diag::MultipleNetAlias);
     CHECK(diags[26].code == diag::MultipleNetAlias);
     CHECK(diags[27].code == diag::MultipleNetAlias);

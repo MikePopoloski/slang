@@ -27,6 +27,7 @@ class SubroutineSymbol;
 class TempVarSymbol;
 class Type;
 class ValueSymbol;
+class NetAliasSymbol;
 enum class RandMode;
 
 /// Specifies flags that control expression and statement creation.
@@ -297,6 +298,9 @@ public:
 
     /// Various flags that control how AST creation is performed.
     bitmask<ASTFlags> flags;
+
+    /// Placeholder for storing currently processed net alias
+    const NetAliasSymbol *netAlias = nullptr;
 
 private:
     const Symbol* instanceOrProc = nullptr;

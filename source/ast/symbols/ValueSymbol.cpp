@@ -27,8 +27,7 @@ using namespace syntax;
 
 ValueSymbol::ValueSymbol(SymbolKind kind, std::string_view name, SourceLocation location,
                          bitmask<DeclaredTypeFlags> flags) :
-    Symbol(kind, name, location),
-    declaredType(*this, flags) {
+    Symbol(kind, name, location), declaredType(*this, flags) {
 }
 
 void ValueSymbol::setFromDeclarator(const DeclaratorSyntax& decl) {
@@ -334,8 +333,11 @@ void ValueSymbol::addDriver(DriverBitRange bounds, const ValueDriver& driver) co
         }
 
         // If one of the drivers is an alias, then perform a check if the second one is an alias
-        if (curr->isNetAlias() || driver.isNetAlias())
+        if (curr->isNetAlias() || driver.isNetAlias()) {
             isProblem = curr->isNetAlias() && driver.isNetAlias();
+            // Check that all net alias drivers are have the same net alias symbol scope
+            isProblem = isProblem && (curr->containingSymbol == driver.containingSymbol);
+        }
 
         if (isProblem) {
             if (!handleOverlap(*scope, name, *curr, driver, isNet, isUWire, isSingleDriverUDNT,

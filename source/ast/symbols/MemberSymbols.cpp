@@ -9,6 +9,7 @@
 
 #include "../FmtHelpers.h"
 #include "fmt/core.h"
+#include <iostream>
 
 #include "slang/ast/ASTSerializer.h"
 #include "slang/ast/ASTVisitor.h"
@@ -2068,7 +2069,6 @@ struct NetAliasVisitor {
     const ASTContext& context;
     const NetType* commonNetType = nullptr;
     bool issuedError = false;
-    SmallMap<const ValueSymbol*, const Expression*, 2> aliasedSyms;
 
     NetAliasVisitor(const ASTContext& context) : context(context) {}
 
@@ -2081,10 +2081,6 @@ struct NetAliasVisitor {
                 case ExpressionKind::ElementSelect:
                 case ExpressionKind::RangeSelect: {
                     if (auto sym = expr.getSymbolReference()) {
-                        if (const auto* valSym = sym->template as_if<ValueSymbol>()) {
-                            aliasedSyms.insert_or_assign(valSym, &expr);
-                        }
-
                         if (sym->kind != SymbolKind::Net) {
                             context.addDiag(diag::NetAliasNotANet, expr.sourceRange) << sym->name;
                         }
@@ -2127,13 +2123,31 @@ std::span<const Expression* const> NetAliasSymbol::getNetReferences() const {
     bitwidth_t bitWidth = 0;
     bool issuedError = false;
     SmallVector<const Expression*> buffer;
-    ASTContext context(*scope, LookupLocation::after(*this),
-                       ASTFlags::NonProcedural | ASTFlags::NotADriver);
+    ASTContext context(*scope, LookupLocation::after(*this), ASTFlags::NonProcedural);
+    auto& comp = context.getCompilation();
+    auto& aliasedSyms = comp.getNetAliases();
     NetAliasVisitor visitor(context);
-    // In order to save the leftmost alias
-    SmallMap<const ValueSymbol*, const Expression*, 2> leftAlias;
 
     const auto nets = syntax->as<NetAliasSyntax>().nets;
+
+    // Preprocessing net alias expressions to relate them to existing net aliases.
+    const NetAliasSymbol* current = this;
+    for (auto exprSyntax : nets) {
+        if (auto foundedSym = comp.mergeOrAddNetAlias(this, exprSyntax); foundedSym.has_value()) {
+            const auto* symToMerge = foundedSym.value();
+            current = symToMerge;
+
+            // Merge all expression into founded net alias symbol expression list
+            for (auto eS : nets)
+                aliasedSyms[symToMerge].push_back(eS);
+
+            // Erase existing aliases expressions if present
+            if (auto pos = aliasedSyms.find(this); pos != aliasedSyms.end())
+                aliasedSyms.erase(aliasedSyms.find(this));
+            break;
+        }
+    }
+    context.netAlias = current;
 
     for (auto exprSyntax : nets) {
         auto& netRef = Expression::bind(*exprSyntax, context);
@@ -2141,12 +2155,6 @@ std::span<const Expression* const> NetAliasSymbol::getNetReferences() const {
         // Inside a call chain there is a Check that all bits were not previously aliased.
         if (!netRef.requireLValue(context, /* location =*/{}, /* flags =*/AssignFlags::NetAlias))
             continue;
-
-        // Skip driver setting for left outermost alias declaration
-        // to ignore false positives.
-        if (exprSyntax == *nets.begin()) {
-            context = context.resetFlags(context.flags & ~ASTFlags::NotADriver);
-        }
 
         if (!bitWidth) {
             bitWidth = netRef.type->getBitWidth();
@@ -2159,21 +2167,6 @@ std::span<const Expression* const> NetAliasSymbol::getNetReferences() const {
 
         netRef.visit(visitor);
         buffer.push_back(&netRef);
-
-        if (exprSyntax != *nets.begin()) {
-            for (const auto& refVal : visitor.aliasedSyms) {
-                const auto* sym = refVal.first;
-                // Check that bits of net are aliased to itself
-                if (leftAlias.count(sym)) {
-                    auto& diag = context.addDiag(diag::NetAliasItself, refVal.second->sourceRange);
-                    diag.addNote(diag::NoteAliasHere, leftAlias[sym]->sourceRange);
-                }
-            }
-        }
-        else {
-            leftAlias.insert(visitor.aliasedSyms.begin(), visitor.aliasedSyms.end());
-        }
-        visitor.aliasedSyms.clear();
     }
 
     netRefs = buffer.copy(scope->getCompilation());
