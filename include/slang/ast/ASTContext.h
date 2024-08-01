@@ -300,7 +300,7 @@ public:
     bitmask<ASTFlags> flags;
 
     /// Placeholder for storing currently processed net alias
-    const NetAliasSymbol *netAlias = nullptr;
+    const NetAliasSymbol* netAlias = nullptr;
 
 private:
     const Symbol* instanceOrProc = nullptr;

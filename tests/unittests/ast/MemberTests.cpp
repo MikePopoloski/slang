@@ -2397,7 +2397,7 @@ module overlap3(inout wire [15:0] bus16, inout wire [11:0] low12, high12);
     alias low12 = bus16[11:0];
     alias high12 = bus16[15:4];
 endmodule
-    
+
 module overlap4(inout wire [15:0] bus16, inout wire [11:0] low12, high12);
     alias {high12, low12[3:0]} = bus16;
     alias low12[11:4] = high12[7:0];
