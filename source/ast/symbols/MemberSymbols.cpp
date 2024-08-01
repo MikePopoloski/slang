@@ -9,7 +9,6 @@
 
 #include "../FmtHelpers.h"
 #include "fmt/core.h"
-#include <iostream>
 
 #include "slang/ast/ASTSerializer.h"
 #include "slang/ast/ASTVisitor.h"

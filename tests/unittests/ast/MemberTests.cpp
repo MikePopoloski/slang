@@ -19,8 +19,6 @@
 #include "slang/ast/symbols/VariableSymbols.h"
 #include "slang/ast/types/NetType.h"
 #include "slang/ast/types/Type.h"
-#include "slang/diagnostics/DeclarationsDiags.h"
-#include "slang/diagnostics/ExpressionsDiags.h"
 #include "slang/text/Json.h"
 
 TEST_CASE("Nets") {
