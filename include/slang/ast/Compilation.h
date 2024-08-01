@@ -660,6 +660,10 @@ public:
         const NetAliasSymbol* foundedSym = nullptr;
         for (const auto& alias : aliasedSyms) {
             for (const auto* aSExpr : alias.second) {
+                // TODO: it's not a best solution to compare expression as syntaxes nodes
+                // but in this case it is possible, since in aliases all symbols are global nets
+                // from the point of view of the module, in the future we need to come up with a
+                // better comparator
                 if (aSExpr->isEquivalentTo(*expr)) {
                     foundedSym = alias.first;
                     break;
