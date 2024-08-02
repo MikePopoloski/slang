@@ -1666,8 +1666,8 @@ PortConnection::PortConnection(const InterfacePortSymbol& port, const Symbol* co
 
 PortConnection::PortConnection(const Symbol& port, const Symbol* connectedSymbol,
                                SourceRange implicitNameRange) :
-    port(port),
-    connectedSymbol(connectedSymbol), implicitNameRange(implicitNameRange), isImplicit(true) {
+    port(port), connectedSymbol(connectedSymbol), implicitNameRange(implicitNameRange),
+    isImplicit(true) {
 }
 
 PortConnection::IfaceConn PortConnection::getIfaceConn() const {
