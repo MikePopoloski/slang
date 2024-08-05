@@ -14,6 +14,7 @@
 #include "fmt/format.h"
 #include <iostream>
 #include <utility>
+#include <vector>
 
 #include "slang/ast/ASTVisitor.h"
 #include "slang/ast/Expression.h"
@@ -274,6 +275,19 @@ public:
     std::string hierarchicalPath;
 };
 
+/// A class representing a variable declaration alias.
+class NetlistVariableAlias : public NetlistNode {
+public:
+    NetlistVariableAlias(const ast::Symbol& symbol, ConstantRange overlap) :
+        NetlistNode(NodeKind::VariableAlias, symbol), overlap(overlap) {}
+
+    static bool isKind(NodeKind otherKind) { return otherKind == NodeKind::VariableAlias; }
+
+public:
+    std::string hierarchicalPath;
+    ConstantRange overlap;
+};
+
 /// A class representing a variable declaration.
 class NetlistVariableDeclaration : public NetlistNode {
 public:
@@ -281,21 +295,14 @@ public:
         NetlistNode(NodeKind::VariableDeclaration, symbol) {}
 
     static bool isKind(NodeKind otherKind) { return otherKind == NodeKind::VariableDeclaration; }
+    
+    void addAlias(NetlistVariableAlias *node) {
+      aliases.push_back(node);
+    }
 
 public:
     std::string hierarchicalPath;
-};
-
-/// A class representing a variable declaration alias.
-class NetlistVariableAlias : public NetlistNode {
-public:
-    NetlistVariableAlias(const ast::Symbol& symbol) :
-        NetlistNode(NodeKind::VariableAlias, symbol) {}
-
-    static bool isKind(NodeKind otherKind) { return otherKind == NodeKind::VariableAlias; }
-
-public:
-    std::string hierarchicalPath;
+    std::vector<NetlistVariableAlias*> aliases;
 };
 
 /// A class representing a variable reference.
@@ -337,12 +344,7 @@ public:
 
     /// Return a string representation of this variable reference.
     std::string toString() const {
-        if (selectors.empty()) {
-            return fmt::format("{}", getName());
-        }
-        else {
-            return fmt::format("{}{}", getName(), selectorString());
-        }
+        return fmt::format("{}[{}:{}]", getName(), bounds.upper(), bounds.lower());
     }
 
 public:
@@ -392,8 +394,8 @@ public:
     }
 
     /// Add a variable declaration alias node to the netlist.
-    NetlistVariableAlias& addVariableAlias(const ast::Symbol& symbol) {
-        auto nodePtr = std::make_unique<NetlistVariableAlias>(symbol);
+    NetlistVariableAlias& addVariableAlias(const ast::Symbol& symbol, ConstantRange overlap) {
+        auto nodePtr = std::make_unique<NetlistVariableAlias>(symbol, overlap);
         auto& node = nodePtr->as<NetlistVariableAlias>();
         symbol.getHierarchicalPath(node.hierarchicalPath);
         nodes.push_back(std::move(nodePtr));
@@ -454,64 +456,101 @@ public:
         return it != end() ? &it->get()->as<NetlistVariableReference>() : nullptr;
     }
 
-    /// Perform a transformation on the netlist graph to split variable /
-    /// declaration nodes into multiple parts corresponding to / the access ranges of
-    /// references to the variable incoming (l-values) and outgoing edges (r-values).
-    void split() {
-        std::vector<std::tuple<NetlistVariableDeclaration*, NetlistEdge*, NetlistEdge*>>
-            modifications;
-        // Find each variable declaration nodes in the graph that has multiple
-        // outgoing edges.
+    struct VarSplit {
+      NetlistVariableDeclaration* varDecl;
+      ConstantRange overlap;
+      NetlistEdge* inEdge;
+      NetlistEdge* outEdge;
+    };
+
+    // A list of modifications to apply to the netlist.
+    using SplittingList = std::vector<VarSplit>; 
+
+    /// Identify the new ALIAS nodes and their edges to add to the netlist.
+    void identifySplits(SplittingList &mods) {
         for (auto& node : nodes) {
+    
+            // Find variable declaration nodes in the graph that have multiple
+            // outgoing edges.
             if (node->kind == NodeKind::VariableDeclaration && node->outDegree() > 1) {
                 auto& varDeclNode = node->as<NetlistVariableDeclaration>();
                 auto& varType = varDeclNode.symbol.getDeclaredType()->getType();
                 DEBUG_PRINT("Variable {} has type {}\n", varDeclNode.hierarchicalPath,
                             varType.toString());
+
+                // Create a list of incoming edges to the declration node.
                 std::vector<NetlistEdge*> inEdges;
                 getInEdgesToNode(*node, inEdges);
+
                 // Find pairs of input and output edges that are attached to variable
-                // refertence nodes. Eg.
-                //   var ref -> var decl -> var ref
-                // If the variable references select the same part of a structured
-                // variable, then transform them into:
-                //   var ref -> var alias -> var ref
-                // And mark the original edges as disabled.
+                // reference nodes.
                 for (auto* inEdge : inEdges) {
                     for (auto& outEdge : *node) {
                         if (inEdge->getSourceNode().kind == NodeKind::VariableReference &&
                             outEdge->getTargetNode().kind == NodeKind::VariableReference) {
+
                             auto& sourceVarRef =
                                 inEdge->getSourceNode().as<NetlistVariableReference>();
                             auto& targetVarRef =
                                 outEdge->getTargetNode().as<NetlistVariableReference>();
+                          
                             // Match if the selection made by the target node intersects with the
                             // selection made by the source node.
-                            auto match = sourceVarRef.bounds.overlaps(targetVarRef.bounds);
-                            if (match) {
-                                DEBUG_PRINT("New dependency through variable {} -> {}\n",
-                                            sourceVarRef.toString(), targetVarRef.toString());
-                                modifications.emplace_back(&varDeclNode, inEdge, outEdge.get());
+                            if (sourceVarRef.bounds.overlaps(targetVarRef.bounds)) {
+                                auto overlap = sourceVarRef.bounds.intersect(targetVarRef.bounds);
+                                DEBUG_PRINT("New split path: REF {} -> ALIAS {}[{}:{}] -> REF {}\n",
+                                            sourceVarRef.toString(),
+                                            varDeclNode.hierarchicalPath,
+                                            overlap.upper(),
+                                            overlap.lower(),
+                                            targetVarRef.toString());
+                                mods.emplace_back(&varDeclNode, overlap, inEdge, outEdge.get());
                             }
                         }
                     }
                 }
             }
         }
-        // Apply the operations to the graph.
-        for (auto& modification : modifications) {
-            auto* varDeclNode = std::get<0>(modification);
-            auto* inEdge = std::get<1>(modification);
-            auto* outEdge = std::get<2>(modification);
+    } 
+
+    // Apply the splitting operations to the netlist graph.
+    void applySplits(SplittingList &mods) {
+        for (auto& mod : mods) {
+
             // Disable the existing edges.
-            inEdge->disable();
-            outEdge->disable();
+            mod.inEdge->disable();
+            mod.outEdge->disable();
+
             // Create a new node that aliases the variable declaration.
-            auto& varAliasNode = addVariableAlias(varDeclNode->symbol);
+            auto& varAliasNode = addVariableAlias(mod.varDecl->symbol, mod.overlap);
+
+            // Record the alias on the orginal declaration.
+            mod.varDecl->addAlias(&varAliasNode);
+
             // Create edges through the new node.
-            inEdge->getSourceNode().addEdge(varAliasNode);
-            varAliasNode.addEdge(outEdge->getTargetNode());
+            mod.inEdge->getSourceNode().addEdge(varAliasNode);
+            varAliasNode.addEdge(mod.outEdge->getTargetNode());
         }
+    }
+
+    /// Perform a transformation on the netlist graph to split variable
+    /// declaration nodes into multiple parts corresponding to the access ranges
+    /// of references for incoming source variables to outdgoing target
+    /// variables. For each new split of the variable declration, create an ALIAS
+    /// node. For example, given a path of the form:
+    ///
+    ///   var ref a ---> var decl x ---> var ref b
+    ///
+    /// If a and b reference the same part of x, then transform the path and
+    /// mark the original edges as disabled:
+    ///
+    ///   var ref a -x-> var alias x -x-> var ref b
+    ///   var ref a ---> var alias x ---> var ref
+    ///
+    void split() {
+        SplittingList mods;
+        identifySplits(mods);
+        applySplits(mods);
     }
 };
 
