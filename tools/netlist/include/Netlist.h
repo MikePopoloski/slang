@@ -295,10 +295,8 @@ public:
         NetlistNode(NodeKind::VariableDeclaration, symbol) {}
 
     static bool isKind(NodeKind otherKind) { return otherKind == NodeKind::VariableDeclaration; }
-    
-    void addAlias(NetlistVariableAlias *node) {
-      aliases.push_back(node);
-    }
+
+    void addAlias(NetlistVariableAlias* node) { aliases.push_back(node); }
 
 public:
     std::string hierarchicalPath;
@@ -457,19 +455,19 @@ public:
     }
 
     struct VarSplit {
-      NetlistVariableDeclaration* varDecl;
-      ConstantRange overlap;
-      NetlistEdge* inEdge;
-      NetlistEdge* outEdge;
+        NetlistVariableDeclaration* varDecl;
+        ConstantRange overlap;
+        NetlistEdge* inEdge;
+        NetlistEdge* outEdge;
     };
 
     // A list of modifications to apply to the netlist.
-    using SplittingList = std::vector<VarSplit>; 
+    using SplittingList = std::vector<VarSplit>;
 
     /// Identify the new ALIAS nodes and their edges to add to the netlist.
-    void identifySplits(SplittingList &mods) {
+    void identifySplits(SplittingList& mods) {
         for (auto& node : nodes) {
-    
+
             // Find variable declaration nodes in the graph that have multiple
             // outgoing edges.
             if (node->kind == NodeKind::VariableDeclaration && node->outDegree() > 1) {
@@ -493,16 +491,14 @@ public:
                                 inEdge->getSourceNode().as<NetlistVariableReference>();
                             auto& targetVarRef =
                                 outEdge->getTargetNode().as<NetlistVariableReference>();
-                          
+
                             // Match if the selection made by the target node intersects with the
                             // selection made by the source node.
                             if (sourceVarRef.bounds.overlaps(targetVarRef.bounds)) {
                                 auto overlap = sourceVarRef.bounds.intersect(targetVarRef.bounds);
                                 DEBUG_PRINT("New split path: REF {} -> ALIAS {}[{}:{}] -> REF {}\n",
-                                            sourceVarRef.toString(),
-                                            varDeclNode.hierarchicalPath,
-                                            overlap.upper(),
-                                            overlap.lower(),
+                                            sourceVarRef.toString(), varDeclNode.hierarchicalPath,
+                                            overlap.upper(), overlap.lower(),
                                             targetVarRef.toString());
                                 mods.emplace_back(&varDeclNode, overlap, inEdge, outEdge.get());
                             }
@@ -511,10 +507,10 @@ public:
                 }
             }
         }
-    } 
+    }
 
     // Apply the splitting operations to the netlist graph.
-    void applySplits(SplittingList &mods) {
+    void applySplits(SplittingList& mods) {
         for (auto& mod : mods) {
 
             // Disable the existing edges.
