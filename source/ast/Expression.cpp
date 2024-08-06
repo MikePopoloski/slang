@@ -81,9 +81,13 @@ public:
                 return std::nullopt;
 
             if (context_) {
-                EvalContext ctx(*context_); 
-                if (const auto constant = expr.eval(ctx); !constant.bad() && constant.isInteger())
-                    return constant.integer().getMinRepresentedBits();
+                EvalContext ctx(*context_);
+                if (const auto& constant = expr.eval(ctx); !constant.bad() && constant.isInteger()) {
+                    const auto& integer = constant.integer();
+                    if (integer.isNegative())
+                        return integer.getMinRepresentedBits();
+                    return integer.getActiveBits();
+                }
             }
 
             return expr.getEffectiveWidthImpl(context_);

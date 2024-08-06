@@ -186,8 +186,7 @@ void checkImplicitConversions(const ASTContext& context, const Type& sourceType,
         // to the minimum width necessary to represent them. Otherwise, even
         // code as simple as this will result in a warning:
         //    logic [3:0] a = 1;
-        std::optional<bitwidth_t> effective = op.getEffectiveWidth(
-            context.getCompilation().getOptions().evalEffectiveWidth ? &context : nullptr);
+        std::optional<bitwidth_t> effective = op.getEffectiveWidth(&context);
         if (!effective)
             return;
 

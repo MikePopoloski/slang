@@ -1010,10 +1010,9 @@ void BinaryExpression::analyzeOpTypes(const Type& clt, const Type& crt, const Ty
             if (alw == arw)
                 return;
 
-            auto elw = lhs.getEffectiveWidth(
-                context.getCompilation().getOptions().evalEffectiveWidth ? &context : nullptr);
-            auto erw = rhs.getEffectiveWidth(
-                context.getCompilation().getOptions().evalEffectiveWidth ? &context : nullptr);
+            auto elw = lhs.getEffectiveWidth(&context);
+            auto erw = rhs.getEffectiveWidth(&context);
+
             if (!elw || !erw)
                 return;
 

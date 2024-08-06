@@ -241,8 +241,7 @@ bool ASTContext::requireBooleanConvertible(const Expression& expr) const {
         addDiag(diag::FloatBoolConv, expr.sourceRange) << *expr.type;
     }
     else if (expr.type->isIntegral() && expr.type->getBitWidth() > 1 &&
-             expr.getEffectiveWidth(
-                 getCompilation().getOptions().evalEffectiveWidth ? this : nullptr) > 1u) {
+             expr.getEffectiveWidth(this) > 1u) {
         // Suppress the warning for cases of right shift and bitwise-AND,
         // as it's common practice to check for non-zero results like this:
         //   if (a & b) begin end

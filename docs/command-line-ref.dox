@@ -280,10 +280,6 @@ Set the maximum number of instances allowed in a single instance array.
 The limit exists to prevent runaway compilation times on invalid input.
 The default is 65535.
 
-`--eval-effective-width`
-
-A flag to control getEffectiveWidth computation more accurately by expression evaluation.
-
 `--compat vcs`
 
 Attempt to increase compatibility with the specified tool. Various options will
