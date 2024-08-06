@@ -1385,7 +1385,8 @@ bool ConditionalExpression::propagateType(const ASTContext& context, const Type&
     return true;
 }
 
-std::optional<bitwidth_t> ConditionalExpression::getEffectiveWidthImpl(const ASTContext* context) const {
+std::optional<bitwidth_t> ConditionalExpression::getEffectiveWidthImpl(
+    const ASTContext* context) const {
     if (auto branch = knownSide())
         return branch->getEffectiveWidth(context);
     return std::max(left().getEffectiveWidth(context), right().getEffectiveWidth(context));

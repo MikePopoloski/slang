@@ -206,7 +206,8 @@ ConstantValue UnbasedUnsizedIntegerLiteral::evalImpl(EvalContext&) const {
     return getValue();
 }
 
-std::optional<bitwidth_t> UnbasedUnsizedIntegerLiteral::getEffectiveWidthImpl(const ASTContext*) const {
+std::optional<bitwidth_t> UnbasedUnsizedIntegerLiteral::getEffectiveWidthImpl(
+    const ASTContext*) const {
     return 1;
 }
 

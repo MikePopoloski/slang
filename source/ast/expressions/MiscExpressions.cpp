@@ -1320,7 +1320,8 @@ ConstantValue MinTypMaxExpression::evalImpl(EvalContext& context) const {
     return selected().eval(context);
 }
 
-std::optional<bitwidth_t> MinTypMaxExpression::getEffectiveWidthImpl(const ASTContext* context) const {
+std::optional<bitwidth_t> MinTypMaxExpression::getEffectiveWidthImpl(
+    const ASTContext* context) const {
     return selected().getEffectiveWidth(context);
 }
 

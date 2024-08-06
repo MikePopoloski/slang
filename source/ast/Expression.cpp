@@ -82,7 +82,8 @@ public:
 
             if (context_) {
                 EvalContext ctx(*context_);
-                if (const auto& constant = expr.eval(ctx); !constant.bad() && constant.isInteger()) {
+                if (const auto& constant = expr.eval(ctx);
+                    !constant.bad() && constant.isInteger()) {
                     const auto& integer = constant.integer();
                     if (integer.isNegative())
                         return integer.getMinRepresentedBits();

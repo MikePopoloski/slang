@@ -1061,7 +1061,8 @@ ConstantValue ConversionExpression::convert(EvalContext& context, const Type& fr
     SLANG_UNREACHABLE;
 }
 
-std::optional<bitwidth_t> ConversionExpression::getEffectiveWidthImpl(const ASTContext* context) const {
+std::optional<bitwidth_t> ConversionExpression::getEffectiveWidthImpl(
+    const ASTContext* context) const {
     if (isImplicit())
         return operand().getEffectiveWidth(context);
     return type->getBitWidth();
