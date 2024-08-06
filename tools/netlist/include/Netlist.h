@@ -340,7 +340,18 @@ public:
         return buffer;
     }
 
-    /// Return a string representation of this variable reference.
+    /// Return a string of the syntax for this variable reference.
+    std::string syntax() const {
+        if (selectors.empty()) {
+            return fmt::format("{}", getName());
+        }
+        else {
+            return fmt::format("{}{}", getName(), selectorString());
+        }
+    }
+
+    /// Return a string representation of this variable reference with the name
+    /// and access bounds.
     std::string toString() const {
         return fmt::format("{}[{}:{}]", getName(), bounds.upper(), bounds.lower());
     }
@@ -448,7 +459,7 @@ public:
     NetlistVariableReference* lookupVariableReference(std::string_view syntax) {
         auto compareNode = [&syntax](const std::unique_ptr<NetlistNode>& node) {
             return node->kind == NodeKind::VariableReference &&
-                   node->as<NetlistVariableReference>().toString() == syntax;
+                   node->as<NetlistVariableReference>().syntax() == syntax;
         };
         auto it = std::ranges::find_if(*this, compareNode);
         return it != end() ? &it->get()->as<NetlistVariableReference>() : nullptr;
