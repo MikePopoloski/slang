@@ -496,7 +496,7 @@ public:
                 // in edge's bounds.
                 for (auto* inEdge : inEdges) {
                     if (inEdge->getSourceNode().kind != NodeKind::VariableReference) {
-                      continue;
+                        continue;
                     }
 
                     auto& sourceVarRef = inEdge->getSourceNode().as<NetlistVariableReference>();
@@ -505,7 +505,7 @@ public:
 
                     for (auto& outEdge : *node) {
                         if (outEdge->getTargetNode().kind != NodeKind::VariableReference) {
-                          continue;
+                            continue;
                         }
 
                         auto& targetVarRef =
@@ -517,8 +517,7 @@ public:
                             auto overlap = sourceVarRef.bounds.intersect(targetVarRef.bounds);
                             DEBUG_PRINT("New split path: REF {} -> ALIAS {}[{}:{}] -> REF {}\n",
                                         sourceVarRef.toString(), varDeclNode.hierarchicalPath,
-                                        overlap.upper(), overlap.lower(),
-                                        targetVarRef.toString());
+                                        overlap.upper(), overlap.lower(), targetVarRef.toString());
                             outEdges.push_back(outEdge.get());
                         }
                     }
@@ -534,8 +533,8 @@ public:
 
             // Disable the existing edges.
             mod.inEdge->disable();
-            for (auto *outEdge : mod.outEdges) {
-              outEdge->disable();
+            for (auto* outEdge : mod.outEdges) {
+                outEdge->disable();
             }
 
             // Create a new node that aliases the variable declaration.
@@ -548,8 +547,8 @@ public:
             mod.inEdge->getSourceNode().addEdge(varAliasNode);
 
             // Create the out edges.
-            for (auto *outEdge : mod.outEdges) {
-              varAliasNode.addEdge(outEdge->getTargetNode());
+            for (auto* outEdge : mod.outEdges) {
+                varAliasNode.addEdge(outEdge->getTargetNode());
             }
         }
     }

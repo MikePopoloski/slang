@@ -63,7 +63,6 @@ endmodule
     CHECK(v->aliases.size() == 0);
 }
 
-
 TEST_CASE("Two in, two out") {
     auto tree = SyntaxTree::fromText(R"(
 module foo(
@@ -86,9 +85,8 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
     auto netlist = createNetlist(compilation);
-    // foo.x should have two ALIAS components. 
+    // foo.x should have two ALIAS components.
     auto v = netlist.lookupVariable("foo.x");
     CHECK(v != nullptr);
     CHECK(v->aliases.size() == 2);
 }
-
