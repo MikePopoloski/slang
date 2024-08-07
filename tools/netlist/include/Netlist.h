@@ -467,9 +467,9 @@ public:
 
     struct VarSplit {
         NetlistVariableDeclaration* varDecl;
-        ConstantRange overlap;
+        ConstantRange bounds;
         NetlistEdge* inEdge;
-        NetlistEdge* outEdge;
+        std::vector<NetlistEdge*> outEdges;
     };
 
     // A list of modifications to apply to the netlist.
@@ -491,30 +491,38 @@ public:
                 std::vector<NetlistEdge*> inEdges;
                 getInEdgesToNode(*node, inEdges);
 
-                // Find pairs of input and output edges that are attached to variable
-                // reference nodes.
+                // For each in edge (assignment to a part of the variable),
+                // make a list of the out edges with bounds that intersect the
+                // in edge's bounds.
                 for (auto* inEdge : inEdges) {
+                    if (inEdge->getSourceNode().kind != NodeKind::VariableReference) {
+                      continue;
+                    }
+
+                    auto& sourceVarRef = inEdge->getSourceNode().as<NetlistVariableReference>();
+
+                    std::vector<NetlistEdge*> outEdges;
+
                     for (auto& outEdge : *node) {
-                        if (inEdge->getSourceNode().kind == NodeKind::VariableReference &&
-                            outEdge->getTargetNode().kind == NodeKind::VariableReference) {
+                        if (outEdge->getTargetNode().kind != NodeKind::VariableReference) {
+                          continue;
+                        }
 
-                            auto& sourceVarRef =
-                                inEdge->getSourceNode().as<NetlistVariableReference>();
-                            auto& targetVarRef =
-                                outEdge->getTargetNode().as<NetlistVariableReference>();
+                        auto& targetVarRef =
+                            outEdge->getTargetNode().as<NetlistVariableReference>();
 
-                            // Match if the selection made by the target node intersects with the
-                            // selection made by the source node.
-                            if (sourceVarRef.bounds.overlaps(targetVarRef.bounds)) {
-                                auto overlap = sourceVarRef.bounds.intersect(targetVarRef.bounds);
-                                DEBUG_PRINT("New split path: REF {} -> ALIAS {}[{}:{}] -> REF {}\n",
-                                            sourceVarRef.toString(), varDeclNode.hierarchicalPath,
-                                            overlap.upper(), overlap.lower(),
-                                            targetVarRef.toString());
-                                mods.emplace_back(&varDeclNode, overlap, inEdge, outEdge.get());
-                            }
+                        // Match if the selection made by the target node intersects with the
+                        // selection made by the source node.
+                        if (sourceVarRef.bounds.overlaps(targetVarRef.bounds)) {
+                            auto overlap = sourceVarRef.bounds.intersect(targetVarRef.bounds);
+                            DEBUG_PRINT("New split path: REF {} -> ALIAS {}[{}:{}] -> REF {}\n",
+                                        sourceVarRef.toString(), varDeclNode.hierarchicalPath,
+                                        overlap.upper(), overlap.lower(),
+                                        targetVarRef.toString());
+                            outEdges.push_back(outEdge.get());
                         }
                     }
+                    mods.emplace_back(&varDeclNode, sourceVarRef.bounds, inEdge, outEdges);
                 }
             }
         }
@@ -526,17 +534,23 @@ public:
 
             // Disable the existing edges.
             mod.inEdge->disable();
-            mod.outEdge->disable();
+            for (auto *outEdge : mod.outEdges) {
+              outEdge->disable();
+            }
 
             // Create a new node that aliases the variable declaration.
-            auto& varAliasNode = addVariableAlias(mod.varDecl->symbol, mod.overlap);
+            auto& varAliasNode = addVariableAlias(mod.varDecl->symbol, mod.bounds);
 
             // Record the alias on the orginal declaration.
             mod.varDecl->addAlias(&varAliasNode);
 
-            // Create edges through the new node.
+            // Create the in edge to the new node.
             mod.inEdge->getSourceNode().addEdge(varAliasNode);
-            varAliasNode.addEdge(mod.outEdge->getTargetNode());
+
+            // Create the out edges.
+            for (auto *outEdge : mod.outEdges) {
+              varAliasNode.addEdge(outEdge->getTargetNode());
+            }
         }
     }
 
