@@ -14,6 +14,7 @@ add_executable(
   DirectedGraphTests.cpp
   NameTests.cpp
   PathTests.cpp
+  SplitTests.cpp
   VariableSelectorsTests.cpp)
 
 target_link_libraries(
