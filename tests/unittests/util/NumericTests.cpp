@@ -242,6 +242,10 @@ TEST_CASE("SVInt to string (and back)") {
     CHECK("4'bxxxx"_si.toString(LiteralBase::Hex, false) == "x");
     CHECK("4'bzzzz"_si.toString(LiteralBase::Hex, false) == "z");
     CHECK("4'bzz1z"_si.toString(LiteralBase::Hex, false) == "Z");
+
+    // Make sure leading x round trips correctly.
+    auto str = "8'b0x"_si.toString(SVInt::MAX_BITS, true);
+    CHECK(str == SVInt::fromString(str).toString());
 }
 
 TEST_CASE("Comparison") {

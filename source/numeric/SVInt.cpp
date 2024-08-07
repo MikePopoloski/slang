@@ -842,6 +842,12 @@ void SVInt::writeTo(SmallVectorBase<char>& buffer, LiteralBase base, bool includ
             bitsLeft -= int(shiftAmount);
             x = tmp != 0;
         }
+
+        // If there are bits left over and the last digit we pushed was
+        // an unknown we need to insert an extra 0 to indicate that the
+        // leading bits are actually zeroes and not extended unknowns.
+        if (bitsLeft > 0 && !buffer.empty() && (buffer.back() == 'x' || buffer.back() == 'z'))
+            buffer.push_back('0');
     }
 
     // no digits means this is zero
