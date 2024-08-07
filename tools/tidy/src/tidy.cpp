@@ -194,6 +194,8 @@ int main(int argc, char** argv) {
 
     // Check all enabled checks
     for (const auto& checkName : Registry::getEnabledChecks()) {
+        driver.diagClient->clear();
+
         const auto check = Registry::create(checkName);
 
         if (!quiet)
@@ -227,7 +229,6 @@ int main(int argc, char** argv) {
                     driver.diagEngine.issue(diag);
                 }
                 OS::print(fmt::format("{}\n", driver.diagClient->getString()));
-                driver.diagClient->clear();
             }
         }
         else {
