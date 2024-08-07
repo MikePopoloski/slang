@@ -350,7 +350,7 @@ module test_enum;
     STATE a = STATE_0;
 
     class C;
-        int i;
+        int unsigned i = 32'(200'd12924697071141057419865760813593169586965814232826232910156);
     endclass
 
     C c = new;
@@ -453,8 +453,31 @@ endmodule
                 "kind": "ClassProperty",
                 "source_file": "source",
                 "source_line": 11,
-                "source_column": 13,
-                "type": "int",
+                "source_column": 22,
+                "type": "int unsigned",
+                "initializer": {
+                  "source_file_start": "source",
+                  "source_file_end": "source",
+                  "source_line_start": 11,
+                  "source_line_end": 11,
+                  "source_column_start": 26,
+                  "source_column_end": 95,
+                  "kind": "Conversion",
+                  "type": "bit[31:0]",
+                  "operand": {
+                    "source_file_start": "source",
+                    "source_file_end": "source",
+                    "source_line_start": 11,
+                    "source_line_end": 11,
+                    "source_column_start": 29,
+                    "source_column_end": 95,
+                    "kind": "IntegerLiteral",
+                    "type": "bit[199:0]",
+                    "value": "200'h20f1c22386aad976de4999f1b69e783e821874fb88b47314c",
+                    "constant": "200'h20f1c22386aad976de4999f1b69e783e821874fb88b47314c"
+                  },
+                  "constant": "32'd2336698700"
+                },
                 "lifetime": "Automatic",
                 "visibility": "Public"
               }

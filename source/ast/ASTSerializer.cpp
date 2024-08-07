@@ -95,7 +95,8 @@ void ASTSerializer::write(std::string_view name, const Symbol& value) {
 
 void ASTSerializer::write(std::string_view name, const ConstantValue& value) {
     writer.writeProperty(name);
-    writer.writeValue(value.toString());
+    writer.writeValue(value.toString(SVInt::MAX_BITS, /* exactUnknowns */ true,
+                                     /* useAssignmentPatterns */ true));
 }
 
 void ASTSerializer::write(std::string_view name, const Expression& value) {
