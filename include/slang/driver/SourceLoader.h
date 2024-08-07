@@ -217,7 +217,7 @@ private:
                                 const Bag& optionBag, bool expandEnvVars,
                                 flat_hash_set<std::filesystem::path>& seenMaps);
     void addSDFFilesInternal(std::string_view pattern, const std::filesystem::path& basePath,
-                                const Bag& optionBag);
+                             const Bag& optionBag);
     void createLibrary(const syntax::LibraryDeclarationSyntax& syntax,
                        const std::filesystem::path& basePath);
     LoadResult loadAndParse(const FileEntry& fileEntry, const Bag& optionBag,

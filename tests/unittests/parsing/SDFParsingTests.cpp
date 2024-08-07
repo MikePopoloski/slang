@@ -138,7 +138,7 @@ TEST_CASE("SDF file correct (unformatted and with comments") {
     )*/
 )";
 
-    auto &unit = parseSDFUnit(text);
+    auto& unit = parseSDFUnit(text);
     CHECK_DIAGNOSTICS_EMPTY;
     REQUIRE(unit.kind == SyntaxKind::SDFUnit);
     REQUIRE(unit.members.size() == 1);
@@ -1774,13 +1774,12 @@ TEST_CASE("correct SDF simple file") {
 )
 )";
 
-    auto &unit = parseSDFUnit(text);
+    auto& unit = parseSDFUnit(text);
     CHECK_DIAGNOSTICS_EMPTY;
     REQUIRE(unit.kind == SyntaxKind::SDFUnit);
     REQUIRE(unit.members.size() == 1);
     REQUIRE(unit.members[0]->kind == SyntaxKind::SDFDelayFile);
 }
-
 
 TEST_CASE("SDF file incorrect (invalid order of SDF file attributes/invalid number of SDFDelayFile "
           "members/no specified cells)") {
@@ -1833,7 +1832,7 @@ TEST_CASE("SDF file incorrect (invalid timing check values)") {
      (IOPATH CLK Q (0.341:0.341:0.341) (0.379:0.379:0.379))
      (IOPATH RESET_B.d Q () (0.000:0.000:0.000))
     )
-   ) 
+   )
    (TIMINGCHECK
      (REMOVAL (posedge RESET_B) (posedge CLK) (0.348:0.348:0.348))
      (RECOVERY (posedge RESET_B) (posedge CLK) (-0.255:-0.255:-0.255))

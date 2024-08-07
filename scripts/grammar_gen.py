@@ -10,11 +10,18 @@ import re
 
 ourdir = os.path.dirname(os.path.realpath(__file__))
 
-infs = [open(os.path.join(ourdir, "grammar.txt")), open(os.path.join(ourdir, "grammar_sdf.txt"))]
-outfs = [open(os.path.join(ourdir, "../docs/grammar.md"), "w"), open(os.path.join(ourdir, "../docs/grammar_sdf.md"), "w")]
+infs = [
+    open(os.path.join(ourdir, "grammar.txt")),
+    open(os.path.join(ourdir, "grammar_sdf.txt")),
+]
+outfs = [
+    open(os.path.join(ourdir, "../docs/grammar.md"), "w"),
+    open(os.path.join(ourdir, "../docs/grammar_sdf.md"), "w"),
+]
 
 outfs[0].write("# SystemVerilog\n")
 outfs[1].write("# Standard Delay Format (SDF)\n")
+
 
 def entry(line):
     match = re.match(r"(\w+) ::=", line)
@@ -47,6 +54,7 @@ def entry(line):
 
     if saved_match:
         entry(saved_match)
+
 
 for i, inf in enumerate(infs):
     outf = outfs[i]

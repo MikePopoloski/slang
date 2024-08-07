@@ -1175,7 +1175,7 @@ std::string_view LexerFacts::getTokenKindText(TokenKind kind) {
         case TokenKind::SDFVoltageKeyword: return "VOLTAGE";
         case TokenKind::SDFWaveformKeyword: return "WAVEFORM";
         case TokenKind::SDFWidthKeyword: return "WIDTH";
- 
+
         // SDF special tokens
         case TokenKind::SDFEdgeIdent0Z: return "0Z";
         case TokenKind::SDFEdgeIdent1Z: return "1Z";

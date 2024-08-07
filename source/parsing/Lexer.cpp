@@ -451,7 +451,8 @@ Token Lexer::lexToken(KeywordVersion keywordVersion) {
             // Parse SDF '0z'/'1z' lexemes
             if (isSDFFile() and peek() == 'z' and (c == '0' or c == '1')) {
                 advance();
-                return (c == '0') ? create(TokenKind::SDFEdgeIdent0Z): create(TokenKind::SDFEdgeIdent1Z);
+                return (c == '0') ? create(TokenKind::SDFEdgeIdent0Z)
+                                  : create(TokenKind::SDFEdgeIdent1Z);
             }
 
             // back up so that lexNumericLiteral can look at this digit again
@@ -591,7 +592,8 @@ Token Lexer::lexToken(KeywordVersion keywordVersion) {
             scanIdentifier();
 
             // might be a keyword
-            auto table = (!isSDFFile()) ? LF::getKeywordTable(keywordVersion) : LF::getKeywordTable(KeywordVersion::v1497_2001);
+            auto table = (!isSDFFile()) ? LF::getKeywordTable(keywordVersion)
+                                        : LF::getKeywordTable(KeywordVersion::v1497_2001);
 
             SLANG_ASSERT(table);
             if (auto it = table->find(lexeme()); it != table->end())

@@ -75,7 +75,7 @@ void SourceLoader::addLibraryMaps(std::string_view pattern, const fs::path& base
 }
 
 void SourceLoader::addSDFFiles(std::string_view pattern, const fs::path& basePath,
-                                  const Bag& optionBag) {
+                               const Bag& optionBag) {
     addSDFFilesInternal(pattern, basePath, optionBag);
 }
 
@@ -158,7 +158,7 @@ void SourceLoader::addLibraryMapsInternal(std::string_view pattern, const fs::pa
 }
 
 void SourceLoader::addSDFFilesInternal(std::string_view pattern, const fs::path& basePath,
-                                          const Bag& optionBag) {
+                                       const Bag& optionBag) {
     SmallVector<fs::path> files;
     std::error_code ec;
     svGlob(basePath, pattern, GlobMode::Files, files, /* expandEnvVars=*/false, ec);

@@ -288,8 +288,8 @@ void Driver::addStandardArgs() {
             sourceLoader.addSDFFiles(value, {}, optionBag);
             return "";
         },
-        "One or more standard delay format files to parse",
-        "<file-pattern>[,...]", CommandLineFlags::CommaList);
+        "One or more standard delay format files to parse", "<file-pattern>[,...]",
+        CommandLineFlags::CommaList);
 
     cmdLine.add(
         "-y,--libdir",
