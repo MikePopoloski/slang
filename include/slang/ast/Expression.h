@@ -324,7 +324,7 @@ public:
     /// Traverses the expression tree and computes what its width would be (in bits)
     /// if the types of all known constants were declared with only the bits necessary to
     /// represent them. If any encountered expressions have errors, returns nullopt.
-    std::optional<bitwidth_t> getEffectiveWidth() const;
+    std::optional<bitwidth_t> getEffectiveWidth(const ASTContext* context = nullptr) const;
 
     /// Specifies possible results of a getEffectiveSign call.
     enum class EffectiveSign {
