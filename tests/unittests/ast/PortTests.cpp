@@ -1313,6 +1313,15 @@ module n ({b[1:0], a});
     input tri1 [3:0] b;
 endmodule
 
+module x(input trireg in);
+    y y(.in);
+    y y1(in);
+    y y2(.in(in));
+endmodule
+
+module y(input wor in);
+endmodule
+
 module top;
     wand a;
     wor b;
@@ -1320,6 +1329,7 @@ module top;
 
     m m1({a, b, c}, c);
     n n1({{a, a}, c[0]});
+    x x1(b);
 endmodule
 )");
 
@@ -1327,11 +1337,15 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 4);
-    CHECK(diags[0].code == diag::NetRangeInconsistent);
-    CHECK(diags[1].code == diag::NetRangeInconsistent);
+    REQUIRE(diags.size() == 8);
+    CHECK(diags[0].code == diag::ImplicitConnNetInconsistent);
+    CHECK(diags[1].code == diag::NetInconsistent);
     CHECK(diags[2].code == diag::NetInconsistent);
     CHECK(diags[3].code == diag::NetRangeInconsistent);
+    CHECK(diags[4].code == diag::NetRangeInconsistent);
+    CHECK(diags[5].code == diag::NetInconsistent);
+    CHECK(diags[6].code == diag::NetRangeInconsistent);
+    CHECK(diags[7].code == diag::NetInconsistent);
 }
 
 TEST_CASE("Inout port conn to variable") {

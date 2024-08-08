@@ -211,6 +211,7 @@ private:
         SourceRange implicitNameRange;
     };
     bool useDefault = false;
+    bool isImplicit = false;
 };
 
 } // namespace slang::ast
