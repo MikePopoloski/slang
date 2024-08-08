@@ -730,6 +730,8 @@ KeywordVersion LexerFacts::getDefaultKeywordVersion(LanguageVersion languageVers
             return KeywordVersion::v1800_2017;
         case LanguageVersion::v1800_2023:
             return KeywordVersion::v1800_2023;
+        case LanguageVersion::v1497_2001:
+            return KeywordVersion::v1497_2001;
         default:
             SLANG_UNREACHABLE;
     }
