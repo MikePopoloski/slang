@@ -2265,18 +2265,40 @@ std::span<const Expression* const> NetAliasSymbol::getNetReferences() const {
     auto syntax = getSyntax();
     SLANG_ASSERT(scope && syntax);
 
-    // TODO: there should be a global check somewhere that any given bit
-    // of a net isn't aliased to the same target signal bit multiple times.
     bitwidth_t bitWidth = 0;
     bool issuedError = false;
     SmallVector<const Expression*> buffer;
-    ASTContext context(*scope, LookupLocation::after(*this),
-                       ASTFlags::NonProcedural | ASTFlags::NotADriver);
+    ASTContext context(*scope, LookupLocation::after(*this), ASTFlags::NonProcedural);
+    auto& comp = context.getCompilation();
+    auto& aliasedSyms = comp.getNetAliases();
     NetAliasVisitor visitor(context);
 
-    for (auto exprSyntax : syntax->as<NetAliasSyntax>().nets) {
+    const auto nets = syntax->as<NetAliasSyntax>().nets;
+
+    // Preprocessing net alias expressions to relate them to existing net aliases.
+    const NetAliasSymbol* current = this;
+    for (auto exprSyntax : nets) {
+        if (auto foundedSym = comp.mergeOrAddNetAlias(this, exprSyntax); foundedSym.has_value()) {
+            const auto* symToMerge = foundedSym.value();
+            current = symToMerge;
+
+            // Merge all expression into founded net alias symbol expression list
+            for (auto eS : nets)
+                aliasedSyms[symToMerge].push_back(eS);
+
+            // Erase existing aliases expressions if present
+            if (auto pos = aliasedSyms.find(this); pos != aliasedSyms.end())
+                aliasedSyms.erase(aliasedSyms.find(this));
+            break;
+        }
+    }
+    context.netAlias = current;
+
+    for (auto exprSyntax : nets) {
         auto& netRef = Expression::bind(*exprSyntax, context);
-        if (!netRef.requireLValue(context))
+
+        // Inside a call chain there is a Check that all bits were not previously aliased.
+        if (!netRef.requireLValue(context, /* location =*/{}, /* flags =*/AssignFlags::NetAlias))
             continue;
 
         if (!bitWidth) {

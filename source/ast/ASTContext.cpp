@@ -140,7 +140,10 @@ void ASTContext::addDriver(const ValueSymbol& symbol, const Expression& longestS
     if (flags.has(ASTFlags::NotADriver) || scope->isUninstantiated())
         return;
 
-    symbol.addDriver(getDriverKind(), longestStaticPrefix, getContainingSymbol(), assignFlags);
+    if (!assignFlags.has(AssignFlags::NetAlias) || !netAlias)
+        symbol.addDriver(getDriverKind(), longestStaticPrefix, getContainingSymbol(), assignFlags);
+    else
+        symbol.addDriver(getDriverKind(), longestStaticPrefix, *netAlias, assignFlags);
 }
 
 const Symbol& ASTContext::getContainingSymbol() const {

@@ -171,6 +171,8 @@ static bool handleOverlap(const Scope& scope, std::string_view name, const Value
         code = diag::MultipleUWireDrivers;
     else if (isSingleDriverUDNT)
         code = diag::MultipleUDNTDrivers;
+    else if (driver.isNetAlias())
+        code = diag::MultipleNetAlias;
     else if (driver.kind == DriverKind::Continuous && curr.kind == DriverKind::Continuous)
         code = diag::MultipleContAssigns;
     else
@@ -183,7 +185,10 @@ static bool handleOverlap(const Scope& scope, std::string_view name, const Value
         diag << netType->name;
     }
 
-    addAssignedHereNote(diag);
+    if (!driver.isNetAlias())
+        addAssignedHereNote(diag);
+    else
+        diag.addNote(diag::NoteAliasHere, currRange);
     return false;
 }
 
@@ -299,6 +304,7 @@ void ValueSymbol::addDriver(DriverBitRange bounds, const ValueDriver& driver) co
         //            block to overlap even if the other block is an always_comb/ff.
         // - Assertion local variable formal arguments can't drive more than
         //   one output to the same local variable.
+        // - Net bits are not aliased more than once
         bool isProblem = false;
         auto curr = *it;
 
@@ -324,6 +330,13 @@ void ValueSymbol::addDriver(DriverBitRange bounds, const ValueDriver& driver) co
             else if (curr->isLocalVarFormalArg() && driver.isLocalVarFormalArg()) {
                 isProblem = true;
             }
+        }
+
+        // If one of the drivers is an alias, then perform a check if the second one is an alias
+        if (curr->isNetAlias() || driver.isNetAlias()) {
+            isProblem = curr->isNetAlias() && driver.isNetAlias();
+            // Check that all net alias drivers are have the same net alias symbol scope
+            isProblem = isProblem && (curr->containingSymbol == driver.containingSymbol);
         }
 
         if (isProblem) {
