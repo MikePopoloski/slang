@@ -41,6 +41,19 @@ LibraryMapSyntax& Parser::parseLibraryMap() {
     }
 }
 
+SDFUnitSyntax& Parser::parseSDFUnit() {
+    SLANG_TRY {
+        auto members = parseMemberList<MemberSyntax>(
+            TokenKind::EndOfFile, meta.eofToken, SyntaxKind::SDFUnit,
+            [this](SyntaxKind, bool&) { return parseSDFDelayFile(); }, /*memberLimit =*/1);
+
+        return factory.sDFUnit(members, meta.eofToken);
+    }
+    SLANG_CATCH(const RecursionException&) {
+        return factory.sDFUnit(nullptr, meta.eofToken);
+    }
+}
+
 MemberSyntax& Parser::parseModule() {
     bool anyLocalModules = false;
     return parseModule(parseAttributes(), SyntaxKind::CompilationUnit, anyLocalModules);
@@ -423,7 +436,8 @@ MemberSyntax* Parser::parseSingleMember(SyntaxKind parentKind) {
 
 template<typename TMember, typename TParseFunc>
 std::span<TMember*> Parser::parseMemberList(TokenKind endKind, Token& endToken,
-                                            SyntaxKind parentKind, TParseFunc&& parseFunc) {
+                                            SyntaxKind parentKind, TParseFunc&& parseFunc,
+                                            uint32_t memberLimit) {
     SmallVector<TMember*, 8> members;
     bool errored = false;
     bool anyLocalModules = false;
@@ -435,6 +449,13 @@ std::span<TMember*> Parser::parseMemberList(TokenKind endKind, Token& endToken,
 
         auto member = parseFunc(parentKind, anyLocalModules);
         if (member) {
+            // If memberLimit is set to 0 (which is default value)
+            // the number of members will not be checked.
+            if (memberLimit && memberLimit == members.size()) {
+                addDiag(diag::MemberLimitViolation, member->sourceRange().start()) << memberLimit;
+                continue;
+            }
+
             checkMemberAllowed(*member, parentKind);
             members.push_back(member);
             errored = false;
@@ -3894,6 +3915,934 @@ FilePathSpecSyntax& Parser::parseFilePathSpec() {
     return factory.filePathSpec(path);
 }
 
+SDFTimescaleSyntax* Parser::parseSDFTimescale() {
+    if (peek().kind != TokenKind::OpenParenthesis || peek(1).kind != TokenKind::SDFTimescaleKeyword)
+        return nullptr;
+
+    auto openParen = expect(TokenKind::OpenParenthesis);
+    auto keyword = expect(TokenKind::SDFTimescaleKeyword);
+
+    // Timescale number and unit can be parsed as two tokens (RealLiteral and Identifier) for
+    // example: "1 ns" and also as one (TimeLiteral) - 1ns.
+    static std::set<std::string_view> validTimescaleNumbers{"1", "10", "100", "1.0", "10", "100.0"};
+    auto number = peek();
+    std::string_view realLitStr = number.valueText();
+    if (number.kind == TokenKind::TimeLiteral) {
+        auto numberText = number.valueText();
+        // Remove 's' suffix
+        realLitStr = numberText.substr(0, numberText.length() - 1);
+        // Remove remaining alpha suffix if it present
+        if (isalpha(realLitStr.back()) != 0)
+            realLitStr = numberText.substr(0, numberText.length() - 2);
+    }
+
+    if (!validTimescaleNumbers.contains(realLitStr)) {
+        addDiag(diag::InvalidSDFTimescaleUnit, number.range());
+        return nullptr;
+    }
+    number = consume();
+
+    if (number.kind != TokenKind::TimeLiteral) {
+        static std::set<std::string_view> validTimescaleUnits{"s", "ms", "us", "ns", "ps", "fs"};
+        auto unit = peek();
+        if (!validTimescaleUnits.contains(unit.valueText())) {
+            addDiag(diag::InvalidSDFTimescaleUnit, number.range());
+            return nullptr;
+        }
+        unit = consume();
+        return &factory.sDFTimescale(openParen, keyword,
+                                     factory.literalExpression(SyntaxKind::RealLiteralExpression,
+                                                               number),
+                                     unit, expect(TokenKind::CloseParenthesis));
+    }
+
+    return &factory.sDFTimescale(
+        openParen, keyword, factory.literalExpression(SyntaxKind::TimeLiteralExpression, number),
+        Token(), expect(TokenKind::CloseParenthesis));
+}
+
+SDFCharMemberSyntax* Parser::parseSDFCharMember(TokenKind keywordKind, bool weak) {
+    if (peek().kind != TokenKind::OpenParenthesis || (weak && peek(1).kind != keywordKind))
+        return nullptr;
+
+    auto openParen = expect(TokenKind::OpenParenthesis);
+    auto keyword = expect(keywordKind);
+
+    auto value = peek();
+    if (keywordKind == TokenKind::SDFDividerKeyword) {
+        if (value.kind != TokenKind::Slash && value.kind != TokenKind::Dot) {
+            addDiag(diag::ExpectedSDFDivider, value.range());
+            return nullptr;
+        }
+    }
+    else if (value.kind != TokenKind::StringLiteral) {
+        addDiag(diag::ExpectedStringLiteral, value.range());
+        return nullptr;
+    }
+    value = consume();
+
+    return &factory.sDFCharMember(openParen, keyword, value, expect(TokenKind::CloseParenthesis));
+}
+
+SDFValueSyntax* Parser::parseSDFValue(const std::set<TokenKind>& endKinds, bool withParens,
+                                      bool isSign) {
+    // Try to parse such value cases (where braces wrap optional tokens and min, typ, max may be
+    // signed or unsigned integers or real literals):
+    //     - triple [`(`] [min] `:` [typ] `:` [max] [`)`]
+    //     - single [`(`] [value] [`)`]
+    // Why the `parseMinTypMaxExpression` method is not used is that parsing this type of SDF
+    // expression is more difficult due to the fact that all values can be optional.
+    std::set<SyntaxKind> expectedExprKinds{SyntaxKind::IntegerLiteralExpression,
+                                           SyntaxKind::RealLiteralExpression};
+    if (isSign)
+        expectedExprKinds.insert(SyntaxKind::UnaryMinusExpression);
+
+    ExpressionSyntax* min = nullptr;
+    ExpressionSyntax* typ = nullptr;
+    ExpressionSyntax* max = nullptr;
+    Token curr;
+    if (withParens)
+        curr = expect(TokenKind::OpenParenthesis);
+
+    uint32_t colonCount = 0;
+    while (true) {
+        curr = peek();
+        if (endKinds.contains(curr.kind) || colonCount >= 2)
+            break;
+
+        if (curr.kind != TokenKind::Colon && curr.kind != TokenKind::DoubleColon) {
+            if (min != nullptr) {
+                addDiag(diag::InvalidSDFValueSep, curr.range());
+                return &factory.sDFValue(min, typ, max);
+            }
+        }
+        else {
+            curr = consume();
+            colonCount = (curr.kind == TokenKind::Colon) ? colonCount + 1 : colonCount + 2;
+        }
+
+        if (endKinds.contains(peek().kind))
+            break;
+
+        auto* expr = &parseExpression();
+        if (!expectedExprKinds.contains(expr->kind)) {
+            addDiag(diag::InvalidSDFValueExpr, expr->sourceRange());
+            return &factory.sDFValue(min, typ, max);
+        }
+
+        switch (colonCount) {
+            case 0:
+                min = expr;
+                break;
+            case 1:
+                typ = expr;
+                break;
+            case 2:
+                max = expr;
+                break;
+            default:
+                break;
+        }
+    }
+
+    // When colonCount is 0 then single scalar or no scalar is emitted instead of triple
+    if (colonCount != 0 && colonCount != 2)
+        addDiag(diag::InvalidSDFValueExpr, curr.range());
+
+    // Value propagation in case of single value
+    if (colonCount == 0 && min)
+        max = typ = min;
+
+    if (withParens)
+        curr = expect(TokenKind::CloseParenthesis);
+    return &factory.sDFValue(min, typ, max);
+}
+
+SDFDelayValueSyntax* Parser::parseSDFDelayValue() {
+    SmallVector<SDFValueSyntax*, 3> values;
+    if (peek().kind != TokenKind::OpenParenthesis)
+        return &factory.sDFDelayValue(values.copy(alloc));
+
+    auto lookahead = peek(1);
+    if (lookahead.kind == TokenKind::OpenParenthesis) {
+        lookahead = expect(TokenKind::OpenParenthesis);
+        values.push_back(
+            parseSDFValue({TokenKind::CloseParenthesis}, /*withParens =*/true, /*isSign =*/true));
+        values.push_back(
+            parseSDFValue({TokenKind::CloseParenthesis}, /*withParens =*/true, /*isSign =*/true));
+        lookahead = peek();
+        if (lookahead.kind != TokenKind::CloseParenthesis)
+            values.push_back(parseSDFValue({TokenKind::CloseParenthesis}, /*withParens =*/true,
+                                           /*isSign =*/true));
+        lookahead = expect(TokenKind::CloseParenthesis);
+    }
+    else {
+        values.push_back(
+            parseSDFValue({TokenKind::CloseParenthesis}, /*withParens =*/true, /*isSign =*/true));
+    }
+
+    return &factory.sDFDelayValue(values.copy(alloc));
+}
+
+std::span<SDFDelayValueSyntax*> Parser::parseSDFDelayValueList(bool isRetain) {
+    SmallVector<SDFDelayValueSyntax*, 12> delayValues;
+    delayValues.push_back(parseSDFDelayValue());
+
+    while (peek().kind == TokenKind::OpenParenthesis)
+        delayValues.push_back(parseSDFDelayValue());
+
+    if (isRetain && delayValues.size() > 3)
+        addDiag(diag::InvalidSDFDelayValuesList, peek().range()) << 3;
+    else if (delayValues.size() > 12)
+        addDiag(diag::InvalidSDFDelayValuesList, peek().range()) << 12;
+    return delayValues.copy(alloc);
+}
+
+SDFValueMemberSyntax* Parser::parseSDFValueMember(TokenKind keywordKind) {
+    if (peek().kind != TokenKind::OpenParenthesis || (peek(1).kind != keywordKind))
+        return nullptr;
+
+    auto openParen = expect(TokenKind::OpenParenthesis);
+    auto keyword = consume();
+
+    auto* value = parseSDFValue({TokenKind::CloseParenthesis}, /*withParens =*/false,
+                                /*isSign =*/true);
+    return &factory.sDFValueMember(openParen, keyword, *value, expect(TokenKind::CloseParenthesis));
+}
+
+SDFHeaderSyntax& Parser::parseSDFHeader() {
+    auto* version = parseSDFCharMember(TokenKind::SDFVersionKeyword, /*weak =*/false);
+    auto* design = parseSDFCharMember(TokenKind::SDFDesignKeyword);
+    auto* date = parseSDFCharMember(TokenKind::SDFDateKeyword);
+    auto* vendor = parseSDFCharMember(TokenKind::SDFVendorKeyword);
+    auto* programName = parseSDFCharMember(TokenKind::SDFProgramKeyword);
+    auto* programVersion = parseSDFCharMember(TokenKind::SDFProgramVersionKeyword);
+    auto* divider = parseSDFCharMember(TokenKind::SDFDividerKeyword);
+    SDFValueMemberSyntax* voltage = parseSDFValueMember(TokenKind::SDFVoltageKeyword);
+    auto* process = parseSDFCharMember(TokenKind::SDFProcessKeyword);
+    SDFValueMemberSyntax* temperature = parseSDFValueMember(TokenKind::SDFTemperatureKeyword);
+    SDFTimescaleSyntax* timescale = parseSDFTimescale();
+    return factory.sDFHeader(version, design, date, vendor, programName, programVersion, divider,
+                             voltage, process, temperature, timescale);
+}
+
+SDFNameSyntax* Parser::parseSDFName() {
+    auto openParen = expect(TokenKind::OpenParenthesis);
+    auto keyword = expect(TokenKind::SDFNameKeyword);
+    LiteralExpressionSyntax* name = nullptr;
+    if (peek().kind == TokenKind::StringLiteral)
+        name = &factory.literalExpression(SyntaxKind::StringLiteralExpression, consume());
+    return &factory.sDFName(openParen, keyword, name, expect(TokenKind::CloseParenthesis));
+}
+
+SDFPortSpecSyntax* Parser::parseSDFPortSpec() {
+    if (peek().kind == TokenKind::OpenParenthesis)
+        return parseSDFPortEdge();
+    return parseSDFPort();
+}
+
+SDFPortSyntax* Parser::parseSDFPort() {
+    NameSyntax& name = parseSDFHierIdentifier();
+    auto lookahead = peek();
+    if (lookahead.kind == TokenKind::OpenBracket) {
+        SelectorSyntax* selector = nullptr;
+        auto openBracket = consume();
+        auto& lhs = factory.literalExpression(SyntaxKind::IntegerLiteralExpression,
+                                              expect(TokenKind::IntegerLiteral));
+        auto colon = peek();
+        if (colon.kind == TokenKind::Colon) {
+            colon = consume();
+            auto& rhs = factory.literalExpression(SyntaxKind::IntegerLiteralExpression,
+                                                  expect(TokenKind::IntegerLiteral));
+            selector = &factory.rangeSelect(SyntaxKind::SimpleRangeSelect, lhs, colon, rhs);
+        }
+        else {
+            selector = &factory.bitSelect(lhs);
+        }
+
+        auto closeBracket = expect(TokenKind::CloseBracket);
+        auto& elemSelect = factory.elementSelect(openBracket, selector, closeBracket);
+        return &factory.sDFPort(factory.elementSelectExpression(name, elemSelect));
+    }
+
+    return &factory.sDFPort(name);
+}
+
+SDFPortEdgeSyntax* Parser::parseSDFPortEdge() {
+    auto openParen = expect(TokenKind::OpenParenthesis);
+    // posedge and negedge are not specified as keywords in IEEE 1497-2001 SDF standard
+    static const std::set<std::string_view> validTokenText{"posedge", "negedge", "01",
+                                                           "10",      "0z",      "1z"};
+    bool isError = false;
+    auto edge = consume();
+    switch (edge.kind) {
+        case TokenKind::SDFEdgeIdent0Z:
+        case TokenKind::SDFEdgeIdent1Z:
+            break;
+        case TokenKind::IntegerLiteral:
+        case TokenKind::Identifier: {
+            if (!validTokenText.contains(edge.valueText()))
+                isError = true;
+            break;
+        }
+        default:
+            isError = true;
+            break;
+    }
+
+    if (isError)
+        addDiag(diag::InvalidSDFPortEdgeIdentifier, edge.range());
+
+    auto* port = parseSDFPort();
+    return &factory.sDFPortEdge(openParen, edge, *port, expect(TokenKind::CloseParenthesis));
+}
+
+SDFCellInstanceSyntax* Parser::parseSDFCellInstance() {
+    auto openParen = expect(TokenKind::OpenParenthesis);
+    auto keyword = expect(TokenKind::SDFInstanceKeyword);
+    NameSyntax* name = nullptr;
+    auto lookahead = peek();
+    switch (lookahead.kind) {
+        case TokenKind::Star:
+            name = &factory.identifierName(consume());
+            break;
+        case TokenKind::Identifier:
+            name = &parseSDFHierIdentifier();
+            break;
+        default: {
+            if (lookahead.kind != TokenKind::CloseParenthesis)
+                addDiag(diag::InvalidSDFCellInstanceIdentifier, lookahead.range());
+
+            name = &factory.identifierName(Token());
+            break;
+        }
+    }
+
+    auto closeParen = expect(TokenKind::CloseParenthesis);
+    return &factory.sDFCellInstance(openParen, keyword, *name, closeParen);
+}
+
+SDFExceptionSyntax* Parser::parseSDFException() {
+    auto openParen = expect(TokenKind::OpenParenthesis);
+    auto keyword = expect(TokenKind::SDFExceptionKeyword);
+    SmallVector<SDFCellInstanceSyntax*> instances;
+    while (peek().kind == TokenKind::OpenParenthesis)
+        instances.push_back(parseSDFCellInstance());
+
+    if (instances.empty())
+        addDiag(diag::ExpectedSDFMember, peek().range()) << "cell instance"sv;
+    return &factory.sDFException(openParen, keyword, instances.copy(alloc),
+                                 expect(TokenKind::CloseParenthesis));
+}
+
+SDFPathPulseSyntax* Parser::parseSDFPathPulse() {
+    auto openParen = expect(TokenKind::OpenParenthesis);
+    auto keyword = consume();
+    SDFPortSyntax* in = nullptr;
+    SDFPortSyntax* out = nullptr;
+    // Parse input and output port identifiers
+    if (peek().kind == TokenKind::Identifier) {
+        in = parseSDFPort();
+        out = parseSDFPort();
+    }
+
+    SmallVector<SDFValueSyntax*, 2> values;
+    values.push_back(parseSDFValue({TokenKind::CloseParenthesis}, /*withParens =*/true,
+                                   /*isSign =*/false));
+
+    if (peek().kind != TokenKind::CloseParenthesis)
+        values.push_back(parseSDFValue({TokenKind::CloseParenthesis}, /*withParens =*/true,
+                                       /*isSign =*/false));
+
+    auto closeParen = expect(TokenKind::CloseParenthesis);
+    return &factory.sDFPathPulse(openParen, keyword, in, out, values.copy(alloc), closeParen);
+}
+
+SDFRetainSyntax* Parser::parseSDFRetain() {
+    auto openParen = expect(TokenKind::OpenParenthesis);
+    auto keyword = consume();
+    auto values = parseSDFDelayValueList(/*isRetain =*/true);
+    auto closeParen = expect(TokenKind::CloseParenthesis);
+    return &factory.sDFRetain(openParen, keyword, values, closeParen);
+}
+
+SDFIOPathSyntax* Parser::parseSDFIOPath() {
+    auto openParen = expect(TokenKind::OpenParenthesis);
+    auto keyword = consume();
+    SmallVector<SDFPortSpecSyntax*, 2> ports;
+    ports.push_back(parseSDFPortSpec());
+    ports.push_back(parseSDFPort());
+    SDFRetainSyntax* retain = nullptr;
+    if (peek().kind == TokenKind::OpenParenthesis && peek(1).kind == TokenKind::SDFRetainKeyword)
+        retain = parseSDFRetain();
+    auto values = parseSDFDelayValueList();
+    auto closeParen = expect(TokenKind::CloseParenthesis);
+    return &factory.sDFIOPath(openParen, keyword, ports.copy(alloc), retain, values, closeParen);
+}
+
+SDFCondSyntax* Parser::parseSDFCond() {
+    auto openParen = expect(TokenKind::OpenParenthesis);
+    auto keyword = consume();
+    LiteralExpressionSyntax* name = nullptr;
+    if (peek().kind == TokenKind::StringLiteral)
+        name = &factory.literalExpression(SyntaxKind::StringLiteralExpression, consume());
+    auto* condition = &parseSubExpression(ExpressionOptions::SDFCondExpr, 0);
+    auto* iOPath = parseSDFIOPath();
+    return &factory.sDFCond(openParen, keyword, name, *condition, *iOPath,
+                            expect(TokenKind::CloseParenthesis));
+}
+
+SDFCondElseSyntax* Parser::parseSDFCondElse() {
+    auto openParen = expect(TokenKind::OpenParenthesis);
+    auto keyword = consume();
+    auto* iOPath = parseSDFIOPath();
+    return &factory.sDFCondElse(openParen, keyword, *iOPath, expect(TokenKind::CloseParenthesis));
+}
+
+SDFPortDelayDefSyntax* Parser::parseSDFPortDelayDef() {
+    auto openParen = expect(TokenKind::OpenParenthesis);
+    auto keyword = consume();
+    auto* port = parseSDFPort();
+    auto values = parseSDFDelayValueList();
+    return &factory.sDFPortDelayDef(openParen, keyword, *port, values,
+                                    expect(TokenKind::CloseParenthesis));
+}
+
+SDFInterconnectSyntax* Parser::parseSDFInterconnect() {
+    auto openParen = expect(TokenKind::OpenParenthesis);
+    auto keyword = consume();
+    SmallVector<SDFPortSyntax*, 2> ports;
+    ports.push_back(parseSDFPort());
+    ports.push_back(parseSDFPort());
+    auto values = parseSDFDelayValueList();
+    return &factory.sDFInterconnect(openParen, keyword, ports.copy(alloc), values,
+                                    expect(TokenKind::CloseParenthesis));
+}
+
+SDFNetDelaySyntax* Parser::parseSDFNetDelay() {
+    auto openParen = expect(TokenKind::OpenParenthesis);
+    auto keyword = consume();
+    auto* net = parseSDFPort();
+    auto values = parseSDFDelayValueList();
+    return &factory.sDFNetDelay(openParen, keyword, *net, values,
+                                expect(TokenKind::CloseParenthesis));
+}
+
+SDFDeviceSyntax* Parser::parseSDFDevice() {
+    auto openParen = expect(TokenKind::OpenParenthesis);
+    auto keyword = consume();
+    SDFPortSyntax* port = nullptr;
+    if (peek().kind != TokenKind::OpenParenthesis)
+        port = parseSDFPort();
+    auto values = parseSDFDelayValueList();
+    return &factory.sDFDevice(openParen, keyword, port, values,
+                              expect(TokenKind::CloseParenthesis));
+}
+
+SDFAbsIncDelayTypeSyntax* Parser::parseSDFAbsIncDelayType() {
+    auto openParen = expect(TokenKind::OpenParenthesis);
+    auto keyword = consume();
+    SmallVector<SDFDelayDefSyntax*, 4> defs;
+    bool next = true;
+    while (next && peek().kind == TokenKind::OpenParenthesis) {
+        switch (peek(1).kind) {
+            case TokenKind::SDFIOPathKeyword:
+                defs.push_back(parseSDFIOPath());
+                break;
+            case TokenKind::SDFCondKeyword:
+                defs.push_back(parseSDFCond());
+                break;
+            case TokenKind::SDFCondElseKeyword:
+                defs.push_back(parseSDFCondElse());
+                break;
+            case TokenKind::SDFPortKeyword:
+                defs.push_back(parseSDFPortDelayDef());
+                break;
+            case TokenKind::SDFInterconnectKeyword:
+                defs.push_back(parseSDFInterconnect());
+                break;
+            case TokenKind::SDFNetDelayKeyword:
+                defs.push_back(parseSDFNetDelay());
+                break;
+            case TokenKind::SDFDeviceKeyword:
+                defs.push_back(parseSDFDevice());
+                break;
+            default:
+                next = false;
+                break;
+        }
+    }
+
+    if (defs.empty())
+        addDiag(diag::ExpectedSDFMember, peek().range()) << "delay definition"sv;
+    return &factory.sDFAbsIncDelayType(openParen, keyword, defs.copy(alloc),
+                                       expect(TokenKind::CloseParenthesis));
+}
+
+std::span<SDFDelayTypeSyntax*> Parser::parseSDFDelayTypes() {
+    SmallVector<SDFDelayTypeSyntax*, 4> types;
+    bool next = true;
+    while (next && peek().kind == TokenKind::OpenParenthesis) {
+        auto lookahead = peek(1);
+        switch (lookahead.kind) {
+            case TokenKind::SDFPathPulseKeyword:
+            case TokenKind::SDFPathPulsePercentKeyword:
+                types.push_back(parseSDFPathPulse());
+                break;
+            case TokenKind::SDFAbsoluteKeyword:
+            case TokenKind::SDFIncrementKeyword:
+                types.push_back(parseSDFAbsIncDelayType());
+                break;
+            default:
+                next = false;
+                break;
+        }
+    }
+    return types.copy(alloc);
+}
+
+SDFDelaySpecSyntax* Parser::parseSDFDelaySpec() {
+    auto openParen = expect(TokenKind::OpenParenthesis);
+    auto keyword = consume();
+    auto types = parseSDFDelayTypes();
+    if (types.empty())
+        addDiag(diag::ExpectedSDFMember, peek().range()) << "delay type"sv;
+    return &factory.sDFDelaySpec(openParen, keyword, types, expect(TokenKind::CloseParenthesis));
+}
+
+SDFPathConstraintSyntax* Parser::parseSDFPathConstraint() {
+    auto openParen = expect(TokenKind::OpenParenthesis);
+    auto keyword = consume();
+    SDFNameSyntax* name = nullptr;
+    if (peek().kind == TokenKind::OpenParenthesis)
+        name = parseSDFName();
+
+    SmallVector<SDFPortSyntax*, 4> ports;
+    while (peek().kind == TokenKind::Identifier)
+        ports.push_back(parseSDFPort());
+
+    if (ports.size() < 2)
+        addDiag(diag::InvalidSDFPathCnsPortNum, peek().range());
+
+    SmallVector<SDFValueSyntax*, 2> values;
+    values.push_back(
+        parseSDFValue({TokenKind::CloseParenthesis}, /*withParens =*/true, /*isSign =*/true));
+    values.push_back(
+        parseSDFValue({TokenKind::CloseParenthesis}, /*withParens =*/true, /*isSign =*/true));
+    return &factory.sDFPathConstraint(openParen, keyword, name, ports.copy(alloc),
+                                      values.copy(alloc), expect(TokenKind::CloseParenthesis));
+}
+
+SDFPeriodConstraintSyntax* Parser::parseSDFPeriodConstraint() {
+    auto openParen = expect(TokenKind::OpenParenthesis);
+    auto keyword = consume();
+    auto* port = parseSDFPort();
+    auto* value = parseSDFValue({TokenKind::OpenParenthesis, TokenKind::CloseParenthesis},
+                                /*withParens =*/true,
+                                /*isSign =*/false);
+    auto* exception = parseSDFException();
+    return &factory.sDFPeriodConstraint(openParen, keyword, *port, *value, exception,
+                                        expect(TokenKind::CloseParenthesis));
+}
+
+SDFConstraintPathSyntax* Parser::parseSDFConstraintPath() {
+    auto openParen = expect(TokenKind::OpenParenthesis);
+    SmallVector<SDFPortSyntax*, 2> ports;
+    ports.push_back(parseSDFPort());
+    ports.push_back(parseSDFPort());
+    return &factory.sDFConstraintPath(openParen, ports.copy(alloc),
+                                      expect(TokenKind::CloseParenthesis));
+}
+
+SDFSumDiffConstraintSyntax* Parser::parseSDFSumDiffConstraint(bool isDiff) {
+    auto openParen = expect(TokenKind::OpenParenthesis);
+    auto keyword = consume();
+    SmallVector<SDFConstraintPathSyntax*, 4> pathes;
+    while (peek().kind == TokenKind::OpenParenthesis && peek(1).kind == TokenKind::Identifier &&
+           !(isDiff && pathes.size() == 2))
+        pathes.push_back(parseSDFConstraintPath());
+
+    if (pathes.size() < 2)
+        addDiag(diag::InvalidSDFSumDiffCnsPathesNum, peek().range());
+
+    SmallVector<SDFValueSyntax*, 2> values;
+    bool isSign = !isDiff;
+    values.push_back(
+        parseSDFValue({TokenKind::CloseParenthesis}, /*withParens =*/true, /*isSign =*/isSign));
+    if (peek().kind != TokenKind::CloseParenthesis)
+        values.push_back(
+            parseSDFValue({TokenKind::CloseParenthesis}, /*withParens =*/true, /*isSign =*/isSign));
+    return &factory.sDFSumDiffConstraint(openParen, keyword, pathes.copy(alloc), values.copy(alloc),
+                                         expect(TokenKind::CloseParenthesis));
+}
+
+SDFSkewConstraintSyntax* Parser::parseSDFSkewConstraint() {
+    auto openParen = expect(TokenKind::OpenParenthesis);
+    auto keyword = consume();
+    auto* portSpec = parseSDFPortSpec();
+    auto* value = parseSDFValue({TokenKind::CloseParenthesis}, /*withParens =*/true,
+                                /*isSign =*/false);
+    return &factory.sDFSkewConstraint(openParen, keyword, *portSpec, *value,
+                                      expect(TokenKind::CloseParenthesis));
+}
+
+SDFTimingEnvConstructSyntax* Parser::parseSDFTimingEnvConstruct(bool isSlack) {
+    auto openParen = expect(TokenKind::OpenParenthesis);
+    auto keyword = consume();
+    SDFPortEdgeSyntax* edge = nullptr;
+    if (!isSlack && peek().kind == TokenKind::OpenParenthesis)
+        edge = parseSDFPortEdge();
+    auto* port = parseSDFPort();
+    SmallVector<SDFValueSyntax*, 4> values;
+    values.push_back(
+        parseSDFValue({TokenKind::CloseParenthesis}, /*withParens =*/true, /*isSign =*/true));
+    values.push_back(
+        parseSDFValue({TokenKind::CloseParenthesis}, /*withParens =*/true, /*isSign =*/true));
+    values.push_back(
+        parseSDFValue({TokenKind::CloseParenthesis}, /*withParens =*/true, /*isSign =*/true));
+    values.push_back(
+        parseSDFValue({TokenKind::CloseParenthesis}, /*withParens =*/true, /*isSign =*/true));
+    ExpressionSyntax* period = nullptr;
+    if (isSlack && peek().kind != TokenKind::CloseParenthesis) {
+        period = &parseExpression();
+        if (period->kind != SyntaxKind::RealLiteralExpression &&
+            period->kind != SyntaxKind::IntegerLiteralExpression)
+            addDiag(diag::ExpectedRealLiteralExpression, period->sourceRange());
+    }
+    return &factory.sDFTimingEnvConstruct(openParen, keyword, edge, *port, values.copy(alloc),
+                                          period, expect(TokenKind::CloseParenthesis));
+}
+
+SDFEdgeSyntax* Parser::parseSDFEdge() {
+    auto openParen = expect(TokenKind::OpenParenthesis);
+    auto edge = peek();
+    auto edgeText = edge.valueText();
+    if (edgeText != "posedge" && edgeText != "negedge")
+        addDiag(diag::InvalidSDFEdgeSpec, edge.range());
+    else
+        edge = consume();
+
+    static const std::set<SyntaxKind> expectedExprKinds{SyntaxKind::IntegerLiteralExpression,
+                                                        SyntaxKind::RealLiteralExpression,
+                                                        SyntaxKind::UnaryMinusExpression};
+    SmallVector<ExpressionSyntax*, 2> values;
+    auto* expr = &parseExpression();
+    if (!expectedExprKinds.contains(expr->kind))
+        addDiag(diag::InvalidSDFValueExpr, expr->sourceRange());
+    values.push_back(expr);
+
+    if (peek().kind != TokenKind::CloseParenthesis) {
+        expr = &parseExpression();
+        if (!expectedExprKinds.contains(expr->kind))
+            addDiag(diag::InvalidSDFValueExpr, expr->sourceRange());
+        values.push_back(expr);
+    }
+    return &factory.sDFEdge(openParen, edge, values.copy(alloc),
+                            expect(TokenKind::CloseParenthesis));
+}
+
+SDFEdgePairSyntax* Parser::parseSDFEdgePair() {
+    SmallVector<SDFEdgeSyntax*, 4> pair;
+    pair.push_back(parseSDFEdge());
+    pair.push_back(parseSDFEdge());
+    if (pair[0]->edge.valueText() == pair[1]->edge.valueText())
+        addDiag(diag::InvalidSDFEdgePair, pair[1]->edge.range())
+            << ((pair[1]->edge.valueText() == "posedge") ? "negedge"sv : "posedge"sv);
+    return &factory.sDFEdgePair(pair.copy(alloc));
+}
+
+SDFWaveformSyntax* Parser::parseSDFWaveform() {
+    auto openParen = expect(TokenKind::OpenParenthesis);
+    auto keyword = consume();
+    auto* port = parseSDFPort();
+    auto* period = &parseExpression();
+    if (period->kind != SyntaxKind::RealLiteralExpression &&
+        period->kind != SyntaxKind::IntegerLiteralExpression)
+        addDiag(diag::ExpectedRealLiteralExpression, period->sourceRange());
+
+    SmallVector<SDFEdgePairSyntax*, 4> edgeList;
+    while (peek().kind == TokenKind::OpenParenthesis)
+        edgeList.push_back(parseSDFEdgePair());
+
+    if (edgeList.empty())
+        addDiag(diag::ExpectedSDFMember, peek().range()) << "edge pair"sv;
+
+    const auto* first = *edgeList.begin();
+    for (const auto* pair : edgeList) {
+        if (pair == first)
+            continue;
+
+        const auto edge = pair->edges[0]->edge;
+        if (edge.valueText() != first->edges[0]->edge.valueText())
+            addDiag(diag::InvalidSDFEdgePair, edge.range())
+                << ((edge.valueText() == "posedge") ? "negedge"sv : "posedge"sv);
+    }
+
+    return &factory.sDFWaveform(openParen, keyword, *port, *period, edgeList.copy(alloc),
+                                expect(TokenKind::CloseParenthesis));
+}
+
+std::span<SDFTimingEnvDefSyntax*> Parser::parseSDFTimingEnvDefs() {
+    SmallVector<SDFTimingEnvDefSyntax*, 4> defs;
+    bool next = true;
+    while (next && peek().kind == TokenKind::OpenParenthesis) {
+        auto lookahead = peek(1);
+        switch (lookahead.kind) {
+            case TokenKind::SDFPathConstraintKeyword:
+                defs.push_back(parseSDFPathConstraint());
+                break;
+            case TokenKind::SDFPeriodConstraintKeyword:
+                defs.push_back(parseSDFPeriodConstraint());
+                break;
+            case TokenKind::SDFSumKeyword:
+                defs.push_back(parseSDFSumDiffConstraint());
+                break;
+            case TokenKind::SDFDiffKeyword:
+                defs.push_back(parseSDFSumDiffConstraint(/*isDiff =*/true));
+                break;
+            case TokenKind::SDFSkewConstraintKeyword:
+                defs.push_back(parseSDFSkewConstraint());
+                break;
+            case TokenKind::SDFArrivalKeyword:
+            case TokenKind::SDFDepartureKeyword:
+                defs.push_back(parseSDFTimingEnvConstruct());
+                break;
+            case TokenKind::SDFSlackKeyword:
+                defs.push_back(parseSDFTimingEnvConstruct(/*isSlack =*/true));
+                break;
+            case TokenKind::SDFWaveformKeyword:
+                defs.push_back(parseSDFWaveform());
+                break;
+            default:
+                next = false;
+                break;
+        }
+    }
+    return defs.copy(alloc);
+}
+
+SDFPortTimingCheckSyntax* Parser::parseSDFPortTimingCheck() {
+    if (peek().kind == TokenKind::OpenParenthesis && peek(1).kind == TokenKind::SDFCondKeyword)
+        return parseSDFTimingCheckCondition(TokenKind::SDFCondKeyword);
+    return parseSDFPortSpec();
+}
+
+SDFTimingCheckConditionSyntax* Parser::parseSDFTimingCheckCondition(TokenKind keywordKind) {
+    auto openParen = expect(TokenKind::OpenParenthesis);
+    auto keyword = expect(keywordKind);
+    LiteralExpressionSyntax* name = nullptr;
+    if (peek().kind == TokenKind::StringLiteral)
+        name = &factory.literalExpression(SyntaxKind::StringLiteralExpression, consume());
+    auto* condition = &parseSubExpression(ExpressionOptions::SDFTimingCheckCondExpr, 0);
+    SDFPortSpecSyntax* portSpec = nullptr;
+    if (peek().kind != TokenKind::CloseParenthesis)
+        portSpec = parseSDFPortSpec();
+    return &factory.sDFTimingCheckCondition(openParen, keyword, name, *condition, portSpec,
+                                            expect(TokenKind::CloseParenthesis));
+}
+
+SDFTimingCheckDefSyntax* Parser::parseSDFTimingCheckDef(bool hasTwoPorts, bool hasTwoValues,
+                                                        bool isSign, bool hasConds) {
+    auto openParen = expect(TokenKind::OpenParenthesis);
+    auto keyword = consume();
+    SmallVector<SDFPortTimingCheckSyntax*, 2> ports;
+    bool hasPortConds = false;
+    if (hasConds) {
+        if (peek().kind == TokenKind::OpenParenthesis && peek(1).kind == TokenKind::SDFCondKeyword)
+            hasPortConds = true;
+        ports.push_back(parseSDFPortTimingCheck());
+        if (peek().kind == TokenKind::OpenParenthesis && peek(1).kind == TokenKind::SDFCondKeyword)
+            hasPortConds = true;
+        ports.push_back(parseSDFPortTimingCheck());
+    }
+    else {
+        ports.push_back(parseSDFPortSpec());
+        if (hasTwoPorts)
+            ports.push_back(parseSDFPortSpec());
+    }
+
+    SmallVector<SDFValueSyntax*, 2> values;
+    values.push_back(
+        parseSDFValue({TokenKind::CloseParenthesis}, /*withParens =*/true, /*isSign =*/isSign));
+    if (hasTwoValues)
+        values.push_back(parseSDFValue({TokenKind::CloseParenthesis}, /*withParens =*/true,
+                                       /*isSign =*/isSign));
+    SmallVector<SDFTimingCheckConditionSyntax*, 2> conditions;
+    if (hasConds && !hasPortConds) {
+        if (peek().kind == TokenKind::OpenParenthesis && peek(1).kind == TokenKind::SDFSCondKeyword)
+            conditions.push_back(parseSDFTimingCheckCondition(TokenKind::SDFSCondKeyword));
+        if (peek().kind == TokenKind::OpenParenthesis && peek(1).kind == TokenKind::SDFCCondKeyword)
+            conditions.push_back(parseSDFTimingCheckCondition(TokenKind::SDFCCondKeyword));
+    }
+    return &factory.sDFTimingCheckDef(openParen, keyword, ports.copy(alloc), values.copy(alloc),
+                                      conditions.copy(alloc), expect(TokenKind::CloseParenthesis));
+}
+
+std::span<SDFTimingCheckDefSyntax*> Parser::parseSDFTimingCheckDefs() {
+    SmallVector<SDFTimingCheckDefSyntax*, 4> defs;
+    bool next = true;
+    while (next && peek().kind == TokenKind::OpenParenthesis) {
+        auto lookahead = peek(1);
+        switch (lookahead.kind) {
+            case TokenKind::SDFSetupKeyword:
+            case TokenKind::SDFHoldKeyword:
+            case TokenKind::SDFRecoveryKeyword:
+            case TokenKind::SDFRemovalKeyword:
+                defs.push_back(parseSDFTimingCheckDef(/*hasTwoPorts =*/true,
+                                                      /*hasTwoValues =*/false, /*isSign =*/false));
+                break;
+            case TokenKind::SDFSetupHoldKeyword:
+            case TokenKind::SDFRecremKeyword:
+                defs.push_back(parseSDFTimingCheckDef(/*hasTwoPorts =*/true, /*hasTwoValues =*/true,
+                                                      /*isSign =*/true, /*hasConds =*/true));
+                break;
+            case TokenKind::SDFSkewKeyword:
+                defs.push_back(parseSDFTimingCheckDef(/*hasTwoPorts =*/true,
+                                                      /*hasTwoValues =*/false, /*isSign =*/true));
+                break;
+            case TokenKind::SDFBidirectSkewKeyword:
+                defs.push_back(parseSDFTimingCheckDef(/*hasTwoPorts =*/true, /*hasTwoValues =*/true,
+                                                      /*isSign =*/false));
+                break;
+            case TokenKind::SDFWidthKeyword:
+            case TokenKind::SDFPeriodKeyword:
+                defs.push_back(parseSDFTimingCheckDef(/*hasTwoPorts =*/false,
+                                                      /*hasTwoValues =*/false, /*isSign =*/false));
+                break;
+            case TokenKind::SDFNochangeKeyword:
+                defs.push_back(parseSDFTimingCheckDef(/*hasTwoPorts =*/true, /*hasTwoValues =*/true,
+                                                      /*isSign =*/true));
+                break;
+            default:
+                next = false;
+                break;
+        }
+    }
+    return defs.copy(alloc);
+}
+
+SDFTimingCheckSyntax* Parser::parseSDFTimingCheck() {
+    auto openParen = expect(TokenKind::OpenParenthesis);
+    auto keyword = consume();
+    auto defs = parseSDFTimingCheckDefs();
+    if (defs.empty())
+        addDiag(diag::ExpectedSDFMember, peek().range()) << "timing check definition"sv;
+    return &factory.sDFTimingCheck(openParen, keyword, defs, expect(TokenKind::CloseParenthesis));
+}
+
+SDFTimingEnvSyntax* Parser::parseSDFTimingEnv() {
+    auto openParen = expect(TokenKind::OpenParenthesis);
+    auto keyword = consume();
+    auto defs = parseSDFTimingEnvDefs();
+    if (defs.empty())
+        addDiag(diag::ExpectedSDFMember, peek().range()) << "timing environment definition"sv;
+    return &factory.sDFTimingEnv(openParen, keyword, defs, expect(TokenKind::CloseParenthesis));
+}
+
+SDFLabelDefSyntax* Parser::parseSDFLabelDef() {
+    auto openParen = expect(TokenKind::OpenParenthesis);
+    auto* identifier = &factory.identifierName(expect(TokenKind::Identifier));
+    auto values = parseSDFDelayValueList();
+    return &factory.sDFLabelDef(openParen, *identifier, values,
+                                expect(TokenKind::CloseParenthesis));
+}
+
+SDFLabelTypeSyntax* Parser::parseSDFLabelType() {
+    auto openParen = expect(TokenKind::OpenParenthesis);
+    auto keyword = consume();
+    SmallVector<SDFLabelDefSyntax*, 4> defs;
+    while (peek().kind == TokenKind::OpenParenthesis) {
+        defs.push_back(parseSDFLabelDef());
+    }
+
+    if (defs.empty())
+        addDiag(diag::ExpectedSDFMember, peek().range()) << "label definition"sv;
+    return &factory.sDFLabelType(openParen, keyword, defs.copy(alloc),
+                                 expect(TokenKind::CloseParenthesis));
+}
+
+std::span<SDFLabelTypeSyntax*> Parser::parseSDFLabelTypes() {
+    SmallVector<SDFLabelTypeSyntax*, 4> types;
+    bool next = true;
+    while (next && peek().kind == TokenKind::OpenParenthesis) {
+        auto lookahead = peek(1);
+        switch (lookahead.kind) {
+            case TokenKind::SDFAbsoluteKeyword:
+            case TokenKind::SDFIncrementKeyword:
+                types.push_back(parseSDFLabelType());
+                break;
+            default:
+                next = false;
+                break;
+        }
+    }
+    return types.copy(alloc);
+}
+
+SDFLabelSyntax* Parser::parseSDFLabel() {
+    auto openParen = expect(TokenKind::OpenParenthesis);
+    auto keyword = consume();
+    auto types = parseSDFLabelTypes();
+    if (types.empty())
+        addDiag(diag::ExpectedSDFMember, peek().range()) << "label type"sv;
+    return &factory.sDFLabel(openParen, keyword, types, expect(TokenKind::CloseParenthesis));
+}
+
+std::span<SDFTimingSpecSyntax*> Parser::parseSDFTimingSpecs() {
+    SmallVector<SDFTimingSpecSyntax*, 4> timingSpecs;
+    bool next = true;
+    while (next && peek().kind == TokenKind::OpenParenthesis) {
+        auto lookahead = peek(1);
+        switch (lookahead.kind) {
+            case TokenKind::SDFDelayKeyword:
+                timingSpecs.push_back(parseSDFDelaySpec());
+                break;
+            case TokenKind::SDFTimingCheckKeyword:
+                timingSpecs.push_back(parseSDFTimingCheck());
+                break;
+            case TokenKind::SDFTimingEnvKeyword:
+                timingSpecs.push_back(parseSDFTimingEnv());
+                break;
+            case TokenKind::SDFLabelKeyword:
+                timingSpecs.push_back(parseSDFLabel());
+                break;
+            default:
+                next = false;
+                break;
+        }
+    }
+    return timingSpecs.copy(alloc);
+}
+
+std::span<SDFCellSyntax*> Parser::parseSDFCells() {
+    SmallVector<SDFCellSyntax*, 4> cells;
+    while (peek().kind == TokenKind::OpenParenthesis && peek(1).kind == TokenKind::SDFCellKeyword) {
+        auto openParen = consume();
+        auto keyword = consume();
+        auto* type = parseSDFCharMember(TokenKind::SDFCellTypeKeyword, /*weak =*/false);
+        auto* instance = parseSDFCellInstance();
+        auto timingSpecs = parseSDFTimingSpecs();
+        cells.push_back(&factory.sDFCell(openParen, keyword, *type, *instance, timingSpecs,
+                                         expect(TokenKind::CloseParenthesis)));
+    }
+    return cells.copy(alloc);
+}
+
+SDFDelayFileSyntax* Parser::parseSDFDelayFile() {
+    if (peek().kind == TokenKind::OpenParenthesis &&
+        peek(1).kind == TokenKind::SDFDelayFileKeyword) {
+        auto openParen = consume();
+        auto keyword = consume();
+        SDFHeaderSyntax& header = parseSDFHeader();
+        auto cells = parseSDFCells();
+        if (cells.empty())
+            addDiag(diag::ExpectedSDFMember, peek().range()) << "cell"sv;
+        return &factory.sDFDelayFile(nullptr, openParen, keyword, header, cells,
+                                     expect(TokenKind::CloseParenthesis));
+    }
+    return nullptr;
+}
+
 void Parser::checkMemberAllowed(const SyntaxNode& member, SyntaxKind parentKind) {
     // If this is an empty member with a missing semicolon, it was some kind
     // of error that has already been reported so don't pile on here.
@@ -3968,6 +4917,7 @@ void Parser::checkMemberAllowed(const SyntaxNode& member, SyntaxKind parentKind)
         case SyntaxKind::ClockingDeclaration:
         case SyntaxKind::SpecifyBlock:
         case SyntaxKind::LibraryMap:
+        case SyntaxKind::SDFUnit:
             return;
         default:
             SLANG_UNREACHABLE;
