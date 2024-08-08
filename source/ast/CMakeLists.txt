@@ -47,6 +47,7 @@ target_sources(
           ASTContext.cpp
           ASTSerializer.cpp
           Bitstream.cpp
+          ClockResolution.cpp
           Compilation.cpp
           Constraints.cpp
           EvalContext.cpp

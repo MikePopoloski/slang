@@ -7,6 +7,7 @@
 #include "slang/ast/symbols/InstanceSymbols.h"
 #include "slang/ast/symbols/ParameterSymbols.h"
 #include "slang/ast/types/Type.h"
+#include "slang/diagnostics/CompilationDiags.h"
 
 SVInt testParameter(const std::string& text, uint32_t index = 0) {
     const auto& fullText = "module Top; " + text + " endmodule";

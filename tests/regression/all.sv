@@ -164,7 +164,7 @@ macromodule m3;
                 else
                     f;
         endproperty
-        cover property (p2 and p2);
+        cover property  (@(posedge clk) (p2 and p2));
     end
 
     prim prim_inst(q, r);
