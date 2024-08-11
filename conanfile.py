@@ -10,7 +10,7 @@ class CompressorRecipe(ConanFile):
         self.requires("mimalloc/2.1.7")
         self.requires("catch2/3.6.0")
         self.requires("pybind11/2.13.1")
-        self.requires("fmt/11.0.1")
+        self.requires("fmt/11.0.2")
 
     def layout(self):
         self.folders.build_folder_vars = [
