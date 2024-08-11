@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 #include "Test.h"
+#include <fmt/format.h>
 
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
 #include "slang/ast/symbols/InstanceSymbols.h"
@@ -1229,4 +1230,39 @@ endmodule
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::RecursiveDefinition);
+}
+
+TEST_CASE("Defparam in loop regress -- GH #1081") {
+    auto tree = SyntaxTree::fromText(R"(
+module m1();
+  parameter p = 0;
+endmodule
+
+module m2();
+  genvar i;
+  for (i = 0; i < 2; i = i + 1) begin : Loop1
+    m1 m();
+    defparam m.p = 1 + i;
+  end
+  for (i = 2; i < 4; i = i + 1) begin : Loop2
+    m1 m();
+    defparam Loop2[i].m.p = 1 + i;
+  end
+  for (i = 4; i < 6; i = i + 1) begin : Loop3
+    m1 m();
+    defparam m2.Loop3[i].m.p = 1 + i;
+  end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    for (int i = 0; i < 6; i++) {
+        auto name = i < 2 ? "Loop1"sv : i < 4 ? "Loop2"sv : "Loop3"sv;
+        auto& p = compilation.getRoot().lookupName<ParameterSymbol>(
+            fmt::format("m2.{}[{}].m.p", name, i));
+        CHECK(p.getValue().integer() == i + 1);
+    }
 }

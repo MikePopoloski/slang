@@ -554,7 +554,7 @@ struct DefParamVisitor : public ASTVisitor<DefParamVisitor, false, false> {
         for (auto& member : symbol.members()) {
             if (hierarchyProblem)
                 return;
-            visit(member);
+            member.visit(*this);
         }
     }
 
