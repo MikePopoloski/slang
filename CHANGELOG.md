@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Rules about nondegeneracy of sequences and properties are now enforced (thanks to @likeamahoney)
 * Special case rules about how name resolution works in bind directives are now enforced
 * Changed the definition of "simple types" to include `string` to allow using it as a target for assignment pattern fields (thanks to @likeamahoney)
+* Rules for inconsistent net types connected via an implicit named port connection are now enforced (thanks to @likeamahoney)
 #### Clarifications in IEEE 1800-2023
 * Assertion clocking events can't reference automatic variables
 * The `.*` token sequence is actually two separate tokens that can be separated by whitespace
@@ -55,6 +56,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Various fixes and improvements were made to slang-netlist (thanks to @jameshanlon, @udif)
 * Added options to slang-tidy to better control what gets output (thanks to @Sustrak)
 * Added a bunch of new checks to slang-tidy (thanks to @JoelSole-Semidyn)
+* Improved handling of source files that contain non-UTF8 comments (thanks to @udif)
+* Fixed and improved various parts of the SyntaxRewriter API (thanks to @sgizler)
 
 ### Fixes
 * Fixed several AST serialization methods (thanks to @tdp2110, @likeamahoney, @Kitaev2003)
@@ -70,6 +73,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Fixed a bug where parameters that referred to themselves via hierarchical reference would cause a crash instead of reporting a diagnostic
 * Fixed `PATHPULSE$` specparam initializers to allow providing only one value instead of requiring two (thanks to @likeamahoney)
 * Fixed PLA tasks to accept concatenation expressions as arguments without reporting an error about the direction of the argument bounds (thanks to @likeamahoney)
+* Fixed a bug that could cause spurious errors in uninstantiated generic class definitions
+* Fixed the Symbol::getHierarchicalPath API to round-trip correctly
+* Fixed JSON serialization of integers to round-trip correctly
 
 
 ## [v6.0] - 2024-04-21
