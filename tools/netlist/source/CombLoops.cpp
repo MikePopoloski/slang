@@ -1,3 +1,11 @@
+//------------------------------------------------------------------------------
+//! @file CombLoops.cpp
+//! @brief Algorithm for finding combinatorial loops
+//
+// SPDX-FileCopyrightText: Udi Finkelstein
+// SPDX-License-Identifier: MIT
+//------------------------------------------------------------------------------
+
 /*
  * This code is derived from C++ code created by me (Udi finkelstein),
  * which is a translation of the Java code at https://github.com/josch/cycles_johnson_meyer

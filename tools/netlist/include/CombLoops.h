@@ -1,3 +1,10 @@
+//------------------------------------------------------------------------------
+//! @file CombLoops.h
+//! @brief Algorithm for finding combinatorial loops
+//
+// SPDX-FileCopyrightText: Udi Finkelstein
+// SPDX-License-Identifier: MIT
+//------------------------------------------------------------------------------
 #ifndef COMBLOOPS_H
 #define COMBLOOPS_H
 

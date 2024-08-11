@@ -1916,8 +1916,8 @@ void PortConnection::checkSimulatedNetTypes() const {
             bool shouldWarn;
             NetType::getSimulatedNetType(inNt, exNt, shouldWarn);
             if (shouldWarn) {
-                auto diagCode = (isImplicit) ? diag::ImplicitConnNetInconsistent
-                                             : diag::NetInconsistent;
+                auto diagCode = isImplicit ? diag::ImplicitConnNetInconsistent
+                                           : diag::NetInconsistent;
                 auto& diag = scope->addDiag(diagCode, expr->sourceRange);
                 diag << exNt.name;
                 diag << inNt.name;
