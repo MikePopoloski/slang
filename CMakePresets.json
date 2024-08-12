@@ -1,256 +1,268 @@
 {
-  "version": 3,
-  "configurePresets": [
-    {
-      "name": "windows-flags",
-      "hidden": true,
-      "cacheVariables": {
-        "SLANG_WARN_FLAGS": "/W4;/WX;/external:anglebrackets;/external:W0"
-      }
-    },
-    {
-      "name": "windows-base",
-      "hidden": true,
-      "inherits": "windows-flags",
-      "generator": "Ninja",
-      "binaryDir": "${sourceDir}/build/${presetName}",
-      "installDir": "${sourceDir}/install/${presetName}",
-      "cacheVariables": {
-        "CMAKE_CXX_COMPILER": "cl.exe",
-        "CMAKE_CXX_FLAGS": "/nologo /MP /volatile:iso /Zc:inline /Zc:preprocessor /EHsc /Zc:__cplusplus /Zc:externConstexpr /Zc:throwingNew"
-      },
-      "condition": {
-        "type": "equals",
-        "lhs": "${hostSystemName}",
-        "rhs": "Windows"
-      }
-    },
-    {
-      "name": "windows-debug",
-      "hidden": true,
-      "inherits": "windows-base",
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug",
-        "CMAKE_CXX_FLAGS_DEBUG": "/Zi /Ob0 /Od /RTC1",
-        "CMAKE_EXE_LINKER_FLAGS_DEBUG": "/nologo /DEBUG:FASTLINK",
-        "CMAKE_SHARED_LINKER_FLAGS_DEBUG": "/nologo /DEBUG:FASTLINK",
-        "CMAKE_MSVC_RUNTIME_LIBRARY": "MultiThreadedDebugDLL"
-      }
-    },
-    {
-      "name": "windows-release",
-      "hidden": true,
-      "inherits": "windows-base",
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release",
-        "CMAKE_CXX_FLAGS_RELEASE": "/O2 /Ob3 /GS- /DNDEBUG",
-        "CMAKE_MSVC_RUNTIME_LIBRARY": "MultiThreadedDLL"
-      }
-    },
-    {
-      "name": "win64-debug",
-      "displayName": "Win64 Debug",
-      "inherits": "windows-debug",
-      "architecture": {
-        "value": "x64",
-        "strategy": "external"
-      }
-    },
-    {
-      "name": "win64-release",
-      "displayName": "Win64 Release",
-      "inherits": "windows-release",
-      "architecture": {
-        "value": "x64",
-        "strategy": "external"
-      }
-    },
-    {
-      "name": "win64-debug-shared",
-      "displayName": "Win64 Debug Shared",
-      "inherits": [
-        "win64-debug"
-      ],
-      "cacheVariables": {
-        "BUILD_SHARED_LIBS": "ON",
-        "SLANG_USE_MIMALLOC": "OFF"
-      }
-    },
-    {
-      "name": "win64-debug-noexcept",
-      "displayName": "Win64 Debug No Exceptions",
-      "inherits": [
-        "win64-debug"
-      ],
-      "cacheVariables": {
-        "CMAKE_CXX_FLAGS": "/nologo /MP /GR- /volatile:iso /Zc:inline /Zc:preprocessor /Zc:__cplusplus /Zc:externConstexpr /Zc:throwingNew /D_HAS_EXCEPTIONS=0"
-      }
-    },
-    {
-      "name": "gcc-flags",
-      "hidden": true,
-      "cacheVariables": {
-        "SLANG_WARN_FLAGS": "-Wall;-Wextra;-Werror;-Wunused-value;-Wformat-security;-Wimplicit-fallthrough=5;-Walloc-zero;-Wlogical-op;-Wlogical-not-parentheses;-Wvla;-Wduplicated-cond;-Wtype-limits;-Wno-maybe-uninitialized;-Wno-alloc-size-larger-than;-Wno-dangling-reference;-Wno-stringop-overflow"
-      }
-    },
-    {
-      "name": "clang-flags",
-      "hidden": true,
-      "cacheVariables": {
-        "SLANG_WARN_FLAGS": "-Wall;-Wextra;-Werror;-Warray-bounds-pointer-arithmetic;-Wassign-enum;-Wbad-function-cast;-Wcast-qual;-Wchar-subscripts;-Wcomma;-Wconditional-uninitialized;-Wconversion;-Wdelete-non-virtual-dtor;-Wdeprecated;-Wduplicate-enum;-Wduplicate-method-arg;-Wembedded-directive;-Wfor-loop-analysis;-Wformat-pedantic;-Widiomatic-parentheses;-Wimplicit-fallthrough;-Wpedantic;-Wrange-loop-analysis;-Wredundant-parens;-Wreserved-id-macro;-Wshadow;-Wundefined-reinterpret-cast;-Wunreachable-code-aggressive;-Wno-missing-braces;-Wno-deprecated-literal-operator",
-        "CMAKE_CXX_FLAGS": "-Wno-deprecated-declarations"
-      }
-    },
-    {
-      "name": "linux-base",
-      "hidden": true,
-      "generator": "Unix Makefiles",
-      "binaryDir": "${sourceDir}/build/${presetName}",
-      "installDir": "${sourceDir}/install/${presetName}",
-      "condition": {
-        "type": "equals",
-        "lhs": "${hostSystemName}",
-        "rhs": "Linux"
-      }
-    },
-    {
-      "name": "clang-debug",
-      "displayName": "Clang Debug",
-      "inherits": [
-        "linux-base",
-        "clang-flags"
-      ],
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug",
-        "CMAKE_CXX_COMPILER": "clang++-18"
-      }
-    },
-    {
-      "name": "clang-release",
-      "displayName": "Clang Release",
-      "inherits": [
-        "linux-base",
-        "clang-flags"
-      ],
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release",
-        "CMAKE_CXX_COMPILER": "clang++-18"
-      }
-    },
-    {
-      "name": "clang-sanitize",
-      "displayName": "Clang Sanitize",
-      "description": "clang analysis with sanitizers enabled",
-      "inherits": [
-        "linux-base",
-        "clang-flags"
-      ],
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
-        "CMAKE_CXX_COMPILER": "clang++-18",
-        "CMAKE_CXX_FLAGS": "-DSLANG_ASSERT_ENABLED -fsanitize=undefined,address -fno-sanitize-recover=undefined -fno-omit-frame-pointer -fno-common -Wno-deprecated-declarations",
-        "CMAKE_EXE_LINKER_FLAGS": "-fsanitize=undefined,address -fno-sanitize-recover=undefined",
-        "CMAKE_SHARED_LINKER_FLAGS": "-fsanitize=undefined,address -fno-sanitize-recover=undefined",
-        "SLANG_CLANG_TIDY": "clang-tidy-18"
-      }
-    },
-    {
-      "name": "gcc-debug-shared",
-      "displayName": "GCC Debug Shared",
-      "inherits": [
-        "linux-base",
-        "gcc-flags"
-      ],
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug",
-        "CMAKE_CXX_COMPILER": "g++-13",
-        "BUILD_SHARED_LIBS": "ON"
-      }
-    },
-    {
-      "name": "gcc-debug-noexcept",
-      "displayName": "GCC Debug No Exceptions",
-      "inherits": [
-        "linux-base",
-        "gcc-flags"
-      ],
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug",
-        "CMAKE_CXX_FLAGS": "-fno-exceptions -fno-rtti",
-        "CMAKE_CXX_COMPILER": "g++-13"
-      }
-    },
-    {
-      "name": "gcc-release",
-      "displayName": "GCC Release",
-      "inherits": [
-        "linux-base",
-        "gcc-flags"
-      ],
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release",
-        "CMAKE_CXX_COMPILER": "g++-13"
-      }
-    },
-    {
-      "name": "gcc-11-release",
-      "displayName": "GCC Release",
-      "inherits": [
-        "linux-base",
-        "gcc-flags"
-      ],
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release",
-        "CMAKE_CXX_COMPILER": "g++-11"
-      }
-    },
-    {
-      "name": "gcc-coverage",
-      "displayName": "GCC Coverage",
-      "inherits": [
-        "linux-base"
-      ],
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Coverage",
-        "CMAKE_CXX_COMPILER": "g++-13",
-        "CMAKE_CXX_FLAGS_COVERAGE": "-Og -g --coverage -DSLANG_ASSERT_ENABLED=0 -fno-omit-frame-pointer -fno-optimize-sibling-calls -fno-inline -fno-inline-small-functions -fno-default-inline",
-        "CMAKE_EXE_LINKER_FLAGS_COVERAGE": "--coverage",
-        "CMAKE_SHARED_LINKER_FLAGS_COVERAGE": "--coverage",
-        "SLANG_INCLUDE_COVERAGE": "ON",
-        "COVERAGE_GCOV_TOOL": "gcov-13"
-      }
-    },
-    {
-      "name": "ci-coverage",
-      "displayName": "CI Coverage",
-      "inherits": [
-        "gcc-coverage"
-      ],
-      "cacheVariables": {
-        "COVERAGE_HTML_COMMAND": ""
-      }
-    },
-    {
-      "name": "macos-base",
-      "hidden": true,
-      "generator": "Unix Makefiles",
-      "binaryDir": "${sourceDir}/build/${presetName}",
-      "installDir": "${sourceDir}/install/${presetName}",
-      "condition": {
-        "type": "equals",
-        "lhs": "${hostSystemName}",
-        "rhs": "Darwin"
-      }
-    },
-    {
-      "name": "macos-release",
-      "displayName": "macOS Release",
-      "inherits": [
-        "macos-base"
-      ],
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release"
-      }
-    }
-  ]
+    "version": 3,
+    "configurePresets": [
+        {
+            "name": "windows-flags",
+            "hidden": true,
+            "cacheVariables": {
+                "SLANG_WARN_FLAGS": "/W4;/WX;/external:anglebrackets;/external:W0"
+            }
+        },
+        {
+            "name": "windows-base",
+            "hidden": true,
+            "inherits": "windows-flags",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build/${presetName}",
+            "installDir": "${sourceDir}/install/${presetName}",
+            "cacheVariables": {
+                "CMAKE_CXX_COMPILER": "cl.exe",
+                "CMAKE_CXX_FLAGS": "/nologo /MP /volatile:iso /Zc:inline /Zc:preprocessor /EHsc /Zc:__cplusplus /Zc:externConstexpr /Zc:throwingNew"
+            },
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Windows"
+            }
+        },
+        {
+            "name": "windows-debug",
+            "hidden": true,
+            "inherits": "windows-base",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "CMAKE_CXX_FLAGS_DEBUG": "/Zi /Ob0 /Od /RTC1",
+                "CMAKE_EXE_LINKER_FLAGS_DEBUG": "/nologo /DEBUG:FASTLINK",
+                "CMAKE_SHARED_LINKER_FLAGS_DEBUG": "/nologo /DEBUG:FASTLINK",
+                "CMAKE_MSVC_RUNTIME_LIBRARY": "MultiThreadedDebugDLL"
+            }
+        },
+        {
+            "name": "windows-release",
+            "hidden": true,
+            "inherits": "windows-base",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
+                "CMAKE_CXX_FLAGS_RELEASE": "/O2 /Ob3 /GS- /DNDEBUG",
+                "CMAKE_MSVC_RUNTIME_LIBRARY": "MultiThreadedDLL"
+            }
+        },
+        {
+            "name": "win64-debug",
+            "displayName": "Win64 Debug",
+            "inherits": "windows-debug",
+            "architecture": {
+                "value": "x64",
+                "strategy": "external"
+            }
+        },
+        {
+            "name": "win64-release",
+            "displayName": "Win64 Release",
+            "inherits": "windows-release",
+            "architecture": {
+                "value": "x64",
+                "strategy": "external"
+            }
+        },
+        {
+            "name": "win64-debug-shared",
+            "displayName": "Win64 Debug Shared",
+            "inherits": [
+                "win64-debug"
+            ],
+            "cacheVariables": {
+                "BUILD_SHARED_LIBS": "ON",
+                "SLANG_USE_MIMALLOC": "OFF"
+            }
+        },
+        {
+            "name": "win64-debug-noexcept",
+            "displayName": "Win64 Debug No Exceptions",
+            "inherits": [
+                "win64-debug"
+            ],
+            "cacheVariables": {
+                "CMAKE_CXX_FLAGS": "/nologo /MP /GR- /volatile:iso /Zc:inline /Zc:preprocessor /Zc:__cplusplus /Zc:externConstexpr /Zc:throwingNew /D_HAS_EXCEPTIONS=0"
+            }
+        },
+        {
+            "name": "gcc-flags",
+            "hidden": true,
+            "cacheVariables": {
+                "SLANG_WARN_FLAGS": "-Wall;-Wextra;-Werror;-Wunused-value;-Wformat-security;-Wimplicit-fallthrough=5;-Walloc-zero;-Wlogical-op;-Wlogical-not-parentheses;-Wvla;-Wduplicated-cond;-Wtype-limits;-Wno-maybe-uninitialized;-Wno-alloc-size-larger-than;-Wno-dangling-reference;-Wno-stringop-overflow"
+            }
+        },
+        {
+            "name": "clang-flags",
+            "hidden": true,
+            "cacheVariables": {
+                "SLANG_WARN_FLAGS": "-Wall;-Wextra;-Werror;-Warray-bounds-pointer-arithmetic;-Wassign-enum;-Wbad-function-cast;-Wcast-qual;-Wchar-subscripts;-Wcomma;-Wconditional-uninitialized;-Wconversion;-Wdelete-non-virtual-dtor;-Wdeprecated;-Wduplicate-enum;-Wduplicate-method-arg;-Wembedded-directive;-Wfor-loop-analysis;-Wformat-pedantic;-Widiomatic-parentheses;-Wimplicit-fallthrough;-Wpedantic;-Wrange-loop-analysis;-Wredundant-parens;-Wreserved-id-macro;-Wshadow;-Wundefined-reinterpret-cast;-Wunreachable-code-aggressive;-Wno-missing-braces;-Wno-deprecated-literal-operator",
+                "CMAKE_CXX_FLAGS": "-Wno-deprecated-declarations"
+            }
+        },
+        {
+            "name": "linux-base",
+            "hidden": true,
+            "generator": "Unix Makefiles",
+            "binaryDir": "${sourceDir}/build/${presetName}",
+            "installDir": "${sourceDir}/install/${presetName}",
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Linux"
+            }
+        },
+        {
+            "name": "clang-debug",
+            "displayName": "Clang Debug",
+            "inherits": [
+                "linux-base",
+                "clang-flags"
+            ],
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "CMAKE_CXX_COMPILER": "clang++-18"
+            }
+        },
+        {
+            "name": "clang-release",
+            "displayName": "Clang Release",
+            "inherits": [
+                "linux-base",
+                "clang-flags"
+            ],
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
+                "CMAKE_CXX_COMPILER": "clang++-18"
+            }
+        },
+        {
+            "name": "clang-sanitize",
+            "displayName": "Clang Sanitize",
+            "description": "clang analysis with sanitizers enabled",
+            "inherits": [
+                "linux-base",
+                "clang-flags"
+            ],
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+                "CMAKE_CXX_COMPILER": "clang++-18",
+                "CMAKE_CXX_FLAGS": "-DSLANG_ASSERT_ENABLED -fsanitize=undefined,address -fno-sanitize-recover=undefined -fno-omit-frame-pointer -fno-common -Wno-deprecated-declarations",
+                "CMAKE_EXE_LINKER_FLAGS": "-fsanitize=undefined,address -fno-sanitize-recover=undefined",
+                "CMAKE_SHARED_LINKER_FLAGS": "-fsanitize=undefined,address -fno-sanitize-recover=undefined",
+                "SLANG_CLANG_TIDY": "clang-tidy-18"
+            }
+        },
+        {
+            "name": "gcc-debug-shared",
+            "displayName": "GCC Debug Shared",
+            "inherits": [
+                "linux-base",
+                "gcc-flags"
+            ],
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "CMAKE_CXX_COMPILER": "g++-13",
+                "BUILD_SHARED_LIBS": "ON"
+            }
+        },
+        {
+            "name": "gcc-debug-noexcept",
+            "displayName": "GCC Debug No Exceptions",
+            "inherits": [
+                "linux-base",
+                "gcc-flags"
+            ],
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "CMAKE_CXX_FLAGS": "-fno-exceptions -fno-rtti",
+                "CMAKE_CXX_COMPILER": "g++-13"
+            }
+        },
+        {
+            "name": "gcc-release",
+            "displayName": "GCC Release",
+            "inherits": [
+                "linux-base",
+                "gcc-flags"
+            ],
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
+                "CMAKE_CXX_COMPILER": "g++-13"
+            }
+        },
+        {
+            "name": "gcc-11-release",
+            "displayName": "GCC Release",
+            "inherits": [
+                "linux-base",
+                "gcc-flags"
+            ],
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
+                "CMAKE_CXX_COMPILER": "g++-11"
+            }
+        },
+        {
+            "name": "gcc-coverage",
+            "displayName": "GCC Coverage",
+            "inherits": [
+                "linux-base"
+            ],
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Coverage",
+                "CMAKE_CXX_COMPILER": "g++-13",
+                "CMAKE_CXX_FLAGS_COVERAGE": "-Og -g --coverage -DSLANG_ASSERT_ENABLED=0 -fno-omit-frame-pointer -fno-optimize-sibling-calls -fno-inline -fno-inline-small-functions -fno-default-inline",
+                "CMAKE_EXE_LINKER_FLAGS_COVERAGE": "--coverage",
+                "CMAKE_SHARED_LINKER_FLAGS_COVERAGE": "--coverage",
+                "SLANG_INCLUDE_COVERAGE": "ON",
+                "COVERAGE_GCOV_TOOL": "gcov-13"
+            }
+        },
+        {
+            "name": "ci-coverage",
+            "displayName": "CI Coverage",
+            "inherits": [
+                "gcc-coverage"
+            ],
+            "cacheVariables": {
+                "COVERAGE_HTML_COMMAND": ""
+            }
+        },
+        {
+            "name": "macos-base",
+            "hidden": true,
+            "generator": "Unix Makefiles",
+            "binaryDir": "${sourceDir}/build/${presetName}",
+            "installDir": "${sourceDir}/install/${presetName}",
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Darwin"
+            }
+        },
+        {
+            "name": "macos-release",
+            "displayName": "macOS Release",
+            "inherits": [
+                "macos-base"
+            ],
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release"
+            }
+        },
+        {
+            "name": "Debug",
+            "displayName": "Configure preset using toolchain file",
+            "description": "Sets Ninja generator, build and install directory",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/out/build/${presetName}",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "CMAKE_TOOLCHAIN_FILE": "",
+                "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}"
+            }
+        }
+    ]
 }

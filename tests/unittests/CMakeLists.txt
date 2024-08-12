@@ -5,6 +5,7 @@
 
 add_executable(
   unittests
+  ast/DefaultPrinterTests.cpp
   ast/AssertionTests.cpp
   ast/ClassTests.cpp
   ast/ConfigTests.cpp
