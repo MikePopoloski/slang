@@ -18,7 +18,7 @@ using namespace syntax;
 
 // This visitor is used to touch every node in the AST to ensure that all lazily
 // evaluated members have been realized and we have recorded every diagnostic.
-struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
+struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, true> {
     DiagnosticVisitor(Compilation& compilation, const size_t& numErrors, uint32_t errorLimit) :
         compilation(compilation), numErrors(numErrors), errorLimit(errorLimit) {}
 
@@ -336,8 +336,25 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
             return;
         }
 
-        if (visitInstances)
+        if (visitInstances) {
+            // Collect hierarchical identifiers for current instance
+            SmallVector<SourceRange, 4> hierIdents;
+            instBodiesHierIdents.push_back(std::make_pair(&symbol.body, hierIdents));
             visit(symbol.body);
+            symbol.body.hierIdentifiers = instBodiesHierIdents.back().second.copy(compilation);
+            instBodiesHierIdents.pop_back();
+        }
+    }
+
+    void handle(const HierarchicalValueExpression& hVE) {
+        if (instBodiesHierIdents.empty()) {
+            visitDefault(hVE);
+            return;
+        }
+
+        InstanceBodySymbol::processHierIdent(hVE, *instBodiesHierIdents.back().first,
+                                             instBodiesHierIdents.back().second);
+        visitDefault(hVE);
     }
 
     void handle(const SubroutineSymbol& symbol) {
@@ -466,6 +483,10 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
     SmallVector<const MethodPrototypeSymbol*> externIfaceProtos;
     SmallVector<std::pair<const InterfacePortSymbol*, const ModportSymbol*>> modportsWithExports;
     TimingPathMap timingPathMap;
+
+private:
+    SmallVector<std::pair<const InstanceBodySymbol*, SmallVector<SourceRange, 4>>, 4>
+        instBodiesHierIdents;
 };
 
 // This visitor is for finding all defparam directives in the hierarchy.

@@ -1126,6 +1126,28 @@ bool InstanceBodySymbol::hasSameType(const InstanceBodySymbol& other) const {
     return true;
 }
 
+class InstanceBodySymbol::HierIdentsVisitor : public ASTVisitor<HierIdentsVisitor, true, true> {
+public:
+    SmallVector<SourceRange, 4> hierIdentsSR;
+
+    HierIdentsVisitor(const InstanceBodySymbol& ifaceBody) : ifaceBody(ifaceBody){};
+
+    void handle(const HierarchicalValueExpression& hVE) {
+        processHierIdent(hVE, ifaceBody, hierIdentsSR);
+    }
+
+private:
+    const InstanceBodySymbol& ifaceBody;
+};
+
+void InstanceBodySymbol::collectHierIdents(Compilation& comp) const {
+    if (!hierIdentifiers.has_value()) {
+        HierIdentsVisitor hIdentsVisitor(*this);
+        hIdentsVisitor.visit(*this);
+        hierIdentifiers = hIdentsVisitor.hierIdentsSR.copy(comp);
+    }
+}
+
 void InstanceBodySymbol::serializeTo(ASTSerializer& serializer) const {
     serializer.writeLink("definition", definition);
 }

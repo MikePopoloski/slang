@@ -10,6 +10,7 @@
 #include "slang/ast/ASTContext.h"
 #include "slang/ast/Scope.h"
 #include "slang/ast/Symbol.h"
+#include "slang/ast/expressions/MiscExpressions.h"
 #include "slang/numeric/ConstantValue.h"
 #include "slang/syntax/SyntaxFwd.h"
 
@@ -164,6 +165,10 @@ public:
     /// Flags that describe properties of the instance.
     bitmask<InstanceFlags> flags;
 
+    /// Collected source ranges of hierarchical identifiers used inside instance body
+    /// for later diagnostic.
+    mutable std::optional<std::span<SourceRange>> hierIdentifiers;
+
     InstanceBodySymbol(Compilation& compilation, const DefinitionSymbol& definition,
                        const HierarchyOverrideNode* hierarchyOverrideNode,
                        bitmask<InstanceFlags> flags);
@@ -184,6 +189,9 @@ public:
 
     bool hasSameType(const InstanceBodySymbol& other) const;
 
+    /// Fill hierIdentifiers list.
+    void collectHierIdents(Compilation& comp) const;
+
     static InstanceBodySymbol& fromDefinition(
         Compilation& compilation, const DefinitionSymbol& definition, SourceLocation instanceLoc,
         bitmask<InstanceFlags> flags, const HierarchyOverrideNode* hierarchyOverrideNode,
@@ -199,8 +207,27 @@ public:
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::InstanceBody; }
 
+    static void processHierIdent(const HierarchicalValueExpression& hVE,
+                                 const InstanceBodySymbol& ifaceBody,
+                                 SmallVector<SourceRange, 4>& hierIdents) {
+        const auto& sym = hVE.symbol;
+        const auto* parentScope = sym.getParentScope();
+        // Checking whether a symbol belongs to the interface definition body
+        while (parentScope->asSymbol().kind != SymbolKind::CompilationUnit) {
+            if (const auto symScope = parentScope->asSymbol().as_if<InstanceBodySymbol>();
+                symScope && symScope == &ifaceBody)
+                break;
+            parentScope = parentScope->asSymbol().getParentScope();
+        }
+
+        if (parentScope->asSymbol().kind == SymbolKind::CompilationUnit)
+            hierIdents.push_back(hVE.sourceRange);
+    }
+
 private:
     friend class Scope;
+
+    class HierIdentsVisitor;
 
     void setPorts(std::span<const Symbol* const> ports) const { portList = ports; }
 

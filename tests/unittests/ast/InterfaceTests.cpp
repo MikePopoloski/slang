@@ -724,3 +724,127 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::UndeclaredIdentifier);
 }
+
+TEST_CASE("Virtual interface declaration errors") {
+    auto tree = SyntaxTree::fromText(R"(
+localparam type requestType = byte;
+localparam type responseType = int;
+
+module testMod#(N=16);
+
+  wire clk, rst;
+
+  allIfc#(N) allInst(clk, rst);
+  sliceIfc sliceInst();
+  virtual sliceIfc sliceInst1;
+
+endmodule:testMod
+
+module testMod1#(N=16);
+
+  wire clk, rst;
+
+  allIfc#(N) allInst(clk, rst);
+  virtual sliceIfc1 sliceInst;
+
+endmodule:testMod1
+
+interface automatic allIfc#(N=1)(input clk, rst);
+
+  var requestType Requests[N];
+  var responseType Responses[N];
+
+  function requestType requestRead(int index);
+    return Requests[index];
+  endfunction
+
+  function void responseWrite(int index, responseType response);
+    Responses[index] <= response;
+  endfunction
+
+  modport clientMp(output Requests, input Responses,
+                   input clk, rst);
+
+  modport serverMp(input Requests, output Responses,
+                   import requestRead, responseWrite,
+                   input clk, rst);
+
+endinterface:allIfc
+
+interface automatic sliceIfc#(I=0)();
+  interface II();
+      logic reset;
+  endinterface
+  II ii();  // invalid
+  wire reset = ii.reset;  // valid
+
+  allIfc allInst(.clk(), .rst());
+  var requestType request;
+  var responseType response;
+
+  assign allInst.Requests[I] = request;    // invalid
+  assign response = allInst.Responses[I];  // invalid
+
+  function void requestWrite(requestType req);
+    request <= req;
+  endfunction
+
+  function responseType responseRead();
+    return response;
+  endfunction
+
+  wire clk = allInst.clk;  // invalid
+  wire rst = allInst.rst;  // invalid
+
+  modport clientMp(output request, input response,
+                   import requestWrite, responseRead,
+                   input clk, rst);
+
+endinterface:sliceIfc
+
+interface automatic sliceIfc1#(I=0)();
+  interface II();
+      logic reset;
+  endinterface
+  II ii();  // invalid
+  wire reset = ii.reset;  // valid
+
+  allIfc allInst(.clk(), .rst());
+  var requestType request;
+  var responseType response;
+
+  assign allInst.Requests[I] = request;    // invalid
+  assign response = allInst.Responses[I];  // invalid
+
+  function void requestWrite(requestType req);
+    request <= req;
+  endfunction
+
+  function responseType responseRead();
+    return response;
+  endfunction
+
+  wire clk = allInst.clk;  // invalid
+  wire rst = allInst.rst;  // invalid
+
+  modport clientMp(output request, input response,
+                   import requestWrite, responseRead,
+                   input clk, rst);
+
+endinterface:sliceIfc1
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 8);
+    CHECK(diags[0].code == diag::VirtualInterfaceHierRef);
+    CHECK(diags[1].code == diag::VirtualInterfaceHierRef);
+    CHECK(diags[2].code == diag::VirtualInterfaceHierRef);
+    CHECK(diags[3].code == diag::VirtualInterfaceHierRef);
+    CHECK(diags[4].code == diag::VirtualInterfaceHierRef);
+    CHECK(diags[5].code == diag::VirtualInterfaceHierRef);
+    CHECK(diags[6].code == diag::VirtualInterfaceHierRef);
+    CHECK(diags[7].code == diag::VirtualInterfaceHierRef);
+}
