@@ -708,6 +708,9 @@ public:
     /// Creates an empty ImplicitTypeSyntax object.
     const syntax::ImplicitTypeSyntax& createEmptyTypeSyntax(SourceLocation loc);
 
+    /// Queries if any errors have been issued on any scope within this compilation.
+    bool hasIssuedErrors() const { return numErrors > 0; };
+
     /// @{
 
 private:
