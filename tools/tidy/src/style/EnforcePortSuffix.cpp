@@ -22,9 +22,7 @@ struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, true, false> {
         if (port.isNullPort)
             return;
 
-        auto symbol = port.internalSymbol;
-
-        if (symbol->name == checkConfig.clkName || symbol->name == checkConfig.resetName)
+        if (port.name == checkConfig.clkName || port.name == checkConfig.resetName)
             return;
 
         std::vector<std::string> const* suffixes;
@@ -38,10 +36,10 @@ struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, true, false> {
 
         bool matched = suffixes->empty(); // no error is thrown without a suffix
         for (auto& suffix : *suffixes) {
-            matched |= symbol->name.ends_with(suffix);
+            matched |= port.name.ends_with(suffix);
         }
         if (!matched) {
-            auto& diag = diags.add(diag::EnforcePortSuffix, port.location) << symbol->name;
+            auto& diag = diags.add(diag::EnforcePortSuffix, port.location) << port.name;
             if (suffixes->size() == 1) {
                 diag << fmt::format("\"{}\"", suffixes->front());
             }
