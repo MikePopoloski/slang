@@ -100,6 +100,14 @@ public:
         }
         // todo deze functie en die van invalidAssertionExpr joinen
     }
+
+    //wait_statement ::= wait ( expression ) statement_or_null
+    void handle(const WaitStatement& t){
+        write("wait (");
+        t.cond.visit(*this);
+        write(")");
+        t.stmt.visit(*this);
+    }
     
     //#test schrijven
     void handle(const InvalidAssertionExpr& t) {
@@ -126,6 +134,7 @@ public:
         write("}");
 
     }
+  
     //mintypmax_expression ::=expression | expression : expression : expression
     void handle(const MinTypMaxExpression& t) {
         t.min().visit(*this);
@@ -134,6 +143,7 @@ public:
         write(":",false);
         t.max().visit(*this);
     }
+
     //blocking_assignment ::= variable_lvalue = delay_or_event_control expression |
     //                        variable_lvalue assignment_operator expression
     //nonblocking_assignment ::= variable_lvalue <= [ delay_or_event_control ] expression
@@ -141,7 +151,7 @@ public:
         t.left().visit(*this);
 
         if (t.isCompound())
-            writeBinOperator(t.op.value());
+            write(t.op.value());
     
         if (t.isNonBlocking()){
             write("<=",false);
@@ -155,6 +165,12 @@ public:
 
         t.right().visit(*this);
     }
+    void handle(const UnaryExpression& t){
+        write(t.op);
+        visitDefault(t);
+
+    }
+
     //event_control::= @ ( event_expression )
     //event_expression ::=[ edge_identifier ] expression [ iff expression ]
     void handle(const SignalEventControl& t){
@@ -410,7 +426,7 @@ public:
     void handle(const slang::ast::PortSymbol& t) {
         // net_port_header      ::= [ port_direction ] net_port_type
         // variable_port_header ::= [ port_direction ] variable_port_type
-        writeDirection(t.direction);
+        write(t.direction);
 
         if(t.internalSymbol){
             t.internalSymbol->visit(*this);
@@ -534,7 +550,7 @@ public:
             return visitDefault(t);
         }
 
-        writeDirection(t.direction);
+        write(t.direction);
 
         write(t.getType().toString());
         write(".");
@@ -622,7 +638,7 @@ public:
     // 
     void handle(const ModportPortSymbol& t) {
         writeAttributeInstances(t);
-        writeDirection(t.direction);
+        write(t.direction);
         write(t.name);
     }
 
@@ -813,7 +829,8 @@ private:
         }
 
     }
-    void writeBinOperator(BinaryOperator op){
+    //TODO finish this list
+    void write(BinaryOperator op){
         switch (op) {
             case(BinaryOperator::Add):
                 write("+", false);
@@ -825,7 +842,26 @@ private:
                 SLANG_UNREACHABLE;
     }
 }
-    void writeDirection(ArgumentDirection direction){
+    void write(UnaryOperator op){
+        switch (op) {
+            case(UnaryOperator::Preincrement):
+                write("++", false);
+                break;
+            case(UnaryOperator::Postincrement):
+                write("$++", false);
+                break;
+            case(UnaryOperator::Predecrement):
+                write("--", false);
+                break;
+
+            case(UnaryOperator::Postdecrement):
+                write("$--", false);
+                break;
+            default:
+                SLANG_UNREACHABLE;
+    }
+}
+    void write(ArgumentDirection direction){
         switch (direction) {
             case (ArgumentDirection::In):
                 write("input", false);

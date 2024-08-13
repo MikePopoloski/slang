@@ -187,8 +187,7 @@ macromodule m3;
     event ev;
     initial begin
         repeat (3) @(negedge b) f = #2 1;
-
-
+        wait (f) f++;
     end
 endmodule : m3)";
     CHECK(isEqual(code, "sv26_44"));
