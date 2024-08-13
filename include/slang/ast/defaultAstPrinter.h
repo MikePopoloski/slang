@@ -114,6 +114,18 @@ public:
             SLANG_UNREACHABLE;
         }
     }
+    //net_lvalue ::={ net_lvalue { , net_lvalue } } (this is used in other instances asswel)
+    void handle(const ConcatenationExpression& t){
+        write("{");
+        for (auto op : t.operands()){
+            op->visit(*this);
+            if (op != t.operands().back()){
+                write(",");
+            }
+        }
+        write("}");
+
+    }
     //mintypmax_expression ::=expression | expression : expression : expression
     void handle(const MinTypMaxExpression& t) {
         t.min().visit(*this);
@@ -136,7 +148,7 @@ public:
         } else{
             write("=",false);
         }
-        
+
         if (t.timingControl){
             t.timingControl->visit(*this);
         }
@@ -552,9 +564,14 @@ public:
         write(")");
     }
     
-    // TODO:spec vinden
+    // net_alias ::= alias net_lvalue = net_lvalue { = net_lvalue } ;
     void handle(const NetAliasSymbol& t){
-        visitDefault(t);  
+        write("alias");
+        for (auto expr : t.getNetReferences()){
+            expr->visit(*this);
+            if (expr != t.getNetReferences().back())
+                write("=");
+        }
     }
 
     // modport_ports_declaration ::= { attribute_instance } modport_simple_ports_declaration
