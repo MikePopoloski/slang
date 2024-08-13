@@ -157,8 +157,12 @@ interface I(.*);
 endinterface)";
     CHECK(isEqual(code, "sv21_26"));
 }
-// removed     $info("Hello %s", "world");
 
+/*
+The keyword macromodule
+can be used interchangeably with the keyword module to define a module. An implementation may choose
+to treat module definitions beginning with the macromodule keyword differently.
+*/
 TEST_CASE("all.sv 26-44"){
     std::string code = R"(
 extern interface I(input a, output b);
@@ -172,8 +176,12 @@ macromodule m3;
     logic c;
 
     I d(.a(), .b());
-    I q(.a(), .b());
+
+    wor [1:0] w = 1;
+    assign (supply0, weak1) #(1, 2:1:0) w = 2;
 
 endmodule : m3)";
     CHECK(isEqual(code, "sv26_44"));
 }
+// removed     $info("Hello %s", "world")and  m2 m(, b, c, d, );
+

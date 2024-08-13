@@ -114,6 +114,36 @@ public:
             SLANG_UNREACHABLE;
         }
     }
+    //mintypmax_expression ::=expression | expression : expression : expression
+    void handle(const MinTypMaxExpression& t) {
+        t.min().visit(*this);
+        write(":",false);
+        t.typ().visit(*this);
+        write(":",false);
+        t.max().visit(*this);
+    }
+    //blocking_assignment ::= variable_lvalue = delay_or_event_control expression |
+    //                        variable_lvalue assignment_operator expression
+    //nonblocking_assignment ::= variable_lvalue <= [ delay_or_event_control ] expression
+    void handle(const AssignmentExpression& t){
+        t.left().visit(*this);
+
+        if (t.isCompound())
+            writeBinOperator(t.op.value());
+    
+        if (t.isNonBlocking()){
+            write("<=",false);
+        } else{
+            write("=",false);
+        }
+        
+        if (t.timingControl){
+            t.timingControl->visit(*this);
+        }
+
+        t.right().visit(*this);
+
+    }
 
     //#test schrijven
     void handle(const EmptyStatement& t) {
@@ -163,7 +193,6 @@ public:
             write("end\n");
         }
     }
-
 
     void handle(const PatternVarSymbol& t){
         write(t.getType().toString());
@@ -219,6 +248,51 @@ public:
         write(lowerFirstLetter(toString(t.procedureKind)));
         visitDefault(t);
     }
+
+    //continuous_assign ::= assign [ drive_strength ] [ delay3 ] list_of_net_assignments ;
+    //                    | assign [ delay_control ] list_of_variable_assignments ;
+    void handle(const ContinuousAssignSymbol& t){
+        write("assign");
+        //drive_strength ::= ( strength0 , strength1 )
+        bool driveStrengthExists = t.getDriveStrength().first.has_value() && t.getDriveStrength().second.has_value();
+        if(driveStrengthExists ){
+            write("(");
+            write(lower(toString(t.getDriveStrength().first.value())),false);
+            write("0",false);
+            write(",",false);
+            write(lower(toString(t.getDriveStrength().second.value())));
+            write("1",false);
+            write(")",false);
+
+        }
+
+        // delay3 | delay_control
+        if (t.getDelay())
+            t.getDelay()->visit(*this);
+
+        // list_of_net_assignments | list_of_variable_assignments
+        t.getAssignment().visit(*this);
+    }
+
+    void handle(const Delay3Control& t){
+        // delay3 | delay_control
+        // delay3 ::= # delay_value | # ( mintypmax_expression [ , mintypmax_expression [ , mintypmax_expression ] ] )
+        //delay_control ::=# delay_value| # ( mintypmax_expression )
+        write("#");
+        write("(",false);
+        t.expr1.visit(*this);
+        if (t.expr2){
+            write(",", false);
+            (*t.expr2).visit(*this);
+
+            if(t.expr3){
+                write(",", false);
+                (*t.expr3).visit(*this);
+            }
+        }
+        write(")",false);
+    }
+
 
 
     /// module_declaration    ::= module_ansi_header [ timeunits_declaration ] { non_port_module_item } endmodule [ : module_identifier ]
@@ -333,14 +407,20 @@ public:
             case(NetType::NetKind::Wire):
                 write("wire");
                 break;
-           case(NetType::NetKind::Interconnect):
-                write("interconnect");
+            case(NetType::NetKind::WAnd):
+                write("wand");
                 break;
-            case(NetType::NetKind::Supply0):
-                write("supply0");
+            case(NetType::NetKind::WOr):
+                write("wor");
                 break;
-            case(NetType::NetKind::Supply1):
-                write("supply1");
+            case(NetType::NetKind::Tri):
+                write("tri");
+                break;
+            case(NetType::NetKind::TriAnd):
+                write("triAnd");
+                break;
+            case(NetType::NetKind::TriOr):
+                write("trior");
                 break;
             case(NetType::NetKind::Tri0):
                 write("tri0");
@@ -348,12 +428,32 @@ public:
             case(NetType::NetKind::Tri1):
                 write("tri1");
                 break;
-            case(NetType::NetKind::Tri):
-                write("tri");
+            case(NetType::NetKind::TriReg):
+                write("trireg");
                 break;
+            case(NetType::NetKind::Supply0):
+                write("supply0");
+                break;
+            case(NetType::NetKind::Supply1):
+                write("supply1");
+                break;
+            case(NetType::NetKind::UWire):
+                write("uwire");
+                break;
+            case(NetType::NetKind::Interconnect):
+                write("interconnect");
+                break;
+  
         }
         write(t.getType().toString());
         write(t.name);
+
+        // 
+        auto initializer = t.getInitializer();
+        if(initializer){
+            write("=");
+            initializer->visit(*this);
+        }
 
 
     }
@@ -450,6 +550,11 @@ public:
         write("(");
         visitDefault(t);
         write(")");
+    }
+    
+    // TODO:spec vinden
+    void handle(const NetAliasSymbol& t){
+        visitDefault(t);  
     }
 
     // modport_ports_declaration ::= { attribute_instance } modport_simple_ports_declaration
@@ -556,6 +661,19 @@ public:
         return new_string;
     }
 
+    // lowers all letters of a string
+    std::string lower(std::string_view string) {
+        if (string == "")
+            return "";
+        // TODO: een beter manier vinden om dit te doen
+        std::string new_string = std::string(string);
+        for (auto& x : new_string) { 
+            x = tolower(x); 
+        } 
+        return new_string;
+    }
+
+
 private:
     std::string buffer;
     std::list<std::string> writeNextBuffer;
@@ -635,7 +753,18 @@ private:
         }
 
     }
-
+    void writeBinOperator(BinaryOperator op){
+        switch (op) {
+            case(BinaryOperator::Add):
+                write("+", false);
+                break;
+            case(BinaryOperator::Subtract):
+                write("-", false);
+                break;
+            default:
+                SLANG_UNREACHABLE;
+    }
+}
     void writeDirection(ArgumentDirection direction){
         switch (direction) {
             case (ArgumentDirection::In):
@@ -654,6 +783,7 @@ private:
                 SLANG_UNREACHABLE;
     }
 }
+
 
 };
 
