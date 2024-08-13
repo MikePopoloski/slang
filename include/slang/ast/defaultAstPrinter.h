@@ -164,6 +164,13 @@ public:
         }
     }
 
+
+    void handle(const PatternVarSymbol& t){
+        write(t.getType().toString());
+        write(t.name);
+
+    }
+
     // attr_spec ::= attr_name [ = constant_expression ]
     // attr_name ::= identifier
     void handle(const AttributeSymbol& t){
@@ -238,7 +245,35 @@ public:
         t.body.visit(*this);
 
         // print endinstance
-        write("end" + newSymbol);
+        write("end" + newSymbol + "\n");
+
+        //check if there are connections that need to be made
+        if (!t.getPortConnections().empty()){
+            // module_instantiation ::= module_identifier [ parameter_value_assignment ] hierarchical_instance { , hierarchical_instance } ;
+            write(t.body.name);
+            // TODO parameter_value_assignment
+
+            //hierarchical_instance ::= name_of_instance ( [ list_of_port_connections ] ) | named_port_connection { , named_port_connection }
+            write(t.name);
+            write("(",false);
+            // list_of_port_connections ::= named_port_connection { , named_port_connection } or named equivalent
+            for(auto named_port: t.getPortConnections()){
+                // named_port_connection ::= { attribute_instance } . port_identifier [ ( [ expression ] ) ]
+                writeAttributeInstances(named_port->port);
+                write(".");
+                write(named_port->port.name,false);
+                write("(",false);
+                auto expression = named_port->getExpression();
+                if (expression)
+                    expression->visit(*this);
+                write(")",false);
+
+                if (named_port != t.getPortConnections().back())
+                    write(",",false);
+            }
+            write(")",false);
+
+        }
     }
 
     /// ansi_port_declaration ::=[ net_port_header  ] port_identifier { unpacked_dimension } [ = constant_expression ]
@@ -256,7 +291,7 @@ public:
 
         }
         // write port_identifier
-        write(t.name);
+        //write(t.name);
         if (!t.isNetPort()){
             //variable_dimension ::= unsized_dimension | unpacked_dimension | associative_dimension | queue_dimension
             //TODODODODODODOD samen met unpacked 
@@ -318,6 +353,14 @@ public:
                 break;
         }
         write(t.getType().toString());
+        write(t.name);
+
+
+    }
+
+    void handle(const slang::ast::ScalarType& t){
+        write(t.name);
+
     }
 
     /// variable_port_type ::= var_data_type
@@ -325,6 +368,9 @@ public:
     void handle(const slang::ast::VariableSymbol& t){
             write("var");
             write(t.getType().toString());
+            write(t.name);
+
+
     }
     
 
@@ -380,7 +426,7 @@ public:
         write(t.defaultLifetime == VariableLifetime::Static ? "static" : "automatic");
         write(t.name);
     }
-
+    
     ///package_import_item ::= package_identifier :: identifier
     void handle(const ExplicitImportSymbol& t) {
         write(t.packageName);
@@ -404,7 +450,6 @@ public:
         write("(");
         visitDefault(t);
         write(")");
-        write(";");
     }
 
     // modport_ports_declaration ::= { attribute_instance } modport_simple_ports_declaration
@@ -467,7 +512,14 @@ public:
                 if (port != t.getPortList().back())
                     write(",\n", false);
             }
-            remainingMember =  t.getPortList().back()->getNextSibling();
+            
+            switch(t.getPortList().back()->kind){
+                case(SymbolKind::Port):
+                    auto symbol =  ((PortSymbol*) t.getPortList().back())->internalSymbol;
+                    remainingMember =  symbol?symbol->getNextSibling():t.getPortList().back();
+                    break;
+
+            }
             write(")");
         }
 
@@ -475,8 +527,10 @@ public:
 
         //return if there are no remaining members
         while(remainingMember){
-            if (remainingMember->kind != SymbolKind::Net ){
-                remainingMember->visit(*this);
+            remainingMember->visit(*this);
+            //TODO betere maniet voor dit vinden
+            if ("\n" != buffer.substr(buffer.length()-1, buffer.length()-1)){
+                write(";\n",false);
             }
 
             remainingMember = remainingMember->getNextSibling();

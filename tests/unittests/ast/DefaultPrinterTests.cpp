@@ -120,7 +120,7 @@ module static BAR;
     end
   end
 endmodule)";
-    CHECK(isEqual(code));
+    CHECK(isEqual(code, "BlockStatement"));
 
 };
 
@@ -145,15 +145,35 @@ module m2 #(parameter i = 1, localparam j = i)
      interface.mod d, .e());
 endmodule)";
     CHECK(isEqual(code, "sv16_20"));
-}
-*/
+}*/
+
 
 TEST_CASE("all.sv 21-26"){
-std::string code = R"(
+    std::string code = R"(
 extern interface I(input a, output b);
 
 interface I(.*);
     modport mod(input a), mod2(input a);
 endinterface)";
     CHECK(isEqual(code, "sv21_26"));
+}
+// removed     $info("Hello %s", "world");
+
+TEST_CASE("all.sv 26-44"){
+    std::string code = R"(
+extern interface I(input a, output b);
+
+interface I(.*);
+    modport mod(input a), mod2(input a);
+endinterface
+
+macromodule m3;
+    wire b;
+    logic c;
+
+    I d(.a(), .b());
+    I q(.a(), .b());
+
+endmodule : m3)";
+    CHECK(isEqual(code, "sv26_44"));
 }
