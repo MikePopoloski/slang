@@ -178,14 +178,18 @@ macromodule m3;
     I d(.a(), .b());
 
     wor [1:0] w = 1;
-    assign (supply0, weak1) #(1, 2:1:0) w = 2;
+    assign (supply0, weak1) #(1:2:3, 2:1:0) w = 2;
 
     wor u,v;
     alias {u,v} = w;
 
     logic f;
     event ev;
+    initial begin
+        repeat (3) @(negedge b) f = #2 1;
 
+
+    end
 endmodule : m3)";
     CHECK(isEqual(code, "sv26_44"));
 }

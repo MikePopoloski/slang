@@ -154,6 +154,21 @@ public:
         }
 
         t.right().visit(*this);
+    }
+    //event_control::= @ ( event_expression )
+    //event_expression ::=[ edge_identifier ] expression [ iff expression ]
+    void handle(const SignalEventControl& t){
+        write("@(");
+        if (t.edge==EdgeKind::BothEdges){
+            write("edge");
+        }else{
+            write(lower(toString(t.edge)));
+        }
+        t.expr.visit(*this);
+        if (t.iffCondition){
+            (*t.iffCondition).visit(*this);
+        }
+        write(")");
 
     }
 
@@ -167,6 +182,17 @@ public:
     void handle(const StatementList& t) {
         // Represents a list of statements.
         visitDefault(t);
+    }
+
+    // loop_statement ::= repeat ( expression ) statement_or_null
+    // statement_or_null ::=statement| { attribute_instance } ;
+    // statement ::= [ block_identifier : ] { attribute_instance } statement_item
+    void handle(const RepeatLoopStatement& t){
+        write("repeat (");
+        t.count.visit(*this);
+        write(")",false);
+        t.body.visit(*this);
+        write(";\n");
     }
 
     //#test schrijven
@@ -286,23 +312,40 @@ public:
         t.getAssignment().visit(*this);
     }
 
-    void handle(const Delay3Control& t){
-        // delay3 | delay_control
-        // delay3 ::= # delay_value | # ( mintypmax_expression [ , mintypmax_expression [ , mintypmax_expression ] ] )
-        //delay_control ::=# delay_value| # ( mintypmax_expression )
+    //delay_control ::= # delay_value | # ( mintypmax_expression )
+    void handle(const DelayControl& t){
         write("#");
-        write("(",false);
-        t.expr1.visit(*this);
-        if (t.expr2){
-            write(",", false);
-            (*t.expr2).visit(*this);
-
-            if(t.expr3){
-                write(",", false);
-                (*t.expr3).visit(*this);
-            }
+        if (t.expr.kind == ExpressionKind::MinTypMax){
+            write("(",false);
+            t.expr.visit(*this);
+            write(")",false);
         }
-        write(")",false);
+        else{
+            t.expr.visit(*this);
+        }
+    }
+
+    void handle(const Delay3Control& t){
+        write("#");
+        if (t.expr1.kind == ExpressionKind::MinTypMax){
+            // delay3 ::=  # ( mintypmax_expression [ , mintypmax_expression [ , mintypmax_expression ] ] )
+            write("(",false);
+            t.expr1.visit(*this);
+            if (t.expr2){
+                write(",", false);
+                (*t.expr2).visit(*this);
+
+                if(t.expr3){
+                    write(",", false);
+                    (*t.expr3).visit(*this);
+                }
+            }
+            write(")",false);
+        }else{
+            // delay3 ::= # delay_value
+             t.expr1.visit(*this);
+
+        }
     }
 
 
@@ -584,7 +627,7 @@ public:
     }
 
     void handle(const NamedValueExpression& t){
-        write(t.symbol.name, false);
+        write(t.symbol.name);
     }
 
     /// { package_import_declaration } [ parameter_port_list ] [ list_of_port_declarations ];
@@ -661,7 +704,7 @@ public:
         indentation_level -= 1;
     }
 
-    void handle(const slang::ast::IntegerLiteral& t) { write(t.getValue().toString(), false); }
+    void handle(const slang::ast::IntegerLiteral& t) { write(t.getValue().toString()); }
 
     void handle(const slang::ast::ElementSelectExpression& t){
         write("[",false);
