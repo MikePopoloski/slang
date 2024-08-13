@@ -1101,6 +1101,22 @@ Expression& AssertionInstanceExpression::makeDefault(const Symbol& symbol) {
     auto result = comp.emplace<AssertionInstanceExpression>(*type, symbol, body,
                                                             /* isRecursiveProperty */ false, range);
     result->localVars = localVars.copy(comp);
+    // Check LRM 16.10 section restriction:
+    // > It's illegal to declare a local variable if it is a formal argument of a sequence
+    // declaration.
+    if (!localVars.empty() && !formalPorts.empty() && symbol.kind == SymbolKind::Sequence) {
+        for (const auto* port : formalPorts) {
+            // Map port symbol and local variable symbol by name
+            auto isPort = [&](const Symbol* localVarSym) {
+                return port->name == localVarSym->name;
+            };
+            if (auto it = std::find_if(localVars.begin(), localVars.end(), isPort);
+                it != localVars.end()) {
+                auto& diag = context.addDiag(diag::SequenceLocalVarFormalArg, (*it)->location);
+                diag.addNote(diag::NoteSequenceFormalArg, port->location) << port->name;
+            }
+        }
+    }
     return *result;
 }
 
