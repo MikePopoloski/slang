@@ -209,11 +209,11 @@ macromodule m3;
         case (w) inside
             [0: 3]: ;
         endcase
-
-
-
-
     end
+
+    always_ff @(posedge b iff f == 1) begin
+    end
+
 endmodule : m3)";
     CHECK(isEqual(code, "sv26_44"));
 }

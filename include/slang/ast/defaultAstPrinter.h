@@ -83,7 +83,6 @@ public:
     /// text. A SyntaxPrinter with useful defaults is constructed, the tree is printed,
     /// and the resulting text is returned.
     // static std::string printFile(const SyntaxTree& treprints
-
     void handle(const InvalidStatement& t) {
         // wrap the invalid part of the code in a comment
         write("// InvalidStatement removed\n");
@@ -202,6 +201,12 @@ public:
         visitDefault(t);
     }
 
+    void handle(const BinaryExpression& t) {
+        t.left().visit(*this);
+        write(t.op);
+        t.right().visit(*this);
+    }
+
     // event_control::= @ ( event_expression )
     // event_expression ::=[ edge_identifier ] expression [ iff expression ]
     void handle(const SignalEventControl& t) {
@@ -214,6 +219,7 @@ public:
         }
         t.expr.visit(*this);
         if (t.iffCondition) {
+            write("iff");
             (*t.iffCondition).visit(*this);
         }
         write(")");
@@ -425,8 +431,7 @@ public:
 
     // ding zoals initial
     void handle(const ProceduralBlockSymbol& t) {
-        write(lowerFirstLetter(toString(t.procedureKind)));
-
+        write(t.procedureKind);
         t.getBody().visit(*this);
     }
 
@@ -975,6 +980,9 @@ private:
             case (BinaryOperator::Subtract):
                 write("-", false);
                 break;
+            case (BinaryOperator::Equality):
+                write("==", false);
+                break;
             default:
                 SLANG_UNREACHABLE;
         }
@@ -1030,8 +1038,25 @@ private:
             case (CaseStatementCondition::WildcardJustZ):
                 write("casez");
                 break;
+
             default:
                 SLANG_UNREACHABLE;
+        }
+    }
+
+    void write(ProceduralBlockKind procedure) {
+        switch (procedure) {
+            case (ProceduralBlockKind::AlwaysComb):
+                write("always_comb");
+                break;
+            case (ProceduralBlockKind::AlwaysLatch):
+                write("always_latch");
+                break;
+            case (ProceduralBlockKind::AlwaysFF):
+                write("always_ff");
+                break;
+            default:
+                write(lowerFirstLetter(toString(procedure)));
         }
     }
 };
