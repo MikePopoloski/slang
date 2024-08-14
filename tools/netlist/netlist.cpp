@@ -37,22 +37,24 @@ using namespace slang::ast;
 using namespace slang::driver;
 using namespace netlist;
 
-
-template <> class fmt::formatter<NetlistNode> {
+template<>
+class fmt::formatter<NetlistNode> {
 public:
-  constexpr auto parse (format_parse_context& ctx) { return ctx.begin(); }
-  template <typename Context>
-  constexpr auto format (NetlistNode const& node, Context& ctx) const {
-      if (node.kind == NodeKind::VariableAlias) {
-        auto &aliasNode = node.as<NetlistVariableAlias>();
-        return format_to(ctx.out(), "{}{}", aliasNode.hierarchicalPath, aliasNode.overlap);
-      } else if (node.kind == NodeKind::VariableDeclaration) {
-        auto &declNode = node.as<NetlistVariableDeclaration>();
-        return format_to(ctx.out(), "{}", declNode.hierarchicalPath);
-      } else {
-        return format_to(ctx.out(), "{}", node.getName());
-      }
-  }
+    constexpr auto parse(format_parse_context& ctx) { return ctx.begin(); }
+    template<typename Context>
+    constexpr auto format(NetlistNode const& node, Context& ctx) const {
+        if (node.kind == NodeKind::VariableAlias) {
+            auto& aliasNode = node.as<NetlistVariableAlias>();
+            return format_to(ctx.out(), "{}{}", aliasNode.hierarchicalPath, aliasNode.overlap);
+        }
+        else if (node.kind == NodeKind::VariableDeclaration) {
+            auto& declNode = node.as<NetlistVariableDeclaration>();
+            return format_to(ctx.out(), "{}", declNode.hierarchicalPath);
+        }
+        else {
+            return format_to(ctx.out(), "{}", node.getName());
+        }
+    }
 };
 
 namespace slang::diag {
@@ -328,21 +330,21 @@ int main(int argc, char** argv) {
 
             // Search through all combinations of start and end points. Report
             // the first path found and stop searching.
-            for (auto *src : startPoints) {
-              for (auto *dst : endPoints) {
+            for (auto* src : startPoints) {
+                for (auto* dst : endPoints) {
 
-                  DEBUG_PRINT("Searching for path between:\n  {}\n  {}\n", *src, *dst);
+                    DEBUG_PRINT("Searching for path between:\n  {}\n  {}\n", *src, *dst);
 
-                  // Search for the path.
-                  PathFinder pathFinder(netlist);
-                  auto path = pathFinder.find(*src, *dst);
+                    // Search for the path.
+                    PathFinder pathFinder(netlist);
+                    auto path = pathFinder.find(*src, *dst);
 
-                  if (!path.empty()) {
-                      // Report the path and exit.
-                      reportPath(*compilation, path);
-                      return 0;
+                    if (!path.empty()) {
+                        // Report the path and exit.
+                        reportPath(*compilation, path);
+                        return 0;
+                    }
                 }
-              }
             }
 
             // No path found.

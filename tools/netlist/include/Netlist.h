@@ -31,13 +31,14 @@
 
 using namespace slang;
 
-template <> class fmt::formatter<ConstantRange> {
+template<>
+class fmt::formatter<ConstantRange> {
 public:
-  constexpr auto parse (format_parse_context& ctx) { return ctx.begin(); }
-  template <typename Context>
-  constexpr auto format (ConstantRange const& range, Context& ctx) const {
-      return format_to(ctx.out(), "[{}:{}]", range.upper(), range.lower());
-  }
+    constexpr auto parse(format_parse_context& ctx) { return ctx.begin(); }
+    template<typename Context>
+    constexpr auto format(ConstantRange const& range, Context& ctx) const {
+        return format_to(ctx.out(), "[{}:{}]", range.upper(), range.lower());
+    }
 };
 
 namespace netlist {
