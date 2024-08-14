@@ -163,7 +163,7 @@ The keyword macromodule
 can be used interchangeably with the keyword module to define a module. An implementation may choose        
 to treat module definitions beginning with the macromodule keyword differently.
 */
-TEST_CASE("all.sv 26-44"){
+TEST_CASE("all.sv 26-80"){
     std::string code = R"(
 extern interface I(input a, output b);
 
@@ -219,8 +219,25 @@ macromodule m3;
         foreach (w[q]) begin end
     end
 
+
+    always @* begin : foo
+    end : foo
+
+
 endmodule : m3)";
-    CHECK(isEqual(code, "sv26_44"));
+    CHECK(isEqual(code, "sv26_80"));
 }
 // removed     $info("Hello %s", "world")and  m2 m(, b, c, d, );
+TEST_CASE("all.sv 80-120"){
+    std::string code = R"(
+macromodule m3;
+    always_comb begin
+        automatic int rf[] = new [3];
+        static longint pc = 'x;
+    end
 
+
+endmodule)";
+    CHECK(isEqual(code, "sv80_120"));
+}
+// skipped the      typedef shit
