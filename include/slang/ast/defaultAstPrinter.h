@@ -95,7 +95,7 @@ public:
         t.cond.visit(*this);
         write(")");
         t.stmt.visit(*this);
-        write(";\n");
+        write("\n");
     }
 
     // wait_statement ::= wait fork;
@@ -115,11 +115,9 @@ public:
 
         // action_block ::=statement _or_null | [ statement ] else statement
         t.ifTrue->visit(*this);
-        write(";");
         if (t.ifFalse) {
             write("else");
             t.ifFalse->visit(*this);
-            write(";");
         }
         write("\n");
     }
@@ -251,7 +249,14 @@ public:
         t.target.visit(*this);
         write(";\n");
     }
-
+    //jump_statement ::=break ;
+    void handle(const BreakStatement& t){
+        write("break;");
+    }
+    void handle(const ExpressionStatement& t){
+        visitDefault(t);
+        write(";");
+    }
     // loop_statement ::= repeat ( expression ) statement_or_null
     // statement_or_null ::=statement| { attribute_instance } ;
     // statement ::= [ block_identifier : ] { attribute_instance } statement_item
@@ -260,9 +265,16 @@ public:
         t.count.visit(*this);
         write(")", false);
         t.body.visit(*this);
-        write(";\n");
+        write("\n");
+
     }
 
+    //loop_statement ::= forever statement_or_null
+    void handle(const ForeverLoopStatement& t) {
+        write("forever");
+        t.body.visit(*this);
+        write("\n");
+    }
     // conditional_statement ::= [ unique_priority ] if ( cond_predicate ) statement_or_null {else
     // if ( cond_predicate ) statement_or_null } [ else statement_or_null ]
     void handle(const ConditionalStatement& t) {

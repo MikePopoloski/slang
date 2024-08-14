@@ -212,6 +212,7 @@ macromodule m3;
     end
 
     always_ff @(posedge b iff f == 1) begin
+        forever break;
     end
 
 endmodule : m3)";
