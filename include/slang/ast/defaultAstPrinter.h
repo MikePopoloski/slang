@@ -171,6 +171,7 @@ public:
         write("]");
     }
 
+
     // blocking_assignment    ::= variable_lvalue = delay_or_event_control expression |
     //                            variable_lvalue assignment_operator expression
     // nonblocking_assignment ::= variable_lvalue <= [ delay_or_event_control ] expression
@@ -201,7 +202,10 @@ public:
 
     void handle(const BinaryExpression& t) {
         t.left().visit(*this);
-        write(t.op);
+        // ensures that compound operators work ex: += would be +=+ without this
+        if (t.left().kind != ExpressionKind::LValueReference){
+            write(t.op);
+        }
         t.right().visit(*this);
     }
 
@@ -226,7 +230,9 @@ public:
     // #test schrijven
     void handle(const EmptyStatement& t) {
         // Represents an empty statement, used as a placeholder or an anchor for attributes.
-        visitDefault(t);
+        writeAttributeInstances(t);
+        write(";");
+        //visitDefault(t);
     }
 
     // #test schrijven
@@ -253,6 +259,12 @@ public:
     void handle(const BreakStatement& t){
         write("break;");
     }
+
+    //jump_statement ::=continue ;
+    void handle(const ContinueStatement& t){
+        write("continue;");
+    }
+
     void handle(const ExpressionStatement& t){
         visitDefault(t);
         write(";");
@@ -263,16 +275,80 @@ public:
     void handle(const RepeatLoopStatement& t) {
         write("repeat (");
         t.count.visit(*this);
-        write(")", false);
+        write(")");
+        indentation_level++;
         t.body.visit(*this);
+        indentation_level--;
+        write("\n");
+
+    }
+    //loop_statement ::= forever statement_or_null
+    void handle(const ForeverLoopStatement& t) {
+        write("forever");
+        indentation_level++;
+        t.body.visit(*this);
+        indentation_level--;
         write("\n");
 
     }
 
-    //loop_statement ::= forever statement_or_null
-    void handle(const ForeverLoopStatement& t) {
-        write("forever");
+    //loop_statement ::= foreach ( ps_or_hierarchical_array_identifier [ loop_variables ] ) statement
+    void handle(const ForeachLoopStatement& t) {
+        write("foreach(");
+        t.arrayRef.visit(*this);
+        write("[");
+        for (auto var:t.loopDims){
+            if (var.loopVar){
+                write(var.loopVar->name);
+                if (var.loopVar != t.loopDims.back().loopVar)
+                    write(",");
+            }
+        }
+        write("]");
+        write(")");
+
+        indentation_level++;
         t.body.visit(*this);
+        indentation_level--;
+        write("\n");
+
+    }
+    //loop_statement ::= while ( expression ) statement_or_null
+    void handle(const WhileLoopStatement& t) {
+        write("while (");
+        t.cond.visit(*this);
+        write(")");
+        t.body.visit(*this);
+        write("\n");
+    }
+    //for ( [ for_initialization ] ; [ expression ] ; [ for_step ] ) statement_or_null
+    void handle(const ForLoopStatement& t) {
+        write("for (");
+
+        //for_initialization ::= list_of_variable_assignments
+        for(auto initializer:t.initializers){
+            (*initializer).visit(*this);
+            if (initializer != t.initializers.back()) {
+                write(",");
+            }
+        }
+        write(";");
+
+        // stop expression
+        t.stopExpr->visit(*this);
+        write(";");
+
+        //for_step_assignment ::=operator_assignment| inc_or_dec_expression | function_subroutine_call
+        for(auto step_expr:t.steps){
+            (*step_expr).visit(*this);
+            if (step_expr != t.steps.back()) {
+                write(",");
+            }
+        }
+        write(")\n");
+        indentation_level++;
+        t.body.visit(*this);
+        indentation_level--;
         write("\n");
     }
     // conditional_statement ::= [ unique_priority ] if ( cond_predicate ) statement_or_null {else
@@ -338,14 +414,14 @@ public:
             }
             write(":");
             item.stmt->visit(*this);
-            write(";\n");
+            write("\n");
         }
 
         // case_item ::= | default [ : ] statement_or_null
         if (t.defaultCase) {
             write("default :");
             (*t.defaultCase).visit(*this);
-            write(";\n");
+            write("\n");
         }
         indentation_level--;
 
@@ -353,7 +429,21 @@ public:
     }
 
     // #test schrijven
+    //  TODOO snappen waarom dat dit zo sketch is
+    void handle(const StatementBlockSymbol& t) {
+        // Represents a sequential or parallel block statement.
+        // write(lowerFirstLetter(toString(t.defaultLifetime)));
+        // write(t.name, false);
+    }
+    // #test schrijven
     void handle(const BlockStatement& t) {
+        // edge case handeling
+        // TODO BETERE MANER VINDEN
+        // foreach creates a Blockstatement automaticly which causes a duplicate block statement when trying to print the ast
+        if (t.body.kind==StatementKind::ForeachLoop){
+            t.body.visit(*this);
+            return;
+        }
         // Represents a sequential or parallel block statement.
         if (t.blockKind == StatementBlockKind::Sequential) {
             write("begin");
@@ -364,7 +454,7 @@ public:
 
         if (t.blockSymbol) {
             write(":", false);
-            writeStatementBlockSymbol(*t.blockSymbol);
+            write((*t.blockSymbol).name);
             write("\n");
         }
         else {
@@ -389,9 +479,9 @@ public:
         }
     }
     // ignore statment block anders krijgt ge duplicate variable declaraties in BlockStatement
-    void handle(const StatementBlockSymbol& t) {
+    /*void handle(const StatementBlockSymbol& t) {
 
-    };
+    };*/
 
     void handle(const PatternVarSymbol& t) {
         write(t.getType().toString());
@@ -686,8 +776,10 @@ public:
 
     /// variable_port_type ::= var_data_type
     /// var_data_type      ::= data_type | var data_type_or_implicit
+    //data_declaration10 ::=  [ var ] [ lifetime ] data_type_or_implicit 
     void handle(const slang::ast::VariableSymbol& t) {
         write("var");
+        write(t.lifetime == VariableLifetime::Static ? "static" : "automatic");
         write(t.getType().toString());
         write(t.name);
 
@@ -955,16 +1047,9 @@ private:
         }
     }
 
-    // #test schrijven
-    //  TODOO snappen waarom dat dit zo sketch is
-    void writeStatementBlockSymbol(const StatementBlockSymbol& t) {
-        // Represents a sequential or parallel block statement.
-        // write(lowerFirstLetter(toString(t.defaultLifetime)));
-        write(t.name, false);
-    }
 
-    void writeAttributeInstances(const Symbol& t) {
-        auto attributes = compilation.getAttributes(t);
+
+    void writeAttributes(std::span<const AttributeSymbol* const> attributes) {
         if (!attributes.empty()) {
             write("(*");
             for (auto attrib : attributes) {
@@ -974,6 +1059,21 @@ private:
                 write("*) ");
             }
         }
+    }
+    
+    void writeAttributeInstances(const Symbol& t) {
+        auto attributes = compilation.getAttributes(t);
+        writeAttributes(attributes);
+    }
+
+    void writeAttributeInstances(const Statement& t) {
+        auto attributes = compilation.getAttributes(t);
+        writeAttributes(attributes);
+    }
+
+    void writeAttributeInstances(const Expression& t) {
+        auto attributes = compilation.getAttributes(t);
+        writeAttributes(attributes);
     }
 
     void writeTimeUnitsDeclaration(const std::optional<TimeScale> t) {
@@ -992,9 +1092,25 @@ private:
             case (BinaryOperator::Subtract):
                 write("-", false);
                 break;
+            case (BinaryOperator::Multiply):
+                write("*", false);
+                break;
             case (BinaryOperator::Equality):
                 write("==", false);
                 break;
+            case (BinaryOperator::LessThan):
+                write("<", false);
+                break;
+            case (BinaryOperator::LessThanEqual):
+                write("<=", false);
+                break;
+            case (BinaryOperator::GreaterThan):
+                write(">", false);
+                break;
+            case (BinaryOperator::GreaterThanEqual):
+                write(">=", false);
+                break;
+
             default:
                 SLANG_UNREACHABLE;
         }

@@ -210,9 +210,13 @@ macromodule m3;
             [0: 3]: ;
         endcase
     end
-
     always_ff @(posedge b iff f == 1) begin
         forever break;
+        repeat (f + 2) continue;
+        while (1)
+            ;
+        for (int i = 0, j = i; i < 10; i += 2, j += i) begin end
+        foreach (w[q]) begin end
     end
 
 endmodule : m3)";
