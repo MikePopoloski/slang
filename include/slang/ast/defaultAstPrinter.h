@@ -32,7 +32,7 @@
 namespace slang::ast {
 
 /// Provides support for printing ast back to source code.
-class AstPrinter : public ASTVisitor<AstPrinter, true, true> {
+class AstPrinter : public ASTVisitor<AstPrinter, true, true, true> {
 public:
     AstPrinter(slang::ast::Compilation& compilation): compilation(compilation){ };
 
@@ -85,20 +85,10 @@ public:
     /// and the resulting text is returned.
     // static std::string printFile(const SyntaxTree& treprints
 
-    //@fuure jeff->line 255 ben ik gestqrt
-    //#test schrijven
     void handle(const InvalidStatement& t) {
         // wrap the invalid part of the code in a comment
-        // print instance
-        if (t.child) {
-            write("/* invalid code:");
-            t.child->visit(*this);
-            write("*/");
-        }
-        else {
-            SLANG_UNREACHABLE;
-        }
-        // todo deze functie en die van invalidAssertionExpr joinen
+        write("// InvalidStatement removed\n");
+        visitDefault(t);
     }
 
     //wait_statement ::= wait ( expression ) statement_or_null
@@ -109,6 +99,8 @@ public:
         t.stmt.visit(*this);
         write(";\n");
     }
+
+
 
     //wait_statement ::= wait fork;
     void handle(const WaitForkStatement& t){
@@ -137,7 +129,6 @@ public:
         write("\n");
 
     }
-
     //#test schrijven
     void handle(const InvalidAssertionExpr& t) {
         // wrap the invalid part of the code in a comment
@@ -146,9 +137,6 @@ public:
             write("/* invalid code:");
             t.child->visit(*this);
             write("*/");
-        }
-        else {
-            SLANG_UNREACHABLE;
         }
     }
 
@@ -209,6 +197,7 @@ public:
         visitDefault(t);
     }
 
+
     //event_control::= @ ( event_expression )
     //event_expression ::=[ edge_identifier ] expression [ iff expression ]
     void handle(const SignalEventControl& t){
@@ -237,6 +226,23 @@ public:
         visitDefault(t);
     }
 
+    void handle(const VariableDeclStatement& t){
+        t.symbol.visit(*this);
+        write(";\n");
+    }
+
+    //disable_statement ::= disable fork ;
+    void handle(const DisableForkStatement& t){
+        write("disable fork ;\n");
+    }
+
+    //disable_statement ::= disable hierarchical_block_identifier ;
+    void handle(const DisableStatement& t){
+        write("disable");
+        t.target.visit(*this);
+        write(";\n");
+    }
+
     // loop_statement ::= repeat ( expression ) statement_or_null
     // statement_or_null ::=statement| { attribute_instance } ;
     // statement ::= [ block_identifier : ] { attribute_instance } statement_item
@@ -247,6 +253,28 @@ public:
         t.body.visit(*this);
         write(";\n");
     }
+    //conditional_statement ::= [ unique_priority ] if ( cond_predicate ) statement_or_null {else if ( cond_predicate ) statement_or_null } [ else statement_or_null ]
+    void handle(const ConditionalStatement& t){
+        
+        if (t.check != UniquePriorityCheck::None){
+            std::string_view priority = toString(t.check);
+            write(lowerFirstLetter(priority));
+        }
+
+        write("if(");
+        for (auto condition:t.conditions){
+            condition.expr.get()->visit(*this);
+            if (condition.expr.get() != t.conditions.back().expr.get()){
+                write(",");
+            }
+        }
+        write(")");
+        t.ifTrue.visit(*this);
+        if(t.ifFalse){
+            write("else");
+            t.ifFalse->visit(*this);
+        }
+}
 
     //#test schrijven
     void handle(const BlockStatement& t) {
@@ -284,6 +312,10 @@ public:
             write("end\n");
         }
     }
+    // ignore statment block anders krijgt ge duplicate variable declaraties in BlockStatement
+    void handle(const StatementBlockSymbol& t){
+        
+    };
 
     void handle(const PatternVarSymbol& t){
         write(t.getType().toString());
@@ -337,7 +369,8 @@ public:
     // ding zoals initial
     void handle(const ProceduralBlockSymbol& t) {
         write(lowerFirstLetter(toString(t.procedureKind)));
-        visitDefault(t);
+
+        t.getBody().visit(*this);
     }
 
     //continuous_assign ::= assign [ drive_strength ] [ delay3 ] list_of_net_assignments ;
@@ -551,19 +584,16 @@ public:
             case(NetType::NetKind::Interconnect):
                 write("interconnect");
                 break;
-  
         }
+
         write(t.getType().toString());
         write(t.name);
 
-        // 
         auto initializer = t.getInitializer();
         if(initializer){
             write("=");
             initializer->visit(*this);
         }
-
-
     }
 
     void handle(const slang::ast::ScalarType& t){
@@ -576,6 +606,12 @@ public:
             write("var");
             write(t.getType().toString());
             write(t.name);
+
+            auto initializer = t.getInitializer();
+            if(initializer){
+                write("=");
+                initializer->visit(*this);
+            }
     }
     
 

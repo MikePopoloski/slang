@@ -160,7 +160,7 @@ endinterface)";
 
 /*
 The keyword macromodule
-can be used interchangeably with the keyword module to define a module. An implementation may choose
+can be used interchangeably with the keyword module to define a module. An implementation may choose        
 to treat module definitions beginning with the macromodule keyword differently.
 */
 TEST_CASE("all.sv 26-44"){
@@ -176,6 +176,7 @@ macromodule m3;
     logic c;
 
     I d(.a(), .b());
+    I d(.a(), .b());
 
     wor [1:0] w = 1;
     assign (supply0, weak1) #(1:2:3, 2:1:0) w = 2;
@@ -190,6 +191,18 @@ macromodule m3;
         wait (f) ++f;
         wait fork;
         wait_order (m3.ev) f++;
+
+        fork : fkb
+            static int i = 1;
+            disable fork;
+        join_none
+
+        //disable m3.foo; TODO invalid statements fixe
+
+        if (1) begin end else begin end
+
+
+
     end
 endmodule : m3)";
     CHECK(isEqual(code, "sv26_44"));
