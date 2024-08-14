@@ -276,12 +276,10 @@ private:
     bool isClockFunc;
 };
 
-struct SequenceMethodExprVisitor {
+struct TriggeredMethodArgExprVisitor {
     const ASTContext& context;
-    std::string name;
 
-    SequenceMethodExprVisitor(const ASTContext& context, std::string name) :
-        context(context), name(std::move(name)) {}
+    TriggeredMethodArgExprVisitor(const ASTContext& context) : context(context) {}
 
     template<typename T>
     void visit(const T& expr) {
@@ -291,14 +289,42 @@ struct SequenceMethodExprVisitor {
                     if (sym->kind == SymbolKind::LocalAssertionVar ||
                         (sym->kind == SymbolKind::AssertionPort &&
                          sym->template as<AssertionPortSymbol>().isLocalVar())) {
-                        context.addDiag(diag::SequenceMethodLocalVar, expr.sourceRange) << name;
+                        context.addDiag(diag::TriggeredMethodLocalVar, expr.sourceRange);
                     }
                 }
             }
         }
 
-        if constexpr (HasVisitExprs<T, SequenceMethodExprVisitor>)
+        if constexpr (HasVisitExprs<T, TriggeredMethodArgExprVisitor>)
             expr.visitExprs(*this);
+    }
+};
+
+struct TriggeredMethodSeqBodyVisitor
+    : public ASTVisitor<TriggeredMethodSeqBodyVisitor, true, true> {
+    const Symbol* arg = nullptr;
+    bool isAssignmentMatched = false;
+    SmallVector<SourceRange, 2> foundedSR;
+
+    TriggeredMethodSeqBodyVisitor(const NamedValueExpression* nVE) : arg(&nVE->symbol) {}
+
+    template<typename T>
+    void visit(const T& expr) {
+        if constexpr (std::is_base_of_v<NamedValueExpression, T>) {
+            if (!isAssignmentMatched)
+                foundedSR.push_back(expr.sourceRange);
+        }
+
+        if constexpr (std::is_base_of_v<AssignmentExpression, T>) {
+            if (const auto* lhs = expr.left().template as_if<NamedValueExpression>();
+                lhs && &lhs->symbol == arg) {
+                isAssignmentMatched = true;
+            }
+        }
+
+        if constexpr (HasVisitExprs<T, TriggeredMethodSeqBodyVisitor>)
+            expr.visitExprs(*this);
+        visitDefault(*this);
     }
 };
 
@@ -348,12 +374,17 @@ private:
                 }
             }
 
+            if (name != "triggered"sv)
+                return;
+
             // Arguments to sequence instances that have triggered invoked can only
             // reference local variables if that is the entire argument.
-            SequenceMethodExprVisitor visitor(context, name);
+            TriggeredMethodArgExprVisitor visitor(context);
             for (auto& [formal, actualArg] : aie.arguments) {
                 std::visit(
-                    [&visitor](auto&& arg) {
+                    [&visitor, &context, &aie](auto&& arg) {
+                        const NamedValueExpression* validatedArg = nullptr;
+
                         // Local vars are allowed at the top level, so we need to check if
                         // the entire argument is a named value and if so don't bother
                         // checking it.
@@ -361,12 +392,16 @@ private:
                         if constexpr (std::is_same_v<T, const Expression*>) {
                             if (arg->kind != ExpressionKind::NamedValue)
                                 arg->visit(visitor);
+                            else
+                                validatedArg = &arg->template as<NamedValueExpression>();
                         }
                         else if constexpr (std::is_same_v<T, const AssertionExpr*>) {
                             if (arg->kind == AssertionExprKind::Simple) {
                                 auto& sae = arg->template as<SimpleAssertionExpr>();
                                 if (sae.repetition || sae.expr.kind != ExpressionKind::NamedValue)
                                     arg->visit(visitor);
+                                else if (sae.expr.kind == ExpressionKind::NamedValue)
+                                    validatedArg = &sae.expr.template as<NamedValueExpression>();
                             }
                             else {
                                 arg->visit(visitor);
@@ -379,6 +414,9 @@ private:
                                     sec.expr.kind != ExpressionKind::NamedValue) {
                                     arg->visit(visitor);
                                 }
+                                else if (sec.expr.kind == ExpressionKind::NamedValue) {
+                                    validatedArg = &sec.expr.template as<NamedValueExpression>();
+                                }
                             }
                             else {
                                 arg->visit(visitor);
@@ -386,6 +424,20 @@ private:
                         }
                         else {
                             static_assert(always_false<T>::value, "Missing case");
+                        }
+
+                        // After we validate a named value argument then check that it is not
+                        // referenced before assignment in sequence instance body on which triggered
+                        // method is called.
+                        if (validatedArg) {
+                            TriggeredMethodSeqBodyVisitor visitor(validatedArg);
+                            aie.body.visit(visitor);
+
+                            if (visitor.isAssignmentMatched) {
+                                for (auto& sR : visitor.foundedSR) {
+                                    context.addDiag(diag::TriggeredMethodUseBeforeInit, sR);
+                                }
+                            }
                         }
                     },
                     actualArg);

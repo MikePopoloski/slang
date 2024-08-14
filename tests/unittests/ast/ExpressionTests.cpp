@@ -3644,3 +3644,32 @@ assign z = x & y;
            ~ ^ ~
 )");
 }
+
+TEST_CASE("Invalid sequence method triggered usage in assignments") {
+    auto tree = SyntaxTree::fromText(R"(
+checker my_check(input logic clk, output logic a, output logic b);
+    sequence s; 1; endsequence
+
+    assign b = s.triggered; // illegal
+
+    always_comb a = s.triggered;  // illegal
+
+    reg c, d;
+
+    always_latch c = s.triggered;  // legal
+    always_ff @clk d <= s.triggered;  // legal
+endchecker
+
+module m(input logic clk, output logic a, output logic b);
+    my_check mc(clk, a, b);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::ContinuousAssignTriggered);
+    CHECK(diags[1].code == diag::AlwaysCombAssignTriggered);
+}

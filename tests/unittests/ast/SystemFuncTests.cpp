@@ -7,6 +7,7 @@
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
 #include "slang/ast/symbols/ParameterSymbols.h"
 #include "slang/ast/types/Type.h"
+#include "slang/diagnostics/StatementsDiags.h"
 #include "slang/syntax/AllSyntax.h"
 
 TEST_CASE("I/O system tasks") {
@@ -886,13 +887,14 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 6);
+    REQUIRE(diags.size() == 7);
     CHECK(diags[0].code == diag::PastNumTicksInvalid);
     CHECK(diags[1].code == diag::NoGlobalClocking);
-    CHECK(diags[2].code == diag::SampledValueMatched);
-    CHECK(diags[3].code == diag::SampledValueLocalVar);
-    CHECK(diags[4].code == diag::GlobalSampledValueAssertionExpr);
-    CHECK(diags[5].code == diag::GlobalSampledValueNested);
+    CHECK(diags[2].code == diag::MatchedOutsideSeq);
+    CHECK(diags[3].code == diag::SampledValueMatched);
+    CHECK(diags[4].code == diag::SampledValueLocalVar);
+    CHECK(diags[5].code == diag::GlobalSampledValueAssertionExpr);
+    CHECK(diags[6].code == diag::GlobalSampledValueNested);
 }
 
 TEST_CASE("Global clock sys func") {
@@ -1472,4 +1474,36 @@ endmodule
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::FormatMismatchedType);
+}
+
+TEST_CASE("matched method outside sequence") {
+    auto tree = SyntaxTree::fromText(R"(
+module m();
+
+sequence e1;
+    1;
+endsequence
+
+sequence e2;
+    1;
+endsequence
+
+initial begin
+    wait (e1.matched || e2.matched); // violation
+    if (e1.matched) // violation
+        $display("e1 passed");
+    if (e2.matched) // violation
+        $display("e2 passed");
+end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 4);
+    CHECK(diags[0].code == diag::MatchedOutsideSeq);
+    CHECK(diags[1].code == diag::MatchedOutsideSeq);
+    CHECK(diags[2].code == diag::MatchedOutsideSeq);
+    CHECK(diags[3].code == diag::MatchedOutsideSeq);
 }

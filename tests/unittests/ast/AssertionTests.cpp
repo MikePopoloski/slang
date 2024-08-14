@@ -476,6 +476,21 @@ module m;
         int i;
         s5(i + 1, e, i + 1).triggered ##1 s5(i, e, i).triggered;
     endsequence
+
+    sequence s7(lv);
+        (lv, lv = 1);
+    endsequence
+
+    sequence s8;
+        int v1;
+        ##1 s7(v1).triggered ##1 (1 == v1);
+    endsequence
+
+    sequence s9;
+        int v1;
+        ##1 s7(v1).matched ##1 (1 == v1);
+    endsequence
+
 endmodule
 )");
 
@@ -483,10 +498,11 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 3);
+    REQUIRE(diags.size() == 4);
     CHECK(diags[0].code == diag::SeqMethodInputLocalVar);
-    CHECK(diags[1].code == diag::SequenceMethodLocalVar);
-    CHECK(diags[2].code == diag::SequenceMethodLocalVar);
+    CHECK(diags[1].code == diag::TriggeredMethodLocalVar);
+    CHECK(diags[2].code == diag::TriggeredMethodLocalVar);
+    CHECK(diags[3].code == diag::TriggeredMethodUseBeforeInit);
 }
 
 TEST_CASE("Sequence event control") {
@@ -1004,9 +1020,10 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 2);
+    REQUIRE(diags.size() == 3);
     CHECK(diags[0].code == diag::DisableIffLocalVar);
     CHECK(diags[1].code == diag::DisableIffMatched);
+    CHECK(diags[2].code == diag::MatchedOutsideSeq);
 }
 
 TEST_CASE("abort property condition restrictions") {
@@ -1028,9 +1045,10 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 2);
+    REQUIRE(diags.size() == 3);
     CHECK(diags[0].code == diag::PropAbortLocalVar);
-    CHECK(diags[1].code == diag::PropAbortMatched);
+    CHECK(diags[1].code == diag::MatchedOutsideSeq);
+    CHECK(diags[2].code == diag::PropAbortMatched);
 }
 
 TEST_CASE("Sequence properties with empty matches") {
