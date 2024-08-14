@@ -201,6 +201,16 @@ macromodule m3;
 
         if (1) begin end else begin end
 
+        unique0 casez (w)
+            0, 1: ;
+            default ;
+        endcase
+
+        case (w) inside
+            [0: 3]: ;
+        endcase
+
+
 
 
     end
