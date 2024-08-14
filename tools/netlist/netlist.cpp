@@ -37,6 +37,26 @@ using namespace slang::ast;
 using namespace slang::driver;
 using namespace netlist;
 
+template<>
+class fmt::formatter<NetlistNode> {
+public:
+    constexpr auto parse(format_parse_context& ctx) { return ctx.begin(); }
+    template<typename Context>
+    constexpr auto format(NetlistNode const& node, Context& ctx) const {
+        if (node.kind == NodeKind::VariableAlias) {
+            auto& aliasNode = node.as<NetlistVariableAlias>();
+            return format_to(ctx.out(), "{}{}", aliasNode.hierarchicalPath, aliasNode.overlap);
+        }
+        else if (node.kind == NodeKind::VariableDeclaration) {
+            auto& declNode = node.as<NetlistVariableDeclaration>();
+            return format_to(ctx.out(), "{}", declNode.hierarchicalPath);
+        }
+        else {
+            return format_to(ctx.out(), "{}", node.getName());
+        }
+    }
+};
+
 namespace slang::diag {
 
 inline constexpr DiagCode VariableReference(DiagSubsystem::Netlist, 0);
@@ -166,6 +186,21 @@ void dumpCyclesList(Compilation& compilation, Netlist& netlist,
     }
 }
 
+/// Exand a variable declaration node into a set of aliases if any are defined.
+/// These are used for searching for paths.
+auto expandVarDecl(NetlistVariableDeclaration* node) {
+    std::vector<NetlistNode*> result;
+    if (node->aliases.empty()) {
+        result.push_back(node);
+    }
+    else {
+        for (auto* alias : node->aliases) {
+            result.push_back(alias);
+        }
+    }
+    return result;
+}
+
 int main(int argc, char** argv) {
     OS::setupConsole();
 
@@ -288,14 +323,33 @@ int main(int argc, char** argv) {
                 SLANG_THROW(std::runtime_error(
                     fmt::format("could not find finish point: {}", *toPointName)));
             }
-            PathFinder pathFinder(netlist);
-            auto path = pathFinder.find(*fromPoint, *toPoint);
-            if (path.empty()) {
-                SLANG_THROW(std::runtime_error(
-                    fmt::format("no path between {} and {}", *fromPointName, *toPointName)));
+
+            // Expand the start and end points over aliases of the variable declaration nodes.
+            auto startPoints = expandVarDecl(fromPoint);
+            auto endPoints = expandVarDecl(toPoint);
+
+            // Search through all combinations of start and end points. Report
+            // the first path found and stop searching.
+            for (auto* src : startPoints) {
+                for (auto* dst : endPoints) {
+
+                    DEBUG_PRINT("Searching for path between:\n  {}\n  {}\n", *src, *dst);
+
+                    // Search for the path.
+                    PathFinder pathFinder(netlist);
+                    auto path = pathFinder.find(*src, *dst);
+
+                    if (!path.empty()) {
+                        // Report the path and exit.
+                        reportPath(*compilation, path);
+                        return 0;
+                    }
+                }
             }
-            // Report the path.
-            reportPath(*compilation, path);
+
+            // No path found.
+            SLANG_THROW(std::runtime_error(
+                fmt::format("no path between {} and {}", *fromPointName, *toPointName)));
         }
 
         // No action performed.
