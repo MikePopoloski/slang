@@ -10,7 +10,6 @@
 #include "slang/ast/symbols/ParameterSymbols.h"
 #include "slang/ast/symbols/VariableSymbols.h"
 #include "slang/ast/types/Type.h"
-#include "slang/diagnostics/StatementsDiags.h"
 
 TEST_CASE("For loop statements") {
     auto tree = SyntaxTree::fromText(R"(
