@@ -10,6 +10,7 @@
 #include "slang/ast/symbols/ParameterSymbols.h"
 #include "slang/ast/symbols/VariableSymbols.h"
 #include "slang/ast/types/Type.h"
+#include "slang/diagnostics/StatementsDiags.h"
 
 TEST_CASE("For loop statements") {
     auto tree = SyntaxTree::fromText(R"(
@@ -429,6 +430,7 @@ module m;
     function void f1; endfunction
     function void f2(int i, output int o); endfunction
     function automatic void f3(int i, ref r); endfunction
+    function int error_code(); return (0); endfunction
 
     int i;
     string s;
@@ -439,6 +441,8 @@ module m;
         assert #0 (i < 0) f2(i, i);
         assert #0 (i < 0) f3(i, r);
         assert #0 (i < 0) $swrite(s, "%d", i);
+        assert #0 (i < 0) error_code();
+        assert #0 (i < 0) void'(error_code());
     end
 endmodule
 )");
@@ -447,12 +451,13 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 5);
+    REQUIRE(diags.size() == 6);
     CHECK(diags[0].code == diag::InvalidDeferredAssertAction);
     CHECK(diags[1].code == diag::DeferredAssertNonVoid);
     CHECK(diags[2].code == diag::DeferredAssertOutArg);
     CHECK(diags[3].code == diag::DeferredAssertAutoRefArg);
     CHECK(diags[4].code == diag::DeferredAssertOutArg);
+    CHECK(diags[5].code == diag::UnusedResult);
 }
 
 TEST_CASE("Break statement check -- regression") {
