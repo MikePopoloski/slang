@@ -524,7 +524,9 @@ void SequenceRepetition::serializeTo(ASTSerializer& serializer) const {
 AssertionExpr& SimpleAssertionExpr::fromSyntax(const SimpleSequenceExprSyntax& syntax,
                                                const ASTContext& context, bool allowDisable) {
     auto& comp = context.getCompilation();
-    auto& expr = bindExpr(*syntax.expr, context, /* allowInstances */ true);
+    ASTContext ctx = context;
+    ctx.flags |= ASTFlags::InsideSequenceExpr;
+    auto& expr = bindExpr(*syntax.expr, ctx, /* allowInstances */ true);
 
     std::optional<SequenceRepetition> repetition;
     if (syntax.repetition) {

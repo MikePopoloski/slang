@@ -20,6 +20,7 @@
 #include "slang/diagnostics/ExpressionsDiags.h"
 #include "slang/diagnostics/LookupDiags.h"
 #include "slang/diagnostics/ParserDiags.h"
+#include "slang/diagnostics/StatementsDiags.h"
 #include "slang/syntax/AllSyntax.h"
 
 namespace slang::ast {
@@ -400,6 +401,9 @@ Expression& CallExpression::fromSystemMethod(
         }
         return badExpr(compilation, &expr);
     }
+
+    if (subroutine->name == "matched"sv && !context.flags.has(ASTFlags::InsideSequenceExpr))
+        context.addDiag(diag::MatchedOutsideSeq, expr.sourceRange);
 
     return createSystemCall(compilation, *subroutine, &expr, syntax, withClause,
                             syntax ? syntax->sourceRange() : expr.sourceRange, context);

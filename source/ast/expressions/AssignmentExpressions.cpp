@@ -8,6 +8,7 @@
 #include "slang/ast/expressions/AssignmentExpressions.h"
 
 #include "slang/ast/ASTSerializer.h"
+#include "slang/ast/ASTVisitor.h"
 #include "slang/ast/Bitstream.h"
 #include "slang/ast/Compilation.h"
 #include "slang/ast/EvalContext.h"
@@ -17,6 +18,7 @@
 #include "slang/ast/expressions/MiscExpressions.h"
 #include "slang/ast/expressions/OperatorExpressions.h"
 #include "slang/ast/expressions/SelectExpressions.h"
+#include "slang/ast/symbols/BlockSymbols.h"
 #include "slang/ast/symbols/ClassSymbols.h"
 #include "slang/ast/symbols/CoverSymbols.h"
 #include "slang/ast/symbols/InstanceSymbols.h"
@@ -26,6 +28,7 @@
 #include "slang/diagnostics/ExpressionsDiags.h"
 #include "slang/diagnostics/LookupDiags.h"
 #include "slang/diagnostics/NumericDiags.h"
+#include "slang/diagnostics/StatementsDiags.h"
 #include "slang/diagnostics/TypesDiags.h"
 #include "slang/numeric/MathUtils.h"
 #include "slang/syntax/AllSyntax.h"
@@ -35,6 +38,32 @@ namespace {
 using namespace slang;
 using namespace slang::ast;
 using namespace slang::syntax;
+
+struct TriggeredAssignmentVisitor {
+    const ASTContext& context;
+    DiagCode triggeredCode;
+
+    TriggeredAssignmentVisitor(const ASTContext& context, DiagCode triggeredCode) :
+        context(context), triggeredCode(triggeredCode) {}
+
+    template<typename T>
+    void visit(const T& expr) {
+        if constexpr (std::is_base_of_v<Expression, T>) {
+            if (expr.kind == ExpressionKind::Call) {
+                auto& call = expr.template as<CallExpression>();
+                if (call.isSystemCall()) {
+                    if (call.getSubroutineName() == "triggered"sv && !call.arguments().empty() &&
+                        call.arguments()[0]->type->isSequenceType()) {
+                        context.addDiag(triggeredCode, expr.sourceRange);
+                    }
+                }
+            }
+            else if constexpr (HasVisitExprs<T, TriggeredAssignmentVisitor>) {
+                expr.visitExprs(*this);
+            }
+        }
+    }
+};
 
 // This function exists to handle a case like:
 //      integer i;
@@ -642,6 +671,17 @@ Expression& AssignmentExpression::fromSyntax(Compilation& compilation,
         else {
             rhs = &create(compilation, *rightExpr, context, extraFlags, lhs.type);
         }
+    }
+
+    // Check that there is no sequence method triggered call in continuous assignment or
+    // assignment in always_comb block.
+    if ((context.getProceduralBlock() &&
+         context.getProceduralBlock()->procedureKind == ProceduralBlockKind::AlwaysComb) ||
+        context.flags.has(ASTFlags::NonProcedural)) {
+        bool isContinuous = context.flags.has(ASTFlags::NonProcedural);
+        TriggeredAssignmentVisitor tAV(context, (isContinuous) ? diag::ContinuousAssignTriggered
+                                                               : diag::AlwaysCombAssignTriggered);
+        rhs->visit(tAV);
     }
 
     return fromComponents(compilation, op, assignFlags, lhs, *rhs, syntax.operatorToken.range(),
