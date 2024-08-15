@@ -430,11 +430,11 @@ private:
                         // referenced before assignment in sequence instance body on which triggered
                         // method is called.
                         if (validatedArg) {
-                            TriggeredMethodSeqBodyVisitor visitor(validatedArg);
-                            aie.body.visit(visitor);
+                            TriggeredMethodSeqBodyVisitor seqBodyVisitor(validatedArg);
+                            aie.body.visit(seqBodyVisitor);
 
-                            if (visitor.isAssignmentMatched) {
-                                for (auto& sR : visitor.foundedSR) {
+                            if (seqBodyVisitor.isAssignmentMatched) {
+                                for (auto& sR : seqBodyVisitor.foundedSR) {
                                     context.addDiag(diag::TriggeredMethodUseBeforeInit, sR);
                                 }
                             }
