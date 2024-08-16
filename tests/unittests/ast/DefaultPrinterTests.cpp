@@ -232,12 +232,55 @@ TEST_CASE("all.sv 80-120"){
     std::string code = R"(
 macromodule m3;
     always_comb begin
+        typedef union tagged {
+            void Invalid;
+            int Valid;
+        } VInt;
+
+        typedef union tagged {
+            struct {
+                bit [4:0] reg1, reg2, regd;
+            } Add;
+            union tagged {
+                bit [9:0] JmpU;
+                struct {
+                    bit [1:0] cc;
+                    bit [9:0] addr;
+                } JmpC;
+            } Jmp;
+        } Instr;
+
+
+        VInt v;
         automatic int rf[] = new [3];
         static longint pc = 'x;
+
+
+
+
+
     end
-
-
 endmodule)";
     CHECK(isEqual(code, "sv80_120"));
 }
-// skipped the      typedef shit
+
+/*
+TEST_CASE("interfaces "){
+    std::string code = R"(
+extern interface I1(input a, output b);
+interface I1(.*);
+    modport mod(input a), mod2(input a);
+endinterface
+
+macromodule m3;
+    extern interface I1(input a, output b);
+    interface I1(.*);
+        modport mod(input a), mod2(input a), mod3(input a);
+    endinterface
+    I1 d(.a(), .b());
+    I1 d(.c(), .d());
+
+endmodule)";
+    CHECK(isEqual(code, "interfaces"));
+}
+*/

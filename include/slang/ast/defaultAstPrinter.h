@@ -10,6 +10,7 @@
 #include <cctype>
 #include <iostream>
 #include <list>
+#include <set>
 #include <regex>
 #include <string>
 #include <string_view>
@@ -27,6 +28,7 @@
 #include "slang/ast/types/Type.h"
 #include "slang/util/LanguageVersion.h"
 #include "slang/util/Util.h"
+
 
 namespace slang::ast {
 
@@ -241,13 +243,24 @@ public:
     void handle(const ImplicitEventControl& t) { write("@*"); }
 
     // type_declaration ::= typedef data_type type_identifier { variable_dimension } ;
+    // TODO: formating type_str
     void handle(const TypeAliasType& t) {
-        write("typedef");
+        blockBuffer.append("typedef ");
         // ex: union tagged{void Invalid;int Valid;}m3.u$1 shoulden't have the m3.u$1
         std::string type_str = t.targetType.getType().toString();
-        int bracket_loc = type_str.find("}");
-        write(type_str.substr(0, bracket_loc + 1));
-        write(t.name);
+
+        std::regex reg("}.*?(?= .\\S*?;)");
+        type_str = std::regex_replace(type_str, reg, "}");
+
+        int bracket_loc = type_str.rfind("}");
+        blockBuffer.append(type_str.substr(0, bracket_loc + 1));
+        blockBuffer.append(t.name);
+        blockBuffer.append(";\n");
+        
+
+        // remove the name of the typealias to make it possible to compare them to getType() types
+        int dot_loc = type_str.rfind(".");
+        typeConversions.insert({type_str.substr(0, dot_loc ), std::string(t.name)});
     }
 
     // #test schrijven
@@ -399,10 +412,8 @@ public:
         }
     }
 
-    // case_statement ::= [ unique_priority ] case_keyword ( case_expression ) case_item {
-    // case_item} endcase
-    //                  | [ unique_priority ] case ( case_expression ) inside case_inside_item {
-    //                  case_inside_item } endcase
+    // case_statement ::= [ unique_priority ] case_keyword ( case_expression ) case_item { case_item} endcase
+    //                  | [ unique_priority ] case ( case_expression ) inside case_inside_item {   case_inside_item } endcase
     void handle(const CaseStatement& t) {
         if (t.check != UniquePriorityCheck::None) {
             std::string_view priority = toString(t.check);
@@ -449,8 +460,12 @@ public:
     // #test schrijven
     //  TODOO snappen waarom dat dit zo sketch is
     void handle(const StatementBlockSymbol& t) {
-        // Represents a sequential or parallel block statement.
-        // visitDefault(t);
+        // extra block  where variables, .. are defined that are used in the corresponding instance,
+        // contains mostly redundant except TypeAliasTypes
+        t.visit(makeVisitor([&](auto& visitor, const TypeAliasType& TypeAliasType) {
+            handle(TypeAliasType);
+            visitor.visitDefault(TypeAliasType);
+        })); 
     }
     // #test schrijven
     void handle(const BlockStatement& t) {
@@ -480,6 +495,11 @@ public:
         }
 
         indentation_level += 1;
+
+        // first write the information from the statementBlock
+        write(blockBuffer);
+        blockBuffer = "";
+        
         t.body.visit(*this);
         indentation_level -= 1;
 
@@ -629,6 +649,12 @@ public:
     /// list_of_port_declarations ] ;>
     /// <> is handeld in InstanceBodySymbol
     void handle(const slang::ast::InstanceSymbol& t) {
+        // if it is already written somewhere else do not write it again
+        if (initializedInstances.count(&(t.body)) != 0){
+            return;
+        }else {
+            initializedInstances.insert(&(t.body));
+        }
 
         writeAttributeInstances(t);
 
@@ -691,7 +717,7 @@ public:
             t.internalSymbol->visit(*this);
         }
         else {
-            write(t.getType().toString(), true, true);
+            write(convertType(t.getType().toString()), true, true);
         }
         // write port_identifier
         // write(t.name);
@@ -777,7 +803,7 @@ public:
                 break;
         }
 
-        write(t.getType().toString(), true, true);
+        write(convertType(convertType(t.getType().toString())), true, true);
         write(t.name);
 
         auto initializer = t.getInitializer();
@@ -795,7 +821,7 @@ public:
     void handle(const slang::ast::VariableSymbol& t) {
         write("var");
         write(t.lifetime == VariableLifetime::Static ? "static" : "automatic");
-        write(t.getType().toString(), true, true);
+        write(convertType(t.getType().toString()), true, true);
         write(t.name);
 
         auto initializer = t.getInitializer();
@@ -812,7 +838,7 @@ public:
 
         write(t.direction);
 
-        write(t.getType().toString(), true, true);
+        write(convertType(t.getType().toString()), true, true);
         write(".");
         write(t.name, false);
         write("(\n", false);
@@ -845,7 +871,7 @@ public:
             write(std::string_view("parameter"));
         }
         // data_type_or_implicit
-        write(lowerFirstLetter(t.getType().toString()));
+        write(lowerFirstLetter(convertType(t.getType().toString())));
         // list_of_param_assignments->param_assignment->parameter_identifier
         write(t.name);
         // TODO:unpacked_dimension
@@ -982,6 +1008,8 @@ public:
         // add a tab to all folowing code
         indentation_level -= 1;
     }
+
+    //TODO DIT nakijken
     void handle(const UnbasedUnsizedIntegerLiteral& t){ 
         if (t.getLiteralValue().isUnknown())
             write("'x");
@@ -1024,6 +1052,11 @@ public:
 private:
     std::string buffer;
     std::list<std::string> writeNextBuffer;
+    std::set<const slang::ast::InstanceBodySymbol *> initializedInstances;
+    // the type in the ast is not the type defined by the type alias, this map is used to convert the type back to the type alias type
+    std::map<std::string, std::string> typeConversions;
+    // buffer for code in a statementblock that needs to be appended in the next proceduralBlock
+    std::string blockBuffer;
     Compilation& compilation;
 
     // variables that are declared in a statement block but not in the code
@@ -1039,6 +1072,22 @@ private:
     // the amount of spaces after a newline is depth*depth_multplier
     int indentation_level = 0;
     const int indentation_multiplier = 3;
+
+    // converts the type to a type defined by a type alias if a conversion is available
+    std::string convertType(std::string type){
+        // check if type in type conversions
+        // remove the name of the typealias to make it possible to compare them to typealias types
+        // ex: type alieas union tagged{void Invalid;int Valid;}m3.u$1 (this is named VInt)
+        //     getType(): union tagged{void Invalid;int Valid;}m3.VInt
+        std::regex reg("}.*?(?= .\\S*?;)");
+        type = std::regex_replace(type, reg, "}");
+
+        int dot_loc = type.rfind(".");
+        if (typeConversions.count(type.substr(0, dot_loc )))
+            return typeConversions[type.substr(0, dot_loc )];
+        return type;
+
+    }
 
     void write(std::string_view string, bool add_spacer = true, bool use_dollar = false) {
         // check if there is a $ sign in the string and add its content to the write next buffer
