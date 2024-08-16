@@ -739,7 +739,6 @@ error VoidAssignment "expression of type 'void' cannot be used in assignments"
 error VirtualIfaceDefparam "interface instance cannot be assigned to a virtual interface because it is the target of a defparam or bind directive"
 error MultipleDefaultDistWeight "'default' cannot be used more than once in dist item list"
 error DistRealRangeWeight "'dist' for a range of real values must include an explicit weight and must use the ':/' operator"
-error SequenceLocalVarFormalArg "it is illegal to declare the local variable when it is a formal argument"
 warning ignored-slice IgnoredSlice "slice size ignored for left-to-right streaming operator"
 warning unsized-concat UnsizedInConcat "unsized integer in concat; using a width of {}"
 warning width-expand WidthExpand "implicit conversion expands from {} to {} bits"
@@ -770,7 +769,6 @@ warning arith-op-mismatch ArithOpMismatch "arithmetic between operands of differ
 warning bitwise-op-mismatch BitwiseOpMismatch "bitwise operation between operands of different types ({} and {})"
 warning comparison-mismatch ComparisonMismatch "comparison between operands of different types ({} and {})"
 warning sign-compare SignCompare "comparison of differently signed types ({} and {})"
-note NoteSequenceFormalArg "sequence formal argument '{}' specified here"
 
 subsystem Statements
 error ReturnNotInSubroutine "return statement is only valid inside task and function blocks"
