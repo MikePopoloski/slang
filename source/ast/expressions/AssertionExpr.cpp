@@ -284,8 +284,9 @@ AssertionExpr& AssertionExpr::badExpr(Compilation& compilation, const AssertionE
 
 bool AssertionExpr::checkAssertionCall(const CallExpression& call, const ASTContext& context,
                                        DiagCode outArgCode, DiagCode refArgCode,
-                                       DiagCode nonVoidCode, SourceRange range) {
-    if (context.flags.has(ASTFlags::InsideSequence) || call.isSystemCall()) {
+                                       DiagCode nonVoidCode, SourceRange range,
+                                       bool isInsideSequence) {
+    if (isInsideSequence || call.isSystemCall()) {
         if (call.getSubroutineKind() == SubroutineKind::Function && !call.type->isVoid() &&
             !call.type->isError()) {
             context.addDiag(nonVoidCode, range) << call.getSubroutineName();
@@ -813,11 +814,11 @@ static std::span<const Expression* const> bindMatchItems(const SequenceMatchList
             }
             case ExpressionKind::Call: {
                 ASTContext insideSeqCtx = context;
-                insideSeqCtx.flags |= ASTFlags::InsideSequence;
                 AssertionExpr::checkAssertionCall(expr.as<CallExpression>(), insideSeqCtx,
                                                   diag::SubroutineMatchOutArg,
                                                   diag::SubroutineMatchAutoRefArg,
-                                                  diag::SubroutineMatchNonVoid, expr.sourceRange);
+                                                  diag::SubroutineMatchNonVoid, expr.sourceRange,
+                                                  /*isInsideSequence =*/true);
                 break;
             }
             case ExpressionKind::Invalid:

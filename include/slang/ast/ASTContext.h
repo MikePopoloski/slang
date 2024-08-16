@@ -194,11 +194,8 @@ enum class SLANG_EXPORT ASTFlags : uint64_t {
 
     /// AST binding is for a bind instantiation (port connection or param value).
     BindInstantiation = 1ull << 45,
-
-    /// The expression is inside sequence.
-    InsideSequence = 1ull << 46
 };
-SLANG_BITMASK(ASTFlags, InsideSequence)
+SLANG_BITMASK(ASTFlags, BindInstantiation)
 
 // clang-format off
 #define DK(x) \
