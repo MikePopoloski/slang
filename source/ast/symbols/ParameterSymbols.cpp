@@ -597,9 +597,11 @@ const Symbol* SpecparamSymbol::resolvePathTerminal(std::string_view terminalName
         return nullptr;
     }
 
+    auto dir = isSource ? SpecifyBlockSymbol::SpecifyTerminalDir::Input
+                        : SpecifyBlockSymbol::SpecifyTerminalDir::Output;
     auto& value = symbol->as<ValueSymbol>();
-    if (!SpecifyBlockSymbol::checkPathTerminal(value, value.getType(), *parentParent, isSource,
-                                               /* allowAnyNet */ false, sourceRange)) {
+    if (!SpecifyBlockSymbol::checkPathTerminal(value, value.getType(), *parentParent, dir,
+                                               sourceRange)) {
         return nullptr;
     }
 

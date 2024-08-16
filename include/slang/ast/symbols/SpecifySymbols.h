@@ -19,6 +19,8 @@ class ValueSymbol;
 
 class SLANG_EXPORT SpecifyBlockSymbol : public Symbol, public Scope {
 public:
+    enum class SpecifyTerminalDir { Input, Output, Both };
+
     SpecifyBlockSymbol(Compilation& compilation, SourceLocation loc);
 
     static SpecifyBlockSymbol& fromSyntax(const Scope& scope,
@@ -26,7 +28,7 @@ public:
                                           SmallVector<const Symbol*>& implicitSymbols);
 
     static bool checkPathTerminal(const ValueSymbol& terminal, const Type& type,
-                                  const Scope& specifyParent, bool isSource, bool allowAnyNet,
+                                  const Scope& specifyParent, SpecifyTerminalDir dir,
                                   SourceRange sourceRange);
 
     void serializeTo(ASTSerializer&) const {}

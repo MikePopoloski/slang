@@ -1809,7 +1809,6 @@ module m(input a, output b);
         $setup(posedge a, negedge a, 1, ABC);
         $setup(posedge a &&& d, negedge a, 1);
         $setup(edge [1xx] a &&& notify, negedge a, 1);
-        $setuphold(notify, negedge a, 1, 2, , , , asdf);
         $setup(posedge a, a, -12.14);
         $width(a, 1);
         $nochange(edge [1x] a, a, 1, 2);
@@ -1821,7 +1820,7 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 14);
+    REQUIRE(diags.size() == 13);
     CHECK(diags[0].code == diag::UnknownSystemTimingCheck);
     CHECK(diags[1].code == diag::TooFewArguments);
     CHECK(diags[2].code == diag::TooManyArguments);
@@ -1832,10 +1831,9 @@ endmodule
     CHECK(diags[7].code == diag::BadAssignment);
     CHECK(diags[8].code == diag::NotBooleanConvertible);
     CHECK(diags[9].code == diag::InvalidEdgeDescriptor);
-    CHECK(diags[10].code == diag::InvalidSpecifySource);
-    CHECK(diags[11].code == diag::NegativeTimingLimit);
-    CHECK(diags[12].code == diag::TimingCheckEventEdgeRequired);
-    CHECK(diags[13].code == diag::NoChangeEdgeRequired);
+    CHECK(diags[10].code == diag::NegativeTimingLimit);
+    CHECK(diags[11].code == diag::TimingCheckEventEdgeRequired);
+    CHECK(diags[12].code == diag::NoChangeEdgeRequired);
 }
 
 TEST_CASE("System timing check implicit nets") {
@@ -2242,20 +2240,21 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
-TEST_CASE("IEEE 1800 Section 10.9.2 - structure assignment patterns") {
+TEST_CASE("Timing check arg restriction regress -- GH #1084") {
     auto tree = SyntaxTree::fromText(R"(
-module top;
-   typedef struct {
-      logic [7:0] a;
-      bit b;
-      bit signed [31:0] c;
-      string s;
-   } sa;
+module clk_gate_and(
+        input  logic clk_in,
+        input  logic clk_en,
+        output logic clk_out
+    );
 
-   sa s2;
-   initial s2 = '{int:1, default:0, string:""}; // set all to 0 except the
-                                                // array of bits to 1 and
-                                                // string to ""
+    specify
+        specparam setup = 10;
+        specparam hold = 10;
+
+        $setup(posedge clk_in, clk_en, setup);
+        $hold(posedge clk_in, clk_en, hold);
+    endspecify
 endmodule
 )");
 
