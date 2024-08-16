@@ -272,6 +272,10 @@ macromodule m3;
                            endcase
         endcase
 
+        if (instr matches (tagged Jmp .j) &&&
+            j matches (tagged JmpC '{cc:.c,addr:.a})) begin
+            pc = c[0] & a[0];
+        end
 
     end
 endmodule)";

@@ -417,10 +417,17 @@ public:
         }
 
         write("if(");
+        //cond_predicate ::= expression_or_cond_pattern { &&& expression_or_cond_pattern }
         for (auto condition : t.conditions) {
             condition.expr.get()->visit(*this);
+            //cond_pattern ::= expression matches pattern
+            if(condition.pattern){
+                write("matches ");
+                condition.pattern->visit(*this);
+            }
+            condition.expr.get()->visit(*this);
             if (condition.expr.get() != t.conditions.back().expr.get()) {
-                write(",");
+                write("&&&");
             }
         }
         write(")\n");
@@ -660,6 +667,7 @@ public:
     // ding zoals initial
     void handle(const ProceduralBlockSymbol& t) {
         write(t.procedureKind);
+        
         t.getBody().visit(*this);
     }
 
@@ -1273,7 +1281,18 @@ private:
             case (BinaryOperator::GreaterThanEqual):
                 write(">=", false);
                 break;
-
+            case (BinaryOperator::LogicalAnd):
+                write("&&", false);
+                break;
+            case (BinaryOperator::LogicalOr):
+                write("||", false);
+                break;
+            case (BinaryOperator::BinaryOr):
+                write("|", false);
+                break;
+            case (BinaryOperator::BinaryAnd):
+                write("&", false);
+                break;
             default:
                 SLANG_UNREACHABLE;
         }
