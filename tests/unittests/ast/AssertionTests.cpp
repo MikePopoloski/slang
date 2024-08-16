@@ -606,8 +606,21 @@ property check_write_data_beat(
     );
 endproperty
 
+property prop(p, bit b, abort);
+  (p and (1'b1 |=> recProp(p, b, abort)));
+endproperty
+
+property recProp(p, bit b, abort);
+  accept_on(b) reject_on(abort) prop(p, b, abort);
+endproperty
+
 module m;
     assert property (check_write);
+
+    logic p;
+    bit b;
+    logic abort;
+    assert property(prop(p, b, abort));
 endmodule
 )");
 
