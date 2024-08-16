@@ -222,6 +222,31 @@ public:
         t.right().visit(*this);
     }
 
+    //subroutine_call_statement ::=subroutine_call ;
+    //subroutine_call ::= tf_call | system_tf_call | method_call | [ std:: ] randomize_call
+    // ps_or_hierarchical_tf_identifier { attribute_instance } [ ( list_of_arguments ) ]
+    // system_tf_call ::= system_tf_identifier [ ( list_of_arguments ) ]
+    void handle(const CallExpression& t){
+        write( t.getSubroutineName());
+        writeAttributeInstances(t);
+
+        write("(");
+        for (auto arg : t.arguments()) {
+            arg->visit(*this);
+            if (arg != t.arguments().back()) {
+                write(",");
+            }
+        }
+        write(")");
+    }
+
+    void handle(const StringLiteral& t){
+        write("\"");
+        write(t.getValue(),false);
+        write("\"",false);
+    }
+
+
     // event_control::= @ ( event_expression )
     // event_expression ::=[ edge_identifier ] expression [ iff expression ]
     void handle(const SignalEventControl& t) {
@@ -457,8 +482,74 @@ public:
         write("endcase \n");
     }
 
-    // #test schrijven
-    //  TODOO snappen waarom dat dit zo sketch is
+    // case_statement ::= | [ unique_priority ] case_keyword (case_expression )matches
+    //                       case_pattern_item { case_pattern_item } endcase
+    void handle(const PatternCaseStatement& t){
+        if (t.check != UniquePriorityCheck::None) {
+            std::string_view priority = toString(t.check);
+            write(lowerFirstLetter(priority));
+        }
+
+        // case_keyword
+        write(t.condition);
+        write("(");
+        t.expr.visit(*this);
+        write(") matches\n");
+        indentation_level++;
+
+        //case_pattern_item ::= pattern [ &&& expression ] : statement_or_null
+        for (auto item : t.items) {
+            item.pattern.get()->visit(*this);
+            if (item.filter){
+                write("&&&");
+                item.filter->visit(*this);
+            }
+            write(":");
+            item.stmt->visit(*this);
+            write("\n");
+        }
+
+        // case_item ::= | default [ : ] statement_or_null
+        if (t.defaultCase) {
+            write("default :");
+            (*t.defaultCase).visit(*this);
+            write("\n");
+            
+        }
+
+        indentation_level--;
+        write("endcase \n");
+    }
+
+    // pattern ::= tagged member_identifier [ pattern ]
+    void handle(const TaggedPattern& t){
+        write("tagged");
+        write(t.member.name);
+        t.valuePattern->visit(*this);
+    }
+
+    // pattern ::=. variable_identifier
+    void handle(const VariablePattern& t){
+        write(".");
+        write(t.variable.name,false);
+    }
+    // pattern ::= .*
+    void handle(const WildcardPattern& t){
+        write(".*");
+    }
+
+    //assignment_pattern ::= '{ expression { , expression } }
+    void handle(const StructurePattern& t){
+        write("'{");
+        for (auto field_pattern : t.patterns){
+            field_pattern.pattern->visit(*this);
+            if (field_pattern.pattern != t.patterns.back().pattern)
+                write(",");
+        }
+        write("}");
+    }
+
+
     void handle(const StatementBlockSymbol& t) {
         // extra block  where variables, .. are defined that are used in the corresponding instance,
         // contains mostly redundant except TypeAliasTypes
@@ -1023,6 +1114,7 @@ public:
     void handle(const IntegerLiteral& t) { write(t.getValue().toString()); }
 
     void handle(const slang::ast::ElementSelectExpression& t) {
+        t.value().visit(*this);
         write("[", false);
         t.selector().visit(*this);
         write("]", false);
