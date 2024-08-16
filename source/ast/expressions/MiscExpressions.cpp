@@ -1120,9 +1120,6 @@ Expression& AssertionInstanceExpression::makeDefault(const Symbol& symbol) {
     auto result = comp.emplace<AssertionInstanceExpression>(*type, symbol, body,
                                                             /* isRecursiveProperty */ false, range);
     result->localVars = localVars.copy(comp);
-    // Check LRM 16.10 section restriction:
-    // > It's illegal to declare a local variable if it is a formal argument of a sequence
-    // declaration.
     return *result;
 }
 
