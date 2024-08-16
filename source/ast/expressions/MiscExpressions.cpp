@@ -987,7 +987,8 @@ Expression& AssertionInstanceExpression::fromLookup(const Symbol& symbol,
     ASTContext bodyContext(*symbolScope, LookupLocation::max);
     bodyContext.assertionInstance = &instance;
     // Propagate previously founded time advance specs
-    bodyContext.flags |= ASTFlags::PropertyTimeAdvance;
+    if (context.flags.has(ASTFlags::PropertyTimeAdvance))
+        bodyContext.flags |= ASTFlags::PropertyTimeAdvance;
 
     // Let declarations expand directly to an expression.
     if (symbol.kind == SymbolKind::LetDecl)
