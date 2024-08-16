@@ -55,6 +55,11 @@ target_sources(
           HierarchicalReference.cpp
           Lookup.cpp
           LValue.cpp
+          printer/StatementPrinter.cpp
+          printer/ExpressionPrinter.cpp
+          printer/PatternPrinter.cpp
+          printer/SymbolPrinter.cpp
+          printer/EtcPrinter.cpp
           OpaqueInstancePath.cpp
           Patterns.cpp
           Scope.cpp

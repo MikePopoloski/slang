@@ -3,7 +3,7 @@
 
 #include "Test.h"
 #include "slang/ast/Statements.h"
-#include "slang/ast/defaultAstPrinter.h"
+#include "slang/ast/printer/defaultAstPrinter.h"
 #include "slang/syntax/SyntaxTree.h"
 #include "slang/text/Json.h"
 #include <iostream>
@@ -46,7 +46,7 @@ bool isEqual(std::string original_code, std::string name_test ="test"){
     auto [new_ast_json, new_rootAst] = getAst(new_compilation);
 
     // dump the content to a file if the ast don't match
-    if (old_ast_json != new_ast_json){
+    if (true){
          name_test.append(".json");
          std::ofstream out(name_test);
          out <<"original json:";
@@ -276,11 +276,33 @@ macromodule m3;
             j matches (tagged JmpC '{cc:.c,addr:.a})) begin
             pc = c[0] & a[0];
         end
+        else begin
+        end
 
     end
 endmodule)";
-    CHECK(isEqual(code, "sv80_120"));
+    CHECK(isEqual(code, "sv80_128"));
 }
+
+TEST_CASE("all.sv 129-150"){
+    std::string code = R"(
+macromodule m3;
+    always_comb begin
+        generate
+            case ($bits(w))
+                0, 1: begin end
+                2: begin end
+                default: begin end
+            endcase
+         wire b;
+        endgenerate
+    end
+endmodule)";
+    CHECK(isEqual(code, "sv129_150"));
+}
+
+// line 133 isin't tested because it is invalid
+
 
 /*
 TEST_CASE("interfaces "){
