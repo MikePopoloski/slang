@@ -303,14 +303,27 @@ macromodule m3;
                 2: begin end
                 default: begin end
             endcase
-         wire b;
         endgenerate
 
     assertion0: assert #0 (1 == 1) else $display("Hello!");
     assertion1: assume final (2 != 1) else $display("Hello!");
 
+endmodule
 )";
     CHECK(isEqual(code, "sv129_150"));
+}
+
+TEST_CASE("all.sv v"){
+    std::string code = R"(
+macromodule m3;
+    if (1) begin
+        logic a,b,c,d,e,f;
+
+    end
+endmodule
+)";
+    CHECK(isEqual(code, "sv150_180"));
+
 }
 
 // line 133 isin't tested because it is invalid
@@ -336,3 +349,4 @@ endmodule)";
     CHECK(isEqual(code, "interfaces"));
 }
 */
+// TODO bug fixen: https://www.systemverilog.io/verification/generate/ bij loop contruc

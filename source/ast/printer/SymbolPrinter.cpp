@@ -498,10 +498,32 @@ void AstPrinter::handle(const StatementBlockSymbol& t) {
         visitor.visitDefault(TypeAliasType);
     }));
 }
-//loop_generate_construct ::= for ( genvar_initialization ; genvar_expression ; genvar_iteration ) generate_block
+
+// loop_generate_construct ::= for ( genvar_initialization ; genvar_expression ; genvar_iteration )
+// generate_block
 void AstPrinter::handle(const GenerateBlockArraySymbol& t) {
-    // als je kijkt naar de ast van een gen block is het ( denk ik) onmgelijk om de originele source te herconstrueren
+    // als je kijkt naar de ast van een gen block is het ( denk ik) onmgelijk om de originele source
+    // te herconstrueren
     // _> deze worden via de originele source code geprint 
     write(t.getSyntax()->toString());
 }
+
+void AstPrinter::handle(const GenerateBlockSymbol& t) {
+    write("generate");
+    write(t.getSyntax()->toString());
+    write("endgenerate\n");
+
+    /*
+    auto member = t.getFirstMember();
+    while (member) {
+        member->visit(*this);
+
+        // TODO betere maniet voor dit vinden
+        if ("\n" != buffer.substr(buffer.length() - 1, buffer.length() - 1))
+            write(";\n", false);
+
+        member = member->getNextSibling();
+    }*/
+}
+
 } // namespace slang::ast

@@ -10,11 +10,11 @@
 #include <cctype>
 #include <iostream>
 #include <list>
-#include <set>
+#include <map>
 #include <regex>
+#include <set>
 #include <string>
 #include <string_view>
-#include <map>
 
 #include "slang/ast/ASTVisitor.h"
 #include "slang/ast/HierarchicalReference.h"
@@ -30,7 +30,6 @@
 #include "slang/util/LanguageVersion.h"
 #include "slang/util/Util.h"
 
-
 namespace slang::ast {
 
 /// Provides support for printing ast back to source code.
@@ -44,7 +43,7 @@ public:
 
     /// Sets whether to include trivia when printing syntax.
     /// @return a reference to this object, to allow chaining additional method calls.
-    AstPrinter& setIncludeTrivia(bool include) ;
+    AstPrinter& setIncludeTrivia(bool include);
 
     /// Sets whether to include preprocessor directives when printing syntax.
     /// @return a reference to this object, to allow chaining additional method calls.
@@ -75,19 +74,21 @@ public:
     void handle(const InvalidAssertionExpr& t);
 
     // hierarchical_identifier ::= [ $root . ] { identifier constant_bit_select . } identifier
-    void handle(const HierarchicalValueExpression& t) ;
+    void handle(const HierarchicalValueExpression& t);
 
     // net_lvalue ::={ net_lvalue { , net_lvalue } } (this is used in other instances asswel)
-    void handle(const ConcatenationExpression& t) ;
+    void handle(const ConcatenationExpression& t);
 
     void handle(const NewArrayExpression& t);
 
     // mintypmax_expression ::= expression | expression : expression : expression
-    void handle(const MinTypMaxExpression& t) ;
+    void handle(const MinTypMaxExpression& t);
 
     // value_range ::= expression | [ expression : expression ]
     // TODO uitzoeken waarvoor die valuerange kind dient
-    void handle(const ValueRangeExpression& t) ;
+    void handle(const ValueRangeExpression& t);
+
+    void handle(const BinaryAssertionExpr& t);
 
     // blocking_assignment    ::= variable_lvalue = delay_or_event_control expression |
     //                            variable_lvalue assignment_operator expression
@@ -97,84 +98,88 @@ public:
     void handle(const UnaryExpression& t);
 
     void handle(const BinaryExpression& t);
-    //subroutine_call_statement ::=subroutine_call ;
-    //subroutine_call ::= tf_call | system_tf_call | method_call | [ std:: ] randomize_call
-    // ps_or_hierarchical_tf_identifier { attribute_instance } [ ( list_of_arguments ) ]
-    // system_tf_call ::= system_tf_identifier [ ( list_of_arguments ) ]
+
+    // subroutine_call_statement ::=subroutine_call ;
+    // subroutine_call ::= tf_call | system_tf_call | method_call | [ std:: ] randomize_call
+    //  ps_or_hierarchical_tf_identifier { attribute_instance } [ ( list_of_arguments ) ]
+    //  system_tf_call ::= system_tf_identifier [ ( list_of_arguments ) ]
     void handle(const CallExpression& t);
 
-
-
     void handle(const StringLiteral& t);
-
 
     // event_control::= @ ( event_expression )
     // event_expression ::=[ edge_identifier ] expression [ iff expression ]
     void handle(const SignalEventControl& t);
 
-    void handle(const ImplicitEventControl& t) ;
+    void handle(const ImplicitEventControl& t);
 
     // type_declaration ::= typedef data_type type_identifier { variable_dimension } ;
     // TODO: formating type_str
-    void handle(const TypeAliasType& t) ;
+    void handle(const TypeAliasType& t);
 
-    // 
-    void handle(const EmptyStatement& t) ;
+    //
+    void handle(const EmptyStatement& t);
 
-    // 
-    void handle(const StatementList& t) ;
+    //
+    void handle(const StatementList& t);
 
-    // 
-    void handle(const VariableDeclStatement& t) ;
+    //
+    void handle(const VariableDeclStatement& t);
 
     // disable_statement ::= disable fork ;
-    void handle(const DisableForkStatement& t) ;
+    void handle(const DisableForkStatement& t);
 
     // disable_statement ::= disable hierarchical_block_identifier ;
     void handle(const DisableStatement& t);
-    
+
     // jump_statement ::=break ;
-    void handle(const BreakStatement& t) ;
+    void handle(const BreakStatement& t);
 
     // jump_statement ::=continue ;
-    void handle(const ContinueStatement& t) ;
+    void handle(const ContinueStatement& t);
 
     void handle(const ExpressionStatement& t);
 
     // loop_statement ::= repeat ( expression ) statement_or_null
     // statement_or_null ::=statement| { attribute_instance } ;
     // statement ::= [ block_identifier : ] { attribute_instance } statement_item
-    void handle(const RepeatLoopStatement& t) ;
+    void handle(const RepeatLoopStatement& t);
 
     // loop_statement ::= forever statement_or_null
     void handle(const ForeverLoopStatement& t);
 
     // loop_statement ::= foreach ( ps_or_hierarchical_array_identifier [ loop_variables ] )
     // statement
-    void handle(const ForeachLoopStatement& t) ;
+    void handle(const ForeachLoopStatement& t);
 
     // loop_statement ::= while ( expression ) statement_or_null
     void handle(const WhileLoopStatement& t);
 
     // for ( [ for_initialization ] ; [ expression ] ; [ for_step ] ) statement_or_null
-    void handle(const ForLoopStatement& t) ;
+    void handle(const ForLoopStatement& t);
 
     // conditional_statement ::= [ unique_priority ] if ( cond_predicate ) statement_or_null {else
     // if ( cond_predicate ) statement_or_null } [ else statement_or_null ]
     void handle(const ConditionalStatement& t);
 
-    // case_statement ::= [ unique_priority ] case_keyword ( case_expression ) case_item { case_item} endcase
-    //                  | [ unique_priority ] case ( case_expression ) inside case_inside_item {   case_inside_item } endcase
+    // case_statement ::= [ unique_priority ] case_keyword ( case_expression ) case_item {
+    // case_item} endcase
+    //                  | [ unique_priority ] case ( case_expression ) inside case_inside_item {
+    //                  case_inside_item } endcase
     void handle(const CaseStatement& t);
 
     void handle(const BlockStatement& t);
 
-    //immediate_assertion_statement        ::= simple_immediate_assertion_statement | deferred_immediate_assertion_statement
-    //simple_immediate_assertion_statement ::= simple_immediate_assert_statement
-    //simple_immediate_assert_statement    ::= assert ( expression ) action_block
-    //action_block ::=statement_or_null | [ statement ] else statement_or_null
+    // immediate_assertion_statement        ::= simple_immediate_assertion_statement |
+    // deferred_immediate_assertion_statement simple_immediate_assertion_statement ::=
+    // simple_immediate_assert_statement simple_immediate_assert_statement    ::= assert (
+    // expression ) action_block action_block ::=statement_or_null | [ statement ] else
+    // statement_or_null 
     void handle(const ImmediateAssertionStatement& t);
-    
+
+    // concurrent_assertion_statement ::=assert_property_statement| assume_property_statement
+    void handle(const ConcurrentAssertionStatement& t);
+
     // case_statement ::= | [ unique_priority ] case_keyword (case_expression )matches
     //                       case_pattern_item { case_pattern_item } endcase
     void handle(const PatternCaseStatement& t);
@@ -187,17 +192,28 @@ public:
     // pattern ::= .*
     void handle(const WildcardPattern& t);
 
-    //assignment_pattern ::= '{ expression { , expression } }
+    // assignment_pattern ::= '{ expression { , expression } }
     void handle(const StructurePattern& t);
-    
+
     void handle(const GenvarSymbol& t);
+
+    void handle(const GenerateBlockSymbol& t);
+
+    // loop_generate_construct ::= for ( genvar_initialization ; genvar_expression ;
+    // genvar_iteration ) generate_block
+    void handle(const GenerateBlockArraySymbol& t);
 
     void handle(const AttributeSymbol& t);
 
     void handle(const StatementBlockSymbol& t);
 
-    //loop_generate_construct ::= for ( genvar_initialization ; genvar_expression ; genvar_iteration ) generate_block
-    void handle(const GenerateBlockArraySymbol& t);
+    // property_declaration ::= property property_identifier [ ( [ property_port_list ] ) ] ;{
+    // assertion_variable_declaration }property_spec [ ; ] endproperty
+    void handle(const PropertySymbol& t);
+
+    // property_port_item ::={ attribute_instance } [ local [ property_lvar_port_direction ] ]
+    // property_formal_typeformal_port_identifier {variable_dimension} [ = property_actual_arg ]
+    void handle(const AssertionPortSymbol& t);
 
     /*
     package_declaration ::=
@@ -208,7 +224,7 @@ public:
     void handle(const PackageSymbol& t);
 
     // anonymous_program ::= program ; { anonymous_program_item } endprogram
-    void handle(const AnonymousProgramSymbol& t) ;
+    void handle(const AnonymousProgramSymbol& t);
 
     // ding zoals initial
     void handle(const ProceduralBlockSymbol& t);
@@ -236,13 +252,13 @@ public:
     /// lifetime ] program_identifier <{ package_import_declaration } [ parameter_port_list ] [
     /// list_of_port_declarations ] ;>
     /// <> is handeld in InstanceBodySymbol
-    void handle(const slang::ast::InstanceSymbol& t); 
+    void handle(const slang::ast::InstanceSymbol& t);
 
     /// ansi_port_declaration ::=[ net_port_header  ] port_identifier { unpacked_dimension } [ =
     /// constant_expression ]
     ///                          | [ variable_port_header ] port_identifier { variable_dimension } [
     ///                          = constant_expression ]
-    void handle(const slang::ast::PortSymbol& t) ;
+    void handle(const slang::ast::PortSymbol& t);
 
     /// ansi_port_declaration ::=[ interface_port_header ] port_identifier { unpacked_dimension } [
     /// = constant_expression ]
@@ -265,28 +281,29 @@ public:
     /// list_of_param_assignments ::= param_assignment { , param_assignment }  always with lenght 1
     /// ?? param_assignment ::= parameter_identifier { unpacked_dimension } [ =
     /// constant_param_expression ]
-    void handle(const slang::ast::ParameterSymbol& t) ;
+    void handle(const slang::ast::ParameterSymbol& t);
 
     // Represents a module, interface, or program definition
-    void handle(const DefinitionSymbol& t) ;
+    void handle(const DefinitionSymbol& t);
 
     /// package_import_item ::= package_identifier :: identifier
     void handle(const ExplicitImportSymbol& t);
 
     // package_import_item ::= package_identifier :: *
-    void handle(const WildcardImportSymbol& t) ;
-    
+    void handle(const WildcardImportSymbol& t);
+
     // modport_declaration ::= modport modport_item { , modport_item } ;
     // modport declartion with multiple items get automaticly splitted in multiple separete modport
     // declartions
-    void handle(const ModportSymbol& t) ;
+    void handle(const ModportSymbol& t);
 
     // net_alias ::= alias net_lvalue = net_lvalue { = net_lvalue } ;
-    void handle(const NetAliasSymbol& t) ;
+    void handle(const NetAliasSymbol& t);
 
     // modport_ports_declaration ::= { attribute_instance } modport_simple_ports_declaration
-    // modport_simple_ports_declaration ::= port_direction modport_simple_port { ,modport_simple_port}
-    void handle(const ModportPortSymbol& t) ;
+    // modport_simple_ports_declaration ::= port_direction modport_simple_port {
+    // ,modport_simple_port}
+    void handle(const ModportPortSymbol& t);
 
     void handle(const NamedValueExpression& t);
 
@@ -297,7 +314,9 @@ public:
 
     void handle(const IntegerLiteral& t);
 
-    void handle(const slang::ast::ElementSelectExpression& t);
+    void handle(const ElementSelectExpression& t);
+
+    void handle(const AssertionInstanceExpression& t);
 
     std::string lowerFirstLetter(std::string_view string) {
         if (string == "")
@@ -323,8 +342,9 @@ public:
 private:
     std::string buffer;
     std::list<std::string> writeNextBuffer;
-    std::set<const slang::ast::InstanceBodySymbol *> initializedInstances;
-    // the type in the ast is not the type defined by the type alias, this map is used to convert the type back to the type alias type
+    std::set<const slang::ast::InstanceBodySymbol*> initializedInstances;
+    // the type in the ast is not the type defined by the type alias, this map is used to convert
+    // the type back to the type alias type
     std::map<std::string, std::string> typeConversions;
     // buffer for code in a statementblock that needs to be appended in the next proceduralBlock
     std::string blockBuffer;
@@ -345,7 +365,7 @@ private:
     const int indentation_multiplier = 3;
 
     // converts the type to a type defined by a type alias if a conversion is available
-    std::string convertType(std::string type){
+    std::string convertType(std::string type) {
         // check if type in type conversions
         // remove the name of the typealias to make it possible to compare them to typealias types
         // ex: type alieas union tagged{void Invalid;int Valid;}m3.u$1 (this is named VInt)
@@ -354,10 +374,9 @@ private:
         type = std::regex_replace(type, reg, "}");
 
         int dot_loc = type.rfind(".");
-        if (typeConversions.count(type.substr(0, dot_loc )))
-            return typeConversions[type.substr(0, dot_loc )];
+        if (typeConversions.count(type.substr(0, dot_loc)))
+            return typeConversions[type.substr(0, dot_loc)];
         return type;
-
     }
 
     void write(std::string_view string, bool add_spacer = true, bool use_dollar = false) {
@@ -426,7 +445,7 @@ private:
         }
     }
 
-    void write(NetType::NetKind kind){
+    void write(NetType::NetKind kind) {
         switch (kind) {
             case (NetType::NetKind::Wire):
                 write("wire");
@@ -467,7 +486,7 @@ private:
             case (NetType::NetKind::Interconnect):
                 write("interconnect");
                 break;
-    }
+        }
     }
     // TODO finish this list
     void write(BinaryOperator op) {
@@ -536,6 +555,7 @@ private:
                 SLANG_UNREACHABLE;
         }
     }
+
     // TODO finish this list
     void write(UnaryOperator op) {
         switch (op) {
@@ -579,11 +599,11 @@ private:
         switch (assertion) {
             case (AssertionKind::Assert):
             case (AssertionKind::Assume):
-                write(lowerFirstLetter(toString(assertion)), false);
+                write(lowerFirstLetter(toString(assertion)));
                 break;
             case (AssertionKind::CoverProperty):
             case (AssertionKind::CoverSequence):
-                write("cover", false);
+                write("cover");
                 break;
             default:
                 SLANG_UNREACHABLE;
@@ -622,6 +642,29 @@ private:
             default:
                 write(lowerFirstLetter(toString(procedure)));
         }
+    }
+
+    void write(BinaryAssertionOperator op){
+        switch (op) {
+            case (BinaryAssertionOperator::And):
+                write("and", false);
+                break;
+            case (BinaryAssertionOperator::Or):
+                write("or", false);
+                break;
+            case (BinaryAssertionOperator::Implies):
+                write("|->", false);
+                break;
+            case (BinaryAssertionOperator::Intersect):
+                write("intersect", false);
+                break;
+            case (BinaryAssertionOperator::OverlappedImplication):
+                write("|->");
+                break;
+            default:
+                SLANG_UNREACHABLE;
+        }
+
     }
 };
 
