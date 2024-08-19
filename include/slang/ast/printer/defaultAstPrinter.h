@@ -166,6 +166,14 @@ public:
     // case_statement ::= [ unique_priority ] case_keyword ( case_expression ) case_item { case_item} endcase
     //                  | [ unique_priority ] case ( case_expression ) inside case_inside_item {   case_inside_item } endcase
     void handle(const CaseStatement& t);
+
+    void handle(const BlockStatement& t);
+
+    //immediate_assertion_statement        ::= simple_immediate_assertion_statement | deferred_immediate_assertion_statement
+    //simple_immediate_assertion_statement ::= simple_immediate_assert_statement
+    //simple_immediate_assert_statement    ::= assert ( expression ) action_block
+    //action_block ::=statement_or_null | [ statement ] else statement_or_null
+    void handle(const ImmediateAssertionStatement& t);
     
     // case_statement ::= | [ unique_priority ] case_keyword (case_expression )matches
     //                       case_pattern_item { case_pattern_item } endcase
@@ -190,8 +198,6 @@ public:
 
     //loop_generate_construct ::= for ( genvar_initialization ; genvar_expression ; genvar_iteration ) generate_block
     void handle(const GenerateBlockArraySymbol& t);
-
-    void handle(const BlockStatement& t);
 
     /*
     package_declaration ::=
@@ -462,7 +468,6 @@ private:
                 write("interconnect");
                 break;
     }
-
     }
     // TODO finish this list
     void write(BinaryOperator op) {
@@ -478,6 +483,9 @@ private:
                 break;
             case (BinaryOperator::Equality):
                 write("==", false);
+                break;
+            case (BinaryOperator::Inequality):
+                write("!=", false);
                 break;
             case (BinaryOperator::LessThan):
                 write("<", false);
@@ -524,7 +532,6 @@ private:
             case (BinaryOperator::LogicalShiftRight):
                 write("<<");
                 break;
-
             default:
                 SLANG_UNREACHABLE;
         }
@@ -562,6 +569,21 @@ private:
                 break;
             case (ArgumentDirection::Ref):
                 write("ref", false);
+                break;
+            default:
+                SLANG_UNREACHABLE;
+        }
+    }
+
+    void write(AssertionKind assertion) {
+        switch (assertion) {
+            case (AssertionKind::Assert):
+            case (AssertionKind::Assume):
+                write(lowerFirstLetter(toString(assertion)), false);
+                break;
+            case (AssertionKind::CoverProperty):
+            case (AssertionKind::CoverSequence):
+                write("cover", false);
                 break;
             default:
                 SLANG_UNREACHABLE;

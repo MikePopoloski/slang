@@ -336,4 +336,24 @@ void AstPrinter::handle(const BlockStatement& t) {
     }
 }
 
+//immediate_assertion_statement        ::= simple_immediate_assertion_statement | deferred_immediate_assertion_statement
+//simple_immediate_assertion_statement ::= simple_immediate_assert_statement
+//simple_immediate_assert_statement    ::= assert ( expression ) action_block
+//action_block ::=statement_or_null | [ statement ] else statement_or_null
+void AstPrinter::handle(const ImmediateAssertionStatement& t){
+    write(t.assertionKind);
+    if(t.isDeferred)
+        write(t.isFinal?"final":"#0");
+    write("(");
+    t.cond.visit(*this);
+    write(")");
+    if (t.ifTrue)
+        t.ifTrue->visit(*this);
+
+    if (t.ifFalse){
+        write("else");
+        t.ifFalse->visit(*this);
+    }
+}
+
 } // namespace slang::ast

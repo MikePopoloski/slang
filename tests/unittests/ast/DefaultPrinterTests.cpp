@@ -287,7 +287,16 @@ endmodule)";
 TEST_CASE("all.sv 129-150"){
     std::string code = R"(
 macromodule m3;
-    always_comb begin
+    always_latch begin
+    end
+
+    genvar j;
+    for (genvar i = 0; i < 10; i += 2)
+        if (i == 7) begin
+        end
+
+    ;
+
         generate
             case ($bits(w))
                 0, 1: begin end
@@ -296,8 +305,11 @@ macromodule m3;
             endcase
          wire b;
         endgenerate
-    end
-endmodule)";
+
+    assertion0: assert #0 (1 == 1) else $display("Hello!");
+    assertion1: assume final (2 != 1) else $display("Hello!");
+
+)";
     CHECK(isEqual(code, "sv129_150"));
 }
 
