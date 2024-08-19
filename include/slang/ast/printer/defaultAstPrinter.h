@@ -118,12 +118,13 @@ public:
     // TODO: formating type_str
     void handle(const TypeAliasType& t) ;
 
-    // #test schrijven
+    // 
     void handle(const EmptyStatement& t) ;
 
-    // #test schrijven
+    // 
     void handle(const StatementList& t) ;
 
+    // 
     void handle(const VariableDeclStatement& t) ;
 
     // disable_statement ::= disable fork ;
@@ -186,6 +187,9 @@ public:
     void handle(const AttributeSymbol& t);
 
     void handle(const StatementBlockSymbol& t);
+
+    //loop_generate_construct ::= for ( genvar_initialization ; genvar_expression ; genvar_iteration ) generate_block
+    void handle(const GenerateBlockArraySymbol& t);
 
     void handle(const BlockStatement& t);
 
@@ -275,9 +279,7 @@ public:
     void handle(const NetAliasSymbol& t) ;
 
     // modport_ports_declaration ::= { attribute_instance } modport_simple_ports_declaration
-    // modport_simple_ports_declaration ::= port_direction modport_simple_port { ,
-    // modport_simple_port}
-    //
+    // modport_simple_ports_declaration ::= port_direction modport_simple_port { ,modport_simple_port}
     void handle(const ModportPortSymbol& t) ;
 
     void handle(const NamedValueExpression& t);
@@ -417,6 +419,51 @@ private:
             write(";");
         }
     }
+
+    void write(NetType::NetKind kind){
+        switch (kind) {
+            case (NetType::NetKind::Wire):
+                write("wire");
+                break;
+            case (NetType::NetKind::WAnd):
+                write("wand");
+                break;
+            case (NetType::NetKind::WOr):
+                write("wor");
+                break;
+            case (NetType::NetKind::Tri):
+                write("tri");
+                break;
+            case (NetType::NetKind::TriAnd):
+                write("triAnd");
+                break;
+            case (NetType::NetKind::TriOr):
+                write("trior");
+                break;
+            case (NetType::NetKind::Tri0):
+                write("tri0");
+                break;
+            case (NetType::NetKind::Tri1):
+                write("tri1");
+                break;
+            case (NetType::NetKind::TriReg):
+                write("trireg");
+                break;
+            case (NetType::NetKind::Supply0):
+                write("supply0");
+                break;
+            case (NetType::NetKind::Supply1):
+                write("supply1");
+                break;
+            case (NetType::NetKind::UWire):
+                write("uwire");
+                break;
+            case (NetType::NetKind::Interconnect):
+                write("interconnect");
+                break;
+    }
+
+    }
     // TODO finish this list
     void write(BinaryOperator op) {
         switch (op) {
@@ -450,12 +497,34 @@ private:
             case (BinaryOperator::LogicalOr):
                 write("||", false);
                 break;
+            case (BinaryOperator::LogicalEquivalence):
+                write("||", false);
+                break;
             case (BinaryOperator::BinaryOr):
                 write("|", false);
                 break;
             case (BinaryOperator::BinaryAnd):
                 write("&", false);
                 break;
+            case (BinaryOperator::BinaryXnor):
+                write("^~", false);
+                break;
+            case (BinaryOperator::BinaryXor):
+                write("^", false);
+                break;
+            case (BinaryOperator::ArithmeticShiftLeft):
+                write("<<<");
+                break;
+            case (BinaryOperator::ArithmeticShiftRight):
+                write(">>>");
+                break;
+            case (BinaryOperator::LogicalShiftLeft):
+                write(">>");
+                break;
+            case (BinaryOperator::LogicalShiftRight):
+                write("<<");
+                break;
+
             default:
                 SLANG_UNREACHABLE;
         }

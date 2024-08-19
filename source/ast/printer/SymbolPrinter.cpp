@@ -146,7 +146,9 @@ void AstPrinter::handle(const slang::ast::InstanceSymbol& t) {
     t.getDefinition().visit(*this);
 
     // visit content instance <>
+    indentation_level += 1;
     t.body.visit(*this);
+    indentation_level -= 1;
 
     // print endinstance
     write("end" + newSymbol + "\n");
@@ -282,7 +284,7 @@ void AstPrinter::handle(const slang::ast::NetSymbol& t) {
             break;
     }
 
-    write(convertType(convertType(t.getType().toString())), true, true);
+        write(convertType(convertType(t.getType().toString())), true, true);
     write(t.name);
 
     auto initializer = t.getInitializer();
@@ -300,9 +302,15 @@ void AstPrinter::handle(const slang::ast::ScalarType& t) {
 /// var_data_type      ::= data_type | var data_type_or_implicit
 // data_declaration10 ::=  [ var ] [ lifetime ] data_type_or_implicit
 void AstPrinter::handle(const slang::ast::VariableSymbol& t) {
-    write("var");
     write(t.lifetime == VariableLifetime::Static ? "static" : "automatic");
-    write(convertType(t.getType().toString()), true, true);
+
+    const Type& data_type = t.getDeclaredType().get()->getType();
+    bitmask<DeclaredTypeFlags> flags= t.getDeclaredType().get()->getFlags();
+    
+    if ((flags & DeclaredTypeFlags::InferImplicit) != DeclaredTypeFlags::InferImplicit){
+        write(convertType(data_type.toString()),true,true);
+    }
+
     write(t.name);
 
     auto initializer = t.getInitializer();
@@ -416,7 +424,6 @@ void AstPrinter::handle(const ModportPortSymbol& t) {
 
 /// { package_import_declaration } [ parameter_port_list ] [ list_of_port_declarations ];
 void AstPrinter::handle(const InstanceBodySymbol& t) {
-    indentation_level += 1;
 
     auto remainingMember = t.getFirstMember();
 
@@ -444,7 +451,7 @@ void AstPrinter::handle(const InstanceBodySymbol& t) {
             if (param != t.getParameters().back())
                 write(",", false);
         }
-        remainingMember = ((Symbol*)t.getParameters().back())->getNextSibling();
+        remainingMember = t.getParameters().back()->symbol.getNextSibling();
         write(")");
     }
 
@@ -463,11 +470,9 @@ void AstPrinter::handle(const InstanceBodySymbol& t) {
                 write(",\n", false);
         }
 
-        switch (t.getPortList().back()->kind) {
-            case (SymbolKind::Port):
-                auto symbol = ((PortSymbol*)t.getPortList().back())->internalSymbol;
-                remainingMember = symbol ? symbol->getNextSibling() : t.getPortList().back();
-                break;
+        if (t.getPortList().back()->kind == SymbolKind::Port) {
+            auto symbol = ((PortSymbol*)t.getPortList().back())->internalSymbol;
+            remainingMember = symbol ? symbol->getNextSibling() : t.getPortList().back();
         }
         write(")");
     }
@@ -481,11 +486,8 @@ void AstPrinter::handle(const InstanceBodySymbol& t) {
         if ("\n" != buffer.substr(buffer.length() - 1, buffer.length() - 1)) {
             write(";\n", false);
         }
-
         remainingMember = remainingMember->getNextSibling();
     }
-    // add a tab to all folowing code
-    indentation_level -= 1;
 }
 
 void AstPrinter::handle(const StatementBlockSymbol& t) {
@@ -495,5 +497,11 @@ void AstPrinter::handle(const StatementBlockSymbol& t) {
         AstPrinter::handle(TypeAliasType);
         visitor.visitDefault(TypeAliasType);
     }));
+}
+//loop_generate_construct ::= for ( genvar_initialization ; genvar_expression ; genvar_iteration ) generate_block
+void AstPrinter::handle(const GenerateBlockArraySymbol& t) {
+    // als je kijkt naar de ast van een gen block is het ( denk ik) onmgelijk om de originele source te herconstrueren
+    // _> deze worden via de originele source code geprint 
+    write(t.getSyntax()->toString());
 }
 } // namespace slang::ast
