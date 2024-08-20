@@ -17,9 +17,9 @@
 #include "slang/ast/ASTVisitor.h"
 #include "slang/ast/HierarchicalReference.h"
 #include "slang/ast/SemanticFacts.h"
-#include "slang/ast/printer/defaultAstPrinter.h"
 #include "slang/ast/expressions/LiteralExpressions.h"
 #include "slang/ast/expressions/SelectExpressions.h"
+#include "slang/ast/printer/defaultAstPrinter.h"
 #include "slang/ast/symbols/BlockSymbols.h"
 #include "slang/ast/symbols/ParameterSymbols.h"
 #include "slang/ast/symbols/PortSymbols.h"
@@ -508,6 +508,7 @@ void AstPrinter::handle(const GenerateBlockArraySymbol& t) {
     write(t.getSyntax()->toString());
 }
 
+// TODO: dit beter implementeren
 void AstPrinter::handle(const GenerateBlockSymbol& t) {
     write("generate");
     write(t.getSyntax()->toString());
@@ -526,4 +527,70 @@ void AstPrinter::handle(const GenerateBlockSymbol& t) {
     }*/
 }
 
+// udp_output_declaration ::= { attribute_instance } output port_identifier
+// udp_input_declaration ::= { attribute_instance } input list_of_udp_port_identifiers
+void AstPrinter::handle(const PrimitivePortSymbol& t){
+    writeAttributeInstances(t);
+    write(t.direction);
+    write(t.name);
+}
+
+// udp_declaration      ::= udp_ansi_declaration udp_body endprimitive [ : udp_identifier ]
+// udp_ansi_declaration ::= {attribute_instance} primitive udp_identifier (
+// udp_declaration_port_list ) ;
+void AstPrinter::handle(const PrimitiveSymbol& t) {
+    writeAttributeInstances(t);
+    write("primitive");
+    write(t.name);
+
+    // udp_declaration_port_list ::= udp_output_declaration , udp_input_declaration { ,
+    // udp_input_declaration }
+    write("(");
+    for (auto port : t.ports) {
+        port->visit(*this);
+        if (port != t.ports.back())
+            write(",", false);
+    }
+    write(")\n");
+    indentation_level++;
+
+    // udp_body ::= combinational_body | sequential_body
+    if (t.isSequential) {
+        // sequential_body       ::= [ udp_initial_statement ] table sequential_entry { sequential_entry } endtable
+        // udp_initial_statement ::= initial output_port_identifier = init_val ;
+        if (t.initVal) {
+            write("intial");
+            write(t.ports.front()->name);
+            write("=");
+            write(t.initVal->toString());
+        }
+
+        write("table\n");
+        // sequential_entry ::= seq_input_list : current_state : next_state ;
+        for (auto TableEntry : t.table) {
+            std::string entry = std::string(TableEntry.inputs);
+            entry.append(1,':');
+            entry.append(1,TableEntry.state);
+            entry.append(1,':');
+            entry.append(1,TableEntry.output);
+            write(entry+";\n");
+        }
+        write("endtable\n");
+    }
+    else {
+        // combinational_body ::= table combinational_entry { combinational_entry } endtable
+        write("table\n");
+        for (auto TableEntry : t.table) {
+            //combinational_entry ::= level_input_list : output_symbol ;
+            std::string entry = std::string(TableEntry.inputs);
+            entry.append(1,':');
+            entry.append(1,TableEntry.output);
+            write(entry+";\n");
+        }
+        write("endtable\n");
+    }
+    indentation_level--;
+
+    write("endprimitive");
+}
 } // namespace slang::ast

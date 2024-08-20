@@ -176,7 +176,7 @@ void AstPrinter::handle(const StringLiteral& t){
         write("\"",false);
 }
 
-void AstPrinter::handle(const slang::ast::ElementSelectExpression& t) {
+void AstPrinter::handle(const ElementSelectExpression& t) {
     t.value().visit(*this);
     write("[", false);
     t.selector().visit(*this);

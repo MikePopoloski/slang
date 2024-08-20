@@ -88,7 +88,7 @@ public:
     // TODO uitzoeken waarvoor die valuerange kind dient
     void handle(const ValueRangeExpression& t);
 
-    void handle(const BinaryAssertionExpr& t);
+   //void handle(const BinaryAssertionExpr& t);
 
     // blocking_assignment    ::= variable_lvalue = delay_or_event_control expression |
     //                            variable_lvalue assignment_operator expression
@@ -305,6 +305,13 @@ public:
     // ,modport_simple_port}
     void handle(const ModportPortSymbol& t);
 
+    // udp_output_declaration ::= { attribute_instance } output port_identifier
+    // udp_input_declaration ::= { attribute_instance } input list_of_udp_port_identifiers
+    void handle(const PrimitivePortSymbol& t);
+
+    //udp_declaration ::= udp_ansi_declaration udp_body endprimitive [ : udp_identifier ]
+    void handle(const PrimitiveSymbol& t);
+
     void handle(const NamedValueExpression& t);
 
     /// { package_import_declaration } [ parameter_port_list ] [ list_of_port_declarations ];
@@ -316,7 +323,9 @@ public:
 
     void handle(const ElementSelectExpression& t);
 
-    void handle(const AssertionInstanceExpression& t);
+    //void handle(const AssertionInstanceExpression& t);
+
+    //void handle(const SimpleAssertionExpr& t);
 
     std::string lowerFirstLetter(std::string_view string) {
         if (string == "")
