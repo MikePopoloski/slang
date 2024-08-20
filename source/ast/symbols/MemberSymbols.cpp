@@ -9,6 +9,7 @@
 
 #include "../FmtHelpers.h"
 #include "fmt/core.h"
+#include <set>
 
 #include "slang/ast/ASTSerializer.h"
 #include "slang/ast/ASTVisitor.h"
@@ -766,23 +767,18 @@ void PrimitivePortSymbol::serializeTo(ASTSerializer& serializer) const {
 // Each 'bit' is one input value in the row.
 class BitTrie {
 public:
-    // Tries to insert the row. Returns nullopt if the row is
-    // successfully inserted, and a set of the previously
-    // inserted rows with the same bit pattern if a collision
-    // is found.
     template<typename TAllocator>
-    std::optional<SmallVector<const UdpEntrySyntax*, 4>> insert(const UdpEntrySyntax& syntax,
-                                                                std::span<const char> inputs,
-                                                                char stateChar,
-                                                                TAllocator& allocator) {
+    std::optional<SmallVector<const UdpEntrySyntax*, 4>> find(BitTrie*& primaryNode,
+                                                              std::span<const char> inputs,
+                                                              char stateChar,
+                                                              TAllocator& allocator) {
         SmallVector<BitTrie*> nodes;
-        BitTrie* primary = this;
         nodes.push_back(this);
 
         auto advance = [&](char c) {
             SmallVector<BitTrie*> nextNodes;
             for (auto node : nodes)
-                node->nextNodesFor(c, nextNodes, primary, allocator);
+                node->nextNodesFor(c, nextNodes, primaryNode, allocator);
             nodes = std::move(nextNodes);
         };
 
@@ -834,6 +830,26 @@ public:
                 eSyntaxes.push_back(node->entry);
         }
 
+        // If we have an empty syntaxes set we saw an error somewhere,
+        // in which case don't insert. Otherwise we've found the
+        // correct place to insert, pointed to by the primary.
+        if (eSyntaxes.empty())
+            return std::nullopt;
+
+        return eSyntaxes;
+    }
+
+    // Tries to insert the row. Returns nullopt if the row is
+    // successfully inserted, and a set of the previously
+    // inserted rows with the same bit pattern if a collision
+    // is found.
+    template<typename TAllocator>
+    std::optional<SmallVector<const UdpEntrySyntax*, 4>> insert(const UdpEntrySyntax& syntax,
+                                                                std::span<const char> inputs,
+                                                                char stateChar,
+                                                                TAllocator& allocator) {
+        BitTrie* primary = this;
+        auto founded = find(primary, inputs, stateChar, allocator);
         // Always store so as not to miss info it in case of possible overlap.
         // If the primary->entry already has a value,
         // then rewriting will not spoil anything,
@@ -843,9 +859,9 @@ public:
         // If we have an empty syntaxes set we saw an error somewhere,
         // in which case don't insert. Otherwise we've found the
         // correct place to insert, pointed to by the primary.
-        if (eSyntaxes.empty())
+        if (!founded.has_value())
             return std::nullopt;
-        return eSyntaxes;
+        return founded;
     }
 
 private:
@@ -948,8 +964,10 @@ static void createTableRow(const Scope& scope, const UdpEntrySyntax& syntax,
     SmallVector<char> inputs;
     size_t numInputs = 0;
     bool allX = true;
+    bool isEdgeSensitive = false;
     for (auto input : syntax.inputs) {
         if (input->kind == SyntaxKind::UdpEdgeField) {
+            isEdgeSensitive = true;
             auto& edge = input->as<UdpEdgeFieldSyntax>();
             inputs.push_back('(');
 
@@ -989,6 +1007,18 @@ static void createTableRow(const Scope& scope, const UdpEntrySyntax& syntax,
             auto tok = input->as<UdpSimpleFieldSyntax>().field;
             for (auto c : tok.rawText()) {
                 auto d = charToLower(c);
+                switch (d) {
+                    case '*':
+                    case 'r':
+                    case 'f':
+                    case 'p':
+                    case 'n':
+                        isEdgeSensitive = true;
+                        break;
+                    default:
+                        break;
+                }
+
                 inputs.push_back(d);
                 numInputs++;
                 allX &= d == 'x';
@@ -1094,7 +1124,8 @@ static void createTableRow(const Scope& scope, const UdpEntrySyntax& syntax,
     }
 
     auto inputSpan = inputs.copy(scope.getCompilation());
-    table.push_back({std::string_view(inputSpan.data(), inputSpan.size()), stateChar, outputChar});
+    table.push_back({std::string_view(inputSpan.data(), inputSpan.size()), stateChar, outputChar,
+                     isEdgeSensitive});
 }
 
 PrimitiveSymbol& PrimitiveSymbol::fromSyntax(const Scope& scope,
@@ -1337,10 +1368,82 @@ PrimitiveSymbol& PrimitiveSymbol::fromSyntax(const Scope& scope,
         BumpAllocator alloc;
         PoolAllocator<BitTrie> trieAlloc(alloc);
         SmallVector<TableEntry> table;
-        for (auto entry : syntax.body->entries)
+        for (auto entry : syntax.body->entries) {
             createTableRow(scope, *entry, table, ports.size(), trie, trieAlloc);
+            if (!table.empty() && !prim->isEdgeSensitive)
+                prim->isEdgeSensitive = table.back().isEdgeSensitive;
+        }
 
         prim->table = table.copy(comp);
+
+        // Check that if the behavior of the UDP is sensitive to edges of any input, the desired
+        // output state shall be specified for all edges of all inputs.
+        if (prim->isEdgeSensitive && !prim->table.empty()) {
+            auto portSize = ports.size();
+            auto numInput = (portSize >= 2) ? portSize - 1 : portSize;
+            // All possible clock edges
+            const static std::set<std::string_view> edgeScope = {"(01)", "(10)", "(0x)",
+                                                                 "(x0)", "(1x)", "(x1)"};
+            // Row size except single edge-inpute
+            std::vector<char> initialState(numInput - 1, '0');
+            std::vector<char> state = initialState;
+            std::vector<char> endState(numInput - 1, 'x');
+            auto incrementState = [](std::vector<char>& state) {
+                for (size_t i = 0; i < state.size(); ++i) {
+                    if (state.at(i) == '0') {
+                        state.at(i) = '1';
+                        break;
+                    }
+
+                    if (state.at(i) == '1') {
+                        state.at(i) = 'x';
+                        break;
+                    }
+
+                    state.at(i) = '0';
+                }
+            };
+            Diagnostic* diag = nullptr;
+            // Try to find the missing combinations by completely enumerating all possible table
+            // rows
+            for (size_t inInd = 0; inInd < numInput; ++inInd) {
+                bool next = true;
+                while (next) {
+                    next = (state != endState);
+                    for (auto& eS : edgeScope) {
+                        SmallVector<char> inputTest;
+                        if (inInd != 0)
+                            inputTest.append(state.begin(), state.begin() + long(inInd));
+                        inputTest.append(eS.begin(), eS.end());
+                        inputTest.append(state.begin() + long(inInd), state.end());
+                        BitTrie* triePtr = &trie;
+                        if (!trie.find(triePtr, inputTest, '?', trieAlloc).has_value()) {
+                            if (!diag) {
+                                diag = &scope.addDiag(diag::UdpEdgeSenseMiss, prim->location);
+                            }
+                            else {
+                                std::string noteStr;
+                                bool nextSplit = false;
+                                for (auto c : inputTest) {
+                                    if (c == ')') {
+                                        nextSplit = true;
+                                        noteStr += c;
+                                        continue;
+                                    }
+
+                                    if (nextSplit)
+                                        noteStr += ' ';
+                                    noteStr += c;
+                                }
+                                diag->addNote(diag::NoteUdpEdgeSenseMiss, prim->location)
+                                    << noteStr;
+                            }
+                        }
+                    }
+                    incrementState(state);
+                }
+            }
+        }
     }
 
     prim->ports = ports.copy(comp);

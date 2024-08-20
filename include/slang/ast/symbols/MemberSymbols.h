@@ -261,12 +261,14 @@ public:
         std::string_view inputs;
         char state = 0;
         char output = 0;
+        bool isEdgeSensitive = false;
     };
 
     std::span<const PrimitivePortSymbol* const> ports;
     std::span<const TableEntry> table;
     const ConstantValue* initVal = nullptr;
     bool isSequential = false;
+    bool isEdgeSensitive = false;
     enum PrimitiveKind { UserDefined, Fixed, NInput, NOutput, BiDiSwitch } primitiveKind;
 
     PrimitiveSymbol(Compilation& compilation, std::string_view name, SourceLocation loc,
