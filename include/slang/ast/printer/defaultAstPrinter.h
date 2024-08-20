@@ -107,6 +107,8 @@ public:
 
     void handle(const StringLiteral& t);
 
+    void handle(const RealLiteral& t);
+
     // event_control::= @ ( event_expression )
     // event_expression ::=[ edge_identifier ] expression [ iff expression ]
     void handle(const SignalEventControl& t);
@@ -254,10 +256,8 @@ public:
     /// <> is handeld in InstanceBodySymbol
     void handle(const slang::ast::InstanceSymbol& t);
 
-    /// ansi_port_declaration ::=[ net_port_header  ] port_identifier { unpacked_dimension } [ =
-    /// constant_expression ]
-    ///                          | [ variable_port_header ] port_identifier { variable_dimension } [
-    ///                          = constant_expression ]
+    /// ansi_port_declaration ::=[ net_port_header  ] port_identifier { unpacked_dimension } [ = constant_expression ]
+    ///                          | [ variable_port_header ] port_identifier { variable_dimension } [ = constant_expression ]
     void handle(const slang::ast::PortSymbol& t);
 
     /// ansi_port_declaration ::=[ interface_port_header ] port_identifier { unpacked_dimension } [
@@ -311,6 +311,19 @@ public:
 
     //udp_declaration ::= udp_ansi_declaration udp_body endprimitive [ : udp_identifier ]
     void handle(const PrimitiveSymbol& t);
+
+    //config_declaration ::= config config_identifier ; { local_parameter_declaration ; }design_statement { config_rule_statement } endconfig [ : config_identifier ]
+    void handle(const ConfigBlockSymbol& t);
+
+    // specify_block ::= specify { specify_item } endspecify
+    void handle(const SpecifyBlockSymbol& t);
+
+    //specparam_declaration ::= specparam [ packed_dimension ] list_of_specparam_assignments ;
+    void handle(const SpecparamSymbol& t);
+    
+    // path_declaration ::=simple_path_declaration ;| edge_sensitive_path_declaration ; | state_dependent_path_declaration;
+    void handle(const TimingPathSymbol& t);
+
 
     void handle(const NamedValueExpression& t);
 
@@ -603,6 +616,24 @@ private:
                 SLANG_UNREACHABLE;
         }
     }
+
+
+    void write(PrimitivePortDirection direction) {
+        switch (direction) {
+            case (PrimitivePortDirection::In):
+                write("input", false);
+                break;
+            case (PrimitivePortDirection::Out):
+                write("output", false);
+                break;
+            case (PrimitivePortDirection::OutReg):
+                write("output reg", false);
+                break;
+            default:
+                SLANG_UNREACHABLE;
+        }
+    }
+
 
     void write(AssertionKind assertion) {
         switch (assertion) {

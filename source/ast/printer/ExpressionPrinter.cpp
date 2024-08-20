@@ -176,6 +176,10 @@ void AstPrinter::handle(const StringLiteral& t){
         write("\"",false);
 }
 
+void AstPrinter::handle(const RealLiteral& t) {
+    write(std::to_string(t.getValue()));
+}
+
 void AstPrinter::handle(const ElementSelectExpression& t) {
     t.value().visit(*this);
     write("[", false);

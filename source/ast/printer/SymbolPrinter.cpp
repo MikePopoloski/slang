@@ -187,8 +187,8 @@ void AstPrinter::handle(const slang::ast::InstanceSymbol& t) {
 
 /// ansi_port_declaration ::=[ net_port_header  ] port_identifier { unpacked_dimension } [ =
 /// constant_expression ]
-///                          | [ variable_port_header ] port_identifier { variable_dimension } [
-///                          = constant_expression ]
+///                          | [ variable_port_header ] port_identifier { variable_dimension } [=
+///                          constant_expression ]
 void AstPrinter::handle(const slang::ast::PortSymbol& t) {
     // net_port_header      ::= [ port_direction ] net_port_type
     // variable_port_header ::= [ port_direction ] variable_port_type
@@ -241,50 +241,10 @@ void AstPrinter::handle(const slang::ast::InterfacePortSymbol& t) {
 
 /// net_port_type ::= [ net_type ] data_type_or_implicit
 void AstPrinter::handle(const slang::ast::NetSymbol& t) {
-    // TODO dewe lijst afwerken , betere manier vinder
-    switch (t.netType.netKind) {
-        case (NetType::NetKind::Wire):
-            write("wire");
-            break;
-        case (NetType::NetKind::WAnd):
-            write("wand");
-            break;
-        case (NetType::NetKind::WOr):
-            write("wor");
-            break;
-        case (NetType::NetKind::Tri):
-            write("tri");
-            break;
-        case (NetType::NetKind::TriAnd):
-            write("triAnd");
-            break;
-        case (NetType::NetKind::TriOr):
-            write("trior");
-            break;
-        case (NetType::NetKind::Tri0):
-            write("tri0");
-            break;
-        case (NetType::NetKind::Tri1):
-            write("tri1");
-            break;
-        case (NetType::NetKind::TriReg):
-            write("trireg");
-            break;
-        case (NetType::NetKind::Supply0):
-            write("supply0");
-            break;
-        case (NetType::NetKind::Supply1):
-            write("supply1");
-            break;
-        case (NetType::NetKind::UWire):
-            write("uwire");
-            break;
-        case (NetType::NetKind::Interconnect):
-            write("interconnect");
-            break;
+    if (!t.isImplicit) {
+        write(t.netType.netKind);
+        write(convertType(t.getType().toString()), true, true);
     }
-
-        write(convertType(convertType(t.getType().toString())), true, true);
     write(t.name);
 
     auto initializer = t.getInitializer();
@@ -302,13 +262,15 @@ void AstPrinter::handle(const slang::ast::ScalarType& t) {
 /// var_data_type      ::= data_type | var data_type_or_implicit
 // data_declaration10 ::=  [ var ] [ lifetime ] data_type_or_implicit
 void AstPrinter::handle(const slang::ast::VariableSymbol& t) {
-    write(t.lifetime == VariableLifetime::Static ? "static" : "automatic");
+    // without this the module ast doesn't contain the name of the variable for no apparent reason
+    if ((t.flags & VariableFlags::RefStatic) != VariableFlags::RefStatic)
+        write(t.lifetime == VariableLifetime::Static ? "static" : "automatic");
 
     const Type& data_type = t.getDeclaredType().get()->getType();
-    bitmask<DeclaredTypeFlags> flags= t.getDeclaredType().get()->getFlags();
-    
-    if ((flags & DeclaredTypeFlags::InferImplicit) != DeclaredTypeFlags::InferImplicit){
-        write(convertType(data_type.toString()),true,true);
+    bitmask<DeclaredTypeFlags> flags = t.getDeclaredType().get()->getFlags();
+
+    if ((flags & DeclaredTypeFlags::InferImplicit) != DeclaredTypeFlags::InferImplicit) {
+        write(convertType(data_type.toString()), true, true);
     }
 
     write(t.name);
@@ -411,11 +373,54 @@ void AstPrinter::handle(const NetAliasSymbol& t) {
             write("=");
     }
 }
+// property_declaration ::=property property_identifier [ ( [ property_port_list ] ) ] ;{
+// assertion_variable_declaration }property_spec [ ; ]endproperty
+void AstPrinter::handle(const PropertySymbol& t) {
+    write("property");
+    write(t.name);
+    auto member = t.getFirstMember();
+
+    if (!t.ports.empty()) {
+        write("(");
+        for (auto port : t.ports) {
+            port->visit(*this);
+            if (port != t.ports.back())
+                write(",");
+        }
+        auto symbol = ((PortSymbol*)t.ports.back())->internalSymbol;
+        member = symbol ? symbol->getNextSibling() : t.ports.back();
+        write(")");
+    }
+
+    write(";\n");
+    indentation_level++;
+
+    while (member) {
+        member->visit(*this);
+        if ("\n" != buffer.substr(buffer.length() - 1, buffer.length() - 1))
+            write(";\n", false);
+        member = member->getNextSibling();
+    }
+    indentation_level--;
+    write("endproperty\n");
+}
+
+// property_port_item ::={ attribute_instance } [ local [ property_lvar_port_direction ] ]
+// property_formal_type formal_port_identifier {variable_dimension} [ = property_actual_arg ]
+void AstPrinter::handle(const AssertionPortSymbol& t) {
+    writeAttributeInstances(t);
+
+    if (t.isLocalVar()) {
+        write("local input");
+    }
+
+    // write(t.declaredType.getType().toString());
+
+    write(t.name);
+}
 
 // modport_ports_declaration ::= { attribute_instance } modport_simple_ports_declaration
-// modport_simple_ports_declaration ::= port_direction modport_simple_port { ,
-// modport_simple_port}
-//
+// modport_simple_ports_declaration ::= port_direction modport_simple_port { ,modport_simple_port}
 void AstPrinter::handle(const ModportPortSymbol& t) {
     writeAttributeInstances(t);
     write(t.direction);
@@ -504,7 +509,7 @@ void AstPrinter::handle(const StatementBlockSymbol& t) {
 void AstPrinter::handle(const GenerateBlockArraySymbol& t) {
     // als je kijkt naar de ast van een gen block is het ( denk ik) onmgelijk om de originele source
     // te herconstrueren
-    // _> deze worden via de originele source code geprint 
+    // _> deze worden via de originele source code geprint
     write(t.getSyntax()->toString());
 }
 
@@ -529,7 +534,7 @@ void AstPrinter::handle(const GenerateBlockSymbol& t) {
 
 // udp_output_declaration ::= { attribute_instance } output port_identifier
 // udp_input_declaration ::= { attribute_instance } input list_of_udp_port_identifiers
-void AstPrinter::handle(const PrimitivePortSymbol& t){
+void AstPrinter::handle(const PrimitivePortSymbol& t) {
     writeAttributeInstances(t);
     write(t.direction);
     write(t.name);
@@ -569,11 +574,11 @@ void AstPrinter::handle(const PrimitiveSymbol& t) {
         // sequential_entry ::= seq_input_list : current_state : next_state ;
         for (auto TableEntry : t.table) {
             std::string entry = std::string(TableEntry.inputs);
-            entry.append(1,':');
-            entry.append(1,TableEntry.state);
-            entry.append(1,':');
-            entry.append(1,TableEntry.output);
-            write(entry+";\n");
+            entry.append(1, ':');
+            entry.append(1, TableEntry.state);
+            entry.append(1, ':');
+            entry.append(1, TableEntry.output);
+            write(entry + ";\n");
         }
         write("endtable\n");
     }
@@ -581,11 +586,11 @@ void AstPrinter::handle(const PrimitiveSymbol& t) {
         // combinational_body ::= table combinational_entry { combinational_entry } endtable
         write("table\n");
         for (auto TableEntry : t.table) {
-            //combinational_entry ::= level_input_list : output_symbol ;
+            // combinational_entry ::= level_input_list : output_symbol ;
             std::string entry = std::string(TableEntry.inputs);
-            entry.append(1,':');
-            entry.append(1,TableEntry.output);
-            write(entry+";\n");
+            entry.append(1, ':');
+            entry.append(1, TableEntry.output);
+            write(entry + ";\n");
         }
         write("endtable\n");
     }
@@ -593,4 +598,106 @@ void AstPrinter::handle(const PrimitiveSymbol& t) {
 
     write("endprimitive");
 }
+// config_declaration ::= config config_identifier ; { local_parameter_declaration ;
+// }design_statement { config_rule_statement } endconfig [ : config_identifier ]
+void AstPrinter::handle(const ConfigBlockSymbol& t) {
+    write("config");
+    write(t.name);
+    write(";\n");
+    indentation_level++;
+
+    auto member = t.getFirstMember();
+    while (member) {
+        member->visit(*this);
+        // TODO betere maniet voor dit vinden
+        if ("\n" != buffer.substr(buffer.length() - 1, buffer.length() - 1)) {
+            write(";\n", false);
+        }
+        member = member->getNextSibling();
+    }
+
+    indentation_level--;
+    write("endconfig\n");
+}
+// specify_block ::= specify { specify_item } endspecify
+void AstPrinter::handle(const SpecifyBlockSymbol& t) {
+    write("specify");
+
+    indentation_level++;
+    auto member = t.getFirstMember();
+    while (member) {
+        member->visit(*this);
+        // TODO betere maniet voor dit vinden
+        if ("\n" != buffer.substr(buffer.length() - 1, buffer.length() - 1)) {
+            write(";\n", false);
+        }
+        member = member->getNextSibling();
+    }
+    indentation_level--;
+    
+    write("endspecify\n");
+}
+
+// specparam_declaration ::= specparam [ packed_dimension ] list_of_specparam_assignments ;
+// specparam_assignment  ::= specparam_identifier = constant_mintypmax_expression
+void AstPrinter::handle(const SpecparamSymbol& t) {
+    write("specparam");
+    write(t.name);
+    write("=");
+    if (t.getInitializer())
+        t.getInitializer()->visit(*this);
+}
+
+// path_declaration ::=simple_path_declaration ;
+//                  | edge_sensitive_path_declaration ;
+//                  | state_dependent_path_declaration;
+// simple_path_declaration ::=parallel_path_description = path_delay_value
+// edge_sensitive_path_declaration ::= parallel_edge_sensitive_path_description = path_delay_value
+// state_dependent_path_declaration ::= if ( module_path_expression ) simple_path_declaration
+void AstPrinter::handle(const TimingPathSymbol& t) {
+    if (t.isStateDependent) {
+        write("if (");
+        if (t.getConditionExpr())
+            t.getConditionExpr()->visit(*this);
+        write(")");
+    }
+    // full_path_description ::=( list_of_path_inputs [ polarity_operator ] *> list_of_path_outputs )
+    write("(");
+    // specify_input_terminal_descriptor ::=input_identifier [ [ constant_range_expression ] ]
+    for (auto input : t.getInputs()) {
+        input->visit(*this);
+        if (input !=  t.getInputs().back())
+            write(",", false);
+
+    }
+
+    if (t.polarity == TimingPathSymbol::Polarity::Positive) {
+        write("+", false);
+    }
+    else if (t.polarity == TimingPathSymbol::Polarity::Negative) {
+        write("-", false);
+    }
+
+    if (t.connectionKind==TimingPathSymbol::ConnectionKind::Full){
+        write("*>");
+    } else{
+        write("=>");
+    }
+
+    for (auto output : t.getOutputs()) {
+        output->visit(*this);
+        if (output !=  t.getOutputs().back())
+            write(",", false);
+
+    }
+    write(")=(");
+
+    for (auto delay : t.getDelays()) {
+        delay->visit(*this);
+        if (delay !=  t.getDelays().back())
+            write(",", false);
+    }
+    write(")");
+}
+
 } // namespace slang::ast

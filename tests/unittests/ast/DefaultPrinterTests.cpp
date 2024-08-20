@@ -2,16 +2,18 @@
 // SPDX-License-Identifier: MIT
 
 #include "Test.h"
+#include <fstream>
+#include <iostream>
+#include <string>
+#include <string_view>
+
 #include "slang/ast/Statements.h"
 #include "slang/ast/printer/defaultAstPrinter.h"
 #include "slang/syntax/SyntaxTree.h"
 #include "slang/text/Json.h"
-#include <iostream>
-#include <fstream>
-#include <string>
-#include<string_view>
 
-std::tuple<std::string,const slang::ast::RootSymbol&>  getAst(slang::ast::Compilation& compilation){
+std::tuple<std::string, const slang::ast::RootSymbol&> getAst(
+    slang::ast::Compilation& compilation) {
     slang::JsonWriter jsonWriter;
     slang::ast::ASTSerializer jsonPrinter(compilation, jsonWriter);
     const slang::ast::RootSymbol& rootAst = compilation.getRoot();
@@ -26,7 +28,7 @@ std::tuple<std::string,const slang::ast::RootSymbol&>  getAst(slang::ast::Compil
 }
 
 // checks if the ast of the original code is equal to the ast of the generated code
-bool isEqual(std::string original_code, std::string name_test ="test"){
+bool isEqual(std::string original_code, std::string name_test = "test") {
     // calculate ast original code
     slang::ast::Compilation compilation;
     auto tree = slang::syntax::SyntaxTree::fromText(original_code);
@@ -38,7 +40,7 @@ bool isEqual(std::string original_code, std::string name_test ="test"){
     old_rootAst.visit(printer);
     std::string_view new_code = printer.str();
     std::cout << new_code;
-    
+
     // calculate ast new code
     slang::ast::Compilation new_compilation;
     auto new_tree = slang::syntax::SyntaxTree::fromText(new_code);
@@ -46,16 +48,16 @@ bool isEqual(std::string original_code, std::string name_test ="test"){
     auto [new_ast_json, new_rootAst] = getAst(new_compilation);
 
     // dump the content to a file if the ast don't match
-    if (true){
-         name_test.append(".json");
-         std::ofstream out(name_test);
-         out <<"original json:";
-         out << old_ast_json;
-         out <<"\nnew json:";
-         out << new_ast_json;
-         out << "\nnew code:";
-         out << new_code << "\n";
-         out.close();
+    if (true) {
+        name_test.append(".json");
+        std::ofstream out(name_test);
+        out << "original json:";
+        out << old_ast_json;
+        out << "\nnew json:";
+        out << new_ast_json;
+        out << "\nnew code:";
+        out << new_code << "\n";
+        out.close();
     }
     return old_ast_json == new_ast_json;
 }
@@ -70,11 +72,10 @@ TEST_CASE("lowerFirstLetter function") {
 
     test_string = "test";
     CHECK(printer.lowerFirstLetter(test_string) == "test");
-};
-*/
+};*/
 
 TEST_CASE("InstanceSymbol printer") {
-    std::string code = R"(module Foo; endmodule)"; 
+    std::string code = R"(module Foo; endmodule)";
     CHECK(isEqual(code));
 };
 
@@ -83,8 +84,7 @@ TEST_CASE("InstanceSymbol with ports") {
 module Foo (input a,b);
 endmodule
 )";
-    CHECK(isEqual(code,"ports"));
-
+    CHECK(isEqual(code, "ports"));
 };
 
 TEST_CASE("InstanceSymbol with parameters") {
@@ -93,12 +93,10 @@ module Foo #(parameter N=2, parameter DOWN=0)
 (input a,input b);
 endmodule
 )";
-    CHECK(isEqual(code,"paramas"));
-
+    CHECK(isEqual(code, "paramas"));
 };
 /*
 TEST_CASE("InstanceSymbol with import") {
-    slang::ast::AstPrinter printer;
     std::string code = R"(
 module automatic m1 import p::*,f::*; #(int i = 1)
     (a, b, , .c({a, b[0]}));
@@ -108,7 +106,6 @@ endmodule
 )";
     CHECK(isEqual(code));
 };*/
-
 
 TEST_CASE("BlockStatement printer") {
     std::string code = R"(
@@ -121,11 +118,9 @@ module static BAR;
   end
 endmodule)";
     CHECK(isEqual(code, "BlockStatement"));
-
 };
 
-
-TEST_CASE("all.sv 0-8"){
+TEST_CASE("all.sv 0-8") {
     std::string code = R"(
 timeunit 1ns / 1ps;
 timeprecision 1ps;
@@ -147,8 +142,7 @@ endmodule)";
     CHECK(isEqual(code, "sv16_20"));
 }*/
 
-
-TEST_CASE("all.sv 21-26"){
+TEST_CASE("all.sv 21-26") {
     std::string code = R"(
 extern interface I(input a, output b);
 
@@ -158,12 +152,11 @@ endinterface)";
     CHECK(isEqual(code, "sv21_26"));
 }
 
-/*
-The keyword macromodule
-can be used interchangeably with the keyword module to define a module. An implementation may choose        
-to treat module definitions beginning with the macromodule keyword differently.
-*/
-TEST_CASE("all.sv 26-80"){
+// The keyword macromodule
+// can be used interchangeably with the keyword module to define a module. An implementation may
+// choose to treat module definitions beginning with the macromodule keyword differently.
+
+TEST_CASE("all.sv 26-80") {
     std::string code = R"(
 extern interface I(input a, output b);
 
@@ -228,7 +221,7 @@ endmodule : m3)";
     CHECK(isEqual(code, "sv26_80"));
 }
 // removed     $info("Hello %s", "world")and  m2 m(, b, c, d, );
-TEST_CASE("all.sv 80-120"){
+TEST_CASE("all.sv 80-120") {
     std::string code = R"(
 macromodule m3;
     always_comb begin
@@ -284,7 +277,7 @@ endmodule)";
     CHECK(isEqual(code, "sv80_128"));
 }
 
-TEST_CASE("all.sv 129-150"){
+TEST_CASE("all.sv 129-150") {
     std::string code = R"(
 macromodule m3;
     always_latch begin
@@ -297,13 +290,13 @@ macromodule m3;
 
     ;
 
-        generate
-            case ($bits(w))
-                0, 1: begin end
-                2: begin end
-                default: begin end
-            endcase
-        endgenerate
+    generate
+        case ($bits(w))
+            0, 1: begin end
+            2: begin end
+            default: begin end
+        endcase
+    endgenerate
 
     assertion0: assert #0 (1 == 1) else $display("Hello!");
     assertion1: assume final (2 != 1) else $display("Hello!");
@@ -313,40 +306,115 @@ endmodule
     CHECK(isEqual(code, "sv129_150"));
 }
 
-TEST_CASE("all.sv v"){
+TEST_CASE("all.sv 150_153") {
     std::string code = R"(
 macromodule m3;
     if (1) begin
         logic a,b,c,d,e,f;
 
+        property p1(x,y);
+            ##1 x |-> y;
+        endproperty
+
+        wire clk;
+        property p2;
+            @(posedge clk)
+            a ##1 (b || c)[->1] |->
+                if (b)
+                    p1(d,e)
+                else
+                    f;
+        endproperty
     end
 endmodule
 )";
-    CHECK(isEqual(code, "sv150_180"));
-
+    CHECK(isEqual(code, "sv150_153"));
 }
-
-// line 133 isin't tested because it is invalid
-
 
 /*
-TEST_CASE("interfaces "){
+TEST_CASE("all.sv 153_160"){
     std::string code = R"(
-extern interface I1(input a, output b);
-interface I1(.*);
-    modport mod(input a), mod2(input a);
-endinterface
-
 macromodule m3;
-    extern interface I1(input a, output b);
-    interface I1(.*);
-        modport mod(input a), mod2(input a), mod3(input a);
-    endinterface
-    I1 d(.a(), .b());
-    I1 d(.c(), .d());
+        property p1(x,y);
+            ##1 x |-> y;
+        endproperty
+        property p2;
+            @(posedge clk)
 
-endmodule)";
-    CHECK(isEqual(code, "interfaces"));
+        endproperty
+
+        cover property (p2 and p2);
+
+
+endmodule
+)";
+    CHECK(isEqual(code, "sv153_160"));
 }
 */
+// ben geskipt naar de module na module 3
+
+TEST_CASE("all.sv 193_200") {
+    std::string code = R"(
+extern primitive prim(output reg a, input b);
+
+primitive prim(output reg a, input b);
+    table
+        0 : ? : 1;
+        1 : 0 : x;
+    endtable
+
+endprimitive
+(* attr = 3.14 *) bind m3.m m1 #(1) bound('x, , , );
+)";
+    CHECK(isEqual(code, "sv193_200"));
+}
+
+//notes: ast is het welfde maar code lijkt absoluut niet op elkaar
+TEST_CASE("all.sv 202") {
+    std::string code = R"("
+module m3;
+    module m;
+    endmodule
+endmodule
+module m1#(parameter N=2)(input q,input a,input b,input c);
+endmodule
+(* attr = 3.14 *) bind m3.m m1 #(1) bound('x, , , );
+)";
+    CHECK(isEqual(code, "sv202"));
+}
+
+//note: de dingen in desing zijn niet nodig om een functioneel equivalent programma te generen
+TEST_CASE("all.sv 204_210") {
+    std::string code = R"("
+config cfg;
+    localparam i = 1;
+    design work.m3;
+    default liblist a b;
+    cell m3 use work.m3;
+endconfig
+)";
+    CHECK(isEqual(code, "204_210"));
+}
+
+TEST_CASE("all.sv 211_223") {
+    std::string code = R"("
+module ALU 
+    wire [7:0] i1, i2;
+    wire [2:1] opcode;
+    wire [7:0] o1;
+
+    specify
+        specparam s1 = 2;
+        if (opcode == 2'b00) (i1,i2 *> o1) = (25.0, 25.0);
+        if (opcode == 2'b01) (i1 => o1) = (5.6, 8.0);
+        if (opcode == s1) (i2 => o1) = (5.6, 8.0);
+        (opcode *> o1) = (6.1, 6.5);
+    endspecify
+endmodule
+)";
+    CHECK(isEqual(code, "204_210"));
+}
+
+
+
 // TODO bug fixen: https://www.systemverilog.io/verification/generate/ bij loop contruc
