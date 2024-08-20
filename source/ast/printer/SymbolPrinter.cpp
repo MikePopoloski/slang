@@ -598,6 +598,7 @@ void AstPrinter::handle(const PrimitiveSymbol& t) {
 
     write("endprimitive");
 }
+
 // config_declaration ::= config config_identifier ; { local_parameter_declaration ;
 // }design_statement { config_rule_statement } endconfig [ : config_identifier ]
 void AstPrinter::handle(const ConfigBlockSymbol& t) {
@@ -619,6 +620,7 @@ void AstPrinter::handle(const ConfigBlockSymbol& t) {
     indentation_level--;
     write("endconfig\n");
 }
+
 // specify_block ::= specify { specify_item } endspecify
 void AstPrinter::handle(const SpecifyBlockSymbol& t) {
     write("specify");
@@ -661,14 +663,13 @@ void AstPrinter::handle(const TimingPathSymbol& t) {
             t.getConditionExpr()->visit(*this);
         write(")");
     }
-    // full_path_description ::=( list_of_path_inputs [ polarity_operator ] *> list_of_path_outputs )
     write("(");
+    // full_path_description ::=( list_of_path_inputs [ polarity_operator ] *> list_of_path_outputs )
     // specify_input_terminal_descriptor ::=input_identifier [ [ constant_range_expression ] ]
     for (auto input : t.getInputs()) {
         input->visit(*this);
         if (input !=  t.getInputs().back())
             write(",", false);
-
     }
 
     if (t.polarity == TimingPathSymbol::Polarity::Positive) {
@@ -698,6 +699,43 @@ void AstPrinter::handle(const TimingPathSymbol& t) {
             write(",", false);
     }
     write(")");
+}
+
+// method_prototype ::= task_prototype | function_prototype
+// function_prototype ::= function data_type_or_void function_identifier [ ( [ tf_port_list ] ) ]
+// task_prototype ::= task task_identifier [ ( [ tf_port_list ] ) ]
+void AstPrinter::handle(const MethodPrototypeSymbol& t) {
+    if ((t.flags & MethodFlags::InterfaceExtern) == MethodFlags::InterfaceExtern)
+        write("extern");
+
+    write(lowerFirstLetter(toString(t.subroutineKind)));
+
+    if (t.subroutineKind ==SubroutineKind::Function ){
+        write(t.declaredReturnType.getType().toString());
+    }
+
+    //function_identifier | task_identifier
+    write(t.name);
+    
+    //tf_port_list
+    if (!t.getArguments().empty()){
+        write("(");
+        for (auto arg: t.getArguments()){
+            arg->visit(*this);
+            if (arg!= t.getArguments().back())
+                write(",");
+        }
+        write(")");
+    }
+}
+
+void AstPrinter::handle(const FormalArgumentSymbol& t) {
+    write(t.getType().toString());
+    write(t.name);
+    if (t.getDefaultValue()){
+        write("=");
+        t.getDefaultValue()->visit(*this);
+    }
 }
 
 } // namespace slang::ast

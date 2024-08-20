@@ -398,10 +398,7 @@ endconfig
 
 TEST_CASE("all.sv 211_223") {
     std::string code = R"("
-module ALU 
-    wire [7:0] i1, i2;
-    wire [2:1] opcode;
-    wire [7:0] o1;
+module ALU(input wire [7:0] i1, i2, input wire [2:1] opcode, output wire [7:0] o1;)
 
     specify
         specparam s1 = 2;
@@ -415,6 +412,16 @@ endmodule
     CHECK(isEqual(code, "204_210"));
 }
 
+TEST_CASE("all.sv 225_232") {
+    std::string code = R"("
+interface Iface;
+    extern function void foo(int i, real r);
+
+endinterface
+
+)";
+    CHECK(isEqual(code, "225_232"));
+}
 
 
 // TODO bug fixen: https://www.systemverilog.io/verification/generate/ bij loop contruc

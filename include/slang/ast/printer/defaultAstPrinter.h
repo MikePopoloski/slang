@@ -324,6 +324,10 @@ public:
     // path_declaration ::=simple_path_declaration ;| edge_sensitive_path_declaration ; | state_dependent_path_declaration;
     void handle(const TimingPathSymbol& t);
 
+    // method_prototype ::= task_prototype | function_prototype
+    void handle(const MethodPrototypeSymbol& t);
+
+    void handle(const FormalArgumentSymbol& t);
 
     void handle(const NamedValueExpression& t);
 
