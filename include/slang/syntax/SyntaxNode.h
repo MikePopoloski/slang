@@ -190,8 +190,8 @@ public:
     /// is compatible with the static type of the object.
     static bool isKind(SyntaxKind) { return true; }
 
-    /// Derived nodes should implement this and return false if child at provided
-    /// index is node wrapped in not_null.
+    /// Derived nodes should implement this and return true if child at provided
+    /// index is pointer not wrapped in not_null.
     static bool isChildOptional(size_t) { return true; }
 
 protected:

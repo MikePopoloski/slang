@@ -378,7 +378,7 @@ namespace slang::syntax {
                 )
             )
             docf.write(
-                "    @brief Returns false if child member (token or syntax node) at the provided index within this struct is a syntax node wrapped in not_null<>\n"
+                "    @brief Returns true if child member (token or syntax node) at the provided index within this struct is a nullable pointer\n"
             )
             docf.write(
                 "    @fn TokenOrSyntax slang::syntax::{}::getChild(size_t index)\n".format(
@@ -493,20 +493,20 @@ size_t SyntaxNode::getChildCount() const {
 
         if v.members or v.final != "":
             cppf.write("bool {}::isChildOptional(size_t index) {{\n".format(k))
-            if v.notNullMembers:
+            if v.optionalMembers:
                 cppf.write("    switch (index) {\n")
 
                 index = 0
                 for m in v.combinedMembers:
-                    if m[1] in v.notNullMembers:
-                        cppf.write("        case {}: return false;\n".format(index))
+                    if m[1] in v.optionalMembers:
+                        cppf.write("        case {}: return true;\n".format(index))
                     index += 1
 
-                cppf.write("        default: return true;\n")
+                cppf.write("        default: return false;\n")
                 cppf.write("    }\n")
             else:
                 cppf.write("    (void)index;\n")
-                cppf.write("    return true;\n")
+                cppf.write("    return false;\n")
 
             cppf.write("}\n\n")
 
