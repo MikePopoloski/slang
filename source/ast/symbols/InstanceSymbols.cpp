@@ -1130,7 +1130,7 @@ class InstanceBodySymbol::HierIdentsVisitor : public ASTVisitor<HierIdentsVisito
 public:
     SmallVector<SourceRange, 4> hierIdentsSR;
 
-    HierIdentsVisitor(const InstanceBodySymbol& ifaceBody) : ifaceBody(ifaceBody){};
+    HierIdentsVisitor(const InstanceBodySymbol& ifaceBody) : ifaceBody(ifaceBody) {};
 
     void handle(const HierarchicalValueExpression& hVE) {
         processHierIdent(hVE, ifaceBody, hierIdentsSR);
