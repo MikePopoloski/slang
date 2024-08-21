@@ -368,6 +368,9 @@ public:
 private:
     std::string buffer;
     std::list<std::string> writeNextBuffer;
+    // used make sure the internalSymbol of ports aren't written as a member of a instanceBody
+    std::set<const slang::ast::Symbol*> internalSymbols;
+    // used to ensure interfaces, .. are only written fully  once
     std::set<const slang::ast::InstanceBodySymbol*> initializedInstances;
     // the type in the ast is not the type defined by the type alias, this map is used to convert
     // the type back to the type alias type
@@ -404,6 +407,8 @@ private:
             return typeConversions[type.substr(0, dot_loc)];
         return type;
     }
+
+
 
     void write(std::string_view string, bool add_spacer = true, bool use_dollar = false) {
         // check if there is a $ sign in the string and add its content to the write next buffer

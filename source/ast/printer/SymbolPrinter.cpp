@@ -127,14 +127,6 @@ void AstPrinter::handle(const ContinuousAssignSymbol& t) {
 /// list_of_port_declarations ] ;>
 /// <> is handeld in InstanceBodySymbol
 void AstPrinter::handle(const slang::ast::InstanceSymbol& t) {
-    // if it is already written somewhere else do not write it again
-    if (initializedInstances.count(&(t.body)) != 0) {
-        return;
-    }
-    else {
-        initializedInstances.insert(&(t.body));
-    }
-
     writeAttributeInstances(t);
 
     // print instance
@@ -181,7 +173,7 @@ void AstPrinter::handle(const slang::ast::InstanceSymbol& t) {
             if (named_port != t.getPortConnections().back())
                 write(",", false);
         }
-        write(")", false);
+        write(");\n", false);
     }
 }
 
@@ -362,7 +354,13 @@ void AstPrinter::handle(const ModportSymbol& t) {
     // modport_ports_declaration } )
     write(t.name);
     write("(");
-    visitDefault(t);
+    auto member = t.getFirstMember();
+    while (member) {
+        member->visit(*this);
+        if (member != t.getLastMember())
+            write(",", false);
+        member = member->getNextSibling();
+    }
     write(")");
 }
 
@@ -713,10 +711,21 @@ void AstPrinter::handle(const MethodPrototypeSymbol& t) {
         //extern_tf_declaration ::=extern method_prototype;
         //                         extern forkjoin task_prototype ;
         write("extern");
-        if (t.subroutineKind==SubroutineKind::Task)
-            write("forkjoin");
+
+    if ((t.flags & MethodFlags::ForkJoin) == MethodFlags::ForkJoin)
+        write("forkjoin");
+
+
+    if (((t.flags & MethodFlags::ModportExport) == MethodFlags::ModportExport)){
+        write("export");
+    }
+
+    if (((t.flags & MethodFlags::ModportImport) == MethodFlags::ModportImport)){
+        write("import");
+    }
 
     write(lowerFirstLetter(toString(t.subroutineKind)));
+    
 
     if (t.subroutineKind ==SubroutineKind::Function ){
         write(t.declaredReturnType.getType().toString());

@@ -118,7 +118,7 @@ void AstPrinter::handle(const ContinueStatement& t) {
 
 void AstPrinter::handle(const ExpressionStatement& t) {
     visitDefault(t);
-    write(";");
+    write(";\n");
 }
 // loop_statement ::= repeat ( expression ) statement_or_null
 // statement_or_null ::=statement| { attribute_instance } ;

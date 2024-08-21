@@ -413,11 +413,14 @@ endmodule
 }
 
 TEST_CASE("all.sv 225_232") {
-    std::string code = R"("
-interface Iface;
+    std::string code = R"(
+interface Iface();
     extern function void foo(int i, real r);
     extern forkjoin task t3();
 
+    modport m(export foo, function void bar(int, logic), task baz);
+    modport n(import foo, import task t3);
+    modport o(export t3);
 endinterface
 
 )";
