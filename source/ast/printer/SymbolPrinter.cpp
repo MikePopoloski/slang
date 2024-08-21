@@ -196,7 +196,9 @@ void AstPrinter::handle(const slang::ast::PortSymbol& t) {
 
     if (t.internalSymbol) {
         t.internalSymbol->visit(*this);
+        internalSymbols.insert(t.internalSymbol);
     }
+
     else {
         write(convertType(t.getType().toString()), true, true);
     }
@@ -462,6 +464,7 @@ void AstPrinter::handle(const InstanceBodySymbol& t) {
 
     // list_of_port_declarations2 ::=( [ { attribute_instance} ansi_port_declaration { , {
     // attribute_instance} ansi_port_declaration } ] )
+    internalSymbols.clear();
     if (!t.getPortList().empty()) {
         write(std::string_view("(\n"), false);
 
@@ -474,11 +477,12 @@ void AstPrinter::handle(const InstanceBodySymbol& t) {
             if (port != t.getPortList().back())
                 write(",\n", false);
         }
-
-        if (t.getPortList().back()->kind == SymbolKind::Port) {
-            auto symbol = ((PortSymbol*)t.getPortList().back())->internalSymbol;
-            remainingMember = symbol ? symbol->getNextSibling() : t.getPortList().back();
-        }
+        
+        // the remainingMember shouden't be one of the internal symbols -> skip these
+        remainingMember = t.getPortList().back()->getNextSibling();
+        while(internalSymbols.count(remainingMember)!=0)
+             remainingMember = remainingMember->getNextSibling();
+        
         write(")");
     }
 
