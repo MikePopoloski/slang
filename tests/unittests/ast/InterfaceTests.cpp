@@ -730,11 +730,21 @@ TEST_CASE("Virtual interface declaration errors") {
 localparam type requestType = byte;
 localparam type responseType = int;
 
+interface I;
+
+wire r;
+
+modport ii(input r);
+
+endinterface
+
 module testMod#(N=16);
 
   wire clk, rst;
 
-  allIfc#(N) allInst(clk, rst);
+  I i();
+  allIfc#(N) allInst(clk, rst, i, i.ii);
+  virtual allIfc#(N) allInst1;
   sliceIfc sliceInst();
   virtual sliceIfc sliceInst1;
 
@@ -744,12 +754,12 @@ module testMod1#(N=16);
 
   wire clk, rst;
 
-  allIfc#(N) allInst(clk, rst);
+  virtual allIfc#(N) allInst1;
   virtual sliceIfc1 sliceInst;
 
 endmodule:testMod1
 
-interface automatic allIfc#(N=1)(input clk, rst);
+interface automatic allIfc#(N=1)(input clk, rst, I i, I.ii i1);
 
   var requestType Requests[N];
   var responseType Responses[N];
@@ -778,7 +788,8 @@ interface automatic sliceIfc#(I=0)();
   II ii();  // invalid
   wire reset = ii.reset;  // valid
 
-  allIfc allInst(.clk(), .rst());
+  I i();
+  allIfc allInst(.clk(), .rst(), .i(i), .i1(i.ii));
   var requestType request;
   var responseType response;
 
@@ -809,7 +820,8 @@ interface automatic sliceIfc1#(I=0)();
   II ii();  // invalid
   wire reset = ii.reset;  // valid
 
-  allIfc allInst(.clk(), .rst());
+  I i();
+  allIfc allInst(.clk(), .rst(), .i(i), .i1(i.ii));
   var requestType request;
   var responseType response;
 
@@ -838,13 +850,15 @@ endinterface:sliceIfc1
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 8);
-    CHECK(diags[0].code == diag::VirtualInterfaceHierRef);
-    CHECK(diags[1].code == diag::VirtualInterfaceHierRef);
+    REQUIRE(diags.size() == 10);
+    CHECK(diags[0].code == diag::VirtualInterfaceIfacePort);
+    CHECK(diags[1].code == diag::VirtualInterfaceIfacePort);
     CHECK(diags[2].code == diag::VirtualInterfaceHierRef);
     CHECK(diags[3].code == diag::VirtualInterfaceHierRef);
     CHECK(diags[4].code == diag::VirtualInterfaceHierRef);
     CHECK(diags[5].code == diag::VirtualInterfaceHierRef);
     CHECK(diags[6].code == diag::VirtualInterfaceHierRef);
     CHECK(diags[7].code == diag::VirtualInterfaceHierRef);
+    CHECK(diags[8].code == diag::VirtualInterfaceHierRef);
+    CHECK(diags[9].code == diag::VirtualInterfaceHierRef);
 }
