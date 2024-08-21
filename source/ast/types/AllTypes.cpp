@@ -1129,8 +1129,7 @@ const Type& VirtualInterfaceType::fromSyntax(const ASTContext& context,
 
     auto loc = syntax.name.location();
     auto& defSym = def->as<DefinitionSymbol>();
-    auto& iface = InstanceSymbol::createVirtual(context, loc, defSym,
-                                                syntax.parameters);
+    auto& iface = InstanceSymbol::createVirtual(context, loc, defSym, syntax.parameters);
 
     // To control duplicates
     SmallSet<const DefinitionSymbol*, 4> visited;
