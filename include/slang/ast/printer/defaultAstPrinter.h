@@ -105,6 +105,20 @@ public:
     //  system_tf_call ::= system_tf_identifier [ ( list_of_arguments ) ]
     void handle(const CallExpression& t);
 
+    void handle(const NamedValueExpression& t);
+
+    void handle(const ArbitrarySymbolExpression& t);
+
+    void handle(const UnbasedUnsizedIntegerLiteral& t);
+
+    void handle(const IntegerLiteral& t);
+
+    void handle(const ElementSelectExpression& t);
+
+    //void handle(const AssertionInstanceExpression& t);
+
+    //void handle(const SimpleAssertionExpr& t);
+
     void handle(const StringLiteral& t);
 
     void handle(const RealLiteral& t);
@@ -329,20 +343,17 @@ public:
 
     void handle(const FormalArgumentSymbol& t);
 
-    void handle(const NamedValueExpression& t);
+    void handle(const UninstantiatedDefSymbol& t);
+
+    void handle(const CompilationUnitSymbol& t);
+
+    //checker_declaration ::= checker checker_identifier [ ( [ checker_port_list ] ) ] ; { { attribute_instance } checker_or_generate_item } endchecker [ : checker_identifier ]
+    void handle(const CheckerSymbol& t);
 
     /// { package_import_declaration } [ parameter_port_list ] [ list_of_port_declarations ];
     void handle(const InstanceBodySymbol& t);
 
-    void handle(const UnbasedUnsizedIntegerLiteral& t);
 
-    void handle(const IntegerLiteral& t);
-
-    void handle(const ElementSelectExpression& t);
-
-    //void handle(const AssertionInstanceExpression& t);
-
-    //void handle(const SimpleAssertionExpr& t);
 
     std::string lowerFirstLetter(std::string_view string) {
         if (string == "")
@@ -406,6 +417,18 @@ private:
         if (typeConversions.count(type.substr(0, dot_loc)))
             return typeConversions[type.substr(0, dot_loc)];
         return type;
+    }
+    
+    // this function visits all of tthe member and all of its siblings
+    void visitMembers(const Symbol* member){
+        while (member) {
+            member->visit(*this);
+            // TODO betere maniet voor dit vinden
+            if ("\n" != buffer.substr(buffer.length() - 1, buffer.length() - 1)) 
+                write(";\n", false);
+            
+            member = member->getNextSibling();
+    }
     }
 
 

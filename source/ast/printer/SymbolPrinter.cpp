@@ -395,12 +395,8 @@ void AstPrinter::handle(const PropertySymbol& t) {
     write(";\n");
     indentation_level++;
 
-    while (member) {
-        member->visit(*this);
-        if ("\n" != buffer.substr(buffer.length() - 1, buffer.length() - 1))
-            write(";\n", false);
-        member = member->getNextSibling();
-    }
+    visitMembers (member);
+
     indentation_level--;
     write("endproperty\n");
 }
@@ -449,14 +445,17 @@ void AstPrinter::handle(const InstanceBodySymbol& t) {
         // TODO add Support for writing non ansi code
         write("#(", false);
         for (auto param : t.getParameters()) {
-            if (!param)
+            if (param->isBodyParam())
                 continue;
 
             param->symbol.visit(*this);
             if (param != t.getParameters().back())
                 write(",", false);
+
+            // implemented like this to prevent body params shifting the last param
+            remainingMember = param->symbol.getNextSibling();
         }
-        remainingMember = t.getParameters().back()->symbol.getNextSibling();
+
         write(")");
     }
 
@@ -487,14 +486,8 @@ void AstPrinter::handle(const InstanceBodySymbol& t) {
     write(";\n", false);
 
     // return if there are no remaining members
-    while (remainingMember) {
-        remainingMember->visit(*this);
-        // TODO betere maniet voor dit vinden
-        if ("\n" != buffer.substr(buffer.length() - 1, buffer.length() - 1)) {
-            write(";\n", false);
-        }
-        remainingMember = remainingMember->getNextSibling();
-    }
+    visitMembers (remainingMember);
+
 }
 
 void AstPrinter::handle(const StatementBlockSymbol& t) {
@@ -610,14 +603,7 @@ void AstPrinter::handle(const ConfigBlockSymbol& t) {
     indentation_level++;
 
     auto member = t.getFirstMember();
-    while (member) {
-        member->visit(*this);
-        // TODO betere maniet voor dit vinden
-        if ("\n" != buffer.substr(buffer.length() - 1, buffer.length() - 1)) {
-            write(";\n", false);
-        }
-        member = member->getNextSibling();
-    }
+    visitMembers (member);
 
     indentation_level--;
     write("endconfig\n");
@@ -629,14 +615,8 @@ void AstPrinter::handle(const SpecifyBlockSymbol& t) {
 
     indentation_level++;
     auto member = t.getFirstMember();
-    while (member) {
-        member->visit(*this);
-        // TODO betere maniet voor dit vinden
-        if ("\n" != buffer.substr(buffer.length() - 1, buffer.length() - 1)) {
-            write(";\n", false);
-        }
-        member = member->getNextSibling();
-    }
+    visitMembers (member);
+
     indentation_level--;
     
     write("endspecify\n");
@@ -754,4 +734,54 @@ void AstPrinter::handle(const FormalArgumentSymbol& t) {
     }
 }
 
+void AstPrinter::handle(const UninstantiatedDefSymbol& t){
+    // module_instantiation ::= module_identifier [ parameter_value_assignment ] hierarchical_instance { , hierarchical_instance } ;
+    write(t.definitionName);
+    write(t.name);
+
+    write("(", false);
+
+    for (auto port : t.getPortConnections()) {
+        port->visit(*this);
+
+        if (port != t.getPortConnections().back())
+            write(",", false);
+    }
+    write(");\n", false);
+
+}
+
+void AstPrinter::handle(const CompilationUnitSymbol& t){
+    visitDefault(t);
+    // TypeAliases can also be attached to a compilationUnit
+    write(blockBuffer);
+    blockBuffer = "";
+
+}
+//checker_declaration ::= checker checker_identifier [ ( [ checker_port_list ] ) ] ; { { attribute_instance } checker_or_generate_item } endchecker [ : checker_identifier ]
+void AstPrinter::handle(const CheckerSymbol& t){
+    write("checker");
+    write(t.name);
+    write("(");
+
+    auto remainingMember = t.getFirstMember();
+
+    for (auto port : t.ports) {
+        indentation_level++;
+        port->visit(*this);
+
+        if (port != t.ports.back())
+            write(",\n", false);
+        else
+            remainingMember = port->getNextSibling();
+        indentation_level--;
+    }
+
+    write(");\n");
+    // return if there are no remaining members
+    visitMembers (remainingMember);
+    write("endchecker\n");
+
+
+}
 } // namespace slang::ast

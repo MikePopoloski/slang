@@ -427,5 +427,121 @@ endinterface
     CHECK(isEqual(code, "225_232"));
 }
 
+TEST_CASE("all.sv 250_266") {
+    std::string code = R"(
+    module m4;
+        Iface i1();
+        n n1(i1);
+
+        Iface i2();
+
+        localparam int baz = 3;
+        // het volgende zord niet opgeno;en in de ast
+        task i1.t2;
+            static int i = baz;
+        endtask
+
+        task i2.t2;
+            static int i = baz;
+        endtask
+    endmodule
+    typedef enum { cover_none, cover_all } coverage_level;
+
+)";
+    CHECK(isEqual(code, "250_266"));
+}
+
+TEST_CASE("all.sv 266_309") {
+    std::string code = R"(
+checker assert_window1 (
+    logic test_expr,
+    untyped start_event,
+    untyped end_event,
+    event clock = $inferred_clock,
+    logic reset = $inferred_disable,
+    string error_msg = "violation",
+    coverage_level clevel = cover_all
+);
+    // het volgende zord niet opgenomen in de ast
+    default clocking @clock; endclocking
+    default disable iff reset;
+    bit window = 1'b0, next_window = 1'b1;
+    rand bit q;
+
+    always_comb begin
+        if (reset || window && end_event)
+            next_window = 1'b0;
+        else if (!window && start_event)
+            next_window = 1'b1;
+        else
+            next_window = window;
+    end
+
+endchecker : assert_window1
+
+)";
+    CHECK(isEqual(code, "266_309"));
+}
+
+
+
+TEST_CASE("all.sv 250_266") {
+    std::string code = R"(
+    module m4;
+        Iface i1();
+        n n1(i1);
+
+        Iface i2();
+
+        localparam int baz = 3;
+        // het volgende zord niet opgeno;en in de ast
+        task i1.t2;
+            static int i = baz;
+        endtask
+
+        task i2.t2;
+            static int i = baz;
+        endtask
+    endmodule
+    typedef enum { cover_none, cover_all } coverage_level;
+
+)";
+    CHECK(isEqual(code, "250_266"));
+}
+
+TEST_CASE("all.sv 266_309") {
+    std::string code = R"(
+checker assert_window1 (
+    logic test_expr,
+    untyped start_event,
+    untyped end_event,
+    event clock = $inferred_clock,
+    logic reset = $inferred_disable,
+    string error_msg = "violation",
+    coverage_level clevel = cover_all
+);
+    // het volgende zord niet opgenomen in de ast
+    default clocking @clock; endclocking
+    default disable iff reset;
+    bit window = 1'b0, next_window = 1'b1;
+    rand bit q;
+
+    always_comb begin
+        if (reset || window && end_event)
+            next_window = 1'b0;
+        else if (!window && start_event)
+            next_window = 1'b1;
+        else
+            next_window = window;
+    end
+
+endchecker : assert_window1
+
+)";
+    CHECK(isEqual(code, "266_309"));
+}
+
+
+
 
 // TODO bug fixen: https://www.systemverilog.io/verification/generate/ bij loop contruc
