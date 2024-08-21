@@ -706,7 +706,11 @@ void AstPrinter::handle(const TimingPathSymbol& t) {
 // task_prototype ::= task task_identifier [ ( [ tf_port_list ] ) ]
 void AstPrinter::handle(const MethodPrototypeSymbol& t) {
     if ((t.flags & MethodFlags::InterfaceExtern) == MethodFlags::InterfaceExtern)
+        //extern_tf_declaration ::=extern method_prototype;
+        //                         extern forkjoin task_prototype ;
         write("extern");
+        if (t.subroutineKind==SubroutineKind::Task)
+            write("forkjoin");
 
     write(lowerFirstLetter(toString(t.subroutineKind)));
 
@@ -718,15 +722,14 @@ void AstPrinter::handle(const MethodPrototypeSymbol& t) {
     write(t.name);
     
     //tf_port_list
-    if (!t.getArguments().empty()){
-        write("(");
-        for (auto arg: t.getArguments()){
-            arg->visit(*this);
-            if (arg!= t.getArguments().back())
-                write(",");
-        }
-        write(")");
+    write("(");
+    for (auto arg: t.getArguments()){
+        arg->visit(*this);
+        if (arg!= t.getArguments().back())
+            write(",");
     }
+    write(")");
+    
 }
 
 void AstPrinter::handle(const FormalArgumentSymbol& t) {
