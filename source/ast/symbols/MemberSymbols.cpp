@@ -2346,20 +2346,24 @@ std::span<const Expression* const> NetAliasSymbol::getNetReferences() const {
                     remainder = std::nullopt;
                 }
 
-                auto rangeDiff = std::abs(long(rangeFirst.second - rangeFirst.first)) -
-                                 std::abs(long(rangeSecond.second - rangeSecond.first));
+                auto rangeDiff = std::abs(int64_t(rangeFirst.second - rangeFirst.first)) -
+                                 std::abs(int64_t(rangeSecond.second - rangeSecond.first));
                 auto currFirstSaved = currFirst;
                 auto currSecondSaved = currSecond;
                 if (rangeDiff > 0) {
-                    auto newBound = rangeFirst.second - rangeDiff + 1;
-                    remainder = std::make_pair(DriverBitRange(newBound, rangeFirst.second), true);
-                    rangeFirst = DriverBitRange(rangeFirst.first, newBound - 1);
+                    int64_t newBound = (int64_t)rangeFirst.second - rangeDiff + 1;
+                    SLANG_ASSERT(newBound >= 0);
+                    remainder =
+                        std::make_pair(DriverBitRange((uint64_t)newBound, rangeFirst.second), true);
+                    rangeFirst = DriverBitRange(rangeFirst.first, (uint64_t)newBound - 1);
                     ++currSecond;
                 }
                 else if (rangeDiff < 0) {
-                    auto newBound = rangeSecond.second + rangeDiff + 1;
-                    remainder = std::make_pair(DriverBitRange(newBound, rangeSecond.second), false);
-                    rangeSecond = DriverBitRange(rangeSecond.first, newBound - 1);
+                    int64_t newBound = (int64_t)rangeSecond.second + rangeDiff + 1;
+                    SLANG_ASSERT(newBound >= 0);
+                    remainder = std::make_pair(
+                        DriverBitRange((uint64_t)newBound, rangeSecond.second), false);
+                    rangeSecond = DriverBitRange(rangeSecond.first, (uint64_t)newBound - 1);
                     ++currFirst;
                 }
                 else {
