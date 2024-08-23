@@ -2336,6 +2336,7 @@ std::span<const Expression* const> NetAliasSymbol::getNetReferences() const {
                     DriverBitRange(0, currFirst->expr->type->getBitWidth()));
                 auto rangeSecond = currSecond->bounds.value_or(
                     DriverBitRange(0, currSecond->expr->type->getBitWidth()));
+
                 if (remainder.has_value()) {
                     if (remainder.value().second)
                         rangeFirst = remainder.value().first;
@@ -2350,13 +2351,13 @@ std::span<const Expression* const> NetAliasSymbol::getNetReferences() const {
                 auto currFirstSaved = currFirst;
                 auto currSecondSaved = currSecond;
                 if (rangeDiff > 0) {
-                    auto newBound = rangeFirst.first - rangeDiff + rangeFirst.second;
+                    auto newBound = rangeFirst.second - rangeDiff + 1;
                     remainder = std::make_pair(DriverBitRange(newBound, rangeFirst.second), true);
                     rangeFirst = DriverBitRange(rangeFirst.first, newBound - 1);
                     ++currSecond;
                 }
                 else if (rangeDiff < 0) {
-                    auto newBound = rangeSecond.first + rangeDiff + rangeSecond.second;
+                    auto newBound = rangeSecond.second + rangeDiff + 1;
                     remainder = std::make_pair(DriverBitRange(newBound, rangeSecond.second), false);
                     rangeSecond = DriverBitRange(rangeSecond.first, newBound - 1);
                     ++currFirst;
