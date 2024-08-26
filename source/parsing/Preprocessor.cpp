@@ -214,6 +214,66 @@ Token Preprocessor::next() {
     return consume();
 }
 
+Token Preprocessor::nextMasked() {
+    auto token = nextRaw();
+
+    if (!options.enableCompatPragmas || inMacroBody)
+        return token;
+
+    SmallVector<Token, 8> skippedTokens;
+    bool disabledByPragma = false;
+    while (true) {
+        for (const Trivia& trivia : token.trivia()) {
+            switch (trivia.kind) {
+            case TriviaKind::LineComment:
+                {
+                    auto text = trivia.getRawText();
+
+                    if (disabledByPragma) {
+                        if (std::regex_match(text.begin(), text.end(), options.compatOnPragma))
+                            disabledByPragma = false;
+                    } else {
+                        if (std::regex_match(text.begin(), text.end(), options.compatOffPragma))
+                            disabledByPragma = true;
+                    }
+                }
+                break;
+
+            case TriviaKind::Directive:
+            case TriviaKind::SkippedSyntax:
+            case TriviaKind::SkippedTokens:
+                // These kinds of trivia shouldn't be possible on a raw token. They imply
+                // the possibility of nested trivia, which we have no handling for in this
+                // loop, so make sure we are not encountering them.
+                SLANG_UNREACHABLE;
+
+            default:
+            }
+        }
+
+        if (token.kind == TokenKind::EndOfFile)
+            disabledByPragma = false;
+
+        if (disabledByPragma) {
+            skippedTokens.push_back(token);
+            token = nextRaw();
+            SLANG_ASSERT(!inMacroBody);
+        } else {
+            // Exit the loop, but make sure all the skipped tokens get prepended
+            // to the next token as trivia.
+            if (!skippedTokens.empty()) {
+                SmallVector<Trivia, 8> trivia;
+                trivia.push_back(Trivia(TriviaKind::SkippedTokens, skippedTokens.copy(alloc)));
+                trivia.append_range(token.trivia());
+                token = token.withTrivia(alloc, trivia.copy(alloc));
+            }
+            break;
+        }
+    }
+
+    return token;
+}
+
 Token Preprocessor::nextProcessed() {
     // The core preprocessing routine; this method pulls raw tokens from various text
     // files and converts them into a unified logical stream of sanitized tokens that
@@ -221,7 +281,7 @@ Token Preprocessor::nextProcessed() {
     //
     // Start off by grabbing the next raw token, either from the current file, an
     // active include file, or an expanded macro.
-    auto token = nextRaw();
+    auto token = nextMasked();
 
     // If we're currently within a macro body, return whatever we got right away.
     // If it was a directive it will be deferred until the macro is used.
@@ -391,7 +451,7 @@ Token Preprocessor::handleDirectives(Token token) {
                 return token.withTrivia(alloc, trivia.copy(alloc));
         }
 
-        token = nextRaw();
+        token = nextMasked();
     }
 }
 
@@ -751,7 +811,7 @@ Trivia Preprocessor::parseBranchDirective(Token directive,
     if (!taken) {
         // skip over everything until we find another conditional compilation directive
         while (true) {
-            auto token = nextRaw();
+            auto token = nextMasked();
 
             // EoF or conditional directive stops the skipping process
             bool done = false;

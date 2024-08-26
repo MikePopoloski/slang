@@ -8,6 +8,7 @@
 #pragma once
 
 #include <memory>
+#include <regex>
 
 #include "slang/parsing/Lexer.h"
 #include "slang/parsing/NumberParser.h"
@@ -57,6 +58,16 @@ struct SLANG_EXPORT PreprocessorOptions {
 
     /// A set of preprocessor directives to be ignored.
     flat_hash_set<std::string_view> ignoreDirectives;
+
+    /// A flag to enable the interpretation of non-standard line comment
+    /// pragmas within the preprocessor.
+    bool enableCompatPragmas = false;
+
+    /// A pair of regexes to match on the on/off pragmas in line comments.
+    /// The off pragma instructs the preprocessor to ignore all tokens until
+    /// the occurence of the on pragma.
+    std::regex compatOffPragma;
+    std::regex compatOnPragma;
 };
 
 /// Preprocessor - Interface between lexer and parser
@@ -153,6 +164,7 @@ private:
 
     // Internal methods to grab and handle the next token
     Token nextProcessed();
+    Token nextMasked();
     Token nextRaw();
     void popSource();
 

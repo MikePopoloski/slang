@@ -2682,3 +2682,33 @@ endmodule
     REQUIRE(diagnostics.size() == 1);
     CHECK(diagnostics[0].code == diag::ProtectedEnvelope);
 }
+
+TEST_CASE("Compat comment pragmas") {
+    auto& text = R"(
+a
+// pragma translate_off
+assert(property);
+// pragma translate_on
+b
+)";
+
+    diagnostics.clear();
+    Bag options;
+    auto &ppOptions = options.insertOrGet<PreprocessorOptions>();
+    ppOptions.enableCompatPragmas = true;
+    ppOptions.compatOnPragma = "\\/\\/.*pragma.+translate_on.*";
+    ppOptions.compatOffPragma = "\\/\\/.*pragma.+translate_off.*";
+    Preprocessor preprocessor(getSourceManager(), alloc, diagnostics, options);
+    preprocessor.pushSource(text);
+    std::vector<Token> result;
+    while (true) {
+        Token token = preprocessor.next();
+        if (token.kind == TokenKind::EndOfFile)
+            break;
+        result.push_back(token);
+    }
+    CHECK(result.size() == 2);
+    CHECK(result[0].rawText() == "a");
+    CHECK(result[1].rawText() == "b");
+    CHECK_DIAGNOSTICS_EMPTY;
+}
