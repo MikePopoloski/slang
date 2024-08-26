@@ -225,29 +225,28 @@ Token Preprocessor::nextMasked() {
     while (true) {
         for (const Trivia& trivia : token.trivia()) {
             switch (trivia.kind) {
-            case TriviaKind::LineComment:
-                {
+                case TriviaKind::LineComment: {
                     auto text = trivia.getRawText();
 
                     if (disabledByPragma) {
                         if (std::regex_match(text.begin(), text.end(), options.compatOnPragma))
                             disabledByPragma = false;
-                    } else {
+                    }
+                    else {
                         if (std::regex_match(text.begin(), text.end(), options.compatOffPragma))
                             disabledByPragma = true;
                     }
-                }
-                break;
+                } break;
 
-            case TriviaKind::Directive:
-            case TriviaKind::SkippedSyntax:
-            case TriviaKind::SkippedTokens:
-                // These kinds of trivia shouldn't be possible on a raw token. They imply
-                // the possibility of nested trivia, which we have no handling for in this
-                // loop, so make sure we are not encountering them.
-                SLANG_UNREACHABLE;
+                case TriviaKind::Directive:
+                case TriviaKind::SkippedSyntax:
+                case TriviaKind::SkippedTokens:
+                    // These kinds of trivia shouldn't be possible on a raw token. They imply
+                    // the possibility of nested trivia, which we have no handling for in this
+                    // loop, so make sure we are not encountering them.
+                    SLANG_UNREACHABLE;
 
-            default:
+                default:
             }
         }
 
@@ -258,7 +257,8 @@ Token Preprocessor::nextMasked() {
             skippedTokens.push_back(token);
             token = nextRaw();
             SLANG_ASSERT(!inMacroBody);
-        } else {
+        }
+        else {
             // Exit the loop, but make sure all the skipped tokens get prepended
             // to the next token as trivia.
             if (!skippedTokens.empty()) {

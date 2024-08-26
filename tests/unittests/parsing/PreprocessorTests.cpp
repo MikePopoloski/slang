@@ -2694,7 +2694,7 @@ b
 
     diagnostics.clear();
     Bag options;
-    auto &ppOptions = options.insertOrGet<PreprocessorOptions>();
+    auto& ppOptions = options.insertOrGet<PreprocessorOptions>();
     ppOptions.enableCompatPragmas = true;
     ppOptions.compatOnPragma = "\\/\\/.*pragma.+translate_on.*";
     ppOptions.compatOffPragma = "\\/\\/.*pragma.+translate_off.*";
