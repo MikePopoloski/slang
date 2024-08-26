@@ -88,11 +88,10 @@ public:
     // TODO uitzoeken waarvoor die valuerange kind dient
     void handle(const ValueRangeExpression& t);
 
-   //void handle(const BinaryAssertionExpr& t);
-
-    // blocking_assignment    ::= variable_lvalue = delay_or_event_control expression |
-    //                            variable_lvalue assignment_operator expression
-    // nonblocking_assignment ::= variable_lvalue <= [ delay_or_event_control ] expression
+    // void handle(const BinaryAssertionExpr& t);
+    //  blocking_assignment    ::= variable_lvalue = delay_or_event_control expression |
+    //                             variable_lvalue assignment_operator expression
+    //  nonblocking_assignment ::= variable_lvalue <= [ delay_or_event_control ] expression
     void handle(const AssignmentExpression& t);
 
     void handle(const UnaryExpression& t);
@@ -270,8 +269,10 @@ public:
     /// <> is handeld in InstanceBodySymbol
     void handle(const slang::ast::InstanceSymbol& t);
 
-    /// ansi_port_declaration ::=[ net_port_header  ] port_identifier { unpacked_dimension } [ = constant_expression ]
-    ///                          | [ variable_port_header ] port_identifier { variable_dimension } [ = constant_expression ]
+    /// ansi_port_declaration ::=[ net_port_header  ] port_identifier { unpacked_dimension } [ =
+    /// constant_expression ]
+    ///                          | [ variable_port_header ] port_identifier { variable_dimension } [
+    ///                          = constant_expression ]
     void handle(const slang::ast::PortSymbol& t);
 
     /// ansi_port_declaration ::=[ interface_port_header ] port_identifier { unpacked_dimension } [
@@ -378,6 +379,7 @@ public:
 
 private:
     std::string buffer;
+    std::string* tempBuffer;
     std::list<std::string> writeNextBuffer;
     // used make sure the internalSymbol of ports aren't written as a member of a instanceBody
     std::set<const slang::ast::Symbol*> internalSymbols;
@@ -386,6 +388,7 @@ private:
     // the type in the ast is not the type defined by the type alias, this map is used to convert
     // the type back to the type alias type
     std::map<std::string, std::string> typeConversions;
+
     // buffer for code in a statementblock that needs to be appended in the next proceduralBlock
     std::string blockBuffer;
     Compilation& compilation;
@@ -399,6 +402,7 @@ private:
     bool includePreprocessed = true;
     bool includeComments = true;
     bool squashNewlines = true;
+    bool useTempBuffer = false;
 
     // the amount of spaces after a newline is depth*depth_multplier
     int indentation_level = 0;
@@ -423,14 +427,30 @@ private:
     void visitMembers(const Symbol* member){
         while (member) {
             member->visit(*this);
-            // TODO betere maniet voor dit vinden
-            if ("\n" != buffer.substr(buffer.length() - 1, buffer.length() - 1)) 
+            // TODO betere maniet voor dit vinden            
+            std::string* writeBuffer = (useTempBuffer) ? (tempBuffer) : (&this->buffer);
+
+            if("\n" != (*writeBuffer).substr((*writeBuffer).length() - 1, (* writeBuffer).length() - 1))
                 write(";\n", false);
             
             member = member->getNextSibling();
     }
-    }
+}
+    
+    template<typename T>
+    void visitMembers(std::span<const T* const>  t, const std::string& divider=",", bool newline=false) {
+        for (auto item : t) {
+            //named_checker_port_connection ::= { attribute_instance } . formal_port_identifier [ ( [ property_actual_arg ] ) ]
+            //writeAttributeInstances(*item);
 
+            item->visit(*this);
+            if (item != t.back())
+                write(divider,false);
+                std::string* writeBuffer = (useTempBuffer) ? (tempBuffer) : (&this->buffer);
+                if (newline && ("\n" != (*writeBuffer).substr((*writeBuffer).length() - 1, (* writeBuffer).length() - 1)))
+                    write("\n", false);
+        }
+    }
 
 
     void write(std::string_view string, bool add_spacer = true, bool use_dollar = false) {
@@ -542,6 +562,7 @@ private:
                 break;
         }
     }
+
     // TODO finish this list
     void write(BinaryOperator op) {
         switch (op) {
@@ -625,6 +646,12 @@ private:
             case (UnaryOperator::Postdecrement):
                 write("$--", false, true);
                 break;
+            case (UnaryOperator::BitwiseNot):
+                write("~", false, true);
+                break;
+            case (UnaryOperator::LogicalNot):
+                write("!", false, true);
+                break;
             default:
                 SLANG_UNREACHABLE;
         }
@@ -649,7 +676,6 @@ private:
         }
     }
 
-
     void write(PrimitivePortDirection direction) {
         switch (direction) {
             case (PrimitivePortDirection::In):
@@ -665,7 +691,6 @@ private:
                 SLANG_UNREACHABLE;
         }
     }
-
 
     void write(AssertionKind assertion) {
         switch (assertion) {
@@ -716,7 +741,7 @@ private:
         }
     }
 
-    void write(BinaryAssertionOperator op){
+    void write(BinaryAssertionOperator op) {
         switch (op) {
             case (BinaryAssertionOperator::And):
                 write("and", false);
@@ -725,7 +750,7 @@ private:
                 write("or", false);
                 break;
             case (BinaryAssertionOperator::Implies):
-                write("|->", false);
+                write("implies", false);
                 break;
             case (BinaryAssertionOperator::Intersect):
                 write("intersect", false);
@@ -733,11 +758,17 @@ private:
             case (BinaryAssertionOperator::OverlappedImplication):
                 write("|->");
                 break;
+            case (BinaryAssertionOperator::NonOverlappedImplication):
+                write("|=>");
+                break;
+            case (BinaryAssertionOperator::Until):
+                write("|=>");
+                break;
             default:
                 SLANG_UNREACHABLE;
         }
-
     }
 };
+
 
 } // namespace slang::ast
