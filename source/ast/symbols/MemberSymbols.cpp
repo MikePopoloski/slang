@@ -9,7 +9,6 @@
 
 #include "../FmtHelpers.h"
 #include "fmt/core.h"
-#include <set>
 
 #include "slang/ast/ASTSerializer.h"
 #include "slang/ast/ASTVisitor.h"
@@ -772,9 +771,10 @@ public:
     // inserted rows with the same bit pattern if a collision
     // is found.
     template<typename TAllocator>
-    std::optional<std::set<const UdpEntrySyntax*>> insert(const UdpEntrySyntax& syntax,
-                                                          std::span<const char> inputs,
-                                                          char stateChar, TAllocator& allocator) {
+    std::optional<SmallVector<const UdpEntrySyntax*, 4>> insert(const UdpEntrySyntax& syntax,
+                                                                std::span<const char> inputs,
+                                                                char stateChar,
+                                                                TAllocator& allocator) {
         SmallVector<BitTrie*> nodes;
         BitTrie* primary = this;
         nodes.push_back(this);
@@ -828,10 +828,10 @@ public:
 
         // If any of our nodes have entries we won't insert,
         // as it means we have a duplicate.
-        std::set<const UdpEntrySyntax*> eSyntaxes;
+        SmallVector<const UdpEntrySyntax*, 4> eSyntaxes;
         for (auto node : nodes) {
             if (node->entry)
-                eSyntaxes.insert(node->entry);
+                eSyntaxes.push_back(node->entry);
         }
 
         // Always store so as not to miss info it in case of possible overlap.
@@ -914,14 +914,15 @@ private:
                 handle(5, true);
                 break;
             // Below are implicit node identifiers that cannot be found in the UDP grammar. They are
-            // helpers for `p` and `n`. Handling `0` or `x` (for `p` and `r` matching cases)
+            // helpers for `p` and `n`.
+            // Handling `0` or `x`.
             case '6':
                 handle(6, true);
                 handle(0);
                 handle(2);
                 handle(3);
                 break;
-            // Handling `1` or `x` (for `p` and `r` matching cases)
+            // Handling `1` or `x` (for `p` and `n` matching cases).
             case '7':
                 handle(7, true);
                 handle(1);
