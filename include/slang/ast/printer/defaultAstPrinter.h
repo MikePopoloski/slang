@@ -30,7 +30,16 @@
 #include "slang/util/LanguageVersion.h"
 #include "slang/util/Util.h"
 
+
+
 namespace slang::ast {
+
+template<typename T>
+concept IsFunc= requires(T t) {
+    // selecteerd SubroutineSymbol, MethodPrototypeSymbol
+   typeid(t.subroutineKind) ==typeid(SubroutineSymbol) || typeid(t.subroutineKind) ==typeid(MethodPrototypeSymbol);
+}; 
+
 
 /// Provides support for printing ast back to source code.
 class AstPrinter : public ASTVisitor<AstPrinter, true, true, true> {
@@ -114,9 +123,17 @@ public:
 
     void handle(const ElementSelectExpression& t);
 
-    //void handle(const AssertionInstanceExpression& t);
+    void handle(const DistExpression& t);
 
-    //void handle(const SimpleAssertionExpr& t);
+    //inside_expression ::= expression inside { open_range_list }
+    void handle(const InsideExpression& t);
+
+    //value_range ::=expression| [ expression : expression ]
+    void handle(const RangeSelectExpression& t);
+
+    // void handle(const AssertionInstanceExpression& t);
+
+    // void handle(const SimpleAssertionExpr& t);
 
     void handle(const StringLiteral& t);
 
@@ -131,6 +148,8 @@ public:
     // type_declaration ::= typedef data_type type_identifier { variable_dimension } ;
     // TODO: formating type_str
     void handle(const TypeAliasType& t);
+
+    void handle(const ClassType& t);
 
     //
     void handle(const EmptyStatement& t);
@@ -189,7 +208,7 @@ public:
     // deferred_immediate_assertion_statement simple_immediate_assertion_statement ::=
     // simple_immediate_assert_statement simple_immediate_assert_statement    ::= assert (
     // expression ) action_block action_block ::=statement_or_null | [ statement ] else
-    // statement_or_null 
+    // statement_or_null
     void handle(const ImmediateAssertionStatement& t);
 
     // concurrent_assertion_statement ::=assert_property_statement| assume_property_statement
@@ -324,23 +343,29 @@ public:
     // udp_input_declaration ::= { attribute_instance } input list_of_udp_port_identifiers
     void handle(const PrimitivePortSymbol& t);
 
-    //udp_declaration ::= udp_ansi_declaration udp_body endprimitive [ : udp_identifier ]
+    // udp_declaration ::= udp_ansi_declaration udp_body endprimitive [ : udp_identifier ]
     void handle(const PrimitiveSymbol& t);
 
-    //config_declaration ::= config config_identifier ; { local_parameter_declaration ; }design_statement { config_rule_statement } endconfig [ : config_identifier ]
+    // config_declaration ::= config config_identifier ; { local_parameter_declaration ;
+    // }design_statement { config_rule_statement } endconfig [ : config_identifier ]
     void handle(const ConfigBlockSymbol& t);
 
     // specify_block ::= specify { specify_item } endspecify
     void handle(const SpecifyBlockSymbol& t);
 
-    //specparam_declaration ::= specparam [ packed_dimension ] list_of_specparam_assignments ;
+    // specparam_declaration ::= specparam [ packed_dimension ] list_of_specparam_assignments ;
     void handle(const SpecparamSymbol& t);
-    
-    // path_declaration ::=simple_path_declaration ;| edge_sensitive_path_declaration ; | state_dependent_path_declaration;
+
+    // path_declaration ::=simple_path_declaration ;| edge_sensitive_path_declaration ; |
+    // state_dependent_path_declaration;
     void handle(const TimingPathSymbol& t);
     
+    // dient voor SubroutineSymbol, MethodPrototypeSymbol
     // method_prototype ::= task_prototype | function_prototype
-    void handle(const MethodPrototypeSymbol& t);
+    // function_prototype ::= function data_type_or_void function_identifier [ ( [ tf_port_list ] ) ]
+    // task_prototype ::= task task_identifier [ ( [ tf_port_list ] ) ]
+    template< IsFunc T>
+    void handle(const T& t);
 
     void handle(const FormalArgumentSymbol& t);
 
@@ -348,12 +373,41 @@ public:
 
     void handle(const CompilationUnitSymbol& t);
 
-    //checker_declaration ::= checker checker_identifier [ ( [ checker_port_list ] ) ] ; { { attribute_instance } checker_or_generate_item } endchecker [ : checker_identifier ]
+    // class_property ::= { property_qualifier } data_declaration
+    void handle(const ClassPropertySymbol& t);
+
+    // checker_declaration ::= checker checker_identifier [ ( [ checker_port_list ] ) ] ; { {
+    // attribute_instance } checker_or_generate_item } endchecker [ : checker_identifier ]
     void handle(const CheckerSymbol& t);
+
+    void handle(const CheckerInstanceSymbol& t);
+
+    // checker_declaration  { { attribute_instance } checker_or_generate_item } insert deze waarden
+    // bij Checker symbol
+    void handle(const CheckerInstanceBodySymbol& t);
+
+    // clocking_declaration ::= [ default ] clocking [ clocking_identifier ] clocking_event ;{
+    // clocking_item }endclocking [ : clocking_identifier ]
+    void handle(const ClockingBlockSymbol& t);
 
     /// { package_import_declaration } [ parameter_port_list ] [ list_of_port_declarations ];
     void handle(const InstanceBodySymbol& t);
 
+
+    void handle(const GenericClassDefSymbol& t);
+
+    // constraint_declaration ::= [ static ] constraint constraint_identifier constraint_block
+    void handle(const ConstraintBlockSymbol& t);
+
+    void handle(const ConstraintList& t);
+
+    void handle(const ExpressionConstraint& t);
+
+    void handle(const ImplicationConstraint& t);
+    void handle(const SolveBeforeConstraint& t);
+    void handle(const ConditionalConstraint& t);
+    void handle(const ForeachConstraint& t);
+    void handle(const DisableSoftConstraint& t);
 
 
     std::string lowerFirstLetter(std::string_view string) {

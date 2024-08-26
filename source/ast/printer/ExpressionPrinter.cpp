@@ -6,28 +6,7 @@
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
 
-#include <cctype>
-#include <iostream>
-#include <list>
-#include <regex>
-#include <set>
-#include <string>
-#include <string_view>
-
-#include "slang/ast/ASTVisitor.h"
-#include "slang/ast/HierarchicalReference.h"
-#include "slang/ast/SemanticFacts.h"
 #include "slang/ast/printer/defaultAstPrinter.h"
-#include "slang/ast/expressions/LiteralExpressions.h"
-#include "slang/ast/expressions/SelectExpressions.h"
-#include "slang/ast/symbols/BlockSymbols.h"
-#include "slang/ast/symbols/ParameterSymbols.h"
-#include "slang/ast/symbols/PortSymbols.h"
-#include "slang/ast/symbols/VariableSymbols.h"
-#include "slang/ast/types/NetType.h"
-#include "slang/ast/types/Type.h"
-#include "slang/util/LanguageVersion.h"
-#include "slang/util/Util.h"
 
 namespace slang::ast {
 
@@ -138,14 +117,14 @@ void AstPrinter::handle(const CallExpression& t) {
     write(t.getSubroutineName());
     writeAttributeInstances(t);
 
-    write("(");
+    write("(",false);
     for (auto arg : t.arguments()) {
         arg->visit(*this);
         if (arg != t.arguments().back()) {
             write(",");
         }
     }
-    write(")");
+    write(")",false);
 }
 
 void AstPrinter::handle(const NamedValueExpression& t) {
@@ -187,5 +166,74 @@ void AstPrinter::handle(const ElementSelectExpression& t) {
     write("]", false);
 }
 
+void AstPrinter::handle(const ArbitrarySymbolExpression& t) {
+   write(t.symbol->name);
+}
+//expression_or_dist ::= expression [ dist { dist_list } ]
+//dist_item ::= value_range [ dist_weight ]
+//dist_weight ::=:= expression| :/ expression
+void AstPrinter::handle(const DistExpression& t){
+    t.left().visit(*this);
+    write("dist");
+    write("{");
+    for (auto dist:t.items()){
+        dist.value.visit(*this);
+        if (dist.weight.has_value()){
+            if (dist.weight.value().kind== DistExpression::DistWeight::PerValue)
+                write(":=");
+            else
+                write(":/");
+            dist.weight->expr->visit(*this);
+        }
+        if (&dist.value != &(t.items().back().value))
+            write(",", false);
+        
+    }
+    write("}");
+
+    }
+    //inside_expression ::= expression inside { open_range_list }
+    void AstPrinter::handle(const InsideExpression& t){
+        t.left().visit(*this);
+        write("inside");
+        write("{");
+        visitMembers<Expression>(t.rangeList());
+        write("}");
+    }
+    
+    //value_range ::=expression| [ expression : expression ]
+    void AstPrinter::handle(const RangeSelectExpression& t){
+            t.value().visit(*this);
+            write("[",false);
+            t.left().visit(*this);
+            write(":",false);
+            t.right().visit(*this);
+            write("]",false);
+    }
+    
+/*
+void AstPrinter::handle(const BinaryAssertionExpr& t){
+    t.left.visit(*this);
+    // ensures that compound operators work ex: += would be +=+ without this
+    write(t.op);
+    t.right.visit(*this);}
+
+//property_instance ::= ps_or_hierarchical_property_identifier [ ( [ property_list_of_arguments ] ) ]
+void AstPrinter::handle(const AssertionInstanceExpression& t){
+    write(t.symbol.name);
+    write("(");
+
+    write(")");
+    t.body.visit(*this);
+}
+
+void AstPtinter::handle(const ClockingAssertionExpr& t){
+    
+}
+
+void AstPrinter::handle(const SimpleAssertionExpr& t){
+    
+}
+*/
 
 } // namespace slang::ast

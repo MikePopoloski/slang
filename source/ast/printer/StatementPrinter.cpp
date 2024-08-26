@@ -6,28 +6,8 @@
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
 
-#include <cctype>
-#include <iostream>
-#include <list>
-#include <regex>
-#include <set>
-#include <string>
-#include <string_view>
-
-#include "slang/ast/ASTVisitor.h"
-#include "slang/ast/HierarchicalReference.h"
-#include "slang/ast/SemanticFacts.h"
 #include "slang/ast/printer/defaultAstPrinter.h"
-#include "slang/ast/expressions/LiteralExpressions.h"
-#include "slang/ast/expressions/SelectExpressions.h"
-#include "slang/ast/symbols/BlockSymbols.h"
-#include "slang/ast/symbols/ParameterSymbols.h"
-#include "slang/ast/symbols/PortSymbols.h"
-#include "slang/ast/symbols/VariableSymbols.h"
-#include "slang/ast/types/NetType.h"
-#include "slang/ast/types/Type.h"
-#include "slang/util/LanguageVersion.h"
-#include "slang/util/Util.h"
+
 
 namespace slang::ast {
 
@@ -354,6 +334,31 @@ void AstPrinter::handle(const ImmediateAssertionStatement& t){
         write("else");
         t.ifFalse->visit(*this);
     }
+}
+
+// concurrent_assertion_statement ::=assert_property_statement| assume_property_statement
+// assert_property_statement      ::=assert property ( property_spec ) action_block
+void AstPrinter::handle(const ConcurrentAssertionStatement& t){
+    write(t.assertionKind);
+    write("property");
+    write("(");
+    // property_spec ::=[clocking_event ] [ disable iff ( expression_or_dist ) ] property_expr
+    t.propertySpec.visit(*this);
+    write(")");
+    // action_block ::= statement_or_null | [ statement ] else statement_or_null
+    if (t.ifTrue)
+        indentation_level++;
+        t.ifTrue->visit(*this);
+        indentation_level--;
+
+
+    if (t.ifFalse){
+        write("else");
+        indentation_level++;
+        t.ifFalse->visit(*this);
+        indentation_level--;
+    }
+    write("\n");
 }
 
 } // namespace slang::ast

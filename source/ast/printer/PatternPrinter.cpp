@@ -5,28 +5,9 @@
 // SPDX-FileCopyrightText: Michael Popoloski, Easics
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
-#include <cctype>
-#include <iostream>
-#include <list>
-#include <regex>
-#include <set>
-#include <string>
-#include <string_view>
 
-#include "slang/ast/ASTVisitor.h"
-#include "slang/ast/HierarchicalReference.h"
-#include "slang/ast/SemanticFacts.h"
 #include "slang/ast/printer/defaultAstPrinter.h"
-#include "slang/ast/expressions/LiteralExpressions.h"
-#include "slang/ast/expressions/SelectExpressions.h"
-#include "slang/ast/symbols/BlockSymbols.h"
-#include "slang/ast/symbols/ParameterSymbols.h"
-#include "slang/ast/symbols/PortSymbols.h"
-#include "slang/ast/symbols/VariableSymbols.h"
-#include "slang/ast/types/NetType.h"
-#include "slang/ast/types/Type.h"
-#include "slang/util/LanguageVersion.h"
-#include "slang/util/Util.h"
+
 
 namespace slang::ast {
 

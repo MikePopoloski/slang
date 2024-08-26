@@ -6,27 +6,9 @@
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
 
-#include <cctype>
-#include <iostream>
-#include <list>
-#include <regex>
-#include <set>
-#include <string>
-#include <string_view>
-
-#include "slang/ast/ASTVisitor.h"
-#include "slang/ast/HierarchicalReference.h"
-#include "slang/ast/SemanticFacts.h"
+#include <iterator>
+#include "slang/ast/Constraints.h"
 #include "slang/ast/printer/defaultAstPrinter.h"
-#include "slang/ast/expressions/LiteralExpressions.h"
-#include "slang/ast/expressions/SelectExpressions.h"
-#include "slang/ast/symbols/BlockSymbols.h"
-#include "slang/ast/symbols/ParameterSymbols.h"
-#include "slang/ast/symbols/PortSymbols.h"
-#include "slang/ast/symbols/VariableSymbols.h"
-#include "slang/ast/types/NetType.h"
-#include "slang/ast/types/Type.h"
-#include "slang/util/LanguageVersion.h"
 #include "slang/util/Util.h"
 
 namespace slang::ast {
@@ -109,5 +91,123 @@ void AstPrinter::handle(const TypeAliasType& t) {
     int dot_loc = type_str.rfind(".");
     typeConversions.insert({type_str.substr(0, dot_loc), std::string(t.name)});
 }
+/*
+class_declaration ::=
+[ virtual ] class [ lifetime ] class_identifier [ parameter_port_list ]
+[ extends class_type [ ( list_of_arguments ) ] ]
+[ implements interface_class_type { , interface_class_type } ] ;
+{ class_item }
+endclass [ : class_identifier]*/
+void AstPrinter::handle(const ClassType& t) {
+    if (t.isAbstract)
+        write("virtual");
+    write("class");
 
-} // namespace slang::ast
+    if (t.thisVar)
+        // [ lifetime ] class_identifier
+        write(t.thisVar->lifetime == VariableLifetime::Static ? "static" : "automatic");
+        const Type& data_type = t.thisVar->getDeclaredType().get()->getType();
+        write(convertType(data_type.toString()), true, true);
+
+    if (t.getBaseClass() != nullptr){
+        write("extends");
+        write(t.getBaseClass()->name);
+    }
+
+    if (!t.getDeclaredInterfaces().empty()){
+        write("implements");
+        for (auto interface: t.getDeclaredInterfaces()){
+            interface->visit(*this);
+        }
+    }
+
+    write(";\n");
+
+    indentation_level++;
+    // ingore the last 
+    visitMembers(t.getFirstMember());
+    indentation_level--;
+
+    write("endclass\n");
+}
+                 
+void AstPrinter::handle(const ConstraintList& t) {
+    visitMembers<Constraint>(t.list, ";",true);
+}
+
+void AstPrinter::handle(const ExpressionConstraint& t) {
+    if(t.isSoft)
+        write("soft");
+    t.expr.visit(*this);
+}
+
+//constraint_expression ::=[ soft ] expression –> constraint_set ;
+void AstPrinter::handle(const ImplicationConstraint& t) {
+    //t.expr.visit(*this);
+    t.predicate.visit(*this);
+    write("->");
+    write("{");
+    t.body.visit(*this);
+    write(";");
+    write("}\n");
+
+}
+
+//constraint_block_item ::= solve solve_before_list before solve_before_list ;
+void AstPrinter::handle(const SolveBeforeConstraint& t) {
+    write("solve");
+    visitMembers<>(t.solve);
+    write("before");
+    visitMembers<>(t.after);
+
+    //t.expr.visit(*this);
+}
+
+//
+void AstPrinter::handle(const ConditionalConstraint& t) {
+    write("if(");
+    t.predicate.visit(*this);
+    write("){\n");
+    indentation_level++;
+    t.ifBody.visit(*this);
+    indentation_level--;
+    write("}\n");
+    if (t.elseBody){
+        write("else{\n");
+        t.elseBody->visit(*this);
+    }
+    write("}\n");
+    }
+
+void AstPrinter::handle(const DisableSoftConstraint& t) {
+    write("disable soft");
+    t.target.visit(*this);
+    }
+    //t.expr.visit(*this);
+
+//foreach ( ps_or_hierarchical_array_identifier [ loop_variables ] ) constraint_set
+void AstPrinter::handle(const slang::ast::ForeachConstraint& t) {
+    write("foreach(" );
+    t.arrayRef.visit(*this);
+    if (!t.loopDims.empty()){
+        write("[",false);
+        for(auto LoopDim:t.loopDims ){
+            write(LoopDim.loopVar->name);
+            if (LoopDim.range.has_value())
+                write(LoopDim.range.value().toString(),false);
+
+        }
+        write("]",false);
+    }
+    write(")",false );
+    write("{\n",false);
+    indentation_level++;
+    t.body.visit(*this);
+    indentation_level--;
+    write("}\n",false);
+
+
+}
+
+}
+ // namespace slang::ast
