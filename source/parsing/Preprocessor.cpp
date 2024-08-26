@@ -247,6 +247,7 @@ Token Preprocessor::nextMasked() {
                     SLANG_UNREACHABLE;
 
                 default:
+                    break;
             }
         }
 
