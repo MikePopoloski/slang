@@ -766,13 +766,15 @@ void PrimitivePortSymbol::serializeTo(ASTSerializer& serializer) const {
 // Each 'bit' is one input value in the row.
 class BitTrie {
 public:
-    // Tries to insert the row. Returns nullptr if the row is
-    // successfully inserted, and a pointer to the previously
-    // inserted row with the same bit pattern if a collision
+    // Tries to insert the row. Returns nullopt if the row is
+    // successfully inserted, and a set of the previously
+    // inserted rows with the same bit pattern if a collision
     // is found.
     template<typename TAllocator>
-    const UdpEntrySyntax* insert(const UdpEntrySyntax& syntax, std::span<const char> inputs,
-                                 char stateChar, TAllocator& allocator) {
+    std::optional<SmallVector<const UdpEntrySyntax*, 4>> insert(const UdpEntrySyntax& syntax,
+                                                                std::span<const char> inputs,
+                                                                char stateChar,
+                                                                TAllocator& allocator) {
         SmallVector<BitTrie*> nodes;
         BitTrie* primary = this;
         nodes.push_back(this);
@@ -808,14 +810,13 @@ public:
                     advance('0');
                     break;
                 case 'p':
-                case 'n': {
-                    // Special handling for iteration of edge specifiers.
-                    SmallVector<BitTrie*> nextNodes;
-                    for (auto node : nodes)
-                        node->nextNodesForEdge(c, nextNodes, primary, allocator);
-                    nodes = std::move(nextNodes);
+                    advance('6');
+                    advance('7');
                     break;
-                }
+                case 'n':
+                    advance('7');
+                    advance('6');
+                    break;
                 default:
                     break;
             }
@@ -827,17 +828,24 @@ public:
 
         // If any of our nodes have entries we won't insert,
         // as it means we have a duplicate.
+        SmallVector<const UdpEntrySyntax*, 4> eSyntaxes;
         for (auto node : nodes) {
             if (node->entry)
-                return node->entry;
+                eSyntaxes.push_back(node->entry);
         }
 
-        // If we have an empty node set we saw an error somewhere,
+        // Always store so as not to miss info it in case of possible overlap.
+        // If the primary->entry already has a value,
+        // then rewriting will not spoil anything,
+        // since the rewriting will be to the equivalent grammar.
+        primary->entry = &syntax;
+
+        // If we have an empty syntaxes set we saw an error somewhere,
         // in which case don't insert. Otherwise we've found the
         // correct place to insert, pointed to by the primary.
-        if (!nodes.empty())
-            primary->entry = &syntax;
-        return nullptr;
+        if (eSyntaxes.empty())
+            return std::nullopt;
+        return eSyntaxes;
     }
 
 private:
@@ -868,15 +876,19 @@ private:
                 handle(0, true);
                 handle(3);
                 handle(4);
+                handle(6);
                 break;
             case '1':
                 handle(1, true);
                 handle(3);
                 handle(4);
+                handle(7);
                 break;
             case 'x':
                 handle(2, true);
                 handle(3);
+                handle(6);
+                handle(7);
                 break;
             case '?':
                 handle(3, true);
@@ -884,6 +896,8 @@ private:
                 handle(1);
                 handle(2);
                 handle(4);
+                handle(6);
+                handle(7);
                 break;
             case 'b':
                 handle(4, true);
@@ -899,6 +913,22 @@ private:
             case 'n':
                 handle(5, true);
                 break;
+            // Below are implicit node identifiers that cannot be found in the UDP grammar. They are
+            // helpers for `p` and `n`.
+            // Handling `0` or `x`.
+            case '6':
+                handle(6, true);
+                handle(0);
+                handle(2);
+                handle(3);
+                break;
+            // Handling `1` or `x` (for `p` and `n` matching cases).
+            case '7':
+                handle(7, true);
+                handle(1);
+                handle(2);
+                handle(3);
+                break;
             default:
                 // On error clear all nodes. Assume someone else
                 // (the parser) has reported the error already.
@@ -907,41 +937,7 @@ private:
         }
     }
 
-    template<typename TAllocator>
-    void nextNodesForEdge(char c, SmallVector<BitTrie*>& nextNodes, BitTrie*& primaryNode,
-                          TAllocator& allocator) {
-        SmallVector<BitTrie*> results;
-        auto handle = [&](char first, char second) {
-            // We have to do this in two steps when expanding the edge char.
-            BitTrie* unused = nullptr;
-            SmallVector<BitTrie*> temp;
-            nextNodesFor(first, temp, primaryNode, allocator);
-            for (auto node : temp) {
-                for (char d : {second, 'x'})
-                    node->nextNodesFor(d, results, d == second ? primaryNode : unused, allocator);
-            }
-
-            temp.clear();
-            nextNodesFor('x', temp, unused, allocator);
-            for (auto node : temp)
-                node->nextNodesFor(second, results, unused, allocator);
-        };
-
-        if (c == 'p')
-            handle('0', '1');
-        else
-            handle('1', '0');
-
-        // We have to de-dup now because we iterated multiple times
-        // for the same slot.
-        SmallSet<BitTrie*, 4> set;
-        for (auto node : results) {
-            if (set.emplace(node).second)
-                nextNodes.push_back(node);
-        }
-    }
-
-    BitTrie* children[6] = {};
+    BitTrie* children[8] = {};
     const UdpEntrySyntax* entry = nullptr;
 };
 
@@ -1076,18 +1072,20 @@ static void createTableRow(const Scope& scope, const UdpEntrySyntax& syntax,
         }
     };
 
-    auto existing = trie.insert(syntax, inputs, stateChar, trieAlloc);
-    if (existing) {
-        // This is an error if the existing row has a different output,
-        // otherwise it's just silently ignored.
-        auto existingOutput = getOutputChar(existing->next);
-        auto existingState = getStateChar(existing->current);
-        if (!(existingOutput == outputChar ||
-              matchOutput(existingState, existingOutput, outputChar) ||
-              matchOutput(stateChar, outputChar, existingOutput))) {
-            auto& diag = scope.addDiag(diag::UdpDupDiffOutput, syntax.sourceRange());
-            diag.addNote(diag::NotePreviousDefinition, existing->sourceRange());
-            return;
+    auto existingSyntaxes = trie.insert(syntax, inputs, stateChar, trieAlloc);
+    if (existingSyntaxes.has_value()) {
+        for (const auto* existing : existingSyntaxes.value()) {
+            // This is an error if the existing row has a different output,
+            // otherwise it's just silently ignored.
+            auto existingOutput = getOutputChar(existing->next);
+            auto existingState = getStateChar(existing->current);
+            if (!(existingOutput == outputChar ||
+                  matchOutput(existingState, existingOutput, outputChar) ||
+                  matchOutput(stateChar, outputChar, existingOutput))) {
+                auto& diag = scope.addDiag(diag::UdpDupDiffOutput, syntax.sourceRange());
+                diag.addNote(diag::NotePreviousDefinition, existing->sourceRange());
+                return;
+            }
         }
     }
     else if (allX && outputChar != 'x') {

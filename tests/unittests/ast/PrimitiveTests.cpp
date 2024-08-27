@@ -433,8 +433,36 @@ primitive p(output reg o, input a, b);
   endtable
 endprimitive
 
+primitive pp (q, clock, data);
+  output q; reg q;
+  input clock, data;
+  table
+    // clock data q q+
+    p ? : ? : 1 ;
+    (x1) ? : ? : 0;
+    n ? : ? : 1 ;
+    (1x) ? : ? : 0;
+    ? (??) : ? : - ;
+  endtable
+endprimitive
+
+primitive ppp (q, clock, data);
+  output q; reg q;
+  input clock, data;
+  table
+    // clock data q q+
+    (?0) ? : ? : 1 ;
+    (0?) ? : ? : 1 ;
+    (01) ? : ? : 0 ;
+    (??) ? : ? : - ;
+    ? (??) : ? : - ;
+  endtable
+endprimitive
+
 module top;
   p p1(o, a, b);
+  pp pp1(o, a, b);
+  ppp ppp1(o, a, b);
 endmodule
 )");
 
@@ -442,10 +470,13 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 3);
+    REQUIRE(diags.size() == 6);
     CHECK(diags[0].code == diag::UdpDupDiffOutput);
     CHECK(diags[1].code == diag::UdpDupDiffOutput);
     CHECK(diags[2].code == diag::UdpDupDiffOutput);
+    CHECK(diags[3].code == diag::UdpDupDiffOutput);
+    CHECK(diags[4].code == diag::UdpDupDiffOutput);
+    CHECK(diags[5].code == diag::UdpDupDiffOutput);
 }
 
 TEST_CASE("UDP overlapping inputs with compatible outputs") {
