@@ -2,7 +2,7 @@
 //! @file EtcPrinter.cpp
 //! @brief adds Support for printing TimingControls, Types,... from the ast
 //
-// SPDX-FileCopyrightText: Michael Popoloski, Easics
+// SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
 
@@ -14,6 +14,22 @@
 namespace slang::ast {
 
 void AstPrinter::handle(const EventListControl& t) {
+    // I think these are only used in SignalEventControl. to make this syntax possible  @(A,B,....)
+    this->inEventList = true;
+    this->isFrontEventList = true;
+    for (auto event : t.events) {
+        if (event == t.events.back())
+            this->isBackEventList = true;
+        event->visit(*this);
+        this->isFrontEventList = false;
+
+        if (event != t.events.back())
+            write(",",false);
+    }
+    this->inEventList = false;
+    this->isBackEventList = false;
+    this->inEventList = false;
+
     
 }
 
@@ -58,7 +74,10 @@ void AstPrinter::handle(const Delay3Control& t) {
 // event_control::= @ ( event_expression )
 // event_expression ::=[ edge_identifier ] expression [ iff expression ]
 void AstPrinter::handle(const SignalEventControl& t) {
-    write("@(");
+    if (isFrontEventList || !inEventList)
+        write("@(");
+    
+
     if (t.edge == EdgeKind::BothEdges) {
         write("edge");
     }
@@ -70,7 +89,10 @@ void AstPrinter::handle(const SignalEventControl& t) {
         write("iff");
         (*t.iffCondition).visit(*this);
     }
-    write(")");
+
+    if (isBackEventList || !inEventList)
+        write(")");
+
 }
 
 void AstPrinter::handle(const ImplicitEventControl& t) {

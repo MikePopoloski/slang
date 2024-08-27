@@ -492,6 +492,11 @@ private:
     bool squashNewlines = true;
     bool useTempBuffer = false;
 
+    bool inEventList = false;
+    bool isFrontEventList = false;
+    bool isBackEventList = false;
+
+
     // the amount of spaces after a newline is depth*depth_multplier
     int indentation_level = 0;
     const int indentation_multiplier = 3;

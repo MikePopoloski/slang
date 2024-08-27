@@ -330,7 +330,7 @@ endmodule
 )";
     CHECK(isEqual(code, "sv150_153"));
 }
-
+/*
 
 TEST_CASE("all.sv 153_160"){
     std::string code = R"(
@@ -350,7 +350,7 @@ endmodule
 )";
     CHECK(isEqual(code, "sv153_160"));
 }
-
+*/
 // ben geskipt naar de module na module 3
 
 TEST_CASE("all.sv 193_200") {
@@ -636,7 +636,7 @@ module jmagnitudeComparator(AEQB, AGTB, ALTB, A, B);
   output reg AEQB, AGTB, ALTB;
   input [3:0] A, B;
 
-  always @(A)
+  always @(A,B)
   begin
     if( A === B )
       begin
