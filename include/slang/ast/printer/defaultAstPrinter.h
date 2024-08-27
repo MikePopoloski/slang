@@ -25,6 +25,7 @@
 #include "slang/ast/symbols/ParameterSymbols.h"
 #include "slang/ast/symbols/PortSymbols.h"
 #include "slang/ast/symbols/VariableSymbols.h"
+#include "slang/ast/types/AllTypes.h"
 #include "slang/ast/types/NetType.h"
 #include "slang/ast/types/Type.h"
 #include "slang/util/LanguageVersion.h"
@@ -131,6 +132,12 @@ public:
     //value_range ::=expression| [ expression : expression ]
     void handle(const RangeSelectExpression& t);
 
+    //class_new ::=[ class_scope ] new [ ( list_of_arguments ) ]
+    void handle(const NewClassExpression& t);
+
+    //class_new ::=[ class_scope ] new [ ( list_of_arguments ) ]
+    void handle(const MemberAccessExpression& t);
+
     // void handle(const AssertionInstanceExpression& t);
 
     // void handle(const SimpleAssertionExpr& t);
@@ -150,6 +157,10 @@ public:
     void handle(const TypeAliasType& t);
 
     void handle(const ClassType& t);
+
+    //covergroup_declaration ::= covergroup covergroup_identifier [ ( [ tf_port_list ] ) ] [ coverage_event ] ;{ coverage_spec_or_option } endgroup [ : covergroup_identifier ]
+    void handle(const CovergroupType& t);
+
 
     //
     void handle(const EmptyStatement& t);
@@ -272,6 +283,9 @@ public:
 
     void handle(const Delay3Control& t);
 
+    void handle(const EventListControl& t);
+
+
     /// module_declaration    ::= module_ansi_header [ timeunits_declaration ] {
     /// non_port_module_item } endmodule [ : module_identifier ] interface_declaration ::=
     /// interface_ansi_header [ timeunits_declaration ] { non_port_interface_item } endinterface [ :
@@ -293,6 +307,10 @@ public:
     ///                          | [ variable_port_header ] port_identifier { variable_dimension } [
     ///                          = constant_expression ]
     void handle(const slang::ast::PortSymbol& t);
+
+    ///(non ansi) port ::=[ port_expression ] | . port_identifier ( [ port_expression ] )
+    /// port_reference ::= port_identifier constant_select
+   void handleNonAnsiPort(const slang::ast::PortSymbol& t);
 
     /// ansi_port_declaration ::=[ interface_port_header ] port_identifier { unpacked_dimension } [
     /// = constant_expression ]
@@ -398,8 +416,22 @@ public:
 
     // constraint_declaration ::= [ static ] constraint constraint_identifier constraint_block
     void handle(const ConstraintBlockSymbol& t);
+    
+    // production ::= [ data_type_or_void ] production_identifier [ ( tf_port_list ) ] : rs_rule { | rs_rule } ;
+    void handle(const RandSeqProductionSymbol& t);
+
+    void handle(const RandSequenceStatement& t);
+
+
+    void handle(const RandSeqProductionSymbol::ProdBase& t);
+
+    void handle(const RandSeqProductionSymbol::CaseItem& t);
+
+    void handle(std::span<const RandSeqProductionSymbol::Rule> t);
 
     void handle(const ConstraintList& t);
+
+    void handle(const CoverpointSymbol& t);
 
     void handle(const ExpressionConstraint& t);
 
@@ -408,6 +440,8 @@ public:
     void handle(const ConditionalConstraint& t);
     void handle(const ForeachConstraint& t);
     void handle(const DisableSoftConstraint& t);
+
+
 
 
     std::string lowerFirstLetter(std::string_view string) {
@@ -435,8 +469,8 @@ private:
     std::string buffer;
     std::string* tempBuffer;
     std::list<std::string> writeNextBuffer;
-    // used make sure the internalSymbol of ports aren't written as a member of a instanceBody
-    std::set<const slang::ast::Symbol*> internalSymbols;
+    // used to  make sure the internalSymbol of ansi ports aren't written as a member of a instanceBody, the direction of ansi ports is known
+    std::map<const slang::ast::Symbol*, ArgumentDirection> internalSymbols;
     // used to ensure interfaces, .. are only written fully  once
     std::set<const slang::ast::InstanceBodySymbol*> initializedInstances;
     // the type in the ast is not the type defined by the type alias, this map is used to convert
@@ -469,13 +503,19 @@ private:
         // ex: type alieas union tagged{void Invalid;int Valid;}m3.u$1 (this is named VInt)
         //     getType(): union tagged{void Invalid;int Valid;}m3.VInt
         std::regex reg("}.*?(?= .\\S*?;)");
+        // removes class identifiers because they are unwanted most of the time
+        // ex: enum{red=32'sd0,green=32'sd1,blue=32'sd2}C3::e 
+        std::regex reg2("(?=}).*::.*");
         type = std::regex_replace(type, reg, "}");
+        type = std::regex_replace(type, reg2, "}");
 
         int dot_loc = type.rfind(".");
         if (typeConversions.count(type.substr(0, dot_loc)))
             return typeConversions[type.substr(0, dot_loc)];
         return type;
     }
+
+
     
     // this function visits all of tthe member and all of its siblings
     void visitMembers(const Symbol* member){
@@ -494,8 +534,6 @@ private:
     template<typename T>
     void visitMembers(std::span<const T* const>  t, const std::string& divider=",", bool newline=false) {
         for (auto item : t) {
-            //named_checker_port_connection ::= { attribute_instance } . formal_port_identifier [ ( [ property_actual_arg ] ) ]
-            //writeAttributeInstances(*item);
 
             item->visit(*this);
             if (item != t.back())
@@ -505,6 +543,19 @@ private:
                     write("\n", false);
         }
     }
+
+    template<typename T>
+    void visitMembers(std::span<const T>  t, const std::string& divider=",", bool newline=false) {
+        for (auto item : t) {
+            handle(item);
+            if (&item != &t.back())
+                write(divider,false);
+                std::string* writeBuffer = (useTempBuffer) ? (tempBuffer) : (&this->buffer);
+                if (newline && ("\n" != (*writeBuffer).substr((*writeBuffer).length() - 1, (* writeBuffer).length() - 1)))
+                    write("\n", false);
+        }
+    }
+
 
 
     void write(std::string_view string, bool add_spacer = true, bool use_dollar = false) {
@@ -632,8 +683,14 @@ private:
             case (BinaryOperator::Equality):
                 write("==", false);
                 break;
+            case (BinaryOperator::CaseEquality):
+                write("===", false);
+                break;
             case (BinaryOperator::Inequality):
                 write("!=", false);
+                break;
+            case (BinaryOperator::CaseInequality):
+                write("!==", false);
                 break;
             case (BinaryOperator::LessThan):
                 write("<", false);
@@ -680,6 +737,10 @@ private:
             case (BinaryOperator::LogicalShiftRight):
                 write("<<");
                 break;
+            case (BinaryOperator::Power):
+                write("**");
+                break;
+
             default:
                 SLANG_UNREACHABLE;
         }

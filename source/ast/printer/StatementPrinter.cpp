@@ -360,5 +360,17 @@ void AstPrinter::handle(const ConcurrentAssertionStatement& t){
     }
     write("\n");
 }
+//randsequence_statement ::= randsequence ( [ production_identifier ] ) production { production } endsequence
+void AstPrinter::handle(const RandSequenceStatement& t){
+    //
+    write("randsequence(");
+    write(t.firstProduction->name);
+    write(")\n");
+    indentation_level++;
+    t.firstProduction->visit(*this);
+    indentation_level--;
+    write("endsequence");
+}
+
 
 } // namespace slang::ast

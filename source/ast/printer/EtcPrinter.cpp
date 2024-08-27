@@ -13,6 +13,10 @@
 
 namespace slang::ast {
 
+void AstPrinter::handle(const EventListControl& t) {
+    
+}
+
 // delay_control ::= # delay_value | # ( mintypmax_expression )
 void AstPrinter::handle(const DelayControl& t) {
     write("#");
@@ -50,6 +54,7 @@ void AstPrinter::handle(const Delay3Control& t) {
     }
 }
 
+
 // event_control::= @ ( event_expression )
 // event_expression ::=[ edge_identifier ] expression [ iff expression ]
 void AstPrinter::handle(const SignalEventControl& t) {
@@ -57,7 +62,7 @@ void AstPrinter::handle(const SignalEventControl& t) {
     if (t.edge == EdgeKind::BothEdges) {
         write("edge");
     }
-    else {
+    else if (t.edge!=EdgeKind::None){
         write(lower(toString(t.edge)));
     }
     t.expr.visit(*this);
@@ -130,6 +135,25 @@ void AstPrinter::handle(const ClassType& t) {
 
     write("endclass\n");
 }
+
+//covergroup_declaration ::=covergroup covergroup_identifier [ ( [ tf_port_list ] ) ] [ coverage_event ] ;{ coverage_spec_or_option } endgroup [ : covergroup_identifier ]
+void AstPrinter::handle(const CovergroupType& t) {
+    write("covergroup");
+    write(t.name);
+    if(!t.getArguments().empty()){
+        write("(");
+        visitMembers(t.getArguments());
+        write(")");
+    }
+    t.getCoverageEvent()->visit(*this);
+    // tf_port_list not found
+    write(";\n");
+    visitMembers(t.getArguments().back()->getNextSibling());
+
+    write("endgroup");
+}
+
+
                  
 void AstPrinter::handle(const ConstraintList& t) {
     visitMembers<Constraint>(t.list, ";",true);
@@ -205,8 +229,6 @@ void AstPrinter::handle(const slang::ast::ForeachConstraint& t) {
     t.body.visit(*this);
     indentation_level--;
     write("}\n",false);
-
-
 }
 
 }

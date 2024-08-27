@@ -6,6 +6,8 @@
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
 
+#include <cstddef>
+#include "slang/ast/expressions/MiscExpressions.h"
 #include "slang/ast/printer/defaultAstPrinter.h"
 
 namespace slang::ast {
@@ -113,18 +115,23 @@ void AstPrinter::handle(const BinaryExpression& t) {
 // subroutine_call ::= tf_call | system_tf_call | method_call | [ std:: ] randomize_call
 //  ps_or_hierarchical_tf_identifier { attribute_instance } [ ( list_of_arguments ) ]
 //  system_tf_call ::= system_tf_identifier [ ( list_of_arguments ) ]
-void AstPrinter::handle(const CallExpression& t) {
-    write(t.getSubroutineName());
+void AstPrinter::handle(const CallExpression& t){
+    bool hasThisClass =t.thisClass()!= nullptr ;
+    if(hasThisClass){
+        t.thisClass()->visit(*this);
+        write(".",false);
+    }
+    write(t.getSubroutineName(),!hasThisClass);
     writeAttributeInstances(t);
 
-    write("(",false);
+    write("(", false);
     for (auto arg : t.arguments()) {
         arg->visit(*this);
         if (arg != t.arguments().back()) {
             write(",");
         }
     }
-    write(")",false);
+    write(")", false);
 }
 
 void AstPrinter::handle(const NamedValueExpression& t) {
@@ -149,10 +156,10 @@ void AstPrinter::handle(const IntegerLiteral& t) {
     write(t.getValue().toString());
 }
 
-void AstPrinter::handle(const StringLiteral& t){
-        write("\"");
-        write(t.getValue(),false);
-        write("\"",false);
+void AstPrinter::handle(const StringLiteral& t) {
+    write("\"");
+    write(t.getValue(), false);
+    write("\"", false);
 }
 
 void AstPrinter::handle(const RealLiteral& t) {
@@ -167,19 +174,19 @@ void AstPrinter::handle(const ElementSelectExpression& t) {
 }
 
 void AstPrinter::handle(const ArbitrarySymbolExpression& t) {
-   write(t.symbol->name);
+    write(t.symbol->name);
 }
-//expression_or_dist ::= expression [ dist { dist_list } ]
-//dist_item ::= value_range [ dist_weight ]
-//dist_weight ::=:= expression| :/ expression
-void AstPrinter::handle(const DistExpression& t){
+// expression_or_dist ::= expression [ dist { dist_list } ]
+// dist_item ::= value_range [ dist_weight ]
+// dist_weight ::=:= expression| :/ expression
+void AstPrinter::handle(const DistExpression& t) {
     t.left().visit(*this);
     write("dist");
     write("{");
-    for (auto dist:t.items()){
+    for (auto dist : t.items()) {
         dist.value.visit(*this);
-        if (dist.weight.has_value()){
-            if (dist.weight.value().kind== DistExpression::DistWeight::PerValue)
+        if (dist.weight.has_value()) {
+            if (dist.weight.value().kind == DistExpression::DistWeight::PerValue)
                 write(":=");
             else
                 write(":/");
@@ -187,30 +194,40 @@ void AstPrinter::handle(const DistExpression& t){
         }
         if (&dist.value != &(t.items().back().value))
             write(",", false);
-        
     }
     write("}");
+}
+// inside_expression ::= expression inside { open_range_list }
+void AstPrinter::handle(const InsideExpression& t) {
+    t.left().visit(*this);
+    write("inside");
+    write("{");
+    visitMembers<Expression>(t.rangeList());
+    write("}");
+}
 
-    }
-    //inside_expression ::= expression inside { open_range_list }
-    void AstPrinter::handle(const InsideExpression& t){
-        t.left().visit(*this);
-        write("inside");
-        write("{");
-        visitMembers<Expression>(t.rangeList());
-        write("}");
-    }
-    
-    //value_range ::=expression| [ expression : expression ]
-    void AstPrinter::handle(const RangeSelectExpression& t){
-            t.value().visit(*this);
-            write("[",false);
-            t.left().visit(*this);
-            write(":",false);
-            t.right().visit(*this);
-            write("]",false);
-    }
-    
+// value_range ::=expression| [ expression : expression ]
+void AstPrinter::handle(const RangeSelectExpression& t) {
+    t.value().visit(*this);
+    write("[", false);
+    t.left().visit(*this);
+    write(":", false);
+    t.right().visit(*this);
+    write("]", false);
+}
+
+//class_new ::=[ class_scope ] new [ ( list_of_arguments ) ]
+void AstPrinter::handle(const NewClassExpression& t) {
+    write(t.type->toString());
+    write("::new",false);
+}
+
+//
+void AstPrinter::handle(const MemberAccessExpression& t) {
+    t.value().visit(*this);
+    write(".",false);
+    write(t.member.name,false);
+}
 /*
 void AstPrinter::handle(const BinaryAssertionExpr& t){
     t.left.visit(*this);
@@ -218,21 +235,19 @@ void AstPrinter::handle(const BinaryAssertionExpr& t){
     write(t.op);
     t.right.visit(*this);}
 
-//property_instance ::= ps_or_hierarchical_property_identifier [ ( [ property_list_of_arguments ] ) ]
-void AstPrinter::handle(const AssertionInstanceExpression& t){
-    write(t.symbol.name);
-    write("(");
+//property_instance ::= ps_or_hierarchical_property_identifier [ ( [ property_list_of_arguments ] )
+] void AstPrinter::handle(const AssertionInstanceExpression& t){ write(t.symbol.name); write("(");
 
     write(")");
     t.body.visit(*this);
 }
 
 void AstPtinter::handle(const ClockingAssertionExpr& t){
-    
+
 }
 
 void AstPrinter::handle(const SimpleAssertionExpr& t){
-    
+
 }
 */
 

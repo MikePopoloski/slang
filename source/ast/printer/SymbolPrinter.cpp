@@ -8,9 +8,10 @@
 
 #include "slang/ast/Symbol.h"
 #include "slang/ast/printer/defaultAstPrinter.h"
+#include "slang/ast/symbols/CoverSymbols.h"
+#include "slang/ast/symbols/MemberSymbols.h"
 #include "slang/ast/symbols/SubroutineSymbols.h"
-
-
+#include "slang/util/Util.h"
 
 namespace slang::ast {
 
@@ -160,29 +161,31 @@ void AstPrinter::handle(const slang::ast::InstanceSymbol& t) {
     }
 }
 
-/// ansi_port_declaration ::=[ net_port_header  ] port_identifier { unpacked_dimension } [ =
-/// constant_expression ]
-///                          | [ variable_port_header ] port_identifier { variable_dimension } [=
-///                          constant_expression ]
+/// ansi_port_declaration ::=[ net_port_header  ] port_identifier { unpacked_dimension } [ =constant_expression ]
+///                          | [ variable_port_header ] port_identifier { variable_dimension } [= constant_expression ]
 void AstPrinter::handle(const slang::ast::PortSymbol& t) {
     // net_port_header      ::= [ port_direction ] net_port_type
     // variable_port_header ::= [ port_direction ] variable_port_type
-    write(t.direction);
 
+    internalSymbols.insert({t.internalSymbol,t.direction});
+
+    if (!t.isAnsiPort){
+        return handleNonAnsiPort(t);
+    }
+    
     if (t.internalSymbol) {
+        // direction word via internalSymbols map geregeld
         t.internalSymbol->visit(*this);
-        internalSymbols.insert(t.internalSymbol);
     }
-
     else {
-        write(convertType(t.getType().toString()), true, true);
-    }
-    // write port_identifier
-    // write(t.name);
-    if (!t.isNetPort()) {
-        // variable_dimension ::= unsized_dimension | unpacked_dimension | associative_dimension
-        // | queue_dimension
-        // TODODODODODODOD samen met unpacked
+        write(t.direction);
+        // added suppor for 
+        if (t.getType().toString() == "void"){
+            write(".$()",true,true);
+            write(t.name,false);
+        }else{
+             write(convertType(t.getType().toString()), true, true);
+        }
     }
 
     if (t.getInternalExpr())
@@ -192,6 +195,15 @@ void AstPrinter::handle(const slang::ast::PortSymbol& t) {
         write("=", false);
         t.getInitializer()->visit(*this);
     }
+}
+
+///(non ansi) port ::=[ port_expression ] | . port_identifier ( [ port_expression ] )
+/// port_reference ::= port_identifier constant_select
+void AstPrinter::handleNonAnsiPort(const slang::ast::PortSymbol& t){
+        write(t.name);
+        if (t.getInternalExpr())
+            t.getInternalExpr()->visit(*this);
+
 }
 
 /// ansi_port_declaration ::=[ interface_port_header ] port_identifier { unpacked_dimension } [
@@ -218,6 +230,10 @@ void AstPrinter::handle(const slang::ast::InterfacePortSymbol& t) {
 
 /// net_port_type ::= [ net_type ] data_type_or_implicit
 void AstPrinter::handle(const slang::ast::NetSymbol& t) {
+    // add the direction if this symbol is part of the port declaration
+    if (internalSymbols.count(&t) !=0)
+        write(internalSymbols[&t]);
+
     if (!t.isImplicit) {
         write(t.netType.netKind);
         write(convertType(t.getType().toString()), true, true);
@@ -239,13 +255,20 @@ void AstPrinter::handle(const slang::ast::ScalarType& t) {
 /// var_data_type      ::= data_type | var data_type_or_implicit
 // data_declaration10 ::=  [ var ] [ lifetime ] data_type_or_implicit
 void AstPrinter::handle(const slang::ast::VariableSymbol& t) {
+    // add the direction if this symbol is part of the port declaration
+    bool isPort = internalSymbols.count(&t) !=0;
+    if (isPort)
+        write(internalSymbols[&t]);
+
+    write("var");
     // without this the module ast doesn't contain the name of the variable for no apparent reason
-    if ((t.flags & VariableFlags::RefStatic) != VariableFlags::RefStatic)
+    //( after processing the new source code)
+    if (!t.flags.has(VariableFlags::RefStatic) && !isPort)
         write(t.lifetime == VariableLifetime::Static ? "static" : "automatic");
 
-    if ((t.flags & VariableFlags::CheckerFreeVariable) == VariableFlags::CheckerFreeVariable)
+    if (t.flags.has(VariableFlags::CheckerFreeVariable))
         write("rand");
-    
+
     const Type& data_type = t.getDeclaredType().get()->getType();
     bitmask<DeclaredTypeFlags> flags = t.getDeclaredType().get()->getFlags();
 
@@ -264,38 +287,35 @@ void AstPrinter::handle(const slang::ast::VariableSymbol& t) {
     }
 }
 void AstPrinter::handle(const slang::ast::ClassPropertySymbol& t) {
-    if (t.randMode!=RandMode::None){
+    if (t.randMode != RandMode::None) {
         write(lower(toString(t.randMode)));
     }
-    const VariableSymbol& u= t;
+    const VariableSymbol& u = t;
     this->handle(u);
 }
-
 
 void AstPrinter::handle(const slang::ast::MultiPortSymbol& t) {
     if (t.isNullPort) {
         return visitDefault(t);
     }
 
-    write(t.direction);
+    //write(t.direction);
 
-    write(convertType(t.getType().toString()), true, true);
+    //write(convertType(t.getType().toString()), true, true);
     write(".");
     write(t.name, false);
-    write("(\n", false);
+    write("({", false);
 
-    indentation_level++;
     for (auto port : t.ports) {
-        if (!port)
+        if (port ==nullptr)
             continue;
 
         port->visit(*this);
 
         if (port != t.ports.back())
-            write(",\n", false);
+            write(",", false);
     }
-    indentation_level--;
-    write(")");
+    write("})");
 }
 
 /// parameter_declaration ::= parameter data_type_or_implicit list_of_param_assignments
@@ -457,23 +477,28 @@ void AstPrinter::handle(const InstanceBodySymbol& t) {
 
     // list_of_port_declarations2 ::=( [ { attribute_instance} ansi_port_declaration { , {
     // attribute_instance} ansi_port_declaration } ] )
-    internalSymbols.clear();
     if (!t.getPortList().empty()) {
-        write(std::string_view("(\n"), false);
-
+        write(std::string_view("("), false);
+        bool isAnsi = false;
         for (auto port : t.getPortList()) {
             if (!port)
                 continue;
             writeAttributeInstances(*port);
 
             port->visit(*this);
+
+            // check if the declaration is nonAnsi
+            if(!isAnsi && port->kind ==SymbolKind::Port){
+                isAnsi = ((slang::ast::PortSymbol*) port)->isAnsiPort;
+            }
+
             if (port != t.getPortList().back())
-                write(",\n", false);
+                write(",", false);
         }
 
         // the remainingMember shouden't be one of the internal symbols -> skip these
         remainingMember = t.getPortList().back()->getNextSibling();
-        while (internalSymbols.count(remainingMember) != 0)
+        while (isAnsi && internalSymbols.count(remainingMember) != 0 && remainingMember)
             remainingMember = remainingMember->getNextSibling();
 
         write(")");
@@ -682,7 +707,7 @@ void AstPrinter::handle(const TimingPathSymbol& t) {
 // method_prototype ::= task_prototype | function_prototype
 // function_prototype ::= function data_type_or_void function_identifier [ ( [ tf_port_list ] ) ]
 // task_prototype ::= task task_identifier [ ( [ tf_port_list ] ) ]
-template< IsFunc T>
+template<IsFunc T>
 void AstPrinter::handle(const T& t) {
     if ((t.flags & MethodFlags::InterfaceExtern) == MethodFlags::InterfaceExtern)
         // extern_tf_declaration ::=extern method_prototype;
@@ -714,28 +739,24 @@ void AstPrinter::handle(const T& t) {
     write(t.name);
 
     // tf_port_list
-    write("(",false);
+    write("(", false);
     for (auto arg : t.getArguments()) {
         arg->visit(*this);
         if (arg != t.getArguments().back())
-            write(",",false);
+            write(",", false);
     }
-    write(")",false);
+    write(")", false);
 
-    if(t.isKind(SymbolKind::Subroutine)){
-        write(";\n",false);
-        ((const SubroutineSymbol&) t).getBody().visit(*this);
+    if (t.isKind(SymbolKind::Subroutine)) {
+        write(";\n", false);
+        ((const SubroutineSymbol&)t).getBody().visit(*this);
         write("end");
-        write(lowerFirstLetter(toString(t.subroutineKind)),false);
-        write("\n",false);
-
+        write(lowerFirstLetter(toString(t.subroutineKind)), false);
+        write("\n", false);
     }
-
-
 }
 
 // exact dezelfde implementatie als methodeprotoype
-
 
 void AstPrinter::handle(const FormalArgumentSymbol& t) {
     write(t.getType().toString());
@@ -746,8 +767,9 @@ void AstPrinter::handle(const FormalArgumentSymbol& t) {
     }
 }
 
-void AstPrinter::handle(const UninstantiatedDefSymbol& t){
-    // module_instantiation ::= module_identifier [ parameter_value_assignment ] hierarchical_instance { , hierarchical_instance } ;
+void AstPrinter::handle(const UninstantiatedDefSymbol& t) {
+    // module_instantiation ::= module_identifier [ parameter_value_assignment ]
+    // hierarchical_instance { , hierarchical_instance } ;
     write(t.definitionName);
     write(t.name);
 
@@ -767,10 +789,10 @@ void AstPrinter::handle(const CompilationUnitSymbol& t) {
     // TypeAliases can also be attached to a compilationUnit
     write(blockBuffer);
     blockBuffer = "";
-
 }
-//checker_declaration ::= checker checker_identifier [ ( [ checker_port_list ] ) ] ; { { attribute_instance } checker_or_generate_item } endchecker [ : checker_identifier ]
-void AstPrinter::handle(const CheckerSymbol& t){
+// checker_declaration ::= checker checker_identifier [ ( [ checker_port_list ] ) ] ; { {
+// attribute_instance } checker_or_generate_item } endchecker [ : checker_identifier ]
+void AstPrinter::handle(const CheckerSymbol& t) {
     write("checker");
     write(t.name);
     write("(");
@@ -791,8 +813,9 @@ void AstPrinter::handle(const CheckerSymbol& t){
     write(");\n");
     //  { { attribute_instance } checker_or_generate_item }
 
-    // if a CheckerInstanceBodySymbol is in the ast it will find this comment and replace it with the content of the body 
-    std::string identifier = "//" + std::to_string((unsigned long long)(void *)&t);
+    // if a CheckerInstanceBodySymbol is in the ast it will find this comment and replace it with
+    // the content of the body
+    std::string identifier = "//" + std::to_string((unsigned long long)(void*)&t);
     write(identifier);
 
     write("endchecker\n");
@@ -800,25 +823,27 @@ void AstPrinter::handle(const CheckerSymbol& t){
 
 void AstPrinter::handle(const CheckerInstanceSymbol& t) {
     t.body.visit(*this);
-    //checker_instantiation ::= ps_checker_identifier name_of_instance ( [list_of_checker_port_connections] ) ;
-    if (!t.getPortConnections().empty()){
+    // checker_instantiation ::= ps_checker_identifier name_of_instance (
+    // [list_of_checker_port_connections] ) ;
+    if (!t.getPortConnections().empty()) {
         write(t.body.name);
         write(t.name);
         write("(");
-        //list_of_checker_port_connections
+        // list_of_checker_port_connections
         for (auto conn : t.getPortConnections()) {
-            //named_checker_port_connection ::= { attribute_instance } . formal_port_identifier [ ( [ property_actual_arg ] ) ]
+            // named_checker_port_connection ::= { attribute_instance } . formal_port_identifier [ (
+            // [ property_actual_arg ] ) ]
             std::visit(
                 [&](auto&& arg) {
                     if (arg)
                         arg->visit(*this);
-                },conn.actual);
+                },
+                conn.actual);
 
             if (&conn.formal != &t.getPortConnections().back().formal)
                 write(",", false);
         }
         write(")");
-
     }
 }
 
@@ -832,7 +857,6 @@ void AstPrinter::handle(const CheckerInstanceBodySymbol& t) {
     while (remainingMember && remainingMember->kind == SymbolKind::AssertionPort)
         remainingMember = remainingMember->getNextSibling();
 
-
     std::string programBuffer;
     this->tempBuffer = &programBuffer;
 
@@ -840,18 +864,19 @@ void AstPrinter::handle(const CheckerInstanceBodySymbol& t) {
     visitMembers(remainingMember);
     this->useTempBuffer = false;
 
-
     // while elaborating the name of the port is replaced with the name of the argument
-    std::string checker_identifier = R"(\/\/)" + std::to_string((unsigned long long)(void *)&t.checker);
+    std::string checker_identifier = R"(\/\/)" +
+                                     std::to_string((unsigned long long)(void*)&t.checker);
     std::regex reg(checker_identifier);
 
-    // 
+    //
     this->buffer = std::regex_replace(this->buffer, reg, programBuffer);
 }
 
 /*
-clocking_declaration ::= [ default ] clocking [ clocking_identifier ] clocking_event ;{ clocking_item }endclocking [ : clocking_identifier ]
-                         | global clocking [ clocking_identifier ] clocking_event ; endclocking [ : clocking_identifier]
+clocking_declaration ::= [ default ] clocking [ clocking_identifier ] clocking_event ;{
+clocking_item }endclocking [ : clocking_identifier ] | global clocking [ clocking_identifier ]
+clocking_event ; endclocking [ : clocking_identifier]
 */
 void AstPrinter::handle(const ClockingBlockSymbol& t) {
     write("default clocking");
@@ -864,19 +889,18 @@ void AstPrinter::handle(const ClockingBlockSymbol& t) {
     write("endclocking\n");
 }
 
-//TODO: ast uitbreiden om deze fe beter te ondersteunen
+// TODO: ast uitbreiden om deze fe beter te ondersteunen
 void AstPrinter::handle(const GenericClassDefSymbol& t) {
     write(t.getSyntax()->toString());
     write("endclass \n");
-
 }
-//constraint_declaration ::= [ static ] constraint constraint_identifier constraint_block
-void AstPrinter::handle(const ConstraintBlockSymbol& t){
+// constraint_declaration ::= [ static ] constraint constraint_identifier constraint_block
+void AstPrinter::handle(const ConstraintBlockSymbol& t) {
     if (t.flags.has(ConstraintBlockFlags::Static))
         write("static");
     write("constraint");
     write(t.name);
-    //constraint_block ::= { { constraint_block_item } }
+    // constraint_block ::= { { constraint_block_item } }
     write("{\n");
     indentation_level++;
 
@@ -885,4 +909,131 @@ void AstPrinter::handle(const ConstraintBlockSymbol& t){
 
     write("}");
 }
+
+// production ::= [ data_type_or_void ] production_identifier [ ( tf_port_list ) ] : rs_rule { |
+// rs_rule } ;
+void AstPrinter::handle(const RandSeqProductionSymbol& t) {
+    write(t.name, false);
+    if (!t.arguments.empty()) {
+        write("(");
+        visitMembers(t.arguments);
+        write(")");
+    }
+    // tf_port_list apears to be unimplemented
+    write(":");
+    handle(t.getRules());
+    write(";\n");
+    if(t.getNextSibling()!= nullptr && t.getNextSibling()->kind ==SymbolKind::RandSeqProduction){
+        t.getNextSibling()->visit(*this);
+    }
+
+}
+//rs_case_item ::=case_item_expression { , case_item_expression } : production_item ;
+void AstPrinter::handle(const RandSeqProductionSymbol::CaseItem& t) {
+    visitMembers(t.expressions,",");
+    write(":",false);
+    handle(t.item);
+}
+
+void AstPrinter::handle(const RandSeqProductionSymbol::ProdBase& t) {
+    switch (t.kind) {
+        // production_item ::= production_identifier [ ( list_of_arguments ) ]
+        case (RandSeqProductionSymbol::ProdKind::Item): {
+            auto prodItem = ((const RandSeqProductionSymbol::ProdItem& ) t);
+            write(prodItem.target->name);
+            if (!prodItem.args.empty()) {
+                write("(", false);
+                visitMembers(prodItem.args);
+                write(")", false);
+            }
+            break;
+        }
+        // rs_code_block ::= { { data_declaration } { statement_or_null } }
+        case (RandSeqProductionSymbol::ProdKind::CodeBlock): {
+            write("{");
+            auto codeBlock = (const RandSeqProductionSymbol::CodeBlockProd& )t;
+            codeBlock.block->visit(*this);
+            write("}");
+            break;
+        }
+        //rs_if_else ::= if ( expression ) production_item [ else production_item ]
+        case (RandSeqProductionSymbol::ProdKind::IfElse): {
+            write("if(");
+            auto ifElseItem = (const RandSeqProductionSymbol::IfElseProd&)t;
+            ifElseItem.expr->visit(*this);
+            write(")");
+            ifElseItem.ifItem.visit(*this);\
+            if(ifElseItem.elseItem.has_value()){
+                write("else");
+                handle(ifElseItem.elseItem.value());
+            }
+            break;
+        }
+        //rs_repeat ::= repeat ( expression ) production_item
+        case (RandSeqProductionSymbol::ProdKind::Repeat): {
+            write("repeat(");
+            auto repeatItem = (const RandSeqProductionSymbol::RepeatProd&)t;
+            repeatItem.expr->visit(*this);
+            write(")");
+            handle(repeatItem.item);
+            break;
+        }
+
+        //rs_case ::= case ( case_expression ) rs_case_item { rs_case_item } endcase
+        case (RandSeqProductionSymbol::ProdKind::Case): {
+            write("case(");
+            auto caseItem = (const RandSeqProductionSymbol::CaseProd&)t;
+            caseItem.expr->visit(*this);
+            write(")\n");
+            visitMembers(caseItem.items,";",true);
+            //rs_case_item:= default [ : ] production_item ;
+            if (caseItem.defaultItem.has_value()){
+                write("default :");
+                handle(caseItem.defaultItem.value());
+            }
+            write("endcase");
+
+            break;
+        }
+    }
+}
+
+// rs_rule ::= rs_production_list [ := weight_specification [ rs_code_block ] ]
+void AstPrinter::handle(std::span<const RandSeqProductionSymbol::Rule> t) {
+    //rs_rule ::= rs_production_list [ := weight_specification [ rs_code_block ] ]
+    for (int i=0;i<t.size();i++) {
+        auto rule = t[i];
+        // rs_production_list ::= rs_prod { rs_prod }
+        //                     | rand join [ ( expression ) ] production_item production_item {
+        //                     production_item }
+        if (rule.isRandJoin) {
+            write("rand join");
+            write("(", false);
+            if(rule.randJoinExpr)
+                rule.randJoinExpr->visit(*this);
+            write(")", false);
+        }
+        visitMembers(rule.prods);
+        if (rule.weightExpr!= nullptr){
+            write(":=");
+            rule.weightExpr->visit(*this);
+            if (rule.codeBlock.has_value())
+                handle(rule.codeBlock.value());
+        }
+
+        if (i !=t.size()-1) {
+            write("|");
+        }
+    }
+}
+
+//cover_point ::=[ [ data_type_or_implicit ] cover_point_identifier : ] coverpoint expression [ iff ( expression ) ] bins_or_empty
+void AstPrinter::handle(const CoverpointSymbol& t){
+    write(t.declaredType.getType().toString());
+    write(t.name);
+    write(":");
+    write("coverpoint");
+    t.getCoverageExpr().visit(*this);
+}
+
 } // namespace slang::ast

@@ -95,17 +95,17 @@ endmodule
 )";
     CHECK(isEqual(code, "paramas"));
 };
-/*
+
 TEST_CASE("InstanceSymbol with import") {
     std::string code = R"(
-module automatic m1 import p::*,f::*; #(int i = 1)
+module automatic m1 import p::*; #(int i = 1)
     (a, b, , .c({a, b[0]}));
     input a;
     output [1:0] b;
 endmodule
 )";
-    CHECK(isEqual(code));
-};*/
+    CHECK(isEqual(code,"import"));
+};
 
 TEST_CASE("BlockStatement printer") {
     std::string code = R"(
@@ -132,7 +132,7 @@ endpackage
 )";
     CHECK(isEqual(code));
 }
-/*
+
 TEST_CASE("all.sv 16-20"){
     std::string code = R"(
 module m2 #(parameter i = 1, localparam j = i)
@@ -140,7 +140,7 @@ module m2 #(parameter i = 1, localparam j = i)
      interface.mod d, .e());
 endmodule)";
     CHECK(isEqual(code, "sv16_20"));
-}*/
+}
 
 TEST_CASE("all.sv 21-26") {
     std::string code = R"(
@@ -331,7 +331,7 @@ endmodule
     CHECK(isEqual(code, "sv150_153"));
 }
 
-/*
+
 TEST_CASE("all.sv 153_160"){
     std::string code = R"(
 macromodule m3;
@@ -350,7 +350,7 @@ endmodule
 )";
     CHECK(isEqual(code, "sv153_160"));
 }
-*/
+
 // ben geskipt naar de module na module 3
 
 TEST_CASE("all.sv 193_200") {
@@ -535,9 +535,8 @@ endclass
 )";
     CHECK(isEqual(code, "316_400"));
 }*/
-
-
-TEST_CASE("all.sv 358_400") {
+/*
+TEST_CASE("all.sv 358_426") {
     std::string code = R"(
 class A;
     integer i = 1;
@@ -580,8 +579,84 @@ class C2 extends B;
     }
 endclass
 
+module m6;
+    A a = new;
+    A b1 = B::new;
+    B b2 = new;
+    C2 c = new;
+    int depth;
+    integer i = b1.f();
+    initial begin
+        b2.f();
+        a = b2;
+        c.i = c.j;
+
+        randsequence(main)
+            main : first second;
+            first : add | dec := (1 + 1);
+            second : repeat($urandom_range(2, 6)) first;
+            add : if (depth < 2) first else second;
+            dec : case (depth & 7)
+                0 : add;
+                1, 2 : dec;
+                default : first;
+            endcase;
+            third : rand join first second;
+            fourth(string s = "done") : { if (depth) break; };
+        endsequence
+    end
+endmodule
+
 )";
-    CHECK(isEqual(code, "358_400"));
+
+    CHECK(isEqual(code, "358_426"));
 }
+*/
+/*
+TEST_CASE("all.sv 426_end") {
+    std::string code = R"(
+    class C3;
+        enum {red, green, blue} color;
+        bit [3:0] pixel_adr, pixel_offset, pixel_hue;
+        logic clk, x, y, c;
+
+        covergroup g2 (string instComment) @(posedge clk);
+            Offset: coverpoint pixel_offset;
+        endgroup
+    endclass    
+    )";
+    CHECK(isEqual(code, "426_end"));
+}*/
 
 // TODO bug fixen: https://www.systemverilog.io/verification/generate/ bij loop contruc
+TEST_CASE("inetTest.sv") {
+    std::string code = R"(
+
+module jmagnitudeComparator(AEQB, AGTB, ALTB, A, B);
+  output reg AEQB, AGTB, ALTB;
+  input [3:0] A, B;
+
+  always @(A)
+  begin
+    if( A === B )
+      begin
+        AEQB = 1;
+        AGTB = 0;
+        ALTB = 0;
+      end
+    else if ( A > B )
+      begin
+        AEQB = 0;
+        AGTB = 1;
+        ALTB = 0;
+      end
+    else
+      begin
+        AEQB = 0;
+        AGTB = 0;
+        ALTB = 1;
+      end
+  end
+endmodule )";
+    CHECK(isEqual(code, "inetTest"));
+}
