@@ -39,12 +39,7 @@ void AstPrinter::handle(const WaitForkStatement& t) {
 // action_block
 void AstPrinter::handle(const WaitOrderStatement& t) {
     write("wait_order (");
-    for (auto hierarchical_identifier : t.events) {
-        hierarchical_identifier->visit(*this);
-        if (hierarchical_identifier != t.events.back()) {
-            write(",");
-        }
-    }
+    visitMembers<>(t.events);
     write(")");
 
     // action_block ::=statement _or_null | [ statement ] else statement
@@ -155,12 +150,7 @@ void AstPrinter::handle(const ForLoopStatement& t) {
     write("for (");
 
     // for_initialization ::= list_of_variable_assignments
-    for (auto initializer : t.initializers) {
-        (*initializer).visit(*this);
-        if (initializer != t.initializers.back()) {
-            write(",");
-        }
-    }
+    visitMembers<>(t.initializers);
     write(";");
 
     // stop expression
@@ -169,12 +159,7 @@ void AstPrinter::handle(const ForLoopStatement& t) {
 
     // for_step_assignment ::=operator_assignment| inc_or_dec_expression |
     // function_subroutine_call
-    for (auto step_expr : t.steps) {
-        (*step_expr).visit(*this);
-        if (step_expr != t.steps.back()) {
-            write(",");
-        }
-    }
+    visitMembers<>(t.steps);
     write(")\n");
     indentation_level++;
     t.body.visit(*this);
@@ -243,11 +228,7 @@ void AstPrinter::handle(const CaseStatement& t) {
 
     for (auto item : t.items) {
         // case_item :: case_item_expression { , case_item_expression } : statement_or_null
-        for (auto expr : item.expressions) {
-            expr->visit(*this);
-            if (expr != item.expressions.back())
-                write(",");
-        }
+        visitMembers<>(item.expressions);
         write(":");
         item.stmt->visit(*this);
         write("\n");

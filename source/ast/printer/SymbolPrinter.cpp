@@ -306,15 +306,8 @@ void AstPrinter::handle(const slang::ast::MultiPortSymbol& t) {
     write(t.name, false);
     write("({", false);
 
-    for (auto port : t.ports) {
-        if (port ==nullptr)
-            continue;
+    visitMembers<>(t.ports);
 
-        port->visit(*this);
-
-        if (port != t.ports.back())
-            write(",", false);
-    }
     write("})");
 }
 
@@ -383,11 +376,8 @@ void AstPrinter::handle(const ModportSymbol& t) {
 // net_alias ::= alias net_lvalue = net_lvalue { = net_lvalue } ;
 void AstPrinter::handle(const NetAliasSymbol& t) {
     write("alias");
-    for (auto expr : t.getNetReferences()) {
-        expr->visit(*this);
-        if (expr != t.getNetReferences().back())
-            write("=");
-    }
+    visitMembers<>( t.getNetReferences(),"=");
+
 }
 // property_declaration ::=property property_identifier [ ( [ property_port_list ] ) ] ;{
 // assertion_variable_declaration }property_spec [ ; ]endproperty
@@ -398,11 +388,7 @@ void AstPrinter::handle(const PropertySymbol& t) {
 
     if (!t.ports.empty()) {
         write("(");
-        for (auto port : t.ports) {
-            port->visit(*this);
-            if (port != t.ports.back())
-                write(",");
-        }
+        visitMembers<>(t.ports);
         auto symbol = ((PortSymbol*)t.ports.back())->internalSymbol;
         member = symbol ? symbol->getNextSibling() : t.ports.back();
         write(")");
@@ -566,11 +552,7 @@ void AstPrinter::handle(const PrimitiveSymbol& t) {
     // udp_declaration_port_list ::= udp_output_declaration , udp_input_declaration { ,
     // udp_input_declaration }
     write("(");
-    for (auto port : t.ports) {
-        port->visit(*this);
-        if (port != t.ports.back())
-            write(",", false);
-    }
+    visitMembers<>(t.ports);
     write(")\n");
     indentation_level++;
 
@@ -669,11 +651,7 @@ void AstPrinter::handle(const TimingPathSymbol& t) {
     write("(");
     // full_path_description ::=( list_of_path_inputs [ polarity_operator ] *> list_of_path_outputs
     // ) specify_input_terminal_descriptor ::=input_identifier [ [ constant_range_expression ] ]
-    for (auto input : t.getInputs()) {
-        input->visit(*this);
-        if (input != t.getInputs().back())
-            write(",", false);
-    }
+    visitMembers<>(t.getInputs());
 
     if (t.polarity == TimingPathSymbol::Polarity::Positive) {
         write("+", false);

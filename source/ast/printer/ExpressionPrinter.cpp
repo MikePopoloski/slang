@@ -34,12 +34,7 @@ void AstPrinter::handle(const HierarchicalValueExpression& t) {
 // net_lvalue ::={ net_lvalue { , net_lvalue } } (this is used in other instances asswel)
 void AstPrinter::handle(const ConcatenationExpression& t) {
     write("{");
-    for (auto op : t.operands()) {
-        op->visit(*this);
-        if (op != t.operands().back()) {
-            write(",");
-        }
-    }
+    visitMembers<>(t.operands());
     write("}");
 }
 
@@ -125,12 +120,7 @@ void AstPrinter::handle(const CallExpression& t){
     writeAttributeInstances(t);
 
     write("(", false);
-    for (auto arg : t.arguments()) {
-        arg->visit(*this);
-        if (arg != t.arguments().back()) {
-            write(",");
-        }
-    }
+    visitMembers<>(t.arguments());
     write(")", false);
 }
 
