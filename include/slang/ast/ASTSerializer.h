@@ -38,6 +38,13 @@ public:
     /// should be included in the JSON output.
     void setIncludeAddresses(bool set) { includeAddrs = set; }
 
+    /// Sets a flag that indicates whether the addresses type of AST objects 
+    /// should be included in the JSON output.
+    void setIncludeType(bool set) { includeType = set; }
+
+    bool getIncludeType() { return includeType; }
+
+
     /// Sets a flag that indicates whether source line and file
     /// information should be included in the JSON output.
     void setIncludeSourceInfo(bool set) { includeSourceInfo = set; }
@@ -173,6 +180,7 @@ private:
     Compilation& compilation;
     JsonWriter& writer;
     bool includeAddrs = true;
+    bool includeType =true;
     bool includeSourceInfo = false;
 };
 
