@@ -2039,6 +2039,16 @@ module m8(input wire [15:0] a, input wire [2:0] b, input wire [2:0] c, input wir
    alias {b, e[0]}  = {c, d[0]};
    alias e[1] = d[2];
 endmodule
+
+module m9(input wire [15:0] a, input wire [15:0] b, input wire [14:0] c, input wire [15:0] d, input wire [2:0] e);
+  alias b[13:0] = d[13:0];
+  alias b  = {c, d[14]};
+endmodule
+
+module m10(input wire [15:0] a, input wire [1:0] b);
+  alias a[1] = b[0];
+  alias a[0] = a[1];
+endmodule
 )");
 
     Compilation compilation;
@@ -2096,20 +2106,30 @@ module m3(input wire [15:0] a, input wire [2:0] b, input wire [2:0] c, input wir
    alias {b, e[0]}  = {c, d[0]};
    alias e[1] = d[2];
 endmodule
+
+module m10(input wire [15:0] a, input wire [15:0] b, input wire [14:0] c, input wire [15:0] d, input wire [2:0] e);
+  alias b[14:0] = d[14:0];
+  alias b  = {c, d[14]};
+endmodule
+
+module m11(input wire [15:0] a, input wire [1:0] b);
+  alias a[1] = b[0];
+  alias a[0] = b[0];
+endmodule
 )");
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 46);
+    REQUIRE(diags.size() == 48);
     CHECK(diags[0].code == diag::NetAliasWidthMismatch);
     CHECK(diags[1].code == diag::ExpressionNotAssignable);
     CHECK(diags[2].code == diag::NetAliasNotANet);
     CHECK(diags[3].code == diag::NetAliasHierarchical);
     CHECK(diags[4].code == diag::NetAliasCommonNetType);
     CHECK(diags[5].code == diag::MultipleNetAlias);
-    for (size_t i = 6; i < 46; ++i)
+    for (size_t i = 6; i < 48; ++i)
         CHECK(diags[i].code == diag::MultipleNetAlias);
 }
 
