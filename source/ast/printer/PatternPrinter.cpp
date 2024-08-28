@@ -70,8 +70,9 @@ void AstPrinter::handle(const WildcardPattern& t) {
 void AstPrinter::handle(const StructurePattern& t) {
     write("'{");
     for (auto field_pattern : t.patterns) {
+        int currentBuffer = changedBuffer;
         field_pattern.pattern->visit(*this);
-        if (field_pattern.pattern != t.patterns.back().pattern)
+        if (field_pattern.pattern != t.patterns.back().pattern && changedBuffer != currentBuffer)
             write(",");
     }
     write("}");

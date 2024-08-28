@@ -20,10 +20,11 @@ void AstPrinter::handle(const EventListControl& t) {
     for (auto event : t.events) {
         if (event == t.events.back())
             this->isBackEventList = true;
+        int currentBuffer = changedBuffer;
         event->visit(*this);
         this->isFrontEventList = false;
 
-        if (event != t.events.back())
+        if (event != t.events.back()&& changedBuffer != currentBuffer)
             write(",",false);
     }
     this->inEventList = false;
@@ -152,7 +153,7 @@ void AstPrinter::handle(const ClassType& t) {
 
     indentation_level++;
     // ingore the last 
-    visitMembers(t.getFirstMember());
+    visitMembers(t.getFirstMember() ,";");
     indentation_level--;
 
     write("endclass\n");
@@ -161,6 +162,7 @@ void AstPrinter::handle(const ClassType& t) {
 //covergroup_declaration ::=covergroup covergroup_identifier [ ( [ tf_port_list ] ) ] [ coverage_event ] ;{ coverage_spec_or_option } endgroup [ : covergroup_identifier ]
 void AstPrinter::handle(const CovergroupType& t) {
     write("covergroup");
+    // om een vreemde reden is de naam de naam van de laatste member
     write(t.name);
     if(!t.getArguments().empty()){
         write("(");
@@ -170,8 +172,7 @@ void AstPrinter::handle(const CovergroupType& t) {
     t.getCoverageEvent()->visit(*this);
     // tf_port_list not found
     write(";\n");
-    visitMembers(t.getArguments().back()->getNextSibling());
-
+    visitMembers(t.getArguments().back()->getNextSibling(),";");
     write("endgroup");
 }
 

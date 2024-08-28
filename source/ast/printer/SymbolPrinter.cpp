@@ -256,6 +256,9 @@ void AstPrinter::handle(const slang::ast::ScalarType& t) {
 // data_declaration10 ::=  [ var ] [ lifetime ] data_type_or_implicit
 void AstPrinter::handle(const slang::ast::VariableSymbol& t) {
     // add the direction if this symbol is part of the port declaration
+    if (t.flags.has(VariableFlags::CompilerGenerated ))
+        return;
+
     bool isPort = internalSymbols.count(&t) !=0;
     if (isPort)
         write(internalSymbols[&t]);
@@ -364,12 +367,7 @@ void AstPrinter::handle(const ModportSymbol& t) {
     write(t.name);
     write("(");
     auto member = t.getFirstMember();
-    while (member) {
-        member->visit(*this);
-        if (member != t.getLastMember())
-            write(",\n", false);
-        member = member->getNextSibling();
-    }
+    visitMembers(member,",");
     write(")");
 }
 
@@ -397,7 +395,7 @@ void AstPrinter::handle(const PropertySymbol& t) {
     write(";\n");
     indentation_level++;
 
-    visitMembers(member);
+    visitMembers(member,";");
 
     indentation_level--;
     write("endproperty\n");
@@ -435,8 +433,11 @@ void AstPrinter::handle(const InstanceBodySymbol& t) {
     if (wildCard) {
         write("import");
         for (auto imports : wildCard->wildcardImports) {
+
+            int currentBuffer = changedBuffer;
+
             imports->visit(*this);
-            if (imports != wildCard->wildcardImports.back())
+            if (changedBuffer != currentBuffer && imports != wildCard->wildcardImports.back())
                 write(",", false);
         }
         write(";", false);
@@ -449,9 +450,11 @@ void AstPrinter::handle(const InstanceBodySymbol& t) {
         for (auto param : t.getParameters()) {
             if (param->isBodyParam())
                 continue;
+            int currentBuffer = changedBuffer;
 
             param->symbol.visit(*this);
-            if (param != t.getParameters().back())
+
+            if (changedBuffer != currentBuffer && param != t.getParameters().back())
                 write(",", false);
 
             // implemented like this to prevent body params shifting the last param
@@ -493,7 +496,7 @@ void AstPrinter::handle(const InstanceBodySymbol& t) {
     write(";\n", false);
 
     // return if there are no remaining members
-    visitMembers(remainingMember);
+    visitMembers(remainingMember,";");
 }
 
 void AstPrinter::handle(const StatementBlockSymbol& t) {
@@ -606,7 +609,7 @@ void AstPrinter::handle(const ConfigBlockSymbol& t) {
     indentation_level++;
 
     auto member = t.getFirstMember();
-    visitMembers(member);
+    visitMembers(member,";");
 
     indentation_level--;
     write("endconfig\n");
@@ -666,19 +669,10 @@ void AstPrinter::handle(const TimingPathSymbol& t) {
     else {
         write("=>");
     }
+    visitMembers<>(t.getOutputs());
 
-    for (auto output : t.getOutputs()) {
-        output->visit(*this);
-        if (output != t.getOutputs().back())
-            write(",", false);
-    }
     write(")=(");
-
-    for (auto delay : t.getDelays()) {
-        delay->visit(*this);
-        if (delay != t.getDelays().back())
-            write(",", false);
-    }
+    visitMembers<>(t.getDelays());
     write(")");
 }
 
@@ -687,10 +681,42 @@ void AstPrinter::handle(const TimingPathSymbol& t) {
 // task_prototype ::= task task_identifier [ ( [ tf_port_list ] ) ]
 template<IsFunc T>
 void AstPrinter::handle(const T& t) {
-    if ((t.flags & MethodFlags::InterfaceExtern) == MethodFlags::InterfaceExtern)
+    // Ignore built-in methods on class types.
+    if (t.flags.has(MethodFlags::BuiltIn | MethodFlags::Randomize))
+        return;
+
+    if (t.flags.has( MethodFlags::Virtual) )
+        write("virtual");
+
+    if (t.flags.has( MethodFlags::Pure) )
+        write("pure virtual");
+
+    if (((t.flags & MethodFlags::Static) == MethodFlags::Static)) {
+        write("static");
+    }
+
+    if (t.flags.has( MethodFlags::InterfaceExtern) )
         // extern_tf_declaration ::=extern method_prototype;
         //                          extern forkjoin task_prototype ;
         write("extern");
+
+    if (t.flags.has( MethodFlags::Constructor) )
+        write("new");
+
+    if (t.flags.has( MethodFlags::DPIImport) )
+        write(R"(import "DPI")");
+
+    if (t.flags.has( MethodFlags::DPIContext) )
+        write(R"(import "DPI" context)");
+
+    if (t.flags.has( MethodFlags::Initial) )
+        write(R"(initial)");
+
+    if (t.flags.has( MethodFlags::Extends) )
+        write("extends");
+
+    if (t.flags.has( MethodFlags::Final) )
+        write("final");
 
     if ((t.flags & MethodFlags::ForkJoin) == MethodFlags::ForkJoin)
         write("forkjoin");
@@ -701,10 +727,6 @@ void AstPrinter::handle(const T& t) {
 
     if (((t.flags & MethodFlags::ModportImport) == MethodFlags::ModportImport)) {
         write("import");
-    }
-
-    if (((t.flags & MethodFlags::Static) == MethodFlags::Static)) {
-        write("static");
     }
 
     write(lowerFirstLetter(toString(t.subroutineKind)));
@@ -839,7 +861,7 @@ void AstPrinter::handle(const CheckerInstanceBodySymbol& t) {
     this->tempBuffer = &programBuffer;
 
     this->useTempBuffer = true;
-    visitMembers(remainingMember);
+    visitMembers(remainingMember,";");
     this->useTempBuffer = false;
 
     // while elaborating the name of the port is replaced with the name of the argument
@@ -862,7 +884,7 @@ void AstPrinter::handle(const ClockingBlockSymbol& t) {
     t.getEvent().visit(*this);
     write(";\n");
 
-    visitMembers(t.getFirstMember());
+    visitMembers(t.getFirstMember(),";");
 
     write("endclocking\n");
 }
@@ -963,7 +985,7 @@ void AstPrinter::handle(const RandSeqProductionSymbol::ProdBase& t) {
             auto caseItem = (const RandSeqProductionSymbol::CaseProd&)t;
             caseItem.expr->visit(*this);
             write(")\n");
-            visitMembers(caseItem.items,";",true);
+            visitMembers(caseItem.items,";");
             //rs_case_item:= default [ : ] production_item ;
             if (caseItem.defaultItem.has_value()){
                 write("default :");

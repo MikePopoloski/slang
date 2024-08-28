@@ -174,6 +174,7 @@ void AstPrinter::handle(const DistExpression& t) {
     write("dist");
     write("{");
     for (auto dist : t.items()) {
+        int currentBuffer = changedBuffer;
         dist.value.visit(*this);
         if (dist.weight.has_value()) {
             if (dist.weight.value().kind == DistExpression::DistWeight::PerValue)
@@ -182,7 +183,7 @@ void AstPrinter::handle(const DistExpression& t) {
                 write(":/");
             dist.weight->expr->visit(*this);
         }
-        if (&dist.value != &(t.items().back().value))
+        if (&dist.value != &(t.items().back().value) && changedBuffer != currentBuffer)
             write(",", false);
     }
     write("}");
