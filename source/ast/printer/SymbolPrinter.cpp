@@ -256,7 +256,7 @@ void AstPrinter::handle(const slang::ast::ScalarType& t) {
 // data_declaration10 ::=  [ var ] [ lifetime ] data_type_or_implicit
 void AstPrinter::handle(const slang::ast::VariableSymbol& t) {
     // add the direction if this symbol is part of the port declaration
-    if (t.flags.has(VariableFlags::CompilerGenerated ))
+    if (t.flags.has(VariableFlags::CompilerGenerated) | t.flags.has(VariableFlags::isDuplicate))
         return;
 
     bool isPort = internalSymbols.count(&t) !=0;
@@ -1034,6 +1034,20 @@ void AstPrinter::handle(const CoverpointSymbol& t){
     write(":");
     write("coverpoint");
     t.getCoverageExpr().visit(*this);
+}
+
+void AstPrinter::handle(const CovergroupBodySymbol& t){
+    // visit everything except for the class propertys
+    for (auto& member : t.members()){
+        if (member.kind == SymbolKind::ClassProperty)
+            continue;
+        else{
+            int currentBuffer = changedBuffer;
+            member.visit(*this);
+            if(changedBuffer != currentBuffer)
+                write(";\n");
+        }
+    }
 }
 
 } // namespace slang::ast

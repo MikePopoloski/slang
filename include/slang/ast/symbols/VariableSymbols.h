@@ -41,7 +41,11 @@ enum class SLANG_EXPORT VariableFlags : uint16_t {
     CheckerFreeVariable = 1 << 4,
 
     /// The variable is a function port with direction 'ref static'.
-    RefStatic = 1 << 5
+    RefStatic = 1 << 5,
+    
+    /// This variable contains no new information and should be ingored 
+    /// when printing the ast back to source code
+    isDuplicate = 1 << 6
 };
 SLANG_BITMASK(VariableFlags, RefStatic)
 

@@ -48,7 +48,7 @@ bool isEqual(std::string original_code, std::string name_test = "test") {
     auto [new_ast_json, new_rootAst] = getAst(new_compilation);
 
     // dump the content to a file if the ast don't match
-    if (true) {
+    if (new_ast_json!= old_ast_json) {
         name_test.append(".json");
         std::ofstream out(name_test);
         out << "original json:";
@@ -61,18 +61,7 @@ bool isEqual(std::string original_code, std::string name_test = "test") {
     }
     return old_ast_json == new_ast_json;
 }
-/*
-TEST_CASE("lowerFirstLetter function") {
-    slang::ast::AstPrinter printer;
-    std::string_view test_string = "Test12345";
-    CHECK(printer.lowerFirstLetter(test_string) == "test12345");
 
-    test_string = "";
-    CHECK(printer.lowerFirstLetter(test_string) == "");
-
-    test_string = "test";
-    CHECK(printer.lowerFirstLetter(test_string) == "test");
-};*/
 
 TEST_CASE("InstanceSymbol printer") {
     std::string code = R"(module Foo; endmodule)";
@@ -331,7 +320,6 @@ endmodule
     CHECK(isEqual(code, "sv150_153"));
 }
 /*
-
 TEST_CASE("all.sv 153_160"){
     std::string code = R"(
 macromodule m3;
@@ -349,8 +337,8 @@ macromodule m3;
 endmodule
 )";
     CHECK(isEqual(code, "sv153_160"));
-}
-*/
+}*/
+
 // ben geskipt naar de module na module 3
 
 TEST_CASE("all.sv 193_200") {
@@ -502,42 +490,15 @@ endmodule
     CHECK(isEqual(code, "309_314"));
 }
 
-/*
+
 TEST_CASE("all.sv 316_400") {
     std::string code = R"(
 class C;
     int i;
     static int j;
-    extern function int foo(int bar, int baz = 1);
+    // extern is ingonerd in the ast ???
+    //extern function int foo(int bar, int baz = 1);
 endclass
-
-class D;
-    static function real foo();
-        begin
-        end
-    endfunction
-endclass
-
-
-module m7;
-    G #(real) g1;
-    G #(int) g2;
-
-    int i = g2.foo();
-    real r = D::foo();
-endmodule
-
-class G #(type T);
-    extern function T foo;
-endclass
-
-
-)";
-    CHECK(isEqual(code, "316_400"));
-}*/
-/*
-TEST_CASE("all.sv 358_426") {
-    std::string code = R"(
 class A;
     integer i = 1;
     integer j = 2;
@@ -550,11 +511,20 @@ class B extends A;
     integer i = 2;
     function void f();
         i = j;
-        // super.i = super.j;
-        // j = super.f();
-        // j = this.super.f();
+        //super.i = super.j;
+        //j = super.f();
+        //j = this.super.f();
     endfunction
 endclass
+
+)";
+    CHECK(isEqual(code, "316_400"));
+}
+/*
+TEST_CASE("all.sv 358_426") {
+    std::string code = R"(
+
+
 
 
 class C2 extends B;
@@ -610,9 +580,8 @@ endmodule
 )";
 
     CHECK(isEqual(code, "358_426"));
-}
-*/
-/*
+}*/
+
 TEST_CASE("all.sv 426_end") {
     std::string code = R"(
     class C3;
@@ -626,7 +595,7 @@ TEST_CASE("all.sv 426_end") {
     endclass    
     )";
     CHECK(isEqual(code, "426_end"));
-}*/
+}
 
 // TODO bug fixen: https://www.systemverilog.io/verification/generate/ bij loop contruc
 TEST_CASE("inetTest.sv") {

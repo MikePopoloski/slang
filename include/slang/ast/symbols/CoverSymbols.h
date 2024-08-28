@@ -63,6 +63,8 @@ class SLANG_EXPORT CovergroupType : public Type, public Scope {
 public:
     using ArgList = std::span<const FormalArgumentSymbol* const>;
 
+    std::string_view name;
+
     CovergroupType(Compilation& compilation, std::string_view name, SourceLocation loc,
                    const CovergroupBodySymbol& body);
 

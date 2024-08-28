@@ -164,6 +164,7 @@ void AstPrinter::handle(const CovergroupType& t) {
     write("covergroup");
     // om een vreemde reden is de naam de naam van de laatste member
     write(t.name);
+
     if(!t.getArguments().empty()){
         write("(");
         visitMembers(t.getArguments());
@@ -173,9 +174,10 @@ void AstPrinter::handle(const CovergroupType& t) {
     // tf_port_list not found
     write(";\n");
     visitMembers(t.getArguments().back()->getNextSibling(),";");
-    write("endgroup");
+    write("endgroup\n");
 }
-
+void AstPrinter::handle(const CoverageOptionSetter& t){
+}
 
                  
 void AstPrinter::handle(const ConstraintList& t) {

@@ -161,6 +161,7 @@ public:
     //covergroup_declaration ::= covergroup covergroup_identifier [ ( [ tf_port_list ] ) ] [ coverage_event ] ;{ coverage_spec_or_option } endgroup [ : covergroup_identifier ]
     void handle(const CovergroupType& t);
 
+    void handle(const CoverageOptionSetter& t);
 
     //
     void handle(const EmptyStatement& t);
@@ -432,6 +433,7 @@ public:
     void handle(const ConstraintList& t);
 
     void handle(const CoverpointSymbol& t);
+    void handle(const CovergroupBodySymbol& t);
 
     void handle(const ExpressionConstraint& t);
 
