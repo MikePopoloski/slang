@@ -31,21 +31,19 @@
 #include "slang/util/LanguageVersion.h"
 #include "slang/util/Util.h"
 
-
-
 namespace slang::ast {
 
 template<typename T>
-concept IsFunc= requires(T t) {
+concept IsFunc = requires(T t) {
     // selecteerd SubroutineSymbol, MethodPrototypeSymbol
-   typeid(t.subroutineKind) ==typeid(SubroutineSymbol) || typeid(t.subroutineKind) ==typeid(MethodPrototypeSymbol);
-}; 
-
+    typeid(t.subroutineKind) == typeid(SubroutineSymbol) ||
+        typeid(t.subroutineKind) == typeid(MethodPrototypeSymbol);
+};
 
 /// Provides support for printing ast back to source code.
 class AstPrinter : public ASTVisitor<AstPrinter, true, true, true> {
 public:
-    AstPrinter(slang::ast::Compilation& compilation) : compilation(compilation) {};
+    AstPrinter(slang::ast::Compilation& compilation) : compilation(compilation){};
 
     /// Append raw text to the buffer.
     /// @return a reference to this object, to allow chaining additional method calls.
@@ -120,23 +118,36 @@ public:
 
     void handle(const UnbasedUnsizedIntegerLiteral& t);
 
+    void handle(const UnboundedLiteral& t);
+
     void handle(const IntegerLiteral& t);
 
     void handle(const ElementSelectExpression& t);
 
     void handle(const DistExpression& t);
 
-    //inside_expression ::= expression inside { open_range_list }
+    // inside_expression ::= expression inside { open_range_list }
     void handle(const InsideExpression& t);
 
-    //value_range ::=expression| [ expression : expression ]
+    // value_range ::=expression| [ expression : expression ]
     void handle(const RangeSelectExpression& t);
 
-    //class_new ::=[ class_scope ] new [ ( list_of_arguments ) ]
+    // class_new ::=[ class_scope ] new [ ( list_of_arguments ) ]
     void handle(const NewClassExpression& t);
 
-    //class_new ::=[ class_scope ] new [ ( list_of_arguments ) ]
+    // class_new ::=[ class_scope ] new [ ( list_of_arguments ) ]
     void handle(const MemberAccessExpression& t);
+
+    void handle(const SimpleAssignmentPatternExpression& t);
+
+    void handle(const BinSelectWithFilterExpr& t);
+
+    void handle(const BinaryBinsSelectExpr& t);
+
+    // select_condition ::= binsof ( bins_expression ) [ intersect { covergroup_range_list } ]
+    void handle(const ConditionBinsSelectExpr& t);
+
+    void handle(const UnaryBinsSelectExpr& t);
 
     // void handle(const AssertionInstanceExpression& t);
 
@@ -158,7 +169,8 @@ public:
 
     void handle(const ClassType& t);
 
-    //covergroup_declaration ::= covergroup covergroup_identifier [ ( [ tf_port_list ] ) ] [ coverage_event ] ;{ coverage_spec_or_option } endgroup [ : covergroup_identifier ]
+    // covergroup_declaration ::= covergroup covergroup_identifier [ ( [ tf_port_list ] ) ] [
+    // coverage_event ] ;{ coverage_spec_or_option } endgroup [ : covergroup_identifier ]
     void handle(const CovergroupType& t);
 
     void handle(const CoverageOptionSetter& t);
@@ -286,7 +298,6 @@ public:
 
     void handle(const EventListControl& t);
 
-
     /// module_declaration    ::= module_ansi_header [ timeunits_declaration ] {
     /// non_port_module_item } endmodule [ : module_identifier ] interface_declaration ::=
     /// interface_ansi_header [ timeunits_declaration ] { non_port_interface_item } endinterface [ :
@@ -311,7 +322,7 @@ public:
 
     ///(non ansi) port ::=[ port_expression ] | . port_identifier ( [ port_expression ] )
     /// port_reference ::= port_identifier constant_select
-   void handleNonAnsiPort(const slang::ast::PortSymbol& t);
+    void handleNonAnsiPort(const slang::ast::PortSymbol& t);
 
     /// ansi_port_declaration ::=[ interface_port_header ] port_identifier { unpacked_dimension } [
     /// = constant_expression ]
@@ -378,12 +389,12 @@ public:
     // path_declaration ::=simple_path_declaration ;| edge_sensitive_path_declaration ; |
     // state_dependent_path_declaration;
     void handle(const TimingPathSymbol& t);
-    
+
     // dient voor SubroutineSymbol, MethodPrototypeSymbol
     // method_prototype ::= task_prototype | function_prototype
-    // function_prototype ::= function data_type_or_void function_identifier [ ( [ tf_port_list ] ) ]
-    // task_prototype ::= task task_identifier [ ( [ tf_port_list ] ) ]
-    template< IsFunc T>
+    // function_prototype ::= function data_type_or_void function_identifier [ ( [ tf_port_list ] )
+    // ] task_prototype ::= task task_identifier [ ( [ tf_port_list ] ) ]
+    template<IsFunc T>
     void handle(const T& t);
 
     void handle(const FormalArgumentSymbol& t);
@@ -412,17 +423,16 @@ public:
     /// { package_import_declaration } [ parameter_port_list ] [ list_of_port_declarations ];
     void handle(const InstanceBodySymbol& t);
 
-
     void handle(const GenericClassDefSymbol& t);
 
     // constraint_declaration ::= [ static ] constraint constraint_identifier constraint_block
     void handle(const ConstraintBlockSymbol& t);
-    
-    // production ::= [ data_type_or_void ] production_identifier [ ( tf_port_list ) ] : rs_rule { | rs_rule } ;
+
+    // production ::= [ data_type_or_void ] production_identifier [ ( tf_port_list ) ] : rs_rule { |
+    // rs_rule } ;
     void handle(const RandSeqProductionSymbol& t);
 
     void handle(const RandSequenceStatement& t);
-
 
     void handle(const RandSeqProductionSymbol::ProdBase& t);
 
@@ -433,20 +443,41 @@ public:
     void handle(const ConstraintList& t);
 
     void handle(const CoverpointSymbol& t);
+
     void handle(const CovergroupBodySymbol& t);
+
+    // cover_cross ::=[ cross_identifier : ] cross list_of_cross_items [ iff ( expression ) ]
+    // cross_body
+    void handle(const CoverCrossSymbol& t);
+
+    //
+    void handle(const CoverageBinSymbol& t);
+
+    // cross_body ::= { { cross_body_item ; } }
+    void handle(const CoverCrossBodySymbol& t);
+
+    void visitTransList(std::span<const CoverageBinSymbol::TransRangeList> set);
+
+    void visitTransSet(std::span<const CoverageBinSymbol::TransSet> list);
 
     void handle(const ExpressionConstraint& t);
 
     void handle(const ImplicationConstraint& t);
+
     void handle(const SolveBeforeConstraint& t);
+
     void handle(const ConditionalConstraint& t);
+
     void handle(const ForeachConstraint& t);
+
     void handle(const DisableSoftConstraint& t);
+
 private:
     std::string buffer;
     std::string* tempBuffer;
     std::list<std::string> writeNextBuffer;
-    // used to  make sure the internalSymbol of ansi ports aren't written as a member of a instanceBody, the direction of ansi ports is known
+    // used to  make sure the internalSymbol of ansi ports aren't written as a member of a
+    // instanceBody, the direction of ansi ports is known
     std::map<const slang::ast::Symbol*, ArgumentDirection> internalSymbols;
     // used to ensure interfaces, .. are only written fully  once
     std::set<const slang::ast::InstanceBodySymbol*> initializedInstances;
@@ -473,7 +504,10 @@ private:
     bool isFrontEventList = false;
     bool isBackEventList = false;
 
-    //used to detecet if the a visit has changed the buffer
+    // used to get parent symbol while you are in a expression
+    const Symbol* currSymbol;
+
+    // used to detecet if the a visit has changed the buffer
     int changedBuffer = 0;
 
     // the amount of spaces after a newline is depth*depth_multplier
@@ -488,7 +522,7 @@ private:
         //     getType(): union tagged{void Invalid;int Valid;}m3.VInt
         std::regex reg("}.*?(?= .\\S*?;)");
         // removes class identifiers because they are unwanted most of the time
-        // ex: enum{red=32'sd0,green=32'sd1,blue=32'sd2}C3::e 
+        // ex: enum{red=32'sd0,green=32'sd1,blue=32'sd2}C3::e
         std::regex reg2("(?=}).*::.*");
         type = std::regex_replace(type, reg, "}");
         type = std::regex_replace(type, reg2, "}");
@@ -499,54 +533,55 @@ private:
         return type;
     }
 
-
-    
     // this function visits all of tthe member and all of its siblings
-    void visitMembers(const Symbol* member, const std::string& divider=","){
+    void visitMembers(const Symbol* member, const std::string& divider = ",") {
         while (member) {
             int currentBuffer = changedBuffer;
             member->visit(*this);
-            // TODO betere maniet voor dit vinden            
+            // TODO betere maniet voor dit vinden
             std::string* writeBuffer = (useTempBuffer) ? (tempBuffer) : (&this->buffer);
-            
 
-            if("\n" != (*writeBuffer).substr((*writeBuffer).length() - 1, (* writeBuffer).length() - 1) && changedBuffer != currentBuffer)
+            if (("\n" !=
+                 (*writeBuffer).substr((*writeBuffer).length() - 1, (*writeBuffer).length() - 1)) &&
+                (changedBuffer != currentBuffer)) {
                 write(divider);
                 write("\n", false);
-            
+            }
             member = member->getNextSibling();
-
-            
+        }
     }
-}
-    
+
     template<typename T>
-    void visitMembers(std::span<const T* const>  t, const std::string& divider=",", bool newline=false) {
+    void visitMembers(std::span<const T* const> t, const std::string& divider = ",",
+                      bool newline = false) {
         for (auto item : t) {
             int currentBuffer = changedBuffer;
             item->visit(*this);
             if (item != t.back() && changedBuffer != currentBuffer)
-                write(divider,false);
-                std::string* writeBuffer = (useTempBuffer) ? (tempBuffer) : (&this->buffer);
-                if (newline && ("\n" != (*writeBuffer).substr((*writeBuffer).length() - 1, (* writeBuffer).length() - 1)))
-                    write("\n", false);
+                write(divider, false);
+            std::string* writeBuffer = (useTempBuffer) ? (tempBuffer) : (&this->buffer);
+            if (newline &&
+                ("\n" !=
+                 (*writeBuffer).substr((*writeBuffer).length() - 1, (*writeBuffer).length() - 1)))
+                write("\n", false);
         }
     }
 
     template<typename T>
-    void visitMembers(std::span<const T>  t, const std::string& divider=",", bool newline=false) {
+    void visitMembers(std::span<const T> t, const std::string& divider = ",",
+                      bool newline = false) {
         for (auto item : t) {
             int currentBuffer = changedBuffer;
             handle(item);
-            if (&item != &t.back()  && changedBuffer != currentBuffer)
-                write(divider,false);
-                std::string* writeBuffer = (useTempBuffer) ? (tempBuffer) : (&this->buffer);
-                if (newline && ("\n" != (*writeBuffer).substr((*writeBuffer).length() - 1, (* writeBuffer).length() - 1)))
-                    write("\n", false);
+            if (&item != &t.back() && changedBuffer != currentBuffer)
+                write(divider, false);
+            std::string* writeBuffer = (useTempBuffer) ? (tempBuffer) : (&this->buffer);
+            if (newline &&
+                ("\n" !=
+                 (*writeBuffer).substr((*writeBuffer).length() - 1, (*writeBuffer).length() - 1)))
+                write("\n", false);
         }
     }
-
-
 
     void write(std::string_view string, bool add_spacer = true, bool use_dollar = false) {
         if (string != "")
@@ -615,6 +650,7 @@ private:
             write(";");
         }
     }
+
 
     void write(NetType::NetKind kind) {
         switch (kind) {
@@ -876,6 +912,83 @@ private:
         }
     }
 
+    void write(CoverageBinSymbol::BinKind kind) {
+        switch (kind) {
+            case (CoverageBinSymbol::BinKind::Bins):
+                write("bins");
+                break;
+            case (CoverageBinSymbol::BinKind::IllegalBins):
+                write("illegal_bins");
+                break;
+            case (CoverageBinSymbol::BinKind::IgnoreBins):
+                write("ignore_bins");
+                break;
+            default:
+                SLANG_UNREACHABLE;
+        }
+    }
+
+    void write(CoverageBinSymbol::TransRangeList::RepeatKind kind) {
+        switch (kind) {
+            case (CoverageBinSymbol::TransRangeList::RepeatKind::None):
+                break;
+            case (CoverageBinSymbol::TransRangeList::RepeatKind::Consecutive):
+                write("*");
+                break;
+            case (CoverageBinSymbol::TransRangeList::RepeatKind::Nonconsecutive):
+                write("=");
+                break;
+            case (CoverageBinSymbol::TransRangeList::RepeatKind::GoTo):
+                write("->");
+                break;
+            default:
+                SLANG_UNREACHABLE;
+        }
+    }
+
+    void writeName(const Symbol& t, bool add_spacer = true) {
+        write(getRealName(t, currSymbol), add_spacer);
+    }
+
+    // attempt to get the real hierachical name of an object ex:e.a instead of $root.m.e.a
+    // It does this by trying to find the scope in which both the caller and the actual item are visible
+    std::string getRealName(const Symbol& item, const Symbol* caller) {
+        // caller is often this.currSymnol which can be null
+        if (!caller)
+            return std::string(item.name);
+
+        // loop through the parents of the item until the scope of the parent contains the other
+        // symbol
+        auto parent = item.getParentScope();
+        while (!Lookup::isVisibleFrom(*caller, *parent)) {
+            auto& parent_symbol = parent->asSymbol();
+            parent = parent_symbol.getParentScope();
+        }
+
+        if (parent) {
+            auto& parent_symbol = parent->asSymbol();
+
+            std::string parent_path_name = "";
+            std::string item_path_name = "";
+            auto grandparent = parent_symbol.getParentScope();
+
+            if (grandparent) {
+
+                grandparent->asSymbol().getHierarchicalPath(parent_path_name);
+                parent_path_name += ".";
+                item.getHierarchicalPath(item_path_name);
+
+                if (item_path_name.find(parent_path_name) != -1) {
+                    item_path_name.replace(item_path_name.find(parent_path_name),
+                                           parent_path_name.length(), "");
+                    return item_path_name;
+                }
+            }
+        }
+        return std::string(item.name);
+    }
+
+
     std::string lowerFirstLetter(std::string_view string) {
         if (string == "")
             return "";
@@ -896,8 +1009,6 @@ private:
         }
         return new_string;
     }
-
 };
-
 
 } // namespace slang::ast

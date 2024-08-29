@@ -176,7 +176,11 @@ void AstPrinter::handle(const CovergroupType& t) {
     visitMembers(t.getArguments().back()->getNextSibling(),";");
     write("endgroup\n");
 }
+
+// coverage_option ::= option.member_identifier = expression
+//                      type_option.member_identifier = constant_expression
 void AstPrinter::handle(const CoverageOptionSetter& t){
+    t.getExpression().visit(*this);
 }
 
                  
@@ -241,7 +245,7 @@ void AstPrinter::handle(const slang::ast::ForeachConstraint& t) {
     if (!t.loopDims.empty()){
         write("[",false);
         for(auto LoopDim:t.loopDims ){
-            write(LoopDim.loopVar->name);
+            writeName(*LoopDim.loopVar);
             if (LoopDim.range.has_value())
                 write(LoopDim.range.value().toString(),false);
 

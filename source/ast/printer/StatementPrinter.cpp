@@ -124,7 +124,7 @@ void AstPrinter::handle(const ForeachLoopStatement& t) {
     write("[");
     for (auto var : t.loopDims) {
         if (var.loopVar) {
-            write(var.loopVar->name);
+            writeName(*var.loopVar);
             if (var.loopVar != t.loopDims.back().loopVar)
                 write(",");
         }
@@ -267,7 +267,7 @@ void AstPrinter::handle(const BlockStatement& t) {
 
     if (t.blockSymbol) {
         write(":", false);
-        write((*t.blockSymbol).name);
+        writeName((*t.blockSymbol));
         write("\n");
     }
     else {

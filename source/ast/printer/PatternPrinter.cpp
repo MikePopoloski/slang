@@ -52,14 +52,15 @@ void AstPrinter::handle(const PatternCaseStatement& t) {
 // pattern ::= tagged member_identifier [ pattern ]
 void AstPrinter::handle(const TaggedPattern& t) {
     write("tagged");
-    write(t.member.name);
+    writeName(t.member);
     t.valuePattern->visit(*this);
 }
 
 // pattern ::=. variable_identifier
 void AstPrinter::handle(const VariablePattern& t) {
     write(".");
-    write(t.variable.name, false);
+    
+    writeName(t.variable, false);
 }
 // pattern ::= .*
 void AstPrinter::handle(const WildcardPattern& t) {

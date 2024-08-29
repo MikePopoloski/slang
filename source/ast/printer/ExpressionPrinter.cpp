@@ -7,6 +7,7 @@
 //------------------------------------------------------------------------------
 
 #include <cstddef>
+#include "slang/ast/HierarchicalReference.h"
 #include "slang/ast/expressions/MiscExpressions.h"
 #include "slang/ast/printer/defaultAstPrinter.h"
 
@@ -125,7 +126,7 @@ void AstPrinter::handle(const CallExpression& t){
 }
 
 void AstPrinter::handle(const NamedValueExpression& t) {
-    write(t.symbol.name);
+    writeName(t.symbol);
 }
 
 // TODO DIT nakijken
@@ -140,6 +141,9 @@ void AstPrinter::handle(const UnbasedUnsizedIntegerLiteral& t) {
         write("'");
         write(std::to_string(t.getLiteralValue().value));
     }
+}
+void AstPrinter::handle(const UnboundedLiteral& t) {
+    write("$");
 }
 
 void AstPrinter::handle(const IntegerLiteral& t) {
@@ -164,7 +168,7 @@ void AstPrinter::handle(const ElementSelectExpression& t) {
 }
 
 void AstPrinter::handle(const ArbitrarySymbolExpression& t) {
-    write(t.symbol->name);
+    writeName(*t.symbol);
 }
 // expression_or_dist ::= expression [ dist { dist_list } ]
 // dist_item ::= value_range [ dist_weight ]
@@ -217,7 +221,54 @@ void AstPrinter::handle(const NewClassExpression& t) {
 void AstPrinter::handle(const MemberAccessExpression& t) {
     t.value().visit(*this);
     write(".",false);
-    write(t.member.name,false);
+    writeName(t.member,false);
+}
+
+void AstPrinter::handle(const SimpleAssignmentPatternExpression& t){
+    write("'{");
+    visitMembers(t.elements());
+    write("}");
+
+}
+
+void AstPrinter::handle(const BinSelectWithFilterExpr& t){
+    write("(");
+    t.expr.visit(*this);
+    if(t.matchesExpr)
+        t.matchesExpr->visit(*this);
+    write(")");
+    write("with");
+    write("(");
+    t.filter.visit(*this);
+    write(")");
+
+}
+ //select_condition ::= binsof ( bins_expression ) [ intersect { covergroup_range_list } ]
+
+void AstPrinter::handle(const BinaryBinsSelectExpr& t){
+    t.left.visit(*this);
+    if(t.op==BinaryBinsSelectExpr::And){
+        write("&&");
+    }else{
+        write("||");
+    }
+    t.right.visit(*this);
+}
+void AstPrinter::handle(const UnaryBinsSelectExpr& t){
+    write("!");
+    t.expr.visit(*this);
+}
+//select_condition ::= binsof ( bins_expression ) [ intersect { covergroup_range_list } ]
+void AstPrinter::handle(const ConditionBinsSelectExpr& t){
+    write("binsof(");
+    std::string path_name = "";
+    writeName(t.target);
+    write(")");
+    if(!t.intersects.empty()){
+        write("intersect{");
+        visitMembers(t.intersects);
+        write("}");
+    }
 }
 /*
 void AstPrinter::handle(const BinaryAssertionExpr& t){
@@ -227,7 +278,7 @@ void AstPrinter::handle(const BinaryAssertionExpr& t){
     t.right.visit(*this);}
 
 //property_instance ::= ps_or_hierarchical_property_identifier [ ( [ property_list_of_arguments ] )
-] void AstPrinter::handle(const AssertionInstanceExpression& t){ write(t.symbol.name); write("(");
+] void AstPrinter::handle(const AssertionInstanceExpression& t){ writeName(t.symbol); write("(");
 
     write(")");
     t.body.visit(*this);

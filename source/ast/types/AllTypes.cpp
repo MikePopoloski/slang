@@ -1280,7 +1280,8 @@ ConstantValue TypeAliasType::getDefaultValueImpl() const {
 }
 
 void TypeAliasType::serializeTo(ASTSerializer& serializer) const {
-    serializer.write("target", targetType.getType());
+    if(!serializer.getMinimalInfoEnabled())
+        serializer.write("target", targetType.getType());
     if (firstForward)
         serializer.write("forward", *firstForward);
 }

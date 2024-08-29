@@ -194,7 +194,7 @@ void ASTSerializer::visit(const T& elem, bool inMembersArray) {
     }
     if constexpr (std::is_base_of_v<Expression, T>) {
         write("kind", toString(elem.kind));
-        if (includeType)
+        if (!minimalInfo)
             write("type", *elem.type);
         auto attributes = compilation.getAttributes(elem);
         if (!attributes.empty()) {
@@ -284,7 +284,7 @@ void ASTSerializer::visit(const T& elem, bool inMembersArray) {
         }
 
         if constexpr (std::is_base_of_v<ValueSymbol, T>) {
-            if (includeType)
+            if (!minimalInfo)
                 write("type", elem.getType());
 
             if (auto init = elem.getInitializer())

@@ -270,7 +270,8 @@ bool TypeParameterSymbol::isOverridden() const {
 }
 
 void TypeParameterSymbol::serializeTo(ASTSerializer& serializer) const {
-    serializer.write("type", targetType.getType());
+    if (!serializer.getMinimalInfoEnabled())
+        serializer.write("type", targetType.getType());
     serializer.write("isLocal", isLocalParam());
     serializer.write("isPort", isPortParam());
     serializer.write("isBody", isBodyParam());

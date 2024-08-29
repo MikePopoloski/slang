@@ -20,6 +20,8 @@ std::tuple<std::string, const slang::ast::RootSymbol&> getAst(
 
     jsonPrinter.setIncludeAddresses(false);
     jsonPrinter.setIncludeSourceInfo(false);
+    jsonPrinter.enableMinimalInfo(true);
+
     jsonPrinter.startObject();
     jsonPrinter.serialize(rootAst);
     jsonPrinter.endObject();
@@ -591,6 +593,31 @@ TEST_CASE("all.sv 426_end") {
 
         covergroup g2 (string instComment) @(posedge clk);
             Offset: coverpoint pixel_offset;
+            Hue: coverpoint pixel_hue;
+            AxC: cross color, pixel_adr;
+            all: cross color, Hue, Offset;
+
+            option.comment = instComment;
+
+            e: coverpoint x iff (clk) {
+                option.weight = 2;
+                wildcard bins a = { [0:63],65 };
+                bins b[] = { [127:150],[148:191] }; // note overlapping values
+                bins c[] = { 200,201,202 };
+                bins d = { [1000:$] };
+                bins others[] = default;
+
+                bins sa = (4 => 5 => 6), ([7:9],10 => 11,12);
+                bins sb[] = (12 => 3 [* 1]);
+                bins sc = (12 => 3 [-> 1]);
+                bins sd = (12 => 3 [= 1:2]);
+            }
+            cross e, y {
+                option.weight = c;
+                bins one = '{ '{1,2}, '{3,4}, '{5,6} };
+                ignore_bins others = (!binsof(e.a) || !binsof(y) intersect {1}) with (e > 10);
+            }
+
         endgroup
     endclass    
     )";
