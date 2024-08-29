@@ -15,7 +15,7 @@ namespace no_dot_var_in_port_connection {
 
 struct PortConnectionVisitor : public SyntaxVisitor<PortConnectionVisitor> {
     void handle(const NamedPortConnectionSyntax& port) {
-        if (!port.expr)
+        if (!port.openParen)
             foundPorts.push_back(&port);
     }
 
