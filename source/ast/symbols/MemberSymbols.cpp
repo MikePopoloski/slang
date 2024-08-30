@@ -1435,8 +1435,7 @@ PrimitiveSymbol& PrimitiveSymbol::fromSyntax(const Scope& scope,
                                         noteStr += ' ';
                                     noteStr += c;
                                 }
-                                diag->addNote(diag::NoteUdpCoverage, prim->location)
-                                    << noteStr;
+                                diag->addNote(diag::NoteUdpCoverage, prim->location) << noteStr;
                             }
                         }
                     }
