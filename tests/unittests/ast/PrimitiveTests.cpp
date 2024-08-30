@@ -218,7 +218,7 @@ endprimitive
     CHECK(diags[19].code == diag::ExpectedUdpSymbol);
     CHECK(diags[20].code == diag::UdpWrongInputCount);
     CHECK(diags[21].code == diag::UdpWrongInputCount);
-    CHECK(diags[22].code == diag::UdpEdgeSenseMiss);
+    CHECK(diags[22].code == diag::UdpCoverage);
     CHECK(diags[23].code == diag::UdpDupDiffOutput);
     CHECK(diags[24].code == diag::UdpAllX);
     CHECK(diags[25].code == diag::UdpDupDiffOutput);
@@ -326,7 +326,7 @@ endprimitive
 
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 13);
-    CHECK(diags[0].code == diag::UdpEdgeSenseMiss);
+    CHECK(diags[0].code == diag::UdpCoverage);
     CHECK(diags[1].code == diag::UdpInvalidSymbol);
     CHECK(diags[2].code == diag::UdpInvalidTransition);
     CHECK(diags[3].code == diag::UdpInvalidEdgeSymbol);
@@ -606,9 +606,9 @@ endprimitive
 
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 5);
-    CHECK(diags[0].code == diag::UdpEdgeSenseMiss);
+    CHECK(diags[0].code == diag::UdpCoverage);
     CHECK(diags[1].code == diag::UdpTransSameChar);
-    CHECK(diags[2].code == diag::UdpEdgeSenseMiss);
+    CHECK(diags[2].code == diag::UdpCoverage);
     CHECK(diags[3].code == diag::UdpEdgeInComb);
     CHECK(diags[4].code == diag::UdpInvalidMinus);
 }
@@ -738,7 +738,7 @@ endprimitive
 
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 3);
-    CHECK(diags[0].code == diag::UdpEdgeSenseMiss);
-    CHECK(diags[1].code == diag::UdpEdgeSenseMiss);
-    CHECK(diags[2].code == diag::UdpEdgeSenseMiss);
+    CHECK(diags[0].code == diag::UdpCoverage);
+    CHECK(diags[1].code == diag::UdpCoverage);
+    CHECK(diags[2].code == diag::UdpCoverage);
 }

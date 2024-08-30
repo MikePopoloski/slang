@@ -1419,7 +1419,7 @@ PrimitiveSymbol& PrimitiveSymbol::fromSyntax(const Scope& scope,
                         BitTrie* triePtr = &trie;
                         if (!trie.find(triePtr, inputTest, '?', trieAlloc).has_value()) {
                             if (!diag) {
-                                diag = &scope.addDiag(diag::UdpEdgeSenseMiss, prim->location);
+                                diag = &scope.addDiag(diag::UdpCoverage, prim->location);
                             }
                             else {
                                 std::string noteStr;
@@ -1435,7 +1435,7 @@ PrimitiveSymbol& PrimitiveSymbol::fromSyntax(const Scope& scope,
                                         noteStr += ' ';
                                     noteStr += c;
                                 }
-                                diag->addNote(diag::NoteUdpEdgeSenseMiss, prim->location)
+                                diag->addNote(diag::NoteUdpCoverage, prim->location)
                                     << noteStr;
                             }
                         }

@@ -1353,3 +1353,29 @@ module m;
     end
 endmodule
 ```
+
+-Wudp-coverage
+Checks if the behavior of the UDP is sensitive to edges of any input,
+the desired output state shall be specified for all edges of all inputs.
+That constraint is specified by LRM 29.6 section and it is not clear about it.
+This can be a useful for checking edge-sensitive UDP missed transitions
+when developing and simulating a behavioral model of industrial cells
+which commonly implemented as verilog primitives.
+```
+primitive d_edge_ff (q, clock, data);
+    output q; reg q;
+    input clock, data;
+    table
+        // clock data q q+
+        // obtain output on rising edge of clock
+        (01) 0 : ? : 0 ;
+        (01) 1 : ? : 1 ;
+        (0?) 1 : 1 : 1 ;
+        (0?) 0 : 0 : 0 ;
+        // ignore negative edge of clock
+        (?0) ? : ? : - ;
+        // missed clock edge (1x) specification
+        // missed edge specifications for data signal
+    endtable
+endprimitive
+```
