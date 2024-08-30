@@ -251,9 +251,9 @@ void AstPrinter::handle(const CaseStatement& t) {
 void AstPrinter::handle(const BlockStatement& t) {
     // edge case handeling
     // TODO BETERE MANER VINDEN
-    // foreach creates a Blockstatement automaticly which causes a duplicate block statement
-    // when trying to print the ast
-    if (t.body.kind == StatementKind::ForeachLoop) {
+    // foreach creates a Blockstatement automaticly which causes a duplicate block statement 
+    // when trying to print the ast ( the same happens with RandSequence )
+    if (t.body.kind == StatementKind::ForeachLoop || t.body.kind == StatementKind::RandSequence) {
         t.body.visit(*this);
         return;
     }

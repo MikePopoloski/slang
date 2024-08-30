@@ -1030,12 +1030,15 @@ void AstPrinter::handle(const RandSeqProductionSymbol::ProdBase& t) {
             auto caseItem = (const RandSeqProductionSymbol::CaseProd&)t;
             caseItem.expr->visit(*this);
             write(")\n");
-            visitMembers(caseItem.items, ";");
+            indentation_level ++;
+            visitMembers(caseItem.items, ";",true);
             // rs_case_item:= default [ : ] production_item ;
             if (caseItem.defaultItem.has_value()) {
                 write("default :");
                 handle(caseItem.defaultItem.value());
-            }
+                write(";\n");
+            }          
+              indentation_level--;
             write("endcase");
 
             break;
@@ -1054,15 +1057,18 @@ void AstPrinter::handle(std::span<const RandSeqProductionSymbol::Rule> t) {
         //                     production_item }
         if (rule.isRandJoin) {
             write("rand join");
-            write("(", false);
-            if (rule.randJoinExpr)
+
+            if (rule.randJoinExpr){
+                write("(", false);
                 rule.randJoinExpr->visit(*this);
-            write(")", false);
+                write(")", false);
+            }
         }
-        visitMembers(rule.prods);
+        visitMembers(rule.prods," ");
         if (rule.weightExpr != nullptr) {
-            write(":=");
+            write(":=(");
             rule.weightExpr->visit(*this);
+            write(")");
             if (rule.codeBlock.has_value())
                 handle(rule.codeBlock.value());
         }

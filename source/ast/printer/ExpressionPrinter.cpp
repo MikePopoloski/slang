@@ -117,7 +117,18 @@ void AstPrinter::handle(const CallExpression& t){
         t.thisClass()->visit(*this);
         write(".",false);
     }
-    write(t.getSubroutineName(),!hasThisClass);
+
+    try{
+        auto symbol =std::get<const SubroutineSymbol*>(t.subroutine) ;
+        if (symbol)
+            writeName(*symbol, !hasThisClass); 
+        else
+            write(t.getSubroutineName(), !hasThisClass);
+
+    }
+    catch (const std::bad_variant_access& ex){
+        write(t.getSubroutineName(), !hasThisClass);
+    }
     writeAttributeInstances(t);
 
     write("(", false);

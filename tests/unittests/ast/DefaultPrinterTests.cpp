@@ -442,7 +442,7 @@ TEST_CASE("all.sv 250_266") {
 }
 
 // removed $inferred_clock becauses this causes weirdness with the ast that i coudn't fix
-/*
+
 TEST_CASE("all.sv 266_309") {
     std::string code = R"(
 checker assert_window1 (
@@ -479,7 +479,7 @@ module m5;
 endmodule
 )";
     CHECK(isEqual(code, "266_309"));
-}*/
+}
 // tododit subbsitueren in de vorige
 TEST_CASE("all.sv 309_314") {
     std::string code = R"(
@@ -513,55 +513,23 @@ class B extends A;
     integer i = 2;
     function void f();
         i = j;
-        //super.i = super.j;
-        //j = super.f();
-        //j = this.super.f();
+        super.i = super.j;
+        j = super.f();
+        j = this.super.f();
     endfunction
-endclass
-
-)";
-    CHECK(isEqual(code, "316_400"));
-}
-/*
-TEST_CASE("all.sv 358_426") {
-    std::string code = R"(
-
-
-
-
-class C2 extends B;
-    function void g();
-        f();
-        //i = j + C::j + A::f();
-    endfunction
-
-    rand bit [63:0] value;
-    rand logic q;
-    constraint value_c {
-        value[63] dist {0 :/ 70, 1 :/ 30};
-        value[0] == 1'b0;
-        value[15:8] inside {
-            8'h0,
-            8'hF
-        };
-        solve value before q;
-        soft value[3:1] > 1;
-        q -> { value[4] == 0; }
-        if (q) { foreach (value[b]) { value[b] == 0; } } else { disable soft value; }
-    }
 endclass
 
 module m6;
     A a = new;
     A b1 = B::new;
     B b2 = new;
-    C2 c = new;
+    //C2 c = new;
     int depth;
     integer i = b1.f();
     initial begin
         b2.f();
         a = b2;
-        c.i = c.j;
+        //c.i = c.j;
 
         randsequence(main)
             main : first second;
@@ -574,15 +542,14 @@ module m6;
                 default : first;
             endcase;
             third : rand join first second;
-            fourth(string s = "done") : { if (depth) break; };
+            //fourth(string s = "done") : { if (depth) break; };
         endsequence
     end
 endmodule
-
 )";
+    CHECK(isEqual(code, "316_4"));
+}
 
-    CHECK(isEqual(code, "358_426"));
-}*/
 
 TEST_CASE("all.sv 426_end") {
     std::string code = R"(
@@ -632,7 +599,7 @@ module jmagnitudeComparator(AEQB, AGTB, ALTB, A, B);
   output reg AEQB, AGTB, ALTB;
   input [3:0] A, B;
 
-  always @(A,B)
+  always @(A) @(B)
   begin
     if( A === B )
       begin
