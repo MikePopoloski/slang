@@ -9,13 +9,20 @@
 
 #include "Config.h"
 #include <cstring>
+#include <source_location>
 #include <fmt/core.h>
 
 namespace netlist {
 
+inline const char* file_name(const char* file)
+{
+    return strrchr(file, '/') ? strrchr(file, '/') + 1 : file;
+}
+
 template<typename... T>
-void DebugMessage(const char* filename, const int line, fmt::format_string<T...> fmt, T&&... args) {
-    fmt::print("{}:{}: ", filename, line);
+    void DebugMessage(const std::source_location& location,
+                  fmt::format_string<T...> fmt, T&&... args) {
+    fmt::print("{}:{}: ", file_name(location.file_name()), location.line());
     fmt::print(fmt, std::forward<T>(args)...);
 }
 
@@ -26,12 +33,11 @@ void InfoMessage(fmt::format_string<T...> fmt, T&&... args) {
 
 } // namespace netlist
 
-#define __FILENAME__ (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
-
 #ifdef DEBUG
 #    define DEBUG_PRINT(str, ...)                                                 \
         if (netlist::Config::getInstance().debugEnabled) {                        \
-            DebugMessage(__FILENAME__, __LINE__, str __VA_OPT__(, ) __VA_ARGS__); \
+            DebugMessage(std::source_location::current(), \
+                         str __VA_OPT__(, ) __VA_ARGS__); \
         }
 #else
 #    define DEBUG_PRINT(str, ...)

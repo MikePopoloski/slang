@@ -26,7 +26,7 @@ namespace detail {
 
 template<typename T>
 constexpr std::string_view wrappedTypeName() {
-    return SLANG_ASSERT_FUNCTION;
+    return std::source_location::current().function_name();
 }
 
 constexpr std::size_t wrappedTypeNamePrefixLength() {
