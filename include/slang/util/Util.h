@@ -24,8 +24,7 @@
 #else
 #    define SLANG_TRY if (true)
 #    define SLANG_CATCH(X) if (false)
-#    define SLANG_THROW(e) \
-        slang::assert::handleThrow((e).what(), std::source_location::current())
+#    define SLANG_THROW(e) slang::assert::handleThrow((e).what(), std::source_location::current())
 #endif
 
 #if defined(__clang__)
@@ -61,14 +60,13 @@
 #endif
 
 #if SLANG_ASSERT_ENABLED
-#    define SLANG_ASSERT(cond)                                                                 \
-        do {                                                                                   \
-            if (!(cond))                                                                       \
+#    define SLANG_ASSERT(cond)                                                       \
+        do {                                                                         \
+            if (!(cond))                                                             \
                 slang::assert::assertFailed(#cond, std::source_location::current()); \
         } while (false)
 
-#    define SLANG_UNREACHABLE \
-        slang::assert::handleUnreachable(std::source_location::current())
+#    define SLANG_UNREACHABLE slang::assert::handleUnreachable(std::source_location::current())
 #else
 #    define SLANG_ASSERT(cond)  \
         do {                    \
@@ -121,8 +119,7 @@ public:
 
 /// A handler that runs when an ASSERT condition fails; it will unconditionally
 /// throw an exception.
-[[noreturn]] SLANG_EXPORT void assertFailed(
-    const char* expr, const std::source_location& location);
+[[noreturn]] SLANG_EXPORT void assertFailed(const char* expr, const std::source_location& location);
 
 /// A handler that runs when an exception is thrown but exceptions are disabled; it will
 /// unconditionally abort the program.
