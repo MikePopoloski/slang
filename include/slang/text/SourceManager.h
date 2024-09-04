@@ -120,6 +120,11 @@ public:
     /// inside a macro. Otherwise just returns the location itself.
     SourceLocation getFullyOriginalLoc(SourceLocation location) const;
 
+    /// Build the original location range where source is written.
+    /// If there is a mismatch between resulting start and end files,
+    /// returns the original range instead.
+    SourceRange getFullyOriginalRange(SourceRange range) const;
+
     /// If the given location is a macro location, fully expands it out to its actual
     /// file expansion location. Otherwise just returns the location itself.
     SourceLocation getFullyExpandedLoc(SourceLocation location) const;

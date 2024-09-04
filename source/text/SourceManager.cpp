@@ -199,6 +199,15 @@ SourceLocation SourceManager::getFullyOriginalLoc(SourceLocation location) const
     return location;
 }
 
+SourceRange SourceManager::getFullyOriginalRange(SourceRange range) const {
+    SourceLocation start(getFullyOriginalLoc(range.start()));
+    SourceLocation end(getFullyOriginalLoc(range.end()));
+
+    if (getFileName(start) != getFileName(end))
+        return range;
+    return SourceRange(start, end);
+}
+
 SourceLocation SourceManager::getFullyExpandedLoc(SourceLocation location) const {
     std::shared_lock lock(mutex);
     return getFullyExpandedLocImpl(location, lock);
