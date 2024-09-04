@@ -196,7 +196,7 @@ CovergroupBodySymbol::CovergroupBodySymbol(Compilation& comp, SourceLocation loc
 void CovergroupBodySymbol::serializeTo(ASTSerializer& serializer) const {
     if (!options.empty()) {
         serializer.startArray("options");
-        for (auto& opt : options){
+        for (auto& opt : options) {
             serializer.startObject();
             opt.serializeTo(serializer);
             serializer.endObject();
@@ -884,10 +884,11 @@ void CoverpointSymbol::checkBins() const {
 void CoverpointSymbol::serializeTo(ASTSerializer& serializer) const {
     if (!options.empty()) {
         serializer.startArray("options");
-        for (auto& opt : options){
+        for (auto& opt : options) {
             serializer.startObject();
             opt.serializeTo(serializer);
-            serializer.endObject();}
+            serializer.endObject();
+        }
         serializer.endArray();
     }
 
@@ -1015,7 +1016,7 @@ void CoverCrossSymbol::serializeTo(ASTSerializer& serializer) const {
 
     if (!options.empty()) {
         serializer.startArray("options");
-        for (auto& opt : options){
+        for (auto& opt : options) {
             serializer.startObject();
             opt.serializeTo(serializer);
             serializer.endObject();
