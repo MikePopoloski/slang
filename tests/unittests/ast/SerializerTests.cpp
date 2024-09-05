@@ -564,3 +564,257 @@ endmodule
   ]
 })");
 }
+TEST_CASE("JSON dump -- covergroup with an option") {
+    auto tree = SyntaxTree::fromText(R"(
+class C3;
+    logic clk, y, c;
+
+    covergroup g2 ();
+
+        e: coverpoint y iff (clk) {
+            option.weight = 2;
+        }
+        cross e, y {
+            option.weight = c;
+        }
+    endgroup
+endclass
+
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    JsonWriter writer;
+    writer.setPrettyPrint(true);
+
+    ASTSerializer serializer(compilation, writer);
+    serializer.setIncludeAddresses(false);
+    serializer.serialize(compilation.getRoot());
+    std::string result = "\n"s + std::string(writer.view());
+    CHECK(result == R"(
+{
+  "name": "$root",
+  "kind": "Root",
+  "members": [
+    {
+      "name": "",
+      "kind": "CompilationUnit",
+      "members": [
+        {
+          "name": "C3",
+          "kind": "ClassType",
+          "members": [
+            {
+              "name": "clk",
+              "kind": "ClassProperty",
+              "type": "logic",
+              "lifetime": "Automatic",
+              "visibility": "Public"
+            },
+            {
+              "name": "y",
+              "kind": "ClassProperty",
+              "type": "logic",
+              "lifetime": "Automatic",
+              "visibility": "Public"
+            },
+            {
+              "name": "c",
+              "kind": "ClassProperty",
+              "type": "logic",
+              "lifetime": "Automatic",
+              "visibility": "Public"
+            },
+            {
+              "name": "",
+              "kind": "CovergroupType",
+              "members": [
+                {
+                  "name": "",
+                  "kind": "CovergroupBody",
+                  "members": [
+                    {
+                      "name": "option",
+                      "kind": "ClassProperty",
+                      "type": "struct{string name;int weight;int goal;string comment;int at_least;int auto_bin_max;int cross_num_print_missing;bit detect_overlap;bit per_instance;bit get_inst_coverage;}C3.s$1",
+                      "lifetime": "Automatic",
+                      "visibility": "Public"
+                    },
+                    {
+                      "name": "type_option",
+                      "kind": "ClassProperty",
+                      "type": "struct{int weight;int goal;string comment;bit strobe;bit merge_instances;bit distribute_first;}C3.s$2",
+                      "lifetime": "Static",
+                      "visibility": "Public"
+                    },
+                    {
+                      "name": "e",
+                      "kind": "Coverpoint",
+                      "members": [
+                        {
+                          "name": "option",
+                          "kind": "ClassProperty",
+                          "type": "struct{int weight;int goal;string comment;int at_least;int auto_bin_max;bit detect_overlap;}C3.e.s$3",
+                          "lifetime": "Automatic",
+                          "visibility": "Public"
+                        },
+                        {
+                          "name": "type_option",
+                          "kind": "ClassProperty",
+                          "type": "struct{int weight;int goal;string comment;}C3.e.s$4",
+                          "lifetime": "Static",
+                          "visibility": "Public"
+                        }
+                      ],
+                      "options": [
+                        {
+                          "expr": {
+                            "kind": "Assignment",
+                            "type": "int",
+                            "left": {
+                              "kind": "MemberAccess",
+                              "type": "int",
+                              "member": "weight",
+                              "value": {
+                                "kind": "NamedValue",
+                                "type": "struct{int weight;int goal;string comment;int at_least;int auto_bin_max;bit detect_overlap;}C3.e.s$3",
+                                "symbol": "option"
+                              }
+                            },
+                            "right": {
+                              "kind": "IntegerLiteral",
+                              "type": "int",
+                              "value": "2",
+                              "constant": "2"
+                            },
+                            "isNonBlocking": false
+                          }
+                        }
+                      ],
+                      "iff": {
+                        "kind": "NamedValue",
+                        "type": "logic",
+                        "symbol": "clk"
+                      }
+                    },
+                    {
+                      "name": "y",
+                      "kind": "Coverpoint",
+                      "members": [
+                        {
+                          "name": "option",
+                          "kind": "ClassProperty",
+                          "type": "struct{int weight;int goal;string comment;int at_least;int auto_bin_max;bit detect_overlap;}C3.y.s$5",
+                          "lifetime": "Automatic",
+                          "visibility": "Public"
+                        },
+                        {
+                          "name": "type_option",
+                          "kind": "ClassProperty",
+                          "type": "struct{int weight;int goal;string comment;}C3.y.s$6",
+                          "lifetime": "Static",
+                          "visibility": "Public"
+                        }
+                      ]
+                    },
+                    {
+                      "name": "",
+                      "kind": "CoverCross",
+                      "members": [
+                        {
+                          "name": "option",
+                          "kind": "ClassProperty",
+                          "type": "struct{int weight;int goal;string comment;int at_least;int cross_num_print_missing;}C3.s$7",
+                          "lifetime": "Automatic",
+                          "visibility": "Public"
+                        },
+                        {
+                          "name": "type_option",
+                          "kind": "ClassProperty",
+                          "type": "struct{int weight;int goal;string comment;}C3.s$8",
+                          "lifetime": "Static",
+                          "visibility": "Public"
+                        },
+                        {
+                          "name": "",
+                          "kind": "CoverCrossBody",
+                          "members": [
+                            {
+                              "name": "CrossValType",
+                              "kind": "TypeAlias",
+                              "target": "struct{logic[0:0] e;logic[0:0] y;}C3.s$9"
+                            },
+                            {
+                              "name": "CrossQueueType",
+                              "kind": "TypeAlias",
+                              "target": "struct{logic[0:0] e;logic[0:0] y;}C3.CrossValType$[$]"
+                            }
+                          ]
+                        }
+                      ],
+                      "targets": [
+                        {
+                          "coverpoint": "e"
+                        },
+                        {
+                          "coverpoint": "y"
+                        }
+                      ],
+                      "options": [
+                        {
+                          "expr": {
+                            "kind": "Assignment",
+                            "type": "int",
+                            "left": {
+                              "kind": "MemberAccess",
+                              "type": "int",
+                              "member": "weight",
+                              "value": {
+                                "kind": "NamedValue",
+                                "type": "struct{int weight;int goal;string comment;int at_least;int cross_num_print_missing;}C3.s$7",
+                                "symbol": "option"
+                              }
+                            },
+                            "right": {
+                              "kind": "Conversion",
+                              "type": "int",
+                              "operand": {
+                                "kind": "Conversion",
+                                "type": "logic[31:0]",
+                                "operand": {
+                                  "kind": "NamedValue",
+                                  "type": "logic",
+                                  "symbol": "c"
+                                }
+                              }
+                            },
+                            "isNonBlocking": false
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "g2",
+              "kind": "ClassProperty",
+              "type": "",
+              "lifetime": "Automatic",
+              "flags": "const",
+              "visibility": "Public"
+            }
+          ],
+          "isAbstract": false,
+          "isInterface": false,
+          "isFinal": false,
+          "implements": [
+          ]
+        }
+      ]
+    }
+  ]
+})");
+}
