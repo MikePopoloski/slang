@@ -2,7 +2,7 @@
 //! @file StatemenPrinter.
 //! @brief Support for printing statements from the ast
 //
-// SPDX-FileCopyrightText: Michael Popoloski, Easics
+// SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
 

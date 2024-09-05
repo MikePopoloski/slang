@@ -2,7 +2,7 @@
 //! @file Pattern.h
 //! @brief Support for printing patterns from the ast
 //
-// SPDX-FileCopyrightText: Michael Popoloski, Easics
+// SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
 

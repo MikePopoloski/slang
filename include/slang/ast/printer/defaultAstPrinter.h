@@ -35,38 +35,18 @@ namespace slang::ast {
 
 template<typename T>
 concept IsFunc = requires(T t) {
-    // selecteerd SubroutineSymbol, MethodPrototypeSymbol
-    typeid(t.subroutineKind) == typeid(SubroutineSymbol) ||
-        typeid(t.subroutineKind) == typeid(MethodPrototypeSymbol);
+    // selects SubroutineSymbol, MethodPrototypeSymbol
+    t.subroutineKind;
 };
 
-/// Provides support for printing ast back to source code.
+/// Provides support for printing a ast back to source code.
 class AstPrinter : public ASTVisitor<AstPrinter, true, true, true> {
 public:
     AstPrinter(slang::ast::Compilation& compilation) : compilation(compilation){};
 
-    /// Append raw text to the buffer.
-    /// @return a reference to this object, to allow chaining additional method calls.
-    AstPrinter& append(std::string_view text);
-
-    /// Sets whether to include trivia when printing syntax.
-    /// @return a reference to this object, to allow chaining additional method calls.
-    AstPrinter& setIncludeTrivia(bool include);
-
-    /// Sets whether to include preprocessor directives when printing syntax.
-    /// @return a reference to this object, to allow chaining additional method calls.
-    AstPrinter& setAnsiStyle(bool include) {
-        includeDirectives = include;
-        return *this;
-    }
-
-    /// @return a copy of the internal text buffer.
+    /// @return a view of the internal text buffer.
     std::string_view str() const { return buffer; }
 
-    /// A helper method that assists in printing an entire syntax tree back to source
-    /// text. A SyntaxPrinter with useful defaults is constructed, the tree is printed,
-    /// and the resulting text is returned.
-    // static std::string printFile(const SyntaxTree& treprints
     void handle(const InvalidStatement& t);
 
     // wait_statement ::= wait ( expression ) statement_or_null
@@ -75,10 +55,9 @@ public:
     // wait_statement ::= wait fork;
     void handle(const WaitForkStatement& t);
 
-    // wait_statement ::= wait_order ( hierarchical_identifier { , hierarchical_identifier } )
-    // action_block
+    // wait_statement ::= wait_order ( hierarchical_identifier { , hierarchical_identifier } ) action_block
     void handle(const WaitOrderStatement& t);
-    // #test schrijven
+
     void handle(const InvalidAssertionExpr& t);
 
     // hierarchical_identifier ::= [ $root . ] { identifier constant_bit_select . } identifier
@@ -273,6 +252,7 @@ public:
     // property_formal_typeformal_port_identifier {variable_dimension} [ = property_actual_arg ]
     void handle(const AssertionPortSymbol& t);
 
+
     /*
     package_declaration ::=
             { attribute_instance } package [ lifetime ] package_identifier ;
@@ -412,9 +392,8 @@ public:
 
     void handle(const CheckerInstanceSymbol& t);
 
-    // checker_declaration  { { attribute_instance } checker_or_generate_item } insert deze waarden
-    // bij Checker symbol
-    void handle(const CheckerInstanceBodySymbol& t);
+    // checker_declaration  { { attribute_instance } checker_or_generate_item } these values get inserted in CheckerSymbol 
+    void handle(const CheckerInstanceBodySymbol& t, const std::map<std::string, std::string> &connectionMapping = std::map<std::string, std::string>());
 
     // clocking_declaration ::= [ default ] clocking [ clocking_identifier ] clocking_event ;{
     // clocking_item }endclocking [ : clocking_identifier ]
@@ -476,30 +455,22 @@ private:
     std::string buffer;
     std::string* tempBuffer;
     std::list<std::string> writeNextBuffer;
-    // used to  make sure the internalSymbol of ansi ports aren't written as a member of a
-    // instanceBody, the direction of ansi ports is known
+
+    // used to make sure the internalSymbol of ansi ports aren't written as a member of a
+    // instanceBody, to make sure the direction of ansi ports is known.
     std::map<const slang::ast::Symbol*, ArgumentDirection> internalSymbols;
-    // used to ensure interfaces, .. are only written fully  once
-    std::set<const slang::ast::InstanceBodySymbol*> initializedInstances;
+
+
     // the type in the ast is not the type defined by the type alias, this map is used to convert
     // the type back to the type alias type
     std::map<std::string, std::string> typeConversions;
 
     // buffer for code in a statementblock that needs to be appended in the next proceduralBlock
     std::string blockBuffer;
+
     Compilation& compilation;
 
-    // variables that are declared in a statement block but not in the code
-    // std::map<std::string_view,> variables;
-    bool includeTrivia = true;
-    bool includeMissing = false;
-    bool includeSkipped = false;
-    bool includeDirectives = false;
-    bool includePreprocessed = true;
-    bool includeComments = true;
-    bool squashNewlines = true;
     bool useTempBuffer = false;
-
     bool inEventList = false;
     bool isFrontEventList = false;
     bool isBackEventList = false;
@@ -507,7 +478,7 @@ private:
     // used to get parent symbol while you are in a expression
     const Symbol* currSymbol;
 
-    // used to detecet if the a visit has changed the buffer
+    // used to detect if a visit has changed the buffer
     int changedBuffer = 0;
 
     // the amount of spaces after a newline is depth*depth_multplier
@@ -533,14 +504,11 @@ private:
         return type;
     }
 
-    // this function visits all of tthe member and all of its siblings
     void visitMembers(const Symbol* member, const std::string& divider = ",") {
         while (member) {
             int currentBuffer = changedBuffer;
             member->visit(*this);
-            // TODO betere maniet voor dit vinden
             std::string* writeBuffer = (useTempBuffer) ? (tempBuffer) : (&this->buffer);
-
             if (*writeBuffer != "" &&
                 ("\n" != (*writeBuffer).substr((*writeBuffer).length() - 1, (*writeBuffer).length() - 1)) &&
                 (changedBuffer != currentBuffer)) {
@@ -560,9 +528,7 @@ private:
             if (item != t.back() && changedBuffer != currentBuffer)
                 write(divider, false);
             std::string* writeBuffer = (useTempBuffer) ? (tempBuffer) : (&this->buffer);
-            if (newline &&
-                ("\n" !=
-                 (*writeBuffer).substr((*writeBuffer).length() - 1, (*writeBuffer).length() - 1)))
+            if (*writeBuffer != "" && newline &&("\n" != (*writeBuffer).substr((*writeBuffer).length() - 1, (*writeBuffer).length() - 1)))
                 write("\n", false);
         }
     }
@@ -576,9 +542,8 @@ private:
             if (&item != &t.back() && changedBuffer != currentBuffer)
                 write(divider, false);
             std::string* writeBuffer = (useTempBuffer) ? (tempBuffer) : (&this->buffer);
-            if (newline &&
-                ("\n" !=
-                 (*writeBuffer).substr((*writeBuffer).length() - 1, (*writeBuffer).length() - 1)))
+
+            if (*writeBuffer != "" && newline &&("\n" != (*writeBuffer).substr((*writeBuffer).length() - 1, (*writeBuffer).length() - 1)))
                 write("\n", false);
         }
     }
@@ -586,8 +551,8 @@ private:
     void write(std::string_view string, bool add_spacer = true, bool use_dollar = false) {
         if (string != "")
             changedBuffer++;
-        // check if there is a $ sign in the string and add its content to the write next buffer
-        // the $ is generated by the typewriter and repersents a jump ex: int$[] identifier -> int
+        // check if there is a $ sign in the string and add its content to the writeNext buffer
+        // the $ is generated by the typewriter and represents a jump ex: int$[] identifier -> int
         // identifier[]
         int dollarLocation = string.find("$");
         std::string* writeBuffer = (useTempBuffer) ? (tempBuffer) : (&this->buffer);
@@ -600,11 +565,12 @@ private:
         }
 
         if ((*writeBuffer).back() == '\n') {
-            // solves the indentation in new scopes
+            // solves the indentation in new lines
             std::string depth_string = std::string(indentation_level * indentation_multiplier, ' ');
             (*writeBuffer).append(depth_string);
         }
-        // buffer =="" is added to ensure the first char of the program does not have a space
+
+        // buffer == "" is added to ensure the first char of the program does not have a space
         // infront of it
         else if (add_spacer && (*writeBuffer) != "") {
             (*writeBuffer).append(" ");
@@ -988,7 +954,7 @@ private:
             }
         }
 
-        // incase a classs element is used check if it needs extra identification ex::super
+        // incase item / caller is a class element is check if it needs extra identification ex:super
        if(item.getParentScope() && (*caller).getParentScope()){
             std::pair<const ClassType*, bool> itemClassPair=  Lookup::getContainingClass(*item.getParentScope());
             //check if the caller is a member of the same class
@@ -1013,7 +979,6 @@ private:
     std::string lowerFirstLetter(std::string_view string) {
         if (string == "")
             return "";
-        // TODO: een beter manier vinden om dit te doen
         std::string new_string = std::string(string);
         new_string[0] = (char)tolower(new_string[0]);
         return new_string;

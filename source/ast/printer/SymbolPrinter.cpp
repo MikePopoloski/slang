@@ -2,7 +2,7 @@
 //! @file ExpressionPrinter.cpp
 //! @brief adds Support for printing expressions from the ast
 //
-// SPDX-FileCopyrightText: Michael Popoloski, Easics
+// SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
 
@@ -12,6 +12,7 @@
 #include "slang/ast/symbols/MemberSymbols.h"
 #include "slang/ast/symbols/SubroutineSymbols.h"
 #include "slang/util/Util.h"
+#include "slang/syntax/AllSyntax.h"
 
 namespace slang::ast {
 
@@ -791,8 +792,6 @@ void AstPrinter::handle(const T& t) {
     }
 }
 
-// exact dezelfde implementatie als methodeprotoype
-
 void AstPrinter::handle(const FormalArgumentSymbol& t) {
     currSymbol = &t;
     write(t.getType().toString());
@@ -842,6 +841,12 @@ void AstPrinter::handle(const CheckerSymbol& t) {
         indentation_level++;
         port->visit(*this);
 
+        // default value is only availible as a syntax node -> print its string representation
+        if (port->defaultValueSyntax){
+            write("=");
+            write(port->defaultValueSyntax->toString());
+        }
+
         if (port != t.ports.back())
             write(",\n", false);
         else
@@ -887,10 +892,10 @@ void AstPrinter::handle(const CheckerInstanceSymbol& t) {
     }
 }
 
-// the body needs to be added to the checker symbol, there is no pointer from the there to here so
+// the body needs to be added to the checker symbol, there is no pointer from there to here so
 // when the symbol is visited it wil leave a comment with its memory adress this function will make
 // a string containing the body and inserting it in the correct location
-void AstPrinter::handle(const CheckerInstanceBodySymbol& t) {
+void AstPrinter::handle(const CheckerInstanceBodySymbol& t, const std::map<std::string, std::string> &connectionMapping) {
     currSymbol = &t;
     auto remainingMember = t.getFirstMember();
 
@@ -910,7 +915,6 @@ void AstPrinter::handle(const CheckerInstanceBodySymbol& t) {
                                      std::to_string((unsigned long long)(void*)&t.checker);
     std::regex reg(checker_identifier);
 
-    //
     this->buffer = std::regex_replace(this->buffer, reg, programBuffer);
 }
 
@@ -937,6 +941,7 @@ void AstPrinter::handle(const GenericClassDefSymbol& t) {
     write(t.getSyntax()->toString());
     write("endclass \n");
 }
+
 // constraint_declaration ::= [ static ] constraint constraint_identifier constraint_block
 void AstPrinter::handle(const ConstraintBlockSymbol& t) {
     currSymbol = &t;
@@ -973,6 +978,7 @@ void AstPrinter::handle(const RandSeqProductionSymbol& t) {
         t.getNextSibling()->visit(*this);
     }
 }
+
 // rs_case_item ::=case_item_expression { , case_item_expression } : production_item ;
 void AstPrinter::handle(const RandSeqProductionSymbol::CaseItem& t) {
     visitMembers(t.expressions, ",");

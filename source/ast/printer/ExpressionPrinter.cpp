@@ -2,7 +2,7 @@
 //! @file ExpressionPrinter.cpp
 //! @brief adds Support for printing expressions from the ast
 //
-// SPDX-FileCopyrightText: Michael Popoloski, Easics
+// SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
 
@@ -13,7 +13,6 @@
 
 namespace slang::ast {
 
-// #test schrijven
 void AstPrinter::handle(const InvalidAssertionExpr& t) {
     // wrap the invalid part of the code in a comment
     // print instance
@@ -281,27 +280,4 @@ void AstPrinter::handle(const ConditionBinsSelectExpr& t){
         write("}");
     }
 }
-/*
-void AstPrinter::handle(const BinaryAssertionExpr& t){
-    t.left.visit(*this);
-    // ensures that compound operators work ex: += would be +=+ without this
-    write(t.op);
-    t.right.visit(*this);}
-
-//property_instance ::= ps_or_hierarchical_property_identifier [ ( [ property_list_of_arguments ] )
-] void AstPrinter::handle(const AssertionInstanceExpression& t){ writeName(t.symbol); write("(");
-
-    write(")");
-    t.body.visit(*this);
-}
-
-void AstPtinter::handle(const ClockingAssertionExpr& t){
-
-}
-
-void AstPrinter::handle(const SimpleAssertionExpr& t){
-
-}
-*/
-
 } // namespace slang::ast

@@ -14,7 +14,7 @@
 namespace slang::ast {
 
 void AstPrinter::handle(const EventListControl& t) {
-    // I think these are only used in SignalEventControl. to make this syntax possible  @(A,B,....)
+    // These are only used in SignalEventControl. to make this syntax possible  @(A,B,....)
     this->inEventList = true;
     this->isFrontEventList = true;
     for (auto event : t.events) {
@@ -77,7 +77,6 @@ void AstPrinter::handle(const Delay3Control& t) {
 void AstPrinter::handle(const SignalEventControl& t) {
     if (isFrontEventList || !inEventList)
         write("@(");
-    
 
     if (t.edge == EdgeKind::BothEdges) {
         write("edge");
@@ -85,15 +84,15 @@ void AstPrinter::handle(const SignalEventControl& t) {
     else if (t.edge!=EdgeKind::None){
         write(lower(toString(t.edge)));
     }
+
     t.expr.visit(*this);
+
     if (t.iffCondition) {
         write("iff");
         (*t.iffCondition).visit(*this);
     }
-
     if (isBackEventList || !inEventList)
         write(")");
-
 }
 
 void AstPrinter::handle(const ImplicitEventControl& t) {
@@ -106,8 +105,8 @@ void AstPrinter::handle(const TypeAliasType& t) {
     blockBuffer.append("typedef ");
     // ex: union tagged{void Invalid;int Valid;}m3.u$1 shoulden't have the m3.u$1
     std::string type_str = t.targetType.getType().toString();
-
     std::regex reg("}.*?(?= .\\S*?;)");
+
     type_str = std::regex_replace(type_str, reg, "}");
 
     int bracket_loc = type_str.rfind("}");
@@ -131,11 +130,12 @@ void AstPrinter::handle(const ClassType& t) {
         write("virtual");
     write("class");
 
-    if (t.thisVar)
+    if (t.thisVar){
         // [ lifetime ] class_identifier
         write(t.thisVar->lifetime == VariableLifetime::Static ? "static" : "automatic");
         const Type& data_type = t.thisVar->getDeclaredType().get()->getType();
         write(convertType(data_type.toString()), true, true);
+    }
 
     if (t.getBaseClass() != nullptr){
         write("extends");
@@ -148,11 +148,9 @@ void AstPrinter::handle(const ClassType& t) {
             interface->visit(*this);
         }
     }
-
     write(";\n");
 
     indentation_level++;
-    // ingore the last 
     visitMembers(t.getFirstMember() ,";");
     indentation_level--;
 
@@ -162,18 +160,21 @@ void AstPrinter::handle(const ClassType& t) {
 //covergroup_declaration ::=covergroup covergroup_identifier [ ( [ tf_port_list ] ) ] [ coverage_event ] ;{ coverage_spec_or_option } endgroup [ : covergroup_identifier ]
 void AstPrinter::handle(const CovergroupType& t) {
     write("covergroup");
-    // om een vreemde reden is de naam de naam van de laatste member
     write(t.name);
-
+    // ( [ tf_port_list ] )
     if(!t.getArguments().empty()){
         write("(");
         visitMembers(t.getArguments());
         write(")");
     }
-    t.getCoverageEvent()->visit(*this);
-    // tf_port_list not found
+
+    if (t.getCoverageEvent())
+        t.getCoverageEvent()->visit(*this);
+    
     write(";\n");
+    
     visitMembers(t.getArguments().back()->getNextSibling(),";");
+    
     write("endgroup\n");
 }
 
@@ -221,9 +222,11 @@ void AstPrinter::handle(const ConditionalConstraint& t) {
     write("if(");
     t.predicate.visit(*this);
     write("){\n");
+
     indentation_level++;
     t.ifBody.visit(*this);
     indentation_level--;
+
     write("}\n");
     if (t.elseBody){
         write("else{\n");
@@ -235,10 +238,10 @@ void AstPrinter::handle(const ConditionalConstraint& t) {
 void AstPrinter::handle(const DisableSoftConstraint& t) {
     write("disable soft");
     t.target.visit(*this);
-    }
-    //t.expr.visit(*this);
+}
+// t.expr.visit(*this);
 
-//foreach ( ps_or_hierarchical_array_identifier [ loop_variables ] ) constraint_set
+//constraint_expression ::= foreach ( ps_or_hierarchical_array_identifier [ loop_variables ] ) constraint_set
 void AstPrinter::handle(const slang::ast::ForeachConstraint& t) {
     write("foreach(" );
     t.arrayRef.visit(*this);
