@@ -42,7 +42,7 @@ module m;
     C c;
     initial begin
         foreach (c.asdf[i,j,,k]) begin
-            if (c.asdf[i][j][0]) begin
+            if (c.asdf[i][j][0] != 0) begin
                 string s;
                 s = string'(c.asdf[i][j][0][k]);
                 foreach (c.asdf[a]) begin
@@ -190,7 +190,7 @@ module m;
 
     initial begin
         #3 i++;
-        #(2.1 + i) i++;
+        #(2.1 + real'(i)) i++;
 
         // Invalid
         #foo i++;
@@ -220,7 +220,7 @@ module m;
 
     always @i;
     always @(i);
-    always @((i / 2) or blah, r, (posedge blah or negedge i), edge i);
+    always @((i / 2) or blah, r, (posedge blah or negedge i[0]), edge i[0]);
 
     always @*;
     always @ *;
@@ -230,7 +230,7 @@ module m;
     // warning about constant expr
     localparam int param = 4;
     always @(3);
-    always @(posedge param + 2 / 3);
+    always @(posedge 1'(param + 2 / 3));
 
     // following are invalid
     always @;
@@ -377,10 +377,10 @@ module m;
         assert (i > 0) i++; else i--;
         assume #0 (i < 0) else bar();
         assume #0 (i < 0);
-        cover final (i) bar();
+        cover final (i != 0) bar();
 
-        assert (foo);                      // not boolean
-        cover (i) else $fatal(1, "SDF");   // fail stmt not allowed
+        assert (foo);                           // not boolean
+        cover (i != 0) else $fatal(1, "SDF");   // fail stmt not allowed
     end
 
     function void bar(); endfunction
@@ -429,6 +429,7 @@ module m;
     function void f1; endfunction
     function void f2(int i, output int o); endfunction
     function automatic void f3(int i, ref r); endfunction
+    function int error_code(); return (0); endfunction
 
     int i;
     string s;
@@ -439,6 +440,8 @@ module m;
         assert #0 (i < 0) f2(i, i);
         assert #0 (i < 0) f3(i, r);
         assert #0 (i < 0) $swrite(s, "%d", i);
+        assert #0 (i < 0) error_code();
+        assert #0 (i < 0) void'(error_code());
     end
 endmodule
 )");
@@ -447,12 +450,13 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 5);
+    REQUIRE(diags.size() == 6);
     CHECK(diags[0].code == diag::InvalidDeferredAssertAction);
-    CHECK(diags[1].code == diag::DeferredAssertSysTask);
+    CHECK(diags[1].code == diag::DeferredAssertNonVoid);
     CHECK(diags[2].code == diag::DeferredAssertOutArg);
     CHECK(diags[3].code == diag::DeferredAssertAutoRefArg);
     CHECK(diags[4].code == diag::DeferredAssertOutArg);
+    CHECK(diags[5].code == diag::UnusedResult);
 }
 
 TEST_CASE("Break statement check -- regression") {
@@ -533,13 +537,13 @@ module m;
     endfunction
 
     function int func3();
-        while (foo) begin
+        while (foo > 0) begin
         end
         return 1;
     endfunction
 
     function int func4();
-        do begin end while (foo);
+        do begin end while (foo > 0);
         return 1;
     endfunction
 
@@ -662,7 +666,7 @@ module m;
     int g;
     initial begin
         j <= #2 2;
-        g = @(posedge j) 3;
+        g = @(posedge j[0]) 3;
     end
 endmodule
 )");
@@ -1172,7 +1176,7 @@ function f;
         static int j = i;
         i++;
     join_any
-    wait (3) i = 1;
+    wait (i != 0) i = 1;
     wait_order(a, b, c);
     t();
 endfunction
@@ -1222,6 +1226,8 @@ module m;
         @(posedge i) i = 1;
         fork join_any
         t();
+        wait fork;
+        expect(i == 0);
     end
 endmodule
 )");
@@ -1230,11 +1236,13 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 4);
+    REQUIRE(diags.size() == 6);
     CHECK(diags[0].code == diag::TimingInFuncNotAllowed);
     CHECK(diags[1].code == diag::TimingInFuncNotAllowed);
     CHECK(diags[2].code == diag::TimingInFuncNotAllowed);
     CHECK(diags[3].code == diag::TaskFromFinal);
+    CHECK(diags[4].code == diag::TimingInFuncNotAllowed);
+    CHECK(diags[5].code == diag::TimingInFuncNotAllowed);
 }
 
 TEST_CASE("Non-blocking timing control reference to auto") {
@@ -1429,7 +1437,7 @@ module m;
             void A1 : { cnt = 1; } B repeat(5) C B
             { $display("c=%d, b1=%d, b2=%d", C, B[1], B[2]); }
             ;
-            void A2 : if (a) D(5) else D(20)
+            void A2 : if (a != 0) D(5) else D(20)
             { $display("d1=%d, d2=%d", D[1], D[2]); }
             ;
             int B : C { return C;}
@@ -1600,7 +1608,10 @@ TEST_CASE("Unrollable for loop drivers") {
  endmodule
 )");
 
-    Compilation compilation;
+    CompilationOptions options;
+    options.maxConstexprSteps = 10000;
+
+    Compilation compilation(options);
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
@@ -1727,17 +1738,17 @@ module m;
     Instr instr;
     initial begin
         if (instr matches (tagged Jmp (tagged JmpC '{cc:.c,addr:.a}))) begin
-            j = c + a;
+            j = 10'(c) + a;
         end
 
         if (instr matches (tagged Jmp .j) &&&
             j matches (tagged JmpC '{cc:.c,addr:.a})) begin
-            e = c + a;
+            e = 10'(c) + a;
         end
     end
 
     initial begin
-        e = instr matches tagged Jmp tagged JmpC '{cc:.c,addr:.a} &&& foo > 1 ? a + c : 0;
+        e = instr matches tagged Jmp tagged JmpC '{cc:.c,addr:.a} &&& foo > 1 ? a + 10'(c) : 0;
     end
 endmodule
 )");
@@ -1788,7 +1799,7 @@ module m;
             tagged Add '{.r1, .r2, .rd} &&& (rd != 0) : rf[rd] = rf[r1] + rf[r2];
             tagged Jmp .j : case (j) matches
                                 tagged JmpU .a : pc = pc + a;
-                                tagged JmpC '{.c, .a}: if (rf[c]) pc = a;
+                                tagged JmpC '{.c, .a}: if (rf[c] != 0) pc = a;
                             endcase
         endcase
 
@@ -1797,7 +1808,7 @@ module m;
             tagged Add '{.r1, .r2, .rd} : rf[rd] = rf[r1] + rf[r2];
             tagged Jmp .j : case (j) matches
                                 tagged JmpU .a : pc = pc + a;
-                                tagged JmpC '{.c, .a} : if (rf[c]) pc = a;
+                                tagged JmpC '{.c, .a} : if (rf[c] != 0) pc = a;
                             endcase
         endcase
 
@@ -1808,7 +1819,7 @@ module m;
                           endcase
             tagged Jmp .j: case (j) matches
                                 tagged JmpU .a : pc = pc + a;
-                                tagged JmpC '{.c, .a} : if (rf[c]) pc = a;
+                                tagged JmpC '{.c, .a} : if (rf[c] != 0) pc = a;
                                 default: begin end
                            endcase
         endcase
@@ -1816,14 +1827,14 @@ module m;
         case (instr) matches
             tagged Add '{.r1, .r2, .rd} &&& (rd != 0) : rf[rd] = rf[r1] + rf[r2];
             tagged Jmp (tagged JmpU .a) : pc = pc + a;
-            tagged Jmp (tagged JmpC '{.c, .a}) : if (rf[c]) pc = a;
+            tagged Jmp (tagged JmpC '{.c, .a}) : if (rf[c] != 0) pc = a;
         endcase
 
         case (instr) matches
             tagged Add '{reg2:.r2,regd:.rd,reg1:.r1} &&& (rd != 0):
                                                         rf[rd] = rf[r1] + rf[r2];
             tagged Jmp (tagged JmpU .a) : pc = pc + a;
-            tagged Jmp (tagged JmpC '{addr:.a,cc:.c}) : if (rf[c]) pc = a;
+            tagged Jmp (tagged JmpC '{addr:.a,cc:.c}) : if (rf[c] != 0) pc = a;
         endcase
     end
 endmodule
@@ -1955,7 +1966,7 @@ class Packet;
 		end
 
 		if (update_status == 0)
-			if (this.update_status)
+			if (this.update_status != 0)
 				command[update_status] = 1'b0;
 		return update_status;
 	endfunction
@@ -1971,4 +1982,27 @@ endclass
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::UnusedResult);
+}
+
+TEST_CASE("Ref args in fork-join blocks") {
+    auto options = optionsFor(LanguageVersion::v1800_2023);
+    auto tree = SyntaxTree::fromText(R"(
+function automatic foo(ref a, ref static b);
+    fork
+        automatic int k = a;
+        begin : foo
+            $display(a);
+            $display(b);
+        end
+    join_none
+endfunction
+)",
+                                     options);
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::RefArgForkJoin);
 }

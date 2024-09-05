@@ -35,5 +35,7 @@ Checks: >
     -misc-const-correctness,
     -misc-use-anonymous-namespace,
     -misc-include-cleaner,
+    -misc-header-include-cycle,
     -performance-no-int-to-ptr,
+    -performance-enum-size,
     -portability-simd-intrinsics

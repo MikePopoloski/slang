@@ -36,7 +36,6 @@ void registerTypes(py::module_& m) {
         .def_property_readonly("isBooleanConvertible", &Type::isBooleanConvertible)
         .def_property_readonly("isArray", &Type::isArray)
         .def_property_readonly("isStruct", &Type::isStruct)
-        .def_property_readonly("isBitstreamType", &Type::isBitstreamType)
         .def_property_readonly("isFixedSize", &Type::isFixedSize)
         .def_property_readonly("isSimpleType", &Type::isSimpleType)
         .def_property_readonly("isByteArray", &Type::isByteArray)
@@ -65,6 +64,7 @@ void registerTypes(py::module_& m) {
         .def_property_readonly("isSequenceType", &Type::isSequenceType)
         .def_property_readonly("isPropertyType", &Type::isPropertyType)
         .def_property_readonly("isVirtualInterface", &Type::isVirtualInterface)
+        .def_property_readonly("isHandleType", &Type::isHandleType)
         .def_property_readonly("isAlias", &Type::isAlias)
         .def_property_readonly("isError", &Type::isError)
         .def("isMatching", &Type::isMatching, "rhs"_a)
@@ -72,10 +72,13 @@ void registerTypes(py::module_& m) {
         .def("isAssignmentCompatible", &Type::isAssignmentCompatible, "rhs"_a)
         .def("isCastCompatible", &Type::isCastCompatible, "rhs"_a)
         .def("isBitstreamCastable", &Type::isBitstreamCastable, "rhs"_a)
+        .def("isBitstreamType", &Type::isBitstreamType, "destination"_a = false)
         .def("isDerivedFrom", &Type::isDerivedFrom, "rhs"_a)
         .def("implements", &Type::implements, "rhs"_a)
-        .def("isValidForRand", &Type::isValidForRand, "rhs"_a)
-        .def("coerceValue", &Type::coerceValue, "rhs"_a)
+        .def("isValidForRand", &Type::isValidForRand, "mode"_a, "languageVersion"_a)
+        .def("coerceValue", &Type::coerceValue, "value"_a)
+        .def("makeSigned", &Type::makeSigned, "compilation"_a)
+        .def("makeUnsigned", &Type::makeUnsigned, "compilation"_a)
         .def_static("getCommonBase", &Type::getCommonBase, byrefint, "left"_a, "right"_a)
         .def_property_readonly("integralFlags", &Type::getIntegralFlags)
         .def_property_readonly("defaultValue", &Type::getDefaultValue)
@@ -221,6 +224,7 @@ void registerTypes(py::module_& m) {
     py::class_<PackedUnionType, IntegralType, Scope>(m, "PackedUnionType")
         .def_readonly("systemId", &PackedUnionType::systemId)
         .def_readonly("isTagged", &PackedUnionType::isTagged)
+        .def_readonly("isSoft", &PackedUnionType::isSoft)
         .def_readonly("tagBits", &PackedUnionType::tagBits);
 
     py::class_<UnpackedUnionType, Type, Scope>(m, "UnpackedUnionType")
@@ -246,10 +250,10 @@ void registerTypes(py::module_& m) {
         .def_property_readonly("modport",
                                [](const VirtualInterfaceType& self) { return self.modport; });
 
-    EXPOSE_ENUM(m, ForwardTypedefCategory);
+    EXPOSE_ENUM(m, ForwardTypeRestriction);
 
     py::class_<ForwardingTypedefSymbol, Symbol>(m, "ForwardingTypedefSymbol")
-        .def_readonly("category", &ForwardingTypedefSymbol::category)
+        .def_readonly("typeRestriction", &ForwardingTypedefSymbol::typeRestriction)
         .def_readonly("visibility", &ForwardingTypedefSymbol::visibility)
         .def_property_readonly("nextForwardDecl", [](const ForwardingTypedefSymbol& self) {
             return self.getNextForwardDecl();
@@ -267,9 +271,11 @@ void registerTypes(py::module_& m) {
         .def_readonly("genericClass", &ClassType::genericClass)
         .def_readonly("isAbstract", &ClassType::isAbstract)
         .def_readonly("isInterface", &ClassType::isInterface)
+        .def_readonly("isFinal", &ClassType::isFinal)
         .def_property_readonly("baseClass", &ClassType::getBaseClass)
         .def_property_readonly("implementedInterfaces", &ClassType::getImplementedInterfaces)
         .def_property_readonly("baseConstructorCall", &ClassType::getBaseConstructorCall)
+        .def_property_readonly("constructor", &ClassType::getConstructor)
         .def_property_readonly("firstForwardDecl", &ClassType::getFirstForwardDecl);
 
     py::class_<GenericClassDefSymbol, Symbol>(m, "GenericClassDefSymbol")
@@ -282,17 +288,24 @@ void registerTypes(py::module_& m) {
                                &GenericClassDefSymbol::getDefaultSpecialization)
         .def_property_readonly("firstForwardDecl", &GenericClassDefSymbol::getFirstForwardDecl);
 
+    py::enum_<ConstraintBlockFlags>(m, "ConstraintBlockFlags")
+        .value("None", ConstraintBlockFlags::None)
+        .value("Pure", ConstraintBlockFlags::Pure)
+        .value("Static", ConstraintBlockFlags::Static)
+        .value("Extern", ConstraintBlockFlags::Extern)
+        .value("ExplicitExtern", ConstraintBlockFlags::ExplicitExtern)
+        .value("Initial", ConstraintBlockFlags::Initial)
+        .value("Extends", ConstraintBlockFlags::Extends)
+        .value("Final", ConstraintBlockFlags::Final);
+
     py::class_<ConstraintBlockSymbol, Symbol, Scope>(m, "ConstraintBlockSymbol")
         .def_readonly("thisVar", &ConstraintBlockSymbol::thisVar)
-        .def_readonly("isStatic", &ConstraintBlockSymbol::isStatic)
-        .def_readonly("isExtern", &ConstraintBlockSymbol::isExtern)
-        .def_readonly("isExplicitExtern", &ConstraintBlockSymbol::isExplicitExtern)
-        .def_readonly("isPure", &ConstraintBlockSymbol::isPure)
+        .def_readonly("flags", &ConstraintBlockSymbol::flags)
         .def_property_readonly("constraints", &ConstraintBlockSymbol::getConstraints);
 
     py::class_<CovergroupType, Type, Scope>(m, "CovergroupType")
-        .def_readonly("arguments", &CovergroupType::arguments)
-        .def_readonly("sampleArguments", &CovergroupType::sampleArguments)
-        .def_property_readonly("body", [](const CovergroupType& self) { return &self.body; })
+        .def_property_readonly("arguments", &CovergroupType::getArguments)
+        .def_property_readonly("body", [](const CovergroupType& self) { return &self.getBody(); })
+        .def_property_readonly("baseGroup", &CovergroupType::getBaseGroup)
         .def_property_readonly("coverageEvent", &CovergroupType::getCoverageEvent);
 }

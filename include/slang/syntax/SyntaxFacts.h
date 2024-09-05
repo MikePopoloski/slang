@@ -155,8 +155,8 @@ public:
     /// @return true if the given token represents a possible for-statement variable initializer.
     static bool isPossibleForInitializer(TokenKind kind);
 
-    /// @return true if the given token represents a possible open range element.
-    static bool isPossibleOpenRangeElement(TokenKind kind);
+    /// @return true if the given token represents a possible value range element.
+    static bool isPossibleValueRangeElement(TokenKind kind);
 
     /// @return true if the given token represents a possible conditional pattern.
     static bool isPossiblePattern(TokenKind kind);

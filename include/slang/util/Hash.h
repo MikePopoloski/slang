@@ -104,12 +104,12 @@ static inline void mum(uint64_t* a, uint64_t* b) {
     uint64_t seed = secret[0];
     uint64_t a{};
     uint64_t b{};
-    if (SLANG_LIKELY(len <= 16)) {
-        if (SLANG_LIKELY(len >= 4)) {
+    if (len <= 16) [[likely]] {
+        if (len >= 4) [[likely]] {
             a = (r4(p) << 32U) | r4(p + ((len >> 3U) << 2U));
             b = (r4(p + len - 4) << 32U) | r4(p + len - 4 - ((len >> 3U) << 2U));
         }
-        else if (SLANG_LIKELY(len > 0)) {
+        else if (len > 0) [[likely]] {
             a = r3(p, len);
             b = 0;
         }
@@ -120,19 +120,21 @@ static inline void mum(uint64_t* a, uint64_t* b) {
     }
     else {
         size_t i = len;
-        if (SLANG_UNLIKELY(i > 48)) {
+        if (i > 48) [[unlikely]] {
             uint64_t see1 = seed;
             uint64_t see2 = seed;
-            do {
-                seed = mix(r8(p) ^ secret[1], r8(p + 8) ^ seed);
-                see1 = mix(r8(p + 16) ^ secret[2], r8(p + 24) ^ see1);
-                see2 = mix(r8(p + 32) ^ secret[3], r8(p + 40) ^ see2);
-                p += 48;
-                i -= 48;
-            } while (SLANG_LIKELY(i > 48));
+            do
+                [[likely]] {
+                    seed = mix(r8(p) ^ secret[1], r8(p + 8) ^ seed);
+                    see1 = mix(r8(p + 16) ^ secret[2], r8(p + 24) ^ see1);
+                    see2 = mix(r8(p + 32) ^ secret[3], r8(p + 40) ^ see2);
+                    p += 48;
+                    i -= 48;
+                }
+            while (i > 48);
             seed ^= see1 ^ see2;
         }
-        while (SLANG_UNLIKELY(i > 16)) {
+        while (i > 16) [[unlikely]] {
             seed = mix(r8(p) ^ secret[1], r8(p + 8) ^ seed);
             i -= 16;
             p += 16;
@@ -421,6 +423,9 @@ class SmallSet : private Alloc::Storage, public flat_hash_set<T, hash<T>, std::e
 
 public:
     SmallSet() : BaseType(Alloc(*this)) {}
+
+    template<typename TIterator>
+    SmallSet(TIterator first, TIterator last) : BaseType(first, last, Alloc(*this)) {}
 };
 
 } // namespace slang

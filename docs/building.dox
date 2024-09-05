@@ -150,7 +150,7 @@ in one of the default locations, you should be able to use a simple `find_packag
 it into your build.
 
 ```
-cmake_minimum_required(VERSION 3.15)
+cmake_minimum_required(VERSION 3.20)
 project(example)
 
 find_package(slang 1.0.0)
@@ -167,7 +167,7 @@ Instead of installing the slang package on your system, you can instead instruct
 from GitHub and build it as part of your own project.
 
 ```
-cmake_minimum_required(VERSION 3.15)
+cmake_minimum_required(VERSION 3.20)
 project(example)
 
 # Note: this example just pulls the head master branch

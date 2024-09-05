@@ -38,6 +38,10 @@ public:
     /// should be included in the JSON output.
     void setIncludeAddresses(bool set) { includeAddrs = set; }
 
+    /// Sets a flag that indicates whether source line and file
+    /// information should be included in the JSON output.
+    void setIncludeSourceInfo(bool set) { includeSourceInfo = set; }
+
     /// Serializes a symbol to JSON.
     void serialize(const Symbol& symbol, bool inMembersArray = false);
 
@@ -169,6 +173,7 @@ private:
     Compilation& compilation;
     JsonWriter& writer;
     bool includeAddrs = true;
+    bool includeSourceInfo = false;
 };
 
 } // namespace slang::ast

@@ -6,7 +6,6 @@
 #include "pyslang.h"
 
 #include "slang/ast/Compilation.h"
-#include "slang/ast/Definition.h"
 #include "slang/ast/ScriptSession.h"
 #include "slang/ast/SystemSubroutine.h"
 #include "slang/ast/symbols/AttributeSymbol.h"
@@ -36,30 +35,6 @@ void registerCompilation(py::module_& m) {
     EXPOSE_ENUM(m, PrimitivePortDirection);
     EXPOSE_ENUM(m, DriverKind);
 
-    py::class_<Definition>(m, "Definition")
-        .def_readonly("name", &Definition::name)
-        .def_readonly("location", &Definition::location)
-        .def_readonly("definitionKind", &Definition::definitionKind)
-        .def_readonly("defaultLifetime", &Definition::defaultLifetime)
-        .def_readonly("unconnectedDrive", &Definition::unconnectedDrive)
-        .def_readonly("timeScale", &Definition::timeScale)
-        .def_readonly("attributes", &Definition::attributes)
-        .def_property_readonly("syntax", [](const Definition& self) { return &self.syntax; })
-        .def_property_readonly("defaultNetType",
-                               [](const Definition& self) { return &self.defaultNetType; })
-        .def_property_readonly("scope", [](const Definition& self) { return &self.scope; })
-        .def_property_readonly("hierarchicalPath",
-                               [](const Definition& self) {
-                                   std::string str;
-                                   self.getHierarchicalPath(str);
-                                   return str;
-                               })
-        .def_property_readonly("isInstantiated", &Definition::isInstantiated)
-        .def("getKindString", &Definition::getKindString)
-        .def("getArticleKindString", &Definition::getArticleKindString)
-        .def("__repr__",
-             [](const Definition& self) { return fmt::format("Definition(\"{}\")", self.name); });
-
     py::enum_<MinTypMax>(m, "MinTypMax")
         .value("Min", MinTypMax::Min)
         .value("Typ", MinTypMax::Typ)
@@ -75,7 +50,13 @@ void registerCompilation(py::module_& m) {
         .value("StrictDriverChecking", CompilationFlags::StrictDriverChecking)
         .value("LintMode", CompilationFlags::LintMode)
         .value("SuppressUnused", CompilationFlags::SuppressUnused)
-        .value("IgnoreUnknownModules", CompilationFlags::IgnoreUnknownModules);
+        .value("IgnoreUnknownModules", CompilationFlags::IgnoreUnknownModules)
+        .value("RelaxStringConversions", CompilationFlags::RelaxStringConversions)
+        .value("AllowRecursiveImplicitCall", CompilationFlags::AllowRecursiveImplicitCall)
+        .value("AllowBareValParamAssignment", CompilationFlags::AllowBareValParamAssignment)
+        .value("AllowSelfDeterminedStreamConcat", CompilationFlags::AllowSelfDeterminedStreamConcat)
+        .value("AllowMultiDrivenLocals", CompilationFlags::AllowMultiDrivenLocals)
+        .value("AllowMergingAnsiPorts", CompilationFlags::AllowMergingAnsiPorts);
 
     py::class_<CompilationOptions>(m, "CompilationOptions")
         .def(py::init<>())
@@ -90,25 +71,26 @@ void registerCompilation(py::module_& m) {
         .def_readwrite("errorLimit", &CompilationOptions::errorLimit)
         .def_readwrite("typoCorrectionLimit", &CompilationOptions::typoCorrectionLimit)
         .def_readwrite("minTypMax", &CompilationOptions::minTypMax)
+        .def_readwrite("languageVersion", &CompilationOptions::languageVersion)
         .def_readwrite("defaultTimeScale", &CompilationOptions::defaultTimeScale)
         .def_readwrite("topModules", &CompilationOptions::topModules)
-        .def_readwrite("paramOverrides", &CompilationOptions::paramOverrides);
+        .def_readwrite("paramOverrides", &CompilationOptions::paramOverrides)
+        .def_readwrite("defaultLiblist", &CompilationOptions::defaultLiblist);
 
-    py::class_<Compilation>(m, "Compilation")
-        .def(py::init<>())
+    py::class_<Compilation> comp(m, "Compilation");
+    comp.def(py::init<>())
         .def(py::init<const Bag&>(), "options"_a)
         .def_property_readonly("options", &Compilation::getOptions)
         .def_property_readonly("isFinalized", &Compilation::isFinalized)
         .def_property_readonly("sourceManager", &Compilation::getSourceManager)
+        .def_property_readonly("defaultLibrary", &Compilation::getDefaultLibrary)
         .def("addSyntaxTree", &Compilation::addSyntaxTree, "tree"_a)
         .def("getSyntaxTrees", &Compilation::getSyntaxTrees)
         .def("getRoot", py::overload_cast<>(&Compilation::getRoot), byrefint)
-        .def("addSystemSubroutine",
-             py::overload_cast<const SystemSubroutine&>(&Compilation::addSystemSubroutine),
-             py::keep_alive<1, 2>(), "subroutine"_a)
-        .def("addSystemMethod",
-             py::overload_cast<SymbolKind, const SystemSubroutine&>(&Compilation::addSystemMethod),
-             py::keep_alive<1, 3>(), "typeKind"_a, "method"_a)
+        .def("addSystemSubroutine", &Compilation::addSystemSubroutine, py::keep_alive<1, 2>(),
+             "subroutine"_a)
+        .def("addSystemMethod", &Compilation::addSystemMethod, py::keep_alive<1, 3>(), "typeKind"_a,
+             "method"_a)
         .def("getSystemSubroutine", &Compilation::getSystemSubroutine, byrefint, "name"_a)
         .def("getSystemMethod", &Compilation::getSystemMethod, byrefint, "typeKind"_a, "name"_a)
         .def("parseName", &Compilation::parseName, byrefint, "name"_a)
@@ -118,6 +100,27 @@ void registerCompilation(py::module_& m) {
         .def("getSemanticDiagnostics", &Compilation::getSemanticDiagnostics, byrefint)
         .def("getAllDiagnostics", &Compilation::getAllDiagnostics, byrefint)
         .def("addDiagnostics", &Compilation::addDiagnostics, "diagnostics"_a)
+        .def("getCompilationUnit", &Compilation::getCompilationUnit, byrefint, "syntax"_a)
+        .def("getCompilationUnits", &Compilation::getCompilationUnits, byrefint)
+        .def("getSourceLibrary", &Compilation::getSourceLibrary, byrefint, "name"_a)
+        .def("tryGetDefinition", &Compilation::tryGetDefinition, byrefint, "name"_a, "scope"_a)
+        .def("getDefinitions", &Compilation::getDefinitions, byrefint)
+        .def("getPackage", &Compilation::getPackage, byrefint, "name"_a)
+        .def("getStdPackage", &Compilation::getStdPackage, byrefint)
+        .def("getPackages", &Compilation::getPackages, byrefint)
+        .def("getGateType", &Compilation::getGateType, byrefint, "name"_a)
+        .def("getAttributes",
+             py::overload_cast<const Symbol&>(&Compilation::getAttributes, py::const_), byrefint,
+             "symbol"_a)
+        .def("getAttributes",
+             py::overload_cast<const Statement&>(&Compilation::getAttributes, py::const_), byrefint,
+             "stmt"_a)
+        .def("getAttributes",
+             py::overload_cast<const Expression&>(&Compilation::getAttributes, py::const_),
+             byrefint, "expr"_a)
+        .def("getAttributes",
+             py::overload_cast<const PortConnection&>(&Compilation::getAttributes, py::const_),
+             byrefint, "conn"_a)
         .def("getType", py::overload_cast<SyntaxKind>(&Compilation::getType, py::const_), byrefint,
              "kind"_a)
         .def("getNetType", &Compilation::getNetType, byrefint, "kind"_a)
@@ -138,6 +141,12 @@ void registerCompilation(py::module_& m) {
         .def_property_readonly("typeRefType", &Compilation::getTypeRefType)
         .def_property_readonly("wireNetType", &Compilation::getWireNetType);
 
+    py::class_<Compilation::DefinitionLookupResult>(comp, "DefinitionLookupResult")
+        .def(py::init<>())
+        .def_readwrite("definition", &Compilation::DefinitionLookupResult::definition)
+        .def_readwrite("configRoot", &Compilation::DefinitionLookupResult::configRoot)
+        .def_readwrite("configRule", &Compilation::DefinitionLookupResult::configRule);
+
     py::class_<ScriptSession>(m, "ScriptSession")
         .def(py::init<>())
         .def_readonly("compilation", &ScriptSession::compilation)
@@ -153,6 +162,11 @@ void registerCompilation(py::module_& m) {
         .def_readwrite("expandEnvVars", &CommandLine::ParseOptions::expandEnvVars)
         .def_readwrite("ignoreDuplicates", &CommandLine::ParseOptions::ignoreDuplicates);
 
+    py::enum_<LanguageVersion>(m, "LanguageVersion")
+        .value("v1800_2017", LanguageVersion::v1800_2017)
+        .value("v1800_2023", LanguageVersion::v1800_2023)
+        .value("Default", LanguageVersion::Default);
+
     py::class_<Driver>(m, "Driver")
         .def(py::init<>())
         .def_readonly("sourceManager", &Driver::sourceManager)
@@ -160,6 +174,7 @@ void registerCompilation(py::module_& m) {
         .def_readonly("diagClient", &Driver::diagClient)
         .def_readonly("sourceLoader", &Driver::sourceLoader)
         .def_readonly("syntaxTrees", &Driver::syntaxTrees)
+        .def_readwrite("languageVersion", &Driver::languageVersion)
         .def("addStandardArgs", &Driver::addStandardArgs)
         .def(
             "parseCommandLine",
@@ -167,7 +182,8 @@ void registerCompilation(py::module_& m) {
                 return self.parseCommandLine(arg, parseOptions);
             },
             "arg"_a, "parseOptions"_a = CommandLine::ParseOptions{})
-        .def("processCommandFiles", &Driver::processCommandFiles, "fileName"_a, "makeRelative"_a)
+        .def("processCommandFiles", &Driver::processCommandFiles, "fileName"_a, "makeRelative"_a,
+             "separateUnit"_a)
         .def("processOptions", &Driver::processOptions)
         .def("runPreprocessor", &Driver::runPreprocessor, "includeComments"_a,
              "includeDirectives"_a, "obfuscateIds"_a, "useFixedObfuscationSeed"_a = false)
@@ -193,6 +209,8 @@ void registerCompilation(py::module_& m) {
         .def("addSearchExtension", &SourceLoader::addSearchExtension, "extension"_a)
         .def("addLibraryMaps", &SourceLoader::addLibraryMaps, "pattern"_a, "basePath"_a,
              "optionBag"_a)
+        .def("addSeparateUnit", &SourceLoader::addSeparateUnit, "filePatterns"_a, "includePaths"_a,
+             "defines"_a, "libraryName"_a)
         .def("loadSources", &SourceLoader::loadSources)
         .def("loadAndParseSources", &SourceLoader::loadAndParseSources, "optionBag"_a)
         .def_property_readonly("hasFiles", &SourceLoader::hasFiles)
@@ -243,7 +261,8 @@ void registerCompilation(py::module_& m) {
         using SystemSubroutine::unevaluatedContext;
     };
 
-    py::class_<SystemSubroutine, PySystemSubroutine> systemSub(m, "SystemSubroutine");
+    py::class_<SystemSubroutine, PySystemSubroutine, std::shared_ptr<SystemSubroutine>> systemSub(
+        m, "SystemSubroutine");
     systemSub.def(py::init_alias<const std::string&, SubroutineKind>(), "name"_a, "kind"_a)
         .def_readwrite("name", &SystemSubroutine::name)
         .def_readwrite("kind", &SystemSubroutine::kind)
@@ -286,14 +305,15 @@ void registerCompilation(py::module_& m) {
         }
     };
 
-    py::class_<SimpleSystemSubroutine, SystemSubroutine, PySimpleSystemSubroutine>(
-        m, "SimpleSystemSubroutine")
+    py::class_<SimpleSystemSubroutine, SystemSubroutine, PySimpleSystemSubroutine,
+               std::shared_ptr<SimpleSystemSubroutine>>(m, "SimpleSystemSubroutine")
         .def(py::init_alias<const std::string&, SubroutineKind, size_t,
                             const std::vector<const Type*>&, const Type&, bool, bool>(),
              "name"_a, "kind"_a, "requiredArgs"_a, "argTypes"_a, "returnType"_a, "isMethod"_a,
              "isFirstArgLValue"_a = false);
 
-    py::class_<NonConstantFunction, SimpleSystemSubroutine>(m, "NonConstantFunction")
+    py::class_<NonConstantFunction, SimpleSystemSubroutine, std::shared_ptr<NonConstantFunction>>(
+        m, "NonConstantFunction")
         .def(py::init<const std::string&, const Type&, size_t, const std::vector<const Type*>&,
                       bool>(),
              "name"_a, "returnType"_a, "requiredArgs"_a = 0,

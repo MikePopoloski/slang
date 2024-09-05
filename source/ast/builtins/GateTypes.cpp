@@ -43,11 +43,11 @@ void registerGateTypes(Compilation& c) {
     gate(c, "pmos", {out, in, in});
     gate(c, "rnmos", {out, in, in});
     gate(c, "rpmos", {out, in, in});
-    gate(c, "tranif0", {inout, inout, in});
-    gate(c, "tranif1", {inout, inout, in});
+    gate(c, "tranif0", {inout, inout, in}, PrimitiveSymbol::BiDiSwitch);
+    gate(c, "tranif1", {inout, inout, in}, PrimitiveSymbol::BiDiSwitch);
     gate(c, "rtranif0", {inout, inout, in});
     gate(c, "rtranif1", {inout, inout, in});
-    gate(c, "tran", {inout, inout});
+    gate(c, "tran", {inout, inout}, PrimitiveSymbol::BiDiSwitch);
     gate(c, "rtran", {inout, inout});
     gate(c, "pullup", {out});
     gate(c, "pulldown", {out});

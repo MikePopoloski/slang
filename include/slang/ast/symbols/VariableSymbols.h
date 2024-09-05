@@ -38,9 +38,12 @@ enum class SLANG_EXPORT VariableFlags : uint16_t {
 
     /// This is a checker "free variable", which may behave nondeterministically
     /// in simulation and participate differently in formal verification.
-    CheckerFreeVariable = 1 << 4
+    CheckerFreeVariable = 1 << 4,
+
+    /// The variable is a function port with direction 'ref static'.
+    RefStatic = 1 << 5
 };
-SLANG_BITMASK(VariableFlags, CheckerFreeVariable)
+SLANG_BITMASK(VariableFlags, RefStatic)
 
 /// Represents a variable declaration.
 class SLANG_EXPORT VariableSymbol : public ValueSymbol {
@@ -49,6 +52,8 @@ public:
     bitmask<VariableFlags> flags;
 
     VariableSymbol(std::string_view name, SourceLocation loc, VariableLifetime lifetime);
+
+    void checkInitializer() const;
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -107,6 +112,8 @@ public:
 
     const syntax::ExpressionSyntax* getDefaultValueSyntax() const { return defaultValSyntax; }
     const Expression* getDefaultValue() const;
+
+    FormalArgumentSymbol& clone(Compilation& compilation) const;
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -218,8 +225,7 @@ public:
 
 protected:
     TempVarSymbol(SymbolKind childKind, std::string_view name, SourceLocation loc,
-                  VariableLifetime lifetime) :
-        VariableSymbol(childKind, name, loc, lifetime) {}
+                  VariableLifetime lifetime) : VariableSymbol(childKind, name, loc, lifetime) {}
 };
 
 /// Represents an iterator variable created for array manipulation methods.
@@ -228,8 +234,13 @@ public:
     /// The type of the array that this iterator traverses.
     const Type& arrayType;
 
+    /// The name of the built-in "index" method, which can be customized
+    /// by the user. Some uses of IteratorSymbol don't allow an index method
+    /// and set this value to the empty string.
+    std::string_view indexMethodName;
+
     IteratorSymbol(const Scope& scope, std::string_view name, SourceLocation loc,
-                   const Type& arrayType);
+                   const Type& arrayType, std::string_view indexMethodName);
     IteratorSymbol(std::string_view name, SourceLocation loc, const Type& arrayType,
                    const Type& indexType);
 

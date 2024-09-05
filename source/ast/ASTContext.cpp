@@ -10,6 +10,7 @@
 #include "slang/ast/Compilation.h"
 #include "slang/ast/EvalContext.h"
 #include "slang/ast/expressions/MiscExpressions.h"
+#include "slang/ast/expressions/OperatorExpressions.h"
 #include "slang/ast/symbols/AttributeSymbol.h"
 #include "slang/ast/symbols/BlockSymbols.h"
 #include "slang/ast/symbols/InstanceSymbols.h"
@@ -124,8 +125,9 @@ void ASTContext::setAttributes(const Expression& expr,
     if (syntax.empty())
         return;
 
-    if (flags & ASTFlags::NoAttributes) {
-        addDiag(diag::AttributesNotAllowed, expr.sourceRange);
+    if (flags.has(ASTFlags::NoAttributes)) {
+        if (!expr.bad())
+            addDiag(diag::AttributesNotAllowed, expr.sourceRange);
         return;
     }
 
@@ -235,6 +237,29 @@ bool ASTContext::requireBooleanConvertible(const Expression& expr) const {
         addDiag(diag::NotBooleanConvertible, expr.sourceRange) << *expr.type;
         return false;
     }
+    else if (expr.type->isFloating()) {
+        addDiag(diag::FloatBoolConv, expr.sourceRange) << *expr.type;
+    }
+    else if (expr.type->isIntegral() && expr.type->getBitWidth() > 1 &&
+             expr.getEffectiveWidth() > 1u) {
+        // Suppress the warning for cases of right shift and bitwise-AND,
+        // as it's common practice to check for non-zero results like this:
+        //   if (a & b) begin end
+        //   if (a >> 2) begin end
+        auto isMaskOrRShift = [&] {
+            if (expr.kind == ExpressionKind::BinaryOp) {
+                auto op = expr.as<BinaryExpression>().op;
+                return op == BinaryOperator::BinaryAnd || op == BinaryOperator::LogicalShiftRight ||
+                       op == BinaryOperator::ArithmeticShiftRight ||
+                       op == BinaryOperator::BinaryXor || op == BinaryOperator::BinaryXnor;
+            }
+            return false;
+        };
+
+        if (!isMaskOrRShift())
+            addDiag(diag::IntBoolConv, expr.sourceRange) << *expr.type;
+    }
+
     return true;
 }
 
@@ -246,9 +271,17 @@ bool ASTContext::requireValidBitWidth(bitwidth_t width, SourceRange range) const
     return true;
 }
 
+bool ASTContext::requireTimingAllowed(SourceRange range) const {
+    if (flags.has(ASTFlags::Function | ASTFlags::Final) || inAlwaysCombLatch()) {
+        addDiag(diag::TimingInFuncNotAllowed, range);
+        return false;
+    }
+    return true;
+}
+
 ConstantValue ASTContext::eval(const Expression& expr, bitmask<EvalFlags> extraFlags) const {
     extraFlags |= EvalFlags::CacheResults;
-    if (flags.has(ASTFlags::SpecifyBlock))
+    if (flags.has(ASTFlags::SpecifyBlock | ASTFlags::SpecparamInitializer))
         extraFlags |= EvalFlags::SpecparamsAllowed;
 
     EvalContext ctx(*this, extraFlags);
@@ -259,7 +292,7 @@ ConstantValue ASTContext::eval(const Expression& expr, bitmask<EvalFlags> extraF
 
 ConstantValue ASTContext::tryEval(const Expression& expr) const {
     bitmask<EvalFlags> extraFlags = EvalFlags::CacheResults;
-    if (flags.has(ASTFlags::SpecifyBlock))
+    if (flags.has(ASTFlags::SpecifyBlock | ASTFlags::SpecparamInitializer))
         extraFlags |= EvalFlags::SpecparamsAllowed;
 
     EvalContext ctx(*this, extraFlags);
@@ -490,15 +523,17 @@ void ASTContext::evalRangeDimension(const SelectorSyntax& syntax, bool isPacked,
             addDiag(diag::PackedDimsRequireFullRange, syntax.sourceRange());
             result.kind = DimensionKind::Unknown;
         }
-        else if (isPacked && result.range.width() > SVInt::MAX_BITS) {
-            addDiag(diag::PackedTypeTooLarge, syntax.sourceRange())
-                << result.range.width() << (int)SVInt::MAX_BITS;
-            result.kind = DimensionKind::Unknown;
-        }
-        else if (!isPacked && result.range.width() > INT32_MAX) {
-            addDiag(diag::ArrayDimTooLarge, syntax.sourceRange())
-                << result.range.width() << INT32_MAX;
-            result.kind = DimensionKind::Unknown;
+        else {
+            auto fullWidth = result.range.fullWidth();
+            if (isPacked && fullWidth > SVInt::MAX_BITS) {
+                addDiag(diag::PackedTypeTooLarge, syntax.sourceRange())
+                    << fullWidth << (int)SVInt::MAX_BITS;
+                result.kind = DimensionKind::Unknown;
+            }
+            else if (!isPacked && fullWidth > INT32_MAX) {
+                addDiag(diag::ArrayDimTooLarge, syntax.sourceRange()) << fullWidth << INT32_MAX;
+                result.kind = DimensionKind::Unknown;
+            }
         }
     }
 }

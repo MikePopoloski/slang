@@ -7,7 +7,6 @@
 #include "pyslang.h"
 
 #include "slang/ast/Compilation.h"
-#include "slang/ast/Definition.h"
 #include "slang/ast/Scope.h"
 #include "slang/ast/Symbol.h"
 #include "slang/ast/SystemSubroutine.h"
@@ -30,12 +29,25 @@ void registerSymbols(py::module_& m) {
         .value("DisallowWildcardImport", LookupFlags::DisallowWildcardImport)
         .value("NoUndeclaredError", LookupFlags::NoUndeclaredError)
         .value("NoUndeclaredErrorIfUninstantiated", LookupFlags::NoUndeclaredErrorIfUninstantiated)
-        .value("TypedefTarget", LookupFlags::TypedefTarget)
+        .value("AllowIncompleteForwardTypedefs", LookupFlags::AllowIncompleteForwardTypedefs)
         .value("NoParentScope", LookupFlags::NoParentScope)
         .value("NoSelectors", LookupFlags::NoSelectors)
         .value("AllowRoot", LookupFlags::AllowRoot)
+        .value("AllowUnit", LookupFlags::AllowUnit)
         .value("IfacePortConn", LookupFlags::IfacePortConn)
-        .value("ForceHierarchical", LookupFlags::ForceHierarchical);
+        .value("StaticInitializer", LookupFlags::StaticInitializer)
+        .value("ForceHierarchical", LookupFlags::ForceHierarchical)
+        .value("TypeReference", LookupFlags::TypeReference)
+        .value("AlwaysAllowUpward", LookupFlags::AlwaysAllowUpward)
+        .value("DisallowUnitReferences", LookupFlags::DisallowUnitReferences);
+
+    py::enum_<LookupResultFlags>(m, "LookupResultFlags")
+        .value("None", LookupResultFlags::None)
+        .value("WasImported", LookupResultFlags::WasImported)
+        .value("IsHierarchical", LookupResultFlags::IsHierarchical)
+        .value("SuppressUndeclared", LookupResultFlags::SuppressUndeclared)
+        .value("FromTypeParam", LookupResultFlags::FromTypeParam)
+        .value("FromForwardTypedef", LookupResultFlags::FromForwardTypedef);
 
     py::class_<LookupLocation>(m, "LookupLocation")
         .def(py::init<>())
@@ -53,16 +65,12 @@ void registerSymbols(py::module_& m) {
     lookupResult.def(py::init<>())
         .def_readonly("found", &LookupResult::found)
         .def_readonly("systemSubroutine", &LookupResult::systemSubroutine)
-        .def_readonly("wasImported", &LookupResult::wasImported)
-        .def_readonly("isHierarchical", &LookupResult::isHierarchical)
-        .def_readonly("suppressUndeclared", &LookupResult::suppressUndeclared)
-        .def_readonly("fromTypeParam", &LookupResult::fromTypeParam)
-        .def_readonly("fromForwardTypedef", &LookupResult::fromForwardTypedef)
+        .def_readonly("upwardCount", &LookupResult::upwardCount)
+        .def_readonly("flags", &LookupResult::flags)
         .def_readonly("selectors", &LookupResult::selectors)
         .def_property_readonly("diagnostics", &LookupResult::getDiagnostics)
         .def_property_readonly("hasError", &LookupResult::hasError)
         .def("clear", &LookupResult::clear)
-        .def("copyFrom", &LookupResult::copyFrom, "other"_a)
         .def("reportDiags", &LookupResult::reportDiags, "context"_a)
         .def("errorIfSelectors", &LookupResult::errorIfSelectors, "context"_a);
 
@@ -107,6 +115,7 @@ void registerSymbols(py::module_& m) {
         .def_property_readonly("declaringDefinition", &Symbol::getDeclaringDefinition)
         .def_property_readonly("randMode", &Symbol::getRandMode)
         .def_property_readonly("nextSibling", &Symbol::getNextSibling)
+        .def_property_readonly("sourceLibrary", &Symbol::getSourceLibrary)
         .def_property_readonly("hierarchicalPath",
                                [](const Symbol& self) {
                                    std::string str;
@@ -134,8 +143,8 @@ void registerSymbols(py::module_& m) {
         .def_property_readonly("timeScale", &Scope::getTimeScale)
         .def_property_readonly("isProceduralContext", &Scope::isProceduralContext)
         .def_property_readonly("containingInstance", &Scope::getContainingInstance)
+        .def_property_readonly("compilationUnit", &Scope::getCompilationUnit)
         .def_property_readonly("isUninstantiated", &Scope::isUninstantiated)
-        .def_property_readonly("containingInstance", &Scope::getContainingInstance)
         .def(
             "find", [](const Scope& self, std::string_view arg) { return self.find(arg); },
             byrefint)
@@ -181,6 +190,20 @@ void registerSymbols(py::module_& m) {
         .def_readonly("topInstances", &RootSymbol::topInstances)
         .def_readonly("compilationUnits", &RootSymbol::compilationUnits);
 
+    py::class_<DefinitionSymbol, Symbol>(m, "DefinitionSymbol")
+        .def_readonly("definitionKind", &DefinitionSymbol::definitionKind)
+        .def_readonly("defaultLifetime", &DefinitionSymbol::defaultLifetime)
+        .def_readonly("unconnectedDrive", &DefinitionSymbol::unconnectedDrive)
+        .def_readonly("timeScale", &DefinitionSymbol::timeScale)
+        .def_property_readonly("defaultNetType",
+                               [](const DefinitionSymbol& self) { return &self.defaultNetType; })
+        .def_property_readonly("instanceCount", &DefinitionSymbol::getInstanceCount)
+        .def("getKindString", &DefinitionSymbol::getKindString)
+        .def("getArticleKindString", &DefinitionSymbol::getArticleKindString)
+        .def("__repr__", [](const DefinitionSymbol& self) {
+            return fmt::format("DefinitionSymbol(\"{}\")", self.name);
+        });
+
     py::class_<ValueSymbol, Symbol>(m, "ValueSymbol")
         .def_property_readonly("type", &ValueSymbol::getType)
         .def_property_readonly("initializer", &ValueSymbol::getInitializer)
@@ -214,8 +237,7 @@ void registerSymbols(py::module_& m) {
     py::class_<ParameterSymbolBase>(m, "ParameterSymbolBase")
         .def_property_readonly("isLocalParam", &ParameterSymbolBase::isLocalParam)
         .def_property_readonly("isPortParam", &ParameterSymbolBase::isPortParam)
-        .def_property_readonly("isBodyParam", &ParameterSymbolBase::isBodyParam)
-        .def_property_readonly("hasDefault", &ParameterSymbolBase::hasDefault);
+        .def_property_readonly("isBodyParam", &ParameterSymbolBase::isBodyParam);
 
     py::class_<ParameterSymbol, ValueSymbol, ParameterSymbolBase>(m, "ParameterSymbol")
         .def_property_readonly("value", [](const ParameterSymbol& self) { return self.getValue(); })
@@ -255,7 +277,8 @@ void registerSymbols(py::module_& m) {
         .value("CompilerGenerated", VariableFlags::CompilerGenerated)
         .value("ImmutableCoverageOption", VariableFlags::ImmutableCoverageOption)
         .value("CoverageSampleFormal", VariableFlags::CoverageSampleFormal)
-        .value("CheckerFreeVariable", VariableFlags::CheckerFreeVariable);
+        .value("CheckerFreeVariable", VariableFlags::CheckerFreeVariable)
+        .value("RefStatic", VariableFlags::RefStatic);
 
     py::class_<VariableSymbol, ValueSymbol>(m, "VariableSymbol")
         .def_readonly("lifetime", &VariableSymbol::lifetime)
@@ -316,7 +339,11 @@ void registerSymbols(py::module_& m) {
         .value("DPIContext", MethodFlags::DPIContext)
         .value("BuiltIn", MethodFlags::BuiltIn)
         .value("Randomize", MethodFlags::Randomize)
-        .value("ForkJoin", MethodFlags::ForkJoin);
+        .value("ForkJoin", MethodFlags::ForkJoin)
+        .value("DefaultedSuperArg", MethodFlags::DefaultedSuperArg)
+        .value("Initial", MethodFlags::Initial)
+        .value("Extends", MethodFlags::Extends)
+        .value("Final", MethodFlags::Final);
 
     py::class_<SubroutineSymbol, Symbol, Scope>(m, "SubroutineSymbol")
         .def_readonly("defaultLifetime", &SubroutineSymbol::defaultLifetime)
@@ -400,8 +427,7 @@ void registerSymbols(py::module_& m) {
 
     py::class_<InstanceBodySymbol, Symbol, Scope>(m, "InstanceBodySymbol")
         .def_readonly("parentInstance", &InstanceBodySymbol::parentInstance)
-        .def_readonly("parameters", &InstanceBodySymbol::parameters)
-        .def_readonly("isUninstantiated", &InstanceBodySymbol::isUninstantiated)
+        .def_property_readonly("parameters", &InstanceBodySymbol::getParameters)
         .def_property_readonly("portList", &InstanceBodySymbol::getPortList)
         .def_property_readonly("definition", &InstanceBodySymbol::getDefinition)
         .def("findPort", &InstanceBodySymbol::findPort, byrefint, "portName"_a)
@@ -443,7 +469,6 @@ void registerSymbols(py::module_& m) {
 
     py::class_<CheckerInstanceBodySymbol, Symbol, Scope>(m, "CheckerInstanceBodySymbol")
         .def_readonly("parentInstance", &CheckerInstanceBodySymbol::parentInstance)
-        .def_readonly("isUninstantiated", &CheckerInstanceBodySymbol::isUninstantiated)
         .def_property_readonly("checker",
                                [](const CheckerInstanceBodySymbol& self) { return &self.checker; });
 
@@ -529,10 +554,6 @@ void registerSymbols(py::module_& m) {
         .value("NInput", PrimitiveSymbol::PrimitiveKind::NInput)
         .value("NOutput", PrimitiveSymbol::PrimitiveKind::NOutput)
         .export_values();
-
-    py::class_<PrimitiveSymbol::TableField>(primitiveSym, "TableField")
-        .def_readonly("value", &PrimitiveSymbol::TableField::value)
-        .def_readonly("transitionTo", &PrimitiveSymbol::TableField::transitionTo);
 
     py::class_<PrimitiveSymbol::TableEntry>(primitiveSym, "TableEntry")
         .def_readonly("inputs", &PrimitiveSymbol::TableEntry::inputs)
@@ -704,4 +725,6 @@ void registerSymbols(py::module_& m) {
         .def_readonly("options", &CoverCrossSymbol::options)
         .def_readonly("targets", &CoverCrossSymbol::targets)
         .def_property_readonly("iffExpr", &CoverCrossSymbol::getIffExpr);
+
+    py::class_<ConfigBlockSymbol, Symbol, Scope>(m, "ConfigBlockSymbol");
 }

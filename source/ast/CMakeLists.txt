@@ -49,18 +49,17 @@ target_sources(
           Bitstream.cpp
           Compilation.cpp
           Constraints.cpp
-          Definition.cpp
           EvalContext.cpp
           Expression.cpp
           FmtHelpers.cpp
-          InstancePath.cpp
+          HierarchicalReference.cpp
           Lookup.cpp
           LValue.cpp
+          OpaqueInstancePath.cpp
           Patterns.cpp
           Scope.cpp
           ScriptSession.cpp
           SemanticFacts.cpp
-          SemanticModel.cpp
           SFormat.cpp
           Statements.cpp
           Symbol.cpp

@@ -176,13 +176,22 @@ primitive p14 (a, b, c);
         xx:0:0;
     endtable
 endprimitive
+
+primitive p15 (a, b);
+    output a;
+    input b;
+    table
+        0:0;
+        0:1;
+    endtable
+endprimitive
 )");
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 24);
+    REQUIRE(diags.size() == 25);
     CHECK(diags[0].code == diag::PrimitiveOutputFirst);
     CHECK(diags[1].code == diag::PrimitiveAnsiMix);
     CHECK(diags[2].code == diag::DuplicateDefinition);
@@ -207,6 +216,7 @@ endprimitive
     CHECK(diags[21].code == diag::UdpWrongInputCount);
     CHECK(diags[22].code == diag::UdpDupDiffOutput);
     CHECK(diags[23].code == diag::UdpAllX);
+    CHECK(diags[24].code == diag::UdpDupDiffOutput);
 }
 
 TEST_CASE("UDP instances error checking") {
@@ -387,4 +397,242 @@ endprimitive
     Compilation compilation;
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Primitive with large number of inputs") {
+    auto tree = SyntaxTree::fromText(R"(
+ primitive p(output o, input i0, i1, i2, i3, i4, i5, i6, i7,
+                             i8, i9, i10, i11, i12, i13, i14,
+                             i15, i16, i17, i18, i19, i20);
+   table
+     bbbbbbbbbbbbbbbbbbbbb:1;
+   endtable
+ endprimitive
+
+ module top;
+   p p1(o, i0, i1, i2, i3, i4, i5, i6, i7, i8, i9, i10,
+           i11, i12, i13, i14, i15, i16, i17, i18, i19, i20);
+ endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("More UDP overlapping row errors") {
+    auto tree = SyntaxTree::fromText(R"(
+primitive p(output reg o, input a, b);
+  table
+    *x:1:1;
+    (x1)1:1:0;
+    p1:1:x;
+    (x0)1:1:1;
+    *1:1:0;
+    n1:1:0;
+  endtable
+endprimitive
+
+primitive pp (q, clock, data);
+  output q; reg q;
+  input clock, data;
+  table
+    // clock data q q+
+    p ? : ? : 1 ;
+    (x1) ? : ? : 0;
+    n ? : ? : 1 ;
+    (1x) ? : ? : 0;
+    ? (??) : ? : - ;
+  endtable
+endprimitive
+
+primitive ppp (q, clock, data);
+  output q; reg q;
+  input clock, data;
+  table
+    // clock data q q+
+    (?0) ? : ? : 1 ;
+    (0?) ? : ? : 1 ;
+    (01) ? : ? : 0 ;
+    (??) ? : ? : - ;
+    ? (??) : ? : - ;
+  endtable
+endprimitive
+
+module top;
+  p p1(o, a, b);
+  pp pp1(o, a, b);
+  ppp ppp1(o, a, b);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 6);
+    CHECK(diags[0].code == diag::UdpDupDiffOutput);
+    CHECK(diags[1].code == diag::UdpDupDiffOutput);
+    CHECK(diags[2].code == diag::UdpDupDiffOutput);
+    CHECK(diags[3].code == diag::UdpDupDiffOutput);
+    CHECK(diags[4].code == diag::UdpDupDiffOutput);
+    CHECK(diags[5].code == diag::UdpDupDiffOutput);
+}
+
+TEST_CASE("UDP overlapping inputs with compatible outputs") {
+    auto tree = SyntaxTree::fromText(R"(
+ primitive X1 (q, clk, d);
+    output reg q;
+    input clk, d;
+    table
+    // clk in  : Qt  : Qt+1
+    r    0   : ?   :  0;
+    *    0   : 0   :  -;
+    endtable
+ endprimitive
+ primitive X2 (q, clk, d);
+    output reg q;
+    input clk, d;
+    table
+    // clk in  : Qt  : Qt+1
+    r    0   : 1   :  -;
+    *    0   : ?   :  1;
+    endtable
+ endprimitive
+ primitive X3 (q, clk, d);
+    output reg q;
+    input clk, d;
+    table
+    // clk in  : Qt  : Qt+1
+    r    0   : ?   :  -;
+    *    0   : ?   :  0;
+    *    1   : ?   :  0;
+    r    1   : ?   :  -;
+    endtable
+ endprimitive
+ primitive X4 (q, clk, d);
+    output reg q;
+    input clk, d;
+    table
+    // clk in  : Qt  : Qt+1
+    r    0   : ?   :  -;
+    *    0   : ?   :  1;
+    *    1   : ?   :  1;
+    r    1   : ?   :  -;
+    endtable
+ endprimitive
+ primitive X5 (q, clk, d);
+    output reg q;
+    input clk, d;
+    table
+    // clk in  : Qt  : Qt+1
+    r    0   : ?   :  -;
+    *    0   : ?   :  x;
+    *    1   : ?   :  x;
+    r    1   : ?   :  -;
+    endtable
+ endprimitive
+ primitive X6 (q, clk, d);
+    output reg q;
+    input clk, d;
+    table
+    // clk in  : Qt  : Qt+1
+    r    0   : b   :  -;
+    *    0   : ?   :  0;
+    *    1   : ?   :  0;
+    r    1   : b   :  -;
+    endtable
+ endprimitive
+primitive X7 (q, clk, d);
+    output reg q;
+    input clk, d;
+    table
+    // clk in  : Qt  : Qt+1
+    r    0   : b   :  -;
+    *    0   : ?   :  1;
+    *    1   : ?   :  1;
+    r    1   : b   :  -;
+    endtable
+ endprimitive
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 0);
+}
+
+TEST_CASE("More UDP error cases") {
+    auto tree = SyntaxTree::fromText(R"(
+primitive p1(output reg o, input a);
+  table
+    (11):1:1;
+  endtable
+endprimitive
+
+primitive p2(output o, input a);
+  table
+    p:1;
+    1:-;
+  endtable
+endprimitive
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::UdpTransSameChar);
+    CHECK(diags[1].code == diag::UdpEdgeInComb);
+    CHECK(diags[2].code == diag::UdpInvalidMinus);
+}
+
+TEST_CASE("Most gates can't attach to user-defined nettypes") {
+    auto tree = SyntaxTree::fromText(R"(
+primitive p(output o, input i);
+	table
+      1 : 1;
+    endtable
+endprimitive
+
+module m;
+    nettype real ntr;
+    nettype shortreal nts;
+
+    ntr r1, r2;
+    rtranif1(r1, r2, 1);
+
+    ntr r3;
+    and(r3, 1);
+
+    ntr r4;
+    p p1(r4, 1);
+
+    // This one is allowed.
+    ntr r5, r6;
+    tranif1(r5, r6, 1);
+
+    ntr r7;
+    wire r8;
+    tran(r7, r8);
+
+    ntr r9;
+    nts r10;
+    tranif0(r9, r10, 0);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 6);
+    CHECK(diags[0].code == diag::GateUDNTConn);
+    CHECK(diags[1].code == diag::GateUDNTConn);
+    CHECK(diags[2].code == diag::GateUDNTConn);
+    CHECK(diags[3].code == diag::GateUDNTConn);
+    CHECK(diags[4].code == diag::BiDiSwitchNetTypes);
+    CHECK(diags[5].code == diag::BiDiSwitchNetTypes);
 }

@@ -10,7 +10,11 @@
 #include "slang/ast/ASTVisitor.h"
 #include "slang/ast/Compilation.h"
 #include "slang/ast/EvalContext.h"
+#include "slang/syntax/AllSyntax.h"
+#include "slang/text/CharInfo.h"
+#include "slang/text/FormatBuffer.h"
 #include "slang/text/Json.h"
+#include "slang/text/SourceManager.h"
 
 namespace slang::ast {
 
@@ -91,7 +95,8 @@ void ASTSerializer::write(std::string_view name, const Symbol& value) {
 
 void ASTSerializer::write(std::string_view name, const ConstantValue& value) {
     writer.writeProperty(name);
-    writer.writeValue(value.toString());
+    writer.writeValue(value.toString(SVInt::MAX_BITS, /* exactUnknowns */ true,
+                                     /* useAssignmentPatterns */ true));
 }
 
 void ASTSerializer::write(std::string_view name, const Expression& value) {
@@ -171,11 +176,26 @@ void ASTSerializer::writeProperty(std::string_view name) {
 
 template<typename T>
 void ASTSerializer::visit(const T& elem, bool inMembersArray) {
-    if constexpr (std::is_base_of_v<Expression, T>) {
+    if constexpr (std::is_base_of_v<Expression, T> || std::is_base_of_v<Statement, T> ||
+                  std::is_base_of_v<TimingControl, T> || std::is_base_of_v<Constraint, T> ||
+                  std::is_base_of_v<AssertionExpr, T> || std::is_base_of_v<BinsSelectExpr, T> ||
+                  std::is_base_of_v<Pattern, T>) {
         writer.startObject();
+        if (elem.syntax && includeSourceInfo) {
+            if (auto sm = compilation.getSourceManager()) {
+                auto sr = elem.syntax->sourceRange();
+                write("source_file_start", sm->getFileName(sr.start()));
+                write("source_file_end", sm->getFileName(sr.end()));
+                write("source_line_start", sm->getLineNumber(sr.start()));
+                write("source_line_end", sm->getLineNumber(sr.end()));
+                write("source_column_start", sm->getColumnNumber(sr.start()));
+                write("source_column_end", sm->getColumnNumber(sr.end()));
+            }
+        }
+    }
+    if constexpr (std::is_base_of_v<Expression, T>) {
         write("kind", toString(elem.kind));
         write("type", *elem.type);
-
         auto attributes = compilation.getAttributes(elem);
         if (!attributes.empty()) {
             startArray("attributes");
@@ -196,7 +216,6 @@ void ASTSerializer::visit(const T& elem, bool inMembersArray) {
         writer.endObject();
     }
     else if constexpr (std::is_base_of_v<Statement, T>) {
-        writer.startObject();
         write("kind", toString(elem.kind));
 
         auto attributes = compilation.getAttributes(elem);
@@ -216,7 +235,6 @@ void ASTSerializer::visit(const T& elem, bool inMembersArray) {
     else if constexpr (std::is_base_of_v<TimingControl, T> || std::is_base_of_v<Constraint, T> ||
                        std::is_base_of_v<AssertionExpr, T> ||
                        std::is_base_of_v<BinsSelectExpr, T> || std::is_base_of_v<Pattern, T>) {
-        writer.startObject();
         write("kind", toString(elem.kind));
         if constexpr (!std::is_same_v<TimingControl, T> && !std::is_same_v<Constraint, T> &&
                       !std::is_same_v<AssertionExpr, T> && !std::is_same_v<BinsSelectExpr, T> &&
@@ -246,6 +264,13 @@ void ASTSerializer::visit(const T& elem, bool inMembersArray) {
         writer.startObject();
         write("name", elem.name);
         write("kind", toString(elem.kind));
+        if (includeSourceInfo) {
+            if (auto sm = compilation.getSourceManager()) {
+                write("source_file", sm->getFileName(elem.location));
+                write("source_line", sm->getLineNumber(elem.location));
+                write("source_column", sm->getColumnNumber(elem.location));
+            }
+        }
 
         if (includeAddrs)
             write("addr", uintptr_t(&elem));

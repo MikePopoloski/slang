@@ -5,10 +5,14 @@
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
+#include "Builtins.h"
+
 #include "slang/ast/Compilation.h"
 #include "slang/ast/SystemSubroutine.h"
+#include "slang/ast/expressions/MiscExpressions.h"
 #include "slang/ast/types/Type.h"
 #include "slang/diagnostics/SysFuncsDiags.h"
+#include "slang/syntax/AllSyntax.h"
 
 namespace slang::ast::builtins {
 
@@ -210,6 +214,9 @@ public:
         return numArgs ? comp.getVoidType() : comp.getIntType();
     }
 
+    // Return type is 'int' but the actual value is always either 0 or 1
+    std::optional<bitwidth_t> getEffectiveWidth() const final { return 1; }
+
     ConstantValue eval(EvalContext& context, const Args&, SourceRange range,
                        const CallExpression::SystemCallInfo&) const final {
         notConst(context, range);
@@ -328,6 +335,9 @@ public:
         if (argIndex == 0 || argIndex == 2)
             extraFlags = ASTFlags::AssertionExpr;
 
+        if (argIndex == 2)
+            extraFlags |= ASTFlags::NonProcedural;
+
         return Expression::bind(syntax, context, extraFlags);
     }
 
@@ -417,35 +427,184 @@ private:
     bool isFuture;
 };
 
-void registerNonConstFuncs(Compilation& c) {
-#define REGISTER(...) c.addSystemSubroutine(std::make_unique<NonConstantFunction>(__VA_ARGS__))
+class TimeScaleFunc : public SystemSubroutine {
+public:
+    TimeScaleFunc(const std::string& name, bool isOptional) :
+        SystemSubroutine(name, SubroutineKind::Function), isOptional(isOptional) {}
 
-    auto& intType = c.getIntType();
-    auto& uintType = c.getUnsignedIntType();
+    const Expression& bindArgument(size_t argIndex, const ASTContext& context,
+                                   const ExpressionSyntax& syntax, const Args& args) const final {
+        if (argIndex == 0) {
+            auto& comp = context.getCompilation();
+            if (!NameSyntax::isKind(syntax.kind)) {
+                context.addDiag(diag::ExpectedModuleName, syntax.sourceRange());
+                return *comp.emplace<InvalidExpression>(nullptr, comp.getErrorType());
+            }
+
+            bitmask<LookupFlags> extraFlags;
+            if (isOptional)
+                extraFlags = LookupFlags::AllowRoot | LookupFlags::AllowUnit;
+
+            return ArbitrarySymbolExpression::fromSyntax(comp, syntax.as<NameSyntax>(), context,
+                                                         extraFlags);
+        }
+
+        return SystemSubroutine::bindArgument(argIndex, context, syntax, args);
+    }
+
+    const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
+                               const Expression*) const final {
+        auto& comp = context.getCompilation();
+        if (!checkArgCount(context, false, args, range, isOptional ? 0 : 1, 1))
+            return comp.getErrorType();
+
+        if (isOptional) {
+            auto languageVersion = comp.languageVersion();
+            if (languageVersion < LanguageVersion::v1800_2023)
+                context.addDiag(diag::WrongLanguageVersion, range) << toString(languageVersion);
+        }
+
+        if (args.size() > 0) {
+            auto& sym = *args[0]->as<ArbitrarySymbolExpression>().symbol;
+            if (sym.kind != SymbolKind::Instance && sym.kind != SymbolKind::CompilationUnit &&
+                sym.kind != SymbolKind::Root) {
+                if (!context.scope->isUninstantiated())
+                    context.addDiag(diag::ExpectedModuleName, args[0]->sourceRange);
+                return comp.getErrorType();
+            }
+        }
+
+        return comp.getIntType();
+    }
+
+    ConstantValue eval(EvalContext& context, const Args&, SourceRange range,
+                       const CallExpression::SystemCallInfo&) const final {
+        notConst(context, range);
+        return nullptr;
+    }
+
+private:
+    bool isOptional;
+};
+
+class StacktraceFunc : public SystemSubroutine {
+public:
+    StacktraceFunc() : SystemSubroutine("$stacktrace", SubroutineKind::Function) {}
+
+    const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
+                               const Expression*) const final {
+        auto& comp = context.getCompilation();
+        if (!checkArgCount(context, false, args, range, 0, 0))
+            return comp.getErrorType();
+
+        return context.flags.has(ASTFlags::TopLevelStatement) ? comp.getVoidType()
+                                                              : comp.getStringType();
+    }
+
+    ConstantValue eval(EvalContext& context, const Args&, SourceRange range,
+                       const CallExpression::SystemCallInfo&) const final {
+        notConst(context, range);
+        return nullptr;
+    }
+};
+
+class CountDriversFunc : public SystemSubroutine {
+public:
+    CountDriversFunc() : SystemSubroutine("$countdrivers", SubroutineKind::Function) {
+        hasOutputArgs = true;
+    }
+
+    const Expression& bindArgument(size_t argIndex, const ASTContext& context,
+                                   const ExpressionSyntax& syntax, const Args&) const final {
+        if (argIndex > 0) {
+            return Expression::bindLValue(syntax, context.getCompilation().getIntType(),
+                                          syntax.getFirstToken().location(), context,
+                                          /* isInout */ false);
+        }
+        return Expression::bind(syntax, context);
+    }
+
+    const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
+                               const Expression*) const final {
+        auto& comp = context.getCompilation();
+        if (!checkArgCount(context, false, args, range, 1, 6))
+            return comp.getErrorType();
+
+        auto sym = args[0]->getSymbolReference(/* allowPacked */ false);
+        if (!sym || sym->kind != SymbolKind::Net)
+            context.addDiag(diag::ExpectedNetRef, args[0]->sourceRange);
+
+        return comp.getBitType();
+    }
+
+    ConstantValue eval(EvalContext& context, const Args&, SourceRange range,
+                       const CallExpression::SystemCallInfo&) const final {
+        notConst(context, range);
+        return nullptr;
+    }
+};
+
+class GetPatternFunc : public SystemSubroutine {
+public:
+    GetPatternFunc() : SystemSubroutine("$getpattern", SubroutineKind::Function) {}
+
+    const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
+                               const Expression*) const final {
+        auto& comp = context.getCompilation();
+        if (!checkArgCount(context, false, args, range, 1, 1))
+            return comp.getErrorType();
+
+        if (!args[0]->type->isIntegral())
+            return badArg(context, *args[0]);
+
+        return comp.getType(args[0]->type->getBitWidth(), {});
+    }
+
+    ConstantValue eval(EvalContext& context, const Args&, SourceRange range,
+                       const CallExpression::SystemCallInfo&) const final {
+        notConst(context, range);
+        return nullptr;
+    }
+};
+
+class TestPlusArgsFunction : public NonConstantFunction {
+public:
+    TestPlusArgsFunction(const Builtins& builtins) :
+        NonConstantFunction("$test$plusargs", builtins.intType, 1,
+                            std::vector<const Type*>{&builtins.stringType}) {}
+
+    // Return type is 'int' but the actual value is always either 0 or 1
+    std::optional<bitwidth_t> getEffectiveWidth() const final { return 1; }
+};
+
+void Builtins::registerNonConstFuncs() {
+#define REGISTER(...) addSystemSubroutine(std::make_shared<NonConstantFunction>(__VA_ARGS__))
+
     std::vector<const Type*> intArg = {&intType};
 
-    REGISTER("$time", c.getType(SyntaxKind::TimeType));
-    REGISTER("$stime", c.getUnsignedIntType());
-    REGISTER("$realtime", c.getType(SyntaxKind::RealTimeType));
+    REGISTER("$time", timeType);
+    REGISTER("$stime", uintType);
+    REGISTER("$realtime", realTimeType);
     REGISTER("$random", intType, 0, intArg);
     REGISTER("$urandom", uintType, 0, intArg);
     REGISTER("$urandom_range", uintType, 1, std::vector<const Type*>{&uintType, &uintType});
 
-    REGISTER("$fopen", intType, 1, std::vector{&c.getStringType(), &c.getStringType()});
-    REGISTER("$fclose", c.getVoidType(), 1, intArg);
+    REGISTER("$fopen", intType, 1, std::vector<const Type*>{&stringType, &stringType});
+    REGISTER("$fclose", voidType, 1, intArg);
     REGISTER("$fgetc", intType, 1, intArg);
-    REGISTER("$ungetc", intType, 2, std::vector{&intType, &intType});
+    REGISTER("$ungetc", intType, 2, std::vector<const Type*>{&intType, &intType});
     REGISTER("$ftell", intType, 1, intArg);
-    REGISTER("$fseek", intType, 3, std::vector{&intType, &intType, &intType});
+    REGISTER("$fseek", intType, 3, std::vector<const Type*>{&intType, &intType, &intType});
     REGISTER("$rewind", intType, 1, intArg);
-    REGISTER("$fflush", c.getVoidType(), 0, intArg);
+    REGISTER("$fflush", voidType, 0, intArg);
     REGISTER("$feof", intType, 1, intArg);
 
-    REGISTER("$test$plusargs", intType, 1, std::vector{&c.getStringType()});
+    REGISTER("$reset_count", intType, 0);
+    REGISTER("$reset_value", intType, 0);
 
 #undef REGISTER
 
-#define FUNC(name, numArgs) c.addSystemSubroutine(std::make_unique<DistributionFunc>(name, numArgs))
+#define FUNC(name, numArgs) addSystemSubroutine(std::make_shared<DistributionFunc>(name, numArgs))
     FUNC("$dist_uniform", 3);
     FUNC("$dist_normal", 3);
     FUNC("$dist_exponential", 2);
@@ -455,7 +614,7 @@ void registerNonConstFuncs(Compilation& c) {
     FUNC("$dist_erlang", 3);
 #undef FUNC
 
-#define FUNC(name) c.addSystemSubroutine(std::make_unique<ValueChangeFunc>(name))
+#define FUNC(name) addSystemSubroutine(std::make_shared<ValueChangeFunc>(name))
     FUNC("$rose");
     FUNC("$fell");
     FUNC("$stable");
@@ -463,7 +622,7 @@ void registerNonConstFuncs(Compilation& c) {
 #undef FUNC
 
 #define FUNC(name, isFuture) \
-    c.addSystemSubroutine(std::make_unique<GlobalValueChangeFunc>(name, isFuture))
+    addSystemSubroutine(std::make_shared<GlobalValueChangeFunc>(name, isFuture))
     FUNC("$past_gclk", false);
     FUNC("$rose_gclk", false);
     FUNC("$fell_gclk", false);
@@ -476,22 +635,28 @@ void registerNonConstFuncs(Compilation& c) {
     FUNC("$changing_gclk", true);
 #undef FUNC
 
-    c.addSystemSubroutine(std::make_unique<FErrorFunc>());
-    c.addSystemSubroutine(std::make_unique<FGetsFunc>());
-    c.addSystemSubroutine(std::make_unique<ScanfFunc>(true));
-    c.addSystemSubroutine(std::make_unique<ScanfFunc>(false));
-    c.addSystemSubroutine(std::make_unique<FReadFunc>());
-    c.addSystemSubroutine(std::make_unique<SampledFunc>());
-    c.addSystemSubroutine(std::make_unique<PastFunc>());
+    addSystemSubroutine(std::make_shared<FErrorFunc>());
+    addSystemSubroutine(std::make_shared<FGetsFunc>());
+    addSystemSubroutine(std::make_shared<ScanfFunc>(true));
+    addSystemSubroutine(std::make_shared<ScanfFunc>(false));
+    addSystemSubroutine(std::make_shared<FReadFunc>());
+    addSystemSubroutine(std::make_shared<SampledFunc>());
+    addSystemSubroutine(std::make_shared<PastFunc>());
+    addSystemSubroutine(std::make_shared<TimeScaleFunc>("$timeunit", true));
+    addSystemSubroutine(std::make_shared<TimeScaleFunc>("$timeprecision", true));
+    addSystemSubroutine(std::make_shared<TimeScaleFunc>("$scale", false));
+    addSystemSubroutine(std::make_shared<StacktraceFunc>());
+    addSystemSubroutine(std::make_shared<CountDriversFunc>());
+    addSystemSubroutine(std::make_shared<GetPatternFunc>());
+    addSystemSubroutine(std::make_shared<TestPlusArgsFunction>(*this));
 
-    c.addSystemMethod(SymbolKind::EventType,
-                      std::make_unique<NonConstantFunction>("triggered", c.getBitType(), 0,
-                                                            std::vector<const Type*>{},
-                                                            /* isMethod */ true));
+    addSystemMethod(SymbolKind::EventType,
+                    std::make_shared<NonConstantFunction>("triggered", bitType, 0,
+                                                          std::vector<const Type*>{},
+                                                          /* isMethod */ true));
 
-    c.addSystemMethod(SymbolKind::ClassProperty, std::make_unique<RandModeFunc>("rand_mode"));
-    c.addSystemMethod(SymbolKind::ConstraintBlock,
-                      std::make_unique<RandModeFunc>("constraint_mode"));
+    addSystemMethod(SymbolKind::ClassProperty, std::make_shared<RandModeFunc>("rand_mode"));
+    addSystemMethod(SymbolKind::ConstraintBlock, std::make_shared<RandModeFunc>("constraint_mode"));
 }
 
 } // namespace slang::ast::builtins

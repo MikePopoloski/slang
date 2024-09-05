@@ -402,12 +402,12 @@ SVInt SVInt::fromPow2Digits(bitwidth_t bits, bool isSigned, bool anyUnknown, uin
     return result;
 }
 
-SVInt SVInt::fromDouble(bitwidth_t bits, double value, bool isSigned) {
-    return fromIEEE754<double, 11, 52, 1023>(bits, value, isSigned);
+SVInt SVInt::fromDouble(bitwidth_t bits, double value, bool isSigned, bool round) {
+    return fromIEEE754<double, 11, 52, 1023>(bits, value, isSigned, round);
 }
 
-SVInt SVInt::fromFloat(bitwidth_t bits, float value, bool isSigned) {
-    return fromIEEE754<float, 8, 23, 127>(bits, value, isSigned);
+SVInt SVInt::fromFloat(bitwidth_t bits, float value, bool isSigned, bool round) {
+    return fromIEEE754<float, 8, 23, 127>(bits, value, isSigned, round);
 }
 
 double SVInt::toDouble() const {
@@ -842,6 +842,12 @@ void SVInt::writeTo(SmallVectorBase<char>& buffer, LiteralBase base, bool includ
             bitsLeft -= int(shiftAmount);
             x = tmp != 0;
         }
+
+        // If there are bits left over and the last digit we pushed was
+        // an unknown we need to insert an extra 0 to indicate that the
+        // leading bits are actually zeroes and not extended unknowns.
+        if (bitsLeft > 0 && !buffer.empty() && (buffer.back() == 'x' || buffer.back() == 'z'))
+            buffer.push_back('0');
     }
 
     // no digits means this is zero
@@ -1394,19 +1400,12 @@ logic_t SVInt::operator<(const SVInt& rhs) const {
         else
             return *this < rhs.extend(bitWidth, bothSigned);
     }
+    // handle signed negatives
+    if (bothSigned && isNegative() ^ rhs.isNegative())
+        return logic_t(isNegative());
 
-    if (bothSigned) {
-        // handle negatives
-        if (isNegative()) {
-            if (rhs.isNegative())
-                return -(*this) > -rhs;
-            else
-                return logic_t(true);
-        }
-        if (rhs.isNegative())
-            return logic_t(false);
-    }
-
+    // both are positive or both are negative
+    // or not both are signed
     if (isSingleWord())
         return logic_t(val < rhs.val);
 

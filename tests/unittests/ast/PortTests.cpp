@@ -3,7 +3,6 @@
 
 #include "Test.h"
 
-#include "slang/ast/Definition.h"
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
 #include "slang/ast/symbols/InstanceSymbols.h"
 #include "slang/ast/symbols/ParameterSymbols.h"
@@ -47,7 +46,7 @@ module mh22(ref wire x); endmodule
         auto def = compilation.getRoot().find(moduleName);    \
         REQUIRE(def);                                         \
         auto& body = def->as<InstanceSymbol>().body;          \
-        auto& port = body.findPort(name) -> as<PortSymbol>(); \
+        auto& port = body.findPort(name)->as<PortSymbol>();   \
         CHECK(port.direction == ArgumentDirection::dir);      \
         CHECK(port.getType().toString() == (type));           \
         if (nt) {                                             \
@@ -120,34 +119,35 @@ module m6(I.bar bar); endmodule
     Compilation compilation;
     compilation.addSyntaxTree(tree);
 
-#define checkWirePort(moduleName, name, dir, nt, type)                           \
-    {                                                                            \
-        auto def = compilation.getDefinition(moduleName, compilation.getRoot()); \
-        REQUIRE(def);                                                            \
-        auto& inst = InstanceSymbol::createDefault(compilation, *def, nullptr);  \
-        auto& port = inst.body.findPort(name) -> as<PortSymbol>();               \
-        CHECK(port.direction == ArgumentDirection::dir);                         \
-        CHECK(port.getType().toString() == (type));                              \
-        if (nt) {                                                                \
-            auto& net = port.internalSymbol->as<NetSymbol>();                    \
-            CHECK(&net.netType == (nt));                                         \
-        }                                                                        \
+    auto getPort = [&](std::string_view defName, std::string_view portName) {
+        auto def = compilation.tryGetDefinition(defName, compilation.getRoot()).definition;
+        REQUIRE(def);
+        auto& inst = InstanceSymbol::createDefault(compilation, def->as<DefinitionSymbol>());
+        return inst.body.findPort(portName);
     };
 
-#define checkIfacePort(moduleName, portName, ifaceName, modportName)             \
-    {                                                                            \
-        auto def = compilation.getDefinition(moduleName, compilation.getRoot()); \
-        REQUIRE(def);                                                            \
-        auto& inst = InstanceSymbol::createDefault(compilation, *def, nullptr);  \
-        auto& port = inst.body.findPort(portName) -> as<InterfacePortSymbol>();  \
-        REQUIRE(port.interfaceDef);                                              \
-        CHECK(port.interfaceDef->name == (ifaceName));                           \
-        if (*(modportName)) {                                                    \
-            CHECK(port.modport == (modportName));                                \
-        }                                                                        \
-        else {                                                                   \
-            CHECK(port.modport.empty());                                         \
-        }                                                                        \
+#define checkWirePort(moduleName, name, dir, nt, type)            \
+    {                                                             \
+        auto& port = getPort(moduleName, name)->as<PortSymbol>(); \
+        CHECK(port.direction == ArgumentDirection::dir);          \
+        CHECK(port.getType().toString() == (type));               \
+        if (nt) {                                                 \
+            auto& net = port.internalSymbol->as<NetSymbol>();     \
+            CHECK(&net.netType == (nt));                          \
+        }                                                         \
+    };
+
+#define checkIfacePort(moduleName, portName, ifaceName, modportName)           \
+    {                                                                          \
+        auto& port = getPort(moduleName, portName)->as<InterfacePortSymbol>(); \
+        REQUIRE(port.interfaceDef);                                            \
+        CHECK(port.interfaceDef->name == (ifaceName));                         \
+        if (*(modportName)) {                                                  \
+            CHECK(port.modport == (modportName));                              \
+        }                                                                      \
+        else {                                                                 \
+            CHECK(port.modport.empty());                                       \
+        }                                                                      \
     };
 
     auto wire = &compilation.getWireNetType();
@@ -639,7 +639,7 @@ endmodule
 
 module o(I conn);
     m m2(conn);
-    logic foo = conn.a;
+    wire foo = conn.a;
 endmodule
 
 module top;
@@ -676,7 +676,7 @@ endmodule
 
     CompilationOptions options;
     options.flags |= CompilationFlags::LintMode;
-    tree->isLibrary = true;
+    tree->isLibraryUnit = true;
 
     Compilation compilation(options);
     compilation.addSyntaxTree(tree);
@@ -832,7 +832,7 @@ module n(x, y);
     I x;
 
     localparam bar = x.foo;
-    int i = y.baz;
+    wire integer i = y.baz;
 
     I.mod y;
 endmodule
@@ -1313,6 +1313,15 @@ module n ({b[1:0], a});
     input tri1 [3:0] b;
 endmodule
 
+module x(input trireg in);
+    y y(.in);
+    y y1(in);
+    y y2(.in(in));
+endmodule
+
+module y(input wor in);
+endmodule
+
 module top;
     wand a;
     wor b;
@@ -1320,6 +1329,7 @@ module top;
 
     m m1({a, b, c}, c);
     n n1({{a, a}, c[0]});
+    x x1(b);
 endmodule
 )");
 
@@ -1327,11 +1337,15 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 4);
-    CHECK(diags[0].code == diag::NetRangeInconsistent);
-    CHECK(diags[1].code == diag::NetRangeInconsistent);
+    REQUIRE(diags.size() == 8);
+    CHECK(diags[0].code == diag::ImplicitConnNetInconsistent);
+    CHECK(diags[1].code == diag::NetInconsistent);
     CHECK(diags[2].code == diag::NetInconsistent);
     CHECK(diags[3].code == diag::NetRangeInconsistent);
+    CHECK(diags[4].code == diag::NetRangeInconsistent);
+    CHECK(diags[5].code == diag::NetInconsistent);
+    CHECK(diags[6].code == diag::NetRangeInconsistent);
+    CHECK(diags[7].code == diag::NetInconsistent);
 }
 
 TEST_CASE("Inout port conn to variable") {
@@ -1683,6 +1697,70 @@ endmodule
 )");
 
     Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Non-ansi iface port crash regress") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I(.;input interface I
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    // No crash.
+    compilation.getAllDiagnostics();
+}
+
+TEST_CASE("Inout ports are treated as readers and writers") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I;
+    wire integer i;
+    modport m(inout i);
+endinterface
+
+module m(inout wire a);
+    wire local_a;
+    pullup(local_a);
+    tranif1(a, local_a, 1'b1);
+endmodule
+
+module top;
+    I i();
+
+    wire a;
+    m m1(.*);
+    m m2(.*);
+endmodule
+)");
+
+    CompilationOptions options;
+    options.flags &= ~CompilationFlags::SuppressUnused;
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Ansi duplicate port compatibility option") {
+    auto tree = SyntaxTree::fromText(R"(
+module m(input a, output b);
+    wire [31:0] a;
+    logic [31:0] b;
+    assign b = a;
+endmodule
+
+module top;
+    logic [31:0] a, b;
+    m m1(.a, .b);
+endmodule
+)");
+
+    CompilationOptions options;
+    options.flags |= CompilationFlags::AllowMergingAnsiPorts;
+
+    Compilation compilation(options);
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }

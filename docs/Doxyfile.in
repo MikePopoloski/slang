@@ -42,7 +42,7 @@
 ##!  "<a href="https://sv-lang.com/explore/">Try It</a>" \
 ##!  "<a href="https://github.com/MikePopoloski/slang">GitHub</a>"
 ##! M_PAGE_FINE_PRINT = \
-##!  <p>slang SystemVerilog language services. Copyright (C) 2015-2023 Michael Popoloski.</br> \
+##!  <p>slang SystemVerilog language services. Copyright (C) 2015-2024 Michael Popoloski.</br> \
 ##!  Code is <a href="https://github.com/MikePopoloski/slang">available on GitHub</a> under the MIT license.</p>
 ##! M_SEARCH_DOWNLOAD_BINARY = YES
 ##! M_SEARCH_BASE_URL = https://sv-lang.com/

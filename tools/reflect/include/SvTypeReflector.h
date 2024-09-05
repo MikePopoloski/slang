@@ -16,8 +16,8 @@ class SvTypeReflector {
 public:
     explicit SvTypeReflector(std::unique_ptr<slang::ast::Compilation> compilation, bool verbose,
                              bool noSystemC) :
-        compilation(std::move(compilation)),
-        verbose(verbose), noSystemC(noSystemC), cppEmitter(noSystemC) {}
+        compilation(std::move(compilation)), verbose(verbose), noSystemC(noSystemC),
+        cppEmitter(noSystemC) {}
 
     void reflect();
 

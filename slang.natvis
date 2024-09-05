@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+    <Type Name="boost::unordered::unordered_flat_map&lt;*&gt;">
+        <Intrinsic Name="sz" Expression="table_.size_"/>
+        <DisplayString Condition="sz() == 0">empty</DisplayString>
+        <DisplayString>{{ size={sz()} }}</DisplayString>
+        <Expand>
+            <Item Name="[size]" ExcludeView="simple">sz()</Item>
+            <CustomListItems MaxItemsPerView="1024">
+                <Variable Name="p" InitialValue="table_.arrays.elements" />
+                <Variable Name="pg" InitialValue="table_.arrays.groups" />
+                <Variable Name="n" InitialValue="0" />
+                <Size>sz()</Size>
+                <Loop>
+                    <If Condition="n==15">
+                        <Break Condition="reinterpret_cast&lt;const unsigned char*&gt;(&amp;pg->m)[n] == 1"/>
+                        <Exec>n=0</Exec>
+                        <Exec>pg++</Exec>
+                    </If>
+                    <Else>
+                        <If Condition="reinterpret_cast&lt;const unsigned char*&gt;(&amp;pg->m)[n] &gt; 1">
+                            <Item>*p</Item>
+                        </If>
+                        <Exec>n++</Exec>
+                        <Exec>p++</Exec>
+                    </Else>
+                </Loop>
+            </CustomListItems>
+        </Expand>
+    </Type>
+    <Type Name="slang::real_t">
+        <DisplayString>{v}</DisplayString>
+    </Type>
+    <Type Name="slang::shortreal_t">
+        <DisplayString>{v}</DisplayString>
+    </Type>
+    <Type Name="slang::ConstantValue">
+        <DisplayString>{value}</DisplayString>
+    </Type>
+    <Type Name="slang::ConstantValue::NullPlaceholder">
+        <DisplayString>null</DisplayString>
+    </Type>
+    <Type Name="slang::ConstantValue::UnboundedPlaceholder">
+        <DisplayString>$</DisplayString>
+    </Type>
+    <Type Name="slang::SVInt">
+        <DisplayString Condition="bitWidth &lt;= BITS_PER_WORD &amp;&amp; !unknownFlag &amp;&amp; signFlag">{bitWidth}'sd{val}</DisplayString>
+        <DisplayString Condition="bitWidth &lt;= BITS_PER_WORD &amp;&amp; !unknownFlag &amp;&amp; !signFlag">{bitWidth}'d{val}</DisplayString>
+        <DisplayString Condition="unknownFlag">&lt;unknown bits&gt;</DisplayString>
+        <DisplayString>{{bits={bitWidth} signed={signFlag}}}</DisplayString>
+    </Type>
+</AutoVisualizer>

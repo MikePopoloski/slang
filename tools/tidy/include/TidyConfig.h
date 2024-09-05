@@ -110,6 +110,10 @@ private:
             visit(checkConfigs.inoutPortSuffix);
             return;
         }
+        else if (configName == "moduleInstantiationPrefix") {
+            visit(checkConfigs.moduleInstantiationPrefix);
+            return;
+        }
         SLANG_THROW(std::invalid_argument(fmt::format("The check: {} does not exist", configName)));
     }
 };

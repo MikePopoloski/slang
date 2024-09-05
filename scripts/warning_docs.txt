@@ -1013,6 +1013,30 @@ module m;
 endmodule
 ```
 
+-Wunused-import
+A package import directive is never used.
+```
+package p;
+    int a;
+endpackage
+
+module m;
+    import p::a;
+endmodule
+```
+
+-Wunused-wildcard-import
+A wildcard package import directive is never used.
+```
+package p;
+    int a;
+endpackage
+
+module m;
+    import p::*;
+endmodule
+```
+
 -Wbad-procedural-force
 According to the Verilog/SystemVerilog standard, it is illegal to procedurally force a
 bit-select or range select of a variable (you can do that with a net, or with a plain
@@ -1076,5 +1100,256 @@ module m;
     logic signed [31:0] a;
     logic [31:0] b;
     assign b = a;
+endmodule
+```
+
+-Wdpi-pure-task
+A DPI import task is marked 'pure', which is disallowed by SystemVerilog but can be
+downgraded to a warning to support code compatibility with other tools.
+```
+import "DPI-C" pure task func(logic [3:0] a);
+```
+
+-Wmultibit-edge
+A timing control edge expression (posedge, negedge, etc) is wider than one bit,
+which can indicate a mistake since only changes to the first bit will trigger the edge.
+```
+module m;
+    int i;
+    always @(posedge i) begin end
+endmodule
+```
+
+-Wfloat-bool-conv
+A floating point value is implicitly converted to a boolean predicate (such as in an
+if statement or loop condition). This is not necessarily wrong but can indicate
+mistakes where you intended to compare the value to something.
+```
+module m;
+    real r;
+    initial if (r) begin end // Did you mean r != 0 or something else?
+endmodule
+```
+
+-Wint-bool-conv
+A multi-bit integer value is implicitly converted to a boolean predicate (such as in an
+if statement or loop condition). This is not necessarily wrong but can indicate
+mistakes where you intended to compare the value to something.
+```
+module m;
+    int i;
+    initial if (i + 2) begin end // Did you mean i + 2 != 0 or something else?
+endmodule
+```
+
+-Wuseless-cast
+An explicit cast converts an expression to the same type, so the cast does nothing.
+```
+module m;
+    int i, j;
+    assign i = int'(j);
+endmodule
+```
+
+-Wunknown-sys-name
+An unknown system task or function is called. This is an error by default but can
+be downgraded to allow analyzing code using special system names defined by other tools.
+```
+module m;
+    always_comb begin
+        if (!$somename) begin end
+    end
+endmodule
+```
+
+-Wunknown-library
+A configuration library list references an unknown library.
+@options --top=cfg
+```
+config cfg;
+    design d;
+    default liblist foo;
+endconfig
+```
+
+-Wdup-config-rule
+More than one rule in a configuration targets the same cell or instance. They can't both
+be used, so slang takes the first one and ignores all others.
+@options --top=cfg
+```
+module d;
+endmodule
+
+config cfg;
+    design d;
+    instance d.foo use bar;
+    instance d.foo use baz;
+endconfig
+```
+
+-Wunused-config-cell
+A configuration cell rule is unused, which may mean that there's a typo in the target name.
+@options --top=cfg
+```
+config cfg;
+    design top;
+    cell foo liblist l;
+endconfig
+
+module top;
+endmodule
+```
+
+-Wunused-config-instance
+A configuration instance rule is unused, which means that target path does not exist in the design.
+@options --top=cfg
+```
+config cfg;
+    design top;
+    instance top.foo liblist l;
+endconfig
+
+module top;
+endmodule
+```
+
+-Wunsigned-arith-shift
+An arithmetic right shift of an unsigned integral type will always shift in zeros, which can be
+confusing since typically this operator is used to shift in the value of the most significant bit.
+If this is intended behavior use the logical right shift operator which does the same.
+```
+function bit[31:0] f1(int unsigned i);
+    return i >>> 5;
+endfunction
+```
+
+-Wstatic-init-value
+A static variable's initializer expression refers to an uninitialized variable, a net, a port,
+or a modport member, which won't have a value assigned by the time the initializer runs. The variable
+therefore will always be initialized to the default value.
+```
+module m(input i);
+    logic j = i;
+endmodule
+```
+
+-Wstatic-init-order
+A static variable's initializer refers to another variable that does not have a defined order
+of initialization relative to the first. This means that the initialization may or may not work
+as expected depending on how the tool chooses to schedule the initializers.
+```
+package p;
+    int i = 1;
+endpackage
+
+module m;
+    import p::i;
+    int j = i;
+endmodule
+```
+
+-Wfloat-int-conv
+A floating point value (real or shortreal) is implicitly converted to an integer.
+```
+function automatic f(real r);
+    int i = r;
+endfunction
+```
+
+-Wint-float-conv
+A integer value is implicitly converted to a floating point type (real or shortreal).
+```
+function automatic f(int i);
+    real r = i;
+endfunction
+```
+
+-Wfloat-widen
+A floating point value is implicitly converted to a wider floating point type.
+```
+function automatic f(shortreal s);
+    real r = s;
+endfunction
+```
+
+-Wfloat-narrow
+A floating point value is implicitly converted to a narrower floating point type.
+```
+function automatic f(real r);
+    shortreal s = r;
+endfunction
+```
+
+-Wisunbounded-param-arg
+The SystemVerilog LRM 1800-2023 requires that the argument to the $isunbounded system
+function be a parameter name. This seems needlessly restrictive and conflicts with the
+wording in prior versions so this is implemented as a pedantic warning only.
+```
+localparam p = $isunbounded(1 + 1);
+```
+
+-Wspecify-condition-expr
+State-dependent path conditions in specify blocks are restricted to a subset of expression
+types and operators (see Table 30-1 in the LRM for the list of valid operators). This is an
+error by default but can be downgraded to a warning for compatibility with other tools.
+```
+module m(input b, output c);
+    wire integer a;
+    specify
+        if (a === 1 + 1) (b => c) = (0,0);
+    endspecify
+endmodule
+```
+
+-Warith-op-mismatch
+An arithmetic operator has operands of different types -- one or both will be converted
+before the operation is performed. This is not necessarily a problem but the warning
+can be helpful if you prefer to be strict about disallowing implicit conversions.
+```
+module m;
+    logic [7:0] a;
+    struct packed { logic [7:0] x; } b;
+    initial a += b;
+endmodule
+```
+
+-Wbitwise-op-mismatch
+A bitwise operator has operands of different types -- one or both will be converted
+before the operation is performed. This is not necessarily a problem but the warning
+can be helpful if you prefer to be strict about disallowing implicit conversions.
+```
+module m;
+    logic [7:0] a;
+    logic [11:1] b;
+    initial a = a | b;
+endmodule
+```
+
+-Wcomparison-mismatch
+A comparison operator has operands of different types -- one or both will be converted
+before the operation is performed. This is not necessarily a problem but the warning
+can be helpful if you prefer to be strict about disallowing implicit conversions.
+```
+module m;
+    logic [7:0] a;
+    struct packed { logic [7:0] x; } b;
+    initial begin
+        if (a == b) begin
+        end
+    end
+endmodule
+```
+
+-Wsign-compare
+A comparison operator has operands of differing signs. The signed operand will be
+treated as unsigned, which can lead to unexpected results.
+```
+module m;
+    int a = -1;
+    int unsigned b = 1;
+    initial begin
+        if (a < b) begin
+        end
+    end
 endmodule
 ```

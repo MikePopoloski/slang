@@ -121,8 +121,8 @@ public:
     /// Constructs a new ValueDriver instance.
     ValueDriver(DriverKind kind, const Expression& longestStaticPrefix,
                 const Symbol& containingSymbol, bitmask<AssignFlags> flags) :
-        prefixExpression(&longestStaticPrefix),
-        containingSymbol(&containingSymbol), flags(flags), kind(kind) {}
+        prefixExpression(&longestStaticPrefix), containingSymbol(&containingSymbol), flags(flags),
+        kind(kind) {}
 
     /// Indicates whether the driver is for an input port.
     bool isInputPort() const { return flags.has(AssignFlags::InputPort); }

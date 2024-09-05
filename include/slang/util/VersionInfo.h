@@ -1,5 +1,5 @@
 //------------------------------------------------------------------------------
-//! @file Version.h
+//! @file VersionInfo.h
 //! @brief Library build-time version information
 //
 // SPDX-FileCopyrightText: Michael Popoloski

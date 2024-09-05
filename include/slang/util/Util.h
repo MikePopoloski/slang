@@ -16,14 +16,6 @@
 #include "slang/slang_export.h"
 #include "slang/util/Enum.h"
 
-#if defined(__GNUC__) || defined(__INTEL_COMPILER) || defined(__clang__)
-#    define SLANG_LIKELY(x) __builtin_expect(x, 1)
-#    define SLANG_UNLIKELY(x) __builtin_expect(x, 0)
-#else
-#    define SLANG_LIKELY(x) (x)
-#    define SLANG_UNLIKELY(x) (x)
-#endif
-
 #if defined(__GNUC__) || defined(__clang__)
 #    define SLANG_ASSERT_FUNCTION __PRETTY_FUNCTION__
 #elif defined(_MSC_VER)
@@ -61,7 +53,9 @@
 #    define SLANG_RTTI_ENABLED
 #endif
 
-#if defined(SLANG_RTTI_ENABLED)
+// Note: typeid() appears to be broken under libc++ arm64,
+// which is why we use our workaround type for that as well.
+#if defined(SLANG_RTTI_ENABLED) && !defined(__ARM_ARCH_ISA_A64)
 #    define SLANG_TYPEOF(x) std::type_index(typeid(x))
 #    define SLANG_TYPEINDEX std::type_index
 #else

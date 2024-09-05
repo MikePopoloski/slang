@@ -10,6 +10,7 @@
 #include "slang/ast/ASTSerializer.h"
 #include "slang/ast/Compilation.h"
 #include "slang/ast/Expression.h"
+#include "slang/ast/expressions/MiscExpressions.h"
 #include "slang/ast/symbols/InstanceSymbols.h"
 #include "slang/ast/symbols/PortSymbols.h"
 #include "slang/ast/symbols/SpecifySymbols.h"
@@ -17,6 +18,7 @@
 #include "slang/diagnostics/ConstEvalDiags.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/syntax/AllSyntax.h"
+#include "slang/syntax/SyntaxVisitor.h"
 #include "slang/util/ScopeGuard.h"
 
 namespace slang::ast {
@@ -47,11 +49,45 @@ void ParameterSymbolBase::fromLocalSyntax(const Scope& scope,
     }
 }
 
-bool ParameterSymbolBase::hasDefault() const {
-    if (symbol.kind == SymbolKind::Parameter)
-        return symbol.as<ParameterSymbol>().getDeclaredType()->getInitializerSyntax();
-    else
-        return symbol.as<TypeParameterSymbol>().targetType.getTypeSyntax();
+void ParameterSymbolBase::checkDefaultExpression() const {
+    // A visitor that finds all Name expressions and
+    // performs a lookup to ensure that they resolve.
+    struct Visitor : public SyntaxVisitor<Visitor> {
+        explicit Visitor(const ASTContext& context) : context(context) {}
+
+        void handle(const NameSyntax& syntax) {
+            LookupResult result;
+            Lookup::name(syntax, context, LookupFlags::ForceHierarchical, result);
+            result.reportDiags(context);
+            if (result.found)
+                context.getCompilation().noteReference(*result.found);
+
+            for (auto& selector : result.selectors) {
+                if (auto elemSel = std::get_if<0>(&selector))
+                    (*elemSel)->visit(*this);
+            }
+        }
+
+        void handle(const AssignmentPatternItemSyntax& syntax) {
+            // Avoid visiting the key which can name a struct member
+            // and so should not be looked up.
+            syntax.expr->visit(*this);
+        }
+
+        const ASTContext& context;
+    };
+
+    if (defaultValSyntax) {
+        // We can't properly bind this default expression because it may
+        // rely on other parameters that have been overridden in conflicting
+        // ways, so the best we can do is resolve names and mark them used.
+        auto scope = symbol.getParentScope();
+        SLANG_ASSERT(scope);
+
+        ASTContext context(*scope, LookupLocation::before(symbol));
+        Visitor visitor(context);
+        defaultValSyntax->visit(visitor);
+    }
 }
 
 ParameterSymbol::ParameterSymbol(std::string_view name, SourceLocation loc, bool isLocal,
@@ -85,26 +121,28 @@ void ParameterSymbol::fromSyntax(const Scope& scope, const ParameterDeclarationS
 
 const ConstantValue& ParameterSymbol::getValue(SourceRange referencingRange) const {
     if (!value) {
+        auto scope = getParentScope();
+        SLANG_ASSERT(scope);
+
+        ASTContext ctx(*scope, LookupLocation::max);
+        if (isFromConf)
+            ctx.flags |= ASTFlags::ConfigParam;
+
+        if (evaluating) {
+            SLANG_ASSERT(referencingRange.start());
+
+            auto& diag = ctx.addDiag(diag::ConstEvalParamCycle, location) << name;
+            diag.addNote(diag::NoteReferencedHere, referencingRange);
+            return ConstantValue::Invalid;
+        }
+
+        evaluating = true;
+        auto guard = ScopeGuard([this] { evaluating = false; });
+
         // If no value has been explicitly set, try to set it
         // from our initializer.
         auto init = getInitializer();
         if (init) {
-            auto scope = getParentScope();
-            SLANG_ASSERT(scope);
-
-            ASTContext ctx(*scope, LookupLocation::max);
-
-            if (evaluating) {
-                SLANG_ASSERT(referencingRange.start());
-
-                auto& diag = ctx.addDiag(diag::ConstEvalParamCycle, location) << name;
-                diag.addNote(diag::NoteReferencedHere, referencingRange);
-                return ConstantValue::Invalid;
-            }
-
-            evaluating = true;
-            auto guard = ScopeGuard([this] { evaluating = false; });
-
             value = scope->getCompilation().allocConstant(
                 ctx.eval(*init, EvalFlags::AllowUnboundedPlaceholder));
 
@@ -134,8 +172,10 @@ const ConstantValue& ParameterSymbol::getValue(SourceRange referencingRange) con
 }
 
 bool ParameterSymbol::isImplicitString(SourceRange referencingRange) const {
-    if (!value)
+    if (!value) {
         getValue(referencingRange);
+        SLANG_ASSERT(value);
+    }
     return fromStringLit || value->bad();
 }
 
@@ -156,21 +196,40 @@ void ParameterSymbol::serializeTo(ASTSerializer& serializer) const {
     serializer.write("isBody", isBodyParam());
 }
 
-TypeParameterSymbol::TypeParameterSymbol(std::string_view name, SourceLocation loc, bool isLocal,
-                                         bool isPort) :
-    Symbol(SymbolKind::TypeParameter, name, loc),
-    ParameterSymbolBase(*this, isLocal, isPort), targetType(*this) {
+static DeclaredTypeFlags getTypeParamFlags(const Scope& scope) {
+    // v1800-2023: Type parameter assignments are allowed to reference
+    // incomplete forward class types now.
+    if (scope.getCompilation().languageVersion() >= LanguageVersion::v1800_2023)
+        return DeclaredTypeFlags::TypedefTarget;
+    return DeclaredTypeFlags::None;
+}
+
+TypeParameterSymbol::TypeParameterSymbol(const Scope& scope, std::string_view name,
+                                         SourceLocation loc, bool isLocal, bool isPort,
+                                         ForwardTypeRestriction typeRestriction) :
+    Symbol(SymbolKind::TypeParameter, name, loc), ParameterSymbolBase(*this, isLocal, isPort),
+    targetType(*this, getTypeParamFlags(scope)), typeRestriction(typeRestriction) {
+
+    auto alias = scope.getCompilation().emplace<TypeAliasType>(name, loc);
+    alias->setParent(scope);
+    alias->targetType.setLink(targetType);
+    typeAlias = alias;
 }
 
 void TypeParameterSymbol::fromSyntax(const Scope& scope,
                                      const TypeParameterDeclarationSyntax& syntax, bool isLocal,
                                      bool isPort, SmallVectorBase<TypeParameterSymbol*>& results) {
     auto& comp = scope.getCompilation();
+    auto typeRestriction = ForwardTypeRestriction::None;
+    if (syntax.typeRestriction)
+        typeRestriction = SemanticFacts::getTypeRestriction(*syntax.typeRestriction);
+
     for (auto decl : syntax.declarators) {
         auto name = decl->name.valueText();
         auto loc = decl->name.location();
 
-        auto param = comp.emplace<TypeParameterSymbol>(name, loc, isLocal, isPort);
+        auto param = comp.emplace<TypeParameterSymbol>(scope, name, loc, isLocal, isPort,
+                                                       typeRestriction);
         param->setSyntax(*decl);
 
         if (!decl->assignment) {
@@ -188,22 +247,22 @@ void TypeParameterSymbol::fromSyntax(const Scope& scope,
     }
 }
 
-const Type& TypeParameterSymbol::getTypeAlias() const {
-    if (typeAlias)
-        return *typeAlias;
+void TypeParameterSymbol::checkTypeRestriction() const {
+    if (typeRestriction != ForwardTypeRestriction::None) {
+        auto& type = targetType.getType();
+        if (!type.isError() && typeRestriction != SemanticFacts::getTypeRestriction(type)) {
+            auto scope = getParentScope();
+            auto typeSyntax = targetType.getTypeSyntax();
+            SLANG_ASSERT(scope && typeSyntax);
 
-    auto scope = getParentScope();
-    SLANG_ASSERT(scope);
+            auto& diag = scope->addDiag(diag::TypeRestrictionMismatch, typeSyntax->sourceRange());
+            diag << SemanticFacts::getTypeRestrictionText(typeRestriction);
+            diag << type;
 
-    auto alias = scope->getCompilation().emplace<TypeAliasType>(name, location);
-    if (auto syntax = getSyntax())
-        alias->setSyntax(*syntax);
-
-    alias->targetType.setLink(targetType);
-    alias->setParent(*scope, getIndex());
-
-    typeAlias = alias;
-    return *typeAlias;
+            if (isOverridden())
+                diag.addNote(diag::NoteDeclarationHere, location);
+        }
+    }
 }
 
 bool TypeParameterSymbol::isOverridden() const {
@@ -271,7 +330,7 @@ static const Symbol* checkDefparamHierarchy(const Symbol& target, const Scope& d
             // to check whether our common ancestor also is.
             if (isInsideBind) {
                 auto inst = (*it)->getContainingInstance();
-                if (!inst || !inst->isFromBind)
+                if (!inst || !inst->flags.has(InstanceFlags::ParentFromBind))
                     return &scope->asSymbol();
             }
 
@@ -291,7 +350,7 @@ static const Symbol* checkDefparamHierarchy(const Symbol& target, const Scope& d
         SLANG_ASSERT(body.parentInstance);
         scope = body.parentInstance->getParentScope();
 
-        isInsideBind |= body.isFromBind;
+        isInsideBind |= body.flags.has(InstanceFlags::ParentFromBind);
 
         // We are also disallowed from having defparams inside an instance that has interface
         // ports that connect to an array from extending outside that hierarchy.
@@ -357,18 +416,19 @@ void DefParamSymbol::resolve() const {
     // We need to know the parameter's type (or lack thereof) in order to
     // correctly bind a value for it.
     auto& exprSyntax = *assignment.setter->expr;
-    auto equalsLoc = assignment.setter->equals.location();
+    auto equalsRange = assignment.setter->equals.range();
     auto declType = param.getDeclaredType();
     auto typeSyntax = declType->getTypeSyntax();
 
     if (typeSyntax && typeSyntax->kind == SyntaxKind::ImplicitType) {
         ASTContext typeContext(*param.getParentScope(), LookupLocation::before(param));
-        auto [expr, type] = Expression::bindImplicitParam(*typeSyntax, exprSyntax, equalsLoc,
+        auto [expr, type] = Expression::bindImplicitParam(*typeSyntax, exprSyntax, equalsRange,
                                                           context, typeContext);
         initializer = expr;
     }
     else {
-        initializer = &Expression::bindRValue(declType->getType(), exprSyntax, equalsLoc, context);
+        initializer = &Expression::bindRValue(declType->getType(), exprSyntax, equalsRange,
+                                              context);
     }
 
     context.eval(*initializer);
@@ -389,28 +449,28 @@ SpecparamSymbol::SpecparamSymbol(std::string_view name, SourceLocation loc) :
 
 const ConstantValue& SpecparamSymbol::getValue(SourceRange referencingRange) const {
     if (!value1) {
+        auto scope = getParentScope();
+        SLANG_ASSERT(scope);
+
+        ASTContext ctx(*scope, LookupLocation::before(*this), ASTFlags::SpecparamInitializer);
+
+        if (evaluating) {
+            SLANG_ASSERT(referencingRange.start());
+
+            auto& diag = ctx.addDiag(diag::ConstEvalParamCycle, location) << name;
+            diag.addNote(diag::NoteReferencedHere, referencingRange);
+            return ConstantValue::Invalid;
+        }
+
+        evaluating = true;
+        auto guard = ScopeGuard([this] { evaluating = false; });
+
         // If no value has been explicitly set, try to set it
         // from our initializer.
         auto init = getInitializer();
         if (init) {
-            auto scope = getParentScope();
-            SLANG_ASSERT(scope);
-
-            ASTContext ctx(*scope, LookupLocation::before(*this));
-
-            if (evaluating) {
-                SLANG_ASSERT(referencingRange.start());
-
-                auto& diag = ctx.addDiag(diag::ConstEvalParamCycle, location) << name;
-                diag.addNote(diag::NoteReferencedHere, referencingRange);
-                return ConstantValue::Invalid;
-            }
-
-            evaluating = true;
-            auto guard = ScopeGuard([this] { evaluating = false; });
-
             auto& comp = scope->getCompilation();
-            value1 = comp.allocConstant(ctx.eval(*init, EvalFlags::SpecparamsAllowed));
+            value1 = comp.allocConstant(ctx.eval(*init));
 
             // Specparams can also be a "PATHPULSE$" which has two values to bind.
             auto syntax = getSyntax();
@@ -418,9 +478,9 @@ const ConstantValue& SpecparamSymbol::getValue(SourceRange referencingRange) con
 
             auto& decl = syntax->as<SpecparamDeclaratorSyntax>();
             if (auto exprSyntax = decl.value2) {
-                auto& expr2 = Expression::bindRValue(getType(), *exprSyntax, decl.equals.location(),
+                auto& expr2 = Expression::bindRValue(getType(), *exprSyntax, decl.equals.range(),
                                                      ctx);
-                value2 = comp.allocConstant(ctx.eval(expr2, EvalFlags::SpecparamsAllowed));
+                value2 = comp.allocConstant(ctx.eval(expr2));
             }
             else {
                 value2 = &ConstantValue::Invalid;
@@ -537,9 +597,11 @@ const Symbol* SpecparamSymbol::resolvePathTerminal(std::string_view terminalName
         return nullptr;
     }
 
+    auto dir = isSource ? SpecifyBlockSymbol::SpecifyTerminalDir::Input
+                        : SpecifyBlockSymbol::SpecifyTerminalDir::Output;
     auto& value = symbol->as<ValueSymbol>();
-    if (!SpecifyBlockSymbol::checkPathTerminal(value, value.getType(), *parentParent, isSource,
-                                               /* allowAnyNet */ false, sourceRange)) {
+    if (!SpecifyBlockSymbol::checkPathTerminal(value, value.getType(), *parentParent, dir,
+                                               sourceRange)) {
         return nullptr;
     }
 

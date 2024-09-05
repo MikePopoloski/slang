@@ -21,6 +21,7 @@
 #include "slang/ast/types/AllTypes.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/diagnostics/ExpressionsDiags.h"
+#include "slang/diagnostics/ParserDiags.h"
 #include "slang/diagnostics/TypesDiags.h"
 #include "slang/syntax/AllSyntax.h"
 
@@ -31,8 +32,7 @@ using namespace syntax;
 
 ClassPropertySymbol::ClassPropertySymbol(std::string_view name, SourceLocation loc,
                                          VariableLifetime lifetime, Visibility visibility) :
-    VariableSymbol(SymbolKind::ClassProperty, name, loc, lifetime),
-    visibility(visibility) {
+    VariableSymbol(SymbolKind::ClassProperty, name, loc, lifetime), visibility(visibility) {
 }
 
 void ClassPropertySymbol::fromSyntax(const Scope& scope,
@@ -130,10 +130,10 @@ void ClassType::addForwardDecl(const ForwardingTypedefSymbol& decl) const {
 
 void ClassType::checkForwardDecls() const {
     if (firstForward) {
-        auto category = ForwardTypedefCategory::Class;
+        auto typeRestriction = ForwardTypeRestriction::Class;
         if (isInterface)
-            category = ForwardTypedefCategory::InterfaceClass;
-        firstForward->checkType(category, Visibility::Public, location);
+            typeRestriction = ForwardTypeRestriction::InterfaceClass;
+        firstForward->checkType(typeRestriction, Visibility::Public, location);
     }
 }
 
@@ -170,6 +170,9 @@ void ClassType::populate(const Scope& scope, const ClassDeclarationSyntax& synta
         isAbstract = true;
     else if (syntax.virtualOrInterface.kind == TokenKind::InterfaceKeyword)
         isInterface = true;
+
+    if (syntax.finalSpecifier && syntax.finalSpecifier->keyword.kind == TokenKind::FinalKeyword)
+        isFinal = true;
 
     setSyntax(syntax);
     for (auto member : syntax.items)
@@ -239,6 +242,14 @@ void ClassType::populate(const Scope& scope, const ClassDeclarationSyntax& synta
     if (constraint_mode)
         constraint_mode->addArg("on_ff", comp.getBitType());
 
+    // Give this class a "thisVar" that can be used by non-static class
+    // property initializers to refer to their own instance.
+    auto tv = comp.emplace<VariableSymbol>("this", location, VariableLifetime::Automatic);
+    tv->setType(*this);
+    tv->flags |= VariableFlags::Const | VariableFlags::CompilerGenerated;
+    tv->setParent(*this);
+    thisVar = tv;
+
     // This needs to happen last, otherwise setting "needs elaboration" before
     // trying to access the name map can cause infinite recursion.
     if (syntax.extendsClause || syntax.implementsClause)
@@ -273,6 +284,12 @@ void ClassType::handleExtends(const ExtendsClauseSyntax& extendsClause, const AS
     if (baseType->isInterface) {
         baseClass = &comp.getErrorType();
         context.addDiag(diag::ExtendIfaceFromClass, extendsClause.sourceRange()) << baseType->name;
+        return;
+    }
+
+    if (baseType->isFinal) {
+        baseClass = &comp.getErrorType();
+        context.addDiag(diag::ExtendFromFinal, extendsClause.sourceRange()) << baseType->name;
         return;
     }
 
@@ -330,7 +347,7 @@ void ClassType::handleExtends(const ExtendsClauseSyntax& extendsClause, const AS
         // an abstract class, issue an error.
         if (!isAbstract && toWrap->kind == SymbolKind::MethodPrototype) {
             auto& sub = toWrap->as<MethodPrototypeSymbol>();
-            if (sub.flags & MethodFlags::Pure) {
+            if (sub.flags.has(MethodFlags::Pure)) {
                 if (!pureVirtualError) {
                     auto& diag = context.addDiag(diag::InheritFromAbstract,
                                                  extendsClause.sourceRange());
@@ -346,7 +363,7 @@ void ClassType::handleExtends(const ExtendsClauseSyntax& extendsClause, const AS
 
         if (!isAbstract && toWrap->kind == SymbolKind::ConstraintBlock) {
             auto& cb = toWrap->as<ConstraintBlockSymbol>();
-            if (cb.isPure) {
+            if (cb.flags.has(ConstraintBlockFlags::Pure)) {
                 if (!pureVirtualError) {
                     auto& diag = context.addDiag(diag::InheritFromAbstractConstraint,
                                                  extendsClause.sourceRange());
@@ -367,6 +384,22 @@ void ClassType::handleExtends(const ExtendsClauseSyntax& extendsClause, const AS
         insertCB(*wrapper);
     }
 
+    auto checkOverrideSpecifiers = [&](auto& base, auto& derived) {
+        if (derived.flags.has(MethodFlags::Initial) && base.isVirtual()) {
+            auto& diag = context.addDiag(diag::OverridingInitial, derived.location);
+            diag << derived.name;
+            diag.addNote(diag::NoteDeclarationHere, base.location);
+        }
+        else if (base.flags.has(MethodFlags::Final)) {
+            auto& diag = context.addDiag(diag::OverridingFinal, derived.location);
+            diag << derived.name;
+            diag.addNote(diag::NoteDeclarationHere, base.location);
+        }
+        else if (!base.isVirtual() && derived.flags.has(MethodFlags::Extends)) {
+            context.addDiag(diag::OverridingExtends, derived.location) << derived.name;
+        }
+    };
+
     auto checkForOverride = [&](auto& member) {
         // Constructors and static methods can never be virtual.
         if (member.flags.has(MethodFlags::Constructor | MethodFlags::Static))
@@ -379,25 +412,35 @@ void ClassType::handleExtends(const ExtendsClauseSyntax& extendsClause, const AS
             if (found) {
                 if (found->kind == SymbolKind::Subroutine) {
                     auto& baseSub = found->as<SubroutineSymbol>();
+                    checkOverrideSpecifiers(baseSub, member);
                     if (baseSub.isVirtual())
                         member.setOverride(baseSub);
+                    return;
                 }
                 break;
             }
 
             // Otherwise it could be inherited from a higher-level base.
             auto possibleBase = currentBase->getBaseClass();
-            if (!possibleBase || possibleBase->isError())
+            if (!possibleBase)
                 break;
+
+            if (possibleBase->isError())
+                return;
 
             currentBase = &possibleBase->getCanonicalType().as<ClassType>();
         }
+
+        // No base method found; if our member is marked 'extends' it's an error.
+        if (member.flags.has(MethodFlags::Extends))
+            context.addDiag(diag::OverridingExtends, member.location) << member.name;
     };
 
     // Check all methods in our class for overriding virtual methods in parent classes.
     for (auto& member : members()) {
-        if (member.kind == SymbolKind::Subroutine)
+        if (member.kind == SymbolKind::Subroutine) {
             checkForOverride(member.as<SubroutineSymbol>());
+        }
         else if (member.kind == SymbolKind::MethodPrototype) {
             auto& proto = member.as<MethodPrototypeSymbol>();
             checkForOverride(proto);
@@ -414,18 +457,33 @@ void ClassType::handleExtends(const ExtendsClauseSyntax& extendsClause, const AS
         else if (member.kind == SymbolKind::ConstraintBlock) {
             // Constraint blocks can also be overridden -- check that 'static'ness
             // matches between base and derived if the base is pure.
+            bool isOverridden = false;
             auto currentBase = baseType;
+            auto& derived = member.as<ConstraintBlockSymbol>();
             while (true) {
                 const Symbol* found = currentBase->find(member.name);
                 if (found) {
                     if (found->kind == SymbolKind::ConstraintBlock) {
+                        isOverridden = true;
                         auto& baseConstraint = found->as<ConstraintBlockSymbol>();
-                        if (baseConstraint.isPure &&
-                            baseConstraint.isStatic !=
-                                member.as<ConstraintBlockSymbol>().isStatic) {
+                        if (baseConstraint.flags.has(ConstraintBlockFlags::Pure) &&
+                            baseConstraint.flags.has(ConstraintBlockFlags::Static) !=
+                                member.as<ConstraintBlockSymbol>().flags.has(
+                                    ConstraintBlockFlags::Static)) {
                             auto& diag = context.addDiag(diag::MismatchStaticConstraint,
                                                          member.location);
                             diag.addNote(diag::NoteDeclarationHere, found->location);
+                        }
+
+                        if (derived.flags.has(ConstraintBlockFlags::Initial)) {
+                            auto& diag = context.addDiag(diag::OverridingInitial, derived.location);
+                            diag << derived.name;
+                            diag.addNote(diag::NoteDeclarationHere, baseConstraint.location);
+                        }
+                        else if (baseConstraint.flags.has(ConstraintBlockFlags::Final)) {
+                            auto& diag = context.addDiag(diag::OverridingFinal, derived.location);
+                            diag << derived.name;
+                            diag.addNote(diag::NoteDeclarationHere, baseConstraint.location);
                         }
                     }
                     break;
@@ -438,6 +496,9 @@ void ClassType::handleExtends(const ExtendsClauseSyntax& extendsClause, const AS
 
                 currentBase = &possibleBase->getCanonicalType().as<ClassType>();
             }
+
+            if (!isOverridden && derived.flags.has(ConstraintBlockFlags::Extends))
+                context.addDiag(diag::OverridingExtends, member.location) << member.name;
         }
     }
 }
@@ -463,7 +524,9 @@ const Expression* ClassType::getBaseConstructorCall() const {
         return nullptr;
 
     // If we have a constructor, find whether it invokes super.new in its body.
-    if (auto ourConstructor = find("new")) {
+    bool constructorHasDefault = false;
+    auto ourConstructor = getConstructor();
+    if (ourConstructor) {
         auto checkForSuperNew = [&](const Statement& stmt) {
             if (stmt.kind == StatementKind::ExpressionStatement) {
                 auto& expr = stmt.as<ExpressionStatement>().expr;
@@ -476,12 +539,14 @@ const Expression* ClassType::getBaseConstructorCall() const {
 
         // If the body is invalid, early out now so we don't report
         // spurious errors on top of it.
-        auto& body = ourConstructor->as<SubroutineSymbol>().getBody();
+        constructorHasDefault = ourConstructor->flags.has(MethodFlags::DefaultedSuperArg);
+        auto& body = ourConstructor->getBody();
         if (body.bad())
             return nullptr;
 
-        if (body.kind != StatementKind::List)
+        if (body.kind != StatementKind::List) {
             checkForSuperNew(body);
+        }
         else {
             for (auto stmt : body.as<StatementList>().list) {
                 if (stmt->kind != StatementKind::VariableDeclaration) {
@@ -495,14 +560,16 @@ const Expression* ClassType::getBaseConstructorCall() const {
     ASTContext context(*this, LookupLocation(this, uint32_t(headerIndex)));
     auto& extendsClause = *classSyntax.extendsClause;
 
-    if (auto extendsArgs = extendsClause.arguments) {
-        // Can't have both a super.new and extends arguments.
-        if (callExpr) {
-            auto& diag = context.addDiag(diag::BaseConstructorDuplicate, callExpr->sourceRange);
-            diag.addNote(diag::NotePreviousUsage, extendsArgs->getFirstToken().location());
-            return nullptr;
-        }
+    // Can't have both a super.new and extends arguments.
+    if (callExpr && (extendsClause.arguments || extendsClause.defaultedArg)) {
+        auto argSyntax = extendsClause.arguments ? (const SyntaxNode*)extendsClause.arguments
+                                                 : extendsClause.defaultedArg;
+        auto& diag = context.addDiag(diag::BaseConstructorDuplicate, callExpr->sourceRange);
+        diag.addNote(diag::NotePreviousUsage, argSyntax->getFirstToken().location());
+        return nullptr;
+    }
 
+    if (auto extendsArgs = extendsClause.arguments) {
         // If we have a base class constructor, create the call to it.
         if (baseConstructor) {
             SourceRange range = extendsClause.sourceRange();
@@ -519,10 +586,21 @@ const Expression* ClassType::getBaseConstructorCall() const {
             diag << extendsArgs->parameters.size();
         }
     }
+    else if (extendsClause.defaultedArg) {
+        SLANG_ASSERT(ourConstructor);
+        if (!constructorHasDefault) {
+            auto& diag = context.addDiag(diag::InvalidExtendsDefault, ourConstructor->location);
+            diag.addNote(diag::NotePreviousUsage, extendsClause.defaultedArg->sourceRange());
+        }
+
+        constructorHasDefault = true;
+    }
 
     // If we have a base class constructor and nothing called it, make sure
     // it has no arguments or all of the arguments have default values.
-    if (baseConstructor && !callExpr) {
+    // If our own constructor declares a 'default' arg then this requirement
+    // is removed since we will insert the appropriate call arguments automatically.
+    if (baseConstructor && !callExpr && !constructorHasDefault) {
         for (auto arg : baseConstructor->as<SubroutineSymbol>().getArguments()) {
             if (!arg->getDefaultValue()) {
                 auto& diag = context.addDiag(diag::BaseConstructorNotCalled,
@@ -538,6 +616,37 @@ const Expression* ClassType::getBaseConstructorCall() const {
 
     baseConstructorCall = callExpr;
     return callExpr;
+}
+
+const SubroutineSymbol* ClassType::getConstructor() const {
+    if (auto constructor = find("new");
+        constructor && constructor->kind == SymbolKind::Subroutine) {
+        auto& sub = constructor->as<SubroutineSymbol>();
+        if (sub.flags.has(MethodFlags::Constructor))
+            return &sub;
+    }
+
+    // If our extends clause specifies 'default' for the argument list
+    // we will auto-generate an appropriate constructor if the user
+    // has not provided one.
+    auto syntax = getSyntax();
+    auto scope = getParentScope();
+    if (syntax && scope) {
+        auto extendsClause = syntax->as<ClassDeclarationSyntax>().extendsClause;
+        if (extendsClause && extendsClause->defaultedArg) {
+            auto& comp = scope->getCompilation();
+            MethodBuilder builder(comp, "new", comp.getVoidType(), SubroutineKind::Function);
+            builder.addFlags(MethodFlags::Constructor | MethodFlags::DefaultedSuperArg);
+
+            SubroutineSymbol::inheritDefaultedArgList(builder.symbol, *this,
+                                                      *extendsClause->defaultedArg, builder.args);
+
+            insertMember(&builder.symbol, getLastMember(), true, true);
+            return &builder.symbol;
+        }
+    }
+
+    return nullptr;
 }
 
 // Recursively finds interface classes that are implemented and adds them
@@ -680,9 +789,11 @@ void ClassType::handleImplements(const ImplementsClauseSyntax& implementsClause,
 
                 auto impl = find(method.name);
                 if (!impl || impl->kind != SymbolKind::Subroutine) {
-                    auto& diag = context.addDiag(diag::IfaceMethodNoImpl,
-                                                 nameSyntax->sourceRange());
-                    diag << name << method.name << iface->name;
+                    if (!baseClass || !baseClass->isError()) {
+                        auto& diag = context.addDiag(diag::IfaceMethodNoImpl,
+                                                     nameSyntax->sourceRange());
+                        diag << name << method.name << iface->name;
+                    }
                     continue;
                 }
 
@@ -756,6 +867,7 @@ void ClassType::computeCycles() const {
 void ClassType::serializeTo(ASTSerializer& serializer) const {
     serializer.write("isAbstract", isAbstract);
     serializer.write("isInterface", isInterface);
+    serializer.write("isFinal", isFinal);
     if (firstForward)
         serializer.write("forward", *firstForward);
     if (genericClass)
@@ -832,6 +944,12 @@ const Type* GenericClassDefSymbol::getSpecializationImpl(
     auto scope = getParentScope();
     SLANG_ASSERT(scope);
 
+    auto guard = ScopeGuard([this] { recursionDepth--; });
+    if (++recursionDepth > comp.getOptions().maxRecursiveClassSpecialization) {
+        context.addDiag(diag::RecursiveClassSpecialization, instanceLoc) << name;
+        return &comp.getErrorType();
+    }
+
     // Create a class type instance to hold the parameters. If it turns out we already
     // have this specialization cached we'll throw it away, but that's not a big deal.
     auto classType = comp.emplace<ClassType>(comp, name, location);
@@ -848,7 +966,7 @@ const Type* GenericClassDefSymbol::getSpecializationImpl(
     paramBuilder.setSuppressErrors(isForDefault);
     paramBuilder.setInstanceContext(context);
     if (syntax)
-        paramBuilder.setAssignments(*syntax);
+        paramBuilder.setAssignments(*syntax, /* isFromConfig */ false);
 
     SourceRange instRange = {instanceLoc, instanceLoc + 1};
 
@@ -877,7 +995,7 @@ const Type* GenericClassDefSymbol::getSpecializationImpl(
         }
     }
 
-    SpecializationKey key(*this, paramValues.copy(comp), typeParams.copy(comp));
+    detail::ClassSpecializationKey key(*this, paramValues.copy(comp), typeParams.copy(comp));
     if (auto it = specMap.find(key); it != specMap.end())
         return it->second;
 
@@ -885,10 +1003,13 @@ const Type* GenericClassDefSymbol::getSpecializationImpl(
     // specialization for later lookup. If we have a specialization function,
     // call that instead of trying to create from our syntax node.
     if (specializeFunc)
-        specializeFunc(comp, *classType);
+        specializeFunc(comp, *classType, instanceLoc);
     else
         classType->populate(*scope, getSyntax()->as<ClassDeclarationSyntax>());
-    specMap.emplace(key, classType);
+
+    if (!forceInvalidParams && !context.scope->isUninstantiated())
+        specMap.emplace(key, classType);
+
     return classType;
 }
 
@@ -901,27 +1022,32 @@ void GenericClassDefSymbol::addForwardDecl(const ForwardingTypedefSymbol& decl) 
 
 void GenericClassDefSymbol::checkForwardDecls() const {
     if (firstForward) {
-        auto category = ForwardTypedefCategory::Class;
+        auto typeRestriction = ForwardTypeRestriction::Class;
         if (isInterface)
-            category = ForwardTypedefCategory::InterfaceClass;
-        firstForward->checkType(category, Visibility::Public, location);
+            typeRestriction = ForwardTypeRestriction::InterfaceClass;
+        firstForward->checkType(typeRestriction, Visibility::Public, location);
     }
 }
 
-void GenericClassDefSymbol::addParameterDecl(const Definition::ParameterDecl& decl) {
+void GenericClassDefSymbol::addParameterDecl(const DefinitionSymbol::ParameterDecl& decl) {
     paramDecls.push_back(decl);
 }
 
 void GenericClassDefSymbol::serializeTo(ASTSerializer& serializer) const {
     if (firstForward)
         serializer.write("forward", *firstForward);
+    serializer.startArray("specializations");
+    for (auto&& spec : specializations())
+        serializer.serialize(spec, /* inMembersArray */ true);
+    serializer.endArray();
 }
 
-GenericClassDefSymbol::SpecializationKey::SpecializationKey(
-    const GenericClassDefSymbol& def, std::span<const ConstantValue* const> paramValues,
-    std::span<const Type* const> typeParams) :
-    definition(&def),
-    paramValues(paramValues), typeParams(typeParams) {
+namespace detail {
+
+ClassSpecializationKey::ClassSpecializationKey(const GenericClassDefSymbol& def,
+                                               std::span<const ConstantValue* const> paramValues,
+                                               std::span<const Type* const> typeParams) :
+    definition(&def), paramValues(paramValues), typeParams(typeParams) {
 
     // Precompute the hash.
     size_t h = 0;
@@ -933,7 +1059,7 @@ GenericClassDefSymbol::SpecializationKey::SpecializationKey(
     savedHash = h;
 }
 
-bool GenericClassDefSymbol::SpecializationKey::operator==(const SpecializationKey& other) const {
+bool ClassSpecializationKey::operator==(const ClassSpecializationKey& other) const {
     if (savedHash != other.savedHash || definition != other.definition ||
         paramValues.size() != other.paramValues.size() ||
         typeParams.size() != other.typeParams.size()) {
@@ -971,10 +1097,32 @@ bool GenericClassDefSymbol::SpecializationKey::operator==(const SpecializationKe
     return true;
 }
 
+} // namespace detail
+
 ConstraintBlockSymbol::ConstraintBlockSymbol(Compilation& c, std::string_view name,
                                              SourceLocation loc) :
-    Symbol(SymbolKind::ConstraintBlock, name, loc),
-    Scope(c, this) {
+    Symbol(SymbolKind::ConstraintBlock, name, loc), Scope(c, this) {
+}
+
+static void addSpecifierFlags(const SyntaxList<ClassSpecifierSyntax>& specifiers,
+                              bitmask<ConstraintBlockFlags>& flags) {
+    for (auto specifier : specifiers) {
+        if (!specifier->keyword.isMissing()) {
+            switch (specifier->keyword.kind) {
+                case TokenKind::InitialKeyword:
+                    flags |= ConstraintBlockFlags::Initial;
+                    break;
+                case TokenKind::ExtendsKeyword:
+                    flags |= ConstraintBlockFlags::Extends;
+                    break;
+                case TokenKind::FinalKeyword:
+                    flags |= ConstraintBlockFlags::Final;
+                    break;
+                default:
+                    SLANG_UNREACHABLE;
+            }
+        }
+    }
 }
 
 ConstraintBlockSymbol* ConstraintBlockSymbol::fromSyntax(
@@ -1005,7 +1153,7 @@ ConstraintBlockSymbol* ConstraintBlockSymbol::fromSyntax(
     // Static is the only allowed qualifier.
     for (auto qual : syntax.qualifiers) {
         if (qual.kind == TokenKind::StaticKeyword)
-            result->isStatic = true;
+            result->flags |= ConstraintBlockFlags::Static;
         else if (qual.kind == TokenKind::PureKeyword || qual.kind == TokenKind::ExternKeyword) {
             // This is an error, pure and extern declarations can't declare bodies.
             scope.addDiag(diag::UnexpectedConstraintBlock, syntax.block->sourceRange())
@@ -1014,8 +1162,12 @@ ConstraintBlockSymbol* ConstraintBlockSymbol::fromSyntax(
         }
     }
 
-    if (!result->isStatic && scope.asSymbol().kind == SymbolKind::ClassType)
+    addSpecifierFlags(syntax.specifiers, result->flags);
+
+    if (!result->flags.has(ConstraintBlockFlags::Static) &&
+        scope.asSymbol().kind == SymbolKind::ClassType) {
         result->addThisVar(scope.asSymbol().as<ClassType>());
+    }
 
     return result;
 }
@@ -1028,18 +1180,20 @@ ConstraintBlockSymbol& ConstraintBlockSymbol::fromSyntax(const Scope& scope,
                                                       nameToken.location());
     result->setSyntax(syntax);
     result->setAttributes(scope, syntax.attributes);
-    result->isExtern = true;
+    result->flags |= ConstraintBlockFlags::Extern;
+
+    addSpecifierFlags(syntax.specifiers, result->flags);
 
     for (auto qual : syntax.qualifiers) {
         switch (qual.kind) {
             case TokenKind::StaticKeyword:
-                result->isStatic = true;
+                result->flags |= ConstraintBlockFlags::Static;
                 break;
             case TokenKind::ExternKeyword:
-                result->isExplicitExtern = true;
+                result->flags |= ConstraintBlockFlags::ExplicitExtern;
                 break;
             case TokenKind::PureKeyword:
-                result->isPure = true;
+                result->flags |= ConstraintBlockFlags::Pure;
                 break;
             default:
                 break;
@@ -1048,10 +1202,10 @@ ConstraintBlockSymbol& ConstraintBlockSymbol::fromSyntax(const Scope& scope,
 
     if (scope.asSymbol().kind == SymbolKind::ClassType) {
         auto& classType = scope.asSymbol().as<ClassType>();
-        if (result->isPure && !classType.isAbstract)
+        if (result->flags.has(ConstraintBlockFlags::Pure) && !classType.isAbstract)
             scope.addDiag(diag::PureConstraintInAbstract, nameToken.range());
 
-        if (!result->isStatic)
+        if (!result->flags.has(ConstraintBlockFlags::Static))
             result->addThisVar(classType);
     }
 
@@ -1075,8 +1229,10 @@ const Constraint& ConstraintBlockSymbol::getConstraints() const {
 
         auto [declSyntax, index, used] = comp.findOutOfBlockDecl(outerScope, parentSym.name, name);
         if (!declSyntax || declSyntax->kind != SyntaxKind::ConstraintDeclaration || name.empty()) {
-            if (!isPure && !name.empty()) {
-                DiagCode code = isExplicitExtern ? diag::NoMemberImplFound : diag::NoConstraintBody;
+            if (!flags.has(ConstraintBlockFlags::Pure) && !name.empty()) {
+                DiagCode code = flags.has(ConstraintBlockFlags::ExplicitExtern)
+                                    ? diag::NoMemberImplFound
+                                    : diag::NoConstraintBody;
                 outerScope.addDiag(code, location) << name;
             }
             constraint = scope->getCompilation().emplace<InvalidConstraint>(nullptr);
@@ -1086,7 +1242,7 @@ const Constraint& ConstraintBlockSymbol::getConstraints() const {
         auto& cds = declSyntax->as<ConstraintDeclarationSyntax>();
         *used = true;
 
-        if (isPure) {
+        if (flags.has(ConstraintBlockFlags::Pure)) {
             auto& diag = outerScope.addDiag(diag::BodyForPureConstraint, cds.name->sourceRange());
             diag.addNote(diag::NoteDeclarationHere, location);
             constraint = scope->getCompilation().emplace<InvalidConstraint>(nullptr);
@@ -1110,9 +1266,19 @@ const Constraint& ConstraintBlockSymbol::getConstraints() const {
             }
         }
 
-        if (declStatic != isStatic) {
+        if (declStatic != flags.has(ConstraintBlockFlags::Static)) {
             auto& diag = outerScope.addDiag(diag::MismatchStaticConstraint,
                                             cds.getFirstToken().location());
+            diag.addNote(diag::NoteDeclarationHere, location);
+        }
+
+        bitmask<ConstraintBlockFlags> declFlags;
+        addSpecifierFlags(cds.specifiers, declFlags);
+
+        if (declFlags != (flags & (ConstraintBlockFlags::Initial | ConstraintBlockFlags::Extends |
+                                   ConstraintBlockFlags::Final))) {
+            auto& diag = outerScope.addDiag(diag::MismatchConstraintSpecifiers,
+                                            cds.name->getLastToken().location());
             diag.addNote(diag::NoteDeclarationHere, location);
         }
 
@@ -1124,11 +1290,31 @@ const Constraint& ConstraintBlockSymbol::getConstraints() const {
     return *constraint;
 }
 
+static std::string flagsToStr(bitmask<ConstraintBlockFlags> flags) {
+    std::string str;
+    if (flags.has(ConstraintBlockFlags::Pure))
+        str += "pure,";
+    if (flags.has(ConstraintBlockFlags::Static))
+        str += "static,";
+    if (flags.has(ConstraintBlockFlags::Extern))
+        str += "extern,";
+    if (flags.has(ConstraintBlockFlags::ExplicitExtern))
+        str += "explicitExtern,";
+    if (flags.has(ConstraintBlockFlags::Initial))
+        str += "initial,";
+    if (flags.has(ConstraintBlockFlags::Extends))
+        str += "extends,";
+    if (flags.has(ConstraintBlockFlags::Final))
+        str += "final,";
+    if (!str.empty())
+        str.pop_back();
+    return str;
+}
+
 void ConstraintBlockSymbol::serializeTo(ASTSerializer& serializer) const {
     serializer.write("constraints", getConstraints());
-    serializer.write("isStatic", isStatic);
-    serializer.write("isExtern", isExtern);
-    serializer.write("isExplicitExtern", isExplicitExtern);
+    if (flags)
+        serializer.write("flags", flagsToStr(flags));
 }
 
 void ConstraintBlockSymbol::addThisVar(const Type& type) {

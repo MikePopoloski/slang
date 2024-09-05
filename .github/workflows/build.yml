@@ -13,17 +13,17 @@ jobs:
       matrix:
         include:
           - preset: clang-sanitize
-            os: ubuntu-22.04
+            os: ubuntu-latest
           - preset: gcc-release
-            os: ubuntu-22.04
+            os: ubuntu-latest
           - preset: gcc-11-release
-            os: ubuntu-22.04
+            os: ubuntu-latest
           - preset: gcc-debug-shared
-            os: ubuntu-22.04
+            os: ubuntu-latest
           - preset: gcc-debug-noexcept
-            os: ubuntu-22.04
+            os: ubuntu-latest
           - preset: macos-release
-            os: macos-13
+            os: macos-latest
           - preset: win64-release
             os: windows-latest
           - preset: win64-debug-shared
@@ -33,21 +33,21 @@ jobs:
 
     runs-on: ${{ matrix.os }}
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         fetch-depth: 0
     - name: Install dependencies
-      if: matrix.os == 'ubuntu-22.04'
+      if: matrix.os == 'ubuntu-latest'
       run: |
         wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
-        sudo add-apt-repository "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-17 main"
+        sudo add-apt-repository "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-18 main"
         sudo add-apt-repository ppa:ubuntu-toolchain-r/test
         sudo apt-get update
-        sudo apt-get install -y g++-13 g++-11 clang-17 clang-tidy-17
+        sudo apt-get install -y g++-13 g++-11 clang-18 clang-tidy-18
     - uses: ilammy/msvc-dev-cmd@v1
       if: matrix.os == 'windows-latest'
     - uses: maxim-lobanov/setup-xcode@v1
-      if: matrix.os == 'macos-13'
+      if: matrix.os == 'macos-latest'
       with:
         xcode-version: 'latest'
     - name: Configure
@@ -58,9 +58,9 @@ jobs:
       run: ctest --test-dir build/${{ matrix.preset }} --output-on-failure --no-tests=error -j8
 
   linux-coverage:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         fetch-depth: 0
     - name: Install dependencies
@@ -77,15 +77,16 @@ jobs:
     - name: Process coverage info
       run: cmake --build build/ci-coverage -t coverage
     - name: Submit to codecov.io
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v4
       with:
         files: build/ci-coverage/coverage.info
+        token: ${{ secrets.CODECOV_TOKEN }}
         verbose: true
 
   bindings:
     runs-on: windows-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         fetch-depth: 0
     - uses: ilammy/msvc-dev-cmd@v1
@@ -97,9 +98,9 @@ jobs:
       run: ctest --test-dir build --output-on-failure -C Release --no-tests=error -j8
 
   conan:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         fetch-depth: 0
     - name: Install dependencies

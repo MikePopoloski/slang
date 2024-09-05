@@ -19,6 +19,8 @@ class ValueSymbol;
 
 class SLANG_EXPORT SpecifyBlockSymbol : public Symbol, public Scope {
 public:
+    enum class SpecifyTerminalDir { Input, Output, Both };
+
     SpecifyBlockSymbol(Compilation& compilation, SourceLocation loc);
 
     static SpecifyBlockSymbol& fromSyntax(const Scope& scope,
@@ -26,7 +28,7 @@ public:
                                           SmallVector<const Symbol*>& implicitSymbols);
 
     static bool checkPathTerminal(const ValueSymbol& terminal, const Type& type,
-                                  const Scope& specifyParent, bool isSource, bool allowAnyNet,
+                                  const Scope& specifyParent, SpecifyTerminalDir dir,
                                   SourceRange sourceRange);
 
     void serializeTo(ASTSerializer&) const {}
@@ -172,8 +174,7 @@ public:
         Arg(const Expression& expr) : expr(&expr) {}
         Arg(const Expression& expr, const Expression* condition, EdgeKind edge,
             std::span<const EdgeDescriptor> edgeDescriptors) :
-            expr(&expr),
-            condition(condition), edge(edge), edgeDescriptors(edgeDescriptors) {}
+            expr(&expr), condition(condition), edge(edge), edgeDescriptors(edgeDescriptors) {}
     };
 
     SystemTimingCheckKind timingCheckKind;

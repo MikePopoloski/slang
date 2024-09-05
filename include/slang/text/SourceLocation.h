@@ -162,6 +162,9 @@ public:
     /// @return the end of the range.
     SourceLocation end() const { return endLoc; }
 
+    /// @return true if @a location is within the range.
+    bool contains(const SourceLocation& loc) const { return loc >= startLoc && loc < endLoc; }
+
     bool operator==(const SourceRange& rhs) const = default;
 
     /// A range that is reserved to represent "no location" at all.
@@ -188,6 +191,9 @@ struct SLANG_EXPORT SourceLibrary {
     /// The priority of this library relative to others in the
     /// search order. Lower numbers are higher priority.
     int priority = 0;
+
+    /// Set to true if this is the default library.
+    bool isDefault = false;
 
     /// Default constructor.
     SourceLibrary() = default;
@@ -227,6 +233,16 @@ struct hash<slang::SourceLocation> {
         size_t seed = 0;
         slang::hash_combine(seed, obj.buffer());
         slang::hash_combine(seed, obj.offset());
+        return seed;
+    }
+};
+
+template<>
+struct hash<slang::SourceRange> {
+    size_t operator()(const slang::SourceRange& obj) const {
+        size_t seed = 0;
+        slang::hash_combine(seed, obj.start());
+        slang::hash_combine(seed, obj.end());
         return seed;
     }
 };

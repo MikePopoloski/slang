@@ -55,3 +55,39 @@ endmodule
     auto netlist = createNetlist(compilation);
     CHECK(netlist.numNodes() > 0);
 }
+
+TEST_CASE("Ignore concurrent assertions") {
+    // Test that we are not confused by timing events inside concurrent assertions
+    auto tree = SyntaxTree::fromText(R"(
+module t33 #(
+  parameter MODE = 3'd0
+) (
+  input wire  clk,
+  input wire [15:0]l,
+  input wire [15:0]s,
+  input wire [15:0]c,
+  input wire  [1:0]b,
+  input wire       a
+);
+  reg   [15:0] c_n;
+  always @(s or l or c)
+  begin : c_inc
+    c_n = c + (l ^ s);
+  end
+
+  property test_prop;
+    @(posedge clk) disable iff (MODE != 3'd0)
+    !($isunknown({a,b,c})) &
+      a & (b == 2'b01)
+      |-> (c_n[15:12] == c[15:12]);
+  endproperty
+  tp_inst: assert property (test_prop) else
+        $error("prop error");
+endmodule
+)");
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+    auto netlist = createNetlist(compilation);
+    CHECK(netlist.numNodes() > 0);
+}

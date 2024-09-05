@@ -1,11 +1,11 @@
 //------------------------------------------------------------------------------
-// Version.cpp
+// VersionInfo.cpp
 // Input file for build-time version source generation
 //
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
-#include "slang/util/Version.h"
+#include "slang/util/VersionInfo.h"
 
 using std::string_view;
 using namespace std::literals;

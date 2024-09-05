@@ -143,15 +143,17 @@ static bool printableTextForNextChar(std::string_view sourceLine, size_t& index,
     // Try to decode the next UTF-8 character we see.
     int error;
     uint32_t c;
+    int unused;
     if (index + 4 <= sourceLine.size()) {
-        data = utf8Decode(data, &c, &error);
+        data = utf8Decode(data, &c, &error, unused);
     }
     else {
         char buf[4] = {};
-        memcpy(buf, data, sourceLine.size() - index);
+        auto spaceLeft = sourceLine.size() - index;
+        memcpy(buf, data, spaceLeft);
 
-        auto next = utf8Decode(buf, &c, &error);
-        data += next - buf;
+        auto next = utf8Decode(buf, &c, &error, unused);
+        data += std::min(size_t(next - buf), spaceLeft);
     }
 
     if (error) {
@@ -168,10 +170,10 @@ static bool printableTextForNextChar(std::string_view sourceLine, size_t& index,
 
     if (!isPrintableUnicode(c)) {
         SmallVector<char, 8> buf;
-        while (c) {
+        do {
             buf.push_back(getHexForDigit(c % 16));
             c /= 16;
-        }
+        } while (c);
 
         out.append_range("<U+"sv);
         out.append_range(std::views::reverse(buf));

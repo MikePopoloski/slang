@@ -1,7 +1,7 @@
 /*******************************************************************************
  * vpi_compatibility.h
  *
- * IEEE 1800-2017 SystemVerilog Verification Procedural Interface (VPI)
+ * IEEE Std 1800-2023 SystemVerilog Verification Procedural Interface (VPI)
  *
  * NOTE: THIS FILE IS INCLUDED BY vpi_user.h. DO NOT INCLUDE THIS FILE FROM
  * USER APPLICATION CODE.
@@ -16,6 +16,9 @@ directly."
 #endif
 #define VPI_COMPATIBILITY_H
 /* Compatibility-mode variants of functions */
+#if VPI_COMPATIBILITY_VERSION_1800v2023
+#    define VPI_COMPATIBILITY_VERSION_1800v2012
+#endif
 #if VPI_COMPATIBILITY_VERSION_1800v2017
 #    define VPI_COMPATIBILITY_VERSION_1800v2012
 #endif

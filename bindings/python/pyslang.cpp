@@ -7,11 +7,16 @@
 
 void registerAST(py::module_& m);
 void registerCompilation(py::module_& m);
+void registerExpressions(py::module_& m);
 void registerNumeric(py::module_& m);
 void registerUtil(py::module_& m);
+void registerStatements(py::module_& m);
 void registerSymbols(py::module_& m);
 void registerSyntax(py::module_& m);
-void registerSyntaxNodes(py::module_& m);
+void registerSyntaxNodes0(py::module_& m);
+void registerSyntaxNodes1(py::module_& m);
+void registerSyntaxNodes2(py::module_& m);
+void registerSyntaxNodes3(py::module_& m);
 void registerTypes(py::module_& m);
 
 PYBIND11_MODULE(pyslang, m) {
@@ -25,11 +30,16 @@ PYBIND11_MODULE(pyslang, m) {
 
     registerAST(m);
     registerCompilation(m);
+    registerExpressions(m);
     registerNumeric(m);
     registerUtil(m);
+    registerStatements(m);
     registerSymbols(m);
     registerSyntax(m);
-    registerSyntaxNodes(m);
+    registerSyntaxNodes0(m);
+    registerSyntaxNodes1(m);
+    registerSyntaxNodes2(m);
+    registerSyntaxNodes3(m);
     registerTypes(m);
 
     py::register_exception_translator([](std::exception_ptr p) {

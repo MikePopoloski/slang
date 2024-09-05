@@ -22,6 +22,24 @@ namespace {
 struct PySyntaxVisitor : public PyVisitorBase<PySyntaxVisitor, SyntaxVisitor> {
     using PyVisitorBase::PyVisitorBase;
 
+    template<typename T>
+    void handle(const T& t) {
+        if (this->interrupted)
+            return;
+
+        // Note: the cast to SyntaxNode here is very important.
+        // It means that the object Python sees is of type SyntaxNode,
+        // forcing them to go through the polymorphic downcaster to get
+        // at the actual type.
+        py::object result = this->f(static_cast<const SyntaxNode*>(&t));
+        if (result.equal(py::cast(VisitAction::Interrupt))) {
+            this->interrupted = true;
+            return;
+        }
+        if (result.not_equal(py::cast(VisitAction::Skip)))
+            this->visitDefault(t);
+    }
+
     void visitToken(parsing::Token t) {
         if (this->interrupted)
             return;
@@ -180,7 +198,7 @@ void registerSyntax(py::module_& m) {
         .def("__str__", &SyntaxNode::toString);
 
     py::class_<SyntaxTree, std::shared_ptr<SyntaxTree>>(m, "SyntaxTree")
-        .def_readonly("isLibrary", &SyntaxTree::isLibrary)
+        .def_readonly("isLibraryUnit", &SyntaxTree::isLibraryUnit)
         .def_static(
             "fromFile",
             [](std::string_view path) {
@@ -244,22 +262,28 @@ void registerSyntax(py::module_& m) {
         .def_property_readonly("sourceManager", py::overload_cast<>(&SyntaxTree::sourceManager))
         .def_property_readonly("root", py::overload_cast<>(&SyntaxTree::root))
         .def_property_readonly("options", &SyntaxTree::options)
+        .def_property_readonly("sourceLibrary", &SyntaxTree::getSourceLibrary)
         .def_static("getDefaultSourceManager", &SyntaxTree::getDefaultSourceManager, byref);
 
     py::class_<LexerOptions>(m, "LexerOptions")
         .def(py::init<>())
-        .def_readwrite("maxErrors", &LexerOptions::maxErrors);
+        .def_readwrite("maxErrors", &LexerOptions::maxErrors)
+        .def_readwrite("languageVersion", &LexerOptions::languageVersion);
 
     py::class_<PreprocessorOptions>(m, "PreprocessorOptions")
         .def(py::init<>())
         .def_readwrite("maxIncludeDepth", &PreprocessorOptions::maxIncludeDepth)
+        .def_readwrite("languageVersion", &PreprocessorOptions::languageVersion)
         .def_readwrite("predefineSource", &PreprocessorOptions::predefineSource)
         .def_readwrite("predefines", &PreprocessorOptions::predefines)
-        .def_readwrite("undefines", &PreprocessorOptions::undefines);
+        .def_readwrite("undefines", &PreprocessorOptions::undefines)
+        .def_readwrite("additionalIncludePaths", &PreprocessorOptions::additionalIncludePaths)
+        .def_readwrite("ignoreDirectives", &PreprocessorOptions::ignoreDirectives);
 
     py::class_<ParserOptions>(m, "ParserOptions")
         .def(py::init<>())
-        .def_readwrite("maxRecursionDepth", &ParserOptions::maxRecursionDepth);
+        .def_readwrite("maxRecursionDepth", &ParserOptions::maxRecursionDepth)
+        .def_readwrite("languageVersion", &ParserOptions::languageVersion);
 
     py::class_<SyntaxPrinter>(m, "SyntaxPrinter")
         .def(py::init<>())

@@ -34,15 +34,28 @@ IntegerLiteral::IntegerLiteral(BumpAllocator& alloc, const Type& type, const SVI
     }
 }
 
-Expression& IntegerLiteral::fromSyntax(Compilation& compilation,
-                                       const LiteralExpressionSyntax& syntax) {
+Expression& IntegerLiteral::fromSyntax(Compilation& comp, const LiteralExpressionSyntax& syntax) {
     SLANG_ASSERT(syntax.kind == SyntaxKind::IntegerLiteralExpression);
 
-    SVInt val = syntax.literal.intValue().resize(32);
-    val.setSigned(true);
+    const Type* type;
+    SVInt val = syntax.literal.intValue();
+    if (val.getBitWidth() < 32 || comp.languageVersion() < LanguageVersion::v1800_2023) {
+        // In v2023 the rule changed to not truncate unsized literals.
+        // Literals smaller than 32 bits are always sized up to 32.
+        val = val.resize(32);
+        val.setSigned(true);
+        type = &comp.getIntType();
+    }
+    else {
+        if (!val.isSigned()) {
+            // Note the +1 here to account for the sign bit we're going to add.
+            val = val.resize(val.getBitWidth() + 1);
+            val.setSigned(true);
+        }
+        type = &comp.getType(val.getBitWidth(), IntegralFlags::Signed);
+    }
 
-    return *compilation.emplace<IntegerLiteral>(compilation, compilation.getIntType(),
-                                                std::move(val), true, syntax.sourceRange());
+    return *comp.emplace<IntegerLiteral>(comp, *type, std::move(val), true, syntax.sourceRange());
 }
 
 Expression& IntegerLiteral::fromSyntax(Compilation& compilation,
@@ -85,6 +98,23 @@ std::optional<bitwidth_t> IntegerLiteral::getEffectiveWidthImpl() const {
     return val.getActiveBits();
 }
 
+Expression::EffectiveSign IntegerLiteral::getEffectiveSignImpl(bool isForConversion) const {
+    // We will say that this literal could have been signed if doing
+    // so would not change its logical value (i.e. it either already
+    // was marked signed, or it's a positive value that would remain
+    // positive given a cast to a signed type).
+    //
+    // We will not warn if the value contains unknowns -- the rationale
+    // is that signed-related warnings make no sense in those cases, though
+    // we should probably warn separately about the unknowns themselves.
+    auto&& val = getValue();
+    if (isForConversion || (!val.hasUnknown() && val.getActiveBits() == val.getBitWidth())) {
+        return val.isSigned() ? EffectiveSign::Signed : EffectiveSign::Unsigned;
+    }
+
+    return EffectiveSign::Either;
+}
+
 void IntegerLiteral::serializeTo(ASTSerializer& serializer) const {
     serializer.write("value", getValue());
 }
@@ -114,7 +144,7 @@ Expression& TimeLiteral::fromSyntax(const ASTContext& context,
     double value = syntax.literal.realValue();
     TimeUnit unit = syntax.literal.numericFlags().unit();
     TimeScale scale = context.scope->getTimeScale().value_or(TimeScale());
-    value = scale.apply(value, unit);
+    value = scale.apply(value, unit, /* roundToPrecision */ false);
 
     auto& comp = context.getCompilation();
     return *comp.emplace<TimeLiteral>(comp.getType(SyntaxKind::RealTimeType), value,
@@ -142,7 +172,8 @@ Expression& UnbasedUnsizedIntegerLiteral::fromSyntax(Compilation& compilation,
         val, syntax.sourceRange());
 }
 
-bool UnbasedUnsizedIntegerLiteral::propagateType(const ASTContext&, const Type& newType) {
+bool UnbasedUnsizedIntegerLiteral::propagateType(const ASTContext&, const Type& newType,
+                                                 SourceRange) {
     SLANG_ASSERT(newType.isIntegral());
     SLANG_ASSERT(newType.getBitWidth());
 
@@ -179,6 +210,13 @@ std::optional<bitwidth_t> UnbasedUnsizedIntegerLiteral::getEffectiveWidthImpl() 
     return 1;
 }
 
+Expression::EffectiveSign UnbasedUnsizedIntegerLiteral::getEffectiveSignImpl(bool) const {
+    // We don't really want warnings for things like this:
+    // logic signed [1:0] k = '1;
+    // ...so we'll just say this could always be either.
+    return EffectiveSign::Either;
+}
+
 void UnbasedUnsizedIntegerLiteral::serializeTo(ASTSerializer& serializer) const {
     serializer.write("value", getValue());
 }
@@ -198,7 +236,7 @@ Expression& UnboundedLiteral::fromSyntax(const ASTContext& context,
     SLANG_ASSERT(syntax.kind == SyntaxKind::WildcardLiteralExpression);
 
     auto& comp = context.getCompilation();
-    if (!context.flags.has(ASTFlags::AllowUnboundedLiteral)) {
+    if (!context.flags.has(ASTFlags::AllowUnboundedLiteral) && !context.inUnevaluatedBranch()) {
         context.addDiag(diag::UnboundedNotAllowed, syntax.sourceRange());
         return badExpr(comp, nullptr);
     }
@@ -223,8 +261,8 @@ ConstantValue UnboundedLiteral::evalImpl(EvalContext& context) const {
 
 StringLiteral::StringLiteral(const Type& type, std::string_view value, std::string_view rawValue,
                              ConstantValue& intVal, SourceRange sourceRange) :
-    Expression(ExpressionKind::StringLiteral, type, sourceRange),
-    value(value), rawValue(rawValue), intStorage(&intVal) {
+    Expression(ExpressionKind::StringLiteral, type, sourceRange), value(value), rawValue(rawValue),
+    intStorage(&intVal) {
 }
 
 Expression& StringLiteral::fromSyntax(const ASTContext& context,

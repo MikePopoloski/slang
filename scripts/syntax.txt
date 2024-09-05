@@ -25,7 +25,9 @@ EqualsValueClause? value
 
 AttributeInstance
 token openParen
+token openStar
 separated_list<AttributeSpec> specs
+token closeStar
 token closeParen
 
 NamedLabel
@@ -96,7 +98,8 @@ token dot
 token variableName
 
 WildcardPattern base=Pattern
-token dotStar
+token dot
+token star
 
 ExpressionPattern base=Pattern
 Expression expr
@@ -220,14 +223,14 @@ token tagged
 token member
 Expression? expr
 
-OpenRangeExpression base=Expression
+ValueRangeExpression base=Expression
 token openBracket
 Expression left
-token colon
+token op
 Expression right
 token closeBracket
 
-OpenRangeList
+RangeList
 token openBrace
 separated_list<Expression> valueRanges
 token closeBrace
@@ -235,7 +238,7 @@ token closeBrace
 InsideExpression base=Expression
 Expression expr
 token inside
-OpenRangeList ranges
+RangeList ranges
 
 ConditionalExpression base=Expression
 ConditionalPredicate predicate
@@ -372,6 +375,12 @@ CopyClassExpression base=Expression
 Name scopedNew
 Expression expr
 
+SuperNewDefaultedArgsExpression base=Expression
+Name scopedNew
+token openParen
+token defaultKeyword
+token closeParen
+
 // ----- POSTFIX EXPRESSIONS -----
 
 ElementSelectExpression base=Expression
@@ -503,6 +512,10 @@ DataType type
 separated_list<Declarator> declarators
 token semi
 
+ForwardTypeRestriction
+token keyword1
+token keyword2
+
 TypedefDeclaration base=Member
 token typedefKeyword
 DataType type
@@ -512,14 +525,7 @@ token semi
 
 ForwardTypedefDeclaration base=Member
 token typedefKeyword
-token keyword
-token name
-token semi
-
-ForwardInterfaceClassTypedefDeclaration base=Member
-token typedefKeyword
-token interfaceKeyword
-token classKeyword
+ForwardTypeRestriction? typeRestriction
 token name
 token semi
 
@@ -608,6 +614,7 @@ EqualsTypeClause? assignment
 
 TypeParameterDeclaration base=ParameterDeclarationBase
 token typeKeyword
+ForwardTypeRestriction? typeRestriction
 separated_list<TypeAssignment> declarators
 
 ParameterDeclarationStatement base=Member
@@ -627,17 +634,24 @@ token keyword
 separated_list<IdentifierName> identifiers
 token semi
 
-FunctionPort
+FunctionPortBase final=false
+empty
+
+DefaultFunctionPort base=FunctionPortBase
+token keyword
+
+FunctionPort base=FunctionPortBase
 list<AttributeInstance> attributes
 token constKeyword
 token direction
+token staticKeyword
 token varKeyword
 DataType? dataType
 Declarator declarator
 
 FunctionPortList
 token openParen
-separated_list<FunctionPort> ports
+separated_list<FunctionPortBase> ports
 token closeParen
 
 // ----- TYPES -----
@@ -670,7 +684,7 @@ token semi
 
 StructUnionType base=DataType multiKind=true
 token keyword
-token tagged
+token taggedOrSoft
 token packed
 token signing
 token openBrace
@@ -1118,7 +1132,8 @@ token closeParen
 
 WildcardPortList base=PortList
 token openParen
-token dotStar
+token dot
+token star
 token closeParen
 
 ParameterPortList
@@ -1237,7 +1252,8 @@ PropertyExpr? expr
 token closeParen
 
 WildcardPortConnection base=PortConnection
-token dotStar
+token dot
+token star
 
 InstanceName
 token name
@@ -1281,8 +1297,13 @@ Name target
 BindTargetList? targetInstances
 Member instantiation
 
+ClassSpecifier
+token colon
+token keyword
+
 FunctionPrototype
 token keyword
+list<ClassSpecifier> specifiers
 token lifetime
 DataType returnType
 Name name
@@ -1324,10 +1345,16 @@ token equals
 Expression expr
 token semi
 
+DefaultExtendsClauseArg
+token openParen
+token defaultKeyword
+token closeParen
+
 ExtendsClause
 token keyword
 Name baseName
 ArgumentList? arguments
+DefaultExtendsClauseArg? defaultedArg
 
 ImplementsClause
 token keyword
@@ -1336,7 +1363,7 @@ separated_list<Name> interfaces
 ClassDeclaration base=Member
 token virtualOrInterface
 token classKeyword
-token lifetime
+ClassSpecifier? finalSpecifier
 token name
 ParameterPortList? parameters
 ExtendsClause? extendsClause
@@ -1509,7 +1536,8 @@ token semi
 
 WildcardUdpPortList base=UdpPortList
 token openParen
-token dotStar
+token dot
+token star
 token closeParen
 token semi
 
@@ -1690,14 +1718,21 @@ token op
 token extraOp
 Expression expr
 
-DistItem
+DistItemBase final=false
+empty
+
+DistItem base=DistItemBase
 Expression range
+DistWeight? weight
+
+DefaultDistItem base=DistItemBase
+token defaultKeyword
 DistWeight? weight
 
 DistConstraintList
 token dist
 token openBrace
-separated_list<DistItem> items
+separated_list<DistItemBase> items
 token closeBrace
 
 ExpressionOrDist base=Expression
@@ -1711,7 +1746,7 @@ token semi
 
 UniquenessConstraint base=ConstraintItem
 token unique
-OpenRangeList ranges
+RangeList ranges
 token semi
 
 ImplicationConstraint base=ConstraintItem
@@ -1739,7 +1774,7 @@ ConstraintItem constraints
 DisableConstraint base=ConstraintItem
 token disable
 token soft
-Name name
+Expression name
 token semi
 
 SolveBeforeConstraint base=ConstraintItem
@@ -1757,12 +1792,14 @@ token closeBrace
 ConstraintPrototype base=Member
 tokenlist qualifiers
 token keyword
+list<ClassSpecifier> specifiers
 Name name
 token semi
 
 ConstraintDeclaration base=Member
 tokenlist qualifiers
 token keyword
+list<ClassSpecifier> specifiers
 Name name
 ConstraintBlock block
 
@@ -1805,6 +1842,7 @@ token closeParen
 
 CovergroupDeclaration base=Member
 token covergroup
+token extends
 token name
 FunctionPortList? portList
 SyntaxNode? event
@@ -1851,7 +1889,7 @@ ExpressionCoverageBinInitializer base=CoverageBinInitializer
 Expression expr
 
 RangeCoverageBinInitializer base=CoverageBinInitializer
-OpenRangeList ranges
+RangeList ranges
 WithClause? withClause
 
 IdWithExprCoverageBinInitializer base=CoverageBinInitializer
@@ -1906,7 +1944,7 @@ empty
 
 IntersectClause
 token intersect
-OpenRangeList ranges
+RangeList ranges
 
 BinsSelectConditionExpr base=BinsSelectExpression
 token binsof
@@ -2147,13 +2185,35 @@ SimpleDirective base=Directive multiKind=true
 
 kindmap<SimpleDirective>
 CellDefineDirective NoUnconnectedDriveDirective EndCellDefineDirective EndKeywordsDirective
-ResetAllDirective UndefineAllDirective
+ResetAllDirective UndefineAllDirective DelayModeDistributedDirective DelayModePathDirective
+DelayModeUnitDirective DelayModeZeroDirective ProtectDirective EndProtectDirective
+ProtectedDirective EndProtectedDirective
 
 IncludeDirective base=Directive
 token fileName
 
-ConditionalBranchDirective base=Directive multiKind=true
+ConditionalDirectiveExpression final=false
+empty
+
+NamedConditionalDirectiveExpression base=ConditionalDirectiveExpression
 token name
+
+UnaryConditionalDirectiveExpression base=ConditionalDirectiveExpression
+token op
+ConditionalDirectiveExpression operand
+
+BinaryConditionalDirectiveExpression base=ConditionalDirectiveExpression
+ConditionalDirectiveExpression left
+token op
+ConditionalDirectiveExpression right
+
+ParenthesizedConditionalDirectiveExpression base=ConditionalDirectiveExpression
+token openParen
+ConditionalDirectiveExpression operand
+token closeParen
+
+ConditionalBranchDirective base=Directive multiKind=true
+ConditionalDirectiveExpression expr
 tokenlist disabledTokens
 
 kindmap<ConditionalBranchDirective>
@@ -2203,6 +2263,12 @@ DefaultNetTypeDirective base=Directive
 token netType
 
 UnconnectedDriveDirective base=Directive
+token strength
+
+DefaultDecayTimeDirective base=Directive
+token time
+
+DefaultTriregStrengthDirective base=Directive
 token strength
 
 LineDirective base=Directive

@@ -14,30 +14,8 @@
 #include "slang/ast/symbols/ParameterSymbols.h"
 #include "slang/ast/symbols/VariableSymbols.h"
 #include "slang/ast/types/Type.h"
+#include "slang/parsing/Parser.h"
 #include "slang/syntax/AllSyntax.h"
-
-SVInt testParameter(const std::string& text, uint32_t index = 0) {
-    const auto& fullText = "module Top; " + text + " endmodule";
-    auto tree = SyntaxTree::fromText(fullText);
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-
-    const auto& module = *compilation.getRoot().topInstances[0];
-    if (!tree->diagnostics().empty())
-        WARN(report(tree->diagnostics()));
-
-    const ParameterSymbol& param = module.body.memberAt<ParameterSymbol>(index);
-    return param.getValue().integer();
-}
-
-TEST_CASE("Bind parameter") {
-    CHECK(testParameter("parameter foo = 4;") == 4);
-    CHECK(testParameter("parameter foo = 4 + 5;") == 9);
-    CHECK(testParameter("parameter bar = 9, foo = bar + 1;", 1) == 10);
-    CHECK(testParameter("parameter logic [3:0] foo = 4;") == 4);
-    CHECK(testParameter("parameter logic [3:0] foo = 4'b100;") == 4);
-}
 
 TEST_CASE("Evaluate assignment expression") {
     // Evaluate an assignment expression (has an LValue we can observe)
@@ -208,6 +186,7 @@ TEST_CASE("Expression types") {
 
     declare("logic [7:0] l;");
     declare("logic signed [7:0] sl;");
+    declare("logic signed [2:0][7:0] sla;");
     declare("logic [7:0][3:2] pa;");
     declare("bit [2:10] b1;");
     declare("int i;");
@@ -265,13 +244,13 @@ TEST_CASE("Expression types") {
     CHECK(typeof("su2 == su2") == "bit");
     CHECK(typeof("EVAL1 + 5") == "int");
     CHECK(typeof("up + 5") == "logic[31:0]");
-    CHECK(typeof("up + up") == "logic[1:0]");
+    CHECK(typeof("up + up") == "union packed{logic[1:0] a;bit[0:1] b;}u$1");
 
     // Unpacked arrays
     declare("bit [7:0] arr1 [2];");
     declare("bit [7:0] arr2 [2:0];");
     declare("bit [7:0] arr3 [3];");
-    declare("logic [7:0] arr4 [3];");
+    declare("logic signed [7:0] arr4 [3];");
     CHECK(typeof("arr1 == arr2") == "<error>");
     CHECK(typeof("arr2 == arr3") == "bit");
     CHECK(typeof("arr2 == arr4") == "<error>");
@@ -326,6 +305,9 @@ TEST_CASE("Expression types") {
     // Selections
     CHECK(typeof("l[0:0]") == "logic[0:0]");
     CHECK(typeof("b1[2:2]") == "bit[2:2]");
+    CHECK(typeof("sl[7:0]") == "logic[7:0]");
+    CHECK(typeof("sla[0]") == "logic[7:0]");
+    CHECK(typeof("arr4[0]") == "logic signed[7:0]");
 
     // Casts
     declare("parameter int FOO = 1;");
@@ -544,9 +526,9 @@ endmodule
     auto& diagnostics = compilation.getAllDiagnostics();
     std::string result = "\n" + report(diagnostics);
     CHECK(result == R"(
-source:7:13: warning: implicit conversion from 'bit[34:0]' to 'int' changes value from 35'h22c6d1fba to 745349050 [-Wconstant-conversion]
+source:7:11: warning: implicit conversion from 'bit[34:0]' to 'int' changes value from 35'h22c6d1fba to 745349050 [-Wconstant-conversion]
     int i = 35'd123498234978234;
-            ^~~~~~~~~~~~~~~~~~~
+          ^ ~~~~~~~~~~~~~~~~~~~
 source:7:17: warning: vector literal too large for the given number of bits (47 bits needed) [-Wvector-overflow]
     int i = 35'd123498234978234;
                 ^
@@ -609,6 +591,7 @@ source:4:14: warning: value of real literal is too small; minimum is 4.94066e-32
 )");
 }
 
+#ifdef CI_BUILD
 TEST_CASE("Crazy long hex literal") {
     std::string str = "int i = 'h";
     str += std::string(4194304, 'f');
@@ -624,6 +607,7 @@ TEST_CASE("Crazy long hex literal") {
     CHECK(diags[0].code == diag::ConstantConversion);
     CHECK(diags[1].code == diag::LiteralSizeTooLarge);
 }
+#endif
 
 TEST_CASE("Simple assignment patterns") {
     auto tree = SyntaxTree::fromText(R"(
@@ -996,7 +980,7 @@ module m;
         void'(mutate(k));
     end
 
-    int i;
+    int i = 0;
     int j = mutate(i);
 
     function int mutate(output int f);
@@ -1014,9 +998,9 @@ endmodule
 TEST_CASE("Type operator") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
-    logic [3:0] a;
-    logic [4:0] b;
-    var type(a + b) foo = a + b;
+    logic [3:0] a = 0;
+    logic [4:0] b = 1;
+    var type(5'(a) + b) foo = 5'(a) + b;
     int i = type(int)'(a);
 endmodule
 )");
@@ -1039,7 +1023,7 @@ endmodule
     NO_COMPILATION_ERRORS;
 
     auto& r = compilation.getRoot().lookupName<ParameterSymbol>("m.r");
-    CHECK(r.getValue().real() == 234.057);
+    CHECK(r.getValue().real() == 234.0567891);
 }
 
 TEST_CASE("Fixed / dynamic array assignments") {
@@ -1436,20 +1420,20 @@ struct {bit a[$]; shortint b;} a = '{{1,0,1,0}, 67};
 int b = int'(a);
 )",
         R"(
-struct {bit[15:0] a; shortint b;} a;
+struct {bit[15:0] a; shortint b;} a = '{default:0};
 int b = int'(a);
 )",
         R"(
 typedef struct { shortint address; logic [3:0] code; byte command [2]; } Control;
 typedef bit Bits [36:1];
-Control p;
+Control p = '{default:0};
 Bits stream = Bits'(p);
 Control q = Control'(stream);
 )",
         R"(
 typedef struct { byte length; shortint address; byte payload[]; byte chksum; } Packet;
 typedef byte channel_type[$];
-Packet genPkt;
+Packet genPkt = '{default:0, payload: {1}};
 channel_type channel = channel_type'(genPkt);
 Packet p = Packet'( channel[0 : 1] );
 )"};
@@ -1504,7 +1488,7 @@ TEST_CASE("Streaming operators") {
         {"real a; int b = {<< 5 {a}};", diag::BadStreamExprType},
         {"int a; real b = {<< 2 {a}};", diag::BadStreamTargetType},
         {"int a[2]; real b = $itor(a);", diag::BadSystemSubroutineArg},
-        {"int a; int b = {>> 4 {a}};", diag::IgnoredSlice},
+        {"int a = 0; int b = {>> 4 {a}};", diag::IgnoredSlice},
         {"int a; real b; assign {<< 2 {a}} = b;", diag::BadStreamSourceType},
         {"int a; shortint b; assign {<< 2 {a}} = b;", diag::BadStreamSize},
         {"int a; shortint b; assign b = {<< 4 {a}};", diag::BadStreamSize},
@@ -1578,17 +1562,17 @@ module sub(input byte b);
     };
 
     for (const auto& test : illegal) {
-        if (testBitstream(test.sv, test.msg) != 1) {
+        if (testBitstream(test.sv, test.msg) == 0) {
             FAIL_CHECK(test.sv);
         }
     }
 
     std::string legal[] = {
-        "int a; byte b[4] = {<<3{a}};",
+        "int a = 0; byte b[4] = {<<3{a}};",
         "int a; byte b[4]; assign {<<3{b}} = a;",
         "int a; byte b[4]; assign {<<3{b}} = {<<5{a}};",
-        "byte b[4]; int a = int'({<<3{b}}) + 5;",
-        "shortint a; byte b[2]; int c = {<<3{a, {<<5{b}}}};",
+        "byte b[4] = '{default:0}; int a = int'({<<3{b}}) + 5;",
+        "shortint a = 0; byte b[2] = '{default:0}; int c = {<<3{a, {<<5{b}}}};",
         "shortint a; byte b[2]; int c; assign {<<3{{<<5{b}}, a}}=c;",
         "struct{bit a[];int b;}a;struct {byte a[];bit b;}b;assign{<<{a}}={>>{b}};",
         "struct{bit a[];int b;}a;int b;assign {>>{a}} = {<<{b}};",
@@ -1613,12 +1597,12 @@ TEST_CASE("Stream expression with") {
         {"byte b[4]; int a = {<<3{b with[]}};", diag::ExpectedExpression},
         {"int a; byte b[4] = {<<3{a with [2]}};", diag::BadStreamWithType},
         {"byte b[4]; int a = {<<3{b with[0.5]}};", diag::ExprMustBeIntegral},
-        {"byte b[4]; int a = {<<3{b with[{65{1'b1}}]}};", diag::IndexOOB},
-        {"byte b[4]; int a = {<<3{b with[4]}};", diag::IndexOOB},
+        {"byte b[4] = '{default:0}; int a = {<<3{b with[{65{1'b1}}]}};", diag::IndexOOB},
+        {"byte b[4] = '{default:0}; int a = {<<3{b with[4]}};", diag::IndexOOB},
         {"byte b[4]; int a = {<<3{b with[2-:-1]}};", diag::ValueMustBePositive},
-        {"byte b[4]; logic [39:0] a = {<<3{b with[2+:5]}};", diag::RangeOOB},
-        {"byte b[3:0]; int a = {<<3{b with[2+:3]}};", diag::RangeOOB},
-        {"byte b[0:3]; int a = {<<3{b with[2:5]}};", diag::RangeOOB},
+        {"byte b[4] = '{default:0}; logic [39:0] a = {<<3{b with[2+:5]}};", diag::RangeOOB},
+        {"byte b[3:0] = '{default:0}; int a = {<<3{b with[2+:3]}};", diag::RangeOOB},
+        {"byte b[0:3] = '{default:0}; int a = {<<3{b with[2:5]}};", diag::RangeOOB},
         {"byte b[]; int a = {<<3{b with[3:2]}};", diag::SelectEndianDynamic},
         {"byte b[], c[4]; always {>>{b, {<<3{c with[b[0]:b[1]]}}}} = 9;", diag::BadStreamWithOrder},
         {"int a[],b[],c[];bit d;always {>>{b}}={<<{a with [2+:3],c,d}};", diag::BadStreamSize},
@@ -1777,11 +1761,10 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 4);
+    REQUIRE(diags.size() == 3);
     CHECK(diags[0].code == diag::InvalidPortType);
-    CHECK(diags[1].code == diag::InvalidEventExpression);
-    CHECK(diags[2].code == diag::AssignToCHandle);
-    CHECK(diags[3].code == diag::InvalidUnionMember);
+    CHECK(diags[1].code == diag::AssignToCHandle);
+    CHECK(diags[2].code == diag::InvalidUnionMember);
 }
 
 TEST_CASE("Event data type") {
@@ -1996,8 +1979,8 @@ TEST_CASE("Selects of vectored nets") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
     wire vectored integer i;
-    logic j = i[1];
-    logic [1:0] k = i[1:0];
+    wire j = i[1];
+    wire [1:0] k = i[1:0];
 endmodule
 )");
 
@@ -2060,7 +2043,7 @@ module m;
     function asdf_t foo;
     endfunction
 
-    asdf_t a;
+    asdf_t a = '{default:0};
 
     int j = foo().i();
     int k = foo().i with (bar);
@@ -2068,19 +2051,21 @@ module m;
     int m = foo() with (bar);
     int n = $bits(a) with (bar);
 
-    int o[3];
+    int o[3] = '{default:0};
     int p = o.and(a);
     int q = o.and();
     int r = o.and with (1) { 1; };
     int s = o.and with;
     int t = o.and with (a, b);
-    int u = o.and(a, b) with (a == 1);
+    int u = o.and(a, b, c) with (a == 1);
     int v = o.and(a[1]) with (a == 1);
     int w = o.and(,) with (a == 1);
+    int x = o.and(a, .foo()) with (a == 1);
+    int y = o.and(posedge clk) with (a == 1);
 
     // These are ok.
-    int x = o.and(b) with (b + 1);
-    int y = o.and with (item + x);
+    int z = o.and(b) with (b + 1);
+    int aa = o.and with (item + x);
 endmodule
 )");
 
@@ -2088,7 +2073,7 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 12);
+    REQUIRE(diags.size() == 14);
     CHECK(diags[0].code == diag::ExpressionNotCallable);
     CHECK(diags[1].code == diag::UnexpectedWithClause);
     CHECK(diags[2].code == diag::UnexpectedWithClause);
@@ -2098,18 +2083,20 @@ endmodule
     CHECK(diags[6].code == diag::UnexpectedConstraintBlock);
     CHECK(diags[7].code == diag::ExpectedIterationExpression);
     CHECK(diags[8].code == diag::ExpectedIterationExpression);
-    CHECK(diags[9].code == diag::ExpectedIteratorName);
+    CHECK(diags[9].code == diag::TooManyArguments);
     CHECK(diags[10].code == diag::ExpectedIteratorName);
-    CHECK(diags[11].code == diag::ExpectedIteratorName);
+    CHECK(diags[11].code == diag::EmptyArgNotAllowed);
+    CHECK(diags[12].code == diag::NamedArgNotAllowed);
+    CHECK(diags[13].code == diag::InvalidArgumentExpr);
 }
 
 TEST_CASE("Iterator index method") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
-    int foo[3];
+    int foo[3] = '{default:0};
     int i = foo.sum(a) with (a + a.index);
 
-    int bar[string];
+    int bar[string] = '{"hello": 0};
     int k = bar.sum(b) with (b.index().atoi);
 endmodule
 )");
@@ -2138,7 +2125,7 @@ module m;
         q = { q[0:pos], e, q[pos+1:$] };
         q = q[2:$];
         q = q[1:$-1'b1];
-        q = q[1:e ? u+1 : v-1];
+        q = q[1:e != 0 ? $+1 : $-1];
 
         // These are disallowed.
         e = $;
@@ -2295,24 +2282,6 @@ TEST_CASE("Invalid argument regress GH #418") {
 byte i_data [ ] ;
 initial
 i_data [ 12 : 9
-)");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-
-    // Just check no assertion.
-    compilation.getAllDiagnostics();
-}
-
-TEST_CASE("Invalid param assign regress GH #420") {
-    auto tree = SyntaxTree::fromText(R"(
-typedef ctrl_reg_t;
-parameter CTRL_RESET = $;
-endpackage
-module shadow # (
-  RESVAL
-endmodule;
-shadow # (CTRL_RESET) (
 )");
 
     Compilation compilation;
@@ -2523,8 +2492,8 @@ class A;
 endclass
 
 module m;
-    A bar;
-    int i = bar.func.foo(3);
+    A bar = new;
+    int i = bar.func().foo(3);
 endmodule
 )");
 
@@ -2621,12 +2590,12 @@ module top;
   integer ones;
 
   function automatic integer count_by_one(input integer start);
-    if (start) count_by_one = (value[start] ? 1 : 0) + count_ones(start-1);
+    if (start != 0) count_by_one = (value[start] ? 1 : 0) + count_ones(start-1);
     else count_by_one = value[start] ? 1 : 0;
   endfunction
 
   function automatic integer count_ones(input integer start);
-    if (start) count_ones = (value[start] ? 1 : 0) + count_by_one(start-1);
+    if (start != 0) count_ones = (value[start] ? 1 : 0) + count_by_one(start-1);
     else count_ones = value[start] ? 1 : 0;
   endfunction
 
@@ -2774,8 +2743,8 @@ module m;
     string s[integer] = '{0: "hello", 2: "world"};
     string t = s[2:1];
 
-    real r;
-    logic [7:0] u;
+    real r = 1.0;
+    logic [7:0] u = 0;
     logic [1:0] v1 = u[r:0];
     logic [1:0] v2 = u[0:r];
     logic [1:0] v3 = u[1:2];
@@ -2784,7 +2753,7 @@ module m;
     logic [1:0] v6 = u['x+:2];
     logic [9:0] v7 = u[u+:10];
 
-    int w[];
+    int w[] = {1};
     int x1[2] = w[u:1];
     int x2[2] = w[u+:-1];
 
@@ -3162,4 +3131,538 @@ endmodule
     REQUIRE(diags.size() == 2);
     CHECK(diags[0].code == diag::SelectAfterRangeSelect);
     CHECK(diags[1].code == diag::SelectAfterRangeSelect);
+}
+
+TEST_CASE("Streaming concat in non-stream context") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    logic [16777214:0] a;
+    int i = {<<{a, a}} + 1;
+
+    let known(sig) = (!($isunknown({>>{sig}})));
+
+    property known_prop(sig, clk);
+      @(clk) (!($isunknown({>>{sig}})));
+    endproperty
+
+    wire clk;
+    assert property (known_prop(known(clk), clk));
+endmodule
+)");
+
+    CompilationOptions options;
+    options.flags |= CompilationFlags::AllowSelfDeterminedStreamConcat;
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::BadStreamSize);
+}
+
+TEST_CASE("Multi-driven errors through call expressions from normal always block") {
+    auto tree = SyntaxTree::fromText(R"(
+module top(input clk, input reset);
+    logic c;
+    function logic m(logic d);
+        c = d;
+        return c;
+    endfunction
+
+    logic a, b;
+    always_ff @(posedge clk) begin
+        a <= m(a);
+    end
+
+    always @(posedge reset) begin
+        b <= m(a);
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::MultipleAlwaysAssigns);
+}
+
+TEST_CASE("Multi-driven subroutine local var option to allow") {
+    auto tree = SyntaxTree::fromText(R"(
+module top(input clk, input reset);
+    function logic m(logic d);
+        logic c;
+        c = d;
+        return c;
+    endfunction
+
+    logic a, b;
+    always_ff @(posedge clk) begin
+        a <= m(a);
+    end
+
+    always @(posedge reset) begin
+        b <= m(a);
+    end
+endmodule
+)");
+
+    CompilationOptions options;
+    options.flags |= CompilationFlags::AllowMultiDrivenLocals;
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("v1800-2023 clarification: multi-driven subroutine checking doesn't apply to tasks") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int i;
+    task t;
+        i <= 1;
+    endtask
+
+    always_comb t();
+    always_comb t();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("v1800-2023: Unsized integer literals can be any bit width") {
+    auto options = optionsFor(LanguageVersion::v1800_2023);
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    localparam a = 'h7_0000_0000;
+    localparam b = 4294967296;
+endmodule
+)",
+                                     options);
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto getParam = [&](std::string_view name) -> decltype(auto) {
+        return compilation.getRoot().lookupName<ParameterSymbol>(name);
+    };
+
+    auto& a = getParam("m.a");
+    auto& b = getParam("m.b");
+    CHECK(a.getType().toString() == "logic[34:0]");
+    CHECK(b.getType().toString() == "logic signed[33:0]");
+    CHECK(a.getValue().integer() == 0x700000000ull);
+    CHECK(b.getValue().integer() == 4294967296ll);
+}
+
+TEST_CASE("Change of behavior in time literal rounding") {
+    // 1800-2023 changed the rules for time literals; previously they would
+    // be scaled and rounded to the current time settings, but now they are
+    // only scaled, not rounded. This is a breaking change, but it turns out
+    // they made this change because no other tools ever implemented the
+    // rounding part of the rule, so slang just needs to conform.
+    auto tree = SyntaxTree::fromText(R"x(
+module test();
+  timeunit 1ns/1ps;
+
+    if (1.0 == 1ns)
+      $info("TEST1 PASSED");
+    else
+      $info("TEST1 FAILED");
+
+    if (1fs == 10fs)
+      $info("TEST2 PASSED");
+    else
+      $info("TEST2 FAILED");
+
+    if (1fs == 0.000001)
+      $info("TEST3 FAILED (SCALED/!ROUNDED)");
+    else
+      if (1fs == 0.000000000000001)
+        $info("TEST3 FAILED (!SCALED/!ROUNDED)");
+      else
+        if (1fs == 0.0)
+          $info("TEST3 PASSED");
+        else
+          $info("TEST3 REALLY FAILED");
+endmodule : test
+)x");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    // This used to print TEST PASSED for all three tests,
+    // but now it prints what all other tools print.
+    auto& diags = compilation.getAllDiagnostics();
+    std::string result = "\n" + report(diags);
+    CHECK(result == R"x(
+source:6:7: note: $info encountered: TEST1 PASSED
+      $info("TEST1 PASSED");
+      ^
+source:13:7: note: $info encountered: TEST2 FAILED
+      $info("TEST2 FAILED");
+      ^
+source:16:7: note: $info encountered: TEST3 FAILED (SCALED/!ROUNDED)
+      $info("TEST3 FAILED (SCALED/!ROUNDED)");
+      ^
+)x");
+}
+
+TEST_CASE("Set membership can use unbounded literals") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    localparam a = $;
+    localparam b = 10;
+    localparam c = 15 inside {[b:a]};
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& c = compilation.getRoot().lookupName<ParameterSymbol>("m.c");
+    CHECK(c.getValue().integer() == 1);
+}
+
+TEST_CASE("Chained method calls require parentheses") {
+    auto tree = SyntaxTree::fromText(R"(
+string sa[10] = '{default:"SDF"};
+int i = sa.unique.size;
+int j = sa.unique().size;
+
+int ia[10] = '{default:0};
+int k[$] = ia.find(x) with (x > 5).unique;
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::ChainedMethodParens);
+}
+
+TEST_CASE("v1800-2023: override name of index method") {
+    auto options = optionsFor(LanguageVersion::v1800_2023);
+    auto tree = SyntaxTree::fromText(R"(
+function automatic f;
+    typedef struct {int index;} idx_type;
+    idx_type arr1[4];
+    idx_type arr2[$] = arr1.find(item, iter_index) with (item.index != item.iter_index);
+endfunction
+)",
+                                     options);
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Overriding index method name not allowed in 1800-2017") {
+    auto tree = SyntaxTree::fromText(R"(
+function automatic f;
+    typedef struct {int index;} idx_type;
+    idx_type arr1[4];
+    idx_type arr2[$] = arr1.find(item, iter_index) with (item.index != item.iter_index);
+endfunction
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::WrongLanguageVersion);
+}
+
+TEST_CASE("v1800-2023 clarification: non-blocking assignments to elements of dynamic arrays are "
+          "not allowed") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int i[];
+    initial begin
+        i[0] <= 1;
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::NonblockingDynamicAssign);
+}
+
+TEST_CASE("v1800-2023 clarification: static casts are assignment-like contexts") {
+    auto tree = SyntaxTree::fromText(R"(
+module top;
+  typedef int DA[];
+  localparam p = DA'('{1, 2, 3});
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("v1800-2023: value range expressions with tolerance operators") {
+    auto options = optionsFor(LanguageVersion::v1800_2023);
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    localparam a = 5.3 inside { "ASDF", 5.0, [4.0+/-2] };
+    localparam b = 5.3 inside { "ASDF", 5.0, [7.0+%-25] };
+    localparam c = 5 inside { [7+%-25] };
+    localparam d = -6 inside { [-7+%-25] };
+endmodule
+)",
+                                     options);
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto getValue = [&](std::string_view name) {
+        return compilation.getRoot().lookupName<ParameterSymbol>(name).getValue();
+    };
+
+    CHECK(getValue("m.a").integer() == 1);
+    CHECK(getValue("m.b").integer() == 1);
+    CHECK(getValue("m.c").integer() == 0);
+    CHECK(getValue("m.d").integer() == 1);
+}
+
+TEST_CASE("Multi-driven unpacked array regress GH #923") {
+    auto tree = SyntaxTree::fromText(R"(
+// Range select in unpacked array, causing error.
+module Test1;
+  parameter DIM1 = 2;
+  parameter DIM2 = 4;
+
+  logic test [DIM1-1:0][DIM2-1:0];
+
+  // i == 2, elemRange = {1, 1}, start 1, width 1, elemWidth 4, result = {4, 7}
+  // i == 1, elemRange = {1, 3}, start 1, width 3, elemWidth 3, result = {7, 9}, should be {5, 7}
+  assign test[0][DIM2-2:0] = '{default: '0};
+
+  // i == 2, elemRange = {1, 1}, start 1, width 1, elemWidth 4, result = {4, 7}
+  // i == 1, elemRange = {0, 0}, start 0, width 1, elemWidth 1, result = {4, 4}
+  assign test[0][DIM2-1]   = '0;
+
+  // i == 2, elemRange = {0, 0}, start 0, width 1, elemWidth 4, result = {0, 3}
+  // i == 1, elemRange = {1, 3}, start 1, width 3, elemWidth 3, result = {3, 5}, should be {1, 3}
+  assign test[1][DIM2-2:0] = '{default: '0};
+
+  // i == 2, elemRange = {0, 0}, start 0, width 1, elemWidth 4, result = {0, 3}
+  // i == 1, elemRange = {0, 0}, start 0, width 1, elemWidth 1, result = {0, 0}
+  assign test[1][DIM2-1]   = '0;
+
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("v1800-2023: ref static arguments") {
+    auto options = optionsFor(LanguageVersion::v1800_2023);
+    auto tree = SyntaxTree::fromText(R"(
+function automatic foo(ref static a, r);
+    static logic l = r;
+endfunction
+
+module m;
+    logic a, r;
+    logic b = foo(a, r);
+endmodule
+)",
+                                     options);
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("v1800-2023: ref static errors") {
+    auto options = optionsFor(LanguageVersion::v1800_2023);
+    auto tree = SyntaxTree::fromText(R"(
+function automatic void bar(ref static a);
+endfunction
+
+function automatic void foo(ref static a, r);
+    bar(a);
+endfunction
+
+class C;
+    static logic a;
+    logic b;
+endclass
+
+module m;
+    logic r[];
+    C c;
+    initial begin
+        automatic logic a;
+        foo(a, r[0]);
+        foo(c.a, c.b);
+    end
+endmodule
+)",
+                                     options);
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::AutoVarToRefStatic);
+    CHECK(diags[1].code == diag::AutoVarToRefStatic);
+    CHECK(diags[2].code == diag::AutoVarToRefStatic);
+}
+
+TEST_CASE("Out of range select regress") {
+    auto tree = SyntaxTree::fromText(R"(
+localparam p = -4'd8;
+$info(p[-2147483648:-2147483649]);
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::RangeWidthOverflow);
+    CHECK(diags[1].code == diag::SignedIntegerOverflow);
+    CHECK(diags[2].code == diag::SignedIntegerOverflow);
+}
+
+TEST_CASE("Assigning void in expressions is illegal") {
+    auto tree = SyntaxTree::fromText(R"(
+function void foo;
+endfunction
+
+module m;
+     union tagged {
+        void a;
+        type(a) b;
+    } u;
+
+    var type(foo) a;
+    var type(u.a) b;
+
+    initial begin
+        a = foo();
+        u.a = foo();
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 5);
+    CHECK(diags[0].code == diag::TypeRefVoid);
+    CHECK(diags[1].code == diag::TypeRefVoid);
+    CHECK(diags[2].code == diag::TypeRefVoid);
+    CHECK(diags[3].code == diag::VoidAssignment);
+    CHECK(diags[4].code == diag::VoidAssignment);
+}
+
+TEST_CASE("Virtual interface array concat") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I;
+endinterface
+
+module m;
+    virtual I i[3];
+    I i1();
+    I i2 [2] ();
+    assign i = {i1, i2};
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Virtual interface array concat errors") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I;
+endinterface
+
+interface J;
+endinterface
+
+module m;
+    virtual I i[3];
+    I i1();
+    J i2 [2] ();
+    assign i = {i1, i2};
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::BadConcatExpression);
+}
+
+TEST_CASE("Wrong typename in error regress GH #1013") {
+    auto tree = SyntaxTree::fromText(R"(
+module t40;
+typedef struct {
+        logic a;
+        logic b;
+} t;
+t x, y, z;
+assign z = x & y;
+
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    std::string result = "\n" + report(diags);
+    CHECK(result == R"(
+source:8:14: error: invalid operands to binary expression ('t40.t' and 't40.t')
+assign z = x & y;
+           ~ ^ ~
+)");
+}
+
+TEST_CASE("IEEE 1800 Section 10.9.2 - structure assignment patterns") {
+    auto tree = SyntaxTree::fromText(R"(
+module top;
+   typedef struct {
+      logic [7:0] a;
+      bit b;
+      bit signed [31:0] c;
+      string s;
+   } sa;
+
+   sa s2;
+   initial s2 = '{int:1, default:0, string:""}; // set all to 0 except the
+                                                // array of bits to 1 and
+                                                // string to ""
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
 }

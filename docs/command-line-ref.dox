@@ -17,6 +17,13 @@ Display slang version information and exit.
 
 Don't print non-essential output status.
 
+`--std (1800-2017 | 1800-2023 | latest)`
+
+Sets the version of the SystemVerilog language to use. This changes how the code is parsed
+and elaborated and which language features are available to use. The current default is
+1800-2017, though this may change in the future. Using "latest" will use the latest available
+version, currently 1800-2023.
+
 `positional arguments`
 
 Paths to files (using @ref file-patterns "file patterns") that should be included in the compilation.
@@ -26,7 +33,7 @@ Paths to files (using @ref file-patterns "file patterns") that should be include
 Causes the tool to treat all input files as being part of a single compilation unit.
 By default all files are considered to be separate compilation units and ordering between them
 does not matter. When this option is provided, all files are concatenated together, in order, to
-produce a single compilation unit.
+produce a single compilation unit. See @ref compilation-units for more discussion.
 
 `-v,--libfile <file-pattern>[,...]`
 
@@ -50,6 +57,14 @@ addition to the ones provided on the command line itself. Any file paths in
 the files are relative to the command file itself.
 
 See @ref command-files for more information about command files.
+
+`-C <file-pattern>[,...]`
+
+Opens the given "compilation unit listing files" containing lists of files
+and arguments used to create separate compilation units. Any file paths in
+the files are relative to the unit listing file itself.
+
+See @ref unit-listing for more information about compilation unit listings.
 
 `--exclude-ext <ext>`
 
@@ -145,6 +160,10 @@ If true, library files will inherit macro definitions from the primary source fi
 By default library files are independent and will not inherit macros from the main project.
 `--single-unit` must also be passed when this option is used.
 
+`--enable-legacy-protect`
+
+Enables use of legacy source protection directives for compatibility with older tools.
+
 `--obfuscate-ids`
 
 Causes all identifiers in the preprocessed output to be replaced with obfuscated
@@ -193,13 +212,24 @@ When dumping AST to JSON, include only the scope (or symbol) specified by the gi
 This option can be specified more than once to include more than one scope. If not provided, all
 symbols are dumped.
 
+`--ast-json-source-info`
+
+When dumping AST to JSON, include source line and file information.
+
 @section compilation-limits Compilation
 
 `--top <name>`
 
-Specifies the name of a module that should be instantiated at the root of the design.
-Can be specified more than once to instantiate multiple top-level modules. The module
-specified must not have any non-defaulted parameters or interface ports.
+Specifies the name of a module or program that should be instantiated at the root
+of the design. Can be specified more than once to instantiate multiple top-level modules.
+The module (or program) specified must not have any non-defaulted parameters or
+interface ports.
+
+Additionally, you can specify the name of one or more SystemVerilog configurations.
+The cells specified in the `design` statement of those configurations will become
+the top levels of the design. If the name of a configuration overlaps with that of
+a module/interface/program definition, the latter will be taken by default. You can use
+a `:config` suffix on the name to explicitly select the configuration.
 
 If no top modules are specified manually, they will be automatically inferred by
 finding all modules that are not instantiated elsewhere in the design.
@@ -212,6 +242,10 @@ ones later in the list.
 
 If no explicit ordering is given the default order is
 the order in which the libraries are specified to the tool.
+
+`--defaultLibName <name>`
+
+Sets the name of the default library. If not set, defaults to "work".
 
 `--max-hierarchy-depth <depth>`
 
@@ -249,7 +283,7 @@ The default is 65535.
 `--compat vcs`
 
 Attempt to increase compatibility with the specified tool. Various options will
-be set and warnings will be silenced to mimic the given tool as closely as possible.
+be set and some warnings will be silenced to mimic the given tool as closely as possible.
 Currently only 'vcs' is supported as a value.
 
 `-T,--timing min|typ|max`
@@ -305,6 +339,40 @@ allow it anyway so this flag can be used for compatibility purposes.
 Allow implicit call expressions (ones that lack parentheses) to be recursive function calls.
 The LRM states that directly recursive function calls require parentheses but many other tools
 allow this anyway so this flag can be used for compatibility purposes.
+
+`--allow-bare-value-param-assigment`
+
+Allow module instantiations to provide a single parameter value assignment without enclosing it
+in parentheses. SystemVerilog doesn't permit this, but some tools allow it anyway so this flag
+can be used for compatibility purposes.
+
+`--allow-self-determined-stream-concat`
+
+Allow self-determined streaming concatenation expressions. SystemVerilog only permits these
+expressions in assignment-like contexts but some tools allow it anyway so this flag can be
+used for compatibility purposes.
+
+`--allow-multi-driven-locals`
+
+Allow subroutine local variables to be driven from multiple always_comb/always_ff blocks.
+The LRM does not make an exception for local variables in assignment rules but
+most tools allow it anyway so this flag exists for compatibility with those tools.
+
+`--allow-merging-ansi-ports`
+
+Allow ANSI port declarations to merge with a net or variable declaration internal to the
+instance, instead of creating a new internal symbol to connect to. This is not allowed in
+SystemVerilog but some tools support it anyway so this flag can be used for compatibility purposes.
+
+For example:
+
+@code{.sv}
+module m(input a, output b);
+    wire [31:0] a;
+    logic [31:0] b;
+    assign b = a;
+endmodule
+@endcode
 
 `--strict-driver-checking`
 

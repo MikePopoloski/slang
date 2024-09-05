@@ -7,12 +7,14 @@
 //------------------------------------------------------------------------------
 #include "slang/parsing/Preprocessor.h"
 
+#include "slang/diagnostics/LexerDiags.h"
 #include "slang/diagnostics/PreprocessorDiags.h"
 #include "slang/syntax/AllSyntax.h"
 #include "slang/text/SourceManager.h"
 #include "slang/util/BumpAllocator.h"
+#include "slang/util/ScopeGuard.h"
 #include "slang/util/String.h"
-#include "slang/util/Version.h"
+#include "slang/util/VersionInfo.h"
 
 namespace slang::parsing {
 
@@ -23,11 +25,12 @@ using LF = LexerFacts;
 Preprocessor::Preprocessor(SourceManager& sourceManager, BumpAllocator& alloc,
                            Diagnostics& diagnostics, const Bag& options_,
                            std::span<const DefineDirectiveSyntax* const> inheritedMacros) :
-    sourceManager(sourceManager),
-    alloc(alloc), diagnostics(diagnostics), options(options_.getOrDefault<PreprocessorOptions>()),
-    lexerOptions(options_.getOrDefault<LexerOptions>()), numberParser(diagnostics, alloc) {
+    sourceManager(sourceManager), alloc(alloc), diagnostics(diagnostics),
+    options(options_.getOrDefault<PreprocessorOptions>()),
+    lexerOptions(options_.getOrDefault<LexerOptions>()),
+    numberParser(diagnostics, alloc, options.languageVersion) {
 
-    keywordVersionStack.push_back(LF::getDefaultKeywordVersion());
+    keywordVersionStack.push_back(LF::getDefaultKeywordVersion(options.languageVersion));
     resetAllDirectives();
     undefineAll();
 
@@ -78,9 +81,10 @@ Preprocessor::Preprocessor(SourceManager& sourceManager, BumpAllocator& alloc,
 
 Preprocessor::Preprocessor(const Preprocessor& other) :
     sourceManager(other.sourceManager), alloc(other.alloc), diagnostics(other.diagnostics),
-    numberParser(diagnostics, alloc) {
+    options(other.options), lexerOptions(other.lexerOptions),
+    numberParser(diagnostics, alloc, options.languageVersion) {
 
-    keywordVersionStack.push_back(LF::getDefaultKeywordVersion());
+    keywordVersionStack.push_back(LF::getDefaultKeywordVersion(options.languageVersion));
 }
 
 void Preprocessor::pushSource(std::string_view source, std::string_view name) {
@@ -115,9 +119,11 @@ void Preprocessor::predefine(const std::string& definition, std::string_view nam
     // Look for the macro in the temporary preprocessor's macro map.
     // Any macros found that are not the built-in intrinsic macros should
     // be copied over to our own map.
-    for (const auto& pair : pp.macros) {
-        if (!pair.second.isIntrinsic())
+    for (auto& pair : pp.macros) {
+        if (!pair.second.isIntrinsic()) {
+            pair.second.commandLine = true;
             macros.insert(pair);
+        }
     }
 }
 
@@ -226,11 +232,26 @@ Token Preprocessor::nextProcessed() {
         // If we found a directive token, process it and pull another. We don't want
         // to return directives to the caller; we handle them ourselves and turn them
         // into trivia.
-        case TokenKind::Directive:
         case TokenKind::MacroQuote:
+        case TokenKind::MacroTripleQuote:
         case TokenKind::MacroEscapedQuote:
         case TokenKind::MacroPaste:
         case TokenKind::LineContinuation:
+        case TokenKind::Unknown:
+            return handleDirectives(token);
+        case TokenKind::Directive:
+            if (inIfDefCondition) {
+                switch (token.directiveKind()) {
+                    case SyntaxKind::IfDefDirective:
+                    case SyntaxKind::IfNDefDirective:
+                    case SyntaxKind::ElsIfDirective:
+                    case SyntaxKind::ElseDirective:
+                    case SyntaxKind::EndIfDirective:
+                        return token;
+                    default:
+                        break;
+                }
+            }
             return handleDirectives(token);
         default:
             return token;
@@ -241,9 +262,9 @@ Token Preprocessor::handleDirectives(Token token) {
     // burn through any preprocessor directives we find and convert them to trivia
     SmallVector<Trivia, 8> trivia;
     while (true) {
-        lastConsumed = token;
         switch (token.kind) {
             case TokenKind::MacroQuote:
+            case TokenKind::MacroTripleQuote:
             case TokenKind::MacroEscapedQuote:
             case TokenKind::MacroPaste:
             case TokenKind::LineContinuation: {
@@ -253,7 +274,21 @@ Token Preprocessor::handleDirectives(Token token) {
                 addDiag(diag::MacroOpsOutsideDefinition, token.range());
                 break;
             }
-            case TokenKind::Directive:
+            case TokenKind::Unknown: {
+                // This is an error in the lexer. See if we should issue any more
+                // specific diagnostics here (that were deferred until we know we're
+                // not inside a macro) and then return the token.
+                auto raw = token.rawText();
+                if (raw == "\\" || raw == "`\\")
+                    addDiag(diag::EscapedWhitespace, token.location() + 1);
+                else if (raw == "`")
+                    addDiag(diag::MisplacedDirectiveChar, token.location());
+
+                trivia.append_range(token.trivia());
+                return token.withTrivia(alloc, trivia.copy(alloc));
+            }
+            case TokenKind::Directive: {
+                auto savedLast = std::exchange(lastConsumed, token);
                 switch (token.directiveKind()) {
                     case SyntaxKind::IncludeDirective:
                         trivia.push_back(handleIncludeDirective(token));
@@ -320,15 +355,37 @@ Token Preprocessor::handleDirectives(Token token) {
                     case SyntaxKind::NoUnconnectedDriveDirective:
                         trivia.push_back(handleNoUnconnectedDriveDirective(token));
                         break;
+                    case SyntaxKind::DefaultDecayTimeDirective:
+                        trivia.push_back(handleDefaultDecayTimeDirective(token));
+                        break;
+                    case SyntaxKind::DefaultTriregStrengthDirective:
+                        trivia.push_back(handleDefaultTriregStrengthDirective(token));
+                        break;
+                    case SyntaxKind::ProtectedDirective: {
+                        auto [directive, skipped] = handleProtectedDirective(token);
+                        trivia.push_back(directive);
+                        if (skipped)
+                            trivia.push_back(skipped);
+                        break;
+                    }
                     case SyntaxKind::CellDefineDirective:
                     case SyntaxKind::EndCellDefineDirective:
-                        // we don't do anything with celldefine directives
+                    case SyntaxKind::DelayModeDistributedDirective:
+                    case SyntaxKind::DelayModePathDirective:
+                    case SyntaxKind::DelayModeUnitDirective:
+                    case SyntaxKind::DelayModeZeroDirective:
+                    case SyntaxKind::ProtectDirective:
+                    case SyntaxKind::EndProtectDirective:
+                    case SyntaxKind::EndProtectedDirective:
+                        // we don't do anything with these directives currently
                         trivia.push_back(createSimpleDirective(token));
                         break;
                     default:
                         SLANG_UNREACHABLE;
                 }
+                lastConsumed = savedLast;
                 break;
+            }
             default:
                 trivia.append_range(token.trivia());
                 return token.withTrivia(alloc, trivia.copy(alloc));
@@ -364,11 +421,18 @@ Token Preprocessor::nextRaw() {
     if (token.kind != TokenKind::EndOfFile)
         return token;
 
+    auto checkBranchStack = [&] {
+        if (!branchStack.empty())
+            addDiag(diag::MissingEndIfDirective, branchStack.back().directive.range());
+    };
+
     // don't return EndOfFile tokens for included files, fall
     // through to loop to merge trivia
     popSource();
-    if (lexerStack.empty())
+    if (lexerStack.empty()) {
+        checkBranchStack();
         return token;
+    }
 
     // Rare case: we have an EoF from an include file... we don't want to return
     // that one, but we do want to merge its trivia with whatever comes next.
@@ -389,9 +453,15 @@ Token Preprocessor::nextRaw() {
             break;
 
         popSource();
-        if (lexerStack.empty())
+        if (lexerStack.empty()) {
+            checkBranchStack();
             break;
+        }
     }
+
+    // Ensure EoL at the end of trivia to prevent inlining issues
+    if (trivia.empty() || trivia.back().kind != TriviaKind::EndOfLine)
+        trivia.push_back(Trivia(TriviaKind::EndOfLine, ""sv));
 
     // finally found a real token to return, so update trivia and get out of here
     return token.withTrivia(alloc, trivia.copy(alloc));
@@ -466,7 +536,7 @@ Trivia Preprocessor::handleIncludeDirective(Token directive) {
         path = path.substr(1, path.length() - 2);
 
         auto buffer = sourceManager.readHeader(path, directive.location(), getCurrentLibrary(),
-                                               isSystem);
+                                               isSystem, options.additionalIncludePaths);
         if (!buffer) {
             addDiag(diag::CouldNotOpenIncludeFile, fileName.range())
                 << path << buffer.error().message();
@@ -506,7 +576,8 @@ Trivia Preprocessor::handleDefineDirective(Token directive) {
     if (name.isMissing())
         bad = true;
     else {
-        if (LF::getDirectiveKind(name.valueText()) != SyntaxKind::MacroUsage) {
+        if (LF::getDirectiveKind(name.valueText(), lexerOptions.enableLegacyProtect) !=
+            SyntaxKind::MacroUsage) {
             addDiag(diag::InvalidMacroName, name.range());
             bad = true;
         }
@@ -526,6 +597,7 @@ Trivia Preprocessor::handleDefineDirective(Token directive) {
 
     // consume all remaining tokens as macro text
     scratchTokenBuffer.clear();
+    bool hasContinuation = false;
     while (true) {
         // Figure out when to stop consuming macro text. This involves looking for new lines in the
         // trivia of each token as we grab it. If there's a new line without a preceeding line
@@ -534,14 +606,13 @@ Trivia Preprocessor::handleDefineDirective(Token directive) {
         if (t.kind == TokenKind::EndOfFile)
             break;
         if (t.kind == TokenKind::LineContinuation) {
+            hasContinuation = false;
             scratchTokenBuffer.push_back(consume());
             continue;
         }
 
-        bool hasContinuation = false;
         bool done = false;
         auto triviaList = t.trivia();
-
         for (const Trivia& trivia : triviaList) {
             switch (trivia.kind) {
                 case TriviaKind::EndOfLine:
@@ -550,33 +621,12 @@ Trivia Preprocessor::handleDefineDirective(Token directive) {
                     else
                         done = true;
                     break;
-
                 case TriviaKind::LineComment:
                     // A line comment can have a trailing line continuation.
-                    if (trivia.getRawText().back() == '\\')
-                        hasContinuation = true;
+                    hasContinuation = (trivia.getRawText().back() == '\\');
                     break;
-
-                case TriviaKind::BlockComment:
-                    if (size_t offset = trivia.getRawText().find_first_of("\r\n");
-                        offset != std::string_view::npos) {
-
-                        // Getting the location here is annoying; we need to walk
-                        // backward from the token's location.
-                        size_t diff = trivia.getRawText().length() - offset;
-                        for (auto it = triviaList.rbegin(); it != triviaList.rend(); it++) {
-                            if (&(*it) == &trivia)
-                                break;
-                            diff += it->getRawText().length();
-                        }
-
-                        SourceLocation loc = t.location() - diff;
-                        addDiag(diag::SplitBlockCommentInDirective, loc);
-                        done = true;
-                    }
-                    break;
-
                 default:
+                    hasContinuation = false;
                     break;
             }
             if (done)
@@ -585,7 +635,25 @@ Trivia Preprocessor::handleDefineDirective(Token directive) {
         if (done)
             break;
 
-        scratchTokenBuffer.push_back(consume());
+        consume();
+
+        if (t.kind == TokenKind::Identifier) {
+            // Escaped identifiers that end in a backslash act as a continuation.
+            auto raw = t.rawText();
+            if (!raw.empty() && raw.back() == '\\') {
+                auto nextTrivia = peek().trivia();
+                if (!nextTrivia.empty() && nextTrivia[0].kind == TriviaKind::EndOfLine) {
+                    hasContinuation = true;
+                    scratchTokenBuffer.push_back(
+                        t.withRawText(alloc, raw.substr(0, raw.size() - 1)));
+                    scratchTokenBuffer.push_back(Token(alloc, TokenKind::LineContinuation, {}, "\\",
+                                                       t.location() + raw.size() - 1));
+                    continue;
+                }
+            }
+        }
+
+        scratchTokenBuffer.push_back(t);
     }
     inMacroBody = false;
 
@@ -597,6 +665,8 @@ Trivia Preprocessor::handleDefineDirective(Token directive) {
             addDiag(diag::InvalidMacroName, name.range());
             bad = true;
         }
+        else if (it->second.commandLine)
+            bad = true; // not really bad, but commandLine args has precedence so we skip this
         else if (!bad && it->second.valid() && !isSameMacro(*result, *it->second.syntax)) {
             auto& diag = addDiag(diag::RedefiningMacro, name.range());
             diag << name.valueText();
@@ -620,35 +690,33 @@ std::pair<Trivia, Trivia> Preprocessor::handleMacroUsage(Token directive) {
 }
 
 Trivia Preprocessor::handleIfDefDirective(Token directive, bool inverted) {
-    // next token should be the macro name
-    auto name = expect(TokenKind::Identifier);
+    auto& expr = parseConditionalExprTop();
     bool take = false;
     if (branchStack.empty() || branchStack.back().currentActive) {
         // decide whether the branch is taken or skipped
-        take = macros.find(name.valueText()) != macros.end();
+        take = evalConditionalExpr(expr);
         if (inverted)
             take = !take;
     }
 
-    branchStack.emplace_back(BranchEntry(take));
+    branchStack.emplace_back(BranchEntry(directive, take));
 
-    return parseBranchDirective(directive, name, take);
+    return parseBranchDirective(directive, &expr, take);
 }
 
 Trivia Preprocessor::handleElsIfDirective(Token directive) {
-    // next token should be the macro name
-    auto name = expect(TokenKind::Identifier);
-    bool take = shouldTakeElseBranch(directive.location(), true, name.valueText());
-    return parseBranchDirective(directive, name, take);
+    auto& expr = parseConditionalExprTop();
+    bool take = shouldTakeElseBranch(directive.location(), &expr);
+    return parseBranchDirective(directive, &expr, take);
 }
 
 Trivia Preprocessor::handleElseDirective(Token directive) {
-    bool take = shouldTakeElseBranch(directive.location(), false, "");
-    return parseBranchDirective(directive, Token(), take);
+    bool take = shouldTakeElseBranch(directive.location(), nullptr);
+    return parseBranchDirective(directive, nullptr, take);
 }
 
-bool Preprocessor::shouldTakeElseBranch(SourceLocation location, bool isElseIf,
-                                        std::string_view macroName) {
+bool Preprocessor::shouldTakeElseBranch(SourceLocation location,
+                                        const syntax::ConditionalDirectiveExpressionSyntax* expr) {
     // empty stack is an error
     if (branchStack.empty()) {
         addDiag(diag::UnexpectedConditionalDirective, location);
@@ -666,19 +734,19 @@ bool Preprocessor::shouldTakeElseBranch(SourceLocation location, bool isElseIf,
     bool taken = false;
     if (!branch.anyTaken) {
         // only take this branch if we're the only one in the stack, or our parent is active
-        if (branchStack.size() == 1 || branchStack[branchStack.size() - 2].currentActive) {
-            // if this is an elseif, the macro name needs to be defined
-            taken = !isElseIf || macros.find(macroName) != macros.end();
-        }
+        if (branchStack.size() == 1 || branchStack[branchStack.size() - 2].currentActive)
+            taken = !expr || evalConditionalExpr(*expr);
     }
 
     branch.currentActive = taken;
     branch.anyTaken |= taken;
-    branch.hasElse = !isElseIf;
+    branch.hasElse = !expr;
     return taken;
 }
 
-Trivia Preprocessor::parseBranchDirective(Token directive, Token condition, bool taken) {
+Trivia Preprocessor::parseBranchDirective(Token directive,
+                                          syntax::ConditionalDirectiveExpressionSyntax* expr,
+                                          bool taken) {
     scratchTokenBuffer.clear();
     if (!taken) {
         // skip over everything until we find another conditional compilation directive
@@ -688,7 +756,6 @@ Trivia Preprocessor::parseBranchDirective(Token directive, Token condition, bool
             // EoF or conditional directive stops the skipping process
             bool done = false;
             if (token.kind == TokenKind::EndOfFile) {
-                addDiag(diag::MissingEndIfDirective, directive.range());
                 done = true;
             }
             else if (token.kind == TokenKind::Directive) {
@@ -715,9 +782,9 @@ Trivia Preprocessor::parseBranchDirective(Token directive, Token condition, bool
     }
 
     SyntaxNode* syntax;
-    if (condition) {
+    if (expr) {
         syntax = alloc.emplace<ConditionalBranchDirectiveSyntax>(directive.directiveKind(),
-                                                                 directive, condition,
+                                                                 directive, *expr,
                                                                  scratchTokenBuffer.copy(alloc));
     }
     else {
@@ -738,7 +805,7 @@ Trivia Preprocessor::handleEndIfDirective(Token directive) {
         if (!branchStack.empty() && !branchStack.back().currentActive)
             taken = false;
     }
-    return parseBranchDirective(directive, Token(), taken);
+    return parseBranchDirective(directive, nullptr, taken);
 }
 
 bool Preprocessor::expectTimeScaleSpecifier(Token& token, TimeScaleValue& value) {
@@ -786,6 +853,9 @@ bool Preprocessor::expectTimeScaleSpecifier(Token& token, TimeScaleValue& value)
 }
 
 Trivia Preprocessor::handleTimeScaleDirective(Token directive) {
+    if (options.languageVersion >= LanguageVersion::v1800_2023)
+        checkOutsideDesignElement(directive);
+
     Token unitToken, precisionToken;
     TimeScaleValue unit, precision;
     bool success = expectTimeScaleSpecifier(unitToken, unit);
@@ -865,8 +935,9 @@ Trivia Preprocessor::handleDefaultNetTypeDirective(Token directive) {
     }
 
     if (!netType) {
-        addDiag(diag::ExpectedNetType, peek().location());
-        netType = Token::createMissing(alloc, TokenKind::WireKeyword, peek().location());
+        auto loc = directive.location() + directive.rawText().length();
+        addDiag(diag::ExpectedNetType, loc);
+        netType = Token::createMissing(alloc, TokenKind::WireKeyword, loc);
     }
 
     auto result = alloc.emplace<DefaultNetTypeDirectiveSyntax>(directive, netType);
@@ -925,7 +996,7 @@ Trivia Preprocessor::handleEndKeywordsDirective(Token directive) {
 
 std::pair<Trivia, Trivia> Preprocessor::handlePragmaDirective(Token directive) {
     if (peek().kind != TokenKind::Identifier || !peek().isOnSameLine()) {
-        addDiag(diag::ExpectedPragmaName, directive.location());
+        addDiag(diag::ExpectedPragmaName, directive.location() + directive.rawText().length());
         return {createSimpleDirective(directive), Trivia()};
     }
 
@@ -969,6 +1040,25 @@ std::pair<Trivia, Trivia> Preprocessor::handlePragmaDirective(Token directive) {
     return {Trivia(TriviaKind::Directive, result), skippedTrivia};
 }
 
+std::pair<Trivia, Trivia> Preprocessor::handleProtectedDirective(Token directive) {
+    // This is handling legacy Verilog-XL style `protected directives.
+    SmallVector<Token, 4> skipped;
+    skipMacroTokensBeforeProtectRegion(directive, skipped);
+
+    Token token = lexerStack.back()->lexEncodedText(ProtectEncoding::Raw, 0,
+                                                    /* isSingleLine */ false,
+                                                    /* legacyProtectedMode */ true);
+    skipped.push_back(token);
+
+    addDiag(diag::ProtectedEnvelope, token.location());
+
+    Trivia skippedTrivia;
+    if (!skipped.empty())
+        skippedTrivia = Trivia(TriviaKind::SkippedTokens, skipped.copy(alloc));
+
+    return {createSimpleDirective(directive), skippedTrivia};
+}
+
 Trivia Preprocessor::handleUnconnectedDriveDirective(Token directive) {
     checkOutsideDesignElement(directive);
 
@@ -984,8 +1074,9 @@ Trivia Preprocessor::handleUnconnectedDriveDirective(Token directive) {
     }
 
     if (!strength) {
-        addDiag(diag::ExpectedDriveStrength, peek().location());
-        strength = Token::createMissing(alloc, TokenKind::Pull0Keyword, peek().location());
+        auto loc = directive.location() + directive.rawText().length();
+        addDiag(diag::ExpectedDriveStrength, loc);
+        strength = Token::createMissing(alloc, TokenKind::Pull0Keyword, loc);
     }
 
     auto result = alloc.emplace<UnconnectedDriveDirectiveSyntax>(directive, strength);
@@ -996,6 +1087,145 @@ Trivia Preprocessor::handleNoUnconnectedDriveDirective(Token directive) {
     checkOutsideDesignElement(directive);
     unconnectedDrive = TokenKind::Unknown;
     return createSimpleDirective(directive);
+}
+
+Trivia Preprocessor::handleDefaultDecayTimeDirective(Token directive) {
+    checkOutsideDesignElement(directive);
+
+    Token time;
+    switch (peek().kind) {
+        case TokenKind::IntegerLiteral:
+        case TokenKind::RealLiteral:
+            time = consume();
+            break;
+        case TokenKind::Identifier:
+            if (peek().valueText() == "infinite")
+                time = consume();
+            break;
+        default:
+            break;
+    }
+
+    if (!time)
+        time = expect(TokenKind::IntegerLiteral);
+
+    auto result = alloc.emplace<DefaultDecayTimeDirectiveSyntax>(directive, time);
+    return Trivia(TriviaKind::Directive, result);
+}
+
+Trivia Preprocessor::handleDefaultTriregStrengthDirective(Token directive) {
+    checkOutsideDesignElement(directive);
+
+    auto strength = expect(TokenKind::IntegerLiteral);
+
+    auto result = alloc.emplace<DefaultTriregStrengthDirectiveSyntax>(directive, strength);
+    return Trivia(TriviaKind::Directive, result);
+}
+
+ConditionalDirectiveExpressionSyntax* Preprocessor::parseConditionalExpr() {
+    auto isBinaryOp = [](TokenKind kind) {
+        switch (kind) {
+            case TokenKind::DoubleAnd:
+            case TokenKind::DoubleOr:
+            case TokenKind::MinusArrow:
+            case TokenKind::LessThanMinusArrow:
+                return true;
+            default:
+                return false;
+        }
+    };
+
+    auto parsePrimary = [&]() -> ConditionalDirectiveExpressionSyntax* {
+        Token token = peek();
+        if (token.kind == TokenKind::OpenParenthesis) {
+            auto openParen = consume();
+            auto operand = parseConditionalExpr();
+            auto closeParen = expect(TokenKind::CloseParenthesis);
+            return alloc.emplace<ParenthesizedConditionalDirectiveExpressionSyntax>(openParen,
+                                                                                    *operand,
+                                                                                    closeParen);
+        }
+        else {
+            auto id = expect(TokenKind::Identifier);
+            return alloc.emplace<NamedConditionalDirectiveExpressionSyntax>(id);
+        }
+    };
+
+    ConditionalDirectiveExpressionSyntax* left;
+    if (peek(TokenKind::Exclamation)) {
+        auto op = consume();
+        auto operand = parsePrimary();
+        left = alloc.emplace<UnaryConditionalDirectiveExpressionSyntax>(op, *operand);
+    }
+    else {
+        left = parsePrimary();
+    }
+
+    while (true) {
+        if (!isBinaryOp(peek().kind))
+            break;
+
+        auto op = consume();
+        auto right = parseConditionalExpr();
+        left = alloc.emplace<BinaryConditionalDirectiveExpressionSyntax>(*left, op, *right);
+    }
+
+    return left;
+}
+
+ConditionalDirectiveExpressionSyntax& Preprocessor::parseConditionalExprTop() {
+    SLANG_ASSERT(!inIfDefCondition);
+    auto guard = ScopeGuard([this] { inIfDefCondition = false; });
+    inIfDefCondition = true;
+
+    if (peek(TokenKind::OpenParenthesis)) {
+        auto result = parseConditionalExpr();
+        if (options.languageVersion < LanguageVersion::v1800_2023) {
+            addDiag(diag::WrongLanguageVersion, result->sourceRange())
+                << toString(options.languageVersion);
+        }
+        return *result;
+    }
+
+    auto id = expect(TokenKind::Identifier);
+    return *alloc.emplace<NamedConditionalDirectiveExpressionSyntax>(id);
+}
+
+bool Preprocessor::evalConditionalExpr(
+    const syntax::ConditionalDirectiveExpressionSyntax& expr) const {
+
+    switch (expr.kind) {
+        case SyntaxKind::ParenthesizedConditionalDirectiveExpression:
+            return evalConditionalExpr(
+                *expr.as<ParenthesizedConditionalDirectiveExpressionSyntax>().operand);
+        case SyntaxKind::UnaryConditionalDirectiveExpression:
+            // Only one kind of unary operator.
+            return !evalConditionalExpr(
+                *expr.as<UnaryConditionalDirectiveExpressionSyntax>().operand);
+        case SyntaxKind::BinaryConditionalDirectiveExpression: {
+            auto& bcde = expr.as<BinaryConditionalDirectiveExpressionSyntax>();
+            const bool l = evalConditionalExpr(*bcde.left);
+            const bool r = evalConditionalExpr(*bcde.right);
+            switch (bcde.op.kind) {
+                case TokenKind::DoubleAnd:
+                    return l && r;
+                case TokenKind::DoubleOr:
+                    return l || r;
+                case TokenKind::MinusArrow:
+                    return !l || r;
+                case TokenKind::LessThanMinusArrow:
+                    return l == r;
+                default:
+                    SLANG_UNREACHABLE;
+            }
+        }
+        case SyntaxKind::NamedConditionalDirectiveExpression:
+            return macros.find(
+                       expr.as<NamedConditionalDirectiveExpressionSyntax>().name.valueText()) !=
+                   macros.end();
+        default:
+            SLANG_UNREACHABLE;
+    }
 }
 
 Trivia Preprocessor::createSimpleDirective(Token directive) {

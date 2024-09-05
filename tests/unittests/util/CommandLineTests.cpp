@@ -118,6 +118,23 @@ OPTIONS:
 )");
 }
 
+TEST_CASE("Test CommandLine -- backslash at EOL") {
+    std::optional<bool> a, b, c;
+    CommandLine cmdLine;
+    cmdLine.add("-a", a, "SDF");
+    cmdLine.add("-b", b, "SDF");
+    cmdLine.add("-c", c, "SDF");
+
+    // Check for backslash at EOL
+    // Check for backslash plus whitespace(s) at EOL
+    // Check for backslash at end of command line args
+    CHECK(cmdLine.parse("prog -a\\\n -b -c\\"sv));
+    CHECK(cmdLine.getProgramName() == "prog");
+    CHECK(a);
+    CHECK(b);
+    CHECK(c);
+}
+
 TEST_CASE("Test CommandLine -- nonspan") {
     std::optional<bool> a;
     CommandLine cmdLine;
@@ -468,8 +485,9 @@ TEST_CASE("Test CommandLine -- check setIgnoreCommand()") {
     cmdLine.addIgnoreCommand("--xxx,0");
     cmdLine.addIgnoreCommand("--yyy,2");
     cmdLine.addIgnoreCommand("+zzz,0");
+    cmdLine.addIgnoreCommand("-baz,0");
 
-    CHECK(cmdLine.parse("prog --yyy --foo 456 --foo 123 --xxx +zzz+123+abc+456"));
+    CHECK(cmdLine.parse("prog --yyy --foo 456 --foo 123 --xxx +zzz+123+abc+456 -baz=blah"));
     // --foo 456 is skipped because it's not a real flag, it's --yyy's two parameters,
     // which are ignored
     CHECK(foo == 123);
@@ -488,7 +506,7 @@ TEST_CASE("Test CommandLine -- check setRenameCommand()") {
     cmdLine.addRenameCommand("--xxx,--foo");
     cmdLine.addRenameCommand("--yyy,--bar");
 
-    CHECK(cmdLine.parse("prog --xxx 123 --yyy 456"));
+    CHECK(cmdLine.parse("prog --xxx 123 --yyy=456"));
     CHECK(foo == 123);
     CHECK(bar == 456);
 

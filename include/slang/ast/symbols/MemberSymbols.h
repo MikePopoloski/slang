@@ -62,8 +62,8 @@ public:
 
     ExplicitImportSymbol(std::string_view packageName, std::string_view importName,
                          SourceLocation location) :
-        Symbol(SymbolKind::ExplicitImport, importName, location),
-        packageName(packageName), importName(importName) {}
+        Symbol(SymbolKind::ExplicitImport, importName, location), packageName(packageName),
+        importName(importName) {}
 
     const PackageSymbol* package() const;
     const Symbol* importedSymbol() const;
@@ -257,27 +257,22 @@ public:
 
 class SLANG_EXPORT PrimitiveSymbol : public Symbol, public Scope {
 public:
-    struct TableField {
-        char value = 0;
-        char transitionTo = 0;
-    };
-
     struct TableEntry {
-        std::span<const TableField> inputs;
-        TableField state;
-        TableField output;
+        std::string_view inputs;
+        char state = 0;
+        char output = 0;
     };
 
     std::span<const PrimitivePortSymbol* const> ports;
     std::span<const TableEntry> table;
     const ConstantValue* initVal = nullptr;
     bool isSequential = false;
-    enum PrimitiveKind { UserDefined, Fixed, NInput, NOutput } primitiveKind;
+    enum PrimitiveKind { UserDefined, Fixed, NInput, NOutput, BiDiSwitch } primitiveKind;
 
     PrimitiveSymbol(Compilation& compilation, std::string_view name, SourceLocation loc,
                     PrimitiveKind primitiveKind) :
-        Symbol(SymbolKind::Primitive, name, loc),
-        Scope(compilation, this), primitiveKind(primitiveKind) {}
+        Symbol(SymbolKind::Primitive, name, loc), Scope(compilation, this),
+        primitiveKind(primitiveKind) {}
 
     static PrimitiveSymbol& fromSyntax(const Scope& scope,
                                        const syntax::UdpDeclarationSyntax& syntax);
@@ -498,8 +493,7 @@ public:
 
         CaseProd(const Expression& expr, std::span<const CaseItem> items,
                  std::optional<ProdItem> defaultItem) :
-            ProdBase(ProdKind::Case),
-            expr(&expr), items(items), defaultItem(defaultItem) {}
+            ProdBase(ProdKind::Case), expr(&expr), items(items), defaultItem(defaultItem) {}
 
         static bool isKind(ProdKind kind) { return kind == ProdKind::Case; }
     };
@@ -515,9 +509,8 @@ public:
         Rule(const StatementBlockSymbol& ruleBlock, std::span<const ProdBase* const> prods,
              const Expression* weightExpr, const Expression* randJoinExpr,
              std::optional<CodeBlockProd> codeBlock, bool isRandJoin) :
-            ruleBlock(&ruleBlock),
-            prods(prods), weightExpr(weightExpr), randJoinExpr(randJoinExpr), codeBlock(codeBlock),
-            isRandJoin(isRandJoin) {}
+            ruleBlock(&ruleBlock), prods(prods), weightExpr(weightExpr), randJoinExpr(randJoinExpr),
+            codeBlock(codeBlock), isRandJoin(isRandJoin) {}
     };
 
     DeclaredType declaredReturnType;
@@ -530,7 +523,7 @@ public:
 
     void serializeTo(ASTSerializer& serializer) const;
 
-    static RandSeqProductionSymbol& fromSyntax(Compilation& compilation,
+    static RandSeqProductionSymbol& fromSyntax(const Scope& scope,
                                                const syntax::ProductionSyntax& syntax);
 
     static const RandSeqProductionSymbol* findProduction(std::string_view name,

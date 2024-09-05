@@ -931,7 +931,7 @@ TEST_CASE("Dynamic string ops") {
     CHECK(session.eval("{\"Hi\",str2}").str() == "Hiaaaaa");
     CHECK(session.eval("str2 = {\"Hi\", \"Bye\"}").str() == "HiBye");
 
-    CHECK(session.eval("string'(str1)").str() == "a");
+    CHECK(session.eval("str1").str() == "a");
 
     session.eval("byte ba[] = \"asdf\";");
     CHECK(session.eval("string'(ba)").str() == "asdf");
@@ -1170,7 +1170,7 @@ TEST_CASE("Eval sformatf") {
     CHECK(sformatf("%c", "999") == "\xe7");
 
     CHECK(session.eval("$sformatf(\"%m\")"s).str() == "$unit");
-    CHECK(session.eval("$sformatf(\"%l\")"s).str() == "$unit");
+    CHECK(session.eval("$sformatf(\"%l\")"s).str() == "work.$unit");
 
     session.eval(R"(
 function string func;
@@ -1757,8 +1757,10 @@ TEST_CASE("Unpacked array concat") {
     CHECK(session.eval("SA = {SAD}").bad());
 
     auto diags = session.getDiagnostics();
-    REQUIRE(diags.size() == 1);
-    CHECK(diags[0].code == diag::UnpackedConcatSize);
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::ConstantConversion);
+    CHECK(diags[1].code == diag::ConstantConversion);
+    CHECK(diags[2].code == diag::UnpackedConcatSize);
 }
 
 TEST_CASE("$bits unpacked types") {
@@ -1951,7 +1953,7 @@ typedef union {
 } u_t;
 
 function u_t f;
-    f.b = 8'b10011100;
+    f.b = byte'(8'b10011100);
 endfunction
 
 function u_t g;
@@ -2251,8 +2253,6 @@ TEST_CASE("Queue unbounded expressions") {
 
     session.eval("parameter int p1 = $;");
     session.eval("parameter p2 = $;");
-    CHECK(session.eval("q[p1]").integer() == -1);
-    CHECK(session.eval("q[p2-1]").integer() == 4);
 
     CHECK(session.eval("$isunbounded($)").integer() == 1);
     CHECK(session.eval("$isunbounded(p1)").integer() == 1);
@@ -2496,9 +2496,14 @@ endfunction
     CHECK(session.eval("f3();").integer() == 139);
 
     auto diags = session.getDiagnostics();
-    REQUIRE(diags.size() == 2);
-    CHECK(diags[0].code == diag::ConstEvalNoCaseItemsMatched);
-    CHECK(diags[1].code == diag::ConstEvalCaseItemsNotUnique);
+    REQUIRE(diags.size() == 7);
+    CHECK(diags[0].code == diag::ArithOpMismatch);
+    CHECK(diags[1].code == diag::ConstEvalNoCaseItemsMatched);
+    CHECK(diags[2].code == diag::ConstEvalCaseItemsNotUnique);
+    CHECK(diags[3].code == diag::ConstantConversion);
+    CHECK(diags[4].code == diag::ArithOpMismatch);
+    CHECK(diags[5].code == diag::ArithOpMismatch);
+    CHECK(diags[6].code == diag::ArithOpMismatch);
 }
 
 TEST_CASE("case statement eval regression") {
@@ -2519,5 +2524,19 @@ endfunction
     CHECK(session.eval("calc(200);").integer() == 1);
     CHECK(session.eval("calc(300);").integer() == 2);
     CHECK(session.eval("calc(400);").integer() == 0);
+    NO_SESSION_ERRORS;
+}
+
+TEST_CASE("Array map eval") {
+    ScriptSession session(optionsFor(LanguageVersion::v1800_2023));
+    session.eval(R"(int A[] = {1,2,3}, B[3] = {2,3,5};)");
+    session.eval(R"(real C[$] = {3.14};)");
+    session.eval(R"(int D[string] = '{"Hello": -1, "World": 5};)");
+
+    CHECK(session.eval("A.map with (item * 2.5)").toString() == "[2.5,5,7.5]");
+    CHECK(session.eval("B.map with (1)").toString() == "[1,1,1]");
+    CHECK(session.eval("C.map with (int'(item))").toString() == "[3]");
+    CHECK(session.eval("D.map with (item * 3)").toString() == R"(["Hello":-3,"World":15])");
+
     NO_SESSION_ERRORS;
 }

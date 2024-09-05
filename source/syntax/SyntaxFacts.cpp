@@ -421,7 +421,7 @@ bool SyntaxFacts::isPossibleStatement(TokenKind kind) {
         case TokenKind::RandSequenceKeyword:
         case TokenKind::RandCaseKeyword:
         case TokenKind::ExpectKeyword:
-        case TokenKind::OpenParenthesisStar:
+        case TokenKind::OpenParenthesis:
         case TokenKind::Semicolon:
             return true;
         default:
@@ -508,7 +508,6 @@ parsing::TokenKind SyntaxFacts::getDelimCloseKind(TokenKind kind) {
         case TokenKind::OpenBrace: return TokenKind::CloseBrace;
         case TokenKind::OpenBracket: return TokenKind::CloseBracket;
         case TokenKind::ApostropheOpenBrace: return TokenKind::CloseBrace;
-        case TokenKind::OpenParenthesisStar: return TokenKind::StarCloseParenthesis;
         default: return TokenKind::Unknown;
     }
 }
@@ -519,7 +518,6 @@ parsing::TokenKind SyntaxFacts::getSkipToKind(TokenKind kind) {
         case TokenKind::OpenBrace: return TokenKind::CloseBrace;
         case TokenKind::OpenBracket: return TokenKind::CloseBracket;
         case TokenKind::ApostropheOpenBrace: return TokenKind::CloseBrace;
-        case TokenKind::OpenParenthesisStar: return TokenKind::StarCloseParenthesis;
         case TokenKind::BeginKeyword: return TokenKind::EndKeyword;
         case TokenKind::CaseKeyword: return TokenKind::EndCaseKeyword;
         case TokenKind::CheckerKeyword: return TokenKind::EndCheckerKeyword;
@@ -643,7 +641,7 @@ bool SyntaxFacts::isPossibleAnsiPort(TokenKind kind) {
         case TokenKind::InOutKeyword:
         case TokenKind::RefKeyword:
         case TokenKind::VarKeyword:
-        case TokenKind::OpenParenthesisStar:
+        case TokenKind::OpenParenthesis:
             return true;
         default:
             return isNetType(kind) || isPossibleDataType(kind);
@@ -657,7 +655,7 @@ bool SyntaxFacts::isPossibleUdpPort(TokenKind kind) {
         case TokenKind::OutputKeyword:
         case TokenKind::RegKeyword:
         case TokenKind::Comma:
-        case TokenKind::OpenParenthesisStar:
+        case TokenKind::OpenParenthesis:
             return true;
         default:
             return false;
@@ -666,7 +664,7 @@ bool SyntaxFacts::isPossibleUdpPort(TokenKind kind) {
 
 bool SyntaxFacts::isPossibleModportPort(TokenKind kind) {
     switch (kind) {
-        case TokenKind::OpenParenthesisStar:
+        case TokenKind::OpenParenthesis:
         case TokenKind::InputKeyword:
         case TokenKind::OutputKeyword:
         case TokenKind::InOutKeyword:
@@ -691,7 +689,8 @@ bool SyntaxFacts::isPossibleFunctionPort(TokenKind kind) {
         case TokenKind::RefKeyword:
         case TokenKind::VarKeyword:
         case TokenKind::ConstKeyword:
-        case TokenKind::OpenParenthesisStar:
+        case TokenKind::OpenParenthesis:
+        case TokenKind::DefaultKeyword:
             return true;
         default:
             return isPossibleDataType(kind);
@@ -738,10 +737,11 @@ bool SyntaxFacts::isPossibleForInitializer(TokenKind kind) {
     return kind == TokenKind::Comma || kind == TokenKind::VarKeyword || isPossibleExpression(kind);
 }
 
-bool SyntaxFacts::isPossibleOpenRangeElement(TokenKind kind) {
+bool SyntaxFacts::isPossibleValueRangeElement(TokenKind kind) {
     switch (kind) {
         case TokenKind::OpenBracket:
         case TokenKind::Comma:
+        case TokenKind::DefaultKeyword:
             return true;
         default:
             return isPossibleExpression(kind);
@@ -751,7 +751,6 @@ bool SyntaxFacts::isPossibleOpenRangeElement(TokenKind kind) {
 bool SyntaxFacts::isPossiblePattern(TokenKind kind) {
     switch (kind) {
         case TokenKind::Dot:
-        case TokenKind::DotStar:
         case TokenKind::ApostropheOpenBrace:
             return true;
         case TokenKind::TripleAnd:
@@ -834,8 +833,7 @@ bool SyntaxFacts::isPossibleParameter(TokenKind kind) {
 
 bool SyntaxFacts::isPossiblePortConnection(TokenKind kind) {
     switch (kind) {
-        case TokenKind::OpenParenthesisStar:
-        case TokenKind::DotStar:
+        case TokenKind::OpenParenthesis:
         case TokenKind::Dot:
         case TokenKind::Comma:
             return true;
@@ -895,7 +893,6 @@ bool SyntaxFacts::isCloseDelimOrKeyword(TokenKind kind) {
         case TokenKind::CloseBrace:
         case TokenKind::CloseBracket:
         case TokenKind::CloseParenthesis:
-        case TokenKind::StarCloseParenthesis:
             return true;
         default:
             return isEndKeyword(kind);
@@ -1084,7 +1081,8 @@ bool SyntaxFacts::isEndOfConditionalPredicate(TokenKind kind) {
 
 bool SyntaxFacts::isEndOfAttribute(TokenKind kind) {
     switch (kind) {
-        case TokenKind::StarCloseParenthesis:
+        case TokenKind::Star:
+        case TokenKind::CloseParenthesis:
             // these indicate a missing *) somewhere
         case TokenKind::Semicolon:
         case TokenKind::PrimitiveKeyword:
@@ -1150,7 +1148,7 @@ bool SyntaxFacts::isNotInConcatenationExpr(TokenKind kind) {
 }
 
 bool SyntaxFacts::isPossibleLetPortItem(TokenKind kind) {
-    return kind == TokenKind::OpenParenthesisStar || kind == TokenKind::UntypedKeyword || isPossibleDataType(kind);
+    return kind == TokenKind::OpenParenthesis || kind == TokenKind::UntypedKeyword || isPossibleDataType(kind);
 }
 
 bool SyntaxFacts::isNotInParameterList(TokenKind kind) {
@@ -1159,7 +1157,7 @@ bool SyntaxFacts::isNotInParameterList(TokenKind kind) {
 
 bool SyntaxFacts::isPossiblePropertyPortItem(TokenKind kind) {
     switch (kind) {
-        case TokenKind::OpenParenthesisStar:
+        case TokenKind::OpenParenthesis:
         case TokenKind::LocalKeyword:
         case TokenKind::PropertyKeyword:
         case TokenKind::SequenceKeyword:
@@ -1232,7 +1230,6 @@ static bool isModuleOrPackageDecl(SyntaxKind kind) {
         case SyntaxKind::NetTypeDeclaration:
         case SyntaxKind::TypedefDeclaration:
         case SyntaxKind::ForwardTypedefDeclaration:
-        case SyntaxKind::ForwardInterfaceClassTypedefDeclaration:
         case SyntaxKind::PackageImportDeclaration:
         case SyntaxKind::DataDeclaration:
         case SyntaxKind::TaskDeclaration:
@@ -1439,7 +1436,6 @@ bool SyntaxFacts::isAllowedInChecker(SyntaxKind kind) {
         case SyntaxKind::NetTypeDeclaration:
         case SyntaxKind::TypedefDeclaration:
         case SyntaxKind::ForwardTypedefDeclaration:
-        case SyntaxKind::ForwardInterfaceClassTypedefDeclaration:
         case SyntaxKind::PackageImportDeclaration:
         case SyntaxKind::DataDeclaration:
         case SyntaxKind::FunctionDeclaration:

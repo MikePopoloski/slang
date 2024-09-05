@@ -10,6 +10,7 @@
 #include "slang/ast/Compilation.h"
 #include "slang/ast/EvalContext.h"
 #include "slang/ast/Expression.h"
+#include "slang/ast/symbols/VariableSymbols.h"
 #include "slang/ast/types/Type.h"
 #include "slang/diagnostics/ExpressionsDiags.h"
 #include "slang/diagnostics/SysFuncsDiags.h"
@@ -23,6 +24,10 @@ bool SystemSubroutine::allowEmptyArgument(size_t) const {
 }
 
 bool SystemSubroutine::allowClockingArgument(size_t) const {
+    return false;
+}
+
+bool SystemSubroutine::isArgUnevaluated(size_t) const {
     return false;
 }
 
@@ -110,7 +115,8 @@ const Expression& SimpleSystemSubroutine::bindArgument(size_t argIndex, const AS
     if (argIndex >= argTypes.size())
         return SystemSubroutine::bindArgument(argIndex, context, syntax, args);
 
-    return Expression::bindArgument(*argTypes[argIndex], ArgumentDirection::In, syntax, context);
+    return Expression::bindArgument(*argTypes[argIndex], ArgumentDirection::In, {}, syntax,
+                                    context);
 }
 
 const Type& SimpleSystemSubroutine::checkArguments(const ASTContext& context, const Args& args,

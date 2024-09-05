@@ -110,8 +110,10 @@ void registerNumeric(py::module_& m) {
         .def_static("createFillZ", &SVInt::createFillZ, "bitWidth"_a, "isSigned"_a)
         .def_static("fromDigits", &SVInt::fromDigits, "bits"_a, "base"_a, "isSigned"_a,
                     "anyUnknown"_a, "digits"_a)
-        .def_static("fromDouble", &SVInt::fromDouble, "bits"_a, "value"_a, "isSigned"_a)
-        .def_static("fromFloat", &SVInt::fromFloat, "bits"_a, "value"_a, "isSigned"_a)
+        .def_static("fromDouble", &SVInt::fromDouble, "bits"_a, "value"_a, "isSigned"_a,
+                    "round"_a = true)
+        .def_static("fromFloat", &SVInt::fromFloat, "bits"_a, "value"_a, "isSigned"_a,
+                    "round"_a = true)
         .def_static("conditional", &SVInt::conditional, "condition"_a, "lhs"_a, "rhs"_a)
         .def_static("logicalImpl", &SVInt::logicalImpl, "lhs"_a, "rhs"_a)
         .def_static("logicalEquiv", &SVInt::logicalEquiv, "lhs"_a, "rhs"_a)
@@ -249,7 +251,7 @@ void registerNumeric(py::module_& m) {
         .def(py::init<TimeScaleValue, TimeScaleValue>(), "base"_a, "precision"_a)
         .def_readwrite("base", &TimeScale::base)
         .def_readwrite("precision", &TimeScale::precision)
-        .def("apply", &TimeScale::apply, "value"_a, "unit"_a)
+        .def("apply", &TimeScale::apply, "value"_a, "unit"_a, "roundToPrecision"_a)
         .def_static("fromString", &TimeScale::fromString, "str"_a)
         .def(py::self == py::self)
         .def(py::self != py::self)
@@ -330,10 +332,8 @@ void registerNumeric(py::module_& m) {
 
     py::class_<ConstantRange>(m, "ConstantRange")
         .def(py::init<>())
-        .def(py::init([](int left, int right) {
-                 return ConstantRange{left, right};
-             }),
-             "left"_a, "right"_a)
+        .def(py::init([](int left, int right) { return ConstantRange{left, right}; }), "left"_a,
+             "right"_a)
         .def_readwrite("left", &ConstantRange::left)
         .def_readwrite("right", &ConstantRange::right)
         .def_property_readonly("width", &ConstantRange::width)

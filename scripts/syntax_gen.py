@@ -5,6 +5,7 @@
 # SPDX-License-Identifier: MIT
 
 import argparse
+import math
 import os
 
 
@@ -365,10 +366,20 @@ namespace slang::syntax {
         else:
             outf.write("    static bool isKind(SyntaxKind kind);\n\n")
 
+            outf.write("    static bool isChildOptional(size_t index);\n")
             outf.write("    TokenOrSyntax getChild(size_t index);\n")
             outf.write("    ConstTokenOrSyntax getChild(size_t index) const;\n")
+            outf.write("    PtrTokenOrSyntax getChildPtr(size_t index);\n")
             outf.write("    void setChild(size_t index, TokenOrSyntax child);\n\n")
 
+            docf.write(
+                "    @fn static bool slang::syntax::{}::isChildOptional(size_t index);\n".format(
+                    name
+                )
+            )
+            docf.write(
+                "    @brief Returns true if child member (token or syntax node) at the provided index within this struct is a nullable pointer\n"
+            )
             docf.write(
                 "    @fn TokenOrSyntax slang::syntax::{}::getChild(size_t index)\n".format(
                     name
@@ -379,6 +390,14 @@ namespace slang::syntax {
             )
             docf.write(
                 "    @fn ConstTokenOrSyntax slang::syntax::{}::getChild(size_t index) const\n".format(
+                    name
+                )
+            )
+            docf.write(
+                "    @brief Gets the child member (token or syntax node) as a pointer at the provided index within this struct\n"
+            )
+            docf.write(
+                "    @fn PtrTokenOrSyntax slang::syntax::{}::getChildPtr(size_t index)\n".format(
                     name
                 )
             )
@@ -473,19 +492,53 @@ size_t SyntaxNode::getChildCount() const {
         cppf.write("}\n\n")
 
         if v.members or v.final != "":
-            for returnType in ("TokenOrSyntax", "ConstTokenOrSyntax"):
+            cppf.write("bool {}::isChildOptional(size_t index) {{\n".format(k))
+            if v.optionalMembers:
+                cppf.write("    switch (index) {\n")
+
+                index = 0
+                for m in v.combinedMembers:
+                    if m[1] in v.optionalMembers:
+                        cppf.write("        case {}: return true;\n".format(index))
+                    index += 1
+
+                cppf.write("        default: return false;\n")
+                cppf.write("    }\n")
+            else:
+                cppf.write("    (void)index;\n")
+                cppf.write("    return false;\n")
+
+            cppf.write("}\n\n")
+
+            for returnType in (
+                "TokenOrSyntax",
+                "ConstTokenOrSyntax",
+                "PtrTokenOrSyntax",
+            ):
                 cppf.write(
-                    "{} {}::getChild(size_t index){} {{\n".format(
-                        returnType, k, "" if returnType == "TokenOrSyntax" else " const"
+                    "{} {}::getChild{}(size_t index){} {{\n".format(
+                        returnType,
+                        k,
+                        ("Ptr" if returnType.startswith("Ptr") else ""),
+                        "" if not returnType.startswith("Const") else " const",
                     )
                 )
+
+                returnPointer = returnType == "PtrTokenOrSyntax"
 
                 if v.combinedMembers:
                     cppf.write("    switch (index) {\n")
 
                     index = 0
                     for m in v.combinedMembers:
-                        addr = "&" if m[1] in v.pointerMembers else ""
+                        addr = ""
+                        if returnPointer:
+                            if m[0] == "Token" or (m[1] in v.pointerMembers):
+                                addr = "&"
+                        elif m[1] in v.pointerMembers:
+                            addr = "&"
+
+                        # addr = "&" if  != (returnPointer and not (m[1] in v.notNullMembers)) else ""
                         get = ".get()" if m[1] in v.notNullMembers else ""
                         cppf.write(
                             "        case {}: return {}{}{};\n".format(
@@ -634,8 +687,10 @@ const std::type_info* typeFromSyntaxKind(SyntaxKind kind) {
     outf.write(
         "    static bool isKind(SyntaxKind kind) { return kind == SyntaxKind::Unknown; }\n"
     )
+    outf.write("    static bool isChildOptional(size_t) { return true; }\n")
     outf.write("    TokenOrSyntax getChild(size_t) { return nullptr; }\n")
     outf.write("    ConstTokenOrSyntax getChild(size_t) const { return nullptr; }\n")
+    outf.write("    PtrTokenOrSyntax getChildPtr(size_t) { return nullptr; }\n")
     outf.write("    void setChild(size_t, TokenOrSyntax) {}\n")
     outf.write("};\n\n")
 
@@ -837,8 +892,10 @@ SyntaxNode* clone(const SyntaxListBase&, BumpAllocator&) {
                             m[1]
                         )
                     )
-                elif m[0].startswith("SyntaxList") or m[0].startswith(
-                    "SeparatedSyntaxList"
+                elif (
+                    m[0].startswith("SyntaxList")
+                    or m[0].startswith("SeparatedSyntaxList")
+                    or m[0].startswith("TokenList")
                 ):
                     clonef.write("        *deepClone(node.{0}, alloc)".format(m[1]))
                 elif m[0] == "Token":
@@ -1019,10 +1076,15 @@ namespace slang::parsing {
 
 
 def generatePyBindings(builddir, alltypes):
-    outf = open(os.path.join(builddir, "PySyntaxBindings.cpp"), "w")
-    outf.write(
-        """//------------------------------------------------------------------------------
-// PySyntaxBindings.cpp
+    numfiles = 4
+    items = list(alltypes.items())
+    perfile = math.ceil(len(items) / numfiles)
+
+    for i in range(numfiles):
+        outf = open(os.path.join(builddir, f"PySyntaxBindings{i}.cpp"), "w")
+        outf.write(
+            """//------------------------------------------------------------------------------
+// PySyntaxBindings{0}.cpp
 // Generated Python bindings for syntax types
 //
 // SPDX-FileCopyrightText: Michael Popoloski
@@ -1032,20 +1094,25 @@ def generatePyBindings(builddir, alltypes):
 
 #include "slang/syntax/AllSyntax.h"
 
-void registerSyntaxNodes(py::module_& m) {
-"""
-    )
+void registerSyntaxNodes{0}(py::module_& m) {{
+""".format(
+                i
+            )
+        )
 
-    for k, v in alltypes.items():
-        if k == "SyntaxNode":
-            continue
+        idx = i * perfile
+        for k, v in items[idx : idx + perfile]:
+            if k == "SyntaxNode":
+                continue
 
-        outf.write('    py::class_<{}, {}>(m, "{}")'.format(k, v.base, k))
-        for m in v.members:
-            outf.write('\n        .def_readwrite("{}", &{}::{})'.format(m[1], k, m[1]))
-        outf.write(";\n\n")
+            outf.write('    py::class_<{}, {}>(m, "{}")'.format(k, v.base, k))
+            for m in v.members:
+                outf.write(
+                    '\n        .def_readwrite("{}", &{}::{})'.format(m[1], k, m[1])
+                )
+            outf.write(";\n\n")
 
-    outf.write("}\n")
+        outf.write("}\n")
 
 
 if __name__ == "__main__":

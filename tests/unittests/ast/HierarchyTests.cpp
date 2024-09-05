@@ -3,10 +3,10 @@
 
 #include "Test.h"
 
-#include "slang/ast/Definition.h"
 #include "slang/ast/symbols/BlockSymbols.h"
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
 #include "slang/ast/symbols/InstanceSymbols.h"
+#include "slang/ast/symbols/MemberSymbols.h"
 #include "slang/ast/symbols/ParameterSymbols.h"
 #include "slang/text/SourceManager.h"
 
@@ -54,24 +54,6 @@ endmodule
     CHECK(root.topInstances[1]->name == "top");
 }
 
-TEST_CASE("Top level params") {
-    auto tree = SyntaxTree::fromText(R"(
-module Top #(parameter int foo = 3) ();
-endmodule
-
-module NotTop #(parameter int foo) ();
-endmodule
-)");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-    NO_COMPILATION_ERRORS;
-
-    const RootSymbol& root = compilation.getRoot();
-    REQUIRE(root.topInstances.size() == 1);
-    CHECK(root.topInstances[0]->name == "Top");
-}
-
 TEST_CASE("Duplicate module") {
     auto tree = SyntaxTree::fromText(R"(
 module top #(parameter int foo = 3) ();
@@ -104,75 +86,6 @@ endpackage
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::Redefinition);
-}
-
-TEST_CASE("Module parameterization errors") {
-    auto tree = SyntaxTree::fromText(R"(
-module Top;
-    Leaf l1();
-    Leaf #(1, 2, 3, 4) l2();
-    Leaf #(1, 2, 3, 4, 5) l3();
-    Leaf #(.foo(3), .baz(9)) l4();
-    Leaf #(.unset(10), .bla(7)) l5();
-    Leaf #(.unset(10), .localp(7)) l6();
-    Leaf #(.unset(10), .unset(7)) l7();
-    Leaf #(.unset(10), 5) l8();
-    Leaf #(.unset(10)) l9(); // no errors on this one
-endmodule
-
-module Leaf #(
-    int foo = 4,
-    int bar = 9,
-    localparam int baz,
-    parameter bizz = baz,
-    parameter int unset
-    )();
-
-    parameter int localp;
-
-endmodule
-)");
-
-    Compilation compilation;
-    auto it = evalModule(tree, compilation).body.membersOfType<InstanceSymbol>().begin();
-    CHECK(it->name == "l1");
-    it++;
-    CHECK(it->name == "l2");
-    it++;
-    CHECK(it->name == "l3");
-    it++;
-    CHECK(it->name == "l4");
-    it++;
-    CHECK(it->name == "l5");
-    it++;
-    CHECK(it->name == "l6");
-    it++;
-    CHECK(it->name == "l7");
-    it++;
-    CHECK(it->name == "l8");
-    it++;
-    CHECK(it->name == "l9");
-    it++;
-
-    auto& diags = compilation.getSemanticDiagnostics();
-    REQUIRE(diags.size() == 10);
-    CHECK(diags[0].code == diag::ParamHasNoValue);
-    CHECK(diags[1].code == diag::TooManyParamAssignments);
-    CHECK(diags[2].code == diag::AssignedToLocalPortParam);
-    CHECK(diags[3].code == diag::ParamHasNoValue);
-    CHECK(diags[4].code == diag::ParameterDoesNotExist);
-    CHECK(diags[5].code == diag::AssignedToLocalBodyParam);
-    CHECK(diags[6].code == diag::DuplicateParamAssignment);
-    CHECK(diags[7].code == diag::MixingOrderedAndNamedParams);
-    CHECK(diags[8].code == diag::LocalParamNoInitializer);
-    CHECK(diags[9].code == diag::BodyParamNoInitializer);
-
-    REQUIRE(diags[2].notes.size() == 1);
-    REQUIRE(diags[5].notes.size() == 1);
-    REQUIRE(diags[6].notes.size() == 1);
-    CHECK(diags[2].notes[0].code == diag::NoteDeclarationHere);
-    CHECK(diags[5].notes[0].code == diag::NoteDeclarationHere);
-    CHECK(diags[6].notes[0].code == diag::NotePreviousUsage);
 }
 
 TEST_CASE("Instance missing name") {
@@ -333,69 +246,6 @@ endpackage
     NO_COMPILATION_ERRORS;
 }
 
-TEST_CASE("Recursive parameter / function") {
-    auto tree = SyntaxTree::fromText(R"(
-module M;
-    localparam logic [bar()-1:0] foo = 1;
-
-    function logic[$bits(foo)-1:0] bar;
-        return 1;
-    endfunction
-
-    localparam int baz = fun();
-    localparam int bax = baz;
-
-    function logic[bax-1:0] fun;
-        return 1;
-    endfunction
-
-    localparam int a = stuff();
-    localparam int b = a;
-
-    function int stuff;
-        return b;
-    endfunction
-
-    localparam int z = stuff2();
-    logic [3:0] y;
-
-    function int stuff2;
-        return int'(y);
-    endfunction
-
-endmodule
-)");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-
-    auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 5);
-    CHECK(diags[0].code == diag::RecursiveDefinition);
-    CHECK(diags[1].code == diag::RecursiveDefinition);
-    CHECK(diags[2].code == diag::ConstEvalParamCycle);
-    CHECK(diags[3].code == diag::ConstEvalIdUsedInCEBeforeDecl);
-    CHECK(diags[4].code == diag::ConstEvalFunctionIdentifiersMustBeLocal);
-}
-
-TEST_CASE("Parameter ordering from const func") {
-    auto tree = SyntaxTree::fromText(R"(
-module M;
-    localparam int a = 1;
-
-    function int stuff;
-        return a;
-    endfunction
-
-    localparam int b = stuff();
-endmodule
-)");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-    NO_COMPILATION_ERRORS;
-}
-
 TEST_CASE("Name conflict bug") {
     auto tree = SyntaxTree::fromText(R"(
 module m(logic stuff);
@@ -427,22 +277,22 @@ module m;
     struct { logic l; } us;
     logic arr[2];
 
-    for (i = i; i + 1; i + 1) begin end         // iter expr doesn't change genvar
-    for (i = 0; i; --i) begin end               // not an error
-    for (i = 0; i; i++) begin end               // not an error
-    for ( = 0; i; i++) begin end                // missing genvar
-    for (i = 0; i; j++) begin end               // different name in init and incr
-    for (k = 0; k; k++) begin end               // missing genvar
-    for (l = 0; l; l++) begin end               // l is not a genvar
-    for (i = 0; i < blah.foo; i++) begin end    // non-constant stop expr
-    for (i = 0; i; i += blah.foo) begin end     // non-constant iter expr
-    for (i = 0; us; i++) begin end              // stop expr is not boolean
-    for (i = 'x; i; i++) begin end              // unknown in init
-    for (i = 0; i < 10; i += 'x) begin end      // unknown in iter
-    for (i = 0; i < 10; i += 0) begin end       // repeated val
-    for (i = 0; i < 10; i += arr[i+4]) name: begin end       // bad iter expr
+    for (i = i; i + 1 != 0; i + 1) begin end            // iter expr doesn't change genvar
+    for (i = 0; i != 0; --i) begin end                  // not an error
+    for (i = 0; i != 0; i++) begin end                  // not an error
+    for ( = 0; i != 0; i++) begin end                   // missing genvar
+    for (i = 0; i != 0; j++) begin end                  // different name in init and incr
+    for (k = 0; k != 0; k++) begin end                  // missing genvar
+    for (l = 0; l != 0; l++) begin end                  // l is not a genvar
+    for (i = 0; i < blah.foo; i++) begin end            // non-constant stop expr
+    for (i = 0; i != 0; i += blah.foo) begin end        // non-constant iter expr
+    for (i = 0; us; i++) begin end                      // stop expr is not boolean
+    for (i = 'x; i != 0; i++) begin end                 // unknown in init
+    for (i = 0; i < 10; i += 'x) begin end              // unknown in iter
+    for (i = 0; i < 10; i += 0) begin end               // repeated val
+    for (i = 0; i < 10; i += integer'(arr[i+4])) name: begin end  // bad iter expr
 
-    for (i = 0; i; --i) foo: begin : baz end    // name and label
+    for (i = 0; i != 0; --i) foo: begin : baz end       // name and label
 
 endmodule
 )");
@@ -619,40 +469,6 @@ source:16:16: error: use of undeclared identifier 'asdf'
         always asdf = 1;
                ^~~~
 )");
-}
-
-TEST_CASE("Parameter with type imported from package") {
-    auto tree1 = SyntaxTree::fromText(R"(
-module m #(parameter p::foo f = "SDF") ();
-    if (f == "BAR") begin: block1
-        l #(.f(f)) l1();
-    end
-    else begin: block2
-        l #(.f(f)) l1();
-    end
-endmodule
-)");
-    auto tree2 = SyntaxTree::fromText(R"(
-package p;
-    typedef string foo;
-endpackage
-)");
-    auto tree3 = SyntaxTree::fromText(R"(
-module l #(p::foo f) ();
-endmodule
-)");
-    auto tree4 = SyntaxTree::fromText(R"(
-module top;
-    m m1();
-endmodule
-)");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree4);
-    compilation.addSyntaxTree(tree2);
-    compilation.addSyntaxTree(tree3);
-    compilation.addSyntaxTree(tree1);
-    NO_COMPILATION_ERRORS;
 }
 
 TEST_CASE("Recursive modules -- if generate") {
@@ -884,105 +700,6 @@ TEST_CASE("No top warning") {
     CHECK(diags[0].code == diag::NoTopModules);
 }
 
-TEST_CASE("Empty parameter assignments") {
-    auto tree = SyntaxTree::fromText(R"(
-module n;
-endmodule
-
-module m;
-    n #(,) n1();
-endmodule
-)");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-
-    auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 3);
-    CHECK(diags[0].code == diag::ExpectedExpression);
-    CHECK(diags[1].code == diag::MisplacedTrailingSeparator);
-    CHECK(diags[2].code == diag::TooManyParamAssignments);
-}
-
-TEST_CASE("Options to override top-level params") {
-    auto tree = SyntaxTree::fromText(R"(
-module m #(parameter int foo, string bar, real baz);
-    localparam int j = foo + (bar == "asdf" ? baz : 0);
-endmodule
-)");
-
-    CompilationOptions coptions;
-    coptions.paramOverrides.push_back("foo=3");
-    coptions.paramOverrides.push_back("bar=\"asdf\"");
-    coptions.paramOverrides.push_back("baz=1.6");
-
-    Bag options;
-    options.set(coptions);
-
-    Compilation compilation(options);
-    compilation.addSyntaxTree(tree);
-    NO_COMPILATION_ERRORS;
-
-    auto& j = compilation.getRoot().lookupName<ParameterSymbol>("m.j");
-    CHECK(j.getValue().integer() == 5);
-}
-
-TEST_CASE("Invalid param override option handling") {
-    auto tree = SyntaxTree::fromText(R"(
-module m #(parameter int foo, string bar, real baz);
-    localparam int j = foo + (bar == "asdf" ? baz : 0);
-endmodule
-)");
-
-    CompilationOptions coptions;
-    coptions.paramOverrides.push_back("foo");
-    coptions.paramOverrides.push_back("bar=");
-    coptions.paramOverrides.push_back("bar=lkj");
-    coptions.paramOverrides.push_back("baz=\"asdf\"");
-    coptions.paramOverrides.push_back("m.baz=\"asdf\"");
-
-    Bag options;
-    options.set(coptions);
-
-    Compilation compilation(options);
-    compilation.addSyntaxTree(tree);
-
-    auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 4);
-    for (size_t i = 0; i < diags.size(); i++) {
-        CHECK(diags[i].code == diag::InvalidParamOverrideOpt);
-    }
-}
-
-TEST_CASE("Empty params for uninstantiated modules") {
-    auto tree = SyntaxTree::fromText(R"(
-module top;
-endmodule
-
-module other #(parameter int bar);
-    logic [3:0] asdf;
-    initial asdf[bar] = 1;
-endmodule
-
-module unused #(parameter int foo = -1);
-    other #(-2) inst();
-
-    logic [3:0] baz;
-    initial baz[foo] = 1;
-endmodule
-)");
-
-    CompilationOptions coptions;
-    coptions.topModules.emplace("top"sv);
-
-    Bag options;
-    options.set(coptions);
-
-    Compilation compilation(options);
-    compilation.addSyntaxTree(tree);
-    NO_COMPILATION_ERRORS;
-}
-
 TEST_CASE("Upward name by definition name -- design tree") {
     auto tree = SyntaxTree::fromText(R"(
 module B();
@@ -1003,282 +720,6 @@ endmodule
     Compilation compilation;
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
-}
-
-TEST_CASE("defparams") {
-    auto tree = SyntaxTree::fromText(R"(
-module top;
-    m m1();
-endmodule
-
-module m;
-    parameter a = 1;
-    parameter b = 2;
-
-    logic [b-1:0] foo;
-
-    defparam m1.a = $bits(foo) + 2;
-    defparam m1.b = 4;
-
-    if (a == 6) begin : q
-        n #(5) n1();
-        defparam n1.foo = 12;
-    end
-    defparam q.n1.bar.n2.foo = 99;
-endmodule
-
-module n #(parameter int foo = 0);
-    if (foo > 10) begin : bar
-        parameter baz = 6;
-        n #(baz) n2();
-    end
-endmodule
-)");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-    NO_COMPILATION_ERRORS;
-
-    auto param = [&](auto name) {
-        return compilation.getRoot().lookupName<ParameterSymbol>(name).getValue().integer();
-    };
-
-    CHECK(param("top.m1.a") == 6);
-    CHECK(param("top.m1.b") == 4);
-    CHECK(param("top.m1.q.n1.foo") == 12);
-    CHECK(param("top.m1.q.n1.bar.n2.foo") == 99);
-    CHECK(param("top.m1.q.n1.bar.n2.bar.n2.foo") == 6);
-}
-
-TEST_CASE("defparam error cases") {
-    auto tree = SyntaxTree::fromText(R"(
-module top;
-    m m1();
-endmodule
-
-module m;
-    parameter a = 6;
-    defparam q.foo = 1;
-
-    if (a == 6) begin : q
-        parameter foo = 0;
-    end
-
-    parameter b = 3;
-    parameter c = 4;
-    defparam b = c;
-    defparam c = b;
-endmodule
-)");
-
-    CompilationOptions options;
-    options.maxDefParamSteps = 32;
-
-    Compilation compilation(options);
-    compilation.addSyntaxTree(tree);
-
-    auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 2);
-    CHECK(diags[0].code == diag::DefParamLocal);
-    CHECK(diags[1].code == diag::DefParamCycle);
-}
-
-TEST_CASE("defparam conflicting resolution") {
-    auto tree = SyntaxTree::fromText(R"(
-module m;
-    m1 n();
-endmodule
-
-module m1;
-    parameter p = 2;
-    defparam m.n.p = 1;
-    initial $display(m.n.p);
-    generate
-        if (p == 1) begin : m
-            m2 n();
-        end
-    endgenerate
-endmodule
-
-module m2;
-    parameter p = 3;
-endmodule
-)");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-
-    auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 1);
-    CHECK(diags[0].code == diag::DefParamTargetChange);
-}
-
-TEST_CASE("defparam target outside allowed hierarchy") {
-    auto tree = SyntaxTree::fromText(R"(
-module flop(input a, b, output c);
-    parameter xyz = 0;
-endmodule
-
-module m(input [7:0] in, in1, output [7:0] out1);
-    genvar i;
-    generate
-        for (i = 0; i < 8; i = i + 1) begin : somename
-            flop my_flop(in[i], in1[i], out1[i]);
-            if (i != 7)
-                defparam somename[i+1].my_flop.xyz = i;
-        end
-    endgenerate
-endmodule
-)");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-
-    auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 1);
-    CHECK(diags[0].code == diag::DefparamBadHierarchy);
-}
-
-TEST_CASE("defparam target outside bind hierarchy") {
-    auto tree = SyntaxTree::fromText(R"(
-module m;
-    defparam n1.p = 2;
-endmodule
-
-module n;
-    parameter p = 1;
-endmodule
-
-module top;
-    bind top m m1();
-    n n1();
-endmodule
-)");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-
-    auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 1);
-    CHECK(diags[0].code == diag::DefparamBadHierarchy);
-}
-
-TEST_CASE("defparam with instance array ports") {
-    auto tree = SyntaxTree::fromText(R"(
-interface I;
-endinterface
-
-module n(I i);
-  defparam top.p = 1;
-endmodule
-
-module m;
-  I i[4]();
-  n n1(i[1]);
-endmodule
-
-module top;
-  if (1) begin: foo
-    I i();
-  end
-  m m1();
-  parameter p = 2;
-endmodule
-)");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-
-    auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 1);
-    CHECK(diags[0].code == diag::DefparamBadHierarchy);
-}
-
-TEST_CASE("defparam with cached target") {
-    auto tree = SyntaxTree::fromText(R"(
-module dut;
-   parameter int foo = 1234;
-endmodule
-
-module main;
-   dut dut0 ();
-   dut #(.foo(12345)) dut1 ();
-
-   defparam dut2.foo = 5678;
-   dut dut2 ();
-endmodule
-)");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-    NO_COMPILATION_ERRORS;
-
-    auto& root = compilation.getRoot().topInstances[0]->body;
-    REQUIRE(std::ranges::distance(root.members()) == 4);
-
-    auto checkChild = [&](int index, const std::string& name, int val) {
-        auto& inst = root.memberAt<InstanceSymbol>(index);
-        CHECK(inst.name == name);
-
-        auto& param = inst.body.memberAt<ParameterSymbol>(0);
-        CHECK(param.getValue().integer() == val);
-    };
-
-    checkChild(0, "dut0", 1234);
-    checkChild(1, "dut1", 12345);
-    checkChild(3, "dut2", 5678);
-}
-
-TEST_CASE("defparam in infinite recursion") {
-    auto tree = SyntaxTree::fromText(R"(
-module m;
-    m1 n();
-endmodule
-
-module m1;
-    parameter p = 2;
-    defparam p = 1;
-    if (p == 1) begin : f
-        m1 n();
-    end
-endmodule
-)");
-
-    CompilationOptions options;
-    options.maxInstanceDepth = 8;
-    options.maxDefParamSteps = 32;
-
-    Compilation compilation(options);
-    compilation.addSyntaxTree(tree);
-
-    auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 1);
-    CHECK(diags[0].code == diag::MaxInstanceDepthExceeded);
-}
-
-TEST_CASE("Multiple defparams for one target") {
-    auto tree = SyntaxTree::fromText(R"(
-module m;
-    parameter p = 1;
-endmodule
-
-module n;
-    defparam m1.p = 3;
-endmodule
-
-module top;
-    m m1();
-    n n1();
-    defparam m1.p = 2;
-endmodule
-)");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-
-    auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 1);
-    CHECK(diags[0].code == diag::DuplicateDefparam);
 }
 
 TEST_CASE("Invalid instance parents") {
@@ -1429,30 +870,6 @@ endmodule
     CHECK(diags[0].code == diag::WidthTruncate);
 }
 
-TEST_CASE("Parameter override regression GH #459") {
-    auto tree = SyntaxTree::fromText(R"(
-module tb();
-    dut #(.P1(1), .P2(1), .P3(1)) inst();
-endmodule
-
-module dut();
-    reg data;
-    function int getv();
-        return 1;
-    endfunction
-
-    parameter P0 = $bits(data);
-    parameter [P0:0] P1 = 0;
-    parameter [getv():0] P2 = 0;
-    parameter reg [$bits(data)-1:0] P3 = 0;
-endmodule
-)");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-    NO_COMPILATION_ERRORS;
-}
-
 TEST_CASE("Hierarchical names in constexpr option") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
@@ -1592,7 +1009,7 @@ endmodule
 
     auto& top = compilation.getRoot().lookupName<InstanceSymbol>("top").body;
     auto instances = top.membersOfType<InstanceSymbol>();
-    REQUIRE(std::ranges::equal(instances, std::array{"i1", "i3", "ff2"}, {}, &Symbol::name));
+    REQUIRE(std::ranges::equal(instances, std::array{"i1", "i3", "ff2", "ff1"}, {}, &Symbol::name));
 }
 
 TEST_CASE("Instance array size limits") {
@@ -1636,32 +1053,6 @@ endmodule
     REQUIRE(diags.size() == 2);
     CHECK(diags[0].code == diag::ExpectedVariableAssignment);
     CHECK(diags[1].code == diag::MaxInstanceDepthExceeded);
-}
-
-TEST_CASE("Implicit parameter typing in instances regress GH #635") {
-    auto tree = SyntaxTree::fromText(R"(
-module m;
-    localparam WIDE=32'h12345678;
-
-    n #(.P(WIDE[31:16])) n1 ();
-    n #(.P(WIDE[15:0]))  n2 ();
-endmodule
-
-module n #(parameter P=0) ();
-    int i = P[15:0];
-endmodule
-)");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-    NO_COMPILATION_ERRORS;
-
-    auto& m = compilation.getRoot().lookupName<InstanceSymbol>("m");
-    auto p = &m.body.lookupName<ParameterSymbol>("n1.P");
-    CHECK(p->getValue().integer() == 0x1234);
-
-    p = &m.body.lookupName<ParameterSymbol>("n2.P");
-    CHECK(p->getValue().integer() == 0x5678);
 }
 
 TEST_CASE("Top level program") {
@@ -1866,7 +1257,7 @@ endmodule
     CHECK(diags[2].code == diag::WrongBindTargetDef);
     CHECK(diags[3].code == diag::Redefinition);
     CHECK(diags[4].code == diag::UnknownModule);
-    CHECK(diags[5].code == diag::UndeclaredIdentifier);
+    CHECK(diags[5].code == diag::UnknownModule);
     CHECK(diags[6].code == diag::BindTargetPrimitive);
     CHECK(diags[7].code == diag::InvalidInstanceForParent);
 }
@@ -1895,29 +1286,6 @@ endmodule
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::BindUnderBind);
-}
-
-TEST_CASE("Param overrides within generates, arrays") {
-    auto tree = SyntaxTree::fromText(R"(
-module m;
-    parameter int foo = 0;
-    if (foo == 12) begin
-        $info("Hello");
-    end
-endmodule
-
-module top;
-    m m1[8:1][2:5]();
-    defparam m1[2][3].foo = 12;
-endmodule
-)");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-
-    auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 1);
-    CHECK(diags[0].code == diag::InfoTask);
 }
 
 TEST_CASE("More bind examples") {
@@ -2059,24 +1427,6 @@ endmodule
     REQUIRE(diags.size() == 2);
     CHECK(diags[0].code == diag::InfoTask);
     CHECK(diags[1].code == diag::InfoTask);
-}
-
-TEST_CASE("Hierarchical parameter lookup location regress") {
-    auto tree = SyntaxTree::fromText(R"(
-interface I;
-    parameter int P = 6;
-    function automatic int getP; return P; endfunction
-endinterface
-
-module m;
-    I i();
-    localparam int a = i.getP();
-endmodule
-)");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-    NO_COMPILATION_ERRORS;
 }
 
 TEST_CASE("Extern module missing impl errors") {
@@ -2260,6 +1610,298 @@ module m #(parameter int i);
 endmodule
 
 module top; endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Compilation def / package retrieval API") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    module n;
+    endmodule
+endmodule
+
+package p;
+endpackage
+
+primitive p2 (output reg a = 1'bx, input b, input c);
+    table 00:0:0; endtable
+endprimitive
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto defs = compilation.getDefinitions();
+    REQUIRE(defs.size() == 3);
+    CHECK(defs[0]->name == "m");
+    CHECK(defs[1]->name == "n");
+    CHECK(defs[2]->name == "p2");
+
+    auto pkgs = compilation.getPackages();
+    REQUIRE(pkgs.size() == 2);
+    CHECK(pkgs[0]->name == "p");
+    CHECK(pkgs[1]->name == "std");
+
+    auto cus = compilation.getCompilationUnits();
+    REQUIRE(cus.size() == 1);
+    CHECK(cus[0]->members().front().name == "p");
+}
+
+TEST_CASE("Nested modules multi-driven regress") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int foo;
+    module n;
+        assign foo = 1;
+    endmodule
+endmodule
+
+module top;
+    m m1();
+    m m2();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Nested modules with infinite recursion regress") {
+    auto tree = SyntaxTree::fromText(R"(
+ interface I;
+     I d;
+     module n;
+        g g;
+     endmodule
+ endinterface
+
+ module top;
+     I i();
+ endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    // Check that it doesn't crash.
+    compilation.getAllDiagnostics();
+}
+
+TEST_CASE("Bind corner case crash regress 1") {
+    auto tree = SyntaxTree::fromText(R"(
+module AL i,bind d,i AL,i
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    // Check that it doesn't crash.
+    compilation.getAllDiagnostics();
+}
+
+TEST_CASE("Bind corner case crash regress 2") {
+    auto tree = SyntaxTree::fromFileInMemory(R"(
+begin
+program p(a,endprogram bind p
+)",
+                                             SyntaxTree::getDefaultSourceManager());
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    // Check that it doesn't crash.
+    compilation.getAllDiagnostics();
+}
+
+TEST_CASE("Bind corner case crash regress 3") {
+    auto tree = SyntaxTree::fromText(R"(
+module n begin
+bind p program p(s
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    // Check that it doesn't crash.
+    compilation.getAllDiagnostics();
+}
+
+TEST_CASE("Nested modules with binds, parameterized, info task") {
+    auto tree = SyntaxTree::fromText(R"(
+module m #(parameter P);
+  module n;
+    int i;
+  endmodule
+  if (P == 2) begin
+  	bind n foo f();
+  end
+endmodule
+
+module foo;
+  $info("%m");
+endmodule
+
+module top;
+  m #(1) m1();
+  m #(2) m2();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::InfoTask);
+}
+
+TEST_CASE("Nested modules with binds, parameterized, explicit instantiation") {
+    auto tree = SyntaxTree::fromText(R"(
+module m #(parameter P);
+  module n;
+    int i;
+  endmodule
+  if (P == 2) begin
+    bind n foo f();
+  end
+  n n1();
+endmodule
+
+module foo;
+  $info("%m");
+endmodule
+
+module top;
+  m #(1) m1();
+  m #(2) m2();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    CHECK("\n" + report(diags) == R"(
+source:13:3: note: $info encountered: top.m2.n1.f
+  $info("%m");
+  ^
+)");
+}
+
+TEST_CASE("Virtual interface invalid due to defaram to target instance") {
+    auto tree = SyntaxTree::fromText(R"(
+interface J;
+    parameter q = 1;
+endinterface
+
+interface I;
+    J j();
+endinterface
+
+interface K;
+endinterface
+
+module m;
+    I i1();
+    I i2();
+
+    virtual I vi1 = i1;
+    virtual I vi2 = i2;
+
+    defparam i1.j.q = 2;
+    bind i2.j K k();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::VirtualIfaceDefparam);
+    CHECK(diags[1].code == diag::VirtualIfaceDefparam);
+}
+
+TEST_CASE("Spurious errors in uninstantiated blocks, GH #1028") {
+    auto tree = SyntaxTree::fromText(R"(
+typedef struct packed {
+  logic [7:0] r;
+  logic [7:0] g;
+  logic [7:0] b;
+} RGB;
+
+typedef struct packed {
+  logic [7:0] c;
+  logic [7:0] m;
+  logic [7:0] y;
+  logic [7:0] k;
+} CMYK;
+
+typedef logic [7:0] GrayScale;
+
+
+virtual class ColorFunctions #(
+  parameter type T_RGB  = RGB,
+  parameter type T_CMYK = CMYK
+);
+  static function GrayScale rgb_to_grayscale(input T_RGB color);
+    return (color.r * 3 + color.g * 6 + color.b * 1) / 10;
+  endfunction
+
+  static function GrayScale cmyk_to_grayscale(input T_CMYK color);
+    return ((8'hFF - color.c) + (8'hFF - color.m) + (8'hFF - color.y)) / 3 * (8'hFF - color.k) / 8'hFF;
+  endfunction
+endclass
+
+
+module GrayScaleModule #(
+  parameter COLOR_SPACE = "RGB",
+  type T = RGB
+) (
+  input T color,
+  output GrayScale grayscale
+);
+
+  if (COLOR_SPACE == "RGB") begin
+    assign grayscale = ColorFunctions#(.T_RGB(T))::rgb_to_grayscale(color);
+  end
+  else if (COLOR_SPACE == "CMYK") begin
+    assign grayscale = ColorFunctions#(.T_CMYK(T))::cmyk_to_grayscale(color);
+  end
+
+endmodule
+
+
+module Top (
+  input RGB rgb,
+  input CMYK cmyk,
+  output GrayScale grayscale_rgb,
+  output GrayScale grayscale_cmyk
+);
+
+  GrayScaleModule #(
+    .COLOR_SPACE("RGB"),
+    .T(RGB)
+  ) rgb_module (
+    .color(rgb),
+    .grayscale(grayscale_rgb)
+  );
+
+  GrayScaleModule #(
+    .COLOR_SPACE("CMYK"),
+    .T(CMYK)
+  ) cmyk_module (
+    .color(cmyk),
+    .grayscale(grayscale_cmyk)
+  );
+
+endmodule
 )");
 
     Compilation compilation;

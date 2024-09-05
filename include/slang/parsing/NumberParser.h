@@ -14,14 +14,16 @@
 #include "slang/numeric/SVInt.h"
 #include "slang/parsing/Token.h"
 #include "slang/syntax/SyntaxFacts.h"
+#include "slang/text/CharInfo.h"
 #include "slang/text/SourceLocation.h"
+#include "slang/util/LanguageVersion.h"
 #include "slang/util/SmallVector.h"
 
 namespace slang::parsing {
 
 class NumberParser {
 public:
-    NumberParser(Diagnostics& diagnostics, BumpAllocator& alloc);
+    NumberParser(Diagnostics& diagnostics, BumpAllocator& alloc, LanguageVersion languageVersion);
 
     struct IntResult {
         Token size;
@@ -39,13 +41,14 @@ public:
     template<typename TStream>
     IntResult parseSimpleInt(TStream& stream) {
         auto token = stream.expect(TokenKind::IntegerLiteral);
-        if (token.intValue() > INT32_MAX)
-            reportIntOverflow(token);
+        checkIntOverflow(token);
         return IntResult::simple(token);
     }
 
     template<typename TStream, bool RequireSameLine = false>
     IntResult parseInteger(TStream& stream) {
+        const bool isNegated = stream.getLastConsumed().kind == TokenKind::Minus;
+
         Token sizeToken;
         Token baseToken;
 
@@ -56,8 +59,7 @@ public:
         }
         else {
             auto createSimple = [&] {
-                if (token.intValue() > INT32_MAX)
-                    reportIntOverflow(token);
+                checkIntOverflow(token);
                 return IntResult::simple(token);
             };
 
@@ -115,7 +117,7 @@ public:
             next = stream.peek();
         } while (syntax::SyntaxFacts::isPossibleVectorDigit(next.kind) && next.trivia().empty());
 
-        return IntResult::vector(sizeToken, baseToken, finishValue(first, count == 1));
+        return IntResult::vector(sizeToken, baseToken, finishValue(first, count == 1, isNegated));
     }
 
     template<typename TStream>
@@ -133,13 +135,46 @@ public:
                     << real_t(std::numeric_limits<double>::max());
             }
         }
+
+        // Enforce extra rules about where digits and underscores
+        // are allowed to go in a real literal.
+        auto raw = literal.rawText();
+        auto len = raw.length();
+        for (size_t i = 0; i < len; i++) {
+            char c = raw[i];
+            size_t j = i + 1;
+
+            auto checkForDigit = [&](DiagCode missingCode) {
+                if (j == len || !isDecimalDigit(raw[j])) {
+                    auto code = (j < len && raw[j] == '_') ? diag::DigitsLeadingUnderscore
+                                                           : missingCode;
+                    addDiag(code, literal.location() + j);
+                }
+            };
+
+            if (c == '.') {
+                checkForDigit(diag::MissingFractionalDigits);
+            }
+            else if (c == 'e' || c == 'E') {
+                if (j < len && (raw[j] == '+' || raw[j] == '-'))
+                    j++;
+
+                checkForDigit(diag::MissingExponentDigits);
+            }
+        }
+
         return literal;
     }
 
 private:
+    void checkIntOverflow(Token token) {
+        if (languageVersion < LanguageVersion::v1800_2023 && token.intValue() > INT32_MAX)
+            reportIntOverflow(token);
+    }
+
     void startVector(Token baseToken, Token sizeToken);
     int append(Token token, bool isFirst);
-    Token finishValue(Token firstToken, bool singleToken);
+    Token finishValue(Token firstToken, bool singleToken, bool isNegated);
     void addDigit(logic_t digit, int maxValue);
     Diagnostic& addDiag(DiagCode code, SourceLocation location);
     IntResult reportMissingDigits(Token sizeToken, Token baseToken, Token first);
@@ -147,6 +182,7 @@ private:
 
     bitwidth_t sizeBits = 0;
     LiteralBase literalBase = LiteralBase::Binary;
+    LanguageVersion languageVersion;
     SourceLocation firstLocation;
     bool signFlag = false;
     bool hasUnknown = false;

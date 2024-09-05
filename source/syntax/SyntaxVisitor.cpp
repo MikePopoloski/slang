@@ -30,6 +30,7 @@ struct CloneVisitor {
 
         constexpr bool IsList = std::is_same_v<T, SyntaxListBase>;
         SmallVector<TokenOrSyntax, 8> listBuffer;
+        bool skipSeparator = false;
 
         if constexpr (IsList) {
             if (auto it = commits.listInsertAtFront.find(&node);
@@ -51,8 +52,16 @@ struct CloneVisitor {
         for (size_t i = 0; i < node.getChildCount(); i++) {
             auto child = node.childNode(i);
             if (!child) {
-                if constexpr (IsList)
-                    listBuffer.push_back(node.childToken(i));
+                if constexpr (IsList) {
+                    if (!skipSeparator)
+                        listBuffer.push_back(node.childToken(i).deepClone(alloc));
+                    skipSeparator = false;
+                }
+                else {
+                    if (node.getChild(i).isToken()) { // check since it might be null node
+                        cloned->setChild(i, node.childToken(i).deepClone(alloc));
+                    }
+                }
                 continue;
             }
 
@@ -79,6 +88,9 @@ struct CloneVisitor {
                         static SyntaxNode* emptyNode = nullptr;
                         cloned->setChild(i, emptyNode);
                     }
+                    else {
+                        skipSeparator = true; // remove separator related to removed node
+                    }
                 }
             }
             else {
@@ -102,6 +114,14 @@ struct CloneVisitor {
         }
 
         if constexpr (IsList) {
+            if (skipSeparator) {
+                // remove trailing sep if it wasn't there before transform
+                bool isClonedTrailing = !listBuffer.empty() && listBuffer.back().isToken();
+                bool isOriginalTrailing = node.getChildCount() &&
+                                          node.getChild(node.getChildCount() - 1).isToken();
+                if (isClonedTrailing && !isOriginalTrailing)
+                    listBuffer.pop_back();
+            }
             if (auto it = commits.listInsertAtBack.find(&node);
                 it != commits.listInsertAtBack.end()) {
 
@@ -139,8 +159,10 @@ std::shared_ptr<SyntaxTree> transformTree(BumpAllocator&& alloc,
     for (auto& t : tempTrees)
         alloc.steal(std::move(t->allocator()));
 
-    return std::make_shared<SyntaxTree>(root, tree->sourceManager(), std::move(alloc), library,
-                                        tree);
+    auto newTree = std::make_shared<SyntaxTree>(root, tree->sourceManager(), std::move(alloc),
+                                                library, tree);
+    alloc = BumpAllocator(); // creation of newTree invalidated our old alloc
+    return newTree;
 }
 
 } // namespace slang::syntax::detail

@@ -78,12 +78,25 @@ SLANG_ENUM(UniquePriorityCheck, UNIQUE_PRIORITY)
 #undef UNIQUE_PRIORITY
 // clang-format on
 
+/// Various flags that control statement construction.
 enum class StatementFlags {
+    /// No specific flags specified.
     None = 0,
+
+    /// Statement creation is happening inside a loop.
     InLoop = 1 << 0,
+
+    /// Statement creation is happening inside a fork-join block.
     InForkJoin = 1 << 1,
+
+    /// Statement creation is happening inside a randseq block.
     InRandSeq = 1 << 2,
+
+    /// Statement creation is happening inside a for loop.
     InForLoop = 1 << 3,
+
+    /// Statement creation has seen a timing-related error
+    /// (and so should not issue another).
     HasTimingError = 1 << 4
 };
 SLANG_BITMASK(StatementFlags, HasTimingError)
@@ -208,18 +221,27 @@ public:
     static std::span<const StatementBlockSymbol* const> createAndAddBlockItems(
         Scope& scope, const StatementSyntax& syntax, bool labelHandled);
 
+    /// @brief Casts this statement to the given concrete derived type.
+    ///
+    /// Asserts that the type is appropriate given this statement's kind.
     template<typename T>
     T& as() {
         SLANG_ASSERT(T::isKind(kind));
         return *static_cast<T*>(this);
     }
 
+    /// @brief Casts this statement to the given concrete derived type.
+    ///
+    /// Asserts that the type is appropriate given this statement's kind.
     template<typename T>
     const T& as() const {
         SLANG_ASSERT(T::isKind(kind));
         return *static_cast<const T*>(this);
     }
 
+    /// @brief Tries to cast this statement to the given concrete derived type.
+    ///
+    /// If the type is not appropriate given this statement's kind, returns nullptr.
     template<typename T>
     T* as_if() {
         if (!T::isKind(kind))
@@ -227,6 +249,9 @@ public:
         return static_cast<T*>(this);
     }
 
+    /// @brief Tries to cast this statement to the given concrete derived type.
+    ///
+    /// If the type is not appropriate given this statement's kind, returns nullptr.
     template<typename T>
     const T* as_if() const {
         if (!T::isKind(kind))
@@ -234,6 +259,7 @@ public:
         return static_cast<const T*>(this);
     }
 
+    /// Visits this statement's concrete derived type via the provided visitor object.
     template<typename TVisitor, typename... Args>
     decltype(auto) visit(TVisitor&& visitor, Args&&... args) const;
 
@@ -245,8 +271,10 @@ protected:
                                       SmallVectorBase<const Statement*>& results);
 };
 
-/// Represents an invalid statement, which is usually generated and inserted
-/// into a statement list due to violation of language semantics or type checking.
+/// @brief Represents an invalid statement
+///
+/// Usually generated and inserted into a statement tree due
+/// to violation of language semantics or type checking.
 class SLANG_EXPORT InvalidStatement : public Statement {
 public:
     /// A wrapped sub-statement that is considered invalid.
@@ -280,6 +308,7 @@ public:
 /// Represents a list of statements.
 class SLANG_EXPORT StatementList : public Statement {
 public:
+    /// The list of child statements.
     std::span<const Statement* const> list;
 
     StatementList(std::span<const Statement* const> list, SourceRange sourceRange) :
@@ -303,8 +332,13 @@ public:
 /// Represents a sequential or parallel block statement.
 class SLANG_EXPORT BlockStatement : public Statement {
 public:
+    /// The block body.
     const Statement& body;
+
+    /// An optional symbol associated with the block.
     const StatementBlockSymbol* blockSymbol = nullptr;
+
+    /// The kind of statement block.
     StatementBlockKind blockKind;
 
     BlockStatement(const Statement& body, StatementBlockKind blockKind, SourceRange sourceRange) :
@@ -329,8 +363,10 @@ public:
     }
 };
 
+/// Represents a return statement.
 class SLANG_EXPORT ReturnStatement : public Statement {
 public:
+    /// The return value expression, or nullptr if there is none.
     const Expression* expr;
 
     ReturnStatement(const Expression* expr, SourceRange sourceRange) :
@@ -353,6 +389,7 @@ public:
     }
 };
 
+/// Represents a break statement.
 class SLANG_EXPORT BreakStatement : public Statement {
 public:
     explicit BreakStatement(SourceRange sourceRange) :
@@ -369,6 +406,7 @@ public:
     static bool isKind(StatementKind kind) { return kind == StatementKind::Break; }
 };
 
+/// Represents a continue statement.
 class SLANG_EXPORT ContinueStatement : public Statement {
 public:
     explicit ContinueStatement(SourceRange sourceRange) :
@@ -385,9 +423,13 @@ public:
     static bool isKind(StatementKind kind) { return kind == StatementKind::Continue; }
 };
 
+/// Represents a disable statement.
 class SLANG_EXPORT DisableStatement : public Statement {
 public:
+    /// The target of the disable.
     const Symbol& target;
+
+    /// True if the target name was a hierarchical name.
     bool isHierarchical;
 
     DisableStatement(const Symbol& target, bool isHierarchical, SourceRange sourceRange) :
@@ -405,8 +447,10 @@ public:
     static bool isKind(StatementKind kind) { return kind == StatementKind::Disable; }
 };
 
+/// Represents a variable declaration in a statement context.
 class SLANG_EXPORT VariableDeclStatement : public Statement {
 public:
+    /// The variable that was declared.
     const VariableSymbol& symbol;
 
     VariableDeclStatement(const VariableSymbol& symbol, SourceRange sourceRange) :
@@ -419,23 +463,35 @@ public:
     static bool isKind(StatementKind kind) { return kind == StatementKind::VariableDeclaration; }
 };
 
+/// Represents a conditional statement.
 class SLANG_EXPORT ConditionalStatement : public Statement {
 public:
+    /// A condition.
     struct Condition {
+        /// The condition expression.
         not_null<const Expression*> expr;
+
+        /// An optional pattern associated with the condition.
         const Pattern* pattern = nullptr;
     };
 
+    /// The list of conditions that control the statement.
     std::span<const Condition> conditions;
+
+    /// The body for if-true evaluation.
     const Statement& ifTrue;
+
+    /// The optional body for else-false evaluation.
     const Statement* ifFalse;
+
+    /// An optional unique or priority check that should be applied to the condition.
     UniquePriorityCheck check;
 
     ConditionalStatement(std::span<const Condition> conditions, UniquePriorityCheck check,
                          const Statement& ifTrue, const Statement* ifFalse,
                          SourceRange sourceRange) :
-        Statement(StatementKind::Conditional, sourceRange),
-        conditions(conditions), ifTrue(ifTrue), ifFalse(ifFalse), check(check) {}
+        Statement(StatementKind::Conditional, sourceRange), conditions(conditions), ifTrue(ifTrue),
+        ifFalse(ifFalse), check(check) {}
 
     EvalResult evalImpl(EvalContext& context) const;
 
@@ -464,24 +520,38 @@ public:
     }
 };
 
+/// Represents a case statement.
 class SLANG_EXPORT CaseStatement : public Statement {
 public:
+    /// A group of items in a case statement.
     struct ItemGroup {
+        /// A list of expression that can match this group.
         std::span<const Expression* const> expressions;
+
+        /// The group statement body.
         not_null<const Statement*> stmt;
     };
 
+    /// The controlling case condition.
     const Expression& expr;
+
+    /// A list of items to match against.
     std::span<ItemGroup const> items;
+
+    /// An optional default case item that applies if no items match.
     const Statement* defaultCase = nullptr;
+
+    /// The kind of case condition to evaluate.
     CaseStatementCondition condition;
+
+    /// An optional unique or priority check that should be applied to the condition.
     UniquePriorityCheck check;
 
     CaseStatement(CaseStatementCondition condition, UniquePriorityCheck check,
                   const Expression& expr, std::span<ItemGroup const> items,
                   const Statement* defaultCase, SourceRange sourceRange) :
-        Statement(StatementKind::Case, sourceRange),
-        expr(expr), items(items), defaultCase(defaultCase), condition(condition), check(check) {}
+        Statement(StatementKind::Case, sourceRange), expr(expr), items(items),
+        defaultCase(defaultCase), condition(condition), check(check) {}
 
     EvalResult evalImpl(EvalContext& context) const;
 
@@ -511,25 +581,41 @@ public:
     }
 };
 
+/// Represents a pattern case statement.
 class SLANG_EXPORT PatternCaseStatement : public Statement {
 public:
+    /// A group of items in a pattern case statement.
     struct ItemGroup {
+        /// The pattern that controls whether the group matches.
         not_null<const Pattern*> pattern;
+
+        /// An optional filter condition.
         const Expression* filter;
+
+        /// The statement to execute if a match is found.
         not_null<const Statement*> stmt;
     };
 
+    /// The controlling case condition.
     const Expression& expr;
+
+    /// A list of items to match against.
     std::span<ItemGroup const> items;
+
+    /// An optional default case item that applies if no items match.
     const Statement* defaultCase = nullptr;
+
+    /// The kind of case condition to evaluate.
     CaseStatementCondition condition;
+
+    /// An optional unique or priority check that should be applied to the condition.
     UniquePriorityCheck check;
 
     PatternCaseStatement(CaseStatementCondition condition, UniquePriorityCheck check,
                          const Expression& expr, std::span<ItemGroup const> items,
                          const Statement* defaultCase, SourceRange sourceRange) :
-        Statement(StatementKind::PatternCase, sourceRange),
-        expr(expr), items(items), defaultCase(defaultCase), condition(condition), check(check) {}
+        Statement(StatementKind::PatternCase, sourceRange), expr(expr), items(items),
+        defaultCase(defaultCase), condition(condition), check(check) {}
 
     EvalResult evalImpl(EvalContext& context) const;
 
@@ -560,19 +646,29 @@ public:
     }
 };
 
+/// Represents a `for` loop statement.
 class SLANG_EXPORT ForLoopStatement : public Statement {
 public:
+    /// A list of variable initializers (mutually exclusive with @a loopVars )
     std::span<const Expression* const> initializers;
+
+    /// A list of variables declared in the for loop (mutually exclusive with @a initializers )
     std::span<const VariableSymbol* const> loopVars;
+
+    /// An optional expression that controls when the loop stops.
     const Expression* stopExpr;
+
+    /// A list of steps to apply on each iteration.
     std::span<const Expression* const> steps;
+
+    /// The body of the loop.
     const Statement& body;
 
     ForLoopStatement(std::span<const Expression* const> initializers, const Expression* stopExpr,
                      std::span<const Expression* const> steps, const Statement& body,
                      SourceRange sourceRange) :
-        Statement(StatementKind::ForLoop, sourceRange),
-        initializers(initializers), stopExpr(stopExpr), steps(steps), body(body) {}
+        Statement(StatementKind::ForLoop, sourceRange), initializers(initializers),
+        stopExpr(stopExpr), steps(steps), body(body) {}
 
     EvalResult evalImpl(EvalContext& context) const;
 
@@ -600,9 +696,13 @@ public:
     }
 };
 
+/// Represents a `repeat` loop statement.
 class SLANG_EXPORT RepeatLoopStatement : public Statement {
 public:
+    /// An expression that controls the number of times to repeat the loop.
     const Expression& count;
+
+    /// The body of the loop.
     const Statement& body;
 
     RepeatLoopStatement(const Expression& count, const Statement& body, SourceRange sourceRange) :
@@ -629,6 +729,7 @@ public:
     }
 };
 
+/// Represents a `foreach` loop statement.
 class SLANG_EXPORT ForeachLoopStatement : public Statement {
 public:
     /// Describes one dimension that will be iterated by the loop.
@@ -642,14 +743,19 @@ public:
         const IteratorSymbol* loopVar = nullptr;
     };
 
+    /// An expression indicating the array to iterate.
     const Expression& arrayRef;
+
+    /// A list of dimensions iterated by the loop.
     std::span<const LoopDim> loopDims;
+
+    /// The body of the loop.
     const Statement& body;
 
     ForeachLoopStatement(const Expression& arrayRef, std::span<const LoopDim> loopDims,
                          const Statement& body, SourceRange sourceRange) :
-        Statement(StatementKind::ForeachLoop, sourceRange),
-        arrayRef(arrayRef), loopDims(loopDims), body(body) {}
+        Statement(StatementKind::ForeachLoop, sourceRange), arrayRef(arrayRef), loopDims(loopDims),
+        body(body) {}
 
     EvalResult evalImpl(EvalContext& context) const;
 
@@ -679,9 +785,13 @@ private:
                              std::span<const LoopDim> loopDims) const;
 };
 
+/// Represents a `while` loop statement.
 class SLANG_EXPORT WhileLoopStatement : public Statement {
 public:
+    /// A condition that controls whether the loop continues to execute.
     const Expression& cond;
+
+    /// The body of the loop.
     const Statement& body;
 
     WhileLoopStatement(const Expression& cond, const Statement& body, SourceRange sourceRange) :
@@ -708,9 +818,13 @@ public:
     }
 };
 
+/// Represents a `do` `while` loop statement.
 class SLANG_EXPORT DoWhileLoopStatement : public Statement {
 public:
+    /// A condition that controls whether the loop continues to execute.
     const Expression& cond;
+
+    /// The body of the loop.
     const Statement& body;
 
     DoWhileLoopStatement(const Expression& cond, const Statement& body, SourceRange sourceRange) :
@@ -737,8 +851,10 @@ public:
     }
 };
 
+/// Represents a `forever` loop statement.
 class SLANG_EXPORT ForeverLoopStatement : public Statement {
 public:
+    /// The body of the loop.
     const Statement& body;
 
     ForeverLoopStatement(const Statement& body, SourceRange sourceRange) :
@@ -760,8 +876,10 @@ public:
     }
 };
 
+/// Represents an expression that is executed as a standalone statement.
 class SLANG_EXPORT ExpressionStatement : public Statement {
 public:
+    /// The expression to execute.
     const Expression& expr;
 
     ExpressionStatement(const Expression& expr, SourceRange sourceRange) :
@@ -787,9 +905,13 @@ public:
     }
 };
 
+/// Represents a statement that has an associated timing control.
 class SLANG_EXPORT TimedStatement : public Statement {
 public:
+    /// The timing that controls the statement.
     const TimingControl& timing;
+
+    /// The statement.
     const Statement& stmt;
 
     TimedStatement(const TimingControl& timing, const Statement& stmt, SourceRange sourceRange) :
@@ -816,21 +938,32 @@ public:
     }
 };
 
+/// Represents an immediate assertion statement.
 class SLANG_EXPORT ImmediateAssertionStatement : public Statement {
 public:
+    /// The assertion condition.
     const Expression& cond;
+
+    /// An optional action to take if the assertion passes.
     const Statement* ifTrue;
+
+    /// An optional action to take if the assertion fails.
     const Statement* ifFalse;
+
+    /// The kind of assertion.
     AssertionKind assertionKind;
+
+    /// True if the assertion is a "deferred" immediate assertion.
     bool isDeferred;
+
+    /// True if the assertion is declared "final".
     bool isFinal;
 
     ImmediateAssertionStatement(AssertionKind assertionKind, const Expression& cond,
                                 const Statement* ifTrue, const Statement* ifFalse, bool isDeferred,
                                 bool isFinal, SourceRange sourceRange) :
-        Statement(StatementKind::ImmediateAssertion, sourceRange),
-        cond(cond), ifTrue(ifTrue), ifFalse(ifFalse), assertionKind(assertionKind),
-        isDeferred(isDeferred), isFinal(isFinal) {}
+        Statement(StatementKind::ImmediateAssertion, sourceRange), cond(cond), ifTrue(ifTrue),
+        ifFalse(ifFalse), assertionKind(assertionKind), isDeferred(isDeferred), isFinal(isFinal) {}
 
     EvalResult evalImpl(EvalContext& context) const;
 
@@ -856,19 +989,26 @@ public:
     }
 };
 
+/// Represents a concurrent assertion statement.
 class SLANG_EXPORT ConcurrentAssertionStatement : public Statement {
 public:
+    /// The assertion body.
     const AssertionExpr& propertySpec;
+
+    /// An optional action to take if the assertion passes.
     const Statement* ifTrue;
+
+    /// An optional action to take if the assertion fails.
     const Statement* ifFalse;
+
+    /// The kind of assertion.
     AssertionKind assertionKind;
 
     ConcurrentAssertionStatement(AssertionKind assertionKind, const AssertionExpr& propertySpec,
                                  const Statement* ifTrue, const Statement* ifFalse,
                                  SourceRange sourceRange) :
-        Statement(StatementKind::ConcurrentAssertion, sourceRange),
-        propertySpec(propertySpec), ifTrue(ifTrue), ifFalse(ifFalse), assertionKind(assertionKind) {
-    }
+        Statement(StatementKind::ConcurrentAssertion, sourceRange), propertySpec(propertySpec),
+        ifTrue(ifTrue), ifFalse(ifFalse), assertionKind(assertionKind) {}
 
     EvalResult evalImpl(EvalContext& context) const;
 
@@ -894,6 +1034,7 @@ public:
     }
 };
 
+/// Represents a `disable fork` statement.
 class SLANG_EXPORT DisableForkStatement : public Statement {
 public:
     explicit DisableForkStatement(SourceRange sourceRange) :
@@ -909,9 +1050,13 @@ public:
     static bool isKind(StatementKind kind) { return kind == StatementKind::DisableFork; }
 };
 
+/// Represents a `wait` statement.
 class SLANG_EXPORT WaitStatement : public Statement {
 public:
+    /// The wait condition.
     const Expression& cond;
+
+    /// The statement to execute after the condition passes.
     const Statement& stmt;
 
     WaitStatement(const Expression& cond, const Statement& stmt, SourceRange sourceRange) :
@@ -938,6 +1083,7 @@ public:
     }
 };
 
+/// Represents a `wait fork` statement.
 class SLANG_EXPORT WaitForkStatement : public Statement {
 public:
     explicit WaitForkStatement(SourceRange sourceRange) :
@@ -946,23 +1092,30 @@ public:
     EvalResult evalImpl(EvalContext& context) const;
 
     static Statement& fromSyntax(Compilation& compilation,
-                                 const syntax::WaitForkStatementSyntax& syntax);
+                                 const syntax::WaitForkStatementSyntax& syntax,
+                                 const ASTContext& context);
 
     void serializeTo(const ASTSerializer&) const {}
 
     static bool isKind(StatementKind kind) { return kind == StatementKind::WaitFork; }
 };
 
+/// Represents a `wait_order` statement.
 class SLANG_EXPORT WaitOrderStatement : public Statement {
 public:
+    /// A list of expressions denoting the events on which to wait, in order.
     std::span<const Expression* const> events;
+
+    /// An optional statement to execute if the events all trigger in order.
     const Statement* ifTrue;
+
+    /// An optional statement to execute if any of the events did not trigger in order.
     const Statement* ifFalse;
 
     WaitOrderStatement(std::span<const Expression* const> events, const Statement* ifTrue,
                        const Statement* ifFalse, SourceRange sourceRange) :
-        Statement(StatementKind::WaitOrder, sourceRange),
-        events(events), ifTrue(ifTrue), ifFalse(ifFalse) {}
+        Statement(StatementKind::WaitOrder, sourceRange), events(events), ifTrue(ifTrue),
+        ifFalse(ifFalse) {}
 
     EvalResult evalImpl(EvalContext& context) const;
 
@@ -989,16 +1142,22 @@ public:
     }
 };
 
+/// Represents an event triggering statement.
 class SLANG_EXPORT EventTriggerStatement : public Statement {
 public:
+    /// An expression denoting the target event to trigger.
     const Expression& target;
+
+    /// An optional timing control delaying the triggering.
     const TimingControl* timing;
+
+    /// True if the event trigger is a non-blocking operation, and false otherwise.
     bool isNonBlocking;
 
     EventTriggerStatement(const Expression& target, const TimingControl* timing, bool isNonBlocking,
                           SourceRange sourceRange) :
-        Statement(StatementKind::EventTrigger, sourceRange),
-        target(target), timing(timing), isNonBlocking(isNonBlocking) {}
+        Statement(StatementKind::EventTrigger, sourceRange), target(target), timing(timing),
+        isNonBlocking(isNonBlocking) {}
 
     EvalResult evalImpl(EvalContext& context) const;
 
@@ -1018,9 +1177,13 @@ public:
     }
 };
 
+/// Represents a procedural `assign` statement.
 class SLANG_EXPORT ProceduralAssignStatement : public Statement {
 public:
+    /// The assignment expression.
     const Expression& assignment;
+
+    /// True if this is a `force` statement and false if it's an `assign` statement.
     bool isForce;
 
     ProceduralAssignStatement(const Expression& assignment, bool isForce, SourceRange sourceRange) :
@@ -1043,9 +1206,13 @@ public:
     }
 };
 
+/// Represents a procedural `deassign` statement.
 class SLANG_EXPORT ProceduralDeassignStatement : public Statement {
 public:
+    /// The target lvalue to deassign.
     const Expression& lvalue;
+
+    /// True if this is a `release` statement and false if it's a `deassign` statement.
     bool isRelease;
 
     ProceduralDeassignStatement(const Expression& lvalue, bool isRelease, SourceRange sourceRange) :
@@ -1068,13 +1235,19 @@ public:
     }
 };
 
+/// Represents a `randcase` statement.
 class SLANG_EXPORT RandCaseStatement : public Statement {
 public:
+    /// An item in the randcase list.
     struct Item {
+        /// The expression to match against.
         not_null<const Expression*> expr;
+
+        /// The statement to execute upon a match.
         not_null<const Statement*> stmt;
     };
 
+    /// The list of items to pick from.
     std::span<Item const> items;
 
     RandCaseStatement(std::span<Item const> items, SourceRange sourceRange) :
@@ -1103,8 +1276,11 @@ public:
     }
 };
 
+/// Represents a `randsequence` statement.
 class SLANG_EXPORT RandSequenceStatement : public Statement {
 public:
+    /// A pointer to the first production that starts the random sequence,
+    /// or nullptr if the sequence is empty.
     const RandSeqProductionSymbol* firstProduction;
 
     RandSequenceStatement(const RandSeqProductionSymbol* firstProduction, SourceRange sourceRange) :
@@ -1121,8 +1297,10 @@ public:
     static bool isKind(StatementKind kind) { return kind == StatementKind::RandSequence; }
 };
 
+/// Represents a procedural checker instantiation statement.
 class SLANG_EXPORT ProceduralCheckerStatement : public Statement {
 public:
+    /// A list of checkers to instantiate.
     std::span<const Symbol* const> instances;
 
     ProceduralCheckerStatement(std::span<const Symbol* const> instances, SourceRange sourceRange) :

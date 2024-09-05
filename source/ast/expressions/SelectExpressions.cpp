@@ -33,7 +33,11 @@ static const Type& getIndexedType(Compilation& compilation, const ASTContext& co
                                   SourceRange valueRange, bool isRangeSelect) {
     const Type& ct = valueType.getCanonicalType();
     if (ct.isArray()) {
-        return *ct.getArrayElementType();
+        auto& elemType = *ct.getArrayElementType();
+        if (valueType.kind == SymbolKind::PackedArrayType && valueType.isSigned())
+            return elemType.makeUnsigned(compilation);
+
+        return elemType;
     }
     else if (ct.kind == SymbolKind::StringType && !isRangeSelect) {
         return compilation.getByteType();
@@ -87,13 +91,20 @@ bool requireLValueHelper(const T& expr, const ASTContext& context, SourceLocatio
     }
 
     if (ValueExpressionBase::isKind(val.kind)) {
-        auto sym = val.getSymbolReference();
-        if (sym && sym->kind == SymbolKind::Net) {
-            auto& net = sym->template as<NetSymbol>();
-            if (net.netType.netKind == NetType::UserDefined) {
-                context.addDiag(diag::UserDefPartialDriver, expr.sourceRange) << net.name;
+        auto& sym = val.template as<ValueExpressionBase>().symbol;
+        if (sym.kind == SymbolKind::Net) {
+            if (sym.template as<NetSymbol>().netType.netKind == NetType::UserDefined) {
+                context.addDiag(diag::UserDefPartialDriver, expr.sourceRange) << sym.name;
                 return false;
             }
+        }
+
+        if (flags.has(AssignFlags::NonBlocking) && sym.getType().isDynamicallySizedArray()) {
+            if (!location)
+                location = expr.sourceRange.start();
+
+            context.addDiag(diag::NonblockingDynamicAssign, location) << expr.sourceRange;
+            return false;
         }
     }
 
@@ -144,10 +155,8 @@ Expression& ElementSelectExpression::fromSyntax(Compilation& compilation, Expres
     const Expression* selector = nullptr;
     if (valueType.isAssociativeArray()) {
         auto indexType = valueType.getAssociativeIndexType();
-        if (indexType) {
-            selector = &bindRValue(*indexType, syntax, syntax.getFirstToken().location(),
-                                   selectorCtx);
-        }
+        if (indexType)
+            selector = &bindRValue(*indexType, syntax, {}, selectorCtx);
     }
 
     if (!selector) {
@@ -410,6 +419,15 @@ void ElementSelectExpression::serializeTo(ASTSerializer& serializer) const {
     serializer.write("selector", selector());
 }
 
+template<typename TContext>
+static bool checkRangeOverflow(ConstantRange range, TContext& context, SourceRange sourceRange) {
+    if (range.fullWidth() > INT32_MAX) {
+        context.addDiag(diag::RangeWidthOverflow, sourceRange);
+        return true;
+    }
+    return false;
+}
+
 Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expression& value,
                                               const RangeSelectSyntax& syntax,
                                               SourceRange fullRange, const ASTContext& context) {
@@ -521,6 +539,9 @@ Expression& RangeSelectExpression::fromSyntax(Compilation& compilation, Expressi
                 return badExpr(compilation, result);
 
             selectionRange = {*lv, *rv};
+            if (checkRangeOverflow(selectionRange, context, errorRange))
+                return badExpr(compilation, result);
+
             if (selectionRange.isLittleEndian() != valueRange.isLittleEndian() &&
                 selectionRange.width() > 1) {
                 auto& diag = context.addDiag(diag::SelectEndianMismatch, errorRange);
@@ -733,6 +754,8 @@ std::optional<ConstantRange> RangeSelectExpression::evalRange(EvalContext& conte
     ConstantRange result;
     if (selectionKind == RangeSelectionKind::Simple) {
         result = {*li, *ri};
+        if (checkRangeOverflow(result, context, sourceRange))
+            return std::nullopt;
     }
     else {
         bool isLittleEndian = false;
@@ -841,17 +864,18 @@ static Expression* tryBindSpecialMethod(Compilation& compilation, const Expressi
             return nullptr;
 
         return CallExpression::fromBuiltInMethod(compilation, SymbolKind::ClassProperty, expr,
-                                                 selector, invocation, withClause, context);
+                                                 selector.name, invocation, withClause, context);
     }
 
-    return CallExpression::fromBuiltInMethod(compilation, sym->kind, expr, selector, invocation,
-                                             withClause, context);
+    return CallExpression::fromBuiltInMethod(compilation, sym->kind, expr, selector.name,
+                                             invocation, withClause, context);
 }
 
 Expression& MemberAccessExpression::fromSelector(
     Compilation& compilation, Expression& expr, const LookupResult::MemberSelector& selector,
     const InvocationExpressionSyntax* invocation,
-    const ArrayOrRandomizeMethodExpressionSyntax* withClause, const ASTContext& context) {
+    const ArrayOrRandomizeMethodExpressionSyntax* withClause, const ASTContext& context,
+    bool isFromLookupChain) {
 
     // If the selector name is invalid just give up early.
     if (selector.name.empty())
@@ -863,13 +887,24 @@ Expression& MemberAccessExpression::fromSelector(
     // Special cases for built-in iterator methods that don't cleanly fit the general
     // mold of looking up members via the type of the expression.
     if (expr.kind == ExpressionKind::NamedValue) {
-        auto symKind = expr.as<NamedValueExpression>().symbol.kind;
+        auto& sym = expr.as<NamedValueExpression>().symbol;
+        auto symKind = sym.kind;
         if (symKind == SymbolKind::Iterator) {
-            auto result = CallExpression::fromBuiltInMethod(compilation, symKind, expr, selector,
-                                                            invocation, withClause, context);
-            if (result)
-                return *result;
+            auto& iter = sym.as<IteratorSymbol>();
+            if (iter.indexMethodName == selector.name) {
+                auto result = CallExpression::fromBuiltInMethod(compilation, symKind, expr,
+                                                                "index"sv, invocation, withClause,
+                                                                context);
+                if (result)
+                    return *result;
+            }
         }
+    }
+    else if (expr.kind == ExpressionKind::Call && isFromLookupChain) {
+        // It's an error to dot select from a call expression that
+        // doesn't include parentheses, which it doesn't iff
+        // isFromLookupChain is set.
+        context.addDiag(diag::ChainedMethodParens, range);
     }
 
     auto errorIfNotProcedural = [&] {
@@ -906,7 +941,7 @@ Expression& MemberAccessExpression::fromSelector(
             break;
         }
         case SymbolKind::CovergroupType:
-            scope = &type.as<CovergroupType>().body;
+            scope = &type.as<CovergroupType>().getBody();
             break;
         case SymbolKind::EnumType:
         case SymbolKind::StringType:
@@ -1039,7 +1074,9 @@ Expression& MemberAccessExpression::fromSyntax(
     selector.dotLocation = syntax.dot.location();
     selector.nameRange = syntax.name.range();
 
-    auto& result = fromSelector(compilation, lhs, selector, invocation, withClause, context);
+    auto& result = fromSelector(compilation, lhs, selector, invocation, withClause, context,
+                                /* isFromLookupChain */ false);
+
     if (result.kind != ExpressionKind::Call && !result.bad()) {
         if (invocation) {
             auto& diag = context.addDiag(diag::ExpressionNotCallable, invocation->sourceRange());

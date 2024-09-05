@@ -300,9 +300,11 @@ def createdocs(outDir, inpath, slangBin, diags, groups):
         elif line.startswith("-W"):
             if curropt:
                 exampleMap[curropt[0]] = curropt
-            curropt = [line[2:], "", "", ""]
+            curropt = [line[2:], "", "", "", ""]
         elif line.startswith("```"):
             inexample = True
+        elif line.startswith("@options "):
+            curropt[4] = line[9:]
         else:
             if curropt[1]:
                 curropt[1] += " "
@@ -327,6 +329,9 @@ def createdocs(outDir, inpath, slangBin, diags, groups):
             "--color-diagnostics",
             testPath,
         ]
+
+        if v[4]:
+            args.extend(v[4].split())
 
         result = subprocess.run(
             args, encoding="utf-8", stdout=subprocess.PIPE, stderr=subprocess.STDOUT

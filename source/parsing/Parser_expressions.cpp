@@ -63,8 +63,12 @@ ExpressionSyntax& Parser::parseSubExpression(bitmask<ExpressionOptions> options,
         auto member = expect(TokenKind::Identifier);
 
         ExpressionSyntax* expr = nullptr;
-        if (isPossibleExpression(peek().kind))
-            expr = &parseExpression();
+        if (isPossibleExpression(peek().kind)) {
+            // This is not allowed to be a binary expression,
+            // so use a high precedence to avoid taking any
+            // binary operators that may trail our tag expr.
+            expr = &parseSubExpression(ExpressionOptions::None, INT_MAX);
+        }
 
         return factory.taggedUnionExpression(tagged, member, expr);
     }
@@ -102,8 +106,9 @@ ExpressionSyntax& Parser::parseBinaryExpression(ExpressionSyntax* left,
         // either a binary operator, or we're done
         current = peek();
         auto opKind = getBinaryExpression(current.kind);
-        if (opKind == SyntaxKind::Unknown)
+        if (opKind == SyntaxKind::Unknown) {
             break;
+        }
         else if (opKind == SyntaxKind::LogicalImplicationExpression &&
                  options.has(ExpressionOptions::ConstraintContext)) {
             // the implication operator in constraint blocks is special, we don't handle it here
@@ -114,6 +119,11 @@ ExpressionSyntax& Parser::parseBinaryExpression(ExpressionSyntax* left,
                  options.has(ExpressionOptions::BinsSelectContext)) {
             // The && and || operators in a bins select expression are part of the bins select
             // and not part of this nested sub expression.
+            break;
+        }
+        else if (opKind == SyntaxKind::MultiplyExpression &&
+                 peek(1).kind == TokenKind::CloseParenthesis && peek(1).trivia().empty()) {
+            // This is an end-of-attribute token, not a multiply.
             break;
         }
         else if (opKind == SyntaxKind::LessThanEqualExpression &&
@@ -311,33 +321,45 @@ void Parser::handleExponentSplit(Token token, size_t offset) {
 
 ExpressionSyntax& Parser::parseInsideExpression(ExpressionSyntax& expr) {
     auto inside = expect(TokenKind::InsideKeyword);
-    auto& list = parseOpenRangeList();
+    auto& list = parseRangeList();
     return factory.insideExpression(expr, inside, list);
 }
 
-OpenRangeListSyntax& Parser::parseOpenRangeList() {
+RangeListSyntax& Parser::parseRangeList() {
     Token openBrace;
     Token closeBrace;
     std::span<TokenOrSyntax> list;
 
-    parseList<isPossibleOpenRangeElement, isEndOfBracedList>(
+    parseList<isPossibleValueRangeElement, isEndOfBracedList>(
         TokenKind::OpenBrace, TokenKind::CloseBrace, TokenKind::Comma, openBrace, list, closeBrace,
-        RequireItems::True, diag::ExpectedOpenRangeElement,
-        [this] { return &parseOpenRangeElement(); });
+        RequireItems::True, diag::ExpectedValueRangeElement,
+        [this] { return &parseValueRangeElement(); });
 
-    return factory.openRangeList(openBrace, list, closeBrace);
+    return factory.rangeList(openBrace, list, closeBrace);
 }
 
-ExpressionSyntax& Parser::parseOpenRangeElement(bitmask<ExpressionOptions> options) {
+ExpressionSyntax& Parser::parseValueRangeElement(bitmask<ExpressionOptions> options) {
     if (!peek(TokenKind::OpenBracket))
         return parseSubExpression(options, 0);
 
     auto openBracket = consume();
     auto& left = parseExpression();
-    auto colon = expect(TokenKind::Colon);
+
+    Token op;
+    if (peek(TokenKind::PlusDivMinus) || peek(TokenKind::PlusModMinus)) {
+        op = consume();
+        if (parseOptions.languageVersion < LanguageVersion::v1800_2023) {
+            addDiag(diag::WrongLanguageVersion, op.range())
+                << toString(parseOptions.languageVersion);
+        }
+    }
+    else {
+        op = expect(TokenKind::Colon);
+    }
+
     auto& right = parseExpression();
     auto closeBracket = expect(TokenKind::CloseBracket);
-    return factory.openRangeExpression(openBracket, left, colon, right, closeBracket);
+    return factory.valueRangeExpression(openBracket, left, op, right, closeBracket);
 }
 
 ConcatenationExpressionSyntax& Parser::parseConcatenation(Token openBrace,
@@ -564,16 +586,50 @@ ExpressionSyntax& Parser::parsePostfixExpression(ExpressionSyntax& lhs,
                 break;
             case TokenKind::Dot: {
                 auto dot = consume();
-                auto name = expect(TokenKind::Identifier);
+
+                Token name;
+                switch (peek().kind) {
+                    case TokenKind::UniqueKeyword:
+                    case TokenKind::AndKeyword:
+                    case TokenKind::OrKeyword:
+                    case TokenKind::XorKeyword:
+                        name = consume();
+                        break;
+                    default:
+                        name = expect(TokenKind::Identifier);
+                        break;
+                }
+
                 expr = &factory.memberAccessExpression(*expr, dot, name);
                 break;
             }
             case TokenKind::OpenParenthesis: {
-                if (isLiteral())
-                    return *expr;
+                if (isStartOfAttrs(0)) {
+                    auto attributes = parseAttributes();
+                    switch (peek().kind) {
+                        case TokenKind::DoublePlus:
+                        case TokenKind::DoubleMinus: {
+                            auto op = consume();
+                            return factory.postfixUnaryExpression(
+                                getUnaryPostfixExpression(op.kind), *expr, attributes, op);
+                        }
+                        case TokenKind::OpenParenthesis:
+                            expr = &factory.invocationExpression(*expr, attributes,
+                                                                 &parseArgumentList());
+                            break;
+                        default:
+                            // otherwise, this has to be a function call without any arguments
+                            expr = &factory.invocationExpression(*expr, attributes, nullptr);
+                            break;
+                    }
+                }
+                else {
+                    if (isLiteral())
+                        return *expr;
 
-                auto& args = parseArgumentList();
-                expr = &factory.invocationExpression(*expr, nullptr, &args);
+                    auto& args = parseArgumentList();
+                    expr = &factory.invocationExpression(*expr, nullptr, &args);
+                }
                 break;
             }
             case TokenKind::DoublePlus:
@@ -590,26 +646,6 @@ ExpressionSyntax& Parser::parsePostfixExpression(ExpressionSyntax& lhs,
                 auto closeParen = expect(TokenKind::CloseParenthesis);
                 auto& parenExpr = factory.parenthesizedExpression(openParen, innerExpr, closeParen);
                 expr = &factory.castExpression(*expr, apostrophe, parenExpr);
-                break;
-            }
-            case TokenKind::OpenParenthesisStar: {
-                auto attributes = parseAttributes();
-                switch (peek().kind) {
-                    case TokenKind::DoublePlus:
-                    case TokenKind::DoubleMinus: {
-                        auto op = consume();
-                        return factory.postfixUnaryExpression(getUnaryPostfixExpression(op.kind),
-                                                              *expr, attributes, op);
-                    }
-                    case TokenKind::OpenParenthesis:
-                        expr = &factory.invocationExpression(*expr, attributes,
-                                                             &parseArgumentList());
-                        break;
-                    default:
-                        // otherwise, this has to be a function call without any arguments
-                        expr = &factory.invocationExpression(*expr, attributes, nullptr);
-                        break;
-                }
                 break;
             }
             case TokenKind::WithKeyword:
@@ -694,10 +730,9 @@ NameSyntax& Parser::parseName(bitmask<NameOptions> options) {
         kind = peek().kind;
     }
 
-    // If we saw $unit, $root, super, or local, make sure the correct token follows it.
+    // If we saw super or local, make sure the correct token follows it.
     TokenKind expectedKind = TokenKind::Unknown;
     switch (name->kind) {
-        case SyntaxKind::UnitScope:
         case SyntaxKind::LocalScope:
             expectedKind = TokenKind::DoubleColon;
             break;
@@ -892,10 +927,10 @@ PatternSyntax& Parser::parsePattern() {
             return factory.parenthesizedPattern(openParen, pattern,
                                                 expect(TokenKind::CloseParenthesis));
         }
-        case TokenKind::DotStar:
-            return factory.wildcardPattern(consume());
         case TokenKind::Dot: {
             auto dot = consume();
+            if (peek(TokenKind::Star))
+                return factory.wildcardPattern(dot, consume());
             return factory.variablePattern(dot, expect(TokenKind::Identifier));
         }
         case TokenKind::TaggedKeyword: {
@@ -1055,11 +1090,13 @@ ExpressionSyntax& Parser::parseNewExpression(NameSyntax& newKeyword,
     }
 
     // Enforce rules for super.new placement.
+    bool isSuperNew = false;
     if (newKeyword.kind == SyntaxKind::ScopedName) {
         auto& scoped = newKeyword.as<ScopedNameSyntax>();
         if (scoped.right->kind == SyntaxKind::ConstructorName &&
             scoped.left->getLastToken().kind == TokenKind::SuperKeyword) {
-            if ((options & ExpressionOptions::AllowSuperNewCall) == 0) {
+            isSuperNew = true;
+            if (!options.has(ExpressionOptions::AllowSuperNewCall)) {
                 addDiag(diag::InvalidSuperNew, scoped.right->getFirstToken().location())
                     << newKeyword.sourceRange();
             }
@@ -1070,8 +1107,23 @@ ExpressionSyntax& Parser::parseNewExpression(NameSyntax& newKeyword,
     // new-class has an optional argument list, copy-class has a required expression.
     // An open paren here would be ambiguous between an arg list and a parenthesized
     // expression -- we resolve by always taking the arg list.
-    if (kind == TokenKind::OpenParenthesis)
+    if (kind == TokenKind::OpenParenthesis) {
+        // 1800-2023 added the construct super.new(default) -- check for that here.
+        if (isSuperNew && peek(1).kind == TokenKind::DefaultKeyword) {
+            auto openParen = consume();
+            auto defaultKeyword = consume();
+            auto& result = factory.superNewDefaultedArgsExpression(
+                newKeyword, openParen, defaultKeyword, expect(TokenKind::CloseParenthesis));
+
+            if (parseOptions.languageVersion < LanguageVersion::v1800_2023) {
+                addDiag(diag::WrongLanguageVersion, result.sourceRange())
+                    << toString(parseOptions.languageVersion);
+            }
+
+            return result;
+        }
         return factory.newClassExpression(newKeyword, &parseArgumentList());
+    }
 
     if (isPossibleExpression(kind)) {
         if (newKeyword.kind != SyntaxKind::ConstructorName)
@@ -1138,23 +1190,10 @@ TimingControlSyntax* Parser::parseTimingControl() {
                                                              expect(TokenKind::CloseParenthesis));
                     }
 
-                    // Special case since @(*) will be lexed as '@' '(' '*)'
-                    if (peek(TokenKind::StarCloseParenthesis)) {
-                        auto starCloseParen = consume();
-                        return &factory.implicitEventControl(at, openParen, starCloseParen,
-                                                             Token());
-                    }
-
                     auto& eventExpr = parseEventExpression();
                     auto closeParen = expect(TokenKind::CloseParenthesis);
                     return &factory.eventControlWithExpression(
                         at, factory.parenthesizedEventExpression(openParen, eventExpr, closeParen));
-                }
-                case TokenKind::OpenParenthesisStar: {
-                    // Special case since @(*) will be lexed as '@' '(*' ')'
-                    auto openParen = consume();
-                    return &factory.implicitEventControl(at, openParen, Token(),
-                                                         expect(TokenKind::CloseParenthesis));
                 }
                 case TokenKind::Star:
                     return &factory.implicitEventControl(at, Token(), consume(), Token());
@@ -1289,7 +1328,6 @@ static bool isBinaryOrPostfixExpression(TokenKind kind) {
     switch (kind) {
         case TokenKind::Dot:
         case TokenKind::OpenParenthesis:
-        case TokenKind::OpenParenthesisStar:
         case TokenKind::Apostrophe:
         case TokenKind::DistKeyword:
         case TokenKind::Question:

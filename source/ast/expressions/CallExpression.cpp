@@ -24,6 +24,7 @@
 
 namespace slang::ast {
 
+using namespace parsing;
 using namespace syntax;
 
 Expression& CallExpression::fromSyntax(Compilation& compilation,
@@ -247,8 +248,8 @@ bool CallExpression::bindArgs(const ArgumentListSyntax* argSyntax,
                     addDefaultDriver(*expr, *formal);
             }
             else if (auto exSyn = context.requireSimpleExpr(arg->as<PropertyExprSyntax>())) {
-                expr = &Expression::bindArgument(formal->getType(), formal->direction, *exSyn,
-                                                 context, formal->flags.has(VariableFlags::Const));
+                expr = &Expression::bindArgument(formal->getType(), formal->direction,
+                                                 formal->flags, *exSyn, context);
             }
 
             // Make sure there isn't also a named value for this argument.
@@ -279,8 +280,8 @@ bool CallExpression::bindArgs(const ArgumentListSyntax* argSyntax,
                 }
             }
             else if (auto exSyn = context.requireSimpleExpr(*arg)) {
-                expr = &Expression::bindArgument(formal->getType(), formal->direction, *exSyn,
-                                                 context, formal->flags.has(VariableFlags::Const));
+                expr = &Expression::bindArgument(formal->getType(), formal->direction,
+                                                 formal->flags, *exSyn, context);
             }
         }
         else {
@@ -371,11 +372,9 @@ Expression& CallExpression::fromArgs(Compilation& compilation, const Subroutine&
 
     // If this subroutine is invoked from a procedure, register drivers for this
     // particular procedure to detect multiple driver violations.
-    if (!thisClass) {
-        if (auto proc = context.getProceduralBlock();
-            proc && proc->isSingleDriverBlock() && !context.scope->isUninstantiated()) {
+    if (!thisClass && symbol.subroutineKind == SubroutineKind::Function) {
+        if (auto proc = context.getProceduralBlock(); proc && !context.scope->isUninstantiated())
             addSubroutineDrivers(*proc, symbol, *result);
-        }
     }
 
     return *result;
@@ -408,10 +407,10 @@ Expression& CallExpression::fromSystemMethod(
 
 Expression* CallExpression::fromBuiltInMethod(
     Compilation& compilation, SymbolKind rootKind, const Expression& expr,
-    const LookupResult::MemberSelector& selector, const InvocationExpressionSyntax* syntax,
+    std::string_view methodName, const InvocationExpressionSyntax* syntax,
     const ArrayOrRandomizeMethodExpressionSyntax* withClause, const ASTContext& context) {
 
-    auto subroutine = compilation.getSystemMethod(rootKind, selector.name);
+    auto subroutine = compilation.getSystemMethod(rootKind, methodName);
     if (!subroutine)
         return nullptr;
 
@@ -419,7 +418,71 @@ Expression* CallExpression::fromBuiltInMethod(
                              syntax ? syntax->sourceRange() : expr.sourceRange, context);
 }
 
-static const Expression* bindIteratorExpr(Compilation& compilation,
+static bool getIteratorParams(std::string_view subroutineName, const ArgumentListSyntax& arguments,
+                              const ASTContext& context, std::string_view& iteratorName,
+                              std::string_view& indexMethodName, SourceLocation& iteratorLoc) {
+    auto actualArgs = arguments.parameters;
+    if (actualArgs.empty())
+        return true;
+
+    if (actualArgs.size() > 2) {
+        auto& diag = context.addDiag(diag::TooManyArguments, arguments.sourceRange());
+        diag << subroutineName;
+        diag << 2;
+        diag << actualArgs.size();
+        return false;
+    }
+
+    auto getId = [&](const ArgumentSyntax& argSyntax) -> Token {
+        switch (argSyntax.kind) {
+            case SyntaxKind::OrderedArgument: {
+                auto exSyn = context.requireSimpleExpr(*argSyntax.as<OrderedArgumentSyntax>().expr);
+                if (!exSyn)
+                    return Token();
+
+                if (exSyn->kind != SyntaxKind::IdentifierName) {
+                    context.addDiag(diag::ExpectedIteratorName, exSyn->sourceRange());
+                    return Token();
+                }
+
+                return exSyn->as<IdentifierNameSyntax>().identifier;
+            }
+            case SyntaxKind::NamedArgument:
+                context.addDiag(diag::NamedArgNotAllowed, argSyntax.sourceRange());
+                return Token();
+            case SyntaxKind::EmptyArgument:
+                context.addDiag(diag::EmptyArgNotAllowed, argSyntax.sourceRange());
+                return Token();
+            default:
+                SLANG_UNREACHABLE;
+        }
+    };
+
+    auto iteratorTok = getId(*actualArgs[0]);
+    if (!iteratorTok || iteratorTok.isMissing())
+        return false;
+
+    if (actualArgs.size() > 1) {
+        auto indexTok = getId(*actualArgs[1]);
+        if (!indexTok || indexTok.isMissing())
+            return false;
+
+        indexMethodName = indexTok.valueText();
+
+        auto languageVersion = context.getCompilation().languageVersion();
+        if (languageVersion < LanguageVersion::v1800_2023) {
+            context.addDiag(diag::WrongLanguageVersion, actualArgs[1]->sourceRange())
+                << toString(languageVersion);
+        }
+    }
+
+    iteratorName = iteratorTok.valueText();
+    iteratorLoc = iteratorTok.location();
+
+    return true;
+}
+
+static const Expression* bindIteratorExpr(Compilation& compilation, std::string_view subroutineName,
                                           const InvocationExpressionSyntax* invocation,
                                           const ArrayOrRandomizeMethodExpressionSyntax& withClause,
                                           const Type& arrayType, const ASTContext& context,
@@ -440,42 +503,24 @@ static const Expression* bindIteratorExpr(Compilation& compilation,
         return nullptr;
     }
 
-    // If arguments are provided, there should be only one and it should
-    // be the name of the iterator symbol. Otherwise, we need to automatically
-    // generate an iterator symbol named 'item'.
+    // If arguments are provided, there can be one or two.
+    // The first is the name of iterator, and the second is the name
+    // of the index method on that iterator. Otherwise we use defaults
+    // for those names.
     SourceLocation iteratorLoc = SourceLocation::NoLocation;
-    std::string_view iteratorName;
+    std::string_view iteratorName = "item"sv;
+    std::string_view indexMethodName = "index"sv;
     if (invocation && invocation->arguments) {
-        auto actualArgs = invocation->arguments->parameters;
-        if (actualArgs.size() == 1 && actualArgs[0]->kind == SyntaxKind::OrderedArgument) {
-            auto& arg = actualArgs[0]->as<OrderedArgumentSyntax>();
-            if (auto exSyn = context.requireSimpleExpr(*arg.expr)) {
-                if (exSyn->kind == SyntaxKind::IdentifierName) {
-                    auto id = exSyn->as<IdentifierNameSyntax>().identifier;
-                    iteratorLoc = id.location();
-                    iteratorName = id.valueText();
-                    if (iteratorName.empty())
-                        return nullptr;
-                }
-            }
-            else {
-                return nullptr;
-            }
-        }
-
-        if (iteratorName.empty() && !actualArgs.empty()) {
-            context.addDiag(diag::ExpectedIteratorName, invocation->arguments->sourceRange());
+        if (!getIteratorParams(subroutineName, *invocation->arguments, context, iteratorName,
+                               indexMethodName, iteratorLoc)) {
             return nullptr;
         }
     }
 
-    if (iteratorName.empty())
-        iteratorName = "item"sv;
-
     // Create the iterator variable and set it up with an AST context so that it
     // can be found by the iteration expression.
     auto it = compilation.emplace<IteratorSymbol>(*context.scope, iteratorName, iteratorLoc,
-                                                  arrayType);
+                                                  arrayType, indexMethodName);
     iterVar = it;
 
     ASTContext iterCtx = context;
@@ -511,8 +556,8 @@ Expression& CallExpression::createSystemCall(
             }
         }
         else if (firstArg) {
-            iterOrThis = bindIteratorExpr(compilation, syntax, *withClause, *firstArg->type,
-                                          context, iterVar);
+            iterOrThis = bindIteratorExpr(compilation, subroutine.name, syntax, *withClause,
+                                          *firstArg->type, context, iterVar);
             if (!iterOrThis || iterOrThis->bad())
                 return badExpr(compilation, iterOrThis);
 
@@ -521,7 +566,7 @@ Expression& CallExpression::createSystemCall(
     }
     else {
         ASTContext::RandomizeDetails randomizeDetails;
-        ASTContext argContext = context;
+        ASTContext argContext = context.resetFlags({});
 
         if (subroutine.withClauseMode == WithClauseMode::Randomize) {
             // If this is a class-scoped randomize call, setup the scope properly
@@ -867,13 +912,14 @@ public:
 
     DriverVisitor(const Symbol& procedure, SmallSet<const SubroutineSymbol*, 4>& visitedSubs,
                   const SubroutineSymbol& sub, const Expression& callExpr) :
-        procedure(procedure),
-        sub(sub), callExpr(callExpr), visitedSubs(visitedSubs) {}
+        procedure(procedure), sub(sub), callExpr(callExpr), visitedSubs(visitedSubs) {}
 
     void handle(const CallExpression& expr) {
         if (!expr.isSystemCall() && !expr.thisClass()) {
             auto& subroutine = *std::get<0>(expr.subroutine);
-            if (visitedSubs.emplace(&subroutine).second) {
+            if (subroutine.subroutineKind == SubroutineKind::Function &&
+                visitedSubs.emplace(&subroutine).second) {
+
                 DriverVisitor visitor(procedure, visitedSubs, subroutine, callExpr);
                 subroutine.getBody().visit(visitor);
             }
@@ -881,13 +927,26 @@ public:
     }
 
     void handle(const ValueExpressionBase& expr) {
-        if (!visitedValues.emplace(&expr.symbol).second)
+        auto& sym = expr.symbol;
+        if (!visitedValues.emplace(&sym).second)
             return;
+
+        if (sub.getCompilation().hasFlag(CompilationFlags::AllowMultiDrivenLocals)) {
+            auto scope = sym.getParentScope();
+            while (scope && scope->asSymbol().kind == SymbolKind::StatementBlock)
+                scope = scope->asSymbol().getParentScope();
+
+            if (scope == &sub) {
+                // This is a local variable of the subroutine,
+                // so don't do driver checking.
+                return;
+            }
+        }
 
         // If the target symbol is driven by the subroutine we're inspecting,
         // add another driver for the procedure we're originally called from.
         SmallVector<std::pair<DriverBitRange, const ValueDriver*>> drivers;
-        auto range = expr.symbol.drivers();
+        auto range = sym.drivers();
         for (auto it = range.begin(); it != range.end(); ++it) {
             if ((*it)->containingSymbol == &sub)
                 drivers.push_back({it.bounds(), *it});
@@ -896,8 +955,8 @@ public:
         // This needs to be a separate loop to avoid mutating the driver map
         // while iterating over it.
         for (auto [bounds, driver] : drivers) {
-            expr.symbol.addDriver(DriverKind::Procedural, bounds, *driver->prefixExpression,
-                                  procedure, callExpr);
+            sym.addDriver(DriverKind::Procedural, bounds, *driver->prefixExpression, procedure,
+                          callExpr);
         }
     }
 };

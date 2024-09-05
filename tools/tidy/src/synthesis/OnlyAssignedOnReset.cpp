@@ -12,8 +12,9 @@ using namespace slang::ast;
 
 namespace only_assigned_on_reset {
 struct AlwaysFFVisitor : public ASTVisitor<AlwaysFFVisitor, true, true> {
-    explicit AlwaysFFVisitor(const std::string_view name, const std::string_view resetName) :
-        name(name), resetName(resetName){};
+    explicit AlwaysFFVisitor(const std::string_view name, const std::string_view resetName,
+                             const bool resetIsActiveHigh) :
+        name(name), resetName(resetName), resetIsActiveHigh(resetIsActiveHigh) {};
 
     void handle(const ConditionalStatement& statement) {
         // Early return, if there's no else clause on the conditional statement
@@ -21,27 +22,46 @@ struct AlwaysFFVisitor : public ASTVisitor<AlwaysFFVisitor, true, true> {
             return;
         }
 
-        // Collect all the identifiers in the conditions
-        CollectIdentifiers collectIdentifiersVisitor;
+        // Check if there is a reset in the conditional statement and if the signal is negated
+        bool isReset = false;
+        bool isResetNeg = false;
+
+        LookupIdentifier lookupIdentifierVisitor(resetName, false);
         for (const auto& condition : statement.conditions) {
-            condition.expr->visit(collectIdentifiersVisitor);
+            condition.expr->visit(lookupIdentifierVisitor);
+            isReset = lookupIdentifierVisitor.found();
+
+            if (isReset) {
+                if (condition.expr->kind == ExpressionKind::UnaryOp) {
+                    auto op = condition.expr->as<UnaryExpression>().op;
+                    isResetNeg = (op == UnaryOperator::BitwiseNot) ||
+                                 (op == UnaryOperator::LogicalNot);
+                }
+                break;
+            }
         }
 
-        // Check if one of the identifiers is a reset
-        const auto isReset =
-            std::ranges::any_of(collectIdentifiersVisitor.identifiers, [this](auto id) {
-                return id.find(resetName) != std::string_view::npos;
-            });
+        if (!isReset)
+            return;
 
-        if (isReset) {
-            LookupLhsIdentifier visitor(name);
-            statement.ifTrue.visit(visitor);
-            if (visitor.found()) {
-                visitor.reset();
-                statement.ifFalse->visit(visitor);
-                if (!visitor.found()) {
-                    correctlyAssignedOnIfReset = true;
-                }
+        auto resetStatement = &statement.ifTrue;
+        auto noResetStatement = statement.ifFalse;
+
+        bool swapStatements = isResetNeg ? !resetIsActiveHigh : resetIsActiveHigh;
+
+        if (swapStatements) {
+            std::swap(resetStatement, noResetStatement);
+        }
+
+        LookupLhsIdentifier visitor(name);
+        resetStatement->visit(visitor);
+        if (visitor.found()) {
+            auto foundLocation = visitor.foundLocation();
+            visitor.reset();
+            noResetStatement->visit(visitor);
+            if (!visitor.found()) {
+                correctlyAssignedOnIfReset = true;
+                errorLocation = foundLocation;
             }
         }
     }
@@ -54,27 +74,34 @@ struct AlwaysFFVisitor : public ASTVisitor<AlwaysFFVisitor, true, true> {
 
     bool hasError() { return correctlyAssignedOnIfReset && !assignedOutsideIfReset; }
 
+    std::optional<SourceLocation> getErrorLocation() const { return errorLocation; }
+
+private:
     const std::string_view name;
     const std::string_view resetName;
+    const bool resetIsActiveHigh;
     bool correctlyAssignedOnIfReset = false;
     bool assignedOutsideIfReset = false;
+    std::optional<SourceLocation> errorLocation;
 };
 
-struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, true, false> {
+struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, true, true> {
     explicit MainVisitor(Diagnostics& diagnostics) : TidyVisitor(diagnostics) {}
 
     void handle(const VariableSymbol& symbol) {
         NEEDS_SKIP_SYMBOL(symbol)
-
         if (symbol.drivers().empty())
             return;
 
         auto firstDriver = *symbol.drivers().begin();
         if (firstDriver && firstDriver->isInAlwaysFFBlock()) {
-            AlwaysFFVisitor visitor(symbol.name, config.getCheckConfigs().resetName);
+            auto& configs = config.getCheckConfigs();
+            AlwaysFFVisitor visitor(symbol.name, configs.resetName, configs.resetIsActiveHigh);
             firstDriver->containingSymbol->visit(visitor);
             if (visitor.hasError()) {
-                diags.add(diag::OnlyAssignedOnReset, symbol.location) << symbol.name;
+                diags.add(diag::RegisterNotAssignedOnReset,
+                          visitor.getErrorLocation().value_or(symbol.location))
+                    << symbol.name;
             }
         }
     }
@@ -89,9 +116,7 @@ public:
     bool check(const RootSymbol& root) override {
         MainVisitor visitor(diagnostics);
         root.visit(visitor);
-        if (!diagnostics.empty())
-            return false;
-        return true;
+        return diagnostics.empty();
     }
 
     DiagCode diagCode() const override { return diag::OnlyAssignedOnReset; }

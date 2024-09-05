@@ -27,6 +27,7 @@ namespace slang::ast {
 
 class ASTContext;
 class Compilation;
+class CompilationUnitSymbol;
 class ForwardingTypedefSymbol;
 class InstanceBodySymbol;
 class NetType;
@@ -67,22 +68,35 @@ public:
     /// Otherwise returns nullptr.
     const InstanceBodySymbol* getContainingInstance() const;
 
+    /// Gets the compilation unit that contains this scope, if applicable.
+    /// Otherwise returns nullptr.
+    const CompilationUnitSymbol* getCompilationUnit() const;
+
     /// Returns true if this scope is in an uninstantiated context, like if
     /// in a module that is not used in the design.
     bool isUninstantiated() const;
 
+    /// Reports a new diagnostic under this scope.
     Diagnostic& addDiag(DiagCode code, SourceLocation location) const;
+
+    /// Reports a new diagnostic under this scope.
     Diagnostic& addDiag(DiagCode code, SourceRange sourceRange) const;
+
+    /// Reports the given set of diagnostics under this scope.
     void addDiags(const Diagnostics& diags) const;
 
-    /// Finds a direct child member with the given name. This won't return anything weird like
-    /// forwarding typedefs or imported symbols, but will return things like transparent enum
-    /// members. If no symbol is found with the given name, nullptr is returned.
+    /// @brief Finds a direct child member with the given name.
+    ///
+    /// This won't return anything weird like forwarding typedefs or imported symbols,
+    /// but will return things like transparent enum members. If no symbol is found with
+    /// the given name, nullptr is returned.
     const Symbol* find(std::string_view name) const;
 
-    /// Finds a direct child member with the given name. This won't return anything weird like
-    /// forwarding typedefs or imported symbols, but will return things like transparent enum
-    /// members. This method expects that the symbol will be found and be of the given type `T`.
+    /// @brief Finds a direct child member with the given name.
+    ///
+    /// This won't return anything weird like forwarding typedefs or imported symbols,
+    /// but will return things like transparent enum members. This method asserts that
+    /// the symbol is found and is of the given type `T`.
     template<typename T>
     const T& find(std::string_view name) const {
         const Symbol* sym = find(name);
@@ -119,31 +133,50 @@ public:
     /// An iterator for members in the scope.
     class iterator : public iterator_facade<iterator> {
     public:
+        /// Constructs a default iterator that points nowhere.
         iterator() : current(nullptr) {}
+
+        /// Constructs an iterator pointing at the given child symbol in the scope.
         iterator(const Symbol* firstSymbol) : current(firstSymbol) {}
 
+        /// Dereferences the iterator, resolving it to a symbol.
         const Symbol& dereference() const { return *current; }
+
+        /// Advances the iterator to the next symbol in the scope.
         void increment() { current = current->nextInScope; }
+
+        /// @returns true if the given iterator is equal to this one.
         bool equals(const iterator& other) const { return current == other.current; }
 
     private:
         const Symbol* current;
     };
 
+    /// An iterator for members in the scope of the specified type.
     template<typename SpecificType>
     class specific_symbol_iterator
         : public iterator_facade<specific_symbol_iterator<SpecificType>> {
     public:
+        /// Constructs a default iterator that points nowhere.
         specific_symbol_iterator() : current(nullptr) {}
+
+        /// Constructs an iterator pointing at the given child symbol in the scope.
+        ///
+        /// @note If the given symbol is not of the desired type the iterator
+        /// will be advanced until one is found or the end of the scope is reached.
         specific_symbol_iterator(const Symbol* firstSymbol) : current(firstSymbol) { skipToNext(); }
 
+        /// Dereferences the iterator, resolving it to a symbol.
         const SpecificType& dereference() const { return current->as<SpecificType>(); }
 
+        /// Advances the iterator to the next symbol in the scope
+        /// that is of the desired type.
         void increment() {
             current = current->nextInScope;
             skipToNext();
         }
 
+        /// @returns true if the given iterator is equal to this one.
         bool equals(const specific_symbol_iterator& other) const {
             return current == other.current;
         }
@@ -176,23 +209,46 @@ public:
         return {firstMember, nullptr};
     }
 
-    /// Gets a pointer to the first member in the scope. Note that this does not
-    /// force elaboration of the scope.
+    /// @brief Gets a pointer to the first member in the scope.
+    ///
+    /// @note This does not force elaboration of the scope.
     const Symbol* getFirstMember() const { return firstMember; }
 
-    /// Gets a pointer to the last member in the scope. Note that this does not
-    /// force elaboration of the scope.
+    /// @brief Gets a pointer to the last member in the scope.
+    ///
+    /// @note This does not force elaboration of the scope.
     const Symbol* getLastMember() const { return lastMember; }
 
+    /// Gets the map of names for child symbols in this scope.
     const SymbolMap& getNameMap() const {
         ensureElaborated();
         return *nameMap;
     }
 
+    /// Gets the map of names for child symbols in this scope without
+    /// forcing elaboration of the scope.
     const SymbolMap& getUnelaboratedNameMap() const { return *nameMap; }
+
+    /// Reports a name conflict between the two given symbols in this scope.
     void reportNameConflict(const Symbol& member, const Symbol& existing) const;
 
-    std::span<const WildcardImportSymbol* const> getWildcardImports() const;
+    /// Collection of information about wildcard imports in a scope.
+    class WildcardImportData {
+    public:
+        /// A list of wildcard import directives in the scope.
+        std::vector<const WildcardImportSymbol*> wildcardImports;
+
+        /// A name map of symbols that have imported thus far.
+        /// This is mutated as the scope is elaborated.
+        SymbolMap importedSymbols;
+
+        /// True if we have called forceElaborate on this scope to
+        /// ensure that we've seen all imported names.
+        bool hasForceElaborated = false;
+    };
+
+    /// Gets the wildcard import data declared in this scope.
+    WildcardImportData* getWildcardImportData() const { return importData; }
 
 protected:
     Scope(Compilation& compilation_, const Symbol* thisSym_);
@@ -211,6 +267,8 @@ protected:
     void addWildcardImport(const WildcardImportSymbol& item);
 
     void addDeferredMembers(const syntax::SyntaxNode& syntax);
+    void insertMember(const Symbol* member, const Symbol* at, bool isElaborating,
+                      bool incrementIndex) const;
 
 private:
     friend class Compilation;
@@ -218,10 +276,6 @@ private:
     // Strongly typed index type which is used in a sideband list in the Compilation object
     // to store information about deferred members in this scope.
     enum class DeferredMemberIndex : uint32_t { Invalid = 0 };
-
-    // Strongly typed index type which is used in a sideband list in the Compilation object
-    // to store information about wildcard imports in this scope.
-    enum class ImportDataIndex : uint32_t { Invalid = 0 };
 
     // Data stored in sideband tables in the Compilation object for deferred members.
     class DeferredMemberData {
@@ -256,12 +310,6 @@ private:
         // elaborated we'll go back and make sure they're valid.
         std::vector<std::pair<const syntax::SyntaxNode*, const Symbol*>> portDecls;
     };
-
-    // Sideband collection of wildcard imports stored in the Compilation object.
-    using ImportData = std::vector<const WildcardImportSymbol*>;
-
-    void insertMember(const Symbol* member, const Symbol* at, bool isElaborating,
-                      bool incrementIndex) const;
 
     DeferredMemberData& getOrAddDeferredData() const;
     void elaborate() const;
@@ -299,8 +347,8 @@ private:
     mutable DeferredMemberIndex deferredMemberIndex{0};
 
     // If this scope has any wildcard import directives we'll keep track of them
-    // in a sideband list in the compilation object.
-    ImportDataIndex importDataIndex{0};
+    // in a sideband object.
+    WildcardImportData* importData = nullptr;
 };
 
 } // namespace slang::ast

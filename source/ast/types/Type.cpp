@@ -317,6 +317,7 @@ bool Type::isSimpleType() const {
         case SymbolKind::FloatingType:
         case SymbolKind::TypeAlias:
         case SymbolKind::ClassType:
+        case SymbolKind::StringType:
             return true;
         default:
             return false;
@@ -371,6 +372,21 @@ bool Type::isVirtualInterfaceOrArray() const {
             default:
                 return ct->isVirtualInterface();
         }
+    }
+}
+
+bool Type::isHandleType() const {
+    auto ct = &getCanonicalType();
+    switch (ct->kind) {
+        case SymbolKind::VirtualInterfaceType:
+        case SymbolKind::ClassType:
+        case SymbolKind::CHandleType:
+        case SymbolKind::CovergroupType:
+        case SymbolKind::EventType:
+        case SymbolKind::NullType:
+            return true;
+        default:
+            return false;
     }
 }
 
@@ -559,7 +575,7 @@ bool Type::isAssignmentCompatible(const Type& rhs) const {
     // Any integral or floating value can be implicitly converted to a packed integer
     // value or to a floating value.
     if ((l->isIntegral() && !l->isEnum()) || l->isFloating())
-        return r->isIntegral() || r->isFloating() || r->isUnbounded();
+        return r->isIntegral() || r->isFloating() || (r->isUnbounded() && l->isSimpleBitVector());
 
     if (l->isUnpackedArray() && r->isUnpackedArray()) {
         // Associative arrays are only compatible with each other.
@@ -755,12 +771,15 @@ bool Type::isIterable() const {
     return (t.hasFixedRange() || t.isArray() || t.isString()) && !t.isScalar();
 }
 
-bool Type::isValidForRand(RandMode mode) const {
+bool Type::isValidForRand(RandMode mode, LanguageVersion languageVersion) const {
     if ((isIntegral() || isNull()) && !isTaggedUnion())
         return true;
 
+    if (isFloating())
+        return mode == RandMode::Rand && languageVersion >= LanguageVersion::v1800_2023;
+
     if (isArray())
-        return getArrayElementType()->isValidForRand(mode);
+        return getArrayElementType()->isValidForRand(mode, languageVersion);
 
     if (isClass() || isUnpackedStruct())
         return mode == RandMode::Rand;
@@ -865,6 +884,48 @@ ConstantValue Type::coerceValue(const ConstantValue& value) const {
         return value.convertToStr();
 
     return nullptr;
+}
+
+static const Type* changeSign(Compilation& compilation, const Type& type, bool set) {
+    // This deliberately does not look at the canonical type; type aliases
+    // are not convertible to a different signedness.
+    SmallVector<ConstantRange, 4> dims;
+    const Type* curr = &type;
+    while (curr->kind == SymbolKind::PackedArrayType) {
+        dims.push_back(curr->getFixedRange());
+        curr = curr->getArrayElementType();
+    }
+
+    if (curr->kind != SymbolKind::ScalarType)
+        return &type;
+
+    auto flags = curr->getIntegralFlags();
+    if (set)
+        flags |= IntegralFlags::Signed;
+    else
+        flags &= ~IntegralFlags::Signed;
+
+    if (dims.size() == 1)
+        return &compilation.getType(type.getBitWidth(), flags);
+
+    // Rebuild the array with the new element type.
+    curr = &compilation.getScalarType(flags);
+    size_t count = dims.size();
+    for (size_t i = 0; i < count; i++) {
+        // There's no worry about size overflow here because we started with a valid type.
+        ConstantRange dim = dims[count - i - 1];
+        curr = compilation.emplace<PackedArrayType>(*curr, dim, curr->getBitWidth() * dim.width());
+    }
+
+    return curr;
+}
+
+const Type& Type::makeSigned(Compilation& compilation) const {
+    return *changeSign(compilation, *this, true);
+}
+
+const Type& Type::makeUnsigned(Compilation& compilation) const {
+    return *changeSign(compilation, *this, false);
 }
 
 std::string Type::toString() const {
@@ -1011,7 +1072,7 @@ const Type& Type::fromSyntax(Compilation& compilation, const DataTypeSyntax& nod
         }
         case SyntaxKind::UnionType: {
             const auto& structUnion = node.as<StructUnionTypeSyntax>();
-            return structUnion.packed
+            return (structUnion.packed || structUnion.taggedOrSoft.kind == TokenKind::SoftKeyword)
                        ? PackedUnionType::fromSyntax(compilation, structUnion, context)
                        : UnpackedUnionType::fromSyntax(context, structUnion);
         }
@@ -1026,11 +1087,19 @@ const Type& Type::fromSyntax(Compilation& compilation, const DataTypeSyntax& nod
         }
         case SyntaxKind::TypeReference: {
             auto& exprSyntax = *node.as<TypeReferenceSyntax>().expr;
-            auto& expr = Expression::bind(exprSyntax, context, ASTFlags::AllowDataType);
-            if (expr.hasHierarchicalReference() &&
-                !compilation.hasFlag(CompilationFlags::AllowHierarchicalConst)) {
-                context.addDiag(diag::TypeRefHierarchical, exprSyntax.sourceRange());
+            auto& expr = Expression::bind(exprSyntax, context,
+                                          ASTFlags::AllowDataType | ASTFlags::TypeOperator);
+
+            if (!expr.bad()) {
+                if (expr.hasHierarchicalReference() &&
+                    !compilation.hasFlag(CompilationFlags::AllowHierarchicalConst)) {
+                    context.addDiag(diag::TypeRefHierarchical, exprSyntax.sourceRange());
+                }
+
+                if (expr.type->isVoid())
+                    context.addDiag(diag::TypeRefVoid, exprSyntax.sourceRange());
             }
+
             return *expr.type;
         }
         case SyntaxKind::VirtualInterfaceType:
@@ -1156,7 +1225,7 @@ const Type& Type::lookupNamedType(Compilation& compilation, const NameSyntax& sy
                                   const ASTContext& context, bool isTypedefTarget) {
     bitmask<LookupFlags> flags = LookupFlags::Type;
     if (isTypedefTarget)
-        flags |= LookupFlags::TypedefTarget;
+        flags |= LookupFlags::AllowIncompleteForwardTypedefs;
 
     LookupResult result;
     Lookup::name(syntax, context, flags, result);

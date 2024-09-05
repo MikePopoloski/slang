@@ -44,6 +44,8 @@ protected:
     Token getLastConsumed() const;
     bool haveDiagAtCurrentLoc();
 
+    const std::pair<Token, Token>& getLastPoppedDelims() const { return lastPoppedDelims; }
+
     Preprocessor& getPP() { return window.tokenSource; }
 
     /// Helper class that maintains a sliding window of tokens, with lookahead.
@@ -150,17 +152,17 @@ protected:
         // Be careful when changing it.
         while (true) {
             // Parse the next item in the list.
-            current = peek();
             buffer.push_back(parseItem());
 
             // If we found the end token, we're done with list processing.
-            if (IsEnd(peek().kind))
+            auto next = peek();
+            if (IsEnd(next.kind) || next.kind == TokenKind::EndOfFile)
                 break;
 
             // Since the list hasn't ended, we must see a separator here.
             // If we don't, something is wrong and we need to try to recover
             // by skipping tokens until we get back to a separator or end token.
-            if (!peek(separatorKind)) {
+            if (next.kind != separatorKind) {
                 // Special case for semicolon-ended lists: we assume that
                 // a missing separator means they actually probably missed
                 // the *end* token (i.e. the semicolon) and that we'll more
@@ -184,22 +186,28 @@ protected:
 
             buffer.push_back(expect(separatorKind));
 
-            if (IsEnd(peek().kind)) {
-                if (allowEmpty == AllowEmpty::True)
-                    continue;
-
-                // Specific check for misplaced trailing separators here.
-                reportMisplacedSeparator();
+            next = peek();
+            if (IsEnd(next.kind) || next.kind == TokenKind::EndOfFile) {
+                if (allowEmpty == AllowEmpty::True) {
+                    // Empty items are allowed, so call the parse function
+                    // to get one here and then we're finished.
+                    buffer.push_back(parseItem());
+                }
+                else {
+                    // Specific check for misplaced trailing separators here.
+                    reportMisplacedSeparator();
+                }
                 break;
             }
 
             // If parseItem() failed to consume any tokens we will be stuck in
             // an infinite loop. Detect that here and bail out. If parseItem()
             // did not issue a diagnostic on this token, add one now as well.
-            if (current == peek()) {
+            if (current == next) {
                 if (!skipBadTokens<IsExpected, IsEnd>(code, true))
                     break;
             }
+            current = next;
         }
         closeToken = expect(closeKind);
     }
@@ -230,6 +238,7 @@ private:
     Window window;
     SmallVector<Token> skippedTokens;
     SmallVector<Token> openDelims;
+    std::pair<Token, Token> lastPoppedDelims;
 };
 
 } // namespace slang::parsing

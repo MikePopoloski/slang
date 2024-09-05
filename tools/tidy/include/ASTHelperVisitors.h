@@ -20,6 +20,10 @@
 // Function that tries to get the name of the variable in an expression
 std::optional<std::string_view> getIdentifier(const slang::ast::Expression& expr);
 
+// Function that tries to get the source location of an expression
+std::optional<slang::SourceLocation> getExpressionSourceLocation(
+    const slang::ast::Expression& expr);
+
 struct TidyVisitor {
 protected:
     explicit TidyVisitor(slang::Diagnostics& diagnostics) :
@@ -28,7 +32,7 @@ protected:
 
     [[nodiscard]] bool skip(std::string_view path) const {
         auto file = std::filesystem::path(path).filename().string();
-        auto parentPath = weakly_canonical(std::filesystem::path(path));
+        auto parentPath = weakly_canonical(std::filesystem::path(path).parent_path());
         const auto& skipFiles = config.getSkipFiles();
         const auto& skipPaths = config.getSkipPaths();
         return std::find(skipFiles.begin(), skipFiles.end(), file) != skipFiles.end() ||
@@ -52,10 +56,51 @@ struct CollectIdentifiers : public slang::ast::ASTVisitor<CollectIdentifiers, fa
     std::vector<std::string_view> identifiers;
 };
 
+/// ASTVisitor that will try to find the provided name in the identifiers under a node
+struct LookupIdentifier : public slang::ast::ASTVisitor<LookupIdentifier, true, true> {
+    explicit LookupIdentifier(const std::string_view& name, const bool exactMatching = true) :
+        name(name), exactMatching(exactMatching) {}
+
+    void handle(const slang::ast::NamedValueExpression& expression) {
+        if (hasIdentifier(name, exactMatching, expression)) {
+            _found = true;
+            _foundLocation = getExpressionSourceLocation(expression);
+        }
+    }
+
+    // Checks if the symbol reference of the expression has the provided name
+    static bool hasIdentifier(const std::string_view& name, const bool exactMatching,
+                              const slang::ast::NamedValueExpression& expression) {
+        auto symbol = expression.getSymbolReference();
+
+        return symbol && exactMatching ? symbol->name == name
+                                       : symbol->name.find(name) != std::string_view::npos;
+    }
+
+    // Retrieves whether the identifier has been found
+    [[nodiscard]] bool found() const { return _found; }
+
+    // Retrieves the identifier location in case it has been found
+    std::optional<slang::SourceLocation> foundLocation() const { return _foundLocation; }
+
+    // Resets the state of the visitor, so it can be used again without having to create a new one
+    void reset() {
+        _found = false;
+        _foundLocation = {};
+    }
+
+private:
+    const std::string_view name;
+    const bool exactMatching;
+    bool _found = false;
+    std::optional<slang::SourceLocation> _foundLocation;
+};
+
 /// ASTVisitor that will collect all LHS assignment symbols under a node
 struct CollectLHSSymbols : public slang::ast::ASTVisitor<CollectLHSSymbols, true, true> {
     void handle(const slang::ast::AssignmentExpression& expression) {
-        symbols.push_back(expression.left().getSymbolReference());
+        if (const auto symbol = expression.left().getSymbolReference(); symbol)
+            symbols.push_back(symbol);
     }
 
     std::vector<const slang::ast::Symbol*> symbols;
@@ -66,7 +111,10 @@ struct LookupLhsIdentifier : public slang::ast::ASTVisitor<LookupLhsIdentifier, 
     explicit LookupLhsIdentifier(const std::string_view& name) : name(name) {}
 
     void handle(const slang::ast::AssignmentExpression& expression) {
-        _found |= hasIdentifier(name, expression);
+        if (hasIdentifier(name, expression)) {
+            _found = true;
+            _foundLocation = getExpressionSourceLocation(expression);
+        }
     }
 
     // Checks if the symbol on the LHS of the expression has the provided name
@@ -74,19 +122,23 @@ struct LookupLhsIdentifier : public slang::ast::ASTVisitor<LookupLhsIdentifier, 
                               const slang::ast::AssignmentExpression& expression) {
         auto identifier = getIdentifier(expression.left());
 
-        if (identifier && identifier.value() == name) {
-            return true;
-        }
-        return false;
+        return identifier && identifier.value() == name;
     }
 
     // Retrieves whether the identifier has been found
     [[nodiscard]] bool found() const { return _found; }
 
+    // Retrieves the identifier location in case it has been found
+    std::optional<slang::SourceLocation> foundLocation() const { return _foundLocation; }
+
     // Resets the state of the visitor, so it can be used again without having to create a new one
-    void reset() { _found = false; }
+    void reset() {
+        _found = false;
+        _foundLocation = {};
+    }
 
 private:
     const std::string_view name;
     bool _found = false;
+    std::optional<slang::SourceLocation> _foundLocation;
 };

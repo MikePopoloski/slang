@@ -10,6 +10,7 @@
 #include "slang/ast/Symbol.h"
 #include "slang/numeric/ConstantValue.h"
 #include "slang/syntax/SyntaxNode.h"
+#include "slang/util/LanguageVersion.h"
 
 namespace slang::ast {
 
@@ -38,7 +39,7 @@ enum class SLANG_EXPORT IntegralFlags : uint8_t {
 };
 SLANG_BITMASK(IntegralFlags, Reg)
 
-/// Base class for all data types in SystemVerilog.
+/// @brief Base class for all data types in SystemVerilog.
 ///
 /// Note that this can actually be an alias for some other type (such as with typedefs or
 /// type parameters). Each type knows its "canonical" type, which in the case of most types
@@ -222,6 +223,10 @@ public:
     /// A plain virtual interface type will also return true.
     bool isVirtualInterfaceOrArray() const;
 
+    /// Indicates whether this is a type that acts like a handle, which includes
+    /// classes, events, chandles, virtual interfaces, and the null type.
+    bool isHandleType() const;
+
     /// Indicates whether this is a type alias.
     /// Note that unlike other methods, this one does not unwrap to the canonical type.
     bool isAlias() const { return kind == SymbolKind::TypeAlias; }
@@ -290,7 +295,7 @@ public:
 
     /// Returns true if the type is valid for use as a random variable of
     /// the given mode.
-    bool isValidForRand(RandMode mode) const;
+    bool isValidForRand(RandMode mode, LanguageVersion languageVersion) const;
 
     /// Returns true if the type is valid for use as a DPI return value.
     bool isValidForDPIReturn() const;
@@ -310,7 +315,20 @@ public:
     /// Coerces the given constant into one that is appropriate for this type.
     ConstantValue coerceValue(const ConstantValue& value) const;
 
+    /// If this is an integral type, returns the same type converted
+    /// to a signed integral type (properly descending through sub arrays).
+    /// Otherwise returns `*this`.
+    const Type& makeSigned(Compilation& compilation) const;
+
+    /// If this is an integral type, returns the same type converted
+    /// to an unsigned integral type (properly descending through sub arrays).
+    /// Otherwise returns `*this`.
+    const Type& makeUnsigned(Compilation& compilation) const;
+
+    /// @returns a human-friendly string representation of the type.
     std::string toString() const;
+
+    /// @returns a hash value for the type.
     size_t hash() const;
 
     /// If the two given types are both class types and have a common base class somewhere

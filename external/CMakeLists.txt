@@ -4,9 +4,9 @@
 # ~~~
 
 # Required minimum versions for dependencies
-set(fmt_min_version "10.1")
+set(fmt_min_version "11.0")
 set(mimalloc_min_version "2.1")
-set(catch2_min_version "3.4")
+set(catch2_min_version "3.6")
 
 # --- fmt lib ---
 set(find_pkg_args "")
@@ -14,10 +14,14 @@ if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.24.0")
   set(find_pkg_args "FIND_PACKAGE_ARGS" "${fmt_min_version}")
 endif()
 
+set(FMT_SYSTEM_HEADERS
+    ON
+    CACHE INTERNAL "")
+
 FetchContent_Declare(
   fmt
   GIT_REPOSITORY https://github.com/fmtlib/fmt.git
-  GIT_TAG 10.1.1
+  GIT_TAG 11.0.2
   GIT_SHALLOW ON
   ${find_pkg_args})
 
@@ -94,20 +98,39 @@ if(SLANG_USE_MIMALLOC)
   FetchContent_Declare(
     mimalloc
     GIT_REPOSITORY https://github.com/microsoft/mimalloc.git
-    GIT_TAG v2.1.2
+    GIT_TAG v2.1.7
     GIT_SHALLOW ON
     ${find_pkg_args})
   FetchContent_MakeAvailable(mimalloc)
 
-  if(NOT TARGET mimalloc-static)
-    message(
-      FATAL_ERROR
-        "Could not find mimalloc package, min version: ${mimalloc_min_version}")
-  endif()
-
   if(mimalloc_FOUND)
-    message(STATUS "Found system mimalloc version: ${Catch2_VERSION}")
+    if(TARGET mimalloc)
+      set(mimalloc_target "mimalloc")
+    elseif(TARGET mimalloc-static)
+      set(mimalloc_target "mimalloc-static")
+    else()
+      message(
+        FATAL_ERROR
+          "Could not find mimalloc package, min version: ${mimalloc_min_version}"
+      )
+    endif()
+
+    get_target_property(MIMALLOC_CFG ${mimalloc_target} IMPORTED_CONFIGURATIONS)
+    get_target_property(MIMALLOC_LIB ${mimalloc_target}
+                        IMPORTED_LOCATION_${MIMALLOC_CFG})
+    get_target_property(MIMALLOC_INC ${mimalloc_target}
+                        INTERFACE_INCLUDE_DIRECTORIES)
+    message(STATUS "Found system mimalloc library: ${MIMALLOC_LIB}")
+    message(STATUS "Using system mimalloc include: ${MIMALLOC_INC}")
   else()
+    if(NOT TARGET mimalloc-static)
+      message(
+        FATAL_ERROR
+          "Could not find mimalloc package, min version: ${mimalloc_min_version}"
+      )
+    endif()
+    set(mimalloc_target "mimalloc-static")
+
     message(STATUS "Using remote mimalloc library")
     if(IS_DIRECTORY "${mimalloc_SOURCE_DIR}")
       set_property(DIRECTORY ${mimalloc_SOURCE_DIR} PROPERTY EXCLUDE_FROM_ALL
@@ -135,7 +158,7 @@ if(SLANG_INCLUDE_TESTS)
   FetchContent_Declare(
     Catch2
     GIT_REPOSITORY https://github.com/catchorg/Catch2.git
-    GIT_TAG v3.4.0
+    GIT_TAG v3.6.0
     GIT_SHALLOW ON
     ${find_pkg_args})
   FetchContent_MakeAvailable(Catch2)

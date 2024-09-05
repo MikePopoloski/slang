@@ -8,7 +8,7 @@ it yet does not. This is not a promise that features marked "supported" are bug-
 but should imply that any such bugs are as of yet unknown and should be reported if discovered.
 
 Features are expressed via references to chapters and sections within the
-IEEE 1800-2017 SystemVerilog Language Reference Manual (LRM).
+IEEE 1800-2023 SystemVerilog Language Reference Manual (LRM).
 
 @section elaboration Elaboration
 
@@ -63,11 +63,11 @@ IEEE 1800-2017 SystemVerilog Language Reference Manual (LRM).
 {{m-success}} 6.18 | User-defined types | v0.2
 {{m-success}} 6.19 | Enumerations | v0.2
 {{m-success}} 6.20.2 | Value parameters | v0.2
-{{m-success}} 6.20.2.1 | $ as a parameter value | v0.8
 {{m-success}} 6.20.3 | Type parameters | v0.2
 {{m-success}} 6.20.4 | Local parameters | v0.2
 {{m-success}} 6.20.5 | Specify parameters | v0.7
 {{m-success}} 6.20.6 | Const constants | v0.3
+{{m-success}} 6.20.7 | $ as a constant | v0.8
 {{m-success}} 6.21 | Scope and lifetime | v0.3
 {{m-success}} 6.22 | Type compatibility | v0.2
 {{m-success}} 6.23 | Type operator | v0.7
@@ -91,6 +91,7 @@ IEEE 1800-2017 SystemVerilog Language Reference Manual (LRM).
 {{m-success}} 7.10 | Queues | v0.7
 {{m-success}} 7.11 | Array querying functions | v0.6
 {{m-success}} 7.12 | Array manipulation methods | v0.6
+{{m-success}} 7.12.5 | Array mapping method | v6.0
 
 ## 8. Classes
 
@@ -123,6 +124,7 @@ IEEE 1800-2017 SystemVerilog Language Reference Manual (LRM).
 {{m-success}} 8.27 | Typedef class | v0.5
 {{m-dim}}     8.28 | Classes and structures | N/A
 {{m-dim}}     8.29 | Memory management | N/A
+{{m-success}} 8.30 | Weak references | v6.0
 
 ## 9. Processes
 
@@ -248,7 +250,7 @@ IEEE 1800-2017 SystemVerilog Language Reference Manual (LRM).
 {{m-success}} 16.10 | Local variables | v0.8
 {{m-success}} 16.11 | Calling subroutines on match of sequence | v0.8
 {{m-success}} 16.12 | Declaring properties | v0.8
-{{m-warning}} 16.12.22 | Nondegeneracy | partial
+{{m-success}} 16.12.22 | Nondegeneracy | v7.0
 {{m-warning}} 16.13 | Multiclock support | partial
 {{m-success}} 16.14 | Concurrent assertions | v0.8
 {{m-warning}} 16.14.7 | Inferred value functions | partial
@@ -318,14 +320,14 @@ IEEE 1800-2017 SystemVerilog Language Reference Manual (LRM).
 {{m-success}} 20.8 | Math functions | v0.2
 {{m-success}} 20.9 | Bit vector system functions | v0.2
 {{m-success}} 20.10 | Severity tasks | v0.2
-{{m-success}} 20.11 | Elaboration tasks | v0.5
-{{m-success}} 20.12 | Assertion control tasks | v0.6
-{{m-success}} 20.13 | Sampled value system functions | v0.8
-{{m-success}} 20.14 | Coverage control functions | v0.9
-{{m-success}} 20.15 | Probabilistic distribution functions | v0.7
-{{m-success}} 20.16 | Stochastic analysis tasks and functions | v0.7
-{{m-success}} 20.17 | PLA modeling tasks | v0.9
-{{m-success}} 20.18 | Miscellaneous tasks and functions | v0.4
+{{m-success}} 20.10.1 | Elaboration tasks | v0.5
+{{m-success}} 20.11 | Assertion control tasks | v0.6
+{{m-success}} 20.12 | Sampled value system functions | v0.8
+{{m-success}} 20.13 | Coverage control functions | v0.9
+{{m-success}} 20.14 | Probabilistic distribution functions | v0.7
+{{m-success}} 20.15 | Stochastic analysis tasks and functions | v0.7
+{{m-success}} 20.16 | PLA modeling tasks | v0.9
+{{m-success}} 20.17 | Miscellaneous tasks and functions | v0.4
 
 ## 21. Input/output system tasks and system functions
 
@@ -492,13 +494,13 @@ IEEE 1800-2017 SystemVerilog Language Reference Manual (LRM).
 
 {{w:15%}} LRM | Feature | {{w:15%}} Supported
 --- | ------- | ---------
-{{m-danger}}  33.2 | Overview | no
-{{m-danger}}  33.3 | Libraries | no
-{{m-danger}}  33.4 | Configurations | no
-{{m-danger}}  33.5 | Using libraries and configs | no
-{{m-danger}}  33.6 | Configuration examples | no
-{{m-danger}}  33.7 | Displaying library binding information | no
-{{m-danger}}  33.8 | Library mapping examples | no
+{{m-success}} 33.2 | Overview | v6.0
+{{m-success}} 33.3 | Libraries | v4.0
+{{m-success}} 33.4 | Configurations | v6.0
+{{m-success}} 33.5 | Using libraries and configs | v5.0
+{{m-success}} 33.6 | Configuration examples | v6.0
+{{m-success}} 33.7 | Displaying library binding information | v6.0
+{{m-success}} 33.8 | Library mapping examples | v4.0
 
 ## 34. Protected envelopes
 

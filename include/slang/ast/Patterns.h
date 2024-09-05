@@ -58,18 +58,27 @@ public:
     ConstantValue eval(EvalContext& context, const ConstantValue& value,
                        CaseStatementCondition conditionKind) const;
 
+    /// @brief Casts this pattern to the given concrete derived type.
+    ///
+    /// Asserts that the type is appropriate given this pattern's kind.
     template<typename T>
     T& as() {
         SLANG_ASSERT(T::isKind(kind));
         return *static_cast<T*>(this);
     }
 
+    /// @brief Casts this pattern to the given concrete derived type.
+    ///
+    /// Asserts that the type is appropriate given this pattern's kind.
     template<typename T>
     const T& as() const {
         SLANG_ASSERT(T::isKind(kind));
         return *static_cast<const T*>(this);
     }
 
+    /// @brief Tries to cast this pattern to the given concrete derived type.
+    ///
+    /// If the type is not appropriate given this pattern's kind, returns nullptr.
     template<typename T>
     T* as_if() {
         if (!T::isKind(kind))
@@ -77,6 +86,9 @@ public:
         return static_cast<T*>(this);
     }
 
+    /// @brief Tries to cast this pattern to the given concrete derived type.
+    ///
+    /// If the type is not appropriate given this pattern's kind, returns nullptr.
     template<typename T>
     const T* as_if() const {
         if (!T::isKind(kind))
@@ -84,6 +96,7 @@ public:
         return static_cast<const T*>(this);
     }
 
+    /// Visits this pattern's concrete derived type via the provided visitor object.
     template<typename TVisitor, typename... Args>
     decltype(auto) visit(TVisitor& visitor, Args&&... args) const;
 
@@ -95,8 +108,13 @@ protected:
                                       ASTContext& context);
 };
 
+/// @brief Represents an invalid pattern
+///
+/// Usually generated and inserted into an pattern tree due
+/// to violation of language semantics or type checking.
 class SLANG_EXPORT InvalidPattern : public Pattern {
 public:
+    /// A wrapped child pattern that is considered invalid.
     const Pattern* child;
 
     explicit InvalidPattern(const Pattern* child) :
@@ -111,6 +129,7 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 };
 
+/// Represents a wildcard pattern that matches anything.
 class SLANG_EXPORT WildcardPattern : public Pattern {
 public:
     explicit WildcardPattern(SourceRange sourceRange) :
@@ -127,8 +146,10 @@ public:
     void serializeTo(ASTSerializer&) const {}
 };
 
+/// Reresents a pattern that matches a given constant expression.
 class SLANG_EXPORT ConstantPattern : public Pattern {
 public:
+    /// The constant expression to match against.
     const Expression& expr;
 
     ConstantPattern(const Expression& expr, SourceRange sourceRange) :
@@ -150,8 +171,10 @@ public:
     }
 };
 
+/// Represents a pattern that stores its match in a pattern variable.
 class SLANG_EXPORT VariablePattern : public Pattern {
 public:
+    /// The pattern variable that receives the result of the match.
     const PatternVarSymbol& variable;
 
     VariablePattern(const PatternVarSymbol& variable, SourceRange sourceRange) :
@@ -168,9 +191,13 @@ public:
     void serializeTo(ASTSerializer& serializer) const;
 };
 
+/// Represents a pattern that matches a member of a tagged union.
 class SLANG_EXPORT TaggedPattern : public Pattern {
 public:
+    /// The union member to match.
     const FieldSymbol& member;
+
+    /// The value to match against, or nullptr for void members.
     const Pattern* valuePattern;
 
     TaggedPattern(const FieldSymbol& member, const Pattern* valuePattern, SourceRange sourceRange) :
@@ -193,13 +220,19 @@ public:
     }
 };
 
+/// Represents a pattern that matches a structure.
 class SLANG_EXPORT StructurePattern : public Pattern {
 public:
+    /// A pattern over a struct field.
     struct FieldPattern {
+        /// The field symbol to match against.
         not_null<const FieldSymbol*> field;
+
+        /// The pattern that applies to the field.
         not_null<const Pattern*> pattern;
     };
 
+    /// The list of patterns to match against the struct.
     std::span<const FieldPattern> patterns;
 
     StructurePattern(std::span<const FieldPattern> patterns, SourceRange sourceRange) :

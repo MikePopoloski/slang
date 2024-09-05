@@ -19,6 +19,7 @@
 
 namespace slang::syntax {
 
+struct ConditionalDirectiveExpressionSyntax;
 struct DefineDirectiveSyntax;
 struct MacroActualArgumentListSyntax;
 struct MacroFormalArgumentListSyntax;
@@ -37,6 +38,9 @@ struct SLANG_EXPORT PreprocessorOptions {
     /// a file will result in an error.
     uint32_t maxIncludeDepth = 1024;
 
+    /// The version of the SystemVerilog language to use.
+    LanguageVersion languageVersion = LanguageVersion::Default;
+
     /// The name to associate with errors produced by macros specified
     /// via the @a predefines option.
     std::string predefineSource = "<api>";
@@ -47,6 +51,9 @@ struct SLANG_EXPORT PreprocessorOptions {
 
     /// A set of macro names to undefine at the start of file preprocessing.
     std::vector<std::string> undefines;
+
+    /// Additional include paths to use when preprocessing.
+    std::vector<std::filesystem::path> additionalIncludePaths;
 
     /// A set of preprocessor directives to be ignored.
     flat_hash_set<std::string_view> ignoreDirectives;
@@ -168,14 +175,20 @@ private:
     Trivia handleEndKeywordsDirective(Token directive);
     Trivia handleUnconnectedDriveDirective(Token directive);
     Trivia handleNoUnconnectedDriveDirective(Token directive);
+    Trivia handleDefaultDecayTimeDirective(Token directive);
+    Trivia handleDefaultTriregStrengthDirective(Token directive);
     Trivia createSimpleDirective(Token directive);
     std::pair<Trivia, Trivia> handlePragmaDirective(Token directive);
-
-    // Determines whether the else branch of a conditional directive should be taken
-    bool shouldTakeElseBranch(SourceLocation location, bool isElseIf, std::string_view macroName);
+    std::pair<Trivia, Trivia> handleProtectedDirective(Token directive);
 
     // Handle parsing a branch of a conditional directive
-    Trivia parseBranchDirective(Token directive, Token condition, bool taken);
+    syntax::ConditionalDirectiveExpressionSyntax* parseConditionalExpr();
+    syntax::ConditionalDirectiveExpressionSyntax& parseConditionalExprTop();
+    bool evalConditionalExpr(const syntax::ConditionalDirectiveExpressionSyntax& expr) const;
+    bool shouldTakeElseBranch(SourceLocation location,
+                              const syntax::ConditionalDirectiveExpressionSyntax* expr);
+    Trivia parseBranchDirective(Token directive, syntax::ConditionalDirectiveExpressionSyntax* expr,
+                                bool taken);
 
     // TimeScale specifier parser
     bool expectTimeScaleSpecifier(Token& token, TimeScaleValue& value);
@@ -240,6 +253,7 @@ private:
         const syntax::DefineDirectiveSyntax* syntax = nullptr;
         MacroIntrinsic intrinsic = MacroIntrinsic::None;
         bool builtIn = false;
+        bool commandLine = false;
 
         MacroDef() = default;
         MacroDef(const syntax::DefineDirectiveSyntax* syntax) : syntax(syntax) {}
@@ -255,8 +269,8 @@ private:
     public:
         MacroExpansion(SourceManager& sourceManager, BumpAllocator& alloc,
                        SmallVectorBase<Token>& dest, Token usageSite, bool isTopLevel) :
-            sourceManager(sourceManager),
-            alloc(alloc), dest(dest), usageSite(usageSite), isTopLevel(isTopLevel) {}
+            sourceManager(sourceManager), alloc(alloc), dest(dest), usageSite(usageSite),
+            isTopLevel(isTopLevel) {}
 
         SourceRange getRange() const;
 
@@ -286,6 +300,8 @@ private:
                                SmallSet<const syntax::DefineDirectiveSyntax*, 8>& alreadyExpanded);
     bool applyMacroOps(std::span<Token const> tokens, SmallVectorBase<Token>& dest);
     void createBuiltInMacro(std::string_view name, int value, std::string_view valueStr = {});
+    void splitTokens(Token sourceToken, size_t offset, SmallVectorBase<Token>& results);
+    Token getLastConsumed() const { return lastConsumed; }
 
     static bool isSameMacro(const syntax::DefineDirectiveSyntax& left,
                             const syntax::DefineDirectiveSyntax& right);
@@ -303,6 +319,8 @@ private:
     // This is a small collection of state used to keep track of where we are in a tree of
     // nested conditional directives.
     struct BranchEntry {
+        Token directive;
+
         // Whether any of the sibling directives in this branch have been taken; used to decide
         // whether to take an `elsif or `else branch.
         bool anyTaken;
@@ -314,7 +332,8 @@ private:
         // for any other directives in the current level to come after that.
         bool hasElse = false;
 
-        BranchEntry(bool taken) : anyTaken(taken), currentActive(taken) {}
+        BranchEntry(Token directive, bool taken) :
+            directive(directive), anyTaken(taken), currentActive(taken) {}
     };
 
     // Helper class for parsing macro arguments. There's a lot of otherwise overlapping code that
@@ -339,7 +358,8 @@ private:
 
     private:
         template<typename TFunc>
-        void parseArgumentList(SmallVectorBase<syntax::TokenOrSyntax>& buffer, TFunc&& parseItem);
+        void parseArgumentList(SmallVectorBase<syntax::TokenOrSyntax>& buffer, TFunc&& parseItem,
+                               Token& closeParen);
 
         syntax::MacroActualArgumentSyntax* parseActualArgument();
         syntax::MacroFormalArgumentSyntax* parseFormalArgument();
@@ -384,6 +404,9 @@ private:
     // Directives don't get handled when lexing within a macro body
     // (either define or usage).
     bool inMacroBody = false;
+
+    // Special handling for pulling directives when in an ifdef condition expr.
+    bool inIfDefCondition = false;
 
     // A buffer used to hold tokens while we're busy consuming them for directives.
     SmallVector<Token> scratchTokenBuffer;

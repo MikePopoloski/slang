@@ -41,8 +41,7 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
                 declaredType->getInitializer();
             }
 
-            if constexpr (std::is_same_v<ParameterSymbol, T> ||
-                          std::is_same_v<EnumValueSymbol, T> ||
+            if constexpr (std::is_same_v<EnumValueSymbol, T> ||
                           std::is_same_v<SpecparamSymbol, T>) {
                 symbol.getValue();
             }
@@ -51,7 +50,7 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
                 attr->getValue();
         }
 
-        if constexpr (requires { symbol.getBody(); }) {
+        if constexpr (requires { symbol.getBody().bad(); }) {
             auto& body = symbol.getBody();
             if (body.bad())
                 return true;
@@ -105,6 +104,24 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
         if (!handleDefault(symbol))
             return;
         symbol.getType();
+    }
+
+    void handle(const ParameterSymbol& symbol) {
+        if (!handleDefault(symbol))
+            return;
+
+        symbol.getValue();
+        if (symbol.isOverridden())
+            symbol.checkDefaultExpression();
+    }
+
+    void handle(const TypeParameterSymbol& symbol) {
+        if (!handleDefault(symbol))
+            return;
+
+        symbol.checkTypeRestriction();
+        if (symbol.isOverridden())
+            symbol.checkDefaultExpression();
     }
 
     void handle(const ContinuousAssignSymbol& symbol) {
@@ -167,7 +184,7 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
             return;
 
         symbol.getCoverageEvent();
-        for (auto& option : symbol.body.options)
+        for (auto& option : symbol.getBody().options)
             option.getExpression();
     }
 
@@ -176,6 +193,7 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
             return;
 
         symbol.getIffExpr();
+        symbol.checkBins();
         for (auto& option : symbol.options)
             option.getExpression();
     }
@@ -201,6 +219,12 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
             return;
 
         symbol.getDelay();
+        symbol.checkInitializer();
+    }
+
+    void handle(const VariableSymbol& symbol) {
+        if (!handleDefault(symbol))
+            return;
         symbol.checkInitializer();
     }
 
@@ -239,11 +263,26 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
         for (auto attr : compilation.getAttributes(symbol))
             attr->getValue();
 
-        for (auto& conn : symbol.getPortConnections())
-            conn.getOutputInitialExpr();
-
         visit(symbol.body);
-        symbol.verifyMembers();
+
+        if (!finishedEarly()) {
+            for (auto& conn : symbol.getPortConnections())
+                conn.getOutputInitialExpr();
+
+            symbol.verifyMembers();
+        }
+    }
+
+    void handle(const CheckerInstanceBodySymbol& symbol) {
+        if (!visitInstances || finishedEarly())
+            return;
+
+        if (symbol.instanceDepth > compilation.getOptions().maxCheckerInstanceDepth) {
+            hierarchyProblem = true;
+            return;
+        }
+
+        visitDefault(symbol);
     }
 
     void handle(const ClockingBlockSymbol& symbol) {
@@ -265,8 +304,6 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
             return buffer;
         });
 
-        instanceCount[&symbol.getDefinition()]++;
-
         for (auto attr : compilation.getAttributes(symbol))
             attr->getValue();
 
@@ -275,7 +312,7 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
             conn->checkSimulatedNetTypes();
             for (auto attr : compilation.getAttributes(*conn))
                 attr->getValue();
-        };
+        }
 
         // Detect infinite recursion, which happens if we see this exact
         // instance body somewhere higher up in the stack.
@@ -299,7 +336,8 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
             return;
         }
 
-        visit(symbol.body);
+        if (visitInstances)
+            visit(symbol.body);
     }
 
     void handle(const SubroutineSymbol& symbol) {
@@ -319,31 +357,31 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
     }
 
     void handle(const SequenceSymbol& symbol) {
-        if (!handleDefault(symbol))
+        if (!visitInstances || !handleDefault(symbol))
             return;
 
         symbol.makeDefaultInstance();
     }
 
     void handle(const PropertySymbol& symbol) {
-        if (!handleDefault(symbol))
+        if (!visitInstances || !handleDefault(symbol))
             return;
 
         symbol.makeDefaultInstance();
     }
 
     void handle(const LetDeclSymbol& symbol) {
-        if (!handleDefault(symbol))
+        if (!visitInstances || !handleDefault(symbol))
             return;
 
         symbol.makeDefaultInstance();
     }
 
     void handle(const CheckerSymbol& symbol) {
-        if (!handleDefault(symbol))
+        if (!visitInstances || !handleDefault(symbol))
             return;
 
-        auto& result = CheckerInstanceSymbol::createInvalid(symbol);
+        auto& result = CheckerInstanceSymbol::createInvalid(symbol, 0);
         result.visit(*this);
     }
 
@@ -419,10 +457,10 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
     Compilation& compilation;
     const size_t& numErrors;
     uint32_t errorLimit;
+    bool visitInstances = true;
     bool hierarchyProblem = false;
-    flat_hash_map<const Definition*, size_t> instanceCount;
     flat_hash_set<const InstanceBodySymbol*> activeInstanceBodies;
-    flat_hash_set<const Definition*> usedIfacePorts;
+    flat_hash_set<const DefinitionSymbol*> usedIfacePorts;
     SmallVector<const GenericClassDefSymbol*> genericClasses;
     SmallVector<const SubroutineSymbol*> dpiImports;
     SmallVector<const MethodPrototypeSymbol*> externIfaceProtos;
@@ -458,7 +496,7 @@ struct DefParamVisitor : public ASTVisitor<DefParamVisitor, false, false> {
     }
 
     void handle(const InstanceSymbol& symbol) {
-        if (symbol.body.isUninstantiated || hierarchyProblem)
+        if (symbol.body.flags.has(InstanceFlags::Uninstantiated) || hierarchyProblem)
             return;
 
         // If we hit max depth we have a problem -- setting the hierarchyProblem
@@ -516,7 +554,7 @@ struct DefParamVisitor : public ASTVisitor<DefParamVisitor, false, false> {
         for (auto& member : symbol.members()) {
             if (hierarchyProblem)
                 return;
-            visit(member);
+            member.visit(*this);
         }
     }
 
@@ -524,7 +562,7 @@ struct DefParamVisitor : public ASTVisitor<DefParamVisitor, false, false> {
     void handle(const T&) {}
 
     SmallVector<const DefParamSymbol*> found;
-    flat_hash_set<const Definition*> activeInstances;
+    flat_hash_set<const DefinitionSymbol*> activeInstances;
     size_t instanceDepth = 0;
     size_t maxInstanceDepth = 0;
     size_t generateLevel = 0;
@@ -636,6 +674,20 @@ struct PostElabVisitor : public ASTVisitor<PostElabVisitor, false, false> {
     void handle(const PropertySymbol& symbol) { checkAssertionDeclUnused(symbol, "property"sv); }
     void handle(const LetDeclSymbol& symbol) { checkAssertionDeclUnused(symbol, "let"sv); }
     void handle(const CheckerSymbol& symbol) { checkAssertionDeclUnused(symbol, "checker"sv); }
+
+    void handle(const ExplicitImportSymbol& symbol) { checkUnused(symbol, diag::UnusedImport); }
+
+    void handle(const WildcardImportSymbol& symbol) {
+        auto syntax = symbol.getSyntax();
+        if (!syntax)
+            return;
+
+        auto [used, _] = compilation.isReferenced(*syntax);
+        if (!used) {
+            if (shouldWarn(symbol))
+                symbol.getParentScope()->addDiag(diag::UnusedWildcardImport, symbol.location);
+        }
+    }
 
 private:
     void checkValueUnused(const ValueSymbol& symbol, DiagCode unusedCode,

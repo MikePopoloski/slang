@@ -11,6 +11,7 @@
 #include "slang/ast/Compilation.h"
 #include "slang/ast/symbols/MemberSymbols.h"
 #include "slang/ast/types/Type.h"
+#include "slang/text/CharInfo.h"
 #include "slang/text/FormatBuffer.h"
 
 namespace {
@@ -115,16 +116,39 @@ static void getHierarchicalPathImpl(const Symbol& symbol, FormatBuffer& buffer) 
         }
     }
 
+    auto needsEscaping = [](std::string_view text) {
+        if (!text.empty()) {
+            if (!isValidCIdChar(text[0]) || isDecimalDigit(text[0]))
+                return true;
+
+            for (size_t i = 1; i < text.length(); i++) {
+                if (!isValidCIdChar(text[i]) && text[i] != '$')
+                    return true;
+            }
+        }
+        return false;
+    };
+
     auto addName = [&](std::string_view text) {
         if (!separator.empty())
             buffer.append(separator);
-        buffer.append(text);
+
+        // If the name requires escaping add that here.
+        if (needsEscaping(text))
+            buffer.format("\\{} ", text);
+        else
+            buffer.append(text);
     };
 
     if (!current->name.empty())
         addName(current->name);
 
-    if (current->kind == SymbolKind::GenerateBlock) {
+    if (current->kind == SymbolKind::GenerateBlockArray) {
+        auto& array = current->as<GenerateBlockArraySymbol>();
+        if (current->name.empty())
+            addName(array.getExternalName());
+    }
+    else if (current->kind == SymbolKind::GenerateBlock) {
         auto& block = current->as<GenerateBlockSymbol>();
         if (auto index = block.arrayIndex) {
             buffer.append("[");
@@ -193,7 +217,7 @@ void Symbol::getLexicalPath(std::string& buffer) const {
 }
 
 std::optional<bool> Symbol::isDeclaredBefore(const Symbol& target) const {
-    return isDeclaredBefore(LookupLocation::before(target));
+    return isDeclaredBefore(LookupLocation::after(target));
 }
 
 std::optional<bool> Symbol::isDeclaredBefore(LookupLocation target) const {
@@ -201,39 +225,18 @@ std::optional<bool> Symbol::isDeclaredBefore(LookupLocation target) const {
     if (!target.getScope())
         return ll < target;
 
-    // Find a common parent scope for the two symbols. Start with our parent and
-    // walk upwards until we find `target`s scope or run into a compilation unit.
-    SmallMap<const Scope*, LookupLocation, 8> locMap;
-    const Symbol* sym = this;
-    const Scope* scope = ll.getScope();
-
-    while (sym->kind != SymbolKind::CompilationUnit && scope && scope != target.getScope()) {
-        locMap[scope] = ll;
-        sym = &scope->asSymbol();
-        ll = LookupLocation::before(*sym);
-        scope = ll.getScope();
+    // Walk up the target's tree until we find our own scope.
+    while (target.getScope() != ll.getScope()) {
+        auto& sym = target.getScope()->asSymbol();
+        target = LookupLocation::after(sym);
+        if (sym.kind == SymbolKind::CompilationUnit || !target.getScope())
+            return std::nullopt;
     }
 
-    if (scope == target.getScope())
-        return ll < target;
-
-    // If target wasn't in a direct scope of any of our own parents,
-    // repeat the process walking up target's scopes.
-    sym = &target.getScope()->asSymbol();
-    ll = LookupLocation::after(*sym);
-
-    while ((scope = ll.getScope()) != nullptr && sym->kind != SymbolKind::CompilationUnit) {
-        if (auto it = locMap.find(scope); it != locMap.end())
-            return it->second < ll;
-
-        sym = &scope->asSymbol();
-        ll = LookupLocation::after(*sym);
-    }
-
-    return std::nullopt;
+    return ll < target;
 }
 
-const Definition* Symbol::getDeclaringDefinition() const {
+const DefinitionSymbol* Symbol::getDeclaringDefinition() const {
     auto curr = this;
     while (curr->kind != SymbolKind::InstanceBody) {
         auto scope = curr->getParentScope();
@@ -244,6 +247,29 @@ const Definition* Symbol::getDeclaringDefinition() const {
     }
 
     return &curr->as<InstanceBodySymbol>().getDefinition();
+}
+
+const SourceLibrary* Symbol::getSourceLibrary() const {
+    auto curr = this;
+    while (true) {
+        switch (curr->kind) {
+            case SymbolKind::Definition:
+                return &curr->as<DefinitionSymbol>().sourceLibrary;
+            case SymbolKind::CompilationUnit:
+                return &curr->as<CompilationUnitSymbol>().sourceLibrary;
+            case SymbolKind::InstanceBody:
+                return &curr->as<InstanceBodySymbol>().getDefinition().sourceLibrary;
+            case SymbolKind::Instance:
+                return &curr->as<InstanceSymbol>().getDefinition().sourceLibrary;
+            default:
+                auto scope = curr->getParentScope();
+                if (!scope)
+                    return nullptr;
+
+                curr = &scope->asSymbol();
+                break;
+        }
+    }
 }
 
 RandMode Symbol::getRandMode() const {

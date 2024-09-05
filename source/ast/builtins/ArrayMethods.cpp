@@ -5,6 +5,8 @@
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
+#include "Builtins.h"
+
 #include "slang/ast/Compilation.h"
 #include "slang/ast/EvalContext.h"
 #include "slang/ast/SystemSubroutine.h"
@@ -534,8 +536,8 @@ private:
 
 class ArraySizeMethod : public SimpleSystemSubroutine {
 public:
-    ArraySizeMethod(Compilation& comp, const std::string& name) :
-        SimpleSystemSubroutine(name, SubroutineKind::Function, 0, {}, comp.getIntType(), true) {}
+    ArraySizeMethod(const Builtins& builtins, const std::string& name) :
+        SimpleSystemSubroutine(name, SubroutineKind::Function, 0, {}, builtins.intType, true) {}
 
     ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
                        const CallExpression::SystemCallInfo&) const final {
@@ -549,8 +551,8 @@ public:
 
 class DynArrayDeleteMethod : public SimpleSystemSubroutine {
 public:
-    explicit DynArrayDeleteMethod(Compilation& comp) :
-        SimpleSystemSubroutine("delete", SubroutineKind::Function, 0, {}, comp.getVoidType(), true,
+    explicit DynArrayDeleteMethod(const Builtins& builtins) :
+        SimpleSystemSubroutine("delete", SubroutineKind::Function, 0, {}, builtins.voidType, true,
                                /* isFirstArgLValue */ true) {}
 
     ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
@@ -573,8 +575,10 @@ public:
         // Argument type comes from the index type of the previous argument.
         if (argIndex == 1) {
             auto indexType = args[0]->type->getAssociativeIndexType();
-            if (indexType)
-                return Expression::bindArgument(*indexType, ArgumentDirection::In, syntax, context);
+            if (indexType) {
+                return Expression::bindArgument(*indexType, ArgumentDirection::In, {}, syntax,
+                                                context);
+            }
         }
 
         return SystemSubroutine::bindArgument(argIndex, context, syntax, args);
@@ -633,8 +637,10 @@ public:
         // Argument type comes from the index type of the previous argument.
         if (argIndex == 1) {
             auto indexType = args[0]->type->getAssociativeIndexType();
-            if (indexType)
-                return Expression::bindArgument(*indexType, ArgumentDirection::In, syntax, context);
+            if (indexType) {
+                return Expression::bindArgument(*indexType, ArgumentDirection::In, {}, syntax,
+                                                context);
+            }
         }
 
         return SystemSubroutine::bindArgument(argIndex, context, syntax, args);
@@ -681,13 +687,17 @@ public:
         // Argument type comes from the index type of the previous argument.
         if (argIndex == 1) {
             auto indexType = args[0]->type->getAssociativeIndexType();
-            if (indexType)
-                return Expression::bindArgument(*indexType, ArgumentDirection::Ref, syntax,
+            if (indexType) {
+                return Expression::bindArgument(*indexType, ArgumentDirection::Ref, {}, syntax,
                                                 context);
+            }
         }
 
         return SystemSubroutine::bindArgument(argIndex, context, syntax, args);
     }
+
+    // Return type is 'int' but the actual value is always either 0 or 1
+    std::optional<bitwidth_t> getEffectiveWidth() const final { return 1; }
 
     const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
@@ -767,8 +777,10 @@ public:
         // Argument type comes from the element type of the queue.
         if (argIndex == 1) {
             auto elemType = args[0]->type->getArrayElementType();
-            if (elemType)
-                return Expression::bindArgument(*elemType, ArgumentDirection::In, syntax, context);
+            if (elemType) {
+                return Expression::bindArgument(*elemType, ArgumentDirection::In, {}, syntax,
+                                                context);
+            }
         }
 
         return SystemSubroutine::bindArgument(argIndex, context, syntax, args);
@@ -819,8 +831,10 @@ public:
         // Argument type comes from the element type of the queue.
         if (argIndex == 2) {
             auto elemType = args[0]->type->getArrayElementType();
-            if (elemType)
-                return Expression::bindArgument(*elemType, ArgumentDirection::In, syntax, context);
+            if (elemType) {
+                return Expression::bindArgument(*elemType, ArgumentDirection::In, {}, syntax,
+                                                context);
+            }
         }
 
         return SystemSubroutine::bindArgument(argIndex, context, syntax, args);
@@ -949,9 +963,103 @@ public:
     }
 };
 
-void registerArrayMethods(Compilation& c) {
-#define REGISTER(kind, name, ...) \
-    c.addSystemMethod(kind, std::make_unique<name##Method>(__VA_ARGS__))
+class ArrayMapMethod : public SystemSubroutine {
+public:
+    ArrayMapMethod() : SystemSubroutine("map", SubroutineKind::Function) {
+        withClauseMode = WithClauseMode::Iterator;
+    }
+
+    const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
+                               const Expression* iterExpr) const final {
+        auto& comp = context.getCompilation();
+        if (!checkArgCount(context, true, args, range, 0, 0))
+            return comp.getErrorType();
+
+        if (!iterExpr) {
+            context.addDiag(diag::ArrayLocatorWithClause, range) << name;
+            return comp.getErrorType();
+        }
+
+        auto languageVersion = comp.languageVersion();
+        if (languageVersion < LanguageVersion::v1800_2023)
+            context.addDiag(diag::WrongLanguageVersion, range) << toString(languageVersion);
+
+        auto& arrayType = args[0]->type->getCanonicalType();
+        auto& elemType = *iterExpr->type;
+        switch (arrayType.kind) {
+            case SymbolKind::FixedSizeUnpackedArrayType: {
+                auto& fsuat = arrayType.as<FixedSizeUnpackedArrayType>();
+                return FixedSizeUnpackedArrayType::fromDim(*context.scope, elemType, fsuat.range,
+                                                           iterExpr->sourceRange);
+            }
+            case SymbolKind::DynamicArrayType:
+                return *comp.emplace<DynamicArrayType>(elemType);
+            case SymbolKind::AssociativeArrayType: {
+                auto& aat = arrayType.as<AssociativeArrayType>();
+                return *comp.emplace<AssociativeArrayType>(elemType, aat.indexType);
+            }
+            case SymbolKind::QueueType: {
+                auto& qt = arrayType.as<QueueType>();
+                return *comp.emplace<QueueType>(elemType, qt.maxBound);
+            }
+            default:
+                SLANG_UNREACHABLE;
+        }
+    }
+
+    ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
+                       const CallExpression::SystemCallInfo& callInfo) const final {
+        ConstantValue arr = args[0]->eval(context);
+        if (!arr)
+            return nullptr;
+
+        auto [iterExpr, iterVar] = callInfo.getIteratorInfo();
+        auto guard = context.disableCaching();
+        auto iterVal = context.createLocal(iterVar);
+
+        if (arr.isMap()) {
+            AssociativeArray results;
+            for (auto& [key, val] : *arr.map()) {
+                *iterVal = val;
+                ConstantValue cv = iterExpr->eval(context);
+                if (!cv)
+                    return nullptr;
+
+                results.emplace(key, std::move(cv));
+            }
+            return results;
+        }
+        else {
+            auto doMap = [&, ie = iterExpr](auto& container, auto& results) {
+                for (auto& elem : container) {
+                    *iterVal = elem;
+                    ConstantValue cv = ie->eval(context);
+                    if (!cv)
+                        return false;
+
+                    results.emplace_back(std::move(cv));
+                }
+                return true;
+            };
+
+            if (arr.isQueue()) {
+                SVQueue results;
+                if (!doMap(*arr.queue(), results))
+                    return nullptr;
+                return results;
+            }
+            else {
+                ConstantValue::Elements results;
+                if (!doMap(std::get<ConstantValue::Elements>(arr.getVariant()), results))
+                    return nullptr;
+                return results;
+            }
+        }
+    }
+};
+
+void Builtins::registerArrayMethods() {
+#define REGISTER(kind, name, ...) addSystemMethod(kind, std::make_shared<name##Method>(__VA_ARGS__))
 
     for (auto kind : {SymbolKind::FixedSizeUnpackedArrayType, SymbolKind::DynamicArrayType,
                       SymbolKind::AssociativeArrayType, SymbolKind::QueueType}) {
@@ -973,11 +1081,13 @@ void registerArrayMethods(Compilation& c) {
 
         REGISTER(kind, ArrayUnique, "unique", false);
         REGISTER(kind, ArrayUnique, "unique_index", true);
+
+        REGISTER(kind, ArrayMap, );
     }
 
     for (auto kind :
          {SymbolKind::DynamicArrayType, SymbolKind::AssociativeArrayType, SymbolKind::QueueType}) {
-        REGISTER(kind, ArraySize, c, "size");
+        REGISTER(kind, ArraySize, *this, "size");
     }
 
     for (auto kind : {SymbolKind::FixedSizeUnpackedArrayType, SymbolKind::DynamicArrayType,
@@ -986,16 +1096,15 @@ void registerArrayMethods(Compilation& c) {
         REGISTER(kind, ArraySort, "rsort", true);
         REGISTER(kind, ArrayReverse, );
 
-        c.addSystemMethod(kind,
-                          std::make_unique<NonConstantFunction>("shuffle", c.getVoidType(), 0,
-                                                                std::vector<const Type*>{}, true));
+        addSystemMethod(kind, std::make_shared<NonConstantFunction>(
+                                  "shuffle", voidType, 0, std::vector<const Type*>{}, true));
     }
 
     // Associative arrays also alias "size" to "num" for some reason.
-    REGISTER(SymbolKind::AssociativeArrayType, ArraySize, c, "num");
+    REGISTER(SymbolKind::AssociativeArrayType, ArraySize, *this, "num");
 
     // "delete" methods
-    REGISTER(SymbolKind::DynamicArrayType, DynArrayDelete, c);
+    REGISTER(SymbolKind::DynamicArrayType, DynArrayDelete, *this);
     REGISTER(SymbolKind::AssociativeArrayType, AssocArrayDelete, );
     REGISTER(SymbolKind::QueueType, QueueDelete, );
 

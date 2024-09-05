@@ -11,6 +11,7 @@
 #include "slang/parsing/LexerFacts.h"
 #include "slang/parsing/Token.h"
 #include "slang/text/SourceLocation.h"
+#include "slang/util/LanguageVersion.h"
 #include "slang/util/SmallVector.h"
 #include "slang/util/Util.h"
 
@@ -27,6 +28,13 @@ struct SLANG_EXPORT LexerOptions {
     /// The maximum number of errors that can occur before the rest of the source
     /// buffer is skipped.
     uint32_t maxErrors = 16;
+
+    /// The version of the SystemVerilog language to use.
+    LanguageVersion languageVersion = LanguageVersion::Default;
+
+    /// If true, the preprocessor will support legacy protected envelope directives,
+    /// for compatibility with old Verilog tools.
+    bool enableLegacyProtect = false;
 };
 
 /// Possible encodings for encrypted text used in a pragma protect region.
@@ -50,14 +58,16 @@ public:
     /// Lexes the next token from the source code.
     /// This will never return a null pointer; at the end of the buffer,
     /// an infinite stream of EndOfFile tokens will be generated
-    Token lex(KeywordVersion keywordVersion = LexerFacts::getDefaultKeywordVersion());
+    Token lex();
+    Token lex(KeywordVersion keywordVersion);
 
     /// Looks ahead in the source stream to see if the next token we would lex
     /// is on the same line as the previous token we've lexed.
     bool isNextTokenOnSameLine();
 
     /// Lexes a token that contains encoded text as part of a protected envelope.
-    Token lexEncodedText(ProtectEncoding encoding, uint32_t expectedBytes, bool singleLine);
+    Token lexEncodedText(ProtectEncoding encoding, uint32_t expectedBytes, bool singleLine,
+                         bool legacyProtectedMode);
 
     /// Returns the library with which the lexer's source buffer is associated.
     const SourceLibrary* getLibrary() const { return library; }
@@ -66,14 +76,11 @@ public:
     static Token concatenateTokens(BumpAllocator& alloc, Token left, Token right);
 
     /// Converts a range of tokens into a string literal; used for macro stringification.
-    /// The @a location and @a trivia parameters are used in the newly created token.
-    /// The range of tokens to stringify is given by @a begin and @a end.
-    static Token stringify(BumpAllocator& alloc, SourceLocation location,
-                           std::span<Trivia const> trivia, Token* begin, Token* end);
+    static Token stringify(Lexer& parentLexer, Token startToken, std::span<Token> bodyTokens,
+                           Token endToken);
 
     /// Converts a range of tokens into a block comment; used for macro expansion.
-    /// The range of tokens to commentify is given by @a begin and @a end.
-    static Trivia commentify(BumpAllocator& alloc, Token* begin, Token* end);
+    static Trivia commentify(BumpAllocator& alloc, std::span<Token> tokens);
 
     /// Splits the given token at the specified offset into its raw source text. The trailing
     /// portion of the split is lexed into new tokens and appened to @a results
@@ -102,8 +109,11 @@ private:
     void scanLineComment();
     void scanWhitespace();
     void scanIdentifier();
-    bool scanUTF8Char(bool alreadyErrored, uint32_t* code);
-    void scanEncodedText(ProtectEncoding encoding, uint32_t expectedBytes, bool singleLine);
+    bool scanUTF8Char(bool alreadyErrored);
+    bool scanUTF8Char(bool alreadyErrored, uint32_t* code, int& computedLen);
+    void scanEncodedText(ProtectEncoding encoding, uint32_t expectedBytes, bool singleLine,
+                         bool legacyProtectedMode);
+    void scanProtectComment();
 
     template<typename... Args>
     Token create(TokenKind kind, Args&&... args);

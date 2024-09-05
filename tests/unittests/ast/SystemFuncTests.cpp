@@ -198,13 +198,13 @@ TEST_CASE("Utility system functions") {
     };
 
     // [18.13] Constrained pseudo-random value generation
-    CHECK(typeof("$urandom") == "bit[31:0]");
-    CHECK(typeof("$urandom_range(1)") == "bit[31:0]");
-    CHECK(typeof("$urandom_range(1, 55)") == "bit[31:0]");
+    CHECK(typeof("$urandom") == "int unsigned");
+    CHECK(typeof("$urandom_range(1)") == "int unsigned");
+    CHECK(typeof("$urandom_range(1, 55)") == "int unsigned");
 
     // [20.3] Simulation time functions
     CHECK(typeof("$time") == "time");
-    CHECK(typeof("$stime") == "bit[31:0]");
+    CHECK(typeof("$stime") == "int unsigned");
     CHECK(typeof("$realtime") == "realtime");
 
     // [20.4] Timescale system tasks
@@ -362,7 +362,8 @@ endmodule
     CHECK(diags[15].code == diag::QueryOnAssociativeWildcard);
 }
 
-TEST_CASE("printtimescale -- errors") {
+TEST_CASE("$printtimescale, $timeunit, $timeprecision") {
+    auto options = optionsFor(LanguageVersion::v1800_2023);
     auto tree = SyntaxTree::fromText(R"(
 module j;
 endmodule
@@ -380,19 +381,35 @@ module m;
         $printtimescale(5);
         $printtimescale(m.k1.j1, 5);
         $printtimescale(foo);
+        $printtimescale($root);
+        $printtimescale($unit);
+    end
+
+    initial begin
+        foo = $timeunit;
+        foo = $timeunit(5);
+        foo = $timeprecision(m.k1.j1);
+        foo = $timeprecision(m.k1.j1, 5);
+        foo = $timeprecision(foo);
+        foo = $timeunit($root);
+        foo = $timeunit($unit);
     end
 
 endmodule
-)");
+)",
+                                     options);
 
-    Compilation compilation;
+    Compilation compilation(options);
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 3);
+    REQUIRE(diags.size() == 6);
     CHECK(diags[0].code == diag::ExpectedModuleName);
     CHECK(diags[1].code == diag::TooManyArguments);
     CHECK(diags[2].code == diag::ExpectedModuleName);
+    CHECK(diags[3].code == diag::ExpectedModuleName);
+    CHECK(diags[4].code == diag::TooManyArguments);
+    CHECK(diags[5].code == diag::ExpectedModuleName);
 }
 
 TEST_CASE("dumpvars / dumpports") {
@@ -564,17 +581,14 @@ module m;
     initial begin
         $cast(a, b);
         if ($cast(i, r)) begin end
-        $cast(i, da); // error
+        $cast(i, da);
     end
 endmodule
 )");
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
-
-    auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 1);
-    CHECK(diags[0].code == diag::CastArgSingular);
+    NO_COMPILATION_ERRORS;
 }
 
 TEST_CASE("Associative array non-const methods") {
@@ -796,8 +810,8 @@ TEST_CASE("Invalid clocking argument") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
     wire clk;
-    int i = $bits(@(posedge clk));
-    logic j = $rose(clk, @clk strong(a));
+    wire integer i = $bits(@(posedge clk));
+    wire logic j = $rose(clk, @clk strong(a));
 endmodule
 )");
 
@@ -1027,6 +1041,20 @@ module m;
         $async$and$plane(mem, in, outBadOrder);   // Bad output bit ordering
     end
 endmodule
+
+module async_array(a1,a2,a3,a4,a5,a6,a7,b1,b2,b3);
+    input a1, a2, a3, a4, a5, a6, a7;
+    output b1, b2, b3;
+    logic [1:7] mem[1:3]; // memory declaration for array personality
+    logic b1, b2, b3;
+    initial begin
+        // set up the personality from the file array.dat
+        $readmemb("array.dat", mem);
+        // set up an asynchronous logic array with the input
+        // and output terms expressed as concatenations
+        $async$and$array(mem,{a1,a2,a3,a4,a5,a6,a7},{b1,b2,b3});
+    end
+endmodule
 )");
 
     Compilation compilation;
@@ -1048,7 +1076,7 @@ endmodule
 TEST_CASE("Non-standard system funcs") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
-    int foo;
+    int foo = 0;
     string s = $psprintf("%0d", foo);
 endmodule
 )");
@@ -1098,4 +1126,350 @@ endmodule
     Compilation compilation;
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Assert control functions referencing instances") {
+    auto tree = SyntaxTree::fromText(R"(
+module M(
+    input logic clk,
+    input logic rst_b
+);
+    myprop: assert property(@(posedge clk) disable iff (rst_b) ~1);
+endmodule
+
+module top;
+    logic clk;
+    logic rst_b;
+
+    M m(
+        .clk   (clk),
+        .rst_b (rst_b)
+    );
+
+    initial begin
+        $assertoff(0, m);
+        $assertoff(0, m.myprop);
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("No width warning for randomize method") {
+    auto tree = SyntaxTree::fromText(R"(
+class C;
+    function bit f();
+        bit x;
+        bit rc = std::randomize(x);
+        assert (rc);
+        return x;
+    endfunction
+endclass
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    // TODO: also shouldn't warn about sign
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::SignConversion);
+}
+
+TEST_CASE("Array map method") {
+    auto options = optionsFor(LanguageVersion::v1800_2023);
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int A[] = {1,2,3}, B[] = {2,3,5}, C[$];
+    bit Compare[];
+
+    initial begin
+        A = A.map() with (item + 1); // A = {2,3,4}
+        C = A.map(a) with (a + B[a.index]); // C = {4,6,9}
+        Compare = A.map(a) with (a == B[a.index]); // Compare = {1,1,0}
+    end
+endmodule
+)",
+                                     options);
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Array map method not allowed in 2017") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int A[] = {1,2,3};
+    int B[] = A.map with (item);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::WrongLanguageVersion);
+}
+
+TEST_CASE("Assert control functions force hierarchical lookup") {
+    auto tree = SyntaxTree::fromText(R"(
+module top();
+  m m1();
+endmodule
+
+module m();
+  initial begin
+    $assertoff(0, m);
+  end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Weak References") {
+    auto options = optionsFor(LanguageVersion::v1800_2023);
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    class A;
+    endclass
+
+    A a = new;
+    weak_reference #(A) ref1 = new (a);
+    weak_reference #(A) ref2 = new (a);
+
+    longint l = weak_reference #(A)::get_id(a);
+
+    initial begin
+        assert(ref1 != ref2);
+        assert(ref1.get() == ref2.get());
+
+        ref1.clear();
+        ref2.clear();
+    end
+endmodule
+)",
+                                     options);
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Weak reference errors") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    weak_reference a;
+    weak_reference #(int) b;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::NoDefaultSpecialization);
+    CHECK(diags[1].code == diag::WrongLanguageVersion);
+    CHECK(diags[2].code == diag::TypeIsNotAClass);
+}
+
+TEST_CASE("v1800-2023 clarification: severity system tasks should work in constant functions") {
+    auto tree = SyntaxTree::fromText(R"(
+function foo(int i);
+    assert(i > 10) else $info("Not greater than 10: %0d", i);
+    assert(i > 9) else $fatal(2);
+endfunction
+
+localparam p = foo(8);
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::InfoTask);
+    CHECK(diags[1].code == diag::FatalTask);
+}
+
+TEST_CASE("Deferred assertion void-returning system funcs allowed regress GH #925") {
+    auto tree = SyntaxTree::fromText(R"(
+module Test;
+  function logic my_func();
+    static logic my_var = 1'b1;
+    assert final (my_var == 1'b1)
+      else $error();
+  endfunction
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("System function call args are not considered 'top-level' statements") {
+    auto tree = SyntaxTree::fromText(R"(
+module my_mod;
+  function automatic logic my_func();
+    my_func = 1'b1;
+    assert (my_func === 1'b1)
+      else $error("Expect my_func to return 1 but got %0b", my_func);
+  endfunction
+endmodule
+)");
+
+    CompilationOptions options;
+    options.flags |= CompilationFlags::AllowRecursiveImplicitCall;
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("$bits of >32bit sized type") {
+    auto tree = SyntaxTree::fromText(R"(
+logic [7:0] a [2147483647];
+localparam p = $bits(a);
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& p = compilation.getCompilationUnits()[0]->find<ParameterSymbol>("p");
+    CHECK(p.getValue().integer() == -8);
+}
+
+TEST_CASE("Restriction on automatic variables in $past") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    initial begin
+        automatic int b;
+        automatic int c = $past(b, 1, b > 0, @b);
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::AutoFromNonProcedural);
+    CHECK(diags[1].code == diag::AutoFromNonProcedural);
+}
+
+TEST_CASE("$isunbounded of non-param name") {
+    auto tree = SyntaxTree::fromText(R"(
+localparam p = $isunbounded(1 + 1);
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::IsUnboundedParamArg);
+}
+
+TEST_CASE("$stacktrace function") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    initial begin
+        string s;
+        $stacktrace;
+        s = $stacktrace;
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Annex D option system tasks and functions") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    wire n = 1;
+    initial begin : baz
+        bit f;
+        int a, b, c, d, e;
+        f = $countdrivers(m.n, a, b, c, d, e);
+        $list;
+        $list(m);
+        $input("asdf");
+        $key("asdf");
+        $nokey;
+        $reset;
+        $reset(0, 1, 2);
+        a = $reset_count;
+        b = $reset_value;
+        $save("SDF");
+        $reset("SDF");
+        $incsave("SDF");
+        $scope(m.baz);
+        c = $scale(m);
+        $showscopes;
+        $showscopes(1);
+        $showvars;
+        $showvars(a, b[0]);
+    end
+
+    logic [1:4] in_mem[100];
+    assign {i1,i2,i3,i4} = $getpattern(in_mem[n]);
+
+    initial begin
+        $sreadmemb(in_mem, 0, 1, "SDF");
+        $sreadmemh(in_mem, 0, 1, "SDF", "BAZ");
+    end
+
+    var v;
+    initial begin
+        bit b;
+        b = $countdrivers(v);
+        $list(m.n);
+        $showvars(v + 1);
+        $sreadmemh(in_mem, 0, 1, "SDF", in_mem);
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 4);
+    CHECK(diags[0].code == diag::ExpectedNetRef);
+    CHECK(diags[1].code == diag::ExpectedScopeName);
+    CHECK(diags[2].code == diag::ExpectedVariableName);
+    CHECK(diags[3].code == diag::BadSystemSubroutineArg);
+}
+
+TEST_CASE("$sformat invalid %p call") {
+    auto tree = SyntaxTree::fromText(R"(
+function void void_fn;
+endfunction
+
+module m;
+  initial begin
+    $sformatf("%p", void_fn());
+  end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::FormatMismatchedType);
 }

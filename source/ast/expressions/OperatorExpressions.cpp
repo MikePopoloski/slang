@@ -17,6 +17,7 @@
 #include "slang/ast/Statements.h"
 #include "slang/ast/expressions/AssignmentExpressions.h"
 #include "slang/ast/expressions/MiscExpressions.h"
+#include "slang/ast/symbols/VariableSymbols.h"
 #include "slang/ast/types/AllTypes.h"
 #include "slang/diagnostics/ConstEvalDiags.h"
 #include "slang/diagnostics/ExpressionsDiags.h"
@@ -42,7 +43,11 @@ ConstantValue evalLogicalOp(BinaryOperator op, const TL& l, const TR& r) {
         OP(LogicalImplication, SVInt(SVInt::logicalImpl(l, r)));
         OP(LogicalEquivalence, SVInt(SVInt::logicalEquiv(l, r)));
         default:
-            SLANG_UNREACHABLE;
+            // This should only be reachable when speculatively
+            // evaluating an expression that hasn't had its
+            // type finalized via propagation, which can happen
+            // during an analyzeOpTypes call.
+            return nullptr;
     }
 }
 
@@ -110,6 +115,14 @@ const Type* Expression::binaryOperatorType(Compilation& compilation, const Type*
     if (!lt->isNumeric() || !rt->isNumeric())
         return &compilation.getErrorType();
 
+    // If both sides are the same type just use that type.
+    // NOTE: This specifically ignores the forceFourState option for enums,
+    // as that better matches expectations. This area of the LRM is underspecified.
+    if (lt->isMatching(*rt)) {
+        if (!forceFourState || lt->isFourState() || lt->isEnum())
+            return lt;
+    }
+
     // Figure out what the result type of an arithmetic binary operator should be. The rules are:
     // - If either operand is real, the result is real
     // - Otherwise, if either operand is shortreal, the result is shortreal
@@ -126,11 +139,6 @@ const Type* Expression::binaryOperatorType(Compilation& compilation, const Type*
         else {
             result = &compilation.getShortRealType();
         }
-    }
-    else if (lt->isEnum() && rt->isEnum() && lt->isMatching(*rt)) {
-        // If both sides are the same enum type, preserve that in the output type.
-        // NOTE: This specifically ignores the forceFourState option.
-        return lt;
     }
     else {
         bitwidth_t width = std::max(lt->getBitWidth(), rt->getBitWidth());
@@ -168,7 +176,7 @@ const Type* Expression::binaryOperatorType(Compilation& compilation, const Type*
 
 bool Expression::bindMembershipExpressions(const ASTContext& context, TokenKind keyword,
                                            bool requireIntegral, bool unwrapUnpacked,
-                                           bool allowTypeReferences, bool allowOpenRange,
+                                           bool allowTypeReferences, bool allowValueRange,
                                            const ExpressionSyntax& valueExpr,
                                            std::span<const ExpressionSyntax* const> expressions,
                                            SmallVectorBase<const Expression*>& results) {
@@ -209,6 +217,9 @@ bool Expression::bindMembershipExpressions(const ASTContext& context, TokenKind 
         else if (bt.isTypeRefType() && type->isTypeRefType()) {
             // ok
         }
+        else if (bt.isUnbounded() && (type->isNumeric() || type->isString())) {
+            // ok
+        }
         else if (canBeStrings) {
             // If canBeStrings is still true, it means either this specific type or
             // the common type (or both) are of type string. This is ok, but force
@@ -239,15 +250,16 @@ bool Expression::bindMembershipExpressions(const ASTContext& context, TokenKind 
         if (bad)
             continue;
 
-        // Special handling for open range expressions -- they don't have
+        // Special handling for value range expressions -- they don't have
         // a real type on their own, we need to check their bounds.
-        if (allowOpenRange && bound->kind == ExpressionKind::OpenRange) {
+        if (allowValueRange && bound->kind == ExpressionKind::ValueRange) {
             if (canBeStrings && !bound->isImplicitString())
                 canBeStrings = false;
 
-            auto& range = bound->as<OpenRangeExpression>();
+            auto& range = bound->as<ValueRangeExpression>();
             checkType(range.left(), *range.left().type);
-            checkType(range.right(), *range.right().type);
+            if (range.rangeKind == ValueRangeKind::Simple)
+                checkType(range.right(), *range.right().type);
             continue;
         }
 
@@ -288,7 +300,7 @@ bool Expression::bindMembershipExpressions(const ASTContext& context, TokenKind 
         Expression* expr = const_cast<Expression*>(result);
 
         if ((type->isNumeric() || type->isString()) && !expr->type->isUnpackedArray())
-            contextDetermined(context, expr, nullptr, *type);
+            contextDetermined(context, expr, nullptr, *type, {});
         else
             selfDetermined(context, expr);
 
@@ -414,13 +426,14 @@ Expression& UnaryExpression::fromSyntax(Compilation& compilation,
     return *result;
 }
 
-bool UnaryExpression::propagateType(const ASTContext& context, const Type& newType) {
+bool UnaryExpression::propagateType(const ASTContext& context, const Type& newType,
+                                    SourceRange opRange) {
     switch (op) {
         case UnaryOperator::Plus:
         case UnaryOperator::Minus:
         case UnaryOperator::BitwiseNot:
             type = &newType;
-            contextDetermined(context, operand_, this, newType);
+            contextDetermined(context, operand_, this, newType, opRange);
             return true;
         case UnaryOperator::BitwiseAnd:
         case UnaryOperator::BitwiseOr:
@@ -447,6 +460,19 @@ std::optional<bitwidth_t> UnaryExpression::getEffectiveWidthImpl() const {
             return operand().getEffectiveWidth();
         default:
             return type->getBitWidth();
+    }
+}
+
+Expression::EffectiveSign UnaryExpression::getEffectiveSignImpl(bool isForConversion) const {
+    switch (op) {
+        case UnaryOperator::Plus:
+        case UnaryOperator::BitwiseNot:
+            return operand().getEffectiveSign(isForConversion);
+        case UnaryOperator::Minus:
+            // If we're negating a number it should be signed.
+            return EffectiveSign::Signed;
+        default:
+            return type->isSigned() ? EffectiveSign::Signed : EffectiveSign::Unsigned;
     }
 }
 
@@ -581,16 +607,71 @@ Expression& BinaryExpression::fromSyntax(Compilation& compilation,
         flags = ASTFlags::AllowUnboundedLiteral;
     }
 
+    Expression *lhs, *rhs;
+    auto& syntaxLeft = *syntax.left;
+    auto& syntaxRight = *syntax.right;
+
     auto op = getBinaryOperator(syntax.kind);
     if (op == BinaryOperator::Equality || op == BinaryOperator::Inequality ||
         op == BinaryOperator::CaseEquality || op == BinaryOperator::CaseInequality) {
         flags |= ASTFlags::AllowTypeReferences;
+
+        // Special case to handle comparing a virtual interface with an
+        // actual instance. We can't normally bind to an instance from
+        // an expression so we need to explicitly try that separately here.
+        lhs = tryBindInterfaceRef(context, syntaxLeft, /* isInterfacePort */ false);
+        if (!lhs)
+            lhs = &create(compilation, syntaxLeft, context, flags);
+
+        // If we found a virtual interface on the lhs we can also try for an instance
+        // on the rhs. Otherwise we know we're doing normal expression binding.
+        if (lhs->type->isVirtualInterface()) {
+            rhs = tryBindInterfaceRef(context, syntaxRight, /* isInterfacePort */ false);
+            if (!rhs) {
+                rhs = &create(compilation, syntaxRight, context, flags);
+            }
+            else if (lhs->kind == ExpressionKind::ArbitrarySymbol &&
+                     rhs->kind == ExpressionKind::ArbitrarySymbol) {
+                // Having an instance on both sides is not allowed. One side must be
+                // an actual virtual interface.
+                context.addDiag(diag::CannotCompareTwoInstances, syntax.operatorToken.location())
+                    << lhs->sourceRange << rhs->sourceRange;
+                return badExpr(compilation, nullptr);
+            }
+        }
+        else {
+            rhs = &create(compilation, syntaxRight, context, flags);
+        }
+    }
+    else {
+        lhs = &create(compilation, syntaxLeft, context, flags);
+
+        if (isShortCircuitOp(op)) {
+            // We want to evaluate the lhs as a constant if possible, to know whether
+            // the rhs is for sure in an unevaluated context. This is required for
+            // correctness in cases where the condition on the lhs gates off otherwise
+            // invalid code on the rhs.
+            if (auto val = context.tryEval(*lhs)) {
+                switch (op) {
+                    case BinaryOperator::LogicalAnd:
+                    case BinaryOperator::LogicalImplication:
+                        if (val.isFalse())
+                            flags |= ASTFlags::UnevaluatedBranch;
+                        break;
+                    case BinaryOperator::LogicalOr:
+                        if (val.isTrue())
+                            flags |= ASTFlags::UnevaluatedBranch;
+                        break;
+                    default:
+                        SLANG_UNREACHABLE;
+                }
+            }
+        }
+
+        rhs = &create(compilation, syntaxRight, context, flags);
     }
 
-    Expression& lhs = create(compilation, *syntax.left, context, flags);
-    Expression& rhs = create(compilation, *syntax.right, context, flags);
-
-    auto& result = fromComponents(lhs, rhs, op, syntax.operatorToken.location(),
+    auto& result = fromComponents(*lhs, *rhs, op, syntax.operatorToken.range(),
                                   syntax.sourceRange(), context);
     context.setAttributes(result, syntax.attributes);
 
@@ -598,13 +679,13 @@ Expression& BinaryExpression::fromSyntax(Compilation& compilation,
 }
 
 Expression& BinaryExpression::fromComponents(Expression& lhs, Expression& rhs, BinaryOperator op,
-                                             SourceLocation opLoc, SourceRange sourceRange,
+                                             SourceRange opRange, SourceRange sourceRange,
                                              const ASTContext& context) {
     auto& compilation = context.getCompilation();
     const Type* lt = lhs.type;
     const Type* rt = rhs.type;
 
-    auto result = compilation.emplace<BinaryExpression>(op, *lt, lhs, rhs, sourceRange);
+    auto result = compilation.emplace<BinaryExpression>(op, *lt, lhs, rhs, sourceRange, opRange);
     if (lhs.bad() || rhs.bad())
         return badExpr(compilation, result);
 
@@ -674,7 +755,7 @@ Expression& BinaryExpression::fromComponents(Expression& lhs, Expression& rhs, B
             good = bothNumeric;
             if (lt->isFloating() || rt->isFloating()) {
                 result->type = binaryOperatorType(compilation, lt, rt, false);
-                contextDetermined(context, result->right_, result, *result->type);
+                contextDetermined(context, result->right_, result, *result->type, opRange);
             }
             else {
                 // Result is forced to 4-state because result can be X.
@@ -694,8 +775,8 @@ Expression& BinaryExpression::fromComponents(Expression& lhs, Expression& rhs, B
             // other context-determined operators.
             auto nt = (good && !bothNumeric) ? &compilation.getStringType()
                                              : binaryOperatorType(compilation, lt, rt, false);
-            contextDetermined(context, result->left_, result, *nt);
-            contextDetermined(context, result->right_, result, *nt);
+            contextDetermined(context, result->left_, result, *nt, opRange);
+            contextDetermined(context, result->right_, result, *nt, opRange);
             break;
         }
         case BinaryOperator::LogicalAnd:
@@ -707,6 +788,11 @@ Expression& BinaryExpression::fromComponents(Expression& lhs, Expression& rhs, B
             result->type = singleBitType(compilation, lt, rt);
             selfDetermined(context, result->left_);
             selfDetermined(context, result->right_);
+            if (good) {
+                // Call this just to get warnings about boolean conversions.
+                context.requireBooleanConvertible(*result->left_);
+                context.requireBooleanConvertible(*result->right_);
+            }
             break;
         case BinaryOperator::Equality:
         case BinaryOperator::Inequality:
@@ -742,8 +828,8 @@ Expression& BinaryExpression::fromComponents(Expression& lhs, Expression& rhs, B
                 // Result type is fixed but the two operands affect each other as they would
                 // in other context-determined operators.
                 auto nt = binaryOperatorType(compilation, lt, rt, false);
-                contextDetermined(context, result->left_, result, *nt);
-                contextDetermined(context, result->right_, result, *nt);
+                contextDetermined(context, result->left_, result, *nt, opRange);
+                contextDetermined(context, result->right_, result, *nt, opRange);
             }
             else {
                 bool isContext = false;
@@ -756,8 +842,10 @@ Expression& BinaryExpression::fromComponents(Expression& lhs, Expression& rhs, B
 
                     // If there is a literal involved, make sure it's converted to string.
                     isContext = true;
-                    contextDetermined(context, result->left_, result, compilation.getStringType());
-                    contextDetermined(context, result->right_, result, compilation.getStringType());
+                    contextDetermined(context, result->left_, result, compilation.getStringType(),
+                                      opRange);
+                    contextDetermined(context, result->right_, result, compilation.getStringType(),
+                                      opRange);
                 }
                 else if (lt->isAggregate() && lt->isEquivalent(*rt) && !lt->isUnpackedUnion()) {
                     good = !isWildcard;
@@ -805,17 +893,182 @@ Expression& BinaryExpression::fromComponents(Expression& lhs, Expression& rhs, B
     }
 
     if (!good) {
-        auto& diag = context.addDiag(diag::BadBinaryExpression, opLoc);
+        auto& diag = context.addDiag(diag::BadBinaryExpression, opRange);
         diag << *lt << *rt;
         diag << lhs.sourceRange;
         diag << rhs.sourceRange;
         return badExpr(compilation, result);
     }
 
+    auto& clt = lt->getCanonicalType();
+    auto& crt = rt->getCanonicalType();
+    if (!clt.isMatching(crt)) {
+        auto checkTypes = [&](DiagCode code, bool isComparison) {
+            analyzeOpTypes(clt, crt, *lt, *rt, lhs, rhs, context, opRange, code, isComparison);
+        };
+
+        switch (op) {
+            case BinaryOperator::Add:
+            case BinaryOperator::Subtract:
+            case BinaryOperator::Multiply:
+            case BinaryOperator::Divide:
+            case BinaryOperator::Mod:
+                checkTypes(diag::ArithOpMismatch, false);
+                break;
+            case BinaryOperator::BinaryAnd:
+            case BinaryOperator::BinaryOr:
+            case BinaryOperator::BinaryXor:
+            case BinaryOperator::BinaryXnor:
+                checkTypes(diag::BitwiseOpMismatch, false);
+                break;
+            case BinaryOperator::Equality:
+            case BinaryOperator::Inequality:
+            case BinaryOperator::CaseEquality:
+            case BinaryOperator::CaseInequality:
+            case BinaryOperator::GreaterThanEqual:
+            case BinaryOperator::GreaterThan:
+            case BinaryOperator::LessThanEqual:
+            case BinaryOperator::LessThan:
+            case BinaryOperator::WildcardEquality:
+            case BinaryOperator::WildcardInequality:
+                checkTypes(diag::ComparisonMismatch, true);
+                break;
+            default:
+                // Remaining operations have self determined
+                // operands so the warning wouldn't make sense.
+                break;
+        }
+    }
+
     return *result;
 }
 
-bool BinaryExpression::propagateType(const ASTContext& context, const Type& newType) {
+void BinaryExpression::analyzeOpTypes(const Type& clt, const Type& crt, const Type& originalLt,
+                                      const Type& originalRt, const Expression& lhs,
+                                      const Expression& rhs, const ASTContext& context,
+                                      SourceRange opRange, DiagCode code, bool isComparison) {
+    // Don't warn if either side is a compiler generated variable
+    // (which can be true for genvars).
+    auto isCompGenVar = [](const Symbol* sym) {
+        return sym && sym->kind == SymbolKind::Variable &&
+               sym->as<VariableSymbol>().flags.has(VariableFlags::CompilerGenerated);
+    };
+
+    auto lsym = lhs.getSymbolReference(), rsym = rhs.getSymbolReference();
+    if (isCompGenVar(lsym) || isCompGenVar(rsym))
+        return;
+
+    // Don't warn if either side is an enum value symbol and the
+    // other side is the base type of that enum.
+    auto isEnumBaseCompare = [](const Symbol* sym, const Type& otherType) {
+        if (sym && sym->kind == SymbolKind::EnumValue) {
+            auto& ct = sym->as<EnumValueSymbol>().getType().getCanonicalType();
+            if (ct.kind == SymbolKind::EnumType)
+                return ct.as<EnumType>().baseType.isMatching(otherType);
+        }
+        return false;
+    };
+
+    if (isComparison && (isEnumBaseCompare(lsym, crt) || isEnumBaseCompare(rsym, clt)))
+        return;
+
+    if (clt.isSimpleBitVector() && crt.isSimpleBitVector()) {
+        const bool sameSign = clt.isSigned() == crt.isSigned() ||
+                              signMatches(lhs.getEffectiveSign(/* isForConversion */ false),
+                                          rhs.getEffectiveSign(/* isForConversion */ false));
+
+        if (isComparison) {
+            // Comparisons of bit vectors should warn if the signs differ and
+            // otherwise should not warn, otherwise you can get quite misleading
+            // results like:
+            //      logic [7:0] a, b;
+            //      bit b = a + b < 257;
+            // We don't want a warning for the comparison between logic[7:0] and
+            // int because the addition will actually be promoted correctly and
+            // everything will work as expected.
+            if (sameSign)
+                return;
+
+            if ((clt.getBitWidth() == 8 && clt.isPredefinedInteger() && rhs.isImplicitString()) ||
+                (crt.getBitWidth() == 8 && crt.isPredefinedInteger() && lhs.isImplicitString())) {
+                // Don't warn if the comparison is between `byte` and a string literal.
+                return;
+            }
+
+            auto& diag = context.addDiag(diag::SignCompare, opRange);
+            diag << originalLt << originalRt;
+            diag << lhs.sourceRange << rhs.sourceRange;
+            return;
+        }
+
+        if (sameSign) {
+            // If we have two integers of the same effective sign and size
+            // (using the same ideas as in checkImplicitConversions) then we
+            // should not warn.
+            auto alw = clt.getBitWidth();
+            auto arw = crt.getBitWidth();
+            if (alw == arw)
+                return;
+
+            auto elw = lhs.getEffectiveWidth();
+            auto erw = rhs.getEffectiveWidth();
+            if (!elw || !erw)
+                return;
+
+            if (elw <= arw && alw >= erw)
+                return;
+
+            // If either side is a constant we'll assume the max allowed
+            // width is actually unbounded.
+            EvalContext evalCtx(context);
+            if (lhs.eval(evalCtx))
+                alw = SVInt::MAX_BITS;
+            if (rhs.eval(evalCtx))
+                arw = SVInt::MAX_BITS;
+
+            if (elw <= arw && alw >= erw)
+                return;
+        }
+    }
+    else if (clt.isHandleType() && crt.isHandleType()) {
+        // Ignore operations between handles (like comparing a class handle with null).
+        return;
+    }
+    else if (clt.isNumeric() && crt.isNumeric()) {
+        // If either side is a constant we might want to avoid warning.
+        // The cases that I think make sense are:
+        // - comparing any numeric value against the constant 0
+        // - any floating value operator alongside an integer constant
+        EvalContext evalCtx(context);
+        auto lcv = lhs.eval(evalCtx);
+        auto rcv = rhs.eval(evalCtx);
+        if (lcv || rcv) {
+            if (clt.isFloating() && crt.isIntegral() && rcv)
+                return;
+            if (crt.isFloating() && clt.isIntegral() && lcv)
+                return;
+
+            if (isComparison) {
+                if (lcv.isInteger() && bool(lcv.integer() == 0))
+                    return;
+                if (rcv.isInteger() && bool(rcv.integer() == 0))
+                    return;
+            }
+        }
+    }
+    else if ((clt.isString() && rhs.isImplicitString()) ||
+             (crt.isString() && lhs.isImplicitString())) {
+        // Ignore operations between strings and string literals.
+        return;
+    }
+
+    auto& diag = context.addDiag(code, opRange);
+    diag << originalLt << originalRt;
+    diag << lhs.sourceRange << rhs.sourceRange;
+}
+
+bool BinaryExpression::propagateType(const ASTContext& context, const Type& newType,
+                                     SourceRange propRange) {
     switch (op) {
         case BinaryOperator::Add:
         case BinaryOperator::Subtract:
@@ -827,8 +1080,8 @@ bool BinaryExpression::propagateType(const ASTContext& context, const Type& newT
         case BinaryOperator::BinaryXor:
         case BinaryOperator::BinaryXnor:
             type = &newType;
-            contextDetermined(context, left_, this, newType);
-            contextDetermined(context, right_, this, newType);
+            contextDetermined(context, left_, this, newType, propRange);
+            contextDetermined(context, right_, this, newType, propRange);
             return true;
         case BinaryOperator::Equality:
         case BinaryOperator::Inequality:
@@ -853,7 +1106,9 @@ bool BinaryExpression::propagateType(const ASTContext& context, const Type& newT
         case BinaryOperator::Power:
             // Only the left hand side gets propagated; the rhs is self determined.
             type = &newType;
-            contextDetermined(context, left_, this, newType);
+            contextDetermined(context, left_, this, newType, propRange);
+            if (op == BinaryOperator::ArithmeticShiftRight && !type->isSigned())
+                context.addDiag(diag::UnsignedArithShift, left_->sourceRange) << *type;
             return true;
     }
     SLANG_UNREACHABLE;
@@ -871,15 +1126,67 @@ std::optional<bitwidth_t> BinaryExpression::getEffectiveWidthImpl() const {
         case BinaryOperator::BinaryXor:
         case BinaryOperator::BinaryXnor:
             return std::max(left().getEffectiveWidth(), right().getEffectiveWidth());
+        case BinaryOperator::Equality:
+        case BinaryOperator::Inequality:
+        case BinaryOperator::CaseEquality:
+        case BinaryOperator::CaseInequality:
+        case BinaryOperator::GreaterThanEqual:
+        case BinaryOperator::GreaterThan:
+        case BinaryOperator::LessThanEqual:
+        case BinaryOperator::LessThan:
+        case BinaryOperator::WildcardEquality:
+        case BinaryOperator::WildcardInequality:
+        case BinaryOperator::LogicalAnd:
+        case BinaryOperator::LogicalOr:
+        case BinaryOperator::LogicalImplication:
+        case BinaryOperator::LogicalEquivalence:
+            return 1;
         case BinaryOperator::LogicalShiftLeft:
         case BinaryOperator::LogicalShiftRight:
         case BinaryOperator::ArithmeticShiftLeft:
         case BinaryOperator::ArithmeticShiftRight:
         case BinaryOperator::Power:
             return left().getEffectiveWidth();
-        default:
-            return type->getBitWidth();
     }
+    SLANG_UNREACHABLE;
+}
+
+Expression::EffectiveSign BinaryExpression::getEffectiveSignImpl(bool isForConversion) const {
+    switch (op) {
+        case BinaryOperator::Add:
+        case BinaryOperator::Subtract:
+        case BinaryOperator::Multiply:
+        case BinaryOperator::Divide:
+        case BinaryOperator::Mod:
+        case BinaryOperator::BinaryAnd:
+        case BinaryOperator::BinaryOr:
+        case BinaryOperator::BinaryXor:
+        case BinaryOperator::BinaryXnor:
+            return conjunction(left().getEffectiveSign(isForConversion),
+                               right().getEffectiveSign(isForConversion));
+        case BinaryOperator::Equality:
+        case BinaryOperator::Inequality:
+        case BinaryOperator::CaseEquality:
+        case BinaryOperator::CaseInequality:
+        case BinaryOperator::GreaterThanEqual:
+        case BinaryOperator::GreaterThan:
+        case BinaryOperator::LessThanEqual:
+        case BinaryOperator::LessThan:
+        case BinaryOperator::WildcardEquality:
+        case BinaryOperator::WildcardInequality:
+        case BinaryOperator::LogicalAnd:
+        case BinaryOperator::LogicalOr:
+        case BinaryOperator::LogicalImplication:
+        case BinaryOperator::LogicalEquivalence:
+            return EffectiveSign::Either;
+        case BinaryOperator::LogicalShiftLeft:
+        case BinaryOperator::LogicalShiftRight:
+        case BinaryOperator::ArithmeticShiftLeft:
+        case BinaryOperator::ArithmeticShiftRight:
+        case BinaryOperator::Power:
+            return left().getEffectiveSign(isForConversion);
+    }
+    SLANG_UNREACHABLE;
 }
 
 ConstantValue BinaryExpression::evalImpl(EvalContext& context) const {
@@ -1004,8 +1311,9 @@ Expression& ConditionalExpression::fromSyntax(Compilation& comp,
 
     // Force four-state return type for ambiguous condition case.
     const Type* resultType = binaryOperatorType(comp, lt, rt, isFourState);
-    auto result = comp.emplace<ConditionalExpression>(*resultType, conditions.copy(comp), left,
-                                                      right, syntax.sourceRange(), isConst, isTrue);
+    auto result = comp.emplace<ConditionalExpression>(*resultType, conditions.copy(comp),
+                                                      syntax.question.location(), left, right,
+                                                      syntax.sourceRange(), isConst, isTrue);
     if (bad)
         return badExpr(comp, result);
 
@@ -1057,7 +1365,8 @@ Expression& ConditionalExpression::fromSyntax(Compilation& comp,
     return *result;
 }
 
-bool ConditionalExpression::propagateType(const ASTContext& context, const Type& newType) {
+bool ConditionalExpression::propagateType(const ASTContext& context, const Type& newType,
+                                          SourceRange opRange) {
     // The predicate is self determined so no need to handle it here.
     type = &newType;
 
@@ -1070,13 +1379,22 @@ bool ConditionalExpression::propagateType(const ASTContext& context, const Type&
             leftFlags = ASTFlags::UnevaluatedBranch;
     }
 
-    contextDetermined(context.resetFlags(leftFlags), left_, this, newType);
-    contextDetermined(context.resetFlags(rightFlags), right_, this, newType);
+    contextDetermined(context.resetFlags(leftFlags), left_, this, newType, opRange);
+    contextDetermined(context.resetFlags(rightFlags), right_, this, newType, opRange);
     return true;
 }
 
 std::optional<bitwidth_t> ConditionalExpression::getEffectiveWidthImpl() const {
+    if (auto branch = knownSide())
+        return branch->getEffectiveWidth();
     return std::max(left().getEffectiveWidth(), right().getEffectiveWidth());
+}
+
+Expression::EffectiveSign ConditionalExpression::getEffectiveSignImpl(bool isForConversion) const {
+    if (auto branch = knownSide())
+        return branch->getEffectiveSign(isForConversion);
+    return conjunction(left().getEffectiveSign(isForConversion),
+                       right().getEffectiveSign(isForConversion));
 }
 
 ConstantValue ConditionalExpression::evalImpl(EvalContext& context) const {
@@ -1178,7 +1496,7 @@ Expression& InsideExpression::fromSyntax(Compilation& compilation,
     bool bad =
         !bindMembershipExpressions(context, TokenKind::InsideKeyword, /* requireIntegral */ false,
                                    /* unwrapUnpacked */ true, /* allowTypeReferences */ false,
-                                   /* allowOpenRange */ true, *syntax.expr, expressions, bound);
+                                   /* allowValueRange */ true, *syntax.expr, expressions, bound);
 
     auto boundSpan = bound.copy(compilation);
     auto result = compilation.emplace<InsideExpression>(compilation.getLogicType(), *boundSpan[0],
@@ -1221,8 +1539,8 @@ ConstantValue InsideExpression::evalImpl(EvalContext& context) const {
     bool anyUnknown = false;
     for (auto elem : rangeList()) {
         logic_t result;
-        if (elem->kind == ExpressionKind::OpenRange) {
-            ConstantValue cvr = elem->as<OpenRangeExpression>().checkInside(context, cvl);
+        if (elem->kind == ExpressionKind::ValueRange) {
+            ConstantValue cvr = elem->as<ValueRangeExpression>().checkInside(context, cvl);
             if (!cvr)
                 return nullptr;
 
@@ -1274,18 +1592,26 @@ Expression& ConcatenationExpression::fromSyntax(Compilation& compilation,
         size_t totalElems = 0;
         const Type& type = *assignmentTarget;
         const Type& elemType = *type.getArrayElementType();
+        const bool isVirtualIface = elemType.isVirtualInterface();
         SmallVector<Expression*> buffer;
 
         for (auto argSyntax : syntax.expressions) {
-            Expression* arg = &create(compilation, *argSyntax, context);
+            Expression* arg = nullptr;
+            if (isVirtualIface) {
+                arg = tryBindInterfaceRef(context, *argSyntax,
+                                          /* isInterfacePort */ false);
+            }
+
+            if (!arg)
+                arg = &create(compilation, *argSyntax, context);
+
             if (arg->bad()) {
                 bad = true;
                 continue;
             }
 
             if (arg->isImplicitlyAssignableTo(compilation, elemType)) {
-                buffer.push_back(&convertAssignment(context, elemType, *arg,
-                                                    argSyntax->getFirstToken().location()));
+                buffer.push_back(&convertAssignment(context, elemType, *arg, arg->sourceRange));
                 totalElems++;
                 continue;
             }
@@ -1398,7 +1724,7 @@ Expression& ConcatenationExpression::fromSyntax(Compilation& compilation,
                 else if (expr->isImplicitString()) {
                     expr = &ConversionExpression::makeImplicit(context, compilation.getStringType(),
                                                                ConversionKind::Implicit, *expr,
-                                                               nullptr, expr->sourceRange.start());
+                                                               nullptr, {});
                 }
                 else {
                     errored = true;
@@ -1595,7 +1921,7 @@ Expression& ReplicationExpression::fromSyntax(Compilation& compilation,
             return badExpr(compilation, result);
         }
 
-        contextDetermined(context, right, result, compilation.getStringType());
+        contextDetermined(context, right, result, compilation.getStringType(), {});
 
         result->concat_ = right;
         result->type = &compilation.getStringType();
@@ -1676,13 +2002,9 @@ void ReplicationExpression::serializeTo(ASTSerializer& serializer) const {
 
 Expression& StreamingConcatenationExpression::fromSyntax(
     Compilation& comp, const StreamingConcatenationExpressionSyntax& syntax,
-    const ASTContext& context, const Type* assignmentTarget) {
+    const ASTContext& context) {
 
-    // The sole purpose of assignmentTarget here is to know whether this is a
-    // "destination" stream (i.e. an unpack operation) or whether it is a source / pack.
-    // Streaming concatenation is self-determined and its size/type should not be affected
-    // by assignmentTarget.
-    const bool isDestination = !assignmentTarget;
+    const bool isDestination = context.flags.has(ASTFlags::LValue);
     const bool isRightToLeft = syntax.operatorToken.kind == TokenKind::LeftShift;
     uint64_t sliceSize = 0;
 
@@ -1692,7 +2014,8 @@ Expression& StreamingConcatenationExpression::fromSyntax(
                                  std::span<const StreamExpression>(), syntax.sourceRange()));
     };
 
-    if (!context.flags.has(ASTFlags::StreamingAllowed)) {
+    if (!context.flags.has(ASTFlags::StreamingAllowed) &&
+        (isDestination || !comp.hasFlag(CompilationFlags::AllowSelfDeterminedStreamConcat))) {
         context.addDiag(diag::BadStreamContext, syntax.operatorToken.location());
         return badResult();
     }
@@ -1736,21 +2059,12 @@ Expression& StreamingConcatenationExpression::fromSyntax(
     uint64_t bitstreamWidth = 0;
     SmallVector<StreamExpression, 4> buffer;
     for (const auto argSyntax : syntax.expressions) {
-        Expression* arg;
-        if (assignmentTarget &&
-            argSyntax->expression->kind == SyntaxKind::StreamingConcatenationExpression) {
-            arg = &create(comp, *argSyntax->expression, context, ASTFlags::StreamingAllowed,
-                          assignmentTarget);
-        }
-        else {
-            arg = &selfDetermined(comp, *argSyntax->expression, context,
-                                  ASTFlags::StreamingAllowed);
-        }
-
-        if (arg->bad())
+        auto& arg = selfDetermined(comp, *argSyntax->expression, context,
+                                   ASTFlags::StreamingAllowed);
+        if (arg.bad())
             return badResult();
 
-        const Type* argType = arg->type;
+        const Type* argType = arg.type;
         const Expression* withExpr = nullptr;
         std::optional<bitwidth_t> constantWithWidth;
         if (argSyntax->withRange) {
@@ -1758,11 +2072,11 @@ Expression& StreamingConcatenationExpression::fromSyntax(
             // (including a queue).
             if (!argType->isUnpackedArray() || argType->isAssociativeArray() ||
                 !argType->getArrayElementType()->isFixedSize()) {
-                context.addDiag(diag::BadStreamWithType, arg->sourceRange);
+                context.addDiag(diag::BadStreamWithType, arg.sourceRange);
                 return badResult();
             }
 
-            withExpr = &bindSelector(comp, *arg, *argSyntax->withRange->range,
+            withExpr = &bindSelector(comp, arg, *argSyntax->withRange->range,
                                      context.resetFlags(ASTFlags::StreamingWithRange));
             if (withExpr->bad())
                 return badResult();
@@ -1786,17 +2100,17 @@ Expression& StreamingConcatenationExpression::fromSyntax(
             }
 
             if (!argType->isBitstreamType(isDestination)) {
-                context.addDiag(diag::BadStreamExprType, arg->sourceRange) << *arg->type;
+                context.addDiag(diag::BadStreamExprType, arg.sourceRange) << *arg.type;
                 return badResult();
             }
 
-            if (!Bitstream::checkClassAccess(*argType, context, arg->sourceRange))
+            if (!Bitstream::checkClassAccess(*argType, context, arg.sourceRange))
                 return badResult();
         }
 
         uint64_t argWidth = 0;
-        if (arg->kind == ExpressionKind::Streaming) {
-            argWidth = arg->as<StreamingConcatenationExpression>().getBitstreamWidth();
+        if (arg.kind == ExpressionKind::Streaming) {
+            argWidth = arg.as<StreamingConcatenationExpression>().getBitstreamWidth();
         }
         else if (withExpr) {
             if (constantWithWidth) {
@@ -1820,14 +2134,28 @@ Expression& StreamingConcatenationExpression::fromSyntax(
             return badResult();
         }
 
-        buffer.push_back({arg, withExpr, constantWithWidth});
+        buffer.push_back({&arg, withExpr, constantWithWidth});
     }
 
-    // Streaming concatenation has no explicit type. Use void to prevent problems when
-    // its type is passed to context-determined expressions.
-    return *comp.emplace<StreamingConcatenationExpression>(comp.getVoidType(), sliceSize,
-                                                           bitstreamWidth, buffer.ccopy(comp),
-                                                           syntax.sourceRange());
+    // So normally the type of a streaming concatenation is never inspected,
+    // since it can only be used in assignments and there is explicit handling
+    // of these expressions there. We use a void type for the result to represent
+    // this (also because otherwise what type can we use for e.g. non fixed-size
+    // streams). However, in VCS compat mode the error about requiring an assignment
+    // context can be silenced, so we need to come up with a real result type here,
+    // which we do by converting to a packed bit vector of bitstream width.
+    auto& result = *comp.emplace<StreamingConcatenationExpression>(
+        comp.getVoidType(), sliceSize, bitstreamWidth, buffer.ccopy(comp), syntax.sourceRange());
+
+    if (!context.flags.has(ASTFlags::StreamingAllowed)) {
+        // Cap the width so we don't overflow. The conversion will error for us
+        // since the target width will be less than the source width.
+        auto width = std::min(bitstreamWidth, (uint64_t)SVInt::MAX_BITS);
+        auto& type = comp.getType(bitwidth_t(width), IntegralFlags::FourState);
+        return convertAssignment(context, type, result, result.sourceRange);
+    }
+
+    return result;
 }
 
 ConstantValue StreamingConcatenationExpression::evalImpl(EvalContext& context) const {
@@ -1893,74 +2221,157 @@ bool StreamingConcatenationExpression::isFixedSize() const {
     return true;
 }
 
-Expression& OpenRangeExpression::fromSyntax(Compilation& comp,
-                                            const OpenRangeExpressionSyntax& syntax,
-                                            const ASTContext& context) {
-    // If we are allowed unbounded literals here, pass that along to subexpressions.
-    bitmask<ASTFlags> flags = ASTFlags::None;
-    if (context.flags.has(ASTFlags::AllowUnboundedLiteral))
-        flags = ASTFlags::AllowUnboundedLiteral;
+Expression& ValueRangeExpression::fromSyntax(Compilation& comp,
+                                             const ValueRangeExpressionSyntax& syntax,
+                                             const ASTContext& context) {
+    ValueRangeKind rangeKind;
+    switch (syntax.op.kind) {
+        case TokenKind::PlusDivMinus:
+            rangeKind = ValueRangeKind::AbsoluteTolerance;
+            break;
+        case TokenKind::PlusModMinus:
+            rangeKind = ValueRangeKind::RelativeTolerance;
+            break;
+        default:
+            rangeKind = ValueRangeKind::Simple;
+            break;
+    }
 
-    Expression& left = create(comp, *syntax.left, context, flags);
-    Expression& right = create(comp, *syntax.right, context, flags);
-
-    auto result = comp.emplace<OpenRangeExpression>(comp.getVoidType(), left, right,
-                                                    syntax.sourceRange());
+    // Unbounded literals are allowed if we are not a tolerance range.
+    const auto flags = rangeKind == ValueRangeKind::Simple ? ASTFlags::AllowUnboundedLiteral
+                                                           : ASTFlags::None;
+    auto& left = create(comp, *syntax.left, context, flags);
+    auto& right = create(comp, *syntax.right, context, flags);
+    auto result = comp.emplace<ValueRangeExpression>(comp.getVoidType(), rangeKind, left, right,
+                                                     syntax.sourceRange());
     if (left.bad() || right.bad())
         return badExpr(comp, result);
 
     auto lt = left.type;
     auto rt = right.type;
-    if (lt->isUnbounded()) {
-        lt = &comp.getIntType();
+
+    if (rangeKind == ValueRangeKind::Simple) {
+        if (lt->isUnbounded()) {
+            lt = &comp.getIntType();
+            if (rt->isUnbounded())
+                context.addDiag(diag::ValueRangeUnbounded, result->sourceRange);
+        }
+
         if (rt->isUnbounded())
-            context.addDiag(diag::OpenRangeUnbounded, result->sourceRange);
+            rt = &comp.getIntType();
+
+        if (!(lt->isNumeric() && rt->isNumeric()) &&
+            !(left.isImplicitString() && right.isImplicitString())) {
+            auto& diag = context.addDiag(diag::BadValueRange, syntax.op.location());
+            diag << left.sourceRange << right.sourceRange << *lt << *rt;
+            return badExpr(comp, result);
+        }
+
+        auto cvl = context.tryEval(left);
+        auto cvr = context.tryEval(right);
+        if (cvl.isInteger() && cvr.isInteger() && bool(cvl.integer() > cvr.integer()))
+            context.addDiag(diag::ReversedValueRange, result->sourceRange);
     }
+    else {
+        if (!lt->isNumeric() || !rt->isNumeric()) {
+            auto& diag = context.addDiag(diag::BadValueRange, syntax.op.location());
+            diag << left.sourceRange << right.sourceRange << *lt << *rt;
+            return badExpr(comp, result);
+        }
 
-    if (rt->isUnbounded())
-        rt = &comp.getIntType();
-
-    if (!(lt->isNumeric() && rt->isNumeric()) &&
-        !(left.isImplicitString() && right.isImplicitString())) {
-        auto& diag = context.addDiag(diag::BadOpenRange, syntax.colon.location());
-        diag << left.sourceRange << right.sourceRange << *lt << *rt;
-        return badExpr(comp, result);
+        selfDetermined(context, result->right_);
     }
-
-    auto cvl = context.tryEval(left);
-    auto cvr = context.tryEval(right);
-    if (cvl.isInteger() && cvr.isInteger() && bool(cvl.integer() > cvr.integer()))
-        context.addDiag(diag::ReversedOpenRange, result->sourceRange);
 
     return *result;
 }
 
-bool OpenRangeExpression::propagateType(const ASTContext& context, const Type& newType) {
-    contextDetermined(context, left_, this, newType);
-    contextDetermined(context, right_, this, newType);
+bool ValueRangeExpression::propagateType(const ASTContext& context, const Type& newType,
+                                         SourceRange opRange) {
+    contextDetermined(context, left_, this, newType, opRange);
+    if (rangeKind == ValueRangeKind::Simple)
+        contextDetermined(context, right_, this, newType, opRange);
     return true;
 }
 
-ConstantValue OpenRangeExpression::evalImpl(EvalContext&) const {
+ConstantValue ValueRangeExpression::evalImpl(EvalContext&) const {
     // Should never enter this expecting a real result.
     return nullptr;
 }
 
-ConstantValue OpenRangeExpression::checkInside(EvalContext& context,
-                                               const ConstantValue& val) const {
+ConstantValue ValueRangeExpression::checkInside(EvalContext& context,
+                                                const ConstantValue& val) const {
     ConstantValue cvl = left().eval(context);
     ConstantValue cvr = right().eval(context);
     if (!cvl || !cvr)
         return nullptr;
 
-    cvl = evalBinaryOperator(BinaryOperator::GreaterThanEqual, val, cvl);
-    cvr = evalBinaryOperator(BinaryOperator::LessThanEqual, val, cvr);
+    auto convert = [&](const Type& from, const Type& to, SourceRange range, ConstantValue&& cv) {
+        return ConversionExpression::convert(context, from, to, range, std::move(cv),
+                                             ConversionKind::Propagated);
+    };
+
+    if (rangeKind != ValueRangeKind::Simple) {
+        auto& comp = context.getCompilation();
+        if (rangeKind == ValueRangeKind::RelativeTolerance) {
+            // Convert both sides to the common type so we can scale them together.
+            auto l = cvl;
+            auto& lt = *left().type;
+            auto common = binaryOperatorType(comp, &lt, right().type, false);
+            l = convert(lt, *common, left().sourceRange, std::move(l));
+            cvr = convert(*right().type, *common, right().sourceRange, std::move(cvr));
+
+            // Final equation looks like:
+            // cvr = left'(common'(cvl) * common'(cvr) / 100.0);
+            cvr = evalBinaryOperator(BinaryOperator::Multiply, l, cvr).convertToReal();
+            cvr = evalBinaryOperator(BinaryOperator::Divide, cvr, real_t(100.0));
+
+            // Special case for the conversion: LRM says that real -> int truncates
+            // instead of rounding unlike every other case in the language. shrug?
+            if (lt.isIntegral()) {
+                cvr = SVInt::fromDouble(lt.getBitWidth(), cvr.real(), lt.isSigned(),
+                                        /* round */ false);
+            }
+            else {
+                cvr = convert(comp.getRealType(), lt, right().sourceRange, std::move(cvr));
+            }
+        }
+        else {
+            // Convert the rhs to the lhs type.
+            cvr = convert(*right().type, *left().type, right().sourceRange, std::move(cvr));
+        }
+
+        // Form the range, [A - B : A + B], swapping A and B if needed
+        // to form a non-empty range.
+        auto lower = evalBinaryOperator(BinaryOperator::Subtract, cvl, cvr);
+        auto upper = evalBinaryOperator(BinaryOperator::Add, cvl, cvr);
+        if (evalBinaryOperator(BinaryOperator::LessThan, upper, lower).isTrue()) {
+            cvl = std::move(upper);
+            cvr = std::move(lower);
+        }
+        else {
+            cvl = std::move(lower);
+            cvr = std::move(upper);
+        }
+    }
+
+    // If a side is unbounded, that comparison is just always true.
+    if (cvl.isUnbounded())
+        cvl = SVInt(1);
+    else
+        cvl = evalBinaryOperator(BinaryOperator::GreaterThanEqual, val, cvl);
+
+    if (cvr.isUnbounded())
+        cvr = SVInt(1);
+    else
+        cvr = evalBinaryOperator(BinaryOperator::LessThanEqual, val, cvr);
+
     return evalLogicalOp(BinaryOperator::LogicalAnd, cvl.integer(), cvr.integer());
 }
 
-void OpenRangeExpression::serializeTo(ASTSerializer& serializer) const {
+void ValueRangeExpression::serializeTo(ASTSerializer& serializer) const {
     serializer.write("left", left());
     serializer.write("right", right());
+    serializer.write("rangeKind", toString(rangeKind));
 }
 
 UnaryOperator Expression::getUnaryOperator(SyntaxKind kind) {

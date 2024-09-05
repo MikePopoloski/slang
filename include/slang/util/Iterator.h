@@ -218,8 +218,9 @@ public:
     /// @brief Arrow operator
     /// @return Pointer or arrow proxy to the return value of
     /// <code>Derived::dereference() const</code>
-    constexpr decltype(auto) operator->() const noexcept(
-        (detail::has_nothrow_dereference<self_type>&& noexcept(detail::arrow_helper(**this)))) {
+    constexpr decltype(auto) operator->() const
+        noexcept((detail::has_nothrow_dereference<self_type> &&
+                  noexcept(detail::arrow_helper(**this)))) {
         if constexpr (detail::dereferences_lvalue<self_type>) {
             return std::addressof(**this);
         }
@@ -266,8 +267,8 @@ public:
     /// <code>Derived::advance(1)</code>
     template<typename T = self_type>
         requires(detail::has_increment<T> || detail::has_advance<T, int>)
-    constexpr self_type operator++(int) noexcept(
-        std::is_nothrow_copy_constructible_v<self_type>&& noexcept(++(*this))) {
+    constexpr self_type operator++(int) noexcept(std::is_nothrow_copy_constructible_v<self_type> &&
+                                                 noexcept(++(*this))) {
         auto copy = self();
         ++(*this);
         return copy;
@@ -294,8 +295,8 @@ public:
     /// <code>Derived::advance(-1)</code>
     template<typename T = self_type>
         requires(detail::has_decrement<T> || detail::has_advance<T, int>)
-    constexpr self_type operator--(int) noexcept(
-        std::is_nothrow_copy_constructible_v<self_type>&& noexcept(--(*this))) {
+    constexpr self_type operator--(int) noexcept(std::is_nothrow_copy_constructible_v<self_type> &&
+                                                 noexcept(--(*this))) {
         auto copy = self();
         ++(*this);
         return copy;

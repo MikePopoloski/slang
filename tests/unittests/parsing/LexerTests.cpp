@@ -126,6 +126,49 @@ TEST_CASE("Line Comment (UTF8)") {
     REQUIRE(diagnostics.empty());
 }
 
+TEST_CASE("Embedded control characters in a broken UTF8 comment") {
+    const char text[] = "//\xe0\x80\nendmodule";
+    Token token = lexToken(text);
+
+    CHECK(token.kind == TokenKind::EndModuleKeyword);
+    CHECK(token.trivia().size() == 2);
+    CHECK(token.trivia()[0].kind == TriviaKind::LineComment);
+    CHECK(token.trivia()[1].kind == TriviaKind::EndOfLine);
+    REQUIRE(diagnostics.size() == 1); // Due to UTF8 intended error
+}
+
+TEST_CASE("Embedded control characters in a broken UTF8 comment (2)") {
+    const char text[] = "//\x82\xe8\nendmodule";
+    Token token = lexToken(text);
+
+    CHECK(token.kind == TokenKind::EndModuleKeyword);
+    CHECK(token.trivia().size() == 2);
+    CHECK(token.trivia()[0].kind == TriviaKind::LineComment);
+    CHECK(token.trivia()[1].kind == TriviaKind::EndOfLine);
+    REQUIRE(diagnostics.size() == 1); // Due to UTF8 intended error
+}
+
+TEST_CASE("Embedded control characters in a broken UTF8 comment not affecting lexer errorCount") {
+    auto& text = "//\x82\xe8\n//\x82\xe8\n//\x82\xe8\n//\x82\xe8\n//\x82\xe8\n//\x82\xe8\n//"
+                 "\x82\xe8\n//\x82\xe8\nendmodule\n";
+
+    LexerOptions options;
+    options.maxErrors = 4;
+
+    diagnostics.clear();
+    auto buffer = getSourceManager().assignText(text);
+    Lexer lexer(buffer, alloc, diagnostics, options);
+    Token token = lexer.lex();
+
+    CHECK(token.kind == TokenKind::EndModuleKeyword);
+    CHECK(token.trivia().size() == 16);
+    for (int i = 0; i < 8; i++) {
+        CHECK(token.trivia()[2 * i].kind == TriviaKind::LineComment);
+        CHECK(token.trivia()[2 * i + 1].kind == TriviaKind::EndOfLine);
+    }
+    REQUIRE(diagnostics.size() == 8); // Due to UTF8 intended error
+}
+
 TEST_CASE("Block Comment (one line)") {
     auto& text = "/* comment */";
     Token token = lexToken(text);
@@ -415,7 +458,7 @@ TEST_CASE("String literal (bad hex escape)") {
 
     CHECK(token.kind == TokenKind::StringLiteral);
     CHECK(token.toString() == text);
-    CHECK(token.valueText() == "literalz");
+    CHECK(token.valueText() == "literalxz");
     REQUIRE(!diagnostics.empty());
     CHECK(diagnostics.back().code == diag::InvalidHexEscapeCode);
 }
@@ -466,6 +509,45 @@ TEST_CASE("String literal (UTF8 escape)") {
     CHECK(diagnostics.back().code == diag::UnknownEscapeCode);
 }
 
+TEST_CASE("String literal (triple quoted)") {
+    auto& text = R"("""Humpty Dumpty sat on a "wall".
+Humpty Dumpty had a great fall.""")";
+
+    Token token = lexToken(text, LanguageVersion::v1800_2023);
+
+    CHECK(token.kind == TokenKind::StringLiteral);
+    CHECK(token.toString() == text);
+    CHECK(token.valueText() == R"(Humpty Dumpty sat on a "wall".
+Humpty Dumpty had a great fall.)");
+    CHECK_DIAGNOSTICS_EMPTY;
+}
+
+TEST_CASE("String literal (triple quoted with escaped newline)") {
+    auto& text = R"("""Humpty Dumpty sat on a "wall". \
+Humpty Dumpty had a great fall.""")";
+
+    Token token = lexToken(text, LanguageVersion::v1800_2023);
+
+    CHECK(token.kind == TokenKind::StringLiteral);
+    CHECK(token.toString() == text);
+    CHECK(token.valueText() == R"(Humpty Dumpty sat on a "wall". Humpty Dumpty had a great fall.)");
+    CHECK_DIAGNOSTICS_EMPTY;
+}
+
+TEST_CASE("String literal (triple quoted wrong version)") {
+    auto& text = R"("""Humpty Dumpty sat on a "wall".
+Humpty Dumpty had a great fall.""")";
+
+    Token token = lexToken(text, LanguageVersion::v1800_2017);
+
+    CHECK(token.kind == TokenKind::StringLiteral);
+    CHECK(token.toString() == text);
+    CHECK(token.valueText() == R"(Humpty Dumpty sat on a "wall".
+Humpty Dumpty had a great fall.)");
+    REQUIRE(!diagnostics.empty());
+    CHECK(diagnostics.back().code == diag::WrongLanguageVersion);
+}
+
 TEST_CASE("Integer literal") {
     auto& text = "19248";
     Token token = lexToken(text);
@@ -497,16 +579,6 @@ TEST_CASE("Vector bases") {
     checkVectorBase("'SH", LiteralBase::Hex, true);
 }
 
-TEST_CASE("Vector base (bad)") {
-    Token token = lexToken("'sf");
-
-    CHECK(token.kind == TokenKind::IntegerBase);
-    CHECK(token.numericFlags().base() == LiteralBase::Decimal);
-    CHECK(token.toString() == "'s");
-    REQUIRE(diagnostics.size() == 1);
-    CHECK(diagnostics.back().code == diag::ExpectedIntegerBaseAfterSigned);
-}
-
 TEST_CASE("Unbased unsized literal") {
     auto& text = "'1";
     Token token = lexToken(text);
@@ -525,17 +597,6 @@ TEST_CASE("Real literal (fraction)") {
     CHECK(token.toString() == text);
     CHECK(withinUlp(token.realValue(), 32.57));
     CHECK_DIAGNOSTICS_EMPTY;
-}
-
-TEST_CASE("Real literal (missing fraction)") {
-    auto& text = "32.";
-    Token token = lexToken(text);
-
-    CHECK(token.kind == TokenKind::RealLiteral);
-    CHECK(token.toString() == text);
-    REQUIRE(!diagnostics.empty());
-    CHECK(diagnostics.back().code == diag::MissingFractionalDigits);
-    CHECK(token.realValue() == 32);
 }
 
 TEST_CASE("Real literal (exponent)") {
@@ -585,9 +646,7 @@ TEST_CASE("Real literal (underscores)") {
     CHECK(token.kind == TokenKind::RealLiteral);
     CHECK(token.toString() == text);
     CHECK(withinUlp(token.realValue(), 32.3456e57));
-    REQUIRE(diagnostics.size() == 2);
-    CHECK(diagnostics[0].code == diag::DigitsLeadingUnderscore);
-    CHECK(diagnostics[1].code == diag::DigitsLeadingUnderscore);
+    CHECK_DIAGNOSTICS_EMPTY;
 }
 
 TEST_CASE("Real literal (exponent overflow)") {
@@ -618,8 +677,7 @@ TEST_CASE("Real literal (bad exponent)") {
 
     CHECK(token.kind == TokenKind::RealLiteral);
     CHECK(token.toString() == "32.234e");
-    REQUIRE(diagnostics.size() == 1);
-    CHECK(diagnostics.back().code == diag::MissingExponentDigits);
+    CHECK_DIAGNOSTICS_EMPTY;
 }
 
 TEST_CASE("Real literal (digit overflow)") {
@@ -692,16 +750,6 @@ TEST_CASE("Colon") {
         CHECK(token.toString() == ":");
         CHECK_DIAGNOSTICS_EMPTY;
     }
-}
-
-TEST_CASE("Misplaced directive char") {
-    auto& text = "`";
-    Token token = lexRawToken(text);
-
-    CHECK(token.kind == TokenKind::Unknown);
-    CHECK(token.toString() == text);
-    REQUIRE(!diagnostics.empty());
-    CHECK(diagnostics.back().code == diag::MisplacedDirectiveChar);
 }
 
 TEST_CASE("Directive continuation") {
@@ -1032,16 +1080,13 @@ TEST_CASE("All Punctuation") {
     testPunctuation(TokenKind::OpenBracket);
     testPunctuation(TokenKind::CloseBracket);
     testPunctuation(TokenKind::OpenParenthesis);
-    testPunctuation(TokenKind::OpenParenthesisStar);
     testPunctuation(TokenKind::CloseParenthesis);
-    testPunctuation(TokenKind::StarCloseParenthesis);
     testPunctuation(TokenKind::Semicolon);
     testPunctuation(TokenKind::Colon);
     testPunctuation(TokenKind::ColonEquals);
     testPunctuation(TokenKind::ColonSlash);
     testPunctuation(TokenKind::DoubleColon);
     testPunctuation(TokenKind::Comma);
-    testPunctuation(TokenKind::DotStar);
     testPunctuation(TokenKind::Dot);
     testPunctuation(TokenKind::Slash);
     testPunctuation(TokenKind::Star);
@@ -1050,6 +1095,8 @@ TEST_CASE("All Punctuation") {
     testPunctuation(TokenKind::Plus);
     testPunctuation(TokenKind::DoublePlus);
     testPunctuation(TokenKind::PlusColon);
+    testPunctuation(TokenKind::PlusDivMinus);
+    testPunctuation(TokenKind::PlusModMinus);
     testPunctuation(TokenKind::Minus);
     testPunctuation(TokenKind::DoubleMinus);
     testPunctuation(TokenKind::MinusColon);
@@ -1126,6 +1173,7 @@ void testDirectivePunctuation(TokenKind kind) {
 
 TEST_CASE("Directive Punctuation") {
     testDirectivePunctuation(TokenKind::MacroQuote);
+    testDirectivePunctuation(TokenKind::MacroTripleQuote);
     testDirectivePunctuation(TokenKind::MacroEscapedQuote);
     testDirectivePunctuation(TokenKind::MacroPaste);
 }
@@ -1203,4 +1251,15 @@ TEST_CASE("Missing / expected tokens") {
     testExpect(TokenKind::IntegerLiteral);
     testExpect(TokenKind::TimeLiteral);
     testExpect(TokenKind::WithKeyword);
+}
+
+TEST_CASE("Hex escape corner case") {
+    auto& text = R"("\x)";
+    Token token = lexToken(text);
+
+    CHECK(token.kind == TokenKind::StringLiteral);
+    CHECK(token.toString() == text);
+    REQUIRE(!diagnostics.empty());
+    CHECK(diagnostics[0].code == diag::InvalidHexEscapeCode);
+    CHECK(diagnostics[1].code == diag::ExpectedClosingQuote);
 }

@@ -156,7 +156,7 @@ module m;
 
     // Would be disallowed because 4-state 'i' forces a 4-state result.
     // We carve out an exception for this.
-    initial foo = i ? A : B;
+    initial foo = i != 0 ? A : B;
 endmodule
 )");
 
@@ -429,6 +429,26 @@ source:12:26: note: declared here
     typedef enum { SDF } s1_t;
                          ^
 )");
+}
+
+TEST_CASE("v1800-2023: forward typedefs allowed in type operator and type param assignments") {
+    auto tree = SyntaxTree::fromText(R"(
+typedef C;
+typedef C::T c_t;
+var type(C::T) foo;
+parameter type PT = C::T;
+
+class C;
+    typedef int T;
+endclass
+)");
+
+    CompilationOptions options;
+    options.languageVersion = LanguageVersion::v1800_2023;
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
 }
 
 TEST_CASE("Packed arrays") {
@@ -1295,7 +1315,7 @@ endprogram
 TEST_CASE("Virtual interfaces with nested hierarchical names") {
     auto tree = SyntaxTree::fromText(R"(
 interface clk_generator(output logic clk);
-time period;
+realtime period;
 initial begin
     clk = 0;
     period = 0ns;
@@ -1421,7 +1441,7 @@ endmodule
 TEST_CASE("virtual interfaces member access via nested member") {
     auto tree = SyntaxTree::fromText(R"(
 interface clk_generator(output logic clk);
-time period;
+realtime period;
 initial begin
     clk = 0;
     period = 0ns;
@@ -2017,7 +2037,7 @@ module m;
     struct packed { logic [16777214:0] a; logic [16777214:0] b; } boz;
 
     initial begin
-        $display(foo[2147483647:-2147483647]);
+        $display(foo[2147483647:1]);
         $display(bar[-2147483647:2147483647]);
     end
 endmodule
@@ -2131,12 +2151,66 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
-TEST_CASE("Inferred parameter type with range specification -- assignment-like context") {
+TEST_CASE("Forward typedef restriction regress") {
     auto tree = SyntaxTree::fromText(R"(
-localparam [1:0][7:0] VALUES_0 = '{1, 2};
+typedef struct s;
+
+typedef int s;
 )");
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::ForwardTypedefDoesNotMatch);
+}
+
+TEST_CASE("Unbounded literals can only be converted to simple bit vector types") {
+    auto tree = SyntaxTree::fromText(R"(
+parameter real r = $;
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::BadAssignment);
+}
+
+TEST_CASE("v1800-2023: Soft packed unions") {
+    auto options = optionsFor(LanguageVersion::v1800_2023);
+    auto tree = SyntaxTree::fromText(R"(
+function automatic logic[7:0] foo;
+    union soft { logic [7:0] a; logic [5:0] b; } u;
+    u.a = 8'hff;
+    u.b = 6'd0;
+    return u;
+endfunction
+
+module m;
+    localparam p = foo();
+endmodule
+)",
+                                     options);
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Type dimension overflow regress") {
+    auto tree = SyntaxTree::fromText(R"(
+logic [-2147483648:-2147483649] a;
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::PackedTypeTooLarge);
+    CHECK(diags[1].code == diag::SignedIntegerOverflow);
+    CHECK(diags[2].code == diag::SignedIntegerOverflow);
 }

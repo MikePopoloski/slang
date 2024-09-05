@@ -28,6 +28,7 @@
 #include "slang/diagnostics/LookupDiags.h"
 #include "slang/diagnostics/TypesDiags.h"
 #include "slang/syntax/AllSyntax.h"
+#include "slang/util/PoolAllocator.h"
 #include "slang/util/String.h"
 
 namespace slang::ast {
@@ -66,11 +67,30 @@ const PackageSymbol* ExplicitImportSymbol::package() const {
 }
 
 static const PackageSymbol* findPackage(std::string_view packageName, const Scope& lookupScope,
-                                        SourceLocation errorLoc) {
+                                        SourceLocation errorLoc, bool isFromExport) {
     auto& comp = lookupScope.getCompilation();
     auto package = comp.getPackage(packageName);
-    if (!package && !packageName.empty() && !comp.hasFlag(CompilationFlags::LintMode))
-        lookupScope.addDiag(diag::UnknownPackage, errorLoc) << packageName;
+    if (!package) {
+        if (!packageName.empty() && !comp.hasFlag(CompilationFlags::LintMode))
+            lookupScope.addDiag(diag::UnknownPackage, errorLoc) << packageName;
+    }
+    else {
+        // Make sure we aren't trying to import/export our own package.
+        auto currScope = &lookupScope;
+        do {
+            auto& sym = currScope->asSymbol();
+            if (package == &sym) {
+                if (isFromExport)
+                    lookupScope.addDiag(diag::PackageExportSelf, errorLoc);
+                else
+                    lookupScope.addDiag(diag::PackageImportSelf, errorLoc);
+                return nullptr;
+            }
+
+            currScope = sym.getParentScope();
+        } while (currScope);
+    }
+
     return package;
 }
 
@@ -85,7 +105,7 @@ const Symbol* ExplicitImportSymbol::importedSymbol() const {
         if (auto syntax = getSyntax())
             loc = syntax->as<PackageImportItemSyntax>().package.location();
 
-        package_ = findPackage(packageName, *scope, loc);
+        package_ = findPackage(packageName, *scope, loc, isFromExport);
         if (!package_)
             return nullptr;
 
@@ -99,19 +119,6 @@ const Symbol* ExplicitImportSymbol::importedSymbol() const {
                 auto& diag = scope->addDiag(diag::UnknownPackageMember, loc);
                 diag << importName << packageName;
             }
-        }
-        else {
-            // If we are doing this lookup from a scope that is within a package declaration
-            // we should note that fact so that it can later be exported if desired.
-            do {
-                auto& sym = scope->asSymbol();
-                if (sym.kind == SymbolKind::Package) {
-                    sym.as<PackageSymbol>().noteImport(*import);
-                    break;
-                }
-
-                scope = sym.getParentScope();
-            } while (scope);
         }
     }
     return import;
@@ -139,7 +146,7 @@ const PackageSymbol* WildcardImportSymbol::getPackage() const {
         if (auto syntax = getSyntax(); syntax)
             loc = syntax->as<PackageImportItemSyntax>().package.location();
 
-        package = findPackage(packageName, *scope, loc);
+        package = findPackage(packageName, *scope, loc, isFromExport);
     }
     return *package;
 }
@@ -152,8 +159,7 @@ void WildcardImportSymbol::serializeTo(ASTSerializer& serializer) const {
 
 ModportPortSymbol::ModportPortSymbol(std::string_view name, SourceLocation loc,
                                      ArgumentDirection direction) :
-    ValueSymbol(SymbolKind::ModportPort, name, loc),
-    direction(direction) {
+    ValueSymbol(SymbolKind::ModportPort, name, loc), direction(direction) {
 }
 
 ModportPortSymbol& ModportPortSymbol::fromSyntax(const ASTContext& context,
@@ -194,8 +200,11 @@ ModportPortSymbol& ModportPortSymbol::fromSyntax(const ASTContext& context,
     // Perform checking on the connected symbol to make sure it's allowed
     // given the modport's direction.
     ASTContext checkCtx = context.resetFlags(ASTFlags::NonProcedural | ASTFlags::NotADriver);
-    if (direction != ArgumentDirection::In)
+    if (direction != ArgumentDirection::In) {
         checkCtx.flags |= ASTFlags::LValue;
+        if (direction == ArgumentDirection::InOut)
+            checkCtx.flags |= ASTFlags::LAndRValue;
+    }
 
     auto loc = result->location;
     auto& expr = ValueExpressionBase::fromSymbol(checkCtx, *result->internalSymbol, false,
@@ -221,9 +230,12 @@ ModportPortSymbol& ModportPortSymbol::fromSyntax(const ASTContext& parentContext
         return *result;
     }
 
-    ASTFlags extraFlags = ASTFlags::None;
-    if (direction == ArgumentDirection::Out || direction == ArgumentDirection::InOut)
+    bitmask<ASTFlags> extraFlags;
+    if (direction == ArgumentDirection::Out || direction == ArgumentDirection::InOut) {
         extraFlags = ASTFlags::LValue;
+        if (direction == ArgumentDirection::InOut)
+            extraFlags |= ASTFlags::LAndRValue;
+    }
 
     auto& expr = Expression::bind(*syntax.expr, context, extraFlags);
     result->explicitConnection = &expr;
@@ -741,8 +753,7 @@ void ElabSystemTaskSymbol::serializeTo(ASTSerializer& serializer) const {
 
 PrimitivePortSymbol::PrimitivePortSymbol(Compilation& compilation, std::string_view name,
                                          SourceLocation loc, PrimitivePortDirection direction) :
-    ValueSymbol(SymbolKind::PrimitivePort, name, loc),
-    direction(direction) {
+    ValueSymbol(SymbolKind::PrimitivePort, name, loc), direction(direction) {
     // All primitive ports are single bit logic types.
     setType(compilation.getLogicType());
 }
@@ -751,201 +762,339 @@ void PrimitivePortSymbol::serializeTo(ASTSerializer& serializer) const {
     serializer.write("direction", toString(direction));
 }
 
-static char getUdpFieldChar(const UdpFieldBaseSyntax* base) {
-    if (base && base->kind == SyntaxKind::UdpSimpleField) {
-        auto raw = base->as<UdpSimpleFieldSyntax>().field.rawText();
-        if (!raw.empty())
-            return raw[0];
-    }
-    return 0;
-}
+// A trie node used to detect duplicate primitive rows.
+// Each 'bit' is one input value in the row.
+class BitTrie {
+public:
+    // Tries to insert the row. Returns nullopt if the row is
+    // successfully inserted, and a set of the previously
+    // inserted rows with the same bit pattern if a collision
+    // is found.
+    template<typename TAllocator>
+    std::optional<SmallVector<const UdpEntrySyntax*, 4>> insert(const UdpEntrySyntax& syntax,
+                                                                std::span<const char> inputs,
+                                                                char stateChar,
+                                                                TAllocator& allocator) {
+        SmallVector<BitTrie*> nodes;
+        BitTrie* primary = this;
+        nodes.push_back(this);
 
-static void expandTableEntries(const Scope& scope, const UdpEntrySyntax& syntax,
-                               const SmallVector<PrimitiveSymbol::TableField>& fields,
-                               SmallVector<PrimitiveSymbol::TableField>& currEntry,
-                               size_t fieldIndex, PrimitiveSymbol::TableEntry& baseEntry,
-                               SmallVector<PrimitiveSymbol::TableEntry>& results,
-                               SmallMap<std::string, const UdpEntrySyntax*, 4>& rowDupMap) {
-    if (fieldIndex == fields.size()) {
-        // Build a key out of inputs and current state (if present) that
-        // let us determine if this combination has already been added to the table.
-        std::string key;
-        bool allX = true;
-        for (auto& field : currEntry) {
-            allX &= charToLower(field.value) == 'x';
-            if (field.transitionTo) {
-                key.push_back('(');
-                key.push_back(field.value);
-                key.push_back(field.transitionTo);
-                key.push_back(')');
-                allX &= charToLower(field.transitionTo) == 'x';
-            }
-            else {
-                key.push_back(field.value);
-            }
-        }
+        auto advance = [&](char c) {
+            SmallVector<BitTrie*> nextNodes;
+            for (auto node : nodes)
+                node->nextNodesFor(c, nextNodes, primary, allocator);
+            nodes = std::move(nextNodes);
+        };
 
-        if (baseEntry.state.value)
-            key.push_back(baseEntry.state.value);
+        for (char c : inputs) {
+            // Skip the closing paren, since it doesn't add
+            // any additional signal to the bitstring.
+            if (c == ')')
+                continue;
 
-        auto [it, inserted] = rowDupMap.emplace(std::move(key), &syntax);
-        if (!inserted) {
-            // This is an error if the existing row has a different output,
-            // otherwise it's just silently ignored.
-            auto existing = getUdpFieldChar(it->second->next);
-            if (existing != baseEntry.output.value && existing && baseEntry.output.value) {
-                auto& diag = scope.addDiag(diag::UdpDupDiffOutput, syntax.sourceRange());
-                diag.addNote(diag::NotePreviousDefinition, it->second->sourceRange());
-            }
-        }
-        else {
-            if (allX && !currEntry.empty() && charToLower(baseEntry.output.value) != 'x')
-                scope.addDiag(diag::UdpAllX, syntax.sourceRange());
+            // Advance along the path.
+            advance(c);
 
-            baseEntry.inputs = currEntry.copy(scope.getCompilation());
-            results.push_back(baseEntry);
-        }
-        return;
-    }
-
-    auto next = [&](SmallVector<PrimitiveSymbol::TableField>& nextFieldList) {
-        expandTableEntries(scope, syntax, fields, nextFieldList, fieldIndex + 1, baseEntry, results,
-                           rowDupMap);
-    };
-
-    auto& field = fields[fieldIndex];
-    const char v = charToLower(field.value);
-
-    if (field.transitionTo) {
-        const char w = charToLower(field.transitionTo);
-
-        SmallVector<char> firstChars;
-        SmallVector<char> secondChars;
-        for (int i = 0; i < 2; i++) {
-            auto currVec = i ? &secondChars : &firstChars;
-            auto c = i ? w : v;
+            // Check if we need special handling for this character.
             switch (c) {
-                case '?':
-                    for (auto d : {'0', '1', 'x'})
-                        currVec->push_back(d);
+                case '*':
+                    advance('?');
+                    advance('?');
                     break;
-                case 'b':
-                    for (auto d : {'0', '1'})
-                        currVec->push_back(d);
+                case 'r':
+                    advance('0');
+                    advance('1');
+                    break;
+                case 'f':
+                    advance('1');
+                    advance('0');
+                    break;
+                case 'p':
+                    advance('6');
+                    advance('7');
+                    break;
+                case 'n':
+                    advance('7');
+                    advance('6');
                     break;
                 default:
-                    currVec->push_back(c);
                     break;
             }
         }
 
-        for (auto c : firstChars) {
-            for (auto d : secondChars) {
-                // Don't insert invalid double-x transition entries
-                // even if the expansion of an iteration character would
-                // otherwise cause us to do so.
-                if (c == 'x' && d == 'x')
-                    continue;
+        // Include the state field if present.
+        if (stateChar)
+            advance(stateChar);
 
-                auto copiedEntry = currEntry;
-                copiedEntry.push_back({c, d});
-                next(copiedEntry);
-            }
+        // If any of our nodes have entries we won't insert,
+        // as it means we have a duplicate.
+        SmallVector<const UdpEntrySyntax*, 4> eSyntaxes;
+        for (auto node : nodes) {
+            if (node->entry)
+                eSyntaxes.push_back(node->entry);
         }
+
+        // Always store so as not to miss info it in case of possible overlap.
+        // If the primary->entry already has a value,
+        // then rewriting will not spoil anything,
+        // since the rewriting will be to the equivalent grammar.
+        primary->entry = &syntax;
+
+        // If we have an empty syntaxes set we saw an error somewhere,
+        // in which case don't insert. Otherwise we've found the
+        // correct place to insert, pointed to by the primary.
+        if (eSyntaxes.empty())
+            return std::nullopt;
+        return eSyntaxes;
     }
-    else {
-        switch (v) {
+
+private:
+    template<typename TAllocator>
+    void nextNodesFor(char c, SmallVector<BitTrie*>& nextNodes, BitTrie*& primaryNode,
+                      TAllocator& allocator) {
+        // Map the character to one or more of our child entries.
+        // The "primary" entry is the one that directly matches the
+        // character, and there can be several secondary entries that
+        // can match based on wildcard values.
+        //
+        // If we are handling a primary and the current node is also
+        // the primary node we should allocate if missing, otherwise
+        // we only add if it already exists.
+        auto handle = [&](int index, bool primary = false) {
+            if (primary && primaryNode == this) {
+                if (!children[index])
+                    children[index] = allocator.emplace();
+                primaryNode = children[index];
+            }
+
+            if (children[index])
+                nextNodes.push_back(children[index]);
+        };
+
+        switch (c) {
+            case '0':
+                handle(0, true);
+                handle(3);
+                handle(4);
+                handle(6);
+                break;
+            case '1':
+                handle(1, true);
+                handle(3);
+                handle(4);
+                handle(7);
+                break;
+            case 'x':
+                handle(2, true);
+                handle(3);
+                handle(6);
+                handle(7);
+                break;
             case '?':
-                for (auto c : {'0', '1', 'x'}) {
-                    auto copiedEntry = currEntry;
-                    copiedEntry.push_back({c});
-                    next(copiedEntry);
-                }
+                handle(3, true);
+                handle(0);
+                handle(1);
+                handle(2);
+                handle(4);
+                handle(6);
+                handle(7);
                 break;
             case 'b':
-                for (auto c : {'0', '1'}) {
-                    auto copiedEntry = currEntry;
-                    copiedEntry.push_back({c});
-                    next(copiedEntry);
-                }
+                handle(4, true);
+                handle(0);
+                handle(1);
+                handle(3);
                 break;
-            case 'p':
-                for (auto c : {"01", "0x", "x1"}) {
-                    auto copiedEntry = currEntry;
-                    copiedEntry.push_back({c[0], c[1]});
-                    next(copiedEntry);
-                }
-                break;
-            case 'n':
-                for (auto c : {"10", "1x", "x0"}) {
-                    auto copiedEntry = currEntry;
-                    copiedEntry.push_back({c[0], c[1]});
-                    next(copiedEntry);
-                }
-                break;
+            case '(':
             case '*':
-                for (auto c : {"01", "0x", "x1", "10", "1x", "x0"}) {
-                    auto copiedEntry = currEntry;
-                    copiedEntry.push_back({c[0], c[1]});
-                    next(copiedEntry);
-                }
-                break;
             case 'r':
-                currEntry.push_back({'0', '1'});
-                next(currEntry);
-                break;
             case 'f':
-                currEntry.push_back({'1', '0'});
-                next(currEntry);
+            case 'p':
+            case 'n':
+                handle(5, true);
+                break;
+            // Below are implicit node identifiers that cannot be found in the UDP grammar. They are
+            // helpers for `p` and `n`.
+            // Handling `0` or `x`.
+            case '6':
+                handle(6, true);
+                handle(0);
+                handle(2);
+                handle(3);
+                break;
+            // Handling `1` or `x` (for `p` and `n` matching cases).
+            case '7':
+                handle(7, true);
+                handle(1);
+                handle(2);
+                handle(3);
                 break;
             default:
-                currEntry.push_back({v});
-                next(currEntry);
+                // On error clear all nodes. Assume someone else
+                // (the parser) has reported the error already.
+                nextNodes.clear();
                 break;
         }
     }
-}
 
-static void createTableEntries(const Scope& scope, const UdpEntrySyntax& syntax,
-                               SmallVector<PrimitiveSymbol::TableEntry>& results,
-                               SmallMap<std::string, const UdpEntrySyntax*, 4>& rowDupMap,
-                               size_t numPorts) {
-    SmallVector<PrimitiveSymbol::TableField> fields;
+    BitTrie* children[8] = {};
+    const UdpEntrySyntax* entry = nullptr;
+};
+
+static void createTableRow(const Scope& scope, const UdpEntrySyntax& syntax,
+                           SmallVector<PrimitiveSymbol::TableEntry>& table, size_t numPorts,
+                           BitTrie& trie, PoolAllocator<BitTrie>& trieAlloc) {
+    // Normalize all of the inputs into a single string.
+    SmallVector<char> inputs;
+    size_t numInputs = 0;
+    bool allX = true;
     for (auto input : syntax.inputs) {
         if (input->kind == SyntaxKind::UdpEdgeField) {
             auto& edge = input->as<UdpEdgeFieldSyntax>();
+            inputs.push_back('(');
 
-            SmallVector<char, 4> chars;
-            chars.append_range(edge.first.rawText());
-            chars.append_range(edge.second.rawText());
+            SmallVector<char> buf;
+            for (char c : edge.first.rawText())
+                buf.push_back(charToLower(c));
+            for (char c : edge.second.rawText())
+                buf.push_back(charToLower(c));
 
-            PrimitiveSymbol::TableField field;
-            if (chars.size() > 0)
-                field.value = chars[0];
-            if (chars.size() > 1)
-                field.transitionTo = chars[1];
+            if (buf.size() != 2)
+                return;
 
-            fields.push_back(field);
+            // Special case for (x?) and (?x) -- pretend these were
+            // written as (xb) and (bx), otherwise they're guaranteed
+            // to error about the overlap between ? and the 'x' value.
+            if (buf[0] == 'x' && buf[1] == '?') {
+                inputs.push_back('x');
+                inputs.push_back('b');
+                allX = false;
+            }
+            else if (buf[0] == '?' && buf[1] == 'x') {
+                inputs.push_back('b');
+                inputs.push_back('x');
+                allX = false;
+            }
+            else {
+                inputs.push_back(buf[0]);
+                inputs.push_back(buf[1]);
+                allX &= buf[0] == 'x';
+                allX &= buf[1] == 'x';
+            }
+
+            inputs.push_back(')');
+            numInputs++;
         }
         else {
             auto tok = input->as<UdpSimpleFieldSyntax>().field;
-            for (auto c : tok.rawText())
-                fields.push_back({c, 0});
+            for (auto c : tok.rawText()) {
+                auto d = charToLower(c);
+                inputs.push_back(d);
+                numInputs++;
+                allX &= d == 'x';
+            }
         }
     }
 
-    if (numPorts >= 2 && fields.size() != numPorts - 1) {
+    if (numPorts >= 2 && numInputs != numPorts - 1) {
         auto& diag = scope.addDiag(diag::UdpWrongInputCount, syntax.inputs.sourceRange());
-        diag << fields.size();
+        diag << numInputs;
         diag << numPorts - 1;
+        return;
     }
 
-    PrimitiveSymbol::TableEntry entry;
-    entry.state.value = getUdpFieldChar(syntax.current);
-    entry.output.value = getUdpFieldChar(syntax.next);
+    auto getStateChar = [](const UdpFieldBaseSyntax* base) -> char {
+        if (base && base->kind == SyntaxKind::UdpSimpleField) {
+            auto raw = base->as<UdpSimpleFieldSyntax>().field.rawText();
+            if (raw.size() == 1) {
+                auto c = charToLower(raw[0]);
+                switch (c) {
+                    case '0':
+                    case '1':
+                    case 'x':
+                    case '?':
+                    case 'b':
+                        return c;
+                    default:
+                        break;
+                }
+            }
+        }
+        return 0;
+    };
 
-    SmallVector<PrimitiveSymbol::TableField> currEntry;
-    expandTableEntries(scope, syntax, fields, currEntry, 0, entry, results, rowDupMap);
+    char stateChar = 0;
+    if (syntax.current) {
+        stateChar = getStateChar(syntax.current);
+        if (!stateChar)
+            return;
+    }
+
+    auto getOutputChar = [](const UdpFieldBaseSyntax* base) -> char {
+        if (base && base->kind == SyntaxKind::UdpSimpleField) {
+            auto raw = base->as<UdpSimpleFieldSyntax>().field.rawText();
+            if (raw.size() == 1) {
+                auto c = charToLower(raw[0]);
+                switch (c) {
+                    case '-':
+                    case '0':
+                    case '1':
+                    case 'x':
+                        return c;
+                    default:
+                        break;
+                }
+            }
+        }
+        return 0;
+    };
+
+    auto outputChar = getOutputChar(syntax.next);
+    if (!outputChar)
+        return;
+
+    auto matchOutput = [](char state1, char output1, char output2) -> bool {
+        if (output1 != '-')
+            return false;
+
+        switch (state1) {
+            case '0':
+            case '1':
+            case 'x':
+                return output2 == state1;
+            case 'b':
+                return output2 == '0' || output2 == '1';
+            case '?':
+                return output2 == '0' || output2 == '1' || output2 == 'x';
+            default:
+                // Can happen if e.g. the UDP doesn't have a state char (combinational).
+                return false;
+        }
+    };
+
+    auto existingSyntaxes = trie.insert(syntax, inputs, stateChar, trieAlloc);
+    if (existingSyntaxes.has_value()) {
+        for (const auto* existing : existingSyntaxes.value()) {
+            // This is an error if the existing row has a different output,
+            // otherwise it's just silently ignored.
+            auto existingOutput = getOutputChar(existing->next);
+            auto existingState = getStateChar(existing->current);
+            if (!(existingOutput == outputChar ||
+                  matchOutput(existingState, existingOutput, outputChar) ||
+                  matchOutput(stateChar, outputChar, existingOutput))) {
+                auto& diag = scope.addDiag(diag::UdpDupDiffOutput, syntax.sourceRange());
+                diag.addNote(diag::NotePreviousDefinition, existing->sourceRange());
+                return;
+            }
+        }
+    }
+    else if (allX && outputChar != 'x') {
+        scope.addDiag(diag::UdpAllX, syntax.sourceRange());
+        return;
+    }
+
+    auto inputSpan = inputs.copy(scope.getCompilation());
+    table.push_back({std::string_view(inputSpan.data(), inputSpan.size()), stateChar, outputChar});
 }
 
 PrimitiveSymbol& PrimitiveSymbol::fromSyntax(const Scope& scope,
@@ -959,11 +1108,11 @@ PrimitiveSymbol& PrimitiveSymbol::fromSyntax(const Scope& scope,
 
     auto portList = syntax.portList.get();
     if (portList->kind == SyntaxKind::WildcardUdpPortList) {
-        auto externPrim = comp.getExternPrimitive(primName, scope);
-        if (!externPrim)
+        auto externPrim = comp.getExternDefinition(primName, scope);
+        if (!externPrim || externPrim->kind != SyntaxKind::ExternUdpDecl)
             scope.addDiag(diag::MissingExternWildcardPorts, portList->sourceRange()) << primName;
         else
-            portList = externPrim->portList;
+            portList = externPrim->as<ExternUdpDeclSyntax>().portList;
     }
 
     SmallVector<const PrimitivePortSymbol*> ports;
@@ -1028,7 +1177,8 @@ PrimitiveSymbol& PrimitiveSymbol::fromSyntax(const Scope& scope,
         for (auto decl : syntax.body->portDecls) {
             if (decl->kind == SyntaxKind::UdpOutputPortDecl) {
                 auto& outputDecl = decl->as<UdpOutputPortDeclSyntax>();
-                if (auto it = portMap.find(outputDecl.name.valueText()); it != portMap.end()) {
+                auto name = outputDecl.name;
+                if (auto it = portMap.find(name.valueText()); it != portMap.end()) {
                     // Standalone "reg" specifiers should be saved and processed at the
                     // end once we've handled all of the regular declarations.
                     if (outputDecl.reg && !outputDecl.keyword) {
@@ -1043,19 +1193,19 @@ PrimitiveSymbol& PrimitiveSymbol::fromSyntax(const Scope& scope,
                     }
 
                     auto port = it->second;
-                    checkDup(port, outputDecl.name);
+                    checkDup(port, name);
 
                     port->direction = PrimitivePortDirection::Out;
                     if (outputDecl.reg)
                         port->direction = PrimitivePortDirection::OutReg;
 
-                    port->location = outputDecl.name.location();
+                    port->location = name.location();
                     port->setSyntax(outputDecl);
                     port->setAttributes(scope, decl->attributes);
                 }
-                else {
-                    auto& diag = scope.addDiag(diag::PrimitivePortUnknown, outputDecl.name.range());
-                    diag << outputDecl.name.valueText();
+                else if (!name.valueText().empty()) {
+                    auto& diag = scope.addDiag(diag::PrimitivePortUnknown, name.range());
+                    diag << name.valueText();
                 }
             }
             else {
@@ -1072,7 +1222,7 @@ PrimitiveSymbol& PrimitiveSymbol::fromSyntax(const Scope& scope,
                         port->setSyntax(*nameSyntax);
                         port->setAttributes(scope, decl->attributes);
                     }
-                    else {
+                    else if (!name.valueText().empty()) {
                         auto& diag = scope.addDiag(diag::PrimitivePortUnknown, name.range());
                         diag << name.valueText();
                     }
@@ -1101,7 +1251,7 @@ PrimitiveSymbol& PrimitiveSymbol::fromSyntax(const Scope& scope,
         }
 
         for (auto port : ports) {
-            if (!port->getSyntax()) {
+            if (!port->getSyntax() && !port->name.empty()) {
                 auto& diag = scope.addDiag(diag::PrimitivePortMissing, port->location);
                 diag << port->name;
             }
@@ -1182,15 +1332,18 @@ PrimitiveSymbol& PrimitiveSymbol::fromSyntax(const Scope& scope,
                     scope.addDiag(diag::PrimitiveInitVal, expr.sourceRange);
             }
         }
+
+        BitTrie trie;
+        BumpAllocator alloc;
+        PoolAllocator<BitTrie> trieAlloc(alloc);
+        SmallVector<TableEntry> table;
+        for (auto entry : syntax.body->entries)
+            createTableRow(scope, *entry, table, ports.size(), trie, trieAlloc);
+
+        prim->table = table.copy(comp);
     }
 
-    SmallMap<std::string, const UdpEntrySyntax*, 4> rowDupMap;
-    SmallVector<TableEntry> table;
-    for (auto entry : syntax.body->entries)
-        createTableEntries(scope, *entry, table, rowDupMap, ports.size());
-
     prim->ports = ports.copy(comp);
-    prim->table = table.copy(comp);
     return *prim;
 }
 
@@ -1203,17 +1356,10 @@ void PrimitiveSymbol::serializeTo(ASTSerializer& serializer) const {
         serializer.startArray("table");
         for (auto& row : table) {
             serializer.startObject();
-            serializer.startArray("inputs");
-            for (auto& entry : row.inputs) {
-                if (entry.transitionTo)
-                    serializer.serialize(fmt::format("({}{})", entry.value, entry.transitionTo));
-                else
-                    serializer.serialize(std::string_view(&entry.value, 1));
-            }
-            serializer.endArray();
-            if (row.state.value)
-                serializer.write("state", std::string_view(&row.state.value, 1));
-            serializer.write("output", std::string_view(&row.output.value, 1));
+            serializer.write("inputs", row.inputs);
+            if (row.state)
+                serializer.write("state", std::string_view(&row.state, 1));
+            serializer.write("output", std::string_view(&row.output, 1));
             serializer.endObject();
         }
         serializer.endArray();
@@ -1336,8 +1482,7 @@ void AssertionPortSymbol::serializeTo(ASTSerializer& serializer) const {
 
 SequenceSymbol::SequenceSymbol(Compilation& compilation, std::string_view name,
                                SourceLocation loc) :
-    Symbol(SymbolKind::Sequence, name, loc),
-    Scope(compilation, this) {
+    Symbol(SymbolKind::Sequence, name, loc), Scope(compilation, this) {
 }
 
 SequenceSymbol& SequenceSymbol::fromSyntax(const Scope& scope,
@@ -1362,8 +1507,7 @@ void SequenceSymbol::makeDefaultInstance() const {
 
 PropertySymbol::PropertySymbol(Compilation& compilation, std::string_view name,
                                SourceLocation loc) :
-    Symbol(SymbolKind::Property, name, loc),
-    Scope(compilation, this) {
+    Symbol(SymbolKind::Property, name, loc), Scope(compilation, this) {
 }
 
 PropertySymbol& PropertySymbol::fromSyntax(const Scope& scope,
@@ -1388,8 +1532,7 @@ void PropertySymbol::makeDefaultInstance() const {
 
 LetDeclSymbol::LetDeclSymbol(Compilation& compilation, const ExpressionSyntax& exprSyntax,
                              std::string_view name, SourceLocation loc) :
-    Symbol(SymbolKind::LetDecl, name, loc),
-    Scope(compilation, this), exprSyntax(&exprSyntax) {
+    Symbol(SymbolKind::LetDecl, name, loc), Scope(compilation, this), exprSyntax(&exprSyntax) {
 }
 
 LetDeclSymbol& LetDeclSymbol::fromSyntax(const Scope& scope, const LetDeclarationSyntax& syntax) {
@@ -1495,8 +1638,7 @@ CheckerSymbol& CheckerSymbol::fromSyntax(const Scope& scope,
 
 ClockingBlockSymbol::ClockingBlockSymbol(Compilation& compilation, std::string_view name,
                                          SourceLocation loc) :
-    Symbol(SymbolKind::ClockingBlock, name, loc),
-    Scope(compilation, this) {
+    Symbol(SymbolKind::ClockingBlock, name, loc), Scope(compilation, this) {
 }
 
 ClockingBlockSymbol& ClockingBlockSymbol::fromSyntax(const Scope& scope,
@@ -1621,26 +1763,27 @@ void ClockingBlockSymbol::serializeTo(ASTSerializer& serializer) const {
 
 RandSeqProductionSymbol::RandSeqProductionSymbol(Compilation& compilation, std::string_view name,
                                                  SourceLocation loc) :
-    Symbol(SymbolKind::RandSeqProduction, name, loc),
-    Scope(compilation, this), declaredReturnType(*this) {
+    Symbol(SymbolKind::RandSeqProduction, name, loc), Scope(compilation, this),
+    declaredReturnType(*this) {
 }
 
-RandSeqProductionSymbol& RandSeqProductionSymbol::fromSyntax(Compilation& compilation,
+RandSeqProductionSymbol& RandSeqProductionSymbol::fromSyntax(const Scope& scope,
                                                              const ProductionSyntax& syntax) {
-    auto result = compilation.emplace<RandSeqProductionSymbol>(compilation, syntax.name.valueText(),
-                                                               syntax.name.location());
+    auto& comp = scope.getCompilation();
+    auto result = comp.emplace<RandSeqProductionSymbol>(comp, syntax.name.valueText(),
+                                                        syntax.name.location());
     result->setSyntax(syntax);
 
     if (syntax.dataType)
         result->declaredReturnType.setTypeSyntax(*syntax.dataType);
     else
-        result->declaredReturnType.setType(compilation.getVoidType());
+        result->declaredReturnType.setType(comp.getVoidType());
 
     if (syntax.portList) {
         SmallVector<const FormalArgumentSymbol*> args;
-        SubroutineSymbol::buildArguments(*result, *syntax.portList, VariableLifetime::Automatic,
-                                         args);
-        result->arguments = args.copy(compilation);
+        SubroutineSymbol::buildArguments(*result, scope, *syntax.portList,
+                                         VariableLifetime::Automatic, args);
+        result->arguments = args.copy(comp);
     }
 
     for (auto rule : syntax.rules) {
@@ -1736,8 +1879,9 @@ const RandSeqProductionSymbol::CaseProd& RandSeqProductionSymbol::createCaseProd
     Expression::bindMembershipExpressions(context, TokenKind::CaseKeyword,
                                           /* requireIntegral */ false,
                                           /* unwrapUnpacked */ false,
-                                          /* allowTypeReferences */ true, /* allowOpenRange */ true,
-                                          *syntax.expr, expressions, bound);
+                                          /* allowTypeReferences */ true,
+                                          /* allowValueRange */ true, *syntax.expr, expressions,
+                                          bound);
 
     SmallVector<CaseItem, 8> items;
     SmallVector<const Expression*> group;

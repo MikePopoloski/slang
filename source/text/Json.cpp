@@ -96,6 +96,10 @@ void JsonWriter::writeValue(bool value) {
     endValue();
 }
 
+void JsonWriter::writeNewLine() {
+    buffer->append("\n");
+}
+
 void JsonWriter::writeQuoted(std::string_view str) {
     SmallVector<char> vec(str.size() + 2, UninitializedTag());
     vec.push_back('"');

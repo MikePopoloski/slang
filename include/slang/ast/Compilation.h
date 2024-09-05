@@ -9,7 +9,7 @@
 
 #include <memory>
 
-#include "slang/ast/InstancePath.h"
+#include "slang/ast/OpaqueInstancePath.h"
 #include "slang/ast/Scope.h"
 #include "slang/diagnostics/Diagnostics.h"
 #include "slang/numeric/Time.h"
@@ -18,6 +18,7 @@
 #include "slang/util/Bag.h"
 #include "slang/util/BumpAllocator.h"
 #include "slang/util/IntervalMap.h"
+#include "slang/util/LanguageVersion.h"
 #include "slang/util/SafeIndexedVector.h"
 
 namespace slang::syntax {
@@ -30,7 +31,7 @@ class AttributeSymbol;
 class ASTContext;
 class CompilationUnitSymbol;
 class ConfigBlockSymbol;
-class Definition;
+class DefinitionSymbol;
 class Expression;
 class GenericClassDefSymbol;
 class InterfacePortSymbol;
@@ -47,6 +48,7 @@ class SystemSubroutine;
 class ValueDriver;
 struct AssertionInstanceDetails;
 struct ConfigRule;
+struct ResolvedConfig;
 
 using DriverIntervalMap = IntervalMap<uint64_t, const ValueDriver*>;
 using UnrollIntervalMap = IntervalMap<uint64_t, std::monostate>;
@@ -113,9 +115,23 @@ enum class SLANG_EXPORT CompilationFlags {
     RelaxStringConversions = 1 << 9,
 
     /// Allow implicit call expressions (lacking parentheses) to be recursive function calls.
-    AllowRecursiveImplicitCall = 1 << 10
+    AllowRecursiveImplicitCall = 1 << 10,
+
+    /// Allow module parameter assignments to elide the parentheses.
+    AllowBareValParamAssignment = 1 << 11,
+
+    /// Allow self-determined streaming concatenation expressions; normally these
+    /// can only be used in specific assignment-like contexts.
+    AllowSelfDeterminedStreamConcat = 1 << 12,
+
+    /// Allow multi-driven subroutine local variables.
+    AllowMultiDrivenLocals = 1 << 13,
+
+    /// Allow merging ANSI port declarations with nets and variables
+    /// declared in the module body.
+    AllowMergingAnsiPorts = 1 << 14
 };
-SLANG_BITMASK(CompilationFlags, AllowRecursiveImplicitCall)
+SLANG_BITMASK(CompilationFlags, AllowMergingAnsiPorts)
 
 /// Contains various options that can control compilation behavior.
 struct SLANG_EXPORT CompilationOptions {
@@ -153,6 +169,9 @@ struct SLANG_EXPORT CompilationOptions {
     /// The maximum number of instances allowed in a single instance array.
     uint32_t maxInstanceArray = 65535;
 
+    /// The maximum depth of recursive generic class specializations.
+    uint32_t maxRecursiveClassSpecialization = 8;
+
     /// The maximum number of errors that can be found before we short circuit
     /// the tree walking process.
     uint32_t errorLimit = 64;
@@ -165,6 +184,9 @@ struct SLANG_EXPORT CompilationOptions {
     /// Specifies which set of min:typ:max expressions should
     /// be used during compilation.
     MinTypMax minTypMax = MinTypMax::Typ;
+
+    /// The version of the SystemVerilog language to use.
+    LanguageVersion languageVersion = LanguageVersion::Default;
 
     /// The default time scale to use for design elements that don't specify
     /// one explicitly.
@@ -184,36 +206,56 @@ struct SLANG_EXPORT CompilationOptions {
     std::vector<std::string> defaultLiblist;
 };
 
+/// Information about how a bind directive applies to some definition
+/// or specific target node.
+struct SLANG_EXPORT BindDirectiveInfo {
+    /// The syntax node of the bind directive.
+    const syntax::BindDirectiveSyntax* bindSyntax = nullptr;
+
+    /// The syntax node for a config rule that applies
+    /// to the target instance, if any.
+    const syntax::SyntaxNode* configRuleSyntax = nullptr;
+
+    /// The syntax node for a config block that applies
+    /// to the target instance, if any.
+    const syntax::SyntaxNode* configBlockSyntax = nullptr;
+
+    /// The syntax node for the resolved definition,
+    /// if definition name resolution succeeded.
+    const syntax::SyntaxNode* instantiationDefSyntax = nullptr;
+
+    /// A liblist that applies to the newly bound instance.
+    std::span<const SourceLibrary* const> liblist;
+
+    /// If true, the new instance is also a new config root,
+    /// and @a configRootSyntax points to the config block
+    /// for that root. Otherwise, it points either to nullptr,
+    /// or to its parent's config root.
+    bool isNewConfigRoot = false;
+};
+
 /// A node in a tree representing an instance in the design
 /// hierarchy where parameters should be overriden and/or
 /// bind directives should be applied. These are assembled
 /// from defparam values, bind directives, and command-line
 /// specified overrides.
-struct HierarchyOverrideNode {
+struct SLANG_EXPORT HierarchyOverrideNode {
     /// A map of parameters in the current scope to override.
     /// The key is the syntax node representing the parameter and the value is a pair,
     /// the first element of which is the value to set the parameter to and the second
     /// is the source defparam doing the overriding, if any (can be null).
     flat_hash_map<const syntax::SyntaxNode*, std::pair<ConstantValue, const syntax::SyntaxNode*>>
-        overridesBySyntax;
+        paramOverrides;
 
-    /// A map of parameters to override, keyed by name.
-    flat_hash_map<std::string_view, ConstantValue> overridesByName;
-
-    /// A map of child scopes that also contain overrides, keyed by syntax.
-    flat_hash_map<InstancePath::Entry, HierarchyOverrideNode> childrenBySyntax;
-
-    /// A map of child scopes that also contain overrides, keyed by name.
-    flat_hash_map<std::string_view, HierarchyOverrideNode> childrenByName;
+    /// A map of child scopes that also contain overrides.
+    flat_hash_map<OpaqueInstancePath::Entry, HierarchyOverrideNode> childNodes;
 
     /// A list of bind directives to apply in this scope.
-    std::vector<const syntax::BindDirectiveSyntax*> binds;
-
-    /// A config rule that should be applied to this hierarchy instance.
-    const ConfigRule* configRule = nullptr;
-
-    /// Set to true if any direct child nodes have config rules supplied.
-    bool anyChildConfigRules = false;
+    /// The first entry is info about the bind instantiation, and the
+    /// second is an optional pointer to the definition it targets.
+    /// If the target is null, then the bind is actually targeting the
+    /// scope represented by this override node.
+    std::vector<std::pair<BindDirectiveInfo, const syntax::SyntaxNode*>> binds;
 };
 
 /// A centralized location for creating and caching symbols. This includes
@@ -228,7 +270,7 @@ struct HierarchyOverrideNode {
 class SLANG_EXPORT Compilation : public BumpAllocator {
 public:
     /// Constructs a new instance of the Compilation class.
-    explicit Compilation(const Bag& options = {});
+    explicit Compilation(const Bag& options = {}, const SourceLibrary* defaultLib = nullptr);
     Compilation(const Compilation& other) = delete;
     Compilation(Compilation&& other) = delete;
     ~Compilation();
@@ -241,6 +283,9 @@ public:
 
     /// Returns true if the given flag(s) are enabled for this compilation.
     bool hasFlag(bitmask<CompilationFlags> flags) const { return options.flags.has(flags); }
+
+    /// Gets the language version set in the compilation options.
+    LanguageVersion languageVersion() const { return getOptions().languageVersion; }
 
     /// Gets the source manager associated with the compilation. If no syntax trees have
     /// been added to the design this method will return nullptr.
@@ -311,17 +356,64 @@ public:
     /// Gets the source library with the given name, or nullptr if there is no such library.
     const SourceLibrary* getSourceLibrary(std::string_view name) const;
 
+    /// Gets the default library object.
+    const SourceLibrary& getDefaultLibrary() const { return *defaultLibPtr; }
+
+    /// A struct containing the result of a definition lookup.
+    struct DefinitionLookupResult {
+        /// The definition that was found, or nullptr if none was found.
+        const Symbol* definition = nullptr;
+
+        /// A new config root that applies to this definition and
+        /// any hierarchy underneath it, or nullptr if none.
+        const ConfigBlockSymbol* configRoot = nullptr;
+
+        /// A config rule that applies to instances using this
+        /// definition, or nullptr if none.
+        const ConfigRule* configRule = nullptr;
+
+        DefinitionLookupResult() = default;
+
+        DefinitionLookupResult(const Symbol* definition) : definition(definition) {}
+
+        DefinitionLookupResult(const Symbol* definition, const ConfigBlockSymbol* configRoot,
+                               const ConfigRule* configRule) :
+            definition(definition), configRoot(configRoot), configRule(configRule) {}
+    };
+
     /// Gets the definition with the given name, or nullptr if there is no such definition.
     /// This takes into account the given scope so that nested definitions are found
     /// before more global ones.
-    const Definition* getDefinition(std::string_view name, const Scope& scope) const;
+    DefinitionLookupResult tryGetDefinition(std::string_view name, const Scope& scope) const;
 
-    /// Gets the definition for the given syntax node, or nullptr if it does not exist.
-    const Definition* getDefinition(const syntax::ModuleDeclarationSyntax& syntax) const;
+    /// Gets the definition with the given name, or nullptr if there is no such definition.
+    /// If no definition is found an appropriate diagnostic will be issued.
+    DefinitionLookupResult getDefinition(std::string_view name, const Scope& scope,
+                                         SourceRange sourceRange, DiagCode code) const;
 
     /// Gets the definition indicated by the given config rule, or nullptr if it does not exist.
-    const Definition* getDefinition(std::string_view name, const Scope& scope,
-                                    const ConfigRule& configRule) const;
+    /// If no definition is found an appropriate diagnostic will be issued.
+    DefinitionLookupResult getDefinition(std::string_view name, const Scope& scope,
+                                         const ConfigRule& configRule, SourceRange sourceRange,
+                                         DiagCode code) const;
+
+    /// Gets the definition indicated by the given bind directive info.
+    DefinitionLookupResult getDefinition(std::string_view name, const Scope& scope,
+                                         SourceRange sourceRange,
+                                         const BindDirectiveInfo& bindInfo) const;
+
+    /// Gets the definition for the given syntax node, or nullptr if it does not exist.
+    const DefinitionSymbol* getDefinition(const Scope& scope,
+                                          const syntax::ModuleDeclarationSyntax& syntax) const;
+
+    /// Gets the definition indicated by the given config and cell ID, or nullptr
+    /// if it does not exist. If no definition is found an appropriate diagnostic will be issued.
+    const DefinitionSymbol* getDefinition(const ConfigBlockSymbol& config,
+                                          std::string_view cellName, std::string_view libName,
+                                          SourceRange sourceRange) const;
+
+    /// Gets a list of all definitions (including primitives) in the design.
+    std::vector<const Symbol*> getDefinitions() const;
 
     /// Gets the package with the give name, or nullptr if there is no such package.
     const PackageSymbol* getPackage(std::string_view name) const;
@@ -329,8 +421,8 @@ public:
     /// Gets the built-in 'std' package.
     const PackageSymbol& getStdPackage() const { return *stdPkg; }
 
-    /// Gets the primitive with the given name, or nullptr if there is no such primitive.
-    const PrimitiveSymbol* getPrimitive(std::string_view name) const;
+    /// Gets a list of all packages in the design.
+    std::vector<const PackageSymbol*> getPackages() const;
 
     /// Gets the built-in gate type with the given name, or nullptr if there is no such gate.
     const PrimitiveSymbol* getGateType(std::string_view name) const;
@@ -340,20 +432,10 @@ public:
     /// @{
 
     /// Registers a system subroutine handler, which can be accessed by compiled code.
-    void addSystemSubroutine(std::unique_ptr<SystemSubroutine> subroutine);
-
-    /// Registers an externally owned system subroutine handler,
-    /// which can be accessed by compiled code. The provided subroutine must remain
-    /// valid for the lifetime of this object.
-    void addSystemSubroutine(const SystemSubroutine& subroutine);
+    void addSystemSubroutine(const std::shared_ptr<SystemSubroutine>& subroutine);
 
     /// Registers a type-based system method handler, which can be accessed by compiled code.
-    void addSystemMethod(SymbolKind typeKind, std::unique_ptr<SystemSubroutine> method);
-
-    /// Registers an externally owned type-based system method handler,
-    /// which can be accessed by compiled code. The provided subroutine must remain
-    /// valid for the lifetime of this object.
-    void addSystemMethod(SymbolKind typeKind, const SystemSubroutine& subroutine);
+    void addSystemMethod(SymbolKind typeKind, const std::shared_ptr<SystemSubroutine>& method);
 
     /// Gets a system subroutine with the given name, or nullptr if there is no such subroutine
     /// registered.
@@ -392,7 +474,7 @@ public:
                                                const syntax::ConfigDeclarationSyntax& syntax);
 
     /// Creates a new primitive in the given scope based on the given syntax.
-    const PrimitiveSymbol& createPrimitive(const Scope& scope,
+    const PrimitiveSymbol& createPrimitive(Scope& scope,
                                            const syntax::UdpDeclarationSyntax& syntax);
 
     /// Registers a built-in gate symbol.
@@ -410,16 +492,6 @@ public:
     /// Sets the attributes associated with the given port connection.
     void setAttributes(const PortConnection& conn,
                        std::span<const AttributeSymbol* const> attributes);
-
-    /// Notes that the given symbol was imported into the current scope via a package import,
-    /// and further that the current scope is within a package declaration. These symbols are
-    /// candidates for being exported from that package.
-    void notePackageExportCandidate(const PackageSymbol& packageScope, const Symbol& symbol);
-
-    /// Tries to find a symbol that can be exported from the given package to satisfy an import
-    /// of a given name from that package. Returns nullptr if no such symbol can be found.
-    const Symbol* findPackageExportCandidate(const PackageSymbol& packageScope,
-                                             std::string_view name) const;
 
     /// Notes the presence of a bind directive. These can be later checked during
     /// scope elaboration to include the newly bound instances.
@@ -474,29 +546,12 @@ public:
     /// if no such declaration is in effect.
     const Expression* getDefaultDisable(const Scope& scope) const;
 
-    /// Notes the existence of an extern module/interface/program declaration.
-    void noteExternModule(const Scope& scope, const syntax::ExternModuleDeclSyntax& syntax);
+    /// Notes the existence of an extern module/interface/program/primitive declaration.
+    void noteExternDefinition(const Scope& scope, const syntax::SyntaxNode& syntax);
 
-    /// Performs a lookup for an extern module declaration of the given name.
-    const syntax::ExternModuleDeclSyntax* getExternModule(std::string_view name,
-                                                          const Scope& scope) const;
-
-    /// Reports an error about a missing implementation if there exists an
-    /// extern module declaration for the given name.
-    bool errorIfMissingExternModule(std::string_view name, const Scope& scope,
-                                    SourceRange sourceRange);
-
-    /// Notes the existence of an extern primitive declaration.
-    void noteExternPrimitive(const Scope& scope, const syntax::ExternUdpDeclSyntax& syntax);
-
-    /// Performs a lookup for an extern primitive declaration of the given name.
-    const syntax::ExternUdpDeclSyntax* getExternPrimitive(std::string_view name,
-                                                          const Scope& scope) const;
-
-    /// Reports an error about a missing implementation if there exists an
-    /// extern primitive declaration for the given name.
-    bool errorIfMissingExternPrimitive(std::string_view name, const Scope& scope,
-                                       SourceRange sourceRange);
+    /// Performs a lookup for an extern module/interface/program/primitive declaration
+    /// of the given name.
+    const syntax::SyntaxNode* getExternDefinition(std::string_view name, const Scope& scope) const;
 
     /// Notes that the given syntax node is "referenced" somewhere in the AST.
     /// This is used to diagnose unused variables, nets, etc. The @a isLValue parameter
@@ -521,7 +576,7 @@ public:
     /// Adds a set of diagnostics to the compilation's list of semantic diagnostics.
     void addDiagnostics(const Diagnostics& diagnostics);
 
-    /// Forces the given symbol and all children underneath it in the hierarchy to
+    /// Forces the given symbol and all scopes underneath it to
     /// be elaborated and any relevant diagnostics to be issued.
     void forceElaborate(const Symbol& symbol);
 
@@ -639,6 +694,9 @@ public:
     /// Allocates a config block symbol.
     ConfigBlockSymbol* allocConfigBlock(std::string_view name, SourceLocation loc);
 
+    /// Allocates a scope's wildcard import data object.
+    Scope::WildcardImportData* allocWildcardImportData();
+
     /// Gets the driver map allocator.
     DriverIntervalMap::allocator_type& getDriverMapAllocator() { return driverMapAllocator; }
 
@@ -650,16 +708,25 @@ public:
     /// Creates an empty ImplicitTypeSyntax object.
     const syntax::ImplicitTypeSyntax& createEmptyTypeSyntax(SourceLocation loc);
 
+    /// Queries if any errors have been issued on any scope within this compilation.
+    bool hasIssuedErrors() const { return numErrors > 0; };
+
     /// @{
 
 private:
     friend class Lookup;
     friend class Scope;
 
+    // Collected information about a resolved bind directive.
+    struct ResolvedBind {
+        SmallVector<const Symbol*> instTargets;
+        DefinitionLookupResult instanceDef;
+        const DefinitionSymbol* defTarget = nullptr;
+        const ResolvedConfig* resolvedConfig = nullptr;
+    };
+
     // These functions are called by Scopes to create and track various members.
     Scope::DeferredMemberData& getOrAddDeferredData(Scope::DeferredMemberIndex& index);
-    void trackImport(Scope::ImportDataIndex& index, const WildcardImportSymbol& import);
-    std::span<const WildcardImportSymbol*> queryImports(Scope::ImportDataIndex index);
 
     bool doTypoCorrection() const { return typoCorrections < options.typoCorrectionLimit; }
     void didTypoCorrection() { typoCorrections++; }
@@ -669,6 +736,8 @@ private:
     Diagnostic& addDiag(Diagnostic diag);
 
     const RootSymbol& getRoot(bool skipDefParamsAndBinds);
+    void elaborate();
+    void insertDefinition(Symbol& symbol, const Scope& scope);
     void parseParamOverrides(flat_hash_map<std::string_view, const ConstantValue*>& results);
     void checkDPIMethods(std::span<const SubroutineSymbol* const> dpiImports);
     void checkExternIfaceMethods(std::span<const MethodPrototypeSymbol* const> protos);
@@ -677,14 +746,16 @@ private:
     void checkElemTimeScale(std::optional<TimeScale> timeScale, SourceRange sourceRange);
     void resolveDefParamsAndBinds();
     void resolveBindTargets(const syntax::BindDirectiveSyntax& syntax, const Scope& scope,
-                            SmallVector<const Symbol*>& instTargets, const Definition** defTarget);
+                            ResolvedBind& resolvedBind);
     void checkBindTargetParams(const syntax::BindDirectiveSyntax& syntax, const Scope& scope,
-                               std::span<const Symbol* const> instTargets,
-                               const Definition* defTarget);
-    const Definition* resolveConfigRules(std::string_view name, const Scope& scope,
-                                         const ConfigBlockSymbol* config,
-                                         const ConfigRule* configRule,
-                                         const std::vector<Definition*>& defList) const;
+                               const ResolvedBind& resolvedBind);
+    std::pair<DefinitionLookupResult, bool> resolveConfigRule(const Scope& scope,
+                                                              const ConfigRule& rule) const;
+    std::pair<DefinitionLookupResult, bool> resolveConfigRules(
+        std::string_view name, const Scope& scope, const ResolvedConfig* parentConfig,
+        const ConfigRule* configRule, const std::vector<Symbol*>& defList) const;
+    Diagnostic* errorMissingDef(std::string_view name, const Scope& scope, SourceRange sourceRange,
+                                DiagCode code) const;
 
     // Stored options object.
     CompilationOptions options;
@@ -716,23 +787,18 @@ private:
     // Sideband data for scopes that have deferred members.
     SafeIndexedVector<Scope::DeferredMemberData, Scope::DeferredMemberIndex> deferredData;
 
-    // Sideband data for scopes that have wildcard imports. The list of imports
-    // is stored here and queried during name lookups.
-    SafeIndexedVector<Scope::ImportData, Scope::ImportDataIndex> importData;
-
     // A map of syntax nodes that have been referenced in the AST.
     // The value indicates whether the node has been used as an lvalue vs non-lvalue,
     // for things like variables and nets.
     flat_hash_map<const syntax::SyntaxNode*, std::pair<bool, bool>> referenceStatusMap;
 
-    // The name map for all module, interface, and program definitions.
+    // The name map for all module, interface, program, and primitive definitions.
     // The key is a combination of definition name + the scope in which it was declared.
     // The value is a pair -- the first element is a list of definitions that share
     // the given name / scope (which can happen for multiple libraries at the root scope),
     // and the second element is a boolean that indicates whether there exists at least
     // one nested module with the given name (requiring a more involved lookup).
-    flat_hash_map<std::tuple<std::string_view, const Scope*>,
-                  std::pair<std::vector<Definition*>, bool>>
+    flat_hash_map<std::tuple<std::string_view, const Scope*>, std::pair<std::vector<Symbol*>, bool>>
         definitionMap;
 
     // A cache of vector types, keyed on various properties such as bit width.
@@ -749,17 +815,17 @@ private:
     flat_hash_map<std::string_view, const PackageSymbol*> packageMap;
 
     // The name map for system subroutines.
-    flat_hash_map<std::string_view, const SystemSubroutine*> subroutineMap;
+    flat_hash_map<std::string_view, std::shared_ptr<SystemSubroutine>> subroutineMap;
 
     // The name map for system methods.
-    flat_hash_map<std::tuple<std::string_view, SymbolKind>, const SystemSubroutine*> methodMap;
+    flat_hash_map<std::tuple<std::string_view, SymbolKind>, std::shared_ptr<SystemSubroutine>>
+        methodMap;
 
     // Map from pointers (to symbols, statements, expressions) to their associated attributes.
     flat_hash_map<const void*, std::span<const AttributeSymbol* const>> attributeMap;
 
     struct SyntaxMetadata {
         const syntax::SyntaxTree* tree = nullptr;
-        const SourceLibrary* library = nullptr;
         const NetType* defaultNetType = nullptr;
         std::optional<TimeScale> timeScale;
         UnconnectedDrive unconnectedDrive = UnconnectedDrive::None;
@@ -769,10 +835,7 @@ private:
     flat_hash_map<const syntax::SyntaxNode*, SyntaxMetadata> syntaxMetadata;
 
     // A list of all created definitions, as storage for their memory.
-    std::vector<std::unique_ptr<Definition>> definitionMemory;
-
-    // A map of config blocks to use for a given scope.
-    flat_hash_map<const Scope*, const ConfigBlockSymbol*> configForScope;
+    std::vector<std::unique_ptr<DefinitionSymbol>> definitionMemory;
 
     // A map from diag code + location to the diagnostics that have occurred at that location.
     // This is used to collapse duplicate diagnostics across instantiations into a single report.
@@ -781,11 +844,6 @@ private:
 
     // A list of libraries that control the order in which we search for cell bindings.
     std::vector<const SourceLibrary*> defaultLiblist;
-
-    // A map of packages to the set of names that are candidates for being
-    // exported from those packages.
-    flat_hash_map<const PackageSymbol*, flat_hash_map<std::string_view, const Symbol*>>
-        packageExportCandidateMap;
 
     // A map from class name + decl name + scope to out-of-block declarations. These get
     // registered when we find the initial declaration and later get used when we see
@@ -810,6 +868,7 @@ private:
     TypedBumpAllocator<GenericClassDefSymbol> genericClassAllocator;
     TypedBumpAllocator<AssertionInstanceDetails> assertionDetailsAllocator;
     TypedBumpAllocator<ConfigBlockSymbol> configBlockAllocator;
+    TypedBumpAllocator<Scope::WildcardImportData> wildcardImportAllocator;
 
     // This is storage for a temporary diagnostic that is being constructed.
     // Typically this is done in-place within the diagMap, but for diagnostics
@@ -828,10 +887,7 @@ private:
 
     // A list of definitions that are unreferenced in any instantiations and
     // are also not automatically instantiated as top-level.
-    std::vector<const Definition*> unreferencedDefs;
-
-    // The name map for user-defined primitive definitions.
-    flat_hash_map<std::string_view, const PrimitiveSymbol*> udpMap;
+    std::vector<const DefinitionSymbol*> unreferencedDefs;
 
     // The name map for built-in primitive definitions. These are stored in a separate
     // map because they are distinguished by keyword names that may otherwise collide
@@ -840,7 +896,8 @@ private:
 
     // A map from syntax node to the definition it represents. Used much less frequently
     // than other ways of looking up definitions which is why it's lower down here.
-    flat_hash_map<const syntax::ModuleDeclarationSyntax*, Definition*> definitionFromSyntax;
+    flat_hash_map<const syntax::ModuleDeclarationSyntax*, std::vector<DefinitionSymbol*>>
+        definitionFromSyntax;
 
     // A set of all instantiated names in the design; used for determining whether a given
     // module has ever been instantiated to know whether it should be considered top-level.
@@ -874,28 +931,26 @@ private:
 
     // A map of config blocks.
     flat_hash_map<std::string_view, std::vector<const ConfigBlockSymbol*>> configBlocks;
+    flat_hash_map<const syntax::SyntaxNode*, const ConfigBlockSymbol*> configBySyntax;
 
     // A map of library names to their actual source library pointers.
     flat_hash_map<std::string_view, const SourceLibrary*> libraryNameMap;
 
     // A set of instances that have global definition-based bind directives applied.
     // This is pretty rare and only used for checking of type params.
-    flat_hash_map<const Definition*, std::vector<const Symbol*>> instancesWithDefBinds;
+    flat_hash_map<const DefinitionSymbol*, std::vector<const Symbol*>> instancesWithDefBinds;
 
-    // The name map for extern module declarations.
+    // The name map for extern module/interface/program/primitive declarations.
     // The key is a combination of definition name + the scope in which it was declared.
-    flat_hash_map<std::tuple<std::string_view, const Scope*>, const syntax::ExternModuleDeclSyntax*>
-        externModuleMap;
-
-    // The name map for extern user-defined primitive declarations.
-    flat_hash_map<std::tuple<std::string_view, const Scope*>, const syntax::ExternUdpDeclSyntax*>
-        externUdpMap;
-
-    // Storage for system subroutine instances.
-    std::vector<std::unique_ptr<SystemSubroutine>> subroutineStorage;
+    flat_hash_map<std::tuple<std::string_view, const Scope*>, const syntax::SyntaxNode*>
+        externDefMap;
 
     // The built-in std package.
     const PackageSymbol* stdPkg = nullptr;
+
+    // The default library.
+    std::unique_ptr<SourceLibrary> defaultLibMem;
+    const SourceLibrary* defaultLibPtr;
 };
 
 } // namespace slang::ast

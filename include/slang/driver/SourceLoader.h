@@ -7,6 +7,7 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include <deque>
 #include <filesystem>
 #include <memory>
 #include <mutex>
@@ -110,6 +111,19 @@ public:
     void addLibraryMaps(std::string_view pattern, const std::filesystem::path& basePath,
                         const Bag& optionBag);
 
+    /// @brief Adds a group of files as a separately compiled compilation unit.
+    ///
+    /// Unlike files added via the @a addFiles method, files added here are
+    /// all guaranteed to be grouped into a single compilation unit and use
+    /// the provided options for preprocessor defines and include paths.
+    ///
+    /// If the library name is provided the compilation unit will be included
+    /// in the library of that name; otherwise it will be included in the
+    /// default library and be considered a non-library unit.
+    void addSeparateUnit(std::span<const std::string> filePatterns,
+                         const std::vector<std::string>& includePaths,
+                         std::vector<std::string> defines, const std::string& libraryName);
+
     /// Returns a list of all library map syntax trees that have been loaded and parsed.
     const SyntaxTreeList& getLibraryMaps() const { return libraryMapTrees; }
 
@@ -127,7 +141,19 @@ public:
     /// Gets the list of errors that have occurred while loading files.
     std::span<const std::string> getErrors() const { return errors; }
 
+    /// Gets a pointer to the source library with the given name, or adds it if
+    /// it does not exist. Returns nullptr if @a name is empty.
+    SourceLibrary* getOrAddLibrary(std::string_view name);
+
 private:
+    // One entry per unit of files + options to compile them.
+    // Only used for addSeparateUnit.
+    struct UnitEntry {
+        std::vector<std::filesystem::path> includePaths;
+        std::vector<std::string> defines;
+        const SourceLibrary* library = nullptr;
+    };
+
     // One entry per unique file path added to the loader.
     struct FileEntry {
         // The filesystem path (as specified by the user).
@@ -144,6 +170,9 @@ private:
         // matches at an even higher rank.
         const SourceLibrary* secondLib = nullptr;
 
+        // A pointer to the unit this file is a part of, or nullptr if none.
+        const UnitEntry* unit = nullptr;
+
         // A measure of how strongly this file belongs to the library.
         GlobRank libraryRank;
 
@@ -156,29 +185,31 @@ private:
         bool isLibraryFile = false;
 
         FileEntry(std::filesystem::path&& path, bool isLibraryFile, const SourceLibrary* library,
-                  GlobRank libraryRank) :
-            path(std::move(path)),
-            library(library), libraryRank(libraryRank), isLibraryFile(isLibraryFile) {}
+                  const UnitEntry* unit, GlobRank libraryRank) :
+            path(std::move(path)), library(library), unit(unit), libraryRank(libraryRank),
+            isLibraryFile(isLibraryFile) {}
     };
 
     // The result of a loadAndParse call.
     // 0: A parsed syntax tree
     // 1: A loaded source buffer + bool that indicates whether it's a library
     // 2: A file entry + error code if the load fails
+    // 3: A source buffer + unit pointer if it's part of a separate unit
     using LoadResult =
         std::variant<std::shared_ptr<syntax::SyntaxTree>, std::pair<SourceBuffer, bool>,
-                     std::pair<const FileEntry*, std::error_code>>;
+                     std::pair<const FileEntry*, std::error_code>,
+                     std::pair<SourceBuffer, const UnitEntry*>>;
 
-    SourceLibrary* getOrAddLibrary(std::string_view name);
     void addFilesInternal(std::string_view pattern, const std::filesystem::path& basePath,
-                          bool isLibraryFile, const SourceLibrary* library, bool expandEnvVars);
+                          bool isLibraryFile, const SourceLibrary* library, const UnitEntry* unit,
+                          bool expandEnvVars);
     void addLibraryMapsInternal(std::string_view pattern, const std::filesystem::path& basePath,
                                 const Bag& optionBag, bool expandEnvVars,
                                 flat_hash_set<std::filesystem::path>& seenMaps);
     void createLibrary(const syntax::LibraryDeclarationSyntax& syntax,
                        const std::filesystem::path& basePath);
     LoadResult loadAndParse(const FileEntry& fileEntry, const Bag& optionBag,
-                            const SourceOptions& srcOptions);
+                            const SourceOptions& srcOptions, uint64_t fileSortKey = UINT64_MAX);
     void addError(const std::filesystem::path& path, std::error_code ec);
 
     SourceManager& sourceManager;
@@ -186,6 +217,7 @@ private:
     std::vector<FileEntry> fileEntries;
     flat_hash_map<std::filesystem::path, size_t> fileIndex;
     flat_hash_map<std::string, std::unique_ptr<SourceLibrary>> libraries;
+    std::deque<UnitEntry> unitEntries;
     std::vector<std::filesystem::path> searchDirectories;
     std::vector<std::filesystem::path> searchExtensions;
     flat_hash_set<std::string_view> uniqueExtensions;

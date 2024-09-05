@@ -22,7 +22,7 @@ public:
 
     NetlistPath() = default;
 
-    NetlistPath(NodeListType nodes) : nodes(std::move(nodes)){};
+    NetlistPath(NodeListType nodes) : nodes(std::move(nodes)) {};
 
     const_iterator begin() const { return nodes.begin(); }
     const_iterator end() const { return nodes.end(); }
@@ -38,6 +38,7 @@ public:
     size_t size() const { return nodes.size(); }
 
     bool empty() const { return nodes.empty(); }
+    void clear() { nodes.clear(); }
 
     static std::string getSymbolHierPath(const ast::Symbol& symbol) {
         std::string buffer;

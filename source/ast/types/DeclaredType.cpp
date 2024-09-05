@@ -12,6 +12,7 @@
 #include "slang/ast/Scope.h"
 #include "slang/ast/Symbol.h"
 #include "slang/ast/symbols/InstanceSymbols.h"
+#include "slang/ast/symbols/ParameterSymbols.h"
 #include "slang/ast/symbols/SubroutineSymbols.h"
 #include "slang/ast/symbols/VariableSymbols.h"
 #include "slang/ast/types/AllTypes.h"
@@ -106,10 +107,9 @@ void DeclaredType::resolveType(const ASTContext& typeContext,
             if (flags.has(DeclaredTypeFlags::AllowUnboundedLiteral))
                 extraFlags = ASTFlags::AllowUnboundedLiteral;
 
-            std::tie(initializer, type) = Expression::bindImplicitParam(*syntax, *initializerSyntax,
-                                                                        initializerLocation,
-                                                                        initializerContext,
-                                                                        typeContext, extraFlags);
+            std::tie(initializer, type) = Expression::bindImplicitParam(
+                *syntax, *initializerSyntax, {initializerLocation, initializerLocation + 1},
+                initializerContext, typeContext, extraFlags);
             SLANG_ASSERT(initializer);
         }
     }
@@ -135,8 +135,12 @@ void DeclaredType::resolveType(const ASTContext& typeContext,
     }
     else {
         const Type* typedefTarget = nullptr;
-        if (flags.has(DeclaredTypeFlags::TypedefTarget))
-            typedefTarget = &parent.as<Type>();
+        if (flags.has(DeclaredTypeFlags::TypedefTarget)) {
+            if (parent.kind == SymbolKind::TypeParameter)
+                typedefTarget = &parent.as<TypeParameterSymbol>().getTypeAlias();
+            else
+                typedefTarget = &parent.as<Type>();
+        }
 
         type = &comp.getType(*syntax, typeContext, typedefTarget);
         if (dimensions)
@@ -157,6 +161,14 @@ static bool isValidForNet(const Type& type) {
 
     if (ct.isUnpackedStruct()) {
         for (auto field : ct.as<UnpackedStructType>().fields) {
+            if (!isValidForNet(field->getType()))
+                return false;
+        }
+        return true;
+    }
+
+    if (ct.isUnpackedUnion()) {
+        for (auto field : ct.as<UnpackedUnionType>().fields) {
             if (!isValidForNet(field->getType()))
                 return false;
         }
@@ -212,6 +224,7 @@ static bool isValidForIfaceVar(const Type& type) {
 }
 
 void DeclaredType::checkType(const ASTContext& context) const {
+    auto lv = context.getCompilation().languageVersion();
     uint32_t masked = (flags & DeclaredTypeFlags::NeedsTypeCheck).bits();
     SLANG_ASSERT(std::popcount(masked) == 1);
 
@@ -240,7 +253,7 @@ void DeclaredType::checkType(const ASTContext& context) const {
             break;
         case uint32_t(DeclaredTypeFlags::Rand): {
             RandMode mode = parent.getRandMode();
-            if (!type->isValidForRand(mode)) {
+            if (!type->isValidForRand(mode, lv)) {
                 auto& diag = context.addDiag(diag::InvalidRandType, parent.location) << *type;
                 if (mode == RandMode::Rand)
                     diag << "rand"sv;
@@ -265,8 +278,8 @@ void DeclaredType::checkType(const ASTContext& context) const {
                 context.addDiag(diag::AssertionExprType, parent.location) << *type;
             break;
         case uint32_t(DeclaredTypeFlags::CoverageType):
-            if (!type->isIntegral())
-                context.addDiag(diag::NonIntegralCoverageExpr, parent.location) << *type;
+            if (!type->isIntegral() && (lv < LanguageVersion::v1800_2023 || !type->isFloating()))
+                context.addDiag(diag::InvalidCoverageExpr, parent.location) << *type;
             break;
         case uint32_t(DeclaredTypeFlags::InterfaceVariable):
             if (!isValidForIfaceVar(*type))
@@ -275,35 +288,6 @@ void DeclaredType::checkType(const ASTContext& context) const {
         default:
             SLANG_UNREACHABLE;
     }
-}
-
-static const Type* makeSigned(Compilation& compilation, const Type& type) {
-    // This deliberately does not look at the canonical type; type aliases
-    // are not convertible to a different signedness.
-    SmallVector<ConstantRange, 4> dims;
-    const Type* curr = &type;
-    while (curr->kind == SymbolKind::PackedArrayType) {
-        dims.push_back(curr->getFixedRange());
-        curr = curr->getArrayElementType();
-    }
-
-    if (curr->kind != SymbolKind::ScalarType)
-        return &type;
-
-    auto flags = curr->getIntegralFlags() | IntegralFlags::Signed;
-    if (dims.size() == 1)
-        return &compilation.getType(type.getBitWidth(), flags);
-
-    // Rebuild the array with the new element type.
-    curr = &compilation.getScalarType(flags);
-    size_t count = dims.size();
-    for (size_t i = 0; i < count; i++) {
-        // There's no worry about size overflow here because we started with a valid type.
-        ConstantRange dim = dims[count - i - 1];
-        curr = compilation.emplace<PackedArrayType>(*curr, dim, curr->getBitWidth() * dim.width());
-    }
-
-    return curr;
 }
 
 void DeclaredType::mergePortTypes(
@@ -358,7 +342,7 @@ void DeclaredType::mergePortTypes(
 
         bool shouldBeSigned = implicit.signing.kind == TokenKind::SignedKeyword;
         if (shouldBeSigned && !sourceType->isSigned()) {
-            sourceType = makeSigned(context.getCompilation(), *sourceType);
+            sourceType = &sourceType->makeSigned(context.getCompilation());
             if (!sourceType->isSigned()) {
                 warnSignedness();
             }
@@ -436,14 +420,15 @@ void DeclaredType::resolveAt(const ASTContext& context) const {
     const Type* targetType = type;
     if (targetType->isEnum() && scope.asSymbol().kind == SymbolKind::EnumType) {
         targetType = &targetType->as<EnumType>().baseType;
-        extraFlags = ASTFlags::EnumInitializer;
+        extraFlags = ASTFlags::UnevaluatedBranch;
     }
     else if (flags.has(DeclaredTypeFlags::AllowUnboundedLiteral)) {
         extraFlags = ASTFlags::AllowUnboundedLiteral;
     }
 
-    initializer = &Expression::bindRValue(*targetType, *initializerSyntax, initializerLocation,
-                                          context, extraFlags);
+    initializer = &Expression::bindRValue(*targetType, *initializerSyntax,
+                                          {initializerLocation, initializerLocation + 1}, context,
+                                          extraFlags);
 }
 
 void DeclaredType::forceResolveAt(const ASTContext& context) const {
@@ -487,9 +472,10 @@ T DeclaredType::getASTContext() const {
 
     // Specparams inside of specify blocks have additional constraints so we
     // need to set the AST flag for them.
-    if (parent.kind == SymbolKind::Specparam &&
-        scope->asSymbol().kind == SymbolKind::SpecifyBlock) {
-        astFlags |= ASTFlags::SpecifyBlock;
+    if (parent.kind == SymbolKind::Specparam) {
+        astFlags |= ASTFlags::SpecparamInitializer;
+        if (scope->asSymbol().kind == SymbolKind::SpecifyBlock)
+            astFlags |= ASTFlags::SpecifyBlock;
     }
 
     // If this type/initializer has been overridden by a parameter override,
@@ -497,11 +483,15 @@ T DeclaredType::getASTContext() const {
     // when resolving.
     if ((IsInitializer && flags.has(DeclaredTypeFlags::InitializerOverridden)) ||
         (!IsInitializer && flags.has(DeclaredTypeFlags::TypeOverridden))) {
-        auto inst = scope->asSymbol().as<InstanceBodySymbol>().parentInstance;
+        auto& instBody = scope->asSymbol().as<InstanceBodySymbol>();
+        auto inst = instBody.parentInstance;
         SLANG_ASSERT(inst);
 
         scope = inst->getParentScope();
         SLANG_ASSERT(scope);
+
+        if (instBody.flags.has(InstanceFlags::FromBind))
+            astFlags |= ASTFlags::BindInstantiation;
 
         return ASTContext(*scope, LookupLocation::before(*inst), astFlags);
     }

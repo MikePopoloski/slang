@@ -7,11 +7,11 @@
 //------------------------------------------------------------------------------
 #include "FmtHelpers.h"
 
-#include "slang/ast/Definition.h"
 #include "slang/ast/EvalContext.h"
 #include "slang/ast/Expression.h"
 #include "slang/ast/SFormat.h"
 #include "slang/ast/expressions/LiteralExpressions.h"
+#include "slang/ast/symbols/CompilationUnitSymbols.h"
 #include "slang/ast/symbols/VariableSymbols.h"
 #include "slang/ast/types/AllTypes.h"
 #include "slang/diagnostics/SysFuncsDiags.h"
@@ -86,8 +86,9 @@ static bool checkArgType(TContext& context, const Expression& arg, char spec, So
                 return true;
             break;
         case 'p':
-            // Always valid.
-            return true;
+            if (!type.isVoid())
+                return true;
+            break;
         case 's':
             if (type.canBeStringLike())
                 return true;
@@ -199,12 +200,18 @@ bool FmtHelpers::checkSFormatArgs(const ASTContext& context, const Args& args) {
 
 static bool formatSpecialArg(char spec, const Scope& scope, std::string& result) {
     switch (charToLower(spec)) {
-        case 'l':
-            if (auto def = scope.asSymbol().getDeclaringDefinition())
+        case 'l': {
+            auto& sym = scope.asSymbol();
+            if (auto lib = sym.getSourceLibrary()) {
+                result += lib->name;
+                result.push_back('.');
+            }
+            if (auto def = sym.getDeclaringDefinition())
                 result += def->name;
             else
                 result += "$unit";
             return true;
+        }
         case 'm':
             scope.asSymbol().getHierarchicalPath(result);
             return true;

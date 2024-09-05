@@ -5,9 +5,12 @@
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
+#include "Builtins.h"
+
 #include "slang/ast/Compilation.h"
 #include "slang/ast/EvalContext.h"
 #include "slang/ast/SystemSubroutine.h"
+#include "slang/ast/expressions/MiscExpressions.h"
 #include "slang/ast/symbols/ParameterSymbols.h"
 #include "slang/ast/types/TypePrinter.h"
 #include "slang/diagnostics/ConstEvalDiags.h"
@@ -20,6 +23,8 @@ using namespace syntax;
 class BitsFunction : public SystemSubroutine {
 public:
     BitsFunction() : SystemSubroutine("$bits", SubroutineKind::Function) {}
+
+    bool isArgUnevaluated(size_t) const final { return true; }
 
     const Expression& bindArgument(size_t, const ASTContext& context,
                                    const ExpressionSyntax& syntax, const Args&) const final {
@@ -61,7 +66,9 @@ public:
             width = cv.getBitstreamWidth();
         }
 
-        // TODO: handle overflow of 32 bits
+        // Note: we convert the size down to a 32-bit result. This can result
+        // in (defined) overflow, which matches the behavior of all other
+        // tools that I tried.
         return SVInt(32, width, true);
     }
 };
@@ -69,6 +76,8 @@ public:
 class TypenameFunction : public SystemSubroutine {
 public:
     TypenameFunction() : SystemSubroutine("$typename", SubroutineKind::Function) {}
+
+    bool isArgUnevaluated(size_t) const final { return true; }
 
     const Expression& bindArgument(size_t, const ASTContext& context,
                                    const ExpressionSyntax& syntax, const Args&) const final {
@@ -100,6 +109,8 @@ class IsUnboundedFunction : public SystemSubroutine {
 public:
     IsUnboundedFunction() : SystemSubroutine("$isunbounded", SubroutineKind::Function) {}
 
+    bool isArgUnevaluated(size_t) const final { return true; }
+
     const Expression& bindArgument(size_t, const ASTContext& context,
                                    const ExpressionSyntax& syntax, const Args&) const final {
         return Expression::bind(syntax, unevaluatedContext(context),
@@ -111,6 +122,11 @@ public:
         auto& comp = context.getCompilation();
         if (!checkArgCount(context, false, args, range, 1, 1))
             return comp.getErrorType();
+
+        if (!ValueExpressionBase::isKind(args[0]->kind) ||
+            args[0]->as<ValueExpressionBase>().symbol.kind != SymbolKind::Parameter) {
+            context.addDiag(diag::IsUnboundedParamArg, args[0]->sourceRange);
+        }
 
         return comp.getBitType();
     }
@@ -137,6 +153,8 @@ public:
 class ArrayQueryFunction : public SystemSubroutine {
 public:
     using SystemSubroutine::SystemSubroutine;
+
+    bool isArgUnevaluated(size_t index) const final { return index == 0; }
 
     const Expression& bindArgument(size_t index, const ASTContext& context,
                                    const ExpressionSyntax& syntax, const Args&) const final {
@@ -470,6 +488,8 @@ public:
     ArrayDimensionFunction(const std::string& name, bool unpackedOnly) :
         SystemSubroutine(name, FUNC), unpackedOnly(unpackedOnly) {}
 
+    bool isArgUnevaluated(size_t) const final { return true; }
+
     const Expression& bindArgument(size_t, const ASTContext& context,
                                    const ExpressionSyntax& syntax, const Args&) const final {
         return Expression::bind(syntax, unevaluatedContext(context), ASTFlags::AllowDataType);
@@ -522,8 +542,8 @@ private:
     bool unpackedOnly;
 };
 
-void registerQueryFuncs(Compilation& c) {
-#define REGISTER(name) c.addSystemSubroutine(std::make_unique<name##Function>())
+void Builtins::registerQueryFuncs() {
+#define REGISTER(name) addSystemSubroutine(std::make_shared<name##Function>())
     REGISTER(Bits);
     REGISTER(Typename);
     REGISTER(IsUnbounded);
@@ -535,8 +555,8 @@ void registerQueryFuncs(Compilation& c) {
     REGISTER(Increment);
 #undef REGISTER
 
-    c.addSystemSubroutine(std::make_unique<ArrayDimensionFunction>("$dimensions", false));
-    c.addSystemSubroutine(std::make_unique<ArrayDimensionFunction>("$unpacked_dimensions", true));
+    addSystemSubroutine(std::make_shared<ArrayDimensionFunction>("$dimensions", false));
+    addSystemSubroutine(std::make_shared<ArrayDimensionFunction>("$unpacked_dimensions", true));
 }
 
 } // namespace slang::ast::builtins

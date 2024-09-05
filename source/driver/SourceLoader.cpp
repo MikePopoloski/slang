@@ -9,6 +9,7 @@
 
 #include <fmt/core.h>
 
+#include "slang/parsing/Preprocessor.h"
 #include "slang/syntax/AllSyntax.h"
 #include "slang/syntax/SyntaxTree.h"
 #include "slang/text/SourceManager.h"
@@ -32,11 +33,13 @@ SourceLoader::SourceLoader(SourceManager& sourceManager) : sourceManager(sourceM
 
 void SourceLoader::addFiles(std::string_view pattern) {
     addFilesInternal(pattern, {}, /* isLibraryFile */ false, /* library */ nullptr,
+                     /* unit */ nullptr,
                      /* expandEnvVars */ false);
 }
 
 void SourceLoader::addLibraryFiles(std::string_view libName, std::string_view pattern) {
     addFilesInternal(pattern, {}, /* isLibraryFile */ true, getOrAddLibrary(libName),
+                     /* unit */ nullptr,
                      /* expandEnvVars */ false);
 }
 
@@ -69,6 +72,29 @@ void SourceLoader::addLibraryMaps(std::string_view pattern, const fs::path& base
                                   const Bag& optionBag) {
     flat_hash_set<fs::path> seenMaps;
     addLibraryMapsInternal(pattern, basePath, optionBag, /* expandEnvVars */ false, seenMaps);
+}
+
+void SourceLoader::addSeparateUnit(std::span<const std::string> filePatterns,
+                                   const std::vector<std::string>& includePaths,
+                                   std::vector<std::string> defines,
+                                   const std::string& libraryName) {
+    std::error_code ec;
+    SmallVector<fs::path> includeDirs;
+    for (auto& str : includePaths)
+        svGlob({}, str, GlobMode::Directories, includeDirs, /* expandEnvVars */ false, ec);
+
+    auto& unit = unitEntries.emplace_back();
+    unit.defines = std::move(defines);
+    unit.library = getOrAddLibrary(libraryName);
+
+    for (auto&& path : includeDirs)
+        unit.includePaths.emplace_back(std::move(path));
+
+    const bool isLibraryFile = unit.library != nullptr;
+    for (auto& pattern : filePatterns) {
+        addFilesInternal(pattern, {}, isLibraryFile, unit.library, &unit,
+                         /* expandEnvVars */ false);
+    }
 }
 
 void SourceLoader::addLibraryMapsInternal(std::string_view pattern, const fs::path& basePath,
@@ -146,6 +172,7 @@ SourceLoader::SyntaxTreeList SourceLoader::loadAndParseSources(const Bag& option
     std::vector<SourceBuffer> singleUnitBuffers;
     std::vector<SourceBuffer> deferredLibBuffers;
     std::span<const DefineDirectiveSyntax* const> inheritedMacros;
+    flat_hash_map<const UnitEntry*, std::vector<SourceBuffer>> unitToBufferMap;
 
     const size_t fileEntryCount = fileEntries.size();
     syntaxTrees.reserve(fileEntryCount);
@@ -157,9 +184,12 @@ SourceLoader::SyntaxTreeList SourceLoader::loadAndParseSources(const Bag& option
     auto handleLoadResult = [&](LoadResult&& result) {
         switch (result.index()) {
             case 0:
+                // File was loaded and parsed independently.
                 syntaxTrees.emplace_back(std::get<0>(std::move(result)));
                 break;
             case 1: {
+                // File was loaded but it's a library file and we
+                // need to wait to include it in a parse operation.
                 auto [buffer, isDeferredLib] = std::get<1>(result);
                 if (isDeferredLib)
                     deferredLibBuffers.push_back(buffer);
@@ -168,8 +198,16 @@ SourceLoader::SyntaxTreeList SourceLoader::loadAndParseSources(const Bag& option
                 break;
             }
             case 2: {
+                // Error occurred.
                 auto [entry, code] = std::get<2>(result);
                 addError(entry->path, code);
+                break;
+            }
+            case 3: {
+                // File is part of a separate unit.
+                auto [buffer, unit] = std::get<3>(result);
+                SLANG_ASSERT(unit != nullptr);
+                unitToBufferMap[unit].push_back(buffer);
                 break;
             }
         }
@@ -180,11 +218,24 @@ SourceLoader::SyntaxTreeList SourceLoader::loadAndParseSources(const Bag& option
         if (!buffers.empty()) {
             auto tree = SyntaxTree::fromBuffers(buffers, sourceManager, optionBag);
             if (srcOptions.onlyLint)
-                tree->isLibrary = true;
+                tree->isLibraryUnit = true;
 
             syntaxTrees.emplace_back(std::move(tree));
             inheritedMacros = syntaxTrees.back()->getDefinedMacros();
         }
+    };
+
+    auto parseSeparateUnit = [&](const UnitEntry& unit, const std::vector<SourceBuffer>& buffers) {
+        auto unitOptions = optionBag;
+        auto& ppOptions = unitOptions.insertOrGet<parsing::PreprocessorOptions>();
+        ppOptions.predefines.insert(ppOptions.predefines.end(), unit.defines.begin(),
+                                    unit.defines.end());
+        ppOptions.additionalIncludePaths.insert(ppOptions.additionalIncludePaths.end(),
+                                                unit.includePaths.begin(), unit.includePaths.end());
+
+        auto tree = SyntaxTree::fromBuffers(buffers, sourceManager, unitOptions, inheritedMacros);
+        tree->isLibraryUnit = srcOptions.onlyLint || unit.library != nullptr;
+        return tree;
     };
 
     if (fileEntries.size() >= MinFilesForThreading && srcOptions.numThreads != 1u) {
@@ -199,7 +250,7 @@ SourceLoader::SyntaxTreeList SourceLoader::loadAndParseSources(const Bag& option
         // or via library maps.
         threadPool.pushLoop(size_t(0), fileEntries.size(), [&](size_t start, size_t end) {
             for (size_t i = start; i < end; i++)
-                loadResults[i] = loadAndParse(fileEntries[i], optionBag, srcOptions);
+                loadResults[i] = loadAndParse(fileEntries[i], optionBag, srcOptions, i);
         });
         threadPool.waitForAll();
 
@@ -207,6 +258,25 @@ SourceLoader::SyntaxTreeList SourceLoader::loadAndParseSources(const Bag& option
             handleLoadResult(std::move(result));
 
         parseSingleUnit(singleUnitBuffers);
+
+        // Parse separate unit groups into their own syntax trees.
+        if (!unitToBufferMap.empty()) {
+            std::vector<std::pair<const UnitEntry* const, std::vector<SourceBuffer>>*> unitList;
+            unitList.reserve(unitToBufferMap.size());
+            for (auto& pair : unitToBufferMap)
+                unitList.push_back(&pair);
+
+            const size_t numTrees = syntaxTrees.size();
+            syntaxTrees.resize(numTrees + unitList.size());
+
+            threadPool.pushLoop(size_t(0), unitList.size(), [&](size_t start, size_t end) {
+                for (size_t i = start; i < end; i++) {
+                    syntaxTrees[i + numTrees] = parseSeparateUnit(*unitList[i]->first,
+                                                                  unitList[i]->second);
+                }
+            });
+            threadPool.waitForAll();
+        }
 
         // If we deferred libraries due to wanting to inherit macros, parse them now.
         if (!deferredLibBuffers.empty()) {
@@ -219,7 +289,7 @@ SourceLoader::SyntaxTreeList SourceLoader::loadAndParseSources(const Bag& option
                                         auto tree = SyntaxTree::fromBuffer(deferredLibBuffers[i],
                                                                            sourceManager, optionBag,
                                                                            inheritedMacros);
-                                        tree->isLibrary = true;
+                                        tree->isLibraryUnit = true;
                                         syntaxTrees[i + numTrees] = std::move(tree);
                                     }
                                 });
@@ -234,12 +304,18 @@ SourceLoader::SyntaxTreeList SourceLoader::loadAndParseSources(const Bag& option
 
         parseSingleUnit(singleUnitBuffers);
 
+        // Parse separate unit groups into their own syntax trees.
+        if (!unitToBufferMap.empty()) {
+            for (auto& [unit, buffers] : unitToBufferMap)
+                syntaxTrees.emplace_back(parseSeparateUnit(*unit, buffers));
+        }
+
         // If we deferred libraries due to wanting to inherit macros, parse them now.
         if (!deferredLibBuffers.empty()) {
             for (auto& buffer : deferredLibBuffers) {
                 auto tree = SyntaxTree::fromBuffer(buffer, sourceManager, optionBag,
                                                    inheritedMacros);
-                tree->isLibrary = true;
+                tree->isLibraryUnit = true;
                 syntaxTrees.emplace_back(std::move(tree));
             }
         }
@@ -330,7 +406,7 @@ SourceLoader::SyntaxTreeList SourceLoader::loadAndParseSources(const Bag& option
                 if (buffer) {
                     auto tree = SyntaxTree::fromBuffer(buffer, sourceManager, optionBag,
                                                        inheritedMacros);
-                    tree->isLibrary = true;
+                    tree->isLibraryUnit = true;
                     syntaxTrees.emplace_back(tree);
 
                     addKnownNames(tree);
@@ -363,7 +439,7 @@ SourceLibrary* SourceLoader::getOrAddLibrary(std::string_view name) {
 
 void SourceLoader::addFilesInternal(std::string_view pattern, const fs::path& basePath,
                                     bool isLibraryFile, const SourceLibrary* library,
-                                    bool expandEnvVars) {
+                                    const UnitEntry* unit, bool expandEnvVars) {
     SmallVector<fs::path> files;
     std::error_code ec;
     auto rank = svGlob(basePath, pattern, GlobMode::Files, files, expandEnvVars, ec);
@@ -376,12 +452,20 @@ void SourceLoader::addFilesInternal(std::string_view pattern, const fs::path& ba
     for (auto&& path : files) {
         auto [it, inserted] = fileIndex.try_emplace(path, fileEntries.size());
         if (inserted) {
-            fileEntries.emplace_back(std::move(path), isLibraryFile, library, rank);
+            fileEntries.emplace_back(std::move(path), isLibraryFile, library, unit, rank);
         }
         else {
+            // If this file is supposed to be in a separate unit but is already
+            // included elsewhere we should error.
+            auto& entry = fileEntries[it->second];
+            if (unit || entry.unit) {
+                errors.emplace_back(
+                    fmt::format("'{}': included in multiple compilation units", getU8Str(path)));
+                continue;
+            }
+
             // If any of the times we see this is entry is for a non-library file,
             // then it's always a non-library file, hence the &=.
-            auto& entry = fileEntries[it->second];
             entry.isLibraryFile &= isLibraryFile;
 
             if (library) {
@@ -392,6 +476,7 @@ void SourceLoader::addFilesInternal(std::string_view pattern, const fs::path& ba
                 if (!entry.library || rank < entry.libraryRank) {
                     entry.library = library;
                     entry.libraryRank = rank;
+                    entry.secondLib = nullptr;
                 }
                 else if (rank == entry.libraryRank) {
                     entry.secondLib = library;
@@ -410,7 +495,7 @@ void SourceLoader::createLibrary(const LibraryDeclarationSyntax& syntax, const f
     for (auto filePath : syntax.filePaths) {
         auto spec = getPathFromSpec(*filePath);
         if (!spec.empty()) {
-            addFilesInternal(spec, basePath, /* isLibraryFile */ true, library,
+            addFilesInternal(spec, basePath, /* isLibraryFile */ true, library, nullptr,
                              /* expandEnvVars */ true);
         }
     }
@@ -438,14 +523,18 @@ void SourceLoader::createLibrary(const LibraryDeclarationSyntax& syntax, const f
 }
 
 SourceLoader::LoadResult SourceLoader::loadAndParse(const FileEntry& entry, const Bag& optionBag,
-                                                    const SourceOptions& srcOptions) {
+                                                    const SourceOptions& srcOptions,
+                                                    uint64_t fileSortKey) {
     // TODO: error if secondLib is set
 
-    auto buffer = sourceManager.readSource(entry.path, entry.library);
+    auto buffer = sourceManager.readSource(entry.path, entry.library, fileSortKey);
     if (!buffer)
         return std::pair{&entry, buffer.error()};
 
-    if (!entry.isLibraryFile && srcOptions.singleUnit) {
+    if (entry.unit) {
+        return std::pair{*buffer, entry.unit};
+    }
+    else if (!entry.isLibraryFile && srcOptions.singleUnit) {
         // If this file was directly specified (i.e. not via
         // a library mapping) and we're in single-unit mode,
         // collect it for later parsing.
@@ -461,7 +550,7 @@ SourceLoader::LoadResult SourceLoader::loadAndParse(const FileEntry& entry, cons
         // Otherwise we can parse right away.
         auto tree = SyntaxTree::fromBuffer(*buffer, sourceManager, optionBag);
         if (entry.isLibraryFile || srcOptions.onlyLint)
-            tree->isLibrary = true;
+            tree->isLibraryUnit = true;
 
         return tree;
     }

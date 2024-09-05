@@ -191,6 +191,10 @@ public:
 
     /// Sorts the diagnostics in the collection based on source file and line number.
     void sort(const SourceManager& sourceManager);
+
+    /// Returns a copy of this collection with all diagnostics that match any of
+    /// the codes given in @a list filtered out.
+    Diagnostics filter(std::initializer_list<DiagCode> list) const;
 };
 
 class SLANG_EXPORT DiagGroup {

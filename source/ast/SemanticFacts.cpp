@@ -10,6 +10,8 @@
 #include "slang/ast/ASTSerializer.h"
 #include "slang/ast/Scope.h"
 #include "slang/ast/TimingControl.h"
+#include "slang/ast/symbols/ClassSymbols.h"
+#include "slang/ast/types/Type.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/diagnostics/PreprocessorDiags.h"
 #include "slang/syntax/AllSyntax.h"
@@ -200,6 +202,61 @@ StatementBlockKind SemanticFacts::getStatementBlockKind(const BlockStatementSynt
     }
 }
 
+ForwardTypeRestriction SemanticFacts::getTypeRestriction(
+    syntax::ForwardTypeRestrictionSyntax& syntax) {
+    switch (syntax.keyword1.kind) {
+        case TokenKind::EnumKeyword:
+            return ForwardTypeRestriction::Enum;
+        case TokenKind::StructKeyword:
+            return ForwardTypeRestriction::Struct;
+        case TokenKind::UnionKeyword:
+            return ForwardTypeRestriction::Union;
+        case TokenKind::ClassKeyword:
+            return ForwardTypeRestriction::Class;
+        case TokenKind::InterfaceKeyword:
+            return ForwardTypeRestriction::InterfaceClass;
+        default:
+            return ForwardTypeRestriction::None;
+    }
+}
+
+ForwardTypeRestriction SemanticFacts::getTypeRestriction(const Type& type) {
+    auto& ct = type.getCanonicalType();
+    switch (ct.kind) {
+        case SymbolKind::PackedStructType:
+        case SymbolKind::UnpackedStructType:
+            return ForwardTypeRestriction::Struct;
+        case SymbolKind::PackedUnionType:
+        case SymbolKind::UnpackedUnionType:
+            return ForwardTypeRestriction::Union;
+        case SymbolKind::EnumType:
+            return ForwardTypeRestriction::Enum;
+        case SymbolKind::ClassType:
+            if (ct.as<ClassType>().isInterface)
+                return ForwardTypeRestriction::InterfaceClass;
+            return ForwardTypeRestriction::Class;
+        default:
+            return ForwardTypeRestriction::None;
+    }
+}
+
+std::string_view SemanticFacts::getTypeRestrictionText(ForwardTypeRestriction typeRestriction) {
+    switch (typeRestriction) {
+        case ForwardTypeRestriction::Enum:
+            return "enum"sv;
+        case ForwardTypeRestriction::Struct:
+            return "struct"sv;
+        case ForwardTypeRestriction::Union:
+            return "union"sv;
+        case ForwardTypeRestriction::Class:
+            return "class"sv;
+        case ForwardTypeRestriction::InterfaceClass:
+            return "interface class"sv;
+        default:
+            return ""sv;
+    }
+}
+
 void SemanticFacts::populateTimeScale(TimeScale& timeScale, const Scope& scope,
                                       const TimeUnitsDeclarationSyntax& syntax,
                                       std::optional<SourceRange>& unitsRange,
@@ -314,8 +371,14 @@ ClockingSkew ClockingSkew::fromSyntax(const ClockingSkewSyntax& syntax, const AS
     ClockingSkew result;
     result.edge = SemanticFacts::getEdgeKind(syntax.edge.kind);
 
-    if (syntax.delay)
+    if (syntax.delay) {
         result.delay = &TimingControl::bind(*syntax.delay, context);
+        if (result.delay->kind == TimingControlKind::Delay) {
+            auto cv = context.eval(result.delay->as<DelayControl>().expr);
+            if (cv.isInteger())
+                context.requirePositive(cv.integer(), result.delay->sourceRange);
+        }
+    }
 
     return result;
 }

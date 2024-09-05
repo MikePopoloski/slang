@@ -131,6 +131,8 @@ struct DistVarVisitor {
 struct ConstraintExprVisitor {
     const ASTContext& context;
     bool failed = false;
+    bool isTop = true;
+    bool sawRandVars = false;
     bool isSoft;
 
     ConstraintExprVisitor(const ASTContext& context, bool isSoft) :
@@ -142,13 +144,16 @@ struct ConstraintExprVisitor {
             return fail();
 
         if constexpr (std::is_base_of_v<Expression, T>) {
-            if (isSoft) {
-                if (auto sym = expr.getSymbolReference()) {
-                    RandMode mode = context.getRandMode(*sym);
-                    if (mode == RandMode::RandC)
-                        context.addDiag(diag::RandCInSoft, expr.sourceRange);
-                }
+            if (auto sym = expr.getSymbolReference()) {
+                RandMode mode = context.getRandMode(*sym);
+                if (mode != RandMode::None)
+                    sawRandVars = true;
+
+                if (isSoft && mode == RandMode::RandC)
+                    context.addDiag(diag::RandCInSoft, expr.sourceRange);
             }
+
+            bool childrenHaveRand = false;
 
             if constexpr (HasVisitExprs<T, ConstraintExprVisitor>) {
                 // Inside call and select expressions we don't care about the types.
@@ -158,7 +163,13 @@ struct ConstraintExprVisitor {
                 if (expr.kind != ExpressionKind::ElementSelect &&
                     expr.kind != ExpressionKind::MemberAccess &&
                     expr.kind != ExpressionKind::Call) {
+
+                    const bool oldTop = std::exchange(isTop, false);
+                    const bool oldSawRand = std::exchange(sawRandVars, false);
                     expr.visitExprs(*this);
+                    isTop = oldTop;
+                    childrenHaveRand = sawRandVars;
+                    sawRandVars = oldSawRand;
                 }
             }
 
@@ -171,8 +182,11 @@ struct ConstraintExprVisitor {
                     return fail();
                 case ExpressionKind::RealLiteral:
                 case ExpressionKind::TimeLiteral:
-                    context.addDiag(diag::NonIntegralConstraintLiteral, expr.sourceRange);
-                    return fail();
+                    if (context.getCompilation().languageVersion() < LanguageVersion::v1800_2023) {
+                        context.addDiag(diag::NonIntegralConstraintLiteral, expr.sourceRange);
+                        return fail();
+                    }
+                    break;
                 case ExpressionKind::IntegerLiteral:
                     if (expr.template as<IntegerLiteral>().getValue().hasUnknown()) {
                         context.addDiag(diag::UnknownConstraintLiteral, expr.sourceRange);
@@ -186,19 +200,51 @@ struct ConstraintExprVisitor {
                     }
                     return true;
                 case ExpressionKind::BinaryOp: {
-                    switch (expr.template as<BinaryExpression>().op) {
+                    auto& binExpr = expr.template as<BinaryExpression>();
+                    switch (binExpr.op) {
                         case BinaryOperator::CaseEquality:
                         case BinaryOperator::CaseInequality:
                         case BinaryOperator::WildcardEquality:
                         case BinaryOperator::WildcardInequality:
                             context.addDiag(diag::ExprNotConstraint, expr.sourceRange);
                             return fail();
+                        case BinaryOperator::Equality:
+                        case BinaryOperator::Inequality:
+                        case BinaryOperator::GreaterThanEqual:
+                        case BinaryOperator::GreaterThan:
+                        case BinaryOperator::LessThanEqual:
+                        case BinaryOperator::LessThan:
+                        case BinaryOperator::LogicalAnd:
+                        case BinaryOperator::LogicalOr:
+                        case BinaryOperator::LogicalImplication:
+                        case BinaryOperator::LogicalEquivalence:
+                            // We previously ignored invalid types of NamedValues when
+                            // we visited subexpressions. If there were any rand vars
+                            // used in our subexpressions we should re-check named values
+                            // for the stricter integral / numeric type requirements.
+                            if (childrenHaveRand) {
+                                if (ValueExpressionBase::isKind(binExpr.left().kind) &&
+                                    !checkType(binExpr.left())) {
+                                    return fail();
+                                }
+
+                                if (ValueExpressionBase::isKind(binExpr.right().kind) &&
+                                    !checkType(binExpr.right())) {
+                                    return fail();
+                                }
+                            }
+                            break;
                         default:
                             break;
                     }
                     break;
                 }
-                case ExpressionKind::OpenRange:
+                case ExpressionKind::NamedValue:
+                case ExpressionKind::HierarchicalValue:
+                    if (!isTop)
+                        return true;
+                    break;
+                case ExpressionKind::ValueRange:
                     return true;
                 case ExpressionKind::Dist: {
                     // Additional restrictions on dist expressions:
@@ -222,6 +268,7 @@ struct ConstraintExprVisitor {
                         const SubroutineSymbol& sub = *std::get<0>(call.subroutine);
                         for (auto arg : sub.getArguments()) {
                             if (arg->direction == ArgumentDirection::Out ||
+                                arg->direction == ArgumentDirection::InOut ||
                                 (arg->direction == ArgumentDirection::Ref &&
                                  !arg->flags.has(VariableFlags::Const))) {
                                 context.addDiag(diag::OutRefFuncConstraint, expr.sourceRange);
@@ -235,10 +282,8 @@ struct ConstraintExprVisitor {
                     break;
             }
 
-            if (!expr.type->isValidForRand(RandMode::Rand)) {
-                context.addDiag(diag::NonIntegralConstraintExpr, expr.sourceRange) << *expr.type;
+            if (!checkType(expr))
                 return fail();
-            }
         }
 
         return true;
@@ -248,6 +293,15 @@ private:
     bool fail() {
         failed = true;
         return false;
+    }
+
+    bool checkType(const Expression& expr) {
+        if (!expr.type->isValidForRand(RandMode::Rand,
+                                       context.getCompilation().languageVersion())) {
+            context.addDiag(diag::InvalidConstraintExpr, expr.sourceRange) << *expr.type;
+            return false;
+        }
+        return true;
     }
 };
 
@@ -321,12 +375,15 @@ void ConditionalConstraint::serializeTo(ASTSerializer& serializer) const {
         serializer.write("elseBody", *elseBody);
 }
 
-static bool isAllowedForUniqueness(const Type& type) {
+static bool isAllowedForUniqueness(const Type& type, LanguageVersion languageVersion) {
     if (type.isIntegral())
         return true;
 
+    if (languageVersion >= LanguageVersion::v1800_2023 && type.isFloating())
+        return true;
+
     if (type.isUnpackedArray())
-        return isAllowedForUniqueness(*type.getArrayElementType());
+        return isAllowedForUniqueness(*type.getArrayElementType(), languageVersion);
 
     return false;
 }
@@ -334,6 +391,8 @@ static bool isAllowedForUniqueness(const Type& type) {
 Constraint& UniquenessConstraint::fromSyntax(const UniquenessConstraintSyntax& syntax,
                                              const ASTContext& context) {
     auto& comp = context.getCompilation();
+    const auto lv = comp.languageVersion();
+
     bool bad = false;
     const Type* commonType = nullptr;
     SmallVector<const Expression*> items;
@@ -346,8 +405,14 @@ Constraint& UniquenessConstraint::fromSyntax(const UniquenessConstraintSyntax& s
         }
         else {
             auto sym = expr.getSymbolReference();
-            if (!sym || !isAllowedForUniqueness(sym->getDeclaredType()->getType())) {
-                context.addDiag(diag::InvalidUniquenessExpr, expr.sourceRange);
+            if (!sym || !isAllowedForUniqueness(sym->getDeclaredType()->getType(), lv)) {
+                if (!sym) {
+                    context.addDiag(diag::InvalidUniquenessExpr, expr.sourceRange);
+                }
+                else {
+                    context.addDiag(diag::BadUniquenessType, expr.sourceRange)
+                        << sym->getDeclaredType()->getType();
+                }
                 bad = true;
             }
             else {
@@ -389,6 +454,19 @@ void UniquenessConstraint::serializeTo(ASTSerializer& serializer) const {
     serializer.endArray();
 }
 
+static std::pair<const Symbol*, SourceRange> getConstraintPrimary(const Expression& expr) {
+    auto sym = expr.getSymbolReference();
+    if (expr.kind == ExpressionKind::Call) {
+        auto& call = expr.template as<CallExpression>();
+        if (call.isSystemCall() && call.getSubroutineName() == "size"sv &&
+            call.arguments().size() == 1) {
+            auto& arg0 = *call.arguments()[0];
+            return {arg0.getSymbolReference(), arg0.sourceRange};
+        }
+    }
+    return {sym, expr.sourceRange};
+}
+
 Constraint& DisableSoftConstraint::fromSyntax(const DisableConstraintSyntax& syntax,
                                               const ASTContext& context) {
     auto& comp = context.getCompilation();
@@ -397,9 +475,9 @@ Constraint& DisableSoftConstraint::fromSyntax(const DisableConstraintSyntax& syn
     if (expr.bad())
         return badConstraint(comp, result);
 
-    auto sym = expr.getSymbolReference();
+    auto [sym, sourceRange] = getConstraintPrimary(expr);
     if (!sym || context.getRandMode(*sym) != RandMode::Rand) {
-        context.addDiag(diag::BadDisableSoft, expr.sourceRange);
+        context.addDiag(diag::BadDisableSoft, sourceRange);
         return badConstraint(comp, result);
     }
 
@@ -418,25 +496,26 @@ Constraint& SolveBeforeConstraint::fromSyntax(const SolveBeforeConstraintSyntax&
             auto& expr = Expression::bind(*item, context);
             results.push_back(&expr);
 
-            if (expr.bad())
+            if (expr.bad()) {
                 bad = true;
-            else {
-                auto sym = expr.getSymbolReference();
-                if (!sym || context.getRandMode(*sym) == RandMode::None)
-                    context.addDiag(diag::BadSolveBefore, expr.sourceRange);
-                else if (sym && context.getRandMode(*sym) == RandMode::RandC)
-                    context.addDiag(diag::RandCInSolveBefore, expr.sourceRange);
+                continue;
             }
+
+            auto [sym, sourceRange] = getConstraintPrimary(expr);
+            if (!sym || context.getRandMode(*sym) == RandMode::None)
+                context.addDiag(diag::BadSolveBefore, sourceRange);
+            else if (sym && context.getRandMode(*sym) == RandMode::RandC)
+                context.addDiag(diag::RandCInSolveBefore, sourceRange);
         }
     };
 
     auto& comp = context.getCompilation();
     SmallVector<const Expression*> solve;
-    SmallVector<const Expression*> before;
+    SmallVector<const Expression*> after;
     bindExprs(syntax.beforeExpr, solve);
-    bindExprs(syntax.afterExpr, before);
+    bindExprs(syntax.afterExpr, after);
 
-    auto result = comp.emplace<SolveBeforeConstraint>(solve.copy(comp), before.copy(comp));
+    auto result = comp.emplace<SolveBeforeConstraint>(solve.copy(comp), after.copy(comp));
     if (bad)
         return badConstraint(comp, result);
 
@@ -449,8 +528,8 @@ void SolveBeforeConstraint::serializeTo(ASTSerializer& serializer) const {
         serializer.serialize(*item);
     serializer.endArray();
 
-    serializer.startArray("before");
-    for (auto item : before)
+    serializer.startArray("after");
+    for (auto item : after)
         serializer.serialize(*item);
     serializer.endArray();
 }

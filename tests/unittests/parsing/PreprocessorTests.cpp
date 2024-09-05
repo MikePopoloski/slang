@@ -342,7 +342,7 @@ TEST_CASE("Macro pasting (weird)") {
     Token token = lexToken(text);
 
     CHECK(token.kind == TokenKind::Unknown);
-    REQUIRE(diagnostics.size() == 2);
+    REQUIRE(diagnostics.size() == 1);
 }
 
 TEST_CASE("Macro pasting (weird 2)") {
@@ -359,7 +359,7 @@ TEST_CASE("Macro stringify") {
     Token token = lexToken(text);
 
     REQUIRE(token.kind == TokenKind::StringLiteral);
-    CHECK(token.valueText() == " \" bar_foo42 \"");
+    CHECK(token.valueText() == " \" bar_foo42 \" ");
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
@@ -853,24 +853,6 @@ baz /* hello */ bar
     CHECK_DIAGNOSTICS_EMPTY;
 }
 
-TEST_CASE("Macro with split block comment") {
-    auto& text = R"(
-`define FOO baz /* hel
-lo */ bar
-`FOO
-)";
-    auto& expected = R"(
- /* hel
-lo */ bar
-baz
-)";
-
-    std::string result = preprocess(text);
-    CHECK(result == expected);
-    REQUIRE(diagnostics.size() == 1);
-    CHECK(diagnostics[0].code == diag::SplitBlockCommentInDirective);
-}
-
 TEST_CASE("IfDef branch (taken)") {
     auto& text = "`define FOO\n`ifdef FOO\n42\n`endif";
     Token token = lexToken(text);
@@ -1211,7 +1193,7 @@ TEST_CASE("begin_keywords") {
 }
 
 TEST_CASE("begin_keywords (nested)") {
-    auto& text = "`begin_keywords \"1800-2009\"\n"
+    auto& text = "`begin_keywords \"1800-2023\"\n"
                  "`begin_keywords \"1800-2005\"\n"
                  "`begin_keywords \"1364-2001\"\n"
                  "uwire\n"
@@ -1400,6 +1382,41 @@ TEST_CASE("Preprocessor API") {
     CHECK(pp.getDefinedMacros().size() == 19);
 }
 
+TEST_CASE("Command-line defines priority over `define") {
+    PreprocessorOptions ppOptions;
+    ppOptions.predefines.emplace_back("A=2");
+    ppOptions.predefines.emplace_back("B=2");
+    ppOptions.predefines.emplace_back("C=2");
+
+    Bag options;
+    options.set(ppOptions);
+
+    auto& text = R"(
+`define A 1
+`undef B
+`undef C
+`define C 1
+)";
+    Preprocessor preprocessor(getSourceManager(), alloc, diagnostics, options);
+    preprocessor.pushSource(text);
+
+    while (true) {
+        Token token = preprocessor.next();
+        if (token.kind == TokenKind::EndOfFile)
+            break;
+    }
+
+    CHECK(!preprocessor.isDefined("B"));
+    CHECK(preprocessor.isDefined("A"));
+    CHECK(preprocessor.isDefined("C"));
+    for (auto macro : preprocessor.getDefinedMacros()) {
+        if (macro->name.toString() == "A")
+            CHECK(macro->body[0].toString() == "2");
+        if (macro->name.toString() == "C")
+            CHECK(macro->body[0].toString() == "1");
+    }
+}
+
 TEST_CASE("Undef builtin") {
     auto& text = R"(
 `undef __slang__
@@ -1530,9 +1547,9 @@ TEST_CASE("Pragma expressions -- errors") {
 
     std::string result = "\n" + reportGlobalDiags();
     CHECK(result == R"(
-source:2:1: error: expected pragma name
+source:2:8: error: expected pragma name
 `pragma
-^
+       ^
 source:5:18: error: expected pragma expression
 `pragma bar asdf=
                  ^
@@ -1560,9 +1577,9 @@ source:16:18: error: expected pragma expression
 source:16:9: warning: unknown pragma 'bar' [-Wunknown-pragma]
 `pragma bar 'h 3e+2
         ^~~
-source:17:1: error: expected pragma name
+source:17:8: error: expected pragma name
 `pragma /* asdf
-^
+       ^
 source:20:15: error: expected pragma name
 `pragma reset (asdf, asdf), foo
               ^~~~~~~~~~~~
@@ -2219,4 +2236,449 @@ TEST_CASE("Unknown but ignored directive") {
     auto tree = SyntaxTree::fromText(text, SyntaxTree::getDefaultSourceManager(), "source"sv, "",
                                      ppOptions);
     CHECK(SyntaxPrinter::printFile(*tree) == text);
+}
+
+TEST_CASE("Include with missing endif") {
+    auto& text = R"(
+`ifdef __slang__
+module m;
+endmodule
+)";
+
+    preprocess(text);
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics.back().code == diag::MissingEndIfDirective);
+}
+
+TEST_CASE("Spurious errors inside stringified macro expansion regression") {
+    auto& text = R"(
+`define FOO(x) `" x `"
+`FOO('s)
+`FOO(`)
+`FOO(\ )
+`FOO(`\ )
+`FOO(3._e_)
+)";
+
+    auto& expected = R"(
+" 's "
+" ` "
+" \ "
+" `\ "
+" 3._e_ "
+)";
+
+    std::string result = preprocess(text);
+    CHECK(result == expected);
+    CHECK_DIAGNOSTICS_EMPTY;
+}
+
+TEST_CASE("Invalid tokens still error after macro expansion") {
+    auto& text = R"(
+`define FOO(x) x
+`FOO(`)
+`FOO(\ )
+`FOO(`\ )
+)";
+
+    preprocess(text);
+
+    REQUIRE(diagnostics.size() == 3);
+    CHECK(diagnostics[0].code == diag::MisplacedDirectiveChar);
+    CHECK(diagnostics[1].code == diag::EscapedWhitespace);
+    CHECK(diagnostics[2].code == diag::EscapedWhitespace);
+}
+
+TEST_CASE("Newline handling in macros with comments and triple quoted strings") {
+    auto& text = R"(
+`define var_nand(dly) nand #dly     // define a nand with variable delay
+`var_nand(2) g121 (q21, n10, n11);
+
+`define var_nand2(dly) nand          // define a nand with variable delay \
+                                     /* this is a block comment
+                                        embedded in a multi-line macro */ \
+                           #dly      // this is the end of the macro definition
+`var_nand2(2) g122 (q21, n10, n11);
+
+`define var_nand3(dly) nand          /* this is a block comment
+                                        embedded in a multi-line macro */ #dly
+`var_nand3(2) g123 (q21, n10, n11);
+
+module main;
+
+`define TEST """
+many
+many
+more
+lines""" // end of macro
+
+initial $display(`TEST);
+
+endmodule
+)";
+
+    auto& expected = R"(
+     // define a nand with variable delay
+nand #2 g121 (q21, n10, n11);
+      // this is the end of the macro definition
+nand          // define a nand with variable delay \
+                                     /* this is a block comment
+                                        embedded in a multi-line macro */
+                           #2 g122 (q21, n10, n11);
+nand          /* this is a block comment
+                                        embedded in a multi-line macro */ #2 g123 (q21, n10, n11);
+module main;
+ // end of macro
+initial $display("""
+many
+many
+more
+lines""");
+endmodule
+)";
+
+    std::string result = preprocess(text, optionsFor(LanguageVersion::v1800_2023));
+    CHECK(result == expected);
+    CHECK_DIAGNOSTICS_EMPTY;
+}
+
+TEST_CASE("Macro triple quoted stringify") {
+    auto& text = R"(
+`define TEST(VAL) `"""line1\
+line2 - VAL\
+line3 - backslash\\\
+line4`""" // end of macro
+
+string s = `TEST(FOO);
+)";
+
+    auto& expected = R"(
+ // end of macro
+string s = """line1
+line2 - FOO
+line3 - backslash\\
+line4""";
+)";
+
+    std::string result = preprocess(text, optionsFor(LanguageVersion::v1800_2023));
+    CHECK(result == expected);
+    CHECK_DIAGNOSTICS_EMPTY;
+}
+
+TEST_CASE("Triple quoted string inside macro stringification") {
+    auto& text = R"(
+`define TEST `" """hello""" `"
+`TEST
+)";
+
+    auto& expected = R"(
+" \"\"\"hello\"\"\" "
+)";
+
+    std::string result = preprocess(text, optionsFor(LanguageVersion::v1800_2023));
+    CHECK(result == expected);
+    CHECK_DIAGNOSTICS_EMPTY;
+}
+
+TEST_CASE("Escaped name at end of macro stringify is a continuation") {
+    auto& text = R"(
+`define TEST(VAL) `"asdf\\\
+VAL`"
+`TEST(FOO)
+
+`define TEST2(VAL) \asdf\\\
+    ,VAL
+`TEST2(FOO)
+)";
+
+    auto& expected = R"(
+"asdf\\FOO"
+\asdf\\
+    ,FOO
+)";
+
+    std::string result = preprocess(text);
+    CHECK(result == expected);
+    CHECK_DIAGNOSTICS_EMPTY;
+}
+
+TEST_CASE("Mismatch macro stringification delimiters") {
+    auto& text = R"(
+`define TEST(x) `""" x `" `"""
+`TEST(foo)
+
+`define TEST2(x) `" x `"""
+`TEST2(bar)
+)";
+
+    auto& expected = R"(
+""" foo `" """
+" bar """
+)";
+
+    std::string result = preprocess(text, optionsFor(LanguageVersion::v1800_2023));
+    CHECK(result == expected);
+    CHECK_DIAGNOSTICS_EMPTY;
+}
+
+TEST_CASE("Triple quoted macro stringification not allowed in 2017") {
+    auto& text = R"(
+`define TEST(x) `""" x `"""
+`TEST(FOO)
+)";
+
+    preprocess(text);
+
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics[0].code == diag::WrongLanguageVersion);
+}
+
+TEST_CASE("Escaped identifier that turns into triple quoted macro stringification") {
+    auto& text = R"(
+`define TEST(x) `"""x\n`"""
+`TEST(foo)
+)";
+
+    auto& expected = R"(
+"""foo\n"""
+)";
+
+    std::string result = preprocess(text, optionsFor(LanguageVersion::v1800_2023));
+    CHECK(result == expected);
+    CHECK_DIAGNOSTICS_EMPTY;
+}
+
+TEST_CASE("Conditional ifdef expression") {
+    auto& text = R"(
+`define A 0
+`define B
+
+`ifdef (!A)
+TEST1
+`endif
+`ifdef (A && B)
+TEST2
+`endif
+`ifdef (A && C)
+TEST3
+`elsif (!A || (!B))
+TEST4
+`else
+TEST5
+`endif
+`ifdef (C -> A)
+TEST6
+`endif
+`ifdef (C <-> A)
+TEST7
+`elsif (C <-> D)
+TEST8
+`endif
+TEST9
+)";
+
+    auto& expected = R"(
+TEST2
+TEST5
+TEST6
+TEST8
+TEST9
+)";
+
+    std::string result = preprocess(text, optionsFor(LanguageVersion::v1800_2023));
+    CHECK(result == expected);
+    CHECK_DIAGNOSTICS_EMPTY;
+}
+
+TEST_CASE("Conditional ifdef expression errors") {
+    auto& text = R"(
+`define A 0
+`define B
+
+`ifdef (!A || )
+`elsif (
+`endif
+FOO
+)";
+
+    auto& expected = R"(
+FOO
+)";
+
+    std::string result = preprocess(text);
+    CHECK(result == expected);
+
+    REQUIRE(diagnostics.size() == 4);
+    CHECK(diagnostics[0].code == diag::ExpectedIdentifier);
+    CHECK(diagnostics[1].code == diag::WrongLanguageVersion);
+    CHECK(diagnostics[2].code == diag::ExpectedIdentifier);
+    CHECK(diagnostics[3].code == diag::WrongLanguageVersion);
+}
+
+TEST_CASE("Macro expansion with asterisks regress") {
+    auto& text = R"(
+`define FOO(x) x
+`define BAR(x=(*)) x
+`FOO(*)
+`FOO( *)
+`FOO( * )
+`BAR()
+)";
+
+    auto& expected = R"(
+*
+*
+*
+(*)
+)";
+
+    std::string result = preprocess(text);
+    CHECK(result == expected);
+    CHECK_DIAGNOSTICS_EMPTY;
+}
+
+TEST_CASE("Annex E optional directives") {
+    auto& text = R"(
+`default_decay_time 100
+`default_decay_time 1.0
+`default_decay_time infinite
+`default_decay_time
+
+`default_trireg_strength 100
+
+`delay_mode_distributed
+`delay_mode_path
+`delay_mode_unit
+`delay_mode_zero
+)";
+
+    preprocess(text);
+
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics[0].code == diag::ExpectedIntegerLiteral);
+}
+
+TEST_CASE("Locations for missing expected tokens in preprocessor") {
+    auto& text = R"(
+`unconnected_drive
+`resetall
+`include
+`resetall
+)";
+
+    preprocess(text);
+
+    std::string result = "\n" + reportGlobalDiags();
+    CHECK(result == R"(
+source:4:9: error: expected an include file name
+`include
+        ^
+source:2:19: error: expected pull1 or pull0 strength
+`unconnected_drive
+                  ^
+)");
+}
+
+TEST_CASE("Verilog-XL style `protect directives") {
+    auto& text = R"(
+module top_design (a, b, c);
+    bottom inst ();
+    `protect
+        initial $display("Hello");
+    `endprotect
+endmodule
+)";
+
+    auto& expected = R"(
+module top_design (a, b, c);
+    bottom inst ();
+
+        initial $display("Hello");
+
+endmodule
+)";
+
+    LexerOptions lo;
+    lo.enableLegacyProtect = true;
+
+    std::string result = preprocess(text, lo);
+    CHECK(result == expected);
+    CHECK_DIAGNOSTICS_EMPTY;
+}
+
+TEST_CASE("Verilog-XL style `protected directives") {
+    auto& text = R"(
+module top_design (a, b, c);
+    bottom inst ();
+    `protected
+  a*lejodi)dlj@lsfj4gRekv*9l#sIjnd<;pXywUHvow%emhiITvne(@mengTVpe
+  prK58s53<gf:dneURtnd&8ejsWqpsu*ehtsY=wkxOrkp$
+    `endprotected
+endmodule
+
+`protected
+  fkeop*456gjkl@%^&^&s85Kfmv(:wjvdwLSchrmx*2uPQjsu=:wucgwigIWsuxnt
+  pr"W84&@(shxjMvn02:wjd8%&!0s$
+`endprotected
+)";
+
+    auto& expected = R"(
+module top_design (a, b, c);
+    bottom inst ();
+
+endmodule
+)";
+
+    LexerOptions lo;
+    lo.enableLegacyProtect = true;
+
+    std::string result = preprocess(text, lo);
+    CHECK(result == expected);
+
+    REQUIRE(diagnostics.size() == 2);
+    CHECK(diagnostics[0].code == diag::ProtectedEnvelope);
+    CHECK(diagnostics[1].code == diag::ProtectedEnvelope);
+}
+
+TEST_CASE("Verilog-A style pragma protect comments") {
+    auto& text = R"(
+module top_design (a, b, c);
+    bottom inst ();
+//    pragma protect begin_protected
+//pragma protect key_keyowner=Cadence Design Systems.
+//pragma protect key_keyname=CDS_KEY
+//pragma protect key_method=RC5
+//pragma protect key_block
+hjQ2rsuJMpL9F3O43Xx7zf656dz2xxBxdnHC0GvJFJG3Y5HL0dSoPcLMN5Zy6Iq+
+ySMMWcOGkowbtoHVjNn3UdcZFD6NFlWHJpb7KIc8Php8iT1uEZmtwTgDSy64yqLL
+SCaqKffWXhnJ5n/936szbTSvc8vs2ILJYG4FnjIZeYARwKjbofvTgA==
+//pragma protect end_key_block
+//pragma protect digest_block
+uilUH9+52Dwx1U6ajpWVBgZque4=
+//pragma protect end_digest_block
+//pragma protect data_block
+jGZcQn3lBzXvF2kCXy+abmSjUdOfUzPOp7g7dfEzgN96O2ZRQP4aN7kqJOCA9shI
+jcvO6pnBhjaTNlxUJBSbBA==
+//pragma protect end_data_block
+//pragma protect digest_block
+tzEpxTPg7KWB9yMYYlqfoVE3lVk=
+//pragma protect end_digest_block
+//  pragma protect end_protected
+endmodule
+)";
+
+    auto& expected = R"(
+module top_design (a, b, c);
+    bottom inst ();
+endmodule
+)";
+
+    LexerOptions lo;
+    lo.enableLegacyProtect = true;
+
+    std::string result = preprocess(text, lo);
+    CHECK(result == expected);
+
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics[0].code == diag::ProtectedEnvelope);
 }

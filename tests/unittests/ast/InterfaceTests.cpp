@@ -356,7 +356,7 @@ interface I;
 endinterface
 
 module n (I.m m);
-    longint i = signed'(m.k);
+    wire [63:0] i = m.k;
     assign m.o = unsigned'(i);
     int q = m.s;
 endmodule
@@ -507,16 +507,16 @@ interface I;
 endinterface
 
 module o #(q) (I i[3]);
-    int j = i[0].i;
+    wire integer j = i[0].i;
 endmodule
 
 module m #(q) (I.m i[3]);
-    int j = i[0].i;
+    wire integer j = i[0].i;
     o #(q) o1(i.n);
 endmodule
 
 module n #(q) (I i[3]);
-    int j = i[0].i;
+    wire integer j = i[0].i;
     o #(q) o1(i.n);
 endmodule
 
@@ -552,7 +552,7 @@ module m(I.m i[3]);
 endmodule
 
 module n(I i[3]);
-    int j = i[0].j;
+    wire integer j = i[0].j;
 endmodule
 
 module o(I.m i[4][3]);
@@ -700,4 +700,27 @@ endmodule
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::WildcardPortGenericIface);
+}
+
+TEST_CASE("Top-level iface port array index regress") {
+    auto tree = SyntaxTree::fromText(R"(
+interface J;
+    int foo;
+endinterface
+
+module m #(parameter int i = 2)(J j[i]);
+    assign j[0].foo = 1;
+endmodule
+
+module n #(parameter int i = bar)(J j[i]);
+    assign j[0].foo = 1;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::UndeclaredIdentifier);
 }

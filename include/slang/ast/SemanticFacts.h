@@ -19,6 +19,7 @@ class ASTSerializer;
 class ASTContext;
 class Scope;
 class TimingControl;
+class Type;
 enum class SymbolKind;
 
 #define LIFETIME(x) x(Automatic) x(Static)
@@ -102,6 +103,10 @@ SLANG_ENUM(ChargeStrength, CS)
 SLANG_ENUM(DriveStrength, DS)
 #undef DS
 
+#define FTR(x) x(None) x(Enum) x(Struct) x(Union) x(Class) x(InterfaceClass)
+SLANG_ENUM(ForwardTypeRestriction, FTR);
+#undef FTR
+
 /// A set of flags that control how assignments are checked.
 enum class SLANG_EXPORT AssignFlags : uint8_t {
     /// No special assignment behavior specified.
@@ -136,6 +141,8 @@ enum class SLANG_EXPORT AssignFlags : uint8_t {
 };
 SLANG_BITMASK(AssignFlags, SlicedPort)
 
+/// A helper class that can extract semantic AST information from
+/// tokens and syntax nodes.
 class SLANG_EXPORT SemanticFacts {
 public:
     /// Interprets a keyword token as a variable lifetime value.
@@ -144,37 +151,61 @@ public:
     /// Interprets a token type as an argument direction value.
     static ArgumentDirection getDirection(parsing::TokenKind kind);
 
+    /// Interprets a syntax kind as a procedural block kind.
     static ProceduralBlockKind getProceduralBlockKind(syntax::SyntaxKind kind);
 
+    /// Interprets a syntax kind as a definition kind.
     static DefinitionKind getDefinitionKind(syntax::SyntaxKind kind);
 
+    /// Interprets an edge token as an EdgeKind value.
     static EdgeKind getEdgeKind(parsing::TokenKind kind);
 
+    /// Interprets a syntax kind as an assertion kind.
     static AssertionKind getAssertKind(syntax::SyntaxKind kind);
 
+    /// Gets the statement block kind from the given syntax node.
     static StatementBlockKind getStatementBlockKind(const syntax::BlockStatementSyntax& syntax);
 
+    /// Interprets a system name token as an elaboration system task kind.
     static ElabSystemTaskKind getElabSystemTaskKind(parsing::Token token);
 
+    /// Interprets a token type as a pulse style kind.
     static PulseStyleKind getPulseStyleKind(parsing::TokenKind kind);
 
+    /// Interprets a token type as a charge strength.
     static ChargeStrength getChargeStrength(parsing::TokenKind kind);
 
+    /// Gets the human-friendly string name of a procedural block kind.
     static std::string_view getProcedureKindStr(ProceduralBlockKind kind);
 
+    /// Gets the optional drive strength values associated with the given net strength syntax node.
     static std::pair<std::optional<DriveStrength>, std::optional<DriveStrength>> getDriveStrength(
         const syntax::NetStrengthSyntax& syntax);
 
+    /// Gets the forward type restriction associated with the given syntax node.
+    static ForwardTypeRestriction getTypeRestriction(syntax::ForwardTypeRestrictionSyntax& syntax);
+
+    /// Gets the forward type restriction that matches the given type.
+    static ForwardTypeRestriction getTypeRestriction(const Type& type);
+
+    /// Gets the human-friendly string name of the given forward type restriction kind.
+    static std::string_view getTypeRestrictionText(ForwardTypeRestriction typeRestriction);
+
+    /// Populates the given timescale object with the appropriate values specified by
+    /// the given syntax node. Reports errors if needed.
     static void populateTimeScale(TimeScale& timeScale, const Scope& scope,
                                   const syntax::TimeUnitsDeclarationSyntax& syntax,
                                   std::optional<SourceRange>& unitsRange,
                                   std::optional<SourceRange>& precisionRange, bool isFirst);
 
+    /// Populates the given timescale object with the given values.
+    /// Reports errors if the timescale is invalid.
     static void populateTimeScale(std::optional<TimeScale>& timeScale, const Scope& scope,
                                   std::optional<TimeScale> directiveTimeScale,
                                   std::optional<SourceRange> unitsRange,
                                   std::optional<SourceRange> precisionRange);
 
+    /// @returns true if the given symbol kind is allowed in modports.
     static bool isAllowedInModport(SymbolKind kind);
 
 private:

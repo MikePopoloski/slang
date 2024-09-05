@@ -143,9 +143,7 @@ Pattern& ConstantPattern::fromSyntax(const ExpressionPatternSyntax& syntax, cons
         type = &comp.getType(type->getBitWidth(), flags);
     }
 
-    auto& expr = Expression::bindRValue(*type, *syntax.expr,
-                                        syntax.expr->getFirstToken().location(), context);
-
+    auto& expr = Expression::bindRValue(*type, *syntax.expr, {}, context);
     if (expr.bad() || !context.eval(expr))
         return badPattern(comp, nullptr);
 

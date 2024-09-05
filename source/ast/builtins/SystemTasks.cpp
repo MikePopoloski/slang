@@ -6,13 +6,16 @@
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
 #include "../FmtHelpers.h"
+#include "Builtins.h"
 
 #include "slang/ast/ASTVisitor.h"
 #include "slang/ast/Compilation.h"
+#include "slang/ast/EvalContext.h"
 #include "slang/ast/SystemSubroutine.h"
 #include "slang/ast/expressions/MiscExpressions.h"
 #include "slang/ast/symbols/InstanceSymbols.h"
 #include "slang/ast/symbols/MemberSymbols.h"
+#include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/diagnostics/SysFuncsDiags.h"
 #include "slang/syntax/AllSyntax.h"
 
@@ -116,9 +119,73 @@ public:
     }
 };
 
-class FatalTask : public SystemTaskBase {
+// Note: these are called "severity tasks" in the LRM but they
+// function as void-returning functions since they are callable
+// in constant functions.
+class SeverityTask : public SystemSubroutine {
 public:
-    using SystemTaskBase::SystemTaskBase;
+    SeverityTask(const std::string& name, ElabSystemTaskKind taskKind) :
+        SystemSubroutine(name, SubroutineKind::Function), taskKind(taskKind) {}
+
+    bool allowEmptyArgument(size_t) const override { return true; }
+
+    const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange,
+                               const Expression*) const override {
+        auto& comp = context.getCompilation();
+        if (!FmtHelpers::checkDisplayArgs(context, args))
+            return comp.getErrorType();
+
+        return comp.getVoidType();
+    }
+
+    ConstantValue eval(EvalContext& context, const Args& args, SourceRange sourceRange,
+                       const CallExpression::SystemCallInfo& callInfo) const final {
+        auto argCopy = args;
+        if (taskKind == ElabSystemTaskKind::Fatal && !args.empty())
+            argCopy = args.subspan(1);
+
+        auto str = FmtHelpers::formatDisplay(*callInfo.scope, context, argCopy);
+        if (!str)
+            return nullptr;
+
+        if (!str->empty())
+            str->insert(0, ": ");
+
+        DiagCode code;
+        switch (taskKind) {
+            case ElabSystemTaskKind::Fatal:
+                code = diag::FatalTask;
+                break;
+            case ElabSystemTaskKind::Error:
+                code = diag::ErrorTask;
+                break;
+            case ElabSystemTaskKind::Warning:
+                code = diag::WarningTask;
+                break;
+            case ElabSystemTaskKind::Info:
+                code = diag::InfoTask;
+                break;
+            default:
+                SLANG_UNREACHABLE;
+        }
+
+        context.addDiag(code, sourceRange).addStringAllowEmpty(*str);
+
+        // Return something valid here for info / warning; since this is a void-function or,
+        // equivalently, a task, nothing will inspect the result, but we only want it to not
+        // abort further evaluation for errors / fatals.
+        if (taskKind == ElabSystemTaskKind::Info || taskKind == ElabSystemTaskKind::Warning)
+            return ConstantValue::NullPlaceholder{};
+        return nullptr;
+    }
+
+private:
+    ElabSystemTaskKind taskKind;
+};
+
+class FatalTask : public SeverityTask {
+public:
+    FatalTask() : SeverityTask("$fatal", ElabSystemTaskKind::Fatal) {}
 
     bool allowEmptyArgument(size_t index) const final { return index != 0; }
 
@@ -362,7 +429,9 @@ public:
                 return *comp.emplace<InvalidExpression>(nullptr, comp.getErrorType());
             }
 
-            return ArbitrarySymbolExpression::fromSyntax(comp, syntax.as<NameSyntax>(), context);
+            return ArbitrarySymbolExpression::fromSyntax(comp, syntax.as<NameSyntax>(), context,
+                                                         LookupFlags::AllowRoot |
+                                                             LookupFlags::AllowUnit);
         }
 
         return SystemTaskBase::bindArgument(argIndex, context, syntax, args);
@@ -376,7 +445,8 @@ public:
 
         if (args.size() > 0) {
             auto& sym = *args[0]->as<ArbitrarySymbolExpression>().symbol;
-            if (sym.kind != SymbolKind::Instance || !sym.as<InstanceSymbol>().isModule()) {
+            if (sym.kind != SymbolKind::Instance && sym.kind != SymbolKind::CompilationUnit &&
+                sym.kind != SymbolKind::Root) {
                 if (!context.scope->isUninstantiated())
                     context.addDiag(diag::ExpectedModuleName, args[0]->sourceRange);
                 return comp.getErrorType();
@@ -511,16 +581,6 @@ public:
         if (!checkArgCount(context, false, args, range, 2, 2))
             return comp.getErrorType();
 
-        if (!args[0]->type->isSingular()) {
-            context.addDiag(diag::CastArgSingular, args[0]->sourceRange) << *args[0]->type;
-            return comp.getErrorType();
-        }
-
-        if (!args[1]->type->isSingular()) {
-            context.addDiag(diag::CastArgSingular, args[1]->sourceRange) << *args[1]->type;
-            return comp.getErrorType();
-        }
-
         return comp.getIntType();
     }
 };
@@ -538,7 +598,8 @@ public:
         }
 
         return ArbitrarySymbolExpression::fromSyntax(context.getCompilation(),
-                                                     syntax.as<NameSyntax>(), context);
+                                                     syntax.as<NameSyntax>(), context,
+                                                     LookupFlags::AlwaysAllowUpward);
     }
 
     const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
@@ -556,8 +617,12 @@ public:
                     return badArg(context, *args[i]);
             }
             else {
+                auto isScope = [](const Symbol& symbol) {
+                    return symbol.isScope() || symbol.kind == SymbolKind::Instance;
+                };
+
                 if (args[i]->kind != ExpressionKind::ArbitrarySymbol ||
-                    !args[i]->as<ArbitrarySymbolExpression>().symbol->isScope()) {
+                    !isScope(*args[i]->as<ArbitrarySymbolExpression>().symbol)) {
                     if (!context.scope->isUninstantiated())
                         context.addDiag(diag::ExpectedScopeOrAssert, args[i]->sourceRange);
                     return comp.getErrorType();
@@ -576,8 +641,7 @@ class StochasticTask : public SystemSubroutine {
 public:
     StochasticTask(const std::string& name, SubroutineKind subroutineKind, size_t inputArgs,
                    size_t outputArgs) :
-        SystemSubroutine(name, subroutineKind),
-        inputArgs(inputArgs), outputArgs(outputArgs) {
+        SystemSubroutine(name, subroutineKind), inputArgs(inputArgs), outputArgs(outputArgs) {
         hasOutputArgs = outputArgs > 0;
     }
 
@@ -663,7 +727,7 @@ public:
 
 class PlaTask : public SystemTaskBase {
 public:
-    PlaTask(const std::string& name) : SystemTaskBase(name){};
+    PlaTask(const std::string& name) : SystemTaskBase(name) {};
 
     const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
@@ -685,7 +749,8 @@ public:
                     return badArg(context, *args[i]);
                 }
 
-                if (elemType.hasFixedRange() && !isValidRange(elemType)) {
+                if (elemType.hasFixedRange() && args[i]->kind != ExpressionKind::Concatenation &&
+                    !isValidRange(elemType)) {
                     return badRange(context, *args[i]);
                 }
             }
@@ -695,7 +760,8 @@ public:
                 }
             }
 
-            if (type.hasFixedRange() && !isValidRange(type)) {
+            if (type.hasFixedRange() && args[i]->kind != ExpressionKind::Concatenation &&
+                !isValidRange(type)) {
                 return badRange(context, *args[i]);
             }
         }
@@ -715,8 +781,103 @@ private:
     }
 };
 
-void registerSystemTasks(Compilation& c) {
-#define REGISTER(type, name, base) c.addSystemSubroutine(std::make_unique<type>(name, base))
+class ScopeTask : public SystemTaskBase {
+public:
+    ScopeTask(const std::string& name, bool isOptional) :
+        SystemTaskBase(name), isOptional(isOptional) {}
+
+    const Expression& bindArgument(size_t argIndex, const ASTContext& context,
+                                   const ExpressionSyntax& syntax, const Args& args) const final {
+        if (argIndex == 0 && NameSyntax::isKind(syntax.kind)) {
+            return ArbitrarySymbolExpression::fromSyntax(context.getCompilation(),
+                                                         syntax.as<NameSyntax>(), context);
+        }
+
+        return SystemTaskBase::bindArgument(argIndex, context, syntax, args);
+    }
+
+    const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
+                               const Expression*) const final {
+        auto& comp = context.getCompilation();
+        if (!checkArgCount(context, false, args, range, isOptional ? 0 : 1, 1))
+            return comp.getErrorType();
+
+        if (args.size() > 0) {
+            auto sym = args[0]->getSymbolReference();
+            if (!sym || (!sym->isScope() && sym->kind != SymbolKind::Instance)) {
+                if (!context.scope->isUninstantiated())
+                    context.addDiag(diag::ExpectedScopeName, args[0]->sourceRange);
+                return comp.getErrorType();
+            }
+        }
+
+        return comp.getVoidType();
+    }
+
+private:
+    bool isOptional;
+};
+
+class ShowVarsTask : public SystemTaskBase {
+public:
+    using SystemTaskBase::SystemTaskBase;
+
+    const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
+                               const Expression*) const final {
+        auto& comp = context.getCompilation();
+        if (!checkArgCount(context, false, args, range, 0, INT32_MAX))
+            return comp.getErrorType();
+
+        for (auto arg : args) {
+            auto sym = arg->getSymbolReference();
+            if (!sym || (sym->kind != SymbolKind::Variable && sym->kind != SymbolKind::Net)) {
+                if (!context.scope->isUninstantiated())
+                    context.addDiag(diag::ExpectedVariableName, arg->sourceRange);
+                return comp.getErrorType();
+            }
+        }
+
+        return comp.getVoidType();
+    }
+};
+
+class SReadMemTask : public SystemTaskBase {
+public:
+    SReadMemTask(const std::string& name) : SystemTaskBase(name) { hasOutputArgs = true; }
+
+    const Expression& bindArgument(size_t argIndex, const ASTContext& context,
+                                   const ExpressionSyntax& syntax, const Args&) const final {
+        if (argIndex == 0)
+            return Expression::bindLValue(syntax, context);
+        return Expression::bind(syntax, context);
+    }
+
+    const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
+                               const Expression*) const final {
+        auto& comp = context.getCompilation();
+        if (!checkArgCount(context, false, args, range, 4, INT32_MAX))
+            return comp.getErrorType();
+
+        if (!args[0]->type->isUnpackedArray())
+            return badArg(context, *args[1]);
+
+        if (!args[1]->type->isNumeric())
+            return badArg(context, *args[1]);
+
+        if (!args[2]->type->isNumeric())
+            return badArg(context, *args[2]);
+
+        for (size_t i = 3; i < args.size(); i++) {
+            if (!args[i]->type->canBeStringLike())
+                return badArg(context, *args[i]);
+        }
+
+        return comp.getVoidType();
+    }
+};
+
+void Builtins::registerSystemTasks() {
+#define REGISTER(type, name, base) addSystemSubroutine(std::make_shared<type>(name, base))
     REGISTER(DisplayTask, "$display", LiteralBase::Decimal);
     REGISTER(DisplayTask, "$displayb", LiteralBase::Binary);
     REGISTER(DisplayTask, "$displayo", LiteralBase::Octal);
@@ -734,12 +895,8 @@ void registerSystemTasks(Compilation& c) {
     REGISTER(MonitorTask, "$monitoro", LiteralBase::Octal);
     REGISTER(MonitorTask, "$monitorh", LiteralBase::Hex);
 
-    REGISTER(DisplayTask, "$error", LiteralBase::Decimal);
-    REGISTER(DisplayTask, "$warning", LiteralBase::Decimal);
-    REGISTER(DisplayTask, "$info", LiteralBase::Decimal);
-
 #undef REGISTER
-#define REGISTER(type, name) c.addSystemSubroutine(std::make_unique<type>(name))
+#define REGISTER(type, name) addSystemSubroutine(std::make_shared<type>(name))
     REGISTER(FileDisplayTask, "$fdisplay");
     REGISTER(FileDisplayTask, "$fdisplayb");
     REGISTER(FileDisplayTask, "$fdisplayo");
@@ -762,8 +919,6 @@ void registerSystemTasks(Compilation& c) {
     REGISTER(StringOutputTask, "$swriteo");
     REGISTER(StringOutputTask, "$swriteh");
 
-    REGISTER(FatalTask, "$fatal");
-
     REGISTER(FinishControlTask, "$finish");
     REGISTER(FinishControlTask, "$stop");
 
@@ -773,49 +928,69 @@ void registerSystemTasks(Compilation& c) {
 
     REGISTER(DumpVarsTask, "$dumpvars");
     REGISTER(DumpPortsTask, "$dumpports");
+    REGISTER(ShowVarsTask, "$showvars");
 
     REGISTER(CastTask, "$cast");
 
 #undef REGISTER
+#define REGISTER(type, name, kind) addSystemSubroutine(std::make_shared<type>(name, kind))
+    REGISTER(SeverityTask, "$info", ElabSystemTaskKind::Info);
+    REGISTER(SeverityTask, "$warning", ElabSystemTaskKind::Warning);
+    REGISTER(SeverityTask, "$error", ElabSystemTaskKind::Error);
 
-    auto int_t = &c.getIntType();
-    auto string_t = &c.getStringType();
+#undef REGISTER
 
-    c.addSystemSubroutine(std::make_unique<ReadWriteMemTask>("$readmemb", true));
-    c.addSystemSubroutine(std::make_unique<ReadWriteMemTask>("$readmemh", true));
-    c.addSystemSubroutine(std::make_unique<ReadWriteMemTask>("$writememb", false));
-    c.addSystemSubroutine(std::make_unique<ReadWriteMemTask>("$writememh", false));
-    c.addSystemSubroutine(std::make_unique<SimpleSystemTask>("$system", *int_t, 0,
-                                                             std::vector<const Type*>{string_t}));
-    c.addSystemSubroutine(std::make_unique<SdfAnnotateTask>());
-    c.addSystemSubroutine(std::make_unique<StaticAssertTask>());
+    addSystemSubroutine(std::make_shared<ReadWriteMemTask>("$readmemb", true));
+    addSystemSubroutine(std::make_shared<ReadWriteMemTask>("$readmemh", true));
+    addSystemSubroutine(std::make_shared<ReadWriteMemTask>("$writememb", false));
+    addSystemSubroutine(std::make_shared<ReadWriteMemTask>("$writememh", false));
+    addSystemSubroutine(std::make_shared<SReadMemTask>("$sreadmemb"));
+    addSystemSubroutine(std::make_shared<SReadMemTask>("$sreadmemh"));
+    addSystemSubroutine(std::make_shared<SimpleSystemTask>("$system", intType, 0,
+                                                           std::vector<const Type*>{&stringType}));
+    addSystemSubroutine(std::make_shared<SdfAnnotateTask>());
+    addSystemSubroutine(std::make_shared<StaticAssertTask>());
+    addSystemSubroutine(std::make_shared<FatalTask>());
+    addSystemSubroutine(std::make_shared<ScopeTask>("$list", true));
+    addSystemSubroutine(std::make_shared<ScopeTask>("$scope", false));
 
-#define TASK(name, required, ...)                             \
-    c.addSystemSubroutine(std::make_unique<SimpleSystemTask>( \
-        name, c.getVoidType(), required, std::vector<const Type*>{__VA_ARGS__}))
+#define TASK(name, required, ...)                                                    \
+    addSystemSubroutine(std::make_shared<SimpleSystemTask>(name, voidType, required, \
+                                                           std::vector<const Type*>{__VA_ARGS__}))
 
     TASK("$exit", 0, );
 
-    TASK("$timeformat", 0, int_t, int_t, string_t, int_t);
+    TASK("$timeformat", 0, &intType, &intType, &stringType, &intType);
 
     TASK("$monitoron", 0, );
     TASK("$monitoroff", 0, );
 
-    TASK("$dumpfile", 0, string_t);
+    TASK("$dumpfile", 0, &stringType);
     TASK("$dumpon", 0, );
     TASK("$dumpoff", 0, );
     TASK("$dumpall", 0, );
-    TASK("$dumplimit", 1, int_t);
+    TASK("$dumplimit", 1, &intType);
     TASK("$dumpflush", 0, );
-    TASK("$dumpportson", 0, string_t);
-    TASK("$dumpportsoff", 0, string_t);
-    TASK("$dumpportsall", 0, string_t);
-    TASK("$dumpportslimit", 1, int_t, string_t);
-    TASK("$dumpportsflush", 0, string_t);
+    TASK("$dumpportson", 0, &stringType);
+    TASK("$dumpportsoff", 0, &stringType);
+    TASK("$dumpportsall", 0, &stringType);
+    TASK("$dumpportslimit", 1, &intType, &stringType);
+    TASK("$dumpportsflush", 0, &stringType);
+
+    TASK("$input", 1, &stringType);
+    TASK("$key", 0, &stringType);
+    TASK("$nokey", 0, );
+    TASK("$log", 0, &stringType);
+    TASK("$nolog", 0, );
+    TASK("$reset", 0, &intType, &intType, &intType);
+    TASK("$save", 1, &stringType);
+    TASK("$restart", 1, &stringType);
+    TASK("$incsave", 1, &stringType);
+    TASK("$showscopes", 0, &intType);
 
 #undef TASK
 
-#define ASSERTCTRL(name) c.addSystemSubroutine(std::make_unique<AssertControlTask>(name))
+#define ASSERTCTRL(name) addSystemSubroutine(std::make_shared<AssertControlTask>(name))
     ASSERTCTRL("$assertcontrol");
     ASSERTCTRL("$asserton");
     ASSERTCTRL("$assertoff");
@@ -830,7 +1005,7 @@ void registerSystemTasks(Compilation& c) {
 #undef ASSERTCTRL
 
 #define TASK(name, kind, input, output) \
-    c.addSystemSubroutine(std::make_unique<StochasticTask>(name, kind, input, output))
+    addSystemSubroutine(std::make_shared<StochasticTask>(name, kind, input, output))
     TASK("$q_initialize", SubroutineKind::Task, 3, 1);
     TASK("$q_add", SubroutineKind::Task, 3, 1);
     TASK("$q_remove", SubroutineKind::Task, 2, 2);
@@ -839,7 +1014,7 @@ void registerSystemTasks(Compilation& c) {
 
 #undef TASK
 
-#define PLA_TASK(name) c.addSystemSubroutine(std::make_unique<PlaTask>(name))
+#define PLA_TASK(name) addSystemSubroutine(std::make_shared<PlaTask>(name))
     for (auto& fmt : {"$array", "$plane"}) {
         for (auto& gate : {"$and", "$or", "$nand", "$nor"}) {
             for (auto& type : {"$async", "$sync"}) {

@@ -15,8 +15,10 @@ add_executable(
   ast/InterfaceTests.cpp
   ast/LookupTests.cpp
   ast/MemberTests.cpp
+  ast/ParameterTests.cpp
   ast/PortTests.cpp
   ast/PrimitiveTests.cpp
+  ast/SerializerTests.cpp
   ast/StatementTests.cpp
   ast/SubroutineTests.cpp
   ast/SystemFuncTests.cpp
@@ -51,6 +53,12 @@ endif()
 
 if(CMAKE_SYSTEM_NAME MATCHES "Windows")
   target_sources(unittests PRIVATE ${PROJECT_SOURCE_DIR}/scripts/win32.manifest)
+endif()
+
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+  # Suppress annoying false positive Wstringop-overflow warnings
+  target_compile_options(unittests PUBLIC "-Wno-stringop-overflow")
+  target_link_options(unittests PUBLIC "-Wno-stringop-overflow")
 endif()
 
 # Copy the data directory for running tests from the build folder.

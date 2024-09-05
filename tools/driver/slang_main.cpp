@@ -18,20 +18,29 @@
 #include "slang/text/Json.h"
 #include "slang/util/String.h"
 #include "slang/util/TimeTrace.h"
-#include "slang/util/Version.h"
+#include "slang/util/VersionInfo.h"
 
 using namespace slang;
 using namespace slang::ast;
 using namespace slang::driver;
 
 void printJson(Compilation& compilation, const std::string& fileName,
-               const std::vector<std::string>& scopes) {
+               const std::vector<std::string>& scopes, bool includeSourceInfo) {
     JsonWriter writer;
     writer.setPrettyPrint(true);
 
     ASTSerializer serializer(compilation, writer);
+    serializer.setIncludeSourceInfo(includeSourceInfo);
     if (scopes.empty()) {
+        serializer.startObject();
+        serializer.writeProperty("design");
         serializer.serialize(compilation.getRoot());
+        serializer.writeProperty("definitions");
+        serializer.startArray();
+        for (auto def : compilation.getDefinitions())
+            serializer.serialize(*def);
+        serializer.endArray();
+        serializer.endObject();
     }
     else {
         for (auto& scopeName : scopes) {
@@ -41,6 +50,7 @@ void printJson(Compilation& compilation, const std::string& fileName,
         }
     }
 
+    writer.writeNewLine();
     OS::writeFile(fileName, writer.view());
 }
 
@@ -91,6 +101,10 @@ int driverMain(int argc, TArgs argv) {
                            "When dumping AST to JSON, include only the scopes specified by the "
                            "given hierarchical paths",
                            "<path>");
+
+        std::optional<bool> includeSourceInfo;
+        driver.cmdLine.add("--ast-json-source-info", includeSourceInfo,
+                           "When dumping AST to JSON, include source line and file information");
 
         std::optional<std::string> timeTrace;
         driver.cmdLine.add("--time-trace", timeTrace,
@@ -153,7 +167,8 @@ int driverMain(int argc, TArgs argv) {
                     auto compilation = driver.createCompilation();
                     ok &= driver.reportCompilation(*compilation, quiet == true);
                     if (astJsonFile)
-                        printJson(*compilation, *astJsonFile, astJsonScopes);
+                        printJson(*compilation, *astJsonFile, astJsonScopes,
+                                  includeSourceInfo == true);
                 }
             }
         }
@@ -191,10 +206,11 @@ int main(int argc, char** argv) {
 
 #else
 
+using namespace slang::syntax;
+
 // When fuzzing with libFuzzer, this is the entry point.
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
-    auto& sourceManager = SyntaxTree::getDefaultSourceManager();
-
+    SourceManager sourceManager;
     std::string_view text(reinterpret_cast<const char*>(data), size);
     auto tree = SyntaxTree::fromFileInMemory(text, sourceManager);
 

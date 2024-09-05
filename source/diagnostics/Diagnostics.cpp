@@ -143,14 +143,33 @@ void Diagnostics::sort(const SourceManager& sourceManager) {
     auto compare = [&sourceManager](auto& x, auto& y) {
         SourceLocation xl = sourceManager.getFullyExpandedLoc(x.location);
         SourceLocation yl = sourceManager.getFullyExpandedLoc(y.location);
-        if (xl < yl)
+
+        auto xb = sourceManager.getSortKey(xl.buffer());
+        auto yb = sourceManager.getSortKey(yl.buffer());
+        if (xb < yb)
             return true;
-        if (xl == yl)
-            return x.code < y.code;
+        if (xb == yb) {
+            if (xl.offset() < yl.offset())
+                return true;
+            if (xl == yl)
+                return x.code < y.code;
+        }
         return false;
     };
 
     std::ranges::stable_sort(*this, compare);
+}
+
+Diagnostics Diagnostics::filter(std::initializer_list<DiagCode> list) const {
+    Diagnostics result;
+    result.reserve(size());
+
+    for (auto& diag : *this) {
+        if (std::ranges::none_of(list, [&](DiagCode code) { return code == diag.code; }))
+            result.push_back(diag);
+    }
+
+    return result;
 }
 
 } // namespace slang

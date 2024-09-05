@@ -225,7 +225,8 @@ const Statement& Statement::bind(const StatementSyntax& syntax, const ASTContext
                                                 stmtCtx);
             break;
         case SyntaxKind::WaitForkStatement:
-            result = &WaitForkStatement::fromSyntax(comp, syntax.as<WaitForkStatementSyntax>());
+            result = &WaitForkStatement::fromSyntax(comp, syntax.as<WaitForkStatementSyntax>(),
+                                                    context);
             break;
         case SyntaxKind::WaitOrderStatement:
             result = &WaitOrderStatement::fromSyntax(comp, syntax.as<WaitOrderStatementSyntax>(),
@@ -581,7 +582,6 @@ std::span<const StatementBlockSymbol* const> Statement::createAndAddBlockItems(
             case SyntaxKind::DataDeclaration:
             case SyntaxKind::TypedefDeclaration:
             case SyntaxKind::ForwardTypedefDeclaration:
-            case SyntaxKind::ForwardInterfaceClassTypedefDeclaration:
             case SyntaxKind::PackageImportDeclaration:
             case SyntaxKind::ParameterDeclarationStatement:
             case SyntaxKind::LetDeclaration:
@@ -706,6 +706,9 @@ Statement& BlockStatement::fromSyntax(Compilation& comp, const BlockStatementSyn
     if (addInitializers)
         bindScopeInitializers(context, buffer);
 
+    if (blockKind == StatementBlockKind::JoinAny || blockKind == StatementBlockKind::JoinNone)
+        context.flags |= ASTFlags::ForkJoinAnyNone;
+
     for (auto item : syntax.items) {
         if (StatementSyntax::isKind(item->kind)) {
             auto& stmt = Statement::bind(item->as<StatementSyntax>(), context, stmtCtx,
@@ -770,17 +773,17 @@ Statement& ReturnStatement::fromSyntax(Compilation& compilation,
     while (scope->asSymbol().kind == SymbolKind::StatementBlock)
         scope = scope->asSymbol().getParentScope();
 
-    auto stmtLoc = syntax.returnKeyword.location();
+    auto stmtRange = syntax.returnKeyword.range();
     auto& symbol = scope->asSymbol();
     if (symbol.kind != SymbolKind::Subroutine && symbol.kind != SymbolKind::RandSeqProduction) {
-        context.addDiag(diag::ReturnNotInSubroutine, stmtLoc);
+        context.addDiag(diag::ReturnNotInSubroutine, stmtRange);
         return badStmt(compilation, nullptr);
     }
 
     auto& returnType = symbol.getDeclaredType()->getType();
     const Expression* retExpr = nullptr;
     if (syntax.returnValue) {
-        retExpr = &Expression::bindRValue(returnType, *syntax.returnValue, stmtLoc, context);
+        retExpr = &Expression::bindRValue(returnType, *syntax.returnValue, stmtRange, context);
     }
     else if (!returnType.isVoid()) {
         DiagCode code = symbol.kind == SymbolKind::Subroutine ? diag::MissingReturnValue
@@ -862,8 +865,8 @@ Statement& DisableStatement::fromSyntax(Compilation& compilation,
         return badStmt(compilation, nullptr);
     }
 
-    return *compilation.emplace<DisableStatement>(*symbol, result.isHierarchical,
-                                                  syntax.sourceRange());
+    return *compilation.emplace<DisableStatement>(
+        *symbol, result.flags.has(LookupResultFlags::IsHierarchical), syntax.sourceRange());
 }
 
 ER DisableStatement::evalImpl(EvalContext& context) const {
@@ -1138,10 +1141,10 @@ Statement& CaseStatement::fromSyntax(Compilation& compilation, const CaseStateme
     bool isInside = syntax.matchesOrInside.kind == TokenKind::InsideKeyword;
     bool wildcard = !isInside && keyword != TokenKind::CaseKeyword;
     bool allowTypeRefs = !isInside && keyword == TokenKind::CaseKeyword;
-    bool allowOpenRange = !wildcard;
+    bool allowValueRange = !wildcard;
 
     bad |= !Expression::bindMembershipExpressions(context, keyword, wildcard, isInside,
-                                                  allowTypeRefs, allowOpenRange, *syntax.expr,
+                                                  allowTypeRefs, allowValueRange, *syntax.expr,
                                                   expressions, bound);
 
     auto condition = getCondition(syntax.caseKeyword.kind);
@@ -1237,8 +1240,8 @@ ER CaseStatement::evalImpl(EvalContext& context) const {
     for (auto& group : items) {
         for (auto item : group.expressions) {
             bool matched;
-            if (item->kind == ExpressionKind::OpenRange) {
-                ConstantValue val = item->as<OpenRangeExpression>().checkInside(context, cv);
+            if (item->kind == ExpressionKind::ValueRange) {
+                ConstantValue val = item->as<ValueRangeExpression>().checkInside(context, cv);
                 if (!val)
                     return ER::Fail;
 
@@ -2281,12 +2284,14 @@ Statement& ExpressionStatement::fromSyntax(Compilation& compilation,
             ok = true;
             break;
         }
-        case ExpressionKind::Assignment:
-            if (auto timing = expr.as<AssignmentExpression>().timingControl)
-                stmtCtx.observeTiming(*timing);
+        case ExpressionKind::Assignment: {
+            const AssignmentExpression& ae = expr.as<AssignmentExpression>();
+            if (ae.isBlocking() && ae.timingControl)
+                stmtCtx.observeTiming(*ae.timingControl);
 
             ok = true;
             break;
+        }
         case ExpressionKind::NewClass:
             ok = true;
             break;
@@ -2391,11 +2396,11 @@ static void checkDeferredAssertAction(const Statement& stmt, const ASTContext& c
 
     // The subroutine being called has some restrictions:
     // - No output or inout arguments
-    // - If a system call, must be a task
+    // - If a system call, must be a task or void returning
     // - Any ref arguments cannot reference automatic or dynamic variables
     auto& call = stmt.as<ExpressionStatement>().expr.as<CallExpression>();
     AssertionExpr::checkAssertionCall(call, context, diag::DeferredAssertOutArg,
-                                      diag::DeferredAssertAutoRefArg, diag::DeferredAssertSysTask,
+                                      diag::DeferredAssertAutoRefArg, diag::DeferredAssertNonVoid,
                                       stmt.sourceRange);
 }
 
@@ -2532,6 +2537,9 @@ Statement& ConcurrentAssertionStatement::fromSyntax(
     if (bad || (ifTrue && ifTrue->bad()) || (ifFalse && ifFalse->bad()))
         return badStmt(compilation, result);
 
+    if (assertKind == AssertionKind::Expect && !context.requireTimingAllowed(result->sourceRange))
+        return badStmt(compilation, result);
+
     return *result;
 }
 
@@ -2570,10 +2578,8 @@ Statement& WaitStatement::fromSyntax(Compilation& compilation, const WaitStateme
     if (!context.requireBooleanConvertible(cond))
         return badStmt(compilation, result);
 
-    if (context.flags.has(ASTFlags::Function | ASTFlags::Final) || context.inAlwaysCombLatch()) {
-        context.addDiag(diag::TimingInFuncNotAllowed, syntax.sourceRange());
+    if (!context.requireTimingAllowed(result->sourceRange))
         return badStmt(compilation, result);
-    }
 
     return *result;
 }
@@ -2589,8 +2595,14 @@ void WaitStatement::serializeTo(ASTSerializer& serializer) const {
 }
 
 Statement& WaitForkStatement::fromSyntax(Compilation& compilation,
-                                         const WaitForkStatementSyntax& syntax) {
-    return *compilation.emplace<WaitForkStatement>(syntax.sourceRange());
+                                         const WaitForkStatementSyntax& syntax,
+                                         const ASTContext& context) {
+    auto result = compilation.emplace<WaitForkStatement>(syntax.sourceRange());
+
+    if (!context.requireTimingAllowed(result->sourceRange))
+        return badStmt(compilation, result);
+
+    return *result;
 }
 
 ER WaitForkStatement::evalImpl(EvalContext& context) const {
@@ -2627,11 +2639,9 @@ Statement& WaitOrderStatement::fromSyntax(Compilation& compilation,
 
     auto result = compilation.emplace<WaitOrderStatement>(events.copy(compilation), ifTrue, ifFalse,
                                                           syntax.sourceRange());
-    if (context.flags.has(ASTFlags::Function) || context.flags.has(ASTFlags::Final) ||
-        context.inAlwaysCombLatch()) {
-        context.addDiag(diag::TimingInFuncNotAllowed, syntax.sourceRange());
+
+    if (!context.requireTimingAllowed(result->sourceRange))
         return badStmt(compilation, result);
-    }
 
     return *result;
 }

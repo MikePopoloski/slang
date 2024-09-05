@@ -5,6 +5,7 @@
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
+#include "Builtins.h"
 #include <cmath>
 
 #include "slang/ast/Bitstream.h"
@@ -196,9 +197,9 @@ private:
 template<double Func(double)>
 class RealMath1Function : public SimpleSystemSubroutine {
 public:
-    RealMath1Function(Compilation& comp, const std::string& name) :
-        SimpleSystemSubroutine(name, SubroutineKind::Function, 1, {&comp.getRealType()},
-                               comp.getRealType(), false) {}
+    RealMath1Function(const Builtins& builtins, const std::string& name) :
+        SimpleSystemSubroutine(name, SubroutineKind::Function, 1, {&builtins.realType},
+                               builtins.realType, false) {}
 
     ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
                        const CallExpression::SystemCallInfo&) const final {
@@ -214,10 +215,10 @@ public:
 template<double Func(double, double)>
 class RealMath2Function : public SimpleSystemSubroutine {
 public:
-    RealMath2Function(Compilation& comp, const std::string& name) :
+    RealMath2Function(const Builtins& builtins, const std::string& name) :
         SimpleSystemSubroutine(name, SubroutineKind::Function, 2,
-                               {&comp.getRealType(), &comp.getRealType()}, comp.getRealType(),
-                               false) {}
+                               {&builtins.realType, &builtins.realType}, builtins.realType, false) {
+    }
 
     ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
                        const CallExpression::SystemCallInfo&) const final {
@@ -231,14 +232,14 @@ public:
     }
 };
 
-void registerMathFuncs(Compilation& c) {
-    c.addSystemSubroutine(std::make_unique<Clog2Function>());
-    c.addSystemSubroutine(std::make_unique<CountBitsFunction>());
-    c.addSystemSubroutine(std::make_unique<CountOnesFunction>());
+void Builtins::registerMathFuncs() {
+    addSystemSubroutine(std::make_shared<Clog2Function>());
+    addSystemSubroutine(std::make_shared<CountBitsFunction>());
+    addSystemSubroutine(std::make_shared<CountOnesFunction>());
 
 #define REGISTER(name, kind) \
-    c.addSystemSubroutine(   \
-        std::make_unique<BooleanBitVectorFunction>(name, BooleanBitVectorFunction::kind))
+    addSystemSubroutine(     \
+        std::make_shared<BooleanBitVectorFunction>(name, BooleanBitVectorFunction::kind))
 
     REGISTER("$onehot", OneHot);
     REGISTER("$onehot0", OneHot0);
@@ -246,7 +247,7 @@ void registerMathFuncs(Compilation& c) {
 
 #undef REGISTER
 #define REGISTER(name, func) \
-    c.addSystemSubroutine(std::make_unique<RealMath1Function<(func)>>(c, name))
+    addSystemSubroutine(std::make_shared<RealMath1Function<(func)>>(*this, name))
 
     REGISTER("$ln", std::log);
     REGISTER("$log10", std::log10);
@@ -269,7 +270,7 @@ void registerMathFuncs(Compilation& c) {
 
 #undef REGISTER
 #define REGISTER(name, func) \
-    c.addSystemSubroutine(std::make_unique<RealMath2Function<(func)>>(c, name))
+    addSystemSubroutine(std::make_shared<RealMath2Function<(func)>>(*this, name))
 
     REGISTER("$pow", std::pow);
     REGISTER("$atan2", std::atan2);

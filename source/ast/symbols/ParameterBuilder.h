@@ -7,7 +7,7 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include "slang/ast/Definition.h"
+#include "slang/ast/symbols/CompilationUnitSymbols.h"
 
 namespace slang::ast {
 
@@ -21,23 +21,24 @@ struct HierarchyOverrideNode;
 /// generic class definitions.
 class ParameterBuilder {
 public:
-    using Decl = Definition::ParameterDecl;
+    using Decl = DefinitionSymbol::ParameterDecl;
 
     ParameterBuilder(const Scope& scope, std::string_view definitionName,
                      std::span<const Decl> parameterDecls);
 
     bool hasErrors() const { return anyErrors; }
 
-    void setAssignments(const syntax::ParameterValueAssignmentSyntax& syntax);
+    void setAssignments(const syntax::ParameterValueAssignmentSyntax& syntax, bool isFromConfig);
     void setOverrides(const HierarchyOverrideNode* newVal) { overrideNode = newVal; }
     void setForceInvalidValues(bool set) { forceInvalidValues = set; }
     void setSuppressErrors(bool set) { suppressErrors = set; }
     void setInstanceContext(const ASTContext& context) { instanceContext = &context; }
+    void setConfigScope(const Scope& confScope) { configScope = &confScope; }
 
     const HierarchyOverrideNode* getOverrides() const { return overrideNode; }
 
-    const ParameterSymbolBase& createParam(const Definition::ParameterDecl& decl, Scope& newScope,
-                                           SourceLocation instanceLoc);
+    const ParameterSymbolBase& createParam(const DefinitionSymbol::ParameterDecl& decl,
+                                           Scope& newScope, SourceLocation instanceLoc);
 
     static void createDecls(const Scope& scope,
                             const syntax::ParameterDeclarationBaseSyntax& syntax, bool isLocal,
@@ -51,9 +52,10 @@ private:
     const Scope& scope;
     std::string_view definitionName;
     std::span<const Decl> parameterDecls;
-    SmallMap<std::string_view, const syntax::ExpressionSyntax*, 8> assignments;
+    SmallMap<std::string_view, std::pair<const syntax::ExpressionSyntax*, bool>, 8> assignments;
     const ASTContext* instanceContext = nullptr;
     const HierarchyOverrideNode* overrideNode = nullptr;
+    const Scope* configScope = nullptr;
     bool forceInvalidValues = false;
     bool suppressErrors = false;
     bool anyErrors = false;

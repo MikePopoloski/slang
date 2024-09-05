@@ -10,7 +10,6 @@
 #include "slang/ast/ASTSerializer.h"
 #include "slang/ast/ASTVisitor.h"
 #include "slang/ast/Compilation.h"
-#include "slang/ast/Definition.h"
 #include "slang/ast/expressions/AssignmentExpressions.h"
 #include "slang/ast/expressions/MiscExpressions.h"
 #include "slang/ast/expressions/OperatorExpressions.h"
@@ -43,35 +42,42 @@ const NetType& getDefaultNetType(const Scope& scope, SourceLocation location) {
     return scope.getCompilation().getWireNetType();
 }
 
-std::tuple<const Definition*, std::string_view> getInterfacePortInfo(
+std::tuple<const DefinitionSymbol*, std::string_view> getInterfacePortInfo(
     const Scope& scope, const InterfacePortHeaderSyntax& header) {
 
     auto& comp = scope.getCompilation();
     auto token = header.nameOrKeyword;
-    auto def = comp.getDefinition(token.valueText(), scope);
-    std::string_view modport;
-
-    if (!def) {
-        scope.addDiag(diag::UnknownInterface, token.range()) << token.valueText();
+    auto def = comp.getDefinition(token.valueText(), scope, token.range(), diag::UnknownInterface)
+                   .definition;
+    if (!def || def->kind != SymbolKind::Definition) {
+        // If we got a result then getDefinition didn't error, so do it ourselves.
+        if (def)
+            scope.addDiag(diag::UnknownInterface, token.range()) << token.valueText();
+        return {nullptr, {}};
     }
-    else if (def->definitionKind != DefinitionKind::Interface) {
+
+    std::string_view modport;
+    auto defSym = &def->as<DefinitionSymbol>();
+
+    if (defSym->definitionKind != DefinitionKind::Interface) {
         auto& diag = scope.addDiag(diag::PortTypeNotInterfaceOrData, header.nameOrKeyword.range());
-        diag << def->name;
-        diag.addNote(diag::NoteDeclarationHere, def->location);
-        def = nullptr;
+        diag << defSym->name;
+        diag.addNote(diag::NoteDeclarationHere, defSym->location);
+        defSym = nullptr;
     }
     else if (header.modport) {
         auto member = header.modport->member;
         modport = member.valueText();
-        if (auto it = def->modports.find(modport); it == def->modports.end() && !modport.empty()) {
+        if (auto it = defSym->modports.find(modport);
+            it == defSym->modports.end() && !modport.empty()) {
             auto& diag = scope.addDiag(diag::NotAModport, member.range());
             diag << modport;
-            diag << def->name;
+            diag << defSym->name;
             modport = {};
         }
     }
 
-    return {def, modport};
+    return {defSym, modport};
 }
 
 // Helper class to build up lists of port symbols.
@@ -79,8 +85,7 @@ class AnsiPortListBuilder {
 public:
     AnsiPortListBuilder(const Scope& scope,
                         SmallVectorBase<std::pair<Symbol*, const Symbol*>>& implicitMembers) :
-        comp(scope.getCompilation()),
-        scope(scope), implicitMembers(implicitMembers) {}
+        comp(scope.getCompilation()), scope(scope), implicitMembers(implicitMembers) {}
 
     Symbol* createPort(const ImplicitAnsiPortSyntax& syntax) {
         // Helper function to check if an implicit type syntax is totally empty.
@@ -116,13 +121,16 @@ public:
 
                     // If we didn't find a valid type, try to find a definition.
                     if (!found || !found->isType()) {
-                        if (auto definition = comp.getDefinition(simpleName, scope)) {
-                            if (definition->definitionKind != DefinitionKind::Interface) {
+                        if (auto def = comp.tryGetDefinition(simpleName, scope).definition;
+                            def && def->kind == SymbolKind::Definition) {
+
+                            auto defSym = &def->as<DefinitionSymbol>();
+                            if (defSym->definitionKind != DefinitionKind::Interface) {
                                 auto& diag = scope.addDiag(diag::PortTypeNotInterfaceOrData,
                                                            header.dataType->sourceRange());
-                                diag << definition->name;
-                                diag.addNote(diag::NoteDeclarationHere, definition->location);
-                                definition = nullptr;
+                                diag << defSym->name;
+                                diag.addNote(diag::NoteDeclarationHere, defSym->location);
+                                defSym = nullptr;
                             }
                             else {
                                 if (header.varKeyword) {
@@ -136,7 +144,7 @@ public:
                                 }
                             }
 
-                            return add(decl, definition, ""sv, /* isGeneric */ false,
+                            return add(decl, defSym, ""sv, /* isGeneric */ false,
                                        syntax.attributes);
                         }
                     }
@@ -247,29 +255,42 @@ private:
             }
         }
 
+        // Support a compatibility option which allows ANSI ports to still look
+        // up and connect to an identically named net or variable declared in
+        // the definition body instead of creating a new symbol internally.
+        if (comp.hasFlag(CompilationFlags::AllowMergingAnsiPorts)) {
+            if (auto symbol = scope.find(port->name);
+                symbol &&
+                (symbol->kind == SymbolKind::Variable || symbol->kind == SymbolKind::Net)) {
+                port->internalSymbol = symbol;
+            }
+        }
+
         // Create a new symbol to represent this port internally to the instance.
-        ValueSymbol* symbol;
-        if (netType) {
-            symbol = comp.emplace<NetSymbol>(port->name, port->location, *netType);
-        }
-        else {
-            symbol = comp.emplace<VariableSymbol>(port->name, port->location,
-                                                  VariableLifetime::Static);
-        }
+        if (!port->internalSymbol) {
+            ValueSymbol* symbol;
+            if (netType) {
+                symbol = comp.emplace<NetSymbol>(port->name, port->location, *netType);
+            }
+            else {
+                symbol = comp.emplace<VariableSymbol>(port->name, port->location,
+                                                      VariableLifetime::Static);
+            }
 
-        if (type) {
-            symbol->setDeclaredType(*type, decl.dimensions);
-        }
-        else {
-            SLANG_ASSERT(netType);
-            if (!decl.dimensions.empty())
-                symbol->getDeclaredType()->setDimensionSyntax(decl.dimensions);
-        }
+            if (type) {
+                symbol->setDeclaredType(*type, decl.dimensions);
+            }
+            else {
+                SLANG_ASSERT(netType);
+                if (!decl.dimensions.empty())
+                    symbol->getDeclaredType()->setDimensionSyntax(decl.dimensions);
+            }
 
-        symbol->setSyntax(decl);
-        symbol->setAttributes(scope, attrs);
-        port->internalSymbol = symbol;
-        implicitMembers.emplace_back(symbol, port);
+            symbol->setSyntax(decl);
+            symbol->setAttributes(scope, attrs);
+            port->internalSymbol = symbol;
+            implicitMembers.emplace_back(symbol, port);
+        }
 
         if (decl.initializer) {
             if (netType && netType->netKind == NetType::Interconnect) {
@@ -292,8 +313,9 @@ private:
         return port;
     }
 
-    Symbol* add(const DeclaratorSyntax& decl, const Definition* iface, std::string_view modport,
-                bool isGeneric, std::span<const AttributeInstanceSyntax* const> attrs) {
+    Symbol* add(const DeclaratorSyntax& decl, const DefinitionSymbol* iface,
+                std::string_view modport, bool isGeneric,
+                std::span<const AttributeInstanceSyntax* const> attrs) {
         auto port = comp.emplace<InterfacePortSymbol>(decl.name.valueText(), decl.name.location());
         port->interfaceDef = iface;
         port->modport = modport;
@@ -321,7 +343,7 @@ private:
     ArgumentDirection lastDirection = ArgumentDirection::InOut;
     const DataTypeSyntax* lastType = nullptr;
     const NetType* lastNetType = nullptr;
-    const Definition* lastInterface = nullptr;
+    const DefinitionSymbol* lastInterface = nullptr;
     std::string_view lastModport;
     bool lastGenericIface = false;
 };
@@ -332,8 +354,7 @@ public:
         const Scope& scope,
         std::span<std::pair<const SyntaxNode*, const Symbol*> const> portDeclarations,
         SmallVectorBase<std::pair<Symbol*, const Symbol*>>& implicitMembers) :
-        comp(scope.getCompilation()),
-        scope(scope), implicitMembers(implicitMembers) {
+        comp(scope.getCompilation()), scope(scope), implicitMembers(implicitMembers) {
 
         // All port declarations in the scope have been collected; index them for easy lookup.
         for (auto [syntax, insertionPoint] : portDeclarations) {
@@ -361,9 +382,12 @@ public:
                 auto& data = syntax->as<DataDeclarationSyntax>();
                 auto& namedType = data.type->as<NamedTypeSyntax>();
                 auto typeName = namedType.name->as<IdentifierNameSyntax>().identifier.valueText();
-                auto def = comp.getDefinition(typeName, scope);
+                auto def = comp.tryGetDefinition(typeName, scope).definition;
 
-                SLANG_ASSERT(def && def->definitionKind == DefinitionKind::Interface);
+                SLANG_ASSERT(def && def->kind == SymbolKind::Definition);
+
+                auto& defSym = def->as<DefinitionSymbol>();
+                SLANG_ASSERT(defSym.definitionKind == DefinitionKind::Interface);
 
                 for (auto decl : data.declarators) {
                     if (auto name = decl->name; !name.isMissing()) {
@@ -373,7 +397,7 @@ public:
                         if (inserted) {
                             auto& info = it->second;
                             info.isIface = true;
-                            info.ifaceDef = def;
+                            info.ifaceDef = &defSym;
                             info.insertionPoint = insertionPoint;
 
                             if (decl->initializer) {
@@ -454,7 +478,7 @@ private:
         std::span<const AttributeInstanceSyntax* const> attrs;
         const Symbol* internalSymbol = nullptr;
         const Symbol* insertionPoint = nullptr;
-        const Definition* ifaceDef = nullptr;
+        const DefinitionSymbol* ifaceDef = nullptr;
         std::string_view modport;
         ArgumentDirection direction = ArgumentDirection::In;
         bool used = false;
@@ -462,8 +486,7 @@ private:
 
         PortInfo(const DeclaratorSyntax& syntax,
                  std::span<const AttributeInstanceSyntax* const> attrs) :
-            syntax(&syntax),
-            attrs(attrs) {}
+            syntax(&syntax), attrs(attrs) {}
     };
     SmallMap<std::string_view, PortInfo, 8> portInfos;
 
@@ -546,9 +569,11 @@ private:
                 break;
             }
             case SyntaxKind::InterfacePortHeader: {
+                // Iface header here should always be an identifier, except if there is
+                // invalid syntax resulting in the generic 'interface' which will be
+                // diagnosed by the parser itself.
                 auto& ifaceHeader = header.as<InterfacePortHeaderSyntax>();
                 auto [definition, modport] = getInterfacePortInfo(scope, ifaceHeader);
-                SLANG_ASSERT(ifaceHeader.nameOrKeyword.kind == TokenKind::Identifier);
                 info.isIface = true;
                 info.ifaceDef = definition;
                 info.modport = modport;
@@ -740,8 +765,7 @@ class PortConnectionBuilder {
 public:
     PortConnectionBuilder(const InstanceSymbol& instance,
                           const SeparatedSyntaxList<PortConnectionSyntax>& portConnections) :
-        scope(*instance.getParentScope()),
-        instance(instance), comp(scope.getCompilation()),
+        scope(*instance.getParentScope()), instance(instance), comp(scope.getCompilation()),
         lookupLocation(LookupLocation::after(instance)),
         connMap(portConnections, scope, lookupLocation) {
 
@@ -1006,7 +1030,13 @@ private:
         // - An implicit connection between nets of two dissimilar net types shall issue an
         //   error when it is a warning in an explicit named port connection
 
-        LookupFlags flags = isWildcard ? LookupFlags::DisallowWildcardImport : LookupFlags::None;
+        bitmask<LookupFlags> flags;
+        if (isWildcard)
+            flags |= LookupFlags::DisallowWildcardImport;
+
+        if (instance.body.flags.has(InstanceFlags::FromBind))
+            flags |= LookupFlags::DisallowWildcardImport | LookupFlags::DisallowUnitReferences;
+
         auto symbol = Lookup::unqualified(scope, port.name, flags);
         if (!symbol) {
             // If this is a wildcard connection, we're allowed to use the port's default value,
@@ -1330,8 +1360,8 @@ const Expression* PortSymbol::getInitializer() const {
             ll = LookupLocation::after(*internalSymbol);
 
         ASTContext context(*scope, ll, ASTFlags::NonProcedural | ASTFlags::StaticInitializer);
-        initializer = &Expression::bindRValue(getType(), *initializerSyntax, initializerLoc,
-                                              context);
+        initializer = &Expression::bindRValue(getType(), *initializerSyntax,
+                                              {initializerLoc, initializerLoc + 1}, context);
         context.eval(*initializer);
     }
 
@@ -1472,6 +1502,9 @@ void PortSymbol::serializeTo(ASTSerializer& serializer) const {
     serializer.write("type", getType());
     serializer.write("direction", toString(direction));
 
+    if (isNullPort)
+        serializer.write("isNullPort", isNullPort);
+
     if (auto init = getInitializer())
         serializer.write("initializer", *init);
 
@@ -1482,8 +1515,7 @@ void PortSymbol::serializeTo(ASTSerializer& serializer) const {
 MultiPortSymbol::MultiPortSymbol(std::string_view name, SourceLocation loc,
                                  std::span<const PortSymbol* const> ports,
                                  ArgumentDirection direction) :
-    Symbol(SymbolKind::MultiPort, name, loc),
-    ports(ports), direction(direction) {
+    Symbol(SymbolKind::MultiPort, name, loc), ports(ports), direction(direction) {
 }
 
 const Type& MultiPortSymbol::getType() const {
@@ -1548,11 +1580,11 @@ void MultiPortSymbol::serializeTo(ASTSerializer& serializer) const {
 
 std::optional<std::span<const ConstantRange>> InterfacePortSymbol::getDeclaredRange() const {
     if (range)
-        return *range;
+        return range;
 
     if (isInvalid()) {
         range.emplace();
-        return *range;
+        return range;
     }
 
     auto syntax = getSyntax();
@@ -1573,7 +1605,7 @@ std::optional<std::span<const ConstantRange>> InterfacePortSymbol::getDeclaredRa
     }
 
     range = buffer.copy(scope->getCompilation());
-    return *range;
+    return range;
 }
 
 InterfacePortSymbol::IfaceConn InterfacePortSymbol::getConnection() const {
@@ -1629,14 +1661,13 @@ PortConnection::PortConnection(const Symbol& port, bool useDefault) :
 
 PortConnection::PortConnection(const InterfacePortSymbol& port, const Symbol* connectedSymbol,
                                const ModportSymbol* modport) :
-    port(port),
-    connectedSymbol(connectedSymbol), modport(modport) {
+    port(port), connectedSymbol(connectedSymbol), modport(modport) {
 }
 
 PortConnection::PortConnection(const Symbol& port, const Symbol* connectedSymbol,
                                SourceRange implicitNameRange) :
-    port(port),
-    connectedSymbol(connectedSymbol), implicitNameRange(implicitNameRange) {
+    port(port), connectedSymbol(connectedSymbol), implicitNameRange(implicitNameRange),
+    isImplicit(true) {
 }
 
 PortConnection::IfaceConn PortConnection::getIfaceConn() const {
@@ -1685,8 +1716,15 @@ const Expression* PortConnection::getExpression() const {
         bitmask<ASTFlags> flags = ASTFlags::NonProcedural;
         if (isNetPort)
             flags |= ASTFlags::AllowInterconnect;
-        if (direction == ArgumentDirection::Out || direction == ArgumentDirection::InOut)
+
+        if (direction == ArgumentDirection::Out || direction == ArgumentDirection::InOut) {
             flags |= ASTFlags::LValue;
+            if (direction == ArgumentDirection::InOut)
+                flags |= ASTFlags::LAndRValue;
+        }
+
+        if (parentInstance.body.flags.has(InstanceFlags::FromBind))
+            flags |= ASTFlags::BindInstantiation;
 
         ASTContext context(*scope, ll, flags);
         context.setInstance(parentInstance);
@@ -1703,13 +1741,12 @@ const Expression* PortConnection::getExpression() const {
                 auto& comp = context.getCompilation();
                 auto exprType = e->type;
                 if (direction == ArgumentDirection::In) {
-                    e = &Expression::convertAssignment(context, *type, *e,
-                                                       implicitNameRange.start());
+                    e = &Expression::convertAssignment(context, *type, *e, implicitNameRange);
                 }
                 else if (direction != ArgumentDirection::Ref) {
                     auto rhs = comp.emplace<EmptyArgumentExpression>(*type, implicitNameRange);
-                    Expression::convertAssignment(context, *e->type, *rhs,
-                                                  implicitNameRange.start(), &e, &assignFlags);
+                    Expression::convertAssignment(context, *e->type, *rhs, implicitNameRange, &e,
+                                                  &assignFlags);
                 }
 
                 // We should warn for this case unless convertAssignment already issued an error,
@@ -1735,7 +1772,7 @@ const Expression* PortConnection::getExpression() const {
             }
         }
         else {
-            expr = &Expression::bindArgument(*type, direction, *exprSyntax, context);
+            expr = &Expression::bindArgument(*type, direction, {}, *exprSyntax, context);
         }
     }
     else if (useDefault) {
@@ -1879,7 +1916,9 @@ void PortConnection::checkSimulatedNetTypes() const {
             bool shouldWarn;
             NetType::getSimulatedNetType(inNt, exNt, shouldWarn);
             if (shouldWarn) {
-                auto& diag = scope->addDiag(diag::NetInconsistent, expr->sourceRange);
+                auto diagCode = isImplicit ? diag::ImplicitConnNetInconsistent
+                                           : diag::NetInconsistent;
+                auto& diag = scope->addDiag(diagCode, expr->sourceRange);
                 diag << exNt.name;
                 diag << inNt.name;
                 diag.addNote(diag::NoteDeclarationHere, port.location);
@@ -1945,10 +1984,8 @@ void PortConnection::checkSimulatedNetTypes() const {
             }
         }
 
-        if (in == internal.end() || ex == external.end()) {
-            SLANG_ASSERT(in == internal.end() && ex == external.end());
+        if (in == internal.end() || ex == external.end())
             break;
-        }
 
         currBit += width;
     }
@@ -2033,7 +2070,7 @@ void PortConnection::makeConnections(
 }
 
 void PortConnection::serializeTo(ASTSerializer& serializer) const {
-    serializer.writeLink("port", port);
+    serializer.write("port", port);
     if (port.kind == SymbolKind::InterfacePort) {
         if (connectedSymbol)
             serializer.writeLink("ifaceInstance", *connectedSymbol);

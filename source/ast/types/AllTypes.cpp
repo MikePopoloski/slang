@@ -11,13 +11,16 @@
 #include "slang/ast/ASTSerializer.h"
 #include "slang/ast/Compilation.h"
 #include "slang/ast/Expression.h"
+#include "slang/ast/expressions/LiteralExpressions.h"
 #include "slang/ast/symbols/ClassSymbols.h"
 #include "slang/ast/symbols/InstanceSymbols.h"
 #include "slang/ast/symbols/MemberSymbols.h"
 #include "slang/ast/symbols/VariableSymbols.h"
 #include "slang/diagnostics/ConstEvalDiags.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
+#include "slang/diagnostics/ExpressionsDiags.h"
 #include "slang/diagnostics/LookupDiags.h"
+#include "slang/diagnostics/NumericDiags.h"
 #include "slang/diagnostics/TypesDiags.h"
 #include "slang/numeric/MathUtils.h"
 #include "slang/syntax/AllSyntax.h"
@@ -119,8 +122,7 @@ const ErrorType ErrorType::Instance;
 
 IntegralType::IntegralType(SymbolKind kind, std::string_view name, SourceLocation loc,
                            bitwidth_t bitWidth_, bool isSigned_, bool isFourState_) :
-    Type(kind, name, loc),
-    bitWidth(bitWidth_), isSigned(isSigned_), isFourState(isFourState_) {
+    Type(kind, name, loc), bitWidth(bitWidth_), isSigned(isSigned_), isFourState(isFourState_) {
 }
 
 bool IntegralType::isKind(SymbolKind kind) {
@@ -336,24 +338,43 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
 
     // For enumerands that have an initializer, set it up appropriately.
     auto setInitializer = [&](EnumValueSymbol& ev, const EqualsValueClauseSyntax& initializer) {
-        ev.setInitializerSyntax(*initializer.expr, initializer.equals.location());
-
+        // Clear our previous state in case there's an error and we need to exit early.
         first = false;
-        previous = ev.getValue();
-        previousRange = ev.getInitializer()->sourceRange;
+        previous = nullptr;
 
-        if (!previous)
+        // Create the initializer expression.
+        ev.setInitializerSyntax(*initializer.expr, initializer.equals.location());
+        auto initExpr = ev.getInitializer();
+        SLANG_ASSERT(initExpr);
+
+        // Drill down to the original initializer before any conversions are applied.
+        initExpr = &initExpr->unwrapImplicitConversions();
+        previousRange = initExpr->sourceRange;
+
+        // [6.19] says that the initializer for an enum value must be an integer expression that
+        // does not truncate any bits. Furthermore, if a sized literal constant is used, it must
+        // be sized exactly to the size of the enum base type.
+        auto& rt = *initExpr->type;
+        if (!rt.isIntegral()) {
+            context.addDiag(diag::ValueMustBeIntegral, previousRange);
             return;
+        }
 
-        auto loc = previousRange.start();
-        auto& value = previous.integer(); // checkEnumInitializer ensures previous is integral
+        if (bitWidth != rt.getBitWidth() && initExpr->kind == ExpressionKind::IntegerLiteral &&
+            !initExpr->as<IntegerLiteral>().isDeclaredUnsized) {
+            auto& diag = context.addDiag(diag::EnumValueSizeMismatch, previousRange);
+            diag << rt.getBitWidth() << bitWidth;
+        }
+
+        ev.getValue();
+        if (!initExpr->constant)
+            return;
 
         // An enumerated name with x or z assignments assigned to an enum with no explicit data type
         // or an explicit 2-state declaration shall be a syntax error.
+        auto& value = initExpr->constant->integer();
         if (!base->isFourState() && value.hasUnknown()) {
-            context.addDiag(diag::EnumValueUnknownBits, loc) << value << *base;
-            ev.setValue(nullptr);
-            previous = nullptr;
+            context.addDiag(diag::EnumValueUnknownBits, previousRange) << value << *base;
             return;
         }
 
@@ -373,26 +394,13 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
             }
 
             if (!good) {
-                context.addDiag(diag::EnumValueOutOfRange, loc) << value << *base;
-                ev.setValue(nullptr);
-                previous = nullptr;
+                context.addDiag(diag::EnumValueOutOfRange, previousRange) << value << *base;
                 return;
             }
         }
 
-        // Implicit casting to base type to ensure value matches the underlying type.
-        if (value.getBitWidth() != bitWidth) {
-            auto cv = previous.convertToInt(bitWidth, base->isSigned(), base->isFourState());
-            ev.setValue(cv);
-            previous = std::move(cv);
-        }
-        else {
-            if (!base->isFourState())
-                value.flattenUnknowns();
-            value.setSigned(base->isSigned());
-        }
-
-        checkValue(previous, loc);
+        previous = ev.getValue();
+        checkValue(previous, previousRange.start());
     };
 
     // For enumerands that have no initializer, infer the value via this function.
@@ -574,7 +582,10 @@ const ConstantValue& EnumValueSymbol::getValue(SourceRange referencingRange) con
             auto scope = getParentScope();
             SLANG_ASSERT(scope);
 
-            ASTContext ctx(*scope, LookupLocation::max);
+            // We set UnevaluatedBranch here so that we don't get any implicit
+            // conversion warnings, since we check those manually in the enum
+            // value creation path.
+            ASTContext ctx(*scope, LookupLocation::max, ASTFlags::UnevaluatedBranch);
 
             if (evaluating) {
                 SLANG_ASSERT(referencingRange.start());
@@ -669,9 +680,8 @@ const Type& PackedArrayType::fromDim(const Scope& scope, const Type& elementType
 FixedSizeUnpackedArrayType::FixedSizeUnpackedArrayType(const Type& elementType, ConstantRange range,
                                                        uint64_t selectableWidth,
                                                        uint64_t bitstreamWidth) :
-    Type(SymbolKind::FixedSizeUnpackedArrayType, "", SourceLocation()),
-    elementType(elementType), range(range), selectableWidth(selectableWidth),
-    bitstreamWidth(bitstreamWidth) {
+    Type(SymbolKind::FixedSizeUnpackedArrayType, "", SourceLocation()), elementType(elementType),
+    range(range), selectableWidth(selectableWidth), bitstreamWidth(bitstreamWidth) {
 }
 
 const Type& FixedSizeUnpackedArrayType::fromDims(const Scope& scope, const Type& elementType,
@@ -837,8 +847,8 @@ const Type& PackedStructType::fromSyntax(Compilation& comp, const StructUnionTyp
 
 UnpackedStructType::UnpackedStructType(Compilation& compilation, SourceLocation loc,
                                        const ASTContext& context) :
-    Type(SymbolKind::UnpackedStructType, "", loc),
-    Scope(compilation, this), systemId(compilation.getNextStructSystemId()) {
+    Type(SymbolKind::UnpackedStructType, "", loc), Scope(compilation, this),
+    systemId(compilation.getNextStructSystemId()) {
 
     // Struct types don't live as members of the parent scope (they're "owned" by
     // the declaration containing them) but we hook up the parent pointer so that
@@ -914,10 +924,10 @@ const Type& UnpackedStructType::fromSyntax(const ASTContext& context,
 }
 
 PackedUnionType::PackedUnionType(Compilation& compilation, bool isSigned, bool isTagged,
-                                 SourceLocation loc, const ASTContext& context) :
+                                 bool isSoft, SourceLocation loc, const ASTContext& context) :
     IntegralType(SymbolKind::PackedUnionType, "", loc, 0, isSigned, false),
     Scope(compilation, this), systemId(compilation.getNextUnionSystemId()), isTagged(isTagged),
-    tagBits(0) {
+    isSoft(isSoft), tagBits(0) {
 
     // Union types don't live as members of the parent scope (they're "owned" by
     // the declaration containing them) but we hook up the parent pointer so that
@@ -927,13 +937,13 @@ PackedUnionType::PackedUnionType(Compilation& compilation, bool isSigned, bool i
 
 const Type& PackedUnionType::fromSyntax(Compilation& comp, const StructUnionTypeSyntax& syntax,
                                         const ASTContext& parentContext) {
-    SLANG_ASSERT(syntax.packed);
     const bool isSigned = syntax.signing.kind == TokenKind::SignedKeyword;
-    const bool isTagged = syntax.tagged.valid();
+    const bool isTagged = syntax.taggedOrSoft.kind == TokenKind::TaggedKeyword;
+    const bool isSoft = syntax.taggedOrSoft.kind == TokenKind::SoftKeyword;
     bool issuedError = false;
     uint32_t fieldIndex = 0;
 
-    auto unionType = comp.emplace<PackedUnionType>(comp, isSigned, isTagged,
+    auto unionType = comp.emplace<PackedUnionType>(comp, isSigned, isTagged, isSoft,
                                                    syntax.keyword.location(), parentContext);
     unionType->setSyntax(syntax);
 
@@ -974,7 +984,7 @@ const Type& PackedUnionType::fromSyntax(Compilation& comp, const StructUnionType
             if (!unionType->bitWidth) {
                 unionType->bitWidth = type.getBitWidth();
             }
-            else if (isTagged) {
+            else if (isTagged || isSoft) {
                 // In tagged unions the members don't all have to have the same width.
                 unionType->bitWidth = std::max(unionType->bitWidth, type.getBitWidth());
             }
@@ -1007,8 +1017,8 @@ const Type& PackedUnionType::fromSyntax(Compilation& comp, const StructUnionType
 
 UnpackedUnionType::UnpackedUnionType(Compilation& compilation, bool isTagged, SourceLocation loc,
                                      const ASTContext& context) :
-    Type(SymbolKind::UnpackedUnionType, "", loc),
-    Scope(compilation, this), systemId(compilation.getNextUnionSystemId()), isTagged(isTagged) {
+    Type(SymbolKind::UnpackedUnionType, "", loc), Scope(compilation, this),
+    systemId(compilation.getNextUnionSystemId()), isTagged(isTagged) {
 
     // Union types don't live as members of the parent scope (they're "owned" by
     // the declaration containing them) but we hook up the parent pointer so that
@@ -1035,7 +1045,7 @@ const Type& UnpackedUnionType::fromSyntax(const ASTContext& context,
     SLANG_ASSERT(!syntax.packed);
 
     auto& comp = context.getCompilation();
-    bool isTagged = syntax.tagged.valid();
+    bool isTagged = syntax.taggedOrSoft.kind == TokenKind::TaggedKeyword;
     auto result = comp.emplace<UnpackedUnionType>(comp, isTagged, syntax.keyword.location(),
                                                   context);
 
@@ -1103,16 +1113,23 @@ const Type& VirtualInterfaceType::fromSyntax(const ASTContext& context,
     if (ifaceName.empty())
         return comp.getErrorType();
 
-    auto definition = comp.getDefinition(ifaceName, *context.scope);
-    if (!definition || definition->definitionKind != DefinitionKind::Interface) {
-        if (!comp.errorIfMissingExternModule(ifaceName, *context.scope, syntax.name.range())) {
+    auto def = comp.getDefinition(ifaceName, *context.scope, syntax.name.range(),
+                                  diag::UnknownInterface)
+                   .definition;
+
+    if (!def || def->kind != SymbolKind::Definition ||
+        def->as<DefinitionSymbol>().definitionKind != DefinitionKind::Interface) {
+
+        // If we got a result from getDefinition then it didn't error, so issue
+        // one ourselves since we didn't find an interface.
+        if (def)
             context.addDiag(diag::UnknownInterface, syntax.name.range()) << ifaceName;
-        }
         return comp.getErrorType();
     }
 
     auto loc = syntax.name.location();
-    auto& iface = InstanceSymbol::createVirtual(context, loc, *definition, syntax.parameters);
+    auto& iface = InstanceSymbol::createVirtual(context, loc, def->as<DefinitionSymbol>(),
+                                                syntax.parameters);
 
     const ModportSymbol* modport = nullptr;
     std::string_view modportName = syntax.modport ? syntax.modport->member.valueText() : ""sv;
@@ -1122,7 +1139,7 @@ const Type& VirtualInterfaceType::fromSyntax(const ASTContext& context,
             SLANG_ASSERT(syntax.modport);
             auto& diag = context.addDiag(diag::NotAModport, syntax.modport->member.range());
             diag << modportName;
-            diag << definition->name;
+            diag << def->name;
         }
         else {
             modport = &sym->as<ModportSymbol>();
@@ -1139,40 +1156,13 @@ ConstantValue VirtualInterfaceType::getDefaultValueImpl() const {
 ForwardingTypedefSymbol& ForwardingTypedefSymbol::fromSyntax(
     const Scope& scope, const ForwardTypedefDeclarationSyntax& syntax) {
 
-    ForwardTypedefCategory category;
-    switch (syntax.keyword.kind) {
-        case TokenKind::EnumKeyword:
-            category = ForwardTypedefCategory::Enum;
-            break;
-        case TokenKind::StructKeyword:
-            category = ForwardTypedefCategory::Struct;
-            break;
-        case TokenKind::UnionKeyword:
-            category = ForwardTypedefCategory::Union;
-            break;
-        case TokenKind::ClassKeyword:
-            category = ForwardTypedefCategory::Class;
-            break;
-        default:
-            category = ForwardTypedefCategory::None;
-            break;
-    }
+    auto typeRestriction = ForwardTypeRestriction::None;
+    if (syntax.typeRestriction)
+        typeRestriction = SemanticFacts::getTypeRestriction(*syntax.typeRestriction);
 
     auto& comp = scope.getCompilation();
     auto result = comp.emplace<ForwardingTypedefSymbol>(syntax.name.valueText(),
-                                                        syntax.name.location(), category);
-    result->setSyntax(syntax);
-    result->setAttributes(scope, syntax.attributes);
-    return *result;
-}
-
-ForwardingTypedefSymbol& ForwardingTypedefSymbol::fromSyntax(
-    const Scope& scope, const ForwardInterfaceClassTypedefDeclarationSyntax& syntax) {
-
-    auto& comp = scope.getCompilation();
-    auto result = comp.emplace<ForwardingTypedefSymbol>(syntax.name.valueText(),
-                                                        syntax.name.location(),
-                                                        ForwardTypedefCategory::InterfaceClass);
+                                                        syntax.name.location(), typeRestriction);
     result->setSyntax(syntax);
     result->setAttributes(scope, syntax.attributes);
     return *result;
@@ -1181,22 +1171,14 @@ ForwardingTypedefSymbol& ForwardingTypedefSymbol::fromSyntax(
 ForwardingTypedefSymbol& ForwardingTypedefSymbol::fromSyntax(
     const Scope& scope, const ClassPropertyDeclarationSyntax& syntax) {
 
-    ForwardingTypedefSymbol* result;
-    if (syntax.declaration->kind == SyntaxKind::ForwardInterfaceClassTypedefDeclaration) {
-        result = &fromSyntax(
-            scope, syntax.declaration->as<ForwardInterfaceClassTypedefDeclarationSyntax>());
-    }
-    else {
-        result = &fromSyntax(scope, syntax.declaration->as<ForwardTypedefDeclarationSyntax>());
-    }
-
+    auto& result = fromSyntax(scope, syntax.declaration->as<ForwardTypedefDeclarationSyntax>());
     for (Token qual : syntax.qualifiers) {
         switch (qual.kind) {
             case TokenKind::LocalKeyword:
-                result->visibility = Visibility::Local;
+                result.visibility = Visibility::Local;
                 break;
             case TokenKind::ProtectedKeyword:
-                result->visibility = Visibility::Protected;
+                result.visibility = Visibility::Protected;
                 break;
             default:
                 // Everything else is not allowed on typedefs; the parser will issue
@@ -1205,8 +1187,8 @@ ForwardingTypedefSymbol& ForwardingTypedefSymbol::fromSyntax(
         }
     }
 
-    result->setAttributes(scope, syntax.attributes);
-    return *result;
+    result.setAttributes(scope, syntax.attributes);
+    return result;
 }
 
 void ForwardingTypedefSymbol::addForwardDecl(const ForwardingTypedefSymbol& decl) const {
@@ -1216,30 +1198,11 @@ void ForwardingTypedefSymbol::addForwardDecl(const ForwardingTypedefSymbol& decl
         next->addForwardDecl(decl);
 }
 
-void ForwardingTypedefSymbol::checkType(ForwardTypedefCategory checkCategory,
+void ForwardingTypedefSymbol::checkType(ForwardTypeRestriction checkRestriction,
                                         Visibility checkVisibility, SourceLocation declLoc) const {
-    if (category != ForwardTypedefCategory::None && checkCategory != ForwardTypedefCategory::None &&
-        category != checkCategory) {
+    if (typeRestriction != ForwardTypeRestriction::None && typeRestriction != checkRestriction) {
         auto& diag = getParentScope()->addDiag(diag::ForwardTypedefDoesNotMatch, location);
-        switch (category) {
-            case ForwardTypedefCategory::Enum:
-                diag << "enum"sv;
-                break;
-            case ForwardTypedefCategory::Struct:
-                diag << "struct"sv;
-                break;
-            case ForwardTypedefCategory::Union:
-                diag << "union"sv;
-                break;
-            case ForwardTypedefCategory::Class:
-                diag << "class"sv;
-                break;
-            case ForwardTypedefCategory::InterfaceClass:
-                diag << "interface class"sv;
-                break;
-            default:
-                SLANG_UNREACHABLE;
-        }
+        diag << SemanticFacts::getTypeRestrictionText(typeRestriction);
         diag.addNote(diag::NoteDeclarationHere, declLoc);
         return;
     }
@@ -1251,11 +1214,11 @@ void ForwardingTypedefSymbol::checkType(ForwardTypedefCategory checkCategory,
     }
 
     if (next)
-        next->checkType(checkCategory, checkVisibility, declLoc);
+        next->checkType(checkRestriction, checkVisibility, declLoc);
 }
 
 void ForwardingTypedefSymbol::serializeTo(ASTSerializer& serializer) const {
-    serializer.write("category", toString(category));
+    serializer.write("category", toString(typeRestriction));
     if (next)
         serializer.write("next", *next);
 }
@@ -1306,32 +1269,10 @@ void TypeAliasType::addForwardDecl(const ForwardingTypedefSymbol& decl) const {
 }
 
 void TypeAliasType::checkForwardDecls() const {
-    auto& ct = targetType.getType().getCanonicalType();
-    ForwardTypedefCategory category;
-    switch (ct.kind) {
-        case SymbolKind::PackedStructType:
-        case SymbolKind::UnpackedStructType:
-            category = ForwardTypedefCategory::Struct;
-            break;
-        case SymbolKind::PackedUnionType:
-        case SymbolKind::UnpackedUnionType:
-            category = ForwardTypedefCategory::Union;
-            break;
-        case SymbolKind::EnumType:
-            category = ForwardTypedefCategory::Enum;
-            break;
-        case SymbolKind::ClassType:
-            category = ForwardTypedefCategory::Class;
-            if (ct.as<ClassType>().isInterface)
-                category = ForwardTypedefCategory::InterfaceClass;
-            break;
-        default:
-            category = ForwardTypedefCategory::None;
-            break;
+    if (firstForward) {
+        firstForward->checkType(SemanticFacts::getTypeRestriction(targetType.getType()), visibility,
+                                location);
     }
-
-    if (firstForward)
-        firstForward->checkType(category, visibility, location);
 }
 
 ConstantValue TypeAliasType::getDefaultValueImpl() const {

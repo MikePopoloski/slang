@@ -20,7 +20,13 @@ add_library(
   src/synthesis/XilinxDoNotCareValues.cpp
   src/synthesis/CastSignedIndex.cpp
   src/style/NoDotStarInPortConnection.cpp
-  src/style/NoImplicitPortNameInPortConnection.cpp)
+  src/style/NoImplicitPortNameInPortConnection.cpp
+  src/style/AlwaysCombNamed.cpp
+  src/style/GenerateNamed.cpp
+  src/style/NoDotVarInPortConnection.cpp
+  src/style/NoLegacyGenerate.cpp
+  src/synthesis/AlwaysFFAssignmentOutsideConditional.cpp
+  src/synthesis/UnusedSensitiveSignal.cpp)
 
 target_include_directories(slang_tidy_obj_lib PUBLIC include ../../include)
 target_link_libraries(slang_tidy_obj_lib PUBLIC slang::slang)

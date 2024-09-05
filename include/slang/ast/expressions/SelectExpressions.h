@@ -17,14 +17,19 @@ class SLANG_EXPORT ElementSelectExpression : public Expression {
 public:
     ElementSelectExpression(const Type& type, Expression& value, const Expression& selector,
                             SourceRange sourceRange) :
-        Expression(ExpressionKind::ElementSelect, type, sourceRange),
-        value_(&value), selector_(&selector) {}
+        Expression(ExpressionKind::ElementSelect, type, sourceRange), value_(&value),
+        selector_(&selector) {}
 
+    /// @returns the value being selected from
     const Expression& value() const { return *value_; }
+
+    /// @returns the value being selected from
     Expression& value() { return *value_; }
 
+    /// @returns the selection expression
     const Expression& selector() const { return *selector_; }
 
+    /// @returns true if this is a constant selection
     bool isConstantSelect(EvalContext& context) const;
 
     ConstantValue evalImpl(EvalContext& context) const;
@@ -68,17 +73,25 @@ public:
     RangeSelectExpression(RangeSelectionKind selectionKind, const Type& type, Expression& value,
                           const Expression& left, const Expression& right,
                           SourceRange sourceRange) :
-        Expression(ExpressionKind::RangeSelect, type, sourceRange),
-        value_(&value), left_(&left), right_(&right), selectionKind(selectionKind) {}
+        Expression(ExpressionKind::RangeSelect, type, sourceRange), value_(&value), left_(&left),
+        right_(&right), selectionKind(selectionKind) {}
 
+    /// @returns the value being selected from
     const Expression& value() const { return *value_; }
+
+    /// @returns the value being selected from
     Expression& value() { return *value_; }
 
+    /// @returns the left-hand side of the range
     const Expression& left() const { return *left_; }
+
+    /// @returns the right-hand side of the range
     const Expression& right() const { return *right_; }
 
+    /// @returns the kind of selection (simple or indexed).
     RangeSelectionKind getSelectionKind() const { return selectionKind; }
 
+    /// @returns true if this is a constant selection
     bool isConstantSelect(EvalContext& context) const;
 
     ConstantValue evalImpl(EvalContext& context) const;
@@ -121,14 +134,18 @@ private:
 /// Represents an access of a structure variable's members.
 class SLANG_EXPORT MemberAccessExpression : public Expression {
 public:
+    /// The member being accessed.
     const Symbol& member;
 
     MemberAccessExpression(const Type& type, Expression& value, const Symbol& member,
                            SourceRange sourceRange) :
-        Expression(ExpressionKind::MemberAccess, type, sourceRange),
-        member(member), value_(&value) {}
+        Expression(ExpressionKind::MemberAccess, type, sourceRange), member(member),
+        value_(&value) {}
 
+    /// @returns the value being selected from
     const Expression& value() const { return *value_; }
+
+    /// @returns the value being selected from
     Expression& value() { return *value_; }
 
     ConstantValue evalImpl(EvalContext& context) const;
@@ -145,8 +162,8 @@ public:
     static Expression& fromSelector(
         Compilation& compilation, Expression& expr, const LookupResult::MemberSelector& selector,
         const syntax::InvocationExpressionSyntax* invocation,
-        const syntax::ArrayOrRandomizeMethodExpressionSyntax* withClause,
-        const ASTContext& context);
+        const syntax::ArrayOrRandomizeMethodExpressionSyntax* withClause, const ASTContext& context,
+        bool isFromLookupChain);
 
     static Expression& fromSyntax(Compilation& compilation,
                                   const syntax::MemberAccessExpressionSyntax& syntax,

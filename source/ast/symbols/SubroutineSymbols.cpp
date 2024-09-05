@@ -8,7 +8,9 @@
 #include "slang/ast/symbols/SubroutineSymbols.h"
 
 #include "slang/ast/ASTSerializer.h"
+#include "slang/ast/ASTVisitor.h"
 #include "slang/ast/Compilation.h"
+#include "slang/ast/expressions/MiscExpressions.h"
 #include "slang/ast/symbols/ClassSymbols.h"
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
 #include "slang/ast/symbols/InstanceSymbols.h"
@@ -128,9 +130,9 @@ SubroutineSymbol* SubroutineSymbol::fromSyntax(Compilation& compilation,
 
     SmallVector<const FormalArgumentSymbol*> arguments;
     if (proto->portList)
-        buildArguments(*result, *proto->portList, *lifetime, arguments);
+        result->flags |= buildArguments(*result, parent, *proto->portList, *lifetime, arguments);
 
-    if (result->name == "new") {
+    if (nameToken.kind == TokenKind::NewKeyword) {
         result->flags |= MethodFlags::Constructor;
         result->declaredReturnType.setType(compilation.getVoidType());
     }
@@ -181,33 +183,27 @@ SubroutineSymbol* SubroutineSymbol::fromSyntax(Compilation& compilation,
     return result;
 }
 
-SubroutineSymbol* SubroutineSymbol::fromSyntax(Compilation& compilation,
-                                               const ClassMethodDeclarationSyntax& syntax,
-                                               const Scope& parent) {
-    auto result = fromSyntax(compilation, *syntax.declaration, parent, /* outOfBlock */ false);
-    if (!result)
-        return nullptr;
+static std::pair<bitmask<MethodFlags>, Visibility> getMethodFlags(
+    const TokenList& qualifiers, const FunctionPrototypeSyntax& proto) {
 
-    result->setAttributes(parent, syntax.attributes);
-
-    for (Token qual : syntax.qualifiers) {
+    bitmask<MethodFlags> flags;
+    auto visibility = Visibility::Public;
+    for (Token qual : qualifiers) {
         switch (qual.kind) {
             case TokenKind::LocalKeyword:
-                result->visibility = Visibility::Local;
+                visibility = Visibility::Local;
                 break;
             case TokenKind::ProtectedKeyword:
-                result->visibility = Visibility::Protected;
+                visibility = Visibility::Protected;
                 break;
             case TokenKind::StaticKeyword:
-                result->flags |= MethodFlags::Static;
+                flags |= MethodFlags::Static;
                 break;
             case TokenKind::PureKeyword:
-                // This is unreachable in valid code, because a pure method cannot
-                // have an implementation body. The parser checks this for us.
-                result->flags |= MethodFlags::Pure;
+                flags |= MethodFlags::Pure;
                 break;
             case TokenKind::VirtualKeyword:
-                result->flags |= MethodFlags::Virtual;
+                flags |= MethodFlags::Virtual;
                 break;
             case TokenKind::ConstKeyword:
             case TokenKind::ExternKeyword:
@@ -219,7 +215,41 @@ SubroutineSymbol* SubroutineSymbol::fromSyntax(Compilation& compilation,
         }
     }
 
-    if ((result->flags & MethodFlags::Static) == 0)
+    for (auto specifier : proto.specifiers) {
+        if (!specifier->keyword.isMissing()) {
+            switch (specifier->keyword.kind) {
+                case TokenKind::InitialKeyword:
+                    flags |= MethodFlags::Initial;
+                    break;
+                case TokenKind::ExtendsKeyword:
+                    flags |= MethodFlags::Extends;
+                    break;
+                case TokenKind::FinalKeyword:
+                    flags |= MethodFlags::Final;
+                    break;
+                default:
+                    SLANG_UNREACHABLE;
+            }
+        }
+    }
+
+    return {flags, visibility};
+}
+
+SubroutineSymbol* SubroutineSymbol::fromSyntax(Compilation& compilation,
+                                               const ClassMethodDeclarationSyntax& syntax,
+                                               const Scope& parent) {
+    auto result = fromSyntax(compilation, *syntax.declaration, parent, /* outOfBlock */ false);
+    if (!result)
+        return nullptr;
+
+    result->setAttributes(parent, syntax.attributes);
+
+    auto [flags, visibility] = getMethodFlags(syntax.qualifiers, *syntax.declaration->prototype);
+    result->visibility = visibility;
+    result->flags |= flags;
+
+    if (!result->flags.has(MethodFlags::Static))
         result->addThisVar(parent.asSymbol().as<ClassType>());
 
     return result;
@@ -244,7 +274,7 @@ SubroutineSymbol& SubroutineSymbol::fromSyntax(Compilation& compilation,
     if (subroutineKind == SubroutineKind::Function)
         result->declaredReturnType.setTypeSyntax(*proto.returnType);
     else
-        result->declaredReturnType.setType(compilation.getIntType());
+        result->declaredReturnType.setType(compilation.getVoidType());
 
     bool isPure = false;
     switch (syntax.property.kind) {
@@ -264,8 +294,8 @@ SubroutineSymbol& SubroutineSymbol::fromSyntax(Compilation& compilation,
 
     SmallVector<const FormalArgumentSymbol*> arguments;
     if (proto.portList) {
-        SubroutineSymbol::buildArguments(*result, *proto.portList, VariableLifetime::Automatic,
-                                         arguments);
+        result->flags |= SubroutineSymbol::buildArguments(*result, parent, *proto.portList,
+                                                          VariableLifetime::Automatic, arguments);
     }
 
     // Check arguments for extra rules imposed by DPI imports.
@@ -357,7 +387,7 @@ SubroutineSymbol& SubroutineSymbol::createOutOfBlock(Compilation& compilation,
                 diag.addNote(diag::NoteDeclarationHere, pa->location);
                 return *result;
             }
-            else if (de->syntax && pe->syntax) {
+            else if (de->syntax && pe->syntax && !de->bad() && !pe->bad()) {
                 // Check for "syntactically identical" expressions.
                 if (!de->syntax->isEquivalentTo(*pe->syntax)) {
                     auto& diag = parent.addDiag(diag::MethodArgDefaultMismatch, de->sourceRange);
@@ -533,67 +563,175 @@ void SubroutineSymbol::checkVirtualMethodMatch(const Scope& scope,
     }
 }
 
-void SubroutineSymbol::buildArguments(Scope& scope, const FunctionPortListSyntax& syntax,
-                                      VariableLifetime defaultLifetime,
-                                      SmallVectorBase<const FormalArgumentSymbol*>& arguments) {
+struct LocalVarCheckVisitor {
+    const Scope& scope;
+    const SyntaxNode& syntax;
+    std::string_view argName;
+    bool anyErrors = false;
+
+    LocalVarCheckVisitor(const Scope& scope, const SyntaxNode& syntax, std::string_view argName) :
+        scope(scope), syntax(syntax), argName(argName) {}
+
+    template<typename T>
+    void visit(const T& expr) {
+        if (anyErrors)
+            return;
+
+        if constexpr (std::is_base_of_v<Expression, T>) {
+            if (ValueExpressionBase::isKind(expr.kind)) {
+                if (auto sym = expr.getSymbolReference();
+                    sym && sym->kind == SymbolKind::ClassProperty) {
+                    checkVisibility(*sym, expr, sym->template as<ClassPropertySymbol>().visibility);
+                }
+            }
+            else if (expr.kind == ExpressionKind::Call) {
+                auto& call = expr.template as<CallExpression>();
+                if (!call.isSystemCall()) {
+                    auto& sub = *std::get<const SubroutineSymbol*>(call.subroutine);
+                    checkVisibility(sub, expr, sub.visibility);
+                }
+            }
+
+            if constexpr (HasVisitExprs<T, LocalVarCheckVisitor>) {
+                expr.visitExprs(*this);
+            }
+        }
+    }
+
+    void checkVisibility(const Symbol& symbol, const Expression& expr, Visibility visibility) {
+        if (visibility == Visibility::Local) {
+            auto& diag = scope.addDiag(diag::DefaultSuperArgLocalReference, syntax.sourceRange());
+            diag << argName << symbol.name;
+            diag.addNote(diag::NoteReferencedHere, expr.sourceRange);
+            anyErrors = true;
+        }
+    }
+};
+
+void SubroutineSymbol::inheritDefaultedArgList(
+    Scope& scope, const Scope& parentScope, const SyntaxNode& syntax,
+    SmallVectorBase<const FormalArgumentSymbol*>& arguments) {
+
+    auto& comp = scope.getCompilation();
+    if (parentScope.asSymbol().kind == SymbolKind::ClassType) {
+        auto& ct = parentScope.asSymbol().as<ClassType>();
+        auto baseClass = ct.getBaseClass();
+        if (!baseClass) {
+            scope.addDiag(diag::SuperNoBase, syntax.sourceRange()) << ct.name;
+        }
+        else if (baseClass->isClass()) {
+            // Note: we check isClass() above to skip over cases where
+            // the baseClass is the ErrorType.
+            auto& baseCt = baseClass->getCanonicalType().as<ClassType>();
+            if (auto constructor = baseCt.getConstructor()) {
+                // We found the base class's constructor.
+                // Pull in all arguments from it.
+                bool anyErrors = false;
+                for (auto arg : constructor->getArguments()) {
+                    // It's an error if any of the inherited arguments
+                    // have default values that refer to local members
+                    // of the parent class.
+                    if (auto defVal = arg->getDefaultValue();
+                        !anyErrors && defVal && !arg->name.empty()) {
+                        LocalVarCheckVisitor visitor(scope, syntax, arg->name);
+                        defVal->visit(visitor);
+                        anyErrors |= visitor.anyErrors;
+                    }
+
+                    auto& cloned = arg->clone(comp);
+                    scope.addMember(cloned);
+                    arguments.push_back(&cloned);
+                }
+            }
+        }
+    }
+}
+
+bitmask<MethodFlags> SubroutineSymbol::buildArguments(
+    Scope& scope, const Scope& parentScope, const FunctionPortListSyntax& syntax,
+    VariableLifetime defaultLifetime, SmallVectorBase<const FormalArgumentSymbol*>& arguments) {
+
     auto& comp = scope.getCompilation();
     const DataTypeSyntax* lastType = nullptr;
+    const SyntaxNode* explicitDefault = nullptr;
     auto lastDirection = ArgumentDirection::In;
+    bitmask<VariableFlags> lastFlags;
+    bitmask<MethodFlags> resultFlags;
 
-    for (const FunctionPortSyntax* portSyntax : syntax.ports) {
-        ArgumentDirection direction;
-        bool directionSpecified;
-        if (portSyntax->direction) {
+    for (auto portBase : syntax.ports) {
+        if (portBase->kind == SyntaxKind::DefaultFunctionPort) {
+            lastDirection = ArgumentDirection::In;
+            lastType = nullptr;
+
+            if (explicitDefault) {
+                // Ignore a duplicate default.
+                scope.addDiag(diag::MultipleDefaultConstructorArg, portBase->sourceRange());
+            }
+            else {
+                explicitDefault = portBase;
+                inheritDefaultedArgList(scope, parentScope, *portBase, arguments);
+                resultFlags |= MethodFlags::DefaultedSuperArg;
+            }
+            continue;
+        }
+
+        auto direction = lastDirection;
+        auto flags = lastFlags;
+        bool directionSpecified = false;
+        auto& fps = portBase->as<FunctionPortSyntax>();
+        if (fps.direction) {
             directionSpecified = true;
-            direction = SemanticFacts::getDirection(portSyntax->direction.kind);
+            direction = SemanticFacts::getDirection(fps.direction.kind);
+            flags = {};
 
-            if (direction == ArgumentDirection::Ref && defaultLifetime == VariableLifetime::Static)
-                scope.addDiag(diag::RefArgAutomaticFunc, portSyntax->direction.range());
-        }
-        else {
-            // Otherwise, we "inherit" the previous argument
-            directionSpecified = false;
-            direction = lastDirection;
+            if (direction == ArgumentDirection::Ref) {
+                if (defaultLifetime == VariableLifetime::Static)
+                    scope.addDiag(diag::RefArgAutomaticFunc, fps.direction.range());
+
+                if (fps.constKeyword)
+                    flags |= VariableFlags::Const;
+
+                if (fps.staticKeyword)
+                    flags |= VariableFlags::RefStatic;
+            }
         }
 
-        auto declarator = portSyntax->declarator;
-        auto arg = comp.emplace<FormalArgumentSymbol>(declarator->name.valueText(),
-                                                      declarator->name.location(), direction,
-                                                      defaultLifetime);
-
-        if (portSyntax->constKeyword) {
-            SLANG_ASSERT(direction == ArgumentDirection::Ref);
-            arg->flags |= VariableFlags::Const;
-        }
+        auto& decl = *fps.declarator;
+        auto arg = comp.emplace<FormalArgumentSymbol>(decl.name.valueText(), decl.name.location(),
+                                                      direction, defaultLifetime);
+        arg->flags |= flags;
 
         // If we're given a type, use that. Otherwise, if we were given a
         // direction, default to logic. Otherwise, use the last type.
-        if (portSyntax->dataType) {
-            arg->setDeclaredType(*portSyntax->dataType);
-            lastType = portSyntax->dataType;
+        if (fps.dataType) {
+            arg->setDeclaredType(*fps.dataType);
+            lastType = fps.dataType;
         }
         else if (directionSpecified || !lastType) {
-            arg->setDeclaredType(
-                comp.createEmptyTypeSyntax(declarator->getFirstToken().location()));
+            arg->setDeclaredType(comp.createEmptyTypeSyntax(decl.getFirstToken().location()));
             lastType = nullptr;
         }
         else {
             arg->setDeclaredType(*lastType);
         }
 
-        arg->setAttributes(scope, portSyntax->attributes);
-        arg->setSyntax(*declarator);
+        arg->setAttributes(scope, fps.attributes);
+        arg->setSyntax(decl);
 
-        if (!declarator->dimensions.empty())
-            arg->getDeclaredType()->setDimensionSyntax(declarator->dimensions);
+        if (!decl.dimensions.empty())
+            arg->getDeclaredType()->setDimensionSyntax(decl.dimensions);
 
-        if (declarator->initializer)
-            arg->setDefaultValueSyntax(*declarator->initializer->expr);
+        if (decl.initializer)
+            arg->setDefaultValueSyntax(*decl.initializer->expr);
 
         scope.addMember(*arg);
         arguments.push_back(arg);
+
         lastDirection = direction;
+        lastFlags = flags;
     }
+
+    return resultFlags;
 }
 
 bool SubroutineSymbol::hasOutputArgs() const {
@@ -663,7 +801,8 @@ void SubroutineSymbol::connectExternInterfacePrototype() const {
 
     auto ifaceMethod = inst->body.find(name);
     if (!ifaceMethod) {
-        scope->addDiag(diag::UnknownMember, location) << name << ifaceName;
+        if (!name.empty())
+            scope->addDiag(diag::UnknownMember, location) << name << ifaceName;
         return;
     }
 
@@ -709,6 +848,41 @@ void SubroutineSymbol::connectExternInterfacePrototype() const {
     }
 }
 
+static std::string flagsToStr(bitmask<MethodFlags> flags) {
+    std::string str;
+    if (flags.has(MethodFlags::Virtual))
+        str += "virtual,";
+    if (flags.has(MethodFlags::Pure))
+        str += "pure,";
+    if (flags.has(MethodFlags::Static))
+        str += "static,";
+    if (flags.has(MethodFlags::Constructor))
+        str += "ctor,";
+    if (flags.has(MethodFlags::InterfaceExtern))
+        str += "ifaceExtern,";
+    if (flags.has(MethodFlags::ModportImport))
+        str += "modportImport,";
+    if (flags.has(MethodFlags::ModportExport))
+        str += "modportExport,";
+    if (flags.has(MethodFlags::DPIImport))
+        str += "dpi,";
+    if (flags.has(MethodFlags::DPIContext))
+        str += "context,";
+    if (flags.has(MethodFlags::ForkJoin))
+        str += "forkJoin,";
+    if (flags.has(MethodFlags::DefaultedSuperArg))
+        str += "defaultedSuperArg,";
+    if (flags.has(MethodFlags::Initial))
+        str += "initial,";
+    if (flags.has(MethodFlags::Extends))
+        str += "extends,";
+    if (flags.has(MethodFlags::Final))
+        str += "final,";
+    if (!str.empty())
+        str.pop_back();
+    return str;
+}
+
 void SubroutineSymbol::serializeTo(ASTSerializer& serializer) const {
     serializer.write("returnType", getReturnType());
     serializer.write("defaultLifetime", toString(defaultLifetime));
@@ -721,33 +895,8 @@ void SubroutineSymbol::serializeTo(ASTSerializer& serializer) const {
         serializer.serialize(*arg);
     serializer.endArray();
 
-    if (flags) {
-        std::string str;
-        if (flags.has(MethodFlags::Virtual))
-            str += "virtual,";
-        if (flags.has(MethodFlags::Pure))
-            str += "pure,";
-        if (flags.has(MethodFlags::Static))
-            str += "static,";
-        if (flags.has(MethodFlags::Constructor))
-            str += "ctor,";
-        if (flags.has(MethodFlags::InterfaceExtern))
-            str += "ifaceExtern,";
-        if (flags.has(MethodFlags::ModportImport))
-            str += "modportImport,";
-        if (flags.has(MethodFlags::ModportExport))
-            str += "modportExport,";
-        if (flags.has(MethodFlags::DPIImport))
-            str += "dpi,";
-        if (flags.has(MethodFlags::DPIContext))
-            str += "context,";
-        if (flags.has(MethodFlags::ForkJoin))
-            str += "forkJoin,";
-        if (!str.empty()) {
-            str.pop_back();
-            serializer.write("flags", str);
-        }
-    }
+    if (flags)
+        serializer.write("flags", flagsToStr(flags));
 }
 
 void SubroutineSymbol::addThisVar(const Type& type) {
@@ -762,50 +911,21 @@ void SubroutineSymbol::addThisVar(const Type& type) {
 MethodPrototypeSymbol::MethodPrototypeSymbol(Compilation& compilation, std::string_view name,
                                              SourceLocation loc, SubroutineKind subroutineKind,
                                              Visibility visibility, bitmask<MethodFlags> flags) :
-    Symbol(SymbolKind::MethodPrototype, name, loc),
-    Scope(compilation, this), declaredReturnType(*this), subroutineKind(subroutineKind),
-    visibility(visibility), flags(flags) {
+    Symbol(SymbolKind::MethodPrototype, name, loc), Scope(compilation, this),
+    declaredReturnType(*this), subroutineKind(subroutineKind), visibility(visibility),
+    flags(flags) {
 }
 
 MethodPrototypeSymbol& MethodPrototypeSymbol::fromSyntax(const Scope& scope,
                                                          const ClassMethodPrototypeSyntax& syntax) {
     auto& comp = scope.getCompilation();
     auto& proto = *syntax.prototype;
-
-    Visibility visibility = Visibility::Public;
-    bitmask<MethodFlags> flags;
-    Token nameToken = proto.name->getLastToken();
+    auto [flags, visibility] = getMethodFlags(syntax.qualifiers, proto);
     auto subroutineKind = proto.keyword.kind == TokenKind::TaskKeyword ? SubroutineKind::Task
                                                                        : SubroutineKind::Function;
 
-    for (Token qual : syntax.qualifiers) {
-        switch (qual.kind) {
-            case TokenKind::LocalKeyword:
-                visibility = Visibility::Local;
-                break;
-            case TokenKind::ProtectedKeyword:
-                visibility = Visibility::Protected;
-                break;
-            case TokenKind::StaticKeyword:
-                flags |= MethodFlags::Static;
-                break;
-            case TokenKind::PureKeyword:
-                flags |= MethodFlags::Pure;
-                break;
-            case TokenKind::VirtualKeyword:
-                flags |= MethodFlags::Virtual;
-                break;
-            case TokenKind::ConstKeyword:
-            case TokenKind::ExternKeyword:
-            case TokenKind::RandKeyword:
-                // Parser already issued errors for these, so just ignore them here.
-                break;
-            default:
-                SLANG_UNREACHABLE;
-        }
-    }
-
-    if (nameToken.valueText() == "new")
+    Token nameToken = proto.name->getLastToken();
+    if (nameToken.kind == TokenKind::NewKeyword)
         flags |= MethodFlags::Constructor;
 
     auto result = comp.emplace<MethodPrototypeSymbol>(comp, nameToken.valueText(),
@@ -820,7 +940,7 @@ MethodPrototypeSymbol& MethodPrototypeSymbol::fromSyntax(const Scope& scope,
         result->declaredReturnType.setType(comp.getVoidType());
 
     // Pure virtual methods can only appear in virtual or interface classes.
-    if (flags & MethodFlags::Pure) {
+    if (flags.has(MethodFlags::Pure)) {
         auto& classType = scope.asSymbol().as<ClassType>();
         if (!classType.isAbstract && !classType.isInterface) {
             scope.addDiag(diag::PureInAbstract, nameToken.range());
@@ -830,8 +950,8 @@ MethodPrototypeSymbol& MethodPrototypeSymbol::fromSyntax(const Scope& scope,
 
     SmallVector<const FormalArgumentSymbol*> arguments;
     if (proto.portList) {
-        SubroutineSymbol::buildArguments(*result, *proto.portList, VariableLifetime::Automatic,
-                                         arguments);
+        result->flags |= SubroutineSymbol::buildArguments(*result, scope, *proto.portList,
+                                                          VariableLifetime::Automatic, arguments);
     }
 
     result->arguments = arguments.copy(comp);
@@ -853,9 +973,11 @@ MethodPrototypeSymbol& MethodPrototypeSymbol::createForModport(const Scope& scop
     // Find the target method we're importing or exporting from the parent interface.
     auto target = scope.find(name);
     if (!target) {
-        auto& diag = scope.addDiag(diag::IfaceImportExportTarget, syntax.sourceRange());
-        diag << (isExport ? "export"sv : "import"sv);
-        diag << name;
+        if (!name.empty()) {
+            auto& diag = scope.addDiag(diag::IfaceImportExportTarget, syntax.sourceRange());
+            diag << (isExport ? "export"sv : "import"sv);
+            diag << name;
+        }
 
         result->subroutine = nullptr;
         result->declaredReturnType.setType(comp.getErrorType());
@@ -899,8 +1021,8 @@ MethodPrototypeSymbol& MethodPrototypeSymbol::fromSyntax(const Scope& scope,
 
     SmallVector<const FormalArgumentSymbol*> arguments;
     if (proto.portList) {
-        SubroutineSymbol::buildArguments(result, *proto.portList, VariableLifetime::Automatic,
-                                         arguments);
+        result.flags |= SubroutineSymbol::buildArguments(result, scope, *proto.portList,
+                                                         VariableLifetime::Automatic, arguments);
     }
 
     result.arguments = arguments.copy(comp);
@@ -945,8 +1067,8 @@ MethodPrototypeSymbol& MethodPrototypeSymbol::createExternIfaceMethod(const Scop
 
     SmallVector<const FormalArgumentSymbol*> arguments;
     if (proto.portList) {
-        SubroutineSymbol::buildArguments(*result, *proto.portList, VariableLifetime::Automatic,
-                                         arguments);
+        result->flags |= SubroutineSymbol::buildArguments(*result, scope, *proto.portList,
+                                                          VariableLifetime::Automatic, arguments);
     }
 
     result->arguments = arguments.copy(comp);
@@ -1080,7 +1202,13 @@ bool MethodPrototypeSymbol::checkMethodMatch(const Scope& scope,
         // Names must be identical.
         const FormalArgumentSymbol* da = *di;
         const FormalArgumentSymbol* pa = *pi;
-        if (da->name != pa->name && !da->name.empty() && !pa->name.empty()) {
+
+        // The subroutine itself shouldn't have empty argument names.
+        // If it does the parser already errored.
+        if (da->name.empty())
+            continue;
+
+        if (da->name != pa->name && !pa->name.empty()) {
             auto& diag = scope.addDiag(diag::MethodArgNameMismatch, da->location);
             diag << da->name << pa->name;
             diag.addNote(diag::NoteDeclarationHere, pa->location);
@@ -1123,6 +1251,12 @@ void MethodPrototypeSymbol::serializeTo(ASTSerializer& serializer) const {
     for (auto arg : arguments)
         serializer.serialize(*arg);
     serializer.endArray();
+
+    if (flags)
+        serializer.write("flags", flagsToStr(flags));
+
+    if (auto* sub = getSubroutine())
+        serializer.write("subroutine", *sub);
 }
 
 } // namespace slang::ast

@@ -14,7 +14,7 @@
 namespace slang::ast {
 
 class DeclaredType;
-class Definition;
+class DefinitionSymbol;
 class Scope;
 enum class RandMode;
 
@@ -22,6 +22,7 @@ enum class RandMode;
 #define SYMBOLKIND(x) \
     x(Unknown) \
     x(Root) \
+    x(Definition) \
     x(CompilationUnit) \
     x(DeferredMember) \
     x(TransparentMember) \
@@ -141,8 +142,7 @@ public:
     std::string_view name;
 
     /// The declared location of the symbol in the source code, or an empty location
-    /// if it was not explicitly declared in the source text. This is mainly used
-    /// for reporting errors.
+    /// if it was not explicitly declared in the source text.
     SourceLocation location;
 
     Symbol(const Symbol&) = delete;
@@ -188,15 +188,22 @@ public:
 
     /// Gets the definition in which this symbol is declared. If the symbol isn't
     /// declared in a definition, returns nullptr.
-    const Definition* getDeclaringDefinition() const;
+    const DefinitionSymbol* getDeclaringDefinition() const;
+
+    /// Gets the source library that contains this symbol.
+    const SourceLibrary* getSourceLibrary() const;
 
     /// If this symbol is a random variable, returns its mode.
     /// Otherwise returns RandMode::None.
     RandMode getRandMode() const;
 
+    /// Sets the attributes associated with this symbol.
     void setAttributes(const Scope& scope,
                        std::span<const syntax::AttributeInstanceSyntax* const> syntax);
 
+    /// @brief Casts this symbol to the given concrete derived type.
+    ///
+    /// Asserts that the type is appropriate given this symbol's kind.
     template<typename T>
     decltype(auto) as() {
         if constexpr (std::is_same_v<T, Scope>) {
@@ -210,6 +217,9 @@ public:
         }
     }
 
+    /// @brief Tries to cast this symbol to the given concrete derived type.
+    ///
+    /// If the type is not appropriate given this symbol's kind, returns nullptr.
     template<typename T>
     decltype(auto) as_if() {
         if constexpr (std::is_same_v<T, Scope>) {
@@ -222,11 +232,17 @@ public:
         }
     }
 
+    /// @brief Casts this symbol to the given concrete derived type.
+    ///
+    /// Asserts that the type is appropriate given this symbol's kind.
     template<typename T>
     const T& as() const {
         return const_cast<Symbol*>(this)->as<T>();
     }
 
+    /// @brief Tries to cast this symbol to the given concrete derived type.
+    ///
+    /// If the type is not appropriate given this symbol's kind, returns nullptr.
     template<typename T>
     const T* as_if() const {
         return const_cast<Symbol*>(this)->as_if<T>();
@@ -235,27 +251,38 @@ public:
     /// Gets the index of the symbol within its parent scope, which can be used
     /// to determine the relative ordering of scope members.
     SymbolIndex getIndex() const { return indexInScope; }
+
+    /// Sets the index of this symbol within its parent scope.
     void setIndex(SymbolIndex index) { indexInScope = index; }
 
-    /// Sets the syntax that was used to create this symbol. Mostly called by
-    /// various factory functions.
+    /// Sets the syntax that was used to create this symbol.
     void setSyntax(const syntax::SyntaxNode& node) { originatingSyntax = &node; }
 
     /// Returns the next sibling symbol in the parent scope, if one exists.
     const Symbol* getNextSibling() const { return nextInScope; }
 
+    /// Sets the parent scope of this symbol.
+    ///
+    /// Typically this is not called directly; add the symbol to the scope
+    /// via the Scope::addMember method.
+    void setParent(const Scope& scope) { parentScope = &scope; }
+
+    /// Sets the parent scope of this symbol.
+    ///
+    /// Typically this is not called directly; add the symbol to the scope
+    /// via the Scope::addMember method.
+    void setParent(const Scope& scope, SymbolIndex index) {
+        setParent(scope);
+        indexInScope = index;
+    }
+
+    /// Visits this symbol's concrete derived type via the provided visitor object.
     template<typename TVisitor, typename... Args>
     decltype(auto) visit(TVisitor&& visitor, Args&&... args) const;
 
 protected:
     Symbol(SymbolKind kind, std::string_view name, SourceLocation location) :
         kind(kind), name(name), location(location) {}
-
-    void setParent(const Scope& scope) { parentScope = &scope; }
-    void setParent(const Scope& scope, SymbolIndex index) {
-        setParent(scope);
-        indexInScope = index;
-    }
 
 private:
     friend class Scope;

@@ -113,7 +113,7 @@ std::string TimeScaleValue::toString() const {
 
 std::strong_ordering TimeScaleValue::operator<=>(const TimeScaleValue& rhs) const {
     // Unit enum is specified in reverse order, so check in the opposite direction.
-    if (auto cmp = rhs.unit <=> unit; cmp != 0)
+    if (auto cmp = rhs.unit <=> unit; cmp != 0) // NOLINT
         return cmp;
     return magnitude <=> rhs.magnitude;
 }
@@ -153,7 +153,7 @@ std::optional<TimeScale> TimeScale::fromString(std::string_view str) {
     return TimeScale(*base, *precision);
 }
 
-double TimeScale::apply(double value, TimeUnit unit) const {
+double TimeScale::apply(double value, TimeUnit unit, bool roundToPrecision) const {
     // First scale the value by the difference between our base and the provided unit.
     // TimeUnits are from 0-5, so we need 11 entries.
     static constexpr double scales[] = {1e15, 1e12, 1e9,  1e6,   1e3,  1e0,
@@ -162,12 +162,14 @@ double TimeScale::apply(double value, TimeUnit unit) const {
     double scale = scales[diff + int(TimeUnit::Femtoseconds)] / int(base.magnitude);
     value *= scale;
 
-    // Round the result to the number of decimals implied by the magnitude
-    // difference between our base and our precision.
-    diff = int(base.unit) - int(precision.unit);
-    scale = scales[diff + int(TimeUnit::Femtoseconds)] * int(base.magnitude);
-    scale /= int(precision.magnitude);
-    value = std::round(value * scale) / scale;
+    if (roundToPrecision) {
+        // Round the result to the number of decimals implied by the magnitude
+        // difference between our base and our precision.
+        diff = int(base.unit) - int(precision.unit);
+        scale = scales[diff + int(TimeUnit::Femtoseconds)] * int(base.magnitude);
+        scale /= int(precision.magnitude);
+        value = std::round(value * scale) / scale;
+    }
 
     return value;
 }

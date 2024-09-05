@@ -26,6 +26,10 @@ TidyConfig::TidyConfig() {
     styleChecks.emplace("OnlyANSIPortDecl", CheckStatus::ENABLED);
     styleChecks.emplace("NoDotStarInPortConnection", CheckStatus::ENABLED);
     styleChecks.emplace("NoImplicitPortNameInPortConnection", CheckStatus::ENABLED);
+    styleChecks.emplace("AlwaysCombBlockNamed", CheckStatus::ENABLED);
+    styleChecks.emplace("GenerateNamed", CheckStatus::ENABLED);
+    styleChecks.emplace("NoDotVarInPortConnection", CheckStatus::ENABLED);
+    styleChecks.emplace("NoLegacyGenerate", CheckStatus::ENABLED);
     checkKinds.insert({slang::TidyKind::Style, styleChecks});
 
     auto synthesisChecks = std::unordered_map<std::string, CheckStatus>();
@@ -34,6 +38,8 @@ TidyConfig::TidyConfig() {
     synthesisChecks.emplace("RegisterHasNoReset", CheckStatus::ENABLED);
     synthesisChecks.emplace("XilinxDoNotCareValues", CheckStatus::ENABLED);
     synthesisChecks.emplace("CastSignedIndex", CheckStatus::ENABLED);
+    synthesisChecks.emplace("AlwaysFFAssignmentOutsideConditional", CheckStatus::ENABLED);
+    synthesisChecks.emplace("UnusedSensitiveSignal", CheckStatus::ENABLED);
     checkKinds.insert({slang::TidyKind::Synthesis, synthesisChecks});
 }
 
@@ -74,8 +80,15 @@ bool TidyConfig::toggleCheck(slang::TidyKind kind, const std::string& checkName,
         registeredChecks.end()) {
         return false;
     }
-    checkKinds.at(kind).at(checkName) = status;
-    return true;
+
+    auto& checkNames = checkKinds.at(kind);
+    // Check that checker name is presence at target group
+    if (checkNames.count(checkName)) {
+        checkNames.at(checkName) = status;
+        return true;
+    }
+
+    return false;
 }
 
 bool TidyConfig::isCheckEnabled(slang::TidyKind kind, const std::string& checkName) const {

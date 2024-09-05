@@ -5,6 +5,8 @@
 #include <fmt/core.h>
 #include <regex>
 
+#include "slang/ast/symbols/CompilationUnitSymbols.h"
+#include "slang/ast/symbols/InstanceSymbols.h"
 #include "slang/driver/Driver.h"
 
 using namespace slang::driver;
@@ -232,6 +234,19 @@ TEST_CASE("Driver single-unit parsing") {
     driver.addStandardArgs();
 
     auto args = fmt::format("testfoo \"{0}test.sv\" \"{0}test2.sv\" --single-unit --lint-only",
+                            findTestDir());
+    CHECK(driver.parseCommandLine(args));
+    CHECK(driver.processOptions());
+    CHECK(driver.parseAllSources());
+    CHECK(driver.reportParseDiags());
+}
+
+TEST_CASE("Driver single-unit parsing files with no EOL") {
+    Driver driver;
+    driver.addStandardArgs();
+
+    auto args = fmt::format("testfoo \"{0}file_with_no_eol.sv\" "
+                            "\"{0}file_uses_define_in_file_with_no_eol.sv\" --single-unit",
                             findTestDir());
     CHECK(driver.parseCommandLine(args));
     CHECK(driver.processOptions());
@@ -614,4 +629,69 @@ TEST_CASE("Driver checking for infinite library map includes") {
     CHECK(!driver.processOptions());
     CHECK(stderrContains("error: library map "));
     CHECK(stderrContains("includes itself recursively"));
+}
+
+TEST_CASE("Driver separate unit listing") {
+    auto guard = OS::captureOutput();
+
+    Driver driver;
+    driver.addStandardArgs();
+
+    auto args = fmt::format("testfoo \"{0}test5.sv\" -C \"{0}unit.f\" -v \"lib2={0}test6.sv\"",
+                            findTestDir());
+    CHECK(driver.parseCommandLine(args));
+    CHECK(driver.processOptions());
+    CHECK(driver.parseAllSources());
+
+    auto compilation = driver.createCompilation();
+    CHECK(driver.reportCompilation(*compilation, false));
+    CHECK(stdoutContains("Build succeeded"));
+
+    auto& root = compilation->getRoot();
+    REQUIRE(root.topInstances.size() == 1);
+    CHECK(root.topInstances[0]->getSourceLibrary()->name == "work");
+    CHECK(root.topInstances[0]->name == "k");
+
+    auto units = compilation->getCompilationUnits();
+    REQUIRE(units.size() == 3);
+    REQUIRE(units[1]->getSourceLibrary() != nullptr);
+    REQUIRE(units[2]->getSourceLibrary() != nullptr);
+    CHECK(units[1]->getSourceLibrary()->name == "lib2");
+    CHECK(units[2]->getSourceLibrary()->name == "mylib");
+
+    auto defs = compilation->getDefinitions();
+    auto it = std::ranges::find_if(defs, [](auto sym) {
+        return sym->kind == SymbolKind::Definition && sym->name == "mod1" &&
+               sym->getSourceLibrary() && sym->getSourceLibrary()->name == "mylib";
+    });
+    CHECK(it != defs.end());
+}
+
+TEST_CASE("Driver customize default lib name") {
+    auto guard = OS::captureOutput();
+
+    Driver driver;
+    driver.addStandardArgs();
+
+    auto args = fmt::format("testfoo \"{0}test5.sv\" -v \"blah={0}test6.sv\" --defaultLibName blah",
+                            findTestDir());
+    CHECK(driver.parseCommandLine(args));
+    CHECK(driver.processOptions());
+    CHECK(driver.parseAllSources());
+
+    auto compilation = driver.createCompilation();
+    CHECK(driver.reportCompilation(*compilation, false));
+    CHECK(stdoutContains("Build succeeded"));
+
+    auto& root = compilation->getRoot();
+    REQUIRE(root.topInstances.size() == 1);
+    CHECK(root.topInstances[0]->getSourceLibrary()->name == "blah");
+    CHECK(root.topInstances[0]->name == "k");
+
+    auto units = compilation->getCompilationUnits();
+    REQUIRE(units.size() == 2);
+    REQUIRE(units[0]->getSourceLibrary() != nullptr);
+    REQUIRE(units[1]->getSourceLibrary() != nullptr);
+    CHECK(units[0]->getSourceLibrary()->name == "blah");
+    CHECK(units[1]->getSourceLibrary()->name == "blah");
 }

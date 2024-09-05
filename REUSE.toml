@@ -1,0 +1,22 @@
+version = 1
+SPDX-PackageName = "slang"
+SPDX-PackageSupplier = "Michael Popoloski <mike@popoloski.com>"
+SPDX-PackageDownloadLocation = "https://sv-lang.com/"
+
+[[annotations]]
+path = "**"
+precedence = "aggregate"
+SPDX-FileCopyrightText = "Michael Popoloski"
+SPDX-License-Identifier = "MIT"
+
+[[annotations]]
+path = "external/boost_unordered.hpp"
+precedence = "aggregate"
+SPDX-FileCopyrightText = "Boost authors"
+SPDX-License-Identifier = "BSL-1.0"
+
+[[annotations]]
+path = "external/expected.hpp"
+precedence = "aggregate"
+SPDX-FileCopyrightText = "Martin Moene"
+SPDX-License-Identifier = "BSL-1.0"

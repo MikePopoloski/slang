@@ -138,6 +138,7 @@ bool Preprocessor::applyMacroOps(std::span<Token const> tokens, SmallVectorBase<
     SmallVector<Token, 8> commentBuffer;
     Token stringify;
     Token syntheticComment;
+    Token extraToAppend;
     bool anyNewMacros = false;
     bool didConcat = false;
 
@@ -151,15 +152,40 @@ bool Preprocessor::applyMacroOps(std::span<Token const> tokens, SmallVectorBase<
         Token token = tokens[i];
         switch (token.kind) {
             case TokenKind::MacroQuote:
+            case TokenKind::MacroTripleQuote:
                 if (!stringify) {
                     stringify = token;
                     stringifyBuffer.clear();
+
+                    if (token.kind == TokenKind::MacroTripleQuote &&
+                        options.languageVersion < LanguageVersion::v1800_2023) {
+                        addDiag(diag::WrongLanguageVersion, token.location())
+                            << toString(options.languageVersion);
+                    }
+                }
+                else if (token.kind == stringify.kind) {
+                    // all done stringifying; convert saved tokens to string
+                    newToken = Lexer::stringify(*lexerStack.back(), stringify, stringifyBuffer,
+                                                token);
+                    stringify = Token();
+                }
+                else if (stringify.kind == TokenKind::MacroTripleQuote) {
+                    // We found a `" inside of a triple quoted stringification.
+                    // Just keep it, let it become part of the string contents.
+                    newToken = token;
                 }
                 else {
-                    // all done stringifying; convert saved tokens to string
-                    newToken = Lexer::stringify(alloc, stringify.location(), stringify.trivia(),
-                                                stringifyBuffer.begin(), stringifyBuffer.end());
+                    // We found a `""" inside of a single quoted stringification.
+                    // The LRM doesn't say what to do, but I think it makes sense to
+                    // split the token, end the previous stringification, and then
+                    // append the essentially empty string literal after it.
+                    // This will cause an error down the line since two string literals
+                    // next to each other isn't ever valid.
+                    newToken = Lexer::stringify(*lexerStack.back(), stringify, stringifyBuffer,
+                                                token);
                     stringify = Token();
+                    extraToAppend = Token(alloc, TokenKind::StringLiteral, {}, "\"\"",
+                                          token.location() + 2, ""sv);
                 }
                 break;
             case TokenKind::MacroPaste:
@@ -178,8 +204,10 @@ bool Preprocessor::applyMacroOps(std::span<Token const> tokens, SmallVectorBase<
                 else if (stringify) {
                     // If this is right after the opening quote or right before the closing quote,
                     // we're trying to concatenate something with nothing.
-                    if (stringifyBuffer.empty() || tokens[i + 1].kind == TokenKind::MacroQuote)
+                    if (stringifyBuffer.empty() || tokens[i + 1].kind == TokenKind::MacroQuote ||
+                        tokens[i + 1].kind == TokenKind::MacroTripleQuote) {
                         addDiag(diag::IgnoredMacroPaste, token.location());
+                    }
                     else {
                         newToken = Lexer::concatenateTokens(alloc, stringifyBuffer.back(),
                                                             tokens[i + 1]);
@@ -198,8 +226,7 @@ bool Preprocessor::applyMacroOps(std::span<Token const> tokens, SmallVectorBase<
                         i++;
 
                         emptyArgTrivia.append_range(syntheticComment.trivia());
-                        emptyArgTrivia.push_back(
-                            Lexer::commentify(alloc, commentBuffer.begin(), commentBuffer.end()));
+                        emptyArgTrivia.push_back(Lexer::commentify(alloc, commentBuffer));
                         syntheticComment = Token();
                     }
                 }
@@ -271,36 +298,47 @@ bool Preprocessor::applyMacroOps(std::span<Token const> tokens, SmallVectorBase<
         }
 
         if (!stringify) {
-            if (syntheticComment)
+            if (syntheticComment) {
                 commentBuffer.push_back(newToken);
-            else
+            }
+            else {
                 dest.push_back(newToken);
+                if (extraToAppend) {
+                    dest.push_back(extraToAppend);
+                    extraToAppend = Token();
+                }
+            }
             continue;
         }
 
         // If this is an escaped identifier that includes a `" within it, we need to split the
         // token up to match the behavior of other simulators.
-        if (newToken.kind == TokenKind::Identifier && !newToken.rawText().empty() &&
-            newToken.rawText()[0] == '\\') {
-
-            size_t offset = newToken.rawText().find("`\"");
+        auto raw = newToken.rawText();
+        if (newToken.kind == TokenKind::Identifier && !raw.empty() && raw[0] == '\\') {
+            size_t offset = raw.find("`\"");
             if (offset != std::string_view::npos) {
-                // Split the token, finish the stringification.
-                Token split(alloc, TokenKind::Identifier, newToken.trivia(),
-                            newToken.rawText().substr(0, offset), newToken.location());
-                stringifyBuffer.push_back(split);
+                // Like above, we need to handle the case of mismatched delimiters.
+                // If we match, we complete the stringification. If we found a `"
+                // inside a triple quoted string, just keep going. If we found a `"""
+                // inside a single quoted string, split and end.
+                const bool startIsTriple = stringify.kind == TokenKind::MacroTripleQuote;
+                const bool endIsTriple = raw.substr(offset).starts_with(R"(`""")");
+                if (startIsTriple == endIsTriple || !startIsTriple) {
+                    stringifyBuffer.push_back(newToken.withRawText(alloc, raw.substr(0, offset)));
 
-                dest.push_back(Lexer::stringify(alloc, stringify.location(), stringify.trivia(),
-                                                stringifyBuffer.begin(), stringifyBuffer.end()));
-                stringify = Token();
+                    // Note: endToken parameter here doesn't matter,
+                    // we know there is no trivia to take.
+                    dest.push_back(
+                        Lexer::stringify(*lexerStack.back(), stringify, stringifyBuffer, Token()));
+                    stringify = Token();
 
-                // Now we have the unfortunate task of re-lexing the remaining stuff after the split
-                // and then appending those tokens to the destination as well.
-                SmallVector<Token, 8> splits;
-                Lexer::splitTokens(alloc, diagnostics, sourceManager, newToken, offset + 2,
-                                   getCurrentKeywordVersion(), splits);
-                anyNewMacros |= applyMacroOps(splits, dest);
-                continue;
+                    // Now we have the unfortunate task of re-lexing the remaining stuff after the
+                    // split and then appending those tokens to the destination as well.
+                    SmallVector<Token, 8> splits;
+                    splitTokens(newToken, offset + (endIsTriple ? 4 : 2), splits);
+                    anyNewMacros |= applyMacroOps(splits, dest);
+                    continue;
+                }
             }
         }
 
@@ -521,9 +559,7 @@ bool Preprocessor::expandMacro(MacroDef macro, MacroExpansion& expansion,
                     return false;
 
                 SmallVector<Token, 8> splits;
-                Lexer::splitTokens(alloc, diagnostics, sourceManager, token, index,
-                                   getCurrentKeywordVersion(), splits);
-
+                splitTokens(token, index, splits);
                 for (auto t : splits) {
                     if (!handleToken(t))
                         return false;
@@ -702,13 +738,14 @@ bool Preprocessor::MacroDef::needsArgs() const {
 }
 
 MacroFormalArgumentListSyntax* Preprocessor::MacroParser::parseFormalArgumentList() {
-    // parse all formal arguments
     auto openParen = consume();
+
+    Token closeParen;
     SmallVector<TokenOrSyntax, 8> arguments;
-    parseArgumentList(arguments, [this]() { return parseFormalArgument(); });
+    parseArgumentList(arguments, [this]() { return parseFormalArgument(); }, closeParen);
 
     return pp.alloc.emplace<MacroFormalArgumentListSyntax>(openParen, arguments.copy(pp.alloc),
-                                                           expect(TokenKind::CloseParenthesis));
+                                                           closeParen);
 }
 
 MacroActualArgumentListSyntax* Preprocessor::MacroParser::parseActualArgumentList(Token prevToken) {
@@ -719,33 +756,31 @@ MacroActualArgumentListSyntax* Preprocessor::MacroParser::parseActualArgumentLis
     }
 
     auto openParen = consume();
+    Token closeParen;
     SmallVector<TokenOrSyntax, 8> arguments;
-    parseArgumentList(arguments, [this]() { return parseActualArgument(); });
+    parseArgumentList(arguments, [this]() { return parseActualArgument(); }, closeParen);
 
-    auto closeParen = expect(TokenKind::CloseParenthesis);
     return pp.alloc.emplace<MacroActualArgumentListSyntax>(openParen, arguments.copy(pp.alloc),
                                                            closeParen);
 }
 
 template<typename TFunc>
 void Preprocessor::MacroParser::parseArgumentList(SmallVectorBase<TokenOrSyntax>& results,
-                                                  TFunc&& parseItem) {
+                                                  TFunc&& parseItem, Token& closeParen) {
     while (true) {
         results.push_back(parseItem());
 
         if (peek().kind == TokenKind::Comma)
             results.push_back(consume());
-        else {
-            // Just break out of the loop. Our caller will expect
-            // that there is a closing parenthesis here.
+        else
             break;
-        }
     }
+
+    closeParen = expect(TokenKind::CloseParenthesis);
 }
 
 MacroActualArgumentSyntax* Preprocessor::MacroParser::parseActualArgument() {
-    auto arg = parseTokenList(true);
-    return pp.alloc.emplace<MacroActualArgumentSyntax>(arg);
+    return pp.alloc.emplace<MacroActualArgumentSyntax>(parseTokenList(true));
 }
 
 MacroFormalArgumentSyntax* Preprocessor::MacroParser::parseFormalArgument() {
@@ -765,11 +800,12 @@ MacroFormalArgumentSyntax* Preprocessor::MacroParser::parseFormalArgument() {
 }
 
 std::span<Token> Preprocessor::MacroParser::parseTokenList(bool allowNewlines) {
-    // comma and right parenthesis only end the default token list if they are
-    // not inside a nested pair of (), [], or {}
-    // otherwise, keep swallowing tokens as part of the default
     SmallVector<Token, 16> tokens;
     SmallVector<TokenKind> delimPairStack;
+
+    // Comma and right parenthesis only end the default token list if they are
+    // not inside a nested pair of (), [], or {}, otherwise, keep swallowing
+    // tokens as part of the list.
     while (true) {
         auto kind = peek().kind;
         if (kind == TokenKind::EndOfFile || (!allowNewlines && !peek().isOnSameLine())) {
@@ -781,7 +817,7 @@ std::span<Token> Preprocessor::MacroParser::parseTokenList(bool allowNewlines) {
         }
 
         if (delimPairStack.empty()) {
-            if ((kind == TokenKind::Comma || kind == TokenKind::CloseParenthesis))
+            if (kind == TokenKind::Comma || kind == TokenKind::CloseParenthesis)
                 break;
         }
         else if (delimPairStack.back() == kind) {
@@ -831,6 +867,11 @@ Token Preprocessor::MacroParser::expect(TokenKind kind) {
                                      Token());
     }
     return next();
+}
+
+void Preprocessor::splitTokens(Token sourceToken, size_t offset, SmallVectorBase<Token>& results) {
+    Lexer::splitTokens(alloc, diagnostics, sourceManager, sourceToken, offset,
+                       getCurrentKeywordVersion(), results);
 }
 
 static bool isSameToken(Token left, Token right) {

@@ -239,7 +239,7 @@ public:
     ///
     /// @param name a comma separated list of long form and short form names
     ///             (including the dashes) that are accepted for this option
-    /// @param cb a calback that will be invoked if the option is provided
+    /// @param cb a callback that will be invoked if the option is provided
     /// @param desc a human-friendly description for printing help text
     /// @param valueName an example name for the value when printing help text
     /// @param flags additional flags that control how the option behaves
@@ -398,6 +398,8 @@ private:
     void parseStr(std::string_view argList, ParseOptions options, bool& hasArg,
                   std::string& current, SmallVectorBase<std::string>& storage);
 
+    void handleArg(std::string_view arg, Option*& expectingVal, std::string& expectingValName,
+                   bool& hadUnknowns, ParseOptions options);
     void handlePlusArg(std::string_view arg, ParseOptions options, bool& hadUnknowns);
 
     Option* findOption(std::string_view arg, std::string_view& value) const;

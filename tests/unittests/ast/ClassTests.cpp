@@ -520,7 +520,7 @@ endfunction
 
 module m;
     G #(real) g1;
-    G #(int) g2;
+    G #(int) g2 = new();
 
     int i = g2.foo();
     real r = D::foo();
@@ -1841,8 +1841,8 @@ class A;
 
         i == 'x;
         i == 3'bx;
-        i == 3.1;
-        3.1 == i;
+        real'(i) == 3.1;
+        3.1 == real'(i);
         a == null;
         i === 3;
     }
@@ -1935,7 +1935,7 @@ endclass
     REQUIRE(diags.size() == 18);
     CHECK(diags[0].code == diag::UnknownConstraintLiteral);
     CHECK(diags[1].code == diag::UnknownConstraintLiteral);
-    CHECK(diags[2].code == diag::NonIntegralConstraintExpr);
+    CHECK(diags[2].code == diag::InvalidConstraintExpr);
     CHECK(diags[3].code == diag::NonIntegralConstraintLiteral);
     CHECK(diags[4].code == diag::ExprNotConstraint);
     CHECK(diags[5].code == diag::RandNeededInDist);
@@ -2245,7 +2245,7 @@ class C;
         randsequence( main )
             main : first second third;
             first : { x = x + 10; };
-            second : { if(x) break; } fourth;
+            second : { if (x != 0) break; } fourth;
             third : { x = x + 10; };
             fourth : { x = x + 15; };
         endsequence
@@ -2613,7 +2613,7 @@ endclass
 
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 1);
-    CHECK(diags[0].code == diag::ReversedOpenRange);
+    CHECK(diags[0].code == diag::ReversedValueRange);
 }
 
 TEST_CASE("Access to static class data member with incomplete forward typedef") {
@@ -2794,4 +2794,654 @@ endmodule
     CHECK(diags[4].code == diag::ClassPrivateMembersBitstream);
     CHECK(diags[5].code == diag::ClassPrivateMembersBitstream);
     CHECK(diags[6].code == diag::ClassPrivateMembersBitstream);
+}
+
+TEST_CASE("Using this keyword in class property intializer") {
+    auto tree = SyntaxTree::fromText(R"(
+typedef class B;
+class A;
+    B b;
+    function new(B b);
+        this.b = b;
+    endfunction
+endclass
+
+class B;
+    A a1 = new(this);
+    static A a2 = new(this);
+endclass
+
+class C extends B;
+    A a1 = super.a1;
+    static A a2 = super.a1;
+    static A a3 = super.a2;
+endclass
+
+module test;
+    B b = new();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::InvalidThisHandle);
+    CHECK(diags[1].code == diag::NonStaticClassProperty);
+    CHECK(diags[2].code == diag::NonStaticClassProperty);
+}
+
+TEST_CASE("Super handle and class randomize used from static contexts") {
+    auto tree = SyntaxTree::fromText(R"(
+class A;
+    static int blah;
+endclass
+
+class B extends A;
+    static int i = randomize;
+
+    static function void foo;
+        int i = super.blah;
+        int j = randomize;
+    endfunction
+endclass
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::NonStaticClassMethod);
+    CHECK(diags[1].code == diag::NonStaticClassProperty);
+    CHECK(diags[2].code == diag::NonStaticClassMethod);
+}
+
+TEST_CASE("Type of this handle works") {
+    auto tree = SyntaxTree::fromText(R"(
+class registry #(type T=int);
+    static function type(this) get();
+        var static type(this) m_inst;
+        if (m_inst == null)
+            m_inst = new();
+        return m_inst;
+    endfunction
+endclass
+
+class my_int_registry extends registry #();
+    function type(this) other();
+    endfunction
+endclass
+)");
+
+    CompilationOptions options;
+    options.languageVersion = LanguageVersion::v1800_2023;
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Invalid generic class handle lookup regress") {
+    auto tree = SyntaxTree::fromText(R"(
+class G#(t)function-G#
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    // Just observe no crash.
+    compilation.getAllDiagnostics();
+}
+
+TEST_CASE("Invalid recursive generic class specialization") {
+    auto tree = SyntaxTree::fromText(R"(
+class G#(G #(null) o); endclass
+class H#(type a = H); endclass
+
+module m;
+    H h;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::RecursiveClassSpecialization);
+    CHECK(diags[1].code == diag::RecursiveClassSpecialization);
+}
+
+TEST_CASE("Extend from final class") {
+    auto options = optionsFor(LanguageVersion::v1800_2023);
+    auto tree = SyntaxTree::fromText(R"(
+class :final A;
+endclass
+
+class B extends A;
+endclass
+)",
+                                     options);
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::ExtendFromFinal);
+}
+
+TEST_CASE("Derived class default argument list") {
+    auto options = optionsFor(LanguageVersion::v1800_2023);
+    auto tree = SyntaxTree::fromText(R"(
+class Base;
+    string name;
+    local int m_id;
+    function new(string name, output int id);
+        this.name = name;
+        id = m_id++;
+    endfunction : new
+endclass : Base
+
+// Class A does not add any additional arguments before the default keyword
+class A extends Base;
+    function new(default);
+        // Compiler automatically calls super.new(default)
+    endfunction : new
+endclass : A
+
+// Class B adds additional arguments before the default keyword
+class B extends Base;
+    int size;
+    function new(int size, default);
+        super.new(default); // Optional explicit use of super.new
+        this.size = size;
+    endfunction : new
+endclass : B
+
+// Class C adds additional arguments after the default keyword
+class C extends B;
+    bit enable;
+    function new(default, bit enable);
+        super.new(default); // Optional explicit use of super.new
+        this.enable = enable; // enable is an input by default
+    endfunction : new
+endclass : C
+
+module m;
+    int id = 0;
+    A a = new("Hello", id);
+    B b = new(3, "World", id);
+    C c = new(4, "!", id, 1);
+endmodule
+)",
+                                     options);
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Extends clause defaulted argument list") {
+    auto options = optionsFor(LanguageVersion::v1800_2023);
+    auto tree = SyntaxTree::fromText(R"(
+class Base;
+    string name;
+    local int m_id;
+    function new(string name, output int id);
+        this.name = name;
+        id = m_id++;
+    endfunction : new
+endclass : Base
+
+// Class A does not require an explicit constructor;
+// the implicit new() method has the argument list of Base::new.
+class A extends Base(default);
+endclass : A
+
+// Class B still requires an explicit constructor,
+// as additional arguments are provided.
+class B extends Base(default);
+    int size;
+    function new(int size, default);
+        // Implicit call to super.new(default) from Base(default)
+        this.size = size;
+    endfunction : new
+endclass : B
+
+module m;
+    int id = 0;
+    A a = new("Hello", id);
+endmodule
+)",
+                                     options);
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Derived class default argument list errors") {
+    auto options = optionsFor(LanguageVersion::v1800_2023);
+    auto tree = SyntaxTree::fromText(R"(
+class Base;
+    string name;
+    local int m_id;
+    function new(string name, output int id);
+        this.name = name;
+        id = m_id++;
+    endfunction : new
+endclass : Base
+
+class A extends Base;
+    function new(default, int i, default);
+    endfunction
+endclass
+
+class B;
+    function new(default);
+    endfunction
+endclass
+
+class BadBase1;
+    local int j;
+
+    function new(int i = 1 + j);
+    endfunction
+endclass
+
+class C extends BadBase1;
+    function new(default);
+    endfunction
+endclass
+
+class BadBase2;
+    local function int bar; return 1; endfunction
+
+    function new(int i = 1 + bar());
+    endfunction
+endclass
+
+class D extends BadBase2;
+    function new(default);
+    endfunction
+endclass
+
+class E extends Base;
+    function new(int i);
+        super.new(default);
+    endfunction
+endclass
+
+class F extends Base(default);
+    function new;
+    endfunction
+endclass
+)",
+                                     options);
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 6);
+    CHECK(diags[0].code == diag::MultipleDefaultConstructorArg);
+    CHECK(diags[1].code == diag::SuperNoBase);
+    CHECK(diags[2].code == diag::DefaultSuperArgLocalReference);
+    CHECK(diags[3].code == diag::DefaultSuperArgLocalReference);
+    CHECK(diags[4].code == diag::InvalidSuperNewDefault);
+    CHECK(diags[5].code == diag::InvalidExtendsDefault);
+}
+
+TEST_CASE("Class property named 'new'") {
+    auto tree = SyntaxTree::fromText(R"(
+class A;
+  int \new ;
+endclass
+
+module m;
+  A a = new;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("v1800-2023: class method override specifiers") {
+    auto options = optionsFor(LanguageVersion::v1800_2023);
+    auto tree = SyntaxTree::fromText(R"(
+virtual class base;
+    function void f1(); endfunction             // non-virtual
+    virtual function void f2(); endfunction     // virtual
+    pure virtual function void f3();            // pure virtual
+endclass : base
+
+virtual class A extends base;
+    function :initial void f1(); endfunction
+    // OK: base::f1 is not a virtual method
+
+    virtual function :extends :final void f2(); endfunction
+    // OK: f2 shall not be overridden in subclasses of A
+
+    function :final void f4(); endfunction
+    // OK: f4 shall not be overridden in subclasses of A
+
+    virtual function :extends void f5(); endfunction
+    // NOT OK: f5 is not a virtual override
+endclass : A
+
+virtual class B extends A;
+    virtual function :initial void f1(); endfunction
+    // OK: A::f1 is not a virtual method
+
+    virtual function void f2(); endfunction
+    // NOT OK: f2 is specified final in A
+
+    function void f4(); endfunction
+    // NOT OK: A::f4 is specified final
+endclass : B
+
+class C extends base;
+    function :initial void f2(); endfunction
+    // NOT OK: f2 is a virtual override from base::f2
+
+    function :initial void f3(); endfunction
+    // NOT OK: f3 is a virtual override from pure virtual base::f3
+
+    extern function :initial void f5();
+    // OK: f5 is not a virtual override
+
+    function :extends void f1(); endfunction
+    // NOT OK: base::f1 is not virtual
+endclass : C
+
+function void C::f5(); endfunction
+)",
+                                     options);
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 6);
+    CHECK(diags[0].code == diag::OverridingExtends);
+    CHECK(diags[1].code == diag::OverridingFinal);
+    CHECK(diags[2].code == diag::OverridingFinal);
+    CHECK(diags[3].code == diag::OverridingInitial);
+    CHECK(diags[4].code == diag::OverridingInitial);
+    CHECK(diags[5].code == diag::OverridingExtends);
+}
+
+TEST_CASE("v1800-2023: class constraint override specifiers") {
+    auto options = optionsFor(LanguageVersion::v1800_2023);
+    auto tree = SyntaxTree::fromText(R"(
+class A;
+    constraint :initial a {}
+    constraint :final b {}
+    constraint d {}
+endclass
+
+class B extends A;
+    constraint :extends a {}
+    constraint :extends b {}
+    constraint :extends c {}
+    constraint :initial d {}
+endclass
+)",
+                                     options);
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::OverridingFinal);
+    CHECK(diags[1].code == diag::OverridingExtends);
+    CHECK(diags[2].code == diag::OverridingInitial);
+}
+
+TEST_CASE("v1800-2023: Interface class can be declared inside a class") {
+    auto options = optionsFor(LanguageVersion::v1800_2023);
+    auto tree = SyntaxTree::fromText(R"(
+class A;
+  interface class B;
+  endclass
+endclass
+)",
+                                     options);
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("v1800-2023: Constraints with reals") {
+    auto options = optionsFor(LanguageVersion::v1800_2023);
+    auto tree = SyntaxTree::fromText(R"(
+class real_constraint_c;
+    const int ZSTATE = -100;
+    const real VALUE_LOW = 0.70;
+    const real VALUE_MIN = 1.43;
+    const real VALUE_NOM = 3.30;
+    const real VALUE_MAX = 3.65;
+
+    rand real a;
+    rand real b;
+    string s;
+
+    constraint a_constraint {
+        a dist { ZSTATE := 5,
+                 [VALUE_LOW:VALUE_MIN] :/ 1,
+                 [VALUE_NOM +%- 1.0] :/ 13, // equivalent to 3.3 +/- 0.033
+                 [VALUE_MIN:VALUE_MAX] :/ 1
+        };
+    }
+
+    constraint b_constraint {
+        (a inside {[VALUE_LOW:VALUE_MIN]}) -> b == real'(ZSTATE);
+        b dist { ZSTATE := 1,
+                 [VALUE_MIN:VALUE_MAX] :/ 20,
+                 default :/ 1,
+                 default : = 1,
+                 default
+        };
+        s dist { "Hello" := 1 };
+        solve a before b;
+    }
+endclass
+)",
+                                     options);
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 7);
+    CHECK(diags[0].code == diag::IntFloatConv);
+    CHECK(diags[1].code == diag::IntFloatConv);
+    CHECK(diags[2].code == diag::MultipleDefaultDistWeight);
+    CHECK(diags[3].code == diag::ExpectedToken);
+    CHECK(diags[4].code == diag::SplitDistWeightOp);
+    CHECK(diags[5].code == diag::ExpectedToken);
+    CHECK(diags[6].code == diag::BadSetMembershipType);
+}
+
+TEST_CASE("Dist range with real values requires a weight") {
+    auto options = optionsFor(LanguageVersion::v1800_2023);
+    auto tree = SyntaxTree::fromText(R"(
+class A;
+    rand real a, b;
+    constraint c {
+        a dist { [a:b], [a:b] := 1};
+    }
+endclass
+)",
+                                     options);
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::DistRealRangeWeight);
+    CHECK(diags[1].code == diag::DistRealRangeWeight);
+}
+
+TEST_CASE("v1800-2023: Uniqueness allows real") {
+    auto options = optionsFor(LanguageVersion::v1800_2023);
+    auto tree = SyntaxTree::fromText(R"(
+class A;
+    rand real a, b;
+    event c;
+    constraint C {
+        unique { a, b, c };
+    }
+endclass
+)",
+                                     options);
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::BadUniquenessType);
+}
+
+TEST_CASE("v1800-2023: solve-before with reals, array sizes") {
+    auto options = optionsFor(LanguageVersion::v1800_2023);
+    auto tree = SyntaxTree::fromText(R"(
+class A;
+    function void foo; endfunction
+
+    rand real a;
+    rand int b[];
+    constraint C {
+        solve a before b.size(), b.size, foo();
+    }
+endclass
+)",
+                                     options);
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::BadSolveBefore);
+}
+
+TEST_CASE("v1800-2023: disable soft with array sizes") {
+    auto options = optionsFor(LanguageVersion::v1800_2023);
+    auto tree = SyntaxTree::fromText(R"(
+class A;
+    rand int b[];
+    constraint C {
+        disable soft b.size;
+        disable soft b.size();
+    }
+endclass
+)",
+                                     options);
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("v1800-2023: extern constraint blocks must match specifiers") {
+    auto options = optionsFor(LanguageVersion::v1800_2023);
+    auto tree = SyntaxTree::fromText(R"(
+class A;
+    extern constraint :initial a;
+    extern constraint :final b;
+endclass
+
+constraint A::a {}
+constraint :final A::b {}
+)",
+                                     options);
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::MismatchConstraintSpecifiers);
+}
+
+TEST_CASE("Constraint comparisons can be any type as long as no rand vars") {
+    auto tree = SyntaxTree::fromText(R"(
+class A;
+    string a, b;
+    rand int c;
+    constraint C {
+        if (a == b) c > 1;
+        a;
+    }
+endclass
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::InvalidConstraintExpr);
+}
+
+TEST_CASE("Spurious inheritance from generic param error -- GH #1058") {
+    auto tree = SyntaxTree::fromText(R"(
+interface class some_intf;
+    pure virtual function void fn1();
+
+    pure virtual function bit fn2();
+endclass
+
+virtual class adapter;
+    function new(string name="");
+    endfunction
+
+    virtual function bit fn2();
+        return 1'b1;
+    endfunction
+
+    virtual function string get_name();
+        return "example";
+    endfunction
+endclass
+
+virtual class used_class#(
+    type extends_class = adapter
+)
+extends extends_class
+implements some_intf;
+
+    function new(string name="");
+        super.new(name);
+    endfunction
+
+    extern virtual function void fn1();
+endclass
+
+
+function void used_class::fn1();
+    bit the_var;
+    if(get_name() == "string") begin
+        the_var = 1'b1;
+    end
+endfunction
+
+module top;
+
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
 }

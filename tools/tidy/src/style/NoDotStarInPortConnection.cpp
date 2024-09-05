@@ -14,10 +14,10 @@ using namespace slang::syntax;
 namespace no_dot_start_in_port_connection {
 
 struct PortConnectionVisitor : public SyntaxVisitor<PortConnectionVisitor> {
-    void handle(const WildcardPortConnectionSyntax&) { found = true; }
+    void handle(const WildcardPortConnectionSyntax& port) { foundPorts.push_back(&port); }
 
 public:
-    bool found{false};
+    std::vector<const WildcardPortConnectionSyntax*> foundPorts;
 };
 
 struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, true, true> {
@@ -27,8 +27,8 @@ struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, true, true> {
         NEEDS_SKIP_SYMBOL(symbol)
         PortConnectionVisitor visitor;
         symbol.getSyntax()->visit(visitor);
-        if (visitor.found)
-            diags.add(diag::NoDotStarInPortConnection, symbol.location);
+        for (const auto port : visitor.foundPorts)
+            diags.add(diag::NoDotStarInPortConnection, port->star.location());
     }
 };
 } // namespace no_dot_start_in_port_connection
@@ -42,9 +42,7 @@ public:
     bool check(const RootSymbol& root) override {
         MainVisitor visitor(diagnostics);
         root.visit(visitor);
-        if (!diagnostics.empty())
-            return false;
-        return true;
+        return diagnostics.empty();
     }
 
     DiagCode diagCode() const override { return diag::NoDotStarInPortConnection; }

@@ -5,12 +5,148 @@
 #include <fmt/core.h>
 
 #include "slang/ast/ASTVisitor.h"
-#include "slang/ast/SemanticModel.h"
 #include "slang/parsing/ParserMetadata.h"
 #include "slang/syntax/SyntaxPrinter.h"
 #include "slang/syntax/SyntaxVisitor.h"
 
-class TestRewriter : public SyntaxRewriter<TestRewriter> {
+class SemanticModel {
+public:
+    explicit SemanticModel(Compilation& compilation) : compilation(compilation) {}
+
+    const Symbol* getDeclaredSymbol(const syntax::SyntaxNode& syntax) {
+        // If we've already cached this node, return that.
+        if (auto it = symbolCache.find(&syntax); it != symbolCache.end())
+            return it->second;
+
+        // If we hit the top of the syntax tree, look in the compilation for the correct symbol.
+        if (syntax.kind == SyntaxKind::CompilationUnit) {
+            auto result = compilation.getCompilationUnit(syntax.as<CompilationUnitSyntax>());
+            if (result)
+                symbolCache[&syntax] = result;
+            return result;
+        }
+        else if (syntax.kind == SyntaxKind::ModuleDeclaration ||
+                 syntax.kind == SyntaxKind::InterfaceDeclaration ||
+                 syntax.kind == SyntaxKind::ProgramDeclaration) {
+            auto [parentScope, parentSym] = getParent(syntax);
+            if (!parentScope)
+                parentScope = &compilation.getRoot();
+
+            auto def = compilation.getDefinition(*parentScope,
+                                                 syntax.as<ModuleDeclarationSyntax>());
+            if (!def)
+                return nullptr;
+
+            // There is no symbol to use here so create a placeholder instance.
+            auto result = &InstanceSymbol::createDefault(compilation, *def);
+            symbolCache[&syntax] = result;
+            return result;
+        }
+
+        // Otherwise try to find the parent symbol first.
+        auto [parentScope, parentSym] = getParent(syntax);
+        if (!parentSym)
+            return nullptr;
+
+        // If this is a type alias, unwrap its target type to look at the syntax node.
+        if (parentSym->kind == SymbolKind::TypeAlias) {
+            auto& target = parentSym->as<TypeAliasType>().targetType.getType();
+            if (target.getSyntax() == &syntax) {
+                symbolCache.emplace(&syntax, &target);
+                return &target;
+            }
+            return nullptr;
+        }
+
+        if (!parentScope)
+            return nullptr;
+
+        // Search among the parent's children to see if we can find ourself.
+        for (auto& child : parentScope->members()) {
+            if (child.getSyntax() == &syntax) {
+                // We found ourselves, hurray.
+                symbolCache.emplace(&syntax, &child);
+                return &child;
+            }
+        }
+
+        return nullptr;
+    }
+
+    const CompilationUnitSymbol* getDeclaredSymbol(const CompilationUnitSyntax& syntax) {
+        auto result = getDeclaredSymbol((const SyntaxNode&)syntax);
+        return result ? &result->as<CompilationUnitSymbol>() : nullptr;
+    }
+
+    const InstanceSymbol* getDeclaredSymbol(const HierarchyInstantiationSyntax& syntax) {
+        auto result = getDeclaredSymbol((const SyntaxNode&)syntax);
+        return result ? &result->as<InstanceSymbol>() : nullptr;
+    }
+
+    const StatementBlockSymbol* getDeclaredSymbol(const BlockStatementSyntax& syntax) {
+        auto result = getDeclaredSymbol((const SyntaxNode&)syntax);
+        return result ? &result->as<StatementBlockSymbol>() : nullptr;
+    }
+
+    const ProceduralBlockSymbol* getDeclaredSymbol(const ProceduralBlockSyntax& syntax) {
+        auto result = getDeclaredSymbol((const SyntaxNode&)syntax);
+        return result ? &result->as<ProceduralBlockSymbol>() : nullptr;
+    }
+
+    const GenerateBlockSymbol* getDeclaredSymbol(const IfGenerateSyntax& syntax) {
+        auto result = getDeclaredSymbol((const SyntaxNode&)syntax);
+        return result ? &result->as<GenerateBlockSymbol>() : nullptr;
+    }
+
+    const GenerateBlockArraySymbol* getDeclaredSymbol(const LoopGenerateSyntax& syntax) {
+        auto result = getDeclaredSymbol((const SyntaxNode&)syntax);
+        return result ? &result->as<GenerateBlockArraySymbol>() : nullptr;
+    }
+
+    const SubroutineSymbol* getDeclaredSymbol(const FunctionDeclarationSyntax& syntax) {
+        auto result = getDeclaredSymbol((const SyntaxNode&)syntax);
+        return result ? &result->as<SubroutineSymbol>() : nullptr;
+    }
+
+    const EnumType* getDeclaredSymbol(const EnumTypeSyntax& syntax) {
+        auto result = getDeclaredSymbol((const SyntaxNode&)syntax);
+        return result ? &result->as<EnumType>() : nullptr;
+    }
+
+    const TypeAliasType* getDeclaredSymbol(const TypedefDeclarationSyntax& syntax) {
+        auto result = getDeclaredSymbol((const SyntaxNode&)syntax);
+        return result ? &result->as<TypeAliasType>() : nullptr;
+    }
+
+private:
+    std::pair<const Scope*, const Symbol*> getParent(const SyntaxNode& syntax) {
+        auto parent = syntax.parent ? getDeclaredSymbol(*syntax.parent) : nullptr;
+        if (!parent)
+            return {nullptr, nullptr};
+
+        if (parent->kind == SymbolKind::Instance)
+            parent = &parent->as<InstanceSymbol>().body;
+        else if (!parent->isScope())
+            return {nullptr, parent};
+
+        return {&parent->as<Scope>(), parent};
+    }
+
+    Compilation& compilation;
+    flat_hash_map<const syntax::SyntaxNode*, const Symbol*> symbolCache;
+};
+
+template<typename T>
+class RewriterBase : public SyntaxRewriter<T> {
+public:
+    FunctionPortSyntax& makeArg(std::string_view name) {
+        return this->factory.functionPort(nullptr, {}, {}, {}, {}, nullptr,
+                                          this->factory.declarator(this->makeId(name), nullptr,
+                                                                   nullptr));
+    }
+};
+
+class TestRewriter : public RewriterBase<TestRewriter> {
 public:
     Compilation compilation;
     SemanticModel model;
@@ -38,13 +174,8 @@ public:
         if (!portList)
             return;
 
-        auto& argA = factory.functionPort(nullptr, {}, {}, {}, nullptr,
-                                          factory.declarator(makeId("argA"), nullptr, nullptr));
-        insertAtFront(portList->ports, argA, makeComma());
-
-        auto& argZ = factory.functionPort(nullptr, {}, {}, {}, nullptr,
-                                          factory.declarator(makeId("argZ"), nullptr, nullptr));
-        insertAtBack(portList->ports, argZ, makeComma());
+        insertAtFront(portList->ports, makeArg("argA"), makeComma());
+        insertAtBack(portList->ports, makeArg("argZ"), makeComma());
     }
 };
 
@@ -119,9 +250,42 @@ endmodule
 )");
 }
 
+TEST_CASE("Remove node from comma-separated list") {
+    auto tree = SyntaxTree::fromText(R"(
+    // normal case
+    function void foo1(int a, int b, int c, int d, int e);
+    endfunction
+    // case with trailing comma
+    function void foo2(int a, int b, int c, int d, int e,);
+    endfunction
+    // case with duplicated comma
+    function void foo3(int a, int b,, int c, int d, int e);
+    endfunction
+)");
+    struct RemoveWriter : public SyntaxRewriter<RemoveWriter> {
+        void handle(const FunctionPortBaseSyntax& port) {
+            std::string str = port.toString();
+            str.erase(0, str.find_first_not_of(' ')); // trim left whitespace
+            if (str == "int a" or str == "int c" or str == "int e")
+                remove(port);
+        }
+    };
+    tree = RemoveWriter().transform(tree);
+    CHECK(SyntaxPrinter::printFile(*tree) == R"(
+    // normal case
+    function void foo1( int b, int d);
+    endfunction
+    // case with trailing comma
+    function void foo2( int b, int d,);
+    endfunction
+    // case with duplicated comma
+    function void foo3( int b,, int d);
+    endfunction
+)");
+}
 TEST_CASE("Advanced rewriting") {
     SECTION("Insert multiple newNodes surrounding oldNodes") {
-        class MultipleRewriter : public SyntaxRewriter<MultipleRewriter> {
+        class MultipleRewriter : public RewriterBase<MultipleRewriter> {
         public:
             Compilation compilation;
             SemanticModel model;
@@ -158,15 +322,8 @@ TEST_CASE("Advanced rewriting") {
                 if (!portList)
                     return;
 
-                auto& argA = factory.functionPort(nullptr, {}, {}, {}, nullptr,
-                                                  factory.declarator(makeId("argA"), nullptr,
-                                                                     nullptr));
-                insertAtFront(portList->ports, argA, makeComma());
-
-                auto& argZ = factory.functionPort(nullptr, {}, {}, {}, nullptr,
-                                                  factory.declarator(makeId("argZ"), nullptr,
-                                                                     nullptr));
-                insertAtBack(portList->ports, argZ, makeComma());
+                insertAtFront(portList->ports, makeArg("argA"), makeComma());
+                insertAtBack(portList->ports, makeArg("argZ"), makeComma());
             }
         };
 
@@ -195,7 +352,7 @@ endmodule
 )");
     }
     SECTION("Combine insert and replace operation on oldNodes") {
-        class InterleavedRewriter : public SyntaxRewriter<InterleavedRewriter> {
+        class InterleavedRewriter : public RewriterBase<InterleavedRewriter> {
         public:
             Compilation compilation;
             SemanticModel model;
@@ -229,15 +386,8 @@ endmodule
                 if (!portList)
                     return;
 
-                auto& argA = factory.functionPort(nullptr, {}, {}, {}, nullptr,
-                                                  factory.declarator(makeId("argA"), nullptr,
-                                                                     nullptr));
-                insertAtFront(portList->ports, argA, makeComma());
-
-                auto& argZ = factory.functionPort(nullptr, {}, {}, {}, nullptr,
-                                                  factory.declarator(makeId("argZ"), nullptr,
-                                                                     nullptr));
-                insertAtBack(portList->ports, argZ, makeComma());
+                insertAtFront(portList->ports, makeArg("argA"), makeComma());
+                insertAtBack(portList->ports, makeArg("argZ"), makeComma());
             }
         };
 
@@ -263,7 +413,7 @@ endmodule
 )");
     }
     SECTION("Combine insert and remove operation on oldNodes") {
-        class InterleavedRewriter : public SyntaxRewriter<InterleavedRewriter> {
+        class InterleavedRewriter : public RewriterBase<InterleavedRewriter> {
         public:
             Compilation compilation;
             SemanticModel model;
@@ -295,15 +445,8 @@ endmodule
                 if (!portList)
                     return;
 
-                auto& argA = factory.functionPort(nullptr, {}, {}, {}, nullptr,
-                                                  factory.declarator(makeId("argA"), nullptr,
-                                                                     nullptr));
-                insertAtFront(portList->ports, argA, makeComma());
-
-                auto& argZ = factory.functionPort(nullptr, {}, {}, {}, nullptr,
-                                                  factory.declarator(makeId("argZ"), nullptr,
-                                                                     nullptr));
-                insertAtBack(portList->ports, argZ, makeComma());
+                insertAtFront(portList->ports, makeArg("argA"), makeComma());
+                insertAtBack(portList->ports, makeArg("argZ"), makeComma());
             }
         };
 
@@ -324,6 +467,37 @@ module M;
 
     function void foo(argA,int i, output r,argZ);
     endfunction
+endmodule
+)");
+    }
+
+    SECTION("Reuse same rewriter object") {
+        struct FirstTypedefRemover : public SyntaxRewriter<FirstTypedefRemover> {
+            int index;
+            void handle(const TypedefDeclarationSyntax& decl) {
+                if (index++ == 0)
+                    remove(decl);
+            }
+            std::shared_ptr<SyntaxTree> transform(const std::shared_ptr<SyntaxTree>& tree) {
+                index = 0;
+                return SyntaxRewriter<FirstTypedefRemover>::transform(tree);
+            }
+        };
+        auto tree = SyntaxTree::fromText(R"(
+module M;
+    typedef enum int { FOO = 1 } test_t_1;
+    typedef enum int { BAR = 2 } test_t_2;
+    typedef enum int { BAZ = 3 } test_t_3;
+endmodule
+)");
+
+        FirstTypedefRemover rewriter;
+        tree = rewriter.transform(tree);
+        tree = rewriter.transform(tree);
+
+        CHECK(SyntaxPrinter::printFile(*tree) == R"(
+module M;
+    typedef enum int { BAZ = 3 } test_t_3;
 endmodule
 )");
     }
@@ -413,8 +587,8 @@ endmodule
             }
         };
 
-        tree = CloneRewriter().transform(tree);
-        CHECK(SyntaxPrinter::printFile(*tree) == R"(
+        auto newTree = CloneRewriter().transform(tree);
+        CHECK(SyntaxPrinter::printFile(*newTree) == R"(
 module m;
     reg tmp3;
     reg tmp3;
@@ -515,8 +689,8 @@ class C; endclass
         }
     };
 
-    tree = ModuleChanger().transform(tree);
-    CHECK(SyntaxPrinter::printFile(*tree) == R"(
+    auto newTree = ModuleChanger().transform(tree);
+    CHECK(SyntaxPrinter::printFile(*newTree) == R"(
 `default_nettype none
 `unconnected_drive pull0
 `timescale 1ns/1ps
@@ -573,5 +747,5 @@ TEST_CASE("Visit all file") {
         v.visitDefault(elem);
     }));
 
-    CHECK(count == 981);
+    CHECK(count == 1456);
 }

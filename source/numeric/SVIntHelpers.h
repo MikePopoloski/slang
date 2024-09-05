@@ -627,7 +627,7 @@ static void clearBits(uint64_t* dest, uint32_t destOffset, uint32_t length) {
 }
 
 template<typename TVal, int ExpBits, int MantissaBits, int Bias>
-static SVInt fromIEEE754(bitwidth_t bits, TVal value, bool isSigned) {
+static SVInt fromIEEE754(bitwidth_t bits, TVal value, bool isSigned, bool round) {
     uint64_t ival = 0;
     memcpy(&ival, &value, sizeof(TVal));
 
@@ -641,7 +641,7 @@ static SVInt fromIEEE754(bitwidth_t bits, TVal value, bool isSigned) {
     // If exponent is negative the value is less than 1. The SystemVerilog
     // spec says that values of exactly 0.5 round away from zero, so check
     // for an exponent of -1 (which sets us at 0.5) and return 1 in that case.
-    if (exp == -1) {
+    if (exp == -1 && round) {
         SVInt result(bits, 1, isSigned);
         return neg ? -result : result;
     }
@@ -659,7 +659,7 @@ static SVInt fromIEEE754(bitwidth_t bits, TVal value, bool isSigned) {
         uint64_t halfway = 1ull << (shift - 1);
         mantissa >>= shift;
 
-        if (remainder >= halfway)
+        if (remainder >= halfway && round)
             mantissa++;
 
         SVInt result(bits, mantissa, isSigned);

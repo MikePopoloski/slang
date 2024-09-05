@@ -316,10 +316,17 @@ struct SLANG_EXPORT ConstantRange {
 
     /// Gets the width of the range, regardless of the order in which
     /// the bounds are specified.
-    bitwidth_t width() const {
-        auto ul = uint32_t(left);
-        auto ur = uint32_t(right);
-        return bitwidth_t(left > right ? ul - ur : ur - ul) + 1;
+    ///
+    /// @note the width is truncated to fit in a bitwidth_t. Use @a fullWidth
+    /// if there is a possibility of overflow.
+    bitwidth_t width() const { return bitwidth_t(fullWidth()); }
+
+    /// Gets the full width of the range, which may not fit into a
+    /// 32-bit integer.
+    uint64_t fullWidth() const {
+        auto ul = uint64_t(left);
+        auto ur = uint64_t(right);
+        return (left > right ? ul - ur : ur - ul) + 1;
     }
 
     /// Gets the lower bound of the range, regardless of the order in which
@@ -339,6 +346,9 @@ struct SLANG_EXPORT ConstantRange {
     /// Selects a subrange of this range, correctly handling both forms of
     /// bit endianness. This will assert that the given subrange is not wider.
     [[nodiscard]] ConstantRange subrange(ConstantRange select) const;
+
+    /// Return the intersection range with other.
+    [[nodiscard]] ConstantRange intersect(ConstantRange other) const;
 
     /// Translates the given index to be relative to the range.
     /// For example, if the range is [7:2] and you pass in 3, the result will be 1.

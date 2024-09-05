@@ -18,25 +18,43 @@ class TimingControl;
 /// Represents an assignment expression.
 class SLANG_EXPORT AssignmentExpression : public Expression {
 public:
+    /// An optional operator that applies to the assignment
+    /// (i.e. a compound assignment expression).
     std::optional<BinaryOperator> op;
+
+    /// An optional timing control that applies to the assignment.
     const TimingControl* timingControl;
 
     AssignmentExpression(std::optional<BinaryOperator> op, bool nonBlocking, const Type& type,
                          Expression& left, Expression& right, const TimingControl* timingControl,
                          SourceRange sourceRange) :
-        Expression(ExpressionKind::Assignment, type, sourceRange),
-        op(op), timingControl(timingControl), left_(&left), right_(&right),
-        nonBlocking(nonBlocking) {}
+        Expression(ExpressionKind::Assignment, type, sourceRange), op(op),
+        timingControl(timingControl), left_(&left), right_(&right), nonBlocking(nonBlocking) {}
 
+    /// @returns true if this is a compound assignment
     bool isCompound() const { return op.has_value(); }
+
+    /// @returns true if this is a non-blocking assignment
     bool isNonBlocking() const { return nonBlocking; }
+
+    /// @returns true if this is a blocking assignment
     bool isBlocking() const { return !nonBlocking; }
+
+    /// @returns true if this assignment has been implied by the lhs being the target
+    /// of an lvalue argument or port connection (i.e. there is no explicit assignment
+    /// operator or rhs here).
     bool isLValueArg() const;
 
+    /// @returns the left-hand side of the assignment
     const Expression& left() const { return *left_; }
+
+    /// @returns the left-hand side of the assignment
     Expression& left() { return *left_; }
 
+    /// @returns the right-hand side of the assignment
     const Expression& right() const { return *right_; }
+
+    /// @returns the right-hand side of the assignment
     Expression& right() { return *right_; }
 
     ConstantValue evalImpl(EvalContext& context) const;
@@ -49,7 +67,7 @@ public:
 
     static Expression& fromComponents(Compilation& compilation, std::optional<BinaryOperator> op,
                                       bitmask<AssignFlags> flags, Expression& lhs, Expression& rhs,
-                                      SourceLocation assignLoc, const TimingControl* timingControl,
+                                      SourceRange opRange, const TimingControl* timingControl,
                                       SourceRange sourceRange, const ASTContext& context);
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::Assignment; }
@@ -82,37 +100,44 @@ SLANG_ENUM(ConversionKind, CK)
 /// Represents a type conversion expression (implicit or explicit).
 class SLANG_EXPORT ConversionExpression : public Expression {
 public:
+    /// The kind of conversion.
     const ConversionKind conversionKind;
 
     ConversionExpression(const Type& type, ConversionKind conversionKind, Expression& operand,
                          SourceRange sourceRange) :
-        Expression(ExpressionKind::Conversion, type, sourceRange),
-        conversionKind(conversionKind), operand_(&operand) {}
+        Expression(ExpressionKind::Conversion, type, sourceRange), conversionKind(conversionKind),
+        operand_(&operand) {}
 
-    bool isImplicit() const { return conversionKind < ConversionKind::Explicit; }
+    /// @returns true if this is an implicit conversion
+    bool isImplicit() const { return conversionKind < ConversionKind::StreamingConcat; }
 
+    /// @returns the operand of the conversion
     const Expression& operand() const { return *operand_; }
+
+    /// @returns the operand of the conversion
     Expression& operand() { return *operand_; }
 
     ConstantValue evalImpl(EvalContext& context) const;
     std::optional<bitwidth_t> getEffectiveWidthImpl() const;
+    EffectiveSign getEffectiveSignImpl(bool isForConversion) const;
 
     void serializeTo(ASTSerializer& serializer) const;
 
     static Expression& fromSyntax(Compilation& compilation,
                                   const syntax::CastExpressionSyntax& syntax,
-                                  const ASTContext& context);
+                                  const ASTContext& context, const Type* assignmentTarget);
     static Expression& fromSyntax(Compilation& compilation,
                                   const syntax::SignedCastExpressionSyntax& syntax,
                                   const ASTContext& context);
 
     static Expression& makeImplicit(const ASTContext& context, const Type& targetType,
                                     ConversionKind conversionKind, Expression& expr,
-                                    const Expression* parentExpr, SourceLocation loc);
+                                    const Expression* parentExpr, SourceRange opRange);
 
     static ConstantValue convert(EvalContext& context, const Type& from, const Type& to,
                                  SourceRange sourceRange, ConstantValue&& value,
-                                 ConversionKind conversionKind);
+                                 ConversionKind conversionKind, const Expression* expr = nullptr,
+                                 SourceRange implicitOpRange = {});
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::Conversion; }
 
@@ -123,6 +148,7 @@ public:
 
 private:
     Expression* operand_;
+    SourceRange implicitOpRange;
 };
 
 /// Represents a new[] expression that creates a dynamic array.
@@ -130,10 +156,13 @@ class SLANG_EXPORT NewArrayExpression : public Expression {
 public:
     NewArrayExpression(const Type& type, const Expression& sizeExpr, const Expression* initializer,
                        SourceRange sourceRange) :
-        Expression(ExpressionKind::NewArray, type, sourceRange),
-        sizeExpr_(&sizeExpr), initializer_(initializer) {}
+        Expression(ExpressionKind::NewArray, type, sourceRange), sizeExpr_(&sizeExpr),
+        initializer_(initializer) {}
 
+    /// @returns the expression indicating the size of the array to create
     const Expression& sizeExpr() const { return *sizeExpr_; }
+
+    /// @returns an optional expression that initializes the array
     const Expression* initExpr() const { return initializer_; }
 
     ConstantValue evalImpl(EvalContext& context) const;
@@ -166,9 +195,10 @@ public:
 
     NewClassExpression(const Type& type, const Expression* constructorCall, bool isSuperClass,
                        SourceRange sourceRange) :
-        Expression(ExpressionKind::NewClass, type, sourceRange),
-        isSuperClass(isSuperClass), constructorCall_(constructorCall) {}
+        Expression(ExpressionKind::NewClass, type, sourceRange), isSuperClass(isSuperClass),
+        constructorCall_(constructorCall) {}
 
+    /// @returns an optional expression that calls the class's constructor
     const Expression* constructorCall() const { return constructorCall_; }
 
     ConstantValue evalImpl(EvalContext& context) const;
@@ -177,6 +207,10 @@ public:
 
     static Expression& fromSyntax(Compilation& compilation,
                                   const syntax::NewClassExpressionSyntax& syntax,
+                                  const ASTContext& context, const Type* assignmentTarget);
+
+    static Expression& fromSyntax(Compilation& compilation,
+                                  const syntax::SuperNewDefaultedArgsExpressionSyntax& syntax,
                                   const ASTContext& context, const Type* assignmentTarget);
 
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::NewClass; }
@@ -194,12 +228,12 @@ private:
 /// Represents a `new` expression that creates a covergroup instance.
 class SLANG_EXPORT NewCovergroupExpression : public Expression {
 public:
+    /// A list of arguments to the new expression.
     std::span<const Expression* const> arguments;
 
     NewCovergroupExpression(const Type& type, std::span<const Expression* const> arguments,
                             SourceRange sourceRange) :
-        Expression(ExpressionKind::NewCovergroup, type, sourceRange),
-        arguments(arguments) {}
+        Expression(ExpressionKind::NewCovergroup, type, sourceRange), arguments(arguments) {}
 
     ConstantValue evalImpl(EvalContext& context) const;
 
@@ -221,6 +255,7 @@ public:
 /// Base class for assignment pattern expressions.
 class SLANG_EXPORT AssignmentPatternExpressionBase : public Expression {
 public:
+    /// @returns the list of elements in the assignment pattern
     std::span<const Expression* const> elements() const { return elements_; }
 
     ConstantValue evalImpl(EvalContext& context) const;
@@ -237,16 +272,16 @@ protected:
     AssignmentPatternExpressionBase(ExpressionKind kind, const Type& type,
                                     std::span<const Expression* const> elements,
                                     SourceRange sourceRange) :
-        Expression(kind, type, sourceRange),
-        elements_(elements) {}
+        Expression(kind, type, sourceRange), elements_(elements) {}
 
 private:
     std::span<const Expression* const> elements_;
 };
 
-/// Represents an assignment pattern expression.
+/// Represents a simple assignment pattern expression.
 class SLANG_EXPORT SimpleAssignmentPatternExpression : public AssignmentPatternExpressionBase {
 public:
+    /// True if this assignment pattern is an lvalue, and false otherwise.
     bool isLValue;
 
     SimpleAssignmentPatternExpression(const Type& type, bool isLValue,
@@ -279,27 +314,47 @@ public:
     }
 };
 
-/// Represents an assignment pattern expression.
+/// Represents a structured assignment pattern expression.
 class SLANG_EXPORT StructuredAssignmentPatternExpression : public AssignmentPatternExpressionBase {
 public:
+    /// A setter for a specific type member.
     struct MemberSetter {
+        /// The member to which this setter applies.
         not_null<const Symbol*> member;
+
+        /// An expression for the value to set.
         not_null<const Expression*> expr;
     };
 
+    /// A setter for a specific type.
     struct TypeSetter {
+        /// The type to which this setter applies.
         not_null<const Type*> type;
+
+        /// An expression for the value to set.
         not_null<const Expression*> expr;
     };
 
+    /// A setter for a specific array index.
     struct IndexSetter {
+        /// The array index expression.
         not_null<const Expression*> index;
+
+        /// An expression for the value to set.
         not_null<const Expression*> expr;
     };
 
+    /// A list of members to set.
     std::span<const MemberSetter> memberSetters;
+
+    /// A list of types to match against and set.
     std::span<const TypeSetter> typeSetters;
+
+    /// A list of specific array elements to set.
     std::span<const IndexSetter> indexSetters;
+
+    /// An optional default setter to apply for elements
+    /// that don't match a more specific setter.
     const Expression* defaultSetter;
 
     StructuredAssignmentPatternExpression(const Type& type,
@@ -365,6 +420,7 @@ public:
                                         sourceRange),
         count_(&count) {}
 
+    /// @returns an expression indicating the number of times to replicate the pattern.
     const Expression& count() const { return *count_; }
 
     void serializeTo(ASTSerializer& serializer) const;

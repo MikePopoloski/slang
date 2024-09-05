@@ -281,7 +281,7 @@ TimingControl& SignalEventControl::fromSyntax(Compilation& compilation,
     SLANG_ASSERT(syntax.kind == SyntaxKind::IffPropertyExpr);
 
     auto left = context.requireSimpleExpr(*syntax.left, diag::InvalidSyntaxInEventExpr);
-    auto right = context.requireSimpleExpr(*syntax.left, diag::InvalidSyntaxInEventExpr);
+    auto right = context.requireSimpleExpr(*syntax.right, diag::InvalidSyntaxInEventExpr);
     if (!left || !right)
         return badCtrl(compilation, nullptr);
 
@@ -317,11 +317,11 @@ TimingControl& SignalEventControl::fromExpr(Compilation& compilation, EdgeKind e
     // Note: `expr` here can be a void-typed ArbitrarySymbolExpression if it's
     // referring to a clocking block.
     auto symRef = expr.getSymbolReference();
-    bool isClocking = (symRef && symRef->kind == SymbolKind::ClockingBlock) ||
-                      expr.kind == ExpressionKind::ClockingEvent;
+    const bool isClocking = (symRef && symRef->kind == SymbolKind::ClockingBlock) ||
+                            expr.kind == ExpressionKind::ClockingEvent;
 
     if (edge == EdgeKind::None) {
-        if (expr.type->isAggregate() || expr.type->isCHandle() || expr.type->isPropertyType() ||
+        if (expr.type->isAggregate() || expr.type->isPropertyType() ||
             (expr.type->isVoid() && !isClocking)) {
             context.addDiag(diag::InvalidEventExpression, expr.sourceRange) << *expr.type;
             return badCtrl(compilation, result);
@@ -333,6 +333,9 @@ TimingControl& SignalEventControl::fromExpr(Compilation& compilation, EdgeKind e
         else
             context.addDiag(diag::ExprMustBeIntegral, expr.sourceRange) << *expr.type;
         return badCtrl(compilation, result);
+    }
+    else if (expr.type->getBitWidth() > 1) {
+        context.addDiag(diag::MultiBitEdge, expr.sourceRange) << *expr.type;
     }
 
     if (iffCondition) {
@@ -350,6 +353,9 @@ TimingControl& SignalEventControl::fromExpr(Compilation& compilation, EdgeKind e
 void SignalEventControl::serializeTo(ASTSerializer& serializer) const {
     serializer.write("expr", expr);
     serializer.write("edge", toString(edge));
+
+    if (iffCondition)
+        serializer.write("iff", *iffCondition);
 }
 
 static void collectEvents(const ASTContext& context, const SyntaxNode& expr,

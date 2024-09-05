@@ -81,15 +81,19 @@ std::string to_string(const Diagnostic& diag);
 
 Diagnostics filterWarnings(const Diagnostics& diags);
 
-Token lexToken(std::string_view text);
+Token lexToken(std::string_view text,
+               LanguageVersion languageVersion = LanguageVersion::v1800_2017);
 Token lexRawToken(std::string_view text);
+
+Bag optionsFor(LanguageVersion version);
 
 const ModuleDeclarationSyntax& parseModule(const std::string& text);
 const ClassDeclarationSyntax& parseClass(const std::string& text);
 const MemberSyntax& parseMember(const std::string& text);
 const StatementSyntax& parseStatement(const std::string& text);
 const ExpressionSyntax& parseExpression(const std::string& text);
-const CompilationUnitSyntax& parseCompilationUnit(const std::string& text);
+const CompilationUnitSyntax& parseCompilationUnit(
+    const std::string& text, LanguageVersion languageVersion = LanguageVersion::v1800_2017);
 const InstanceSymbol& evalModule(std::shared_ptr<SyntaxTree> syntax, Compilation& compilation);
 
 class LogicExactlyEqualMatcher : public Catch::Matchers::MatcherGenericBase {

@@ -8,7 +8,6 @@
 #include "slang/ast/Scope.h"
 
 #include "slang/ast/Compilation.h"
-#include "slang/ast/Definition.h"
 #include "slang/ast/Expression.h"
 #include "slang/ast/symbols/BlockSymbols.h"
 #include "slang/ast/symbols/ClassSymbols.h"
@@ -121,6 +120,17 @@ const InstanceBodySymbol* Scope::getContainingInstance() const {
     return nullptr;
 }
 
+const CompilationUnitSymbol* Scope::getCompilationUnit() const {
+    auto currScope = this;
+    while (currScope && currScope->asSymbol().kind != SymbolKind::CompilationUnit)
+        currScope = currScope->asSymbol().getParentScope();
+
+    if (currScope)
+        return &currScope->asSymbol().as<CompilationUnitSymbol>();
+
+    return nullptr;
+}
+
 bool Scope::isUninstantiated() const {
     // In linting mode all contexts are considered uninstantiated.
     if (getCompilation().hasFlag(CompilationFlags::LintMode))
@@ -130,9 +140,9 @@ bool Scope::isUninstantiated() const {
     do {
         auto& sym = currScope->asSymbol();
         if (sym.kind == SymbolKind::InstanceBody)
-            return sym.as<InstanceBodySymbol>().isUninstantiated;
+            return sym.as<InstanceBodySymbol>().flags.has(InstanceFlags::Uninstantiated);
         if (sym.kind == SymbolKind::CheckerInstanceBody)
-            return sym.as<CheckerInstanceBodySymbol>().isUninstantiated;
+            return sym.as<CheckerInstanceBodySymbol>().flags.has(InstanceFlags::Uninstantiated);
         if (sym.kind == SymbolKind::GenerateBlock)
             return sym.as<GenerateBlockSymbol>().isUninstantiated;
         currScope = sym.getParentScope();
@@ -201,7 +211,7 @@ void Scope::addMembers(const SyntaxNode& syntax) {
         }
         case SyntaxKind::UdpDeclaration:
             // Primitives exist in their own namespace and are tracked in the Compilation.
-            addMember(compilation.createPrimitive(*this, syntax.as<UdpDeclarationSyntax>()));
+            compilation.createPrimitive(*this, syntax.as<UdpDeclarationSyntax>());
             break;
         case SyntaxKind::ConfigDeclaration:
             // Config blocks exist in their own namespace and are tracked in the Compilation.
@@ -357,13 +367,6 @@ void Scope::addMembers(const SyntaxNode& syntax) {
             getOrAddDeferredData().addForwardingTypedef(symbol);
             break;
         }
-        case SyntaxKind::ForwardInterfaceClassTypedefDeclaration: {
-            auto& symbol = ForwardingTypedefSymbol::fromSyntax(
-                *this, syntax.as<ForwardInterfaceClassTypedefDeclarationSyntax>());
-            addMember(symbol);
-            getOrAddDeferredData().addForwardingTypedef(symbol);
-            break;
-        }
         case SyntaxKind::GenerateRegion:
             for (auto member : syntax.as<GenerateRegionSyntax>().members)
                 addMembers(*member);
@@ -398,8 +401,7 @@ void Scope::addMembers(const SyntaxNode& syntax) {
                 case SyntaxKind::TypedefDeclaration:
                     addMember(TypeAliasType::fromSyntax(*this, cpd));
                     break;
-                case SyntaxKind::ForwardTypedefDeclaration:
-                case SyntaxKind::ForwardInterfaceClassTypedefDeclaration: {
+                case SyntaxKind::ForwardTypedefDeclaration: {
                     auto& symbol = ForwardingTypedefSymbol::fromSyntax(*this, cpd);
                     addMember(symbol);
                     getOrAddDeferredData().addForwardingTypedef(symbol);
@@ -421,9 +423,12 @@ void Scope::addMembers(const SyntaxNode& syntax) {
             break;
         }
         case SyntaxKind::ClassMethodDeclaration: {
-            auto subroutine = SubroutineSymbol::fromSyntax(
-                compilation, syntax.as<ClassMethodDeclarationSyntax>(), *this);
-            if (subroutine)
+            // Constructors need to be deferred because they may need to
+            // inherit arguments from their base class.
+            auto& cmds = syntax.as<ClassMethodDeclarationSyntax>();
+            if (cmds.declaration->prototype->name->getLastToken().kind == TokenKind::NewKeyword)
+                addDeferredMembers(syntax);
+            else if (auto subroutine = SubroutineSymbol::fromSyntax(compilation, cmds, *this))
                 addMember(*subroutine);
             break;
         }
@@ -530,10 +535,8 @@ void Scope::addMembers(const SyntaxNode& syntax) {
                 AnonymousProgramSymbol::fromSyntax(*this, syntax.as<AnonymousProgramSyntax>()));
             break;
         case SyntaxKind::ExternModuleDecl:
-            compilation.noteExternModule(*this, syntax.as<ExternModuleDeclSyntax>());
-            break;
         case SyntaxKind::ExternUdpDecl:
-            compilation.noteExternPrimitive(*this, syntax.as<ExternUdpDeclSyntax>());
+            compilation.noteExternDefinition(*this, syntax);
             break;
         case SyntaxKind::WildcardPortList:
             // If we hit this case we've run into an error elsewhere.
@@ -582,10 +585,6 @@ const Symbol* Scope::lookupName(std::string_view name, LookupLocation location,
     Lookup::name(compilation.parseName(name), context, flags, result);
     SLANG_ASSERT(result.selectors.empty());
     return result.found;
-}
-
-std::span<const WildcardImportSymbol* const> Scope::getWildcardImports() const {
-    return compilation.queryImports(importDataIndex);
 }
 
 Scope::DeferredMemberData& Scope::getOrAddDeferredData() const {
@@ -871,6 +870,12 @@ void Scope::elaborate() const {
         thisSym->as<ClassType>().inheritMembers(
             [this](const Symbol& member) { insertMember(&member, nullptr, true, true); });
     }
+    else if (thisSym->kind == SymbolKind::CovergroupType) {
+        // If this is a covergroup type being elaborated, let it inherit members from parent
+        // classes.
+        thisSym->as<CovergroupType>().inheritMembers(
+            [this](const Symbol& member) { insertMember(&member, nullptr, true, true); });
+    }
     else if (thisSym->kind == SymbolKind::InstanceBody &&
              thisSym->as<InstanceBodySymbol>().getDefinition().definitionKind ==
                  DefinitionKind::Interface) {
@@ -909,6 +914,7 @@ void Scope::elaborate() const {
     // Go through deferred instances and elaborate them now.
     bool usedPorts = false;
     bool hasNestedDefs = false;
+    bool hasBinds = false;
     uint32_t constructIndex = 1;
 
     for (auto symbol : deferred) {
@@ -921,7 +927,7 @@ void Scope::elaborate() const {
                 SmallVector<const Symbol*> implicitNets;
                 InstanceSymbol::fromSyntax(compilation,
                                            member.node.as<HierarchyInstantiationSyntax>(), context,
-                                           instances, implicitNets, /* isFromBind */ false);
+                                           instances, implicitNets);
                 insertMembersAndNets(instances, implicitNets, symbol);
                 break;
             }
@@ -938,7 +944,7 @@ void Scope::elaborate() const {
                 SmallVector<const Symbol*> implicitNets;
                 CheckerInstanceSymbol::fromSyntax(member.node.as<CheckerInstantiationSyntax>(),
                                                   context, instances, implicitNets,
-                                                  /* isFromBind */ false);
+                                                  InstanceFlags::None);
                 insertMembersAndNets(instances, implicitNets, symbol);
                 break;
             }
@@ -1028,10 +1034,12 @@ void Scope::elaborate() const {
                 auto& expr = Expression::bind(
                     *member.node.as<DefaultDisableDeclarationSyntax>().expr, context);
 
-                if (!expr.type->isVoid())
-                    context.requireBooleanConvertible(expr);
+                if (!expr.bad()) {
+                    if (!expr.type->isVoid())
+                        context.requireBooleanConvertible(expr);
 
-                compilation.noteDefaultDisable(*this, expr);
+                    compilation.noteDefaultDisable(*this, expr);
+                }
                 break;
             }
             case SyntaxKind::PortDeclaration:
@@ -1077,24 +1085,15 @@ void Scope::elaborate() const {
                 break;
             }
             case SyntaxKind::BindDirective: {
-                // We only find a bind directive in our deferred members list if that
-                // directive is *targeting* this scope, so we should go ahead and
-                // create the instances here.
-                SmallVector<const Symbol*> instances;
-                SmallVector<const Symbol*> implicitNets;
-                auto& bind = member.node.as<BindDirectiveSyntax>();
-                if (bind.instantiation->kind == SyntaxKind::CheckerInstantiation) {
-                    CheckerInstanceSymbol::fromSyntax(
-                        bind.instantiation->as<CheckerInstantiationSyntax>(), context, instances,
-                        implicitNets,
-                        /* isFromBind */ true);
-                }
-                else {
-                    InstanceSymbol::fromSyntax(
-                        compilation, bind.instantiation->as<HierarchyInstantiationSyntax>(),
-                        context, instances, implicitNets, /* isFromBind */ true);
-                }
-                insertMembersAndNets(instances, implicitNets, symbol);
+                // Process bind directives below after everything else.
+                hasBinds = true;
+                break;
+            }
+            case SyntaxKind::ClassMethodDeclaration: {
+                auto subroutine = SubroutineSymbol::fromSyntax(
+                    compilation, member.node.as<ClassMethodDeclarationSyntax>(), *this);
+                if (subroutine)
+                    insertMember(subroutine, symbol, true, true);
                 break;
             }
             default:
@@ -1146,6 +1145,44 @@ void Scope::elaborate() const {
                     break;
                 }
             }
+        }
+    }
+
+    // If there are bind directives, reach up into the instance body
+    // and pull out the extra bind metadata from its override node.
+    if (hasBinds) {
+        ASTContext context(*this, LookupLocation::max);
+        auto handleBind = [&](const BindDirectiveInfo& info) {
+            SmallVector<const Symbol*> instances;
+            SmallVector<const Symbol*> implicitNets;
+            if (info.bindSyntax->instantiation->kind == SyntaxKind::CheckerInstantiation) {
+                CheckerInstanceSymbol::fromSyntax(
+                    info.bindSyntax->instantiation->as<CheckerInstantiationSyntax>(), context,
+                    instances, implicitNets, InstanceFlags::FromBind);
+            }
+            else {
+                InstanceSymbol::fromSyntax(
+                    compilation, info.bindSyntax->instantiation->as<HierarchyInstantiationSyntax>(),
+                    context, instances, implicitNets, &info);
+            }
+
+            for (auto sym : implicitNets)
+                insertMember(sym, lastMember, true, false);
+            for (auto sym : instances)
+                insertMember(sym, lastMember, true, true);
+        };
+
+        auto& instanceBody = asSymbol().as<InstanceBodySymbol>();
+        if (auto node = instanceBody.hierarchyOverrideNode) {
+            for (auto& [bindInfo, targetDefSyntax] : node->binds) {
+                if (!targetDefSyntax)
+                    handleBind(bindInfo);
+            }
+        }
+
+        if (!instanceBody.getDefinition().bindDirectives.empty()) {
+            for (auto& bindInfo : instanceBody.getDefinition().bindDirectives)
+                handleBind(bindInfo);
         }
     }
 
@@ -1264,13 +1301,13 @@ bool Scope::handleDataDeclaration(const DataDeclarationSyntax& syntax) {
     if (symbol || namedType.name->kind != SyntaxKind::IdentifierName)
         return false;
 
-    auto def = compilation.getDefinition(name, *this);
-    if (!def)
+    auto def = compilation.tryGetDefinition(name, *this).definition;
+    if (!def || def->kind != SymbolKind::Definition)
         return false;
 
     // If we're in an instance and have non-ansi ports then assume that this is
     // a non-ansi interface port definition.
-    if (def->definitionKind == DefinitionKind::Interface &&
+    if (def->as<DefinitionSymbol>().definitionKind == DefinitionKind::Interface &&
         asSymbol().kind == SymbolKind::InstanceBody &&
         asSymbol().as<InstanceBodySymbol>().getDefinition().hasNonAnsiPorts) {
 
@@ -1296,20 +1333,21 @@ void Scope::tryFixupInstances(const DataDeclarationSyntax& syntax, const ASTCont
                               SmallVectorBase<const Symbol*>& results) const {
     auto& namedType = syntax.type->as<NamedTypeSyntax>();
     std::string_view name = getIdentifierName(namedType);
-    auto def = compilation.getDefinition(name, *this);
-    if (!def)
+    auto def = compilation.tryGetDefinition(name, *this).definition;
+    if (!def || def->kind != SymbolKind::Definition)
         return;
 
     // Matching the check in handleDataDeclaration -- if this is true we
     // handle this as a non-ansi interface port declaration instead.
-    if (def->definitionKind == DefinitionKind::Interface &&
+    auto& defSym = def->as<DefinitionSymbol>();
+    if (defSym.definitionKind == DefinitionKind::Interface &&
         asSymbol().kind == SymbolKind::InstanceBody &&
         asSymbol().as<InstanceBodySymbol>().getDefinition().hasNonAnsiPorts) {
         return;
     }
 
     // Assume this is malformed instantiation syntax and create the instances anyway.
-    InstanceSymbol::fromFixupSyntax(compilation, *def, syntax, context, results);
+    InstanceSymbol::fromFixupSyntax(compilation, defSym, syntax, context, results);
 }
 
 void Scope::handleUserDefinedNet(const UserDefinedNetDeclarationSyntax& syntax) {
@@ -1328,7 +1366,7 @@ void Scope::handleUserDefinedNet(const UserDefinedNetDeclarationSyntax& syntax) 
 }
 
 void Scope::handleNestedDefinition(const ModuleDeclarationSyntax& syntax) const {
-    // We implicitly instantiated this definition if it has no parameters
+    // We implicitly instantiate this definition if it has no parameters
     // and no ports and hasn't been instantiated elsewhere.
     auto& header = *syntax.header;
     if (header.parameters && !header.parameters->declarations.empty())
@@ -1348,13 +1386,11 @@ void Scope::handleNestedDefinition(const ModuleDeclarationSyntax& syntax) const 
         }
     }
 
-    // This can return nullptr if we had more than one nested declaration
-    // with the same name (so only one got stored in the compilation's map).
-    auto def = compilation.getDefinition(syntax);
-    if (!def || def->isInstantiated())
+    auto def = compilation.getDefinition(*this, syntax);
+    if (!def || def->getInstanceCount() > 0)
         return;
 
-    auto& inst = InstanceSymbol::createDefault(compilation, *def, nullptr);
+    auto& inst = InstanceSymbol::createDefaultNested(*this, syntax);
     insertMember(&inst, lastMember, /* isElaborating */ true, /* incrementIndex */ true);
 }
 
@@ -1431,14 +1467,16 @@ void Scope::handleExportedMethods(std::span<Symbol* const> deferredMembers) cons
 
 void Scope::addWildcardImport(const PackageImportItemSyntax& item,
                               std::span<const AttributeInstanceSyntax* const> attributes) {
-    // Check for redundant import statements.
-    for (auto import : compilation.queryImports(importDataIndex)) {
-        if (import->packageName == item.package.valueText()) {
-            if (!import->packageName.empty()) {
-                auto& diag = addDiag(diag::DuplicateImport, item.item.location());
-                diag.addNote(diag::NotePreviousDefinition, import->location);
+    if (importData) {
+        // Check for redundant import statements.
+        for (auto import : importData->wildcardImports) {
+            if (import->packageName == item.package.valueText()) {
+                if (!import->packageName.empty()) {
+                    auto& diag = addDiag(diag::DuplicateImport, item.item.location());
+                    diag.addNote(diag::NotePreviousDefinition, import->location);
+                }
+                return;
             }
-            return;
         }
     }
 
@@ -1452,7 +1490,9 @@ void Scope::addWildcardImport(const PackageImportItemSyntax& item,
 }
 
 void Scope::addWildcardImport(const WildcardImportSymbol& item) {
-    compilation.trackImport(importDataIndex, item);
+    if (!importData)
+        importData = compilation.allocWildcardImportData();
+    importData->wildcardImports.push_back(&item);
 }
 
 void Scope::DeferredMemberData::addMember(Symbol* symbol) {
@@ -1567,6 +1607,7 @@ static size_t countMembers(const SyntaxNode& syntax) {
         case SyntaxKind::DefaultDisableDeclaration:
         case SyntaxKind::ModuleDeclaration:
         case SyntaxKind::ProgramDeclaration:
+        case SyntaxKind::ClassMethodDeclaration:
             return 1;
         case SyntaxKind::SpecifyBlock:
         case SyntaxKind::CoverCross:

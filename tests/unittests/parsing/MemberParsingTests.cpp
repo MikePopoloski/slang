@@ -104,7 +104,7 @@ const MemberSyntax* parseModuleMember(const std::string& text, SyntaxKind kind) 
 }
 
 TEST_CASE("Module members") {
-    parseModuleMember("Foo #(stuff) bar(.*), baz(.clock, .rst(rst + 2));",
+    parseModuleMember("Foo #(stuff) bar( .   *), baz(.clock, .rst(rst + 2));",
                       SyntaxKind::HierarchyInstantiation);
     parseModuleMember("timeunit 30ns / 40ns;", SyntaxKind::TimeUnitsDeclaration);
     parseModuleMember("timeprecision 30ns;", SyntaxKind::TimeUnitsDeclaration);
@@ -297,6 +297,19 @@ endmodule
     REQUIRE(diagnostics.size() == 2);
     CHECK(diagnostics[0].code == diag::DirectiveInsideDesignElement);
     CHECK(diagnostics[1].code == diag::DirectiveInsideDesignElement);
+}
+
+TEST_CASE("v1800-2023: `timescale not allowed in design element") {
+    auto& text = R"(
+module m1;
+    `timescale 1ns/1ns
+endmodule
+)";
+
+    parseCompilationUnit(text, LanguageVersion::v1800_2023);
+
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics[0].code == diag::DirectiveInsideDesignElement);
 }
 
 TEST_CASE("Module instance -- missing closing paren") {
@@ -653,7 +666,7 @@ endmodule
 
     parseCompilationUnit(text);
 
-    REQUIRE(diagnostics.size() == 15);
+    REQUIRE(diagnostics.size() == 14);
     CHECK(diagnostics[0].code == diag::InvalidEdgeDescriptor);
     CHECK(diagnostics[1].code == diag::ExpectedToken);
     CHECK(diagnostics[2].code == diag::InvalidEdgeDescriptor);
@@ -662,13 +675,12 @@ endmodule
     CHECK(diagnostics[5].code == diag::ExpectedPathOp);
     CHECK(diagnostics[6].code == diag::ExpectedPathOp);
     CHECK(diagnostics[7].code == diag::ExpectedPathOp);
-    CHECK(diagnostics[8].code == diag::UnexpectedEdgeKeyword);
+    CHECK(diagnostics[8].code == diag::MultipleParallelTerminals);
     CHECK(diagnostics[9].code == diag::MultipleParallelTerminals);
-    CHECK(diagnostics[10].code == diag::MultipleParallelTerminals);
-    CHECK(diagnostics[11].code == diag::WrongSpecifyDelayCount);
-    CHECK(diagnostics[12].code == diag::IfNoneEdgeSensitive);
-    CHECK(diagnostics[13].code == diag::TooManyEdgeDescriptors);
-    CHECK(diagnostics[14].code == diag::EdgeDescWrongKeyword);
+    CHECK(diagnostics[10].code == diag::WrongSpecifyDelayCount);
+    CHECK(diagnostics[11].code == diag::IfNoneEdgeSensitive);
+    CHECK(diagnostics[12].code == diag::TooManyEdgeDescriptors);
+    CHECK(diagnostics[13].code == diag::EdgeDescWrongKeyword);
 }
 
 TEST_CASE("PATHPULSE$ specparams") {
@@ -677,6 +689,20 @@ module m;
     specify
         specparam PATHPULSE$ = (1:2:3, 4:5:6);
         specparam PATHPULSE$a$b = (1:2:3, 4:5:6);
+    endspecify
+endmodule
+
+module m1;
+    specify
+        specparam PATHPULSE$ = 1;
+        specparam PATHPULSE$a$b = 1;
+    endspecify
+endmodule
+
+module m2;
+    specify
+        specparam PATHPULSE$ = (1);
+        specparam PATHPULSE$a$b = (1);
     endspecify
 endmodule
 )";
@@ -698,10 +724,9 @@ endmodule
 
     parseCompilationUnit(text);
 
-    REQUIRE(diagnostics.size() == 3);
+    REQUIRE(diagnostics.size() == 2);
     CHECK(diagnostics[0].code == diag::PulseControlSpecifyParent);
-    CHECK(diagnostics[1].code == diag::PulseControlTwoValues);
-    CHECK(diagnostics[2].code == diag::PulseControlPATHPULSE);
+    CHECK(diagnostics[1].code == diag::PulseControlPATHPULSE);
 }
 
 TEST_CASE("Invalid package decls") {
@@ -1062,8 +1087,8 @@ TEST_CASE("Config declaration parsing") {
     auto& text = R"(
 config cfgl;
     design rtlLib.top;
-    instance top use #(.WIDTH(32));
-    instance top.a1 use #(.W(top.WIDTH));
+    instance top.a1 use #(.WIDTH(32));
+    instance top.a2 use #(.W(top.WIDTH));
 endconfig
 
 config cfg2;
@@ -1121,8 +1146,8 @@ TEST_CASE("Library map parsing") {
     auto tree = SyntaxTree::fromLibraryMapText(R"(
 config cfgl;
     design rtlLib.top;
-    instance top use #(.WIDTH(32));
-    instance top.a1 use #(.W(top.WIDTH));
+    instance top.a1 use #(.WIDTH(32));
+    instance top.a2 use #(.W(top.WIDTH));
 endconfig
 
 ;;
@@ -1152,4 +1177,315 @@ endmodule
     CHECK(diagnostics[0].code == diag::ExpectedMember);
     CHECK(diagnostics[1].code == diag::ExpectedMember);
     CHECK(diagnostics[2].code == diag::ExpectedMember);
+}
+
+TEST_CASE("DPI pure task parsing compatibility") {
+    auto& text = R"(
+import "DPI-C" pure task bad_pure_dpi_t (logic [3:0] a);
+)";
+
+    parseCompilationUnit(text);
+
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics[0].code == diag::DPIPureTask);
+}
+
+TEST_CASE("DPI implicit return parsing") {
+    auto& text = R"(
+import "DPI-C" function dpi_f (logic [3:0] a);
+)";
+
+    parseCompilationUnit(text);
+    CHECK_DIAGNOSTICS_EMPTY;
+}
+
+TEST_CASE("Config parsing errors") {
+    auto& text = R"(
+config cfg;
+    localparam S = (3 + 2);
+    design;
+    default liblist a;
+    instance foo.bar use #() : config;
+    default liblist b;
+    instance foo.bar use #(3, 4);
+    cell foo.bar liblist l;
+endconfig
+)";
+
+    parseCompilationUnit(text);
+
+    REQUIRE(diagnostics.size() == 6);
+    CHECK(diagnostics[0].code == diag::ConfigParamLiteral);
+    CHECK(diagnostics[1].code == diag::ExpectedIdentifier);
+    CHECK(diagnostics[2].code == diag::ConfigMissingName);
+    CHECK(diagnostics[3].code == diag::MultipleDefaultRules);
+    CHECK(diagnostics[4].code == diag::ConfigParamsOrdered);
+    CHECK(diagnostics[5].code == diag::ConfigSpecificCellLiblist);
+}
+
+TEST_CASE("Config specific parse error for extraneous commas") {
+    auto& text = R"(
+config cfg;
+    design a, b;
+    default liblist c, d;
+endconfig
+)";
+
+    parseCompilationUnit(text);
+
+    REQUIRE(diagnostics.size() == 2);
+    CHECK(diagnostics[0].code == diag::NoCommaInList);
+    CHECK(diagnostics[1].code == diag::NoCommaInList);
+}
+
+TEST_CASE("type parameter with type restriction parsing disallowed in 2017") {
+    auto& text = R"(
+module m #(parameter type enum foo)();
+endmodule
+)";
+
+    parseCompilationUnit(text);
+
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics[0].code == diag::WrongLanguageVersion);
+}
+
+TEST_CASE("v1800-2023: type parameter with type restriction parsing") {
+    auto& text = R"(
+module m #(parameter type enum foo,
+           type struct s,
+           type union u,
+           type class c,
+           type interface class i)();
+endmodule
+)";
+
+    parseCompilationUnit(text, LanguageVersion::v1800_2023);
+    CHECK_DIAGNOSTICS_EMPTY;
+}
+
+TEST_CASE("Primitive parsing crash regress 1") {
+    auto& text = R"(
+primitive ,*l,
+)";
+
+    // Just testing that there's no crash.
+    parseCompilationUnit(text);
+}
+
+TEST_CASE("Primitive parsing crash regress 2") {
+    auto& text = R"(
+primitive'b
+)";
+
+    // Just testing that there's no crash.
+    parseCompilationUnit(text);
+}
+
+TEST_CASE("Case parsing crash regress") {
+    auto& text = R"(
+always case(matches matches
+)";
+
+    // Just testing that there's no crash.
+    parseCompilationUnit(text);
+}
+
+TEST_CASE("Soft packed unions only allowed in 1800-2023") {
+    auto& text = R"(
+union soft { logic a; int b; } foo;
+)";
+
+    parseCompilationUnit(text);
+
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics[0].code == diag::WrongLanguageVersion);
+}
+
+TEST_CASE("Class lifetime is allowed but ignored in 1800-2017") {
+    auto& text = R"(
+class static foo;
+endclass
+)";
+
+    parseCompilationUnit(text);
+    CHECK_DIAGNOSTICS_EMPTY;
+}
+
+TEST_CASE("Class lifetime is error in 1800-2023") {
+    auto& text = R"(
+class static foo;
+endclass
+)";
+
+    parseCompilationUnit(text, LanguageVersion::v1800_2023);
+
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics[0].code == diag::ExpectedIdentifier);
+}
+
+TEST_CASE("Invalid class specifier") {
+    auto& text = R"(
+class :stuff foo;
+endclass
+)";
+
+    parseCompilationUnit(text, LanguageVersion::v1800_2023);
+
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics[0].code == diag::ExpectedClassSpecifier);
+}
+
+TEST_CASE("Invalid class final specifier") {
+    auto& text = R"(
+class :initial foo;
+endclass
+)";
+
+    parseCompilationUnit(text);
+
+    REQUIRE(diagnostics.size() == 2);
+    CHECK(diagnostics[0].code == diag::WrongLanguageVersion);
+    CHECK(diagnostics[1].code == diag::ExpectedToken);
+}
+
+TEST_CASE("Constructor defaulted arg list errors") {
+    auto& text = R"(
+class A extends B(default);
+    function new(default);
+        super.new(default);
+    endfunction
+
+    function foo(default);
+    endfunction
+endclass
+)";
+
+    parseCompilationUnit(text);
+
+    REQUIRE(diagnostics.size() == 4);
+    CHECK(diagnostics[0].code == diag::WrongLanguageVersion);
+    CHECK(diagnostics[1].code == diag::WrongLanguageVersion);
+    CHECK(diagnostics[2].code == diag::WrongLanguageVersion);
+    CHECK(diagnostics[3].code == diag::DefaultArgNotAllowed);
+}
+
+TEST_CASE("Class method override specifier parsing") {
+    auto& text = R"(
+class A;
+    function :initial :final foo();
+    endfunction
+endclass
+
+class B extends A;
+    extern task :extends bar();
+
+    function :final :initial :initial :extends func1; endfunction
+
+    pure virtual function :final int blah();
+
+    static function :initial sf1; endfunction
+endclass
+
+function :extends B::bar();
+endfunction
+
+class C;
+    function :extends f; endfunction
+endclass
+)";
+
+    parseCompilationUnit(text, LanguageVersion::v1800_2023);
+
+    REQUIRE(diagnostics.size() == 7);
+    CHECK(diagnostics[0].code == diag::FinalSpecifierLast);
+    CHECK(diagnostics[1].code == diag::DuplicateClassSpecifier);
+    CHECK(diagnostics[2].code == diag::ClassSpecifierConflict);
+    CHECK(diagnostics[3].code == diag::FinalWithPure);
+    CHECK(diagnostics[4].code == diag::StaticFuncSpecifier);
+    CHECK(diagnostics[5].code == diag::SpecifiersNotAllowed);
+    CHECK(diagnostics[6].code == diag::OverridingExtends);
+}
+
+TEST_CASE("v1800-2023: ref static parsing errors") {
+    auto& text = R"(
+function foo(ref static r);
+endfunction
+)";
+
+    parseCompilationUnit(text);
+
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics[0].code == diag::WrongLanguageVersion);
+}
+
+TEST_CASE("Attribute parsing with space in end token") {
+    auto& text = R"(
+module m;
+    (* a = 4, b * ) int i;
+endmodule
+)";
+
+    parseCompilationUnit(text);
+
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics[0].code == diag::ExpectedToken);
+}
+
+TEST_CASE("Constraint override specifier parsing") {
+    auto& text = R"(
+class A;
+    constraint :initial c {}
+    constraint :extends d {}
+    pure constraint :final e;
+    static constraint :initial f {}
+endclass
+)";
+
+    parseCompilationUnit(text, LanguageVersion::v1800_2023);
+
+    REQUIRE(diagnostics.size() == 3);
+    CHECK(diagnostics[0].code == diag::OverridingExtends);
+    CHECK(diagnostics[1].code == diag::FinalWithPure);
+    CHECK(diagnostics[2].code == diag::StaticFuncSpecifier);
+}
+
+TEST_CASE("Covergroup inheritance parsing errors") {
+    auto& text = R"(
+class A;
+    covergroup extends cg(bit a) @b;
+    endgroup
+endclass
+
+covergroup extends foo;
+endgroup
+)";
+
+    parseCompilationUnit(text);
+
+    REQUIRE(diagnostics.size() == 6);
+    CHECK(diagnostics[0].code == diag::WrongLanguageVersion);
+    CHECK(diagnostics[1].code == diag::ExpectedToken);
+    CHECK(diagnostics[2].code == diag::ExpectedToken);
+    CHECK(diagnostics[3].code == diag::DerivedCovergroupNoBase);
+    CHECK(diagnostics[4].code == diag::WrongLanguageVersion);
+    CHECK(diagnostics[5].code == diag::DerivedCovergroupNotInClass);
+}
+
+TEST_CASE("Parser error recovery with extra end token") {
+    auto& text = R"(
+module m;
+    int i;
+    if (1) begin
+        initial /* begin */
+            i = 1;
+        end
+    end
+endmodule
+)";
+
+    parseCompilationUnit(text);
+
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics[0].code == diag::UnexpectedEndDelim);
 }

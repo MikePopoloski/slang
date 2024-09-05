@@ -12,20 +12,14 @@
 #include "SvType.h"
 #include <fmt/format.h>
 
+#include "slang/ast/symbols/ParameterSymbols.h"
+
 class SvLocalParam : public SvGeneric {
 public:
     explicit SvLocalParam(const slang::ast::ParameterSymbol& parameter) :
         SvGeneric(SvGeneric::Kind::LocalParam), parameter(parameter) {}
 
-    void toCpp(HppFile& hppFile, std::string_view, const SvAliases&, bool) const override {
-        std::string parameterName = isCppReserved(parameter.name)
-                                        ? fmt::format("_{}", parameter.name)
-                                        : std::string(parameter.name);
-        hppFile.addWithIndent(
-            fmt::format("static constexpr {} {} = {};\n",
-                        toString(CppType::fromSize(parameter.getType().getBitstreamWidth())),
-                        parameterName, *parameter.getValue().integer().getRawPtr()));
-    }
+    void toCpp(HppFile& hppFile, std::string_view, const SvAliases&, bool) const override;
 
 private:
     const slang::ast::ParameterSymbol& parameter;

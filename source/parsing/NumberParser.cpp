@@ -27,8 +27,9 @@ static logic_t getLogicCharValue(char c) {
     }
 }
 
-NumberParser::NumberParser(Diagnostics& diagnostics, BumpAllocator& alloc) :
-    diagnostics(diagnostics), alloc(alloc) {
+NumberParser::NumberParser(Diagnostics& diagnostics, BumpAllocator& alloc,
+                           LanguageVersion languageVersion) :
+    languageVersion(languageVersion), diagnostics(diagnostics), alloc(alloc) {
 }
 
 void NumberParser::startVector(Token baseToken, Token sizeToken) {
@@ -40,6 +41,10 @@ void NumberParser::startVector(Token baseToken, Token sizeToken) {
     NumericTokenFlags baseFlags = baseToken.numericFlags();
     literalBase = baseFlags.base();
     signFlag = baseFlags.isSigned();
+
+    // Diagnose errors where they only provided a sign and no base.
+    if (auto baseRaw = baseToken.rawText(); baseRaw.length() == 2 && ::tolower(baseRaw[1]) == 's')
+        addDiag(diag::ExpectedIntegerBaseAfterSigned, baseToken.location() + 1);
 
     sizeBits = 0;
     if (sizeToken) {
@@ -169,50 +174,58 @@ int NumberParser::append(Token token, bool isFirst) {
     return -1;
 }
 
-Token NumberParser::finishValue(Token firstToken, bool singleToken) {
+Token NumberParser::finishValue(Token firstToken, bool singleToken, bool isNegated) {
     auto createResult = [&](auto&& val) {
         return Token(alloc, TokenKind::IntegerLiteral, firstToken.trivia(),
                      singleToken ? firstToken.rawText() : toStringView(text.copy(alloc)),
                      firstLocation, std::forward<decltype(val)>(val));
     };
 
+    auto checkOverflow = [&](bitwidth_t computedWidth, const SVInt& value) {
+        // Special case to avoid the warning when we have a minus operator preceeding
+        // a min value signed negative integer, with no unknowns.
+        if (isNegated && signFlag && !hasUnknown && computedWidth == sizeBits + 1 &&
+            value.isNegative() && value.countOnes() == 1) {
+            return;
+        }
+
+        addDiag(diag::VectorLiteralOverflow, firstLocation) << computedWidth;
+    };
+
     if (!valid)
         return createResult(0);
 
-    if (literalBase == LiteralBase::Decimal) {
-        // If we added an x or z, fall through to the general handler below.
+    if (literalBase == LiteralBase::Decimal && !hasUnknown) {
+        // If we added an x or z, we will fall through to the general handler below.
         // Otherwise, optimize for this case by reusing the integer value already
         // computed by the token itself.
-        if (!hasUnknown) {
-            bitwidth_t width = decimalValue.getBitWidth();
-            if (signFlag) {
-                width++;
-                decimalValue = decimalValue.resize(width);
-            }
-
-            // If no size was specified, just return the value as-is. Otherwise,
-            // resize it to match the desired size. Warn if that will truncate.
-            SVInt result;
-            if (!sizeBits) {
-                // Unsized numbers are required to be at least 32 bits by the spec.
-                if (width < 32)
-                    result = decimalValue.resize(32);
-                else
-                    result = std::move(decimalValue);
-            }
-            else if (width != sizeBits) {
-                if (width > sizeBits)
-                    addDiag(diag::VectorLiteralOverflow, firstLocation) << width;
-
-                result = decimalValue.resize(sizeBits);
-            }
-            else {
-                result = std::move(decimalValue);
-            }
-
-            result.setSigned(signFlag);
-            return createResult(result);
+        bitwidth_t width = decimalValue.getBitWidth();
+        if (signFlag) {
+            width++;
+            decimalValue = decimalValue.resize(width);
         }
+
+        // If no size was specified, just return the value as-is. Otherwise,
+        // resize it to match the desired size. Warn if that will truncate.
+        SVInt result;
+        if (!sizeBits) {
+            // Unsized numbers are required to be at least 32 bits by the spec.
+            if (width < 32)
+                result = decimalValue.resize(32);
+            else
+                result = std::move(decimalValue);
+        }
+        else if (width != sizeBits) {
+            result = decimalValue.resize(sizeBits);
+            if (width > sizeBits)
+                checkOverflow(width, result);
+        }
+        else {
+            result = std::move(decimalValue);
+        }
+
+        result.setSigned(signFlag);
+        return createResult(std::move(result));
     }
 
     if (digits.empty()) {
@@ -259,9 +272,10 @@ Token NumberParser::finishValue(Token firstToken, bool singleToken) {
                 sizeBits = std::max(32u, bits);
             }
             else {
-                // We should warn about overflow here, but the spec says it is valid and
-                // the literal gets truncated. Definitely a warning though.
-                addDiag(diag::VectorLiteralOverflow, firstLocation) << bits;
+                auto result = SVInt::fromDigits(sizeBits, literalBase, signFlag, hasUnknown,
+                                                digits);
+                checkOverflow(bits, result);
+                return createResult(std::move(result));
             }
         }
     }

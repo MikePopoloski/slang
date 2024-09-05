@@ -7,6 +7,7 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include "slang/ast/SemanticFacts.h"
 #include "slang/ast/symbols/ValueSymbol.h"
 #include "slang/syntax/SyntaxFwd.h"
 
@@ -17,11 +18,13 @@ class Compilation;
 class SLANG_EXPORT ParameterSymbolBase {
 public:
     const Symbol& symbol;
+    const syntax::SyntaxNode* defaultValSyntax = nullptr;
 
     bool isLocalParam() const { return isLocal; }
     bool isPortParam() const { return isPort; }
     bool isBodyParam() const { return !isPortParam(); }
-    bool hasDefault() const;
+
+    void checkDefaultExpression() const;
 
     static void fromLocalSyntax(const Scope& scope,
                                 const syntax::ParameterDeclarationStatementSyntax& syntax,
@@ -52,6 +55,9 @@ public:
     bool isImplicitString(SourceRange referencingRange) const;
     bool isOverridden() const;
 
+    bool isFromConfig() const { return isFromConf; }
+    void setIsFromConfig(bool newIsFromConf) { isFromConf = newIsFromConf; }
+
     void serializeTo(ASTSerializer& serializer) const;
 
 private:
@@ -59,13 +65,16 @@ private:
     mutable bool fromStringLit = false;
     mutable bool needsCoercion = false;
     mutable bool evaluating = false;
+    bool isFromConf = false;
 };
 
 class SLANG_EXPORT TypeParameterSymbol : public Symbol, public ParameterSymbolBase {
 public:
     DeclaredType targetType;
+    ForwardTypeRestriction typeRestriction;
 
-    TypeParameterSymbol(std::string_view name, SourceLocation loc, bool isLocal, bool isPort);
+    TypeParameterSymbol(const Scope& scope, std::string_view name, SourceLocation loc, bool isLocal,
+                        bool isPort, ForwardTypeRestriction typeRestriction);
 
     static void fromSyntax(const Scope& scope, const syntax::TypeParameterDeclarationSyntax& syntax,
                            bool isLocal, bool isPort,
@@ -73,13 +82,14 @@ public:
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::TypeParameter; }
 
-    const Type& getTypeAlias() const;
+    const Type& getTypeAlias() const { return *typeAlias; }
     bool isOverridden() const;
+    void checkTypeRestriction() const;
 
     void serializeTo(ASTSerializer& serializer) const;
 
 private:
-    mutable const Type* typeAlias = nullptr;
+    const Type* typeAlias;
 };
 
 /// Represents a defparam directive.

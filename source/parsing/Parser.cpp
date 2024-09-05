@@ -15,7 +15,8 @@ using namespace syntax;
 
 Parser::Parser(Preprocessor& preprocessor, const Bag& options) :
     ParserBase::ParserBase(preprocessor), factory(alloc),
-    parseOptions(options.getOrDefault<ParserOptions>()), numberParser(getDiagnostics(), alloc) {
+    parseOptions(options.getOrDefault<ParserOptions>()),
+    numberParser(getDiagnostics(), alloc, parseOptions.languageVersion) {
 }
 
 SyntaxNode& Parser::parseGuess() {
@@ -94,9 +95,10 @@ ModuleHeaderSyntax& Parser::parseModuleHeader() {
     PortListSyntax* ports = nullptr;
     if (peek(TokenKind::OpenParenthesis)) {
         auto openParen = consume();
-        if (peek(TokenKind::DotStar)) {
-            auto dotStar = consume();
-            ports = &factory.wildcardPortList(openParen, dotStar,
+        if (peek(TokenKind::Dot) && peek(1).kind == TokenKind::Star) {
+            auto dot = consume();
+            auto star = consume();
+            ports = &factory.wildcardPortList(openParen, dot, star,
                                               expect(TokenKind::CloseParenthesis));
         }
         else if (isNonAnsiPort()) {
@@ -412,7 +414,11 @@ DotMemberClauseSyntax* Parser::parseDotMemberClause() {
 
 StructUnionTypeSyntax& Parser::parseStructUnion(SyntaxKind syntaxKind) {
     auto keyword = consume();
-    auto tagged = consumeIf(TokenKind::TaggedKeyword);
+
+    Token taggedOrSoft;
+    if (peek(TokenKind::TaggedKeyword) || peek(TokenKind::SoftKeyword))
+        taggedOrSoft = consume();
+
     auto packed = consumeIf(TokenKind::PackedKeyword);
     auto signing = parseSigning();
     auto openBrace = expect(TokenKind::OpenBrace);
@@ -442,8 +448,10 @@ StructUnionTypeSyntax& Parser::parseStructUnion(SyntaxKind syntaxKind) {
             }
 
             bitmask<TypeOptions> typeOptions;
-            if (tagged.valid() && keyword.kind == TokenKind::UnionKeyword)
+            if (taggedOrSoft.kind == TokenKind::TaggedKeyword &&
+                keyword.kind == TokenKind::UnionKeyword) {
                 typeOptions = TypeOptions::AllowVoid;
+            }
 
             auto& type = parseDataType(typeOptions);
 
@@ -480,10 +488,16 @@ StructUnionTypeSyntax& Parser::parseStructUnion(SyntaxKind syntaxKind) {
             addDiag(diag::UnpackedSigned, signing.range());
     }
 
-    if (keyword.kind == TokenKind::StructKeyword && tagged.valid())
-        addDiag(diag::TaggedStruct, tagged.range());
+    if (keyword.kind == TokenKind::StructKeyword && taggedOrSoft.valid()) {
+        addDiag(diag::TaggedStruct, taggedOrSoft.range()) << taggedOrSoft.valueText();
+    }
+    else if (taggedOrSoft.kind == TokenKind::SoftKeyword &&
+             parseOptions.languageVersion < LanguageVersion::v1800_2023) {
+        addDiag(diag::WrongLanguageVersion, taggedOrSoft.range())
+            << toString(parseOptions.languageVersion);
+    }
 
-    return factory.structUnionType(syntaxKind, keyword, tagged, packed, signing, openBrace,
+    return factory.structUnionType(syntaxKind, keyword, taggedOrSoft, packed, signing, openBrace,
                                    buffer.copy(alloc), closeBrace, dims);
 }
 
@@ -741,41 +755,38 @@ MemberSyntax& Parser::parseNetDeclaration(AttrList attributes) {
                                   declarators, semi);
 }
 
+ForwardTypeRestrictionSyntax* Parser::parseTypeRestriction(bool isExpected) {
+    switch (peek().kind) {
+        case TokenKind::EnumKeyword:
+        case TokenKind::StructKeyword:
+        case TokenKind::UnionKeyword:
+        case TokenKind::ClassKeyword:
+            if (isExpected ||
+                (peek(1).kind == TokenKind::Identifier && peek(2).kind == TokenKind::Semicolon)) {
+                return &factory.forwardTypeRestriction(consume(), Token());
+            }
+            break;
+        case TokenKind::InterfaceKeyword: {
+            auto interfaceKeyword = consume();
+            auto classKeyword = expect(TokenKind::ClassKeyword);
+            return &factory.forwardTypeRestriction(interfaceKeyword, classKeyword);
+        }
+        default:
+            break;
+    }
+    return nullptr;
+}
+
 MemberSyntax& Parser::parseVariableDeclaration(AttrList attributes) {
     switch (peek().kind) {
         case TokenKind::TypedefKeyword: {
             auto typedefKeyword = consume();
-            switch (peek().kind) {
-                case TokenKind::EnumKeyword:
-                case TokenKind::StructKeyword:
-                case TokenKind::UnionKeyword:
-                case TokenKind::ClassKeyword:
-                    if (peek(1).kind == TokenKind::Identifier &&
-                        peek(2).kind == TokenKind::Semicolon) {
-
-                        auto keyword = consume();
-                        auto name = consume();
-                        return factory.forwardTypedefDeclaration(attributes, typedefKeyword,
-                                                                 keyword, name, consume());
-                    }
-                    break;
-                case TokenKind::InterfaceKeyword: {
-                    auto interfaceKeyword = consume();
-                    auto classKeyword = expect(TokenKind::ClassKeyword);
-                    auto name = expect(TokenKind::Identifier);
-                    return factory.forwardInterfaceClassTypedefDeclaration(
-                        attributes, typedefKeyword, interfaceKeyword, classKeyword, name,
-                        expect(TokenKind::Semicolon));
-                }
-                case TokenKind::Identifier:
-                    if (peek(1).kind == TokenKind::Semicolon) {
-                        auto name = consume();
-                        return factory.forwardTypedefDeclaration(attributes, typedefKeyword,
-                                                                 Token(), name, consume());
-                    }
-                    break;
-                default:
-                    break;
+            auto restriction = parseTypeRestriction(/* isExpected */ false);
+            if (restriction ||
+                (peek(TokenKind::Identifier) && peek(1).kind == TokenKind::Semicolon)) {
+                auto name = expect(TokenKind::Identifier);
+                return factory.forwardTypedefDeclaration(attributes, typedefKeyword, restriction,
+                                                         name, expect(TokenKind::Semicolon));
             }
 
             auto& type = parseDataType();
@@ -917,17 +928,23 @@ std::span<TokenOrSyntax> Parser::parseDeclarators(Token& semi, bool allowMinTypM
 
 Parser::AttrList Parser::parseAttributes() {
     SmallVector<AttributeInstanceSyntax*> buffer;
-    while (peek(TokenKind::OpenParenthesisStar)) {
-        Token openParen;
-        Token closeParen;
+    while (isStartOfAttrs(0)) {
+        Token openParen = consume();
+        Token closeParen, openStar, closeStar;
+
         std::span<TokenOrSyntax> list;
-
         parseList<isIdentifierOrComma, isEndOfAttribute>(
-            TokenKind::OpenParenthesisStar, TokenKind::StarCloseParenthesis, TokenKind::Comma,
-            openParen, list, closeParen, RequireItems::True, diag::ExpectedAttribute,
-            [this] { return &parseAttributeSpec(); });
+            TokenKind::Star, TokenKind::Star, TokenKind::Comma, openStar, list, closeStar,
+            RequireItems::True, diag::ExpectedAttribute, [this] { return &parseAttributeSpec(); });
 
-        buffer.push_back(&factory.attributeInstance(openParen, list, closeParen));
+        if (!closeStar.isMissing()) {
+            closeParen = expect(TokenKind::CloseParenthesis);
+            if (!closeParen.isMissing() && !closeParen.trivia().empty())
+                addDiag(diag::ExpectedToken, closeStar.location()) << "*)"sv;
+        }
+
+        buffer.push_back(
+            &factory.attributeInstance(openParen, openStar, list, closeStar, closeParen));
     }
     return buffer.copy(alloc);
 }
@@ -984,6 +1001,11 @@ ParameterDeclarationBaseSyntax& Parser::parseParameterDecl(Token keyword, Token*
     // this is actually a type reference for a normal parameter.
     if (peek(TokenKind::TypeKeyword) && peek(1).kind != TokenKind::OpenParenthesis) {
         auto typeKeyword = consume();
+        auto restriction = parseTypeRestriction(/* isExpected */ true);
+        if (restriction && parseOptions.languageVersion < LanguageVersion::v1800_2023) {
+            addDiag(diag::WrongLanguageVersion, restriction->sourceRange())
+                << toString(parseOptions.languageVersion);
+        }
 
         SmallVector<TokenOrSyntax, 4> decls;
         if (semi) {
@@ -1004,7 +1026,8 @@ ParameterDeclarationBaseSyntax& Parser::parseParameterDecl(Token keyword, Token*
             }
         }
 
-        return factory.typeParameterDeclaration(keyword, typeKeyword, decls.copy(alloc));
+        return factory.typeParameterDeclaration(keyword, typeKeyword, restriction,
+                                                decls.copy(alloc));
     }
     else {
         auto& type = parseDataType(TypeOptions::AllowImplicit);
@@ -1052,11 +1075,12 @@ PortConnectionSyntax& Parser::parsePortConnection() {
     if (peek(TokenKind::Comma) || peek(TokenKind::CloseParenthesis))
         return factory.emptyPortConnection(attributes, placeholderToken());
 
-    if (peek(TokenKind::DotStar))
-        return factory.wildcardPortConnection(attributes, consume());
-
     if (peek(TokenKind::Dot)) {
         auto dot = consume();
+
+        if (peek(TokenKind::Star))
+            return factory.wildcardPortConnection(attributes, dot, consume());
+
         auto name = expect(TokenKind::Identifier);
 
         PropertyExprSyntax* expr = nullptr;
@@ -1428,18 +1452,27 @@ bool Parser::scanQualifiedName(uint32_t& index, bool allowNew) {
 }
 
 bool Parser::scanAttributes(uint32_t& index) {
-    while (peek(index).kind == TokenKind::OpenParenthesisStar) {
+    while (isStartOfAttrs(index)) {
         // scan over attributes
+        index++;
         while (true) {
             auto kind = peek(++index).kind;
             if (kind == TokenKind::EndOfFile)
                 return false;
-            if (kind == TokenKind::StarCloseParenthesis)
+            if (kind == TokenKind::Star && peek(index + 1).kind == TokenKind::CloseParenthesis)
                 break;
         }
-        index++;
+        index += 2;
     }
     return true;
+}
+
+bool Parser::isStartOfAttrs(uint32_t index) {
+    if (peek(index).kind == TokenKind::OpenParenthesis) {
+        auto t = peek(index + 1);
+        return t.kind == TokenKind::Star && t.trivia().empty();
+    }
+    return false;
 }
 
 void Parser::errorIfAttributes(AttrList attributes) {

@@ -4,7 +4,7 @@
 # ~~~
 
 # slang - cmake entry point
-cmake_minimum_required(VERSION 3.20...3.26)
+cmake_minimum_required(VERSION 3.20...3.29)
 
 # Determine if slang is built as a subproject (using add_subdirectory) or if it
 # is the master project.
@@ -28,7 +28,7 @@ set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
 include(gitversion)
 get_git_version(SLANG_VERSION_PATCH SLANG_VERSION_HASH)
 
-set(SLANG_VERSION_MAJOR 4)
+set(SLANG_VERSION_MAJOR 6)
 set(SLANG_VERSION_MINOR 0)
 set(SLANG_VERSION_STRING
     "${SLANG_VERSION_MAJOR}.${SLANG_VERSION_MINOR}.${SLANG_VERSION_PATCH}")
@@ -140,6 +140,10 @@ endif()
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
   add_compile_options(/utf-8 /bigobj /permissive-)
+endif()
+
+if(SLANG_FUZZ_TARGET)
+  add_compile_definitions(SLANG_ASSERT_ENABLED)
 endif()
 
 # mimalloc is incompatible with Python bindings

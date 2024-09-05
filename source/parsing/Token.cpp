@@ -154,7 +154,7 @@ std::span<Token const> Trivia::getSkippedTokens() const {
     return {tokens.ptr, tokens.len};
 }
 
-Trivia Trivia::clone(BumpAllocator& alloc) const {
+Trivia Trivia::clone(BumpAllocator& alloc, bool deep) const {
     Trivia result;
     result.kind = kind;
     result.hasFullLocation = hasFullLocation;
@@ -162,7 +162,10 @@ Trivia Trivia::clone(BumpAllocator& alloc) const {
     switch (kind) {
         case TriviaKind::Directive:
         case TriviaKind::SkippedSyntax:
-            result.syntaxNode = syntaxNode;
+            if (deep)
+                result.syntaxNode = syntax::deepClone(*syntaxNode, alloc);
+            else
+                result.syntaxNode = syntaxNode;
             break;
         case TriviaKind::SkippedTokens:
             result.tokens = tokens;
@@ -311,7 +314,7 @@ std::span<Trivia const> Token::trivia() const {
 
     const Trivia* trivia;
     byte* ptr = info->extra() + getExtraSize(kind);
-    memcpy(&trivia, ptr, sizeof(trivia));
+    memcpy(reinterpret_cast<void*>(&trivia), ptr, sizeof(trivia));
 
     if (triviaCountSmall == MaxTriviaSmallCount + 1) {
         size_t size;
@@ -410,7 +413,7 @@ Token Token::deepClone(BumpAllocator& alloc) const {
 
     SmallVector<Trivia> triviaBuffer(trivia().size(), UninitializedTag());
     for (const auto& t : trivia())
-        triviaBuffer.push_back(t.clone(alloc));
+        triviaBuffer.push_back(t.clone(alloc, true));
     return clone(alloc, triviaBuffer.copy(alloc), rawText(), location());
 }
 
@@ -445,7 +448,7 @@ void Token::init(BumpAllocator& alloc, TokenKind kind_, std::span<Trivia const> 
     if (!trivia.empty()) {
         const Trivia* triviaPtr = trivia.data();
         byte* dest = info->extra() + extra;
-        memcpy(dest, &triviaPtr, sizeof(triviaPtr));
+        memcpy(dest, reinterpret_cast<const void*>(&triviaPtr), sizeof(triviaPtr));
 
         if (trivia.size() > MaxTriviaSmallCount) {
             size = trivia.size();

@@ -13,6 +13,7 @@
 #include "slang/text/SourceManager.h"
 #include "slang/util/Bag.h"
 #include "slang/util/CommandLine.h"
+#include "slang/util/LanguageVersion.h"
 #include "slang/util/OS.h"
 #include "slang/util/Util.h"
 
@@ -74,9 +75,15 @@ public:
     /// A list of syntax trees that have been parsed.
     std::vector<std::shared_ptr<syntax::SyntaxTree>> syntaxTrees;
 
+    /// The version of the SystemVerilog language to use.
+    LanguageVersion languageVersion = LanguageVersion::Default;
+
     /// A container for various options that can be parsed and applied
     /// to the compilation process.
     struct SLANG_EXPORT Options {
+        /// The version of the SystemVerilog language to use.
+        std::optional<std::string> languageVersion;
+
         /// @name Preprocessing
         /// @{
 
@@ -91,6 +98,10 @@ public:
 
         /// If true, library files will inherit macro definitions from primary source files.
         std::optional<bool> librariesInheritMacros;
+
+        /// If true, the preprocessor will support legacy protected envelope directives,
+        /// for compatibility with old Verilog tools.
+        std::optional<bool> enableLegacyProtect;
 
         /// A set of preprocessor directives to be ignored.
         std::vector<std::string> ignoreDirectives;
@@ -162,6 +173,9 @@ public:
         /// A list of library names specifying the order in which module lookup
         /// should be resolved between libraries.
         std::vector<std::string> libraryOrder;
+
+        /// The name of the default library; if not set, defaults to "work".
+        std::optional<std::string> defaultLibName;
 
         /// @}
         /// @name Diagnostics control
@@ -250,8 +264,11 @@ public:
     /// @param pattern a file path pattern indicating the command file(s) to process.
     /// @param makeRelative indicates whether paths in the file are relative to the file
     ///                     itself or to the current working directory.
+    /// @param separateUnit if true, the file is a separate compilation unit listing;
+    ///                     options within it apply only to that unit and not the
+    ///                     broader compilation.
     /// @returns true on success and false if errors were encountered.
-    bool processCommandFiles(std::string_view pattern, bool makeRelative);
+    bool processCommandFiles(std::string_view pattern, bool makeRelative, bool separateUnit);
 
     /// Processes and applies all configured options.
     /// @returns true on success and false if errors were encountered.
@@ -284,7 +301,7 @@ public:
     [[nodiscard]] Bag createOptionBag() const;
 
     /// Creates a compilation object from all of the current loaded state of the driver.
-    [[nodiscard]] std::unique_ptr<ast::Compilation> createCompilation() const;
+    [[nodiscard]] std::unique_ptr<ast::Compilation> createCompilation();
 
     /// Reports all parsing diagnostics found in all of the @a syntaxTrees
     /// @returns true on success and false if errors were encountered.
@@ -297,6 +314,7 @@ public:
     [[nodiscard]] bool reportCompilation(ast::Compilation& compilation, bool quiet);
 
 private:
+    bool parseUnitListing(std::string_view text);
     void addLibraryFiles(std::string_view pattern);
     void addParseOptions(Bag& bag) const;
     void addCompilationOptions(Bag& bag) const;

@@ -19,7 +19,8 @@ class AssertionExpr;
 class AttributeSymbol;
 class CheckerSymbol;
 class CheckerInstanceBodySymbol;
-class Definition;
+class ConfigBlockSymbol;
+class DefinitionSymbol;
 class Expression;
 class InstanceBodySymbol;
 class InterfacePortSymbol;
@@ -30,8 +31,31 @@ class PortConnection;
 class PortSymbol;
 class PrimitiveSymbol;
 class TimingControl;
+struct BindDirectiveInfo;
+struct ConfigRule;
+struct ResolvedConfig;
 struct HierarchyOverrideNode;
 enum class DriveStrength : int;
+
+/// Specifies various flags that describe instance behavior.
+enum class SLANG_EXPORT InstanceFlags : uint8_t {
+    /// No flags specified.
+    None = 0,
+
+    /// The module isn't actually instantiated in the design.
+    /// This might be because it was created with invalid parameters simply to
+    /// check name lookup rules but it's never actually referenced elsewhere
+    /// in the user's code.
+    Uninstantiated = 1 << 0,
+
+    /// The instance was created from a bind directive instead of a typical instantiation.
+    FromBind = 1 << 1,
+
+    /// The instance resides in a parent instance that itself is from a bind directive.
+    /// This applies recursively for the entire bound hierarchy.
+    ParentFromBind = 1 << 2
+};
+SLANG_BITMASK(InstanceFlags, ParentFromBind)
 
 /// Common functionality for module, interface, program, and primitive instances.
 class SLANG_EXPORT InstanceSymbolBase : public Symbol {
@@ -55,17 +79,22 @@ protected:
     using Symbol::Symbol;
 };
 
+/// Represents an instance of a module, interface, or program.
 class SLANG_EXPORT InstanceSymbol : public InstanceSymbolBase {
 public:
     const InstanceBodySymbol& body;
 
+    /// A config rule that applies to this instance, or a pointer to
+    /// the parent instance's config rule if there is one up the stack.
+    const ResolvedConfig* resolvedConfig = nullptr;
+
     InstanceSymbol(std::string_view name, SourceLocation loc, InstanceBodySymbol& body);
 
     InstanceSymbol(Compilation& compilation, std::string_view name, SourceLocation loc,
-                   const Definition& definition, ParameterBuilder& paramBuilder,
-                   bool isUninstantiated, bool isFromBind);
+                   const DefinitionSymbol& definition, ParameterBuilder& paramBuilder,
+                   bitmask<InstanceFlags> flags);
 
-    const Definition& getDefinition() const;
+    const DefinitionSymbol& getDefinition() const;
     bool isModule() const;
     bool isInterface() const;
     bool isTopLevel() const;
@@ -80,26 +109,35 @@ public:
     static void fromSyntax(Compilation& compilation,
                            const syntax::HierarchyInstantiationSyntax& syntax,
                            const ASTContext& context, SmallVectorBase<const Symbol*>& results,
-                           SmallVectorBase<const Symbol*>& implicitNets, bool isFromBind);
+                           SmallVectorBase<const Symbol*>& implicitNets,
+                           const BindDirectiveInfo* bindInfo = nullptr,
+                           const syntax::SyntaxNode* overrideSyntax = nullptr);
 
-    static void fromFixupSyntax(Compilation& compilation, const Definition& definition,
+    static void fromFixupSyntax(Compilation& compilation, const DefinitionSymbol& definition,
                                 const syntax::DataDeclarationSyntax& syntax,
                                 const ASTContext& context, SmallVectorBase<const Symbol*>& results);
 
     /// Creates a default-instantiated instance of the given definition. All parameters must
     /// have defaults specified.
-    static InstanceSymbol& createDefault(Compilation& compilation, const Definition& definition,
-                                         const HierarchyOverrideNode* hierarchyOverrideNode,
-                                         SourceLocation locationOverride = {});
+    static InstanceSymbol& createDefault(
+        Compilation& compilation, const DefinitionSymbol& definition,
+        const HierarchyOverrideNode* hierarchyOverrideNode = nullptr,
+        const ConfigBlockSymbol* configBlock = nullptr, const ConfigRule* configRule = nullptr,
+        SourceLocation locationOverride = {});
 
     /// Creates a placeholder instance for a virtual interface type declaration.
     static InstanceSymbol& createVirtual(
-        const ASTContext& context, SourceLocation loc, const Definition& definition,
+        const ASTContext& context, SourceLocation loc, const DefinitionSymbol& definition,
         const syntax::ParameterValueAssignmentSyntax* paramAssignments);
+
+    /// Creates a default-instantiated instance of a nested definition in the provided scope.
+    static Symbol& createDefaultNested(const Scope& scope,
+                                       const syntax::ModuleDeclarationSyntax& syntax);
 
     /// Creates an intentionally invalid instance by forcing all parameters to null values.
     /// This allows type checking instance members as long as they don't depend on any parameters.
-    static InstanceSymbol& createInvalid(Compilation& compilation, const Definition& definition);
+    static InstanceSymbol& createInvalid(Compilation& compilation,
+                                         const DefinitionSymbol& definition);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Instance; }
 
@@ -123,22 +161,17 @@ public:
     /// child instances have overrides that need to be applied.
     const HierarchyOverrideNode* hierarchyOverrideNode = nullptr;
 
-    /// A copy of all port parameter symbols used to construct the instance body.
-    std::span<const ParameterSymbolBase* const> parameters;
+    /// Flags that describe properties of the instance.
+    bitmask<InstanceFlags> flags;
 
-    /// Indicates whether the module isn't actually instantiated in the design.
-    /// This might be because it was created with invalid parameters simply to
-    /// check name lookup rules but it's never actually referenced elsewhere
-    /// in the user's code.
-    bool isUninstantiated = false;
+    InstanceBodySymbol(Compilation& compilation, const DefinitionSymbol& definition,
+                       const HierarchyOverrideNode* hierarchyOverrideNode,
+                       bitmask<InstanceFlags> flags);
 
-    /// Indicates whether this instance was created from a bind directive
-    /// instead of a typical instantiation.
-    bool isFromBind = false;
-
-    InstanceBodySymbol(Compilation& compilation, const Definition& definition,
-                       const HierarchyOverrideNode* hierarchyOverrideNode, bool isUninstantiated,
-                       bool isFromBind);
+    std::span<const ParameterSymbolBase* const> getParameters() const {
+        ensureElaborated();
+        return parameters;
+    }
 
     std::span<const Symbol* const> getPortList() const {
         ensureElaborated();
@@ -147,20 +180,20 @@ public:
 
     const Symbol* findPort(std::string_view name) const;
 
-    const Definition& getDefinition() const { return definition; }
+    const DefinitionSymbol& getDefinition() const { return definition; }
 
     bool hasSameType(const InstanceBodySymbol& other) const;
 
-    static InstanceBodySymbol& fromDefinition(Compilation& compilation,
-                                              const Definition& definition,
-                                              SourceLocation instanceLoc, bool isUninstantiated,
-                                              const HierarchyOverrideNode* hierarchyOverrideNode);
+    static InstanceBodySymbol& fromDefinition(
+        Compilation& compilation, const DefinitionSymbol& definition, SourceLocation instanceLoc,
+        bitmask<InstanceFlags> flags, const HierarchyOverrideNode* hierarchyOverrideNode,
+        const ConfigBlockSymbol* configBlock, const ConfigRule* configRule);
 
     static InstanceBodySymbol& fromDefinition(Compilation& compilation,
-                                              const Definition& definition,
+                                              const DefinitionSymbol& definition,
                                               SourceLocation instanceLoc,
-                                              ParameterBuilder& paramBuilder, bool isUninstantiated,
-                                              bool isFromBind);
+                                              ParameterBuilder& paramBuilder,
+                                              bitmask<InstanceFlags> flags);
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -171,8 +204,9 @@ private:
 
     void setPorts(std::span<const Symbol* const> ports) const { portList = ports; }
 
-    const Definition& definition;
+    const DefinitionSymbol& definition;
     mutable std::span<const Symbol* const> portList;
+    std::span<const ParameterSymbolBase* const> parameters;
 };
 
 class SLANG_EXPORT InstanceArraySymbol : public Symbol, public Scope {
@@ -182,12 +216,15 @@ public:
 
     InstanceArraySymbol(Compilation& compilation, std::string_view name, SourceLocation loc,
                         std::span<const Symbol* const> elements, ConstantRange range) :
-        Symbol(SymbolKind::InstanceArray, name, loc),
-        Scope(compilation, this), elements(elements), range(range) {}
+        Symbol(SymbolKind::InstanceArray, name, loc), Scope(compilation, this), elements(elements),
+        range(range) {}
 
     /// If this array is part of a multidimensional array, walk upward to find
     /// the root array's name. Otherwise returns the name of this symbol itself.
     std::string_view getArrayName() const;
+
+    static InstanceArraySymbol& createEmpty(Compilation& compilation, std::string_view name,
+                                            SourceLocation loc);
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -210,8 +247,8 @@ public:
     UninstantiatedDefSymbol(std::string_view name, SourceLocation loc,
                             std::string_view definitionName,
                             std::span<const Expression* const> params) :
-        Symbol(SymbolKind::UninstantiatedDef, name, loc),
-        definitionName(definitionName), paramExpressions(params) {}
+        Symbol(SymbolKind::UninstantiatedDef, name, loc), definitionName(definitionName),
+        paramExpressions(params) {}
 
     /// Gets the self-determined expressions that are assigned to the ports
     /// in the instantiation. These aren't necessarily correctly typed
@@ -233,9 +270,18 @@ public:
                            SmallVectorBase<const Symbol*>& implicitNets);
 
     static void fromSyntax(Compilation& compilation,
-                           const syntax::PrimitiveInstantiationSyntax& syntax,
+                           const syntax::HierarchyInstantiationSyntax& syntax,
+                           const syntax::HierarchicalInstanceSyntax* specificInstance,
                            const ASTContext& context, SmallVectorBase<const Symbol*>& results,
-                           SmallVectorBase<const Symbol*>& implicitNets);
+                           SmallVectorBase<const Symbol*>& implicitNets,
+                           SmallSet<std::string_view, 8>& implicitNetNames, const NetType& netType);
+
+    static void fromSyntax(Compilation& compilation,
+                           const syntax::PrimitiveInstantiationSyntax& syntax,
+                           const syntax::HierarchicalInstanceSyntax* specificInstance,
+                           const ASTContext& context, SmallVectorBase<const Symbol*>& results,
+                           SmallVectorBase<const Symbol*>& implicitNets,
+                           SmallSet<std::string_view, 8>& implicitNetNames);
 
     static void fromSyntax(Compilation& compilation,
                            const syntax::CheckerInstantiationSyntax& syntax,
@@ -258,8 +304,8 @@ public:
 
     PrimitiveInstanceSymbol(std::string_view name, SourceLocation loc,
                             const PrimitiveSymbol& primitiveType) :
-        InstanceSymbolBase(SymbolKind::PrimitiveInstance, name, loc),
-        primitiveType(primitiveType) {}
+        InstanceSymbolBase(SymbolKind::PrimitiveInstance, name, loc), primitiveType(primitiveType) {
+    }
 
     std::span<const Expression* const> getPortConnections() const;
     const TimingControl* getDelay() const;
@@ -267,8 +313,10 @@ public:
 
     static void fromSyntax(const PrimitiveSymbol& primitive,
                            const syntax::HierarchyInstantiationSyntax& syntax,
+                           const syntax::HierarchicalInstanceSyntax* specificInstance,
                            const ASTContext& context, SmallVectorBase<const Symbol*>& results,
-                           SmallVectorBase<const Symbol*>& implicitNets);
+                           SmallVectorBase<const Symbol*>& implicitNets,
+                           SmallSet<std::string_view, 8>& implicitNetNames);
 
     static void fromSyntax(const syntax::PrimitiveInstantiationSyntax& syntax,
                            const ASTContext& context, SmallVectorBase<const Symbol*>& results,
@@ -303,8 +351,8 @@ public:
         Connection(const CheckerInstanceBodySymbol& parent, const Symbol& formal,
                    const syntax::ExpressionSyntax* outputInitialSyntax,
                    std::span<const AttributeSymbol* const> attributes) :
-            parent(parent),
-            formal(formal), attributes(attributes), outputInitialSyntax(outputInitialSyntax) {}
+            parent(parent), formal(formal), attributes(attributes),
+            outputInitialSyntax(outputInitialSyntax) {}
 
         const Expression* getOutputInitialExpr() const;
 
@@ -318,22 +366,24 @@ public:
     static void fromSyntax(const CheckerSymbol& checker,
                            const syntax::HierarchyInstantiationSyntax& syntax,
                            const ASTContext& context, SmallVectorBase<const Symbol*>& results,
-                           SmallVectorBase<const Symbol*>& implicitNets, bool isFromBind);
+                           SmallVectorBase<const Symbol*>& implicitNets,
+                           bitmask<InstanceFlags> flags);
 
     static void fromSyntax(const syntax::CheckerInstantiationSyntax& syntax,
                            const ASTContext& context, SmallVectorBase<const Symbol*>& results,
-                           SmallVectorBase<const Symbol*>& implicitNets, bool isFromBind);
+                           SmallVectorBase<const Symbol*>& implicitNets,
+                           bitmask<InstanceFlags> flags);
 
     /// Creates an intentionally invalid instance by forcing all port connections to
     /// null values. This allows type checking instance members as long as they don't
     /// depend on any port expansion.
-    static CheckerInstanceSymbol& createInvalid(const CheckerSymbol& checker);
+    static CheckerInstanceSymbol& createInvalid(const CheckerSymbol& checker, uint32_t depth);
 
     static CheckerInstanceSymbol& fromSyntax(
         Compilation& compilation, const ASTContext& context, const CheckerSymbol& checker,
         const syntax::HierarchicalInstanceSyntax& syntax,
         std::span<const syntax::AttributeInstanceSyntax* const> attributes,
-        SmallVectorBase<int32_t>& path, bool isProcedural, bool isFromBind);
+        SmallVectorBase<int32_t>& path, bool isProcedural, bitmask<InstanceFlags> flags);
 
     void verifyMembers() const;
 
@@ -358,21 +408,12 @@ public:
     const AssertionInstanceDetails& assertionDetails;
     uint32_t instanceDepth;
     bool isProcedural;
-
-    /// Indicates whether this instance was created from a bind directive
-    /// instead of a typical instantiation.
-    bool isFromBind = false;
-
-    /// Indicates whether the checker isn't actually instantiated in the design.
-    /// This might be because it was created with invalid port connections simply
-    /// to check name lookup rules but it's never actually referenced elsewhere
-    /// in the user's code.
-    bool isUninstantiated;
+    bitmask<InstanceFlags> flags;
 
     CheckerInstanceBodySymbol(Compilation& compilation, const CheckerSymbol& checker,
                               AssertionInstanceDetails& assertionDetails,
                               const ASTContext& originalContext, uint32_t instanceDepth,
-                              bool isProcedural, bool isFromBind, bool isUninstantiated);
+                              bool isProcedural, bitmask<InstanceFlags> flags);
 
     void serializeTo(ASTSerializer& serializer) const;
 

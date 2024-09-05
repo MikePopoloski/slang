@@ -7,6 +7,7 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include "slang/ast/HierarchicalReference.h"
 #include "slang/diagnostics/Diagnostics.h"
 #include "slang/syntax/SyntaxFwd.h"
 #include "slang/text/SourceLocation.h"
@@ -50,9 +51,8 @@ enum class SLANG_EXPORT LookupFlags {
     /// uninstantiated module.
     NoUndeclaredErrorIfUninstantiated = 1 << 4,
 
-    /// The lookup is for a typedef target type, which has a special exemption
-    /// to allow scoped access to incomplete forward class types.
-    TypedefTarget = 1 << 5,
+    /// Allow lookup to resolve to incomplete forward class types.
+    AllowIncompleteForwardTypedefs = 1 << 5,
 
     /// The lookup should not continue looking into parent scopes if the name
     /// is not found in the initial search scope.
@@ -64,13 +64,56 @@ enum class SLANG_EXPORT LookupFlags {
     /// Lookup is allowed to return the root symbol via the '$root' scope specifier.
     AllowRoot = 1 << 8,
 
+    /// Lookup is allowed to return the nearest compilation unit via the '$unit' scope specifier.
+    AllowUnit = 1 << 9,
+
     /// Lookup is resolving an interface port connection expression.
-    IfacePortConn = 1 << 9,
+    IfacePortConn = 1 << 10,
+
+    /// Lookup is within a static initializer expression.
+    StaticInitializer = 1 << 11,
+
+    /// Lookup is happening within a type reference expression.
+    TypeReference = 1 << 12,
+
+    /// Always allow upward name lookup to occur, even with simple identifiers.
+    AlwaysAllowUpward = 1 << 13,
+
+    /// Disallow resolving a name to a member declared or imported into
+    /// the $unit compilation unit scope.
+    DisallowUnitReferences = 1 << 14,
 
     /// Treat this lookup as hierarchical even if it's a simple name.
     ForceHierarchical = AllowDeclaredAfter | NoUndeclaredErrorIfUninstantiated
 };
-SLANG_BITMASK(LookupFlags, IfacePortConn)
+SLANG_BITMASK(LookupFlags, DisallowUnitReferences)
+
+/// Flags that indicate additional details about the result of a lookup operation.
+enum class SLANG_EXPORT LookupResultFlags : uint8_t {
+    /// No extra result information.
+    None = 0,
+
+    /// The found symbol was imported from a package.
+    WasImported = 1 << 0,
+
+    /// The symbol was found via hierarchical lookup.
+    IsHierarchical = 1 << 1,
+
+    /// There were problems during lookup that indicate we should ignore the lack
+    /// of a found symbol, because we're in a context where such a failure may be
+    /// expected (for example, within a default instantiation of a generic class
+    /// where the base class fails to resolve).
+    SuppressUndeclared = 1 << 2,
+
+    /// The lookup was resolved through a type parameter. Some language
+    /// rules restrict where this can be done.
+    FromTypeParam = 1 << 3,
+
+    /// The lookup was resolved through a forwarded typedef. Some language
+    /// rules restrict where this can be done.
+    FromForwardTypedef = 1 << 4
+};
+SLANG_BITMASK(LookupResultFlags, FromForwardTypedef)
 
 /// This type denotes the ordering of symbols within a particular scope, for the purposes of
 /// determining whether a found symbol is visible compared to the given location.
@@ -99,8 +142,10 @@ public:
     /// A special location that should always compare before any other.
     static const LookupLocation min;
 
+    /// Default equality operator.
     bool operator==(const LookupLocation& other) const = default;
 
+    /// Default comparison operator.
     std::strong_ordering operator<=>(const LookupLocation& other) const {
         SLANG_ASSERT(scope == other.scope || !scope || !other.scope);
         return index <=> other.index;
@@ -121,25 +166,13 @@ struct SLANG_EXPORT LookupResult {
     /// and the @a found field will be nullptr.
     const SystemSubroutine* systemSubroutine = nullptr;
 
-    /// Set to true if the found symbol was imported from a package.
-    bool wasImported = false;
+    /// If the lookup was via hierarchical path, this indicates the number of
+    /// steps upward through the hierarchy we had to take before we started
+    /// traversing back down to the found symbol.
+    uint32_t upwardCount = 0;
 
-    /// Set to true if the lookup was hierarchical.
-    bool isHierarchical = false;
-
-    /// Set to true if there were problems during lookup that indicate we should
-    /// ignore the lack of a found symbol, because we're in a context where such
-    /// a failure may be expected (for example, within a default instantiation of
-    /// a generic class where the base class fails to resolve).
-    bool suppressUndeclared = false;
-
-    /// Set to true if the lookup was resolved through a type parameter. Some language
-    /// rules restrict where this can be done.
-    bool fromTypeParam = false;
-
-    /// Set to true if the lookup was resolved through a forwarded typedef. Some language
-    /// rules restrict where this can be done.
-    bool fromForwardTypedef = false;
+    /// Flags that specify additional information about the result of the lookup.
+    bitmask<LookupResultFlags> flags;
 
     /// A structure that represents a selection of a single member from the resulting
     /// symbol found during a lookup operation.
@@ -164,6 +197,10 @@ struct SLANG_EXPORT LookupResult {
     /// Only applicable if the found symbol is a value symbol.
     SmallVector<Selector, 4> selectors;
 
+    /// If this lookup was via a hierarchical reference, this value contains
+    /// information about how the path was resolved.
+    SmallVector<HierarchicalReference::Element, 2> path;
+
     /// Reports a diagnostic that occurred during lookup. The stored diagnostics
     /// are not automatically emitted to the compilation, letting them be suppressed
     /// if desired.
@@ -184,9 +221,6 @@ struct SLANG_EXPORT LookupResult {
 
     /// Clears the structure of all results, as if it had been default initialized.
     void clear();
-
-    /// Copies result members from the given result object.
-    void copyFrom(const LookupResult& other);
 
     /// Reports any diagnostics that have occurred during lookup to the given AST
     /// context, which will ensure they are visible to the compilation.

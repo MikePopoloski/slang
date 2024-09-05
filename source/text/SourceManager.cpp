@@ -214,6 +214,15 @@ std::string_view SourceManager::getSourceText(BufferID buffer) const {
     return std::string_view(fd->mem.data(), fd->mem.size());
 }
 
+uint64_t SourceManager::getSortKey(BufferID buffer) const {
+    std::shared_lock lock(mutex);
+    auto info = getFileInfo(buffer, lock);
+    if (!info)
+        return uint64_t(buffer.getId()) << 32;
+
+    return info->sortKey;
+}
+
 SourceLocation SourceManager::createExpansionLoc(SourceLocation originalLoc,
                                                  SourceRange expansionRange, bool isMacroArg) {
     std::unique_lock lock(mutex);
@@ -268,19 +277,20 @@ SourceBuffer SourceManager::assignBuffer(std::string_view bufferPath, SmallVecto
         }
     }
 
-    return cacheBuffer(std::move(path), std::move(pathStr), includedFrom, library,
+    return cacheBuffer(std::move(path), std::move(pathStr), includedFrom, library, UINT64_MAX,
                        std::move(buffer));
 }
 
 SourceManager::BufferOrError SourceManager::readSource(const fs::path& path,
-                                                       const SourceLibrary* library) {
-    return openCached(path, SourceLocation(), library);
+                                                       const SourceLibrary* library,
+                                                       uint64_t sortKey) {
+    return openCached(path, SourceLocation(), library, sortKey);
 }
 
-SourceManager::BufferOrError SourceManager::readHeader(std::string_view path,
-                                                       SourceLocation includedFrom,
-                                                       const SourceLibrary* library,
-                                                       bool isSystemPath) {
+SourceManager::BufferOrError SourceManager::readHeader(
+    std::string_view path, SourceLocation includedFrom, const SourceLibrary* library,
+    bool isSystemPath, std::span<std::filesystem::path const> additionalIncludePaths) {
+
     // if the header is specified as an absolute path, just do a straight lookup
     SLANG_ASSERT(!path.empty());
     fs::path p = path;
@@ -312,6 +322,12 @@ SourceManager::BufferOrError SourceManager::readHeader(std::string_view path,
 
     if (currFileDir) {
         auto result = openCached(*currFileDir / p, includedFrom, library);
+        if (result)
+            return result;
+    }
+
+    for (auto& dir : additionalIncludePaths) {
+        auto result = openCached(dir / p, includedFrom, library);
         if (result)
             return result;
     }
@@ -407,10 +423,16 @@ const SourceManager::FileInfo* SourceManager::getFileInfo(BufferID buffer, TLock
 }
 
 SourceBuffer SourceManager::createBufferEntry(FileData* fd, SourceLocation includedFrom,
-                                              const SourceLibrary* library,
+                                              const SourceLibrary* library, uint64_t sortKey,
                                               std::unique_lock<std::shared_mutex>&) {
     SLANG_ASSERT(fd);
-    bufferEntries.emplace_back(FileInfo(fd, library, includedFrom));
+
+    // If no sort key is provided we use the bufferID, but shifted up
+    // so that the bottom 32 bits are reserved for custom sort keys.
+    if (sortKey == UINT64_MAX)
+        sortKey = bufferEntries.size() << 32;
+
+    bufferEntries.emplace_back(FileInfo(fd, library, includedFrom, sortKey));
     return SourceBuffer{std::string_view(fd->mem.data(), fd->mem.size()), library,
                         BufferID((uint32_t)(bufferEntries.size() - 1), fd->name)};
 }
@@ -434,7 +456,8 @@ bool SourceManager::isCached(const fs::path& path) const {
 
 SourceManager::BufferOrError SourceManager::openCached(const fs::path& fullPath,
                                                        SourceLocation includedFrom,
-                                                       const SourceLibrary* library) {
+                                                       const SourceLibrary* library,
+                                                       uint64_t sortKey) {
     fs::path absPath;
     if (!disableProximatePaths) {
         std::error_code ec;
@@ -457,7 +480,7 @@ SourceManager::BufferOrError SourceManager::openCached(const fs::path& fullPath,
                 return nonstd::make_unexpected(ec);
 
             SLANG_ASSERT(fd);
-            return createBufferEntry(fd.get(), includedFrom, library, lock);
+            return createBufferEntry(fd.get(), includedFrom, library, sortKey, lock);
         }
     }
 
@@ -469,13 +492,13 @@ SourceManager::BufferOrError SourceManager::openCached(const fs::path& fullPath,
         return nonstd::make_unexpected(ec);
     }
 
-    return cacheBuffer(std::move(absPath), std::move(pathStr), includedFrom, library,
+    return cacheBuffer(std::move(absPath), std::move(pathStr), includedFrom, library, sortKey,
                        std::move(buffer));
 }
 
 SourceBuffer SourceManager::cacheBuffer(fs::path&& path, std::string&& pathStr,
                                         SourceLocation includedFrom, const SourceLibrary* library,
-                                        SmallVector<char>&& buffer) {
+                                        uint64_t sortKey, SmallVector<char>&& buffer) {
     std::string name;
     if (!disableProximatePaths) {
         std::error_code ec;
@@ -502,7 +525,7 @@ SourceBuffer SourceManager::cacheBuffer(fs::path&& path, std::string&& pathStr,
     auto [it, inserted] = lookupCache.emplace(pathStr, std::pair{std::move(fd), std::error_code{}});
 
     FileData* fdPtr = it->second.first.get();
-    return createBufferEntry(fdPtr, includedFrom, library, lock);
+    return createBufferEntry(fdPtr, includedFrom, library, sortKey, lock);
 }
 
 template<IsLock TLock>

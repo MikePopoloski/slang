@@ -20,27 +20,44 @@ const static flat_hash_map<std::string_view, TokenKind> systemIdentifierKeywords
     { "$unit", TokenKind::UnitSystemName }
 };
 
+#define STANDARD_DIRECTIVES \
+    { "begin_keywords", SyntaxKind::BeginKeywordsDirective },                  \
+    { "celldefine", SyntaxKind::CellDefineDirective },                         \
+    { "default_nettype", SyntaxKind::DefaultNetTypeDirective },                \
+    { "define", SyntaxKind::DefineDirective },                                 \
+    { "else", SyntaxKind::ElseDirective },                                     \
+    { "elsif", SyntaxKind::ElsIfDirective },                                   \
+    { "end_keywords", SyntaxKind::EndKeywordsDirective },                      \
+    { "endcelldefine", SyntaxKind::EndCellDefineDirective },                   \
+    { "endif", SyntaxKind::EndIfDirective },                                   \
+    { "ifdef", SyntaxKind::IfDefDirective },                                   \
+    { "ifndef", SyntaxKind::IfNDefDirective },                                 \
+    { "include", SyntaxKind::IncludeDirective },                               \
+    { "line", SyntaxKind::LineDirective },                                     \
+    { "nounconnected_drive", SyntaxKind::NoUnconnectedDriveDirective },        \
+    { "pragma", SyntaxKind::PragmaDirective },                                 \
+    { "resetall", SyntaxKind::ResetAllDirective },                             \
+    { "timescale", SyntaxKind::TimeScaleDirective },                           \
+    { "unconnected_drive", SyntaxKind::UnconnectedDriveDirective },            \
+    { "undef", SyntaxKind::UndefDirective },                                   \
+    { "undefineall", SyntaxKind::UndefineAllDirective },                       \
+    { "default_decay_time", SyntaxKind::DefaultDecayTimeDirective },           \
+    { "default_trireg_strength", SyntaxKind::DefaultTriregStrengthDirective }, \
+    { "delay_mode_distributed", SyntaxKind::DelayModeDistributedDirective },   \
+    { "delay_mode_path", SyntaxKind::DelayModePathDirective },                 \
+    { "delay_mode_unit", SyntaxKind::DelayModeUnitDirective },                 \
+    { "delay_mode_zero", SyntaxKind::DelayModeZeroDirective },
+
 const static flat_hash_map<std::string_view, SyntaxKind> directiveTable = {
-    { "begin_keywords", SyntaxKind::BeginKeywordsDirective },
-    { "celldefine", SyntaxKind::CellDefineDirective },
-    { "default_nettype", SyntaxKind::DefaultNetTypeDirective },
-    { "define", SyntaxKind::DefineDirective },
-    { "else", SyntaxKind::ElseDirective },
-    { "elsif", SyntaxKind::ElsIfDirective },
-    { "end_keywords", SyntaxKind::EndKeywordsDirective },
-    { "endcelldefine", SyntaxKind::EndCellDefineDirective },
-    { "endif", SyntaxKind::EndIfDirective },
-    { "ifdef", SyntaxKind::IfDefDirective },
-    { "ifndef", SyntaxKind::IfNDefDirective },
-    { "include", SyntaxKind::IncludeDirective },
-    { "line", SyntaxKind::LineDirective },
-    { "nounconnected_drive", SyntaxKind::NoUnconnectedDriveDirective },
-    { "pragma", SyntaxKind::PragmaDirective },
-    { "resetall", SyntaxKind::ResetAllDirective },
-    { "timescale", SyntaxKind::TimeScaleDirective },
-    { "unconnected_drive", SyntaxKind::UnconnectedDriveDirective },
-    { "undef", SyntaxKind::UndefDirective },
-    { "undefineall", SyntaxKind::UndefineAllDirective }
+    STANDARD_DIRECTIVES
+};
+
+const static flat_hash_map<std::string_view, SyntaxKind> directivesWithLegacyProtect = {
+    STANDARD_DIRECTIVES
+    { "protect", SyntaxKind::ProtectDirective },
+    { "endprotect", SyntaxKind::EndProtectDirective },
+    { "protected", SyntaxKind::ProtectedDirective },
+    { "endprotected", SyntaxKind::EndProtectedDirective }
 };
 
 const static flat_hash_map<std::string_view, KeywordVersion> keywordVersionTable = {
@@ -51,7 +68,8 @@ const static flat_hash_map<std::string_view, KeywordVersion> keywordVersionTable
     { "1800-2005", KeywordVersion::v1800_2005 },
     { "1800-2009", KeywordVersion::v1800_2009 },
     { "1800-2012", KeywordVersion::v1800_2012 },
-    { "1800-2017", KeywordVersion::v1800_2017 }
+    { "1800-2017", KeywordVersion::v1800_2017 },
+    { "1800-2023", KeywordVersion::v1800_2023 }
 };
 
 // Lists of keywords, separated by the specification in which they were first introduced
@@ -320,7 +338,7 @@ const static flat_hash_map<std::string_view, KeywordVersion> keywordVersionTable
 
 // We maintain a separate table of keywords for all the various specifications,
 // to allow for easy switching between them when requested
-const static flat_hash_map<std::string_view, TokenKind> allKeywords[8] =
+const static flat_hash_map<std::string_view, TokenKind> allKeywords[9] =
 { { // IEEE 1364-1995
     KEYWORDS_1364_1995
 }, { // IEEE 1364-2001-noconfig
@@ -357,6 +375,14 @@ const static flat_hash_map<std::string_view, TokenKind> allKeywords[8] =
     NEWKEYWORDS_1800_2009,
     NEWKEYWORDS_1800_2012
 }, { // IEEE 1800-2017
+    KEYWORDS_1364_1995,
+    NEWKEYWORDS_1364_2001_noconfig,
+    NEWKEYWORDS_1364_2001,
+    NEWKEYWORDS_1364_2005,
+    NEWKEYWORDS_1800_2005,
+    NEWKEYWORDS_1800_2009,
+    NEWKEYWORDS_1800_2012
+}, { // IEEE 1800-2023
     KEYWORDS_1364_1995,
     NEWKEYWORDS_1364_2001_noconfig,
     NEWKEYWORDS_1364_2001,
@@ -630,14 +656,22 @@ TokenKind LexerFacts::getSystemKeywordKind(std::string_view text) {
     return TokenKind::Unknown;
 }
 
-SyntaxKind LexerFacts::getDirectiveKind(std::string_view directive) {
-    if (auto it = directiveTable.find(directive); it != directiveTable.end())
+SyntaxKind LexerFacts::getDirectiveKind(std::string_view directive, bool enableLegacyProtect) {
+    auto& table = enableLegacyProtect ? directivesWithLegacyProtect : directiveTable;
+    if (auto it = table.find(directive); it != table.end())
         return it->second;
     return SyntaxKind::MacroUsage;
 }
 
-KeywordVersion LexerFacts::getDefaultKeywordVersion() {
-    return KeywordVersion::v1800_2017;
+KeywordVersion LexerFacts::getDefaultKeywordVersion(LanguageVersion languageVersion) {
+    switch (languageVersion) {
+        case LanguageVersion::v1800_2017:
+            return KeywordVersion::v1800_2017;
+        case LanguageVersion::v1800_2023:
+            return KeywordVersion::v1800_2023;
+        default:
+            SLANG_UNREACHABLE;
+    }
 }
 
 std::optional<KeywordVersion> LexerFacts::getKeywordVersion(std::string_view text) {
@@ -688,16 +722,13 @@ std::string_view LexerFacts::getTokenKindText(TokenKind kind) {
         case TokenKind::OpenBracket: return "[";
         case TokenKind::CloseBracket: return "]";
         case TokenKind::OpenParenthesis: return "(";
-        case TokenKind::OpenParenthesisStar: return "(*";
         case TokenKind::CloseParenthesis: return ")";
-        case TokenKind::StarCloseParenthesis: return "*)";
         case TokenKind::Semicolon: return ";";
         case TokenKind::Colon: return ":";
         case TokenKind::ColonEquals: return ":=";
         case TokenKind::ColonSlash: return ":/";
         case TokenKind::DoubleColon: return "::";
         case TokenKind::Comma: return ",";
-        case TokenKind::DotStar: return ".*";
         case TokenKind::Dot: return ".";
         case TokenKind::Slash: return "/";
         case TokenKind::Star: return "*";
@@ -706,6 +737,8 @@ std::string_view LexerFacts::getTokenKindText(TokenKind kind) {
         case TokenKind::Plus: return "+";
         case TokenKind::DoublePlus: return "++";
         case TokenKind::PlusColon: return "+:";
+        case TokenKind::PlusDivMinus: return "+/-";
+        case TokenKind::PlusModMinus: return "+%-";
         case TokenKind::Minus: return "-";
         case TokenKind::DoubleMinus: return "--";
         case TokenKind::MinusColon: return "-:";
@@ -1021,6 +1054,7 @@ std::string_view LexerFacts::getTokenKindText(TokenKind kind) {
 
         // directives
         case TokenKind::MacroQuote: return "`\"";
+        case TokenKind::MacroTripleQuote: return "`\"\"\"";
         case TokenKind::MacroEscapedQuote: return "`\\`\"";
         case TokenKind::MacroPaste: return "``";
 

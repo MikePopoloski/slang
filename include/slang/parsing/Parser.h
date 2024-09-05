@@ -15,6 +15,7 @@
 #include "slang/syntax/SyntaxFacts.h"
 #include "slang/util/Bag.h"
 #include "slang/util/Hash.h"
+#include "slang/util/LanguageVersion.h"
 
 namespace slang::parsing {
 
@@ -103,20 +104,23 @@ enum class FunctionOptions {
     /// No special options specified.
     None = 0,
 
-    /// Allow tasks (as opposed to just functions).
-    AllowTasks = 1,
-
     /// Allow formal argument names to be ommitted.
-    AllowEmptyArgNames = 2,
+    AllowEmptyArgNames = 1 << 0,
 
     /// Allow the return type to be ommitted.
-    AllowImplicitReturn = 4,
+    AllowImplicitReturn = 1 << 1,
 
     /// The function header is for a prototype, so parsing rules
     /// are slightly different.
-    IsPrototype = 8
+    IsPrototype = 1 << 2,
+
+    /// Allow use of the 'default' argument.
+    AllowDefaultArg = 1 << 3,
+
+    /// Allow override specifiers to be declared on the function prototype.
+    AllowOverrideSpecifiers = 1 << 4
 };
-SLANG_BITMASK(FunctionOptions, AllowImplicitReturn)
+SLANG_BITMASK(FunctionOptions, AllowOverrideSpecifiers)
 
 } // namespace detail
 
@@ -125,6 +129,9 @@ struct SLANG_EXPORT ParserOptions {
     /// The maximum depth of nested language constructs (statements, exceptions) before
     /// we give up for fear of stack overflow.
     uint32_t maxRecursionDepth = 1024;
+
+    /// The version of the SystemVerilog language to use.
+    LanguageVersion languageVersion = LanguageVersion::Default;
 };
 
 /// Implements a full syntax parser for SystemVerilog.
@@ -179,8 +186,8 @@ private:
     syntax::ConcatenationExpressionSyntax& parseConcatenation(Token openBrace, syntax::ExpressionSyntax* first);
     syntax::StreamingConcatenationExpressionSyntax& parseStreamConcatenation(Token openBrace);
     syntax::StreamExpressionSyntax& parseStreamExpression();
-    syntax::OpenRangeListSyntax& parseOpenRangeList();
-    syntax::ExpressionSyntax& parseOpenRangeElement(bitmask<ExpressionOptions> options = {});
+    syntax::RangeListSyntax& parseRangeList();
+    syntax::ExpressionSyntax& parseValueRangeElement(bitmask<ExpressionOptions> options = {});
     syntax::ElementSelectSyntax& parseElementSelect();
     syntax::SelectorSyntax* parseElementSelector();
     syntax::NameSyntax& parseName(bitmask<NameOptions> options);
@@ -273,6 +280,7 @@ private:
     syntax::MemberSyntax* parseClockingItem();
     syntax::MemberSyntax& parseClockingDeclaration(AttrList attributes);
     syntax::MemberSyntax& parseDefaultDisable(AttrList attributes);
+    syntax::ForwardTypeRestrictionSyntax* parseTypeRestriction(bool isExpected);
     syntax::MemberSyntax& parseVariableDeclaration(AttrList attributes);
     syntax::DataDeclarationSyntax& parseDataDeclaration(AttrList attributes);
     syntax::LocalVariableDeclarationSyntax& parseLocalVariableDeclaration();
@@ -285,10 +293,11 @@ private:
     syntax::PrimitiveInstantiationSyntax& parsePrimitiveInstantiation(AttrList attributes);
     syntax::CheckerInstantiationSyntax& parseCheckerInstantiation(AttrList attributes);
     syntax::PortConnectionSyntax& parsePortConnection();
-    syntax::FunctionPortSyntax& parseFunctionPort(bool allowEmptyName);
-    syntax::FunctionPortListSyntax* parseFunctionPortList(bool allowEmptyNames);
+    syntax::FunctionPortBaseSyntax& parseFunctionPort(bitmask<FunctionOptions> options);
+    syntax::FunctionPortListSyntax* parseFunctionPortList(bitmask<FunctionOptions> options);
     syntax::FunctionPrototypeSyntax& parseFunctionPrototype(syntax::SyntaxKind parentKind, bitmask<FunctionOptions> options, bool* isConstructor = nullptr);
-    syntax::FunctionDeclarationSyntax& parseFunctionDeclaration(AttrList attributes, syntax::SyntaxKind functionKind, TokenKind endKind, syntax::SyntaxKind parentKind);
+    syntax::FunctionDeclarationSyntax& parseFunctionDeclaration(AttrList attributes, syntax::SyntaxKind functionKind, TokenKind endKind, syntax::SyntaxKind parentKind, bitmask<FunctionOptions> options = {});
+    std::span<syntax::ClassSpecifierSyntax*> parseClassSpecifierList(bool allowSpecifiers);
     Token parseLifetime();
     std::span<syntax::SyntaxNode*> parseBlockItems(TokenKind endKind, Token& end, bool inConstructor);
     syntax::GenvarDeclarationSyntax& parseGenvarDeclaration(AttrList attributes);
@@ -297,14 +306,15 @@ private:
     syntax::CaseGenerateSyntax& parseCaseGenerateConstruct(AttrList attributes);
     syntax::MemberSyntax& parseGenerateBlock();
     syntax::ImplementsClauseSyntax* parseImplementsClause(TokenKind keywordKind, Token& semi);
+    syntax::ClassSpecifierSyntax* parseClassSpecifier();
     syntax::ClassDeclarationSyntax& parseClassDeclaration(AttrList attributes, Token virtualOrInterface);
-    syntax::MemberSyntax* parseClassMember(bool isIfaceClass);
+    syntax::MemberSyntax* parseClassMember(bool isIfaceClass, bool hasBaseClass);
     syntax::ContinuousAssignSyntax& parseContinuousAssign(AttrList attributes);
     syntax::DeclaratorSyntax& parseDeclarator(bool allowMinTypMax = false, bool requireInitializers = false);
     syntax::MemberSyntax* parseCoverageMember();
     syntax::BlockEventExpressionSyntax& parseBlockEventExpression();
     syntax::WithClauseSyntax* parseWithClause();
-    syntax::CovergroupDeclarationSyntax& parseCovergroupDeclaration(AttrList attributes);
+    syntax::CovergroupDeclarationSyntax& parseCovergroupDeclaration(AttrList attributes, bool inClass, bool hasBaseClass);
     syntax::CoverpointSyntax* parseCoverpoint(AttrList attributes, syntax::DataTypeSyntax* type, syntax::NamedLabelSyntax* label);
     syntax::CoverCrossSyntax* parseCoverCross(AttrList attributes, syntax::NamedLabelSyntax* label);
     syntax::CoverageOptionSyntax* parseCoverageOption(AttrList attributes);
@@ -313,11 +323,11 @@ private:
     syntax::MemberSyntax* parseCoverCrossMember();
     syntax::BinsSelectExpressionSyntax& parseBinsSelectPrimary();
     syntax::BinsSelectExpressionSyntax& parseBinsSelectExpression();
-    syntax::MemberSyntax& parseConstraint(AttrList attributes, std::span<Token> qualifiers);
+    syntax::MemberSyntax& parseConstraint(AttrList attributes, std::span<Token> qualifiers, bool hasBaseClass);
     syntax::ConstraintBlockSyntax& parseConstraintBlock(bool isTopLevel);
     syntax::ConstraintItemSyntax* parseConstraintItem(bool allowBlock, bool isTopLevel);
     syntax::DistConstraintListSyntax& parseDistConstraintList();
-    syntax::DistItemSyntax& parseDistItem();
+    syntax::DistItemBaseSyntax& parseDistItem();
     syntax::ExpressionSyntax& parseArrayOrRandomizeMethod(syntax::ExpressionSyntax& expr);
     syntax::DefParamAssignmentSyntax& parseDefParamAssignment();
     syntax::DefParamSyntax& parseDefParam(AttrList attributes);
@@ -332,7 +342,7 @@ private:
     syntax::UdpDeclarationSyntax& parseUdpDeclaration(AttrList attributes);
     syntax::UdpPortDeclSyntax& parseUdpPortDecl(bool& isReg);
     syntax::UdpBodySyntax& parseUdpBody(bool isSequential);
-    syntax::UdpFieldBaseSyntax* parseUdpField(bool required, bool isInput, bool& sawTransition);
+    syntax::UdpFieldBaseSyntax* parseUdpField(bool required, bool isInput, bool isSequential, bool& sawTransition);
     syntax::UdpEntrySyntax& parseUdpEntry(bool isSequential);
     syntax::SpecparamDeclaratorSyntax& parseSpecparamDeclarator(syntax::SyntaxKind parentKind);
     syntax::SpecparamDeclarationSyntax& parseSpecparam(AttrList attributes, syntax::SyntaxKind parentKind);
@@ -406,6 +416,7 @@ private:
     bool scanDimensionList(uint32_t& index);
     bool scanQualifiedName(uint32_t& index, bool allowNew);
     bool scanAttributes(uint32_t& index);
+    bool isStartOfAttrs(uint32_t index);
 
     template<bool (*IsEnd)(TokenKind)>
     bool scanTypePart(uint32_t& index, TokenKind start, TokenKind end);

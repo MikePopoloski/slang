@@ -177,6 +177,9 @@ void TypePrinter::visit(const PackedUnionType& type, std::string_view overrideNa
         if (type.isSigned)
             buffer->append(" signed");
 
+        if (type.isTagged)
+            buffer->append(" tagged");
+
         appendMembers(type);
 
         if (options.skipScopedTypeNames)
@@ -293,6 +296,9 @@ void TypePrinter::visit(const UnpackedUnionType& type, std::string_view override
     }
     else {
         buffer->append("union");
+        if (type.isTagged)
+            buffer->append(" tagged");
+
         appendMembers(type);
 
         if (options.skipScopedTypeNames)
@@ -363,7 +369,7 @@ void TypePrinter::visit(const VirtualInterfaceType& type, std::string_view) {
 
     buffer->append(type.iface.getDefinition().name);
 
-    auto params = type.iface.body.parameters;
+    auto params = type.iface.body.getParameters();
     if (!params.empty()) {
         buffer->append("#(");
         for (auto param : params) {
@@ -387,7 +393,8 @@ void TypePrinter::visit(const TypeAliasType& type, std::string_view overrideName
     if (!overrideName.empty()) {
         type.targetType.getType().visit(*this, overrideName);
     }
-    else if (options.elideScopeNames) {
+    else if (options.elideScopeNames ||
+             options.anonymousTypeStyle == TypePrintingOptions::FriendlyName) {
         type.targetType.getType().visit(*this, type.name);
     }
     else {

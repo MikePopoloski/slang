@@ -9,10 +9,10 @@
 
 #include "slang/ast/ASTSerializer.h"
 #include "slang/ast/Compilation.h"
-#include "slang/ast/Definition.h"
 #include "slang/ast/EvalContext.h"
 #include "slang/ast/Expression.h"
 #include "slang/ast/expressions/MiscExpressions.h"
+#include "slang/ast/symbols/CompilationUnitSymbols.h"
 #include "slang/ast/symbols/MemberSymbols.h"
 #include "slang/ast/symbols/ParameterSymbols.h"
 #include "slang/ast/symbols/SubroutineSymbols.h"
@@ -152,12 +152,11 @@ StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
     auto result = createBlock(scope, syntax, name, loc, StatementBlockKind::Sequential,
                               VariableLifetime::Automatic);
 
-    auto& comp = scope.getCompilation();
     for (auto prod : syntax.productions) {
         if (prod->name.valueText().empty())
             continue;
 
-        auto& symbol = RandSeqProductionSymbol::fromSyntax(comp, *prod);
+        auto& symbol = RandSeqProductionSymbol::fromSyntax(scope, *prod);
         result->addMember(symbol);
     }
 
@@ -242,8 +241,8 @@ void StatementBlockSymbol::elaborateVariables(function_ref<void(const Symbol&)> 
 
 ProceduralBlockSymbol::ProceduralBlockSymbol(SourceLocation loc, ProceduralBlockKind procedureKind,
                                              bool isFromAssertion) :
-    Symbol(SymbolKind::ProceduralBlock, "", loc),
-    procedureKind(procedureKind), isFromAssertion(isFromAssertion) {
+    Symbol(SymbolKind::ProceduralBlock, "", loc), procedureKind(procedureKind),
+    isFromAssertion(isFromAssertion) {
 }
 
 const Statement& ProceduralBlockSymbol::getBody() const {
@@ -427,7 +426,7 @@ void GenerateBlockSymbol::fromSyntax(Compilation& compilation, const CaseGenerat
     SmallVector<const Expression*> bound;
     if (!Expression::bindMembershipExpressions(
             context, TokenKind::CaseKeyword, /* requireIntegral */ false,
-            /* unwrapUnpacked */ false, /* allowTypeReferences */ true, /* allowOpenRange */ true,
+            /* unwrapUnpacked */ false, /* allowTypeReferences */ true, /* allowValueRange */ true,
             *syntax.condition, expressions, bound)) {
         return;
     }
@@ -634,7 +633,7 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(Compilation& comp
 
     // Bind the initialization expression.
     auto& initial = Expression::bindRValue(compilation.getIntegerType(), *syntax.initialExpr,
-                                           syntax.equals.location(), context);
+                                           syntax.equals.range(), context);
     ConstantValue initialVal = context.eval(initial);
     if (!initialVal)
         return *result;

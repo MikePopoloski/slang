@@ -8,7 +8,6 @@
 #include "slang/ast/Lookup.h"
 
 #include "slang/ast/Compilation.h"
-#include "slang/ast/Definition.h"
 #include "slang/ast/Scope.h"
 #include "slang/ast/Symbol.h"
 #include "slang/ast/symbols/BlockSymbols.h"
@@ -56,7 +55,7 @@ Diagnostic& LookupResult::addDiag(const Scope& scope, DiagCode code, SourceRange
 
 bool LookupResult::hasError() const {
     // We have an error if we have any diagnostics or if there was a missing explicit import.
-    if (!found && (wasImported || suppressUndeclared))
+    if (!found && flags.has(LookupResultFlags::WasImported | LookupResultFlags::SuppressUndeclared))
         return true;
 
     for (auto& diag : diagnostics) {
@@ -70,29 +69,11 @@ bool LookupResult::hasError() const {
 void LookupResult::clear() {
     found = nullptr;
     systemSubroutine = nullptr;
-    wasImported = false;
-    isHierarchical = false;
-    suppressUndeclared = false;
-    fromTypeParam = false;
-    fromForwardTypedef = false;
+    upwardCount = 0;
+    flags = LookupResultFlags::None;
     selectors.clear();
+    path.clear();
     diagnostics.clear();
-}
-
-void LookupResult::copyFrom(const LookupResult& other) {
-    found = other.found;
-    systemSubroutine = other.systemSubroutine;
-    wasImported = other.wasImported;
-    isHierarchical = other.isHierarchical;
-    suppressUndeclared = other.suppressUndeclared;
-    fromTypeParam = other.fromTypeParam;
-    fromForwardTypedef = other.fromForwardTypedef;
-
-    selectors.clear();
-    selectors.append_range(other.selectors);
-
-    diagnostics.clear();
-    diagnostics.append_range(other.diagnostics);
 }
 
 void LookupResult::reportDiags(const ASTContext& context) const {
@@ -346,12 +327,12 @@ bool lookupDownward(std::span<const NamePlusLoc> nameParts, NameComponents name,
         // - This is not a virtual interface access (or descended from one)
         // - This is not a direct interface port, package, or $unit reference
         const bool isCBOrVirtualIface = symbol->kind == SymbolKind::ClockingBlock || isVirtualIface;
-        result.isHierarchical |= !isCBOrVirtualIface;
         if (it == nameParts.rbegin()) {
-            result.isHierarchical = symbol->kind != SymbolKind::InterfacePort &&
-                                    symbol->kind != SymbolKind::Package &&
-                                    symbol->kind != SymbolKind::CompilationUnit &&
-                                    !isCBOrVirtualIface;
+            if (symbol->kind != SymbolKind::InterfacePort && symbol->kind != SymbolKind::Package &&
+                symbol->kind != SymbolKind::CompilationUnit && !isCBOrVirtualIface) {
+                result.flags |= LookupResultFlags::IsHierarchical;
+                result.path.emplace_back(*symbol);
+            }
         }
         else if (flags.has(LookupFlags::IfacePortConn) &&
                  (symbol->kind == SymbolKind::GenerateBlock ||
@@ -360,6 +341,10 @@ bool lookupDownward(std::span<const NamePlusLoc> nameParts, NameComponents name,
             SourceRange errorRange{name.range.start(), (nameParts.rend() - 1)->name.range.end()};
             result.addDiag(*context.scope, diag::InvalidHierarchicalIfacePortConn, errorRange);
             return false;
+        }
+        else if (!isCBOrVirtualIface) {
+            result.flags |= LookupResultFlags::IsHierarchical;
+            result.path.emplace_back(*symbol);
         }
 
         const ModportSymbol* modport = nullptr;
@@ -512,7 +497,7 @@ bool lookupDownward(std::span<const NamePlusLoc> nameParts, NameComponents name,
     if (!checkClassParams(name))
         return false;
 
-    if (result.isHierarchical && symbol) {
+    if (result.flags.has(LookupResultFlags::IsHierarchical) && symbol) {
         if (VariableSymbol::isKind(symbol->kind) &&
             symbol->as<VariableSymbol>().lifetime == VariableLifetime::Automatic) {
             // If we found an automatic variable check that we didn't try to reference it
@@ -525,6 +510,7 @@ bool lookupDownward(std::span<const NamePlusLoc> nameParts, NameComponents name,
             result.addDiag(*context.scope, diag::TypeHierarchical, name.range);
             return false;
         }
+        result.path.emplace_back(*symbol);
     }
 
     result.found = symbol;
@@ -653,7 +639,9 @@ bool checkVisibility(const Symbol& symbol, const Scope& scope,
     }
 
     if (sourceRange) {
-        if (symbol.name == "new") {
+        if (symbol.kind == SymbolKind::Subroutine &&
+            symbol.as<SubroutineSymbol>().flags.has(MethodFlags::Constructor)) {
+
             auto& diag = result.addDiag(scope, diag::InvalidConstructorAccess, *sourceRange);
             diag << targetParent.name;
             if (visibility == Visibility::Local)
@@ -803,10 +791,10 @@ bool resolveColonNames(SmallVectorBase<NamePlusLoc>& nameParts, int colonParts,
         const Symbol* savedSymbol = symbol;
         if (symbol->kind == SymbolKind::Package) {
             symbol = symbol->as<PackageSymbol>().findForImport(name.text);
-            result.wasImported = true;
+            result.flags |= LookupResultFlags::WasImported;
         }
         else if (symbol->kind == SymbolKind::CovergroupType) {
-            symbol = symbol->as<CovergroupType>().body.find(name.text);
+            symbol = symbol->as<CovergroupType>().getBody().find(name.text);
         }
         else {
             symbol = symbol->as<Scope>().find(name.text);
@@ -834,8 +822,9 @@ bool resolveColonNames(SmallVectorBase<NamePlusLoc>& nameParts, int colonParts,
 
     // The initial symbol found cannot be resolved via a forward typedef (i.e. "incomplete")
     // unless this is within a typedef declaration.
-    if (result.fromForwardTypedef && !flags.has(LookupFlags::TypedefTarget) && symbol->isType()) {
-        result.fromForwardTypedef = false;
+    if (result.flags.has(LookupResultFlags::FromForwardTypedef) &&
+        !flags.has(LookupFlags::AllowIncompleteForwardTypedefs) && symbol->isType()) {
+        result.flags &= ~LookupResultFlags::FromForwardTypedef;
         result.addDiag(*context.scope, diag::ScopeIncompleteTypedef, name.range);
     }
 
@@ -848,6 +837,19 @@ void unwrapResult(const Scope& scope, std::optional<SourceRange> range, LookupRe
     if (!result.found)
         return;
 
+    if (result.flags.has(LookupResultFlags::IsHierarchical)) {
+        auto declaredType = result.found->getDeclaredType();
+        if (declaredType && declaredType->isEvaluating()) {
+            if (range) {
+                auto& diag = result.addDiag(scope, diag::RecursiveDefinition, *range);
+                diag << result.found->name;
+                diag.addNote(diag::NoteDeclarationHere, result.found->location);
+            }
+            result.found = nullptr;
+            return;
+        }
+    }
+
     checkVisibility(*result.found, scope, range, result);
 
     // Unwrap type parameters into their target type alias.
@@ -855,7 +857,7 @@ void unwrapResult(const Scope& scope, std::optional<SourceRange> range, LookupRe
         scope.getCompilation().noteReference(*result.found);
 
         result.found = &result.found->as<TypeParameterSymbol>().getTypeAlias();
-        result.fromTypeParam = true;
+        result.flags |= LookupResultFlags::FromTypeParam;
     }
     else if (result.found->kind == SymbolKind::TypeAlias) {
         scope.getCompilation().noteReference(*result.found);
@@ -877,7 +879,7 @@ void unwrapResult(const Scope& scope, std::optional<SourceRange> range, LookupRe
     if (!range)
         return;
 
-    if (result.wasImported) {
+    if (result.flags.has(LookupResultFlags::WasImported)) {
         // If the symbol was imported from a package, check if it is actually
         // declared within an anonymous program within that package and if so,
         // check whether we're allowed to reference it from our source scope.
@@ -898,7 +900,7 @@ void unwrapResult(const Scope& scope, std::optional<SourceRange> range, LookupRe
             parent = parentSym.getParentScope();
         }
     }
-    else if (result.isHierarchical) {
+    else if (result.flags.has(LookupResultFlags::IsHierarchical)) {
         // Hierarchical references are not allowed from within packages
         // unless the target symbol is also within the same package.
         auto pkg = getContainingPackage(scope.asSymbol());
@@ -915,36 +917,62 @@ void unwrapResult(const Scope& scope, std::optional<SourceRange> range, LookupRe
     }
 }
 
-const Symbol* findThisHandle(const Scope& scope, SourceRange range, LookupResult& result) {
-    // Find the parent method, if we can.
-    const Symbol* parent = &scope.asSymbol();
-    while (parent->kind == SymbolKind::StatementBlock ||
-           parent->kind == SymbolKind::RandSeqProduction) {
-        auto parentScope = parent->getParentScope();
-        SLANG_ASSERT(parentScope);
-        parent = &parentScope->asSymbol();
-    }
+const Symbol* findThisHandle(const Scope& scope, bitmask<LookupFlags> flags, SourceRange range,
+                             LookupResult& result) {
+    if (flags.has(LookupFlags::TypeReference)) {
+        // type(this) is allowed to work anywhere within a class, regardless of whether
+        // it's a static context or not.
+        auto parent = &scope.asSymbol();
+        while (parent->kind != SymbolKind::ClassType && parent->kind != SymbolKind::InstanceBody) {
+            auto parentScope = parent->getParentScope();
+            if (!parentScope)
+                break;
+            parent = &parentScope->asSymbol();
+        }
 
-    if (parent->kind == SymbolKind::Subroutine) {
-        auto& sub = parent->as<SubroutineSymbol>();
-        if (sub.thisVar)
-            return sub.thisVar;
+        if (parent->kind == SymbolKind::ClassType)
+            return &parent->as<ClassType>();
     }
+    else {
+        // Find the parent method, if we can.
+        const Symbol* parent = &scope.asSymbol();
+        while (parent->kind == SymbolKind::StatementBlock ||
+               parent->kind == SymbolKind::RandSeqProduction) {
+            auto parentScope = parent->getParentScope();
+            SLANG_ASSERT(parentScope);
+            parent = &parentScope->asSymbol();
+        }
 
-    if (parent->kind == SymbolKind::ConstraintBlock) {
-        auto thisVar = parent->as<ConstraintBlockSymbol>().thisVar;
-        if (thisVar)
-            return thisVar;
+        if (parent->kind == SymbolKind::Subroutine) {
+            auto& sub = parent->as<SubroutineSymbol>();
+            if (sub.thisVar)
+                return sub.thisVar;
+        }
+        else if (parent->kind == SymbolKind::ConstraintBlock) {
+            auto thisVar = parent->as<ConstraintBlockSymbol>().thisVar;
+            if (thisVar)
+                return thisVar;
+        }
+        else if (parent->kind == SymbolKind::ClassType &&
+                 !flags.has(LookupFlags::StaticInitializer)) {
+            return parent->as<ClassType>().thisVar;
+        }
     }
 
     result.addDiag(scope, diag::InvalidThisHandle, range);
     return nullptr;
 }
 
-const Symbol* findSuperHandle(const Scope& scope, SourceRange range, LookupResult& result) {
-    auto [parent, _] = Lookup::getContainingClass(scope);
+const Symbol* findSuperHandle(const Scope& scope, bitmask<LookupFlags> flags, SourceRange range,
+                              LookupResult& result) {
+    auto [parent, inStatic] = Lookup::getContainingClass(scope);
     if (!parent) {
         result.addDiag(scope, diag::SuperOutsideClass, range);
+        return nullptr;
+    }
+
+    if (inStatic || flags.has(LookupFlags::StaticInitializer)) {
+        result.addDiag(scope, diag::NonStaticClassProperty, range) << "super"sv;
         return nullptr;
     }
 
@@ -999,7 +1027,7 @@ void Lookup::name(const NameSyntax& syntax, const ASTContext& context, bitmask<L
                 result.errorIfSelectors(context);
             return;
         case SyntaxKind::ThisHandle:
-            result.found = findThisHandle(scope, syntax.sourceRange(), result);
+            result.found = findThisHandle(scope, flags, syntax.sourceRange(), result);
             return;
         case SyntaxKind::SystemName: {
             // If this is a system name, look up directly in the compilation.
@@ -1024,6 +1052,16 @@ void Lookup::name(const NameSyntax& syntax, const ASTContext& context, bitmask<L
             }
             result.found = &scope.getCompilation().getRoot();
             return;
+        case SyntaxKind::UnitScope:
+            if (!flags.has(LookupFlags::AllowUnit)) {
+                auto tok = syntax.getFirstToken();
+                result.addDiag(scope, diag::ExpectedToken,
+                               tok.location() + tok.valueText().length())
+                    << "::"sv;
+                return;
+            }
+            result.found = scope.getCompilationUnit();
+            return;
         case SyntaxKind::ConstructorName:
             result.addDiag(scope, diag::UnexpectedNameToken, syntax.sourceRange())
                 << syntax.getFirstToken().valueText();
@@ -1034,7 +1072,6 @@ void Lookup::name(const NameSyntax& syntax, const ASTContext& context, bitmask<L
             // already issued a diagnostic.
             result.found = nullptr;
             return;
-        case SyntaxKind::UnitScope:
         case SyntaxKind::SuperHandle:
         case SyntaxKind::ArrayUniqueMethod:
         case SyntaxKind::ArrayAndMethod:
@@ -1052,8 +1089,16 @@ void Lookup::name(const NameSyntax& syntax, const ASTContext& context, bitmask<L
 
     // Perform the lookup.
     unqualifiedImpl(scope, name.text, context.getLocation(), name.range, flags, {}, result, scope);
-    if (!result.found && !result.hasError())
-        reportUndeclared(scope, name.text, name.range, flags, false, result);
+
+    if (!result.found) {
+        if (flags.has(LookupFlags::AlwaysAllowUpward)) {
+            if (!lookupUpward({}, name, context, flags, result))
+                return;
+        }
+
+        if (!result.found && !result.hasError())
+            reportUndeclared(scope, name.text, name.range, flags, false, result);
+    }
 
     if (result.found && name.paramAssignments) {
         if (result.found->kind != SymbolKind::GenericClassDef) {
@@ -1136,7 +1181,9 @@ static const Symbol* selectSingleChild(const Symbol& symbol, const BitSelectSynt
             return nullptr;
         }
 
-        return array.elements[size_t(array.range.translateIndex(*index))];
+        auto child = array.elements[size_t(array.range.translateIndex(*index))];
+        result.path.emplace_back(*child, *index);
+        return child;
     }
     else {
         auto& array = symbol.as<GenerateBlockArraySymbol>();
@@ -1144,8 +1191,10 @@ static const Symbol* selectSingleChild(const Symbol& symbol, const BitSelectSynt
             return nullptr;
 
         for (auto entry : array.entries) {
-            if (entry->arrayIndex && *entry->arrayIndex == *index)
+            if (entry->arrayIndex && *entry->arrayIndex == *index) {
+                result.path.emplace_back(*entry, *index);
                 return entry;
+            }
         }
 
         auto& diag = result.addDiag(*context.scope, diag::ScopeIndexOutOfRange,
@@ -1217,7 +1266,10 @@ static const Symbol* selectChildRange(const InstanceArraySymbol& array,
 
     // Create a placeholder array symbol that will hold this new sliced array.
     auto& comp = context.getCompilation();
-    return comp.emplace<InstanceArraySymbol>(comp, array.name, array.location, elems, newRange);
+    auto children = comp.emplace<InstanceArraySymbol>(comp, ""sv, syntax.getFirstToken().location(),
+                                                      elems, newRange);
+    result.path.emplace_back(*children);
+    return children;
 }
 
 const Symbol* Lookup::selectChild(const Symbol& initialSymbol,
@@ -1322,12 +1374,12 @@ const ClassType* Lookup::findClass(const NameSyntax& className, const ASTContext
         return nullptr;
 
     if (requireInterfaceClass) {
-        if (result.fromTypeParam) {
+        if (result.flags.has(LookupResultFlags::FromTypeParam)) {
             context.addDiag(diag::IfaceExtendTypeParam, className.sourceRange());
             return nullptr;
         }
 
-        if (result.fromForwardTypedef) {
+        if (result.flags.has(LookupResultFlags::FromForwardTypedef)) {
             context.addDiag(diag::IfaceExtendIncomplete, className.sourceRange());
             return nullptr;
         }
@@ -1541,19 +1593,19 @@ bool Lookup::withinClassRandomize(const ASTContext& context, const NameSyntax& s
         case SyntaxKind::ThisHandle:
             result.found = details.thisVar;
             if (!result.found)
-                result.found = findThisHandle(*context.scope, name.range, result);
+                result.found = findThisHandle(*context.scope, flags, name.range, result);
 
             if (result.found && nameParts.back().kind == SyntaxKind::SuperHandle) {
                 // Handle "this.super.whatever" the same as if the user had just
                 // written "super.whatever".
                 name = nameParts.back().name;
                 nameParts.pop_back();
-                result.found = findSuperHandle(findSuperScope(), name.range, result);
+                result.found = findSuperHandle(findSuperScope(), flags, name.range, result);
                 colonParts = 1;
             }
             break;
         case SyntaxKind::SuperHandle:
-            result.found = findSuperHandle(findSuperScope(), name.range, result);
+            result.found = findSuperHandle(findSuperScope(), flags, name.range, result);
             colonParts = 1; // pretend we used colon access to resolve class scoped name
             break;
         default:
@@ -1666,7 +1718,10 @@ void Lookup::unqualifiedImpl(const Scope& scope, std::string_view name, LookupLo
                         return;
                     }
 
-                    locationGood = sub.getReturnType().isVoid();
+                    // Also allow built-ins to always be found; they don't really
+                    // have a location since they're intrinsically defined.
+                    locationGood = sub.getReturnType().isVoid() ||
+                                   sub.flags.has(MethodFlags::BuiltIn);
                     break;
                 }
                 case SymbolKind::MethodPrototype: {
@@ -1677,7 +1732,8 @@ void Lookup::unqualifiedImpl(const Scope& scope, std::string_view name, LookupLo
                         return;
                     }
 
-                    locationGood = sub.getReturnType().isVoid();
+                    locationGood = sub.getReturnType().isVoid() ||
+                                   sub.flags.has(MethodFlags::BuiltIn);
                     break;
                 }
                 case SymbolKind::Sequence:
@@ -1698,7 +1754,7 @@ void Lookup::unqualifiedImpl(const Scope& scope, std::string_view name, LookupLo
 
             if (forward) {
                 locationGood = LookupLocation::before(*forward) < location;
-                result.fromForwardTypedef = true;
+                result.flags |= LookupResultFlags::FromForwardTypedef;
             }
         }
 
@@ -1723,7 +1779,8 @@ void Lookup::unqualifiedImpl(const Scope& scope, std::string_view name, LookupLo
             switch (symbol->kind) {
                 case SymbolKind::ExplicitImport:
                     result.found = symbol->as<ExplicitImportSymbol>().importedSymbol();
-                    result.wasImported = true;
+                    result.flags |= LookupResultFlags::WasImported;
+                    scope.getCompilation().noteReference(*symbol);
                     break;
                 case SymbolKind::ForwardingTypedef:
                     // If we find a forwarding typedef, the actual typedef was never defined.
@@ -1771,74 +1828,83 @@ void Lookup::unqualifiedImpl(const Scope& scope, std::string_view name, LookupLo
 
     // Look through any wildcard imports prior to the lookup point and see if their packages
     // contain the name we're looking for.
-    auto wildcardImports = scope.getWildcardImports();
-    if (!wildcardImports.empty()) {
-        struct Import {
-            const Symbol* imported;
-            const WildcardImportSymbol* import;
-        };
-        SmallVector<Import, 4> imports;
-        SmallSet<const Symbol*, 2> importDedup;
-
-        for (auto import : wildcardImports) {
-            if (location < LookupLocation::after(*import))
-                break;
-
-            auto package = import->getPackage();
-            if (!package) {
-                result.suppressUndeclared = true;
-                continue;
+    if (auto wildcardImportData = scope.getWildcardImportData()) {
+        if (flags.has(LookupFlags::DisallowWildcardImport)) {
+            // We're in a context that disallows new imports via wildcard imports,
+            // but we can still reference any symbols that were previously imported
+            // that way from some other lookup. In order to be sure we've seen all of
+            // those lookups we need to force elaborate the scope first.
+            if (!wildcardImportData->hasForceElaborated) {
+                wildcardImportData->hasForceElaborated = true;
+                scope.getCompilation().forceElaborate(scope.asSymbol());
             }
 
-            const Symbol* imported = package->findForImport(name);
-            if (imported && importDedup.emplace(imported).second)
-                imports.emplace_back(Import{imported, import});
-        }
-
-        if (!imports.empty()) {
-            if (imports.size() > 1) {
-                if (sourceRange) {
-                    auto& diag = result.addDiag(scope, diag::AmbiguousWildcardImport, *sourceRange);
-                    diag << name;
-                    for (const auto& pair : imports) {
-                        diag.addNote(diag::NoteImportedFrom, pair.import->location);
-                        diag.addNote(diag::NoteDeclarationHere, pair.imported->location);
-                    }
-                }
+            if (auto it = wildcardImportData->importedSymbols.find(name);
+                it != wildcardImportData->importedSymbols.end()) {
+                result.flags |= LookupResultFlags::WasImported;
+                result.found = it->second;
                 return;
             }
+        }
+        else {
+            struct Import {
+                const Symbol* imported;
+                const WildcardImportSymbol* import;
+            };
+            SmallVector<Import, 4> imports;
+            SmallSet<const Symbol*, 2> importDedup;
 
-            if (symbol && sourceRange) {
-                // The existing symbol might be an import for the thing we just imported
-                // via wildcard, which is fine so don't error for that case.
-                if (symbol->kind != SymbolKind::ExplicitImport ||
-                    symbol->as<ExplicitImportSymbol>().importedSymbol() != imports[0].imported) {
+            for (auto import : wildcardImportData->wildcardImports) {
+                if (location < LookupLocation::after(*import))
+                    break;
 
-                    auto& diag = result.addDiag(scope, diag::ImportNameCollision, *sourceRange);
-                    diag << name;
-                    diag.addNote(diag::NoteDeclarationHere, symbol->location);
-                    diag.addNote(diag::NoteImportedFrom, imports[0].import->location);
-                    diag.addNote(diag::NoteDeclarationHere, imports[0].imported->location);
+                auto package = import->getPackage();
+                if (!package) {
+                    result.flags |= LookupResultFlags::SuppressUndeclared;
+                    continue;
                 }
+
+                const Symbol* imported = package->findForImport(name);
+                if (imported && importDedup.emplace(imported).second)
+                    imports.emplace_back(Import{imported, import});
             }
 
-            result.wasImported = true;
-            result.found = imports[0].imported;
-
-            // If we are doing this lookup from a scope that is within a package declaration
-            // we should note that fact so that it can later be exported if desired.
-            auto currScope = &scope;
-            do {
-                auto& sym = currScope->asSymbol();
-                if (sym.kind == SymbolKind::Package) {
-                    sym.as<PackageSymbol>().noteImport(*result.found);
-                    break;
+            if (!imports.empty()) {
+                if (imports.size() > 1) {
+                    if (sourceRange) {
+                        auto& diag = result.addDiag(scope, diag::AmbiguousWildcardImport,
+                                                    *sourceRange);
+                        diag << name;
+                        for (const auto& pair : imports) {
+                            diag.addNote(diag::NoteImportedFrom, pair.import->location);
+                            diag.addNote(diag::NoteDeclarationHere, pair.imported->location);
+                        }
+                    }
+                    return;
                 }
 
-                currScope = sym.getParentScope();
-            } while (currScope);
+                if (symbol && sourceRange) {
+                    // The existing symbol might be an import for the thing we just imported
+                    // via wildcard, which is fine so don't error for that case.
+                    if (symbol->kind != SymbolKind::ExplicitImport ||
+                        symbol->as<ExplicitImportSymbol>().importedSymbol() !=
+                            imports[0].imported) {
 
-            return;
+                        auto& diag = result.addDiag(scope, diag::ImportNameCollision, *sourceRange);
+                        diag << name;
+                        diag.addNote(diag::NoteDeclarationHere, symbol->location);
+                        diag.addNote(diag::NoteImportedFrom, imports[0].import->location);
+                        diag.addNote(diag::NoteDeclarationHere, imports[0].imported->location);
+                    }
+                }
+
+                result.flags |= LookupResultFlags::WasImported;
+                result.found = imports[0].imported;
+                scope.getCompilation().noteReference(*imports[0].import);
+
+                wildcardImportData->importedSymbols.try_emplace(result.found->name, result.found);
+                return;
+            }
         }
     }
 
@@ -1869,12 +1935,19 @@ void Lookup::unqualifiedImpl(const Scope& scope, std::string_view name, LookupLo
         location = LookupLocation(location.getScope(), uint32_t(outOfBlockIndex));
         outOfBlockIndex = SymbolIndex(0);
     }
-    else if (sym.kind == SymbolKind::ClassType) {
+
+    if (sym.kind == SymbolKind::ClassType) {
         // Suppress errors when we fail to find a symbol inside a class that
         // had a problem resolving its base class, since the symbol may be
         // expected to be defined in the base.
         auto baseClass = sym.as<ClassType>().getBaseClass();
-        result.suppressUndeclared |= baseClass && baseClass->isError();
+        if (baseClass && baseClass->isError())
+            result.flags |= LookupResultFlags::SuppressUndeclared;
+    }
+
+    if (flags.has(LookupFlags::DisallowUnitReferences) &&
+        location.getScope()->asSymbol().kind == SymbolKind::CompilationUnit) {
+        return;
     }
 
     return unqualifiedImpl(*location.getScope(), name, location, sourceRange, flags,
@@ -1960,18 +2033,18 @@ void Lookup::qualified(const ScopedNameSyntax& syntax, const ASTContext& context
             lookupDownward(nameParts, first, context, flags, result);
             return;
         case SyntaxKind::ThisHandle:
-            result.found = findThisHandle(scope, first.range, result);
+            result.found = findThisHandle(scope, flags, first.range, result);
             if (result.found && nameParts.back().kind == SyntaxKind::SuperHandle) {
                 // Handle "this.super.whatever" the same as if the user had just
                 // written "super.whatever".
                 first = nameParts.back().name;
                 nameParts.pop_back();
-                result.found = findSuperHandle(scope, first.range, result);
+                result.found = findSuperHandle(scope, flags, first.range, result);
                 colonParts = 1;
             }
             break;
         case SyntaxKind::SuperHandle:
-            result.found = findSuperHandle(scope, first.range, result);
+            result.found = findSuperHandle(scope, flags, first.range, result);
             colonParts = 1; // pretend we used colon access to resolve class scoped name
             break;
         case SyntaxKind::LocalScope:
@@ -2017,10 +2090,10 @@ void Lookup::qualified(const ScopedNameSyntax& syntax, const ASTContext& context
         // If we found a symbol, we're done with lookup. In case (1) above we'll always have a
         // found symbol here. Otherwise, if we're in case (2) we need to do further upwards name
         // lookup. If we're in case (3) we've already issued an error and just need to give up.
-        if (result.found || result.wasImported)
+        if (result.found || result.flags.has(LookupResultFlags::WasImported))
             return;
 
-        originalResult.copyFrom(result);
+        originalResult = result;
     }
 
     // If we reach this point we're in case (2) or (4) above. Go up through the instantiation
@@ -2034,7 +2107,7 @@ void Lookup::qualified(const ScopedNameSyntax& syntax, const ASTContext& context
     // We couldn't find anything. originalResult has any diagnostics issued by the first
     // downward lookup (if any), so it's fine to just return it as is. If we never found any
     // symbol originally, issue an appropriate error for that.
-    result.copyFrom(originalResult);
+    result = originalResult;
     if (!result.found && !result.hasError()) {
         reportUndeclared(scope, name, first.range,
                          flags | LookupFlags::NoUndeclaredErrorIfUninstantiated, true, result);
@@ -2056,7 +2129,7 @@ void Lookup::reportUndeclared(const Scope& initialScope, std::string_view name, 
     // In particular it's important that we do this because when we first look at a
     // definition because it's possible we haven't seen the file containing the package yet.
     // This also gets set for class scopes that have an error base class.
-    if (result.suppressUndeclared)
+    if (result.flags.has(LookupResultFlags::SuppressUndeclared))
         return;
 
     // The symbol wasn't found, so this is an error. The only question is how helpful we can
@@ -2070,7 +2143,7 @@ void Lookup::reportUndeclared(const Scope& initialScope, std::string_view name, 
     int bestDistance = INT_MAX;
     bool usedBeforeDeclared = false;
     auto scope = &initialScope;
-    do {
+    while (true) {
         // This lambda returns true if the given symbol is a viable candidate
         // for the kind of lookup that was being performed.
         auto isViable = [flags, &initialScope](const Symbol& sym) {
@@ -2150,15 +2223,21 @@ void Lookup::reportUndeclared(const Scope& initialScope, std::string_view name, 
             checkMembers(*scope);
 
             // Also search in package imports.
-            for (auto import : scope->getWildcardImports()) {
-                auto package = import->getPackage();
-                if (package)
-                    checkMembers(*package);
+            if (auto importData = scope->getWildcardImportData()) {
+                for (auto import : importData->wildcardImports) {
+                    auto package = import->getPackage();
+                    if (package)
+                        checkMembers(*package);
+                }
             }
         }
 
         scope = scope->asSymbol().getParentScope();
-    } while (scope);
+        if (!scope || (scope->asSymbol().kind == SymbolKind::CompilationUnit &&
+                       flags.has(LookupFlags::DisallowUnitReferences))) {
+            break;
+        }
+    }
 
     // If we found the actual named symbol and it's viable for our kind of lookup,
     // report a diagnostic about it being used before declared.
@@ -2170,16 +2249,23 @@ void Lookup::reportUndeclared(const Scope& initialScope, std::string_view name, 
     }
 
     // Otherwise, check if this names a definition, in which case we can give a nicer error.
-    auto def = initialScope.getCompilation().getDefinition(name, initialScope);
-    if (def) {
+    if (auto def = comp.tryGetDefinition(name, initialScope).definition;
+        def && def->kind == SymbolKind::Definition) {
         if (isHierarchical) {
             result.addDiag(initialScope, diag::CouldNotResolveHierarchicalPath, range) << name;
         }
         else {
             auto code = flags.has(LookupFlags::Type) ? diag::DefinitionUsedAsType
                                                      : diag::DefinitionUsedAsValue;
-            result.addDiag(initialScope, code, range) << name << def->getArticleKindString();
+            result.addDiag(initialScope, code, range)
+                << name << def->as<DefinitionSymbol>().getArticleKindString();
         }
+        return;
+    }
+
+    // Also check for a package with this name.
+    if (comp.getPackage(name)) {
+        result.addDiag(initialScope, diag::UndeclaredButFoundPackage, range.end()) << name << range;
         return;
     }
 

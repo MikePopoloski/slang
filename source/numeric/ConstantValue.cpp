@@ -640,6 +640,16 @@ ConstantRange ConstantRange::subrange(ConstantRange select) const {
         return result.reverse();
 }
 
+ConstantRange ConstantRange::intersect(ConstantRange other) const {
+    if (overlaps(other)) {
+        ConstantRange result;
+        result.left = std::max(lower(), other.lower());
+        result.right = std::min(upper(), other.upper());
+        return result;
+    }
+    return ConstantRange();
+}
+
 int32_t ConstantRange::translateIndex(int32_t index) const {
     if (!isLittleEndian())
         return upper() - index;

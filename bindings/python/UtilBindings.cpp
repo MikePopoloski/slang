@@ -18,7 +18,7 @@
 #include "slang/text/SourceManager.h"
 #include "slang/util/Bag.h"
 #include "slang/util/BumpAllocator.h"
-#include "slang/util/Version.h"
+#include "slang/util/VersionInfo.h"
 
 namespace fs = std::filesystem;
 
@@ -163,7 +163,7 @@ void registerUtil(py::module_& m) {
             "readHeader",
             [](SourceManager& self, std::string_view path, SourceLocation includedFrom,
                const SourceLibrary* library, bool isSystemPath) {
-                auto result = self.readHeader(path, includedFrom, library, isSystemPath);
+                auto result = self.readHeader(path, includedFrom, library, isSystemPath, {});
                 if (!result)
                     throw fs::filesystem_error("", path, result.error());
                 return *result;

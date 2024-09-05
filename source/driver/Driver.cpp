@@ -45,6 +45,10 @@ Driver::Driver() : diagEngine(sourceManager), sourceLoader(sourceManager) {
 }
 
 void Driver::addStandardArgs() {
+    cmdLine.add("--std", options.languageVersion,
+                "The version of the SystemVerilog language to use",
+                "(1800-2017 | 1800-2023 | latest)");
+
     // Include paths
     cmdLine.add(
         "-I,--include-directory,+incdir",
@@ -79,6 +83,9 @@ void Driver::addStandardArgs() {
     cmdLine.add("--libraries-inherit-macros", options.librariesInheritMacros,
                 "If true, library files will inherit macro definitions from the primary source "
                 "files. --single-unit must also be passed when this option is used.");
+    cmdLine.add("--enable-legacy-protect", options.enableLegacyProtect,
+                "If true, the preprocessor will support legacy protected envelope directives, "
+                "for compatibility with old Verilog tools.");
 
     // Legacy vendor commands support
     cmdLine.add(
@@ -104,6 +111,17 @@ void Driver::addStandardArgs() {
                 "<count>");
     cmdLine.add("-j,--threads", options.numThreads,
                 "The number of threads to use to parallelize parsing", "<count>");
+
+    cmdLine.add(
+        "-C",
+        [this](std::string_view value) {
+            processCommandFiles(value, /* makeRelative */ true, /* separateUnit */ true);
+            return "";
+        },
+        "One or more files containing independent compilation unit listings. "
+        "The files accept a subset of options that pertain specifically to parsing "
+        "that unit and optionally including it in a library.",
+        "<file-pattern>[,...]", CommandLineFlags::CommaList);
 
     // Compilation
     cmdLine.add("--max-hierarchy-depth", options.maxInstanceDepth,
@@ -156,6 +174,17 @@ void Driver::addStandardArgs() {
                 "Allow top-level modules to have interface ports.");
     addCompFlag(CompilationFlags::AllowRecursiveImplicitCall, "--allow-recursive-implicit-call",
                 "Allow implicit call expressions to be recursive function calls.");
+    addCompFlag(CompilationFlags::AllowBareValParamAssignment, "--allow-bare-value-param-assigment",
+                "Allow module parameter assignments to elide the parentheses.");
+    addCompFlag(CompilationFlags::AllowSelfDeterminedStreamConcat,
+                "--allow-self-determined-stream-concat",
+                "Allow self-determined streaming concatenation expressions");
+    addCompFlag(
+        CompilationFlags::AllowMultiDrivenLocals, "--allow-multi-driven-locals",
+        "Allow subroutine local variables to be driven from multiple always_comb/_ff blocks");
+    addCompFlag(CompilationFlags::AllowMergingAnsiPorts, "--allow-merging-ansi-ports",
+                "Allow merging ANSI port declarations with nets and variables declared in the "
+                "instance body");
     addCompFlag(CompilationFlags::StrictDriverChecking, "--strict-driver-checking",
                 "Perform strict driver checking, which currently means disabling "
                 "procedural 'for' loop unrolling.");
@@ -173,11 +202,13 @@ void Driver::addStandardArgs() {
     cmdLine.add("-L", options.libraryOrder,
                 "A list of library names that controls the priority order for module lookup",
                 "<library>", CommandLineFlags::CommaList);
+    cmdLine.add("--defaultLibName", options.defaultLibName, "Sets the name of the default library",
+                "<name>");
 
     // Diagnostics control
     cmdLine.add("-W", options.warningOptions, "Control the specified warning", "<warning>");
     cmdLine.add("--color-diagnostics", options.colorDiags,
-                "Always print diagnostics in color."
+                "Always print diagnostics in color. "
                 "If this option is unset, colors will be enabled if a color-capable "
                 "terminal is detected.");
     cmdLine.add("--diag-column", options.diagColumn, "Show column numbers in diagnostic output.");
@@ -289,7 +320,7 @@ void Driver::addStandardArgs() {
     cmdLine.add(
         "-f",
         [this](std::string_view value) {
-            processCommandFiles(value, /* makeRelative */ false);
+            processCommandFiles(value, /* makeRelative */ false, /* separateUnit */ false);
             return "";
         },
         "One or more command files containing additional program options. "
@@ -299,7 +330,7 @@ void Driver::addStandardArgs() {
     cmdLine.add(
         "-F",
         [this](std::string_view value) {
-            processCommandFiles(value, /* makeRelative */ true);
+            processCommandFiles(value, /* makeRelative */ true, /* separateUnit */ false);
             return "";
         },
         "One or more command files containing additional program options. "
@@ -317,7 +348,7 @@ void Driver::addStandardArgs() {
     return !anyFailedLoads;
 }
 
-bool Driver::processCommandFiles(std::string_view pattern, bool makeRelative) {
+bool Driver::processCommandFiles(std::string_view pattern, bool makeRelative, bool separateUnit) {
     auto onError = [this](const auto& name, std::error_code ec) {
         printError(fmt::format("command file '{}': {}", name, ec.message()));
         anyFailedLoads = true;
@@ -349,17 +380,22 @@ bool Driver::processCommandFiles(std::string_view pattern, bool makeRelative) {
             fs::current_path(path.parent_path(), ec);
         }
 
-        CommandLine::ParseOptions parseOpts;
-        parseOpts.expandEnvVars = true;
-        parseOpts.ignoreProgramName = true;
-        parseOpts.supportComments = true;
-        parseOpts.ignoreDuplicates = true;
-
         SLANG_ASSERT(!buffer.empty());
         buffer.pop_back();
-
         std::string_view argStr(buffer.data(), buffer.size());
-        const bool result = parseCommandLine(argStr, parseOpts);
+
+        bool result;
+        if (separateUnit) {
+            result = parseUnitListing(argStr);
+        }
+        else {
+            CommandLine::ParseOptions parseOpts;
+            parseOpts.expandEnvVars = true;
+            parseOpts.ignoreProgramName = true;
+            parseOpts.supportComments = true;
+            parseOpts.ignoreDuplicates = true;
+            result = parseCommandLine(argStr, parseOpts);
+        }
 
         if (makeRelative)
             fs::current_path(currPath, ec);
@@ -388,13 +424,29 @@ bool Driver::processOptions() {
             OS::setStdoutColorsEnabled(true);
     }
 
+    if (options.languageVersion.has_value()) {
+        if (options.languageVersion == "1800-2017")
+            languageVersion = LanguageVersion::v1800_2017;
+        else if (options.languageVersion == "1800-2023" || options.languageVersion == "latest")
+            languageVersion = LanguageVersion::v1800_2023;
+        else {
+            printError(
+                fmt::format("invalid value for --std option: '{}'", *options.languageVersion));
+            return false;
+        }
+    }
+
     if (options.compat.has_value()) {
         if (options.compat == "vcs") {
             auto vcsCompatFlags = {CompilationFlags::AllowHierarchicalConst,
                                    CompilationFlags::AllowUseBeforeDeclare,
                                    CompilationFlags::RelaxEnumConversions,
                                    CompilationFlags::RelaxStringConversions,
-                                   CompilationFlags::AllowRecursiveImplicitCall};
+                                   CompilationFlags::AllowRecursiveImplicitCall,
+                                   CompilationFlags::AllowBareValParamAssignment,
+                                   CompilationFlags::AllowSelfDeterminedStreamConcat,
+                                   CompilationFlags::AllowMultiDrivenLocals,
+                                   CompilationFlags::AllowMergingAnsiPorts};
 
             for (auto flag : vcsCompatFlags) {
                 auto& option = options.compilationFlags.at(flag);
@@ -467,10 +519,9 @@ bool Driver::processOptions() {
     // suppressible warning that we promote to an error by default. This allows
     // the user to turn this back into a warning, or turn it off altogether.
 
-    // allow ignoring duplicate module/interface/program definitions,
     diagEngine.setSeverity(diag::DuplicateDefinition, DiagnosticSeverity::Error);
-    // allow procedural force on variable part-select
     diagEngine.setSeverity(diag::BadProceduralForce, DiagnosticSeverity::Error);
+    diagEngine.setSeverity(diag::UnknownSystemName, DiagnosticSeverity::Error);
 
     if (options.compat == "vcs") {
         diagEngine.setSeverity(diag::StaticInitializerMustBeExplicit, DiagnosticSeverity::Ignored);
@@ -488,6 +539,8 @@ bool Driver::processOptions() {
         diagEngine.setSeverity(diag::RangeWidthOOB, DiagnosticSeverity::Error);
         diagEngine.setSeverity(diag::ImplicitNamedPortTypeMismatch, DiagnosticSeverity::Error);
         diagEngine.setSeverity(diag::SplitDistWeightOp, DiagnosticSeverity::Error);
+        diagEngine.setSeverity(diag::DPIPureTask, DiagnosticSeverity::Error);
+        diagEngine.setSeverity(diag::SpecifyPathConditionExpr, DiagnosticSeverity::Error);
     }
 
     Diagnostics optionDiags = diagEngine.setWarningOptions(options.warningOptions);
@@ -646,16 +699,20 @@ void Driver::addParseOptions(Bag& bag) const {
     ppoptions.predefines = options.defines;
     ppoptions.undefines = options.undefines;
     ppoptions.predefineSource = "<command-line>";
+    ppoptions.languageVersion = languageVersion;
     if (options.maxIncludeDepth.has_value())
         ppoptions.maxIncludeDepth = *options.maxIncludeDepth;
     for (const auto& d : options.ignoreDirectives)
         ppoptions.ignoreDirectives.emplace(d);
 
     LexerOptions loptions;
+    loptions.languageVersion = languageVersion;
+    loptions.enableLegacyProtect = options.enableLegacyProtect == true;
     if (options.maxLexerErrors.has_value())
         loptions.maxErrors = *options.maxLexerErrors;
 
     ParserOptions poptions;
+    poptions.languageVersion = languageVersion;
     if (options.maxParseDepth.has_value())
         poptions.maxRecursionDepth = *options.maxParseDepth;
 
@@ -668,6 +725,7 @@ void Driver::addParseOptions(Bag& bag) const {
 void Driver::addCompilationOptions(Bag& bag) const {
     CompilationOptions coptions;
     coptions.flags = CompilationFlags::None;
+    coptions.languageVersion = languageVersion;
     if (options.maxInstanceDepth.has_value())
         coptions.maxInstanceDepth = *options.maxInstanceDepth;
     if (options.maxGenerateSteps.has_value())
@@ -713,8 +771,17 @@ void Driver::addCompilationOptions(Bag& bag) const {
     bag.set(coptions);
 }
 
-std::unique_ptr<Compilation> Driver::createCompilation() const {
-    auto compilation = std::make_unique<Compilation>(createOptionBag());
+std::unique_ptr<Compilation> Driver::createCompilation() {
+    SourceLibrary* defaultLib;
+    if (options.defaultLibName && !options.defaultLibName->empty())
+        defaultLib = sourceLoader.getOrAddLibrary(*options.defaultLibName);
+    else
+        defaultLib = sourceLoader.getOrAddLibrary("work");
+
+    SLANG_ASSERT(defaultLib);
+    defaultLib->isDefault = true;
+
+    auto compilation = std::make_unique<Compilation>(createOptionBag(), defaultLib);
     for (auto& tree : sourceLoader.getLibraryMaps())
         compilation->addSyntaxTree(tree);
     for (auto& tree : syntaxTrees)
@@ -773,6 +840,59 @@ bool Driver::reportCompilation(Compilation& compilation, bool quiet) {
     }
 
     return succeeded;
+}
+
+bool Driver::parseUnitListing(std::string_view text) {
+    CommandLine unitCmdLine;
+    std::vector<std::string> includes;
+    unitCmdLine.add("-I,--include-directory,+incdir", includes, "", "",
+                    CommandLineFlags::CommaList);
+
+    std::vector<std::string> defines;
+    unitCmdLine.add("-D,--define-macro,+define", defines, "");
+
+    std::optional<std::string> libraryName;
+    unitCmdLine.add("--library", libraryName, "");
+
+    unitCmdLine.add(
+        "-C",
+        [this](std::string_view value) {
+            processCommandFiles(value, /* makeRelative */ true, /* separateUnit */ true);
+            return "";
+        },
+        "", "", CommandLineFlags::CommaList);
+
+    std::vector<std::string> files;
+    unitCmdLine.setPositional(
+        [&](std::string_view value) {
+            if (!options.excludeExts.empty()) {
+                if (size_t extIndex = value.find_last_of('.'); extIndex != std::string_view::npos) {
+                    if (options.excludeExts.count(std::string(value.substr(extIndex + 1))))
+                        return "";
+                }
+            }
+
+            files.push_back(std::string(value));
+            return "";
+        },
+        "");
+
+    CommandLine::ParseOptions parseOpts;
+    parseOpts.expandEnvVars = true;
+    parseOpts.ignoreProgramName = true;
+    parseOpts.supportComments = true;
+    parseOpts.ignoreDuplicates = true;
+
+    if (!unitCmdLine.parse(text, parseOpts)) {
+        for (auto& err : unitCmdLine.getErrors())
+            OS::printE(fmt::format("{}\n", err));
+        return false;
+    }
+
+    sourceLoader.addSeparateUnit(files, includes, std::move(defines),
+                                 std::move(libraryName).value_or(std::string()));
+
+    return true;
 }
 
 void Driver::addLibraryFiles(std::string_view pattern) {

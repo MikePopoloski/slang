@@ -498,7 +498,8 @@ void Preprocessor::handleEncryptedRegion(Token keyword, const PragmaExpressionSy
     ensureNoPragmaArgs(keyword, args);
     skipMacroTokensBeforeProtectRegion(keyword, skippedTokens);
 
-    Token token = lexerStack.back()->lexEncodedText(protectEncoding, protectBytes, isSingleLine);
+    Token token = lexerStack.back()->lexEncodedText(protectEncoding, protectBytes, isSingleLine,
+                                                    /* legacyProtectedMode */ false);
     addDiag(diag::ProtectedEnvelope, token.location());
 
     skippedTokens.push_back(token);

@@ -525,3 +525,149 @@ endmodule
     // Valid paths.
     CHECK(!pathFinder.find(*inPort, *outPort).empty());
 }
+
+//===---------------------------------------------------------------------===//
+// Test case for #919 (empty port hookup)
+//===---------------------------------------------------------------------===//
+
+TEST_CASE("Test case for #919 (empty port hookup)") {
+    auto tree = SyntaxTree::fromText(R"(
+module foo (input logic i_in);
+endmodule
+
+module top ();
+
+  foo u_foo(.i_in());
+
+endmodule
+)");
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+    auto netlist = createNetlist(compilation);
+    CHECK(netlist.numNodes() == 2);
+}
+
+//===---------------------------------------------------------------------===//
+// Test cases for for #855 (instances with interfaces)
+//===---------------------------------------------------------------------===//
+
+TEST_CASE("Instance with an interface") {
+    auto tree = SyntaxTree::fromText(R"(
+interface my_if();
+  logic [31:0] a;
+  logic [31:0] b;
+  logic [31:0] sum;
+  logic        co;
+
+  modport test (
+    input  a,
+    input  b,
+    output sum,
+    output co
+  );
+endinterface
+
+module adder(my_if.test i);
+  logic [31:0] sum;
+  logic co;
+  assign {co, sum} = i.a + i.b;
+  assign i.sum = sum;
+  assign i.co = co;
+endmodule
+
+module top();
+  my_if i ();
+  adder adder0 (i);
+endmodule
+)");
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+    auto netlist = createNetlist(compilation);
+    CHECK(netlist.numNodes());
+}
+
+TEST_CASE("Interface array") {
+    auto tree = SyntaxTree::fromText(R"(
+interface if_foo();
+  logic [31:0] a;
+  modport produce (output a);
+  modport consume (input a);
+endinterface
+
+module produce(if_foo.produce i, input logic [31:0] x);
+  assign i.a = x;
+endmodule
+
+module consume(if_foo.consume i, output logic [31:0] x);
+  assign x = i.a;
+endmodule
+
+module top(input logic [31:0] in, output logic [31:0] out);
+  if_foo i [2] [3] ();
+  produce p (i[0][0], in);
+  consume c (i[0][0], out);
+endmodule
+)");
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+    auto netlist = createNetlist(compilation);
+    auto* inPort = netlist.lookupPort("top.in");
+    auto* outPort = netlist.lookupPort("top.out");
+    PathFinder pathFinder(netlist);
+    CHECK(!pathFinder.find(*inPort, *outPort).empty());
+}
+
+//===---------------------------------------------------------------------===//
+// Test case for for #985 (generate blocks)
+//===---------------------------------------------------------------------===//
+
+TEST_CASE("Conditional generate blocks") {
+    // One branch of the generate conditional is uninstantiated.
+    auto tree = SyntaxTree::fromText(R"(
+module top#(parameter X=0)(output logic out);
+generate
+if (X) begin
+  logic foo;
+  assign out = foo;
+end else begin
+  logic foo;
+  assign out = foo;
+end
+endgenerate
+endmodule
+)");
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+    auto netlist = createNetlist(compilation);
+    CHECK(netlist.lookupVariable("top.genblk1.foo"));
+}
+
+//===---------------------------------------------------------------------===//
+// Test case for for #1007 (variable declarations in procedural blocks).
+//===---------------------------------------------------------------------===//
+
+TEST_CASE("Variable declarations in procedural blocks") {
+    auto tree = SyntaxTree::fromText(R"(
+module t34;
+  reg  [3:0] x;
+  reg   [15:0] v;
+  always @(v)
+  begin
+    integer i;
+    x = '0;
+    for (i = 0; i <= 15; i = i + 1)
+      if (v[i] == 1'b0)
+        x = i[3:0];
+  end
+endmodule
+)");
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+    auto netlist = createNetlist(compilation);
+    CHECK(netlist.lookupVariable("t34.i"));
+}

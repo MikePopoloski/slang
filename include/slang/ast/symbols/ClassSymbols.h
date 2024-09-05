@@ -8,8 +8,8 @@
 #pragma once
 
 #include "slang/ast/Constraints.h"
-#include "slang/ast/Definition.h"
 #include "slang/ast/Scope.h"
+#include "slang/ast/symbols/CompilationUnitSymbols.h"
 #include "slang/ast/symbols/VariableSymbols.h"
 #include "slang/ast/types/Type.h"
 #include "slang/syntax/SyntaxFwd.h"
@@ -46,12 +46,21 @@ public:
     /// a pointer to that generic class definition.
     const GenericClassDefSymbol* genericClass = nullptr;
 
+    /// A variable that points to the instance of this class itself, which is
+    /// used by non-static class property initializers that refers to the
+    /// special "this" handle. Subroutines and constraint blocks have their
+    /// own "thisVar" members.
+    const VariableSymbol* thisVar = nullptr;
+
     /// Set to true if the class is an abstract class (declared with the
     /// "virtual" keyword).
     bool isAbstract = false;
 
     /// Set to true if the class is an interface class.
     bool isInterface = false;
+
+    /// Set to true if this class is marked final (i.e. it cannot be extended).
+    bool isFinal = false;
 
     ClassType(Compilation& compilation, std::string_view name, SourceLocation loc);
 
@@ -85,6 +94,10 @@ public:
     /// If this class has a base class with a constructor, gets the expression used to
     /// invoke that method. Otherwise returns nullptr.
     const Expression* getBaseConstructorCall() const;
+
+    /// Gets the class constructor function, if it has an explicit constructor.
+    /// Otherwise returns nullptr.
+    const SubroutineSymbol* getConstructor() const;
 
     /// Gets $bits of the type. Returns zero if the type does not have a statically known size.
     uint64_t getBitstreamWidth() const {
@@ -143,20 +156,49 @@ private:
     SymbolIndex headerIndex;
 };
 
+namespace detail {
+
+// This would ideally be a private member of GenericClassDefSymbol but
+// MSVC has a bug using the Hasher object in boost::unordered_flat_map
+// when that's the case so it's separated here for now.
+class ClassSpecializationKey {
+public:
+    ClassSpecializationKey(const GenericClassDefSymbol& def,
+                           std::span<const ConstantValue* const> paramValues,
+                           std::span<const Type* const> typeParams);
+
+    size_t hash() const { return savedHash; }
+
+    bool operator==(const ClassSpecializationKey& other) const;
+
+private:
+    const GenericClassDefSymbol* definition;
+    std::span<const ConstantValue* const> paramValues;
+    std::span<const Type* const> typeParams;
+    size_t savedHash;
+};
+
+struct ClassSpecializationHasher {
+    size_t operator()(const ClassSpecializationKey& key) const { return key.hash(); }
+};
+
+} // namespace detail
+
 /// Represents a generic class definition, which is a parameterized class that has not
 /// yet had its parameter values specified. This is a not a type -- the generic class
 /// must first be specialized in order to be a type usable in expressions and declarations.
 class SLANG_EXPORT GenericClassDefSymbol : public Symbol {
 public:
+    using SpecializeFunc = function_ref<void(Compilation&, ClassType&, SourceLocation)>;
+
     /// Set to true if the generic class is an interface class.
     bool isInterface = false;
 
     GenericClassDefSymbol(std::string_view name, SourceLocation loc) :
         Symbol(SymbolKind::GenericClassDef, name, loc) {}
     GenericClassDefSymbol(std::string_view name, SourceLocation loc,
-                          function_ref<void(Compilation&, ClassType&)> specializeFunc) :
-        Symbol(SymbolKind::GenericClassDef, name, loc),
-        specializeFunc{specializeFunc} {}
+                          SpecializeFunc specializeFunc) :
+        Symbol(SymbolKind::GenericClassDef, name, loc), specializeFunc{specializeFunc} {}
 
     /// Gets the default specialization for the class, or nullptr if the generic
     /// class has no default specialization (because some parameters are not defaulted).
@@ -189,7 +231,7 @@ public:
     /// Adds a new parameter declaration to the generic class. This is only used for
     /// programmatically constructed generic classes (not sourced from syntax).
     /// Behavior is undefined if this generic class has already been instantiated and used.
-    void addParameterDecl(const Definition::ParameterDecl& decl);
+    void addParameterDecl(const DefinitionSymbol::ParameterDecl& decl);
 
     void serializeTo(ASTSerializer& serializer) const;
 
@@ -199,39 +241,55 @@ public:
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::GenericClassDef; }
 
 private:
-    class SpecializationKey {
-    public:
-        SpecializationKey(const GenericClassDefSymbol& def,
-                          std::span<const ConstantValue* const> paramValues,
-                          std::span<const Type* const> typeParams);
-
-        size_t hash() const { return savedHash; }
-
-        bool operator==(const SpecializationKey& other) const;
-
-    private:
-        const GenericClassDefSymbol* definition;
-        std::span<const ConstantValue* const> paramValues;
-        std::span<const Type* const> typeParams;
-        size_t savedHash;
-    };
-
-    struct Hasher {
-        size_t operator()(const SpecializationKey& key) const { return key.hash(); }
-    };
-
     const Type* getSpecializationImpl(const ASTContext& context, SourceLocation instanceLoc,
                                       bool forceInvalidParams,
                                       const syntax::ParameterValueAssignmentSyntax* syntax) const;
 
-    SmallVector<Definition::ParameterDecl, 8> paramDecls;
+    SmallVector<DefinitionSymbol::ParameterDecl, 8> paramDecls;
 
-    using SpecMap = flat_hash_map<SpecializationKey, const Type*, Hasher>;
+    using SpecMap = flat_hash_map<detail::ClassSpecializationKey, const Type*,
+                                  detail::ClassSpecializationHasher>;
     mutable SpecMap specMap;
     mutable std::optional<const Type*> defaultSpecialization;
     mutable const ForwardingTypedefSymbol* firstForward = nullptr;
-    function_ref<void(Compilation&, ClassType&)> specializeFunc;
+    mutable uint32_t recursionDepth = 0;
+    SpecializeFunc specializeFunc;
 };
+
+/// Specifies various flags that can apply to constraint bocks.
+enum class SLANG_EXPORT ConstraintBlockFlags : uint8_t {
+    /// No specific flags specified.
+    None = 0,
+
+    /// The constraint is 'pure', meaning it requires
+    /// an implementation in derived classes.
+    Pure = 1 << 1,
+
+    /// The conbstraint is static, meaning it is shared across
+    /// all object instances.
+    Static = 1 << 2,
+
+    /// The constraint block was declared extern, either
+    /// implicitly or explicitly.
+    Extern = 1 << 3,
+
+    /// The constraint block was explicitly declared extern, which
+    /// means an out-of-block body is required instead of optional.
+    ExplicitExtern = 1 << 4,
+
+    /// The constraint is marked 'initial', which means it should not
+    /// override a base class constraint.
+    Initial = 1 << 5,
+
+    /// The constraint is marked 'extends', which means it must override
+    /// a base class constraint.
+    Extends = 1 << 6,
+
+    /// The constraint is marked 'final', which means it cannot be
+    /// overridden in a derived class.
+    Final = 1 << 7
+};
+SLANG_BITMASK(ConstraintBlockFlags, Final)
 
 /// Represents a named constraint block declaration within a class.
 class SLANG_EXPORT ConstraintBlockSymbol : public Symbol, public Scope {
@@ -240,20 +298,8 @@ public:
     /// that represents the 'this' class handle.
     const VariableSymbol* thisVar = nullptr;
 
-    /// Set to true if this is a static constraint block.
-    bool isStatic = false;
-
-    /// Set to true if this constraint block was declared extern, either
-    /// implicitly or explicitly.
-    bool isExtern = false;
-
-    /// Set to true if this constraint block was explicitly declared extern,
-    /// which means an out-of-block body is required instead of optional.
-    bool isExplicitExtern = false;
-
-    /// Set to true if this is a 'pure' constraint block, once which is
-    /// required to be overridden in derived classes.
-    bool isPure = false;
+    /// Various flags that control constraint block behavior.
+    bitmask<ConstraintBlockFlags> flags;
 
     ConstraintBlockSymbol(Compilation& compilation, std::string_view name, SourceLocation loc);
 

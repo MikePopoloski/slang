@@ -199,3 +199,27 @@ endmodule
     bool result = visitor->check(root);
     CHECK(result);
 }
+
+TEST_CASE("NoOldAlwaysSyntax: composite lhs") {
+    auto tree = SyntaxTree::fromText(R"(
+module top();
+    logic n;
+
+    always @(*) begin
+        {n} = 1;
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    compilation.getAllDiagnostics();
+    auto& root = compilation.getRoot();
+
+    TidyConfig config;
+    Registry::setConfig(config);
+    Registry::setSourceManager(compilation.getSourceManager());
+    auto visitor = Registry::create("NoOldAlwaysSyntax");
+    bool result = visitor->check(root);
+    CHECK(result);
+}

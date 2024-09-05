@@ -207,7 +207,8 @@ bool Parser::parseCaseItems(TokenKind caseKind, SmallVectorBase<CaseItemSyntax*>
     bool errored = false;
 
     while (true) {
-        auto kind = peek().kind;
+        auto current = peek();
+        auto kind = current.kind;
         if (kind == TokenKind::DefaultKeyword) {
             if (lastDefault && !errored) {
                 auto& diag = addDiag(diag::MultipleDefaultCases, peek().location());
@@ -221,6 +222,11 @@ bool Parser::parseCaseItems(TokenKind caseKind, SmallVectorBase<CaseItemSyntax*>
         }
         else if (isItem(kind)) {
             itemBuffer.push_back(parseItem());
+            if (current == peek()) {
+                // parseItem() didn't consume any tokens, so we'll be stuck
+                // in an infinite loop if we don't skip a token here.
+                skipToken(std::nullopt);
+            }
         }
         else if (kind == TokenKind::EndOfFile || isEndKeyword(kind)) {
             break;
@@ -271,15 +277,15 @@ CaseStatementSyntax& Parser::parseCaseStatement(NamedLabelSyntax* label, AttrLis
             matchesOrInside = consume();
             errored = parseCaseItems(
                 caseKeyword.kind, itemBuffer,
-                [](auto kind) { return isPossibleOpenRangeElement(kind); },
+                [](auto kind) { return isPossibleValueRangeElement(kind); },
                 [this] {
                     Token colon;
                     SmallVector<TokenOrSyntax, 8> buffer;
 
-                    parseList<isPossibleOpenRangeElement, isEndOfCaseItem>(
+                    parseList<isPossibleValueRangeElement, isEndOfCaseItem>(
                         buffer, TokenKind::Colon, TokenKind::Comma, colon, RequireItems::True,
-                        diag::ExpectedOpenRangeElement,
-                        [this] { return &parseOpenRangeElement(); });
+                        diag::ExpectedValueRangeElement,
+                        [this] { return &parseValueRangeElement(); });
                     return &factory.standardCaseItem(buffer.copy(alloc), colon, parseStatement());
                 });
             break;
@@ -617,7 +623,8 @@ ActionBlockSyntax& Parser::parseActionBlock() {
         elseClause = parseElseClause();
     else {
         statement = &parseStatement();
-        elseClause = parseElseClause();
+        if (statement->kind != SyntaxKind::EmptyStatement)
+            elseClause = parseElseClause();
     }
 
     return factory.actionBlock(statement, elseClause);
@@ -969,7 +976,7 @@ ProductionSyntax& Parser::parseProduction() {
     }
 
     auto name = expect(TokenKind::Identifier);
-    auto ports = parseFunctionPortList(/* allowEmptyNames */ false);
+    auto ports = parseFunctionPortList({});
     auto colon = expect(TokenKind::Colon);
 
     Token semi;

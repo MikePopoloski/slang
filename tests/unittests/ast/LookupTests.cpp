@@ -33,7 +33,7 @@ import Foo::x;
     ASTContext context(*unit, LookupLocation::max);
     Lookup::name(compilation.parseName("x"), context, LookupFlags::None, result);
 
-    CHECK(result.wasImported);
+    CHECK(result.flags.has(LookupResultFlags::WasImported));
     REQUIRE(result.found);
     CHECK(result.found->kind == SymbolKind::Parameter);
     CHECK(result.found->as<ParameterSymbol>().getValue().integer() == 4);
@@ -73,7 +73,7 @@ endmodule
     Lookup::name(compilation.parseName("x"), context, LookupFlags::None, result);
 
     const Symbol* symbol = result.found;
-    CHECK(!result.wasImported);
+    CHECK(!result.flags.has(LookupResultFlags::WasImported));
     REQUIRE(symbol);
     CHECK(symbol->kind == SymbolKind::Parameter);
     CHECK(symbol == &param);
@@ -84,7 +84,7 @@ endmodule
     Lookup::name(compilation.parseName("x"), context, LookupFlags::None, result);
     symbol = result.found;
 
-    CHECK(result.wasImported);
+    CHECK(result.flags.has(LookupResultFlags::WasImported));
     REQUIRE(symbol);
     REQUIRE(symbol->kind == SymbolKind::Parameter);
     CHECK(symbol->as<ParameterSymbol>().getValue().integer() == 4);
@@ -817,14 +817,17 @@ int foo = a.baz.bar;
 
 module a;
     if (1) begin : baz
-        int bar;
+        int bar = 0;
     end
 endmodule
 )");
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
-    NO_COMPILATION_ERRORS;
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::StaticInitOrder);
 }
 
 TEST_CASE("Non-const name selector") {
@@ -1249,10 +1252,10 @@ TEST_CASE("Lookup in invalid generate block") {
     auto tree = SyntaxTree::fromText(R"(
 module m #(parameter int count);
     for (genvar i = 0; i < count; i++) begin: asdf
-        logic foo;
+        logic foo = 0;
     end
 
-    logic i = asdf[0].foo;
+    wire i = asdf[0].foo;
 endmodule
 
 module n;
@@ -1268,12 +1271,12 @@ endmodule
 TEST_CASE("Package lookup with other symbol of same name") {
     auto tree = SyntaxTree::fromText(R"(
 package p;
-    int x;
+    logic x;
 endpackage
 
 module m;
     enum { p = 1 } sdf;
-    int i = p::x;
+    wire i = p::x;
 endmodule
 )");
 
@@ -1509,7 +1512,7 @@ interface I;
 endinterface
 
 module m(I.m i);
-    logic a = i.f;
+    wire a = i.f;
     logic b = i.g;
     logic c = i.foo;
 endmodule
@@ -1629,8 +1632,9 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 1);
-    CHECK(diags[0].code == diag::UndeclaredIdentifier);
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::StaticInitValue);
+    CHECK(diags[1].code == diag::UndeclaredIdentifier);
 }
 
 TEST_CASE("Package export lookup") {
@@ -1734,7 +1738,8 @@ endmodule
     Compilation compilation;
     compilation.addSyntaxTree(tree);
 
-    auto& diags = compilation.getAllDiagnostics();
+    auto diags = compilation.getAllDiagnostics().filter(
+        {diag::StaticInitOrder, diag::StaticInitValue});
     REQUIRE(diags.size() == 5);
     CHECK(diags[0].code == diag::Redefinition);
     CHECK(diags[1].code == diag::UnknownPackage);
@@ -1938,7 +1943,7 @@ endclass
 
 TEST_CASE("Package cannot refer to $unit or have hierarchical ref") {
     auto tree = SyntaxTree::fromText(R"(
-int i;
+int i = 0;
 
 package p;
     int j = i;
@@ -1955,7 +1960,7 @@ package p;
 endpackage
 
 module m;
-    int l;
+    int l = 0;
 endmodule
 )");
 
@@ -1963,10 +1968,11 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 3);
+    REQUIRE(diags.size() == 4);
     CHECK(diags[0].code == diag::CompilationUnitFromPackage);
     CHECK(diags[1].code == diag::CompilationUnitFromPackage);
-    CHECK(diags[2].code == diag::HierarchicalFromPackage);
+    CHECK(diags[2].code == diag::StaticInitOrder);
+    CHECK(diags[3].code == diag::HierarchicalFromPackage);
 }
 
 TEST_CASE("Virtual interface access is not necessarily hierarchical") {
@@ -2044,4 +2050,127 @@ endmodule
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::DotIntoInstArray);
+}
+
+TEST_CASE("Undeclared identifier -- package correction") {
+    auto tree = SyntaxTree::fromText(R"(
+package my_pkg;
+endpackage
+
+module m;
+    int i = my_pkg;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::UndeclaredButFoundPackage);
+}
+
+TEST_CASE("Wildcard lookup doesn't import from packages") {
+    auto tree = SyntaxTree::fromText(R"(
+package p;
+    int i;
+endpackage
+
+module n(input int i);
+endmodule
+
+module m;
+    import p::*;
+    n n1(.*);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::ImplicitNamedPortNotFound);
+}
+
+TEST_CASE("Wildcard lookup uses existing imports") {
+    auto tree = SyntaxTree::fromText(R"(
+package p;
+    int i;
+endpackage
+
+module n(input int i);
+endmodule
+
+module m;
+    import p::*;
+    n n1(.*);
+
+    if (1) begin
+        wire integer j = i;
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Package self-import loop") {
+    auto tree = SyntaxTree::fromText(R"(
+package p;
+    export m;
+    import p::*;
+    K[1] t;
+endpackage
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    // Check no crash.
+    compilation.getAllDiagnostics();
+}
+
+TEST_CASE("Bind instantiation can't see into $unit, can't import") {
+    auto tree = SyntaxTree::fromText(R"(
+`default_nettype none
+
+module m;
+    import p::*;
+endmodule
+
+logic foo;
+logic x;
+int j;
+
+module n #(parameter int i)
+          (input logic a, b, foo);
+endmodule
+
+checker c (logic t, bar);
+endchecker
+
+package p;
+    logic bar;
+endpackage
+
+module top;
+    bind m n #(.i(j)) n1(.a(x), .b(bar), .foo);
+    bind m c c1(.t(x), .bar);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 6);
+    CHECK(diags[0].code == diag::UndeclaredIdentifier);
+    CHECK(diags[1].code == diag::UndeclaredIdentifier);
+    CHECK(diags[2].code == diag::UndeclaredIdentifier);
+    CHECK(diags[3].code == diag::ImplicitNamedPortNotFound);
+    CHECK(diags[4].code == diag::UndeclaredIdentifier);
+    CHECK(diags[5].code == diag::ImplicitNamedPortNotFound);
 }

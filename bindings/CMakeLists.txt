@@ -5,13 +5,13 @@
 
 set(find_pkg_args "")
 if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.24.0")
-  set(find_pkg_args "FIND_PACKAGE_ARGS" "2.11.1")
+  set(find_pkg_args "FIND_PACKAGE_ARGS" "2.13.1")
 endif()
 
 FetchContent_Declare(
   pybind11
   GIT_REPOSITORY https://github.com/pybind/pybind11.git
-  GIT_TAG v2.10.4
+  GIT_TAG v2.13.1
   GIT_SHALLOW ON
   ${find_pkg_args})
 FetchContent_MakeAvailable(pybind11)
@@ -27,7 +27,10 @@ endif()
 add_custom_command(
   COMMAND ${Python_EXECUTABLE} ${SCRIPTS_DIR}/syntax_gen.py --dir
           ${CMAKE_CURRENT_BINARY_DIR} --python-bindings
-  OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/PySyntaxBindings.cpp
+  OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/PySyntaxBindings0.cpp
+         ${CMAKE_CURRENT_BINARY_DIR}/PySyntaxBindings1.cpp
+         ${CMAKE_CURRENT_BINARY_DIR}/PySyntaxBindings2.cpp
+         ${CMAKE_CURRENT_BINARY_DIR}/PySyntaxBindings3.cpp
   DEPENDS ${SCRIPTS_DIR}/syntax_gen.py ${SCRIPTS_DIR}/syntax.txt
   COMMENT "Generating syntax bindings")
 
@@ -37,26 +40,25 @@ pybind11_add_module(
   MODULE
   python/ASTBindings.cpp
   python/CompBindings.cpp
+  python/ExpressionBindings.cpp
   python/NumericBindings.cpp
   python/pyslang.cpp
+  python/StatementBindings.cpp
   python/SymbolBindings.cpp
   python/SyntaxBindings.cpp
   python/TypeBindings.cpp
   python/UtilBindings.cpp
-  ${CMAKE_CURRENT_BINARY_DIR}/PySyntaxBindings.cpp)
+  ${CMAKE_CURRENT_BINARY_DIR}/PySyntaxBindings0.cpp
+  ${CMAKE_CURRENT_BINARY_DIR}/PySyntaxBindings1.cpp
+  ${CMAKE_CURRENT_BINARY_DIR}/PySyntaxBindings2.cpp
+  ${CMAKE_CURRENT_BINARY_DIR}/PySyntaxBindings3.cpp)
+set_source_files_properties(
+  python/pyslang.cpp PROPERTIES COMPILE_DEFINITIONS
+                                VERSION_INFO=${PROJECT_VERSION})
 target_link_libraries(pyslang PUBLIC slang::slang)
 target_include_directories(pyslang PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/python)
-target_compile_definitions(pyslang PRIVATE VERSION_INFO=${PROJECT_VERSION})
 
 install(
   TARGETS pyslang
   COMPONENT pylib
   DESTINATION .)
-
-# Fake install component target to allow installing just a minimal set of things
-# when building from Python.
-add_custom_target(
-  pyslang-install-pylib
-  ${CMAKE_COMMAND} -DCMAKE_INSTALL_COMPONENT=pylib -P
-  "${PROJECT_BINARY_DIR}/cmake_install.cmake"
-  DEPENDS pyslang)

@@ -3,8 +3,7 @@
 
 #include "Test.h"
 
-#include "slang/ast/ASTSerializer.h"
-#include "slang/ast/Definition.h"
+#include "slang/ast/ASTVisitor.h"
 #include "slang/ast/Statements.h"
 #include "slang/ast/expressions/AssignmentExpressions.h"
 #include "slang/ast/expressions/CallExpression.h"
@@ -20,7 +19,6 @@
 #include "slang/ast/symbols/VariableSymbols.h"
 #include "slang/ast/types/NetType.h"
 #include "slang/ast/types/Type.h"
-#include "slang/text/Json.h"
 
 TEST_CASE("Nets") {
     auto tree = SyntaxTree::fromText(R"(
@@ -61,6 +59,19 @@ endmodule
     CHECK(diags[3].code == diag::SingleBitVectored);
     CHECK(diags[4].code == diag::UndeclaredIdentifier);
     CHECK(diags[5].code == diag::DelayNotNumeric);
+}
+
+TEST_CASE("Net types can be unpacked unions") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    typedef union { logic l; } u;
+    wire u w;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
 }
 
 TEST_CASE("Bad signed specifier") {
@@ -256,276 +267,6 @@ endmodule
     CHECK(diags[7].code == diag::UserDefPartialDriver);
 }
 
-TEST_CASE("JSON dump") {
-    auto tree = SyntaxTree::fromText(R"(
-interface I;
-    logic f;
-    modport m(input f);
-endinterface
-
-package p1;
-    parameter int BLAH = 1;
-endpackage
-
-function int foo(int a, output logic b);
-endfunction
-
-module Top;
-    wire foo;
-    assign foo = 1;
-
-    (* foo, bar = 1 *) I array [3] ();
-
-    always_comb begin
-    end
-
-    if (1) begin
-    end
-
-    for (genvar i = 0; i < 10; i++) begin
-    end
-
-    import p1::BLAH;
-
-    import p1::*;
-
-    logic f;
-    I stuff();
-    Child child(.i(stuff), .f);
-
-    function logic func(logic bar);
-    endfunction
-
-    int arr[3];
-    initial begin
-        randsequence()
-            a: case (f) 0, 1: b("hello"); default: c; endcase | c;
-            b(string s): { $display(s); };
-            c: { break; };
-        endsequence
-
-        arr[0] = randomize with { foreach(arr[i]) i == 1; };
-    end
-
-endmodule
-
-module Child(I.m i, input logic f = 1);
-endmodule
-)");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-    NO_COMPILATION_ERRORS;
-
-    // This basic test just makes sure that JSON dumping doesn't crash.
-    JsonWriter writer;
-    writer.setPrettyPrint(true);
-
-    ASTSerializer serializer(compilation, writer);
-    serializer.serialize(compilation.getRoot());
-    writer.view();
-}
-
-TEST_CASE("JSON dump -- types and values") {
-    auto tree = SyntaxTree::fromText(R"(
-module test_enum;
-    typedef enum logic {
-        STATE_0 = 0,
-        STATE_1 = 1
-    } STATE;
-
-    STATE a = STATE_0;
-
-    class C;
-        int i;
-    endclass
-
-    C c = new;
-endmodule
-)");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-    NO_COMPILATION_ERRORS;
-
-    JsonWriter writer;
-    writer.setPrettyPrint(true);
-
-    ASTSerializer serializer(compilation, writer);
-    serializer.setIncludeAddresses(false);
-    serializer.serialize(compilation.getRoot());
-
-    std::string result = "\n"s + std::string(writer.view());
-    CHECK(result == R"(
-{
-  "name": "$root",
-  "kind": "Root",
-  "members": [
-    {
-      "name": "",
-      "kind": "CompilationUnit"
-    },
-    {
-      "name": "test_enum",
-      "kind": "Instance",
-      "body": {
-        "name": "test_enum",
-        "kind": "InstanceBody",
-        "members": [
-          {
-            "name": "STATE_0",
-            "kind": "TransparentMember"
-          },
-          {
-            "name": "STATE_1",
-            "kind": "TransparentMember"
-          },
-          {
-            "name": "STATE",
-            "kind": "TypeAlias",
-            "target": "enum{STATE_0=1'd0,STATE_1=1'd1}test_enum.e$1"
-          },
-          {
-            "name": "a",
-            "kind": "Variable",
-            "type": "enum{STATE_0=1'd0,STATE_1=1'd1}test_enum.STATE",
-            "initializer": {
-              "kind": "NamedValue",
-              "type": "enum{STATE_0=1'd0,STATE_1=1'd1}test_enum.STATE",
-              "symbol": "STATE_0",
-              "constant": "1'b0"
-            },
-            "lifetime": "Static"
-          },
-          {
-            "name": "C",
-            "kind": "ClassType",
-            "members": [
-              {
-                "name": "i",
-                "kind": "ClassProperty",
-                "type": "int",
-                "lifetime": "Automatic",
-                "visibility": "Public"
-              }
-            ],
-            "isAbstract": false,
-            "isInterface": false,
-            "implements": [
-            ]
-          },
-          {
-            "name": "c",
-            "kind": "Variable",
-            "type": "C",
-            "initializer": {
-              "kind": "NewClass",
-              "type": "C"
-            },
-            "lifetime": "Static"
-          }
-        ],
-        "definition": "test_enum"
-      },
-      "connections": [
-      ]
-    }
-  ]
-})");
-}
-
-TEST_CASE("JSON dump -- attributes") {
-    auto tree = SyntaxTree::fromText(R"(
-module m;
-    wire dog, cat;
-    (* special *) assign dog = cat;
-endmodule
-)");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-    NO_COMPILATION_ERRORS;
-
-    JsonWriter writer;
-    writer.setPrettyPrint(true);
-
-    ASTSerializer serializer(compilation, writer);
-    serializer.setIncludeAddresses(false);
-    serializer.serialize(compilation.getRoot());
-
-    std::string result = "\n"s + std::string(writer.view());
-    CHECK(result == R"(
-{
-  "name": "$root",
-  "kind": "Root",
-  "members": [
-    {
-      "name": "",
-      "kind": "CompilationUnit"
-    },
-    {
-      "name": "m",
-      "kind": "Instance",
-      "body": {
-        "name": "m",
-        "kind": "InstanceBody",
-        "members": [
-          {
-            "name": "dog",
-            "kind": "Net",
-            "type": "logic",
-            "netType": {
-              "name": "wire",
-              "kind": "NetType",
-              "type": "logic"
-            }
-          },
-          {
-            "name": "cat",
-            "kind": "Net",
-            "type": "logic",
-            "netType": {
-              "name": "wire",
-              "kind": "NetType",
-              "type": "logic"
-            }
-          },
-          {
-            "name": "",
-            "kind": "ContinuousAssign",
-            "attributes": [
-              {
-                "name": "special",
-                "kind": "Attribute",
-                "value": "1'b1"
-              }
-            ],
-            "assignment": {
-              "kind": "Assignment",
-              "type": "logic",
-              "left": {
-                "kind": "NamedValue",
-                "type": "logic",
-                "symbol": "dog"
-              },
-              "right": {
-                "kind": "NamedValue",
-                "type": "logic",
-                "symbol": "cat"
-              },
-              "isNonBlocking": false
-            }
-          }
-        ],
-        "definition": "m"
-      },
-      "connections": [
-      ]
-    }
-  ]
-})");
-}
-
 TEST_CASE("Attributes") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
@@ -666,9 +407,15 @@ endpackage
 
     auto ts = [](std::string_view str) { return TimeScale::fromString(str).value(); };
 
-    CHECK(compilation.getDefinition("m", compilation.getRoot())->timeScale == ts("10ns/10ps"));
-    CHECK(compilation.getDefinition("n", compilation.getRoot())->timeScale == ts("10us/1ns"));
-    CHECK(compilation.getDefinition("o", compilation.getRoot())->timeScale == ts("100s/10fs"));
+    auto getDefTS = [&](std::string_view name) {
+        auto def = compilation.tryGetDefinition(name, compilation.getRoot()).definition;
+        REQUIRE(def);
+        return def->as<DefinitionSymbol>().timeScale;
+    };
+
+    CHECK(getDefTS("m") == ts("10ns/10ps"));
+    CHECK(getDefTS("n") == ts("10us/1ns"));
+    CHECK(getDefTS("o") == ts("100s/10fs"));
     CHECK(compilation.getPackage("p")->getTimeScale() == ts("100s/1ps"));
 }
 
@@ -757,155 +504,6 @@ endmodule
     CHECK(diags[0].code == diag::PortDeclInANSIModule);
     CHECK(diags[1].code == diag::UnusedPortDecl);
     CHECK(diags[2].code == diag::UnusedPortDecl);
-}
-
-TEST_CASE("Type parameters") {
-    auto tree = SyntaxTree::fromText(R"(
-module m #(parameter type foo_t = int, foo_t foo = 1) ();
-    if (foo) begin
-        parameter type asdf = shortint, basdf = logic;
-    end
-endmodule
-)");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-    NO_COMPILATION_ERRORS;
-}
-
-TEST_CASE("Type parameters 2") {
-    auto tree = SyntaxTree::fromText(R"(
-module m #(parameter type foo_t, foo_t foo = 1) ();
-    if (foo) begin
-        parameter type asdf = shortint, basdf = logic;
-    end
-endmodule
-
-module top;
-    m #(longint) m1();
-endmodule
-)");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-    NO_COMPILATION_ERRORS;
-}
-
-TEST_CASE("Type parameters 3") {
-    auto tree = SyntaxTree::fromText(R"(
-module m #(parameter type foo_t, foo_t foo = 1) ();
-    if (foo) begin
-        parameter type asdf = shortint, basdf = logic;
-    end
-endmodule
-
-module top;
-    typedef struct packed { logic l; } asdf;
-    m #(.foo_t(asdf)) m1();
-endmodule
-)");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-    NO_COMPILATION_ERRORS;
-}
-
-TEST_CASE("Type parameters 4") {
-    auto tree = SyntaxTree::fromText(R"(
-module m;
-    parameter int i = 0;
-    localparam j = i;
-    parameter type t = int;
-
-    t t1 = 2;
-endmodule
-
-module top;
-    m #(1, shortint) m1();
-endmodule
-)");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-    NO_COMPILATION_ERRORS;
-}
-
-TEST_CASE("Type parameters -- bad replacement") {
-    auto tree = SyntaxTree::fromText(R"(
-module m #(parameter type foo_t, foo_t foo = 1) ();
-    if (foo) begin
-        parameter type asdf = shortint, basdf = logic;
-    end
-endmodule
-
-module top;
-    typedef struct { logic l; } asdf;
-    m #(asdf) m1();
-endmodule
-)");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-
-    auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 1);
-    CHECK(diags[0].code == diag::BadAssignment);
-}
-
-TEST_CASE("Type parameters unset -- ok") {
-    auto tree = SyntaxTree::fromText(R"(
-module m #(parameter type foo_t = int, foo_t foo = 1) ();
-    if (foo) begin
-        parameter type asdf = shortint, basdf = logic;
-    end
-endmodule
-
-module top;
-    m #(.foo_t()) m1();
-endmodule
-)");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-    NO_COMPILATION_ERRORS;
-}
-
-TEST_CASE("Type parameters unset -- bad") {
-    auto tree = SyntaxTree::fromText(R"(
-module m #(parameter type foo_t, foo_t foo = 1) ();
-    if (foo) begin
-        parameter type asdf = shortint, basdf = logic;
-    end
-endmodule
-
-module top;
-    m #(.foo_t()) m1();
-endmodule
-)");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-
-    auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 1);
-    CHECK(diags[0].code == diag::ParamHasNoValue);
-}
-
-TEST_CASE("Type parameters default -- no error") {
-    auto tree = SyntaxTree::fromText(R"(
-module m #(parameter type foo_t = bit) ();
-    foo_t f;
-    initial f[0] = 1;
-endmodule
-
-module top;
-    m #(.foo_t(logic[3:0])) m1();
-endmodule
-)");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-    NO_COMPILATION_ERRORS;
 }
 
 TEST_CASE("Module non-ansi port lookup locations") {
@@ -1015,54 +613,6 @@ endmodule
     CHECK(diags[2].code == diag::UndeclaredIdentifier);
 }
 
-TEST_CASE("Implicit param with unpacked dimensions") {
-    auto tree = SyntaxTree::fromText(R"(
-module m;
-    parameter foo[3] = '{1,2,3};
-    parameter signed bar[2] = '{-1,2};
-    parameter [31:0] baz[2] = '{1,2};
-endmodule
-)");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-
-    auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 2);
-    CHECK(diags[0].code == diag::UnpackedArrayParamType);
-    CHECK(diags[1].code == diag::ConstantConversion);
-}
-
-TEST_CASE("Implicit param types") {
-    auto tree = SyntaxTree::fromText(R"(
-module m;
-    parameter [9:1] a = 9'b0;
-    parameter b = '1;
-    parameter c = 3.4;
-    parameter signed d = 2'b10;
-    parameter signed e = 3.4;
-    parameter unsigned f = 3.4;
-    parameter signed [3:5] g = 3.4;
-endmodule
-)");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-    NO_COMPILATION_ERRORS;
-
-    auto typeof = [&](auto name) {
-        return compilation.getRoot().lookupName<ParameterSymbol>("m."s + name).getType().toString();
-    };
-
-    CHECK(typeof("a") == "logic[9:1]");
-    CHECK(typeof("b") == "logic[31:0]");
-    CHECK(typeof("c") == "real");
-    CHECK(typeof("d") == "logic signed[1:0]");
-    CHECK(typeof("e") == "logic signed[31:0]");
-    CHECK(typeof("f") == "logic[31:0]");
-    CHECK(typeof("g") == "logic signed[3:5]");
-}
-
 TEST_CASE("Static initializer missing static keyword") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
@@ -1123,7 +673,7 @@ endmodule
 source:7:5: error: $error encountered
     $error;
     ^
-source:11:9: note: $info encountered:           43.200000 top.asdf.genblk1:m Hello world 14!
+source:11:9: note: $info encountered:           43.200000 top.asdf.genblk1:work.m Hello world 14!
         $info(4, 3.2, " %m:%l Hello world %0d!", foo + 2);
         ^
 )");
@@ -1143,6 +693,28 @@ endmodule
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::ConstEvalNonConstVariable);
+}
+
+TEST_CASE("Escaped names in hierarchical path printing") {
+    auto tree = SyntaxTree::fromText(R"(
+module \module. ;
+  if (1) begin : \foo.
+    $info("\"%m\"");
+  end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diagnostics = compilation.getAllDiagnostics();
+    auto result = "\n" + report(diagnostics);
+    auto expected = R"(
+source:4:5: note: $info encountered: \"\module. .\foo. \"
+    $info("\"%m\"");
+    ^
+)";
+    CHECK(result == expected);
 }
 
 TEST_CASE("Const variable must provide initializer") {
@@ -1183,9 +755,11 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 2);
-    CHECK(diags[0].code == diag::SpecparamInConstant);
-    CHECK(diags[1].code == diag::SpecifyBlockParam);
+    REQUIRE(diags.size() == 4);
+    CHECK(diags[0].code == diag::ConstantConversion);
+    CHECK(diags[1].code == diag::ArithOpMismatch);
+    CHECK(diags[2].code == diag::SpecparamInConstant);
+    CHECK(diags[3].code == diag::SpecifyBlockParam);
 }
 
 TEST_CASE("Net initializer in package") {
@@ -1244,6 +818,8 @@ module test;
         default output edge;
         output a = b + 1;
         input f;
+        input #b b;
+        input #(-1) clk;
     endclocking
 
     default clocking cb;
@@ -1262,15 +838,17 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 8);
+    REQUIRE(diags.size() == 10);
     CHECK(diags[0].code == diag::MultipleDefaultInputSkew);
     CHECK(diags[1].code == diag::MultipleDefaultOutputSkew);
     CHECK(diags[2].code == diag::ExpressionNotAssignable);
     CHECK(diags[3].code == diag::InvalidClockingSignal);
-    CHECK(diags[4].code == diag::MultipleDefaultClocking);
-    CHECK(diags[5].code == diag::NotAClockingBlock);
-    CHECK(diags[6].code == diag::MultipleGlobalClocking);
-    CHECK(diags[7].code == diag::GlobalClockingGenerate);
+    CHECK(diags[4].code == diag::ConstEvalNonConstVariable);
+    CHECK(diags[5].code == diag::ValueMustBePositive);
+    CHECK(diags[6].code == diag::MultipleDefaultClocking);
+    CHECK(diags[7].code == diag::NotAClockingBlock);
+    CHECK(diags[8].code == diag::MultipleGlobalClocking);
+    CHECK(diags[9].code == diag::GlobalClockingGenerate);
 }
 
 TEST_CASE("Multiple clocking blocks with ifaces") {
@@ -1453,51 +1031,6 @@ endmodule : m
     CHECK(diags[5].code == diag::LetHierarchical);
 }
 
-TEST_CASE("Param initialize self-reference") {
-    auto tree = SyntaxTree::fromText(R"(
-parameter int foo = foo;
-)");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-
-    auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 1);
-    CHECK(diags[0].code == diag::UsedBeforeDeclared);
-}
-
-TEST_CASE("Param reference in implicit dimension specification") {
-    auto tree = SyntaxTree::fromText(R"(
-module m #(parameter foo = 1, parameter [foo-1:0] bar = '0)();
-    localparam p = bar;
-endmodule
-
-module n;
-    m #(.bar(1)) m1();
-endmodule
-)");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-    NO_COMPILATION_ERRORS;
-}
-
-TEST_CASE("Param sum with regression GH #432") {
-    auto tree = SyntaxTree::fromText(R"(
-module m;
-    parameter logic [7:0] m1 [2] = '{ 5, 10 };
-    parameter int y1 = m1.sum with(item);
-endmodule
-)");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-    NO_COMPILATION_ERRORS;
-
-    auto cv = compilation.getRoot().lookupName<ParameterSymbol>("m.y1").getValue();
-    CHECK(cv.integer() == 15);
-}
-
 TEST_CASE("Hierarchical path strings") {
     auto tree = SyntaxTree::fromText(R"(
 module top;
@@ -1528,6 +1061,26 @@ endmodule
     CHECK(path == "top.m1[2][1][3].asdf[1].genblk1.foo");
 }
 
+TEST_CASE("Hierarchical paths with unnamed generate arrays") {
+    auto tree = SyntaxTree::fromText(R"(
+module top;
+  genvar i;
+  for (i = 0; i < 1; i = i + 1) begin
+    logic a;
+  end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    std::string path;
+    compilation.getRoot().visit(
+        makeVisitor([&](auto& v, const VariableSymbol& sym) { sym.getHierarchicalPath(path); }));
+    CHECK(path == "top.genblk1[0].a");
+}
+
 TEST_CASE("$static_assert elab task") {
     auto tree = SyntaxTree::fromText(R"(
 module top;
@@ -1540,9 +1093,9 @@ module m;
     struct packed { logic [4:1] a, b; } bar;
 
     $static_assert(foo < $bits(bar));
-    $static_assert(foo * 0, "Stuff %0d", foo / 2);
-    $static_assert(foo, "Stuff Stuff %0d", foo / 2);
-    $static_assert(bar);
+    $static_assert(foo & 0, "Stuff %0d", foo / 2);
+    $static_assert(foo != 0, "Stuff Stuff %0d", foo / 2);
+    $static_assert(bar > 0);
 
     initial begin
         $static_assert(foo > $bits(bar));
@@ -1564,10 +1117,10 @@ source:11:24: note: comparison reduces to (12 < 8)
     $static_assert(foo < $bits(bar));
                    ~~~~^~~~~~~~~~~~
 source:12:5: error: static assertion failed: Stuff 6
-    $static_assert(foo * 0, "Stuff %0d", foo / 2);
+    $static_assert(foo & 0, "Stuff %0d", foo / 2);
     ^
 source:14:20: error: reference to non-constant variable 'bar' is not allowed in a constant expression
-    $static_assert(bar);
+    $static_assert(bar > 0);
                    ^~~
 source:9:41: note: declared here
     struct packed { logic [4:1] a, b; } bar;
@@ -1696,6 +1249,48 @@ endmodule
     CHECK(diags[3].code == diag::MultipleAlwaysAssigns);
     CHECK(diags[4].code == diag::ForkJoinAlwaysComb);
     CHECK(diags[5].code == diag::TimingInFuncNotAllowed);
+}
+
+TEST_CASE("always_ff timing (pass)") {
+    auto tree = SyntaxTree::fromText(R"(
+module x;
+reg a;
+wire clk;
+always_ff @(posedge clk)
+  a <= #1 1'b0;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 0);
+}
+
+TEST_CASE("always_ff timing (fail)") {
+    auto tree = SyntaxTree::fromText(R"(
+module x1;
+reg a;
+wire clk;
+always_ff @(posedge clk)
+  #1 a <= 1'b0;
+endmodule
+module x2;
+reg a;
+wire clk;
+always_ff @(posedge clk)
+  a = #1 1'b0;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::BlockingInAlwaysFF);
+    CHECK(diags[1].code == diag::BlockingInAlwaysFF);
 }
 
 TEST_CASE("always_comb drivers within nested functions") {
@@ -2017,7 +1612,7 @@ module ALU (o1, i1, i2, opcode);
         specparam s1 = 2;
         if (opcode == 2'b00) (i1,i2 *> o1) = (25.0, 25.0);
         if (opcode == 2'b01) (i1 => o1) = (5.6, 8.0);
-        if (opcode == s1) (i2 => o1) = (5.6, 8.0);
+        if (opcode == s1[1:0]) (i2 => o1) = (5.6, 8.0);
         (opcode *> o1) = (6.1, 6.5);
     endspecify
 endmodule
@@ -2060,7 +1655,7 @@ module m(input [4:0] a, output [4:0] b, z[6], output [5:0] l, I.m foo, I bar);
 
         if (k < 2) (a => z[1]) = 1;
         if (1 < 2) (a => z[2]) = 1;
-        if (int'(g) == 1) (a => z[3]) = 1;
+        if (byte'(g) == 1) (a => z[3]) = 1;
         if (+g == 1) (a => z[4]) = 1;
         if (g inside { 1, 2 }) (a => z[5]) = 1;
 
@@ -2080,7 +1675,7 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 17);
+    REQUIRE(diags.size() == 18);
     CHECK(diags[0].code == diag::InvalidSpecifyDest);
     CHECK(diags[1].code == diag::SpecifyBlockParam);
     CHECK(diags[2].code == diag::InvalidSpecifyPath);
@@ -2096,8 +1691,9 @@ endmodule
     CHECK(diags[12].code == diag::SpecifyPathConditionExpr);
     CHECK(diags[13].code == diag::SpecifyPathConditionExpr);
     CHECK(diags[14].code == diag::SpecifyPathConditionExpr);
-    CHECK(diags[15].code == diag::InvalidSpecifySource);
-    CHECK(diags[16].code == diag::InvalidSpecifyDest);
+    CHECK(diags[15].code == diag::SpecifyPathConditionExpr);
+    CHECK(diags[16].code == diag::InvalidSpecifySource);
+    CHECK(diags[17].code == diag::InvalidSpecifyDest);
 }
 
 TEST_CASE("Pathpulse specparams") {
@@ -2163,11 +1759,11 @@ module m(input a, clk, data, output b);
         specparam tSU = 1, tHLD = 3:4:5;
         $setup(posedge clk, data, 42);
         $hold(posedge clk, data, 42, );
-        $setuphold(posedge clk, data, tSU, tHLD, notify, 1:2:3, bar, dclk, ddata);
+        $setuphold(posedge clk, data, tSU, tHLD, notify, 0:1:0, bar, dclk, ddata);
         $recovery(posedge clk, data, 42);
         $removal(posedge clk, data, 42, );
-        $recrem(posedge clk, data, tSU, tHLD, notify, 1:2:3, bar, dclk);
-        $recrem(posedge clk, data, tSU, tHLD, notify, 1:2:3, bar, w[0], ddata);
+        $recrem(posedge clk, data, tSU, tHLD, notify, 0:1:0, bar, dclk);
+        $recrem(posedge clk, data, tSU, tHLD, notify, 0:1:0, bar, w[0], ddata);
         $skew(posedge clk, data, 42);
         $timeskew(posedge clk, negedge data, 42, , 1, 0:1:0);
         $fullskew(posedge clk, negedge data, 42, 32, , 1, 0:1:0);
@@ -2213,7 +1809,6 @@ module m(input a, output b);
         $setup(posedge a, negedge a, 1, ABC);
         $setup(posedge a &&& d, negedge a, 1);
         $setup(edge [1xx] a &&& notify, negedge a, 1);
-        $setuphold(notify, negedge a, 1, 2, , , , asdf);
         $setup(posedge a, a, -12.14);
         $width(a, 1);
         $nochange(edge [1x] a, a, 1, 2);
@@ -2225,7 +1820,7 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 14);
+    REQUIRE(diags.size() == 13);
     CHECK(diags[0].code == diag::UnknownSystemTimingCheck);
     CHECK(diags[1].code == diag::TooFewArguments);
     CHECK(diags[2].code == diag::TooManyArguments);
@@ -2236,10 +1831,9 @@ endmodule
     CHECK(diags[7].code == diag::BadAssignment);
     CHECK(diags[8].code == diag::NotBooleanConvertible);
     CHECK(diags[9].code == diag::InvalidEdgeDescriptor);
-    CHECK(diags[10].code == diag::InvalidSpecifySource);
-    CHECK(diags[11].code == diag::NegativeTimingLimit);
-    CHECK(diags[12].code == diag::TimingCheckEventEdgeRequired);
-    CHECK(diags[13].code == diag::NoChangeEdgeRequired);
+    CHECK(diags[10].code == diag::NegativeTimingLimit);
+    CHECK(diags[11].code == diag::TimingCheckEventEdgeRequired);
+    CHECK(diags[12].code == diag::NoChangeEdgeRequired);
 }
 
 TEST_CASE("System timing check implicit nets") {
@@ -2426,21 +2020,87 @@ endmodule
     CHECK(diags[4].code == diag::NetAliasCommonNetType);
 }
 
-TEST_CASE("Parameter port wrong / implicit type regression GH #797") {
+TEST_CASE("Action block parsing regress GH #911") {
     auto tree = SyntaxTree::fromText(R"(
-module dut #(
-    parameter bit P1,
-    parameter bit P2
+module M #(
+    A = 1
 );
+logic clk, rst;
+
+property myprop(k);
+   @(posedge clk) disable iff(rst !== 0) k > 0;
+endproperty
+
+genvar k;
+for (k=1; k < 4; k++) begin: m
+    if (A)
+        label1: assert property(myprop(k));
+    else
+        label2: assert property(myprop(k));
+
+    if (A)
+        label3: assert property(myprop(k))
+                else $error("assert failed");
+    else
+        label4: assert property(myprop(k));
+
+    if (A) begin
+        label5: assert property(myprop(k));
+    end else
+        label6: assert property(myprop(k));
+end
+
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Function result chaining is allowed") {
+    auto tree = SyntaxTree::fromText(R"(
+class Node;
+    typedef bit [15:10] value_t;
+    protected Node m_next;
+    protected value_t m_val;
+
+    function new(value_t v); m_val = v; endfunction
+    function void set_next(Node n); m_next = n; endfunction
+    function Node get_next(); return m_next; endfunction
+    function value_t get_val(); return m_val; endfunction
+endclass
+
+function Node get_first_node();
+    Node n1, n2;
+    n1 = new(6'h00);
+    n2 = new(6'h3F);
+    n1.set_next(n2);
+    return n1;
+endfunction
+
+module m;
+    initial begin
+        bit [3:0] my_bits;
+        my_bits = get_first_node().get_next().get_val()[13:10];
+    end
 endmodule
 
-module top #(
-   parameter bit [3:1]
-       P1 = {3{1'b1}},
-       P2 = {3{1'b1}}
-);
-    for (genvar p=1; p<4; p++) begin: gen_loop
-        dut #(.P1 (P1[p]), .P2 (P2[p])) dut_i();
+class A;
+    real member=1;
+endclass
+
+module top;
+    A a;
+    function A F;
+        int member;
+        a = new();
+        return a;
+    endfunction
+
+    initial begin
+        $display(F.member);
+        $display(F().member);
     end
 endmodule
 )");
@@ -2450,13 +2110,151 @@ endmodule
     NO_COMPILATION_ERRORS;
 }
 
-TEST_CASE("Parameter port with package scoped type regress") {
+TEST_CASE("Virtual interface comparison") {
+    auto tree = SyntaxTree::fromText(R"(
+interface PBus1 #(parameter WIDTH=8);
+        logic req, grant;
+        logic [WIDTH-1:0] addr, data;
+        modport phy(input addr, ref data);
+endinterface
+
+module top;
+        PBus1 #(16) p16();
+        virtual PBus1 #(16) v16;
+
+        initial begin
+                if (p16 == v16) begin end
+                if (v16 == p16) begin end
+                if (v16 == v16) begin end
+        end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Instance comparison") {
+    auto tree = SyntaxTree::fromText(R"(
+interface PBus1 #(parameter WIDTH=8);
+        logic req, grant;
+        logic [WIDTH-1:0] addr, data;
+        modport phy(input addr, ref data);
+endinterface
+
+module top;
+        PBus1 #(16) p16();
+        initial begin
+                if (p16 == p16) begin end
+        end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::CannotCompareTwoInstances);
+}
+
+TEST_CASE("Virtual interfaces of different types comparison") {
+    auto tree = SyntaxTree::fromText(R"(
+interface PBus1 #(parameter WIDTH=8);
+        logic req, grant;
+        logic [WIDTH-1:0] addr, data;
+        modport phy(input addr, ref data);
+endinterface
+
+interface PBus2 #(parameter WIDTH=8);
+        logic req, grant;
+        logic [WIDTH-1:0] addr, data;
+        modport phy(input addr, ref data);
+endinterface
+
+module top;
+        virtual PBus1 #(16) v16;
+        virtual PBus2 #(16) v26;
+        PBus1 #(16) p16();
+        initial begin
+                if (p16 == v26) begin end
+                if (v16 == v26) begin end
+        end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::BadBinaryExpression);
+    CHECK(diags[1].code == diag::BadBinaryExpression);
+}
+
+TEST_CASE("Package import / export from self") {
     auto tree = SyntaxTree::fromText(R"(
 package p;
-    typedef int i;
-endpackage
+    int i;
 
-module m #(parameter int a, p::i b);
+    function foo;
+        import p::i;
+        import p::*;
+    endfunction
+
+    export p::i;
+    export p::*;
+endpackage
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 5);
+    CHECK(diags[0].code == diag::PackageImportSelf);
+    CHECK(diags[1].code == diag::PackageImportSelf);
+    CHECK(diags[2].code == diag::PackageExportSelf);
+    CHECK(diags[3].code == diag::Redefinition);
+    CHECK(diags[4].code == diag::PackageExportSelf);
+}
+
+TEST_CASE("DPI task import has correct return type") {
+    auto tree = SyntaxTree::fromText(R"(
+module t;
+    task task1;
+    endtask
+
+    import "DPI-C" context task dpi_init;
+
+    initial begin
+        dpi_init;
+        task1;
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Timing check arg restriction regress -- GH #1084") {
+    auto tree = SyntaxTree::fromText(R"(
+module clk_gate_and(
+        input  logic clk_in,
+        input  logic clk_en,
+        output logic clk_out
+    );
+
+    specify
+        specparam setup = 10;
+        specparam hold = 10;
+
+        $setup(posedge clk_in, clk_en, setup);
+        $hold(posedge clk_in, clk_en, hold);
+    endspecify
 endmodule
 )");
 

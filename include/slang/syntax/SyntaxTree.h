@@ -44,7 +44,7 @@ public:
 
     /// Indicates whether this syntax tree represents a "library" compilation unit,
     /// which means that modules declared within it are not automatically instantiated.
-    bool isLibrary = false;
+    bool isLibraryUnit = false;
 
     SyntaxTree(SyntaxNode* root, SourceManager& sourceManager, BumpAllocator&& alloc,
                const SourceLibrary* library, std::shared_ptr<SyntaxTree> parent = nullptr);
@@ -92,10 +92,21 @@ public:
 
     /// Creates a syntax tree by guessing at what might be in the given source snippet.
     /// @a text is the actual source code text.
+    /// @a options is a bag of lexer, preprocessor, and parser options.
+    /// @a name is an optional name to give to the loaded source buffer.
+    /// @a path is an optional path to give to the loaded source buffer.
+    /// @return the created and parsed syntax tree.
+    static std::shared_ptr<SyntaxTree> fromText(std::string_view text, const Bag& options,
+                                                std::string_view name = "source"sv,
+                                                std::string_view path = "");
+
+    /// Creates a syntax tree by guessing at what might be in the given source snippet.
+    /// @a text is the actual source code text.
     /// @a sourceManager is the manager that owns all of the loaded source code.
     /// @a name is an optional name to give to the loaded source buffer.
     /// @a path is an optional path to give to the loaded source buffer.
     /// @a options is an optional bag of lexer, preprocessor, and parser options.
+    /// @a library the source library to associated with the parsed tree
     /// @return the created and parsed syntax tree.
     static std::shared_ptr<SyntaxTree> fromText(std::string_view text, SourceManager& sourceManager,
                                                 std::string_view name = "source"sv,
@@ -181,6 +192,9 @@ public:
     /// Gets the source manager used to build the syntax tree.
     const SourceManager& sourceManager() const { return sourceMan; }
 
+    /// Gets the source library with which the syntax tree is associated.
+    const SourceLibrary* getSourceLibrary() const { return library; }
+
     /// Gets the root of the syntax tree.
     SyntaxNode& root() { return *rootNode; }
 
@@ -189,12 +203,6 @@ public:
 
     /// The options used to construct the syntax tree.
     const Bag& options() const { return options_; }
-
-    /// Gets the parent syntax tree, if there is one. Otherwise returns nullptr.
-    /// Most syntax trees don't have a parent; this is for cases where a given tree is
-    /// derived from another and relies on the parent tree's memory remaining valid for
-    /// the lifetime of the child tree.
-    const SyntaxTree* getParentTree() const { return parentTree.get(); }
 
     /// Gets various bits of metadata collected during parsing.
     const parsing::ParserMetadata& getMetadata() const { return *metadata; }
@@ -209,8 +217,8 @@ public:
     static SourceManager& getDefaultSourceManager();
 
 private:
-    SyntaxTree(SyntaxNode* root, SourceManager& sourceManager, BumpAllocator&& alloc,
-               Diagnostics&& diagnostics, parsing::ParserMetadata&& metadata,
+    SyntaxTree(SyntaxNode* root, const SourceLibrary* library, SourceManager& sourceManager,
+               BumpAllocator&& alloc, Diagnostics&& diagnostics, parsing::ParserMetadata&& metadata,
                std::vector<const DefineDirectiveSyntax*>&& macros, Bag options);
 
     static std::shared_ptr<SyntaxTree> create(SourceManager& sourceManager,
@@ -219,13 +227,13 @@ private:
                                               bool guess);
 
     SyntaxNode* rootNode;
+    const SourceLibrary* library;
     SourceManager& sourceMan;
     BumpAllocator alloc;
     Diagnostics diagnosticsBuffer;
     Bag options_;
     std::unique_ptr<parsing::ParserMetadata> metadata;
     std::vector<const DefineDirectiveSyntax*> macros;
-    std::shared_ptr<SyntaxTree> parentTree;
 };
 
 } // namespace slang::syntax

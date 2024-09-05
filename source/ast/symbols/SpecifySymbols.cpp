@@ -58,8 +58,8 @@ SpecifyBlockSymbol& SpecifyBlockSymbol::fromSyntax(const Scope& scope,
 }
 
 bool SpecifyBlockSymbol::checkPathTerminal(const ValueSymbol& terminal, const Type& type,
-                                           const Scope& specifyParent, bool isSource,
-                                           bool allowAnyNet, SourceRange sourceRange) {
+                                           const Scope& specifyParent, SpecifyTerminalDir dir,
+                                           SourceRange sourceRange) {
     // Type must be integral.
     if (!type.isIntegral()) {
         if (!type.isError())
@@ -68,7 +68,8 @@ bool SpecifyBlockSymbol::checkPathTerminal(const ValueSymbol& terminal, const Ty
     }
 
     auto reportErr = [&] {
-        auto code = isSource ? diag::InvalidSpecifySource : diag::InvalidSpecifyDest;
+        auto code = dir == SpecifyTerminalDir::Input ? diag::InvalidSpecifySource
+                                                     : diag::InvalidSpecifyDest;
         auto& diag = specifyParent.addDiag(code, sourceRange) << terminal.name;
         diag.addNote(diag::NoteDeclarationHere, terminal.location);
     };
@@ -76,16 +77,17 @@ bool SpecifyBlockSymbol::checkPathTerminal(const ValueSymbol& terminal, const Ty
     // Inputs must be nets (or modport ports) and outputs must
     // be nets or variables (or modport ports).
     if (terminal.kind != SymbolKind::Net && terminal.kind != SymbolKind::ModportPort &&
-        (terminal.kind != SymbolKind::Variable || isSource)) {
+        (terminal.kind != SymbolKind::Variable || dir == SpecifyTerminalDir::Input)) {
         reportErr();
         return false;
     }
 
     if (terminal.kind == SymbolKind::ModportPort) {
         // Check that the modport port has the correct direction.
-        auto dir = terminal.as<ModportPortSymbol>().direction;
-        if (dir != ArgumentDirection::InOut && ((isSource && dir != ArgumentDirection::In) ||
-                                                (!isSource && dir != ArgumentDirection::Out))) {
+        auto portDir = terminal.as<ModportPortSymbol>().direction;
+        if (portDir != ArgumentDirection::InOut &&
+            ((dir == SpecifyTerminalDir::Input && portDir != ArgumentDirection::In) ||
+             (dir == SpecifyTerminalDir::Output && portDir != ArgumentDirection::Out))) {
             reportErr();
             return false;
         }
@@ -112,17 +114,17 @@ bool SpecifyBlockSymbol::checkPathTerminal(const ValueSymbol& terminal, const Ty
         return false;
     }
 
-    // If allowAnyNet then it's fine to just have a non-port net here.
-    if (allowAnyNet && terminal.kind == SymbolKind::Net)
+    if (dir == SpecifyTerminalDir::Both)
         return true;
 
     // Check that the terminal is connected to a module port and that
     // the direction is correct.
     for (auto portRef = terminal.getFirstPortBackref(); portRef;
          portRef = portRef->getNextBackreference()) {
-        auto dir = portRef->port->direction;
-        if (dir == ArgumentDirection::InOut || (isSource && dir == ArgumentDirection::In) ||
-            (!isSource && dir == ArgumentDirection::Out)) {
+        auto portDir = portRef->port->direction;
+        if (portDir == ArgumentDirection::InOut ||
+            (dir == SpecifyTerminalDir::Input && portDir == ArgumentDirection::In) ||
+            (dir == SpecifyTerminalDir::Output && portDir == ArgumentDirection::Out)) {
             return true;
         }
     }
@@ -134,9 +136,8 @@ bool SpecifyBlockSymbol::checkPathTerminal(const ValueSymbol& terminal, const Ty
 TimingPathSymbol::TimingPathSymbol(SourceLocation loc, ConnectionKind connectionKind,
                                    Polarity polarity, Polarity edgePolarity,
                                    EdgeKind edgeIdentifier) :
-    Symbol(SymbolKind::TimingPath, ""sv, loc),
-    connectionKind(connectionKind), polarity(polarity), edgePolarity(edgePolarity),
-    edgeIdentifier(edgeIdentifier) {
+    Symbol(SymbolKind::TimingPath, ""sv, loc), connectionKind(connectionKind), polarity(polarity),
+    edgePolarity(edgePolarity), edgeIdentifier(edgeIdentifier) {
 }
 
 TimingPathSymbol& TimingPathSymbol::fromSyntax(const Scope& parent,
@@ -202,9 +203,9 @@ TimingPathSymbol& TimingPathSymbol::fromSyntax(const Scope& parent,
     return result;
 }
 
-static const Expression* bindTerminal(const ExpressionSyntax& syntax, bool isSource,
-                                      bool allowAnyNet, const Scope* parentParent,
-                                      ASTContext& context) {
+static const Expression* bindTerminal(const ExpressionSyntax& syntax,
+                                      SpecifyBlockSymbol::SpecifyTerminalDir dir,
+                                      const Scope* parentParent, ASTContext& context) {
     auto expr = &Expression::bind(syntax, context);
     if (expr->bad())
         return nullptr;
@@ -231,8 +232,8 @@ static const Expression* bindTerminal(const ExpressionSyntax& syntax, bool isSou
     }
     else {
         auto& symbol = valueExpr->as<NamedValueExpression>().symbol;
-        if (SpecifyBlockSymbol::checkPathTerminal(symbol, *expr->type, *parentParent, isSource,
-                                                  allowAnyNet, valueExpr->sourceRange)) {
+        if (SpecifyBlockSymbol::checkPathTerminal(symbol, *expr->type, *parentParent, dir,
+                                                  valueExpr->sourceRange)) {
             return expr;
         }
     }
@@ -241,13 +242,12 @@ static const Expression* bindTerminal(const ExpressionSyntax& syntax, bool isSou
 }
 
 static std::span<const Expression* const> bindTerminals(
-    const SeparatedSyntaxList<NameSyntax>& syntaxList, bool isSource, const Scope* parentParent,
-    ASTContext& context) {
+    const SeparatedSyntaxList<NameSyntax>& syntaxList, SpecifyBlockSymbol::SpecifyTerminalDir dir,
+    const Scope* parentParent, ASTContext& context) {
 
     SmallVector<const Expression*> results;
     for (auto exprSyntax : syntaxList) {
-        auto expr = bindTerminal(*exprSyntax, isSource, /* allowAnyNet */ false, parentParent,
-                                 context);
+        auto expr = bindTerminal(*exprSyntax, dir, parentParent, context);
         if (expr)
             results.push_back(expr);
     }
@@ -258,7 +258,7 @@ static std::span<const Expression* const> bindTerminals(
 struct SpecifyConditionVisitor {
     const ASTContext& context;
     const Scope* specifyParentScope;
-    bool hasError = false;
+    bool hasWarned = false;
 
     SpecifyConditionVisitor(const ASTContext& context, const Scope* specifyParentScope) :
         context(context), specifyParentScope(specifyParentScope) {}
@@ -273,7 +273,7 @@ struct SpecifyConditionVisitor {
                 case ExpressionKind::NamedValue:
                     if (auto sym = expr.getSymbolReference()) {
                         // Specparams are always allowed.
-                        if (sym->kind == SymbolKind::Specparam || hasError)
+                        if (sym->kind == SymbolKind::Specparam)
                             break;
 
                         // Other references must be locally defined nets or variables.
@@ -283,7 +283,6 @@ struct SpecifyConditionVisitor {
                                                          expr.sourceRange);
                             diag << sym->name;
                             diag.addNote(diag::NoteDeclarationHere, sym->location);
-                            hasError = true;
                         }
                     }
                     break;
@@ -346,9 +345,9 @@ struct SpecifyConditionVisitor {
     }
 
     void reportError(SourceRange sourceRange) {
-        if (!hasError) {
+        if (!hasWarned) {
             context.addDiag(diag::SpecifyPathConditionExpr, sourceRange);
-            hasError = true;
+            hasWarned = true;
         }
     }
 };
@@ -380,18 +379,21 @@ void TimingPathSymbol::resolve() const {
     }
 
     auto& syntax = syntaxPtr->as<PathDeclarationSyntax>();
-    inputs = bindTerminals(syntax.desc->inputs, true, parentParent, context);
+    inputs = bindTerminals(syntax.desc->inputs, SpecifyBlockSymbol::SpecifyTerminalDir::Input,
+                           parentParent, context);
 
     if (syntax.desc->suffix->kind == SyntaxKind::EdgeSensitivePathSuffix) {
         auto& esps = syntax.desc->suffix->as<EdgeSensitivePathSuffixSyntax>();
-        outputs = bindTerminals(esps.outputs, false, parentParent, context);
+        outputs = bindTerminals(esps.outputs, SpecifyBlockSymbol::SpecifyTerminalDir::Output,
+                                parentParent, context);
 
         // This expression is apparently allowed to be anything the user wants.
         edgeSourceExpr = &Expression::bind(*esps.expr, context);
     }
     else {
-        outputs = bindTerminals(syntax.desc->suffix->as<SimplePathSuffixSyntax>().outputs, false,
-                                parentParent, context);
+        outputs = bindTerminals(syntax.desc->suffix->as<SimplePathSuffixSyntax>().outputs,
+                                SpecifyBlockSymbol::SpecifyTerminalDir::Output, parentParent,
+                                context);
     }
 
     // Verify that input and output sizes match for parallel connections.
@@ -606,7 +608,8 @@ void PulseStyleSymbol::resolve() const {
                        ASTFlags::NonProcedural | ASTFlags::SpecifyBlock);
 
     auto& syntax = syntaxPtr->as<PulseStyleDeclarationSyntax>();
-    terminals = bindTerminals(syntax.inputs, false, parentParent, context);
+    terminals = bindTerminals(syntax.inputs, SpecifyBlockSymbol::SpecifyTerminalDir::Output,
+                              parentParent, context);
 }
 
 void PulseStyleSymbol::checkPreviouslyUsed(const TimingPathMap& timingPathMap) const {
@@ -808,8 +811,7 @@ static void createImplicitNets(const SystemTimingCheckSymbol& timingCheck,
 
 SystemTimingCheckSymbol::SystemTimingCheckSymbol(SourceLocation loc,
                                                  const SystemTimingCheckDef* def) :
-    Symbol(SymbolKind::SystemTimingCheck, ""sv, loc),
-    def(def) {
+    Symbol(SymbolKind::SystemTimingCheck, ""sv, loc), def(def) {
     timingCheckKind = def ? def->kind : SystemTimingCheckKind::Unknown;
 }
 
@@ -929,7 +931,7 @@ void SystemTimingCheckSymbol::resolve() const {
             case SystemTimingCheckArgDef::Event:
                 if (actual.kind == SyntaxKind::ExpressionTimingCheckArg) {
                     auto expr = bindTerminal(*actual.as<ExpressionTimingCheckArgSyntax>().expr,
-                                             /* isSource */ true, /* allowAnyNet */ true,
+                                             SpecifyBlockSymbol::SpecifyTerminalDir::Both,
                                              parentParent, context);
                     if (!expr)
                         argBuf.emplace_back();
@@ -939,7 +941,7 @@ void SystemTimingCheckSymbol::resolve() const {
                 else {
                     auto& eventArg = actual.as<TimingCheckEventArgSyntax>();
                     auto expr = bindTerminal(*eventArg.terminal,
-                                             /* isSource */ true, /* allowAnyNet */ true,
+                                             SpecifyBlockSymbol::SpecifyTerminalDir::Both,
                                              parentParent, context);
 
                     const Expression* condition = nullptr;

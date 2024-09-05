@@ -205,6 +205,7 @@ TEST_CASE("SVInt to string (and back)") {
     checkRoundTrip("-999989", LiteralBase::Decimal);
     checkRoundTrip("12'b101x101z1", LiteralBase::Binary);
     checkRoundTrip("999999999", LiteralBase::Decimal);
+    checkRoundTrip("-2147483648", LiteralBase::Decimal);
 
     std::ostringstream ss;
     ss << "96'd192834"_si;
@@ -241,6 +242,10 @@ TEST_CASE("SVInt to string (and back)") {
     CHECK("4'bxxxx"_si.toString(LiteralBase::Hex, false) == "x");
     CHECK("4'bzzzz"_si.toString(LiteralBase::Hex, false) == "z");
     CHECK("4'bzz1z"_si.toString(LiteralBase::Hex, false) == "Z");
+
+    // Make sure leading x round trips correctly.
+    auto str = "8'b0x"_si.toString(SVInt::MAX_BITS, true);
+    CHECK(str == SVInt::fromString(str).toString());
 }
 
 TEST_CASE("Comparison") {
@@ -260,6 +265,10 @@ TEST_CASE("Comparison") {
     CHECK("100'sd99999999999999999999999999"_si >= "-120'sd999999999999977789999"_si);
     CHECK("100'd99999999999999999999999999"_si < "-120'sd999999999999977789999"_si);
     CHECK("100'd99999999999999999999999999"_si >= -50);
+    CHECK(SVInt(32, -2147483648, 1) < SVInt(32, -1, 1));
+    CHECK(SVInt(32, -1, 1) > SVInt(32, -2147483648, 1));
+    CHECK(SVInt(32, 0, 1) > SVInt(32, -1, 1));
+    CHECK(SVInt(32, -1, 1) < SVInt(32, 0, 1));
 
     CHECK(bool("100'd1234"_si && "100'd09809345"_si));
     CHECK(bool("100'd1234"_si || "100'd0"_si));
@@ -387,6 +396,7 @@ TEST_CASE("Division") {
     CHECK("-50"_si / "25"_si == -2);
     CHECK("-50"_si % "-40"_si == -10);
     CHECK("-50"_si % "40"_si == -10);
+    CHECK("-4'sd8"_si / "-4'sd7"_si == 1);
 
     SVInt v7 = "19823'd234098234098234098234"_si;
     CHECK("300'd0"_si / "10"_si == 0);
@@ -684,15 +694,18 @@ TEST_CASE("Double conversions") {
     CHECK(SVInt::fromDouble(112, 0.0, false) == "112'd0"_si);
     CHECK(SVInt::fromDouble(112, 0.49999999999999, false) == "112'd0"_si);
     CHECK(SVInt::fromDouble(112, 0.5, false) == "112'd1"_si);
+    CHECK(SVInt::fromDouble(112, 0.5, false, false) == "112'd0"_si);
     CHECK(SVInt::fromDouble(112, 0.8987, false) == "112'd1"_si);
     CHECK(SVInt::fromDouble(16, 1.0, false) == "16'd1"_si);
     CHECK(SVInt::fromDouble(16, 1024.499999, false) == "16'd1024"_si);
     CHECK(SVInt::fromDouble(16, 1024.5, false) == "16'd1025"_si);
+    CHECK(SVInt::fromDouble(16, 1024.999, false, false) == "16'd1024"_si);
     CHECK(SVInt::fromDouble(112, 36893488147419107328.0, false) == "112'd36893488147419103232"_si);
 
     CHECK(SVInt::fromDouble(112, -0.0, true) == "112'sd0"_si);
     CHECK(SVInt::fromDouble(112, -0.49999999999999, true) == "112'sd0"_si);
     CHECK(SVInt::fromDouble(112, -0.5, true) == "-112'sd1"_si);
+    CHECK(SVInt::fromDouble(112, -0.5, true, false) == "112'sd0"_si);
     CHECK(SVInt::fromDouble(112, -0.8987, true) == "-112'sd1"_si);
     CHECK(SVInt::fromDouble(16, -1.0, true) == "-16'sd1"_si);
     CHECK(SVInt::fromDouble(16, -1024.499999, true) == "-16'sd1024"_si);
@@ -728,6 +741,7 @@ TEST_CASE("Float conversions") {
     CHECK(SVInt::fromFloat(112, 0.0f, false) == "112'd0"_si);
     CHECK(SVInt::fromFloat(112, 0.4999999f, false) == "112'd0"_si);
     CHECK(SVInt::fromFloat(112, 0.5f, false) == "112'd1"_si);
+    CHECK(SVInt::fromFloat(112, 0.5f, false, false) == "112'd0"_si);
     CHECK(SVInt::fromFloat(112, 0.8987f, false) == "112'd1"_si);
     CHECK(SVInt::fromFloat(16, 1.0f, false) == "16'd1"_si);
     CHECK(SVInt::fromFloat(16, 1024.4999f, false) == "16'd1024"_si);
@@ -737,10 +751,12 @@ TEST_CASE("Float conversions") {
     CHECK(SVInt::fromFloat(112, -0.0f, true) == "112'sd0"_si);
     CHECK(SVInt::fromFloat(112, -0.4999999f, true) == "112'sd0"_si);
     CHECK(SVInt::fromFloat(112, -0.5f, true) == "-112'sd1"_si);
+    CHECK(SVInt::fromFloat(112, -0.5f, true, false) == "112'sd0"_si);
     CHECK(SVInt::fromFloat(112, -0.8987f, true) == "-112'sd1"_si);
     CHECK(SVInt::fromFloat(16, -1.0f, true) == "-16'sd1"_si);
     CHECK(SVInt::fromFloat(16, -1024.4999f, true) == "-16'sd1024"_si);
     CHECK(SVInt::fromFloat(16, -1024.5f, true) == "-16'sd1025"_si);
+    CHECK(SVInt::fromFloat(16, -1024.999f, true, false) == "-16'sd1024"_si);
     CHECK(SVInt::fromFloat(112, -36893488147419107328.0f, true) ==
           "-112'sd36893488147419103232"_si);
 
@@ -759,25 +775,25 @@ TEST_CASE("Time scaling") {
     auto ts = [](std::string_view str) { return TimeScale::fromString(str).value(); };
 
     TimeScale scale = ts("100ns / 1ps");
-    CHECK(scale.apply(234.0567891, TimeUnit::Nanoseconds) == AP(2.34057));
-    CHECK(scale.apply(234.0567891, TimeUnit::Picoseconds) == AP(0.00234));
-    CHECK(scale.apply(234.0567891, TimeUnit::Seconds) == AP(2.340567891e9));
+    CHECK(scale.apply(234.0567891, TimeUnit::Nanoseconds, true) == AP(2.34057));
+    CHECK(scale.apply(234.0567891, TimeUnit::Picoseconds, true) == AP(0.00234));
+    CHECK(scale.apply(234.0567891, TimeUnit::Seconds, true) == AP(2.340567891e9));
 
     scale.base = tv("10ps");
-    CHECK(scale.apply(234.0567891, TimeUnit::Nanoseconds) == AP(23405.7));
-    CHECK(scale.apply(234.0567891, TimeUnit::Picoseconds) == AP(23.4));
-    CHECK(scale.apply(234.0567891, TimeUnit::Seconds) == AP(2.340567891e13));
+    CHECK(scale.apply(234.0567891, TimeUnit::Nanoseconds, true) == AP(23405.7));
+    CHECK(scale.apply(234.0567891, TimeUnit::Picoseconds, true) == AP(23.4));
+    CHECK(scale.apply(234.0567891, TimeUnit::Seconds, true) == AP(2.340567891e13));
 
     scale.base = tv("1ms");
-    CHECK(scale.apply(234.0567891, TimeUnit::Nanoseconds) == AP(0.000234057));
-    CHECK(scale.apply(234.0567891, TimeUnit::Picoseconds) == AP(2.34e-7));
-    CHECK(scale.apply(234.0567891, TimeUnit::Seconds) == AP(234056.7891));
+    CHECK(scale.apply(234.0567891, TimeUnit::Nanoseconds, true) == AP(0.000234057));
+    CHECK(scale.apply(234.0567891, TimeUnit::Picoseconds, true) == AP(2.34e-7));
+    CHECK(scale.apply(234.0567891, TimeUnit::Seconds, true) == AP(234056.7891));
 
     scale.base = tv("1ns");
     scale.precision = tv("1ns");
-    CHECK(scale.apply(234.0567891, TimeUnit::Nanoseconds) == AP(234));
-    CHECK(scale.apply(234.0567891, TimeUnit::Picoseconds) == AP(0));
-    CHECK(scale.apply(234.0567891, TimeUnit::Seconds) == AP(234056789100));
+    CHECK(scale.apply(234.0567891, TimeUnit::Nanoseconds, true) == AP(234));
+    CHECK(scale.apply(234.0567891, TimeUnit::Picoseconds, true) == AP(0));
+    CHECK(scale.apply(234.0567891, TimeUnit::Seconds, true) == AP(234056789100));
 }
 
 TEST_CASE("TimeScale stringify") {

@@ -5,12 +5,14 @@
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
+
 #include "Netlist.h"
 
-#include "NetlistVisitor.h"
+#include "CombLoops.h"
 #include "PathFinder.h"
 #include "fmt/color.h"
 #include "fmt/format.h"
+#include "visitors/NetlistVisitor.h"
 #include <fstream>
 #include <iostream>
 #include <stdexcept>
@@ -28,12 +30,32 @@
 #include "slang/util/String.h"
 #include "slang/util/TimeTrace.h"
 #include "slang/util/Util.h"
-#include "slang/util/Version.h"
+#include "slang/util/VersionInfo.h"
 
 using namespace slang;
 using namespace slang::ast;
 using namespace slang::driver;
 using namespace netlist;
+
+template<>
+class fmt::formatter<NetlistNode> {
+public:
+    constexpr auto parse(format_parse_context& ctx) { return ctx.begin(); }
+    template<typename Context>
+    constexpr auto format(NetlistNode const& node, Context& ctx) const {
+        if (node.kind == NodeKind::VariableAlias) {
+            auto& aliasNode = node.as<NetlistVariableAlias>();
+            return format_to(ctx.out(), "{}{}", aliasNode.hierarchicalPath, aliasNode.overlap);
+        }
+        else if (node.kind == NodeKind::VariableDeclaration) {
+            auto& declNode = node.as<NetlistVariableDeclaration>();
+            return format_to(ctx.out(), "{}", declNode.hierarchicalPath);
+        }
+        else {
+            return format_to(ctx.out(), "{}", node.getName());
+        }
+    }
+};
 
 namespace slang::diag {
 
@@ -86,8 +108,14 @@ void printDOT(const Netlist& netlist, const std::string& fileName) {
             }
             case NodeKind::VariableReference: {
                 auto& varRef = node->as<NetlistVariableReference>();
-                buffer.format("  N{} [label=\"{}\\n{}\"]\n", node->ID, varRef.toString(),
-                              varRef.isLeftOperand() ? "[Assigned to]" : "");
+                if (!varRef.isLeftOperand())
+                    buffer.format("  N{} [label=\"{}\\n\"]\n", node->ID, varRef.toString());
+                else if (node->edgeKind == EdgeKind::None)
+                    buffer.format("  N{} [label=\"{}\\n[Assigned to]\"]\n", node->ID,
+                                  varRef.toString());
+                else
+                    buffer.format("  N{} [label=\"{}\\n[Assigned to @({})]\"]\n", node->ID,
+                                  varRef.toString(), toString(node->edgeKind));
                 break;
             }
             default:
@@ -102,7 +130,7 @@ void printDOT(const Netlist& netlist, const std::string& fileName) {
         }
     }
     buffer.append("}\n");
-    OS::writeFile(fileName, buffer.data());
+    OS::writeFile(fileName, buffer.str());
 }
 
 void reportPath(Compilation& compilation, const NetlistPath& path) {
@@ -135,6 +163,44 @@ void reportPath(Compilation& compilation, const NetlistPath& path) {
     }
 }
 
+void dumpCyclesList(Compilation& compilation, Netlist& netlist,
+                    std::vector<CycleListType>* cycles) {
+    auto s = cycles->size();
+    if (!s) {
+        OS::print("No combinatorial loops detected\n");
+        return;
+    }
+    OS::print(fmt::format("Detected {} combinatorial loop{}:\n", s, (s > 1) ? "s" : ""));
+    NetlistPath path;
+    for (int i = 0; i < s; i++) {
+        auto si = (*cycles)[i].size();
+        for (int j = 0; j < si; j++) {
+            auto& node = netlist.getNode((*cycles)[i][j]);
+            if (node.kind == NodeKind::VariableReference) {
+                path.add(node);
+            }
+        }
+        OS::print(fmt::format("Path length: {}\n", path.size()));
+        reportPath(compilation, path);
+        path.clear();
+    }
+}
+
+/// Exand a variable declaration node into a set of aliases if any are defined.
+/// These are used for searching for paths.
+auto expandVarDecl(NetlistVariableDeclaration* node) {
+    std::vector<NetlistNode*> result;
+    if (node->aliases.empty()) {
+        result.push_back(node);
+    }
+    else {
+        for (auto* alias : node->aliases) {
+            result.push_back(alias);
+        }
+    }
+    return result;
+}
+
 int main(int argc, char** argv) {
     OS::setupConsole();
 
@@ -145,10 +211,12 @@ int main(int argc, char** argv) {
     std::optional<bool> showVersion;
     std::optional<bool> quiet;
     std::optional<bool> debug;
+    std::optional<bool> combLoops;
     driver.cmdLine.add("-h,--help", showHelp, "Display available options");
     driver.cmdLine.add("--version", showVersion, "Display version information and exit");
     driver.cmdLine.add("-q,--quiet", quiet, "Suppress non-essential output");
     driver.cmdLine.add("-d,--debug", debug, "Output debugging information");
+    driver.cmdLine.add("-c,--comb-loops", combLoops, "Detect combinatorial loops");
 
     std::optional<std::string> astJsonFile;
     driver.cmdLine.add(
@@ -232,6 +300,11 @@ int main(int argc, char** argv) {
             return 0;
         }
 
+        if (combLoops == true) {
+            ElementaryCyclesSearch ecs(netlist);
+            std::vector<CycleListType>* cycles = ecs.getElementaryCycles();
+            dumpCyclesList(*compilation, netlist, cycles);
+        }
         // Find a point-to-point path in the netlist.
         if (fromPointName.has_value() && toPointName.has_value()) {
             if (!fromPointName.has_value()) {
@@ -250,14 +323,33 @@ int main(int argc, char** argv) {
                 SLANG_THROW(std::runtime_error(
                     fmt::format("could not find finish point: {}", *toPointName)));
             }
-            PathFinder pathFinder(netlist);
-            auto path = pathFinder.find(*fromPoint, *toPoint);
-            if (path.empty()) {
-                SLANG_THROW(std::runtime_error(
-                    fmt::format("no path between {} and {}", *fromPointName, *toPointName)));
+
+            // Expand the start and end points over aliases of the variable declaration nodes.
+            auto startPoints = expandVarDecl(fromPoint);
+            auto endPoints = expandVarDecl(toPoint);
+
+            // Search through all combinations of start and end points. Report
+            // the first path found and stop searching.
+            for (auto* src : startPoints) {
+                for (auto* dst : endPoints) {
+
+                    DEBUG_PRINT("Searching for path between:\n  {}\n  {}\n", *src, *dst);
+
+                    // Search for the path.
+                    PathFinder pathFinder(netlist);
+                    auto path = pathFinder.find(*src, *dst);
+
+                    if (!path.empty()) {
+                        // Report the path and exit.
+                        reportPath(*compilation, path);
+                        return 0;
+                    }
+                }
             }
-            // Report the path.
-            reportPath(*compilation, path);
+
+            // No path found.
+            SLANG_THROW(std::runtime_error(
+                fmt::format("no path between {} and {}", *fromPointName, *toPointName)));
         }
 
         // No action performed.
