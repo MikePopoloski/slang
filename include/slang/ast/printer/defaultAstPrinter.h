@@ -783,13 +783,22 @@ private:
             case (UnaryOperator::BitwiseAnd):
                 write("&", false, true);
                 break;
+            case (UnaryOperator::BitwiseNand):
+                write("~&", false, true);
+                break;
+            case (UnaryOperator::BitwiseOr):
+                write("|", false, true);
+                break;
             case (UnaryOperator::BitwiseNor):
-                write("^~", false, true);
+                write("~|", false, true);
                 break;
             case (UnaryOperator::BitwiseNot):
                 write("~", false, true);
                 break;
-            case (UnaryOperator::BitwiseOr):
+            case (UnaryOperator::BitwiseXor):
+                write("^", false, true);
+                break;
+            case (UnaryOperator::BitwiseXnor):
                 write("^", false, true);
                 break;
             case (UnaryOperator::Minus):
@@ -892,8 +901,8 @@ private:
             case (BinaryAssertionOperator::And):
                 write("and", false);
                 break;
-            case (BinaryAssertionOperator::Or):
-                write("or", false);
+            case (BinaryAssertionOperator::Iff):
+                write("iff", false);
                 break;
             case (BinaryAssertionOperator::Implies):
                 write("implies", false);
@@ -904,11 +913,35 @@ private:
             case (BinaryAssertionOperator::OverlappedImplication):
                 write("|->");
                 break;
+            case (BinaryAssertionOperator::OverlappedFollowedBy):
+                write("#-#", false);
+                break;
+            case (BinaryAssertionOperator::Or):
+                write("or", false);
+                break;
+            case (BinaryAssertionOperator::NonOverlappedFollowedBy):
+                write("#=#", false);
+                break;
             case (BinaryAssertionOperator::NonOverlappedImplication):
                 write("|=>");
                 break;
-            case (BinaryAssertionOperator::Until):
-                write("|=>");
+            case (BinaryAssertionOperator::SUntil):
+                write("s_until");
+                break;
+            case (BinaryAssertionOperator::SUntilWith):
+                write("s_until_with");
+                break;
+            case (BinaryAssertionOperator::Throughout):
+                write("throughout");
+                break;
+             case (BinaryAssertionOperator::Until):
+                write("until");
+                break;
+            case (BinaryAssertionOperator::UntilWith):
+                write("until_with");
+                break;
+            case (BinaryAssertionOperator::Within):
+                write("within");
                 break;
             default:
                 SLANG_UNREACHABLE;
