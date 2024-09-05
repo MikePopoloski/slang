@@ -386,7 +386,7 @@ void AstPrinter::handle(const ModportSymbol& t) {
     write(t.name);
     write("(");
     auto member = t.getFirstMember();
-    visitMembers(member, ",");
+    visitMembers(member, ",",false);
     write(")");
 }
 
@@ -447,7 +447,7 @@ void AstPrinter::handle(const ModportPortSymbol& t) {
 /// { package_import_declaration } [ parameter_port_list ] [ list_of_port_declarations ];
 void AstPrinter::handle(const InstanceBodySymbol& t) {
     currSymbol = &t;
-
+    
     auto remainingMember = t.getFirstMember();
 
     // package_import_declaration ::= import package_import_item { , package_import_item } ;

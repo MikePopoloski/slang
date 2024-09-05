@@ -510,29 +510,31 @@ private:
         return type;
     }
 
-    void visitMembers(const Symbol* member, const std::string& divider = ",") {
+    // this function is used when visiting the members of a scope, in this case not every element has to be ended with the divider.
+    // To prevent this behavouir element which already contain a newline are skipped  if newline is true
+    void visitMembers(const Symbol* member, const std::string& div = ",", bool newline = true) {
+        std::string endChar = newline?"\n":std::string(div);
         while (member) {
             int currentBuffer = changedBuffer;
             member->visit(*this);
             std::string* writeBuffer = (useTempBuffer) ? (tempBuffer) : (&this->buffer);
-            if (*writeBuffer != "" &&
-                ("\n" != (*writeBuffer).substr((*writeBuffer).length() - 1, (*writeBuffer).length() - 1)) &&
-                (changedBuffer != currentBuffer)) {
-                write(divider);
-                write("\n", false);
+            
+            bool needsDivider = endChar != (*writeBuffer).substr((*writeBuffer).length() - endChar.length(), (*writeBuffer).length() - endChar.length());
+            if (*writeBuffer != "" && needsDivider && (changedBuffer != currentBuffer)) {
+                write(std::string(div) + (newline?"\n":""),false);
             }
             member = member->getNextSibling();
         }
     }
 
     template<typename T>
-    void visitMembers(std::span<const T* const> t, const std::string& divider = ",",
+    void visitMembers(std::span<const T* const> t, const std::string& div = ",",
                       bool newline = false) {
         for (auto item : t) {
             int currentBuffer = changedBuffer;
             item->visit(*this);
             if (item != t.back() && changedBuffer != currentBuffer)
-                write(divider, false);
+                write(div, false);
             std::string* writeBuffer = (useTempBuffer) ? (tempBuffer) : (&this->buffer);
             if (*writeBuffer != "" && newline &&("\n" != (*writeBuffer).substr((*writeBuffer).length() - 1, (*writeBuffer).length() - 1)))
                 write("\n", false);
@@ -545,10 +547,11 @@ private:
         for (auto item : t) {
             int currentBuffer = changedBuffer;
             handle(item);
+
             if (&item != &t.back() && changedBuffer != currentBuffer)
                 write(divider, false);
-            std::string* writeBuffer = (useTempBuffer) ? (tempBuffer) : (&this->buffer);
 
+            std::string* writeBuffer = (useTempBuffer) ? (tempBuffer) : (&this->buffer);
             if (*writeBuffer != "" && newline &&("\n" != (*writeBuffer).substr((*writeBuffer).length() - 1, (*writeBuffer).length() - 1)))
                 write("\n", false);
         }
@@ -682,29 +685,47 @@ private:
             case (BinaryOperator::Multiply):
                 write("*", false);
                 break;
+            case (BinaryOperator::Divide):
+                write("/", false);
+                break;
+            case (BinaryOperator::Mod):
+                write("%", false);
+                break;
+            case (BinaryOperator::BinaryAnd):
+                write("&", false);
+                break;
+            case (BinaryOperator::BinaryOr):
+                write("|", false);
+                break;
+            case (BinaryOperator::BinaryXor):
+                write("^", false);
+                break;
+            case (BinaryOperator::BinaryXnor):
+                write("^~", false);
+                break;
             case (BinaryOperator::Equality):
                 write("==", false);
-                break;
-            case (BinaryOperator::CaseEquality):
-                write("===", false);
                 break;
             case (BinaryOperator::Inequality):
                 write("!=", false);
                 break;
+            case (BinaryOperator::CaseEquality):
+                write("===", false);
+                break;
             case (BinaryOperator::CaseInequality):
                 write("!==", false);
                 break;
-            case (BinaryOperator::LessThan):
-                write("<", false);
-                break;
-            case (BinaryOperator::LessThanEqual):
-                write("<=", false);
+            case (BinaryOperator::GreaterThanEqual):
+                write(">=", false);
                 break;
             case (BinaryOperator::GreaterThan):
                 write(">", false);
                 break;
-            case (BinaryOperator::GreaterThanEqual):
-                write(">=", false);
+            case (BinaryOperator::LessThanEqual):
+                write("<=", false);
+                break;
+            case (BinaryOperator::LessThan):
+                write("<", false);
                 break;
             case (BinaryOperator::LogicalAnd):
                 write("&&", false);
@@ -715,34 +736,27 @@ private:
             case (BinaryOperator::LogicalEquivalence):
                 write("||", false);
                 break;
-            case (BinaryOperator::BinaryOr):
-                write("|", false);
-                break;
-            case (BinaryOperator::BinaryAnd):
-                write("&", false);
-                break;
-            case (BinaryOperator::BinaryXnor):
-                write("^~", false);
-                break;
-            case (BinaryOperator::BinaryXor):
-                write("^", false);
-                break;
             case (BinaryOperator::ArithmeticShiftLeft):
-                write("<<<");
+                write("<<<", false);
                 break;
             case (BinaryOperator::ArithmeticShiftRight):
-                write(">>>");
+                write(">>>", false);
                 break;
             case (BinaryOperator::LogicalShiftLeft):
-                write(">>");
+                write(">>", false);
                 break;
             case (BinaryOperator::LogicalShiftRight):
-                write("<<");
+                write("<<", false);
                 break;
             case (BinaryOperator::Power):
-                write("**");
+                write("**", false);
                 break;
-
+           case (BinaryOperator::WildcardEquality):
+                write("==", false);
+                break;
+            case (BinaryOperator::WildcardInequality):
+                write("!=?"), false;
+                break;
             default:
                 SLANG_UNREACHABLE;
         }
@@ -763,11 +777,26 @@ private:
             case (UnaryOperator::Postdecrement):
                 write("$--", false, true);
                 break;
+            case (UnaryOperator::LogicalNot):
+                write("!", false, true);
+                break;
+            case (UnaryOperator::BitwiseAnd):
+                write("&", false, true);
+                break;
+            case (UnaryOperator::BitwiseNor):
+                write("^~", false, true);
+                break;
             case (UnaryOperator::BitwiseNot):
                 write("~", false, true);
                 break;
-            case (UnaryOperator::LogicalNot):
-                write("!", false, true);
+            case (UnaryOperator::BitwiseOr):
+                write("^", false, true);
+                break;
+            case (UnaryOperator::Minus):
+                write("-", false, true);
+                break;
+            case (UnaryOperator::Plus):
+                write("+", false, true);
                 break;
             default:
                 SLANG_UNREACHABLE;

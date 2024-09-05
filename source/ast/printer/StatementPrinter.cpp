@@ -122,7 +122,7 @@ void AstPrinter::handle(const ForeachLoopStatement& t) {
         if (var.loopVar) {
             writeName(*var.loopVar);
             if (var.loopVar != t.loopDims.back().loopVar)
-                write(",");
+                write(",",false);
         }
     }
     write("]");

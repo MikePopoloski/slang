@@ -50,8 +50,8 @@ bool isEqual(std::string original_code, std::string name_test = "test") {
     auto [new_ast_json, new_rootAst] = getAst(new_compilation);
 
     // dump the content to a file if the ast don't match
-    if (new_ast_json!= old_ast_json) {
-        name_test.append(".json");
+    if (new_ast_json != old_ast_json) {
+        name_test.append(".txt");
         std::ofstream out(name_test);
         out << "original json:";
         out << old_ast_json;
@@ -510,7 +510,7 @@ module jmagnitudeComparator(AEQB, AGTB, ALTB, A, B);
   output reg AEQB, AGTB, ALTB;
   input [3:0] A, B;
 
-  always @(A) @(B)
+  always @(A,B)
   begin
     if( A === B )
       begin
@@ -533,4 +533,17 @@ module jmagnitudeComparator(AEQB, AGTB, ALTB, A, B);
   end
 endmodule )";
     CHECK(isEqual(code, "inetTest"));
+}
+
+TEST_CASE("checker.sv") {
+    std::string code = R"(
+checker test (logic a);
+    logic b;
+    logic c = a + b
+endchecker
+module m5;
+    logic b;
+    test aw1(b);
+ endmodule )";
+    CHECK(isEqual(code, "checker"));
 }

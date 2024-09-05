@@ -239,6 +239,7 @@ void AstPrinter::handle(const DisableSoftConstraint& t) {
     write("disable soft");
     t.target.visit(*this);
 }
+// t.expr.visit(*this);
 
 //constraint_expression ::= foreach ( ps_or_hierarchical_array_identifier [ loop_variables ] ) constraint_set
 void AstPrinter::handle(const slang::ast::ForeachConstraint& t) {
