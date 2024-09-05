@@ -143,10 +143,6 @@ endinterface)";
     CHECK(isEqual(code, "sv21_26"));
 }
 
-// The keyword macromodule
-// can be used interchangeably with the keyword module to define a module. An implementation may
-// choose to treat module definitions beginning with the macromodule keyword differently.
-
 TEST_CASE("all.sv 26-80") {
     std::string code = R"(
 extern interface I(input a, output b);
@@ -158,6 +154,9 @@ endinterface
 macromodule m3;
     wire b;
     logic c;
+    m2 m(, b, c, d, );
+
+    //$info("Hello %s", "world");
 
     I d(.a(), .b());
     I d(.a(), .b());
@@ -211,7 +210,7 @@ macromodule m3;
 endmodule : m3)";
     CHECK(isEqual(code, "sv26_80"));
 }
-// removed     $info("Hello %s", "world")and  m2 m(, b, c, d, );
+
 TEST_CASE("all.sv 80-120") {
     std::string code = R"(
 macromodule m3;
@@ -321,27 +320,6 @@ endmodule
 )";
     CHECK(isEqual(code, "sv150_153"));
 }
-/*
-TEST_CASE("all.sv 153_160"){
-    std::string code = R"(
-macromodule m3;
-        property p1(x,y);
-            ##1 x |-> y;
-        endproperty
-        property p2;
-            @(posedge clk)
-
-        endproperty
-
-        cover property (p2 and p2);
-
-
-endmodule
-)";
-    CHECK(isEqual(code, "sv153_160"));
-}*/
-
-// ben geskipt naar de module na module 3
 
 TEST_CASE("all.sv 193_200") {
     std::string code = R"(
@@ -359,7 +337,7 @@ endprimitive
     CHECK(isEqual(code, "sv193_200"));
 }
 
-//notes: ast is het welfde maar code lijkt absoluut niet op elkaar
+//ast is the same but the generated source code is o low quality
 TEST_CASE("all.sv 202") {
     std::string code = R"("
 module m3;
@@ -373,7 +351,6 @@ endmodule
     CHECK(isEqual(code, "sv202"));
 }
 
-//note: de dingen in desing zijn niet nodig om een functioneel equivalent programma te generen
 TEST_CASE("all.sv 204_210") {
     std::string code = R"("
 config cfg;
@@ -401,7 +378,7 @@ endmodule
 )";
     CHECK(isEqual(code, "204_210"));
 }
-// TODOOO  HIER verder afmaken
+
 TEST_CASE("all.sv 225_232") {
     std::string code = R"(
 interface Iface();
@@ -417,69 +394,6 @@ endinterface
     CHECK(isEqual(code, "225_232"));
 }
 
-TEST_CASE("all.sv 250_266") {
-    std::string code = R"(
-    module m4;
-        Iface i1();
-        n n1(i1);
-
-        Iface i2();
-
-        localparam int baz = 3;
-        // het volgende zord niet opgeno;en in de ast
-        task i1.t2;
-            static int i = baz;
-        endtask
-
-        task i2.t2;
-            static int i = baz;
-        endtask
-    endmodule
-    typedef enum { cover_none, cover_all } coverage_level;
-
-)";
-    CHECK(isEqual(code, "250_266"));
-}
-/*
-// removed $inferred_clock becauses this causes weirdness with the ast that i coudn't fix
-TEST_CASE("all.sv 266_309") {
-    std::string code = R"(
-checker assert_window1 (
-    logic test_expr,
-    untyped start_event,
-    untyped end_event,
-    logic reset ,
-    string error_msg = "violation"
-);
-    // het volgende zord niet opgenomen in de ast
-    bit window = 1'b0; 
-    default clocking; endclocking    
-    default disable iff reset;
-    bit window = 1'b0, next_window = 1'b1;
-
-    rand bit q;
-
-    always_comb begin
-        if (window && end_event)
-            next_window = 1'b0;
-        else if (!window && start_event)
-            next_window = 1'b1;
-        else
-            next_window = window;
-    end
-
-
-
-endchecker : assert_window1
-
-module m5;
-    logic a, b,c;
-    assert_window1 aw1(1 + 1, a, b,c,);
-endmodule
-)";
-    CHECK(isEqual(code, "266_309"));
-}*/
-// tododit subbsitueren in de vorige
 TEST_CASE("all.sv 309_314") {
     std::string code = R"(
 module m5;
@@ -592,7 +506,6 @@ TEST_CASE("all.sv 426_end") {
 
 TEST_CASE("inetTest.sv") {
     std::string code = R"(
-
 module jmagnitudeComparator(AEQB, AGTB, ALTB, A, B);
   output reg AEQB, AGTB, ALTB;
   input [3:0] A, B;

@@ -11,10 +11,6 @@
 
 namespace slang::ast {
 
-/// A helper method that assists in printing an entire syntax tree back to source
-/// text. A SyntaxPrinter with useful defaults is constructed, the tree is printed,
-/// and the resulting text is returned.
-// static std::string printFile(const SyntaxTree& treprints
 void AstPrinter::handle(const InvalidStatement& t) {
     // wrap the invalid part of the code in a comment
     write("// InvalidStatement removed\n");
@@ -247,16 +243,14 @@ void AstPrinter::handle(const CaseStatement& t) {
 
 
 
-// #test schrijven
 void AstPrinter::handle(const BlockStatement& t) {
-    // edge case handeling
-    // TODO BETERE MANER VINDEN
     // foreach creates a Blockstatement automaticly which causes a duplicate block statement 
     // when trying to print the ast ( the same happens with RandSequence )
     if (t.body.kind == StatementKind::ForeachLoop || t.body.kind == StatementKind::RandSequence) {
         t.body.visit(*this);
         return;
     }
+
     // Represents a sequential or parallel block statement.
     if (t.blockKind == StatementBlockKind::Sequential) {
         write("begin");
@@ -300,7 +294,7 @@ void AstPrinter::handle(const BlockStatement& t) {
 //immediate_assertion_statement        ::= simple_immediate_assertion_statement | deferred_immediate_assertion_statement
 //simple_immediate_assertion_statement ::= simple_immediate_assert_statement
 //simple_immediate_assert_statement    ::= assert ( expression ) action_block
-//action_block ::=statement_or_null | [ statement ] else statement_or_null
+//action_block                         ::= statement_or_null | [ statement ] else statement_or_null
 void AstPrinter::handle(const ImmediateAssertionStatement& t){
     write(t.assertionKind);
     if(t.isDeferred)

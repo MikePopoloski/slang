@@ -14,7 +14,7 @@
 namespace slang::ast {
 
 void AstPrinter::handle(const EventListControl& t) {
-    // These are only used in SignalEventControl. to make this syntax possible  @(A,B,....)
+    // These are only used to make this syntax possible  @(A,B,....)
     this->inEventList = true;
     this->isFrontEventList = true;
     for (auto event : t.events) {
@@ -239,7 +239,6 @@ void AstPrinter::handle(const DisableSoftConstraint& t) {
     write("disable soft");
     t.target.visit(*this);
 }
-// t.expr.visit(*this);
 
 //constraint_expression ::= foreach ( ps_or_hierarchical_array_identifier [ loop_variables ] ) constraint_set
 void AstPrinter::handle(const slang::ast::ForeachConstraint& t) {

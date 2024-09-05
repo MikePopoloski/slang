@@ -60,11 +60,10 @@ void AstPrinter::handle(const MinTypMaxExpression& t) {
 }
 
 // value_range ::= expression | [ expression : expression ]
-// TODO uitzoeken waarvoor die valuerange kind dient
 void AstPrinter::handle(const ValueRangeExpression& t) {
     write("[");
     t.left().visit(*this);
-    write(":");
+    write(t.rangeKind);
     t.right().visit(*this);
     write("]");
 }
@@ -139,10 +138,7 @@ void AstPrinter::handle(const NamedValueExpression& t) {
     writeName(t.symbol);
 }
 
-// TODO DIT nakijken
 void AstPrinter::handle(const UnbasedUnsizedIntegerLiteral& t) {
-    logic_t l;
-
     if (t.getLiteralValue().isUnknown())
         write("'x");
     else if (t.getLiteralValue().value == slang::logic_t::Z_VALUE)

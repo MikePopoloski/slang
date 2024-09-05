@@ -34,11 +34,13 @@ void AstPrinter::handle(const AttributeSymbol& t) {
     }
 }
 
+
+
 /*
 package_declaration ::=
         { attribute_instance } package [ lifetime ] package_identifier ;
         [ timeunits_declaration ] { { attribute_instance } package_item }
-    endpackage [ : package_identifier ]
+        endpackage [ : package_identifier ]
 */
 void AstPrinter::handle(const PackageSymbol& t) {
     currSymbol = &t;
@@ -139,20 +141,16 @@ void AstPrinter::handle(const slang::ast::InstanceSymbol& t) {
 
     // check if there are connections that need to be made
     if (!t.getPortConnections().empty()) {
-        // module_instantiation ::= module_identifier [ parameter_value_assignment ]
-        // hierarchical_instance { , hierarchical_instance } ;
+        // module_instantiation ::= module_identifier [ parameter_value_assignment ] hierarchical_instance { , hierarchical_instance } ;
         writeName(t.body);
         // TODO parameter_value_assignment
 
-        // hierarchical_instance ::= name_of_instance ( [ list_of_port_connections ] ) |
-        // named_port_connection { , named_port_connection }
+        // hierarchical_instance ::= name_of_instance ( [ list_of_port_connections ] ) | named_port_connection { , named_port_connection }
         write(t.name);
         write("(", false);
-        // list_of_port_connections ::= named_port_connection { , named_port_connection } or
-        // named equivalent
+        // list_of_port_connections ::= named_port_connection { , named_port_connection } or named equivalent
         for (auto named_port : t.getPortConnections()) {
-            // named_port_connection ::= { attribute_instance } . port_identifier [ ( [
-            // expression ] ) ]
+            // named_port_connection ::= { attribute_instance } . port_identifier [ ( [expression ] ) ]
             writeAttributeInstances(named_port->port);
             write(".");
             writeName(named_port->port, false);
@@ -169,10 +167,8 @@ void AstPrinter::handle(const slang::ast::InstanceSymbol& t) {
     }
 }
 
-/// ansi_port_declaration ::=[ net_port_header  ] port_identifier { unpacked_dimension } [
-/// =constant_expression ]
-///                          | [ variable_port_header ] port_identifier { variable_dimension } [=
-///                          constant_expression ]
+// ansi_port_declaration ::=  [ net_port_header  ] port_identifier { unpacked_dimension } [=constant_expression ]
+//                          | [ variable_port_header ] port_identifier { variable_dimension } [= constant_expression ]
 void AstPrinter::handle(const slang::ast::PortSymbol& t) {
     currSymbol = &t;
     // net_port_header      ::= [ port_direction ] net_port_type
@@ -185,12 +181,11 @@ void AstPrinter::handle(const slang::ast::PortSymbol& t) {
     }
 
     if (t.internalSymbol) {
-        // direction word via internalSymbols map geregeld
+        // direction is handeld via the internalSymbols map
         t.internalSymbol->visit(*this);
     }
     else {
         write(t.direction);
-        // added suppor for
         if (t.getType().toString() == "void") {
             write(".$()", true, true);
             write(t.name, false);
@@ -237,21 +232,20 @@ void AstPrinter::handle(const slang::ast::InterfacePortSymbol& t) {
 
     // write port_identifier
     write(t.name);
-
-    // TODO:[ = constant_expression ]
 }
 
 /// net_port_type ::= [ net_type ] data_type_or_implicit
 void AstPrinter::handle(const slang::ast::NetSymbol& t) {
+    if (t.isImplicit){
+        return;
+    }
     currSymbol = &t;
     // add the direction if this symbol is part of the port declaration
     if (internalSymbols.count(&t) != 0)
         write(internalSymbols[&t]);
 
-    if (!t.isImplicit) {
-        write(t.netType.netKind);
-        write(convertType(t.getType().toString()), true, true);
-    }
+    write(t.netType.netKind);
+    write(convertType(t.getType().toString()), true, true);
     write(t.name);
 
     auto initializer = t.getInitializer();
@@ -332,10 +326,10 @@ void AstPrinter::handle(const slang::ast::MultiPortSymbol& t) {
     write("})");
 }
 
-/// parameter_declaration ::= parameter data_type_or_implicit list_of_param_assignments
+/// parameter_declaration       ::= parameter data_type_or_implicit list_of_param_assignments
 /// local_parameter_declaration ::= localparam data_type_or_implicit list_of_param_assignments
-/// list_of_param_assignments ::= param_assignment { , param_assignment }  always with lenght 1
-/// ?? param_assignment ::= parameter_identifier { unpacked_dimension } [ =
+/// list_of_param_assignments   ::= param_assignment { , param_assignment }  always has a lenght 1
+/// ?? param_assignment         ::= parameter_identifier { unpacked_dimension } [ =
 /// constant_param_expression ]
 void AstPrinter::handle(const slang::ast::ParameterSymbol& t) {
     currSymbol = &t;
@@ -348,8 +342,10 @@ void AstPrinter::handle(const slang::ast::ParameterSymbol& t) {
     }
     // data_type_or_implicit
     write(lowerFirstLetter(convertType(t.getType().toString())));
+
     // list_of_param_assignments->param_assignment->parameter_identifier
     write(t.name);
+
     // TODO:unpacked_dimension
     if (t.getInitializer())
         write("=", false);
@@ -471,7 +467,6 @@ void AstPrinter::handle(const InstanceBodySymbol& t) {
 
     // parameter_port_list ::= # ( list_of_param_assignments { , parameter_port_declaration } )
     if (!t.getParameters().empty()) {
-        // TODO add Support for writing non ansi code
         write("#(", false);
         for (auto param : t.getParameters()) {
             if (param->isBodyParam())
@@ -483,7 +478,7 @@ void AstPrinter::handle(const InstanceBodySymbol& t) {
             if (changedBuffer != currentBuffer && param != t.getParameters().back())
                 write(",", false);
 
-            // implemented like this to prevent body params shifting the last param
+            // implemented like this to prevent body parameters shifting the last parameters
             remainingMember = param->symbol.getNextSibling();
         }
 
@@ -493,16 +488,18 @@ void AstPrinter::handle(const InstanceBodySymbol& t) {
     // list_of_port_declarations2 ::=( [ { attribute_instance} ansi_port_declaration { , {
     // attribute_instance} ansi_port_declaration } ] )
     if (!t.getPortList().empty()) {
+
         write(std::string_view("("), false);
         bool isAnsi = false;
+
         for (auto port : t.getPortList()) {
+
             if (!port)
                 continue;
             writeAttributeInstances(*port);
 
             port->visit(*this);
 
-            // check if the declaration is nonAnsi
             if (!isAnsi && port->kind == SymbolKind::Port) {
                 isAnsi = ((slang::ast::PortSymbol*)port)->isAnsiPort;
             }
@@ -545,24 +542,12 @@ void AstPrinter::handle(const GenerateBlockArraySymbol& t) {
     write(t.getSyntax()->toString());
 }
 
-// TODO: dit beter implementeren
+// TODO: implementent this without using the getSyntax function
 void AstPrinter::handle(const GenerateBlockSymbol& t) {
     currSymbol = &t;
     write("generate");
     write(t.getSyntax()->toString());
     write("endgenerate\n");
-
-    /*
-    auto member = t.getFirstMember();
-    while (member) {
-        member->visit(*this);
-
-        // TODO betere maniet voor dit vinden
-        if ("\n" != buffer.substr(buffer.length() - 1, buffer.length() - 1))
-            write(";\n", false);
-
-        member = member->getNextSibling();
-    }*/
 }
 
 // udp_output_declaration ::= { attribute_instance } output port_identifier
@@ -935,7 +920,7 @@ void AstPrinter::handle(const ClockingBlockSymbol& t) {
     write("endclocking\n");
 }
 
-// TODO: ast uitbreiden om deze fe beter te ondersteunen
+// TODO: Adding the right information to the ast to make this possible
 void AstPrinter::handle(const GenericClassDefSymbol& t) {
     currSymbol = &t;
     write(t.getSyntax()->toString());
@@ -957,6 +942,23 @@ void AstPrinter::handle(const ConstraintBlockSymbol& t) {
     indentation_level--;
 
     write("}");
+}
+
+//severity_system_task ::=  $fatal [ ( finish_number [, list_of_arguments ] ) ] ;
+//                        | $error [ ( [ list_of_arguments ] ) ] ;
+//                        | $warning [ ( [ list_of_arguments ] ) ] ;
+//                        | $info [ ( [ list_of_arguments ] ) ] ;
+void AstPrinter::handle(const ElabSystemTaskSymbol& t) {
+    if(t.taskKind !=ElabSystemTaskKind::StaticAssert){
+        write("$");
+        write(lowerFirstLetter(toString(t.taskKind)),false);
+        if(t.getMessage().has_value()){
+            write("(\"",false);
+            write(t.getMessage().value());
+            write("\")");
+        }
+    }
+    
 }
 
 // production ::= [ data_type_or_void ] production_identifier [ ( tf_port_list ) ] : rs_rule { |

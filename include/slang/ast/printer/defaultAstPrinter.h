@@ -435,6 +435,12 @@ public:
     // cross_body ::= { { cross_body_item ; } }
     void handle(const CoverCrossBodySymbol& t);
 
+    //severity_system_task ::=  $fatal [ ( finish_number [, list_of_arguments ] ) ] ;
+    //                      | $error [ ( [ list_of_arguments ] ) ] ;
+    //                      | $warning [ ( [ list_of_arguments ] ) ] ;
+    //                      | $info [ ( [ list_of_arguments ] ) ] ;
+    void handle(const ElabSystemTaskSymbol& t);
+
     void visitTransList(std::span<const CoverageBinSymbol::TransRangeList> set);
 
     void visitTransSet(std::span<const CoverageBinSymbol::TransSet> list);
@@ -913,6 +919,23 @@ private:
                 SLANG_UNREACHABLE;
         }
     }
+    
+    void write(ValueRangeKind kind) {
+        switch (kind) {
+            case (ValueRangeKind::Simple):
+                write(":");
+                break;
+            case (ValueRangeKind::AbsoluteTolerance):
+                write("+/-");
+                break;
+            case (ValueRangeKind::RelativeTolerance):
+                write("+%-");
+                break;
+            default:
+                SLANG_UNREACHABLE;
+        }
+    }
+
 
     void writeName(const Symbol& t, bool add_spacer = true) {
         write(getRealName(t, currSymbol), add_spacer);
