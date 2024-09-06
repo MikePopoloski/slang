@@ -496,15 +496,7 @@ private:
     // converts the type to a type defined by a type alias if a conversion is available
     std::string convertType(std::string type) {
         // check if type in type conversions
-        // remove the name of the typealias to make it possible to compare them to typealias types
-        // ex: type alieas union tagged{void Invalid;int Valid;}m3.u$1 (this is named VInt)
-        //     getType(): union tagged{void Invalid;int Valid;}m3.VInt
-        std::regex reg("}.*?(?= .\\S*?;)");
-        // removes class identifiers because they are unwanted most of the time
-        // ex: enum{red=32'sd0,green=32'sd1,blue=32'sd2}C3::e
-        std::regex reg2("(?=}).*::.*");
-        type = std::regex_replace(type, reg, "}");
-        type = std::regex_replace(type, reg2, "}");
+
 
         std::size_t dot_loc = type.rfind(".");
         if (typeConversions.count(type.substr(0, dot_loc)))

@@ -49,7 +49,7 @@ bool isEqual(std::shared_ptr<slang::syntax::SyntaxTree> tree, std::string name_t
     auto [new_ast_json, new_rootAst] = getAst(new_compilation);
 
     // dump the content to a file if the ast don't match
-    if (new_ast_json != old_ast_json) {
+    if (true) {
         name_test.append(".txt");
         std::ofstream out(name_test);
         out << "original json:";
