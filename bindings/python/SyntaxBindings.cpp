@@ -9,13 +9,11 @@
 #include "slang/parsing/Lexer.h"
 #include "slang/parsing/Parser.h"
 #include "slang/parsing/Preprocessor.h"
-#include "slang/syntax/SyntaxKind.h"
 #include "slang/syntax/SyntaxNode.h"
 #include "slang/syntax/SyntaxPrinter.h"
 #include "slang/syntax/SyntaxTree.h"
 #include "slang/syntax/SyntaxVisitor.h"
 #include "slang/text/SourceManager.h"
-#include "slang/util/BumpAllocator.h"
 
 namespace fs = std::filesystem;
 
@@ -56,30 +54,14 @@ void pySyntaxVisit(const SyntaxNode& sn, py::object f) {
     PySyntaxVisitor visitor{f};
     sn.visit(visitor);
 }
+
 } // end namespace
-
-void insertAtFront(SyntaxNode&  node, TokenOrSyntax NewNode, BumpAllocator& alloc){
-    if(node.kind ==SyntaxKind::SyntaxList || node.kind ==SyntaxKind::SeparatedList || node.kind ==SyntaxKind::SyntaxList){
-
-        SyntaxListBase *list = (SyntaxListBase*)(&node);
-        std::vector<TokenOrSyntax> children_vec;
-        children_vec.push_back(NewNode);
-
-        for (int i=0;i<list->getChildCount();i++){
-            children_vec.push_back(list->getChild(i));
-        }
-
-        std::span<const TokenOrSyntax> children(children_vec);
-        list->resetAll(alloc, children);  
-    }
-};
 
 void registerSyntax(py::module_& m) {
     EXPOSE_ENUM(m, TriviaKind);
     EXPOSE_ENUM(m, TokenKind);
     EXPOSE_ENUM(m, SyntaxKind);
 
-    
     py::class_<Trivia>(m, "Trivia")
         .def(py::init<>())
         .def(py::init<TriviaKind, std::string_view>(), "kind"_a, "rawText"_a)
@@ -183,11 +165,7 @@ void registerSyntax(py::module_& m) {
         const SyntaxNode* node;
         size_t index;
     };
-    
-    m.def("insertAtFront",[](SyntaxNode&  node, Token NewNode, BumpAllocator& alloc){insertAtFront(node,NewNode,alloc);},  "node"_a,"token"_a,"alloc"_a);
-    m.def("insertAtFront",[](SyntaxNode&  node, SyntaxNode& NewNode, BumpAllocator& alloc){insertAtFront(node,&NewNode,alloc);},  "node"_a,"node"_a,"alloc"_a);
 
-    
     py::class_<SyntaxNode>(m, "SyntaxNode")
         .def_readonly("parent", &SyntaxNode::parent)
         .def_readonly("kind", &SyntaxNode::kind)
@@ -218,9 +196,6 @@ void registerSyntax(py::module_& m) {
                  return fmt::format("SyntaxNode(SyntaxKind.{})", toString(self.kind));
              })
         .def("__str__", &SyntaxNode::toString);
-
-    
-        
 
     py::class_<SyntaxTree, std::shared_ptr<SyntaxTree>>(m, "SyntaxTree")
         .def_readonly("isLibraryUnit", &SyntaxTree::isLibraryUnit)
@@ -288,9 +263,7 @@ void registerSyntax(py::module_& m) {
         .def_property_readonly("root", py::overload_cast<>(&SyntaxTree::root))
         .def_property_readonly("options", &SyntaxTree::options)
         .def_property_readonly("sourceLibrary", &SyntaxTree::getSourceLibrary)
-        .def_static("getDefaultSourceManager", &SyntaxTree::getDefaultSourceManager, byref)
-        .def("allocator", &SyntaxTree::allocator,py::return_value_policy::reference);
-
+        .def_static("getDefaultSourceManager", &SyntaxTree::getDefaultSourceManager, byref);
 
     py::class_<LexerOptions>(m, "LexerOptions")
         .def(py::init<>())
@@ -332,5 +305,4 @@ void registerSyntax(py::module_& m) {
         .def("setSquashNewlines", &SyntaxPrinter::setSquashNewlines, byrefint, "include"_a)
         .def("str", &SyntaxPrinter::str)
         .def_static("printFile", &SyntaxPrinter::printFile, "tree"_a);
-
 }

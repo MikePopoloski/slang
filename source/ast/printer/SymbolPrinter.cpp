@@ -880,7 +880,7 @@ void AstPrinter::handle(const CheckerInstanceSymbol& t) {
 // the body needs to be added to the checker symbol, there is no pointer from there to here so
 // when the symbol is visited it wil leave a comment with its memory adress this function will make
 // a string containing the body and inserting it in the correct location
-void AstPrinter::handle(const CheckerInstanceBodySymbol& t, const std::map<std::string, std::string> &connectionMapping) {
+void AstPrinter::handle(const CheckerInstanceBodySymbol& t) {
     currSymbol = &t;
     auto remainingMember = t.getFirstMember();
 
