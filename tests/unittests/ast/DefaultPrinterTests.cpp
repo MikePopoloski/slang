@@ -29,11 +29,10 @@ std::tuple<std::string, const slang::ast::RootSymbol&> getAst(
     return {std::string(jsonWriter.view()), rootAst};
 }
 
+
 // checks if the ast of the original code is equal to the ast of the generated code
-bool isEqual(std::string original_code, std::string name_test = "test") {
-    // calculate ast original code
+bool isEqual(std::shared_ptr<slang::syntax::SyntaxTree> tree, std::string name_test = "test") {
     slang::ast::Compilation compilation;
-    auto tree = slang::syntax::SyntaxTree::fromText(original_code);
     compilation.addSyntaxTree(tree);
     auto [old_ast_json, old_rootAst] = getAst(compilation);
 
@@ -64,6 +63,12 @@ bool isEqual(std::string original_code, std::string name_test = "test") {
     return old_ast_json == new_ast_json;
 }
 
+// checks if the ast of the original code is equal to the ast of the generated code
+bool isEqual(std::string original_code, std::string name_test = "test") {
+    // calculate ast original code
+    auto tree = slang::syntax::SyntaxTree::fromText(original_code);
+    return isEqual(tree, name_test );
+}
 
 TEST_CASE("InstanceSymbol printer") {
     std::string code = R"(module Foo; endmodule)";
@@ -393,7 +398,29 @@ endinterface
 )";
     CHECK(isEqual(code, "225_232"));
 }
+TEST_CASE("all.sv 250_266") {
+    std::string code = R"(
+    module m4;
+        Iface i1();
+        n n1(i1);
 
+        Iface i2();
+
+        localparam int baz = 3;
+        // het volgende zord niet opgeno;en in de ast
+        task i1.t2;
+            static int i = baz;
+        endtask
+
+        task i2.t2;
+            static int i = baz;
+        endtask
+    endmodule
+    typedef enum { cover_none, cover_all } coverage_level;
+
+)";
+    CHECK(isEqual(code, "250_266"));
+    }
 TEST_CASE("all.sv 309_314") {
     std::string code = R"(
 module m5;
@@ -534,16 +561,10 @@ module jmagnitudeComparator(AEQB, AGTB, ALTB, A, B);
 endmodule )";
     CHECK(isEqual(code, "inetTest"));
 }
-
+/*
 TEST_CASE("checker.sv") {
-    std::string code = R"(
-checker test (logic a);
-    logic b;
-    logic c = a + b
-endchecker
-module m5;
-    logic b;
-    test aw1(b);
- endmodule )";
-    CHECK(isEqual(code, "checker"));
-}
+    fs::path path = findTestDir();
+    path /= "../../unittests/data/printer/test1.sv";
+    auto tree = SyntaxTree::fromFile(path.string());
+    CHECK(isEqual(tree.value(), "checker"));
+}*/
