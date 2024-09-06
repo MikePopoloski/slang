@@ -7,15 +7,6 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include <cctype>
-#include <iostream>
-#include <list>
-#include <map>
-#include <regex>
-#include <set>
-#include <string>
-#include <string_view>
-
 #include "slang/ast/ASTVisitor.h"
 #include "slang/ast/HierarchicalReference.h"
 #include "slang/ast/SemanticFacts.h"
@@ -30,8 +21,18 @@
 #include "slang/ast/types/Type.h"
 #include "slang/util/LanguageVersion.h"
 #include "slang/util/Util.h"
-
 #include "slang/ast/types/TypePrinter.h"
+
+#include <cctype>
+#include <iostream>
+#include <list>
+#include <map>
+#include <regex>
+#include <set>
+#include <string>
+#include <string_view>
+
+
 
 namespace slang::ast {
 
@@ -42,7 +43,7 @@ concept IsFunc = requires(T t) {
 };
 
 /// Provides support for printing a ast back to source code.
-class AstPrinter : public ASTVisitor<AstPrinter, true, true, true> {
+class SLANG_EXPORT AstPrinter : public ASTVisitor<AstPrinter, true, true, true> {
 public:
     AstPrinter(slang::ast::Compilation& compilation) : compilation(compilation){};
 
