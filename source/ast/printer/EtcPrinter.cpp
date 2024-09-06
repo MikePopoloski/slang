@@ -95,7 +95,7 @@ void AstPrinter::handle(const SignalEventControl& t) {
         write(")");
 }
 
-void AstPrinter::handle(const ImplicitEventControl& t) {
+void AstPrinter::handle([[maybe_unused]] const ImplicitEventControl& t) {
     write("@*");
 }
 
@@ -109,13 +109,13 @@ void AstPrinter::handle(const TypeAliasType& t) {
 
     type_str = std::regex_replace(type_str, reg, "}");
 
-    int bracket_loc = type_str.rfind("}");
+    std::size_t bracket_loc = type_str.rfind("}");
     blockBuffer.append(type_str.substr(0, bracket_loc + 1));
     blockBuffer.append(t.name);
     blockBuffer.append(";\n");
 
     // remove the name of the typealias to make it possible to compare them to getType() types
-    int dot_loc = type_str.rfind(".");
+    std::size_t dot_loc = type_str.rfind(".");
     typeConversions.insert({type_str.substr(0, dot_loc), std::string(t.name)});
 }
 /*
