@@ -1,13 +1,14 @@
 import os
 def generateSyntaxFactory(builddir, alltypes):
-    bindingsdir = "/home/jeffj/Documents/sv_parser/external/slang/bindings/python"
-    outf = open(os.path.join(bindingsdir, "SyntaxFactoryBindings.cpp"), "w")
+    bindingsdir = "../slang/bindings/python"
+    outf = open(os.path.join(builddir,bindingsdir, "SyntaxFactoryBindings.cpp"), "w")
+    print("location", os.path.join(builddir,bindingsdir, "SyntaxFactoryBindings.cpp"))
     outf.write("""
 //------------------------------------------------------------------------------
 //! @file SyntaxFactoryBindings.cpp
 //! @brief Generated SyntaxFactoryBindings 
 //
-// SPDX-FileCopyrightText: Easics
+// SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------\n""")
     outf.write('''#include "pyslang.h"
