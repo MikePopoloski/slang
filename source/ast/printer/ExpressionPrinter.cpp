@@ -5,11 +5,11 @@
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
-
-#include <cstddef>
+#include "slang/ast/printer/defaultAstPrinter.h"
 #include "slang/ast/HierarchicalReference.h"
 #include "slang/ast/expressions/MiscExpressions.h"
-#include "slang/ast/printer/defaultAstPrinter.h"
+
+#include <cstddef>
 
 namespace slang::ast {
 
@@ -116,7 +116,7 @@ void AstPrinter::handle(const CallExpression& t){
         write(".",false);
     }
 
-    if(std::holds_alternative<const SubroutineSymbol*){
+    if(std::holds_alternative<const SubroutineSymbol*>(t.subroutine)){
         auto symbol =std::get<const SubroutineSymbol*>(t.subroutine) ;
         if (symbol)
             writeName(*symbol, !hasThisClass); 
