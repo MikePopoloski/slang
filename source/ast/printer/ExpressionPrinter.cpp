@@ -116,7 +116,7 @@ void AstPrinter::handle(const CallExpression& t){
         write(".",false);
     }
 
-    try{
+    if(std::holds_alternative<const SubroutineSymbol*){
         auto symbol =std::get<const SubroutineSymbol*>(t.subroutine) ;
         if (symbol)
             writeName(*symbol, !hasThisClass); 
@@ -124,10 +124,8 @@ void AstPrinter::handle(const CallExpression& t){
             write(t.getSubroutineName(), !hasThisClass);
 
     }
-    catch (const std::bad_variant_access& ex){
+    else {
         write(t.getSubroutineName(), !hasThisClass);
-        (void)ex; // used to get rid of compiler waring
-
     }
     writeAttributeInstances(t);
 
