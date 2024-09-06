@@ -31,6 +31,8 @@
 #include "slang/util/LanguageVersion.h"
 #include "slang/util/Util.h"
 
+#include "slang/ast/types/TypePrinter.h"
+
 namespace slang::ast {
 
 template<typename T>
@@ -1084,6 +1086,17 @@ private:
             x =  (char)tolower(x);
         }
         return new_string;
+    }
+
+    std::string getTypeStr(const Type& t){
+        TypePrintingOptions options;
+        options.elideScopeNames = true;
+        options.skipScopedTypeNames = true;
+        TypePrinter printer;
+        printer.options = options;
+        printer.append(t);
+
+        return  printer.toString();
     }
 };
 

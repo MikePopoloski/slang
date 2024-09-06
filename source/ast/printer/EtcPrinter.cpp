@@ -10,6 +10,7 @@
 #include "slang/ast/Constraints.h"
 #include "slang/ast/printer/defaultAstPrinter.h"
 #include "slang/util/Util.h"
+#include "slang/ast/types/TypePrinter.h"
 
 namespace slang::ast {
 
@@ -104,11 +105,14 @@ void AstPrinter::handle([[maybe_unused]] const ImplicitEventControl& t) {
 void AstPrinter::handle(const TypeAliasType& t) {
     blockBuffer.append("typedef ");
     // ex: union tagged{void Invalid;int Valid;}m3.u$1 shoulden't have the m3.u$1
-    std::string type_str = t.targetType.getType().toString();
-    std::regex reg("}.*?(?= .\\S*?;)");
+    TypePrintingOptions options;
+    options.elideScopeNames = true;
+    options.skipScopedTypeNames = true;
+    TypePrinter printer;
+    printer.options = options;
+    printer.append(t);
 
-    type_str = std::regex_replace(type_str, reg, "}");
-
+    std::string type_str = printer.toString();
     std::size_t bracket_loc = type_str.rfind("}");
     blockBuffer.append(type_str.substr(0, bracket_loc + 1));
     blockBuffer.append(t.name);
@@ -134,7 +138,7 @@ void AstPrinter::handle(const ClassType& t) {
         // [ lifetime ] class_identifier
         write(t.thisVar->lifetime == VariableLifetime::Static ? "static" : "automatic");
         const Type& data_type = t.thisVar->getDeclaredType().get()->getType();
-        write(convertType(data_type.toString()), true, true);
+        write(convertType(getTypeStr(data_type)), true, true);
     }
 
     if (t.getBaseClass() != nullptr){

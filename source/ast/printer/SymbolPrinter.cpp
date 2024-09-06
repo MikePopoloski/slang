@@ -191,7 +191,7 @@ void AstPrinter::handle(const slang::ast::PortSymbol& t) {
             write(t.name, false);
         }
         else {
-            write(convertType(t.getType().toString()), true, true);
+            write(convertType(getTypeStr(t.getType())), true, true);
         }
     }
 
@@ -245,7 +245,7 @@ void AstPrinter::handle(const slang::ast::NetSymbol& t) {
         write(internalSymbols[&t]);
     if(t.netType.netKind != NetType::NetKind::UserDefined){
         write(t.netType.netKind);
-        write(convertType(t.getType().toString()), true, true);
+        write(convertType(getTypeStr(t.getType())), true, true);
     }
     write(t.name);
 
@@ -287,7 +287,7 @@ void AstPrinter::handle(const slang::ast::VariableSymbol& t) {
     bitmask<DeclaredTypeFlags> flags = t.getDeclaredType().get()->getFlags();
 
     if ((flags & DeclaredTypeFlags::InferImplicit) != DeclaredTypeFlags::InferImplicit) {
-        write(convertType(data_type.toString()), true, true);
+        write(convertType(getTypeStr(data_type)), true, true);
     }
 
     writeAttributeInstances(t);
@@ -342,7 +342,7 @@ void AstPrinter::handle(const slang::ast::ParameterSymbol& t) {
         write(std::string_view("parameter"));
     }
     // data_type_or_implicit
-    write(lowerFirstLetter(convertType(t.getType().toString())));
+    write(lowerFirstLetter(convertType(getTypeStr(t.getType()))));
 
     // list_of_param_assignments->param_assignment->parameter_identifier
     write(t.name);
@@ -431,7 +431,7 @@ void AstPrinter::handle(const AssertionPortSymbol& t) {
         write("local input");
     }
 
-    write(t.declaredType.getType().toString());
+    write(getTypeStr(t.declaredType.getType()));
 
     write(t.name);
 }
@@ -754,7 +754,7 @@ void AstPrinter::handle(const T& t) {
     write(lowerFirstLetter(toString(t.subroutineKind)));
 
     if (t.subroutineKind == SubroutineKind::Function) {
-        write(t.declaredReturnType.getType().toString());
+        write(getTypeStr(t.declaredReturnType.getType()));
     }
 
     // function_identifier | task_identifier
@@ -780,7 +780,7 @@ void AstPrinter::handle(const T& t) {
 
 void AstPrinter::handle(const FormalArgumentSymbol& t) {
     currSymbol = &t;
-    write(t.getType().toString());
+    write(getTypeStr(t.getType()));
     write(t.name);
     if (t.getDefaultValue()) {
         write("=");
@@ -1089,7 +1089,7 @@ void AstPrinter::handle(std::span<const RandSeqProductionSymbol::Rule> t) {
 void AstPrinter::handle(const CoverpointSymbol& t) {
     currSymbol = &t;
     if (t.name != "") {
-        write(t.declaredType.getType().toString());
+        write(getTypeStr(t.declaredType.getType()));
         write(t.name);
         write(":");
     }
