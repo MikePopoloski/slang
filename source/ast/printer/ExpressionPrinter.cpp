@@ -124,7 +124,7 @@ void AstPrinter::handle(const CallExpression& t){
             write(t.getSubroutineName(), !hasThisClass);
 
     }
-    catch (const std::bad_variant_access& ex){
+    catch ([[maybe_unused]] const std::bad_variant_access& ex){
         write(t.getSubroutineName(), !hasThisClass);
     }
     writeAttributeInstances(t);
