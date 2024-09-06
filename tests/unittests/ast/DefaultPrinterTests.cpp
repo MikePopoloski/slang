@@ -561,10 +561,3 @@ module jmagnitudeComparator(AEQB, AGTB, ALTB, A, B);
 endmodule )";
     CHECK(isEqual(code, "inetTest"));
 }
-/*
-TEST_CASE("checker.sv") {
-    fs::path path = findTestDir();
-    path /= "../../unittests/data/printer/test1.sv";
-    auto tree = SyntaxTree::fromFile(path.string());
-    CHECK(isEqual(tree.value(), "checker"));
-}*/
