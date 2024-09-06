@@ -3393,3 +3393,55 @@ endclass
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::InvalidConstraintExpr);
 }
+
+TEST_CASE("Spurious inheritance from generic param error -- GH #1058") {
+    auto tree = SyntaxTree::fromText(R"(
+interface class some_intf;
+    pure virtual function void fn1();
+
+    pure virtual function bit fn2();
+endclass
+
+virtual class adapter;
+    function new(string name="");
+    endfunction
+
+    virtual function bit fn2();
+        return 1'b1;
+    endfunction
+
+    virtual function string get_name();
+        return "example";
+    endfunction
+endclass
+
+virtual class used_class#(
+    type extends_class = adapter
+)
+extends extends_class
+implements some_intf;
+
+    function new(string name="");
+        super.new(name);
+    endfunction
+
+    extern virtual function void fn1();
+endclass
+
+
+function void used_class::fn1();
+    bit the_var;
+    if(get_name() == "string") begin
+        the_var = 1'b1;
+    end
+endfunction
+
+module top;
+
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

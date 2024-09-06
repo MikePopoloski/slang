@@ -606,8 +606,21 @@ property check_write_data_beat(
     );
 endproperty
 
+property prop(p, bit b, abort);
+  (p and (1'b1 |=> recProp(p, b, abort)));
+endproperty
+
+property recProp(p, bit b, abort);
+  accept_on(b) reject_on(abort) prop(p, b, abort);
+endproperty
+
 module m;
     assert property (check_write);
+
+    logic p;
+    bit b;
+    logic abort;
+    assert property(prop(p, b, abort));
 endmodule
 )");
 
@@ -2627,4 +2640,33 @@ endmodule
     Compilation compilation;
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Sequence local variable same as formal argument declaration") {
+    auto tree = SyntaxTree::fromText(R"(
+logic a, b, c, d;
+
+sequence sub_seq(lv);
+int lv;
+(a ##1 !a, lv = 1) ##1 !b[*0:$] ##1 b && (1 == lv);
+endsequence
+
+sequence seq;
+int v1;
+c ##1 sub_seq(v1)
+##1 (d == v1);
+endsequence
+
+module m;
+    int m;
+    assert property(seq);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::Redefinition);
 }

@@ -109,13 +109,17 @@ public:
     ///
     /// @return if no changes are requested, returns the original syntax tree.
     /// Otherwise, the changes are applied and the newly rewritten syntax tree is returned.
+    ///
+    /// @note lifetimes of new and old trees are independent from each other. If you
+    /// shallow clone something from old tree into new one, you have to make sure that
+    /// shared_ptr to original doesn't go out of scope too early.
     std::shared_ptr<SyntaxTree> transform(const std::shared_ptr<SyntaxTree>& tree,
                                           const SourceLibrary* library = nullptr) {
         sourceManager = &tree->sourceManager();
         commits.clear();
         tempTrees.clear();
 
-        tree->root().visit(*this);
+        tree->root().visit(*DERIVED);
 
         if (commits.empty())
             return tree;

@@ -1668,7 +1668,8 @@ PortConnection::PortConnection(const InterfacePortSymbol& port, const Symbol* co
 
 PortConnection::PortConnection(const Symbol& port, const Symbol* connectedSymbol,
                                SourceRange implicitNameRange) :
-    port(port), connectedSymbol(connectedSymbol), implicitNameRange(implicitNameRange) {
+    port(port), connectedSymbol(connectedSymbol), implicitNameRange(implicitNameRange),
+    isImplicit(true) {
 }
 
 PortConnection::IfaceConn PortConnection::getIfaceConn() const {
@@ -1917,7 +1918,9 @@ void PortConnection::checkSimulatedNetTypes() const {
             bool shouldWarn;
             NetType::getSimulatedNetType(inNt, exNt, shouldWarn);
             if (shouldWarn) {
-                auto& diag = scope->addDiag(diag::NetInconsistent, expr->sourceRange);
+                auto diagCode = isImplicit ? diag::ImplicitConnNetInconsistent
+                                           : diag::NetInconsistent;
+                auto& diag = scope->addDiag(diagCode, expr->sourceRange);
                 diag << exNt.name;
                 diag << inNt.name;
                 diag.addNote(diag::NoteDeclarationHere, port.location);
@@ -1983,10 +1986,8 @@ void PortConnection::checkSimulatedNetTypes() const {
             }
         }
 
-        if (in == internal.end() || ex == external.end()) {
-            SLANG_ASSERT(in == internal.end() && ex == external.end());
+        if (in == internal.end() || ex == external.end())
             break;
-        }
 
         currBit += width;
     }
@@ -2071,7 +2072,7 @@ void PortConnection::makeConnections(
 }
 
 void PortConnection::serializeTo(ASTSerializer& serializer) const {
-    serializer.writeLink("port", port);
+    serializer.write("port", port);
     if (port.kind == SymbolKind::InterfacePort) {
         if (connectedSymbol)
             serializer.writeLink("ifaceInstance", *connectedSymbol);

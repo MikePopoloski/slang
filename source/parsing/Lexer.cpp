@@ -1306,7 +1306,14 @@ bool Lexer::scanUTF8Char(bool alreadyErrored, uint32_t* code, int& computedLen) 
     }
 
     if (error) {
-        errorCount++;
+        // if error, trim next pointer so that control char is read as next char
+        if ((computedLen > 1) && (curr[1] < 0x20))
+            sourceBuffer = curr + 1;
+        else if ((computedLen > 2) && (curr[2] < 0x20))
+            sourceBuffer = curr + 2;
+        else if ((computedLen > 3) && (curr[3] < 0x20))
+            sourceBuffer = curr + 3;
+
         if (!alreadyErrored)
             addDiag(diag::InvalidUTF8Seq, (size_t)(curr - originalBegin));
         return false;

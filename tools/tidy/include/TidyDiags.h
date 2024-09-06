@@ -24,5 +24,11 @@ inline constexpr DiagCode XilinxDoNotCareValues(DiagSubsystem::Tidy, 9);
 inline constexpr DiagCode CastSignedIndex(DiagSubsystem::Tidy, 10);
 inline constexpr DiagCode NoDotStarInPortConnection(DiagSubsystem::Tidy, 11);
 inline constexpr DiagCode NoImplicitPortNameInPortConnection(DiagSubsystem::Tidy, 12);
+inline constexpr DiagCode AlwaysCombBlockNamed(DiagSubsystem::Tidy, 13);
+inline constexpr DiagCode GenerateNamed(DiagSubsystem::Tidy, 14);
+inline constexpr DiagCode NoDotVarInPortConnection(DiagSubsystem::Tidy, 15);
+inline constexpr DiagCode NoLegacyGenerate(DiagSubsystem::Tidy, 16);
+inline constexpr DiagCode AlwaysFFAssignmentOutsideConditional(DiagSubsystem::Tidy, 17);
+inline constexpr DiagCode UnusedSensitiveSignal(DiagSubsystem::Tidy, 18);
 
 } // namespace slang::diag

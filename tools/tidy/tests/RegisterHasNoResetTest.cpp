@@ -236,3 +236,37 @@ endmodule
     bool result = visitor->check(root);
     CHECK_FALSE(result);
 }
+
+TEST_CASE("RegisterHasNoReset: Struct not assigned on reset, reset signal inverted") {
+    auto tree = SyntaxTree::fromText(R"(
+module top;
+    logic clk_i;
+    logic rst_ni;
+    struct {
+        logic a;
+        logic b;
+        logic c;
+    } data;
+
+    always_ff @(posedge clk_i or negedge rst_ni) begin
+        if (rst_ni) begin
+            data.a <= 1'b1;
+        end
+        else begin
+        end
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    compilation.getAllDiagnostics();
+    auto& root = compilation.getRoot();
+
+    TidyConfig config;
+    Registry::setConfig(config);
+    Registry::setSourceManager(compilation.getSourceManager());
+    auto visitor = Registry::create("RegisterHasNoReset");
+    bool result = visitor->check(root);
+    CHECK_FALSE(result);
+}

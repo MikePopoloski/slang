@@ -164,7 +164,7 @@ public:
 
     static bool checkAssertionCall(const CallExpression& call, const ASTContext& context,
                                    DiagCode outArgCode, DiagCode refArgCode, DiagCode nonVoidCode,
-                                   SourceRange range);
+                                   SourceRange range, bool isInsideSequence = false);
 
     static void checkSampledValueExpr(const Expression& expr, const ASTContext& context,
                                       bool isFutureGlobal, DiagCode localVarCode,

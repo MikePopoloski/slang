@@ -19,11 +19,18 @@ using namespace parsing;
 
 SyntaxTree::SyntaxTree(SyntaxNode* root, SourceManager& sourceManager, BumpAllocator&& alloc,
                        const SourceLibrary* library, std::shared_ptr<SyntaxTree> parent) :
-    rootNode(root), library(library), sourceMan(sourceManager), alloc(std::move(alloc)),
-    parentTree(std::move(parent)) {
+    rootNode(root), library(library), sourceMan(sourceManager), alloc(std::move(alloc)) {
     metadata = std::make_unique<ParserMetadata>(ParserMetadata::fromSyntax(*root));
-    if (!metadata->eofToken && parentTree)
-        metadata->eofToken = parentTree->getMetadata().eofToken;
+    if (parent) { // copy parent's info
+        for (size_t i = 0; i < parent->macros.size(); ++i) {
+            auto macro = parent->macros[i];
+            if (macro)
+                macro = deepClone(*macro, this->alloc);
+            macros.push_back(macro);
+        }
+        if (!metadata->eofToken)
+            metadata->eofToken = parent->getMetadata().eofToken.deepClone(this->alloc);
+    }
 }
 
 SyntaxTree::~SyntaxTree() = default;

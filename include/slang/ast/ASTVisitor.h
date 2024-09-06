@@ -91,6 +91,11 @@ public:
             }
         }
 
+        if constexpr (std::is_base_of_v<GenericClassDefSymbol, T>) {
+            for (auto&& spec : t.specializations())
+                spec.visit(DERIVED);
+        }
+
         if constexpr (std::is_base_of_v<Scope, T>) {
             for (auto& member : t.members())
                 member.visit(DERIVED);

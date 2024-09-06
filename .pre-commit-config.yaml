@@ -36,14 +36,14 @@ repos:
 
 # Black, the python code formatter
 - repo: https://github.com/psf/black
-  rev: 24.4.2
+  rev: 24.8.0
   hooks:
   - id: black
     exclude: ^(docs)
 
 # flake8 for python linting
 - repo: https://github.com/pycqa/flake8
-  rev: 7.1.0
+  rev: 7.1.1
   hooks:
   - id: flake8
     additional_dependencies: [flake8-bugbear]
@@ -65,7 +65,7 @@ repos:
 
 # clang-format
 - repo: https://github.com/pre-commit/mirrors-clang-format
-  rev: v18.1.7
+  rev: v18.1.8
   hooks:
   - id: clang-format
     exclude: ^external/.*

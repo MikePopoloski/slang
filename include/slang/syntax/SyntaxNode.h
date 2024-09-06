@@ -190,6 +190,10 @@ public:
     /// is compatible with the static type of the object.
     static bool isKind(SyntaxKind) { return true; }
 
+    /// Derived nodes should implement this and return true if child at provided
+    /// index is pointer not wrapped in not_null.
+    static bool isChildOptional(size_t) { return true; }
+
 protected:
     explicit SyntaxNode(SyntaxKind kind) : kind(kind) {}
 
@@ -286,6 +290,8 @@ public:
     virtual void resetAll(BumpAllocator& alloc, std::span<const TokenOrSyntax> children) = 0;
 
     static bool isKind(SyntaxKind kind);
+
+    static bool isChildOptional(size_t index);
 
 protected:
     SyntaxListBase(SyntaxKind kind, size_t childCount) : SyntaxNode(kind), childCount(childCount) {}
@@ -468,6 +474,14 @@ SeparatedSyntaxList<T>* deepClone(const SeparatedSyntaxList<T>& node, BumpAlloca
             buffer.push_back(static_cast<T*>(deepClone(*ele.node(), alloc)));
     }
     return alloc.emplace<SeparatedSyntaxList<T>>(buffer.copy(alloc));
+}
+
+inline TokenList* deepClone(const TokenList& node, BumpAllocator& alloc) {
+    SmallVector<parsing::Token> buffer(node.size(), UninitializedTag());
+    for (const auto& ele : node) {
+        buffer.push_back(ele.deepClone(alloc));
+    }
+    return alloc.emplace<TokenList>(buffer.copy(alloc));
 }
 
 } // namespace slang::syntax

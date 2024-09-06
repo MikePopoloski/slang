@@ -195,3 +195,49 @@ endmodule
     bool result = visitor->check(root);
     CHECK(result);
 }
+
+TEST_CASE("EnforcePortSuffix: Explicit ports") {
+    auto tree = SyntaxTree::fromText(R"(
+module top (
+    input .data_i({a1, b1}),
+    output .data_o({a2, b2})
+);
+    logic a1, a1, a2, b2;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    compilation.getAllDiagnostics();
+    auto& root = compilation.getRoot();
+
+    TidyConfig config;
+    Registry::setConfig(config);
+    Registry::setSourceManager(compilation.getSourceManager());
+    auto visitor = Registry::create("EnforcePortSuffix");
+    bool result = visitor->check(root);
+    CHECK(result);
+}
+
+TEST_CASE("EnforcePortSuffix: Explicit port with incorrect suffix") {
+    auto tree = SyntaxTree::fromText(R"(
+module top (
+    input .data_i({a1, b1}),
+    input .data_o({a2, b2})
+);
+    logic a1, a1, a2, b2;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    compilation.getAllDiagnostics();
+    auto& root = compilation.getRoot();
+
+    TidyConfig config;
+    Registry::setConfig(config);
+    Registry::setSourceManager(compilation.getSourceManager());
+    auto visitor = Registry::create("EnforcePortSuffix");
+    bool result = visitor->check(root);
+    CHECK_FALSE(result);
+}

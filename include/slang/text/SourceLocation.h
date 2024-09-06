@@ -237,4 +237,14 @@ struct hash<slang::SourceLocation> {
     }
 };
 
+template<>
+struct hash<slang::SourceRange> {
+    size_t operator()(const slang::SourceRange& obj) const {
+        size_t seed = 0;
+        slang::hash_combine(seed, obj.start());
+        slang::hash_combine(seed, obj.end());
+        return seed;
+    }
+};
+
 } // namespace std

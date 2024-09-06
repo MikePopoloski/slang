@@ -3223,13 +3223,10 @@ SpecparamDeclaratorSyntax& Parser::parseSpecparamDeclarator(SyntaxKind parentKin
         closeParen = expect(TokenKind::CloseParenthesis);
 
     if (!name.isMissing()) {
-        if (isPathPulse) {
-            if (parentKind != SyntaxKind::SpecifyBlock)
-                addDiag(diag::PulseControlSpecifyParent, name.range());
-            else if (!expr2)
-                addDiag(diag::PulseControlTwoValues, expr1.sourceRange()) << name.range();
-        }
-        else if (expr2) {
+        if (isPathPulse && parentKind != SyntaxKind::SpecifyBlock)
+            addDiag(diag::PulseControlSpecifyParent, name.range());
+
+        if (!isPathPulse && expr2) {
             auto last = expr2->getLastToken();
             SourceRange range(expr1.getFirstToken().location(),
                               last.location() + last.rawText().length());

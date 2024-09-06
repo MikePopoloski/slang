@@ -5,13 +5,13 @@
 
 set(find_pkg_args "")
 if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.24.0")
-  set(find_pkg_args "FIND_PACKAGE_ARGS" "2.12.0")
+  set(find_pkg_args "FIND_PACKAGE_ARGS" "2.13.1")
 endif()
 
 FetchContent_Declare(
   pybind11
   GIT_REPOSITORY https://github.com/pybind/pybind11.git
-  GIT_TAG v2.12.0
+  GIT_TAG v2.13.1
   GIT_SHALLOW ON
   ${find_pkg_args})
 FetchContent_MakeAvailable(pybind11)

@@ -19,6 +19,7 @@ add_executable(
   ast/ParameterTests.cpp
   ast/PortTests.cpp
   ast/PrimitiveTests.cpp
+  ast/SerializerTests.cpp
   ast/StatementTests.cpp
   ast/SubroutineTests.cpp
   ast/SystemFuncTests.cpp

@@ -367,11 +367,20 @@ namespace slang::syntax {
         else:
             outf.write("    static bool isKind(SyntaxKind kind);\n\n")
 
+            outf.write("    static bool isChildOptional(size_t index);\n")
             outf.write("    TokenOrSyntax getChild(size_t index);\n")
             outf.write("    ConstTokenOrSyntax getChild(size_t index) const;\n")
             outf.write("    PtrTokenOrSyntax getChildPtr(size_t index);\n")
             outf.write("    void setChild(size_t index, TokenOrSyntax child);\n\n")
 
+            docf.write(
+                "    @fn static bool slang::syntax::{}::isChildOptional(size_t index);\n".format(
+                    name
+                )
+            )
+            docf.write(
+                "    @brief Returns true if child member (token or syntax node) at the provided index within this struct is a nullable pointer\n"
+            )
             docf.write(
                 "    @fn TokenOrSyntax slang::syntax::{}::getChild(size_t index)\n".format(
                     name
@@ -484,6 +493,24 @@ size_t SyntaxNode::getChildCount() const {
         cppf.write("}\n\n")
 
         if v.members or v.final != "":
+            cppf.write("bool {}::isChildOptional(size_t index) {{\n".format(k))
+            if v.optionalMembers:
+                cppf.write("    switch (index) {\n")
+
+                index = 0
+                for m in v.combinedMembers:
+                    if m[1] in v.optionalMembers:
+                        cppf.write("        case {}: return true;\n".format(index))
+                    index += 1
+
+                cppf.write("        default: return false;\n")
+                cppf.write("    }\n")
+            else:
+                cppf.write("    (void)index;\n")
+                cppf.write("    return false;\n")
+
+            cppf.write("}\n\n")
+
             for returnType in (
                 "TokenOrSyntax",
                 "ConstTokenOrSyntax",
@@ -661,6 +688,7 @@ const std::type_info* typeFromSyntaxKind(SyntaxKind kind) {
     outf.write(
         "    static bool isKind(SyntaxKind kind) { return kind == SyntaxKind::Unknown; }\n"
     )
+    outf.write("    static bool isChildOptional(size_t) { return true; }\n")
     outf.write("    TokenOrSyntax getChild(size_t) { return nullptr; }\n")
     outf.write("    ConstTokenOrSyntax getChild(size_t) const { return nullptr; }\n")
     outf.write("    PtrTokenOrSyntax getChildPtr(size_t) { return nullptr; }\n")
@@ -865,8 +893,10 @@ SyntaxNode* clone(const SyntaxListBase&, BumpAllocator&) {
                             m[1]
                         )
                     )
-                elif m[0].startswith("SyntaxList") or m[0].startswith(
-                    "SeparatedSyntaxList"
+                elif (
+                    m[0].startswith("SyntaxList")
+                    or m[0].startswith("SeparatedSyntaxList")
+                    or m[0].startswith("TokenList")
                 ):
                     clonef.write("        *deepClone(node.{0}, alloc)".format(m[1]))
                 elif m[0] == "Token":

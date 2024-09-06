@@ -154,7 +154,7 @@ std::span<Token const> Trivia::getSkippedTokens() const {
     return {tokens.ptr, tokens.len};
 }
 
-Trivia Trivia::clone(BumpAllocator& alloc) const {
+Trivia Trivia::clone(BumpAllocator& alloc, bool deep) const {
     Trivia result;
     result.kind = kind;
     result.hasFullLocation = hasFullLocation;
@@ -162,7 +162,10 @@ Trivia Trivia::clone(BumpAllocator& alloc) const {
     switch (kind) {
         case TriviaKind::Directive:
         case TriviaKind::SkippedSyntax:
-            result.syntaxNode = syntaxNode;
+            if (deep)
+                result.syntaxNode = syntax::deepClone(*syntaxNode, alloc);
+            else
+                result.syntaxNode = syntaxNode;
             break;
         case TriviaKind::SkippedTokens:
             result.tokens = tokens;
@@ -410,7 +413,7 @@ Token Token::deepClone(BumpAllocator& alloc) const {
 
     SmallVector<Trivia> triviaBuffer(trivia().size(), UninitializedTag());
     for (const auto& t : trivia())
-        triviaBuffer.push_back(t.clone(alloc));
+        triviaBuffer.push_back(t.clone(alloc, true));
     return clone(alloc, triviaBuffer.copy(alloc), rawText(), location());
 }
 

@@ -1,3 +1,10 @@
+//------------------------------------------------------------------------------
+//! @file hier.cpp
+//! @brief A tool for printing information about a Verilog hierarchy
+//
+// SPDX-FileCopyrightText: Michael Popoloski
+// SPDX-License-Identifier: MIT
+//------------------------------------------------------------------------------
 #include <algorithm>
 #include <regex>
 
