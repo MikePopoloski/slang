@@ -267,7 +267,6 @@ void AstPrinter::handle(const UnaryBinsSelectExpr& t){
 //select_condition ::= binsof ( bins_expression ) [ intersect { covergroup_range_list } ]
 void AstPrinter::handle(const ConditionBinsSelectExpr& t){
     write("binsof(");
-    std::string path_name = "";
     writeName(t.target);
     write(")");
     if(!t.intersects.empty()){

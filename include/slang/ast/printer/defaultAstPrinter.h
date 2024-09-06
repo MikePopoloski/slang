@@ -490,7 +490,7 @@ private:
     int changedBuffer = 0;
 
     // the amount of spaces after a newline is depth*depth_multplier
-    int indentation_level = 0;
+    std::size_t indentation_level = 0;
     const int indentation_multiplier = 3;
 
     // converts the type to a type defined by a type alias if a conversion is available

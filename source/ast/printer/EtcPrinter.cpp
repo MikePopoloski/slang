@@ -5,10 +5,10 @@
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
+#include "slang/ast/printer/defaultAstPrinter.h"
 
 #include <iterator>
 #include "slang/ast/Constraints.h"
-#include "slang/ast/printer/defaultAstPrinter.h"
 #include "slang/util/Util.h"
 #include "slang/ast/types/TypePrinter.h"
 
