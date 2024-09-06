@@ -4,7 +4,7 @@
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
 #include "pyslang.h"
-#include "PyDiagnostic.h"
+
 #include "slang/ast/Compilation.h"
 #include "slang/ast/Symbol.h"
 #include "slang/diagnostics/DiagnosticClient.h"
@@ -299,8 +299,7 @@ void registerUtil(py::module_& m) {
         .def_readonly("severity", &ReportedDiagnostic::severity)
         .def_readonly("shouldShowIncludeStack", &ReportedDiagnostic::shouldShowIncludeStack);
 
-    py::class_<DiagnosticClient,PyDiagnosticClient, std::shared_ptr<DiagnosticClient>>(m, "DiagnosticClient")
-        .def(py::init<>())
+    py::class_<DiagnosticClient, std::shared_ptr<DiagnosticClient>>(m, "DiagnosticClient")
         .def("report", &DiagnosticClient::report, "diagnostic"_a)
         .def("setEngine", &DiagnosticClient::setEngine, "engine"_a);
 
