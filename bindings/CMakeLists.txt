@@ -48,7 +48,6 @@ pybind11_add_module(
   python/SyntaxBindings.cpp
   python/TypeBindings.cpp
   python/UtilBindings.cpp
-  python/SyntaxFactoryBindings.cpp
   ${CMAKE_CURRENT_BINARY_DIR}/PySyntaxBindings0.cpp
   ${CMAKE_CURRENT_BINARY_DIR}/PySyntaxBindings1.cpp
   ${CMAKE_CURRENT_BINARY_DIR}/PySyntaxBindings2.cpp
