@@ -567,7 +567,7 @@ private:
         std::string* writeBuffer = (useTempBuffer) ? (tempBuffer) : (&this->buffer);
 
         bool writeNextIsEmpty = writeNextBuffer.empty();
-        if (dollarLocation != -1 && use_dollar) {
+        if (dollarLocation != std::string::npos && use_dollar) {
             std::string nextStr = std::string(string.substr(dollarLocation + 1));
             writeNextBuffer.push_back(nextStr);
             string = string.substr(0, dollarLocation);
@@ -670,6 +670,12 @@ private:
             case (NetType::NetKind::Interconnect):
                 write("interconnect");
                 break;
+            case (NetType::NetKind::Unknown):
+                write("// unkown net type");
+                break;
+            case (NetType::NetKind::UserDefined):
+                // Is handeld in the handler
+                break;
         }
     }
 
@@ -755,7 +761,7 @@ private:
                 write("==", false);
                 break;
             case (BinaryOperator::WildcardInequality):
-                write("!=?"), false;
+                write("!=?", false);
                 break;
             default:
                 SLANG_UNREACHABLE;
@@ -1026,12 +1032,11 @@ private:
             auto grandparent = parent_symbol.getParentScope();
 
             if (grandparent) {
-
                 grandparent->asSymbol().getHierarchicalPath(parent_path_name);
                 parent_path_name += ".";
                 item.getHierarchicalPath(item_path_name);
 
-                if (parent_path_name.length()<item_path_name.length()&& item_path_name.find(parent_path_name) != -1) {
+                if (parent_path_name.length()<item_path_name.length()&& item_path_name.find(parent_path_name) != std::string::npos) {
                     item_path_name.replace(item_path_name.find(parent_path_name),
                                            parent_path_name.length(), "");
                     return item_path_name;

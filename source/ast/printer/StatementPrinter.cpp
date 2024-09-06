@@ -27,7 +27,7 @@ void AstPrinter::handle(const WaitStatement& t) {
 }
 
 // wait_statement ::= wait fork;
-void AstPrinter::handle(const WaitForkStatement& t) {
+void AstPrinter::handle([[maybe_unused]] const WaitForkStatement& t) {
     write("wait fork;\n");
 }
 
@@ -67,7 +67,7 @@ void AstPrinter::handle(const VariableDeclStatement& t) {
 }
 
 // disable_statement ::= disable fork ;
-void AstPrinter::handle(const DisableForkStatement& t) {
+void AstPrinter::handle([[maybe_unused]] const DisableForkStatement& t) {
     write("disable fork ;\n");
 }
 
@@ -78,12 +78,12 @@ void AstPrinter::handle(const DisableStatement& t) {
     write(";\n");
 }
 // jump_statement ::=break ;
-void AstPrinter::handle(const BreakStatement& t) {
+void AstPrinter::handle([[maybe_unused]] const BreakStatement& t) {
     write("break;");
 }
 
 // jump_statement ::=continue ;
-void AstPrinter::handle(const ContinueStatement& t) {
+void AstPrinter::handle([[maybe_unused]] const ContinueStatement& t) {
     write("continue;");
 }
 
@@ -321,11 +321,11 @@ void AstPrinter::handle(const ConcurrentAssertionStatement& t){
     t.propertySpec.visit(*this);
     write(")");
     // action_block ::= statement_or_null | [ statement ] else statement_or_null
-    if (t.ifTrue)
+    if (t.ifTrue){
         indentation_level++;
         t.ifTrue->visit(*this);
         indentation_level--;
-
+    }
 
     if (t.ifFalse){
         write("else");

@@ -627,7 +627,7 @@ endclass
               "visibility": "Public"
             },
             {
-              "name": "",
+              "name": "g2",
               "kind": "CovergroupType",
               "members": [
                 {
@@ -801,7 +801,7 @@ endclass
             {
               "name": "g2",
               "kind": "ClassProperty",
-              "type": "",
+              "type": "g2",
               "lifetime": "Automatic",
               "flags": "const",
               "visibility": "Public"

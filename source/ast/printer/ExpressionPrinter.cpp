@@ -148,7 +148,7 @@ void AstPrinter::handle(const UnbasedUnsizedIntegerLiteral& t) {
         write(std::to_string(t.getLiteralValue().value));
     }
 }
-void AstPrinter::handle(const UnboundedLiteral& t) {
+void AstPrinter::handle([[maybe_unused]] const UnboundedLiteral& t) {
     write("$");
 }
 

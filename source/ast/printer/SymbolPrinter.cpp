@@ -243,9 +243,10 @@ void AstPrinter::handle(const slang::ast::NetSymbol& t) {
     // add the direction if this symbol is part of the port declaration
     if (internalSymbols.count(&t) != 0)
         write(internalSymbols[&t]);
-
-    write(t.netType.netKind);
-    write(convertType(t.getType().toString()), true, true);
+    if(t.netType.netKind != NetType::NetKind::UserDefined){
+        write(t.netType.netKind);
+        write(convertType(t.getType().toString()), true, true);
+    }
     write(t.name);
 
     auto initializer = t.getInitializer();
@@ -820,8 +821,6 @@ void AstPrinter::handle(const CheckerSymbol& t) {
     write(t.name);
     write("(");
 
-    auto remainingMember = t.getFirstMember();
-
     for (auto port : t.ports) {
         indentation_level++;
         port->visit(*this);
@@ -834,8 +833,6 @@ void AstPrinter::handle(const CheckerSymbol& t) {
 
         if (port != t.ports.back())
             write(",\n", false);
-        else
-            remainingMember = port->getNextSibling();
         indentation_level--;
     }
 
@@ -1058,7 +1055,7 @@ void AstPrinter::handle(const RandSeqProductionSymbol::ProdBase& t) {
 void AstPrinter::handle(std::span<const RandSeqProductionSymbol::Rule> t) {
 
     // rs_rule ::= rs_production_list [ := weight_specification [ rs_code_block ] ]
-    for (int i = 0; i < t.size(); i++) {
+    for (long unsigned int i = 0; i < t.size(); i++) {
         auto rule = t[i];
         // rs_production_list ::= rs_prod { rs_prod }
         //                     | rand join [ ( expression ) ] production_item production_item {

@@ -63,7 +63,7 @@ void AstPrinter::handle(const VariablePattern& t) {
     writeName(t.variable, false);
 }
 // pattern ::= .*
-void AstPrinter::handle(const WildcardPattern& t) {
+void AstPrinter::handle([[maybe_unused]] const WildcardPattern& t) {
     write(".*");
 }
 
