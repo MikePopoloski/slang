@@ -1340,12 +1340,14 @@ void Lookup::selectChild(const Type& virtualInterface, SourceRange range,
     SmallVector<const ElementSelectSyntax*> elementSelects;
     auto& comp = context.getCompilation();
 
-    for (auto& selector : selectors) {
+    for (auto& selector : std::views::reverse(selectors)) {
         if (auto memberSel = std::get_if<LookupResult::MemberSelector>(&selector)) {
             NamePlusLoc npl;
             npl.dotLocation = memberSel->dotLocation;
             npl.name.text = memberSel->name;
             npl.name.range = memberSel->nameRange;
+            std::ranges::reverse(elementSelects); // reverse the element selects since we initially
+                                                  // saw them in reverse order
             npl.name.selectors = elementSelects.copy(comp);
 
             nameParts.push_back(npl);
@@ -1356,13 +1358,8 @@ void Lookup::selectChild(const Type& virtualInterface, SourceRange range,
         }
     }
 
-    // lookupDownward expects names in reverse order...
-    SmallVector<NamePlusLoc, 4> namePartsReversed(nameParts.size(), UninitializedTag());
-    for (auto& npl : std::views::reverse(nameParts))
-        namePartsReversed.push_back(npl);
-
     result.found = getVirtualInterfaceTarget(virtualInterface, context, range);
-    lookupDownward(namePartsReversed, unused, context, LookupFlags::None, result);
+    lookupDownward(nameParts, unused, context, LookupFlags::None, result);
 }
 
 const ClassType* Lookup::findClass(const NameSyntax& className, const ASTContext& context,

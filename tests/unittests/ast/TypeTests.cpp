@@ -2214,3 +2214,33 @@ logic [-2147483648:-2147483649] a;
     CHECK(diags[1].code == diag::SignedIntegerOverflow);
     CHECK(diags[2].code == diag::SignedIntegerOverflow);
 }
+
+TEST_CASE("Virtual interface element select of member") {
+    auto tree = SyntaxTree::fromText(R"(
+    interface iface;
+        logic [255:0] data[2048];
+        logic [255:0] data_3d[2048][128][128];
+    endinterface
+
+    class cls1;
+        virtual iface vif;
+    endclass
+
+    class cls2;
+        cls1 c;
+        logic [255:0] data;
+        function set(int idx);
+            c.vif.data[idx] = data;
+            c.vif.data_3d[idx][64][8] = data;
+            c.vif.data_3d[idx][64][8][10:0] = data[10:0]; // index + range select
+        endfunction
+    endclass
+
+    module top;
+    endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
