@@ -114,7 +114,7 @@ public:
     /// @return the maximum number of elements that could ever fit in the array,
     /// assuming the system had enough memory to support it.
     [[nodiscard]] constexpr size_type max_size() const noexcept {
-        return std::numeric_limits<difference_type>::max();
+        return std::numeric_limits<difference_type>::max() / sizeof(T);
     }
 
     /// @return true if the array is empty, and false if it has elements in it.
