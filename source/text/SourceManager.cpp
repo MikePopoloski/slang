@@ -202,9 +202,6 @@ SourceLocation SourceManager::getFullyOriginalLoc(SourceLocation location) const
 SourceRange SourceManager::getFullyOriginalRange(SourceRange range) const {
     SourceLocation start(getFullyOriginalLoc(range.start()));
     SourceLocation end(getFullyOriginalLoc(range.end()));
-
-    if (getFileName(start) != getFileName(end))
-        return range;
     return SourceRange(start, end);
 }
 
