@@ -9,6 +9,7 @@
 
 #include "../FmtHelpers.h"
 #include "fmt/core.h"
+#include <iostream>
 #include <set>
 
 #include "slang/ast/ASTSerializer.h"
@@ -768,10 +769,8 @@ void PrimitivePortSymbol::serializeTo(ASTSerializer& serializer) const {
 class BitTrie {
 public:
     template<typename TAllocator>
-    std::optional<SmallVector<const UdpEntrySyntax*, 4>> find(BitTrie*& primaryNode,
-                                                              std::span<const char> inputs,
-                                                              char stateChar,
-                                                              TAllocator& allocator) {
+    void find(BitTrie*& primaryNode, std::span<const char> inputs, char stateChar,
+              TAllocator& allocator, SmallVector<const UdpEntrySyntax*, 4>& result) {
         SmallVector<BitTrie*> nodes;
         nodes.push_back(this);
 
@@ -824,19 +823,10 @@ public:
 
         // If any of our nodes have entries we won't insert,
         // as it means we have a duplicate.
-        SmallVector<const UdpEntrySyntax*, 4> eSyntaxes;
         for (auto node : nodes) {
             if (node->entry)
-                eSyntaxes.push_back(node->entry);
+                result.push_back(node->entry);
         }
-
-        // If we have an empty syntaxes set we saw an error somewhere,
-        // in which case don't insert. Otherwise we've found the
-        // correct place to insert, pointed to by the primary.
-        if (eSyntaxes.empty())
-            return std::nullopt;
-
-        return eSyntaxes;
     }
 
     // Tries to insert the row. Returns nullopt if the row is
@@ -849,7 +839,8 @@ public:
                                                                 char stateChar,
                                                                 TAllocator& allocator) {
         BitTrie* primary = this;
-        auto founded = find(primary, inputs, stateChar, allocator);
+        SmallVector<const UdpEntrySyntax*, 4> eSyntaxes;
+        find(primary, inputs, stateChar, allocator, eSyntaxes);
         // Always store so as not to miss info it in case of possible overlap.
         // If the primary->entry already has a value,
         // then rewriting will not spoil anything,
@@ -859,9 +850,9 @@ public:
         // If we have an empty syntaxes set we saw an error somewhere,
         // in which case don't insert. Otherwise we've found the
         // correct place to insert, pointed to by the primary.
-        if (!founded.has_value())
+        if (eSyntaxes.empty())
             return std::nullopt;
-        return founded;
+        return eSyntaxes;
     }
 
 private:
@@ -1381,15 +1372,63 @@ PrimitiveSymbol& PrimitiveSymbol::fromSyntax(const Scope& scope,
         if (prim->isEdgeSensitive && !prim->table.empty()) {
             auto portSize = ports.size();
             auto numInput = (portSize >= 2) ? portSize - 1 : portSize;
-            // All possible clock edges
-            const static std::set<std::string_view> edgeScope = {"(01)", "(10)", "(0x)",
-                                                                 "(x0)", "(1x)", "(x1)"};
-            // Row size except single edge-inpute
-            std::vector<char> initialState(numInput - 1, '0');
+            // Ordered list of all possible clock edges
+            const static std::vector<std::string_view> edgeScope = {"(01)", "(0x)", "(10)",
+                                                                    "(1x)", "(x0)", "(x1)"};
+            // Init state is (??)000...
+            std::string_view initEdge = "(??"
+                                        ")";
+            std::vector<char> initialState(initEdge.begin(), initEdge.end());
+            initialState.insert(initialState.end(), numInput - 1, '0');
             std::vector<char> state = initialState;
+            // End state is xxx...(x1)
+            std::string_view endEdge = "(x1)";
             std::vector<char> endState(numInput - 1, 'x');
-            auto incrementState = [](std::vector<char>& state) {
-                for (size_t i = 0; i < state.size(); ++i) {
+            endState.insert(endState.end(), endEdge.begin(), endEdge.end());
+            auto incrementState = [&initEdge](std::vector<char>& state) {
+                for (unsigned i = 0; i < state.size(); ++i) {
+                    if (state.at(i) == '(') {
+                        std::string currEdge{state.at(i), state.at(i + 1), state.at(i + 2),
+                                             state.at(i + 3)};
+                        if (currEdge == edgeScope.back()) {
+                            if (state.back() != 'x') {
+                                if (i != 0) {
+                                    std::copy(edgeScope[0].begin(), edgeScope[0].end(),
+                                              state.begin() + i);
+                                }
+                                else {
+                                    std::copy(initEdge.begin(), initEdge.end(), state.begin());
+                                }
+
+                                i += 3;
+                                continue;
+                            }
+                            else {
+                                // Move edge input to the next position
+                                // and set first input as '?' and all other as '0'
+                                state.at(0) = '?';
+                                for (unsigned j = 1; j < state.size(); ++j)
+                                    state.at(j) = '0';
+
+                                std::copy(edgeScope[0].begin(), edgeScope[0].end(),
+                                          state.begin() + i + 1);
+                                break;
+                            }
+                        }
+                        else {
+                            size_t nextPos = (state.at(i + 1) != '?')
+                                                 ? std::distance(edgeScope.begin(),
+                                                                 std::find(edgeScope.begin(),
+                                                                           edgeScope.end(),
+                                                                           currEdge)) +
+                                                       1
+                                                 : 0;
+                            std::copy(edgeScope[nextPos].begin(), edgeScope[nextPos].end(),
+                                      state.begin() + i);
+                            break;
+                        }
+                    }
+
                     if (state.at(i) == '0') {
                         state.at(i) = '1';
                         break;
@@ -1400,47 +1439,80 @@ PrimitiveSymbol& PrimitiveSymbol::fromSyntax(const Scope& scope,
                         break;
                     }
 
+                    if (i == 0) {
+                        if (state.at(i) == '?') {
+                            state.at(i) = '0';
+                            break;
+                        }
+
+                        if (state.at(i) == 'x')
+                            state.at(i) = '?';
+                        continue;
+                    }
+
                     state.at(i) = '0';
                 }
+
+                return state.at(0) == '?' || state.at(1) == '?';
             };
+
             Diagnostic* diag = nullptr;
+            SmallVector<std::string, 8> missingRows;
+            bool isVariable = true;
             // Try to find the missing combinations by completely enumerating all possible table
             // rows
-            for (size_t inInd = 0; inInd < numInput; ++inInd) {
-                bool next = true;
-                while (next) {
+            bool next = true;
+            while (next) {
+                // Comparing current state with end state
+                if (state.back() == ')' && (numInput == 1 || state[0] == 'x'))
                     next = (state != endState);
-                    for (auto& eS : edgeScope) {
-                        SmallVector<char> inputTest;
-                        if (inInd != 0)
-                            inputTest.append(state.begin(), state.begin() + long(inInd));
-                        inputTest.append(eS.begin(), eS.end());
-                        inputTest.append(state.begin() + long(inInd), state.end());
-                        BitTrie* triePtr = &trie;
-                        if (!trie.find(triePtr, inputTest, '?', trieAlloc).has_value()) {
-                            if (!diag) {
-                                diag = &scope.addDiag(diag::UdpCoverage, prim->location);
-                            }
-                            else {
-                                std::string noteStr;
-                                bool nextSplit = false;
-                                for (auto c : inputTest) {
-                                    if (c == ')') {
-                                        nextSplit = true;
-                                        noteStr += c;
-                                        continue;
-                                    }
 
-                                    if (nextSplit)
-                                        noteStr += ' ';
-                                    noteStr += c;
-                                }
-                                diag->addNote(diag::NoteUdpCoverage, prim->location) << noteStr;
-                            }
-                        }
+                BitTrie* triePtr = &trie;
+                SmallVector<const UdpEntrySyntax*, 4> results;
+                // Try to find a desired input in an existing table structure
+                trie.find(triePtr, state, '?', trieAlloc, results);
+                if (results.empty()) {
+                    if (!diag)
+                        diag = &scope.addDiag(diag::UdpCoverage, prim->location);
+
+                    std::string noteStr;
+                    bool nextSplit = true;
+                    for (auto c : state) {
+                        if (c == '(')
+                            nextSplit = false;
+                        else if (c == ')')
+                            nextSplit = true;
+
+                        noteStr += c;
+                        if (nextSplit)
+                            noteStr += ' ';
                     }
-                    incrementState(state);
+                    missingRows.push_back(noteStr);
+
+                    bool wasVariable = isVariable;
+                    // If state with any value clock edge (??) was not found
+                    // then we don't need to check any other state with explicit clock edges.
+                    // So skip the state until we get a new any value clock edge state.
+                    do {
+                        isVariable = incrementState(state);
+                        if (state.back() == ')' && (numInput == 1 || state[0] == 'x'))
+                            next = (state != endState);
+                    } while (next && wasVariable && !isVariable);
+
+                    continue;
                 }
+
+                isVariable = incrementState(state);
+            }
+
+            if (diag && !missingRows.empty()) {
+                std::string noteStr;
+                for (auto& missingRow : missingRows) {
+                    noteStr += {missingRow.data(), missingRow.size()};
+                    noteStr += "\n";
+                }
+
+                diag->addNote(diag::NoteUdpCoverage, prim->location) << noteStr;
             }
         }
     }
