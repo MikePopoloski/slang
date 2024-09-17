@@ -1489,3 +1489,14 @@ endmodule
     REQUIRE(diagnostics.size() == 1);
     CHECK(diagnostics[0].code == diag::UnexpectedEndDelim);
 }
+
+TEST_CASE("Bad top level constraints") {
+    auto& text = R"(
+constraint A :: A { &&& }
+constraint A :: A { matches }
+constraint A :: A { soft *) 0 ; }
+)";
+    parseCompilationUnit(text);
+
+    REQUIRE(diagnostics.size() == 4);
+}
