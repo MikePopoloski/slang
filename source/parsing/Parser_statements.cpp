@@ -765,16 +765,12 @@ RandCaseStatementSyntax& Parser::parseRandCaseStatement(NamedLabelSyntax* label,
         Token curr = peek();
         auto& expr = parseExpression();
         auto colon = expect(TokenKind::Colon);
-        const auto loc = peek().location();
         auto& stmt = parseStatement();
-        if (stmt.kind == SyntaxKind::EmptyStatement &&
-            stmt.as<EmptyStatementSyntax>().semicolon.isMissing() && loc == peek().location()) {
-            skipToken(std::nullopt);
-        }
-        itemBuffer.push_back(&factory.randCaseItem(expr, colon, stmt));
-        // If there is no consumed tokens then expression was not parsed
+        // If there is no consumed tokens then expression and statement were not parsed
         if (curr == peek())
-            break;
+            skipToken(std::nullopt);
+
+        itemBuffer.push_back(&factory.randCaseItem(expr, colon, stmt));
     }
 
     auto endcase = expect(TokenKind::EndCaseKeyword);
@@ -1004,7 +1000,7 @@ StatementSyntax& Parser::parseRandSequenceStatement(NamedLabelSyntax* label, Att
         productions.push_back(&parseProduction());
         // If there is no consumed tokens then production was not parsed
         if (curr == peek())
-            break;
+            skipToken(std::nullopt);
     }
 
     if (productions.empty())

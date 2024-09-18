@@ -2152,32 +2152,23 @@ ConstraintItemSyntax* Parser::parseConstraintItem(bool allowBlock, bool isTopLev
         case TokenKind::ForeachKeyword: {
             auto keyword = consume();
             auto& vars = parseForeachLoopVariables();
-            auto constraints = parseConstraintItem(true, false);
-            if (constraints)
-                return &factory.loopConstraint(keyword, vars, *constraints);
-            else
-                return nullptr;
+            return &factory.loopConstraint(keyword, vars, *parseConstraintItem(true, false));
         }
         case TokenKind::IfKeyword: {
             auto ifKeyword = consume();
             auto openParen = expect(TokenKind::OpenParenthesis);
             auto& condition = parseExpression();
             auto closeParen = expect(TokenKind::CloseParenthesis);
-            auto constraints = parseConstraintItem(true, false);
-            if (!constraints)
-                return nullptr;
+            auto& constraints = *parseConstraintItem(true, false);
 
             ElseConstraintClauseSyntax* elseClause = nullptr;
             if (peek(TokenKind::ElseKeyword)) {
                 auto elseKeyword = consume();
-                auto elseConstraints = parseConstraintItem(true, false);
-                if (!elseConstraints)
-                    return nullptr;
-
-                elseClause = &factory.elseConstraintClause(elseKeyword, *elseConstraints);
+                elseClause = &factory.elseConstraintClause(elseKeyword,
+                                                           *parseConstraintItem(true, false));
             }
             return &factory.conditionalConstraint(ifKeyword, openParen, condition, closeParen,
-                                                  *constraints, elseClause);
+                                                  constraints, elseClause);
         }
         case TokenKind::UniqueKeyword: {
             auto keyword = consume();
@@ -2221,16 +2212,12 @@ ConstraintItemSyntax* Parser::parseConstraintItem(bool allowBlock, bool isTopLev
     auto expr =
         &parseSubExpression(ExpressionOptions::ConstraintContext | ExpressionOptions::AllowDist, 0);
     // checking that tokens were extracted during expression parsing
-    if (curr == peek())
+    if (curr == peek() && !allowBlock)
         return nullptr;
 
     if (peek(TokenKind::MinusArrow)) {
         auto arrow = consume();
-        auto constraints = parseConstraintItem(true, false);
-        if (constraints)
-            return &factory.implicationConstraint(*expr, arrow, *constraints);
-        else
-            return nullptr;
+        return &factory.implicationConstraint(*expr, arrow, *parseConstraintItem(true, false));
     }
 
     return &factory.expressionConstraint(Token(), *expr, expect(TokenKind::Semicolon));

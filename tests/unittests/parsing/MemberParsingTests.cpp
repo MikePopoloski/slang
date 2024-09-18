@@ -1506,5 +1506,5 @@ program A ; final randcase 0 : matches A = # 0 0 ; endcase endprogram
 )";
     parseCompilationUnit(text);
 
-    REQUIRE(diagnostics.size() == 18);
+    REQUIRE(diagnostics.size() == 16);
 }
