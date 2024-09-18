@@ -1493,10 +1493,18 @@ endmodule
 TEST_CASE("Bad top level constraints") {
     auto& text = R"(
 constraint A :: A { &&& }
+
 constraint A :: A { matches }
+
 constraint A :: A { soft *) 0 ; }
+
+program A ; final randsequence ( const ) A : A ; endsequence endprogram
+
+constraint A :: A { foreach ( &&& A [ ] ) 0 ; }
+
+program A ; final randcase 0 : matches A = # 0 0 ; endcase endprogram
 )";
     parseCompilationUnit(text);
 
-    REQUIRE(diagnostics.size() == 4);
+    REQUIRE(diagnostics.size() == 18);
 }
