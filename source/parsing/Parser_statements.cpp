@@ -772,7 +772,7 @@ RandCaseStatementSyntax& Parser::parseRandCaseStatement(NamedLabelSyntax* label,
             skipToken(std::nullopt);
         }
         itemBuffer.push_back(&factory.randCaseItem(expr, colon, stmt));
-        // If there no consumed tokens then expression was not parced
+        // If there is no consumed tokens then expression was not parsed
         if (curr == peek())
             break;
     }
@@ -1002,7 +1002,7 @@ StatementSyntax& Parser::parseRandSequenceStatement(NamedLabelSyntax* label, Att
     while (isPossibleDataType(peek().kind)) {
         Token curr = peek();
         productions.push_back(&parseProduction());
-        // If there no consumed tokens then production was not parced
+        // If there is no consumed tokens then production was not parsed
         if (curr == peek())
             break;
     }
