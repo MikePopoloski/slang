@@ -7,8 +7,8 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include "visitors/ProceduralBlockVisitor.hpp"
 #include "visitors/ContinuousAssignVisitor.hpp"
+#include "visitors/ProceduralBlockVisitor.hpp"
 
 using namespace slang;
 
@@ -19,7 +19,8 @@ namespace netlist {
 /// marked as uninstantiated, and are therefore not visited.
 class GenerateBlockVisitor : public ast::ASTVisitor<GenerateBlockVisitor, true, false> {
 public:
-    explicit GenerateBlockVisitor(ast::Compilation& compilation, Netlist& netlist, NetlistVisitorOptions const &options) :
+    explicit GenerateBlockVisitor(ast::Compilation& compilation, Netlist& netlist,
+                                  NetlistVisitorOptions const& options) :
         compilation(compilation), netlist(netlist), options(options) {}
 
     /// Variable declaration.
@@ -44,7 +45,7 @@ public:
 
 private:
     Netlist& netlist;
-    NetlistVisitorOptions const &options;
+    NetlistVisitorOptions const& options;
     ast::Compilation& compilation;
 };
 

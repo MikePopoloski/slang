@@ -1,12 +1,12 @@
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
 
-#include <string>
-
-#include "slang/ast/Compilation.h"
 #include "Netlist.h"
 #include "PathFinder.h"
 #include "visitors/NetlistVisitor.h"
+#include <string>
+
+#include "slang/ast/Compilation.h"
 
 using namespace netlist;
 
@@ -19,7 +19,7 @@ inline Netlist createNetlist(ast::Compilation& compilation) {
     return netlist;
 }
 
-inline Netlist createNetlist(ast::Compilation& compilation, NetlistVisitorOptions const &options) {
+inline Netlist createNetlist(ast::Compilation& compilation, NetlistVisitorOptions const& options) {
     Netlist netlist;
     NetlistVisitor visitor(compilation, netlist, options);
     compilation.getRoot().visit(visitor);

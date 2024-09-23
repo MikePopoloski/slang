@@ -22,7 +22,8 @@ namespace netlist {
 /// The top-level visitor that traverses the AST and builds a netlist connectivity graph.
 class NetlistVisitor : public ast::ASTVisitor<NetlistVisitor, true, false> {
 public:
-    explicit NetlistVisitor(ast::Compilation& compilation, Netlist& netlist, NetlistVisitorOptions const &options) :
+    explicit NetlistVisitor(ast::Compilation& compilation, Netlist& netlist,
+                            NetlistVisitorOptions const& options) :
         compilation(compilation), netlist(netlist), options(options) {}
 
     void handle(const ast::InstanceSymbol& symbol) {
@@ -33,7 +34,7 @@ public:
 private:
     ast::Compilation& compilation;
     Netlist& netlist;
-    NetlistVisitorOptions const &options;
+    NetlistVisitorOptions const& options;
 };
 
 } // namespace netlist

@@ -6,8 +6,8 @@
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
 
-#include "Test.h"
 #include "NetlistTest.h"
+#include "Test.h"
 
 // Test the logic that splits variable declaration nodes into sets of ALIAS
 // nodes with connections based on their selection bounds.

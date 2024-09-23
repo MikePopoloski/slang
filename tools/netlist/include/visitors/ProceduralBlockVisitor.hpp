@@ -10,10 +10,10 @@
 #include "Debug.h"
 #include "Netlist.h"
 #include "NetlistVisitorOptions.hpp"
+#include "visitors/VariableReferenceVisitor.hpp"
 
 #include "slang/ast/EvalContext.h"
 #include "slang/ast/symbols/BlockSymbols.h"
-#include "visitors/VariableReferenceVisitor.hpp"
 
 using namespace slang;
 
@@ -27,7 +27,7 @@ public:
     bool anyErrors = false;
 
     explicit ProceduralBlockVisitor(ast::Compilation& compilation, Netlist& netlist,
-                                    NetlistVisitorOptions const &options, ast::EdgeKind edgeKind) :
+                                    NetlistVisitorOptions const& options, ast::EdgeKind edgeKind) :
         netlist(netlist), evalCtx(ast::ASTContext(compilation.getRoot(), ast::LookupLocation::max)),
         options(options), edgeKind(edgeKind) {
         evalCtx.pushEmptyFrame();
@@ -85,7 +85,8 @@ public:
     void handle(const ast::ForLoopStatement& loop) {
 
         // Conditions that mean this loop cannot be unrolled.
-        if (!*options.unrollForLoops || loop.loopVars.empty() || !loop.stopExpr || loop.steps.empty() || anyErrors) {
+        if (!*options.unrollForLoops || loop.loopVars.empty() || !loop.stopExpr ||
+            loop.steps.empty() || anyErrors) {
             loop.body.visit(*this);
             return;
         }
@@ -280,7 +281,7 @@ private:
 
     Netlist& netlist;
     ast::EvalContext evalCtx;
-    NetlistVisitorOptions const&options;
+    NetlistVisitorOptions const& options;
     ast::EdgeKind edgeKind;
 };
 

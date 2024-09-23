@@ -19,7 +19,8 @@ namespace netlist {
 /// variables mirroring the ports.
 class InstanceVisitor : public ast::ASTVisitor<InstanceVisitor, true, false> {
 public:
-    explicit InstanceVisitor(ast::Compilation& compilation, Netlist& netlist, NetlistVisitorOptions const &options) :
+    explicit InstanceVisitor(ast::Compilation& compilation, Netlist& netlist,
+                             NetlistVisitorOptions const& options) :
         compilation(compilation), netlist(netlist), options(options) {}
 
 private:
@@ -231,7 +232,7 @@ public:
 private:
     ast::Compilation& compilation;
     Netlist& netlist;
-    NetlistVisitorOptions const &options;
+    NetlistVisitorOptions const& options;
 };
 
 } // namespace netlist
