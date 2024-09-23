@@ -85,7 +85,7 @@ public:
     void handle(const ast::ForLoopStatement& loop) {
 
         // Conditions that mean this loop cannot be unrolled.
-        if (!options.unrollForLoops || loop.loopVars.empty() || !loop.stopExpr || loop.steps.empty() || anyErrors) {
+        if (!*options.unrollForLoops || loop.loopVars.empty() || !loop.stopExpr || loop.steps.empty() || anyErrors) {
             loop.body.visit(*this);
             return;
         }
