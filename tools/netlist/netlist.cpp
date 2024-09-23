@@ -13,11 +13,8 @@
 #include "fmt/color.h"
 #include "fmt/format.h"
 #include "visitors/NetlistVisitor.h"
-#include <fstream>
 #include <iostream>
 #include <stdexcept>
-#include <unordered_set>
-#include <utility>
 #include <vector>
 
 #include "slang/ast/ASTSerializer.h"
@@ -27,8 +24,6 @@
 #include "slang/driver/Driver.h"
 #include "slang/text/FormatBuffer.h"
 #include "slang/text/Json.h"
-#include "slang/util/String.h"
-#include "slang/util/TimeTrace.h"
 #include "slang/util/Util.h"
 #include "slang/util/VersionInfo.h"
 
@@ -207,6 +202,7 @@ int main(int argc, char** argv) {
     driver::Driver driver;
     driver.addStandardArgs();
 
+    NetlistVisitorOptions options;
     std::optional<bool> showHelp;
     std::optional<bool> showVersion;
     std::optional<bool> quiet;
@@ -217,6 +213,7 @@ int main(int argc, char** argv) {
     driver.cmdLine.add("-q,--quiet", quiet, "Suppress non-essential output");
     driver.cmdLine.add("-d,--debug", debug, "Output debugging information");
     driver.cmdLine.add("-c,--comb-loops", combLoops, "Detect combinatorial loops");
+    driver.cmdLine.add("--unroll-for-loops", options.unrollForLoops, "Unroll procedural for loops");
 
     std::optional<std::string> astJsonFile;
     driver.cmdLine.add(
@@ -289,7 +286,7 @@ int main(int argc, char** argv) {
 
         // Create the netlist by traversing the AST.
         Netlist netlist;
-        NetlistVisitor visitor(*compilation, netlist);
+        NetlistVisitor visitor(*compilation, netlist, options);
         compilation->getRoot().visit(visitor);
         netlist.split();
         DEBUG_PRINT("Netlist has {} nodes and {} edges\n", netlist.numNodes(), netlist.numEdges());

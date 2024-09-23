@@ -7,6 +7,9 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include "slang/ast/ASTVisitor.h"
+#include "Netlist.h"
+
 using namespace slang;
 
 namespace netlist {

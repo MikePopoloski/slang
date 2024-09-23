@@ -19,8 +19,8 @@ namespace netlist {
 /// variables mirroring the ports.
 class InstanceVisitor : public ast::ASTVisitor<InstanceVisitor, true, false> {
 public:
-    explicit InstanceVisitor(ast::Compilation& compilation, Netlist& netlist) :
-        compilation(compilation), netlist(netlist) {}
+    explicit InstanceVisitor(ast::Compilation& compilation, Netlist& netlist, NetlistVisitorOptions const &options) :
+        compilation(compilation), netlist(netlist), options(options) {}
 
 private:
     void connectDeclToVar(NetlistNode& declNode, const ast::Symbol& variable) {
@@ -207,7 +207,7 @@ public:
 
     /// Procedural block.
     void handle(const ast::ProceduralBlockSymbol& symbol) {
-        ProceduralBlockVisitor visitor(compilation, netlist,
+        ProceduralBlockVisitor visitor(compilation, netlist, options,
                                        ProceduralBlockVisitor::determineEdgeKind(symbol));
         symbol.visit(visitor);
     }
@@ -215,7 +215,7 @@ public:
     /// Generate block.
     void handle(const ast::GenerateBlockSymbol& symbol) {
         if (!symbol.isUninstantiated) {
-            GenerateBlockVisitor visitor(compilation, netlist);
+            GenerateBlockVisitor visitor(compilation, netlist, options);
             symbol.visit(visitor);
         }
     }
@@ -231,6 +231,7 @@ public:
 private:
     ast::Compilation& compilation;
     Netlist& netlist;
+    NetlistVisitorOptions const &options;
 };
 
 } // namespace netlist
