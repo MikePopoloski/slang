@@ -9,8 +9,6 @@
 
 #include "../FmtHelpers.h"
 #include "fmt/core.h"
-#include <iostream>
-#include <set>
 
 #include "slang/ast/ASTSerializer.h"
 #include "slang/ast/ASTVisitor.h"
@@ -1385,8 +1383,12 @@ PrimitiveSymbol& PrimitiveSymbol::fromSyntax(const Scope& scope,
             std::string_view endEdge = "(x1)";
             std::vector<char> endState(numInput - 1, 'x');
             endState.insert(endState.end(), endEdge.begin(), endEdge.end());
+            // Iterate state by increase leftoutermost inputs.
+            // For simple inputs value '0' goes to '1' and value '1' goes to `x`.
+            // For edge inputs circular iteration occurs over 'edgeScope' list.
             auto incrementState = [&initEdge](std::vector<char>& state) {
                 for (unsigned i = 0; i < state.size(); ++i) {
+                    // Increase edge input
                     if (state.at(i) == '(') {
                         std::string currEdge{state.at(i), state.at(i + 1), state.at(i + 2),
                                              state.at(i + 3)};
@@ -1397,6 +1399,9 @@ PrimitiveSymbol& PrimitiveSymbol::fromSyntax(const Scope& scope,
                                               state.begin() + i);
                                 }
                                 else {
+                                    // If it is edge input at first position set it as '(??)'
+                                    // instead of '(01)' for heuristically check it and skip any
+                                    // other edge inputs if '(??)' is present.
                                     std::copy(initEdge.begin(), initEdge.end(), state.begin());
                                 }
 
@@ -1440,6 +1445,10 @@ PrimitiveSymbol& PrimitiveSymbol::fromSyntax(const Scope& scope,
                     }
 
                     if (i == 0) {
+                        // If it is simple input at first position set it as '?'
+                        // instead of '0' for heuristically check it and skip any
+                        // other inputs if '?' is present.
+
                         if (state.at(i) == '?') {
                             state.at(i) = '0';
                             break;
@@ -1490,9 +1499,10 @@ PrimitiveSymbol& PrimitiveSymbol::fromSyntax(const Scope& scope,
                     missingRows.push_back(noteStr);
 
                     bool wasVariable = isVariable;
-                    // If state with any value clock edge (??) was not found
-                    // then we don't need to check any other state with explicit clock edges.
-                    // So skip the state until we get a new any value clock edge state.
+                    // If state with first any value input ('(??)' for edge input or '?' for simple
+                    // input) was not found then we don't need to check any other state with
+                    // explicit clock edges. So skip the state until we get a new any value clock
+                    // edge state.
                     do {
                         isVariable = incrementState(state);
                         if (state.back() == ')' && (numInput == 1 || state[0] == 'x'))
