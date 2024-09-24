@@ -1421,13 +1421,13 @@ PrimitiveSymbol& PrimitiveSymbol::fromSyntax(const Scope& scope,
                             }
                         }
                         else {
-                            size_t nextPos = (state.at(i + 1) != '?')
-                                                 ? std::distance(edgeScope.begin(),
-                                                                 std::find(edgeScope.begin(),
-                                                                           edgeScope.end(),
-                                                                           currEdge)) +
-                                                       1
-                                                 : 0;
+                            size_t nextPos =
+                                (state.at(i + 1) != '?')
+                                    ? (size_t)std::distance(edgeScope.begin(),
+                                                            std::find(edgeScope.begin(),
+                                                                      edgeScope.end(), currEdge)) +
+                                          1
+                                    : 0U;
                             std::copy(edgeScope[nextPos].begin(), edgeScope[nextPos].end(),
                                       state.begin() + i);
                             break;
