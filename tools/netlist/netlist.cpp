@@ -202,18 +202,18 @@ int main(int argc, char** argv) {
     driver::Driver driver;
     driver.addStandardArgs();
 
-    NetlistVisitorOptions options;
     std::optional<bool> showHelp;
     std::optional<bool> showVersion;
     std::optional<bool> quiet;
     std::optional<bool> debug;
     std::optional<bool> combLoops;
+    std::optional<bool> unrollForLoops;
     driver.cmdLine.add("-h,--help", showHelp, "Display available options");
     driver.cmdLine.add("--version", showVersion, "Display version information and exit");
     driver.cmdLine.add("-q,--quiet", quiet, "Suppress non-essential output");
     driver.cmdLine.add("-d,--debug", debug, "Output debugging information");
     driver.cmdLine.add("-c,--comb-loops", combLoops, "Detect combinatorial loops");
-    driver.cmdLine.add("--unroll-for-loops", options.unrollForLoops, "Unroll procedural for loops");
+    driver.cmdLine.add("--unroll-for-loops", unrollForLoops, "Unroll procedural for loops");
 
     std::optional<std::string> astJsonFile;
     driver.cmdLine.add(
@@ -286,6 +286,8 @@ int main(int argc, char** argv) {
 
         // Create the netlist by traversing the AST.
         Netlist netlist;
+        NetlistVisitorOptions options;
+        options.unrollForLoops = unrollForLoops.value_or(false);
         NetlistVisitor visitor(*compilation, netlist, options);
         compilation->getRoot().visit(visitor);
         netlist.split();

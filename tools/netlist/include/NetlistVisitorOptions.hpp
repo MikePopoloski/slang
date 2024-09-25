@@ -13,5 +13,5 @@
 struct NetlistVisitorOptions {
 
     /// If enabled, unroll loops in procedural blocks.
-    std::optional<bool> unrollForLoops;
+    bool unrollForLoops{false};
 };

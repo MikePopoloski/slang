@@ -13,7 +13,6 @@ using namespace netlist;
 inline Netlist createNetlist(ast::Compilation& compilation) {
     Netlist netlist;
     NetlistVisitorOptions options;
-    options.unrollForLoops = true;
     NetlistVisitor visitor(compilation, netlist, options);
     compilation.getRoot().visit(visitor);
     netlist.split();
