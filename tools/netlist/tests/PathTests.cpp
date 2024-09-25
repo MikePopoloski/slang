@@ -311,7 +311,7 @@ endmodule
 // Tests for conditional variables in procedural blocks (Not supported!)
 //===---------------------------------------------------------------------===//
 
- TEST_CASE("Mux") {
+TEST_CASE("Mux") {
     // Test that the variable in a conditional block is correctly added as a
     // dependency on the output variable controlled by that block.
     auto tree = SyntaxTree::fromText(R"(
@@ -334,7 +334,7 @@ endmodule
     CHECK(pathFinder.find(*netlist.lookupPort("mux.sel"), *netlist.lookupPort("mux.f")).empty());
 }
 
- TEST_CASE("Nested muxing") {
+TEST_CASE("Nested muxing") {
     // Test that the variables in multiple nested levels of conditions are
     // correctly added as dependencies of the output variable.
     auto tree = SyntaxTree::fromText(R"(
@@ -359,10 +359,8 @@ endmodule
     auto netlist = createNetlist(compilation);
     PathFinder pathFinder(netlist);
     // Paths do not exist!
-    CHECK(pathFinder.find(*netlist.lookupPort("mux.sel_a"),
-    *netlist.lookupPort("mux.f")).empty());
-    CHECK(pathFinder.find(*netlist.lookupPort("mux.sel_b"),
-    *netlist.lookupPort("mux.f")).empty());
+    CHECK(pathFinder.find(*netlist.lookupPort("mux.sel_a"), *netlist.lookupPort("mux.f")).empty());
+    CHECK(pathFinder.find(*netlist.lookupPort("mux.sel_b"), *netlist.lookupPort("mux.f")).empty());
 }
 
 //===---------------------------------------------------------------------===//
