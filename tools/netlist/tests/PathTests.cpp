@@ -307,63 +307,63 @@ endmodule
     CHECK(*path.findVariable("nested_passthrough.foo_b.o_value") == 6);
 }
 
-////===---------------------------------------------------------------------===//
-//// Tests for conditional variables in procedural blocks (Not supported!)
-////===---------------------------------------------------------------------===//
-//
-// TEST_CASE("Mux") {
-//    // Test that the variable in a conditional block is correctly added as a
-//    // dependency on the output variable controlled by that block.
-//    auto tree = SyntaxTree::fromText(R"(
-// module mux(input a, input b, input sel, output reg f);
-//  always @(*) begin
-//    if (sel == 1'b0) begin
-//      f = a;
-//    end else begin
-//      f = b;
-//    end
-//  end
-// endmodule
-//)");
-//    Compilation compilation;
-//    compilation.addSyntaxTree(tree);
-//    NO_COMPILATION_ERRORS;
-//    auto netlist = createNetlist(compilation);
-//    PathFinder pathFinder(netlist);
-//    // Path does not exist!
-//    CHECK(pathFinder.find(*netlist.lookupPort("mux.sel"), *netlist.lookupPort("mux.f")).empty());
-//}
-//
-// TEST_CASE("Nested muxing") {
-//    // Test that the variables in multiple nested levels of conditions are
-//    // correctly added as dependencies of the output variable.
-//    auto tree = SyntaxTree::fromText(R"(
-// module mux(input a, input b, input c,
-//           input sel_a, input sel_b,
-//           output reg f);
-//  always @(*) begin
-//    if (sel_a == 1'b0) begin
-//      if (sel_b == 1'b0)
-//        f = a;
-//      else
-//        f = b;
-//    end else begin
-//      f = c;
-//    end
-//  end
-// endmodule
-//)");
-//    Compilation compilation;
-//    compilation.addSyntaxTree(tree);
-//    NO_COMPILATION_ERRORS;
-//    auto netlist = createNetlist(compilation);
-//    PathFinder pathFinder(netlist);
-//    // Paths do not exist!
-//    CHECK(pathFinder.find(*netlist.lookupPort("mux.sel_a"),
-//    *netlist.lookupPort("mux.f")).empty());
-//    CHECK(pathFinder.find(*netlist.lookupPort("mux.sel_b"),
-//    *netlist.lookupPort("mux.f")).empty());
-//}
+//===---------------------------------------------------------------------===//
+// Tests for conditional variables in procedural blocks (Not supported!)
+//===---------------------------------------------------------------------===//
+
+ TEST_CASE("Mux") {
+    // Test that the variable in a conditional block is correctly added as a
+    // dependency on the output variable controlled by that block.
+    auto tree = SyntaxTree::fromText(R"(
+ module mux(input a, input b, input sel, output reg f);
+  always @(*) begin
+    if (sel == 1'b0) begin
+      f = a;
+    end else begin
+      f = b;
+    end
+  end
+ endmodule
+)");
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+    auto netlist = createNetlist(compilation);
+    PathFinder pathFinder(netlist);
+    // Path does not exist!
+    CHECK(pathFinder.find(*netlist.lookupPort("mux.sel"), *netlist.lookupPort("mux.f")).empty());
+}
+
+ TEST_CASE("Nested muxing") {
+    // Test that the variables in multiple nested levels of conditions are
+    // correctly added as dependencies of the output variable.
+    auto tree = SyntaxTree::fromText(R"(
+ module mux(input a, input b, input c,
+           input sel_a, input sel_b,
+           output reg f);
+  always @(*) begin
+    if (sel_a == 1'b0) begin
+      if (sel_b == 1'b0)
+        f = a;
+      else
+        f = b;
+    end else begin
+      f = c;
+    end
+  end
+ endmodule
+)");
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+    auto netlist = createNetlist(compilation);
+    PathFinder pathFinder(netlist);
+    // Paths do not exist!
+    CHECK(pathFinder.find(*netlist.lookupPort("mux.sel_a"),
+    *netlist.lookupPort("mux.f")).empty());
+    CHECK(pathFinder.find(*netlist.lookupPort("mux.sel_b"),
+    *netlist.lookupPort("mux.f")).empty());
+}
 
 //===---------------------------------------------------------------------===//
 // Tests for loop unrolling
