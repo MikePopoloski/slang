@@ -12,6 +12,6 @@
 /// Hold various options controlling the way the netlist is created.
 struct NetlistVisitorOptions {
 
-    /// If enabled, unroll loops in procedural blocks.
+    /// If enabled, unroll for loops in procedural blocks.
     bool unrollForLoops{false};
 };
