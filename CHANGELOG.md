@@ -60,7 +60,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Fixed and improved various parts of the SyntaxRewriter API (thanks to @sgizler)
 
 ### Fixes
-* Fixed several AST serialization methods (thanks to @tdp2110, @likeamahoney, @Kitaev2003)
+* Fixed several AST serialization methods (thanks to @tdp2110, @likeamahoney, @Kitaev2003, @cyuzuzo-j)
 * Fixed the return type of DPI import tasks
 * Fixed a bug that caused some `inout` ports to warn as "unused"
 * Fixed the checking of the `extends` override specifier when the containing class has no base class
@@ -76,6 +76,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Fixed a bug that could cause spurious errors in uninstantiated generic class definitions
 * Fixed the Symbol::getHierarchicalPath API to round-trip correctly
 * Fixed JSON serialization of integers to round-trip correctly
+* Fixed a bug in resolving defparam values inside of generate loops
+* Fixed checking of event arguments in system timing check functions
+* Fixed checking of deferred assertion function calls (thanks to @likeamahoney)
+* Correctly issue an error if a sequence or property has a formal argument with the same name as a local variable declaration (thanks to @likeamahoney)
+* Fixed a case of recursive property instantiation that was incorrectly disallowed (thanks to @likeamahoney)
+* Fixed bugs in checking for overlapping user-defined primitive table rows (thanks to @likeamahoney)
+* Fixed infinite loops in the parser when encountering constraint blocks with certain kinds of invalid tokens in them (thanks to @likeamahoney)
+* Fixed errors in assigning to select expressions involving members of virtual interfaces (thanks to @micron-ian)
 
 
 ## [v6.0] - 2024-04-21
