@@ -121,6 +121,8 @@ public:
     std::optional<bitwidth_t> getEffectiveWidthImpl() const;
     EffectiveSign getEffectiveSignImpl(bool isForConversion) const;
 
+    ConstantValue applyTo(EvalContext& context, ConstantValue&& value) const;
+
     void serializeTo(ASTSerializer& serializer) const;
 
     static Expression& fromSyntax(Compilation& compilation,
@@ -292,6 +294,8 @@ public:
         isLValue(isLValue) {}
 
     LValue evalLValueImpl(EvalContext& context) const;
+
+    ConstantValue applyConversions(EvalContext& context, const ConstantValue& rval) const;
 
     static Expression& forStruct(Compilation& compilation,
                                  const syntax::SimpleAssignmentPatternSyntax& syntax,

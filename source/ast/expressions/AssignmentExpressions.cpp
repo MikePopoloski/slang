@@ -738,6 +738,11 @@ ConstantValue AssignmentExpression::evalImpl(EvalContext& context) const {
     if (!rvalue)
         return nullptr;
 
+    // If the LHS is an assignment pattern we need to manually apply any conversions
+    // to the elements of the RHS since there's no other place to do it.
+    if (left().kind == ExpressionKind::SimpleAssignmentPattern)
+        rvalue = left().as<SimpleAssignmentPatternExpression>().applyConversions(context, rvalue);
+
     lvalue.store(rvalue);
     return rvalue;
 }
@@ -925,8 +930,12 @@ Expression& ConversionExpression::makeImplicit(const ASTContext& context, const 
 }
 
 ConstantValue ConversionExpression::evalImpl(EvalContext& context) const {
-    return convert(context, *operand().type, *type, sourceRange, operand().eval(context),
-                   conversionKind, &operand(), implicitOpRange);
+    return applyTo(context, operand().eval(context));
+}
+
+ConstantValue ConversionExpression::applyTo(EvalContext& context, ConstantValue&& value) const {
+    return convert(context, *operand().type, *type, sourceRange, std::move(value), conversionKind,
+                   &operand(), implicitOpRange);
 }
 
 ConstantValue ConversionExpression::convert(EvalContext& context, const Type& from, const Type& to,
@@ -1638,6 +1647,57 @@ LValue SimpleAssignmentPatternExpression::evalLValueImpl(EvalContext& context) c
 
     auto lvalKind = type->isIntegral() ? LValue::Concat::Packed : LValue::Concat::Unpacked;
     return LValue(std::move(lvals), lvalKind);
+}
+
+ConstantValue SimpleAssignmentPatternExpression::applyConversions(EvalContext& context,
+                                                                  const ConstantValue& rval) const {
+    if (rval.isInteger()) {
+        auto& ri = rval.integer();
+        int32_t msb = ri.getBitWidth() - 1;
+
+        SmallVector<SVInt> ints;
+        for (auto elem : elements()) {
+            auto& elemRhs = elem->as<AssignmentExpression>().right();
+            if (elemRhs.kind == ExpressionKind::Conversion) {
+                auto& conv = elemRhs.as<ConversionExpression>();
+                if (conv.isImplicit()) {
+                    auto width = conv.operand().type->getBitWidth();
+                    ints.emplace_back(
+                        conv.applyTo(context, ri.slice(msb, msb - width + 1)).integer());
+                    msb -= width;
+                    continue;
+                }
+            }
+
+            auto width = elemRhs.type->getBitWidth();
+            ints.emplace_back(ri.slice(msb, msb - width + 1));
+            msb -= width;
+        }
+
+        return SVInt::concat(ints);
+    }
+    else {
+        auto rvalElems = rval.elements();
+        SLANG_ASSERT(rvalElems.size() == elements().size());
+
+        size_t i = 0;
+        std::vector<ConstantValue> newElems;
+        for (auto elem : elements()) {
+            auto& elemRhs = elem->as<AssignmentExpression>().right();
+            auto currVal = rvalElems[i++];
+            if (elemRhs.kind == ExpressionKind::Conversion) {
+                auto& conv = elemRhs.as<ConversionExpression>();
+                if (conv.isImplicit()) {
+                    newElems.emplace_back(conv.applyTo(context, std::move(currVal)));
+                    continue;
+                }
+            }
+
+            newElems.emplace_back(std::move(currVal));
+        }
+
+        return newElems;
+    }
 }
 
 static const Expression* matchElementValue(

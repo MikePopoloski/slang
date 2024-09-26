@@ -3666,3 +3666,58 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("LHS assignment pattern bit width checking") {
+    auto tree = SyntaxTree::fromText(R"(
+function automatic [7:0] f();
+	logic [3:0] a, b;
+	'{ a, b } = 2'h3;
+	return {a, b};
+endfunction
+
+typedef logic[1:0] tt[2];
+function automatic tt g();
+    logic [1:0] a, b;
+    int c[2] = '{ 11, 13 };
+    '{ a, b } = c;
+    return {a, b};
+endfunction
+
+function automatic [3:0] h();
+	logic [0:0] data[1] = '{1};
+	logic [3:0] a;
+	'{ a } = data;
+	return a;
+endfunction
+
+module m;
+    localparam p = f();
+    localparam q = g();
+    localparam r = h();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 9);
+    CHECK(diags[0].code == diag::WidthExpand);
+    CHECK(diags[1].code == diag::WidthExpand);
+    CHECK(diags[2].code == diag::SignConversion);
+    CHECK(diags[3].code == diag::WidthTruncate);
+    CHECK(diags[4].code == diag::ConstantConversion);
+    CHECK(diags[5].code == diag::SignConversion);
+    CHECK(diags[6].code == diag::WidthTruncate);
+    CHECK(diags[7].code == diag::ConstantConversion);
+    CHECK(diags[8].code == diag::WidthExpand);
+
+    auto& p = compilation.getRoot().lookupName<ParameterSymbol>("m.p");
+    CHECK(p.getValue().integer() == "8'b00010001"_si);
+
+    auto& q = compilation.getRoot().lookupName<ParameterSymbol>("m.q");
+    CHECK(q.getValue().toString() == "[2'b11,2'b1]");
+
+    auto& r = compilation.getRoot().lookupName<ParameterSymbol>("m.r");
+    CHECK(r.getValue().toString() == "4'b1");
+}
