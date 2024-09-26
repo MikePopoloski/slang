@@ -6,6 +6,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 ### Language Support
+### General Features
+### Improvements
+### Fixes
+
+
+## [v7.0] - 2024-09-26
+### Language Support
 * Select expressions of packed arrays now always return an unsigned type, as mandated by the LRM
 * Clocking skew delays now properly require a constant value
 * Enforce that static methods can't have override specifiers
