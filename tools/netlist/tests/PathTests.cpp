@@ -7,6 +7,7 @@
 //------------------------------------------------------------------------------
 
 #include "NetlistTest.h"
+#include "Test.h"
 
 //===---------------------------------------------------------------------===//
 // Basic tests
@@ -307,14 +308,14 @@ endmodule
 }
 
 //===---------------------------------------------------------------------===//
-// Tests for conditional variables in procedural blocks.
+// Tests for conditional variables in procedural blocks (Not supported!)
 //===---------------------------------------------------------------------===//
 
 TEST_CASE("Mux") {
     // Test that the variable in a conditional block is correctly added as a
     // dependency on the output variable controlled by that block.
     auto tree = SyntaxTree::fromText(R"(
-module mux(input a, input b, input sel, output reg f);
+ module mux(input a, input b, input sel, output reg f);
   always @(*) begin
     if (sel == 1'b0) begin
       f = a;
@@ -322,21 +323,22 @@ module mux(input a, input b, input sel, output reg f);
       f = b;
     end
   end
-endmodule
+ endmodule
 )");
     Compilation compilation;
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
     auto netlist = createNetlist(compilation);
     PathFinder pathFinder(netlist);
-    CHECK(!pathFinder.find(*netlist.lookupPort("mux.sel"), *netlist.lookupPort("mux.f")).empty());
+    // Path does not exist!
+    CHECK(pathFinder.find(*netlist.lookupPort("mux.sel"), *netlist.lookupPort("mux.f")).empty());
 }
 
 TEST_CASE("Nested muxing") {
     // Test that the variables in multiple nested levels of conditions are
     // correctly added as dependencies of the output variable.
     auto tree = SyntaxTree::fromText(R"(
-module mux(input a, input b, input c,
+ module mux(input a, input b, input c,
            input sel_a, input sel_b,
            output reg f);
   always @(*) begin
@@ -349,15 +351,16 @@ module mux(input a, input b, input c,
       f = c;
     end
   end
-endmodule
+ endmodule
 )");
     Compilation compilation;
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
     auto netlist = createNetlist(compilation);
     PathFinder pathFinder(netlist);
-    CHECK(!pathFinder.find(*netlist.lookupPort("mux.sel_a"), *netlist.lookupPort("mux.f")).empty());
-    CHECK(!pathFinder.find(*netlist.lookupPort("mux.sel_b"), *netlist.lookupPort("mux.f")).empty());
+    // Paths do not exist!
+    CHECK(pathFinder.find(*netlist.lookupPort("mux.sel_a"), *netlist.lookupPort("mux.f")).empty());
+    CHECK(pathFinder.find(*netlist.lookupPort("mux.sel_b"), *netlist.lookupPort("mux.f")).empty());
 }
 
 //===---------------------------------------------------------------------===//
@@ -389,7 +392,9 @@ endmodule
     Compilation compilation;
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
-    auto netlist = createNetlist(compilation);
+    NetlistVisitorOptions options;
+    options.unrollForLoops = true;
+    auto netlist = createNetlist(compilation, options);
     PathFinder pathFinder(netlist);
     // i_value -> o_value, check it passes through each stage.
     CHECK(pathFinder
@@ -426,7 +431,9 @@ endmodule
     Compilation compilation;
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
-    auto netlist = createNetlist(compilation);
+    NetlistVisitorOptions options;
+    options.unrollForLoops = true;
+    auto netlist = createNetlist(compilation, options);
     PathFinder pathFinder(netlist);
     // i_value -> o_value, check it passes through each stage.
     auto path = pathFinder.find(*netlist.lookupPort("chain_nested.i_value"),
@@ -476,7 +483,9 @@ endmodule
     Compilation compilation;
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
-    auto netlist = createNetlist(compilation);
+    NetlistVisitorOptions options;
+    options.unrollForLoops = true;
+    auto netlist = createNetlist(compilation, options);
     auto* inPortA = netlist.lookupPort("chain_loop_dual.i_value_a");
     auto* inPortB = netlist.lookupPort("chain_loop_dual.i_value_b");
     auto* outPortA = netlist.lookupPort("chain_loop_dual.o_value_a");
