@@ -1653,7 +1653,7 @@ ConstantValue SimpleAssignmentPatternExpression::applyConversions(EvalContext& c
                                                                   const ConstantValue& rval) const {
     if (rval.isInteger()) {
         auto& ri = rval.integer();
-        int32_t msb = ri.getBitWidth() - 1;
+        int32_t msb = int32_t(ri.getBitWidth()) - 1;
 
         SmallVector<SVInt> ints;
         for (auto elem : elements()) {
@@ -1661,7 +1661,7 @@ ConstantValue SimpleAssignmentPatternExpression::applyConversions(EvalContext& c
             if (elemRhs.kind == ExpressionKind::Conversion) {
                 auto& conv = elemRhs.as<ConversionExpression>();
                 if (conv.isImplicit()) {
-                    auto width = conv.operand().type->getBitWidth();
+                    auto width = int32_t(conv.operand().type->getBitWidth());
                     ints.emplace_back(
                         conv.applyTo(context, ri.slice(msb, msb - width + 1)).integer());
                     msb -= width;
@@ -1669,7 +1669,7 @@ ConstantValue SimpleAssignmentPatternExpression::applyConversions(EvalContext& c
                 }
             }
 
-            auto width = elemRhs.type->getBitWidth();
+            auto width = int32_t(elemRhs.type->getBitWidth());
             ints.emplace_back(ri.slice(msb, msb - width + 1));
             msb -= width;
         }
