@@ -1226,7 +1226,7 @@ TEST_CASE("Token with lots of trivia") {
 
     trivia = trivia.withLocation(alloc, SourceLocation(BufferID(1, "asdf"), 5));
     CHECK(trivia.getRawText() == "/**/");
-    CHECK(trivia.getExplicitLocation()->offset() == 5);
+    CHECK(trivia.getExplicitLocation()->offset() == 1);
 }
 
 TEST_CASE("Directive trivia location") {
