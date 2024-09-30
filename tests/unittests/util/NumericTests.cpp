@@ -230,7 +230,9 @@ TEST_CASE("SVInt to string (and back)") {
     CHECK(ss.str() == "1");
 
     // This caught a heap corruption bug in from-string truncation.
-    { "54'bxx0111x10xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"_si; }
+    {
+        "54'bxx0111x10xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"_si;
+    }
 
     CHECK("96'hx00000Z101"_si.toString(LiteralBase::Decimal, false) == "X");
     CHECK("96'hxxxxxxxxxxxxxxxxxxxxxxxx"_si.toString(LiteralBase::Decimal, false) == "x");
