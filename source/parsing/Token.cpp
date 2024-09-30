@@ -104,26 +104,25 @@ Trivia Trivia::withLocation(BumpAllocator& alloc, SourceLocation anchorLocation)
             break;
     }
 
-    auto fullLocation = alloc.emplace<FullLocation>();
-    fullLocation->text = getRawText();
-    fullLocation->location = anchorLocation - fullLocation->text.size();
+    auto resultLocation = alloc.emplace<FullLocation>();
+    resultLocation->text = getRawText();
+    resultLocation->location = anchorLocation - resultLocation->text.size();
 
     Trivia result;
     result.kind = kind;
     result.hasFullLocation = true;
-    result.fullLocation = fullLocation;
+    result.fullLocation = resultLocation;
     return result;
 }
 
 // Get the start location of a token including its trivia
-static SourceLocation tokenLocationInclTrivia(const Token &token)
-{
+static SourceLocation tokenLocationInclTrivia(const Token& token) {
     size_t locOffset = 0;
 
     // We iterate over trivia until we hit one which has explicit location.
     // All trivia without explicit location must be raw source text, for which
     // we can easily query its length and add it to the offset.
-    for (const Trivia &trivia : token.trivia()) {
+    for (const Trivia& trivia : token.trivia()) {
         if (auto loc = trivia.getExplicitLocation())
             return *loc - locOffset;
         else
