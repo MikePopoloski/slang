@@ -2392,8 +2392,8 @@ void Compilation::resolveDefParamsAndBinds() {
 }
 
 template<typename TDefList>
-auto findDefByLib(TDefList& defList,
-                  const SourceLibrary& target) -> std::remove_reference_t<decltype(defList[0])> {
+auto findDefByLib(TDefList& defList, const SourceLibrary& target)
+    -> std::remove_reference_t<decltype(defList[0])> {
     for (auto def : defList) {
         if (def->getSourceLibrary() == &target)
             return def;

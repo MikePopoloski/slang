@@ -56,22 +56,21 @@ private:
 /// When the object is constructed, it begins the trace section and when
 /// it is destroyed, it stops it. If the time profiler is not initialized
 /// the overhead is a single branch.
-class SLANG_EXPORT TimeTraceScope {
-public:
-    TimeTraceScope(std::string_view name, std::string_view detail) {
-        if (TimeTrace::isEnabled())
-            TimeTrace::beginTrace(name, detail);
-    }
+class SLANG_EXPORT
+TimeTraceScope{public: TimeTraceScope(std::string_view name, std::string_view detail){
+    if (TimeTrace::isEnabled()) TimeTrace::beginTrace(name, detail);
+} // namespace slang
 
-    TimeTraceScope(std::string_view name, function_ref<std::string()> detail) {
-        if (TimeTrace::isEnabled())
-            TimeTrace::beginTrace(name, detail);
-    }
+TimeTraceScope(std::string_view name, function_ref<std::string()> detail) {
+    if (TimeTrace::isEnabled())
+        TimeTrace::beginTrace(name, detail);
+}
 
-    ~TimeTraceScope() {
-        if (TimeTrace::isEnabled())
-            TimeTrace::endTrace();
-    }
-};
+~TimeTraceScope() {
+    if (TimeTrace::isEnabled())
+        TimeTrace::endTrace();
+}
+}
+;
 
 } // namespace slang
