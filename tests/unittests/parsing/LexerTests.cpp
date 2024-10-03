@@ -1226,7 +1226,22 @@ TEST_CASE("Token with lots of trivia") {
 
     trivia = trivia.withLocation(alloc, SourceLocation(BufferID(1, "asdf"), 5));
     CHECK(trivia.getRawText() == "/**/");
-    CHECK(trivia.getExplicitLocation()->offset() == 5);
+    CHECK(trivia.getExplicitLocation()->offset() == 1);
+}
+
+TEST_CASE("Directive trivia location") {
+    auto& text = "//bar\n`define FOO bar";
+    Token token = lexToken(text);
+
+    CHECK(token.kind == TokenKind::EndOfFile);
+    REQUIRE(token.trivia().size() == 1);
+
+    Trivia t = token.trivia()[0];
+    CHECK(t.kind == TriviaKind::Directive);
+    REQUIRE(t.syntax()->kind == SyntaxKind::DefineDirective);
+    CHECK(t.getExplicitLocation()->offset() == 0);
+
+    CHECK_DIAGNOSTICS_EMPTY;
 }
 
 void testExpect(TokenKind kind) {

@@ -438,9 +438,10 @@ Token Preprocessor::nextRaw() {
     // that one, but we do want to merge its trivia with whatever comes next.
     SmallVector<Trivia, 8> trivia;
     auto appendTrivia = [&trivia, this](Token token) {
+        trivia.append_range(token.trivia());
         SourceLocation loc = token.location();
-        for (const auto& t : token.trivia())
-            trivia.push_back(t.withLocation(alloc, loc));
+        if (!token.trivia().empty())
+            trivia.back() = trivia.back().withLocation(alloc, loc);
     };
 
     appendTrivia(token);
