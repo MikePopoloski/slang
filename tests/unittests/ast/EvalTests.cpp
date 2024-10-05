@@ -841,6 +841,9 @@ union {
     session.eval("baz.c = 123;");
     CHECK(session.eval("baz.a.s1").integer() == 123);
 
+    CHECK(session.eval("foo == bar").integer() == 1);
+    CHECK(session.eval("1 ? foo : bar").toString() == "(0) [3,4,42]");
+
     NO_SESSION_ERRORS;
 }
 

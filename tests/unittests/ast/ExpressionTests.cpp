@@ -336,12 +336,12 @@ TEST_CASE("Expression types") {
 
     // Unpacked unions
     declare("union { int i; real r; } uu1, uu2;");
-    CHECK(typeof("uu1 == uu2") == "<error>");
-    CHECK(typeof("uu1 !== uu2") == "<error>");
-    CHECK(typeof("1 ? uu1 : uu2") == "<error>");
+    CHECK(typeof("uu1 == uu2") == "bit");
+    CHECK(typeof("uu1 !== uu2") == "bit");
+    CHECK(typeof("1 ? uu1 : uu2") == "union{int i;real r;}u$3");
 
     auto diags = filterWarnings(compilation.getAllDiagnostics());
-    REQUIRE(diags.size() == 11);
+    REQUIRE(diags.size() == 8);
     CHECK(diags[0].code == diag::BadUnaryExpression);
     CHECK(diags[1].code == diag::BadBinaryExpression);
     CHECK(diags[2].code == diag::BadBinaryExpression);
@@ -350,9 +350,6 @@ TEST_CASE("Expression types") {
     CHECK(diags[5].code == diag::BadBinaryExpression);
     CHECK(diags[6].code == diag::BadConditionalExpression);
     CHECK(diags[7].code == diag::NotBooleanConvertible);
-    CHECK(diags[8].code == diag::BadBinaryExpression);
-    CHECK(diags[9].code == diag::BadBinaryExpression);
-    CHECK(diags[10].code == diag::BadConditionalExpression);
 }
 
 TEST_CASE("Expression - bad name references") {
