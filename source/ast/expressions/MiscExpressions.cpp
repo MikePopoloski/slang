@@ -1005,9 +1005,11 @@ Expression& AssertionInstanceExpression::fromLookup(const Symbol& symbol,
 
     ASTContext bodyContext(*symbolScope, LookupLocation::max);
     bodyContext.assertionInstance = &instance;
-    // Propagate previously founded time advance specs
+    // Propagate previously founded time advance specs and negation operators
     if (context.flags.has(ASTFlags::PropertyTimeAdvance))
         bodyContext.flags |= ASTFlags::PropertyTimeAdvance;
+    if (context.flags.has(ASTFlags::PropertyNegation))
+        bodyContext.flags |= ASTFlags::PropertyNegation;
 
     // Let declarations expand directly to an expression.
     if (symbol.kind == SymbolKind::LetDecl)

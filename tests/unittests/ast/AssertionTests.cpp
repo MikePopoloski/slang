@@ -1119,13 +1119,14 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 6);
+    REQUIRE(diags.size() == 7);
     CHECK(diags[0].code == diag::RecursivePropNegation);
-    CHECK(diags[1].code == diag::RecursivePropDisableIff);
-    CHECK(diags[2].code == diag::RecursivePropTimeAdvance);
-    CHECK(diags[3].code == diag::RecursivePropArgExpr);
+    CHECK(diags[1].code == diag::RecursivePropNegation);
+    CHECK(diags[2].code == diag::RecursivePropDisableIff);
+    CHECK(diags[3].code == diag::RecursivePropTimeAdvance);
     CHECK(diags[4].code == diag::RecursivePropArgExpr);
     CHECK(diags[5].code == diag::RecursivePropArgExpr);
+    CHECK(diags[6].code == diag::RecursivePropArgExpr);
 }
 
 TEST_CASE("Illegal concurrent assertions in action blocks") {
