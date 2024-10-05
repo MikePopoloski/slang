@@ -1621,10 +1621,16 @@ bool Lookup::withinClassRandomize(const ASTContext& context, const NameSyntax& s
         if (!isClass.has_value() || !isClass.value())
             return false;
 
-        return resolveColonNames(nameParts, colonParts, name, flags, result, classContext);
+        if (!resolveColonNames(nameParts, colonParts, name, flags, result, classContext))
+            return false;
+    }
+    else {
+        if (!lookupDownward(nameParts, name, classContext, flags, result))
+            return false;
     }
 
-    return lookupDownward(nameParts, name, classContext, flags, result);
+    unwrapResult(*context.scope, syntax.sourceRange(), result);
+    return true;
 }
 
 bool Lookup::findAssertionLocalVar(const ASTContext& context, const NameSyntax& syntax,

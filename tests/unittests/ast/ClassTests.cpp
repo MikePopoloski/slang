@@ -3483,3 +3483,30 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Class randomize can't access protected members") {
+    auto tree = SyntaxTree::fromText(R"(
+class C;
+    protected int a;
+    rand bit b;
+endclass
+
+class T;
+    function f();
+        C c = new();
+        int i = c.randomize() with {
+            if (a == 3) {
+                b == 1'b1;
+            }
+        };
+    endfunction
+endclass
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::ProtectedMemberAccess);
+}
