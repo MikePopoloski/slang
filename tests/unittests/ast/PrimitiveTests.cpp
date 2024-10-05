@@ -16,6 +16,10 @@ primitive srff (q, s, r);
         0 r : ? : 0 ;
         0 f : 0 : - ;
         1 1 : ? : 0 ;
+        p ? : ? : 0 ;
+        n ? : ? : - ;
+        ? n : ? : 0 ;
+        ? p : ? : 0 ;
     endtable
 endprimitive : srff
 
@@ -191,7 +195,7 @@ endprimitive
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 25);
+    REQUIRE(diags.size() == 26);
     CHECK(diags[0].code == diag::PrimitiveOutputFirst);
     CHECK(diags[1].code == diag::PrimitiveAnsiMix);
     CHECK(diags[2].code == diag::DuplicateDefinition);
@@ -214,9 +218,10 @@ endprimitive
     CHECK(diags[19].code == diag::ExpectedUdpSymbol);
     CHECK(diags[20].code == diag::UdpWrongInputCount);
     CHECK(diags[21].code == diag::UdpWrongInputCount);
-    CHECK(diags[22].code == diag::UdpDupDiffOutput);
-    CHECK(diags[23].code == diag::UdpAllX);
-    CHECK(diags[24].code == diag::UdpDupDiffOutput);
+    CHECK(diags[22].code == diag::UdpCoverage);
+    CHECK(diags[23].code == diag::UdpDupDiffOutput);
+    CHECK(diags[24].code == diag::UdpAllX);
+    CHECK(diags[25].code == diag::UdpDupDiffOutput);
 }
 
 TEST_CASE("UDP instances error checking") {
@@ -320,19 +325,20 @@ endprimitive
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 12);
-    CHECK(diags[0].code == diag::UdpInvalidSymbol);
-    CHECK(diags[1].code == diag::UdpInvalidTransition);
-    CHECK(diags[2].code == diag::UdpInvalidEdgeSymbol);
-    CHECK(diags[3].code == diag::UdpTransitionLength);
-    CHECK(diags[4].code == diag::UdpSingleChar);
-    CHECK(diags[5].code == diag::UdpInvalidInputOnly);
-    CHECK(diags[6].code == diag::UdpInvalidMinus);
+    REQUIRE(diags.size() == 13);
+    CHECK(diags[0].code == diag::UdpCoverage);
+    CHECK(diags[1].code == diag::UdpInvalidSymbol);
+    CHECK(diags[2].code == diag::UdpInvalidTransition);
+    CHECK(diags[3].code == diag::UdpInvalidEdgeSymbol);
+    CHECK(diags[4].code == diag::UdpTransitionLength);
+    CHECK(diags[5].code == diag::UdpSingleChar);
+    CHECK(diags[6].code == diag::UdpInvalidInputOnly);
     CHECK(diags[7].code == diag::UdpInvalidMinus);
-    CHECK(diags[8].code == diag::UdpInvalidOutput);
-    CHECK(diags[9].code == diag::UdpDupTransition);
-    CHECK(diags[10].code == diag::UdpSequentialState);
-    CHECK(diags[11].code == diag::UdpCombState);
+    CHECK(diags[8].code == diag::UdpInvalidMinus);
+    CHECK(diags[9].code == diag::UdpInvalidOutput);
+    CHECK(diags[10].code == diag::UdpDupTransition);
+    CHECK(diags[11].code == diag::UdpSequentialState);
+    CHECK(diags[12].code == diag::UdpCombState);
 }
 
 TEST_CASE("UDP row error checking regress") {
@@ -390,6 +396,7 @@ primitive edet (q, i);
    table
          (?x) : ? : 1;
          (x?) : ? : 0;
+         (??) : ? : -;
    endtable
 endprimitive
 )");
@@ -428,8 +435,9 @@ primitive p(output reg o, input a, b);
     (x1)1:1:0;
     p1:1:x;
     (x0)1:1:1;
-    *1:1:0;
+    *?:1:0;
     n1:1:0;
+    ?*:1:0;
   endtable
 endprimitive
 
@@ -488,6 +496,8 @@ TEST_CASE("UDP overlapping inputs with compatible outputs") {
     // clk in  : Qt  : Qt+1
     r    0   : ?   :  0;
     *    0   : 0   :  -;
+    *    ?   : b   :  -;
+    ?    *   : b   :  -;
     endtable
  endprimitive
  primitive X2 (q, clk, d);
@@ -497,6 +507,8 @@ TEST_CASE("UDP overlapping inputs with compatible outputs") {
     // clk in  : Qt  : Qt+1
     r    0   : 1   :  -;
     *    0   : ?   :  1;
+    *    ?   : b   :  -;
+    ?    *   : b   :  -;
     endtable
  endprimitive
  primitive X3 (q, clk, d);
@@ -508,6 +520,8 @@ TEST_CASE("UDP overlapping inputs with compatible outputs") {
     *    0   : ?   :  0;
     *    1   : ?   :  0;
     r    1   : ?   :  -;
+    *    ?   : b   :  -;
+    ?    *   : b   :  -;
     endtable
  endprimitive
  primitive X4 (q, clk, d);
@@ -519,6 +533,8 @@ TEST_CASE("UDP overlapping inputs with compatible outputs") {
     *    0   : ?   :  1;
     *    1   : ?   :  1;
     r    1   : ?   :  -;
+    *    ?   : b   :  -;
+    ?    *   : b   :  -;
     endtable
  endprimitive
  primitive X5 (q, clk, d);
@@ -530,6 +546,8 @@ TEST_CASE("UDP overlapping inputs with compatible outputs") {
     *    0   : ?   :  x;
     *    1   : ?   :  x;
     r    1   : ?   :  -;
+    *    ?   : b   :  x;
+    ?    *   : b   :  -;
     endtable
  endprimitive
  primitive X6 (q, clk, d);
@@ -541,6 +559,8 @@ TEST_CASE("UDP overlapping inputs with compatible outputs") {
     *    0   : ?   :  0;
     *    1   : ?   :  0;
     r    1   : b   :  -;
+    *    ?   : b   :  -;
+    ?    *   : b   :  -;
     endtable
  endprimitive
 primitive X7 (q, clk, d);
@@ -552,6 +572,8 @@ primitive X7 (q, clk, d);
     *    0   : ?   :  1;
     *    1   : ?   :  1;
     r    1   : b   :  -;
+    *    ?   : b   :  -;
+    ?    *   : b   :  -;
     endtable
  endprimitive
 )");
@@ -583,10 +605,12 @@ endprimitive
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 3);
-    CHECK(diags[0].code == diag::UdpTransSameChar);
-    CHECK(diags[1].code == diag::UdpEdgeInComb);
-    CHECK(diags[2].code == diag::UdpInvalidMinus);
+    REQUIRE(diags.size() == 5);
+    CHECK(diags[0].code == diag::UdpCoverage);
+    CHECK(diags[1].code == diag::UdpTransSameChar);
+    CHECK(diags[2].code == diag::UdpCoverage);
+    CHECK(diags[3].code == diag::UdpEdgeInComb);
+    CHECK(diags[4].code == diag::UdpInvalidMinus);
 }
 
 TEST_CASE("Most gates can't attach to user-defined nettypes") {
@@ -635,4 +659,86 @@ endmodule
     CHECK(diags[3].code == diag::GateUDNTConn);
     CHECK(diags[4].code == diag::BiDiSwitchNetTypes);
     CHECK(diags[5].code == diag::BiDiSwitchNetTypes);
+}
+
+TEST_CASE("UDP edge-sequence coverage no-error tests") {
+    auto tree = SyntaxTree::fromText(R"(
+primitive p1 (q, clock, data);
+    output q; reg q;
+    input clock, data;
+    table
+        // clock data q q+
+        (01) ? : ? : 0 ;
+        (??) ? : ? : 0 ;
+        ? (??) : ? : 0 ;
+    endtable
+endprimitive
+primitive p2 (q, clock, data, data1);
+output q; reg q;
+    input clock, data, data1;
+    table
+        // clock data q q+
+        n ? 1    : ? : 0 ;
+        p ? 1    : ? : 0 ;
+        n ? ?    : ? : 0 ;
+        p ? ?    : ? : 0 ;
+        ? (??) ? : ? : 0 ;
+        ? ? (??) : ? : 0 ;
+    endtable
+endprimitive
+primitive p3 (q, clock, data);
+    output q; reg q;
+    input clock, data;
+    table
+        // clock data q q+
+        (??) ? : ? : 0 ;
+        ? (??) : ? : 0 ;
+    endtable
+endprimitive
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 0);
+}
+
+TEST_CASE("UDP edge-sequence coverage error tests") {
+    auto tree = SyntaxTree::fromText(R"(
+primitive p1 (q, clock, data);
+    output q; reg q;
+    input clock, data;
+    table
+        // clock data q q+
+        (01) ? : ? : 0 ;
+    endtable
+endprimitive
+primitive p2 (q, clock, data, data1);
+    output q; reg q;
+    input clock, data, data1;
+    table
+        // clock data q q+
+        n ? 1 : ? : 0 ;
+        p ? 1 : ? : 0 ;
+    endtable
+endprimitive
+primitive p3 (q, clock, data);
+    output q; reg q;
+    input clock, data;
+    table
+        // clock data q q+
+        (??) ? : ? : 0 ;
+    endtable
+endprimitive
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::UdpCoverage);
+    CHECK(diags[1].code == diag::UdpCoverage);
+    CHECK(diags[2].code == diag::UdpCoverage);
 }

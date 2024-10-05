@@ -542,6 +542,8 @@ warning warning-task WarningTask "$warning encountered{}"
 note InfoTask "$info encountered{}"
 note NoteComparisonReduces "comparison reduces to ({} {} {})"
 note NoteCommonAncestor "common ancestor here violates that constraint"
+warning udp-coverage UdpCoverage "if the behavior of the UDP is sensitive to edges of any input, the desired output state shall be specified for all edges of all inputs."
+note NoteUdpCoverage "missed desired output for rows:\n{}"
 warning explicit-static StaticInitializerMustBeExplicit "initializing a static variable in a procedural context requires an explicit 'static' keyword"
 warning case-gen-dup CaseGenerateDup "more than one case generate block matches the value {}"
 warning case-gen-none CaseGenerateNoBlock "no case generate expression matches the value {}"
@@ -1147,7 +1149,7 @@ group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-
                 float-narrow }
 
 group pedantic = { empty-pattern implicit-net-port nonstandard-escape-code nonstandard-generate format-multibit-strength
-                   nonstandard-sys-func nonstandard-foreach nonstandard-dist isunbounded-param-arg }
+                   nonstandard-sys-func nonstandard-foreach nonstandard-dist isunbounded-param-arg udp-coverage }
 
 group conversion = { width-trunc width-expand port-width-trunc port-width-expand implicit-conv
                      constant-conversion sign-conversion float-bool-conv int-bool-conv float-int-conv
