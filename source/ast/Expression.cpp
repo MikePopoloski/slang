@@ -222,10 +222,7 @@ const Expression& Expression::bindLValue(const ExpressionSyntax& lhs, const Type
     // Create a placeholder expression that will carry the type of the rhs.
     // Nothing will ever actually look at this expression, it's there only
     // to fill the space in the created AssignmentExpression.
-    SourceRange rhsRange{location, location};
-    auto rhsExpr = comp.emplace<EmptyArgumentExpression>(rhs, rhsRange);
-    if (rhsExpr->bad())
-        return badExpr(comp, nullptr);
+    auto rhsExpr = comp.emplace<EmptyArgumentExpression>(rhs, SourceRange{location, location});
 
     auto instance = context.getInstance();
     Expression* lhsExpr;
