@@ -1337,8 +1337,18 @@ std::span<const AssertionExpr* const> UninstantiatedDefSymbol::getPortConnection
                 auto& npc = port->as<NamedPortConnectionSyntax>();
                 names.push_back(npc.name.valueText());
 
-                if (auto ex = npc.expr)
+                if (auto ex = npc.expr) {
                     results.push_back(bindUnknownPortConn(context, *ex));
+                }
+                else if (npc.openParen) {
+                    results.push_back(comp.emplace<InvalidAssertionExpr>(nullptr));
+                }
+                else {
+                    auto idName = comp.emplace<IdentifierNameSyntax>(npc.name);
+                    auto simpSeq = comp.emplace<SimpleSequenceExprSyntax>(*idName, nullptr);
+                    auto propExpr = comp.emplace<SimplePropertyExprSyntax>(*simpSeq);
+                    results.push_back(bindUnknownPortConn(context, *propExpr));
+                }
             }
         }
 

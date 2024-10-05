@@ -7,6 +7,18 @@
 #include "slang/ast/ASTVisitor.h"
 #include "slang/text/Json.h"
 
+std::string serialize(Compilation& comp, bool sourceInfo = false) {
+    JsonWriter writer;
+    writer.setPrettyPrint(true);
+
+    ASTSerializer serializer(comp, writer);
+    serializer.setIncludeAddresses(false);
+    serializer.setIncludeSourceInfo(sourceInfo);
+    serializer.serialize(comp.getRoot());
+
+    return "\n"s + std::string(writer.view());
+}
+
 TEST_CASE("JSON dump") {
     auto tree = SyntaxTree::fromText(R"(
 interface I;
@@ -69,12 +81,7 @@ endmodule
     NO_COMPILATION_ERRORS;
 
     // This basic test just makes sure that JSON dumping doesn't crash.
-    JsonWriter writer;
-    writer.setPrettyPrint(true);
-
-    ASTSerializer serializer(compilation, writer);
-    serializer.serialize(compilation.getRoot());
-    writer.view();
+    serialize(compilation);
 }
 
 TEST_CASE("JSON dump -- types and values") {
@@ -99,15 +106,7 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 
-    JsonWriter writer;
-    writer.setPrettyPrint(true);
-
-    ASTSerializer serializer(compilation, writer);
-    serializer.setIncludeAddresses(false);
-    serializer.setIncludeSourceInfo(true);
-    serializer.serialize(compilation.getRoot());
-
-    std::string result = "\n"s + std::string(writer.view());
+    auto result = serialize(compilation, true);
     CHECK(result == R"(
 {
   "name": "$root",
@@ -268,14 +267,7 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 
-    JsonWriter writer;
-    writer.setPrettyPrint(true);
-
-    ASTSerializer serializer(compilation, writer);
-    serializer.setIncludeAddresses(false);
-    serializer.serialize(compilation.getRoot());
-
-    std::string result = "\n"s + std::string(writer.view());
+    auto result = serialize(compilation);
     CHECK(result == R"(
 {
   "name": "$root",
@@ -365,14 +357,7 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 
-    JsonWriter writer;
-    writer.setPrettyPrint(true);
-
-    ASTSerializer serializer(compilation, writer);
-    serializer.setIncludeAddresses(false);
-    serializer.serialize(compilation.getRoot());
-
-    std::string result = "\n"s + std::string(writer.view());
+    auto result = serialize(compilation);
     CHECK(result == R"(
 {
   "name": "$root",
@@ -585,13 +570,7 @@ endclass
     Compilation compilation;
     compilation.addSyntaxTree(tree);
 
-    JsonWriter writer;
-    writer.setPrettyPrint(true);
-
-    ASTSerializer serializer(compilation, writer);
-    serializer.setIncludeAddresses(false);
-    serializer.serialize(compilation.getRoot());
-    std::string result = "\n"s + std::string(writer.view());
+    auto result = serialize(compilation);
     CHECK(result == R"(
 {
   "name": "$root",
@@ -813,6 +792,103 @@ endclass
           "implements": [
           ]
         }
+      ]
+    }
+  ]
+})");
+}
+
+TEST_CASE("Serializing uninstantiated defs with implicit named connections") {
+    auto tree = SyntaxTree::fromText(R"(
+module top;
+endmodule
+
+module n #(parameter int j);
+    int foo;
+    m m1(
+        .foo,
+        .bar()
+    );
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto result = serialize(compilation);
+    CHECK(result == R"(
+{
+  "name": "$root",
+  "kind": "Root",
+  "members": [
+    {
+      "name": "",
+      "kind": "CompilationUnit"
+    },
+    {
+      "name": "top",
+      "kind": "Instance",
+      "body": {
+        "name": "top",
+        "kind": "InstanceBody",
+        "definition": "top"
+      },
+      "connections": [
+      ]
+    },
+    {
+      "name": "",
+      "kind": "Instance",
+      "body": {
+        "name": "n",
+        "kind": "InstanceBody",
+        "members": [
+          {
+            "name": "j",
+            "kind": "Parameter",
+            "type": "int",
+            "value": "<unset>",
+            "isLocal": false,
+            "isPort": true,
+            "isBody": false
+          },
+          {
+            "name": "foo",
+            "kind": "Variable",
+            "type": "int",
+            "lifetime": "Static"
+          },
+          {
+            "name": "m1",
+            "kind": "UninstantiatedDef",
+            "definitionName": "m",
+            "parameters": [
+            ],
+            "ports": [
+              {
+                "name": "foo",
+                "expr": {
+                  "kind": "Simple",
+                  "expr": {
+                    "kind": "NamedValue",
+                    "type": "int",
+                    "symbol": "foo"
+                  }
+                }
+              },
+              {
+                "name": "bar",
+                "expr": {
+                  "kind": "Invalid"
+                }
+              }
+            ]
+          }
+        ],
+        "definition": "n"
+      },
+      "connections": [
       ]
     }
   ]
