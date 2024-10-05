@@ -3670,9 +3670,9 @@ endmodule
 TEST_CASE("LHS assignment pattern bit width checking") {
     auto tree = SyntaxTree::fromText(R"(
 function automatic [7:0] f();
-	logic [3:0] a, b;
-	'{ a, b } = 2'h3;
-	return {a, b};
+    logic [3:0] a, b;
+    '{ a, b } = 2'h3;
+    return {a, b};
 endfunction
 
 typedef logic[1:0] tt[2];
@@ -3684,10 +3684,10 @@ function automatic tt g();
 endfunction
 
 function automatic [3:0] h();
-	logic [0:0] data[1] = '{1};
-	logic [3:0] a;
-	'{ a } = data;
-	return a;
+    logic [0:0] data[1] = '{1};
+    logic [3:0] a;
+    '{ a } = data;
+    return a;
 endfunction
 
 module m;
@@ -3720,4 +3720,24 @@ endmodule
 
     auto& r = compilation.getRoot().lookupName<ParameterSymbol>("m.r");
     CHECK(r.getValue().toString() == "4'b1");
+}
+
+TEST_CASE("Invalid selection driver bounds regress -- GH #1141") {
+    auto tree = SyntaxTree::fromText(R"(
+module test;
+  reg [15:0] vect;
+
+  initial begin
+    vect[1 -: 4] = 8'b1010_1010;
+  end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::RangeOOB);
+    CHECK(diags[1].code == diag::ConstantConversion);
 }

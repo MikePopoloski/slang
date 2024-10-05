@@ -437,7 +437,7 @@ void TimingPathSymbol::checkDuplicatePaths(TimingPathMap& timingPathMap) const {
         if (otherExpr.getSymbolReference() != &ourTerminal)
             return false;
 
-        auto otherRange = otherExpr.evalSelector(evalCtx);
+        auto otherRange = otherExpr.evalSelector(evalCtx, /* enforceBounds */ false);
         identicalRanges = ourRange == otherRange;
         return !ourRange || !otherRange || ourRange->overlaps(*otherRange);
     };
@@ -495,13 +495,13 @@ void TimingPathSymbol::checkDuplicatePaths(TimingPathMap& timingPathMap) const {
         if (auto output = outputExpr->getSymbolReference()) {
             // Find all paths that map to this output.
             auto& inputMap = timingPathMap[output];
-            auto outputRange = outputExpr->evalSelector(evalCtx);
+            auto outputRange = outputExpr->evalSelector(evalCtx, /* enforceBounds */ false);
 
             for (auto inputExpr : getInputs()) {
                 if (auto input = inputExpr->getSymbolReference()) {
                     // Find all paths that also map to this input.
                     auto& vec = inputMap[input];
-                    auto inputRange = inputExpr->evalSelector(evalCtx);
+                    auto inputRange = inputExpr->evalSelector(evalCtx, /* enforceBounds */ false);
 
                     // Look at each existing path and determine whether it's a duplicate.
                     bool alreadyAdded = false;

@@ -486,14 +486,15 @@ LValue Expression::evalLValue(EvalContext& context) const {
     return visit(visitor, context);
 }
 
-std::optional<ConstantRange> Expression::evalSelector(EvalContext& context) const {
+std::optional<ConstantRange> Expression::evalSelector(EvalContext& context,
+                                                      bool enforceBounds) const {
     ConstantValue unused1;
     bool unused2;
     switch (kind) {
         case ExpressionKind::ElementSelect:
             return as<ElementSelectExpression>().evalIndex(context, nullptr, unused1, unused2);
         case ExpressionKind::RangeSelect:
-            return as<RangeSelectExpression>().evalRange(context, nullptr);
+            return as<RangeSelectExpression>().evalRange(context, nullptr, enforceBounds);
         default:
             return {};
     }

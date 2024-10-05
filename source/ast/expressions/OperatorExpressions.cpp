@@ -2085,7 +2085,7 @@ Expression& StreamingConcatenationExpression::fromSyntax(
             // If they are constant, we've already done bounds checking and
             // max size checking on them.
             EvalContext evalCtx(context);
-            auto range = withExpr->evalSelector(evalCtx);
+            auto range = withExpr->evalSelector(evalCtx, /* enforceBounds */ false);
             if (range)
                 constantWithWidth = range->width();
         }
@@ -2167,7 +2167,7 @@ ConstantValue StreamingConcatenationExpression::evalImpl(EvalContext& context) c
             return nullptr;
 
         if (stream.withExpr) {
-            auto range = stream.withExpr->evalSelector(context);
+            auto range = stream.withExpr->evalSelector(context, /* enforceBounds */ false);
             if (!range)
                 return nullptr;
 

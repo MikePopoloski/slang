@@ -768,7 +768,7 @@ static bool unpackConcatenation(const StreamingConcatenationExpression& lhs, Pac
             ConstantRange with;
             ConstantValue rvalue;
             if (stream.withExpr) {
-                auto range = stream.withExpr->evalSelector(context);
+                auto range = stream.withExpr->evalSelector(context, /* enforceBounds */ false);
                 if (!range)
                     return false;
 

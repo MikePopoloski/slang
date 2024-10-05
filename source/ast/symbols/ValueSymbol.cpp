@@ -439,7 +439,7 @@ std::optional<DriverBitRange> ValueDriver::getBounds(const Expression& prefixExp
             width = elem.type->getSelectableWidth();
         }
         else {
-            auto elemRange = elem.evalSelector(evalContext);
+            auto elemRange = elem.evalSelector(evalContext, /* enforceBounds */ true);
             if (!elemRange)
                 return std::nullopt;
 

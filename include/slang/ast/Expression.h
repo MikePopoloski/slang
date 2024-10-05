@@ -298,7 +298,7 @@ public:
     /// Evaluates the expression as a selector and returns the selection range that
     /// results. If the evaluates fails or the expression does not represent a selection
     /// std::nullopt will be returned.
-    std::optional<ConstantRange> evalSelector(EvalContext& context) const;
+    std::optional<ConstantRange> evalSelector(EvalContext& context, bool enforceBounds) const;
 
     /// Verifies that this expression is a valid lvalue and that each element
     /// of that lvalue can be assigned to. If it's not, appropriate diagnostics
