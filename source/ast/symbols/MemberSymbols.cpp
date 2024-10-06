@@ -2392,12 +2392,21 @@ NetAliasSymbol& NetAliasSymbol::fromSyntax(const ASTContext& parentContext,
     return *result;
 }
 
+struct NetAliasPOD {
+    const ValueSymbol* sym;
+    const Expression* expr;
+    std::optional<DriverBitRange> bounds;
+};
+
 struct NetAliasVisitor {
     const ASTContext& context;
     const NetType* commonNetType = nullptr;
     bool issuedError = false;
+    SmallVector<NetAliasPOD, 4> netAliases;
+    EvalContext& evalCtx;
 
-    NetAliasVisitor(const ASTContext& context) : context(context) {}
+    NetAliasVisitor(const ASTContext& context, EvalContext& evalCtx) :
+        context(context), evalCtx(evalCtx) {}
 
     template<typename T>
     void visit(const T& expr) {
@@ -2412,7 +2421,11 @@ struct NetAliasVisitor {
                             context.addDiag(diag::NetAliasNotANet, expr.sourceRange) << sym->name;
                         }
                         else {
-                            auto& nt = sym->template as<NetSymbol>().netType;
+                            auto& netSym = sym->template as<NetSymbol>();
+                            netAliases.push_back(
+                                {&netSym, &expr,
+                                 ValueDriver::getBounds(expr, evalCtx, netSym.getType())});
+                            auto& nt = netSym.netType;
                             if (!commonNetType) {
                                 commonNetType = &nt;
                             }
@@ -2447,14 +2460,14 @@ std::span<const Expression* const> NetAliasSymbol::getNetReferences() const {
     auto syntax = getSyntax();
     SLANG_ASSERT(scope && syntax);
 
-    // TODO: there should be a global check somewhere that any given bit
-    // of a net isn't aliased to the same target signal bit multiple times.
     bitwidth_t bitWidth = 0;
     bool issuedError = false;
     SmallVector<const Expression*> buffer;
     ASTContext context(*scope, LookupLocation::after(*this),
                        ASTFlags::NonProcedural | ASTFlags::NotADriver);
-    NetAliasVisitor visitor(context);
+    EvalContext evalCtx(ASTContext(*scope, LookupLocation::max));
+    NetAliasVisitor visitor(context, evalCtx);
+    SmallVector<std::pair<const Expression*, std::span<NetAliasPOD>>, 4> netAliases;
 
     for (auto exprSyntax : syntax->as<NetAliasSyntax>().nets) {
         auto& netRef = Expression::bind(*exprSyntax, context);
@@ -2472,9 +2485,83 @@ std::span<const Expression* const> NetAliasSymbol::getNetReferences() const {
 
         netRef.visit(visitor);
         buffer.push_back(&netRef);
+        if (!visitor.netAliases.empty()) {
+            netAliases.push_back(
+                std::make_pair(&netRef, visitor.netAliases.copy(scope->getCompilation())));
+            visitor.netAliases.clear();
+        }
     }
 
     netRefs = buffer.copy(scope->getCompilation());
+
+    // To process an each pair a single time.
+    SmallSet<const Expression*, 4> processed;
+    // Go through the list of net aliases with a sliding window adding each alias in pairs to each
+    // as a driver. Along the way, calculating the subexpessions bounds (there is no duplication of
+    // calculations, since the bounds are calculated only once for each subexpression.) and bit
+    // remainders (which will be processed on the next iterations), since the subexpressions can be
+    // of different bit lengths.
+    for (auto first : netAliases) {
+        processed.insert(first.first);
+        for (auto second : netAliases) {
+            if (processed.contains(second.first))
+                continue;
+
+            auto currFirst = first.second.begin();
+            auto endFirst = first.second.end();
+            auto currSecond = second.second.begin();
+            auto endSecond = second.second.end();
+            // boolean member means bit range remainder of left (if it is true) or right otherwise
+            std::optional<std::pair<DriverBitRange, bool>> remainder = std::nullopt;
+            while (currFirst != endFirst && currSecond != endSecond) {
+                auto rangeFirst = currFirst->bounds.value_or(
+                    DriverBitRange(0, currFirst->expr->type->getBitWidth()));
+                auto rangeSecond = currSecond->bounds.value_or(
+                    DriverBitRange(0, currSecond->expr->type->getBitWidth()));
+
+                if (remainder.has_value()) {
+                    if (remainder.value().second)
+                        rangeFirst = remainder.value().first;
+                    else
+                        rangeSecond = remainder.value().first;
+
+                    remainder = std::nullopt;
+                }
+
+                auto rangeDiff = std::abs(int64_t(rangeFirst.second - rangeFirst.first)) -
+                                 std::abs(int64_t(rangeSecond.second - rangeSecond.first));
+                auto currFirstSaved = currFirst;
+                auto currSecondSaved = currSecond;
+                if (rangeDiff > 0) {
+                    int64_t newBound = (int64_t)rangeFirst.second - rangeDiff + 1;
+                    SLANG_ASSERT(newBound >= 0);
+                    remainder =
+                        std::make_pair(DriverBitRange((uint64_t)newBound, rangeFirst.second), true);
+                    rangeFirst = DriverBitRange(rangeFirst.first, (uint64_t)newBound - 1);
+                    ++currSecond;
+                }
+                else if (rangeDiff < 0) {
+                    int64_t newBound = (int64_t)rangeSecond.second + rangeDiff + 1;
+                    SLANG_ASSERT(newBound >= 0);
+                    remainder = std::make_pair(
+                        DriverBitRange((uint64_t)newBound, rangeSecond.second), false);
+                    rangeSecond = DriverBitRange(rangeSecond.first, (uint64_t)newBound - 1);
+                    ++currFirst;
+                }
+                else {
+                    ++currFirst;
+                    ++currSecond;
+                }
+
+                currFirstSaved->sym->addDriver(DriverKind::Continuous, *currSecondSaved->expr,
+                                               *currSecondSaved->sym, AssignFlags::NetAlias,
+                                               currFirstSaved->expr->sourceRange, rangeSecond);
+                currSecondSaved->sym->addDriver(DriverKind::Continuous, *currFirstSaved->expr,
+                                                *currFirstSaved->sym, AssignFlags::NetAlias,
+                                                currSecondSaved->expr->sourceRange, rangeFirst);
+            }
+        }
+    }
     return *netRefs;
 }
 
