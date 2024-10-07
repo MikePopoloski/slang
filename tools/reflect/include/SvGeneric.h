@@ -10,7 +10,7 @@
 
 #include "CppEmitter.h"
 
-#include "slang/ast/types/AllTypes.h"
+#include <unordered_map>
 
 using SvAliases = std::unordered_map<std::string_view, std::string_view>;
 
@@ -24,21 +24,24 @@ public:
     bool isStruct() const { return kind == Kind::Struct; }
     bool isEnum() const { return kind == Kind::Enum; }
     bool isLocalParam() const { return kind == Kind::LocalParam; }
+    [[nodiscard]] bool isStruct() const { return kind == Kind::Struct; }
+    [[nodiscard]] bool isEnum() const { return kind == Kind::Enum; }
+    [[nodiscard]] bool isLocalParam() const { return kind == Kind::LocalParam; }
 
     virtual ~SvGeneric() = default;
 
 protected:
     Kind kind;
 
-    static std::string_view resolveAlias(std::string_view typeName, const SvAliases& aliases) {
-        if (auto alias = aliases.find(typeName); alias != aliases.end())
+    [[nodiscard]] static std::string_view resolveAlias(const std::string_view& typeName,
+                                                       const SvAliases& aliases) {
+        if (const auto& alias = aliases.find(typeName); alias != aliases.end())
             return alias->second;
         return typeName;
     }
 
-    static bool isCppReserved(std::string_view name) {
-        return std::find(cppReservedKeywords.begin(), cppReservedKeywords.end(), name) !=
-               cppReservedKeywords.end();
+    [[nodiscard]] static bool isCppReserved(const std::string_view name) {
+        return std::ranges::find(cppReservedKeywords, name) != cppReservedKeywords.end();
     }
 
     static constexpr std::array cppReservedKeywords = {"alignas",

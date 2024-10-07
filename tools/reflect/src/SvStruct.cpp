@@ -8,7 +8,7 @@
 #include "slang/ast/symbols/VariableSymbols.h"
 #include "slang/util/OS.h"
 
-void SvStruct::toCpp(HppFile& hppFile, std::string_view _namespace, const SvAliases& aliases,
+void SvStruct::toCpp(HppFile& hppFile, const std::string_view _namespace, const SvAliases& aliases,
                      bool noSystemC) const {
     //* STRUCT DECLARATION **/
     auto structName = isCppReserved(type.name) ? fmt::format("_{}", type.name)
@@ -41,29 +41,29 @@ void SvStruct::toCpp(HppFile& hppFile, std::string_view _namespace, const SvAlia
         members.emplace_back(variableName, SvType(variable.getType(), typeName));
     }
 
-    std::reverse(members.begin(), members.end());
+    std::ranges::reverse(members);
 
     //** MEMBERS DECLARATION **//
-    for (const auto& member : members) {
-        if (member.second.isStructOrEnum() && _namespace != member.second._namespace) {
-            hppFile.addWithIndent(fmt::format("{}::{} {};\n", member.second._namespace,
-                                              member.second.toString(), member.first));
-            hppFile.addIncludeHeader(member.second._namespace);
+    for (const auto& [name, type] : members) {
+        if (type.isStructOrEnum() && _namespace != type._namespace) {
+            hppFile.addWithIndent(fmt::format("{}::{} {};\n", type._namespace,
+                                              type.toString(), name));
+            hppFile.addIncludeHeader(type._namespace);
         }
         else {
-            hppFile.addWithIndent(fmt::format("{} {};\n", member.second.toString(), member.first));
+            hppFile.addWithIndent(fmt::format("{} {};\n", type.toString(), name));
         }
     }
     hppFile.add("\n");
 
     //** GENERATE START AND WIDTH OF EACH SIGNAL **//
     size_t startBit = 0;
-    for (const auto& member : members) {
+    for (const auto& [name, type] : members) {
         hppFile.addWithIndent(
-            fmt::format("static constexpr size_t {}_s = {};\n", member.first, startBit));
+            fmt::format("static constexpr size_t {}_s = {};\n", name, startBit));
         hppFile.addWithIndent(
-            fmt::format("static constexpr size_t {}_w = {};\n", member.first, member.second.size));
-        startBit += member.second.size;
+            fmt::format("static constexpr size_t {}_w = {};\n", name, type.size));
+        startBit += type.size;
     }
     hppFile.addWithIndent(fmt::format("static constexpr size_t _size = {};\n", structSize));
     hppFile.add("\n");
@@ -82,37 +82,37 @@ void SvStruct::toCpp(HppFile& hppFile, std::string_view _namespace, const SvAlia
         std::vector<std::string> values;
 
         if (structSize > 64) {
-            for (const auto& member : members) {
-                if (member.second.size == 1)
-                    values.emplace_back(fmt::format("__data.get_bit({0}_s)", member.first));
-                else if (member.second.size > 64)
+            for (const auto& [name, type] : members) {
+                if (type.size == 1)
+                    values.emplace_back(fmt::format("__data.get_bit({0}_s)", name));
+                else if (type.size > 64)
                     values.emplace_back(
-                        fmt::format("__data.range({0}_s + {0}_w - 1, {0}_s)", member.first));
+                        fmt::format("__data.range({0}_s + {0}_w - 1, {0}_s)", name));
                 else
                     values.emplace_back(fmt::format(
-                        "__data.range({0}_s + {0}_w - 1, {0}_s).to_uint64()", member.first));
+                        "__data.range({0}_s + {0}_w - 1, {0}_s).to_uint64()", name));
             }
         }
         else {
-            for (const auto& member : members)
+            for (const auto& [name, snd] : members)
                 values.emplace_back(fmt::format("(__data >> {0}_s) & (~0ULL >> (64 - {1}))",
-                                                member.first, member.second.size));
+                                                name, snd.size));
         }
 
         for (auto i = 0; i < members.size(); i++) {
-            const auto& member = members[i];
+            const auto& [name, type] = members[i];
             const auto& value = values[i];
 
-            if (member.second.isStructOrEnum())
-                if (_namespace != member.second._namespace)
-                    hppFile.addWithIndent(fmt::format("{} = {}::{}({});\n", member.first,
-                                                      member.second._namespace,
-                                                      member.second.toString(), value));
+            if (type.isStructOrEnum())
+                if (_namespace != type._namespace)
+                    hppFile.addWithIndent(fmt::format("{} = {}::{}({});\n", name,
+                                                      type._namespace,
+                                                      type.toString(), value));
                 else
-                    hppFile.addWithIndent(fmt::format("{} = {}({});\n", member.first,
-                                                      member.second.toString(), value));
+                    hppFile.addWithIndent(fmt::format("{} = {}({});\n", name,
+                                                      type.toString(), value));
             else
-                hppFile.addWithIndent(fmt::format("{} = {};\n", member.first, value));
+                hppFile.addWithIndent(fmt::format("{} = {};\n", name, value));
         }
 
         hppFile.decreaseIndent();
@@ -128,24 +128,24 @@ void SvStruct::toCpp(HppFile& hppFile, std::string_view _namespace, const SvAlia
 
         hppFile.increaseIndent();
 
-        for (const auto& member : members) {
+        for (const auto& [name, type] : members) {
             std::string value;
-            if (member.second.size == 1)
-                value = fmt::format("__data.get_bit({0}_s)", member.first);
+            if (type.size == 1)
+                value = fmt::format("__data.get_bit({0}_s)", name);
             else
                 value = fmt::format("__data.range({0}_s + {0}_w - 1, {0}_s).to_uint64()",
-                                    member.first);
+                                    name);
 
-            if (member.second.isStructOrEnum())
-                if (_namespace != member.second._namespace)
-                    hppFile.addWithIndent(fmt::format("{} = {}::{}({});\n", member.first,
-                                                      member.second._namespace,
-                                                      member.second.toString(), value));
+            if (type.isStructOrEnum())
+                if (_namespace != type._namespace)
+                    hppFile.addWithIndent(fmt::format("{} = {}::{}({});\n", name,
+                                                      type._namespace,
+                                                      type.toString(), value));
                 else
-                    hppFile.addWithIndent(fmt::format("{} = {}({});\n", member.first,
-                                                      member.second.toString(), value));
+                    hppFile.addWithIndent(fmt::format("{} = {}({});\n", name,
+                                                      type.toString(), value));
             else
-                hppFile.addWithIndent(fmt::format("{} = {};\n", member.first, value));
+                hppFile.addWithIndent(fmt::format("{} = {};\n", name, value));
         }
 
         hppFile.decreaseIndent();
@@ -157,17 +157,17 @@ void SvStruct::toCpp(HppFile& hppFile, std::string_view _namespace, const SvAlia
         hppFile.addWithIndent(fmt::format("operator {}() const {{\n", cppTypeStr));
         hppFile.increaseIndent();
         hppFile.addWithIndent(fmt::format("auto ret = {}();\n", cppTypeStr));
-        for (const auto& member : members) {
-            if (member.second.cppType == CppType::BOOL) {
-                hppFile.addWithIndent(fmt::format("ret.set_bit({0}_s, {0});\n", member.first));
+        for (const auto& [name, type] : members) {
+            if (type.cppType == CppType::BOOL) {
+                hppFile.addWithIndent(fmt::format("ret.set_bit({0}_s, {0});\n", name));
             }
             else {
                 hppFile.addWithIndent(
-                    fmt::format("ret.range({0}_s + {0}_w - 1, {0}_s) = ", member.first));
-                if (member.second.isStructOrEnum() && member.second.size > 64)
-                    hppFile.add(fmt::format("sc_bv<{}>({});\n", member.second.size, member.first));
+                    fmt::format("ret.range({0}_s + {0}_w - 1, {0}_s) = ", name));
+                if (type.isStructOrEnum() && type.size > 64)
+                    hppFile.add(fmt::format("sc_bv<{}>({});\n", type.size, name));
                 else
-                    hppFile.add(fmt::format("{};\n", member.first));
+                    hppFile.add(fmt::format("{};\n", name));
             }
         }
         hppFile.addWithIndent("return ret;\n");
@@ -176,9 +176,9 @@ void SvStruct::toCpp(HppFile& hppFile, std::string_view _namespace, const SvAlia
         hppFile.addWithIndent(fmt::format("operator {}() const {{\n", cppTypeStr));
         hppFile.increaseIndent();
         hppFile.addWithIndent(fmt::format("{} ret = 0;\n", cppTypeStr));
-        for (const auto& member : members) {
+        for (const auto& [name, _] : members) {
             hppFile.addWithIndent(
-                fmt::format("ret |= static_cast<{0}>({1}) << {1}_s;\n", cppTypeStr, member.first));
+                fmt::format("ret |= static_cast<{0}>({1}) << {1}_s;\n", cppTypeStr, name));
         }
         hppFile.addWithIndent("return ret;\n");
     }
@@ -190,17 +190,17 @@ void SvStruct::toCpp(HppFile& hppFile, std::string_view _namespace, const SvAlia
         hppFile.addWithIndent(fmt::format("operator sc_bv<{}>() const {{\n", structSize));
         hppFile.increaseIndent();
         hppFile.addWithIndent(fmt::format("auto ret = sc_bv<{}>();\n", structSize));
-        for (const auto& member : members) {
-            if (member.second.cppType == CppType::BOOL) {
-                hppFile.addWithIndent(fmt::format("ret.set_bit({0}_s, {0});\n", member.first));
+        for (const auto& [name, type] : members) {
+            if (type.cppType == CppType::BOOL) {
+                hppFile.addWithIndent(fmt::format("ret.set_bit({0}_s, {0});\n", name));
             }
             else {
                 hppFile.addWithIndent(
-                    fmt::format("ret.range({0}_s + {0}_w - 1, {0}_s) = ", member.first));
-                if (member.second.isStructOrEnum() && member.second.size > 64)
-                    hppFile.add(fmt::format("sc_bv<{}>({});\n", member.second.size, member.first));
+                    fmt::format("ret.range({0}_s + {0}_w - 1, {0}_s) = ", name));
+                if (type.isStructOrEnum() && type.size > 64)
+                    hppFile.add(fmt::format("sc_bv<{}>({});\n", type.size, name));
                 else
-                    hppFile.add(fmt::format("{};\n", member.first));
+                    hppFile.add(fmt::format("{};\n", name));
             }
         }
         hppFile.addWithIndent("return ret;\n");
@@ -213,16 +213,16 @@ void SvStruct::toCpp(HppFile& hppFile, std::string_view _namespace, const SvAlia
     hppFile.increaseIndent();
     hppFile.addWithIndent("std::stringstream ss;\n");
     bool first = true;
-    for (const auto& member : members) {
+    for (const auto& [name, type] : members) {
         if (first)
-            hppFile.addWithIndent(fmt::format("ss << \"{0}\" << \" = \" << ", member.first));
+            hppFile.addWithIndent(fmt::format("ss << \"{0}\" << \" = \" << ", name));
         else
-            hppFile.addWithIndent(fmt::format("ss << \" {0}\" << \" = \" << ", member.first));
+            hppFile.addWithIndent(fmt::format("ss << \" {0}\" << \" = \" << ", name));
 
-        if (member.second.cppType == CppType::SC_BV || member.second.cppType == CppType::STRUCT)
-            hppFile.add(fmt::format("{0}.to_string();\n", member.first));
+        if (type.cppType == CppType::SC_BV || type.cppType == CppType::STRUCT)
+            hppFile.add(fmt::format("{0}.to_string();\n", name));
         else
-            hppFile.add(fmt::format("{0};\n", member.first));
+            hppFile.add(fmt::format("{0};\n", name));
 
         first = false;
     }
@@ -240,39 +240,39 @@ void SvStruct::toCpp(HppFile& hppFile, std::string_view _namespace, const SvAlia
     hppFile.addWithIndent("}\n");
 
     //* STATIC GET FUNCTIONS *//
-    for (const auto& member : members) {
-        if (member.second.isStructOrEnum() && _namespace != member.second._namespace) {
+    for (const auto& [name, type] : members) {
+        if (type.isStructOrEnum() && _namespace != type._namespace) {
             hppFile.addWithIndent(fmt::format("static {}::{} get_{} (const {}& __data) {{\n",
-                                              member.second._namespace, member.second.toString(),
-                                              member.first, cppTypeStr));
+                                              type._namespace, type.toString(),
+                                              name, cppTypeStr));
         }
         else {
             hppFile.addWithIndent(fmt::format("static {} get_{} (const {}& __data) {{\n",
-                                              member.second.toString(), member.first, cppTypeStr));
+                                              type.toString(), name, cppTypeStr));
         }
         hppFile.increaseIndent();
         std::string value;
         if (cppType == CppType::SC_BV) {
-            if (member.second.size == 1)
-                value = fmt::format("__data.get_bit({0}_s)", member.first);
-            else if (member.second.size > 64)
-                value = fmt::format("__data.range({0}_s + {0}_w - 1, {0}_s)", member.first);
+            if (type.size == 1)
+                value = fmt::format("__data.get_bit({0}_s)", name);
+            else if (type.size > 64)
+                value = fmt::format("__data.range({0}_s + {0}_w - 1, {0}_s)", name);
             else
                 value = fmt::format("__data.range({0}_s + {0}_w - 1, {0}_s).to_uint64()",
-                                    member.first);
+                                    name);
         }
         else {
-            value = fmt::format("(__data >> {0}_s) & (~0ULL >> (64 - {1}))", member.first,
-                                member.second.size);
+            value = fmt::format("(__data >> {0}_s) & (~0ULL >> (64 - {1}))", name,
+                                type.size);
         }
 
-        if (member.second.isStructOrEnum())
-            if (_namespace != member.second._namespace)
-                hppFile.addWithIndent(fmt::format("return {}::{}({});\n", member.second._namespace,
-                                                  member.second.toString(), value));
+        if (type.isStructOrEnum())
+            if (_namespace != type._namespace)
+                hppFile.addWithIndent(fmt::format("return {}::{}({});\n", type._namespace,
+                                                  type.toString(), value));
             else
                 hppFile.addWithIndent(
-                    fmt::format("return {}({});\n", member.second.toString(), value));
+                    fmt::format("return {}({});\n", type.toString(), value));
         else
             hppFile.addWithIndent(fmt::format("return {};\n", value));
 

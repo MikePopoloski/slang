@@ -8,8 +8,6 @@
 
 #pragma once
 
-#include <ostream>
-
 #include "slang/ast/types/Type.h"
 
 namespace CppType {
@@ -22,7 +20,7 @@ Type fromSize(size_t size);
 class SvType {
 public:
     explicit SvType(const slang::ast::Type& type);
-    explicit SvType(const slang::ast::Type& type, std::string_view name) : SvType(type) {
+    explicit SvType(const slang::ast::Type& type, const std::string_view name) : SvType(type) {
         this->name = name;
     }
 

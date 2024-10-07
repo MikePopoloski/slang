@@ -13,20 +13,19 @@ using namespace slang::syntax;
 
 namespace no_dot_var_in_port_connection {
 
-struct PortConnectionVisitor : public SyntaxVisitor<PortConnectionVisitor> {
+struct PortConnectionVisitor : SyntaxVisitor<PortConnectionVisitor> {
     void handle(const NamedPortConnectionSyntax& port) {
         if (!port.openParen)
             foundPorts.push_back(&port);
     }
 
-public:
     std::vector<const NamedPortConnectionSyntax*> foundPorts;
 };
 
-struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, true, true> {
+struct MainVisitor : TidyVisitor, ASTVisitor<MainVisitor, true, true> {
     explicit MainVisitor(Diagnostics& diagnostics) : TidyVisitor(diagnostics) {}
 
-    void handle(const InstanceBodySymbol& symbol) {
+    void handle(const InstanceBodySymbol& symbol) const {
         NEEDS_SKIP_SYMBOL(symbol)
         if (!symbol.getSyntax())
             return;
@@ -43,9 +42,9 @@ struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, true, true> {
 
 using namespace no_dot_var_in_port_connection;
 
-class NoDotVarInPortConnection : public TidyCheck {
+class NoDotVarInPortConnection final : public TidyCheck {
 public:
-    [[maybe_unused]] explicit NoDotVarInPortConnection(TidyKind kind) : TidyCheck(kind) {}
+    [[maybe_unused]] explicit NoDotVarInPortConnection(const TidyKind kind) : TidyCheck(kind) {}
 
     bool check(const RootSymbol& root) override {
         MainVisitor visitor(diagnostics);
