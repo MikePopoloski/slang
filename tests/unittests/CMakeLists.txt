@@ -31,6 +31,7 @@ add_executable(
   parsing/PreprocessorTests.cpp
   parsing/VisitorTests.cpp
   parsing/StatementParsingTests.cpp
+  parsing/SDFParsingTests.cpp
   util/CommandLineTests.cpp
   util/IntervalMapTests.cpp
   util/NumericTests.cpp
