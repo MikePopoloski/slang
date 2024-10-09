@@ -1128,8 +1128,64 @@ const Type& VirtualInterfaceType::fromSyntax(const ASTContext& context,
     }
 
     auto loc = syntax.name.location();
-    auto& iface = InstanceSymbol::createVirtual(context, loc, def->as<DefinitionSymbol>(),
-                                                syntax.parameters);
+    auto& defSym = def->as<DefinitionSymbol>();
+    auto& iface = InstanceSymbol::createVirtual(context, loc, defSym, syntax.parameters);
+
+    // To control duplicates
+    SmallSet<const DefinitionSymbol*, 4> visited;
+    // Find cached instance hierarchical identifiers
+    std::function<std::optional<const InstanceSymbol*>(const Scope& scope)> findInst =
+        [&defSym, &findInst, &visited, &context,
+         &iface](const Scope& scope) -> std::optional<const InstanceSymbol*> {
+        for (auto& name : scope.getNameMap()) {
+            if (auto inst = name.second->as_if<InstanceSymbol>()) {
+                auto instDef = &inst->getDefinition();
+                if (instDef == &defSym && inst->body.hierIdentifiers.has_value()) {
+                    for (auto port : inst->body.getPortList()) {
+                        // Check that there are an interface ports if we have elaboration cache
+                        if (port->kind == SymbolKind::InterfacePort) {
+                            auto& diag = context.addDiag(diag::VirtualInterfaceIfacePort,
+                                                         port->location);
+                            diag.addNote(diag::NoteDeclarationHere, iface.location);
+                        }
+                    }
+                    return inst;
+                }
+
+                if (visited.contains(instDef))
+                    continue;
+                visited.insert(instDef);
+
+                if (auto founded = findInst(inst->body); founded.has_value())
+                    return founded;
+            }
+        }
+        return std::nullopt;
+    };
+
+    auto& scope = comp.getRoot();
+    auto founded = findInst(scope);
+    const InstanceSymbol* toReport = nullptr;
+    if (!founded.has_value()) {
+        iface.body.collectHierIdents(comp);
+        toReport = &iface;
+        // Elaborate ports to check interface type presence if previously elaborated instance was
+        // not found
+        for (auto port : iface.body.getPortList()) {
+            if (port->kind == SymbolKind::InterfacePort) {
+                auto& diag = context.addDiag(diag::VirtualInterfaceIfacePort, port->location);
+                diag.addNote(diag::NoteDeclarationHere, iface.location);
+            }
+        }
+    }
+    else {
+        toReport = founded.value();
+    }
+
+    for (auto& sR : toReport->body.hierIdentifiers.value()) {
+        auto& diag = context.addDiag(diag::VirtualInterfaceHierRef, sR);
+        diag.addNote(diag::NoteDeclarationHere, iface.location);
+    }
 
     const ModportSymbol* modport = nullptr;
     std::string_view modportName = syntax.modport ? syntax.modport->member.valueText() : ""sv;
