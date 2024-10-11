@@ -3738,3 +3738,16 @@ endmodule
     CHECK(diags[0].code == diag::RangeOOB);
     CHECK(diags[1].code == diag::ConstantConversion);
 }
+
+TEST_CASE("Empty queue assignment to unknown type placeholder -- GH #1146") {
+    auto tree = SyntaxTree::fromText(R"(
+class cls#(type T = int);
+  int q1[$] = {};
+  T q2[$] = {};
+endclass
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

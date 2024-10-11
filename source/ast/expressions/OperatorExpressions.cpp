@@ -1764,7 +1764,8 @@ Expression& ConcatenationExpression::fromEmpty(Compilation& compilation,
                                                const Type* assignmentTarget) {
     // Empty concatenation can only target arrays.
     if (!assignmentTarget || !assignmentTarget->isUnpackedArray()) {
-        context.addDiag(diag::EmptyConcatNotAllowed, syntax.sourceRange());
+        if (!assignmentTarget || !assignmentTarget->isError())
+            context.addDiag(diag::EmptyConcatNotAllowed, syntax.sourceRange());
         return badExpr(compilation, nullptr);
     }
 
