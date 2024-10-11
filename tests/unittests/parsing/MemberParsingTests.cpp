@@ -1508,3 +1508,17 @@ program A ; final randcase 0 : matches A = # 0 0 ; endcase endprogram
 
     REQUIRE(diagnostics.size() == 16);
 }
+
+TEST_CASE("Override specifiers on class constructor") {
+    auto& text = R"(
+class cls;
+  function :initial :final new();
+  endfunction
+endclass
+)";
+
+    parseCompilationUnit(text, LanguageVersion::v1800_2023);
+
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics[0].code == diag::SpecifiersNotAllowed);
+}

@@ -682,8 +682,8 @@ FunctionPrototypeSyntax& Parser::parseFunctionPrototype(SyntaxKind parentKind,
     else
         keyword = expect(TokenKind::FunctionKeyword);
 
-    auto specifiers = parseClassSpecifierList(
-        options.has(FunctionOptions::AllowOverrideSpecifiers));
+    const bool allowSpecifiers = options.has(FunctionOptions::AllowOverrideSpecifiers);
+    auto specifiers = parseClassSpecifierList(allowSpecifiers);
 
     auto lifetime = parseLifetime();
     if (lifetime && options.has(FunctionOptions::IsPrototype))
@@ -728,15 +728,20 @@ FunctionPrototypeSyntax& Parser::parseFunctionPrototype(SyntaxKind parentKind,
         else if (constructor)
             addDiag(diag::TaskConstructor, keyword.location()) << name.sourceRange();
     }
-    else if (constructor && returnType->kind != SyntaxKind::ImplicitType) {
-        addDiag(diag::ConstructorReturnType, name.getFirstToken().location())
-            << returnType->sourceRange();
+    else if (constructor) {
+        if (returnType->kind != SyntaxKind::ImplicitType) {
+            addDiag(diag::ConstructorReturnType, name.getFirstToken().location())
+                << returnType->sourceRange();
+        }
+        else if (name.kind != SyntaxKind::ScopedName &&
+                 parentKind != SyntaxKind::ClassDeclaration) {
+            addDiag(diag::ConstructorOutsideClass, keyword.location()) << name.sourceRange();
+        }
+        else if (allowSpecifiers && !specifiers.empty()) {
+            addDiag(diag::SpecifiersNotAllowed, specifiers[0]->sourceRange()) << name.sourceRange();
+        }
     }
-    else if (constructor && name.kind != SyntaxKind::ScopedName &&
-             parentKind != SyntaxKind::ClassDeclaration) {
-        addDiag(diag::ConstructorOutsideClass, keyword.location()) << name.sourceRange();
-    }
-    else if (!constructor && !options.has(FunctionOptions::AllowImplicitReturn) &&
+    else if (!options.has(FunctionOptions::AllowImplicitReturn) &&
              returnType->kind == SyntaxKind::ImplicitType) {
         addDiag(diag::ImplicitNotAllowed, name.getFirstToken().location());
     }
