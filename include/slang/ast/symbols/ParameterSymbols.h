@@ -58,6 +58,9 @@ public:
     bool isFromConfig() const { return isFromConf; }
     void setIsFromConfig(bool newIsFromConf) { isFromConf = newIsFromConf; }
 
+    bool isFromGenvar() const { return isFromGv; }
+    void setIsFromGenvar(bool newIsFromGenvar) { isFromGv = newIsFromGenvar; }
+
     void serializeTo(ASTSerializer& serializer) const;
 
 private:
@@ -66,6 +69,7 @@ private:
     mutable bool needsCoercion = false;
     mutable bool evaluating = false;
     bool isFromConf = false;
+    bool isFromGv = false;
 };
 
 class SLANG_EXPORT TypeParameterSymbol : public Symbol, public ParameterSymbolBase {

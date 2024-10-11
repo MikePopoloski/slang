@@ -824,6 +824,19 @@ module m;
 
     // Useless.
     localparam p4 = int'(1 ? 2 : 3);
+
+    // Not useless.
+    typedef logic [31:0] data_t;
+    logic [31:0] a;
+    data_t b;
+    assign b = data_t'(a);
+
+    // Not useless.
+    localparam width = 32;
+    logic [1:0][width-1:0] c;
+    for (genvar i = 0; i < 2; i++) begin
+        always_comb c[i] = $bits(c[i])'(i);
+    end
 endmodule
 )");
 

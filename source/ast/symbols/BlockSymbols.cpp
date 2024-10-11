@@ -626,6 +626,7 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(Compilation& comp
 
         implicitParam->setType(compilation.getIntegerType());
         implicitParam->setValue(compilation, std::move(value), /* needsCoercion */ false);
+        implicitParam->setIsFromGenvar(true);
 
         block->arrayIndex = &implicitParam->getValue().integer();
         entries.push_back(block);

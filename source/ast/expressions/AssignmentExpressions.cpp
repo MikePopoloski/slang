@@ -20,6 +20,7 @@
 #include "slang/ast/symbols/ClassSymbols.h"
 #include "slang/ast/symbols/CoverSymbols.h"
 #include "slang/ast/symbols/InstanceSymbols.h"
+#include "slang/ast/symbols/ParameterSymbols.h"
 #include "slang/ast/symbols/SubroutineSymbols.h"
 #include "slang/ast/types/AllTypes.h"
 #include "slang/diagnostics/ConstEvalDiags.h"
@@ -863,7 +864,21 @@ Expression& ConversionExpression::fromSyntax(Compilation& comp, const CastExpres
     // We have a useless cast if the type of the operand matches what we're casting to, unless:
     // - We needed the assignment-like context of the cast (like for an unpacked array concat)
     // - We weren't already in an assignment-like context of the correct type
-    if (type->isMatching(*operand->type) &&
+    // - We're casting a genvar (people dislike seeing warnings about genvar operands)
+    // - We're casting to a different typedef even if it's a matching underlying type
+    auto isGenvar = [&] {
+        if (auto sym = operand->getSymbolReference()) {
+            return sym->kind == SymbolKind::Genvar || (sym->kind == SymbolKind::Parameter &&
+                                                       sym->as<ParameterSymbol>().isFromGenvar());
+        }
+        return false;
+    };
+
+    auto isDifferentTypedef = [&] {
+        return (type->isAlias() || operand->type->isAlias()) && type != operand->type;
+    };
+
+    if (type->isMatching(*operand->type) && !isGenvar() && !isDifferentTypedef() &&
         ((assignmentTarget && assignmentTarget->isMatching(*type)) ||
          !actuallyNeededCast(*type, *operand))) {
         context.addDiag(diag::UselessCast, syntax.apostrophe.location())
