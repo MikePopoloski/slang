@@ -7,6 +7,10 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include <cstddef>
+#include <ostream>
+#include <utility>
+
 namespace slang {
 
 /// A smart pointer that allocates its pointee on the heap and provides value copy
