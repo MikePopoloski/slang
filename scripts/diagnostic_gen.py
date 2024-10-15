@@ -8,15 +8,14 @@ import argparse
 import os
 import shlex
 import subprocess
+import sys
 
 
 def writefile(path, contents):
-    try:
-        with open(path, "r") as f:
+    existing = None
+    if os.path.exists(path):
+        with open(path, 'r') as f:
             existing = f.read()
-    except OSError:
-        existing = ""
-
     if existing != contents:
         with open(path, "w") as f:
             f.write(contents)
@@ -28,17 +27,23 @@ def main():
     parser.add_argument("--srcDir", help="Source directory to search for usages")
     parser.add_argument("--incDir", help="Include directory to search for usages")
     parser.add_argument("--docs", action="store_true")
+    parser.add_argument("--diagnostics", help="path to diagnostics file")
     parser.add_argument("--slangBin")
     args = parser.parse_args()
 
-    ourdir = os.path.dirname(os.path.realpath(__file__))
-    inf = open(os.path.join(ourdir, "diagnostics.txt"))
+    inf = None
+    try:
+        inf = open(args.diagnostics)
+    except Exception:
+        print("failed to open", args.diagnostics)
+        sys.exit(1)
 
     headerdir = os.path.join(args.outDir, "slang", "diagnostics")
     try:
-        os.makedirs(headerdir)
-    except OSError:
-        pass
+        os.makedirs(headerdir, exist_ok=True)
+    except OSError as err:
+        print("Directory '%s' can not be created" % headerdir)
+        sys.exit(1)
 
     diags = {}
     groups = []
@@ -88,7 +93,7 @@ def main():
     if args.docs:
         createdocs(
             args.outDir,
-            os.path.join(ourdir, "warning_docs.txt"),
+            os.path.join(os.path.dirname(args.diagnostics), "warning_docs.txt"),
             args.slangBin,
             diags,
             groups,
@@ -280,7 +285,7 @@ def createallheader(path, diags):
 
 def createdocs(outDir, inpath, slangBin, diags, groups):
     inf = open(inpath)
-    curropt = None
+    curropt = [ None, None, None, None, None ]
     inexample = False
     exampleMap = {}
 
@@ -310,7 +315,7 @@ def createdocs(outDir, inpath, slangBin, diags, groups):
                 curropt[1] += " "
             curropt[1] += line
 
-    if curropt:
+    if len(curropt[0]) > 0:
         exampleMap[curropt[0]] = curropt
 
     for k, v in exampleMap.items():
