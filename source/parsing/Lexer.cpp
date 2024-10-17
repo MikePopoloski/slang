@@ -1198,25 +1198,14 @@ void Lexer::scanWhitespace() {
     addTrivia(TriviaKind::Whitespace);
 }
 
-bool detectTranslateOnOffPragma(std::string_view view, bool offMode)
-{
+bool detectTranslateOnOffPragma(std::string_view view, bool offMode) {
     static std::vector<std::string_view> offCandidates = {
-        "pragma synthesis_off"sv,
-        "pragma translate_off"sv,
-        "synopsys synthesis_off"sv,
-        "synopsys translate_off"sv,
-        "synthesis translate_off"sv,
-        "xilinx translate_off"sv
-    };
+        "pragma synthesis_off"sv,   "pragma translate_off"sv,    "synopsys synthesis_off"sv,
+        "synopsys translate_off"sv, "synthesis translate_off"sv, "xilinx translate_off"sv};
 
     static std::vector<std::string_view> onCandidates = {
-        "pragma synthesis_on"sv,
-        "pragma translate_on"sv,
-        "synopsys synthesis_on"sv,
-        "synopsys translate_on"sv,
-        "synthesis translate_on"sv,
-        "xilinx translate_on"sv
-    };
+        "pragma synthesis_on"sv,   "pragma translate_on"sv,    "synopsys synthesis_on"sv,
+        "synopsys translate_on"sv, "synthesis translate_on"sv, "xilinx translate_on"sv};
 
     if (view.length() < 2)
         return false;
@@ -1242,14 +1231,18 @@ bool detectTranslateOnOffPragma(std::string_view view, bool offMode)
                 return false;
 
             cpos++;
-        } else {
-            while (clower < cupper && (*clower)[cpos] < *p) clower++;
-            while (cupper > clower && (*(cupper - 1))[cpos] > *p) cupper--;
+        }
+        else {
+            while (clower < cupper && (*clower)[cpos] < *p)
+                clower++;
+            while (cupper > clower && (*(cupper - 1))[cpos] > *p)
+                cupper--;
 
             if (clower == cupper)
                 return false;
 
-            cpos++; p++;
+            cpos++;
+            p++;
         }
 
         if (cpos == clower->length()) {
@@ -1266,29 +1259,30 @@ bool detectTranslateOnOffPragma(std::string_view view, bool offMode)
 
 void Lexer::scanTranslateOffSection() {
     while (true) {
-        const char *commentStart = sourceBuffer;
+        const char* commentStart = sourceBuffer;
 
         switch (peek()) {
-        case '\0':
-            if (reallyAtEnd()) {
-                addDiag(diag::UnclosedTranslateOff, currentOffset() - lexemeLength());
-                return;
-            }
-            break;
-        case '/':
-            advance();
-            if (peek() == '/') {
-                advance();
-                while (!isNewline(peek()) && !reallyAtEnd())
-                    advance();
-
-                std::string_view commentText = std::string_view(commentStart, sourceBuffer - commentStart);
-                if (detectTranslateOnOffPragma(commentText, false))
+            case '\0':
+                if (reallyAtEnd()) {
+                    addDiag(diag::UnclosedTranslateOff, currentOffset() - lexemeLength());
                     return;
-            }
-            continue;
-        default:
-            break;
+                }
+                break;
+            case '/':
+                advance();
+                if (peek() == '/') {
+                    advance();
+                    while (!isNewline(peek()) && !reallyAtEnd())
+                        advance();
+
+                    std::string_view commentText = std::string_view(commentStart,
+                                                                    sourceBuffer - commentStart);
+                    if (detectTranslateOnOffPragma(commentText, false))
+                        return;
+                }
+                continue;
+            default:
+                break;
         }
         advance();
     }
