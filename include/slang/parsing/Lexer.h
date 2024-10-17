@@ -35,6 +35,10 @@ struct SLANG_EXPORT LexerOptions {
     /// If true, the preprocessor will support legacy protected envelope directives,
     /// for compatibility with old Verilog tools.
     bool enableLegacyProtect = false;
+
+    /// A flag to enable the interpretation of non-standard line comment pragmas
+    /// disabling parts of the input for synthesis.
+    bool enableTranslateOnOffCompat = false;
 };
 
 /// Possible encodings for encrypted text used in a pragma protect region.
@@ -114,6 +118,7 @@ private:
     void scanEncodedText(ProtectEncoding encoding, uint32_t expectedBytes, bool singleLine,
                          bool legacyProtectedMode);
     void scanProtectComment();
+    void scanTranslateOffSection();
 
     template<typename... Args>
     Token create(TokenKind kind, Args&&... args);

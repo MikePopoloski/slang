@@ -1198,6 +1198,102 @@ void Lexer::scanWhitespace() {
     addTrivia(TriviaKind::Whitespace);
 }
 
+bool detectTranslateOnOffPragma(std::string_view view, bool offMode)
+{
+    static std::vector<std::string_view> offCandidates = {
+        "pragma synthesis_off"sv,
+        "pragma translate_off"sv,
+        "synopsys synthesis_off"sv,
+        "synopsys translate_off"sv,
+        "synthesis translate_off"sv,
+        "xilinx translate_off"sv
+    };
+
+    static std::vector<std::string_view> onCandidates = {
+        "pragma synthesis_on"sv,
+        "pragma translate_on"sv,
+        "synopsys synthesis_on"sv,
+        "synopsys translate_on"sv,
+        "synthesis translate_on"sv,
+        "xilinx translate_on"sv
+    };
+
+    if (view.length() < 2)
+        return false;
+    const char *p = view.data() + 2, *end = view.data() + view.size();
+
+    auto skipWs = [&] {
+        bool seen = false;
+        while (p != end && isWhitespace(*p)) {
+            seen = true;
+            p++;
+        }
+        return seen;
+    };
+
+    int cpos = 0;
+    auto clower = offMode ? offCandidates.begin() : onCandidates.begin();
+    auto cupper = offMode ? offCandidates.end() : onCandidates.end();
+
+    skipWs();
+    while (p != end) {
+        if ((*clower)[cpos] == ' ') {
+            if (!skipWs())
+                return false;
+
+            cpos++;
+        } else {
+            while (clower < cupper && (*clower)[cpos] < *p) clower++;
+            while (cupper > clower && (*(cupper - 1))[cpos] > *p) cupper--;
+
+            if (clower == cupper)
+                return false;
+
+            cpos++; p++;
+        }
+
+        if (cpos == clower->length()) {
+            // We have a complete match, check the comment line
+            // ends there or the match is followed by a whitespace
+            if (p == end || isWhitespace(*p))
+                return true;
+            return false;
+        }
+    }
+
+    return false;
+}
+
+void Lexer::scanTranslateOffSection() {
+    while (true) {
+        const char *commentStart = sourceBuffer;
+
+        switch (peek()) {
+        case '\0':
+            if (reallyAtEnd()) {
+                addDiag(diag::UnclosedTranslateOff, currentOffset() - lexemeLength());
+                return;
+            }
+            break;
+        case '/':
+            advance();
+            if (peek() == '/') {
+                advance();
+                while (!isNewline(peek()) && !reallyAtEnd())
+                    advance();
+
+                std::string_view commentText = std::string_view(commentStart, sourceBuffer - commentStart);
+                if (detectTranslateOnOffPragma(commentText, false))
+                    return;
+            }
+            continue;
+        default:
+            break;
+        }
+        advance();
+    }
+}
+
 void Lexer::scanLineComment() {
     if (options.enableLegacyProtect) {
         // See if we're looking at a pragma protect comment and skip
@@ -1242,6 +1338,15 @@ void Lexer::scanLineComment() {
             sawUTF8Error |= !scanUTF8Char(sawUTF8Error);
         }
     }
+
+    if (options.enableTranslateOnOffCompat) {
+        if (detectTranslateOnOffPragma(lexeme(), true)) {
+            scanTranslateOffSection();
+            addTrivia(TriviaKind::DisabledText);
+            return;
+        }
+    }
+
     addTrivia(TriviaKind::LineComment);
 }
 
