@@ -1245,7 +1245,7 @@ bool detectTranslateOnOffPragma(std::string_view view, bool offMode) {
             p++;
         }
 
-        if (cpos == clower->length()) {
+        if (cpos == (int) clower->length()) {
             // We have a complete match, check the comment line
             // ends there or the match is followed by a whitespace
             if (p == end || isWhitespace(*p))
