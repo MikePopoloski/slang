@@ -17,6 +17,7 @@
 #include "slang/ast/Statements.h"
 #include "slang/ast/expressions/AssignmentExpressions.h"
 #include "slang/ast/expressions/MiscExpressions.h"
+#include "slang/ast/symbols/ParameterSymbols.h"
 #include "slang/ast/symbols/VariableSymbols.h"
 #include "slang/ast/types/AllTypes.h"
 #include "slang/diagnostics/ConstEvalDiags.h"
@@ -950,8 +951,17 @@ void BinaryExpression::analyzeOpTypes(const Type& clt, const Type& crt, const Ty
     // Don't warn if either side is a compiler generated variable
     // (which can be true for genvars).
     auto isCompGenVar = [](const Symbol* sym) {
-        return sym && sym->kind == SymbolKind::Variable &&
-               sym->as<VariableSymbol>().flags.has(VariableFlags::CompilerGenerated);
+        if (sym) {
+            if (sym->kind == SymbolKind::Variable &&
+                sym->as<VariableSymbol>().flags.has(VariableFlags::CompilerGenerated)) {
+                return true;
+            }
+
+            if (sym->kind == SymbolKind::Parameter && sym->as<ParameterSymbol>().isFromGenvar()) {
+                return true;
+            }
+        }
+        return false;
     };
 
     auto lsym = lhs.getSymbolReference(), rsym = rhs.getSymbolReference();

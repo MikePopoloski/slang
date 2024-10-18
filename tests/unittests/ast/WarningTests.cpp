@@ -961,6 +961,17 @@ class C;
         v.size() == E;
     }
 endclass
+
+module top;
+    logic valid;
+    logic [7:0] a;
+    logic [7:0] b;
+
+    // No warning for sign comparison of genvars.
+    for (genvar i = 0; i < 8; i++) begin
+        always_comb a[i] = valid && i == b;
+    end
+endmodule
 )");
 
     Compilation compilation;
