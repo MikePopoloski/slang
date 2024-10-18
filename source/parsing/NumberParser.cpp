@@ -258,10 +258,6 @@ Token NumberParser::finishValue(Token firstToken, bool singleToken, bool isNegat
         if (!digits[0].isUnknown())
             bits += (bitwidth_t)std::bit_width(digits[0].value);
 
-        // Signed numbers need an extra bit for the sign.
-        if (signFlag)
-            bits++;
-
         if (bits > sizeBits) {
             if (sizeBits == 0) {
                 if (bits > SVInt::MAX_BITS) {
