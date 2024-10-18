@@ -91,7 +91,11 @@ ExpressionSyntax& Parser::parseSubExpression(bitmask<ExpressionOptions> options,
         if (isNewExpr(leftOperand))
             return parseNewExpression(leftOperand->as<NameSyntax>(), options);
 
-        leftOperand = &parsePostfixExpression(*leftOperand, options);
+        // Don't try to parse postfix if we didn't find a valid primary to begin with.
+        if (leftOperand->kind != SyntaxKind::IdentifierName ||
+            !leftOperand->as<IdentifierNameSyntax>().identifier.isMissing()) {
+            leftOperand = &parsePostfixExpression(*leftOperand, options);
+        }
     }
 
     options &= ~ExpressionOptions::AllowSuperNewCall;

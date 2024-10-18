@@ -1070,7 +1070,6 @@ Token Lexer::lexApostrophe() {
             return create(TokenKind::UnbasedUnsizedLiteral, logic_t::x);
         case 'Z':
         case 'z':
-        case '?':
             advance();
             return create(TokenKind::UnbasedUnsizedLiteral, logic_t::z);
         case 's':

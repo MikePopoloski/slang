@@ -978,3 +978,16 @@ endclass
     REQUIRE(diagnostics.size() == 1);
     CHECK(diagnostics[0].code == diag::WrongLanguageVersion);
 }
+
+TEST_CASE("Unbased unsized question mark parsing") {
+    auto& text = R"(
+module bug(input logic [1:0] a, input logic s, output logic [1:0]y);
+    assign y = s? a: '?;
+endmodule
+)";
+
+    parseCompilationUnit(text);
+
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics[0].code == diag::ExpectedExpression);
+}
