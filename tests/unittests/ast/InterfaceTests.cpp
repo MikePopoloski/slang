@@ -724,3 +724,25 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::UndeclaredIdentifier);
 }
+
+TEST_CASE("Iface array with different declared indices regress -- GH #1152") {
+    auto tree = SyntaxTree::fromText(R"(
+interface bus();
+	logic a;
+	logic b;
+endinterface
+
+module submodule(bus iface [3:2]);
+	assign iface[2].a = iface[3].b;
+endmodule
+
+module top();
+	bus iface[1:0]();
+	submodule inst(iface);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

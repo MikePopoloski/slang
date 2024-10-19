@@ -1111,6 +1111,25 @@ private:
         return true;
     }
 
+    const Symbol* rewireIfaceArrayIndices(const Symbol* sym, std::string_view name,
+                                          SourceLocation loc,
+                                          std::span<const ConstantRange> portDims) {
+        if (!sym || sym->kind != SymbolKind::InstanceArray)
+            return sym;
+
+        // The port dimensions are guaranteed to have the same count and width as
+        // the instance array dimensions but their indices may differ, so this
+        // function creates a new array with the correct range.
+        SLANG_ASSERT(!portDims.empty());
+        auto subPortDims = portDims.subspan(1);
+
+        SmallVector<const Symbol*> newElems;
+        for (auto elem : sym->as<InstanceArraySymbol>().elements)
+            newElems.push_back(rewireIfaceArrayIndices(elem, ""sv, loc, subPortDims));
+
+        return comp.emplace<InstanceArraySymbol>(comp, name, loc, newElems.copy(comp), portDims[0]);
+    }
+
     PortConnection::IfaceConn getInterfaceConn(ASTContext& context, const InterfacePortSymbol& port,
                                                const ExpressionSyntax& syntax) {
         SLANG_ASSERT(!port.isInvalid());
@@ -1169,7 +1188,7 @@ private:
         // Make the connection if the dimensions match exactly what the port is expecting.
         const Symbol* symbol = expr->as<ArbitrarySymbolExpression>().symbol;
         if (areDimSizesEqual(*portDims, dims))
-            return {symbol, modport};
+            return {rewireIfaceArrayIndices(symbol, port.name, port.location, *portDims), modport};
 
         // Otherwise, if the instance being instantiated is part of an array of instances *and*
         // the symbol we're connecting to is an array of interfaces, we need to check to see whether
@@ -1198,7 +1217,7 @@ private:
                 symbol = array.elements[size_t(index)];
             }
 
-            return {symbol, modport};
+            return {rewireIfaceArrayIndices(symbol, port.name, port.location, *portDims), modport};
         }
 
         auto& diag = scope.addDiag(diag::PortConnDimensionsMismatch, syntax.sourceRange())
