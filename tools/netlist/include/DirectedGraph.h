@@ -79,7 +79,7 @@ public:
         return *this;
     }
     Node<NodeType, EdgeType>& operator=(Node<NodeType, EdgeType>&& node) noexcept {
-        edges = std::move(node.Edges);
+        edges = std::move(node.edges);
         return *this;
     }
 

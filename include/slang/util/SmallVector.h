@@ -8,6 +8,7 @@
 #pragma once
 
 #include <algorithm>
+#include <iterator>
 #include <limits>
 #include <memory>
 #include <span>

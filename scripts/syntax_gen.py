@@ -48,17 +48,18 @@ def main():
     parser = argparse.ArgumentParser(description="Diagnostic source generator")
     parser.add_argument("--dir", default=os.getcwd(), help="Output directory")
     parser.add_argument("--python-bindings", action="store_true")
+    parser.add_argument("--syntax", help="full path to syntax file")
     args = parser.parse_args()
 
-    ourdir = os.path.dirname(os.path.realpath(__file__))
-    alltypes, kindmap = loadalltypes(ourdir)
+    inputdir = os.path.dirname(args.syntax)
+    alltypes, kindmap = loadalltypes(inputdir)
 
     if args.python_bindings:
         generatePyBindings(args.dir, alltypes)
     else:
         generateSyntaxClone(args.dir, alltypes, kindmap)
         generateSyntax(args.dir, alltypes, kindmap)
-        generateTokenKinds(ourdir, args.dir)
+        generateTokenKinds(inputdir, args.dir)
 
 
 def loadalltypes(ourdir):
@@ -764,6 +765,9 @@ const std::type_info* typeFromSyntaxKind(SyntaxKind kind) {
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
 #pragma once
+
+#include <ostream>
+#include "slang/slang_export.h"
 
 namespace std { class type_info; }
 

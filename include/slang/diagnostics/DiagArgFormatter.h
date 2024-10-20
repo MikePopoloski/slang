@@ -8,6 +8,9 @@
 #pragma once
 
 #include <any>
+#include <string>
+
+#include "slang/slang_export.h"
 
 namespace slang {
 

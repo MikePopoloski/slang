@@ -10,6 +10,7 @@
 #include <cstring>
 #include <new>
 #include <span>
+#include <type_traits>
 
 #include "slang/util/Util.h"
 
