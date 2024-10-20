@@ -42,7 +42,8 @@ def main():
     try:
         os.makedirs(headerdir, exist_ok=True)
     except OSError as err:
-        print("Directory '%s' can not be created" % headerdir)
+        print(err)
+        print("Directory '%s' can not be created: %s" % headerdir)
         sys.exit(1)
 
     diags = {}
