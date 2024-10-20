@@ -10,7 +10,8 @@ add_custom_command(
   COMMAND
     ${Python_EXECUTABLE} ${SCRIPTS_DIR}/diagnostic_gen.py --outDir
     ${CMAKE_CURRENT_BINARY_DIR} --srcDir ${CMAKE_CURRENT_SOURCE_DIR} --incDir
-    ${CMAKE_CURRENT_SOURCE_DIR}/../include/slang --diagnostics ${SCRIPTS_DIR}/diagnostics.txt
+    ${CMAKE_CURRENT_SOURCE_DIR}/../include/slang --diagnostics
+    ${SCRIPTS_DIR}/diagnostics.txt
   OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/slang/diagnostics/AllDiags.h
          ${CMAKE_CURRENT_BINARY_DIR}/slang/diagnostics/CompilationDiags.h
          ${CMAKE_CURRENT_BINARY_DIR}/slang/diagnostics/ConstEvalDiags.h

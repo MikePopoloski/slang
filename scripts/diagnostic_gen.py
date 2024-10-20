@@ -14,7 +14,7 @@ import sys
 def writefile(path, contents):
     existing = None
     if os.path.exists(path):
-        with open(path, 'r') as f:
+        with open(path, "r") as f:
             existing = f.read()
     if existing != contents:
         with open(path, "w") as f:
@@ -285,7 +285,7 @@ def createallheader(path, diags):
 
 def createdocs(outDir, inpath, slangBin, diags, groups):
     inf = open(inpath)
-    curropt = [ None, None, None, None, None ]
+    curropt = [None, None, None, None, None]
     inexample = False
     exampleMap = {}
 
