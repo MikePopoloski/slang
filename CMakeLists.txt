@@ -146,9 +146,15 @@ if(SLANG_FUZZ_TARGET)
   add_compile_definitions(SLANG_ASSERT_ENABLED)
 endif()
 
-# mimalloc is incompatible with Python bindings
 if(SLANG_INCLUDE_PYLIB)
+  # mimalloc is incompatible with Python bindings
   set(SLANG_USE_MIMALLOC OFF)
+
+  if(CMAKE_SYSTEM_NAME MATCHES "Windows")
+    # Workaround incompatibilities with old MSVC runtimes that are distributed
+    # with some Python packages like PyQt6
+    add_compile_definitions(_DISABLE_CONSTEXPR_MUTEX_CONSTRUCTOR)
+  endif()
 endif()
 
 # Get sane install RPATH handling by default if none has been provided.
