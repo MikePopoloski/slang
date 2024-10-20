@@ -6,9 +6,29 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 ### Language Support
+* Disallow access to protected members from class scoped randomize constraint blocks -- the LRM is unclear about this but other tools seem to have decided this way made the most sense
+
 ### General Features
+* Added [-Wudp-coverage](https://sv-lang.com/warning-ref.html#udp-coverage) which warns about edge-sensitive user-defined primitives that don't specify an output state for all edges of all inputs (thanks to @likeamahoney)
+
 ### Improvements
+* Made -Wuseless-cast a bit less noisy -- it now does not warn about expressions involving genvars or cases where types are matching but one or the other has a different typedef alias name
+* -Wsign-compare no longer warns about expressions involving genvars
+* -Wvector-overflow no longer warns about signed literals with binary, octal, or hex bases that place a bit in the MSB
+
 ### Fixes
+* Fixed a bug with constant evaluation of left-hand side assignment patterns that require implicit conversions to be applied
+* Fixed the locations returned by Trivia::getExplicitLocation for nested trivia involving directives (thanks to @povik)
+* Fixed checking of illegal property negation operator when used within recursive property instantiations (thanks to @likeamahoney)
+* Fixed a bug with serializing UninstantiatedDef AST nodes that use implicit named port connections
+* Fixed a crash when checking duplicate drivers in assignments to invalid ranges of a vector
+* Correctly allow unpacked unions to be used in equality and conditional expressions
+* Fixed spurious warnings inside an unused generic class that instantiates the default specialization of itself
+* Fixed Python bindings build to work with Python 3.13 (thanks to @vowstar)
+* Fixed a spurious error when assigning the empty queue to an unresolved / unknown typed variable
+* Correctly disallow override specifiers on class constructor declarations
+* Correctly report an error for unbased unsized literals that use a `?` instead of a `z` character for high impedance
+* Fixed handling of connections of interface arrays to ports with different declared dimensions
 
 
 ## [v7.0] - 2024-09-26
