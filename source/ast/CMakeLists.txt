@@ -20,6 +20,7 @@ target_sources(
           expressions/AssertionExpr.cpp
           expressions/AssignmentExpressions.cpp
           expressions/CallExpression.cpp
+          expressions/ConversionExpression.cpp
           expressions/LiteralExpressions.cpp
           expressions/MiscExpressions.cpp
           expressions/OperatorExpressions.cpp

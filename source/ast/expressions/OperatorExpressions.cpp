@@ -15,7 +15,7 @@
 #include "slang/ast/EvalContext.h"
 #include "slang/ast/Patterns.h"
 #include "slang/ast/Statements.h"
-#include "slang/ast/expressions/AssignmentExpressions.h"
+#include "slang/ast/expressions/ConversionExpression.h"
 #include "slang/ast/expressions/MiscExpressions.h"
 #include "slang/ast/symbols/ParameterSymbols.h"
 #include "slang/ast/symbols/VariableSymbols.h"

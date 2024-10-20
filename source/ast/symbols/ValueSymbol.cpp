@@ -11,7 +11,7 @@
 #include "slang/ast/EvalContext.h"
 #include "slang/ast/Expression.h"
 #include "slang/ast/Scope.h"
-#include "slang/ast/expressions/AssignmentExpressions.h"
+#include "slang/ast/expressions/ConversionExpression.h"
 #include "slang/ast/expressions/MiscExpressions.h"
 #include "slang/ast/expressions/SelectExpressions.h"
 #include "slang/ast/symbols/BlockSymbols.h"

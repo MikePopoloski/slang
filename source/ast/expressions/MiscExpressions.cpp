@@ -12,7 +12,7 @@
 #include "slang/ast/EvalContext.h"
 #include "slang/ast/TimingControl.h"
 #include "slang/ast/expressions/AssertionExpr.h"
-#include "slang/ast/expressions/AssignmentExpressions.h"
+#include "slang/ast/expressions/ConversionExpression.h"
 #include "slang/ast/expressions/OperatorExpressions.h"
 #include "slang/ast/symbols/ClassSymbols.h"
 #include "slang/ast/symbols/InstanceSymbols.h"

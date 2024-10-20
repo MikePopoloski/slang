@@ -14,6 +14,7 @@
 #include "slang/ast/expressions/AssertionExpr.h"
 #include "slang/ast/expressions/AssignmentExpressions.h"
 #include "slang/ast/expressions/CallExpression.h"
+#include "slang/ast/expressions/ConversionExpression.h"
 #include "slang/ast/expressions/LiteralExpressions.h"
 #include "slang/ast/expressions/MiscExpressions.h"
 #include "slang/ast/expressions/OperatorExpressions.h"
