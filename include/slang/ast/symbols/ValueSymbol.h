@@ -64,6 +64,10 @@ public:
     void addDriver(DriverKind kind, const Expression& longestStaticPrefix,
                    const Symbol& containingSymbol, bitmask<AssignFlags> flags) const;
 
+    void addDriver(DriverKind kind, const Expression& longestStaticPrefix,
+                   const Symbol& containingSymbol, bitmask<AssignFlags> flags,
+                   const SourceRange& symExprSR, DriverBitRange exprBounds) const;
+
     void addDriver(DriverKind kind, DriverBitRange bounds, const Expression& longestStaticPrefix,
                    const Symbol& containingSymbol, const Expression& procCallExpression) const;
 
@@ -118,11 +122,15 @@ public:
     /// The kind of driver (procedural or continuous).
     DriverKind kind;
 
+    /// Stored driven value expression source range for diagnostic
+    const SourceRange* symExprSR = nullptr;
+
     /// Constructs a new ValueDriver instance.
     ValueDriver(DriverKind kind, const Expression& longestStaticPrefix,
-                const Symbol& containingSymbol, bitmask<AssignFlags> flags) :
+                const Symbol& containingSymbol, bitmask<AssignFlags> flags,
+                const SourceRange* symExprSR = nullptr) :
         prefixExpression(&longestStaticPrefix), containingSymbol(&containingSymbol), flags(flags),
-        kind(kind) {}
+        kind(kind), symExprSR(symExprSR) {}
 
     /// Indicates whether the driver is for an input port.
     bool isInputPort() const { return flags.has(AssignFlags::InputPort); }
@@ -137,6 +145,9 @@ public:
 
     /// Indicates whether the driver is for an assertion local variable formal argument.
     bool isLocalVarFormalArg() const { return flags.has(AssignFlags::AssertionLocalVarFormalArg); }
+
+    /// Indicates whether the driver is for a net alias.
+    bool isNetAlias() const { return flags.has(AssignFlags::NetAlias); }
 
     /// Indicates whether the driver is inside a single-driver procedure (such as always_comb).
     bool isInSingleDriverProcedure() const;
