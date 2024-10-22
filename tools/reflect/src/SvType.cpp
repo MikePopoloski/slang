@@ -17,12 +17,14 @@ SvType::SvType(const Type& type) {
         cppType = CppType::fromSize(size);
     else if (type.isEnum())
         cppType = CppType::ENUM;
-    else if (type.isStruct() || type.isUnpackedStruct())
+    else if (type.isStruct())
         cppType = CppType::STRUCT;
+    else if (type.isUnion())
+        cppType = CppType::UNION;
     else
         SLANG_UNREACHABLE;
 
-    if (this->isEnum() || this->isStruct())
+    if (this->isStructEnumOrUnion())
         _namespace = type.getParentScope()->asSymbol().name;
 }
 
@@ -34,7 +36,7 @@ std::string SvType::toString() const {
     std::stringstream ss;
     if (cppType == CppType::SC_BV)
         ss << format(fmt::runtime(CppType::toString(cppType)), size);
-    else if (this->isEnum() || this->isStruct())
+    else if (this->isStructEnumOrUnion())
         ss << format(fmt::runtime(CppType::toString(cppType)), name);
     else
         ss << CppType::toString(cppType);
@@ -52,6 +54,7 @@ std::string toString(const Type& cppType) {
         case SC_BV: return "sc_bv<{}>";
         case STRUCT: return "{}";
         case ENUM: return "{}";
+        case UNION: return "{}";
     }
     // clang-format on
     SLANG_UNREACHABLE;

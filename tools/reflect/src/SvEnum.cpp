@@ -62,11 +62,7 @@ void SvEnum::toCpp(HppFile& hppFile, std::string_view, const SvAliases&, bool) c
     hppFile.addWithIndent("switch (__data) {\n");
     hppFile.increaseIndent();
     for (const auto& [name, value] : members)
-        hppFile.addWithIndent(
-            fmt::format("case {}: type = Type::{}; break;\n", value, name));
-    hppFile.addWithIndent(fmt::format(
-        "default: throw std::runtime_error(\"Can not create {} from provided value\");\n",
-        type.name));
+        hppFile.addWithIndent(fmt::format("case {}: type = Type::{}; break;\n", value, name));
     hppFile.decreaseIndent();
     hppFile.addWithIndent("}\n");
     hppFile.decreaseIndent();

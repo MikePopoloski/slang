@@ -16,17 +16,15 @@ using SvAliases = std::unordered_map<std::string_view, std::string_view>;
 
 class SvGeneric {
 public:
-    enum class Kind { Struct, Enum, LocalParam };
-    explicit SvGeneric(Kind kind) : kind(kind) {}
+    enum class Kind { Struct, Enum, LocalParam, Union };
+    explicit SvGeneric(const Kind kind) : kind(kind) {}
 
     virtual void toCpp(HppFile&, std::string_view, const SvAliases&, bool noSystemC) const = 0;
 
-    bool isStruct() const { return kind == Kind::Struct; }
-    bool isEnum() const { return kind == Kind::Enum; }
-    bool isLocalParam() const { return kind == Kind::LocalParam; }
     [[nodiscard]] bool isStruct() const { return kind == Kind::Struct; }
     [[nodiscard]] bool isEnum() const { return kind == Kind::Enum; }
     [[nodiscard]] bool isLocalParam() const { return kind == Kind::LocalParam; }
+    [[nodiscard]] bool isUnion() const { return kind == Kind::Union; }
 
     virtual ~SvGeneric() = default;
 

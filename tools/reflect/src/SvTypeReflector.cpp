@@ -8,6 +8,7 @@
 #include "SvGeneric.h"
 #include "SvLocalParam.h"
 #include "SvStruct.h"
+#include "SvUnion.h"
 #include "fmt/color.h"
 
 #include "slang/util/OS.h"
@@ -44,6 +45,9 @@ void SvTypeReflector::reflect() {
                     std::make_unique<SvStruct>(type));
             else if (type.isEnum())
                 namespaces[getNamespace(type)].members.emplace_back(std::make_unique<SvEnum>(type));
+            else if (type.isUnion())
+                namespaces[getNamespace(type)].members.emplace_back(
+                    std::make_unique<SvUnion>(type));
             if (verbose)
                 OS::print(fg(fmt::color::yellow_green),
                           fmt::format("Detected {} as public\n", type.name));
@@ -63,26 +67,29 @@ void SvTypeReflector::reflect() {
         }
     }));
 
-    for (const auto& [name, members] : namespaces) {
-        if (members.members.empty())
+    for (const auto& [namespaceName, namespaceMembers] : namespaces) {
+        if (namespaceMembers.members.empty())
             continue;
 
         //** NAMESPACE DECLARATION **//
-        auto& hpp = cppEmitter.newNamespace(name);
-        hpp.add(fmt::format("namespace {} {{\n", name));
+        auto& hpp = cppEmitter.newNamespace(namespaceName);
+        hpp.add(fmt::format("namespace {} {{\n", namespaceName));
         hpp.increaseIndent();
 
         //** NAMESPACE MEMBERS DECLARATION **//
-        for (const auto& generic : members.members) {
+        for (const auto& generic : namespaceMembers.members) {
             if (generic->isStruct())
                 reinterpret_cast<SvStruct*>(generic.get())
-                    ->toCpp(hpp, name, members.aliases, noSystemC);
+                    ->toCpp(hpp, namespaceName, namespaceMembers.aliases, noSystemC);
             else if (generic->isEnum())
                 reinterpret_cast<SvEnum*>(generic.get())
-                    ->toCpp(hpp, name, members.aliases, noSystemC);
+                    ->toCpp(hpp, namespaceName, namespaceMembers.aliases, noSystemC);
+            else if (generic->isUnion())
+                reinterpret_cast<SvUnion*>(generic.get())
+                    ->toCpp(hpp, namespaceName, namespaceMembers.aliases, noSystemC);
             else if (generic->isLocalParam())
                 reinterpret_cast<SvLocalParam*>(generic.get())
-                    ->toCpp(hpp, name, members.aliases, noSystemC);
+                    ->toCpp(hpp, namespaceName, namespaceMembers.aliases, noSystemC);
         }
 
         hpp.decreaseIndent();

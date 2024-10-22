@@ -9,7 +9,7 @@
 #include "slang/util/OS.h"
 
 void SvStruct::toCpp(HppFile& hppFile, const std::string_view _namespace, const SvAliases& aliases,
-                     bool noSystemC) const {
+                     const bool noSystemC) const {
     //* STRUCT DECLARATION **/
     auto structName = isCppReserved(type.name) ? fmt::format("_{}", type.name)
                                                : std::string(type.name);
@@ -18,8 +18,8 @@ void SvStruct::toCpp(HppFile& hppFile, const std::string_view _namespace, const 
 
     std::vector<std::pair<std::string, SvType>> members;
 
-    size_t structSize = type.getBitstreamWidth();
-    auto cppType = CppType::fromSize(structSize);
+    const size_t structSize = type.getBitstreamWidth();
+    const auto cppType = CppType::fromSize(structSize);
 
     if (cppType == CppType::SC_BV && noSystemC) {
         slang::OS::printE(fmt::format("Headers for the struct {} can not be generated without "
@@ -45,7 +45,7 @@ void SvStruct::toCpp(HppFile& hppFile, const std::string_view _namespace, const 
 
     //** MEMBERS DECLARATION **//
     for (const auto& [name, type] : members) {
-        if (type.isStructOrEnum() && _namespace != type._namespace) {
+        if (type.isStructEnumOrUnion() && _namespace != type._namespace) {
             hppFile.addWithIndent(fmt::format("{}::{} {};\n", type._namespace,
                                               type.toString(), name));
             hppFile.addIncludeHeader(type._namespace);
@@ -94,16 +94,16 @@ void SvStruct::toCpp(HppFile& hppFile, const std::string_view _namespace, const 
             }
         }
         else {
-            for (const auto& [name, snd] : members)
+            for (const auto& [name, type] : members)
                 values.emplace_back(fmt::format("(__data >> {0}_s) & (~0ULL >> (64 - {1}))",
-                                                name, snd.size));
+                                                name, type.size));
         }
 
         for (auto i = 0; i < members.size(); i++) {
             const auto& [name, type] = members[i];
             const auto& value = values[i];
 
-            if (type.isStructOrEnum())
+            if (type.isStructEnumOrUnion())
                 if (_namespace != type._namespace)
                     hppFile.addWithIndent(fmt::format("{} = {}::{}({});\n", name,
                                                       type._namespace,
@@ -136,7 +136,7 @@ void SvStruct::toCpp(HppFile& hppFile, const std::string_view _namespace, const 
                 value = fmt::format("__data.range({0}_s + {0}_w - 1, {0}_s).to_uint64()",
                                     name);
 
-            if (type.isStructOrEnum())
+            if (type.isStructEnumOrUnion())
                 if (_namespace != type._namespace)
                     hppFile.addWithIndent(fmt::format("{} = {}::{}({});\n", name,
                                                       type._namespace,
@@ -164,7 +164,7 @@ void SvStruct::toCpp(HppFile& hppFile, const std::string_view _namespace, const 
             else {
                 hppFile.addWithIndent(
                     fmt::format("ret.range({0}_s + {0}_w - 1, {0}_s) = ", name));
-                if (type.isStructOrEnum() && type.size > 64)
+                if (type.isStructEnumOrUnion() && type.size > 64)
                     hppFile.add(fmt::format("sc_bv<{}>({});\n", type.size, name));
                 else
                     hppFile.add(fmt::format("{};\n", name));
@@ -197,7 +197,7 @@ void SvStruct::toCpp(HppFile& hppFile, const std::string_view _namespace, const 
             else {
                 hppFile.addWithIndent(
                     fmt::format("ret.range({0}_s + {0}_w - 1, {0}_s) = ", name));
-                if (type.isStructOrEnum() && type.size > 64)
+                if (type.isStructEnumOrUnion() && type.size > 64)
                     hppFile.add(fmt::format("sc_bv<{}>({});\n", type.size, name));
                 else
                     hppFile.add(fmt::format("{};\n", name));
@@ -241,7 +241,7 @@ void SvStruct::toCpp(HppFile& hppFile, const std::string_view _namespace, const 
 
     //* STATIC GET FUNCTIONS *//
     for (const auto& [name, type] : members) {
-        if (type.isStructOrEnum() && _namespace != type._namespace) {
+        if (type.isStructEnumOrUnion() && _namespace != type._namespace) {
             hppFile.addWithIndent(fmt::format("static {}::{} get_{} (const {}& __data) {{\n",
                                               type._namespace, type.toString(),
                                               name, cppTypeStr));
@@ -266,7 +266,7 @@ void SvStruct::toCpp(HppFile& hppFile, const std::string_view _namespace, const 
                                 type.size);
         }
 
-        if (type.isStructOrEnum())
+        if (type.isStructEnumOrUnion())
             if (_namespace != type._namespace)
                 hppFile.addWithIndent(fmt::format("return {}::{}({});\n", type._namespace,
                                                   type.toString(), value));

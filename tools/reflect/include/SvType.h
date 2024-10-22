@@ -11,7 +11,7 @@
 #include "slang/ast/types/Type.h"
 
 namespace CppType {
-enum Type { BOOL, U32, U64, SC_BV, STRUCT, ENUM };
+enum Type { BOOL, U32, U64, SC_BV, STRUCT, ENUM, UNION };
 
 std::string toString(const Type& cppType);
 Type fromSize(size_t size);
@@ -24,11 +24,14 @@ public:
         this->name = name;
     }
 
-    bool isStruct() const { return cppType == CppType::STRUCT; }
-    bool isEnum() const { return cppType == CppType::ENUM; }
-    bool isStructOrEnum() const { return this->isStruct() || this->isEnum(); }
+    [[nodiscard]] bool isStruct() const { return cppType == CppType::STRUCT; }
+    [[nodiscard]] bool isEnum() const { return cppType == CppType::ENUM; }
+    [[nodiscard]] bool isUnion() const { return cppType == CppType::UNION; }
+    [[nodiscard]] bool isStructEnumOrUnion() const {
+        return this->isStruct() || this->isEnum() || this->isUnion();
+    }
 
-    std::string toString() const;
+    [[nodiscard]] std::string toString() const;
     friend std::ostream& operator<<(std::ostream& os, const SvType& type);
 
     CppType::Type cppType;

@@ -148,6 +148,9 @@ public:
     /// Indicates whether this is a dynamic array, associative array, or a queue.
     bool isDynamicallySizedArray() const;
 
+    /// Indicates whether this is a packed or unpacked union.
+    bool isUnion() const;
+
     /// Indicates whether this is a tagged union, packed or unpacked.
     bool isTaggedUnion() const;
 
