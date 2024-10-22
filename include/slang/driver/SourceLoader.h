@@ -15,9 +15,9 @@
 #include <span>
 #include <vector>
 
-#include "slang/text/SourceLocation.h"
 #include "slang/syntax/SyntaxFwd.h"
 #include "slang/text/Glob.h"
+#include "slang/text/SourceLocation.h"
 #include "slang/util/Hash.h"
 #include "slang/util/Util.h"
 
@@ -194,11 +194,11 @@ private:
 
         FileEntry(std::filesystem::path&& path, bool isLibraryFile, const SourceLibrary* library,
                   const UnitEntry* unit, GlobRank libraryRank) :
-            path(std::move(path)), preloadedBuffer(), library(library), unit(unit), libraryRank(libraryRank),
-            isLibraryFile(isLibraryFile) {}
+            path(std::move(path)), preloadedBuffer(), library(library), unit(unit),
+            libraryRank(libraryRank), isLibraryFile(isLibraryFile) {}
 
-        FileEntry(SourceBuffer buffer)
-            : preloadedBuffer(buffer), libraryRank(GlobRank::ExactPath) {}
+        FileEntry(SourceBuffer buffer) :
+            preloadedBuffer(buffer), libraryRank(GlobRank::ExactPath) {}
     };
 
     // The result of a loadAndParse call.
