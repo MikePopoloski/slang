@@ -15,6 +15,7 @@
 #include <span>
 #include <vector>
 
+#include "slang/text/SourceLocation.h"
 #include "slang/syntax/SyntaxFwd.h"
 #include "slang/text/Glob.h"
 #include "slang/util/Hash.h"
@@ -65,6 +66,9 @@ public:
 
     SourceLoader(const SourceLoader& other) = delete;
     SourceLoader(SourceLoader&& other) = default;
+
+    /// @brief Adds a pre-loaded buffer
+    void addBuffer(SourceBuffer buffer);
 
     /// @brief Adds files to be loaded, specified via the given @a pattern.
     ///
@@ -159,6 +163,10 @@ private:
         // The filesystem path (as specified by the user).
         std::filesystem::path path;
 
+        // An optional pre-loaded buffer for when the source doesn't originate
+        // from the filesystem
+        const SourceBuffer preloadedBuffer;
+
         // The library to which the file belongs, if any.
         const SourceLibrary* library = nullptr;
 
@@ -186,8 +194,11 @@ private:
 
         FileEntry(std::filesystem::path&& path, bool isLibraryFile, const SourceLibrary* library,
                   const UnitEntry* unit, GlobRank libraryRank) :
-            path(std::move(path)), library(library), unit(unit), libraryRank(libraryRank),
+            path(std::move(path)), preloadedBuffer(), library(library), unit(unit), libraryRank(libraryRank),
             isLibraryFile(isLibraryFile) {}
+
+        FileEntry(SourceBuffer buffer)
+            : preloadedBuffer(buffer), libraryRank(GlobRank::ExactPath) {}
     };
 
     // The result of a loadAndParse call.

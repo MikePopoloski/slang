@@ -31,6 +31,10 @@ SourceLoader::SourceLoader(SourceManager& sourceManager) : sourceManager(sourceM
         searchExtensions.emplace_back(ext);
 }
 
+void SourceLoader::addBuffer(SourceBuffer buffer) {
+    fileEntries.emplace_back(buffer);
+}
+
 void SourceLoader::addFiles(std::string_view pattern) {
     addFilesInternal(pattern, {}, /* isLibraryFile */ false, /* library */ nullptr,
                      /* unit */ nullptr,
@@ -157,7 +161,12 @@ std::vector<SourceBuffer> SourceLoader::loadSources() {
     results.reserve(fileEntries.size());
 
     for (auto& entry : fileEntries) {
-        auto buffer = sourceManager.readSource(entry.path, entry.library);
+        SourceManager::BufferOrError buffer;
+        if (!entry.preloadedBuffer)
+            buffer = sourceManager.readSource(entry.path, entry.library);
+        else
+            buffer = entry.preloadedBuffer;
+
         if (!buffer)
             addError(entry.path, buffer.error());
         else
@@ -527,7 +536,12 @@ SourceLoader::LoadResult SourceLoader::loadAndParse(const FileEntry& entry, cons
                                                     uint64_t fileSortKey) {
     // TODO: error if secondLib is set
 
-    auto buffer = sourceManager.readSource(entry.path, entry.library, fileSortKey);
+    SourceManager::BufferOrError buffer;
+    if (entry.preloadedBuffer)
+        buffer = entry.preloadedBuffer;
+    else
+        buffer = sourceManager.readSource(entry.path, entry.library, fileSortKey);
+
     if (!buffer)
         return std::pair{&entry, buffer.error()};
 
