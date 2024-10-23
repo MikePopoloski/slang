@@ -1379,3 +1379,16 @@ primitive d_edge_ff (q, clock, data);
     endtable
 endprimitive
 ```
+
+-Wpacked-array-conv
+Indicates an implicit conversion between types with differing
+packed array dimensions, even if their overall bit width is the same.
+This will not warn for types with a single packed dimension; at least
+one of the types must have multiple declared dimensions.
+```
+module m;
+    logic [3:1][1:0] a;
+    logic [5:0] b;
+    initial b = a;
+endmodule
+```

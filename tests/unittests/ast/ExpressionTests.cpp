@@ -783,13 +783,17 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 6);
+    REQUIRE(diags.size() == 10);
     CHECK(diags[0].code == diag::IndexOOB);
     CHECK(diags[1].code == diag::IndexOOB);
-    CHECK(diags[2].code == diag::RangeOOB);
+    CHECK(diags[2].code == diag::PackedArrayConv);
     CHECK(diags[3].code == diag::RangeOOB);
-    CHECK(diags[4].code == diag::RangeOOB);
+    CHECK(diags[4].code == diag::PackedArrayConv);
     CHECK(diags[5].code == diag::RangeOOB);
+    CHECK(diags[6].code == diag::PackedArrayConv);
+    CHECK(diags[7].code == diag::RangeOOB);
+    CHECK(diags[8].code == diag::PackedArrayConv);
+    CHECK(diags[9].code == diag::RangeOOB);
 }
 
 TEST_CASE("Empty concat error") {
@@ -2827,7 +2831,7 @@ endmodule
 TEST_CASE("Index oob tryEval regress GH #602") {
     auto tree = SyntaxTree::fromText(R"(
 module top #(
-    parameter [2:0][4:0] IDX_MAP = {5'd1, 5'd3, 5'd4}
+    parameter [2:0][4:0] IDX_MAP = '{5'd1, 5'd3, 5'd4}
 );
     logic [4:0] sig;
 

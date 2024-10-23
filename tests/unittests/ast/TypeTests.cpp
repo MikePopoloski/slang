@@ -947,7 +947,7 @@ module m;
     union packed { logic [3:0] a; bit [1:4] b; } [4:1] u;
     enum { A, B, C } [4:1] e;
 
-    initial e = A;
+    initial e[1] = A;
 endmodule
 )");
 

@@ -158,9 +158,13 @@ Expression* Expression::tryConnectPortArray(const ASTContext& context, const Typ
     // bit ranges from it -- the range select expression works on the declared
     // range of the packed array so a multidimensional wouldn't work correctly
     // without this conversion.
-    result = &ConversionExpression::makeImplicit(
-        context, comp.getType(*instPortWidth, result->type->getIntegralFlags()),
-        ConversionKind::Implicit, *result, nullptr, {});
+    //
+    // We set the UnevaluatedBranch flag here so that we don't get any warnings
+    // related to implicit conversions.
+    auto& vecType = comp.getType(*instPortWidth, result->type->getIntegralFlags());
+    result = &ConversionExpression::makeImplicit(context.resetFlags(ASTFlags::UnevaluatedBranch),
+                                                 vecType, ConversionKind::Implicit, *result,
+                                                 nullptr, {});
 
     // We have enough bits to assign each port on each instance, so now we just need
     // to pick the right ones. The spec says we start with all right hand indices

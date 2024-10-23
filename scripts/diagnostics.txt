@@ -748,6 +748,7 @@ warning width-trunc WidthTruncate "implicit conversion truncates from {} to {} b
 warning port-width-expand PortWidthExpand "implicit conversion of port connection expands from {} to {} bits"
 warning port-width-trunc PortWidthTruncate "implicit conversion of port connection truncates from {} to {} bits"
 warning implicit-conv ImplicitConvert "implicit conversion from {} to {}"
+warning packed-array-conv PackedArrayConv "implicit conversion from {} to {}"
 warning nonblocking-final NonblockingInFinal "nonblocking assignments in final blocks have no effect"
 warning port-coercion InputPortCoercion "input net port '{}' coerced to 'inout'"
 warning port-coercion OutputPortCoercion "output net port '{}' coerced to 'inout'"
@@ -1140,7 +1141,8 @@ group default = { real-underflow real-overflow vector-overflow int-overflow unco
                   raw-protect-eof protected-envelope specify-param dup-timing-path invalid-pulsestyle
                   negative-timing-limit bad-procedural-force duplicate-defparam implicit-port-type-mismatch
                   split-distweight-op dpi-pure-task multibit-edge unknown-sys-name unknown-library
-                  dup-config-rule unused-config-cell unused-config-instance specify-condition-expr }
+                  dup-config-rule unused-config-cell unused-config-instance specify-condition-expr
+                  packed-array-conv }
 
 group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-none case-gen-dup
                 unused-result format-real ignored-slice task-ignored width-trunc dup-attr event-const
@@ -1153,7 +1155,7 @@ group pedantic = { empty-pattern implicit-net-port nonstandard-escape-code nonst
 
 group conversion = { width-trunc width-expand port-width-trunc port-width-expand implicit-conv
                      constant-conversion sign-conversion float-bool-conv int-bool-conv float-int-conv
-                     int-float-conv float-widen float-narrow }
+                     int-float-conv float-widen float-narrow packed-array-conv }
 
 group unused = { unused-def unused-net unused-implicit-net unused-variable undriven-net unassigned-variable
                  unused-but-set-net unused-but-set-variable unused-port undriven-port unused-argument

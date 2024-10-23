@@ -11,6 +11,7 @@
 #include "slang/ast/Bitstream.h"
 #include "slang/ast/Compilation.h"
 #include "slang/ast/EvalContext.h"
+#include "slang/ast/expressions/LiteralExpressions.h"
 #include "slang/ast/expressions/MiscExpressions.h"
 #include "slang/ast/expressions/OperatorExpressions.h"
 #include "slang/ast/symbols/InstanceSymbols.h"
@@ -88,6 +89,21 @@ bool isUnionMemberType(const Type& left, const Type& right) {
     return false;
 }
 
+bool hasSameDims(const Type& left, const Type& right) {
+    if (left.getFixedRange().width() != right.getFixedRange().width())
+        return false;
+
+    auto le = left.getArrayElementType();
+    auto re = right.getArrayElementType();
+    if (bool(le) != bool(re))
+        return false;
+
+    if (!le)
+        return true;
+
+    return hasSameDims(*le, *re);
+}
+
 void checkImplicitConversions(const ASTContext& context, const Type& sourceType,
                               const Type& targetType, const Expression& op,
                               const Expression* parentExpr, SourceRange operatorRange,
@@ -95,6 +111,31 @@ void checkImplicitConversions(const ASTContext& context, const Type& sourceType,
     auto isStructUnionEnum = [](const Type& t) {
         return t.kind == SymbolKind::PackedStructType || t.kind == SymbolKind::PackedUnionType ||
                t.kind == SymbolKind::EnumType;
+    };
+
+    auto isMultiDimArray = [](const Type& t) {
+        return t.kind == SymbolKind::PackedArrayType && t.getArrayElementType()->getBitWidth() > 1;
+    };
+
+    auto parentIsComparison = [&] {
+        if (parentExpr && parentExpr->kind == ExpressionKind::BinaryOp) {
+            switch (parentExpr->as<BinaryExpression>().op) {
+                case BinaryOperator::Equality:
+                case BinaryOperator::Inequality:
+                case BinaryOperator::CaseEquality:
+                case BinaryOperator::CaseInequality:
+                case BinaryOperator::GreaterThanEqual:
+                case BinaryOperator::GreaterThan:
+                case BinaryOperator::LessThanEqual:
+                case BinaryOperator::LessThan:
+                case BinaryOperator::WildcardEquality:
+                case BinaryOperator::WildcardInequality:
+                    return true;
+                default:
+                    break;
+            }
+        }
+        return false;
     };
 
     auto addDiag = [&](DiagCode code) -> Diagnostic& {
@@ -127,6 +168,30 @@ void checkImplicitConversions(const ASTContext& context, const Type& sourceType,
             return;
         }
 
+        // Warn for conversions between packed arrays of differing
+        // dimension counts or sizes.
+        if (isMultiDimArray(lt) || isMultiDimArray(rt) && !hasSameDims(lt, rt)) {
+            // Avoid warning for assignments or comparisons with 0 or '0, '1.
+            auto isZeroOrUnsized = [](const Expression& e) {
+                auto expr = &e.unwrapImplicitConversions();
+                if (expr->kind == ExpressionKind::ConditionalOp) {
+                    if (auto known = expr->as<ConditionalExpression>().knownSide())
+                        expr = known;
+                }
+
+                return expr->kind == ExpressionKind::UnbasedUnsizedIntegerLiteral ||
+                       (expr->kind == ExpressionKind::IntegerLiteral &&
+                        bool(expr->as<IntegerLiteral>().getValue() == 0));
+            };
+
+            if (!isZeroOrUnsized(op) &&
+                (!parentIsComparison() ||
+                 !isZeroOrUnsized(parentExpr->as<BinaryExpression>().right()))) {
+                addDiag(diag::PackedArrayConv) << sourceType << targetType;
+                return;
+            }
+        }
+
         // Check to rule out false positives: try to eval as a constant.
         // We'll ignore any constants, because they will get their own more
         // fine grained warning during eval.
@@ -136,27 +201,7 @@ void checkImplicitConversions(const ASTContext& context, const Type& sourceType,
         // Warn for sign conversions.
         if (lt.isSigned() != rt.isSigned()) {
             // Comparisons get their own warning elsewhere.
-            bool isComparison = false;
-            if (parentExpr && parentExpr->kind == ExpressionKind::BinaryOp) {
-                switch (parentExpr->as<BinaryExpression>().op) {
-                    case BinaryOperator::Equality:
-                    case BinaryOperator::Inequality:
-                    case BinaryOperator::CaseEquality:
-                    case BinaryOperator::CaseInequality:
-                    case BinaryOperator::GreaterThanEqual:
-                    case BinaryOperator::GreaterThan:
-                    case BinaryOperator::LessThanEqual:
-                    case BinaryOperator::LessThan:
-                    case BinaryOperator::WildcardEquality:
-                    case BinaryOperator::WildcardInequality:
-                        isComparison = true;
-                        break;
-                    default:
-                        break;
-                }
-            }
-
-            if (!isComparison)
+            if (!parentIsComparison())
                 addDiag(diag::SignConversion) << sourceType << targetType;
         }
 
