@@ -165,7 +165,7 @@ private:
 
         // An optional pre-loaded buffer for when the source doesn't originate
         // from the filesystem
-        const SourceBuffer preloadedBuffer;
+        SourceBuffer preloadedBuffer;
 
         // The library to which the file belongs, if any.
         const SourceLibrary* library = nullptr;
