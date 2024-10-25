@@ -12,10 +12,12 @@ import sys
 
 
 def writefile(path, contents):
-    existing = None
-    if os.path.exists(path):
+    try:
         with open(path, "r") as f:
             existing = f.read()
+    except OSError:
+        existing = ""
+
     if existing != contents:
         with open(path, "w") as f:
             f.write(contents)
@@ -31,20 +33,9 @@ def main():
     parser.add_argument("--slangBin")
     args = parser.parse_args()
 
-    inf = None
-    try:
-        inf = open(args.diagnostics)
-    except Exception:
-        print("failed to open", args.diagnostics)
-        sys.exit(1)
-
+    inf = open(args.diagnostics)
     headerdir = os.path.join(args.outDir, "slang", "diagnostics")
-    try:
-        os.makedirs(headerdir, exist_ok=True)
-    except OSError as err:
-        print(err)
-        print("Directory '%s' can not be created: %s" % headerdir)
-        sys.exit(1)
+    os.makedirs(headerdir, exist_ok=True)
 
     diags = {}
     groups = []
@@ -316,7 +307,7 @@ def createdocs(outDir, inpath, slangBin, diags, groups):
                 curropt[1] += " "
             curropt[1] += line
 
-    if len(curropt[0]) > 0:
+    if curropt[0]:
         exampleMap[curropt[0]] = curropt
 
     for k, v in exampleMap.items():
