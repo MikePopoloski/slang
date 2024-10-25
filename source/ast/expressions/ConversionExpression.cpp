@@ -170,7 +170,7 @@ void checkImplicitConversions(const ASTContext& context, const Type& sourceType,
 
         // Warn for conversions between packed arrays of differing
         // dimension counts or sizes.
-        if (isMultiDimArray(lt) || isMultiDimArray(rt) && !hasSameDims(lt, rt)) {
+        if (isMultiDimArray(lt) && isMultiDimArray(rt) && !hasSameDims(lt, rt)) {
             // Avoid warning for assignments or comparisons with 0 or '0, '1.
             auto isZeroOrUnsized = [](const Expression& e) {
                 auto expr = &e.unwrapImplicitConversions();
@@ -188,7 +188,6 @@ void checkImplicitConversions(const ASTContext& context, const Type& sourceType,
                 (!parentIsComparison() ||
                  !isZeroOrUnsized(parentExpr->as<BinaryExpression>().right()))) {
                 addDiag(diag::PackedArrayConv) << sourceType << targetType;
-                return;
             }
         }
 
