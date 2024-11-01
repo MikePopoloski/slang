@@ -2710,4 +2710,8 @@ Diagnostic* Compilation::errorMissingDef(std::string_view name, const Scope& sco
     return &diag;
 }
 
+const Scope* Compilation::getRootScope() const {
+    return root.get();
+}
+
 } // namespace slang::ast
