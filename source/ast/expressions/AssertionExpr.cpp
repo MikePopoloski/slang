@@ -813,12 +813,11 @@ static std::span<const Expression* const> bindMatchItems(const SequenceMatchList
                 break;
             }
             case ExpressionKind::Call: {
-                ASTContext insideSeqCtx = context;
-                AssertionExpr::checkAssertionCall(expr.as<CallExpression>(), insideSeqCtx,
+                AssertionExpr::checkAssertionCall(expr.as<CallExpression>(), context,
                                                   diag::SubroutineMatchOutArg,
                                                   diag::SubroutineMatchAutoRefArg,
                                                   diag::SubroutineMatchNonVoid, expr.sourceRange,
-                                                  /*isInsideSequence =*/true);
+                                                  /* isInsideSequence */ true);
                 break;
             }
             case ExpressionKind::Invalid:

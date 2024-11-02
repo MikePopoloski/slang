@@ -140,6 +140,7 @@ void registerUtil(py::module_& m) {
         .def("getExpansionRange", &SourceManager::getExpansionRange, "location"_a)
         .def("getOriginalLoc", &SourceManager::getOriginalLoc, "location"_a)
         .def("getFullyOriginalLoc", &SourceManager::getFullyOriginalLoc, "location"_a)
+        .def("getFullyOriginalRange", &SourceManager::getFullyOriginalRange, "range"_a)
         .def("getFullyExpandedLoc", &SourceManager::getFullyExpandedLoc, "location"_a)
         .def("getSourceText", &SourceManager::getSourceText, "buffer"_a)
         .def("assignText",

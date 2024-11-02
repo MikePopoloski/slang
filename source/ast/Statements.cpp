@@ -2401,7 +2401,7 @@ static void checkDeferredAssertAction(const Statement& stmt, const ASTContext& c
     auto& call = stmt.as<ExpressionStatement>().expr.as<CallExpression>();
     AssertionExpr::checkAssertionCall(call, context, diag::DeferredAssertOutArg,
                                       diag::DeferredAssertAutoRefArg, diag::DeferredAssertNonVoid,
-                                      stmt.sourceRange);
+                                      stmt.sourceRange, /* isInsideSequence */ false);
 }
 
 Statement& ImmediateAssertionStatement::fromSyntax(Compilation& compilation,

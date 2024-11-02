@@ -699,9 +699,7 @@ endprimitive
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
-
-    auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 0);
+    NO_COMPILATION_ERRORS;
 }
 
 TEST_CASE("UDP edge-sequence coverage error tests") {

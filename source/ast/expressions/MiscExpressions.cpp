@@ -739,12 +739,7 @@ static const AssertionExpr& bindAssertionBody(const Symbol& symbol, const Syntax
                                               AssertionInstanceDetails& instance,
                                               SmallVectorBase<const Symbol*>& localVars) {
     auto createLocals = [&](auto& syntaxType) {
-        const auto* seq = symbol.as_if<SequenceSymbol>();
-        const auto* prop = symbol.as_if<PropertySymbol>();
-        std::span<const AssertionPortSymbol* const> ports;
-        if (seq || prop)
-            ports = (seq) ? seq->ports : prop->ports;
-
+        auto& scope = symbol.as<Scope>();
         for (auto varSyntax : syntaxType.variables) {
             SmallVector<const LocalAssertionVarSymbol*> vars;
             LocalAssertionVarSymbol::fromSyntax(*context.scope, *varSyntax, vars);
@@ -754,17 +749,12 @@ static const AssertionExpr& bindAssertionBody(const Symbol& symbol, const Syntax
                     auto [it, inserted] = instance.localVars.emplace(var->name, var);
                     if (inserted) {
                         localVars.push_back(var);
+
                         // If value successfully inserted then check LRM 16.10 section restriction:
                         // "It's illegal to declare a local variable if it is a formal argument of
                         // a sequence declaration."
-                        auto isVar = [&](const Symbol* portSym) {
-                            return var->name == portSym->name;
-                        };
-                        if (!ports.empty()) {
-                            auto founded = std::find_if(ports.begin(), ports.end(), isVar);
-                            if (founded != ports.end())
-                                context.scope->reportNameConflict(*var, **founded);
-                        }
+                        if (auto other = scope.find(var->name))
+                            context.scope->reportNameConflict(*var, *other);
                     }
                     else {
                         context.scope->reportNameConflict(*var, *it->second);
@@ -1005,7 +995,8 @@ Expression& AssertionInstanceExpression::fromLookup(const Symbol& symbol,
 
     ASTContext bodyContext(*symbolScope, LookupLocation::max);
     bodyContext.assertionInstance = &instance;
-    // Propagate previously founded time advance specs and negation operators
+
+    // Propagate previously determined time advance specs and negation operators
     if (context.flags.has(ASTFlags::PropertyTimeAdvance))
         bodyContext.flags |= ASTFlags::PropertyTimeAdvance;
     if (context.flags.has(ASTFlags::PropertyNegation))

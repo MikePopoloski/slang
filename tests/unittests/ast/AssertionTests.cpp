@@ -2645,7 +2645,8 @@ endmodule
 
 TEST_CASE("Sequence local variable same as formal argument declaration") {
     auto tree = SyntaxTree::fromText(R"(
-logic a, b, c, d;
+logic a, b, c;
+int d;
 
 sequence sub_seq(lv);
 int lv;
@@ -2668,6 +2669,6 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 2);
+    REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::Redefinition);
 }

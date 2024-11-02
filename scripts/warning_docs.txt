@@ -1355,12 +1355,13 @@ endmodule
 ```
 
 -Wudp-coverage
-Checks if the behavior of the UDP is sensitive to edges of any input,
-the desired output state shall be specified for all edges of all inputs.
-That constraint is specified by LRM 29.6 section and it is not clear about it.
-This can be a useful for checking edge-sensitive UDP missed transitions
-when developing and simulating a behavioral model of industrial cells
-which commonly implemented as verilog primitives.
+A user-defined primitive is edge sensitive but does not provide an output value
+for all possible edges of all inputs. This is not necessarily wrong; the default
+output value when given unspecified input combinations is 'x', but the LRM mentions
+this constraint in section 29.6 so this warning can be used if you wish to be pedantic.
+Additionally, it can be useful for checking for missed transitions when developing and
+simulating the behavioral model of industrial cells, which are commonly implemented as
+Verilog primitives.
 ```
 primitive d_edge_ff (q, clock, data);
     output q; reg q;

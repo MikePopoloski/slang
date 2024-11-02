@@ -2211,13 +2211,12 @@ ConstraintItemSyntax* Parser::parseConstraintItem(bool allowBlock, bool isTopLev
     if (!isPossibleExpression(peek().kind) && !allowBlock)
         return nullptr;
 
-    Token curr = peek();
     // at this point we either have an expression with optional distribution or
     // we have an implication constraint
+    Token curr = peek();
     auto expr =
         &parseSubExpression(ExpressionOptions::ConstraintContext | ExpressionOptions::AllowDist, 0);
-    // checking that tokens were extracted during expression parsing
-    if (curr == peek() && !allowBlock)
+    if (!allowBlock && curr == peek())
         return nullptr;
 
     if (peek(TokenKind::MinusArrow)) {

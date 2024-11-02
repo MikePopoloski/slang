@@ -762,15 +762,16 @@ RandCaseStatementSyntax& Parser::parseRandCaseStatement(NamedLabelSyntax* label,
     SmallVector<RandCaseItemSyntax*> itemBuffer;
 
     while (isPossibleExpression(peek().kind)) {
-        Token curr = peek();
+        auto curr = peek();
         auto& expr = parseExpression();
         auto colon = expect(TokenKind::Colon);
         auto& stmt = parseStatement();
-        // If there is no consumed tokens then expression and statement were not parsed
+
+        // If there are no consumed tokens then expression and statement were not parsed.
         if (curr == peek())
             skipToken(std::nullopt);
-
-        itemBuffer.push_back(&factory.randCaseItem(expr, colon, stmt));
+        else
+            itemBuffer.push_back(&factory.randCaseItem(expr, colon, stmt));
     }
 
     auto endcase = expect(TokenKind::EndCaseKeyword);
@@ -996,9 +997,10 @@ StatementSyntax& Parser::parseRandSequenceStatement(NamedLabelSyntax* label, Att
 
     SmallVector<ProductionSyntax*> productions;
     while (isPossibleDataType(peek().kind)) {
-        Token curr = peek();
+        auto curr = peek();
         productions.push_back(&parseProduction());
-        // If there is no consumed tokens then production was not parsed
+
+        // If there are no consumed tokens then production was not parsed.
         if (curr == peek())
             skipToken(std::nullopt);
     }
