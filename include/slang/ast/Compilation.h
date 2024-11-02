@@ -172,6 +172,10 @@ struct SLANG_EXPORT CompilationOptions {
     /// The maximum depth of recursive generic class specializations.
     uint32_t maxRecursiveClassSpecialization = 8;
 
+    /// The maximum number of UDP coverage notes that will be generated for a single
+    /// warning about missing edge transitions.
+    uint32_t maxUDPCoverageNotes = 8;
+
     /// The maximum number of errors that can be found before we short circuit
     /// the tree walking process.
     uint32_t errorLimit = 64;

@@ -1141,59 +1141,73 @@ static void checkPrimitiveEdgeCombinations(const PrimitiveSymbol& prim, const Sc
     SLANG_ASSERT(prim.ports.size() >= 2);
     auto numInputs = prim.ports.size() - 1;
 
-    // Initial state is (??)000...
-    const std::string_view initEdge = "(??)"sv;
-    std::string state(initEdge);
+    // Initial state is (01)000...
+    std::string state(AllPrimEdges[0]);
     state.append(numInputs - 1, '0');
 
     // End state is xxx...(x1)
     std::string endState(numInputs - 1, 'x');
     endState.append("(x1)"sv);
 
-    // Iterate state by increasing leftoutermost inputs.
-    // For simple inputs value '0' goes to '1' and value '1' goes to `x`.
-    // For edge inputs circular iteration occurs over 'AllPrimEdges' list.
-    auto incrementState = [&initEdge, &state] {
+    // Try to find the missing combinations by completely enumerating all
+    // possible table rows.
+    std::string noteStr;
+    uint32_t noteCount = 0;
+    Diagnostic* diag = nullptr;
+    auto& comp = scope.getCompilation();
+
+    while (true) {
+        // Try to find the desired row in the trie we built earlier.
+        if (!trie.contains(state, '?')) {
+            // Not found, so we'll issue a warning if we don't have one already.
+            if (!diag)
+                diag = &scope.addDiag(diag::UdpCoverage, prim.location);
+
+            if (noteCount >= comp.getOptions().maxUDPCoverageNotes) {
+                noteStr += "...and more\n";
+                break;
+            }
+
+            bool nextSplit = true;
+            for (auto c : state) {
+                if (c == '(')
+                    nextSplit = false;
+                else if (c == ')')
+                    nextSplit = true;
+
+                noteStr += c;
+                if (nextSplit)
+                    noteStr += ' ';
+            }
+            noteCount++;
+            noteStr += '\n';
+        }
+
+        if (state.back() == ')' && state == endState)
+            break;
+
+        // Iterate state by increasing leftoutermost inputs.
+        // For simple inputs value '0' goes to '1' and value '1' goes to `x`.
+        // For edge inputs circular iteration occurs over 'AllPrimEdges' list.
         for (size_t i = 0; i < state.size(); ++i) {
-            // Increase edge input
             if (state[i] == '(') {
                 std::string_view currEdge(&state[i], 4);
                 if (currEdge == AllPrimEdges.back()) {
+                    // We finished cycling this edge.
                     if (state.back() != 'x') {
-                        if (i != 0) {
-                            std::copy(AllPrimEdges[0].begin(), AllPrimEdges[0].end(),
-                                      state.begin() + i);
-                        }
-                        else {
-                            // If it is edge input at first position set it as '(??)'
-                            // instead of '(01)' to heuristically check it and skip any
-                            // other edge inputs if '(??)' is present.
-                            std::copy(initEdge.begin(), initEdge.end(), state.begin());
-                        }
-
+                        state.replace(i, 4, AllPrimEdges[0]);
                         i += 3;
                         continue;
                     }
 
-                    // Move edge input to the next position and set first input as '?'
-                    // and all others as '0'
-                    state[0] = '?';
-                    for (size_t j = 1; j < state.size(); ++j)
-                        state[j] = '0';
-
-                    std::copy(AllPrimEdges[0].begin(), AllPrimEdges[0].end(),
-                              state.begin() + i + 1);
+                    // Move edge input to the next position and set all others as '0'
+                    std::ranges::fill(state, '0');
+                    state.replace(i + 1, 4, AllPrimEdges[0]);
                     break;
                 }
 
-                size_t nextPos = 0;
-                if (state[i + 1] != '?') {
-                    auto it = std::find(AllPrimEdges.begin(), AllPrimEdges.end(), currEdge);
-                    nextPos = (size_t)std::distance(AllPrimEdges.begin(), it) + 1;
-                }
-
-                std::copy(AllPrimEdges[nextPos].begin(), AllPrimEdges[nextPos].end(),
-                          state.begin() + i);
+                auto it = std::find(AllPrimEdges.begin(), AllPrimEdges.end(), currEdge) + 1;
+                state.replace(i, 4, *it);
                 break;
             }
 
@@ -1207,76 +1221,13 @@ static void checkPrimitiveEdgeCombinations(const PrimitiveSymbol& prim, const Sc
                 break;
             }
 
-            if (i == 0) {
-                // If it is simple input at first position set it as '?'
-                // instead of '0' to heuristically check it and skip any
-                // other inputs if '?' is present.
-                if (state[i] == '?') {
-                    state[i] = '0';
-                    break;
-                }
-
-                if (state[i] == 'x')
-                    state[i] = '?';
-                continue;
-            }
-
             state[i] = '0';
         }
-
-        return state[0] == '?' || state[1] == '?';
-    };
-
-    // Try to find the missing combinations by completely enumerating all
-    // possible table rows.
-    std::string noteStr;
-    Diagnostic* diag = nullptr;
-    bool isVariable = true;
-    bool next = true;
-    do {
-        // Comparing current state with end state
-        if (state.back() == ')' && (numInputs == 1 || state[0] == 'x'))
-            next = (state != endState);
-
-        // Try to find the desired row in the trie we built earlier.
-        if (!trie.contains(state, '?')) {
-            // Not found, so we'll issue a warning if we don't have one already.
-            if (!diag)
-                diag = &scope.addDiag(diag::UdpCoverage, prim.location);
-
-            bool nextSplit = true;
-            for (auto c : state) {
-                if (c == '(')
-                    nextSplit = false;
-                else if (c == ')')
-                    nextSplit = true;
-
-                noteStr += c;
-                if (nextSplit)
-                    noteStr += ' ';
-            }
-            noteStr += '\n';
-
-            // If state with first any value input ('(??)' for edge input or '?' for simple
-            // input) was not found then we don't need to check any other state with
-            // explicit clock edges. So skip the state until we get a new any value clock
-            // edge state.
-            bool wasVariable = isVariable;
-            do {
-                isVariable = incrementState();
-                if (state.back() == ')' && (numInputs == 1 || state[0] == 'x'))
-                    next = (state != endState);
-            } while (next && wasVariable && !isVariable);
-
-            continue;
-        }
-
-        isVariable = incrementState();
-    } while (next);
+    }
 
     if (diag && !noteStr.empty()) {
         noteStr.pop_back();
-        diag->addNote(diag::NoteUdpCoverage, prim.location) << noteStr;
+        diag->addNote(diag::NoteUdpCoverage, SourceLocation::NoLocation) << noteStr;
     }
 }
 

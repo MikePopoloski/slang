@@ -280,6 +280,12 @@ Set the maximum number of instances allowed in a single instance array.
 The limit exists to prevent runaway compilation times on invalid input.
 The default is 65535.
 
+`--max-udp-coverage-notes <limit>`
+
+When reporting a warning for a UDP that doesn't cover all possible input
+edge transitions, limit the number of notes printed to this value to avoid
+excessively large diagnostic output. The default is 8.
+
 `--compat vcs`
 
 Attempt to increase compatibility with the specified tool. Various options will

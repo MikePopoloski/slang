@@ -740,3 +740,20 @@ endprimitive
     CHECK(diags[1].code == diag::UdpCoverage);
     CHECK(diags[2].code == diag::UdpCoverage);
 }
+
+TEST_CASE("UDP with many inputs -- coverage checking") {
+    auto tree = SyntaxTree::fromText(R"(
+primitive p13 (output reg a, input b, c,d,e,f,g,h,i,j,k,l,m,n);
+    table
+        0(10)00000000000:0:0;
+    endtable
+endprimitive
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::UdpCoverage);
+}
