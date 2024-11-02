@@ -139,7 +139,7 @@ enum class SLANG_EXPORT AssignFlags : uint16_t {
     /// being connected to an array argument.
     SlicedPort = 1 << 7,
 
-    /// The assignment declares net alias
+    /// The assignment is from a net alias declaration.
     NetAlias = 1 << 8
 };
 SLANG_BITMASK(AssignFlags, NetAlias)

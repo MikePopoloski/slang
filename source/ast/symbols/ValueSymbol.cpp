@@ -49,9 +49,9 @@ bool ValueSymbol::isKind(SymbolKind kind) {
     }
 }
 
-static bool handleOverlap(const Scope& scope, std::string_view name, const ValueDriver& curr,
-                          const ValueDriver& driver, bool isNet, bool isUWire,
-                          bool isSingleDriverUDNT, const NetType* netType) {
+static bool handleOverlap(const Symbol& thisSym, const Scope& scope, std::string_view name,
+                          const ValueDriver& curr, const ValueDriver& driver, bool isNet,
+                          bool isUWire, bool isSingleDriverUDNT, const NetType* netType) {
     auto currRange = curr.getSourceRange();
     auto driverRange = driver.getSourceRange();
 
@@ -166,23 +166,51 @@ static bool handleOverlap(const Scope& scope, std::string_view name, const Value
         return false;
     }
 
+    if (driver.isNetAlias()) {
+        // Avoid duplicate diagnostics where the alias ranges are simply reversed.
+        auto& comp = scope.getCompilation();
+        auto hasDiag = [&](SourceLocation errLoc, SourceLocation noteLoc1,
+                           SourceLocation noteLoc2 = SourceLocation::NoLocation) {
+            for (auto code : {diag::NetAliasSelf, diag::MultipleNetAlias}) {
+                for (auto& diag : comp.getIssuedDiagnosticsAt(code, errLoc)) {
+                    for (auto& note : diag.notes) {
+                        if (note.location == noteLoc1 || note.location == noteLoc2)
+                            return true;
+                    }
+                }
+            }
+            return false;
+        };
+
+        if (hasDiag(currRange.start(), driverRange.start(), curr.symExprSR->start()) ||
+            hasDiag(driver.symExprSR->start(), driverRange.start()) ||
+            hasDiag(curr.symExprSR->start(), currRange.start())) {
+            return false;
+        }
+
+        auto code = driver.containingSymbol == &thisSym ? diag::NetAliasSelf
+                                                        : diag::MultipleNetAlias;
+        auto& diag = scope.addDiag(code, driverRange);
+        diag << name;
+
+        diag.addNote(diag::NoteAliasedTo, *driver.symExprSR);
+        if (code == diag::MultipleNetAlias) {
+            diag.addNote(diag::NoteAliasDeclaration, currRange);
+            diag.addNote(diag::NoteAliasedTo, *curr.symExprSR);
+        }
+
+        return false;
+    }
+
     DiagCode code;
     if (isUWire)
         code = diag::MultipleUWireDrivers;
     else if (isSingleDriverUDNT)
         code = diag::MultipleUDNTDrivers;
-    else if (driver.isNetAlias())
-        code = diag::MultipleNetAlias;
     else if (driver.kind == DriverKind::Continuous && curr.kind == DriverKind::Continuous)
         code = diag::MultipleContAssigns;
     else
         code = diag::MixedVarAssigns;
-
-    // Filter out duplicate diagnostics with accuracy up to swap diagnostic and note.
-    if (driver.isNetAlias() &&
-        scope.getCompilation().checkDiagAndNote(diag::MultipleNetAlias, currRange.start(),
-                                                diag::NoteAliasDeclaration, driverRange.start()))
-        return false;
 
     auto& diag = scope.addDiag(code, driverRange);
     diag << name;
@@ -191,14 +219,7 @@ static bool handleOverlap(const Scope& scope, std::string_view name, const Value
         diag << netType->name;
     }
 
-    if (!driver.isNetAlias()) {
-        addAssignedHereNote(diag);
-    }
-    else {
-        diag.addNote(diag::NoteAliasedTo, *driver.symExprSR);
-        diag.addNote(diag::NoteAliasDeclaration, currRange);
-        diag.addNote(diag::NoteAliasedTo, *curr.symExprSR);
-    }
+    addAssignedHereNote(diag);
     return false;
 }
 
@@ -359,8 +380,8 @@ void ValueSymbol::addDriver(DriverBitRange bounds, const ValueDriver& driver) co
         }
 
         if (isProblem) {
-            if (!handleOverlap(*scope, name, *curr, driver, isNet, isUWire, isSingleDriverUDNT,
-                               netType)) {
+            if (!handleOverlap(*this, *scope, name, *curr, driver, isNet, isUWire,
+                               isSingleDriverUDNT, netType)) {
                 break;
             }
         }

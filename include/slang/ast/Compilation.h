@@ -715,12 +715,10 @@ public:
     /// Queries if any errors have been issued on any scope within this compilation.
     bool hasIssuedErrors() const { return numErrors > 0; };
 
-    /// Check that provided diagnotic code and location with it's note is exists in the compilation
-    /// diagnostic scope
-    bool checkDiagAndNote(DiagCode diagCode, SourceLocation diagLoc, DiagCode noteCode,
-                          SourceLocation noteLoc);
+    /// Gets any issued diagnostics with the given code and location.
+    std::span<const Diagnostic> getIssuedDiagnosticsAt(DiagCode code, SourceLocation loc) const;
 
-    /// @{
+    /// @}
 
 private:
     friend class Lookup;

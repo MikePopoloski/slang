@@ -2068,7 +2068,22 @@ module m;
     alias a = 1;
     alias a = c = m.c = d;
 endmodule
+)");
 
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 5);
+    CHECK(diags[0].code == diag::NetAliasWidthMismatch);
+    CHECK(diags[1].code == diag::ExpressionNotAssignable);
+    CHECK(diags[2].code == diag::NetAliasNotANet);
+    CHECK(diags[3].code == diag::NetAliasHierarchical);
+    CHECK(diags[4].code == diag::NetAliasCommonNetType);
+}
+
+TEST_CASE("Net alias overlap") {
+    auto tree = SyntaxTree::fromText(R"(
 module overlap(inout wire [15:0] bus16, inout wire [11:0] low12, high12, inout wire [32:0] c, inout wire [16:0] b, inout wire [32:0] b2);
     alias bus16 = {{high12[4:0], high12[6:0]}, bus16[3:0]} = {bus16[15:12], high12};
     alias low12[0:0] = a;
@@ -2122,15 +2137,28 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 48);
-    CHECK(diags[0].code == diag::NetAliasWidthMismatch);
-    CHECK(diags[1].code == diag::ExpressionNotAssignable);
-    CHECK(diags[2].code == diag::NetAliasNotANet);
-    CHECK(diags[3].code == diag::NetAliasHierarchical);
-    CHECK(diags[4].code == diag::NetAliasCommonNetType);
-    CHECK(diags[5].code == diag::MultipleNetAlias);
-    for (size_t i = 6; i < 48; ++i)
-        CHECK(diags[i].code == diag::MultipleNetAlias);
+    REQUIRE(diags.size() == 21);
+    CHECK(diags[0].code == diag::MultipleNetAlias);
+    CHECK(diags[1].code == diag::MultipleNetAlias);
+    CHECK(diags[2].code == diag::NetAliasSelf);
+    CHECK(diags[3].code == diag::NetAliasSelf);
+    CHECK(diags[4].code == diag::NetAliasSelf);
+    CHECK(diags[5].code == diag::NetAliasSelf);
+    CHECK(diags[6].code == diag::NetAliasSelf);
+    CHECK(diags[7].code == diag::MultipleNetAlias);
+    CHECK(diags[8].code == diag::MultipleNetAlias);
+    CHECK(diags[9].code == diag::MultipleNetAlias);
+    CHECK(diags[10].code == diag::MultipleNetAlias);
+    CHECK(diags[11].code == diag::MultipleNetAlias);
+    CHECK(diags[12].code == diag::NetAliasSelf);
+    CHECK(diags[13].code == diag::MultipleNetAlias);
+    CHECK(diags[14].code == diag::MultipleNetAlias);
+    CHECK(diags[15].code == diag::MultipleNetAlias);
+    CHECK(diags[16].code == diag::MultipleNetAlias);
+    CHECK(diags[17].code == diag::MultipleNetAlias);
+    CHECK(diags[18].code == diag::MultipleNetAlias);
+    CHECK(diags[19].code == diag::MultipleNetAlias);
+    CHECK(diags[20].code == diag::MultipleNetAlias);
 }
 
 TEST_CASE("Action block parsing regress GH #911") {
