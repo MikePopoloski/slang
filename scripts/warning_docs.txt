@@ -1393,3 +1393,88 @@ module m;
     initial b = a;
 endmodule
 ```
+
+-Wbitwise-rel-precedence
+Identifies a bitwise operator used in a relational expression without parentheses,
+which can indicate a mistake in the intended order of operations.
+```
+module m;
+    int unsigned flags;
+    initial begin
+        if (flags & 'h1 == 'h1) begin end
+    end
+endmodule
+```
+
+-Warith-in-shift
+Identifies an arithmetic operator used in a shift expression, which can
+indicate a mistake in the intended order of operations.
+```
+module m;
+    logic a;
+    initial begin
+        if (a << 1 + 1) begin end
+    end
+endmodule
+```
+
+-Wlogical-not-parentheses
+Identifies a logical not operator used without parentheses around the operand,
+followed by a comparison operator. This can indicate a mistake in the intended
+order of operations.
+```
+module m;
+    logic a, b;
+    initial begin
+        if (!a < b) begin end
+    end
+endmodule
+```
+
+-Wbitwise-op-parentheses
+Identifies a mix of bitwise operators with different levels of precedence without
+any parentheses, which can indicate a mistake in the intended order of operations.
+```
+module m;
+    logic a, b, c;
+    initial begin
+        if (a & b | c) begin end
+    end
+endmodule
+```
+
+-Wlogical-op-parentheses
+Identifies a mix of logical operators with different levels of precedence without
+any parentheses, which can indicate a mistake in the intended order of operations.
+```
+module m;
+    logic a, b, c;
+    initial begin
+        if (a || b && c) begin end
+    end
+endmodule
+```
+
+-Wconditional-precedence
+Identifies a conditional expression mixed with a binary expression in way that
+suggests a different intended order of operations.
+```
+module m;
+    logic a, b;
+    initial begin
+        if ((a + b ? 1 : 2) == 2) begin end
+    end
+endmodule
+```
+
+-Wconsecutive-comparison
+Identifies a sequence of comparison operators that suggest an incorrect notion
+of how the comparisons will be evaluated.
+```
+module m;
+    logic a, b, c;
+    initial begin
+        if (a < b < c) begin end
+    end
+endmodule
+```

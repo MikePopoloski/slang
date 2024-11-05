@@ -1497,6 +1497,74 @@ bool SyntaxFacts::isAssignmentOperator(SyntaxKind kind) {
     }
 }
 
+bool SyntaxFacts::isBitwiseOperator(SyntaxKind kind) {
+    switch (kind) {
+        case SyntaxKind::BinaryOrExpression:
+        case SyntaxKind::BinaryAndExpression:
+        case SyntaxKind::BinaryXorExpression:
+        case SyntaxKind::BinaryXnorExpression:
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool SyntaxFacts::isComparisonOperator(SyntaxKind kind) {
+    switch (kind) {
+        case SyntaxKind::EqualityExpression:
+        case SyntaxKind::InequalityExpression:
+        case SyntaxKind::CaseEqualityExpression:
+        case SyntaxKind::CaseInequalityExpression:
+        case SyntaxKind::WildcardEqualityExpression:
+        case SyntaxKind::WildcardInequalityExpression:
+        case SyntaxKind::LessThanExpression:
+        case SyntaxKind::LessThanEqualExpression:
+        case SyntaxKind::GreaterThanExpression:
+        case SyntaxKind::GreaterThanEqualExpression:
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool SyntaxFacts::isShiftOperator(SyntaxKind kind) {
+    switch (kind) {
+        case SyntaxKind::LogicalShiftLeftExpression:
+        case SyntaxKind::LogicalShiftRightExpression:
+        case SyntaxKind::ArithmeticShiftLeftExpression:
+        case SyntaxKind::ArithmeticShiftRightExpression:
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool SyntaxFacts::isArithmeticOperator(SyntaxKind kind) {
+    switch (kind) {
+        case SyntaxKind::AddExpression:
+        case SyntaxKind::SubtractExpression:
+        case SyntaxKind::MultiplyExpression:
+        case SyntaxKind::DivideExpression:
+        case SyntaxKind::ModExpression:
+        case SyntaxKind::PowerExpression:
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool SyntaxFacts::isRelationalOperator(SyntaxKind kind) {
+    switch (kind) {
+        case SyntaxKind::LessThanExpression:
+        case SyntaxKind::LessThanEqualExpression:
+        case SyntaxKind::GreaterThanExpression:
+        case SyntaxKind::GreaterThanEqualExpression:
+            return true;
+        default:
+            return false;
+    }
+}
+
 // clang-format on
 
 } // namespace slang::syntax

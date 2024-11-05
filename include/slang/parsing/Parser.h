@@ -463,6 +463,10 @@ private:
     void checkEmptyBody(const syntax::SyntaxNode& syntax, Token prevToken,
                         std::string_view syntaxName);
 
+    void analyzePrecedence(const syntax::ExpressionSyntax& left,
+                           const syntax::ExpressionSyntax& right, syntax::SyntaxKind opKind,
+                           Token opToken);
+
     // ---- Member variables ----
 
     // The factory used to create new syntax nodes.

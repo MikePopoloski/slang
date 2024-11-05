@@ -1007,3 +1007,38 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Parentheses / precedence warnings") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int unsigned flags;
+    logic a, b, c;
+    initial begin
+        if (flags & 'h1 == 'h1) begin end
+        if (a & b | c) begin end
+        if (a | b ^ c) begin end
+        if (a || b && c) begin end
+        if (a << 1 + 1) begin end
+        if (!a < b) begin end
+        if (!a & b) begin end
+        if ((a + b ? 1 : 2) == 2) begin end
+        if (a < b < c) begin end
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 9);
+    CHECK(diags[0].code == diag::BitwiseRelPrecedence);
+    CHECK(diags[1].code == diag::BitwiseOpParentheses);
+    CHECK(diags[2].code == diag::BitwiseOpParentheses);
+    CHECK(diags[3].code == diag::LogicalOpParentheses);
+    CHECK(diags[4].code == diag::ArithInShift);
+    CHECK(diags[5].code == diag::LogicalNotParentheses);
+    CHECK(diags[6].code == diag::LogicalNotParentheses);
+    CHECK(diags[7].code == diag::ConditionalPrecedence);
+    CHECK(diags[8].code == diag::ConsecutiveComparison);
+}

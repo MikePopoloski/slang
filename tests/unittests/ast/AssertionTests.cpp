@@ -2001,7 +2001,7 @@ checker assert_window1 (
     bit window = 1'b0, next_window = 1'b1;
 
     always_comb begin
-        if (reset || window && end_event)
+        if (reset || (window && end_event))
             next_window = 1'b0;
         else if (!window && start_event)
             next_window = 1'b1;
@@ -2046,7 +2046,7 @@ checker assert_window2 (
     let end_flag = end_event.triggered;
 
     function bit next_window (bit win);
-        if (reset || win && end_flag)
+        if (reset || (win && end_flag))
             return 1'b0;
         if (!win && start_flag)
             return 1'b1;

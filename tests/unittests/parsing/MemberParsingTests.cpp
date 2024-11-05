@@ -784,7 +784,7 @@ module m;
     a4: assert property (a |=> in1);
 
     function bit next_window (bit win);
-        if (reset || win && end_flag)
+        if (reset || (win && end_flag))
             return 1'b0;
     endfunction
 

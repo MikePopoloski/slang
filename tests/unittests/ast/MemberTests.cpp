@@ -940,7 +940,7 @@ module m4;
     wire e;
     for (genvar i = 0; i < 3; i++) begin : L0
         if (i != 1) begin : L1
-            let my_let(x) = !x || b && c[i];
+            let my_let(x) = !x || (b && c[i]);
             assign d[2 - i] = my_let(a); // OK
         end : L1
     end : L0
@@ -1010,7 +1010,7 @@ module m;
     wire e;
     for (genvar i = 0; i < 3; i++) begin : L0
         if (i !=1) begin : L1
-            let my_let(x) = !x || b && c[i];
+            let my_let(x) = !x || (b && c[i]);
             assign d[2 - i] = my_let(a); // OK
         end : L1
     end : L0

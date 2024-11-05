@@ -311,6 +311,18 @@ warning split-distweight-op SplitDistWeightOp "split dist weight operator is not
 note NoteToMatchThis "to match this '{}'"
 note NoteLastBlockStarted "last complete block started here"
 note NoteLastBlockEnded "and ended here"
+warning bitwise-rel-precedence BitwiseRelPrecedence "'{}' has lower precedence than '{}'; '{}' will be evaluated first"
+note NotePrecedenceBitwiseFirst "place parentheses around the '{}' expression to evaluate it first"
+note NotePrecedenceSilence "place parentheses around the '{}' expression to silence this warning"
+warning bitwise-op-parentheses BitwiseOpParentheses "'{}' within '{}'"
+warning logical-op-parentheses LogicalOpParentheses "'{}' within '{}'"
+warning arith-in-shift ArithInShift "'{}' has lower precedence than '{}'; '{}' will be evaluated first"
+warning logical-not-parentheses LogicalNotParentheses "logical not is only applied to the left hand side of this {}"
+note NoteLogicalNotFix "add parentheses after the '!' to evaluate the {} first"
+note NoteLogicalNotSilence "add parentheses around left hand side expression to silence this warning"
+warning conditional-precedence ConditionalPrecedence "operator '?:' has lower precedence than '{}'; '{}' will be evaluated first"
+note NoteConditionalPrecedenceFix "place parentheses around the '?:' expression to evaluate it first"
+warning consecutive-comparison ConsecutiveComparison "comparisons like 'x < y < z' don't have their mathematical meaning"
 
 subsystem Declarations
 error LocalParamNoInitializer "local parameter is missing an initializer"
@@ -1151,7 +1163,8 @@ group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-
                 unused-result format-real ignored-slice task-ignored width-trunc dup-attr event-const
                 ineffective-sign port-width-trunc constant-conversion float-bool-conv int-bool-conv
                 useless-cast unsigned-arith-shift static-init-order static-init-value float-int-conv
-                float-narrow }
+                float-narrow bitwise-rel-precedence arith-in-shift logical-not-parentheses
+                consecutive-comparison }
 
 group pedantic = { empty-pattern implicit-net-port nonstandard-escape-code nonstandard-generate format-multibit-strength
                    nonstandard-sys-func nonstandard-foreach nonstandard-dist isunbounded-param-arg udp-coverage }
@@ -1164,3 +1177,6 @@ group unused = { unused-def unused-net unused-implicit-net unused-variable undri
                  unused-but-set-net unused-but-set-variable unused-port undriven-port unused-argument
                  unused-parameter unused-type-parameter unused-typedef unused-genvar unused-assertion-decl
                  unused-but-set-port unused-config-cell unused-config-instance unused-import unused-wildcard-import }
+
+group parentheses = { bitwise-rel-precedence arith-in-shift logical-not-parentheses bitwise-op-parentheses
+                      logical-op-parentheses conditional-precedence consecutive-comparison }

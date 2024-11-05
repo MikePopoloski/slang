@@ -326,6 +326,21 @@ public:
     /// @return true if the given syntax kind is an assignment operator.
     static bool isAssignmentOperator(SyntaxKind kind);
 
+    /// @return true if the given syntax kind is a bitwise operator.
+    static bool isBitwiseOperator(SyntaxKind kind);
+
+    /// @return true if the given syntax kind is a comparison operator.
+    static bool isComparisonOperator(SyntaxKind kind);
+
+    /// @return true if the given syntax kind is a shift operator.
+    static bool isShiftOperator(SyntaxKind kind);
+
+    /// @return true if the given syntax kind is an arithmetic operator.
+    static bool isArithmeticOperator(SyntaxKind kind);
+
+    /// @return true if the given syntax kind is a relational operator.
+    static bool isRelationalOperator(SyntaxKind kind);
+
     /// @return a string representing the name of the given data type, if it has a simple name.
     static std::string_view getSimpleTypeName(const DataTypeSyntax& syntax);
 
