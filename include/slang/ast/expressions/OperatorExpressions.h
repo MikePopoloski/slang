@@ -21,9 +21,13 @@ public:
     /// The operator.
     UnaryOperator op;
 
+    /// The source range of the operator token.
+    SourceRange opRange;
+
     UnaryExpression(UnaryOperator op, const Type& type, Expression& operand,
-                    SourceRange sourceRange) :
-        Expression(ExpressionKind::UnaryOp, type, sourceRange), op(op), operand_(&operand) {}
+                    SourceRange sourceRange, SourceRange opRange) :
+        Expression(ExpressionKind::UnaryOp, type, sourceRange), op(op), opRange(opRange),
+        operand_(&operand) {}
 
     /// @returns the operand
     const Expression& operand() const { return *operand_; }

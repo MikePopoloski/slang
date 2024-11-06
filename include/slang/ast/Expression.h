@@ -121,6 +121,14 @@ SLANG_ENUM(RangeSelectionKind, RANGE)
 #undef RANGE
 // clang-format on
 
+bool isBitwiseOperator(BinaryOperator op);
+bool isComparisonOperator(BinaryOperator op);
+bool isShiftOperator(BinaryOperator op);
+bool isArithmeticOperator(BinaryOperator op);
+bool isRelationalOperator(BinaryOperator op);
+std::string_view getOperatorText(BinaryOperator op);
+int getOperatorPrecedence(BinaryOperator op);
+
 /// The base class for all expressions in SystemVerilog.
 class SLANG_EXPORT Expression {
 public:
@@ -353,6 +361,10 @@ public:
 
     /// Returns true if any subexpression of this expression is a hierarchical reference.
     bool hasHierarchicalReference() const;
+
+    /// Returns true if this expression is known to be within a pair of parentheses,
+    /// and otherwise false.
+    bool isParenthesized() const;
 
     /// If this expression is an implicit conversion, recursively unwraps to the
     /// target operand. Otherwise returns `*this`.

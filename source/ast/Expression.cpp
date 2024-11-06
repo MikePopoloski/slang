@@ -746,6 +746,10 @@ bool Expression::hasHierarchicalReference() const {
     return visitor.any;
 }
 
+bool Expression::isParenthesized() const {
+    return syntax && syntax->kind == SyntaxKind::ParenthesizedExpression;
+}
+
 const Expression& Expression::unwrapImplicitConversions() const {
     auto expr = this;
     while (expr->kind == ExpressionKind::Conversion) {

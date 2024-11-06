@@ -9,7 +9,6 @@
 #include "slang/parsing/Lexer.h"
 #include "slang/parsing/Parser.h"
 #include "slang/parsing/Preprocessor.h"
-#include "slang/text/SourceManager.h"
 
 namespace slang::parsing {
 
@@ -103,125 +102,6 @@ ExpressionSyntax& Parser::parseSubExpression(bitmask<ExpressionOptions> options,
     return parseBinaryExpression(leftOperand, options, precedence);
 }
 
-void Parser::analyzePrecedence(const ExpressionSyntax& lhs, const ExpressionSyntax& rhs,
-                               SyntaxKind opKind, Token opToken) {
-    // Warn when mixing bitwise ops and comparisons -- comparisons have higher precedence.
-    // ex: `flags & 'h20 != 0` is equivalent to `flags & 1`
-    if (isBitwiseOperator(opKind)) {
-        auto lhsBin = lhs.as_if<BinaryExpressionSyntax>();
-        auto rhsBin = rhs.as_if<BinaryExpressionSyntax>();
-
-        const bool isLeftComp = lhsBin && isComparisonOperator(lhsBin->kind);
-        const bool isRightComp = rhsBin && isComparisonOperator(rhsBin->kind);
-        if (isLeftComp != isRightComp) {
-            // Bitwise operations are sometimes used as eager logical ops.
-            // Don't diagnose this.
-            const bool isLeftBitwise = lhsBin && isBitwiseOperator(lhsBin->kind);
-            const bool isRightBitwise = rhsBin && isBitwiseOperator(rhsBin->kind);
-            if (!isLeftBitwise && !isRightBitwise) {
-                auto opStr = opToken.valueText();
-                auto compOpStr = isLeftComp ? lhsBin->operatorToken.valueText()
-                                            : rhsBin->operatorToken.valueText();
-                auto compRange = isLeftComp ? lhs.sourceRange() : rhs.sourceRange();
-
-                auto& diag = addDiag(diag::BitwiseRelPrecedence, opToken.range());
-                diag << opStr << compOpStr << compOpStr << compRange;
-
-                auto rewrittenRange =
-                    isLeftComp
-                        ? SourceRange(lhsBin->right->sourceRange().start(), rhs.sourceRange().end())
-                        : SourceRange(lhs.sourceRange().start(), rhsBin->left->sourceRange().end());
-                diag.addNote(diag::NotePrecedenceBitwiseFirst, rewrittenRange) << opStr;
-                diag.addNote(diag::NotePrecedenceSilence, compRange) << compOpStr;
-            }
-        }
-    }
-
-    auto isInMacro = [&] { return getPP().getSourceManager().isMacroLoc(opToken.location()); };
-
-    auto warnAWithinB = [&](DiagCode code, const BinaryExpressionSyntax& binOp) {
-        auto binOpTok = binOp.operatorToken;
-        auto& diag = addDiag(code, binOpTok.range());
-        diag << binOpTok.valueText() << opToken.valueText();
-        diag << binOp.sourceRange() << opToken.range();
-        diag.addNote(diag::NotePrecedenceSilence, binOpTok.range())
-            << binOpTok.valueText() << binOp.sourceRange();
-    };
-
-    // Warn about `a & b | c` constructs (except in macros).
-    if ((opKind == SyntaxKind::BinaryOrExpression || opKind == SyntaxKind::BinaryXorExpression ||
-         opKind == SyntaxKind::BinaryXnorExpression) &&
-        !isInMacro()) {
-
-        auto check = [&](const ExpressionSyntax& expr) {
-            if (auto binOp = expr.as_if<BinaryExpressionSyntax>()) {
-                if (isBitwiseOperator(binOp->kind) &&
-                    getPrecedence(binOp->kind) > getPrecedence(opKind)) {
-                    warnAWithinB(diag::BitwiseOpParentheses, *binOp);
-                }
-            }
-        };
-
-        check(lhs);
-        check(rhs);
-    }
-
-    // Warn about `a && b || c` constructs (except in macros).
-    if (opKind == SyntaxKind::LogicalOrExpression && !isInMacro()) {
-        auto check = [&](const ExpressionSyntax& expr) {
-            if (auto binOp = expr.as_if<BinaryExpressionSyntax>()) {
-                if (binOp->kind == SyntaxKind::LogicalAndExpression)
-                    warnAWithinB(diag::LogicalOpParentheses, *binOp);
-            }
-        };
-
-        check(lhs);
-        check(rhs);
-    }
-
-    // Warn about `x << 1 + 1` constructs.
-    if (isShiftOperator(opKind)) {
-        auto check = [&](const ExpressionSyntax& expr) {
-            if (auto binOp = expr.as_if<BinaryExpressionSyntax>()) {
-                if (binOp->kind == SyntaxKind::AddExpression ||
-                    binOp->kind == SyntaxKind::SubtractExpression) {
-
-                    auto binOpTok = binOp->operatorToken;
-                    auto& diag = addDiag(diag::ArithInShift, binOpTok.range());
-                    diag << opToken.valueText() << binOpTok.valueText() << binOpTok.valueText();
-                    diag << binOp->sourceRange() << opToken.range();
-                    diag.addNote(diag::NotePrecedenceSilence, binOpTok.range())
-                        << binOpTok.valueText() << binOp->sourceRange();
-                }
-            }
-        };
-
-        check(lhs);
-        check(rhs);
-    }
-
-    // Warn about `!x < y` and `!x & y` where they probably meant `!(x < y)` and `!(x & y)`
-    if ((isComparisonOperator(opKind) || opKind == SyntaxKind::BinaryAndExpression) &&
-        lhs.kind == SyntaxKind::UnaryLogicalNotExpression) {
-
-        auto kindStr = opKind == SyntaxKind::BinaryAndExpression ? "bitwise operator"sv
-                                                                 : "comparison"sv;
-        auto& unary = lhs.as<PrefixUnaryExpressionSyntax>();
-        auto notOpTok = unary.operatorToken;
-        auto& diag = addDiag(diag::LogicalNotParentheses, notOpTok.location());
-        diag << kindStr << opToken.range();
-
-        SourceRange range(unary.operand->getFirstToken().location(), rhs.sourceRange().end());
-        diag.addNote(diag::NoteLogicalNotFix, range) << kindStr;
-        diag.addNote(diag::NoteLogicalNotSilence, lhs.sourceRange());
-    }
-
-    // Warn about comparisons like `x < y < z` which doesn't compare the way you'd
-    // mathematically expect.
-    if (isRelationalOperator(opKind) && isRelationalOperator(lhs.kind))
-        addDiag(diag::ConsecutiveComparison, opToken.range());
-}
-
 ExpressionSyntax& Parser::parseBinaryExpression(ExpressionSyntax* left,
                                                 bitmask<ExpressionOptions> options,
                                                 int precedence) {
@@ -285,7 +165,6 @@ ExpressionSyntax& Parser::parseBinaryExpression(ExpressionSyntax* left,
             auto opToken = consume();
             auto attributes = parseAttributes();
             auto& rightOperand = parseSubExpression(options, newPrecedence);
-            analyzePrecedence(*left, rightOperand, opKind, opToken);
             left = &factory.binaryExpression(opKind, *left, opToken, attributes, rightOperand);
 
             if (!attributes.empty() && isAssignmentOperator(opKind))
@@ -313,24 +192,6 @@ ExpressionSyntax& Parser::parseBinaryExpression(ExpressionSyntax* left,
             auto colon = expect(TokenKind::Colon);
             auto& rhs = parseSubExpression(options, logicalOrPrecedence - 1);
             left = &factory.conditionalExpression(predicate, question, attributes, lhs, colon, rhs);
-
-            // Warn about cases where a conditional expression and a binary operator
-            // are mixed in a way that suggests the user mixed up the precedence order.
-            // ex: `a + b ? 1 : 2`
-            if (predicate.conditions.size() == 1 && !predicate.conditions[0]->matchesClause) {
-                if (auto binOp = predicate.conditions[0]->expr->as_if<BinaryExpressionSyntax>()) {
-                    if (isArithmeticOperator(binOp->kind) || isShiftOperator(binOp->kind)) {
-                        auto opStr = binOp->operatorToken.valueText();
-                        auto& diag = addDiag(diag::ConditionalPrecedence, question.location());
-                        diag << opStr << opStr << binOp->sourceRange();
-
-                        SourceRange range(binOp->right->getFirstToken().location(),
-                                          rhs.sourceRange().end());
-                        diag.addNote(diag::NoteConditionalPrecedenceFix, range);
-                        diag.addNote(diag::NotePrecedenceSilence, binOp->sourceRange()) << opStr;
-                    }
-                }
-            }
         }
     }
 

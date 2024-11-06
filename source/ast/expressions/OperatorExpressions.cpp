@@ -26,6 +26,7 @@
 #include "slang/numeric/MathUtils.h"
 #include "slang/parsing/LexerFacts.h"
 #include "slang/syntax/AllSyntax.h"
+#include "slang/text/SourceManager.h"
 
 namespace {
 
@@ -325,7 +326,8 @@ Expression& UnaryExpression::fromSyntax(Compilation& compilation,
     Expression& operand = create(compilation, *syntax.operand, context, extraFlags);
     const Type* type = operand.type;
 
-    auto result = compilation.emplace<UnaryExpression>(op, *type, operand, syntax.sourceRange());
+    auto result = compilation.emplace<UnaryExpression>(op, *type, operand, syntax.sourceRange(),
+                                                       syntax.operatorToken.range());
     if (operand.bad())
         return badExpr(compilation, result);
 
@@ -405,7 +407,8 @@ Expression& UnaryExpression::fromSyntax(Compilation& compilation,
     const Type* type = operand.type;
 
     Expression* result = compilation.emplace<UnaryExpression>(getUnaryOperator(syntax.kind), *type,
-                                                              operand, syntax.sourceRange());
+                                                              operand, syntax.sourceRange(),
+                                                              syntax.operatorToken.range());
     if (operand.bad() || !operand.requireLValue(context, syntax.operatorToken.location()))
         return badExpr(compilation, result);
 
@@ -428,13 +431,13 @@ Expression& UnaryExpression::fromSyntax(Compilation& compilation,
 }
 
 bool UnaryExpression::propagateType(const ASTContext& context, const Type& newType,
-                                    SourceRange opRange) {
+                                    SourceRange propRange) {
     switch (op) {
         case UnaryOperator::Plus:
         case UnaryOperator::Minus:
         case UnaryOperator::BitwiseNot:
             type = &newType;
-            contextDetermined(context, operand_, this, newType, opRange);
+            contextDetermined(context, operand_, this, newType, propRange);
             return true;
         case UnaryOperator::BitwiseAnd:
         case UnaryOperator::BitwiseOr:
@@ -679,6 +682,131 @@ Expression& BinaryExpression::fromSyntax(Compilation& compilation,
     return result;
 }
 
+static void analyzePrecedence(const ASTContext& context, const Expression& lhs,
+                              const Expression& rhs, BinaryOperator op, SourceRange opRange) {
+    auto getBin = [](const Expression& expr) {
+        return expr.isParenthesized() ? nullptr : expr.as_if<BinaryExpression>();
+    };
+
+    // Warn when mixing bitwise ops and comparisons -- comparisons have higher precedence.
+    // ex: `flags & 'h20 != 0` is equivalent to `flags & 1`
+    if (isBitwiseOperator(op)) {
+        auto lhsBin = getBin(lhs);
+        auto rhsBin = getBin(rhs);
+
+        const bool isLeftComp = lhsBin && isComparisonOperator(lhsBin->op);
+        const bool isRightComp = rhsBin && isComparisonOperator(rhsBin->op);
+        if (isLeftComp != isRightComp) {
+            // Bitwise operations are sometimes used as eager logical ops.
+            // Don't diagnose this.
+            const bool isLeftBitwise = lhsBin && isBitwiseOperator(lhsBin->op);
+            const bool isRightBitwise = rhsBin && isBitwiseOperator(rhsBin->op);
+            if (!isLeftBitwise && !isRightBitwise) {
+                auto opStr = getOperatorText(op);
+                auto compOpStr = isLeftComp ? getOperatorText(lhsBin->op)
+                                            : getOperatorText(rhsBin->op);
+                auto compRange = isLeftComp ? lhs.sourceRange : rhs.sourceRange;
+
+                auto& diag = context.addDiag(diag::BitwiseRelPrecedence, opRange);
+                diag << opStr << compOpStr << compOpStr << compRange;
+
+                auto rewrittenRange =
+                    isLeftComp
+                        ? SourceRange(lhsBin->right().sourceRange.start(), rhs.sourceRange.end())
+                        : SourceRange(lhs.sourceRange.start(), rhsBin->left().sourceRange.end());
+                diag.addNote(diag::NotePrecedenceBitwiseFirst, rewrittenRange) << opStr;
+                diag.addNote(diag::NotePrecedenceSilence, compRange) << compOpStr;
+            }
+        }
+    }
+
+    auto isInMacro = [&] {
+        if (auto sm = context.getCompilation().getSourceManager())
+            return sm->isMacroLoc(opRange.start());
+        return false;
+    };
+
+    auto warnAWithinB = [&](DiagCode code, const BinaryExpression& binOp) {
+        auto binOpText = getOperatorText(binOp.op);
+        auto& diag = context.addDiag(code, binOp.opRange);
+        diag << binOpText << getOperatorText(op);
+        diag << binOp.sourceRange << opRange;
+        diag.addNote(diag::NotePrecedenceSilence, binOp.opRange) << binOpText << binOp.sourceRange;
+    };
+
+    // Warn about `a & b | c` constructs (except in macros).
+    if ((op == BinaryOperator::BinaryOr || op == BinaryOperator::BinaryXor ||
+         op == BinaryOperator::BinaryXnor) &&
+        !isInMacro()) {
+
+        auto check = [&](const Expression& expr) {
+            if (auto binOp = getBin(expr)) {
+                if (isBitwiseOperator(binOp->op) &&
+                    getOperatorPrecedence(binOp->op) > getOperatorPrecedence(op)) {
+                    warnAWithinB(diag::BitwiseOpParentheses, *binOp);
+                }
+            }
+        };
+
+        check(lhs);
+        check(rhs);
+    }
+
+    // Warn about `a && b || c` constructs (except in macros).
+    if (op == BinaryOperator::LogicalOr && !isInMacro()) {
+        auto check = [&](const Expression& expr) {
+            if (auto binOp = getBin(expr)) {
+                if (binOp->op == BinaryOperator::LogicalAnd)
+                    warnAWithinB(diag::LogicalOpParentheses, *binOp);
+            }
+        };
+
+        check(lhs);
+        check(rhs);
+    }
+
+    // Warn about `x << 1 + 1` constructs.
+    if (isShiftOperator(op)) {
+        auto check = [&](const Expression& expr) {
+            if (auto binOp = getBin(expr)) {
+                if (binOp->op == BinaryOperator::Add || binOp->op == BinaryOperator::Subtract) {
+                    auto binOpText = getOperatorText(binOp->op);
+                    auto& diag = context.addDiag(diag::ArithInShift, binOp->opRange);
+                    diag << getOperatorText(op) << binOpText << binOpText;
+                    diag << binOp->sourceRange << opRange;
+                    diag.addNote(diag::NotePrecedenceSilence, binOp->opRange)
+                        << binOpText << binOp->sourceRange;
+                }
+            }
+        };
+
+        check(lhs);
+        check(rhs);
+    }
+
+    // Warn about `!x < y` and `!x & y` where they probably meant `!(x < y)` and `!(x & y)`
+    if ((isComparisonOperator(op) || op == BinaryOperator::BinaryAnd) &&
+        lhs.kind == ExpressionKind::UnaryOp && !lhs.isParenthesized() &&
+        lhs.as<UnaryExpression>().op == UnaryOperator::LogicalNot) {
+
+        auto kindStr = op == BinaryOperator::BinaryAnd ? "bitwise operator"sv : "comparison"sv;
+        auto& unary = lhs.as<UnaryExpression>();
+        auto& diag = context.addDiag(diag::LogicalNotParentheses, unary.opRange);
+        diag << kindStr << opRange;
+
+        SourceRange range(unary.operand().sourceRange.start(), rhs.sourceRange.end());
+        diag.addNote(diag::NoteLogicalNotFix, range) << kindStr;
+        diag.addNote(diag::NoteLogicalNotSilence, lhs.sourceRange);
+    }
+
+    // Warn about comparisons like `x < y < z` which doesn't compare the way you'd
+    // mathematically expect.
+    if (isRelationalOperator(op)) {
+        if (auto binOp = getBin(lhs); binOp && isRelationalOperator(binOp->op))
+            context.addDiag(diag::ConsecutiveComparison, opRange);
+    }
+}
+
 Expression& BinaryExpression::fromComponents(Expression& lhs, Expression& rhs, BinaryOperator op,
                                              SourceRange opRange, SourceRange sourceRange,
                                              const ASTContext& context) {
@@ -900,6 +1028,8 @@ Expression& BinaryExpression::fromComponents(Expression& lhs, Expression& rhs, B
         diag << rhs.sourceRange;
         return badExpr(compilation, result);
     }
+
+    analyzePrecedence(context, lhs, rhs, op, opRange);
 
     auto& clt = lt->getCanonicalType();
     auto& crt = rt->getCanonicalType();
@@ -1369,6 +1499,25 @@ Expression& ConditionalExpression::fromSyntax(Compilation& comp,
         diag << left.sourceRange;
         diag << right.sourceRange;
         return badExpr(comp, result);
+    }
+
+    // Warn about cases where a conditional expression and a binary operator
+    // are mixed in a way that suggests the user mixed up the precedence order.
+    // ex: `a + b ? 1 : 2`
+    if (conditions.size() == 1 && !conditions[0].pattern) {
+        if (auto binOp = conditions[0].expr->as_if<BinaryExpression>();
+            binOp && !binOp->isParenthesized()) {
+            if (isArithmeticOperator(binOp->op) || isShiftOperator(binOp->op)) {
+                auto opStr = getOperatorText(binOp->op);
+                auto& diag = context.addDiag(diag::ConditionalPrecedence,
+                                             syntax.question.location());
+                diag << opStr << opStr << binOp->sourceRange;
+
+                SourceRange range(binOp->right().sourceRange.start(), right.sourceRange.end());
+                diag.addNote(diag::NoteConditionalPrecedenceFix, range);
+                diag.addNote(diag::NotePrecedenceSilence, binOp->sourceRange) << opStr;
+            }
+        }
     }
 
     context.setAttributes(*result, syntax.attributes);
@@ -2638,6 +2787,184 @@ ConstantValue Expression::evalBinaryOperator(BinaryOperator op, const ConstantVa
     }
 
 #undef OP
+    SLANG_UNREACHABLE;
+}
+
+bool isBitwiseOperator(BinaryOperator op) {
+    switch (op) {
+        case BinaryOperator::BinaryOr:
+        case BinaryOperator::BinaryAnd:
+        case BinaryOperator::BinaryXor:
+        case BinaryOperator::BinaryXnor:
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool isComparisonOperator(BinaryOperator op) {
+    switch (op) {
+        case BinaryOperator::Equality:
+        case BinaryOperator::Inequality:
+        case BinaryOperator::CaseEquality:
+        case BinaryOperator::CaseInequality:
+        case BinaryOperator::WildcardEquality:
+        case BinaryOperator::WildcardInequality:
+        case BinaryOperator::GreaterThanEqual:
+        case BinaryOperator::GreaterThan:
+        case BinaryOperator::LessThanEqual:
+        case BinaryOperator::LessThan:
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool isShiftOperator(BinaryOperator op) {
+    switch (op) {
+        case BinaryOperator::LogicalShiftLeft:
+        case BinaryOperator::LogicalShiftRight:
+        case BinaryOperator::ArithmeticShiftLeft:
+        case BinaryOperator::ArithmeticShiftRight:
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool isArithmeticOperator(BinaryOperator op) {
+    switch (op) {
+        case BinaryOperator::Add:
+        case BinaryOperator::Subtract:
+        case BinaryOperator::Multiply:
+        case BinaryOperator::Divide:
+        case BinaryOperator::Mod:
+        case BinaryOperator::Power:
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool isRelationalOperator(BinaryOperator op) {
+    switch (op) {
+        case BinaryOperator::GreaterThanEqual:
+        case BinaryOperator::GreaterThan:
+        case BinaryOperator::LessThanEqual:
+        case BinaryOperator::LessThan:
+            return true;
+        default:
+            return false;
+    }
+}
+
+std::string_view getOperatorText(BinaryOperator op) {
+    switch (op) {
+        case BinaryOperator::Add:
+            return "+";
+        case BinaryOperator::Subtract:
+            return "-";
+        case BinaryOperator::Multiply:
+            return "*";
+        case BinaryOperator::Divide:
+            return "/";
+        case BinaryOperator::Mod:
+            return "%";
+        case BinaryOperator::BinaryAnd:
+            return "&";
+        case BinaryOperator::BinaryOr:
+            return "|";
+        case BinaryOperator::BinaryXor:
+            return "^";
+        case BinaryOperator::BinaryXnor:
+            return "~^";
+        case BinaryOperator::Equality:
+            return "==";
+        case BinaryOperator::Inequality:
+            return "!=";
+        case BinaryOperator::CaseEquality:
+            return "===";
+        case BinaryOperator::CaseInequality:
+            return "!==";
+        case BinaryOperator::GreaterThanEqual:
+            return ">=";
+        case BinaryOperator::GreaterThan:
+            return ">";
+        case BinaryOperator::LessThanEqual:
+            return "<=";
+        case BinaryOperator::LessThan:
+            return "<";
+        case BinaryOperator::WildcardEquality:
+            return "==?";
+        case BinaryOperator::WildcardInequality:
+            return "!=?";
+        case BinaryOperator::LogicalAnd:
+            return "&&";
+        case BinaryOperator::LogicalOr:
+            return "||";
+        case BinaryOperator::LogicalImplication:
+            return "->";
+        case BinaryOperator::LogicalEquivalence:
+            return "<->";
+        case BinaryOperator::LogicalShiftLeft:
+            return "<<";
+        case BinaryOperator::LogicalShiftRight:
+            return ">>";
+        case BinaryOperator::ArithmeticShiftLeft:
+            return "<<<";
+        case BinaryOperator::ArithmeticShiftRight:
+            return ">>>";
+        case BinaryOperator::Power:
+            return "**";
+    }
+    SLANG_UNREACHABLE;
+}
+
+int getOperatorPrecedence(BinaryOperator op) {
+    // Note: the precedence levels here match what is returned by
+    // SyntaxFacts::getPrecedence.
+    switch (op) {
+        case BinaryOperator::LogicalImplication:
+        case BinaryOperator::LogicalEquivalence:
+            return 2;
+        case BinaryOperator::LogicalOr:
+            return 3;
+        case BinaryOperator::LogicalAnd:
+            return 4;
+        case BinaryOperator::BinaryOr:
+            return 5;
+        case BinaryOperator::BinaryXor:
+        case BinaryOperator::BinaryXnor:
+            return 6;
+        case BinaryOperator::BinaryAnd:
+            return 7;
+        case BinaryOperator::Equality:
+        case BinaryOperator::Inequality:
+        case BinaryOperator::CaseEquality:
+        case BinaryOperator::CaseInequality:
+        case BinaryOperator::WildcardEquality:
+        case BinaryOperator::WildcardInequality:
+            return 8;
+        case BinaryOperator::GreaterThanEqual:
+        case BinaryOperator::GreaterThan:
+        case BinaryOperator::LessThanEqual:
+        case BinaryOperator::LessThan:
+            return 9;
+        case BinaryOperator::LogicalShiftLeft:
+        case BinaryOperator::LogicalShiftRight:
+        case BinaryOperator::ArithmeticShiftLeft:
+        case BinaryOperator::ArithmeticShiftRight:
+            return 10;
+        case BinaryOperator::Add:
+        case BinaryOperator::Subtract:
+            return 11;
+        case BinaryOperator::Multiply:
+        case BinaryOperator::Divide:
+        case BinaryOperator::Mod:
+            return 12;
+        case BinaryOperator::Power:
+            return 13;
+    }
     SLANG_UNREACHABLE;
 }
 
