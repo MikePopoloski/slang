@@ -7,6 +7,8 @@
 using Catch::Approx;
 
 #include "slang/ast/ScriptSession.h"
+#include "slang/ast/symbols/CompilationUnitSymbols.h"
+#include "slang/ast/symbols/ParameterSymbols.h"
 
 TEST_CASE("Simple eval") {
     ScriptSession session;
@@ -2542,4 +2544,28 @@ TEST_CASE("Array map eval") {
     CHECK(session.eval("D.map with (item * 3)").toString() == R"(["Hello":-3,"World":15])");
 
     NO_SESSION_ERRORS;
+}
+
+TEST_CASE("Packed struct field comparison const eval regress -- GH #1170") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+  typedef struct packed {
+    int width;
+  } t_config;
+
+  parameter t_config Config = '{ width: 4 };
+  parameter bit Compare = Config.width > -1;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& root = compilation.getRoot();
+    auto& config = root.lookupName<ParameterSymbol>("m.Config");
+    CHECK(config.getValue().integer() == 4);
+
+    auto& compare = root.lookupName<ParameterSymbol>("m.Compare");
+    CHECK(compare.getValue().integer() == 1);
 }

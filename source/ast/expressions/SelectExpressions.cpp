@@ -1285,7 +1285,10 @@ ConstantValue MemberAccessExpression::evalImpl(EvalContext& context) const {
     else {
         int32_t io = (int32_t)field.bitOffset;
         int32_t width = (int32_t)type->getBitWidth();
-        return cv.integer().slice(width + io - 1, io);
+        cv = cv.integer().slice(width + io - 1, io);
+
+        // Make sure sign and four-statedness are correct.
+        return cv.convertToInt(type->getBitWidth(), type->isSigned(), type->isFourState());
     }
 }
 
