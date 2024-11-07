@@ -66,68 +66,10 @@ enum class VariableFlags : uint16_t;
 SLANG_ENUM(ExpressionKind, EXPRESSION)
 #undef EXPRESSION
 
-#define OP(x) \
-    x(Plus) \
-    x(Minus) \
-    x(BitwiseNot) \
-    x(BitwiseAnd) \
-    x(BitwiseOr) \
-    x(BitwiseXor) \
-    x(BitwiseNand) \
-    x(BitwiseNor) \
-    x(BitwiseXnor) \
-    x(LogicalNot) \
-    x(Preincrement) \
-    x(Predecrement) \
-    x(Postincrement) \
-    x(Postdecrement)
-SLANG_ENUM(UnaryOperator, OP)
-#undef OP
-
-#define OP(x) \
-    x(Add) \
-    x(Subtract) \
-    x(Multiply) \
-    x(Divide) \
-    x(Mod) \
-    x(BinaryAnd) \
-    x(BinaryOr) \
-    x(BinaryXor) \
-    x(BinaryXnor) \
-    x(Equality) \
-    x(Inequality) \
-    x(CaseEquality) \
-    x(CaseInequality) \
-    x(GreaterThanEqual) \
-    x(GreaterThan) \
-    x(LessThanEqual) \
-    x(LessThan) \
-    x(WildcardEquality) \
-    x(WildcardInequality) \
-    x(LogicalAnd) \
-    x(LogicalOr) \
-    x(LogicalImplication) \
-    x(LogicalEquivalence) \
-    x(LogicalShiftLeft) \
-    x(LogicalShiftRight) \
-    x(ArithmeticShiftLeft) \
-    x(ArithmeticShiftRight) \
-    x(Power)
-SLANG_ENUM(BinaryOperator, OP)
-#undef OP
-
 #define RANGE(x) x(Simple) x(IndexedUp) x(IndexedDown)
 SLANG_ENUM(RangeSelectionKind, RANGE)
 #undef RANGE
 // clang-format on
-
-bool isBitwiseOperator(BinaryOperator op);
-bool isComparisonOperator(BinaryOperator op);
-bool isShiftOperator(BinaryOperator op);
-bool isArithmeticOperator(BinaryOperator op);
-bool isRelationalOperator(BinaryOperator op);
-std::string_view getOperatorText(BinaryOperator op);
-int getOperatorPrecedence(BinaryOperator op);
 
 /// The base class for all expressions in SystemVerilog.
 class SLANG_EXPORT Expression {
@@ -419,15 +361,6 @@ public:
 protected:
     Expression(ExpressionKind kind, const Type& type, SourceRange sourceRange) :
         kind(kind), type(&type), sourceRange(sourceRange) {}
-
-    static UnaryOperator getUnaryOperator(syntax::SyntaxKind kind);
-    static BinaryOperator getBinaryOperator(syntax::SyntaxKind kind);
-
-    static const Type* binaryOperatorType(Compilation& compilation, const Type* lt, const Type* rt,
-                                          bool forceFourState, bool signednessFromRt = false);
-
-    static ConstantValue evalBinaryOperator(BinaryOperator op, const ConstantValue& cvl,
-                                            const ConstantValue& cvr);
 
     static Expression& create(Compilation& compilation, const ExpressionSyntax& syntax,
                               const ASTContext& context,

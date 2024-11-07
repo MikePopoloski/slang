@@ -212,7 +212,7 @@ Expression& AssignmentExpression::fromSyntax(Compilation& compilation,
     std::optional<BinaryOperator> op;
     if (syntax.kind != SyntaxKind::AssignmentExpression &&
         syntax.kind != SyntaxKind::NonblockingAssignmentExpression) {
-        op = getBinaryOperator(syntax.kind);
+        op = OpInfo::getBinary(syntax.kind);
     }
     else {
         extraFlags |= ASTFlags::StreamingAllowed;

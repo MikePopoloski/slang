@@ -9,6 +9,7 @@
 
 #include "slang/ast/Expression.h"
 #include "slang/ast/TimingControl.h"
+#include "slang/ast/expressions/Operator.h"
 #include "slang/syntax/SyntaxFwd.h"
 
 namespace slang::ast {

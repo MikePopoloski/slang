@@ -23,6 +23,7 @@ target_sources(
           expressions/ConversionExpression.cpp
           expressions/LiteralExpressions.cpp
           expressions/MiscExpressions.cpp
+          expressions/Operator.cpp
           expressions/OperatorExpressions.cpp
           expressions/SelectExpressions.cpp
           symbols/AttributeSymbol.cpp

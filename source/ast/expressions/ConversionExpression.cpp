@@ -118,24 +118,8 @@ void checkImplicitConversions(const ASTContext& context, const Type& sourceType,
     };
 
     auto parentIsComparison = [&] {
-        if (parentExpr && parentExpr->kind == ExpressionKind::BinaryOp) {
-            switch (parentExpr->as<BinaryExpression>().op) {
-                case BinaryOperator::Equality:
-                case BinaryOperator::Inequality:
-                case BinaryOperator::CaseEquality:
-                case BinaryOperator::CaseInequality:
-                case BinaryOperator::GreaterThanEqual:
-                case BinaryOperator::GreaterThan:
-                case BinaryOperator::LessThanEqual:
-                case BinaryOperator::LessThan:
-                case BinaryOperator::WildcardEquality:
-                case BinaryOperator::WildcardInequality:
-                    return true;
-                default:
-                    break;
-            }
-        }
-        return false;
+        return parentExpr && parentExpr->kind == ExpressionKind::BinaryOp &&
+               OpInfo::isComparison(parentExpr->as<BinaryExpression>().op);
     };
 
     auto addDiag = [&](DiagCode code) -> Diagnostic& {
@@ -413,7 +397,7 @@ Expression& Expression::convertAssignment(const ASTContext& context, const Type&
         // The "signednessFromRt" flag is important here; only the width of the lhs is
         // propagated down to operands, not the sign flag. Once the expression is appropriately
         // sized, the makeImplicit call down below will convert the sign for us.
-        rt = binaryOperatorType(comp, &type, rt, false, /* signednessFromRt */ true);
+        rt = OpInfo::binaryType(comp, &type, rt, false, /* signednessFromRt */ true);
 
         // If the final type is the same type (or equivalent) of the lhs, we know we're
         // performing an expansion of the rhs. The propagation performed by contextDetermined
