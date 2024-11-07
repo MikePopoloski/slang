@@ -1424,7 +1424,7 @@ followed by a comparison operator. This can indicate a mistake in the intended
 order of operations.
 ```
 module m;
-    logic a, b;
+    int a, b;
     initial begin
         if (!a < b) begin end
     end
