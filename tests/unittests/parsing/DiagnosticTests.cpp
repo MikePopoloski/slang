@@ -303,8 +303,8 @@ TEST_CASE("Multiple ranges split between macro and not") {
 `define PASS(asdf) asdf
 
 module m;
-    bit b;
-    int j = (b) `PASS([1]);
+    struct { bit c; } b;
+    int j = (b).c `PASS([1]);
 endmodule
 )");
 
@@ -314,9 +314,9 @@ endmodule
     auto& diagnostics = compilation.getAllDiagnostics();
     std::string result = "\n" + report(diagnostics);
     CHECK(result == R"(
-source:6:24: error: scalar type cannot be indexed
-    int j = (b) `PASS([1]);
-             ~         ^
+source:6:26: error: scalar type cannot be indexed
+    int j = (b).c `PASS([1]);
+             ~~~~        ^
 source:2:20: note: expanded from macro 'PASS'
 `define PASS(asdf) asdf
                    ^~~~

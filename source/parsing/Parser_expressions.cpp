@@ -578,16 +578,35 @@ ExpressionSyntax& Parser::parsePostfixExpression(ExpressionSyntax& lhs,
         }
     };
 
+    auto isSelectAllowed = [&] {
+        switch (expr->kind) {
+            case SyntaxKind::ConcatenationExpression:
+            case SyntaxKind::MultipleConcatenationExpression:
+            case SyntaxKind::MemberAccessExpression:
+            case SyntaxKind::InvocationExpression:
+            case SyntaxKind::ArrayOrRandomizeMethodExpression:
+            case SyntaxKind::ElementSelectExpression:
+                return true;
+            default:
+                return NameSyntax::isKind(expr->kind);
+        }
+    };
+
     while (true) {
         switch (peek().kind) {
-            case TokenKind::OpenBracket:
+            case TokenKind::OpenBracket: {
                 if (isLiteral() ||
                     (options.has(ExpressionOptions::SequenceExpr) && isSequenceRepetition())) {
                     return *expr;
                 }
 
+                const bool isValid = isSelectAllowed();
                 expr = &factory.elementSelectExpression(*expr, parseElementSelect());
+                if (!isValid)
+                    addDiag(diag::InvalidSelectExpression, expr->sourceRange());
+
                 break;
+            }
             case TokenKind::Dot: {
                 auto dot = consume();
 

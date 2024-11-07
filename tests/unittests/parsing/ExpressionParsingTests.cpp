@@ -288,7 +288,7 @@ TEST_CASE("Streaming concatenation") {
 }
 
 TEST_CASE("Element Access") {
-    auto& text = "(foo)[3][9+4]";
+    auto& text = "(foo).bar[3][9+4]";
     auto& expr = parseExpression(text);
 
     REQUIRE(expr.kind == SyntaxKind::ElementSelectExpression);
@@ -305,9 +305,9 @@ void testElementRange(std::string_view text, SyntaxKind kind) {
 }
 
 TEST_CASE("Element range") {
-    testElementRange("(foo)[3:4]", SyntaxKind::SimpleRangeSelect);
-    testElementRange("(foo)[3+:4]", SyntaxKind::AscendingRangeSelect);
-    testElementRange("(foo)[3-:4]", SyntaxKind::DescendingRangeSelect);
+    testElementRange("(foo).bar[3:4]", SyntaxKind::SimpleRangeSelect);
+    testElementRange("(foo).bar[3+:4]", SyntaxKind::AscendingRangeSelect);
+    testElementRange("(foo).bar[3-:4]", SyntaxKind::DescendingRangeSelect);
 }
 
 TEST_CASE("Member Access") {
@@ -990,4 +990,17 @@ endmodule
 
     REQUIRE(diagnostics.size() == 1);
     CHECK(diagnostics[0].code == diag::ExpectedExpression);
+}
+
+TEST_CASE("Invalid select expression parsing") {
+    auto& text = R"(
+module signal_wrong (input logic [3:0] a,b, output logic [1:0] c);
+    assign c = (a & b)[3:2];
+endmodule
+)";
+
+    parseCompilationUnit(text);
+
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics[0].code == diag::InvalidSelectExpression);
 }
