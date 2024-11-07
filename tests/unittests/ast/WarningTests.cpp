@@ -1013,14 +1013,15 @@ TEST_CASE("Parentheses / precedence warnings") {
 module m;
     int unsigned flags;
     logic a, b, c;
+    int unsigned d, e;
     initial begin
         if (flags & 'h1 == 'h1) begin end
         if (a & b | c) begin end
         if (a | b ^ c) begin end
         if (a || b && c) begin end
         if (a << 1 + 1) begin end
-        if (!a < b) begin end
-        if (!a & b) begin end
+        if (!d < e) begin end
+        if (!d & e) begin end
         if ((a + b ? 1 : 2) == 2) begin end
         if (a < b < c) begin end
     end
@@ -1031,7 +1032,7 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 9);
+    REQUIRE(diags.size() == 10);
     CHECK(diags[0].code == diag::BitwiseRelPrecedence);
     CHECK(diags[1].code == diag::BitwiseOpParentheses);
     CHECK(diags[2].code == diag::BitwiseOpParentheses);
@@ -1039,6 +1040,7 @@ endmodule
     CHECK(diags[4].code == diag::ArithInShift);
     CHECK(diags[5].code == diag::LogicalNotParentheses);
     CHECK(diags[6].code == diag::LogicalNotParentheses);
-    CHECK(diags[7].code == diag::ConditionalPrecedence);
-    CHECK(diags[8].code == diag::ConsecutiveComparison);
+    CHECK(diags[7].code == diag::BitwiseOpMismatch);
+    CHECK(diags[8].code == diag::ConditionalPrecedence);
+    CHECK(diags[9].code == diag::ConsecutiveComparison);
 }

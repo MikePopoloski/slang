@@ -688,6 +688,10 @@ static void analyzePrecedence(const ASTContext& context, const Expression& lhs,
         return expr.isParenthesized() ? nullptr : expr.as_if<BinaryExpression>();
     };
 
+    auto isBoolean = [](const Expression& expr) {
+        return expr.type->isIntegral() && expr.type->getBitWidth() == 1;
+    };
+
     // Warn when mixing bitwise ops and comparisons -- comparisons have higher precedence.
     // ex: `flags & 'h20 != 0` is equivalent to `flags & 1`
     if (isBitwiseOperator(op)) {
@@ -701,7 +705,8 @@ static void analyzePrecedence(const ASTContext& context, const Expression& lhs,
             // Don't diagnose this.
             const bool isLeftBitwise = lhsBin && isBitwiseOperator(lhsBin->op);
             const bool isRightBitwise = rhsBin && isBitwiseOperator(rhsBin->op);
-            if (!isLeftBitwise && !isRightBitwise) {
+            const bool bothBoolean = isBoolean(lhs) && isBoolean(rhs);
+            if (!isLeftBitwise && !isRightBitwise && !bothBoolean) {
                 auto opStr = getOperatorText(op);
                 auto compOpStr = isLeftComp ? getOperatorText(lhsBin->op)
                                             : getOperatorText(rhsBin->op);
@@ -720,12 +725,6 @@ static void analyzePrecedence(const ASTContext& context, const Expression& lhs,
         }
     }
 
-    auto isInMacro = [&] {
-        if (auto sm = context.getCompilation().getSourceManager())
-            return sm->isMacroLoc(opRange.start());
-        return false;
-    };
-
     auto warnAWithinB = [&](DiagCode code, const BinaryExpression& binOp) {
         auto binOpText = getOperatorText(binOp.op);
         auto& diag = context.addDiag(code, binOp.opRange);
@@ -734,11 +733,9 @@ static void analyzePrecedence(const ASTContext& context, const Expression& lhs,
         diag.addNote(diag::NotePrecedenceSilence, binOp.opRange) << binOpText << binOp.sourceRange;
     };
 
-    // Warn about `a & b | c` constructs (except in macros).
-    if ((op == BinaryOperator::BinaryOr || op == BinaryOperator::BinaryXor ||
-         op == BinaryOperator::BinaryXnor) &&
-        !isInMacro()) {
-
+    // Warn about `a & b | c` constructs.
+    if (op == BinaryOperator::BinaryOr || op == BinaryOperator::BinaryXor ||
+        op == BinaryOperator::BinaryXnor) {
         auto check = [&](const Expression& expr) {
             if (auto binOp = getBin(expr)) {
                 if (isBitwiseOperator(binOp->op) &&
@@ -753,7 +750,7 @@ static void analyzePrecedence(const ASTContext& context, const Expression& lhs,
     }
 
     // Warn about `a && b || c` constructs (except in macros).
-    if (op == BinaryOperator::LogicalOr && !isInMacro()) {
+    if (op == BinaryOperator::LogicalOr) {
         auto check = [&](const Expression& expr) {
             if (auto binOp = getBin(expr)) {
                 if (binOp->op == BinaryOperator::LogicalAnd)
@@ -789,14 +786,16 @@ static void analyzePrecedence(const ASTContext& context, const Expression& lhs,
         lhs.kind == ExpressionKind::UnaryOp && !lhs.isParenthesized() &&
         lhs.as<UnaryExpression>().op == UnaryOperator::LogicalNot) {
 
-        auto kindStr = op == BinaryOperator::BinaryAnd ? "bitwise operator"sv : "comparison"sv;
         auto& unary = lhs.as<UnaryExpression>();
-        auto& diag = context.addDiag(diag::LogicalNotParentheses, unary.opRange);
-        diag << kindStr << opRange;
+        if (!isBoolean(unary.operand()) && !isBoolean(rhs)) {
+            auto kindStr = op == BinaryOperator::BinaryAnd ? "bitwise operator"sv : "comparison"sv;
+            auto& diag = context.addDiag(diag::LogicalNotParentheses, unary.opRange);
+            diag << kindStr << opRange;
 
-        SourceRange range(unary.operand().sourceRange.start(), rhs.sourceRange.end());
-        diag.addNote(diag::NoteLogicalNotFix, range) << kindStr;
-        diag.addNote(diag::NoteLogicalNotSilence, lhs.sourceRange);
+            SourceRange range(unary.operand().sourceRange.start(), rhs.sourceRange.end());
+            diag.addNote(diag::NoteLogicalNotFix, range) << kindStr;
+            diag.addNote(diag::NoteLogicalNotSilence, lhs.sourceRange);
+        }
     }
 
     // Warn about comparisons like `x < y < z` which doesn't compare the way you'd
