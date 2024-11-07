@@ -561,6 +561,26 @@ void SubroutineSymbol::checkVirtualMethodMatch(const Scope& scope,
             return;
         }
     }
+
+    if (parentMethod.visibility != derivedMethod.visibility) {
+        auto visStr = [](Visibility vis) {
+            switch (vis) {
+                case Visibility::Local:
+                    return "local"sv;
+                case Visibility::Protected:
+                    return "protected"sv;
+                case Visibility::Public:
+                    return "public"sv;
+                default:
+                    return ""sv;
+            }
+        };
+
+        auto& diag = scope.addDiag(diag::VirtualVisibilityMismatch, derivedMethod.location);
+        diag << derivedMethod.name << visStr(derivedMethod.visibility)
+             << visStr(parentMethod.visibility);
+        diag.addNote(diag::NoteDeclarationHere, parentMethod.location);
+    }
 }
 
 struct LocalVarCheckVisitor {

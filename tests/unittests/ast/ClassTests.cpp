@@ -3510,3 +3510,32 @@ endclass
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::ProtectedMemberAccess);
 }
+
+TEST_CASE("Virtual method qualifier mismatch") {
+    auto tree = SyntaxTree::fromText(R"(
+class C1;
+    virtual protected function void f();
+    endfunction
+endclass
+
+class C2 extends C1;
+    virtual function void f();
+    endfunction
+endclass
+
+module top;
+    C2 c;
+    initial begin
+        c = new();
+        c.f();
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::VirtualVisibilityMismatch);
+}

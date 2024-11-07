@@ -379,6 +379,7 @@ error MethodArgDirectionMismatch "direction of method argument '{}' differs from
 error MemberDefinitionBeforeClass "definition of '{}' must come after its containing class '{}'"
 error MethodReturnTypeScoped "return type for out-of-block method '{}' must use class scope '{}::' to access nested type"
 error VirtualKindMismatch "mismatch between 'function' and 'task' declared in superclass method"
+error VirtualVisibilityMismatch "virtual method '{}' is '{}' but declared '{}' in superclass method"
 error VirtualReturnMismatch "return type {} of virtual method '{}' does not match {} declared in its superclass"
 error VirtualArgCountMismatch "virtual method '{}' has different number of arguments from its superclass method"
 error VirtualArgNameMismatch "virtual method argument name '{}' doesn't match '{}' given in its superclass method"
