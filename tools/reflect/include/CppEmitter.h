@@ -57,8 +57,8 @@ public:
             return fmt::format("#include \"{}.h\"", h);
         });
         return fmt::format("// {}\n#pragma once\n\n{}\n{}\n\n{}", fileName,
-                      fmt::join(includesTransform, "\n"), fmt::join(headersTransform, "\n"),
-                      hpp.str());
+                           fmt::join(includesTransform, "\n"), fmt::join(headersTransform, "\n"),
+                           hpp.str());
     }
 
     void emitToFile(const fs::path& path) const {

@@ -46,8 +46,8 @@ void SvStruct::toCpp(HppFile& hppFile, const std::string_view _namespace, const 
     //** MEMBERS DECLARATION **//
     for (const auto& [name, type] : members) {
         if (type.isStructEnumOrUnion() && _namespace != type._namespace) {
-            hppFile.addWithIndent(fmt::format("{}::{} {};\n", type._namespace,
-                                              type.toString(), name));
+            hppFile.addWithIndent(
+                fmt::format("{}::{} {};\n", type._namespace, type.toString(), name));
             hppFile.addIncludeHeader(type._namespace);
         }
         else {
@@ -59,10 +59,8 @@ void SvStruct::toCpp(HppFile& hppFile, const std::string_view _namespace, const 
     //** GENERATE START AND WIDTH OF EACH SIGNAL **//
     size_t startBit = 0;
     for (const auto& [name, type] : members) {
-        hppFile.addWithIndent(
-            fmt::format("static constexpr size_t {}_s = {};\n", name, startBit));
-        hppFile.addWithIndent(
-            fmt::format("static constexpr size_t {}_w = {};\n", name, type.size));
+        hppFile.addWithIndent(fmt::format("static constexpr size_t {}_s = {};\n", name, startBit));
+        hppFile.addWithIndent(fmt::format("static constexpr size_t {}_w = {};\n", name, type.size));
         startBit += type.size;
     }
     hppFile.addWithIndent(fmt::format("static constexpr size_t _size = {};\n", structSize));
@@ -89,14 +87,14 @@ void SvStruct::toCpp(HppFile& hppFile, const std::string_view _namespace, const 
                     values.emplace_back(
                         fmt::format("__data.range({0}_s + {0}_w - 1, {0}_s)", name));
                 else
-                    values.emplace_back(fmt::format(
-                        "__data.range({0}_s + {0}_w - 1, {0}_s).to_uint64()", name));
+                    values.emplace_back(
+                        fmt::format("__data.range({0}_s + {0}_w - 1, {0}_s).to_uint64()", name));
             }
         }
         else {
             for (const auto& [name, type] : members)
-                values.emplace_back(fmt::format("(__data >> {0}_s) & (~0ULL >> (64 - {1}))",
-                                                name, type.size));
+                values.emplace_back(
+                    fmt::format("(__data >> {0}_s) & (~0ULL >> (64 - {1}))", name, type.size));
         }
 
         for (auto i = 0; i < members.size(); i++) {
@@ -105,12 +103,11 @@ void SvStruct::toCpp(HppFile& hppFile, const std::string_view _namespace, const 
 
             if (type.isStructEnumOrUnion())
                 if (_namespace != type._namespace)
-                    hppFile.addWithIndent(fmt::format("{} = {}::{}({});\n", name,
-                                                      type._namespace,
+                    hppFile.addWithIndent(fmt::format("{} = {}::{}({});\n", name, type._namespace,
                                                       type.toString(), value));
                 else
-                    hppFile.addWithIndent(fmt::format("{} = {}({});\n", name,
-                                                      type.toString(), value));
+                    hppFile.addWithIndent(
+                        fmt::format("{} = {}({});\n", name, type.toString(), value));
             else
                 hppFile.addWithIndent(fmt::format("{} = {};\n", name, value));
         }
@@ -133,17 +130,15 @@ void SvStruct::toCpp(HppFile& hppFile, const std::string_view _namespace, const 
             if (type.size == 1)
                 value = fmt::format("__data.get_bit({0}_s)", name);
             else
-                value = fmt::format("__data.range({0}_s + {0}_w - 1, {0}_s).to_uint64()",
-                                    name);
+                value = fmt::format("__data.range({0}_s + {0}_w - 1, {0}_s).to_uint64()", name);
 
             if (type.isStructEnumOrUnion())
                 if (_namespace != type._namespace)
-                    hppFile.addWithIndent(fmt::format("{} = {}::{}({});\n", name,
-                                                      type._namespace,
+                    hppFile.addWithIndent(fmt::format("{} = {}::{}({});\n", name, type._namespace,
                                                       type.toString(), value));
                 else
-                    hppFile.addWithIndent(fmt::format("{} = {}({});\n", name,
-                                                      type.toString(), value));
+                    hppFile.addWithIndent(
+                        fmt::format("{} = {}({});\n", name, type.toString(), value));
             else
                 hppFile.addWithIndent(fmt::format("{} = {};\n", name, value));
         }
@@ -162,8 +157,7 @@ void SvStruct::toCpp(HppFile& hppFile, const std::string_view _namespace, const 
                 hppFile.addWithIndent(fmt::format("ret.set_bit({0}_s, {0});\n", name));
             }
             else {
-                hppFile.addWithIndent(
-                    fmt::format("ret.range({0}_s + {0}_w - 1, {0}_s) = ", name));
+                hppFile.addWithIndent(fmt::format("ret.range({0}_s + {0}_w - 1, {0}_s) = ", name));
                 if (type.isStructEnumOrUnion() && type.size > 64)
                     hppFile.add(fmt::format("sc_bv<{}>({});\n", type.size, name));
                 else
@@ -195,8 +189,7 @@ void SvStruct::toCpp(HppFile& hppFile, const std::string_view _namespace, const 
                 hppFile.addWithIndent(fmt::format("ret.set_bit({0}_s, {0});\n", name));
             }
             else {
-                hppFile.addWithIndent(
-                    fmt::format("ret.range({0}_s + {0}_w - 1, {0}_s) = ", name));
+                hppFile.addWithIndent(fmt::format("ret.range({0}_s + {0}_w - 1, {0}_s) = ", name));
                 if (type.isStructEnumOrUnion() && type.size > 64)
                     hppFile.add(fmt::format("sc_bv<{}>({});\n", type.size, name));
                 else
@@ -243,8 +236,7 @@ void SvStruct::toCpp(HppFile& hppFile, const std::string_view _namespace, const 
     for (const auto& [name, type] : members) {
         if (type.isStructEnumOrUnion() && _namespace != type._namespace) {
             hppFile.addWithIndent(fmt::format("static {}::{} get_{} (const {}& __data) {{\n",
-                                              type._namespace, type.toString(),
-                                              name, cppTypeStr));
+                                              type._namespace, type.toString(), name, cppTypeStr));
         }
         else {
             hppFile.addWithIndent(fmt::format("static {} get_{} (const {}& __data) {{\n",
@@ -258,21 +250,18 @@ void SvStruct::toCpp(HppFile& hppFile, const std::string_view _namespace, const 
             else if (type.size > 64)
                 value = fmt::format("__data.range({0}_s + {0}_w - 1, {0}_s)", name);
             else
-                value = fmt::format("__data.range({0}_s + {0}_w - 1, {0}_s).to_uint64()",
-                                    name);
+                value = fmt::format("__data.range({0}_s + {0}_w - 1, {0}_s).to_uint64()", name);
         }
         else {
-            value = fmt::format("(__data >> {0}_s) & (~0ULL >> (64 - {1}))", name,
-                                type.size);
+            value = fmt::format("(__data >> {0}_s) & (~0ULL >> (64 - {1}))", name, type.size);
         }
 
         if (type.isStructEnumOrUnion())
             if (_namespace != type._namespace)
-                hppFile.addWithIndent(fmt::format("return {}::{}({});\n", type._namespace,
-                                                  type.toString(), value));
-            else
                 hppFile.addWithIndent(
-                    fmt::format("return {}({});\n", type.toString(), value));
+                    fmt::format("return {}::{}({});\n", type._namespace, type.toString(), value));
+            else
+                hppFile.addWithIndent(fmt::format("return {}({});\n", type.toString(), value));
         else
             hppFile.addWithIndent(fmt::format("return {};\n", value));
 

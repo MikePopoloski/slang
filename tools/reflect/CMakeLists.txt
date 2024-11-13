@@ -4,9 +4,9 @@
 # ~~~
 
 add_library(
-  slang_reflect_obj_lib OBJECT src/SvStruct.cpp src/SvType.cpp src/SvEnum.cpp
-                               src/SvTypeReflector.cpp src/SvLocalParam.cpp
-                               src/SvUnion.cpp)
+  slang_reflect_obj_lib OBJECT
+  src/SvStruct.cpp src/SvType.cpp src/SvEnum.cpp src/SvTypeReflector.cpp
+  src/SvLocalParam.cpp src/SvUnion.cpp)
 
 target_include_directories(slang_reflect_obj_lib PUBLIC include ../../include)
 target_link_libraries(slang_reflect_obj_lib PUBLIC slang::slang)

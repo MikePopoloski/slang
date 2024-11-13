@@ -9,7 +9,6 @@
 #pragma once
 
 #include "CppEmitter.h"
-
 #include <unordered_map>
 
 using SvAliases = std::unordered_map<std::string_view, std::string_view>;
