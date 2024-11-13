@@ -415,8 +415,10 @@ MemberSyntax* Parser::parseSingleMember(SyntaxKind parentKind) {
     if (anyLocalModules)
         moduleDeclStack.pop_back();
 
-    if (result)
+    if (result) {
         checkMemberAllowed(*result, parentKind);
+        result->previewNode = std::exchange(previewNode, nullptr);
+    }
 
     return result;
 }
@@ -438,6 +440,8 @@ std::span<TMember*> Parser::parseMemberList(TokenKind endKind, Token& endToken,
             checkMemberAllowed(*member, parentKind);
             members.push_back(member);
             errored = false;
+
+            member->previewNode = std::exchange(previewNode, nullptr);
         }
         else {
             if (isCloseDelimOrKeyword(kind)) {
@@ -487,7 +491,10 @@ MemberSyntax& Parser::parseModportSubroutinePortList(AttrList attributes) {
             auto& proto = parseFunctionPrototype(SyntaxKind::Unknown,
                                                  FunctionOptions::AllowEmptyArgNames |
                                                      FunctionOptions::IsPrototype);
-            buffer.push_back(&factory.modportSubroutinePort(proto));
+
+            auto& msp = factory.modportSubroutinePort(proto);
+            msp.previewNode = std::exchange(previewNode, nullptr);
+            buffer.push_back(&msp);
         }
         else {
             auto name = expect(TokenKind::Identifier);
@@ -642,8 +649,11 @@ FunctionPortBaseSyntax& Parser::parseFunctionPort(bitmask<FunctionOptions> optio
     else {
         decl = &factory.declarator(placeholderToken(), nullptr, nullptr);
     }
-    return factory.functionPort(attributes, constKeyword, direction, staticKeyword, varKeyword,
-                                dataType, *decl);
+
+    auto& result = factory.functionPort(attributes, constKeyword, direction, staticKeyword,
+                                        varKeyword, dataType, *decl);
+    result.previewNode = std::exchange(previewNode, nullptr);
+    return result;
 }
 
 static bool checkSubroutineName(const NameSyntax& name) {
@@ -746,7 +756,12 @@ FunctionPrototypeSyntax& Parser::parseFunctionPrototype(SyntaxKind parentKind,
         addDiag(diag::ImplicitNotAllowed, name.getFirstToken().location());
     }
 
+    // If the function returns a declared enum type, save it off here
+    // so that we don't suck it into the port list.
+    auto savedPN = std::exchange(previewNode, nullptr);
     auto portList = parseFunctionPortList(options);
+    previewNode = savedPN;
+
     return factory.functionPrototype(keyword, specifiers, lifetime, *returnType, name, portList);
 }
 
@@ -2467,8 +2482,10 @@ AssertionItemPortSyntax& Parser::parseAssertionItemPort(SyntaxKind parentKind) {
         defaultValue = &factory.equalsAssertionArgClause(equals, parsePropertyExpr(0));
     }
 
-    return factory.assertionItemPort(attributes, local, direction, *type, name, dimensions,
-                                     defaultValue);
+    auto& result = factory.assertionItemPort(attributes, local, direction, *type, name, dimensions,
+                                             defaultValue);
+    result.previewNode = std::exchange(previewNode, nullptr);
+    return result;
 }
 
 AssertionItemPortListSyntax* Parser::parseAssertionItemPortList(SyntaxKind parentKind) {

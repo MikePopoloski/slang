@@ -91,12 +91,21 @@ class SLANG_EXPORT SyntaxNode {
 public:
     using Token = parsing::Token;
 
+    /// The kind of syntax node.
+    SyntaxKind kind;
+
     /// The parent node of this syntax node. The root of the syntax
     /// tree does not have a parent (will be nullptr).
     SyntaxNode* parent = nullptr;
 
-    /// The kind of syntax node.
-    SyntaxKind kind;
+    /// @brief An potional pointer to a syntax node tha can be useful
+    /// to know ahead of time when visiting this node.
+    ///
+    /// The node, if set, is underneath this node in the syntax tree.
+    ///
+    /// For example, an enum declaration deep inside an expression tree
+    /// needs to be known up front to add its members to its parent scope.
+    const SyntaxNode* previewNode = nullptr;
 
     /// Print the node and all of its children to a string.
     std::string toString() const;

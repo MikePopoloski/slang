@@ -378,6 +378,7 @@ private:
     syntax::MemberSyntax* parseLibraryMember();
     syntax::FilePathSpecSyntax& parseFilePathSpec();
     syntax::LibraryDeclarationSyntax& parseLibraryDecl();
+    syntax::StatementSyntax& parseStatementInternal(bool allowEmpty, bool allowSuperNew);
     // clang-format on
 
     template<bool (*IsEnd)(TokenKind)>
@@ -467,6 +468,10 @@ private:
 
     // The factory used to create new syntax nodes.
     syntax::SyntaxFactory factory;
+
+    // A pending node that should be stored as a "preview node"
+    // on the next member that is parsed.
+    const syntax::SyntaxNode* previewNode = nullptr;
 
     // Stored parse options.
     ParserOptions parseOptions;

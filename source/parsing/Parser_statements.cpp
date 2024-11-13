@@ -14,6 +14,12 @@ namespace slang::parsing {
 using namespace syntax;
 
 StatementSyntax& Parser::parseStatement(bool allowEmpty, bool allowSuperNew) {
+    auto& result = parseStatementInternal(allowEmpty, allowSuperNew);
+    result.previewNode = std::exchange(previewNode, nullptr);
+    return result;
+}
+
+StatementSyntax& Parser::parseStatementInternal(bool allowEmpty, bool allowSuperNew) {
     auto dg = setDepthGuard();
 
     NamedLabelSyntax* label = nullptr;
@@ -355,10 +361,11 @@ SyntaxNode& Parser::parseForInitializer() {
     if (isVariableDeclaration()) {
         auto varKeyword = consumeIf(TokenKind::VarKeyword);
         auto& type = parseDataType();
-
-        return factory.forVariableDeclaration(varKeyword, &type,
-                                              parseDeclarator(/* allowMinTypMax */ false,
-                                                              /* requireInitializers */ true));
+        auto& decl = parseDeclarator(/* allowMinTypMax */ false,
+                                     /* requireInitializers */ true);
+        auto& result = factory.forVariableDeclaration(varKeyword, &type, decl);
+        result.previewNode = std::exchange(previewNode, nullptr);
+        return result;
     }
 
     return factory.forVariableDeclaration(Token(), nullptr, parseDeclarator());
@@ -999,6 +1006,7 @@ StatementSyntax& Parser::parseRandSequenceStatement(NamedLabelSyntax* label, Att
     while (isPossibleDataType(peek().kind)) {
         auto curr = peek();
         productions.push_back(&parseProduction());
+        productions.back()->previewNode = std::exchange(previewNode, nullptr);
 
         // If there are no consumed tokens then production was not parsed.
         if (curr == peek())
