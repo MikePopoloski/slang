@@ -4,7 +4,6 @@
 #include "SvEnum.h"
 
 #include <fmt/format.h>
-#include <iostream>
 
 void SvEnum::toCpp(HppFile& hppFile, std::string_view, const SvAliases&, bool) const {
     auto underlyingType = [&] {
@@ -77,7 +76,7 @@ void SvEnum::toCpp(HppFile& hppFile, std::string_view, const SvAliases&, bool) c
     hppFile.increaseIndent();
     hppFile.addWithIndent("switch (__data.type) {\n");
     hppFile.increaseIndent();
-    for (const auto& [name, value] : members)
+    for (const auto& name : members | std::views::keys)
         hppFile.addWithIndent(fmt::format("case Type::{0}: os << \"{0}\"; break;\n", name));
     hppFile.decreaseIndent();
     hppFile.addWithIndent("}\n");

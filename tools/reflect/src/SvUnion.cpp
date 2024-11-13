@@ -36,7 +36,7 @@ void SvUnion::toCpp(HppFile& hppFile, std::string_view _namespace, const SvAlias
     // Create a sc bit vector to store the data of the Union
     hppFile.addWithIndent(fmt::format("{} union_data;\n\n", cppTypeStr));
 
-    // Check if some headers needs to be included
+    // Check if some headers need to be included
     for (const auto& member : type.getCanonicalType().as<slang::ast::Scope>().members()) {
         const auto& variable = member.as<slang::ast::VariableSymbol>();
 

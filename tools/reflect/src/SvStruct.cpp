@@ -176,7 +176,7 @@ void SvStruct::toCpp(HppFile& hppFile, const std::string_view _namespace, const 
         hppFile.addWithIndent(fmt::format("operator {}() const {{\n", cppTypeStr));
         hppFile.increaseIndent();
         hppFile.addWithIndent(fmt::format("{} ret = 0;\n", cppTypeStr));
-        for (const auto& [name, _] : members) {
+        for (const auto& name : members | std::views::keys) {
             hppFile.addWithIndent(
                 fmt::format("ret |= static_cast<{0}>({1}) << {1}_s;\n", cppTypeStr, name));
         }
