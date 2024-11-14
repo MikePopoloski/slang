@@ -169,26 +169,10 @@ void Scope::addDiags(const Diagnostics& diags) const {
     }
 }
 
-void Scope::addMember(const Symbol& symbol) {
-    // For any symbols that expose a type to the surrounding scope, keep track of it in our
-    // deferred data so that we can include enum values in our member list.
-    const DeclaredType* declaredType = symbol.getDeclaredType();
-    if (declaredType) {
-        auto syntax = declaredType->getTypeSyntax();
-        if (syntax && syntax->kind == SyntaxKind::EnumType) {
-            getOrAddDeferredData().registerTransparentType(lastMember, symbol);
-            insertMember(&symbol, lastMember, false, true);
-
-            // Make extra space in the scope for the enum members to be inserted.
-            symbol.indexInScope += 1;
-            return;
-        }
-    }
-
-    insertMember(&symbol, lastMember, false, true);
-}
-
 void Scope::addMembers(const SyntaxNode& syntax) {
+    if (syntax.previewNode)
+        addMembers(*syntax.previewNode);
+
     switch (syntax.kind) {
         case SyntaxKind::ModuleDeclaration:
         case SyntaxKind::InterfaceDeclaration:
@@ -280,6 +264,10 @@ void Scope::addMembers(const SyntaxNode& syntax) {
         case SyntaxKind::CoverCross:
         case SyntaxKind::NetAlias:
             addDeferredMembers(syntax);
+            break;
+        case SyntaxKind::EnumType:
+            addDeferredMembers(syntax);
+            getOrAddDeferredData().hasEnums = true;
             break;
         case SyntaxKind::PortDeclaration:
             addDeferredMembers(syntax);
@@ -824,46 +812,38 @@ void Scope::elaborate() const {
 
     SLANG_ASSERT(deferredMemberIndex != DeferredMemberIndex::Invalid);
     auto deferredData = compilation.getOrAddDeferredData(deferredMemberIndex);
+    auto deferred = deferredData.getMembers();
     deferredMemberIndex = DeferredMemberIndex::Invalid;
 
-    SmallSet<const SyntaxNode*, 8> enumDecls;
-    for (const auto& pair : deferredData.getTransparentTypes()) {
-        auto insertAt = pair.first;
-        auto dt = pair.second->getDeclaredType();
-
-        const Type* type = &dt->getType();
-        while (type->isArray())
-            type = type->getArrayElementType();
-
-        if (type->kind == SymbolKind::EnumType) {
-            if (!type->getSyntax() || enumDecls.insert(type->getSyntax()).second) {
-                for (const auto& value : type->as<EnumType>().values()) {
-                    auto wrapped = compilation.emplace<TransparentMemberSymbol>(value);
-                    insertMember(wrapped, insertAt, true, false);
-                    insertAt = wrapped;
+    // Enums need to be handled first because their value members may need
+    // to be looked up by methods below.
+    if (deferredData.hasEnums) {
+        for (auto symbol : deferred) {
+            const Symbol* at = symbol;
+            auto& node = symbol->as<DeferredMemberSymbol>().node;
+            if (node.kind == SyntaxKind::EnumType) {
+                ASTContext context(*this, LookupLocation::before(*symbol));
+                auto& type = EnumType::fromSyntax(compilation, node.as<EnumTypeSyntax>(), context);
+                if (type.isError()) {
+                    // If we failed to create the enum type we should still create placeholders
+                    // for all the members so that we don't get further errors.
+                    SmallVector<const Symbol*> members;
+                    EnumType::createDefaultMembers(context, node.as<EnumTypeSyntax>(), members);
+                    for (auto member : members) {
+                        insertMember(member, at, true, false);
+                        at = member;
+                    }
+                }
+                else {
+                    for (auto& value : type.as<EnumType>().values()) {
+                        auto wrapped = compilation.emplace<TransparentMemberSymbol>(value);
+                        insertMember(wrapped, at, true, false);
+                        at = wrapped;
+                    }
                 }
             }
         }
-        else {
-            // If there was an error with the enum definition, we still want to
-            // add all of the members into this scope so that we don't get
-            // further errors reported.
-            auto syntax = dt->getTypeSyntax();
-            SLANG_ASSERT(syntax);
-            SLANG_ASSERT(type->kind == SymbolKind::ErrorType);
-
-            SmallVector<const Symbol*> members;
-            ASTContext context(*this, LookupLocation::max);
-            EnumType::createDefaultMembers(context, syntax->as<EnumTypeSyntax>(), members);
-
-            for (auto member : members) {
-                insertMember(member, insertAt, true, false);
-                insertAt = member;
-            }
-        }
     }
-
-    auto deferred = deferredData.getMembers();
 
     if (thisSym->kind == SymbolKind::ClassType) {
         // If this is a class type being elaborated, let it inherit members from parent classes.
@@ -1096,6 +1076,9 @@ void Scope::elaborate() const {
                     insertMember(subroutine, symbol, true, true);
                 break;
             }
+            case SyntaxKind::EnumType:
+                // Already handled above.
+                break;
             default:
                 SLANG_UNREACHABLE;
         }
@@ -1503,16 +1486,6 @@ std::span<Symbol* const> Scope::DeferredMemberData::getMembers() const {
     return members;
 }
 
-void Scope::DeferredMemberData::registerTransparentType(const Symbol* insertion,
-                                                        const Symbol& parent) {
-    transparentTypes.emplace_back(insertion, &parent);
-}
-
-std::span<std::pair<const Symbol*, const Symbol*> const> Scope::DeferredMemberData::
-    getTransparentTypes() const {
-    return transparentTypes;
-}
-
 void Scope::DeferredMemberData::addForwardingTypedef(const ForwardingTypedefSymbol& symbol) {
     forwardingTypedefs.push_back(&symbol);
 }
@@ -1608,6 +1581,7 @@ static size_t countMembers(const SyntaxNode& syntax) {
         case SyntaxKind::ModuleDeclaration:
         case SyntaxKind::ProgramDeclaration:
         case SyntaxKind::ClassMethodDeclaration:
+        case SyntaxKind::EnumType:
             return 1;
         case SyntaxKind::SpecifyBlock:
         case SyntaxKind::CoverCross:

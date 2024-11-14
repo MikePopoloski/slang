@@ -84,7 +84,9 @@ void TypePrinter::visit(const EnumType& type, std::string_view overrideName) {
     if (options.anonymousTypeStyle == TypePrintingOptions::FriendlyName) {
         printScope(type.getParentScope());
 
-        if (overrideName.empty())
+        if (!type.name.empty())
+            buffer->append(type.name);
+        else if (overrideName.empty())
             buffer->append("<unnamed enum>");
         else
             buffer->append(overrideName);
@@ -109,13 +111,18 @@ void TypePrinter::visit(const EnumType& type, std::string_view overrideName) {
         }
         buffer->append("}");
 
-        if (options.skipScopedTypeNames)
-            ;
-        else if (!overrideName.empty())
+        if (options.skipScopedTypeNames) {
+            // Nothing to do here.
+        }
+        else if (!overrideName.empty()) {
             buffer->append(overrideName);
+        }
         else {
             printScope(type.getParentScope());
-            buffer->format("e${}", type.systemId);
+            if (type.name.empty())
+                buffer->format("e${}", type.systemId);
+            else
+                buffer->append(type.name);
         }
     }
 }

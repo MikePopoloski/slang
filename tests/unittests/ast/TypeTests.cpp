@@ -2272,3 +2272,65 @@ TEST_CASE("Hierarchy-dependent type equivalence") {
 
     CHECK(!type1->isEquivalent(*type2));
 }
+
+TEST_CASE("More enum member lookup cases") {
+    auto tree = SyntaxTree::fromText(R"(
+module m #(parameter enum {Q,R} p1 = Q, int p2 = $bits(enum{S,T}));
+    initial randsequence () enum {A,B} foo : { int i = A; }; endsequence
+    initial for (enum {A,B} f = A; f != B; f = B) begin automatic int i = B; end
+    localparam int q = $bits(enum{A,B}) + $bits(enum{C,D});
+    localparam r = B;
+    localparam type s = type(B);
+    localparam t = R;
+    localparam u = T;
+endmodule
+
+module n #(type T = enum {U,V}, parameter p = U)(input enum {A,B} i = A,
+            output int o = $bits(enum {C,D}), q = C);
+    int a[] = '{U, A, C};
+endmodule
+
+checker c (enum {A,B} test_sig = A);
+    a1: assert property (B);
+endchecker
+
+property p(enum {A,B} a = A);
+    B;
+endproperty
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Enum mismatch corner cases") {
+    auto tree = SyntaxTree::fromText(R"(
+class A;
+    extern function enum {B,C} f(enum {D,E} p, int i = $bits(enum {F}));
+endclass
+
+function enum {B,C} A::f(enum {D,E} p, int i = $bits(enum {F}));
+    int j[] = '{B, D, F};
+endfunction
+
+interface I;
+    modport m(import function enum{A,B} foo(enum{C,D} a = C,
+              int i = $bits(enum{E,F}), int j = B));
+
+    function automatic enum{A,B} foo(enum{C,D} a = C,
+                                     int i = $bits(enum{E,F}),
+                                     int j = B);
+        int q[] = '{A, C, E};
+    endfunction
+endinterface
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::MethodArgTypeMismatch);
+    CHECK(diags[1].code == diag::MethodReturnMismatch);
+}

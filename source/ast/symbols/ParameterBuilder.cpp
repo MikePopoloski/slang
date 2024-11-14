@@ -137,6 +137,20 @@ const ParameterSymbolBase& ParameterBuilder::createParam(
         }
     };
 
+    auto handlePreviewNodes = [&](const SyntaxNode& syntax) {
+        // Two cases where we might have enum definitions to catch
+        // via the preview nodes; for parameter decl members,
+        // we need to look at the parent, and for port lists we
+        // should just look at the param itself.
+        if (syntax.previewNode)
+            newScope.addMembers(*syntax.previewNode);
+
+        if (syntax.parent->kind == SyntaxKind::ParameterDeclarationStatement &&
+            syntax.parent->previewNode) {
+            newScope.addMembers(*syntax.parent->previewNode);
+        }
+    };
+
     auto& comp = scope.getCompilation();
     const ExpressionSyntax* newInitializer = nullptr;
     bool isFromConfig = false;
@@ -153,8 +167,11 @@ const ParameterSymbolBase& ParameterBuilder::createParam(
                                                        typeRestriction);
         param->setAttributes(scope, decl.attributes);
 
-        if (decl.hasSyntax && decl.typeDecl && decl.typeDecl->assignment)
-            param->defaultValSyntax = decl.typeDecl->assignment->type;
+        if (decl.hasSyntax) {
+            handlePreviewNodes(*decl.typeSyntax);
+            if (decl.typeDecl && decl.typeDecl->assignment)
+                param->defaultValSyntax = decl.typeDecl->assignment->type;
+        }
 
         auto& tt = param->targetType;
         if (newInitializer) {
@@ -193,8 +210,6 @@ const ParameterSymbolBase& ParameterBuilder::createParam(
                 tt.setType(comp.getErrorType());
         }
 
-        // Add to scope *after* setting the type on the member,
-        // so that enums get picked up correctly.
         newScope.addMember(*param);
 
         if (!param->isLocalParam()) {
@@ -224,8 +239,10 @@ const ParameterSymbolBase& ParameterBuilder::createParam(
                                                    decl.isPortParam);
         param->setAttributes(scope, decl.attributes);
 
-        if (decl.hasSyntax)
+        if (decl.hasSyntax) {
             param->defaultValSyntax = decl.valueDecl;
+            handlePreviewNodes(*decl.valueSyntax);
+        }
 
         auto& declType = *param->getDeclaredType();
         if (newInitializer)
@@ -250,8 +267,6 @@ const ParameterSymbolBase& ParameterBuilder::createParam(
                                         newInitializer->getFirstToken().location());
         }
 
-        // Add to scope *after* setting the type on the member,
-        // so that enums get picked up correctly.
         newScope.addMember(*param);
 
         // If there is an override node, see if this parameter is in it.

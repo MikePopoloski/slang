@@ -111,7 +111,11 @@ public:
              const ASTContext& context);
 
     static const Type& fromSyntax(Compilation& compilation, const syntax::EnumTypeSyntax& syntax,
-                                  const ASTContext& context, const Type* typedefTarget);
+                                  const ASTContext& context);
+    static const Type& findDefinition(Compilation& compilation,
+                                      const syntax::EnumTypeSyntax& syntax,
+                                      const ASTContext& context);
+
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::EnumType; }
 
     static void createDefaultMembers(const ASTContext& context,

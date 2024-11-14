@@ -44,7 +44,7 @@ public:
     Scope& operator=(const Scope&) = delete;
 
     /// Adds a symbol as a member to the scope.
-    void addMember(const Symbol& symbol);
+    void addMember(const Symbol& symbol) { insertMember(&symbol, lastMember, false, true); }
 
     /// Creates and adds one or more member symbols to the scope from the given syntax node.
     void addMembers(const syntax::SyntaxNode& syntax);
@@ -283,9 +283,6 @@ private:
         void addMember(Symbol* symbol);
         std::span<Symbol* const> getMembers() const;
 
-        void registerTransparentType(const Symbol* insertion, const Symbol& parent);
-        std::span<std::pair<const Symbol*, const Symbol*> const> getTransparentTypes() const;
-
         void addForwardingTypedef(const ForwardingTypedefSymbol& symbol);
         std::span<const ForwardingTypedefSymbol* const> getForwardingTypedefs() const;
 
@@ -297,11 +294,6 @@ private:
         // A list of deferred member symbols.
         std::vector<Symbol*> members;
 
-        // Some types are special in that their members leak into the surrounding scope; this
-        // set keeps track of all variables, parameters, arguments, etc that have such data types
-        // so that when our list of members is finalized we can include their members as well.
-        std::vector<std::pair<const Symbol*, const Symbol*>> transparentTypes;
-
         // Track a list of forwarding typedefs declared in the scope; once we've fully elaborated
         // we'll go back and make sure they're actually valid.
         std::vector<const ForwardingTypedefSymbol*> forwardingTypedefs;
@@ -309,6 +301,10 @@ private:
         // Track a list of non-ANSI port declarations declared in the scope; once we've fully
         // elaborated we'll go back and make sure they're valid.
         std::vector<std::pair<const syntax::SyntaxNode*, const Symbol*>> portDecls;
+
+    public:
+        // A flag indicating whether any enums have been registered in the scope.
+        bool hasEnums = false;
     };
 
     DeferredMemberData& getOrAddDeferredData() const;

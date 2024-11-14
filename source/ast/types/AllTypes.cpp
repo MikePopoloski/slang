@@ -281,7 +281,7 @@ static void checkEnumRange(const ASTContext& context, const VariableDimensionSyn
 }
 
 const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax& syntax,
-                                 const ASTContext& context, const Type* typedefTarget) {
+                                 const ASTContext& context) {
     const Type* base;
     const Type* cb;
     bitwidth_t bitWidth;
@@ -321,6 +321,11 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
     auto resultType = compilation.emplace<EnumType>(compilation, syntax.keyword.location(), *base,
                                                     context);
     resultType->setSyntax(syntax);
+
+    // If this enum is inside a typedef we want to save the name here so that
+    // when printing the types of our enum values we can refer back to this.
+    if (syntax.parent && syntax.parent->kind == SyntaxKind::TypedefDeclaration)
+        resultType->name = syntax.parent->as<TypedefDeclarationSyntax>().name.valueText();
 
     // Enum values must be unique; this set and lambda are used to check that.
     SmallMap<SVInt, SourceLocation, 8> usedValues;
@@ -495,16 +500,7 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
         }
     }
 
-    // If this enum is inside a typedef, override the types of each member to be
-    // the typedef instead of the enum itself. This is done as a separate pass
-    // so that we don't try to access the type of the enum values while we're
-    // still in the middle of resolving it.
-    if (typedefTarget) {
-        for (auto& value : resultType->membersOfType<EnumValueSymbol>())
-            const_cast<EnumValueSymbol&>(value).getDeclaredType()->setType(*typedefTarget);
-    }
-
-    return createPackedDims(context, resultType, syntax.dimensions);
+    return *resultType;
 }
 
 static std::string_view getEnumValueName(Compilation& comp, std::string_view name, int32_t index) {
@@ -519,6 +515,41 @@ static std::string_view getEnumValueName(Compilation& comp, std::string_view nam
         name = std::string_view(mem, sz + name.size());
     }
     return name;
+}
+
+const Type& EnumType::findDefinition(Compilation& comp, const EnumTypeSyntax& syntax,
+                                     const ASTContext& context) {
+    // The enum type and all of its values should have already been created and
+    // added to the parent scope. We just need to find it so we can hook up our caller.
+    // To do that we're going to try to look up our first member, which should have
+    // the right type. If we don't find it we know an error must have occurred during
+    // type creation.
+    std::string_view name;
+    if (!syntax.members.empty()) {
+        auto member = *syntax.members.begin();
+        if (member->dimensions.empty())
+            name = member->name.valueText();
+        else {
+            auto dimList = member->dimensions[0];
+            auto dim = context.evalUnpackedDimension(*dimList);
+            if (dim.isRange()) {
+                SourceRange dimRange = dimList->sourceRange();
+                if (context.requirePositive(std::optional(dim.range.left), dimRange) &&
+                    context.requirePositive(std::optional(dim.range.right), dimRange)) {
+                    name = getEnumValueName(comp, member->name.valueText(), dim.range.lower());
+                }
+            }
+        }
+    }
+
+    auto symbol = context.scope->find(name);
+    if (symbol && symbol->kind == SymbolKind::EnumValue) {
+        auto& type = symbol->as<EnumValueSymbol>().getType().getCanonicalType();
+        if (type.getSyntax() == &syntax)
+            return createPackedDims(context, &type, syntax.dimensions);
+    }
+
+    return comp.getErrorType();
 }
 
 void EnumType::createDefaultMembers(const ASTContext& context, const EnumTypeSyntax& syntax,
@@ -785,6 +816,9 @@ const Type& PackedStructType::fromSyntax(Compilation& comp, const StructUnionTyp
 
     SmallVector<FieldSymbol*> members;
     for (auto member : syntax.members) {
+        if (member->previewNode)
+            structType->addMembers(*member->previewNode);
+
         const Type& type = comp.getType(*member->type, context);
         structType->isFourState |= type.isFourState();
         issuedError |= type.isError();
@@ -875,6 +909,9 @@ const Type& UnpackedStructType::fromSyntax(const ASTContext& context,
     uint64_t bitstreamWidth = 0;
     SmallVector<const FieldSymbol*> fields;
     for (auto member : syntax.members) {
+        if (member->previewNode)
+            result->addMembers(*member->previewNode);
+
         RandMode randMode = RandMode::None;
         switch (member->randomQualifier.kind) {
             case TokenKind::RandKeyword:
@@ -950,6 +987,9 @@ const Type& PackedUnionType::fromSyntax(Compilation& comp, const StructUnionType
     ASTContext context(*unionType, LookupLocation::max, parentContext.flags);
 
     for (auto member : syntax.members) {
+        if (member->previewNode)
+            unionType->addMembers(*member->previewNode);
+
         const Type& type = comp.getType(*member->type, context);
         unionType->isFourState |= type.isFourState();
         issuedError |= type.isError();
@@ -1051,6 +1091,9 @@ const Type& UnpackedUnionType::fromSyntax(const ASTContext& context,
 
     SmallVector<const FieldSymbol*> fields;
     for (auto member : syntax.members) {
+        if (member->previewNode)
+            result->addMembers(*member->previewNode);
+
         for (auto decl : member->declarators) {
             auto field = comp.emplace<FieldSymbol>(decl->name.valueText(), decl->name.location(),
                                                    0u, (uint32_t)fields.size());

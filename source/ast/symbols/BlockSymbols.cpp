@@ -121,6 +121,9 @@ StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
     auto& comp = scope.getCompilation();
     const VariableSymbol* lastVar = nullptr;
     for (auto init : syntax.initializers) {
+        if (init->previewNode)
+            result->addMembers(*init->previewNode);
+
         auto& var = VariableSymbol::fromSyntax(comp, init->as<ForVariableDeclarationSyntax>(),
                                                lastVar);
 
@@ -153,6 +156,9 @@ StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
                               VariableLifetime::Automatic);
 
     for (auto prod : syntax.productions) {
+        if (prod->previewNode)
+            result->addMembers(*prod->previewNode);
+
         if (prod->name.valueText().empty())
             continue;
 
@@ -173,6 +179,9 @@ StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
     result->setNeedElaboration();
 
     for (auto prod : syntax.prods) {
+        if (prod->previewNode)
+            result->addMembers(*prod->previewNode);
+
         if (prod->kind == SyntaxKind::RsCodeBlock) {
             result->addMember(
                 StatementBlockSymbol::fromSyntax(scope, prod->as<RsCodeBlockSyntax>()));

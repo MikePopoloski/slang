@@ -1072,8 +1072,7 @@ const Type& Type::fromSyntax(Compilation& compilation, const DataTypeSyntax& nod
         case SyntaxKind::SequenceType:
             return compilation.getType(node.kind);
         case SyntaxKind::EnumType:
-            return EnumType::fromSyntax(compilation, node.as<EnumTypeSyntax>(), context,
-                                        typedefTarget);
+            return EnumType::findDefinition(compilation, node.as<EnumTypeSyntax>(), context);
         case SyntaxKind::StructType: {
             const auto& structUnion = node.as<StructUnionTypeSyntax>();
             return structUnion.packed

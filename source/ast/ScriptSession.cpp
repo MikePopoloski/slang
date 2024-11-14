@@ -47,6 +47,11 @@ ConstantValue ScriptSession::eval(std::string_view text) {
             scope.addMembers(node);
             return nullptr;
         case SyntaxKind::DataDeclaration: {
+            if (node.previewNode) {
+                scope.addMembers(*node.previewNode);
+                scope.getNameMap(); // force name map to be built
+            }
+
             SmallVector<VariableSymbol*> symbols;
             VariableSymbol::fromSyntax(compilation, node.as<DataDeclarationSyntax>(), scope,
                                        /* isCheckerFreeVar */ false, symbols);
@@ -67,6 +72,11 @@ ConstantValue ScriptSession::eval(std::string_view text) {
                 scope.addMembers(*member);
             return nullptr;
         default:
+            if (node.previewNode) {
+                scope.addMembers(*node.previewNode);
+                scope.getNameMap(); // force name map to be built
+            }
+
             if (ExpressionSyntax::isKind(node.kind)) {
                 return evalExpression(node.as<ExpressionSyntax>());
             }

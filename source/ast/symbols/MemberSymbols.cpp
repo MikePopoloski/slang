@@ -338,6 +338,9 @@ void ModportSymbol::fromSyntax(const ASTContext& context, const ModportDeclarati
                         modport->hasExports = true;
 
                     for (auto subPort : portList.ports) {
+                        if (subPort->previewNode)
+                            modport->addMembers(*subPort->previewNode);
+
                         switch (subPort->kind) {
                             case SyntaxKind::ModportNamedPort: {
                                 auto& mps = MethodPrototypeSymbol::fromSyntax(
@@ -1525,6 +1528,9 @@ void AssertionPortSymbol::buildPorts(Scope& scope, const AssertionItemPortListSy
     std::optional<ArgumentDirection> lastDir;
 
     for (auto item : syntax.ports) {
+        if (item->previewNode)
+            scope.addMembers(*item->previewNode);
+
         auto port = comp.emplace<AssertionPortSymbol>(item->name.valueText(),
                                                       item->name.location());
         port->setSyntax(*item);
@@ -1713,6 +1719,9 @@ CheckerSymbol& CheckerSymbol::fromSyntax(const Scope& scope,
         ArgumentDirection lastDir = ArgumentDirection::In;
 
         for (auto item : syntax.portList->ports) {
+            if (item->previewNode)
+                result->addMembers(*item->previewNode);
+
             auto port = comp.emplace<AssertionPortSymbol>(item->name.valueText(),
                                                           item->name.location());
             port->setSyntax(*item);
@@ -1925,6 +1934,9 @@ RandSeqProductionSymbol& RandSeqProductionSymbol::fromSyntax(const Scope& scope,
     }
 
     for (auto rule : syntax.rules) {
+        if (rule->previewNode)
+            result->addMembers(*rule->previewNode);
+
         auto& ruleBlock = StatementBlockSymbol::fromSyntax(*result, *rule);
         result->addMember(ruleBlock);
     }

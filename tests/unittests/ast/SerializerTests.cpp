@@ -155,7 +155,7 @@ endmodule
             "source_file": "source",
             "source_line": 6,
             "source_column": 7,
-            "target": "enum{STATE_0=1'd0,STATE_1=1'd1}test_enum.e$1"
+            "target": "enum{STATE_0=1'd0,STATE_1=1'd1}test_enum.STATE"
           },
           {
             "name": "a",

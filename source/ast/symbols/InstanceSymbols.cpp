@@ -1987,6 +1987,9 @@ static const Symbol* createCheckerFormal(Compilation& comp, const AssertionPortS
                                          CheckerInstanceBodySymbol& instance,
                                          const ExpressionSyntax*& outputInitialSyntax,
                                          const ASTContext& context) {
+    if (auto portSyntax = port.getSyntax(); portSyntax && portSyntax->previewNode)
+        instance.addMembers(*portSyntax->previewNode);
+
     // Output ports are special; they aren't involved in the rewriting process,
     // they just act like normal formal ports / arguments.
     if (port.direction == ArgumentDirection::Out) {
