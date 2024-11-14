@@ -1299,7 +1299,7 @@ f
     diagnostics.clear();
     Lexer lexer(buffer, alloc, diagnostics, options);
     CHECK(diagnostics.empty());
-    for (auto &text : {"a"sv, "c"sv, "f"sv}) {
+    for (auto& text : {"a"sv, "c"sv, "f"sv}) {
         Token tok = lexer.lex();
         REQUIRE(tok.kind == TokenKind::Identifier);
         CHECK(!tok.rawText().compare(text));
@@ -1324,7 +1324,7 @@ f
 )"sv);
     diagnostics.clear();
     Lexer lexer(buffer, alloc, diagnostics, options);
-    for (auto &text : {"a"sv, "c"sv}) {
+    for (auto& text : {"a"sv, "c"sv}) {
         Token tok = lexer.lex();
         REQUIRE(tok.kind == TokenKind::Identifier);
         CHECK(!tok.rawText().compare(text));
