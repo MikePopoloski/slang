@@ -1222,7 +1222,7 @@ bool detectTranslateOnOffPragma(std::string_view view, bool offMode) {
         return seen;
     };
 
-    int cpos = 0;
+    size_t cpos = 0;
     auto clower = offMode ? TranslateOffPragmas.begin() : TranslateOnPragmas.begin();
     auto cupper = offMode ? TranslateOffPragmas.end() : TranslateOnPragmas.end();
 
@@ -1247,7 +1247,7 @@ bool detectTranslateOnOffPragma(std::string_view view, bool offMode) {
             p++;
         }
 
-        if (cpos == (int)clower->length()) {
+        if (cpos == clower->length()) {
             // We have a complete match, check the comment line
             // ends there or the match is followed by a whitespace
             if (p == end || isWhitespace(*p))
