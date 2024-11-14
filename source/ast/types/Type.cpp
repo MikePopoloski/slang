@@ -426,8 +426,8 @@ bool Type::isMatching(const Type& rhs) const {
     if (l == r)
         return true;
 
-    if (l->getSyntax() && l->getSyntax() == r->getSyntax() &&
-        l->getParentScope() && l->getParentScope() == r->getParentScope())
+    if (l->getSyntax() && l->getSyntax() == r->getSyntax() && l->getParentScope() &&
+        l->getParentScope() == r->getParentScope())
         return true;
 
     // Special casing for type synonyms: real/realtime

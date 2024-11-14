@@ -2263,10 +2263,12 @@ TEST_CASE("Hierarchy-dependent type equivalence") {
     Compilation compilation;
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
-    
-    const InstanceBodySymbol &top = compilation.getRoot().lookupName<InstanceSymbol>("top").body;
-    const Type *type1 = &top.lookupName<InstanceSymbol>("if1").body.lookupName<VariableSymbol>("ready").getType();
-    const Type *type2 = &top.lookupName<InstanceSymbol>("if2").body.lookupName<VariableSymbol>("ready").getType();
+
+    const InstanceBodySymbol& top = compilation.getRoot().lookupName<InstanceSymbol>("top").body;
+    const Type* type1 =
+        &top.lookupName<InstanceSymbol>("if1").body.lookupName<VariableSymbol>("ready").getType();
+    const Type* type2 =
+        &top.lookupName<InstanceSymbol>("if2").body.lookupName<VariableSymbol>("ready").getType();
 
     CHECK(!type1->isEquivalent(*type2));
 }
