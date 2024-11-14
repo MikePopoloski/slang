@@ -1277,8 +1277,8 @@ void Lexer::scanTranslateOffSection() {
                     while (!isNewline(peek()) && !reallyAtEnd())
                         advance();
 
-                    std::string_view commentText = std::string_view(commentStart,
-                                                                    (size_t) (sourceBuffer - commentStart));
+                    std::string_view commentText =
+                        std::string_view(commentStart, (size_t)(sourceBuffer - commentStart));
                     if (detectTranslateOnOffPragma(commentText, false))
                         return;
                 }
