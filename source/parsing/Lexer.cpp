@@ -27,6 +27,16 @@ static const double BitsPerDecimal = log2(10.0);
 static constexpr std::string_view PragmaBeginProtected = "pragma protect begin_protected"sv;
 static constexpr std::string_view PragmaEndProtected = "pragma protect end_protected"sv;
 
+// Note the detection algorithm requires these in alphabetical order; also when a prefix is
+// followed by a whitespace in one variant, it's assumed the same prefix will be followed by
+// a whitespace in all variants
+static std::vector<std::string_view> TranslateOffPragmas = {
+    "pragma synthesis_off"sv,   "pragma translate_off"sv,    "synopsys synthesis_off"sv,
+    "synopsys translate_off"sv, "synthesis translate_off"sv, "xilinx translate_off"sv};
+static std::vector<std::string_view> TranslateOnPragmas = {
+    "pragma synthesis_on"sv,   "pragma translate_on"sv,    "synopsys synthesis_on"sv,
+    "synopsys translate_on"sv, "synthesis translate_on"sv, "xilinx translate_on"sv};
+
 namespace slang::parsing {
 
 using namespace syntax;
@@ -1199,14 +1209,6 @@ void Lexer::scanWhitespace() {
 }
 
 bool detectTranslateOnOffPragma(std::string_view view, bool offMode) {
-    static std::vector<std::string_view> offCandidates = {
-        "pragma synthesis_off"sv,   "pragma translate_off"sv,    "synopsys synthesis_off"sv,
-        "synopsys translate_off"sv, "synthesis translate_off"sv, "xilinx translate_off"sv};
-
-    static std::vector<std::string_view> onCandidates = {
-        "pragma synthesis_on"sv,   "pragma translate_on"sv,    "synopsys synthesis_on"sv,
-        "synopsys translate_on"sv, "synthesis translate_on"sv, "xilinx translate_on"sv};
-
     if (view.length() < 2)
         return false;
     const char *p = view.data() + 2, *end = view.data() + view.size();
@@ -1221,8 +1223,8 @@ bool detectTranslateOnOffPragma(std::string_view view, bool offMode) {
     };
 
     int cpos = 0;
-    auto clower = offMode ? offCandidates.begin() : onCandidates.begin();
-    auto cupper = offMode ? offCandidates.end() : onCandidates.end();
+    auto clower = offMode ? TranslateOffPragmas.begin() : TranslateOnPragmas.begin();
+    auto cupper = offMode ? TranslateOffPragmas.end() : TranslateOnPragmas.end();
 
     skipWs();
     while (p != end) {
