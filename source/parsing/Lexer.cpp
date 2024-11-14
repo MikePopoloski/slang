@@ -27,6 +27,16 @@ static const double BitsPerDecimal = log2(10.0);
 static constexpr std::string_view PragmaBeginProtected = "pragma protect begin_protected"sv;
 static constexpr std::string_view PragmaEndProtected = "pragma protect end_protected"sv;
 
+// Note the detection algorithm requires these in alphabetical order; also when a prefix is
+// followed by a whitespace in one variant, it's assumed the same prefix will be followed by
+// a whitespace in all variants
+static std::vector<std::string_view> TranslateOffPragmas = {
+    "pragma synthesis_off"sv,   "pragma translate_off"sv,    "synopsys synthesis_off"sv,
+    "synopsys translate_off"sv, "synthesis translate_off"sv, "xilinx translate_off"sv};
+static std::vector<std::string_view> TranslateOnPragmas = {
+    "pragma synthesis_on"sv,   "pragma translate_on"sv,    "synopsys synthesis_on"sv,
+    "synopsys translate_on"sv, "synthesis translate_on"sv, "xilinx translate_on"sv};
+
 namespace slang::parsing {
 
 using namespace syntax;
@@ -1197,6 +1207,88 @@ void Lexer::scanWhitespace() {
     addTrivia(TriviaKind::Whitespace);
 }
 
+bool detectTranslateOnOffPragma(std::string_view view, bool offMode) {
+    if (view.length() < 2)
+        return false;
+    const char *p = view.data() + 2, *end = view.data() + view.size();
+
+    auto skipWs = [&] {
+        bool seen = false;
+        while (p != end && isWhitespace(*p)) {
+            seen = true;
+            p++;
+        }
+        return seen;
+    };
+
+    size_t cpos = 0;
+    auto clower = offMode ? TranslateOffPragmas.begin() : TranslateOnPragmas.begin();
+    auto cupper = offMode ? TranslateOffPragmas.end() : TranslateOnPragmas.end();
+
+    skipWs();
+    while (p != end) {
+        if ((*clower)[cpos] == ' ') {
+            if (!skipWs())
+                return false;
+
+            cpos++;
+        }
+        else {
+            while (clower < cupper && (*clower)[cpos] < *p)
+                clower++;
+            while (cupper > clower && (*(cupper - 1))[cpos] > *p)
+                cupper--;
+
+            if (clower == cupper)
+                return false;
+
+            cpos++;
+            p++;
+        }
+
+        if (cpos == clower->length()) {
+            // We have a complete match, check the comment line
+            // ends there or the match is followed by a whitespace
+            if (p == end || isWhitespace(*p))
+                return true;
+            return false;
+        }
+    }
+
+    return false;
+}
+
+void Lexer::scanTranslateOffSection() {
+    while (true) {
+        const char* commentStart = sourceBuffer;
+
+        switch (peek()) {
+            case '\0':
+                if (reallyAtEnd()) {
+                    addDiag(diag::UnclosedTranslateOff, currentOffset() - lexemeLength());
+                    return;
+                }
+                break;
+            case '/':
+                advance();
+                if (peek() == '/') {
+                    advance();
+                    while (!isNewline(peek()) && !reallyAtEnd())
+                        advance();
+
+                    std::string_view commentText =
+                        std::string_view(commentStart, (size_t)(sourceBuffer - commentStart));
+                    if (detectTranslateOnOffPragma(commentText, false))
+                        return;
+                }
+                continue;
+            default:
+                break;
+        }
+        advance();
+    }
+}
+
 void Lexer::scanLineComment() {
     if (options.enableLegacyProtect) {
         // See if we're looking at a pragma protect comment and skip
@@ -1241,6 +1333,15 @@ void Lexer::scanLineComment() {
             sawUTF8Error |= !scanUTF8Char(sawUTF8Error);
         }
     }
+
+    if (options.enableTranslateOnOffCompat) {
+        if (detectTranslateOnOffPragma(lexeme(), true)) {
+            scanTranslateOffSection();
+            addTrivia(TriviaKind::DisabledText);
+            return;
+        }
+    }
+
     addTrivia(TriviaKind::LineComment);
 }
 
