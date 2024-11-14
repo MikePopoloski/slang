@@ -1278,3 +1278,58 @@ TEST_CASE("Hex escape corner case") {
     CHECK(diagnostics[0].code == diag::InvalidHexEscapeCode);
     CHECK(diagnostics[1].code == diag::ExpectedClosingQuote);
 }
+
+TEST_CASE("Compat translate_on/off pragmas") {
+    LexerOptions options;
+    options.enableTranslateOnOffCompat = true;
+
+    auto buffer = getSourceManager().assignText(R"(
+a
+// pragma synthesis_off
+b
+// pragma synthesis_on
+c
+// synthesis translate_off
+d
+// synthesis translate_off
+e
+// synthesis translate_on
+f
+)"sv);
+    diagnostics.clear();
+    Lexer lexer(buffer, alloc, diagnostics, options);
+    CHECK(diagnostics.empty());
+    for (auto &text : {"a"sv, "c"sv, "f"sv}) {
+        Token tok = lexer.lex();
+        REQUIRE(tok.kind == TokenKind::Identifier);
+        CHECK(!tok.rawText().compare(text));
+    }
+    CHECK(lexer.lex().kind == TokenKind::EndOfFile);
+}
+
+TEST_CASE("Compat translate_on/off pragmas unclosed") {
+    LexerOptions options;
+    options.enableTranslateOnOffCompat = true;
+
+    auto buffer = getSourceManager().assignText(R"(
+a
+// pragma synthesis_off
+b
+// pragma synthesis_on
+c
+// synthesis translate_off
+d
+e
+f
+)"sv);
+    diagnostics.clear();
+    Lexer lexer(buffer, alloc, diagnostics, options);
+    for (auto &text : {"a"sv, "c"sv}) {
+        Token tok = lexer.lex();
+        REQUIRE(tok.kind == TokenKind::Identifier);
+        CHECK(!tok.rawText().compare(text));
+    }
+    CHECK(lexer.lex().kind == TokenKind::EndOfFile);
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics[0].code == diag::UnclosedTranslateOff);
+}
