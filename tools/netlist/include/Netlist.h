@@ -531,7 +531,7 @@ public:
                             outEdges.push_back(outEdge.get());
                         }
                     }
-                    mods.emplace_back(&varDeclNode, sourceVarRef.bounds, inEdge, outEdges);
+                    mods.push_back({&varDeclNode, sourceVarRef.bounds, inEdge, outEdges});
                 }
             }
         }
