@@ -27,6 +27,7 @@
 #include "slang/diagnostics/ParserDiags.h"
 #include "slang/parsing/LexerFacts.h"
 #include "slang/syntax/AllSyntax.h"
+#include "slang/text/SourceManager.h"
 #include "slang/util/String.h"
 
 namespace slang::ast {
@@ -1088,7 +1089,8 @@ void Lookup::name(const NameSyntax& syntax, const ASTContext& context, bitmask<L
         return;
 
     // Perform the lookup.
-    unqualifiedImpl(scope, name.text, context.getLocation(), name.range, flags, {}, result, scope);
+    unqualifiedImpl(scope, name.text, context.getLocation(), name.range, flags, {}, result, scope,
+                    &syntax);
 
     if (!result.found) {
         if (flags.has(LookupFlags::AlwaysAllowUpward)) {
@@ -1135,7 +1137,9 @@ const Symbol* Lookup::unqualified(const Scope& scope, std::string_view name,
         return nullptr;
 
     LookupResult result;
-    unqualifiedImpl(scope, name, LookupLocation::max, std::nullopt, flags, {}, result, scope);
+    unqualifiedImpl(scope, name, LookupLocation::max, std::nullopt, flags, {}, result, scope,
+                    nullptr);
+
     SLANG_ASSERT(result.selectors.empty());
     unwrapResult(scope, std::nullopt, result, /* unwrapGenericClasses */ false);
 
@@ -1149,7 +1153,8 @@ const Symbol* Lookup::unqualifiedAt(const Scope& scope, std::string_view name,
         return nullptr;
 
     LookupResult result;
-    unqualifiedImpl(scope, name, location, sourceRange, flags, {}, result, scope);
+    unqualifiedImpl(scope, name, location, sourceRange, flags, {}, result, scope, nullptr);
+
     SLANG_ASSERT(result.selectors.empty());
     unwrapResult(scope, sourceRange, result, /* unwrapGenericClasses */ false);
 
@@ -1673,7 +1678,7 @@ bool Lookup::findAssertionLocalVar(const ASTContext& context, const NameSyntax& 
 void Lookup::unqualifiedImpl(const Scope& scope, std::string_view name, LookupLocation location,
                              std::optional<SourceRange> sourceRange, bitmask<LookupFlags> flags,
                              SymbolIndex outOfBlockIndex, LookupResult& result,
-                             const Scope& originalScope) {
+                             const Scope& originalScope, const SyntaxNode* originalSyntax) {
     auto reportRecursiveError = [&](const Symbol& symbol) {
         if (sourceRange) {
             auto& diag = result.addDiag(scope, diag::RecursiveDefinition, *sourceRange);
@@ -1758,6 +1763,20 @@ void Lookup::unqualifiedImpl(const Scope& scope, std::string_view name, LookupLo
             if (forward) {
                 locationGood = LookupLocation::before(*forward) < location;
                 result.flags |= LookupResultFlags::FromForwardTypedef;
+            }
+        }
+        else if (symbol->kind == SymbolKind::TransparentMember && originalSyntax) {
+            // Enum values are special in that we can't always get a precise ordering
+            // of where they are declared in a scope, since they can be declared inside
+            // a nested subexpression. Check for correct location by looking at the
+            // actual source locations involved.
+            auto& wrapped = symbol->as<TransparentMemberSymbol>().wrapped;
+            if (wrapped.kind == SymbolKind::EnumValue) {
+                if (auto sm = scope.getCompilation().getSourceManager()) {
+                    auto loc = originalSyntax->getFirstToken().location();
+                    locationGood =
+                        sm->isBeforeInCompilationUnit(wrapped.location, loc).value_or(true);
+                }
             }
         }
 
@@ -1954,7 +1973,7 @@ void Lookup::unqualifiedImpl(const Scope& scope, std::string_view name, LookupLo
     }
 
     return unqualifiedImpl(*location.getScope(), name, location, sourceRange, flags,
-                           outOfBlockIndex, result, originalScope);
+                           outOfBlockIndex, result, originalScope, originalSyntax);
 }
 
 void Lookup::qualified(const ScopedNameSyntax& syntax, const ASTContext& context,
@@ -2003,7 +2022,7 @@ void Lookup::qualified(const ScopedNameSyntax& syntax, const ASTContext& context
         case SyntaxKind::ClassName:
             // Start by trying to find the first name segment using normal unqualified lookup
             unqualifiedImpl(scope, name, context.getLocation(), first.range, flags, {}, result,
-                            scope);
+                            scope, nullptr);
             break;
         case SyntaxKind::UnitScope: {
             // Walk upward to find the compilation unit scope.
@@ -2016,8 +2035,8 @@ void Lookup::qualified(const ScopedNameSyntax& syntax, const ASTContext& context
             do {
                 auto& symbol = current->asSymbol();
                 if (symbol.kind == SymbolKind::CompilationUnit) {
-                    unqualifiedImpl(*current, name, location, first.range, flags, {}, result,
-                                    scope);
+                    unqualifiedImpl(*current, name, location, first.range, flags, {}, result, scope,
+                                    nullptr);
                     break;
                 }
 

@@ -177,6 +177,47 @@ bool SourceManager::isPreprocessedLoc(SourceLocation location) const {
     return isMacroLoc(location) || isIncludedFileLoc(location);
 }
 
+std::optional<bool> SourceManager::isBeforeInCompilationUnit(SourceLocation left,
+                                                             SourceLocation right) const {
+    // Simple check: if they're in the same buffer, just do an easy compare
+    if (left.buffer() == right.buffer())
+        return left.offset() < right.offset();
+
+    auto moveUp = [this](SourceLocation& sl) {
+        if (sl && !isFileLoc(sl))
+            sl = getExpansionLoc(sl);
+        else {
+            SourceLocation included = getIncludedFrom(sl.buffer());
+            if (!included)
+                return true;
+            sl = included;
+        }
+        return false;
+    };
+
+    // Otherwise we have to build the full include / expansion chain and compare.
+    SmallMap<BufferID, size_t, 16> leftChain;
+    do {
+        leftChain.emplace(left.buffer(), left.offset());
+    } while (left.buffer() != right.buffer() && !moveUp(left));
+
+    SmallMap<BufferID, size_t, 16>::iterator it;
+    while ((it = leftChain.find(right.buffer())) == leftChain.end()) {
+        if (moveUp(right))
+            break;
+    }
+
+    if (it != leftChain.end())
+        left = SourceLocation(it->first, it->second);
+
+    // At this point, we either have a nearest common ancestor, or the two
+    // locations are simply in totally different compilation units.
+    if (left.buffer() == right.buffer())
+        return left.offset() < right.offset();
+
+    return std::nullopt;
+}
+
 SourceLocation SourceManager::getExpansionLoc(SourceLocation location) const {
     std::shared_lock lock(mutex);
     return getExpansionRangeImpl(location, lock).start();

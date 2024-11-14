@@ -2264,13 +2264,11 @@ TEST_CASE("Hierarchy-dependent type equivalence") {
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 
-    const InstanceBodySymbol& top = compilation.getRoot().lookupName<InstanceSymbol>("top").body;
-    const Type* type1 =
-        &top.lookupName<InstanceSymbol>("if1").body.lookupName<VariableSymbol>("ready").getType();
-    const Type* type2 =
-        &top.lookupName<InstanceSymbol>("if2").body.lookupName<VariableSymbol>("ready").getType();
+    auto& root = compilation.getRoot();
+    auto& type1 = root.lookupName<VariableSymbol>("top.if1.ready").getType();
+    auto& type2 = root.lookupName<VariableSymbol>("top.if2.ready").getType();
 
-    CHECK(!type1->isEquivalent(*type2));
+    CHECK(!type1.isEquivalent(type2));
 }
 
 TEST_CASE("More enum member lookup cases") {
@@ -2333,4 +2331,28 @@ endinterface
     REQUIRE(diags.size() == 2);
     CHECK(diags[0].code == diag::MethodArgTypeMismatch);
     CHECK(diags[1].code == diag::MethodReturnMismatch);
+}
+
+TEST_CASE("Enum lookup location corner cases") {
+    auto tree = SyntaxTree::fromText(R"(
+localparam int A = 1;
+module m(input int a = C, enum {C,D} c);
+    localparam int q = A + $bits(enum{A=4,B});
+    localparam int r = A;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::UsedBeforeDeclared);
+
+    auto& root = compilation.getRoot();
+    auto& q = root.lookupName<ParameterSymbol>("m.q");
+    CHECK(q.getValue().integer() == 33);
+
+    auto& r = root.lookupName<ParameterSymbol>("m.r");
+    CHECK(r.getValue().integer() == 4);
 }
