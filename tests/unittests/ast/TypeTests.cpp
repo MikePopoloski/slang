@@ -2244,3 +2244,29 @@ TEST_CASE("Virtual interface element select of member") {
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Hierarchy-dependent type equivalence") {
+    auto tree = SyntaxTree::fromText(R"(
+    interface iface #(parameter int WIDTH = 1)();
+        typedef struct packed {
+            bit [3:0] op;
+        } t;
+        t [WIDTH-1:0] ready;
+    endinterface
+
+    module top();
+        iface #(.WIDTH(1)) if1();
+        iface #(.WIDTH(2)) if2();
+    endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+    
+    const InstanceBodySymbol &top = compilation.getRoot().lookupName<InstanceSymbol>("top").body;
+    const Type *type1 = &top.lookupName<InstanceSymbol>("if1").body.lookupName<VariableSymbol>("ready").getType();
+    const Type *type2 = &top.lookupName<InstanceSymbol>("if2").body.lookupName<VariableSymbol>("ready").getType();
+
+    CHECK(!type1->isEquivalent(*type2));
+}

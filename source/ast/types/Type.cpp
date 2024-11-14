@@ -427,9 +427,8 @@ bool Type::isMatching(const Type& rhs) const {
         return true;
 
     if (l->getSyntax() && l->getSyntax() == r->getSyntax() &&
-        l->getParentScope() == r->getParentScope()) {
+        l->getParentScope() && l->getParentScope() == r->getParentScope())
         return true;
-    }
 
     // Special casing for type synonyms: real/realtime
     if (l->isFloating() && r->isFloating()) {
