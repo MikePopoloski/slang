@@ -3,8 +3,11 @@
 
 #include "SvLocalParam.h"
 
-void unwrapUnpackedArray(const std::span<const slang::ConstantValue> constantValues,
-                         std::vector<std::vector<uint64_t>>& values, uint64_t& biggestElementSize) {
+#include <SvType.h>
+
+static void unwrapUnpackedArray(const std::span<const slang::ConstantValue> constantValues,
+                                std::vector<std::vector<uint64_t>>& values,
+                                uint64_t& biggestElementSize) {
     if (constantValues.front().isUnpacked())
         for (const auto& unpackedArray : constantValues)
             unwrapUnpackedArray(unpackedArray.elements(), values, biggestElementSize);

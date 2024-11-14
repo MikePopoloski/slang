@@ -9,15 +9,14 @@
 #pragma once
 
 #include "SvGeneric.h"
-#include "SvType.h"
 #include <fmt/format.h>
 
 #include "slang/ast/symbols/ParameterSymbols.h"
 
-class SvLocalParam : public SvGeneric {
+class SvLocalParam final : public SvGeneric {
 public:
     explicit SvLocalParam(const slang::ast::ParameterSymbol& parameter) :
-        SvGeneric(SvGeneric::Kind::LocalParam), parameter(parameter) {}
+        SvGeneric(Kind::LocalParam), parameter(parameter) {}
 
     void toCpp(HppFile& hppFile, std::string_view, const SvAliases&, bool) const override;
 

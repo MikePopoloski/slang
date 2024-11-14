@@ -9,6 +9,7 @@
 #include "ASTVisitors.h"
 #include "SvTypeReflector.h"
 #include <fmt/format.h>
+#include <iostream>
 #include <optional>
 
 #include "slang/driver/Driver.h"
@@ -41,7 +42,7 @@ int main(int argc, char** argv) {
         return 1;
 
     if (showHelp) {
-        slang::OS::print(fmt::format("{}", driver.cmdLine.getHelpText("slang-reflect")));
+        OS::print(fmt::format("{}", driver.cmdLine.getHelpText("slang-reflect")));
         return 0;
     }
 
@@ -52,7 +53,7 @@ int main(int argc, char** argv) {
         return 0;
     }
 
-    bool info = verbose && *verbose;
+    const bool info = verbose && *verbose;
 
     fs::path outputPath = ".";
     if (outputDir && !toStdout) {
@@ -86,13 +87,13 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    bool noSc = noSystemC.has_value() && noSystemC.value();
+    const bool noSc = noSystemC.has_value() && noSystemC.value();
 
     auto reflector = SvTypeReflector(std::move(compilation), info, noSc);
     reflector.reflect();
 
     if (toStdout && *toStdout) {
-        std::cout << reflector.emit() << std::endl;
+        std::cout << reflector.emit() << '\n';
     }
     else {
         OS::print("Emitting code to: " + absolute(outputPath).string() + "\n");

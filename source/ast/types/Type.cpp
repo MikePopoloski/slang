@@ -390,6 +390,17 @@ bool Type::isHandleType() const {
     }
 }
 
+bool Type::isUnion() const {
+    const Type& ct = getCanonicalType();
+    switch (ct.kind) {
+        case SymbolKind::UnpackedUnionType:
+        case SymbolKind::PackedUnionType:
+            return true;
+        default:
+            return false;
+    }
+}
+
 bool Type::isTaggedUnion() const {
     auto& ct = getCanonicalType();
     switch (ct.kind) {

@@ -4,10 +4,9 @@
 #include "SvEnum.h"
 
 #include <fmt/format.h>
-#include <iostream>
 
 void SvEnum::toCpp(HppFile& hppFile, std::string_view, const SvAliases&, bool) const {
-    auto underlyingType = [&]() {
+    auto underlyingType = [&] {
         if (type.getBitstreamWidth() <= 8)
             return "uint8_t"sv;
         if (type.getBitstreamWidth() <= 16)
@@ -16,9 +15,8 @@ void SvEnum::toCpp(HppFile& hppFile, std::string_view, const SvAliases&, bool) c
             return "uint32_t"sv;
         if (type.getBitstreamWidth() <= 64)
             return "uint64_t"sv;
-        else
-            SLANG_THROW(
-                std::runtime_error("Enum with $bits size bigger than 64 bits are not supported"));
+        SLANG_THROW(
+            std::runtime_error("Enum with $bits size bigger than 64 bits are not supported"));
     };
     //** STRUCT (ENUM) DECLARATION **//
     hppFile.addWithIndent(fmt::format("struct {} {{\n", type.name));
@@ -62,12 +60,8 @@ void SvEnum::toCpp(HppFile& hppFile, std::string_view, const SvAliases&, bool) c
     hppFile.increaseIndent();
     hppFile.addWithIndent("switch (__data) {\n");
     hppFile.increaseIndent();
-    for (const auto& member : members)
-        hppFile.addWithIndent(
-            fmt::format("case {}: type = Type::{}; break;\n", member.second, member.first));
-    hppFile.addWithIndent(fmt::format(
-        "default: throw std::runtime_error(\"Can not create {} from provided value\");\n",
-        type.name));
+    for (const auto& [name, value] : members)
+        hppFile.addWithIndent(fmt::format("case {}: type = Type::{}; break;\n", value, name));
     hppFile.decreaseIndent();
     hppFile.addWithIndent("}\n");
     hppFile.decreaseIndent();
@@ -82,8 +76,8 @@ void SvEnum::toCpp(HppFile& hppFile, std::string_view, const SvAliases&, bool) c
     hppFile.increaseIndent();
     hppFile.addWithIndent("switch (__data.type) {\n");
     hppFile.increaseIndent();
-    for (const auto& member : members)
-        hppFile.addWithIndent(fmt::format("case Type::{0}: os << \"{0}\"; break;\n", member.first));
+    for (const auto& name : members | std::views::keys)
+        hppFile.addWithIndent(fmt::format("case Type::{0}: os << \"{0}\"; break;\n", name));
     hppFile.decreaseIndent();
     hppFile.addWithIndent("}\n");
     hppFile.addWithIndent("return os;\n");
