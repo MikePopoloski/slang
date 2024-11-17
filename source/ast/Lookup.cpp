@@ -1772,7 +1772,21 @@ void Lookup::unqualifiedImpl(const Scope& scope, std::string_view name, LookupLo
             // actual source locations involved.
             auto& wrapped = symbol->as<TransparentMemberSymbol>().wrapped;
             if (wrapped.kind == SymbolKind::EnumValue) {
-                if (auto sm = scope.getCompilation().getSourceManager()) {
+                // If the enum was inherited from a base class then we shouldn't
+                // worry about the source location; the base class may be declared
+                // later in the file.
+                bool skipLocationCheck = false;
+                auto enumScope = wrapped.getParentScope()->asSymbol().getParentScope();
+                SLANG_ASSERT(enumScope);
+                if (enumScope->asSymbol().kind == SymbolKind::ClassType) {
+                    auto containingClass = getContainingClass(scope).first;
+                    if (containingClass &&
+                        containingClass->isDerivedFrom(enumScope->asSymbol().as<ClassType>())) {
+                        skipLocationCheck = true;
+                    }
+                }
+
+                if (auto sm = scope.getCompilation().getSourceManager(); sm && !skipLocationCheck) {
                     auto loc = originalSyntax->getFirstToken().location();
                     locationGood =
                         sm->isBeforeInCompilationUnit(wrapped.location, loc).value_or(true);

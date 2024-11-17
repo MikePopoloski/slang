@@ -2174,3 +2174,31 @@ endmodule
     CHECK(diags[4].code == diag::UndeclaredIdentifier);
     CHECK(diags[5].code == diag::ImplicitNamedPortNotFound);
 }
+
+TEST_CASE("Enum in inherited class lookup regress -- GH #1177") {
+    auto tree = SyntaxTree::fromText(R"(
+package P;
+    typedef class C1;
+
+    class C2 extends C1;
+        constraint c {
+            if (e == A) {
+            }
+        }
+
+        function f();
+            enum {X, Y} z;
+            z = X;
+        endfunction
+    endclass
+
+    class C1;
+        rand enum {A, B} e;
+    endclass
+endpackage
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

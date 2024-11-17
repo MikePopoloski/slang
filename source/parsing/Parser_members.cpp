@@ -776,6 +776,10 @@ FunctionDeclarationSyntax& Parser::parseFunctionDeclaration(AttrList attributes,
                                              options | FunctionOptions::AllowImplicitReturn,
                                              &isConstructor);
 
+    // If the function returns a declared enum type, save it off here
+    // so that we don't suck it into the body.
+    auto savedPN = std::exchange(previewNode, nullptr);
+
     auto semi = expect(TokenKind::Semicolon);
     auto items = parseBlockItems(endKind, end, isConstructor);
     auto endBlockName = parseNamedBlockClause();
@@ -784,6 +788,7 @@ FunctionDeclarationSyntax& Parser::parseFunctionDeclaration(AttrList attributes,
     if (nameToken.kind == TokenKind::Identifier || nameToken.kind == TokenKind::NewKeyword)
         checkBlockNames(nameToken, endBlockName);
 
+    previewNode = savedPN;
     return factory.functionDeclaration(functionKind, attributes, prototype, semi, items, end,
                                        endBlockName);
 }

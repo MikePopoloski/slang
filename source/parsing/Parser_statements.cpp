@@ -14,12 +14,6 @@ namespace slang::parsing {
 using namespace syntax;
 
 StatementSyntax& Parser::parseStatement(bool allowEmpty, bool allowSuperNew) {
-    auto& result = parseStatementInternal(allowEmpty, allowSuperNew);
-    result.previewNode = std::exchange(previewNode, nullptr);
-    return result;
-}
-
-StatementSyntax& Parser::parseStatementInternal(bool allowEmpty, bool allowSuperNew) {
     auto dg = setDepthGuard();
 
     NamedLabelSyntax* label = nullptr;
@@ -688,6 +682,7 @@ std::span<SyntaxNode*> Parser::parseBlockItems(TokenKind endKind, Token& end, bo
         }
 
         if (newNode) {
+            newNode->previewNode = std::exchange(previewNode, nullptr);
             buffer.push_back(newNode);
             errored = false;
 

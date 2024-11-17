@@ -2295,6 +2295,15 @@ endchecker
 property p(enum {A,B} a = A);
     B;
 endproperty
+
+module o;
+    int i,j;
+    initial i = $bits(enum{A,B});
+    assign j = $bits(enum{C,D});
+
+    localparam p = A;
+    localparam q = C;
+endmodule
 )");
 
     Compilation compilation;

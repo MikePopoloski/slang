@@ -378,7 +378,6 @@ private:
     syntax::MemberSyntax* parseLibraryMember();
     syntax::FilePathSpecSyntax& parseFilePathSpec();
     syntax::LibraryDeclarationSyntax& parseLibraryDecl();
-    syntax::StatementSyntax& parseStatementInternal(bool allowEmpty, bool allowSuperNew);
     // clang-format on
 
     template<bool (*IsEnd)(TokenKind)>
