@@ -397,17 +397,25 @@ void TypePrinter::visit(const VirtualInterfaceType& type, std::string_view) {
 }
 
 void TypePrinter::visit(const TypeAliasType& type, std::string_view overrideName) {
+    std::string downstreamOverrideName;
     if (!overrideName.empty()) {
-        type.targetType.getType().visit(*this, overrideName);
+        downstreamOverrideName = overrideName;
     }
     else if (options.elideScopeNames ||
              options.anonymousTypeStyle == TypePrintingOptions::FriendlyName) {
-        type.targetType.getType().visit(*this, type.name);
+        downstreamOverrideName = type.name;
     }
     else {
         std::string path = getLexicalPath(type.getParentScope());
         path.append(type.name);
-        type.targetType.getType().visit(*this, path);
+        downstreamOverrideName = path;
+    }
+
+    if (options.skipTypeDefs) {
+        buffer->append(downstreamOverrideName);
+    }
+    else {
+        type.targetType.getType().visit(*this, downstreamOverrideName);
     }
 }
 

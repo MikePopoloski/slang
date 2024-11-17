@@ -33,6 +33,9 @@ struct SLANG_EXPORT TypePrintingOptions {
     /// Skip over scoped type names completely.
     bool skipScopedTypeNames = false;
 
+    /// Skip expanding typedefs.
+    bool skipTypeDefs = false;
+
     /// Include the enum's base type.
     bool fullEnumType = false;
 

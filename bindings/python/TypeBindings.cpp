@@ -125,7 +125,8 @@ void registerTypes(py::module_& m) {
         .def_readwrite("printAKA", &TypePrintingOptions::printAKA)
         .def_readwrite("anonymousTypeStyle", &TypePrintingOptions::anonymousTypeStyle)
         .def_readwrite("skipScopedTypeNames", &TypePrintingOptions::skipScopedTypeNames)
-        .def_readwrite("fullEnumType", &TypePrintingOptions::anonymousTypeStyle);
+        .def_readwrite("fullEnumType", &TypePrintingOptions::fullEnumType)
+        .def_readwrite("skipTypeDefs", &TypePrintingOptions::skipTypeDefs);
 
     py::enum_<TypePrintingOptions::AnonymousTypeStyle>(typePrintingOptions, "AnonymousTypeStyle")
         .value("SystemName", TypePrintingOptions::SystemName)
