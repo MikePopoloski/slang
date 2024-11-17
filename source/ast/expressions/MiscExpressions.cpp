@@ -772,7 +772,7 @@ static const AssertionExpr& bindAssertionBody(const Symbol& symbol, const Syntax
         result.requireSequence(context);
 
         if (outputLocalVarArgLoc &&
-            result.checkNondegeneracy().has(NondegeneracyStatus::AdmitsEmpty)) {
+            result.checkNondegeneracy().status.has(NondegeneracyStatus::AdmitsEmpty)) {
             auto& diag = context.addDiag(diag::LocalVarOutputEmptyMatch,
                                          sds.seqExpr->sourceRange());
             diag << symbol.name;

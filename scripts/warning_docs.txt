@@ -1478,3 +1478,11 @@ module m;
     end
 endmodule
 ```
+
+-Wseq-no-match
+Warns about a sequence expression that can never be matched.
+```
+module top;
+    assert property ((1'b1 ##1 1'b0) intersect (1'b1[*0] ##2 1'b1));
+endmodule
+```

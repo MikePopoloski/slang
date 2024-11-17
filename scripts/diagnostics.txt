@@ -870,8 +870,8 @@ error ForkJoinAlwaysComb "fork-join is not allowed in {} procedure"
 error BlockingInAlwaysFF "always_ff procedures cannot have blocking timing controls"
 error AlwaysFFEventControl "always_ff procedure must have one and only one event control"
 error SeqEmptyMatch "sequence must not admit an empty match"
-error SeqNoMatch "sequence can never be matched"
 error SeqOnlyEmpty "sequence admits only empty matches"
+warning seq-no-match SeqNoMatch "sequence can never be matched"
 warning event-const EventExpressionConstant "edge expression is constant"
 warning empty-stmt EmptyStatement "extra ';' has no effect"
 warning pointless-void-cast PointlessVoidCast "cast to void for void-returning function '{}' has no effect"
@@ -880,6 +880,7 @@ warning bad-procedural-force BadProceduralForce "lvalue of force/release must be
 warning multibit-edge MultiBitEdge "edge of expression of type {} will only trigger on changes to the first bit"
 note NoteWhileExpanding "while expanding {} '{}'"
 note NoteExpandedHere "expanded here"
+note NoteAlwaysFalse "expression is always false"
 
 subsystem Types
 error InvalidEnumBase "invalid enum base type {} (must be a single dimensional integer type)"
@@ -1160,7 +1161,8 @@ group default = { real-underflow real-overflow vector-overflow int-overflow unco
                   raw-protect-eof protected-envelope specify-param dup-timing-path invalid-pulsestyle
                   negative-timing-limit bad-procedural-force duplicate-defparam implicit-port-type-mismatch
                   split-distweight-op dpi-pure-task multibit-edge unknown-sys-name unknown-library
-                  dup-config-rule unused-config-cell unused-config-instance specify-condition-expr }
+                  dup-config-rule unused-config-cell unused-config-instance specify-condition-expr
+                  seq-no-match }
 
 group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-none case-gen-dup
                 unused-result format-real ignored-slice task-ignored width-trunc dup-attr event-const
