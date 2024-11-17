@@ -7,14 +7,19 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ## [Unreleased]
 ### Language Support
 * Disallow access to protected members from class scoped randomize constraint blocks -- the LRM is unclear about this but other tools seem to have decided this way made the most sense
+* Added a check that net aliases aren't duplicated, and that nets don't alias to themselves, as mandated by the LRM (thanks to @likeamahoney)
 
 ### General Features
 * Added [-Wudp-coverage](https://sv-lang.com/warning-ref.html#udp-coverage) which warns about edge-sensitive user-defined primitives that don't specify an output state for all edges of all inputs (thanks to @likeamahoney)
+* Added [-Wpacked-array-conv](https://sv-lang.com/warning-ref.html#packed-array-conv) which warns for conversions between different multidimensional packed array types even if their overall bit width is the same
+* Added the [-Wparentheses](https://sv-lang.com/warning-ref.html#parentheses) warning group for diagnosing common precedence-related syntactical errors, which includes the following new warnings: -Wbitwise-rel-precedence, -Warith-in-shift, -Wlogical-not-parentheses, -Wbitwise-op-parentheses, -Wlogical-op-parentheses, -Wconditional-precedence, -Wconsecutive-comparison
 
 ### Improvements
 * Made -Wuseless-cast a bit less noisy -- it now does not warn about expressions involving genvars or cases where types are matching but one or the other has a different typedef alias name
 * -Wsign-compare no longer warns about expressions involving genvars
 * -Wvector-overflow no longer warns about signed literals with binary, octal, or hex bases that place a bit in the MSB
+* Made some build tweaks to support hermetic builds (thanks to @cc10512)
+* Added support for unions to slang-reflect (thanks to @Sustrak)
 
 ### Fixes
 * Fixed a bug with constant evaluation of left-hand side assignment patterns that require implicit conversions to be applied
@@ -29,6 +34,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Correctly disallow override specifiers on class constructor declarations
 * Correctly report an error for unbased unsized literals that use a `?` instead of a `z` character for high impedance
 * Fixed handling of connections of interface arrays to ports with different declared dimensions
+* Fixed a bug in constant evaluation of packed struct member access
+* Correctly disallow select expressions of a parenthesized subexpression
+* Fixed a bug where some type declarations in two modules with different parameter values could be erroneously considered equivalent to each other (thanks to @povik)
+* Correctly disallow derived class virtual methods from declaring a different visibility level from their base class method
+* Reworked how enum types are implemented to fix various issues related to enum values declared inside subexpressions from being visible to their surrounding scopes
 
 
 ## [v7.0] - 2024-09-26
