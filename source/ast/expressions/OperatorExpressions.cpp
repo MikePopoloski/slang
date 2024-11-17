@@ -538,6 +538,10 @@ Expression& BinaryExpression::fromSyntax(Compilation& compilation,
 
 static void analyzePrecedence(const ASTContext& context, const Expression& lhs,
                               const Expression& rhs, BinaryOperator op, SourceRange opRange) {
+    // Ignore compound assignments.
+    if (lhs.kind == ExpressionKind::LValueReference)
+        return;
+
     auto getBin = [](const Expression& expr) {
         return expr.isParenthesized() ? nullptr : expr.as_if<BinaryExpression>();
     };

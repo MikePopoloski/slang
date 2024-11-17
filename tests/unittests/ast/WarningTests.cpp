@@ -1024,6 +1024,7 @@ module m;
         if (!d & e) begin end
         if ((a + b ? 1 : 2) == 2) begin end
         if (a < b < c) begin end
+        c |= a & b;
     end
 endmodule
 )");
