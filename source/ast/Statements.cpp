@@ -7,6 +7,8 @@
 //------------------------------------------------------------------------------
 #include "slang/ast/Statements.h"
 
+#include <fmt/core.h>
+
 #include "slang/ast/ASTSerializer.h"
 #include "slang/ast/ASTVisitor.h"
 #include "slang/ast/Compilation.h"
@@ -1197,6 +1199,45 @@ Statement& CaseStatement::fromSyntax(Compilation& compilation, const CaseStateme
     if (!defStmt) {
         context.addDiag(diag::CaseDefault, syntax.caseKeyword.range())
             << LexerFacts::getTokenKindText(keyword);
+    }
+
+    if (expr->type->isEnum()) {
+        SmallSet<ConstantValue, 4> elems;
+        for (auto& g : result->items) {
+            for (auto item : g.expressions) {
+                if (auto cv = context.tryEval(*item))
+                    elems.emplace(std::move(cv));
+            }
+        }
+
+        SmallVector<std::string_view> missing;
+        for (auto& ev : expr->type->getCanonicalType().as<EnumType>().values()) {
+            auto& val = ev.getValue();
+            if (!elems.contains(val))
+                missing.push_back(ev.name);
+        }
+
+        if (!missing.empty()) {
+            std::string msg;
+            if (missing.size() == 1) {
+                msg = fmt::format("value '{}'", missing[0]);
+            }
+            else if (missing.size() == 2) {
+                msg = fmt::format("values '{}' and '{}'", missing[0], missing[1]);
+            }
+            else if (missing.size() == 3) {
+                msg = fmt::format("values '{}', '{}', and '{}'", missing[0], missing[1],
+                                  missing[2]);
+            }
+            else {
+                const size_t remainder = missing.size() - 3;
+                msg = fmt::format("values '{}', '{}', '{}' (and {} other{})", missing[0],
+                                  missing[1], missing[2], remainder, remainder == 1 ? "" : "s");
+            }
+
+            auto code = defStmt ? diag::CaseEnumExplicit : diag::CaseEnum;
+            context.addDiag(code, expr->sourceRange) << msg;
+        }
     }
 
     return *result;

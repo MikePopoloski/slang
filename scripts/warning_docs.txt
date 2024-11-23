@@ -1530,3 +1530,34 @@ module m;
     end
 endmodule
 ```
+
+-Wcase-enum
+A case statement with an enum type condition does not include items
+that cover every enumerand. Note that this warning will not be
+issued if there is a 'default' label.
+```
+module m;
+    enum {A, B} e;
+    initial begin
+        case (e)
+            A: ;
+        endcase
+    end
+endmodule
+```
+
+-Wcase-enum-explicit
+A case statement with an enum type condition does not include items
+that cover every enumerand, regardless of whether there is a default
+label or not.
+```
+module m;
+    enum {A, B} e;
+    initial begin
+        case (e)
+            A: ;
+            default;
+        endcase
+    end
+endmodule
+```

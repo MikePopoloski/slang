@@ -1124,3 +1124,60 @@ endmodule
     CHECK(diags[5].code == diag::CaseTypeMismatch);
     CHECK(diags[6].code == diag::CaseTypeMismatch);
 }
+
+TEST_CASE("Case statement missing enum values") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    enum {A,B,C,D,E} e;
+    initial begin
+        case (e)
+            A, B, C, D:;
+            default;
+        endcase
+        case (e)
+            A, B, C:;
+            default;
+        endcase
+        case (e)
+            A, B:;
+            default;
+        endcase
+        case (e)
+            A:;
+            default;
+        endcase
+
+        case (e)
+            A, B, C, D:;
+        endcase
+        case (e)
+            A, B, C:;
+        endcase
+        case (e)
+            A, B:;
+        endcase
+        case (e)
+            A:;
+        endcase
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 12);
+    CHECK(diags[0].code == diag::CaseEnumExplicit);
+    CHECK(diags[1].code == diag::CaseEnumExplicit);
+    CHECK(diags[2].code == diag::CaseEnumExplicit);
+    CHECK(diags[3].code == diag::CaseEnumExplicit);
+    CHECK(diags[4].code == diag::CaseDefault);
+    CHECK(diags[5].code == diag::CaseEnum);
+    CHECK(diags[6].code == diag::CaseDefault);
+    CHECK(diags[7].code == diag::CaseEnum);
+    CHECK(diags[8].code == diag::CaseDefault);
+    CHECK(diags[9].code == diag::CaseEnum);
+    CHECK(diags[10].code == diag::CaseDefault);
+    CHECK(diags[11].code == diag::CaseEnum);
+}
