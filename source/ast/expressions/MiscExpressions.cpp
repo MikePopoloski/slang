@@ -316,27 +316,13 @@ bool ValueExpressionBase::checkVariableAssignment(const ASTContext& context,
 }
 
 std::optional<bitwidth_t> ValueExpressionBase::getEffectiveWidthImpl() const {
-    auto cvToWidth = [this](const ConstantValue& cv) -> std::optional<bitwidth_t> {
-        if (!cv.isInteger())
-            return std::nullopt;
-
-        auto& sv = cv.integer();
-        if (sv.hasUnknown())
-            return type->getBitWidth();
-
-        if (sv.isNegative())
-            return sv.getMinRepresentedBits();
-
-        return sv.getActiveBits();
-    };
-
     switch (symbol.kind) {
         case SymbolKind::Parameter:
-            return cvToWidth(symbol.as<ParameterSymbol>().getValue(sourceRange));
+            return symbol.as<ParameterSymbol>().getValue(sourceRange).getEffectiveWidth();
         case SymbolKind::EnumValue:
-            return cvToWidth(symbol.as<EnumValueSymbol>().getValue(sourceRange));
+            return symbol.as<EnumValueSymbol>().getValue(sourceRange).getEffectiveWidth();
         case SymbolKind::Specparam:
-            return cvToWidth(symbol.as<SpecparamSymbol>().getValue(sourceRange));
+            return symbol.as<SpecparamSymbol>().getValue(sourceRange).getEffectiveWidth();
         default:
             return type->getBitWidth();
     }

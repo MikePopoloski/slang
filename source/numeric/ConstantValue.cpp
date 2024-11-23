@@ -509,6 +509,20 @@ uint64_t ConstantValue::getBitstreamWidth() const {
     return width;
 }
 
+std::optional<bitwidth_t> ConstantValue::getEffectiveWidth() const {
+    if (!isInteger())
+        return std::nullopt;
+
+    auto& sv = integer();
+    if (sv.hasUnknown())
+        return sv.getBitWidth();
+
+    if (sv.isNegative())
+        return sv.getMinRepresentedBits();
+
+    return sv.getActiveBits();
+}
+
 std::ostream& operator<<(std::ostream& os, const ConstantValue& cv) {
     return os << cv.toString();
 }

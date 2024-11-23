@@ -1516,3 +1516,17 @@ module m;
     end
 endmodule
 ```
+
+-Wcase-outside-range
+A case item has a known value that makes it impossible to ever match
+the case condition (or vice versa).
+```
+module m;
+    logic [2:0] a;
+    initial begin
+        case (a)
+            4'b1000: ;
+        endcase
+    end
+endmodule
+```

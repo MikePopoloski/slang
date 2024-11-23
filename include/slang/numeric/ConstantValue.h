@@ -173,6 +173,8 @@ public:
     /// Gets the size of this value when converted to a bitstream.
     uint64_t getBitstreamWidth() const;
 
+    std::optional<bitwidth_t> getEffectiveWidth() const;
+
     static const ConstantValue Invalid;
 
     SLANG_EXPORT friend std::ostream& operator<<(std::ostream& os, const ConstantValue& cv);

@@ -30,25 +30,44 @@ namespace slang::ast {
 using namespace parsing;
 using namespace syntax;
 
+static std::optional<bitwidth_t> evalEffectiveWidth(const ASTContext& context,
+                                                    const Expression& expr, TokenKind keyword) {
+    auto cv = context.tryEval(expr);
+    auto width = cv.getEffectiveWidth();
+    if (!width)
+        return std::nullopt;
+
+    // If the case statement we are evaluating allows wildcards,
+    // don't count a wildcard in a top bit as part of the effective
+    // width, since it can match zeros.
+    if (keyword == TokenKind::CaseXKeyword)
+        return *width - cv.integer().countLeadingUnknowns();
+    if (keyword == TokenKind::CaseZKeyword)
+        return *width - cv.integer().countLeadingZs();
+    return width;
+}
+
 bool Expression::bindMembershipExpressions(const ASTContext& context, TokenKind keyword,
                                            bool requireIntegral, bool unwrapUnpacked,
                                            bool allowTypeReferences, bool allowValueRange,
                                            const ExpressionSyntax& valueExpr,
                                            std::span<const ExpressionSyntax* const> expressions,
                                            SmallVectorBase<const Expression*>& results) {
+    const auto keywordStr = LexerFacts::getTokenKindText(keyword);
     auto extraFlags = allowTypeReferences ? ASTFlags::AllowTypeReferences : ASTFlags::None;
     Compilation& comp = context.getCompilation();
     Expression& valueRes = create(comp, valueExpr, context, extraFlags);
     results.push_back(&valueRes);
 
     const Type* type = valueRes.type;
+    auto valueWidth = evalEffectiveWidth(context, valueRes, keyword);
     bool bad = valueRes.bad();
     bool canBeStrings = valueRes.isImplicitString();
 
     if ((!requireIntegral && type->isAggregate()) || (requireIntegral && !type->isIntegral())) {
         if (!bad) {
             context.addDiag(diag::BadSetMembershipType, valueRes.sourceRange)
-                << *type << LexerFacts::getTokenKindText(keyword);
+                << *type << keywordStr;
             bad = true;
         }
     }
@@ -85,14 +104,13 @@ bool Expression::bindMembershipExpressions(const ASTContext& context, TokenKind 
         }
         else if (bt.isAggregate()) {
             // Aggregates are just never allowed in membership expressions.
-            context.addDiag(diag::BadSetMembershipType, expr.sourceRange)
-                << bt << LexerFacts::getTokenKindText(keyword);
+            context.addDiag(diag::BadSetMembershipType, expr.sourceRange) << bt << keywordStr;
             bad = true;
         }
         else {
             // Couldn't find a common type.
             context.addDiag(diag::NoCommonComparisonType, expr.sourceRange)
-                << LexerFacts::getTokenKindText(keyword) << bt << *type;
+                << keywordStr << bt << *type;
             bad = true;
         }
 
@@ -101,8 +119,26 @@ bool Expression::bindMembershipExpressions(const ASTContext& context, TokenKind 
             auto& rct = valueRes.type->getCanonicalType();
             BinaryExpression::analyzeOpTypes(lct, rct, bt, *valueRes.type, expr, valueRes, context,
                                              expr.sourceRange, diag::CaseTypeMismatch,
-                                             /* isComparison */ false,
-                                             LexerFacts::getTokenKindText(keyword));
+                                             /* isComparison */ false, keywordStr);
+
+            if (expr.type->isIntegral() && valueRes.type->isIntegral()) {
+                // Check whether either the item or the value expression is
+                // a constant integral (but not both). If so, check that the
+                // constant value's effective width is not larger than the
+                // bit width of the other expression, which would make it
+                // impossible to ever match.
+                auto exprWidth = evalEffectiveWidth(context, expr, keyword);
+                auto vw = valueWidth.value_or(valueRes.type->getBitWidth());
+
+                if (valueWidth > expr.type->getBitWidth() && !exprWidth) {
+                    auto& diag = context.addDiag(diag::CaseOutsideRange, expr.sourceRange);
+                    diag << keywordStr << expr.type->getBitWidth() << *valueWidth;
+                }
+                else if (exprWidth > vw && !valueWidth) {
+                    auto& diag = context.addDiag(diag::CaseOutsideRange, expr.sourceRange);
+                    diag << keywordStr << *exprWidth << vw;
+                }
+            }
         }
     };
 
@@ -132,7 +168,7 @@ bool Expression::bindMembershipExpressions(const ASTContext& context, TokenKind 
         if (requireIntegral) {
             if (!bt->isIntegral()) {
                 context.addDiag(diag::BadSetMembershipType, bound->sourceRange)
-                    << *bt << LexerFacts::getTokenKindText(keyword);
+                    << *bt << keywordStr;
                 bad = true;
             }
             else {

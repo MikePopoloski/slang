@@ -670,6 +670,10 @@ TEST_CASE("SVInt misc functions") {
     CHECK("64'd1"_si.reverse() == 1ull << 63);
     CHECK_THAT("129'b1x10"_si.shl(125).reverse(), exactlyEquals("129'b1x1"_si));
     CHECK_THAT("128'b1x10"_si.shl(124).reverse(), exactlyEquals("128'b1x1"_si));
+
+    CHECK("192'hzzxx000000zz0000"_si.countLeadingUnknowns() == 144);
+    CHECK("192'hzzxx000000zz0000"_si.countLeadingZs() == 136);
+    CHECK(a.countLeadingZs() == 0);
 }
 
 TEST_CASE("Double conversions") {

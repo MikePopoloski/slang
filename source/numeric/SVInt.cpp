@@ -1954,6 +1954,63 @@ bitwidth_t SVInt::countLeadingOnesSlowCase() const {
     return count;
 }
 
+bitwidth_t SVInt::countLeadingUnknowns() const {
+    if (!hasUnknown())
+        return 0;
+
+    bitwidth_t bitsInMsw = bitWidth % BITS_PER_WORD;
+    uint32_t shift = 0;
+    if (!bitsInMsw)
+        bitsInMsw = BITS_PER_WORD;
+    else
+        shift = BITS_PER_WORD - bitsInMsw;
+
+    uint32_t words = getNumWords(bitWidth, false);
+    int i = int(words - 1);
+    bitwidth_t count = (bitwidth_t)std::countl_one(pVal[i + words] << shift);
+    if (count == bitsInMsw) {
+        for (i--; i >= 0; i--) {
+            if (pVal[i + words] == UINT64_MAX)
+                count += BITS_PER_WORD;
+            else {
+                count += (bitwidth_t)std::countl_one(pVal[i + words]);
+                break;
+            }
+        }
+    }
+
+    return count;
+}
+
+bitwidth_t SVInt::countLeadingZs() const {
+    if (!hasUnknown())
+        return 0;
+
+    bitwidth_t bitsInMsw = bitWidth % BITS_PER_WORD;
+    uint32_t shift = 0;
+    if (!bitsInMsw)
+        bitsInMsw = BITS_PER_WORD;
+    else
+        shift = BITS_PER_WORD - bitsInMsw;
+
+    uint32_t words = getNumWords(bitWidth, false);
+    int i = int(words - 1);
+    bitwidth_t count = (bitwidth_t)std::countl_one((pVal[i + words] & pVal[i]) << shift);
+    if (count == bitsInMsw) {
+        for (i--; i >= 0; i--) {
+            auto elem = pVal[i + words] & pVal[i];
+            if (elem == UINT64_MAX)
+                count += BITS_PER_WORD;
+            else {
+                count += (bitwidth_t)std::countl_one(elem);
+                break;
+            }
+        }
+    }
+
+    return count;
+}
+
 bitwidth_t SVInt::countOnes() const {
     if (isSingleWord())
         return (bitwidth_t)std::popcount(val);

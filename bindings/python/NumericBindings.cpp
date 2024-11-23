@@ -152,6 +152,8 @@ void registerNumeric(py::module_& m) {
         .def("getMinRepresentedBits", &SVInt::getMinRepresentedBits)
         .def("countLeadingZeros", &SVInt::countLeadingZeros)
         .def("countLeadingOnes", &SVInt::countLeadingOnes)
+        .def("countLeadingUnknowns", &SVInt::countLeadingUnknowns)
+        .def("countLeadingZs", &SVInt::countLeadingZs)
         .def("countOnes", &SVInt::countOnes)
         .def("countZeros", &SVInt::countZeros)
         .def("countXs", &SVInt::countXs)

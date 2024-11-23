@@ -88,14 +88,7 @@ ConstantValue IntegerLiteral::evalImpl(EvalContext&) const {
 }
 
 std::optional<bitwidth_t> IntegerLiteral::getEffectiveWidthImpl() const {
-    auto&& val = getValue();
-    if (val.hasUnknown())
-        return val.getBitWidth();
-
-    if (val.isNegative())
-        return val.getMinRepresentedBits();
-
-    return val.getActiveBits();
+    return ConstantValue(getValue()).getEffectiveWidth();
 }
 
 Expression::EffectiveSign IntegerLiteral::getEffectiveSignImpl(bool isForConversion) const {

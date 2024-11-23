@@ -1086,3 +1086,41 @@ endmodule
     CHECK(diags[5].code == diag::CaseTypeMismatch);
     CHECK(diags[6].code == diag::CaseDefault);
 }
+
+TEST_CASE("Case statement out of range") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    logic [2:0] a;
+    initial begin
+        casex (a)
+            4'b01: ;
+            4'b1000: ;
+            -1: ;
+            4'bx001: ;
+            default;
+        endcase
+        case (4'b1000)
+            a: ;
+            default;
+        endcase
+        casez (a)
+            4'b?001: ;
+            default;
+        endcase
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 7);
+    CHECK(diags[0].code == diag::CaseOutsideRange);
+    CHECK(diags[1].code == diag::CaseTypeMismatch);
+    CHECK(diags[2].code == diag::CaseTypeMismatch);
+    CHECK(diags[3].code == diag::CaseTypeMismatch);
+    CHECK(diags[4].code == diag::CaseOutsideRange);
+    CHECK(diags[5].code == diag::CaseTypeMismatch);
+    CHECK(diags[6].code == diag::CaseTypeMismatch);
+}
