@@ -1059,9 +1059,11 @@ module m;
             A, f: ;
             F, 1: ;
             3.14: ;
+            default;
         endcase
         case (1)
             g, h: ;
+            default;
         endcase
         case (g)
             P: ;
@@ -1075,11 +1077,12 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 6);
+    REQUIRE(diags.size() == 7);
     CHECK(diags[0].code == diag::IntFloatConv);
     CHECK(diags[1].code == diag::CaseTypeMismatch);
     CHECK(diags[2].code == diag::IntFloatConv);
     CHECK(diags[3].code == diag::CaseTypeMismatch);
     CHECK(diags[4].code == diag::CaseTypeMismatch);
     CHECK(diags[5].code == diag::CaseTypeMismatch);
+    CHECK(diags[6].code == diag::CaseDefault);
 }

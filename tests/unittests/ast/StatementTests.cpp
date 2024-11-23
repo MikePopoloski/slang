@@ -305,6 +305,7 @@ module m;
 
         case (null)
             null: ;
+            default;
         endcase
 
         case ("asdf")

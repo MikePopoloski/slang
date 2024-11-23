@@ -1194,6 +1194,11 @@ Statement& CaseStatement::fromSyntax(Compilation& compilation, const CaseStateme
     if (bad)
         return badStmt(compilation, result);
 
+    if (!defStmt) {
+        context.addDiag(diag::CaseDefault, syntax.caseKeyword.range())
+            << LexerFacts::getTokenKindText(keyword);
+    }
+
     return *result;
 }
 

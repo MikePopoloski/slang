@@ -776,6 +776,7 @@ warning bitwise-op-mismatch BitwiseOpMismatch "bitwise operation between operand
 warning comparison-mismatch ComparisonMismatch "comparison between operands of different types ({} and {})"
 warning sign-compare SignCompare "comparison of differently signed types ({} and {})"
 warning case-type CaseTypeMismatch "comparison of different types in '{}' statement ({} and {})"
+warning case-default CaseDefault "'{}' missing 'default' label"
 warning bitwise-rel-precedence BitwiseRelPrecedence "'{}' has lower precedence than '{}'; '{}' will be evaluated first"
 note NotePrecedenceBitwiseFirst "place parentheses around the '{}' expression to evaluate it first"
 note NotePrecedenceSilence "place parentheses around the '{}' expression to silence this warning"

@@ -1501,3 +1501,18 @@ module m;
     end
 endmodule
 ```
+
+-Wcase-default
+A case statement is missing a 'default' label. This is not necessarily problematic,
+but some coding standards mandate that all case statements include a 'default' so
+this warning can be used to enforce that.
+```
+module m;
+    enum {A, B} e;
+    initial begin
+        case (e)
+            A, B: ;
+        endcase
+    end
+endmodule
+```

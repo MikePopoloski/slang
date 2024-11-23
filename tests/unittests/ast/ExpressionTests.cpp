@@ -2446,6 +2446,7 @@ module m;
     initial begin
         case (bar)
             A: begin end
+            default;
         endcase
     end
 endmodule
