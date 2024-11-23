@@ -7,7 +7,7 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include "slang/ast/Statements.h"
+#include "slang/ast/statements/LoopStatements.h"
 #include "slang/syntax/SyntaxFwd.h"
 #include "slang/util/Util.h"
 

@@ -15,6 +15,7 @@
 namespace slang::ast {
 
 class FormalArgumentSymbol;
+class VariableSymbol;
 
 /// Specifies various flags that can apply to subroutines.
 enum class SLANG_EXPORT MethodFlags : uint16_t {

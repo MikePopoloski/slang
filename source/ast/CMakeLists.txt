@@ -26,6 +26,9 @@ target_sources(
           expressions/Operator.cpp
           expressions/OperatorExpressions.cpp
           expressions/SelectExpressions.cpp
+          statements/ConditionalStatements.cpp
+          statements/LoopStatements.cpp
+          statements/MiscStatements.cpp
           symbols/AttributeSymbol.cpp
           symbols/BlockSymbols.cpp
           symbols/ClassSymbols.cpp

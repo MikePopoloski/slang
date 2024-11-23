@@ -3,6 +3,8 @@
 
 #include "Test.h"
 
+#include "slang/ast/statements/ConditionalStatements.h"
+#include "slang/ast/statements/MiscStatements.h"
 #include "slang/ast/symbols/BlockSymbols.h"
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
 #include "slang/ast/symbols/InstanceSymbols.h"
