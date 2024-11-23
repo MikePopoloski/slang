@@ -41,7 +41,8 @@ namespace slang::ast {
 
 Compilation::Compilation(const Bag& options, const SourceLibrary* defaultLib) :
     options(options.getOrDefault<CompilationOptions>()), driverMapAllocator(*this),
-    unrollIntervalMapAllocator(*this), tempDiag({}, {}), defaultLibPtr(defaultLib) {
+    unrollIntervalMapAllocator(*this), tempDiag({}, {}), netAliasAllocator(*this),
+    defaultLibPtr(defaultLib) {
 
     // Construct all built-in types.
     auto& bi = slang::ast::builtins::Builtins::Instance;
@@ -1204,6 +1205,55 @@ void Compilation::noteNameConflict(const Symbol& symbol) {
     nameConflicts.push_back(&symbol);
 }
 
+void Compilation::noteNetAlias(const Scope& scope, const Symbol& firstSym,
+                               DriverBitRange firstRange, const Expression& firstExpr,
+                               const Symbol& secondSym, DriverBitRange secondRange,
+                               const Expression& secondExpr) {
+    SLANG_ASSERT(firstRange.second - firstRange.first == secondRange.second - secondRange.first);
+
+    auto overlaps = [](DriverBitRange a, DriverBitRange b) {
+        return a.first <= b.second && b.first <= a.second;
+    };
+
+    const Symbol* a = &firstSym;
+    const Symbol* b = &secondSym;
+    const Expression* firstExprPtr = &firstExpr;
+    const Expression* secondExprPtr = &secondExpr;
+    if (a > b) {
+        std::swap(a, b);
+        std::swap(firstRange, secondRange);
+        std::swap(firstExprPtr, secondExprPtr);
+    }
+
+    bool errored = false;
+    auto& imap = netAliases[a];
+    const auto end = imap.end();
+    for (auto it = imap.find(firstRange); it != end; ++it) {
+        auto curr = *it;
+        if (curr->sym == b && overlaps(curr->range, secondRange)) {
+            errored = true;
+            if (curr->sym == a) {
+                scope.addDiag(diag::NetAliasSelf, firstExprPtr->sourceRange)
+                    << secondExprPtr->sourceRange;
+            }
+            else {
+                auto& diag = scope.addDiag(diag::MultipleNetAlias, firstExprPtr->sourceRange);
+                diag.addNote(diag::NoteAliasedTo, secondExprPtr->sourceRange);
+                diag.addNote(diag::NoteAliasDeclaration, curr->firstExpr->sourceRange);
+                diag.addNote(diag::NoteAliasedTo, curr->secondExpr->sourceRange);
+            }
+            break;
+        }
+    }
+
+    auto newAlias = emplace<NetAlias>(b, secondRange, firstExprPtr, secondExprPtr);
+    imap.insert(firstRange, newAlias, netAliasAllocator);
+
+    if (!errored && a == b && overlaps(firstRange, secondRange)) {
+        scope.addDiag(diag::NetAliasSelf, firstExprPtr->sourceRange) << secondExprPtr->sourceRange;
+    }
+}
+
 const Expression* Compilation::getDefaultDisable(const Scope& scope) const {
     auto curr = &scope;
     while (true) {
@@ -1631,13 +1681,6 @@ Diagnostic& Compilation::addDiag(Diagnostic diag) {
 
     auto [it, inserted] = diagMap.emplace(key, std::move(newEntry));
     return it->second.back();
-}
-
-std::span<const Diagnostic> Compilation::getIssuedDiagnosticsAt(DiagCode code,
-                                                                SourceLocation loc) const {
-    if (auto diagIt = diagMap.find({code, loc}); diagIt != diagMap.end())
-        return diagIt->second;
-    return {};
 }
 
 AssertionInstanceDetails* Compilation::allocAssertionDetails() {

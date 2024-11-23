@@ -108,7 +108,7 @@ SLANG_ENUM(ForwardTypeRestriction, FTR);
 #undef FTR
 
 /// A set of flags that control how assignments are checked.
-enum class SLANG_EXPORT AssignFlags : uint16_t {
+enum class SLANG_EXPORT AssignFlags : uint8_t {
     /// No special assignment behavior specified.
     None = 0,
 
@@ -137,12 +137,9 @@ enum class SLANG_EXPORT AssignFlags : uint16_t {
 
     /// The assignment is for an output port that was sliced due to an array of instances
     /// being connected to an array argument.
-    SlicedPort = 1 << 7,
-
-    /// The assignment is from a net alias declaration.
-    NetAlias = 1 << 8
+    SlicedPort = 1 << 7
 };
-SLANG_BITMASK(AssignFlags, NetAlias)
+SLANG_BITMASK(AssignFlags, SlicedPort)
 
 /// A helper class that can extract semantic AST information from
 /// tokens and syntax nodes.

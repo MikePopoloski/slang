@@ -49,9 +49,9 @@ bool ValueSymbol::isKind(SymbolKind kind) {
     }
 }
 
-static bool handleOverlap(const Symbol& thisSym, const Scope& scope, std::string_view name,
-                          const ValueDriver& curr, const ValueDriver& driver, bool isNet,
-                          bool isUWire, bool isSingleDriverUDNT, const NetType* netType) {
+static bool handleOverlap(const Scope& scope, std::string_view name, const ValueDriver& curr,
+                          const ValueDriver& driver, bool isNet, bool isUWire,
+                          bool isSingleDriverUDNT, const NetType* netType) {
     auto currRange = curr.getSourceRange();
     auto driverRange = driver.getSourceRange();
 
@@ -166,42 +166,6 @@ static bool handleOverlap(const Symbol& thisSym, const Scope& scope, std::string
         return false;
     }
 
-    if (driver.isNetAlias()) {
-        // Avoid duplicate diagnostics where the alias ranges are simply reversed.
-        auto& comp = scope.getCompilation();
-        auto hasDiag = [&](SourceLocation errLoc, SourceLocation noteLoc1,
-                           SourceLocation noteLoc2 = SourceLocation::NoLocation) {
-            for (auto code : {diag::NetAliasSelf, diag::MultipleNetAlias}) {
-                for (auto& diag : comp.getIssuedDiagnosticsAt(code, errLoc)) {
-                    for (auto& note : diag.notes) {
-                        if (note.location == noteLoc1 || note.location == noteLoc2)
-                            return true;
-                    }
-                }
-            }
-            return false;
-        };
-
-        if (hasDiag(currRange.start(), driverRange.start(), curr.symExprSR->start()) ||
-            hasDiag(driver.symExprSR->start(), driverRange.start()) ||
-            hasDiag(curr.symExprSR->start(), currRange.start())) {
-            return false;
-        }
-
-        auto code = driver.containingSymbol == &thisSym ? diag::NetAliasSelf
-                                                        : diag::MultipleNetAlias;
-        auto& diag = scope.addDiag(code, driverRange);
-        diag << name;
-
-        diag.addNote(diag::NoteAliasedTo, *driver.symExprSR);
-        if (code == diag::MultipleNetAlias) {
-            diag.addNote(diag::NoteAliasDeclaration, currRange);
-            diag.addNote(diag::NoteAliasedTo, *curr.symExprSR);
-        }
-
-        return false;
-    }
-
     DiagCode code;
     if (isUWire)
         code = diag::MultipleUWireDrivers;
@@ -238,15 +202,6 @@ void ValueSymbol::addDriver(DriverKind driverKind, const Expression& longestStat
     auto driver = comp.emplace<ValueDriver>(driverKind, longestStaticPrefix, containingSymbol,
                                             flags);
     addDriver(*bounds, *driver);
-}
-
-void ValueSymbol::addDriver(DriverKind driverKind, const Expression& longestStaticPrefix,
-                            const Symbol& containingSymbol, bitmask<AssignFlags> flags,
-                            const SourceRange& symExprSR, DriverBitRange exprBounds) const {
-    auto& comp = getParentScope()->getCompilation();
-    auto driver = comp.emplace<ValueDriver>(driverKind, longestStaticPrefix, containingSymbol,
-                                            flags, &symExprSR);
-    addDriver(exprBounds, *driver);
 }
 
 void ValueSymbol::addDriver(DriverKind driverKind, DriverBitRange bounds,
@@ -344,7 +299,6 @@ void ValueSymbol::addDriver(DriverBitRange bounds, const ValueDriver& driver) co
         //            block to overlap even if the other block is an always_comb/ff.
         // - Assertion local variable formal arguments can't drive more than
         //   one output to the same local variable.
-        // - Net bits are not aliased more than once
         bool isProblem = false;
         auto curr = *it;
 
@@ -372,16 +326,9 @@ void ValueSymbol::addDriver(DriverBitRange bounds, const ValueDriver& driver) co
             }
         }
 
-        // If one of the drivers is an alias, then perform a check if the second one is an alias
-        if (curr->isNetAlias() || driver.isNetAlias()) {
-            isProblem = curr->isNetAlias() && driver.isNetAlias();
-            // Check that all net alias drivers are have the same net alias symbol scope
-            isProblem = isProblem && (curr->containingSymbol == driver.containingSymbol);
-        }
-
         if (isProblem) {
-            if (!handleOverlap(*this, *scope, name, *curr, driver, isNet, isUWire,
-                               isSingleDriverUDNT, netType)) {
+            if (!handleOverlap(*scope, name, *curr, driver, isNet, isUWire, isSingleDriverUDNT,
+                               netType)) {
                 break;
             }
         }

@@ -52,6 +52,7 @@ struct ResolvedConfig;
 
 using DriverIntervalMap = IntervalMap<uint64_t, const ValueDriver*>;
 using UnrollIntervalMap = IntervalMap<uint64_t, std::monostate>;
+using DriverBitRange = std::pair<uint64_t, uint64_t>;
 
 enum class IntegralFlags : uint8_t;
 enum class SymbolIndex : uint32_t;
@@ -577,6 +578,12 @@ public:
     /// This will cause appropriate errors to be issued.
     void noteNameConflict(const Symbol& symbol);
 
+    /// Makes note of an alias defined between the bit ranges of the two given symbols.
+    /// This is used to check for duplicate aliases between the bit ranges.
+    void noteNetAlias(const Scope& scope, const Symbol& firstSym, DriverBitRange firstRange,
+                      const Expression& firstExpr, const Symbol& secondSym,
+                      DriverBitRange secondRange, const Expression& secondExpr);
+
     /// Adds a set of diagnostics to the compilation's list of semantic diagnostics.
     void addDiagnostics(const Diagnostics& diagnostics);
 
@@ -714,9 +721,6 @@ public:
 
     /// Queries if any errors have been issued on any scope within this compilation.
     bool hasIssuedErrors() const { return numErrors > 0; };
-
-    /// Gets any issued diagnostics with the given code and location.
-    std::span<const Diagnostic> getIssuedDiagnosticsAt(DiagCode code, SourceLocation loc) const;
 
     /// @}
 
@@ -951,6 +955,20 @@ private:
     // The key is a combination of definition name + the scope in which it was declared.
     flat_hash_map<std::tuple<std::string_view, const Scope*>, const syntax::SyntaxNode*>
         externDefMap;
+
+    struct NetAlias {
+        const Symbol* sym;
+        DriverBitRange range;
+        const Expression* firstExpr;
+        const Expression* secondExpr;
+    };
+
+    using AliasIntervalMap = IntervalMap<uint64_t, const NetAlias*>;
+    AliasIntervalMap::allocator_type netAliasAllocator;
+
+    // A map of net aliases to check for duplicates. For any given alias the key is
+    // whichever symbol has the lower address in memory.
+    flat_hash_map<const Symbol*, AliasIntervalMap> netAliases;
 
     // The built-in std package.
     const PackageSymbol* stdPkg = nullptr;
