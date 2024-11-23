@@ -1965,8 +1965,8 @@ bitwidth_t SVInt::countLeadingUnknowns() const {
     else
         shift = BITS_PER_WORD - bitsInMsw;
 
-    uint32_t words = getNumWords(bitWidth, false);
-    int i = int(words - 1);
+    int words = (int)getNumWords(bitWidth, false);
+    int i = words - 1;
     bitwidth_t count = (bitwidth_t)std::countl_one(pVal[i + words] << shift);
     if (count == bitsInMsw) {
         for (i--; i >= 0; i--) {
@@ -1993,8 +1993,8 @@ bitwidth_t SVInt::countLeadingZs() const {
     else
         shift = BITS_PER_WORD - bitsInMsw;
 
-    uint32_t words = getNumWords(bitWidth, false);
-    int i = int(words - 1);
+    int words = (int)getNumWords(bitWidth, false);
+    int i = words - 1;
     bitwidth_t count = (bitwidth_t)std::countl_one((pVal[i + words] & pVal[i]) << shift);
     if (count == bitsInMsw) {
         for (i--; i >= 0; i--) {
