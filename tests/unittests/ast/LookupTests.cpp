@@ -2202,3 +2202,29 @@ endpackage
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Enum initializer cycle") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    enum { A = 1, B = A, C = D, D = D, E = foo(), F = bar() } e;
+    function foo;
+        return A;
+    endfunction
+    function int bar;
+        return F;
+    endfunction
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 6);
+    CHECK(diags[0].code == diag::EnumValueDuplicate);
+    CHECK(diags[1].code == diag::UndeclaredIdentifier);
+    CHECK(diags[2].code == diag::ConstEvalParamCycle);
+    CHECK(diags[3].code == diag::EnumValueDuplicate);
+    CHECK(diags[4].code == diag::ConstEvalParamCycle);
+    CHECK(diags[5].code == diag::ConstEvalIdUsedInCEBeforeDecl);
+}

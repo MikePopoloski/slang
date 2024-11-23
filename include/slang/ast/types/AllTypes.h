@@ -11,6 +11,7 @@
 #include "slang/ast/symbols/ValueSymbol.h"
 #include "slang/ast/types/Type.h"
 #include "slang/syntax/SyntaxFwd.h"
+#include "slang/util/Function.h"
 
 namespace slang::ast {
 
@@ -111,16 +112,13 @@ public:
              const ASTContext& context);
 
     static const Type& fromSyntax(Compilation& compilation, const syntax::EnumTypeSyntax& syntax,
-                                  const ASTContext& context);
+                                  const ASTContext& context,
+                                  function_ref<void(const Symbol&)> insertCB);
     static const Type& findDefinition(Compilation& compilation,
                                       const syntax::EnumTypeSyntax& syntax,
                                       const ASTContext& context);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::EnumType; }
-
-    static void createDefaultMembers(const ASTContext& context,
-                                     const syntax::EnumTypeSyntax& syntax,
-                                     SmallVectorBase<const Symbol*>& members);
 
     std::ranges::subrange<specific_symbol_iterator<EnumValueSymbol>> values() const {
         return membersOfType<EnumValueSymbol>();

@@ -823,24 +823,13 @@ void Scope::elaborate() const {
             auto& node = symbol->as<DeferredMemberSymbol>().node;
             if (node.kind == SyntaxKind::EnumType) {
                 ASTContext context(*this, LookupLocation::before(*symbol));
-                auto& type = EnumType::fromSyntax(compilation, node.as<EnumTypeSyntax>(), context);
-                if (type.isError()) {
-                    // If we failed to create the enum type we should still create placeholders
-                    // for all the members so that we don't get further errors.
-                    SmallVector<const Symbol*> members;
-                    EnumType::createDefaultMembers(context, node.as<EnumTypeSyntax>(), members);
-                    for (auto member : members) {
-                        insertMember(member, at, true, false);
-                        at = member;
-                    }
-                }
-                else {
-                    for (auto& value : type.as<EnumType>().values()) {
-                        auto wrapped = compilation.emplace<TransparentMemberSymbol>(value);
-                        insertMember(wrapped, at, true, false);
-                        at = wrapped;
-                    }
-                }
+                EnumType::fromSyntax(compilation, node.as<EnumTypeSyntax>(), context,
+                                     [this, &at](const Symbol& member) {
+                                         auto wrapped =
+                                             compilation.emplace<TransparentMemberSymbol>(member);
+                                         insertMember(wrapped, at, true, false);
+                                         at = wrapped;
+                                     });
             }
         }
     }

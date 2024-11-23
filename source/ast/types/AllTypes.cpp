@@ -280,34 +280,35 @@ static void checkEnumRange(const ASTContext& context, const VariableDimensionSyn
     }
 }
 
-const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax& syntax,
-                                 const ASTContext& context) {
+const Type& EnumType::fromSyntax(Compilation& comp, const EnumTypeSyntax& syntax,
+                                 const ASTContext& context,
+                                 function_ref<void(const Symbol&)> insertCB) {
     const Type* base;
     const Type* cb;
-    bitwidth_t bitWidth;
+    bitwidth_t bitWidth = 32;
 
     if (!syntax.baseType) {
         // If no explicit base type is specified we default to an int.
-        base = &compilation.getIntType();
+        base = &comp.getIntType();
         cb = base;
         bitWidth = cb->getBitWidth();
     }
     else {
-        base = &compilation.getType(*syntax.baseType, context);
+        base = &comp.getType(*syntax.baseType, context);
         cb = &base->getCanonicalType();
-        if (cb->isError())
-            return *cb;
-
-        // Error if the named type is invalid for an enum base type. Other invalid types
-        // will have been diagnosed already by the parser.
-        if (!cb->isSimpleBitVector() && syntax.baseType->kind == SyntaxKind::NamedType) {
-            context.addDiag(diag::InvalidEnumBase, syntax.baseType->getFirstToken().location())
-                << *base;
-            return compilation.getErrorType();
+        if (!cb->isError()) {
+            // Error if the named type is invalid for an enum base type. Other invalid types
+            // will have been diagnosed already by the parser.
+            if (!cb->isSimpleBitVector() && syntax.baseType->kind == SyntaxKind::NamedType) {
+                context.addDiag(diag::InvalidEnumBase, syntax.baseType->getFirstToken().location())
+                    << *base;
+                cb = &comp.getErrorType();
+            }
+            else {
+                bitWidth = cb->getBitWidth();
+                SLANG_ASSERT(bitWidth);
+            }
         }
-
-        bitWidth = cb->getBitWidth();
-        SLANG_ASSERT(bitWidth);
     }
 
     SVInt allOnes(bitWidth, 0, cb->isSigned());
@@ -318,14 +319,15 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
     SourceRange previousRange;
     bool first = true;
 
-    auto resultType = compilation.emplace<EnumType>(compilation, syntax.keyword.location(), *base,
-                                                    context);
-    resultType->setSyntax(syntax);
+    auto enumType = comp.emplace<EnumType>(comp, syntax.keyword.location(), *base, context);
+    enumType->setSyntax(syntax);
 
     // If this enum is inside a typedef we want to save the name here so that
     // when printing the types of our enum values we can refer back to this.
     if (syntax.parent && syntax.parent->kind == SyntaxKind::TypedefDeclaration)
-        resultType->name = syntax.parent->as<TypedefDeclarationSyntax>().name.valueText();
+        enumType->name = syntax.parent->as<TypedefDeclarationSyntax>().name.valueText();
+
+    auto resultType = cb->isError() ? cb : enumType;
 
     // Enum values must be unique; this set and lambda are used to check that.
     SmallMap<SVInt, SourceLocation, 8> usedValues;
@@ -351,6 +353,8 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
         ev.setInitializerSyntax(*initializer.expr, initializer.equals.location());
         auto initExpr = ev.getInitializer();
         SLANG_ASSERT(initExpr);
+        if (initExpr->bad())
+            return;
 
         // Drill down to the original initializer before any conversions are applied.
         initExpr = &initExpr->unwrapImplicitConversions();
@@ -446,8 +450,9 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
 
     for (auto member : syntax.members) {
         if (member->dimensions.empty()) {
-            auto& ev = EnumValueSymbol::fromSyntax(compilation, *member, *resultType, std::nullopt);
-            resultType->addMember(ev);
+            auto& ev = EnumValueSymbol::fromSyntax(comp, *member, *resultType, std::nullopt);
+            enumType->addMember(ev);
+            insertCB(ev);
 
             if (member->initializer)
                 setInitializer(ev, *member->initializer);
@@ -457,19 +462,18 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
         else {
             if (member->dimensions.size() > 1) {
                 context.addDiag(diag::EnumRangeMultiDimensional, member->dimensions.sourceRange());
-                return compilation.getErrorType();
             }
 
             auto dim = context.evalUnpackedDimension(*member->dimensions[0]);
             if (!dim.isRange())
-                return compilation.getErrorType();
+                continue;
 
             // Range must be positive.
             if (!context.requirePositive(std::optional(dim.range.left),
                                          member->dimensions[0]->sourceRange()) ||
                 !context.requirePositive(std::optional(dim.range.right),
                                          member->dimensions[0]->sourceRange())) {
-                return compilation.getErrorType();
+                continue;
             }
 
             // Enum ranges must be integer literals.
@@ -479,8 +483,9 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
             // don't get the initializer.
             int32_t index = dim.range.left;
             {
-                auto& ev = EnumValueSymbol::fromSyntax(compilation, *member, *resultType, index);
-                resultType->addMember(ev);
+                auto& ev = EnumValueSymbol::fromSyntax(comp, *member, *resultType, index);
+                enumType->addMember(ev);
+                insertCB(ev);
 
                 if (member->initializer)
                     setInitializer(ev, *member->initializer);
@@ -492,8 +497,9 @@ const Type& EnumType::fromSyntax(Compilation& compilation, const EnumTypeSyntax&
             while (index != dim.range.right) {
                 index = down ? index - 1 : index + 1;
 
-                auto& ev = EnumValueSymbol::fromSyntax(compilation, *member, *resultType, index);
-                resultType->addMember(ev);
+                auto& ev = EnumValueSymbol::fromSyntax(comp, *member, *resultType, index);
+                enumType->addMember(ev);
+                insertCB(ev);
 
                 inferValue(ev, member->sourceRange());
             }
@@ -550,41 +556,6 @@ const Type& EnumType::findDefinition(Compilation& comp, const EnumTypeSyntax& sy
     }
 
     return comp.getErrorType();
-}
-
-void EnumType::createDefaultMembers(const ASTContext& context, const EnumTypeSyntax& syntax,
-                                    SmallVectorBase<const Symbol*>& members) {
-    auto& comp = context.getCompilation();
-    for (auto member : syntax.members) {
-        std::string_view name = member->name.valueText();
-        SourceLocation loc = member->name.location();
-
-        if (member->dimensions.empty()) {
-            auto ev = comp.emplace<EnumValueSymbol>(name, loc);
-            ev->setType(comp.getErrorType());
-            members.push_back(ev);
-        }
-        else {
-            auto dimList = member->dimensions[0];
-            auto dim = context.evalUnpackedDimension(*dimList);
-            if (!dim.isRange())
-                continue;
-
-            SourceRange dimRange = dimList->sourceRange();
-            if (!context.requirePositive(std::optional(dim.range.left), dimRange) ||
-                !context.requirePositive(std::optional(dim.range.right), dimRange)) {
-                continue;
-            }
-
-            int32_t low = dim.range.lower();
-            for (uint32_t i = 0; i < dim.range.width(); i++) {
-                int32_t index = int32_t(i) + low;
-                auto ev = comp.emplace<EnumValueSymbol>(getEnumValueName(comp, name, index), loc);
-                ev->setType(comp.getErrorType());
-                members.push_back(ev);
-            }
-        }
-    }
 }
 
 EnumValueSymbol::EnumValueSymbol(std::string_view name, SourceLocation loc) :
