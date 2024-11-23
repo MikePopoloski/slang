@@ -1201,14 +1201,21 @@ Statement& CaseStatement::fromSyntax(Compilation& compilation, const CaseStateme
             << LexerFacts::getTokenKindText(keyword);
     }
 
-    if (expr->type->isEnum()) {
-        SmallSet<ConstantValue, 4> elems;
-        for (auto& g : result->items) {
-            for (auto item : g.expressions) {
-                if (auto cv = context.tryEval(*item))
-                    elems.emplace(std::move(cv));
+    SmallMap<ConstantValue, const Expression*, 4> elems;
+    for (auto& g : result->items) {
+        for (auto item : g.expressions) {
+            if (auto cv = context.tryEval(*item)) {
+                auto [it, inserted] = elems.emplace(std::move(cv), item);
+                if (!inserted) {
+                    auto& diag = context.addDiag(diag::CaseDup, item->sourceRange);
+                    diag << LexerFacts::getTokenKindText(keyword) << it->first;
+                    diag.addNote(diag::NotePreviousUsage, it->second->sourceRange);
+                }
             }
         }
+    }
+
+    if (expr->type->isEnum()) {
 
         SmallVector<std::string_view> missing;
         for (auto& ev : expr->type->getCanonicalType().as<EnumType>().values()) {

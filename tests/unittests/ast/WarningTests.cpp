@@ -1181,3 +1181,32 @@ endmodule
     CHECK(diags[10].code == diag::CaseDefault);
     CHECK(diags[11].code == diag::CaseEnum);
 }
+
+TEST_CASE("Case statement dups") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int i;
+    event e;
+    initial begin
+        case (i)
+            1, 2:;
+            3, 1:;
+            default;
+        endcase
+        case (e)
+            null:;
+            null:;
+            default;
+        endcase
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::CaseDup);
+    CHECK(diags[1].code == diag::CaseDup);
+}

@@ -1561,3 +1561,20 @@ module m;
     end
 endmodule
 ```
+
+-Wcase-dup
+A case statement contains more than one item with the same value.
+Case items are evaluated and selected in order and so the second
+one will never be matched.
+```
+module m;
+    int i;
+    initial begin
+        case (i)
+            1, 2:;
+            3, 1:;
+            default;
+        endcase
+    end
+endmodule
+```
