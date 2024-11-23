@@ -95,6 +95,15 @@ bool Expression::bindMembershipExpressions(const ASTContext& context, TokenKind 
                 << LexerFacts::getTokenKindText(keyword) << bt << *type;
             bad = true;
         }
+
+        if (!bad && !bt.isMatching(*valueRes.type) && !bt.isUnbounded()) {
+            auto& lct = bt.getCanonicalType();
+            auto& rct = valueRes.type->getCanonicalType();
+            BinaryExpression::analyzeOpTypes(lct, rct, bt, *valueRes.type, expr, valueRes, context,
+                                             expr.sourceRange, diag::CaseTypeMismatch,
+                                             /* isComparison */ false,
+                                             LexerFacts::getTokenKindText(keyword));
+        }
     };
 
     // We need to find a common type across all expressions. If this is for a wildcard
@@ -127,7 +136,7 @@ bool Expression::bindMembershipExpressions(const ASTContext& context, TokenKind 
                 bad = true;
             }
             else {
-                type = OpInfo::binaryType(comp, type, bt, false);
+                checkType(*bound, *bt);
             }
             continue;
         }
@@ -892,7 +901,7 @@ Expression& BinaryExpression::fromComponents(Expression& lhs, Expression& rhs, B
     auto& crt = rt->getCanonicalType();
     if (!clt.isMatching(crt)) {
         auto checkTypes = [&](DiagCode code, bool isComparison) {
-            analyzeOpTypes(clt, crt, *lt, *rt, lhs, rhs, context, opRange, code, isComparison);
+            analyzeOpTypes(clt, crt, *lt, *rt, lhs, rhs, context, opRange, code, isComparison, {});
         };
 
         switch (op) {
@@ -934,7 +943,8 @@ Expression& BinaryExpression::fromComponents(Expression& lhs, Expression& rhs, B
 void BinaryExpression::analyzeOpTypes(const Type& clt, const Type& crt, const Type& originalLt,
                                       const Type& originalRt, const Expression& lhs,
                                       const Expression& rhs, const ASTContext& context,
-                                      SourceRange opRange, DiagCode code, bool isComparison) {
+                                      SourceRange opRange, DiagCode code, bool isComparison,
+                                      std::optional<std::string_view> extraDiagArg) {
     // Don't warn if either side is a compiler generated variable
     // (which can be true for genvars).
     auto isCompGenVar = [](const Symbol* sym) {
@@ -993,6 +1003,7 @@ void BinaryExpression::analyzeOpTypes(const Type& clt, const Type& crt, const Ty
             }
 
             auto& diag = context.addDiag(diag::SignCompare, opRange);
+            SLANG_ASSERT(!extraDiagArg);
             diag << originalLt << originalRt;
             diag << lhs.sourceRange << rhs.sourceRange;
             return;
@@ -1060,6 +1071,8 @@ void BinaryExpression::analyzeOpTypes(const Type& clt, const Type& crt, const Ty
     }
 
     auto& diag = context.addDiag(code, opRange);
+    if (extraDiagArg)
+        diag << *extraDiagArg;
     diag << originalLt << originalRt;
     diag << lhs.sourceRange << rhs.sourceRange;
 }

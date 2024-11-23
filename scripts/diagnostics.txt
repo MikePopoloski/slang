@@ -775,6 +775,7 @@ warning arith-op-mismatch ArithOpMismatch "arithmetic between operands of differ
 warning bitwise-op-mismatch BitwiseOpMismatch "bitwise operation between operands of different types ({} and {})"
 warning comparison-mismatch ComparisonMismatch "comparison between operands of different types ({} and {})"
 warning sign-compare SignCompare "comparison of differently signed types ({} and {})"
+warning case-type CaseTypeMismatch "comparison of different types in '{}' statement ({} and {})"
 warning bitwise-rel-precedence BitwiseRelPrecedence "'{}' has lower precedence than '{}'; '{}' will be evaluated first"
 note NotePrecedenceBitwiseFirst "place parentheses around the '{}' expression to evaluate it first"
 note NotePrecedenceSilence "place parentheses around the '{}' expression to silence this warning"
@@ -1176,7 +1177,7 @@ group pedantic = { empty-pattern implicit-net-port nonstandard-escape-code nonst
 
 group conversion = { width-trunc width-expand port-width-trunc port-width-expand implicit-conv
                      constant-conversion sign-conversion float-bool-conv int-bool-conv float-int-conv
-                     int-float-conv float-widen float-narrow packed-array-conv }
+                     int-float-conv float-widen float-narrow packed-array-conv case-type }
 
 group unused = { unused-def unused-net unused-implicit-net unused-variable undriven-net unassigned-variable
                  unused-but-set-net unused-but-set-variable unused-port undriven-port unused-argument

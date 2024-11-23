@@ -107,6 +107,11 @@ public:
                                       SourceRange opRange, SourceRange sourceRange,
                                       const ASTContext& context);
 
+    static void analyzeOpTypes(const Type& clt, const Type& crt, const Type& originalLt,
+                               const Type& originalRt, const Expression& lhs, const Expression& rhs,
+                               const ASTContext& context, SourceRange opRange, DiagCode code,
+                               bool isComparison, std::optional<std::string_view> extraDiagArg);
+
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::BinaryOp; }
 
     template<typename TVisitor>
@@ -114,12 +119,6 @@ public:
         left().visit(visitor);
         right().visit(visitor);
     }
-
-private:
-    static void analyzeOpTypes(const Type& clt, const Type& crt, const Type& originalLt,
-                               const Type& originalRt, const Expression& lhs, const Expression& rhs,
-                               const ASTContext& context, SourceRange opRange, DiagCode code,
-                               bool isComparison);
 };
 
 /// Represents a conditional operator expression.

@@ -1045,3 +1045,41 @@ endmodule
     CHECK(diags[8].code == diag::ConditionalPrecedence);
     CHECK(diags[9].code == diag::ConsecutiveComparison);
 }
+
+TEST_CASE("Case statement type warnings") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    enum{A,B,C} e;
+    enum{D,E,F} f;
+    int unsigned g;
+    logic [1:0] h;
+    parameter [99:0] P = 999999;
+    initial begin
+        case (e)
+            A, f: ;
+            F, 1: ;
+            3.14: ;
+        endcase
+        case (1)
+            g, h: ;
+        endcase
+        case (g)
+            P: ;
+            4'd1:;
+        endcase
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 6);
+    CHECK(diags[0].code == diag::IntFloatConv);
+    CHECK(diags[1].code == diag::CaseTypeMismatch);
+    CHECK(diags[2].code == diag::IntFloatConv);
+    CHECK(diags[3].code == diag::CaseTypeMismatch);
+    CHECK(diags[4].code == diag::CaseTypeMismatch);
+    CHECK(diags[5].code == diag::CaseTypeMismatch);
+}

@@ -282,7 +282,7 @@ module m;
     int unpacked [3];
 
     always begin : block
-        case (foo)
+        case (9'(foo))
             3'd7 + 3'd7: ;
             default;
             9'd9, 9'd8: ;

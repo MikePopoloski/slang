@@ -1486,3 +1486,18 @@ module top;
     assert property ((1'b1 ##1 1'b0) intersect (1'b1[*0] ##2 1'b1));
 endmodule
 ```
+
+-Wcase-type
+The type of a case item expression does not match the type of the case condition
+expression.
+```
+module m;
+    enum {A, B} e;
+    enum {C, D} f;
+    initial begin
+        case (e)
+            C: ;
+        endcase
+    end
+endmodule
+```

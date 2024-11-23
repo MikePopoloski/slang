@@ -3260,14 +3260,16 @@ endclass
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 7);
-    CHECK(diags[0].code == diag::IntFloatConv);
+    REQUIRE(diags.size() == 9);
+    CHECK(diags[0].code == diag::CaseTypeMismatch);
     CHECK(diags[1].code == diag::IntFloatConv);
-    CHECK(diags[2].code == diag::MultipleDefaultDistWeight);
-    CHECK(diags[3].code == diag::ExpectedToken);
-    CHECK(diags[4].code == diag::SplitDistWeightOp);
+    CHECK(diags[2].code == diag::CaseTypeMismatch);
+    CHECK(diags[3].code == diag::IntFloatConv);
+    CHECK(diags[4].code == diag::MultipleDefaultDistWeight);
     CHECK(diags[5].code == diag::ExpectedToken);
-    CHECK(diags[6].code == diag::BadSetMembershipType);
+    CHECK(diags[6].code == diag::SplitDistWeightOp);
+    CHECK(diags[7].code == diag::ExpectedToken);
+    CHECK(diags[8].code == diag::BadSetMembershipType);
 }
 
 TEST_CASE("Dist range with real values requires a weight") {
