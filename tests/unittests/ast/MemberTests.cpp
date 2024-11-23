@@ -4,7 +4,7 @@
 #include "Test.h"
 
 #include "slang/ast/ASTVisitor.h"
-#include "slang/ast/Statements.h"
+#include "slang/ast/Statement.h"
 #include "slang/ast/expressions/AssignmentExpressions.h"
 #include "slang/ast/expressions/CallExpression.h"
 #include "slang/ast/expressions/OperatorExpressions.h"

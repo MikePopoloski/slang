@@ -8,7 +8,7 @@
 #include "slang/ast/ScriptSession.h"
 
 #include "slang/ast/Expression.h"
-#include "slang/ast/Statements.h"
+#include "slang/ast/Statement.h"
 #include "slang/ast/symbols/BlockSymbols.h"
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
 #include "slang/ast/symbols/VariableSymbols.h"

@@ -9,7 +9,6 @@
 
 #include "slang/ast/Constraints.h"
 #include "slang/ast/Patterns.h"
-#include "slang/ast/Statements.h"
 #include "slang/ast/TimingControl.h"
 #include "slang/ast/expressions/AssertionExpr.h"
 #include "slang/ast/expressions/AssignmentExpressions.h"

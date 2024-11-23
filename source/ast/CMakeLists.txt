@@ -66,7 +66,7 @@ target_sources(
           ScriptSession.cpp
           SemanticFacts.cpp
           SFormat.cpp
-          Statements.cpp
+          Statement.cpp
           Symbol.cpp
           SystemSubroutine.cpp
           TimingControl.cpp)

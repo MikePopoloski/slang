@@ -7,7 +7,7 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include "slang/ast/Statements.h"
+#include "slang/ast/Statement.h"
 
 namespace slang::ast {
 

@@ -1,5 +1,5 @@
 //------------------------------------------------------------------------------
-//! @file Statements.h
+//! @file Statement.h
 //! @brief Statement creation and analysis
 //
 // SPDX-FileCopyrightText: Michael Popoloski

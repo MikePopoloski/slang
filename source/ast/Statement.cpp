@@ -1,11 +1,11 @@
 //------------------------------------------------------------------------------
-// Statements.cpp
+// Statement.cpp
 // Statement creation and analysis
 //
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
-#include "slang/ast/Statements.h"
+#include "slang/ast/Statement.h"
 
 #include "slang/ast/ASTSerializer.h"
 #include "slang/ast/ASTVisitor.h"

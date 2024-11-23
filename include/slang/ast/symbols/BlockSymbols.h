@@ -8,7 +8,7 @@
 #pragma once
 
 #include "slang/ast/SemanticFacts.h"
-#include "slang/ast/Statements.h"
+#include "slang/ast/Statement.h"
 #include "slang/ast/Symbol.h"
 #include "slang/syntax/SyntaxFwd.h"
 #include "slang/util/Function.h"

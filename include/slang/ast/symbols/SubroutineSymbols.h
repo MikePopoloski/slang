@@ -7,7 +7,7 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#include "slang/ast/Statements.h"
+#include "slang/ast/Scope.h"
 #include "slang/ast/types/DeclaredType.h"
 #include "slang/syntax/SyntaxFwd.h"
 #include "slang/util/Enum.h"
@@ -15,6 +15,8 @@
 namespace slang::ast {
 
 class FormalArgumentSymbol;
+class Statement;
+class StatementBlockSymbol;
 class VariableSymbol;
 
 /// Specifies various flags that can apply to subroutines.
