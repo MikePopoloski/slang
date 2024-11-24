@@ -192,6 +192,68 @@ void ConditionalStatement::serializeTo(ASTSerializer& serializer) const {
         serializer.write("ifFalse", *ifFalse);
 }
 
+// A trie for checking overlap of case items.
+class CaseTrie {
+public:
+    // Tries to insert the given value. If successful, nullptr is returned.
+    // Otherwise, the overlapping expression is returned.
+    const Expression* insert(const SVInt& value, const Expression& expr, bool wildcardX,
+                             BumpAllocator& alloc) {
+        if (auto result = find(value, 0, expr, wildcardX))
+            return result;
+
+        CaseTrie* curr = this;
+        const auto width = value.getBitWidth();
+        for (uint32_t i = 0; i < width; i++) {
+            const auto bit = value[i];
+            const bool isWildcard = wildcardX ? bit.isUnknown() : bit.value == logic_t::Z_VALUE;
+            const auto valueIndex = isWildcard ? 3 : bit.isUnknown() ? 2 : bit.value;
+
+            auto& elem = curr->nodes[valueIndex];
+            if (i == width - 1) {
+                elem.expr = &expr;
+            }
+            else {
+                if (!elem.trie)
+                    elem.trie = alloc.emplace<CaseTrie>();
+                curr = elem.trie;
+            }
+        }
+
+        return nullptr;
+    }
+
+private:
+    const Expression* find(const SVInt& value, uint32_t bitIndex, const Expression& expr,
+                           bool wildcardX) {
+        const auto bit = value[bitIndex];
+        const bool lastBit = bitIndex == value.getBitWidth() - 1;
+        const bool isWildcard = wildcardX ? bit.isUnknown() : bit.value == logic_t::Z_VALUE;
+        const auto valueIndex = bit.isUnknown() ? 2 : bit.value;
+
+        for (int i = 0; i < 4; i++) {
+            if (isWildcard || i == valueIndex || i == 3) {
+                if (lastBit) {
+                    if (nodes[i].expr)
+                        return nodes[i].expr;
+                }
+                else if (nodes[i].trie) {
+                    if (auto result = nodes[i].trie->find(value, bitIndex + 1, expr, wildcardX))
+                        return result;
+                }
+            }
+        }
+
+        return nullptr;
+    }
+
+    union Node {
+        CaseTrie* trie;
+        const Expression* expr;
+    };
+    Node nodes[4] = {};
+};
+
 static CaseStatementCondition getCondition(TokenKind kind) {
     CaseStatementCondition condition;
     switch (kind) {
@@ -308,6 +370,11 @@ Statement& CaseStatement::fromSyntax(Compilation& compilation, const CaseStateme
             << LexerFacts::getTokenKindText(keyword);
     }
 
+    CaseTrie trie;
+    std::optional<BumpAllocator> trieAlloc;
+    if (wildcard)
+        trieAlloc.emplace();
+
     SmallMap<ConstantValue, const Expression*, 4> elems;
     for (auto& g : result->items) {
         for (auto item : g.expressions) {
@@ -318,12 +385,20 @@ Statement& CaseStatement::fromSyntax(Compilation& compilation, const CaseStateme
                     diag << LexerFacts::getTokenKindText(keyword) << it->first;
                     diag.addNote(diag::NotePreviousUsage, it->second->sourceRange);
                 }
+                else if (wildcard) {
+                    if (auto prev = trie.insert(it->first.integer(), *item,
+                                                condition == CaseStatementCondition::WildcardXOrZ,
+                                                *trieAlloc)) {
+                        auto& diag = context.addDiag(diag::CaseOverlap, item->sourceRange)
+                                     << LexerFacts::getTokenKindText(keyword);
+                        diag.addNote(diag::NotePreviousUsage, prev->sourceRange);
+                    }
+                }
             }
         }
     }
 
     if (expr->type->isEnum()) {
-
         SmallVector<std::string_view> missing;
         for (auto& ev : expr->type->getCanonicalType().as<EnumType>().values()) {
             auto& val = ev.getValue();

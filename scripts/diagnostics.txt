@@ -873,6 +873,7 @@ warning case-default CaseDefault "'{}' missing 'default' label"
 warning case-enum CaseEnum "enumeration {} not handled in case statement"
 warning case-enum-explicit CaseEnumExplicit "enumeration {} not explicitly handled in case statement"
 warning case-dup CaseDup "'{}' statement contains duplicate items for value '{}' (the second one will never be matched)"
+warning case-overlap CaseOverlap "'{}' statement contains overlapping items"
 warning seq-no-match SeqNoMatch "sequence can never be matched"
 warning event-const EventExpressionConstant "edge expression is constant"
 warning empty-stmt EmptyStatement "extra ';' has no effect"
@@ -1175,7 +1176,7 @@ group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-
                 ineffective-sign port-width-trunc constant-conversion float-bool-conv int-bool-conv
                 useless-cast unsigned-arith-shift static-init-order static-init-value float-int-conv
                 float-narrow bitwise-rel-precedence arith-in-shift logical-not-parentheses
-                consecutive-comparison case-outside-range case-enum case-dup }
+                consecutive-comparison case-outside-range case-enum case-dup case-overlap }
 
 group pedantic = { empty-pattern implicit-net-port nonstandard-escape-code nonstandard-generate format-multibit-strength
                    nonstandard-sys-func nonstandard-foreach nonstandard-dist isunbounded-param-arg udp-coverage }

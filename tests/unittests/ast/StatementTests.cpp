@@ -318,7 +318,7 @@ module m;
         endcase
 
         casex (foo)
-            1'bx: ;
+            1'b0: ;
             1'd1: ;
             default;
         endcase

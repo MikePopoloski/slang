@@ -1578,3 +1578,19 @@ module m;
     end
 endmodule
 ```
+
+-Wcase-overlap
+A wildcard case statement contains overlapping items, which can be confusing
+since the overlapping value(s) will only ever match the first item in the list.
+```
+module m;
+    logic [3:0] a;
+    initial begin
+        casez (a)
+            4'b1011:;
+            4'b101?:;
+            default;
+        endcase
+    end
+endmodule
+```

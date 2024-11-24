@@ -1115,14 +1115,15 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 7);
+    REQUIRE(diags.size() == 8);
     CHECK(diags[0].code == diag::CaseOutsideRange);
     CHECK(diags[1].code == diag::CaseTypeMismatch);
     CHECK(diags[2].code == diag::CaseTypeMismatch);
     CHECK(diags[3].code == diag::CaseTypeMismatch);
-    CHECK(diags[4].code == diag::CaseOutsideRange);
-    CHECK(diags[5].code == diag::CaseTypeMismatch);
+    CHECK(diags[4].code == diag::CaseOverlap);
+    CHECK(diags[5].code == diag::CaseOutsideRange);
     CHECK(diags[6].code == diag::CaseTypeMismatch);
+    CHECK(diags[7].code == diag::CaseTypeMismatch);
 }
 
 TEST_CASE("Case statement missing enum values") {
@@ -1209,4 +1210,41 @@ endmodule
     REQUIRE(diags.size() == 2);
     CHECK(diags[0].code == diag::CaseDup);
     CHECK(diags[1].code == diag::CaseDup);
+}
+
+TEST_CASE("Case statement overlap") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    logic [65:0] a;
+    initial begin
+        casex (a)
+            65'bx1011z:;
+            65'b10111:;
+            65'b11011:;
+            65'b1101x:;
+            65'b110?1:;
+            default;
+        endcase
+        casez (a)
+            65'bx1111:;
+            65'b1x111:;
+            65'b1?111:;
+            65'b?1111:;
+            65'b?0111:;
+            default;
+        endcase
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 5);
+    CHECK(diags[0].code == diag::CaseOverlap);
+    CHECK(diags[1].code == diag::CaseOverlap);
+    CHECK(diags[2].code == diag::CaseOverlap);
+    CHECK(diags[3].code == diag::CaseOverlap);
+    CHECK(diags[4].code == diag::CaseOverlap);
 }
