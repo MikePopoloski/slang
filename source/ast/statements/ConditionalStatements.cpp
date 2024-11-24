@@ -205,7 +205,7 @@ public:
         CaseTrie* curr = this;
         const auto width = value.getBitWidth();
         for (uint32_t i = 0; i < width; i++) {
-            const auto bit = value[i];
+            const auto bit = value[(int32_t)i];
             const bool isWildcard = wildcardX ? bit.isUnknown() : bit.value == logic_t::Z_VALUE;
             const auto valueIndex = isWildcard ? 3 : bit.isUnknown() ? 2 : bit.value;
 
@@ -226,7 +226,7 @@ public:
 private:
     const Expression* find(const SVInt& value, uint32_t bitIndex, const Expression& expr,
                            bool wildcardX) {
-        const auto bit = value[bitIndex];
+        const auto bit = value[(int32_t)bitIndex];
         const bool lastBit = bitIndex == value.getBitWidth() - 1;
         const bool isWildcard = wildcardX ? bit.isUnknown() : bit.value == logic_t::Z_VALUE;
         const auto valueIndex = bit.isUnknown() ? 2 : bit.value;

@@ -47,7 +47,7 @@ public:
     bool isLibraryUnit = false;
 
     SyntaxTree(SyntaxNode* root, SourceManager& sourceManager, BumpAllocator&& alloc,
-               const SourceLibrary* library, std::shared_ptr<SyntaxTree> parent = nullptr);
+               const SourceLibrary* library, const std::shared_ptr<SyntaxTree>& parent = nullptr);
 
     SyntaxTree(SyntaxTree&& other) = default;
     ~SyntaxTree();
