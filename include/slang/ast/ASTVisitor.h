@@ -413,6 +413,11 @@ void CheckerInstanceSymbol::visitExprs(TVisitor&& visitor) const {
     }
 }
 
+template<typename TVisitor>
+decltype(auto) SubroutineSymbol::visitStmts(TVisitor&& visitor) const {
+    return getBody().visit(visitor);
+}
+
 template<typename TVisitor, typename... Args>
 decltype(auto) Constraint::visit(TVisitor& visitor, Args&&... args) const {
     // clang-format off
