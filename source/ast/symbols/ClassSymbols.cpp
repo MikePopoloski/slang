@@ -999,6 +999,8 @@ const Type* GenericClassDefSymbol::getSpecializationImpl(
     detail::ClassSpecializationKey key(*this, paramValues.copy(comp), typeParams.copy(comp));
     if (auto it = specMap.find(key); it != specMap.end())
         return it->second;
+    if (auto it = uninstantiatedSpecMap.find(key); it != uninstantiatedSpecMap.end())
+        return it->second;
 
     // Not found, so this is a new entry. Fill in its members and store the
     // specialization for later lookup. If we have a specialization function,
@@ -1008,8 +1010,15 @@ const Type* GenericClassDefSymbol::getSpecializationImpl(
     else
         classType->populate(*scope, getSyntax()->as<ClassDeclarationSyntax>());
 
-    if (!forceInvalidParams && !context.scope->isUninstantiated())
-        specMap.emplace(key, classType);
+    if (!forceInvalidParams) {
+        // If we're in an uninstantiated scope we save this specialization
+        // in a separate map so that we don't try to elaborate it further
+        // and potentially cause spurious errors to be issued.
+        if (context.scope->isUninstantiated())
+            uninstantiatedSpecMap.emplace(key, classType);
+        else
+            specMap.emplace(key, classType);
+    }
 
     return classType;
 }

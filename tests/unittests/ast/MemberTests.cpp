@@ -2412,4 +2412,5 @@ alias;
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
+    compilation.getAllDiagnostics();
 }

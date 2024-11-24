@@ -3541,3 +3541,17 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::VirtualVisibilityMismatch);
 }
+
+TEST_CASE("Generic class size computation stack overflow regress") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I;
+    class G #(type l);
+        G #(int) g2;
+    endclass
+endinterface
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    compilation.getAllDiagnostics();
+}

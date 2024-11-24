@@ -250,6 +250,7 @@ private:
     using SpecMap = flat_hash_map<detail::ClassSpecializationKey, const Type*,
                                   detail::ClassSpecializationHasher>;
     mutable SpecMap specMap;
+    mutable SpecMap uninstantiatedSpecMap;
     mutable std::optional<const Type*> defaultSpecialization;
     mutable const ForwardingTypedefSymbol* firstForward = nullptr;
     mutable uint32_t recursionDepth = 0;
