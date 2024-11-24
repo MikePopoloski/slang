@@ -2404,3 +2404,12 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Net alias infinite loop regress") {
+    auto tree = SyntaxTree::fromText(R"(
+alias;
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+}

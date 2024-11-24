@@ -2460,7 +2460,7 @@ std::span<const Expression* const> NetAliasSymbol::getNetReferences() const {
     }
 
     netRefs = buffer.copy(scope->getCompilation());
-    if (issuedError)
+    if (issuedError || netAliases.empty())
         return *netRefs;
 
     // Compare every net alias expression to every other, finding the set of
