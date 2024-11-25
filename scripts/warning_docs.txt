@@ -1594,3 +1594,33 @@ module m;
     end
 endmodule
 ```
+
+-Wcase-not-wildcard
+A normal case statement has items with integer literals that contain X or Z bits.
+These bits don't count as wildcards, so the designer may have meant for this to
+be a 'casex' or 'casez' statement instead.
+```
+module m;
+    logic [2:0] a;
+    initial begin
+        case (a)
+            3'b10?:;
+        endcase
+    end
+endmodule
+```
+
+-Wcasez-with-x
+A 'casez' statement has items with integer literals that contain X bits.
+These bits don't count as wildcards, so the designer may have meant for this to
+be a 'casex' statement instead.
+```
+module m;
+    logic [2:0] a;
+    initial begin
+        casez (a)
+            3'b10x:;
+        endcase
+    end
+endmodule
+```

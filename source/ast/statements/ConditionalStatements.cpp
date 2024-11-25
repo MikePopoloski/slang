@@ -395,6 +395,26 @@ Statement& CaseStatement::fromSyntax(Compilation& compilation, const CaseStateme
                     }
                 }
             }
+
+            if (condition == CaseStatementCondition::Normal ||
+                condition == CaseStatementCondition::WildcardJustZ) {
+                // If we're not in a wildcard case we should warn
+                // about integer literal items that have unknown bits.
+                // Similarly, if we're in a wildcard case with just Zs
+                // we should warn if we see Xs.
+                auto& unwrapped = item->unwrapImplicitConversions();
+                if (unwrapped.kind == ExpressionKind::IntegerLiteral) {
+                    auto& lit = unwrapped.as<IntegerLiteral>();
+                    if (condition == CaseStatementCondition::Normal &&
+                        lit.getValue().hasUnknown()) {
+                        context.addDiag(diag::CaseNotWildcard, item->sourceRange);
+                    }
+                    else if (condition == CaseStatementCondition::WildcardJustZ &&
+                             lit.getValue().countXs() > 0) {
+                        context.addDiag(diag::CaseZWithX, item->sourceRange);
+                    }
+                }
+            }
         }
     }
 

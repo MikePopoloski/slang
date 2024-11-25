@@ -1241,10 +1241,40 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 5);
+    REQUIRE(diags.size() == 7);
     CHECK(diags[0].code == diag::CaseOverlap);
     CHECK(diags[1].code == diag::CaseOverlap);
     CHECK(diags[2].code == diag::CaseOverlap);
-    CHECK(diags[3].code == diag::CaseOverlap);
-    CHECK(diags[4].code == diag::CaseOverlap);
+    CHECK(diags[3].code == diag::CaseZWithX);
+    CHECK(diags[4].code == diag::CaseZWithX);
+    CHECK(diags[5].code == diag::CaseOverlap);
+    CHECK(diags[6].code == diag::CaseOverlap);
+}
+
+TEST_CASE("Case items with unknowns that are not wildcards") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    logic [3:0] a;
+    initial begin
+        case (a)
+            4'b?10:;
+            4'bx10:;
+            default;
+        endcase
+        casez (a)
+            4'bx10:;
+            default;
+        endcase
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::CaseNotWildcard);
+    CHECK(diags[1].code == diag::CaseNotWildcard);
+    CHECK(diags[2].code == diag::CaseZWithX);
 }
