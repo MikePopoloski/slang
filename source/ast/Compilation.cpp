@@ -2359,9 +2359,10 @@ void Compilation::resolveDefParamsAndBinds() {
 
         DefParamVisitor initialVisitor(options.maxInstanceDepth, generateLevel);
         initialClone.getRoot(/* skipDefParamsAndBinds */ true).visit(initialVisitor);
-        saveState(initialVisitor, initialClone);
         if (checkProblem(initialVisitor))
             return;
+
+        saveState(initialVisitor, initialClone);
 
         // If we have found more binds, do another visit to let them be applied
         // and potentially add blocks and defparams to our set for this level.
