@@ -999,8 +999,11 @@ ClassSpecifierSyntax* Parser::parseClassSpecifier() {
             case TokenKind::FinalKeyword:
                 keyword = consume();
                 break;
-            default:
+            case TokenKind::Identifier:
                 skipToken(diag::ExpectedClassSpecifier);
+                break;
+            default:
+                addDiag(diag::ExpectedClassSpecifier, peek().location());
                 break;
         }
 

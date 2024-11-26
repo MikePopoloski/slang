@@ -1522,3 +1522,12 @@ endclass
     REQUIRE(diagnostics.size() == 1);
     CHECK(diagnostics[0].code == diag::SpecifiersNotAllowed);
 }
+
+TEST_CASE("Class specifier parsing crash regress") {
+    auto& text = R"(
+task:
+)";
+
+    parseCompilationUnit(text, LanguageVersion::v1800_2023);
+    REQUIRE(diagnostics.size() == 3);
+}
