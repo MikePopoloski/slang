@@ -1732,6 +1732,23 @@ bind p program p(s
     compilation.getAllDiagnostics();
 }
 
+TEST_CASE("Bind corner case crash regress 4") {
+    auto tree = SyntaxTree::fromText(R"(
+module m3;
+    module m2;
+        bind m2 m2 mc();
+    endmodule
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::DuplicateBind);
+}
+
 TEST_CASE("Nested modules with binds, parameterized, info task") {
     auto tree = SyntaxTree::fromText(R"(
 module m #(parameter P);

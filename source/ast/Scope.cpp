@@ -1123,8 +1123,14 @@ void Scope::elaborate() const {
     // If there are bind directives, reach up into the instance body
     // and pull out the extra bind metadata from its override node.
     if (hasBinds) {
+        SmallSet<const BindDirectiveSyntax*, 4> seenBindDirectives;
         ASTContext context(*this, LookupLocation::max);
         auto handleBind = [&](const BindDirectiveInfo& info) {
+            if (!seenBindDirectives.emplace(info.bindSyntax).second) {
+                addDiag(diag::DuplicateBind, info.bindSyntax->sourceRange());
+                return;
+            }
+
             SmallVector<const Symbol*> instances;
             SmallVector<const Symbol*> implicitNets;
             if (info.bindSyntax->instantiation->kind == SyntaxKind::CheckerInstantiation) {

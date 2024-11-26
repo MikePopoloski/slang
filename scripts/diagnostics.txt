@@ -495,6 +495,7 @@ error VirtualInterfaceIfaceMember "virtual interfaces cannot be used as the type
 error DefparamBadHierarchy "defparam in a hierarchy in or under a generate block, array of instances, or bind instantiation cannot change a parameter value outside that hierarchy"
 error BindTargetPrimitive "cannot bind a primitive"
 error BindUnderBind "cannot bind an instance underneath the scope of another bind instance"
+error DuplicateBind "bind directive targeting the same scope instantiated more than once"
 error UdpWrongInputCount "incorrect number of input fields in table row; have {} but expect {}"
 error UdpDupDiffOutput "primitive table row duplicates a set of inputs with a different specified output value"
 error UdpAllX "primitive table row has all 'x' inputs so its output must also be 'x'"
