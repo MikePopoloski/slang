@@ -215,6 +215,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
     auto tree = SyntaxTree::fromFileInMemory(text, sourceManager);
 
     DiagnosticEngine diagEngine(sourceManager);
+    diagEngine.setErrorLimit(10);
+
     auto diagClient = std::make_shared<TextDiagnosticClient>();
     diagEngine.addClient(diagClient);
 
