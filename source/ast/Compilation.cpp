@@ -1295,14 +1295,16 @@ void Compilation::noteExternDefinition(const Scope& scope, const SyntaxNode& syn
 
 const SyntaxNode* Compilation::getExternDefinition(std::string_view name,
                                                    const Scope& scope) const {
-    const Scope* searchScope = &scope;
-    do {
-        auto it = externDefMap.find(std::make_tuple(name, searchScope));
-        if (it != externDefMap.end())
-            return it->second;
+    if (!externDefMap.empty()) {
+        const Scope* searchScope = &scope;
+        do {
+            auto it = externDefMap.find(std::make_tuple(name, searchScope));
+            if (it != externDefMap.end())
+                return it->second;
 
-        searchScope = searchScope->asSymbol().getParentScope();
-    } while (searchScope);
+            searchScope = searchScope->asSymbol().getParentScope();
+        } while (searchScope);
+    }
 
     return nullptr;
 }
@@ -1646,6 +1648,11 @@ void Compilation::addDiagnostics(const Diagnostics& diagnostics) {
 }
 
 Diagnostic& Compilation::addDiag(Diagnostic diag) {
+    if (diagsDisabled) {
+        tempDiag = std::move(diag);
+        return tempDiag;
+    }
+
     auto isSuppressed = [](const Symbol* symbol) {
         while (symbol) {
             if (symbol->kind == SymbolKind::GenerateBlock)
@@ -2260,6 +2267,7 @@ void Compilation::resolveDefParamsAndBinds() {
     };
 
     auto cloneInto = [&](Compilation& c) {
+        c.diagsDisabled = true;
         c.options = options;
         for (auto& tree : syntaxTrees)
             c.addSyntaxTree(tree);
@@ -2348,6 +2356,7 @@ void Compilation::resolveDefParamsAndBinds() {
     size_t generateLevel = 0;
     size_t numBlocksSeen = 0;
     size_t numBindsSeen = 0;
+    size_t numDefParamsSeen = 0;
     while (true) {
         // Traverse the design and find all defparams and their values.
         // defparam resolution happens in a cloned compilation unit because we will be
@@ -2357,16 +2366,47 @@ void Compilation::resolveDefParamsAndBinds() {
         Compilation initialClone({}, defaultLibPtr);
         cloneInto(initialClone);
 
-        DefParamVisitor initialVisitor(options.maxInstanceDepth, generateLevel);
-        initialClone.getRoot(/* skipDefParamsAndBinds */ true).visit(initialVisitor);
-        if (checkProblem(initialVisitor))
-            return;
+        size_t currBlocksSeen;
+        auto nextIt = [&] {
+            // If we haven't found any new blocks we're done iterating.
+            SLANG_ASSERT(currBlocksSeen >= numBlocksSeen);
+            if (currBlocksSeen == numBlocksSeen)
+                return true;
 
-        saveState(initialVisitor, initialClone);
+            // Otherwise advance into the next blocks and try again.
+            generateLevel++;
+            numBlocksSeen = currBlocksSeen;
+            return false;
+        };
+
+        while (true) {
+            DefParamVisitor v(options.maxInstanceDepth, generateLevel);
+            initialClone.getRoot(/* skipDefParamsAndBinds */ true).visit(v);
+            if (checkProblem(v))
+                return;
+
+            currBlocksSeen = v.numBlocksSeen;
+            if (v.found.size() > numDefParamsSeen ||
+                initialClone.bindDirectives.size() > numBindsSeen) {
+                numDefParamsSeen = v.found.size();
+                saveState(v, initialClone);
+                break;
+            }
+
+            // We didn't find any more binds or defparams so increase
+            // our generate level and try again.
+            if (nextIt()) {
+                saveState(v, initialClone);
+                break;
+            }
+        }
 
         // If we have found more binds, do another visit to let them be applied
         // and potentially add blocks and defparams to our set for this level.
         if (initialClone.bindDirectives.size() > numBindsSeen) {
+            // Reset the number of defparams seen to ensure that
+            // we re-resolve everything after the next iteration.
+            numDefParamsSeen = 0;
             numBindsSeen = initialClone.bindDirectives.size();
             continue;
         }
@@ -2432,12 +2472,8 @@ void Compilation::resolveDefParamsAndBinds() {
         if (!allSame)
             break;
 
-        SLANG_ASSERT(initialVisitor.numBlocksSeen >= numBlocksSeen);
-        if (initialVisitor.numBlocksSeen == numBlocksSeen)
+        if (nextIt())
             break;
-
-        generateLevel++;
-        numBlocksSeen = initialVisitor.numBlocksSeen;
     }
 
     // We have our final overrides; copy them into the main compilation unit.

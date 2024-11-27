@@ -871,6 +871,7 @@ private:
     bool finalized = false;
     bool finalizing = false; // to prevent reentrant calls to getRoot()
     bool anyElemsWithTimescales = false;
+    bool diagsDisabled = false;
     uint32_t typoCorrections = 0;
     int nextEnumSystemId = 1;
     int nextStructSystemId = 1;

@@ -496,8 +496,10 @@ struct DefParamVisitor : public ASTVisitor<DefParamVisitor, false, false> {
     }
 
     void handle(const InstanceSymbol& symbol) {
-        if (symbol.body.flags.has(InstanceFlags::Uninstantiated) || hierarchyProblem)
+        if (symbol.name.empty() || symbol.body.flags.has(InstanceFlags::Uninstantiated) ||
+            hierarchyProblem) {
             return;
+        }
 
         // If we hit max depth we have a problem -- setting the hierarchyProblem
         // member will cause other functions to early out so that we complete

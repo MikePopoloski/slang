@@ -745,6 +745,9 @@ void InstanceSymbol::fromFixupSyntax(Compilation& comp, const DefinitionSymbol& 
     // for this fixup case.
     SmallVector<TokenOrSyntax, 4> instances;
     for (auto decl : syntax.declarators) {
+        if (decl->name.valueText().empty())
+            continue;
+
         auto loc = decl->name.location();
         if (!instances.empty())
             instances.push_back(missing(TokenKind::Comma, loc));
