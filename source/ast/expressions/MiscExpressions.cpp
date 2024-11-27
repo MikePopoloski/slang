@@ -885,7 +885,7 @@ Expression& AssertionInstanceExpression::fromLookup(const Symbol& symbol,
             if (arg->kind == SyntaxKind::EmptyArgument) {
                 // Empty arguments are allowed as long as a default is provided.
                 setDefault();
-                if (!expr)
+                if (!expr && !formal->name.empty())
                     context.addDiag(diag::ArgCannotBeEmpty, arg->sourceRange()) << formal->name;
             }
             else {
@@ -911,7 +911,7 @@ Expression& AssertionInstanceExpression::fromLookup(const Symbol& symbol,
             if (!arg) {
                 // Empty arguments are allowed as long as a default is provided.
                 setDefault();
-                if (!expr) {
+                if (!expr && !formal->name.empty()) {
                     context.addDiag(diag::ArgCannotBeEmpty, it->second.first->sourceRange())
                         << formal->name;
                 }
@@ -927,7 +927,7 @@ Expression& AssertionInstanceExpression::fromLookup(const Symbol& symbol,
                     bad = true;
                     break;
                 }
-                else {
+                else if (!formal->name.empty()) {
                     context.addDiag(diag::UnconnectedArg, range) << formal->name;
                 }
             }

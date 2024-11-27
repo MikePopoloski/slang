@@ -2672,3 +2672,13 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::Redefinition);
 }
+
+TEST_CASE("Invalid property lookup crash regress") {
+    auto tree = SyntaxTree::fromText(R"(
+f(p1(,;property p1(,
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    compilation.getAllDiagnostics();
+}
