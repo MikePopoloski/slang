@@ -53,7 +53,7 @@ else()
 endif()
 
 # --- boost ---
-find_package(Boost 1.82.0 QUIET)
+find_package(Boost 1.82.0 CONFIG QUIET)
 if(NOT Boost_FOUND)
   message(STATUS "Using vendored boost_unordered header")
 
