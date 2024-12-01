@@ -124,6 +124,38 @@ cmake --build build --target docs
 
 The output website is located at `build/docs/html/`
 
+@section python-binding-builds Building Python Bindings
+
+This section contains instructions for building and installing the Python bindings, which are created with [pybind11](https://github.com/pybind/pybind11).
+
+## Steps
+
+1. Clone the `pyslang` repository (https://github.com/MikePopoloski/slang)
+2. Clone the `slang` submodule:
+
+@code{.ansi}
+git submodule update --init --recursive
+@endcode
+
+3. Create a virtual environment, activate it, and install `pyslang` as a Python package (including building the C++ `slang` library, with bindings):
+
+@code{.ansi}
+python3 -m venv venv
+source venv/bin/activate
+pip install .
+@endcode
+
+## Steps: Run the Python tests
+
+The Python tests are built and executed using the `pytest` framework.
+
+Install test/development dependencies, and run the Python tests:
+
+@code{.ansi}
+pip install '.[test]'
+pytest
+@endcode
+
 @section installation Installation
 
 CMake can be used to install slang.
