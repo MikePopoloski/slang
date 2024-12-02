@@ -142,7 +142,6 @@ git submodule update --init --recursive
 @code{.ansi}
 python3 -m venv venv
 source venv/bin/activate
-pip install .
 @endcode
 
 4. Install `pyslang` as a Python package (including building the C++ `slang` library with bindings, from the submodule):
