@@ -57,7 +57,9 @@ void registerUtil(py::module_& m) {
     py::class_<BufferID>(m, "BufferID")
         .def(py::init<>())
         .def_property_readonly("id", &BufferID::getId)
-        .def_property_readonly_static("placeholder", &BufferID::getPlaceholder)
+        .def_static("getPlaceholder", &BufferID::getPlaceholder)
+        .def_property_readonly_static(
+            "placeholder", [](py::object /* self or cls */) { return BufferID::getPlaceholder(); })
         .def(py::self == py::self)
         .def(py::self != py::self)
         .def(py::self < py::self)
