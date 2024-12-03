@@ -28,7 +28,7 @@ void registerAST(py::module_& m) {
         .value("Interrupt", VisitAction::Interrupt);
 
     py::enum_<EvalFlags>(m, "EvalFlags")
-        .value("None", EvalFlags::None)
+        .value("None_", EvalFlags::None)
         .value("IsScript", EvalFlags::IsScript)
         .value("CacheResults", EvalFlags::CacheResults)
         .value("SpecparamsAllowed", EvalFlags::SpecparamsAllowed)
@@ -75,7 +75,7 @@ void registerAST(py::module_& m) {
         .def("store", &LValue::store, "value"_a);
 
     py::enum_<ASTFlags>(m, "ASTFlags")
-        .value("None", ASTFlags::None)
+        .value("None_", ASTFlags::None)
         .value("InsideConcatenation", ASTFlags::InsideConcatenation)
         .value("UnevaluatedBranch", ASTFlags::UnevaluatedBranch)
         .value("AllowDataType", ASTFlags::AllowDataType)
