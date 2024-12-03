@@ -1,5 +1,9 @@
 # Doxyfile 1.13.2
 
+# Note that this file cloned-and-modified by the settings in CMakeLists.txt.
+# Various placeholders (e.g., `@DOXYGEN_OUTPUT_DIR@`) are replaced with the
+# values of the corresponding CMake variables.
+
 # This file describes the settings to be used by the documentation system
 # Doxygen (www.doxygen.org) for a project.
 #
