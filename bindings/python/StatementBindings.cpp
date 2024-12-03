@@ -27,7 +27,7 @@ void registerStatements(py::module_& m) {
             return fmt::format("Statement(StatementKind.{})", toString(self.kind));
         });
 
-    py::enum_<Statement::EvalResult>(stmt, "EvalResult")
+    py::enum_<Statement::EvalResult>(m, "EvalResult")
         .value("Fail", Statement::EvalResult::Fail)
         .value("Success", Statement::EvalResult::Success)
         .value("Return", Statement::EvalResult::Return)
