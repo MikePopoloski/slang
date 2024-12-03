@@ -290,7 +290,7 @@ void registerTypes(py::module_& m) {
         .def_property_readonly("firstForwardDecl", &GenericClassDefSymbol::getFirstForwardDecl);
 
     py::enum_<ConstraintBlockFlags>(m, "ConstraintBlockFlags")
-        .value("None", ConstraintBlockFlags::None)
+        .value("None_", ConstraintBlockFlags::None)
         .value("Pure", ConstraintBlockFlags::Pure)
         .value("Static", ConstraintBlockFlags::Static)
         .value("Extern", ConstraintBlockFlags::Extern)

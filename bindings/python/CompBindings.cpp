@@ -41,7 +41,7 @@ void registerCompilation(py::module_& m) {
         .value("Max", MinTypMax::Max);
 
     py::enum_<CompilationFlags>(m, "CompilationFlags")
-        .value("None", CompilationFlags::None)
+        .value("None_", CompilationFlags::None)
         .value("AllowHierarchicalConst", CompilationFlags::AllowHierarchicalConst)
         .value("RelaxEnumConversions", CompilationFlags::RelaxEnumConversions)
         .value("AllowUseBeforeDeclare", CompilationFlags::AllowUseBeforeDeclare)
@@ -287,7 +287,7 @@ void registerCompilation(py::module_& m) {
         .def("__repr__", [](const SystemSubroutine& self) { return self.name; });
 
     py::enum_<SystemSubroutine::WithClauseMode>(systemSub, "WithClauseMode")
-        .value("None", SystemSubroutine::WithClauseMode::None)
+        .value("None_", SystemSubroutine::WithClauseMode::None)
         .value("Iterator", SystemSubroutine::WithClauseMode::Iterator)
         .value("Randomize", SystemSubroutine::WithClauseMode::Randomize);
 
