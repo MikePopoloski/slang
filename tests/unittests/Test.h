@@ -94,6 +94,7 @@ const StatementSyntax& parseStatement(const std::string& text);
 const ExpressionSyntax& parseExpression(const std::string& text);
 const CompilationUnitSyntax& parseCompilationUnit(
     const std::string& text, LanguageVersion languageVersion = LanguageVersion::v1800_2017);
+const SDFUnitSyntax& parseSDFUnit(const std::string& text);
 const InstanceSymbol& evalModule(std::shared_ptr<SyntaxTree> syntax, Compilation& compilation);
 
 class LogicExactlyEqualMatcher : public Catch::Matchers::MatcherGenericBase {
