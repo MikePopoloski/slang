@@ -775,6 +775,15 @@ std::optional<bitwidth_t> CallExpression::getEffectiveWidthImpl() const {
     return type->getBitWidth();
 }
 
+Expression::EffectiveSign CallExpression::getEffectiveSignImpl(bool) const {
+    if (isSystemCall()) {
+        auto& callInfo = std::get<1>(subroutine);
+        if (callInfo.subroutine->getEffectiveWidth() == 1)
+            return EffectiveSign::Either;
+    }
+    return type->isSigned() ? EffectiveSign::Signed : EffectiveSign::Unsigned;
+}
+
 bool CallExpression::checkConstant(EvalContext& context, const SubroutineSymbol& subroutine,
                                    SourceRange range) {
     if (context.flags.has(EvalFlags::IsScript))

@@ -1172,11 +1172,7 @@ endclass
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
-
-    // TODO: also shouldn't warn about sign
-    auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 1);
-    CHECK(diags[0].code == diag::SignConversion);
+    NO_COMPILATION_ERRORS;
 }
 
 TEST_CASE("Array map method") {

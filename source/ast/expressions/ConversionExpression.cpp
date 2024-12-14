@@ -184,8 +184,10 @@ void checkImplicitConversions(const ASTContext& context, const Type& sourceType,
         // Warn for sign conversions.
         if (lt.isSigned() != rt.isSigned()) {
             // Comparisons get their own warning elsewhere.
-            if (!parentIsComparison())
+            if (!parentIsComparison() && op.getEffectiveSign(/* isForConversion */ false) !=
+                                             Expression::EffectiveSign::Either) {
                 addDiag(diag::SignConversion) << sourceType << targetType;
+            }
         }
 
         // Don't issue width warnings for propagated conversions, as they would
