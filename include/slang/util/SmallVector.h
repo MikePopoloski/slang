@@ -680,25 +680,9 @@ inline bool operator==(const SmallVectorBase<T>& lhs, const SmallVectorBase<T>& 
     return std::ranges::equal(lhs, rhs);
 }
 
-// TODO: clean these up once minimum libc++ version has lexicographical_compare_three_way
 template<typename T>
-inline bool operator<(const SmallVectorBase<T>& lhs, const SmallVectorBase<T>& rhs) {
-    return std::ranges::lexicographical_compare(lhs, rhs);
-}
-
-template<typename T>
-inline bool operator>(const SmallVectorBase<T>& lhs, const SmallVectorBase<T>& rhs) {
-    return rhs < lhs;
-}
-
-template<typename T>
-inline bool operator<=(const SmallVectorBase<T>& lhs, const SmallVectorBase<T>& rhs) {
-    return !(lhs > rhs);
-}
-
-template<typename T>
-inline bool operator>=(const SmallVectorBase<T>& lhs, const SmallVectorBase<T>& rhs) {
-    return !(lhs < rhs);
+inline auto operator<=>(const SmallVectorBase<T>& lhs, const SmallVectorBase<T>& rhs) {
+    return std::lexicographical_compare_three_way(lhs.begin(), lhs.end(), rhs.begin(), rhs.end());
 }
 
 template<typename T>
