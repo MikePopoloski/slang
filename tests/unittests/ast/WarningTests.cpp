@@ -787,17 +787,25 @@ module m;
     initial if (i & 2) begin end
     initial if (i ^ 2) begin end
 endmodule
+
+class C;
+    int a;
+    constraint c {
+        if (a) {}
+    }
+endclass
 )");
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 4);
+    REQUIRE(diags.size() == 5);
     CHECK(diags[0].code == diag::FloatBoolConv);
     CHECK(diags[1].code == diag::IntBoolConv);
     CHECK(diags[2].code == diag::IntBoolConv);
     CHECK(diags[3].code == diag::FloatBoolConv);
+    CHECK(diags[4].code == diag::IntBoolConv);
 }
 
 TEST_CASE("Useless cast warnings") {

@@ -362,7 +362,7 @@ Constraint& ConditionalConstraint::fromSyntax(const ConditionalConstraintSyntax&
         return badConstraint(comp, result);
 
     ConstraintExprVisitor visitor(context, /* isSoft */ false);
-    if (!pred.visit(visitor))
+    if (!pred.visit(visitor) || !context.requireBooleanConvertible(pred))
         return badConstraint(comp, result);
 
     return *result;
