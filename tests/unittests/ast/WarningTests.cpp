@@ -1033,6 +1033,7 @@ module m;
         if ((a + b ? 1 : 2) == 2) begin end
         if (a < b < c) begin end
         c |= a & b;
+        if (!a inside {0, 1, 0}) begin end
     end
 endmodule
 )");
@@ -1041,7 +1042,7 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 10);
+    REQUIRE(diags.size() == 11);
     CHECK(diags[0].code == diag::BitwiseRelPrecedence);
     CHECK(diags[1].code == diag::BitwiseOpParentheses);
     CHECK(diags[2].code == diag::BitwiseOpParentheses);
@@ -1052,6 +1053,7 @@ endmodule
     CHECK(diags[7].code == diag::BitwiseOpMismatch);
     CHECK(diags[8].code == diag::ConditionalPrecedence);
     CHECK(diags[9].code == diag::ConsecutiveComparison);
+    CHECK(diags[10].code == diag::LogicalNotParentheses);
 }
 
 TEST_CASE("Case statement type warnings") {

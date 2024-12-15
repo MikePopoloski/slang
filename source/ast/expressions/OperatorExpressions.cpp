@@ -1569,6 +1569,21 @@ Expression& InsideExpression::fromSyntax(Compilation& compilation,
     if (bad)
         return badExpr(compilation, result);
 
+    // Warn about `!x inside {y, z}` where they probably meant `!(x inside {y, z})`
+    auto& lhs = boundSpan[0]->unwrapImplicitConversions();
+    if (lhs.kind == ExpressionKind::UnaryOp && !lhs.isParenthesized() &&
+        lhs.as<UnaryExpression>().op == UnaryOperator::LogicalNot) {
+
+        auto& unary = lhs.as<UnaryExpression>();
+        auto kindStr = "'inside' expression"sv;
+        auto& diag = context.addDiag(diag::LogicalNotParentheses, unary.opRange);
+        diag << kindStr << syntax.inside.range();
+
+        SourceRange range(unary.operand().sourceRange.start(), result->sourceRange.end());
+        diag.addNote(diag::NoteLogicalNotFix, range) << kindStr;
+        diag.addNote(diag::NoteLogicalNotSilence, lhs.sourceRange);
+    }
+
     return *result;
 }
 
