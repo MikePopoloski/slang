@@ -9,7 +9,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Disallow access to protected members from class scoped randomize constraint blocks -- the LRM is unclear about this but other tools seem to have decided this way made the most sense
 * Added a check that net aliases aren't duplicated, and that nets don't alias to themselves, as mandated by the LRM (thanks to @likeamahoney)
 
-### General Features
+### Potentially Breaking Changes
+* The minimum supported Xcode version is now 16 and the minimum supported Clang version is now 17 (to allow cleaning up workarounds for various bugs)
+
+### New Features
 * Added [-Wudp-coverage](https://sv-lang.com/warning-ref.html#udp-coverage) which warns about edge-sensitive user-defined primitives that don't specify an output state for all edges of all inputs (thanks to @likeamahoney)
 * Added [-Wpacked-array-conv](https://sv-lang.com/warning-ref.html#packed-array-conv) which warns for conversions between different multidimensional packed array types even if their overall bit width is the same
 * Added the [-Wparentheses](https://sv-lang.com/warning-ref.html#parentheses) warning group for diagnosing common precedence-related syntactical errors, which includes the following new warnings: [-Wbitwise-rel-precedence](https://sv-lang.com/warning-ref.html#bitwise-rel-precedence), [-Warith-in-shift](https://sv-lang.com/warning-ref.html#arith-in-shift), [-Wlogical-not-parentheses](https://sv-lang.com/warning-ref.html#logical-not-parentheses), [-Wbitwise-op-parentheses](https://sv-lang.com/warning-ref.html#bitwise-op-parentheses), [-Wlogical-op-parentheses](https://sv-lang.com/warning-ref.html#logical-op-parentheses), [-Wconditional-precedence](https://sv-lang.com/warning-ref.html#conditional-precedence), [-Wconsecutive-comparison](https://sv-lang.com/warning-ref.html#consecutive-comparison)
@@ -18,6 +21,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Added [-Wcase-outside-range](https://sv-lang.com/warning-ref.html#case-outside-range) which warns for case items that can never be matched because they are outside the range of the case condition expression
 * Added [-Wcase-enum](https://sv-lang.com/warning-ref.html#case-enum) and [-Wcase-enum-explicit](https://sv-lang.com/warning-ref.html#case-enum-explicit) which warns about enum values that are missing from a case statement (with and without the presence of a `default` label, respectively)
 * Added [-Wcase-dup](https://sv-lang.com/warning-ref.html#case-dup) which warns about duplicate item expressions in a case statement
+* Added [-Wcase-overlap](https://sv-lang.com/warning-ref.html#case-overlap) which warns about overlapping case items (due to wildcard bits)
+* Added [-Wcase-not-wildcard](https://sv-lang.com/warning-ref.html#case-not-wildcard) and [-Wcasez-with-x](https://sv-lang.com/warning-ref.html#casez-with-x) which warn about potentially misleading wildcard bits in non-wildcard case statements
 
 ### Improvements
 * Made -Wuseless-cast a bit less noisy -- it now does not warn about expressions involving genvars or cases where types are matching but one or the other has a different typedef alias name
@@ -26,6 +31,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Made some build tweaks to support hermetic builds (thanks to @cc10512)
 * Added support for unions to slang-reflect (thanks to @Sustrak)
 * Changed the error issued for sequences that can never be matched to be a warning instead (-Wseq-no-match) and added additional context to the diagnostic message
+* Made minor tweaks to improve defparam and bind resolution performance
+* -Wsign-conversion will no longer warn for certain system functions that have a return type of `int` but in practice only return a single bit result
 
 ### Fixes
 * Fixed a bug with constant evaluation of left-hand side assignment patterns that require implicit conversions to be applied
@@ -46,6 +53,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Correctly disallow derived class virtual methods from declaring a different visibility level from their base class method
 * Reworked how enum types are implemented to fix various issues related to enum values declared inside subexpressions from being visible to their surrounding scopes
 * Fixed several issues related to enum value initializers that try to refer to themselves or other enum values
+* Fixed a parser crash when an invalid class override specifier is at the very end of a file
+* Fixed a potentially unbounded loop when resolving a specific case of invalid bind directives
+* Fixed bad diagnostic output related to instantiating properties with missing formal argument names
+* Fixed several minor issues with the Python bindings (thanks to @parker-research)
 
 
 ## [v7.0] - 2024-09-26
