@@ -176,6 +176,17 @@ const CompilationUnitSyntax& parseCompilationUnit(const std::string& text,
     return parser.parseCompilationUnit();
 }
 
+const SDFUnitSyntax& parseSDFUnit(const std::string& text) {
+    diagnostics.clear();
+
+    auto options = optionsFor(LanguageVersion::v1497_2001);
+    Preprocessor preprocessor(getSourceManager(), alloc, diagnostics, options);
+    preprocessor.pushSource(text);
+
+    Parser parser(preprocessor, options);
+    return parser.parseSDFUnit();
+}
+
 const InstanceSymbol& evalModule(std::shared_ptr<SyntaxTree> syntax, Compilation& compilation) {
     compilation.addSyntaxTree(syntax);
     const RootSymbol& root = compilation.getRoot();
