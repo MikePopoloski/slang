@@ -37,8 +37,12 @@ const Statement& StatementBlockSymbol::getStatement(const ASTContext& parentCont
             return *stmt;
 
         auto syntax = getSyntax();
-        if (!syntax || syntax->kind == SyntaxKind::RsRule) {
-            stmt = &BlockStatement::makeEmpty(parentContext.getCompilation());
+        if (!syntax || syntax->kind == SyntaxKind::RsRule ||
+            syntax->kind == SyntaxKind::ConditionalPattern) {
+
+            auto& bs = BlockStatement::makeEmpty(parentContext.getCompilation());
+            bs.blockSymbol = this;
+            stmt = &bs;
         }
         else {
             ASTContext context = parentContext;
@@ -152,6 +156,63 @@ StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
 }
 
 StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
+                                                       const ConditionalStatementSyntax& syntax) {
+    // Each matches clause gets its own block with its own variables.
+    auto& comp = scope.getCompilation();
+    StatementBlockSymbol* first = nullptr;
+    StatementBlockSymbol* curr = nullptr;
+
+    for (auto cond : syntax.predicate->conditions) {
+        if (cond->matchesClause) {
+            auto block = comp.emplace<StatementBlockSymbol>(
+                comp, ""sv, cond->matchesClause->getFirstToken().location(),
+                StatementBlockKind::Sequential, VariableLifetime::Automatic);
+
+            // Each block needs elaboration to collect pattern variables.
+            block->setNeedElaboration();
+            block->setSyntax(*cond);
+
+            if (!first) {
+                first = curr = block;
+            }
+            else {
+                curr->addMember(*block);
+                curr = block;
+            }
+        }
+    }
+
+    // The most nested block gets the actual statement items.
+    auto block = comp.emplace<StatementBlockSymbol>(comp, ""sv,
+                                                    syntax.statement->getFirstToken().location(),
+                                                    StatementBlockKind::Sequential,
+                                                    VariableLifetime::Automatic);
+    block->setSyntax(*syntax.statement);
+    block->setAttributes(scope, syntax.attributes);
+    block->blocks = Statement::createAndAddBlockItems(*block, *syntax.statement,
+                                                      /* labelHandled */ false);
+    curr->addMember(*block);
+
+    return *first;
+}
+
+StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
+                                                       const PatternCaseItemSyntax& syntax) {
+    auto& comp = scope.getCompilation();
+    auto result = comp.emplace<StatementBlockSymbol>(comp, ""sv, syntax.getFirstToken().location(),
+                                                     StatementBlockKind::Sequential,
+                                                     VariableLifetime::Automatic);
+    result->setSyntax(syntax);
+    result->blocks = Statement::createAndAddBlockItems(*result, *syntax.statement,
+                                                       /* labelHandled */ false);
+
+    // This block needs elaboration to collect pattern variables.
+    result->setNeedElaboration();
+
+    return *result;
+}
+
+StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
                                                        const RandSequenceStatementSyntax& syntax) {
     auto [name, loc] = getLabel(syntax, syntax.randsequence.location());
     auto result = createBlock(scope, syntax, name, loc, StatementBlockKind::Sequential,
@@ -247,6 +308,33 @@ void StatementBlockSymbol::elaborateVariables(function_ref<void(const Symbol&)> 
             if (dim.loopVar)
                 insertCB(*dim.loopVar);
         }
+    }
+    else if (syntax->kind == SyntaxKind::ConditionalPattern) {
+        ASTContext context(*this, LookupLocation::max);
+
+        auto& cond = syntax->as<ConditionalPatternSyntax>();
+        SLANG_ASSERT(cond.matchesClause);
+
+        SmallVector<const PatternVarSymbol*> vars;
+        if (!Pattern::createPatternVars(context, *cond.matchesClause->pattern, *cond.expr, vars))
+            stmt = &InvalidStatement::Instance;
+
+        for (auto var : vars)
+            insertCB(*var);
+    }
+    else if (syntax->kind == SyntaxKind::PatternCaseItem) {
+        ASTContext context(*this, LookupLocation::max);
+        SLANG_ASSERT(syntax->parent);
+        auto& caseSyntax = syntax->parent->as<CaseStatementSyntax>();
+
+        SmallVector<const PatternVarSymbol*> vars;
+        if (!Pattern::createPatternVars(context, *syntax->as<PatternCaseItemSyntax>().pattern,
+                                        *caseSyntax.expr, vars)) {
+            stmt = &InvalidStatement::Instance;
+        }
+
+        for (auto var : vars)
+            insertCB(*var);
     }
 }
 

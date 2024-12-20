@@ -55,6 +55,8 @@ Statement& ConditionalStatement::fromSyntax(Compilation& comp,
     bool isTrue = true;
     SmallVector<Condition> conditions;
     ASTContext trueContext = context;
+    const StatementBlockSymbol* currBlock = nullptr;
+    const Statement* ifTrue = nullptr;
 
     for (auto condSyntax : syntax.predicate->conditions) {
         auto& cond = Expression::bind(*condSyntax->expr, trueContext);
@@ -62,17 +64,38 @@ Statement& ConditionalStatement::fromSyntax(Compilation& comp,
 
         const Pattern* pattern = nullptr;
         if (condSyntax->matchesClause) {
-            Pattern::VarMap patternVarMap;
-            pattern = &Pattern::bind(*condSyntax->matchesClause->pattern, *cond.type, patternVarMap,
-                                     trueContext);
+            // If there is a matches clause we expect a block to have been created.
+            // The first one will be registered with the stmtCtx, the rest are children
+            // of that first block.
+            if (!currBlock) {
+                ifTrue = stmtCtx.tryGetBlock(context, *condSyntax);
+                SLANG_ASSERT(ifTrue);
+                if (ifTrue->bad())
+                    return badStmt(comp, nullptr);
+
+                currBlock = ifTrue->as<BlockStatement>().blockSymbol;
+                SLANG_ASSERT(currBlock);
+            }
+            else {
+                auto last = currBlock->getLastMember();
+                SLANG_ASSERT(last);
+                currBlock = &last->as<StatementBlockSymbol>();
+            }
+
+            // If the block was invalid (due to failing to bind pattern variables),
+            // just bail out early.
+            if (currBlock->isKnownBad())
+                return badStmt(comp, nullptr);
+
+            trueContext = ASTContext(*currBlock, LookupLocation::max, trueContext.flags);
+            pattern = &Pattern::bind(trueContext, *condSyntax->matchesClause->pattern, *cond.type);
+            bad |= pattern->bad();
 
             // We don't consider the condition to be const if there's a pattern.
             isConst = false;
-            bad |= pattern->bad();
         }
-        else {
-            if (!bad && !trueContext.requireBooleanConvertible(cond))
-                bad = true;
+        else if (!bad && !trueContext.requireBooleanConvertible(cond)) {
+            bad = true;
         }
 
         if (!bad && isConst) {
@@ -96,7 +119,21 @@ Statement& ConditionalStatement::fromSyntax(Compilation& comp,
             ifFlags = ASTFlags::UnevaluatedBranch;
     }
 
-    auto& ifTrue = Statement::bind(*syntax.statement, trueContext.resetFlags(ifFlags), stmtCtx);
+    // If the `ifTrue` statement is already set it means we had a pattern
+    // in at least one condition, so we don't need to bind it again.
+    // We still need need to drill down in that case to the final block
+    // which has the actual statement to execute; the others above it in the
+    // tree just contain pattern variables.
+    if (ifTrue) {
+        SLANG_ASSERT(currBlock);
+        auto last = currBlock->getLastMember();
+        SLANG_ASSERT(last);
+        currBlock = &last->as<StatementBlockSymbol>();
+        ifTrue = &currBlock->getStatement(trueContext, stmtCtx);
+    }
+    else {
+        ifTrue = &Statement::bind(*syntax.statement, trueContext.resetFlags(ifFlags), stmtCtx);
+    }
 
     const Statement* ifFalse = nullptr;
     if (syntax.elseClause) {
@@ -105,10 +142,10 @@ Statement& ConditionalStatement::fromSyntax(Compilation& comp,
     }
 
     auto result = comp.emplace<ConditionalStatement>(
-        conditions.copy(comp), getUniquePriority(syntax.uniqueOrPriority.kind), ifTrue, ifFalse,
+        conditions.copy(comp), getUniquePriority(syntax.uniqueOrPriority.kind), *ifTrue, ifFalse,
         syntax.sourceRange());
 
-    if (bad || conditions.empty() || ifTrue.bad() || (ifFalse && ifFalse->bad()))
+    if (bad || conditions.empty() || ifTrue->bad() || (ifFalse && ifFalse->bad()))
         return badStmt(comp, result);
 
     return *result;
@@ -594,22 +631,35 @@ Statement& PatternCaseStatement::fromSyntax(Compilation& compilation,
     for (auto item : syntax.items) {
         switch (item->kind) {
             case SyntaxKind::PatternCaseItem: {
-                Pattern::VarMap varMap;
-                ASTContext localCtx = context;
-
+                // We always create an implicit block for each case item.
                 auto& pci = item->as<PatternCaseItemSyntax>();
-                auto& pattern = Pattern::bind(*pci.pattern, *expr.type, varMap, localCtx);
-                auto& stmt = Statement::bind(*pci.statement, localCtx, stmtCtx);
-                bad |= stmt.bad() || pattern.bad();
+                auto stmt = stmtCtx.tryGetBlock(context, pci);
+                SLANG_ASSERT(stmt);
+                bad |= stmt->bad();
 
+                const Pattern* pattern = nullptr;
                 const Expression* filter = nullptr;
-                if (pci.expr) {
-                    filter = &Expression::bind(*pci.expr, localCtx);
-                    if (!bad && !localCtx.requireBooleanConvertible(*filter))
-                        bad = true;
+
+                if (stmt->kind == StatementKind::Block) {
+                    auto& block = stmt->as<BlockStatement>();
+                    if (block.blockSymbol) {
+                        ASTContext blockContext(*block.blockSymbol, LookupLocation::max,
+                                                context.flags);
+                        pattern = &Pattern::bind(blockContext, *pci.pattern, *expr.type);
+
+                        if (pci.expr) {
+                            filter = &Expression::bind(*pci.expr, blockContext);
+                            if (!bad && !blockContext.requireBooleanConvertible(*filter))
+                                bad = true;
+                        }
+                    }
                 }
 
-                items.push_back({&pattern, filter, &stmt});
+                if (!pattern)
+                    pattern = compilation.emplace<InvalidPattern>(nullptr);
+
+                bad |= pattern->bad();
+                items.push_back({pattern, filter, stmt});
                 break;
             }
             case SyntaxKind::DefaultCaseItem:

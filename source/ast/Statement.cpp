@@ -62,6 +62,7 @@ Statement::StatementContext::~StatementContext() {
         if (proc && proc->procedureKind == ProceduralBlockKind::AlwaysFF && !proc->getBody().bad())
             rootAstContext.addDiag(diag::AlwaysFFEventControl, proc->location);
     }
+    SLANG_ASSERT(blocks.empty());
 }
 
 const Statement* Statement::StatementContext::tryGetBlock(const ASTContext& context,
@@ -329,15 +330,19 @@ const Statement& Statement::bindBlock(const StatementBlockSymbol& block, const S
         SmallVector<const Statement*> buffer;
         bindScopeInitializers(context, buffer);
 
-        auto& ss = syntax.as<StatementSyntax>();
-        auto& stmt = bind(ss, context, stmtCtx, /* inList */ false,
+        const StatementSyntax* ss;
+        if (syntax.kind == SyntaxKind::PatternCaseItem)
+            ss = syntax.as<PatternCaseItemSyntax>().statement;
+        else
+            ss = &syntax.as<StatementSyntax>();
+        auto& stmt = bind(*ss, context, stmtCtx, /* inList */ false,
                           /* labelHandled */ true);
         buffer.push_back(&stmt);
         anyBad |= stmt.bad();
 
         result = createBlockStatement(comp, buffer, syntax);
-        result->syntax = &ss;
-        context.setAttributes(*result, ss.attributes);
+        result->syntax = ss;
+        context.setAttributes(*result, ss->attributes);
     }
 
     result->blockSymbol = &block;
@@ -456,7 +461,9 @@ static void findBlocks(const Scope& scope, const StatementSyntax& syntax,
                         recurse(&item->as<StandardCaseItemSyntax>().clause->as<StatementSyntax>());
                         break;
                     case SyntaxKind::PatternCaseItem:
-                        recurse(item->as<PatternCaseItemSyntax>().statement);
+                        // Pattern case items always create a block.
+                        results.push_back(&StatementBlockSymbol::fromSyntax(
+                            scope, item->as<PatternCaseItemSyntax>()));
                         break;
                     case SyntaxKind::DefaultCaseItem:
                         recurse(&item->as<DefaultCaseItemSyntax>().clause->as<StatementSyntax>());
@@ -468,7 +475,20 @@ static void findBlocks(const Scope& scope, const StatementSyntax& syntax,
             return;
         case SyntaxKind::ConditionalStatement: {
             auto& cond = syntax.as<ConditionalStatementSyntax>();
-            recurse(cond.statement);
+            bool hasPattern = false;
+            for (auto condSyntax : cond.predicate->conditions) {
+                if (condSyntax->matchesClause) {
+                    hasPattern = true;
+                    break;
+                }
+            }
+
+            // If any condition has a pattern, we need a block.
+            if (hasPattern)
+                results.push_back(&StatementBlockSymbol::fromSyntax(scope, cond));
+            else
+                recurse(cond.statement);
+
             if (cond.elseClause)
                 recurse(&cond.elseClause->clause->as<StatementSyntax>());
             return;
@@ -724,7 +744,7 @@ Statement& BlockStatement::fromSyntax(Compilation& comp, const BlockStatementSyn
     return *result;
 }
 
-Statement& BlockStatement::makeEmpty(Compilation& compilation) {
+BlockStatement& BlockStatement::makeEmpty(Compilation& compilation) {
     return *compilation.emplace<BlockStatement>(
         StatementList::makeEmpty(compilation), StatementBlockKind::Sequential,
         SourceRange(SourceLocation::NoLocation, SourceLocation::NoLocation));

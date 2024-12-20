@@ -2009,3 +2009,22 @@ endfunction
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::RefArgForkJoin);
 }
+
+TEST_CASE("Pattern variable lookup from nested initializers") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int i;
+    initial begin
+        if (i matches .a) begin
+            begin
+                automatic int b = a;
+            end
+        end
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

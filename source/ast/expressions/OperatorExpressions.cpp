@@ -20,6 +20,7 @@
 #include "slang/ast/types/AllTypes.h"
 #include "slang/diagnostics/ConstEvalDiags.h"
 #include "slang/diagnostics/ExpressionsDiags.h"
+#include "slang/diagnostics/LookupDiags.h"
 #include "slang/diagnostics/TypesDiags.h"
 #include "slang/numeric/MathUtils.h"
 #include "slang/parsing/LexerFacts.h"
@@ -1285,6 +1286,37 @@ void BinaryExpression::serializeTo(ASTSerializer& serializer) const {
     serializer.write("right", right());
 }
 
+static const Pattern* createPattern(Compilation& comp, ASTContext& context,
+                                    const PatternSyntax& syntax, const Type& targetType) {
+
+    SmallVector<const PatternVarSymbol*> vars;
+    if (!Pattern::createPatternVars(context, syntax, targetType, vars))
+        return comp.emplace<InvalidPattern>(nullptr);
+
+    SmallMap<std::string_view, const Symbol*, 4> varMap;
+    for (auto var : vars) {
+        if (!var->name.empty()) {
+            auto [it, inserted] = varMap.emplace(var->name, var);
+            if (!inserted) {
+                auto& diag = context.addDiag(diag::Redefinition, var->location);
+                diag << var->name;
+                diag.addNote(diag::NoteDeclarationHere, it->second->location);
+                continue;
+            }
+
+            // We just created this pattern var so the const_cast is safe.
+            const_cast<PatternVarSymbol*>(var)->nextTemp = std::exchange(context.firstTempVar, var);
+
+            // We need to force resolution here because the pattern variable doesn't
+            // live in a scope and so later attempts at touching it could cause normal
+            // resolution logic to fail.
+            var->getDeclaredType()->forceResolveAt(context);
+        }
+    }
+
+    return &Pattern::bind(context, syntax, targetType);
+}
+
 Expression& ConditionalExpression::fromSyntax(Compilation& comp,
                                               const ConditionalExpressionSyntax& syntax,
                                               const ASTContext& context,
@@ -1302,13 +1334,12 @@ Expression& ConditionalExpression::fromSyntax(Compilation& comp,
 
         const Pattern* pattern = nullptr;
         if (condSyntax->matchesClause) {
-            Pattern::VarMap patternVarMap;
-            pattern = &Pattern::bind(*condSyntax->matchesClause->pattern, *cond.type, patternVarMap,
-                                     trueContext);
+            pattern = createPattern(comp, trueContext, *condSyntax->matchesClause->pattern,
+                                    *cond.type);
+            bad |= pattern->bad();
 
             // We don't consider the condition to be const if there's a pattern.
             isConst = false;
-            bad |= pattern->bad();
         }
         else {
             isFourState |= cond.type->isFourState();

@@ -321,7 +321,7 @@ public:
                                  const ASTContext& context, StatementContext& stmtCtx,
                                  bool addInitializers = false);
 
-    static Statement& makeEmpty(Compilation& compilation);
+    static BlockStatement& makeEmpty(Compilation& compilation);
 
     static bool isKind(StatementKind kind) { return kind == StatementKind::Block; }
 
