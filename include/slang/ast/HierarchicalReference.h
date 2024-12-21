@@ -15,8 +15,10 @@
 
 namespace slang::ast {
 
-class Symbol;
+class Compilation;
 class Expression;
+class LookupResult;
+class Symbol;
 
 /// Represents a hierarchical reference to a symbol.
 class HierarchicalReference {
@@ -37,6 +39,8 @@ public:
     size_t upwardCount = 0;
 
     HierarchicalReference() = default;
+
+    static HierarchicalReference fromLookup(Compilation& compilation, const LookupResult& result);
 };
 
 } // namespace slang::ast

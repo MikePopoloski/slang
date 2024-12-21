@@ -38,8 +38,9 @@ static constexpr bitmask<ASTFlags> DisallowedAutoVarContexts = ASTFlags::NonProc
                                                                ASTFlags::NonBlockingTimingControl;
 
 Expression& ValueExpressionBase::fromSymbol(const ASTContext& context, const Symbol& symbol,
-                                            bool isHierarchical, SourceRange sourceRange,
-                                            bool constraintAllowed, bool isDottedAccess) {
+                                            const HierarchicalReference* hierRef,
+                                            SourceRange sourceRange, bool constraintAllowed,
+                                            bool isDottedAccess) {
     // Automatic variables have additional restrictions.
     bool isUnbounded = false;
     auto& comp = context.getCompilation();
@@ -136,7 +137,7 @@ Expression& ValueExpressionBase::fromSymbol(const ASTContext& context, const Sym
             (symbol.kind == SymbolKind::ConstraintBlock && constraintAllowed) ||
             (symbol.kind == SymbolKind::Coverpoint && flags.has(ASTFlags::AllowCoverpoint))) {
             // Special case for event expressions and constraint block built-in methods.
-            return *comp.emplace<ArbitrarySymbolExpression>(symbol, comp.getVoidType(),
+            return *comp.emplace<ArbitrarySymbolExpression>(symbol, comp.getVoidType(), hierRef,
                                                             sourceRange);
         }
 
@@ -173,8 +174,8 @@ Expression& ValueExpressionBase::fromSymbol(const ASTContext& context, const Sym
     }
 
     Expression* result;
-    if (isHierarchical)
-        result = comp.emplace<HierarchicalValueExpression>(value, sourceRange);
+    if (hierRef && hierRef->target)
+        result = comp.emplace<HierarchicalValueExpression>(value, *hierRef, sourceRange);
     else
         result = comp.emplace<NamedValueExpression>(value, sourceRange);
 
@@ -475,6 +476,14 @@ bool NamedValueExpression::checkConstant(EvalContext& context) const {
     return true;
 }
 
+HierarchicalValueExpression::HierarchicalValueExpression(const ValueSymbol& symbol,
+                                                         const HierarchicalReference& ref,
+                                                         SourceRange sourceRange) :
+    ValueExpressionBase(ExpressionKind::HierarchicalValue, symbol, sourceRange), ref(ref) {
+    SLANG_ASSERT(ref.target == &symbol);
+    this->ref.expr = this;
+}
+
 ConstantValue HierarchicalValueExpression::evalImpl(EvalContext& context) const {
     if (!context.getCompilation().hasFlag(CompilationFlags::AllowHierarchicalConst) &&
         !context.astCtx.flags.has(ASTFlags::ConfigParam)) {
@@ -536,8 +545,18 @@ void TypeReferenceExpression::serializeTo(ASTSerializer& serializer) const {
     serializer.write("targetType", targetType);
 }
 
-Expression& ArbitrarySymbolExpression::fromSyntax(Compilation& compilation,
-                                                  const NameSyntax& syntax,
+ArbitrarySymbolExpression::ArbitrarySymbolExpression(const Symbol& symbol, const Type& type,
+                                                     const HierarchicalReference* hierRef,
+                                                     SourceRange sourceRange) :
+    Expression(ExpressionKind::ArbitrarySymbol, type, sourceRange), symbol(&symbol) {
+
+    if (hierRef && hierRef->target) {
+        this->hierRef = *hierRef;
+        this->hierRef.expr = this;
+    }
+}
+
+Expression& ArbitrarySymbolExpression::fromSyntax(Compilation& comp, const NameSyntax& syntax,
                                                   const ASTContext& context,
                                                   bitmask<LookupFlags> extraLookupFlags) {
     LookupResult result;
@@ -548,12 +567,13 @@ Expression& ArbitrarySymbolExpression::fromSyntax(Compilation& compilation,
 
     const Symbol* symbol = result.found;
     if (!symbol)
-        return badExpr(compilation, nullptr);
+        return badExpr(comp, nullptr);
 
-    compilation.noteReference(*symbol, context.flags.has(ASTFlags::LValue));
+    comp.noteReference(*symbol, context.flags.has(ASTFlags::LValue));
 
-    return *compilation.emplace<ArbitrarySymbolExpression>(*symbol, compilation.getVoidType(),
-                                                           syntax.sourceRange());
+    auto hierRef = HierarchicalReference::fromLookup(comp, result);
+    return *comp.emplace<ArbitrarySymbolExpression>(*symbol, comp.getVoidType(), &hierRef,
+                                                    syntax.sourceRange());
 }
 
 void ArbitrarySymbolExpression::serializeTo(ASTSerializer& serializer) const {

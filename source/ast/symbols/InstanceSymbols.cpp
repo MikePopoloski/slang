@@ -1302,8 +1302,10 @@ static const AssertionExpr* bindUnknownPortConn(const ASTContext& context,
                             symbol->kind == SymbolKind::Instance ||
                             symbol->kind == SymbolKind::InstanceArray ||
                             symbol->kind == SymbolKind::UninstantiatedDef) {
+
+                            auto hierRef = HierarchicalReference::fromLookup(comp, result);
                             auto hre = comp.emplace<ArbitrarySymbolExpression>(
-                                *symbol, comp.getVoidType(), syntax.sourceRange());
+                                *symbol, comp.getVoidType(), &hierRef, syntax.sourceRange());
                             return comp.emplace<SimpleAssertionExpr>(*hre, std::nullopt);
                         }
                     }

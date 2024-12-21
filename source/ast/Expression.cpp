@@ -1092,14 +1092,14 @@ Expression& Expression::bindName(Compilation& comp, const NameSyntax& syntax,
     return bindLookupResult(comp, result, syntax.sourceRange(), invocation, withClause, context);
 }
 
-Expression& Expression::bindLookupResult(Compilation& compilation, LookupResult& result,
+Expression& Expression::bindLookupResult(Compilation& comp, LookupResult& result,
                                          SourceRange sourceRange,
                                          const InvocationExpressionSyntax* invocation,
                                          const ArrayOrRandomizeMethodExpressionSyntax* withClause,
                                          const ASTContext& context) {
     const Symbol* symbol = result.found;
     if (!symbol)
-        return badExpr(compilation, nullptr);
+        return badExpr(comp, nullptr);
 
     auto errorIfInvoke = [&]() {
         // If we require a subroutine, enforce that now. The invocation syntax will have been
@@ -1120,10 +1120,10 @@ Expression& Expression::bindLookupResult(Compilation& compilation, LookupResult&
 
     if (context.flags.has(ASTFlags::AllowDataType) && symbol->isType()) {
         // We looked up a named data type and we were allowed to do so, so return it.
-        const Type& resultType = Type::fromLookupResult(compilation, result, sourceRange, context);
-        auto expr = compilation.emplace<DataTypeExpression>(resultType, sourceRange);
+        const Type& resultType = Type::fromLookupResult(comp, result, sourceRange, context);
+        auto expr = comp.emplace<DataTypeExpression>(resultType, sourceRange);
         if (!expr->bad() && !errorIfInvoke())
-            return badExpr(compilation, expr);
+            return badExpr(comp, expr);
 
         return *expr;
     }
@@ -1135,9 +1135,8 @@ Expression& Expression::bindLookupResult(Compilation& compilation, LookupResult&
         symbol->as<VariableSymbol>().flags.has(VariableFlags::CompilerGenerated)) {
 
         auto scope = symbol->getParentScope();
-        if (scope &&
-            (invocation || (context.flags.has(ASTFlags::TopLevelStatement) &&
-                            compilation.hasFlag(CompilationFlags::AllowRecursiveImplicitCall)))) {
+        if (scope && (invocation || (context.flags.has(ASTFlags::TopLevelStatement) &&
+                                     comp.hasFlag(CompilationFlags::AllowRecursiveImplicitCall)))) {
             auto& sym = scope->asSymbol();
             if (sym.kind == SymbolKind::Subroutine &&
                 sym.as<SubroutineSymbol>().returnValVar == symbol) {
@@ -1152,8 +1151,8 @@ Expression& Expression::bindLookupResult(Compilation& compilation, LookupResult&
         case SymbolKind::Subroutine: {
             SLANG_ASSERT(result.selectors.empty());
             SourceRange callRange = invocation ? invocation->sourceRange() : sourceRange;
-            expr = &CallExpression::fromLookup(compilation, &symbol->as<SubroutineSymbol>(),
-                                               nullptr, invocation, withClause, callRange, context);
+            expr = &CallExpression::fromLookup(comp, &symbol->as<SubroutineSymbol>(), nullptr,
+                                               invocation, withClause, callRange, context);
             invocation = nullptr;
             withClause = nullptr;
             break;
@@ -1182,9 +1181,9 @@ Expression& Expression::bindLookupResult(Compilation& compilation, LookupResult&
             // If there are selectors then this is ok -- either they will be valid because
             // they're accessing a built-in method or they will issue an error.
             const bool constraintAllowed = !result.selectors.empty();
-            expr = &ValueExpressionBase::fromSymbol(
-                context, *symbol, result.flags.has(LookupResultFlags::IsHierarchical), sourceRange,
-                constraintAllowed);
+            auto hierRef = HierarchicalReference::fromLookup(comp, result);
+            expr = &ValueExpressionBase::fromSymbol(context, *symbol, &hierRef, sourceRange,
+                                                    constraintAllowed);
             break;
         }
         default: {
@@ -1192,9 +1191,9 @@ Expression& Expression::bindLookupResult(Compilation& compilation, LookupResult&
                 context.flags.has(ASTFlags::LValue) && !result.selectors.empty() &&
                 std::get_if<LookupResult::MemberSelector>(&result.selectors[0]) != nullptr;
 
-            expr = &ValueExpressionBase::fromSymbol(
-                context, *symbol, result.flags.has(LookupResultFlags::IsHierarchical), sourceRange,
-                /* constraintAllowed */ false, isDottedAccess);
+            auto hierRef = HierarchicalReference::fromLookup(comp, result);
+            expr = &ValueExpressionBase::fromSymbol(context, *symbol, &hierRef, sourceRange,
+                                                    /* constraintAllowed */ false, isDottedAccess);
             break;
         }
     }
@@ -1214,15 +1213,15 @@ Expression& Expression::bindLookupResult(Compilation& compilation, LookupResult&
 
                 nextResult.reportDiags(context);
                 if (!nextResult.found)
-                    return badExpr(compilation, expr);
+                    return badExpr(comp, expr);
 
-                return bindLookupResult(compilation, nextResult, sourceRange, invocation,
-                                        withClause, context);
+                return bindLookupResult(comp, nextResult, sourceRange, invocation, withClause,
+                                        context);
             }
 
             if (i == result.selectors.size() - 1) {
-                expr = &MemberAccessExpression::fromSelector(compilation, *expr, *memberSelect,
-                                                             invocation, withClause, context,
+                expr = &MemberAccessExpression::fromSelector(comp, *expr, *memberSelect, invocation,
+                                                             withClause, context,
                                                              /* isFromLookupChain */ true);
 
                 if (expr->kind == ExpressionKind::Call) {
@@ -1231,20 +1230,20 @@ Expression& Expression::bindLookupResult(Compilation& compilation, LookupResult&
                 }
             }
             else {
-                expr = &MemberAccessExpression::fromSelector(compilation, *expr, *memberSelect,
-                                                             nullptr, nullptr, context,
+                expr = &MemberAccessExpression::fromSelector(comp, *expr, *memberSelect, nullptr,
+                                                             nullptr, context,
                                                              /* isFromLookupChain */ true);
             }
         }
         else {
             // Element / range selectors.
             auto selectSyntax = std::get<const ElementSelectSyntax*>(selector);
-            expr = &bindSelector(compilation, *expr, *selectSyntax, context);
+            expr = &bindSelector(comp, *expr, *selectSyntax, context);
         }
     }
 
     if (!expr->bad() && !errorIfInvoke())
-        return badExpr(compilation, expr);
+        return badExpr(comp, expr);
 
     return *expr;
 }
@@ -1415,7 +1414,7 @@ Expression* Expression::tryBindInterfaceRef(const ASTContext& context,
             (symbol->kind == SymbolKind::Variable &&
              symbol->as<VariableSymbol>().getType().isError())) {
             return comp.emplace<ArbitrarySymbolExpression>(*origSymbol, comp.getErrorType(),
-                                                           syntax.sourceRange());
+                                                           nullptr, syntax.sourceRange());
         }
 
         if (isInterfacePort && !origSymbol->name.empty()) {
@@ -1488,7 +1487,8 @@ Expression* Expression::tryBindInterfaceRef(const ASTContext& context,
         origSymbol = origSymbol->as<InstanceBodySymbol>().parentInstance;
     }
 
-    return comp.emplace<ArbitrarySymbolExpression>(*origSymbol, *type, sourceRange);
+    auto hierRef = HierarchicalReference::fromLookup(comp, result);
+    return comp.emplace<ArbitrarySymbolExpression>(*origSymbol, *type, &hierRef, sourceRange);
 }
 
 void Expression::findPotentiallyImplicitNets(

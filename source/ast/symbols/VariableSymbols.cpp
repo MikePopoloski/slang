@@ -653,7 +653,7 @@ void ClockVarSymbol::fromSyntax(const Scope& scope, const ClockingItemSyntax& sy
                 arg->getDeclaredType()->setLink(*sourceType);
 
                 auto& valExpr = ValueExpressionBase::fromSymbol(
-                    context, *sym, false, {arg->location, arg->location + arg->name.length()});
+                    context, *sym, nullptr, {arg->location, arg->location + arg->name.length()});
 
                 if (dir != ArgumentDirection::In)
                     context.addDriver(sym->as<ValueSymbol>(), valExpr, AssignFlags::ClockVar);

@@ -548,8 +548,9 @@ bool lookupUpward(std::span<const NamePlusLoc> nameParts, const NameComponents& 
         return lookupDownward(nameParts, name, context, flags, result);
     };
 
+    size_t upwardCount = 0;
     const Scope* scope = context.scope;
-    while (scope) {
+    do {
         // Search for a scope or instance target within our current scope.
         auto symbol = scope->find(name.text);
         if (symbol && !symbol->isValue() && !symbol->isType() &&
@@ -557,8 +558,10 @@ bool lookupUpward(std::span<const NamePlusLoc> nameParts, const NameComponents& 
             if (!tryMatch(*symbol))
                 return false;
 
-            if (result.found)
+            if (result.found) {
+                result.upwardCount = upwardCount;
                 return true;
+            }
         }
 
         // Advance to the next scope, skipping to the parent instance when
@@ -578,11 +581,15 @@ bool lookupUpward(std::span<const NamePlusLoc> nameParts, const NameComponents& 
                 if (!tryMatch(*inst))
                     return false;
 
-                if (result.found)
+                if (result.found) {
+                    result.upwardCount = upwardCount;
                     return true;
+                }
             }
         }
-    }
+
+        upwardCount++;
+    } while (scope);
 
     result.clear();
     if (firstMatch) {

@@ -207,7 +207,7 @@ ModportPortSymbol& ModportPortSymbol::fromSyntax(const ASTContext& context,
     }
 
     auto loc = result->location;
-    auto& expr = ValueExpressionBase::fromSymbol(checkCtx, *result->internalSymbol, false,
+    auto& expr = ValueExpressionBase::fromSymbol(checkCtx, *result->internalSymbol, nullptr,
                                                  {loc, loc + result->name.length()});
 
     Expression::checkConnectionDirection(expr, direction, checkCtx, loc);

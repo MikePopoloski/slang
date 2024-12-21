@@ -1286,7 +1286,7 @@ const Type& PortSymbol::getType() const {
 
         ASTContext context(*scope, LookupLocation::before(*this), astFlags);
 
-        auto& valExpr = ValueExpressionBase::fromSymbol(context, *internalSymbol, false,
+        auto& valExpr = ValueExpressionBase::fromSymbol(context, *internalSymbol, nullptr,
                                                         {location, location + name.length()});
 
         if (syntax->kind == SyntaxKind::PortReference) {
@@ -1749,7 +1749,7 @@ const Expression* PortConnection::getExpression() const {
         context.setInstance(parentInstance);
 
         if (connectedSymbol) {
-            Expression* e = &ValueExpressionBase::fromSymbol(context, *connectedSymbol, false,
+            Expression* e = &ValueExpressionBase::fromSymbol(context, *connectedSymbol, nullptr,
                                                              implicitNameRange);
 
             bitmask<AssignFlags> assignFlags;
