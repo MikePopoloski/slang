@@ -270,7 +270,7 @@ std::optional<std::string> FmtHelpers::formatArgs(std::string_view formatString,
                 return;
             }
 
-            SFormat::formatArg(result, value, spec, options);
+            SFormat::formatArg(result, value, *arg->type, spec, options, arg->isImplicitString());
         },
         [&](DiagCode code, size_t offset, size_t len, std::optional<char> specifier) {
             // If this is from a string literal format string, we already checked
@@ -354,7 +354,8 @@ std::optional<std::string> FmtHelpers::formatDisplay(
                             return;
                         }
 
-                        SFormat::formatArg(result, value, specifier, options);
+                        SFormat::formatArg(result, value, *currentArg->type, specifier, options,
+                                           currentArg->isImplicitString());
                     }
                 },
                 [](DiagCode, size_t, size_t, std::optional<char>) {});
@@ -368,7 +369,9 @@ std::optional<std::string> FmtHelpers::formatDisplay(
             if (!value)
                 return std::nullopt;
 
-            SFormat::formatArg(result, value, getDefaultSpecifier(*arg, LiteralBase::Decimal), {});
+            SFormat::formatArg(result, value, *arg->type,
+                               getDefaultSpecifier(*arg, LiteralBase::Decimal), {},
+                               arg->isImplicitString());
         }
     }
 
