@@ -14,6 +14,33 @@
 
 namespace slang::ast {
 
+class InstanceCacheKey {
+public:
+    InstanceCacheKey(const InstanceSymbol& symbol);
+
+    bool operator==(const InstanceCacheKey& other) const;
+
+    size_t hash() const { return savedHash; }
+
+private:
+    not_null<const InstanceSymbol*> symbol;
+    std::vector<InstanceCacheKey> ifaceKeys;
+    size_t savedHash;
+};
+
+} // namespace slang::ast
+
+namespace slang {
+
+template<>
+struct hash<ast::InstanceCacheKey> {
+    size_t operator()(const ast::InstanceCacheKey& key) const noexcept { return key.hash(); }
+};
+
+} // namespace slang
+
+namespace slang::ast {
+
 using namespace syntax;
 
 // This visitor is used to touch every node in the AST to ensure that all lazily
@@ -336,6 +363,30 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
             return;
         }
 
+        // If we have already visited an identical instance body we don't have to do
+        // it again, because all possible diagnostics have already been collected,
+        // with some notable caveats that need to be handled:
+        // - "identical" needs to take into account parameters values and interface ports,
+        //   since they types of members and expression can vary based on those
+        // - TODO: Any upward hierarchical references that extend out of the instance need
+        //         to be re-resolved here, and the resolved types must match
+        // - TODO: Downward hierarchical references into such instances need to be accounted for
+        // - TODO: Bind directives needs to be accounted for
+        // - TODO: Defparams need to be accounted for
+        // - TODO: Configuration rules need to be accounted for
+        //
+        // Assuming we find an appropriately cached instance, we will store a pointer to it
+        // in other instances to facilitate downstream consumers in not needing to recreate
+        // this duplication detection logic again.
+        SLANG_ASSERT(symbol.getCanonicalBody() == nullptr);
+        if (!compilation.hasFlag(CompilationFlags::DisableInstanceCaching)) {
+            auto [it, inserted] = instanceCache.try_emplace(symbol, &symbol.body);
+            if (!inserted) {
+                symbol.setCanonicalBody(*it->second);
+                return;
+            }
+        }
+
         if (visitInstances)
             visit(symbol.body);
     }
@@ -459,6 +510,7 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
     uint32_t errorLimit;
     bool visitInstances = true;
     bool hierarchyProblem = false;
+    flat_hash_map<InstanceCacheKey, const InstanceBodySymbol*> instanceCache;
     flat_hash_set<const InstanceBodySymbol*> activeInstanceBodies;
     flat_hash_set<const DefinitionSymbol*> usedIfacePorts;
     SmallVector<const GenericClassDefSymbol*> genericClasses;
@@ -578,6 +630,12 @@ struct DefParamVisitor : public ASTVisitor<DefParamVisitor, false, false> {
 // things like unused code elements.
 struct PostElabVisitor : public ASTVisitor<PostElabVisitor, false, false> {
     explicit PostElabVisitor(Compilation& compilation) : compilation(compilation) {}
+
+    void handle(const InstanceSymbol& symbol) {
+        // Ignore instances that have a duplicate body.
+        if (!symbol.getCanonicalBody())
+            visitDefault(symbol);
+    }
 
     void handle(const NetSymbol& symbol) {
         if (symbol.isImplicit) {
@@ -785,5 +843,75 @@ private:
 
     Compilation& compilation;
 };
+
+InstanceCacheKey::InstanceCacheKey(const InstanceSymbol& symbol) : symbol(&symbol) {
+    size_t h = 0;
+    hash_combine(h, &symbol.getDefinition());
+
+    for (auto param : symbol.body.getParameters()) {
+        if (param->symbol.kind == SymbolKind::Parameter)
+            hash_combine(h, param->symbol.as<ParameterSymbol>().getValue().hash());
+        else
+            hash_combine(h, param->symbol.as<TypeParameterSymbol>().targetType.getType().hash());
+    }
+
+    for (auto conn : symbol.getPortConnections()) {
+        if (conn->port.kind == SymbolKind::InterfacePort) {
+            auto [iface, modport] = conn->getIfaceConn();
+            while (iface && iface->kind == SymbolKind::InstanceArray) {
+                auto& arr = iface->as<InstanceArraySymbol>();
+                if (arr.empty())
+                    iface = nullptr;
+                else
+                    iface = arr.elements[0];
+            }
+
+            if (iface) {
+                ifaceKeys.emplace_back(iface->as<InstanceSymbol>());
+                hash_combine(h, ifaceKeys.back().savedHash);
+            }
+        }
+    }
+
+    savedHash = h;
+}
+
+bool InstanceCacheKey::operator==(const InstanceCacheKey& other) const {
+    if (savedHash != other.savedHash ||
+        &symbol->getDefinition() != &other.symbol->getDefinition() ||
+        ifaceKeys.size() != other.ifaceKeys.size()) {
+        return false;
+    }
+
+    auto lparams = symbol->body.getParameters();
+    auto rparams = other.symbol->body.getParameters();
+    SLANG_ASSERT(lparams.size() == rparams.size());
+
+    for (size_t i = 0; i < lparams.size(); i++) {
+        auto lp = lparams[i];
+        auto rp = rparams[i];
+        SLANG_ASSERT(lp->symbol.kind == rp->symbol.kind);
+
+        if (lp->symbol.kind == SymbolKind::Parameter) {
+            if (lp->symbol.as<ParameterSymbol>().getValue() !=
+                rp->symbol.as<ParameterSymbol>().getValue()) {
+                return false;
+            }
+        }
+        else {
+            auto& lt = lp->symbol.as<TypeParameterSymbol>().targetType.getType();
+            auto& rt = rp->symbol.as<TypeParameterSymbol>().targetType.getType();
+            if (!lt.isMatching(rt))
+                return false;
+        }
+    }
+
+    for (size_t i = 0; i < ifaceKeys.size(); i++) {
+        if (ifaceKeys[i] != other.ifaceKeys[i])
+            return false;
+    }
+
+    return true;
+}
 
 } // namespace slang::ast

@@ -104,6 +104,16 @@ public:
     const PortConnection* getPortConnection(const InterfacePortSymbol& port) const;
     std::span<const PortConnection* const> getPortConnections() const;
 
+    /// If it has been determined that the body of this instance is an exact
+    /// duplicate of another, this returns a pointer to the canonical copy
+    /// to avoid duplicating effort visiting this instance's body again.
+    /// Otherwise returns nullptr.
+    const InstanceBodySymbol* getCanonicalBody() const { return canonicalBody; }
+
+    void setCanonicalBody(const InstanceBodySymbol& newCanonical) const {
+        canonicalBody = &newCanonical;
+    }
+
     void serializeTo(ASTSerializer& serializer) const;
 
     static void fromSyntax(Compilation& compilation,
@@ -150,6 +160,7 @@ private:
 
     mutable PointerMap* connectionMap = nullptr;
     mutable std::span<const PortConnection* const> connections;
+    mutable const InstanceBodySymbol* canonicalBody = nullptr;
 };
 
 class SLANG_EXPORT InstanceBodySymbol : public Symbol, public Scope {

@@ -1493,7 +1493,10 @@ module n(I i);
 endmodule
 )");
 
-    Compilation compilation;
+    CompilationOptions options;
+    options.flags |= CompilationFlags::DisableInstanceCaching;
+
+    Compilation compilation(options);
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();

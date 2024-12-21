@@ -130,9 +130,13 @@ enum class SLANG_EXPORT CompilationFlags {
 
     /// Allow merging ANSI port declarations with nets and variables
     /// declared in the module body.
-    AllowMergingAnsiPorts = 1 << 14
+    AllowMergingAnsiPorts = 1 << 14,
+
+    /// Disable the use of instance caching, which normally allows skipping
+    /// duplicate instance bodies to save time when elaborating.
+    DisableInstanceCaching = 1 << 15,
 };
-SLANG_BITMASK(CompilationFlags, AllowMergingAnsiPorts)
+SLANG_BITMASK(CompilationFlags, DisableInstanceCaching)
 
 /// Contains various options that can control compilation behavior.
 struct SLANG_EXPORT CompilationOptions {
