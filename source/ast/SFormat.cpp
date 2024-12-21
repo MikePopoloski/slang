@@ -377,16 +377,17 @@ struct TypeVisitor {
 
             buffer.append("'{");
             for (auto& field : type.membersOfType<FieldSymbol>()) {
-                auto& type = field.getType();
-                auto elem = value.slice(currOffset - 1, currOffset - type.getBitWidth());
-                currOffset -= type.getBitWidth();
+                auto& fieldType = field.getType();
+                auto fieldWidth = int32_t(fieldType.getBitWidth());
+                auto elem = value.slice(currOffset - 1, currOffset - fieldWidth);
+                currOffset -= fieldWidth;
 
                 if (!abbreviated) {
                     buffer.append(field.name);
                     buffer.append(":");
                 }
 
-                type.visit(*this, elem);
+                fieldType.visit(*this, elem);
 
                 buffer.append(",");
                 if (!abbreviated)
