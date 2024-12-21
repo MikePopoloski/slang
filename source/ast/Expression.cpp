@@ -1511,6 +1511,8 @@ void Expression::findPotentiallyImplicitNets(
             ASTContext ctx(*context.scope, LookupLocation::max);
             Lookup::name(nameSyntax, ctx, flags, result);
 
+            SLANG_ASSERT(!result.flags.has(LookupResultFlags::IsHierarchical));
+
             if (!result.found && !result.hasError())
                 results.push_back(&nameSyntax.as<IdentifierNameSyntax>());
         }

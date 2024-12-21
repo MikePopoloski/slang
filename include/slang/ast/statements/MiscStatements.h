@@ -31,14 +31,10 @@ public:
 class SLANG_EXPORT DisableStatement : public Statement {
 public:
     /// The target of the disable.
-    const Symbol& target;
+    const Expression& target;
 
-    /// True if the target name was a hierarchical name.
-    bool isHierarchical;
-
-    DisableStatement(const Symbol& target, bool isHierarchical, SourceRange sourceRange) :
-        Statement(StatementKind::Disable, sourceRange), target(target),
-        isHierarchical(isHierarchical) {}
+    DisableStatement(const Expression& target, SourceRange sourceRange) :
+        Statement(StatementKind::Disable, sourceRange), target(target) {}
 
     EvalResult evalImpl(EvalContext& context) const;
 

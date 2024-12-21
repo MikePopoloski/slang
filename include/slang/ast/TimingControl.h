@@ -345,7 +345,7 @@ public:
     /// A single block event.
     struct Event {
         /// The target block.
-        const Symbol* target = nullptr;
+        const Expression* target = nullptr;
 
         /// True if this is a `begin` event and false if it's an `end` event.
         bool isBegin = false;

@@ -23,43 +23,41 @@ using namespace parsing;
 
 using ER = Statement::EvalResult;
 
-Statement& DisableStatement::fromSyntax(Compilation& compilation,
-                                        const DisableStatementSyntax& syntax,
+Statement& DisableStatement::fromSyntax(Compilation& comp, const DisableStatementSyntax& syntax,
                                         const ASTContext& context) {
-    LookupResult result;
-    Lookup::name(*syntax.name, context, LookupFlags::ForceHierarchical | LookupFlags::NoSelectors,
-                 result);
-    result.reportDiags(context);
+    auto& targetExpr = ArbitrarySymbolExpression::fromSyntax(comp, *syntax.name, context);
+    if (targetExpr.bad())
+        return badStmt(comp, nullptr);
 
-    const Symbol* symbol = result.found;
-    if (!symbol)
-        return badStmt(compilation, nullptr);
+    auto symbol = targetExpr.getSymbolReference();
+    SLANG_ASSERT(symbol);
 
     if (symbol->kind != SymbolKind::StatementBlock &&
         (symbol->kind != SymbolKind::Subroutine ||
          symbol->as<SubroutineSymbol>().subroutineKind != SubroutineKind::Task)) {
         context.addDiag(diag::InvalidDisableTarget, syntax.name->sourceRange());
-        return badStmt(compilation, nullptr);
+        return badStmt(comp, nullptr);
     }
 
-    return *compilation.emplace<DisableStatement>(
-        *symbol, result.flags.has(LookupResultFlags::IsHierarchical), syntax.sourceRange());
+    return *comp.emplace<DisableStatement>(targetExpr, syntax.sourceRange());
 }
 
 ER DisableStatement::evalImpl(EvalContext& context) const {
     // Hierarchical names are disallowed in constant expressions and constant functions
+    auto& ase = target.as<ArbitrarySymbolExpression>();
+    const bool isHierarchical = ase.hierRef.target != nullptr;
     if (isHierarchical) {
-        context.addDiag(diag::ConstEvalHierarchicalName, sourceRange) << target.name;
+        context.addDiag(diag::ConstEvalHierarchicalName, sourceRange) << ase.symbol->name;
         return ER::Fail;
     }
 
     SLANG_ASSERT(!context.getDisableTarget());
-    context.setDisableTarget(&target, sourceRange);
+    context.setDisableTarget(ase.symbol, sourceRange);
     return ER::Disable;
 }
 
 void DisableStatement::serializeTo(ASTSerializer& serializer) const {
-    serializer.writeLink("target", target);
+    serializer.write("target", target);
 }
 
 ER VariableDeclStatement::evalImpl(EvalContext& context) const {

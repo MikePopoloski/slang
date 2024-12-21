@@ -11,6 +11,7 @@
 #include "slang/ast/ASTSerializer.h"
 #include "slang/ast/Compilation.h"
 #include "slang/ast/Scope.h"
+#include "slang/ast/expressions/MiscExpressions.h"
 #include "slang/ast/symbols/SubroutineSymbols.h"
 #include "slang/ast/symbols/VariableSymbols.h"
 #include "slang/ast/types/Type.h"
@@ -109,12 +110,9 @@ const SubroutineSymbol* NetType::getResolutionFunction() const {
     auto& declSyntax = syntax->as<NetTypeDeclarationSyntax>();
     if (declSyntax.withFunction) {
         ASTContext context(*scope, LookupLocation::after(*this));
-        LookupResult result;
-        Lookup::name(*declSyntax.withFunction->name, context,
-                     LookupFlags::ForceHierarchical | LookupFlags::NoSelectors, result);
-        result.reportDiags(context);
-
-        auto symbol = result.found;
+        auto& expr = ArbitrarySymbolExpression::fromSyntax(context.getCompilation(),
+                                                           *declSyntax.withFunction->name, context);
+        auto symbol = expr.getSymbolReference();
         if (symbol) {
             SourceRange range = declSyntax.withFunction->name->sourceRange();
             if (symbol->kind != SymbolKind::Subroutine) {

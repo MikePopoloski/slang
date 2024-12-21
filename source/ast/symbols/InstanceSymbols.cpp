@@ -1954,15 +1954,14 @@ void CheckerInstanceSymbol::fromSyntax(const CheckerInstantiationSyntax& syntax,
         return;
     }
 
-    LookupResult lookupResult;
-    Lookup::name(*syntax.type, context, LookupFlags::AllowDeclaredAfter | LookupFlags::NoSelectors,
-                 lookupResult);
-
-    lookupResult.reportDiags(context);
-    if (!lookupResult.found)
+    auto& comp = context.getCompilation();
+    auto& typeExpr = ArbitrarySymbolExpression::fromSyntax(comp, *syntax.type, context);
+    if (typeExpr.bad())
         return;
 
-    auto symbol = lookupResult.found;
+    auto symbol = typeExpr.getSymbolReference();
+    SLANG_ASSERT(symbol);
+
     if (symbol->kind != SymbolKind::Checker) {
         if (symbol->kind == SymbolKind::ClassType) {
             context.addDiag(diag::CheckerClassBadInstantiation, syntax.sourceRange())

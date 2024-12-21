@@ -10,6 +10,7 @@
 #include "slang/ast/ASTSerializer.h"
 #include "slang/ast/Compilation.h"
 #include "slang/ast/Expression.h"
+#include "slang/ast/expressions/MiscExpressions.h"
 #include "slang/ast/types/Type.h"
 #include "slang/diagnostics/ExpressionsDiags.h"
 #include "slang/diagnostics/StatementsDiags.h"
@@ -510,22 +511,19 @@ TimingControl& BlockEventListControl::fromSyntax(const BlockEventExpressionSynta
     SmallVector<Event, 4> events;
 
     auto addEvent = [&](const PrimaryBlockEventExpressionSyntax& evSyntax) {
-        LookupResult result;
-        Lookup::name(*evSyntax.name, context,
-                     LookupFlags::ForceHierarchical | LookupFlags::NoSelectors, result);
-        result.reportDiags(context);
+        auto& expr = ArbitrarySymbolExpression::fromSyntax(comp, *evSyntax.name, context);
+        if (auto symbol = expr.getSymbolReference()) {
+            if (symbol->kind != SymbolKind::StatementBlock &&
+                symbol->kind != SymbolKind::Subroutine) {
+                context.addDiag(diag::InvalidBlockEventTarget, evSyntax.name->sourceRange());
+                return false;
+            }
 
-        const Symbol* symbol = result.found;
-        if (!symbol)
-            return false;
-
-        if (symbol->kind != SymbolKind::StatementBlock && symbol->kind != SymbolKind::Subroutine) {
-            context.addDiag(diag::InvalidBlockEventTarget, evSyntax.name->sourceRange());
-            return false;
+            events.push_back({&expr, evSyntax.keyword.kind == TokenKind::BeginKeyword});
+            return true;
         }
 
-        events.push_back({nullptr, evSyntax.keyword.kind == TokenKind::BeginKeyword});
-        return true;
+        return false;
     };
 
     const BlockEventExpressionSyntax* curr = &syntax;
@@ -548,7 +546,7 @@ void BlockEventListControl::serializeTo(ASTSerializer& serializer) const {
     for (auto& event : events) {
         SLANG_ASSERT(event.target);
         serializer.startObject();
-        serializer.writeLink("target", *event.target);
+        serializer.write("target", *event.target);
         serializer.write("isBegin", event.isBegin);
         serializer.endObject();
     }
