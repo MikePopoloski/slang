@@ -59,7 +59,8 @@ Expression& ValueExpressionBase::fromSymbol(const ASTContext& context, const Sym
             context.addDiag(diag::LocalVarEventExpr, sourceRange) << symbol.name;
             return badExpr(comp, nullptr);
         }
-        else if (!var.flags.has(VariableFlags::RefStatic) && flags.has(DisallowedAutoVarContexts)) {
+        else if (!var.flags.has(VariableFlags::RefStatic) && flags.has(DisallowedAutoVarContexts) &&
+                 var.kind != SymbolKind::PatternVar) {
             if (flags.has(ASTFlags::NonProcedural)) {
                 context.addDiag(diag::AutoFromNonProcedural, sourceRange) << symbol.name;
                 return badExpr(comp, nullptr);

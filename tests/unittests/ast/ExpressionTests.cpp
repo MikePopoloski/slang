@@ -3756,3 +3756,18 @@ endclass
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Pattern var in static initializer") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    struct {int a; real b;} s;
+    initial begin
+        static int b = s matches '{a:.i, b:.j} ? i : 0;
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
