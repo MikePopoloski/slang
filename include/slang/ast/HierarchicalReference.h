@@ -17,8 +17,8 @@ namespace slang::ast {
 
 class Compilation;
 class Expression;
-class LookupResult;
 class Symbol;
+struct LookupResult;
 
 /// Represents a hierarchical reference to a symbol.
 class HierarchicalReference {
