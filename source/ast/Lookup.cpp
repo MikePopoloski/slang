@@ -548,7 +548,7 @@ bool lookupUpward(std::span<const NamePlusLoc> nameParts, const NameComponents& 
         return lookupDownward(nameParts, name, context, flags, result);
     };
 
-    size_t upwardCount = 0;
+    uint32_t upwardCount = 0;
     const Scope* scope = context.scope;
     do {
         // Search for a scope or instance target within our current scope.
