@@ -78,6 +78,8 @@ ExpressionSyntax& Parser::parseSubExpression(bitmask<ExpressionOptions> options,
     if (opKind != SyntaxKind::Unknown) {
         auto opToken = consume();
         auto attributes = parseAttributes();
+        if (options.has(ExpressionOptions::DisallowAttrs))
+            errorIfAttributes(attributes);
 
         auto& operand = parsePrimaryExpression(options);
         auto& postfix = parsePostfixExpression(operand, options);
@@ -167,7 +169,7 @@ ExpressionSyntax& Parser::parseBinaryExpression(ExpressionSyntax* left,
             auto& rightOperand = parseSubExpression(options, newPrecedence);
             left = &factory.binaryExpression(opKind, *left, opToken, attributes, rightOperand);
 
-            if (!attributes.empty() && isAssignmentOperator(opKind))
+            if (isAssignmentOperator(opKind) || options.has(ExpressionOptions::DisallowAttrs))
                 errorIfAttributes(attributes);
         }
     }
@@ -188,6 +190,9 @@ ExpressionSyntax& Parser::parseBinaryExpression(ExpressionSyntax* left,
             Token question;
             auto& predicate = parseConditionalPredicate(*left, TokenKind::Question, question);
             auto attributes = parseAttributes();
+            if (options.has(ExpressionOptions::DisallowAttrs))
+                errorIfAttributes(attributes);
+
             auto& lhs = parseSubExpression(options, logicalOrPrecedence - 1);
             auto colon = expect(TokenKind::Colon);
             auto& rhs = parseSubExpression(options, logicalOrPrecedence - 1);
@@ -629,6 +634,9 @@ ExpressionSyntax& Parser::parsePostfixExpression(ExpressionSyntax& lhs,
             case TokenKind::OpenParenthesis: {
                 if (isStartOfAttrs(0)) {
                     auto attributes = parseAttributes();
+                    if (options.has(ExpressionOptions::DisallowAttrs))
+                        errorIfAttributes(attributes);
+
                     switch (peek().kind) {
                         case TokenKind::DoublePlus:
                         case TokenKind::DoubleMinus: {

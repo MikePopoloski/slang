@@ -964,7 +964,9 @@ AttributeSpecSyntax& Parser::parseAttributeSpec() {
     EqualsValueClauseSyntax* initializer = nullptr;
     if (peek(TokenKind::Equals)) {
         auto equals = consume();
-        initializer = &factory.equalsValueClause(equals, parseExpression());
+        // Nested attributes are not allowed
+        initializer = &factory.equalsValueClause(
+            equals, parseSubExpression(ExpressionOptions::DisallowAttrs, 0));
     }
 
     return factory.attributeSpec(name, initializer);
