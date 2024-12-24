@@ -400,7 +400,7 @@ IEEE 1800-2023 SystemVerilog Language Reference Manual (LRM).
 {{m-success}} 25.6 | Interfaces and specify blocks | v3.0
 {{m-success}} 25.7 | Tasks and functions in interfaces | v2.0
 {{m-success}} 25.8 | Parameterized interfaces | v0.2
-{{m-warning}} 25.9 | Virtual interfaces | partial
+{{m-success}} 25.9 | Virtual interfaces | v8.0
 {{m-success}} 25.10 | Access to interface objects | v0.6
 
 ## 26. Packages
