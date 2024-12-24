@@ -1254,6 +1254,26 @@ void Compilation::noteNetAlias(const Scope& scope, const Symbol& firstSym,
     }
 }
 
+void Compilation::noteHierarchicalReference(const Scope& initialScope,
+                                            const HierarchicalReference& ref) {
+    // For now, we're only interested in upward names that cross
+    // through instance boundaries.
+    SLANG_ASSERT(ref.expr);
+    auto currScope = &initialScope;
+    for (size_t i = 0; i < ref.upwardCount; i++) {
+        auto& sym = currScope->asSymbol();
+        if (sym.kind == SymbolKind::InstanceBody)
+            hierRefMap[&sym].push_back(&ref);
+
+        currScope = sym.getHierarchicalParent();
+        SLANG_ASSERT(currScope);
+    }
+}
+
+void Compilation::noteVirtualIfaceInstance(const InstanceSymbol& symbol) {
+    virtualInterfaceInstances.push_back(&symbol);
+}
+
 const Expression* Compilation::getDefaultDisable(const Scope& scope) const {
     auto curr = &scope;
     while (true) {
@@ -2193,6 +2213,27 @@ void Compilation::checkBindTargetParams(const syntax::BindDirectiveSyntax& synta
         if (it != instancesWithDefBinds.end()) {
             for (auto target : it->second)
                 doCheck(target->as<InstanceBodySymbol>());
+        }
+    }
+}
+
+void Compilation::checkVirtualIfaceInstance(const InstanceSymbol& instance) {
+    auto body = instance.getCanonicalBody();
+    if (!body)
+        body = &instance.body;
+
+    if (auto it = hierRefMap.find(body); it != hierRefMap.end()) {
+        auto& diag = body->addDiag(diag::VirtualIfaceHierRef, instance.location);
+        for (auto ref : it->second)
+            diag.addNote(diag::NoteHierarchicalRef, ref->expr->sourceRange);
+    }
+
+    Diagnostic* portDiag = nullptr;
+    for (auto port : body->getPortList()) {
+        if (port->kind == SymbolKind::InterfacePort) {
+            if (!portDiag)
+                portDiag = &body->addDiag(diag::VirtualIfaceIfacePort, instance.location);
+            portDiag->addNote(diag::NoteDeclarationHere, port->location);
         }
     }
 }

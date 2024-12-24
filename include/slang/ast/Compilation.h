@@ -34,6 +34,7 @@ class ConfigBlockSymbol;
 class DefinitionSymbol;
 class Expression;
 class GenericClassDefSymbol;
+class InstanceSymbol;
 class InterfacePortSymbol;
 class MethodPrototypeSymbol;
 class ModportSymbol;
@@ -328,6 +329,9 @@ public:
     /// Gets all of the diagnostics produced during compilation.
     const Diagnostics& getAllDiagnostics();
 
+    /// Queries if any errors have been issued on any scope within this compilation.
+    bool hasIssuedErrors() const { return numErrors > 0; };
+
     /// @}
     /// @name Utility and convenience methods
     /// @{
@@ -588,6 +592,13 @@ public:
                       const Expression& firstExpr, const Symbol& secondSym,
                       DriverBitRange secondRange, const Expression& secondExpr);
 
+    /// Notes the existence of the given hierarchical reference, which is used,
+    /// among other things, to ensure we perform instance caching correctly.
+    void noteHierarchicalReference(const Scope& scope, const HierarchicalReference& ref);
+
+    /// Notes the existence of a virtual interface type declaration for the given instance.
+    void noteVirtualIfaceInstance(const InstanceSymbol& instance);
+
     /// Adds a set of diagnostics to the compilation's list of semantic diagnostics.
     void addDiagnostics(const Diagnostics& diagnostics);
 
@@ -723,14 +734,12 @@ public:
     /// Creates an empty ImplicitTypeSyntax object.
     const syntax::ImplicitTypeSyntax& createEmptyTypeSyntax(SourceLocation loc);
 
-    /// Queries if any errors have been issued on any scope within this compilation.
-    bool hasIssuedErrors() const { return numErrors > 0; };
-
     /// @}
 
 private:
     friend class Lookup;
     friend class Scope;
+    friend class DiagnosticVisitor;
 
     // Collected information about a resolved bind directive.
     struct ResolvedBind {
@@ -764,6 +773,7 @@ private:
                             ResolvedBind& resolvedBind);
     void checkBindTargetParams(const syntax::BindDirectiveSyntax& syntax, const Scope& scope,
                                const ResolvedBind& resolvedBind);
+    void checkVirtualIfaceInstance(const InstanceSymbol& instance);
     std::pair<DefinitionLookupResult, bool> resolveConfigRule(const Scope& scope,
                                                               const ConfigRule& rule) const;
     std::pair<DefinitionLookupResult, bool> resolveConfigRules(
@@ -839,6 +849,9 @@ private:
     // Map from pointers (to symbols, statements, expressions) to their associated attributes.
     flat_hash_map<const void*, std::span<const AttributeSymbol* const>> attributeMap;
 
+    // Map from instance bodies to hierarchical references that extend up through them.
+    flat_hash_map<const Symbol*, std::vector<const HierarchicalReference*>> hierRefMap;
+
     struct SyntaxMetadata {
         const syntax::SyntaxTree* tree = nullptr;
         const NetType* defaultNetType = nullptr;
@@ -859,6 +872,9 @@ private:
 
     // A list of libraries that control the order in which we search for cell bindings.
     std::vector<const SourceLibrary*> defaultLiblist;
+
+    // A list of instances that have been created by virtual interface type declarations.
+    std::vector<const InstanceSymbol*> virtualInterfaceInstances;
 
     // A map from class name + decl name + scope to out-of-block declarations. These get
     // registered when we find the initial declaration and later get used when we see

@@ -1423,8 +1423,9 @@ Expression* Expression::tryBindInterfaceRef(const ASTContext& context,
         if (symbol->kind == SymbolKind::UninstantiatedDef ||
             (symbol->kind == SymbolKind::Variable &&
              symbol->as<VariableSymbol>().getType().isError())) {
-            return comp.emplace<ArbitrarySymbolExpression>(*origSymbol, comp.getErrorType(),
-                                                           nullptr, syntax.sourceRange());
+            return comp.emplace<ArbitrarySymbolExpression>(*context.scope, *origSymbol,
+                                                           comp.getErrorType(), nullptr,
+                                                           syntax.sourceRange());
         }
 
         if (isInterfacePort && !origSymbol->name.empty()) {
@@ -1498,7 +1499,8 @@ Expression* Expression::tryBindInterfaceRef(const ASTContext& context,
     }
 
     auto hierRef = HierarchicalReference::fromLookup(comp, result);
-    return comp.emplace<ArbitrarySymbolExpression>(*origSymbol, *type, &hierRef, sourceRange);
+    return comp.emplace<ArbitrarySymbolExpression>(*context.scope, *origSymbol, *type, &hierRef,
+                                                   sourceRange);
 }
 
 void Expression::findPotentiallyImplicitNets(

@@ -749,3 +749,86 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Virtual interface declaration errors") {
+    auto tree = SyntaxTree::fromText(R"(
+localparam type requestType = byte;
+localparam type responseType = int;
+
+interface I;
+    wire r;
+    modport ii(input r);
+endinterface
+
+module testMod#(N=16);
+  wire clk, rst;
+  I i();
+
+  allIfc#(N) allInst(clk, rst, i, i.ii);
+
+  virtual allIfc#(N) allInst1;
+  sliceIfc sliceInst();
+  virtual sliceIfc sliceInst1;
+endmodule:testMod
+
+interface automatic allIfc#(N=1)(input clk, rst, I i, I.ii i1);
+  var requestType Requests[N];
+  var responseType Responses[N];
+
+  function requestType requestRead(int index);
+    return Requests[index];
+  endfunction
+
+  function void responseWrite(int index, responseType response);
+    Responses[index] <= response;
+  endfunction
+
+  modport clientMp(output Requests, input Responses,
+                   input clk, rst);
+  modport serverMp(input Requests, output Responses,
+                   import requestRead, responseWrite,
+                   input clk, rst);
+endinterface:allIfc
+
+interface automatic sliceIfc#(I=0)();
+  interface II();
+      logic reset;
+  endinterface
+
+  II ii();
+  wire reset = ii.reset;
+
+  I i();
+  allIfc allInst(.clk(), .rst(), .i(i), .i1(i.ii));
+
+  var requestType request;
+  var responseType response;
+
+  assign allInst.Requests[I] = request;
+  assign response = allInst.Responses[I];
+
+  function void requestWrite(requestType req);
+    request <= req;
+  endfunction
+
+  function responseType responseRead();
+    return response;
+  endfunction
+
+  wire clk = testMod.clk;  // invalid
+  wire rst = testMod.rst;  // invalid
+
+  modport clientMp(output request, input response,
+                   import requestWrite, responseRead,
+                   input clk, rst);
+endinterface:sliceIfc
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::VirtualIfaceIfacePort);
+    CHECK(diags[1].code == diag::VirtualIfaceHierRef);
+}

@@ -137,7 +137,8 @@ Expression& ValueExpressionBase::fromSymbol(const ASTContext& context, const Sym
             (symbol.kind == SymbolKind::ConstraintBlock && constraintAllowed) ||
             (symbol.kind == SymbolKind::Coverpoint && flags.has(ASTFlags::AllowCoverpoint))) {
             // Special case for event expressions and constraint block built-in methods.
-            return *comp.emplace<ArbitrarySymbolExpression>(symbol, comp.getVoidType(), hierRef,
+            return *comp.emplace<ArbitrarySymbolExpression>(*context.scope, symbol,
+                                                            comp.getVoidType(), hierRef,
                                                             sourceRange);
         }
 
@@ -174,10 +175,13 @@ Expression& ValueExpressionBase::fromSymbol(const ASTContext& context, const Sym
     }
 
     Expression* result;
-    if (hierRef && hierRef->target)
-        result = comp.emplace<HierarchicalValueExpression>(value, *hierRef, sourceRange);
-    else
+    if (hierRef && hierRef->target) {
+        result = comp.emplace<HierarchicalValueExpression>(*context.scope, value, *hierRef,
+                                                           sourceRange);
+    }
+    else {
         result = comp.emplace<NamedValueExpression>(value, sourceRange);
+    }
 
     if (isUnbounded)
         result->type = &comp.getUnboundedType();
@@ -476,12 +480,15 @@ bool NamedValueExpression::checkConstant(EvalContext& context) const {
     return true;
 }
 
-HierarchicalValueExpression::HierarchicalValueExpression(const ValueSymbol& symbol,
+HierarchicalValueExpression::HierarchicalValueExpression(const Scope& scope,
+                                                         const ValueSymbol& symbol,
                                                          const HierarchicalReference& ref,
                                                          SourceRange sourceRange) :
     ValueExpressionBase(ExpressionKind::HierarchicalValue, symbol, sourceRange), ref(ref) {
     SLANG_ASSERT(ref.target == &symbol);
     this->ref.expr = this;
+
+    scope.getCompilation().noteHierarchicalReference(scope, this->ref);
 }
 
 ConstantValue HierarchicalValueExpression::evalImpl(EvalContext& context) const {
@@ -545,7 +552,8 @@ void TypeReferenceExpression::serializeTo(ASTSerializer& serializer) const {
     serializer.write("targetType", targetType);
 }
 
-ArbitrarySymbolExpression::ArbitrarySymbolExpression(const Symbol& symbol, const Type& type,
+ArbitrarySymbolExpression::ArbitrarySymbolExpression(const Scope& scope, const Symbol& symbol,
+                                                     const Type& type,
                                                      const HierarchicalReference* hierRef,
                                                      SourceRange sourceRange) :
     Expression(ExpressionKind::ArbitrarySymbol, type, sourceRange), symbol(&symbol) {
@@ -553,6 +561,7 @@ ArbitrarySymbolExpression::ArbitrarySymbolExpression(const Symbol& symbol, const
     if (hierRef && hierRef->target) {
         this->hierRef = *hierRef;
         this->hierRef.expr = this;
+        scope.getCompilation().noteHierarchicalReference(scope, this->hierRef);
     }
 }
 
@@ -572,8 +581,8 @@ Expression& ArbitrarySymbolExpression::fromSyntax(Compilation& comp, const NameS
     comp.noteReference(*symbol, context.flags.has(ASTFlags::LValue));
 
     auto hierRef = HierarchicalReference::fromLookup(comp, result);
-    return *comp.emplace<ArbitrarySymbolExpression>(*symbol, comp.getVoidType(), &hierRef,
-                                                    syntax.sourceRange());
+    return *comp.emplace<ArbitrarySymbolExpression>(*context.scope, *symbol, comp.getVoidType(),
+                                                    &hierRef, syntax.sourceRange());
 }
 
 void ArbitrarySymbolExpression::serializeTo(ASTSerializer& serializer) const {

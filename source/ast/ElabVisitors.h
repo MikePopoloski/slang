@@ -380,12 +380,11 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
         // in other instances to facilitate downstream consumers in not needing to recreate
         // this duplication detection logic again.
         SLANG_ASSERT(symbol.getCanonicalBody() == nullptr);
-        if (!compilation.hasFlag(CompilationFlags::DisableInstanceCaching)) {
-            auto [it, inserted] = instanceCache.try_emplace(symbol, &symbol.body);
-            if (!inserted) {
-                symbol.setCanonicalBody(*it->second);
+        auto [it, inserted] = instanceCache.try_emplace(symbol, &symbol.body);
+        if (!inserted) {
+            symbol.setCanonicalBody(*it->second);
+            if (!compilation.hasFlag(CompilationFlags::DisableInstanceCaching))
                 return;
-            }
         }
 
         if (visitInstances)
@@ -474,9 +473,19 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
 
     void finalize() {
         // Once everything has been visited, go back over and check things that might
-        // have been influenced by visiting later symbols. Unfortunately visiting
-        // a specialization can trigger more specializations to be made for the
-        // same or other generic class, so we need to be careful here when iterating.
+        // have been influenced by visiting later symbols.
+        while (!compilation.virtualInterfaceInstances.empty()) {
+            auto vii = compilation.virtualInterfaceInstances;
+            compilation.virtualInterfaceInstances.clear();
+
+            for (auto inst : vii) {
+                inst->visit(*this);
+                compilation.checkVirtualIfaceInstance(*inst);
+            }
+        }
+
+        // Visiting a specialization can trigger more specializations to be made for the
+        // same or other generic classes, so we need to be careful here when iterating.
         SmallSet<const Type*, 8> visitedSpecs;
         SmallVector<const Type*> toVisit;
         bool didSomething;

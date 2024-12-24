@@ -75,8 +75,8 @@ public:
     /// Information about the hierarchical reference.
     HierarchicalReference ref;
 
-    HierarchicalValueExpression(const ValueSymbol& symbol, const HierarchicalReference& ref,
-                                SourceRange sourceRange);
+    HierarchicalValueExpression(const Scope& scope, const ValueSymbol& symbol,
+                                const HierarchicalReference& ref, SourceRange sourceRange);
 
     ConstantValue evalImpl(EvalContext& context) const;
 
@@ -138,7 +138,7 @@ public:
     /// if this expression was created via hierarchical reference.
     HierarchicalReference hierRef;
 
-    ArbitrarySymbolExpression(const Symbol& symbol, const Type& type,
+    ArbitrarySymbolExpression(const Scope& scope, const Symbol& symbol, const Type& type,
                               const HierarchicalReference* hierRef, SourceRange sourceRange);
 
     ConstantValue evalImpl(EvalContext&) const { return nullptr; }

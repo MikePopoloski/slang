@@ -630,7 +630,7 @@ endmodule
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 5);
     CHECK(diags[0].code == diag::RecursiveDefinition);
-    CHECK(diags[1].code == diag::RecursiveDefinition);
+    CHECK(diags[1].code == diag::ConstEvalParamCycle);
     CHECK(diags[2].code == diag::ConstEvalParamCycle);
     CHECK(diags[3].code == diag::ConstEvalIdUsedInCEBeforeDecl);
     CHECK(diags[4].code == diag::ConstEvalFunctionIdentifiersMustBeLocal);
