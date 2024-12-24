@@ -54,7 +54,10 @@ enum class ExpressionOptions {
     BinsSelectContext = 1 << 6,
 
     /// "dist" expressions are allowed in this context.
-    AllowDist = 1 << 7
+    AllowDist = 1 << 7,
+
+    /// attribute instances are disallowed in expression context.
+    DisallowAttrs = 1 << 8
 };
 SLANG_BITMASK(ExpressionOptions, AllowDist)
 
