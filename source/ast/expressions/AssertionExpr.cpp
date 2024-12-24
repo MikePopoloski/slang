@@ -487,6 +487,10 @@ SequenceRepetition::SequenceRepetition(const SequenceRepetitionSyntax& syntax,
             kind = Consecutive;
             range.min = 1;
             return;
+        case TokenKind::Star:
+            kind = Consecutive;
+            range.min = 0;
+            break;
         default:
             kind = Consecutive;
             break;
@@ -663,6 +667,9 @@ AssertionExpr& SequenceConcatExpr::fromSyntax(const DelayedSequenceExprSyntax& s
         else if (es->range) {
             delay = SequenceRange::fromSyntax(*es->range, context,
                                               /* allowUnbounded */ true);
+        }
+        else if (es->op.kind == TokenKind::Star) {
+            delay.min = 0;
         }
         else if (es->op.kind == TokenKind::Plus) {
             delay.min = 1;
