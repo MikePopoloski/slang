@@ -54,7 +54,6 @@ void registerStatements(py::module_& m) {
         .def_readonly("expr", &ReturnStatement::expr);
 
     py::class_<DisableStatement, Statement>(m, "DisableStatement")
-        .def_readonly("isHierarchical", &DisableStatement::isHierarchical)
         .def_property_readonly("target", [](const DisableStatement& self) { return &self.target; });
 
     py::class_<VariableDeclStatement, Statement>(m, "VariableDeclStatement")
