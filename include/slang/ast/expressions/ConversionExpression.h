@@ -66,6 +66,11 @@ public:
                                  ConversionKind conversionKind, const Expression* expr = nullptr,
                                  SourceRange implicitOpRange = {});
 
+    static void checkImplicitConversions(const ASTContext& context, const Type& from,
+                                         const Type& to, const Expression& expr,
+                                         const Expression* parentExpr, SourceRange opRange,
+                                         ConversionKind conversionKind);
+
     static bool isKind(ExpressionKind kind) { return kind == ExpressionKind::Conversion; }
 
     template<typename TVisitor>

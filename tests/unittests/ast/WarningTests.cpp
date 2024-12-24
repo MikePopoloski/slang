@@ -1288,3 +1288,24 @@ endmodule
     CHECK(diags[1].code == diag::CaseNotWildcard);
     CHECK(diags[2].code == diag::CaseZWithX);
 }
+
+TEST_CASE("Conversion warnings in conditional operator") {
+    auto tree = SyntaxTree::fromText(R"(
+module test;
+  initial begin
+    static int a = 3;
+    static int b = 5;
+    static bit cond = 1;
+    static longint result = 7;
+    result = cond ? a : b;
+  end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::WidthExpand);
+}

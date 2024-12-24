@@ -165,13 +165,23 @@ struct Expression::PropagationVisitor {
                 (newType.isIntegral() && expr.type->isIntegral()) || newType.isString() ||
                 expr.kind == ExpressionKind::ValueRange) {
 
-                // If we don't need a conversion here we still need to call propagateType as
-                // one of our child expressions may still need conversion. However, we shouldn't
-                // pass along our given opRange since we didn't need the conversion here, so our
-                // parent operator isn't relevant. We should try to refigure an opRange for our
-                // most immediate parent expression instead.
-                if (!needConversion)
+                if (!needConversion) {
+                    // If we don't need a conversion here we still need to call propagateType as
+                    // one of our child expressions may still need conversion. However, we shouldn't
+                    // pass along our given opRange since we didn't need the conversion here, so our
+                    // parent operator isn't relevant. We should try to refigure an opRange for our
+                    // most immediate parent expression instead.
                     updateRange(expr);
+                }
+                else if (expr.kind == ExpressionKind::ConditionalOp && isAssignment) {
+                    // This is a special case to make sure we get a width expansion
+                    // warning for assignments from a conditional operator. The type
+                    // conversion here is a propagation so no implicit conversion
+                    // actually gets created, so we need to invoke it manually.
+                    ConversionExpression::checkImplicitConversions(context, *expr.type, newType,
+                                                                   expr, parentExpr, opRange,
+                                                                   ConversionKind::Implicit);
+                }
 
                 if (expr.propagateType(context, newType, opRange))
                     needConversion = false;

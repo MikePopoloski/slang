@@ -104,147 +104,6 @@ bool hasSameDims(const Type& left, const Type& right) {
     return hasSameDims(*le, *re);
 }
 
-void checkImplicitConversions(const ASTContext& context, const Type& sourceType,
-                              const Type& targetType, const Expression& op,
-                              const Expression* parentExpr, SourceRange operatorRange,
-                              ConversionKind conversionKind) {
-    auto isStructUnionEnum = [](const Type& t) {
-        return t.kind == SymbolKind::PackedStructType || t.kind == SymbolKind::PackedUnionType ||
-               t.kind == SymbolKind::EnumType;
-    };
-
-    auto isMultiDimArray = [](const Type& t) {
-        return t.kind == SymbolKind::PackedArrayType && t.getArrayElementType()->getBitWidth() > 1;
-    };
-
-    auto parentIsComparison = [&] {
-        return parentExpr && parentExpr->kind == ExpressionKind::BinaryOp &&
-               OpInfo::isComparison(parentExpr->as<BinaryExpression>().op);
-    };
-
-    auto addDiag = [&](DiagCode code) -> Diagnostic& {
-        auto& diag = context.addDiag(code, op.sourceRange);
-        if (operatorRange.start())
-            diag << operatorRange;
-        return diag;
-    };
-
-    // Don't warn about conversions in compound assignment operators.
-    auto isCompoundAssign = [&] {
-        auto& expr = op.unwrapImplicitConversions();
-        if (expr.kind == ExpressionKind::LValueReference)
-            return true;
-
-        return expr.kind == ExpressionKind::BinaryOp &&
-               expr.as<BinaryExpression>().left().unwrapImplicitConversions().kind ==
-                   ExpressionKind::LValueReference;
-    };
-    if (isCompoundAssign())
-        return;
-
-    const Type& lt = targetType.getCanonicalType();
-    const Type& rt = sourceType.getCanonicalType();
-    if (lt.isIntegral() && rt.isIntegral()) {
-        // Warn for conversions between different enums/structs/unions.
-        if (isStructUnionEnum(lt) && isStructUnionEnum(rt) && !lt.isMatching(rt)) {
-            if (!isSameStructUnion(lt, rt) && !isUnionMemberType(lt, rt))
-                addDiag(diag::ImplicitConvert) << sourceType << targetType;
-            return;
-        }
-
-        // Warn for conversions between packed arrays of differing
-        // dimension counts or sizes.
-        if (isMultiDimArray(lt) && isMultiDimArray(rt) && !hasSameDims(lt, rt)) {
-            // Avoid warning for assignments or comparisons with 0 or '0, '1.
-            auto isZeroOrUnsized = [](const Expression& e) {
-                auto expr = &e.unwrapImplicitConversions();
-                if (expr->kind == ExpressionKind::ConditionalOp) {
-                    if (auto known = expr->as<ConditionalExpression>().knownSide())
-                        expr = known;
-                }
-
-                return expr->kind == ExpressionKind::UnbasedUnsizedIntegerLiteral ||
-                       (expr->kind == ExpressionKind::IntegerLiteral &&
-                        bool(expr->as<IntegerLiteral>().getValue() == 0));
-            };
-
-            if (!isZeroOrUnsized(op) &&
-                (!parentIsComparison() ||
-                 !isZeroOrUnsized(parentExpr->as<BinaryExpression>().right()))) {
-                addDiag(diag::PackedArrayConv) << sourceType << targetType;
-            }
-        }
-
-        // Check to rule out false positives: try to eval as a constant.
-        // We'll ignore any constants, because they will get their own more
-        // fine grained warning during eval.
-        if (context.tryEval(op))
-            return;
-
-        // Warn for sign conversions.
-        if (lt.isSigned() != rt.isSigned()) {
-            // Comparisons get their own warning elsewhere.
-            if (!parentIsComparison() && op.getEffectiveSign(/* isForConversion */ false) !=
-                                             Expression::EffectiveSign::Either) {
-                addDiag(diag::SignConversion) << sourceType << targetType;
-            }
-        }
-
-        // Don't issue width warnings for propagated conversions, as they would
-        // be extremely noisy and of dubious value (since they act the way people
-        // expect their expressions to behave).
-        if (conversionKind == ConversionKind::Propagated)
-            return;
-
-        // Warn for implicit assignments between integral types of differing widths.
-        bitwidth_t targetWidth = lt.getBitWidth();
-        bitwidth_t actualWidth = rt.getBitWidth();
-        if (targetWidth == actualWidth)
-            return;
-
-        // Before we go and issue this warning, weed out false positives by
-        // recomputing the width of the expression, with all constants sized
-        // to the minimum width necessary to represent them. Otherwise, even
-        // code as simple as this will result in a warning:
-        //    logic [3:0] a = 1;
-        std::optional<bitwidth_t> effective = op.getEffectiveWidth();
-        if (!effective)
-            return;
-
-        // Now that we know the effective width, compare it to the expression's
-        // actual width. We don't warn if the target is anywhere in between the
-        // effective and the actual width.
-        SLANG_ASSERT(effective <= actualWidth);
-        if (targetWidth < effective || targetWidth > actualWidth) {
-            DiagCode code;
-            if (context.getInstance())
-                code = targetWidth < effective ? diag::PortWidthTruncate : diag::PortWidthExpand;
-            else
-                code = targetWidth < effective ? diag::WidthTruncate : diag::WidthExpand;
-            addDiag(code) << actualWidth << targetWidth;
-        }
-    }
-    else if (lt.isNumeric() && rt.isNumeric()) {
-        // Don't warn for constexprs.
-        if (context.tryEval(op))
-            return;
-
-        DiagCode code;
-        if (lt.isIntegral())
-            code = diag::FloatIntConv;
-        else if (rt.isIntegral())
-            code = diag::IntFloatConv;
-        else if (lt.getBitWidth() < rt.getBitWidth())
-            code = diag::FloatNarrow;
-        else if (lt.getBitWidth() > rt.getBitWidth())
-            code = diag::FloatWiden;
-        else
-            return;
-
-        addDiag(code) << sourceType << targetType;
-    }
-}
-
 } // namespace
 
 namespace slang::ast {
@@ -300,8 +159,9 @@ Expression& Expression::convertAssignment(const ASTContext& context, const Type&
         // If the types are not actually matching we might still want
         // to issue conversion warnings.
         if (!context.inUnevaluatedBranch() && !type.isMatching(*rt)) {
-            checkImplicitConversions(context, *rt, type, *result, nullptr, assignmentRange,
-                                     ConversionKind::Implicit);
+            ConversionExpression::checkImplicitConversions(context, *rt, type, *result, nullptr,
+                                                           assignmentRange,
+                                                           ConversionKind::Implicit);
         }
 
         return *result;
@@ -749,6 +609,147 @@ ConstantValue ConversionExpression::convert(EvalContext& context, const Type& fr
         return std::move(value);
 
     SLANG_UNREACHABLE;
+}
+
+void ConversionExpression::checkImplicitConversions(
+    const ASTContext& context, const Type& sourceType, const Type& targetType, const Expression& op,
+    const Expression* parentExpr, SourceRange operatorRange, ConversionKind conversionKind) {
+
+    auto isStructUnionEnum = [](const Type& t) {
+        return t.kind == SymbolKind::PackedStructType || t.kind == SymbolKind::PackedUnionType ||
+               t.kind == SymbolKind::EnumType;
+    };
+
+    auto isMultiDimArray = [](const Type& t) {
+        return t.kind == SymbolKind::PackedArrayType && t.getArrayElementType()->getBitWidth() > 1;
+    };
+
+    auto parentIsComparison = [&] {
+        return parentExpr && parentExpr->kind == ExpressionKind::BinaryOp &&
+               OpInfo::isComparison(parentExpr->as<BinaryExpression>().op);
+    };
+
+    auto addDiag = [&](DiagCode code) -> Diagnostic& {
+        auto& diag = context.addDiag(code, op.sourceRange);
+        if (operatorRange.start())
+            diag << operatorRange;
+        return diag;
+    };
+
+    // Don't warn about conversions in compound assignment operators.
+    auto isCompoundAssign = [&] {
+        auto& expr = op.unwrapImplicitConversions();
+        if (expr.kind == ExpressionKind::LValueReference)
+            return true;
+
+        return expr.kind == ExpressionKind::BinaryOp &&
+               expr.as<BinaryExpression>().left().unwrapImplicitConversions().kind ==
+                   ExpressionKind::LValueReference;
+    };
+    if (isCompoundAssign())
+        return;
+
+    const Type& lt = targetType.getCanonicalType();
+    const Type& rt = sourceType.getCanonicalType();
+    if (lt.isIntegral() && rt.isIntegral()) {
+        // Warn for conversions between different enums/structs/unions.
+        if (isStructUnionEnum(lt) && isStructUnionEnum(rt) && !lt.isMatching(rt)) {
+            if (!isSameStructUnion(lt, rt) && !isUnionMemberType(lt, rt))
+                addDiag(diag::ImplicitConvert) << sourceType << targetType;
+            return;
+        }
+
+        // Warn for conversions between packed arrays of differing
+        // dimension counts or sizes.
+        if (isMultiDimArray(lt) && isMultiDimArray(rt) && !hasSameDims(lt, rt)) {
+            // Avoid warning for assignments or comparisons with 0 or '0, '1.
+            auto isZeroOrUnsized = [](const Expression& e) {
+                auto expr = &e.unwrapImplicitConversions();
+                if (expr->kind == ExpressionKind::ConditionalOp) {
+                    if (auto known = expr->as<ConditionalExpression>().knownSide())
+                        expr = known;
+                }
+
+                return expr->kind == ExpressionKind::UnbasedUnsizedIntegerLiteral ||
+                       (expr->kind == ExpressionKind::IntegerLiteral &&
+                        bool(expr->as<IntegerLiteral>().getValue() == 0));
+            };
+
+            if (!isZeroOrUnsized(op) &&
+                (!parentIsComparison() ||
+                 !isZeroOrUnsized(parentExpr->as<BinaryExpression>().right()))) {
+                addDiag(diag::PackedArrayConv) << sourceType << targetType;
+            }
+        }
+
+        // Check to rule out false positives: try to eval as a constant.
+        // We'll ignore any constants, because they will get their own more
+        // fine grained warning during eval.
+        if (context.tryEval(op))
+            return;
+
+        // Warn for sign conversions.
+        if (lt.isSigned() != rt.isSigned()) {
+            // Comparisons get their own warning elsewhere.
+            if (!parentIsComparison() && op.getEffectiveSign(/* isForConversion */ false) !=
+                                             Expression::EffectiveSign::Either) {
+                addDiag(diag::SignConversion) << sourceType << targetType;
+            }
+        }
+
+        // Don't issue width warnings for propagated conversions, as they would
+        // be extremely noisy and of dubious value (since they act the way people
+        // expect their expressions to behave).
+        if (conversionKind == ConversionKind::Propagated)
+            return;
+
+        // Warn for implicit assignments between integral types of differing widths.
+        bitwidth_t targetWidth = lt.getBitWidth();
+        bitwidth_t actualWidth = rt.getBitWidth();
+        if (targetWidth == actualWidth)
+            return;
+
+        // Before we go and issue this warning, weed out false positives by
+        // recomputing the width of the expression, with all constants sized
+        // to the minimum width necessary to represent them. Otherwise, even
+        // code as simple as this will result in a warning:
+        //    logic [3:0] a = 1;
+        std::optional<bitwidth_t> effective = op.getEffectiveWidth();
+        if (!effective)
+            return;
+
+        // Now that we know the effective width, compare it to the expression's
+        // actual width. We don't warn if the target is anywhere in between the
+        // effective and the actual width.
+        SLANG_ASSERT(effective <= actualWidth);
+        if (targetWidth < effective || targetWidth > actualWidth) {
+            DiagCode code;
+            if (context.getInstance())
+                code = targetWidth < effective ? diag::PortWidthTruncate : diag::PortWidthExpand;
+            else
+                code = targetWidth < effective ? diag::WidthTruncate : diag::WidthExpand;
+            addDiag(code) << actualWidth << targetWidth;
+        }
+    }
+    else if (lt.isNumeric() && rt.isNumeric()) {
+        // Don't warn for constexprs.
+        if (context.tryEval(op))
+            return;
+
+        DiagCode code;
+        if (lt.isIntegral())
+            code = diag::FloatIntConv;
+        else if (rt.isIntegral())
+            code = diag::IntFloatConv;
+        else if (lt.getBitWidth() < rt.getBitWidth())
+            code = diag::FloatNarrow;
+        else if (lt.getBitWidth() > rt.getBitWidth())
+            code = diag::FloatWiden;
+        else
+            return;
+
+        addDiag(code) << sourceType << targetType;
+    }
 }
 
 std::optional<bitwidth_t> ConversionExpression::getEffectiveWidthImpl() const {
