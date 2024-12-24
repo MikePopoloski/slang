@@ -191,6 +191,8 @@ StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
     block->setAttributes(scope, syntax.attributes);
     block->blocks = Statement::createAndAddBlockItems(*block, *syntax.statement,
                                                       /* labelHandled */ false);
+
+    SLANG_ASSERT(curr && first);
     curr->addMember(*block);
 
     return *first;

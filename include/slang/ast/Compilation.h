@@ -739,7 +739,7 @@ public:
 private:
     friend class Lookup;
     friend class Scope;
-    friend class DiagnosticVisitor;
+    friend struct DiagnosticVisitor;
 
     // Collected information about a resolved bind directive.
     struct ResolvedBind {
