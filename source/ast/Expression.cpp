@@ -1459,6 +1459,16 @@ Expression* Expression::tryBindInterfaceRef(const ASTContext& context,
             diag.addNote(diag::NoteDeclarationHere, source->sourceRange());
     }
 
+    if (iface->parentInstance && iface->parentInstance->resolvedConfig) {
+        auto& diag = context.addDiag(diag::VirtualIfaceConfigRule, sourceRange);
+
+        auto rc = iface->parentInstance->resolvedConfig;
+        if (rc->configRule)
+            diag.addNote(diag::NoteConfigRule, rc->configRule->syntax->sourceRange());
+        else
+            diag.addNote(diag::NoteConfigRule, rc->useConfig.location);
+    }
+
     if (!arrayModportName.empty()) {
         if (modport) {
             // If we connected via an interface port that itself has a modport restriction,

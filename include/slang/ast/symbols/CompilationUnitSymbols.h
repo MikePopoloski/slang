@@ -261,6 +261,9 @@ struct SLANG_EXPORT ResolvedConfig {
     /// A list of libraries to use to look up definitions.
     std::span<const SourceLibrary* const> liblist;
 
+    /// The original rule that led to this resolved configuration.
+    const ConfigRule* configRule = nullptr;
+
     ResolvedConfig(const ConfigBlockSymbol& useConfig, const InstanceSymbol& rootInstance);
 };
 

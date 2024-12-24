@@ -1243,3 +1243,30 @@ endmodule : cmp
         NO_COMPILATION_ERRORS;
     }
 }
+
+TEST_CASE("Configs with virtual interfaces") {
+    auto tree = SyntaxTree::fromText(R"(
+config cfg1;
+    design top;
+    instance top.i use J;
+    cell I use J;
+endconfig
+
+interface J;
+endinterface
+
+module top;
+    I i();
+    virtual I vi = i;
+endmodule
+)");
+    CompilationOptions options;
+    options.topModules.emplace("cfg1");
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::VirtualIfaceConfigRule);
+}
