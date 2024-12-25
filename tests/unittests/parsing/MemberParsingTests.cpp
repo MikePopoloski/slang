@@ -1531,3 +1531,15 @@ task:
     parseCompilationUnit(text, LanguageVersion::v1800_2023);
     REQUIRE(diagnostics.size() == 3);
 }
+
+TEST_CASE("Nested attributes are not allowed") {
+    auto& text = R"(
+(* a1  , a2 = - (* a3 = 2  *) null *) module mod;
+endmodule
+)";
+
+    parseCompilationUnit(text);
+
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics[0].code == diag::AttributesNotAllowed);
+}
