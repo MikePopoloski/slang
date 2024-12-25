@@ -125,12 +125,6 @@ void ASTContext::setAttributes(const Expression& expr,
     if (syntax.empty())
         return;
 
-    if (flags.has(ASTFlags::NoAttributes)) {
-        if (!expr.bad())
-            addDiag(diag::AttributesNotAllowed, expr.sourceRange);
-        return;
-    }
-
     getCompilation().setAttributes(expr,
                                    AttributeSymbol::fromSyntax(syntax, *scope, getLocation()));
 }

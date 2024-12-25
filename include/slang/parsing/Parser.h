@@ -56,10 +56,10 @@ enum class ExpressionOptions {
     /// "dist" expressions are allowed in this context.
     AllowDist = 1 << 7,
 
-    /// attribute instances are disallowed in expression context.
+    /// Attribute instances are disallowed in expression context.
     DisallowAttrs = 1 << 8
 };
-SLANG_BITMASK(ExpressionOptions, AllowDist)
+SLANG_BITMASK(ExpressionOptions, DisallowAttrs)
 
 /// Various options for parsing names.
 enum class NameOptions {

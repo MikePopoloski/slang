@@ -79,7 +79,6 @@ void registerAST(py::module_& m) {
         .value("InsideConcatenation", ASTFlags::InsideConcatenation)
         .value("UnevaluatedBranch", ASTFlags::UnevaluatedBranch)
         .value("AllowDataType", ASTFlags::AllowDataType)
-        .value("NoAttributes", ASTFlags::NoAttributes)
         .value("AssignmentAllowed", ASTFlags::AssignmentAllowed)
         .value("AssignmentDisallowed", ASTFlags::AssignmentDisallowed)
         .value("NonProcedural", ASTFlags::NonProcedural)
