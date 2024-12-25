@@ -216,4 +216,44 @@ std::shared_ptr<SyntaxTree> SyntaxTree::fromLibraryMapBuffer(const SourceBuffer&
                        parser.getMetadata(), preprocessor.getDefinedMacros(), options));
 }
 
+std::shared_ptr<SyntaxTree> SyntaxTree::fromSDFFile(std::string_view path,
+                                                    SourceManager& sourceManager,
+                                                    const Bag& options) {
+    auto buffer = sourceManager.readSource(path, /* library */ nullptr);
+    if (!buffer)
+        return nullptr;
+
+    return fromSDFBuffer(*buffer, sourceManager, options);
+}
+
+std::shared_ptr<SyntaxTree> SyntaxTree::fromSDFText(std::string_view text,
+                                                    SourceManager& sourceManager,
+                                                    std::string_view name, std::string_view path,
+                                                    const Bag& options) {
+    SourceBuffer buffer = sourceManager.assignText(path, text);
+    if (!buffer)
+        return nullptr;
+
+    if (!name.empty())
+        sourceManager.addLineDirective(SourceLocation(buffer.id, 0), 2, name, 0);
+
+    return fromSDFBuffer(buffer, sourceManager, options);
+}
+
+std::shared_ptr<SyntaxTree> SyntaxTree::fromSDFBuffer(const SourceBuffer& buffer,
+                                                      SourceManager& sourceManager,
+                                                      const Bag& options) {
+    BumpAllocator alloc;
+    Diagnostics diagnostics;
+    Preprocessor preprocessor(sourceManager, alloc, diagnostics, options);
+    preprocessor.pushSource(buffer);
+
+    Parser parser(preprocessor, options);
+    auto& root = parser.parseSDFUnit();
+
+    return std::shared_ptr<SyntaxTree>(
+        new SyntaxTree(&root, nullptr, sourceManager, std::move(alloc), std::move(diagnostics),
+                       parser.getMetadata(), preprocessor.getDefinedMacros(), options));
+}
+
 } // namespace slang::syntax

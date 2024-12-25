@@ -33,7 +33,9 @@ enum class SLANG_EXPORT KeywordVersion : uint8_t {
     v1800_2009 = 5,
     v1800_2012 = 6,
     v1800_2017 = 7,
-    v1800_2023 = 8
+    v1800_2023 = 8,
+    // IEEE Standard for Standard Delay Format (SDF)
+    v1497_2001 = 9
 };
 
 class SLANG_EXPORT LexerFacts {
