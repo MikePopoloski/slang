@@ -62,6 +62,7 @@ add_library(
   diagnostics/DiagnosticClient.cpp
   diagnostics/DiagnosticEngine.cpp
   diagnostics/Diagnostics.cpp
+  diagnostics/JsonDiagnosticClient.cpp
   diagnostics/TextDiagnosticClient.cpp
   driver/Driver.cpp
   driver/SourceLoader.cpp

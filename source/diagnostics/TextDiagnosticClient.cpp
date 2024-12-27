@@ -15,11 +15,7 @@
 
 namespace slang {
 
-TextDiagnosticClient::SymbolPathCB TextDiagnosticClient::defaultSymbolPathCB;
-
-TextDiagnosticClient::TextDiagnosticClient() :
-    buffer(std::make_unique<FormatBuffer>()), symbolPathCB(defaultSymbolPathCB) {
-
+TextDiagnosticClient::TextDiagnosticClient() : buffer(std::make_unique<FormatBuffer>()) {
     noteColor = fmt::terminal_color::bright_black;
     warningColor = fmt::terminal_color::bright_yellow;
     errorColor = fmt::terminal_color::bright_red;
@@ -65,6 +61,7 @@ void TextDiagnosticClient::report(const ReportedDiagnostic& diag) {
 
     // Print out the hierarchy where the diagnostic occurred, if we know it.
     auto& od = diag.originalDiagnostic;
+    auto& symbolPathCB = engine->getSymbolPathCB();
     if (od.symbol && symbolPathCB &&
         (includeHierarchy == ShowHierarchyPathOption::Always ||
          (includeHierarchy == ShowHierarchyPathOption::Auto && od.coalesceCount))) {

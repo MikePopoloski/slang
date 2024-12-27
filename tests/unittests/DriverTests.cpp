@@ -695,3 +695,28 @@ TEST_CASE("Driver customize default lib name") {
     CHECK(units[0]->getSourceLibrary()->name == "blah");
     CHECK(units[1]->getSourceLibrary()->name == "blah");
 }
+
+TEST_CASE("Driver JSON diag output") {
+    auto guard = OS::captureOutput();
+
+    Driver driver;
+    driver.addStandardArgs();
+
+    auto testDir = findTestDir();
+    auto args = fmt::format("testfoo \"{0}test6.sv\" --libmap \"{0}/library/lib.map\" "
+                            "--diag-json -",
+                            testDir);
+    CHECK(driver.parseCommandLine(args));
+    CHECK(driver.processOptions());
+    CHECK(driver.parseAllSources());
+
+    auto compilation = driver.createCompilation();
+    CHECK(driver.reportCompilation(*compilation, true));
+    CHECK(stdoutContains(R"({
+    "severity": "warning",
+    "message": "no top-level modules found in design",
+    "optionName": "missing-top",
+    "symbolPath": "\\$root "
+  }
+)"));
+}

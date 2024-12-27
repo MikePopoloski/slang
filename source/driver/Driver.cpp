@@ -15,6 +15,7 @@
 #include "slang/ast/symbols/InstanceSymbols.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/diagnostics/ExpressionsDiags.h"
+#include "slang/diagnostics/JsonDiagnosticClient.h"
 #include "slang/diagnostics/LookupDiags.h"
 #include "slang/diagnostics/ParserDiags.h"
 #include "slang/diagnostics/StatementsDiags.h"
@@ -24,6 +25,7 @@
 #include "slang/parsing/Preprocessor.h"
 #include "slang/syntax/SyntaxPrinter.h"
 #include "slang/syntax/SyntaxTree.h"
+#include "slang/text/Json.h"
 #include "slang/util/Random.h"
 #include "slang/util/String.h"
 #include "slang/util/ThreadPool.h"
@@ -40,9 +42,11 @@ Driver::Driver() : diagEngine(sourceManager), sourceLoader(sourceManager) {
     // Construct a compilation object here before the TextDiagnosticClient
     // to ensure that static formatter callbacks are registered.
     Compilation compilation;
-    diagClient = std::make_shared<TextDiagnosticClient>();
-    diagEngine.addClient(diagClient);
+    textDiagClient = std::make_shared<TextDiagnosticClient>();
+    diagEngine.addClient(textDiagClient);
 }
+
+Driver::~Driver() = default;
 
 void Driver::addStandardArgs() {
     cmdLine.add("--std", options.languageVersion,
@@ -85,7 +89,7 @@ void Driver::addStandardArgs() {
                 "files. --single-unit must also be passed when this option is used.");
     cmdLine.add("--enable-legacy-protect", options.enableLegacyProtect,
                 "If true, the preprocessor will support legacy protected envelope directives, "
-                "for compatibility with old Verilog tools.");
+                "for compatibility with old Verilog tools");
 
     // Legacy vendor commands support
     cmdLine.add(
@@ -162,25 +166,25 @@ void Driver::addStandardArgs() {
     };
 
     addCompFlag(CompilationFlags::AllowUseBeforeDeclare, "--allow-use-before-declare",
-                "Don't issue an error for use of names before their declarations.");
+                "Don't issue an error for use of names before their declarations");
     addCompFlag(CompilationFlags::IgnoreUnknownModules, "--ignore-unknown-modules",
                 "Don't issue an error for instantiations of unknown modules, "
-                "interface, and programs.");
+                "interface, and programs");
     addCompFlag(CompilationFlags::RelaxEnumConversions, "--relax-enum-conversions",
-                "Allow all integral types to convert implicitly to enum types.");
+                "Allow all integral types to convert implicitly to enum types");
     addCompFlag(CompilationFlags::RelaxStringConversions, "--relax-string-conversions",
-                "Allow string types to convert implicitly to integral types.");
+                "Allow string types to convert implicitly to integral types");
     addCompFlag(CompilationFlags::AllowHierarchicalConst, "--allow-hierarchical-const",
-                "Allow hierarchical references in constant expressions.");
+                "Allow hierarchical references in constant expressions");
     addCompFlag(CompilationFlags::AllowDupInitialDrivers, "--allow-dup-initial-drivers",
                 "Allow signals driven in an always_comb or always_ff block to also be driven "
-                "by initial blocks.");
+                "by initial blocks");
     addCompFlag(CompilationFlags::AllowTopLevelIfacePorts, "--allow-toplevel-iface-ports",
-                "Allow top-level modules to have interface ports.");
+                "Allow top-level modules to have interface ports");
     addCompFlag(CompilationFlags::AllowRecursiveImplicitCall, "--allow-recursive-implicit-call",
-                "Allow implicit call expressions to be recursive function calls.");
+                "Allow implicit call expressions to be recursive function calls");
     addCompFlag(CompilationFlags::AllowBareValParamAssignment, "--allow-bare-value-param-assigment",
-                "Allow module parameter assignments to elide the parentheses.");
+                "Allow module parameter assignments to elide the parentheses");
     addCompFlag(CompilationFlags::AllowSelfDeterminedStreamConcat,
                 "--allow-self-determined-stream-concat",
                 "Allow self-determined streaming concatenation expressions");
@@ -192,7 +196,7 @@ void Driver::addStandardArgs() {
                 "instance body");
     addCompFlag(CompilationFlags::StrictDriverChecking, "--strict-driver-checking",
                 "Perform strict driver checking, which currently means disabling "
-                "procedural 'for' loop unrolling.");
+                "procedural 'for' loop unrolling");
     addCompFlag(CompilationFlags::LintMode, "--lint-only",
                 "Only perform linting of code, don't try to elaborate a full hierarchy");
     addCompFlag(CompilationFlags::DisableInstanceCaching, "--disable-instance-caching",
@@ -205,8 +209,7 @@ void Driver::addStandardArgs() {
                 "(instead of figuring it out automatically)",
                 "<name>", CommandLineFlags::CommaList);
     cmdLine.add("-G", options.paramOverrides,
-                "One or more parameter overrides to apply when "
-                "instantiating top-level modules",
+                "One or more parameter overrides to apply when instantiating top-level modules",
                 "<name>=<value>");
     cmdLine.add("-L", options.libraryOrder,
                 "A list of library names that controls the priority order for module lookup",
@@ -220,18 +223,21 @@ void Driver::addStandardArgs() {
                 "Always print diagnostics in color. "
                 "If this option is unset, colors will be enabled if a color-capable "
                 "terminal is detected.");
-    cmdLine.add("--diag-column", options.diagColumn, "Show column numbers in diagnostic output.");
+    cmdLine.add("--diag-column", options.diagColumn, "Show column numbers in diagnostic output");
     cmdLine.add("--diag-location", options.diagLocation,
-                "Show location information in diagnostic output.");
+                "Show location information in diagnostic output");
     cmdLine.add("--diag-source", options.diagSourceLine,
-                "Show source line or caret info in diagnostic output.");
-    cmdLine.add("--diag-option", options.diagOptionName, "Show option names in diagnostic output.");
+                "Show source line or caret info in diagnostic output");
+    cmdLine.add("--diag-option", options.diagOptionName, "Show option names in diagnostic output");
     cmdLine.add("--diag-include-stack", options.diagIncludeStack,
-                "Show include stacks in diagnostic output.");
+                "Show include stacks in diagnostic output");
     cmdLine.add("--diag-macro-expansion", options.diagMacroExpansion,
-                "Show macro expansion backtraces in diagnostic output.");
+                "Show macro expansion backtraces in diagnostic output");
     cmdLine.add("--diag-hierarchy", options.diagHierarchy,
-                "Show hierarchy locations in diagnostic output.", "always|never|auto");
+                "Show hierarchy locations in diagnostic output", "always|never|auto");
+    cmdLine.add("--diag-json", options.diagJson,
+                "Dump all diagnostics in JSON format to the specified file, or '-' for stdout",
+                "<file>", CommandLineFlags::FilePath);
     cmdLine.add("--error-limit", options.errorLimit,
                 "Limit on the number of errors that will be printed. Setting this to zero will "
                 "disable the limit.",
@@ -271,7 +277,7 @@ void Driver::addStandardArgs() {
             return "";
         },
         "One or more library files, which are separate compilation units "
-        "where modules are not automatically instantiated.",
+        "where modules are not automatically instantiated",
         "<file-pattern>[,...]", CommandLineFlags::CommaList);
 
     cmdLine.add(
@@ -506,19 +512,28 @@ bool Driver::processOptions() {
         return false;
     }
 
-    auto& dc = *diagClient;
-    dc.showColors(showColors);
-    dc.showColumn(options.diagColumn.value_or(true));
-    dc.showLocation(options.diagLocation.value_or(true));
-    dc.showSourceLine(options.diagSourceLine.value_or(true));
-    dc.showOptionName(options.diagOptionName.value_or(true));
-    dc.showIncludeStack(options.diagIncludeStack.value_or(true));
-    dc.showMacroExpansion(options.diagMacroExpansion.value_or(true));
+    if (options.diagJson.has_value()) {
+        jsonWriter = std::make_unique<JsonWriter>();
+        jsonWriter->setPrettyPrint(true);
+        jsonWriter->startArray();
+
+        jsonDiagClient = std::make_shared<JsonDiagnosticClient>(*jsonWriter);
+        diagEngine.addClient(jsonDiagClient);
+    }
+
+    auto& tdc = *textDiagClient;
+    tdc.showColors(showColors);
+    tdc.showColumn(options.diagColumn.value_or(true));
+    tdc.showLocation(options.diagLocation.value_or(true));
+    tdc.showSourceLine(options.diagSourceLine.value_or(true));
+    tdc.showOptionName(options.diagOptionName.value_or(true));
+    tdc.showIncludeStack(options.diagIncludeStack.value_or(true));
+    tdc.showMacroExpansion(options.diagMacroExpansion.value_or(true));
 
     if (options.diagHierarchy == "always")
-        dc.showHierarchyInstance(ShowHierarchyPathOption::Always);
+        tdc.showHierarchyInstance(ShowHierarchyPathOption::Always);
     else if (options.diagHierarchy == "never")
-        dc.showHierarchyInstance(ShowHierarchyPathOption::Never);
+        tdc.showHierarchyInstance(ShowHierarchyPathOption::Never);
 
     diagEngine.setErrorLimit((int)options.errorLimit.value_or(20));
     diagEngine.setDefaultWarnings();
@@ -812,7 +827,7 @@ bool Driver::reportParseDiags() {
     for (auto& diag : diags)
         diagEngine.issue(diag);
 
-    OS::printE(fmt::format("{}", diagClient->getString()));
+    OS::printE(fmt::format("{}", textDiagClient->getString()));
     return diagEngine.getNumErrors() == 0;
 }
 
@@ -820,7 +835,7 @@ bool Driver::reportCompilation(Compilation& compilation, bool quiet) {
     if (!quiet) {
         auto topInstances = compilation.getRoot().topInstances;
         if (!topInstances.empty()) {
-            OS::print(fg(diagClient->warningColor), "Top level design units:\n");
+            OS::print(fg(textDiagClient->warningColor), "Top level design units:\n");
             for (auto inst : topInstances)
                 OS::print(fmt::format("    {}\n", inst->name));
             OS::print("\n");
@@ -830,19 +845,35 @@ bool Driver::reportCompilation(Compilation& compilation, bool quiet) {
     for (auto& diag : compilation.getAllDiagnostics())
         diagEngine.issue(diag);
 
+    bool hasDiagsStdout = false;
     bool succeeded = diagEngine.getNumErrors() == 0;
 
-    std::string diagStr = diagClient->getString();
-    OS::printE(fmt::format("{}", diagStr));
+    if (jsonWriter)
+        jsonWriter->endArray();
+
+    if (options.diagJson == "-") {
+        // If we're printing JSON diagnostics to stdout don't also
+        // print the text diagnostics.
+        hasDiagsStdout = true;
+        OS::print(jsonWriter->view());
+    }
+    else {
+        std::string diagStr = textDiagClient->getString();
+        hasDiagsStdout = diagStr.size() > 1;
+        OS::printE(diagStr);
+
+        if (jsonWriter)
+            OS::writeFile(*options.diagJson, jsonWriter->view());
+    }
 
     if (!quiet) {
-        if (diagStr.size() > 1)
+        if (hasDiagsStdout)
             OS::print("\n");
 
         if (succeeded)
-            OS::print(fg(diagClient->highlightColor), "Build succeeded: ");
+            OS::print(fg(textDiagClient->highlightColor), "Build succeeded: ");
         else
-            OS::print(fg(diagClient->errorColor), "Build failed: ");
+            OS::print(fg(textDiagClient->errorColor), "Build failed: ");
 
         OS::print(fmt::format("{} error{}, {} warning{}\n", diagEngine.getNumErrors(),
                               diagEngine.getNumErrors() == 1 ? "" : "s",
@@ -929,13 +960,13 @@ bool Driver::reportLoadErrors() {
 }
 
 void Driver::printError(const std::string& message) {
-    OS::printE(fg(diagClient->errorColor), "error: ");
+    OS::printE(fg(textDiagClient->errorColor), "error: ");
     OS::printE(message);
     OS::printE("\n");
 }
 
 void Driver::printWarning(const std::string& message) {
-    OS::printE(fg(diagClient->warningColor), "warning: ");
+    OS::printE(fg(textDiagClient->warningColor), "warning: ");
     OS::printE(message);
     OS::printE("\n");
 }

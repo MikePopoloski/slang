@@ -18,7 +18,6 @@
 #include "slang/diagnostics/DiagnosticEngine.h"
 #include "slang/diagnostics/LookupDiags.h"
 #include "slang/diagnostics/StatementsDiags.h"
-#include "slang/diagnostics/TextDiagnosticClient.h"
 #include "slang/parsing/Parser.h"
 #include "slang/parsing/Preprocessor.h"
 #include "slang/syntax/SyntaxTree.h"
@@ -164,7 +163,7 @@ Compilation::Compilation(const Bag& options, const SourceLibrary* defaultLib) :
     static std::once_flag onceFlag;
     std::call_once(onceFlag, [] {
         DiagnosticEngine::setDefaultFormatter<const Type*>(std::make_unique<TypeArgFormatter>());
-        TextDiagnosticClient::setDefaultSymbolPathCB([](const Symbol& sym) {
+        DiagnosticEngine::setDefaultSymbolPathCB([](const Symbol& sym) {
             std::string str;
             sym.getHierarchicalPath(str);
             return str;

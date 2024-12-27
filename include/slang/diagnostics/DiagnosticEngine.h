@@ -8,6 +8,7 @@
 #pragma once
 
 #include <filesystem>
+#include <functional>
 #include <memory>
 #include <string>
 #include <typeindex>
@@ -18,6 +19,10 @@
 #include "slang/util/TypeTraits.h"
 
 namespace slang {
+
+namespace ast {
+class Symbol;
+}
 
 class DiagArgFormatter;
 class DiagnosticClient;
@@ -168,6 +173,24 @@ public:
         defaultFormatters[SLANG_TYPEOF(ForType)] = std::move(formatter);
     }
 
+    using SymbolPathCB = std::function<std::string(const ast::Symbol&)>;
+
+    /// Sets a callback that will be used to get a symbol path for a given symbol.
+    template<typename TFunc>
+    void setSymbolPathCB(TFunc&& func) {
+        symbolPathCB = std::forward<TFunc>(func);
+    }
+
+    /// Gets the callback to use for getting a symbol path for a given symbol.
+    const SymbolPathCB& getSymbolPathCB() const { return symbolPathCB; }
+
+    /// Sets the default callback to use for getting a symbol path for a given symbol,
+    /// which will be used if a specific callback is not set on a DiagnosticEngine instance.
+    template<typename TFunc>
+    static void setDefaultSymbolPathCB(TFunc&& func) {
+        defaultSymbolPathCB = std::forward<TFunc>(func);
+    }
+
     /// Formats the given diagnostic using its arguments and the currently mapped
     /// message for its diagnostic code.
     std::string formatMessage(const Diagnostic& diag) const;
@@ -265,6 +288,10 @@ private:
 
     // A list of all registered clients that receive issued diagnostics.
     std::vector<std::shared_ptr<DiagnosticClient>> clients;
+
+    // Callbacks for retrieving a path for symbol arguments in diagnostics.
+    SymbolPathCB symbolPathCB;
+    static SymbolPathCB defaultSymbolPathCB;
 
     // A map from type_index to a formatter for that type. Used to register custom
     // formatters for subsystem-specific types.

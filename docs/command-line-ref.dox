@@ -430,6 +430,12 @@ Show or hide hierarchy locations in diagnostic output. The default is 'auto', wh
 show the hierarchical path based on heuristics. 'always' will show the paths on every diagnostic,
 and 'never' will suppress them.
 
+`--diag-json <file>`
+
+Dump diagnostics in JSON format to the specified file, or '-' for stdout.
+If printing to stdout, the usual text-style diagnostics will be supressed.
+Otherwise, they will be printed like normal.
+
 `--suppress-warnings <file-pattern>[,...]`
 
 One or more paths in which to suppress warnings. Use this if you want to generally turn on warnings

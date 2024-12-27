@@ -172,7 +172,7 @@ void registerCompilation(py::module_& m) {
         .def(py::init<>())
         .def_readonly("sourceManager", &Driver::sourceManager)
         .def_readonly("diagEngine", &Driver::diagEngine)
-        .def_readonly("diagClient", &Driver::diagClient)
+        .def_readonly("textDiagClient", &Driver::textDiagClient)
         .def_readonly("sourceLoader", &Driver::sourceLoader)
         .def_readonly("syntaxTrees", &Driver::syntaxTrees)
         .def_readwrite("languageVersion", &Driver::languageVersion)

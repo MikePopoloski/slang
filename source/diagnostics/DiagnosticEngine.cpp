@@ -29,10 +29,11 @@ std::string_view getDefaultOptionName(DiagCode code);
 std::span<const DiagCode> findDiagsFromOptionName(std::string_view name);
 const DiagGroup* findDefaultDiagGroup(std::string_view name);
 
+DiagnosticEngine::SymbolPathCB DiagnosticEngine::defaultSymbolPathCB;
 DiagnosticEngine::FormatterMap DiagnosticEngine::defaultFormatters;
 
 DiagnosticEngine::DiagnosticEngine(const SourceManager& sourceManager) :
-    sourceManager(sourceManager), formatters(defaultFormatters) {
+    sourceManager(sourceManager), symbolPathCB(defaultSymbolPathCB), formatters(defaultFormatters) {
 }
 
 DiagnosticEngine::~DiagnosticEngine() = default;
