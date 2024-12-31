@@ -79,6 +79,22 @@ void strToLower(std::string& str) {
     std::ranges::transform(str, str.begin(), [](char c) { return charToLower(c); });
 }
 
+std::vector<std::string_view> splitString(std::string_view str, char delimiter) {
+    std::vector<std::string_view> result;
+    std::string_view::size_type index = 0;
+    while (true) {
+        auto nextIndex = str.find(delimiter, index);
+        if (nextIndex == std::string_view::npos) {
+            result.push_back(str.substr(index));
+            break;
+        }
+
+        result.push_back(str.substr(index, nextIndex - index));
+        index = nextIndex + 1;
+    }
+    return result;
+}
+
 int editDistance(std::string_view left, std::string_view right, bool allowReplacements,
                  int maxDistance) {
     // See: http://en.wikipedia.org/wiki/Levenshtein_distance

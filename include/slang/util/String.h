@@ -55,6 +55,9 @@ void strToUpper(std::string& str);
 /// The string is converted in place.
 void strToLower(std::string& str);
 
+/// Splits the provided string into substrings based on the provided delimiter.
+std::vector<std::string_view> splitString(std::string_view str, char delimiter);
+
 /// Converts a character to uppercase (assuming ASCII).
 inline char charToUpper(char c) {
     return (char)::toupper(c);

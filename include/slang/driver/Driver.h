@@ -113,6 +113,9 @@ public:
         /// A set of preprocessor directives to be ignored.
         std::vector<std::string> ignoreDirectives;
 
+        /// A set of options controlling translate-off comment directives.
+        std::vector<std::string> translateOffOptions;
+
         /// @}
         /// @name Parsing
         /// @{
@@ -340,6 +343,8 @@ private:
 
     bool anyFailedLoads = false;
     flat_hash_set<std::filesystem::path> activeCommandFiles;
+    std::vector<std::tuple<std::string_view, std::string_view, std::string_view>>
+        translateOffFormats;
     std::unique_ptr<JsonWriter> jsonWriter;
 };
 

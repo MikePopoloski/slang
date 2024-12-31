@@ -88,6 +88,19 @@ TEST_CASE("Driver invalid timescale") {
     CHECK(stderrContains("invalid value for time scale option"));
 }
 
+TEST_CASE("Driver invalid translate-off-format") {
+    auto guard = OS::captureOutput();
+
+    Driver driver;
+    driver.addStandardArgs();
+
+    const char* argv[] = {"testfoo", "--translate-off-format=a,b,c,d",
+                          "--translate-off-format=a,,c", "--translate-off-format=a,^^,c"};
+    CHECK(driver.parseCommandLine(4, argv));
+    CHECK(!driver.processOptions());
+    CHECK(stderrContains("invalid format for translate-off-format"));
+}
+
 TEST_CASE("Driver invalid include dirs") {
     auto guard = OS::captureOutput();
 

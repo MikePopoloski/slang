@@ -164,6 +164,35 @@ By default library files are independent and will not inherit macros from the ma
 
 Enables use of legacy source protection directives for compatibility with older tools.
 
+`--translate-off-format <common>,<start>,<end>`
+
+Specify the format of a "translate off" directive in a comment that denotes a span
+of text that is skipped from processing (as if it had been commented out). All source
+text between the start comment and the end comment will be skipped.
+
+@note It is generally preferred to use `ifdef` directives instead for this functionality,
+but legacy code may contain these directives in comment form so this option can be
+used for compatibility.
+
+The format of the argument is three comma-separated words containing alphanumeric
+and underscore characters. The first word is the common keyword at the beginning
+of the comment. The second word is the directive that starts a skipped region,
+and the third is the directive that ends the region.
+
+More than one of these options can be provided to skip regions with differing styles
+in the same run of the tool.
+
+For example, using an option like `--translate-off-format pragma,translate_off,translate_on`
+will work with code like the following:
+
+@code{.sv}
+module m;
+    // pragma translate_off
+    ... some code to skip ...
+    // pragma translate_on
+endmodule
+@endcode
+
 `--obfuscate-ids`
 
 Causes all identifiers in the preprocessed output to be replaced with obfuscated

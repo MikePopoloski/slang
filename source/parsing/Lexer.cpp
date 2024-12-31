@@ -1535,7 +1535,9 @@ void Lexer::scanDisabledRegion(std::string_view firstWord, std::string_view seco
     while (true) {
         char c = peek();
         if (c == '\0' && reallyAtEnd()) {
-            addDiag(unclosedDiag, currentOffset() - lexemeLength());
+            auto& diag = addDiag(unclosedDiag, currentOffset() - lexemeLength());
+            if (unclosedDiag == diag::UnclosedTranslateOff)
+                diag << secondWord;
             return;
         }
 

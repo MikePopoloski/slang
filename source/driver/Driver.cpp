@@ -90,6 +90,12 @@ void Driver::addStandardArgs() {
     cmdLine.add("--enable-legacy-protect", options.enableLegacyProtect,
                 "If true, the preprocessor will support legacy protected envelope directives, "
                 "for compatibility with old Verilog tools");
+    cmdLine.add("--translate-off-format", options.translateOffOptions,
+                "Set a format for comment directives that mark a region of disabled "
+                "source text. The format is a common keyword, a start word, and an "
+                "end word, each separated by commas. For example, "
+                "'pragma,translate_off,translate_on'",
+                "<common>,<start>,<end>");
 
     // Legacy vendor commands support
     cmdLine.add(
@@ -504,6 +510,36 @@ bool Driver::processOptions() {
             opt = true;
     }
 
+    if (!options.translateOffOptions.empty()) {
+        bool anyBad = false;
+        for (auto& fmtStr : options.translateOffOptions) {
+            bool bad = false;
+            auto parts = splitString(fmtStr, ',');
+            if (parts.size() != 3)
+                bad = true;
+
+            for (auto part : parts) {
+                if (part.empty())
+                    bad = true;
+
+                for (char c : part) {
+                    if (!isAlphaNumeric(c) && c != '_')
+                        bad = true;
+                }
+            }
+
+            if (bad)
+                printError(fmt::format("invalid format for translate-off-format: '{}'", fmtStr));
+            else
+                translateOffFormats.emplace_back(parts[0], parts[1], parts[2]);
+
+            anyBad |= bad;
+        }
+
+        if (anyBad)
+            return false;
+    }
+
     if (!reportLoadErrors())
         return false;
 
@@ -737,6 +773,9 @@ void Driver::addParseOptions(Bag& bag) const {
 
     if (loptions.enableLegacyProtect)
         loptions.commentHandlers["pragma"]["protect"] = {CommentHandler::Protect};
+
+    for (auto& [common, start, end] : translateOffFormats)
+        loptions.commentHandlers[common][start] = {CommentHandler::TranslateOff, end};
 
     ParserOptions poptions;
     poptions.languageVersion = languageVersion;
