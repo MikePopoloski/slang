@@ -1281,7 +1281,10 @@ TEST_CASE("Hex escape corner case") {
 
 TEST_CASE("Compat translate_on/off pragmas") {
     LexerOptions options;
-    options.enableTranslateOnOffCompat = true;
+    options.commentHandlers["pragma"]["synthesis_off"] = {CommentHandler::TranslateOff,
+                                                          "synthesis_on"};
+    options.commentHandlers["synthesis"]["translate_off"] = {CommentHandler::TranslateOff,
+                                                             "translate_on"};
 
     auto buffer = getSourceManager().assignText(R"(
 a
@@ -1296,20 +1299,26 @@ e
 // synthesis translate_on
 f
 )"sv);
+
     diagnostics.clear();
     Lexer lexer(buffer, alloc, diagnostics, options);
-    CHECK(diagnostics.empty());
+
     for (auto& text : {"a"sv, "c"sv, "f"sv}) {
         Token tok = lexer.lex();
         REQUIRE(tok.kind == TokenKind::Identifier);
         CHECK(!tok.rawText().compare(text));
     }
+
     CHECK(lexer.lex().kind == TokenKind::EndOfFile);
+    CHECK(diagnostics.empty());
 }
 
 TEST_CASE("Compat translate_on/off pragmas unclosed") {
     LexerOptions options;
-    options.enableTranslateOnOffCompat = true;
+    options.commentHandlers["pragma"]["synthesis_off"] = {CommentHandler::TranslateOff,
+                                                          "synthesis_on"};
+    options.commentHandlers["synthesis"]["translate_off"] = {CommentHandler::TranslateOff,
+                                                             "translate_on"};
 
     auto buffer = getSourceManager().assignText(R"(
 a
@@ -1322,6 +1331,7 @@ d
 e
 f
 )"sv);
+
     diagnostics.clear();
     Lexer lexer(buffer, alloc, diagnostics, options);
     for (auto& text : {"a"sv, "c"sv}) {
@@ -1329,7 +1339,9 @@ f
         REQUIRE(tok.kind == TokenKind::Identifier);
         CHECK(!tok.rawText().compare(text));
     }
+
     CHECK(lexer.lex().kind == TokenKind::EndOfFile);
+
     REQUIRE(diagnostics.size() == 1);
     CHECK(diagnostics[0].code == diag::UnclosedTranslateOff);
 }

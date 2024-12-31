@@ -11,6 +11,7 @@
 #include "slang/parsing/LexerFacts.h"
 #include "slang/parsing/Token.h"
 #include "slang/text/SourceLocation.h"
+#include "slang/util/Hash.h"
 #include "slang/util/LanguageVersion.h"
 #include "slang/util/SmallVector.h"
 #include "slang/util/Util.h"
@@ -23,8 +24,48 @@ class BumpAllocator;
 
 namespace slang::parsing {
 
+/// A handler for a specific kind of directive embedded in comments in the
+/// user source text.
+struct CommentHandler {
+    /// The kind of directive this handler is for.
+    enum Kind {
+        /// A region that should be skipped (as if it were a pragma protect region).
+        Protect,
+
+        /// A region that should be skipped (as if it were commented out).
+        TranslateOff,
+
+        /// Turns linting on for one or more warnings.
+        LintOn,
+
+        /// Turns linting off for one or more warnings.
+        LintOff,
+
+        /// Saves the current lint state in a stack.
+        LintSave,
+
+        /// Restore a previously set lint state.
+        LintRestore
+    };
+
+    /// The kind of comment handler this is.
+    Kind kind;
+
+    /// For region handler, the text that marks the end of the region.
+    std::string_view endRegion;
+
+    CommentHandler() = default;
+    CommentHandler(Kind kind, std::string_view endRegion = {}) : kind(kind), endRegion(endRegion) {}
+};
+
+using CommentHandlerMap =
+    flat_hash_map<std::string_view, flat_hash_map<std::string_view, CommentHandler>>;
+
 /// Contains various options that can control lexing behavior.
 struct SLANG_EXPORT LexerOptions {
+    /// A map of comment handlers to use when lexing directives inside comments.
+    CommentHandlerMap commentHandlers;
+
     /// The maximum number of errors that can occur before the rest of the source
     /// buffer is skipped.
     uint32_t maxErrors = 16;
@@ -35,10 +76,6 @@ struct SLANG_EXPORT LexerOptions {
     /// If true, the preprocessor will support legacy protected envelope directives,
     /// for compatibility with old Verilog tools.
     bool enableLegacyProtect = false;
-
-    /// A flag to enable the interpretation of non-standard line comment pragmas
-    /// disabling parts of the input for synthesis.
-    bool enableTranslateOnOffCompat = false;
 };
 
 /// Possible encodings for encrypted text used in a pragma protect region.
@@ -117,8 +154,9 @@ private:
     bool scanUTF8Char(bool alreadyErrored, uint32_t* code, int& computedLen);
     void scanEncodedText(ProtectEncoding encoding, uint32_t expectedBytes, bool singleLine,
                          bool legacyProtectedMode);
-    void scanProtectComment();
-    void scanTranslateOffSection();
+    bool tryApplyCommentHandler();
+    void scanDisabledRegion(std::string_view firstWord, std::string_view secondWord,
+                            std::optional<std::string_view> thirdWord, DiagCode unclosedDiag);
 
     template<typename... Args>
     Token create(TokenKind kind, Args&&... args);

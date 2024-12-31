@@ -24,19 +24,6 @@ static_assert(std::numeric_limits<double>::is_iec559, "SystemVerilog requires IE
 
 static const double BitsPerDecimal = log2(10.0);
 
-static constexpr std::string_view PragmaBeginProtected = "pragma protect begin_protected"sv;
-static constexpr std::string_view PragmaEndProtected = "pragma protect end_protected"sv;
-
-// Note the detection algorithm requires these in alphabetical order; also when a prefix is
-// followed by a whitespace in one variant, it's assumed the same prefix will be followed by
-// a whitespace in all variants
-static std::vector<std::string_view> TranslateOffPragmas = {
-    "pragma synthesis_off"sv,   "pragma translate_off"sv,    "synopsys synthesis_off"sv,
-    "synopsys translate_off"sv, "synthesis translate_off"sv, "xilinx translate_off"sv};
-static std::vector<std::string_view> TranslateOnPragmas = {
-    "pragma synthesis_on"sv,   "pragma translate_on"sv,    "synopsys synthesis_on"sv,
-    "synopsys translate_on"sv, "synthesis translate_on"sv, "xilinx translate_on"sv};
-
 namespace slang::parsing {
 
 using namespace syntax;
@@ -1207,108 +1194,10 @@ void Lexer::scanWhitespace() {
     addTrivia(TriviaKind::Whitespace);
 }
 
-bool detectTranslateOnOffPragma(std::string_view view, bool offMode) {
-    if (view.length() < 2)
-        return false;
-    const char *p = view.data() + 2, *end = view.data() + view.size();
-
-    auto skipWs = [&] {
-        bool seen = false;
-        while (p != end && isWhitespace(*p)) {
-            seen = true;
-            p++;
-        }
-        return seen;
-    };
-
-    size_t cpos = 0;
-    auto clower = offMode ? TranslateOffPragmas.begin() : TranslateOnPragmas.begin();
-    auto cupper = offMode ? TranslateOffPragmas.end() : TranslateOnPragmas.end();
-
-    skipWs();
-    while (p != end) {
-        if ((*clower)[cpos] == ' ') {
-            if (!skipWs())
-                return false;
-
-            cpos++;
-        }
-        else {
-            while (clower < cupper && (*clower)[cpos] < *p)
-                clower++;
-            while (cupper > clower && (*(cupper - 1))[cpos] > *p)
-                cupper--;
-
-            if (clower == cupper)
-                return false;
-
-            cpos++;
-            p++;
-        }
-
-        if (cpos == clower->length()) {
-            // We have a complete match, check the comment line
-            // ends there or the match is followed by a whitespace
-            if (p == end || isWhitespace(*p))
-                return true;
-            return false;
-        }
-    }
-
-    return false;
-}
-
-void Lexer::scanTranslateOffSection() {
-    while (true) {
-        const char* commentStart = sourceBuffer;
-
-        switch (peek()) {
-            case '\0':
-                if (reallyAtEnd()) {
-                    addDiag(diag::UnclosedTranslateOff, currentOffset() - lexemeLength());
-                    return;
-                }
-                break;
-            case '/':
-                advance();
-                if (peek() == '/') {
-                    advance();
-                    while (!isNewline(peek()) && !reallyAtEnd())
-                        advance();
-
-                    std::string_view commentText =
-                        std::string_view(commentStart, (size_t)(sourceBuffer - commentStart));
-                    if (detectTranslateOnOffPragma(commentText, false))
-                        return;
-                }
-                continue;
-            default:
-                break;
-        }
-        advance();
-    }
-}
-
 void Lexer::scanLineComment() {
-    if (options.enableLegacyProtect) {
-        // See if we're looking at a pragma protect comment and skip
-        // over it if so.
-        while (peek() == ' ')
-            advance();
-
-        bool found = true;
-        for (char c : PragmaBeginProtected) {
-            if (!consume(c)) {
-                found = false;
-                break;
-            }
-        }
-
-        if (found) {
-            scanProtectComment();
-            addTrivia(TriviaKind::DisabledText);
-            return;
-        }
+    if (tryApplyCommentHandler()) {
+        addTrivia(TriviaKind::DisabledText);
+        return;
     }
 
     bool sawUTF8Error = false;
@@ -1331,14 +1220,6 @@ void Lexer::scanLineComment() {
         }
         else {
             sawUTF8Error |= !scanUTF8Char(sawUTF8Error);
-        }
-    }
-
-    if (options.enableTranslateOnOffCompat) {
-        if (detectTranslateOnOffPragma(lexeme(), true)) {
-            scanTranslateOffSection();
-            addTrivia(TriviaKind::DisabledText);
-            return;
         }
     }
 
@@ -1381,6 +1262,52 @@ void Lexer::scanBlockComment() {
     }
 
     addTrivia(TriviaKind::BlockComment);
+}
+
+bool Lexer::tryApplyCommentHandler() {
+    auto nextWord = [&]() {
+        // Skip over leading spaces and tabs.
+        while (isTabOrSpace(peek()))
+            advance();
+
+        auto start = sourceBuffer;
+        while (true) {
+            char c = peek();
+            if (!isAlphaNumeric(c) && c != '_')
+                break;
+
+            advance();
+        }
+
+        return std::string_view(start, sourceBuffer - start);
+    };
+
+    auto firstWord = nextWord();
+    auto it = options.commentHandlers.find(firstWord);
+    if (it == options.commentHandlers.end())
+        return false;
+
+    auto it2 = it->second.find(nextWord());
+    if (it2 == it->second.end())
+        return false;
+
+    auto& handler = it2->second;
+    switch (handler.kind) {
+        case CommentHandler::Protect:
+            // We need to see begin_protected, otherwise we ignore.
+            if (nextWord() == "begin_protected"sv) {
+                addDiag(diag::ProtectedEnvelope, currentOffset() - lexemeLength());
+                scanDisabledRegion(firstWord, "protect", "end_protected", diag::RawProtectEOF);
+                return true;
+            }
+            return false;
+        case CommentHandler::TranslateOff:
+            scanDisabledRegion(firstWord, handler.endRegion, std::nullopt,
+                               diag::UnclosedTranslateOff);
+            return true;
+        default:
+            SLANG_UNREACHABLE;
+    }
 }
 
 bool Lexer::scanUTF8Char(bool alreadyErrored) {
@@ -1590,32 +1517,36 @@ void Lexer::scanEncodedText(ProtectEncoding encoding, uint32_t expectedBytes, bo
     }
 }
 
-void Lexer::scanProtectComment() {
-    addDiag(diag::ProtectedEnvelope, currentOffset() - PragmaBeginProtected.size());
+void Lexer::scanDisabledRegion(std::string_view firstWord, std::string_view secondWord,
+                               std::optional<std::string_view> thirdWord, DiagCode unclosedDiag) {
+    auto matchWord = [&](std::string_view word) {
+        while (isTabOrSpace(peek()))
+            advance();
+
+        for (char c : word) {
+            if (!consume(c))
+                return false;
+        }
+
+        char c = peek();
+        return isWhitespace(c) || c == '\0';
+    };
 
     while (true) {
         char c = peek();
         if (c == '\0' && reallyAtEnd()) {
-            addDiag(diag::RawProtectEOF, currentOffset() - 1);
+            addDiag(unclosedDiag, currentOffset() - lexemeLength());
             return;
         }
 
         advance();
         if (c == '/' && peek() == '/') {
             advance();
-            while (peek() == ' ')
-                advance();
 
-            bool found = true;
-            for (char d : PragmaEndProtected) {
-                if (!consume(d)) {
-                    found = false;
-                    break;
-                }
+            if (matchWord(firstWord) && matchWord(secondWord)) {
+                if (!thirdWord || matchWord(*thirdWord))
+                    return;
             }
-
-            if (found)
-                return;
         }
     }
 }

@@ -2675,6 +2675,7 @@ endmodule
 
     LexerOptions lo;
     lo.enableLegacyProtect = true;
+    lo.commentHandlers["pragma"]["protect"] = {CommentHandler::Protect};
 
     std::string result = preprocess(text, lo);
     CHECK(result == expected);

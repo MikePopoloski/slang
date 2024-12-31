@@ -57,6 +57,11 @@ constexpr bool isWhitespace(char c) {
     return false;
 }
 
+/// Returns whether the given character is considered a space or tab.
+constexpr bool isTabOrSpace(char c) {
+    return c == ' ' || c == '\t';
+}
+
 /// Returns whether the given character is considered a new line.
 constexpr bool isNewline(char c) {
     return c == '\r' || c == '\n';

@@ -735,6 +735,9 @@ void Driver::addParseOptions(Bag& bag) const {
     if (options.maxLexerErrors.has_value())
         loptions.maxErrors = *options.maxLexerErrors;
 
+    if (loptions.enableLegacyProtect)
+        loptions.commentHandlers["pragma"]["protect"] = {CommentHandler::Protect};
+
     ParserOptions poptions;
     poptions.languageVersion = languageVersion;
     if (options.maxParseDepth.has_value())
