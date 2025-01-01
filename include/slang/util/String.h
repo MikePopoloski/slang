@@ -9,6 +9,7 @@
 
 #include <filesystem>
 #include <optional>
+#include <vector>
 
 #include "slang/util/SmallVector.h"
 #include "slang/util/Util.h"
