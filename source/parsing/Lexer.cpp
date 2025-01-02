@@ -32,13 +32,13 @@ using LF = LexerFacts;
 
 Lexer::Lexer(SourceBuffer buffer, BumpAllocator& alloc, Diagnostics& diagnostics,
              LexerOptions options) :
-    Lexer(buffer.id, buffer.data, buffer.data.data(), alloc, diagnostics, options) {
+    Lexer(buffer.id, buffer.data, buffer.data.data(), alloc, diagnostics, std::move(options)) {
     library = buffer.library;
 }
 
 Lexer::Lexer(BufferID bufferId, std::string_view source, const char* startPtr, BumpAllocator& alloc,
              Diagnostics& diagnostics, LexerOptions options) :
-    alloc(alloc), diagnostics(diagnostics), options(options), bufferId(bufferId),
+    alloc(alloc), diagnostics(diagnostics), options(std::move(options)), bufferId(bufferId),
     originalBegin(source.data()), sourceBuffer(startPtr),
     sourceEnd(source.data() + source.length()), marker(nullptr) {
     ptrdiff_t count = sourceEnd - sourceBuffer;
@@ -1279,7 +1279,7 @@ bool Lexer::tryApplyCommentHandler() {
             advance();
         }
 
-        return std::string_view(start, sourceBuffer - start);
+        return std::string_view(start, size_t(sourceBuffer - start));
     };
 
     auto firstWord = nextWord();
