@@ -1292,7 +1292,7 @@ a
 b
 // pragma synthesis_on
 c
-// synthesis translate_off
+/* synthesis translate_off */
 d
 // synthesis translate_off
 e

@@ -261,7 +261,13 @@ bool Lexer::isNextTokenOnSameLine() {
                         return false;
                     case '*':
                         advance(2);
-                        scanBlockComment();
+                        while (true) {
+                            if (consume('*') && consume('/'))
+                                break;
+                            if (peek() == '\0' && reallyAtEnd())
+                                return false;
+                            advance();
+                        }
                         break;
                     default:
                         return true;
@@ -1227,6 +1233,11 @@ void Lexer::scanLineComment() {
 }
 
 void Lexer::scanBlockComment() {
+    if (tryApplyCommentHandler()) {
+        addTrivia(TriviaKind::DisabledText);
+        return;
+    }
+
     bool sawUTF8Error = false;
     while (true) {
         char c = peek();
