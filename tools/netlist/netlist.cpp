@@ -40,14 +40,14 @@ public:
     constexpr auto format(NetlistNode const& node, Context& ctx) const {
         if (node.kind == NodeKind::VariableAlias) {
             auto& aliasNode = node.as<NetlistVariableAlias>();
-            return format_to(ctx.out(), "{}{}", aliasNode.hierarchicalPath, aliasNode.overlap);
+            return fmt::format_to(ctx.out(), "{}{}", aliasNode.hierarchicalPath, aliasNode.overlap);
         }
         else if (node.kind == NodeKind::VariableDeclaration) {
             auto& declNode = node.as<NetlistVariableDeclaration>();
-            return format_to(ctx.out(), "{}", declNode.hierarchicalPath);
+            return fmt::format_to(ctx.out(), "{}", declNode.hierarchicalPath);
         }
         else {
-            return format_to(ctx.out(), "{}", node.getName());
+            return fmt::format_to(ctx.out(), "{}", node.getName());
         }
     }
 };
