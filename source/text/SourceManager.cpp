@@ -444,6 +444,11 @@ std::span<const SourceManager::DiagnosticDirectiveInfo> SourceManager::getDiagno
     return {};
 }
 
+void SourceManager::clearDiagnosticDirectives() {
+    std::unique_lock lock(mutex);
+    diagDirectives.clear();
+}
+
 std::vector<BufferID> SourceManager::getAllBuffers() const {
     std::shared_lock lock(mutex);
     std::vector<BufferID> result;

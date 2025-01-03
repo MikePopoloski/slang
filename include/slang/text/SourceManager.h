@@ -222,6 +222,9 @@ public:
     /// @a addDiagnosticDirective and invalidate the span.
     std::span<const DiagnosticDirectiveInfo> getDiagnosticDirectives(BufferID buffer) const;
 
+    /// Clears all diagnostic directives registered with the sourcemanager.
+    void clearDiagnosticDirectives();
+
     /// Returns a list of buffers (files and macros) that have been created in the
     /// source manager.
     std::vector<BufferID> getAllBuffers() const;

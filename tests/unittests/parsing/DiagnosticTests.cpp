@@ -6,6 +6,7 @@
 #include "slang/diagnostics/DiagnosticClient.h"
 #include "slang/diagnostics/JsonDiagnosticClient.h"
 #include "slang/diagnostics/TextDiagnosticClient.h"
+#include "slang/parsing/Lexer.h"
 #include "slang/text/Json.h"
 #include "slang/text/SourceManager.h"
 
@@ -485,6 +486,8 @@ TEST_CASE("DiagnosticEngine::setWarningOptions") {
 }
 
 TEST_CASE("Diagnostic Pragmas") {
+    SyntaxTree::getDefaultSourceManager().clearDiagnosticDirectives();
+
     auto tree = SyntaxTree::fromText(R"(
 module m;
     ; // warn
@@ -619,4 +622,51 @@ endmodule
     "symbolPath": "m"
   }
 ])");
+}
+
+TEST_CASE("Diagnostic comment directives") {
+    SyntaxTree::getDefaultSourceManager().clearDiagnosticDirectives();
+
+    LexerOptions options;
+    options.commentHandlers["slang"]["lint_off"] = {CommentHandler::LintOff};
+    options.commentHandlers["slang"]["lint_on"] = {CommentHandler::LintOn};
+    options.commentHandlers["slang"]["lint_save"] = {CommentHandler::LintSave};
+    options.commentHandlers["slang"]["lint_restore"] = {CommentHandler::LintRestore};
+
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    ; // warn
+
+    // slang lint_off empty-member
+    ; // hidden
+    // slang lint_save
+    /* slang lint_on empty-member */
+    ; // warn
+    /* slang lint_restore */
+    ; // hidden
+endmodule
+)",
+                                     options);
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    DiagnosticEngine engine(tree->sourceManager());
+    Diagnostics pragmaDiags = engine.setMappingsFromPragmas();
+    if (!pragmaDiags.empty())
+        FAIL_CHECK(report(pragmaDiags));
+
+    auto client = std::make_shared<TextDiagnosticClient>();
+    engine.addClient(client);
+    for (auto& diag : compilation.getAllDiagnostics())
+        engine.issue(diag);
+
+    CHECK("\n"s + client->getString() == R"(
+source:3:5: warning: extra ';' has no effect [-Wempty-member]
+    ; // warn
+    ^
+source:9:5: warning: extra ';' has no effect [-Wempty-member]
+    ; // warn
+    ^
+)");
 }

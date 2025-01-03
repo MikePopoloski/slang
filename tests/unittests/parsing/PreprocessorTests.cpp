@@ -126,8 +126,9 @@ void testDirective(SyntaxKind kind) {
     std::string_view text = LexerFacts::getDirectiveText(kind);
 
     diagnostics.clear();
-    auto buffer = getSourceManager().assignText(text);
-    Lexer lexer(buffer, alloc, diagnostics);
+    auto& sm = getSourceManager();
+    auto buffer = sm.assignText(text);
+    Lexer lexer(buffer, alloc, diagnostics, sm);
 
     Token token = lexer.lex();
     REQUIRE(token);

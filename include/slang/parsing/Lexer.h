@@ -19,8 +19,9 @@
 namespace slang {
 
 class BumpAllocator;
+class SourceManager;
 
-}
+} // namespace slang
 
 namespace slang::parsing {
 
@@ -90,7 +91,7 @@ enum class SLANG_EXPORT ProtectEncoding { UUEncode, Base64, QuotedPrintable, Raw
 class SLANG_EXPORT Lexer {
 public:
     Lexer(SourceBuffer buffer, BumpAllocator& alloc, Diagnostics& diagnostics,
-          LexerOptions options = LexerOptions{});
+          SourceManager& sourceManager, LexerOptions options = LexerOptions{});
 
     // Not copyable
     Lexer(const Lexer&) = delete;
@@ -114,24 +115,26 @@ public:
     const SourceLibrary* getLibrary() const { return library; }
 
     /// Concatenates two tokens together; used for macro pasting.
-    static Token concatenateTokens(BumpAllocator& alloc, Token left, Token right);
+    static Token concatenateTokens(BumpAllocator& alloc, SourceManager& sourceManager, Token left,
+                                   Token right);
 
     /// Converts a range of tokens into a string literal; used for macro stringification.
     static Token stringify(Lexer& parentLexer, Token startToken, std::span<Token> bodyTokens,
                            Token endToken);
 
     /// Converts a range of tokens into a block comment; used for macro expansion.
-    static Trivia commentify(BumpAllocator& alloc, std::span<Token> tokens);
+    static Trivia commentify(BumpAllocator& alloc, SourceManager& sourceManager,
+                             std::span<Token> tokens);
 
     /// Splits the given token at the specified offset into its raw source text. The trailing
     /// portion of the split is lexed into new tokens and appened to @a results
     static void splitTokens(BumpAllocator& alloc, Diagnostics& diagnostics,
-                            const SourceManager& sourceManager, Token sourceToken, size_t offset,
+                            SourceManager& sourceManager, Token sourceToken, size_t offset,
                             KeywordVersion keywordVersion, SmallVectorBase<Token>& results);
 
 private:
     Lexer(BufferID bufferId, std::string_view source, const char* startPtr, BumpAllocator& alloc,
-          Diagnostics& diagnostics, LexerOptions options);
+          Diagnostics& diagnostics, SourceManager& sourceManager, LexerOptions options);
 
     Token lexToken(KeywordVersion keywordVersion);
     Token lexEscapeSequence(bool isMacroName);
@@ -210,6 +213,7 @@ private:
     SmallVector<char> stringBuffer;
 
     const SourceLibrary* library = nullptr;
+    SourceManager& sourceManager;
 };
 
 } // namespace slang::parsing

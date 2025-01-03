@@ -31,16 +31,18 @@ using namespace syntax;
 using LF = LexerFacts;
 
 Lexer::Lexer(SourceBuffer buffer, BumpAllocator& alloc, Diagnostics& diagnostics,
-             LexerOptions options) :
-    Lexer(buffer.id, buffer.data, buffer.data.data(), alloc, diagnostics, std::move(options)) {
+             SourceManager& sourceManager, LexerOptions options) :
+    Lexer(buffer.id, buffer.data, buffer.data.data(), alloc, diagnostics, sourceManager,
+          std::move(options)) {
     library = buffer.library;
 }
 
 Lexer::Lexer(BufferID bufferId, std::string_view source, const char* startPtr, BumpAllocator& alloc,
-             Diagnostics& diagnostics, LexerOptions options) :
+             Diagnostics& diagnostics, SourceManager& sourceManager, LexerOptions options) :
     alloc(alloc), diagnostics(diagnostics), options(std::move(options)), bufferId(bufferId),
     originalBegin(source.data()), sourceBuffer(startPtr),
-    sourceEnd(source.data() + source.length()), marker(nullptr) {
+    sourceEnd(source.data() + source.length()), marker(nullptr), sourceManager(sourceManager) {
+
     ptrdiff_t count = sourceEnd - sourceBuffer;
     SLANG_ASSERT(count);
     SLANG_ASSERT(sourceEnd[-1] == '\0');
@@ -61,7 +63,8 @@ Lexer::Lexer(BufferID bufferId, std::string_view source, const char* startPtr, B
     }
 }
 
-Token Lexer::concatenateTokens(BumpAllocator& alloc, Token left, Token right) {
+Token Lexer::concatenateTokens(BumpAllocator& alloc, SourceManager& sourceManager, Token left,
+                               Token right) {
     auto location = left.location();
     auto trivia = left.trivia();
 
@@ -81,8 +84,13 @@ Token Lexer::concatenateTokens(BumpAllocator& alloc, Token left, Token right) {
     std::string_view combined{mem, newLength};
 
     Diagnostics unused;
-    Lexer lexer{
-        BufferID::getPlaceholder(), combined, combined.data(), alloc, unused, LexerOptions{}};
+    Lexer lexer{BufferID::getPlaceholder(),
+                combined,
+                combined.data(),
+                alloc,
+                unused,
+                sourceManager,
+                LexerOptions{}};
 
     auto token = lexer.lex();
     if (token.kind == TokenKind::Unknown || token.rawText().empty())
@@ -162,7 +170,8 @@ Token Lexer::stringify(Lexer& parentLexer, Token startToken, std::span<Token> bo
 
     Diagnostics unused;
     Lexer lexer{BufferID::getPlaceholder(), raw,    raw.data(),
-                parentLexer.alloc,          unused, parentLexer.options};
+                parentLexer.alloc,          unused, parentLexer.sourceManager,
+                parentLexer.options};
 
     auto token = lexer.lex();
     SLANG_ASSERT(token.kind == TokenKind::StringLiteral);
@@ -172,7 +181,8 @@ Token Lexer::stringify(Lexer& parentLexer, Token startToken, std::span<Token> bo
                        startToken.location());
 }
 
-Trivia Lexer::commentify(BumpAllocator& alloc, std::span<Token> tokens) {
+Trivia Lexer::commentify(BumpAllocator& alloc, SourceManager& sourceManager,
+                         std::span<Token> tokens) {
     SmallVector<char> text;
     for (auto cur : tokens) {
         for (const Trivia& t : cur.trivia())
@@ -186,7 +196,8 @@ Trivia Lexer::commentify(BumpAllocator& alloc, std::span<Token> tokens) {
     std::string_view raw = toStringView(text.copy(alloc));
 
     Diagnostics unused;
-    Lexer lexer{BufferID::getPlaceholder(), raw, raw.data(), alloc, unused, LexerOptions{}};
+    Lexer lexer{
+        BufferID::getPlaceholder(), raw, raw.data(), alloc, unused, sourceManager, LexerOptions{}};
 
     auto token = lexer.lex();
     SLANG_ASSERT(token.kind == TokenKind::EndOfFile);
@@ -196,7 +207,7 @@ Trivia Lexer::commentify(BumpAllocator& alloc, std::span<Token> tokens) {
 }
 
 void Lexer::splitTokens(BumpAllocator& alloc, Diagnostics& diagnostics,
-                        const SourceManager& sourceManager, Token sourceToken, size_t offset,
+                        SourceManager& sourceManager, Token sourceToken, size_t offset,
                         KeywordVersion keywordVersion, SmallVectorBase<Token>& results) {
     auto loc = sourceToken.location();
     if (sourceManager.isMacroLoc(loc))
@@ -205,8 +216,9 @@ void Lexer::splitTokens(BumpAllocator& alloc, Diagnostics& diagnostics,
     auto sourceText = sourceManager.getSourceText(loc.buffer());
     SLANG_ASSERT(!sourceText.empty());
 
-    Lexer lexer{loc.buffer(), sourceText,  sourceToken.rawText().substr(offset).data(),
-                alloc,        diagnostics, LexerOptions{}};
+    Lexer lexer{loc.buffer(),  sourceText,  sourceToken.rawText().substr(offset).data(),
+                alloc,         diagnostics, sourceManager,
+                LexerOptions{}};
 
     size_t endOffset = loc.offset() + sourceToken.rawText().length();
     while (true) {
@@ -1201,7 +1213,7 @@ void Lexer::scanWhitespace() {
 }
 
 void Lexer::scanLineComment() {
-    if (tryApplyCommentHandler()) {
+    if (tryApplyCommentHandler()) [[unlikely]] {
         addTrivia(TriviaKind::DisabledText);
         return;
     }
@@ -1233,7 +1245,7 @@ void Lexer::scanLineComment() {
 }
 
 void Lexer::scanBlockComment() {
-    if (tryApplyCommentHandler()) {
+    if (tryApplyCommentHandler()) [[unlikely]] {
         addTrivia(TriviaKind::DisabledText);
         return;
     }
@@ -1284,7 +1296,7 @@ bool Lexer::tryApplyCommentHandler() {
         auto start = sourceBuffer;
         while (true) {
             char c = peek();
-            if (!isAlphaNumeric(c) && c != '_')
+            if (!isAlphaNumeric(c) && c != '_' && c != '-')
                 break;
 
             advance();
@@ -1295,12 +1307,14 @@ bool Lexer::tryApplyCommentHandler() {
 
     auto firstWord = nextWord();
     auto it = options.commentHandlers.find(firstWord);
-    if (it == options.commentHandlers.end())
+    if (it == options.commentHandlers.end()) [[likely]]
         return false;
 
     auto it2 = it->second.find(nextWord());
     if (it2 == it->second.end())
         return false;
+
+    auto loc = [&] { return SourceLocation(bufferId, currentOffset()); };
 
     auto& handler = it2->second;
     switch (handler.kind) {
@@ -1316,6 +1330,18 @@ bool Lexer::tryApplyCommentHandler() {
             scanDisabledRegion(firstWord, handler.endRegion, std::nullopt,
                                diag::UnclosedTranslateOff);
             return true;
+        case CommentHandler::LintOff:
+            sourceManager.addDiagnosticDirective(loc(), nextWord(), DiagnosticSeverity::Ignored);
+            return false;
+        case CommentHandler::LintOn:
+            sourceManager.addDiagnosticDirective(loc(), nextWord(), DiagnosticSeverity::Warning);
+            return false;
+        case CommentHandler::LintSave:
+            sourceManager.addDiagnosticDirective(loc(), "__push__", DiagnosticSeverity::Ignored);
+            return false;
+        case CommentHandler::LintRestore:
+            sourceManager.addDiagnosticDirective(loc(), "__pop__", DiagnosticSeverity::Ignored);
+            return false;
         default:
             SLANG_UNREACHABLE;
     }

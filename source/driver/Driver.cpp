@@ -777,6 +777,11 @@ void Driver::addParseOptions(Bag& bag) const {
     for (auto& [common, start, end] : translateOffFormats)
         loptions.commentHandlers[common][start] = {CommentHandler::TranslateOff, end};
 
+    loptions.commentHandlers["slang"]["lint_off"] = {CommentHandler::LintOff};
+    loptions.commentHandlers["slang"]["lint_on"] = {CommentHandler::LintOn};
+    loptions.commentHandlers["slang"]["lint_save"] = {CommentHandler::LintSave};
+    loptions.commentHandlers["slang"]["lint_restore"] = {CommentHandler::LintRestore};
+
     ParserOptions poptions;
     poptions.languageVersion = languageVersion;
     if (options.maxParseDepth.has_value())

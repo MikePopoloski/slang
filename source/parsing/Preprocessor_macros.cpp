@@ -209,8 +209,8 @@ bool Preprocessor::applyMacroOps(std::span<Token const> tokens, SmallVectorBase<
                         addDiag(diag::IgnoredMacroPaste, token.location());
                     }
                     else {
-                        newToken = Lexer::concatenateTokens(alloc, stringifyBuffer.back(),
-                                                            tokens[i + 1]);
+                        newToken = Lexer::concatenateTokens(alloc, sourceManager,
+                                                            stringifyBuffer.back(), tokens[i + 1]);
                         if (newToken) {
                             stringifyBuffer.pop_back();
                             ++i;
@@ -226,7 +226,8 @@ bool Preprocessor::applyMacroOps(std::span<Token const> tokens, SmallVectorBase<
                         i++;
 
                         emptyArgTrivia.append_range(syntheticComment.trivia());
-                        emptyArgTrivia.push_back(Lexer::commentify(alloc, commentBuffer));
+                        emptyArgTrivia.push_back(
+                            Lexer::commentify(alloc, sourceManager, commentBuffer));
                         syntheticComment = Token();
                     }
                 }
@@ -248,7 +249,8 @@ bool Preprocessor::applyMacroOps(std::span<Token const> tokens, SmallVectorBase<
                         newToken = right;
                     }
                     else {
-                        newToken = Lexer::concatenateTokens(alloc, dest.back(), tokens[i + 1]);
+                        newToken = Lexer::concatenateTokens(alloc, sourceManager, dest.back(),
+                                                            tokens[i + 1]);
                         if (newToken) {
                             dest.pop_back();
                             ++i;
@@ -265,7 +267,7 @@ bool Preprocessor::applyMacroOps(std::span<Token const> tokens, SmallVectorBase<
                 // is right next to it (not leading trivia). If so, we should try to
                 // continue the concatenation process.
                 if (didConcat && token.trivia().empty() && emptyArgTrivia.empty()) {
-                    newToken = Lexer::concatenateTokens(alloc, dest.back(), token);
+                    newToken = Lexer::concatenateTokens(alloc, sourceManager, dest.back(), token);
                     if (newToken) {
                         dest.pop_back();
                         nextDidConcat = true;
@@ -508,7 +510,7 @@ bool Preprocessor::expandMacro(MacroDef macro, MacroExpansion& expansion,
         // In that case we want to fabricate the correct directive token here.
         if (token.kind == TokenKind::Directive) {
             Token grave(alloc, TokenKind::Unknown, first.trivia(), "`"sv, firstLoc);
-            Token combined = Lexer::concatenateTokens(alloc, grave, first);
+            Token combined = Lexer::concatenateTokens(alloc, sourceManager, grave, first);
             if (combined) {
                 first = combined;
             }

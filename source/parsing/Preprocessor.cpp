@@ -98,7 +98,8 @@ void Preprocessor::pushSource(std::string_view source, std::string_view name) {
 void Preprocessor::pushSource(SourceBuffer buffer) {
     SLANG_ASSERT(buffer.id);
 
-    lexerStack.emplace_back(std::make_unique<Lexer>(buffer, alloc, diagnostics, lexerOptions));
+    lexerStack.emplace_back(
+        std::make_unique<Lexer>(buffer, alloc, diagnostics, sourceManager, lexerOptions));
 }
 
 void Preprocessor::popSource() {
