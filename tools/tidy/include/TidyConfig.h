@@ -15,6 +15,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
+#include <regex>
 
 class TidyConfig {
     friend class TidyConfigParser;
@@ -23,6 +24,8 @@ public:
     /// Configuration values of checks
     struct CheckConfigs {
         std::string clkName;
+        std::string clkNameRegexString;
+        std::regex  clkNameRegexPattern;
         std::string resetName;
         bool resetIsActiveHigh;
         std::vector<std::string> inputPortSuffix;
@@ -92,6 +95,11 @@ private:
         }
         else if (configName == "resetName") {
             visit(checkConfigs.resetName);
+            return;
+        }
+        else if (configName == "clkNameRegexString") {
+            visit(checkConfigs.clkNameRegexString);
+            checkConfigs.clkNameRegexPattern = std::regex(checkConfigs.clkNameRegexString);
             return;
         }
         else if (configName == "resetIsActiveHigh") {

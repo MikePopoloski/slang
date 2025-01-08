@@ -10,6 +10,8 @@ namespace fs = std::filesystem;
 
 TidyConfig::TidyConfig() {
     checkConfigs.clkName = "clk_i";
+    checkConfigs.clkNameRegexString  = "clk\\S*|clock\\S*";
+    checkConfigs.clkNameRegexPattern = std::regex(checkConfigs.clkNameRegexString);
     checkConfigs.resetName = "rst_ni";
     checkConfigs.resetIsActiveHigh = true;
     checkConfigs.inputPortSuffix = {"_i"};
