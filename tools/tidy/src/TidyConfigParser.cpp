@@ -283,12 +283,16 @@ void TidyConfigParser::parseCheckConfigs() {
         // Parse multiple option values
         std::vector<std::string> optionValues;
 
-        auto isRegexMeta       = [](char c) { return c == '.' || c == '^' || c == '$' || c == '*' ||
-                                              c == '+' || c == '?' || c == '{' || c == '}' || c == '[' ||
-                                              c == ']' || c == '\\' || c == '|' || c == '(' || c == ')'; };
+        auto isRegexMeta = [](char c) {
+            return c == '.' || c == '^' || c == '$' || c == '*' || c == '+' || c == '?' ||
+                   c == '{' || c == '}' || c == '[' || c == ']' || c == '\\' || c == '|' ||
+                   c == '(' || c == ')';
+        };
 
         auto isOptionValueChar = [](char c) { return isalnum(c) || c == '_'; };
-        auto isRegexOptionValueChar = [&](char c) { return isalnum(c) || isRegexMeta(c) || c == '_'; };
+        auto isRegexOptionValueChar = [&](char c) {
+            return isalnum(c) || isRegexMeta(c) || c == '_';
+        };
 
         if (peekChar() == '[') {
             currentChar = nextChar(); // skip '['

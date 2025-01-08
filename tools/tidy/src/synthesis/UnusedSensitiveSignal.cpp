@@ -57,7 +57,8 @@ struct MainVisitor : public TidyVisitor, ASTVisitor<MainVisitor, true, true> {
         for (auto signal : unusedSignals) {
             // either match against clkName or against the regex pattern
             if (signal.first != config.getCheckConfigs().clkName &&
-                !(std::regex_match(std::string(signal.first), config.getCheckConfigs().clkNameRegexPattern)) )
+                !(std::regex_match(std::string(signal.first),
+                                   config.getCheckConfigs().clkNameRegexPattern)))
                 diags.add(diag::UnusedSensitiveSignal, signal.second) << signal.first;
         }
     }

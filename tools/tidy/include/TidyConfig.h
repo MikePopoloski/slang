@@ -10,12 +10,12 @@
 #include "TidyKind.h"
 #include <algorithm>
 #include <fmt/format.h>
+#include <regex>
 #include <slang/util/TypeTraits.h>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
-#include <regex>
 
 class TidyConfig {
     friend class TidyConfigParser;
@@ -25,7 +25,7 @@ public:
     struct CheckConfigs {
         std::string clkName;
         std::string clkNameRegexString;
-        std::regex  clkNameRegexPattern;
+        std::regex clkNameRegexPattern;
         std::string resetName;
         bool resetIsActiveHigh;
         std::vector<std::string> inputPortSuffix;
