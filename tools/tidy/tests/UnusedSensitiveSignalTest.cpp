@@ -115,7 +115,8 @@ endmodule
     CHECK(result);
 }
 
-TEST_CASE("UnusedSensitiveSignal: Clock signals not matching regex expression will raise a warning") {
+TEST_CASE(
+    "UnusedSensitiveSignal: Clock signals not matching regex expression will raise a warning") {
     auto tree = SyntaxTree::fromText(R"(
 module d_ff_a_en
 (
