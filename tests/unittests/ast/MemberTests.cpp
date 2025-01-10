@@ -218,7 +218,7 @@ endpackage
     CHECK(root.lookupName<NetSymbol>("m.a").getType().toString() == "logic[3:0]");
     CHECK(root.lookupName<NetSymbol>("m.b").netType.name == "bar");
     CHECK(root.lookupName<NetSymbol>("m.b").getType().toString() == "logic[3:0]");
-    CHECK(root.lookupName<NetSymbol>("m.c").getType().toString() == "logic[10:0]");
+    CHECK(root.lookupName<NetSymbol>("m.c").getType().toString() == "m.stuff");
     CHECK(root.lookupName<NetSymbol>("m.e").getType().toString() == "logic[3:0]$[0:4]");
 }
 

@@ -940,6 +940,7 @@ const Type& Type::makeUnsigned(Compilation& compilation) const {
 
 std::string Type::toString() const {
     TypePrinter printer;
+    printer.options.skipTypeDefs = true;
     printer.append(*this);
     return printer.toString();
 }

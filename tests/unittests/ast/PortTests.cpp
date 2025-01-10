@@ -155,7 +155,7 @@ module m6(I.bar bar); endmodule
     checkIfacePort("m0", "a", "I", "");
     checkIfacePort("m0", "b", "I", "");
     checkWirePort("m0", "c", In, wire, "logic");
-    checkWirePort("m1", "j", InOut, wire, "struct{logic f;}J");
+    checkWirePort("m1", "j", InOut, wire, "J");
     checkIfacePort("m3", "k", "K", "");
     checkWirePort("m3", "w", InOut, wire, "logic");
     checkWirePort("m4", "v", Out, nullptr, "logic");

@@ -163,7 +163,7 @@ endmodule
             "source_file": "source",
             "source_line": 8,
             "source_column": 11,
-            "type": "enum{STATE_0=1'd0,STATE_1=1'd1}test_enum.STATE",
+            "type": "test_enum.STATE",
             "initializer": {
               "source_file_start": "source",
               "source_file_end": "source",
@@ -727,7 +727,7 @@ endclass
                             {
                               "name": "CrossQueueType",
                               "kind": "TypeAlias",
-                              "target": "struct{logic[0:0] e;logic[0:0] y;}C3.CrossValType$[$]"
+                              "target": "C3.CrossValType$[$]"
                             }
                           ]
                         }
@@ -889,6 +889,76 @@ endmodule
         "definition": "n"
       },
       "connections": [
+      ]
+    }
+  ]
+})");
+}
+
+TEST_CASE("Serializing types and type aliase targets") {
+    auto tree = SyntaxTree::fromText(R"(
+typedef union packed {
+    logic [31:0] inst;
+} INST;
+
+typedef struct packed {
+    INST inst;
+    logic another_signal;
+} CONTAINER;
+
+typedef enum logic [1:0] {
+    BYTE   = 2'h0,
+    HALF   = 2'h1,
+    WORD   = 2'h2,
+    DOUBLE = 2'h3
+} MEM_SIZE;
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto result = serialize(compilation);
+    CHECK(result == R"(
+{
+  "name": "$root",
+  "kind": "Root",
+  "members": [
+    {
+      "name": "",
+      "kind": "CompilationUnit",
+      "members": [
+        {
+          "name": "INST",
+          "kind": "TypeAlias",
+          "target": "union packed{logic[31:0] inst;}u$1"
+        },
+        {
+          "name": "CONTAINER",
+          "kind": "TypeAlias",
+          "target": "struct packed{INST inst;logic another_signal;}s$1"
+        },
+        {
+          "name": "BYTE",
+          "kind": "TransparentMember"
+        },
+        {
+          "name": "HALF",
+          "kind": "TransparentMember"
+        },
+        {
+          "name": "WORD",
+          "kind": "TransparentMember"
+        },
+        {
+          "name": "DOUBLE",
+          "kind": "TransparentMember"
+        },
+        {
+          "name": "MEM_SIZE",
+          "kind": "TypeAlias",
+          "target": "enum{BYTE=2'd0,HALF=2'd1,WORD=2'd2,DOUBLE=2'd3}MEM_SIZE"
+        }
       ]
     }
   ]
