@@ -819,6 +819,17 @@ bool SyntaxFacts::isPossibleRsRule(TokenKind kind) {
     }
 }
 
+bool SyntaxFacts::isPossibleStructMember(TokenKind kind) {
+    switch (kind) {
+        case TokenKind::OpenParenthesis:
+        case TokenKind::RandKeyword:
+        case TokenKind::RandCKeyword:
+            return true;
+        default:
+            return isPossibleDataType(kind);
+    }
+}
+
 bool SyntaxFacts::isPossibleParameter(TokenKind kind) {
     switch (kind) {
         case TokenKind::ParameterKeyword:

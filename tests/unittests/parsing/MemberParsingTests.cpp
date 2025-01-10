@@ -272,9 +272,11 @@ endmodule : m1;
 
     parseCompilationUnit(text);
 
-    REQUIRE(diagnostics.size() == 2);
-    CHECK(diagnostics[0].code == diag::ImplicitNotAllowed);
-    CHECK(diagnostics[1].code == diag::ExpectedDeclarator);
+    REQUIRE(diagnostics.size() == 4);
+    CHECK(diagnostics[0].code == diag::ExpectedToken);
+    CHECK(diagnostics[1].code == diag::ExpectedToken);
+    CHECK(diagnostics[2].code == diag::UnexpectedEndDelim);
+    CHECK(diagnostics[3].code == diag::ExpectedDeclarator);
 }
 
 TEST_CASE("Errors for directives inside design elements") {
@@ -1542,4 +1544,18 @@ endmodule
 
     REQUIRE(diagnostics.size() == 1);
     CHECK(diagnostics[0].code == diag::AttributesNotAllowed);
+}
+
+TEST_CASE("Struct type missing brace error recovery") {
+    auto& text = R"(
+module m;
+    struct { logic [3:0][1:0] a;
+    assign i = a[3:1][0];
+endmodule
+)";
+
+    parseCompilationUnit(text);
+
+    REQUIRE(diagnostics.size() == 1);
+    CHECK(diagnostics[0].code == diag::ExpectedToken);
 }

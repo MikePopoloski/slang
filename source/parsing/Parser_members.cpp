@@ -850,7 +850,8 @@ LoopGenerateSyntax& Parser::parseLoopGenerateConstruct(AttrList attributes) {
             iterVarCheck = iterationExpr->as<PostfixUnaryExpressionSyntax>().operand;
             break;
         default:
-            addDiag(diag::InvalidGenvarIterExpression, iterationExpr->sourceRange());
+            if (!iterationExpr->getFirstToken().isMissing())
+                addDiag(diag::InvalidGenvarIterExpression, iterationExpr->sourceRange());
             iterationExpr = &factory.badExpression(*iterationExpr);
             break;
     }
@@ -947,7 +948,8 @@ MemberSyntax& Parser::parseGenerateBlock() {
             // If there was some syntax error that caused parseMember to return null, fabricate an
             // empty member here and let our caller sort it out.
             auto loc = peek().location();
-            addDiag(diag::ExpectedMember, loc);
+            if (!haveDiagAtCurrentLoc())
+                addDiag(diag::ExpectedMember, loc);
             return factory.emptyMember(nullptr, nullptr, missingToken(TokenKind::Semicolon, loc));
         }
 
