@@ -158,7 +158,7 @@ if(SLANG_INCLUDE_TESTS)
   FetchContent_Declare(
     Catch2
     GIT_REPOSITORY https://github.com/catchorg/Catch2.git
-    GIT_TAG v3.7.1
+    GIT_TAG v3.8.0
     GIT_SHALLOW ON
     ${find_pkg_args})
   FetchContent_MakeAvailable(Catch2)
