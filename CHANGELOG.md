@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ### Language Support
 * Disallow access to protected members from class scoped randomize constraint blocks -- the LRM is unclear about this but other tools seem to have decided this way made the most sense
 * Added a check that net aliases aren't duplicated, and that nets don't alias to themselves, as mandated by the LRM (thanks to @likeamahoney)
+* Implemented remaining rules for virtual interfaces:
+  * Virtual interfaces can't have hierarchical references to objects outside the interface
+  * Virtual interfaces can't have interface ports
+  * Instances assigned to a virtual interface can't have an instance configuration rule applied to them
 
 ### Potentially Breaking Changes
 * The minimum supported Xcode version is now 16 and the minimum supported Clang version is now 17 (to allow cleaning up workarounds for various bugs)
@@ -23,6 +27,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Added [-Wcase-dup](https://sv-lang.com/warning-ref.html#case-dup) which warns about duplicate item expressions in a case statement
 * Added [-Wcase-overlap](https://sv-lang.com/warning-ref.html#case-overlap) which warns about overlapping case items (due to wildcard bits)
 * Added [-Wcase-not-wildcard](https://sv-lang.com/warning-ref.html#case-not-wildcard) and [-Wcasez-with-x](https://sv-lang.com/warning-ref.html#casez-with-x) which warn about potentially misleading wildcard bits in non-wildcard case statements
+* Added initial support for instance caching, which skips elaborating identical module instances to speed up elaboration. This is currently hidden behind the `--disable-instance-caching` command line flag because when turned on not all multi-driven errors are properly issued. Once all issues have been worked out the feature will be turned on by default.
+* Added the ability to output diagnostics to JSON instead of (or in addition to) plain text
+* Added `--translate-off-format` which allows specifying comment directives that should act as skipped regions (for example, `// pragma translate_off` and `// pragma translate_on`)
+* slang warnings can now be turned on and off within source code using `// slang lint_off` style comment directives
 
 ### Improvements
 * Made -Wuseless-cast a bit less noisy -- it now does not warn about expressions involving genvars or cases where types are matching but one or the other has a different typedef alias name
@@ -33,6 +41,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Changed the error issued for sequences that can never be matched to be a warning instead (-Wseq-no-match) and added additional context to the diagnostic message
 * Made minor tweaks to improve defparam and bind resolution performance
 * -Wsign-conversion will no longer warn for certain system functions that have a return type of `int` but in practice only return a single bit result
+* Made some minor improvements to parser error recovery when struct definitions are missing a closing brace
 
 ### Fixes
 * Fixed a bug with constant evaluation of left-hand side assignment patterns that require implicit conversions to be applied
@@ -57,6 +66,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Fixed a potentially unbounded loop when resolving a specific case of invalid bind directives
 * Fixed bad diagnostic output related to instantiating properties with missing formal argument names
 * Fixed several minor issues with the Python bindings (thanks to @parker-research)
+* Fixed bugs with pattern variables not being visible in certain scopes where they otherwise should have been
+* Pattern variables are now properly usable from static variable initializer expressions
+* $sformat in constant expressions now works properly with %p specifiers
+* Fixed -Wwidth-expand to apply to conditional expressions
+* Fixed \[\*\] and ##\[\*\] sequence repetitions to start from 0 instead of 1 (thanks to @georgerennie)
+* Fixed a case where nested attributes were not properly diagnosed (thanks to @likeamahoney)
 
 
 ## [v7.0] - 2024-09-26
