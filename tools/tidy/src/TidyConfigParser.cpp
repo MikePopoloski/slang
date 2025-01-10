@@ -283,7 +283,16 @@ void TidyConfigParser::parseCheckConfigs() {
         // Parse multiple option values
         std::vector<std::string> optionValues;
 
+        auto isRegexMeta = [](char c) {
+            return c == '.' || c == '^' || c == '$' || c == '*' || c == '+' || c == '?' ||
+                   c == '{' || c == '}' || c == '[' || c == ']' || c == '\\' || c == '|' ||
+                   c == '(' || c == ')';
+        };
+
         auto isOptionValueChar = [](char c) { return isalnum(c) || c == '_'; };
+        auto isRegexOptionValueChar = [&](char c) {
+            return isalnum(c) || isRegexMeta(c) || c == '_';
+        };
 
         if (peekChar() == '[') {
             currentChar = nextChar(); // skip '['
@@ -298,6 +307,20 @@ void TidyConfigParser::parseCheckConfigs() {
             if (currentChar != ']') {
                 reportErrorAndExit(
                     fmt::format("Expected ']' but found ({}){}", +currentChar, currentChar));
+            }
+            currentChar = nextChar();
+        }
+        else if (peekChar() == '"') {
+            currentChar = nextChar(); // skip '"'
+
+            std::string optionValue;
+            currentChar = readIf(optionValue, isRegexOptionValueChar);
+            if (!optionValue.empty())
+                optionValues.emplace_back((optionValue));
+
+            if (currentChar != '"') {
+                reportErrorAndExit(
+                    fmt::format("Expected '\"' but found ({}){}", +currentChar, currentChar));
             }
             currentChar = nextChar();
         }
