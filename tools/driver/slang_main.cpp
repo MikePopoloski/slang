@@ -25,12 +25,14 @@ using namespace slang::ast;
 using namespace slang::driver;
 
 void printJson(Compilation& compilation, const std::string& fileName,
-               const std::vector<std::string>& scopes, bool includeSourceInfo) {
+               const std::vector<std::string>& scopes, bool includeSourceInfo, bool detailedTypes) {
     JsonWriter writer;
     writer.setPrettyPrint(true);
 
     ASTSerializer serializer(compilation, writer);
     serializer.setIncludeSourceInfo(includeSourceInfo);
+    serializer.setDetailedTypeInfo(detailedTypes);
+
     if (scopes.empty()) {
         serializer.startObject();
         serializer.writeProperty("design");
@@ -106,6 +108,10 @@ int driverMain(int argc, TArgs argv) {
         driver.cmdLine.add("--ast-json-source-info", includeSourceInfo,
                            "When dumping AST to JSON, include source line and file information");
 
+        std::optional<bool> serializeDetailedTypes;
+        driver.cmdLine.add("--ast-json-detailed-types", serializeDetailedTypes,
+                           "When dumping AST to JSON, expand out all type information");
+
         std::optional<std::string> timeTrace;
         driver.cmdLine.add("--time-trace", timeTrace,
                            "Do performance profiling of the slang compiler and output "
@@ -166,9 +172,11 @@ int driverMain(int argc, TArgs argv) {
                     TimeTraceScope timeScope("elaboration"sv, ""sv);
                     auto compilation = driver.createCompilation();
                     ok &= driver.reportCompilation(*compilation, quiet == true);
-                    if (astJsonFile)
+
+                    if (astJsonFile) {
                         printJson(*compilation, *astJsonFile, astJsonScopes,
-                                  includeSourceInfo == true);
+                                  includeSourceInfo == true, serializeDetailedTypes == true);
+                    }
                 }
             }
         }

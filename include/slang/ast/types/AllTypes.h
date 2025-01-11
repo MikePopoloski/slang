@@ -66,6 +66,8 @@ public:
     ScalarType(Kind scalarKind);
     ScalarType(Kind scalarKind, bool isSigned);
 
+    void serializeTo(ASTSerializer&) const {}
+
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::ScalarType; }
 };
 
@@ -77,6 +79,8 @@ public:
 
     PredefinedIntegerType(Kind integerKind);
     PredefinedIntegerType(Kind integerKind, bool isSigned);
+
+    void serializeTo(ASTSerializer&) const {}
 
     static bool isDefaultSigned(Kind integerKind);
 
@@ -93,6 +97,7 @@ public:
     explicit FloatingType(Kind floatKind);
 
     ConstantValue getDefaultValueImpl() const;
+    void serializeTo(ASTSerializer&) const {}
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::FloatingType; }
 };
@@ -110,6 +115,8 @@ public:
 
     EnumType(Compilation& compilation, SourceLocation loc, const Type& baseType,
              const ASTContext& context);
+
+    void serializeTo(ASTSerializer& serializer) const;
 
     static const Type& fromSyntax(Compilation& compilation, const syntax::EnumTypeSyntax& syntax,
                                   const ASTContext& context,
@@ -161,6 +168,8 @@ public:
 
     PackedArrayType(const Type& elementType, ConstantRange range, bitwidth_t fullWidth);
 
+    void serializeTo(ASTSerializer& serializer) const;
+
     static const Type& fromSyntax(const Scope& scope, const Type& elementType,
                                   const EvaluatedDimension& dimension,
                                   const syntax::SyntaxNode& syntax);
@@ -190,6 +199,8 @@ public:
     FixedSizeUnpackedArrayType(const Type& elementType, ConstantRange range,
                                uint64_t selectableWidth, uint64_t bitstreamWidth);
 
+    void serializeTo(ASTSerializer& serializer) const;
+
     static const Type& fromDims(const Scope& scope, const Type& elementType,
                                 std::span<const ConstantRange> dimensions,
                                 syntax::DeferredSourceRange sourceRange);
@@ -211,6 +222,7 @@ public:
     explicit DynamicArrayType(const Type& elementType);
 
     ConstantValue getDefaultValueImpl() const;
+    void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::DynamicArrayType; }
 };
@@ -228,6 +240,7 @@ public:
     DPIOpenArrayType(const Type& elementType, bool isPacked);
 
     ConstantValue getDefaultValueImpl() const;
+    void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::DPIOpenArrayType; }
 };
@@ -247,6 +260,7 @@ public:
     /// @returns true if the array has a wildcard index type
     bool hasWildcardIndexType() const { return indexType == nullptr; }
     ConstantValue getDefaultValueImpl() const;
+    void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::AssociativeArrayType; }
 };
@@ -263,6 +277,7 @@ public:
     QueueType(const Type& elementType, uint32_t maxBound);
 
     ConstantValue getDefaultValueImpl() const;
+    void serializeTo(ASTSerializer& serializer) const;
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::QueueType; }
 };
@@ -275,6 +290,8 @@ public:
 
     PackedStructType(Compilation& compilation, bool isSigned, SourceLocation loc,
                      const ASTContext& context);
+
+    void serializeTo(ASTSerializer&) const {}
 
     static const Type& fromSyntax(Compilation& compilation,
                                   const syntax::StructUnionTypeSyntax& syntax,
@@ -299,6 +316,8 @@ public:
     int systemId;
 
     UnpackedStructType(Compilation& compilation, SourceLocation loc, const ASTContext& context);
+
+    void serializeTo(ASTSerializer&) const {}
 
     static const Type& fromSyntax(const ASTContext& context,
                                   const syntax::StructUnionTypeSyntax& syntax);
@@ -326,6 +345,8 @@ public:
 
     PackedUnionType(Compilation& compilation, bool isSigned, bool isTagged, bool isSoft,
                     SourceLocation loc, const ASTContext& context);
+
+    void serializeTo(ASTSerializer& serializer) const;
 
     static const Type& fromSyntax(Compilation& compilation,
                                   const syntax::StructUnionTypeSyntax& syntax,
@@ -355,6 +376,8 @@ public:
     UnpackedUnionType(Compilation& compilation, bool isTagged, SourceLocation loc,
                       const ASTContext& context);
 
+    void serializeTo(ASTSerializer& serializer) const;
+
     static const Type& fromSyntax(const ASTContext& context,
                                   const syntax::StructUnionTypeSyntax& syntax);
 
@@ -372,6 +395,7 @@ public:
     VoidType() : Type(SymbolKind::VoidType, "void", SourceLocation()) {}
 
     ConstantValue getDefaultValueImpl() const { return nullptr; }
+    void serializeTo(ASTSerializer&) const {}
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::VoidType; }
 };
@@ -385,6 +409,7 @@ public:
     NullType() : Type(SymbolKind::NullType, "null", SourceLocation()) {}
 
     ConstantValue getDefaultValueImpl() const;
+    void serializeTo(ASTSerializer&) const {}
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::NullType; }
 };
@@ -395,6 +420,7 @@ public:
     CHandleType() : Type(SymbolKind::CHandleType, "chandle", SourceLocation()) {}
 
     ConstantValue getDefaultValueImpl() const;
+    void serializeTo(ASTSerializer&) const {}
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::CHandleType; }
 };
@@ -405,6 +431,7 @@ public:
     StringType() : Type(SymbolKind::StringType, "string", SourceLocation()) {}
 
     ConstantValue getDefaultValueImpl() const;
+    void serializeTo(ASTSerializer&) const {}
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::StringType; }
 };
@@ -416,6 +443,7 @@ public:
     EventType() : Type(SymbolKind::EventType, "event", SourceLocation()) {}
 
     ConstantValue getDefaultValueImpl() const;
+    void serializeTo(ASTSerializer&) const {}
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::EventType; }
 };
@@ -427,6 +455,7 @@ public:
     UnboundedType() : Type(SymbolKind::UnboundedType, "$", SourceLocation()) {}
 
     ConstantValue getDefaultValueImpl() const { return nullptr; }
+    void serializeTo(ASTSerializer&) const {}
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::UnboundedType; }
 };
@@ -437,6 +466,7 @@ public:
     TypeRefType() : Type(SymbolKind::TypeRefType, "type reference", SourceLocation()) {}
 
     ConstantValue getDefaultValueImpl() const { return nullptr; }
+    void serializeTo(ASTSerializer&) const {}
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::TypeRefType; }
 };
@@ -447,6 +477,7 @@ public:
     UntypedType() : Type(SymbolKind::UntypedType, "untyped", SourceLocation()) {}
 
     ConstantValue getDefaultValueImpl() const { return nullptr; }
+    void serializeTo(ASTSerializer&) const {}
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::UntypedType; }
 };
@@ -457,6 +488,7 @@ public:
     SequenceType() : Type(SymbolKind::SequenceType, "sequence", SourceLocation()) {}
 
     ConstantValue getDefaultValueImpl() const { return nullptr; }
+    void serializeTo(ASTSerializer&) const {}
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::SequenceType; }
 };
@@ -467,6 +499,7 @@ public:
     PropertyType() : Type(SymbolKind::PropertyType, "property", SourceLocation()) {}
 
     ConstantValue getDefaultValueImpl() const { return nullptr; }
+    void serializeTo(ASTSerializer&) const {}
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::PropertyType; }
 };
@@ -490,6 +523,7 @@ public:
         isRealIface(isRealIface) {}
 
     ConstantValue getDefaultValueImpl() const;
+    void serializeTo(ASTSerializer& serializer) const;
 
     static const Type& fromSyntax(const ASTContext& context,
                                   const syntax::VirtualInterfaceTypeSyntax& syntax);
@@ -576,6 +610,7 @@ public:
     ErrorType() : Type(SymbolKind::ErrorType, "", SourceLocation()) {}
 
     ConstantValue getDefaultValueImpl() const { return nullptr; }
+    void serializeTo(ASTSerializer&) const {}
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::ErrorType; }
 

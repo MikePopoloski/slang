@@ -7,6 +7,7 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include "slang/util/Hash.h"
 #include "slang/util/Util.h"
 
 namespace slang {
@@ -41,6 +42,10 @@ public:
     /// Sets a flag that indicates whether source line and file
     /// information should be included in the JSON output.
     void setIncludeSourceInfo(bool set) { includeSourceInfo = set; }
+
+    /// Sets a flag that indicates whether detailed type information
+    /// is included in the output.
+    void setDetailedTypeInfo(bool set) { detailedTypeInfo = set; }
 
     /// Serializes a symbol to JSON.
     void serialize(const Symbol& symbol, bool inMembersArray = false);
@@ -174,6 +179,8 @@ private:
     JsonWriter& writer;
     bool includeAddrs = true;
     bool includeSourceInfo = false;
+    bool detailedTypeInfo = false;
+    flat_hash_set<const void*> visiting;
 };
 
 } // namespace slang::ast

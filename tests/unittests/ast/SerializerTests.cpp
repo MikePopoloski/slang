@@ -7,13 +7,14 @@
 #include "slang/ast/ASTVisitor.h"
 #include "slang/text/Json.h"
 
-std::string serialize(Compilation& comp, bool sourceInfo = false) {
+std::string serialize(Compilation& comp, bool sourceInfo = false, bool detailedTypeInfo = false) {
     JsonWriter writer;
     writer.setPrettyPrint(true);
 
     ASTSerializer serializer(comp, writer);
     serializer.setIncludeAddresses(false);
     serializer.setIncludeSourceInfo(sourceInfo);
+    serializer.setDetailedTypeInfo(detailedTypeInfo);
     serializer.serialize(comp.getRoot());
 
     return "\n"s + std::string(writer.view());
@@ -135,20 +136,6 @@ endmodule
         "source_line": 2,
         "source_column": 8,
         "members": [
-          {
-            "name": "STATE_0",
-            "kind": "TransparentMember",
-            "source_file": "source",
-            "source_line": 4,
-            "source_column": 9
-          },
-          {
-            "name": "STATE_1",
-            "kind": "TransparentMember",
-            "source_file": "source",
-            "source_line": 5,
-            "source_column": 9
-          },
           {
             "name": "STATE",
             "kind": "TypeAlias",
@@ -918,7 +905,7 @@ typedef enum logic [1:0] {
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 
-    auto result = serialize(compilation);
+    auto result = serialize(compilation, false, true);
     CHECK(result == R"(
 {
   "name": "$root",
@@ -931,33 +918,233 @@ typedef enum logic [1:0] {
         {
           "name": "INST",
           "kind": "TypeAlias",
-          "target": "union packed{logic[31:0] inst;}u$1"
+          "target": {
+            "name": "",
+            "kind": "PackedUnionType",
+            "members": [
+              {
+                "name": "inst",
+                "kind": "Field",
+                "type": {
+                  "name": "",
+                  "kind": "PackedArrayType",
+                  "elementType": {
+                    "name": "logic",
+                    "kind": "ScalarType"
+                  },
+                  "range": "[31:0]"
+                },
+                "lifetime": "Automatic",
+                "bitOffset": 0,
+                "fieldIndex": 0
+              }
+            ],
+            "isTagged": false,
+            "isSoft": false
+          }
         },
         {
           "name": "CONTAINER",
           "kind": "TypeAlias",
-          "target": "struct packed{INST inst;logic another_signal;}s$1"
-        },
-        {
-          "name": "BYTE",
-          "kind": "TransparentMember"
-        },
-        {
-          "name": "HALF",
-          "kind": "TransparentMember"
-        },
-        {
-          "name": "WORD",
-          "kind": "TransparentMember"
-        },
-        {
-          "name": "DOUBLE",
-          "kind": "TransparentMember"
+          "target": {
+            "name": "",
+            "kind": "PackedStructType",
+            "members": [
+              {
+                "name": "inst",
+                "kind": "Field",
+                "type": {
+                  "name": "INST",
+                  "kind": "TypeAlias",
+                  "target": {
+                    "name": "",
+                    "kind": "PackedUnionType",
+                    "members": [
+                      {
+                        "name": "inst",
+                        "kind": "Field",
+                        "type": {
+                          "name": "",
+                          "kind": "PackedArrayType",
+                          "elementType": {
+                            "name": "logic",
+                            "kind": "ScalarType"
+                          },
+                          "range": "[31:0]"
+                        },
+                        "lifetime": "Automatic",
+                        "bitOffset": 0,
+                        "fieldIndex": 0
+                      }
+                    ],
+                    "isTagged": false,
+                    "isSoft": false
+                  }
+                },
+                "lifetime": "Automatic",
+                "bitOffset": 1,
+                "fieldIndex": 0
+              },
+              {
+                "name": "another_signal",
+                "kind": "Field",
+                "type": {
+                  "name": "logic",
+                  "kind": "ScalarType"
+                },
+                "lifetime": "Automatic",
+                "bitOffset": 0,
+                "fieldIndex": 1
+              }
+            ]
+          }
         },
         {
           "name": "MEM_SIZE",
           "kind": "TypeAlias",
-          "target": "enum{BYTE=2'd0,HALF=2'd1,WORD=2'd2,DOUBLE=2'd3}MEM_SIZE"
+          "target": {
+            "name": "MEM_SIZE",
+            "kind": "EnumType",
+            "members": [
+              {
+                "name": "BYTE",
+                "kind": "EnumValue",
+                "initializer": {
+                  "kind": "Conversion",
+                  "type": {
+                    "name": "",
+                    "kind": "PackedArrayType",
+                    "elementType": {
+                      "name": "logic",
+                      "kind": "ScalarType"
+                    },
+                    "range": "[1:0]"
+                  },
+                  "operand": {
+                    "kind": "IntegerLiteral",
+                    "type": {
+                      "name": "",
+                      "kind": "PackedArrayType",
+                      "elementType": {
+                        "name": "bit",
+                        "kind": "ScalarType"
+                      },
+                      "range": "[1:0]"
+                    },
+                    "value": "2'b0",
+                    "constant": "2'b0"
+                  },
+                  "constant": "2'b0"
+                },
+                "value": "2'b0"
+              },
+              {
+                "name": "HALF",
+                "kind": "EnumValue",
+                "initializer": {
+                  "kind": "Conversion",
+                  "type": {
+                    "name": "",
+                    "kind": "PackedArrayType",
+                    "elementType": {
+                      "name": "logic",
+                      "kind": "ScalarType"
+                    },
+                    "range": "[1:0]"
+                  },
+                  "operand": {
+                    "kind": "IntegerLiteral",
+                    "type": {
+                      "name": "",
+                      "kind": "PackedArrayType",
+                      "elementType": {
+                        "name": "bit",
+                        "kind": "ScalarType"
+                      },
+                      "range": "[1:0]"
+                    },
+                    "value": "2'b1",
+                    "constant": "2'b1"
+                  },
+                  "constant": "2'b1"
+                },
+                "value": "2'b1"
+              },
+              {
+                "name": "WORD",
+                "kind": "EnumValue",
+                "initializer": {
+                  "kind": "Conversion",
+                  "type": {
+                    "name": "",
+                    "kind": "PackedArrayType",
+                    "elementType": {
+                      "name": "logic",
+                      "kind": "ScalarType"
+                    },
+                    "range": "[1:0]"
+                  },
+                  "operand": {
+                    "kind": "IntegerLiteral",
+                    "type": {
+                      "name": "",
+                      "kind": "PackedArrayType",
+                      "elementType": {
+                        "name": "bit",
+                        "kind": "ScalarType"
+                      },
+                      "range": "[1:0]"
+                    },
+                    "value": "2'b10",
+                    "constant": "2'b10"
+                  },
+                  "constant": "2'b10"
+                },
+                "value": "2'b10"
+              },
+              {
+                "name": "DOUBLE",
+                "kind": "EnumValue",
+                "initializer": {
+                  "kind": "Conversion",
+                  "type": {
+                    "name": "",
+                    "kind": "PackedArrayType",
+                    "elementType": {
+                      "name": "logic",
+                      "kind": "ScalarType"
+                    },
+                    "range": "[1:0]"
+                  },
+                  "operand": {
+                    "kind": "IntegerLiteral",
+                    "type": {
+                      "name": "",
+                      "kind": "PackedArrayType",
+                      "elementType": {
+                        "name": "bit",
+                        "kind": "ScalarType"
+                      },
+                      "range": "[1:0]"
+                    },
+                    "value": "2'b11",
+                    "constant": "2'b11"
+                  },
+                  "constant": "2'b11"
+                },
+                "value": "2'b11"
+              }
+            ],
+            "baseType": {
+              "name": "",
+              "kind": "PackedArrayType",
+              "elementType": {
+                "name": "logic",
+                "kind": "ScalarType"
+              },
+              "range": "[1:0]"
+            }
+          }
         }
       ]
     }

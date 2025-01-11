@@ -7,6 +7,8 @@
 //------------------------------------------------------------------------------
 #include "slang/ast/types/AllTypes.h"
 
+#include <fmt/format.h>
+
 #include "slang/ast/ASTContext.h"
 #include "slang/ast/ASTSerializer.h"
 #include "slang/ast/Compilation.h"
@@ -558,6 +560,10 @@ const Type& EnumType::findDefinition(Compilation& comp, const EnumTypeSyntax& sy
     return comp.getErrorType();
 }
 
+void EnumType::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("baseType", baseType);
+}
+
 EnumValueSymbol::EnumValueSymbol(std::string_view name, SourceLocation loc) :
     ValueSymbol(SymbolKind::EnumValue, name, loc, DeclaredTypeFlags::InitializerCantSeeParent) {
 }
@@ -679,6 +685,11 @@ const Type& PackedArrayType::fromDim(const Scope& scope, const Type& elementType
     return *result;
 }
 
+void PackedArrayType::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("elementType", elementType);
+    serializer.write("range", fmt::format("[{}:{}]", range.left, range.right));
+}
+
 FixedSizeUnpackedArrayType::FixedSizeUnpackedArrayType(const Type& elementType, ConstantRange range,
                                                        uint64_t selectableWidth,
                                                        uint64_t bitstreamWidth) :
@@ -725,12 +736,21 @@ ConstantValue FixedSizeUnpackedArrayType::getDefaultValueImpl() const {
     return std::vector<ConstantValue>(range.width(), elementType.getDefaultValue());
 }
 
+void FixedSizeUnpackedArrayType::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("elementType", elementType);
+    serializer.write("range", fmt::format("[{}:{}]", range.left, range.right));
+}
+
 DynamicArrayType::DynamicArrayType(const Type& elementType) :
     Type(SymbolKind::DynamicArrayType, "", SourceLocation()), elementType(elementType) {
 }
 
 ConstantValue DynamicArrayType::getDefaultValueImpl() const {
     return std::vector<ConstantValue>();
+}
+
+void DynamicArrayType::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("elementType", elementType);
 }
 
 DPIOpenArrayType::DPIOpenArrayType(const Type& elementType, bool isPacked) :
@@ -742,6 +762,11 @@ ConstantValue DPIOpenArrayType::getDefaultValueImpl() const {
     return nullptr;
 }
 
+void DPIOpenArrayType::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("elementType", elementType);
+    serializer.write("isPacked", isPacked);
+}
+
 AssociativeArrayType::AssociativeArrayType(const Type& elementType, const Type* indexType) :
     Type(SymbolKind::AssociativeArrayType, "", SourceLocation()), elementType(elementType),
     indexType(indexType) {
@@ -749,6 +774,12 @@ AssociativeArrayType::AssociativeArrayType(const Type& elementType, const Type* 
 
 ConstantValue AssociativeArrayType::getDefaultValueImpl() const {
     return AssociativeArray();
+}
+
+void AssociativeArrayType::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("elementType", elementType);
+    if (indexType)
+        serializer.write("indexType", *indexType);
 }
 
 QueueType::QueueType(const Type& elementType, uint32_t maxBound) :
@@ -760,6 +791,11 @@ ConstantValue QueueType::getDefaultValueImpl() const {
     SVQueue result;
     result.maxBound = maxBound;
     return result;
+}
+
+void QueueType::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("elementType", elementType);
+    serializer.write("maxBound", maxBound);
 }
 
 PackedStructType::PackedStructType(Compilation& compilation, bool isSigned, SourceLocation loc,
@@ -1026,6 +1062,11 @@ const Type& PackedUnionType::fromSyntax(Compilation& comp, const StructUnionType
     return createPackedDims(context, unionType, syntax.dimensions);
 }
 
+void PackedUnionType::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("isTagged", isTagged);
+    serializer.write("isSoft", isSoft);
+}
+
 UnpackedUnionType::UnpackedUnionType(Compilation& compilation, bool isTagged, SourceLocation loc,
                                      const ASTContext& context) :
     Type(SymbolKind::UnpackedUnionType, "", loc), Scope(compilation, this),
@@ -1104,6 +1145,10 @@ const Type& UnpackedUnionType::fromSyntax(const ASTContext& context,
     return *result;
 }
 
+void UnpackedUnionType::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("isTagged", isTagged);
+}
+
 ConstantValue NullType::getDefaultValueImpl() const {
     return ConstantValue::NullPlaceholder{};
 }
@@ -1166,6 +1211,10 @@ const Type& VirtualInterfaceType::fromSyntax(const ASTContext& context,
 
 ConstantValue VirtualInterfaceType::getDefaultValueImpl() const {
     return ConstantValue::NullPlaceholder{};
+}
+
+void VirtualInterfaceType::serializeTo(ASTSerializer& serializer) const {
+    serializer.write("target", toString());
 }
 
 ForwardingTypedefSymbol& ForwardingTypedefSymbol::fromSyntax(

@@ -245,6 +245,11 @@ symbols are dumped.
 
 When dumping AST to JSON, include source line and file information.
 
+`--ast-json-detailed-types`
+
+When dumping AST to JSON, include expanded type information in the output instead of
+condensing all types into a human-friendly string.
+
 @section compilation-limits Compilation
 
 `--top <name>`
