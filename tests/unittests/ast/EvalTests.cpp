@@ -2608,3 +2608,19 @@ endmodule
     auto& compare = root.lookupName<ParameterSymbol>("m.Compare");
     CHECK(compare.getValue().integer() == 1);
 }
+
+TEST_CASE("Eval truthiness of strings") {
+    ScriptSession session(optionsFor(LanguageVersion::v1800_2023));
+    session.eval(R"(
+function automatic bit b;
+    string s = "SDF";
+    if (s)
+        return 1;
+    return 0;
+endfunction
+)");
+
+    CHECK(session.eval("b()").integer() == 1);
+
+    NO_SESSION_ERRORS;
+}

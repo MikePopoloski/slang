@@ -242,8 +242,8 @@ Expression& UnaryExpression::fromSyntax(Compilation& compilation,
             result->type = type;
             break;
         case SyntaxKind::UnaryLogicalNotExpression:
-            // Supported for both integral and real types. Result is a single bit.
-            good = type->isNumeric();
+            // Supported for all boolean convertible types. Result is a single bit.
+            good = type->isBooleanConvertible();
             result->type = type->isFourState() ? &compilation.getLogicType()
                                                : &compilation.getBitType();
             selfDetermined(context, result->operand_);
@@ -490,6 +490,9 @@ ConstantValue UnaryExpression::evalImpl(EvalContext& context) const {
             default:
                 break;
         }
+    }
+    else if (op == UnaryOperator::LogicalNot) {
+        return SVInt(cv.isFalse());
     }
 
 #undef OP

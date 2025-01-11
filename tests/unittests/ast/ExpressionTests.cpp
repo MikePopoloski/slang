@@ -3771,3 +3771,20 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Boolean convertible types can be used with operator! -- GH #1208") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    chandle handle = null;
+    always_comb begin
+        if (!handle) begin
+            $fatal(1, "handle is null");
+        end
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}

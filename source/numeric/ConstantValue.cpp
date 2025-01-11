@@ -253,6 +253,8 @@ bool ConstantValue::isTrue() const {
                 return (bool)arg;
             else if constexpr (std::is_same_v<T, ConstantValue::UnboundedPlaceholder>)
                 return true;
+            else if constexpr (std::is_same_v<T, std::string>)
+                return !arg.empty();
             else
                 return false;
         },
@@ -273,6 +275,8 @@ bool ConstantValue::isFalse() const {
                 return !(bool)arg;
             else if constexpr (std::is_same_v<T, ConstantValue::NullPlaceholder>)
                 return true;
+            else if constexpr (std::is_same_v<T, std::string>)
+                return arg.empty();
             else
                 return false;
         },
