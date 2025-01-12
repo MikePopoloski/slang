@@ -2610,7 +2610,7 @@ endmodule
 }
 
 TEST_CASE("Eval truthiness of strings") {
-    ScriptSession session(optionsFor(LanguageVersion::v1800_2023));
+    ScriptSession session;
     session.eval(R"(
 function automatic bit b;
     string s = "SDF";
@@ -2621,6 +2621,14 @@ endfunction
 )");
 
     CHECK(session.eval("b()").integer() == 1);
+
+    NO_SESSION_ERRORS;
+}
+
+TEST_CASE("Eval static cast type propagation") {
+    ScriptSession session;
+    CHECK(session.eval("(3)'(1'b1 << 2)").integer() == 4);
+    CHECK(session.eval("int'(1'b1 + (1'b1 << 2))").integer() == 5);
 
     NO_SESSION_ERRORS;
 }

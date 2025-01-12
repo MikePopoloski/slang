@@ -147,7 +147,7 @@ Expression& Expression::convertAssignment(const ASTContext& context, const Type&
     const Type* rt = expr.type;
 
     auto finalizeType = [&](const Type& t) {
-        contextDetermined(context, result, nullptr, t, assignmentRange, /* isAssignment */ true);
+        contextDetermined(context, result, nullptr, t, assignmentRange, ConversionKind::Implicit);
     };
 
     if (type.isEquivalent(*rt)) {
@@ -328,8 +328,6 @@ Expression& ConversionExpression::fromSyntax(Compilation& comp, const CastExpres
         }
 
         operand = &create(comp, *syntax.right, context, ASTFlags::StreamingAllowed, type);
-        selfDetermined(context, operand);
-
         if (operand->bad())
             return badExpr(comp, nullptr);
     }
@@ -342,7 +340,7 @@ Expression& ConversionExpression::fromSyntax(Compilation& comp, const CastExpres
         if (!context.requireValidBitWidth(width, targetExpr.sourceRange))
             return badExpr(comp, nullptr);
 
-        operand = &selfDetermined(comp, *syntax.right, context, ASTFlags::StreamingAllowed);
+        operand = &create(comp, *syntax.right, context, ASTFlags::StreamingAllowed);
         if (operand->bad())
             return badExpr(comp, nullptr);
 
@@ -409,6 +407,29 @@ Expression& ConversionExpression::fromSyntax(Compilation& comp, const CastExpres
          !actuallyNeededCast(*type, *operand))) {
         context.addDiag(diag::UselessCast, syntax.apostrophe.location())
             << *operand->type << targetExpr.sourceRange << operand->sourceRange;
+    }
+
+    if (type->isAssignmentCompatible(*operand->type)) {
+        // The type we propagate should use the sign of the operand, just like it
+        // would if we were doing an implicit conversion via an assignment expression.
+        auto propagatedType = type;
+        if (type->isIntegral() && operand->type->isIntegral() &&
+            type->getIntegralFlags() != operand->type->getIntegralFlags()) {
+            propagatedType = &comp.getType(type->getBitWidth(), operand->type->getIntegralFlags());
+        }
+
+        contextDetermined(context, operand, nullptr, *propagatedType, syntax.apostrophe.range(),
+                          ConversionKind::Explicit);
+
+        if (operand->kind == ExpressionKind::Conversion &&
+            !operand->as<ConversionExpression>().isImplicit()) {
+            operand->sourceRange = syntax.sourceRange();
+            operand->type = type;
+            return *operand;
+        }
+    }
+    else {
+        selfDetermined(context, operand);
     }
 
     return *result();

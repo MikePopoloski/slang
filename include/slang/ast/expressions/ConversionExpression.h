@@ -11,17 +11,6 @@
 
 namespace slang::ast {
 
-// clang-format off
-#define CK(x) \
-    x(Implicit) \
-    x(Propagated) \
-    x(StreamingConcat) \
-    x(Explicit) \
-    x(BitstreamCast)
-// clang-format on
-SLANG_ENUM(ConversionKind, CK)
-#undef CK
-
 /// Represents a type conversion expression (implicit or explicit).
 class SLANG_EXPORT ConversionExpression : public Expression {
 public:

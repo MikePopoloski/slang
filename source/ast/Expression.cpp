@@ -138,12 +138,12 @@ struct Expression::PropagationVisitor {
     const Type& newType;
     const Expression* parentExpr;
     SourceRange opRange;
-    bool isAssignment;
+    ConversionKind conversionKind;
 
     PropagationVisitor(const ASTContext& context, const Type& newType, const Expression* parentExpr,
-                       SourceRange opRange, bool isAssignment) :
+                       SourceRange opRange, ConversionKind conversionKind) :
         context(context), newType(newType), parentExpr(parentExpr), opRange(opRange),
-        isAssignment(isAssignment) {}
+        conversionKind(conversionKind) {}
 
     template<typename T>
     Expression& visit(T& expr) {
@@ -173,7 +173,8 @@ struct Expression::PropagationVisitor {
                     // most immediate parent expression instead.
                     updateRange(expr);
                 }
-                else if (expr.kind == ExpressionKind::ConditionalOp && isAssignment) {
+                else if (expr.kind == ExpressionKind::ConditionalOp &&
+                         conversionKind == ConversionKind::Implicit) {
                     // This is a special case to make sure we get a width expansion
                     // warning for assignments from a conditional operator. The type
                     // conversion here is a propagation so no implicit conversion
@@ -190,8 +191,6 @@ struct Expression::PropagationVisitor {
 
         Expression* result = &expr;
         if (needConversion) {
-            auto conversionKind = isAssignment ? ConversionKind::Implicit
-                                               : ConversionKind::Propagated;
             result = &ConversionExpression::makeImplicit(context, newType, conversionKind, expr,
                                                          parentExpr, opRange);
         }
@@ -1549,14 +1548,14 @@ void Expression::findPotentiallyImplicitNets(
 
 void Expression::contextDetermined(const ASTContext& context, Expression*& expr,
                                    const Expression* parentExpr, const Type& newType,
-                                   SourceRange opRange, bool isAssignment) {
-    PropagationVisitor visitor(context, newType, parentExpr, opRange, isAssignment);
+                                   SourceRange opRange, ConversionKind conversionKind) {
+    PropagationVisitor visitor(context, newType, parentExpr, opRange, conversionKind);
     expr = &expr->visit(visitor);
 }
 
 void Expression::selfDetermined(const ASTContext& context, Expression*& expr) {
     SLANG_ASSERT(expr->type);
-    PropagationVisitor visitor(context, *expr->type, nullptr, {}, false);
+    PropagationVisitor visitor(context, *expr->type, nullptr, {}, ConversionKind::Propagated);
     expr = &expr->visit(visitor);
 }
 
