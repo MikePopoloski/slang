@@ -1052,7 +1052,7 @@ endmodule
 
     auto& foo = compilation.getRoot()
                     .lookupName<GenerateBlockArraySymbol>("top.m1[2][1][3].asdf")
-                    .memberAt<GenerateBlockSymbol>(1)
+                    .memberAt<GenerateBlockSymbol>(2)
                     .memberAt<GenerateBlockSymbol>(1)
                     .find<VariableSymbol>("foo");
 

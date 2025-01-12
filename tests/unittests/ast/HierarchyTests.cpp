@@ -177,10 +177,10 @@ endmodule
     Compilation compilation;
     const auto& instance = evalModule(tree, compilation).body.memberAt<GenerateBlockArraySymbol>(1);
 
-    REQUIRE(std::ranges::distance(instance.members()) == 10);
+    REQUIRE(std::ranges::distance(instance.members()) == 11);
 
     for (uint32_t i = 0; i < 10; i++) {
-        auto& leaf = instance.memberAt<GenerateBlockSymbol>(i).memberAt<InstanceSymbol>(1).body;
+        auto& leaf = instance.memberAt<GenerateBlockSymbol>(i + 1).memberAt<InstanceSymbol>(1).body;
         auto& foo = leaf.find<ParameterSymbol>("foo");
         CHECK(foo.getValue().integer() == i);
     }

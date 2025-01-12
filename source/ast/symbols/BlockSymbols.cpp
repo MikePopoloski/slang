@@ -671,14 +671,13 @@ static uint64_t getGenerateLoopCount(const Scope& parent) {
     return count ? count : 1;
 }
 
-GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(Compilation& compilation,
+GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(Compilation& comp,
                                                                const LoopGenerateSyntax& syntax,
                                                                SymbolIndex scopeIndex,
                                                                const ASTContext& context,
                                                                uint32_t constructIndex) {
     auto [name, loc] = getGenerateBlockName(*syntax.block);
-    auto result = compilation.emplace<GenerateBlockArraySymbol>(compilation, name, loc,
-                                                                constructIndex);
+    auto result = comp.emplace<GenerateBlockArraySymbol>(comp, name, loc, constructIndex);
     result->setSyntax(syntax);
     result->setAttributes(*context.scope, syntax.attributes);
 
@@ -686,11 +685,13 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(Compilation& comp
     if (genvar.isMissing())
         return *result;
 
+    auto genvarSyntax = comp.emplace<IdentifierNameSyntax>(genvar);
+
     // Walk up the tree a bit to see if we're nested inside another generate loop.
     // If we are, we'll include that parent's array size in our decision about
     // wether we've looped too many times within one generate block.
     const uint64_t baseCount = getGenerateLoopCount(*context.scope);
-    const uint64_t loopLimit = compilation.getOptions().maxGenerateSteps;
+    const uint64_t loopLimit = comp.getOptions().maxGenerateSteps;
 
     // If the loop initializer has a `genvar` keyword, we can use the name directly
     // Otherwise we need to do a lookup to make sure we have the actual genvar somewhere.
@@ -707,26 +708,33 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(Compilation& comp
             return *result;
         }
 
-        compilation.noteReference(*symbol);
+        comp.noteReference(*symbol);
+    }
+    else {
+        // Fabricate a genvar symbol to live in this array since it was declared inline.
+        auto genvarSymbol = comp.emplace<GenvarSymbol>(genvar.valueText(), genvar.location());
+        genvarSymbol->setSyntax(*genvarSyntax);
+        result->addMember(*genvarSymbol);
     }
 
     SmallVector<const GenerateBlockSymbol*> entries;
     auto createBlock = [&, blockLoc = loc](ConstantValue value, bool isUninstantiated) {
         // Spec: each generate block gets their own scope, with an implicit
         // localparam of the same name as the genvar.
-        auto block = compilation.emplace<GenerateBlockSymbol>(compilation, "", blockLoc,
-                                                              (uint32_t)entries.size(),
-                                                              isUninstantiated);
-        auto implicitParam = compilation.emplace<ParameterSymbol>(
-            genvar.valueText(), genvar.location(), true /* isLocal */, false /* isPort */);
+        auto block = comp.emplace<GenerateBlockSymbol>(comp, "", blockLoc, (uint32_t)entries.size(),
+                                                       isUninstantiated);
+        auto implicitParam = comp.emplace<ParameterSymbol>(genvar.valueText(), genvar.location(),
+                                                           true /* isLocal */, false /* isPort */);
+        implicitParam->setSyntax(*genvarSyntax);
+        comp.noteReference(*implicitParam);
 
         block->addMember(*implicitParam);
         block->setSyntax(*syntax.block);
 
         addBlockMembers(*block, *syntax.block);
 
-        implicitParam->setType(compilation.getIntegerType());
-        implicitParam->setValue(compilation, std::move(value), /* needsCoercion */ false);
+        implicitParam->setType(comp.getIntegerType());
+        implicitParam->setValue(comp, std::move(value), /* needsCoercion */ false);
         implicitParam->setIsFromGenvar(true);
 
         block->arrayIndex = &implicitParam->getValue().integer();
@@ -734,19 +742,19 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(Compilation& comp
     };
 
     // Bind the initialization expression.
-    auto& initial = Expression::bindRValue(compilation.getIntegerType(), *syntax.initialExpr,
+    auto& initial = Expression::bindRValue(comp.getIntegerType(), *syntax.initialExpr,
                                            syntax.equals.range(), context);
     ConstantValue initialVal = context.eval(initial);
     if (!initialVal)
         return *result;
 
     // Fabricate a local variable that will serve as the loop iteration variable.
-    auto& iterScope = *compilation.emplace<StatementBlockSymbol>(compilation, "", loc,
-                                                                 StatementBlockKind::Sequential,
-                                                                 VariableLifetime::Automatic);
-    auto& local = *compilation.emplace<VariableSymbol>(genvar.valueText(), genvar.location(),
-                                                       VariableLifetime::Automatic);
-    local.setType(compilation.getIntegerType());
+    auto& iterScope = *comp.emplace<StatementBlockSymbol>(comp, "", loc,
+                                                          StatementBlockKind::Sequential,
+                                                          VariableLifetime::Automatic);
+    auto& local = *comp.emplace<VariableSymbol>(genvar.valueText(), genvar.location(),
+                                                VariableLifetime::Automatic);
+    local.setType(comp.getIntegerType());
     local.flags |= VariableFlags::CompilerGenerated;
 
     iterScope.setTemporaryParent(*context.scope, scopeIndex);
@@ -820,7 +828,7 @@ GenerateBlockArraySymbol& GenerateBlockArraySymbol::fromSyntax(Compilation& comp
             createBlock(index, isUninstantiated);
     }
 
-    result->entries = entries.copy(compilation);
+    result->entries = entries.copy(comp);
     if (entries.empty()) {
         createBlock(SVInt(32, 0, true), true);
     }
