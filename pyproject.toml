@@ -1,0 +1,67 @@
+[project]
+name = "pyslang"
+version = "7.0.1"
+description = "Python bindings for slang, a library for compiling SystemVerilog"
+readme = {file = "README.md", content-type = "text/markdown"}
+authors = [{name = "Mike Popoloski"}]
+keywords = ["slang", "verilog", "systemverilog", "parsing", "compiler", "eda"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: MacOS :: MacOS X",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: Unix",
+    "Programming Language :: C++",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering :: Electronic Design Automation (EDA)",
+    "Topic :: Software Development :: Compilers",
+    "Topic :: Software Development :: Libraries :: Python Modules"
+]
+
+[project.urls]
+Homepage = "https://sv-lang.com/"
+Documentation = "https://sv-lang.com/"
+Repository = "https://github.com/MikePopoloski/pyslang"
+Issues = "https://github.com/MikePopoloski/slang/issues"
+Changelog = "https://github.com/MikePopoloski/slang/blob/master/CHANGELOG.md"
+
+[project.optional-dependencies]
+test = ["pytest"]
+
+[build-system]
+requires = [
+    "pybind11",
+    "scikit-build-core",
+]
+build-backend = "scikit_build_core.build"
+
+[tool.scikit-build]
+build-dir = "build/{wheel_tag}"
+cmake.source-dir = "slang"
+install.components = ["pylib"]
+sdist.exclude = [
+    ".github",
+    "slang/build",
+    "slang/install",
+    "slang/tests",
+    "slang/tools",
+]
+
+[tool.scikit-build.cmake.define]
+SLANG_INCLUDE_TESTS = "OFF"
+SLANG_INCLUDE_TOOLS = "OFF"
+SLANG_INCLUDE_PYLIB = "ON"
+
+[tool.cibuildwheel]
+archs = ["auto64"]
+manylinux-x86_64-image = "manylinux_2_28"
+skip = ["pp*", "cp36-*", "*musllinux*"]
+build-verbosity = 1
+test-command = "pytest {project}/tests"
+test-extras = ["test"]
+test-skip = ["*universal2:arm64"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
