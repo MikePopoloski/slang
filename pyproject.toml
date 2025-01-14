@@ -2,7 +2,7 @@
 name = "pyslang"
 version = "7.0.1"
 description = "Python bindings for slang, a library for compiling SystemVerilog"
-readme = {file = "README.md", content-type = "text/markdown"}
+readme = {file = "pyslang/README.md", content-type = "text/markdown"}
 authors = [{name = "Mike Popoloski"}]
 keywords = ["slang", "verilog", "systemverilog", "parsing", "compiler", "eda"]
 classifiers = [
@@ -23,7 +23,7 @@ classifiers = [
 [project.urls]
 Homepage = "https://sv-lang.com/"
 Documentation = "https://sv-lang.com/"
-Repository = "https://github.com/MikePopoloski/pyslang"
+Repository = "https://github.com/MikePopoloski/slang"
 Issues = "https://github.com/MikePopoloski/slang/issues"
 Changelog = "https://github.com/MikePopoloski/slang/blob/master/CHANGELOG.md"
 
@@ -39,15 +39,16 @@ build-backend = "scikit_build_core.build"
 
 [tool.scikit-build]
 build-dir = "build/{wheel_tag}"
-cmake.source-dir = "slang"
+cmake.source-dir = "."
 install.components = ["pylib"]
 sdist.exclude = [
     ".github",
-    "slang/build",
-    "slang/install",
-    "slang/tests",
-    "slang/tools",
+    "./build",
+    "./install",
+    "./tests",
+    "./tools",
 ]
+wheel.packages = ["pyslang/pyslang"]
 
 [tool.scikit-build.cmake.define]
 SLANG_INCLUDE_TESTS = "OFF"
@@ -64,4 +65,4 @@ test-extras = ["test"]
 test-skip = ["*universal2:arm64"]
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["pyslang/tests"]
