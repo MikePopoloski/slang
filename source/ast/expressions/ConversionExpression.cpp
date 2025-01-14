@@ -413,9 +413,9 @@ Expression& ConversionExpression::fromSyntax(Compilation& comp, const CastExpres
         // The type we propagate should use the sign of the operand, just like it
         // would if we were doing an implicit conversion via an assignment expression.
         auto propagatedType = type;
-        if (type->isIntegral() && operand->type->isIntegral() &&
-            type->getIntegralFlags() != operand->type->getIntegralFlags()) {
-            propagatedType = &comp.getType(type->getBitWidth(), operand->type->getIntegralFlags());
+        if (type->isNumeric() && operand->type->isNumeric()) {
+            propagatedType = OpInfo::binaryType(comp, type, operand->type, false,
+                                                /* signednessFromRt */ true);
         }
 
         contextDetermined(context, operand, nullptr, *propagatedType, syntax.apostrophe.range(),

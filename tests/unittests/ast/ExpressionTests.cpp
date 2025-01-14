@@ -3788,3 +3788,20 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Static casts propagate type correctly and don't truncate") {
+    auto tree = SyntaxTree::fromText(R"(
+typedef logic [6:0] lt;
+function automatic logic[7:0] foo;
+    logic [7:0] a = 8'hff;
+    lt b = lt'(a >> 1);
+    return 8'(b);
+endfunction
+
+$static_assert(foo() == 8'h7f);
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
