@@ -2,14 +2,13 @@
 .pytest_cache/
 .venv/
 venv/
-.idea/
 .cache/
 .DS_Store
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
-
+_version.py
 
 # C and CMake ignores.
 build/
@@ -22,5 +21,11 @@ prefix/
 CMakeLists.txt.user
 CMakeUserPresets.json
 .ccls
-_version.py
+
+# Editor ignores.
+.vscode/
+!.vscode/settings.json
+
+.idea/
+.vs/
 *.code-workspace

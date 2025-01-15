@@ -1,4 +1,4 @@
-name: dist
+name: "Python Dist"
 on:
   workflow_dispatch:
   push:
