@@ -5,7 +5,7 @@ description = "Python bindings for slang, a library for compiling SystemVerilog"
 readme = {file = "pyslang/README.md", content-type = "text/markdown"}
 authors = [{name = "Mike Popoloski"}]
 keywords = ["slang", "verilog", "systemverilog", "parsing", "compiler", "eda"]
-license = "MIT"
+license = {file = "LICENSE"}
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
