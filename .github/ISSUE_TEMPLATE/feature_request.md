@@ -7,6 +7,9 @@ assignees: ''
 
 ---
 
+**Is your feature request related to the C++ slang project or the pyslang Python bindings?**
+C++ slang / Pyslang Python bindings
+
 **Is your feature request related to a problem? Please describe.**
 A clear and concise description of what the problem is.
 
