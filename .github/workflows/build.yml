@@ -15,7 +15,7 @@ jobs:
           - preset: clang-sanitize
             os: ubuntu-latest
           - preset: gcc-release
-            os: ubuntu-latest
+            os: ubuntu-24.04-arm
           - preset: gcc-11-release
             os: ubuntu-latest
           - preset: gcc-debug-shared
