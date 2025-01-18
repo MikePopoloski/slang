@@ -2,7 +2,7 @@
 name = "pyslang"
 version = "7.0.1"
 description = "Python bindings for slang, a library for compiling SystemVerilog"
-readme = {file = "pyslang/README.md", content-type = "text/markdown"}
+readme = {file = "README.md", content-type = "text/markdown"}
 authors = [{name = "Mike Popoloski"}]
 keywords = ["slang", "verilog", "systemverilog", "parsing", "compiler", "eda"]
 license = {file = "LICENSE"}
