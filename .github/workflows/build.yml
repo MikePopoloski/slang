@@ -83,20 +83,6 @@ jobs:
         token: ${{ secrets.CODECOV_TOKEN }}
         verbose: true
 
-  bindings:
-    runs-on: windows-latest
-    steps:
-    - uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-    - uses: ilammy/msvc-dev-cmd@v1
-    - name: Configure
-      run: cmake -B build -DSLANG_INCLUDE_PYLIB=ON
-    - name: Build
-      run: cmake --build build --config Release -j8
-    - name: Run tests
-      run: ctest --test-dir build --output-on-failure -C Release --no-tests=error -j8
-
   conan:
     runs-on: ubuntu-latest
     steps:
