@@ -122,7 +122,7 @@
       ],
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
-        "CMAKE_CXX_COMPILER": "clang++-18"
+        "CMAKE_CXX_COMPILER": "clang++-19"
       }
     },
     {
@@ -134,7 +134,7 @@
       ],
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "CMAKE_CXX_COMPILER": "clang++-18"
+        "CMAKE_CXX_COMPILER": "clang++-19"
       }
     },
     {
@@ -147,11 +147,11 @@
       ],
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "RelWithDebInfo",
-        "CMAKE_CXX_COMPILER": "clang++-18",
+        "CMAKE_CXX_COMPILER": "clang++-19",
         "CMAKE_CXX_FLAGS": "-DSLANG_ASSERT_ENABLED -fsanitize=undefined,address -fno-sanitize-recover=undefined -fno-omit-frame-pointer -fno-common -Wno-deprecated-declarations",
         "CMAKE_EXE_LINKER_FLAGS": "-fsanitize=undefined,address -fno-sanitize-recover=undefined",
         "CMAKE_SHARED_LINKER_FLAGS": "-fsanitize=undefined,address -fno-sanitize-recover=undefined",
-        "SLANG_CLANG_TIDY": "clang-tidy-18"
+        "SLANG_CLANG_TIDY": "clang-tidy-19"
       }
     },
     {
@@ -163,7 +163,7 @@
       ],
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
-        "CMAKE_CXX_COMPILER": "g++-13",
+        "CMAKE_CXX_COMPILER": "g++-14",
         "BUILD_SHARED_LIBS": "ON"
       }
     },
@@ -177,7 +177,7 @@
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
         "CMAKE_CXX_FLAGS": "-fno-exceptions -fno-rtti",
-        "CMAKE_CXX_COMPILER": "g++-13"
+        "CMAKE_CXX_COMPILER": "g++-14"
       }
     },
     {
@@ -189,7 +189,7 @@
       ],
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "CMAKE_CXX_COMPILER": "g++-13"
+        "CMAKE_CXX_COMPILER": "g++-14"
       }
     },
     {
@@ -212,12 +212,12 @@
       ],
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Coverage",
-        "CMAKE_CXX_COMPILER": "g++-13",
+        "CMAKE_CXX_COMPILER": "g++-14",
         "CMAKE_CXX_FLAGS_COVERAGE": "-Og -g --coverage -DSLANG_ASSERT_ENABLED=0 -fno-omit-frame-pointer -fno-optimize-sibling-calls -fno-inline -fno-inline-small-functions -fno-default-inline",
         "CMAKE_EXE_LINKER_FLAGS_COVERAGE": "--coverage",
         "CMAKE_SHARED_LINKER_FLAGS_COVERAGE": "--coverage",
         "SLANG_INCLUDE_COVERAGE": "ON",
-        "COVERAGE_GCOV_TOOL": "gcov-13"
+        "COVERAGE_GCOV_TOOL": "gcov-14"
       }
     },
     {
