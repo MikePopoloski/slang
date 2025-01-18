@@ -15,6 +15,7 @@ Checks: >
     -modernize-return-braced-init-list,
     -modernize-loop-convert,
     -modernize-use-designated-initializers,
+    -modernize-use-ranges,
     -bugprone-suspicious-semicolon,
     -bugprone-branch-clone,
     -bugprone-sizeof-expression,
@@ -24,6 +25,8 @@ Checks: >
     -bugprone-unchecked-optional-access,
     -bugprone-assignment-in-if-condition,
     -bugprone-switch-missing-default-case,
+    -bugprone-suspicious-stringview-data-usage,
+    -bugprone-return-const-ref-from-parameter,
     -clang-analyzer-cplusplus.NewDelete*,
     -clang-analyzer-cplusplus.InnerPointer,
     -clang-analyzer-core.NullDereference,
@@ -37,6 +40,8 @@ Checks: >
     -misc-use-anonymous-namespace,
     -misc-include-cleaner,
     -misc-header-include-cycle,
+    -misc-use-internal-linkage,
     -performance-no-int-to-ptr,
     -performance-enum-size,
-    -portability-simd-intrinsics
+    -portability-simd-intrinsics,
+    -performance-unnecessary-value-param

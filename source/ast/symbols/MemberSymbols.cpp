@@ -832,7 +832,7 @@ private:
         auto advance = [&](char c) {
             SmallVector<TNode*> nextNodes;
             for (auto node : nodes)
-                node->nextNodesFor(c, nextNodes, std::forward<TCallback>(callback));
+                node->nextNodesFor(c, nextNodes, callback);
             nodes = std::move(nextNodes);
         };
 
