@@ -31,7 +31,13 @@ Some examples of things you can use slang for:
 
 ### Getting Started
 
-Instructions on building slang from source are [here](https://sv-lang.com/building.html).
+Instructions on building slang from source are [here](https://sv-lang.com/building.html). The tl;dr is:
+```
+git clone https://github.com/MikePopoloski/slang.git
+cd slang
+cmake -B build
+cmake --build build -j
+```
 
 The slang binary can be run on your code right out of the box; check out the [user manual](https://sv-lang.com/user-manual.html) for more information about how it works.
 

@@ -34,6 +34,14 @@ Some examples of things you can use slang for:
 @section mainpage-getting-started Getting Started
 
 Instructions on building slang from source are here: @ref building
+The tl;dr is:
+
+@code{.ansi}
+git clone https://github.com/MikePopoloski/slang.git
+cd slang
+cmake -B build
+cmake --build build -j
+@endcode
 
 The slang binary can be run on your code right out of the box; check out the
 @ref user-manual for more information about how it works.
