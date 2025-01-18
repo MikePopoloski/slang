@@ -868,6 +868,7 @@ SyntaxNode* clone(const T& node, BumpAllocator& alloc) {
 SyntaxNode* clone(const SyntaxListBase&, BumpAllocator&) {
     return nullptr;
 }
+
 """
     )
     # Write out deepClone methods for each derived type.
@@ -876,7 +877,7 @@ SyntaxNode* clone(const SyntaxListBase&, BumpAllocator&) {
             continue
         if v.final:
             clonef.write(
-                "SyntaxNode* clone(const {0}& node, BumpAllocator& alloc) {{\n".format(
+                "static SyntaxNode* clone(const {0}& node, BumpAllocator& alloc) {{\n".format(
                     k
                 )
             )

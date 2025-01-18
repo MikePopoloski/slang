@@ -14,6 +14,7 @@ Checks: >
     -modernize-use-emplace,
     -modernize-return-braced-init-list,
     -modernize-loop-convert,
+    -modernize-use-designated-initializers,
     -bugprone-suspicious-semicolon,
     -bugprone-branch-clone,
     -bugprone-sizeof-expression,
