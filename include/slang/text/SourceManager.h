@@ -262,7 +262,7 @@ private:
         FileData* data = nullptr;
         const SourceLibrary* library = nullptr;
         SourceLocation includedFrom;
-        uint64_t sortKey;
+        uint64_t sortKey = 0;
         std::vector<LineDirectiveInfo> lineDirectives;
 
         FileInfo() {}
