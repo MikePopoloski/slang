@@ -59,6 +59,7 @@ SLANG_INCLUDE_PYLIB = "ON"
 [tool.cibuildwheel]
 archs = ["auto64"]
 manylinux-x86_64-image = "manylinux_2_28"
+manylinux-aarch64-image = "manylinux_2_28"
 skip = ["pp*", "cp36-*", "*musllinux*"]
 build-verbosity = 1
 test-command = "pytest {project}/pyslang/tests"
