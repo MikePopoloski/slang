@@ -194,12 +194,13 @@ bool SyntaxNode::isEquivalentTo(const SyntaxNode& other) const {
         else {
             Token lt = childToken(i);
             Token rt = other.childToken(i);
-
-            if (!lt)
-                return !rt;
-
-            if (lt.kind != rt.kind || lt.valueText() != rt.valueText())
+            if (bool(lt) != bool(rt))
                 return false;
+
+            if (lt) {
+                if (lt.kind != rt.kind || lt.valueText() != rt.valueText())
+                    return false;
+            }
         }
     }
     return true;

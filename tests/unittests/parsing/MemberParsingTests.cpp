@@ -1559,3 +1559,21 @@ endmodule
     REQUIRE(diagnostics.size() == 1);
     CHECK(diagnostics[0].code == diag::ExpectedToken);
 }
+
+TEST_CASE("isEquivalentTo wrong result regress") {
+    auto& text1 = R"(
+module m;
+    int i = 1;
+endmodule
+)";
+    auto& node1 = parseCompilationUnit(text1);
+
+    auto& text2 = R"(
+module n;
+    int i = 1;
+endmodule
+)";
+    auto& node2 = parseCompilationUnit(text2);
+
+    CHECK(!node1.isEquivalentTo(node2));
+}
