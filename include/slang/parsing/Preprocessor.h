@@ -78,7 +78,7 @@ public:
     void pushSource(SourceBuffer buffer);
 
     /// Predefines the given macro definition. The given definition string is lexed
-    /// as if it were source text immediately following a `define directive.
+    /// as if it were source text immediately following a @code `define @endcode directive.
     /// If any diagnostics are printed for the created text, they will be marked
     /// as coming from @a name.
     void predefine(const std::string& definition, std::string_view name = "<api>");
@@ -101,8 +101,8 @@ public:
     void setKeywordVersion(KeywordVersion version);
 
     /// Resets the state of all compiler directives; this is equivalent to encountering the
-    /// `resetall directive in source. Note that this does not include the state of any
-    /// macros that have been defined.
+    /// @code `resetall @endcode directive in source. Note that this does not include the state
+    /// of any macros that have been defined.
     void resetAllDirectives();
 
     /// Increases the preprocessor's view of the depth of parsed design elements,
@@ -121,8 +121,8 @@ public:
     const std::optional<TimeScale>& getTimeScale() const { return activeTimeScale; }
 
     /// Gets the default net type to use if none is specified. This is set via
-    /// the `default_nettype directive. If it is set to "none" by the user, this
-    /// will return TokenKind::Unknown.
+    /// the @code `default_nettype @endcode directive. If it is set to "none" by the user,
+    /// this will return TokenKind::Unknown.
     TokenKind getDefaultNetType() const { return defaultNetType; }
 
     /// Gets the currently active drive strength to apply to unconnected nets,
@@ -322,13 +322,13 @@ private:
         Token directive;
 
         // Whether any of the sibling directives in this branch have been taken; used to decide
-        // whether to take an `elsif or `else branch.
+        // whether to take an elsif or else branch.
         bool anyTaken;
 
         // Whether the current branch is active.
         bool currentActive;
 
-        // Has this chain of conditional directives had an `else directive yet; it's an error
+        // Has this chain of conditional directives had an else directive yet; it's an error
         // for any other directives in the current level to come after that.
         bool hasElse = false;
 
@@ -381,7 +381,7 @@ private:
     PreprocessorOptions options;
     LexerOptions lexerOptions;
 
-    // stack of active lexers; each `include pushes a new lexer
+    // stack of active lexers; each include pushes a new lexer
     SmallVector<std::unique_ptr<Lexer>, 2> lexerStack;
 
     // keep track of nested processor branches (ifdef, ifndef, else, elsif, endif)
@@ -412,7 +412,7 @@ private:
     SmallVector<Token> scratchTokenBuffer;
 
     // A set of files (identified by a pointer to the start of their text buffer) that
-    // have been marked `pragma once so that we avoid trying to include them more than once.
+    // have been marked pragma once so that we avoid trying to include them more than once.
     flat_hash_set<const char*> includeOnceHeaders;
 
     /// Various state set by preprocessor directives.
@@ -431,7 +431,9 @@ private:
 
     // Parser for numeric literals in pragma expressions.
     NumberParser numberParser;
+#ifndef __DOXYGEN__
     friend class NumberParser;
+#endif
 
     // Called by NumberParser to handle an error condition.
     void handleExponentSplit(Token token, size_t offset);

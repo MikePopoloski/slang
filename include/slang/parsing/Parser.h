@@ -483,7 +483,9 @@ private:
 
     // Helper class for parsing out numeric literals.
     NumberParser numberParser;
+#ifndef __DOXYGEN__
     friend class NumberParser;
+#endif
 
     // A stack of names of modules declared locally within the given scope.
     // This is used to detect and ignore instantiations of local modules when

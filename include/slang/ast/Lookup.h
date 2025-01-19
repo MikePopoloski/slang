@@ -261,7 +261,7 @@ public:
                                      const ASTContext& context, LookupResult& result);
 
     /// Applies the given @a selectors to the @a virtualInterface type and returns the
-    /// selected child in @result -- if any errors occur, diagnostics are issued to
+    /// selected child in @a result -- if any errors occur, diagnostics are issued to
     /// the result object and nullptr is returned.
     static void selectChild(const Type& virtualInterface, SourceRange range,
                             std::span<LookupResult::Selector> selectors, const ASTContext& context,
