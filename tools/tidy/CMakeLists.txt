@@ -28,7 +28,7 @@ add_library(
   src/synthesis/AlwaysFFAssignmentOutsideConditional.cpp
   src/synthesis/UnusedSensitiveSignal.cpp)
 
-target_include_directories(slang_tidy_obj_lib PUBLIC include ../../include)
+target_include_directories(slang_tidy_obj_lib PUBLIC include)
 target_link_libraries(slang_tidy_obj_lib PUBLIC slang::slang)
 
 add_executable(slang_tidy src/tidy.cpp)
