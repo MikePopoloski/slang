@@ -13,6 +13,7 @@ develop structural checks or to investigate timing paths, rather than having to
 use synthesis to obtain a gate-level netlist.
 
 Using the example of a simple adder:
+
 ```
 module adder
   #(parameter p_width = 32)(
@@ -31,6 +32,7 @@ endmodule
 
 The slang-netlist command-line tool can be used to trace paths through the
 design, such as:
+
 ```
 ➜  slang-netlist adder.sv --from adder.i_a --to adder.o_sum -q
 adder.sv:10:22: note: variable i_a read from

@@ -35,7 +35,7 @@
 # The default value is: UTF-8.
 
 ##! M_LINKS_NAVBAR1 = \
-##!  "user-manual command-line-ref language-support warning-ref" \
+##!  "user-manual command-line-ref language-support warning-ref tools" \
 ##!  "developer-guide building commoncomp sourcemanagement diagnostics parsing"
 ##! M_LINKS_NAVBAR2 = \
 ##!  "api-reference namespaces annotated files" \
@@ -1101,7 +1101,7 @@ EXCLUDE_SYMBOLS        =
 # that contain example code fragments that are included (see the \include
 # command).
 
-EXAMPLE_PATH           =
+EXAMPLE_PATH           = @DOXYGEN_EXAMPLE_DIRS@
 
 # If the value of the EXAMPLE_PATH tag contains directories, you can use the
 # EXAMPLE_PATTERNS tag to specify one or more wildcard pattern (like *.cpp and

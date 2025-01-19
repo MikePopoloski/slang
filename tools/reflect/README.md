@@ -6,10 +6,10 @@ SystemVerilog structs, enums and parameters. Its behavior is inspired from
 the [verilator public](https://verilator.org/guide/latest/extensions.html#cmdoption-2) option provided by `verilator`,
 and it is of a great use when building testbenches using `C++/SystemC`.
 
-To indicate which SystemVerilog types we want to make public we need to annotate its declaration with `/* public */`
-or `/* verilator public */`. For example:
+To indicate which SystemVerilog types we want to make public we need to annotate its declaration with `// public`
+or `// verilator public`. For example:
 
-```verilog
+```sv
 typedef struct {
     logic k;
 } pkg_struct_comment /* public */;
@@ -23,7 +23,7 @@ For all types that have been declared `public` inside the same `package` or `mod
 with a namespace inside it, both of them with the name of the SystemVerilog container. Inside the namespace, there will
 be the declaration of the `public` types. For example, a SystemVerilog file that looks like this:
 
-```verilog
+```sv
 package foo;
     localparam foo_local /* public */ = 12;
 endpackage
@@ -65,18 +65,18 @@ namespace top {
 }
 ```
 
-### CPP Reserved Keywords
+## CPP Reserved Keywords
 
 Since not all CPP kewords are SystemVerilog keywords, if any name of a member, enum, struct or parameter collides with a
-reserved C++ keyword, it will be renamed with a `_` in front. For example if a member of a struct is named `operator` it
+reserved C++ keyword, it will be renamed with a `_` in front. For example if a member of a struct is named <tt>operator</tt> it
 will be emitted as `_operator`.
 
-### SystemVerilog Namspace References
+## SystemVerilog Namspace References
 
 In order to handle references from other packages that are done using the `import foo::*` or `foo::my_local`, the foo
 header will be included into the headers where their types or parameters are being used.
 
-```verilog
+```sv
 package bar;
     typedef struct packed {
         logic k;
@@ -120,12 +120,12 @@ namespace foo {
 }
 ```
 
-### SystemVerilog Typedefs
+## SystemVerilog Typedefs
 
 When the type of a member of a struct comes from a typedef, the tool will resolve the typedef and emit the base type.
 For example:
 
-```verilog
+```sv
 package bar;
     typedef enum {ONE = 5, TWO, THREE} my_enum /* public */;
     typedef my_enum t_enum;
@@ -158,7 +158,7 @@ namespace bar {
 }
 ```
 
-### Emitted Headers
+## Emitted Headers
 
 The includes that are emitted along with each file are:
 
@@ -173,12 +173,12 @@ The includes that are emitted along with each file are:
 
 The `#include <systemc.h>` can be removed if the `--no-sc` argument is provided to the tool.
 
-### SystemVerilog Parameters
+## SystemVerilog Parameters
 
 SystemVerilog parameters are transpiled as a `static constexpr` with the type being `uint32_t` or `uint64_t`. For
 example
 
-```verilog
+```sv
 package foo;
     localparam bar /* public */ = 42;
 endpackage
@@ -190,12 +190,12 @@ namespace foo {
 }
 ```
 
-### SystemVerilog Enums
+## SystemVerilog Enums
 
 SystemVerilog enums are transpiled as a `struct` in order to provide convenient methods to serialize and deserialize the
 enum into the underlying type. For example:
 
-```verilog
+```sv
 package bar;
     typedef enum {ONE = 5, TWO, THREE} my_enum /* public */;
 endpackage
@@ -254,7 +254,7 @@ namespace bar {
 }
 ```
 
-### SystemVerilog Structs
+## SystemVerilog Structs
 
 SystemVerilog structs are transpiled as a `struct` that provide convenient methods to serialize, deserialize and print
 the struct.
@@ -265,7 +265,7 @@ itself has a size bigger than 64 bits, the tool will report an error asking for 
 
 For example:
 
-```verilog
+```sv
 package bar;
     typedef struct packed {
         logic [7:0]   b;

@@ -58,7 +58,7 @@ The available options are:
 |            Config             |   Type   |      Default       |
 |:-----------------------------:|:--------:|:------------------:|
 |          **clkName**          |  string  |       clk_i        |
-|    **clkNameRegexString**     |  string  |  "clk\S*|clock\S*" |
+|    **clkNameRegexString**     |  string  | \"clk\\S*\|clock\\S*\" |
 |         **resetName**         |  string  |      rst_ni        |
 |     **resetIsActiveHigh**     |   bool   |       true         |
 |      **inputPortSuffix**      | [string] |       [_i]         |
@@ -67,6 +67,7 @@ The available options are:
 | **moduleInstantiationPrefix** |  string  |        i_          |
 
 An example of a possible configuration file:
+
 ```
 Checks:
     -*,
