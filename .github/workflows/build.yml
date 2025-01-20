@@ -72,6 +72,8 @@ jobs:
         tar -xvf lcov-2.3.tar.gz
         cd lcov-2.3
         sudo make install
+        sudo cpan App::cpanminus
+        sudo cpanm --notest Capture::Tiny DateTime
     - name: Configure
       run: cmake --preset=ci-coverage
     - name: Build
