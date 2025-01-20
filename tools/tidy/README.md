@@ -1,4 +1,4 @@
-# Slang Tidy
+# slang-tidy
 
 A SystemVerilog linter
 

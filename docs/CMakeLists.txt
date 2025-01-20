@@ -22,8 +22,10 @@ set(DOXYGEN_INPUT_DIR_LIST
     "${CMAKE_CURRENT_BINARY_DIR}/../source/slang/syntax"
     "${CMAKE_CURRENT_BINARY_DIR}/../source/slang/parsing")
 set(DOXYGEN_EXAMPLE_DIR_LIST
+    "${PROJECT_SOURCE_DIR}/tools/hier/README.md"
     "${PROJECT_SOURCE_DIR}/tools/netlist/README.md"
     "${PROJECT_SOURCE_DIR}/tools/reflect/README.md"
+    "${PROJECT_SOURCE_DIR}/tools/rewriter/README.md"
     "${PROJECT_SOURCE_DIR}/tools/tidy/README.md")
 set(DOXYGEN_EXTERNAL_DIR "${PROJECT_SOURCE_DIR}/external")
 set(DOXYGEN_STRIP_PATH "${DOXYGEN_INPUT_DIR}")
