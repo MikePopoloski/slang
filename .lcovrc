@@ -48,7 +48,5 @@ lcov_branch_coverage = 0
 # and for a 'default' case block that is empty since it's very
 # irritating to see missed coverage on that line -- either the remaining
 # block is also missed or it's an empty case and we don't care.
-lcov_excl_line = LCOV_EXCL_LINE|SLANG_UNREACHABLE|default:$
-
 omit_lines = SLANG_UNREACHABLE
 omit_lines = default:$
