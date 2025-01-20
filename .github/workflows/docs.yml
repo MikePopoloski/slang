@@ -33,7 +33,7 @@ jobs:
         pip install .
     - name: Build Python/pyslang docs
       run: |
-        ./m.css/documentation/python.py ./docs/conf.py
+        ./m.css/documentation/python.py ./pyslang/docs/conf.py
         du -a ./build/docs/
     - name: Build C++/slang docs
       run: |
