@@ -5,7 +5,9 @@ from pathlib import Path
 
 # Find the root of the git repository.
 _GIT_REPO_ROOT_PATH = Path(__file__).parent.parent.parent
-assert (_GIT_REPO_ROOT_PATH / ".git").is_dir(), "Git repository root not found/set incorrectly"
+assert (
+    _GIT_REPO_ROOT_PATH / ".git"
+).is_dir(), "Git repository root not found/set incorrectly"
 
 # Set the m.css configuration variables.
 PROJECT_TITLE = "pyslang"
