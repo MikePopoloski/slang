@@ -239,21 +239,22 @@ public:
         if (auto result = find(value, 0, expr, wildcardX))
             return result;
 
-        CaseTrie* curr = this;
+        Node curr;
+        curr.trie = this;
         const auto width = value.getBitWidth();
         for (uint32_t i = 0; i < width; i++) {
             const auto bit = value[(int32_t)i];
             const bool isWildcard = wildcardX ? bit.isUnknown() : bit.value == logic_t::Z_VALUE;
             const auto valueIndex = isWildcard ? 3 : bit.isUnknown() ? 2 : bit.value;
 
-            auto& elem = curr->nodes[valueIndex];
+            auto& elem = curr.trie->nodes[valueIndex];
             if (i == width - 1) {
                 elem.expr = &expr;
             }
             else {
                 if (!elem.trie)
                     elem.trie = alloc.emplace<CaseTrie>();
-                curr = elem.trie;
+                curr = elem;
             }
         }
 
@@ -284,9 +285,9 @@ private:
         return nullptr;
     }
 
-    union Node {
-        CaseTrie* trie;
-        const Expression* expr;
+    struct Node {
+        CaseTrie* trie = nullptr;
+        const Expression* expr = nullptr;
     };
     Node nodes[4] = {};
 };

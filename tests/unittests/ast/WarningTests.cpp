@@ -1261,6 +1261,30 @@ endmodule
     CHECK(diags[6].code == diag::CaseOverlap);
 }
 
+TEST_CASE("Case statement with huge bit width selector") {
+    auto tree = SyntaxTree::fromText(R"(
+module test9(
+  input reg [100:0] sel_i,
+  input reg trg_i,
+  output reg [1:0] reg_o
+);
+  always @(posedge trg_i) begin
+    casex (sel_i)
+      -12'b00zzzzz00001,
+      12'b11: reg_o = 2'b01;
+    endcase
+  end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::CaseDefault);
+}
+
 TEST_CASE("Case items with unknowns that are not wildcards") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
