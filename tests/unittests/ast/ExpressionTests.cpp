@@ -3805,3 +3805,21 @@ $static_assert(foo() == 8'h7f);
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Test ternary operation sizing regression") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+  logic [3:0] w = (0) ? '0 : '0;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& root = compilation.getRoot();
+    auto& var = root.lookupName<VariableSymbol>("m.w");
+
+    ast::EvalContext eval_ctx(ast::ASTContext(compilation.getRoot(), ast::LookupLocation::max));
+    CHECK(var.getInitializer()->eval(eval_ctx).getBitstreamWidth() == 4);
+}

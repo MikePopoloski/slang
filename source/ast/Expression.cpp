@@ -184,8 +184,13 @@ struct Expression::PropagationVisitor {
                                                                    ConversionKind::Implicit);
                 }
 
-                if (expr.propagateType(context, newType, opRange))
+                if (expr.propagateType(context, newType, opRange)) {
+                    // We propagated the type successfully so we don't need a conversion.
+                    // We should however clear out any constant value that may have been
+                    // stored here, since it may no longer be valid given the new type.
                     needConversion = false;
+                    expr.constant = nullptr;
+                }
             }
         }
 
