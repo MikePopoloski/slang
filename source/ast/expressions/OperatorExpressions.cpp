@@ -206,9 +206,7 @@ bool Expression::bindMembershipExpressions(const ASTContext& context, TokenKind 
         else
             selfDetermined(context, expr);
 
-        if (expr->bad())
-            return false;
-
+        SLANG_ASSERT(!expr->bad());
         results[index++] = expr;
     }
 
@@ -384,9 +382,6 @@ ConstantValue UnaryExpression::evalImpl(EvalContext& context) const {
     // Handle operations that require an lvalue up front.
     if (OpInfo::isLValue(op)) {
         LValue lvalue = operand().evalLValue(context);
-        if (!lvalue)
-            return nullptr;
-
         ConstantValue cv = lvalue.load();
         if (!cv)
             return nullptr;
@@ -404,7 +399,7 @@ ConstantValue UnaryExpression::evalImpl(EvalContext& context) const {
                 OP(Postincrement, v + 1);
                 OP(Postdecrement, v - 1);
                 default:
-                    break;
+                    SLANG_UNREACHABLE;
             }
 #undef OP
         }
@@ -421,7 +416,7 @@ ConstantValue UnaryExpression::evalImpl(EvalContext& context) const {
                 OP(Postincrement, v + 1);
                 OP(Postdecrement, v - 1);
                 default:
-                    break;
+                    SLANG_UNREACHABLE;
             }
 #undef OP
         }
@@ -438,7 +433,7 @@ ConstantValue UnaryExpression::evalImpl(EvalContext& context) const {
                 OP(Postincrement, v + 1);
                 OP(Postdecrement, v - 1);
                 default:
-                    break;
+                    SLANG_UNREACHABLE;
             }
 #undef OP
         }

@@ -743,6 +743,7 @@ module m;
     logic signed [1:0] l = (2'd3:2'd1:-3);
     logic signed m = (2'd1 == 2'd1);
     logic signed [1:0] n = 2'd1 << 1;
+    logic signed [1:0] o = +2'd3;
 endmodule
 )");
 
@@ -750,10 +751,11 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 3);
+    REQUIRE(diags.size() == 4);
     CHECK(diags[0].code == diag::SignConversion);
-    CHECK(diags[0].code == diag::SignConversion);
-    CHECK(diags[0].code == diag::SignConversion);
+    CHECK(diags[1].code == diag::SignConversion);
+    CHECK(diags[2].code == diag::SignConversion);
+    CHECK(diags[3].code == diag::SignConversion);
 }
 
 TEST_CASE("Edge of multibit type") {

@@ -482,6 +482,7 @@ bool OpInfo::isShortCircuit(BinaryOperator op) {
     }
 }
 
+// LCOV_EXCL_START
 std::string_view OpInfo::getText(BinaryOperator op) {
     switch (op) {
         case BinaryOperator::Add:
@@ -591,5 +592,6 @@ int OpInfo::getPrecedence(BinaryOperator op) {
     }
     SLANG_UNREACHABLE;
 }
+// LCOV_EXCL_STOP
 
 } // namespace slang::ast

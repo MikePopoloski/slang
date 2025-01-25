@@ -3823,3 +3823,94 @@ endmodule
     ast::EvalContext eval_ctx(ast::ASTContext(compilation.getRoot(), ast::LookupLocation::max));
     CHECK(var.getInitializer()->eval(eval_ctx).getBitstreamWidth() == 4);
 }
+
+TEST_CASE("Value range where implicit strings not allowed") {
+    auto tree = SyntaxTree::fromText(R"(
+int i = "a" inside { [1:2] };
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("LValue required for prefix unary operators") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    initial begin
+        ++(1 + 1);
+        (1 + 1)++;
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::ExpressionNotAssignable);
+    CHECK(diags[1].code == diag::ExpressionNotAssignable);
+}
+
+TEST_CASE("More operator eval tests") {
+    auto tree = SyntaxTree::fromText(R"(
+parameter p = foo();
+
+function automatic bit foo;
+    shortreal a = 1.0;
+    int b = 3;
+    string s;
+    event ev;
+    union { int i; shortreal r; } u, v;
+
+    assert(++a == shortreal'(2.0));
+    assert(a++ == shortreal'(2.0));
+    --a;
+    assert(a-- == shortreal'(2.0));
+    assert(+b == 3);
+    assert(^4'b1000 == 1);
+    assert(~&4'b1111 == 0);
+    assert(~|4'b0000 == 1);
+    assert(~^4'b1000 == 0);
+    assert(+a == shortreal'(1.0));
+    assert(-a == shortreal'(-1.0));
+    assert((!a) == 0);
+    assert((!s) == 1);
+    assert(a === shortreal'(1.0));
+    assert(!(a !== shortreal'(1.0)));
+    assert(a && 1);
+    assert(a || 0);
+    assert(0 || b);
+    assert(0 || 1.0);
+    assert(1 -> a);
+    assert(1.0 <-> a);
+    assert(a <-> 1.0);
+    assert(1.0 && 1.0);
+    assert(0.0 || 1.0);
+    assert(3 % 2 == 1);
+    assert(3 !== 2);
+    assert(3'b1x0 !=? 3'b111);
+    assert(1 <-> 1);
+    assert(s === "");
+    assert(s !== "asdf");
+    assert(ev === null);
+    assert(!(ev != null));
+    assert(!(ev !== null));
+
+    assert(u === v);
+    u.i = 1;
+    v.r = 1.0;
+    assert(u != v);
+    assert(u !== v);
+endfunction
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto diags = compilation.getAllDiagnostics().filter({diag::FloatBoolConv, diag::IntBoolConv});
+    if (!diags.empty()) {
+        FAIL_CHECK(report(diags));
+    }
+}

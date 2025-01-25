@@ -122,6 +122,8 @@ macromodule m3;
         if (instr matches (tagged Jmp .j) &&&
             j matches (tagged JmpC '{cc:.c,addr:.a})) begin
             pc = c[0] & a[0];
+            pc = instr matches (tagged Jmp .j) &&&
+                  j matches (tagged JmpC '{cc:.c,addr:.a}) ? c[0] & a[0] : 0;
         end
         else begin
         end
@@ -457,3 +459,26 @@ class C3;
         b: cross y, x;
     endgroup
 endclass
+
+module m9;
+    logic [3:0] a = {4 {1'b1}};
+endmodule
+
+module m10;
+    byte stream[$];
+    class Packet;
+        rand int header;
+        rand int len;
+        rand byte payload[];
+        int crc;
+        constraint G { len > 1; payload.size == len ; }
+        function void post_randomize; crc = payload.sum; endfunction
+    endclass
+
+    initial begin
+        byte q[$];
+        automatic Packet p = new;
+        {<< byte{ p.header, p.len, p.payload with [0 +: p.len], p.crc }} = stream;
+        stream = stream[ $bits(p) / 8 : $ ];
+    end
+endmodule
