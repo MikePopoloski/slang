@@ -1461,7 +1461,7 @@ Expression& ConditionalExpression::fromSyntax(Compilation& comp,
 
 bool ConditionalExpression::propagateType(const ASTContext& context, const Type& newType,
                                           SourceRange opRange) {
-    // The predicate is self determined so no need to handle it here.
+    const bool parentTypeEquiv = type->isEquivalent(newType);
     type = &newType;
 
     bitmask<ASTFlags> leftFlags = ASTFlags::None;
@@ -1473,8 +1473,35 @@ bool ConditionalExpression::propagateType(const ASTContext& context, const Type&
             leftFlags = ASTFlags::UnevaluatedBranch;
     }
 
-    contextDetermined(context.resetFlags(leftFlags), left_, this, newType, opRange);
-    contextDetermined(context.resetFlags(rightFlags), right_, this, newType, opRange);
+    auto handleBranch = [&](Expression*& expr, bitmask<ASTFlags> flags,
+                            std::optional<bitwidth_t> otherEffectiveWidth) {
+        // This is a propagated conversion but we'd like to see width-expand
+        // warnings anyway so we'll manually do the check conversion check here.
+        if (!flags.has(ASTFlags::UnevaluatedBranch)) {
+            // If the parent type was already equivalent to what's being propagated,
+            // then the only conversions we might be doing are "self induced", in the
+            // sense that one branch is propagating its type to the other side.
+            // We want to avoid warning in those cases where we have a literal
+            // expression with a smaller effective type, like for example:
+            //   bit a, b, c;
+            //   c = a ? b : 0; // 32-bit literal 0 shouldn't cause a warning
+            if (!parentTypeEquiv || !newType.isNumeric() || !expr->type->isNumeric() ||
+                !otherEffectiveWidth || expr->type->getBitWidth() < otherEffectiveWidth) {
+                ConversionExpression::checkImplicitConversions(context, *expr->type, newType, *expr,
+                                                               this, opRange,
+                                                               ConversionKind::Implicit);
+            }
+        }
+
+        contextDetermined(context.resetFlags(flags), expr, this, newType, opRange);
+    };
+
+    auto leftEffectiveWidth = left().getEffectiveWidth();
+    auto rightEffectiveWidth = right().getEffectiveWidth();
+    handleBranch(left_, leftFlags, rightEffectiveWidth);
+    handleBranch(right_, rightFlags, leftEffectiveWidth);
+
+    // The predicate is self determined so no need to handle it here.
     return true;
 }
 

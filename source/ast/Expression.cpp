@@ -173,16 +173,6 @@ struct Expression::PropagationVisitor {
                     // most immediate parent expression instead.
                     updateRange(expr);
                 }
-                else if (expr.kind == ExpressionKind::ConditionalOp &&
-                         conversionKind == ConversionKind::Implicit) {
-                    // This is a special case to make sure we get a width expansion
-                    // warning for assignments from a conditional operator. The type
-                    // conversion here is a propagation so no implicit conversion
-                    // actually gets created, so we need to invoke it manually.
-                    ConversionExpression::checkImplicitConversions(context, *expr.type, newType,
-                                                                   expr, parentExpr, opRange,
-                                                                   ConversionKind::Implicit);
-                }
 
                 if (expr.propagateType(context, newType, opRange)) {
                     // We propagated the type successfully so we don't need a conversion.

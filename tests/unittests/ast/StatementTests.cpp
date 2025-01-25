@@ -1751,7 +1751,7 @@ module m;
     end
 
     initial begin
-        e = instr matches tagged Jmp tagged JmpC '{cc:.c,addr:.a} &&& foo > 1 ? a + 10'(c) : 0;
+        e = instr matches tagged Jmp tagged JmpC '{cc:.c,addr:.a} &&& foo > 1 ? 32'(a + 10'(c)) : 0;
     end
 endmodule
 )");

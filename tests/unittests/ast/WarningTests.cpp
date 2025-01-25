@@ -1343,12 +1343,29 @@ module test;
     result = cond ? a : b;
   end
 endmodule
+
+module test2;
+  initial begin
+    static int a = 3;
+    static int b = 5;
+    static bit cond = 1;
+    static longint result = 7;
+    bit c, d;
+
+    result = cond ? a : longint'(b);
+
+    // This should not warn.
+    c = cond ? d : 0;
+  end
+endmodule
 )");
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 1);
+    REQUIRE(diags.size() == 3);
     CHECK(diags[0].code == diag::WidthExpand);
+    CHECK(diags[1].code == diag::WidthExpand);
+    CHECK(diags[2].code == diag::WidthExpand);
 }
