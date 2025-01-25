@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: Michael Popoloski
+# SPDX-License-Identifier: MIT
+
 """Basic tests checking that syntax tree equality checks work as expected."""
 
 import pyslang
