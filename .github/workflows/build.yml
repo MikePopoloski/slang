@@ -87,5 +87,6 @@ jobs:
       with:
         files: build/ci-coverage/coverage.info
         plugins: noop
+        disable_search: true
         token: ${{ secrets.CODECOV_TOKEN }}
         verbose: true
