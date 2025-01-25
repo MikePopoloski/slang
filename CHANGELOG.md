@@ -31,6 +31,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Added the ability to output diagnostics to JSON instead of (or in addition to) plain text
 * Added `--translate-off-format` which allows specifying comment directives that should act as skipped regions (for example, `// pragma translate_off` and `// pragma translate_on`)
 * slang warnings can now be turned on and off within source code using `// slang lint_off` style comment directives
+* Added `--ast-json-detailed-types` to include detailed type information in AST JSON output
+* slang-tidy gained a `clkNameRegexString` option to control how clocks are named (thanks to @spomatasmd)
 
 ### Improvements
 * Made -Wuseless-cast a bit less noisy -- it now does not warn about expressions involving genvars or cases where types are matching but one or the other has a different typedef alias name
@@ -42,6 +44,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Made minor tweaks to improve defparam and bind resolution performance
 * -Wsign-conversion will no longer warn for certain system functions that have a return type of `int` but in practice only return a single bit result
 * Made some minor improvements to parser error recovery when struct definitions are missing a closing brace
+* Inline genvars declared in generate loops are now included in the generate loop's members list when serializing the AST
+* The pyslang packaging build is now done in this repo instead of a separate downstream repo (thanks to @parker-research)
+* pyslang wheels now include support for arm64 (thanks to @gadfort)
+* Documentation now includes the READMEs for the various ancillary slang tools
 
 ### Fixes
 * Fixed a bug with constant evaluation of left-hand side assignment patterns that require implicit conversions to be applied
@@ -72,6 +78,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Fixed -Wwidth-expand to apply to conditional expressions
 * Fixed \[\*\] and ##\[\*\] sequence repetitions to start from 0 instead of 1 (thanks to @georgerennie)
 * Fixed a case where nested attributes were not properly diagnosed (thanks to @likeamahoney)
+* Fixed type resolution for expressions involving static casts; previously the operand of the cast was considered self determined, but now the type of the cast is correctly propagated to the operand
+* Fixed a bug in SyntaxNode::isEquivalentTo which would cause it to sometimes return the wrong result
 
 
 ## [v7.0] - 2024-09-26
