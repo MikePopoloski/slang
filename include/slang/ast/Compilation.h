@@ -639,7 +639,7 @@ public:
     const Type& getType(bitwidth_t width, bitmask<IntegralFlags> flags);
 
     /// Gets a scalar (single bit) type with the given flags.
-    const Type& getScalarType(bitmask<IntegralFlags> flags);
+    const Type& getScalarType(bitmask<IntegralFlags> flags) const;
 
     /// Gets the nettype represented by the given token kind.
     /// If the token kind does not represent a nettype this will return the
@@ -681,13 +681,13 @@ public:
     const Type& getUnsignedIntType();
 
     /// Get the built-in `null` type.
-    const Type& getNullType();
+    const Type& getNullType() const;
 
     /// Get the built-in `$` type.
-    const Type& getUnboundedType();
+    const Type& getUnboundedType() const;
 
     /// Get the built-in type used for the result of the `type()` operator.
-    const Type& getTypeRefType();
+    const Type& getTypeRefType() const;
 
     /// Get the `wire` built in net type. The rest of the built-in net types are
     /// rare enough that we don't bother providing dedicated accessors for them.
@@ -699,14 +699,21 @@ public:
 
     /// Allocates space for a constant value in the pool of constants.
     ConstantValue* allocConstant(ConstantValue&& value) {
+        SLANG_ASSERT(!isFrozen());
         return constantAllocator.emplace(std::move(value));
     }
 
     /// Allocates a symbol map.
-    SymbolMap* allocSymbolMap() { return symbolMapAllocator.emplace(); }
+    SymbolMap* allocSymbolMap() {
+        SLANG_ASSERT(!isFrozen());
+        return symbolMapAllocator.emplace();
+    }
 
     /// Allocates a pointer map.
-    PointerMap* allocPointerMap() { return pointerMapAllocator.emplace(); }
+    PointerMap* allocPointerMap() {
+        SLANG_ASSERT(!isFrozen());
+        return pointerMapAllocator.emplace();
+    }
 
     /// Allocates an assertion instance details object.
     AssertionInstanceDetails* allocAssertionDetails();
@@ -714,6 +721,7 @@ public:
     /// Allocates a generic class symbol.
     template<typename... Args>
     GenericClassDefSymbol* allocGenericClass(Args&&... args) {
+        SLANG_ASSERT(!isFrozen());
         return genericClassAllocator.emplace(std::forward<Args>(args)...);
     }
 
