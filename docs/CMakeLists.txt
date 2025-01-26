@@ -26,6 +26,7 @@ set(DOXYGEN_EXAMPLE_DIR_LIST
     "${PROJECT_SOURCE_DIR}/tools/netlist/README.md"
     "${PROJECT_SOURCE_DIR}/tools/reflect/README.md"
     "${PROJECT_SOURCE_DIR}/tools/rewriter/README.md"
+    "${PROJECT_SOURCE_DIR}/tools/threadtest/README.md"
     "${PROJECT_SOURCE_DIR}/tools/tidy/README.md")
 set(DOXYGEN_EXTERNAL_DIR "${PROJECT_SOURCE_DIR}/external")
 set(DOXYGEN_STRIP_PATH "${DOXYGEN_INPUT_DIR}")
