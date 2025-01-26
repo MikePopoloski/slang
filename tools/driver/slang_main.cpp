@@ -202,8 +202,8 @@ int driverMain(int argc, TArgs argv) {
 #if __cpp_exceptions
         OS::printE(fmt::format("{}\n", e.what()));
 #endif
-        return 6;
     }
+    return 6;
 }
 
 #ifndef FUZZ_TARGET

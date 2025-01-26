@@ -38,6 +38,9 @@ endif()
 if(mimalloc_FOUND)
   set(MIMALLOC_FIND_DEP "find_dependency(mimalloc)")
 endif()
+if(cpptrace_FOUND)
+  set(CPPTRACE_FIND_DEP "find_dependency(cpptrace)")
+endif()
 
 configure_package_config_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/cmake/slangConfig.cmake.in

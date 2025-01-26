@@ -18,9 +18,16 @@
 #include "slang/util/Enum.h"
 
 #if __cpp_exceptions
-#    define SLANG_TRY try
-#    define SLANG_CATCH(X) catch (X)
-#    define SLANG_THROW(e) throw(e)
+#    if defined(SLANG_USE_CPPTRACE)
+#        include <cpptrace/from_current.hpp>
+#        define SLANG_TRY CPPTRACE_TRYZ
+#        define SLANG_CATCH(X) CPPTRACE_CATCHZ(X)
+#        define SLANG_THROW(e) throw(e)
+#    else
+#        define SLANG_TRY try
+#        define SLANG_CATCH(X) catch (X)
+#        define SLANG_THROW(e) throw(e)
+#    endif
 #else
 #    define SLANG_TRY if (true)
 #    define SLANG_CATCH(X) if (false)
