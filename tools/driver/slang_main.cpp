@@ -183,6 +183,9 @@ int driverMain(int argc, TArgs argv) {
         SLANG_CATCH(const std::exception& e) {
 #if __cpp_exceptions
             OS::printE(fmt::format("internal compiler error: {}\n", e.what()));
+#    if defined(SLANG_USE_CPPTRACE)
+            cpptrace::from_current_exception().print();
+#    endif
 #endif
             return 4;
         }
@@ -201,6 +204,9 @@ int driverMain(int argc, TArgs argv) {
     SLANG_CATCH(const std::exception& e) {
 #if __cpp_exceptions
         OS::printE(fmt::format("{}\n", e.what()));
+#    if defined(SLANG_USE_CPPTRACE)
+        cpptrace::from_current_exception().print();
+#    endif
 #endif
     }
     return 6;
