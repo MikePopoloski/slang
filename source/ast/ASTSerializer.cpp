@@ -208,10 +208,15 @@ void ASTSerializer::visit(const T& elem, bool inMembersArray) {
             elem.serializeTo(*this);
         }
 
-        ASTContext ctx(compilation.getRoot(), LookupLocation::max);
-        ConstantValue constant = ctx.tryEval(elem);
-        if (constant)
-            write("constant", constant);
+        if (tryConstantFold) {
+            ASTContext ctx(compilation.getRoot(), LookupLocation::max);
+            ConstantValue constant = ctx.tryEval(elem);
+            if (constant)
+                write("constant", constant);
+        }
+        else if (elem.constant) {
+            write("constant", *elem.constant);
+        }
 
         writer.endObject();
     }
@@ -260,6 +265,21 @@ void ASTSerializer::visit(const T& elem, bool inMembersArray) {
                 writer.writeValue(elem.toString());
                 return;
             }
+        }
+
+        // Skip uninstantiated blocks and instances.
+        if constexpr (std::is_same_v<InstanceSymbol, T> ||
+                      std::is_same_v<CheckerInstanceSymbol, T>) {
+            if (elem.body.flags.has(InstanceFlags::Uninstantiated))
+                return;
+        }
+        else if constexpr (std::is_same_v<GenerateBlockArraySymbol, T>) {
+            if (!elem.valid)
+                return;
+        }
+        else if constexpr (std::is_same_v<GenerateBlockSymbol, T>) {
+            if (elem.isUninstantiated)
+                return;
         }
 
         // Ignore built-in methods on class types.

@@ -47,6 +47,11 @@ public:
     /// is included in the output.
     void setDetailedTypeInfo(bool set) { detailedTypeInfo = set; }
 
+    /// Sets a flag that indicates whether the serializer should
+    /// attempt to constant fold expressions that haven't already
+    /// been evaluated at least once.
+    void setTryConstantFold(bool set) { tryConstantFold = set; }
+
     /// Serializes a symbol to JSON.
     void serialize(const Symbol& symbol, bool inMembersArray = false);
 
@@ -180,6 +185,7 @@ private:
     bool includeAddrs = true;
     bool includeSourceInfo = false;
     bool detailedTypeInfo = false;
+    bool tryConstantFold = true;
     flat_hash_set<const void*> visiting;
 };
 
