@@ -6,6 +6,7 @@
 # Required minimum versions for dependencies
 set(fmt_min_version "11.1")
 set(mimalloc_min_version "2.1")
+set(cpptrace_min_version "0.7")
 set(catch2_min_version "3.7")
 
 # --- fmt lib ---
@@ -148,6 +149,37 @@ if(SLANG_USE_MIMALLOC)
   endif()
 endif()
 
+# --- cpptrace ---
+if(SLANG_USE_CPPTRACE)
+  set(find_pkg_args "")
+  if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.24.0")
+    set(find_pkg_args "FIND_PACKAGE_ARGS" "${cpptrace_min_version}")
+  endif()
+
+  set(CPPTRACE_BUILD_SHARED
+      OFF
+      CACHE INTERNAL "")
+
+  FetchContent_Declare(
+    cpptrace
+    GIT_REPOSITORY https://github.com/jeremy-rifkin/cpptrace.git
+    GIT_TAG v0.7.5
+    GIT_SHALLOW ON
+    ${find_pkg_args})
+  FetchContent_MakeAvailable(cpptrace)
+
+  if(cpptrace_FOUND)
+    get_target_property(CPPTRACE_INC cpptrace INTERFACE_INCLUDE_DIRECTORIES)
+    message(STATUS "Found system cpptrace library: ${CPPTRACE_INC}")
+  else()
+    message(STATUS "Using remote cpptrace library")
+    if(IS_DIRECTORY "${cpptrace_SOURCE_DIR}")
+      set_property(DIRECTORY ${cpptrace_SOURCE_DIR} PROPERTY EXCLUDE_FROM_ALL
+                                                             YES)
+    endif()
+  endif()
+endif()
+
 # --- catch2 ---
 if(SLANG_INCLUDE_TESTS)
   set(find_pkg_args "")
@@ -225,6 +257,13 @@ if(SLANG_INCLUDE_INSTALL)
             ${mimalloc_SOURCE_DIR}/include/mimalloc-override.h
             ${mimalloc_SOURCE_DIR}/include/mimalloc-new-delete.h
       DESTINATION ${mi_install_incdir}
+      COMPONENT slang_Development)
+  endif()
+
+  if(SLANG_USE_CPPTRACE AND NOT cpptrace_FOUND)
+    install(
+      TARGETS cpptrace-lib
+      EXPORT slangTargets
       COMPONENT slang_Development)
   endif()
 endif()
