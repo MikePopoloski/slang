@@ -11,6 +11,7 @@ well supported as the main slang library.
 \include{doc} tools/netlist/README.md
 \include{doc} tools/reflect/README.md
 \include{doc} tools/rewriter/README.md
+\include{doc} tools/threadtest/README.md
 \include{doc} tools/tidy/README.md
 
 */
