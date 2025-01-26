@@ -8,6 +8,7 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include "slang/ast/Compilation.h"
 #include "slang/diagnostics/DiagnosticEngine.h"
 #include "slang/driver/SourceLoader.h"
 #include "slang/text/SourceManager.h"
@@ -59,6 +60,12 @@ namespace slang::driver {
 /// @endcode
 ///
 class SLANG_EXPORT Driver {
+private:
+    // This exists to ensure we get a Compilation object created prior to anything else,
+    // such as the DiagnosticEngine, which wants a Compilation to register callbacks
+    // for printing symbol paths.
+    ast::Compilation defaultComp;
+
 public:
     /// The command line object that will be used to parse
     /// arguments if the @a parseCommandLine method is called.

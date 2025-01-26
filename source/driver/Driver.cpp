@@ -10,7 +10,6 @@
 
 #include <fmt/color.h>
 
-#include "slang/ast/Compilation.h"
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
 #include "slang/ast/symbols/InstanceSymbols.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
@@ -39,9 +38,6 @@ using namespace parsing;
 using namespace syntax;
 
 Driver::Driver() : diagEngine(sourceManager), sourceLoader(sourceManager) {
-    // Construct a compilation object here before the TextDiagnosticClient
-    // to ensure that static formatter callbacks are registered.
-    Compilation compilation;
     textDiagClient = std::make_shared<TextDiagnosticClient>();
     diagEngine.addClient(textDiagClient);
 }
