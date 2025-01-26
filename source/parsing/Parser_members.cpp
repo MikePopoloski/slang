@@ -24,8 +24,9 @@ CompilationUnitSyntax& Parser::parseCompilationUnit() {
         return factory.compilationUnit(members, meta.eofToken);
     }
     SLANG_CATCH(const RecursionException&) {
-        return factory.compilationUnit(nullptr, meta.eofToken);
     }
+
+    return factory.compilationUnit(nullptr, meta.eofToken);
 }
 
 LibraryMapSyntax& Parser::parseLibraryMap() {
@@ -37,8 +38,9 @@ LibraryMapSyntax& Parser::parseLibraryMap() {
         return factory.libraryMap(members, meta.eofToken);
     }
     SLANG_CATCH(const RecursionException&) {
-        return factory.libraryMap(nullptr, meta.eofToken);
     }
+
+    return factory.libraryMap(nullptr, meta.eofToken);
 }
 
 MemberSyntax& Parser::parseModule() {
