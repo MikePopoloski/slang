@@ -36,6 +36,8 @@ int main(int argc, char** argv) {
         if (!driver.reportCompilation(*compilation, true))
             return 2;
 
+        compilation->freeze();
+
         ThreadPool threadPool;
         threadPool.pushLoop(0, count.value_or(1000), [&](int from, int to) {
             SLANG_TRY {
