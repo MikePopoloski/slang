@@ -180,6 +180,8 @@ Compilation::Compilation(const Bag& options, const SourceLibrary* defaultLib) :
 Compilation::~Compilation() = default;
 
 void Compilation::addSyntaxTree(std::shared_ptr<SyntaxTree> tree) {
+    SLANG_ASSERT(!isFrozen());
+
     if (!tree)
         SLANG_THROW(std::invalid_argument("tree cannot be null"));
 
@@ -298,6 +300,8 @@ const RootSymbol& Compilation::getRoot() {
 const RootSymbol& Compilation::getRoot(bool skipDefParamsAndBinds) {
     if (finalized)
         return *root;
+
+    SLANG_ASSERT(!isFrozen());
 
     // Resolve default lib list now that we have all syntax trees added.
     defaultLiblist.reserve(options.defaultLiblist.size());
@@ -805,6 +809,8 @@ static void checkExternUdpMatch(const Scope& scope, const UdpPortListSyntax& ext
 
 void Compilation::createDefinition(const Scope& scope, LookupLocation location,
                                    const ModuleDeclarationSyntax& syntax) {
+    SLANG_ASSERT(!isFrozen());
+
     // We can only be missing metadata if the definition is created programmatically
     // (i.e. not via the parser) so we just fill in the parent's default net type
     // so that it's not a null pointer.
@@ -828,6 +834,8 @@ void Compilation::createDefinition(const Scope& scope, LookupLocation location,
 }
 
 void Compilation::insertDefinition(Symbol& symbol, const Scope& scope) {
+    SLANG_ASSERT(!isFrozen());
+
     auto reportRedefinition = [&](SourceLocation oldLoc, DiagCode code) {
         if (!symbol.name.empty()) {
             auto& diag = scope.addDiag(code, symbol.location);
@@ -941,6 +949,8 @@ const PackageSymbol* Compilation::getPackage(std::string_view lookupName) const 
 
 const PackageSymbol& Compilation::createPackage(const Scope& scope,
                                                 const ModuleDeclarationSyntax& syntax) {
+    SLANG_ASSERT(!isFrozen());
+
     auto& metadata = syntaxMetadata[&syntax];
     if (!metadata.defaultNetType)
         metadata.defaultNetType = &scope.getDefaultNetType();
@@ -963,6 +973,8 @@ const PackageSymbol& Compilation::createPackage(const Scope& scope,
 
 const ConfigBlockSymbol& Compilation::createConfigBlock(const Scope& scope,
                                                         const ConfigDeclarationSyntax& syntax) {
+    SLANG_ASSERT(!isFrozen());
+
     auto& config = ConfigBlockSymbol::fromSyntax(scope, syntax);
 
     // Register lookups by syntax node. Note that we register rule entries here
@@ -999,6 +1011,8 @@ const ConfigBlockSymbol& Compilation::createConfigBlock(const Scope& scope,
 
 const PrimitiveSymbol& Compilation::createPrimitive(Scope& scope,
                                                     const UdpDeclarationSyntax& syntax) {
+    SLANG_ASSERT(!isFrozen());
+
     auto& prim = PrimitiveSymbol::fromSyntax(scope, syntax);
     scope.addMember(prim);
     insertDefinition(prim, scope);
@@ -1012,16 +1026,19 @@ const PrimitiveSymbol* Compilation::getGateType(std::string_view lookupName) con
 }
 
 void Compilation::addGateType(const PrimitiveSymbol& prim) {
+    SLANG_ASSERT(!isFrozen());
     SLANG_ASSERT(!prim.name.empty());
     gateMap.emplace(prim.name, &prim);
 }
 
 void Compilation::addSystemSubroutine(const std::shared_ptr<SystemSubroutine>& subroutine) {
+    SLANG_ASSERT(!isFrozen());
     subroutineMap.emplace(subroutine->name, subroutine);
 }
 
 void Compilation::addSystemMethod(SymbolKind typeKind,
                                   const std::shared_ptr<SystemSubroutine>& method) {
+    SLANG_ASSERT(!isFrozen());
     methodMap.emplace(std::make_tuple(std::string_view(method->name), typeKind), method);
 }
 
@@ -1086,21 +1103,29 @@ std::span<const AttributeSymbol* const> Compilation::getAttributes(const void* p
 }
 
 void Compilation::noteBindDirective(const BindDirectiveSyntax& syntax, const Scope& scope) {
+    SLANG_ASSERT(!isFrozen());
+
     if (!scope.isUninstantiated())
         bindDirectives.emplace_back(&syntax, &scope);
 }
 
 void Compilation::noteInstanceWithDefBind(const Symbol& instance) {
+    SLANG_ASSERT(!isFrozen());
+
     auto& def = instance.as<InstanceBodySymbol>().getDefinition();
     instancesWithDefBinds[&def].push_back(&instance);
 }
 
 void Compilation::noteDPIExportDirective(const DPIExportSyntax& syntax, const Scope& scope) {
+    SLANG_ASSERT(!isFrozen());
+
     dpiExports.emplace_back(&syntax, &scope);
 }
 
 void Compilation::addOutOfBlockDecl(const Scope& scope, const ScopedNameSyntax& name,
                                     const SyntaxNode& syntax, SymbolIndex index) {
+    SLANG_ASSERT(!isFrozen());
+
     std::string_view className = name.left->getLastToken().valueText();
     std::string_view declName = name.right->getLastToken().valueText();
     auto [it, inserted] = outOfBlockDecls.emplace(std::make_tuple(className, declName, &scope),
@@ -1129,11 +1154,14 @@ std::tuple<const SyntaxNode*, SymbolIndex, bool*> Compilation::findOutOfBlockDec
 }
 
 void Compilation::addExternInterfaceMethod(const SubroutineSymbol& method) {
+    SLANG_ASSERT(!isFrozen());
     externInterfaceMethods.push_back(&method);
 }
 
 void Compilation::noteDefaultClocking(const Scope& scope, const Symbol& clocking,
                                       SourceRange range) {
+    SLANG_ASSERT(!isFrozen());
+
     auto [it, inserted] = defaultClockingMap.emplace(&scope, &clocking);
     if (!inserted) {
         auto& diag = scope.addDiag(diag::MultipleDefaultClocking, range);
@@ -1143,6 +1171,8 @@ void Compilation::noteDefaultClocking(const Scope& scope, const Symbol& clocking
 
 void Compilation::noteDefaultClocking(const ASTContext& context,
                                       const DefaultClockingReferenceSyntax& syntax) {
+    SLANG_ASSERT(!isFrozen());
+
     auto name = syntax.name.valueText();
     auto range = syntax.name.range();
     auto sym = Lookup::unqualifiedAt(*context.scope, name, context.getLocation(), range);
@@ -1173,6 +1203,8 @@ const Symbol* Compilation::getDefaultClocking(const Scope& scope) const {
 
 void Compilation::noteGlobalClocking(const Scope& scope, const Symbol& clocking,
                                      SourceRange range) {
+    SLANG_ASSERT(!isFrozen());
+
     auto [it, inserted] = globalClockingMap.emplace(&scope, &clocking);
     if (!inserted) {
         auto& diag = scope.addDiag(diag::MultipleGlobalClocking, range);
@@ -1193,6 +1225,8 @@ const Symbol* Compilation::getGlobalClocking(const Scope& scope) const {
 }
 
 void Compilation::noteDefaultDisable(const Scope& scope, const Expression& expr) {
+    SLANG_ASSERT(!isFrozen());
+
     auto [it, inserted] = defaultDisableMap.emplace(&scope, &expr);
     if (!inserted) {
         auto& diag = scope.addDiag(diag::MultipleDefaultDisable, expr.sourceRange);
@@ -1201,6 +1235,7 @@ void Compilation::noteDefaultDisable(const Scope& scope, const Expression& expr)
 }
 
 void Compilation::noteNameConflict(const Symbol& symbol) {
+    SLANG_ASSERT(!isFrozen());
     nameConflicts.push_back(&symbol);
 }
 
@@ -1208,6 +1243,7 @@ void Compilation::noteNetAlias(const Scope& scope, const Symbol& firstSym,
                                DriverBitRange firstRange, const Expression& firstExpr,
                                const Symbol& secondSym, DriverBitRange secondRange,
                                const Expression& secondExpr) {
+    SLANG_ASSERT(!isFrozen());
     SLANG_ASSERT(firstRange.second - firstRange.first == secondRange.second - secondRange.first);
 
     auto overlaps = [](DriverBitRange a, DriverBitRange b) {
@@ -1257,6 +1293,7 @@ void Compilation::noteHierarchicalReference(const Scope& initialScope,
                                             const HierarchicalReference& ref) {
     // For now, we're only interested in upward names that cross
     // through instance boundaries.
+    SLANG_ASSERT(!isFrozen());
     SLANG_ASSERT(ref.expr);
     auto currScope = &initialScope;
     for (size_t i = 0; i < ref.upwardCount; i++) {
@@ -1270,6 +1307,7 @@ void Compilation::noteHierarchicalReference(const Scope& initialScope,
 }
 
 void Compilation::noteVirtualIfaceInstance(const InstanceSymbol& symbol) {
+    SLANG_ASSERT(!isFrozen());
     virtualInterfaceInstances.push_back(&symbol);
 }
 
@@ -1286,6 +1324,8 @@ const Expression* Compilation::getDefaultDisable(const Scope& scope) const {
 }
 
 void Compilation::noteExternDefinition(const Scope& scope, const SyntaxNode& syntax) {
+    SLANG_ASSERT(!isFrozen());
+
     auto nameToken = getExternNameToken(syntax);
     auto name = nameToken.valueText();
     if (name.empty())
@@ -1329,6 +1369,7 @@ const SyntaxNode* Compilation::getExternDefinition(std::string_view name,
 }
 
 void Compilation::noteReference(const SyntaxNode& node, bool isLValue) {
+    SLANG_ASSERT(!isFrozen());
     auto [it, inserted] = referenceStatusMap.emplace(&node, std::pair{!isLValue, isLValue});
     if (!inserted) {
         it->second.first |= !isLValue;
@@ -1337,6 +1378,7 @@ void Compilation::noteReference(const SyntaxNode& node, bool isLValue) {
 }
 
 void Compilation::noteReference(const Symbol& symbol, bool isLValue) {
+    SLANG_ASSERT(!isFrozen());
     if (auto syntax = symbol.getSyntax())
         noteReference(*syntax, isLValue);
 }
@@ -1372,12 +1414,16 @@ const NameSyntax& Compilation::tryParseName(std::string_view name, Diagnostics& 
 }
 
 CompilationUnitSymbol& Compilation::createScriptScope() {
+    SLANG_ASSERT(!isFrozen());
+
     auto unit = emplace<CompilationUnitSymbol>(*this, getDefaultLibrary());
     root->addMember(*unit);
     return *unit;
 }
 
 void Compilation::elaborate() {
+    SLANG_ASSERT(!isFrozen());
+
     // Touch every symbol, scope, statement, and expression tree so that
     // we can be sure we have all the diagnostics.
     uint32_t errorLimit = options.errorLimit == 0 ? UINT32_MAX : options.errorLimit;
@@ -1531,6 +1577,8 @@ const Diagnostics& Compilation::getParseDiagnostics() {
     if (cachedParseDiagnostics)
         return *cachedParseDiagnostics;
 
+    SLANG_ASSERT(!isFrozen());
+
     cachedParseDiagnostics.emplace();
     for (auto& tree : syntaxTrees)
         cachedParseDiagnostics->append_range(tree->diagnostics());
@@ -1652,6 +1700,8 @@ const Diagnostics& Compilation::getAllDiagnostics() {
     if (cachedAllDiagnostics)
         return *cachedAllDiagnostics;
 
+    SLANG_ASSERT(!isFrozen());
+
     cachedAllDiagnostics.emplace();
     cachedAllDiagnostics->append_range(getParseDiagnostics());
     cachedAllDiagnostics->append_range(getSemanticDiagnostics());
@@ -1662,11 +1712,14 @@ const Diagnostics& Compilation::getAllDiagnostics() {
 }
 
 void Compilation::addDiagnostics(const Diagnostics& diagnostics) {
+    SLANG_ASSERT(!isFrozen());
     for (auto& diag : diagnostics)
         addDiag(diag);
 }
 
 Diagnostic& Compilation::addDiag(Diagnostic diag) {
+    SLANG_ASSERT(!isFrozen());
+
     if (diagsDisabled) {
         tempDiag = std::move(diag);
         return tempDiag;
@@ -1710,23 +1763,28 @@ Diagnostic& Compilation::addDiag(Diagnostic diag) {
 }
 
 AssertionInstanceDetails* Compilation::allocAssertionDetails() {
+    SLANG_ASSERT(!isFrozen());
     return assertionDetailsAllocator.emplace();
 }
 
 ConfigBlockSymbol* Compilation::allocConfigBlock(std::string_view name, SourceLocation loc) {
+    SLANG_ASSERT(!isFrozen());
     return configBlockAllocator.emplace(*this, name, loc);
 }
 
 Scope::WildcardImportData* Compilation::allocWildcardImportData() {
+    SLANG_ASSERT(!isFrozen());
     return wildcardImportAllocator.emplace();
 }
 
 const ImplicitTypeSyntax& Compilation::createEmptyTypeSyntax(SourceLocation loc) {
+    SLANG_ASSERT(!isFrozen());
     return *emplace<ImplicitTypeSyntax>(Token(), nullptr,
                                         Token(*this, TokenKind::Placeholder, {}, {}, loc));
 }
 
 void Compilation::forceElaborate(const Symbol& symbol) {
+    SLANG_ASSERT(!isFrozen());
     DiagnosticVisitor visitor(*this, numErrors,
                               options.errorLimit == 0 ? UINT32_MAX : options.errorLimit);
     visitor.visitInstances = false;
@@ -1740,12 +1798,14 @@ const Type& Compilation::getType(SyntaxKind typeKind) const {
 
 const Type& Compilation::getType(const DataTypeSyntax& node, const ASTContext& context,
                                  const Type* typedefTarget) {
+    SLANG_ASSERT(!isFrozen());
     return Type::fromSyntax(*this, node, context, typedefTarget);
 }
 
 const Type& Compilation::getType(const Type& elementType,
                                  const SyntaxList<VariableDimensionSyntax>& dimensions,
                                  const ASTContext& context) {
+    SLANG_ASSERT(!isFrozen());
     return Type::fromSyntax(*this, elementType, dimensions, context);
 }
 
@@ -1757,13 +1817,15 @@ const Type& Compilation::getType(bitwidth_t width, bitmask<IntegralFlags> flags)
     if (it != vectorTypeCache.end())
         return *it->second;
 
+    SLANG_ASSERT(!isFrozen());
+
     auto type = emplace<PackedArrayType>(getScalarType(flags), ConstantRange{int32_t(width - 1), 0},
                                          width);
     vectorTypeCache.emplace_hint(it, key, type);
     return *type;
 }
 
-const Type& Compilation::getScalarType(bitmask<IntegralFlags> flags) {
+const Type& Compilation::getScalarType(bitmask<IntegralFlags> flags) const {
     Type* ptr = scalarTypeTable[flags.bits() & 0x7];
     SLANG_ASSERT(ptr);
     return *ptr;
@@ -1779,19 +1841,20 @@ const Type& Compilation::getUnsignedIntType() {
     return getType(32, IntegralFlags::Unsigned | IntegralFlags::TwoState);
 }
 
-const Type& Compilation::getNullType() {
+const Type& Compilation::getNullType() const {
     return getType(SyntaxKind::NullLiteralExpression);
 }
 
-const Type& Compilation::getUnboundedType() {
+const Type& Compilation::getUnboundedType() const {
     return getType(SyntaxKind::WildcardLiteralExpression);
 }
 
-const Type& Compilation::getTypeRefType() {
+const Type& Compilation::getTypeRefType() const {
     return getType(SyntaxKind::TypeReference);
 }
 
 Scope::DeferredMemberData& Compilation::getOrAddDeferredData(Scope::DeferredMemberIndex& index) {
+    SLANG_ASSERT(!isFrozen());
     if (index == Scope::DeferredMemberIndex::Invalid)
         index = deferredData.emplace();
     return deferredData[index];
