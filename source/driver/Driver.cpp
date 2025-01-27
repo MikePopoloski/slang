@@ -8,6 +8,7 @@
 //------------------------------------------------------------------------------
 #include "slang/driver/Driver.h"
 
+#include <BS_thread_pool.hpp>
 #include <fmt/color.h>
 
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
@@ -27,7 +28,6 @@
 #include "slang/text/Json.h"
 #include "slang/util/Random.h"
 #include "slang/util/String.h"
-#include "slang/util/ThreadPool.h"
 
 namespace fs = std::filesystem;
 

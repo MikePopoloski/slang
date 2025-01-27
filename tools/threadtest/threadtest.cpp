@@ -5,12 +5,13 @@
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
+#include <BS_thread_pool.hpp>
+
 #include "slang/ast/ASTSerializer.h"
 #include "slang/ast/Compilation.h"
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
 #include "slang/driver/Driver.h"
 #include "slang/text/Json.h"
-#include "slang/util/ThreadPool.h"
 
 using namespace slang;
 using namespace slang::ast;
@@ -38,8 +39,8 @@ int main(int argc, char** argv) {
 
         compilation->freeze();
 
-        ThreadPool threadPool;
-        threadPool.pushLoop(0, count.value_or(1000), [&](int from, int to) {
+        BS::thread_pool threadPool;
+        threadPool.detach_blocks(0, count.value_or(1000), [&](int from, int to) {
             SLANG_TRY {
                 JsonWriter writer;
                 ASTSerializer serializer(*compilation, writer);
