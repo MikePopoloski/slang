@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: MIT
 
 #include "Test.h"
+#include <BS_thread_pool.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>
 #include <sstream>
 
 #include "slang/util/Random.h"
-#include "slang/util/ThreadPool.h"
 #include "slang/util/TimeTrace.h"
 
 using namespace Catch::Matchers;
@@ -45,9 +45,9 @@ TEST_CASE("TimeTrace tests") {
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
     };
 
-    ThreadPool pool;
+    BS::thread_pool pool;
     for (int i = 0; i < 20; i++) {
-        pool.pushTask([i, &frob] {
+        pool.detach_task([i, &frob] {
             if (i % 2 == 0) {
                 TimeTraceScope timeScope("Foo\"thing"sv, std::to_string(i));
                 std::this_thread::sleep_for(std::chrono::milliseconds(1));
@@ -59,7 +59,7 @@ TEST_CASE("TimeTrace tests") {
         });
     }
 
-    pool.waitForAll();
+    pool.wait();
 
     std::ostringstream sstr;
     TimeTrace::write(sstr);
