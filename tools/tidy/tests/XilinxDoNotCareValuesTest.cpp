@@ -63,3 +63,24 @@ endmodule
     bool result = visitor->check(root);
     CHECK(result);
 }
+
+TEST_CASE("XilinxDoNotCareValues: No do-not-care values but with comment") {
+    auto tree = SyntaxTree::fromText(R"(
+module top;
+    logic [3:0] a =
+       /*'d?*/4'd10;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    compilation.getAllDiagnostics();
+    auto& root = compilation.getRoot();
+
+    TidyConfig config;
+    Registry::setConfig(config);
+    Registry::setSourceManager(compilation.getSourceManager());
+    auto visitor = Registry::create("XilinxDoNotCareValues");
+    bool result = visitor->check(root);
+    CHECK(result);
+}
