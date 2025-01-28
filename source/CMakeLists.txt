@@ -59,6 +59,8 @@ add_library(
   ${CMAKE_CURRENT_BINARY_DIR}/TokenKind.cpp
   ${CMAKE_CURRENT_BINARY_DIR}/VersionInfo.cpp
   ${CMAKE_CURRENT_BINARY_DIR}/slang/diagnostics/AllDiags.h
+  analysis/AnalysisManager.cpp
+  analysis/AnalyzedProcedure.cpp
   diagnostics/DiagnosticClient.cpp
   diagnostics/DiagnosticEngine.cpp
   diagnostics/Diagnostics.cpp

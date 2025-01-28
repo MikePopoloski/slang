@@ -314,6 +314,12 @@ public:
     /// so will result in an exception.
     const RootSymbol& getRoot();
 
+    /// Gets the root of the design, which must already have been finalized.
+    const RootSymbol& getFinalizedRoot() const {
+        SLANG_ASSERT(finalized);
+        return *root;
+    }
+
     /// Indicates whether the design has been compiled and can no longer accept modifications.
     bool isFinalized() const { return finalized; }
 
