@@ -1358,6 +1358,21 @@ module test2;
     c = cond ? d : 0;
   end
 endmodule
+
+module test3;
+    localparam int unsigned SIZE = 16;
+
+    logic a;
+    logic [7:0] b, c;
+    logic [SIZE-1:0] d, e, f, g;
+
+    always_comb begin
+        d = SIZE'( a ? b : c);
+        e = SIZE'(b);
+        f = a ? SIZE'(b) : SIZE'(c);
+        g = SIZE'( (a == 0) ? f : c);
+    end
+endmodule
 )");
 
     Compilation compilation;

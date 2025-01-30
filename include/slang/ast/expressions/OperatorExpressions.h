@@ -37,7 +37,8 @@ public:
     Expression& operand() { return *operand_; }
 
     ConstantValue evalImpl(EvalContext& context) const;
-    bool propagateType(const ASTContext& context, const Type& newType, SourceRange opRange);
+    bool propagateType(const ASTContext& context, const Type& newType, SourceRange opRange,
+                       ConversionKind conversionKind);
     std::optional<bitwidth_t> getEffectiveWidthImpl() const;
     EffectiveSign getEffectiveSignImpl(bool isForConversion) const;
 
@@ -93,7 +94,8 @@ public:
     Expression& right() { return *right_; }
 
     ConstantValue evalImpl(EvalContext& context) const;
-    bool propagateType(const ASTContext& context, const Type& newType, SourceRange opRange);
+    bool propagateType(const ASTContext& context, const Type& newType, SourceRange opRange,
+                       ConversionKind conversionKind);
     std::optional<bitwidth_t> getEffectiveWidthImpl() const;
     EffectiveSign getEffectiveSignImpl(bool isForConversion) const;
 
@@ -158,7 +160,8 @@ public:
     Expression& right() { return *right_; }
 
     ConstantValue evalImpl(EvalContext& context) const;
-    bool propagateType(const ASTContext& context, const Type& newType, SourceRange opRange);
+    bool propagateType(const ASTContext& context, const Type& newType, SourceRange opRange,
+                       ConversionKind conversionKind);
     std::optional<bitwidth_t> getEffectiveWidthImpl() const;
     EffectiveSign getEffectiveSignImpl(bool isForConversion) const;
 
@@ -394,7 +397,8 @@ public:
     Expression& right() { return *right_; }
 
     ConstantValue evalImpl(EvalContext& context) const;
-    bool propagateType(const ASTContext& context, const Type& newType, SourceRange opRange);
+    bool propagateType(const ASTContext& context, const Type& newType, SourceRange opRange,
+                       ConversionKind conversionKind);
 
     ConstantValue checkInside(EvalContext& context, const ConstantValue& val) const;
 

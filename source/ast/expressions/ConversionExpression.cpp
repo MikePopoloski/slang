@@ -303,6 +303,8 @@ static bool actuallyNeededCast(const Type& type, const Expression& operand) {
             return actuallyNeededCast(type, operand.as<MinTypMaxExpression>().selected());
         case ExpressionKind::ConditionalOp: {
             auto& cond = operand.as<ConditionalExpression>();
+            if (!type.isEquivalent(*cond.left().type) || !type.isEquivalent(*cond.right().type))
+                return true;
             return actuallyNeededCast(type, cond.left()) || actuallyNeededCast(type, cond.right());
         }
         default:
@@ -403,7 +405,8 @@ Expression& ConversionExpression::fromSyntax(Compilation& comp, const CastExpres
     };
 
     if (type->isMatching(*operand->type) && !isGenvar() && !isDifferentTypedef() &&
-        ((assignmentTarget && assignmentTarget->isMatching(*type)) ||
+        ((assignmentTarget && assignmentTarget->isMatching(*type) &&
+          operand->kind != ExpressionKind::ConditionalOp) ||
          !actuallyNeededCast(*type, *operand))) {
         context.addDiag(diag::UselessCast, syntax.apostrophe.location())
             << *operand->type << targetExpr.sourceRange << operand->sourceRange;

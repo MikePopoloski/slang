@@ -160,7 +160,7 @@ struct Expression::PropagationVisitor {
         // check if the conversion should be pushed further down the tree. Otherwise we
         // should insert the implicit conversion here.
         bool needConversion = !newType.isEquivalent(*expr.type);
-        if constexpr (requires { expr.propagateType(context, newType, opRange); }) {
+        if constexpr (requires { expr.propagateType(context, newType, opRange, conversionKind); }) {
             if ((newType.isFloating() && expr.type->isFloating()) ||
                 (newType.isIntegral() && expr.type->isIntegral()) || newType.isString() ||
                 expr.kind == ExpressionKind::ValueRange) {
@@ -174,7 +174,7 @@ struct Expression::PropagationVisitor {
                     updateRange(expr);
                 }
 
-                if (expr.propagateType(context, newType, opRange)) {
+                if (expr.propagateType(context, newType, opRange, conversionKind)) {
                     // We propagated the type successfully so we don't need a conversion.
                     // We should however clear out any constant value that may have been
                     // stored here, since it may no longer be valid given the new type.

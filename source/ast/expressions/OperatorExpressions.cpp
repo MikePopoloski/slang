@@ -329,7 +329,7 @@ Expression& UnaryExpression::fromSyntax(Compilation& compilation,
 }
 
 bool UnaryExpression::propagateType(const ASTContext& context, const Type& newType,
-                                    SourceRange propRange) {
+                                    SourceRange propRange, ConversionKind) {
     switch (op) {
         case UnaryOperator::Plus:
         case UnaryOperator::Minus:
@@ -1113,7 +1113,7 @@ void BinaryExpression::analyzeOpTypes(const Type& clt, const Type& crt, const Ty
 }
 
 bool BinaryExpression::propagateType(const ASTContext& context, const Type& newType,
-                                     SourceRange propRange) {
+                                     SourceRange propRange, ConversionKind) {
     switch (op) {
         case BinaryOperator::Add:
         case BinaryOperator::Subtract:
@@ -1460,7 +1460,7 @@ Expression& ConditionalExpression::fromSyntax(Compilation& comp,
 }
 
 bool ConditionalExpression::propagateType(const ASTContext& context, const Type& newType,
-                                          SourceRange opRange) {
+                                          SourceRange opRange, ConversionKind conversionKind) {
     const bool parentTypeEquiv = type->isEquivalent(newType);
     type = &newType;
 
@@ -1477,7 +1477,8 @@ bool ConditionalExpression::propagateType(const ASTContext& context, const Type&
                             std::optional<bitwidth_t> otherEffectiveWidth) {
         // This is a propagated conversion but we'd like to see width-expand
         // warnings anyway so we'll manually do the check conversion check here.
-        if (!flags.has(ASTFlags::UnevaluatedBranch)) {
+        if (!flags.has(ASTFlags::UnevaluatedBranch) &&
+            conversionKind <= ConversionKind::Propagated) {
             // If the parent type was already equivalent to what's being propagated,
             // then the only conversions we might be doing are "self induced", in the
             // sense that one branch is propagating its type to the other side.
@@ -2423,7 +2424,7 @@ Expression& ValueRangeExpression::fromSyntax(Compilation& comp,
 }
 
 bool ValueRangeExpression::propagateType(const ASTContext& context, const Type& newType,
-                                         SourceRange opRange) {
+                                         SourceRange opRange, ConversionKind) {
     contextDetermined(context, left_, this, newType, opRange);
     if (rangeKind == ValueRangeKind::Simple)
         contextDetermined(context, right_, this, newType, opRange);
