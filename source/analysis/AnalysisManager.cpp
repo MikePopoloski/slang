@@ -31,7 +31,7 @@ AnalyzedDesign AnalysisManager::analyze(const Compilation& compilation) {
     // Analyze all compilation units first.
     for (auto unit : root.compilationUnits)
         analyzeScopeAsync(*unit);
-    threadPool.wait();
+    wait();
 
     // Go back through and collect all of the units that were analyzed.
     AnalyzedDesign result(compilation);
@@ -54,7 +54,7 @@ AnalyzedDesign AnalysisManager::analyze(const Compilation& compilation) {
 
     for (auto instance : compilation.getFinalizedRoot().topInstances)
         result.topInstances.emplace_back(analyzeInst(*instance));
-    threadPool.wait();
+    wait();
 
     return result;
 }
@@ -91,9 +91,14 @@ void AnalysisManager::analyzeScopeAsync(const Scope& scope) {
 
     if (shouldAnalyze) {
         threadPool.detach_task([this, &scope] {
-            auto& result = analyzeScope(scope);
-            std::unique_lock lock(mutex);
-            analyzedScopes[&scope] = &result;
+            try {
+                auto& result = analyzeScope(scope);
+                std::unique_lock lock(mutex);
+                analyzedScopes[&scope] = &result;
+            }
+            catch (...) {
+                pendingException = std::current_exception();
+            }
         });
     }
 }
@@ -151,6 +156,12 @@ const AnalyzedScope& AnalysisManager::analyzeScope(const Scope& scope) {
         member.visit(visitor);
 
     return result;
+}
+
+void AnalysisManager::wait() {
+    threadPool.wait();
+    if (pendingException)
+        std::rethrow_exception(pendingException);
 }
 
 } // namespace slang::analysis

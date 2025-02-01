@@ -110,6 +110,7 @@ private:
     AnalyzedInstance analyzeInst(const ast::InstanceSymbol& instance);
     const AnalyzedScope& analyzeScope(const ast::Scope& scope);
     void analyzeScopeAsync(const ast::Scope& scope);
+    void wait();
 
     struct WorkerState {
         BumpAllocator alloc;
@@ -121,6 +122,7 @@ private:
     BS::thread_pool<> threadPool;
     std::mutex mutex;
     std::vector<WorkerState> workerStates;
+    std::exception_ptr pendingException;
     flat_hash_map<const ast::Scope*, std::optional<const AnalyzedScope*>> analyzedScopes;
 };
 
