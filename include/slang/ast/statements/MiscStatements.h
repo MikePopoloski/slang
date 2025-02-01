@@ -470,8 +470,14 @@ public:
     /// or nullptr if the sequence is empty.
     const RandSeqProductionSymbol* firstProduction;
 
-    RandSequenceStatement(const RandSeqProductionSymbol* firstProduction, SourceRange sourceRange) :
-        Statement(StatementKind::RandSequence, sourceRange), firstProduction(firstProduction) {}
+    /// A list of all productions in the random sequence.
+    std::span<const RandSeqProductionSymbol* const> productions;
+
+    RandSequenceStatement(const RandSeqProductionSymbol* firstProduction,
+                          std::span<const RandSeqProductionSymbol* const> productions,
+                          SourceRange sourceRange) :
+        Statement(StatementKind::RandSequence, sourceRange), firstProduction(firstProduction),
+        productions(productions) {}
 
     EvalResult evalImpl(EvalContext& context) const;
 
