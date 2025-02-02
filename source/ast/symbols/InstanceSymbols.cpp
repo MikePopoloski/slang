@@ -1690,7 +1690,7 @@ std::span<const Expression* const> PrimitiveInstanceSymbol::getPortConnections()
                 if (primitiveType.primitiveKind == PrimitiveSymbol::NInput)
                     dir = i == 0 ? ArgumentDirection::Out : ArgumentDirection::In;
                 else
-                    dir = conns.size() - 1 ? ArgumentDirection::In : ArgumentDirection::Out;
+                    dir = (i == conns.size() - 1) ? ArgumentDirection::In : ArgumentDirection::Out;
 
                 SLANG_ASSERT(conns[i]);
                 results.push_back(&Expression::bindArgument(logic_t, dir, {}, *conns[i], context));

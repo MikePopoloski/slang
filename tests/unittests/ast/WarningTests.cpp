@@ -1384,3 +1384,22 @@ endmodule
     CHECK(diags[1].code == diag::WidthExpand);
     CHECK(diags[2].code == diag::WidthExpand);
 }
+
+TEST_CASE("Not gate undriven warning regress GH #1227") {
+    auto tree = SyntaxTree::fromText(R"(
+module test (Y, A);
+  output Y;
+  input A;
+wire B;
+not (B, A);
+not (Y, B);
+endmodule
+)");
+
+    CompilationOptions coptions;
+    coptions.flags &= ~CompilationFlags::SuppressUnused;
+
+    Compilation compilation(coptions);
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
