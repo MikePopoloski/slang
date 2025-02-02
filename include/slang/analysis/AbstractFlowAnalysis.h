@@ -9,6 +9,7 @@
 
 #include "slang/ast/ASTVisitor.h"
 #include "slang/ast/EvalContext.h"
+#include "slang/util/Hash.h"
 
 namespace slang::analysis {
 
@@ -99,12 +100,79 @@ protected:
     }
 
     void visitStmt(const BlockStatement& stmt) {
+        // This block could be the target of a disable statement.
+        if (stmt.blockSymbol) {
+            auto [it, inserted] = disableBranches.try_emplace(stmt.blockSymbol,
+                                                              SmallVector<TState>{});
+            SLANG_ASSERT(inserted);
+        }
+
         if (stmt.blockKind == StatementBlockKind::Sequential) {
             visit(stmt.body);
         }
         else {
-            // TODO: handle parallel blocks
-            SLANG_UNREACHABLE;
+            auto stmtPtr = &stmt.body;
+            auto statements = stmt.body.kind == StatementKind::List
+                                  ? stmt.body.as<StatementList>().list
+                                  : std::span(&stmtPtr, 1);
+            size_t numLocalDecls = 0;
+            for (auto s : statements) {
+                // Variable declaration initializers happen before
+                // we fork the remaining statements.
+                if (s->kind == StatementKind::VariableDeclaration) {
+                    visit(*s);
+                    numLocalDecls++;
+                }
+                else {
+                    break;
+                }
+            }
+            statements = statements.subspan(numLocalDecls);
+
+            // Each remaining statement is executed in parallel.
+            auto currState = state;
+            auto finalState = state;
+            for (auto s : statements) {
+                setState(currState);
+                visit(*s);
+
+                switch (stmt.blockKind) {
+                    case StatementBlockKind::JoinAny:
+                        // If there's only one statement (a pathological case)
+                        // then we can meet it; otherwise we must join since
+                        // there is uncertainty about which path was taken.
+                        if (statements.size() == 1)
+                            (DERIVED).meetState(finalState, state);
+                        else
+                            (DERIVED).joinState(finalState, state);
+                        break;
+                    case StatementBlockKind::JoinAll:
+                        // All paths must be taken, so we meet the states.
+                        (DERIVED).meetState(finalState, state);
+                        break;
+                    case StatementBlockKind::JoinNone:
+                        // No paths will be taken by the time the fork
+                        // moves on so we discard this state.
+                        break;
+                    default:
+                        SLANG_UNREACHABLE;
+                }
+            }
+            setState(std::move(finalState));
+        }
+
+        // Once we're done with a block we remove it as a disable target.
+        // A disable statement can target any block in the hierarchy but
+        // we don't analyze the control flow implications for targets that
+        // aren't part of the current execution stack.
+        if (stmt.blockSymbol) {
+            auto it = disableBranches.find(stmt.blockSymbol);
+            SLANG_ASSERT(it != disableBranches.end());
+
+            for (auto& state : it->second)
+                (DERIVED).joinState(state, this->state);
+
+            disableBranches.erase(it);
         }
     }
 
@@ -118,6 +186,7 @@ protected:
     }
 
     void visitStmt(const ReturnStatement& stmt) {
+        // TODO: pending branch
         if (stmt.expr)
             visit(*stmt.expr);
         setUnreachable();
@@ -130,18 +199,30 @@ protected:
 
     void visitStmt(const ContinueStatement& stmt) { setUnreachable(); }
 
-    // TODO: add support
-    void visitStmt(const DisableStatement& stmt) { SLANG_UNREACHABLE; }
+    void visitStmt(const DisableStatement& stmt) {
+        // If the target is within our currently executing
+        // hierarchy then we will jump to the end of it.
+        // Otherwise we will ignore the disable statement.
+        if (auto target = stmt.target.getSymbolReference()) {
+            if (auto it = disableBranches.find(target); it != disableBranches.end()) {
+                it->second.emplace_back(std::move(state));
+                setUnreachable();
+            }
+        }
+    }
 
     void visitStmt(const ConditionalStatement& stmt) {
-        // TODO: handle patterns / multiple conditions
-        SLANG_ASSERT(stmt.conditions.size() == 1);
-        SLANG_ASSERT(!stmt.conditions[0].pattern);
+        auto falseState = (DERIVED).unreachableState();
+        for (auto& cond : stmt.conditions) {
+            visitCondition(*cond.expr);
 
-        visitCondition(*stmt.conditions[0].expr);
+            if (cond.pattern)
+                visitPattern(*cond.pattern);
 
-        auto falseState = std::move(stateWhenFalse);
-        setState(std::move(stateWhenTrue));
+            (DERIVED).joinState(falseState, stateWhenFalse);
+            setState(std::move(stateWhenTrue));
+        }
+
         visit(stmt.ifTrue);
 
         auto trueState = std::move(state);
@@ -177,7 +258,47 @@ protected:
         setState(std::move(finalState));
     }
 
-    void visitStmt(const PatternCaseStatement& stmt) { SLANG_UNREACHABLE; }
+    void visitStmt(const PatternCaseStatement& stmt) {
+        visit(stmt.expr);
+
+        auto initialState = state;
+        auto finalState = state;
+
+        for (auto& item : stmt.items) {
+            setState(initialState);
+
+            visitPattern(*item.pattern);
+
+            if (item.filter) {
+                visitCondition(*item.filter);
+                setState(std::move(stateWhenTrue));
+            }
+
+            visit(*item.stmt);
+            (DERIVED).joinState(finalState, state);
+        }
+
+        if (stmt.defaultCase) {
+            setState(initialState);
+            visit(*stmt.defaultCase);
+            (DERIVED).joinState(finalState, state);
+        }
+
+        setState(std::move(finalState));
+    }
+
+    void visitStmt(const RandCaseStatement& stmt) {
+        auto initialState = state;
+        auto finalState = state;
+        for (auto& item : stmt.items) {
+            setState(initialState);
+            visit(*item.expr);
+            visit(*item.stmt);
+            (DERIVED).joinState(finalState, state);
+        }
+
+        setState(std::move(finalState));
+    }
 
     void visitStmt(const ForLoopStatement& stmt) {
         for (auto init : stmt.initializers)
@@ -276,8 +397,25 @@ protected:
         visit(stmt.stmt);
     }
 
+    void visitStmt(const WaitOrderStatement& stmt) {
+        for (auto expr : stmt.events)
+            visit(*expr);
+
+        auto initialState = state;
+        if (stmt.ifTrue) {
+            visit(*stmt.ifTrue);
+            std::swap(state, initialState);
+        }
+
+        if (stmt.ifFalse)
+            visit(*stmt.ifFalse);
+
+        (DERIVED).joinState(state, initialState);
+    }
+
     void visitStmt(const RandSequenceStatement& stmt) {
         // TODO: could check for unreachable productions
+        // TODO: handle special break / return rules
         auto initialState = state;
         auto finalState = state;
 
@@ -373,17 +511,45 @@ protected:
         setState(std::move(finalState));
     }
 
+    void visitStmt(const ImmediateAssertionStatement& stmt) {
+        visitCondition(stmt.cond);
+
+        if (stmt.isDeferred) {
+            // Deferred assertion action blocks don't execute until
+            // a later phase of simulation so ignore them here.
+            unsplit();
+        }
+        else {
+            auto trueState = std::move(stateWhenTrue), falseState = std::move(stateWhenFalse);
+            if (stmt.ifTrue) {
+                setState(std::move(trueState));
+                visit(*stmt.ifTrue);
+                trueState = std::move(state);
+            }
+
+            setState(std::move(falseState));
+            if (stmt.ifFalse)
+                visit(*stmt.ifFalse);
+
+            (DERIVED).joinState(state, trueState);
+        }
+    }
+
+    void visitStmt(const ConcurrentAssertionStatement&) {
+        // Concurrent assertions do not affect the immediate control
+        // or data flow. However, we may want to visit the assertion
+        // expression in the future because the current values of automatic
+        // variables and const expressions are captured here, though right
+        // now nothing depends on us doing that.
+    }
+
     // Nothing to do for these statements.
     void visitStmt(const EmptyStatement&) {}
     void visitStmt(const WaitForkStatement&) {}
     void visitStmt(const DisableForkStatement&) {}
 
-    void visitStmt(const ImmediateAssertionStatement& stmt) { SLANG_UNREACHABLE; }
-    void visitStmt(const ConcurrentAssertionStatement& stmt) { SLANG_UNREACHABLE; }
-    void visitStmt(const WaitOrderStatement& stmt) { SLANG_UNREACHABLE; }
     void visitStmt(const ProceduralAssignStatement& stmt) { SLANG_UNREACHABLE; }
     void visitStmt(const ProceduralDeassignStatement& stmt) { SLANG_UNREACHABLE; }
-    void visitStmt(const RandCaseStatement& stmt) { SLANG_UNREACHABLE; }
     void visitStmt(const ProceduralCheckerStatement& stmt) { SLANG_UNREACHABLE; }
 
     // **** Expression Visitors ****
@@ -451,24 +617,34 @@ protected:
     }
 
     void visitExpr(const ConditionalExpression& expr) {
-        // TODO: handle patterns / multiple conditions
-        SLANG_ASSERT(expr.conditions.size() == 1);
-        SLANG_ASSERT(!expr.conditions[0].pattern);
-
         // TODO: handle the special ambiguous 'x merging of both sides
-        auto cv = visitCondition(*expr.conditions[0].expr);
-        auto trueState = std::move(stateWhenTrue), falseState = std::move(stateWhenFalse);
+        ConstantValue knownVal = SVInt::One;
+        auto falseState = (DERIVED).unreachableState();
+        for (auto& cond : expr.conditions) {
+            auto cv = visitCondition(*cond.expr);
+            if (cv && knownVal)
+                knownVal = SVInt(knownVal.isTrue() && cv.isTrue() ? 1 : 0);
+            else
+                knownVal = nullptr;
+
+            if (cond.pattern)
+                visitPattern(*cond.pattern);
+
+            (DERIVED).joinState(falseState, stateWhenFalse);
+            setState(std::move(stateWhenTrue));
+        }
 
         auto visitSide = [this](const Expression& expr, TState&& newState) {
             setState(std::move(newState));
             visit(expr);
         };
 
-        if (cv) {
+        auto trueState = std::move(state);
+        if (knownVal) {
             // Special case: if the condition is constant, we will visit
             // the opposing side first and then essentially throw that
             // state away instead of joining it.
-            if (cv.isTrue()) {
+            if (knownVal.isTrue()) {
                 visitSide(expr.right(), std::move(falseState));
                 visitSide(expr.left(), std::move(trueState));
             }
@@ -579,6 +755,7 @@ private:
 
     EvalContext evalContext;
     SmallVector<TState> breakStates;
+    SmallMap<const Symbol*, SmallVector<TState>, 2> disableBranches;
 
     template<typename T>
     struct always_false : std::false_type {};
@@ -646,6 +823,12 @@ private:
     ConstantValue visitCondition(const Expression& expr) {
         visit(expr);
         return adjustConditionalState(expr);
+    }
+
+    void visitPattern(const Pattern&) {
+        // For now this does nothing, but we may want to change
+        // that in the future if we want to do analysis on the
+        // variables introduced by patterns.
     }
 
     ConstantValue tryEvalBool(const Expression& expr) { return expr.eval(evalContext); }
