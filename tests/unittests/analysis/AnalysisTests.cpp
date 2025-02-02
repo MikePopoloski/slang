@@ -16,6 +16,7 @@ public:
     }
 
     void joinState(int& state, const int& other) const { state += other; }
+    void meetState(int& state, const int& other) const { state = std::min(state, other); }
     int unreachableState() const { return 0; }
     int topState() const { return 0; }
 
