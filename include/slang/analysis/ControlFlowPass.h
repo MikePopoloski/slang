@@ -19,6 +19,7 @@ public:
         AbstractFlowAnalysis(symbol, stmt) {}
 
     void joinState(ControlFlowState& state, const ControlFlowState& other) const {}
+    void meetState(ControlFlowState& state, const ControlFlowState& other) const {}
     ControlFlowState unreachableState() const { return {}; }
     ControlFlowState topState() const { return {}; }
 };
