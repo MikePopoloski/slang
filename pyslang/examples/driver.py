@@ -8,7 +8,7 @@ from pyslang import CommandLineOptions, Driver
 
 def main():
     """Reads a list of files as command line arguments and parses them using the slang driver.
-    
+
     After compilation/elaboration, any diagnostics (e.g., syntax errors) are reported to the console.
     Writes to both stderr and stdout.
     """
