@@ -7,6 +7,10 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#ifdef DEBUG
+#    include <typeindex>
+#endif
+
 #include "slang/util/PointerIntPair.h"
 #include "slang/util/PoolAllocator.h"
 #include "slang/util/SmallVector.h"
@@ -133,10 +137,20 @@ enum {
 // Nodes are never empty, so size of 0 is invalid (so the stored range is
 // able to express 1-64 children).
 struct NodeRef {
+#ifdef DEBUG
+    NodeRef() : type(typeid(void)) {}
+#else
     NodeRef() = default;
+#endif
 
     template<typename T>
-    NodeRef(T* node, uint32_t s) : pip(node, s - 1) {
+    NodeRef(T* node, uint32_t s) :
+        pip(node, s - 1)
+#ifdef DEBUG
+        ,
+        type(typeid(T)), isLeaf(T::IsLeaf)
+#endif
+    {
         SLANG_ASSERT(s);
     }
 
@@ -149,18 +163,35 @@ struct NodeRef {
 
     template<typename T>
     T& get() const {
+        SLANG_ASSERT(pip.getPointer() != nullptr);
+#ifdef DEBUG
+        SLANG_ASSERT(type == std::type_index(typeid(T)));
+#endif
         return *reinterpret_cast<T*>(pip.getPointer());
     }
 
     // Accesses the i'th subtree reference in a branch node.
     // This depends on branch nodes storing the NodeRef array as their first
     // member.
-    NodeRef& childAt(uint32_t i) const { return reinterpret_cast<NodeRef*>(pip.getPointer())[i]; }
+    NodeRef& childAt(uint32_t i) const {
+        SLANG_ASSERT(pip.getPointer() != nullptr);
+#ifdef DEBUG
+        SLANG_ASSERT(!isLeaf);
+#endif
+        return reinterpret_cast<NodeRef*>(pip.getPointer())[i];
+    }
 
     explicit operator bool() const { return pip.getOpaqueValue(); }
 
+    void* getPointer() const { return pip.getPointer(); }
+
 private:
     PointerIntPair<void*, Log2CacheLine, Log2CacheLine> pip;
+#ifdef DEBUG
+public:
+    std::type_index type;
+    bool isLeaf = false;
+#endif
 };
 
 // A helper base class to provide common implementations for routines templated
@@ -244,6 +275,8 @@ struct NodeImpl {
 template<typename TKey, typename TValue, uint32_t Capacity>
 struct LeafNode : public NodeBase<interval<TKey>, TValue, Capacity>,
                   public NodeImpl<TKey, LeafNode<TKey, TValue, Capacity>> {
+    static constexpr bool IsLeaf = true;
+
     const interval<TKey>& keyAt(uint32_t i) const { return this->first[i]; }
     interval<TKey>& keyAt(uint32_t i) { return this->first[i]; }
 
@@ -257,6 +290,8 @@ struct LeafNode : public NodeBase<interval<TKey>, TValue, Capacity>,
 template<typename TKey, uint32_t Capacity>
 struct BranchNode : public NodeBase<NodeRef, interval<TKey>, Capacity>,
                     public NodeImpl<TKey, BranchNode<TKey, Capacity>> {
+    static constexpr bool IsLeaf = false;
+
     const interval<TKey>& keyAt(uint32_t i) const { return this->second[i]; }
     interval<TKey>& keyAt(uint32_t i) { return this->second[i]; }
 
@@ -282,11 +317,17 @@ struct SLANG_EXPORT Path {
 
     template<typename T>
     T& node(uint32_t level) const {
+#ifdef DEBUG
+        SLANG_ASSERT(path[level].isLeaf == T::IsLeaf);
+#endif
         return *reinterpret_cast<T*>(path[level].node);
     }
 
     template<typename T>
     T& leaf() const {
+#ifdef DEBUG
+        SLANG_ASSERT(path.back().isLeaf);
+#endif
         return *reinterpret_cast<T*>(path.back().node);
     }
 
@@ -298,13 +339,17 @@ struct SLANG_EXPORT Path {
     uint32_t offset(uint32_t level) const { return path[level].offset; }
     uint32_t& offset(uint32_t level) { return path[level].offset; }
 
-    uint32_t height() const { return uint32_t(path.size() - 1); }
+    uint32_t height() const {
+        SLANG_ASSERT(!path.empty());
+        return uint32_t(path.size() - 1);
+    }
 
     // Gets the subtree referenced at the given level.
     NodeRef& childAt(uint32_t level) const { return path[level].childAt(path[level].offset); }
 
     // Clear the path and set a new root node.
-    void setRoot(void* node, uint32_t size, uint32_t offset) {
+    template<typename TNode>
+    void setRoot(TNode* node, uint32_t size, uint32_t offset) {
         path.clear();
         path.emplace_back(node, size, offset);
     }
@@ -323,7 +368,14 @@ struct SLANG_EXPORT Path {
     }
 
     // Replace the current root of the path without changing the rest of it.
-    void replaceRoot(void* node, uint32_t size, IndexPair offset);
+    template<typename TNode>
+    void replaceRoot(TNode* node, uint32_t size, IndexPair offset) {
+        SLANG_ASSERT(!path.empty());
+        path.front() = Entry(node, size, offset.first);
+
+        auto child = childAt(0);
+        path.insert(path.begin() + 1, Entry(childAt(0), offset.second));
+    }
 
     void moveLeft(uint32_t level);
     void moveRight(uint32_t level);
@@ -364,14 +416,34 @@ private:
         void* node;
         uint32_t size;
         uint32_t offset;
+#ifdef DEBUG
+        bool isLeaf = false;
+#endif
 
-        Entry(void* node, uint32_t size, uint32_t offset) :
-            node(node), size(size), offset(offset) {}
+        Entry(std::nullptr_t, uint32_t size, uint32_t offset) :
+            node(nullptr), size(size), offset(offset) {}
+
+        template<typename TNode>
+        Entry(TNode* node, uint32_t size, uint32_t offset) :
+            node(node), size(size), offset(offset) {
+#ifdef DEBUG
+            isLeaf = TNode::IsLeaf;
+#endif
+        }
 
         Entry(NodeRef node, uint32_t offset) :
-            node(&node.childAt(0)), size(node.size()), offset(offset) {}
+            node(node.getPointer()), size(node.size()), offset(offset) {
+#ifdef DEBUG
+            isLeaf = node.isLeaf;
+#endif
+        }
 
-        NodeRef& childAt(uint32_t i) const { return reinterpret_cast<NodeRef*>(node)[i]; }
+        NodeRef& childAt(uint32_t i) const {
+#ifdef DEBUG
+            SLANG_ASSERT(!isLeaf);
+#endif
+            return reinterpret_cast<NodeRef*>(node)[i];
+        }
     };
     SmallVector<Entry> path;
 };
@@ -439,7 +511,7 @@ class IntervalMap {
 
         // For typical size (4-byte key) this will be the same as the number of
         // leaf entries, i.e. 12 children per branch node.
-        BranchSize = AllocBytes / (2 * sizeof(TKey) + sizeof(void*))
+        BranchSize = AllocBytes / (2 * sizeof(TKey) + sizeof(IntervalMapDetails::NodeRef))
     };
     using Branch = IntervalMapDetails::BranchNode<TKey, BranchSize>;
 
