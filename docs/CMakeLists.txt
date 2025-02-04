@@ -5,8 +5,8 @@
 
 FetchContent_Declare(
   mcss
-  URL https://github.com/MikePopoloski/m.css/releases/download/release-6/mcss.zip
-  URL_HASH MD5=df18825299064642a6f1b5df44faf80c
+  URL https://github.com/parker-research/m.css/archive/refs/heads/mike-re-add-python.zip # FIXME: Update.
+  URL_HASH MD5=2380ae79a15bf624d8667b50ef6c936b
   SOURCE_DIR "${PROJECT_BINARY_DIR}/mcss"
   UPDATE_DISCONNECTED YES)
 FetchContent_MakeAvailable(mcss)
@@ -68,3 +68,25 @@ add_custom_command(
   VERBATIM)
 
 add_custom_target(docs ALL DEPENDS ${DOXYGEN_INDEX_FILE})
+
+# --- Python documentation with virtual environment ---
+set(PYTHON_DOCS_DIR ${CMAKE_CURRENT_BINARY_DIR}/pyslang)
+set(PYTHON_VENV_DIR ${PROJECT_BINARY_DIR}/venv)
+file(MAKE_DIRECTORY ${PYTHON_DOCS_DIR})
+
+add_custom_command(
+  OUTPUT ${PYTHON_DOCS_DIR}/index.html
+  COMMAND ${Python_EXECUTABLE} -m venv ${PYTHON_VENV_DIR}
+  COMMAND ${PYTHON_VENV_DIR}/bin/python -m pip install --upgrade pip
+  COMMAND ${PYTHON_VENV_DIR}/bin/python -m pip install jinja2 pygments docutils
+  COMMAND ${PYTHON_VENV_DIR}/bin/python -m pip install .
+  COMMAND ${PYTHON_VENV_DIR}/bin/python ${MCSS_PYTHONPY_PATH} ${PROJECT_SOURCE_DIR}/pyslang/docs/conf.py
+  WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+  DEPENDS ${PROJECT_SOURCE_DIR}/pyslang/docs/conf.py
+  COMMENT "Generating Python docs in virtual environment"
+  VERBATIM)
+
+add_custom_target(python_docs DEPENDS ${PYTHON_DOCS_DIR}/index.html)
+
+# Make sure both docs and python_docs are built with `make docs`
+add_dependencies(docs python_docs)

@@ -25,20 +25,11 @@ jobs:
         wget https://sourceforge.net/projects/doxygen/files/rel-1.13.2/doxygen-1.13.2.linux.bin.tar.gz
         tar -xvf doxygen-1.13.2.linux.bin.tar.gz
         cp doxygen-1.13.2/bin/doxygen /usr/local/bin
-        git clone https://github.com/mosra/m.css
-    # TODO: This m.css clone is a second clone of m.css. CMake clones it once already. Should see if we can tap into that for the pyslang docs build.
-    - name: Build and install pyslang with Pip
-      run: |
-        python -m pip install --upgrade pip
-        pip install .
-    - name: Build Python/pyslang docs
-      run: |
-        ./m.css/documentation/python.py ./pyslang/docs/conf.py
-        du -a ./build/docs/
-    - name: Build C++/slang docs
+    - name: Build slang and pyslang docs via CMake
       run: |
         cmake -B build -DSLANG_INCLUDE_DOCS=ON -DSLANG_INCLUDE_TESTS=OFF
         cmake --build build --target docs -j8
+    - name: Compress docs artifacts
         tar -czvf slang.tar.gz build/docs build/bin/slang
     - name: Upload
       if: github.event_name != 'pull_request'

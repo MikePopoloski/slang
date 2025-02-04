@@ -9,11 +9,14 @@ assert (
     _GIT_REPO_ROOT_PATH / ".git"
 ).is_dir(), "Git repository root not found/set incorrectly"
 
+_DOCS_OUTPUT_PATH = _GIT_REPO_ROOT_PATH / "build/docs/html/pyslang"
+_DOCS_OUTPUT_PATH.mkdir(parents=True, exist_ok=True)
+
 # Set the m.css configuration variables.
 PROJECT_TITLE = "pyslang"
 INPUT_MODULES = ["pyslang"]
 PYBIND11_COMPATIBILITY = True
-OUTPUT = str((_GIT_REPO_ROOT_PATH / "build/docs").absolute())
+OUTPUT = str(_DOCS_OUTPUT_PATH.absolute())
 
 # Output the stubs for comparison/review, but not actually used.
 OUTPUT_STUBS = str((_GIT_REPO_ROOT_PATH / "build/stubs").absolute())
