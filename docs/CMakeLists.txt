@@ -5,7 +5,8 @@
 
 FetchContent_Declare(
   mcss
-  URL https://github.com/parker-research/m.css/archive/refs/heads/mike-re-add-python.zip # FIXME: Update.
+  URL https://github.com/parker-research/m.css/archive/refs/heads/mike-re-add-python.zip # FIXME:
+                                                                                         # Update.
   URL_HASH MD5=2380ae79a15bf624d8667b50ef6c936b
   SOURCE_DIR "${PROJECT_BINARY_DIR}/mcss"
   UPDATE_DISCONNECTED YES)
@@ -80,7 +81,8 @@ add_custom_command(
   COMMAND ${PYTHON_VENV_DIR}/bin/python -m pip install --upgrade pip
   COMMAND ${PYTHON_VENV_DIR}/bin/python -m pip install jinja2 pygments docutils
   COMMAND ${PYTHON_VENV_DIR}/bin/python -m pip install .
-  COMMAND ${PYTHON_VENV_DIR}/bin/python ${MCSS_PYTHONPY_PATH} ${PROJECT_SOURCE_DIR}/pyslang/docs/conf.py
+  COMMAND ${PYTHON_VENV_DIR}/bin/python ${MCSS_PYTHONPY_PATH}
+          ${PROJECT_SOURCE_DIR}/pyslang/docs/conf.py
   WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
   DEPENDS ${PROJECT_SOURCE_DIR}/pyslang/docs/conf.py
   COMMENT "Generating Python docs in virtual environment"
