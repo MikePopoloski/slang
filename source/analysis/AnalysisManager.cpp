@@ -26,16 +26,17 @@ AnalyzedDesign AnalysisManager::analyze(const Compilation& compilation) {
     SLANG_ASSERT(compilation.isFinalized());
     SLANG_ASSERT(compilation.isFrozen());
 
-    auto& root = compilation.getFinalizedRoot();
+    auto root = compilation.tryGetRoot();
+    SLANG_ASSERT(root);
 
     // Analyze all compilation units first.
-    for (auto unit : root.compilationUnits)
+    for (auto unit : root->compilationUnits)
         analyzeScopeAsync(*unit);
     wait();
 
     // Go back through and collect all of the units that were analyzed.
     AnalyzedDesign result(compilation);
-    for (auto unit : root.compilationUnits) {
+    for (auto unit : root->compilationUnits) {
         auto scope = getAnalyzedScope(*unit);
         SLANG_ASSERT(scope);
         result.compilationUnits.push_back(scope);
@@ -52,7 +53,7 @@ AnalyzedDesign AnalysisManager::analyze(const Compilation& compilation) {
         result.packages.push_back(scope);
     }
 
-    for (auto instance : compilation.getFinalizedRoot().topInstances)
+    for (auto instance : root->topInstances)
         result.topInstances.emplace_back(analyzeInst(*instance));
     wait();
 
