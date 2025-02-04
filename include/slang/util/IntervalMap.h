@@ -272,10 +272,11 @@ struct NodeImpl {
 // actual inserted intervals, sorted in order by their start values
 // (and then their end values if equal start values). The values array is
 // whatever value those entries map to, as given by the insert() call.
-template<typename TKey, typename TValue, uint32_t Capacity>
+template<typename TKey, typename TValue, uint32_t Capacity, bool _IsRoot>
 struct LeafNode : public NodeBase<interval<TKey>, TValue, Capacity>,
-                  public NodeImpl<TKey, LeafNode<TKey, TValue, Capacity>> {
+                  public NodeImpl<TKey, LeafNode<TKey, TValue, Capacity, _IsRoot>> {
     static constexpr bool IsLeaf = true;
+    static constexpr bool IsRoot = _IsRoot;
 
     const interval<TKey>& keyAt(uint32_t i) const { return this->first[i]; }
     interval<TKey>& keyAt(uint32_t i) { return this->first[i]; }
@@ -287,10 +288,11 @@ struct LeafNode : public NodeBase<interval<TKey>, TValue, Capacity>,
 };
 
 // Branch nodes store references to subtree nodes, all of the same height.
-template<typename TKey, uint32_t Capacity>
+template<typename TKey, uint32_t Capacity, bool _IsRoot>
 struct BranchNode : public NodeBase<NodeRef, interval<TKey>, Capacity>,
-                    public NodeImpl<TKey, BranchNode<TKey, Capacity>> {
+                    public NodeImpl<TKey, BranchNode<TKey, Capacity, _IsRoot>> {
     static constexpr bool IsLeaf = false;
+    static constexpr bool IsRoot = _IsRoot;
 
     const interval<TKey>& keyAt(uint32_t i) const { return this->second[i]; }
     interval<TKey>& keyAt(uint32_t i) { return this->second[i]; }
@@ -319,6 +321,7 @@ struct SLANG_EXPORT Path {
     T& node(uint32_t level) const {
 #ifdef DEBUG
         SLANG_ASSERT(path[level].isLeaf == T::IsLeaf);
+        SLANG_ASSERT(T::IsRoot == (level == 0));
 #endif
         return *reinterpret_cast<T*>(path[level].node);
     }
@@ -327,6 +330,7 @@ struct SLANG_EXPORT Path {
     T& leaf() const {
 #ifdef DEBUG
         SLANG_ASSERT(path.back().isLeaf);
+        SLANG_ASSERT(T::IsRoot == (path.size() == 1));
 #endif
         return *reinterpret_cast<T*>(path.back().node);
     }
@@ -372,8 +376,6 @@ struct SLANG_EXPORT Path {
     void replaceRoot(TNode* node, uint32_t size, IndexPair offset) {
         SLANG_ASSERT(!path.empty());
         path.front() = Entry(node, size, offset.first);
-
-        auto child = childAt(0);
         path.insert(path.begin() + 1, Entry(childAt(0), offset.second));
     }
 
@@ -486,7 +488,7 @@ SLANG_EXPORT IndexPair distribute(uint32_t numNodes, uint32_t numElements, uint3
 /// once the map is destroyed, and you must dispose of the PoolAllocator
 /// itself to free up the memory.
 ///
-template<typename TKey, typename TValue>
+template<typename TKey, typename TValue, uint32_t N = 0>
 class IntervalMap {
     enum {
         // Aim for 3 cache lines of bytes for each node.
@@ -503,7 +505,9 @@ class IntervalMap {
         // 64*3/(8+8) = 12 entries per leaf node
         LeafSize = DesiredLeafSize > MinLeafSize ? DesiredLeafSize : MinLeafSize
     };
-    using Leaf = IntervalMapDetails::LeafNode<TKey, TValue, LeafSize>;
+    using Leaf = IntervalMapDetails::LeafNode<TKey, TValue, LeafSize, false>;
+    using RootLeaf = IntervalMapDetails::LeafNode < TKey, TValue,
+          N == 0 ? LeafSize : N<MinLeafSize ? MinLeafSize : N, true>;
 
     enum {
         // Round up allocation size to a full cache line.
@@ -511,9 +515,13 @@ class IntervalMap {
 
         // For typical size (4-byte key) this will be the same as the number of
         // leaf entries, i.e. 12 children per branch node.
-        BranchSize = AllocBytes / (2 * sizeof(TKey) + sizeof(IntervalMapDetails::NodeRef))
+        BranchSize = AllocBytes / (2 * sizeof(TKey) + sizeof(IntervalMapDetails::NodeRef)),
+
+        RootBranchSize = sizeof(RootLeaf) / (2 * sizeof(TKey) + sizeof(IntervalMapDetails::NodeRef))
     };
-    using Branch = IntervalMapDetails::BranchNode<TKey, BranchSize>;
+    using Branch = IntervalMapDetails::BranchNode<TKey, BranchSize, false>;
+    using RootBranch = IntervalMapDetails::BranchNode < TKey,
+          RootBranchSize<2 ? 2 : RootBranchSize, true>;
 
 public:
     using key_type = TKey;
@@ -544,21 +552,21 @@ public:
     /// Move assignment operator.
     IntervalMap& operator=(IntervalMap&& other) noexcept {
         if (isFlat())
-            rootLeaf.~Leaf();
+            rootLeaf.~RootLeaf();
         else
-            rootBranch.~Branch();
+            rootBranch.~RootBranch();
 
         height = other.height;
-        rootSize = other.rootSize;
+        rootSize = std::exchange(other.rootSize, 0);
 
         if (other.isFlat()) {
             rootLeaf = std::move(other.rootLeaf);
         }
         else {
             rootBranch = std::move(other.rootBranch);
-            other.rootBranch.~Branch();
+            other.rootBranch.~RootBranch();
             other.height = 0;
-            new (&other.rootLeaf) Leaf();
+            new (&other.rootLeaf) RootLeaf();
         }
 
         return *this;
@@ -574,7 +582,7 @@ public:
     ///
     /// Insertion complexity is O(log n)
     void insert(TKey left, TKey right, const TValue& value, allocator_type& alloc) {
-        if (isFlat() && rootSize != Leaf::Capacity) {
+        if (isFlat() && rootSize != RootLeaf::Capacity) {
             uint32_t i = rootLeaf.find(rootSize, {left, right});
             rootSize = rootLeaf.insertFrom(i, rootSize, {left, right}, value);
         }
@@ -673,6 +681,11 @@ public:
         return find(key.first, key.second);
     }
 
+    /// @brief Erases the interval pointed to by the given iterator.
+    ///
+    /// The iterator will be invalidated by this operation.
+    void erase(iterator it, allocator_type& alloc);
+
     /// Gets an interval encompassing the entire set of items in the map.
     std::pair<TKey, TKey> getBounds() const {
         SLANG_ASSERT(!empty());
@@ -697,37 +710,38 @@ private:
 
     bool isFlat() const { return height == 0; }
 
-    void verify(const Branch& branch, uint32_t size, uint32_t depth, TKey& lastKey) const;
+    template<typename TBranch>
+    void verify(const TBranch& branch, uint32_t size, uint32_t depth, TKey& lastKey) const;
 
-    template<typename TNode, bool SwitchToBranch>
-    IntervalMapDetails::IndexPair modifyRoot(TNode& rootNode, uint32_t position,
+    template<typename TRootNode, typename TNewNode, bool SwitchToBranch>
+    IntervalMapDetails::IndexPair modifyRoot(TRootNode& rootNode, uint32_t position,
                                              allocator_type& alloc);
 
     IntervalMapDetails::IndexPair switchToBranch(uint32_t position, allocator_type& alloc) {
-        return modifyRoot<Leaf, true>(rootLeaf, position, alloc);
+        return modifyRoot<RootLeaf, Leaf, true>(rootLeaf, position, alloc);
     }
 
     IntervalMapDetails::IndexPair splitRoot(uint32_t position, allocator_type& alloc) {
-        return modifyRoot<Branch, false>(rootBranch, position, alloc);
+        return modifyRoot<RootBranch, Branch, false>(rootBranch, position, alloc);
     }
 
     void switchToLeaf() {
-        rootBranch.~Branch();
+        rootBranch.~RootBranch();
         height = 0;
-        new (&rootLeaf) Leaf();
+        new (&rootLeaf) RootLeaf();
     }
 
     union {
-        Leaf rootLeaf;
-        Branch rootBranch;
+        RootLeaf rootLeaf;
+        RootBranch rootBranch;
     };
 
     uint32_t height = 0;
     uint32_t rootSize = 0;
 };
 
-template<typename TKey, typename TValue>
-class IntervalMap<TKey, TValue>::const_iterator {
+template<typename TKey, typename TValue, uint32_t N>
+class IntervalMap<TKey, TValue, N>::const_iterator {
 public:
     using iterator_category = std::bidirectional_iterator_tag;
     using difference_type = std::ptrdiff_t;
@@ -739,7 +753,9 @@ public:
 
     std::pair<TKey, TKey> bounds() const {
         SLANG_ASSERT(valid());
-        auto ival = path.leaf<Leaf>().keyAt(path.leafOffset());
+        auto offset = path.leafOffset();
+        auto ival = isFlat() ? path.leaf<RootLeaf>().keyAt(offset)
+                             : path.leaf<Leaf>().keyAt(offset);
         return {ival.left, ival.right};
     }
 
@@ -747,7 +763,8 @@ public:
 
     const TValue& operator*() const {
         SLANG_ASSERT(valid());
-        return path.leaf<Leaf>().valueAt(path.leafOffset());
+        auto offset = path.leafOffset();
+        return isFlat() ? path.leaf<RootLeaf>().valueAt(offset) : path.leaf<Leaf>().valueAt(offset);
     }
 
     bool operator==(const const_iterator& rhs) const { return path == rhs.path; }
@@ -818,8 +835,8 @@ protected:
     IntervalMapDetails::Path path;
 };
 
-template<typename TKey, typename TValue>
-class IntervalMap<TKey, TValue>::iterator : public const_iterator {
+template<typename TKey, typename TValue, uint32_t N>
+class IntervalMap<TKey, TValue, N>::iterator : public const_iterator {
 public:
     using value_type = TValue;
     using pointer = value_type*;
@@ -829,7 +846,9 @@ public:
 
     TValue& operator*() {
         SLANG_ASSERT(this->valid());
-        return this->path.template leaf<Leaf>().valueAt(this->path.leafOffset());
+        auto offset = this->path.leafOffset();
+        return this->isFlat() ? this->path.template leaf<RootLeaf>().valueAt(offset)
+                              : this->path.template leaf<Leaf>().valueAt(offset);
     }
 
     iterator& operator++() {
@@ -871,8 +890,8 @@ private:
     bool overflow(uint32_t level, allocator_type& alloc);
 };
 
-template<typename TKey, typename TValue>
-class IntervalMap<TKey, TValue>::overlap_iterator : iterator {
+template<typename TKey, typename TValue, uint32_t N>
+class IntervalMap<TKey, TValue, N>::overlap_iterator : iterator {
 public:
     using iterator_category = std::forward_iterator_tag;
     using difference_type = std::ptrdiff_t;
@@ -887,15 +906,20 @@ public:
 
     const TValue& operator*() const {
         SLANG_ASSERT(valid());
-        return this->path.template leaf<Leaf>().valueAt(this->path.leafOffset());
+        auto offset = this->path.leafOffset();
+        return this->isFlat() ? this->path.template leaf<RootLeaf>().valueAt(offset)
+                              : this->path.template leaf<Leaf>().valueAt(offset);
     }
 
     overlap_iterator& operator++() {
         SLANG_ASSERT(valid());
 
         uint32_t offset = this->path.leafOffset() + 1;
-        offset = this->path.template leaf<Leaf>().findFirstOverlap(offset, this->path.leafSize(),
-                                                                   searchKey);
+        auto size = this->path.leafSize();
+        offset = this->isFlat()
+                     ? this->path.template leaf<RootLeaf>().findFirstOverlap(offset, size,
+                                                                             searchKey)
+                     : this->path.template leaf<Leaf>().findFirstOverlap(offset, size, searchKey);
 
         this->path.leafOffset() = offset;
         if (offset == this->path.leafSize() && !this->isFlat())
@@ -941,10 +965,10 @@ protected:
 
 namespace IntervalMapDetails {
 
-template<typename TKey, typename TValue, uint32_t Capacity>
-uint32_t LeafNode<TKey, TValue, Capacity>::insertFrom(uint32_t i, uint32_t size,
-                                                      const interval<TKey>& key,
-                                                      const TValue& value) {
+template<typename TKey, typename TValue, uint32_t Capacity, bool _IsRoot>
+uint32_t LeafNode<TKey, TValue, Capacity, _IsRoot>::insertFrom(uint32_t i, uint32_t size,
+                                                               const interval<TKey>& key,
+                                                               const TValue& value) {
     SLANG_ASSERT(i <= size && size <= Capacity);
     SLANG_ASSERT(key.left <= key.right);
     SLANG_ASSERT(i == 0 || keyAt(i - 1).left < key.left);
@@ -969,8 +993,8 @@ uint32_t LeafNode<TKey, TValue, Capacity>::insertFrom(uint32_t i, uint32_t size,
 
 } // namespace IntervalMapDetails
 
-template<typename TKey, typename TValue>
-void IntervalMap<TKey, TValue>::clear(allocator_type& alloc) {
+template<typename TKey, typename TValue, uint32_t N>
+void IntervalMap<TKey, TValue, N>::clear(allocator_type& alloc) {
     using namespace IntervalMapDetails;
     if (!isFlat()) {
         // Collect level 0 nodes from the root.
@@ -1000,11 +1024,11 @@ void IntervalMap<TKey, TValue>::clear(allocator_type& alloc) {
     rootSize = 0;
 }
 
-template<typename TKey, typename TValue>
-template<typename TNode, bool SwitchToBranch>
-IntervalMapDetails::IndexPair IntervalMap<TKey, TValue>::modifyRoot(TNode& rootNode,
-                                                                    uint32_t position,
-                                                                    allocator_type& alloc) {
+template<typename TKey, typename TValue, uint32_t N>
+template<typename TRootNode, typename TNewNode, bool SwitchToBranch>
+IntervalMapDetails::IndexPair IntervalMap<TKey, TValue, N>::modifyRoot(TRootNode& rootNode,
+                                                                       uint32_t position,
+                                                                       allocator_type& alloc) {
     using namespace IntervalMapDetails;
 
     // Split the root branch node into two new nodes.
@@ -1016,7 +1040,7 @@ IntervalMapDetails::IndexPair IntervalMap<TKey, TValue>::modifyRoot(TNode& rootN
     uint32_t pos = 0;
     NodeRef nodes[NumNodes];
     for (uint32_t i = 0; i < NumNodes; i++) {
-        auto newNode = alloc.template emplace<TNode>();
+        auto newNode = alloc.template emplace<TNewNode>();
         uint32_t size = sizes[i];
 
         newNode->copy(rootNode, pos, 0, size);
@@ -1026,12 +1050,12 @@ IntervalMapDetails::IndexPair IntervalMap<TKey, TValue>::modifyRoot(TNode& rootN
 
     if (SwitchToBranch) {
         // Destroy the old root leaf and switch it to a branch node.
-        rootLeaf.~Leaf();
-        new (&rootBranch) Branch();
+        rootLeaf.~RootLeaf();
+        new (&rootBranch) RootBranch();
     }
 
     for (uint32_t i = 0; i < NumNodes; i++) {
-        rootBranch.keyAt(i) = nodes[i].template get<TNode>().getBounds(sizes[i]);
+        rootBranch.keyAt(i) = nodes[i].template get<TNewNode>().getBounds(sizes[i]);
         rootBranch.childAt(i) = nodes[i];
     }
 
@@ -1040,9 +1064,15 @@ IntervalMapDetails::IndexPair IntervalMap<TKey, TValue>::modifyRoot(TNode& rootN
     return newOffset;
 }
 
-template<typename TKey, typename TValue>
-void IntervalMap<TKey, TValue>::verify(const Branch& branch, uint32_t size, uint32_t depth,
-                                       TKey& lastKey) const {
+template<typename TKey, typename TValue, uint32_t N>
+void IntervalMap<TKey, TValue, N>::erase(iterator it, allocator_type& alloc) {
+    it.erase(alloc, true);
+}
+
+template<typename TKey, typename TValue, uint32_t N>
+template<typename TBranch>
+void IntervalMap<TKey, TValue, N>::verify(const TBranch& branch, uint32_t size, uint32_t depth,
+                                          TKey& lastKey) const {
     for (uint32_t i = 0; i < size; i++) {
         auto child = branch.childAt(i);
         auto key = branch.keyAt(i);
@@ -1064,9 +1094,10 @@ void IntervalMap<TKey, TValue>::verify(const Branch& branch, uint32_t size, uint
     }
 }
 
-template<typename TKey, typename TValue>
-void IntervalMap<TKey, TValue>::const_iterator::treeFind(TKey left, TKey right) {
+template<typename TKey, typename TValue, uint32_t N>
+void IntervalMap<TKey, TValue, N>::const_iterator::treeFind(TKey left, TKey right) {
     using namespace IntervalMapDetails;
+    SLANG_ASSERT(!isFlat());
 
     interval<TKey> ival{left, right};
     uint32_t offset = map->rootBranch.find(map->rootSize, ival);
@@ -1088,9 +1119,9 @@ void IntervalMap<TKey, TValue>::const_iterator::treeFind(TKey left, TKey right) 
     }
 }
 
-template<typename TKey, typename TValue>
-void IntervalMap<TKey, TValue>::iterator::insert(TKey left, TKey right, const TValue& value,
-                                                 allocator_type& alloc) {
+template<typename TKey, typename TValue, uint32_t N>
+void IntervalMap<TKey, TValue, N>::iterator::insert(TKey left, TKey right, const TValue& value,
+                                                    allocator_type& alloc) {
     using namespace IntervalMapDetails;
 
     auto& map = *this->map;
@@ -1100,7 +1131,7 @@ void IntervalMap<TKey, TValue>::iterator::insert(TKey left, TKey right, const TV
     if (this->isFlat()) {
         // Try simple root leaf insert first.
         uint32_t size = map.rootLeaf.insertFrom(path.leafOffset(), map.rootSize, ival, value);
-        if (size <= Leaf::Capacity) {
+        if (size <= RootLeaf::Capacity) {
             map.rootSize = size;
             path.setSize(0, size);
             return;
@@ -1129,8 +1160,9 @@ void IntervalMap<TKey, TValue>::iterator::insert(TKey left, TKey right, const TV
     updateParentBounds(path.height(), ival);
 }
 
-template<typename TKey, typename TValue>
-bool IntervalMap<TKey, TValue>::iterator::erase(allocator_type& alloc, bool shouldRecomputeBounds) {
+template<typename TKey, typename TValue, uint32_t N>
+bool IntervalMap<TKey, TValue, N>::iterator::erase(allocator_type& alloc,
+                                                   bool shouldRecomputeBounds) {
     auto& map = *this->map;
     auto& path = this->path;
     SLANG_ASSERT(this->valid());
@@ -1161,34 +1193,51 @@ bool IntervalMap<TKey, TValue>::iterator::erase(allocator_type& alloc, bool shou
     return false;
 }
 
-template<typename TKey, typename TValue>
-void IntervalMap<TKey, TValue>::iterator::updateParentBounds(
+template<typename TKey, typename TValue, uint32_t N>
+void IntervalMap<TKey, TValue, N>::iterator::updateParentBounds(
     uint32_t level, const IntervalMapDetails::interval<TKey>& key) {
     auto& path = this->path;
     while (level) {
         --level;
-        path.template node<Branch>(level).keyAt(path.offset(level)).unionWith(key);
+        auto offset = path.offset(level);
+        auto& existing = level == 0 ? path.template node<RootBranch>(level).keyAt(offset)
+                                    : path.template node<Branch>(level).keyAt(offset);
+        existing.unionWith(key);
     }
 }
 
-template<typename TKey, typename TValue>
-void IntervalMap<TKey, TValue>::iterator::recomputeBounds(uint32_t level) {
+template<typename TKey, typename TValue, uint32_t N>
+void IntervalMap<TKey, TValue, N>::iterator::recomputeBounds(uint32_t level) {
+    using namespace IntervalMapDetails;
+
     auto& path = this->path;
     while (level) {
         --level;
-        auto& branch = path.template node<Branch>(level);
         auto offset = path.offset(level);
-        auto child = branch.childAt(offset);
+        interval<TKey>* key;
+        NodeRef child;
+
+        if (level == 0) {
+            auto& branch = path.template node<RootBranch>(level);
+            child = branch.childAt(offset);
+            key = &branch.keyAt(offset);
+        }
+        else {
+            auto& branch = path.template node<Branch>(level);
+            child = branch.childAt(offset);
+            key = &branch.keyAt(offset);
+        }
+
         auto bounds = (level == path.height() - 1)
                           ? child.template get<Leaf>().getBounds(child.size())
                           : child.template get<Branch>().getBounds(child.size());
-        branch.keyAt(offset) = bounds;
+        *key = bounds;
     }
 }
 
-template<typename TKey, typename TValue>
+template<typename TKey, typename TValue, uint32_t N>
 template<typename TNode>
-bool IntervalMap<TKey, TValue>::iterator::overflow(uint32_t level, allocator_type& alloc) {
+bool IntervalMap<TKey, TValue, N>::iterator::overflow(uint32_t level, allocator_type& alloc) {
     SLANG_ASSERT(level > 0);
     using namespace IntervalMapDetails;
 
@@ -1306,11 +1355,10 @@ bool IntervalMap<TKey, TValue>::iterator::overflow(uint32_t level, allocator_typ
     return split;
 }
 
-template<typename TKey, typename TValue>
-bool IntervalMap<TKey, TValue>::iterator::insertNode(uint32_t level,
-                                                     IntervalMapDetails::NodeRef node,
-                                                     const IntervalMapDetails::interval<TKey>& key,
-                                                     allocator_type& alloc) {
+template<typename TKey, typename TValue, uint32_t N>
+bool IntervalMap<TKey, TValue, N>::iterator::insertNode(
+    uint32_t level, IntervalMapDetails::NodeRef node, const IntervalMapDetails::interval<TKey>& key,
+    allocator_type& alloc) {
     SLANG_ASSERT(level > 0);
 
     bool split = false;
@@ -1319,7 +1367,7 @@ bool IntervalMap<TKey, TValue>::iterator::insertNode(uint32_t level,
 
     if (level == 1) {
         // Insert into the root branch node.
-        if (map.rootSize < Branch::Capacity) {
+        if (map.rootSize < RootBranch::Capacity) {
             map.rootBranch.insert(path.offset(0), map.rootSize, node, key);
             path.setSize(0, ++map.rootSize);
             path.reset(level);
@@ -1355,8 +1403,8 @@ bool IntervalMap<TKey, TValue>::iterator::insertNode(uint32_t level,
     return split;
 }
 
-template<typename TKey, typename TValue>
-void IntervalMap<TKey, TValue>::iterator::eraseNode(uint32_t level, allocator_type& alloc) {
+template<typename TKey, typename TValue, uint32_t N>
+void IntervalMap<TKey, TValue, N>::iterator::eraseNode(uint32_t level, allocator_type& alloc) {
     SLANG_ASSERT(level > 0);
     auto& map = *this->map;
     auto& path = this->path;
@@ -1394,8 +1442,8 @@ void IntervalMap<TKey, TValue>::iterator::eraseNode(uint32_t level, allocator_ty
     }
 }
 
-template<typename TKey, typename TValue>
-void IntervalMap<TKey, TValue>::overlap_iterator::treeFind() {
+template<typename TKey, typename TValue, uint32_t N>
+void IntervalMap<TKey, TValue, N>::overlap_iterator::treeFind() {
     if (!valid())
         return;
 
@@ -1405,6 +1453,8 @@ void IntervalMap<TKey, TValue>::overlap_iterator::treeFind() {
         uint32_t size = child.size();
         uint32_t offset = child.template get<Branch>().findFirstOverlap(0, size, searchKey);
         if (offset == size) {
+            // Note: this branch might be impossible since we won't even enter this
+            // function if we aren't overlapping the parent branch.
             this->setToEnd();
             return;
         }
@@ -1414,7 +1464,9 @@ void IntervalMap<TKey, TValue>::overlap_iterator::treeFind() {
     }
 
     uint32_t size = child.size();
-    uint32_t offset = child.template get<Leaf>().findFirstOverlap(0, size, searchKey);
+    uint32_t offset = this->isFlat()
+                          ? child.template get<RootLeaf>().findFirstOverlap(0, size, searchKey)
+                          : child.template get<Leaf>().findFirstOverlap(0, size, searchKey);
     if (offset == size) {
         this->setToEnd();
         return;
@@ -1423,10 +1475,12 @@ void IntervalMap<TKey, TValue>::overlap_iterator::treeFind() {
     path.push(child, offset);
 }
 
-template<typename TKey, typename TValue>
-void IntervalMap<TKey, TValue>::overlap_iterator::treeFindUnion() {
+template<typename TKey, typename TValue, uint32_t N>
+void IntervalMap<TKey, TValue, N>::overlap_iterator::treeFindUnion() {
     if (!valid())
         return;
+
+    SLANG_ASSERT(!this->isFlat());
 
     auto& path = this->path;
     auto child = path.childAt(path.height());
@@ -1434,6 +1488,8 @@ void IntervalMap<TKey, TValue>::overlap_iterator::treeFindUnion() {
         uint32_t size = child.size();
         uint32_t offset = child.template get<Branch>().findUnionLeft(0, size, searchKey);
         if (offset == size) {
+            // Note: this branch might be impossible since we won't even enter this
+            // function if we aren't overlapping the parent branch.
             this->setToEnd();
             return;
         }
@@ -1445,6 +1501,8 @@ void IntervalMap<TKey, TValue>::overlap_iterator::treeFindUnion() {
     uint32_t size = child.size();
     uint32_t offset = child.template get<Leaf>().findUnionLeft(0, size, searchKey);
     if (offset == size) {
+        // Note: this branch might be impossible since we won't even enter this
+        // function if we aren't overlapping the parent branch.
         this->setToEnd();
         return;
     }
@@ -1452,8 +1510,8 @@ void IntervalMap<TKey, TValue>::overlap_iterator::treeFindUnion() {
     path.push(child, offset);
 }
 
-template<typename TKey, typename TValue>
-void IntervalMap<TKey, TValue>::overlap_iterator::nextOverlap() {
+template<typename TKey, typename TValue, uint32_t N>
+void IntervalMap<TKey, TValue, N>::overlap_iterator::nextOverlap() {
     auto& path = this->path;
     SLANG_ASSERT(path.leafOffset() == path.leafSize());
     SLANG_ASSERT(valid());
@@ -1468,7 +1526,10 @@ void IntervalMap<TKey, TValue>::overlap_iterator::nextOverlap() {
         uint32_t& offset = path.leafOffset();
         uint32_t size = path.leafSize();
         if (offset < size - 1) {
-            offset = path.template node<Branch>(l).findFirstOverlap(offset + 1, size, searchKey);
+            offset = l == 0 ? path.template node<RootBranch>(l).findFirstOverlap(offset + 1, size,
+                                                                                 searchKey)
+                            : path.template node<Branch>(l).findFirstOverlap(offset + 1, size,
+                                                                             searchKey);
             if (offset != size) {
                 // Descend back down to the next overlapping leaf node from our current position.
                 treeFind();
@@ -1484,9 +1545,9 @@ void IntervalMap<TKey, TValue>::overlap_iterator::nextOverlap() {
     path.leafOffset()++;
 }
 
-template<typename TKey, typename TValue>
-void IntervalMap<TKey, TValue>::overlap_iterator::unionWith(const TValue& value,
-                                                            allocator_type& alloc) {
+template<typename TKey, typename TValue, uint32_t N>
+void IntervalMap<TKey, TValue, N>::overlap_iterator::unionWith(const TValue& value,
+                                                               allocator_type& alloc) {
     using namespace IntervalMapDetails;
 
     auto& map = *this->map;
@@ -1509,14 +1570,20 @@ void IntervalMap<TKey, TValue>::overlap_iterator::unionWith(const TValue& value,
         return;
     }
 
+    auto getCurrKey = [&]() -> interval<TKey>& {
+        auto offset = path.leafOffset();
+        return this->isFlat() ? path.template leaf<RootLeaf>().keyAt(offset)
+                              : path.template leaf<Leaf>().keyAt(offset);
+    };
+
     auto updateCurrKey = [&](interval<TKey> newKey) {
         // Expand the current entry to match our new item.
-        interval<TKey>& currKey = path.template leaf<Leaf>().keyAt(path.leafOffset());
+        auto& currKey = getCurrKey();
         currKey.unionWith(newKey);
         searchKey = currKey;
     };
 
-    if (!path.template leaf<Leaf>().keyAt(path.leafOffset()).overlapsOrAdjacent(searchKey)) {
+    if (!getCurrKey().overlapsOrAdjacent(searchKey)) {
         this->insert(searchKey.left, searchKey.right, value, alloc);
     }
     else {
@@ -1528,11 +1595,23 @@ void IntervalMap<TKey, TValue>::overlap_iterator::unionWith(const TValue& value,
     // Our new interval is inserted or updated. Continue forward and
     // merge all later intervals that overlap with this one.
     while (true) {
-        auto& leaf = path.template leaf<Leaf>();
         uint32_t offset = path.leafOffset() + 1;
-        if (leaf.canUnionRight(offset, path.leafSize(), searchKey)) {
+        bool canUnionRight;
+        interval<TKey> currKey;
+        if (this->isFlat()) {
+            auto& leaf = path.template leaf<RootLeaf>();
+            canUnionRight = leaf.canUnionRight(offset, path.leafSize(), searchKey);
+            currKey = leaf.keyAt(offset);
+        }
+        else {
+            auto& leaf = path.template leaf<Leaf>();
+            canUnionRight = leaf.canUnionRight(offset, path.leafSize(), searchKey);
+            currKey = leaf.keyAt(offset);
+        }
+
+        if (canUnionRight) {
             // This does not change our parent bounds so no need to update.
-            updateCurrKey(leaf.keyAt(offset));
+            updateCurrKey(currKey);
 
             path.leafOffset() = offset;
             bool modifiedPath = this->erase(alloc, false);
