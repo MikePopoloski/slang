@@ -15,8 +15,6 @@
 #else
 #    include <boost/unordered/unordered_flat_map.hpp>
 #    include <boost/unordered/unordered_flat_set.hpp>
-#    include <boost/unordered/unordered_node_map.hpp>
-#    include <boost/unordered/unordered_node_set.hpp>
 #endif
 
 #include "slang/util/Util.h"
@@ -380,14 +378,6 @@ using flat_hash_map = boost::unordered_flat_map<K, V, H, E, A>;
 template<typename T, typename H = hash<T>, typename E = std::equal_to<T>,
          typename A = std::allocator<T>>
 using flat_hash_set = boost::unordered_flat_set<T, H, E, A>;
-
-template<typename K, typename V, typename H = hash<K>, typename E = std::equal_to<K>,
-         typename A = std::allocator<std::pair<const K, V>>>
-using flat_node_map = boost::unordered_node_map<K, V, H, E, A>;
-
-template<typename T, typename H = hash<T>, typename E = std::equal_to<T>,
-         typename A = std::allocator<T>>
-using flat_node_set = boost::unordered_node_set<T, H, E, A>;
 
 /// A hash map container that allocates room for its first `N` elements on the stack.
 /// Prefer this over a normal hash map for temporary stack variables and small maps
