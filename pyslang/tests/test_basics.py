@@ -121,3 +121,21 @@ def test_symbol_inspection():
     assert t.isPackedArray
     assert t.bitWidth == 32
     assert str(t) == "logic[31:0]"
+
+
+def test_string_to_ast_to_string_loop() -> None:
+    """Test that converting a string to a SyntaxTree and back gives the original string."""
+    input_str = """
+        module and_gate (
+            input wire x,
+            input wire y,
+            output wire z
+        );
+            assign z = x & y;
+        endmodule
+    """
+
+    ast = pyslang.SyntaxTree.fromText(input_str)
+    output_str = str(ast.root)
+
+    assert input_str.rstrip() == output_str.rstrip()
