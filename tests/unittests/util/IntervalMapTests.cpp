@@ -77,9 +77,9 @@ TEST_CASE("IntervalMap -- small num elems in root leaf") {
 }
 
 TEST_CASE("IntervalMap -- branching inserts") {
-    IntervalMap<int32_t, int32_t> map;
+    IntervalMap<int32_t, int32_t, 2> map;
     BumpAllocator ba;
-    IntervalMap<int32_t, int32_t>::allocator_type alloc(ba);
+    IntervalMap<int32_t, int32_t, 2>::allocator_type alloc(ba);
 
     using Int32 = std::tuple<int32_t, int32_t, int32_t>;
     std::vector<Int32> expectedOverlap;
@@ -154,8 +154,14 @@ TEST_CASE("IntervalMap -- branching inserts") {
     auto oit = map.find(1, 3);
     CHECK(oit == map.end());
 
-    map.clear(alloc);
+    decltype(map) newMap = std::move(map);
+    newMap.verify();
+
     CHECK(map.empty());
+    map.clear(alloc);
+
+    newMap.clear(alloc);
+    CHECK(newMap.empty());
 }
 
 TEST_CASE("IntervalMap -- unioning intervals") {
@@ -209,6 +215,9 @@ TEST_CASE("IntervalMap -- unioning intervals") {
     map.unionWith({1, 11000}, 1, alloc);
     CHECK(std::ranges::distance(map.begin(), map.end()) == 1);
     map.verify();
+
+    // Erase the last element.
+    map.erase(map.begin(), alloc);
 }
 
 TEST_CASE("IntervalMap -- pseudorandom union testing") {
