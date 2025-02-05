@@ -242,3 +242,30 @@ TEST_CASE("IntervalMap -- pseudorandom union testing") {
 
     CHECK(std::ranges::distance(map.begin(), map.end()) == 34);
 }
+
+TEST_CASE("IntervalMap -- intersection") {
+    IntervalMap<int32_t, int32_t> left, right;
+    BumpAllocator ba;
+    IntervalMap<int32_t, int32_t>::allocator_type alloc(ba);
+
+    // [[0, 2], [5, 10], [13, 23], [24, 25]]
+    left.unionWith({0, 2}, 1, alloc);
+    left.unionWith({5, 10}, 2, alloc);
+    left.unionWith({13, 23}, 3, alloc);
+    left.unionWith({24, 25}, 4, alloc);
+
+    // [[1, 5], [8, 12], [15, 18], [20, 24]]
+    right.unionWith({1, 5}, 1, alloc);
+    right.unionWith({8, 12}, 2, alloc);
+    right.unionWith({15, 18}, 3, alloc);
+    right.unionWith({20, 24}, 4, alloc);
+
+    auto intersection = left.intersection(right, alloc);
+    std::vector<std::pair<int32_t, int32_t>> result;
+    for (auto it = intersection.begin(); it != intersection.end(); it++)
+        result.push_back(it.bounds());
+
+    std::vector<std::pair<int32_t, int32_t>> expected = {
+        {1, 2}, {5, 5}, {8, 10}, {15, 18}, {20, 24}};
+    CHECK(std::ranges::equal(result, expected));
+}
