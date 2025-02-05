@@ -11,6 +11,7 @@
 #include <mutex>
 #include <optional>
 
+#include "slang/analysis/AnalysisContext.h"
 #include "slang/analysis/AnalyzedProcedure.h"
 #include "slang/diagnostics/Diagnostics.h"
 #include "slang/util/BumpAllocator.h"
@@ -115,7 +116,10 @@ private:
     struct WorkerState {
         BumpAllocator alloc;
         TypedBumpAllocator<AnalyzedScope> scopeAlloc;
+        AssignedBitsMap::allocator_type assignedBitsAllocator;
         Diagnostics diagnostics;
+
+        WorkerState();
     };
     WorkerState& state();
 
