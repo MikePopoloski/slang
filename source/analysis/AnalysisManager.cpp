@@ -69,6 +69,16 @@ const AnalyzedScope* AnalysisManager::getAnalyzedScope(const Scope& scope) {
     return result;
 }
 
+Diagnostics AnalysisManager::getDiagnostics() {
+    wait();
+
+    Diagnostics diags;
+    for (auto& state : workerStates)
+        diags.append_range(state.context.diagnostics);
+
+    return diags;
+}
+
 AnalyzedInstance AnalysisManager::analyzeInst(const InstanceSymbol& instance) {
     // If there is a canonical body set, use that. Otherwise use the
     // instance's body directly.
@@ -148,9 +158,7 @@ const AnalyzedScope& AnalysisManager::analyzeScope(const Scope& scope) {
     auto& s = state();
     auto& result = *s.scopeAlloc.emplace(scope);
 
-    AnalysisContext context{s.alloc, s.diagnostics, s.assignedBitsAllocator};
-
-    ScopeVisitor visitor(*this, context, result);
+    ScopeVisitor visitor(*this, s.context, result);
     for (auto& member : scope.members())
         member.visit(visitor);
 
@@ -161,9 +169,6 @@ void AnalysisManager::wait() {
     threadPool.wait();
     if (pendingException)
         std::rethrow_exception(pendingException);
-}
-
-AnalysisManager::WorkerState::WorkerState() : assignedBitsAllocator(alloc) {
 }
 
 } // namespace slang::analysis
