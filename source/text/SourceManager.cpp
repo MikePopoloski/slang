@@ -11,6 +11,7 @@
 
 #include "slang/text/Glob.h"
 #include "slang/util/OS.h"
+#include "slang/util/SmallMap.h"
 #include "slang/util/String.h"
 
 namespace fs = std::filesystem;

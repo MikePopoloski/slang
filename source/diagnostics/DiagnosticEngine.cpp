@@ -17,6 +17,7 @@
 #include "slang/diagnostics/TextDiagnosticClient.h"
 #include "slang/text/Glob.h"
 #include "slang/text/SourceManager.h"
+#include "slang/util/SmallMap.h"
 
 namespace fs = std::filesystem;
 

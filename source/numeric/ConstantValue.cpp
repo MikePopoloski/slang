@@ -11,7 +11,7 @@
 
 #include "slang/numeric/MathUtils.h"
 #include "slang/text/FormatBuffer.h"
-#include "slang/util/Hash.h"
+#include "slang/util/FlatMap.h"
 
 namespace slang {
 

@@ -14,7 +14,7 @@
 #include "slang/ast/SemanticFacts.h"
 #include "slang/numeric/ConstantValue.h"
 #include "slang/syntax/SyntaxFwd.h"
-#include "slang/util/Hash.h"
+#include "slang/util/FlatMap.h"
 #include "slang/util/Util.h"
 
 namespace slang::ast {
