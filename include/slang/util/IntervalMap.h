@@ -578,6 +578,9 @@ public:
     /// Clears the map and returns all allocated memory, if any, to the provided allocator.
     void clear(allocator_type& alloc);
 
+    /// Clones the map, returning a new map with the same contents.
+    IntervalMap clone(allocator_type& alloc) const;
+
     /// @brief Inserts a new interval and value pair into the map.
     ///
     /// Insertion complexity is O(log n)
@@ -838,13 +841,15 @@ protected:
 template<typename TKey, typename TValue, uint32_t N>
 class IntervalMap<TKey, TValue, N>::iterator : public const_iterator {
 public:
+    using iterator_category = std::bidirectional_iterator_tag;
+    using difference_type = std::ptrdiff_t;
     using value_type = TValue;
     using pointer = value_type*;
     using reference = value_type&;
 
     iterator() = default;
 
-    TValue& operator*() {
+    TValue& operator*() const {
         SLANG_ASSERT(this->valid());
         auto offset = this->path.leafOffset();
         return this->isFlat() ? this->path.template leaf<RootLeaf>().valueAt(offset)
@@ -1022,6 +1027,74 @@ void IntervalMap<TKey, TValue, N>::clear(allocator_type& alloc) {
         switchToLeaf();
     }
     rootSize = 0;
+}
+
+template<typename TKey, typename TValue, uint32_t N>
+IntervalMap<TKey, TValue, N> IntervalMap<TKey, TValue, N>::clone(allocator_type& alloc) const {
+    using namespace IntervalMapDetails;
+
+    IntervalMap result;
+    result.rootSize = rootSize;
+    result.height = height;
+
+    if (isFlat()) {
+        std::copy(rootLeaf.first, rootLeaf.first + rootSize, result.rootLeaf.first);
+        std::copy(rootLeaf.second, rootLeaf.second + rootSize, result.rootLeaf.second);
+    }
+    else {
+        result.rootLeaf.~RootLeaf();
+        new (&result.rootBranch) RootBranch();
+
+        // Copy the root intervals.
+        std::copy(rootBranch.second, rootBranch.second + rootSize, result.rootBranch.second);
+
+        // Copy the child nodes by creating new ones.
+        SmallVector<std::pair<NodeRef, NodeRef>> refs, nextRefs;
+        for (uint32_t i = 0; i < rootSize; i++) {
+            auto& oldChild = rootBranch.childAt(i);
+            auto newChild = height == 1
+                                ? NodeRef(alloc.template emplace<Leaf>(), oldChild.size())
+                                : NodeRef(alloc.template emplace<Branch>(), oldChild.size());
+
+            result.rootBranch.first[i] = newChild;
+            refs.push_back({oldChild, newChild});
+        }
+
+        for (uint32_t h = height; h > 0; h--) {
+            for (auto& [oldChild, newChild] : refs) {
+                if (h == 1) {
+                    auto& oldLeaf = oldChild.template get<Leaf>();
+                    auto& newLeaf = newChild.template get<Leaf>();
+                    std::copy(oldLeaf.first, oldLeaf.first + oldChild.size(), newLeaf.first);
+                    std::copy(oldLeaf.second, oldLeaf.second + oldChild.size(), newLeaf.second);
+                }
+                else {
+                    auto& oldBranch = oldChild.template get<Branch>();
+                    auto& newBranch = newChild.template get<Branch>();
+                    std::copy(oldBranch.second, oldBranch.second + oldChild.size(),
+                              newBranch.second);
+
+                    for (uint32_t i = 0; i < oldChild.size(); i++) {
+                        auto& oldGrandChild = oldBranch.childAt(i);
+                        auto newGrandChild =
+                            h == 2
+                                ? NodeRef(alloc.template emplace<Leaf>(), oldGrandChild.size())
+                                : NodeRef(alloc.template emplace<Branch>(), oldGrandChild.size());
+
+                        newBranch.first[i] = newGrandChild;
+                        nextRefs.push_back({oldGrandChild, newGrandChild});
+                    }
+                }
+            }
+
+            if (h > 1) {
+                refs.clear();
+                refs.swap(nextRefs);
+            }
+        }
+    }
+
+    return result;
 }
 
 template<typename TKey, typename TValue, uint32_t N>
