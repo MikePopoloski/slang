@@ -32,21 +32,23 @@ public:
     /// Set to true if the analysis detected an error.
     bool bad = false;
 
-protected:
-    /// Constructs a new flow analysis pass and runs the analysis.
-    AbstractFlowAnalysis(const Symbol& symbol, const Statement& stmt) :
-        symbol(symbol),
-        evalContext(ASTContext(*symbol.getParentScope(), LookupLocation::after(symbol))) {
-
-        // Kick off the analysis.
+    /// Run the analysis.
+    void run(const Statement& stmt) {
         state = (DERIVED).topState();
         visit(stmt);
     }
+
+protected:
+    /// Constructs a new flow analysis pass and runs the analysis.
+    AbstractFlowAnalysis(const Symbol& symbol) :
+        symbol(symbol),
+        evalContext(ASTContext(*symbol.getParentScope(), LookupLocation::after(symbol))) {}
 
     TState state;
     TState stateWhenTrue;
     TState stateWhenFalse;
     bool isStateSplit = false;
+    EvalContext evalContext;
 
     /// Sets the current flow state to the given value.
     void setState(TState newState) {
@@ -756,7 +758,6 @@ private:
     friend class ast::Expression;
     friend class ast::Statement;
 
-    EvalContext evalContext;
     SmallVector<TState> breakStates;
     flat_hash_map<const Symbol*, SmallVector<TState>> disableBranches;
 
