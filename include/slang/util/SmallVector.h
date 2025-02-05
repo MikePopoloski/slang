@@ -615,13 +615,14 @@ public:
     SmallVector(const Base& other) : Base(N) { this->append(other.begin(), other.end()); }
 
     /// Move constructs from another vector.
-    SmallVector(SmallVector&& other) : SmallVector(static_cast<Base&&>(other)) {}
+    SmallVector(SmallVector&& other) noexcept : SmallVector(static_cast<Base&&>(other)) {}
 
     /// Move constructs from another vector.
-    SmallVector(Base&& other) {
+    SmallVector(Base&& other) noexcept {
         if (other.isSmall()) {
             this->cap = N;
             this->append(std::move_iterator(other.begin()), std::move_iterator(other.end()));
+            other.clear();
         }
         else {
             this->data_ = std::exchange(other.data_, nullptr);
