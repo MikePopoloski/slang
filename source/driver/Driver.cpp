@@ -160,9 +160,8 @@ void Driver::addStandardArgs() {
                 "Default time scale to use for design elements that don't specify one explicitly",
                 "<base>/<precision>");
 
-    auto addCompFlag = [&](CompilationFlags flag, std::string_view name, std::string_view desc,
-                           std::optional<bool> defVal = std::nullopt) {
-        auto [it, inserted] = options.compilationFlags.emplace(flag, defVal);
+    auto addCompFlag = [&](CompilationFlags flag, std::string_view name, std::string_view desc) {
+        auto [it, inserted] = options.compilationFlags.emplace(flag, std::nullopt);
         SLANG_ASSERT(inserted);
         cmdLine.add(name, it->second, desc);
     };
@@ -203,8 +202,7 @@ void Driver::addStandardArgs() {
                 "Only perform linting of code, don't try to elaborate a full hierarchy");
     addCompFlag(CompilationFlags::DisableInstanceCaching, "--disable-instance-caching",
                 "Disable the use of instance caching, which normally allows skipping duplicate "
-                "instance bodies to save time when elaborating",
-                true);
+                "instance bodies to save time when elaborating");
 
     cmdLine.add("--top", options.topModules,
                 "One or more top-level modules to instantiate "
@@ -505,6 +503,10 @@ bool Driver::processOptions() {
         if (!opt.has_value())
             opt = true;
     }
+
+    auto& disableCachingOpt = options.compilationFlags.at(CompilationFlags::DisableInstanceCaching);
+    if (!disableCachingOpt.has_value())
+        disableCachingOpt = true;
 
     if (!options.translateOffOptions.empty()) {
         bool anyBad = false;
