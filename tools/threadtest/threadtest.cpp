@@ -52,23 +52,15 @@ int main(int argc, char** argv) {
                     serializer.serialize(compilation->getRoot());
                 serializer.endArray();
             }
-            SLANG_CATCH(...) {
-#if defined(SLANG_USE_CPPTRACE)
-                cpptrace::from_current_exception().print();
-#endif
-                throw;
+            SLANG_CATCH(const std::exception& e) {
+                SLANG_REPORT_EXCEPTION(e, "{}\n");
             }
         });
 
         return 0;
     }
     SLANG_CATCH(const std::exception& e) {
-#if __cpp_exceptions
-        OS::printE(fmt::format("{}\n", e.what()));
-#    if defined(SLANG_USE_CPPTRACE)
-        cpptrace::from_current_exception().print();
-#    endif
-#endif
+        SLANG_REPORT_EXCEPTION(e, "{}\n");
     }
     return 3;
 }
