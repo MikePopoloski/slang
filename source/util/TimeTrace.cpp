@@ -15,7 +15,7 @@
 #include <vector>
 
 #include "slang/text/CharInfo.h"
-#include "slang/util/Hash.h"
+#include "slang/util/FlatMap.h"
 
 using namespace std::chrono;
 

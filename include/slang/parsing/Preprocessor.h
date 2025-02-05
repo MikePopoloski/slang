@@ -15,6 +15,7 @@
 #include "slang/syntax/SyntaxNode.h"
 #include "slang/text/SourceLocation.h"
 #include "slang/util/Bag.h"
+#include "slang/util/SmallMap.h"
 #include "slang/util/SmallVector.h"
 
 namespace slang::syntax {

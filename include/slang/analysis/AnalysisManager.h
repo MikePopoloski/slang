@@ -14,7 +14,7 @@
 #include "slang/analysis/AnalyzedProcedure.h"
 #include "slang/diagnostics/Diagnostics.h"
 #include "slang/util/BumpAllocator.h"
-#include "slang/util/Hash.h"
+#include "slang/util/FlatMap.h"
 
 namespace slang::ast {
 

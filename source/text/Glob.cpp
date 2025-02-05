@@ -7,7 +7,7 @@
 //------------------------------------------------------------------------------
 #include "slang/text/Glob.h"
 
-#include "slang/util/Hash.h"
+#include "slang/util/FlatMap.h"
 #include "slang/util/OS.h"
 #include "slang/util/String.h"
 
