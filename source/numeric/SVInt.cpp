@@ -14,7 +14,7 @@
 #include <stdexcept>
 
 #include "slang/text/CharInfo.h"
-#include "slang/util/Hash.h"
+#include "slang/util/FlatMap.h"
 #include "slang/util/String.h"
 
 static const double log2_10 = log2(10.0);

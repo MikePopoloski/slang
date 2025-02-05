@@ -15,7 +15,7 @@
 #include <typeinfo>
 
 #include "slang/diagnostics/Diagnostics.h"
-#include "slang/util/Hash.h"
+#include "slang/util/FlatMap.h"
 #include "slang/util/TypeTraits.h"
 
 namespace slang {

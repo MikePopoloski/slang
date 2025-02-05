@@ -12,7 +12,7 @@
 
 #include "slang/ast/SystemSubroutine.h"
 #include "slang/ast/types/AllTypes.h"
-#include "slang/util/Hash.h"
+#include "slang/util/FlatMap.h"
 
 namespace slang::ast::builtins {
 

@@ -13,7 +13,7 @@
 #include "slang/ast/SemanticFacts.h"
 #include "slang/ast/Symbol.h"
 #include "slang/diagnostics/Diagnostics.h"
-#include "slang/util/Hash.h"
+#include "slang/util/FlatMap.h"
 #include "slang/util/Iterator.h"
 #include "slang/util/Util.h"
 
