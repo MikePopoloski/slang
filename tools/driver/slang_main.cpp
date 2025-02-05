@@ -171,7 +171,9 @@ int driverMain(int argc, TArgs argv) {
                 {
                     TimeTraceScope timeScope("elaboration"sv, ""sv);
                     auto compilation = driver.createCompilation();
-                    ok &= driver.reportCompilation(*compilation, quiet == true);
+                    driver.reportCompilation(*compilation, quiet == true);
+
+                    ok &= driver.reportDiagnostics(quiet == true);
 
                     if (astJsonFile) {
                         printJson(*compilation, *astJsonFile, astJsonScopes,
