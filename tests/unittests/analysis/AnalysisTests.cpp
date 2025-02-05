@@ -13,7 +13,7 @@ public:
     TestAnalysis(const Symbol& symbol) : AbstractFlowAnalysis(symbol) {}
 
     void handle(const NamedValueExpression& expr) {
-        state++;
+        getState() += 1;
         visitExpr(expr);
     }
 
@@ -23,7 +23,7 @@ public:
     int unreachableState() const { return 0; }
     int topState() const { return 0; }
 
-    int getState() const { return state; }
+    int getCurrentState() const { return getState(); }
 };
 
 TEST_CASE("Basic flow analysis") {
@@ -48,7 +48,7 @@ endmodule
     TestAnalysis analysis(proc);
     analysis.run(proc.getBody());
     CHECK(!analysis.bad);
-    CHECK(analysis.getState() == 5);
+    CHECK(analysis.getCurrentState() == 5);
 }
 
 TEST_CASE("Inferred latch test") {

@@ -96,11 +96,11 @@ void AnalysisManager::analyzeScopeAsync(const Scope& scope) {
     // this scope before.
     if (analyzedScopes.try_emplace(&scope, std::nullopt)) {
         threadPool.detach_task([this, &scope] {
-            try {
+            SLANG_TRY {
                 auto& result = analyzeScope(scope);
                 analyzedScopes.visit(&scope, [&result](auto& item) { item.second = &result; });
             }
-            catch (...) {
+            SLANG_CATCH(...) {
                 std::unique_lock lock(mutex);
                 pendingException = std::current_exception();
             }

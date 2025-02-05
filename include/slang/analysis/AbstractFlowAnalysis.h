@@ -27,7 +27,7 @@ class AbstractFlowAnalysis {
 #define DERIVED *static_cast<TDerived*>(this)
 public:
     /// The symbol being analyzed (procedure, function, etc).
-    const Symbol& symbol;
+    const Symbol& rootSymbol;
 
     /// Set to true if the analysis detected an error.
     bool bad = false;
@@ -41,14 +41,14 @@ public:
 protected:
     /// Constructs a new flow analysis pass and runs the analysis.
     AbstractFlowAnalysis(const Symbol& symbol) :
-        symbol(symbol),
+        rootSymbol(symbol),
         evalContext(ASTContext(*symbol.getParentScope(), LookupLocation::after(symbol))) {}
 
-    TState state;
-    TState stateWhenTrue;
-    TState stateWhenFalse;
-    bool isStateSplit = false;
-    EvalContext evalContext;
+    /// Gets the current state.
+    TState& getState() { return state; }
+    const TState& getState() const { return state; }
+
+    EvalContext& getEvalContext() { return evalContext; }
 
     /// Sets the current flow state to the given value.
     void setState(TState newState) {
@@ -173,8 +173,8 @@ protected:
             auto it = disableBranches.find(stmt.blockSymbol);
             SLANG_ASSERT(it != disableBranches.end());
 
-            for (auto& state : it->second)
-                (DERIVED).joinState(state, this->state);
+            for (auto& branchState : it->second)
+                (DERIVED).joinState(state, branchState);
 
             disableBranches.erase(it);
         }
@@ -196,12 +196,12 @@ protected:
         setUnreachable();
     }
 
-    void visitStmt(const BreakStatement& stmt) {
+    void visitStmt(const BreakStatement&) {
         breakStates.emplace_back(std::move(state));
         setUnreachable();
     }
 
-    void visitStmt(const ContinueStatement& stmt) { setUnreachable(); }
+    void visitStmt(const ContinueStatement&) { setUnreachable(); }
 
     void visitStmt(const DisableStatement& stmt) {
         // If the target is within our currently executing
@@ -423,8 +423,8 @@ protected:
         auto initialState = (DERIVED).copyState(state);
         auto finalState = std::move(state);
 
-        for (auto prod : stmt.productions) {
-            for (auto& rule : prod->getRules()) {
+        for (auto production : stmt.productions) {
+            for (auto& rule : production->getRules()) {
                 setState((DERIVED).copyState(initialState));
 
                 if (rule.weightExpr)
@@ -441,10 +441,10 @@ protected:
                             ((const RSPS::ProdItem*)prod)->visitExprs(DERIVED);
                             break;
                         case RSPS::ProdKind::CodeBlock: {
-                            auto stmt =
+                            auto blockBody =
                                 ((const RSPS::CodeBlockProd*)prod)->block->tryGetStatement();
-                            if (stmt)
-                                visit(*stmt);
+                            if (blockBody)
+                                visit(*blockBody);
                             break;
                         }
                         case RSPS::ProdKind::IfElse: {
@@ -504,8 +504,8 @@ protected:
                 }
 
                 if (rule.codeBlock) {
-                    if (auto stmt = rule.codeBlock->block->tryGetStatement())
-                        visit(*stmt);
+                    if (auto blockBody = rule.codeBlock->block->tryGetStatement())
+                        visit(*blockBody);
                 }
 
                 (DERIVED).joinState(finalState, state);
@@ -552,13 +552,13 @@ protected:
     void visitStmt(const WaitForkStatement&) {}
     void visitStmt(const DisableForkStatement&) {}
 
-    void visitStmt(const ProceduralAssignStatement& stmt) { SLANG_UNREACHABLE; }
-    void visitStmt(const ProceduralDeassignStatement& stmt) { SLANG_UNREACHABLE; }
-    void visitStmt(const ProceduralCheckerStatement& stmt) { SLANG_UNREACHABLE; }
+    void visitStmt(const ProceduralAssignStatement&) { SLANG_UNREACHABLE; }
+    void visitStmt(const ProceduralDeassignStatement&) { SLANG_UNREACHABLE; }
+    void visitStmt(const ProceduralCheckerStatement&) { SLANG_UNREACHABLE; }
 
     // **** Expression Visitors ****
 
-    void visitExpr(const InvalidExpression& expr) { bad = true; }
+    void visitExpr(const InvalidExpression&) { bad = true; }
 
     void visitExpr(const UnaryExpression& expr) {
         // For logical not, give a chance to evaluate the operand
@@ -722,7 +722,7 @@ protected:
     }
 
     // TODO: add support
-    void visitExpr(const AssertionInstanceExpression& expr) { SLANG_UNREACHABLE; }
+    void visitExpr(const AssertionInstanceExpression&) { SLANG_UNREACHABLE; }
 
     // None of these affect control or data flow state.
     void visitExpr(const IntegerLiteral&) {}
@@ -757,6 +757,12 @@ protected:
 private:
     friend class ast::Expression;
     friend class ast::Statement;
+
+    TState state;
+    TState stateWhenTrue;
+    TState stateWhenFalse;
+    bool isStateSplit = false;
+    EvalContext evalContext;
 
     SmallVector<TState> breakStates;
     flat_hash_map<const Symbol*, SmallVector<TState>> disableBranches;
