@@ -706,6 +706,9 @@ public:
         verify(rootBranch, rootSize, 0, lastKey);
     }
 
+    /// Produces a new interval map that is the intersection of this map and @a other.
+    [[nodiscard]] IntervalMap intersection(const IntervalMap& other, allocator_type& alloc) const;
+
 private:
     friend class iterator;
     friend class const_iterator;
@@ -1165,6 +1168,38 @@ void IntervalMap<TKey, TValue, N>::verify(const TBranch& branch, uint32_t size, 
             verify(childBranch, child.size(), depth + 1, lastKey);
         }
     }
+}
+
+template<typename TKey, typename TValue, uint32_t N>
+IntervalMap<TKey, TValue, N> IntervalMap<TKey, TValue, N>::intersection(
+    const IntervalMap& other, allocator_type& alloc) const {
+
+    IntervalMap result;
+    auto lit = begin(), rit = other.begin();
+    auto lend = end(), rend = other.end();
+    while (lit != lend && rit != rend) {
+        auto lkey = lit.bounds(), rkey = rit.bounds();
+        if (lkey.second < rkey.first) {
+            ++lit;
+        }
+        else if (rkey.second < lkey.first) {
+            ++rit;
+        }
+        else {
+            // We will arbitrarily take the left hand value,
+            // since there's no way to merge them. Presumably if
+            // this method is being called the values don't matter.
+            auto left = std::max(lkey.first, rkey.first);
+            auto right = std::min(lkey.second, rkey.second);
+            result.unionWith(left, right, *lit, alloc);
+
+            if (lkey.second < rkey.second)
+                ++lit;
+            else
+                ++rit;
+        }
+    }
+    return result;
 }
 
 template<typename TKey, typename TValue, uint32_t N>
