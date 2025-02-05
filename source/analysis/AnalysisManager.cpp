@@ -61,12 +61,12 @@ AnalyzedDesign AnalysisManager::analyze(const Compilation& compilation) {
 }
 
 const AnalyzedScope* AnalysisManager::getAnalyzedScope(const Scope& scope) {
-    std::unique_lock lock(mutex);
-    if (auto it = analyzedScopes.find(&scope); it != analyzedScopes.end()) {
-        if (it->second)
-            return *it->second;
-    }
-    return nullptr;
+    const AnalyzedScope* result = nullptr;
+    analyzedScopes.cvisit(&scope, [&result](auto& item) {
+        if (item.second)
+            result = *item.second;
+    });
+    return result;
 }
 
 AnalyzedInstance AnalysisManager::analyzeInst(const InstanceSymbol& instance) {
@@ -84,20 +84,14 @@ AnalyzedInstance AnalysisManager::analyzeInst(const InstanceSymbol& instance) {
 void AnalysisManager::analyzeScopeAsync(const Scope& scope) {
     // Kick off a new analysis task if we haven't already seen
     // this scope before.
-    bool shouldAnalyze;
-    {
-        std::unique_lock writeLock(mutex);
-        shouldAnalyze = analyzedScopes.emplace(&scope, std::nullopt).second;
-    }
-
-    if (shouldAnalyze) {
+    if (analyzedScopes.try_emplace(&scope, std::nullopt)) {
         threadPool.detach_task([this, &scope] {
             try {
                 auto& result = analyzeScope(scope);
-                std::unique_lock lock(mutex);
-                analyzedScopes[&scope] = &result;
+                analyzedScopes.visit(&scope, [&result](auto& item) { item.second = &result; });
             }
             catch (...) {
+                std::unique_lock lock(mutex);
                 pendingException = std::current_exception();
             }
         });
