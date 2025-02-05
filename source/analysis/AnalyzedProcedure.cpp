@@ -7,15 +7,15 @@
 //------------------------------------------------------------------------------
 #include "slang/analysis/AnalyzedProcedure.h"
 
-#include "slang/analysis/ControlFlowPass.h"
+#include "slang/analysis/DataFlowAnalysis.h"
 
 namespace slang::analysis {
 
 using namespace ast;
 
-AnalyzedProcedure::AnalyzedProcedure(AnalysisManager& analysisManager,
+AnalyzedProcedure::AnalyzedProcedure(AnalysisManager& analysisManager, AnalysisContext& context,
                                      const ProceduralBlockSymbol& symbol) {
-    ControlFlowPass controlFlowPass(symbol, symbol.getBody());
+    DataFlowAnalysis dataFlowAnalysis(context, symbol, symbol.getBody());
 }
 
 } // namespace slang::analysis
