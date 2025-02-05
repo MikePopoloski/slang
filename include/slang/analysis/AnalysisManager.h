@@ -11,7 +11,6 @@
 #include <mutex>
 #include <optional>
 
-#include "slang/analysis/AnalysisContext.h"
 #include "slang/analysis/AnalyzedProcedure.h"
 #include "slang/diagnostics/Diagnostics.h"
 #include "slang/util/BumpAllocator.h"
@@ -85,6 +84,13 @@ public:
     explicit AnalyzedDesign(const ast::Compilation& compilation) : compilation(compilation) {}
 };
 
+/// Holds various bits of state needed to perform analysis.
+class AnalysisContext {
+public:
+    BumpAllocator alloc;
+    Diagnostics diagnostics;
+};
+
 /// The analysis manager coordinates running various analyses on AST symbols.
 ///
 /// Analysis is done downstream from one or more Compilation objects.
@@ -105,6 +111,9 @@ public:
     /// if available.
     const AnalyzedScope* getAnalyzedScope(const ast::Scope& scope);
 
+    /// Collects and returns all issued analysis diagnostics.
+    Diagnostics getDiagnostics();
+
 private:
     friend struct ScopeVisitor;
 
@@ -114,12 +123,8 @@ private:
     void wait();
 
     struct WorkerState {
-        BumpAllocator alloc;
+        AnalysisContext context;
         TypedBumpAllocator<AnalyzedScope> scopeAlloc;
-        AssignedBitsMap::allocator_type assignedBitsAllocator;
-        Diagnostics diagnostics;
-
-        WorkerState();
     };
     WorkerState& state();
 
