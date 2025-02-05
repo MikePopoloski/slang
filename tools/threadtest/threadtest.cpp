@@ -34,7 +34,8 @@ int main(int argc, char** argv) {
         }
 
         auto compilation = driver.createCompilation();
-        if (!driver.reportCompilation(*compilation, true))
+        driver.reportCompilation(*compilation, true);
+        if (!driver.reportDiagnostics(true))
             return 2;
 
         compilation->freeze();
