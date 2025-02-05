@@ -21,7 +21,7 @@ class Symbol;
 struct LookupResult;
 
 /// Represents a hierarchical reference to a symbol.
-class HierarchicalReference {
+class SLANG_EXPORT HierarchicalReference {
 public:
     /// An element in the hierarchical path.
     struct Element {

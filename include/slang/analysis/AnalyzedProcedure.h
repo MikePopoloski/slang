@@ -7,6 +7,8 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include "slang/util/Util.h"
+
 namespace slang::ast {
 class ProceduralBlockSymbol;
 }
@@ -16,7 +18,7 @@ namespace slang::analysis {
 class AnalysisContext;
 class AnalysisManager;
 
-class AnalyzedProcedure {
+class SLANG_EXPORT AnalyzedProcedure {
 public:
     AnalyzedProcedure(AnalysisManager& analysisManager, AnalysisContext& context,
                       const ast::ProceduralBlockSymbol& symbol);
