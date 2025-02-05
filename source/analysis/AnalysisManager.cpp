@@ -104,10 +104,11 @@ AnalysisManager::WorkerState& AnalysisManager::state() {
 
 struct ScopeVisitor {
     AnalysisManager& analysisManager;
+    AnalysisContext& context;
     AnalyzedScope& scope;
 
-    ScopeVisitor(AnalysisManager& analysisManager, AnalyzedScope& scope) :
-        analysisManager(analysisManager), scope(scope) {}
+    ScopeVisitor(AnalysisManager& analysisManager, AnalysisContext& context, AnalyzedScope& scope) :
+        analysisManager(analysisManager), context(context), scope(scope) {}
 
     void visit(const InstanceSymbol& symbol) {
         scope.instances.emplace_back(analysisManager.analyzeInst(symbol));
@@ -134,7 +135,7 @@ struct ScopeVisitor {
     }
 
     void visit(const ProceduralBlockSymbol& symbol) {
-        scope.procedures.emplace_back(analysisManager, symbol);
+        scope.procedures.emplace_back(analysisManager, context, symbol);
     }
 
     // Everything else is unhandled.
@@ -144,9 +145,12 @@ struct ScopeVisitor {
 };
 
 const AnalyzedScope& AnalysisManager::analyzeScope(const Scope& scope) {
-    auto& result = *state().scopeAlloc.emplace(scope);
+    auto& s = state();
+    auto& result = *s.scopeAlloc.emplace(scope);
 
-    ScopeVisitor visitor(*this, result);
+    AnalysisContext context{s.alloc, s.diagnostics, s.assignedBitsAllocator};
+
+    ScopeVisitor visitor(*this, context, result);
     for (auto& member : scope.members())
         member.visit(visitor);
 
@@ -157,6 +161,9 @@ void AnalysisManager::wait() {
     threadPool.wait();
     if (pendingException)
         std::rethrow_exception(pendingException);
+}
+
+AnalysisManager::WorkerState::WorkerState() : assignedBitsAllocator(alloc) {
 }
 
 } // namespace slang::analysis
