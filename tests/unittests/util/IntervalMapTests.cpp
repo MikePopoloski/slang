@@ -154,6 +154,12 @@ TEST_CASE("IntervalMap -- branching inserts") {
     auto oit = map.find(1, 3);
     CHECK(oit == map.end());
 
+    // Cloning the map produces a new map with the same contents.
+    auto cloned = map.clone(alloc);
+    cloned.verify();
+    CHECK(cloned.getBounds() == map.getBounds());
+    CHECK(std::ranges::equal(map, cloned));
+
     decltype(map) newMap = std::move(map);
     newMap.verify();
 
