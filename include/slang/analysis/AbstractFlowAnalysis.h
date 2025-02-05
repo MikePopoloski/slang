@@ -9,7 +9,7 @@
 
 #include "slang/ast/ASTVisitor.h"
 #include "slang/ast/EvalContext.h"
-#include "slang/util/SmallMap.h"
+#include "slang/util/FlatMap.h"
 
 namespace slang::analysis {
 
@@ -67,8 +67,10 @@ protected:
 
     /// Splits the current state into two separate states.
     void split() {
-        if (!isStateSplit)
-            setConditionalState(state, state);
+        if (!isStateSplit) {
+            auto copied = (DERIVED).copyState(state);
+            setConditionalState(std::move(copied), std::move(state));
+        }
     }
 
     /// Unsplits the current state if it was split by joining
@@ -130,10 +132,10 @@ protected:
             statements = statements.subspan(numLocalDecls);
 
             // Each remaining statement is executed in parallel.
-            auto currState = state;
-            auto finalState = state;
+            auto currState = (DERIVED).copyState(state);
+            auto finalState = std::move(state);
             for (auto s : statements) {
-                setState(currState);
+                setState((DERIVED).copyState(currState));
                 visit(*s);
 
                 switch (stmt.blockKind) {
@@ -237,11 +239,11 @@ protected:
         // TODO: we could be smarter for constant case conditions
         visit(stmt.expr);
 
-        auto initialState = state;
-        auto finalState = state;
+        auto initialState = (DERIVED).copyState(state);
+        auto finalState = std::move(state);
 
         for (auto& item : stmt.items) {
-            setState(initialState);
+            setState((DERIVED).copyState(initialState));
             for (auto itemExpr : item.expressions)
                 visit(*itemExpr);
 
@@ -250,7 +252,7 @@ protected:
         }
 
         if (stmt.defaultCase) {
-            setState(initialState);
+            setState((DERIVED).copyState(initialState));
             visit(*stmt.defaultCase);
             (DERIVED).joinState(finalState, state);
         }
@@ -261,11 +263,11 @@ protected:
     void visitStmt(const PatternCaseStatement& stmt) {
         visit(stmt.expr);
 
-        auto initialState = state;
-        auto finalState = state;
+        auto initialState = (DERIVED).copyState(state);
+        auto finalState = std::move(state);
 
         for (auto& item : stmt.items) {
-            setState(initialState);
+            setState((DERIVED).copyState(initialState));
 
             visitPattern(*item.pattern);
 
@@ -279,7 +281,7 @@ protected:
         }
 
         if (stmt.defaultCase) {
-            setState(initialState);
+            setState((DERIVED).copyState(initialState));
             visit(*stmt.defaultCase);
             (DERIVED).joinState(finalState, state);
         }
@@ -288,10 +290,10 @@ protected:
     }
 
     void visitStmt(const RandCaseStatement& stmt) {
-        auto initialState = state;
-        auto finalState = state;
+        auto initialState = (DERIVED).copyState(state);
+        auto finalState = std::move(state);
         for (auto& item : stmt.items) {
-            setState(initialState);
+            setState((DERIVED).copyState(initialState));
             visit(*item.expr);
             visit(*item.stmt);
             (DERIVED).joinState(finalState, state);
@@ -321,7 +323,7 @@ protected:
             exitState = (DERIVED).unreachableState();
         }
 
-        auto oldBreakStates = breakStates;
+        auto oldBreakStates = std::move(breakStates);
         breakStates.clear();
         setState(std::move(bodyState));
         visit(stmt.body);
@@ -337,8 +339,8 @@ protected:
         // when it's a constant.
         visit(stmt.count);
 
-        auto currState = state;
-        auto oldBreakStates = breakStates;
+        auto currState = (DERIVED).copyState(state);
+        auto oldBreakStates = std::move(breakStates);
         breakStates.clear();
         visit(stmt.body);
 
@@ -348,8 +350,8 @@ protected:
     void visitStmt(const ForeachLoopStatement& stmt) {
         visit(stmt.arrayRef);
 
-        auto currState = state;
-        auto oldBreakStates = breakStates;
+        auto currState = (DERIVED).copyState(state);
+        auto oldBreakStates = std::move(breakStates);
         breakStates.clear();
         visit(stmt.body);
 
@@ -362,7 +364,7 @@ protected:
         auto exitState = std::move(stateWhenFalse);
         setState(std::move(stateWhenTrue));
 
-        auto oldBreakStates = breakStates;
+        auto oldBreakStates = std::move(breakStates);
         breakStates.clear();
         visit(stmt.body);
 
@@ -370,7 +372,7 @@ protected:
     }
 
     void visitStmt(const DoWhileLoopStatement& stmt) {
-        auto oldBreakStates = breakStates;
+        auto oldBreakStates = std::move(breakStates);
         breakStates.clear();
         visit(stmt.body);
 
@@ -380,7 +382,7 @@ protected:
     }
 
     void visitStmt(const ForeverLoopStatement& stmt) {
-        auto oldBreakStates = breakStates;
+        auto oldBreakStates = std::move(breakStates);
         breakStates.clear();
         visit(stmt.body);
 
@@ -401,7 +403,7 @@ protected:
         for (auto expr : stmt.events)
             visit(*expr);
 
-        auto initialState = state;
+        auto initialState = (DERIVED).copyState(state);
         if (stmt.ifTrue) {
             visit(*stmt.ifTrue);
             std::swap(state, initialState);
@@ -416,12 +418,12 @@ protected:
     void visitStmt(const RandSequenceStatement& stmt) {
         // TODO: could check for unreachable productions
         // TODO: handle special break / return rules
-        auto initialState = state;
-        auto finalState = state;
+        auto initialState = (DERIVED).copyState(state);
+        auto finalState = std::move(state);
 
         for (auto prod : stmt.productions) {
             for (auto& rule : prod->getRules()) {
-                setState(initialState);
+                setState((DERIVED).copyState(initialState));
 
                 if (rule.weightExpr)
                     visit(*rule.weightExpr);
@@ -463,7 +465,7 @@ protected:
                             auto& rp = *(const RSPS::RepeatProd*)prod;
                             visit(*rp.expr);
 
-                            auto currState = state;
+                            auto currState = (DERIVED).copyState(state);
                             rp.item.visitExprs(DERIVED);
 
                             setState(std::move(currState));
@@ -473,11 +475,11 @@ protected:
                             auto& cp = *(const RSPS::CaseProd*)prod;
                             visit(*cp.expr);
 
-                            auto caseInitial = state;
-                            auto caseFinal = state;
+                            auto caseInitial = (DERIVED).copyState(state);
+                            auto caseFinal = std::move(state);
 
                             for (auto& item : cp.items) {
-                                setState(caseInitial);
+                                setState((DERIVED).copyState(caseInitial));
                                 for (auto itemExpr : item.expressions)
                                     visit(*itemExpr);
 
@@ -486,7 +488,7 @@ protected:
                             }
 
                             if (cp.defaultItem) {
-                                setState(caseInitial);
+                                setState((DERIVED).copyState(caseInitial));
                                 cp.defaultItem->visitExprs(DERIVED);
                                 (DERIVED).joinState(caseFinal, state);
                             }
@@ -593,7 +595,8 @@ protected:
         // LHS is false, so we can set the state to the false state.
         // The opposite is true for logical AND and implication.
         auto trueState = std::move(stateWhenTrue), falseState = std::move(stateWhenFalse);
-        setState(expr.op == BinaryOperator::LogicalOr ? falseState : trueState);
+        setState(expr.op == BinaryOperator::LogicalOr ? std::move(falseState)
+                                                      : std::move(trueState));
         visitCondition(expr.right());
 
         // Join the states from the two branches. For example,
@@ -664,7 +667,7 @@ protected:
                 falseAfterLeft = std::move(stateWhenFalse);
             }
             else {
-                trueAfterLeft = state;
+                trueAfterLeft = (DERIVED).copyState(state);
                 falseAfterLeft = std::move(state);
             }
 
@@ -755,7 +758,7 @@ private:
 
     EvalContext evalContext;
     SmallVector<TState> breakStates;
-    SmallMap<const Symbol*, SmallVector<TState>, 2> disableBranches;
+    flat_hash_map<const Symbol*, SmallVector<TState>> disableBranches;
 
     template<typename T>
     struct always_false : std::false_type {};

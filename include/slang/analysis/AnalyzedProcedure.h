@@ -13,11 +13,13 @@ class ProceduralBlockSymbol;
 
 namespace slang::analysis {
 
+class AnalysisContext;
 class AnalysisManager;
 
 class AnalyzedProcedure {
 public:
-    AnalyzedProcedure(AnalysisManager& analysisManager, const ast::ProceduralBlockSymbol& symbol);
+    AnalyzedProcedure(AnalysisManager& analysisManager, AnalysisContext& context,
+                      const ast::ProceduralBlockSymbol& symbol);
 };
 
 } // namespace slang::analysis
