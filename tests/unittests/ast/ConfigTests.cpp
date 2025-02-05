@@ -57,7 +57,8 @@ TEST_CASE("Driver library default ordering") {
     CHECK(driver.parseAllSources());
 
     auto compilation = driver.createCompilation();
-    CHECK(driver.reportCompilation(*compilation, false));
+    driver.reportCompilation(*compilation, false);
+    CHECK(driver.reportDiagnostics(false));
 
     auto& m = compilation->getRoot().lookupName<InstanceSymbol>("top.m");
     CHECK(m.getDefinition().sourceLibrary.name == "lib1");
@@ -77,7 +78,8 @@ TEST_CASE("Driver library explicit ordering") {
     CHECK(driver.parseAllSources());
 
     auto compilation = driver.createCompilation();
-    CHECK(driver.reportCompilation(*compilation, false));
+    driver.reportCompilation(*compilation, false);
+    CHECK(driver.reportDiagnostics(false));
 
     auto& m = compilation->getRoot().lookupName<InstanceSymbol>("top.m");
     CHECK(m.getDefinition().sourceLibrary.name == "lib2");

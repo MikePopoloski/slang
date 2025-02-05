@@ -131,7 +131,9 @@ int main(int argc, char** argv) {
             }
         }));
     }
-    ok &= driver.reportCompilation(*compilation, /* quiet */ false);
+
+    driver.reportCompilation(*compilation, /* quiet */ false);
+    ok &= driver.reportDiagnostics(/* quiet */ false);
 
     return ok ? 0 : 3;
 }

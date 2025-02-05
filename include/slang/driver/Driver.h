@@ -53,9 +53,7 @@ namespace slang::driver {
 /// if (!driver.parseCommandLine(someStr)) { ...error }
 /// if (!driver.processOptions()) { ...error }
 /// if (!driver.parseAllSources()) { ...error }
-///
-/// auto compilation = driver.createCompilation();
-/// if (!driver.reportCompilation(*compilation)) { ...error }
+/// if (!driver.runFullCompilation()) { ...error }
 /// else { ...success }
 /// @endcode
 ///
@@ -336,8 +334,26 @@ public:
     /// @brief Reports the result of compilation.
     ///
     /// If @a quiet is set to true, non-essential output will be suppressed.
+    void reportCompilation(ast::Compilation& compilation, bool quiet);
+
+    /// @brief Runs analysis on a compilation and reports the results.
+    ///
+    /// @note The compilation will be frozen after this call.
+    void runAnalysis(ast::Compilation& compilation);
+
+    /// @brief Reports all diagnostics to output.
+    ///
+    /// If @a quiet is set to true, non-essential output will be suppressed.
     /// @returns true if compilation succeeded and false if errors were encountered.
-    [[nodiscard]] bool reportCompilation(ast::Compilation& compilation, bool quiet);
+    [[nodiscard]] bool reportDiagnostics(bool quiet);
+
+    /// @brief Runs a full compilation pass and reports the results.
+    ///
+    /// This is a helper method that calls @a createCompilation, @a reportCompilation,
+    /// @a runAnalysis, and @a reportDiagnostics in sequence.
+    ///
+    /// @returns true if compilation succeeded and false if errors were encountered.
+    [[nodiscard]] bool runFullCompilation(bool quiet = false);
 
 private:
     bool parseUnitListing(std::string_view text);

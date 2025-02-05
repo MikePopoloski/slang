@@ -273,7 +273,8 @@ int main(int argc, char** argv) {
         bool ok = driver.parseAllSources();
 
         auto compilation = driver.createCompilation();
-        ok &= driver.reportCompilation(*compilation, *quiet);
+        driver.reportCompilation(*compilation, *quiet);
+        ok &= driver.reportDiagnostics(*quiet);
 
         if (!ok) {
             return ok;

@@ -11,6 +11,7 @@
 #include <BS_thread_pool.hpp>
 #include <fmt/color.h>
 
+#include "slang/analysis/AnalysisManager.h"
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
 #include "slang/ast/symbols/InstanceSymbols.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
@@ -876,7 +877,7 @@ bool Driver::reportParseDiags() {
     return diagEngine.getNumErrors() == 0;
 }
 
-bool Driver::reportCompilation(Compilation& compilation, bool quiet) {
+void Driver::reportCompilation(Compilation& compilation, bool quiet) {
     if (!quiet) {
         auto topInstances = compilation.getRoot().topInstances;
         if (!topInstances.empty()) {
@@ -889,7 +890,20 @@ bool Driver::reportCompilation(Compilation& compilation, bool quiet) {
 
     for (auto& diag : compilation.getAllDiagnostics())
         diagEngine.issue(diag);
+}
 
+void Driver::runAnalysis(ast::Compilation& compilation) {
+    compilation.getAllDiagnostics();
+    compilation.freeze();
+
+    analysis::AnalysisManager analysisManager(options.numThreads.value_or(0));
+    analysisManager.analyze(compilation);
+
+    for (auto& diag : analysisManager.getDiagnostics())
+        diagEngine.issue(diag);
+}
+
+bool Driver::reportDiagnostics(bool quiet) {
     bool hasDiagsStdout = false;
     bool succeeded = diagEngine.getNumErrors() == 0;
 
@@ -927,6 +941,13 @@ bool Driver::reportCompilation(Compilation& compilation, bool quiet) {
     }
 
     return succeeded;
+}
+
+bool Driver::runFullCompilation(bool quiet) {
+    auto compilation = createCompilation();
+    reportCompilation(*compilation, quiet);
+    runAnalysis(*compilation);
+    return reportDiagnostics(quiet);
 }
 
 bool Driver::parseUnitListing(std::string_view text) {

@@ -321,9 +321,7 @@ TEST_CASE("Driver full compilation") {
     CHECK(driver.parseCommandLine(args));
     CHECK(driver.processOptions());
     CHECK(driver.parseAllSources());
-
-    auto compilation = driver.createCompilation();
-    CHECK(driver.reportCompilation(*compilation, false));
+    CHECK(driver.runFullCompilation());
     CHECK(stdoutContains("Build succeeded"));
 }
 
@@ -339,9 +337,7 @@ TEST_CASE("Driver full compilation with defines and param overrides") {
     CHECK(driver.parseCommandLine(args));
     CHECK(driver.processOptions());
     CHECK(driver.parseAllSources());
-
-    auto compilation = driver.createCompilation();
-    CHECK(driver.reportCompilation(*compilation, false));
+    CHECK(driver.runFullCompilation());
     CHECK(stdoutContains("Build succeeded"));
 }
 
@@ -364,9 +360,7 @@ TEST_CASE("Driver setting a bunch of compilation options") {
         CHECK(driver.parseCommandLine(args));
         CHECK(driver.processOptions());
         CHECK(driver.parseAllSources());
-
-        auto compilation = driver.createCompilation();
-        CHECK(driver.reportCompilation(*compilation, false));
+        CHECK(driver.runFullCompilation());
         CHECK(stdoutContains("Build succeeded"));
     }
 }
@@ -383,9 +377,7 @@ TEST_CASE("Driver failed compilation") {
     CHECK(driver.parseCommandLine(args));
     CHECK(driver.processOptions());
     CHECK(driver.parseAllSources());
-
-    auto compilation = driver.createCompilation();
-    CHECK(!driver.reportCompilation(*compilation, false));
+    CHECK(!driver.runFullCompilation());
     CHECK(stdoutContains("Build failed"));
     CHECK(stdoutContains("1 error, 1 warning"));
 }
@@ -400,9 +392,7 @@ TEST_CASE("Driver command files") {
     CHECK(driver.parseCommandLine(args));
     CHECK(driver.processOptions());
     CHECK(driver.parseAllSources());
-
-    auto compilation = driver.createCompilation();
-    CHECK(driver.reportCompilation(*compilation, false));
+    CHECK(driver.runFullCompilation());
     CHECK(stdoutContains("Build succeeded"));
 }
 
@@ -443,9 +433,7 @@ TEST_CASE("Driver allow defines to be inherited to lib files") {
     CHECK(driver.parseCommandLine(args));
     CHECK(driver.processOptions());
     CHECK(driver.parseAllSources());
-
-    auto compilation = driver.createCompilation();
-    CHECK(driver.reportCompilation(*compilation, false));
+    CHECK(driver.runFullCompilation());
     CHECK(stdoutContains("Build succeeded"));
 }
 
@@ -499,9 +487,7 @@ TEST_CASE("Driver suppress warnings by path") {
     CHECK(driver.parseCommandLine(args));
     CHECK(driver.processOptions());
     CHECK(driver.parseAllSources());
-
-    auto compilation = driver.createCompilation();
-    CHECK(driver.reportCompilation(*compilation, false));
+    CHECK(driver.runFullCompilation());
     CHECK(stdoutContains("Build succeeded"));
     CHECK(stdoutContains("0 errors, 0 warnings"));
 }
@@ -518,9 +504,7 @@ TEST_CASE("Driver suppress macro warnings by path") {
     CHECK(driver.parseCommandLine(args));
     CHECK(driver.processOptions());
     CHECK(driver.parseAllSources());
-
-    auto compilation = driver.createCompilation();
-    CHECK(driver.reportCompilation(*compilation, false));
+    CHECK(driver.runFullCompilation());
     CHECK(stdoutContains("Build succeeded"));
     CHECK(stdoutContains("0 errors, 0 warnings"));
 }
@@ -610,9 +594,7 @@ TEST_CASE("Driver library map in compilation") {
     CHECK(driver.parseCommandLine(args));
     CHECK(driver.processOptions());
     CHECK(driver.parseAllSources());
-
-    auto compilation = driver.createCompilation();
-    CHECK(driver.reportCompilation(*compilation, false));
+    CHECK(driver.runFullCompilation());
     CHECK(stdoutContains("Build succeeded"));
     CHECK(stdoutContains("0 errors, 2 warnings"));
 }
@@ -657,7 +639,8 @@ TEST_CASE("Driver separate unit listing") {
     CHECK(driver.parseAllSources());
 
     auto compilation = driver.createCompilation();
-    CHECK(driver.reportCompilation(*compilation, false));
+    driver.reportCompilation(*compilation, false);
+    CHECK(driver.reportDiagnostics(false));
     CHECK(stdoutContains("Build succeeded"));
 
     auto& root = compilation->getRoot();
@@ -693,7 +676,8 @@ TEST_CASE("Driver customize default lib name") {
     CHECK(driver.parseAllSources());
 
     auto compilation = driver.createCompilation();
-    CHECK(driver.reportCompilation(*compilation, false));
+    driver.reportCompilation(*compilation, false);
+    CHECK(driver.reportDiagnostics(false));
     CHECK(stdoutContains("Build succeeded"));
 
     auto& root = compilation->getRoot();
@@ -722,9 +706,7 @@ TEST_CASE("Driver JSON diag output") {
     CHECK(driver.parseCommandLine(args));
     CHECK(driver.processOptions());
     CHECK(driver.parseAllSources());
-
-    auto compilation = driver.createCompilation();
-    CHECK(driver.reportCompilation(*compilation, true));
+    CHECK(driver.runFullCompilation(true));
     CHECK(stdoutContains(R"({
     "severity": "warning",
     "message": "no top-level modules found in design",
