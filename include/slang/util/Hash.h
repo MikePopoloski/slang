@@ -9,6 +9,7 @@
 
 #include <array>
 #include <cstring>
+#include <memory>
 
 #include "slang/util/Util.h"
 

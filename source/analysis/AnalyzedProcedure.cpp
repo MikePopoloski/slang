@@ -14,12 +14,12 @@ namespace slang::analysis {
 
 using namespace ast;
 
-AnalyzedProcedure::AnalyzedProcedure(AnalysisManager& analysisManager, AnalysisContext& context,
-                                     const ProceduralBlockSymbol& symbol) {
-    DataFlowAnalysis dataFlowAnalysis(context, symbol);
-    dataFlowAnalysis.run(symbol.getBody());
+AnalyzedProcedure::AnalyzedProcedure(AnalysisManager&, AnalysisContext& context,
+                                     const ProceduralBlockSymbol& procedure) {
+    DataFlowAnalysis dataFlowAnalysis(context, procedure);
+    dataFlowAnalysis.run(procedure.getBody());
 
-    if (symbol.procedureKind == ProceduralBlockKind::AlwaysComb) {
+    if (procedure.procedureKind == ProceduralBlockKind::AlwaysComb) {
         SmallVector<std::pair<const Symbol*, const Expression*>> partiallyAssigned;
         dataFlowAnalysis.getPartiallyAssignedSymbols(partiallyAssigned);
         for (auto [symbol, expr] : partiallyAssigned) {

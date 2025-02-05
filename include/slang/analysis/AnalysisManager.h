@@ -32,7 +32,7 @@ class AnalysisManager;
 class AnalyzedScope;
 
 /// Represents an analyzed AST instance (module / interface / program).
-class AnalyzedInstance {
+class SLANG_EXPORT AnalyzedInstance {
 public:
     /// The symbol that was analyzed.
     const ast::InstanceSymbol& symbol;
@@ -50,7 +50,7 @@ private:
 };
 
 /// Represents an analyzed AST scope.
-class AnalyzedScope {
+class SLANG_EXPORT AnalyzedScope {
 public:
     /// The scope that was analyzed.
     const ast::Scope& scope;
@@ -66,7 +66,7 @@ public:
 };
 
 /// Represents the result of analyzing a full design.
-class AnalyzedDesign {
+class SLANG_EXPORT AnalyzedDesign {
 public:
     /// The compilation that was analyzed.
     const ast::Compilation& compilation;
@@ -85,7 +85,7 @@ public:
 };
 
 /// Holds various bits of state needed to perform analysis.
-class AnalysisContext {
+class SLANG_EXPORT AnalysisContext {
 public:
     BumpAllocator alloc;
     Diagnostics diagnostics;
@@ -96,7 +96,7 @@ public:
 /// Analysis is done downstream from one or more Compilation objects.
 /// Once a design has an AST successfully built, analysis passes can
 /// be run to check for various issues or extract information.
-class AnalysisManager {
+class SLANG_EXPORT AnalysisManager {
 public:
     /// Default constructor for the analysis manager.
     explicit AnalysisManager(uint32_t numThreads = 0);

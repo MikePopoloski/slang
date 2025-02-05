@@ -17,7 +17,7 @@ namespace slang::analysis {
 
 using AssignedBitMap = IntervalMap<uint64_t, std::monostate, 3>;
 
-struct DataFlowState {
+struct SLANG_EXPORT DataFlowState {
     // Each tracked variable has its assigned intervals stored here.
     // This should be 64 bytes per variable.
     SmallVector<AssignedBitMap, 2> assigned;
@@ -32,7 +32,7 @@ struct DataFlowState {
 
 /// Performs data flow analysis on a single procedure, tracking the assigned ranges
 /// of nets and variables at each point in the procedure.
-class DataFlowAnalysis : public AbstractFlowAnalysis<DataFlowAnalysis, DataFlowState> {
+class SLANG_EXPORT DataFlowAnalysis : public AbstractFlowAnalysis<DataFlowAnalysis, DataFlowState> {
 public:
     /// Constructs a new DataFlowAnalysis object.
     DataFlowAnalysis(AnalysisContext& context, const Symbol& symbol) :
@@ -43,10 +43,12 @@ public:
     /// control flow paths.
     void getPartiallyAssignedSymbols(
         SmallVector<std::pair<const Symbol*, const Expression*>>& results) const {
+
+        auto& currState = getState();
         for (size_t index = 0; index < seenSymbols.size(); index++) {
             auto& symbolState = seenSymbols[index];
-            if (state.assigned.size() <= index ||
-                !isFullyAssigned(symbolState.assigned, state.assigned[index])) {
+            if (currState.assigned.size() <= index ||
+                !isFullyAssigned(symbolState.assigned, currState.assigned[index])) {
                 results.push_back({symbolState.symbol, symbolState.firstLSP});
             }
         }
@@ -76,65 +78,68 @@ private:
     void handle(const AssignmentExpression& expr) {
         visitExpr(expr);
 
+        auto& evalCtx = getEvalContext();
+        auto& currState = getState();
+
         SmallVector<std::pair<const ValueSymbol*, const Expression*>> prefixes;
-        expr.left().getLongestStaticPrefixes(prefixes, evalContext);
+        expr.left().getLongestStaticPrefixes(prefixes, evalCtx);
 
         for (auto [symbol, prefix] : prefixes) {
-            auto [it, inserted] = symbolToSlot.try_emplace(symbol, seenSymbols.size());
+            auto [it, inserted] = symbolToSlot.try_emplace(symbol, (uint32_t)seenSymbols.size());
             if (inserted) {
                 seenSymbols.emplace_back(symbol, prefix);
                 SLANG_ASSERT(seenSymbols.size() == symbolToSlot.size());
             }
 
             auto index = it->second;
-            if (index >= state.assigned.size())
-                state.assigned.resize(index + 1);
+            if (index >= currState.assigned.size())
+                currState.assigned.resize(index + 1);
 
-            auto bounds = ValueDriver::getBounds(*prefix, evalContext, symbol->getType());
+            auto bounds = ValueDriver::getBounds(*prefix, evalCtx, symbol->getType());
             if (bounds) {
-                state.assigned[index].unionWith(*bounds, {}, assignedBitAllocator);
+                currState.assigned[index].unionWith(*bounds, {}, assignedBitAllocator);
                 seenSymbols[index].assigned.unionWith(*bounds, {}, assignedBitAllocator);
             }
         }
     }
 
-    void joinState(DataFlowState& state, const DataFlowState& other) {
-        if (state.reachable == other.reachable) {
-            if (state.assigned.size() > other.assigned.size())
-                state.assigned.resize(other.assigned.size());
+    void joinState(DataFlowState& result, const DataFlowState& other) {
+        if (result.reachable == other.reachable) {
+            if (result.assigned.size() > other.assigned.size())
+                result.assigned.resize(other.assigned.size());
 
-            for (size_t i = 0; i < state.assigned.size(); i++) {
-                state.assigned[i] = state.assigned[i].intersection(other.assigned[i],
-                                                                   assignedBitAllocator);
+            for (size_t i = 0; i < result.assigned.size(); i++) {
+                result.assigned[i] = result.assigned[i].intersection(other.assigned[i],
+                                                                     assignedBitAllocator);
             }
         }
-        else if (!state.reachable) {
-            state = copyState(other);
+        else if (!result.reachable) {
+            result = copyState(other);
         }
     }
 
-    void meetState(DataFlowState& state, const DataFlowState& other) {
+    void meetState(DataFlowState& result, const DataFlowState& other) {
         if (!other.reachable) {
-            state.reachable = false;
+            result.reachable = false;
             return;
         }
 
         // Union the assigned state across each variable.
-        if (state.assigned.size() < other.assigned.size())
-            state.assigned.resize(other.assigned.size());
+        if (result.assigned.size() < other.assigned.size())
+            result.assigned.resize(other.assigned.size());
 
         for (size_t i = 0; i < other.assigned.size(); i++) {
             for (auto it = other.assigned[i].begin(); it != other.assigned[i].end(); ++it)
-                state.assigned[i].unionWith(it.bounds(), *it, assignedBitAllocator);
+                result.assigned[i].unionWith(it.bounds(), *it, assignedBitAllocator);
         }
     }
 
-    DataFlowState copyState(const DataFlowState& state) {
+    DataFlowState copyState(const DataFlowState& source) {
         DataFlowState result;
-        result.reachable = state.reachable;
-        result.assigned.reserve(state.assigned.size());
-        for (size_t i = 0; i < state.assigned.size(); i++)
-            result.assigned.emplace_back(state.assigned[i].clone(assignedBitAllocator));
+        result.reachable = source.reachable;
+        result.assigned.reserve(source.assigned.size());
+        for (size_t i = 0; i < source.assigned.size(); i++)
+            result.assigned.emplace_back(source.assigned[i].clone(assignedBitAllocator));
         return result;
     }
 

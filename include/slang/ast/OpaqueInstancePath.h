@@ -22,7 +22,7 @@ class Symbol;
 /// The path is stored only via opaque syntax nodes, to allow it to generalize
 /// across compilations (and so different sets of AST nodes) that share the
 /// same underlying syntax.
-class OpaqueInstancePath {
+class SLANG_EXPORT OpaqueInstancePath {
 public:
     /// Constructs an empty instance path.
     OpaqueInstancePath() = default;

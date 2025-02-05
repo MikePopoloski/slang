@@ -9,6 +9,9 @@
 
 #ifdef DEBUG
 #    include <typeindex>
+#    include <typeinfo>
+
+#    include "slang/util/TypeTraits.h"
 #endif
 
 #include "slang/util/PointerIntPair.h"
@@ -138,7 +141,7 @@ enum {
 // able to express 1-64 children).
 struct NodeRef {
 #ifdef DEBUG
-    NodeRef() : type(typeid(void)) {}
+    NodeRef() : type(SLANG_TYPEOF(void)) {}
 #else
     NodeRef() = default;
 #endif
@@ -148,7 +151,7 @@ struct NodeRef {
         pip(node, s - 1)
 #ifdef DEBUG
         ,
-        type(typeid(T)), isLeaf(T::IsLeaf)
+        type(SLANG_TYPEOF(T)), isLeaf(T::IsLeaf)
 #endif
     {
         SLANG_ASSERT(s);
@@ -165,7 +168,7 @@ struct NodeRef {
     T& get() const {
         SLANG_ASSERT(pip.getPointer() != nullptr);
 #ifdef DEBUG
-        SLANG_ASSERT(type == std::type_index(typeid(T)));
+        SLANG_ASSERT(type == SLANG_TYPEOF(T));
 #endif
         return *reinterpret_cast<T*>(pip.getPointer());
     }
@@ -189,7 +192,7 @@ private:
     PointerIntPair<void*, Log2CacheLine, Log2CacheLine> pip;
 #ifdef DEBUG
 public:
-    std::type_index type;
+    SLANG_TYPEINDEX type;
     bool isLeaf = false;
 #endif
 };
@@ -503,11 +506,15 @@ class IntervalMap {
 
         // Typical size for 4-byte key types and 8-byte value types:
         // 64*3/(8+8) = 12 entries per leaf node
-        LeafSize = DesiredLeafSize > MinLeafSize ? DesiredLeafSize : MinLeafSize
+        LeafSize = DesiredLeafSize > MinLeafSize ? DesiredLeafSize : MinLeafSize,
+
+        RequestedRootLeafSize = N,
+        RootLeafSize = RequestedRootLeafSize == 0            ? LeafSize
+                       : RequestedRootLeafSize < MinLeafSize ? MinLeafSize
+                                                             : RequestedRootLeafSize
     };
     using Leaf = IntervalMapDetails::LeafNode<TKey, TValue, LeafSize, false>;
-    using RootLeaf = IntervalMapDetails::LeafNode < TKey, TValue,
-          N == 0 ? LeafSize : N<MinLeafSize ? MinLeafSize : N, true>;
+    using RootLeaf = IntervalMapDetails::LeafNode<TKey, TValue, RootLeafSize, true>;
 
     enum {
         // Round up allocation size to a full cache line.
