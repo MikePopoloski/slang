@@ -46,9 +46,7 @@ int main(int argc, char** argv) {
         return 0;
     }
     SLANG_CATCH(const std::exception& e) {
-#if __cpp_exceptions
-        printf("internal compiler error (exception): %s\n", e.what());
-#endif
+        SLANG_REPORT_EXCEPTION(e, "internal compiler error (exception): {}\n");
         return 2;
     }
 }

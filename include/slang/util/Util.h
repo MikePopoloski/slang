@@ -23,15 +23,22 @@
 #        define SLANG_TRY CPPTRACE_TRYZ
 #        define SLANG_CATCH(X) CPPTRACE_CATCHZ(X)
 #        define SLANG_THROW(e) throw(e)
+#        define SLANG_REPORT_EXCEPTION(e, msg)                 \
+            do {                                               \
+                slang::OS::printE(fmt::format(msg, e.what())); \
+                cpptrace::from_current_exception().print();    \
+            } while (0)
 #    else
 #        define SLANG_TRY try
 #        define SLANG_CATCH(X) catch (X)
 #        define SLANG_THROW(e) throw(e)
+#        define SLANG_REPORT_EXCEPTION(e, msg) slang::OS::printE(fmt::format(msg, e.what()))
 #    endif
 #else
 #    define SLANG_TRY if (true)
 #    define SLANG_CATCH(X) if (false)
 #    define SLANG_THROW(e) slang::assert::handleThrow((e).what(), std::source_location::current())
+#    define SLANG_REPORT_EXCEPTION(e, msg)
 #endif
 
 #if defined(__clang__)
