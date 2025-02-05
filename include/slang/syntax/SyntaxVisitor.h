@@ -11,7 +11,7 @@
 
 #include "slang/syntax/AllSyntax.h"
 #include "slang/syntax/SyntaxTree.h"
-#include "slang/util/Hash.h"
+#include "slang/util/FlatMap.h"
 #include "slang/util/TypeTraits.h"
 
 namespace slang::syntax {

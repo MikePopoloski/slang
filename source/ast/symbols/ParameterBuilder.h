@@ -8,6 +8,7 @@
 #pragma once
 
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
+#include "slang/util/SmallMap.h"
 
 namespace slang::ast {
 

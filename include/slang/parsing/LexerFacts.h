@@ -9,7 +9,7 @@
 
 #include <optional>
 
-#include "slang/util/Hash.h"
+#include "slang/util/FlatMap.h"
 #include "slang/util/LanguageVersion.h"
 
 namespace slang::syntax {

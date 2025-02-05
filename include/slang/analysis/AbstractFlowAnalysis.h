@@ -9,7 +9,7 @@
 
 #include "slang/ast/ASTVisitor.h"
 #include "slang/ast/EvalContext.h"
-#include "slang/util/Hash.h"
+#include "slang/util/SmallMap.h"
 
 namespace slang::analysis {
 

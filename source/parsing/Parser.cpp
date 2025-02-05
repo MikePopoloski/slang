@@ -8,6 +8,7 @@
 #include "slang/parsing/Parser.h"
 
 #include "slang/diagnostics/ParserDiags.h"
+#include "slang/util/SmallMap.h"
 
 namespace slang::parsing {
 
