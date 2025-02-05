@@ -9,6 +9,7 @@
 
 #include "slang/util/Hash.h"
 
+#define BOOST_UNORDERED_DISABLE_PARALLEL_ALGORITHMS
 #ifdef SLANG_BOOST_SINGLE_HEADER
 #    include <boost_concurrent.hpp>
 #else

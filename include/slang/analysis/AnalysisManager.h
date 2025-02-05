@@ -14,7 +14,7 @@
 #include "slang/analysis/AnalyzedProcedure.h"
 #include "slang/diagnostics/Diagnostics.h"
 #include "slang/util/BumpAllocator.h"
-#include "slang/util/FlatMap.h"
+#include "slang/util/ConcurrentMap.h"
 
 namespace slang::ast {
 
@@ -120,10 +120,12 @@ private:
     WorkerState& state();
 
     BS::thread_pool<> threadPool;
-    std::mutex mutex;
     std::vector<WorkerState> workerStates;
+    concurrent_map<const ast::Scope*, std::optional<const AnalyzedScope*>> analyzedScopes;
+
+    // A mutex for shared state; anything protected by it is declared below.
+    std::mutex mutex;
     std::exception_ptr pendingException;
-    flat_hash_map<const ast::Scope*, std::optional<const AnalyzedScope*>> analyzedScopes;
 };
 
 } // namespace slang::analysis
