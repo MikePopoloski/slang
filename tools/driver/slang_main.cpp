@@ -75,12 +75,16 @@ int driverMain(int argc, TArgs argv) {
         std::optional<bool> onlyPreprocess;
         std::optional<bool> onlyParse;
         std::optional<bool> onlyMacros;
+        std::optional<bool> disableAnalysis;
         driver.cmdLine.add("-E,--preprocess", onlyPreprocess,
                            "Only run the preprocessor (and print preprocessed files to stdout)");
         driver.cmdLine.add("--macros-only", onlyMacros, "Print a list of found macros and exit");
         driver.cmdLine.add(
             "--parse-only", onlyParse,
             "Stop after parsing input files, don't perform elaboration or type checking");
+        driver.cmdLine.add("--disable-analysis", disableAnalysis,
+                           "Disables post-elaboration analysis"
+                           "passes, which prevents some diagnostics from being issued");
 
         std::optional<bool> includeComments;
         std::optional<bool> includeDirectives;
@@ -168,17 +172,24 @@ int driverMain(int argc, TArgs argv) {
                     ok = driver.parseAllSources();
                 }
 
+                std::unique_ptr<Compilation> compilation;
                 {
                     TimeTraceScope timeScope("elaboration"sv, ""sv);
-                    auto compilation = driver.createCompilation();
+                    compilation = driver.createCompilation();
                     driver.reportCompilation(*compilation, quiet == true);
+                }
 
-                    ok &= driver.reportDiagnostics(quiet == true);
+                if (!disableAnalysis.value_or(true)) {
+                    TimeTraceScope timeScope("semanticAnalysis"sv, ""sv);
+                    driver.runAnalysis(*compilation);
+                }
 
-                    if (astJsonFile) {
-                        printJson(*compilation, *astJsonFile, astJsonScopes,
-                                  includeSourceInfo == true, serializeDetailedTypes == true);
-                    }
+                ok &= driver.reportDiagnostics(quiet == true);
+
+                if (astJsonFile) {
+                    TimeTraceScope timeScope("serialization"sv, ""sv);
+                    printJson(*compilation, *astJsonFile, astJsonScopes, includeSourceInfo == true,
+                              serializeDetailedTypes == true);
                 }
             }
         }
