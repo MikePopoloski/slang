@@ -48,6 +48,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * The pyslang packaging build is now done in this repo instead of a separate downstream repo (thanks to @parker-research)
 * pyslang wheels now include support for arm64 (thanks to @gadfort)
 * Documentation now includes the READMEs for the various ancillary slang tools
+* Added stub generation to the Python distribution
 
 ### Fixes
 * Fixed a bug with constant evaluation of left-hand side assignment patterns that require implicit conversions to be applied
@@ -80,6 +81,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Fixed a case where nested attributes were not properly diagnosed (thanks to @likeamahoney)
 * Fixed type resolution for expressions involving static casts; previously the operand of the cast was considered self determined, but now the type of the cast is correctly propagated to the operand
 * Fixed a bug in SyntaxNode::isEquivalentTo which would cause it to sometimes return the wrong result
+* Fixed the direction of argument binding for n-output gate terminals
 
 
 ## [v7.0] - 2024-09-26
