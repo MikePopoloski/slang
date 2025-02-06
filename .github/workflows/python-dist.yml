@@ -19,20 +19,14 @@ jobs:
       uses: actions/setup-python@v5
       with:
         python-version: "3.x"
-    - name: Install dependencies
+    - name: Generate Stubs
       run: |
         python -m venv venv/
         ./venv/bin/python -m pip install --upgrade pip
         ./venv/bin/python -m pip install build twine pybind11-stubgen
-    - name: Build and install pyslang (for stub generation)
-      run: |
         ./venv/bin/python -m pip install .
-    - name: Generate Python stubs
-      run: |
         mkdir pyslang/pyslang/
         ./venv/bin/python -m pybind11_stubgen pyslang -o pyslang/ --root-suffix ''
-    - name: Verify that stub file was generated
-      run: |
         test -f pyslang/pyslang/__init__.pyi
     - name: Build SDist
       run: pipx run build --sdist
@@ -58,25 +52,29 @@ jobs:
       uses: actions/setup-python@v5
       with:
         python-version: "3.x"
-    - name: Install dependencies
-      run: |
-        python -m venv venv/
-        ./venv/bin/python -m pip install --upgrade pip
-        ./venv/bin/python -m pip install build twine pybind11-stubgen
-    - name: Build and install pyslang (for stub generation)
-      run: |
-        ./venv/bin/python -m pip install .
-    - name: Generate Python stubs
-      run: |
-        mkdir pyslang/pyslang/
-        ./venv/bin/python -m pybind11_stubgen pyslang -o pyslang/ --root-suffix ''
-    - name: Verify that stub file was generated
-      run: |
-        test -f pyslang/pyslang/__init__.pyi
     - uses: maxim-lobanov/setup-xcode@v1
       if: matrix.os == 'macos-latest'
       with:
         xcode-version: 'latest'
+    - name: Generate Stubs
+      run: |
+        python -m venv venv/
+        ./venv/bin/python -m pip install --upgrade pip
+        ./venv/bin/python -m pip install build twine pybind11-stubgen
+        ./venv/bin/python -m pip install .
+        mkdir pyslang/pyslang/
+        ./venv/bin/python -m pybind11_stubgen pyslang -o pyslang/ --root-suffix ''
+        test -f pyslang/pyslang/__init__.pyi
+    - name: Generate Stubs (Windows)
+      if: matrix.os == 'windows-latest'
+      run: |
+        python -m venv venv/
+        ./venv/Scripts/python -m pip install --upgrade pip
+        ./venv/Scripts/python -m pip install build twine pybind11-stubgen
+        ./venv/Scripts/python -m pip install .
+        mkdir pyslang/pyslang/
+        ./venv/Scripts/python -m pybind11_stubgen pyslang -o pyslang/ --root-suffix ''
+        test -f pyslang/pyslang/__init__.pyi
     - uses: pypa/cibuildwheel@v2.22.0
       env:
         CIBW_ARCHS_MACOS: auto universal2
