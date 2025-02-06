@@ -48,7 +48,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * The pyslang packaging build is now done in this repo instead of a separate downstream repo (thanks to @parker-research)
 * pyslang wheels now include support for arm64 (thanks to @gadfort)
 * Documentation now includes the READMEs for the various ancillary slang tools
-* Added stub generation to the Python distribution
+* Added stub generation to the Python distribution (thanks to @parker-research)
 
 ### Fixes
 * Fixed a bug with constant evaluation of left-hand side assignment patterns that require implicit conversions to be applied
