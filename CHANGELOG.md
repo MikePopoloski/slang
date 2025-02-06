@@ -6,6 +6,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 ### Language Support
+### Potentially Breaking Changes
+### New Features
+### Improvements
+### Fixes
+
+
+## [v8.0] - 2025-02-05
+### Language Support
 * Disallow access to protected members from class scoped randomize constraint blocks -- the LRM is unclear about this but other tools seem to have decided this way made the most sense
 * Added a check that net aliases aren't duplicated, and that nets don't alias to themselves, as mandated by the LRM (thanks to @likeamahoney)
 * Implemented remaining rules for virtual interfaces:
