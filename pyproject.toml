@@ -36,7 +36,6 @@ requires = ["pybind11", "scikit-build-core"]
 build-backend = "scikit_build_core.build"
 
 [tool.scikit-build]
-build-dir = "build/{wheel_tag}"
 cmake.source-dir = "."
 install.components = ["pylib"]
 sdist.exclude = [".github", "./build", "./install", "./tests", "./tools"]
