@@ -5,9 +5,8 @@
 
 FetchContent_Declare(
   mcss
-  URL https://github.com/parker-research/m.css/archive/refs/heads/mike-re-add-python.zip # FIXME:
-                                                                                         # Update.
-  URL_HASH MD5=2380ae79a15bf624d8667b50ef6c936b
+  URL https://github.com/MikePopoloski/m.css/releases/download/release-7/mcss.zip
+  URL_HASH MD5=57cfeaf570374ebf673f0fe156a349b1
   SOURCE_DIR "${PROJECT_BINARY_DIR}/mcss"
   UPDATE_DISCONNECTED YES)
 FetchContent_MakeAvailable(mcss)
