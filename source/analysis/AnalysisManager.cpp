@@ -121,6 +121,9 @@ struct ScopeVisitor {
         analysisManager(analysisManager), context(context), scope(scope) {}
 
     void visit(const InstanceSymbol& symbol) {
+        if (symbol.body.flags.has(InstanceFlags::Uninstantiated))
+            return;
+
         scope.instances.emplace_back(analysisManager.analyzeInst(symbol));
     }
 
@@ -133,6 +136,9 @@ struct ScopeVisitor {
     }
 
     void visit(const GenerateBlockSymbol& symbol) {
+        if (symbol.isUninstantiated)
+            return;
+
         // For our purposes we can just flatten the content of generate
         // blocks into their parents.
         for (auto& member : symbol.members())
@@ -140,6 +146,9 @@ struct ScopeVisitor {
     }
 
     void visit(const GenerateBlockArraySymbol& symbol) {
+        if (!symbol.valid)
+            return;
+
         for (auto& member : symbol.members())
             member.visit(*this);
     }
