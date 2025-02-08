@@ -313,11 +313,22 @@ protected:
                 visit(*init);
         }
 
+        bool bodyWillExecute = false;
         TState bodyState, exitState;
         if (stmt.stopExpr) {
-            visitCondition(*stmt.stopExpr);
+            auto cv = visitCondition(*stmt.stopExpr);
             bodyState = std::move(stateWhenTrue);
             exitState = std::move(stateWhenFalse);
+
+            // If we had a non-constant stop expression we want
+            // to check whether there's at least a guarantee that
+            // we will visit the loop body at least once, because then
+            // we can allow the body state to definitely affect the
+            // post-loop exit state.
+            if (!cv && !stmt.loopVars.empty() &&
+                willIterateAtLeastOnce(stmt.loopVars, *stmt.stopExpr)) {
+                bodyWillExecute = true;
+            }
         }
         else {
             // If there's no stop expression, the loop is infinite.
@@ -332,6 +343,9 @@ protected:
 
         for (auto step : stmt.steps)
             visit(*step);
+
+        if (bodyWillExecute)
+            (DERIVED).meetState(exitState, state);
 
         loopTail(std::move(exitState), std::move(oldBreakStates));
     }
@@ -842,6 +856,28 @@ private:
     }
 
     ConstantValue tryEvalBool(const Expression& expr) { return expr.eval(evalContext); }
+
+    bool willIterateAtLeastOnce(std::span<const VariableSymbol* const> loopVars,
+                                const Expression& stopExpr) {
+        // We can't know for sure whether the loop will actually execute in all
+        // cases, but we can check for a simple case where we have an in-line
+        // loop variable(s) that pass the stop condition on the first iteration.
+        EvalContext speculativeCtx(evalContext);
+        speculativeCtx.pushEmptyFrame();
+
+        for (auto var : loopVars) {
+            ConstantValue cv;
+            if (auto init = var->getInitializer()) {
+                cv = init->eval(speculativeCtx);
+                if (!cv)
+                    return false;
+            }
+
+            speculativeCtx.createLocal(var, std::move(cv));
+        }
+
+        return stopExpr.eval(speculativeCtx).isTrue();
+    }
 
 #undef DERIVED
 };

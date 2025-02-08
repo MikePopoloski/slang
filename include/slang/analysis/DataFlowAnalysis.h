@@ -39,14 +39,13 @@ public:
         AbstractFlowAnalysis(symbol), context(context), assignedBitAllocator(context.alloc) {}
 
     /// Gets all of the symbols that are assigned anywhere in the procedure
-    /// and aren't fully assigned by the end of the procedure across all
-    /// control flow paths.
+    /// and aren't definitely assigned by the end of the procedure.
     void getPartiallyAssignedSymbols(
         SmallVector<std::pair<const Symbol*, const Expression*>>& results) const {
 
         auto& currState = getState();
-        for (size_t index = 0; index < seenSymbols.size(); index++) {
-            auto& symbolState = seenSymbols[index];
+        for (size_t index = 0; index < lvalueSymbols.size(); index++) {
+            auto& symbolState = lvalueSymbols[index];
             if (currState.assigned.size() <= index ||
                 !isFullyAssigned(symbolState.assigned, currState.assigned[index])) {
                 results.push_back({symbolState.symbol, symbolState.firstLSP});
@@ -65,30 +64,32 @@ private:
 
     // Tracks the assigned ranges of each variable across the entire procedure,
     // even if not all branches assign to it.
-    struct SymbolState {
+    struct LValueSymbol {
         const Symbol* symbol;
         const Expression* firstLSP;
         AssignedBitMap assigned;
 
-        SymbolState(const Symbol* symbol, const Expression* firstLSP) :
+        LValueSymbol(const Symbol* symbol, const Expression* firstLSP) :
             symbol(symbol), firstLSP(firstLSP) {}
     };
-    SmallVector<SymbolState> seenSymbols;
+    SmallVector<LValueSymbol> lvalueSymbols;
 
     void handle(const AssignmentExpression& expr) {
         visitExpr(expr);
 
         auto& evalCtx = getEvalContext();
         auto& currState = getState();
+        if (!currState.reachable)
+            return;
 
         SmallVector<std::pair<const ValueSymbol*, const Expression*>> prefixes;
         expr.left().getLongestStaticPrefixes(prefixes, evalCtx);
 
         for (auto [symbol, prefix] : prefixes) {
-            auto [it, inserted] = symbolToSlot.try_emplace(symbol, (uint32_t)seenSymbols.size());
+            auto [it, inserted] = symbolToSlot.try_emplace(symbol, (uint32_t)lvalueSymbols.size());
             if (inserted) {
-                seenSymbols.emplace_back(symbol, prefix);
-                SLANG_ASSERT(seenSymbols.size() == symbolToSlot.size());
+                lvalueSymbols.emplace_back(symbol, prefix);
+                SLANG_ASSERT(lvalueSymbols.size() == symbolToSlot.size());
             }
 
             auto index = it->second;
@@ -98,7 +99,7 @@ private:
             auto bounds = ValueDriver::getBounds(*prefix, evalCtx, symbol->getType());
             if (bounds) {
                 currState.assigned[index].unionWith(*bounds, {}, assignedBitAllocator);
-                seenSymbols[index].assigned.unionWith(*bounds, {}, assignedBitAllocator);
+                lvalueSymbols[index].assigned.unionWith(*bounds, {}, assignedBitAllocator);
             }
         }
     }

@@ -8,6 +8,23 @@
 
 using namespace slang::analysis;
 
+Diagnostics analyze(const char* text) {
+    auto tree = SyntaxTree::fromText(text);
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    auto diags = compilation.getAllDiagnostics();
+    if (!std::ranges::all_of(diags, [](auto& diag) { return !diag.isError(); })) {
+        FAIL_CHECK(report(diags));
+        return {};
+    }
+
+    compilation.freeze();
+
+    AnalysisManager analysisManager;
+    analysisManager.analyze(compilation);
+    return analysisManager.getDiagnostics();
+}
+
 class TestAnalysis : public AbstractFlowAnalysis<TestAnalysis, int> {
 public:
     TestAnalysis(const Symbol& symbol) : AbstractFlowAnalysis(symbol) {}
@@ -52,7 +69,7 @@ endmodule
 }
 
 TEST_CASE("Inferred latch test") {
-    auto tree = SyntaxTree::fromText(R"(
+    auto& code = R"(
 module m(input clk, input rst, input [2:0] in, output logic out);
     struct { logic a; logic b; } s;
     always_comb begin
@@ -90,24 +107,58 @@ module m(input clk, input rst, input [2:0] in, output logic out);
             default: if(!b&&!c) next3 = in[0];
         endcase
     end
+
+    parameter p = 4;
+    logic [p-1:0] slots;
+    logic q,r,t;
+    always_comb begin
+        for (int i = 0; i < p; i++) begin
+            if (b) slots[i] = 1;
+            else   slots[i] = 0;
+        end
+
+        for (;;) begin
+            q = 1;
+            break;
+        end
+
+        forever begin
+            r = 1;
+            break;
+            t = 1;
+        end
+    end
+
+    logic u, v;
+    always_comb begin
+        while (0) begin
+            u = 1;
+        end
+        while (1) begin
+            v = 1;
+            break;
+        end
+    end
+
+    I iface();
+    n n1(iface);
 endmodule
-)");
 
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
+interface I;
+    logic a;
+    modport m(output a);
+endinterface
 
-    auto compDiags = compilation.getAllDiagnostics();
-    REQUIRE(compDiags.size() == 1);
-    CHECK(compDiags[0].code == diag::CaseDefault);
+module n(I.m i);
+    always_comb begin
+        i.a = 1;
+    end
+endmodule
+)";
 
-    compilation.freeze();
-
-    AnalysisManager analysisManager;
-    analysisManager.analyze(compilation);
-
-    auto analysisDiags = analysisManager.getDiagnostics();
-    REQUIRE(analysisDiags.size() == 3);
-    CHECK(analysisDiags[0].code == diag::InferredLatch);
-    CHECK(analysisDiags[1].code == diag::InferredLatch);
-    CHECK(analysisDiags[2].code == diag::InferredLatch);
+    auto diags = analyze(code);
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::InferredLatch);
+    CHECK(diags[1].code == diag::InferredLatch);
+    CHECK(diags[2].code == diag::InferredLatch);
 }
