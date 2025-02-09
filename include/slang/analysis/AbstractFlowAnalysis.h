@@ -48,7 +48,7 @@ protected:
     TState& getState() { return state; }
     const TState& getState() const { return state; }
 
-    EvalContext& getEvalContext() { return evalContext; }
+    EvalContext& getEvalContext() const { return evalContext; }
 
     /// Sets the current flow state to the given value.
     void setState(TState newState) {
@@ -812,7 +812,7 @@ private:
     TState stateWhenTrue;
     TState stateWhenFalse;
     bool isStateSplit = false;
-    EvalContext evalContext;
+    mutable EvalContext evalContext;
 
     SmallVector<TState> breakStates;
     flat_hash_map<const Symbol*, SmallVector<TState>> disableBranches;
