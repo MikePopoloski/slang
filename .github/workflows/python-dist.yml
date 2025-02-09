@@ -79,7 +79,7 @@ jobs:
     - uses: pypa/cibuildwheel@v2.22.0
       env:
         CIBW_ARCHS_MACOS: auto universal2
-        MACOSX_DEPLOYMENT_TARGET: "10.15"
+        MACOSX_DEPLOYMENT_TARGET: "11.0"
     - name: Verify clean directory
       run: git diff --exit-code
       shell: bash
@@ -108,7 +108,7 @@ jobs:
       with:
         repository-url: https://test.pypi.org/legacy/
         verbose: true
-        skip_existing: true
+        skip-existing: true
 
   upload_official:
     name: Upload official
