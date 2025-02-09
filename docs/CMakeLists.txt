@@ -5,8 +5,8 @@
 
 FetchContent_Declare(
   mcss
-  URL https://github.com/MikePopoloski/m.css/releases/download/release-6/mcss.zip
-  URL_HASH MD5=df18825299064642a6f1b5df44faf80c
+  URL https://github.com/MikePopoloski/m.css/releases/download/release-7/mcss.zip
+  URL_HASH MD5=57cfeaf570374ebf673f0fe156a349b1
   SOURCE_DIR "${PROJECT_BINARY_DIR}/mcss"
   UPDATE_DISCONNECTED YES)
 FetchContent_MakeAvailable(mcss)
@@ -37,7 +37,8 @@ set(DOXYGEN_TAGFILES
 set(DOXYFILE_IN ${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.in)
 set(DOXYFILE_OUT ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile)
 set(SCRIPTS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../scripts)
-set(DOXYGENPY_PATH "${mcss_SOURCE_DIR}/documentation/doxygen.py")
+set(MCSS_DOXYGENPY_PATH "${mcss_SOURCE_DIR}/documentation/doxygen.py")
+set(MCSS_PYTHONPY_PATH "${mcss_SOURCE_DIR}/documentation/python.py")
 
 string(REPLACE ";" " " DOXYGEN_INPUT_DIR "${DOXYGEN_INPUT_DIR_LIST}")
 string(REPLACE ";" " " DOXYGEN_EXAMPLE_DIRS "${DOXYGEN_EXAMPLE_DIR_LIST}")
@@ -60,10 +61,33 @@ add_custom_command(
           ${CMAKE_CURRENT_BINARY_DIR}/warnings.dox
   COMMAND "${CMAKE_COMMAND}" -E rm -rf ${CMAKE_CURRENT_BINARY_DIR}/html
           ${CMAKE_CURRENT_BINARY_DIR}/xml
-  COMMAND ${Python_EXECUTABLE} ${DOXYGENPY_PATH} ${DOXYFILE_OUT}
+  COMMAND ${Python_EXECUTABLE} ${MCSS_DOXYGENPY_PATH} ${DOXYFILE_OUT}
   MAIN_DEPENDENCY ${DOXYFILE_OUT}
   ${DOXYFILE_IN}
   COMMENT "Generating docs"
   VERBATIM)
 
 add_custom_target(docs ALL DEPENDS ${DOXYGEN_INDEX_FILE})
+
+# --- Python documentation with virtual environment ---
+set(PYTHON_DOCS_DIR ${CMAKE_CURRENT_BINARY_DIR}/pyslang)
+set(PYTHON_VENV_DIR ${PROJECT_BINARY_DIR}/venv)
+file(MAKE_DIRECTORY ${PYTHON_DOCS_DIR})
+
+add_custom_command(
+  OUTPUT ${PYTHON_DOCS_DIR}/index.html
+  COMMAND ${Python_EXECUTABLE} -m venv ${PYTHON_VENV_DIR}
+  COMMAND ${PYTHON_VENV_DIR}/bin/python -m pip install --upgrade pip
+  COMMAND ${PYTHON_VENV_DIR}/bin/python -m pip install jinja2 pygments docutils
+  COMMAND ${PYTHON_VENV_DIR}/bin/python -m pip install .
+  COMMAND ${PYTHON_VENV_DIR}/bin/python ${MCSS_PYTHONPY_PATH}
+          ${PROJECT_SOURCE_DIR}/pyslang/docs/conf.py
+  WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+  DEPENDS ${PROJECT_SOURCE_DIR}/pyslang/docs/conf.py
+  COMMENT "Generating Python docs in virtual environment"
+  VERBATIM)
+
+add_custom_target(python_docs DEPENDS ${PYTHON_DOCS_DIR}/index.html)
+
+# Make sure both docs and python_docs are built with `make docs`
+add_dependencies(docs python_docs)

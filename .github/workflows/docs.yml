@@ -1,4 +1,5 @@
 name: docs
+description: Build and deploy documentation (both C++/slang and Python/pyslang)
 
 on:
   push:
@@ -14,16 +15,22 @@ jobs:
     - uses: actions/checkout@v4
       with:
         fetch-depth: 0
+    - name: Install Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
     - name: Install dependencies
       run: |
-        pip install jinja2 pygments
+        pip install jinja2 pygments docutils
         wget https://sourceforge.net/projects/doxygen/files/rel-1.13.2/doxygen-1.13.2.linux.bin.tar.gz
         tar -xvf doxygen-1.13.2.linux.bin.tar.gz
         cp doxygen-1.13.2/bin/doxygen /usr/local/bin
-    - name: Build
+    - name: Build slang and pyslang docs via CMake
       run: |
         cmake -B build -DSLANG_INCLUDE_DOCS=ON -DSLANG_INCLUDE_TESTS=OFF
         cmake --build build --target docs -j8
+    - name: Compress docs artifacts
+      run: |
         tar -czvf slang.tar.gz build/docs build/bin/slang
     - name: Upload
       if: github.event_name != 'pull_request'
