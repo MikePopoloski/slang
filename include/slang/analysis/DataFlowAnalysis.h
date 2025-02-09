@@ -15,6 +15,11 @@
 
 namespace slang::analysis {
 
+template<typename T>
+concept IsSelectExpr =
+    IsAnyOf<T, ElementSelectExpression, RangeSelectExpression, MemberAccessExpression,
+            HierarchicalValueExpression, NamedValueExpression>;
+
 using SymbolBitMap = IntervalMap<uint64_t, std::monostate, 3>;
 
 struct SLANG_EXPORT DataFlowState {
@@ -36,7 +41,8 @@ class SLANG_EXPORT DataFlowAnalysis : public AbstractFlowAnalysis<DataFlowAnalys
 public:
     /// Constructs a new DataFlowAnalysis object.
     DataFlowAnalysis(AnalysisContext& context, const Symbol& symbol) :
-        AbstractFlowAnalysis(symbol), context(context), bitMapAllocator(context.alloc) {}
+        AbstractFlowAnalysis(symbol), context(context), bitMapAllocator(context.alloc),
+        lspVisitor(*this) {}
 
     /// Gets all of the symbols that are assigned anywhere in the procedure
     /// and aren't definitely assigned by the end of the procedure.
@@ -53,14 +59,107 @@ public:
         }
     }
 
+    /// Gets all of the statements in the procedure that have timing controls
+    /// associated with them.
+    std::span<const Statement* const> getTimedStatements() const { return timedStatements; }
+
+    /// Gets all of the concurrent assertions in the procedure.
+    std::span<const ConcurrentAssertionStatement* const> getConcurrentAssertions() const {
+        return concurrentAssertions;
+    }
+
+    /// Determines whether the given symbol is referenced anywhere in
+    /// the procedure, either as an lvalue or an rvalue.
+    bool isReferenced(const ValueSymbol& symbol) const {
+        return symbolToSlot.contains(&symbol) || rvalues.contains(&symbol);
+    }
+
+    /// Determines whether the given subset of the symbol (via the provided
+    /// longest static prefix expression) is referenced anywhere in
+    /// the procedure, either as an lvalue or an rvalue.
+    bool isReferenced(const ValueSymbol& symbol, const Expression& lsp) const;
+
+    /// Visits the longest static prefix expressions for all of the operands
+    /// in the given expression using the provided callback function.
+    template<typename F>
+    void visitLongestStaticPrefixes(const Expression& expr, F&& func) const;
+
 private:
+    // A helper class that finds the longest static prefix of select expressions.
+    template<typename TOwner>
+    struct LSPVisitor {
+        TOwner& owner;
+        const Expression* currentLSP = nullptr;
+
+        explicit LSPVisitor(TOwner& owner) : owner(owner) {}
+
+        void clear() { currentLSP = nullptr; }
+
+        void handle(const ElementSelectExpression& expr) {
+            if (expr.isConstantSelect(owner.getEvalContext())) {
+                if (!currentLSP)
+                    currentLSP = &expr;
+            }
+            else {
+                currentLSP = nullptr;
+            }
+
+            owner.visit(expr.value());
+
+            auto guard = owner.saveLValueFlag();
+            owner.visit(expr.selector());
+        }
+
+        void handle(const RangeSelectExpression& expr) {
+            if (expr.isConstantSelect(owner.getEvalContext())) {
+                if (!currentLSP)
+                    currentLSP = &expr;
+            }
+            else {
+                currentLSP = nullptr;
+            }
+
+            owner.visit(expr.value());
+
+            auto guard = owner.saveLValueFlag();
+            owner.visit(expr.left());
+            owner.visit(expr.right());
+        }
+
+        void handle(const MemberAccessExpression& expr) {
+            if (!currentLSP)
+                currentLSP = &expr;
+
+            owner.visit(expr.value());
+        }
+
+        void handle(const HierarchicalValueExpression& expr) {
+            auto lsp = std::exchange(currentLSP, nullptr);
+            if (!lsp)
+                lsp = &expr;
+
+            owner.noteReference(expr, *lsp);
+        }
+
+        void handle(const NamedValueExpression& expr) {
+            auto lsp = std::exchange(currentLSP, nullptr);
+            if (!lsp)
+                lsp = &expr;
+
+            owner.noteReference(expr, *lsp);
+        }
+    };
+
     friend class AbstractFlowAnalysis;
+
+    template<typename TOwner>
+    friend struct LSPVisitor;
 
     AnalysisContext& context;
     SymbolBitMap::allocator_type bitMapAllocator;
 
     // Maps visited symbols to slots in assigned vectors.
-    SmallMap<const Symbol*, uint32_t, 4> symbolToSlot;
+    SmallMap<const ValueSymbol*, uint32_t, 4> symbolToSlot;
 
     // Tracks the assigned ranges of each variable across the entire procedure,
     // even if not all branches assign to it.
@@ -80,8 +179,14 @@ private:
     SmallMap<const ValueSymbol*, SymbolBitMap, 4> rvalues;
 
     // The currently active longest static prefix expression, if there is one.
-    const Expression* currentLSP = nullptr;
+    LSPVisitor<DataFlowAnalysis> lspVisitor;
     bool isLValue = false;
+
+    // All statements that have timing controls associated with them.
+    SmallVector<const Statement*> timedStatements;
+
+    // All concurrent assertions in the procedure.
+    SmallVector<const ConcurrentAssertionStatement*> concurrentAssertions;
 
     [[nodiscard]] auto saveLValueFlag() {
         auto guard = ScopeGuard([this, savedLVal = isLValue] { isLValue = savedLVal; });
@@ -111,17 +216,22 @@ private:
     // **** AST Handlers ****
 
     template<typename T>
-        requires(std::is_base_of_v<Expression, T>)
+        requires(std::is_base_of_v<Expression, T> && !IsSelectExpr<T>)
     void handle(const T& expr) {
-        currentLSP = nullptr;
+        lspVisitor.clear();
         visitExpr(expr);
+    }
+
+    template<typename T>
+        requires(IsSelectExpr<T>)
+    void handle(const T& expr) {
+        lspVisitor.handle(expr);
     }
 
     void handle(const AssignmentExpression& expr) {
         // Note that this method mirrors the logic in the base class
         // handler but we need to track the LValue status of the lhs.
         SLANG_ASSERT(!isLValue);
-        SLANG_ASSERT(!currentLSP);
         isLValue = true;
         visit(expr.left());
         isLValue = false;
@@ -138,52 +248,7 @@ private:
         }
     }
 
-    void handle(const ElementSelectExpression& expr) {
-        if (expr.isConstantSelect(getEvalContext())) {
-            if (!currentLSP)
-                currentLSP = &expr;
-        }
-        else {
-            currentLSP = nullptr;
-        }
-
-        visit(expr.value());
-
-        auto guard = saveLValueFlag();
-        visit(expr.selector());
-    }
-
-    void handle(const RangeSelectExpression& expr) {
-        if (expr.isConstantSelect(getEvalContext())) {
-            if (!currentLSP)
-                currentLSP = &expr;
-        }
-        else {
-            currentLSP = nullptr;
-        }
-
-        visit(expr.value());
-
-        auto guard = saveLValueFlag();
-        visit(expr.left());
-        visit(expr.right());
-    }
-
-    void handle(const MemberAccessExpression& expr) {
-        if (!currentLSP)
-            currentLSP = &expr;
-
-        visit(expr.value());
-    }
-
-    void handle(const HierarchicalValueExpression& expr) { recordSymbol(expr); }
-    void handle(const NamedValueExpression& expr) { recordSymbol(expr); }
-
-    void recordSymbol(const ValueExpressionBase& expr) {
-        auto lsp = std::exchange(currentLSP, nullptr);
-        if (!lsp)
-            lsp = &expr;
-
+    void noteReference(const ValueExpressionBase& expr, const Expression& lsp) {
         // TODO: think harder about whether unreachable symbol references
         // still count as usages for the procedure.
         auto& currState = getState();
@@ -191,14 +256,14 @@ private:
             return;
 
         auto& symbol = expr.symbol;
-        auto bounds = ValueDriver::getBounds(*lsp, getEvalContext(), symbol.getType());
+        auto bounds = ValueDriver::getBounds(lsp, getEvalContext(), symbol.getType());
         if (!bounds)
             return; // TODO: what cases can get us here?
 
         if (isLValue) {
             auto [it, inserted] = symbolToSlot.try_emplace(&symbol, (uint32_t)lvalues.size());
             if (inserted) {
-                lvalues.emplace_back(&symbol, &expr);
+                lvalues.emplace_back(&symbol, &lsp);
                 SLANG_ASSERT(lvalues.size() == symbolToSlot.size());
             }
 
@@ -212,6 +277,34 @@ private:
         else {
             rvalues[&expr.symbol].unionWith(*bounds, {}, bitMapAllocator);
         }
+    }
+
+    template<typename T>
+        requires(IsAnyOf<T, TimedStatement, WaitStatement, WaitOrderStatement, WaitForkStatement>)
+    void handle(const T& stmt) {
+        if constexpr (std::is_same_v<T, TimedStatement>) {
+            bad |= stmt.timing.bad();
+        }
+
+        timedStatements.push_back(&stmt);
+        visitStmt(stmt);
+    }
+
+    void handle(const ExpressionStatement& stmt) {
+        visitStmt(stmt);
+
+        if (stmt.expr.kind == ExpressionKind::Assignment) {
+            auto& assignment = stmt.expr.as<AssignmentExpression>();
+            if (assignment.timingControl) {
+                bad |= assignment.timingControl->bad();
+                timedStatements.push_back(&stmt);
+            }
+        }
+    }
+
+    void handle(const ConcurrentAssertionStatement& stmt) {
+        concurrentAssertions.push_back(&stmt);
+        visitStmt(stmt);
     }
 
     // **** State Management ****
@@ -263,6 +356,75 @@ private:
     }
 
     DataFlowState topState() const { return {}; }
+
+    // **** LSPHelper class ****
+
+    // A helper for implementing the visitLongestStaticPrefixes method.
+    template<typename F>
+    struct LSPHelper {
+        LSPVisitor<LSPHelper> visitor;
+        EvalContext& evalCtx;
+        F&& func;
+
+        LSPHelper(EvalContext& evalCtx, F&& func) :
+            visitor(*this), evalCtx(evalCtx), func(std::forward<F>(func)) {}
+
+        EvalContext& getEvalContext() const { return evalCtx; }
+        bool saveLValueFlag() { return false; }
+
+        void noteReference(const ValueExpressionBase& expr, const Expression& lsp) {
+            func(expr.symbol, lsp);
+        }
+
+        template<typename T>
+            requires(std::is_base_of_v<Expression, T> && !IsSelectExpr<T>)
+        void visit(const T& expr) {
+            visitor.clear();
+
+            if constexpr (requires { expr.visitExprs(*this); }) {
+                expr.visitExprs(*this);
+            }
+        }
+
+        template<typename T>
+            requires(IsSelectExpr<T>)
+        void visit(const T& expr) {
+            visitor.handle(expr);
+        }
+
+        void visit(const Pattern&) {}
+        void visit(const TimingControl&) {}
+        void visit(const Constraint&) {}
+        void visit(const AssertionExpr&) {}
+    };
 };
+
+bool DataFlowAnalysis::isReferenced(const ValueSymbol& symbol, const Expression& lsp) const {
+    auto bounds = ValueDriver::getBounds(lsp, getEvalContext(), symbol.getType());
+    if (!bounds)
+        return isReferenced(symbol);
+
+    {
+        auto it = symbolToSlot.find(&symbol);
+        if (it != symbolToSlot.end()) {
+            auto& symbolState = lvalues[it->second];
+            if (symbolState.assigned.find(*bounds) != symbolState.assigned.end())
+                return true;
+        }
+    }
+    {
+        auto it = rvalues.find(&symbol);
+        if (it != rvalues.end() && it->second.find(*bounds) != it->second.end())
+            return true;
+    }
+
+    return false;
+}
+
+template<typename F>
+void DataFlowAnalysis::visitLongestStaticPrefixes(const Expression& expr, F&& func) const {
+    LSPHelper<F> lspHelper(getEvalContext(), std::forward<F>(func));
+    expr.visit(lspHelper);
+}
 
 } // namespace slang::analysis

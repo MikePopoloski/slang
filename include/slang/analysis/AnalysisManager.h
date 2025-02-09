@@ -69,7 +69,7 @@ public:
 class SLANG_EXPORT AnalyzedDesign {
 public:
     /// The compilation that was analyzed.
-    const ast::Compilation& compilation;
+    const ast::Compilation* compilation = nullptr;
 
     /// The analyzed compilation units in the design.
     std::vector<const AnalyzedScope*> compilationUnits;
@@ -80,8 +80,11 @@ public:
     /// The analyzed top-level instances in the design.
     std::vector<AnalyzedInstance> topInstances;
 
+    /// Default constructor.
+    AnalyzedDesign() = default;
+
     /// Constructs a new AnalyzedDesign object.
-    explicit AnalyzedDesign(const ast::Compilation& compilation) : compilation(compilation) {}
+    explicit AnalyzedDesign(const ast::Compilation& compilation) : compilation(&compilation) {}
 };
 
 /// Holds various bits of state needed to perform analysis.

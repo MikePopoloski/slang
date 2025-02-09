@@ -10,8 +10,11 @@
 #include "slang/util/Util.h"
 
 namespace slang::ast {
+
 class ProceduralBlockSymbol;
-}
+class TimingControl;
+
+} // namespace slang::ast
 
 namespace slang::analysis {
 
@@ -20,8 +23,15 @@ class AnalysisManager;
 
 class SLANG_EXPORT AnalyzedProcedure {
 public:
+    const ast::ProceduralBlockSymbol& procedureSymbol;
+
     AnalyzedProcedure(AnalysisManager& analysisManager, AnalysisContext& context,
                       const ast::ProceduralBlockSymbol& symbol);
+
+    const ast::TimingControl* getInferredClock() const { return inferredClock; }
+
+private:
+    const ast::TimingControl* inferredClock = nullptr;
 };
 
 } // namespace slang::analysis
