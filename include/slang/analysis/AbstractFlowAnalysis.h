@@ -768,22 +768,6 @@ protected:
         expr.visitExprs(DERIVED);
     }
 
-private:
-    friend class ast::Expression;
-    friend class ast::Statement;
-
-    TState state;
-    TState stateWhenTrue;
-    TState stateWhenFalse;
-    bool isStateSplit = false;
-    EvalContext evalContext;
-
-    SmallVector<TState> breakStates;
-    flat_hash_map<const Symbol*, SmallVector<TState>> disableBranches;
-
-    template<typename T>
-    struct always_false : std::false_type {};
-
     // This is the primary visitor function; if provided a base type
     // (expression or statement) it will dispatch to the concrete type
     // using the AST visitor system. Otherwise if our derived analysis
@@ -804,7 +788,6 @@ private:
             }
             else if constexpr (std::is_base_of_v<Statement, T>) {
                 visitStmt(t);
-                SLANG_ASSERT(!isStateSplit);
             }
             else if constexpr (std::is_base_of_v<Expression, T>) {
                 visitExpr(t);
@@ -820,6 +803,22 @@ private:
             }
         }
     }
+
+private:
+    friend class ast::Expression;
+    friend class ast::Statement;
+
+    TState state;
+    TState stateWhenTrue;
+    TState stateWhenFalse;
+    bool isStateSplit = false;
+    EvalContext evalContext;
+
+    SmallVector<TState> breakStates;
+    flat_hash_map<const Symbol*, SmallVector<TState>> disableBranches;
+
+    template<typename T>
+    struct always_false : std::false_type {};
 
     ConstantValue adjustConditionalState(const Expression& expr) {
         auto cv = tryEvalBool(expr);
