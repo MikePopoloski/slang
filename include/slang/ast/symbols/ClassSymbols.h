@@ -13,8 +13,8 @@
 #include "slang/ast/symbols/VariableSymbols.h"
 #include "slang/ast/types/Type.h"
 #include "slang/syntax/SyntaxFwd.h"
+#include "slang/util/FlatMap.h"
 #include "slang/util/Function.h"
-#include "slang/util/Hash.h"
 
 namespace slang::ast {
 

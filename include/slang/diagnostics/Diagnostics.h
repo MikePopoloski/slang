@@ -44,6 +44,7 @@ class Symbol;
     x(SysFuncs) \
     x(ConstEval) \
     x(Compilation) \
+    x(Analysis) \
     x(Meta) \
     x(Tidy) \
     x(Netlist)

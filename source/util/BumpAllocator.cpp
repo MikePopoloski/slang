@@ -38,6 +38,7 @@ BumpAllocator& BumpAllocator::operator=(BumpAllocator&& other) noexcept {
 }
 
 void BumpAllocator::steal(BumpAllocator&& other) {
+    SLANG_ASSERT(!isFrozen());
     Segment* seg = other.head;
     if (!seg)
         return;

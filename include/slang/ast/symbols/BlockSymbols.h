@@ -29,6 +29,8 @@ public:
     const Statement& getStatement(const ASTContext& context,
                                   Statement::StatementContext& stmtCtx) const;
 
+    const Statement* tryGetStatement() const { return stmt; }
+
     bool isKnownBad() const { return stmt && stmt->bad(); }
 
     void serializeTo(ASTSerializer&) const {}

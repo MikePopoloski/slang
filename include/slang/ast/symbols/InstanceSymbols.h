@@ -12,6 +12,7 @@
 #include "slang/ast/Symbol.h"
 #include "slang/numeric/ConstantValue.h"
 #include "slang/syntax/SyntaxFwd.h"
+#include "slang/util/SmallMap.h"
 
 namespace slang::ast {
 

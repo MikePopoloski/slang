@@ -171,12 +171,11 @@ int main(int argc, char** argv) {
     SLANG_TRY {
         compilationOk = driver.parseAllSources();
         compilation = driver.createCompilation();
-        compilationOk &= driver.reportCompilation(*compilation, true);
+        driver.reportCompilation(*compilation, true);
+        compilationOk &= driver.reportDiagnostics(true);
     }
     SLANG_CATCH(const std::exception& e) {
-#if __cpp_exceptions
-        OS::printE(fmt::format("internal compiler error: {}\n", e.what()));
-#endif
+        SLANG_REPORT_EXCEPTION(e, "internal compiler error: {}\n");
         return 1;
     }
 

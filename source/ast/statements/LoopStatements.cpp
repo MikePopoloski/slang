@@ -123,7 +123,7 @@ public:
         visitor.visit(loop);
 
         if (std::ranges::any_of(visitor.driverMap,
-                                [](auto& item) { return !item.second.empty(); })) {
+                                [](auto& item) { return !item.second->empty(); })) {
             visitor.runForReal(loop);
         }
     }
@@ -243,16 +243,18 @@ public:
 
         auto& assign = stmt.expr.as<AssignmentExpression>();
         auto& driverState = driverMap[&assign];
+        if (!driverState)
+            driverState = std::make_unique<SmallVector<PerAssignDriverState>>();
 
         if (setupMode) {
             SmallVector<std::pair<const ValueSymbol*, const Expression*>> prefixes;
             assign.left().getLongestStaticPrefixes(prefixes, evalCtx);
 
             for (auto [symbol, expr] : prefixes)
-                driverState.emplace_back(*expr, *symbol);
+                driverState->emplace_back(*expr, *symbol);
         }
         else {
-            for (auto& state : driverState) {
+            for (auto& state : *driverState) {
                 auto bounds = ValueDriver::getBounds(*state.longestStaticPrefix, evalCtx,
                                                      *state.rootType);
                 if (bounds) {
@@ -292,7 +294,7 @@ private:
             // Find our finished driver interval maps and apply them.
             auto& containingSym = astCtx.getContainingSymbol();
             for (auto& [expr, stateVec] : driverMap) {
-                for (auto& state : stateVec) {
+                for (auto& state : *stateVec) {
                     auto driver = comp.emplace<ValueDriver>(DriverKind::Procedural,
                                                             *state.longestStaticPrefix,
                                                             containingSym, AssignFlags::None);
@@ -319,7 +321,8 @@ private:
         PerAssignDriverState(const Expression& expr, const ValueSymbol& symbol) :
             longestStaticPrefix(&expr), symbol(&symbol), rootType(&symbol.getType()) {}
     };
-    flat_node_map<const AssignmentExpression*, SmallVector<PerAssignDriverState>> driverMap;
+    flat_hash_map<const AssignmentExpression*, std::unique_ptr<SmallVector<PerAssignDriverState>>>
+        driverMap;
 };
 
 Statement& ForLoopStatement::fromSyntax(Compilation& compilation,

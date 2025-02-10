@@ -20,3 +20,9 @@ path = "external/expected.hpp"
 precedence = "aggregate"
 SPDX-FileCopyrightText = "Martin Moene"
 SPDX-License-Identifier = "BSL-1.0"
+
+[[annotations]]
+path = "external/BS_thread_pool.hpp"
+precedence = "aggregate"
+SPDX-FileCopyrightText = "Barak Shoshany"
+SPDX-License-Identifier = "MIT"

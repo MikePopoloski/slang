@@ -68,7 +68,7 @@ SLANG_ENUM(BinaryOperator, OP)
 #undef OP
 // clang-format on
 
-class OpInfo {
+class SLANG_EXPORT OpInfo {
 public:
     static bool isBitwise(BinaryOperator op);
     static bool isComparison(BinaryOperator op);

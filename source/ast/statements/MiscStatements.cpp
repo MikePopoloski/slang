@@ -704,9 +704,13 @@ void RandCaseStatement::serializeTo(ASTSerializer& serializer) const {
     serializer.endArray();
 }
 
-Statement& RandSequenceStatement::fromSyntax(Compilation& compilation,
+Statement& RandSequenceStatement::fromSyntax(Compilation& comp,
                                              const RandSequenceStatementSyntax& syntax,
                                              const ASTContext& context) {
+    SmallVector<const RandSeqProductionSymbol*> productions;
+    for (auto& prod : context.scope->membersOfType<RandSeqProductionSymbol>())
+        productions.push_back(&prod);
+
     SourceRange firstProdRange;
     const RandSeqProductionSymbol* firstProd = nullptr;
     if (syntax.firstProduction) {
@@ -714,12 +718,9 @@ Statement& RandSequenceStatement::fromSyntax(Compilation& compilation,
         firstProd = RandSeqProductionSymbol::findProduction(syntax.firstProduction.valueText(),
                                                             firstProdRange, context);
     }
-    else {
-        auto prodRange = context.scope->membersOfType<RandSeqProductionSymbol>();
-        if (prodRange.begin() != prodRange.end()) {
-            firstProd = &*prodRange.begin();
-            firstProdRange = {syntax.randsequence.location(), syntax.closeParen.range().end()};
-        }
+    else if (!productions.empty()) {
+        firstProd = productions[0];
+        firstProdRange = {syntax.randsequence.location(), syntax.closeParen.range().end()};
     }
 
     if (firstProd) {
@@ -730,7 +731,8 @@ Statement& RandSequenceStatement::fromSyntax(Compilation& compilation,
     }
 
     // All of the logic for creating productions is in the RandSeqProduction symbol.
-    return *compilation.emplace<RandSequenceStatement>(firstProd, syntax.sourceRange());
+    return *comp.emplace<RandSequenceStatement>(firstProd, productions.copy(comp),
+                                                syntax.sourceRange());
 }
 
 ER RandSequenceStatement::evalImpl(EvalContext& context) const {
