@@ -72,7 +72,6 @@ add_custom_target(docs ALL DEPENDS ${DOXYGEN_INDEX_FILE})
 # --- Python documentation with virtual environment ---
 set(PYTHON_DOCS_DIR ${CMAKE_CURRENT_BINARY_DIR}/html/pyslang)
 set(PYTHON_VENV_DIR ${PROJECT_BINARY_DIR}/venv)
-file(MAKE_DIRECTORY ${PYTHON_DOCS_DIR})
 
 add_custom_command(
   OUTPUT ${PYTHON_DOCS_DIR}/index.html
@@ -85,7 +84,7 @@ add_custom_command(
   COMMAND DOC_OUTPUT_DIR=${PYTHON_DOCS_DIR} ${PYTHON_VENV_DIR}/bin/python
           ${MCSS_PYTHONPY_PATH} ${PROJECT_SOURCE_DIR}/pyslang/docs/conf.py
   WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
-  DEPENDS ${PROJECT_SOURCE_DIR}/pyslang/docs/conf.py
+  DEPENDS ${PROJECT_SOURCE_DIR}/pyslang/docs/conf.py ${DOXYGEN_INDEX_FILE}
   COMMENT "Generating Python docs in virtual environment"
   VERBATIM)
 
