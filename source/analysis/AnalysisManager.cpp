@@ -15,7 +15,7 @@ namespace slang::analysis {
 using namespace ast;
 
 const AnalyzedScope* AnalyzedInstance::getBody() const {
-    return analysisManager.getAnalyzedScope(symbol.body);
+    return analysisManager->getAnalyzedScope(symbol->body);
 }
 
 AnalysisManager::AnalysisManager(uint32_t numThreads) : threadPool(numThreads) {

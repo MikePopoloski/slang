@@ -1624,3 +1624,16 @@ module m;
     end
 endmodule
 ```
+
+-Winferred-latch
+A signal assigned in an always_comb procedure is not assigned on all control
+paths and so infers a latch instead of combinatorial logic.
+@options --disable-analysis=false
+```
+module m(input logic a, output logic b);
+    always_comb begin
+        if (a)
+            b = 0;
+    end
+endmodule
+```

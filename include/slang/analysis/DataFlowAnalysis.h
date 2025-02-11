@@ -106,7 +106,7 @@ private:
 
             owner.visit(expr.value());
 
-            auto guard = owner.saveLValueFlag();
+            [[maybe_unused]] auto guard = owner.saveLValueFlag();
             owner.visit(expr.selector());
         }
 
@@ -121,7 +121,7 @@ private:
 
             owner.visit(expr.value());
 
-            auto guard = owner.saveLValueFlag();
+            [[maybe_unused]] auto guard = owner.saveLValueFlag();
             owner.visit(expr.left());
             owner.visit(expr.right());
         }

@@ -131,7 +131,7 @@ static const TimingControl* inferClock(const ProceduralBlockSymbol& procedureSym
 
 AnalyzedProcedure::AnalyzedProcedure(AnalysisManager&, AnalysisContext& context,
                                      const ProceduralBlockSymbol& procedure) :
-    procedureSymbol(procedure) {
+    procedureSymbol(&procedure) {
 
     DataFlowAnalysis dfa(context, procedure);
     dfa.run(procedure.getBody());

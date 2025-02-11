@@ -35,18 +35,18 @@ class AnalyzedScope;
 class SLANG_EXPORT AnalyzedInstance {
 public:
     /// The symbol that was analyzed.
-    const ast::InstanceSymbol& symbol;
+    not_null<const ast::InstanceSymbol*> symbol;
 
     /// Constructs a new AnalyzedInstance object.
     AnalyzedInstance(AnalysisManager& analysisManager, const ast::InstanceSymbol& symbol) :
-        symbol(symbol), analysisManager(analysisManager) {}
+        symbol(&symbol), analysisManager(&analysisManager) {}
 
     /// Returns the analyzed body of the instance, if available.
     /// If the body has not been analyzed yet, this will return nullptr.
     const AnalyzedScope* getBody() const;
 
 private:
-    AnalysisManager& analysisManager;
+    not_null<AnalysisManager*> analysisManager;
 };
 
 /// Represents an analyzed AST scope.
