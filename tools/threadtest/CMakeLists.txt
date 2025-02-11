@@ -18,6 +18,9 @@ endif()
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL
                                              "GNU")
-  target_compile_options(slang_threadtest PRIVATE "-fsanitize=thread")
-  target_link_libraries(slang_threadtest PRIVATE "-fsanitize=thread")
+  string(FIND "${CMAKE_CXX_FLAGS}" "fsanitize" found)
+  if(found EQUAL -1)
+    target_compile_options(slang_threadtest PRIVATE "-fsanitize=thread")
+    target_link_libraries(slang_threadtest PRIVATE "-fsanitize=thread")
+  endif()
 endif()

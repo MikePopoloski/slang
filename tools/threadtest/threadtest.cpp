@@ -1,5 +1,5 @@
 //------------------------------------------------------------------------------
-// slang_main.cpp
+// slang_threadtest.cpp
 // Testing tool for multithreaded AST visitation
 //
 // SPDX-FileCopyrightText: Michael Popoloski

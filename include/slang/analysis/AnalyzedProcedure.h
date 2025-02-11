@@ -23,7 +23,7 @@ class AnalysisManager;
 
 class SLANG_EXPORT AnalyzedProcedure {
 public:
-    const ast::ProceduralBlockSymbol& procedureSymbol;
+    not_null<const ast::ProceduralBlockSymbol*> procedureSymbol;
 
     AnalyzedProcedure(AnalysisManager& analysisManager, AnalysisContext& context,
                       const ast::ProceduralBlockSymbol& symbol);
