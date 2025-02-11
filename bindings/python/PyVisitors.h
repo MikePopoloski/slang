@@ -21,12 +21,15 @@ struct PyVisitorBase : public BaseVisitor<TDerived, baseArgs...> {
     bool interrupted = false;
 
     static inline constexpr auto doc =
-        "Visit a pyslang object with a callback f.\n\n"
-        "If f ever returns pyslang.VisitAction.Interrupt, the visit is aborted, "
-        "and no additional nodes are visited. If f returns pyslang.VisitAction.Skip, "
-        "then no child nodes of the current node are visited, but otherwise the "
-        "visit continues. Any other return value, including "
-        "pslang.VisitAction.Advance is ignored, and the walk continues.";
+        "Visit a pyslang object with a callback function `f`.\n\n"
+        "The callback function `f` should take a single argument, which is the "
+        "current node being visited.\n\n"
+        "The return value of `f` determines the next node to visit. "
+        "If `f` ever returns `pyslang.VisitAction.Interrupt`, the visit is aborted "
+        "and no additional nodes are visited. If `f` returns `pyslang.VisitAction.Skip`, "
+        "then no child nodes of the current node are visited. "
+        "For any other return value, including `pyslang.VisitAction.Advance`, "
+        "the return value is ignored, and the walk continues.";
 
     explicit PyVisitorBase(py::object f) : f{f} {}
 
