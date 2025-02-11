@@ -33,7 +33,7 @@ jobs:
       run: |
         tar -czvf slang.tar.gz build/docs build/bin/slang
     - name: Upload
-      if: github.event_name != 'pull_request'
+      if: github.event_name != 'pull_request' && github.repository == 'MikePopoloski/slang'
       uses: appleboy/scp-action@master
       with:
         host: ${{ secrets.SSH_DEPLOY_HOST }}
@@ -44,7 +44,7 @@ jobs:
         source: slang.tar.gz
         target: upload/
     - name: Deploy
-      if: github.event_name != 'pull_request'
+      if: github.event_name != 'pull_request' && github.repository == 'MikePopoloski/slang'
       uses: appleboy/ssh-action@master
       with:
         host: ${{ secrets.SSH_DEPLOY_HOST }}
