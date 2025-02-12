@@ -152,7 +152,7 @@
         "CMAKE_EXE_LINKER_FLAGS": "-fsanitize=undefined,address -fno-sanitize-recover=undefined",
         "CMAKE_SHARED_LINKER_FLAGS": "-fsanitize=undefined,address -fno-sanitize-recover=undefined",
         "SLANG_CLANG_TIDY": "clang-tidy-19",
-        "SLANG_USE_CPPTRACE": "ON"
+        "SLANG_USE_MIMALLOC": "OFF"
       }
     },
     {
@@ -165,7 +165,8 @@
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
         "CMAKE_CXX_COMPILER": "g++-14",
-        "BUILD_SHARED_LIBS": "ON"
+        "BUILD_SHARED_LIBS": "ON",
+        "SLANG_USE_CPPTRACE": "ON"
       }
     },
     {
