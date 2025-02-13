@@ -1272,3 +1272,44 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::VirtualIfaceConfigRule);
 }
+
+TEST_CASE("Configs with instance caching") {
+    auto tree = SyntaxTree::fromText(R"(
+config cfg1;
+    design top;
+    instance top.i2.j.k use L#(.b(3));
+endconfig
+
+module I;
+    J j();
+endmodule
+
+module J;
+    K k();
+endmodule
+
+module K;
+endmodule
+
+module L #(parameter int b);
+    if (b == 3) begin
+        $warning("b is 3");
+    end
+endmodule
+
+module top;
+    I i1();
+    I i2();
+endmodule
+)");
+
+    CompilationOptions options;
+    options.topModules.emplace("cfg1");
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::WarningTask);
+}

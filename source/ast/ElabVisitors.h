@@ -367,24 +367,35 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
         // If we have already visited an identical instance body we don't have to do
         // it again, because all possible diagnostics have already been collected,
         // with some notable caveats that need to be handled:
-        // - "identical" needs to take into account parameters values and interface ports,
-        //   since they types of members and expression can vary based on those
-        // - TODO: Any upward hierarchical references that extend out of the instance need
-        //         to be re-resolved here, and the resolved types must match
+        // - "Identical" needs to take into account parameters values and interface ports,
+        //   since they types of members and expression can vary based on those. This is
+        //   computed in the InstanceCacheKey.
+        // - If any hierarchical names extend upward out of the instance we won't consider
+        //   it for caching, since the names could be different based on the context.
+        //   This could be optimized in the future by having another layer of caching based
+        //   on what the name resolves to for each instance.
         // - TODO: Downward hierarchical references into such instances need to be accounted for
         // - TODO: Bind directives needs to be accounted for
         // - TODO: Defparams need to be accounted for
-        // - TODO: Configuration rules need to be accounted for
+        // - TODO: Configuration rules and defparams for iface ports need to be accounted for
+        // - TODO: global clocking?
         //
         // Assuming we find an appropriately cached instance, we will store a pointer to it
         // in other instances to facilitate downstream consumers in not needing to recreate
         // this duplication detection logic again.
         SLANG_ASSERT(symbol.getCanonicalBody() == nullptr);
-        auto [it, inserted] = instanceCache.try_emplace(symbol, &symbol.body);
-        if (!inserted) {
-            symbol.setCanonicalBody(*it->second);
-            if (!compilation.hasFlag(CompilationFlags::DisableInstanceCaching))
-                return;
+        if (!symbol.resolvedConfig) {
+            auto [it, inserted] = instanceCache.try_emplace(symbol, &symbol.body);
+            if (!inserted) {
+                auto canonical = it->second;
+                if (auto hierRefIt = compilation.hierRefMap.find(canonical);
+                    hierRefIt == compilation.hierRefMap.end()) [[likely]] {
+
+                    symbol.setCanonicalBody(*canonical);
+                    if (!compilation.hasFlag(CompilationFlags::DisableInstanceCaching))
+                        return;
+                }
+            }
         }
 
         if (visitInstances)
