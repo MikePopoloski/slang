@@ -1447,20 +1447,22 @@ Expression* Expression::tryBindInterfaceRef(const ASTContext& context,
         iface = &symbol->as<InstanceSymbol>().body;
     }
 
-    if (iface->hierarchyOverrideNode) {
-        auto& diag = context.addDiag(diag::VirtualIfaceDefparam, sourceRange);
-        if (auto source = findOverrideNodeSource(*iface->hierarchyOverrideNode))
-            diag.addNote(diag::NoteDeclarationHere, source->sourceRange());
-    }
+    if (!isInterfacePort) {
+        if (iface->hierarchyOverrideNode) {
+            auto& diag = context.addDiag(diag::VirtualIfaceDefparam, sourceRange);
+            if (auto source = findOverrideNodeSource(*iface->hierarchyOverrideNode))
+                diag.addNote(diag::NoteDeclarationHere, source->sourceRange());
+        }
 
-    if (iface->parentInstance && iface->parentInstance->resolvedConfig) {
-        auto& diag = context.addDiag(diag::VirtualIfaceConfigRule, sourceRange);
+        if (iface->parentInstance && iface->parentInstance->resolvedConfig) {
+            auto& diag = context.addDiag(diag::VirtualIfaceConfigRule, sourceRange);
 
-        auto rc = iface->parentInstance->resolvedConfig;
-        if (rc->configRule)
-            diag.addNote(diag::NoteConfigRule, rc->configRule->syntax->sourceRange());
-        else
-            diag.addNote(diag::NoteConfigRule, rc->useConfig.location);
+            auto rc = iface->parentInstance->resolvedConfig;
+            if (rc->configRule)
+                diag.addNote(diag::NoteConfigRule, rc->configRule->syntax->sourceRange());
+            else
+                diag.addNote(diag::NoteConfigRule, rc->useConfig.location);
+        }
     }
 
     if (!arrayModportName.empty()) {
