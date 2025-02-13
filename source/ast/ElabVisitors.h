@@ -14,9 +14,14 @@
 
 namespace slang::ast {
 
+static bool isEligibleForCaching(const InstanceSymbol& symbol) {
+    return !symbol.resolvedConfig && !symbol.body.hierarchyOverrideNode &&
+           symbol.body.flags == InstanceFlags::None;
+}
+
 class InstanceCacheKey {
 public:
-    InstanceCacheKey(const InstanceSymbol& symbol);
+    InstanceCacheKey(const InstanceSymbol& symbol, bool& valid);
 
     bool operator==(const InstanceCacheKey& other) const;
     bool operator!=(const InstanceCacheKey& other) const { return !(*this == other); }
@@ -368,32 +373,43 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
         // it again, because all possible diagnostics have already been collected,
         // with some notable caveats that need to be handled:
         // - "Identical" needs to take into account parameters values and interface ports,
-        //   since they types of members and expression can vary based on those. This is
+        //   since the types of members and expression can vary based on those. This is
         //   computed in the InstanceCacheKey.
         // - If any hierarchical names extend upward out of the instance we won't consider
         //   it for caching, since the names could be different based on the context.
         //   This could be optimized in the future by having another layer of caching based
         //   on what the name resolves to for each instance.
+        // - Instances that are targeted by defparams, bind directives, or configuration
+        //   rules, or that are themselves created by a bind directive, cannot participate
+        //   in caching.
+        // - Interface ports must be connected to instances that themselves follow the
+        //   restrictions on defparams, bind directives, and config rules.
+        //
         // - TODO: Downward hierarchical references into such instances need to be accounted for
-        // - TODO: Bind directives needs to be accounted for
-        // - TODO: Defparams need to be accounted for
-        // - TODO: Configuration rules and defparams for iface ports need to be accounted for
         // - TODO: global clocking?
+        // - TODO: bind directives inside the cached instance
+        // - TODO: check for iface ports that connect to iface ports
         //
         // Assuming we find an appropriately cached instance, we will store a pointer to it
         // in other instances to facilitate downstream consumers in not needing to recreate
         // this duplication detection logic again.
-        SLANG_ASSERT(symbol.getCanonicalBody() == nullptr);
-        if (!symbol.resolvedConfig) {
-            auto [it, inserted] = instanceCache.try_emplace(symbol, &symbol.body);
-            if (!inserted) {
-                auto canonical = it->second;
-                if (auto hierRefIt = compilation.hierRefMap.find(canonical);
-                    hierRefIt == compilation.hierRefMap.end()) [[likely]] {
 
-                    symbol.setCanonicalBody(*canonical);
-                    if (!compilation.hasFlag(CompilationFlags::DisableInstanceCaching))
-                        return;
+        SLANG_ASSERT(symbol.getCanonicalBody() == nullptr);
+        if (isEligibleForCaching(symbol)) {
+            bool valid = true;
+            InstanceCacheKey key(symbol, valid);
+
+            if (valid) {
+                auto [it, inserted] = instanceCache.try_emplace(std::move(key), &symbol.body);
+                if (!inserted) {
+                    auto canonical = it->second;
+                    if (auto hierRefIt = compilation.hierRefMap.find(canonical);
+                        hierRefIt == compilation.hierRefMap.end()) [[likely]] {
+
+                        symbol.setCanonicalBody(*canonical);
+                        if (!compilation.hasFlag(CompilationFlags::DisableInstanceCaching))
+                            return;
+                    }
                 }
             }
         }
@@ -865,7 +881,7 @@ private:
     Compilation& compilation;
 };
 
-InstanceCacheKey::InstanceCacheKey(const InstanceSymbol& symbol) : symbol(&symbol) {
+InstanceCacheKey::InstanceCacheKey(const InstanceSymbol& symbol, bool& valid) : symbol(&symbol) {
     size_t h = 0;
     hash_combine(h, &symbol.getDefinition());
 
@@ -888,7 +904,17 @@ InstanceCacheKey::InstanceCacheKey(const InstanceSymbol& symbol) : symbol(&symbo
             }
 
             if (iface) {
-                ifaceKeys.emplace_back(iface->as<InstanceSymbol>());
+                auto& ifaceInst = iface->as<InstanceSymbol>();
+                if (!isEligibleForCaching(ifaceInst)) {
+                    valid = false;
+                    return;
+                }
+
+                InstanceCacheKey ifaceKey(ifaceInst, valid);
+                if (!valid)
+                    return;
+
+                ifaceKeys.emplace_back(std::move(ifaceKey));
                 hash_combine(h, ifaceKeys.back().savedHash);
             }
         }

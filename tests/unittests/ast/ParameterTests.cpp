@@ -1266,3 +1266,70 @@ endmodule
         CHECK(p.getValue().integer() == i + 1);
     }
 }
+
+TEST_CASE("Defparams with instance caching") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    n n1();
+    n n2();
+
+    defparam n2.o1.p = 2;
+endmodule
+
+module n;
+    o o1();
+endmodule
+
+module o;
+    parameter int p = 1;
+    if (p == 2) begin
+        $info("Hello");
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::InfoTask);
+}
+
+TEST_CASE("Defparams targeting interface used in port with instance caching") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I;
+    J j();
+endinterface
+
+interface J;
+    parameter int p = 1;
+endinterface
+
+module m;
+    I i1();
+    I i2();
+
+    n n1(i1);
+    n n2(i2);
+
+    defparam i2.j.p = 2;
+endmodule
+
+module n(I i);
+    if (i.j.p == 2) begin
+        $info("Hello");
+    end
+endmodule
+)");
+
+    CompilationOptions options;
+    options.flags |= CompilationFlags::AllowHierarchicalConst;
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::InfoTask);
+}
