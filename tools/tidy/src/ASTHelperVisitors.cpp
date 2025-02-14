@@ -24,5 +24,8 @@ std::optional<std::string_view> getIdentifier(const slang::ast::Expression& expr
 
 std::optional<slang::SourceLocation> getExpressionSourceLocation(
     const slang::ast::Expression& expr) {
+    if (!expr.syntax) {
+        return std::nullopt;
+    }
     return expr.syntax->getFirstToken().location();
 }
