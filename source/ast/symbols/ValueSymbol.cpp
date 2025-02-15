@@ -129,6 +129,7 @@ static bool handleOverlap(const Scope& scope, std::string_view name, const Value
         else {
             auto& note = d.addNote(diag::NoteFromHere2, SourceLocation::NoLocation);
 
+            // TODO: handle case where one side is from a side effect
             std::string buf;
             driver.containingSymbol->getHierarchicalPath(buf);
             note << buf;
@@ -144,10 +145,10 @@ static bool handleOverlap(const Scope& scope, std::string_view name, const Value
         // always_comb / always_ff block.
         ProceduralBlockKind procKind;
         if (driver.isInSingleDriverProcedure()) {
-            procKind = driver.containingSymbol->as<ProceduralBlockSymbol>().procedureKind;
+            procKind = static_cast<ProceduralBlockKind>(driver.source);
         }
         else {
-            procKind = curr.containingSymbol->as<ProceduralBlockSymbol>().procedureKind;
+            procKind = static_cast<ProceduralBlockKind>(curr.source);
             std::swap(driverRange, currRange);
         }
 
@@ -218,11 +219,84 @@ void ValueSymbol::addDriver(DriverKind driverKind, DriverBitRange bounds,
     addDriver(bounds, *driver);
 }
 
+void ValueSymbol::addDriverFromSideEffect(const ValueDriver& sourceDriver,
+                                          const Symbol& newInstance) const {
+    auto scope = getParentScope();
+    SLANG_ASSERT(scope);
+
+    auto& comp = scope->getCompilation();
+    EvalContext evalCtx(ASTContext(*scope, LookupLocation::max));
+
+    auto bounds = ValueDriver::getBounds(*sourceDriver.prefixExpression, evalCtx, getType());
+    if (!bounds)
+        return;
+
+    auto newDriver = comp.emplace<ValueDriver>(sourceDriver.kind, *sourceDriver.prefixExpression,
+                                               newInstance, sourceDriver.flags, sourceDriver.source,
+                                               sourceDriver.procCallExpression);
+    addDriver(*bounds, *newDriver);
+}
+
+template<typename TCallback>
+static void visitPrefixExpressions(const Expression& longestStaticPrefix, bool includeRoot,
+                                   TCallback&& callback) {
+    auto expr = &longestStaticPrefix;
+    do {
+        switch (expr->kind) {
+            case ExpressionKind::NamedValue:
+            case ExpressionKind::HierarchicalValue:
+            case ExpressionKind::Call:
+                if (includeRoot)
+                    callback(*expr);
+                expr = nullptr;
+                break;
+            case ExpressionKind::Conversion:
+                expr = &expr->as<ConversionExpression>().operand();
+                break;
+            case ExpressionKind::ElementSelect:
+                callback(*expr);
+                expr = &expr->as<ElementSelectExpression>().value();
+                break;
+            case ExpressionKind::RangeSelect:
+                callback(*expr);
+                expr = &expr->as<RangeSelectExpression>().value();
+                break;
+            case ExpressionKind::MemberAccess: {
+                auto& access = expr->as<MemberAccessExpression>();
+                if (access.member.kind == SymbolKind::Field) {
+                    callback(*expr);
+                    expr = &access.value();
+                }
+                else {
+                    expr = nullptr;
+                }
+                break;
+            }
+            default:
+                SLANG_UNREACHABLE;
+        }
+    } while (expr);
+}
+
 void ValueSymbol::addDriver(DriverBitRange bounds, const ValueDriver& driver) const {
     auto scope = getParentScope();
     SLANG_ASSERT(scope);
 
     auto& comp = scope->getCompilation();
+
+    // If this driver is made via an interface port connection we want to
+    // note that fact as it represents a side effect for the instance that
+    // is not captured in the port connections.
+    if (!driver.isFromSideEffect) {
+        visitPrefixExpressions(*driver.prefixExpression, /* includeRoot */ true,
+                               [&](const Expression& expr) {
+                                   if (expr.kind == ExpressionKind::HierarchicalValue) {
+                                       auto& hve = expr.as<HierarchicalValueExpression>();
+                                       if (hve.ref.isViaIfacePort())
+                                           comp.noteInterfacePortDriver(hve.ref, driver);
+                                   }
+                               });
+    }
 
     if (driverMap.empty()) {
         // The first time we add a driver, check whether there is also an
@@ -313,12 +387,12 @@ void ValueSymbol::addDriver(DriverBitRange bounds, const ValueDriver& driver) co
                     isProblem = true;
                 }
             }
-            else if (curr->containingSymbol != driver.containingSymbol &&
-                     curr->containingSymbol->kind == SymbolKind::ProceduralBlock &&
-                     driver.containingSymbol->kind == SymbolKind::ProceduralBlock &&
+            else if (curr->containingSymbol != driver.containingSymbol && curr->isInProcedure() &&
+                     driver.isInProcedure() &&
                      (curr->isInSingleDriverProcedure() || driver.isInSingleDriverProcedure()) &&
                      (!comp.hasFlag(CompilationFlags::AllowDupInitialDrivers) ||
-                      (!curr->isInInitialBlock() && !driver.isInInitialBlock()))) {
+                      (curr->source != DriverSource::Initial &&
+                       driver.source != DriverSource::Initial))) {
                 isProblem = true;
             }
             else if (curr->isLocalVarFormalArg() && driver.isLocalVarFormalArg()) {
@@ -345,69 +419,29 @@ void ValueSymbol::addPortBackref(const PortSymbol& port) const {
     firstPortBackref = comp.emplace<PortBackref>(port, firstPortBackref);
 }
 
-template<typename TCallback>
-static void visitPrefixExpressions(const Expression& longestStaticPrefix, TCallback&& callback) {
-    auto expr = &longestStaticPrefix;
-    do {
-        switch (expr->kind) {
-            case ExpressionKind::NamedValue:
-            case ExpressionKind::HierarchicalValue:
-            case ExpressionKind::Call:
-                expr = nullptr;
-                break;
-            case ExpressionKind::Conversion:
-                expr = &expr->as<ConversionExpression>().operand();
-                break;
-            case ExpressionKind::ElementSelect:
-                callback(*expr);
-                expr = &expr->as<ElementSelectExpression>().value();
-                break;
-            case ExpressionKind::RangeSelect:
-                callback(*expr);
-                expr = &expr->as<RangeSelectExpression>().value();
-                break;
-            case ExpressionKind::MemberAccess: {
-                auto& access = expr->as<MemberAccessExpression>();
-                if (access.member.kind == SymbolKind::Field) {
-                    callback(*expr);
-                    expr = &access.value();
-                }
-                else {
-                    expr = nullptr;
-                }
-                break;
-            }
-            default:
-                SLANG_UNREACHABLE;
-        }
-    } while (expr);
+ValueDriver::ValueDriver(DriverKind kind, const Expression& longestStaticPrefix,
+                         const Symbol& containingSymbol, bitmask<AssignFlags> flags) :
+    prefixExpression(&longestStaticPrefix), containingSymbol(&containingSymbol), flags(flags),
+    kind(kind) {
+
+    if (containingSymbol.kind == SymbolKind::ProceduralBlock) {
+        source = static_cast<DriverSource>(
+            containingSymbol.as<ProceduralBlockSymbol>().procedureKind);
+    }
+    else if (containingSymbol.kind == SymbolKind::Subroutine) {
+        source = DriverSource::Subroutine;
+    }
+    else {
+        source = DriverSource::Other;
+    }
 }
 
-bool ValueDriver::isInSingleDriverProcedure() const {
-    return containingSymbol->kind == SymbolKind::ProceduralBlock &&
-           containingSymbol->as<ProceduralBlockSymbol>().isSingleDriverBlock();
-}
-
-bool ValueDriver::isInSubroutine() const {
-    return containingSymbol->kind == SymbolKind::Subroutine;
-}
-
-bool ValueDriver::isInInitialBlock() const {
-    return containingSymbol->kind == SymbolKind::ProceduralBlock &&
-           containingSymbol->as<ProceduralBlockSymbol>().procedureKind ==
-               ProceduralBlockKind::Initial;
-}
-
-bool ValueDriver::isInAlwaysFFBlock() const {
-    return containingSymbol->kind == SymbolKind::ProceduralBlock &&
-           containingSymbol->as<ProceduralBlockSymbol>().procedureKind ==
-               ProceduralBlockKind::AlwaysFF;
-}
-
-bool ValueDriver::isInAlwaysLatchBlock() const {
-    return containingSymbol->kind == SymbolKind::ProceduralBlock &&
-           containingSymbol->as<ProceduralBlockSymbol>().procedureKind ==
-               ProceduralBlockKind::AlwaysLatch;
+ValueDriver::ValueDriver(DriverKind kind, const Expression& longestStaticPrefix,
+                         const Symbol& containingSymbol, bitmask<AssignFlags> flags,
+                         DriverSource source, const Expression* procCallExpression) :
+    prefixExpression(&longestStaticPrefix), containingSymbol(&containingSymbol),
+    procCallExpression(procCallExpression), flags(flags), kind(kind), source(source),
+    isFromSideEffect(true) {
 }
 
 SourceRange ValueDriver::getSourceRange() const {
@@ -423,7 +457,7 @@ std::optional<DriverBitRange> ValueDriver::getBounds(const Expression& prefixExp
     DriverBitRange result{0, type->getSelectableWidth() - 1};
 
     SmallVector<const Expression*> path;
-    visitPrefixExpressions(prefixExpression,
+    visitPrefixExpressions(prefixExpression, /* includeRoot */ false,
                            [&](const Expression& expr) { path.push_back(&expr); });
 
     for (size_t i = path.size(); i > 0; i--) {

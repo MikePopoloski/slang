@@ -599,6 +599,10 @@ public:
     /// among other things, to ensure we perform instance caching correctly.
     void noteHierarchicalReference(const Scope& scope, const HierarchicalReference& ref);
 
+    /// Notes that a symbol is driven through an interface port connection,
+    /// which constitutes a side effect of the instance containing the port.
+    void noteInterfacePortDriver(const HierarchicalReference& ref, const ValueDriver& driver);
+
     /// Notes the existence of a virtual interface type declaration for the given instance.
     void noteVirtualIfaceInstance(const InstanceSymbol& instance);
 
@@ -857,11 +861,26 @@ private:
     flat_hash_map<std::tuple<std::string_view, SymbolKind>, std::shared_ptr<SystemSubroutine>>
         methodMap;
 
+    // Captures the side effects that are applied by an instance indirectly instead
+    // of via a port connection.
+    struct InstanceSideEffects {
+        struct IfacePortDriver {
+            not_null<const HierarchicalReference*> ref;
+            not_null<const ValueDriver*> driver;
+        };
+
+        // Drivers that are applied through interface ports.
+        std::vector<IfacePortDriver> ifacePortDrivers;
+
+        // All upward names that extend out of the instance.
+        std::vector<const HierarchicalReference*> upwardNames;
+    };
+
+    // Map from instance bodies to side effects applied by them.
+    flat_hash_map<const Symbol*, std::unique_ptr<InstanceSideEffects>> instanceSideEffectMap;
+
     // Map from pointers (to symbols, statements, expressions) to their associated attributes.
     flat_hash_map<const void*, std::span<const AttributeSymbol* const>> attributeMap;
-
-    // Map from instance bodies to hierarchical references that extend up through them.
-    flat_hash_map<const Symbol*, std::vector<const HierarchicalReference*>> hierRefMap;
 
     struct SyntaxMetadata {
         const syntax::SyntaxTree* tree = nullptr;

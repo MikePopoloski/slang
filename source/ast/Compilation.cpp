@@ -1302,12 +1302,35 @@ void Compilation::noteHierarchicalReference(const Scope& initialScope,
     auto currScope = &initialScope;
     for (size_t i = 0; i < ref.upwardCount; i++) {
         auto& sym = currScope->asSymbol();
-        if (sym.kind == SymbolKind::InstanceBody)
-            hierRefMap[&sym].push_back(&ref);
+        if (sym.kind == SymbolKind::InstanceBody) {
+            auto& entry = instanceSideEffectMap[&sym];
+            if (!entry)
+                entry = std::make_unique<InstanceSideEffects>();
+            entry->upwardNames.push_back(&ref);
+        }
 
         currScope = sym.getHierarchicalParent();
         SLANG_ASSERT(currScope);
     }
+}
+
+void Compilation::noteInterfacePortDriver(const HierarchicalReference& ref,
+                                          const ValueDriver& driver) {
+    SLANG_ASSERT(!isFrozen());
+    SLANG_ASSERT(ref.isViaIfacePort());
+    SLANG_ASSERT(ref.target);
+    SLANG_ASSERT(ref.expr);
+
+    auto scope = ref.path[0].symbol->getParentScope();
+    SLANG_ASSERT(scope);
+
+    auto& symbol = scope->asSymbol();
+    SLANG_ASSERT(symbol.kind == SymbolKind::InstanceBody);
+
+    auto& entry = instanceSideEffectMap[&symbol];
+    if (!entry)
+        entry = std::make_unique<InstanceSideEffects>();
+    entry->ifacePortDrivers.push_back({&ref, &driver});
 }
 
 void Compilation::noteVirtualIfaceInstance(const InstanceSymbol& symbol) {
@@ -2288,10 +2311,12 @@ void Compilation::checkVirtualIfaceInstance(const InstanceSymbol& instance) {
     if (!body)
         body = &instance.body;
 
-    if (auto it = hierRefMap.find(body); it != hierRefMap.end()) {
-        auto& diag = body->addDiag(diag::VirtualIfaceHierRef, instance.location);
-        for (auto ref : it->second)
-            diag.addNote(diag::NoteHierarchicalRef, ref->expr->sourceRange);
+    if (auto it = instanceSideEffectMap.find(body); it != instanceSideEffectMap.end()) {
+        auto& upwardNames = it->second->upwardNames;
+        if (!upwardNames.empty()) {
+            auto& diag = body->addDiag(diag::VirtualIfaceHierRef, instance.location);
+            diag.addNote(diag::NoteHierarchicalRef, upwardNames[0]->expr->sourceRange);
+        }
     }
 
     Diagnostic* portDiag = nullptr;

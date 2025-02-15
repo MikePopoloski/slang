@@ -226,9 +226,9 @@ void registerSymbols(py::module_& m) {
         .def_property_readonly("isUnidirectionalPort", &ValueDriver::isUnidirectionalPort)
         .def_property_readonly("isClockVar", &ValueDriver::isClockVar)
         .def_property_readonly("isLocalVarFormalArg", &ValueDriver::isLocalVarFormalArg)
-        .def_property_readonly("isInSingleDriverProcedure", &ValueDriver::isInSingleDriverProcedure)
-        .def_property_readonly("isInSubroutine", &ValueDriver::isInSubroutine)
-        .def_property_readonly("isInInitialBlock", &ValueDriver::isInInitialBlock);
+        .def_property_readonly("isInProcedure", &ValueDriver::isInProcedure)
+        .def_property_readonly("isInSingleDriverProcedure",
+                               &ValueDriver::isInSingleDriverProcedure);
 
     py::class_<EnumValueSymbol, ValueSymbol>(m, "EnumValueSymbol")
         .def_property_readonly("value",

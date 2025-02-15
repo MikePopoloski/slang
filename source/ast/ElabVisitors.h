@@ -529,36 +529,66 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
         if (!valid)
             return false;
 
-        auto [it, inserted] = instanceCache.try_emplace(std::move(key), &symbol.body);
+        auto [it, inserted] = instanceCache.try_emplace(std::move(key), symbol.body);
         if (inserted)
             return false;
+
+        // If we haven't resolved the side effects entry yet do that now.
+        // We do this opportunistically here because we know we have a cache hit.
+        auto& entry = it->second;
+        if (!entry.sideEffects) {
+            if (auto sideEffectIt = compilation.instanceSideEffectMap.find(entry.canonicalBody);
+                sideEffectIt != compilation.instanceSideEffectMap.end()) {
+                entry.sideEffects = sideEffectIt->second.get();
+            }
+            else {
+                entry.sideEffects = nullptr;
+            }
+        }
 
         // If any hierarchical names extend upward out of the instance we won't consider
         // it for caching, since the names could be different based on the context.
         // This could be optimized in the future by having another layer of caching based
         // on what the name resolves to for each instance.
-        auto canonical = it->second;
-        if (auto hierRefIt = compilation.hierRefMap.find(canonical);
-            hierRefIt != compilation.hierRefMap.end()) [[unlikely]] {
+        if (*entry.sideEffects && !(*entry.sideEffects)->upwardNames.empty()) {
             return false;
         }
 
         // Assuming we find an appropriately cached instance, we will store a pointer to it
         // in other instances to facilitate downstream consumers in not needing to recreate
         // this duplication detection logic again.
-        symbol.setCanonicalBody(*canonical);
+        symbol.setCanonicalBody(*entry.canonicalBody);
         if (compilation.hasFlag(CompilationFlags::DisableInstanceCaching))
             return false;
 
+        // Apply any side effects that come from the cached instance
+        // in the context of the current instance.
+        if (*entry.sideEffects) {
+            for (auto& ifacePortDriver : (*entry.sideEffects)->ifacePortDrivers) {
+                if (auto target = ifacePortDriver.ref->retargetIfacePort(symbol)) {
+                    target->as<ValueSymbol>().addDriverFromSideEffect(*ifacePortDriver.driver,
+                                                                      symbol);
+                }
+            }
+        }
+
         return true;
     }
+
+    struct InstanceCacheEntry {
+        not_null<const InstanceBodySymbol*> canonicalBody;
+        std::optional<const Compilation::InstanceSideEffects*> sideEffects;
+
+        explicit InstanceCacheEntry(const InstanceBodySymbol& canonicalBody) :
+            canonicalBody(&canonicalBody) {}
+    };
 
     Compilation& compilation;
     const size_t& numErrors;
     uint32_t errorLimit;
     bool visitInstances = true;
     bool hierarchyProblem = false;
-    flat_hash_map<InstanceCacheKey, const InstanceBodySymbol*> instanceCache;
+    flat_hash_map<InstanceCacheKey, InstanceCacheEntry> instanceCache;
     flat_hash_set<const InstanceBodySymbol*> activeInstanceBodies;
     flat_hash_set<const DefinitionSymbol*> usedIfacePorts;
     SmallVector<const GenericClassDefSymbol*> genericClasses;
