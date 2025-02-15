@@ -10,6 +10,7 @@
 #include "slang/ast/Compilation.h"
 #include "slang/ast/Symbol.h"
 #include "slang/ast/symbols/InstanceSymbols.h"
+#include "slang/ast/symbols/MemberSymbols.h"
 #include "slang/ast/symbols/PortSymbols.h"
 #include "slang/ast/symbols/ValueSymbol.h"
 #include "slang/ast/types/Type.h"
@@ -48,19 +49,28 @@ const Symbol* HierarchicalReference::retargetIfacePort(const InstanceSymbol& bas
     if (!port)
         return nullptr;
 
-    // TODO: think about modport restrictions
     auto [symbol, modport] = port->as<InterfacePortSymbol>().getConnection();
     for (size_t i = 1; i < path.size(); i++) {
         if (!symbol)
             return nullptr;
 
-        if (symbol->kind == SymbolKind::Instance)
-            symbol = &symbol->as<InstanceSymbol>().body;
-        else if (!symbol->isScope())
+        if (symbol->kind == SymbolKind::Instance) {
+            auto& body = symbol->as<InstanceSymbol>().body;
+            symbol = &body;
+
+            // See lookupDownward in Lookup.cpp for the logic here.
+            if (modport) {
+                symbol = body.find(modport->name);
+                modport = nullptr;
+                SLANG_ASSERT(symbol);
+            }
+        }
+        else if (!symbol->isScope()) {
             return nullptr;
+        }
 
         auto& elem = path[i];
-        if (auto index = std::get_if<int32_t>(&elem.selector)) {
+        if (std::get_if<int32_t>(&elem.selector)) {
             // TODO: handle array indices
         }
         else {

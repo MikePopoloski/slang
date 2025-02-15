@@ -25,6 +25,7 @@ public:
     InstanceCacheKey(const InstanceSymbol& symbol, bool& valid);
 
     bool operator==(const InstanceCacheKey& other) const;
+    bool operator!=(const InstanceCacheKey& other) const { return !(*this == other); }
 
     size_t hash() const { return savedHash; }
 

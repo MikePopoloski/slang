@@ -427,9 +427,24 @@ module m(I.m i);
     assign i.i = 1;
 endmodule
 
+interface J;
+    logic [3:0] a;
+    logic [2:0] b;
+    modport m(output .R(b[1:0]));
+endinterface
+
+module n(J.m j);
+    assign j.R[1:0] = 2;
+endmodule
+
 module top;
     I i();
     m m1(i), m2(i);
+
+    J j1(), j2();
+    n n1(j1), n2(j2);
+
+    assign j2.b[1] = 1;
 endmodule
 )");
 
@@ -437,8 +452,9 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 1);
+    REQUIRE(diags.size() == 2);
     CHECK(diags[0].code == diag::MultipleContAssigns);
+    CHECK(diags[1].code == diag::MultipleContAssigns);
 }
 
 TEST_CASE("Uninstantiated virtual interface param regress GH #679") {

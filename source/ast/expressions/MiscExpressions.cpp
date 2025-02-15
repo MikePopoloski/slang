@@ -245,15 +245,13 @@ bool ValueExpressionBase::requireLValueImpl(const ASTContext& context, SourceLoc
             // done in the ValueSymbol::addDriver call but because we redirect
             // here we'll lose that information so need to do it manually.
             if (!context.flags.has(ASTFlags::NotADriver) && !context.scope->isUninstantiated() &&
-                kind == ExpressionKind::HierarchicalValue) {
+                kind == ExpressionKind::HierarchicalValue && !longestStaticPrefix) {
 
                 auto& hve = as<HierarchicalValueExpression>();
                 if (hve.ref.isViaIfacePort()) {
                     auto& comp = context.getCompilation();
-                    auto driver = comp.emplace<ValueDriver>(
-                        context.getDriverKind(), longestStaticPrefix ? *longestStaticPrefix : *this,
-                        context.getContainingSymbol(), flags);
-
+                    auto driver = comp.emplace<ValueDriver>(context.getDriverKind(), *this,
+                                                            context.getContainingSymbol(), flags);
                     comp.noteInterfacePortDriver(hve.ref, *driver);
                 }
             }
