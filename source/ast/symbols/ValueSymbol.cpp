@@ -219,22 +219,16 @@ void ValueSymbol::addDriver(DriverKind driverKind, DriverBitRange bounds,
     addDriver(bounds, *driver);
 }
 
-void ValueSymbol::addDriverFromSideEffect(const ValueDriver& sourceDriver,
-                                          const Symbol& newInstance) const {
+void ValueSymbol::addDriverFromSideEffect(const ValueDriver& newDriver) const {
     auto scope = getParentScope();
     SLANG_ASSERT(scope);
 
-    auto& comp = scope->getCompilation();
     EvalContext evalCtx(ASTContext(*scope, LookupLocation::max));
-
-    auto bounds = ValueDriver::getBounds(*sourceDriver.prefixExpression, evalCtx, getType());
+    auto bounds = ValueDriver::getBounds(*newDriver.prefixExpression, evalCtx, getType());
     if (!bounds)
         return;
 
-    auto newDriver = comp.emplace<ValueDriver>(sourceDriver.kind, *sourceDriver.prefixExpression,
-                                               newInstance, sourceDriver.flags, sourceDriver.source,
-                                               sourceDriver.procCallExpression);
-    addDriver(*bounds, *newDriver);
+    addDriver(*bounds, newDriver);
 }
 
 template<typename TCallback>
@@ -434,14 +428,6 @@ ValueDriver::ValueDriver(DriverKind kind, const Expression& longestStaticPrefix,
     else {
         source = DriverSource::Other;
     }
-}
-
-ValueDriver::ValueDriver(DriverKind kind, const Expression& longestStaticPrefix,
-                         const Symbol& containingSymbol, bitmask<AssignFlags> flags,
-                         DriverSource source, const Expression* procCallExpression) :
-    prefixExpression(&longestStaticPrefix), containingSymbol(&containingSymbol),
-    procCallExpression(procCallExpression), flags(flags), kind(kind), source(source),
-    isFromSideEffect(true) {
 }
 
 SourceRange ValueDriver::getSourceRange() const {

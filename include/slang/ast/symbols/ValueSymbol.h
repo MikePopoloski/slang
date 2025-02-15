@@ -69,7 +69,7 @@ public:
 
     void addDriver(DriverBitRange bounds, const ValueDriver& driver) const;
 
-    void addDriverFromSideEffect(const ValueDriver& sourceDriver, const Symbol& newInstance) const;
+    void addDriverFromSideEffect(const ValueDriver& newDriver) const;
 
     std::ranges::subrange<DriverIntervalMap::const_iterator> drivers() const {
         return {driverMap.begin(), driverMap.end()};
@@ -144,11 +144,6 @@ public:
     /// Constructs a new ValueDriver instance.
     ValueDriver(DriverKind kind, const Expression& longestStaticPrefix,
                 const Symbol& containingSymbol, bitmask<AssignFlags> flags);
-
-    /// Constructs a new ValueDriver instance.
-    ValueDriver(DriverKind kind, const Expression& longestStaticPrefix,
-                const Symbol& containingSymbol, bitmask<AssignFlags> flags, DriverSource source,
-                const Expression* procCallExpression);
 
     /// Indicates whether the driver is for an input port.
     bool isInputPort() const { return flags.has(AssignFlags::InputPort); }

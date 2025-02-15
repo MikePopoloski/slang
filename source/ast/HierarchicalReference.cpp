@@ -69,13 +69,6 @@ const Symbol* HierarchicalReference::retargetIfacePort(const InstanceSymbol& bas
         }
     }
 
-    if (symbol) {
-        SLANG_ASSERT(symbol->kind == target->kind);
-        SLANG_ASSERT((symbol->isValue() == target->isValue()) &&
-                     (!symbol->isValue() || symbol->as<ValueSymbol>().getType().isMatching(
-                                                target->as<ValueSymbol>().getType())));
-    }
-
     return symbol;
 }
 

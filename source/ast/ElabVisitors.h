@@ -8,6 +8,7 @@
 #pragma once
 
 #include "slang/ast/ASTVisitor.h"
+#include "slang/ast/EvalContext.h"
 #include "slang/diagnostics/CompilationDiags.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/util/TimeTrace.h"
@@ -564,15 +565,51 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
         // Apply any side effects that come from the cached instance
         // in the context of the current instance.
         if (*entry.sideEffects) {
-            for (auto& ifacePortDriver : (*entry.sideEffects)->ifacePortDrivers) {
-                if (auto target = ifacePortDriver.ref->retargetIfacePort(symbol)) {
-                    target->as<ValueSymbol>().addDriverFromSideEffect(*ifacePortDriver.driver,
-                                                                      symbol);
-                }
-            }
+            for (auto& ifacePortDriver : (*entry.sideEffects)->ifacePortDrivers)
+                applyInstanceSideEffect(ifacePortDriver, symbol);
         }
 
         return true;
+    }
+
+    void applyInstanceSideEffect(
+        const Compilation::InstanceSideEffects::IfacePortDriver& ifacePortDriver,
+        const InstanceSymbol& instance) {
+
+        auto& ref = *ifacePortDriver.ref;
+        if (auto target = ref.retargetIfacePort(instance)) {
+            // If we found a modport port we need to translate to the underlying
+            // connection expression.
+            if (target->kind == SymbolKind::ModportPort) {
+                auto scope = instance.getParentScope();
+                SLANG_ASSERT(scope);
+
+                auto expr = target->as<ModportPortSymbol>().getConnectionExpr();
+                SLANG_ASSERT(expr);
+
+                auto lsp = ifacePortDriver.driver->prefixExpression.get();
+                if (lsp == ref.expr)
+                    lsp = nullptr;
+
+                SmallVector<std::pair<const ValueSymbol*, const Expression*>> prefixes;
+                EvalContext evalCtx(ASTContext(*scope, LookupLocation::after(instance)));
+                expr->getLongestStaticPrefixes(prefixes, evalCtx, lsp);
+
+                for (auto& [value, prefix] : prefixes) {
+                    auto driver = compilation.emplace<ValueDriver>(*ifacePortDriver.driver);
+                    driver->prefixExpression = prefix;
+                    driver->containingSymbol = &instance;
+                    driver->isFromSideEffect = true;
+                    value->addDriverFromSideEffect(*driver);
+                }
+            }
+            else {
+                auto driver = compilation.emplace<ValueDriver>(*ifacePortDriver.driver);
+                driver->containingSymbol = &instance;
+                driver->isFromSideEffect = true;
+                target->as<ValueSymbol>().addDriverFromSideEffect(*driver);
+            }
+        }
     }
 
     struct InstanceCacheEntry {

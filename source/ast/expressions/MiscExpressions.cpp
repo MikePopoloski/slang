@@ -239,8 +239,29 @@ bool ValueExpressionBase::requireLValueImpl(const ASTContext& context, SourceLoc
             return false;
         }
 
-        if (auto expr = modportPort.getConnectionExpr())
+        if (auto expr = modportPort.getConnectionExpr()) {
+            // We want to record this redirection with the compilation as a side
+            // effect of the instance port used to get here. Normally that gets
+            // done in the ValueSymbol::addDriver call but because we redirect
+            // here we'll lose that information so need to do it manually.
+            if (!context.flags.has(ASTFlags::NotADriver) && !context.scope->isUninstantiated() &&
+                kind == ExpressionKind::HierarchicalValue) {
+
+                auto& hve = as<HierarchicalValueExpression>();
+                if (hve.ref.isViaIfacePort()) {
+                    auto& comp = context.getCompilation();
+                    auto driver = comp.emplace<ValueDriver>(
+                        context.getDriverKind(), longestStaticPrefix ? *longestStaticPrefix : *this,
+                        context.getContainingSymbol(), flags);
+
+                    comp.noteInterfacePortDriver(hve.ref, *driver);
+                }
+            }
+
+            // The assignment is actually to the underlying connection expression,
+            // so redirect it there.
             return expr->requireLValue(context, location, flags, longestStaticPrefix);
+        }
     }
 
     if (!longestStaticPrefix)
