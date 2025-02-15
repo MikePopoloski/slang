@@ -1291,10 +1291,14 @@ void Compilation::noteNetAlias(const Scope& scope, const Symbol& firstSym,
 
 void Compilation::noteHierarchicalReference(const Scope& initialScope,
                                             const HierarchicalReference& ref) {
-    // For now, we're only interested in upward names that cross
-    // through instance boundaries.
     SLANG_ASSERT(!isFrozen());
     SLANG_ASSERT(ref.expr);
+
+    // For now, we're only interested in upward names that cross
+    // through instance boundaries.
+    if (ref.isViaIfacePort())
+        return;
+
     auto currScope = &initialScope;
     for (size_t i = 0; i < ref.upwardCount; i++) {
         auto& sym = currScope->asSymbol();

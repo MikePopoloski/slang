@@ -24,13 +24,12 @@ public:
     InstanceCacheKey(const InstanceSymbol& symbol, bool& valid);
 
     bool operator==(const InstanceCacheKey& other) const;
-    bool operator!=(const InstanceCacheKey& other) const { return !(*this == other); }
 
     size_t hash() const { return savedHash; }
 
 private:
     not_null<const InstanceSymbol*> symbol;
-    std::vector<InstanceCacheKey> ifaceKeys;
+    std::vector<std::pair<InstanceCacheKey, const ModportSymbol*>> ifaceKeys;
     size_t savedHash;
 };
 
@@ -370,51 +369,9 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
         }
 
         // If we have already visited an identical instance body we don't have to do
-        // it again, because all possible diagnostics have already been collected,
-        // with some notable caveats that need to be handled:
-        // - "Identical" needs to take into account parameters values and interface ports,
-        //   since the types of members and expression can vary based on those. This is
-        //   computed in the InstanceCacheKey.
-        // - If any hierarchical names extend upward out of the instance we won't consider
-        //   it for caching, since the names could be different based on the context.
-        //   This could be optimized in the future by having another layer of caching based
-        //   on what the name resolves to for each instance.
-        // - Instances that are targeted by defparams, bind directives, or configuration
-        //   rules, or that are themselves created by a bind directive, cannot participate
-        //   in caching.
-        // - Interface ports must be connected to instances that themselves follow the
-        //   restrictions on defparams, bind directives, and config rules.
-        //
-        // - TODO: Downward hierarchical references into such instances need to be accounted for
-        // - TODO: global clocking?
-        // - TODO: bind directives inside the cached instance
-        // - TODO: check for iface ports that connect to iface ports
-        //
-        // Assuming we find an appropriately cached instance, we will store a pointer to it
-        // in other instances to facilitate downstream consumers in not needing to recreate
-        // this duplication detection logic again.
-
-        SLANG_ASSERT(symbol.getCanonicalBody() == nullptr);
-        if (isEligibleForCaching(symbol)) {
-            bool valid = true;
-            InstanceCacheKey key(symbol, valid);
-
-            if (valid) {
-                auto [it, inserted] = instanceCache.try_emplace(std::move(key), &symbol.body);
-                if (!inserted) {
-                    auto canonical = it->second;
-                    if (auto hierRefIt = compilation.hierRefMap.find(canonical);
-                        hierRefIt == compilation.hierRefMap.end()) [[likely]] {
-
-                        symbol.setCanonicalBody(*canonical);
-                        if (!compilation.hasFlag(CompilationFlags::DisableInstanceCaching))
-                            return;
-                    }
-                }
-            }
-        }
-
-        if (visitInstances)
+        // it again, because all possible diagnostics have already been collected.
+        // Otherwise descend into the body and visit everything.
+        if (visitInstances && !isCached(symbol))
             visit(symbol.body);
     }
 
@@ -540,6 +497,60 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
             if (symbol->numSpecializations() == 0)
                 symbol->getInvalidSpecialization().visit(*this);
         }
+    }
+
+    bool isCached(const InstanceSymbol& symbol) {
+        // TODO: Downward hierarchical references into such instances need to be accounted for
+        // TODO: global clocking?
+        // TODO: references to $root
+        // TODO: bind directives inside the cached instance
+        // TODO: modport exports, extern interface prototypes?
+        // TODO: multiple levels of iface ports connected to iface ports
+        // TODO: side effects of connections through modports
+
+        // We can use a cached version of this instance's body if we have already
+        // visited an identical body elsewhere, with some caveats explained below.
+        SLANG_ASSERT(symbol.getCanonicalBody() == nullptr);
+
+        // Instances that are targeted by defparams, bind directives, or configuration rules,
+        // or that are themselves created by a bind directive, cannot participate in caching.
+        if (!isEligibleForCaching(symbol))
+            return false;
+
+        // "Identical" needs to take into account parameter values and interface ports,
+        // since the types of members and expression can vary based on those. This is
+        // computed in the InstanceCacheKey.
+        //
+        // Interface ports must be connected to instances that themselves follow the
+        // restrictions on defparams, bind directives, and config rules. This is checked
+        // in the InstanceCacheKey constructor and returned in the 'valid' parameter.
+        bool valid = true;
+        InstanceCacheKey key(symbol, valid);
+        if (!valid)
+            return false;
+
+        auto [it, inserted] = instanceCache.try_emplace(std::move(key), &symbol.body);
+        if (inserted)
+            return false;
+
+        // If any hierarchical names extend upward out of the instance we won't consider
+        // it for caching, since the names could be different based on the context.
+        // This could be optimized in the future by having another layer of caching based
+        // on what the name resolves to for each instance.
+        auto canonical = it->second;
+        if (auto hierRefIt = compilation.hierRefMap.find(canonical);
+            hierRefIt != compilation.hierRefMap.end()) [[unlikely]] {
+            return false;
+        }
+
+        // Assuming we find an appropriately cached instance, we will store a pointer to it
+        // in other instances to facilitate downstream consumers in not needing to recreate
+        // this duplication detection logic again.
+        symbol.setCanonicalBody(*canonical);
+        if (compilation.hasFlag(CompilationFlags::DisableInstanceCaching))
+            return false;
+
+        return true;
     }
 
     Compilation& compilation;
@@ -914,8 +925,11 @@ InstanceCacheKey::InstanceCacheKey(const InstanceSymbol& symbol, bool& valid) : 
                 if (!valid)
                     return;
 
-                ifaceKeys.emplace_back(std::move(ifaceKey));
-                hash_combine(h, ifaceKeys.back().savedHash);
+                ifaceKeys.emplace_back(std::move(ifaceKey), modport);
+                hash_combine(h, ifaceKeys.back().first.savedHash);
+
+                if (modport)
+                    hash_combine(h, modport->name);
             }
         }
     }
@@ -954,7 +968,12 @@ bool InstanceCacheKey::operator==(const InstanceCacheKey& other) const {
     }
 
     for (size_t i = 0; i < ifaceKeys.size(); i++) {
-        if (ifaceKeys[i] != other.ifaceKeys[i])
+        auto& l = ifaceKeys[i];
+        auto& r = other.ifaceKeys[i];
+        if (l.first != r.first)
+            return false;
+
+        if (bool(l.second) != bool(r.second) || (l.second && l.second->name != r.second->name))
             return false;
     }
 
