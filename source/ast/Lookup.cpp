@@ -329,8 +329,12 @@ bool lookupDownward(std::span<const NamePlusLoc> nameParts, NameComponents name,
         // - This is not a direct interface port, package, or $unit reference
         const bool isCBOrVirtualIface = symbol->kind == SymbolKind::ClockingBlock || isVirtualIface;
         if (it == nameParts.rbegin()) {
-            if (symbol->kind != SymbolKind::InterfacePort && symbol->kind != SymbolKind::Package &&
-                symbol->kind != SymbolKind::CompilationUnit && !isCBOrVirtualIface) {
+            if (symbol->kind == SymbolKind::InterfacePort) {
+                result.flags |= LookupResultFlags::IfacePort;
+                result.path.emplace_back(*symbol);
+            }
+            else if (symbol->kind != SymbolKind::Package &&
+                     symbol->kind != SymbolKind::CompilationUnit && !isCBOrVirtualIface) {
                 result.flags |= LookupResultFlags::IsHierarchical;
                 result.path.emplace_back(*symbol);
             }
@@ -498,18 +502,21 @@ bool lookupDownward(std::span<const NamePlusLoc> nameParts, NameComponents name,
     if (!checkClassParams(name))
         return false;
 
-    if (result.flags.has(LookupResultFlags::IsHierarchical) && symbol) {
-        if (VariableSymbol::isKind(symbol->kind) &&
-            symbol->as<VariableSymbol>().lifetime == VariableLifetime::Automatic) {
-            // If we found an automatic variable check that we didn't try to reference it
-            // hierarchically.
-            result.addDiag(*context.scope, diag::AutoVariableHierarchical, name.range);
-            return false;
-        }
-        else if (symbol->isType()) {
-            // Types cannot be referenced hierarchically.
-            result.addDiag(*context.scope, diag::TypeHierarchical, name.range);
-            return false;
+    if (result.flags.has(LookupResultFlags::IsHierarchical | LookupResultFlags::IfacePort) &&
+        symbol) {
+        if (result.flags.has(LookupResultFlags::IsHierarchical)) {
+            if (VariableSymbol::isKind(symbol->kind) &&
+                symbol->as<VariableSymbol>().lifetime == VariableLifetime::Automatic) {
+                // If we found an automatic variable check that we didn't try to reference it
+                // hierarchically.
+                result.addDiag(*context.scope, diag::AutoVariableHierarchical, name.range);
+                return false;
+            }
+            else if (symbol->isType()) {
+                // Types cannot be referenced hierarchically.
+                result.addDiag(*context.scope, diag::TypeHierarchical, name.range);
+                return false;
+            }
         }
         result.path.emplace_back(*symbol);
     }

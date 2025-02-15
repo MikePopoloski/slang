@@ -111,9 +111,12 @@ enum class SLANG_EXPORT LookupResultFlags : uint8_t {
 
     /// The lookup was resolved through a forwarded typedef. Some language
     /// rules restrict where this can be done.
-    FromForwardTypedef = 1 << 4
+    FromForwardTypedef = 1 << 4,
+
+    /// The lookup was resolved through an interface port connection.
+    IfacePort = 1 << 5
 };
-SLANG_BITMASK(LookupResultFlags, FromForwardTypedef)
+SLANG_BITMASK(LookupResultFlags, IfacePort)
 
 /// This type denotes the ordering of symbols within a particular scope, for the purposes of
 /// determining whether a found symbol is visible compared to the given location.

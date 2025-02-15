@@ -223,7 +223,9 @@ static const Expression* bindTerminal(const ExpressionSyntax& syntax,
             break;
     }
 
-    if (valueExpr->kind != ExpressionKind::NamedValue) {
+    if (valueExpr->kind != ExpressionKind::NamedValue &&
+        (valueExpr->kind != ExpressionKind::HierarchicalValue ||
+         !valueExpr->as<HierarchicalValueExpression>().ref.isViaIfacePort())) {
         auto code = (valueExpr->kind == ExpressionKind::ElementSelect ||
                      valueExpr->kind == ExpressionKind::RangeSelect)
                         ? diag::SpecifyPathMultiDim
@@ -231,7 +233,7 @@ static const Expression* bindTerminal(const ExpressionSyntax& syntax,
         context.addDiag(code, syntax.sourceRange());
     }
     else {
-        auto& symbol = valueExpr->as<NamedValueExpression>().symbol;
+        auto& symbol = valueExpr->as<ValueExpressionBase>().symbol;
         if (SpecifyBlockSymbol::checkPathTerminal(symbol, *expr->type, *parentParent, dir,
                                                   valueExpr->sourceRange)) {
             return expr;

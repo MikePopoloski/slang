@@ -492,7 +492,8 @@ HierarchicalValueExpression::HierarchicalValueExpression(const Scope& scope,
 }
 
 ConstantValue HierarchicalValueExpression::evalImpl(EvalContext& context) const {
-    if (!context.getCompilation().hasFlag(CompilationFlags::AllowHierarchicalConst) &&
+    if (!ref.isViaIfacePort() &&
+        !context.getCompilation().hasFlag(CompilationFlags::AllowHierarchicalConst) &&
         !context.astCtx.flags.has(ASTFlags::ConfigParam)) {
         context.addDiag(diag::ConstEvalHierarchicalName, sourceRange) << symbol.name;
         return nullptr;
@@ -500,16 +501,6 @@ ConstantValue HierarchicalValueExpression::evalImpl(EvalContext& context) const 
 
     if (!checkConstantBase(context))
         return nullptr;
-
-    switch (symbol.kind) {
-        case SymbolKind::Parameter:
-        case SymbolKind::EnumValue:
-        case SymbolKind::Specparam:
-            break;
-        default:
-            context.addDiag(diag::ConstEvalHierarchicalName, sourceRange) << symbol.name;
-            return nullptr;
-    }
 
     switch (symbol.kind) {
         case SymbolKind::Parameter: {
@@ -527,7 +518,8 @@ ConstantValue HierarchicalValueExpression::evalImpl(EvalContext& context) const 
         case SymbolKind::Specparam:
             return symbol.as<SpecparamSymbol>().getValue(sourceRange);
         default:
-            SLANG_UNREACHABLE;
+            context.addDiag(diag::ConstEvalHierarchicalName, sourceRange) << symbol.name;
+            return nullptr;
     }
 }
 
