@@ -9,6 +9,7 @@
 
 #include "slang/ast/Compilation.h"
 #include "slang/ast/Symbol.h"
+#include "slang/ast/symbols/BlockSymbols.h"
 #include "slang/ast/symbols/InstanceSymbols.h"
 #include "slang/ast/symbols/MemberSymbols.h"
 #include "slang/ast/symbols/PortSymbols.h"
@@ -70,12 +71,37 @@ const Symbol* HierarchicalReference::retargetIfacePort(const InstanceSymbol& bas
         }
 
         auto& elem = path[i];
-        if (std::get_if<int32_t>(&elem.selector)) {
-            // TODO: handle array indices
+        if (auto index = std::get_if<int32_t>(&elem.selector)) {
+            if (symbol->kind == SymbolKind::InstanceArray) {
+                auto& arr = symbol->as<InstanceArraySymbol>();
+                if (*index < 0 || size_t(*index) >= arr.elements.size())
+                    return nullptr;
+
+                symbol = arr.elements[size_t(*index)];
+            }
+            else if (symbol->kind == SymbolKind::GenerateBlockArray) {
+                auto& arr = symbol->as<GenerateBlockArraySymbol>();
+                if (!arr.valid || *index < 0 || size_t(*index) >= arr.entries.size())
+                    return nullptr;
+
+                symbol = arr.entries[size_t(*index)];
+            }
+            else {
+                return nullptr;
+            }
         }
         else {
             auto name = std::get<std::string_view>(elem.selector);
-            symbol = symbol->as<Scope>().find(name);
+            auto next = symbol->as<Scope>().find(name);
+            if (!next && symbol->kind == SymbolKind::Modport) {
+                // See lookupDownward in Lookup.cpp for the logic here.
+                next = symbol->getParentScope()->find(name);
+                if (!next || SemanticFacts::isAllowedInModport(next->kind) ||
+                    next->kind == SymbolKind::Modport) {
+                    return nullptr;
+                }
+            }
+            symbol = next;
         }
     }
 

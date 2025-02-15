@@ -1200,8 +1200,9 @@ static const Symbol* selectSingleChild(const Symbol& symbol, const BitSelectSynt
             return nullptr;
         }
 
-        auto child = array.elements[size_t(array.range.translateIndex(*index))];
-        result.path.emplace_back(*child, *index);
+        auto translated = array.range.translateIndex(*index);
+        auto child = array.elements[size_t(translated)];
+        result.path.emplace_back(*child, translated);
         return child;
     }
     else {
@@ -1209,11 +1210,13 @@ static const Symbol* selectSingleChild(const Symbol& symbol, const BitSelectSynt
         if (!array.valid)
             return nullptr;
 
+        int32_t idx = 0;
         for (auto entry : array.entries) {
             if (entry->arrayIndex && *entry->arrayIndex == *index) {
-                result.path.emplace_back(*entry, *index);
+                result.path.emplace_back(*entry, idx);
                 return entry;
             }
+            idx++;
         }
 
         auto& diag = result.addDiag(*context.scope, diag::ScopeIndexOutOfRange,

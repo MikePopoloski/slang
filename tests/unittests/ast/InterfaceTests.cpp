@@ -457,6 +457,54 @@ endmodule
     CHECK(diags[1].code == diag::MultipleContAssigns);
 }
 
+TEST_CASE("Iface connection multi-driven through array errors") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I;
+    for (genvar i = 0; i < 5; i++) begin : asdf
+        logic a;
+    end
+endinterface
+
+interface J;
+    I i[3] ();
+    logic q;
+    modport m(input q);
+endinterface
+
+module m(I i);
+    assign i.asdf[4].a = 1;
+endmodule
+
+module n(I i[3]);
+    assign i[2].asdf[4].a = 1;
+endmodule
+
+module o(J j);
+    assign j.i[1].asdf[2].a = 1;
+endmodule
+
+module top;
+    I i();
+    m m1(i), m2(i);
+
+    I arr [3] ();
+    n n1(arr), n2(arr);
+
+    J j();
+    o o1(j.m), o2(j.m);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::MultipleContAssigns);
+    CHECK(diags[1].code == diag::MultipleContAssigns);
+    CHECK(diags[2].code == diag::MultipleContAssigns);
+}
+
 TEST_CASE("Uninstantiated virtual interface param regress GH #679") {
     auto tree = SyntaxTree::fromText(R"(
 interface I;

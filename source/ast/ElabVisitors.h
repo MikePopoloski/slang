@@ -503,12 +503,12 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
 
     bool isCached(const InstanceSymbol& symbol) {
         // TODO: Downward hierarchical references into such instances need to be accounted for
+        //          - Make sure this doesn't automatically cause dup drivers
         // TODO: global clocking?
         // TODO: references to $root
         // TODO: bind directives inside the cached instance
         // TODO: modport exports, extern interface prototypes?
         // TODO: multiple levels of iface ports connected to iface ports
-        // TODO: side effects of connections through modports
 
         // We can use a cached version of this instance's body if we have already
         // visited an identical body elsewhere, with some caveats explained below.
