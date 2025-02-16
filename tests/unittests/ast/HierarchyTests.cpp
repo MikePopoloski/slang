@@ -1925,3 +1925,47 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Instance caching with nested bind directives") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    l l1();
+endmodule
+
+module l;
+    n n1();
+endmodule
+
+module n;
+    bind q1.o1 o o1();
+endmodule
+
+module o;
+endmodule
+
+module p;
+    m m2();
+endmodule
+
+module q;
+    o o1();
+endmodule
+
+module top;
+    if (1) begin
+        m m1();
+        q q1();
+    end
+    if (1) begin
+        p p1();
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::UndeclaredIdentifier);
+}

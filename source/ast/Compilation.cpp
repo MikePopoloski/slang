@@ -1105,8 +1105,25 @@ std::span<const AttributeSymbol* const> Compilation::getAttributes(const void* p
 void Compilation::noteBindDirective(const BindDirectiveSyntax& syntax, const Scope& scope) {
     SLANG_ASSERT(!isFrozen());
 
-    if (!scope.isUninstantiated())
+    if (!scope.isUninstantiated()) {
         bindDirectives.emplace_back(&syntax, &scope);
+
+        auto currScope = &scope;
+        do {
+            auto& symbol = currScope->asSymbol();
+            if (symbol.kind == SymbolKind::InstanceBody) {
+                auto& entry = instanceSideEffectMap[&symbol];
+                if (!entry)
+                    entry = std::make_unique<InstanceSideEffects>();
+                else if (entry->hasBindDirectives)
+                    break;
+
+                entry->hasBindDirectives = true;
+            }
+
+            currScope = symbol.getHierarchicalParent();
+        } while (currScope);
+    }
 }
 
 void Compilation::noteInstanceWithDefBind(const Symbol& instance) {

@@ -263,6 +263,7 @@ void Scope::addMembers(const SyntaxNode& syntax) {
         case SyntaxKind::SpecifyBlock:
         case SyntaxKind::CoverCross:
         case SyntaxKind::NetAlias:
+        case SyntaxKind::BindDirective:
             addDeferredMembers(syntax);
             break;
         case SyntaxKind::EnumType:
@@ -434,9 +435,6 @@ void Scope::addMembers(const SyntaxNode& syntax) {
             break;
         case SyntaxKind::DPIExport:
             compilation.noteDPIExportDirective(syntax.as<DPIExportSyntax>(), *this);
-            break;
-        case SyntaxKind::BindDirective:
-            compilation.noteBindDirective(syntax.as<BindDirectiveSyntax>(), *this);
             break;
         case SyntaxKind::ConstraintDeclaration:
             if (auto sym = ConstraintBlockSymbol::fromSyntax(
@@ -1061,6 +1059,9 @@ void Scope::elaborate() const {
             }
             case SyntaxKind::EnumType:
                 // Already handled above.
+                break;
+            case SyntaxKind::BindDirective:
+                compilation.noteBindDirective(member.node.as<BindDirectiveSyntax>(), *this);
                 break;
             default:
                 SLANG_UNREACHABLE;

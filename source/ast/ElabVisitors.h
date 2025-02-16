@@ -373,7 +373,7 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
         // If we have already visited an identical instance body we don't have to do
         // it again, because all possible diagnostics have already been collected.
         // Otherwise descend into the body and visit everything.
-        if (visitInstances && !isCached(symbol))
+        if (visitInstances && !tryApplyFromCache(symbol))
             visit(symbol.body);
     }
 
@@ -501,12 +501,11 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
         }
     }
 
-    bool isCached(const InstanceSymbol& symbol) {
+    bool tryApplyFromCache(const InstanceSymbol& symbol) {
         // TODO: Downward hierarchical references into such instances need to be accounted for
         //          - Make sure this doesn't automatically cause dup drivers
         // TODO: global clocking?
         // TODO: references to $root
-        // TODO: bind directives inside the cached instance
         // TODO: modport exports, extern interface prototypes?
         // TODO: multiple levels of iface ports connected to iface ports
 
@@ -552,7 +551,8 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
         // it for caching, since the names could be different based on the context.
         // This could be optimized in the future by having another layer of caching based
         // on what the name resolves to for each instance.
-        if (*entry.sideEffects && !(*entry.sideEffects)->upwardNames.empty()) {
+        auto sideEffects = entry.sideEffects.value();
+        if (sideEffects && (sideEffects->hasBindDirectives || !sideEffects->upwardNames.empty())) {
             return false;
         }
 
@@ -565,8 +565,8 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
 
         // Apply any side effects that come from the cached instance
         // in the context of the current instance.
-        if (*entry.sideEffects) {
-            for (auto& ifacePortDriver : (*entry.sideEffects)->ifacePortDrivers)
+        if (sideEffects) {
+            for (auto& ifacePortDriver : sideEffects->ifacePortDrivers)
                 applyInstanceSideEffect(ifacePortDriver, symbol);
         }
 

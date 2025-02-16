@@ -874,6 +874,9 @@ private:
 
         // All upward names that extend out of the instance.
         std::vector<const HierarchicalReference*> upwardNames;
+
+        // Whether the instance has bind directives within it.
+        bool hasBindDirectives = false;
     };
 
     // Map from instance bodies to side effects applied by them.
