@@ -31,13 +31,16 @@ public:
 
         /// The selector used to get to the @a symbol, either
         /// an index if the parent was an array, or a field name.
-        std::variant<int32_t, std::string_view> selector;
+        std::variant<int32_t, std::pair<int32_t, int32_t>, std::string_view> selector;
 
         /// Constructs an element with a name selector.
         Element(const Symbol& symbol);
 
         /// Constructs an element with an index selector.
         Element(const Symbol& symbol, int32_t index);
+
+        /// Constructs an element with a range selector.
+        Element(const Symbol& symbol, std::pair<int32_t, int32_t> range);
     };
 
     /// The target symbol of the hierarchical reference.

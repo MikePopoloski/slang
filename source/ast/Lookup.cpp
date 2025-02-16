@@ -1290,7 +1290,7 @@ static const Symbol* selectChildRange(const InstanceArraySymbol& array,
     auto& comp = context.getCompilation();
     auto children = comp.emplace<InstanceArraySymbol>(comp, ""sv, syntax.getFirstToken().location(),
                                                       elems, newRange);
-    result.path.emplace_back(*children);
+    result.path.emplace_back(*children, std::pair(begin, end));
     return children;
 }
 

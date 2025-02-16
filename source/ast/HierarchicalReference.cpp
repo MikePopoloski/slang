@@ -26,6 +26,10 @@ HierarchicalReference::Element::Element(const Symbol& symbol, int32_t index) :
     symbol(&symbol), selector(index) {
 }
 
+HierarchicalReference::Element::Element(const Symbol& symbol, std::pair<int32_t, int32_t> range) :
+    symbol(&symbol), selector(range) {
+}
+
 HierarchicalReference HierarchicalReference::fromLookup(Compilation& compilation,
                                                         const LookupResult& result) {
     if (!result.flags.has(LookupResultFlags::IsHierarchical | LookupResultFlags::IfacePort))
@@ -89,6 +93,26 @@ const Symbol* HierarchicalReference::retargetIfacePort(const InstanceSymbol& bas
             else {
                 return nullptr;
             }
+        }
+        else if (auto range = std::get_if<std::pair<int32_t, int32_t>>(&elem.selector)) {
+            if (symbol->kind != SymbolKind::InstanceArray)
+                return nullptr;
+
+            auto& arr = symbol->as<InstanceArraySymbol>();
+            if (range->first < 0 || size_t(range->second) >= arr.elements.size())
+                return nullptr;
+
+            if (size_t(range->first) >= arr.elements.size() ||
+                size_t(range->second) >= arr.elements.size())
+                return nullptr;
+
+            auto elems = arr.elements.subspan(size_t(range->first),
+                                              size_t(range->second - range->first) + 1);
+
+            // Construct a placeholder array symbol that will hold this new sliced array.
+            auto& comp = arr.getCompilation();
+            symbol = comp.emplace<InstanceArraySymbol>(comp, ""sv, SourceLocation::NoLocation,
+                                                       elems, ConstantRange{});
         }
         else {
             auto name = std::get<std::string_view>(elem.selector);

@@ -941,16 +941,16 @@ module m(I i);
     assign i.l = 1;
 endmodule
 
-module n(I i);
-    m m1(i);
+module n(I i[2]);
+    m m1(i[1]);
 endmodule
 
-module o(I i);
-    n n1(i);
+module o(I i[3]);
+    n n1(i[1:2]);
 endmodule
 
 module top;
-    I i();
+    I i [3]();
     o o1(i), o2(i);
 endmodule
 )");
