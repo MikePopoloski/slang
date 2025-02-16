@@ -504,7 +504,6 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
     bool tryApplyFromCache(const InstanceSymbol& symbol) {
         // TODO: Downward hierarchical references into such instances need to be accounted for
         //          - Make sure this doesn't automatically cause dup drivers
-        // TODO: references to $root
         // TODO: modport exports, extern interface prototypes?
         // TODO: multiple levels of iface ports connected to iface ports
 

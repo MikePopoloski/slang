@@ -1328,9 +1328,19 @@ void Compilation::noteHierarchicalReference(const Scope& initialScope,
     if (ref.isViaIfacePort())
         return;
 
+    size_t count = ref.upwardCount;
+    if (count == 0 && !ref.path.empty() && ref.path[0].symbol->kind == SymbolKind::Root) {
+        // If the name targets the root scope the count doesn't mean
+        // anything, we should walk all the way up.
+        count = SIZE_MAX;
+    }
+
     auto currScope = &initialScope;
-    for (size_t i = 0; i < ref.upwardCount; i++) {
+    for (size_t i = 0; i < count; i++) {
         auto& sym = currScope->asSymbol();
+        if (sym.kind == SymbolKind::Root)
+            break;
+
         if (sym.kind == SymbolKind::InstanceBody) {
             auto& entry = instanceSideEffectMap[&sym];
             if (!entry)
