@@ -1011,7 +1011,7 @@ private:
     }
 
     PortConnection* createConnection(const InterfacePortSymbol& port,
-                                     PortConnection::IfaceConn ifaceConn, const Expression& expr,
+                                     PortConnection::IfaceConn ifaceConn, const Expression* expr,
                                      std::span<const AttributeSymbol* const> attributes) {
         auto conn = comp.emplace<PortConnection>(port, ifaceConn, expr);
         if (!attributes.empty())
@@ -1070,7 +1070,7 @@ private:
             return emptyConnection(port);
 
         auto [conn, connExpr] = getInterfaceConn(context, port, *expr);
-        return createConnection(port, conn, *connExpr, attributes);
+        return createConnection(port, conn, connExpr, attributes);
     }
 
     PortConnection* getImplicitInterface(const InterfacePortSymbol& port, SourceRange range,
@@ -1095,7 +1095,7 @@ private:
 
         ASTContext context(scope, lookupLocation, ASTFlags::NonProcedural);
         auto [conn, connExpr] = getInterfaceConn(context, port, *idName);
-        return createConnection(port, conn, *connExpr, attributes);
+        return createConnection(port, conn, connExpr, attributes);
     }
 
     static bool areDimSizesEqual(std::span<const ConstantRange> left,
@@ -1695,8 +1695,8 @@ PortConnection::PortConnection(const Symbol& port, bool useDefault) :
 }
 
 PortConnection::PortConnection(const InterfacePortSymbol& port, const IfaceConn& conn,
-                               const Expression& expr) :
-    port(port), connectedSymbol(conn.first), expr(&expr), modport(conn.second) {
+                               const Expression* expr) :
+    port(port), connectedSymbol(conn.first), expr(expr), modport(conn.second) {
 }
 
 PortConnection::PortConnection(const Symbol& port, const Symbol* connectedSymbol,
@@ -1733,7 +1733,7 @@ static std::pair<ArgumentDirection, const Type*> getDirAndType(const Symbol& por
 }
 
 const Expression* PortConnection::getExpression() const {
-    if (expr)
+    if (expr || port.kind == SymbolKind::InterfacePort)
         return expr;
 
     if (connectedSymbol || exprSyntax) {
