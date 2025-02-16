@@ -266,7 +266,8 @@ protected:
     /// Add a preconstructed wildcard import to this scope.
     void addWildcardImport(const WildcardImportSymbol& item);
 
-    void addDeferredMembers(const syntax::SyntaxNode& syntax);
+    void setHasBinds() { getOrAddDeferredData().hasBinds = true; }
+
     void insertMember(const Symbol* member, const Symbol* at, bool isElaborating,
                       bool incrementIndex) const;
 
@@ -305,9 +306,13 @@ private:
     public:
         // A flag indicating whether any enums have been registered in the scope.
         bool hasEnums = false;
+
+        // A flag indicating whether there are any bind directives targeting this scope.
+        bool hasBinds = false;
     };
 
     DeferredMemberData& getOrAddDeferredData() const;
+    void addDeferredMembers(const syntax::SyntaxNode& syntax);
     void elaborate() const;
     void handleNameConflict(const Symbol& member) const;
     void handleNameConflict(const Symbol& member, const Symbol*& existing,

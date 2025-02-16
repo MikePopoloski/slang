@@ -883,7 +883,6 @@ void Scope::elaborate() const {
     // Go through deferred instances and elaborate them now.
     bool usedPorts = false;
     bool hasNestedDefs = false;
-    bool hasBinds = false;
     uint32_t constructIndex = 1;
 
     for (auto symbol : deferred) {
@@ -1053,11 +1052,6 @@ void Scope::elaborate() const {
                 insertMembersAndNets(members, implicitNets, symbol);
                 break;
             }
-            case SyntaxKind::BindDirective: {
-                // Process bind directives below after everything else.
-                hasBinds = true;
-                break;
-            }
             case SyntaxKind::ClassMethodDeclaration: {
                 auto subroutine = SubroutineSymbol::fromSyntax(
                     compilation, member.node.as<ClassMethodDeclarationSyntax>(), *this);
@@ -1122,7 +1116,7 @@ void Scope::elaborate() const {
 
     // If there are bind directives, reach up into the instance body
     // and pull out the extra bind metadata from its override node.
-    if (hasBinds) {
+    if (deferredData.hasBinds) {
         SmallSet<const BindDirectiveSyntax*, 4> seenBindDirectives;
         ASTContext context(*this, LookupLocation::max);
         auto handleBind = [&](const BindDirectiveInfo& info) {
@@ -1533,13 +1527,6 @@ static size_t countGenMembers(const SyntaxNode& syntax) {
     }
 }
 
-static size_t countBindMembers(const BindDirectiveSyntax& syntax) {
-    if (syntax.instantiation->kind == SyntaxKind::CheckerInstantiation)
-        return syntax.instantiation->as<CheckerInstantiationSyntax>().instances.size();
-    else
-        return syntax.instantiation->as<HierarchyInstantiationSyntax>().instances.size();
-}
-
 static size_t countMembers(const SyntaxNode& syntax) {
     // Note that the +1s on some of these are to make a slot for implicit
     // nets that get created to live.
@@ -1568,7 +1555,6 @@ static size_t countMembers(const SyntaxNode& syntax) {
         case SyntaxKind::CaseGenerate:
             return countGenMembers(syntax);
         case SyntaxKind::BindDirective:
-            return countBindMembers(syntax.as<BindDirectiveSyntax>()) + 1;
         case SyntaxKind::LoopGenerate:
         case SyntaxKind::GenerateBlock:
         case SyntaxKind::DefaultClockingReference:

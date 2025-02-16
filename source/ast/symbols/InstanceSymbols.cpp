@@ -1061,8 +1061,7 @@ InstanceBodySymbol& InstanceBodySymbol::fromDefinition(Compilation& comp,
         }
     }
 
-    // If there are any bind directives targeting this instance,
-    // add them to the end of the scope now.
+    // Make note of any bind directives targeting this instance.
     if (overrideNode) {
         for (auto& [bindInfo, targetDefSyntax] : overrideNode->binds) {
             if (targetDefSyntax) {
@@ -1075,14 +1074,14 @@ InstanceBodySymbol& InstanceBodySymbol::fromDefinition(Compilation& comp,
                 }
             }
             else {
-                result->addDeferredMembers(*bindInfo.bindSyntax);
+                result->setHasBinds();
             }
         }
     }
 
     if (!definition.bindDirectives.empty()) {
-        for (auto& bindInfo : definition.bindDirectives)
-            result->addDeferredMembers(*bindInfo.bindSyntax);
+        if (!definition.bindDirectives.empty())
+            result->setHasBinds();
         comp.noteInstanceWithDefBind(*result);
     }
 
