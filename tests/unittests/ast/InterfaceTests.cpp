@@ -930,3 +930,35 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::DupInterfaceExternMethod);
 }
+
+TEST_CASE("Multiple layers of interface ports and cache interaction") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I;
+    logic l;
+endinterface
+
+module m(I i);
+    assign i.l = 1;
+endmodule
+
+module n(I i);
+    m m1(i);
+endmodule
+
+module o(I i);
+    n n1(i);
+endmodule
+
+module top;
+    I i();
+    o o1(i), o2(i);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::MultipleContAssigns);
+}

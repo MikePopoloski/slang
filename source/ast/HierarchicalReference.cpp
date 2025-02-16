@@ -108,4 +108,23 @@ const Symbol* HierarchicalReference::retargetIfacePort(const InstanceSymbol& bas
     return symbol;
 }
 
+const HierarchicalReference& HierarchicalReference::join(Compilation& compilation,
+                                                         const HierarchicalReference& other) const {
+    HierarchicalReference result;
+    result.target = other.target;
+    result.expr = other.expr;
+    result.upwardCount = upwardCount;
+
+    auto otherPath = other.path;
+    if (other.isViaIfacePort())
+        otherPath = otherPath.subspan(1);
+
+    SmallVector<Element> newPath;
+    newPath.append_range(path);
+    newPath.append_range(otherPath);
+    result.path = newPath.copy(compilation);
+
+    return *compilation.emplace<HierarchicalReference>(std::move(result));
+}
+
 } // namespace slang::ast

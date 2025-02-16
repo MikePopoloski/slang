@@ -70,6 +70,11 @@ public:
     /// @returns the resolved symbol, or nullptr if the path could not be followed
     ///          or this reference does not resolve through an interface port.
     const Symbol* retargetIfacePort(const InstanceSymbol& base) const;
+
+    /// Returns a new HierarchicalReference that represents the joined
+    /// path of this reference and another.
+    const HierarchicalReference& join(Compilation& compilation,
+                                      const HierarchicalReference& other) const;
 };
 
 } // namespace slang::ast

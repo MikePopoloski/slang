@@ -147,6 +147,9 @@ public:
     /// Gets the interface instance that this port connects to.
     IfaceConn getConnection() const;
 
+    /// Gets the interface connection and the connection expression.
+    std::pair<IfaceConn, const Expression*> getConnectionAndExpr() const;
+
     const ModportSymbol* getModport(const ASTContext& context, const InstanceSymbol& instance,
                                     syntax::DeferredSourceRange sourceRange) const;
 
@@ -167,8 +170,7 @@ public:
     PortConnection(const Symbol& port);
     PortConnection(const Symbol& port, const syntax::ExpressionSyntax& expr);
     PortConnection(const Symbol& port, bool useDefault);
-    PortConnection(const InterfacePortSymbol& port, const Symbol* connectedSymbol,
-                   const ModportSymbol* modport);
+    PortConnection(const InterfacePortSymbol& port, const IfaceConn& conn, const Expression& expr);
     PortConnection(const Symbol& port, const Symbol* connectedSymbol,
                    SourceRange implicitNameRange);
 
@@ -202,10 +204,8 @@ private:
     const InstanceSymbol& getParentInstance() const;
 
     const Symbol* connectedSymbol = nullptr;
-    union {
-        mutable const Expression* expr = nullptr;
-        const ModportSymbol* modport;
-    };
+    mutable const Expression* expr = nullptr;
+    const ModportSymbol* modport = nullptr;
     union {
         const syntax::ExpressionSyntax* exprSyntax = nullptr;
         SourceRange implicitNameRange;

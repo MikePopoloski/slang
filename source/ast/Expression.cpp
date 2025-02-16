@@ -1375,6 +1375,9 @@ Expression* Expression::tryBindInterfaceRef(const ASTContext& context,
 
     // If we found an interface port we should unwrap to what it's connected to.
     if (symbol->kind == SymbolKind::InterfacePort) {
+        result.flags |= LookupResultFlags::IfacePort;
+        result.path.emplace_back(*symbol);
+
         ifacePort = &symbol->as<InterfacePortSymbol>();
         std::tie(symbol, modport) = ifacePort->getConnection();
 

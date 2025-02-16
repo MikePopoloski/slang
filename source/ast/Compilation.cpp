@@ -1343,7 +1343,8 @@ void Compilation::noteInterfacePortDriver(const HierarchicalReference& ref,
     SLANG_ASSERT(ref.target);
     SLANG_ASSERT(ref.expr);
 
-    auto scope = ref.path[0].symbol->getParentScope();
+    auto& port = ref.path[0].symbol->as<InterfacePortSymbol>();
+    auto scope = port.getParentScope();
     SLANG_ASSERT(scope);
 
     auto& symbol = scope->asSymbol();
@@ -1351,6 +1352,13 @@ void Compilation::noteInterfacePortDriver(const HierarchicalReference& ref,
 
     auto& entry = getOrAddSideEffects(symbol);
     entry.ifacePortDrivers.push_back({&ref, &driver});
+
+    auto [_, expr] = port.getConnectionAndExpr();
+    if (expr && expr->kind == ExpressionKind::ArbitrarySymbol) {
+        auto& connRef = expr->as<ArbitrarySymbolExpression>().hierRef;
+        if (connRef.isViaIfacePort())
+            noteInterfacePortDriver(connRef.join(*this, ref), driver);
+    }
 }
 
 void Compilation::noteVirtualIfaceInstance(const InstanceSymbol& symbol) {

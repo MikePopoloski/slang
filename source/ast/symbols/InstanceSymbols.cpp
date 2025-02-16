@@ -947,8 +947,11 @@ void InstanceSymbol::connectDefaultIfacePorts() const {
                     inst = &InstanceArraySymbol::createEmpty(comp, port->name, port->location);
                 }
 
+                auto expr = comp.emplace<InvalidExpression>(nullptr, comp.getErrorType());
+
                 inst->setParent(*parent);
-                conns.emplace_back(comp.emplace<PortConnection>(ifacePort, inst, modport));
+                conns.emplace_back(
+                    comp.emplace<PortConnection>(ifacePort, std::pair{inst, modport}, *expr));
                 connectionMap->emplace(reinterpret_cast<uintptr_t>(port),
                                        reinterpret_cast<uintptr_t>(conns.back()));
             }
