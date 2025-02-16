@@ -304,11 +304,15 @@ private:
         std::vector<std::pair<const syntax::SyntaxNode*, const Symbol*>> portDecls;
 
     public:
-        // A flag indicating whether any enums have been registered in the scope.
+        // Indicates whether any enums have been registered in the scope.
         bool hasEnums = false;
 
-        // A flag indicating whether there are any bind directives targeting this scope.
+        // Indicates whether there are any bind directives targeting this scope.
         bool hasBinds = false;
+
+        // Indicates whether this scope is uncacheable, for instance if
+        // it contains an extern iface method implementation.
+        bool isUncacheable = false;
     };
 
     DeferredMemberData& getOrAddDeferredData() const;

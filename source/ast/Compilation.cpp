@@ -1107,22 +1107,7 @@ void Compilation::noteBindDirective(const BindDirectiveSyntax& syntax, const Sco
 
     if (!scope.isUninstantiated()) {
         bindDirectives.emplace_back(&syntax, &scope);
-
-        auto currScope = &scope;
-        do {
-            auto& symbol = currScope->asSymbol();
-            if (symbol.kind == SymbolKind::InstanceBody) {
-                auto& entry = instanceSideEffectMap[&symbol];
-                if (!entry)
-                    entry = std::make_unique<InstanceSideEffects>();
-                else if (entry->hasBindDirectives)
-                    break;
-
-                entry->hasBindDirectives = true;
-            }
-
-            currScope = symbol.getHierarchicalParent();
-        } while (currScope);
+        noteCannotCache(scope);
     }
 }
 
@@ -1342,10 +1327,8 @@ void Compilation::noteHierarchicalReference(const Scope& initialScope,
             break;
 
         if (sym.kind == SymbolKind::InstanceBody) {
-            auto& entry = instanceSideEffectMap[&sym];
-            if (!entry)
-                entry = std::make_unique<InstanceSideEffects>();
-            entry->upwardNames.push_back(&ref);
+            auto& entry = getOrAddSideEffects(sym);
+            entry.upwardNames.push_back(&ref);
         }
 
         currScope = sym.getHierarchicalParent();
@@ -1366,10 +1349,8 @@ void Compilation::noteInterfacePortDriver(const HierarchicalReference& ref,
     auto& symbol = scope->asSymbol();
     SLANG_ASSERT(symbol.kind == SymbolKind::InstanceBody);
 
-    auto& entry = instanceSideEffectMap[&symbol];
-    if (!entry)
-        entry = std::make_unique<InstanceSideEffects>();
-    entry->ifacePortDrivers.push_back({&ref, &driver});
+    auto& entry = getOrAddSideEffects(symbol);
+    entry.ifacePortDrivers.push_back({&ref, &driver});
 }
 
 void Compilation::noteVirtualIfaceInstance(const InstanceSymbol& symbol) {
@@ -2366,6 +2347,29 @@ void Compilation::checkVirtualIfaceInstance(const InstanceSymbol& instance) {
             portDiag->addNote(diag::NoteDeclarationHere, port->location);
         }
     }
+}
+
+Compilation::InstanceSideEffects& Compilation::getOrAddSideEffects(const Symbol& instanceBody) {
+    auto& entry = instanceSideEffectMap[&instanceBody];
+    if (!entry)
+        entry = std::make_unique<InstanceSideEffects>();
+    return *entry;
+}
+
+void Compilation::noteCannotCache(const Scope& scope) {
+    auto currScope = &scope;
+    do {
+        auto& symbol = currScope->asSymbol();
+        if (symbol.kind == SymbolKind::InstanceBody) {
+            auto& entry = getOrAddSideEffects(symbol);
+            if (entry.cannotCache)
+                break;
+
+            entry.cannotCache = true;
+        }
+
+        currScope = symbol.getHierarchicalParent();
+    } while (currScope);
 }
 
 void Compilation::resolveDefParamsAndBinds() {

@@ -893,3 +893,40 @@ endinterface:sliceIfc
     CHECK(diags[0].code == diag::VirtualIfaceIfacePort);
     CHECK(diags[1].code == diag::VirtualIfaceHierRef);
 }
+
+TEST_CASE("Extern and export methods with instance caching") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I;
+    extern task foo;
+    modport m(export foo);
+    modport n(import task foo);
+endinterface
+
+module m(I.m i);
+    task i.foo; endtask
+endmodule
+
+module n(I i);
+    o o1(i);
+endmodule
+
+module o(I i);
+    m m1(i);
+endmodule
+
+module top;
+    I i1();
+    n m1(i1), m2(i1);
+
+    I i2();
+    n m3(i2);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::DupInterfaceExternMethod);
+}

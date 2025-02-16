@@ -765,6 +765,26 @@ private:
         const ResolvedConfig* resolvedConfig = nullptr;
     };
 
+    // Captures the side effects that are applied by an instance indirectly instead
+    // of via a port connection.
+    struct InstanceSideEffects {
+        struct IfacePortDriver {
+            not_null<const HierarchicalReference*> ref;
+            not_null<const ValueDriver*> driver;
+        };
+
+        // Drivers that are applied through interface ports.
+        std::vector<IfacePortDriver> ifacePortDrivers;
+
+        // All upward names that extend out of the instance.
+        std::vector<const HierarchicalReference*> upwardNames;
+
+        // Indicates whether this instance can't be cached
+        // due to something like declaring bind directives
+        // or extern interface methods.
+        bool cannotCache = false;
+    };
+
     // These functions are called by Scopes to create and track various members.
     Scope::DeferredMemberData& getOrAddDeferredData(Scope::DeferredMemberIndex& index);
 
@@ -790,6 +810,8 @@ private:
     void checkBindTargetParams(const syntax::BindDirectiveSyntax& syntax, const Scope& scope,
                                const ResolvedBind& resolvedBind);
     void checkVirtualIfaceInstance(const InstanceSymbol& instance);
+    InstanceSideEffects& getOrAddSideEffects(const Symbol& instanceBody);
+    void noteCannotCache(const Scope& scope);
     std::pair<DefinitionLookupResult, bool> resolveConfigRule(const Scope& scope,
                                                               const ConfigRule& rule) const;
     std::pair<DefinitionLookupResult, bool> resolveConfigRules(
@@ -861,24 +883,6 @@ private:
     // The name map for system methods.
     flat_hash_map<std::tuple<std::string_view, SymbolKind>, std::shared_ptr<SystemSubroutine>>
         methodMap;
-
-    // Captures the side effects that are applied by an instance indirectly instead
-    // of via a port connection.
-    struct InstanceSideEffects {
-        struct IfacePortDriver {
-            not_null<const HierarchicalReference*> ref;
-            not_null<const ValueDriver*> driver;
-        };
-
-        // Drivers that are applied through interface ports.
-        std::vector<IfacePortDriver> ifacePortDrivers;
-
-        // All upward names that extend out of the instance.
-        std::vector<const HierarchicalReference*> upwardNames;
-
-        // Whether the instance has bind directives within it.
-        bool hasBindDirectives = false;
-    };
 
     // Map from instance bodies to side effects applied by them.
     flat_hash_map<const Symbol*, std::unique_ptr<InstanceSideEffects>> instanceSideEffectMap;

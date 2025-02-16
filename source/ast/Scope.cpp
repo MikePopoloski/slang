@@ -276,11 +276,14 @@ void Scope::addMembers(const SyntaxNode& syntax) {
             break;
         case SyntaxKind::FunctionDeclaration:
         case SyntaxKind::TaskDeclaration: {
-            auto subroutine = SubroutineSymbol::fromSyntax(compilation,
-                                                           syntax.as<FunctionDeclarationSyntax>(),
-                                                           *this, /* outOfBlock */ false);
+            auto [subroutine, isExternIfaceMethod] = SubroutineSymbol::fromSyntax(
+                compilation, syntax.as<FunctionDeclarationSyntax>(), *this, /* outOfBlock */ false);
+
             if (subroutine)
                 addMember(*subroutine);
+
+            if (isExternIfaceMethod)
+                getOrAddDeferredData().isUncacheable = true;
             break;
         }
         case SyntaxKind::DataDeclaration: {
@@ -812,6 +815,9 @@ void Scope::elaborate() const {
     auto deferredData = compilation.getOrAddDeferredData(deferredMemberIndex);
     auto deferred = deferredData.getMembers();
     deferredMemberIndex = DeferredMemberIndex::Invalid;
+
+    if (deferredData.isUncacheable)
+        compilation.noteCannotCache(*this);
 
     // Enums need to be handled first because their value members may need
     // to be looked up by methods below.

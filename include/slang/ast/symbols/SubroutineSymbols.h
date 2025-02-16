@@ -137,9 +137,9 @@ public:
 
     void serializeTo(ASTSerializer& serializer) const;
 
-    static SubroutineSymbol* fromSyntax(Compilation& compilation,
-                                        const syntax::FunctionDeclarationSyntax& syntax,
-                                        const Scope& parent, bool outOfBlock);
+    static std::pair<SubroutineSymbol*, bool> fromSyntax(
+        Compilation& compilation, const syntax::FunctionDeclarationSyntax& syntax,
+        const Scope& parent, bool outOfBlock);
 
     static SubroutineSymbol* fromSyntax(Compilation& compilation,
                                         const syntax::ClassMethodDeclarationSyntax& syntax,

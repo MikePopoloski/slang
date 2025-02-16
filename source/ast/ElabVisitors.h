@@ -121,8 +121,14 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
             // processing and checking.
             if (!symbol.modport.empty()) {
                 auto [_, modport] = symbol.getConnection();
-                if (modport)
-                    modportsWithExports.push_back({&symbol, modport});
+                if (modport) {
+                    for (auto& method : modport->membersOfType<MethodPrototypeSymbol>()) {
+                        if (method.flags.has(MethodFlags::ModportExport)) {
+                            modportsWithExports.push_back({&symbol, modport});
+                            break;
+                        }
+                    }
+                }
             }
         }
     }
@@ -184,8 +190,13 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
         if (auto sub = symbol.getSubroutine())
             handle(*sub);
 
-        if (symbol.flags.has(MethodFlags::InterfaceExtern))
+        if (symbol.flags.has(MethodFlags::InterfaceExtern)) {
             externIfaceProtos.push_back(&symbol);
+
+            auto scope = symbol.getParentScope();
+            SLANG_ASSERT(scope);
+            compilation.noteCannotCache(*scope);
+        }
     }
 
     void handle(const GenericClassDefSymbol& symbol) {
@@ -504,7 +515,6 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
     bool tryApplyFromCache(const InstanceSymbol& symbol) {
         // TODO: Downward hierarchical references into such instances need to be accounted for
         //          - Make sure this doesn't automatically cause dup drivers
-        // TODO: modport exports, extern interface prototypes?
         // TODO: multiple levels of iface ports connected to iface ports
 
         // We can use a cached version of this instance's body if we have already
@@ -550,7 +560,7 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
         // This could be optimized in the future by having another layer of caching based
         // on what the name resolves to for each instance.
         auto sideEffects = entry.sideEffects.value();
-        if (sideEffects && (sideEffects->hasBindDirectives || !sideEffects->upwardNames.empty())) {
+        if (sideEffects && (sideEffects->cannotCache || !sideEffects->upwardNames.empty())) {
             return false;
         }
 
