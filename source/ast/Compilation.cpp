@@ -1229,13 +1229,26 @@ void Compilation::noteGlobalClocking(const Scope& scope, const Symbol& clocking,
     }
 }
 
-const Symbol* Compilation::getGlobalClocking(const Scope& scope) const {
+const Symbol* Compilation::getGlobalClockingAndNoteUse(const Scope& scope) {
+    SLANG_ASSERT(!isFrozen());
+
+    size_t upwardCount = 0;
     auto curr = &scope;
     do {
-        if (auto it = globalClockingMap.find(curr); it != globalClockingMap.end())
-            return it->second;
+        if (auto it = globalClockingMap.find(curr); it != globalClockingMap.end()) {
+            auto found = it->second;
+            if (upwardCount > 0) {
+                auto ref = emplace<HierarchicalReference>();
+                ref->target = found;
+                ref->upwardCount = upwardCount;
+                noteHierarchicalReference(scope, *ref);
+            }
+
+            return found;
+        }
 
         curr = curr->asSymbol().getHierarchicalParent();
+        upwardCount++;
     } while (curr);
 
     return nullptr;
@@ -1309,7 +1322,6 @@ void Compilation::noteNetAlias(const Scope& scope, const Symbol& firstSym,
 void Compilation::noteHierarchicalReference(const Scope& initialScope,
                                             const HierarchicalReference& ref) {
     SLANG_ASSERT(!isFrozen());
-    SLANG_ASSERT(ref.expr);
 
     // For now, we're only interested in upward names that cross
     // through instance boundaries.

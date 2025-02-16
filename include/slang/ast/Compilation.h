@@ -552,8 +552,9 @@ public:
     void noteGlobalClocking(const Scope& scope, const Symbol& clocking, SourceRange range);
 
     /// Finds an applicable global clocking block for the given scope, or returns nullptr
-    /// if no global clocking is in effect.
-    const Symbol* getGlobalClocking(const Scope& scope) const;
+    /// if no global clocking is in effect. The use of the global clocking will
+    /// be noted as a side effect of the instance containing the given scope.
+    const Symbol* getGlobalClockingAndNoteUse(const Scope& scope);
 
     /// Notes that there is a default disable associated with the specified scope.
     void noteDefaultDisable(const Scope& scope, const Expression& expr);
