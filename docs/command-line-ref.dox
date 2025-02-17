@@ -423,11 +423,8 @@ Perform strict driver checking, which currently means disabling procedural 'for'
 `--disable-instance-caching`
 
 Disable the use of instance caching, which normally allows skipping duplicate instance bodies to
-save time when elaborating. This is purely an optimization.
-
-This flag defaults to `true` for now, since the feature is not complete and there are cases where
-slang will not issue all appropriate diagnostics when the flag is used. At some point once they
-have all been worked out this will change to be a default of `false` instead.
+save time when elaborating. This shouldn't need to be turned off except to work around bugs in
+the caching implementation.
 
 `--color-diagnostics`
 

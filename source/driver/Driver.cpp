@@ -505,10 +505,6 @@ bool Driver::processOptions() {
             opt = true;
     }
 
-    auto& disableCachingOpt = options.compilationFlags.at(CompilationFlags::DisableInstanceCaching);
-    if (!disableCachingOpt.has_value())
-        disableCachingOpt = true;
-
     if (!options.translateOffOptions.empty()) {
         bool anyBad = false;
         for (auto& fmtStr : options.translateOffOptions) {

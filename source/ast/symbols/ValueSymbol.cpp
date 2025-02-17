@@ -130,7 +130,6 @@ static bool handleOverlap(const Scope& scope, std::string_view name, const Value
         else {
             auto& note = d.addNote(diag::NoteFromHere2, SourceLocation::NoLocation);
 
-            // TODO: handle case where one side is from a side effect
             std::string buf;
             driver.containingSymbol->getHierarchicalPath(buf);
             note << buf;
