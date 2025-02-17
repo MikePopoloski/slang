@@ -15,6 +15,7 @@
 #include "slang/ast/expressions/MiscExpressions.h"
 #include "slang/ast/expressions/SelectExpressions.h"
 #include "slang/ast/symbols/BlockSymbols.h"
+#include "slang/ast/symbols/InstanceSymbols.h"
 #include "slang/ast/symbols/VariableSymbols.h"
 #include "slang/ast/types/NetType.h"
 #include "slang/ast/types/Type.h"
@@ -272,6 +273,25 @@ static void visitPrefixExpressions(const Expression& longestStaticPrefix, bool i
     } while (expr);
 }
 
+static bool isContainedWithin(const Symbol& symbol, const Symbol& container) {
+    const Symbol* current = &symbol;
+    while (true) {
+        if (current->kind == SymbolKind::InstanceBody) {
+            current = current->as<InstanceBodySymbol>().parentInstance;
+            SLANG_ASSERT(current);
+        }
+
+        if (current == &container)
+            return true;
+
+        auto scope = current->getParentScope();
+        if (!scope)
+            return false;
+
+        current = &scope->asSymbol();
+    }
+}
+
 void ValueSymbol::addDriver(DriverBitRange bounds, const ValueDriver& driver) const {
     auto scope = getParentScope();
     SLANG_ASSERT(scope);
@@ -281,13 +301,16 @@ void ValueSymbol::addDriver(DriverBitRange bounds, const ValueDriver& driver) co
     // If this driver is made via an interface port connection we want to
     // note that fact as it represents a side effect for the instance that
     // is not captured in the port connections.
+    bool isIfacePortDriver = false;
     if (!driver.isFromSideEffect) {
         visitPrefixExpressions(*driver.prefixExpression, /* includeRoot */ true,
                                [&](const Expression& expr) {
                                    if (expr.kind == ExpressionKind::HierarchicalValue) {
                                        auto& hve = expr.as<HierarchicalValueExpression>();
-                                       if (hve.ref.isViaIfacePort())
+                                       if (hve.ref.isViaIfacePort()) {
+                                           isIfacePortDriver = true;
                                            comp.noteInterfacePortDriver(hve.ref, driver);
+                                       }
                                    }
                                });
     }
@@ -395,6 +418,17 @@ void ValueSymbol::addDriver(DriverBitRange bounds, const ValueDriver& driver) co
         }
 
         if (isProblem) {
+            // One last annoying special case: if the previous driver was applied as a
+            // side effect of skipping an instance due to it being cached, and then later
+            // we found we had to visit that instance due to a downward name into it,
+            // we might now be trying to reapply the same driver that caused the original
+            // side effect, which would cause spurious multi-driven errors. Detect that
+            // case and skip it here.
+            if (isIfacePortDriver && curr->isFromSideEffect) [[unlikely]] {
+                if (isContainedWithin(*driver.containingSymbol, *curr->containingSymbol))
+                    continue;
+            }
+
             if (!handleOverlap(*scope, name, *curr, driver, isNet, isUWire, isSingleDriverUDNT,
                                netType)) {
                 break;

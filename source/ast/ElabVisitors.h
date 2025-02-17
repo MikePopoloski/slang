@@ -535,9 +535,6 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
         if (disableCache)
             return false;
 
-        // TODO: Downward hierarchical references into such instances need to be accounted for
-        //          - Make sure this doesn't automatically cause dup drivers
-
         // We can use a cached version of this instance's body if we have already
         // visited an identical body elsewhere, with some caveats explained below.
         SLANG_ASSERT(symbol.getCanonicalBody() == nullptr);

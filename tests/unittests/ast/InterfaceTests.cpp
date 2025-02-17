@@ -962,3 +962,31 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::MultipleContAssigns);
 }
+
+TEST_CASE("Instance caching with iface port side effects and downward names") {
+    auto tree = SyntaxTree::fromText(R"(
+interface I;
+    logic l;
+endinterface
+
+module m(I i);
+    assign i.l = 1;
+endmodule
+
+module o(I i);
+    m m1(i);
+    int a;
+endmodule
+
+module top;
+    I i [3]();
+    o o1(i[0]), o2(i[1]);
+
+    assign o2.a = 1;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
