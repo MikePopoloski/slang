@@ -26,8 +26,7 @@ def main():
         return
 
     # Perform elaboration and report all diagnostics
-    compilation = driver.createCompilation()
-    driver.reportCompilation(compilation, quiet=False)
+    driver.runFullCompilation(quiet=False)
 
 
 if __name__ == "__main__":

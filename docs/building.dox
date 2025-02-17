@@ -62,6 +62,7 @@ SLANG_CI_BUILD | Enable additional longer-running tests for automated builds | O
 SLANG_CLANG_TIDY | The path to a clang-tidy binary to run against the slang sources | ""
 SLANG_WARN_FLAGS | Extra compiler warning flags to enable when building slang | ""
 SLANG_CMAKECONFIG_INSTALL_DIR | If install rules are included, this path is used to install the generated CMake config for the slang package | ${CMAKE_INSTALL_LIBDIR}/cmake/slang
+SLANG_USE_CPPTRACE | Enable use of the cpptrace library | OFF
 
 @section build-scripts Build Scripts
 
