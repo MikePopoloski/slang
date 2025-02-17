@@ -596,9 +596,12 @@ public:
                       const Expression& firstExpr, const Symbol& secondSym,
                       DriverBitRange secondRange, const Expression& secondExpr);
 
-    /// Notes the existence of the given hierarchical reference, which is used,
+    /// Notes the existence of the given upward hierarchical reference, which is used,
     /// among other things, to ensure we perform instance caching correctly.
-    void noteHierarchicalReference(const Scope& scope, const HierarchicalReference& ref);
+    void noteUpwardReference(const Scope& scope, const HierarchicalReference& ref);
+
+    /// Notes the existence of an assignment to a hierarchical reference.
+    void noteHierarchicalAssignment(const HierarchicalReference& ref);
 
     /// Notes that a symbol is driven through an interface port connection,
     /// which constitutes a side effect of the instance containing the port.
@@ -913,6 +916,9 @@ private:
 
     // A list of instances that have been created by virtual interface type declarations.
     std::vector<const InstanceSymbol*> virtualInterfaceInstances;
+
+    // A list of assignments via hierarchical reference.
+    std::vector<const HierarchicalReference*> hierarchicalAssignments;
 
     // A map from class name + decl name + scope to out-of-block declarations. These get
     // registered when we find the initial declaration and later get used when we see

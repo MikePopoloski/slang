@@ -1226,7 +1226,7 @@ const Symbol* Compilation::getGlobalClockingAndNoteUse(const Scope& scope) {
                 auto ref = emplace<HierarchicalReference>();
                 ref->target = found;
                 ref->upwardCount = upwardCount;
-                noteHierarchicalReference(scope, *ref);
+                noteUpwardReference(scope, *ref);
             }
 
             return found;
@@ -1304,17 +1304,12 @@ void Compilation::noteNetAlias(const Scope& scope, const Symbol& firstSym,
     }
 }
 
-void Compilation::noteHierarchicalReference(const Scope& initialScope,
-                                            const HierarchicalReference& ref) {
+void Compilation::noteUpwardReference(const Scope& initialScope, const HierarchicalReference& ref) {
     SLANG_ASSERT(!isFrozen());
-
-    // For now, we're only interested in upward names that cross
-    // through instance boundaries.
-    if (ref.isViaIfacePort())
-        return;
+    SLANG_ASSERT(ref.isUpward());
 
     size_t count = ref.upwardCount;
-    if (count == 0 && !ref.path.empty() && ref.path[0].symbol->kind == SymbolKind::Root) {
+    if (count == 0) {
         // If the name targets the root scope the count doesn't mean
         // anything, we should walk all the way up.
         count = SIZE_MAX;
@@ -1334,6 +1329,11 @@ void Compilation::noteHierarchicalReference(const Scope& initialScope,
         currScope = sym.getHierarchicalParent();
         SLANG_ASSERT(currScope);
     }
+}
+
+void Compilation::noteHierarchicalAssignment(const HierarchicalReference& ref) {
+    SLANG_ASSERT(!isFrozen());
+    hierarchicalAssignments.push_back(&ref);
 }
 
 void Compilation::noteInterfacePortDriver(const HierarchicalReference& ref,

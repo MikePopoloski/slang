@@ -262,6 +262,13 @@ bool ValueExpressionBase::requireLValueImpl(const ASTContext& context, SourceLoc
         }
     }
 
+    if (kind == ExpressionKind::HierarchicalValue && !context.flags.has(ASTFlags::NotADriver) &&
+        !context.scope->isUninstantiated()) {
+        auto& ref = as<HierarchicalValueExpression>().ref;
+        if (!ref.isViaIfacePort())
+            context.getCompilation().noteHierarchicalAssignment(ref);
+    }
+
     if (!longestStaticPrefix)
         longestStaticPrefix = this;
     context.addDriver(symbol, *longestStaticPrefix, flags);
@@ -507,7 +514,8 @@ HierarchicalValueExpression::HierarchicalValueExpression(const Scope& scope,
     SLANG_ASSERT(ref.target == &symbol);
     this->ref.expr = this;
 
-    scope.getCompilation().noteHierarchicalReference(scope, this->ref);
+    if (this->ref.isUpward())
+        scope.getCompilation().noteUpwardReference(scope, this->ref);
 }
 
 ConstantValue HierarchicalValueExpression::evalImpl(EvalContext& context) const {
@@ -572,7 +580,9 @@ ArbitrarySymbolExpression::ArbitrarySymbolExpression(const Scope& scope, const S
     if (hierRef && hierRef->target) {
         this->hierRef = *hierRef;
         this->hierRef.expr = this;
-        scope.getCompilation().noteHierarchicalReference(scope, this->hierRef);
+
+        if (this->hierRef.isUpward())
+            scope.getCompilation().noteUpwardReference(scope, this->hierRef);
     }
 }
 

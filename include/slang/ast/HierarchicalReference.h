@@ -67,6 +67,9 @@ public:
     /// via an interface port connection.
     bool isViaIfacePort() const;
 
+    /// Returns true if the hierarchical reference traverses upward through the hierarchy.
+    bool isUpward() const;
+
     /// Re-resolves the target symbol starting from the corresponding port in
     /// the new base instance and following the same path as the original reference.
     ///

@@ -471,6 +471,25 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
     void finalize() {
         // Once everything has been visited, go back over and check things that might
         // have been influenced by visiting later symbols.
+
+        // For all hierarchical assignments, make sure we actually visited their
+        // target instances and didn't skip them due to caching.
+        if (!compilation.hierarchicalAssignments.empty()) {
+            disableCache = true;
+            auto hierarchicalAssignments = compilation.hierarchicalAssignments;
+            for (auto hierRef : hierarchicalAssignments) {
+                // Walk the path and visit all instances we find that were previously cached.
+                for (auto& [sym, _] : hierRef->path) {
+                    if (sym->kind == SymbolKind::Instance) {
+                        auto& inst = sym->as<InstanceSymbol>();
+                        if (inst.getCanonicalBody() != nullptr)
+                            inst.visit(*this);
+                    }
+                }
+            }
+        }
+
+        // Check the validity of virtual interface assignments.
         while (!compilation.virtualInterfaceInstances.empty()) {
             auto vii = compilation.virtualInterfaceInstances;
             compilation.virtualInterfaceInstances.clear();
@@ -513,6 +532,9 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
     }
 
     bool tryApplyFromCache(const InstanceSymbol& symbol) {
+        if (disableCache)
+            return false;
+
         // TODO: Downward hierarchical references into such instances need to be accounted for
         //          - Make sure this doesn't automatically cause dup drivers
 
@@ -632,6 +654,7 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
     const size_t& numErrors;
     uint32_t errorLimit;
     bool visitInstances = true;
+    bool disableCache = false;
     bool hierarchyProblem = false;
     flat_hash_map<InstanceCacheKey, InstanceCacheEntry> instanceCache;
     flat_hash_set<const InstanceBodySymbol*> activeInstanceBodies;

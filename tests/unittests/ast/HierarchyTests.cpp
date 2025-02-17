@@ -1993,3 +1993,24 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::MultipleContAssigns);
 }
+
+TEST_CASE("Instance caching with downward names") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    logic i;
+    assign i = 0;
+endmodule
+
+module top;
+    assign m2.i = 1;
+    m m1(), m2();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::MultipleContAssigns);
+}

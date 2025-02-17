@@ -46,6 +46,11 @@ bool HierarchicalReference::isViaIfacePort() const {
     return !path.empty() && path[0].symbol->kind == SymbolKind::InterfacePort;
 }
 
+bool HierarchicalReference::isUpward() const {
+    return !isViaIfacePort() &&
+           (upwardCount > 0 || (!path.empty() && path[0].symbol->kind == SymbolKind::Root));
+}
+
 const Symbol* HierarchicalReference::retargetIfacePort(const InstanceSymbol& base) const {
     if (!isViaIfacePort() || !target)
         return nullptr;
