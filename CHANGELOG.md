@@ -6,10 +6,20 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 ### Language Support
+
 ### Potentially Breaking Changes
+* AST serialization no longer includes uninstantiated scopes in the output
+* `Driver::reportCompilation` method had part of its functionality split out into `Driver::reportDiagnostics` to allow for calling the new `Driver::runAnalysis` method in between. There is a new `Driver::runFullCompilation` method that wraps all of this for convenience if you don't care about controlling when each pass is done.
+
 ### New Features
+* slang can now optionally use [cpptrace](https://github.com/jeremy-rifkin/cpptrace) (using the `SLANG_USE_CPPTRACE` CMake option) for better backtraces in the event of internal assertions or exceptions thrown
+  
 ### Improvements
+* slang now performs instance caching by default, which means duplicate instance bodies will not be visited during elaboration, which can greatly speed up elaboration times for large projects. This behavior can be disabled with the `--disable-instance-caching` flag, though it should not be needed unless there's a bug in slang -- please open an issue if you find that you need the flag. 
+
 ### Fixes
+* The restriction on interface instances targeted by defparams not being allowed with virtual interfaces was also erroneously applied to interface port connections
+* Fixed a null pointer crash in slang-tidy (thanks to @rhanqtl)
 
 
 ## [v8.0] - 2025-02-05
