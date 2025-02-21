@@ -115,6 +115,9 @@ AnalysisManager::WorkerState& AnalysisManager::state() {
     return workerStates[BS::this_thread::get_index().value_or(workerStates.size() - 1)];
 }
 
+template<typename T, typename... U>
+concept IsAnyOf = (std::same_as<T, U> || ...);
+
 struct ScopeVisitor {
     AnalysisManager& analysisManager;
     AnalysisContext& context;
@@ -161,8 +164,27 @@ struct ScopeVisitor {
     }
 
     // Everything else is unhandled.
-    // TODO: make sure we handle all relevant cases
     template<typename T>
+        requires(
+            IsAnyOf<T, InvalidSymbol, RootSymbol, CompilationUnitSymbol, DefinitionSymbol,
+                    AttributeSymbol, TransparentMemberSymbol, EmptyMemberSymbol, EnumValueSymbol,
+                    ForwardingTypedefSymbol, ParameterSymbol, TypeParameterSymbol, PortSymbol,
+                    MultiPortSymbol, InterfacePortSymbol, InstanceArraySymbol, InstanceBodySymbol,
+                    ExplicitImportSymbol, WildcardImportSymbol, StatementBlockSymbol, NetSymbol,
+                    VariableSymbol, FormalArgumentSymbol, FieldSymbol, ClassPropertySymbol,
+                    SubroutineSymbol, ModportSymbol, ModportPortSymbol, ModportClockingSymbol,
+                    ContinuousAssignSymbol, GenvarSymbol, ElabSystemTaskSymbol,
+                    GenericClassDefSymbol, MethodPrototypeSymbol, UninstantiatedDefSymbol,
+                    IteratorSymbol, PatternVarSymbol, ConstraintBlockSymbol, DefParamSymbol,
+                    SpecparamSymbol, PrimitiveSymbol, PrimitivePortSymbol, PrimitiveInstanceSymbol,
+                    SpecifyBlockSymbol, SequenceSymbol, PropertySymbol, AssertionPortSymbol,
+                    ClockingBlockSymbol, ClockVarSymbol, LocalAssertionVarSymbol, LetDeclSymbol,
+                    CheckerSymbol, CheckerInstanceSymbol, CheckerInstanceBodySymbol,
+                    RandSeqProductionSymbol, CovergroupBodySymbol, CoverpointSymbol,
+                    CoverCrossSymbol, CoverCrossBodySymbol, CoverageBinSymbol, TimingPathSymbol,
+                    PulseStyleSymbol, SystemTimingCheckSymbol, AnonymousProgramSymbol,
+                    NetAliasSymbol, ConfigBlockSymbol, TypeAliasType, NetType> ||
+            std::is_base_of_v<Type, T>)
     void visit(const T&) {}
 };
 
