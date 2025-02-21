@@ -41,7 +41,7 @@ namespace slang::ast {
 
 /// A placeholder symbol type that represents an unknown or invalid symbol.
 /// This is only used when visiting such a symbol.
-struct InvalidSymbol : public Symbol {
+struct SLANG_EXPORT InvalidSymbol : public Symbol {
     InvalidSymbol() : Symbol(SymbolKind::Unknown, "", SourceLocation()) {}
     void serializeTo(ASTSerializer&) const {}
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::Unknown; }
