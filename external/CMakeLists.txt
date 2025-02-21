@@ -6,7 +6,7 @@
 # Required minimum versions for dependencies
 set(fmt_min_version "11.1")
 set(mimalloc_min_version "2.1")
-set(cpptrace_min_version "0.7")
+set(cpptrace_min_version "0.8")
 set(catch2_min_version "3.7")
 
 # --- fmt lib ---
@@ -163,7 +163,7 @@ if(SLANG_USE_CPPTRACE)
   FetchContent_Declare(
     cpptrace
     GIT_REPOSITORY https://github.com/jeremy-rifkin/cpptrace.git
-    GIT_TAG v0.7.5
+    GIT_TAG v0.8.0
     GIT_SHALLOW ON
     ${find_pkg_args})
   FetchContent_MakeAvailable(cpptrace)
