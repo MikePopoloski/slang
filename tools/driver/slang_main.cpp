@@ -32,6 +32,7 @@ void printJson(Compilation& compilation, const std::string& fileName,
     ASTSerializer serializer(compilation, writer);
     serializer.setIncludeSourceInfo(includeSourceInfo);
     serializer.setDetailedTypeInfo(detailedTypes);
+    serializer.setTryConstantFold(false);
 
     if (scopes.empty()) {
         serializer.startObject();
@@ -83,8 +84,8 @@ int driverMain(int argc, TArgs argv) {
             "--parse-only", onlyParse,
             "Stop after parsing input files, don't perform elaboration or type checking");
         driver.cmdLine.add("--disable-analysis", disableAnalysis,
-                           "Disables post-elaboration analysis"
-                           "passes, which prevents some diagnostics from being issued");
+                           "Disables post-elaboration analysis passes,"
+                           "which prevents some diagnostics from being issued");
 
         std::optional<bool> includeComments;
         std::optional<bool> includeDirectives;
@@ -179,7 +180,7 @@ int driverMain(int argc, TArgs argv) {
                     driver.reportCompilation(*compilation, quiet == true);
                 }
 
-                if (!disableAnalysis.value_or(true)) {
+                if (!disableAnalysis.value_or(false)) {
                     TimeTraceScope timeScope("semanticAnalysis"sv, ""sv);
                     driver.runAnalysis(*compilation);
                 }

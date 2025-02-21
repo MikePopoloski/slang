@@ -85,8 +85,9 @@ and that it is not supported when running with `--single-unit`
 @section Actions
 
 These options control what action the tool will perform when run.
-They are mutually exclusive. If none of these are provided, the default
-action is to elaborate the design, print any diagnostics, and exit.
+Some of them are mutually exclusive. If none of these are provided,
+the default action is to elaborate the design, print any diagnostics,
+and exit.
 
 `-E,--preprocess`
 
@@ -107,6 +108,13 @@ All diagnostics encountered will be printed.
 `--lint-only`
 
 Only perform linting of code, don't try to elaborate a full hierarchy.
+
+`--disable-analysis`
+
+Disable the post-elaboration analysis pass. This will improve performance, at the
+expense of preventing various errors and warnings from being diagnosed. This option
+should probably not be needed unless there are bugs in the analysis pass that need
+to be worked around.
 
 @section include-paths Include paths and macros
 
