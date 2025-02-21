@@ -343,6 +343,16 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
         if (finishedEarly())
             return;
 
+        // If we're not visiting instances and this instance came from a bind directive
+        // we don't even want to look at its port connections right now. This is because
+        // we are probably doing a force elaborate due to a wildcard package import and
+        // bind directive connections don't contribute to the set of imported symbols
+        // from wildcard imports, and if we visit connections anyway we can get into a
+        // recursive loop when trying to resolve bind port connections. We will come back
+        // and visit this instance later during the normal elaboration process.
+        if (!visitInstances && symbol.body.flags.has(InstanceFlags::FromBind))
+            return;
+
         TimeTraceScope timeScope("AST Instance", [&] {
             std::string buffer;
             symbol.getHierarchicalPath(buffer);

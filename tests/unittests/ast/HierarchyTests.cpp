@@ -2014,3 +2014,31 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::MultipleContAssigns);
 }
+
+TEST_CASE("Bind with package elab loop regress -- GH #1249") {
+    auto tree = SyntaxTree::fromText(R"(
+module rv_plic import rv_plic_reg_pkg::*; (
+    input  [63:0] c
+);
+endmodule
+
+package rv_plic_reg_pkg;
+    parameter int NumSrc = 64;
+endpackage
+
+module rv_plic_bind_fpv;
+  bind rv_plic rv_plic_assert_fpv #(
+    .P(rv_plic_reg_pkg::NumSrc)
+  ) m(
+    .intr_src_i(c)
+  );
+endmodule
+
+module rv_plic_assert_fpv #(parameter int P = 1) (input [P-1:0] intr_src_i);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
