@@ -130,31 +130,44 @@ static const TimingControl* inferClock(const ProceduralBlockSymbol& procedureSym
 }
 
 AnalyzedProcedure::AnalyzedProcedure(AnalysisManager&, AnalysisContext& context,
-                                     const ProceduralBlockSymbol& procedure) :
-    procedureSymbol(&procedure) {
+                                     const Symbol& analyzedSymbol) :
+    analyzedSymbol(&analyzedSymbol) {
 
-    DataFlowAnalysis dfa(context, procedure);
-    dfa.run(procedure.getBody());
+    DataFlowAnalysis dfa(context, analyzedSymbol);
+    switch (analyzedSymbol.kind) {
+        case SymbolKind::ProceduralBlock:
+            dfa.run(analyzedSymbol.as<ProceduralBlockSymbol>().getBody());
+            break;
+        case SymbolKind::Subroutine:
+            dfa.run(analyzedSymbol.as<SubroutineSymbol>().getBody());
+            break;
+        default:
+            SLANG_UNREACHABLE;
+    }
+
     if (dfa.bad)
         return;
 
-    if (procedure.procedureKind == ProceduralBlockKind::AlwaysComb) {
-        SmallVector<std::pair<const Symbol*, const Expression*>> partiallyAssigned;
-        dfa.getPartiallyAssignedSymbols(partiallyAssigned);
+    if (analyzedSymbol.kind == SymbolKind::ProceduralBlock) {
+        auto& procedure = analyzedSymbol.as<ProceduralBlockSymbol>();
+        if (procedure.procedureKind == ProceduralBlockKind::AlwaysComb) {
+            SmallVector<std::pair<const Symbol*, const Expression*>> partiallyAssigned;
+            dfa.getPartiallyAssignedSymbols(partiallyAssigned);
 
-        for (auto [symbol, expr] : partiallyAssigned) {
-            // Skip automatic variables, which can't be inferred latches.
-            if (VariableSymbol::isKind(symbol->kind) &&
-                symbol->as<VariableSymbol>().lifetime == VariableLifetime::Automatic) {
-                continue;
+            for (auto [symbol, expr] : partiallyAssigned) {
+                // Skip automatic variables, which can't be inferred latches.
+                if (VariableSymbol::isKind(symbol->kind) &&
+                    symbol->as<VariableSymbol>().lifetime == VariableLifetime::Automatic) {
+                    continue;
+                }
+                context.diagnostics.add(procedure, diag::InferredLatch, expr->sourceRange)
+                    << symbol->name;
             }
-            context.diagnostics.add(procedure, diag::InferredLatch, expr->sourceRange)
-                << symbol->name;
         }
-    }
 
-    if (!dfa.getConcurrentAssertions().empty())
-        inferredClock = inferClock(procedure, dfa);
+        if (!dfa.getConcurrentAssertions().empty())
+            inferredClock = inferClock(procedure, dfa);
+    }
 }
 
 } // namespace slang::analysis

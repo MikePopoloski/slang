@@ -11,7 +11,7 @@
 
 namespace slang::ast {
 
-class ProceduralBlockSymbol;
+class Symbol;
 class TimingControl;
 
 } // namespace slang::ast
@@ -25,11 +25,11 @@ class AnalysisManager;
 class SLANG_EXPORT AnalyzedProcedure {
 public:
     /// The symbol that was analyzed.
-    not_null<const ast::ProceduralBlockSymbol*> procedureSymbol;
+    not_null<const ast::Symbol*> analyzedSymbol;
 
     /// Constructs a new AnalyzedProcedure object.
     AnalyzedProcedure(AnalysisManager& analysisManager, AnalysisContext& context,
-                      const ast::ProceduralBlockSymbol& symbol);
+                      const ast::Symbol& symbol);
 
     /// Returns the inferred clocking block for the procedure, if available.
     ///

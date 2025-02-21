@@ -19,8 +19,6 @@
 namespace slang::ast {
 
 class Compilation;
-class InstanceSymbol;
-class ProceduralBlockSymbol;
 class Scope;
 class Symbol;
 
@@ -31,19 +29,20 @@ namespace slang::analysis {
 class AnalysisManager;
 class AnalyzedScope;
 
-/// Represents an analyzed AST instance (module / interface / program).
-class SLANG_EXPORT AnalyzedInstance {
+/// Represents a pending analysis for a particular AST symbol,
+/// such as a module or interface instance, a class type, etc.
+class SLANG_EXPORT PendingAnalysis {
 public:
     /// The symbol that was analyzed.
-    not_null<const ast::InstanceSymbol*> symbol;
+    not_null<const ast::Symbol*> symbol;
 
     /// Constructs a new AnalyzedInstance object.
-    AnalyzedInstance(AnalysisManager& analysisManager, const ast::InstanceSymbol& symbol) :
+    PendingAnalysis(AnalysisManager& analysisManager, const ast::Symbol& symbol) :
         symbol(&symbol), analysisManager(&analysisManager) {}
 
-    /// Returns the analyzed body of the instance, if available.
-    /// If the body has not been analyzed yet, this will return nullptr.
-    const AnalyzedScope* getBody() const;
+    /// Returns the analyzed body of the symbol if available,
+    /// or nullptr if the symbol has not been analyzed yet.
+    const AnalyzedScope* tryGet() const;
 
 private:
     not_null<AnalysisManager*> analysisManager;
@@ -55,8 +54,9 @@ public:
     /// The scope that was analyzed.
     const ast::Scope& scope;
 
-    /// The instances in the scope.
-    std::vector<AnalyzedInstance> instances;
+    /// The analyzed child scopes in the scope. This includes things
+    /// like class types and checker instances.
+    std::vector<PendingAnalysis> childScopes;
 
     /// The procedures in the scope.
     std::vector<AnalyzedProcedure> procedures;
@@ -78,7 +78,7 @@ public:
     std::vector<const AnalyzedScope*> packages;
 
     /// The analyzed top-level instances in the design.
-    std::vector<AnalyzedInstance> topInstances;
+    std::vector<PendingAnalysis> topInstances;
 
     /// Default constructor.
     AnalyzedDesign() = default;
@@ -113,8 +113,7 @@ public:
     ///       before it can be analyzed.
     AnalyzedDesign analyze(const ast::Compilation& compilation);
 
-    /// Returns the results of a previous analysis of a scope,
-    /// if available.
+    /// Returns the results of a previous analysis of a scope, if available.
     const AnalyzedScope* getAnalyzedScope(const ast::Scope& scope);
 
     /// Collects and returns all issued analysis diagnostics.
@@ -123,7 +122,7 @@ public:
 private:
     friend struct ScopeVisitor;
 
-    AnalyzedInstance analyzeInst(const ast::InstanceSymbol& instance);
+    PendingAnalysis analyzeSymbol(const ast::Symbol& symbol);
     const AnalyzedScope& analyzeScope(const ast::Scope& scope);
     void analyzeScopeAsync(const ast::Scope& scope);
     void wait();

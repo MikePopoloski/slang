@@ -192,7 +192,7 @@ endmodule)",
 
     REQUIRE(design.topInstances.size() == 1);
     auto& instance = design.topInstances[0];
-    auto body = instance.getBody();
+    auto body = instance.tryGet();
     REQUIRE(body);
     REQUIRE(body->procedures.size() == 1);
     auto& proc = body->procedures[0];

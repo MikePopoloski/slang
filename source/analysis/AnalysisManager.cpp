@@ -14,8 +14,23 @@ namespace slang::analysis {
 
 using namespace ast;
 
-const AnalyzedScope* AnalyzedInstance::getBody() const {
-    return analysisManager->getAnalyzedScope(symbol->body);
+static const Scope& getAsScope(const Symbol& symbol) {
+    switch (symbol.kind) {
+        case SymbolKind::Instance: {
+            auto& inst = symbol.as<InstanceSymbol>();
+            if (auto body = inst.getCanonicalBody())
+                return *body;
+            return inst.body;
+        }
+        case SymbolKind::CheckerInstance:
+            return symbol.as<CheckerInstanceSymbol>().body;
+        default:
+            return symbol.as<Scope>();
+    }
+}
+
+const AnalyzedScope* PendingAnalysis::tryGet() const {
+    return analysisManager->getAnalyzedScope(getAsScope(*symbol));
 }
 
 AnalysisManager::AnalysisManager(uint32_t numThreads) : threadPool(numThreads) {
@@ -57,7 +72,7 @@ AnalyzedDesign AnalysisManager::analyze(const Compilation& compilation) {
     }
 
     for (auto instance : root->topInstances)
-        result.topInstances.emplace_back(analyzeInst(*instance));
+        result.topInstances.emplace_back(analyzeSymbol(*instance));
     wait();
 
     return result;
@@ -82,16 +97,9 @@ Diagnostics AnalysisManager::getDiagnostics() {
     return diags;
 }
 
-AnalyzedInstance AnalysisManager::analyzeInst(const InstanceSymbol& instance) {
-    // If there is a canonical body set, use that. Otherwise use the
-    // instance's body directly.
-    auto body = instance.getCanonicalBody();
-    if (!body)
-        body = &instance.body;
-
-    analyzeScopeAsync(*body);
-
-    return AnalyzedInstance(*this, instance);
+PendingAnalysis AnalysisManager::analyzeSymbol(const Symbol& symbol) {
+    analyzeScopeAsync(getAsScope(symbol));
+    return PendingAnalysis(*this, symbol);
 }
 
 void AnalysisManager::analyzeScopeAsync(const Scope& scope) {
@@ -130,7 +138,14 @@ struct ScopeVisitor {
         if (symbol.body.flags.has(InstanceFlags::Uninstantiated))
             return;
 
-        scope.instances.emplace_back(analysisManager.analyzeInst(symbol));
+        scope.childScopes.emplace_back(analysisManager.analyzeSymbol(symbol));
+    }
+
+    void visit(const CheckerInstanceSymbol& symbol) {
+        if (symbol.body.flags.has(InstanceFlags::Uninstantiated))
+            return;
+
+        scope.childScopes.emplace_back(analysisManager.analyzeSymbol(symbol));
     }
 
     void visit(const PackageSymbol& symbol) {
@@ -147,45 +162,81 @@ struct ScopeVisitor {
 
         // For our purposes we can just flatten the content of generate
         // blocks into their parents.
-        for (auto& member : symbol.members())
-            member.visit(*this);
+        visitMembers(symbol);
     }
 
     void visit(const GenerateBlockArraySymbol& symbol) {
         if (!symbol.valid)
             return;
 
-        for (auto& member : symbol.members())
-            member.visit(*this);
+        visitMembers(symbol);
     }
 
     void visit(const ProceduralBlockSymbol& symbol) {
         scope.procedures.emplace_back(analysisManager, context, symbol);
     }
 
-    // Everything else is unhandled.
+    void visit(const SubroutineSymbol& symbol) {
+        if (symbol.flags.has(MethodFlags::Pure | MethodFlags::InterfaceExtern |
+                             MethodFlags::DPIImport | MethodFlags::Randomize)) {
+            return;
+        }
+
+        scope.procedures.emplace_back(analysisManager, context, symbol);
+    }
+
+    void visit(const MethodPrototypeSymbol&) {
+        // Deliberately don't visit the method prototype's formal arguments.
+    }
+
+    void visit(const ClassType& symbol) {
+        scope.childScopes.emplace_back(analysisManager.analyzeSymbol(symbol));
+    }
+
+    void visit(const CovergroupType& symbol) {
+        scope.childScopes.emplace_back(analysisManager.analyzeSymbol(symbol));
+    }
+
+    void visit(const GenericClassDefSymbol& symbol) {
+        for (auto& spec : symbol.specializations())
+            spec.visit(*this);
+    }
+
+    template<typename T>
+        requires(IsAnyOf<T, InstanceArraySymbol, ClockingBlockSymbol, AnonymousProgramSymbol,
+                         SpecifyBlockSymbol, CovergroupBodySymbol, CoverCrossSymbol,
+                         CoverCrossBodySymbol>)
+    void visit(const T& symbol) {
+        // For these symbol types we just descend into their members
+        // and flatten them into their parent scope.
+        visitMembers(symbol);
+    }
+
+    // Everything else doesn't need to be analyzed.
     template<typename T>
         requires(
             IsAnyOf<T, InvalidSymbol, RootSymbol, CompilationUnitSymbol, DefinitionSymbol,
                     AttributeSymbol, TransparentMemberSymbol, EmptyMemberSymbol, EnumValueSymbol,
                     ForwardingTypedefSymbol, ParameterSymbol, TypeParameterSymbol, PortSymbol,
-                    MultiPortSymbol, InterfacePortSymbol, InstanceArraySymbol, InstanceBodySymbol,
-                    ExplicitImportSymbol, WildcardImportSymbol, StatementBlockSymbol, NetSymbol,
-                    VariableSymbol, FormalArgumentSymbol, FieldSymbol, ClassPropertySymbol,
-                    SubroutineSymbol, ModportSymbol, ModportPortSymbol, ModportClockingSymbol,
-                    ContinuousAssignSymbol, GenvarSymbol, ElabSystemTaskSymbol,
-                    GenericClassDefSymbol, MethodPrototypeSymbol, UninstantiatedDefSymbol,
-                    IteratorSymbol, PatternVarSymbol, ConstraintBlockSymbol, DefParamSymbol,
-                    SpecparamSymbol, PrimitiveSymbol, PrimitivePortSymbol, PrimitiveInstanceSymbol,
-                    SpecifyBlockSymbol, SequenceSymbol, PropertySymbol, AssertionPortSymbol,
-                    ClockingBlockSymbol, ClockVarSymbol, LocalAssertionVarSymbol, LetDeclSymbol,
-                    CheckerSymbol, CheckerInstanceSymbol, CheckerInstanceBodySymbol,
-                    RandSeqProductionSymbol, CovergroupBodySymbol, CoverpointSymbol,
-                    CoverCrossSymbol, CoverCrossBodySymbol, CoverageBinSymbol, TimingPathSymbol,
-                    PulseStyleSymbol, SystemTimingCheckSymbol, AnonymousProgramSymbol,
-                    NetAliasSymbol, ConfigBlockSymbol, TypeAliasType, NetType> ||
+                    MultiPortSymbol, InterfacePortSymbol, InstanceBodySymbol, ExplicitImportSymbol,
+                    WildcardImportSymbol, StatementBlockSymbol, NetSymbol, VariableSymbol,
+                    FormalArgumentSymbol, FieldSymbol, ClassPropertySymbol, ModportSymbol,
+                    ModportPortSymbol, ModportClockingSymbol, ContinuousAssignSymbol, GenvarSymbol,
+                    ElabSystemTaskSymbol, UninstantiatedDefSymbol, IteratorSymbol, PatternVarSymbol,
+                    ConstraintBlockSymbol, DefParamSymbol, SpecparamSymbol, PrimitiveSymbol,
+                    PrimitivePortSymbol, PrimitiveInstanceSymbol, SequenceSymbol, PropertySymbol,
+                    AssertionPortSymbol, ClockVarSymbol, LocalAssertionVarSymbol, LetDeclSymbol,
+                    CheckerSymbol, RandSeqProductionSymbol, CoverpointSymbol, CoverageBinSymbol,
+                    TimingPathSymbol, PulseStyleSymbol, SystemTimingCheckSymbol, NetAliasSymbol,
+                    ConfigBlockSymbol, TypeAliasType, NetType, CheckerInstanceBodySymbol> ||
             std::is_base_of_v<Type, T>)
     void visit(const T&) {}
+
+    template<typename T>
+    void visitMembers(const T& symbol) {
+        for (auto& member : symbol.members())
+            member.visit(*this);
+    }
 };
 
 const AnalyzedScope& AnalysisManager::analyzeScope(const Scope& scope) {
