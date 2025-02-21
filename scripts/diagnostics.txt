@@ -1091,8 +1091,8 @@ warning task-ignored ConstSysTaskIgnored "system task '{}' is ignored in constan
 warning constant-conversion ConstantConversion "implicit conversion from {} to {} changes value from {} to {}"
 
 subsystem Compilation
-error MaxInstanceDepthExceeded "{} instantiation exceeded maximum depth of {}"
-error InfinitelyRecursiveHierarchy "infinitely recursive instantiation of {}"
+fatal MaxInstanceDepthExceeded "{} instantiation exceeded maximum depth of {}"
+fatal InfinitelyRecursiveHierarchy "infinitely recursive instantiation of {}"
 error InvalidTopModule "'{}' is not a valid top-level module"
 error TopModuleIfacePort "top-level module '{}' has unconnected interface port '{}'"
 error TopModuleRefPort "top-level module '{}' has unconnected 'ref' port '{}'"
@@ -1158,7 +1158,7 @@ subsystem Analysis
 warning inferred-latch InferredLatch "latch inferred for '{}' because it is not assigned on all control paths"
 
 subsystem Meta
-error TooManyErrors "too many errors emitted, stopping now [--error-limit=]"
+fatal TooManyErrors "too many errors emitted, stopping now [--error-limit=]"
 warning unknown-warning-option UnknownWarningOption "unknown warning option '{}'"
 
 // Following are groups of diagnostics, to make it easy to control them from the command line.

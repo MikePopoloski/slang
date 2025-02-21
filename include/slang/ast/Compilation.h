@@ -335,6 +335,11 @@ public:
     /// Queries if any errors have been issued on any scope within this compilation.
     bool hasIssuedErrors() const { return numErrors > 0; };
 
+    /// Returns true if there are any fatal errors reported in the compilation,
+    /// or if we've hit the configured error limit and stopped elaboration early
+    /// because of it.
+    bool hasFatalErrors() const { return sawFatalError; }
+
     /// @}
     /// @name Utility and convenience methods
     /// @{
@@ -936,6 +941,7 @@ private:
     bool finalizing = false; // to prevent reentrant calls to getRoot()
     bool anyElemsWithTimescales = false;
     bool diagsDisabled = false;
+    bool sawFatalError = false;
     uint32_t typoCorrections = 0;
     int nextEnumSystemId = 1;
     int nextStructSystemId = 1;

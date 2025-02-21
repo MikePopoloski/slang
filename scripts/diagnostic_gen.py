@@ -76,6 +76,9 @@ def main():
             elif sev == "error":
                 diags[subsystem].append(("Error", parts[1], parts[2], ""))
                 diaglist.append(parts[1])
+            elif sev == "fatal":
+                diags[subsystem].append(("Fatal", parts[1], parts[2], ""))
+                diaglist.append(parts[1])
             elif sev == "note":
                 diags[subsystem].append(("Note", parts[1], parts[2], ""))
                 diaglist.append(parts[1])

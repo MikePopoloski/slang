@@ -26,6 +26,9 @@ AnalyzedDesign AnalysisManager::analyze(const Compilation& compilation) {
     SLANG_ASSERT(compilation.isFinalized());
     SLANG_ASSERT(compilation.isFrozen());
 
+    if (compilation.hasFatalErrors())
+        return {};
+
     auto root = compilation.tryGetRoot();
     SLANG_ASSERT(root);
 

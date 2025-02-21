@@ -140,7 +140,8 @@ void registerCompilation(py::module_& m) {
         .def_property_readonly("unboundedType", &Compilation::getUnboundedType)
         .def_property_readonly("typeRefType", &Compilation::getTypeRefType)
         .def_property_readonly("wireNetType", &Compilation::getWireNetType)
-        .def_property_readonly("hasIssuedErrors", &Compilation::hasIssuedErrors);
+        .def_property_readonly("hasIssuedErrors", &Compilation::hasIssuedErrors)
+        .def_property_readonly("hasFatalErrors", &Compilation::hasFatalErrors);
 
     py::class_<Compilation::DefinitionLookupResult>(comp, "DefinitionLookupResult")
         .def(py::init<>())

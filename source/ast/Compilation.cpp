@@ -1485,8 +1485,10 @@ void Compilation::elaborate() {
     DiagnosticVisitor elabVisitor(*this, numErrors, errorLimit);
     getRoot().visit(elabVisitor);
 
-    if (elabVisitor.finishedEarly())
+    if (elabVisitor.finishedEarly()) {
+        sawFatalError = true;
         return;
+    }
 
     elabVisitor.finalize();
 
