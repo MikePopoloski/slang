@@ -44,10 +44,13 @@ protected:
         rootSymbol(symbol),
         evalContext(ASTContext(*symbol.getParentScope(), LookupLocation::after(symbol))) {}
 
-    /// Gets the current state.
+    /// Gets the current flow state.
     TState& getState() { return state; }
+
+    /// Gets the current flow state.
     const TState& getState() const { return state; }
 
+    /// Gets an evaluation context for use during analysis.
     EvalContext& getEvalContext() const { return evalContext; }
 
     /// Sets the current flow state to the given value.
@@ -67,7 +70,7 @@ protected:
         stateWhenFalse = std::move(whenFalse);
     }
 
-    /// Splits the current state into two separate states.
+    /// Splits the current state into separate true / false states.
     void split() {
         if (!isStateSplit) {
             auto copied = (DERIVED).copyState(state);
@@ -97,6 +100,8 @@ protected:
     void visitStmt(const ExpressionStatement& stmt) { visit(stmt.expr); }
     void visitStmt(const TimedStatement& stmt) { visit(stmt.stmt); }
     void visitStmt(const EventTriggerStatement& stmt) { visit(stmt.target); }
+    void visitStmt(const ProceduralAssignStatement& stmt) { visit(stmt.assignment); }
+    void visitStmt(const ProceduralDeassignStatement& stmt) { visit(stmt.lvalue); }
 
     void visitStmt(const StatementList& stmt) {
         for (auto s : stmt.list)
@@ -561,14 +566,16 @@ protected:
         // now nothing depends on us doing that.
     }
 
+    void visitStmt(const ProceduralCheckerStatement&) {
+        // Similarly to concurrent assertions, procedural checkers
+        // do not affect the immediate control or data flow but they
+        // can take arguments which we may want to model.
+    }
+
     // Nothing to do for these statements.
     void visitStmt(const EmptyStatement&) {}
     void visitStmt(const WaitForkStatement&) {}
     void visitStmt(const DisableForkStatement&) {}
-
-    void visitStmt(const ProceduralAssignStatement&) { SLANG_UNREACHABLE; }
-    void visitStmt(const ProceduralDeassignStatement&) { SLANG_UNREACHABLE; }
-    void visitStmt(const ProceduralCheckerStatement&) { SLANG_UNREACHABLE; }
 
     // **** Expression Visitors ****
 
@@ -735,8 +742,10 @@ protected:
         visit(expr.selected());
     }
 
-    // TODO: add support
-    void visitExpr(const AssertionInstanceExpression&) { SLANG_UNREACHABLE; }
+    void visitExpr(const AssertionInstanceExpression&) {
+        // The assertion instance doesn't affect control flow but
+        // we may want to model the argument passing in the future.
+    }
 
     // None of these affect control or data flow state.
     void visitExpr(const IntegerLiteral&) {}

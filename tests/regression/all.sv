@@ -40,7 +40,7 @@ macromodule m3;
     wor u,v;
     alias {u,v} = w;
 
-    logic f;
+    logic f, z;
     event ev;
     initial begin
         repeat (3) @(negedge b) f = #2 1;
@@ -54,6 +54,9 @@ macromodule m3;
         join_none
 
         disable m3.foo;
+
+        assign z = 1;
+        deassign z;
 
         if (1) begin end else begin end
 
@@ -311,8 +314,30 @@ checker assert_window1 (
 endchecker : assert_window1
 
 module m5;
-    logic a, b;
+    logic a, b, c, d, e, clk;
     assert_window1 aw1(1 + 1, a, b);
+
+    initial begin
+        assert_window1 aw2(1 + 1, a, b);
+    end
+
+    sequence abc;
+        @(posedge clk) a ##1 b ##1 c;
+    endsequence
+
+    sequence de;
+        @(negedge clk) d ##[2:5] e;
+    endsequence
+
+    program check;
+        initial begin
+            wait( abc.triggered || de.triggered );
+            if( abc.triggered )
+                $display( "abc succeeded" );
+            if( de.triggered )
+                $display( "de succeeded" );
+        end
+    endprogram
 endmodule
 
 class C;

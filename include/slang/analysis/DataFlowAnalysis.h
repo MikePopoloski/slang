@@ -22,12 +22,12 @@ concept IsSelectExpr =
 
 using SymbolBitMap = IntervalMap<uint64_t, std::monostate, 3>;
 
+/// Represents the state of a data flow analysis at a single point in a procedure.
 struct SLANG_EXPORT DataFlowState {
-    // Each tracked variable has its assigned intervals stored here.
-    // This should be 64 bytes per variable.
+    /// Each tracked variable has its assigned intervals stored here.
     SmallVector<SymbolBitMap, 2> assigned;
 
-    // Whether the control flow that arrived at this point is reachable.
+    /// Whether the control flow that arrived at this point is reachable.
     bool reachable = true;
 
     DataFlowState() = default;

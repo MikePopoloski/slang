@@ -90,7 +90,10 @@ public:
 /// Holds various bits of state needed to perform analysis.
 class SLANG_EXPORT AnalysisContext {
 public:
+    /// An allocator used for analysis-specific data structures.
     BumpAllocator alloc;
+
+    /// Diagnostics collected during analysis.
     Diagnostics diagnostics;
 };
 
