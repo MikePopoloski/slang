@@ -1300,7 +1300,7 @@ c
 d
 // synthesis translate_off
 e
-// synthesis translate_on
+/* synthesis translate_on */
 f
 )"sv);
 

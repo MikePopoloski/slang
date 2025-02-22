@@ -1579,12 +1579,23 @@ void Lexer::scanDisabledRegion(std::string_view firstWord, std::string_view seco
         }
 
         advance();
-        if (c == '/' && peek() == '/') {
+        if (c == '/' && (peek() == '/' || peek() == '*')) {
+            const bool isBlockComment = peek() == '*';
             advance();
 
             if (matchWord(firstWord) && matchWord(secondWord)) {
-                if (!thirdWord || matchWord(*thirdWord))
+                if (!thirdWord || matchWord(*thirdWord)) {
+                    // Scan the rest of the comment and then return.
+                    // We discard the comment trivia from the buffer
+                    // so that this part of the region ends up as
+                    // a DisabledText trivia instead.
+                    if (isBlockComment)
+                        scanBlockComment();
+                    else
+                        scanLineComment();
+                    triviaBuffer.pop_back();
                     return;
+                }
             }
         }
     }
