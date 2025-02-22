@@ -63,6 +63,9 @@
       "architecture": {
         "value": "x64",
         "strategy": "external"
+      },
+      "cacheVariables": {
+        "SLANG_INCLUDE_THREADTEST": "ON"
       }
     },
     {
@@ -134,7 +137,8 @@
       ],
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "CMAKE_CXX_COMPILER": "clang++-19"
+        "CMAKE_CXX_COMPILER": "clang++-19",
+        "SLANG_INCLUDE_THREADTEST": "ON"
       }
     },
     {
