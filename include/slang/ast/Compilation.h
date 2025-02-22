@@ -9,9 +9,9 @@
 
 #include <memory>
 
+#include "slang/ast/ASTDiagMap.h"
 #include "slang/ast/OpaqueInstancePath.h"
 #include "slang/ast/Scope.h"
-#include "slang/diagnostics/Diagnostics.h"
 #include "slang/numeric/Time.h"
 #include "slang/syntax/SyntaxFwd.h"
 #include "slang/syntax/SyntaxNode.h"
@@ -913,8 +913,7 @@ private:
 
     // A map from diag code + location to the diagnostics that have occurred at that location.
     // This is used to collapse duplicate diagnostics across instantiations into a single report.
-    using DiagMap = flat_hash_map<std::tuple<DiagCode, SourceLocation>, std::vector<Diagnostic>>;
-    DiagMap diagMap;
+    ASTDiagMap diagMap;
 
     // A list of libraries that control the order in which we search for cell bindings.
     std::vector<const SourceLibrary*> defaultLiblist;

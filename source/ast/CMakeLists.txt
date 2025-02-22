@@ -50,6 +50,7 @@ target_sources(
           types/TypePrinter.cpp
           types/Type.cpp
           ASTContext.cpp
+          ASTDiagMap.cpp
           ASTSerializer.cpp
           Bitstream.cpp
           Compilation.cpp
