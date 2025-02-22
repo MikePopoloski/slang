@@ -141,7 +141,7 @@ public:
     Diagnostics getDiagnostics(const SourceManager* sourceManager);
 
 private:
-    friend struct ScopeVisitor;
+    friend struct AnalysisScopeVisitor;
 
     PendingAnalysis analyzeSymbol(const ast::Symbol& symbol);
     const AnalyzedScope& analyzeScope(const ast::Scope& scope);
