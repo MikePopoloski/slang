@@ -221,6 +221,9 @@ public:
         /// If true, include macro expansion information in printed diagnostics.
         std::optional<bool> diagMacroExpansion;
 
+        /// If true, display absolute paths to files in printed diagnostics.
+        std::optional<bool> diagAbsPaths;
+
         /// One of the ShowHierarchyPathOption values that control whether to
         /// include hierarchy paths in printed diagnostics.
         std::optional<std::string> diagHierarchy;

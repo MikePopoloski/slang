@@ -30,7 +30,7 @@ void JsonDiagnosticClient::report(const ReportedDiagnostic& diag) {
     if (diag.location.buffer() != SourceLocation::NoLocation.buffer()) {
         auto loc = diag.location;
         writer.writeProperty("location");
-        writer.writeValue(fmt::format("{}:{}:{}", sourceManager->getFileName(loc),
+        writer.writeValue(fmt::format("{}:{}:{}", getFileName(loc),
                                       sourceManager->getLineNumber(loc),
                                       sourceManager->getColumnNumber(loc)));
     }
@@ -44,8 +44,8 @@ void JsonDiagnosticClient::report(const ReportedDiagnostic& diag) {
             writer.startArray();
             for (int i = int(includeStack.size()) - 1; i >= 0; i--) {
                 SourceLocation loc = includeStack[size_t(i)];
-                writer.writeValue(fmt::format("{}:{}", sourceManager->getFileName(loc),
-                                              sourceManager->getLineNumber(loc)));
+                writer.writeValue(
+                    fmt::format("{}:{}", getFileName(loc), sourceManager->getLineNumber(loc)));
             }
             writer.endArray();
         }
@@ -73,7 +73,7 @@ void JsonDiagnosticClient::report(const ReportedDiagnostic& diag) {
             loc = sourceManager->getFullyOriginalLoc(loc);
             if (loc.buffer() != SourceLocation::NoLocation.buffer()) {
                 writer.writeProperty("location");
-                writer.writeValue(fmt::format("{}:{}:{}", sourceManager->getFileName(loc),
+                writer.writeValue(fmt::format("{}:{}:{}", getFileName(loc),
                                               sourceManager->getLineNumber(loc),
                                               sourceManager->getColumnNumber(loc)));
             }

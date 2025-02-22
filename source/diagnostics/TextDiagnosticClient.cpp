@@ -54,7 +54,7 @@ void TextDiagnosticClient::report(const ReportedDiagnostic& diag) {
         // Show the stack in reverse.
         for (int i = int(includeStack.size()) - 1; i >= 0; i--) {
             SourceLocation loc = includeStack[size_t(i)];
-            buffer->format("in file included from {}:{}:\n", sourceManager->getFileName(loc),
+            buffer->format("in file included from {}:{}:\n", getFileName(loc),
                            sourceManager->getLineNumber(loc));
         }
     }
@@ -309,7 +309,7 @@ void TextDiagnosticClient::formatDiag(SourceLocation loc, std::span<const Source
     if (hasLocation) {
         col = sourceManager->getColumnNumber(loc);
         if (includeLocation) {
-            buffer->append(fg(filenameColor), sourceManager->getFileName(loc));
+            buffer->append(fg(filenameColor), getFileName(loc));
             buffer->append(":");
             buffer->format(fg(locationColor), "{}", sourceManager->getLineNumber(loc));
             if (includeColumn)

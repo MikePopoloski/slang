@@ -8,6 +8,7 @@
 #include "slang/diagnostics/DiagnosticClient.h"
 
 #include "slang/text/SourceManager.h"
+#include "slang/util/String.h"
 
 namespace slang {
 
@@ -17,6 +18,13 @@ void DiagnosticClient::setEngine(const DiagnosticEngine& newEngine) {
 
     engine = &newEngine;
     sourceManager = &engine->getSourceManager();
+}
+
+std::string DiagnosticClient::getFileName(SourceLocation location) const {
+    if (absPaths)
+        return getU8Str(sourceManager->getFullPath(location.buffer()));
+    else
+        return std::string(sourceManager->getFileName(location));
 }
 
 void DiagnosticClient::getIncludeStack(BufferID buffer,

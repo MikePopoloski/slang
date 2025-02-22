@@ -234,6 +234,8 @@ void Driver::addStandardArgs() {
                 "Show include stacks in diagnostic output");
     cmdLine.add("--diag-macro-expansion", options.diagMacroExpansion,
                 "Show macro expansion backtraces in diagnostic output");
+    cmdLine.add("--diag-abs-paths", options.diagAbsPaths,
+                "Display absolute paths to files in diagnostic output");
     cmdLine.add("--diag-hierarchy", options.diagHierarchy,
                 "Show hierarchy locations in diagnostic output", "always|never|auto");
     cmdLine.add("--diag-json", options.diagJson,
@@ -549,6 +551,7 @@ bool Driver::processOptions() {
         jsonWriter->startArray();
 
         jsonDiagClient = std::make_shared<JsonDiagnosticClient>(*jsonWriter);
+        jsonDiagClient->showAbsPaths(options.diagAbsPaths.value_or(false));
         diagEngine.addClient(jsonDiagClient);
     }
 
@@ -560,6 +563,7 @@ bool Driver::processOptions() {
     tdc.showOptionName(options.diagOptionName.value_or(true));
     tdc.showIncludeStack(options.diagIncludeStack.value_or(true));
     tdc.showMacroExpansion(options.diagMacroExpansion.value_or(true));
+    tdc.showAbsPaths(options.diagAbsPaths.value_or(false));
 
     if (options.diagHierarchy == "always")
         tdc.showHierarchyInstance(ShowHierarchyPathOption::Always);

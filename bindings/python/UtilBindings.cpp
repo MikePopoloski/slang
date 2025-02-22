@@ -306,7 +306,8 @@ void registerUtil(py::module_& m) {
 
     py::class_<DiagnosticClient, std::shared_ptr<DiagnosticClient>>(m, "DiagnosticClient")
         .def("report", &DiagnosticClient::report, "diagnostic"_a)
-        .def("setEngine", &DiagnosticClient::setEngine, "engine"_a);
+        .def("setEngine", &DiagnosticClient::setEngine, "engine"_a)
+        .def("showAbsPaths", &DiagnosticClient::showAbsPaths, "show"_a);
 
     py::class_<TextDiagnosticClient, DiagnosticClient, std::shared_ptr<TextDiagnosticClient>>(
         m, "TextDiagnosticClient")
