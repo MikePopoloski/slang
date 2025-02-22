@@ -106,44 +106,40 @@ enum class SLANG_EXPORT CompilationFlags {
     /// be caused by not having an elaborated design.
     LintMode = 1 << 6,
 
-    /// Suppress warnings about unused code elements.
-    SuppressUnused = 1 << 7,
-
     /// Don't issue an error when encountering an instantiation
     /// for an unknown definition.
-    IgnoreUnknownModules = 1 << 8,
+    IgnoreUnknownModules = 1 << 7,
 
     /// Allow strings to implicitly convert to integers.
-    RelaxStringConversions = 1 << 9,
+    RelaxStringConversions = 1 << 8,
 
     /// Allow implicit call expressions (lacking parentheses) to be recursive function calls.
-    AllowRecursiveImplicitCall = 1 << 10,
+    AllowRecursiveImplicitCall = 1 << 9,
 
     /// Allow module parameter assignments to elide the parentheses.
-    AllowBareValParamAssignment = 1 << 11,
+    AllowBareValParamAssignment = 1 << 10,
 
     /// Allow self-determined streaming concatenation expressions; normally these
     /// can only be used in specific assignment-like contexts.
-    AllowSelfDeterminedStreamConcat = 1 << 12,
+    AllowSelfDeterminedStreamConcat = 1 << 11,
 
     /// Allow multi-driven subroutine local variables.
-    AllowMultiDrivenLocals = 1 << 13,
+    AllowMultiDrivenLocals = 1 << 12,
 
     /// Allow merging ANSI port declarations with nets and variables
     /// declared in the module body.
-    AllowMergingAnsiPorts = 1 << 14,
+    AllowMergingAnsiPorts = 1 << 13,
 
     /// Disable the use of instance caching, which normally allows skipping
     /// duplicate instance bodies to save time when elaborating.
-    DisableInstanceCaching = 1 << 15,
+    DisableInstanceCaching = 1 << 14,
 };
 SLANG_BITMASK(CompilationFlags, DisableInstanceCaching)
 
 /// Contains various options that can control compilation behavior.
 struct SLANG_EXPORT CompilationOptions {
     /// Various flags that control compilation behavior.
-    bitmask<CompilationFlags> flags = CompilationFlags::AllowTopLevelIfacePorts |
-                                      CompilationFlags::SuppressUnused;
+    bitmask<CompilationFlags> flags = CompilationFlags::AllowTopLevelIfacePorts;
 
     /// The maximum depth of nested module instances (and interfaces/programs),
     /// to detect infinite recursion.
@@ -435,6 +431,11 @@ public:
 
     /// Gets a list of all definitions (including primitives) in the design.
     std::vector<const Symbol*> getDefinitions() const;
+
+    /// Gets a list of definitions that are unreferenced in the design.
+    std::span<const DefinitionSymbol* const> getUnreferencedDefinitions() const {
+        return unreferencedDefs;
+    }
 
     /// Gets the package with the give name, or nullptr if there is no such package.
     const PackageSymbol* getPackage(std::string_view name) const;

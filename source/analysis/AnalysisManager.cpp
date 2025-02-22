@@ -7,8 +7,10 @@
 //------------------------------------------------------------------------------
 #include "slang/analysis/AnalysisManager.h"
 
+#include "slang/ast/ASTDiagMap.h"
 #include "slang/ast/ASTVisitor.h"
 #include "slang/ast/Compilation.h"
+#include "slang/diagnostics/AnalysisDiags.h"
 
 namespace slang::analysis {
 
@@ -29,11 +31,29 @@ static const Scope& getAsScope(const Symbol& symbol) {
     }
 }
 
+static bool hasUnusedAttrib(const Compilation& compilation, const Symbol& symbol) {
+    for (auto attr : compilation.getAttributes(symbol)) {
+        if (attr->name == "unused"sv || attr->name == "maybe_unused"sv)
+            return attr->getValue().isTrue();
+    }
+    return false;
+}
+
 const AnalyzedScope* PendingAnalysis::tryGet() const {
     return analysisManager->getAnalyzedScope(getAsScope(*symbol));
 }
 
-AnalysisManager::AnalysisManager(uint32_t numThreads) : threadPool(numThreads) {
+Diagnostic& AnalysisContext::addDiag(const Symbol& symbol, DiagCode code, SourceLocation location) {
+    return diagnostics.add(symbol, code, location);
+}
+
+Diagnostic& AnalysisContext::addDiag(const Symbol& symbol, DiagCode code, SourceRange sourceRange) {
+    return diagnostics.add(symbol, code, sourceRange);
+}
+
+AnalysisManager::AnalysisManager(bitmask<AnalysisFlags> flags, uint32_t numThreads) :
+    analysisFlags(flags), threadPool(numThreads) {
+
     workerStates.resize(threadPool.get_thread_count() + 1);
 }
 
@@ -75,6 +95,17 @@ AnalyzedDesign AnalysisManager::analyze(const Compilation& compilation) {
         result.topInstances.emplace_back(analyzeSymbol(*instance));
     wait();
 
+    // Report on unused definitions.
+    if (hasFlag(AnalysisFlags::CheckUnused)) {
+        auto& context = state().context;
+        for (auto def : compilation.getUnreferencedDefinitions()) {
+            if (!def->name.empty() && def->name != "_"sv && !hasUnusedAttrib(compilation, *def)) {
+                context.addDiag(*def, diag::UnusedDefinition, def->location)
+                    << def->getKindString();
+            }
+        }
+    }
+
     return result;
 }
 
@@ -87,14 +118,18 @@ const AnalyzedScope* AnalysisManager::getAnalyzedScope(const Scope& scope) {
     return result;
 }
 
-Diagnostics AnalysisManager::getDiagnostics() {
+Diagnostics AnalysisManager::getDiagnostics(const SourceManager* sourceManager) {
     wait();
 
-    Diagnostics diags;
-    for (auto& state : workerStates)
-        diags.append_range(state.context.diagnostics);
+    ASTDiagMap diagMap;
+    for (auto& state : workerStates) {
+        for (auto& diag : state.context.diagnostics) {
+            bool _;
+            diagMap.add(diag, _);
+        }
+    }
 
-    return diags;
+    return diagMap.coalesce(sourceManager);
 }
 
 PendingAnalysis AnalysisManager::analyzeSymbol(const Symbol& symbol) {
@@ -127,25 +162,25 @@ template<typename T, typename... U>
 concept IsAnyOf = (std::same_as<T, U> || ...);
 
 struct ScopeVisitor {
-    AnalysisManager& analysisManager;
+    AnalysisManager& manager;
     AnalysisContext& context;
-    AnalyzedScope& scope;
+    AnalyzedScope& result;
 
-    ScopeVisitor(AnalysisManager& analysisManager, AnalysisContext& context, AnalyzedScope& scope) :
-        analysisManager(analysisManager), context(context), scope(scope) {}
+    ScopeVisitor(AnalysisManager& manager, AnalysisContext& context, AnalyzedScope& scope) :
+        manager(manager), context(context), result(scope) {}
 
     void visit(const InstanceSymbol& symbol) {
         if (symbol.body.flags.has(InstanceFlags::Uninstantiated))
             return;
 
-        scope.childScopes.emplace_back(analysisManager.analyzeSymbol(symbol));
+        result.childScopes.emplace_back(manager.analyzeSymbol(symbol));
     }
 
     void visit(const CheckerInstanceSymbol& symbol) {
         if (symbol.body.flags.has(InstanceFlags::Uninstantiated))
             return;
 
-        scope.childScopes.emplace_back(analysisManager.analyzeSymbol(symbol));
+        result.childScopes.emplace_back(manager.analyzeSymbol(symbol));
     }
 
     void visit(const PackageSymbol& symbol) {
@@ -153,7 +188,7 @@ struct ScopeVisitor {
         // Our caller up the chain (we must be in a compilation unit here)
         // will take care of looking these up and hooking them into the
         // final AnalyzedDesign that we return.
-        analysisManager.analyzeScopeAsync(symbol);
+        manager.analyzeScopeAsync(symbol);
     }
 
     void visit(const GenerateBlockSymbol& symbol) {
@@ -173,16 +208,18 @@ struct ScopeVisitor {
     }
 
     void visit(const ProceduralBlockSymbol& symbol) {
-        scope.procedures.emplace_back(analysisManager, context, symbol);
+        result.procedures.emplace_back(context, symbol);
     }
 
     void visit(const SubroutineSymbol& symbol) {
         if (symbol.flags.has(MethodFlags::Pure | MethodFlags::InterfaceExtern |
-                             MethodFlags::DPIImport | MethodFlags::Randomize)) {
+                             MethodFlags::DPIImport | MethodFlags::Randomize |
+                             MethodFlags::BuiltIn)) {
             return;
         }
 
-        scope.procedures.emplace_back(analysisManager, context, symbol);
+        result.procedures.emplace_back(context, symbol);
+        visitMembers(symbol);
     }
 
     void visit(const MethodPrototypeSymbol&) {
@@ -190,11 +227,11 @@ struct ScopeVisitor {
     }
 
     void visit(const ClassType& symbol) {
-        scope.childScopes.emplace_back(analysisManager.analyzeSymbol(symbol));
+        result.childScopes.emplace_back(manager.analyzeSymbol(symbol));
     }
 
     void visit(const CovergroupType& symbol) {
-        scope.childScopes.emplace_back(analysisManager.analyzeSymbol(symbol));
+        result.childScopes.emplace_back(manager.analyzeSymbol(symbol));
     }
 
     void visit(const GenericClassDefSymbol& symbol) {
@@ -202,10 +239,115 @@ struct ScopeVisitor {
             spec.visit(*this);
     }
 
+    void visit(const NetSymbol& symbol) {
+        if (symbol.isImplicit) {
+            checkValueUnused(symbol, diag::UnusedImplicitNet, diag::UnusedImplicitNet,
+                             diag::UnusedImplicitNet);
+        }
+        else {
+            checkValueUnused(symbol, diag::UnusedNet, diag::UndrivenNet, diag::UnusedButSetNet);
+        }
+    }
+
+    void visit(const VariableSymbol& symbol) {
+        if (symbol.flags.has(VariableFlags::CompilerGenerated))
+            return;
+
+        if (symbol.kind == SymbolKind::Variable) {
+            // Class handles and covergroups are considered used if they are
+            // constructed, since construction can have side effects.
+            auto& type = symbol.getType();
+            if (type.isClass() || type.isCovergroup()) {
+                if (auto init = symbol.getDeclaredType()->getInitializer();
+                    init && (init->kind == ExpressionKind::NewClass ||
+                             init->kind == ExpressionKind::NewCovergroup)) {
+                    return;
+                }
+            }
+
+            checkValueUnused(symbol, diag::UnusedVariable, diag::UnassignedVariable,
+                             diag::UnusedButSetVariable);
+        }
+        else if (symbol.kind == SymbolKind::FormalArgument) {
+            auto parent = symbol.getParentScope();
+            SLANG_ASSERT(parent);
+
+            if (parent->asSymbol().kind == SymbolKind::Subroutine) {
+                auto& sub = parent->asSymbol().as<SubroutineSymbol>();
+                if (!sub.isVirtual())
+                    checkValueUnused(symbol, diag::UnusedArgument, std::nullopt, std::nullopt);
+            }
+        }
+    }
+
+    void visit(const ParameterSymbol& symbol) {
+        checkValueUnused(symbol, diag::UnusedParameter, {}, diag::UnusedParameter);
+    }
+
+    void visit(const TypeParameterSymbol& symbol) {
+        checkUnused(symbol, diag::UnusedTypeParameter);
+    }
+
+    void visit(const TypeAliasType& symbol) {
+        if (!manager.hasFlag(AnalysisFlags::CheckUnused))
+            return;
+
+        auto syntax = symbol.getSyntax();
+        if (!syntax || symbol.name.empty())
+            return;
+
+        {
+            auto [used, _] = isReferenced(*syntax);
+            if (used)
+                return;
+        }
+
+        // If this is a typedef for an enum declaration, count usage
+        // of any of the enum values as a usage of the typedef itself
+        // (since there's no good way otherwise to introduce enum values
+        // without the typedef).
+        auto& targetType = symbol.targetType.getType();
+        if (targetType.kind == SymbolKind::EnumType) {
+            for (auto& val : targetType.as<EnumType>().values()) {
+                if (auto valSyntax = val.getSyntax()) {
+                    auto [valUsed, _] = isReferenced(*valSyntax);
+                    if (valUsed)
+                        return;
+                }
+            }
+        }
+
+        addDiag(symbol, diag::UnusedTypedef);
+    }
+
+    void visit(const GenvarSymbol& symbol) { checkUnused(symbol, diag::UnusedGenvar); }
+
+    void visit(const SequenceSymbol& symbol) { checkAssertionDeclUnused(symbol, "sequence"sv); }
+    void visit(const PropertySymbol& symbol) { checkAssertionDeclUnused(symbol, "property"sv); }
+    void visit(const LetDeclSymbol& symbol) { checkAssertionDeclUnused(symbol, "let"sv); }
+    void visit(const CheckerSymbol& symbol) { checkAssertionDeclUnused(symbol, "checker"sv); }
+
+    void visit(const ExplicitImportSymbol& symbol) { checkUnused(symbol, diag::UnusedImport); }
+
+    void visit(const WildcardImportSymbol& symbol) {
+        if (!manager.hasFlag(AnalysisFlags::CheckUnused))
+            return;
+
+        auto syntax = symbol.getSyntax();
+        if (!syntax)
+            return;
+
+        auto [used, _] = isReferenced(*syntax);
+        if (!used) {
+            if (shouldWarn(symbol))
+                context.addDiag(symbol, diag::UnusedWildcardImport, symbol.location);
+        }
+    }
+
     template<typename T>
         requires(IsAnyOf<T, InstanceArraySymbol, ClockingBlockSymbol, AnonymousProgramSymbol,
                          SpecifyBlockSymbol, CovergroupBodySymbol, CoverCrossSymbol,
-                         CoverCrossBodySymbol>)
+                         CoverCrossBodySymbol, StatementBlockSymbol, RandSeqProductionSymbol>)
     void visit(const T& symbol) {
         // For these symbol types we just descend into their members
         // and flatten them into their parent scope.
@@ -217,25 +359,118 @@ struct ScopeVisitor {
         requires(
             IsAnyOf<T, InvalidSymbol, RootSymbol, CompilationUnitSymbol, DefinitionSymbol,
                     AttributeSymbol, TransparentMemberSymbol, EmptyMemberSymbol, EnumValueSymbol,
-                    ForwardingTypedefSymbol, ParameterSymbol, TypeParameterSymbol, PortSymbol,
-                    MultiPortSymbol, InterfacePortSymbol, InstanceBodySymbol, ExplicitImportSymbol,
-                    WildcardImportSymbol, StatementBlockSymbol, NetSymbol, VariableSymbol,
-                    FormalArgumentSymbol, FieldSymbol, ClassPropertySymbol, ModportSymbol,
-                    ModportPortSymbol, ModportClockingSymbol, ContinuousAssignSymbol, GenvarSymbol,
-                    ElabSystemTaskSymbol, UninstantiatedDefSymbol, IteratorSymbol, PatternVarSymbol,
+                    ForwardingTypedefSymbol, PortSymbol, MultiPortSymbol, InterfacePortSymbol,
+                    InstanceBodySymbol, ModportSymbol, ModportPortSymbol, ModportClockingSymbol,
+                    ContinuousAssignSymbol, ElabSystemTaskSymbol, UninstantiatedDefSymbol,
                     ConstraintBlockSymbol, DefParamSymbol, SpecparamSymbol, PrimitiveSymbol,
-                    PrimitivePortSymbol, PrimitiveInstanceSymbol, SequenceSymbol, PropertySymbol,
-                    AssertionPortSymbol, ClockVarSymbol, LocalAssertionVarSymbol, LetDeclSymbol,
-                    CheckerSymbol, RandSeqProductionSymbol, CoverpointSymbol, CoverageBinSymbol,
-                    TimingPathSymbol, PulseStyleSymbol, SystemTimingCheckSymbol, NetAliasSymbol,
-                    ConfigBlockSymbol, TypeAliasType, NetType, CheckerInstanceBodySymbol> ||
+                    PrimitivePortSymbol, PrimitiveInstanceSymbol, AssertionPortSymbol,
+                    CoverpointSymbol, CoverageBinSymbol, TimingPathSymbol, PulseStyleSymbol,
+                    SystemTimingCheckSymbol, NetAliasSymbol, ConfigBlockSymbol, NetType,
+                    CheckerInstanceBodySymbol> ||
             std::is_base_of_v<Type, T>)
     void visit(const T&) {}
 
+private:
     template<typename T>
     void visitMembers(const T& symbol) {
         for (auto& member : symbol.members())
             member.visit(*this);
+    }
+
+    void checkValueUnused(const ValueSymbol& symbol, DiagCode unusedCode,
+                          std::optional<DiagCode> unsetCode, std::optional<DiagCode> unreadCode) {
+        if (!manager.hasFlag(AnalysisFlags::CheckUnused))
+            return;
+
+        auto syntax = symbol.getSyntax();
+        if (!syntax || symbol.name.empty())
+            return;
+
+        auto [rvalue, lvalue] = isReferenced(*syntax);
+
+        auto portRef = symbol.getFirstPortBackref();
+        if (portRef) {
+            // This is a variable or net connected internally to a port.
+            // If there is more than one port connection something unusually
+            // complicated is going on so don't try to diagnose warnings.
+            if (portRef->getNextBackreference())
+                return;
+
+            // Otherwise check and warn about the port being unused.
+            switch (portRef->port->direction) {
+                case ArgumentDirection::In:
+                    if (!rvalue)
+                        addDiag(symbol, diag::UnusedPort);
+                    break;
+                case ArgumentDirection::Out:
+                    if (!lvalue)
+                        addDiag(symbol, diag::UndrivenPort);
+                    break;
+                case ArgumentDirection::InOut:
+                    if (!rvalue && !lvalue)
+                        addDiag(symbol, diag::UnusedPort);
+                    else if (!rvalue)
+                        addDiag(symbol, diag::UnusedButSetPort);
+                    else if (!lvalue)
+                        addDiag(symbol, diag::UndrivenPort);
+                    break;
+                case ArgumentDirection::Ref:
+                    if (!rvalue && !lvalue)
+                        addDiag(symbol, diag::UnusedPort);
+                    break;
+            }
+            return;
+        }
+
+        if (!rvalue && !lvalue)
+            addDiag(symbol, unusedCode);
+        else if (!rvalue && unreadCode)
+            addDiag(symbol, *unreadCode);
+        else if (!lvalue && !symbol.getDeclaredType()->getInitializerSyntax() && unsetCode)
+            addDiag(symbol, *unsetCode);
+    }
+
+    void checkUnused(const Symbol& symbol, DiagCode code) {
+        if (!manager.hasFlag(AnalysisFlags::CheckUnused))
+            return;
+
+        auto syntax = symbol.getSyntax();
+        if (!syntax || symbol.name.empty())
+            return;
+
+        auto [used, _] = isReferenced(*syntax);
+        if (!used)
+            addDiag(symbol, code);
+    }
+
+    void checkAssertionDeclUnused(const Symbol& symbol, std::string_view kind) {
+        if (!manager.hasFlag(AnalysisFlags::CheckUnused))
+            return;
+
+        auto syntax = symbol.getSyntax();
+        if (!syntax || symbol.name.empty())
+            return;
+
+        auto [used, _] = isReferenced(*syntax);
+        if (!used && shouldWarn(symbol)) {
+            context.addDiag(symbol, diag::UnusedAssertionDecl, symbol.location)
+                << kind << symbol.name;
+        }
+    }
+
+    bool shouldWarn(const Symbol& symbol) {
+        auto scope = symbol.getParentScope();
+        return !scope->isUninstantiated() && scope->asSymbol().kind != SymbolKind::Package &&
+               symbol.name != "_"sv && !hasUnusedAttrib(scope->getCompilation(), symbol);
+    }
+
+    void addDiag(const Symbol& symbol, DiagCode code) {
+        if (shouldWarn(symbol))
+            context.addDiag(symbol, code, symbol.location) << symbol.name;
+    }
+
+    std::pair<bool, bool> isReferenced(const syntax::SyntaxNode& node) const {
+        return result.scope.getCompilation().isReferenced(node);
     }
 };
 

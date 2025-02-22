@@ -551,8 +551,10 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamsAndBinds) {
         topList.push_back(&instance);
     }
 
-    if (!hasFlag(CompilationFlags::SuppressUnused) && topDefs.empty())
+    if (!hasFlag(CompilationFlags::LintMode | CompilationFlags::AllowTopLevelIfacePorts) &&
+        topDefs.empty()) {
         root->addDiag(diag::NoTopModules, SourceLocation::NoLocation);
+    }
 
     // For unreferenced definitions, go through and instantiate them with all empty
     // parameter values so that we get at least some semantic checking of the contents.
@@ -1601,32 +1603,15 @@ void Compilation::elaborate() {
         }
     }
 
-    if (!hasFlag(CompilationFlags::SuppressUnused)) {
-        TimeTraceScope timeScope("postElabVisitors"sv, ""sv);
-
-        // Report on unused definitions.
-        for (auto def : unreferencedDefs) {
-            // If this is an interface, it may have been referenced in a port.
-            if (elabVisitor.usedIfacePorts.find(def) != elabVisitor.usedIfacePorts.end())
-                continue;
-
-            auto hasUnusedAttrib = [&] {
-                for (auto attr : getAttributes(*def)) {
-                    if (attr->name == "unused"sv || attr->name == "maybe_unused"sv)
-                        return attr->getValue().isTrue();
-                }
-                return false;
-            };
-
-            if (!def->name.empty() && def->name != "_"sv && !hasUnusedAttrib()) {
-                def->getParentScope()->addDiag(diag::UnusedDefinition, def->location)
-                    << def->getKindString();
-            }
-        }
-
-        PostElabVisitor postElabVisitor(*this);
-        getRoot().visit(postElabVisitor);
+    // Remove definitions from the "unused" set if they were referenced
+    // in an interface port somewhere.
+    std::vector<const DefinitionSymbol*> newUnreferencedDefs;
+    newUnreferencedDefs.reserve(unreferencedDefs.size());
+    for (auto def : unreferencedDefs) {
+        if (elabVisitor.usedIfacePorts.find(def) == elabVisitor.usedIfacePorts.end())
+            newUnreferencedDefs.push_back(def);
     }
+    unreferencedDefs = std::move(newUnreferencedDefs);
 }
 
 const Diagnostics& Compilation::getParseDiagnostics() {

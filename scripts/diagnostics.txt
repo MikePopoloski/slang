@@ -1132,6 +1132,10 @@ error VirtualIfaceIfacePort "interface with ports that reference other interface
 note NoteAliasedTo "which is aliased to"
 note NoteAliasDeclaration "previous alias declaration here"
 note NoteHierarchicalRef "hierarchical reference here"
+warning missing-top NoTopModules "no top-level modules found in design"
+warning duplicate-defparam DuplicateDefparam "parameter already has a defparam override applied; ignoring this one"
+
+subsystem Analysis
 warning unused-def UnusedDefinition "{} definition is unused"
 warning unused-net UnusedNet "unused net '{}'"
 warning unused-implicit-net UnusedImplicitNet "implicit net '{}' is unused elsewhere"
@@ -1151,10 +1155,6 @@ warning unused-genvar UnusedGenvar "unused genvar '{}'"
 warning unused-assertion-decl UnusedAssertionDecl "unused {} '{}'"
 warning unused-import UnusedImport "unused import '{}'"
 warning unused-wildcard-import UnusedWildcardImport "unused wildcard import"
-warning missing-top NoTopModules "no top-level modules found in design"
-warning duplicate-defparam DuplicateDefparam "parameter already has a defparam override applied; ignoring this one"
-
-subsystem Analysis
 warning inferred-latch InferredLatch "latch inferred for '{}' because it is not assigned on all control paths"
 
 subsystem Meta

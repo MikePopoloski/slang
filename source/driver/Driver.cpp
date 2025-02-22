@@ -814,9 +814,6 @@ void Driver::addCompilationOptions(Bag& bag) const {
             coptions.flags |= flag;
     }
 
-    if (options.lintMode())
-        coptions.flags |= CompilationFlags::SuppressUnused;
-
     for (auto& name : options.topModules)
         coptions.topModules.emplace(name);
     for (auto& opt : options.paramOverrides)
@@ -889,13 +886,19 @@ void Driver::reportCompilation(Compilation& compilation, bool quiet) {
 }
 
 void Driver::runAnalysis(ast::Compilation& compilation) {
+    using namespace slang::analysis;
+
     compilation.getAllDiagnostics();
     compilation.freeze();
 
-    analysis::AnalysisManager analysisManager(options.numThreads.value_or(0));
+    bitmask<AnalysisFlags> flags;
+    if (!options.lintMode())
+        flags |= AnalysisFlags::CheckUnused;
+
+    AnalysisManager analysisManager(flags, options.numThreads.value_or(0));
     analysisManager.analyze(compilation);
 
-    for (auto& diag : analysisManager.getDiagnostics())
+    for (auto& diag : analysisManager.getDiagnostics(compilation.getSourceManager()))
         diagEngine.issue(diag);
 }
 

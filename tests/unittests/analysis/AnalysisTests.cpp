@@ -22,7 +22,7 @@ std::pair<Diagnostics, AnalyzedDesign> analyze(const std::string& text, Compilat
     compilation.freeze();
 
     auto design = analysisManager.analyze(compilation);
-    return {analysisManager.getDiagnostics(), design};
+    return {analysisManager.getDiagnostics(compilation.getSourceManager()), design};
 }
 
 class TestAnalysis : public AbstractFlowAnalysis<TestAnalysis, int> {

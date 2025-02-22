@@ -49,14 +49,14 @@ void registerCompilation(py::module_& m) {
         .value("AllowTopLevelIfacePorts", CompilationFlags::AllowTopLevelIfacePorts)
         .value("StrictDriverChecking", CompilationFlags::StrictDriverChecking)
         .value("LintMode", CompilationFlags::LintMode)
-        .value("SuppressUnused", CompilationFlags::SuppressUnused)
         .value("IgnoreUnknownModules", CompilationFlags::IgnoreUnknownModules)
         .value("RelaxStringConversions", CompilationFlags::RelaxStringConversions)
         .value("AllowRecursiveImplicitCall", CompilationFlags::AllowRecursiveImplicitCall)
         .value("AllowBareValParamAssignment", CompilationFlags::AllowBareValParamAssignment)
         .value("AllowSelfDeterminedStreamConcat", CompilationFlags::AllowSelfDeterminedStreamConcat)
         .value("AllowMultiDrivenLocals", CompilationFlags::AllowMultiDrivenLocals)
-        .value("AllowMergingAnsiPorts", CompilationFlags::AllowMergingAnsiPorts);
+        .value("AllowMergingAnsiPorts", CompilationFlags::AllowMergingAnsiPorts)
+        .value("DisableInstanceCaching", CompilationFlags::DisableInstanceCaching);
 
     py::class_<CompilationOptions>(m, "CompilationOptions")
         .def(py::init<>())

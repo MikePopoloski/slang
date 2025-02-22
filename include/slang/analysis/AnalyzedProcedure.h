@@ -19,7 +19,6 @@ class TimingControl;
 namespace slang::analysis {
 
 class AnalysisContext;
-class AnalysisManager;
 
 /// Represents an analyzed procedure.
 class SLANG_EXPORT AnalyzedProcedure {
@@ -28,8 +27,7 @@ public:
     not_null<const ast::Symbol*> analyzedSymbol;
 
     /// Constructs a new AnalyzedProcedure object.
-    AnalyzedProcedure(AnalysisManager& analysisManager, AnalysisContext& context,
-                      const ast::Symbol& symbol);
+    AnalyzedProcedure(AnalysisContext& context, const ast::Symbol& symbol);
 
     /// Returns the inferred clocking block for the procedure, if available.
     ///

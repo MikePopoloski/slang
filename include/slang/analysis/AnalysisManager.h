@@ -95,7 +95,23 @@ public:
 
     /// Diagnostics collected during analysis.
     Diagnostics diagnostics;
+
+    /// Issues a new diagnostic.
+    Diagnostic& addDiag(const ast::Symbol& symbol, DiagCode code, SourceLocation location);
+
+    /// Issues a new diagnostic.
+    Diagnostic& addDiag(const ast::Symbol& symbol, DiagCode code, SourceRange sourceRange);
 };
+
+/// Defines flags that control analysis behavior.
+enum class SLANG_EXPORT AnalysisFlags {
+    /// No flags specified.
+    None = 0,
+
+    /// Analysis should check for and report on unused symbols.
+    CheckUnused = 1 << 0
+};
+SLANG_BITMASK(AnalysisFlags, CheckUnused)
 
 /// The analysis manager coordinates running various analyses on AST symbols.
 ///
@@ -105,7 +121,11 @@ public:
 class SLANG_EXPORT AnalysisManager {
 public:
     /// Default constructor for the analysis manager.
-    explicit AnalysisManager(uint32_t numThreads = 0);
+    explicit AnalysisManager(bitmask<AnalysisFlags> flags = AnalysisFlags::None,
+                             uint32_t numThreads = 0);
+
+    /// Returns true if the given flag(s) are enabled for this analysis.
+    bool hasFlag(bitmask<AnalysisFlags> flags) const { return analysisFlags.has(flags); }
 
     /// Analyzes the given compilation and returns a representation of the design.
     ///
@@ -117,7 +137,8 @@ public:
     const AnalyzedScope* getAnalyzedScope(const ast::Scope& scope);
 
     /// Collects and returns all issued analysis diagnostics.
-    Diagnostics getDiagnostics();
+    /// If @a sourceManager is provided it will be used to sort the diagnostics.
+    Diagnostics getDiagnostics(const SourceManager* sourceManager);
 
 private:
     friend struct ScopeVisitor;
@@ -133,9 +154,10 @@ private:
     };
     WorkerState& state();
 
-    BS::thread_pool<> threadPool;
+    bitmask<AnalysisFlags> analysisFlags;
     std::vector<WorkerState> workerStates;
     concurrent_map<const ast::Scope*, std::optional<const AnalyzedScope*>> analyzedScopes;
+    BS::thread_pool<> threadPool;
 
     // A mutex for shared state; anything protected by it is declared below.
     std::mutex mutex;

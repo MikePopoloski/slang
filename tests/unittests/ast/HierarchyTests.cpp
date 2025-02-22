@@ -662,35 +662,31 @@ module top;
 endmodule
 )");
 
-    CompilationOptions coptions;
-    coptions.flags &= ~CompilationFlags::SuppressUnused;
-    coptions.topModules.emplace("invalid"sv);
-    coptions.topModules.emplace("unknown"sv);
-    coptions.topModules.emplace("top"sv);
-
-    Bag options;
-    options.set(coptions);
+    CompilationOptions options;
+    options.topModules.emplace("invalid"sv);
+    options.topModules.emplace("unknown"sv);
+    options.topModules.emplace("top"sv);
 
     Compilation compilation(options);
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 4);
-    CHECK(diags[0].code == diag::UnusedDefinition);
-    CHECK(diags[1].code == diag::UnusedDefinition);
-    CHECK(diags[2].code == diag::InvalidTopModule);
-    CHECK(diags[3].code == diag::InvalidTopModule);
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::InvalidTopModule);
+    CHECK(diags[1].code == diag::InvalidTopModule);
+
+    auto unusedDefs = compilation.getUnreferencedDefinitions();
+    REQUIRE(unusedDefs.size() == 2);
+    CHECK(unusedDefs[0]->name == "invalid");
+    CHECK(unusedDefs[1]->name == "nottop");
 }
 
 TEST_CASE("No top warning") {
     auto tree = SyntaxTree::fromText(R"(
 )");
 
-    CompilationOptions coptions;
-    coptions.flags &= ~CompilationFlags::SuppressUnused;
-
-    Bag options;
-    options.set(coptions);
+    CompilationOptions options;
+    options.flags = CompilationFlags::None;
 
     Compilation compilation(options);
     compilation.addSyntaxTree(tree);

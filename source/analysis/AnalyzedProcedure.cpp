@@ -129,8 +129,7 @@ static const TimingControl* inferClock(const ProceduralBlockSymbol& procedureSym
     return inferredClock;
 }
 
-AnalyzedProcedure::AnalyzedProcedure(AnalysisManager&, AnalysisContext& context,
-                                     const Symbol& analyzedSymbol) :
+AnalyzedProcedure::AnalyzedProcedure(AnalysisContext& context, const Symbol& analyzedSymbol) :
     analyzedSymbol(&analyzedSymbol) {
 
     DataFlowAnalysis dfa(context, analyzedSymbol);
@@ -160,8 +159,7 @@ AnalyzedProcedure::AnalyzedProcedure(AnalysisManager&, AnalysisContext& context,
                     symbol->as<VariableSymbol>().lifetime == VariableLifetime::Automatic) {
                     continue;
                 }
-                context.diagnostics.add(procedure, diag::InferredLatch, expr->sourceRange)
-                    << symbol->name;
+                context.addDiag(procedure, diag::InferredLatch, expr->sourceRange) << symbol->name;
             }
         }
 
