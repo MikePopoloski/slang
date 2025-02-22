@@ -20,7 +20,7 @@ concept IsAnyOf = (std::same_as<T, U> || ...);
 
 /// A base class for flow analysis passes.
 ///
-/// Formally, this is a fairly conventional lattice flow analysis
+/// See background on lattice flow analysis:
 /// (<see href="https://en.wikipedia.org/wiki/Data-flow_analysis"/>).
 template<typename TDerived, typename TState>
 class AbstractFlowAnalysis {
@@ -582,11 +582,15 @@ protected:
     void visitExpr(const InvalidExpression&) { bad = true; }
 
     void visitExpr(const UnaryExpression& expr) {
-        // For logical not, give a chance to evaluate the operand
-        // to allow for warning on incorrect logic operators.
-        if (expr.op == UnaryOperator::LogicalNot)
-            tryEvalBool(expr.operand());
-        visit(expr.operand());
+        // For logical not we can treat it as a condition
+        // that flips its states.
+        if (expr.op == UnaryOperator::LogicalNot) {
+            visitCondition(expr.operand());
+            setConditionalState(std::move(stateWhenFalse), std::move(stateWhenTrue));
+        }
+        else {
+            visit(expr.operand());
+        }
     }
 
     void visitExpr(const BinaryExpression& expr) {
@@ -662,7 +666,7 @@ protected:
 
         auto visitSide = [this](const Expression& expr, TState&& newState) {
             setState(std::move(newState));
-            visit(expr);
+            visitNoJoin(expr);
         };
 
         auto trueState = std::move(state);
@@ -729,8 +733,10 @@ protected:
 
     void visitExpr(const MinTypMaxExpression& expr) {
         // Only the selected expression is actually evaluated.
-        visit(expr.selected());
+        visitNoJoin(expr.selected());
     }
+
+    void visitExpr(const ConversionExpression& expr) { visitNoJoin(expr.operand()); }
 
     void visitExpr(const AssertionInstanceExpression&) {
         // The assertion instance doesn't affect control flow but
@@ -758,7 +764,7 @@ protected:
     template<typename T>
         requires(IsAnyOf<T, ConcatenationExpression, ReplicationExpression,
                          StreamingConcatenationExpression, ElementSelectExpression,
-                         RangeSelectExpression, MemberAccessExpression, ConversionExpression,
+                         RangeSelectExpression, MemberAccessExpression,
                          SimpleAssignmentPatternExpression, StructuredAssignmentPatternExpression,
                          ReplicatedAssignmentPatternExpression, ValueRangeExpression,
                          DistExpression, NewArrayExpression, NewClassExpression,
@@ -782,23 +788,31 @@ protected:
         else {
             // If the derived type provides a handler then dispatch to it.
             // Otherwise dispatch to our own handler for whatever this is.
-            if constexpr (requires { (DERIVED).handle(t); }) {
+            if constexpr (requires { (DERIVED).handle(t); })
                 (DERIVED).handle(t);
-            }
-            else if constexpr (std::is_base_of_v<Statement, T>) {
+            else if constexpr (std::is_base_of_v<Statement, T>)
                 visitStmt(t);
-            }
-            else if constexpr (std::is_base_of_v<Expression, T>) {
+            else if constexpr (std::is_base_of_v<Expression, T>)
                 visitExpr(t);
-            }
-            else {
+            else
                 static_assert(always_false<T>::value);
-            }
 
             if constexpr (std::is_base_of_v<Statement, T>) {
                 // Sanity check that we finished all split state at
                 // the end of the statement.
                 SLANG_ASSERT(!isStateSplit);
+                SLANG_ASSERT(!inCondition);
+            }
+            else if constexpr (std::is_base_of_v<Expression, T>) {
+                // Note: most expressions don't create branches, but there are
+                // a few that do:
+                // - conditional operator
+                // - short circuiting binary operators
+                // Usually we want to rejoin states after visiting expressions,
+                // unless we're visiting a condition or a child of one of the
+                // previously mentioned expressions.
+                if (!inCondition)
+                    unsplit();
             }
         }
     }
@@ -811,6 +825,7 @@ private:
     TState stateWhenTrue;
     TState stateWhenFalse;
     bool isStateSplit = false;
+    bool inCondition = false;
     mutable EvalContext evalContext;
 
     SmallVector<TState> breakStates;
@@ -842,8 +857,15 @@ private:
         setState(std::move(exitState));
     }
 
-    ConstantValue visitCondition(const Expression& expr) {
+    void visitNoJoin(const Expression& expr) {
+        // Visit the expression without joining states afterward.
+        auto prevInCondition = std::exchange(inCondition, true);
         visit(expr);
+        inCondition = prevInCondition;
+    }
+
+    ConstantValue visitCondition(const Expression& expr) {
+        visitNoJoin(expr);
         return adjustConditionalState(expr);
     }
 
