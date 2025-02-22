@@ -139,12 +139,18 @@ bool Scope::isUninstantiated() const {
     auto currScope = this;
     do {
         auto& sym = currScope->asSymbol();
-        if (sym.kind == SymbolKind::InstanceBody)
-            return sym.as<InstanceBodySymbol>().flags.has(InstanceFlags::Uninstantiated);
-        if (sym.kind == SymbolKind::CheckerInstanceBody)
-            return sym.as<CheckerInstanceBodySymbol>().flags.has(InstanceFlags::Uninstantiated);
-        if (sym.kind == SymbolKind::GenerateBlock)
-            return sym.as<GenerateBlockSymbol>().isUninstantiated;
+        switch (sym.kind) {
+            case SymbolKind::InstanceBody:
+                return sym.as<InstanceBodySymbol>().flags.has(InstanceFlags::Uninstantiated);
+            case SymbolKind::CheckerInstanceBody:
+                return sym.as<CheckerInstanceBodySymbol>().flags.has(InstanceFlags::Uninstantiated);
+            case SymbolKind::GenerateBlock:
+                return sym.as<GenerateBlockSymbol>().isUninstantiated;
+            case SymbolKind::ClassType:
+                return sym.as<ClassType>().isUninstantiated;
+            default:
+                break;
+        }
         currScope = sym.getParentScope();
     } while (currScope);
 

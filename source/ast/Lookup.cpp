@@ -882,7 +882,7 @@ void unwrapResult(const Scope& scope, std::optional<SourceRange> range, LookupRe
     // the default specialization (if possible).
     if (result.found->kind == SymbolKind::GenericClassDef && unwrapGenericClasses) {
         auto& genericClass = result.found->as<GenericClassDefSymbol>();
-        result.found = genericClass.getDefaultSpecialization();
+        result.found = genericClass.getDefaultSpecialization(scope);
 
         if (!result.found) {
             if (range)
