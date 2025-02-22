@@ -711,18 +711,8 @@ protected:
         // still visit the left and right sides now, but the
         // actual assignment won't happen immediately.
         visit(expr.left());
-        if (!expr.isLValueArg()) {
-            // If this is a compound assignment we should skip the
-            // generated lvalue reference expression.
-            if (expr.isCompound()) {
-                auto& binExpr = expr.right().as<BinaryExpression>();
-                SLANG_ASSERT(binExpr.left().kind == ExpressionKind::LValueReference);
-                visit(binExpr.right());
-            }
-            else {
-                visit(expr.right());
-            }
-        }
+        if (!expr.isLValueArg())
+            visit(expr.right());
     }
 
     void visitExpr(const CallExpression& expr) {

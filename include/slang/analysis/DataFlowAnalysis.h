@@ -236,16 +236,8 @@ private:
         visit(expr.left());
         isLValue = false;
 
-        if (!expr.isLValueArg()) {
-            if (expr.isCompound()) {
-                auto& binExpr = expr.right().as<BinaryExpression>();
-                SLANG_ASSERT(binExpr.left().kind == ExpressionKind::LValueReference);
-                visit(binExpr.right());
-            }
-            else {
-                visit(expr.right());
-            }
-        }
+        if (!expr.isLValueArg())
+            visit(expr.right());
     }
 
     void noteReference(const ValueExpressionBase& expr, const Expression& lsp) {
