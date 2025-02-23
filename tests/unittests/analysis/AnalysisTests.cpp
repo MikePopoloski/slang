@@ -142,6 +142,21 @@ module m(input clk, input rst, input [2:0] in, output logic out);
 
     I iface();
     n n1(iface);
+
+    typedef enum logic [2:0] {
+        A, B, C, D,
+        E, F, G, H
+    } e_t;
+
+    e_t e;
+    logic x;
+
+    always_comb begin
+        case (e)
+            A, B, C, D: x = 1'b1;
+            default: x = 1'b0;
+        endcase
+    end
 endmodule
 
 interface I;

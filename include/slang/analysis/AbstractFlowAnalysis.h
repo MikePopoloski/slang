@@ -246,8 +246,8 @@ protected:
         // TODO: we could be smarter for constant case conditions
         visit(stmt.expr);
 
-        auto initialState = (DERIVED).copyState(state);
-        auto finalState = std::move(state);
+        auto initialState = std::move(state);
+        auto finalState = (DERIVED).unreachableState();
 
         for (auto& item : stmt.items) {
             setState((DERIVED).copyState(initialState));
@@ -263,6 +263,9 @@ protected:
             visit(*stmt.defaultCase);
             (DERIVED).joinState(finalState, state);
         }
+        else {
+            (DERIVED).joinState(finalState, initialState);
+        }
 
         setState(std::move(finalState));
     }
@@ -270,8 +273,8 @@ protected:
     void visitStmt(const PatternCaseStatement& stmt) {
         visit(stmt.expr);
 
-        auto initialState = (DERIVED).copyState(state);
-        auto finalState = std::move(state);
+        auto initialState = std::move(state);
+        auto finalState = (DERIVED).unreachableState();
 
         for (auto& item : stmt.items) {
             setState((DERIVED).copyState(initialState));
@@ -291,6 +294,9 @@ protected:
             setState((DERIVED).copyState(initialState));
             visit(*stmt.defaultCase);
             (DERIVED).joinState(finalState, state);
+        }
+        else {
+            (DERIVED).joinState(finalState, initialState);
         }
 
         setState(std::move(finalState));
@@ -496,8 +502,8 @@ protected:
                             auto& cp = *(const RSPS::CaseProd*)prod;
                             visit(*cp.expr);
 
-                            auto caseInitial = (DERIVED).copyState(state);
-                            auto caseFinal = std::move(state);
+                            auto caseInitial = std::move(state);
+                            auto caseFinal = (DERIVED).unreachableState();
 
                             for (auto& item : cp.items) {
                                 setState((DERIVED).copyState(caseInitial));
@@ -512,6 +518,9 @@ protected:
                                 setState((DERIVED).copyState(caseInitial));
                                 cp.defaultItem->visitExprs(DERIVED);
                                 (DERIVED).joinState(caseFinal, state);
+                            }
+                            else {
+                                (DERIVED).joinState(caseFinal, caseInitial);
                             }
 
                             setState(std::move(caseFinal));
