@@ -331,14 +331,45 @@ module m(input d, clk1, clk2, clk3);
     assert property (@(posedge clk1) d and @(posedge clk2) d);
     assert property (first_match(@(posedge clk1) d and @(posedge clk2) d));
 endmodule
+
+module multiclock();
+   reg clk, clk1, clk2, clk3;
+   reg b0, b1, b2, b3, b4;
+
+   sequence a1;
+      (@(posedge clk) b1) and (@(posedge clk) b2) and (@(posedge clk1) b3);  // illegal
+   endsequence // a1
+
+   assert property(a1);
+
+   sequence a2;
+      (@(posedge clk) b1[*0:1]) ##1 (@(posedge clk1) b2);  // illegal - empty match of b1
+   endsequence // a2
+
+   assert property(a2);
+
+   sequence a3;
+      (@(posedge clk) b1[*0:1]) ##1 (@(posedge clk) b2);  // legal - empty match of b1 but it's same clocked
+   endsequence //a3
+
+   assert property(a3);
+
+   sequence a4;
+      (b1[*0:1]) ##1 (b2);  // legal - empty match of b1 but it's unclocked
+   endsequence // a4
+
+   assert property(@(posedge clk) a4);
+endmodule
 )";
 
     Compilation compilation;
     AnalysisManager analysisManager;
 
     auto [diags, design] = analyze(text, compilation, analysisManager);
-    REQUIRE(diags.size() == 3);
+    REQUIRE(diags.size() == 5);
     CHECK(diags[0].code == diag::InvalidMulticlockedSeqOp);
     CHECK(diags[1].code == diag::InvalidMulticlockedSeqOp);
     CHECK(diags[2].code == diag::InvalidMulticlockedSeqOp);
+    CHECK(diags[3].code == diag::InvalidMulticlockedSeqOp);
+    CHECK(diags[4].code == diag::MulticlockedSeqEmptyMatch);
 }

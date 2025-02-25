@@ -117,7 +117,8 @@ struct ClockVisitor {
 
     VisitResult visit(const SequenceConcatExpr& expr, Clock outerClock, bool) {
         Clock firstClock = nullptr;
-        const AssertionExpr* firstExpr = nullptr;
+        const AssertionExpr* lastExpr = nullptr;
+        bool lastWasMulticlocked = false;
         bool isMulticlockedSeq = false;
 
         for (auto& elem : expr.elements) {
@@ -125,14 +126,22 @@ struct ClockVisitor {
             if (!result.clocks.empty()) {
                 if (!firstClock) {
                     firstClock = result.clocks[0];
-                    firstExpr = elem.sequence;
                 }
                 else if (result.isMulticlockedSeq || !isSameClock(*firstClock, *result.clocks[0])) {
+                    // When concatenating differently clocked sequences, the maximal single-clocked
+                    // subsequences must not admit an empty match.
+                    if (!lastWasMulticlocked)
+                        requireOnlyNonEmptyMatch(*lastExpr);
+                    if (!result.isMulticlockedSeq)
+                        requireOnlyNonEmptyMatch(*elem.sequence);
+
                     isMulticlockedSeq = true;
                     if (elem.delay.min > 1 || elem.delay.max != elem.delay.min)
-                        badMulticlockedSeq(*elem.sequence, *firstExpr, elem.delayRange);
+                        badMulticlockedSeq(*elem.sequence, *lastExpr, elem.delayRange);
                 }
             }
+            lastExpr = elem.sequence;
+            lastWasMulticlocked = result.isMulticlockedSeq;
         }
 
         if (!firstClock)
@@ -295,6 +304,16 @@ private:
 
             context.addDiag(parentSymbol, diag::InvalidMulticlockedSeqOp, range)
                 << leftRange << right.syntax->sourceRange();
+        }
+    }
+
+    void requireOnlyNonEmptyMatch(const AssertionExpr& expr) {
+        if (!bad && expr.checkNondegeneracy().status.has(NondegeneracyStatus::AdmitsEmpty)) {
+            bad = true;
+
+            SLANG_ASSERT(expr.syntax);
+            context.addDiag(parentSymbol, diag::MulticlockedSeqEmptyMatch,
+                            expr.syntax->sourceRange());
         }
     }
 };
