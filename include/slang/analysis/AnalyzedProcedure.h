@@ -8,6 +8,7 @@
 #pragma once
 
 #include <span>
+#include <vector>
 
 #include "slang/analysis/AnalyzedAssertion.h"
 #include "slang/util/Util.h"
