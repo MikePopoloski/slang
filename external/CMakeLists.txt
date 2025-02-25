@@ -163,7 +163,7 @@ if(SLANG_USE_CPPTRACE)
   FetchContent_Declare(
     cpptrace
     GIT_REPOSITORY https://github.com/jeremy-rifkin/cpptrace.git
-    GIT_TAG v0.8.0
+    GIT_TAG v0.8.2
     GIT_SHALLOW ON
     ${find_pkg_args})
   FetchContent_MakeAvailable(cpptrace)
