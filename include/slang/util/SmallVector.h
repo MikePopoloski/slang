@@ -8,6 +8,7 @@
 #pragma once
 
 #include <algorithm>
+#include <initializer_list>
 #include <iterator>
 #include <limits>
 #include <memory>
@@ -607,6 +608,9 @@ public:
     explicit SmallVector(TRange range) {
         this->append_range(range);
     }
+
+    /// Constructs the SmallVector from an initializer list.
+    SmallVector(std::initializer_list<T> list) { this->append(list.begin(), list.end()); }
 
     /// Copy constructs from another vector.
     SmallVector(const SmallVector& other) : SmallVector(static_cast<const Base&>(other)) {}
