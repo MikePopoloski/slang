@@ -1165,10 +1165,19 @@ void Compilation::noteDefaultClocking(const Scope& scope, const Symbol& clocking
                                       SourceRange range) {
     SLANG_ASSERT(!isFrozen());
 
-    auto [it, inserted] = defaultClockingMap.emplace(&scope, &clocking);
-    if (!inserted) {
-        auto& diag = scope.addDiag(diag::MultipleDefaultClocking, range);
-        diag.addNote(diag::NotePreviousDefinition, it->second->location);
+    // The LRM is not clear about this, but this Accellera issue states
+    // that default clocking declarations inside child scopes actually
+    // belong to the parent instance body. Only VCS implements this correctly,
+    // other tools treat it the way you'd naturally expect.
+    // https://accellera.mantishub.io/view.php?id=3515
+
+    auto inst = scope.getContainingInstanceOrChecker();
+    if (inst) {
+        auto [it, inserted] = defaultClockingMap.emplace(inst, &clocking);
+        if (!inserted) {
+            auto& diag = scope.addDiag(diag::MultipleDefaultClocking, range);
+            diag.addNote(diag::NotePreviousDefinition, it->second->location);
+        }
     }
 }
 
@@ -1193,15 +1202,10 @@ void Compilation::noteDefaultClocking(const ASTContext& context,
 }
 
 const Symbol* Compilation::getDefaultClocking(const Scope& scope) const {
-    auto curr = &scope;
-    while (true) {
-        if (auto it = defaultClockingMap.find(curr); it != defaultClockingMap.end())
-            return it->second;
-
-        curr = curr->asSymbol().getParentScope();
-        if (!curr || curr->asSymbol().kind == SymbolKind::CompilationUnit)
-            return nullptr;
-    }
+    auto lookupScope = scope.getContainingInstanceOrChecker();
+    if (auto it = defaultClockingMap.find(lookupScope); it != defaultClockingMap.end())
+        return it->second;
+    return nullptr;
 }
 
 void Compilation::noteGlobalClocking(const Scope& scope, const Symbol& clocking,

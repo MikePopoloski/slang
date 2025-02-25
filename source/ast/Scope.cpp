@@ -120,6 +120,18 @@ const InstanceBodySymbol* Scope::getContainingInstance() const {
     return nullptr;
 }
 
+const Symbol* Scope::getContainingInstanceOrChecker() const {
+    auto currScope = this;
+    do {
+        auto& sym = currScope->asSymbol();
+        if (sym.kind == SymbolKind::InstanceBody || sym.kind == SymbolKind::CheckerInstanceBody)
+            return &sym;
+        currScope = sym.getParentScope();
+    } while (currScope);
+
+    return nullptr;
+}
+
 const CompilationUnitSymbol* Scope::getCompilationUnit() const {
     auto currScope = this;
     while (currScope && currScope->asSymbol().kind != SymbolKind::CompilationUnit)

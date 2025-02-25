@@ -329,8 +329,15 @@ static const Symbol* checkDefparamHierarchy(const Symbol& target, const Scope& d
             // If the defparam is inside a bind instantiation we need
             // to check whether our common ancestor also is.
             if (isInsideBind) {
-                auto inst = (*it)->getContainingInstance();
-                if (!inst || !inst->flags.has(InstanceFlags::ParentFromBind))
+                bitmask<InstanceFlags> instFlags;
+                if (auto inst = (*it)->getContainingInstanceOrChecker()) {
+                    if (inst->kind == SymbolKind::InstanceBody)
+                        instFlags = inst->as<InstanceBodySymbol>().flags;
+                    else
+                        instFlags = inst->as<CheckerInstanceBodySymbol>().flags;
+                }
+
+                if (!instFlags.has(InstanceFlags::ParentFromBind))
                     return &scope->asSymbol();
             }
 

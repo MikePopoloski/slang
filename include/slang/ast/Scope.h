@@ -68,6 +68,10 @@ public:
     /// Otherwise returns nullptr.
     const InstanceBodySymbol* getContainingInstance() const;
 
+    /// Gets the instance body or checker body that contains this scope, if applicable.
+    /// Otherwise returns nullptr.
+    const Symbol* getContainingInstanceOrChecker() const;
+
     /// Gets the compilation unit that contains this scope, if applicable.
     /// Otherwise returns nullptr.
     const CompilationUnitSymbol* getCompilationUnit() const;

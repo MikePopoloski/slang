@@ -1002,8 +1002,8 @@ private:
     // A list of name conflicts to later resolve by issuing diagnostics.
     std::vector<const Symbol*> nameConflicts;
 
-    // A map of scopes to default clocking blocks.
-    flat_hash_map<const Scope*, const Symbol*> defaultClockingMap;
+    // A map of containing symbols to default clocking blocks.
+    flat_hash_map<const Symbol*, const Symbol*> defaultClockingMap;
 
     // A map of scopes to global clocking blocks.
     flat_hash_map<const Scope*, const Symbol*> globalClockingMap;
