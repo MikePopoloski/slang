@@ -96,9 +96,10 @@ const AssertionExpr& AssertionExpr::bind(const SequenceExprSyntax& syntax,
         case SyntaxKind::ParenthesizedSequenceExpr: {
             auto& pse = syntax.as<ParenthesizedSequenceExprSyntax>();
             if (pse.matchList || pse.repetition)
-                return SequenceWithMatchExpr::fromSyntax(pse, ctx);
-
-            return bind(*pse.expr, context);
+                result = &SequenceWithMatchExpr::fromSyntax(pse, ctx);
+            else
+                result = const_cast<AssertionExpr*>(&bind(*pse.expr, context));
+            break;
         }
         case SyntaxKind::FirstMatchSequenceExpr:
             result = &FirstMatchAssertionExpr::fromSyntax(syntax.as<FirstMatchSequenceExprSyntax>(),
@@ -188,7 +189,9 @@ const AssertionExpr& AssertionExpr::bind(const PropertyExprSyntax& syntax,
                     return badExpr(ctx.getCompilation(), nullptr);
                 }
             }
-            return bind(*ppe.expr, context);
+
+            result = const_cast<AssertionExpr*>(&bind(*ppe.expr, context));
+            break;
         }
         case SyntaxKind::ClockingPropertyExpr:
             result = &ClockingAssertionExpr::fromSyntax(syntax.as<ClockingPropertyExprSyntax>(),
@@ -287,6 +290,10 @@ AssertionExpr::NondegeneracyCheckResult AssertionExpr::checkNondegeneracy() cons
 std::optional<SequenceRange> AssertionExpr::computeSequenceLength() const {
     SequenceLengthVisitor visitor;
     return visit(visitor);
+}
+
+bool AssertionExpr::isParenthesized() const {
+    return syntax && syntax->kind == SyntaxKind::ParenthesizedExpression;
 }
 
 AssertionExpr& AssertionExpr::badExpr(Compilation& compilation, const AssertionExpr* expr) {

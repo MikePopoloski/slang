@@ -7,6 +7,13 @@
 #include "slang/analysis/AbstractFlowAnalysis.h"
 #include "slang/analysis/AnalysisManager.h"
 
+#define CHECK_DIAGS_EMPTY              \
+    do {                               \
+        if (!diags.empty()) {          \
+            FAIL_CHECK(report(diags)); \
+        }                              \
+    } while (0)
+
 using namespace slang::analysis;
 
 std::pair<Diagnostics, AnalyzedDesign> analyze(const std::string& text, Compilation& compilation,
@@ -191,7 +198,8 @@ static std::string testInferredClock(const char* text) {
     AnalysisManager analysisManager;
 
     auto fullText = fmt::format(R"(
-module m;
+module m(input clk_default);
+    default clocking @clk_default; endclocking
     property p;
         1;
     endproperty
@@ -244,14 +252,14 @@ TEST_CASE("Procedure inferred clocks") {
             cnt <= #5 reset ? 0 : cnt + 1;
             assert property (p);
         end
-    )") == "");
+    )") == "clk_default");
 
     // No inferred clock in final blocks.
     CHECK(testInferredClock(R"(
         final begin
             assert property (p);
         end
-    )") == "");
+    )") == "clk_default");
 
     // Blocking assignment with intra-assignment delay.
     CHECK(testInferredClock(R"(
@@ -261,7 +269,7 @@ TEST_CASE("Procedure inferred clocks") {
             cnt = #5 reset ? 0 : cnt + 1;
             assert property (p);
         end
-    )") == "");
+    )") == "clk_default");
 
     // Multiple event controls.
     CHECK(testInferredClock(R"(
@@ -271,7 +279,7 @@ TEST_CASE("Procedure inferred clocks") {
             @(posedge clk) begin end
             assert property (p);
         end
-    )") == "");
+    )") == "clk_default");
 
     // Delay control.
     CHECK(testInferredClock(R"(
@@ -281,7 +289,7 @@ TEST_CASE("Procedure inferred clocks") {
             #5 begin end
             assert property (p);
         end
-    )") == "");
+    )") == "clk_default");
 
     // Wait control.
     CHECK(testInferredClock(R"(
@@ -291,7 +299,7 @@ TEST_CASE("Procedure inferred clocks") {
             wait (cnt) begin end
             assert property (p);
         end
-    )") == "");
+    )") == "clk_default");
 
     // Multiple matching edge expressions.
     CHECK(testInferredClock(R"(
@@ -300,7 +308,7 @@ TEST_CASE("Procedure inferred clocks") {
         always @(posedge clk iff reset == 0 or negedge clk) begin
             assert property (p);
         end
-    )") == "");
+    )") == "clk_default");
 
     // Single matching event variable.
     CHECK(testInferredClock(R"(
@@ -317,7 +325,7 @@ TEST_CASE("Procedure inferred clocks") {
         always @(ev1 or ev2) begin
             assert property (p);
         end
-    )") == "");
+    )") == "clk_default");
 
     // Single matching clocking block.
     CHECK(testInferredClock(R"(
@@ -339,5 +347,151 @@ TEST_CASE("Procedure inferred clocks") {
         always @(cb or cb) begin
             assert property (p);
         end
-    )") == "");
+    )") == "clk_default");
+}
+
+TEST_CASE("Assertions missing clocks") {
+    auto& text = R"(
+module m(input d, clock, mclk, reset, d1, output logic [3:0] cnt, logic q1);
+    logic q;
+    property r3;
+        q != d;
+    endproperty
+
+    always_ff @(clock iff reset == 0 or posedge reset) begin
+        cnt <= reset ? 0 : cnt + 1;
+        q <= $past(d1); // no inferred clock
+        r3_p: assert property (r3); // no inferred clock
+    end
+
+    property r4;
+        q != d;
+    endproperty
+
+    always @(posedge mclk) begin
+        #10 q1 <= d1; // delay prevents clock inference
+        @(negedge mclk) // event control prevents clock inference
+        #10 q1 <= !d1;
+        r4_p: assert property (r4); // no inferred clock
+    end
+endmodule
+
+module examples_with_default (input logic a, b, c, clk);
+    property q1;
+        $rose(a) |-> ##[1:5] b;
+    endproperty
+
+    property q2;
+        @(posedge clk) q1;
+    endproperty
+
+    default clocking posedge_clk @(posedge clk);
+        property q3;
+            $fell(c) |=> q1; // legal: q1 has no clocking event
+        endproperty
+
+        property q4;
+            $fell(c) |=> q2;
+                // legal: q2 has clocking event identical to that of
+                // the clocking block
+        endproperty
+
+        sequence s1;
+            @(posedge clk) b[*3];
+                // illegal: explicit clocking event in clocking block
+        endsequence
+    endclocking
+
+    property q5;
+        @(negedge clk) b[*3] |=> !b;
+    endproperty
+
+    always @(negedge clk)
+    begin
+        a1: assert property ($fell(c) |=> q1);
+            // legal: contextually inferred leading clocking event,
+            // @(negedge clk)
+        a2: assert property (posedge_clk.q4);
+            // legal: will be queued (pending) on negedge clk, then
+            // (if matured) checked at next posedge clk (see 16.14.6)
+        a3: assert property ($fell(c) |=> q2);
+            // illegal: multiclocked property with contextually
+            // inferred leading clocking event
+        a4: assert property (q5);
+            // legal: contextually inferred leading clocking event,
+            // @(negedge clk)
+    end
+
+    property q6;
+        q1 and q5;
+    endproperty
+
+    a5: assert property (q6);
+        // illegal: default leading clocking event, @(posedge clk),
+        // but semantic leading clock is not unique
+    a6: assert property ($fell(c) |=> q6);
+        // legal: default leading clocking event, @(posedge clk),
+        // is the unique semantic leading clock
+
+    sequence s2;
+        $rose(a) ##[1:5] b;
+    endsequence
+
+    c1: cover property (s2);
+        // legal: default leading clocking event, @(posedge clk)
+    c2: cover property (@(negedge clk) s2);
+        // legal: explicit leading clocking event, @(negedge clk)
+endmodule
+
+module examples_without_default (input logic a, b, c, clk);
+    property q1;
+        $rose(a) |-> ##[1:5] b;
+    endproperty
+
+    property q5;
+        @(negedge clk) b[*3] |=> !b;
+    endproperty
+
+    property q6;
+        q1 and q5;
+    endproperty
+
+    a5: assert property (q6);
+        // illegal: no leading clocking event
+    a6: assert property ($fell(c) |=> q6);
+        // illegal: no leading clocking event
+
+    sequence s2;
+        $rose(a) ##[1:5] b;
+    endsequence
+
+    c1: cover property (s2);
+        // illegal: no leading clocking event
+    c2: cover property (@(negedge clk) s2);
+        // legal: explicit leading clocking event, @(negedge clk)
+
+    sequence s3;
+        @(negedge clk) s2;
+    endsequence
+
+    c3: cover property (s3);
+        // legal: leading clocking event, @(negedge clk),
+        // determined from declaration of s3
+    c4: cover property (s3 ##1 b);
+        // illegal: no default, inferred, or explicit leading
+        // clocking event and maximal property is not an instance
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto [diags, design] = analyze(text, compilation, analysisManager);
+    REQUIRE(diags.size() == 6);
+    CHECK(diags[0].code == diag::AssertionNoClock);
+    CHECK(diags[1].code == diag::AssertionNoClock);
+    CHECK(diags[2].code == diag::AssertionNoClock);
+    CHECK(diags[3].code == diag::AssertionNoClock);
+    CHECK(diags[4].code == diag::AssertionNoClock);
+    CHECK(diags[5].code == diag::AssertionNoClock);
 }

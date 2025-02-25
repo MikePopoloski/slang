@@ -7,6 +7,9 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include <span>
+
+#include "slang/analysis/AnalyzedAssertion.h"
 #include "slang/util/Util.h"
 
 namespace slang::ast {
@@ -35,8 +38,12 @@ public:
     /// at least one concurrent assertion.
     const ast::TimingControl* getInferredClock() const { return inferredClock; }
 
+    /// Gets the list of analyzed assertions in the procedure.
+    std::span<const AnalyzedAssertion> getAssertions() const { return assertions; }
+
 private:
     const ast::TimingControl* inferredClock = nullptr;
+    std::vector<AnalyzedAssertion> assertions;
 };
 
 } // namespace slang::analysis

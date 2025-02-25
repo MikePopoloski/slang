@@ -14,12 +14,7 @@ namespace slang::analysis {
 
 using namespace ast;
 
-static const TimingControl* inferClock(const ProceduralBlockSymbol& procedureSymbol,
-                                       const DataFlowAnalysis& dfa) {
-    // Final blocks don't infer clocks.
-    if (procedureSymbol.procedureKind == ProceduralBlockKind::Final)
-        return nullptr;
-
+static const TimingControl* inferClock(const DataFlowAnalysis& dfa) {
     // 16.14.6: There must be no blocking timing controls and exactly one event control.
     const TimingControl* eventControl = nullptr;
     for (auto stmt : dfa.getTimedStatements()) {
@@ -163,8 +158,22 @@ AnalyzedProcedure::AnalyzedProcedure(AnalysisContext& context, const Symbol& ana
             }
         }
 
-        if (!dfa.getConcurrentAssertions().empty())
-            inferredClock = inferClock(procedure, dfa);
+        if (!dfa.getConcurrentAssertions().empty()) {
+            inferredClock = inferClock(dfa);
+            if (!inferredClock) {
+                auto scope = procedure.getParentScope();
+                SLANG_ASSERT(scope);
+
+                if (auto defaultClocking = scope->getCompilation().getDefaultClocking(*scope))
+                    inferredClock = &defaultClocking->as<ClockingBlockSymbol>().getEvent();
+            }
+
+            if (inferredClock && inferredClock->bad())
+                return;
+
+            for (auto stmt : dfa.getConcurrentAssertions())
+                assertions.emplace_back(context, inferredClock, analyzedSymbol, *stmt);
+        }
     }
 }
 

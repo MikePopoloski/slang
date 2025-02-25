@@ -615,7 +615,7 @@ endmodule
 
 TEST_CASE("Unused assertion decls") {
     auto& text = R"(
-module m;
+module m(input clk);
     sequence s1; 1; endsequence
     property p1; 1; endproperty
     let l1 = 1;
@@ -624,8 +624,8 @@ module m;
     property p2; 1; endproperty
     let l2 = 1;
 
-    assert property (s2);
-    assert property (p2);
+    assert property (@(posedge clk) s2);
+    assert property (@(posedge clk) p2);
     (* unused *) int i = l2();
 endmodule
 )";

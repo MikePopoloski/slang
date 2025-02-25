@@ -1136,6 +1136,8 @@ warning missing-top NoTopModules "no top-level modules found in design"
 warning duplicate-defparam DuplicateDefparam "parameter already has a defparam override applied; ignoring this one"
 
 subsystem Analysis
+error AssertionNoClock "{} has no explicit clocking event and one cannot be inferred from context"
+note NoteRequiredHere "required here"
 warning unused-def UnusedDefinition "{} definition is unused"
 warning unused-net UnusedNet "unused net '{}'"
 warning unused-implicit-net UnusedImplicitNet "implicit net '{}' is unused elsewhere"

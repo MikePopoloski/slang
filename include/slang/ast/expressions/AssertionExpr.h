@@ -179,6 +179,10 @@ public:
     /// Computes possible clock ticks (delay) length of sequence under assertion expression.
     std::optional<SequenceRange> computeSequenceLength() const;
 
+    /// Returns true if this expression is known to be within a pair of parentheses,
+    /// and otherwise false.
+    bool isParenthesized() const;
+
     static const AssertionExpr& bind(const syntax::SequenceExprSyntax& syntax,
                                      const ASTContext& context, bool allowDisable = false);
 
