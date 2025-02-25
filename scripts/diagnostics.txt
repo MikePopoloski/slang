@@ -1137,6 +1137,7 @@ warning duplicate-defparam DuplicateDefparam "parameter already has a defparam o
 
 subsystem Analysis
 error AssertionNoClock "{} has no explicit clocking event and one cannot be inferred from context"
+error InvalidMulticlockedSeqOp "multiclocked sequence operands cannot be combined with any sequence operators other than ##1 and ##0"
 note NoteRequiredHere "required here"
 warning unused-def UnusedDefinition "{} definition is unused"
 warning unused-net UnusedNet "unused net '{}'"

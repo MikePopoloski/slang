@@ -10,10 +10,53 @@
 #include "slang/analysis/AnalysisManager.h"
 #include "slang/ast/ASTVisitor.h"
 #include "slang/diagnostics/AnalysisDiags.h"
+#include "slang/syntax/AllSyntax.h"
 
 namespace slang::analysis {
 
 using namespace ast;
+
+static bool isSameClock(const TimingControl& left, const TimingControl& right) {
+    if ((left.kind != TimingControlKind::SignalEvent &&
+         left.kind != TimingControlKind::EventList) ||
+        (right.kind != TimingControlKind::SignalEvent &&
+         right.kind != TimingControlKind::EventList)) {
+        // Ignore anything invalid here, we only want to compare valid clocks.
+        return true;
+    }
+
+    if (left.kind != right.kind)
+        return false;
+
+    if (left.kind == TimingControlKind::EventList) {
+        auto& le = left.as<EventListControl>();
+        auto& re = right.as<EventListControl>();
+        if (le.events.size() != re.events.size())
+            return false;
+
+        for (size_t i = 0; i < le.events.size(); i++) {
+            if (!isSameClock(*le.events[i], *re.events[i]))
+                return false;
+        }
+        return true;
+    }
+
+    auto& le = left.as<SignalEventControl>();
+    auto& re = right.as<SignalEventControl>();
+    if (le.edge != re.edge || bool(le.iffCondition) != bool(re.iffCondition))
+        return false;
+
+    if (le.iffCondition) {
+        if (!le.iffCondition->syntax || !re.iffCondition->syntax)
+            return false;
+        return le.iffCondition->syntax->isEquivalentTo(*re.iffCondition->syntax);
+    }
+
+    if (!le.expr.syntax || !re.expr.syntax)
+        return false;
+
+    return le.expr.syntax->isEquivalentTo(*re.expr.syntax);
+}
 
 // This visitor implements clock flow and resolution for assertion expressions.
 // The requirements for this are scattered around the LRM. Some important parts are:
@@ -25,6 +68,23 @@ struct ClockVisitor {
     using Clock = const TimingControl*;
     using ClockSet = SmallVector<Clock, 2>;
 
+    struct VisitResult {
+        ClockSet clocks;
+        bool isMulticlockedSeq = false;
+
+        VisitResult() = default;
+        VisitResult(Clock clock, bool isMulticlockedSeq) :
+            clocks{clock}, isMulticlockedSeq(isMulticlockedSeq) {}
+
+        static VisitResult unionWith(const VisitResult& left, const VisitResult& right) {
+            VisitResult result;
+            result.clocks.reserve(left.clocks.size() + right.clocks.size());
+            result.clocks.append_range(left.clocks);
+            result.clocks.append_range(right.clocks);
+            return result;
+        }
+    };
+
     AnalysisContext& context;
     const Symbol& parentSymbol;
     SmallVector<const AssertionExpr*> expansionStack;
@@ -33,12 +93,12 @@ struct ClockVisitor {
     ClockVisitor(AnalysisContext& context, const Symbol& parentSymbol) :
         context(context), parentSymbol(parentSymbol) {}
 
-    ClockSet visit(const InvalidAssertionExpr&, Clock, bool) {
+    VisitResult visit(const InvalidAssertionExpr&, Clock, bool) {
         bad = true;
         return {};
     }
 
-    ClockSet visit(const SimpleAssertionExpr& expr, Clock outerClock, bool requireSeq) {
+    VisitResult visit(const SimpleAssertionExpr& expr, Clock outerClock, bool requireSeq) {
         if (expr.expr.kind == ExpressionKind::AssertionInstance) {
             auto& aie = expr.expr.as<AssertionInstanceExpression>();
             if (aie.isRecursiveProperty)
@@ -46,65 +106,89 @@ struct ClockVisitor {
 
             SLANG_ASSERT(expr.syntax);
             expansionStack.push_back(&expr);
-            auto clocks = aie.body.visit(*this, outerClock,
+            auto result = aie.body.visit(*this, outerClock,
                                          requireSeq || aie.type->isSequenceType());
             expansionStack.pop_back();
-            return clocks;
+            return result;
         }
 
         return inheritedClock(expr, outerClock, true);
     }
 
-    ClockSet visit(const SequenceConcatExpr& expr, Clock outerClock, bool) {
+    VisitResult visit(const SequenceConcatExpr& expr, Clock outerClock, bool) {
         Clock firstClock = nullptr;
+        const AssertionExpr* firstExpr = nullptr;
+        bool isMulticlockedSeq = false;
+
         for (auto& elem : expr.elements) {
-            auto clocks = elem.sequence->visit(*this, outerClock, true);
-            if (!firstClock && !clocks.empty())
-                firstClock = clocks[0];
+            auto result = elem.sequence->visit(*this, outerClock, true);
+            if (!result.clocks.empty()) {
+                if (!firstClock) {
+                    firstClock = result.clocks[0];
+                    firstExpr = elem.sequence;
+                }
+                else if (result.isMulticlockedSeq || !isSameClock(*firstClock, *result.clocks[0])) {
+                    isMulticlockedSeq = true;
+                    if (elem.delay.min > 1 || elem.delay.max != elem.delay.min)
+                        badMulticlockedSeq(*elem.sequence, *firstExpr, elem.delayRange);
+                }
+            }
         }
-        return {firstClock};
+
+        if (!firstClock)
+            return {};
+
+        return {firstClock, isMulticlockedSeq};
     }
 
-    ClockSet visit(const SequenceWithMatchExpr& expr, Clock outerClock, bool) {
+    VisitResult visit(const SequenceWithMatchExpr& expr, Clock outerClock, bool) {
         return expr.expr.visit(*this, outerClock, true);
     }
 
-    ClockSet visit(const FirstMatchAssertionExpr& expr, Clock outerClock, bool) {
+    VisitResult visit(const FirstMatchAssertionExpr& expr, Clock outerClock, bool) {
         return expr.seq.visit(*this, outerClock, true);
     }
 
-    ClockSet visit(const StrongWeakAssertionExpr& expr, Clock outerClock, bool) {
+    VisitResult visit(const StrongWeakAssertionExpr& expr, Clock outerClock, bool) {
         return expr.expr.visit(*this, outerClock, true);
     }
 
-    ClockSet visit(const ClockingAssertionExpr& expr, Clock, bool requireSeq) {
+    VisitResult visit(const ClockingAssertionExpr& expr, Clock, bool requireSeq) {
         // Outer clock is ignored here.
         return expr.expr.visit(*this, &expr.clocking, requireSeq);
     }
 
-    ClockSet visit(const UnaryAssertionExpr& expr, Clock outerClock, bool) {
-        auto clocks = expr.expr.visit(*this, outerClock, false);
+    VisitResult visit(const UnaryAssertionExpr& expr, Clock outerClock, bool) {
+        auto result = expr.expr.visit(*this, outerClock, false);
         if (expr.op == UnaryAssertionOperator::Not)
-            return clocks;
+            return result;
         return inheritedClock(expr, outerClock, false);
     }
 
-    ClockSet visit(const AbortAssertionExpr& expr, Clock outerClock, bool) {
-        auto clocks = expr.expr.visit(*this, outerClock, false);
+    VisitResult visit(const AbortAssertionExpr& expr, Clock outerClock, bool) {
+        auto result = expr.expr.visit(*this, outerClock, false);
         if (!expr.isSync)
-            return clocks;
+            return result;
         return inheritedClock(expr, outerClock, false);
     }
 
-    ClockSet visit(const BinaryAssertionExpr& expr, Clock outerClock, bool requireSeq) {
+    VisitResult visit(const BinaryAssertionExpr& expr, Clock outerClock, bool requireSeq) {
+        auto checkBadSeq = [&](const VisitResult& lresult, const VisitResult& rresult) {
+            if (lresult.isMulticlockedSeq || rresult.isMulticlockedSeq ||
+                (!lresult.clocks.empty() && !rresult.clocks.empty() &&
+                 !isSameClock(*lresult.clocks[0], *rresult.clocks[0]))) {
+                badMulticlockedSeq(expr.left, expr.right, expr.opRange);
+            }
+        };
+
         switch (expr.op) {
             case BinaryAssertionOperator::Intersect:
             case BinaryAssertionOperator::Throughout:
             case BinaryAssertionOperator::Within: {
-                // TODO: Clocks must be the same.
-                auto lclocks = expr.left.visit(*this, outerClock, true);
-                auto rclocks = expr.right.visit(*this, outerClock, true);
-                return lclocks;
+                auto lresult = expr.left.visit(*this, outerClock, true);
+                auto rresult = expr.right.visit(*this, outerClock, true);
+                checkBadSeq(lresult, rresult);
+                return lresult;
             }
             case BinaryAssertionOperator::Until:
             case BinaryAssertionOperator::SUntil:
@@ -116,34 +200,34 @@ struct ClockVisitor {
             case BinaryAssertionOperator::And:
             case BinaryAssertionOperator::Or: {
                 // Clocks come from both sides.
-                auto lclocks = expr.left.visit(*this, outerClock, requireSeq);
-                auto rclocks = expr.right.visit(*this, outerClock, requireSeq);
-                lclocks.append_range(rclocks);
-                return lclocks;
+                auto lresult = expr.left.visit(*this, outerClock, requireSeq);
+                auto rresult = expr.right.visit(*this, outerClock, requireSeq);
+                if (requireSeq)
+                    checkBadSeq(lresult, rresult);
+                return VisitResult::unionWith(lresult, rresult);
             }
             case BinaryAssertionOperator::Iff:
             case BinaryAssertionOperator::Implies: {
                 // Clocks come from both sides.
-                auto lclocks = expr.left.visit(*this, outerClock, false);
-                auto rclocks = expr.right.visit(*this, outerClock, false);
-                lclocks.append_range(rclocks);
-                return lclocks;
+                auto lresult = expr.left.visit(*this, outerClock, false);
+                auto rresult = expr.right.visit(*this, outerClock, false);
+                return VisitResult::unionWith(lresult, rresult);
             }
             case BinaryAssertionOperator::OverlappedImplication:
             case BinaryAssertionOperator::NonOverlappedImplication:
             case BinaryAssertionOperator::OverlappedFollowedBy:
             case BinaryAssertionOperator::NonOverlappedFollowedBy: {
                 // Clocks come from just the left hand side.
-                auto lclocks = expr.left.visit(*this, outerClock, true);
+                auto lresult = expr.left.visit(*this, outerClock, true);
                 expr.right.visit(*this, outerClock, false);
-                return lclocks;
+                return lresult;
             }
             default:
                 SLANG_UNREACHABLE;
         }
     }
 
-    ClockSet visit(const ConditionalAssertionExpr& expr, Clock outerClock, bool) {
+    VisitResult visit(const ConditionalAssertionExpr& expr, Clock outerClock, bool) {
         expr.ifExpr.visit(*this, outerClock, false);
         if (expr.elseExpr)
             expr.elseExpr->visit(*this, outerClock, false);
@@ -152,7 +236,7 @@ struct ClockVisitor {
         return inheritedClock(expr, outerClock, false);
     }
 
-    ClockSet visit(const CaseAssertionExpr& expr, Clock outerClock, bool) {
+    VisitResult visit(const CaseAssertionExpr& expr, Clock outerClock, bool) {
         for (auto& item : expr.items)
             item.body->visit(*this, outerClock, false);
 
@@ -163,12 +247,12 @@ struct ClockVisitor {
         return inheritedClock(expr, outerClock, false);
     }
 
-    ClockSet visit(const DisableIffAssertionExpr& expr, Clock outerClock, bool) {
+    VisitResult visit(const DisableIffAssertionExpr& expr, Clock outerClock, bool) {
         return expr.visit(*this, outerClock, false);
     }
 
 private:
-    ClockSet inheritedClock(const AssertionExpr& expr, Clock outerClock, bool requireSeq) {
+    VisitResult inheritedClock(const AssertionExpr& expr, Clock outerClock, bool requireSeq) {
         if (!outerClock) {
             if (!bad) {
                 bad = true;
@@ -193,7 +277,25 @@ private:
             }
             return {};
         }
-        return {outerClock};
+        return {outerClock, false};
+    }
+
+    void badMulticlockedSeq(const AssertionExpr& left, const AssertionExpr& right,
+                            SourceRange opRange) {
+        if (!bad) {
+            bad = true;
+
+            SLANG_ASSERT(left.syntax);
+            SLANG_ASSERT(right.syntax);
+
+            auto leftRange = left.syntax->sourceRange();
+            auto range = opRange;
+            if (!range.start())
+                range = leftRange;
+
+            context.addDiag(parentSymbol, diag::InvalidMulticlockedSeqOp, range)
+                << leftRange << right.syntax->sourceRange();
+        }
     }
 };
 

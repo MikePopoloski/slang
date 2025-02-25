@@ -343,6 +343,9 @@ public:
         /// A delay that applies to the element.
         SequenceRange delay;
 
+        /// An optional source range for the delay syntax.
+        SourceRange delayRange;
+
         /// The element expression.
         not_null<const AssertionExpr*> sequence;
     };
@@ -455,9 +458,13 @@ public:
     /// The right operand.
     const AssertionExpr& right;
 
+    /// The source range of the operator token.
+    SourceRange opRange;
+
     BinaryAssertionExpr(BinaryAssertionOperator op, const AssertionExpr& left,
-                        const AssertionExpr& right) :
-        AssertionExpr(AssertionExprKind::Binary), op(op), left(left), right(right) {}
+                        const AssertionExpr& right, SourceRange opRange) :
+        AssertionExpr(AssertionExprKind::Binary), op(op), left(left), right(right),
+        opRange(opRange) {}
 
     void requireSequence(const ASTContext& context, DiagCode code) const;
 

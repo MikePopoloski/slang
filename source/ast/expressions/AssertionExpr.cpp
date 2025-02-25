@@ -655,7 +655,7 @@ AssertionExpr& SequenceConcatExpr::fromSyntax(const DelayedSequenceExprSyntax& s
         ok &= !seq.bad();
 
         SequenceRange delay{0, 0};
-        elems.push_back({delay, &seq});
+        elems.push_back({delay, SourceRange{}, &seq});
     }
 
     for (auto es : syntax.elements) {
@@ -664,7 +664,9 @@ AssertionExpr& SequenceConcatExpr::fromSyntax(const DelayedSequenceExprSyntax& s
         seq.requireSequence(context);
         ok &= !seq.bad();
 
+        SourceRange delayRange;
         if (es->delayVal) {
+            delayRange = es->delayVal->sourceRange();
             auto val = context.evalInteger(*es->delayVal, ASTFlags::AssertionDelayOrRepetition);
             if (!context.requirePositive(val, es->delayVal->sourceRange()))
                 ok = false;
@@ -672,17 +674,20 @@ AssertionExpr& SequenceConcatExpr::fromSyntax(const DelayedSequenceExprSyntax& s
                 delay.max = delay.min = uint32_t(*val);
         }
         else if (es->range) {
+            delayRange = es->range->sourceRange();
             delay = SequenceRange::fromSyntax(*es->range, context,
                                               /* allowUnbounded */ true);
         }
         else if (es->op.kind == TokenKind::Star) {
+            delayRange = es->op.range();
             delay.min = 0;
         }
         else if (es->op.kind == TokenKind::Plus) {
+            delayRange = es->op.range();
             delay.min = 1;
         }
 
-        elems.push_back(Element{delay, &seq});
+        elems.push_back(Element{delay, delayRange, &seq});
     }
 
     auto& comp = context.getCompilation();
@@ -1053,7 +1058,7 @@ AssertionExpr& BinaryAssertionExpr::fromSyntax(const BinarySequenceExprSyntax& s
         right.requireSequence(context);
     }
 
-    return *comp.emplace<BinaryAssertionExpr>(op, left, right);
+    return *comp.emplace<BinaryAssertionExpr>(op, left, right, syntax.op.range());
 }
 
 AssertionExpr& BinaryAssertionExpr::fromSyntax(const BinaryPropertyExprSyntax& syntax,
@@ -1108,7 +1113,7 @@ AssertionExpr& BinaryAssertionExpr::fromSyntax(const BinaryPropertyExprSyntax& s
     }
     // clang-format on
 
-    return *comp.emplace<BinaryAssertionExpr>(op, left, right);
+    return *comp.emplace<BinaryAssertionExpr>(op, left, right, syntax.op.range());
 }
 
 void BinaryAssertionExpr::requireSequence(const ASTContext& context, DiagCode code) const {
