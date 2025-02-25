@@ -51,7 +51,7 @@ jobs:
       with:
         xcode-version: 'latest'
     - name: Configure
-      run: cmake --preset ${{ matrix.preset }} -DSLANG_CI_BUILD=ON
+      run: cmake --preset ${{ matrix.preset }} -DSLANG_CI_BUILD=ON -DSLANG_INCLUDE_UVM_TEST=ON
     - name: Build
       run: cmake --build build/${{ matrix.preset }} -j8
     - name: Run tests

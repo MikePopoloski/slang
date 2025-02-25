@@ -56,6 +56,7 @@ SLANG_INCLUDE_DOCS | Include docs in the build | OFF
 SLANG_INCLUDE_PYLIB | Include Python bindings in the build | OFF
 SLANG_INCLUDE_COVERAGE | Include code coverage targets in the build | OFF
 SLANG_INCLUDE_THREADTEST | Include threadtest target in the build | OFF
+SLANG_INCLUDE_UVM_TEST | Include UVM as a test target in the build | OFF
 BUILD_SHARED_LIBS | Build a shared library instead of static | OFF
 SLANG_USE_MIMALLOC | Enable use of the mimalloc library. Can be turned off, the resulting library will be slightly slower. | ON
 SLANG_USE_CPPTRACE | Enable use of the cpptrace library | OFF

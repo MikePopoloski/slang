@@ -65,6 +65,7 @@ option(SLANG_INCLUDE_INSTALL "Include installation targets"
        ${SLANG_MASTER_PROJECT})
 option(SLANG_INCLUDE_COVERAGE "Enable code coverage" OFF)
 option(SLANG_INCLUDE_THREADTEST "Include threadtest target in the build" OFF)
+option(SLANG_INCLUDE_UVM_TEST "Include UVM as a test target in the build" OFF)
 option(SLANG_CI_BUILD "Enable longer running tests for CI builds" OFF)
 option(SLANG_FUZZ_TARGET "Enables changes to make binaries easier to fuzz test"
        OFF)
