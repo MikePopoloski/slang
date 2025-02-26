@@ -257,7 +257,7 @@ struct ClockVisitor {
     }
 
     VisitResult visit(const DisableIffAssertionExpr& expr, Clock outerClock, bool) {
-        return expr.visit(*this, outerClock, false);
+        return expr.expr.visit(*this, outerClock, false);
     }
 
 private:
