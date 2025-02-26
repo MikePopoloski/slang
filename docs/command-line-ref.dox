@@ -465,7 +465,7 @@ Show or hide macro expansion backtraces in diagnostic output. The default is to 
 
 `--diag-abs-paths`
 
-Display file names as absolute paths in diagonstic output. The default is to display relative paths.
+Display file names as absolute paths in diagnostic output. The default is to display relative paths.
 
 `--diag-hierarchy always|never|auto`
 
