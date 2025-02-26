@@ -21,7 +21,7 @@ concept IsAnyOf = (std::same_as<T, U> || ...);
 /// A base class for flow analysis passes.
 ///
 /// See background on lattice flow analysis:
-/// (<see href="https://en.wikipedia.org/wiki/Data-flow_analysis"/>).
+/// https://en.wikipedia.org/wiki/Data-flow_analysis
 template<typename TDerived, typename TState>
 class AbstractFlowAnalysis {
 #define DERIVED *static_cast<TDerived*>(this)
