@@ -413,3 +413,33 @@ endmodule
     CHECK(diags[4].code == diag::InvalidMulticlockedSeqOp);
     CHECK(diags[5].code == diag::MulticlockedSeqEmptyMatch);
 }
+
+TEST_CASE("Assertion unique clock -- LRM invalid example") {
+    // This example comes from the LRM but I believe the "illegal"
+    // comment is incorrect. Nothing in the wording makes this illegal.
+    // No other tools error on this either.
+    auto& text = R"(
+module m (input logic a, b, c, clk);
+    property q1;
+        $rose(a) |-> ##[1:5] b;
+    endproperty
+
+    property q2;
+        @(posedge clk) q1;
+    endproperty
+
+    always @(negedge clk)
+    begin
+        a3: assert property ($fell(c) |=> q2);
+            // illegal: multiclocked property with contextually
+            // inferred leading clocking event
+    end
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto [diags, design] = analyze(text, compilation, analysisManager);
+    CHECK_DIAGS_EMPTY;
+}
