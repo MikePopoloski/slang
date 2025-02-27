@@ -2682,3 +2682,27 @@ f(p1(,;property p1(,
     compilation.addSyntaxTree(tree);
     compilation.getAllDiagnostics();
 }
+
+TEST_CASE("Explicit clocks specified in seq / prop in clocking block") {
+    auto tree = SyntaxTree::fromText(R"(
+module m(input clk, a);
+    clocking cb @(posedge clk);
+        sequence s;
+            @(posedge clk) a;
+        endsequence
+
+        property p;
+            @(posedge clk) a;
+        endproperty
+    endclocking
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::ExplicitClockInClockingBlock);
+    CHECK(diags[1].code == diag::ExplicitClockInClockingBlock);
+}

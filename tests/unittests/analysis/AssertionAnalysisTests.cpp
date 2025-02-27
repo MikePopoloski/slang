@@ -211,10 +211,10 @@ module examples_with_default (input logic a, b, c, clk);
                 // the clocking block
         endproperty
 
-        sequence s1;
-            @(posedge clk) b[*3];
-                // illegal: explicit clocking event in clocking block
-        endsequence
+        // sequence s1;
+        //     @(posedge clk) b[*3];
+        //         // illegal: explicit clocking event in clocking block
+        // endsequence
     endclocking
 
     property q5;

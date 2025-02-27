@@ -871,6 +871,7 @@ error BlockingInAlwaysFF "always_ff procedures cannot have blocking timing contr
 error AlwaysFFEventControl "always_ff procedure must have one and only one event control"
 error SeqEmptyMatch "sequence must not admit an empty match"
 error SeqOnlyEmpty "sequence admits only empty matches"
+error ExplicitClockInClockingBlock "sequences and properties declared within clocking blocks cannot specify an explicit clock event"
 warning case-default CaseDefault "'{}' missing 'default' label"
 warning case-enum CaseEnum "enumeration {} not handled in case statement"
 warning case-enum-explicit CaseEnumExplicit "enumeration {} not explicitly handled in case statement"

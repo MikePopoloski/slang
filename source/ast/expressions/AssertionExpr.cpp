@@ -1323,12 +1323,23 @@ void FirstMatchAssertionExpr::serializeTo(ASTSerializer& serializer) const {
     serializer.endArray();
 }
 
+static void checkForClockingBlock(const ASTContext& context, const SyntaxNode& syntax) {
+    auto parentScope = context.scope->asSymbol().getParentScope();
+    SLANG_ASSERT(parentScope);
+
+    if (parentScope->asSymbol().kind == SymbolKind::ClockingBlock)
+        context.addDiag(diag::ExplicitClockInClockingBlock, syntax.sourceRange());
+}
+
 AssertionExpr& ClockingAssertionExpr::fromSyntax(const ClockingSequenceExprSyntax& syntax,
                                                  const ASTContext& context) {
     auto& comp = context.getCompilation();
     auto& clocking = TimingControl::bind(*syntax.event,
                                          context.resetFlags(ASTFlags::NonProcedural));
     auto& expr = bind(*syntax.expr, context);
+
+    checkForClockingBlock(context, *syntax.event);
+
     return *comp.emplace<ClockingAssertionExpr>(clocking, expr);
 }
 
@@ -1343,6 +1354,8 @@ AssertionExpr& ClockingAssertionExpr::fromSyntax(const ClockingPropertyExprSynta
         context.addDiag(diag::ExpectedExpression, last.location() + last.rawText().length());
         return badExpr(comp, nullptr);
     }
+
+    checkForClockingBlock(context, *syntax.event);
 
     auto& expr = bind(*syntax.expr, context);
     return *comp.emplace<ClockingAssertionExpr>(clocking, expr);
@@ -1368,6 +1381,9 @@ AssertionExpr& ClockingAssertionExpr::fromSyntax(const TimingControlSyntax& synt
                                                  const ASTContext& context) {
     auto& comp = context.getCompilation();
     auto& clocking = TimingControl::bind(syntax, context.resetFlags(ASTFlags::NonProcedural));
+
+    checkForClockingBlock(context, syntax);
+
     return *comp.emplace<ClockingAssertionExpr>(clocking, expr);
 }
 
