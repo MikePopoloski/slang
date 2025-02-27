@@ -113,8 +113,12 @@ public:
                 member.visit(DERIVED);
         }
 
-        if constexpr (std::is_same_v<InstanceSymbol, T> ||
-                      std::is_same_v<CheckerInstanceSymbol, T>) {
+        if constexpr (std::is_same_v<InstanceSymbol, T>) {
+            const auto& body = t.getCanonicalBody() ? *t.getCanonicalBody() : t.body;
+            body.visit(DERIVED);
+        }
+
+        if constexpr (std::is_same_v<CheckerInstanceSymbol, T>) {
             t.body.visit(DERIVED);
         }
     }
