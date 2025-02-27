@@ -313,6 +313,42 @@ endmodule
     CHECK(diags[5].code == diag::AssertionNoClock);
 }
 
+TEST_CASE("Assertions clock resolution rules with clocking blocks") {
+    auto& text = R"(
+module m(input a, b, clk, clk2, clk3);
+    clocking primary_clk @(posedge clk);
+        property p3; not (a ##2 b); endproperty
+    endclocking
+
+    assert property (primary_clk.p3);
+
+    property p2;
+        @(posedge clk2) a and @(posedge clk3) b;
+    endproperty
+
+    clocking cb1 @(posedge clk);
+        property p1; not p2; endproperty
+    endclocking
+
+    assert property (cb1.p1);
+
+    clocking cb2 @(posedge clk2);
+        property p1; not primary_clk.p3; endproperty
+    endclocking
+
+    assert property (cb2.p1);
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto [diags, design] = analyze(text, compilation, analysisManager);
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::MulticlockedInClockingBlock);
+    CHECK(diags[1].code == diag::DifferentClockInClockingBlock);
+}
+
 TEST_CASE("Multiclocked sequences with invalid concat / binary ops") {
     auto& text = R"(
 module m(input d, clk1, clk2, clk3);
