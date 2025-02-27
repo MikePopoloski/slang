@@ -256,6 +256,8 @@ module examples_with_default (input logic a, b, c, clk);
         // legal: default leading clocking event, @(posedge clk)
     c2: cover property (@(negedge clk) s2);
         // legal: explicit leading clocking event, @(negedge clk)
+    c3: cover property (@(negedge clk) disable iff (c) s2);
+        // legal: explicit leading clocking event, @(negedge clk)
 endmodule
 
 module examples_without_default (input logic a, b, c, clk);
