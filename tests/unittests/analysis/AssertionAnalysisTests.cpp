@@ -304,13 +304,14 @@ endmodule
     AnalysisManager analysisManager;
 
     auto [diags, design] = analyze(text, compilation, analysisManager);
-    REQUIRE(diags.size() == 6);
+    REQUIRE(diags.size() == 7);
     CHECK(diags[0].code == diag::AssertionNoClock);
     CHECK(diags[1].code == diag::AssertionNoClock);
-    CHECK(diags[2].code == diag::AssertionNoClock);
+    CHECK(diags[2].code == diag::NoUniqueClock);
     CHECK(diags[3].code == diag::AssertionNoClock);
     CHECK(diags[4].code == diag::AssertionNoClock);
     CHECK(diags[5].code == diag::AssertionNoClock);
+    CHECK(diags[6].code == diag::AssertionNoClock);
 }
 
 TEST_CASE("Assertions clock resolution rules with clocking blocks") {
@@ -404,10 +405,11 @@ endmodule
     AnalysisManager analysisManager;
 
     auto [diags, design] = analyze(text, compilation, analysisManager);
-    REQUIRE(diags.size() == 5);
+    REQUIRE(diags.size() == 6);
     CHECK(diags[0].code == diag::InvalidMulticlockedSeqOp);
     CHECK(diags[1].code == diag::InvalidMulticlockedSeqOp);
-    CHECK(diags[2].code == diag::InvalidMulticlockedSeqOp);
+    CHECK(diags[2].code == diag::NoUniqueClock);
     CHECK(diags[3].code == diag::InvalidMulticlockedSeqOp);
-    CHECK(diags[4].code == diag::MulticlockedSeqEmptyMatch);
+    CHECK(diags[4].code == diag::InvalidMulticlockedSeqOp);
+    CHECK(diags[5].code == diag::MulticlockedSeqEmptyMatch);
 }

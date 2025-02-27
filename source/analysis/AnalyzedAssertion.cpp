@@ -369,7 +369,22 @@ AnalyzedAssertion::AnalyzedAssertion(AnalysisContext& context, const TimingContr
     analyzedStatement(&stmt) {
 
     ClockVisitor visitor(context, parentSymbol);
-    stmt.propertySpec.visit(visitor, contextualClock, VisitFlags::None);
+    auto result = stmt.propertySpec.visit(visitor, contextualClock, VisitFlags::None);
+
+    if (!visitor.bad && result.clocks.size() > 1) {
+        // There must be a unique semantic leading clock.
+        auto firstClock = result.clocks[0];
+        for (size_t i = 1; i < result.clocks.size(); i++) {
+            if (!isSameClock(*firstClock, *result.clocks[i])) {
+                SLANG_ASSERT(stmt.propertySpec.syntax);
+                auto& diag = context.addDiag(parentSymbol, diag::NoUniqueClock,
+                                             stmt.propertySpec.syntax->sourceRange());
+                diag.addNote(diag::NoteClockHere, firstClock->sourceRange);
+                diag.addNote(diag::NoteClockHere, result.clocks[i]->sourceRange);
+                break;
+            }
+        }
+    }
 }
 
 } // namespace slang::analysis

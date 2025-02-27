@@ -246,6 +246,7 @@ const AssertionExpr& AssertionExpr::bind(const PropertySpecSyntax& syntax,
         result = &clocking;
     }
 
+    const_cast<AssertionExpr*>(result)->syntax = &syntax;
     return *result;
 }
 

@@ -1142,6 +1142,7 @@ error InvalidMulticlockedSeqOp "multiclocked sequence operands cannot be combine
 error MulticlockedSeqEmptyMatch "sequence admits an empty match; this is not allowed when concatenating differently clocked sequences"
 error MulticlockedInClockingBlock "cannot instantiate '{}' in clocking block because it is multiclocked"
 error DifferentClockInClockingBlock "cannot instantiate '{}' in clocking block because its clock differs from that of the containing clocking block"
+error NoUniqueClock "assertion expression does not have a unique leading clock"
 note NoteRequiredHere "required here"
 note NoteClockHere "clock here"
 warning unused-def UnusedDefinition "{} definition is unused"
