@@ -1165,6 +1165,9 @@ void Compilation::noteDefaultClocking(const Scope& scope, const Symbol& clocking
                                       SourceRange range) {
     SLANG_ASSERT(!isFrozen());
 
+    if (scope.isUninstantiated())
+        return;
+
     // The LRM is not clear about this, but this Accellera issue states
     // that default clocking declarations inside child scopes actually
     // belong to the parent instance body. Only VCS implements this correctly,

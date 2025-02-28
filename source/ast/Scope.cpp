@@ -282,6 +282,7 @@ void Scope::addMembers(const SyntaxNode& syntax) {
         case SyntaxKind::CoverCross:
         case SyntaxKind::NetAlias:
         case SyntaxKind::BindDirective:
+        case SyntaxKind::ClockingDeclaration:
             addDeferredMembers(syntax);
             break;
         case SyntaxKind::EnumType:
@@ -486,10 +487,6 @@ void Scope::addMembers(const SyntaxNode& syntax) {
             break;
         case SyntaxKind::PropertyDeclaration:
             addMember(PropertySymbol::fromSyntax(*this, syntax.as<PropertyDeclarationSyntax>()));
-            break;
-        case SyntaxKind::ClockingDeclaration:
-            addMember(
-                ClockingBlockSymbol::fromSyntax(*this, syntax.as<ClockingDeclarationSyntax>()));
             break;
         case SyntaxKind::LetDeclaration:
             addMember(LetDeclSymbol::fromSyntax(*this, syntax.as<LetDeclarationSyntax>()));
@@ -1087,6 +1084,11 @@ void Scope::elaborate() const {
             case SyntaxKind::BindDirective:
                 compilation.noteBindDirective(member.node.as<BindDirectiveSyntax>(), *this);
                 break;
+            case SyntaxKind::ClockingDeclaration:
+                insertMember(&ClockingBlockSymbol::fromSyntax(
+                                 *this, member.node.as<ClockingDeclarationSyntax>()),
+                             symbol, true, true);
+                break;
             default:
                 SLANG_UNREACHABLE;
         }
@@ -1588,6 +1590,7 @@ static size_t countMembers(const SyntaxNode& syntax) {
         case SyntaxKind::ProgramDeclaration:
         case SyntaxKind::ClassMethodDeclaration:
         case SyntaxKind::EnumType:
+        case SyntaxKind::ClockingDeclaration:
             return 1;
         case SyntaxKind::SpecifyBlock:
         case SyntaxKind::CoverCross:
