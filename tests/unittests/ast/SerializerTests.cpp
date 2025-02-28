@@ -451,40 +451,32 @@ endmodule
                   "body": {
                     "kind": "Clocking",
                     "clocking": {
-                      "kind": "SignalEvent",
-                      "expr": {
-                        "kind": "ClockingEvent",
-                        "type": "void",
-                        "timingControl": {
-                          "kind": "EventList",
-                          "events": [
-                            {
-                              "kind": "SignalEvent",
-                              "expr": {
-                                "kind": "NamedValue",
-                                "type": "logic",
-                                "symbol": "x1"
-                              },
-                              "edge": "None",
-                              "iff": {
-                                "kind": "NamedValue",
-                                "type": "logic",
-                                "symbol": "y1"
-                              }
-                            },
-                            {
-                              "kind": "SignalEvent",
-                              "expr": {
-                                "kind": "NamedValue",
-                                "type": "logic",
-                                "symbol": "clk"
-                              },
-                              "edge": "NegEdge"
-                            }
-                          ]
+                      "kind": "EventList",
+                      "events": [
+                        {
+                          "kind": "SignalEvent",
+                          "expr": {
+                            "kind": "NamedValue",
+                            "type": "logic",
+                            "symbol": "x1"
+                          },
+                          "edge": "None",
+                          "iff": {
+                            "kind": "NamedValue",
+                            "type": "logic",
+                            "symbol": "y1"
+                          }
+                        },
+                        {
+                          "kind": "SignalEvent",
+                          "expr": {
+                            "kind": "NamedValue",
+                            "type": "logic",
+                            "symbol": "clk"
+                          },
+                          "edge": "NegEdge"
                         }
-                      },
-                      "edge": "None"
+                      ]
                     },
                     "expr": {
                       "kind": "SequenceConcat",

@@ -1280,6 +1280,7 @@ module m;
         @cb i++;
         @(cb) i++;
         @(cb or posedge cb) i++;
+        @(cb iff i > 0) i++;
         @(cb.clk) i++;
     end
 endmodule
@@ -1289,8 +1290,9 @@ endmodule
     compilation.addSyntaxTree(tree);
 
     auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 1);
+    REQUIRE(diags.size() == 2);
     CHECK(diags[0].code == diag::ClockingBlockEventEdge);
+    CHECK(diags[1].code == diag::ClockingBlockEventIff);
 }
 
 TEST_CASE("Cycle delay errors") {

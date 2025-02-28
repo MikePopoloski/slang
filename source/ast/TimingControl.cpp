@@ -308,6 +308,27 @@ TimingControl& SignalEventControl::fromSyntax(Compilation& compilation,
     return fromExpr(compilation, EdgeKind::None, expr, nullptr, context, syntax.sourceRange());
 }
 
+static TimingControl& cloneClockingEvent(Compilation& comp, const TimingControl& timing) {
+    if (timing.kind == TimingControlKind::SignalEvent) {
+        auto& sec = timing.as<SignalEventControl>();
+        return *comp.emplace<SignalEventControl>(sec.edge, sec.expr, sec.iffCondition,
+                                                 sec.sourceRange);
+    }
+    else if (timing.kind == TimingControlKind::EventList) {
+        SmallVector<TimingControl*> events;
+        for (auto& event : timing.as<EventListControl>().events) {
+            events.push_back(&cloneClockingEvent(comp, *event));
+            if (events.back()->bad())
+                return *comp.emplace<InvalidTimingControl>(&timing);
+        }
+
+        return *comp.emplace<EventListControl>(events.ccopy(comp), timing.sourceRange);
+    }
+    else {
+        return *comp.emplace<InvalidTimingControl>(&timing);
+    }
+}
+
 TimingControl& SignalEventControl::fromExpr(Compilation& compilation, EdgeKind edge,
                                             const Expression& expr, const Expression* iffCondition,
                                             const ASTContext& context, SourceRange sourceRange) {
@@ -340,8 +361,19 @@ TimingControl& SignalEventControl::fromExpr(Compilation& compilation, EdgeKind e
     }
 
     if (iffCondition) {
+        if (isClocking)
+            context.addDiag(diag::ClockingBlockEventIff, iffCondition->sourceRange);
+
         if (!context.requireBooleanConvertible(*iffCondition))
             return badCtrl(compilation, result);
+    }
+
+    // If our expression is a reference to another clocking event due to
+    // a sequence or property argument expansion we need to unwrap to the
+    // target timing control and use that instead.
+    if (expr.kind == ExpressionKind::ClockingEvent) {
+        auto& cee = expr.as<ClockingEventExpression>();
+        return cloneClockingEvent(compilation, cee.timingControl);
     }
 
     // Warn if the expression is constant, since it'll never change to trigger off.
