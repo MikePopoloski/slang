@@ -115,7 +115,7 @@ static bool checkFormatString(const ASTContext& context, const StringLiteral& ar
     };
 
     bool ok = true;
-    ok &= SFormat::parse(
+    bool parseOk = SFormat::parse(
         fmt, [](std::string_view) {},
         [&](char spec, size_t offset, size_t len, const SFormat::FormatOptions&) {
             // Filter out non-consuming arguments.
@@ -151,7 +151,7 @@ static bool checkFormatString(const ASTContext& context, const StringLiteral& ar
                 diag << *specifier;
         });
 
-    return ok;
+    return ok && parseOk;
 }
 
 bool FmtHelpers::checkDisplayArgs(const ASTContext& context, const Args& args) {
@@ -237,7 +237,7 @@ std::optional<std::string> FmtHelpers::formatArgs(std::string_view formatString,
     auto argIt = args.begin();
 
     bool ok = true;
-    ok &= SFormat::parse(
+    bool parseOk = SFormat::parse(
         formatString, [&](std::string_view text) { result += text; },
         [&](char spec, size_t offset, size_t len, const SFormat::FormatOptions& options) {
             if (formatSpecialArg(spec, scope, result))
@@ -287,6 +287,7 @@ std::optional<std::string> FmtHelpers::formatArgs(std::string_view formatString,
     if (argIt != args.end())
         context.addDiag(diag::FormatTooManyArgs, (*argIt)->sourceRange);
 
+    ok &= parseOk;
     if (!ok)
         return std::nullopt;
 
@@ -340,7 +341,7 @@ std::optional<std::string> FmtHelpers::formatDisplay(
                 fmt = fmt.substr(1, fmt.length() - 2);
 
             bool ok = true;
-            ok &= SFormat::parse(
+            bool parseOk = SFormat::parse(
                 fmt, [&](std::string_view text) { result += text; },
                 [&](char specifier, size_t, size_t, const SFormat::FormatOptions& options) {
                     if (formatSpecialArg(specifier, scope, result))
@@ -360,6 +361,7 @@ std::optional<std::string> FmtHelpers::formatDisplay(
                 },
                 [](DiagCode, size_t, size_t, std::optional<char>) {});
 
+            ok &= parseOk;
             if (!ok)
                 return std::nullopt;
         }
