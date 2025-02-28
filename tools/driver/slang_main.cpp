@@ -238,7 +238,11 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
     auto diagClient = std::make_shared<TextDiagnosticClient>();
     diagEngine.addClient(diagClient);
 
-    Compilation compilation;
+    CompilationOptions options;
+    options.maxInstanceDepth = 16;
+    options.maxDefParamSteps = 32;
+
+    Compilation compilation(options);
     compilation.addSyntaxTree(tree);
     for (auto& diag : compilation.getAllDiagnostics())
         diagEngine.issue(diag);
