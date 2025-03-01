@@ -304,7 +304,10 @@ struct SequenceMethodExprVisitor {
 
 class SequenceMethod : public SystemSubroutine {
 public:
-    SequenceMethod(const std::string& name) : SystemSubroutine(name, SubroutineKind::Function) {}
+    bool isMatched;
+
+    SequenceMethod(const std::string& name, bool isMatched) :
+        SystemSubroutine(name, SubroutineKind::Function), isMatched(isMatched) {}
 
     const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
@@ -313,6 +316,11 @@ public:
             return comp.getErrorType();
 
         checkLocalVars(*args[0], context, range);
+
+        if (!context.flags.has(ASTFlags::AssertionExpr) && isMatched) {
+            context.addDiag(diag::SequenceMatchedOutsideAssertion, range);
+            return comp.getErrorType();
+        }
 
         return comp.getBitType();
     }
@@ -408,8 +416,8 @@ void Builtins::registerMiscSystemFuncs() {
     addSystemSubroutine(std::make_shared<InferredValueFunction>("$inferred_disable", false));
 
     addSystemMethod(SymbolKind::ClassType, std::make_shared<ClassRandomizeFunction>());
-    addSystemMethod(SymbolKind::SequenceType, std::make_shared<SequenceMethod>("triggered"));
-    addSystemMethod(SymbolKind::SequenceType, std::make_shared<SequenceMethod>("matched"));
+    addSystemMethod(SymbolKind::SequenceType, std::make_shared<SequenceMethod>("triggered", false));
+    addSystemMethod(SymbolKind::SequenceType, std::make_shared<SequenceMethod>("matched", true));
 }
 
 } // namespace slang::ast::builtins

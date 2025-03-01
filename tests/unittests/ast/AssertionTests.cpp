@@ -2706,3 +2706,24 @@ endmodule
     CHECK(diags[0].code == diag::ExplicitClockInClockingBlock);
     CHECK(diags[1].code == diag::ExplicitClockInClockingBlock);
 }
+
+TEST_CASE("matched method can only be used in a sequence") {
+    auto tree = SyntaxTree::fromText(R"(
+module m(input clk, a);
+    sequence s;
+        @(posedge clk) a;
+    endsequence
+
+    always @(posedge clk) begin
+        if (s.matched()) begin end
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::SequenceMatchedOutsideAssertion);
+}
