@@ -393,6 +393,16 @@ void SignalEventControl::serializeTo(ASTSerializer& serializer) const {
 
 static void collectEvents(const ASTContext& context, const SyntaxNode& expr,
                           SmallVectorBase<TimingControl*>& results) {
+    auto addResult = [&](TimingControl& ctrl) {
+        if (ctrl.kind == TimingControlKind::EventList) {
+            for (auto ev : ctrl.as<EventListControl>().events)
+                results.push_back(const_cast<TimingControl*>(ev));
+        }
+        else {
+            results.push_back(&ctrl);
+        }
+    };
+
     switch (expr.kind) {
         case SyntaxKind::ParenthesizedEventExpression:
             collectEvents(context, *expr.as<ParenthesizedEventExpressionSyntax>().expr, results);
@@ -417,11 +427,11 @@ static void collectEvents(const ASTContext& context, const SyntaxNode& expr,
         }
         case SyntaxKind::SimplePropertyExpr:
         case SyntaxKind::IffPropertyExpr:
-            results.push_back(&TimingControl::bind(expr.as<PropertyExprSyntax>(), context));
+            addResult(TimingControl::bind(expr.as<PropertyExprSyntax>(), context));
             break;
         case SyntaxKind::SimpleSequenceExpr:
         case SyntaxKind::SignalEventExpression:
-            results.push_back(&TimingControl::bind(expr.as<SequenceExprSyntax>(), context));
+            addResult(TimingControl::bind(expr.as<SequenceExprSyntax>(), context));
             break;
         case SyntaxKind::ParenthesizedPropertyExpr: {
             auto& ppe = expr.as<ParenthesizedPropertyExprSyntax>();
@@ -436,7 +446,7 @@ static void collectEvents(const ASTContext& context, const SyntaxNode& expr,
             auto& pse = expr.as<ParenthesizedSequenceExprSyntax>();
             if (pse.repetition) {
                 context.addDiag(diag::InvalidSyntaxInEventExpr, expr.sourceRange());
-                results.push_back(context.getCompilation().emplace<InvalidTimingControl>(nullptr));
+                addResult(*context.getCompilation().emplace<InvalidTimingControl>(nullptr));
             }
             else {
                 collectEvents(context, *pse.expr, results);

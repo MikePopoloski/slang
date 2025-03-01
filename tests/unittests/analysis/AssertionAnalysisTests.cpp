@@ -1607,3 +1607,40 @@ endmodule // mm_09
     CHECK(diags[0].code == diag::AssertionNoClock);
     CHECK(diags[1].code == diag::AssertionNoClock);
 }
+
+TEST_CASE("Inferred clock resolution") {
+    auto& text = R"(
+module m(input clk1, clk2, a);
+    sequence s1 (clk);
+        @clk a and @(posedge clk2) a;
+    endsequence
+
+    sequence s2 (clk);
+        @(clk) a and @(posedge clk1 or negedge clk2) a;
+    endsequence
+
+    sequence s3 (clk = $inferred_clock);
+        @clk a and @(posedge clk2) a;
+    endsequence
+
+    always @(posedge clk1) begin
+        assert property (s1(posedge clk2));
+        assert property (s2(posedge clk1 or negedge clk2));
+        assert property (s3); // illegal
+    end
+
+    always @(posedge clk2) begin
+        assert property (s3); // ok
+    end
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto [diags, design] = analyze(text, compilation, analysisManager);
+    CHECK_DIAGS_EMPTY;
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::AssertionNoClock);
+    CHECK(diags[1].code == diag::AssertionNoClock);
+}

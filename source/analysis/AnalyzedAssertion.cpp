@@ -56,6 +56,7 @@ static bool isSameClock(const TimingControl& left, const TimingControl& right) {
     if (!le.expr.syntax || !re.expr.syntax)
         return false;
 
+    // TODO: this should check the AST expression and not the syntax
     return le.expr.syntax->isEquivalentTo(*re.expr.syntax);
 }
 
@@ -92,7 +93,7 @@ struct ClockVisitor {
 
     AnalysisContext& context;
     const Symbol& parentSymbol;
-    SmallVector<const AssertionExpr*> expansionStack;
+    SmallVector<std::pair<const AssertionExpr*, Clock>> expansionStack;
     bool bad = false;
 
     ClockVisitor(AnalysisContext& context, const Symbol& parentSymbol) :
@@ -123,7 +124,7 @@ struct ClockVisitor {
             }
 
             SLANG_ASSERT(expr.syntax);
-            expansionStack.push_back(&expr);
+            expansionStack.push_back({&expr, outerClock});
             auto result = aie.body.visit(*this, flowClock, flags);
             expansionStack.pop_back();
 
@@ -314,7 +315,7 @@ private:
                 SourceRange range;
                 SLANG_ASSERT(expr.syntax);
                 if (!expansionStack.empty())
-                    range = expansionStack.front()->syntax->sourceRange();
+                    range = expansionStack.front().first->syntax->sourceRange();
                 else
                     range = expr.syntax->sourceRange();
 
@@ -324,7 +325,7 @@ private:
                 if (!expansionStack.empty()) {
                     for (size_t i = 1; i < expansionStack.size(); i++) {
                         diag.addNote(diag::NoteRequiredHere,
-                                     expansionStack[i]->syntax->sourceRange());
+                                     expansionStack[i].first->syntax->sourceRange());
                     }
                     diag.addNote(diag::NoteRequiredHere, expr.syntax->sourceRange());
                 }
