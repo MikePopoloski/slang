@@ -13,6 +13,7 @@ note NoteDrivenHere "driven here"
 note NoteOriginalAssign "original assignment here"
 note NoteConfigRule "from configuration here"
 note NoteFromHere2 "from '{}' and '{}'"
+note NoteExpandedHere "expanded here"
 error AttributesNotAllowed "attributes are not allowed here"
 error WrongLanguageVersion "language feature is not supported in version {}; use the --std option to select a supported language version"
 
@@ -888,7 +889,6 @@ warning unused-result UnusedResult "ignoring return value of '{}', cast to void 
 warning bad-procedural-force BadProceduralForce "lvalue of force/release must be a net, a variable, a constant select of a net, or a concatenation of these"
 warning multibit-edge MultiBitEdge "edge of expression of type {} will only trigger on changes to the first bit"
 note NoteWhileExpanding "while expanding {} '{}'"
-note NoteExpandedHere "expanded here"
 note NoteAlwaysFalse "expression is always false"
 
 subsystem Types

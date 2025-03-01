@@ -60,6 +60,15 @@ static bool isSameClock(const TimingControl& left, const TimingControl& right) {
     return le.expr.syntax->isEquivalentTo(*re.expr.syntax);
 }
 
+static bool isInferredClockCall(const Expression& expr) {
+    if (expr.kind == ExpressionKind::Call) {
+        auto& call = expr.as<CallExpression>();
+        if (call.isSystemCall() && call.getSubroutineName() == "$inferred_clock")
+            return true;
+    }
+    return false;
+}
+
 enum class VisitFlags { None = 0, RequireSequence = 1, InClockingBlock = 2 };
 SLANG_BITMASK(VisitFlags, InClockingBlock);
 
@@ -91,9 +100,28 @@ struct ClockVisitor {
         }
     };
 
+    struct ExpansionInstance {
+        const AssertionExpr* expr = nullptr;
+        Clock clock = nullptr;
+        bool hasInferredClockArg = false;
+
+        ExpansionInstance(const AssertionExpr& expr, Clock clock) : expr(&expr), clock(clock) {
+            // Determine if this instance has an inferred clocking default argument.
+            auto& aie = expr.as<SimpleAssertionExpr>().expr.as<AssertionInstanceExpression>();
+            for (auto& arg : aie.arguments) {
+                if (auto argExpr = std::get_if<const Expression*>(&std::get<1>(arg))) {
+                    if (isInferredClockCall(**argExpr)) {
+                        hasInferredClockArg = true;
+                        break;
+                    }
+                }
+            }
+        }
+    };
+
     AnalysisContext& context;
     const Symbol& parentSymbol;
-    SmallVector<std::pair<const AssertionExpr*, Clock>> expansionStack;
+    SmallVector<ExpansionInstance> expansionStack;
     bool bad = false;
 
     ClockVisitor(AnalysisContext& context, const Symbol& parentSymbol) :
@@ -124,7 +152,7 @@ struct ClockVisitor {
             }
 
             SLANG_ASSERT(expr.syntax);
-            expansionStack.push_back({&expr, outerClock});
+            expansionStack.push_back({expr, outerClock});
             auto result = aie.body.visit(*this, flowClock, flags);
             expansionStack.pop_back();
 
@@ -205,8 +233,14 @@ struct ClockVisitor {
     }
 
     VisitResult visit(const ClockingAssertionExpr& expr, Clock, bitmask<VF> flags) {
-        // Outer clock is ignored here.
-        return expr.expr.visit(*this, &expr.clocking, flags);
+        // If we're inside a sequence or property instance that has an inferred
+        // clocking argument we need to try to substitute calls to it from any
+        // clocking expressions we find.
+        auto clocking = &expr.clocking;
+        if (!expansionStack.empty() && expansionStack.back().hasInferredClockArg)
+            clocking = &expandInferredClocking(*clocking, expansionStack.back().clock);
+
+        return expr.expr.visit(*this, clocking, flags);
     }
 
     VisitResult visit(const UnaryAssertionExpr& expr, Clock outerClock, bitmask<VF> flags) {
@@ -315,7 +349,7 @@ private:
                 SourceRange range;
                 SLANG_ASSERT(expr.syntax);
                 if (!expansionStack.empty())
-                    range = expansionStack.front().first->syntax->sourceRange();
+                    range = expansionStack.front().expr->syntax->sourceRange();
                 else
                     range = expr.syntax->sourceRange();
 
@@ -325,7 +359,7 @@ private:
                 if (!expansionStack.empty()) {
                     for (size_t i = 1; i < expansionStack.size(); i++) {
                         diag.addNote(diag::NoteRequiredHere,
-                                     expansionStack[i].first->syntax->sourceRange());
+                                     expansionStack[i].expr->syntax->sourceRange());
                     }
                     diag.addNote(diag::NoteRequiredHere, expr.syntax->sourceRange());
                 }
@@ -348,8 +382,9 @@ private:
             if (!range.start())
                 range = leftRange;
 
-            context.addDiag(parentSymbol, diag::InvalidMulticlockedSeqOp, range)
-                << leftRange << right.syntax->sourceRange();
+            auto& diag = context.addDiag(parentSymbol, diag::InvalidMulticlockedSeqOp, range);
+            diag << leftRange << right.syntax->sourceRange();
+            addExpansionNotes(diag);
         }
     }
 
@@ -360,6 +395,44 @@ private:
             SLANG_ASSERT(expr.syntax);
             context.addDiag(parentSymbol, diag::MulticlockedSeqEmptyMatch,
                             expr.syntax->sourceRange());
+        }
+    }
+
+    const TimingControl& expandInferredClocking(const TimingControl& timing,
+                                                const TimingControl* inferredClock) {
+        auto& alloc = context.alloc;
+        if (timing.kind == TimingControlKind::EventList) {
+            SmallVector<const TimingControl*> events;
+            for (auto& event : timing.as<EventListControl>().events) {
+                events.push_back(&expandInferredClocking(*event, inferredClock));
+                if (events.back()->bad())
+                    return *alloc.emplace<InvalidTimingControl>(&timing);
+            }
+
+            return *alloc.emplace<EventListControl>(events.copy(alloc), timing.sourceRange);
+        }
+
+        if (timing.kind == TimingControlKind::SignalEvent) {
+            auto& sec = timing.as<SignalEventControl>();
+            if (isInferredClockCall(sec.expr)) {
+                if (!inferredClock) {
+                    auto& diag = context.addDiag(parentSymbol, diag::NoInferredClock,
+                                                 sec.expr.sourceRange);
+                    addExpansionNotes(diag);
+                    return *alloc.emplace<InvalidTimingControl>(&timing);
+                }
+                return *inferredClock;
+            }
+        }
+
+        return timing;
+    }
+
+    void addExpansionNotes(Diagnostic& diag) {
+        for (auto it = expansionStack.rbegin(); it != expansionStack.rend(); it++) {
+            auto& expr = *it->expr;
+            if (expr.syntax)
+                diag.addNote(diag::NoteExpandedHere, expr.syntax->sourceRange());
         }
     }
 };

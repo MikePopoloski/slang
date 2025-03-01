@@ -1610,7 +1610,7 @@ endmodule // mm_09
 
 TEST_CASE("Inferred clock resolution") {
     auto& text = R"(
-module m(input clk1, clk2, a);
+module m(input clk1, clk2, clk3, a);
     sequence s1 (clk);
         @clk a and @(posedge clk2) a;
     endsequence
@@ -1632,6 +1632,19 @@ module m(input clk1, clk2, a);
     always @(posedge clk2) begin
         assert property (s3); // ok
     end
+
+    initial begin
+        assert property (s3); // illegal
+    end
+
+    sequence s4(clk = $inferred_clock);
+        @(posedge clk2 or (clk3, posedge clk1)) a and @(posedge clk2 or clk3 or clk) a;
+    endsequence
+
+    property p1;
+        @(posedge clk1) a and s4;
+    endproperty
+    assert property (@(posedge clk1) sync_accept_on(a) p1); // legal
 endmodule
 )";
 
@@ -1639,8 +1652,7 @@ endmodule
     AnalysisManager analysisManager;
 
     auto [diags, design] = analyze(text, compilation, analysisManager);
-    CHECK_DIAGS_EMPTY;
     REQUIRE(diags.size() == 2);
-    CHECK(diags[0].code == diag::AssertionNoClock);
-    CHECK(diags[1].code == diag::AssertionNoClock);
+    CHECK(diags[0].code == diag::NoInferredClock);
+    CHECK(diags[1].code == diag::InvalidMulticlockedSeqOp);
 }
