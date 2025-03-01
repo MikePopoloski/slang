@@ -495,8 +495,10 @@ TimingControl& CycleDelayControl::fromSyntax(Compilation& compilation, const Del
     if (!context.requireIntegral(expr))
         return badCtrl(compilation, result);
 
-    if (!context.flags.has(ASTFlags::LValue) && !compilation.getDefaultClocking(*context.scope))
+    if (!context.flags.has(ASTFlags::LValue) && !context.scope->isUninstantiated() &&
+        !compilation.getDefaultClocking(*context.scope)) {
         context.addDiag(diag::NoDefaultClocking, syntax.sourceRange());
+    }
 
     return *result;
 }
