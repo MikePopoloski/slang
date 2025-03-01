@@ -958,8 +958,8 @@ Expression& AssertionInstanceExpression::fromLookup(const Symbol& symbol,
             // any were unused.
             it->second.second = true;
 
-            auto arg = it->second.first->expr;
-            if (!arg) {
+            expr = it->second.first->expr;
+            if (!expr) {
                 // Empty arguments are allowed as long as a default is provided.
                 setDefault();
                 if (!expr && !formal->name.empty()) {

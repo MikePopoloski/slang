@@ -1656,3 +1656,30 @@ endmodule
     CHECK(diags[0].code == diag::NoInferredClock);
     CHECK(diags[1].code == diag::InvalidMulticlockedSeqOp);
 }
+
+TEST_CASE("Basic property with disable iff analysis") {
+    auto& text = R"(
+module top;
+    logic clk1, clk2;
+    logic rst_b;
+    logic a1, b1, a2, b2;
+
+    property my_prop(clk, rst_b, a, b);
+        @(posedge clk) disable iff(~rst_b)
+            $rose(a) |-> b;
+    endproperty
+
+    prop1: assert property(my_prop(.clk(clk1), .rst_b(rst_b), .a(a1), .b(b1)))
+           else $error("%t %m - my_prop failed", $time);
+
+    prop2: assert property(my_prop(.clk(clk2), .rst_b(rst_b), .a(a2), .b(b2)))
+           else $error("%t %m - my_prop failed", $time);
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto [diags, design] = analyze(text, compilation, analysisManager);
+    CHECK_DIAGS_EMPTY;
+}

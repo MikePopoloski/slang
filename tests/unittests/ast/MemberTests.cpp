@@ -985,7 +985,10 @@ module my_checker;
     wire [1:0] req;
     wire [1:0] vld;
     logic ovr;
-    if (valid_arb(.request(req), .valid(vld), .override(ovr))) begin
+
+    always_comb begin
+        if (valid_arb(.request(req), .valid(vld), .override(ovr))) begin
+        end
     end
 endmodule
 )");
