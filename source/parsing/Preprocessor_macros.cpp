@@ -71,7 +71,7 @@ std::pair<MacroActualArgumentListSyntax*, Trivia> Preprocessor::handleTopLevelMa
             else
                 return {nullptr, Trivia(TriviaKind::SkippedTokens, ignoreTokens.copy(alloc))};
         }
-        addDiag(diag::UnknownDirective, directive.location()) << directive.valueText();
+        addDiag(diag::UnknownDirective, directive.range()) << directive.valueText();
 
         // If we see a parenthesis next, let's assume they tried to invoke a function-like macro
         // and skip over the tokens.

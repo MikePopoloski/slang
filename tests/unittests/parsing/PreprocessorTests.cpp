@@ -761,7 +761,7 @@ TEST_CASE("Macro arg location bug") {
     CHECK(result == R"(
 source:4:15: error: unknown macro or compiler directive '`bar'
    `FOO(      `bar      )   asdfasdfasdfasdfasdfasdfsadfasdfasdfasdfasdf
-              ^
+              ^~~~
 )");
 }
 
