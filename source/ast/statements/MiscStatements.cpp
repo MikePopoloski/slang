@@ -333,6 +333,12 @@ Statement& ConcurrentAssertionStatement::fromSyntax(
         return badStmt(compilation, nullptr);
     }
 
+    auto proc = context.getProceduralBlock();
+    if (!proc || proc->procedureKind == ProceduralBlockKind::Final) {
+        context.addDiag(diag::ConcurrentAssertNotInProc, syntax.sourceRange());
+        return badStmt(compilation, nullptr);
+    }
+
     ASTContext ctx = context;
     ctx.clearInstanceAndProc();
 

@@ -69,13 +69,6 @@ TEST_CASE("Procedure inferred clocks") {
         end
     )") == "clk_default");
 
-    // No inferred clock in final blocks.
-    CHECK(testInferredClock(R"(
-        final begin
-            assert property (p);
-        end
-    )") == "clk_default");
-
     // Blocking assignment with intra-assignment delay.
     CHECK(testInferredClock(R"(
         logic clk, reset;

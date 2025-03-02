@@ -1245,7 +1245,7 @@ endmodule
     CHECK(diags[2].code == diag::TimingInFuncNotAllowed);
     CHECK(diags[3].code == diag::TaskFromFinal);
     CHECK(diags[4].code == diag::TimingInFuncNotAllowed);
-    CHECK(diags[5].code == diag::TimingInFuncNotAllowed);
+    CHECK(diags[5].code == diag::ConcurrentAssertNotInProc);
 }
 
 TEST_CASE("Non-blocking timing control reference to auto") {
