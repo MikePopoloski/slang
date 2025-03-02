@@ -1974,8 +1974,8 @@ endchecker
 module m;
     logic clk;
     my_check c1(clk, 1);
-    op_test1 t1(clk, 1, 2, 3);
-    op_test2 t2(clk, 1, 2, 3);
+    op_test1 t1(clk, 1, 1, 3);
+    op_test2 t2(clk, 1, 1, 3);
 endmodule
 )");
 

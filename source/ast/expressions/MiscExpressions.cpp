@@ -1182,10 +1182,24 @@ Expression& AssertionInstanceExpression::bindPort(const Symbol& symbol, SourceRa
         inst = inst->argDetails;
 
     // The only way to reference an assertion port should be from within
-    // an assertion instance, so we should always find it here.
+    // an assertion or checker instance.
     auto it = inst->argumentMap.find(&symbol);
-    if (it == inst->argumentMap.end())
+    if (it == inst->argumentMap.end()) {
+        // Walk through our previous assertion contexts to see if one of
+        // them is a checker instance, in which case this argument might
+        // be a reference to a checker port.
+        auto ctx = inst->prevContext;
+        while (ctx) {
+            inst = ctx->assertionInstance;
+            if (!inst || (inst->symbol && inst->symbol->kind == SymbolKind::Checker))
+                return bindPort(symbol, range, ctx->resetFlags(instanceCtx.flags));
+
+            ctx = inst->prevContext;
+        }
+
+        SLANG_ASSERT(false);
         return badExpr(comp, nullptr);
+    }
 
     auto& formal = symbol.as<AssertionPortSymbol>();
     auto& type = formal.declaredType.getType();
