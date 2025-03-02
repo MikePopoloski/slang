@@ -2051,3 +2051,30 @@ endmodule
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Procedural checker statement restrictions") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    checker c;
+    endchecker
+
+    function foo;
+        c c1();
+    endfunction
+
+    initial begin
+        fork
+            c c1();
+        join
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::CheckerNotInProc);
+    CHECK(diags[1].code == diag::CheckerInForkJoin);
+}

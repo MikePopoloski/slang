@@ -753,7 +753,19 @@ void RandSequenceStatement::serializeTo(ASTSerializer& serializer) const {
 
 Statement& ProceduralCheckerStatement::fromSyntax(Compilation& comp,
                                                   const CheckerInstanceStatementSyntax& syntax,
-                                                  const ASTContext& context) {
+                                                  const ASTContext& context,
+                                                  StatementContext& stmtCtx) {
+    auto proc = context.getProceduralBlock();
+    if (!proc || proc->procedureKind == ProceduralBlockKind::Final) {
+        context.addDiag(diag::CheckerNotInProc, syntax.sourceRange());
+        return badStmt(comp, nullptr);
+    }
+
+    if (stmtCtx.flags.has(StatementFlags::InForkJoin)) {
+        context.addDiag(diag::CheckerInForkJoin, syntax.sourceRange());
+        return badStmt(comp, nullptr);
+    }
+
     // Find all of the checkers that were pre-created for this syntax node.
     // It's possible to not find them if there were errors in the declaration,
     // so we don't issue errors here -- they are already handled.

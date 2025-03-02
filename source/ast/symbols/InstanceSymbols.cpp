@@ -2069,20 +2069,7 @@ CheckerInstanceSymbol& CheckerInstanceSymbol::fromSyntax(
         context.flags |= ASTFlags::BindInstantiation;
     }
 
-    // It's illegal to instantiate checkers inside fork-join blocks.
-    auto parentScope = context.scope;
-    while (parentScope->asSymbol().kind == SymbolKind::StatementBlock) {
-        auto& block = parentScope->asSymbol().as<StatementBlockSymbol>();
-        if (block.blockKind != StatementBlockKind::Sequential) {
-            parentScope->addDiag(diag::CheckerInForkJoin, syntax.sourceRange());
-            break;
-        }
-
-        parentScope = block.getParentScope();
-        SLANG_ASSERT(parentScope);
-    }
-
-    // It's also illegal to instantiate checkers inside the procedures of other checkers.
+    // It's illegal to instantiate checkers inside the procedures of other checkers.
     if (parentSym && parentSym->kind == SymbolKind::CheckerInstanceBody && isProcedural)
         context.addDiag(diag::CheckerInCheckerProc, syntax.sourceRange());
 

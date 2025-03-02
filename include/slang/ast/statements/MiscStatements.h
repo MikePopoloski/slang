@@ -503,7 +503,7 @@ public:
 
     static Statement& fromSyntax(Compilation& compilation,
                                  const syntax::CheckerInstanceStatementSyntax& syntax,
-                                 const ASTContext& context);
+                                 const ASTContext& context, StatementContext& stmtCtx);
 
     void serializeTo(ASTSerializer& serializer) const;
 

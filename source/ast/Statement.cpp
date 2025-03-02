@@ -269,7 +269,7 @@ const Statement& Statement::bind(const StatementSyntax& syntax, const ASTContext
             break;
         case SyntaxKind::CheckerInstanceStatement:
             result = &ProceduralCheckerStatement::fromSyntax(
-                comp, syntax.as<CheckerInstanceStatementSyntax>(), context);
+                comp, syntax.as<CheckerInstanceStatementSyntax>(), context, stmtCtx);
             break;
         default:
             SLANG_UNREACHABLE;
