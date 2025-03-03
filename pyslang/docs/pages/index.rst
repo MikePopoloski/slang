@@ -91,4 +91,3 @@ Expected output:
 .. code-block:: text
 
     3
-
