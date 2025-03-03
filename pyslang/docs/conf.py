@@ -16,11 +16,11 @@ INPUT_PAGES = [
 ]
 
 LINKS_NAVBAR1 = [
-    ("Slang Documentation", "/", []),
+    ("Slang Documentation", "..", []),
     ("GitHub", "https://github.com/MikePopoloski/slang", []),
     ("PyPI", "https://pypi.org/project/pyslang/", []),
     # Default links:
-    ("Pages", "pages", []),
+    # ("Pages", "pages", []), # -> Currently empty.
     ("Modules", "modules", []),
     ("Classes", "classes", []),
 ]
