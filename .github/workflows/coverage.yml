@@ -19,7 +19,7 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y g++-14
         wget --quiet https://github.com/linux-test-project/lcov/releases/download/v2.3/lcov-2.3.tar.gz
-        tar -xvf lcov-2.3.tar.gz
+        tar -xf lcov-2.3.tar.gz
         cd lcov-2.3
         sudo make install
         sudo cpan App::cpanminus
