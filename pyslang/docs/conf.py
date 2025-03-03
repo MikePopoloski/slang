@@ -16,13 +16,16 @@ INPUT_PAGES = [
 ]
 
 LINKS_NAVBAR1 = [
-    ("Slang Documentation", "..", []),
-    ("GitHub", "https://github.com/MikePopoloski/slang", []),
-    ("PyPI", "https://pypi.org/project/pyslang/", []),
+    ("Slang Documentation", "https://sv-lang.com/", []),
+    
     # Default links:
     # ("Pages", "pages", []), # -> Currently empty.
     ("Modules", "modules", []),
     ("Classes", "classes", []),
+    # End default links.
+
+    ("GitHub", "https://github.com/MikePopoloski/slang", []),
+    ("PyPI", "https://pypi.org/project/pyslang/", []),
 ]
 
 # Output the stubs for comparison/review, but not actually used.
