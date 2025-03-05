@@ -23,7 +23,7 @@ classifiers = [
 
 [project.urls]
 Homepage = "https://sv-lang.com/"
-Documentation = "https://sv-lang.com/"
+Documentation = "https://sv-lang.com/pyslang/"
 Repository = "https://github.com/MikePopoloski/slang"
 Issues = "https://github.com/MikePopoloski/slang/issues"
 Changelog = "https://github.com/MikePopoloski/slang/blob/master/CHANGELOG.md"
