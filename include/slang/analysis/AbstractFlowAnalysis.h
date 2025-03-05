@@ -18,13 +18,9 @@ using namespace ast;
 template<typename T, typename... U>
 concept IsAnyOf = (std::same_as<T, U> || ...);
 
-/// A base class for flow analysis passes.
-///
-/// See background on lattice flow analysis:
-/// https://en.wikipedia.org/wiki/Data-flow_analysis
-template<typename TDerived, typename TState>
-class AbstractFlowAnalysis {
-#define DERIVED *static_cast<TDerived*>(this)
+/// A base class for flow analysis passes that contains
+/// non-specialized helper functions.
+class FlowAnalysisBase {
 public:
     /// The symbol being analyzed (procedure, function, etc).
     const Symbol& rootSymbol;
@@ -32,6 +28,35 @@ public:
     /// Set to true if the analysis detected an error.
     bool bad = false;
 
+protected:
+    /// Constructs a new flow analysis pass.
+    FlowAnalysisBase(const Symbol& symbol) :
+        rootSymbol(symbol),
+        evalContext(ASTContext(*symbol.getParentScope(), LookupLocation::after(symbol))) {}
+
+    /// Gets an evaluation context for use during analysis.
+    EvalContext& getEvalContext() const { return evalContext; }
+
+    ConstantValue tryEvalBool(const Expression& expr) const;
+
+    bool willIterateAtLeastOnce(std::span<const VariableSymbol* const> loopVars,
+                                const Expression& stopExpr) const;
+
+    mutable EvalContext evalContext;
+};
+
+/// An abstract class for flow analysis passes over SystemVerilog code.
+///
+/// This class provides a framework for implementing flow analysis passes
+/// by modeling control flow through the AST. Derived classes implement
+/// the actual state that gets tracked.
+///
+/// See background on lattice flow analysis:
+/// https://en.wikipedia.org/wiki/Data-flow_analysis
+template<typename TDerived, typename TState>
+class AbstractFlowAnalysis : public FlowAnalysisBase {
+#define DERIVED *static_cast<TDerived*>(this)
+public:
     /// Run the analysis.
     void run(const Statement& stmt) {
         state = (DERIVED).topState();
@@ -39,19 +64,14 @@ public:
     }
 
 protected:
-    /// Constructs a new flow analysis pass and runs the analysis.
-    AbstractFlowAnalysis(const Symbol& symbol) :
-        rootSymbol(symbol),
-        evalContext(ASTContext(*symbol.getParentScope(), LookupLocation::after(symbol))) {}
+    /// Constructs a new flow analysis pass.
+    AbstractFlowAnalysis(const Symbol& symbol) : FlowAnalysisBase(symbol) {}
 
     /// Gets the current flow state.
     TState& getState() { return state; }
 
     /// Gets the current flow state.
     const TState& getState() const { return state; }
-
-    /// Gets an evaluation context for use during analysis.
-    EvalContext& getEvalContext() const { return evalContext; }
 
     /// Sets the current flow state to the given value.
     void setState(TState newState) {
@@ -835,7 +855,6 @@ private:
     TState stateWhenFalse;
     bool isStateSplit = false;
     bool inCondition = false;
-    mutable EvalContext evalContext;
 
     SmallVector<TState> breakStates;
     flat_hash_map<const Symbol*, SmallVector<TState>> disableBranches;
@@ -882,30 +901,6 @@ private:
         // For now this does nothing, but we may want to change
         // that in the future if we want to do analysis on the
         // variables introduced by patterns.
-    }
-
-    ConstantValue tryEvalBool(const Expression& expr) { return expr.eval(evalContext); }
-
-    bool willIterateAtLeastOnce(std::span<const VariableSymbol* const> loopVars,
-                                const Expression& stopExpr) {
-        // We can't know for sure whether the loop will actually execute in all
-        // cases, but we can check for a simple case where we have an in-line
-        // loop variable(s) that pass the stop condition on the first iteration.
-        EvalContext speculativeCtx(evalContext);
-        speculativeCtx.pushEmptyFrame();
-
-        for (auto var : loopVars) {
-            ConstantValue cv;
-            if (auto init = var->getInitializer()) {
-                cv = init->eval(speculativeCtx);
-                if (!cv)
-                    return false;
-            }
-
-            speculativeCtx.createLocal(var, std::move(cv));
-        }
-
-        return stopExpr.eval(speculativeCtx).isTrue();
     }
 
 #undef DERIVED
