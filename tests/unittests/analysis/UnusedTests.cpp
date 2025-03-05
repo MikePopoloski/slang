@@ -21,7 +21,10 @@ Diagnostics analyze(const std::string& text, Compilation& compilation) {
     auto diags = compilation.getAllDiagnostics();
     compilation.freeze();
 
-    AnalysisManager analysisManager(AnalysisFlags::CheckUnused);
+    AnalysisOptions options;
+    options.flags = AnalysisFlags::CheckUnused;
+
+    AnalysisManager analysisManager(options);
     analysisManager.analyze(compilation);
 
     diags.append_range(analysisManager.getDiagnostics(compilation.getSourceManager()));

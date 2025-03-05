@@ -7,6 +7,7 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include "slang/analysis/AnalysisOptions.h"
 #include "slang/ast/ASTVisitor.h"
 #include "slang/ast/EvalContext.h"
 #include "slang/util/FlatMap.h"
@@ -25,13 +26,16 @@ public:
     /// The symbol being analyzed (procedure, function, etc).
     const Symbol& rootSymbol;
 
+    /// Flags controlling the behavior of the analysis.
+    bitmask<AnalysisFlags> flags;
+
     /// Set to true if the analysis detected an error.
     bool bad = false;
 
 protected:
     /// Constructs a new flow analysis pass.
-    FlowAnalysisBase(const Symbol& symbol) :
-        rootSymbol(symbol),
+    FlowAnalysisBase(const Symbol& symbol, bitmask<AnalysisFlags> flags) :
+        rootSymbol(symbol), flags(flags),
         evalContext(ASTContext(*symbol.getParentScope(), LookupLocation::after(symbol))) {}
 
     /// Gets an evaluation context for use during analysis.
@@ -64,8 +68,7 @@ public:
     }
 
 protected:
-    /// Constructs a new flow analysis pass.
-    AbstractFlowAnalysis(const Symbol& symbol) : FlowAnalysisBase(symbol) {}
+    using FlowAnalysisBase::FlowAnalysisBase;
 
     /// Gets the current flow state.
     TState& getState() { return state; }

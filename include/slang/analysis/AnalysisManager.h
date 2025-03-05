@@ -11,6 +11,7 @@
 #include <mutex>
 #include <optional>
 
+#include "slang/analysis/AnalysisOptions.h"
 #include "slang/analysis/AnalyzedProcedure.h"
 #include "slang/diagnostics/Diagnostics.h"
 #include "slang/util/BumpAllocator.h"
@@ -90,11 +91,17 @@ public:
 /// Holds various bits of state needed to perform analysis.
 class SLANG_EXPORT AnalysisContext {
 public:
+    /// The analysis manager that owns this context.
+    not_null<AnalysisManager*> manager;
+
     /// An allocator used for analysis-specific data structures.
     BumpAllocator alloc;
 
     /// Diagnostics collected during analysis.
     Diagnostics diagnostics;
+
+    /// Constructs a new AnalysisContext object.
+    explicit AnalysisContext(AnalysisManager& manager) : manager(&manager) {}
 
     /// Issues a new diagnostic.
     Diagnostic& addDiag(const ast::Symbol& symbol, DiagCode code, SourceLocation location);
@@ -102,16 +109,6 @@ public:
     /// Issues a new diagnostic.
     Diagnostic& addDiag(const ast::Symbol& symbol, DiagCode code, SourceRange sourceRange);
 };
-
-/// Defines flags that control analysis behavior.
-enum class SLANG_EXPORT AnalysisFlags {
-    /// No flags specified.
-    None = 0,
-
-    /// Analysis should check for and report on unused symbols.
-    CheckUnused = 1 << 0
-};
-SLANG_BITMASK(AnalysisFlags, CheckUnused)
 
 /// The analysis manager coordinates running various analyses on AST symbols.
 ///
@@ -121,11 +118,13 @@ SLANG_BITMASK(AnalysisFlags, CheckUnused)
 class SLANG_EXPORT AnalysisManager {
 public:
     /// Default constructor for the analysis manager.
-    explicit AnalysisManager(bitmask<AnalysisFlags> flags = AnalysisFlags::None,
-                             uint32_t numThreads = 0);
+    explicit AnalysisManager(AnalysisOptions options = {});
+
+    /// Gets the set of options used to construct the analysis manager.
+    const AnalysisOptions& getOptions() const { return options; }
 
     /// Returns true if the given flag(s) are enabled for this analysis.
-    bool hasFlag(bitmask<AnalysisFlags> flags) const { return analysisFlags.has(flags); }
+    bool hasFlag(bitmask<AnalysisFlags> flags) const { return options.flags.has(flags); }
 
     /// Analyzes the given compilation and returns a representation of the design.
     ///
@@ -151,10 +150,12 @@ private:
     struct WorkerState {
         AnalysisContext context;
         TypedBumpAllocator<AnalyzedScope> scopeAlloc;
+
+        WorkerState(AnalysisManager& manager) : context(manager) {}
     };
     WorkerState& state();
 
-    bitmask<AnalysisFlags> analysisFlags;
+    AnalysisOptions options;
     std::vector<WorkerState> workerStates;
     concurrent_map<const ast::Scope*, std::optional<const AnalyzedScope*>> analyzedScopes;
     BS::thread_pool<> threadPool;

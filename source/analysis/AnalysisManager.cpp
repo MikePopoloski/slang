@@ -43,10 +43,12 @@ Diagnostic& AnalysisContext::addDiag(const Symbol& symbol, DiagCode code, Source
     return diagnostics.add(symbol, code, sourceRange);
 }
 
-AnalysisManager::AnalysisManager(bitmask<AnalysisFlags> flags, uint32_t numThreads) :
-    analysisFlags(flags), threadPool(numThreads) {
+AnalysisManager::AnalysisManager(AnalysisOptions options) :
+    options(options), threadPool(options.numThreads) {
 
-    workerStates.resize(threadPool.get_thread_count() + 1);
+    workerStates.reserve(threadPool.get_thread_count() + 1);
+    for (size_t i = 0; i < threadPool.get_thread_count() + 1; i++)
+        workerStates.emplace_back(*this);
 }
 
 AnalyzedDesign AnalysisManager::analyze(const Compilation& compilation) {

@@ -41,8 +41,8 @@ class SLANG_EXPORT DataFlowAnalysis : public AbstractFlowAnalysis<DataFlowAnalys
 public:
     /// Constructs a new DataFlowAnalysis object.
     DataFlowAnalysis(AnalysisContext& context, const Symbol& symbol) :
-        AbstractFlowAnalysis(symbol), context(context), bitMapAllocator(context.alloc),
-        lspVisitor(*this) {}
+        AbstractFlowAnalysis(symbol, context.manager->getOptions().flags), context(context),
+        bitMapAllocator(context.alloc), lspVisitor(*this) {}
 
     /// Gets all of the symbols that are assigned anywhere in the procedure
     /// and aren't definitely assigned by the end of the procedure.

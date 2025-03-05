@@ -895,11 +895,12 @@ void Driver::runAnalysis(ast::Compilation& compilation) {
     compilation.getAllDiagnostics();
     compilation.freeze();
 
-    bitmask<AnalysisFlags> flags;
+    AnalysisOptions ao;
+    ao.numThreads = options.numThreads.value_or(0);
     if (!options.lintMode())
-        flags |= AnalysisFlags::CheckUnused;
+        ao.flags |= AnalysisFlags::CheckUnused;
 
-    AnalysisManager analysisManager(flags, options.numThreads.value_or(0));
+    AnalysisManager analysisManager(ao);
     analysisManager.analyze(compilation);
 
     for (auto& diag : analysisManager.getDiagnostics(compilation.getSourceManager()))
