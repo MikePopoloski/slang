@@ -6,6 +6,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 ### Language Support
+* Added support for clock flow, clock resolution, and clock inference rules in checkers and assertions
+  * Various cases of invalid clock usage will now issue appropriate errors
+* Implemented rules for which kinds of sequences and properties can be declared in clocking blocks
 
 ### Potentially Breaking Changes
 * AST serialization no longer includes uninstantiated scopes in the output
@@ -13,13 +16,21 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### New Features
 * slang can now optionally use [cpptrace](https://github.com/jeremy-rifkin/cpptrace) (using the `SLANG_USE_CPPTRACE` CMake option) for better backtraces in the event of internal assertions or exceptions thrown
+* There is a new post-elaboration analysis pass in slang that does additional checking for enforcing specific language rules and reporting extra warnings. This can be disabled with the `--disable-analysis` flag, though it should not be needed unless there is a bug in slang.
+* Added a new option `--diag-abs-paths` to report diagnostics with absolute instead of relative file paths
 
 ### Improvements
 * slang now performs instance caching by default, which means duplicate instance bodies will not be visited during elaboration, which can greatly speed up elaboration times for large projects. This behavior can be disabled with the `--disable-instance-caching` flag, though it should not be needed unless there's a bug in slang -- please open an issue if you find that you need the flag.
+* Added some initial documentation and an API reference for the pyslang bindings (thanks to @parker-research)
 
 ### Fixes
 * The restriction on interface instances targeted by defparams not being allowed with virtual interfaces was also erroneously applied to interface port connections
 * Fixed a null pointer crash in slang-tidy (thanks to @rhanqtl)
+* Fixed a bug that could cause infinite recursion when instantiating bind targets that force elaboration due to wildcard package imports
+* Fixed the handling of disable region directives declared in block comments (as opposed to single line comments which were working fine)
+* Fixed argument binding for sequence and property instances when using named arguments
+* Concurrent assertion and procedural checker statements are now correctly disallowed from appearing in subroutines and final blocks
+* Fixed an issue with how checker formal ports are looked up from within checker instances
 
 
 ## [v8.0] - 2025-02-05
