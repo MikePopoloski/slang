@@ -20,9 +20,13 @@ enum class SLANG_EXPORT AnalysisFlags {
     CheckUnused = 1 << 0,
 
     /// 'unique' and 'priority' keywords are used to assume full case coverage.
-    FullCaseUniquePriority = 1 << 1
+    FullCaseUniquePriority = 1 << 1,
+
+    /// Require X and Z bits be covered for full case coverage.
+    /// If not set, only 0 and 1 bits are required.
+    FullCaseFourState = 1 << 2
 };
-SLANG_BITMASK(AnalysisFlags, FullCaseUniquePriority)
+SLANG_BITMASK(AnalysisFlags, FullCaseFourState)
 
 /// Contains various options that can control analysis behavior.
 struct SLANG_EXPORT AnalysisOptions {

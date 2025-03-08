@@ -354,6 +354,15 @@ void Driver::addStandardArgs() {
         "One or more command files containing additional program options. "
         "Paths in the file are considered relative to the file itself.",
         "<file-pattern>[,...]", CommandLineFlags::CommaList);
+
+    // Analysis modifiers
+    cmdLine.add("--dfa-unique-priority", options.dfaUniquePriority,
+                "Respect the 'unique' and 'priority' keywords when analyzing data flow "
+                "through case statements");
+
+    cmdLine.add("--dfa-four-state", options.dfaFourState,
+                "Require that case items cover X and Z bits to assume full coverage "
+                "in data flow analysis");
 }
 
 [[nodiscard]] bool Driver::parseCommandLine(std::string_view argList,
@@ -899,6 +908,10 @@ void Driver::runAnalysis(ast::Compilation& compilation) {
     ao.numThreads = options.numThreads.value_or(0);
     if (!options.lintMode())
         ao.flags |= AnalysisFlags::CheckUnused;
+    if (options.dfaUniquePriority.value_or(true))
+        ao.flags |= AnalysisFlags::FullCaseUniquePriority;
+    if (options.dfaFourState.value_or(false))
+        ao.flags |= AnalysisFlags::FullCaseFourState;
 
     AnalysisManager analysisManager(ao);
     analysisManager.analyze(compilation);

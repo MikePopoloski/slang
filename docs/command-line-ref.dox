@@ -426,6 +426,38 @@ endmodule
 
 Perform strict driver checking, which currently means disabling procedural 'for' @ref loop-unroll
 
+`--dfa-unique-priority`
+
+Respect the 'unique' and 'priority' keywords when analyzing data flow through case statements
+(on by default). This affects things like whether the following example will report a warning
+for an inferred latch or not:
+
+@code{.sv}
+module m(input [3:0] a, output logic b);
+    always_comb begin
+        unique case (a)
+            0: b = 1;
+            1: b = 1;
+        endcase
+    end
+endmodule
+@endcode
+
+The case statement doesn't cover all possible values of `a` but since the `unique`
+keyword is provided it will be assumed that all values are covered in practice and
+no warning will be issued.
+
+`--dfa-four-state`
+
+When set, case statements must include items that cover all possible X and Z bit
+combinations of their input in order to be assumed to be fully covered, meaning
+that things like inferred latches won't be reported if their target is assigned
+in all such case item statements.
+
+By default X and Z bit coverage is not required; having items that cover all possible
+0 and 1 bit combinations is sufficient to assume full coverage of the case input.
+
+
 @section diag-control Diagnostic Control
 
 `--disable-instance-caching`

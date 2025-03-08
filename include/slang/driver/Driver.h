@@ -250,6 +250,16 @@ public:
         flat_hash_set<std::string> excludeExts;
 
         /// @}
+        /// @name Analysis
+        /// @{
+
+        /// Respect the unique and priority keywords in data flow analysis.
+        std::optional<bool> dfaUniquePriority;
+
+        /// Require case coverage to include X and Z bits in data flow analysis.
+        std::optional<bool> dfaFourState;
+
+        /// @}
 
         /// Returns true if the lintMode option is provided.
         bool lintMode() const;

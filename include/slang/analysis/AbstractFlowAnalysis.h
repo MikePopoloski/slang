@@ -46,6 +46,8 @@ protected:
     bool willIterateAtLeastOnce(std::span<const VariableSymbol* const> loopVars,
                                 const Expression& stopExpr) const;
 
+    bool isFullyCovered(const CaseStatement& stmt) const;
+
     mutable EvalContext evalContext;
 };
 
@@ -266,7 +268,6 @@ protected:
     }
 
     void visitStmt(const CaseStatement& stmt) {
-        // TODO: we could be smarter for constant case conditions
         visit(stmt.expr);
 
         auto initialState = std::move(state);
@@ -286,7 +287,7 @@ protected:
             visit(*stmt.defaultCase);
             (DERIVED).joinState(finalState, state);
         }
-        else {
+        else if (!isFullyCovered(stmt)) {
             (DERIVED).joinState(finalState, initialState);
         }
 
