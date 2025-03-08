@@ -21,7 +21,7 @@ concept IsAnyOf = (std::same_as<T, U> || ...);
 
 /// A base class for flow analysis passes that contains
 /// non-specialized helper functions.
-class FlowAnalysisBase {
+class SLANG_EXPORT FlowAnalysisBase {
 public:
     /// The symbol being analyzed (procedure, function, etc).
     const Symbol& rootSymbol;
@@ -60,7 +60,7 @@ protected:
 /// See background on lattice flow analysis:
 /// https://en.wikipedia.org/wiki/Data-flow_analysis
 template<typename TDerived, typename TState>
-class AbstractFlowAnalysis : public FlowAnalysisBase {
+class SLANG_EXPORT AbstractFlowAnalysis : public FlowAnalysisBase {
 #define DERIVED *static_cast<TDerived*>(this)
 public:
     /// Run the analysis.

@@ -126,7 +126,7 @@ bool FlowAnalysisBase::isFullyCovered(const CaseStatement& stmt) const {
     }
 
     // If we're checking for four-state wildcard coverage we simply need to
-    // find entry that is all Z bits. This is because Z is always a wildcard,
+    // find an entry that is all Z bits. This is because Z is always a wildcard,
     // so the only way to specify an entry that hits all Z's will also cover
     // all other bits too.
     if (flags.has(AnalysisFlags::FullCaseFourState)) {
