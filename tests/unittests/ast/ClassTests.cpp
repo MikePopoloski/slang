@@ -3517,3 +3517,18 @@ endinterface
     compilation.addSyntaxTree(tree);
     compilation.getAllDiagnostics();
 }
+
+TEST_CASE("Class prototypes allow missing arg names -- GH #1273") {
+    auto tree = SyntaxTree::fromText(R"(
+class RegisterFile;
+    extern function void SetN(logic);
+endclass
+
+function void RegisterFile::SetN(logic l);
+endfunction
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
