@@ -1676,3 +1676,36 @@ endmodule
     auto [diags, design] = analyze(text, compilation, analysisManager);
     CHECK_DIAGS_EMPTY;
 }
+
+TEST_CASE("Checker default inferred clocks") {
+    auto& text = R"(
+module top(input clk);
+    checker c1(ev);
+        default clocking @(posedge clk); endclocking
+        sequence s;
+            1 and @ev 1;
+        endsequence
+        assert property (s);
+    endchecker
+
+    c1 c1_inst(posedge clk);
+
+    default clocking @(negedge clk); endclocking
+
+    checker c2(ev);
+        sequence s;
+            1 and @ev 1;
+        endsequence
+        assert property (s);
+    endchecker
+
+    c2 c2_inst(negedge clk);
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto [diags, design] = analyze(text, compilation, analysisManager);
+    CHECK_DIAGS_EMPTY;
+}

@@ -748,7 +748,7 @@ TEST_CASE("Visit all file") {
         v.visitDefault(elem);
     }));
 
-    CHECK(count == 1812);
+    CHECK(count == 1813);
 
     compilation.getAllDiagnostics();
     compilation.freeze();

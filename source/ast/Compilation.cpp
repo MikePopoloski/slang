@@ -1205,9 +1205,16 @@ void Compilation::noteDefaultClocking(const ASTContext& context,
 }
 
 const Symbol* Compilation::getDefaultClocking(const Scope& scope) const {
-    auto lookupScope = scope.getContainingInstanceOrChecker();
-    if (auto it = defaultClockingMap.find(lookupScope); it != defaultClockingMap.end())
+    auto lookupSym = scope.getContainingInstanceOrChecker();
+    if (auto it = defaultClockingMap.find(lookupSym); it != defaultClockingMap.end())
         return it->second;
+
+    // If we're in a checker we can inherit from the containing instance.
+    if (lookupSym && lookupSym->kind == SymbolKind::CheckerInstanceBody) {
+        if (auto parent = lookupSym->getParentScope())
+            return getDefaultClocking(*parent);
+    }
+
     return nullptr;
 }
 

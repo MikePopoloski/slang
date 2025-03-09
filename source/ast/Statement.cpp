@@ -443,7 +443,8 @@ static void findBlocks(const Scope& scope, const StatementSyntax& syntax,
 
             for (auto item : block.items) {
                 // If we find any decls at all, this block gets its own scope.
-                if (!StatementSyntax::isKind(item->kind)) {
+                if (!StatementSyntax::isKind(item->kind) ||
+                    item->kind == SyntaxKind::CheckerInstanceStatement) {
                     results.push_back(&StatementBlockSymbol::fromSyntax(scope, block));
                     return;
                 }
