@@ -9,6 +9,7 @@
 
 #include "slang/ast/ASTVisitor.h"
 #include "slang/diagnostics/AnalysisDiags.h"
+#include "slang/util/TypeTraits.h"
 
 namespace slang::analysis {
 
@@ -21,9 +22,6 @@ static bool hasUnusedAttrib(const Compilation& compilation, const Symbol& symbol
     }
     return false;
 }
-
-template<typename T, typename... U>
-concept IsAnyOf = (std::same_as<T, U> || ...);
 
 struct AnalysisScopeVisitor {
     AnalysisManager& manager;

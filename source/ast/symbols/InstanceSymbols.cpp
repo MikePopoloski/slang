@@ -30,6 +30,7 @@
 #include "slang/diagnostics/ParserDiags.h"
 #include "slang/syntax/AllSyntax.h"
 #include "slang/util/TimeTrace.h"
+#include "slang/util/TypeTraits.h"
 
 namespace {
 
@@ -2360,26 +2361,14 @@ public:
     }
 
     void handle(const AssignmentExpression& expr) {
-        // Special checking only applies to assignments to
-        // checker variables.
-        if (auto sym = expr.left().getSymbolReference()) {
-            auto scope = sym->getParentScope();
-            while (scope) {
-                auto& parentSym = scope->asSymbol();
-                if (parentSym.kind == SymbolKind::CheckerInstanceBody) {
-                    expr.left().visit(*this);
+        // Special checking only applies to assignments to checker variables.
+        if (auto sym = expr.left().getSymbolReference(); sym && isFromChecker(*sym)) {
+            expr.left().visit(*this);
 
-                    auto prev = std::exchange(inAssignmentRhs, true);
-                    expr.right().visit(*this);
-                    inAssignmentRhs = prev;
-                    return;
-                }
-
-                if (parentSym.kind == SymbolKind::InstanceBody)
-                    break;
-
-                scope = parentSym.getParentScope();
-            }
+            auto prev = std::exchange(inAssignmentRhs, true);
+            expr.right().visit(*this);
+            inAssignmentRhs = prev;
+            return;
         }
 
         visitDefault(expr);
@@ -2390,6 +2379,56 @@ public:
             body.addDiag(diag::CheckerFuncArg, expr.sourceRange);
     }
 
+    void handle(const HierarchicalValueExpression& expr) {
+        bool inForkJoin = false;
+        auto scope = expr.symbol.getParentScope();
+        while (scope) {
+            auto& sym = scope->asSymbol();
+            if (sym.kind != SymbolKind::StatementBlock)
+                break;
+
+            if (sym.as<StatementBlockSymbol>().blockKind != StatementBlockKind::Sequential) {
+                inForkJoin = true;
+                break;
+            }
+
+            scope = sym.getParentScope();
+        }
+
+        if (inForkJoin && !isFromChecker(expr.symbol)) {
+            auto& diag = body.addDiag(diag::CheckerForkJoinRef, expr.sourceRange);
+            diag.addNote(diag::NoteDeclarationHere, expr.symbol.location);
+            return;
+        }
+
+        visitDefault(expr);
+    }
+
+    template<typename T>
+        requires(IsAnyOf<T, ElementSelectExpression, RangeSelectExpression>)
+    void handle(const T& expr) {
+        if (!expr.value().type->hasFixedRange() && !expr.bad()) {
+            if (auto sym = expr.value().getSymbolReference(); sym && !isFromChecker(*sym)) {
+                auto& diag = body.addDiag(diag::DynamicFromChecker, expr.sourceRange);
+                diag.addNote(diag::NoteDeclarationHere, sym->location);
+                return;
+            }
+        }
+        visitDefault(expr);
+    }
+
+    void handle(const MemberAccessExpression& expr) {
+        auto& valueType = *expr.value().type;
+        if ((!valueType.isFixedSize() || valueType.isClass()) && !expr.bad()) {
+            if (auto sym = expr.value().getSymbolReference(); sym && !isFromChecker(*sym)) {
+                auto& diag = body.addDiag(diag::DynamicFromChecker, expr.sourceRange);
+                diag.addNote(diag::NoteDeclarationHere, sym->location);
+                return;
+            }
+        }
+        visitDefault(expr);
+    }
+
     template<std::derived_from<Statement> T>
     void handle(const T& stmt) {
         if (!currBlock)
@@ -2397,22 +2436,7 @@ public:
 
         auto notAllowed = [&] {
             auto& diag = body.addDiag(diag::InvalidStmtInChecker, stmt.sourceRange);
-            switch (currBlock->procedureKind) {
-                case ProceduralBlockKind::Initial:
-                    diag << "initial"sv;
-                    break;
-                case ProceduralBlockKind::AlwaysComb:
-                    diag << "always_comb"sv;
-                    break;
-                case ProceduralBlockKind::AlwaysFF:
-                    diag << "always_ff"sv;
-                    break;
-                case ProceduralBlockKind::AlwaysLatch:
-                    diag << "always_latch"sv;
-                    break;
-                default:
-                    SLANG_UNREACHABLE;
-            }
+            diag << SemanticFacts::getProcedureKindStr(currBlock->procedureKind);
         };
 
         auto checkTimed = [&] {
@@ -2512,6 +2536,21 @@ public:
     void handle(const InstanceSymbol&) {}
 
 private:
+    bool isFromChecker(const Symbol& symbol) const {
+        auto scope = symbol.getParentScope();
+        while (scope) {
+            if (scope == &body)
+                return true;
+
+            auto& sym = scope->asSymbol();
+            if (sym.kind == SymbolKind::InstanceBody)
+                break;
+
+            scope = sym.getParentScope();
+        }
+        return false;
+    }
+
     const CheckerInstanceBodySymbol& body;
     const ProceduralBlockSymbol* currBlock = nullptr;
     bool inAssignmentRhs = false;

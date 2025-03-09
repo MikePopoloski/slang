@@ -11,13 +11,11 @@
 #include "slang/ast/ASTVisitor.h"
 #include "slang/ast/EvalContext.h"
 #include "slang/util/FlatMap.h"
+#include "slang/util/TypeTraits.h"
 
 namespace slang::analysis {
 
 using namespace ast;
-
-template<typename T, typename... U>
-concept IsAnyOf = (std::same_as<T, U> || ...);
 
 /// A base class for flow analysis passes that contains
 /// non-specialized helper functions.

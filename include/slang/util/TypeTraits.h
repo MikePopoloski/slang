@@ -22,6 +22,9 @@ constexpr std::string_view typeName<void>() {
     return "void";
 }
 
+template<typename T, typename... U>
+concept IsAnyOf = (std::same_as<T, U> || ...);
+
 namespace detail {
 
 template<typename T>

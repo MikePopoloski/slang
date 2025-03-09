@@ -2263,6 +2263,41 @@ endmodule
     CHECK(diags[0].code == diag::CheckerFuncArg);
 }
 
+TEST_CASE("Checker dynamic access restrictions") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    class C;
+        int i;
+    endclass
+
+    C c;
+    int d[];
+
+    initial
+        fork : h
+            int d;
+        join
+
+    checker e;
+        int a = c.i;
+        int b = d[0];
+        int e[];
+        int f = e[0];
+        int g = h.d;
+    endchecker
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::DynamicFromChecker);
+    CHECK(diags[1].code == diag::DynamicFromChecker);
+    CHECK(diags[2].code == diag::CheckerForkJoinRef);
+}
+
 TEST_CASE("Duplicate assertion local variable error") {
     auto tree = SyntaxTree::fromText(R"(
 module m;
