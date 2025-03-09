@@ -60,7 +60,7 @@ protected:
 /// See background on lattice flow analysis:
 /// https://en.wikipedia.org/wiki/Data-flow_analysis
 template<typename TDerived, typename TState>
-class SLANG_EXPORT AbstractFlowAnalysis : public FlowAnalysisBase {
+class AbstractFlowAnalysis : public FlowAnalysisBase {
 #define DERIVED *static_cast<TDerived*>(this)
 public:
     /// Run the analysis.

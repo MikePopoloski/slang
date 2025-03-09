@@ -387,7 +387,7 @@ module m;
     int b,c;
     property p1;
         int x;
-        @(posedge clk)(a, x = b) ##1 (c, cg1.sample(a, x));
+        @(posedge clk)(a, x = b) ##1 (c > 0, cg1.sample(a, x));
     endproperty : p1
 
     c1: cover property (p1);

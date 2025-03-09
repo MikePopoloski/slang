@@ -82,14 +82,14 @@ interface width_checker #(parameter min_cks = 1, parameter max_cks = 1)
         if ($isunbounded(max_cks)) begin
             property width;
                 @(posedge clk)
-                    (reset_n && $rose(expr)) |-> (expr [*min_cks]);
+                    (reset_n && $rose(expr)) |-> (expr[0] [*min_cks]);
             endproperty
             a2: assert property (width);
         end
         else begin
             property width;
                 @(posedge clk)
-                    (reset_n && $rose(expr)) |-> (expr[*min_cks:max_cks])
+                    (reset_n && $rose(expr)) |-> (expr[0][*min_cks:max_cks])
                         ##1 (!expr);
             endproperty
             a2: assert property (width);

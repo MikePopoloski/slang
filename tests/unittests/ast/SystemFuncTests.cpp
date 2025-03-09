@@ -864,7 +864,7 @@ module m;
 
     sequence s;
         int i;
-        $past(i);
+        $past(i) > 0;
     endsequence
 endmodule
 
