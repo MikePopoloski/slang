@@ -132,6 +132,13 @@ public:
     ///       before it can be analyzed.
     AnalyzedDesign analyze(const ast::Compilation& compilation);
 
+    /// Analyzes the given scope, in blocking fashion.
+    ///
+    /// @note The result is not stored in the manager and so
+    /// won't be visible via calls to @a getAnalyzedScope.
+    const AnalyzedScope& analyzeScopeBlocking(const ast::Scope& scope,
+                                              const AnalyzedProcedure* parentProcedure = nullptr);
+
     /// Returns the results of a previous analysis of a scope, if available.
     const AnalyzedScope* getAnalyzedScope(const ast::Scope& scope);
 
@@ -143,7 +150,6 @@ private:
     friend struct AnalysisScopeVisitor;
 
     PendingAnalysis analyzeSymbol(const ast::Symbol& symbol);
-    const AnalyzedScope& analyzeScope(const ast::Scope& scope);
     void analyzeScopeAsync(const ast::Scope& scope);
     void wait();
 

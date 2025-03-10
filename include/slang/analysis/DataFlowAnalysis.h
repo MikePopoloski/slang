@@ -39,6 +39,9 @@ struct SLANG_EXPORT DataFlowState {
 /// of nets and variables at each point in the procedure.
 class SLANG_EXPORT DataFlowAnalysis : public AbstractFlowAnalysis<DataFlowAnalysis, DataFlowState> {
 public:
+    /// The analysis context within which the analysis is being performed.
+    AnalysisContext& context;
+
     /// Constructs a new DataFlowAnalysis object.
     DataFlowAnalysis(AnalysisContext& context, const Symbol& symbol) :
         AbstractFlowAnalysis(symbol, context.manager->getOptions().flags), context(context),
@@ -63,8 +66,8 @@ public:
     /// associated with them.
     std::span<const Statement* const> getTimedStatements() const { return timedStatements; }
 
-    /// Gets all of the concurrent assertions in the procedure.
-    std::span<const ConcurrentAssertionStatement* const> getConcurrentAssertions() const {
+    /// Gets all of the concurrent assertions and procedural checkers in the procedure.
+    std::span<const Statement* const> getAssertionStatements() const {
         return concurrentAssertions;
     }
 
@@ -155,7 +158,6 @@ private:
     template<typename TOwner>
     friend struct LSPVisitor;
 
-    AnalysisContext& context;
     SymbolBitMap::allocator_type bitMapAllocator;
 
     // Maps visited symbols to slots in assigned vectors.
@@ -186,7 +188,7 @@ private:
     SmallVector<const Statement*> timedStatements;
 
     // All concurrent assertions in the procedure.
-    SmallVector<const ConcurrentAssertionStatement*> concurrentAssertions;
+    SmallVector<const Statement*> concurrentAssertions;
 
     [[nodiscard]] auto saveLValueFlag() {
         auto guard = ScopeGuard([this, savedLVal = isLValue] { isLValue = savedLVal; });
@@ -299,6 +301,11 @@ private:
         visitStmt(stmt);
     }
 
+    void handle(const ProceduralCheckerStatement& stmt) {
+        concurrentAssertions.push_back(&stmt);
+        visitStmt(stmt);
+    }
+
     // **** State Management ****
 
     void joinState(DataFlowState& result, const DataFlowState& other) {
@@ -391,7 +398,7 @@ private:
     };
 };
 
-bool DataFlowAnalysis::isReferenced(const ValueSymbol& symbol, const Expression& lsp) const {
+inline bool DataFlowAnalysis::isReferenced(const ValueSymbol& symbol, const Expression& lsp) const {
     auto bounds = ValueDriver::getBounds(lsp, getEvalContext(), symbol.getType());
     if (!bounds)
         return isReferenced(symbol);

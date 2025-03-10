@@ -31,7 +31,8 @@ public:
     not_null<const ast::Symbol*> analyzedSymbol;
 
     /// Constructs a new AnalyzedProcedure object.
-    AnalyzedProcedure(AnalysisContext& context, const ast::Symbol& symbol);
+    AnalyzedProcedure(AnalysisContext& context, const ast::Symbol& symbol,
+                      const AnalyzedProcedure* parentProcedure = nullptr);
 
     /// Returns the inferred clocking block for the procedure, if available.
     ///
@@ -40,6 +41,8 @@ public:
     const ast::TimingControl* getInferredClock() const { return inferredClock; }
 
     /// Gets the list of analyzed assertions in the procedure.
+    ///
+    /// @note These include procedural checkers contained within the procedure.
     std::span<const AnalyzedAssertion> getAssertions() const { return assertions; }
 
 private:

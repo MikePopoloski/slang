@@ -27,9 +27,11 @@ struct AnalysisScopeVisitor {
     AnalysisManager& manager;
     AnalysisContext& context;
     AnalyzedScope& result;
+    const AnalyzedProcedure* parentProcedure;
 
-    AnalysisScopeVisitor(AnalysisManager& manager, AnalysisContext& context, AnalyzedScope& scope) :
-        manager(manager), context(context), result(scope) {}
+    AnalysisScopeVisitor(AnalysisManager& manager, AnalysisContext& context, AnalyzedScope& scope,
+                         const AnalyzedProcedure* parentProcedure) :
+        manager(manager), context(context), result(scope), parentProcedure(parentProcedure) {}
 
     void visit(const InstanceSymbol& symbol) {
         if (symbol.body.flags.has(InstanceFlags::Uninstantiated))
@@ -39,7 +41,8 @@ struct AnalysisScopeVisitor {
     }
 
     void visit(const CheckerInstanceSymbol& symbol) {
-        if (symbol.body.flags.has(InstanceFlags::Uninstantiated))
+        // Ignore procedural checkers here; they will be handled by their parent procedure.
+        if (symbol.body.flags.has(InstanceFlags::Uninstantiated) || symbol.body.isProcedural)
             return;
 
         result.childScopes.emplace_back(manager.analyzeSymbol(symbol));
@@ -70,7 +73,7 @@ struct AnalysisScopeVisitor {
     }
 
     void visit(const ProceduralBlockSymbol& symbol) {
-        result.procedures.emplace_back(context, symbol);
+        result.procedures.emplace_back(context, symbol, parentProcedure);
     }
 
     void visit(const SubroutineSymbol& symbol) {

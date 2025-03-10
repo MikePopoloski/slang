@@ -103,6 +103,19 @@ AnalyzedDesign AnalysisManager::analyze(const Compilation& compilation) {
     return result;
 }
 
+const AnalyzedScope& AnalysisManager::analyzeScopeBlocking(
+    const Scope& scope, const AnalyzedProcedure* parentProcedure) {
+
+    auto& s = state();
+    auto& result = *s.scopeAlloc.emplace(scope);
+
+    AnalysisScopeVisitor visitor(*this, s.context, result, parentProcedure);
+    for (auto& member : scope.members())
+        member.visit(visitor);
+
+    return result;
+}
+
 const AnalyzedScope* AnalysisManager::getAnalyzedScope(const Scope& scope) {
     const AnalyzedScope* result = nullptr;
     analyzedScopes.cvisit(&scope, [&result](auto& item) {
@@ -137,7 +150,7 @@ void AnalysisManager::analyzeScopeAsync(const Scope& scope) {
     if (analyzedScopes.try_emplace(&scope, std::nullopt)) {
         threadPool.detach_task([this, &scope] {
             SLANG_TRY {
-                auto& result = analyzeScope(scope);
+                auto& result = analyzeScopeBlocking(scope);
                 analyzedScopes.visit(&scope, [&result](auto& item) { item.second = &result; });
             }
             SLANG_CATCH(...) {
@@ -150,17 +163,6 @@ void AnalysisManager::analyzeScopeAsync(const Scope& scope) {
 
 AnalysisManager::WorkerState& AnalysisManager::state() {
     return workerStates[BS::this_thread::get_index().value_or(workerStates.size() - 1)];
-}
-
-const AnalyzedScope& AnalysisManager::analyzeScope(const Scope& scope) {
-    auto& s = state();
-    auto& result = *s.scopeAlloc.emplace(scope);
-
-    AnalysisScopeVisitor visitor(*this, s.context, result);
-    for (auto& member : scope.members())
-        member.visit(visitor);
-
-    return result;
 }
 
 void AnalysisManager::wait() {

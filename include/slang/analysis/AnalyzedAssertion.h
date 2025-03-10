@@ -11,7 +11,7 @@
 
 namespace slang::ast {
 
-class ConcurrentAssertionStatement;
+class Statement;
 class Symbol;
 class TimingControl;
 
@@ -20,17 +20,23 @@ class TimingControl;
 namespace slang::analysis {
 
 class AnalysisContext;
+class AnalyzedProcedure;
+class AnalyzedScope;
 
-/// Represents an analyzed assertion.
+/// Represents an analyzed assertion (or procedural checker).
 class SLANG_EXPORT AnalyzedAssertion {
 public:
     /// The assertion statement that was analyzed.
-    not_null<const ast::ConcurrentAssertionStatement*> analyzedStatement;
+    not_null<const ast::Statement*> analyzedStatement;
+
+    /// If this assertion is a procedural checker, this is the expanded
+    /// analyzed checker body.
+    const AnalyzedScope* checkerScope = nullptr;
 
     /// Constructs a new AnalyzedAssertion object.
     AnalyzedAssertion(AnalysisContext& context, const ast::TimingControl* contextualClock,
-                      const ast::Symbol& parentSymbol,
-                      const ast::ConcurrentAssertionStatement& stmt);
+                      const AnalyzedProcedure& procedure, const ast::Statement& stmt,
+                      const ast::Symbol* checkerInstance);
 };
 
 } // namespace slang::analysis

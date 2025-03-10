@@ -124,8 +124,8 @@ static const TimingControl* inferClock(const DataFlowAnalysis& dfa) {
     return inferredClock;
 }
 
-AnalyzedProcedure::AnalyzedProcedure(AnalysisContext& context, const Symbol& analyzedSymbol) :
-    analyzedSymbol(&analyzedSymbol) {
+AnalyzedProcedure::AnalyzedProcedure(AnalysisContext& context, const Symbol& analyzedSymbol,
+                                     const AnalyzedProcedure*) : analyzedSymbol(&analyzedSymbol) {
 
     DataFlowAnalysis dfa(context, analyzedSymbol);
     switch (analyzedSymbol.kind) {
@@ -158,7 +158,7 @@ AnalyzedProcedure::AnalyzedProcedure(AnalysisContext& context, const Symbol& ana
             }
         }
 
-        if (!dfa.getConcurrentAssertions().empty()) {
+        if (!dfa.getAssertionStatements().empty()) {
             inferredClock = inferClock(dfa);
             if (!inferredClock) {
                 auto scope = procedure.getParentScope();
@@ -171,8 +171,15 @@ AnalyzedProcedure::AnalyzedProcedure(AnalysisContext& context, const Symbol& ana
             if (inferredClock && inferredClock->bad())
                 return;
 
-            for (auto stmt : dfa.getConcurrentAssertions())
-                assertions.emplace_back(context, inferredClock, analyzedSymbol, *stmt);
+            for (auto stmt : dfa.getAssertionStatements()) {
+                if (stmt->kind == StatementKind::ProceduralChecker) {
+                    for (auto inst : stmt->as<ProceduralCheckerStatement>().instances)
+                        assertions.emplace_back(context, inferredClock, *this, *stmt, inst);
+                }
+                else {
+                    assertions.emplace_back(context, inferredClock, *this, *stmt, nullptr);
+                }
+            }
         }
     }
 }

@@ -438,24 +438,30 @@ private:
 };
 
 AnalyzedAssertion::AnalyzedAssertion(AnalysisContext& context, const TimingControl* contextualClock,
-                                     const Symbol& parentSymbol,
-                                     const ConcurrentAssertionStatement& stmt) :
-    analyzedStatement(&stmt) {
+                                     const AnalyzedProcedure& procedure, const Statement& stmt,
+                                     const Symbol* checkerInstance) : analyzedStatement(&stmt) {
+    if (checkerInstance) {
+        checkerScope = &context.manager->analyzeScopeBlocking(
+            checkerInstance->as<CheckerInstanceSymbol>().body, &procedure);
+    }
+    else {
+        ClockVisitor visitor(context, *procedure.analyzedSymbol);
 
-    ClockVisitor visitor(context, parentSymbol);
-    auto result = stmt.propertySpec.visit(visitor, contextualClock, VisitFlags::None);
+        auto& propSpec = stmt.as<ConcurrentAssertionStatement>().propertySpec;
+        auto result = propSpec.visit(visitor, contextualClock, VisitFlags::None);
 
-    if (!visitor.bad && result.clocks.size() > 1) {
-        // There must be a unique semantic leading clock.
-        auto firstClock = result.clocks[0];
-        for (size_t i = 1; i < result.clocks.size(); i++) {
-            if (!isSameClock(*firstClock, *result.clocks[i])) {
-                SLANG_ASSERT(stmt.propertySpec.syntax);
-                auto& diag = context.addDiag(parentSymbol, diag::NoUniqueClock,
-                                             stmt.propertySpec.syntax->sourceRange());
-                diag.addNote(diag::NoteClockHere, firstClock->sourceRange);
-                diag.addNote(diag::NoteClockHere, result.clocks[i]->sourceRange);
-                break;
+        if (!visitor.bad && result.clocks.size() > 1) {
+            // There must be a unique semantic leading clock.
+            auto firstClock = result.clocks[0];
+            for (size_t i = 1; i < result.clocks.size(); i++) {
+                if (!isSameClock(*firstClock, *result.clocks[i])) {
+                    SLANG_ASSERT(propSpec.syntax);
+                    auto& diag = context.addDiag(*procedure.analyzedSymbol, diag::NoUniqueClock,
+                                                 propSpec.syntax->sourceRange());
+                    diag.addNote(diag::NoteClockHere, firstClock->sourceRange);
+                    diag.addNote(diag::NoteClockHere, result.clocks[i]->sourceRange);
+                    break;
+                }
             }
         }
     }
