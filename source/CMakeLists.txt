@@ -63,6 +63,7 @@ add_library(
   analysis/AnalysisManager.cpp
   analysis/AnalyzedAssertion.cpp
   analysis/AnalyzedProcedure.cpp
+  analysis/DataFlowAnalysis.cpp
   diagnostics/DiagnosticClient.cpp
   diagnostics/DiagnosticEngine.cpp
   diagnostics/Diagnostics.cpp

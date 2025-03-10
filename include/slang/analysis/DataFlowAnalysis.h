@@ -50,17 +50,7 @@ public:
     /// Gets all of the symbols that are assigned anywhere in the procedure
     /// and aren't definitely assigned by the end of the procedure.
     void getPartiallyAssignedSymbols(
-        SmallVector<std::pair<const Symbol*, const Expression*>>& results) const {
-
-        auto& currState = getState();
-        for (size_t index = 0; index < lvalues.size(); index++) {
-            auto& symbolState = lvalues[index];
-            if (currState.assigned.size() <= index ||
-                !isFullyAssigned(symbolState.assigned, currState.assigned[index])) {
-                results.push_back({symbolState.symbol, symbolState.firstLSP});
-            }
-        }
-    }
+        SmallVector<std::pair<const Symbol*, const Expression*>>& results) const;
 
     /// Gets all of the statements in the procedure that have timing controls
     /// associated with them.
@@ -86,6 +76,28 @@ public:
     /// in the given expression using the provided callback function.
     template<typename F>
     void visitLongestStaticPrefixes(const Expression& expr, F&& func) const;
+
+    /// Gets the inferred clock for the procedure, if one exists.
+    const TimingControl* inferClock() const;
+
+    /// Helper method that returns true if the given expression is a call to the
+    /// $inferred_clock system function.
+    static bool isInferredClockCall(const Expression& expr);
+
+    struct InferredClockResult {
+        not_null<const TimingControl*> clock;
+        Diagnostic* diag = nullptr;
+
+        InferredClockResult(const TimingControl& clock) : clock(&clock) {}
+        InferredClockResult(const TimingControl& clock, Diagnostic* diag) :
+            clock(&clock), diag(diag) {}
+    };
+
+    /// Expands inferred clocking events in the given timing control expression.
+    static InferredClockResult expandInferredClocking(AnalysisContext& context,
+                                                      const Symbol& parentSymbol,
+                                                      const TimingControl& timing,
+                                                      const TimingControl* inferredClock);
 
 private:
     // A helper class that finds the longest static prefix of select expressions.
@@ -196,24 +208,8 @@ private:
         return guard;
     }
 
-    bool isFullyAssigned(const SymbolBitMap& left, const SymbolBitMap& right) const {
-        // The left set is the union of everything we've ever assigned
-        // in this procedure, so we only need to check that the right
-        // set is exactly equal to the left set.
-        auto lit = left.begin(), rit = right.begin();
-        auto lend = left.end(), rend = right.end();
-        while (lit != lend || rit != rend) {
-            if (lit == lend || rit == rend)
-                return false;
-
-            if (lit.bounds() != rit.bounds())
-                return false;
-
-            ++lit;
-            ++rit;
-        }
-        return true;
-    }
+    void noteReference(const ValueExpressionBase& expr, const Expression& lsp);
+    bool isFullyAssigned(const SymbolBitMap& left, const SymbolBitMap& right) const;
 
     // **** AST Handlers ****
 
@@ -230,49 +226,6 @@ private:
         lspVisitor.handle(expr);
     }
 
-    void handle(const AssignmentExpression& expr) {
-        // Note that this method mirrors the logic in the base class
-        // handler but we need to track the LValue status of the lhs.
-        SLANG_ASSERT(!isLValue);
-        isLValue = true;
-        visit(expr.left());
-        isLValue = false;
-
-        if (!expr.isLValueArg())
-            visit(expr.right());
-    }
-
-    void noteReference(const ValueExpressionBase& expr, const Expression& lsp) {
-        // TODO: think harder about whether unreachable symbol references
-        // still count as usages for the procedure.
-        auto& currState = getState();
-        if (!currState.reachable)
-            return;
-
-        auto& symbol = expr.symbol;
-        auto bounds = ValueDriver::getBounds(lsp, getEvalContext(), symbol.getType());
-        if (!bounds)
-            return; // TODO: what cases can get us here?
-
-        if (isLValue) {
-            auto [it, inserted] = symbolToSlot.try_emplace(&symbol, (uint32_t)lvalues.size());
-            if (inserted) {
-                lvalues.emplace_back(&symbol, &lsp);
-                SLANG_ASSERT(lvalues.size() == symbolToSlot.size());
-            }
-
-            auto index = it->second;
-            if (index >= currState.assigned.size())
-                currState.assigned.resize(index + 1);
-
-            currState.assigned[index].unionWith(*bounds, {}, bitMapAllocator);
-            lvalues[index].assigned.unionWith(*bounds, {}, bitMapAllocator);
-        }
-        else {
-            rvalues[&expr.symbol].unionWith(*bounds, {}, bitMapAllocator);
-        }
-    }
-
     template<typename T>
         requires(IsAnyOf<T, TimedStatement, WaitStatement, WaitOrderStatement, WaitForkStatement>)
     void handle(const T& stmt) {
@@ -284,77 +237,18 @@ private:
         visitStmt(stmt);
     }
 
-    void handle(const ExpressionStatement& stmt) {
-        visitStmt(stmt);
-
-        if (stmt.expr.kind == ExpressionKind::Assignment) {
-            auto& assignment = stmt.expr.as<AssignmentExpression>();
-            if (assignment.timingControl) {
-                bad |= assignment.timingControl->bad();
-                timedStatements.push_back(&stmt);
-            }
-        }
-    }
-
-    void handle(const ConcurrentAssertionStatement& stmt) {
-        concurrentAssertions.push_back(&stmt);
-        visitStmt(stmt);
-    }
-
-    void handle(const ProceduralCheckerStatement& stmt) {
-        concurrentAssertions.push_back(&stmt);
-        visitStmt(stmt);
-    }
+    void handle(const AssignmentExpression& expr);
+    void handle(const ExpressionStatement& stmt);
+    void handle(const ConcurrentAssertionStatement& stmt);
+    void handle(const ProceduralCheckerStatement& stmt);
 
     // **** State Management ****
 
-    void joinState(DataFlowState& result, const DataFlowState& other) {
-        if (result.reachable == other.reachable) {
-            if (result.assigned.size() > other.assigned.size())
-                result.assigned.resize(other.assigned.size());
-
-            for (size_t i = 0; i < result.assigned.size(); i++) {
-                result.assigned[i] = result.assigned[i].intersection(other.assigned[i],
-                                                                     bitMapAllocator);
-            }
-        }
-        else if (!result.reachable) {
-            result = copyState(other);
-        }
-    }
-
-    void meetState(DataFlowState& result, const DataFlowState& other) {
-        if (!other.reachable) {
-            result.reachable = false;
-            return;
-        }
-
-        // Union the assigned state across each variable.
-        if (result.assigned.size() < other.assigned.size())
-            result.assigned.resize(other.assigned.size());
-
-        for (size_t i = 0; i < other.assigned.size(); i++) {
-            for (auto it = other.assigned[i].begin(); it != other.assigned[i].end(); ++it)
-                result.assigned[i].unionWith(it.bounds(), *it, bitMapAllocator);
-        }
-    }
-
-    DataFlowState copyState(const DataFlowState& source) {
-        DataFlowState result;
-        result.reachable = source.reachable;
-        result.assigned.reserve(source.assigned.size());
-        for (size_t i = 0; i < source.assigned.size(); i++)
-            result.assigned.emplace_back(source.assigned[i].clone(bitMapAllocator));
-        return result;
-    }
-
-    DataFlowState unreachableState() const {
-        DataFlowState result;
-        result.reachable = false;
-        return result;
-    }
-
-    DataFlowState topState() const { return {}; }
+    void joinState(DataFlowState& result, const DataFlowState& other);
+    void meetState(DataFlowState& result, const DataFlowState& other);
+    DataFlowState copyState(const DataFlowState& source);
+    DataFlowState unreachableState() const;
+    DataFlowState topState() const;
 
     // **** LSPHelper class ****
 
@@ -397,28 +291,6 @@ private:
         void visit(const AssertionExpr&) {}
     };
 };
-
-inline bool DataFlowAnalysis::isReferenced(const ValueSymbol& symbol, const Expression& lsp) const {
-    auto bounds = ValueDriver::getBounds(lsp, getEvalContext(), symbol.getType());
-    if (!bounds)
-        return isReferenced(symbol);
-
-    {
-        auto it = symbolToSlot.find(&symbol);
-        if (it != symbolToSlot.end()) {
-            auto& symbolState = lvalues[it->second];
-            if (symbolState.assigned.find(*bounds) != symbolState.assigned.end())
-                return true;
-        }
-    }
-    {
-        auto it = rvalues.find(&symbol);
-        if (it != rvalues.end() && it->second.find(*bounds) != it->second.end())
-            return true;
-    }
-
-    return false;
-}
 
 template<typename F>
 void DataFlowAnalysis::visitLongestStaticPrefixes(const Expression& expr, F&& func) const {
