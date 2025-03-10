@@ -15,7 +15,8 @@ namespace slang::analysis {
 using namespace ast;
 
 AnalyzedProcedure::AnalyzedProcedure(AnalysisContext& context, const Symbol& analyzedSymbol,
-                                     const AnalyzedProcedure*) : analyzedSymbol(&analyzedSymbol) {
+                                     const AnalyzedProcedure* parentProcedure) :
+    analyzedSymbol(&analyzedSymbol), parentProcedure(parentProcedure) {
 
     DataFlowAnalysis dfa(context, analyzedSymbol);
     switch (analyzedSymbol.kind) {
@@ -48,8 +49,8 @@ AnalyzedProcedure::AnalyzedProcedure(AnalysisContext& context, const Symbol& ana
             }
         }
 
-        if (!dfa.getAssertionStatements().empty()) {
-            inferredClock = dfa.inferClock();
+        if (!dfa.getAssertionStatements().empty() || parentProcedure) {
+            inferredClock = dfa.inferClock(parentProcedure);
             if (!inferredClock) {
                 auto scope = procedure.getParentScope();
                 SLANG_ASSERT(scope);

@@ -765,8 +765,6 @@ endmodule // m
 
     auto [diags, design] = analyze(text, compilation, analysisManager);
     CHECK_DIAGS_EMPTY;
-    // TODO: inferred_clock error
-    // REQUIRE(diags.size() == 1);
 }
 
 TEST_CASE("Clock resolution tests 7") {
@@ -1700,6 +1698,66 @@ module top(input clk);
     endchecker
 
     c2 c2_inst(negedge clk);
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto [diags, design] = analyze(text, compilation, analysisManager);
+    CHECK_DIAGS_EMPTY;
+}
+
+TEST_CASE("Checker explicit inferred clocks") {
+    auto& text = R"(
+module top(input clk);
+    checker c1(ev = $inferred_clock);
+        sequence s1;
+            @(posedge clk) 1 and @ev 1;
+        endsequence
+
+        sequence s2(ev1, ev2 = $inferred_clock);
+            @ev1 1 and @ev2 1;
+        endsequence
+
+        assert property (s1); // uses @ev directly
+        assert property (s2(negedge clk)); // uses the default clock
+
+        always_ff @ev begin
+            assert property (s1);  // uses @ev directly
+            assert property (s2(posedge clk));  // infers from always_ff
+        end
+
+        checker c2;
+            always_ff @ev begin
+            end
+
+            sequence s3(ev1 = $inferred_clock);
+                @ev1 1;
+            endsequence
+
+            assert property (s3(ev));
+            assert property (s3());
+        endchecker
+
+        c2 c2_inst();
+    endchecker
+
+    default clocking @(negedge clk); endclocking
+
+    always_ff @(posedge clk) begin
+        c1 c1_inst();
+
+        assert property (p1);
+    end
+
+    sequence s2(ev = $inferred_clock);
+        @ev 1 and @(posedge clk) 1;
+    endsequence
+
+    property p1(ev = $inferred_clock);
+        @ev 1 and @(negedge clk) s2(ev);
+    endproperty
 endmodule
 )";
 

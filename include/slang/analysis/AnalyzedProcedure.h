@@ -30,6 +30,10 @@ public:
     /// The symbol that was analyzed.
     not_null<const ast::Symbol*> analyzedSymbol;
 
+    /// The procedure that contains this one, if any.
+    /// Only possible for procedural checker instances.
+    const AnalyzedProcedure* parentProcedure;
+
     /// Constructs a new AnalyzedProcedure object.
     AnalyzedProcedure(AnalysisContext& context, const ast::Symbol& symbol,
                       const AnalyzedProcedure* parentProcedure = nullptr);

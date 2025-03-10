@@ -315,6 +315,9 @@ endchecker : assert_window1
 
 module m5;
     logic a, b, c, d, e, clk;
+
+    default clocking @(posedge clk); endclocking
+
     assert_window1 aw1(1 + 1, a, b);
 
     initial begin

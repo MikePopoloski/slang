@@ -8,7 +8,7 @@
 #include "slang/analysis/AnalyzedAssertion.h"
 
 #include "slang/analysis/AnalysisManager.h"
-#include "slang/analysis/DataFlowAnalysis.h"
+#include "slang/analysis/ClockInference.h"
 #include "slang/ast/ASTVisitor.h"
 #include "slang/diagnostics/AnalysisDiags.h"
 #include "slang/syntax/AllSyntax.h"
@@ -92,32 +92,22 @@ struct ClockVisitor {
         }
     };
 
-    struct ExpansionInstance {
-        const AssertionExpr* expr = nullptr;
-        Clock clock = nullptr;
-        bool hasInferredClockArg = false;
-
-        ExpansionInstance(const AssertionExpr& expr, Clock clock) : expr(&expr), clock(clock) {
-            // Determine if this instance has an inferred clocking default argument.
-            auto& aie = expr.as<SimpleAssertionExpr>().expr.as<AssertionInstanceExpression>();
-            for (auto& arg : aie.arguments) {
-                if (auto argExpr = std::get_if<const Expression*>(&std::get<1>(arg))) {
-                    if (DataFlowAnalysis::isInferredClockCall(**argExpr)) {
-                        hasInferredClockArg = true;
-                        break;
-                    }
-                }
-            }
-        }
-    };
-
     AnalysisContext& context;
+    const AnalyzedProcedure& procedure;
     const Symbol& parentSymbol;
-    SmallVector<ExpansionInstance> expansionStack;
+    SmallVector<ClockInference::ExpansionInstance> expansionStack;
+    bool hasInferredClockCall = false;
     bool bad = false;
 
-    ClockVisitor(AnalysisContext& context, const Symbol& parentSymbol) :
-        context(context), parentSymbol(parentSymbol) {}
+    ClockVisitor(AnalysisContext& context, const AnalyzedProcedure& procedure) :
+        context(context), procedure(procedure), parentSymbol(*procedure.analyzedSymbol) {
+
+        // If we're in a checker with an inferred clock arg, we will just assume
+        // that we might have an inferred clock call somewhere.
+        auto scope = procedure.analyzedSymbol->getParentScope();
+        if (scope && scope->asSymbol().kind == SymbolKind::CheckerInstanceBody)
+            hasInferredClockCall = true;
+    }
 
     VisitResult visit(const InvalidAssertionExpr&, Clock, bitmask<VF>) {
         bad = true;
@@ -145,6 +135,8 @@ struct ClockVisitor {
 
             SLANG_ASSERT(expr.syntax);
             expansionStack.push_back({expr, outerClock});
+            hasInferredClockCall |= expansionStack.back().hasInferredClockArg;
+
             auto result = aie.body.visit(*this, flowClock, flags);
             expansionStack.pop_back();
 
@@ -229,9 +221,9 @@ struct ClockVisitor {
         // clocking argument we need to try to substitute calls to it from any
         // clocking expressions we find.
         auto clocking = &expr.clocking;
-        if (!expansionStack.empty() && expansionStack.back().hasInferredClockArg) {
-            auto result = DataFlowAnalysis::expandInferredClocking(context, parentSymbol, *clocking,
-                                                                   expansionStack.back().clock);
+        if (hasInferredClockCall) {
+            auto result = ClockInference::expand(context, parentSymbol, *clocking, expansionStack,
+                                                 &procedure);
             clocking = result.clock;
             if (result.diag) {
                 bad = true;
@@ -414,7 +406,7 @@ AnalyzedAssertion::AnalyzedAssertion(AnalysisContext& context, const TimingContr
             checkerInstance->as<CheckerInstanceSymbol>().body, &procedure);
     }
     else {
-        ClockVisitor visitor(context, *procedure.analyzedSymbol);
+        ClockVisitor visitor(context, procedure);
 
         auto& propSpec = stmt.as<ConcurrentAssertionStatement>().propertySpec;
         auto result = propSpec.visit(visitor, contextualClock, VisitFlags::None);

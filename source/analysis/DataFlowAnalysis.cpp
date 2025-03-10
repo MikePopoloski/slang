@@ -7,7 +7,7 @@
 //------------------------------------------------------------------------------
 #include "slang/analysis/DataFlowAnalysis.h"
 
-#include "slang/diagnostics/AnalysisDiags.h"
+#include "slang/analysis/ClockInference.h"
 
 namespace slang::analysis {
 
@@ -180,7 +180,7 @@ DataFlowState DataFlowAnalysis::topState() const {
     return {};
 }
 
-const TimingControl* DataFlowAnalysis::inferClock() const {
+const TimingControl* DataFlowAnalysis::inferClock(const AnalyzedProcedure* parentProcedure) const {
     // 16.14.6: There must be no blocking timing controls and exactly one event control.
     const TimingControl* eventControl = nullptr;
     for (auto stmt : getTimedStatements()) {
@@ -276,11 +276,14 @@ const TimingControl* DataFlowAnalysis::inferClock() const {
         return true;
     };
 
+    auto expanded = ClockInference::expand(context, rootSymbol, *eventControl, {}, parentProcedure);
+    eventControl = expanded.clock;
+
     if (eventControl->kind == TimingControlKind::SignalEvent) {
         if (!checkEvent(eventControl->as<SignalEventControl>()))
             return nullptr;
     }
-    else {
+    else if (eventControl->kind == TimingControlKind::EventList) {
         for (auto ev : eventControl->as<EventListControl>().events) {
             if (!checkEvent(ev->as<SignalEventControl>()))
                 return nullptr;
@@ -288,48 +291,6 @@ const TimingControl* DataFlowAnalysis::inferClock() const {
     }
 
     return inferredClock;
-}
-
-bool DataFlowAnalysis::isInferredClockCall(const Expression& expr) {
-    if (expr.kind == ExpressionKind::Call) {
-        auto& call = expr.as<CallExpression>();
-        if (call.isSystemCall() && call.getSubroutineName() == "$inferred_clock")
-            return true;
-    }
-    return false;
-}
-
-DataFlowAnalysis::InferredClockResult DataFlowAnalysis::expandInferredClocking(
-    AnalysisContext& context, const Symbol& parentSymbol, const TimingControl& timing,
-    const TimingControl* inferredClock) {
-
-    auto& alloc = context.alloc;
-    if (timing.kind == TimingControlKind::EventList) {
-        SmallVector<const TimingControl*> events;
-        for (auto& event : timing.as<EventListControl>().events) {
-            auto result = expandInferredClocking(context, parentSymbol, *event, inferredClock);
-            if (result.clock->bad())
-                return result;
-
-            events.push_back(result.clock);
-        }
-
-        return *alloc.emplace<EventListControl>(events.copy(alloc), timing.sourceRange);
-    }
-
-    if (timing.kind == TimingControlKind::SignalEvent) {
-        auto& sec = timing.as<SignalEventControl>();
-        if (isInferredClockCall(sec.expr)) {
-            if (!inferredClock) {
-                auto& diag = context.addDiag(parentSymbol, diag::NoInferredClock,
-                                             sec.expr.sourceRange);
-                return {*alloc.emplace<InvalidTimingControl>(&timing), &diag};
-            }
-            return *inferredClock;
-        }
-    }
-
-    return timing;
 }
 
 } // namespace slang::analysis

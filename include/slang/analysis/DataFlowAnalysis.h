@@ -78,26 +78,7 @@ public:
     void visitLongestStaticPrefixes(const Expression& expr, F&& func) const;
 
     /// Gets the inferred clock for the procedure, if one exists.
-    const TimingControl* inferClock() const;
-
-    /// Helper method that returns true if the given expression is a call to the
-    /// $inferred_clock system function.
-    static bool isInferredClockCall(const Expression& expr);
-
-    struct InferredClockResult {
-        not_null<const TimingControl*> clock;
-        Diagnostic* diag = nullptr;
-
-        InferredClockResult(const TimingControl& clock) : clock(&clock) {}
-        InferredClockResult(const TimingControl& clock, Diagnostic* diag) :
-            clock(&clock), diag(diag) {}
-    };
-
-    /// Expands inferred clocking events in the given timing control expression.
-    static InferredClockResult expandInferredClocking(AnalysisContext& context,
-                                                      const Symbol& parentSymbol,
-                                                      const TimingControl& timing,
-                                                      const TimingControl* inferredClock);
+    const TimingControl* inferClock(const AnalyzedProcedure* parentProcedure) const;
 
 private:
     // A helper class that finds the longest static prefix of select expressions.
