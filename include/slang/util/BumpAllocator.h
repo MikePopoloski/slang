@@ -38,7 +38,7 @@ public:
     template<typename T, typename... Args>
     T* emplace(Args&&... args) {
         static_assert(std::is_trivially_destructible_v<T>);
-        return new (allocate(sizeof(T), alignof(T))) T(std::forward<Args>(args)...);
+        return new (allocate(sizeof(T), alignof(T))) T{std::forward<Args>(args)...};
     }
 
     /// Allocate @a size bytes of memory with the given @a alignment.
@@ -134,7 +134,7 @@ public:
     /// Construct a new item using the allocator.
     template<typename... Args>
     T* emplace(Args&&... args) {
-        return new (allocate(sizeof(T), alignof(T))) T(std::forward<Args>(args)...);
+        return new (allocate(sizeof(T), alignof(T))) T{std::forward<Args>(args)...};
     }
 };
 
