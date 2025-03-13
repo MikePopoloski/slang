@@ -5,9 +5,9 @@
 
 # Required minimum versions for dependencies
 set(fmt_min_version "11.1")
-set(mimalloc_min_version "2.1")
+set(mimalloc_min_version "2.2")
 set(cpptrace_min_version "0.8")
-set(catch2_min_version "3.7")
+set(catch2_min_version "3.8")
 
 # --- fmt lib ---
 set(find_pkg_args "")
@@ -22,7 +22,7 @@ set(FMT_SYSTEM_HEADERS
 FetchContent_Declare(
   fmt
   GIT_REPOSITORY https://github.com/fmtlib/fmt.git
-  GIT_TAG 11.1.3
+  GIT_TAG 11.1.4
   GIT_SHALLOW ON
   ${find_pkg_args})
 
@@ -99,7 +99,7 @@ if(SLANG_USE_MIMALLOC)
   FetchContent_Declare(
     mimalloc
     GIT_REPOSITORY https://github.com/microsoft/mimalloc.git
-    GIT_TAG v2.1.7
+    GIT_TAG v2.2.2
     GIT_SHALLOW ON
     ${find_pkg_args})
   FetchContent_MakeAvailable(mimalloc)
@@ -138,7 +138,7 @@ if(SLANG_USE_MIMALLOC)
                                                              YES)
 
       get_target_property(lib_include_dirs mimalloc-static INCLUDE_DIRECTORIES)
-      set(mi_version "2.1")
+      set(mi_version "2.2")
       set(mi_install_incdir
           "${CMAKE_INSTALL_INCLUDEDIR}/mimalloc-${mi_version}")
 
