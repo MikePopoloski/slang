@@ -9,10 +9,45 @@
 
 #include "slang/analysis/DataFlowAnalysis.h"
 #include "slang/diagnostics/AnalysisDiags.h"
+#include "slang/text/FormatBuffer.h"
 
 namespace slang::analysis {
 
 using namespace ast;
+
+static void stringifyLSP(const Expression& expr, EvalContext& evalContext, FormatBuffer& buffer) {
+    switch (expr.kind) {
+        case ExpressionKind::NamedValue:
+        case ExpressionKind::HierarchicalValue:
+            buffer.append(expr.as<ValueExpressionBase>().symbol.name);
+            break;
+        case ExpressionKind::Conversion:
+            stringifyLSP(expr.as<ConversionExpression>().operand(), evalContext, buffer);
+            break;
+        case ExpressionKind::ElementSelect: {
+            auto& select = expr.as<ElementSelectExpression>();
+            stringifyLSP(select.value(), evalContext, buffer);
+            buffer.format("[{}]", select.selector().eval(evalContext).toString());
+            break;
+        }
+        case ExpressionKind::RangeSelect: {
+            auto& select = expr.as<RangeSelectExpression>();
+            stringifyLSP(select.value(), evalContext, buffer);
+            buffer.format("[{}:{}]", select.left().eval(evalContext).toString(),
+                          select.right().eval(evalContext).toString());
+            break;
+        }
+        case ExpressionKind::MemberAccess: {
+            auto& access = expr.as<MemberAccessExpression>();
+            stringifyLSP(access.value(), evalContext, buffer);
+            buffer.append(".");
+            buffer.append(access.member.name);
+            break;
+        }
+        default:
+            SLANG_UNREACHABLE;
+    }
+}
 
 AnalyzedProcedure::AnalyzedProcedure(AnalysisContext& context, const Symbol& analyzedSymbol,
                                      const AnalyzedProcedure* parentProcedure) :
@@ -36,17 +71,12 @@ AnalyzedProcedure::AnalyzedProcedure(AnalysisContext& context, const Symbol& ana
     if (analyzedSymbol.kind == SymbolKind::ProceduralBlock) {
         auto& procedure = analyzedSymbol.as<ProceduralBlockSymbol>();
         if (procedure.procedureKind == ProceduralBlockKind::AlwaysComb) {
-            SmallVector<std::pair<const Symbol*, const Expression*>> partiallyAssigned;
-            dfa.getPartiallyAssignedSymbols(partiallyAssigned);
+            dfa.visitLatches([&](const Symbol&, const Expression& expr) {
+                FormatBuffer buffer;
+                stringifyLSP(expr, dfa.getEvalContext(), buffer);
 
-            for (auto [symbol, expr] : partiallyAssigned) {
-                // Skip automatic variables, which can't be inferred latches.
-                if (VariableSymbol::isKind(symbol->kind) &&
-                    symbol->as<VariableSymbol>().lifetime == VariableLifetime::Automatic) {
-                    continue;
-                }
-                context.addDiag(procedure, diag::InferredLatch, expr->sourceRange) << symbol->name;
-            }
+                context.addDiag(procedure, diag::InferredLatch, expr.sourceRange) << buffer.str();
+            });
         }
 
         if (!dfa.getAssertionStatements().empty() || parentProcedure) {

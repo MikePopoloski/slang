@@ -11,36 +11,9 @@
 
 namespace slang::analysis {
 
-void DataFlowAnalysis::getPartiallyAssignedSymbols(
-    SmallVector<std::pair<const Symbol*, const Expression*>>& results) const {
-
-    auto& currState = getState();
-    for (size_t index = 0; index < lvalues.size(); index++) {
-        auto& symbolState = lvalues[index];
-        if (currState.assigned.size() <= index ||
-            !isFullyAssigned(symbolState.assigned, currState.assigned[index])) {
-            results.push_back({symbolState.symbol, symbolState.firstLSP});
-        }
-    }
-}
-
-bool DataFlowAnalysis::isFullyAssigned(const SymbolBitMap& left, const SymbolBitMap& right) const {
-    // The left set is the union of everything we've ever assigned
-    // in this procedure, so we only need to check that the right
-    // set is exactly equal to the left set.
-    auto lit = left.begin(), rit = right.begin();
-    auto lend = left.end(), rend = right.end();
-    while (lit != lend || rit != rend) {
-        if (lit == lend || rit == rend)
-            return false;
-
-        if (lit.bounds() != rit.bounds())
-            return false;
-
-        ++lit;
-        ++rit;
-    }
-    return true;
+DataFlowAnalysis::DataFlowAnalysis(AnalysisContext& context, const Symbol& symbol) :
+    AbstractFlowAnalysis(symbol, context.manager->getOptions().flags), context(context),
+    bitMapAllocator(context.alloc), lspMapAllocator(context.alloc), lspVisitor(*this) {
 }
 
 bool DataFlowAnalysis::isReferenced(const ValueSymbol& symbol, const Expression& lsp) const {
@@ -80,7 +53,7 @@ void DataFlowAnalysis::noteReference(const ValueExpressionBase& expr, const Expr
     if (isLValue) {
         auto [it, inserted] = symbolToSlot.try_emplace(&symbol, (uint32_t)lvalues.size());
         if (inserted) {
-            lvalues.emplace_back(&symbol, &lsp);
+            lvalues.emplace_back(symbol);
             SLANG_ASSERT(lvalues.size() == symbolToSlot.size());
         }
 
@@ -89,7 +62,23 @@ void DataFlowAnalysis::noteReference(const ValueExpressionBase& expr, const Expr
             currState.assigned.resize(index + 1);
 
         currState.assigned[index].unionWith(*bounds, {}, bitMapAllocator);
-        lvalues[index].assigned.unionWith(*bounds, {}, bitMapAllocator);
+
+        auto& lspMap = lvalues[index].assigned;
+        for (auto lspIt = lspMap.find(*bounds); lspIt != lspMap.end(); ++lspIt) {
+            // If we find an existing entry that completely contains
+            // the new bounds we can just keep that one and ignore the
+            // new one. Otherwise we will insert a new entry.
+            auto itBounds = lspIt.bounds();
+            if (itBounds.first <= bounds->first && itBounds.second >= bounds->second)
+                return;
+
+            // If the new bounds completely contain the existing entry, we can remove it.
+            if (bounds->first < itBounds.first && bounds->second > itBounds.second) {
+                lspMap.erase(lspIt, lspMapAllocator);
+                lspIt = lspMap.find(*bounds);
+            }
+        }
+        lspMap.insert(*bounds, &lsp, lspMapAllocator);
     }
     else {
         rvalues[&expr.symbol].unionWith(*bounds, {}, bitMapAllocator);

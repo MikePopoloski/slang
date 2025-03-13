@@ -696,6 +696,11 @@ public:
     /// The iterator will be invalidated by this operation.
     void erase(iterator it, allocator_type& alloc);
 
+    /// @brief Erases the interval pointed to by the given iterator.
+    ///
+    /// The iterator will be invalidated by this operation.
+    void erase(overlap_iterator it, allocator_type& alloc);
+
     /// Gets an interval encompassing the entire set of items in the map.
     std::pair<TKey, TKey> getBounds() const {
         SLANG_ASSERT(!empty());
@@ -1149,6 +1154,11 @@ IntervalMapDetails::IndexPair IntervalMap<TKey, TValue, N>::modifyRoot(TRootNode
 
 template<typename TKey, typename TValue, uint32_t N>
 void IntervalMap<TKey, TValue, N>::erase(iterator it, allocator_type& alloc) {
+    it.erase(alloc, true);
+}
+
+template<typename TKey, typename TValue, uint32_t N>
+void IntervalMap<TKey, TValue, N>::erase(overlap_iterator it, allocator_type& alloc) {
     it.erase(alloc, true);
 }
 

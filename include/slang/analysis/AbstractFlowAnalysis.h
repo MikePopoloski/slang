@@ -30,14 +30,14 @@ public:
     /// Set to true if the analysis detected an error.
     bool bad = false;
 
+    /// Gets an evaluation context for use during analysis.
+    EvalContext& getEvalContext() const { return evalContext; }
+
 protected:
     /// Constructs a new flow analysis pass.
     FlowAnalysisBase(const Symbol& symbol, bitmask<AnalysisFlags> flags) :
         rootSymbol(symbol), flags(flags),
         evalContext(ASTContext(*symbol.getParentScope(), LookupLocation::after(symbol))) {}
-
-    /// Gets an evaluation context for use during analysis.
-    EvalContext& getEvalContext() const { return evalContext; }
 
     ConstantValue tryEvalBool(const Expression& expr) const;
 

@@ -21,6 +21,7 @@ concept IsSelectExpr =
             HierarchicalValueExpression, NamedValueExpression>;
 
 using SymbolBitMap = IntervalMap<uint64_t, std::monostate, 3>;
+using SymbolLSPMap = IntervalMap<uint64_t, const Expression*, 5>;
 
 /// Represents the state of a data flow analysis at a single point in a procedure.
 struct SLANG_EXPORT DataFlowState {
@@ -43,14 +44,12 @@ public:
     AnalysisContext& context;
 
     /// Constructs a new DataFlowAnalysis object.
-    DataFlowAnalysis(AnalysisContext& context, const Symbol& symbol) :
-        AbstractFlowAnalysis(symbol, context.manager->getOptions().flags), context(context),
-        bitMapAllocator(context.alloc), lspVisitor(*this) {}
+    DataFlowAnalysis(AnalysisContext& context, const Symbol& symbol);
 
-    /// Gets all of the symbols that are assigned anywhere in the procedure
+    /// Visits all of the symbols that are assigned anywhere in the procedure
     /// and aren't definitely assigned by the end of the procedure.
-    void getPartiallyAssignedSymbols(
-        SmallVector<std::pair<const Symbol*, const Expression*>>& results) const;
+    template<typename F>
+    void visitLatches(F&& func) const;
 
     /// Gets all of the statements in the procedure that have timing controls
     /// associated with them.
@@ -152,6 +151,7 @@ private:
     friend struct LSPVisitor;
 
     SymbolBitMap::allocator_type bitMapAllocator;
+    SymbolLSPMap::allocator_type lspMapAllocator;
 
     // Maps visited symbols to slots in assigned vectors.
     SmallMap<const ValueSymbol*, uint32_t, 4> symbolToSlot;
@@ -159,14 +159,10 @@ private:
     // Tracks the assigned ranges of each variable across the entire procedure,
     // even if not all branches assign to it.
     struct LValueSymbol {
-        const ValueSymbol* symbol;
-        // TODO: track LSP per bit range so we can accurately report
-        // which portions of a symbol are assigned and where.
-        const Expression* firstLSP;
-        SymbolBitMap assigned;
+        not_null<const ValueSymbol*> symbol;
+        SymbolLSPMap assigned;
 
-        LValueSymbol(const ValueSymbol* symbol, const Expression* firstLSP) :
-            symbol(symbol), firstLSP(firstLSP) {}
+        LValueSymbol(const ValueSymbol& symbol) : symbol(&symbol) {}
     };
     SmallVector<LValueSymbol> lvalues;
 
@@ -190,7 +186,6 @@ private:
     }
 
     void noteReference(const ValueExpressionBase& expr, const Expression& lsp);
-    bool isFullyAssigned(const SymbolBitMap& left, const SymbolBitMap& right) const;
 
     // **** AST Handlers ****
 
@@ -272,6 +267,46 @@ private:
         void visit(const AssertionExpr&) {}
     };
 };
+
+template<typename F>
+void DataFlowAnalysis::visitLatches(F&& func) const {
+    for (size_t index = 0; index < lvalues.size(); index++) {
+        // Skip automatic variables, which can't be inferred latches.
+        auto& symbolState = lvalues[index];
+        auto& symbol = *symbolState.symbol;
+        if (VariableSymbol::isKind(symbol.kind) &&
+            symbol.as<VariableSymbol>().lifetime == VariableLifetime::Automatic) {
+            continue;
+        }
+
+        auto& left = symbolState.assigned;
+        SLANG_ASSERT(!left.empty());
+
+        // Each interval in the left map is a range that needs to be fully covered
+        // by our final state, otherwise that interval is not fully assigned.
+        auto& currState = getState();
+        if (currState.assigned.size() <= index) {
+            for (auto it = left.begin(); it != left.end(); ++it)
+                func(symbol, **it);
+            return;
+        }
+
+        auto& right = currState.assigned[index];
+        for (auto lit = left.begin(); lit != left.end(); ++lit) {
+            auto lbounds = lit.bounds();
+            if (auto rit = right.find(lbounds); rit != right.end()) {
+                // If this right hand side interval doesn't completely cover
+                // the left hand side one then we don't need to look further.
+                // The rhs intervals are unioned so there otherwise must be a
+                // gap and so the lhs interval is not fully assigned.
+                auto rbounds = rit.bounds();
+                if (rbounds.first <= lbounds.first && rbounds.second >= lbounds.second)
+                    continue;
+            }
+            func(symbol, **lit);
+        }
+    }
+}
 
 template<typename F>
 void DataFlowAnalysis::visitLongestStaticPrefixes(const Expression& expr, F&& func) const {

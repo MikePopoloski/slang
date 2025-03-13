@@ -263,3 +263,37 @@ endmodule
     CHECK(diags[0].code == diag::InferredLatch);
     CHECK(diags[1].code == diag::InferredLatch);
 }
+
+TEST_CASE("Inferred latch warning correct LSP in message") {
+    auto& code = R"(
+module m;
+    struct packed { int a; int b; } s;
+    logic c;
+
+    always_comb begin
+        if (c) begin
+            s.a = 1;
+            s.b[0] = 1;
+            s.b[1] = 1;
+        end
+        else begin
+            s[0] = 1;
+        end
+    end
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto [diags, design] = analyze(code, compilation, analysisManager);
+    std::string result = "\n" + report(diags);
+    CHECK(result == R"(
+source:8:13: warning: latch inferred for 's.a' because it is not assigned on all control paths [-Winferred-latch]
+            s.a = 1;
+            ^~~
+source:10:13: warning: latch inferred for 's.b[1]' because it is not assigned on all control paths [-Winferred-latch]
+            s.b[1] = 1;
+            ^~~~~~
+)");
+}
