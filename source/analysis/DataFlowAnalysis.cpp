@@ -38,17 +38,22 @@ bool DataFlowAnalysis::isReferenced(const ValueSymbol& symbol, const Expression&
     return false;
 }
 
-void DataFlowAnalysis::noteReference(const ValueExpressionBase& expr, const Expression& lsp) {
-    // TODO: think harder about whether unreachable symbol references
-    // still count as usages for the procedure.
+void DataFlowAnalysis::noteReference(const ValueSymbol& symbol, const Expression& lsp) {
+    // This feels icky but we don't count a symbol as being referenced in the procedure
+    // if it's only used inside an unreachable flow path. The alternative would just
+    // frustrate users, but the reason it's icky is because whether a path is reachable
+    // is based on whatever level of heuristics we're willing to implement rather than
+    // some well defined set of rules in the LRM.
     auto& currState = getState();
     if (!currState.reachable)
         return;
 
-    auto& symbol = expr.symbol;
     auto bounds = ValueDriver::getBounds(lsp, getEvalContext(), symbol.getType());
-    if (!bounds)
-        return; // TODO: what cases can get us here?
+    if (!bounds) {
+        // This probably cannot be hit given that we early out elsewhere for
+        // invalid expressions.
+        return;
+    }
 
     if (isLValue) {
         auto [it, inserted] = symbolToSlot.try_emplace(&symbol, (uint32_t)lvalues.size());
@@ -81,7 +86,7 @@ void DataFlowAnalysis::noteReference(const ValueExpressionBase& expr, const Expr
         lspMap.insert(*bounds, &lsp, lspMapAllocator);
     }
     else {
-        rvalues[&expr.symbol].unionWith(*bounds, {}, bitMapAllocator);
+        rvalues[&symbol].unionWith(*bounds, {}, bitMapAllocator);
     }
 }
 

@@ -122,10 +122,28 @@ private:
         }
 
         void handle(const MemberAccessExpression& expr) {
-            if (!currentLSP)
-                currentLSP = &expr;
+            // If this is a selection of a class or covergroup member,
+            // the lsp depends only on the selected member and not on
+            // the handle itself. Otherwise, the opposite is true.
+            auto& valueType = expr.value().type->getCanonicalType();
+            if (valueType.isClass() || valueType.isCovergroup() || valueType.isVoid()) {
+                auto lsp = std::exchange(currentLSP, nullptr);
+                if (!lsp)
+                    lsp = &expr;
 
-            owner.visit(expr.value());
+                if (VariableSymbol::isKind(expr.member.kind))
+                    owner.noteReference(expr.member.as<VariableSymbol>(), *lsp);
+
+                // Make sure the value gets visited but not as an lvalue anymore.
+                [[maybe_unused]] auto guard = owner.saveLValueFlag();
+                owner.visit(expr.value());
+            }
+            else {
+                if (!currentLSP)
+                    currentLSP = &expr;
+
+                owner.visit(expr.value());
+            }
         }
 
         void handle(const HierarchicalValueExpression& expr) {
@@ -133,7 +151,7 @@ private:
             if (!lsp)
                 lsp = &expr;
 
-            owner.noteReference(expr, *lsp);
+            owner.noteReference(expr.symbol, *lsp);
         }
 
         void handle(const NamedValueExpression& expr) {
@@ -141,7 +159,7 @@ private:
             if (!lsp)
                 lsp = &expr;
 
-            owner.noteReference(expr, *lsp);
+            owner.noteReference(expr.symbol, *lsp);
         }
     };
 
@@ -185,7 +203,7 @@ private:
         return guard;
     }
 
-    void noteReference(const ValueExpressionBase& expr, const Expression& lsp);
+    void noteReference(const ValueSymbol& symbol, const Expression& lsp);
 
     // **** AST Handlers ****
 
@@ -241,9 +259,7 @@ private:
         EvalContext& getEvalContext() const { return evalCtx; }
         bool saveLValueFlag() { return false; }
 
-        void noteReference(const ValueExpressionBase& expr, const Expression& lsp) {
-            func(expr.symbol, lsp);
-        }
+        void noteReference(const ValueSymbol& symbol, const Expression& lsp) { func(symbol, lsp); }
 
         template<typename T>
             requires(std::is_base_of_v<Expression, T> && !IsSelectExpr<T>)

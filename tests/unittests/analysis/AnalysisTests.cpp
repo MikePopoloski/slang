@@ -297,3 +297,31 @@ source:10:13: warning: latch inferred for 's.b[1]' because it is not assigned on
             ^~~~~~
 )");
 }
+
+TEST_CASE("Data flow with class members") {
+    auto& code = R"(
+class C;
+    int i;
+endclass
+
+function C foo;
+endfunction
+
+module m(input a);
+    C c;
+    always_comb begin
+        if (a) begin
+            foo().i = 1;
+            foo().i = 2;
+            c.i = 3;
+        end
+    end
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto [diags, design] = analyze(code, compilation, analysisManager);
+    CHECK_DIAGS_EMPTY;
+}
