@@ -31,7 +31,7 @@ void InfoMessage(fmt::format_string<T...> fmt, T&&... args) {
 
 } // namespace netlist
 
-#ifdef DEBUG
+#ifdef SLANG_DEBUG
 #    define DEBUG_PRINT(str, ...)                                                          \
         if (netlist::Config::getInstance().debugEnabled) {                                 \
             DebugMessage(std::source_location::current(), str __VA_OPT__(, ) __VA_ARGS__); \

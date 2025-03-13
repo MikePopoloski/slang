@@ -121,7 +121,7 @@ set_target_properties(
 
 # Compile options
 target_compile_options(slang_slang PRIVATE ${SLANG_WARN_FLAGS})
-target_compile_definitions(slang_slang PUBLIC $<$<CONFIG:Debug>:DEBUG>)
+target_compile_definitions(slang_slang PUBLIC $<$<CONFIG:Debug>:SLANG_DEBUG>)
 
 # Include directories
 target_include_directories(

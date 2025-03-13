@@ -68,7 +68,7 @@
 #endif
 
 #if !defined(SLANG_ASSERT_ENABLED)
-#    if !defined(NDEBUG)
+#    if defined(SLANG_DEBUG)
 #        define SLANG_ASSERT_ENABLED 1
 #    endif
 #endif

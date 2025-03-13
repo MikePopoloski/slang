@@ -7,7 +7,7 @@
 //------------------------------------------------------------------------------
 #pragma once
 
-#ifdef DEBUG
+#ifdef SLANG_DEBUG
 #    include <typeindex>
 #    include <typeinfo>
 
@@ -140,7 +140,7 @@ enum {
 // Nodes are never empty, so size of 0 is invalid (so the stored range is
 // able to express 1-64 children).
 struct NodeRef {
-#ifdef DEBUG
+#ifdef SLANG_DEBUG
     NodeRef() : type(SLANG_TYPEOF(void)) {}
 #else
     NodeRef() = default;
@@ -149,7 +149,7 @@ struct NodeRef {
     template<typename T>
     NodeRef(T* node, uint32_t s) :
         pip(node, s - 1)
-#ifdef DEBUG
+#ifdef SLANG_DEBUG
         ,
         type(SLANG_TYPEOF(T)), isLeaf(T::IsLeaf)
 #endif
@@ -167,7 +167,7 @@ struct NodeRef {
     template<typename T>
     T& get() const {
         SLANG_ASSERT(pip.getPointer() != nullptr);
-#ifdef DEBUG
+#ifdef SLANG_DEBUG
         SLANG_ASSERT(type == SLANG_TYPEOF(T));
 #endif
         return *reinterpret_cast<T*>(pip.getPointer());
@@ -178,7 +178,7 @@ struct NodeRef {
     // member.
     NodeRef& childAt(uint32_t i) const {
         SLANG_ASSERT(pip.getPointer() != nullptr);
-#ifdef DEBUG
+#ifdef SLANG_DEBUG
         SLANG_ASSERT(!isLeaf);
 #endif
         return reinterpret_cast<NodeRef*>(pip.getPointer())[i];
@@ -190,7 +190,7 @@ struct NodeRef {
 
 private:
     PointerIntPair<void*, Log2CacheLine, Log2CacheLine> pip;
-#ifdef DEBUG
+#ifdef SLANG_DEBUG
 public:
     SLANG_TYPEINDEX type;
     bool isLeaf = false;
@@ -322,7 +322,7 @@ struct SLANG_EXPORT Path {
 
     template<typename T>
     T& node(uint32_t level) const {
-#ifdef DEBUG
+#ifdef SLANG_DEBUG
         SLANG_ASSERT(path[level].isLeaf == T::IsLeaf);
         SLANG_ASSERT(T::IsRoot == (level == 0));
 #endif
@@ -331,7 +331,7 @@ struct SLANG_EXPORT Path {
 
     template<typename T>
     T& leaf() const {
-#ifdef DEBUG
+#ifdef SLANG_DEBUG
         SLANG_ASSERT(path.back().isLeaf);
         SLANG_ASSERT(T::IsRoot == (path.size() == 1));
 #endif
@@ -421,7 +421,7 @@ private:
         void* node;
         uint32_t size;
         uint32_t offset;
-#ifdef DEBUG
+#ifdef SLANG_DEBUG
         bool isLeaf = false;
 #endif
 
@@ -431,20 +431,20 @@ private:
         template<typename TNode>
         Entry(TNode* node, uint32_t size, uint32_t offset) :
             node(node), size(size), offset(offset) {
-#ifdef DEBUG
+#ifdef SLANG_DEBUG
             isLeaf = TNode::IsLeaf;
 #endif
         }
 
         Entry(NodeRef node, uint32_t offset) :
             node(node.getPointer()), size(node.size()), offset(offset) {
-#ifdef DEBUG
+#ifdef SLANG_DEBUG
             isLeaf = node.isLeaf;
 #endif
         }
 
         NodeRef& childAt(uint32_t i) const {
-#ifdef DEBUG
+#ifdef SLANG_DEBUG
             SLANG_ASSERT(!isLeaf);
 #endif
             return reinterpret_cast<NodeRef*>(node)[i];

@@ -25,7 +25,7 @@ namespace slang {
 struct SLANG_EXPORT BufferID {
     BufferID() = default;
     constexpr BufferID(uint32_t value, std::string_view name) :
-#ifdef DEBUG
+#ifdef SLANG_DEBUG
         name(name),
 #endif
         id(value) {
@@ -51,7 +51,7 @@ struct SLANG_EXPORT BufferID {
     /// be observed.
     static BufferID getPlaceholder() { return BufferID(UINT32_MAX, ""sv); }
 
-#ifdef DEBUG
+#ifdef SLANG_DEBUG
     std::string_view name;
 #endif
 
@@ -67,7 +67,7 @@ class SLANG_EXPORT SourceLocation {
 public:
     constexpr SourceLocation() : bufferID(0), charOffset(0) {}
     constexpr SourceLocation(BufferID buffer, uint64_t offset) :
-#ifdef DEBUG
+#ifdef SLANG_DEBUG
         bufferName(buffer.name),
 #endif
         bufferID(buffer.getId()), charOffset(offset) {
@@ -75,7 +75,7 @@ public:
 
     /// @return an identifier for the buffer that contains this location.
     BufferID buffer() const {
-#ifdef DEBUG
+#ifdef SLANG_DEBUG
         return BufferID(bufferID, bufferName);
 #else
         return BufferID(bufferID, ""sv);
@@ -133,7 +133,7 @@ public:
         return charOffset <=> rhs.charOffset;
     }
 
-#ifdef DEBUG
+#ifdef SLANG_DEBUG
     std::string_view bufferName;
 #endif
 
@@ -144,10 +144,6 @@ private:
     uint64_t bufferID : 28;
     uint64_t charOffset : 36;
 };
-
-#ifndef DEBUG
-static_assert(sizeof(SourceLocation) == 8);
-#endif
 
 /// Combines a pair of source locations that denote a range of source text.
 class SLANG_EXPORT SourceRange {
