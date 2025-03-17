@@ -1,6 +1,7 @@
 name: "Python Build"
 
 on:
+  workflow_dispatch:
   pull_request:
   push:
     branches:
