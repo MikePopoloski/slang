@@ -1,5 +1,5 @@
 //------------------------------------------------------------------------------
-// SyntaxBindings.cpp
+//! @file SyntaxBindings.cpp
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------

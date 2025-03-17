@@ -1,5 +1,5 @@
 //------------------------------------------------------------------------------
-// PyVisitors.h
+//! @file PyVisitors.h
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------

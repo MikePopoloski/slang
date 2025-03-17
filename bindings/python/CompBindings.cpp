@@ -1,5 +1,5 @@
 //------------------------------------------------------------------------------
-// CompBindings.cpp
+//! @file CompBindings.cpp
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------

@@ -1,5 +1,5 @@
 //------------------------------------------------------------------------------
-// StatementBindings.cpp
+//! @file StatementBindings.cpp
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------

@@ -1,5 +1,5 @@
 //------------------------------------------------------------------------------
-// ExpressionBindings.cpp
+//! @file ExpressionBindings.cpp
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------

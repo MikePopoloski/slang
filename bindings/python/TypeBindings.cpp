@@ -1,5 +1,5 @@
 //------------------------------------------------------------------------------
-// TypeBindings.cpp
+//! @file TypeBindings.cpp
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------

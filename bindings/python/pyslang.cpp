@@ -1,5 +1,5 @@
 //------------------------------------------------------------------------------
-// pyslang.cpp
+//! @file pyslang.cpp
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------

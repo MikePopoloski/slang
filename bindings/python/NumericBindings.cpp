@@ -1,5 +1,5 @@
 //------------------------------------------------------------------------------
-// NumericBindings.cpp
+//! @file NumericBindings.cpp
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------

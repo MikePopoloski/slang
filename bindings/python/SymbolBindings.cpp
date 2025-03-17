@@ -1,5 +1,5 @@
 //------------------------------------------------------------------------------
-// SymbolBindings.cpp
+//! @file SymbolBindings.cpp
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
 //------------------------------------------------------------------------------
