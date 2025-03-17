@@ -313,7 +313,7 @@ void DataFlowAnalysis::visitLatches(F&& func) const {
         if (currState.assigned.size() <= index) {
             for (auto it = left.begin(); it != left.end(); ++it)
                 func(symbol, **it);
-            return;
+            continue;
         }
 
         auto& right = currState.assigned[index];

@@ -327,6 +327,55 @@ endmodule
     CHECK_DIAGS_EMPTY;
 }
 
+TEST_CASE("Data flow with constants in repeat, randcase, foreach") {
+    auto& code = R"(
+module m;
+    int i, j, k, l, n, o, p;
+    int d[3][][2];
+    logic [1:0] e[2][1];
+    always_comb begin
+        repeat (1) begin
+            i = 1;
+        end
+
+        randcase
+            0: ;
+            1: j = 1;
+        endcase
+
+        randcase
+            2: k = 1;
+            1: k = 1;
+        endcase
+
+        randcase
+            0: l = 1;
+            0: l = 2;
+        endcase
+
+        foreach (d[a, b, c]) begin
+            n = 1;
+        end
+
+        foreach (d[a, , c]) begin
+            o = 1;
+        end
+
+        foreach (e[a, b, c]) begin
+            p = 1;
+        end
+    end
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto [diags, design] = analyze(code, compilation, analysisManager);
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::InferredLatch);
+}
+
 TEST_CASE("Functions with missing returns") {
     auto& code = R"(
 function int foo;

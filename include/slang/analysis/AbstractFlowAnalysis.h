@@ -244,6 +244,12 @@ protected:
                 it->second.emplace_back(std::move(state));
                 setUnreachable();
             }
+            else if (target == &rootSymbol) {
+                // This is possible for disable statements that target
+                // the containing task.
+                returnStates.emplace_back(std::move(state));
+                setUnreachable();
+            }
         }
     }
 
@@ -329,16 +335,27 @@ protected:
     }
 
     void visitStmt(const RandCaseStatement& stmt) {
-        auto initialState = (DERIVED).copyState(state);
-        auto finalState = std::move(state);
+        auto initialState = std::move(state);
+        auto finalState = (DERIVED).unreachableState();
+        bool anyReachable = false;
+
         for (auto& item : stmt.items) {
             setState((DERIVED).copyState(initialState));
-            visit(*item.expr);
+            auto cv = visitCondition(*item.expr);
+            anyReachable |= cv.isTrue();
+
+            setState(std::move(stateWhenTrue));
             visit(*item.stmt);
             (DERIVED).joinState(finalState, state);
         }
 
-        setState(std::move(finalState));
+        // If the final state is still unreachable then
+        // none of the randcase items can ever be selected,
+        // so take the initial state.
+        if (anyReachable)
+            setState(std::move(finalState));
+        else
+            setState(std::move(initialState));
     }
 
     void visitStmt(const ForLoopStatement& stmt) {
@@ -388,16 +405,21 @@ protected:
     }
 
     void visitStmt(const RepeatLoopStatement& stmt) {
-        // TODO: we could infer more information from the repeat count
-        // when it's a constant.
-        visit(stmt.count);
+        auto cv = visitCondition(stmt.count);
+        unsplit();
 
         auto currState = (DERIVED).copyState(state);
         auto oldBreakStates = std::move(breakStates);
         breakStates.clear();
         visit(stmt.body);
 
-        loopTail(std::move(currState), std::move(oldBreakStates));
+        // If the repeat count is known to be positive we know the
+        // body will execute at least once so we can keep our current
+        // state; otherwise we need to join with the pre-loop state.
+        if (cv.isTrue())
+            loopTail(std::move(state), std::move(oldBreakStates));
+        else
+            loopTail(std::move(currState), std::move(oldBreakStates));
     }
 
     void visitStmt(const ForeachLoopStatement& stmt) {
@@ -408,7 +430,19 @@ protected:
         breakStates.clear();
         visit(stmt.body);
 
-        loopTail(std::move(currState), std::move(oldBreakStates));
+        // If all loop dims are fixed size then the loop is guaranteed to execute.
+        bool allFixed = !stmt.loopDims.empty();
+        for (auto& dim : stmt.loopDims) {
+            if (dim.loopVar && !dim.range) {
+                allFixed = false;
+                break;
+            }
+        }
+
+        if (allFixed)
+            loopTail(std::move(state), std::move(oldBreakStates));
+        else
+            loopTail(std::move(currState), std::move(oldBreakStates));
     }
 
     void visitStmt(const WhileLoopStatement& stmt) {
