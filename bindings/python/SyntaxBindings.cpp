@@ -55,6 +55,63 @@ void pySyntaxVisit(const SyntaxNode& sn, py::object f) {
     sn.visit(visitor);
 }
 
+class PySyntaxRewriter : public SyntaxRewriter<PySyntaxRewriter> {
+    public:
+        PySyntaxRewriter(pybind11::function handler) : handler(std::move(handler)) {}
+    
+        void visit(const SyntaxNode& node) {
+            try {
+                handler(pybind11::cast(&node), pybind11::cast(this));
+            } catch (const pybind11::error_already_set& e) {
+                throw;
+            }
+            visitDefault(node);
+        }
+    
+        // --- Expose protected base methods via public wrappers ---
+        void py_remove(const SyntaxNode& node) {
+            this->remove(node);
+        }
+
+        void py_replace(const SyntaxNode& oldNode, SyntaxNode& newNode) {
+            this->replace(oldNode, cloneNode(newNode));
+        }
+
+        void py_insertBefore(const SyntaxNode& node, SyntaxNode& newNode) {
+            this->insertBefore(node, cloneNode(newNode));
+        }
+
+        void py_insertAfter(const SyntaxNode& node, SyntaxNode& newNode) {
+            this->insertAfter(node, cloneNode(newNode));
+        }
+
+        void py_insertAtFront(const SyntaxListBase& list, SyntaxNode& newNode, Token separator = {}) {
+            this->insertAtFront(list, cloneNode(newNode), separator);
+        }
+        
+        void py_insertAtBack(const SyntaxListBase& list, SyntaxNode& newNode, Token separator = {}) {
+            this->insertAtBack(list, cloneNode(newNode), separator);
+        }
+
+        SyntaxFactory& getFactory() { return factory; }
+
+    private:
+        pybind11::function handler;
+
+        SyntaxNode& cloneNode(const SyntaxNode& node) {
+            return *slang::syntax::deepClone(node, this->alloc);
+        }
+};
+
+std::shared_ptr<SyntaxTree> pySyntaxRewrite(
+    const std::shared_ptr<SyntaxTree>& tree,
+    pybind11::function handler
+) {
+    PySyntaxRewriter rewriter(std::move(handler));
+    return rewriter.transform(tree);
+}
+
+
 } // end namespace
 
 void registerSyntax(py::module_& m) {
@@ -305,4 +362,18 @@ void registerSyntax(py::module_& m) {
         .def("setSquashNewlines", &SyntaxPrinter::setSquashNewlines, byrefint, "include"_a)
         .def("str", &SyntaxPrinter::str)
         .def_static("printFile", &SyntaxPrinter::printFile, "tree"_a);
+
+
+    py::class_<PySyntaxRewriter>(m, "SyntaxRewriter")
+        .def("remove", &PySyntaxRewriter::py_remove)
+        .def("replace", &PySyntaxRewriter::py_replace)
+        .def("insert_before", &PySyntaxRewriter::py_insertBefore)
+        .def("insert_after", &PySyntaxRewriter::py_insertAfter)
+        .def("insert_at_front", &PySyntaxRewriter::py_insertAtFront,
+            py::arg("list"), py::arg("newNode"), py::arg("separator") = Token())
+        .def("insert_at_back", &PySyntaxRewriter::py_insertAtBack,
+                py::arg("list"), py::arg("newNode"), py::arg("separator") = Token())
+        .def_property_readonly("factory", &PySyntaxRewriter::getFactory);
+    
+    m.def("rewrite", &pySyntaxRewrite, py::arg("tree"), py::arg("handler"));
 }
