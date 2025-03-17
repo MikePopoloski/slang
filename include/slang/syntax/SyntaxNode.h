@@ -98,7 +98,7 @@ public:
     /// tree does not have a parent (will be nullptr).
     SyntaxNode* parent = nullptr;
 
-    /// @brief An potional pointer to a syntax node tha can be useful
+    /// @brief An optional pointer to a syntax node that can be useful
     /// to know ahead of time when visiting this node.
     ///
     /// The node, if set, is underneath this node in the syntax tree.

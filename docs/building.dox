@@ -112,21 +112,16 @@ This section contains instructions for building and installing the Python bindin
 
 ## Steps
 
-1. Clone the `pyslang` repository (https://github.com/MikePopoloski/pyslang)
-2. Clone the `slang` submodule:
+1. Clone the `slang` repository (https://github.com/MikePopoloski/slang), if you haven't already.
 
-@code{.ansi}
-git submodule update --init --recursive
-@endcode
-
-3. Optionally, create a virtual environment and activate it.
+2. Optionally, create a virtual environment and activate it.
 
 @code{.ansi}
 python3 -m venv venv
 source venv/bin/activate
 @endcode
 
-4. Install `pyslang` as a Python package (including building the C++ `slang` library with bindings, from the submodule):
+3. Install `pyslang` as a Python package (including building the C++ `slang` library with bindings):
 
 @code{.ansi}
 pip install .
