@@ -79,6 +79,15 @@ public:
     /// Gets the inferred clock for the procedure, if one exists.
     const TimingControl* inferClock(const AnalyzedProcedure* parentProcedure) const;
 
+    /// Returns true if the procedure has any return statements.
+    bool hasReturnStatements() const { return !getReturnStates().empty(); }
+
+    /// Returns true if the current state is reachable.
+    bool isReachable() const { return getState().reachable; }
+
+    /// Returns true if the given symbol is definitely assigned at the current point.
+    bool isDefinitelyAssigned(const ValueSymbol& symbol) const;
+
 private:
     // A helper class that finds the longest static prefix of select expressions.
     template<typename TOwner>

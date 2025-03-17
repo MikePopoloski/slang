@@ -264,6 +264,7 @@ class C;
     virtual function bar(int b);
         int c[$];
         c.push_back(1);
+        return 0;
     endfunction
 endclass
 
@@ -301,6 +302,7 @@ class C;
     function int unsigned f2();
         bit [3:0] a;
         f1(a);
+        return 0;
     endfunction
 endclass
 
@@ -415,6 +417,7 @@ TEST_CASE("Unused function args") {
     auto& text = R"(
 function foo(input x, output y);
     y = 1;
+    return 0;
 endfunction
 
 module m;

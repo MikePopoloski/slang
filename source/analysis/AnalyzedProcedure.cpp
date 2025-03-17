@@ -103,6 +103,28 @@ AnalyzedProcedure::AnalyzedProcedure(AnalysisContext& context, const Symbol& ana
             }
         }
     }
+    else if (analyzedSymbol.kind == SymbolKind::Subroutine) {
+        // Diagnose missing return statements and/or incomplete
+        // assignments to the return value var.
+        auto& subroutine = analyzedSymbol.as<SubroutineSymbol>();
+        if (dfa.isReachable() && subroutine.subroutineKind == SubroutineKind::Function &&
+            !subroutine.getReturnType().isVoid() && !subroutine.name.empty()) {
+
+            // Control falls off the end of a non-void function but that is
+            // fine if the return value var is definitely assigned here.
+            SLANG_ASSERT(subroutine.returnValVar);
+            if (!dfa.isDefinitelyAssigned(*subroutine.returnValVar)) {
+                if (dfa.hasReturnStatements() || dfa.isReferenced(*subroutine.returnValVar)) {
+                    context.addDiag(subroutine, diag::IncompleteReturn, subroutine.location)
+                        << subroutine.name;
+                }
+                else {
+                    context.addDiag(subroutine, diag::MissingReturn, subroutine.location)
+                        << subroutine.name;
+                }
+            }
+        }
+    }
 }
 
 } // namespace slang::analysis

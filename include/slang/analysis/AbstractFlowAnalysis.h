@@ -116,6 +116,9 @@ protected:
         state = (DERIVED).unreachableState();
     }
 
+    /// Gets the set of states at various return points in a subroutine.
+    std::span<const TState> getReturnStates() const { return returnStates; }
+
     // **** Statement Visitors ****
 
     void visitStmt(const InvalidStatement&) { bad = true; }
@@ -218,9 +221,10 @@ protected:
     }
 
     void visitStmt(const ReturnStatement& stmt) {
-        // TODO: pending branch
         if (stmt.expr)
             visit(*stmt.expr);
+
+        returnStates.emplace_back(std::move(state));
         setUnreachable();
     }
 
@@ -859,6 +863,7 @@ private:
     bool inCondition = false;
 
     SmallVector<TState> breakStates;
+    SmallVector<TState> returnStates;
     flat_hash_map<const Symbol*, SmallVector<TState>> disableBranches;
 
     template<typename T>

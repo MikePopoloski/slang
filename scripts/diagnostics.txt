@@ -1172,6 +1172,8 @@ warning unused-assertion-decl UnusedAssertionDecl "unused {} '{}'"
 warning unused-import UnusedImport "unused import '{}'"
 warning unused-wildcard-import UnusedWildcardImport "unused wildcard import"
 warning inferred-latch InferredLatch "latch inferred for '{}' because it is not assigned on all control paths"
+warning incomplete-return IncompleteReturn "non-void function '{}' does not return a value on all control paths"
+warning missing-return MissingReturn "non-void function '{}' does not return a value"
 
 subsystem Meta
 fatal TooManyErrors "too many errors emitted, stopping now [--error-limit=]"
@@ -1202,7 +1204,8 @@ group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-
                 ineffective-sign port-width-trunc constant-conversion float-bool-conv int-bool-conv
                 useless-cast unsigned-arith-shift static-init-order static-init-value float-int-conv
                 float-narrow bitwise-rel-precedence arith-in-shift logical-not-parentheses
-                consecutive-comparison case-outside-range case-enum case-dup case-overlap }
+                consecutive-comparison case-outside-range case-enum case-dup case-overlap
+                incomplete-return missing-return }
 
 group pedantic = { empty-pattern implicit-net-port nonstandard-escape-code nonstandard-generate format-multibit-strength
                    nonstandard-sys-func nonstandard-foreach nonstandard-dist isunbounded-param-arg udp-coverage }

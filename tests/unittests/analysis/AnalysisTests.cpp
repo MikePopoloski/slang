@@ -305,6 +305,7 @@ class C;
 endclass
 
 function C foo;
+    return null;
 endfunction
 
 module m(input a);
@@ -324,4 +325,45 @@ endmodule
 
     auto [diags, design] = analyze(code, compilation, analysisManager);
     CHECK_DIAGS_EMPTY;
+}
+
+TEST_CASE("Functions with missing returns") {
+    auto& code = R"(
+function int foo;
+endfunction
+
+function int bar(input a);
+    if (a) begin
+        return 1;
+    end
+endfunction
+
+function int baz;
+    while (1) begin
+        return 1;
+    end
+endfunction
+
+function int boz(input a);
+    if (a) begin
+        return 1;
+    end
+    boz = 2;
+endfunction
+
+function int fiz(input a);
+    if (a) begin
+        fiz = 1;
+    end
+endfunction
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto [diags, design] = analyze(code, compilation, analysisManager);
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::MissingReturn);
+    CHECK(diags[1].code == diag::IncompleteReturn);
+    CHECK(diags[2].code == diag::IncompleteReturn);
 }

@@ -38,6 +38,15 @@ bool DataFlowAnalysis::isReferenced(const ValueSymbol& symbol, const Expression&
     return false;
 }
 
+bool DataFlowAnalysis::isDefinitelyAssigned(const ValueSymbol& symbol) const {
+    auto it = symbolToSlot.find(&symbol);
+    if (it == symbolToSlot.end())
+        return false;
+
+    auto& assigned = getState().assigned;
+    return it->second < assigned.size() && !assigned[it->second].empty();
+}
+
 void DataFlowAnalysis::noteReference(const ValueSymbol& symbol, const Expression& lsp) {
     // This feels icky but we don't count a symbol as being referenced in the procedure
     // if it's only used inside an unreachable flow path. The alternative would just
