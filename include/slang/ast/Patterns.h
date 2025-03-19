@@ -136,6 +136,9 @@ public:
     static bool isKind(PatternKind kind) { return kind == PatternKind::Invalid; }
 
     void serializeTo(ASTSerializer& serializer) const;
+
+    template<typename TVisitor>
+    void visitExprs(TVisitor&&) const {}
 };
 
 /// Represents a wildcard pattern that matches anything.
@@ -153,6 +156,9 @@ public:
     static bool isKind(PatternKind kind) { return kind == PatternKind::Wildcard; }
 
     void serializeTo(ASTSerializer&) const {}
+
+    template<typename TVisitor>
+    void visitExprs(TVisitor&&) const {}
 };
 
 /// Reresents a pattern that matches a given constant expression.
@@ -198,6 +204,9 @@ public:
     static bool isKind(PatternKind kind) { return kind == PatternKind::Variable; }
 
     void serializeTo(ASTSerializer& serializer) const;
+
+    template<typename TVisitor>
+    void visitExprs(TVisitor&&) const {}
 };
 
 /// Represents a pattern that matches a member of a tagged union.

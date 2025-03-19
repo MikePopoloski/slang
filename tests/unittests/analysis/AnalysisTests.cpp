@@ -416,3 +416,27 @@ endfunction
     CHECK(diags[1].code == diag::IncompleteReturn);
     CHECK(diags[2].code == diag::IncompleteReturn);
 }
+
+TEST_CASE("Unevaluated syscall args don't contribute to data flow") {
+    auto& code = R"(
+module m;
+    int i, j;
+    always_comb begin
+        if (i) begin
+            i = 1;
+            j = 2;
+        end
+        else begin
+            j = $bits((i = 2));
+        end
+    end
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto [diags, design] = analyze(code, compilation, analysisManager);
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::InferredLatch);
+}

@@ -115,6 +115,9 @@ public:
     static bool isKind(ConstraintKind kind) { return kind == ConstraintKind::Invalid; }
 
     void serializeTo(ASTSerializer& serializer) const;
+
+    template<typename TVisitor>
+    void visitExprs(TVisitor&&) const {}
 };
 
 /// Represents a list of constraints.

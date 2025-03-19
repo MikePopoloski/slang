@@ -10,6 +10,7 @@
 #include "slang/analysis/AnalysisOptions.h"
 #include "slang/ast/ASTVisitor.h"
 #include "slang/ast/EvalContext.h"
+#include "slang/ast/SystemSubroutine.h"
 #include "slang/util/FlatMap.h"
 #include "slang/util/TypeTraits.h"
 
@@ -259,7 +260,7 @@ protected:
             visitCondition(*cond.expr);
 
             if (cond.pattern)
-                visitPattern(*cond.pattern);
+                visit(*cond.pattern);
 
             (DERIVED).joinState(falseState, stateWhenFalse);
             setState(std::move(stateWhenTrue));
@@ -311,7 +312,7 @@ protected:
         for (auto& item : stmt.items) {
             setState((DERIVED).copyState(initialState));
 
-            visitPattern(*item.pattern);
+            visit(*item.pattern);
 
             if (item.filter) {
                 visitCondition(*item.filter);
@@ -727,7 +728,7 @@ protected:
                 knownVal = nullptr;
 
             if (cond.pattern)
-                visitPattern(*cond.pattern);
+                visit(*cond.pattern);
 
             (DERIVED).joinState(falseState, stateWhenFalse);
             setState(std::move(stateWhenTrue));
@@ -789,15 +790,15 @@ protected:
     }
 
     void visitExpr(const CallExpression& expr) {
-        if (expr.thisClass())
-            visit(*expr.thisClass());
+        expr.visitExprsNoArgs(DERIVED);
 
-        // TODO: consider default values
-        // TODO: randomize calls, iterator calls
-        // TODO: omit arguments if they are for a system function
-        //       that doesn't actually evaluate them.
-        for (auto arg : expr.arguments())
-            visit(*arg);
+        auto sysCall = std::get_if<CallExpression::SystemCallInfo>(&expr.subroutine);
+        size_t argIndex = 0;
+        for (auto arg : expr.arguments()) {
+            if (!sysCall || !sysCall->subroutine->isArgUnevaluated(argIndex))
+                visit(*arg);
+            argIndex++;
+        }
     }
 
     void visitExpr(const MinTypMaxExpression& expr) {
@@ -848,9 +849,11 @@ protected:
     // class provides a handler we will call that, and if not we will
     // dispatch to our own handler for that concrete type.
     template<typename T>
-        requires(std::is_base_of_v<Statement, T> || std::is_base_of_v<Expression, T>)
+        requires(std::is_base_of_v<Statement, T> || std::is_base_of_v<Expression, T> ||
+                 std::is_base_of_v<Constraint, T> || std::is_base_of_v<Pattern, T>)
     void visit(const T& t) {
-        if constexpr (std::is_same_v<T, Statement> || std::is_same_v<T, Expression>) {
+        if constexpr (std::is_same_v<T, Statement> || std::is_same_v<T, Expression> ||
+                      std::is_same_v<T, Constraint> || std::is_same_v<T, Pattern>) {
             // We don't have a concrete type, we need to dispatch.
             t.visit(DERIVED);
         }
@@ -863,6 +866,8 @@ protected:
                 visitStmt(t);
             else if constexpr (std::is_base_of_v<Expression, T>)
                 visitExpr(t);
+            else if constexpr (std::is_base_of_v<Constraint, T> || std::is_base_of_v<Pattern, T>)
+                t.visitExprs(DERIVED);
             else
                 static_assert(always_false<T>::value);
 
@@ -872,7 +877,8 @@ protected:
                 SLANG_ASSERT(!isStateSplit);
                 SLANG_ASSERT(!inCondition);
             }
-            else if constexpr (std::is_base_of_v<Expression, T>) {
+            else if constexpr (std::is_base_of_v<Expression, T> ||
+                               std::is_base_of_v<Constraint, T> || std::is_base_of_v<Pattern, T>) {
                 // Note: most expressions don't create branches, but there are
                 // a few that do:
                 // - conditional operator
@@ -889,6 +895,8 @@ protected:
 private:
     friend class ast::Expression;
     friend class ast::Statement;
+    friend class ast::Constraint;
+    friend class ast::Pattern;
 
     TState state;
     TState stateWhenTrue;
@@ -936,12 +944,6 @@ private:
     ConstantValue visitCondition(const Expression& expr) {
         visitNoJoin(expr);
         return adjustConditionalState(expr);
-    }
-
-    void visitPattern(const Pattern&) {
-        // For now this does nothing, but we may want to change
-        // that in the future if we want to do analysis on the
-        // variables introduced by patterns.
     }
 
 #undef DERIVED
