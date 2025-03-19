@@ -799,6 +799,9 @@ protected:
                 visit(*arg);
             argIndex++;
         }
+
+        if (sysCall && sysCall->subroutine->neverReturns)
+            setUnreachable();
     }
 
     void visitExpr(const MinTypMaxExpression& expr) {

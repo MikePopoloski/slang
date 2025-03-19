@@ -104,6 +104,10 @@ class FinishControlTask : public SystemTaskBase {
 public:
     using SystemTaskBase::SystemTaskBase;
 
+    FinishControlTask(const std::string& name, bool isFinish) : SystemTaskBase(name) {
+        neverReturns = isFinish;
+    }
+
     const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
         auto& comp = context.getCompilation();
@@ -185,7 +189,7 @@ private:
 
 class FatalTask : public SeverityTask {
 public:
-    FatalTask() : SeverityTask("$fatal", ElabSystemTaskKind::Fatal) {}
+    FatalTask() : SeverityTask("$fatal", ElabSystemTaskKind::Fatal) { neverReturns = true; }
 
     bool allowEmptyArgument(size_t index) const final { return index != 0; }
 
@@ -919,9 +923,6 @@ void Builtins::registerSystemTasks() {
     REGISTER(StringOutputTask, "$swriteo");
     REGISTER(StringOutputTask, "$swriteh");
 
-    REGISTER(FinishControlTask, "$finish");
-    REGISTER(FinishControlTask, "$stop");
-
     REGISTER(StringFormatTask, "$sformat");
 
     REGISTER(PrintTimeScaleTask, "$printtimescale");
@@ -937,6 +938,11 @@ void Builtins::registerSystemTasks() {
     REGISTER(SeverityTask, "$info", ElabSystemTaskKind::Info);
     REGISTER(SeverityTask, "$warning", ElabSystemTaskKind::Warning);
     REGISTER(SeverityTask, "$error", ElabSystemTaskKind::Error);
+
+#undef REGISTER
+#define REGISTER(type, name, isFinish) addSystemSubroutine(std::make_shared<type>(name, isFinish))
+    REGISTER(FinishControlTask, "$finish", true);
+    REGISTER(FinishControlTask, "$stop", false);
 
 #undef REGISTER
 

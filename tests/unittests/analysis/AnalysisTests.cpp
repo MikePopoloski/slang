@@ -440,3 +440,22 @@ endmodule
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::InferredLatch);
 }
+
+TEST_CASE("Analysis with syscalls that never return") {
+    auto& code = R"(
+function int foo(int i);
+    if (i == 0)
+        return 1;
+    else if (i == 1)
+        return 2;
+    else
+        $fatal();
+endfunction
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto [diags, design] = analyze(code, compilation, analysisManager);
+    CHECK_DIAGS_EMPTY;
+}

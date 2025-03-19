@@ -38,6 +38,10 @@ public:
     /// True if the subroutine has output (or ref / inout) args, and false otherwise.
     bool hasOutputArgs = false;
 
+    /// True if this subroutine halts execution and therefore never returns
+    /// to the caller.
+    bool neverReturns = false;
+
     /// Possible ways in which the subroutine may use a `with` clause.
     enum class WithClauseMode {
         /// The subroutine does not use a `with` clause.
