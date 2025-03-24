@@ -427,6 +427,13 @@ void ValueSymbol::addDriver(DriverBitRange bounds, const ValueDriver& driver) co
                 if (isContainedWithin(*driver.containingSymbol, *curr->containingSymbol))
                     continue;
             }
+            else if (driver.isFromSideEffect &&
+                     isContainedWithin(*curr->containingSymbol, *driver.containingSymbol)) {
+                // This operates in reverse as well; someone already visited the instance
+                // manually and now we're trying to apply a side effect that has already
+                // been applied.
+                continue;
+            }
 
             if (!handleOverlap(*scope, name, *curr, driver, isNet, isUWire, isSingleDriverUDNT,
                                netType)) {

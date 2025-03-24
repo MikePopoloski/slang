@@ -3,6 +3,7 @@
 
 #include "Test.h"
 
+#include "slang/ast/ASTVisitor.h"
 #include "slang/ast/symbols/BlockSymbols.h"
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
 #include "slang/ast/symbols/InstanceSymbols.h"
@@ -2036,5 +2037,34 @@ endmodule
 
     Compilation compilation;
     compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Instance caching with visitation -- GH #1285") {
+    auto tree = SyntaxTree::fromText(R"(
+interface bus();
+	logic w;
+endinterface
+
+module m1(bus intf);
+	assign intf.w = 0;
+endmodule
+
+module top();
+	bus intf1();
+	bus intf2();
+
+	m1 a(.intf(intf1));
+	m1 b(.intf(intf2));
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto visitor = slang::ast::makeVisitor();
+    for (auto instance : compilation.getRoot().topInstances)
+        instance->visit(visitor);
+
     NO_COMPILATION_ERRORS;
 }
