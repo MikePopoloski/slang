@@ -182,15 +182,25 @@ StatementBlockSymbol& StatementBlockSymbol::fromSyntax(const Scope& scope,
         }
     }
 
-    // The most nested block gets the actual statement items.
-    auto block = comp.emplace<StatementBlockSymbol>(comp, ""sv,
-                                                    syntax.statement->getFirstToken().location(),
-                                                    StatementBlockKind::Sequential,
-                                                    VariableLifetime::Automatic);
-    block->setSyntax(*syntax.statement);
-    block->setAttributes(scope, syntax.attributes);
-    block->blocks = Statement::createAndAddBlockItems(*block, *syntax.statement,
-                                                      /* labelHandled */ false);
+    // The most nested block gets the actual statement items. If it's already a sequential
+    // block we can just use that, otherwise we need to fabricate one.
+    StatementBlockSymbol* block;
+    if (syntax.statement->kind == SyntaxKind::SequentialBlockStatement ||
+        syntax.statement->kind == SyntaxKind::ParallelBlockStatement) {
+
+        block = &StatementBlockSymbol::fromSyntax(scope,
+                                                  syntax.statement->as<BlockStatementSyntax>());
+    }
+    else {
+        block = comp.emplace<StatementBlockSymbol>(comp, ""sv,
+                                                   syntax.statement->getFirstToken().location(),
+                                                   StatementBlockKind::Sequential,
+                                                   VariableLifetime::Automatic);
+        block->setSyntax(*syntax.statement);
+        block->setAttributes(scope, syntax.attributes);
+        block->blocks = Statement::createAndAddBlockItems(*block, *syntax.statement,
+                                                          /* labelHandled */ false);
+    }
 
     SLANG_ASSERT(curr && first);
     curr->addMember(*block);
