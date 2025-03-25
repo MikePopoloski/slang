@@ -2078,3 +2078,13 @@ endmodule
     CHECK(diags[0].code == diag::CheckerNotInProc);
     CHECK(diags[1].code == diag::CheckerInForkJoin);
 }
+
+TEST_CASE("Conditional statement with pattern and explicit block crash regress") {
+    auto tree = SyntaxTree::fromText(R"(
+always begin union instr:if(instr matches begin c T i:
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    compilation.getAllDiagnostics();
+}
