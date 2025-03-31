@@ -145,6 +145,12 @@ void DeclaredType::resolveType(const ASTContext& typeContext,
         type = &comp.getType(*syntax, typeContext, typedefTarget);
         if (dimensions)
             type = &comp.getType(*type, *dimensions, typeContext);
+
+        if (typedefTarget) {
+            // When resolving a typedef target we need to force resolution
+            // of the canonical type to make sure there are no cycles.
+            type->getCanonicalType();
+        }
     }
 
     if (flags.has(DeclaredTypeFlags::NeedsTypeCheck) && !type->isError())
