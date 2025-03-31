@@ -12,6 +12,8 @@
 
 using namespace netlist;
 
+namespace {
+
 struct TestNode;
 struct TestEdge;
 
@@ -33,6 +35,8 @@ struct TestVisitor {
     void visitNode(TestNode& node) { nodes.push_back(&node); };
     void visitEdge(TestEdge& edge) { edges.push_back(&edge); };
 };
+
+} // namespace
 
 TEST_CASE("Depth-first search on a ring") {
     DirectedGraph<TestNode, TestEdge> graph;
