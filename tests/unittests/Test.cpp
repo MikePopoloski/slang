@@ -11,7 +11,7 @@
 #include "slang/parsing/Preprocessor.h"
 #include "slang/text/SourceManager.h"
 
-std::string findTestDir() {
+static std::string findTestDirInternal() {
     auto path = fs::current_path();
     while (!fs::exists(path / "tests")) {
         path = path.parent_path();
@@ -19,6 +19,11 @@ std::string findTestDir() {
     }
 
     return (path / "tests/unittests/data/").string();
+}
+
+std::string findTestDir() {
+    static auto path = findTestDirInternal();
+    return path;
 }
 
 void setupSourceManager(SourceManager& sourceManager) {

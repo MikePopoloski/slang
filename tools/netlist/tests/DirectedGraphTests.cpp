@@ -11,6 +11,8 @@
 
 using namespace netlist;
 
+namespace {
+
 struct TestNode;
 struct TestEdge;
 
@@ -21,6 +23,8 @@ struct TestNode : public Node<TestNode, TestEdge> {
 struct TestEdge : public DirectedEdge<TestNode, TestEdge> {
     TestEdge(TestNode& sourceNode, TestNode& targetNode) : DirectedEdge(sourceNode, targetNode) {}
 };
+
+} // namespace
 
 TEST_CASE("Test node and edge equality") {
     DirectedGraph<TestNode, TestEdge> graph;
