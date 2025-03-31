@@ -2365,3 +2365,21 @@ endmodule
     auto& r = root.lookupName<ParameterSymbol>("m.r");
     CHECK(r.getValue().integer() == 4);
 }
+
+TEST_CASE("Recursive typedef regress") {
+    auto tree = SyntaxTree::fromText(R"(
+module test;
+ typedef T1;
+ typedef T1 T2;
+ typedef T2 T3;
+ typedef T3 T1;
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::RecursiveDefinition);
+}
