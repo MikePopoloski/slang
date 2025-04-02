@@ -459,3 +459,33 @@ endfunction
     auto [diags, design] = analyze(code, compilation, analysisManager);
     CHECK_DIAGS_EMPTY;
 }
+
+TEST_CASE("For loop analysis crash regress -- GH #1292") {
+    auto& code = R"(
+module Test (
+  input  logic clk,
+  input  logic in,
+  output logic out
+);
+
+  logic internal[4];
+
+  assign internal[0] = in;
+  assign out = internal[3];
+
+  always_ff @(posedge clk) begin
+    internal[1] <= internal[0];
+    for (int stage = 2; stage <= 3; stage++) begin
+      internal[stage] <= internal[stage-1];
+    end
+  end
+
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto [diags, design] = analyze(code, compilation, analysisManager);
+    CHECK_DIAGS_EMPTY;
+}

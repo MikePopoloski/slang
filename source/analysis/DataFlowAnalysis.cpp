@@ -78,7 +78,7 @@ void DataFlowAnalysis::noteReference(const ValueSymbol& symbol, const Expression
         currState.assigned[index].unionWith(*bounds, {}, bitMapAllocator);
 
         auto& lspMap = lvalues[index].assigned;
-        for (auto lspIt = lspMap.find(*bounds); lspIt != lspMap.end(); ++lspIt) {
+        for (auto lspIt = lspMap.find(*bounds); lspIt != lspMap.end();) {
             // If we find an existing entry that completely contains
             // the new bounds we can just keep that one and ignore the
             // new one. Otherwise we will insert a new entry.
@@ -90,6 +90,9 @@ void DataFlowAnalysis::noteReference(const ValueSymbol& symbol, const Expression
             if (bounds->first < itBounds.first && bounds->second > itBounds.second) {
                 lspMap.erase(lspIt, lspMapAllocator);
                 lspIt = lspMap.find(*bounds);
+            }
+            else {
+                ++lspIt;
             }
         }
         lspMap.insert(*bounds, &lsp, lspMapAllocator);
