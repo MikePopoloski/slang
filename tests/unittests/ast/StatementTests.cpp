@@ -1245,7 +1245,7 @@ endmodule
     CHECK(diags[2].code == diag::TimingInFuncNotAllowed);
     CHECK(diags[3].code == diag::TaskFromFinal);
     CHECK(diags[4].code == diag::TimingInFuncNotAllowed);
-    CHECK(diags[5].code == diag::ConcurrentAssertNotInProc);
+    CHECK(diags[5].code == diag::TimingInFuncNotAllowed);
 }
 
 TEST_CASE("Non-blocking timing control reference to auto") {
@@ -2087,4 +2087,21 @@ always begin union instr:if(instr matches begin c T i:
     Compilation compilation;
     compilation.addSyntaxTree(tree);
     compilation.getAllDiagnostics();
+}
+
+TEST_CASE("Concurrent assertions not allowed in tasks") {
+    auto tree = SyntaxTree::fromText(R"(
+module m(input clk, a);
+    task t;
+        assert property (@(posedge clk) a == 1);
+    endtask
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::ConcurrentAssertNotInProc);
 }

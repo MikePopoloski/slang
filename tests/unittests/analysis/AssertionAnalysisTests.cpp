@@ -1767,3 +1767,39 @@ endmodule
     auto [diags, design] = analyze(text, compilation, analysisManager);
     CHECK_DIAGS_EMPTY;
 }
+
+TEST_CASE("Expect statement in task is analyzed") {
+    auto& text = R"(
+module test(input clk, a, b, c);
+
+   program tst;
+      initial begin
+         # 200ms;
+         expect( @(posedge clk) a ##1 b ##1 c ) else $error( "expect failed" );
+      end
+   endprogram
+
+   integer data;
+
+   task automatic wait_for( integer value, output bit success );
+      wait (!success) #10 value = 1;
+      expect( ##[1:10] data == value ) success = 1;
+         else success = 0;
+   endtask
+
+   initial begin
+      bit ok;
+      wait_for( 23, ok );  // wait for the value 23
+      // ...
+   end
+
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto [diags, design] = analyze(text, compilation, analysisManager);
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::AssertionNoClock);
+}

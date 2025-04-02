@@ -333,8 +333,11 @@ Statement& ConcurrentAssertionStatement::fromSyntax(
         return badStmt(compilation, nullptr);
     }
 
+    AssertionKind assertKind = SemanticFacts::getAssertKind(syntax.kind);
+
     auto proc = context.getProceduralBlock();
-    if (!proc || proc->procedureKind == ProceduralBlockKind::Final) {
+    if (assertKind != AssertionKind::Expect &&
+        (!proc || proc->procedureKind == ProceduralBlockKind::Final)) {
         context.addDiag(diag::ConcurrentAssertNotInProc, syntax.sourceRange());
         return badStmt(compilation, nullptr);
     }
@@ -342,7 +345,6 @@ Statement& ConcurrentAssertionStatement::fromSyntax(
     ASTContext ctx = context;
     ctx.clearInstanceAndProc();
 
-    AssertionKind assertKind = SemanticFacts::getAssertKind(syntax.kind);
     auto& prop = AssertionExpr::bind(*syntax.propertySpec, ctx);
     bool bad = prop.bad();
 
