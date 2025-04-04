@@ -489,3 +489,33 @@ endmodule
     auto [diags, design] = analyze(code, compilation, analysisManager);
     CHECK_DIAGS_EMPTY;
 }
+
+TEST_CASE("DFA for constant case statements") {
+    auto& code = R"(
+module m;
+    parameter p = 2;
+    int i, j;
+    logic l;
+    always_comb begin
+        case (p)
+            0: begin end
+            1: begin end
+            2: i = 1;
+            default:;
+        endcase
+
+        case (l)
+            0: j = 1;
+            1: j = 2;
+            default:;
+        endcase
+    end
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto [diags, design] = analyze(code, compilation, analysisManager);
+    CHECK_DIAGS_EMPTY;
+}

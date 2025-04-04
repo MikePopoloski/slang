@@ -71,12 +71,6 @@ static bool isFullyCoveredWildcards(const SmallVector<SVInt>& patterns, bool wil
 }
 
 bool FlowAnalysisBase::isFullyCovered(const CaseStatement& stmt) const {
-    // Determine whether the case statement has full coverage of all possible
-    // inputs, such taht we're guaranteed to select one of the case items.
-    // This method is only called if we have no default statement, so we need
-    // to check every item to see if they cover the full input space.
-    SLANG_ASSERT(!stmt.defaultCase);
-
     // First of all, if the case statement asserts it has full coverage,
     // and our flags allow it, assume full coverage without checking.
     if (flags.has(AnalysisFlags::FullCaseUniquePriority) &&

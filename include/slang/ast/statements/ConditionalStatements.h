@@ -119,6 +119,11 @@ public:
         Statement(StatementKind::Case, sourceRange), expr(expr), items(items),
         defaultCase(defaultCase), condition(condition), check(check) {}
 
+    /// If the case expression and all items are constant, this returns
+    /// the branch that will be taken, if any. Otherwise returns a nullptr
+    /// statement and false for the second item in the pair.
+    std::pair<const Statement*, bool> getKnownBranch(EvalContext& context) const;
+
     EvalResult evalImpl(EvalContext& context) const;
 
     static Statement& fromSyntax(Compilation& compilation,

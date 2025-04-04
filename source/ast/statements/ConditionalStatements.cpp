@@ -518,14 +518,14 @@ static bool checkMatch(CaseStatementCondition condition, const ConstantValue& cv
     return cvl == cvr;
 }
 
-ER CaseStatement::evalImpl(EvalContext& context) const {
+std::pair<const Statement*, bool> CaseStatement::getKnownBranch(EvalContext& context) const {
     const Type* condType = nullptr;
     auto cv = expr.eval(context);
     if (!cv) {
         if (expr.kind == ExpressionKind::TypeReference)
             condType = &expr.as<TypeReferenceExpression>().targetType;
         else
-            return ER::Fail;
+            return {nullptr, false};
     }
 
     const Statement* matchedStmt = nullptr;
@@ -538,7 +538,7 @@ ER CaseStatement::evalImpl(EvalContext& context) const {
             if (item->kind == ExpressionKind::ValueRange) {
                 ConstantValue val = item->as<ValueRangeExpression>().checkInside(context, cv);
                 if (!val)
-                    return ER::Fail;
+                    return {nullptr, false};
 
                 matched = (bool)(logic_t)val.integer();
             }
@@ -549,7 +549,7 @@ ER CaseStatement::evalImpl(EvalContext& context) const {
                 else if (condType && item->kind == ExpressionKind::TypeReference)
                     matched = item->as<TypeReferenceExpression>().targetType.isMatching(*condType);
                 else
-                    return ER::Fail;
+                    return {nullptr, false};
             }
 
             if (matched) {
@@ -580,14 +580,24 @@ ER CaseStatement::evalImpl(EvalContext& context) const {
     if (!matchedStmt)
         matchedStmt = defaultCase;
 
-    if (matchedStmt)
-        return matchedStmt->eval(context);
+    if (!matchedStmt &&
+        (check == UniquePriorityCheck::Priority || check == UniquePriorityCheck::Unique)) {
 
-    if (check == UniquePriorityCheck::Priority || check == UniquePriorityCheck::Unique) {
         auto& diag = context.addDiag(diag::ConstEvalNoCaseItemsMatched, expr.sourceRange);
         diag << (check == UniquePriorityCheck::Priority ? "priority"sv : "unique"sv);
         diag << cv;
     }
+
+    return {matchedStmt, true};
+}
+
+ER CaseStatement::evalImpl(EvalContext& context) const {
+    auto [matchedStmt, success] = getKnownBranch(context);
+    if (!success)
+        return ER::Fail;
+
+    if (matchedStmt)
+        return matchedStmt->eval(context);
 
     return ER::Success;
 }

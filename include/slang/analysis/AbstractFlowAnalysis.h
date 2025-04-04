@@ -279,11 +279,20 @@ protected:
     void visitStmt(const CaseStatement& stmt) {
         visit(stmt.expr);
 
+        // If the branch is known we can visit it explicitly,
+        // otherwise we need to merge states for all case items.
+        // TODO: report warnings from the eval here?
+        auto [knownBranch, isKnown] = stmt.getKnownBranch(evalContext);
+
         auto initialState = std::move(state);
         auto finalState = (DERIVED).unreachableState();
 
         for (auto& item : stmt.items) {
-            setState((DERIVED).copyState(initialState));
+            if (isKnown && knownBranch != item.stmt)
+                setUnreachable();
+            else
+                setState((DERIVED).copyState(initialState));
+
             for (auto itemExpr : item.expressions)
                 visit(*itemExpr);
 
@@ -291,12 +300,26 @@ protected:
             (DERIVED).joinState(finalState, state);
         }
 
+        // Determine whether the case statement has full coverage of all possible
+        // inputs, such that we're guaranteed to select one of the case items.
+        const bool covered = isFullyCovered(stmt);
+
         if (stmt.defaultCase) {
-            setState((DERIVED).copyState(initialState));
+            // If the case input is fully covered by item expressions,
+            // or if we have a statically known branch that is not the
+            // default, then we know the default case is never hit.
+            if (covered || (isKnown && knownBranch != stmt.defaultCase))
+                setUnreachable();
+            else
+                setState((DERIVED).copyState(initialState));
+
             visit(*stmt.defaultCase);
             (DERIVED).joinState(finalState, state);
         }
-        else if (!isFullyCovered(stmt)) {
+        else if (!isKnown && !covered) {
+            // Branch is not statically known and the case input is
+            // not fully covered, so we have to assume that no item
+            // may be selected and that the initial state is relevant.
             (DERIVED).joinState(finalState, initialState);
         }
 
@@ -304,6 +327,7 @@ protected:
     }
 
     void visitStmt(const PatternCaseStatement& stmt) {
+        // TODO: match handling for regular CaseStatements
         visit(stmt.expr);
 
         auto initialState = std::move(state);
