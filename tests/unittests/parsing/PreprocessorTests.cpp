@@ -1338,6 +1338,28 @@ TEST_CASE("unconnected_drive directive") {
     CHECK(!diagnostics.empty());
 }
 
+bool lexCellDefine(std::string_view text) {
+    diagnostics.clear();
+
+    Preprocessor preprocessor(getSourceManager(), alloc, diagnostics);
+    preprocessor.pushSource(text);
+
+    Token token = preprocessor.next();
+    REQUIRE(token);
+    return preprocessor.getCellDefine();
+}
+
+TEST_CASE("celldefine directive") {
+    CHECK(lexCellDefine("`celldefine") == true);
+    CHECK_DIAGNOSTICS_EMPTY;
+
+    CHECK(lexCellDefine("`celldefine\n`endcelldefine") == false);
+    CHECK_DIAGNOSTICS_EMPTY;
+
+    CHECK(lexCellDefine("`endcelldefine") == false);
+    CHECK_DIAGNOSTICS_EMPTY;
+}
+
 TEST_CASE("macro-defined include file") {
     auto& text = "`define FILE <include.svh>\n"
                  "`include `FILE";

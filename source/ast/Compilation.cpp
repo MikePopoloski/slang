@@ -234,6 +234,8 @@ void Compilation::addSyntaxTree(std::shared_ptr<SyntaxTree> tree) {
                 break;
         }
 
+        result.cellDefine = meta.cellDefine;
+
         syntaxMetadata[n] = result;
     }
 
@@ -822,7 +824,7 @@ void Compilation::createDefinition(const Scope& scope, LookupLocation location,
     auto def = definitionMemory
                    .emplace_back(std::make_unique<DefinitionSymbol>(
                        scope, location, syntax, *metadata.defaultNetType, metadata.unconnectedDrive,
-                       metadata.timeScale, metadata.tree))
+                       metadata.cellDefine, metadata.timeScale, metadata.tree))
                    .get();
     definitionFromSyntax[&syntax].push_back(def);
 
