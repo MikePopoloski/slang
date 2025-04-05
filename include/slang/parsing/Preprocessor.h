@@ -130,6 +130,10 @@ public:
     /// if any has been set by the user. If none is set, this returns TokenKind::Unknown.
     TokenKind getUnconnectedDrive() const { return unconnectedDrive; }
 
+    /// Gets the currently active kind of module definition, if any has been set by
+    /// the user. If none is set, this returns false.
+    bool getCellDefine() const { return cellDefine; }
+
     /// Gets the currently active keyword version in use by the preprocessor.
     KeywordVersion getCurrentKeywordVersion() const { return keywordVersionStack.back(); }
 
@@ -176,6 +180,8 @@ private:
     Trivia handleEndKeywordsDirective(Token directive);
     Trivia handleUnconnectedDriveDirective(Token directive);
     Trivia handleNoUnconnectedDriveDirective(Token directive);
+    Trivia handleCellDefineDirective(Token directive);
+    Trivia handleEndCellDefineDirective(Token directive);
     Trivia handleDefaultDecayTimeDirective(Token directive);
     Trivia handleDefaultTriregStrengthDirective(Token directive);
     Trivia createSimpleDirective(Token directive);
@@ -421,6 +427,7 @@ private:
     std::optional<TimeScale> activeTimeScale;
     TokenKind defaultNetType = TokenKind::WireKeyword;
     TokenKind unconnectedDrive = TokenKind::Unknown;
+    bool cellDefine = false;
 
     int designElementDepth = 0;
     uint32_t includeDepth = 0;
