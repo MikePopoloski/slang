@@ -1046,3 +1046,436 @@ typedef enum logic [1:0] {
   ]
 })");
 }
+
+TEST_CASE("Serializing macro expansion") {
+    auto tree = SyntaxTree::fromText(R"(
+`define print_msg(LEVEL, MSG, CTX) \
+    begin \
+        if (CTX.should_print(LEVEL)) begin \
+            CTX.print_msg(MSG); \
+        end \
+    end
+
+class C;
+    int level = 0;
+    function logic should_print(int log_level);
+        return level >= log_level;
+    endfunction
+    function void print_msg(string msg);
+        $display("%s\n", msg);
+    endfunction
+endclass
+
+module top;
+    C c;
+    initial
+        `print_msg(0, "msg", c)
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto result = serialize(compilation, true);
+    CHECK(result == R"(
+{
+  "name": "$root",
+  "kind": "Root",
+  "source_file": "",
+  "source_line": 0,
+  "source_column": 0,
+  "members": [
+    {
+      "name": "",
+      "kind": "CompilationUnit",
+      "source_file": "",
+      "source_line": 0,
+      "source_column": 0,
+      "members": [
+        {
+          "name": "C",
+          "kind": "ClassType",
+          "source_file": "source",
+          "source_line": 9,
+          "source_column": 7,
+          "members": [
+            {
+              "name": "level",
+              "kind": "ClassProperty",
+              "source_file": "source",
+              "source_line": 10,
+              "source_column": 9,
+              "type": "int",
+              "initializer": {
+                "source_file_start": "source",
+                "source_file_end": "source",
+                "source_line_start": 10,
+                "source_line_end": 10,
+                "source_column_start": 17,
+                "source_column_end": 18,
+                "kind": "IntegerLiteral",
+                "type": "int",
+                "value": "0",
+                "constant": "0"
+              },
+              "lifetime": "Automatic",
+              "visibility": "Public"
+            },
+            {
+              "name": "should_print",
+              "kind": "Subroutine",
+              "source_file": "source",
+              "source_line": 11,
+              "source_column": 20,
+              "members": [
+                {
+                  "name": "log_level",
+                  "kind": "FormalArgument",
+                  "source_file": "source",
+                  "source_line": 11,
+                  "source_column": 37,
+                  "type": "int",
+                  "lifetime": "Automatic",
+                  "direction": "In"
+                },
+                {
+                  "name": "should_print",
+                  "kind": "Variable",
+                  "source_file": "source",
+                  "source_line": 11,
+                  "source_column": 20,
+                  "type": "logic",
+                  "lifetime": "Automatic",
+                  "flags": "compiler_generated"
+                },
+                {
+                  "name": "this",
+                  "kind": "Variable",
+                  "source_file": "source",
+                  "source_line": 9,
+                  "source_column": 7,
+                  "type": "C",
+                  "lifetime": "Automatic",
+                  "flags": "const,compiler_generated"
+                }
+              ],
+              "returnType": "logic",
+              "defaultLifetime": "Automatic",
+              "subroutineKind": "Function",
+              "body": {
+                "source_file_start": "source",
+                "source_file_end": "source",
+                "source_line_start": 12,
+                "source_line_end": 12,
+                "source_column_start": 9,
+                "source_column_end": 35,
+                "kind": "Return",
+                "expr": {
+                  "kind": "Conversion",
+                  "type": "logic",
+                  "operand": {
+                    "source_file_start": "source",
+                    "source_file_end": "source",
+                    "source_line_start": 12,
+                    "source_line_end": 12,
+                    "source_column_start": 16,
+                    "source_column_end": 34,
+                    "kind": "BinaryOp",
+                    "type": "bit",
+                    "op": "GreaterThanEqual",
+                    "left": {
+                      "source_file_start": "source",
+                      "source_file_end": "source",
+                      "source_line_start": 12,
+                      "source_line_end": 12,
+                      "source_column_start": 16,
+                      "source_column_end": 21,
+                      "kind": "NamedValue",
+                      "type": "int",
+                      "symbol": "level"
+                    },
+                    "right": {
+                      "source_file_start": "source",
+                      "source_file_end": "source",
+                      "source_line_start": 12,
+                      "source_line_end": 12,
+                      "source_column_start": 25,
+                      "source_column_end": 34,
+                      "kind": "NamedValue",
+                      "type": "int",
+                      "symbol": "log_level"
+                    }
+                  }
+                }
+              },
+              "visibility": "Public",
+              "arguments": [
+                {
+                  "name": "log_level",
+                  "kind": "FormalArgument",
+                  "source_file": "source",
+                  "source_line": 11,
+                  "source_column": 37,
+                  "type": "int",
+                  "lifetime": "Automatic",
+                  "direction": "In"
+                }
+              ]
+            },
+            {
+              "name": "print_msg",
+              "kind": "Subroutine",
+              "source_file": "source",
+              "source_line": 14,
+              "source_column": 19,
+              "members": [
+                {
+                  "name": "msg",
+                  "kind": "FormalArgument",
+                  "source_file": "source",
+                  "source_line": 14,
+                  "source_column": 36,
+                  "type": "string",
+                  "lifetime": "Automatic",
+                  "direction": "In"
+                },
+                {
+                  "name": "print_msg",
+                  "kind": "Variable",
+                  "source_file": "source",
+                  "source_line": 14,
+                  "source_column": 19,
+                  "type": "void",
+                  "lifetime": "Automatic",
+                  "flags": "compiler_generated"
+                },
+                {
+                  "name": "this",
+                  "kind": "Variable",
+                  "source_file": "source",
+                  "source_line": 9,
+                  "source_column": 7,
+                  "type": "C",
+                  "lifetime": "Automatic",
+                  "flags": "const,compiler_generated"
+                }
+              ],
+              "returnType": "void",
+              "defaultLifetime": "Automatic",
+              "subroutineKind": "Function",
+              "body": {
+                "source_file_start": "source",
+                "source_file_end": "source",
+                "source_line_start": 15,
+                "source_line_end": 15,
+                "source_column_start": 9,
+                "source_column_end": 31,
+                "kind": "ExpressionStatement",
+                "expr": {
+                  "source_file_start": "source",
+                  "source_file_end": "source",
+                  "source_line_start": 15,
+                  "source_line_end": 15,
+                  "source_column_start": 9,
+                  "source_column_end": 30,
+                  "kind": "Call",
+                  "type": "void",
+                  "subroutine": "$display",
+                  "arguments": [
+                    {
+                      "source_file_start": "source",
+                      "source_file_end": "source",
+                      "source_line_start": 15,
+                      "source_line_end": 15,
+                      "source_column_start": 18,
+                      "source_column_end": 24,
+                      "kind": "StringLiteral",
+                      "type": "bit[23:0]",
+                      "literal": "%s\n",
+                      "constant": "24'd2454282"
+                    },
+                    {
+                      "source_file_start": "source",
+                      "source_file_end": "source",
+                      "source_line_start": 15,
+                      "source_line_end": 15,
+                      "source_column_start": 26,
+                      "source_column_end": 29,
+                      "kind": "NamedValue",
+                      "type": "string",
+                      "symbol": "msg"
+                    }
+                  ]
+                }
+              },
+              "visibility": "Public",
+              "arguments": [
+                {
+                  "name": "msg",
+                  "kind": "FormalArgument",
+                  "source_file": "source",
+                  "source_line": 14,
+                  "source_column": 36,
+                  "type": "string",
+                  "lifetime": "Automatic",
+                  "direction": "In"
+                }
+              ]
+            }
+          ],
+          "isAbstract": false,
+          "isInterface": false,
+          "isFinal": false,
+          "implements": [
+          ]
+        }
+      ]
+    },
+    {
+      "name": "top",
+      "kind": "Instance",
+      "source_file": "source",
+      "source_line": 19,
+      "source_column": 8,
+      "body": {
+        "name": "top",
+        "kind": "InstanceBody",
+        "source_file": "source",
+        "source_line": 19,
+        "source_column": 8,
+        "members": [
+          {
+            "name": "c",
+            "kind": "Variable",
+            "source_file": "source",
+            "source_line": 20,
+            "source_column": 7,
+            "type": "C",
+            "lifetime": "Static"
+          },
+          {
+            "name": "",
+            "kind": "ProceduralBlock",
+            "source_file": "source",
+            "source_line": 21,
+            "source_column": 5,
+            "procedureKind": "Initial",
+            "body": {
+              "source_file_start": "source",
+              "source_file_end": "source",
+              "source_line_start": 22,
+              "source_line_end": 22,
+              "source_column_start": 9,
+              "source_column_end": 9,
+              "kind": "Block",
+              "blockKind": "Sequential",
+              "body": {
+                "source_file_start": "source",
+                "source_file_end": "source",
+                "source_line_start": 22,
+                "source_line_end": 22,
+                "source_column_start": 9,
+                "source_column_end": 9,
+                "kind": "Conditional",
+                "conditions": [
+                  {
+                    "expr": {
+                      "source_file_start": "source",
+                      "source_file_end": "source",
+                      "source_line_start": 22,
+                      "source_line_end": 22,
+                      "source_column_start": 30,
+                      "source_column_end": 9,
+                      "kind": "Call",
+                      "type": "logic",
+                      "subroutine": "should_print",
+                      "thisClass": {
+                        "kind": "NamedValue",
+                        "type": "C",
+                        "symbol": "c"
+                      },
+                      "arguments": [
+                        {
+                          "source_file_start": "source",
+                          "source_file_end": "source",
+                          "source_line_start": 22,
+                          "source_line_end": 22,
+                          "source_column_start": 20,
+                          "source_column_end": 21,
+                          "kind": "IntegerLiteral",
+                          "type": "int",
+                          "value": "0",
+                          "constant": "0"
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "check": "None",
+                "ifTrue": {
+                  "source_file_start": "source",
+                  "source_file_end": "source",
+                  "source_line_start": 22,
+                  "source_line_end": 22,
+                  "source_column_start": 9,
+                  "source_column_end": 9,
+                  "kind": "Block",
+                  "blockKind": "Sequential",
+                  "body": {
+                    "source_file_start": "source",
+                    "source_file_end": "source",
+                    "source_line_start": 22,
+                    "source_line_end": 22,
+                    "source_column_start": 30,
+                    "source_column_end": 9,
+                    "kind": "ExpressionStatement",
+                    "expr": {
+                      "source_file_start": "source",
+                      "source_file_end": "source",
+                      "source_line_start": 22,
+                      "source_line_end": 22,
+                      "source_column_start": 30,
+                      "source_column_end": 9,
+                      "kind": "Call",
+                      "type": "void",
+                      "subroutine": "print_msg",
+                      "thisClass": {
+                        "kind": "NamedValue",
+                        "type": "C",
+                        "symbol": "c"
+                      },
+                      "arguments": [
+                        {
+                          "kind": "Conversion",
+                          "type": "string",
+                          "operand": {
+                            "source_file_start": "source",
+                            "source_file_end": "source",
+                            "source_line_start": 22,
+                            "source_line_end": 22,
+                            "source_column_start": 23,
+                            "source_column_end": 28,
+                            "kind": "StringLiteral",
+                            "type": "bit[23:0]",
+                            "literal": "msg",
+                            "constant": "24'd7172967"
+                          },
+                          "constant": "\"msg\""
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "definition": "top"
+      },
+      "connections": [
+      ]
+    }
+  ]
+})");
+}
