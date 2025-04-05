@@ -91,7 +91,7 @@ public:
 
         // Needs to come after we visitDefault because visiting the first token
         // might update our preproc state.
-        meta.nodeMap[&syntax] = {defaultNetType, unconnectedDrive, timeScale};
+        meta.nodeMap[&syntax] = {defaultNetType, unconnectedDrive, cellDefine, timeScale};
     }
 
     void visitToken(Token token) {
@@ -112,6 +112,12 @@ public:
                     case SyntaxKind::NoUnconnectedDriveDirective:
                         unconnectedDrive = TokenKind::Unknown;
                         break;
+                    case SyntaxKind::CellDefineDirective:
+                        cellDefine = true;
+                        break;
+                    case SyntaxKind::EndCellDefineDirective:
+                        cellDefine = false;
+                        break;
                     case SyntaxKind::TimeScaleDirective: {
                         auto& tsd = s->as<TimeScaleDirectiveSyntax>();
                         if (tsd.timeUnit.kind == TokenKind::TimeLiteral &&
@@ -130,6 +136,7 @@ public:
                     case SyntaxKind::ResetAllDirective:
                         defaultNetType = TokenKind::Unknown;
                         unconnectedDrive = TokenKind::Unknown;
+                        cellDefine = false;
                         timeScale = {};
                         break;
                     default:
@@ -143,6 +150,7 @@ private:
     SmallVector<flat_hash_set<std::string_view>, 4> moduleDeclStack;
     TokenKind defaultNetType = TokenKind::Unknown;
     TokenKind unconnectedDrive = TokenKind::Unknown;
+    bool cellDefine = false;
     std::optional<TimeScale> timeScale;
 };
 
