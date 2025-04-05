@@ -22,6 +22,7 @@ struct SLANG_EXPORT ParserMetadata {
     struct Node {
         TokenKind defaultNetType;
         TokenKind unconnectedDrive;
+        bool cellDefine = false;
         std::optional<TimeScale> timeScale;
     };
 

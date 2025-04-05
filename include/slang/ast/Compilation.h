@@ -904,6 +904,7 @@ private:
         const NetType* defaultNetType = nullptr;
         std::optional<TimeScale> timeScale;
         UnconnectedDrive unconnectedDrive = UnconnectedDrive::None;
+        bool cellDefine = false;
     };
 
     // Map from syntax nodes to parse-time metadata about them.
