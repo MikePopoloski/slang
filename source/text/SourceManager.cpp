@@ -627,12 +627,8 @@ size_t SourceManager::getRawLineNumber(SourceLocation location, TLock& readLock)
 
 template<IsLock TLock>
 SourceLocation SourceManager::getFullyExpandedLocImpl(SourceLocation location, TLock& lock) const {
-    while (isMacroLocImpl(location, lock)) {
-        if (isMacroArgLocImpl(location, lock))
-            location = getOriginalLocImpl(location, lock);
-        else
-            location = getExpansionRangeImpl(location, lock).start();
-    }
+    while (isMacroLocImpl(location, lock))
+        location = getExpansionRangeImpl(location, lock).start();
     return location;
 }
 

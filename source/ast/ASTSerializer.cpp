@@ -184,14 +184,14 @@ void ASTSerializer::visit(const T& elem, bool inMembersArray) {
         if (elem.syntax && includeSourceInfo) {
             if (auto sm = compilation.getSourceManager()) {
                 auto sr = elem.syntax->sourceRange();
-                auto expanded_start = sm->getFullyExpandedLoc(sr.start());
-                auto expanded_end = sm->getFullyExpandedLoc(sr.end());
-                write("source_file_start", sm->getFileName(expanded_start));
-                write("source_file_end", sm->getFileName(expanded_end));
-                write("source_line_start", sm->getLineNumber(expanded_start));
-                write("source_line_end", sm->getLineNumber(expanded_end));
-                write("source_column_start", sm->getColumnNumber(expanded_start));
-                write("source_column_end", sm->getColumnNumber(expanded_end));
+                auto start = sm->getFullyExpandedLoc(sr.start());
+                auto end = sm->getFullyExpandedLoc(sr.end());
+                write("source_file_start", sm->getFileName(start));
+                write("source_file_end", sm->getFileName(end));
+                write("source_line_start", sm->getLineNumber(start));
+                write("source_line_end", sm->getLineNumber(end));
+                write("source_column_start", sm->getColumnNumber(start));
+                write("source_column_end", sm->getColumnNumber(end));
             }
         }
     }
