@@ -74,10 +74,14 @@ size_t SourceManager::getColumnNumber(SourceLocation location) const {
     auto fd = info->data;
     size_t lineStart = location.offset();
     SLANG_ASSERT(lineStart < fd->mem.size());
-    while (lineStart > 0 && fd->mem[lineStart - 1] != '\n' && fd->mem[lineStart - 1] != '\r')
+    size_t length = 0;
+    while (lineStart > 0 && fd->mem[lineStart - 1] != '\n' && fd->mem[lineStart - 1] != '\r') {
+        if ((fd->mem[lineStart - 1] & 0xc0) != 0x80)
+            length++;
         lineStart--;
+    }
 
-    return location.offset() - lineStart + 1;
+    return length + 1;
 }
 
 std::string_view SourceManager::getFileName(SourceLocation location) const {
