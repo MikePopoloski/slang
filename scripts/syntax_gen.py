@@ -1106,14 +1106,20 @@ void registerSyntaxNodes{0}(py::module_& m) {{
         )
 
         idx = i * perfile
-        for k, v in items[idx : idx + perfile]:
-            if k == "SyntaxNode":
+        for class_name, v in items[idx : idx + perfile]:
+            if class_name == "SyntaxNode":
                 continue
 
-            outf.write('    py::class_<{}, {}>(m, "{}")'.format(k, v.base, k))
-            for m in v.members:
+            outf.write(f'    py::class_<{class_name}, {v.base}>(m, "{class_name}")')
+            for member_name in v.members:
+                python_member_name = member_name[1]
+
+                # Validate and rewrite invalid Python attribute names.
+                if python_member_name == "with":
+                    python_member_name = "with_"
+
                 outf.write(
-                    '\n        .def_readwrite("{}", &{}::{})'.format(m[1], k, m[1])
+                    f'\n        .def_readwrite("{python_member_name}", &{class_name}::{member_name[1]})'
                 )
             outf.write(";\n\n")
 
