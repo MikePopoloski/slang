@@ -1,18 +1,18 @@
 # SPDX-FileCopyrightText: Michael Popoloski
 # SPDX-License-Identifier: MIT
 
+from typing import Union
+
 import pyslang
 
 
 def test_syntax_node_visitor():
-    """
-    Test the SyntaxNode visitor by extracting the tokens of a SyntaxNode.
-    """
+    """Test the SyntaxNode visitor by extracting the tokens of a SyntaxNode."""
 
     tree = pyslang.SyntaxTree.fromText("always @(*)")
     tokens = []
 
-    def handle(obj):
+    def handle(obj: Union[pyslang.Token, pyslang.SyntaxNode]) -> None:
         if isinstance(obj, pyslang.Token):
             tokens.append(obj)
 
@@ -30,9 +30,9 @@ def test_syntax_node_visitor():
 
 
 def test_timing_control_visitor():
-    """
-    Test the TimingControl visitor by extracting the sensitivit list
-    of a T-FF. The example module was taken from
+    """Test the TimingControl visitor by extracting the sensitivity list of a T-FF.
+
+    The example module was taken from
     https://www.chipverify.com/verilog/verilog-always-block
     """
 
@@ -70,7 +70,7 @@ def test_timing_control_visitor():
         def __init__(self):
             self.sensitivity_vars = []
 
-        def __call__(self, obj):
+        def __call__(self, obj: Union[pyslang.Token, pyslang.SyntaxNode]) -> None:
             if isinstance(obj, pyslang.SignalEventControl):
                 assert isinstance(obj.expr, pyslang.NamedValueExpression)
                 self.sensitivity_vars.append(obj.expr.getSymbolReference())
@@ -82,9 +82,10 @@ def test_timing_control_visitor():
 
 
 def test_ast_visitor_single_counting_of_statements():
-    """
-    Test the visitor interface in pyslang using a port of slang's
-    tests/unittests/VisitorTests.cpp:"Test single counting of statements".
+    """Test the visitor interface in pyslang.
+
+    Uses a port of Slang's test case:
+    `tests/unittests/VisitorTests.cpp:"Test single counting of statements"`.
     """
 
     tree = pyslang.SyntaxTree.fromText(
@@ -107,14 +108,14 @@ endmodule
 
     class Visitor:
         def __init__(self):
-            self.count = 0
+            self.statement_count = 0
 
-        def visit(self, node):
+        def visit(self, node: Union[pyslang.Token, pyslang.SyntaxNode]) -> None:
             if isinstance(node, pyslang.Statement):
-                self.count += 1
+                self.statement_count += 1
 
     c = pyslang.Compilation()
     c.addSyntaxTree(tree)
     v = Visitor()
     c.getRoot().visit(v.visit)
-    assert v.count == 11
+    assert v.statement_count == 11
