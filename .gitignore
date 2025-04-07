@@ -9,6 +9,7 @@ __pycache__/
 *.pyo
 *.pyd
 _version.py
+__init__.pyi
 
 # C and CMake ignores.
 build/
