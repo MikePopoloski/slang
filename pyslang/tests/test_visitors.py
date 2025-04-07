@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: Michael Popoloski
 # SPDX-License-Identifier: MIT
 
-from pyslang import *
+import pyslang
 
 
 def test_syntax_node_visitor():
@@ -9,23 +9,23 @@ def test_syntax_node_visitor():
     Test the SyntaxNode visitor by extracting the tokens of a SyntaxNode.
     """
 
-    tree = SyntaxTree.fromText("always @(*)")
+    tree = pyslang.SyntaxTree.fromText("always @(*)")
     tokens = []
 
     def handle(obj):
-        if isinstance(obj, Token):
+        if isinstance(obj, pyslang.Token):
             tokens.append(obj)
 
-    assert isinstance(tree.root, SyntaxNode)
+    assert isinstance(tree.root, pyslang.SyntaxNode)
     tree.root.visit(handle)
     token_kinds = [t.kind for t in tokens]
     assert token_kinds == [
-        TokenKind.AlwaysKeyword,
-        TokenKind.At,
-        TokenKind.OpenParenthesis,
-        TokenKind.Star,
-        TokenKind.CloseParenthesis,
-        TokenKind.Semicolon,
+        pyslang.TokenKind.AlwaysKeyword,
+        pyslang.TokenKind.At,
+        pyslang.TokenKind.OpenParenthesis,
+        pyslang.TokenKind.Star,
+        pyslang.TokenKind.CloseParenthesis,
+        pyslang.TokenKind.Semicolon,
     ]
 
 
@@ -36,7 +36,7 @@ def test_timing_control_visitor():
     https://www.chipverify.com/verilog/verilog-always-block
     """
 
-    tree = SyntaxTree.fromText(
+    tree = pyslang.SyntaxTree.fromText(
         """
         module tff (input  d,
                     clk,
@@ -55,24 +55,24 @@ def test_timing_control_visitor():
         endmodule
         """
     )
-    c = Compilation()
+    c = pyslang.Compilation()
     c.addSyntaxTree(tree)
     insts = c.getRoot().topInstances
     assert len(insts) == 1
     always_block = list(insts[0].body)[-1]
-    assert isinstance(always_block, ProceduralBlockSymbol)
+    assert isinstance(always_block, pyslang.ProceduralBlockSymbol)
     timed = always_block.body
-    assert isinstance(timed, TimedStatement)
+    assert isinstance(timed, pyslang.TimedStatement)
     timing_control = timed.timing
-    assert isinstance(timing_control, TimingControl)
+    assert isinstance(timing_control, pyslang.TimingControl)
 
     class SensitivityListExtractor:
         def __init__(self):
             self.sensitivity_vars = []
 
         def __call__(self, obj):
-            if isinstance(obj, SignalEventControl):
-                assert isinstance(obj.expr, NamedValueExpression)
+            if isinstance(obj, pyslang.SignalEventControl):
+                assert isinstance(obj.expr, pyslang.NamedValueExpression)
                 self.sensitivity_vars.append(obj.expr.getSymbolReference())
 
     visitor = SensitivityListExtractor()
@@ -87,7 +87,7 @@ def test_ast_visitor_single_counting_of_statements():
     tests/unittests/VisitorTests.cpp:"Test single counting of statements".
     """
 
-    tree = SyntaxTree.fromText(
+    tree = pyslang.SyntaxTree.fromText(
         """
 module m;
     int j;
@@ -110,10 +110,10 @@ endmodule
             self.count = 0
 
         def visit(self, node):
-            if isinstance(node, Statement):
+            if isinstance(node, pyslang.Statement):
                 self.count += 1
 
-    c = Compilation()
+    c = pyslang.Compilation()
     c.addSyntaxTree(tree)
     v = Visitor()
     c.getRoot().visit(v.visit)

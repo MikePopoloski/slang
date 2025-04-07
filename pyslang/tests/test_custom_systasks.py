@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: Michael Popoloski
 # SPDX-License-Identifier: MIT
 
-from pyslang import *
+import pyslang
 
 testfile = """
 module m;
@@ -16,18 +16,18 @@ endmodule
 
 
 def test_custom_systasks():
-    c = Compilation()
-    c.addSyntaxTree(SyntaxTree.fromText(testfile))
+    c = pyslang.Compilation()
+    c.addSyntaxTree(pyslang.SyntaxTree.fromText(testfile))
 
-    foo = NonConstantFunction("$foo", c.realType, 1, [c.stringType])
+    foo = pyslang.NonConstantFunction("$foo", c.realType, 1, [c.stringType])
     c.addSystemSubroutine(foo)
 
-    class BarFunc(SimpleSystemSubroutine):
+    class BarFunc(pyslang.SimpleSystemSubroutine):
         def __init__(self):
-            SimpleSystemSubroutine.__init__(
+            pyslang.SimpleSystemSubroutine.__init__(
                 self,
                 "$bar",
-                SubroutineKind.Function,
+                pyslang.SubroutineKind.Function,
                 1,
                 [c.intType],
                 c.intType,
@@ -45,7 +45,7 @@ def test_custom_systasks():
     c.addSystemSubroutine(BarFunc())
 
     diags = c.getAllDiagnostics()
-    report = DiagnosticEngine.reportAll(c.sourceManager, diags)
+    report = pyslang.DiagnosticEngine.reportAll(c.sourceManager, diags)
     assert (
         ("\n" + report)
         == """
