@@ -33,7 +33,9 @@ using namespace slang::ast;
     do {                                                            \
         py::enum_<name> e(handle, #name);                           \
         for (auto member : name##_traits::values) {                 \
-            e.value(std::string(toString(member)).c_str(), member); \
+            std::string nameStr = std::string(toString(member));    \
+            if (nameStr == "None") nameStr = "None_";               \
+            e.value(nameStr.c_str(), member);                       \
         }                                                           \
     } while (0)
 
