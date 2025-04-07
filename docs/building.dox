@@ -124,7 +124,12 @@ source venv/bin/activate
 3. Install `pyslang` as a Python package (including building the C++ `slang` library with bindings):
 
 @code{.ansi}
+# Option 1: Install Pyslang (takes 5-10 minutes to build), using a fully-isolated build each time:
 pip install .
+
+# Option 2: Install Pyslang, caching build products across rebuilds:
+pip install pybind11 scikit-build-core
+pip install . --no-build-isolation --config-settings build-dir=build/python_build
 @endcode
 
 ## Steps: Run the Python tests
