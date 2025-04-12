@@ -56,20 +56,10 @@ enum class NodeKind {
 
 enum class VariableSelectorKind { ElementSelect, RangeSelect, MemberAccess };
 
-static std::string getSymbolHierPath(const ast::Symbol& symbol) {
-
-    // Resolve the hierarchical path of the symbol.
-    std::string buffer;
-    symbol.getHierarchicalPath(buffer);
-
-    return buffer;
-}
-
 static std::string resolveSymbolHierPath(const ast::Symbol& symbol) {
 
     // Resolve the hierarchical path of the symbol.
-    std::string buffer;
-    symbol.getHierarchicalPath(buffer);
+    auto buffer = symbol.getHierarchicalPath();
 
     // Is the symbol is a modport, use the modport name to adjust the
     // hierachical path to match the corresponding variable declaration in the
@@ -387,7 +377,7 @@ public:
     NetlistPortDeclaration& addPortDeclaration(const ast::Symbol& symbol) {
         auto nodePtr = std::make_unique<NetlistPortDeclaration>(symbol);
         auto& node = nodePtr->as<NetlistPortDeclaration>();
-        symbol.getHierarchicalPath(node.hierarchicalPath);
+        symbol.appendHierarchicalPath(node.hierarchicalPath);
         SLANG_ASSERT(lookupPort(nodePtr->hierarchicalPath) == nullptr &&
                      "Port declaration already exists");
         nodes.push_back(std::move(nodePtr));
@@ -397,7 +387,7 @@ public:
 
     /// Add a variable declaration node to the netlist.
     NetlistVariableDeclaration& addVariableDeclaration(const ast::Symbol& symbol) {
-        std::string hierPath = getSymbolHierPath(symbol);
+        std::string hierPath = symbol.getHierarchicalPath();
         if (auto* result = lookupVariable(hierPath)) {
             DEBUG_PRINT("Variable declaration for {} already exists", hierPath);
             return *result;
@@ -416,7 +406,7 @@ public:
     NetlistVariableAlias& addVariableAlias(const ast::Symbol& symbol, ConstantRange overlap) {
         auto nodePtr = std::make_unique<NetlistVariableAlias>(symbol, overlap);
         auto& node = nodePtr->as<NetlistVariableAlias>();
-        symbol.getHierarchicalPath(node.hierarchicalPath);
+        symbol.appendHierarchicalPath(node.hierarchicalPath);
         nodes.push_back(std::move(nodePtr));
         DEBUG_PRINT("New node: variable alias {}\n", node.hierarchicalPath);
         return node;

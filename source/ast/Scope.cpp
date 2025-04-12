@@ -819,11 +819,7 @@ void Scope::checkImportConflict(const Symbol& member, const Symbol& existing) co
 
 void Scope::elaborate() const {
     if (thisSym->kind == SymbolKind::InstanceBody && TimeTrace::isEnabled()) {
-        TimeTrace::beginTrace("elaborate scope"sv, [&] {
-            std::string buffer;
-            thisSym->getHierarchicalPath(buffer);
-            return buffer;
-        });
+        TimeTrace::beginTrace("elaborate scope"sv, [&] { return thisSym->getHierarchicalPath(); });
     }
 
     SLANG_ASSERT(deferredMemberIndex != DeferredMemberIndex::Invalid);

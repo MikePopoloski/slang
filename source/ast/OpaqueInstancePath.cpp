@@ -59,17 +59,8 @@ void OpaqueInstancePath::buildPath(const Symbol& symbol) {
              current->kind == SymbolKind::CheckerInstance) {
         auto& inst = current->as<InstanceSymbolBase>();
         if (!inst.arrayPath.empty()) {
-            SmallVector<ConstantRange, 8> instanceDimVec;
-            inst.getArrayDimensions(instanceDimVec);
-
-            std::span<const ConstantRange> instanceDims = instanceDimVec;
-            std::span<const int32_t> arrayPath = inst.arrayPath;
-            SLANG_ASSERT(instanceDims.size() == arrayPath.size());
-
-            for (size_t i = 0; i < instanceDims.size(); i++) {
-                auto dim = instanceDims[i];
-                entries.push_back((uint32_t)dim.translateIndex(arrayPath[i]));
-            }
+            for (auto idx : inst.arrayPath)
+                entries.push_back(idx);
             return;
         }
 

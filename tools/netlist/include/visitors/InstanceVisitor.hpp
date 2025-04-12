@@ -85,8 +85,8 @@ private:
     /// occuring in the body of the module.
     void connectPortInternal(NetlistNode& port) {
         if (auto* internalSymbol = port.symbol.as<ast::PortSymbol>().internalSymbol) {
-            std::string pathBuffer;
-            internalSymbol->getHierarchicalPath(pathBuffer);
+            auto pathBuffer = internalSymbol->getHierarchicalPath();
+
             auto* variableNode = netlist.lookupVariable(pathBuffer);
             switch (port.symbol.as<ast::PortSymbol>().direction) {
                 case ast::ArgumentDirection::In:
@@ -190,9 +190,9 @@ public:
 
     /// Instance.
     void handle(const ast::InstanceSymbol& symbol) {
-        DEBUG_PRINT("Instance: {}\n", getSymbolHierPath(symbol));
+        DEBUG_PRINT("Instance: {}\n", symbol.getHierarchicalPath());
 
-        if (getSymbolHierPath(symbol) == "$unit") {
+        if (symbol.getHierarchicalPath() == "$unit") {
             // An instance without a name has been excluded from the design.
             // This can happen when the --top option is used and there is an
             // uninstanced module.

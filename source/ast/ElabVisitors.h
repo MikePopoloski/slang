@@ -353,11 +353,7 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
         if (!visitInstances && symbol.body.flags.has(InstanceFlags::FromBind))
             return;
 
-        TimeTraceScope timeScope("AST Instance", [&] {
-            std::string buffer;
-            symbol.getHierarchicalPath(buffer);
-            return buffer;
-        });
+        TimeTraceScope timeScope("AST Instance", [&] { return symbol.getHierarchicalPath(); });
 
         for (auto attr : compilation.getAttributes(symbol))
             attr->getValue();

@@ -152,7 +152,7 @@ private:
     const ConfigBlockSymbol* newConfigRoot = nullptr;
     const SyntaxNode* overrideSyntax;
     SmallVectorBase<const Symbol*>& implicitNets;
-    SmallVector<int32_t> path;
+    SmallVector<uint32_t> path;
     std::span<const AttributeInstanceSyntax* const> attributes;
     bitmask<InstanceFlags> flags;
 
@@ -211,7 +211,7 @@ private:
                     childOverrides = &nodeIt->second;
             }
 
-            path.push_back(range.lower() + int32_t(i));
+            path.push_back(i);
             auto symbol = recurse(syntax, childOverrides, it, end);
             path.pop_back();
 
@@ -1426,7 +1426,7 @@ PrimitiveInstanceSymbol* createPrimInst(Compilation& compilation, const Scope& s
                                         const PrimitiveSymbol& primitive,
                                         const HierarchicalInstanceSyntax& syntax,
                                         std::span<const AttributeInstanceSyntax* const> attributes,
-                                        SmallVectorBase<int32_t>& path) {
+                                        SmallVectorBase<uint32_t>& path) {
     auto [name, loc] = getNameLoc(syntax);
     auto result = compilation.emplace<PrimitiveInstanceSymbol>(name, loc, primitive);
     result->arrayPath = path.copy(compilation);
@@ -1441,7 +1441,7 @@ Symbol* recursePrimArray(Compilation& comp, const PrimitiveSymbol& primitive,
                          const HierarchicalInstanceSyntax& instance, const ASTContext& context,
                          DimIterator it, DimIterator end,
                          std::span<const AttributeInstanceSyntax* const> attributes,
-                         SmallVectorBase<int32_t>& path) {
+                         SmallVectorBase<uint32_t>& path) {
     if (it == end)
         return createPrimInst(comp, *context.scope, primitive, instance, attributes, path);
 
@@ -1465,7 +1465,7 @@ Symbol* recursePrimArray(Compilation& comp, const PrimitiveSymbol& primitive,
     }
 
     SmallVector<const Symbol*> elements;
-    for (int32_t i = range.lower(); i <= range.upper(); i++) {
+    for (uint32_t i = 0; i < range.width(); i++) {
         path.push_back(i);
         auto symbol = recursePrimArray(comp, primitive, instance, context, it, end, attributes,
                                        path);
@@ -1490,7 +1490,7 @@ void createPrimitives(const PrimitiveSymbol& primitive, const TSyntax& syntax,
                       const ASTContext& context, SmallVectorBase<const Symbol*>& results,
                       SmallVectorBase<const Symbol*>& implicitNets,
                       SmallSet<std::string_view, 8>& implicitNetNames) {
-    SmallVector<int32_t> path;
+    SmallVector<uint32_t> path;
 
     auto& comp = context.getCompilation();
     auto& netType = context.scope->getDefaultNetType();
@@ -1849,7 +1849,7 @@ Symbol* recurseCheckerArray(Compilation& comp, const CheckerSymbol& checker,
                             const HierarchicalInstanceSyntax& instance, const ASTContext& context,
                             DimIterator it, DimIterator end,
                             std::span<const AttributeInstanceSyntax* const> attributes,
-                            SmallVectorBase<int32_t>& path, bool isProcedural,
+                            SmallVectorBase<uint32_t>& path, bool isProcedural,
                             bitmask<InstanceFlags> flags) {
     if (it == end) {
         return &CheckerInstanceSymbol::fromSyntax(comp, context, checker, instance, attributes,
@@ -1876,7 +1876,7 @@ Symbol* recurseCheckerArray(Compilation& comp, const CheckerSymbol& checker,
     }
 
     SmallVector<const Symbol*> elements;
-    for (int32_t i = range.lower(); i <= range.upper(); i++) {
+    for (uint32_t i = 0; i < range.width(); i++) {
         path.push_back(i);
         auto symbol = recurseCheckerArray(comp, checker, instance, context, it, end, attributes,
                                           path, isProcedural, flags);
@@ -1904,7 +1904,7 @@ void createCheckers(const CheckerSymbol& checker, const TSyntax& syntax, const A
         context.addDiag(diag::CheckerParameterAssign, syntax.parameters->sourceRange());
 
     SmallSet<std::string_view, 8> implicitNetNames;
-    SmallVector<int32_t> path;
+    SmallVector<uint32_t> path;
 
     auto& comp = context.getCompilation();
     auto& netType = context.scope->getDefaultNetType();
@@ -2031,7 +2031,7 @@ static const Symbol* createCheckerFormal(Compilation& comp, const AssertionPortS
 CheckerInstanceSymbol& CheckerInstanceSymbol::fromSyntax(
     Compilation& comp, const ASTContext& parentContext, const CheckerSymbol& checker,
     const HierarchicalInstanceSyntax& syntax,
-    std::span<const AttributeInstanceSyntax* const> attributes, SmallVectorBase<int32_t>& path,
+    std::span<const AttributeInstanceSyntax* const> attributes, SmallVectorBase<uint32_t>& path,
     bool isProcedural, bitmask<InstanceFlags> flags) {
 
     ASTContext context = parentContext;

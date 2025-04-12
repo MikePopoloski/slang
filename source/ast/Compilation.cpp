@@ -162,11 +162,8 @@ Compilation::Compilation(const Bag& options, const SourceLibrary* defaultLib) :
     static std::once_flag onceFlag;
     std::call_once(onceFlag, [] {
         DiagnosticEngine::setDefaultFormatter<const Type*>(std::make_unique<TypeArgFormatter>());
-        DiagnosticEngine::setDefaultSymbolPathCB([](const Symbol& sym) {
-            std::string str;
-            sym.getHierarchicalPath(str);
-            return str;
-        });
+        DiagnosticEngine::setDefaultSymbolPathCB(
+            [](const Symbol& sym) { return sym.getHierarchicalPath(); });
     });
 
     // Reset systemId counters that may have been changed due to creation of types
@@ -2361,11 +2358,9 @@ void Compilation::resolveDefParamsAndBinds() {
                 overrides.emplace_back();
             }
             else {
-                std::string path;
-                target->getHierarchicalPath(path);
-
                 overrides.push_back({OpaqueInstancePath(*target), target->getSyntax(),
-                                     defparam->getSyntax(), defparam->getValue(), std::move(path)});
+                                     defparam->getSyntax(), defparam->getValue(),
+                                     target->getHierarchicalPath()});
             }
         }
 
@@ -2523,12 +2518,9 @@ void Compilation::resolveDefParamsAndBinds() {
 
                 auto& prevEntry = overrides[j];
                 if (prevEntry.targetSyntax && targetNode && prevEntry.targetSyntax != targetNode) {
-                    std::string path;
-                    target->getHierarchicalPath(path);
-
                     auto& diag = root->addDiag(diag::DefParamTargetChange, getRange());
                     diag << prevEntry.pathStr;
-                    diag << path;
+                    diag << target->getHierarchicalPath();
                     return;
                 }
 

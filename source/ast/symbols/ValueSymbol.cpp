@@ -129,14 +129,8 @@ static bool handleOverlap(const Scope& scope, std::string_view name, const Value
         }
         else {
             auto& note = d.addNote(diag::NoteFromHere2, SourceLocation::NoLocation);
-
-            std::string buf;
-            driver.containingSymbol->getHierarchicalPath(buf);
-            note << buf;
-
-            buf.clear();
-            curr.containingSymbol->getHierarchicalPath(buf);
-            note << buf;
+            note << driver.containingSymbol->getHierarchicalPath();
+            note << curr.containingSymbol->getHierarchicalPath();
         }
     };
 

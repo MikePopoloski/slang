@@ -3,6 +3,8 @@
 
 #include "Test.h"
 
+#include "slang/ast/expressions/LiteralExpressions.h"
+#include "slang/ast/expressions/SelectExpressions.h"
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
 #include "slang/ast/symbols/InstanceSymbols.h"
 #include "slang/ast/symbols/ParameterSymbols.h"
@@ -1733,4 +1735,40 @@ endmodule
     Compilation compilation(options);
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
+}
+
+TEST_CASE("Unpacked port connection regress -- GH #1315") {
+    auto tree = SyntaxTree::fromText(R"(
+module subm(input h);
+endmodule
+
+module top();
+	wire g [1:0];
+	subm inst[2:3](.h(g));
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& inst = compilation.getRoot().lookupName<InstanceArraySymbol>("top.inst");
+    REQUIRE(inst.elements.size() == 2);
+
+    auto getHierName = [&](size_t index) { return inst.elements[index]->getHierarchicalPath(); };
+    auto getSelectIdx = [&](size_t index) {
+        return inst.elements[index]
+            ->as<InstanceSymbol>()
+            .getPortConnections()[0]
+            ->getExpression()
+            ->as<ElementSelectExpression>()
+            .selector()
+            .as<IntegerLiteral>()
+            .getValue();
+    };
+
+    CHECK(getHierName(0) == "top.inst[2]");
+    CHECK(getSelectIdx(0) == 1);
+    CHECK(getHierName(1) == "top.inst[3]");
+    CHECK(getSelectIdx(1) == 0);
 }

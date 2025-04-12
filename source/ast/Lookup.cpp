@@ -1200,7 +1200,7 @@ static const Symbol* selectSingleChild(const Symbol& symbol, const BitSelectSynt
             return nullptr;
         }
 
-        auto translated = array.range.translateIndex(*index);
+        int32_t translated = *index - array.range.lower();
         auto child = array.elements[size_t(translated)];
         result.path.emplace_back(*child, translated);
         return child;
@@ -1275,8 +1275,8 @@ static const Symbol* selectChildRange(const InstanceArraySymbol& array,
         return nullptr;
     }
 
-    int32_t begin = array.range.translateIndex(selRange.left);
-    int32_t end = array.range.translateIndex(selRange.right);
+    int32_t begin = selRange.left - array.range.lower();
+    int32_t end = selRange.right - array.range.lower();
     if (begin > end)
         std::swap(begin, end);
 

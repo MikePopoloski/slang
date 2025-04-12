@@ -2229,3 +2229,32 @@ endmodule
     CHECK(diags[4].code == diag::ConstEvalParamCycle);
     CHECK(diags[5].code == diag::ConstEvalIdUsedInCEBeforeDecl);
 }
+
+TEST_CASE("Instance range select lookup") {
+    auto tree = SyntaxTree::fromText(R"(
+module n;
+endmodule
+
+module m;
+    n n1[2:1][3:5] ();
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto sym = compilation.getRoot().lookupName("m.n1[1][3:4]");
+    REQUIRE(sym);
+
+    auto& arr = sym->as<InstanceArraySymbol>();
+    CHECK(arr.elements[0]->getHierarchicalPath() == "m.n1[1][3]");
+    CHECK(arr.elements[1]->getHierarchicalPath() == "m.n1[1][4]");
+
+    sym = compilation.getRoot().lookupName("m.n1[2][5-:2]");
+    REQUIRE(sym);
+
+    auto& arr2 = sym->as<InstanceArraySymbol>();
+    CHECK(arr2.elements[0]->getHierarchicalPath() == "m.n1[2][4]");
+    CHECK(arr2.elements[1]->getHierarchicalPath() == "m.n1[2][5]");
+}

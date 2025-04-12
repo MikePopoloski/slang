@@ -61,7 +61,7 @@ Expression* Expression::tryConnectPortArray(const ASTContext& context, const Typ
     instance.getArrayDimensions(instanceDimVec);
 
     std::span<const ConstantRange> instanceDims = instanceDimVec;
-    std::span<const int32_t> arrayPath = instance.arrayPath;
+    std::span<const uint32_t> arrayPath = instance.arrayPath;
 
     // If the connection has any unpacked dimensions, match them up with
     // the leading instance dimensions now.
@@ -88,12 +88,12 @@ Expression* Expression::tryConnectPortArray(const ASTContext& context, const Typ
             if (unpackedDims[i].width() != instanceDims[i].width())
                 return bad();
 
-            // To select the right element, translate the path index since it's
-            // relative to that particular array's declared range.
-            int32_t index = instanceDims[i].translateIndex(arrayPath[i]);
-
-            // Now translate back to be relative to the connection type's declared range.
-            if (!unpackedDims[i].isLittleEndian())
+            // If the dimensions have the same ordering then the first
+            // instance index should map to the lower bound of the array's
+            // range. Otherwise instance index zero should map to the upper
+            // bound of the array's range.
+            int32_t index = int32_t(arrayPath[i]);
+            if (unpackedDims[i].isLittleEndian() != instanceDims[i].isLittleEndian())
                 index = unpackedDims[i].upper() - index;
             else
                 index = unpackedDims[i].lower() + index;
@@ -175,7 +175,12 @@ Expression* Expression::tryConnectPortArray(const ASTContext& context, const Typ
     for (size_t i = 0; i < arrayPath.size(); i++) {
         if (i > 0)
             offset *= int32_t(instanceDims[i - 1].width());
-        offset += instanceDims[i].translateIndex(arrayPath[i]);
+
+        uint32_t index = arrayPath[i];
+        if (!instanceDims[i].isLittleEndian())
+            index = instanceDims[i].width() - index - 1;
+
+        offset += int32_t(index);
     }
 
     int32_t width = int32_t(portWidth);

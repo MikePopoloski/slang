@@ -1059,9 +1059,7 @@ endmodule
                     .memberAt<GenerateBlockSymbol>(1)
                     .find<VariableSymbol>("foo");
 
-    std::string path;
-    foo.getHierarchicalPath(path);
-    CHECK(path == "top.m1[2][1][3].asdf[1].genblk1.foo");
+    CHECK(foo.getHierarchicalPath() == "top.m1[2][1][3].asdf[1].genblk1.foo");
 }
 
 TEST_CASE("Hierarchical paths with unnamed generate arrays") {
@@ -1080,7 +1078,7 @@ endmodule
 
     std::string path;
     compilation.getRoot().visit(
-        makeVisitor([&](auto& v, const VariableSymbol& sym) { sym.getHierarchicalPath(path); }));
+        makeVisitor([&](auto& v, const VariableSymbol& sym) { sym.appendHierarchicalPath(path); }));
     CHECK(path == "top.genblk1[0].a");
 }
 

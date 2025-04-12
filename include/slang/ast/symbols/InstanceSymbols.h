@@ -61,7 +61,12 @@ SLANG_BITMASK(InstanceFlags, ParentFromBind)
 /// Common functionality for module, interface, program, and primitive instances.
 class SLANG_EXPORT InstanceSymbolBase : public Symbol {
 public:
-    std::span<const int32_t> arrayPath;
+    /// The path to this instance, if it is contained within an array (or multiple
+    /// nested arrays). This is a list of indices that can be used to index into the
+    /// arrays' elements list, always zero based. This is not necessarily what the
+    /// user wrote in the source code; the array dimensions are needed to translate
+    /// from this canonical space back to the source code indices.
+    std::span<const uint32_t> arrayPath;
 
     /// If this instance is part of an array, walk upward to find the array's name.
     /// Otherwise returns the name of the instance itself.
@@ -395,7 +400,7 @@ public:
         Compilation& compilation, const ASTContext& context, const CheckerSymbol& checker,
         const syntax::HierarchicalInstanceSyntax& syntax,
         std::span<const syntax::AttributeInstanceSyntax* const> attributes,
-        SmallVectorBase<int32_t>& path, bool isProcedural, bitmask<InstanceFlags> flags);
+        SmallVectorBase<uint32_t>& path, bool isProcedural, bitmask<InstanceFlags> flags);
 
     void verifyMembers() const;
 

@@ -1162,11 +1162,8 @@ private:
         SLANG_ASSERT(vit.isRealIface);
         SLANG_ASSERT(port.isGeneric || port.interfaceDef);
         if (&connDef != port.interfaceDef && !port.isGeneric) {
-            std::string path;
-            connDef.getHierarchicalPath(path);
-
             auto& diag = context.addDiag(diag::InterfacePortTypeMismatch, syntax.sourceRange());
-            diag << path << port.interfaceDef->name;
+            diag << connDef.getHierarchicalPath() << port.interfaceDef->name;
             diag.addNote(diag::NoteDeclarationHere, port.location);
             return makeError();
         }
@@ -1212,19 +1209,14 @@ private:
             // It's ok to do the slicing, so pick the correct slice for the connection
             // based on the actual path of the instance we're elaborating.
             for (size_t i = 0; i < instance.arrayPath.size(); i++) {
-                // First translate the path index since it's relative to that particular
-                // array's declared range.
-                int32_t index = instanceDims[i].translateIndex(instance.arrayPath[i]);
-
-                // Now translate back to be relative to the connecting interface's declared range.
-                // Note that we want this to be zero based because we're going to index into
-                // the actual span of elements, so we only need to flip the index if the range
-                // is not little endian.
+                // We want to match left index to left index, so if the dimensions
+                // are in reversed order we need to reverse our index here.
                 auto& array = symbol->as<InstanceArraySymbol>();
-                if (!array.range.isLittleEndian())
-                    index = array.range.upper() - index - array.range.lower();
+                size_t index = instance.arrayPath[i];
+                if (instanceDims[i].isLittleEndian() != array.range.isLittleEndian())
+                    index = array.elements.size() - index - 1;
 
-                symbol = array.elements[size_t(index)];
+                symbol = array.elements[index];
             }
 
             return makeResult(symbol);

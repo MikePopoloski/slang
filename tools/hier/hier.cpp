@@ -76,7 +76,6 @@ int main(int argc, char** argv) {
         int index = 0;
         i->visit(makeVisitor([&](auto& visitor, const InstanceSymbol& type) {
             if (type.isModule()) {
-                std::string s_inst;
                 int len = type.name.length();
                 int save_index = index;
                 // if no instPrefix, pathLength is 0, and this check will never take place, so
@@ -93,7 +92,8 @@ int main(int argc, char** argv) {
                         return; // separator needed, but didn't find one
                     index++;    // adjust for '.'
                 }
-                type.getHierarchicalPath(s_inst);
+
+                auto s_inst = type.getHierarchicalPath();
                 if (!instRegex.has_value() || std::regex_search(s_inst, match, regex)) {
                     auto s_module = type.getDefinition().name;
                     auto s_file = sourceManager->getFileName(type.getDefinition().location);

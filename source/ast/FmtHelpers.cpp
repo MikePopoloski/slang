@@ -213,7 +213,7 @@ static bool formatSpecialArg(char spec, const Scope& scope, std::string& result)
             return true;
         }
         case 'm':
-            scope.asSymbol().getHierarchicalPath(result);
+            scope.asSymbol().appendHierarchicalPath(result);
             return true;
         default:
             return false;
