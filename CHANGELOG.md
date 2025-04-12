@@ -9,19 +9,25 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Added support for clock flow, clock resolution, and clock inference rules in checkers and assertions
   * Various cases of invalid clock usage will now issue appropriate errors
 * Implemented rules for which kinds of sequences and properties can be declared in clocking blocks
+* Implemented rules for dynamic variable access from within checker procedures
 
 ### Potentially Breaking Changes
 * AST serialization no longer includes uninstantiated scopes in the output
 * `Driver::reportCompilation` method had part of its functionality split out into `Driver::reportDiagnostics` to allow for calling the new `Driver::runAnalysis` method in between. There is a new `Driver::runFullCompilation` method that wraps all of this for convenience if you don't care about controlling when each pass is done.
+* The `DEBUG` macro set for debug builds has been renamed to `SLANG_DEBUG`. `NDEBUG` is no longer used to conditionally control compilation, which should make it much less likely that using slang as a library will result in conflicting `NDEBUG` settings and causing ODR violations.
 
 ### New Features
 * slang can now optionally use [cpptrace](https://github.com/jeremy-rifkin/cpptrace) (using the `SLANG_USE_CPPTRACE` CMake option) for better backtraces in the event of internal assertions or exceptions thrown
 * There is a new post-elaboration analysis pass in slang that does additional checking for enforcing specific language rules and reporting extra warnings. This can be disabled with the `--disable-analysis` flag, though it should not be needed unless there is a bug in slang.
 * Added a new option `--diag-abs-paths` to report diagnostics with absolute instead of relative file paths
+* Added [-Wmissing-return](https://sv-lang.com/warning-ref.html#missing-return) and [-Wincomplete-return](https://sv-lang.com/warning-ref.html#incomplete-return) which warn about non-void functions that do not return a value on all control paths
 
 ### Improvements
 * slang now performs instance caching by default, which means duplicate instance bodies will not be visited during elaboration, which can greatly speed up elaboration times for large projects. This behavior can be disabled with the `--disable-instance-caching` flag, though it should not be needed unless there's a bug in slang -- please open an issue if you find that you need the flag.
 * Added some initial documentation and an API reference for the pyslang bindings (thanks to @parker-research)
+* Added a bunch more tests for the pyslang bindings (thanks to @parker-research)
+* Added pyslang bindings for the SyntaxRewriter class (thanks to @parker-research)
+* -Wint-bool-conv now applies to expressions used in assertions, properties, and sequences
 
 ### Fixes
 * The restriction on interface instances targeted by defparams not being allowed with virtual interfaces was also erroneously applied to interface port connections
@@ -31,6 +37,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Fixed argument binding for sequence and property instances when using named arguments
 * Concurrent assertion and procedural checker statements are now correctly disallowed from appearing in subroutines and final blocks
 * Fixed an issue with how checker formal ports are looked up from within checker instances
+* Fixed a place where empty argument names were not correctly allowed in function prototype declarations
+* Fixed ICE with conditional statements that have pattern matching along with a named statement block
+* Recursive typedef declarations now properly report an error instead of crashing
+* Fixed several issues that led to invalid builds on Linux with LTO enabled
+* Fixed serialized AST locations that come from macro expansions (thanks to @micron-ian)
+* Fixed a case where no diagnostic would be issued when incorrectly referring to an instance array element from within an expression
+* Fixed various issues with how instance array indices are mapped to underlying elements
+* Fixed SyntaxPrinter printing of directives that have skipped leading trivia
 
 
 ## [v8.0] - 2025-02-05
