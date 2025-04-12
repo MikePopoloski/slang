@@ -181,7 +181,11 @@ void registerSyntax(py::module_& m) {
 
                  if (auto node = self.childNode(i))
                      return py::cast(node, byrefint, py::cast(&self));
-                 return py::cast(self.childToken(i));
+
+                 if (auto token = self.childToken(i))
+                     return py::cast(self.childToken(i));
+
+                 return py::none();
              })
         .def("__len__", &SyntaxNode::getChildCount)
         .def(
