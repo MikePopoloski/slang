@@ -16,6 +16,7 @@ Checks: >
     -modernize-loop-convert,
     -modernize-use-designated-initializers,
     -modernize-use-ranges,
+    -modernize-use-integer-sign-comparison,
     -bugprone-suspicious-semicolon,
     -bugprone-branch-clone,
     -bugprone-sizeof-expression,
@@ -44,4 +45,5 @@ Checks: >
     -performance-no-int-to-ptr,
     -performance-enum-size,
     -portability-simd-intrinsics,
+    -portability-template-virtual-member-function,
     -performance-unnecessary-value-param

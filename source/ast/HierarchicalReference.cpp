@@ -153,7 +153,7 @@ const HierarchicalReference& HierarchicalReference::join(Compilation& compilatio
     newPath.append_range(otherPath);
     result.path = newPath.copy(compilation);
 
-    return *compilation.emplace<HierarchicalReference>(std::move(result));
+    return *compilation.emplace<HierarchicalReference>(result);
 }
 
 } // namespace slang::ast
