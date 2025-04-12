@@ -105,3 +105,42 @@ def test_verilog_equality() -> None:
     assert st1_stripped.root.isEquivalentTo(st2.root)
     assert st1.root.isEquivalentTo(st2.root)
     assert st1.root.isEquivalentTo(st2_stripped.root)
+
+
+def test_verilog_equality_with_whitespaces_around_operators() -> None:
+    """Test a specific case with structs."""
+    tree1 = pyslang.SyntaxTree.fromText(
+        """
+        module m;
+            struct {logic logic_signal_to_insert;
+                logic logic_member_to_stay_untouched;
+            } s;
+        endmodule""",
+        "test.sv",
+    )
+
+    tree2 = pyslang.SyntaxTree.fromText(
+        """
+    module m;
+        struct {logic logic_signal_to_insert;
+            logic logic_member_to_stay_untouched;
+        } s;
+    endmodule""",
+        "test.sv",
+    )
+
+    assert tree1.root.isEquivalentTo(tree2.root) is True
+
+    tree3 = pyslang.SyntaxTree.fromText(
+        """
+        module m;
+            struct {
+                logic logic_signal_to_insert;
+                logic logic_member_to_stay_untouched;
+            } s;
+        endmodule
+    """,
+        "test.sv",
+    )
+    assert tree1.root.isEquivalentTo(tree3.root) is True
+    assert tree2.root.isEquivalentTo(tree3.root) is True
