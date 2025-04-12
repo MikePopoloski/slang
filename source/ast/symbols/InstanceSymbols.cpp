@@ -960,7 +960,10 @@ void InstanceSymbol::connectDefaultIfacePorts() const {
 }
 
 void InstanceSymbol::serializeTo(ASTSerializer& serializer) const {
-    serializer.write("body", body);
+    if (canonicalBody)
+        serializer.writeLink("body", *canonicalBody);
+    else
+        serializer.write("body", body);
 
     serializer.startArray("connections");
     for (auto conn : getPortConnections()) {

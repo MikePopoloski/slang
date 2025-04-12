@@ -1479,3 +1479,34 @@ endmodule
   ]
 })");
 }
+
+TEST_CASE("Serialization with instance caching regress -- GH #1299") {
+    auto tree = SyntaxTree::fromText(R"(
+interface bus();
+	logic w;
+endinterface
+
+module m1(bus intf);
+	assign intf.w = 0;
+endmodule
+
+module top();
+	bus intf1();
+	bus intf2();
+
+	m1 a(.intf(intf1));
+	m1 b(.intf(intf2));
+endmodule
+
+(* dont_touch = "yes" *)
+module rptr_empty#()();
+endmodule : rptr_empty
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    compilation.freeze();
+    serialize(compilation);
+}
