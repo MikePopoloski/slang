@@ -379,8 +379,8 @@ def test_rewriter_nested():
 
                     if token.value == "logic_member_to_stay_untouched":
                         new_decl = pyslang.SyntaxTree.fromText(
-                            "logic logic_member_to_insert;", "new.sv"
-                        ).root
+                            "typedef struct{logic logic_member_to_insert;}t;", "new.sv"
+                        ).root.type.members[0]
 
                         check_func_called["insert_match_count"] += 1
 
@@ -408,7 +408,7 @@ def test_rewriter_nested():
     result_str = clean_whitespace(str(result.root))
     expected_str = clean_whitespace(str(expected.root))
     assert result_str == expected_str
-    # assert result.root.isEquivalentTo(expected.root) is True # FIXME: Can't figure out why this fails.
+    assert result.root.isEquivalentTo(expected.root) is True
 
 
 def test_rewriter_skip():
