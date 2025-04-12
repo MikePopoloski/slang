@@ -3914,3 +3914,26 @@ endfunction
         FAIL_CHECK(report(diags));
     }
 }
+
+TEST_CASE("Referring to instance array in expression -- GH #1314") {
+    auto tree = SyntaxTree::fromText(R"(
+module subm();
+endmodule
+module top();
+	subm inst[3:0]();
+	wire w = inst[0];
+
+    for (genvar i = 0; i < 2; i++) begin : asdf
+    end
+    int i = asdf[0];
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::NotAValue);
+    CHECK(diags[1].code == diag::NotAValue);
+}

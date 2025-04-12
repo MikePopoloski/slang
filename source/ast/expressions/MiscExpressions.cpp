@@ -14,6 +14,7 @@
 #include "slang/ast/expressions/AssertionExpr.h"
 #include "slang/ast/expressions/ConversionExpression.h"
 #include "slang/ast/expressions/OperatorExpressions.h"
+#include "slang/ast/symbols/BlockSymbols.h"
 #include "slang/ast/symbols/ClassSymbols.h"
 #include "slang/ast/symbols/InstanceSymbols.h"
 #include "slang/ast/symbols/MemberSymbols.h"
@@ -36,6 +37,29 @@ using namespace syntax;
 static constexpr bitmask<ASTFlags> DisallowedAutoVarContexts = ASTFlags::NonProcedural |
                                                                ASTFlags::StaticInitializer |
                                                                ASTFlags::NonBlockingTimingControl;
+
+static std::string_view getNonValueName(const Symbol& symbol) {
+    if (symbol.name.empty()) {
+        if (symbol.kind == SymbolKind::Instance || symbol.kind == SymbolKind::CheckerInstance) {
+            auto& inst = symbol.as<InstanceSymbolBase>();
+            return inst.getArrayName();
+        }
+
+        auto sym = &symbol;
+        while (sym->kind == SymbolKind::GenerateBlock) {
+            auto& block = sym->as<GenerateBlockSymbol>();
+            if (!block.arrayIndex)
+                return sym->name;
+
+            auto scope = block.getParentScope();
+            SLANG_ASSERT(scope);
+            sym = &scope->asSymbol();
+        }
+
+        return sym->name;
+    }
+    return symbol.name;
+}
 
 Expression& ValueExpressionBase::fromSymbol(const ASTContext& context, const Symbol& symbol,
                                             const HierarchicalReference* hierRef,
@@ -146,8 +170,9 @@ Expression& ValueExpressionBase::fromSymbol(const ASTContext& context, const Sym
         // where we looked up something like a generic class type
         // and there was some error in resolving it to a real type,
         // in which case `symbol` will be the ErrorType with an empty name.
-        if (!symbol.name.empty()) {
-            auto& diag = context.addDiag(diag::NotAValue, sourceRange) << symbol.name;
+        auto name = getNonValueName(symbol);
+        if (!name.empty()) {
+            auto& diag = context.addDiag(diag::NotAValue, sourceRange) << name;
             diag.addNote(diag::NoteDeclarationHere, symbol.location);
         }
         return badExpr(comp, nullptr);
