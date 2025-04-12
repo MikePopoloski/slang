@@ -79,6 +79,16 @@ SyntaxPrinter& SyntaxPrinter::print(Token token) {
                         for (auto t : pending)
                             print(*t);
                     }
+                    else {
+                        // If this is a directive or skipped trivia we may still
+                        // need to print part of it even if the leading trivia
+                        // is from a preprocessed location that we're skipping.
+                        if (trivia.kind == TriviaKind::Directive ||
+                            trivia.kind == TriviaKind::SkippedSyntax ||
+                            trivia.kind == TriviaKind::SkippedTokens) {
+                            print(trivia);
+                        }
+                    }
                     pending.clear();
                 }
             }

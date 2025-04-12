@@ -2684,3 +2684,26 @@ endmodule
     REQUIRE(diagnostics.size() == 1);
     CHECK(diagnostics[0].code == diag::ProtectedEnvelope);
 }
+
+TEST_CASE("Printing of preprocessed file regress -- GH #1317") {
+    SyntaxTree::getDefaultSourceManager().assignText("inc.v", "`define WIDTH 123\n");
+
+    auto& text = R"(
+`include "inc.v"
+
+`ifdef TEST
+    `define TEST2
+`endif
+
+module b();
+
+reg [`WIDTH-1:0]t;
+
+endmodule
+)";
+
+    auto tree = SyntaxTree::fromFileInMemory(text, SyntaxTree::getDefaultSourceManager());
+
+    auto result = SyntaxPrinter::printFile(*tree);
+    CHECK(result == text);
+}
