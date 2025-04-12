@@ -99,7 +99,7 @@ if(SLANG_USE_MIMALLOC)
   FetchContent_Declare(
     mimalloc
     GIT_REPOSITORY https://github.com/microsoft/mimalloc.git
-    GIT_TAG v2.2.2
+    GIT_TAG v2.2.3
     GIT_SHALLOW ON
     ${find_pkg_args})
   FetchContent_MakeAvailable(mimalloc)
@@ -163,7 +163,7 @@ if(SLANG_USE_CPPTRACE)
   FetchContent_Declare(
     cpptrace
     GIT_REPOSITORY https://github.com/jeremy-rifkin/cpptrace.git
-    GIT_TAG v0.8.2
+    GIT_TAG v0.8.3
     GIT_SHALLOW ON
     ${find_pkg_args})
   FetchContent_MakeAvailable(cpptrace)
@@ -190,7 +190,7 @@ if(SLANG_INCLUDE_TESTS)
   FetchContent_Declare(
     Catch2
     GIT_REPOSITORY https://github.com/catchorg/Catch2.git
-    GIT_TAG v3.8.0
+    GIT_TAG v3.8.1
     GIT_SHALLOW ON
     ${find_pkg_args})
   FetchContent_MakeAvailable(Catch2)
