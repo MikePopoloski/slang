@@ -31,8 +31,13 @@ static void testDag(const std::vector<std::string>& clauses, uint32_t bitWidth,
         return;
 
     CHECK(dag.unreachableClauses == expectedUnreachable);
-    CHECK(dag.counterexample == svCounterexample);
     CHECK(dag.overlappingClauses == expectedOverlaps);
+
+    // This works around some kind of GCC miscompilation when trying
+    // to use the normal std::optional operator==
+    CHECK(dag.counterexample.has_value() == svCounterexample.has_value());
+    if (svCounterexample)
+        CHECK(*dag.counterexample == *svCounterexample);
 }
 
 TEST_CASE("Case Dag Exhaustiveness") {
