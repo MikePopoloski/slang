@@ -9,6 +9,8 @@
         disable : 4459) // annoying warning about global "alloc" being shadowed by locals
 #endif
 
+#define CATCH_CONFIG_ENABLE_ALL_STRINGMAKERS
+
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_templated.hpp>
 #include <filesystem>

@@ -271,4 +271,25 @@ struct hash<std::tuple<TT...>> {
     }
 };
 
+template<typename T, typename U>
+struct hash<std::pair<T, U>> {
+    using is_avalanching = void;
+    size_t operator()(std::pair<T, U> const& p) const noexcept {
+        size_t seed = 0;
+        hash_combine(seed, p.first, p.second);
+        return seed;
+    }
+};
+
+template<typename T>
+struct hash<std::vector<T>> {
+    using is_avalanching = void;
+    size_t operator()(std::vector<T> const& v) const noexcept {
+        size_t seed = 0;
+        for (const auto& elem : v)
+            hash_combine(seed, elem);
+        return seed;
+    }
+};
+
 } // namespace slang
