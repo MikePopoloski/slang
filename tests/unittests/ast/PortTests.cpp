@@ -1772,3 +1772,29 @@ endmodule
     CHECK(getHierName(1) == "top.inst[3]");
     CHECK(getSelectIdx(1) == 0);
 }
+
+TEST_CASE("Iface port connection with reversed range regress") {
+    auto tree = SyntaxTree::fromText(R"(
+interface bus(input clk);
+	logic a;
+endinterface
+
+module m1(bus intf [0:1]);
+	wire w = intf[0].a;
+endmodule
+
+module top(input logic clk);
+	bus top_bus[1:0](clk);
+	m1 m1i(top_bus);
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& w = compilation.getRoot().lookupName<NetSymbol>("top.m1i.w");
+    auto target = w.getInitializer()->getSymbolReference();
+    REQUIRE(target);
+    CHECK(target->getHierarchicalPath() == "top.top_bus[1].a");
+}
