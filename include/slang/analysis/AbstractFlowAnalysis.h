@@ -25,8 +25,8 @@ public:
     /// The symbol being analyzed (procedure, function, etc).
     const Symbol& rootSymbol;
 
-    /// Flags controlling the behavior of the analysis.
-    bitmask<AnalysisFlags> flags;
+    /// Various options controlling the behavior of the analysis.
+    AnalysisOptions options;
 
     /// Set to true if the analysis detected an error.
     bool bad = false;
@@ -36,9 +36,9 @@ public:
 
 protected:
     /// Constructs a new flow analysis pass.
-    FlowAnalysisBase(const Symbol& symbol, bitmask<AnalysisFlags> flags,
+    FlowAnalysisBase(const Symbol& symbol, AnalysisOptions options,
                      Diagnostics* diagnostics = nullptr) :
-        rootSymbol(symbol), flags(flags), diagnostics(diagnostics),
+        rootSymbol(symbol), options(options), diagnostics(diagnostics),
         evalContext(ASTContext(*symbol.getParentScope(), LookupLocation::after(symbol))) {}
 
     ConstantValue tryEvalBool(const Expression& expr) const;

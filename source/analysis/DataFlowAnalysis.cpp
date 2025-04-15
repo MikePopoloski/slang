@@ -13,7 +13,7 @@ namespace slang::analysis {
 
 DataFlowAnalysis::DataFlowAnalysis(AnalysisContext& context, const Symbol& symbol,
                                    bool reportDiags) :
-    AbstractFlowAnalysis(symbol, context.manager->getOptions().flags,
+    AbstractFlowAnalysis(symbol, context.manager->getOptions(),
                          reportDiags ? &context.diagnostics : nullptr),
     context(context), bitMapAllocator(context.alloc), lspMapAllocator(context.alloc),
     lspVisitor(*this) {

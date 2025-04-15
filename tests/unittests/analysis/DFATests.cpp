@@ -5,7 +5,7 @@
 
 class TestAnalysis : public AbstractFlowAnalysis<TestAnalysis, int> {
 public:
-    TestAnalysis(const Symbol& symbol) : AbstractFlowAnalysis(symbol, AnalysisFlags::None) {}
+    TestAnalysis(const Symbol& symbol) : AbstractFlowAnalysis(symbol, {}) {}
 
     void handle(const NamedValueExpression& expr) {
         getState() += 1;

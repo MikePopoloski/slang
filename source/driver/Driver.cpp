@@ -363,6 +363,10 @@ void Driver::addStandardArgs() {
     cmdLine.add("--dfa-four-state", options.dfaFourState,
                 "Require that case items cover X and Z bits to assume full coverage "
                 "in data flow analysis");
+
+    cmdLine.add("--max-case-analysis-steps", options.maxCaseAnalysisSteps,
+                "Maximum number of steps that can occur during case analysis before giving up",
+                "<steps>");
 }
 
 [[nodiscard]] bool Driver::parseCommandLine(std::string_view argList,
@@ -912,6 +916,8 @@ void Driver::runAnalysis(ast::Compilation& compilation) {
         ao.flags |= AnalysisFlags::FullCaseUniquePriority;
     if (options.dfaFourState.value_or(false))
         ao.flags |= AnalysisFlags::FullCaseFourState;
+    if (options.maxCaseAnalysisSteps)
+        ao.maxCaseAnalysisSteps = *options.maxCaseAnalysisSteps;
 
     AnalysisManager analysisManager(ao);
     analysisManager.analyze(compilation);

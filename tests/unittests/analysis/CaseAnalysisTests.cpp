@@ -567,3 +567,42 @@ endmodule
     CHECK(diags[1].code == diag::CaseNotWildcard);
     CHECK(diags[2].code == diag::CaseZWithX);
 }
+
+TEST_CASE("Case too complex") {
+    auto& code = R"(
+module m;
+    logic [51:0] a;
+    always_comb begin
+        casex (a)
+            52'bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx011111:;
+            52'bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx0111111:;
+            52'bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx01111111:;
+            52'bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx011111111:;
+            52'bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx0111111111:;
+            52'bxxxxxxxxxxxx1xxxxxxxxxxxxxxxxxxxxxxxxxxxx01111111x11:;
+            52'bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx011111111111:;
+            52'bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx0111111111111:;
+            52'bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx01x11111111111:;
+            52'bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx011111111111111:;
+            52'bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx0111111111111111:;
+            52'bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx01111111111111111:;
+            52'bxxxxxxxxxxxxxxxxx0xxxxxxxxxxxxxxxx0111111111111x1111:;
+            52'bxxxx1xxxxxxxxxxxxxxxxxxxxxxxxxxxx0111111111111111111:;
+            52'bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx01111111111111111111:;
+            52'bxxxxxx1xxxxxxxxxxxxx1xxxxxx1xxx011111111111111111111:;
+            52'bxxxxxxxxxxxx0xxxxxxxxxxxxxxxxx0111111111111111111111:;
+        endcase
+    end
+endmodule
+)";
+
+    AnalysisOptions options;
+    options.maxCaseAnalysisSteps = 1024;
+
+    Compilation compilation;
+    AnalysisManager analysisManager(options);
+
+    auto [diags, design] = analyze(code, compilation, analysisManager);
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::CaseComplex);
+}

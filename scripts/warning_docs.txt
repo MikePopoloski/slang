@@ -1641,6 +1641,39 @@ module m;
 endmodule
 ```
 
+-Wcase-too-complex
+@options --max-case-analysis-steps=1024
+Determining whether a list of wildcard case clauses fully cover the entire input space
+is, in general, NP-complete, so there is a limit to prevent exponential explosion in
+analysis time. In practice case statements written by humans will rarely, if ever,
+exhibit this kind of behavior.
+```
+module m;
+    logic [51:0] a;
+    always_comb begin
+        casex (a)
+            52'bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx011111:;
+            52'bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx0111111:;
+            52'bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx01111111:;
+            52'bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx011111111:;
+            52'bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx0111111111:;
+            52'bxxxxxxxxxxxx1xxxxxxxxxxxxxxxxxxxxxxxxxxxx01111111x11:;
+            52'bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx011111111111:;
+            52'bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx0111111111111:;
+            52'bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx01x11111111111:;
+            52'bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx011111111111111:;
+            52'bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx0111111111111111:;
+            52'bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx01111111111111111:;
+            52'bxxxxxxxxxxxxxxxxx0xxxxxxxxxxxxxxxx0111111111111x1111:;
+            52'bxxxx1xxxxxxxxxxxxxxxxxxxxxxxxxxxx0111111111111111111:;
+            52'bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx01111111111111111111:;
+            52'bxxxxxx1xxxxxxxxxxxxx1xxxxxx1xxx011111111111111111111:;
+            52'bxxxxxxxxxxxx0xxxxxxxxxxxxxxxxx0111111111111111111111:;
+        endcase
+    end
+endmodule
+```
+
 -Winferred-latch
 A signal assigned in an always_comb procedure is not assigned on all control
 paths and so infers a latch instead of combinatorial logic.

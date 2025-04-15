@@ -110,8 +110,13 @@ bool FlowAnalysisBase::isFullyCovered(const CaseStatement& stmt) const {
         }
     }
 
-    // If diagnostics are enabled do various lint checks now.
     std::optional<CaseDecisionDag> decisionDag;
+    auto makeDecisionDag = [&]() {
+        decisionDag.emplace(intVals, bitWidth, cond == CaseStatementCondition::WildcardXOrZ,
+                            options.maxCaseAnalysisSteps);
+    };
+
+    // If diagnostics are enabled do various lint checks now.
     if (diagnostics) {
         // Check for missing enum coverage.
         if (caseType.isEnum()) {
@@ -147,27 +152,32 @@ bool FlowAnalysisBase::isFullyCovered(const CaseStatement& stmt) const {
 
         // If this is a wildcard case statement check for overlaps.
         if (wildcard) {
-            // TODO: check for gave up
-            decisionDag.emplace(intVals, bitWidth, cond == CaseStatementCondition::WildcardXOrZ);
+            makeDecisionDag();
 
-            for (auto index : decisionDag->unreachableClauses) {
-                auto& diag = diagnostics->add(rootSymbol, diag::CaseUnreachable,
-                                              itemExpressions[index]->sourceRange);
+            if (decisionDag->gaveUp) {
+                auto& diag = diagnostics->add(rootSymbol, diag::CaseComplex, stmt.expr.sourceRange);
                 diag << SemanticFacts::getCaseConditionStr(cond);
             }
+            else {
+                for (auto index : decisionDag->unreachableClauses) {
+                    auto& diag = diagnostics->add(rootSymbol, diag::CaseUnreachable,
+                                                  itemExpressions[index]->sourceRange);
+                    diag << SemanticFacts::getCaseConditionStr(cond);
+                }
 
-            for (auto [first, second] : decisionDag->overlappingClauses) {
-                auto& diag = diagnostics->add(rootSymbol, diag::CaseOverlap,
-                                              itemExpressions[second]->sourceRange)
-                             << SemanticFacts::getCaseConditionStr(cond);
-                diag.addNote(diag::NotePreviousUsage, itemExpressions[first]->sourceRange);
+                for (auto [first, second] : decisionDag->overlappingClauses) {
+                    auto& diag = diagnostics->add(rootSymbol, diag::CaseOverlap,
+                                                  itemExpressions[second]->sourceRange)
+                                 << SemanticFacts::getCaseConditionStr(cond);
+                    diag.addNote(diag::NotePreviousUsage, itemExpressions[first]->sourceRange);
+                }
             }
         }
     }
 
     // If the case statement asserts it has full coverage, and our flags allow it,
     // assume full coverage without checking.
-    if (flags.has(AnalysisFlags::FullCaseUniquePriority) &&
+    if (options.flags.has(AnalysisFlags::FullCaseUniquePriority) &&
         (stmt.check == UniquePriorityCheck::Unique ||
          stmt.check == UniquePriorityCheck::Priority)) {
         return true;
@@ -190,11 +200,12 @@ bool FlowAnalysisBase::isFullyCovered(const CaseStatement& stmt) const {
         return false;
 
     // TODO: warn for wildcard case statements with 2-state type?
+    const bool fullCaseFourState = options.flags.has(AnalysisFlags::FullCaseFourState);
     if (stmt.condition == CaseStatementCondition::Normal || !caseType.isFourState()) {
         // The number of non-duplicate elements needs to match the number
         // of possible values for the case expression. This depends on
         // whether the type is 2-state or 4-state.
-        if (caseType.isFourState() && flags.has(AnalysisFlags::FullCaseFourState))
+        if (caseType.isFourState() && fullCaseFourState)
             return bitWidth < 16 && elems.size() >= (size_t)std::pow(4, bitWidth);
         else
             return bitWidth < 32 && elems.size() >= (1ull << bitWidth);
@@ -204,7 +215,7 @@ bool FlowAnalysisBase::isFullyCovered(const CaseStatement& stmt) const {
     // find an entry that is all Z bits. This is because Z is always a wildcard,
     // so the only way to specify an entry that hits all Z's will also cover
     // all other bits too.
-    if (flags.has(AnalysisFlags::FullCaseFourState)) {
+    if (fullCaseFourState) {
         for (auto&& [val, _] : elems) {
             if (val.integer().countLeadingZs() >= bitWidth)
                 return true;
@@ -214,7 +225,7 @@ bool FlowAnalysisBase::isFullyCovered(const CaseStatement& stmt) const {
 
     // Otherwise do the full wildcard coverage search.
     if (!decisionDag)
-        decisionDag.emplace(intVals, bitWidth, cond == CaseStatementCondition::WildcardXOrZ);
+        makeDecisionDag();
 
     return decisionDag->isExhaustive();
 }

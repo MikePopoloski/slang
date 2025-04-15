@@ -457,6 +457,15 @@ in all such case item statements.
 By default X and Z bit coverage is not required; having items that cover all possible
 0 and 1 bit combinations is sufficient to assume full coverage of the case input.
 
+`--max-case-analysis-steps <steps>`
+
+The maximum number of steps to take while trying to analyze a wildcard case statement.
+The default is 65535.
+
+Determining whether a list of wildcard case clauses fully cover the entire input space
+is, in general, NP-complete, so there is a limit to prevent exponential explosion in
+analysis time. In practice case statements written by humans will rarely, if ever,
+exhibit this kind of behavior.
 
 @section diag-control Diagnostic Control
 

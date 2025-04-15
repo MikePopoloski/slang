@@ -259,6 +259,9 @@ public:
         /// Require case coverage to include X and Z bits in data flow analysis.
         std::optional<bool> dfaFourState;
 
+        /// The maximum number of steps to take when analyzing a case statement.
+        std::optional<uint32_t> maxCaseAnalysisSteps;
+
         /// @}
 
         /// Returns true if the lintMode option is provided.

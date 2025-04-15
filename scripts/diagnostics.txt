@@ -1175,6 +1175,7 @@ warning case-overlap CaseOverlap "'{}' statement item overlaps previous item"
 warning case-unreachable CaseUnreachable "'{}' statement item will never match because it is completely handled by previous items"
 warning case-not-wildcard CaseNotWildcard "'case' statement item has unknown bits which don't work as wildcards; should this be a 'casex' or 'casez' statement?"
 warning casez-with-x CaseZWithX "'casez' statement item has 'x' bits which don't work as wildcards; should this be a 'casex' statement?"
+warning case-too-complex CaseComplex "'{}' statement is too complex to analyze; assuming it does not have full coverage (increase --max-case-analysis-steps to try harder)"
 
 subsystem Meta
 fatal TooManyErrors "too many errors emitted, stopping now [--error-limit=]"
@@ -1198,7 +1199,7 @@ group default = { real-underflow real-overflow vector-overflow int-overflow unco
                   negative-timing-limit bad-procedural-force duplicate-defparam implicit-port-type-mismatch
                   split-distweight-op dpi-pure-task multibit-edge unknown-sys-name unknown-library
                   dup-config-rule unused-config-cell unused-config-instance specify-condition-expr
-                  seq-no-match }
+                  seq-no-match case-too-complex }
 
 group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-none case-gen-dup
                 unused-result format-real ignored-slice task-ignored width-trunc dup-attr event-const
