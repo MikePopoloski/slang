@@ -24,7 +24,7 @@ namespace slang::analysis {
 /// The DAG is used to determine if a set of clauses covers all possible
 /// input values for a given case expression bit width, as well as to identify
 /// overlapping and redundnat clauses for issuing diagnostics.
-class CaseDecisionDag {
+class SLANG_EXPORT CaseDecisionDag {
 public:
     using ClauseIndex = uint32_t;
 

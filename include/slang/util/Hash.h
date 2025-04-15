@@ -10,6 +10,7 @@
 #include <array>
 #include <cstring>
 #include <memory>
+#include <vector>
 
 #include "slang/util/Util.h"
 
