@@ -5,9 +5,9 @@
 
 add_executable(
   unittests
-  analysis/AnalysisTests.cpp
   analysis/AssertionAnalysisTests.cpp
   analysis/CaseAnalysisTests.cpp
+  analysis/DFATests.cpp
   analysis/UnusedTests.cpp
   ast/AssertionTests.cpp
   ast/ClassTests.cpp
