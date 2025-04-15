@@ -53,7 +53,7 @@ AnalyzedProcedure::AnalyzedProcedure(AnalysisContext& context, const Symbol& ana
                                      const AnalyzedProcedure* parentProcedure) :
     analyzedSymbol(&analyzedSymbol), parentProcedure(parentProcedure) {
 
-    DataFlowAnalysis dfa(context, analyzedSymbol);
+    DataFlowAnalysis dfa(context, analyzedSymbol, true);
     switch (analyzedSymbol.kind) {
         case SymbolKind::ProceduralBlock:
             dfa.run(analyzedSymbol.as<ProceduralBlockSymbol>().getBody());

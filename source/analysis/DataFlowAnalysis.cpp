@@ -11,9 +11,12 @@
 
 namespace slang::analysis {
 
-DataFlowAnalysis::DataFlowAnalysis(AnalysisContext& context, const Symbol& symbol) :
-    AbstractFlowAnalysis(symbol, context.manager->getOptions().flags), context(context),
-    bitMapAllocator(context.alloc), lspMapAllocator(context.alloc), lspVisitor(*this) {
+DataFlowAnalysis::DataFlowAnalysis(AnalysisContext& context, const Symbol& symbol,
+                                   bool reportDiags) :
+    AbstractFlowAnalysis(symbol, context.manager->getOptions().flags,
+                         reportDiags ? &context.diagnostics : nullptr),
+    context(context), bitMapAllocator(context.alloc), lspMapAllocator(context.alloc),
+    lspVisitor(*this) {
 }
 
 bool DataFlowAnalysis::isReferenced(const ValueSymbol& symbol, const Expression& lsp) const {

@@ -44,7 +44,7 @@ public:
     AnalysisContext& context;
 
     /// Constructs a new DataFlowAnalysis object.
-    DataFlowAnalysis(AnalysisContext& context, const Symbol& symbol);
+    DataFlowAnalysis(AnalysisContext& context, const Symbol& symbol, bool reportDiags);
 
     /// Visits all of the symbols that are assigned anywhere in the procedure
     /// and aren't definitely assigned by the end of the procedure.

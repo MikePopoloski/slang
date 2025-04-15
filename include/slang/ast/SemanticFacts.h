@@ -107,6 +107,10 @@ SLANG_ENUM(DriveStrength, DS)
 SLANG_ENUM(ForwardTypeRestriction, FTR);
 #undef FTR
 
+#define CASE_CONDITION(x) x(Normal) x(WildcardXOrZ) x(WildcardJustZ) x(Inside)
+SLANG_ENUM(CaseStatementCondition, CASE_CONDITION)
+#undef CASE_CONDITION
+
 /// A set of flags that control how assignments are checked.
 enum class SLANG_EXPORT AssignFlags : uint8_t {
     /// No special assignment behavior specified.
@@ -177,6 +181,9 @@ public:
 
     /// Gets the human-friendly string name of a procedural block kind.
     static std::string_view getProcedureKindStr(ProceduralBlockKind kind);
+
+    /// Gets a human-friendly string name of a case statement condition kind.
+    static std::string_view getCaseConditionStr(CaseStatementCondition kind);
 
     /// Gets the optional drive strength values associated with the given net strength syntax node.
     static std::pair<std::optional<DriveStrength>, std::optional<DriveStrength>> getDriveStrength(

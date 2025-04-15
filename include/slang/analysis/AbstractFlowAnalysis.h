@@ -36,8 +36,9 @@ public:
 
 protected:
     /// Constructs a new flow analysis pass.
-    FlowAnalysisBase(const Symbol& symbol, bitmask<AnalysisFlags> flags) :
-        rootSymbol(symbol), flags(flags),
+    FlowAnalysisBase(const Symbol& symbol, bitmask<AnalysisFlags> flags,
+                     Diagnostics* diagnostics = nullptr) :
+        rootSymbol(symbol), flags(flags), diagnostics(diagnostics),
         evalContext(ASTContext(*symbol.getParentScope(), LookupLocation::after(symbol))) {}
 
     ConstantValue tryEvalBool(const Expression& expr) const;
@@ -47,6 +48,11 @@ protected:
 
     bool isFullyCovered(const CaseStatement& stmt) const;
 
+    /// An optional diagnostics collection. If provided, warnings encountered during
+    /// analysis will be added to it.
+    Diagnostics* diagnostics;
+
+    /// An EvalContext that can be used for constant evaluation during analysis.
     mutable EvalContext evalContext;
 };
 
@@ -58,6 +64,8 @@ protected:
 ///
 /// See background on lattice flow analysis:
 /// https://en.wikipedia.org/wiki/Data-flow_analysis
+/// https://clang.llvm.org/docs/DataFlowAnalysisIntro.html
+///
 template<typename TDerived, typename TState>
 class AbstractFlowAnalysis : public FlowAnalysisBase {
 #define DERIVED *static_cast<TDerived*>(this)

@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: Michael Popoloski
 // SPDX-License-Identifier: MIT
 
+#include "AnalysisTests.h"
 #include "Test.h"
 #include <fmt/core.h>
 
@@ -229,4 +230,335 @@ TEST_CASE("Case Dag Hard Variant") {
             "????????????1?1????1", "????????????????????", "????????????????????",
         },
         20, {}, {}, {}, false, true);
+}
+
+TEST_CASE("Inferred latches with 4-state case statements") {
+    auto& code = R"(
+module m;
+    logic [2:0] a;
+    logic b;
+    int c, d, e;
+
+    always_comb begin
+        case (b)
+            0: c = 1;
+            1: c = 1;
+            1'bx: c = 1;
+            1'bz: c = 1;
+        endcase
+    end
+
+    always_comb begin
+        casez (a)
+            3'b000: d = 1;
+            3'b001: d = 1;
+            3'b01?: d = 1;
+            3'b0x?: d = 1;
+            3'b0z?: d = 1;
+            3'b1??: d = 1;
+            3'bx??: d = 1;
+            3'bz??: d = 1;
+        endcase
+    end
+
+    always_comb begin
+        unique case (b)
+            1'b0: e = 1;
+            1'b1: e = 1;
+        endcase
+    end
+endmodule
+)";
+
+    AnalysisOptions options;
+    options.flags = AnalysisFlags::FullCaseFourState | AnalysisFlags::FullCaseUniquePriority;
+
+    Compilation compilation;
+    AnalysisManager analysisManager(options);
+
+    auto [diags, design] = analyze(code, compilation, analysisManager);
+    REQUIRE(diags.size() == 6);
+    CHECK(diags[0].code == diag::CaseNotWildcard);
+    CHECK(diags[1].code == diag::CaseNotWildcard);
+    CHECK(diags[2].code == diag::CaseZWithX);
+    CHECK(diags[3].code == diag::CaseUnreachable);
+    CHECK(diags[4].code == diag::CaseZWithX);
+    CHECK(diags[5].code == diag::CaseUnreachable);
+}
+
+TEST_CASE("Inferred latches with 2-state case statements") {
+    auto& code = R"(
+module m;
+    logic [2:0] a;
+    logic b;
+    int c, d, e, f, g;
+    logic signed [1:0] h;
+
+    always_comb begin
+        case (b)
+            1'b0: c = 1;
+            1'b1: c = 1;
+        endcase
+    end
+
+    always_comb begin
+        casex (a)
+            3'b000: d = 1;
+            3'b001: d = 1;
+            3'b01?: d = 1;
+            3'b1??: d = 1;
+        endcase
+    end
+
+    always_comb begin
+        casex (a)
+            3'b000: e = 1;
+            3'b001: e = 1;
+            3'b010: e = 1;
+            3'b1??: e = 1;
+        endcase
+    end
+
+    always_comb begin
+        case (b)
+            0: f = 1;
+        endcase
+
+        case (h)
+            -2: g = 1;
+            -1: g = 1;
+            0:  g = 1;
+            1:  g = 1;
+        endcase
+    end
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto [diags, design] = analyze(code, compilation, analysisManager);
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::InferredLatch);
+    CHECK(diags[1].code == diag::InferredLatch);
+}
+
+TEST_CASE("DFA for constant case statements") {
+    auto& code = R"(
+module m;
+    parameter p = 2;
+    int i, j;
+    logic l;
+    always_comb begin
+        case (p)
+            0: begin end
+            1: begin end
+            2: i = 1;
+            default:;
+        endcase
+
+        case (l)
+            0: j = 1;
+            1: j = 2;
+            default:;
+        endcase
+    end
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto [diags, design] = analyze(code, compilation, analysisManager);
+    CHECK_DIAGS_EMPTY;
+}
+
+TEST_CASE("Case statement missing enum values") {
+    auto& code = R"(
+module m;
+    enum {A,B,C,D,E} e;
+    initial begin
+        case (e)
+            A, B, C, D:;
+            default;
+        endcase
+        case (e)
+            A, B, C:;
+            default;
+        endcase
+        case (e)
+            A, B:;
+            default;
+        endcase
+        case (e)
+            A:;
+            default;
+        endcase
+
+        case (e)
+            A, B, C, D:;
+        endcase
+        case (e)
+            A, B, C:;
+        endcase
+        case (e)
+            A, B:;
+        endcase
+        case (e)
+            A:;
+        endcase
+    end
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto [diags, design] = analyze(code, compilation, analysisManager);
+    REQUIRE(diags.size() == 8);
+    CHECK(diags[0].code == diag::CaseEnumExplicit);
+    CHECK(diags[1].code == diag::CaseEnumExplicit);
+    CHECK(diags[2].code == diag::CaseEnumExplicit);
+    CHECK(diags[3].code == diag::CaseEnumExplicit);
+    CHECK(diags[4].code == diag::CaseEnum);
+    CHECK(diags[5].code == diag::CaseEnum);
+    CHECK(diags[6].code == diag::CaseEnum);
+    CHECK(diags[7].code == diag::CaseEnum);
+}
+
+TEST_CASE("Case statement dups") {
+    auto& code = R"(
+module m;
+    int i;
+    event e;
+    initial begin
+        case (i)
+            1, 2:;
+            3, 1:;
+            default;
+        endcase
+        case (e)
+            null:;
+            null:;
+            default;
+        endcase
+    end
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto [diags, design] = analyze(code, compilation, analysisManager);
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::CaseDup);
+    CHECK(diags[1].code == diag::CaseDup);
+}
+
+TEST_CASE("Case statement overlap") {
+    auto& code = R"(
+module m;
+    logic [65:0] a;
+    initial begin
+        casex (a)
+            65'bx1011z:;
+            65'b10111:;
+            65'b11011:;
+            65'b1101x:;
+            65'b110?1:;
+            default;
+        endcase
+        casez (a)
+            65'bx1111:;
+            65'b1x111:;
+            65'b1?111:;
+            65'b?1111:;
+            65'b?0111:;
+            default;
+        endcase
+    end
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto [diags, design] = analyze(code, compilation, analysisManager);
+    REQUIRE(diags.size() == 7);
+    CHECK(diags[0].code == diag::CaseUnreachable);
+    CHECK(diags[1].code == diag::CaseOverlap);
+    CHECK(diags[2].code == diag::CaseOverlap);
+    CHECK(diags[3].code == diag::CaseZWithX);
+    CHECK(diags[4].code == diag::CaseZWithX);
+    CHECK(diags[5].code == diag::CaseOverlap);
+    CHECK(diags[6].code == diag::CaseOverlap);
+}
+
+TEST_CASE("Case statement with huge bit width selector") {
+    auto& code = R"(
+module test9(
+  input reg [100:0] sel_i,
+  input reg trg_i,
+  output reg [1:0] reg_o
+);
+  always @(posedge trg_i) begin
+    // Negating the literal with unknowns makes it all unknowns, i.e. all wildcards
+    casex (sel_i)
+      -12'b00zzzzz00001,
+      12'b11: reg_o = 2'b01;
+    endcase
+  end
+endmodule
+
+module test10(
+  input reg [100:0] sel_i,
+  input reg trg_i,
+  output reg [1:0] reg_o
+);
+  always @(posedge trg_i) begin
+    casex (sel_i)
+      12'sb00xxxxx00001,
+      -12'b00zzzzz00001,
+      12'b11: reg_o = 2'b01;
+    endcase
+  end
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto [diags, design] = analyze(code, compilation, analysisManager);
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::CaseUnreachable);
+    CHECK(diags[1].code == diag::CaseOverlap);
+    CHECK(diags[2].code == diag::CaseUnreachable);
+}
+
+TEST_CASE("Case items with unknowns that are not wildcards") {
+    auto& code = R"(
+module m;
+    logic [3:0] a;
+    initial begin
+        case (a)
+            4'b?10:;
+            4'bx10:;
+            default;
+        endcase
+        casez (a)
+            4'bx10:;
+            default;
+        endcase
+    end
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto [diags, design] = analyze(code, compilation, analysisManager);
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::CaseNotWildcard);
+    CHECK(diags[1].code == diag::CaseNotWildcard);
+    CHECK(diags[2].code == diag::CaseZWithX);
 }

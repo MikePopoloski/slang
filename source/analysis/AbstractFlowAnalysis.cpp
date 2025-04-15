@@ -7,6 +7,11 @@
 //------------------------------------------------------------------------------
 #include "slang/analysis/AbstractFlowAnalysis.h"
 
+#include <fmt/core.h>
+
+#include "slang/analysis/CaseDecisionDag.h"
+#include "slang/diagnostics/AnalysisDiags.h"
+
 namespace slang::analysis {
 
 ConstantValue FlowAnalysisBase::tryEvalBool(const Expression& expr) const {
@@ -35,44 +40,133 @@ bool FlowAnalysisBase::willIterateAtLeastOnce(std::span<const VariableSymbol* co
     return stopExpr.eval(speculativeCtx).isTrue();
 }
 
-static bool isFullyCoveredWildcards(const SmallVector<SVInt>& patterns, bool wildcardX) {
-    for (auto bit : {logic_t(0), logic_t(1)}) {
-        // For each branch at the current index (e.g. 0, 1) filter the patterns
-        // to only those that can match the chosen bit.
-        bool done = false;
-        SmallVector<SVInt> nextPatterns;
-        for (auto& pattern : patterns) {
-            const auto width = pattern.getBitWidth();
-            const auto p = pattern[int32_t(width - 1)];
-            if (exactlyEqual(p, bit) || exactlyEqual(p, logic_t::z) ||
-                (wildcardX && exactlyEqual(p, logic_t::x))) {
-                if (width == 1) {
-                    done = true;
-                    break;
+bool FlowAnalysisBase::isFullyCovered(const CaseStatement& stmt) const {
+    // This method determines whether a case statement's items fully cover
+    // the input space, so that we know whether the default statement
+    // (if there is one) is reachable or not.
+    //
+    // Also while we're here we will issue some diagnostics for lint issues like
+    // overlapping case items and duplicate case items, if this analysis has been
+    // configured to report diagnostics.
+
+    const auto& caseType = *stmt.expr.type;
+    const auto bitWidth = stmt.expr.unwrapImplicitConversions().type->getBitWidth();
+    const auto cond = stmt.condition;
+    const bool wildcard = cond == CaseStatementCondition::WildcardXOrZ ||
+                          cond == CaseStatementCondition::WildcardJustZ;
+
+    // Collect all constant case values, checking for duplicates and overlaps
+    // if we are looking for diagnostics.
+    bool hasNonConstItems = false;
+    SmallMap<ConstantValue, const Expression*, 4> elems;
+    SmallVector<SVInt> intVals;
+    SmallVector<const Expression*> itemExpressions;
+    for (auto& g : stmt.items) {
+        for (auto item : g.expressions) {
+            if (auto cv = item->eval(evalContext)) {
+                auto [it, inserted] = elems.emplace(std::move(cv), item);
+                if (!inserted) {
+                    if (diagnostics) {
+                        auto& diag = diagnostics->add(rootSymbol, diag::CaseDup, item->sourceRange);
+                        diag << SemanticFacts::getCaseConditionStr(cond) << it->first;
+                        diag.addNote(diag::NotePreviousUsage, it->second->sourceRange);
+                    }
                 }
-                nextPatterns.emplace_back(pattern.trunc(width - 1));
+                else if (it->first.isInteger()) {
+                    // Save off the values for later use in building the decision
+                    // DAG. One weid thing here: if the value has x bits and we're
+                    // not in a casex statement we should ignore the item, since we
+                    // won't check for coverage of x bits in the decision DAG and these
+                    // clauses will show up as unreachable otherwise.
+                    auto& val = it->first.integer();
+                    if (cond != CaseStatementCondition::WildcardJustZ || val.countXs() == 0) {
+                        intVals.push_back(val.trunc(bitWidth));
+                        itemExpressions.push_back(item);
+                    }
+                }
+            }
+            else {
+                hasNonConstItems = true;
+            }
+
+            if (diagnostics && (cond == CaseStatementCondition::Normal ||
+                                cond == CaseStatementCondition::WildcardJustZ)) {
+                // If we're not in a wildcard case we should warn
+                // about integer literal items that have unknown bits.
+                // Similarly, if we're in a wildcard case with just Zs
+                // we should warn if we see Xs.
+                auto& unwrapped = item->unwrapImplicitConversions();
+                if (unwrapped.kind == ExpressionKind::IntegerLiteral) {
+                    auto& lit = unwrapped.as<IntegerLiteral>();
+                    if (cond == CaseStatementCondition::Normal && lit.getValue().hasUnknown()) {
+                        diagnostics->add(rootSymbol, diag::CaseNotWildcard, item->sourceRange);
+                    }
+                    else if (cond == CaseStatementCondition::WildcardJustZ &&
+                             lit.getValue().countXs() > 0) {
+                        diagnostics->add(rootSymbol, diag::CaseZWithX, item->sourceRange);
+                    }
+                }
+            }
+        }
+    }
+
+    // If diagnostics are enabled do various lint checks now.
+    std::optional<CaseDecisionDag> decisionDag;
+    if (diagnostics) {
+        // Check for missing enum coverage.
+        if (caseType.isEnum()) {
+            SmallVector<std::string_view> missing;
+            for (auto& ev : caseType.getCanonicalType().as<EnumType>().values()) {
+                auto& val = ev.getValue();
+                if (!elems.contains(val))
+                    missing.push_back(ev.name);
+            }
+
+            if (!missing.empty()) {
+                std::string msg;
+                if (missing.size() == 1) {
+                    msg = fmt::format("value '{}'", missing[0]);
+                }
+                else if (missing.size() == 2) {
+                    msg = fmt::format("values '{}' and '{}'", missing[0], missing[1]);
+                }
+                else if (missing.size() == 3) {
+                    msg = fmt::format("values '{}', '{}', and '{}'", missing[0], missing[1],
+                                      missing[2]);
+                }
+                else {
+                    const size_t remainder = missing.size() - 3;
+                    msg = fmt::format("values '{}', '{}', '{}' (and {} other{})", missing[0],
+                                      missing[1], missing[2], remainder, remainder == 1 ? "" : "s");
+                }
+
+                auto code = stmt.defaultCase ? diag::CaseEnumExplicit : diag::CaseEnum;
+                diagnostics->add(rootSymbol, code, stmt.expr.sourceRange) << msg;
             }
         }
 
-        // If no pattern can match then the entire branch is uncovered,
-        // unless we're at the final bit position in which case we did
-        // find a whole match.
-        if (nextPatterns.empty()) {
-            if (done)
-                continue;
-            return false;
+        // If this is a wildcard case statement check for overlaps.
+        if (wildcard) {
+            // TODO: check for gave up
+            decisionDag.emplace(intVals, bitWidth, cond == CaseStatementCondition::WildcardXOrZ);
+
+            for (auto index : decisionDag->unreachableClauses) {
+                auto& diag = diagnostics->add(rootSymbol, diag::CaseUnreachable,
+                                              itemExpressions[index]->sourceRange);
+                diag << SemanticFacts::getCaseConditionStr(cond);
+            }
+
+            for (auto [first, second] : decisionDag->overlappingClauses) {
+                auto& diag = diagnostics->add(rootSymbol, diag::CaseOverlap,
+                                              itemExpressions[second]->sourceRange)
+                             << SemanticFacts::getCaseConditionStr(cond);
+                diag.addNote(diag::NotePreviousUsage, itemExpressions[first]->sourceRange);
+            }
         }
-
-        // Recurse to the next bit position.
-        if (!isFullyCoveredWildcards(nextPatterns, wildcardX))
-            return false;
     }
-    return true;
-}
 
-bool FlowAnalysisBase::isFullyCovered(const CaseStatement& stmt) const {
-    // First of all, if the case statement asserts it has full coverage,
-    // and our flags allow it, assume full coverage without checking.
+    // If the case statement asserts it has full coverage, and our flags allow it,
+    // assume full coverage without checking.
     if (flags.has(AnalysisFlags::FullCaseUniquePriority) &&
         (stmt.check == UniquePriorityCheck::Unique ||
          stmt.check == UniquePriorityCheck::Priority)) {
@@ -80,7 +174,6 @@ bool FlowAnalysisBase::isFullyCovered(const CaseStatement& stmt) const {
     }
 
     // If the case type is not integral then we can never fully satisfy the condition.
-    auto& caseType = *stmt.expr.type;
     if (!caseType.isIntegral())
         return false;
 
@@ -92,21 +185,9 @@ bool FlowAnalysisBase::isFullyCovered(const CaseStatement& stmt) const {
     if (stmt.condition == CaseStatementCondition::Inside)
         return false;
 
-    const bitwidth_t bitWidth = stmt.expr.unwrapImplicitConversions().type->getBitWidth();
-
-    // TODO: merge with dup checking in ConditionalStatements.cpp
-    SmallSet<ConstantValue, 4> seen;
-    SmallVector<SVInt> values;
-    for (auto& g : stmt.items) {
-        for (auto item : g.expressions) {
-            auto cv = item->eval(evalContext);
-            if (!cv)
-                return false;
-
-            if (seen.emplace(cv).second)
-                values.emplace_back(std::move(cv).integer());
-        }
-    }
+    // If we have non-constant items then we can't fully cover the case statement.
+    if (hasNonConstItems)
+        return false;
 
     // TODO: warn for wildcard case statements with 2-state type?
     if (stmt.condition == CaseStatementCondition::Normal || !caseType.isFourState()) {
@@ -114,9 +195,9 @@ bool FlowAnalysisBase::isFullyCovered(const CaseStatement& stmt) const {
         // of possible values for the case expression. This depends on
         // whether the type is 2-state or 4-state.
         if (caseType.isFourState() && flags.has(AnalysisFlags::FullCaseFourState))
-            return bitWidth < 16 && values.size() >= (size_t)std::pow(4, bitWidth);
+            return bitWidth < 16 && elems.size() >= (size_t)std::pow(4, bitWidth);
         else
-            return bitWidth < 32 && values.size() >= (1ull << bitWidth);
+            return bitWidth < 32 && elems.size() >= (1ull << bitWidth);
     }
 
     // If we're checking for four-state wildcard coverage we simply need to
@@ -124,15 +205,18 @@ bool FlowAnalysisBase::isFullyCovered(const CaseStatement& stmt) const {
     // so the only way to specify an entry that hits all Z's will also cover
     // all other bits too.
     if (flags.has(AnalysisFlags::FullCaseFourState)) {
-        for (auto& val : values) {
-            if (val.countLeadingZs() >= bitWidth)
+        for (auto&& [val, _] : elems) {
+            if (val.integer().countLeadingZs() >= bitWidth)
                 return true;
         }
         return false;
     }
 
     // Otherwise do the full wildcard coverage search.
-    return isFullyCoveredWildcards(values, stmt.condition == CaseStatementCondition::WildcardXOrZ);
+    if (!decisionDag)
+        decisionDag.emplace(intVals, bitWidth, cond == CaseStatementCondition::WildcardXOrZ);
+
+    return decisionDag->isExhaustive();
 }
 
 } // namespace slang::analysis

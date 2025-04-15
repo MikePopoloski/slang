@@ -50,6 +50,10 @@ public:
     CaseDecisionDag(std::span<const SVInt> clauses, uint32_t bitWidth, bool wildcardX,
                     uint32_t maxSteps = UINT32_MAX);
 
+    /// Indicates whether the DAG is exhaustive, meaning that all possible
+    /// input values are covered by the case statement clauses.
+    bool isExhaustive() const { return !counterexample.has_value(); }
+
 private:
     void build(uint32_t level, std::span<const SVInt> clauses, uint32_t bitWidth, bool wildcardX,
                uint32_t maxSteps, SVInt curPath, std::vector<ClauseIndex>&& activeIndices);

@@ -140,6 +140,17 @@ std::string_view SemanticFacts::getProcedureKindStr(ProceduralBlockKind kind) {
     SLANG_UNREACHABLE;
 }
 
+std::string_view SemanticFacts::getCaseConditionStr(CaseStatementCondition kind) {
+    switch (kind) {
+        case CaseStatementCondition::WildcardXOrZ:
+            return "casex"sv;
+        case CaseStatementCondition::WildcardJustZ:
+            return "casez"sv;
+        default:
+            return "case"sv;
+    }
+}
+
 static DriveStrength getDriveStrengthVal(TokenKind kind) {
     switch (kind) {
         case TokenKind::Supply0Keyword:

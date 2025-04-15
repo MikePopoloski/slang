@@ -7,19 +7,12 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include "slang/ast/SemanticFacts.h"
 #include "slang/ast/Statement.h"
 
 namespace slang::ast {
 
 // clang-format off
-#define CASE_CONDITION(x) \
-    x(Normal) \
-    x(WildcardXOrZ) \
-    x(WildcardJustZ) \
-    x(Inside)
-SLANG_ENUM(CaseStatementCondition, CASE_CONDITION)
-#undef CASE_CONDITION
-
 #define UNIQUE_PRIORITY(x) \
     x(None) \
     x(Unique) \

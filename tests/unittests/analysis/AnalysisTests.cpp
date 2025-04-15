@@ -153,115 +153,11 @@ endmodule
     AnalysisManager analysisManager;
 
     auto [diags, design] = analyze(code, compilation, analysisManager);
-    REQUIRE(diags.size() == 3);
+    REQUIRE(diags.size() == 4);
     CHECK(diags[0].code == diag::InferredLatch);
     CHECK(diags[1].code == diag::InferredLatch);
     CHECK(diags[2].code == diag::InferredLatch);
-}
-
-TEST_CASE("Inferred latches with 4-state case statements") {
-    auto& code = R"(
-module m;
-    logic [2:0] a;
-    logic b;
-    int c, d, e;
-
-    always_comb begin
-        case (b)
-            0: c = 1;
-            1: c = 1;
-            1'bx: c = 1;
-            1'bz: c = 1;
-        endcase
-    end
-
-    always_comb begin
-        casez (a)
-            3'b000: d = 1;
-            3'b001: d = 1;
-            3'b01?: d = 1;
-            3'b0x?: d = 1;
-            3'b0z?: d = 1;
-            3'b1??: d = 1;
-            3'bx??: d = 1;
-            3'bz??: d = 1;
-        endcase
-    end
-
-    always_comb begin
-        unique case (b)
-            1'b0: e = 1;
-            1'b1: e = 1;
-        endcase
-    end
-endmodule
-)";
-
-    AnalysisOptions options;
-    options.flags = AnalysisFlags::FullCaseFourState | AnalysisFlags::FullCaseUniquePriority;
-
-    Compilation compilation;
-    AnalysisManager analysisManager(options);
-
-    auto [diags, design] = analyze(code, compilation, analysisManager);
-    CHECK_DIAGS_EMPTY;
-}
-
-TEST_CASE("Inferred latches with 2-state case statements") {
-    auto& code = R"(
-module m;
-    logic [2:0] a;
-    logic b;
-    int c, d, e, f, g;
-    logic signed [1:0] h;
-
-    always_comb begin
-        case (b)
-            1'b0: c = 1;
-            1'b1: c = 1;
-        endcase
-    end
-
-    always_comb begin
-        casex (a)
-            3'b000: d = 1;
-            3'b001: d = 1;
-            3'b01?: d = 1;
-            3'b1??: d = 1;
-        endcase
-    end
-
-    always_comb begin
-        casex (a)
-            3'b000: e = 1;
-            3'b001: e = 1;
-            3'b010: e = 1;
-            3'b1??: e = 1;
-        endcase
-    end
-
-    always_comb begin
-        case (b)
-            0: f = 1;
-        endcase
-
-        case (h)
-            -2: g = 1;
-            -1: g = 1;
-            0:  g = 1;
-            1:  g = 1;
-        endcase
-    end
-endmodule
-)";
-
-    Compilation compilation;
-    AnalysisManager analysisManager;
-
-    auto [diags, design] = analyze(code, compilation, analysisManager);
-    REQUIRE(diags.size() == 2);
-    CHECK(diags[0].code == diag::InferredLatch);
-    CHECK(diags[1].code == diag::InferredLatch);
+    CHECK(diags[3].code == diag::CaseEnumExplicit);
 }
 
 TEST_CASE("Inferred latch warning correct LSP in message") {
@@ -480,36 +376,6 @@ module Test (
     end
   end
 
-endmodule
-)";
-
-    Compilation compilation;
-    AnalysisManager analysisManager;
-
-    auto [diags, design] = analyze(code, compilation, analysisManager);
-    CHECK_DIAGS_EMPTY;
-}
-
-TEST_CASE("DFA for constant case statements") {
-    auto& code = R"(
-module m;
-    parameter p = 2;
-    int i, j;
-    logic l;
-    always_comb begin
-        case (p)
-            0: begin end
-            1: begin end
-            2: i = 1;
-            default:;
-        endcase
-
-        case (l)
-            0: j = 1;
-            1: j = 2;
-            default:;
-        endcase
-    end
 endmodule
 )";
 
