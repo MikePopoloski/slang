@@ -1595,6 +1595,22 @@ module m;
 endmodule
 ```
 
+-Wcase-unreachable
+A wildcard case statement is unreachable because earlier items completely
+cover all of its possible values.
+```
+module m;
+    logic [2:0] a;
+    initial begin
+        casez (a)
+            3'b10?:;
+            3'b101:;
+            default;
+        endcase
+    end
+endmodule
+```
+
 -Wcase-not-wildcard
 A normal case statement has items with integer literals that contain X or Z bits.
 These bits don't count as wildcards, so the designer may have meant for this to
