@@ -1124,8 +1124,15 @@ private:
         auto subPortDims = portDims.subspan(1);
 
         SmallVector<const Symbol*> newElems;
-        for (auto elem : sym->as<InstanceArraySymbol>().elements)
-            newElems.push_back(rewireIfaceArrayIndices(elem, ""sv, loc, subPortDims));
+        auto& arr = sym->as<InstanceArraySymbol>();
+        if (arr.range.isLittleEndian() != portDims[0].isLittleEndian()) {
+            for (auto elem : std::views::reverse(arr.elements))
+                newElems.push_back(rewireIfaceArrayIndices(elem, name, loc, subPortDims));
+        }
+        else {
+            for (auto elem : arr.elements)
+                newElems.push_back(rewireIfaceArrayIndices(elem, name, loc, subPortDims));
+        }
 
         return comp.emplace<InstanceArraySymbol>(comp, name, loc, newElems.copy(comp), portDims[0]);
     }
