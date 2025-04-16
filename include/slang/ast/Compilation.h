@@ -760,7 +760,7 @@ public:
     const syntax::ImplicitTypeSyntax& createEmptyTypeSyntax(SourceLocation loc);
 
     /// Get the root scope (c.f. getRoot() this method doesn't trigger finalization)
-    const Scope *getRootScope() const;
+    const Scope* getRootScope() const;
 
     /// @}
 
