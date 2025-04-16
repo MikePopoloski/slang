@@ -1674,6 +1674,52 @@ module m;
 endmodule
 ```
 
+-Wcase-redundant-default
+A case statement that is marked 'unique' or 'priority' has a default item.
+Using 'unique' or 'priority' asserts that the case items fully cover all
+possible inputs, so the default item should never be hit.
+```
+module m;
+    logic [2:0] a;
+    initial begin
+        unique case (a)
+            1:;
+            2:;
+            default; // Warning for default
+        endcase
+    end
+endmodule
+```
+
+-Wcase-wildcard-2state
+A wildcard case statement has a 2-state condition and 2-state items, so there
+will never be unknown bits and therefore no wildcard matching will occur.
+If expected, convert this to a normal 'case' statement to better express
+the intent.
+```
+module m;
+    bit [2:0] a;
+    initial casex (a)
+        3'd0:;
+        3'd1:;
+        default;
+    endcase
+endmodule
+```
+
+-Wcase-incomplete
+A wildcard case statement is missing coverage of one or more possible inputs
+and has no default case to handle them.
+```
+module m;
+    logic [2:0] a;
+    initial casez (a)
+        3'b00?:;
+        3'b1??:;
+    endcase
+endmodule
+```
+
 -Winferred-latch
 A signal assigned in an always_comb procedure is not assigned on all control
 paths and so infers a latch instead of combinatorial logic.

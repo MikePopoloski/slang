@@ -505,6 +505,54 @@ endmodule
     CHECK(diags[6].code == diag::CaseTypeMismatch);
 }
 
+TEST_CASE("Case unique/priority defaults") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    logic [2:0] a;
+    initial begin
+        unique case (a)
+            1:;
+            2:;
+            // No warning for missing default since we assert unique
+        endcase
+
+        unique case (a)
+            1:;
+            2:;
+            default; // Warning for default
+        endcase
+    end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::CaseRedundantDefault);
+}
+
+TEST_CASE("Case wildcard 2-state") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    bit [2:0] a;
+    initial casex (a)
+        3'd0:;
+        3'd1:;
+        default;
+    endcase
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::CaseWildcard2State);
+}
+
 TEST_CASE("Conversion warnings in conditional operator") {
     auto tree = SyntaxTree::fromText(R"(
 module test;

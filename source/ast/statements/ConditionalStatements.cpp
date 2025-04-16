@@ -340,9 +340,20 @@ Statement& CaseStatement::fromSyntax(Compilation& compilation, const CaseStateme
     if (bad)
         return badStmt(compilation, result);
 
+    if (!expr->type->isFourState() && wildcard) {
+        context.addDiag(diag::CaseWildcard2State, syntax.caseKeyword.range())
+            << expr->sourceRange << LexerFacts::getTokenKindText(keyword);
+    }
+
     if (!defStmt) {
-        context.addDiag(diag::CaseDefault, syntax.caseKeyword.range())
-            << LexerFacts::getTokenKindText(keyword);
+        if (check == UniquePriorityCheck::None || check == UniquePriorityCheck::Unique0) {
+            context.addDiag(diag::CaseDefault, syntax.caseKeyword.range())
+                << LexerFacts::getTokenKindText(keyword);
+        }
+    }
+    else if (check == UniquePriorityCheck::Unique || check == UniquePriorityCheck::Priority) {
+        context.addDiag(diag::CaseRedundantDefault, syntax.caseKeyword.range())
+            << LexerFacts::getTokenKindText(keyword) << syntax.uniqueOrPriority.valueText();
     }
 
     return *result;

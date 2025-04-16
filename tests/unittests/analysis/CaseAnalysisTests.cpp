@@ -343,9 +343,10 @@ endmodule
     AnalysisManager analysisManager;
 
     auto [diags, design] = analyze(code, compilation, analysisManager);
-    REQUIRE(diags.size() == 2);
-    CHECK(diags[0].code == diag::InferredLatch);
+    REQUIRE(diags.size() == 3);
+    CHECK(diags[0].code == diag::CaseIncomplete);
     CHECK(diags[1].code == diag::InferredLatch);
+    CHECK(diags[2].code == diag::InferredLatch);
 }
 
 TEST_CASE("DFA for constant case statements") {

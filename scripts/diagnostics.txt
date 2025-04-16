@@ -879,6 +879,8 @@ error ConcurrentAssertNotInProc "concurrent assertion statements may only appear
 error CheckerNotInProc "procedural checkers may only appear in always and initial blocks"
 error CheckerInForkJoin "checkers cannot be instantiated inside fork-join blocks"
 warning case-default CaseDefault "'{}' missing 'default' label"
+warning case-redundant-default CaseRedundantDefault "'{}' marked '{}' has 'default' label"
+warning case-wildcard-2state CaseWildcard2State "'{}' has two-state type so no wildcard matching will be performed"
 warning seq-no-match SeqNoMatch "sequence can never be matched"
 warning event-const EventExpressionConstant "edge expression is constant"
 warning empty-stmt EmptyStatement "extra ';' has no effect"
@@ -1176,6 +1178,7 @@ warning case-unreachable CaseUnreachable "'{}' statement item will never match b
 warning case-not-wildcard CaseNotWildcard "'case' statement item has unknown bits which don't work as wildcards; should this be a 'casex' or 'casez' statement?"
 warning casez-with-x CaseZWithX "'casez' statement item has 'x' bits which don't work as wildcards; should this be a 'casex' statement?"
 warning case-too-complex CaseComplex "'{}' statement is too complex to analyze; assuming it does not have full coverage (increase --max-case-analysis-steps to try harder)"
+warning case-incomplete CaseIncomplete "'{}' statement does not handle all possible inputs (for example, {})"
 
 subsystem Meta
 fatal TooManyErrors "too many errors emitted, stopping now [--error-limit=]"
@@ -1207,7 +1210,8 @@ group extra = { empty-member empty-stmt dup-import pointless-void-cast case-gen-
                 useless-cast unsigned-arith-shift static-init-order static-init-value float-int-conv
                 float-narrow bitwise-rel-precedence arith-in-shift logical-not-parentheses
                 consecutive-comparison case-outside-range case-enum case-dup case-overlap
-                case-unreachable incomplete-return missing-return }
+                case-unreachable incomplete-return missing-return case-redundant-default case-incomplete
+                case-wildcard-2state }
 
 group pedantic = { empty-pattern implicit-net-port nonstandard-escape-code nonstandard-generate format-multibit-strength
                    nonstandard-sys-func nonstandard-foreach nonstandard-dist isunbounded-param-arg udp-coverage }

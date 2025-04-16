@@ -159,6 +159,13 @@ bool FlowAnalysisBase::isFullyCovered(const CaseStatement& stmt) const {
                 diag << SemanticFacts::getCaseConditionStr(cond);
             }
             else {
+                if (decisionDag->counterexample && !stmt.defaultCase) {
+                    auto& diag = diagnostics->add(rootSymbol, diag::CaseIncomplete,
+                                                  stmt.expr.sourceRange);
+                    diag << SemanticFacts::getCaseConditionStr(cond);
+                    diag << *decisionDag->counterexample;
+                }
+
                 for (auto index : decisionDag->unreachableClauses) {
                     auto& diag = diagnostics->add(rootSymbol, diag::CaseUnreachable,
                                                   itemExpressions[index]->sourceRange);
@@ -184,22 +191,14 @@ bool FlowAnalysisBase::isFullyCovered(const CaseStatement& stmt) const {
     }
 
     // If the case type is not integral then we can never fully satisfy the condition.
-    if (!caseType.isIntegral())
-        return false;
-
-    // TODO: handle case condition being a constant
-    if (stmt.expr.eval(evalContext))
+    // Non-constant items or constant condition is also not coverable.
+    if (!caseType.isIntegral() || hasNonConstItems || stmt.expr.eval(evalContext))
         return false;
 
     // TODO: handle case inside
     if (stmt.condition == CaseStatementCondition::Inside)
         return false;
 
-    // If we have non-constant items then we can't fully cover the case statement.
-    if (hasNonConstItems)
-        return false;
-
-    // TODO: warn for wildcard case statements with 2-state type?
     const bool fullCaseFourState = options.flags.has(AnalysisFlags::FullCaseFourState);
     if (stmt.condition == CaseStatementCondition::Normal || !caseType.isFourState()) {
         // The number of non-duplicate elements needs to match the number
@@ -216,8 +215,8 @@ bool FlowAnalysisBase::isFullyCovered(const CaseStatement& stmt) const {
     // so the only way to specify an entry that hits all Z's will also cover
     // all other bits too.
     if (fullCaseFourState) {
-        for (auto&& [val, _] : elems) {
-            if (val.integer().countLeadingZs() >= bitWidth)
+        for (auto& val : intVals) {
+            if (val.countLeadingZs() >= bitWidth)
                 return true;
         }
         return false;
