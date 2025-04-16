@@ -1,341 +1,7 @@
 // This file is an input to the diagnostic_gen.py script, to generate
 // documentation for compiler warning flags.
 
--Wunknown-escape-code
-Detects use of unknown character escape codes in string literals.
-```
-string s = "Hello World\q";
-```
-
--Wnonstandard-escape-code
-Detects use of '\\\%' in string literals. This is not a real escape code
-but other tools silently allow it anyway.
-```
-string s = "Hello World\%";
-```
-
--Wreal-underflow
-Issued for real literals that are too small to be represented.
-```
-real r = 4.94066e-325;
-```
-
--Wreal-overflow
-Issued for real literals that are too large to be represented.
-```
-real r = 1.79769e+309;
-```
-
--Wvector-overflow
-Issued for vector literals that are larger than their specified number of bits.
-```
-logic [7:0] i = 7'd256;
-```
-
--Wint-overflow
-Issued for integer literals that overflow a 32-bit integer (31-bits plus sign).
-```
-int i = 2147483648;
-```
-
--Wignored-macro-paste
-Points out macro concatenation tokens that aren't actually concatenating anything due
-to whitespace on either side, or tokens that can't be concatenated in the first place.
-```
-`define FOO(a) a `` +
-int foo;
-int bar = `FOO(foo) foo;
-```
-
--Wredef-macro
-Issued for redefining a macro name with a different body.
-```
-`define FOO 1
-`define FOO 2
-```
-
--Wunknown-pragma
-Issued for an unknown pragma directive.
-```
-`pragma foo
-```
-
--Wextra-pragma-args
-Issued for a pragma directive that specifies more arguments than expected.
-```
-`pragma resetall extraarg
-```
-
--Wexpected-diag-arg
-Issued for a pragma diagnostic directive that is missing an argument.
-```
-`pragma diagnostic
-```
-
--Wunknown-diag-arg
-Issued for an unknown argument given to a pragma diagnostic directive.
-```
-`pragma diagnostic pushh
-```
-
--Wpragma-diag-level
-Issued for a malformed diagnostic pragma. A severity code was expected
-where the given location is indicated.
-```
-`pragma diagnostic foo=3'd3
-```
-
--Wnonstandard-generate
-Indicates a standalone generate block (begin / end pair) without a corresponding
-generate loop or condition. This was allowed in older Verilog standards but
-is no longer allowed in SystemVerilog.
-```
-module m;
-    begin : gen_block
-        int i = 1;
-    end
-endmodule
-```
-
--Wempty-pattern
-Issued for empty assignment pattern literals, which are not allowed by
-SystemVerilog but are supported by some tools.
-```
-int foo[] = '{};
-```
-
--Wnonstandard-foreach
-foreach loops are not allowed to have multidimensional brackets when declaring
-loop variables, but most tools allow it as an extension.
-```
-module top;
-    int array[8][8];
-    initial begin
-        foreach (array[i]) begin
-            foreach (array[i][j]) begin
-                array[i][j] = i * j;
-            end
-        end
-    end
-endmodule
-```
-
--Wlifetime-prototype
-Lifetime specifiers are not allowed on method prototype declarations but some
-tools allow it as an extension.
-```
-class C;
-    extern function automatic void foo;
-endclass
-
-function automatic void C::foo;
-endfunction
-```
-
--Wnonstandard-dist
-'dist' constraint items are technically not allowed to be surrounded by parentheses according
-to the language grammar, but most tools allow it as an extension.
-```
-class C;
-    rand bit a;
-    rand bit [3:0] b;
-    constraint cmd_c {
-        a -> (b dist { 0 := 1, [1:15] := 1});
-    }
-endclass
-```
-
--Wempty-body
-An empty statement body for a loop or conditional statement could be confusing or misleading.
-If intended, move the semicolon to a separate line to suppress the warning.
-```
-module m;
-    initial begin
-        if (1); begin
-        end
-    end
-endmodule
-```
-
--Wsplit-distweight-op
-Some tools allow the dist weight operators to be split instead of a single token.
-slang will issue this warning as an error by default but it can be downgraded for compatibility.
-```
-class c;
-  rand int val;
-  constraint cst_sum {
-    val dist {1 :    = 10, 4 :   / 20};
-  }
-endclass
-```
-
--Wwarning-task
-A $warning elaboration task was encountered. Its message is printed by this diagnostic.
-```
-$warning("Hello World!");
-```
-
--Wexplicit-static
-static variables declared locally to a procedural block that contain an initializer require
-that the 'static' keyword be explicitly provided (and not just inferred from context) to
-clarify that the initialization happens only once. Most tools don't enforce this rule,
-so this is just a warning instead of an error.
-```
-module m;
-    initial begin
-        int i = 1;
-    end
-endmodule
-```
-
--Wcase-gen-dup
-More than one case generate item was found to have the same value. The second
-case block will never be selected.
-```
-module m;
-    case (1)
-        1: begin end
-        1: begin end
-    endcase
-endmodule
-```
-
--Wcase-gen-none
-A case generate directive did not match any items and so no block was selected.
-```
-module m;
-    case (1)
-        0: begin end
-    endcase
-endmodule
-```
-
--Wunconnected-port
-An instance port was left unconnected and it has no default value.
-```
-module m(input int i);
-endmodule
-
-module n;
-    m m1();
-endmodule
-```
-
--Wunconnected-unnamed-port
-An unnamed instance port was left unconnected.
-```
-module m({a, b});
-    input a, b;
-endmodule
-
-module n;
-    m m1();
-endmodule
-```
-
--Wimplicit-net-port
-A net port that elides its net type occurs in a context where `default_nettype is set to 'none'.
-This technically should be an error but it makes the use of 'none' as a default nettype very
-annoying and most tools just default to a wire in this case.
-```
-`default_nettype none
-
-module m(input i);
-endmodule
-```
-
--Wdup-attr
-A design element has more than one attribute of the same name.
-Only the last one will apply.
-```
-module m;
-    (* foo = 1, foo = 2 *)
-    int i;
-endmodule
-```
-
--Wempty-member
-An unnecessary semicolon is located in a non-procedural scope (such as a module body).
-```
-module m;
-    ;
-endmodule
-```
-
--Wineffective-sign
-For a non-ANSI instance port or function body port declaration, the port I/O specifies a
-signing keyword but the actual data type of the port does not permit that signing to take effect.
-```
-module m(a);
-    input unsigned a;
-    int a;
-endmodule
-```
-
--Wconstraint-missing
-An implicit class constraint block has no external definition and so is useless.
-```
-class C;
-    constraint c;
-endclass
-```
-
--Wdpi-spec
-Old-style "DPI" specified subroutines are deprecated and not supported by slang.
-Use the new-style "DPI-C" which has a well-defined standardized calling convention.
-```
-import "DPI" function void foo();
-```
-
--Wudp-port-empty
-A connection to a user-defined primitive instance is an empty expression.
-While allowed, this is easily confused with a misplaced comma and is likely
-not what you want.
-```
-primitive p1 (output a, input b);
-    table 00:0; endtable
-endprimitive
-
-module m;
-    logic a;
-    p1 (a,);
-endmodule
-```
-
--Wnet-inconsistent
-A connection (or part of a connection) between an external net and an internal net
-port has inconsistent net types. The SystemVerilog LRM defines which combinations
-of net types are inconsistent and should produce a warning; see section [23.3.3.7]
-"Port connections with dissimilar net types (net and port collapsing)" for more detail.
-```
-module m (input .a({b, {c[1:0], d}}));
-    wand b;
-    wand [3:0] c;
-    supply0 d;
-endmodule
-
-module top;
-    wand a;
-    wor b;
-    trireg [1:0] c;
-    m m1({a, b, c});
-endmodule
-```
-
--Wignored-slice
-A streaming operator with direction left-to-right provides a slice size, which
-has no effect because only right-to-left streaming can use a slice size.
-```
-int a;
-int b = {>> 4 {a}};
-```
-
--Wunsized-concat
-An unsized type is used in a concatenation. This is not allowed in SystemVerilog
-but most tools allow it anyway as an extension.
-```
-longint i = {1, 2};
-```
+@category Type Conversions
 
 -Wwidth-expand
 An implicit conversion in an expression expands a type. This may be harmless,
@@ -391,699 +57,6 @@ module m;
 endmodule
 ```
 
--Wnonblocking-final
-A nonblocking assignment is used in a 'final' block, which will have no effect.
-```
-module m;
-    int i;
-    final begin
-        i <= 1;
-    end
-endmodule
-```
-
--Wport-coercion
-An input net port has been coerced to 'inout' direction because it is assigned
-to in the instance body. Alternatively, an output net port has been coerced to
-'inout' direction because it is assigned externally to the instance.
-```
-module m(input wire a, output b);
-    assign a = 1;
-endmodule
-
-module n;
-    wire b;
-    m m1(1, b);
-    assign b = 1;
-endmodule
-```
-
--Wevent-const
-An event expression is a constant and so will never change.
-```
-module m;
-    always @(1) begin
-    end
-endmodule
-```
-
--Wempty-stmt
-An extra semicolon in a procedural context implies an empty statement that does nothing.
-```
-module m;
-    initial begin
-        ;
-    end
-endmodule
-```
-
--Wpointless-void-cast
-A function call is cast to 'void' but it already returns void so the cast is pointless.
-```
-module m;
-    function void foo; endfunction
-    initial begin
-        void'(foo());
-    end
-endmodule
-```
-
--Wunused-result
-A non-void function is invoked without inspecting its return value. Capture the result
-or cast the call to 'void' to suppress the warning.
-```
-module m;
-    function int foo; return 1; endfunction
-    initial begin
-        foo();
-    end
-endmodule
-```
-
--Wenum-range
-An enum member is specified as a range with values that are not integer literals.
-The LRM does not allow other constant expressions to be used here.
-```
-localparam int i = 1;
-typedef enum { A[i:3] } e_t;
-```
-
--Wdup-import
-A given scope contains more than one import statement for the same package and name.
-```
-package p;
-    int i;
-endpackage
-
-module m;
-    import p::i;
-    import p::i;
-endmodule
-```
-
--Wformat-real
-A string formatting function was passed a real value for an integer format specifier,
-which will force the value to round to an integer.
-```
-module m;
-    initial $display("%d", 3.14);
-endmodule
-```
-
--Wfinish-num
-The $finish control task accepts a "finish number" of 0, 1, or 2 as its first argument.
-The actual call to $finish in this case passed something other than one of those values.
-```
-module m;
-    initial $finish("Hello");
-endmodule
-```
-
--Wmissing-format
-A string formatting function has a lone '%%' at the end of the format string,
-implying that the rest of the specifier is missing. If a literal '%%' is intended
-in the output, use the standard '%%%' to achieve that.
-```
-module m;
-    initial $display("Hello World %");
-endmodule
-```
-
--Wformat-multibit-strength
-Formatting multibit nets with the %%v specifier is not allowed in SystemVerilog
-but most tools allow it anyway as an extension.
-```
-module m;
-    wire [3:0] w;
-    initial $display("%v", w);
-endmodule
-```
-
--Wnonstandard-sys-func
-Indicates a call to a nonstandard system function. Currently this only applies
-to the $psprintf function, which is a synonym for $sformatf.
-```
-module m;
-    initial $psprintf("%d", 42);
-endmodule
-```
-
--Welem-not-found
-A constant function tried to access a nonexistent element of an associative array.
-```
-localparam int foo = func();
-function int func;
-    int i[string];
-    return i["Hello"];
-endfunction
-```
-
--Wstatic-skipped
-A constant function contains a static variable with an initializer. That initializer
-will be skipped during constant evaluation, which could lead to unintuitive results.
-```
-localparam int foo = func();
-function int func;
-    static int i = 1;
-    return i;
-endfunction
-```
-
--Wdynarray-index
-A constant function tried to access a nonexistent element of a dynamic array.
-```
-localparam int foo = func();
-function int func;
-    automatic int i[] = new [2];
-    return i[4];
-endfunction
-```
-
--Wdynarray-range
-A constant function tried to access a nonexistent range of a dynamic array.
-```
-typedef int ret_type[2];
-localparam ret_type foo = func();
-function ret_type func;
-    automatic int i[] = new [2];
-    return i[6:7];
-endfunction
-```
-
--Wqueue-range
-A constant function is accessing a queue with a reversed range, which
-is defined to always yield an empty queue.
-```
-typedef int ret_type[$];
-localparam ret_type foo = func();
-function ret_type func;
-    automatic int i[$] = {1, 2, 3};
-    return i[2:0];
-endfunction
-```
-
--Wempty-queue
-A constant function tried to pop an element from an empty queue.
-```
-localparam int foo = func();
-function int func;
-    automatic int i[$];
-    return i.pop_back();
-endfunction
-```
-
--Wtask-ignored
-A constant function contains a system task invocation which will
-be skipped during constant evaluation. This could yield unintuitive results.
-```
-localparam string foo = func();
-function string func;
-    automatic string s;
-    $swrite(s, "asdf %d", 3);
-    return s;
-endfunction
-```
-
--Wmissing-top
-No valid top-level modules exist in the design. No top has been instantiated.
-```
-module m #(parameter int i);
-endmodule
-```
-
--Wunknown-warning-option
-<ignored>
-
--Wreversed-range
-An open range with constant bounds is reversed (i.e. has a larger left-hand side compared to its right).
-Such a range will behave as if it's empty and therefore never be selected.
-```
-class C;
-    rand bit [4:0] a;
-    constraint a_c {
-        a dist { 16 :/ 1, [15:1] :/ 1};
-    }
-endclass
-```
-
--Winvalid-source-encoding
-<ignored>
-
--Wexpected-protect-keyword
-A `pragma protect directive is missing the protect keyword to set.
-```
-`pragma protect
-```
-
--Wunknown-protect-keyword
-A `pragma protect directive specified an unknown keyword.
-```
-`pragma protect foobar
-```
-
--Wexpected-protect-arg
-An invalid argument is passed to a `pragma protect keyword expecting a string value.
-```
-`pragma protect author=3
-```
-
--Wnested-protect-begin
-Nested `pragma protect begin directives were found, which is disallowed.
-```
-`pragma protect begin
-`pragma protect begin
-```
-
--Wextra-protect-end
-An unpair `pragma protect end or end_protected was found in the source text.
-```
-`pragma protect end
-```
-
--Wprotect-arglist
-A `pragma protect keyword expected a list of key=value options but did not receive them.
-```
-`pragma protect encoding=3
-```
-
--Wunknown-protect-encoding
-The specified encoding name in a `pragma protect encoding directive is not known or supported.
-slang will try to work with the encoded data as though it were raw, which may or may not parse
-correctly depending on how the actual encoding functions.
-```
-`pragma protect encoding=(enctype="foobar")
-```
-
--Wunknown-protect-option
-An unknown key=value option was passed to a `pragma protect keyword.
-```
-`pragma protect encoding=(enctype="base64", foo="bar")
-```
-
--Winvalid-pragma-number
-A `pragma protect option expected a valid 32-bit integer value but received something else instead.
-```
-`pragma protect encoding=(enctype="base64", line_length="hello")
-```
-
--Winvalid-pragma-viewport
-A `pragma protect viewport directive was given invalid options. All such directives must be of
-the form (object = &lt;string>, access = &lt;string>)
-```
-`pragma protect viewport=(not_object = "hello")
-```
-
--Windex-oob
-An out-of-bounds value was used to index an array. This is an error by default but can be downgraded to
-a warning for compatibility with other tools.
-```
-logic [7:0] a;
-logic b = a[9];
-```
-
--Wrange-oob
-An out-of-bounds range was used to select from an array. This is an error by default but can be downgraded to
-a warning for compatibility with other tools.
-```
-logic [7:0] a;
-logic [2:0] b = a[9:7];
-```
-
--Wrange-width-oob
-An indexed part-select has a width that is wider than the bounds of the array it is selecting. This is an error
-by default but can be downgraded to a warning for compatibility with other tools.
-```
-logic [1:0] a;
-int b;
-logic [2:0] c = a[b+:3];
-```
-
--Wduplicate-definition
-A module has been defined using the same name as a previously defined module. This is an error
-by default but can be downgraded to a warning for compatibility with other tools.
-This applies to both top level modules as well as nested modules (but only duplicated nested modules within the same scope,
-as it is OK to have modules with the same name in different scopes).
-```
-module a;
-endmodule;
-
-module a;
-endmodule
-```
-
--Wprotect-encoding-bytes
-An encoded block in a protected envelope differed in size from what was specified in
-a prior encoding pragma directive.
-```
-`pragma protect begin_protected
-`pragma protect encoding=(enctype="base64", bytes=6), data_public_key
-asdfas==
-`pragma protect end_protected
-```
-
--Winvalid-encoding-byte
-A character in an encoded protected envelope is invalid for the kind of encoding specified.
-The rest of the protected envelope will be skipped by searching for an end pragma.
-```
-`pragma protect begin_protected
-`pragma protect encoding=(enctype="base64"), data_block
-asdf()0123
-`pragma protect end_protected
-```
-
--Wraw-protect-eof
-A "raw" encoded protected envelope did not terminate before the end of the source file.
-```
-`pragma protect encoding=(enctype="raw"), data_block
-asdfasdf
-```
-
--Wprotected-envelope
-Any use of a pragma protect region in the source will trigger this warning, as slang is
-unable to actually decrypt the contents of that region (it is assumed that no IP vendor
-would be willing to share decryption keys with an open source tool anyway). The text will
-be decoded and skipped in its entirety, which may or may not result in a valid design.
-```
-`pragma protect begin_protected
-`pragma protect encoding=(enctype="raw"), data_block
-asdfasdf
-`pragma protect end_protected
-```
-
--Wspecify-param
-The LRM disallows using parameters inside of specify blocks. Most tools allow this with
-a warning so slang makes it a warning as well.
-```
-module m(input [1:0] a, output [1:0] b);
-    parameter p = 1;
-    specify
-        (a[p] => b[0]) = 1;
-    endspecify
-endmodule
-```
-
--Wdup-timing-path
-More than one specify timing path was given for a particular pair of input and output
-terminals in a module.
-```
-module m(input a, output b);
-    specify
-        (a => b) = 1;
-        (a => b) = 2;
-    endspecify
-endmodule
-```
-
--Winvalid-pulsestyle
-A `pulsestyle` or `showcancelled` declaration targets an output terminal that has
-previously been used in a timing path declaration, which is not allowed according to the LRM.
-```
-module m(input a, output b);
-    specify
-        (a => b) = 1;
-        pulsestyle_ondetect b;
-    endspecify
-endmodule
-```
-
--Wnegative-timing-limit
-A system timing check parameter that should be positive has a negative value.
-```
-module m(input a, b);
-    specify
-        $setup(posedge a, b, -1);
-    endspecify
-endmodule
-```
-
--Wunused-def
-A module, interface, or program definition is unused in the design.
-\n\n
-A definition with name '_' will never warn. Attributes `(* unused *)` or `(* maybe_unused *)`
-may be applied to suppress this warning for a particular definition.
-```
-module m #(parameter int i);
-endmodule
-
-module top;
-endmodule
-```
-
--Wunused-net
-A net is declared but never used.
-\n\n
-A net with name '_' will never warn. Attributes `(* unused *)` or `(* maybe_unused *)`
-may be applied to suppress this warning for a particular net.
-```
-module m;
-    wire w;
-endmodule
-```
-
--Wunused-implicit-net
-An implicitly created net is not referenced elsewhere in the design.
-This is often a typo in the name and not intentional.
-\n\n
-A net with name '_' will never warn.
-```
-module m(output x);
-    assign x = 1;
-endmodule
-
-module n;
-    logic typo;
-    m m1(typa);
-endmodule
-```
-
--Wunused-variable
-A variable is declared but never used.
-\n\n
-A variable with name '_' will never warn. Attributes `(* unused *)` or `(* maybe_unused *)`
-may be applied to suppress this warning for a particular variable.
-```
-module m;
-    int i;
-endmodule
-```
-
--Wundriven-net
-A net is used but never has a value driven.
-\n\n
-A net with name '_' will never warn. Attributes `(* unused *)` or `(* maybe_unused *)`
-may be applied to suppress this warning for a particular net.
-```
-module m(output x);
-    wire w;
-    assign x = w;
-endmodule
-```
-
--Wunassigned-variable
-A variable is used but never has a value assigned.
-\n\n
-A variable with name '_' will never warn. Attributes `(* unused *)` or `(* maybe_unused *)`
-may be applied to suppress this warning for a particular variable.
-```
-module m;
-    int i;
-    int j = i;
-endmodule
-```
-
--Wunused-but-set-net
-A net has a value driven but that value is never used.
-\n\n
-A net with name '_' will never warn. Attributes `(* unused *)` or `(* maybe_unused *)`
-may be applied to suppress this warning for a particular net.
-```
-module m;
-    wire x;
-    assign x = 1;
-endmodule
-```
-
--Wunused-but-set-variable
-A variable has a value assigned but that value is never used.
-\n\n
-A variable with name '_' will never warn. Attributes `(* unused *)` or `(* maybe_unused *)`
-may be applied to suppress this warning for a particular variable.
-```
-module m;
-    int i;
-    initial i = 42;
-endmodule
-```
-
--Wunused-port
-An input port signal is never used internally to the module.
-\n\n
-A port with name '_' will never warn. Attributes `(* unused *)` or `(* maybe_unused *)`
-may be applied to suppress this warning for a particular port.
-```
-module m(input x);
-endmodule
-```
-
--Wundriven-port
-An output port signal is never given a value.
-\n\n
-A port with name '_' will never warn. Attributes `(* unused *)` or `(* maybe_unused *)`
-may be applied to suppress this warning for a particular port.
-```
-module m(output x);
-endmodule
-```
-
--Wunused-but-set-port
-A port has a value assigned but that value is never used. This only applies to 'inout' ports.
-The assumption is that if the port doesn't need to be read, the direction should be changed
-to 'output' instead.
-\n\n
-A port with name '_' will never warn. Attributes `(* unused *)` or `(* maybe_unused *)`
-may be applied to suppress this warning for a particular port.
-```
-module m(inout x);
-    assign x = 1;
-endmodule
-```
-
--Wunused-argument
-A task or function formal argument is not used in its body.
-\n\n
-An argument with name '_' will never warn. Attributes `(* unused *)` or `(* maybe_unused *)`
-may be applied to suppress this warning for a particular argument.
-```
-function foo(int x);
-endfunction
-```
-
--Wunused-parameter
-A parameter's value is never used.
-\n\n
-A parameter with name '_' will never warn. Attributes `(* unused *)` or `(* maybe_unused *)`
-may be applied to suppress this warning for a particular parameter.
-```
-module m #(parameter p = 1);
-endmodule
-```
-
--Wunused-type-parameter
-A type parameter is never used.
-\n\n
-A parameter with name '_' will never warn. Attributes `(* unused *)` or `(* maybe_unused *)`
-may be applied to suppress this warning for a particular parameter.
-```
-module m #(parameter type t = int);
-endmodule
-```
-
--Wunused-typedef
-A typedef is never used.
-\n\n
-A typedef with name '_' will never warn. Attributes `(* unused *)` or `(* maybe_unused *)`
-may be applied to suppress this warning for a particular typedef.
-```
-module m;
-    typedef struct { int a; } foo_t;
-endmodule
-```
-
--Wunused-genvar
-A genvar is never used.
-\n\n
-A genvar with name '_' will never warn. Attributes `(* unused *)` or `(* maybe_unused *)`
-may be applied to suppress this warning for a particular genvar.
-```
-module m;
-    genvar g;
-endmodule
-```
-
--Wunused-assertion-decl
-An assertion declaration (sequence, property, or let) is never used.
-\n\n
-A declaration with name '_' will never warn. Attributes `(* unused *)` or `(* maybe_unused *)`
-may be applied to suppress this warning for a particular declaration.
-```
-module m;
-    sequence s;
-        1;
-    endsequence
-endmodule
-```
-
--Wunused-import
-A package import directive is never used.
-```
-package p;
-    int a;
-endpackage
-
-module m;
-    import p::a;
-endmodule
-```
-
--Wunused-wildcard-import
-A wildcard package import directive is never used.
-```
-package p;
-    int a;
-endpackage
-
-module m;
-    import p::*;
-endmodule
-```
-
--Wbad-procedural-force
-According to the Verilog/SystemVerilog standard, it is illegal to procedurally force a
-bit-select or range select of a variable (you can do that with a net, or with a plain
-variable). It is an error by default, but can be turned into a warning, to support code
-compatibility with commercial tools that accept this illegal code.
-```
-module m;
-    reg [1:0]r;
-    initial
-        force r[0] = 1'b0;
-endmodule
-```
-
--Wduplicate-defparam
-More than one defparam targets the same parameter. The LRM specifies that this is undefined
-behavior. slang takes the value from the first defparam it sees and ignores the rest.
-```
-module m;
-    parameter p = 1;
-endmodule
-
-module n;
-    defparam m1.p = 3;
-endmodule
-
-module top;
-    m m1();
-    n n1();
-    defparam m1.p = 2;
-endmodule
-```
-
--Wimplicit-port-type-mismatch
-An implicit named port connection is made between two inequivalent types. Unlike with a normal
-port connection, where the type of the connection undergoes implicit conversion, the LRM specifies
-that this case is an error. slang makes this an error by default but it can be turned into a warning,
-to support code compatibility with commercial tools.
-```
-module m(logic p);
-endmodule
-
-module n;
-    int p;
-    m m1(.p);
-endmodule
-```
-
 -Wconstant-conversion
 A constant value is changed (truncated) by an implicit conversion.
 ```
@@ -1100,23 +73,6 @@ module m;
     logic signed [31:0] a;
     logic [31:0] b;
     assign b = a;
-endmodule
-```
-
--Wdpi-pure-task
-A DPI import task is marked 'pure', which is disallowed by SystemVerilog but can be
-downgraded to a warning to support code compatibility with other tools.
-```
-import "DPI-C" pure task func(logic [3:0] a);
-```
-
--Wmultibit-edge
-A timing control edge expression (posedge, negedge, etc) is wider than one bit,
-which can indicate a mistake since only changes to the first bit will trigger the edge.
-```
-module m;
-    int i;
-    always @(posedge i) begin end
 endmodule
 ```
 
@@ -1139,112 +95,6 @@ mistakes where you intended to compare the value to something.
 module m;
     int i;
     initial if (i + 2) begin end // Did you mean i + 2 != 0 or something else?
-endmodule
-```
-
--Wuseless-cast
-An explicit cast converts an expression to the same type, so the cast does nothing.
-```
-module m;
-    int i, j;
-    assign i = int'(j);
-endmodule
-```
-
--Wunknown-sys-name
-An unknown system task or function is called. This is an error by default but can
-be downgraded to allow analyzing code using special system names defined by other tools.
-```
-module m;
-    always_comb begin
-        if (!$somename) begin end
-    end
-endmodule
-```
-
--Wunknown-library
-A configuration library list references an unknown library.
-@options --top=cfg
-```
-config cfg;
-    design d;
-    default liblist foo;
-endconfig
-```
-
--Wdup-config-rule
-More than one rule in a configuration targets the same cell or instance. They can't both
-be used, so slang takes the first one and ignores all others.
-@options --top=cfg
-```
-module d;
-endmodule
-
-config cfg;
-    design d;
-    instance d.foo use bar;
-    instance d.foo use baz;
-endconfig
-```
-
--Wunused-config-cell
-A configuration cell rule is unused, which may mean that there's a typo in the target name.
-@options --top=cfg
-```
-config cfg;
-    design top;
-    cell foo liblist l;
-endconfig
-
-module top;
-endmodule
-```
-
--Wunused-config-instance
-A configuration instance rule is unused, which means that target path does not exist in the design.
-@options --top=cfg
-```
-config cfg;
-    design top;
-    instance top.foo liblist l;
-endconfig
-
-module top;
-endmodule
-```
-
--Wunsigned-arith-shift
-An arithmetic right shift of an unsigned integral type will always shift in zeros, which can be
-confusing since typically this operator is used to shift in the value of the most significant bit.
-If this is intended behavior use the logical right shift operator which does the same.
-```
-function bit[31:0] f1(int unsigned i);
-    return i >>> 5;
-endfunction
-```
-
--Wstatic-init-value
-A static variable's initializer expression refers to an uninitialized variable, a net, a port,
-or a modport member, which won't have a value assigned by the time the initializer runs. The variable
-therefore will always be initialized to the default value.
-```
-module m(input i);
-    logic j = i;
-endmodule
-```
-
--Wstatic-init-order
-A static variable's initializer refers to another variable that does not have a defined order
-of initialization relative to the first. This means that the initialization may or may not work
-as expected depending on how the tool chooses to schedule the initializers.
-```
-package p;
-    int i = 1;
-endpackage
-
-module m;
-    import p::i;
-    int j = i;
 endmodule
 ```
 
@@ -1278,27 +128,6 @@ A floating point value is implicitly converted to a narrower floating point type
 function automatic f(real r);
     shortreal s = r;
 endfunction
-```
-
--Wisunbounded-param-arg
-The SystemVerilog LRM 1800-2023 requires that the argument to the $isunbounded system
-function be a parameter name. This seems needlessly restrictive and conflicts with the
-wording in prior versions so this is implemented as a pedantic warning only.
-```
-localparam p = $isunbounded(1 + 1);
-```
-
--Wspecify-condition-expr
-State-dependent path conditions in specify blocks are restricted to a subset of expression
-types and operators (see Table 30-1 in the LRM for the list of valid operators). This is an
-error by default but can be downgraded to a warning for compatibility with other tools.
-```
-module m(input b, output c);
-    wire integer a;
-    specify
-        if (a === 1 + 1) (b => c) = (0,0);
-    endspecify
-endmodule
 ```
 
 -Warith-op-mismatch
@@ -1354,33 +183,6 @@ module m;
 endmodule
 ```
 
--Wudp-coverage
-A user-defined primitive is edge sensitive but does not provide an output value
-for all possible edges of all inputs. This is not necessarily wrong; the default
-output value when given unspecified input combinations is 'x', but the LRM mentions
-this constraint in section 29.6 so this warning can be used if you wish to be pedantic.
-Additionally, it can be useful for checking for missed transitions when developing and
-simulating the behavioral model of industrial cells, which are commonly implemented as
-Verilog primitives.
-```
-primitive d_edge_ff (q, clock, data);
-    output q; reg q;
-    input clock, data;
-    table
-        // clock data q q+
-        // obtain output on rising edge of clock
-        (01) 0 : ? : 0 ;
-        (01) 1 : ? : 1 ;
-        (0?) 1 : 1 : 1 ;
-        (0?) 0 : 0 : 0 ;
-        // ignore negative edge of clock
-        (?0) ? : ? : - ;
-        // missed clock edge (1x) specification
-        // missed edge specifications for data signal
-    endtable
-endprimitive
-```
-
 -Wpacked-array-conv
 Indicates an implicit conversion between types with differing
 packed array dimensions, even if their overall bit width is the same.
@@ -1394,96 +196,122 @@ module m;
 endmodule
 ```
 
--Wbitwise-rel-precedence
-Identifies a bitwise operator used in a relational expression without parentheses,
-which can indicate a mistake in the intended order of operations.
+-Wformat-real
+A string formatting function was passed a real value for an integer format specifier,
+which will force the value to round to an integer.
 ```
 module m;
-    int unsigned flags;
-    initial begin
-        if (flags & 'h1 == 'h1) begin end
-    end
+    initial $display("%d", 3.14);
 endmodule
 ```
 
--Warith-in-shift
-Identifies an arithmetic operator used in a shift expression, which can
-indicate a mistake in the intended order of operations.
+@category Port Connections
+
+-Wunconnected-port
+An instance port was left unconnected and it has no default value.
 ```
+module m(input int i);
+endmodule
+
+module n;
+    m m1();
+endmodule
+```
+
+-Wunconnected-unnamed-port
+An unnamed instance port was left unconnected.
+```
+module m({a, b});
+    input a, b;
+endmodule
+
+module n;
+    m m1();
+endmodule
+```
+
+-Wudp-port-empty
+A connection to a user-defined primitive instance is an empty expression.
+While allowed, this is easily confused with a misplaced comma and is likely
+not what you want.
+```
+primitive p1 (output a, input b);
+    table 00:0; endtable
+endprimitive
+
 module m;
     logic a;
-    initial begin
-        if (a << 1 + 1) begin end
-    end
+    p1 (a,);
 endmodule
 ```
 
--Wlogical-not-parentheses
-Identifies a logical not operator used without parentheses around the operand,
-followed by a comparison operator. This can indicate a mistake in the intended
-order of operations.
+-Wnet-inconsistent
+A connection (or part of a connection) between an external net and an internal net
+port has inconsistent net types. The SystemVerilog LRM defines which combinations
+of net types are inconsistent and should produce a warning; see section [23.3.3.7]
+"Port connections with dissimilar net types (net and port collapsing)" for more detail.
 ```
-module m;
-    int a, b;
-    initial begin
-        if (!a < b) begin end
-    end
+module m (input .a({b, {c[1:0], d}}));
+    wand b;
+    wand [3:0] c;
+    supply0 d;
 endmodule
-```
 
--Wbitwise-op-parentheses
-Identifies a mix of bitwise operators with different levels of precedence without
-any parentheses, which can indicate a mistake in the intended order of operations.
-```
-module m;
-    logic a, b, c;
-    initial begin
-        if (a & b | c) begin end
-    end
-endmodule
-```
-
--Wlogical-op-parentheses
-Identifies a mix of logical operators with different levels of precedence without
-any parentheses, which can indicate a mistake in the intended order of operations.
-```
-module m;
-    logic a, b, c;
-    initial begin
-        if (a || b && c) begin end
-    end
-endmodule
-```
-
--Wconditional-precedence
-Identifies a conditional expression mixed with a binary expression in way that
-suggests a different intended order of operations.
-```
-module m;
-    logic a, b;
-    initial begin
-        if ((a + b ? 1 : 2) == 2) begin end
-    end
-endmodule
-```
-
--Wconsecutive-comparison
-Identifies a sequence of comparison operators that suggest an incorrect notion
-of how the comparisons will be evaluated.
-```
-module m;
-    logic a, b, c;
-    initial begin
-        if (a < b < c) begin end
-    end
-endmodule
-```
-
--Wseq-no-match
-Warns about a sequence expression that can never be matched.
-```
 module top;
-    assert property ((1'b1 ##1 1'b0) intersect (1'b1[*0] ##2 1'b1));
+    wand a;
+    wor b;
+    trireg [1:0] c;
+    m m1({a, b, c});
+endmodule
+```
+
+-Wport-coercion
+An input net port has been coerced to 'inout' direction because it is assigned
+to in the instance body. Alternatively, an output net port has been coerced to
+'inout' direction because it is assigned externally to the instance.
+```
+module m(input wire a, output b);
+    assign a = 1;
+endmodule
+
+module n;
+    wire b;
+    m m1(1, b);
+    assign b = 1;
+endmodule
+```
+
+-Wineffective-sign
+For a non-ANSI instance port or function body port declaration, the port I/O specifies a
+signing keyword but the actual data type of the port does not permit that signing to take effect.
+```
+module m(a);
+    input unsigned a;
+    int a;
+endmodule
+```
+
+@category Case Statements
+
+-Wcase-gen-dup
+More than one case generate item was found to have the same value. The second
+case block will never be selected.
+```
+module m;
+    case (1)
+        1: begin end
+        1: begin end
+    endcase
+endmodule
+```
+
+-Wcase-gen-none
+A case generate directive did not match any items and so no block was selected.
+```
+module m;
+    case (1)
+        0: begin end
+    endcase
 endmodule
 ```
 
@@ -1720,6 +548,425 @@ module m;
 endmodule
 ```
 
+@category Constant Evaluation
+
+-Wreal-underflow
+Issued for real literals that are too small to be represented.
+```
+real r = 4.94066e-325;
+```
+
+-Wreal-overflow
+Issued for real literals that are too large to be represented.
+```
+real r = 1.79769e+309;
+```
+
+-Wvector-overflow
+Issued for vector literals that are larger than their specified number of bits.
+```
+logic [7:0] i = 7'd256;
+```
+
+-Wint-overflow
+Issued for integer literals that overflow a 32-bit integer (31-bits plus sign).
+```
+int i = 2147483648;
+```
+
+-Welem-not-found
+A constant function tried to access a nonexistent element of an associative array.
+```
+localparam int foo = func();
+function int func;
+    int i[string];
+    return i["Hello"];
+endfunction
+```
+
+-Wstatic-skipped
+A constant function contains a static variable with an initializer. That initializer
+will be skipped during constant evaluation, which could lead to unintuitive results.
+```
+localparam int foo = func();
+function int func;
+    static int i = 1;
+    return i;
+endfunction
+```
+
+-Wdynarray-index
+A constant function tried to access a nonexistent element of a dynamic array.
+```
+localparam int foo = func();
+function int func;
+    automatic int i[] = new [2];
+    return i[4];
+endfunction
+```
+
+-Wdynarray-range
+A constant function tried to access a nonexistent range of a dynamic array.
+```
+typedef int ret_type[2];
+localparam ret_type foo = func();
+function ret_type func;
+    automatic int i[] = new [2];
+    return i[6:7];
+endfunction
+```
+
+-Wqueue-range
+A constant function is accessing a queue with a reversed range, which
+is defined to always yield an empty queue.
+```
+typedef int ret_type[$];
+localparam ret_type foo = func();
+function ret_type func;
+    automatic int i[$] = {1, 2, 3};
+    return i[2:0];
+endfunction
+```
+
+-Wempty-queue
+A constant function tried to pop an element from an empty queue.
+```
+localparam int foo = func();
+function int func;
+    automatic int i[$];
+    return i.pop_back();
+endfunction
+```
+
+-Wtask-ignored
+A constant function contains a system task invocation which will
+be skipped during constant evaluation. This could yield unintuitive results.
+```
+localparam string foo = func();
+function string func;
+    automatic string s;
+    $swrite(s, "asdf %d", 3);
+    return s;
+endfunction
+```
+
+@category Misleading or Suspicious
+
+-Wunknown-escape-code
+Detects use of unknown character escape codes in string literals.
+```
+string s = "Hello World\q";
+```
+
+-Wempty-body
+An empty statement body for a loop or conditional statement could be confusing or misleading.
+If intended, move the semicolon to a separate line to suppress the warning.
+```
+module m;
+    initial begin
+        if (1); begin
+        end
+    end
+endmodule
+```
+
+-Wdup-attr
+A design element has more than one attribute of the same name.
+Only the last one will apply.
+```
+module m;
+    (* foo = 1, foo = 2 *)
+    int i;
+endmodule
+```
+
+-Wempty-member
+An unnecessary semicolon is located in a non-procedural scope (such as a module body).
+```
+module m;
+    ;
+endmodule
+```
+
+-Wconstraint-missing
+An implicit class constraint block has no external definition and so is useless.
+```
+class C;
+    constraint c;
+endclass
+```
+
+-Wignored-slice
+A streaming operator with direction left-to-right provides a slice size, which
+has no effect because only right-to-left streaming can use a slice size.
+```
+int a;
+int b = {>> 4 {a}};
+```
+
+-Wnonblocking-final
+A nonblocking assignment is used in a 'final' block, which will have no effect.
+```
+module m;
+    int i;
+    final begin
+        i <= 1;
+    end
+endmodule
+```
+
+-Wevent-const
+An event expression is a constant and so will never change.
+```
+module m;
+    always @(1) begin
+    end
+endmodule
+```
+
+-Wempty-stmt
+An extra semicolon in a procedural context implies an empty statement that does nothing.
+```
+module m;
+    initial begin
+        ;
+    end
+endmodule
+```
+
+-Wpointless-void-cast
+A function call is cast to 'void' but it already returns void so the cast is pointless.
+```
+module m;
+    function void foo; endfunction
+    initial begin
+        void'(foo());
+    end
+endmodule
+```
+
+-Wunused-result
+A non-void function is invoked without inspecting its return value. Capture the result
+or cast the call to 'void' to suppress the warning.
+```
+module m;
+    function int foo; return 1; endfunction
+    initial begin
+        foo();
+    end
+endmodule
+```
+
+-Wdup-import
+A given scope contains more than one import statement for the same package and name.
+```
+package p;
+    int i;
+endpackage
+
+module m;
+    import p::i;
+    import p::i;
+endmodule
+```
+
+-Wfinish-num
+The $finish control task accepts a "finish number" of 0, 1, or 2 as its first argument.
+The actual call to $finish in this case passed something other than one of those values.
+```
+module m;
+    initial $finish("Hello");
+endmodule
+```
+
+-Wmissing-format
+A string formatting function has a lone '%%' at the end of the format string,
+implying that the rest of the specifier is missing. If a literal '%%' is intended
+in the output, use the standard '%%%' to achieve that.
+```
+module m;
+    initial $display("Hello World %");
+endmodule
+```
+
+-Wreversed-range
+An open range with constant bounds is reversed (i.e. has a larger left-hand side compared to its right).
+Such a range will behave as if it's empty and therefore never be selected.
+```
+class C;
+    rand bit [4:0] a;
+    constraint a_c {
+        a dist { 16 :/ 1, [15:1] :/ 1};
+    }
+endclass
+```
+
+-Wduplicate-defparam
+More than one defparam targets the same parameter. The LRM specifies that this is undefined
+behavior. slang takes the value from the first defparam it sees and ignores the rest.
+```
+module m;
+    parameter p = 1;
+endmodule
+
+module n;
+    defparam m1.p = 3;
+endmodule
+
+module top;
+    m m1();
+    n n1();
+    defparam m1.p = 2;
+endmodule
+```
+
+-Wmultibit-edge
+A timing control edge expression (posedge, negedge, etc) is wider than one bit,
+which can indicate a mistake since only changes to the first bit will trigger the edge.
+```
+module m;
+    int i;
+    always @(posedge i) begin end
+endmodule
+```
+
+-Wuseless-cast
+An explicit cast converts an expression to the same type, so the cast does nothing.
+```
+module m;
+    int i, j;
+    assign i = int'(j);
+endmodule
+```
+
+-Wunsigned-arith-shift
+An arithmetic right shift of an unsigned integral type will always shift in zeros, which can be
+confusing since typically this operator is used to shift in the value of the most significant bit.
+If this is intended behavior use the logical right shift operator which does the same.
+```
+function bit[31:0] f1(int unsigned i);
+    return i >>> 5;
+endfunction
+```
+
+-Wstatic-init-value
+A static variable's initializer expression refers to an uninitialized variable, a net, a port,
+or a modport member, which won't have a value assigned by the time the initializer runs. The variable
+therefore will always be initialized to the default value.
+```
+module m(input i);
+    logic j = i;
+endmodule
+```
+
+-Wstatic-init-order
+A static variable's initializer refers to another variable that does not have a defined order
+of initialization relative to the first. This means that the initialization may or may not work
+as expected depending on how the tool chooses to schedule the initializers.
+```
+package p;
+    int i = 1;
+endpackage
+
+module m;
+    import p::i;
+    int j = i;
+endmodule
+```
+
+-Wbitwise-rel-precedence
+Identifies a bitwise operator used in a relational expression without parentheses,
+which can indicate a mistake in the intended order of operations.
+```
+module m;
+    int unsigned flags;
+    initial begin
+        if (flags & 'h1 == 'h1) begin end
+    end
+endmodule
+```
+
+-Warith-in-shift
+Identifies an arithmetic operator used in a shift expression, which can
+indicate a mistake in the intended order of operations.
+```
+module m;
+    logic a;
+    initial begin
+        if (a << 1 + 1) begin end
+    end
+endmodule
+```
+
+-Wlogical-not-parentheses
+Identifies a logical not operator used without parentheses around the operand,
+followed by a comparison operator. This can indicate a mistake in the intended
+order of operations.
+```
+module m;
+    int a, b;
+    initial begin
+        if (!a < b) begin end
+    end
+endmodule
+```
+
+-Wbitwise-op-parentheses
+Identifies a mix of bitwise operators with different levels of precedence without
+any parentheses, which can indicate a mistake in the intended order of operations.
+```
+module m;
+    logic a, b, c;
+    initial begin
+        if (a & b | c) begin end
+    end
+endmodule
+```
+
+-Wlogical-op-parentheses
+Identifies a mix of logical operators with different levels of precedence without
+any parentheses, which can indicate a mistake in the intended order of operations.
+```
+module m;
+    logic a, b, c;
+    initial begin
+        if (a || b && c) begin end
+    end
+endmodule
+```
+
+-Wconditional-precedence
+Identifies a conditional expression mixed with a binary expression in way that
+suggests a different intended order of operations.
+```
+module m;
+    logic a, b;
+    initial begin
+        if ((a + b ? 1 : 2) == 2) begin end
+    end
+endmodule
+```
+
+-Wconsecutive-comparison
+Identifies a sequence of comparison operators that suggest an incorrect notion
+of how the comparisons will be evaluated.
+```
+module m;
+    logic a, b, c;
+    initial begin
+        if (a < b < c) begin end
+    end
+endmodule
+```
+
+-Wseq-no-match
+Warns about a sequence expression that can never be matched.
+```
+module top;
+    assert property ((1'b1 ##1 1'b0) intersect (1'b1[*0] ##2 1'b1));
+endmodule
+```
+
 -Winferred-latch
 A signal assigned in an always_comb procedure is not assigned on all control
 paths and so infers a latch instead of combinatorial logic.
@@ -1752,3 +999,780 @@ function int foo(input a);
     end
 endfunction
 ```
+
+@category Compatibility
+
+-Wdpi-spec
+Old-style "DPI" specified subroutines are deprecated and not supported by slang.
+Use the new-style "DPI-C" which has a well-defined standardized calling convention.
+```
+import "DPI" function void foo();
+```
+
+-Wexplicit-static
+static variables declared locally to a procedural block that contain an initializer require
+that the 'static' keyword be explicitly provided (and not just inferred from context) to
+clarify that the initialization happens only once. Most tools don't enforce this rule,
+so this is just a warning instead of an error.
+```
+module m;
+    initial begin
+        int i = 1;
+    end
+endmodule
+```
+
+-Wlifetime-prototype
+Lifetime specifiers are not allowed on method prototype declarations but some
+tools allow it as an extension.
+```
+class C;
+    extern function automatic void foo;
+endclass
+
+function automatic void C::foo;
+endfunction
+```
+
+-Wsplit-distweight-op
+Some tools allow the dist weight operators to be split instead of a single token.
+slang will issue this warning as an error by default but it can be downgraded for compatibility.
+```
+class c;
+  rand int val;
+  constraint cst_sum {
+    val dist {1 :    = 10, 4 :   / 20};
+  }
+endclass
+```
+
+-Windex-oob
+An out-of-bounds value was used to index an array. This is an error by default but can be downgraded to
+a warning for compatibility with other tools.
+```
+logic [7:0] a;
+logic b = a[9];
+```
+
+-Wrange-oob
+An out-of-bounds range was used to select from an array. This is an error by default but can be downgraded to
+a warning for compatibility with other tools.
+```
+logic [7:0] a;
+logic [2:0] b = a[9:7];
+```
+
+-Wrange-width-oob
+An indexed part-select has a width that is wider than the bounds of the array it is selecting. This is an error
+by default but can be downgraded to a warning for compatibility with other tools.
+```
+logic [1:0] a;
+int b;
+logic [2:0] c = a[b+:3];
+```
+
+-Wduplicate-definition
+A module has been defined using the same name as a previously defined module. This is an error
+by default but can be downgraded to a warning for compatibility with other tools.
+This applies to both top level modules as well as nested modules (but only duplicated nested modules within the same scope,
+as it is OK to have modules with the same name in different scopes).
+```
+module a;
+endmodule;
+
+module a;
+endmodule
+```
+
+-Wspecify-param
+The LRM disallows using parameters inside of specify blocks. Most tools allow this with
+a warning so slang makes it a warning as well.
+```
+module m(input [1:0] a, output [1:0] b);
+    parameter p = 1;
+    specify
+        (a[p] => b[0]) = 1;
+    endspecify
+endmodule
+```
+
+-Wdup-timing-path
+More than one specify timing path was given for a particular pair of input and output
+terminals in a module.
+```
+module m(input a, output b);
+    specify
+        (a => b) = 1;
+        (a => b) = 2;
+    endspecify
+endmodule
+```
+
+-Winvalid-pulsestyle
+A `pulsestyle` or `showcancelled` declaration targets an output terminal that has
+previously been used in a timing path declaration, which is not allowed according to the LRM.
+```
+module m(input a, output b);
+    specify
+        (a => b) = 1;
+        pulsestyle_ondetect b;
+    endspecify
+endmodule
+```
+
+-Wnegative-timing-limit
+A system timing check parameter that should be positive has a negative value.
+```
+module m(input a, b);
+    specify
+        $setup(posedge a, b, -1);
+    endspecify
+endmodule
+```
+
+-Wbad-procedural-force
+According to the Verilog/SystemVerilog standard, it is illegal to procedurally force a
+bit-select or range select of a variable (you can do that with a net, or with a plain
+variable). It is an error by default, but can be turned into a warning, to support code
+compatibility with commercial tools that accept this illegal code.
+```
+module m;
+    reg [1:0]r;
+    initial
+        force r[0] = 1'b0;
+endmodule
+```
+
+-Wimplicit-port-type-mismatch
+An implicit named port connection is made between two inequivalent types. Unlike with a normal
+port connection, where the type of the connection undergoes implicit conversion, the LRM specifies
+that this case is an error. slang makes this an error by default but it can be turned into a warning,
+to support code compatibility with commercial tools.
+```
+module m(logic p);
+endmodule
+
+module n;
+    int p;
+    m m1(.p);
+endmodule
+```
+
+-Wdpi-pure-task
+A DPI import task is marked 'pure', which is disallowed by SystemVerilog but can be
+downgraded to a warning to support code compatibility with other tools.
+```
+import "DPI-C" pure task func(logic [3:0] a);
+```
+
+-Wspecify-condition-expr
+State-dependent path conditions in specify blocks are restricted to a subset of expression
+types and operators (see Table 30-1 in the LRM for the list of valid operators). This is an
+error by default but can be downgraded to a warning for compatibility with other tools.
+```
+module m(input b, output c);
+    wire integer a;
+    specify
+        if (a === 1 + 1) (b => c) = (0,0);
+    endspecify
+endmodule
+```
+
+-Wunknown-sys-name
+An unknown system task or function is called. This is an error by default but can
+be downgraded to allow analyzing code using special system names defined by other tools.
+```
+module m;
+    always_comb begin
+        if (!$somename) begin end
+    end
+endmodule
+```
+
+-Wunsized-concat
+An unsized type is used in a concatenation. This is not allowed in SystemVerilog
+but most tools allow it anyway as an extension.
+```
+longint i = {1, 2};
+```
+
+-Wenum-range
+An enum member is specified as a range with values that are not integer literals.
+The LRM does not allow other constant expressions to be used here.
+```
+localparam int i = 1;
+typedef enum { A[i:3] } e_t;
+```
+
+@category Macros
+
+-Wignored-macro-paste
+Points out macro concatenation tokens that aren't actually concatenating anything due
+to whitespace on either side, or tokens that can't be concatenated in the first place.
+```
+`define FOO(a) a `` +
+int foo;
+int bar = `FOO(foo) foo;
+```
+
+-Wredef-macro
+Issued for redefining a macro name with a different body.
+```
+`define FOO 1
+`define FOO 2
+```
+
+@category Pragmas
+
+-Wunknown-pragma
+Issued for an unknown pragma directive.
+```
+`pragma foo
+```
+
+-Wextra-pragma-args
+Issued for a pragma directive that specifies more arguments than expected.
+```
+`pragma resetall extraarg
+```
+
+-Wexpected-diag-arg
+Issued for a pragma diagnostic directive that is missing an argument.
+```
+`pragma diagnostic
+```
+
+-Wunknown-diag-arg
+Issued for an unknown argument given to a pragma diagnostic directive.
+```
+`pragma diagnostic pushh
+```
+
+-Wpragma-diag-level
+Issued for a malformed diagnostic pragma. A severity code was expected
+where the given location is indicated.
+```
+`pragma diagnostic foo=3'd3
+```
+
+-Wexpected-protect-keyword
+A `pragma protect directive is missing the protect keyword to set.
+```
+`pragma protect
+```
+
+-Wunknown-protect-keyword
+A `pragma protect directive specified an unknown keyword.
+```
+`pragma protect foobar
+```
+
+-Wexpected-protect-arg
+An invalid argument is passed to a `pragma protect keyword expecting a string value.
+```
+`pragma protect author=3
+```
+
+-Wnested-protect-begin
+Nested `pragma protect begin directives were found, which is disallowed.
+```
+`pragma protect begin
+`pragma protect begin
+```
+
+-Wextra-protect-end
+An unpair `pragma protect end or end_protected was found in the source text.
+```
+`pragma protect end
+```
+
+-Wprotect-arglist
+A `pragma protect keyword expected a list of key=value options but did not receive them.
+```
+`pragma protect encoding=3
+```
+
+-Wunknown-protect-encoding
+The specified encoding name in a `pragma protect encoding directive is not known or supported.
+slang will try to work with the encoded data as though it were raw, which may or may not parse
+correctly depending on how the actual encoding functions.
+```
+`pragma protect encoding=(enctype="foobar")
+```
+
+-Wunknown-protect-option
+An unknown key=value option was passed to a `pragma protect keyword.
+```
+`pragma protect encoding=(enctype="base64", foo="bar")
+```
+
+-Winvalid-pragma-number
+A `pragma protect option expected a valid 32-bit integer value but received something else instead.
+```
+`pragma protect encoding=(enctype="base64", line_length="hello")
+```
+
+-Winvalid-pragma-viewport
+A `pragma protect viewport directive was given invalid options. All such directives must be of
+the form (object = &lt;string>, access = &lt;string>)
+```
+`pragma protect viewport=(not_object = "hello")
+```
+
+-Wprotect-encoding-bytes
+An encoded block in a protected envelope differed in size from what was specified in
+a prior encoding pragma directive.
+```
+`pragma protect begin_protected
+`pragma protect encoding=(enctype="base64", bytes=6), data_public_key
+asdfas==
+`pragma protect end_protected
+```
+
+-Winvalid-encoding-byte
+A character in an encoded protected envelope is invalid for the kind of encoding specified.
+The rest of the protected envelope will be skipped by searching for an end pragma.
+```
+`pragma protect begin_protected
+`pragma protect encoding=(enctype="base64"), data_block
+asdf()0123
+`pragma protect end_protected
+```
+
+-Wraw-protect-eof
+A "raw" encoded protected envelope did not terminate before the end of the source file.
+```
+`pragma protect encoding=(enctype="raw"), data_block
+asdfasdf
+```
+
+-Wprotected-envelope
+Any use of a pragma protect region in the source will trigger this warning, as slang is
+unable to actually decrypt the contents of that region (it is assumed that no IP vendor
+would be willing to share decryption keys with an open source tool anyway). The text will
+be decoded and skipped in its entirety, which may or may not result in a valid design.
+```
+`pragma protect begin_protected
+`pragma protect encoding=(enctype="raw"), data_block
+asdfasdf
+`pragma protect end_protected
+```
+
+@category Pedantic
+
+-Wnonstandard-escape-code
+Detects use of '\\\%' in string literals. This is not a real escape code
+but other tools silently allow it anyway.
+```
+string s = "Hello World\%";
+```
+
+-Wnonstandard-generate
+Indicates a standalone generate block (begin / end pair) without a corresponding
+generate loop or condition. This was allowed in older Verilog standards but
+is no longer allowed in SystemVerilog.
+```
+module m;
+    begin : gen_block
+        int i = 1;
+    end
+endmodule
+```
+
+-Wempty-pattern
+Issued for empty assignment pattern literals, which are not allowed by
+SystemVerilog but are supported by some tools.
+```
+int foo[] = '{};
+```
+
+-Wnonstandard-foreach
+foreach loops are not allowed to have multidimensional brackets when declaring
+loop variables, but most tools allow it as an extension.
+```
+module top;
+    int array[8][8];
+    initial begin
+        foreach (array[i]) begin
+            foreach (array[i][j]) begin
+                array[i][j] = i * j;
+            end
+        end
+    end
+endmodule
+```
+
+-Wnonstandard-dist
+'dist' constraint items are technically not allowed to be surrounded by parentheses according
+to the language grammar, but most tools allow it as an extension.
+```
+class C;
+    rand bit a;
+    rand bit [3:0] b;
+    constraint cmd_c {
+        a -> (b dist { 0 := 1, [1:15] := 1});
+    }
+endclass
+```
+
+-Wimplicit-net-port
+A net port that elides its net type occurs in a context where `default_nettype is set to 'none'.
+This technically should be an error but it makes the use of 'none' as a default nettype very
+annoying and most tools just default to a wire in this case.
+```
+`default_nettype none
+
+module m(input i);
+endmodule
+```
+
+-Wudp-coverage
+A user-defined primitive is edge sensitive but does not provide an output value
+for all possible edges of all inputs. This is not necessarily wrong; the default
+output value when given unspecified input combinations is 'x', but the LRM mentions
+this constraint in section 29.6 so this warning can be used if you wish to be pedantic.
+Additionally, it can be useful for checking for missed transitions when developing and
+simulating the behavioral model of industrial cells, which are commonly implemented as
+Verilog primitives.
+```
+primitive d_edge_ff (q, clock, data);
+    output q; reg q;
+    input clock, data;
+    table
+        // clock data q q+
+        // obtain output on rising edge of clock
+        (01) 0 : ? : 0 ;
+        (01) 1 : ? : 1 ;
+        (0?) 1 : 1 : 1 ;
+        (0?) 0 : 0 : 0 ;
+        // ignore negative edge of clock
+        (?0) ? : ? : - ;
+        // missed clock edge (1x) specification
+        // missed edge specifications for data signal
+    endtable
+endprimitive
+```
+
+-Wformat-multibit-strength
+Formatting multibit nets with the %%v specifier is not allowed in SystemVerilog
+but most tools allow it anyway as an extension.
+```
+module m;
+    wire [3:0] w;
+    initial $display("%v", w);
+endmodule
+```
+
+-Wnonstandard-sys-func
+Indicates a call to a nonstandard system function. Currently this only applies
+to the $psprintf function, which is a synonym for $sformatf.
+```
+module m;
+    initial $psprintf("%d", 42);
+endmodule
+```
+
+-Wisunbounded-param-arg
+The SystemVerilog LRM 1800-2023 requires that the argument to the $isunbounded system
+function be a parameter name. This seems needlessly restrictive and conflicts with the
+wording in prior versions so this is implemented as a pedantic warning only.
+```
+localparam p = $isunbounded(1 + 1);
+```
+
+@category Unused Items
+
+-Wunused-def
+A module, interface, or program definition is unused in the design.
+\n\n
+A definition with name '_' will never warn. Attributes `(* unused *)` or `(* maybe_unused *)`
+may be applied to suppress this warning for a particular definition.
+```
+module m #(parameter int i);
+endmodule
+
+module top;
+endmodule
+```
+
+-Wunused-net
+A net is declared but never used.
+\n\n
+A net with name '_' will never warn. Attributes `(* unused *)` or `(* maybe_unused *)`
+may be applied to suppress this warning for a particular net.
+```
+module m;
+    wire w;
+endmodule
+```
+
+-Wunused-implicit-net
+An implicitly created net is not referenced elsewhere in the design.
+This is often a typo in the name and not intentional.
+\n\n
+A net with name '_' will never warn.
+```
+module m(output x);
+    assign x = 1;
+endmodule
+
+module n;
+    logic typo;
+    m m1(typa);
+endmodule
+```
+
+-Wunused-variable
+A variable is declared but never used.
+\n\n
+A variable with name '_' will never warn. Attributes `(* unused *)` or `(* maybe_unused *)`
+may be applied to suppress this warning for a particular variable.
+```
+module m;
+    int i;
+endmodule
+```
+
+-Wundriven-net
+A net is used but never has a value driven.
+\n\n
+A net with name '_' will never warn. Attributes `(* unused *)` or `(* maybe_unused *)`
+may be applied to suppress this warning for a particular net.
+```
+module m(output x);
+    wire w;
+    assign x = w;
+endmodule
+```
+
+-Wunassigned-variable
+A variable is used but never has a value assigned.
+\n\n
+A variable with name '_' will never warn. Attributes `(* unused *)` or `(* maybe_unused *)`
+may be applied to suppress this warning for a particular variable.
+```
+module m;
+    int i;
+    int j = i;
+endmodule
+```
+
+-Wunused-but-set-net
+A net has a value driven but that value is never used.
+\n\n
+A net with name '_' will never warn. Attributes `(* unused *)` or `(* maybe_unused *)`
+may be applied to suppress this warning for a particular net.
+```
+module m;
+    wire x;
+    assign x = 1;
+endmodule
+```
+
+-Wunused-but-set-variable
+A variable has a value assigned but that value is never used.
+\n\n
+A variable with name '_' will never warn. Attributes `(* unused *)` or `(* maybe_unused *)`
+may be applied to suppress this warning for a particular variable.
+```
+module m;
+    int i;
+    initial i = 42;
+endmodule
+```
+
+-Wunused-port
+An input port signal is never used internally to the module.
+\n\n
+A port with name '_' will never warn. Attributes `(* unused *)` or `(* maybe_unused *)`
+may be applied to suppress this warning for a particular port.
+```
+module m(input x);
+endmodule
+```
+
+-Wundriven-port
+An output port signal is never given a value.
+\n\n
+A port with name '_' will never warn. Attributes `(* unused *)` or `(* maybe_unused *)`
+may be applied to suppress this warning for a particular port.
+```
+module m(output x);
+endmodule
+```
+
+-Wunused-but-set-port
+A port has a value assigned but that value is never used. This only applies to 'inout' ports.
+The assumption is that if the port doesn't need to be read, the direction should be changed
+to 'output' instead.
+\n\n
+A port with name '_' will never warn. Attributes `(* unused *)` or `(* maybe_unused *)`
+may be applied to suppress this warning for a particular port.
+```
+module m(inout x);
+    assign x = 1;
+endmodule
+```
+
+-Wunused-argument
+A task or function formal argument is not used in its body.
+\n\n
+An argument with name '_' will never warn. Attributes `(* unused *)` or `(* maybe_unused *)`
+may be applied to suppress this warning for a particular argument.
+```
+function foo(int x);
+endfunction
+```
+
+-Wunused-parameter
+A parameter's value is never used.
+\n\n
+A parameter with name '_' will never warn. Attributes `(* unused *)` or `(* maybe_unused *)`
+may be applied to suppress this warning for a particular parameter.
+```
+module m #(parameter p = 1);
+endmodule
+```
+
+-Wunused-type-parameter
+A type parameter is never used.
+\n\n
+A parameter with name '_' will never warn. Attributes `(* unused *)` or `(* maybe_unused *)`
+may be applied to suppress this warning for a particular parameter.
+```
+module m #(parameter type t = int);
+endmodule
+```
+
+-Wunused-typedef
+A typedef is never used.
+\n\n
+A typedef with name '_' will never warn. Attributes `(* unused *)` or `(* maybe_unused *)`
+may be applied to suppress this warning for a particular typedef.
+```
+module m;
+    typedef struct { int a; } foo_t;
+endmodule
+```
+
+-Wunused-genvar
+A genvar is never used.
+\n\n
+A genvar with name '_' will never warn. Attributes `(* unused *)` or `(* maybe_unused *)`
+may be applied to suppress this warning for a particular genvar.
+```
+module m;
+    genvar g;
+endmodule
+```
+
+-Wunused-assertion-decl
+An assertion declaration (sequence, property, or let) is never used.
+\n\n
+A declaration with name '_' will never warn. Attributes `(* unused *)` or `(* maybe_unused *)`
+may be applied to suppress this warning for a particular declaration.
+```
+module m;
+    sequence s;
+        1;
+    endsequence
+endmodule
+```
+
+-Wunused-import
+A package import directive is never used.
+```
+package p;
+    int a;
+endpackage
+
+module m;
+    import p::a;
+endmodule
+```
+
+-Wunused-wildcard-import
+A wildcard package import directive is never used.
+```
+package p;
+    int a;
+endpackage
+
+module m;
+    import p::*;
+endmodule
+```
+
+@category Libraries and Configurations
+
+-Wunknown-library
+A configuration library list references an unknown library.
+@options --top=cfg
+```
+config cfg;
+    design d;
+    default liblist foo;
+endconfig
+```
+
+-Wdup-config-rule
+More than one rule in a configuration targets the same cell or instance. They can't both
+be used, so slang takes the first one and ignores all others.
+@options --top=cfg
+```
+module d;
+endmodule
+
+config cfg;
+    design d;
+    instance d.foo use bar;
+    instance d.foo use baz;
+endconfig
+```
+
+-Wunused-config-cell
+A configuration cell rule is unused, which may mean that there's a typo in the target name.
+@options --top=cfg
+```
+config cfg;
+    design top;
+    cell foo liblist l;
+endconfig
+
+module top;
+endmodule
+```
+
+-Wunused-config-instance
+A configuration instance rule is unused, which means that target path does not exist in the design.
+@options --top=cfg
+```
+config cfg;
+    design top;
+    instance top.foo liblist l;
+endconfig
+
+module top;
+endmodule
+```
+
+@category Miscellaneous
+
+-Wwarning-task
+A $warning elaboration task was encountered. Its message is printed by this diagnostic.
+```
+$warning("Hello World!");
+```
+
+-Wmissing-top
+No valid top-level modules exist in the design. No top has been instantiated.
+```
+module m #(parameter int i);
+endmodule
+```
+
+-Wunknown-warning-option
+<ignored>
+
+-Winvalid-source-encoding
+<ignored>

@@ -8,7 +8,6 @@ import argparse
 import os
 import shlex
 import subprocess
-import sys
 
 
 def writefile(path, contents):
@@ -279,9 +278,20 @@ def createallheader(path, diags):
 
 
 def createdocs(outDir, inpath, slangBin, diags, groups):
+    class Opt:
+        def __init__(self, name, category):
+            self.name = name
+            self.desc = ""
+            self.example = ""
+            self.output = ""
+            self.options = ""
+            self.category = category
+
     inf = open(inpath)
-    curropt = [None, None, None, None, None]
+    curropt = None
     inexample = False
+    category = "Miscellaneous"
+    categorylist = []
     exampleMap = {}
 
     for line in [x.strip("\n") for x in inf]:
@@ -294,51 +304,58 @@ def createdocs(outDir, inpath, slangBin, diags, groups):
             if line.startswith("```"):
                 inexample = False
             else:
-                if curropt[2]:
-                    curropt[2] += "\n"
-                curropt[2] += line
+                if curropt.example:
+                    curropt.example += "\n"
+                curropt.example += line
+        elif line.startswith("@category "):
+            if curropt:
+                exampleMap[curropt.name] = curropt
+            category = line[10:]
+            categorylist.append(category)
         elif line.startswith("-W"):
             if curropt:
-                exampleMap[curropt[0]] = curropt
-            curropt = [line[2:], "", "", "", ""]
+                exampleMap[curropt.name] = curropt
+            curropt = Opt(line[2:], category)
         elif line.startswith("```"):
             inexample = True
         elif line.startswith("@options "):
-            curropt[4] = line[9:]
+            curropt.options = line[9:]
         else:
-            if curropt[1]:
-                curropt[1] += " "
-            curropt[1] += line
+            if curropt.desc:
+                curropt.desc += " "
+            curropt.desc += line
 
-    if curropt[0]:
-        exampleMap[curropt[0]] = curropt
+    if curropt:
+        exampleMap[curropt.name] = curropt
 
-    for k, v in exampleMap.items():
-        if not v[2]:
+    categorylist.append("Warning Groups")
+
+    for _, v in exampleMap.items():
+        if not v.example:
             continue
 
         testPath = os.path.join(outDir, "test.sv")
         with open(testPath, "w") as outf:
-            outf.write(v[2])
+            outf.write(v.example)
 
         args = [
             slangBin,
             "--quiet",
             "-Wnone",
-            "-W" + k,
+            "-W" + v.name,
             "--color-diagnostics",
             testPath,
         ]
 
-        if v[4]:
-            args.extend(v[4].split())
+        if v.options:
+            args.extend(v.options.split())
 
         result = subprocess.run(
             args, encoding="utf-8", stdout=subprocess.PIPE, stderr=subprocess.STDOUT
         )
-        v[3] = result.stdout
-        if k not in v[3]:
-            raise Exception("Test for -W{} is not correct".format(k))
+        v.output = result.stdout
+        if v.name not in v.output:
+            raise Exception("Test for -W{} is not correct".format(v.name))
 
     output = """/** @page warning-ref Warning Reference
 @brief Reference information about all supported warnings
@@ -350,10 +367,10 @@ def createdocs(outDir, inpath, slangBin, diags, groups):
 """
 
     groupMap = {}
-    warnlist = []
+    categories = {"Warning Groups": []}
     for g in groups:
         if g[0] != "default":
-            warnlist.append(g)
+            categories["Warning Groups"].append(g)
 
         for e in g[1]:
             if e in groupMap:
@@ -363,61 +380,69 @@ def createdocs(outDir, inpath, slangBin, diags, groups):
 
     for _, v in diags.items():
         for d in v:
-            if not d[3]:
-                continue
-            warnlist.append(d)
-
-    warnlist.sort(key=lambda d: d[3] if len(d) > 3 else d[0])
-
-    lastOpt = ""
-    for d in warnlist:
-        if len(d) > 3:
             opt = d[3]
-            if opt == lastOpt:
+            if not opt:
                 continue
 
             if opt not in exampleMap:
                 raise Exception("No documentation for -W{}".format(opt))
 
             details = exampleMap[opt]
-            desc = details[1]
-            example = details[2]
-            results = details[3]
-
-            if desc == "<ignored>":
+            if details.desc == "<ignored>":
                 continue
 
-            if lastOpt != "":
-                output += "\n@n\n"
-            output += "@subsection {} -W{}\n".format(opt, opt)
+            if details.category in categories:
+                categories[details.category].append(d)
+            else:
+                categories[details.category] = [d]
 
-            output += desc
-            output += " @n @n\n"
+    for category in categorylist:
+        output += "@subsection {} {} @n\n".format(category.replace(" ", ""), category)
+        warnlist = categories[category]
+        warnlist.sort(key=lambda d: d[3] if len(d) > 3 else d[0])
 
-            if opt in groupMap:
-                groups = groupMap[opt]
-                if "default" in groups:
-                    output += "This diagnostic is enabled by default. @n @n\n"
+        lastOpt = ""
+        for d in warnlist:
+            if len(d) > 3:
+                opt = d[3]
+                if opt == lastOpt:
+                    continue
 
-            if example:
-                assert results
-                output += "@b Example: \n\n"
-                output += "@code{.sv}\n"
-                output += example + "\n"
-                output += "@endcode\n\n"
-                output += "produces:\n\n"
-                output += "@code{.ansi}\n"
-                output += results
-                output += "@endcode\n"
+                if lastOpt != "":
+                    output += "\n@n\n"
+                output += "@subsubsection {} -W{}\n".format(opt, opt)
 
-            lastOpt = opt
-        else:
-            opt = d[0]
-            lastOpt = opt
-            elemlist = ", ".join("@ref {}".format(s) for s in d[1])
+                details = exampleMap[opt]
+                output += details.desc
+                output += " @n @n\n"
 
-            output += "\n@n\n@subsection {} -W{}\n".format(opt, opt)
-            output += "Controls {}.\n@n\n".format(elemlist)
+                if opt in groupMap:
+                    groups = groupMap[opt]
+                    if "default" in groups:
+                        output += "This diagnostic is enabled by default. @n @n\n"
+
+                if details.example:
+                    assert details.output
+                    output += "@b Example: \n\n"
+                    output += "@code{.sv}\n"
+                    output += details.example + "\n"
+                    output += "@endcode\n\n"
+                    output += "produces:\n\n"
+                    output += "@code{.ansi}\n"
+                    output += details.output
+                    output += "@endcode\n"
+
+                lastOpt = opt
+            else:
+                if lastOpt != "":
+                    output += "\n@n\n"
+
+                opt = d[0]
+                lastOpt = opt
+                elemlist = ", ".join("@ref {}".format(s) for s in d[1])
+
+                output += "@subsubsection {} -W{}\n".format(opt, opt)
+                output += "Controls {}.\n@n\n".format(elemlist)
 
     output += "\n*/"
     writefile(os.path.join(outDir, "warnings.dox"), output)
