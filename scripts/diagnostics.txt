@@ -1118,7 +1118,6 @@ error InvalidBindTarget "'{}' is not a valid bind target; only modules and inter
 error WrongBindTargetDef "bind target '{}' is not an instance of '{}'"
 error BindTypeParamNotFound "bind type parameter '{}' resolves to {} which cannot be found in source scope"
 error BindTypeParamMismatch "bind type parameter '{}' resolves to {} in source scope but {} in target scope"
-error MissingTimeScale "design element does not have a time scale defined but others in the design do"
 error MissingExternModuleImpl "missing implementation for extern {} '{}'"
 error ExternDeclMismatchImpl "extern {} '{}' does not match implementation"
 error ExternDeclMismatchPrev "extern {} '{}' does not match previous extern definition"
@@ -1133,6 +1132,7 @@ error VirtualIfaceIfacePort "interface with ports that reference other interface
 note NoteAliasedTo "which is aliased to"
 note NoteAliasDeclaration "previous alias declaration here"
 note NoteHierarchicalRef "hierarchical reference here"
+warning missing-timescale MissingTimeScale "design element does not have a time scale defined but others in the design do"
 warning missing-top NoTopModules "no top-level modules found in design"
 warning duplicate-defparam DuplicateDefparam "parameter already has a defparam override applied; ignoring this one"
 

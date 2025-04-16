@@ -14,6 +14,7 @@
 #include "slang/analysis/AnalysisManager.h"
 #include "slang/ast/symbols/CompilationUnitSymbols.h"
 #include "slang/ast/symbols/InstanceSymbols.h"
+#include "slang/diagnostics/CompilationDiags.h"
 #include "slang/diagnostics/DeclarationsDiags.h"
 #include "slang/diagnostics/ExpressionsDiags.h"
 #include "slang/diagnostics/JsonDiagnosticClient.h"
@@ -591,6 +592,7 @@ bool Driver::processOptions() {
     // suppressible warning that we promote to an error by default. This allows
     // the user to turn this back into a warning, or turn it off altogether.
 
+    diagEngine.setSeverity(diag::MissingTimeScale, DiagnosticSeverity::Error);
     diagEngine.setSeverity(diag::DuplicateDefinition, DiagnosticSeverity::Error);
     diagEngine.setSeverity(diag::BadProceduralForce, DiagnosticSeverity::Error);
     diagEngine.setSeverity(diag::UnknownSystemName, DiagnosticSeverity::Error);
