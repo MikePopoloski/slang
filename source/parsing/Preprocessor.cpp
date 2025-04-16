@@ -191,6 +191,7 @@ void Preprocessor::resetAllDirectives() {
     activeTimeScale = std::nullopt;
     defaultNetType = TokenKind::WireKeyword;
     unconnectedDrive = TokenKind::Unknown;
+    cellDefine = false;
     resetProtectState();
 }
 
@@ -356,6 +357,12 @@ Token Preprocessor::handleDirectives(Token token) {
                     case SyntaxKind::NoUnconnectedDriveDirective:
                         trivia.push_back(handleNoUnconnectedDriveDirective(token));
                         break;
+                    case SyntaxKind::CellDefineDirective:
+                        trivia.push_back(handleCellDefineDirective(token));
+                        break;
+                    case SyntaxKind::EndCellDefineDirective:
+                        trivia.push_back(handleEndCellDefineDirective(token));
+                        break;
                     case SyntaxKind::DefaultDecayTimeDirective:
                         trivia.push_back(handleDefaultDecayTimeDirective(token));
                         break;
@@ -369,8 +376,6 @@ Token Preprocessor::handleDirectives(Token token) {
                             trivia.push_back(skipped);
                         break;
                     }
-                    case SyntaxKind::CellDefineDirective:
-                    case SyntaxKind::EndCellDefineDirective:
                     case SyntaxKind::DelayModeDistributedDirective:
                     case SyntaxKind::DelayModePathDirective:
                     case SyntaxKind::DelayModeUnitDirective:
@@ -1088,6 +1093,16 @@ Trivia Preprocessor::handleUnconnectedDriveDirective(Token directive) {
 Trivia Preprocessor::handleNoUnconnectedDriveDirective(Token directive) {
     checkOutsideDesignElement(directive);
     unconnectedDrive = TokenKind::Unknown;
+    return createSimpleDirective(directive);
+}
+
+Trivia Preprocessor::handleCellDefineDirective(Token directive) {
+    cellDefine = true;
+    return createSimpleDirective(directive);
+}
+
+Trivia Preprocessor::handleEndCellDefineDirective(Token directive) {
+    cellDefine = false;
     return createSimpleDirective(directive);
 }
 

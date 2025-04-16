@@ -650,6 +650,7 @@ TEST_CASE("Syntax rewriting with metadata updates") {
     auto tree = SyntaxTree::fromFileInMemory(R"(
 `default_nettype none
 `unconnected_drive pull0
+`celldefine
 `timescale 1ns/1ps
 `define FOO
 
@@ -694,6 +695,7 @@ class C; endclass
     CHECK(SyntaxPrinter::printFile(*newTree) == R"(
 `default_nettype none
 `unconnected_drive pull0
+`celldefine
 `timescale 1ns/1ps
 `define FOO
 
@@ -727,6 +729,7 @@ class C; endclass
         if (key->as<ModuleDeclarationSyntax>().header->name.valueText() == "FooBar") {
             CHECK(node.timeScale->base.unit == TimeUnit::Nanoseconds);
             CHECK(node.unconnectedDrive == TokenKind::Pull0Keyword);
+            CHECK(node.cellDefine == true);
         }
     }
 }
