@@ -79,9 +79,6 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
                           std::is_same_v<SpecparamSymbol, T>) {
                 symbol.getValue();
             }
-
-            for (auto attr : compilation.getAttributes(symbol))
-                attr->getValue();
         }
 
         if constexpr (requires { symbol.getBody().bad(); }) {
@@ -305,9 +302,6 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
         if (finishedEarly())
             return;
 
-        for (auto attr : compilation.getAttributes(symbol))
-            attr->getValue();
-
         visit(symbol.body);
 
         if (!finishedEarly()) {
@@ -355,14 +349,9 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
 
         TimeTraceScope timeScope("AST Instance", [&] { return symbol.getHierarchicalPath(); });
 
-        for (auto attr : compilation.getAttributes(symbol))
-            attr->getValue();
-
         for (auto conn : symbol.getPortConnections()) {
             conn->getExpression();
             conn->checkSimulatedNetTypes();
-            for (auto attr : compilation.getAttributes(*conn))
-                attr->getValue();
         }
 
         // Detect infinite recursion, which happens if we see this exact
@@ -534,6 +523,12 @@ struct DiagnosticVisitor : public ASTVisitor<DiagnosticVisitor, false, false> {
         for (auto symbol : genericClasses) {
             if (symbol->numSpecializations() == 0)
                 symbol->getInvalidSpecialization().visit(*this);
+        }
+
+        // Visit all attributes and force their values to resolve.
+        for (auto& [_, attrList] : compilation.attributeMap) {
+            for (auto attr : attrList)
+                attr->getValue();
         }
     }
 

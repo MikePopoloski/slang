@@ -7,7 +7,8 @@
 #include "slang/ast/ASTVisitor.h"
 #include "slang/text/Json.h"
 
-std::string serialize(Compilation& comp, bool sourceInfo = false, bool detailedTypeInfo = false) {
+std::string serialize(Compilation& comp, bool sourceInfo = false, bool detailedTypeInfo = false,
+                      bool includeDefinitions = false) {
     JsonWriter writer;
     writer.setPrettyPrint(true);
 
@@ -16,6 +17,11 @@ std::string serialize(Compilation& comp, bool sourceInfo = false, bool detailedT
     serializer.setIncludeSourceInfo(sourceInfo);
     serializer.setDetailedTypeInfo(detailedTypeInfo);
     serializer.serialize(comp.getRoot());
+
+    if (includeDefinitions) {
+        for (auto def : comp.getDefinitions())
+            serializer.serialize(*def);
+    }
 
     return "\n"s + std::string(writer.view());
 }
@@ -1508,5 +1514,5 @@ endmodule : rptr_empty
     NO_COMPILATION_ERRORS;
 
     compilation.freeze();
-    serialize(compilation);
+    serialize(compilation, false, false, true);
 }
