@@ -79,8 +79,9 @@ use the number of threads supported by the system -- this can be set to some oth
 value to more specifically control the concurrency. Setting it to 1 will disable
 the use of threading.
 
-Note that multithreading only currently applies to the parsing stage of compilation,
-and that it is not supported when running with `--single-unit`
+Note that multithreading *parsing* cannot be supported when running
+with `--single-unit`, though other parts of the compilation process
+may still take advantage of threading where possible.
 
 @section Actions
 
