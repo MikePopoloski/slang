@@ -152,7 +152,7 @@ void AnalysisManager::analyzeScopeAsync(const Scope& scope) {
                 analyzedScopes.visit(&scope, [&result](auto& item) { item.second = &result; });
             }
             SLANG_CATCH(...) {
-                std::unique_lock lock(mutex);
+                std::unique_lock<std::mutex> lock(mutex);
                 pendingException = std::current_exception();
             }
         });

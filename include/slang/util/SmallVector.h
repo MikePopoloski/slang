@@ -625,7 +625,8 @@ public:
     SmallVector(Base&& other) noexcept {
         if (other.isSmall()) {
             this->cap = N;
-            this->append(std::move_iterator(other.begin()), std::move_iterator(other.end()));
+            this->append(std::make_move_iterator(other.begin()),
+                         std::make_move_iterator(other.end()));
             other.clear();
         }
         else {
