@@ -309,7 +309,7 @@ infinite recursion during constant evaluation. The default is 128.
 
 Set the maximum number of steps that can occur during constant evaluation
 before giving up. Used to detect infinite constant evaluation loops.
-The default is 100000.
+The default is 1000000.
 
 `--constexpr-backtrace-limit <limit>`
 
