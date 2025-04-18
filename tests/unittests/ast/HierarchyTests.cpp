@@ -2068,3 +2068,16 @@ endmodule
 
     NO_COMPILATION_ERRORS;
 }
+
+TEST_CASE("Incorrect generate loop regress -- GH #1328") {
+    auto tree = SyntaxTree::fromText(R"(
+module Test;
+  for (genvar i = 4/2; i >= 0; i--) begin
+  end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+}
