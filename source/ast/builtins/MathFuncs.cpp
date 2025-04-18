@@ -185,8 +185,6 @@ public:
                 return SVInt(1, uint64_t(iv.countOnes() <= 1), false);
             case IsUnknown:
                 return SVInt(1, uint64_t(iv.hasUnknown()), false);
-            default:
-                SLANG_UNREACHABLE;
         }
     }
 

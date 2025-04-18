@@ -89,8 +89,6 @@ bitwidth_t Type::getBitWidth() const {
                 return 64;
             case FloatingType::ShortReal:
                 return 32;
-            default:
-                SLANG_UNREACHABLE;
         }
     }
     return 0;

@@ -574,8 +574,6 @@ void SubroutineSymbol::checkVirtualMethodMatch(const Scope& scope,
                     return "protected"sv;
                 case Visibility::Public:
                     return "public"sv;
-                default:
-                    return ""sv;
             }
         };
 

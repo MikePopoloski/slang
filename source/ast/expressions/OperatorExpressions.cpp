@@ -918,8 +918,6 @@ Expression& BinaryExpression::fromComponents(Expression& lhs, Expression& rhs, B
                 }
             }
             break;
-        default:
-            SLANG_UNREACHABLE;
     }
 
     if (!good) {

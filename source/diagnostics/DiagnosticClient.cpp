@@ -66,8 +66,6 @@ std::string_view DiagnosticClient::getSeverityString(DiagnosticSeverity severity
             return "error";
         case DiagnosticSeverity::Fatal:
             return "fatal error";
-        default:
-            SLANG_UNREACHABLE;
     }
 }
 

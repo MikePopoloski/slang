@@ -104,7 +104,7 @@ SLANG_ENUM(DriveStrength, DS)
 #undef DS
 
 #define FTR(x) x(None) x(Enum) x(Struct) x(Union) x(Class) x(InterfaceClass)
-SLANG_ENUM(ForwardTypeRestriction, FTR);
+SLANG_ENUM(ForwardTypeRestriction, FTR)
 #undef FTR
 
 #define CASE_CONDITION(x) x(Normal) x(WildcardXOrZ) x(WildcardJustZ) x(Inside)

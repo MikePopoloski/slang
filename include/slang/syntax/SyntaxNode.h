@@ -273,6 +273,11 @@ private:
     mutable PointerIntPair<const SyntaxNode*, 1, 1, bool> node;
 };
 
+#if defined(__GNUC__)
+#    pragma GCC diagnostic push
+#    pragma GCC diagnostic ignored "-Wnon-virtual-dtor"
+#endif
+
 /// A base class for syntax nodes that represent a list of items.
 class SLANG_EXPORT SyntaxListBase : public SyntaxNode {
 public:
@@ -472,6 +477,10 @@ private:
 
     std::span<TokenOrSyntax> elements;
 };
+
+#if defined(__GNUC__)
+#    pragma GCC diagnostic pop
+#endif
 
 template<typename T>
 SeparatedSyntaxList<T>* deepClone(const SeparatedSyntaxList<T>& node, BumpAllocator& alloc) {

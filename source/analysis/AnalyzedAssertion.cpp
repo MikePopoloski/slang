@@ -62,7 +62,7 @@ static bool isSameClock(const TimingControl& left, const TimingControl& right) {
 }
 
 enum class VisitFlags { None = 0, RequireSequence = 1, InClockingBlock = 2 };
-SLANG_BITMASK(VisitFlags, InClockingBlock);
+SLANG_BITMASK(VisitFlags, InClockingBlock)
 
 // This visitor implements clock flow and resolution for assertion expressions.
 // The requirements for this are scattered around the LRM. Some important parts are:
@@ -298,8 +298,6 @@ struct ClockVisitor {
                 expr.right.visit(*this, outerClock, flags);
                 return lresult;
             }
-            default:
-                SLANG_UNREACHABLE;
         }
     }
 

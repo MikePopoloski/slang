@@ -575,8 +575,6 @@ public:
                         }
                         break;
                     }
-                    default:
-                        SLANG_UNREACHABLE;
                 }
             }
 

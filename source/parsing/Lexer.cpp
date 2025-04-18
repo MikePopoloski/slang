@@ -1342,8 +1342,6 @@ bool Lexer::tryApplyCommentHandler() {
         case CommentHandler::LintRestore:
             sourceManager.addDiagnosticDirective(loc(), "__pop__", DiagnosticSeverity::Ignored);
             return false;
-        default:
-            SLANG_UNREACHABLE;
     }
 }
 
@@ -1548,8 +1546,6 @@ void Lexer::scanEncodedText(ProtectEncoding encoding, uint32_t expectedBytes, bo
                 advance();
                 byteCount++;
                 break;
-            default:
-                SLANG_UNREACHABLE;
         }
     }
 }

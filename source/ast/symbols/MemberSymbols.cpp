@@ -732,8 +732,6 @@ void ElabSystemTaskSymbol::issueDiagnostic() const {
         case ElabSystemTaskKind::StaticAssert:
             reportStaticAssert(*scope, location, *msg, assertCondition);
             return;
-        default:
-            SLANG_UNREACHABLE;
     }
 
     scope->addDiag(code, location).addStringAllowEmpty(std::string(*msg));
@@ -2292,8 +2290,6 @@ void RandSeqProductionSymbol::serializeTo(ASTSerializer& serializer) const {
                     serializer.endArray();
                     break;
                 }
-                default:
-                    SLANG_UNREACHABLE;
             }
             serializer.endObject();
         }

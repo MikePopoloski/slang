@@ -250,7 +250,7 @@ SourceLoader::SyntaxTreeList SourceLoader::loadAndParseSources(const Bag& option
     if (fileEntries.size() >= MinFilesForThreading && srcOptions.numThreads != 1u) {
         // If there are enough files to parse and the user hasn't disabled
         // the use of threads, do the parsing via a thread pool.
-        BS::thread_pool threadPool(srcOptions.numThreads.value_or(0u));
+        BS::thread_pool<> threadPool(srcOptions.numThreads.value_or(0u));
 
         std::vector<LoadResult> loadResults;
         loadResults.resize(fileEntries.size());

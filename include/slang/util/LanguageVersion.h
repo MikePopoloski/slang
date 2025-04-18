@@ -20,8 +20,6 @@ inline std::string_view toString(LanguageVersion lv) {
             return "1800-2017";
         case LanguageVersion::v1800_2023:
             return "1800-2023";
-        default:
-            return "";
     }
 }
 

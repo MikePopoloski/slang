@@ -166,8 +166,6 @@ int NumberParser::append(Token token, bool isFirst) {
                 index++;
             }
             break;
-        default:
-            SLANG_UNREACHABLE;
     }
 
     valid = true;

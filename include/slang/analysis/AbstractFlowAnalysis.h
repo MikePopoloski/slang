@@ -619,8 +619,6 @@ protected:
                             setState(std::move(caseFinal));
                             break;
                         }
-                        default:
-                            SLANG_UNREACHABLE;
                     }
                 }
 

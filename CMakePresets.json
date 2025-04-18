@@ -100,7 +100,7 @@
       "name": "clang-flags",
       "hidden": true,
       "cacheVariables": {
-        "SLANG_WARN_FLAGS": "-Wall;-Wextra;-Werror;-Warray-bounds-pointer-arithmetic;-Wassign-enum;-Wbad-function-cast;-Wcast-qual;-Wchar-subscripts;-Wcomma;-Wconditional-uninitialized;-Wconversion;-Wdelete-non-virtual-dtor;-Wdeprecated;-Wduplicate-enum;-Wduplicate-method-arg;-Wembedded-directive;-Wfor-loop-analysis;-Wformat-pedantic;-Widiomatic-parentheses;-Wimplicit-fallthrough;-Wpedantic;-Wrange-loop-analysis;-Wredundant-parens;-Wreserved-id-macro;-Wshadow;-Wundefined-reinterpret-cast;-Wunreachable-code-aggressive;-Wno-missing-braces;-Wno-deprecated-literal-operator",
+        "SLANG_WARN_FLAGS": "-Wall;-Wextra;-Werror;-Warray-bounds-pointer-arithmetic;-Wassign-enum;-Wbad-function-cast;-Wcast-qual;-Wchar-subscripts;-Wcomma;-Wconditional-uninitialized;-Wconversion;-Wdelete-non-virtual-dtor;-Wnon-virtual-dtor;-Wctad-maybe-unsupported;-Wc++98-compat-extra-semi;-Wcovered-switch-default;-Wdeprecated;-Wduplicate-enum;-Wduplicate-method-arg;-Wembedded-directive;-Wfor-loop-analysis;-Wformat-pedantic;-Widiomatic-parentheses;-Wimplicit-fallthrough;-Wpedantic;-Wrange-loop-analysis;-Wredundant-parens;-Wreserved-id-macro;-Wshadow;-Wundefined-reinterpret-cast;-Wunreachable-code-aggressive;-Wno-missing-braces;-Wno-deprecated-literal-operator",
         "CMAKE_CXX_FLAGS": "-Wno-deprecated-declarations"
       }
     },

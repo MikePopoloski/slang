@@ -84,7 +84,7 @@ enum class NondegeneracyStatus {
     /// The sequence definitely admits no match.
     AdmitsNoMatch = 1 << 2
 };
-SLANG_BITMASK(NondegeneracyStatus, AdmitsNoMatch);
+SLANG_BITMASK(NondegeneracyStatus, AdmitsNoMatch)
 
 /// Represents a range of potential sequence matches.
 struct SequenceRange {

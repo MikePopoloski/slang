@@ -633,8 +633,7 @@ std::string_view toString(SyntaxKind kind) {
         cppf.write('        case SyntaxKind::{}: return "{}";\n'.format(k, k))
 
     cppf.write(
-        """        default: return "";
-    }
+        """    }
 }
 
 """
@@ -1001,8 +1000,7 @@ std::string_view toString({} kind) {{
     for k in kinds:
         outf.write('        case {}::{}: return "{}";\n'.format(name, k, k))
     outf.write(
-        """        default: return "";
-    }
+        """    }
 }
 
 """

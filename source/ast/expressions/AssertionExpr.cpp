@@ -1249,7 +1249,7 @@ AssertionExpr::NondegeneracyCheckResult BinaryAssertionExpr::checkNondegeneracyI
     }
 
     return res;
-};
+}
 
 std::optional<SequenceRange> BinaryAssertionExpr::computeSequenceLengthImpl() const {
     const auto leftLen = left.computeSequenceLength();

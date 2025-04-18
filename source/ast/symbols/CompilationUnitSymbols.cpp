@@ -330,8 +330,6 @@ std::string_view DefinitionSymbol::getKindString() const {
             return "interface"sv;
         case DefinitionKind::Program:
             return "program"sv;
-        default:
-            SLANG_UNREACHABLE;
     }
 }
 
@@ -343,8 +341,6 @@ std::string_view DefinitionSymbol::getArticleKindString() const {
             return "an interface"sv;
         case DefinitionKind::Program:
             return "a program"sv;
-        default:
-            SLANG_UNREACHABLE;
     }
 }
 
