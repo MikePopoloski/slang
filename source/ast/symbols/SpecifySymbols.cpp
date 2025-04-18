@@ -550,6 +550,7 @@ static std::string_view toString(TimingPathSymbol::Polarity polarity) {
         case TimingPathSymbol::Polarity::Negative:
             return "Negative"sv;
     }
+    SLANG_UNREACHABLE;
 }
 
 void TimingPathSymbol::serializeTo(ASTSerializer& serializer) const {

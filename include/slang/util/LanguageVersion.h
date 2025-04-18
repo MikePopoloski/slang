@@ -21,6 +21,7 @@ inline std::string_view toString(LanguageVersion lv) {
         case LanguageVersion::v1800_2023:
             return "1800-2023";
     }
+    return "";
 }
 
 } // namespace slang

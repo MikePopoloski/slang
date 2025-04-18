@@ -67,6 +67,7 @@ std::string_view DiagnosticClient::getSeverityString(DiagnosticSeverity severity
         case DiagnosticSeverity::Fatal:
             return "fatal error";
     }
+    SLANG_UNREACHABLE;
 }
 
 } // namespace slang

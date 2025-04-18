@@ -43,6 +43,7 @@ bitwidth_t getWidth(PredefinedIntegerType::Kind kind) {
         case PredefinedIntegerType::Integer: return 32;
         case PredefinedIntegerType::Time: return 64;
     }
+    SLANG_UNREACHABLE;
 }
 
 bool getSigned(PredefinedIntegerType::Kind kind) {
@@ -54,6 +55,7 @@ bool getSigned(PredefinedIntegerType::Kind kind) {
         case PredefinedIntegerType::Integer: return true;
         case PredefinedIntegerType::Time: return false;
     }
+    SLANG_UNREACHABLE;
 }
 
 bool getFourState(PredefinedIntegerType::Kind kind) {
@@ -65,6 +67,7 @@ bool getFourState(PredefinedIntegerType::Kind kind) {
         case PredefinedIntegerType::Integer: return true;
         case PredefinedIntegerType::Time: return true;
     }
+    SLANG_UNREACHABLE;
 }
 
 std::string_view getName(PredefinedIntegerType::Kind kind) {
@@ -76,6 +79,7 @@ std::string_view getName(PredefinedIntegerType::Kind kind) {
         case PredefinedIntegerType::Integer: return "integer"sv;
         case PredefinedIntegerType::Time: return "time"sv;
     }
+    SLANG_UNREACHABLE;
 }
 
 std::string_view getName(ScalarType::Kind kind) {
@@ -84,6 +88,7 @@ std::string_view getName(ScalarType::Kind kind) {
         case ScalarType::Logic: return "logic"sv;
         case ScalarType::Reg: return "reg"sv;
     }
+    SLANG_UNREACHABLE;
 }
 
 std::string_view getName(FloatingType::Kind kind) {
@@ -92,6 +97,7 @@ std::string_view getName(FloatingType::Kind kind) {
         case FloatingType::ShortReal: return "shortreal"sv;
         case FloatingType::RealTime: return "realtime"sv;
     }
+    SLANG_UNREACHABLE;
 }
 // clang-format on
 

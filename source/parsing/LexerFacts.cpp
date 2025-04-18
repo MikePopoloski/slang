@@ -670,6 +670,7 @@ KeywordVersion LexerFacts::getDefaultKeywordVersion(LanguageVersion languageVers
         case LanguageVersion::v1800_2023:
             return KeywordVersion::v1800_2023;
     }
+    SLANG_UNREACHABLE;
 }
 
 std::optional<KeywordVersion> LexerFacts::getKeywordVersion(std::string_view text) {

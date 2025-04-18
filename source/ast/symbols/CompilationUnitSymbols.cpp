@@ -331,6 +331,7 @@ std::string_view DefinitionSymbol::getKindString() const {
         case DefinitionKind::Program:
             return "program"sv;
     }
+    SLANG_UNREACHABLE;
 }
 
 std::string_view DefinitionSymbol::getArticleKindString() const {
@@ -342,6 +343,7 @@ std::string_view DefinitionSymbol::getArticleKindString() const {
         case DefinitionKind::Program:
             return "a program"sv;
     }
+    SLANG_UNREACHABLE;
 }
 
 void DefinitionSymbol::serializeTo(ASTSerializer& serializer) const {

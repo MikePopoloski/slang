@@ -292,6 +292,7 @@ const NetType& NetType::getSimulatedNetType(const NetType& internal, const NetTy
             }
             return internal;
     }
+    SLANG_UNREACHABLE;
 }
 
 } // namespace slang::ast

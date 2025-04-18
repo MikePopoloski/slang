@@ -575,6 +575,7 @@ void SubroutineSymbol::checkVirtualMethodMatch(const Scope& scope,
                 case Visibility::Public:
                     return "public"sv;
             }
+            return ""sv;
         };
 
         auto& diag = scope.addDiag(diag::VirtualVisibilityMismatch, derivedMethod.location);

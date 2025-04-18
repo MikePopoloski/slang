@@ -299,6 +299,7 @@ struct ClockVisitor {
                 return lresult;
             }
         }
+        SLANG_UNREACHABLE;
     }
 
     VisitResult visit(const ConditionalAssertionExpr& expr, Clock outerClock, bitmask<VF> flags) {

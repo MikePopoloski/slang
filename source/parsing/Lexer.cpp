@@ -1343,6 +1343,7 @@ bool Lexer::tryApplyCommentHandler() {
             sourceManager.addDiagnosticDirective(loc(), "__pop__", DiagnosticSeverity::Ignored);
             return false;
     }
+    SLANG_UNREACHABLE;
 }
 
 bool Lexer::scanUTF8Char(bool alreadyErrored) {

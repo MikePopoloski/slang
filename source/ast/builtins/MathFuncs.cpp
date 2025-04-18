@@ -186,6 +186,7 @@ public:
             case IsUnknown:
                 return SVInt(1, uint64_t(iv.hasUnknown()), false);
         }
+        SLANG_UNREACHABLE;
     }
 
 private:
