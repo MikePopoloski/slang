@@ -1339,7 +1339,7 @@ SVInt SVInt::operator/(const SVInt& rhs) const {
     }
 
     // otherwise, just do the division
-    return udiv(*this, rhs, false);
+    return udiv(*this, rhs, bothSigned);
 }
 
 SVInt SVInt::operator%(const SVInt& rhs) const {

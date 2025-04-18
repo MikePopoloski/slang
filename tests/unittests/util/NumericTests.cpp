@@ -400,6 +400,10 @@ TEST_CASE("Division") {
     CHECK("-50"_si % "40"_si == -10);
     CHECK("-4'sd8"_si / "-4'sd7"_si == 1);
 
+    SVInt v6 = "4"_si / "2"_si;
+    CHECK(v6 == 2);
+    CHECK(v6.isSigned());
+
     SVInt v7 = "19823'd234098234098234098234"_si;
     CHECK("300'd0"_si / "10"_si == 0);
     CHECK(v7 / v7 == 1);
