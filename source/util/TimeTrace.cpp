@@ -82,7 +82,7 @@ struct TimeTrace::Profiler {
 
         // Only include sections longer than 500us.
         if (duration_cast<microseconds>(entry.duration).count() > 500) {
-            std::scoped_lock lock(mut);
+            std::scoped_lock<std::mutex> lock(mut);
             entries.emplace_back(std::move(entry));
         }
 
@@ -91,7 +91,7 @@ struct TimeTrace::Profiler {
 
     void write(std::ostream& os) {
         SLANG_ASSERT(stack.empty());
-        std::scoped_lock lock(mut);
+        std::scoped_lock<std::mutex> lock(mut);
 
         // std::thread::id isn't convertible to an integer, so put it in
         // a table to generate nice ids for output.
