@@ -742,7 +742,7 @@ Expression& BinaryExpression::fromComponents(Expression& lhs, Expression& rhs, B
         return &compilation.getBitType();
     };
 
-    bool good;
+    bool good = false;
     switch (op) {
         case BinaryOperator::Add:
         case BinaryOperator::Subtract:
