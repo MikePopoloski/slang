@@ -211,7 +211,7 @@ public:
     /// iterable collection of DiagnosticDirectiveInfos.
     template<typename Func>
     void visitDiagnosticDirectives(Func&& func) const {
-        std::shared_lock lock(mutex);
+        std::shared_lock<std::shared_mutex> lock(mutex);
         for (auto& [buffer, directives] : diagDirectives)
             func(buffer, directives);
     }
