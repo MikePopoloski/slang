@@ -36,6 +36,7 @@ struct Token::Info {
     SVIntStorage& integer() { return *reinterpret_cast<SVIntStorage*>(extra()); }
     std::string_view& stringText() { return *reinterpret_cast<std::string_view*>(extra()); }
     SyntaxKind& directiveKind() { return *reinterpret_cast<SyntaxKind*>(extra()); }
+    KnownSystemName& systemName() { return *reinterpret_cast<KnownSystemName*>(extra()); }
 };
 
 static constexpr size_t getExtraSize(TokenKind kind) {
@@ -58,6 +59,9 @@ static constexpr size_t getExtraSize(TokenKind kind) {
         case TokenKind::Directive:
         case TokenKind::MacroUsage:
             size = sizeof(SyntaxKind);
+            break;
+        case TokenKind::SystemIdentifier:
+            size = sizeof(KnownSystemName);
             break;
         default:
             return 0;
@@ -228,6 +232,13 @@ Token::Token(BumpAllocator& alloc, TokenKind kind, std::span<Trivia const> trivi
 }
 
 Token::Token(BumpAllocator& alloc, TokenKind kind, std::span<Trivia const> trivia,
+             std::string_view rawText, SourceLocation location, KnownSystemName systemName) {
+    SLANG_ASSERT(kind == TokenKind::SystemIdentifier);
+    init(alloc, kind, trivia, rawText, location);
+    info->systemName() = systemName;
+}
+
+Token::Token(BumpAllocator& alloc, TokenKind kind, std::span<Trivia const> trivia,
              std::string_view rawText, SourceLocation location, logic_t bit) {
     SLANG_ASSERT(kind == TokenKind::UnbasedUnsizedLiteral);
     init(alloc, kind, trivia, rawText, location);
@@ -374,6 +385,11 @@ SyntaxKind Token::directiveKind() const {
     return info->directiveKind();
 }
 
+KnownSystemName Token::systemName() const {
+    SLANG_ASSERT(kind == TokenKind::SystemIdentifier);
+    return info->systemName();
+}
+
 bool Token::isOnSameLine() const {
     for (auto& t : trivia()) {
         switch (t.kind) {
@@ -486,6 +502,9 @@ Token Token::createMissing(BumpAllocator& alloc, TokenKind kind, SourceLocation 
         case TokenKind::Directive:
         case TokenKind::MacroUsage:
             result = Token(alloc, kind, {}, "", location, SyntaxKind::Unknown);
+            break;
+        case TokenKind::SystemIdentifier:
+            result = Token(alloc, kind, {}, "", location, KnownSystemName::Unknown);
             break;
         case TokenKind::IntegerLiteral:
             result = Token(alloc, kind, {}, "", location, SVInt::Zero);

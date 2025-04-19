@@ -60,6 +60,7 @@ def main():
         generateSyntaxClone(args.dir, alltypes, kindmap)
         generateSyntax(args.dir, alltypes, kindmap)
         generateTokenKinds(inputdir, args.dir)
+        generateSystemNames(inputdir, args.dir)
 
 
 def loadalltypes(ourdir):
@@ -1078,6 +1079,133 @@ namespace slang::parsing {
     writekindimpls(outf, "TriviaKind", triviakinds)
     writekindimpls(outf, "TokenKind", tokenkinds)
     outf.write("}\n")
+
+
+def generateSystemNames(ourdir, builddir):
+    headerdir = os.path.join(builddir, "slang", "parsing")
+    try:
+        os.makedirs(headerdir)
+    except OSError:
+        pass
+
+    names = []
+    inf = open(os.path.join(ourdir, "systemnames.txt"))
+    for line in [x.strip("\n") for x in inf]:
+        line = line.strip()
+        if not line:
+            continue
+
+        names.append(line.split())
+
+    outf = open(os.path.join(headerdir, "KnownSystemName.h"), "w")
+    outf.write(
+        """//------------------------------------------------------------------------------
+//! @file KnownSystemName.h
+//! @brief Generated KnownSystemName enum
+//
+// SPDX-FileCopyrightText: Michael Popoloski
+// SPDX-License-Identifier: MIT
+//------------------------------------------------------------------------------
+#pragma once
+
+#include <array>
+#include <ostream>
+
+#include "slang/util/Util.h"
+
+namespace slang::parsing {
+
+enum class SLANG_EXPORT KnownSystemName {
+    Unknown,
+"""
+    )
+
+    for name in names:
+        outf.write("    {},\n".format(name[1]))
+
+    outf.write(
+        """}};
+
+SLANG_EXPORT std::ostream& operator<<(std::ostream& os, KnownSystemName ksn);
+SLANG_EXPORT std::string_view toString(KnownSystemName ksn);
+SLANG_EXPORT KnownSystemName parseKnownSystemName(std::string_view str);
+
+class SLANG_EXPORT KnownSystemName_traits {{
+public:
+    static const std::array<KnownSystemName, {}> values;
+}};
+
+}}
+""".format(
+            len(names) + 1
+        )
+    )
+
+    outf = open(os.path.join(builddir, "KnownSystemName.cpp"), "w")
+    outf.write(
+        """//------------------------------------------------------------------------------
+// KnownSystemName.cpp
+// Generated KnownSystemName enum
+//
+// SPDX-FileCopyrightText: Michael Popoloski
+// SPDX-License-Identifier: MIT
+//------------------------------------------------------------------------------
+#include "slang/parsing/KnownSystemName.h"
+
+#include "slang/util/FlatMap.h"
+
+namespace slang::parsing {
+
+std::ostream& operator<<(std::ostream& os, KnownSystemName ksn) {
+    os << toString(ksn);
+    return os;
+}
+
+std::string_view toString(KnownSystemName ksn) {
+    switch (ksn) {
+        case KnownSystemName::Unknown: return "Unknown";
+"""
+    )
+
+    for name in names:
+        outf.write(
+            '        case KnownSystemName::{}: return "{}";\n'.format(name[1], name[0])
+        )
+
+    outf.write(
+        """    }
+}
+
+const static flat_hash_map<std::string_view, KnownSystemName> ksnTable = {
+"""
+    )
+
+    for name in names:
+        outf.write('    {{ "{}", KnownSystemName::{} }},\n'.format(name[0], name[1]))
+
+    outf.write(
+        """};
+
+KnownSystemName parseKnownSystemName(std::string_view str) {
+    if (auto it = ksnTable.find(str); it != ksnTable.end())
+        return it->second;
+    return KnownSystemName::Unknown;
+}
+
+decltype(KnownSystemName_traits::values) KnownSystemName_traits::values = {
+    KnownSystemName::Unknown,
+"""
+    )
+
+    for name in names:
+        outf.write("    KnownSystemName::{},\n".format(name[1]))
+
+    outf.write(
+        """};
+
+}
+"""
+    )
 
 
 def generatePyBindings(builddir, alltypes):

@@ -41,9 +41,12 @@ add_custom_command(
          ${CMAKE_CURRENT_BINARY_DIR}/slang/syntax/SyntaxKind.h
          ${CMAKE_CURRENT_BINARY_DIR}/slang/syntax/SyntaxFwd.h
          ${CMAKE_CURRENT_BINARY_DIR}/slang/parsing/TokenKind.h
+         ${CMAKE_CURRENT_BINARY_DIR}/slang/parsing/KnownSystemName.h
          ${CMAKE_CURRENT_BINARY_DIR}/TokenKind.cpp
+         ${CMAKE_CURRENT_BINARY_DIR}/KnownSystemName.cpp
   DEPENDS ${SCRIPTS_DIR}/syntax_gen.py ${SCRIPTS_DIR}/syntax.txt
           ${SCRIPTS_DIR}/triviakinds.txt ${SCRIPTS_DIR}/tokenkinds.txt
+          ${SCRIPTS_DIR}/systemnames.txt
   COMMENT "Generating syntax")
 
 # Generate version header
@@ -57,6 +60,7 @@ add_library(
   ${CMAKE_CURRENT_BINARY_DIR}/SyntaxClone.cpp
   ${CMAKE_CURRENT_BINARY_DIR}/DiagCode.cpp
   ${CMAKE_CURRENT_BINARY_DIR}/TokenKind.cpp
+  ${CMAKE_CURRENT_BINARY_DIR}/KnownSystemName.cpp
   ${CMAKE_CURRENT_BINARY_DIR}/VersionInfo.cpp
   ${CMAKE_CURRENT_BINARY_DIR}/slang/diagnostics/AllDiags.h
   analysis/AbstractFlowAnalysis.cpp

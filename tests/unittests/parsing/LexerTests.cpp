@@ -345,6 +345,14 @@ TEST_CASE("System Identifiers") {
     CHECK_DIAGNOSTICS_EMPTY;
 
     CHECK(token != token2);
+
+    auto& text3 = "$async$and$array";
+    Token token3 = lexToken(text3);
+    CHECK(token3.kind == TokenKind::SystemIdentifier);
+    CHECK(token3.toString() == text3);
+    CHECK(token3.valueText() == text3);
+    CHECK(token3.systemName() == KnownSystemName::AsyncAndArray);
+    CHECK_DIAGNOSTICS_EMPTY;
 }
 
 TEST_CASE("Invalid escapes") {

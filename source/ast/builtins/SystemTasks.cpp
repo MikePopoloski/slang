@@ -1021,8 +1021,8 @@ void Builtins::registerSystemTasks() {
 #undef TASK
 
 #define PLA_TASK(name) addSystemSubroutine(std::make_shared<PlaTask>(name))
-    for (auto& fmt : {"$array", "$plane"}) {
-        for (auto& gate : {"$and", "$or", "$nand", "$nor"}) {
+    for (auto& gate : {"$and", "$or", "$nand", "$nor"}) {
+        for (auto& fmt : {"$array", "$plane"}) {
             for (auto& type : {"$async", "$sync"}) {
                 std::string name(type);
                 name.append(gate);

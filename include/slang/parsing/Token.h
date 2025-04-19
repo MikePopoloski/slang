@@ -9,6 +9,7 @@
 
 #include "slang/numeric/SVInt.h"
 #include "slang/numeric/Time.h"
+#include "slang/parsing/KnownSystemName.h"
 #include "slang/parsing/TokenKind.h"
 #include "slang/text/SourceLocation.h"
 #include "slang/util/SmallVector.h"
@@ -143,6 +144,8 @@ public:
     Token(BumpAllocator& alloc, TokenKind kind, std::span<Trivia const> trivia,
           std::string_view rawText, SourceLocation location, syntax::SyntaxKind directive);
     Token(BumpAllocator& alloc, TokenKind kind, std::span<Trivia const> trivia,
+          std::string_view rawText, SourceLocation location, KnownSystemName systemName);
+    Token(BumpAllocator& alloc, TokenKind kind, std::span<Trivia const> trivia,
           std::string_view rawText, SourceLocation location, logic_t bit);
     Token(BumpAllocator& alloc, TokenKind kind, std::span<Trivia const> trivia,
           std::string_view rawText, SourceLocation location, const SVInt& value);
@@ -176,6 +179,7 @@ public:
     logic_t bitValue() const;
     NumericTokenFlags numericFlags() const;
     syntax::SyntaxKind directiveKind() const;
+    KnownSystemName systemName() const;
 
     /// Returns true if this token is on the same line as the token before it.
     /// This is detected by examining the leading trivia of this token for newlines.
