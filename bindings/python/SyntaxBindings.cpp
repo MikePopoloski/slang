@@ -114,6 +114,7 @@ void registerSyntax(py::module_& m) {
     EXPOSE_ENUM(m, TriviaKind);
     EXPOSE_ENUM(m, TokenKind);
     EXPOSE_ENUM(m, SyntaxKind);
+    EXPOSE_ENUM(m, KnownSystemName);
 
     py::class_<Trivia>(m, "Trivia")
         .def(py::init<>())

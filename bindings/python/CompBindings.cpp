@@ -271,6 +271,7 @@ void registerCompilation(py::module_& m) {
     systemSub.def(py::init_alias<const std::string&, SubroutineKind>(), "name"_a, "kind"_a)
         .def_readwrite("name", &SystemSubroutine::name)
         .def_readwrite("kind", &SystemSubroutine::kind)
+        .def_readwrite("knownNameId", &SystemSubroutine::knownNameId)
         .def_readwrite("hasOutputArgs", &SystemSubroutine::hasOutputArgs)
         .def_readwrite("withClauseMode", &SystemSubroutine::withClauseMode)
         .def("allowEmptyArgument", &SystemSubroutine::allowEmptyArgument, "argIndex"_a)
