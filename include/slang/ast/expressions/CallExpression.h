@@ -82,6 +82,9 @@ public:
     /// @returns the kind of subroutine being called.
     SubroutineKind getSubroutineKind() const;
 
+    /// @returns the known system name for the subroutine, if it's a built-in subroutine.
+    parsing::KnownSystemName getKnownSystemName() const;
+
     /// @returns true if the called subroutine has output (or inout / ref) arguments.
     bool hasOutputArgs() const;
 

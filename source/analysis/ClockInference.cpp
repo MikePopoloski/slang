@@ -38,7 +38,7 @@ ClockInference::ExpansionInstance::ExpansionInstance(const AssertionExpr& expr,
 bool ClockInference::isInferredClockCall(const Expression& expr) {
     if (expr.kind == ExpressionKind::Call) {
         auto& call = expr.as<CallExpression>();
-        if (call.isSystemCall() && call.getSubroutineName() == "$inferred_clock")
+        if (call.getKnownSystemName() == parsing::KnownSystemName::InferredClock)
             return true;
     }
     return false;

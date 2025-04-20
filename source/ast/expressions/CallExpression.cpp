@@ -860,6 +860,14 @@ SubroutineKind CallExpression::getSubroutineKind() const {
     return symbol.subroutineKind;
 }
 
+parsing::KnownSystemName CallExpression::getKnownSystemName() const {
+    if (subroutine.index() == 1) {
+        auto& callInfo = std::get<1>(subroutine);
+        return callInfo.subroutine->knownNameId;
+    }
+    return parsing::KnownSystemName::Unknown;
+}
+
 bool CallExpression::hasOutputArgs() const {
     if (subroutine.index() == 1) {
         auto& callInfo = std::get<1>(subroutine);

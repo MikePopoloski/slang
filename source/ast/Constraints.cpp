@@ -458,7 +458,7 @@ static std::pair<const Symbol*, SourceRange> getConstraintPrimary(const Expressi
     auto sym = expr.getSymbolReference();
     if (expr.kind == ExpressionKind::Call) {
         auto& call = expr.template as<CallExpression>();
-        if (call.isSystemCall() && call.getSubroutineName() == "size"sv &&
+        if (call.getKnownSystemName() == parsing::KnownSystemName::ArraySize &&
             call.arguments().size() == 1) {
             auto& arg0 = *call.arguments()[0];
             return {arg0.getSymbolReference(), arg0.sourceRange};
