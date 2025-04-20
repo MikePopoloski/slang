@@ -16,7 +16,8 @@ namespace slang::ast::builtins {
 class StringLenMethod : public SimpleSystemSubroutine {
 public:
     explicit StringLenMethod(const Builtins& builtins) :
-        SimpleSystemSubroutine("len", SubroutineKind::Function, 0, {}, builtins.intType, true) {}
+        SimpleSystemSubroutine(KnownSystemName::Len, SubroutineKind::Function, 0, {},
+                               builtins.intType, true) {}
 
     ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
                        const CallExpression::SystemCallInfo&) const final {
@@ -31,7 +32,7 @@ public:
 class StringPutcMethod : public SimpleSystemSubroutine {
 public:
     explicit StringPutcMethod(const Builtins& builtins) :
-        SimpleSystemSubroutine("putc", SubroutineKind::Function, 2,
+        SimpleSystemSubroutine(KnownSystemName::Putc, SubroutineKind::Function, 2,
                                {&builtins.intType, &builtins.byteType}, builtins.voidType, true,
                                /* isFirstArgLValue */ true) {}
 
@@ -59,8 +60,8 @@ public:
 class StringGetcMethod : public SimpleSystemSubroutine {
 public:
     explicit StringGetcMethod(const Builtins& builtins) :
-        SimpleSystemSubroutine("getc", SubroutineKind::Function, 1, {&builtins.intType},
-                               builtins.byteType, true) {}
+        SimpleSystemSubroutine(KnownSystemName::Getc, SubroutineKind::Function, 1,
+                               {&builtins.intType}, builtins.byteType, true) {}
 
     ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
                        const CallExpression::SystemCallInfo&) const final {
@@ -80,8 +81,9 @@ public:
 
 class StringUpperLowerMethod : public SimpleSystemSubroutine {
 public:
-    StringUpperLowerMethod(const Builtins& builtins, const std::string& name, bool upper) :
-        SimpleSystemSubroutine(name, SubroutineKind::Function, 0, {}, builtins.stringType, true),
+    StringUpperLowerMethod(const Builtins& builtins, KnownSystemName knownNameId, bool upper) :
+        SimpleSystemSubroutine(knownNameId, SubroutineKind::Function, 0, {}, builtins.stringType,
+                               true),
         upper(upper) {}
 
     ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
@@ -104,8 +106,8 @@ private:
 
 class StringCompareMethod : public SimpleSystemSubroutine {
 public:
-    StringCompareMethod(const Builtins& builtins, const std::string& name, bool ignoreCase) :
-        SimpleSystemSubroutine(name, SubroutineKind::Function, 1, {&builtins.stringType},
+    StringCompareMethod(const Builtins& builtins, KnownSystemName knownNameId, bool ignoreCase) :
+        SimpleSystemSubroutine(knownNameId, SubroutineKind::Function, 1, {&builtins.stringType},
                                builtins.intType, true),
         ignoreCase(ignoreCase) {}
 
@@ -147,7 +149,7 @@ private:
 class StringSubstrMethod : public SimpleSystemSubroutine {
 public:
     explicit StringSubstrMethod(const Builtins& builtins) :
-        SimpleSystemSubroutine("substr", SubroutineKind::Function, 2,
+        SimpleSystemSubroutine(KnownSystemName::Substr, SubroutineKind::Function, 2,
                                {&builtins.intType, &builtins.intType}, builtins.stringType, true) {}
 
     ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
@@ -171,8 +173,9 @@ public:
 
 class StringAtoIMethod : public SimpleSystemSubroutine {
 public:
-    StringAtoIMethod(const Builtins& builtins, const std::string& name, int base) :
-        SimpleSystemSubroutine(name, SubroutineKind::Function, 0, {}, builtins.integerType, true),
+    StringAtoIMethod(const Builtins& builtins, KnownSystemName knownNameId, int base) :
+        SimpleSystemSubroutine(knownNameId, SubroutineKind::Function, 0, {}, builtins.integerType,
+                               true),
         base(base) {}
 
     ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
@@ -195,8 +198,8 @@ private:
 class StringAtoRealMethod : public SimpleSystemSubroutine {
 public:
     explicit StringAtoRealMethod(const Builtins& builtins) :
-        SimpleSystemSubroutine("atoreal", SubroutineKind::Function, 0, {}, builtins.realType,
-                               true) {}
+        SimpleSystemSubroutine(KnownSystemName::AToReal, SubroutineKind::Function, 0, {},
+                               builtins.realType, true) {}
 
     ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
                        const CallExpression::SystemCallInfo&) const final {
@@ -214,8 +217,8 @@ public:
 
 class StringItoAMethod : public SimpleSystemSubroutine {
 public:
-    StringItoAMethod(const Builtins& builtins, const std::string& name, LiteralBase base) :
-        SimpleSystemSubroutine(name, SubroutineKind::Function, 1, {&builtins.integerType},
+    StringItoAMethod(const Builtins& builtins, KnownSystemName knownNameId, LiteralBase base) :
+        SimpleSystemSubroutine(knownNameId, SubroutineKind::Function, 1, {&builtins.integerType},
                                builtins.voidType, true, /* isFirstArgLValue */ true),
         base(base) {}
 
@@ -237,8 +240,9 @@ private:
 class StringRealtoAMethod : public SimpleSystemSubroutine {
 public:
     explicit StringRealtoAMethod(const Builtins& builtins) :
-        SimpleSystemSubroutine("realtoa", SubroutineKind::Function, 1, {&builtins.realType},
-                               builtins.voidType, true, /* isFirstArgLValue */ true) {}
+        SimpleSystemSubroutine(KnownSystemName::RealToA, SubroutineKind::Function, 1,
+                               {&builtins.realType}, builtins.voidType, true,
+                               /* isFirstArgLValue */ true) {}
 
     ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
                        const CallExpression::SystemCallInfo&) const final {
@@ -253,24 +257,29 @@ public:
 };
 
 void Builtins::registerStringMethods() {
+    using parsing::KnownSystemName;
+
 #define REGISTER(kind, name, ...) addSystemMethod(kind, std::make_unique<name##Method>(__VA_ARGS__))
     REGISTER(SymbolKind::StringType, StringLen, *this);
     REGISTER(SymbolKind::StringType, StringPutc, *this);
     REGISTER(SymbolKind::StringType, StringGetc, *this);
-    REGISTER(SymbolKind::StringType, StringUpperLower, *this, "toupper", true);
-    REGISTER(SymbolKind::StringType, StringUpperLower, *this, "tolower", false);
-    REGISTER(SymbolKind::StringType, StringCompare, *this, "compare", false);
-    REGISTER(SymbolKind::StringType, StringCompare, *this, "icompare", true);
+    REGISTER(SymbolKind::StringType, StringUpperLower, *this, KnownSystemName::ToUpper, true);
+    REGISTER(SymbolKind::StringType, StringUpperLower, *this, KnownSystemName::ToLower, false);
+    REGISTER(SymbolKind::StringType, StringCompare, *this, KnownSystemName::Compare, false);
+    REGISTER(SymbolKind::StringType, StringCompare, *this, KnownSystemName::ICompare, true);
     REGISTER(SymbolKind::StringType, StringSubstr, *this);
-    REGISTER(SymbolKind::StringType, StringAtoI, *this, "atoi", 10);
-    REGISTER(SymbolKind::StringType, StringAtoI, *this, "atohex", 16);
-    REGISTER(SymbolKind::StringType, StringAtoI, *this, "atooct", 8);
-    REGISTER(SymbolKind::StringType, StringAtoI, *this, "atobin", 2);
+    REGISTER(SymbolKind::StringType, StringAtoI, *this, KnownSystemName::AToI, 10);
+    REGISTER(SymbolKind::StringType, StringAtoI, *this, KnownSystemName::AToHex, 16);
+    REGISTER(SymbolKind::StringType, StringAtoI, *this, KnownSystemName::AToOct, 8);
+    REGISTER(SymbolKind::StringType, StringAtoI, *this, KnownSystemName::AToBin, 2);
     REGISTER(SymbolKind::StringType, StringAtoReal, *this);
-    REGISTER(SymbolKind::StringType, StringItoA, *this, "itoa", LiteralBase::Decimal);
-    REGISTER(SymbolKind::StringType, StringItoA, *this, "hextoa", LiteralBase::Hex);
-    REGISTER(SymbolKind::StringType, StringItoA, *this, "octtoa", LiteralBase::Octal);
-    REGISTER(SymbolKind::StringType, StringItoA, *this, "bintoa", LiteralBase::Binary);
+    REGISTER(SymbolKind::StringType, StringItoA, *this, KnownSystemName::IToA,
+             LiteralBase::Decimal);
+    REGISTER(SymbolKind::StringType, StringItoA, *this, KnownSystemName::HexToA, LiteralBase::Hex);
+    REGISTER(SymbolKind::StringType, StringItoA, *this, KnownSystemName::OctToA,
+             LiteralBase::Octal);
+    REGISTER(SymbolKind::StringType, StringItoA, *this, KnownSystemName::BinToA,
+             LiteralBase::Binary);
     REGISTER(SymbolKind::StringType, StringRealtoA, *this);
 
 #undef REGISTER

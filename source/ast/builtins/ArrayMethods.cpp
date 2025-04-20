@@ -29,8 +29,8 @@ class ArrayReductionMethod : public SystemSubroutine {
 public:
     using Operator = function_ref<void(SVInt&, const SVInt&)>;
 
-    ArrayReductionMethod(const std::string& name, Operator op) :
-        SystemSubroutine(name, SubroutineKind::Function), op(op) {
+    ArrayReductionMethod(KnownSystemName knownNameId, Operator op) :
+        SystemSubroutine(knownNameId, SubroutineKind::Function), op(op) {
         withClauseMode = WithClauseMode::Iterator;
     }
 
@@ -115,8 +115,8 @@ private:
 
 class ArraySortMethod : public SystemSubroutine {
 public:
-    ArraySortMethod(const std::string& name, bool reversed) :
-        SystemSubroutine(name, SubroutineKind::Function), reversed(reversed) {
+    ArraySortMethod(KnownSystemName knownNameId, bool reversed) :
+        SystemSubroutine(knownNameId, SubroutineKind::Function), reversed(reversed) {
         withClauseMode = WithClauseMode::Iterator;
     }
 
@@ -215,7 +215,7 @@ private:
 
 class ArrayReverseMethod : public SystemSubroutine {
 public:
-    ArrayReverseMethod() : SystemSubroutine("reverse", SubroutineKind::Function) {}
+    ArrayReverseMethod() : SystemSubroutine(KnownSystemName::Reverse, SubroutineKind::Function) {}
 
     const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
@@ -253,8 +253,8 @@ public:
     enum Mode { All, First, Last } mode;
     bool isIndexed;
 
-    ArrayLocatorMethod(const std::string& name, Mode mode, bool isIndexed) :
-        SystemSubroutine(name, SubroutineKind::Function), mode(mode), isIndexed(isIndexed) {
+    ArrayLocatorMethod(KnownSystemName knownNameId, Mode mode, bool isIndexed) :
+        SystemSubroutine(knownNameId, SubroutineKind::Function), mode(mode), isIndexed(isIndexed) {
         withClauseMode = WithClauseMode::Iterator;
     }
 
@@ -364,8 +364,8 @@ public:
 
 class ArrayMinMaxMethod : public SystemSubroutine {
 public:
-    ArrayMinMaxMethod(const std::string& name, bool isMin) :
-        SystemSubroutine(name, SubroutineKind::Function), isMin(isMin) {
+    ArrayMinMaxMethod(KnownSystemName knownNameId, bool isMin) :
+        SystemSubroutine(knownNameId, SubroutineKind::Function), isMin(isMin) {
         withClauseMode = WithClauseMode::Iterator;
     }
 
@@ -456,8 +456,8 @@ private:
 
 class ArrayUniqueMethod : public SystemSubroutine {
 public:
-    ArrayUniqueMethod(const std::string& name, bool isIndexed) :
-        SystemSubroutine(name, SubroutineKind::Function), isIndexed(isIndexed) {
+    ArrayUniqueMethod(KnownSystemName knownNameId, bool isIndexed) :
+        SystemSubroutine(knownNameId, SubroutineKind::Function), isIndexed(isIndexed) {
         withClauseMode = WithClauseMode::Iterator;
     }
 
@@ -536,8 +536,9 @@ private:
 
 class ArraySizeMethod : public SimpleSystemSubroutine {
 public:
-    ArraySizeMethod(const Builtins& builtins, const std::string& name) :
-        SimpleSystemSubroutine(name, SubroutineKind::Function, 0, {}, builtins.intType, true) {}
+    ArraySizeMethod(const Builtins& builtins, KnownSystemName knownNameId) :
+        SimpleSystemSubroutine(knownNameId, SubroutineKind::Function, 0, {}, builtins.intType,
+                               true) {}
 
     ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
                        const CallExpression::SystemCallInfo&) const final {
@@ -552,7 +553,8 @@ public:
 class DynArrayDeleteMethod : public SimpleSystemSubroutine {
 public:
     explicit DynArrayDeleteMethod(const Builtins& builtins) :
-        SimpleSystemSubroutine("delete", SubroutineKind::Function, 0, {}, builtins.voidType, true,
+        SimpleSystemSubroutine(KnownSystemName::Delete, SubroutineKind::Function, 0, {},
+                               builtins.voidType, true,
                                /* isFirstArgLValue */ true) {}
 
     ConstantValue eval(EvalContext& context, const Args& args, SourceRange,
@@ -568,7 +570,8 @@ public:
 
 class AssocArrayDeleteMethod : public SystemSubroutine {
 public:
-    AssocArrayDeleteMethod() : SystemSubroutine("delete", SubroutineKind::Function) {}
+    AssocArrayDeleteMethod() :
+        SystemSubroutine(KnownSystemName::Delete, SubroutineKind::Function) {}
 
     const Expression& bindArgument(size_t argIndex, const ASTContext& context,
                                    const ExpressionSyntax& syntax, const Args& args) const final {
@@ -630,7 +633,8 @@ public:
 
 class AssocArrayExistsMethod : public SystemSubroutine {
 public:
-    AssocArrayExistsMethod() : SystemSubroutine("exists", SubroutineKind::Function) {}
+    AssocArrayExistsMethod() :
+        SystemSubroutine(KnownSystemName::Exists, SubroutineKind::Function) {}
 
     const Expression& bindArgument(size_t argIndex, const ASTContext& context,
                                    const ExpressionSyntax& syntax, const Args& args) const final {
@@ -677,8 +681,8 @@ public:
 
 class AssocArrayTraversalMethod : public SystemSubroutine {
 public:
-    explicit AssocArrayTraversalMethod(const std::string& name) :
-        SystemSubroutine(name, SubroutineKind::Function) {
+    explicit AssocArrayTraversalMethod(KnownSystemName knownNameId) :
+        SystemSubroutine(knownNameId, SubroutineKind::Function) {
         hasOutputArgs = true;
     }
 
@@ -724,8 +728,8 @@ public:
 
 class QueuePopMethod : public SystemSubroutine {
 public:
-    QueuePopMethod(const std::string& name, bool front) :
-        SystemSubroutine(name, SubroutineKind::Function), front(front) {}
+    QueuePopMethod(KnownSystemName knownNameId, bool front) :
+        SystemSubroutine(knownNameId, SubroutineKind::Function), front(front) {}
 
     const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
@@ -769,8 +773,8 @@ private:
 
 class QueuePushMethod : public SystemSubroutine {
 public:
-    QueuePushMethod(const std::string& name, bool front) :
-        SystemSubroutine(name, SubroutineKind::Function), front(front) {}
+    QueuePushMethod(KnownSystemName knownNameId, bool front) :
+        SystemSubroutine(knownNameId, SubroutineKind::Function), front(front) {}
 
     const Expression& bindArgument(size_t argIndex, const ASTContext& context,
                                    const ExpressionSyntax& syntax, const Args& args) const final {
@@ -824,7 +828,7 @@ private:
 
 class QueueInsertMethod : public SystemSubroutine {
 public:
-    QueueInsertMethod() : SystemSubroutine("insert", SubroutineKind::Function) {}
+    QueueInsertMethod() : SystemSubroutine(KnownSystemName::Insert, SubroutineKind::Function) {}
 
     const Expression& bindArgument(size_t argIndex, const ASTContext& context,
                                    const ExpressionSyntax& syntax, const Args& args) const final {
@@ -882,7 +886,7 @@ public:
 
 class QueueDeleteMethod : public SystemSubroutine {
 public:
-    QueueDeleteMethod() : SystemSubroutine("delete", SubroutineKind::Function) {}
+    QueueDeleteMethod() : SystemSubroutine(KnownSystemName::Delete, SubroutineKind::Function) {}
 
     const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
@@ -932,7 +936,7 @@ public:
 
 class IteratorIndexMethod : public SystemSubroutine {
 public:
-    IteratorIndexMethod() : SystemSubroutine("index", SubroutineKind::Function) {}
+    IteratorIndexMethod() : SystemSubroutine(KnownSystemName::Index, SubroutineKind::Function) {}
 
     const Type& checkArguments(const ASTContext& context, const Args& args, SourceRange range,
                                const Expression*) const final {
@@ -965,7 +969,7 @@ public:
 
 class ArrayMapMethod : public SystemSubroutine {
 public:
-    ArrayMapMethod() : SystemSubroutine("map", SubroutineKind::Function) {
+    ArrayMapMethod() : SystemSubroutine(KnownSystemName::Map, SubroutineKind::Function) {
         withClauseMode = WithClauseMode::Iterator;
     }
 
@@ -1059,49 +1063,54 @@ public:
 };
 
 void Builtins::registerArrayMethods() {
+    using parsing::KnownSystemName;
+
 #define REGISTER(kind, name, ...) addSystemMethod(kind, std::make_shared<name##Method>(__VA_ARGS__))
 
     for (auto kind : {SymbolKind::FixedSizeUnpackedArrayType, SymbolKind::DynamicArrayType,
                       SymbolKind::AssociativeArrayType, SymbolKind::QueueType}) {
-        REGISTER(kind, ArrayReduction, "or", [](auto& l, auto& r) { l |= r; });
-        REGISTER(kind, ArrayReduction, "and", [](auto& l, auto& r) { l &= r; });
-        REGISTER(kind, ArrayReduction, "xor", [](auto& l, auto& r) { l ^= r; });
-        REGISTER(kind, ArrayReduction, "sum", [](auto& l, auto& r) { l += r; });
-        REGISTER(kind, ArrayReduction, "product", [](auto& l, auto& r) { l *= r; });
+        REGISTER(kind, ArrayReduction, KnownSystemName::Or, [](auto& l, auto& r) { l |= r; });
+        REGISTER(kind, ArrayReduction, KnownSystemName::And, [](auto& l, auto& r) { l &= r; });
+        REGISTER(kind, ArrayReduction, KnownSystemName::XOr, [](auto& l, auto& r) { l ^= r; });
+        REGISTER(kind, ArrayReduction, KnownSystemName::Sum, [](auto& l, auto& r) { l += r; });
+        REGISTER(kind, ArrayReduction, KnownSystemName::Product, [](auto& l, auto& r) { l *= r; });
 
-        REGISTER(kind, ArrayLocator, "find", ArrayLocatorMethod::All, false);
-        REGISTER(kind, ArrayLocator, "find_index", ArrayLocatorMethod::All, true);
-        REGISTER(kind, ArrayLocator, "find_first", ArrayLocatorMethod::First, false);
-        REGISTER(kind, ArrayLocator, "find_first_index", ArrayLocatorMethod::First, true);
-        REGISTER(kind, ArrayLocator, "find_last", ArrayLocatorMethod::Last, false);
-        REGISTER(kind, ArrayLocator, "find_last_index", ArrayLocatorMethod::Last, true);
+        REGISTER(kind, ArrayLocator, KnownSystemName::Find, ArrayLocatorMethod::All, false);
+        REGISTER(kind, ArrayLocator, KnownSystemName::FindIndex, ArrayLocatorMethod::All, true);
+        REGISTER(kind, ArrayLocator, KnownSystemName::FindFirst, ArrayLocatorMethod::First, false);
+        REGISTER(kind, ArrayLocator, KnownSystemName::FindFirstIndex, ArrayLocatorMethod::First,
+                 true);
+        REGISTER(kind, ArrayLocator, KnownSystemName::FindLast, ArrayLocatorMethod::Last, false);
+        REGISTER(kind, ArrayLocator, KnownSystemName::FindLastIndex, ArrayLocatorMethod::Last,
+                 true);
 
-        REGISTER(kind, ArrayMinMax, "min", true);
-        REGISTER(kind, ArrayMinMax, "max", false);
+        REGISTER(kind, ArrayMinMax, KnownSystemName::Min, true);
+        REGISTER(kind, ArrayMinMax, KnownSystemName::Max, false);
 
-        REGISTER(kind, ArrayUnique, "unique", false);
-        REGISTER(kind, ArrayUnique, "unique_index", true);
+        REGISTER(kind, ArrayUnique, KnownSystemName::Unique, false);
+        REGISTER(kind, ArrayUnique, KnownSystemName::UniqueIndex, true);
 
         REGISTER(kind, ArrayMap, );
     }
 
     for (auto kind :
          {SymbolKind::DynamicArrayType, SymbolKind::AssociativeArrayType, SymbolKind::QueueType}) {
-        REGISTER(kind, ArraySize, *this, "size");
+        REGISTER(kind, ArraySize, *this, KnownSystemName::ArraySize);
     }
 
     for (auto kind : {SymbolKind::FixedSizeUnpackedArrayType, SymbolKind::DynamicArrayType,
                       SymbolKind::QueueType}) {
-        REGISTER(kind, ArraySort, "sort", false);
-        REGISTER(kind, ArraySort, "rsort", true);
+        REGISTER(kind, ArraySort, KnownSystemName::Sort, false);
+        REGISTER(kind, ArraySort, KnownSystemName::Rsort, true);
         REGISTER(kind, ArrayReverse, );
 
-        addSystemMethod(kind, std::make_shared<NonConstantFunction>(
-                                  "shuffle", voidType, 0, std::vector<const Type*>{}, true));
+        addSystemMethod(kind,
+                        std::make_shared<NonConstantFunction>(KnownSystemName::Shuffle, voidType, 0,
+                                                              std::vector<const Type*>{}, true));
     }
 
     // Associative arrays also alias "size" to "num" for some reason.
-    REGISTER(SymbolKind::AssociativeArrayType, ArraySize, *this, "num");
+    REGISTER(SymbolKind::AssociativeArrayType, ArraySize, *this, KnownSystemName::Num);
 
     // "delete" methods
     REGISTER(SymbolKind::DynamicArrayType, DynArrayDelete, *this);
@@ -1110,16 +1119,16 @@ void Builtins::registerArrayMethods() {
 
     // Associative array methods.
     REGISTER(SymbolKind::AssociativeArrayType, AssocArrayExists, );
-    REGISTER(SymbolKind::AssociativeArrayType, AssocArrayTraversal, "first");
-    REGISTER(SymbolKind::AssociativeArrayType, AssocArrayTraversal, "last");
-    REGISTER(SymbolKind::AssociativeArrayType, AssocArrayTraversal, "next");
-    REGISTER(SymbolKind::AssociativeArrayType, AssocArrayTraversal, "prev");
+    REGISTER(SymbolKind::AssociativeArrayType, AssocArrayTraversal, KnownSystemName::First);
+    REGISTER(SymbolKind::AssociativeArrayType, AssocArrayTraversal, KnownSystemName::Last);
+    REGISTER(SymbolKind::AssociativeArrayType, AssocArrayTraversal, KnownSystemName::Next);
+    REGISTER(SymbolKind::AssociativeArrayType, AssocArrayTraversal, KnownSystemName::Prev);
 
     // Queue methods
-    REGISTER(SymbolKind::QueueType, QueuePop, "pop_front", true);
-    REGISTER(SymbolKind::QueueType, QueuePop, "pop_back", false);
-    REGISTER(SymbolKind::QueueType, QueuePush, "push_front", true);
-    REGISTER(SymbolKind::QueueType, QueuePush, "push_back", false);
+    REGISTER(SymbolKind::QueueType, QueuePop, KnownSystemName::PopFront, true);
+    REGISTER(SymbolKind::QueueType, QueuePop, KnownSystemName::PopBack, false);
+    REGISTER(SymbolKind::QueueType, QueuePush, KnownSystemName::PushFront, true);
+    REGISTER(SymbolKind::QueueType, QueuePush, KnownSystemName::PushBack, false);
     REGISTER(SymbolKind::QueueType, QueueInsert, );
 
     // Iterator methods

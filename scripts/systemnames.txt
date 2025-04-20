@@ -252,6 +252,7 @@ exists Exists
 insert Insert
 index Index
 map Map
+size ArraySize
 or Or
 and And
 xor XOr
@@ -298,3 +299,5 @@ hextoa HexToA
 octtoa OctToA
 bintoa BinToA
 realtoa RealToA
+rand_mode RandMode
+constraint_mode ConstraintMode

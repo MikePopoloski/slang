@@ -9,6 +9,7 @@
 
 #include "slang/ast/SemanticFacts.h"
 #include "slang/ast/expressions/CallExpression.h"
+#include "slang/parsing/KnownSystemName.h"
 #include "slang/util/Util.h"
 
 namespace slang::ast {
@@ -25,15 +26,20 @@ class Type;
 /// via name lookup.
 class SLANG_EXPORT SystemSubroutine {
 public:
+    using KnownSystemName = parsing::KnownSystemName;
+
     virtual ~SystemSubroutine() = default;
 
     using Args = std::span<const Expression* const>;
 
-    /// The name of the subroutine (including the leading $).
+    /// The name of the subroutine (including the leading $, if applicable).
     std::string name;
 
     /// The kind of subroutine (task or function).
     SubroutineKind kind;
+
+    /// The KnownSystemName enumeration value for this subroutine, if this is a built-in.
+    KnownSystemName knownNameId = KnownSystemName::Unknown;
 
     /// True if the subroutine has output (or ref / inout) args, and false otherwise.
     bool hasOutputArgs = false;
@@ -95,6 +101,12 @@ protected:
     /// Constructs a new system subroutine instance.
     SystemSubroutine(const std::string& name, SubroutineKind kind) : name(name), kind(kind) {}
 
+    /// Constructs a new system subroutine instance.
+    SystemSubroutine(KnownSystemName knownNameId, SubroutineKind kind) :
+        name(toString(knownNameId)), kind(kind), knownNameId(knownNameId) {
+        SLANG_ASSERT(knownNameId != KnownSystemName::Unknown);
+    }
+
     /// @returns a string that says "task" or "function" depending on the kind
     /// of subroutine this is.
     std::string_view kindStr() const;
@@ -141,6 +153,14 @@ protected:
         SLANG_ASSERT(requiredArgs <= argTypes.size());
     }
 
+    SimpleSystemSubroutine(KnownSystemName knownNameId, SubroutineKind kind, size_t requiredArgs,
+                           const std::vector<const Type*>& argTypes, const Type& returnType,
+                           bool isMethod, bool isFirstArgLValue = false) :
+        SystemSubroutine(knownNameId, kind), argTypes(argTypes), returnType(&returnType),
+        requiredArgs(requiredArgs), isMethod(isMethod), isFirstArgLValue(isFirstArgLValue) {
+        SLANG_ASSERT(requiredArgs <= argTypes.size());
+    }
+
 private:
     std::vector<const Type*> argTypes;
     const Type* returnType;
@@ -150,13 +170,19 @@ private:
 };
 
 /// An implementation of the SystemSubroutine interface that is also
-/// a "simple" subroutine that is also not allowed in constant contexts.
+/// a "simple" subroutine and is not allowed in constant contexts.
 class SLANG_EXPORT NonConstantFunction : public SimpleSystemSubroutine {
 public:
     NonConstantFunction(const std::string& name, const Type& returnType, size_t requiredArgs = 0,
                         const std::vector<const Type*>& argTypes = {}, bool isMethod = false) :
         SimpleSystemSubroutine(name, SubroutineKind::Function, requiredArgs, argTypes, returnType,
                                isMethod) {}
+
+    NonConstantFunction(KnownSystemName knownNameId, const Type& returnType,
+                        size_t requiredArgs = 0, const std::vector<const Type*>& argTypes = {},
+                        bool isMethod = false) :
+        SimpleSystemSubroutine(knownNameId, SubroutineKind::Function, requiredArgs, argTypes,
+                               returnType, isMethod) {}
 
     ConstantValue eval(EvalContext& context, const Args&, SourceRange range,
                        const CallExpression::SystemCallInfo&) const final {
