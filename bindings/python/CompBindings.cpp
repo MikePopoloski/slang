@@ -91,7 +91,9 @@ void registerCompilation(py::module_& m) {
              "subroutine"_a)
         .def("addSystemMethod", &Compilation::addSystemMethod, py::keep_alive<1, 3>(), "typeKind"_a,
              "method"_a)
-        .def("getSystemSubroutine", &Compilation::getSystemSubroutine, byrefint, "name"_a)
+        .def("getSystemSubroutine",
+             py::overload_cast<std::string_view>(&Compilation::getSystemSubroutine, py::const_),
+             byrefint, "name"_a)
         .def("getSystemMethod", &Compilation::getSystemMethod, byrefint, "typeKind"_a, "name"_a)
         .def("parseName", &Compilation::parseName, byrefint, "name"_a)
         .def("tryParseName", &Compilation::tryParseName, byrefint, "name"_a, "diags"_a)

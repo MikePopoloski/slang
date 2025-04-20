@@ -465,6 +465,10 @@ public:
     /// registered.
     const SystemSubroutine* getSystemSubroutine(std::string_view name) const;
 
+    /// Gets a system subroutine with the given KnownSystemName, or nullptr if there is no such
+    /// subroutine registered.
+    const SystemSubroutine* getSystemSubroutine(parsing::KnownSystemName knownNameId) const;
+
     /// Gets a system method for the specified type with the given name, or nullptr if there
     /// is no such method registered.
     const SystemSubroutine* getSystemMethod(SymbolKind typeKind, std::string_view name) const;
@@ -888,8 +892,8 @@ private:
     // which is why they can't share the definitions name table.
     flat_hash_map<std::string_view, const PackageSymbol*> packageMap;
 
-    // The name map for system subroutines.
-    flat_hash_map<std::string_view, std::shared_ptr<SystemSubroutine>> subroutineMap;
+    // A list of known system subroutines, indexed via KnownSystemName values.
+    std::vector<std::shared_ptr<SystemSubroutine>> systemSubroutines;
 
     // The name map for system methods.
     flat_hash_map<std::tuple<std::string_view, SymbolKind>, std::shared_ptr<SystemSubroutine>>
@@ -1043,6 +1047,11 @@ private:
     // A map of net aliases to check for duplicates. For any given alias the key is
     // whichever symbol has the lower address in memory.
     flat_hash_map<const Symbol*, AliasIntervalMap> netAliases;
+
+    // The name map for system subroutines.
+    // This is down here because it should really only be used for custom user-defined
+    // system subroutines via the API.
+    flat_hash_map<std::string_view, std::shared_ptr<SystemSubroutine>> subroutineNameMap;
 
     // The built-in std package.
     const PackageSymbol* stdPkg = nullptr;

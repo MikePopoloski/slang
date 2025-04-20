@@ -1048,8 +1048,15 @@ void Lookup::name(const NameSyntax& syntax, const ASTContext& context, bitmask<L
             // If this is a system name, look up directly in the compilation.
             Token nameToken = syntax.as<SystemNameSyntax>().systemIdentifier;
             result.found = nullptr;
-            result.systemSubroutine = scope.getCompilation().getSystemSubroutine(
-                nameToken.valueText());
+
+            if (auto knownNameId = nameToken.systemName();
+                knownNameId != KnownSystemName::Unknown) {
+                result.systemSubroutine = scope.getCompilation().getSystemSubroutine(knownNameId);
+            }
+            else {
+                result.systemSubroutine = scope.getCompilation().getSystemSubroutine(
+                    nameToken.valueText());
+            }
 
             if (!result.systemSubroutine) {
                 result.addDiag(scope, diag::UnknownSystemName, nameToken.range())

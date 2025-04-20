@@ -137,7 +137,8 @@ Compilation::Compilation(const Bag& options, const SourceLibrary* defaultLib) :
     root = std::make_unique<RootSymbol>(*this);
 
     // Copy in all built-in system tasks, functions, and methods.
-    subroutineMap = bi.subroutineMap;
+    systemSubroutines = bi.systemSubroutines;
+    subroutineNameMap = bi.subroutineNameMap;
     methodMap = bi.methodMap;
 
     // Register the built-in std package.
@@ -1033,20 +1034,30 @@ void Compilation::addGateType(const PrimitiveSymbol& prim) {
 
 void Compilation::addSystemSubroutine(const std::shared_ptr<SystemSubroutine>& subroutine) {
     SLANG_ASSERT(!isFrozen());
-    subroutineMap.emplace(subroutine->name, subroutine);
+    SLANG_ASSERT(!subroutine->name.empty());
+    SLANG_ASSERT(subroutine->knownNameId == KnownSystemName::Unknown);
+    subroutineNameMap.emplace(subroutine->name, subroutine);
 }
 
 void Compilation::addSystemMethod(SymbolKind typeKind,
                                   const std::shared_ptr<SystemSubroutine>& method) {
     SLANG_ASSERT(!isFrozen());
+    SLANG_ASSERT(!method->name.empty());
+    SLANG_ASSERT(method->knownNameId == KnownSystemName::Unknown);
     methodMap.emplace(std::make_tuple(std::string_view(method->name), typeKind), method);
 }
 
 const SystemSubroutine* Compilation::getSystemSubroutine(std::string_view name) const {
-    auto it = subroutineMap.find(name);
-    if (it == subroutineMap.end())
+    auto it = subroutineNameMap.find(name);
+    if (it == subroutineNameMap.end())
         return nullptr;
     return it->second.get();
+}
+
+const SystemSubroutine* Compilation::getSystemSubroutine(
+    parsing::KnownSystemName knownNameId) const {
+
+    return systemSubroutines[(size_t)knownNameId].get();
 }
 
 const SystemSubroutine* Compilation::getSystemMethod(SymbolKind typeKind,

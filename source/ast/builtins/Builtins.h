@@ -47,13 +47,16 @@ public:
     PropertyType propertyType;
     ErrorType errorType;
 
-    flat_hash_map<std::string_view, std::shared_ptr<SystemSubroutine>> subroutineMap;
+    std::vector<std::shared_ptr<SystemSubroutine>> systemSubroutines;
+    flat_hash_map<std::string_view, std::shared_ptr<SystemSubroutine>> subroutineNameMap;
     flat_hash_map<std::tuple<std::string_view, SymbolKind>, std::shared_ptr<SystemSubroutine>>
         methodMap;
 
     static Builtins Instance;
 
     Builtins() {
+        systemSubroutines.resize(parsing::KnownSystemName_traits::values.size());
+
         registerArrayMethods();
         registerConversionFuncs();
         registerCoverageFuncs();
@@ -67,6 +70,8 @@ public:
     }
 
 private:
+    using KnownSystemName = parsing::KnownSystemName;
+
     void registerArrayMethods();
     void registerConversionFuncs();
     void registerCoverageFuncs();
@@ -79,7 +84,10 @@ private:
     void registerSystemTasks();
 
     void addSystemSubroutine(std::shared_ptr<SystemSubroutine> subroutine) {
-        subroutineMap.emplace(subroutine->name, std::move(subroutine));
+        SLANG_ASSERT(subroutine->knownNameId != KnownSystemName::Unknown);
+        SLANG_ASSERT(!systemSubroutines[(size_t)subroutine->knownNameId]);
+        subroutineNameMap.emplace(subroutine->name, subroutine);
+        systemSubroutines[(size_t)subroutine->knownNameId] = std::move(subroutine);
     }
 
     void addSystemMethod(SymbolKind typeKind, std::shared_ptr<SystemSubroutine> method) {
