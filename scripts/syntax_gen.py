@@ -1174,6 +1174,7 @@ std::string_view toString(KnownSystemName ksn) {
 
     outf.write(
         """    }
+    return "";
 }
 
 const static flat_hash_map<std::string_view, KnownSystemName> ksnTable = {
