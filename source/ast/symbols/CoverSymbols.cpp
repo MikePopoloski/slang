@@ -217,7 +217,7 @@ const CovergroupType& CovergroupType::fromSyntax(const Scope& scope,
     // is used to implicitly declare a property of the covergroup type.
     bool inClass = scope.asSymbol().kind == SymbolKind::ClassType;
     std::string_view name = inClass ? ""sv : syntax.name.valueText();
-    
+
     auto& comp = scope.getCompilation();
     auto body = comp.emplace<CovergroupBodySymbol>(comp, syntax.name.location());
     auto result = comp.emplace<CovergroupType>(comp, name, syntax.name.location(), *body);

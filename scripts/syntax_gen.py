@@ -3,6 +3,7 @@
 #
 # SPDX-FileCopyrightText: Michael Popoloski
 # SPDX-License-Identifier: MIT
+
 import argparse
 import math
 import os
