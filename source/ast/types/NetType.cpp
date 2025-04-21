@@ -135,7 +135,7 @@ const SubroutineSymbol* NetType::getResolutionFunction() const {
 }
 
 void NetType::serializeTo(ASTSerializer& serializer) const {
-    if (!serializer.getMinimalInfoEnabled())
+    if (serializer.getIncludeTypes())
         serializer.write("type", getDataType());
 }
 

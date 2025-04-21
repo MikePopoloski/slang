@@ -38,12 +38,13 @@ public:
     /// should be included in the JSON output.
     void setIncludeAddresses(bool set) { includeAddrs = set; }
 
-    /// Sets a flag that ensures only the information needed to validate the astPrinter is given.
-    /// the printing of types, targets is disabled
-    void enableMinimalInfo(bool set) { minimalInfo = set; }
+    /// Sets a flag that indicates whether the types of the AST objects
+    /// should be included in the JSON output.
+    void setIncludeTypes(bool set) { includeTypes = set; }
 
-    bool getMinimalInfoEnabled() { return minimalInfo; }
-
+    /// Returns the internal flag that indicates whether the types of the AST
+    /// objects should be included in the JSON output.
+    bool getIncludeTypes() const { return includeTypes; }
 
     /// Sets a flag that indicates whether source line and file
     /// information should be included in the JSON output.
@@ -180,7 +181,7 @@ private:
     Compilation& compilation;
     JsonWriter& writer;
     bool includeAddrs = true;
-    bool minimalInfo = false;
+    bool includeTypes = true;
     bool includeSourceInfo = false;
 };
 

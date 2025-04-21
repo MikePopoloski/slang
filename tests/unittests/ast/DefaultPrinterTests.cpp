@@ -20,7 +20,7 @@ std::tuple<std::string, const slang::ast::RootSymbol&> getAst(
 
     jsonPrinter.setIncludeAddresses(false);
     jsonPrinter.setIncludeSourceInfo(false);
-    jsonPrinter.enableMinimalInfo(true);
+    jsonPrinter.setIncludeTypes(false);
 
     jsonPrinter.startObject();
     jsonPrinter.serialize(rootAst);
@@ -58,6 +58,7 @@ bool isEqual(std::shared_ptr<slang::syntax::SyntaxTree> tree, std::string name_t
         out << new_ast_json;
         out << "\nnew code:";
         out << new_code << "\n";
+        out << "Test result:" << (old_ast_json == new_ast_json) << '\n';
         out.close();
     }
     return old_ast_json == new_ast_json;
@@ -526,7 +527,7 @@ TEST_CASE("all.sv 426_end") {
             }
 
         endgroup
-    endclass    
+    endclass
     )";
     CHECK(isEqual(code, "426_end"));
 }
