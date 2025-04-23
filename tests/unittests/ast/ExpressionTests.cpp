@@ -3937,3 +3937,19 @@ endmodule
     CHECK(diags[0].code == diag::NotAValue);
     CHECK(diags[1].code == diag::NotAValue);
 }
+
+TEST_CASE("Assignments in timing controls disallowed") {
+    auto tree = SyntaxTree::fromText(R"(
+module m;
+    int a, b;
+    always @((a = b)) begin end
+endmodule
+)");
+
+    Compilation compilation;
+    compilation.addSyntaxTree(tree);
+
+    auto& diags = compilation.getAllDiagnostics();
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::AssignmentNotAllowed);
+}
