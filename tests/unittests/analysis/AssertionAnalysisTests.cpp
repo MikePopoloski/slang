@@ -1929,6 +1929,8 @@ endmodule
     AnalysisManager analysisManager;
 
     auto [diags, design] = analyze(text, compilation, analysisManager);
-    REQUIRE(diags.size() == 1);
+    REQUIRE(diags.size() == 3);
     CHECK(diags[0].code == diag::AssertionNoClock);
+    CHECK(diags[1].code == diag::AssertionNoClock);
+    CHECK(diags[2].code == diag::AssertionNoClock);
 }

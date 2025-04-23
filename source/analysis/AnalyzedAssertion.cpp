@@ -93,18 +93,19 @@ struct ClockVisitor {
     };
 
     AnalysisContext& context;
-    const AnalyzedProcedure& procedure;
+    const AnalyzedProcedure* procedure;
     const Symbol& parentSymbol;
     SmallVector<ClockInference::ExpansionInstance> expansionStack;
     bool hasInferredClockCall = false;
     bool bad = false;
 
-    ClockVisitor(AnalysisContext& context, const AnalyzedProcedure& procedure) :
-        context(context), procedure(procedure), parentSymbol(*procedure.analyzedSymbol) {
+    ClockVisitor(AnalysisContext& context, const AnalyzedProcedure* procedure,
+                 const Symbol& parentSymbol) :
+        context(context), procedure(procedure), parentSymbol(parentSymbol) {
 
         // If we're in a checker with an inferred clock arg, we will just assume
         // that we might have an inferred clock call somewhere.
-        auto scope = procedure.analyzedSymbol->getParentScope();
+        auto scope = parentSymbol.getParentScope();
         if (scope && scope->asSymbol().kind == SymbolKind::CheckerInstanceBody)
             hasInferredClockCall = true;
     }
@@ -224,7 +225,7 @@ struct ClockVisitor {
         auto clocking = &expr.clocking;
         if (hasInferredClockCall) {
             auto result = ClockInference::expand(context, parentSymbol, *clocking, expansionStack,
-                                                 &procedure);
+                                                 procedure);
             clocking = result.clock;
             if (result.diag) {
                 bad = true;
@@ -407,7 +408,7 @@ AnalyzedAssertion::AnalyzedAssertion(AnalysisContext& context, const TimingContr
             checkerInstance->as<CheckerInstanceSymbol>().body, &procedure);
     }
     else {
-        ClockVisitor visitor(context, procedure);
+        ClockVisitor visitor(context, &procedure, *procedure.analyzedSymbol);
 
         auto& propSpec = stmt.as<ConcurrentAssertionStatement>().propertySpec;
         auto result = propSpec.visit(visitor, contextualClock, VisitFlags::None);
@@ -430,8 +431,9 @@ AnalyzedAssertion::AnalyzedAssertion(AnalysisContext& context, const TimingContr
 }
 
 AnalyzedAssertion::AnalyzedAssertion(AnalysisContext& context, const TimingControl* contextualClock,
-                                     const AnalyzedProcedure& procedure, const Expression& expr) {
-    ClockVisitor visitor(context, procedure);
+                                     const AnalyzedProcedure* procedure,
+                                     const ast::Symbol& parentSymbol, const Expression& expr) {
+    ClockVisitor visitor(context, procedure, parentSymbol);
     visitor.visit(expr.as<AssertionInstanceExpression>(), contextualClock, VisitFlags::None);
 }
 

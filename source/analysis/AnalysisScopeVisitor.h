@@ -39,17 +39,30 @@ struct NonProceduralExprVisitor {
             if (ClockInference::isSampledValueFuncCall(expr)) {
                 // If we don't have a default clocking active in this scope then
                 // we should check the call to be sure it has an explicit clock provided.
-                auto scope = containingSymbol.getParentScope();
-                SLANG_ASSERT(scope);
-
-                if (scope->getCompilation().getDefaultClocking(*scope) == nullptr)
+                if (getDefaultClocking() == nullptr)
                     ClockInference::checkSampledValueFuncs(context, containingSymbol, expr);
             }
+        }
+        else if constexpr (std::is_same_v<T, AssertionInstanceExpression>) {
+            // We might want to find a place to store these analyzed assertions created in
+            // non-procedural contexts, but for now it's enough to make sure they're valid.
+            AnalyzedAssertion(context, getDefaultClocking(), nullptr, containingSymbol, expr);
         }
 
         if constexpr (HasVisitExprs<T, NonProceduralExprVisitor>) {
             expr.visitExprs(*this);
         }
+    }
+
+private:
+    const TimingControl* getDefaultClocking() const {
+        auto scope = containingSymbol.getParentScope();
+        SLANG_ASSERT(scope);
+
+        if (auto defClk = scope->getCompilation().getDefaultClocking(*scope))
+            return &defClk->as<ClockingBlockSymbol>().getEvent();
+
+        return nullptr;
     }
 };
 

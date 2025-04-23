@@ -38,7 +38,8 @@ public:
 
     /// Constructs a new AnalyzedAssertion object.
     AnalyzedAssertion(AnalysisContext& context, const ast::TimingControl* contextualClock,
-                      const AnalyzedProcedure& procedure, const ast::Expression& expr);
+                      const AnalyzedProcedure* procedure, const ast::Symbol& parentSymbol,
+                      const ast::Expression& expr);
 };
 
 } // namespace slang::analysis

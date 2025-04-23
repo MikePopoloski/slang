@@ -102,7 +102,7 @@ AnalyzedProcedure::AnalyzedProcedure(AnalysisContext& context, const Symbol& ana
             }
             else {
                 auto& expr = *std::get<const Expression*>(var);
-                assertions.emplace_back(context, inferredClock, *this, expr);
+                assertions.emplace_back(context, inferredClock, this, analyzedSymbol, expr);
             }
         }
 
