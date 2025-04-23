@@ -15,6 +15,7 @@
 namespace slang::analysis {
 
 using namespace ast;
+using parsing::KnownSystemName;
 
 ClockInference::ExpansionInstance::ExpansionInstance(const AssertionExpr& expr,
                                                      const TimingControl* clock) :
@@ -38,6 +39,16 @@ bool ClockInference::isInferredClockCall(const Expression& expr) {
         if (call.getKnownSystemName() == parsing::KnownSystemName::InferredClock)
             return true;
     }
+    return false;
+}
+
+static const flat_hash_set<KnownSystemName> SampleValueFuncNames = {
+    KnownSystemName::Rose, KnownSystemName::Fell, KnownSystemName::Stable, KnownSystemName::Changed,
+    KnownSystemName::Past};
+
+bool ClockInference::isSampledValueFuncCall(const Expression& expr) {
+    if (expr.kind == ExpressionKind::Call)
+        return SampleValueFuncNames.contains(expr.as<CallExpression>().getKnownSystemName());
     return false;
 }
 
@@ -119,8 +130,6 @@ ClockInference::InferredClockResult ClockInference::expand(
 }
 
 struct SampledValueFuncVisitor {
-    using KnownSystemName = parsing::KnownSystemName;
-
     AnalysisContext& context;
     const Symbol& parentSymbol;
 
@@ -130,23 +139,21 @@ struct SampledValueFuncVisitor {
     template<typename T>
     void visit(const T& expr) {
         if constexpr (std::is_base_of_v<Expression, T>) {
-            if (expr.kind == ExpressionKind::Call) {
+            if (ClockInference::isSampledValueFuncCall(expr)) {
                 auto& call = expr.template as<CallExpression>();
-                if (SampleValueFuncNames.contains(call.getKnownSystemName())) {
-                    bool hasClock;
-                    if (call.getKnownSystemName() == KnownSystemName::Past) {
-                        hasClock = call.arguments().size() == 4 &&
-                                   call.arguments()[3]->kind != ExpressionKind::EmptyArgument;
-                    }
-                    else {
-                        hasClock = call.arguments().size() == 2 &&
-                                   call.arguments()[1]->kind != ExpressionKind::EmptyArgument;
-                    }
+                bool hasClock;
+                if (call.getKnownSystemName() == KnownSystemName::Past) {
+                    hasClock = call.arguments().size() == 4 &&
+                               call.arguments()[3]->kind != ExpressionKind::EmptyArgument;
+                }
+                else {
+                    hasClock = call.arguments().size() == 2 &&
+                               call.arguments()[1]->kind != ExpressionKind::EmptyArgument;
+                }
 
-                    if (!hasClock) {
-                        context.addDiag(parentSymbol, diag::SampledValueFuncClock, call.sourceRange)
-                            << call.getSubroutineName();
-                    }
+                if (!hasClock) {
+                    context.addDiag(parentSymbol, diag::SampledValueFuncClock, call.sourceRange)
+                        << call.getSubroutineName();
                 }
             }
             else if constexpr (HasVisitExprs<T, SampledValueFuncVisitor>) {
@@ -154,10 +161,6 @@ struct SampledValueFuncVisitor {
             }
         }
     }
-
-    static inline const flat_hash_set<KnownSystemName> SampleValueFuncNames = {
-        KnownSystemName::Rose, KnownSystemName::Fell, KnownSystemName::Stable,
-        KnownSystemName::Changed, KnownSystemName::Past};
 };
 
 void ClockInference::checkSampledValueFuncs(AnalysisContext& context, const Symbol& parentSymbol,

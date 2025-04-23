@@ -36,6 +36,10 @@ public:
     /// $inferred_clock system function.
     static bool isInferredClockCall(const ast::Expression& expr);
 
+    /// Helper method that returns true if the given expression is a call to
+    /// one of the sampled value system functions.
+    static bool isSampledValueFuncCall(const ast::Expression& expr);
+
     struct InferredClockResult {
         not_null<const ast::TimingControl*> clock;
         Diagnostic* diag = nullptr;

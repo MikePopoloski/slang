@@ -297,14 +297,15 @@ endmodule
     AnalysisManager analysisManager;
 
     auto [diags, design] = analyze(text, compilation, analysisManager);
-    REQUIRE(diags.size() == 7);
-    CHECK(diags[0].code == diag::AssertionNoClock);
+    REQUIRE(diags.size() == 8);
+    CHECK(diags[0].code == diag::SampledValueFuncClock);
     CHECK(diags[1].code == diag::AssertionNoClock);
-    CHECK(diags[2].code == diag::NoUniqueClock);
-    CHECK(diags[3].code == diag::AssertionNoClock);
+    CHECK(diags[2].code == diag::AssertionNoClock);
+    CHECK(diags[3].code == diag::NoUniqueClock);
     CHECK(diags[4].code == diag::AssertionNoClock);
     CHECK(diags[5].code == diag::AssertionNoClock);
     CHECK(diags[6].code == diag::AssertionNoClock);
+    CHECK(diags[7].code == diag::AssertionNoClock);
 }
 
 TEST_CASE("Assertions clock resolution rules with clocking blocks") {
@@ -693,8 +694,9 @@ endmodule // c10
     AnalysisManager analysisManager;
 
     auto [diags, design] = analyze(text, compilation, analysisManager);
-    REQUIRE(diags.size() == 1);
-    CHECK(diags[0].code == diag::AssertionNoClock);
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::SampledValueFuncClock);
+    CHECK(diags[1].code == diag::AssertionNoClock);
 }
 
 TEST_CASE("Clock resolution tests 6") {
@@ -1044,7 +1046,7 @@ endmodule
 
 module mc_07;
    bit clk;
-   clocking PCLK @(posedge clk);
+   default clocking PCLK @(posedge clk);
    endclocking
 
    logic a, b;
@@ -1104,7 +1106,8 @@ endmodule
     AnalysisManager analysisManager;
 
     auto [diags, design] = analyze(text, compilation, analysisManager);
-    CHECK_DIAGS_EMPTY;
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::SampledValueFuncClock);
 }
 
 TEST_CASE("Clock resolution tests 12") {
@@ -1857,6 +1860,24 @@ TEST_CASE("Sampled value clock resolution") {
 module m;
     logic a;
     assert property (disable iff ($past(a)) @($rose(a)) a);
+
+    logic clk, clk2;
+    logic x, y;
+    always @(posedge clk) begin
+        @(negedge clk2);
+        x = $past(y, 5);
+    end
+endmodule
+
+module n;
+    logic clk, clk2;
+    default clocking @clk; endclocking
+
+    logic x, y;
+    always @(posedge clk) begin
+        @(negedge clk2);
+        x = $past(y, 5);
+    end
 endmodule
 )";
 
@@ -1864,7 +1885,8 @@ endmodule
     AnalysisManager analysisManager;
 
     auto [diags, design] = analyze(text, compilation, analysisManager);
-    REQUIRE(diags.size() == 2);
+    REQUIRE(diags.size() == 3);
     CHECK(diags[0].code == diag::SampledValueFuncClock);
     CHECK(diags[1].code == diag::SampledValueFuncClock);
+    CHECK(diags[2].code == diag::SampledValueFuncClock);
 }

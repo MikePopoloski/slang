@@ -60,6 +60,11 @@ public:
         return concurrentAssertions;
     }
 
+    /// Gets all of the sampled value system calls in the procedure.
+    std::span<const CallExpression* const> getSampledValueCalls() const {
+        return sampledValueCalls;
+    }
+
     /// Determines whether the given symbol is referenced anywhere in
     /// the procedure, either as an lvalue or an rvalue.
     bool isReferenced(const ValueSymbol& symbol) const {
@@ -206,6 +211,9 @@ private:
     // All concurrent assertions in the procedure.
     SmallVector<const Statement*> concurrentAssertions;
 
+    // Sampled value system calls made in the procedure.
+    SmallVector<const CallExpression*> sampledValueCalls;
+
     [[nodiscard]] auto saveLValueFlag() {
         auto guard = ScopeGuard([this, savedLVal = isLValue] { isLValue = savedLVal; });
         isLValue = false;
@@ -241,6 +249,7 @@ private:
     }
 
     void handle(const AssignmentExpression& expr);
+    void handle(const CallExpression& expr);
     void handle(const ExpressionStatement& stmt);
     void handle(const ConcurrentAssertionStatement& stmt);
     void handle(const ProceduralCheckerStatement& stmt);

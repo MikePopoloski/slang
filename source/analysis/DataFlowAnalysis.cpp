@@ -117,6 +117,15 @@ void DataFlowAnalysis::handle(const AssignmentExpression& expr) {
         visit(expr.right());
 }
 
+void DataFlowAnalysis::handle(const CallExpression& expr) {
+    visitExpr(expr);
+
+    // If this is a call to a sampled value function, keep track of
+    // it so that we can later verify that it has a clocking event.
+    if (ClockInference::isSampledValueFuncCall(expr))
+        sampledValueCalls.push_back(&expr);
+}
+
 void DataFlowAnalysis::handle(const ExpressionStatement& stmt) {
     visitStmt(stmt);
 
