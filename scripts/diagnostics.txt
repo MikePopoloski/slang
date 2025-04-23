@@ -1149,6 +1149,7 @@ error DifferentClockInClockingBlock "cannot instantiate '{}' in clocking block b
 error NoUniqueClock "assertion expression does not have a unique leading clock"
 error NoInferredClock "no inferred clock in this context"
 error SampledValueFuncClock "could not determine clocking event for '{}'"
+error SeqMethodEndClock "the ending clock of the sequence to which '{}' is applied differs from the clock of the calling context"
 note NoteRequiredHere "required here"
 note NoteClockHere "clock here"
 warning unused-def UnusedDefinition "{} definition is unused"

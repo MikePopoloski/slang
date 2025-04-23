@@ -76,14 +76,16 @@ struct ClockVisitor {
     using VF = VisitFlags;
     using Clock = const TimingControl*;
     using ClockSet = SmallVector<Clock, 2>;
+    using KnownSystemName = parsing::KnownSystemName;
 
     struct VisitResult {
         ClockSet clocks;
+        Clock endClock = nullptr;
         bool isMulticlockedSeq = false;
 
         VisitResult() = default;
-        VisitResult(Clock clock, bool isMulticlockedSeq) :
-            clocks{clock}, isMulticlockedSeq(isMulticlockedSeq) {}
+        VisitResult(Clock clock, bool isMulticlockedSeq, Clock endClock) :
+            clocks{clock}, endClock(endClock), isMulticlockedSeq(isMulticlockedSeq) {}
 
         static VisitResult unionWith(const VisitResult& left, const VisitResult& right) {
             VisitResult result;
@@ -91,6 +93,47 @@ struct ClockVisitor {
             result.clocks.append_range(left.clocks);
             result.clocks.append_range(right.clocks);
             return result;
+        }
+    };
+
+    struct SeqExprVisitor {
+        ClockVisitor& parent;
+        Clock outerClock;
+        bitmask<VF> flags;
+        Clock lastEndClock = nullptr;
+
+        SeqExprVisitor(ClockVisitor& parent, Clock outerClock, bitmask<VF> flags) :
+            parent(parent), outerClock(outerClock), flags(flags) {}
+
+        template<typename T>
+        void visit(const T& expr) {
+            if constexpr (std::is_same_v<T, AssertionInstanceExpression>) {
+                auto result = parent.visit(expr, outerClock, flags);
+                if (!result.clocks.empty()) {
+                    lastEndClock = result.endClock == nullptr ? result.clocks.back()
+                                                              : result.endClock;
+                }
+            }
+
+            if constexpr (HasVisitExprs<T, SeqExprVisitor>) {
+                expr.visitExprs(*this);
+                if constexpr (std::is_same_v<T, CallExpression>) {
+                    if (lastEndClock && outerClock) {
+                        // The end clock of a sequence used with .triggered or .matched
+                        // must match the outer clock.
+                        if (!isSameClock(*outerClock, *lastEndClock)) {
+                            parent.bad = true;
+                            auto& diag = parent.context.addDiag(parent.parentSymbol,
+                                                                diag::SeqMethodEndClock,
+                                                                expr.sourceRange);
+                            diag << expr.getSubroutineName();
+                            diag.addNote(diag::NoteClockHere, outerClock->sourceRange);
+                            diag.addNote(diag::NoteClockHere, lastEndClock->sourceRange);
+                        }
+                        lastEndClock = nullptr;
+                    }
+                }
+            }
         }
     };
 
@@ -167,14 +210,34 @@ struct ClockVisitor {
     }
 
     VisitResult visit(const SimpleAssertionExpr& expr, Clock outerClock, bitmask<VF> flags) {
+        // If this is a direct sequence instance then we can return its result directly.
         if (expr.expr.kind == ExpressionKind::AssertionInstance)
             return visit(expr.expr.as<AssertionInstanceExpression>(), outerClock, flags);
+
+        // If this is a call to sequence method we don't require an outer clock,
+        // so check for that case explicitly.
+        if (expr.expr.kind == ExpressionKind::Call) {
+            auto& call = expr.expr.as<CallExpression>();
+            if (auto ksn = call.getKnownSystemName();
+                ksn == KnownSystemName::Triggered || ksn == KnownSystemName::Matched) {
+                auto args = call.arguments();
+                if (!args.empty() && args[0]->kind == ExpressionKind::AssertionInstance)
+                    return visit(args[0]->as<AssertionInstanceExpression>(), outerClock, flags);
+            }
+        }
+
+        // Visit the expression to find nested sequence instantiations due to
+        // calls to .triggered and .matched. We will still require an outer clock
+        // in the inheritedClock call below.
+        SeqExprVisitor exprVisitor(*this, outerClock, flags);
+        expr.expr.visit(exprVisitor);
 
         return inheritedClock(expr, outerClock, flags | VF::RequireSequence);
     }
 
     VisitResult visit(const SequenceConcatExpr& expr, Clock outerClock, bitmask<VF> flags) {
         Clock firstClock = nullptr;
+        Clock endClock = nullptr;
         const AssertionExpr* lastExpr = nullptr;
         bool lastWasMulticlocked = false;
         bool isMulticlockedSeq = false;
@@ -182,6 +245,7 @@ struct ClockVisitor {
         for (auto& elem : expr.elements) {
             auto result = elem.sequence->visit(*this, outerClock, flags | VF::RequireSequence);
             if (!result.clocks.empty()) {
+                endClock = result.endClock == nullptr ? result.clocks.back() : result.endClock;
                 if (!firstClock) {
                     firstClock = result.clocks[0];
                 }
@@ -205,7 +269,7 @@ struct ClockVisitor {
         if (!firstClock)
             return {};
 
-        return {firstClock, isMulticlockedSeq};
+        return {firstClock, isMulticlockedSeq, endClock};
     }
 
     VisitResult visit(const SequenceWithMatchExpr& expr, Clock outerClock, bitmask<VF> flags) {
@@ -372,7 +436,7 @@ private:
             }
             return {};
         }
-        return {outerClock, false};
+        return {outerClock, false, nullptr};
     }
 
     void badMulticlockedSeq(const AssertionExpr& left, const AssertionExpr& right,

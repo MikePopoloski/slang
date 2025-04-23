@@ -1928,10 +1928,17 @@ module m;
 
     logic clk1, clk2;
     sequence s2;
-        @(posedge clk2) 1;
+        @(posedge clk2) 1 ##1 @(posedge clk1) 1;
     endsequence
 
-    assert property (disable iff (s.triggered) @s @(posedge clk1) s2.triggered);
+    sequence s3;
+        @(posedge clk1) 1 ##1 @(posedge clk2) 1;
+    endsequence
+
+    assert property (disable iff (s.triggered) @s @(posedge clk1) s2.triggered || s3.triggered);
+    assert property (s.triggered || s.matched);
+    assert property (s.triggered);
+    assert property (s2.triggered);
 endmodule
 )";
 
@@ -1939,7 +1946,7 @@ endmodule
     AnalysisManager analysisManager;
 
     auto [diags, design] = analyze(text, compilation, analysisManager);
-    REQUIRE(diags.size() == 7);
+    REQUIRE(diags.size() == 10);
     CHECK(diags[0].code == diag::AssertionNoClock);
     CHECK(diags[1].code == diag::AssertionNoClock);
     CHECK(diags[2].code == diag::AssertionNoClock);
@@ -1947,4 +1954,7 @@ endmodule
     CHECK(diags[4].code == diag::AssertionNoClock);
     CHECK(diags[5].code == diag::AssertionNoClock);
     CHECK(diags[6].code == diag::AssertionNoClock);
+    CHECK(diags[7].code == diag::SeqMethodEndClock);
+    CHECK(diags[8].code == diag::AssertionNoClock);
+    CHECK(diags[9].code == diag::AssertionNoClock);
 }
