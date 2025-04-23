@@ -18,6 +18,7 @@ class Diagnostic;
 namespace slang::ast {
 
 class AssertionExpr;
+class AssertionInstanceExpression;
 class Expression;
 class Symbol;
 class TimingControl;
@@ -50,11 +51,12 @@ public:
     };
 
     struct ExpansionInstance {
-        const ast::AssertionExpr* expr = nullptr;
+        const ast::AssertionInstanceExpression* expr = nullptr;
         const ast::TimingControl* clock = nullptr;
         bool hasInferredClockArg = false;
 
-        ExpansionInstance(const ast::AssertionExpr& expr, const ast::TimingControl* clock);
+        ExpansionInstance(const ast::AssertionInstanceExpression& expr,
+                          const ast::TimingControl* clock);
     };
 
     /// Expands inferred clocking events in the given timing control expression.

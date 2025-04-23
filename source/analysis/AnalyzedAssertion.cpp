@@ -114,57 +114,58 @@ struct ClockVisitor {
         return {};
     }
 
-    VisitResult visit(const SimpleAssertionExpr& expr, Clock outerClock, bitmask<VF> flags) {
-        if (expr.expr.kind == ExpressionKind::AssertionInstance) {
-            auto& aie = expr.expr.as<AssertionInstanceExpression>();
-            if (aie.isRecursiveProperty)
-                return {};
+    VisitResult visit(const AssertionInstanceExpression& expr, Clock outerClock,
+                      bitmask<VF> flags) {
+        if (expr.isRecursiveProperty)
+            return {};
 
-            const bool inClockingBlock = flags.has(VF::InClockingBlock);
+        const bool inClockingBlock = flags.has(VF::InClockingBlock);
 
-            if (aie.type->isSequenceType())
-                flags |= VF::RequireSequence;
+        if (expr.type->isSequenceType())
+            flags |= VF::RequireSequence;
 
-            auto flowClock = outerClock;
-            auto scope = aie.symbol.getParentScope();
-            if (scope && scope->asSymbol().kind == SymbolKind::ClockingBlock) {
-                // Outer clock comes from the clocking block.
-                flowClock = &scope->asSymbol().as<ClockingBlockSymbol>().getEvent();
-                flags |= VF::InClockingBlock;
-            }
+        auto flowClock = outerClock;
+        auto scope = expr.symbol.getParentScope();
+        if (scope && scope->asSymbol().kind == SymbolKind::ClockingBlock) {
+            // Outer clock comes from the clocking block.
+            flowClock = &scope->asSymbol().as<ClockingBlockSymbol>().getEvent();
+            flags |= VF::InClockingBlock;
+        }
 
-            SLANG_ASSERT(expr.syntax);
-            expansionStack.push_back({expr, outerClock});
-            hasInferredClockCall |= expansionStack.back().hasInferredClockArg;
+        expansionStack.push_back({expr, outerClock});
+        hasInferredClockCall |= expansionStack.back().hasInferredClockArg;
 
-            auto result = aie.body.visit(*this, flowClock, flags);
-            expansionStack.pop_back();
+        auto result = expr.body.visit(*this, flowClock, flags);
+        expansionStack.pop_back();
 
-            // Named sequences and properties instantiated from within a clocking block
-            // must be singly clocked and share the same clock as the clocking block.
-            if (!bad && inClockingBlock && outerClock) {
-                if (result.isMulticlockedSeq || result.clocks.size() != 1 ||
-                    !isSameClock(*outerClock, *result.clocks[0])) {
+        // Named sequences and properties instantiated from within a clocking block
+        // must be singly clocked and share the same clock as the clocking block.
+        if (!bad && inClockingBlock && outerClock) {
+            if (result.isMulticlockedSeq || result.clocks.size() != 1 ||
+                !isSameClock(*outerClock, *result.clocks[0])) {
 
-                    bad = true;
-                    if (result.isMulticlockedSeq || result.clocks.size() != 1) {
-                        context.addDiag(parentSymbol, diag::MulticlockedInClockingBlock,
-                                        expr.syntax->sourceRange())
-                            << aie.symbol.name;
-                    }
-                    else {
-                        auto& diag = context.addDiag(parentSymbol,
-                                                     diag::DifferentClockInClockingBlock,
-                                                     expr.syntax->sourceRange());
-                        diag << aie.symbol.name;
-                        diag.addNote(diag::NoteClockHere, outerClock->sourceRange);
-                        diag.addNote(diag::NoteClockHere, result.clocks[0]->sourceRange);
-                    }
+                bad = true;
+                if (result.isMulticlockedSeq || result.clocks.size() != 1) {
+                    context.addDiag(parentSymbol, diag::MulticlockedInClockingBlock,
+                                    expr.sourceRange)
+                        << expr.symbol.name;
+                }
+                else {
+                    auto& diag = context.addDiag(parentSymbol, diag::DifferentClockInClockingBlock,
+                                                 expr.sourceRange);
+                    diag << expr.symbol.name;
+                    diag.addNote(diag::NoteClockHere, outerClock->sourceRange);
+                    diag.addNote(diag::NoteClockHere, result.clocks[0]->sourceRange);
                 }
             }
-
-            return result;
         }
+
+        return result;
+    }
+
+    VisitResult visit(const SimpleAssertionExpr& expr, Clock outerClock, bitmask<VF> flags) {
+        if (expr.expr.kind == ExpressionKind::AssertionInstance)
+            return visit(expr.expr.as<AssertionInstanceExpression>(), outerClock, flags);
 
         return inheritedClock(expr, outerClock, flags | VF::RequireSequence);
     }
@@ -343,7 +344,7 @@ private:
                 SourceRange range;
                 SLANG_ASSERT(expr.syntax);
                 if (!expansionStack.empty())
-                    range = expansionStack.front().expr->syntax->sourceRange();
+                    range = expansionStack.front().expr->sourceRange;
                 else
                     range = expr.syntax->sourceRange();
 
@@ -351,10 +352,8 @@ private:
                 diag << exprKindStr(flags);
 
                 if (!expansionStack.empty()) {
-                    for (size_t i = 1; i < expansionStack.size(); i++) {
-                        diag.addNote(diag::NoteRequiredHere,
-                                     expansionStack[i].expr->syntax->sourceRange());
-                    }
+                    for (size_t i = 1; i < expansionStack.size(); i++)
+                        diag.addNote(diag::NoteRequiredHere, expansionStack[i].expr->sourceRange);
                     diag.addNote(diag::NoteRequiredHere, expr.syntax->sourceRange());
                 }
             }
@@ -395,15 +394,14 @@ private:
     void addExpansionNotes(Diagnostic& diag) {
         for (auto it = expansionStack.rbegin(); it != expansionStack.rend(); it++) {
             auto& expr = *it->expr;
-            if (expr.syntax)
-                diag.addNote(diag::NoteExpandedHere, expr.syntax->sourceRange());
+            diag.addNote(diag::NoteExpandedHere, expr.sourceRange);
         }
     }
 };
 
 AnalyzedAssertion::AnalyzedAssertion(AnalysisContext& context, const TimingControl* contextualClock,
                                      const AnalyzedProcedure& procedure, const Statement& stmt,
-                                     const Symbol* checkerInstance) : analyzedStatement(&stmt) {
+                                     const Symbol* checkerInstance) {
     if (checkerInstance) {
         checkerScope = &context.manager->analyzeScopeBlocking(
             checkerInstance->as<CheckerInstanceSymbol>().body, &procedure);
@@ -429,6 +427,12 @@ AnalyzedAssertion::AnalyzedAssertion(AnalysisContext& context, const TimingContr
             }
         }
     }
+}
+
+AnalyzedAssertion::AnalyzedAssertion(AnalysisContext& context, const TimingControl* contextualClock,
+                                     const AnalyzedProcedure& procedure, const Expression& expr) {
+    ClockVisitor visitor(context, procedure);
+    visitor.visit(expr.as<AssertionInstanceExpression>(), contextualClock, VisitFlags::None);
 }
 
 } // namespace slang::analysis

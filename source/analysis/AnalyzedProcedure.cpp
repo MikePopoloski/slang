@@ -69,9 +69,7 @@ AnalyzedProcedure::AnalyzedProcedure(AnalysisContext& context, const Symbol& ana
     if (dfa.bad)
         return;
 
-    if (parentProcedure || !dfa.getAssertionStatements().empty() ||
-        !dfa.getSampledValueCalls().empty()) {
-
+    if (parentProcedure || !dfa.getAssertions().empty() || !dfa.getSampledValueCalls().empty()) {
         // All flavors of always and initial blocks can infer a clock.
         if (analyzedSymbol.kind == SymbolKind::ProceduralBlock &&
             analyzedSymbol.as<ProceduralBlockSymbol>().procedureKind !=
@@ -91,13 +89,20 @@ AnalyzedProcedure::AnalyzedProcedure(AnalysisContext& context, const Symbol& ana
         if (inferredClock && inferredClock->bad())
             return;
 
-        for (auto stmt : dfa.getAssertionStatements()) {
-            if (stmt->kind == StatementKind::ProceduralChecker) {
-                for (auto inst : stmt->as<ProceduralCheckerStatement>().instances)
-                    assertions.emplace_back(context, inferredClock, *this, *stmt, inst);
+        for (auto& var : dfa.getAssertions()) {
+            if (auto stmtPtr = std::get_if<const Statement*>(&var)) {
+                auto& stmt = **stmtPtr;
+                if (stmt.kind == StatementKind::ProceduralChecker) {
+                    for (auto inst : stmt.as<ProceduralCheckerStatement>().instances)
+                        assertions.emplace_back(context, inferredClock, *this, stmt, inst);
+                }
+                else {
+                    assertions.emplace_back(context, inferredClock, *this, stmt, nullptr);
+                }
             }
             else {
-                assertions.emplace_back(context, inferredClock, *this, *stmt, nullptr);
+                auto& expr = *std::get<const Expression*>(var);
+                assertions.emplace_back(context, inferredClock, *this, expr);
             }
         }
 

@@ -148,6 +148,11 @@ void DataFlowAnalysis::handle(const ProceduralCheckerStatement& stmt) {
     visitStmt(stmt);
 }
 
+void DataFlowAnalysis::handle(const AssertionInstanceExpression& expr) {
+    concurrentAssertions.push_back(&expr);
+    visitExpr(expr);
+}
+
 void DataFlowAnalysis::joinState(DataFlowState& result, const DataFlowState& other) {
     if (result.reachable == other.reachable) {
         if (result.assigned.size() > other.assigned.size())

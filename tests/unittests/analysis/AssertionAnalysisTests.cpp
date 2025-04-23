@@ -1868,6 +1868,8 @@ module m;
         x = $past(y, 5);
     end
 
+    always @($fell(x)) begin end
+
     wire z;
     assign z = $past(x, 5);
 endmodule
@@ -1881,6 +1883,8 @@ module n;
         @(negedge clk2);
         x = $past(y, 5);
     end
+
+    always @($fell(x)) begin end
 
     wire z;
     assign z = $past(x, 5);
@@ -1897,4 +1901,34 @@ endmodule
     CHECK(diags[2].code == diag::SampledValueFuncClock);
     CHECK(diags[3].code == diag::SampledValueFuncClock);
     CHECK(diags[4].code == diag::SampledValueFuncClock);
+}
+
+TEST_CASE("Triggered / matched clock resolution") {
+    auto& text = R"(
+module n(input logic a);
+endmodule
+
+module m;
+    sequence s;
+        1;
+    endsequence
+
+    initial begin
+        wait (s.triggered);
+    end
+
+    always @(s) begin end
+
+    wire w = s.triggered;
+
+    n n1(.a(s.triggered));
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto [diags, design] = analyze(text, compilation, analysisManager);
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::AssertionNoClock);
 }

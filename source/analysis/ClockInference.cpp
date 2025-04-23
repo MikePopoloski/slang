@@ -17,13 +17,12 @@ namespace slang::analysis {
 using namespace ast;
 using parsing::KnownSystemName;
 
-ClockInference::ExpansionInstance::ExpansionInstance(const AssertionExpr& expr,
+ClockInference::ExpansionInstance::ExpansionInstance(const AssertionInstanceExpression& expr,
                                                      const TimingControl* clock) :
     expr(&expr), clock(clock) {
 
     // Determine if this instance has an inferred clocking default argument.
-    auto& aie = expr.as<SimpleAssertionExpr>().expr.as<AssertionInstanceExpression>();
-    for (auto& arg : aie.arguments) {
+    for (auto& arg : expr.arguments) {
         if (auto argExpr = std::get_if<const Expression*>(&std::get<1>(arg))) {
             if (ClockInference::isInferredClockCall(**argExpr)) {
                 hasInferredClockArg = true;
@@ -58,10 +57,8 @@ static const TimingControl* findInferredClock(
     const AnalyzedProcedure* parentProcedure) {
 
     for (auto inst : std::views::reverse(expansionStack)) {
-        if (&target ==
-            &inst.expr->as<SimpleAssertionExpr>().expr.as<AssertionInstanceExpression>().symbol) {
+        if (&target == &inst.expr->symbol)
             return inst.clock;
-        }
     }
 
     if (parentProcedure) {

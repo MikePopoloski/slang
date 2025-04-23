@@ -55,8 +55,9 @@ public:
     /// associated with them.
     std::span<const Statement* const> getTimedStatements() const { return timedStatements; }
 
-    /// Gets all of the concurrent assertions and procedural checkers in the procedure.
-    std::span<const Statement* const> getAssertionStatements() const {
+    /// Gets all of the concurrent assertions, procedural checkers, and assertion
+    /// instance expressions in the procedure.
+    std::span<std::variant<const Statement*, const Expression*> const> getAssertions() const {
         return concurrentAssertions;
     }
 
@@ -208,8 +209,8 @@ private:
     // All statements that have timing controls associated with them.
     SmallVector<const Statement*> timedStatements;
 
-    // All concurrent assertions in the procedure.
-    SmallVector<const Statement*> concurrentAssertions;
+    // All concurrent assertions, checkers, and assertion instance expressions in the procedure.
+    SmallVector<std::variant<const Statement*, const Expression*>> concurrentAssertions;
 
     // Sampled value system calls made in the procedure.
     SmallVector<const CallExpression*> sampledValueCalls;
@@ -253,6 +254,7 @@ private:
     void handle(const ExpressionStatement& stmt);
     void handle(const ConcurrentAssertionStatement& stmt);
     void handle(const ProceduralCheckerStatement& stmt);
+    void handle(const AssertionInstanceExpression& expr);
 
     // **** State Management ****
 
