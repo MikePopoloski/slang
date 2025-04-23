@@ -203,7 +203,7 @@ private:
     syntax::EventExpressionSyntax& parseSignalEvent();
     syntax::EventExpressionSyntax& parseEventExpression();
     syntax::NamedBlockClauseSyntax* parseNamedBlockClause();
-    syntax::TimingControlSyntax* parseTimingControl();
+    syntax::TimingControlSyntax* parseTimingControl(bool inAssertion = false);
     syntax::ConditionalPredicateSyntax& parseConditionalPredicate(syntax::ExpressionSyntax& first, TokenKind endKind, Token& end);
     syntax::ConditionalPatternSyntax& parseConditionalPattern();
     syntax::ConditionalStatementSyntax& parseConditionalStatement(syntax::NamedLabelSyntax* label, AttrList attributes, Token uniqueOrPriority);

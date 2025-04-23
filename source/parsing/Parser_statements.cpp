@@ -601,7 +601,7 @@ ConcurrentAssertionStatementSyntax& Parser::parseConcurrentAssertion(NamedLabelS
 PropertySpecSyntax& Parser::parsePropertySpec() {
     TimingControlSyntax* timing = nullptr;
     if (peek(TokenKind::At))
-        timing = parseTimingControl();
+        timing = parseTimingControl(/* inAssertion */ true);
 
     DisableIffSyntax* disable = nullptr;
     if (peek(TokenKind::DisableKeyword)) {
@@ -789,6 +789,8 @@ EventTriggerStatementSyntax& Parser::parseEventTriggerStatement(NamedLabelSyntax
     if (trigger.kind == TokenKind::MinusDoubleArrow) {
         kind = SyntaxKind::NonblockingEventTriggerStatement;
         timing = parseTimingControl();
+        if (timing && timing->kind == SyntaxKind::CycleDelay)
+            addDiag(diag::EventTriggerCycleDelay, timing->sourceRange());
     }
 
     auto& name = parseName();

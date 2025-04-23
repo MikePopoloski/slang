@@ -1004,3 +1004,26 @@ endmodule
     REQUIRE(diagnostics.size() == 1);
     CHECK(diagnostics[0].code == diag::InvalidSelectExpression);
 }
+
+TEST_CASE("Invalid timing control parsing") {
+    auto& text = R"(
+module m;
+    logic clk;
+    event a;
+    default clocking @clk; endclocking
+    initial begin
+        ->> ##3 a;
+    end
+
+    logic b;
+    assert property (@* b ##1 @(*) b);
+endmodule
+)";
+
+    parseCompilationUnit(text);
+
+    REQUIRE(diagnostics.size() == 3);
+    CHECK(diagnostics[0].code == diag::EventTriggerCycleDelay);
+    CHECK(diagnostics[1].code == diag::ImplicitEventInAssertion);
+    CHECK(diagnostics[2].code == diag::ImplicitEventInAssertion);
+}

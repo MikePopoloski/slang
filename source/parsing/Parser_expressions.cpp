@@ -1189,7 +1189,7 @@ static bool isValidCycleDelay(SyntaxKind kind) {
     }
 }
 
-TimingControlSyntax* Parser::parseTimingControl() {
+TimingControlSyntax* Parser::parseTimingControl(bool inAssertion) {
     switch (peek().kind) {
         case TokenKind::Hash: {
             auto hash = consume();
@@ -1217,8 +1217,13 @@ TimingControlSyntax* Parser::parseTimingControl() {
                     auto openParen = consume();
                     if (peek(TokenKind::Star)) {
                         auto star = consume();
-                        return &factory.implicitEventControl(at, openParen, star,
-                                                             expect(TokenKind::CloseParenthesis));
+                        auto& result = factory.implicitEventControl(
+                            at, openParen, star, expect(TokenKind::CloseParenthesis));
+
+                        if (inAssertion)
+                            addDiag(diag::ImplicitEventInAssertion, result.sourceRange());
+
+                        return &result;
                     }
 
                     auto& eventExpr = parseEventExpression();
@@ -1226,8 +1231,13 @@ TimingControlSyntax* Parser::parseTimingControl() {
                     return &factory.eventControlWithExpression(
                         at, factory.parenthesizedEventExpression(openParen, eventExpr, closeParen));
                 }
-                case TokenKind::Star:
-                    return &factory.implicitEventControl(at, Token(), consume(), Token());
+                case TokenKind::Star: {
+                    auto& result = factory.implicitEventControl(at, Token(), consume(), Token());
+                    if (inAssertion)
+                        addDiag(diag::ImplicitEventInAssertion, result.sourceRange());
+
+                    return &result;
+                }
                 case TokenKind::SystemIdentifier:
                     return &factory.eventControl(at,
                                                  parsePrimaryExpression(ExpressionOptions::None));
@@ -1468,7 +1478,7 @@ SequenceExprSyntax& Parser::parseSequencePrimary() {
         case TokenKind::DoubleHash:
             return parseDelayedSequenceExpr(nullptr);
         case TokenKind::At: {
-            auto event = parseTimingControl();
+            auto event = parseTimingControl(/* inAssertion */ true);
             SLANG_ASSERT(event);
             return factory.clockingSequenceExpr(*event,
                                                 parseSequenceExpr(0, /* isInProperty */ false));
@@ -1598,7 +1608,7 @@ PropertyExprSyntax& Parser::parsePropertyPrimary() {
     auto current = peek();
     switch (current.kind) {
         case TokenKind::At: {
-            auto event = parseTimingControl();
+            auto event = parseTimingControl(/* inAssertion */ true);
             SLANG_ASSERT(event);
 
             // To support clocking events in sampled value system calls,

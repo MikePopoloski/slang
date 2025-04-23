@@ -301,6 +301,8 @@ error DerivedCovergroupNotInClass "covergroup inheritance can only be used insid
 error DerivedCovergroupNoBase "covergroup is marked 'extends' but is in a class that has no base class"
 error UnexpectedEndDelim "unexpected '{}' delimiter"
 error InvalidSelectExpression "select expression is not allowed here"
+error ImplicitEventInAssertion "implicit event list not allowed in sequence and property expressions"
+error EventTriggerCycleDelay "cycle delay not allowed in event trigger statements"
 warning dpi-pure-task DPIPureTask "DPI tasks cannot be marked 'pure'"
 warning nonstandard-generate NonStandardGenBlock "standalone generate block without loop or condition is not allowed in SystemVerilog"
 warning empty-pattern EmptyAssignmentPattern "empty assignment patterns are disallowed by SystemVerilog"
