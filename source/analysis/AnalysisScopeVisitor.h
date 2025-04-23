@@ -7,6 +7,7 @@
 //------------------------------------------------------------------------------
 #pragma once
 
+#include "slang/analysis/ClockInference.h"
 #include "slang/ast/ASTVisitor.h"
 #include "slang/diagnostics/AnalysisDiags.h"
 #include "slang/util/TypeTraits.h"
@@ -23,6 +24,35 @@ static bool hasUnusedAttrib(const Compilation& compilation, const Symbol& symbol
     return false;
 }
 
+// For non-procedural expressions, we visit them with this visitor to
+// perform various checks.
+struct NonProceduralExprVisitor {
+    AnalysisContext& context;
+    const Symbol& containingSymbol;
+
+    NonProceduralExprVisitor(AnalysisContext& context, const Symbol& containingSymbol) :
+        context(context), containingSymbol(containingSymbol) {}
+
+    template<typename T>
+    void visit(const T& expr) {
+        if constexpr (std::is_same_v<T, CallExpression>) {
+            if (ClockInference::isSampledValueFuncCall(expr)) {
+                // If we don't have a default clocking active in this scope then
+                // we should check the call to be sure it has an explicit clock provided.
+                auto scope = containingSymbol.getParentScope();
+                SLANG_ASSERT(scope);
+
+                if (scope->getCompilation().getDefaultClocking(*scope) == nullptr)
+                    ClockInference::checkSampledValueFuncs(context, containingSymbol, expr);
+            }
+        }
+
+        if constexpr (HasVisitExprs<T, NonProceduralExprVisitor>) {
+            expr.visitExprs(*this);
+        }
+    }
+};
+
 struct AnalysisScopeVisitor {
     AnalysisManager& manager;
     AnalysisContext& context;
@@ -38,6 +68,7 @@ struct AnalysisScopeVisitor {
             return;
 
         result.childScopes.emplace_back(manager.analyzeSymbol(symbol));
+        visitExprs(symbol);
     }
 
     void visit(const CheckerInstanceSymbol& symbol) {
@@ -46,6 +77,7 @@ struct AnalysisScopeVisitor {
             return;
 
         result.childScopes.emplace_back(manager.analyzeSymbol(symbol));
+        visitExprs(symbol);
     }
 
     void visit(const PackageSymbol& symbol) {
@@ -96,6 +128,7 @@ struct AnalysisScopeVisitor {
     }
 
     void visit(const CovergroupType& symbol) {
+        // TODO: visit expressions?
         result.childScopes.emplace_back(manager.analyzeSymbol(symbol));
     }
 
@@ -105,6 +138,8 @@ struct AnalysisScopeVisitor {
     }
 
     void visit(const NetSymbol& symbol) {
+        visitExprs(symbol);
+
         if (symbol.isImplicit) {
             checkValueUnused(symbol, diag::UnusedImplicitNet, diag::UnusedImplicitNet,
                              diag::UnusedImplicitNet);
@@ -115,6 +150,8 @@ struct AnalysisScopeVisitor {
     }
 
     void visit(const VariableSymbol& symbol) {
+        visitExprs(symbol);
+
         if (symbol.flags.has(VariableFlags::CompilerGenerated))
             return;
 
@@ -214,12 +251,14 @@ struct AnalysisScopeVisitor {
                          SpecifyBlockSymbol, CovergroupBodySymbol, CoverCrossSymbol,
                          CoverCrossBodySymbol, StatementBlockSymbol, RandSeqProductionSymbol>)
     void visit(const T& symbol) {
+        visitExprs(symbol);
+
         // For these symbol types we just descend into their members
         // and flatten them into their parent scope.
         visitMembers(symbol);
     }
 
-    // Everything else doesn't need to be analyzed.
+    // Everything else doesn't need to be analyzed (except visiting expressions, if necessary).
     template<typename T>
         requires(
             IsAnyOf<T, InvalidSymbol, RootSymbol, CompilationUnitSymbol, DefinitionSymbol,
@@ -233,13 +272,23 @@ struct AnalysisScopeVisitor {
                     SystemTimingCheckSymbol, NetAliasSymbol, ConfigBlockSymbol, NetType,
                     CheckerInstanceBodySymbol> ||
             std::is_base_of_v<Type, T>)
-    void visit(const T&) {}
+    void visit(const T& symbol) {
+        visitExprs(symbol);
+    }
 
 private:
     template<typename T>
     void visitMembers(const T& symbol) {
         for (auto& member : symbol.members())
             member.visit(*this);
+    }
+
+    template<typename T>
+    void visitExprs(const T& symbol) {
+        if constexpr (HasVisitExprs<T, NonProceduralExprVisitor>) {
+            NonProceduralExprVisitor visitor(context, symbol);
+            symbol.visitExprs(visitor);
+        }
     }
 
     void checkValueUnused(const ValueSymbol& symbol, DiagCode unusedCode,

@@ -1862,22 +1862,28 @@ module m;
     assert property (disable iff ($past(a)) @($rose(a)) a);
 
     logic clk, clk2;
-    logic x, y;
+    logic x, y = $rose(x);
     always @(posedge clk) begin
         @(negedge clk2);
         x = $past(y, 5);
     end
+
+    wire z;
+    assign z = $past(x, 5);
 endmodule
 
 module n;
     logic clk, clk2;
     default clocking @clk; endclocking
 
-    logic x, y;
+    logic x, y = $rose(x);
     always @(posedge clk) begin
         @(negedge clk2);
         x = $past(y, 5);
     end
+
+    wire z;
+    assign z = $past(x, 5);
 endmodule
 )";
 
@@ -1885,8 +1891,9 @@ endmodule
     AnalysisManager analysisManager;
 
     auto [diags, design] = analyze(text, compilation, analysisManager);
-    REQUIRE(diags.size() == 3);
+    REQUIRE(diags.size() == 4);
     CHECK(diags[0].code == diag::SampledValueFuncClock);
     CHECK(diags[1].code == diag::SampledValueFuncClock);
     CHECK(diags[2].code == diag::SampledValueFuncClock);
+    CHECK(diags[3].code == diag::SampledValueFuncClock);
 }
