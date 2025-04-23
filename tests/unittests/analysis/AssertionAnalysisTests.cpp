@@ -1165,11 +1165,11 @@ module mc_14;
 
     // Define assertions using multi-clocked sequences
     property prop1;
-        @(posedge clk1) disable iff(!$rose(clk1)) seq1 |-> seq2;
+        @(posedge clk1) disable iff(!$rose(clk1, @(posedge clk1))) seq1 |-> seq2;
     endproperty
 
     property prop2;
-        @(posedge clk2) disable iff(!$rose(clk2)) seq2 |-> seq1;
+        @(posedge clk2) disable iff(!$rose(clk2, @(posedge clk2))) seq2 |-> seq1;
     endproperty
 
     // Apply assertions to DUT signals
@@ -1675,6 +1675,54 @@ endmodule
     CHECK_DIAGS_EMPTY;
 }
 
+TEST_CASE("Checker clock inference") {
+    auto& text = R"(
+checker check_in_context (logic test_sig,
+                          event clk1,
+                          event clock = $inferred_clock,
+                          logic reset = $inferred_disable);
+    property p(logic sig);
+        1;
+    endproperty
+
+    sequence s;
+        @(clk1) 1 and @(clock) 1;
+    endsequence
+
+    a1: assert property (@clock disable iff (reset) p(test_sig));
+    c1: cover property (@clock !reset throughout !test_sig ##1 test_sig);
+
+    always_comb assert property (s);
+endchecker : check_in_context
+
+module m(logic rst);
+    wire clk;
+    logic a, en;
+    wire b = a && en;
+
+    // No context inference
+    check_in_context my_check1(.test_sig(b), .clk1(clk), .clock(clk), .reset(rst));
+
+    always @(negedge clk) begin
+        a <= 1;
+        if (en) begin
+            // inferred from context:
+            // .clock(negedge clk)
+            // .reset(1'b0)
+            check_in_context my_check2(a, negedge clk);
+        end
+        en <= 1;
+    end
+endmodule : m
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto [diags, design] = analyze(text, compilation, analysisManager);
+    CHECK_DIAGS_EMPTY;
+}
+
 TEST_CASE("Checker default inferred clocks") {
     auto& text = R"(
 module top(input clk);
@@ -1802,4 +1850,21 @@ endmodule
     auto [diags, design] = analyze(text, compilation, analysisManager);
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::AssertionNoClock);
+}
+
+TEST_CASE("Sampled value clock resolution") {
+    auto& text = R"(
+module m;
+    logic a;
+    assert property (disable iff ($past(a)) @($rose(a)) a);
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto [diags, design] = analyze(text, compilation, analysisManager);
+    REQUIRE(diags.size() == 2);
+    CHECK(diags[0].code == diag::SampledValueFuncClock);
+    CHECK(diags[1].code == diag::SampledValueFuncClock);
 }

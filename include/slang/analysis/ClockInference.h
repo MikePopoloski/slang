@@ -59,6 +59,16 @@ public:
                                       std::span<const ExpansionInstance> expansionStack,
                                       const AnalyzedProcedure* parentProcedure);
 
+    /// Checks the given expression for calls to sampled value functions and
+    /// ensures that they have explicit clocking provided.
+    static void checkSampledValueFuncs(AnalysisContext& context, const ast::Symbol& parentSymbol,
+                                       const ast::Expression& expr);
+
+    /// Checks the given timing control for calls to sampled value functions and
+    /// ensures that they have explicit clocking provided.
+    static void checkSampledValueFuncs(AnalysisContext& context, const ast::Symbol& parentSymbol,
+                                       const ast::TimingControl& timing);
+
 private:
     ClockInference() = delete;
 };

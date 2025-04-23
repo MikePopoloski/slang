@@ -9,10 +9,7 @@
 
 #include "slang/analysis/AnalysisManager.h"
 #include "slang/analysis/AnalyzedProcedure.h"
-#include "slang/ast/expressions/CallExpression.h"
-#include "slang/ast/expressions/MiscExpressions.h"
-#include "slang/ast/symbols/InstanceSymbols.h"
-#include "slang/ast/symbols/MemberSymbols.h"
+#include "slang/ast/ASTVisitor.h"
 #include "slang/diagnostics/AnalysisDiags.h"
 
 namespace slang::analysis {
@@ -88,7 +85,7 @@ ClockInference::InferredClockResult ClockInference::expand(
     auto& alloc = context.alloc;
     if (timing.kind == TimingControlKind::EventList) {
         SmallVector<const TimingControl*> events;
-        for (auto& event : timing.as<EventListControl>().events) {
+        for (auto event : timing.as<EventListControl>().events) {
             auto result = expand(context, parentSymbol, *event, expansionStack, parentProcedure);
             if (result.clock->bad())
                 return result;
@@ -119,6 +116,68 @@ ClockInference::InferredClockResult ClockInference::expand(
     }
 
     return timing;
+}
+
+struct SampledValueFuncVisitor {
+    using KnownSystemName = parsing::KnownSystemName;
+
+    AnalysisContext& context;
+    const Symbol& parentSymbol;
+
+    SampledValueFuncVisitor(AnalysisContext& context, const Symbol& parentSymbol) :
+        context(context), parentSymbol(parentSymbol) {}
+
+    template<typename T>
+    void visit(const T& expr) {
+        if constexpr (std::is_base_of_v<Expression, T>) {
+            if (expr.kind == ExpressionKind::Call) {
+                auto& call = expr.template as<CallExpression>();
+                if (SampleValueFuncNames.contains(call.getKnownSystemName())) {
+                    bool hasClock;
+                    if (call.getKnownSystemName() == KnownSystemName::Past) {
+                        hasClock = call.arguments().size() == 4 &&
+                                   call.arguments()[3]->kind != ExpressionKind::EmptyArgument;
+                    }
+                    else {
+                        hasClock = call.arguments().size() == 2 &&
+                                   call.arguments()[1]->kind != ExpressionKind::EmptyArgument;
+                    }
+
+                    if (!hasClock) {
+                        context.addDiag(parentSymbol, diag::SampledValueFuncClock, call.sourceRange)
+                            << call.getSubroutineName();
+                    }
+                }
+            }
+            else if constexpr (HasVisitExprs<T, SampledValueFuncVisitor>) {
+                expr.visitExprs(*this);
+            }
+        }
+    }
+
+    static inline const flat_hash_set<KnownSystemName> SampleValueFuncNames = {
+        KnownSystemName::Rose, KnownSystemName::Fell, KnownSystemName::Stable,
+        KnownSystemName::Changed, KnownSystemName::Past};
+};
+
+void ClockInference::checkSampledValueFuncs(AnalysisContext& context, const Symbol& parentSymbol,
+                                            const Expression& expr) {
+    SampledValueFuncVisitor visitor{context, parentSymbol};
+    expr.visit(visitor);
+}
+
+void ClockInference::checkSampledValueFuncs(AnalysisContext& context, const Symbol& parentSymbol,
+                                            const TimingControl& timing) {
+    if (timing.kind == TimingControlKind::EventList) {
+        for (auto& event : timing.as<EventListControl>().events)
+            checkSampledValueFuncs(context, parentSymbol, *event);
+    }
+    else if (timing.kind == TimingControlKind::SignalEvent) {
+        auto& sec = timing.as<SignalEventControl>();
+        checkSampledValueFuncs(context, parentSymbol, sec.expr);
+        if (sec.iffCondition)
+            checkSampledValueFuncs(context, parentSymbol, *sec.iffCondition);
+    }
 }
 
 } // namespace slang::analysis

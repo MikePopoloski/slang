@@ -231,6 +231,9 @@ struct ClockVisitor {
             }
         }
 
+        if (clocking)
+            ClockInference::checkSampledValueFuncs(context, parentSymbol, *clocking);
+
         return expr.expr.visit(*this, clocking, flags);
     }
 
@@ -323,6 +326,7 @@ struct ClockVisitor {
     }
 
     VisitResult visit(const DisableIffAssertionExpr& expr, Clock outerClock, bitmask<VF> flags) {
+        ClockInference::checkSampledValueFuncs(context, parentSymbol, expr.condition);
         return expr.expr.visit(*this, outerClock, flags);
     }
 
