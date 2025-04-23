@@ -319,8 +319,6 @@ public:
         AssertionExpr::checkSampledValueExpr(*args[0], context, false, diag::SampledValueLocalVar,
                                              diag::SampledValueMatched);
 
-        // TODO: check rules for inferring clocking
-
         if (args.size() == 2 && args[1]->kind != ExpressionKind::ClockingEvent)
             return badArg(context, *args[1]);
 
@@ -364,8 +362,6 @@ public:
                                                  diag::SampledValueLocalVar,
                                                  diag::SampledValueMatched);
         }
-
-        // TODO: check rules for inferring clocking
 
         if (args.size() > 1 && args[1]->kind != ExpressionKind::EmptyArgument) {
             auto numTicks = context.evalInteger(*args[1]);

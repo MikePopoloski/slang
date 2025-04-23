@@ -509,7 +509,6 @@ TEST_CASE("Driver suppress macro warnings by path") {
     CHECK(stdoutContains("0 errors, 0 warnings"));
 }
 
-// TODO: remove once stdlib gets contains()
 static bool contains(std::string_view str, std::string_view value) {
     return str.find(value) != std::string_view::npos;
 }

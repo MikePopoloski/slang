@@ -54,7 +54,6 @@ std::optional<uint32_t> strToUInt(std::string_view str, size_t* pos, int base) {
     return value;
 }
 
-// TODO: improve this once std::from_chars is available everywhere
 std::optional<double> strToDouble(std::string_view str, size_t* pos) {
     std::string copy(str);
     const char* start = copy.c_str();
