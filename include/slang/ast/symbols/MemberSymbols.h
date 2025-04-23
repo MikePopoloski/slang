@@ -390,6 +390,11 @@ public:
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::ClockingBlock; }
 
+    template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const {
+        getEvent().visit(visitor);
+    }
+
 private:
     mutable const TimingControl* event = nullptr;
     mutable std::optional<ClockingSkew> defaultInputSkew;

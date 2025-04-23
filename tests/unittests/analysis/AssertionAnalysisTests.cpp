@@ -1891,9 +1891,10 @@ endmodule
     AnalysisManager analysisManager;
 
     auto [diags, design] = analyze(text, compilation, analysisManager);
-    REQUIRE(diags.size() == 4);
+    REQUIRE(diags.size() == 5);
     CHECK(diags[0].code == diag::SampledValueFuncClock);
     CHECK(diags[1].code == diag::SampledValueFuncClock);
     CHECK(diags[2].code == diag::SampledValueFuncClock);
     CHECK(diags[3].code == diag::SampledValueFuncClock);
+    CHECK(diags[4].code == diag::SampledValueFuncClock);
 }

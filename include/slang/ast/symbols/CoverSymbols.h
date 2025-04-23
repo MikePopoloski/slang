@@ -9,6 +9,7 @@
 
 #include "slang/ast/Expression.h"
 #include "slang/ast/Scope.h"
+#include "slang/ast/TimingControl.h"
 #include "slang/ast/types/DeclaredType.h"
 #include "slang/ast/types/Type.h"
 #include "slang/syntax/SyntaxFwd.h"
@@ -91,6 +92,12 @@ public:
                                             const Symbol*& classProperty);
 
     static bool isKind(SymbolKind kind) { return kind == SymbolKind::CovergroupType; }
+
+    template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const {
+        if (auto ev = getCoverageEvent())
+            ev->visit(visitor);
+    }
 
 private:
     friend class Scope;
@@ -204,6 +211,9 @@ public:
 
     template<typename TVisitor>
     void visitExprs(TVisitor&& visitor) const {
+        if (auto expr = declaredType.getInitializer())
+            expr->visit(visitor);
+
         if (auto expr = getIffExpr())
             expr->visit(visitor);
 

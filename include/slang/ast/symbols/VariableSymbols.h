@@ -84,6 +84,12 @@ public:
         }
     }
 
+    template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const {
+        if (auto expr = getInitializer())
+            expr->visit(visitor);
+    }
+
 protected:
     VariableSymbol(SymbolKind childKind, std::string_view name, SourceLocation loc,
                    VariableLifetime lifetime);
@@ -194,6 +200,9 @@ public:
 
     template<typename TVisitor>
     void visitExprs(TVisitor&& visitor) const {
+        if (auto expr = getInitializer())
+            expr->visit(visitor);
+
         if (auto d = getDelay())
             d->visit(visitor);
     }

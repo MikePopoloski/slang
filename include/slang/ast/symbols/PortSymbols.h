@@ -78,6 +78,12 @@ public:
 
     using Symbol::setParent;
 
+    template<typename TVisitor>
+    void visitExprs(TVisitor&& visitor) const {
+        if (auto expr = getInitializer())
+            expr->visit(visitor);
+    }
+
 private:
     mutable const Type* type = nullptr;
     mutable const Expression* initializer = nullptr;

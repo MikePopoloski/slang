@@ -92,16 +92,15 @@ public:
         if constexpr (VisitExpressions && HasVisitExprs<T, TDerived>) {
             t.visitExprs(DERIVED);
         }
-
-        if constexpr (VisitStatements && requires { t.visitStmts(DERIVED); }) {
-            t.visitStmts(DERIVED);
-        }
-
-        if constexpr (VisitExpressions && std::is_base_of_v<Symbol, T>) {
+        else if constexpr (VisitExpressions && std::is_base_of_v<Symbol, T>) {
             if (auto declaredType = t.getDeclaredType()) {
                 if (auto init = declaredType->getInitializer())
                     init->visit(DERIVED);
             }
+        }
+
+        if constexpr (VisitStatements && requires { t.visitStmts(DERIVED); }) {
+            t.visitStmts(DERIVED);
         }
 
         if constexpr (std::is_base_of_v<GenericClassDefSymbol, T>) {
@@ -421,12 +420,16 @@ void PrimitiveInstanceSymbol::visitExprs(TVisitor&& visitor) const {
 template<typename TVisitor>
 void CheckerInstanceSymbol::visitExprs(TVisitor&& visitor) const {
     for (auto& conn : getPortConnections()) {
-        std::visit(
-            [&](auto&& arg) {
-                if (arg)
-                    arg->visit(visitor);
-            },
-            conn.actual);
+        // Note: we only visit output arguments here, since input arguments
+        // get rewritten into the checker instance body.
+        if (conn.formal.kind == SymbolKind::FormalArgument) {
+            std::visit(
+                [&](auto&& arg) {
+                    if (arg)
+                        arg->visit(visitor);
+                },
+                conn.actual);
+        }
         if (auto expr = conn.getOutputInitialExpr())
             expr->visit(visitor);
     }

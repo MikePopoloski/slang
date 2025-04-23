@@ -128,8 +128,8 @@ struct AnalysisScopeVisitor {
     }
 
     void visit(const CovergroupType& symbol) {
-        // TODO: visit expressions?
         result.childScopes.emplace_back(manager.analyzeSymbol(symbol));
+        visitExprs(symbol);
     }
 
     void visit(const GenericClassDefSymbol& symbol) {
