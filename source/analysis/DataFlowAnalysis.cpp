@@ -7,6 +7,8 @@
 //------------------------------------------------------------------------------
 #include "slang/analysis/DataFlowAnalysis.h"
 
+#include "NonProceduralExprVisitor.h"
+
 #include "slang/analysis/ClockInference.h"
 
 namespace slang::analysis {
@@ -115,6 +117,9 @@ void DataFlowAnalysis::handle(const AssignmentExpression& expr) {
 
     if (!expr.isLValueArg())
         visit(expr.right());
+
+    if (expr.timingControl)
+        handleTiming(*expr.timingControl);
 }
 
 void DataFlowAnalysis::handle(const CallExpression& expr) {
@@ -151,6 +156,24 @@ void DataFlowAnalysis::handle(const ProceduralCheckerStatement& stmt) {
 void DataFlowAnalysis::handle(const AssertionInstanceExpression& expr) {
     concurrentAssertions.push_back(&expr);
     visitExpr(expr);
+}
+
+void DataFlowAnalysis::handle(const EventTriggerStatement& stmt) {
+    if (stmt.timing)
+        handleTiming(*stmt.timing);
+    visitStmt(stmt);
+}
+
+void DataFlowAnalysis::handleTiming(const TimingControl& timing) {
+    if (timing.bad()) {
+        bad = true;
+        return;
+    }
+
+    // The timing expressions don't contribute to data flow but we still
+    // want to analyze them for various correctness checks.
+    NonProceduralExprVisitor visitor(context, rootSymbol);
+    timing.visit(visitor);
 }
 
 void DataFlowAnalysis::joinState(DataFlowState& result, const DataFlowState& other) {

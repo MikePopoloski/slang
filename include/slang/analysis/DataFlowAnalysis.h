@@ -242,7 +242,7 @@ private:
         requires(IsAnyOf<T, TimedStatement, WaitStatement, WaitOrderStatement, WaitForkStatement>)
     void handle(const T& stmt) {
         if constexpr (std::is_same_v<T, TimedStatement>) {
-            bad |= stmt.timing.bad();
+            handleTiming(stmt.timing);
         }
 
         timedStatements.push_back(&stmt);
@@ -255,6 +255,8 @@ private:
     void handle(const ConcurrentAssertionStatement& stmt);
     void handle(const ProceduralCheckerStatement& stmt);
     void handle(const AssertionInstanceExpression& expr);
+    void handle(const EventTriggerStatement& stmt);
+    void handleTiming(const TimingControl& timing);
 
     // **** State Management ****
 

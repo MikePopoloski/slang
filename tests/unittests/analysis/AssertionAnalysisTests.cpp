@@ -1895,12 +1895,13 @@ endmodule
     AnalysisManager analysisManager;
 
     auto [diags, design] = analyze(text, compilation, analysisManager);
-    REQUIRE(diags.size() == 5);
+    REQUIRE(diags.size() == 6);
     CHECK(diags[0].code == diag::SampledValueFuncClock);
     CHECK(diags[1].code == diag::SampledValueFuncClock);
     CHECK(diags[2].code == diag::SampledValueFuncClock);
     CHECK(diags[3].code == diag::SampledValueFuncClock);
     CHECK(diags[4].code == diag::SampledValueFuncClock);
+    CHECK(diags[5].code == diag::SampledValueFuncClock);
 }
 
 TEST_CASE("Triggered / matched clock resolution") {
@@ -1922,6 +1923,8 @@ module m;
     wire w = s.triggered;
 
     n n1(.a(s.triggered));
+
+    clocking cb @(s); endclocking
 endmodule
 )";
 
@@ -1929,8 +1932,10 @@ endmodule
     AnalysisManager analysisManager;
 
     auto [diags, design] = analyze(text, compilation, analysisManager);
-    REQUIRE(diags.size() == 3);
+    REQUIRE(diags.size() == 5);
     CHECK(diags[0].code == diag::AssertionNoClock);
     CHECK(diags[1].code == diag::AssertionNoClock);
     CHECK(diags[2].code == diag::AssertionNoClock);
+    CHECK(diags[3].code == diag::AssertionNoClock);
+    CHECK(diags[4].code == diag::AssertionNoClock);
 }
