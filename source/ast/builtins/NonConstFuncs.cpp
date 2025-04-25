@@ -417,8 +417,6 @@ public:
         AssertionExpr::checkSampledValueExpr(*args[0], context, isFuture,
                                              diag::SampledValueLocalVar, diag::SampledValueMatched);
 
-        // TODO: enforce rules for future sampled value functions
-
         return comp.getBitType();
     }
 

@@ -1958,3 +1958,27 @@ endmodule
     CHECK(diags[8].code == diag::AssertionNoClock);
     CHECK(diags[9].code == diag::AssertionNoClock);
 }
+
+TEST_CASE("Global future sampled value func with seq match items") {
+    auto& text = R"(
+module m(input logic clk, a, b, c);
+    global clocking @clk; endclocking
+
+    sequence s;
+        bit v;
+        (a, v = a) ##1 (b == v)[->1];
+    endsequence : s
+
+    // Illegal: a global clocking future sampled value function shall not
+    // be used in an assertion containing sequence match items
+    a2: assert property (@clk s |=> $future_gclk(c));
+endmodule
+)";
+
+    Compilation compilation;
+    AnalysisManager analysisManager;
+
+    auto [diags, design] = analyze(text, compilation, analysisManager);
+    REQUIRE(diags.size() == 1);
+    CHECK(diags[0].code == diag::GFSVMatchItems);
+}

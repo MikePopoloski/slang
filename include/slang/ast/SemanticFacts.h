@@ -215,6 +215,9 @@ public:
     /// @returns true if the given symbol kind is allowed in modports.
     static bool isAllowedInModport(SymbolKind kind);
 
+    /// @returns true if the given system name is a global future sampled value function.
+    static bool isGlobalFutureSampledValueFunc(parsing::KnownSystemName name);
+
 private:
     SemanticFacts() = default;
 };

@@ -393,7 +393,7 @@ struct SampledValueExprVisitor {
                             context.addDiag(matchedCode, expr.sourceRange);
                         }
 
-                        if (isFutureGlobal && FutureGlobalNames.contains(ksn))
+                        if (isFutureGlobal && SemanticFacts::isGlobalFutureSampledValueFunc(ksn))
                             context.addDiag(diag::GlobalSampledValueNested, expr.sourceRange);
                     }
                     break;
@@ -405,10 +405,6 @@ struct SampledValueExprVisitor {
             }
         }
     }
-
-    static inline const flat_hash_set<KnownSystemName> FutureGlobalNames = {
-        KnownSystemName::FutureGclk, KnownSystemName::RisingGclk, KnownSystemName::FallingGclk,
-        KnownSystemName::SteadyGclk, KnownSystemName::ChangingGclk};
 };
 
 void AssertionExpr::checkSampledValueExpr(const Expression& expr, const ASTContext& context,

@@ -378,6 +378,14 @@ bool SemanticFacts::isAllowedInModport(SymbolKind kind) {
     }
 }
 
+static const flat_hash_set<KnownSystemName> FutureGlobalNames = {
+    KnownSystemName::FutureGclk, KnownSystemName::RisingGclk, KnownSystemName::FallingGclk,
+    KnownSystemName::SteadyGclk, KnownSystemName::ChangingGclk};
+
+bool SemanticFacts::isGlobalFutureSampledValueFunc(KnownSystemName name) {
+    return FutureGlobalNames.contains(name);
+}
+
 ClockingSkew ClockingSkew::fromSyntax(const ClockingSkewSyntax& syntax, const ASTContext& context) {
     ClockingSkew result;
     result.edge = SemanticFacts::getEdgeKind(syntax.edge.kind);

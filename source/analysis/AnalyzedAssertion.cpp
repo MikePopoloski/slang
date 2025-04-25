@@ -118,6 +118,12 @@ struct ClockVisitor {
             if constexpr (HasVisitExprs<T, SeqExprVisitor>) {
                 expr.visitExprs(*this);
                 if constexpr (std::is_same_v<T, CallExpression>) {
+                    if (!parent.globalFutureSampledValueCall &&
+                        SemanticFacts::isGlobalFutureSampledValueFunc(expr.getKnownSystemName())) {
+                        parent.globalFutureSampledValueCall = &expr;
+                        parent.checkGFSVC();
+                    }
+
                     if (lastEndClock && outerClock) {
                         // The end clock of a sequence used with .triggered or .matched
                         // must match the outer clock.
@@ -141,7 +147,9 @@ struct ClockVisitor {
     const AnalyzedProcedure* procedure;
     const Symbol& parentSymbol;
     SmallVector<ClockInference::ExpansionInstance> expansionStack;
+    const CallExpression* globalFutureSampledValueCall = nullptr;
     bool hasInferredClockCall = false;
+    bool hasMatchItems = false;
     bool bad = false;
 
     ClockVisitor(AnalysisContext& context, const AnalyzedProcedure* procedure,
@@ -273,6 +281,11 @@ struct ClockVisitor {
     }
 
     VisitResult visit(const SequenceWithMatchExpr& expr, Clock outerClock, bitmask<VF> flags) {
+        if (!hasMatchItems) {
+            hasMatchItems = true;
+            checkGFSVC();
+        }
+
         return expr.expr.visit(*this, outerClock, flags | VF::RequireSequence);
     }
 
@@ -406,6 +419,16 @@ struct ClockVisitor {
         expr.condition.visit(visitor);
 
         return expr.expr.visit(*this, outerClock, flags);
+    }
+
+    void checkGFSVC() {
+        if (!bad && globalFutureSampledValueCall && hasMatchItems) {
+            bad = true;
+
+            auto& diag = context.addDiag(parentSymbol, diag::GFSVMatchItems,
+                                         globalFutureSampledValueCall->sourceRange);
+            diag << globalFutureSampledValueCall->getSubroutineName();
+        }
     }
 
 private:
