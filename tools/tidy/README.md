@@ -65,6 +65,9 @@ The available options are:
 |     **outputPortSuffix**      | [string] |       [_o]         |
 |      **inoutPortSuffix**      | [string] |       [_io]        |
 | **moduleInstantiationPrefix** |  string  |        i_          |
+|      **inputPortPrefix**      | [string] |       []           |
+|     **outputPortPrefix**      | [string] |       []           |
+|      **inoutPortPrefix**      | [string] |       []           |
 
 An example of a possible configuration file:
 

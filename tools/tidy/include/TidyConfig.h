@@ -32,6 +32,9 @@ public:
         std::vector<std::string> outputPortSuffix;
         std::vector<std::string> inoutPortSuffix;
         std::string moduleInstantiationPrefix;
+        std::vector<std::string> inputPortPrefix;
+        std::vector<std::string> outputPortPrefix;
+        std::vector<std::string> inoutPortPrefix;
     };
 
     /// Default TidyConfig constructor which will set the default check's configuration values
@@ -120,6 +123,18 @@ private:
         }
         else if (configName == "moduleInstantiationPrefix") {
             visit(checkConfigs.moduleInstantiationPrefix);
+            return;
+        }
+        else if (configName == "inputPortPrefix") {
+            visit(checkConfigs.inputPortPrefix);
+            return;
+        }
+        else if (configName == "outputPortPrefix") {
+            visit(checkConfigs.outputPortPrefix);
+            return;
+        }
+        else if (configName == "inoutPortPrefix") {
+            visit(checkConfigs.inoutPortPrefix);
             return;
         }
         SLANG_THROW(std::invalid_argument(fmt::format("The check: {} does not exist", configName)));
