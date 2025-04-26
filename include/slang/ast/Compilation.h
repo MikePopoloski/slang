@@ -19,7 +19,6 @@
 #include "slang/util/BumpAllocator.h"
 #include "slang/util/IntervalMap.h"
 #include "slang/util/LanguageVersion.h"
-#include "slang/util/SafeIndexedVector.h"
 
 namespace slang::syntax {
 class SyntaxTree;
@@ -751,6 +750,12 @@ public:
     /// Allocates a config block symbol.
     ConfigBlockSymbol* allocConfigBlock(std::string_view name, SourceLocation loc);
 
+    /// Allocates a scope's deferred data object.
+    Scope::DeferredMemberData* allocDeferredMemberData() {
+        SLANG_ASSERT(!isFrozen());
+        return deferredMemberAllocator.emplace();
+    }
+
     /// Allocates a scope's wildcard import data object.
     Scope::WildcardImportData* allocWildcardImportData();
 
@@ -799,9 +804,6 @@ private:
         // or extern interface methods.
         bool cannotCache = false;
     };
-
-    // These functions are called by Scopes to create and track various members.
-    Scope::DeferredMemberData& getOrAddDeferredData(Scope::DeferredMemberIndex& index);
 
     bool doTypoCorrection() const { return typoCorrections < options.typoCorrectionLimit; }
     void didTypoCorrection() { typoCorrections++; }
@@ -861,9 +863,6 @@ private:
     Type* voidType;
     Type* errorType;
     NetType* wireNetType;
-
-    // Sideband data for scopes that have deferred members.
-    SafeIndexedVector<Scope::DeferredMemberData, Scope::DeferredMemberIndex> deferredData;
 
     // A map of syntax nodes that have been referenced in the AST.
     // The value indicates whether the node has been used as an lvalue vs non-lvalue,
@@ -954,6 +953,7 @@ private:
     int nextStructSystemId = 1;
     int nextUnionSystemId = 1;
 
+    TypedBumpAllocator<Scope::DeferredMemberData> deferredMemberAllocator;
     TypedBumpAllocator<GenericClassDefSymbol> genericClassAllocator;
     TypedBumpAllocator<AssertionInstanceDetails> assertionDetailsAllocator;
     TypedBumpAllocator<ConfigBlockSymbol> configBlockAllocator;

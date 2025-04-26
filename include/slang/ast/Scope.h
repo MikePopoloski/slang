@@ -260,7 +260,7 @@ protected:
     /// Before we access any members to do lookups or return iterators, make sure
     /// the scope is fully elaborated.
     void ensureElaborated() const {
-        if (deferredMemberIndex != DeferredMemberIndex::Invalid)
+        if (deferredMemberPtr)
             elaborate();
     }
 
@@ -277,10 +277,6 @@ protected:
 
 private:
     friend class Compilation;
-
-    // Strongly typed index type which is used in a sideband list in the Compilation object
-    // to store information about deferred members in this scope.
-    enum class DeferredMemberIndex : uint32_t { Invalid = 0 };
 
     // Data stored in sideband tables in the Compilation object for deferred members.
     class DeferredMemberData {
@@ -353,7 +349,7 @@ private:
 
     // If this scope has any deferred member symbols they'll be temporarily
     // stored in a sideband list in the compilation object until we expand them.
-    mutable DeferredMemberIndex deferredMemberIndex{0};
+    mutable DeferredMemberData* deferredMemberPtr = nullptr;
 
     // If this scope has any wildcard import directives we'll keep track of them
     // in a sideband object.

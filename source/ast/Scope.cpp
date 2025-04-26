@@ -592,7 +592,9 @@ const Symbol* Scope::lookupName(std::string_view name, LookupLocation location,
 }
 
 Scope::DeferredMemberData& Scope::getOrAddDeferredData() const {
-    return compilation.getOrAddDeferredData(deferredMemberIndex);
+    if (!deferredMemberPtr)
+        deferredMemberPtr = compilation.allocDeferredMemberData();
+    return *deferredMemberPtr;
 }
 
 void Scope::addDeferredMembers(const SyntaxNode& syntax) {
@@ -822,10 +824,9 @@ void Scope::elaborate() const {
         TimeTrace::beginTrace("elaborate scope"sv, [&] { return thisSym->getHierarchicalPath(); });
     }
 
-    SLANG_ASSERT(deferredMemberIndex != DeferredMemberIndex::Invalid);
-    auto deferredData = compilation.getOrAddDeferredData(deferredMemberIndex);
+    SLANG_ASSERT(deferredMemberPtr);
+    auto deferredData = *std::exchange(deferredMemberPtr, nullptr);
     auto deferred = deferredData.getMembers();
-    deferredMemberIndex = DeferredMemberIndex::Invalid;
 
     if (deferredData.isUncacheable)
         compilation.noteCannotCache(*this);
@@ -1234,7 +1235,7 @@ void Scope::elaborate() const {
         });
     }
 
-    SLANG_ASSERT(deferredMemberIndex == DeferredMemberIndex::Invalid);
+    SLANG_ASSERT(!deferredMemberPtr);
     if (thisSym->kind == SymbolKind::InstanceBody && TimeTrace::isEnabled())
         TimeTrace::endTrace();
 }
@@ -1258,9 +1259,9 @@ bool Scope::handleDataDeclaration(const DataDeclarationSyntax& syntax) {
     // We aren't elaborated yet so can't do a normal lookup in this scope.
     // Temporarily swap out the deferred member index so that the lookup
     // doesn't trigger elaboration.
-    auto savedIndex = std::exchange(deferredMemberIndex, DeferredMemberIndex::Invalid);
+    auto savedPtr = std::exchange(deferredMemberPtr, nullptr);
     auto symbol = Lookup::unqualified(*this, name);
-    deferredMemberIndex = savedIndex;
+    deferredMemberPtr = savedPtr;
 
     // If we found a net type, this is actually one or more net symbols.
     if (symbol && symbol->kind == SymbolKind::NetType) {
@@ -1349,10 +1350,10 @@ void Scope::handleUserDefinedNet(const UserDefinedNetDeclarationSyntax& syntax) 
     // We aren't elaborated yet so can't do a normal lookup in this scope.
     // Temporarily swap out the deferred member index so that the lookup
     // doesn't trigger elaboration.
-    auto savedIndex = std::exchange(deferredMemberIndex, DeferredMemberIndex::Invalid);
+    auto savedPtr = std::exchange(deferredMemberPtr, nullptr);
     auto symbol = Lookup::unqualifiedAt(*this, syntax.netType.valueText(), LookupLocation::max,
                                         syntax.netType.range());
-    deferredMemberIndex = savedIndex;
+    deferredMemberPtr = savedPtr;
 
     SmallVector<const NetSymbol*> results;
     NetSymbol::fromSyntax(*this, syntax, symbol, results);

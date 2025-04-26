@@ -1813,13 +1813,6 @@ const Type& Compilation::getTypeRefType() const {
     return getType(SyntaxKind::TypeReference);
 }
 
-Scope::DeferredMemberData& Compilation::getOrAddDeferredData(Scope::DeferredMemberIndex& index) {
-    SLANG_ASSERT(!isFrozen());
-    if (index == Scope::DeferredMemberIndex::Invalid)
-        index = deferredData.emplace();
-    return deferredData[index];
-}
-
 void Compilation::parseParamOverrides(
     flat_hash_map<std::string_view, const ConstantValue*>& results) {
     if (options.paramOverrides.empty())
