@@ -94,11 +94,6 @@ public:
     /// The type of the expression.
     not_null<const Type*> type;
 
-    /// A pointer to a constant value if the expression has been evaluated.
-    /// The value may be empty to indicate that the expression is known to not be constant.
-    /// If the pointer is null, the expression hasn't been evaluated yet.
-    mutable const ConstantValue* constant = nullptr;
-
     /// The syntax used to create the expression, if any. An expression tree can
     /// be created manually in which case it may not have a syntax representation.
     const ExpressionSyntax* syntax = nullptr;
@@ -248,6 +243,11 @@ public:
     /// Indicates whether the expression is represented by an unsized integer value.
     /// For example, the integer literal "4" or the unbased unsized literal "'1";
     bool isUnsizedInteger() const;
+
+    /// Returns a pointer to a constant value if the expression has been evaluated.
+    /// The value may be empty to indicate that the expression is known to not be constant.
+    /// If the pointer is null, the expression hasn't been evaluated yet.
+    const ConstantValue* getConstant() const { return constant; }
 
     /// Evaluates the expression under the given evaluation context. Any errors that occur
     /// will be stored in the evaluation context instead of issued to the compilation.
@@ -418,7 +418,6 @@ protected:
                                                     const ExpressionSyntax& syntax,
                                                     const ASTContext& context,
                                                     bitmask<ASTFlags> extraFlags = ASTFlags::None);
-    struct PropagationVisitor;
 
     template<typename TExpression, typename TVisitor, typename... Args>
     decltype(auto) visitExpression(TExpression* expr, TVisitor&& visitor, Args&&... args) const;
@@ -431,6 +430,16 @@ protected:
 
     static EffectiveSign conjunction(EffectiveSign left, EffectiveSign right);
     static bool signMatches(EffectiveSign left, EffectiveSign right);
+
+private:
+    struct EvalVisitor;
+    struct LValueVisitor;
+    struct EffectiveWidthVisitor;
+    struct EffectiveSignVisitor;
+    struct HierarchicalVisitor;
+    struct PropagationVisitor;
+
+    mutable const ConstantValue* constant = nullptr;
 };
 
 /// @brief Represents an invalid expression

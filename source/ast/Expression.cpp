@@ -17,20 +17,22 @@
 #include "slang/syntax/AllSyntax.h"
 #include "slang/syntax/SyntaxVisitor.h"
 
-namespace {
+namespace slang::ast {
 
-using namespace slang;
-using namespace slang::ast;
+using namespace parsing;
+using namespace syntax;
 
-struct EvalVisitor {
+struct Expression::EvalVisitor {
     template<typename T>
     ConstantValue visit(const T& expr, EvalContext& context) {
-        if (expr.constant)
-            return *expr.constant;
+        if (expr.getConstant())
+            return *expr.getConstant();
 
         if (expr.bad()) {
-            if (context.cacheResults())
+            if (context.cacheResults()) {
+                SLANG_ASSERT(!context.getCompilation().isFrozen());
                 expr.constant = &ConstantValue::Invalid;
+            }
             return nullptr;
         }
 
@@ -49,8 +51,7 @@ struct EvalVisitor {
     }
 };
 
-class LValueVisitor {
-public:
+struct Expression::LValueVisitor {
     template<typename T>
     LValue visit(const T& expr, EvalContext& context) {
         if constexpr (requires { expr.evalLValueImpl(context); }) {
@@ -68,8 +69,7 @@ public:
     }
 };
 
-class EffectiveWidthVisitor {
-public:
+struct Expression::EffectiveWidthVisitor {
     template<typename T>
     std::optional<bitwidth_t> visit(const T& expr) {
         if constexpr (requires { expr.getEffectiveWidthImpl(); }) {
@@ -84,8 +84,7 @@ public:
     }
 };
 
-class EffectiveSignVisitor {
-public:
+struct Expression::EffectiveSignVisitor {
     using EffectiveSign = Expression::EffectiveSign;
 
     bool isForConversion;
@@ -106,7 +105,7 @@ public:
     }
 };
 
-struct HierarchicalVisitor {
+struct Expression::HierarchicalVisitor {
     bool any = false;
 
     template<typename T>
@@ -121,13 +120,6 @@ struct HierarchicalVisitor {
         }
     }
 };
-
-} // namespace
-
-namespace slang::ast {
-
-using namespace parsing;
-using namespace syntax;
 
 // This visitor handles inserting implicit conversions into an expression
 // tree where necessary. SystemVerilog has an additional weird feature where

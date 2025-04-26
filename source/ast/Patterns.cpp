@@ -195,16 +195,16 @@ Pattern& ConstantPattern::fromSyntax(const ExpressionPatternSyntax& syntax, cons
 
 ConstantValue ConstantPattern::evalImpl(EvalContext&, const ConstantValue& value,
                                         CaseStatementCondition conditionKind) const {
-    SLANG_ASSERT(expr.constant);
+    SLANG_ASSERT(expr.getConstant());
     SLANG_ASSERT(conditionKind != CaseStatementCondition::Inside);
 
     bool result;
-    if (conditionKind == CaseStatementCondition::Normal || !expr.constant->isInteger() ||
+    if (conditionKind == CaseStatementCondition::Normal || !expr.getConstant()->isInteger() ||
         !value.isInteger()) {
-        result = *expr.constant == value;
+        result = *expr.getConstant() == value;
     }
     else {
-        const SVInt& l = expr.constant->integer();
+        const SVInt& l = expr.getConstant()->integer();
         const SVInt& r = value.integer();
         if (conditionKind == CaseStatementCondition::WildcardJustZ)
             result = caseZWildcardEqual(l, r);

@@ -300,7 +300,7 @@ const Expression& DefParamSymbol::getInitializer() const {
 }
 
 const ConstantValue& DefParamSymbol::getValue() const {
-    auto v = getInitializer().constant;
+    auto v = getInitializer().getConstant();
     SLANG_ASSERT(v);
     return *v;
 }
@@ -397,7 +397,8 @@ void DefParamSymbol::resolve() const {
 
     auto makeInvalid = [&] {
         initializer = comp.emplace<InvalidExpression>(nullptr, comp.getErrorType());
-        initializer->constant = &ConstantValue::Invalid;
+        context.eval(*initializer);
+        SLANG_ASSERT(initializer->getConstant());
     };
 
     if (!target) {
@@ -439,8 +440,8 @@ void DefParamSymbol::resolve() const {
     }
 
     context.eval(*initializer);
-    if (!initializer->constant)
-        initializer->constant = &ConstantValue::Invalid;
+    if (!initializer->getConstant())
+        makeInvalid();
 }
 
 void DefParamSymbol::serializeTo(ASTSerializer& serializer) const {

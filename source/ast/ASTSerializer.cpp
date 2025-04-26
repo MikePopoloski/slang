@@ -216,8 +216,8 @@ void ASTSerializer::visit(const T& elem, bool inMembersArray) {
             if (constant)
                 write("constant", constant);
         }
-        else if (elem.constant) {
-            write("constant", *elem.constant);
+        else if (elem.getConstant()) {
+            write("constant", *elem.getConstant());
         }
 
         writer.endObject();

@@ -378,12 +378,12 @@ const Type& EnumType::fromSyntax(Compilation& comp, const EnumTypeSyntax& syntax
         }
 
         ev.getValue();
-        if (!initExpr->constant)
+        if (!initExpr->getConstant())
             return;
 
         // An enumerated name with x or z assignments assigned to an enum with no explicit data type
         // or an explicit 2-state declaration shall be a syntax error.
-        auto& value = initExpr->constant->integer();
+        auto& value = initExpr->getConstant()->integer();
         if (!base->isFourState() && value.hasUnknown()) {
             context.addDiag(diag::EnumValueUnknownBits, previousRange) << value << *base;
             return;

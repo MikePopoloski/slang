@@ -681,8 +681,8 @@ static void reduceComparison(const BinaryExpression& expr, Diagnostic& result) {
 
     auto opToken = syntax->as<BinaryExpressionSyntax>().operatorToken;
 
-    auto lc = expr.left().constant;
-    auto rc = expr.right().constant;
+    auto lc = expr.left().getConstant();
+    auto rc = expr.right().getConstant();
     SLANG_ASSERT(lc && rc);
 
     auto& note = result.addNote(diag::NoteComparisonReduces, opToken.location());
@@ -693,9 +693,9 @@ static void reduceComparison(const BinaryExpression& expr, Diagnostic& result) {
 void ElabSystemTaskSymbol::reportStaticAssert(const Scope& scope, SourceLocation loc,
                                               std::string_view message,
                                               const Expression* condition) {
-    if (condition && condition->constant) {
+    if (condition && condition->getConstant()) {
         // Issue no diagnostic if the assert condition is true.
-        if (condition->constant->isTrue())
+        if (condition->getConstant()->isTrue())
             return;
     }
 
@@ -1455,11 +1455,11 @@ PrimitiveSymbol& PrimitiveSymbol::fromSyntax(const Scope& scope,
                 if (expr.kind == ExpressionKind::IntegerLiteral &&
                     (expr.type->getBitWidth() == 1 || expr.isUnsizedInteger())) {
                     context.eval(expr);
-                    if (expr.constant) {
-                        auto& val = expr.constant->integer();
+                    if (expr.getConstant()) {
+                        auto& val = expr.getConstant()->integer();
                         if (val == 0 || val == 1 ||
                             (val.getBitWidth() == 1 && exactlyEqual(val[0], logic_t::x))) {
-                            prim->initVal = expr.constant;
+                            prim->initVal = expr.getConstant();
                         }
                     }
                 }
