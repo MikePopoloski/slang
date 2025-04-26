@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ### Language Support
 * Added support for clock flow, clock resolution, and clock inference rules in checkers and assertions
   * Various cases of invalid clock usage will now issue appropriate errors
+  * Clock resolution is also performed for the sampled value system functions
 * Implemented rules for which kinds of sequences and properties can be declared in clocking blocks
 * Implemented rules for dynamic variable access from within checker procedures
 
@@ -34,6 +35,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Added a bunch more tests for the pyslang bindings (thanks to @parker-research)
 * Added pyslang bindings for the SyntaxRewriter class (thanks to @parker-research)
 * -Wint-bool-conv now applies to expressions used in assertions, properties, and sequences
+* Added a port prefix rule to slang-tidy, similar to the existing port suffix rule (thanks to @corco)
 
 ### Fixes
 * The restriction on interface instances targeted by defparams not being allowed with virtual interfaces was also erroneously applied to interface port connections
@@ -52,6 +54,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 * Fixed various issues with how instance array indices are mapped to underlying elements
 * Fixed SyntaxPrinter printing of directives that have skipped leading trivia
 * Fixed a bug in the constant evaluation of division between two positive signed integers; the sign flag was lost and the result was always treated as unsigned
+* Assignments are now correctly disallowed in timing controls
+* Cycle delays are now correctly disallowed in event trigger statements
+* The global future sampled value system functions are now correctly disallowed in assertions with sequence match items
 
 
 ## [v8.0] - 2025-02-05
