@@ -18,10 +18,14 @@ TidyConfig::TidyConfig() {
     checkConfigs.outputPortSuffix = {"_o"};
     checkConfigs.inoutPortSuffix = {"_io"};
     checkConfigs.moduleInstantiationPrefix = "i_";
+    checkConfigs.inputPortPrefix = {""};
+    checkConfigs.outputPortPrefix = {""};
+    checkConfigs.inoutPortPrefix = {""};
 
     auto styleChecks = std::unordered_map<std::string, CheckStatus>();
     styleChecks.emplace("AlwaysCombNonBlocking", CheckStatus::ENABLED);
     styleChecks.emplace("AlwaysFFBlocking", CheckStatus::ENABLED);
+    styleChecks.emplace("EnforcePortPrefix", CheckStatus::ENABLED);
     styleChecks.emplace("EnforcePortSuffix", CheckStatus::ENABLED);
     styleChecks.emplace("NoOldAlwaysSyntax", CheckStatus::ENABLED);
     styleChecks.emplace("EnforceModuleInstantiationPrefix", CheckStatus::ENABLED);

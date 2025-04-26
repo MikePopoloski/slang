@@ -10,6 +10,7 @@ add_library(
   src/ASTHelperVisitors.cpp
   src/synthesis/OnlyAssignedOnReset.cpp
   src/synthesis/RegisterHasNoReset.cpp
+  src/style/EnforcePortPrefix.cpp
   src/style/EnforcePortSuffix.cpp
   src/synthesis/NoLatchesOnDesign.cpp
   src/style/NoOldAlwaysSyntax.cpp
