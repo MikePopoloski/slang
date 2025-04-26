@@ -54,7 +54,7 @@ using namespace parsing;
 using namespace syntax;
 
 static size_t countMembers(const SyntaxNode& syntax);
-static bool hasModportExports(const ModportDeclarationSyntax& syntax);
+static bool declaresModportExports(const ModportDeclarationSyntax& syntax);
 static std::string_view getIdentifierName(const NamedTypeSyntax& syntax);
 static bool treatAsNonAnsiPort(const Scope& scope, const DataDeclarationSyntax& syntax,
                                const DefinitionSymbol*& foundDef);
@@ -290,16 +290,14 @@ void Scope::addMembers(const SyntaxNode& syntax) {
             break;
         case SyntaxKind::EnumType:
             addDeferredMembers(syntax);
-            getOrAddDeferredData().hasEnums = true;
+            hasEnums = true;
             break;
         case SyntaxKind::PortDeclaration:
             addDeferredMembers(syntax);
-            getOrAddDeferredData();
             break;
         case SyntaxKind::ModportDeclaration:
             addDeferredMembers(syntax);
-            getOrAddDeferredData().hasModportExports = hasModportExports(
-                syntax.as<ModportDeclarationSyntax>());
+            hasModportExports = declaresModportExports(syntax.as<ModportDeclarationSyntax>());
             break;
         case SyntaxKind::FunctionDeclaration:
         case SyntaxKind::TaskDeclaration: {
@@ -309,8 +307,10 @@ void Scope::addMembers(const SyntaxNode& syntax) {
             if (subroutine)
                 addMember(*subroutine);
 
-            if (isExternIfaceMethod)
-                getOrAddDeferredData().isUncacheable = true;
+            if (isExternIfaceMethod) {
+                setNeedElaboration();
+                isUncacheable = true;
+            }
             break;
         }
         case SyntaxKind::DataDeclaration: {
@@ -383,7 +383,7 @@ void Scope::addMembers(const SyntaxNode& syntax) {
             auto& symbol = ForwardingTypedefSymbol::fromSyntax(
                 *this, syntax.as<ForwardTypedefDeclarationSyntax>());
             addMember(symbol);
-            getOrAddDeferredData();
+            setNeedElaboration();
             break;
         }
         case SyntaxKind::GenerateRegion:
@@ -423,7 +423,7 @@ void Scope::addMembers(const SyntaxNode& syntax) {
                 case SyntaxKind::ForwardTypedefDeclaration: {
                     auto& symbol = ForwardingTypedefSymbol::fromSyntax(*this, cpd);
                     addMember(symbol);
-                    getOrAddDeferredData();
+                    setNeedElaboration();
                     break;
                 }
                 case SyntaxKind::ParameterDeclarationStatement: {
@@ -599,16 +599,10 @@ const Symbol* Scope::lookupName(std::string_view name, LookupLocation location,
     return result.found;
 }
 
-Scope::DeferredMemberData& Scope::getOrAddDeferredData() const {
-    if (!deferredMemberPtr)
-        deferredMemberPtr = compilation.allocDeferredMemberData();
-    return *deferredMemberPtr;
-}
-
 void Scope::addDeferredMembers(const SyntaxNode& syntax) {
     auto sym = compilation.emplace<DeferredMemberSymbol>(syntax);
     addMember(*sym);
-    getOrAddDeferredData();
+    setNeedElaboration();
 
     // We need to figure out how many new symbols could be inserted when we
     // later elaborate this deferred member, so that we can make room in the
@@ -832,14 +826,15 @@ void Scope::elaborate() const {
         TimeTrace::beginTrace("elaborate scope"sv, [&] { return thisSym->getHierarchicalPath(); });
     }
 
-    SLANG_ASSERT(deferredMemberPtr);
-    auto deferredData = *std::exchange(deferredMemberPtr, nullptr);
-    if (deferredData.isUncacheable)
+    SLANG_ASSERT(needsElaboration);
+    needsElaboration = false;
+
+    if (isUncacheable)
         compilation.noteCannotCache(*this);
 
     // Enums need to be handled first because their value members may need
     // to be looked up by methods below.
-    if (deferredData.hasEnums) {
+    if (hasEnums) {
         for (auto symbol = firstMember; symbol; symbol = symbol->nextInScope) {
             if (symbol->kind != SymbolKind::DeferredMember)
                 continue;
@@ -861,7 +856,7 @@ void Scope::elaborate() const {
 
     // Allow interfaces to implicitly declare extern methods for
     // exported subroutines that are only declared in modports.
-    if (deferredData.hasModportExports)
+    if (hasModportExports)
         handleExportedMethods();
 
     SmallVector<std::pair<const SyntaxNode*, const Symbol*>> nonAnsiPortDecls;
@@ -1219,7 +1214,7 @@ void Scope::elaborate() const {
 
     // If there are bind directives, reach up into the instance body
     // and pull out the extra bind metadata from its override node.
-    if (deferredData.hasBinds) {
+    if (hasBinds) {
         SmallSet<const BindDirectiveSyntax*, 4> seenBindDirectives;
         ASTContext context(*this, LookupLocation::max);
         auto handleBind = [&](const BindDirectiveInfo& info) {
@@ -1271,7 +1266,7 @@ void Scope::elaborate() const {
         });
     }
 
-    SLANG_ASSERT(!deferredMemberPtr);
+    SLANG_ASSERT(!needsElaboration);
     if (thisSym->kind == SymbolKind::InstanceBody && TimeTrace::isEnabled())
         TimeTrace::endTrace();
 }
@@ -1285,9 +1280,9 @@ bool Scope::handleDataDeclaration(const DataDeclarationSyntax& syntax) {
     // We aren't elaborated yet so can't do a normal lookup in this scope.
     // Temporarily swap out the deferred member index so that the lookup
     // doesn't trigger elaboration.
-    auto savedPtr = std::exchange(deferredMemberPtr, nullptr);
+    auto savedFlag = std::exchange(needsElaboration, false);
     auto symbol = Lookup::unqualified(*this, name);
-    deferredMemberPtr = savedPtr;
+    needsElaboration = savedFlag;
 
     // If we found a net type, this is actually one or more net symbols.
     if (symbol && symbol->kind == SymbolKind::NetType) {
@@ -1329,7 +1324,6 @@ bool Scope::handleDataDeclaration(const DataDeclarationSyntax& syntax) {
     if (treatAsNonAnsiPort(*this, syntax, defSym)) {
         // Save for later when we process the ports.
         addDeferredMembers(syntax);
-        getOrAddDeferredData();
         return true;
     }
 
@@ -1353,10 +1347,10 @@ void Scope::handleUserDefinedNet(const UserDefinedNetDeclarationSyntax& syntax) 
     // We aren't elaborated yet so can't do a normal lookup in this scope.
     // Temporarily swap out the deferred member index so that the lookup
     // doesn't trigger elaboration.
-    auto savedPtr = std::exchange(deferredMemberPtr, nullptr);
+    auto savedFlag = std::exchange(needsElaboration, false);
     auto symbol = Lookup::unqualifiedAt(*this, syntax.netType.valueText(), LookupLocation::max,
                                         syntax.netType.range());
-    deferredMemberPtr = savedPtr;
+    needsElaboration = savedFlag;
 
     SmallVector<const NetSymbol*> results;
     NetSymbol::fromSyntax(*this, syntax, symbol, results);
@@ -1606,7 +1600,7 @@ static size_t countMembers(const SyntaxNode& syntax) {
     }
 }
 
-static bool hasModportExports(const ModportDeclarationSyntax& syntax) {
+static bool declaresModportExports(const ModportDeclarationSyntax& syntax) {
     for (auto item : syntax.items) {
         for (auto port : item->ports->ports) {
             if (port->kind == SyntaxKind::ModportSubroutinePortList) {

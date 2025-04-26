@@ -750,12 +750,6 @@ public:
     /// Allocates a config block symbol.
     ConfigBlockSymbol* allocConfigBlock(std::string_view name, SourceLocation loc);
 
-    /// Allocates a scope's deferred data object.
-    Scope::DeferredMemberData* allocDeferredMemberData() {
-        SLANG_ASSERT(!isFrozen());
-        return deferredMemberAllocator.emplace();
-    }
-
     /// Allocates a scope's wildcard import data object.
     Scope::WildcardImportData* allocWildcardImportData();
 
@@ -953,7 +947,6 @@ private:
     int nextStructSystemId = 1;
     int nextUnionSystemId = 1;
 
-    TypedBumpAllocator<Scope::DeferredMemberData> deferredMemberAllocator;
     TypedBumpAllocator<GenericClassDefSymbol> genericClassAllocator;
     TypedBumpAllocator<AssertionInstanceDetails> assertionDetailsAllocator;
     TypedBumpAllocator<ConfigBlockSymbol> configBlockAllocator;

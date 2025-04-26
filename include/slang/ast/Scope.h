@@ -259,17 +259,20 @@ protected:
     /// Before we access any members to do lookups or return iterators, make sure
     /// the scope is fully elaborated.
     void ensureElaborated() const {
-        if (deferredMemberPtr)
+        if (needsElaboration)
             elaborate();
     }
 
     /// Flag the need for this scope to be elaborated before members are accessed.
-    void setNeedElaboration() { getOrAddDeferredData(); }
+    void setNeedElaboration() { needsElaboration = true; }
 
     /// Add a preconstructed wildcard import to this scope.
     void addWildcardImport(const WildcardImportSymbol& item);
 
-    void setHasBinds() { getOrAddDeferredData().hasBinds = true; }
+    void setHasBinds() {
+        needsElaboration = true;
+        hasBinds = true;
+    }
 
     void insertMember(const Symbol* member, const Symbol* at, bool isElaborating,
                       bool incrementIndex) const;
@@ -277,24 +280,6 @@ protected:
 private:
     friend class Compilation;
 
-    // Data stored in sideband tables in the Compilation object for deferred members.
-    class DeferredMemberData {
-    public:
-        // Indicates whether any enums have been registered in the scope.
-        bool hasEnums = false;
-
-        // Indicates whether there are any bind directives targeting this scope.
-        bool hasBinds = false;
-
-        // Indicates whether this scope is uncacheable, for instance if
-        // it contains an extern iface method implementation.
-        bool isUncacheable = false;
-
-        // Indicates whether this scope has any exported modport subroutines.
-        bool hasModportExports = false;
-    };
-
-    DeferredMemberData& getOrAddDeferredData() const;
     void addDeferredMembers(const syntax::SyntaxNode& syntax);
     void elaborate() const;
     void handleNameConflict(const Symbol& member) const;
@@ -324,13 +309,26 @@ private:
     mutable const Symbol* firstMember = nullptr;
     mutable const Symbol* lastMember = nullptr;
 
-    // If this scope has any deferred member symbols they'll be temporarily
-    // stored in a sideband list in the compilation object until we expand them.
-    mutable DeferredMemberData* deferredMemberPtr = nullptr;
-
     // If this scope has any wildcard import directives we'll keep track of them
     // in a sideband object.
     WildcardImportData* importData = nullptr;
+
+    // Set to true if the scope needs a separate elaboration pass before
+    // its members can be accessed.
+    mutable bool needsElaboration = false;
+
+    // Indicates whether any enums have been registered in the scope.
+    bool hasEnums = false;
+
+    // Indicates whether there are any bind directives targeting this scope.
+    bool hasBinds = false;
+
+    // Indicates whether this scope is uncacheable, for instance if
+    // it contains an extern iface method implementation.
+    bool isUncacheable = false;
+
+    // Indicates whether this scope has any exported modport subroutines.
+    bool hasModportExports = false;
 };
 
 } // namespace slang::ast
