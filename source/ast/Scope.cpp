@@ -1195,75 +1195,19 @@ void Scope::elaborate() const {
     for (auto node : nestedDefs)
         handleNestedDefinition(*node);
 
-    if (usedPorts) {
-        // Now that all members are known, force port types to resolve so that
-        // back references to internal variables and nets are known.
-        for (auto port : asSymbol().as<InstanceBodySymbol>().portList) {
-            switch (port->kind) {
-                case SymbolKind::Port:
-                    port->as<PortSymbol>().getType();
-                    break;
-                case SymbolKind::MultiPort:
-                    port->as<MultiPortSymbol>().getType();
-                    break;
-                default:
-                    break;
-            }
-        }
-    }
-
-    // If there are bind directives, reach up into the instance body
-    // and pull out the extra bind metadata from its override node.
-    if (hasBinds) {
-        SmallSet<const BindDirectiveSyntax*, 4> seenBindDirectives;
-        ASTContext context(*this, LookupLocation::max);
-        auto handleBind = [&](const BindDirectiveInfo& info) {
-            if (!seenBindDirectives.emplace(info.bindSyntax).second) {
-                addDiag(diag::DuplicateBind, info.bindSyntax->sourceRange());
-                return;
-            }
-
-            SmallVector<const Symbol*> instances;
-            SmallVector<const Symbol*> implicitNets;
-            if (info.bindSyntax->instantiation->kind == SyntaxKind::CheckerInstantiation) {
-                CheckerInstanceSymbol::fromSyntax(
-                    info.bindSyntax->instantiation->as<CheckerInstantiationSyntax>(), context,
-                    instances, implicitNets, InstanceFlags::FromBind);
-            }
-            else {
-                InstanceSymbol::fromSyntax(
-                    compilation, info.bindSyntax->instantiation->as<HierarchyInstantiationSyntax>(),
-                    context, instances, implicitNets, &info);
-            }
-
-            for (auto sym : implicitNets)
-                insertMember(sym, lastMember, true, false);
-            for (auto sym : instances)
-                insertMember(sym, lastMember, true, true);
-        };
-
-        auto& instanceBody = asSymbol().as<InstanceBodySymbol>();
-        if (auto node = instanceBody.hierarchyOverrideNode) {
-            for (auto& [bindInfo, targetDefSyntax] : node->binds) {
-                if (!targetDefSyntax)
-                    handleBind(bindInfo);
-            }
-        }
-
-        if (!instanceBody.getDefinition().bindDirectives.empty()) {
-            for (auto& bindInfo : instanceBody.getDefinition().bindDirectives)
-                handleBind(bindInfo);
-        }
-    }
-
-    // Allow statement blocks containing variables to include them in their member
-    // list before allowing anyone else to access the contained statements.
     if (thisSym->kind == SymbolKind::StatementBlock) {
+        // Allow statement blocks containing variables to include them in their member
+        // list before allowing anyone else to access the contained statements.
         const Symbol* at = nullptr;
         thisSym->as<StatementBlockSymbol>().elaborateVariables([this, &at](const Symbol& member) {
             insertMember(&member, at, true, false);
             at = &member;
         });
+    }
+    else if (thisSym->kind == SymbolKind::InstanceBody) {
+        // Allow instances to perform post-elaboration finalization.
+        thisSym->as<InstanceBodySymbol>().finishElaboration(
+            [this](const Symbol& member) { insertMember(&member, lastMember, true, true); });
     }
 
     SLANG_ASSERT(!needsElaboration);

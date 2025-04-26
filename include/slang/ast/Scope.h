@@ -269,11 +269,6 @@ protected:
     /// Add a preconstructed wildcard import to this scope.
     void addWildcardImport(const WildcardImportSymbol& item);
 
-    void setHasBinds() {
-        needsElaboration = true;
-        hasBinds = true;
-    }
-
     void insertMember(const Symbol* member, const Symbol* at, bool isElaborating,
                       bool incrementIndex) const;
 
@@ -319,9 +314,6 @@ private:
 
     // Indicates whether any enums have been registered in the scope.
     bool hasEnums = false;
-
-    // Indicates whether there are any bind directives targeting this scope.
-    bool hasBinds = false;
 
     // Indicates whether this scope is uncacheable, for instance if
     // it contains an extern iface method implementation.

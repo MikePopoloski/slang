@@ -12,6 +12,7 @@
 #include "slang/ast/Symbol.h"
 #include "slang/numeric/ConstantValue.h"
 #include "slang/syntax/SyntaxFwd.h"
+#include "slang/util/Function.h"
 #include "slang/util/SmallMap.h"
 
 namespace slang::ast {
@@ -54,9 +55,12 @@ enum class SLANG_EXPORT InstanceFlags : uint8_t {
 
     /// The instance resides in a parent instance that itself is from a bind directive.
     /// This applies recursively for the entire bound hierarchy.
-    ParentFromBind = 1 << 2
+    ParentFromBind = 1 << 2,
+
+    /// The instance is the target of a bind instantiation.
+    TargetedByBind = 1 << 3
 };
-SLANG_BITMASK(InstanceFlags, ParentFromBind)
+SLANG_BITMASK(InstanceFlags, TargetedByBind)
 
 /// Common functionality for module, interface, program, and primitive instances.
 class SLANG_EXPORT InstanceSymbolBase : public Symbol {
@@ -220,6 +224,7 @@ private:
     friend class Scope;
 
     void setPorts(std::span<const Symbol* const> ports) const { portList = ports; }
+    void finishElaboration(function_ref<void(const Symbol&)> insertCB) const;
 
     const DefinitionSymbol& definition;
     mutable std::span<const Symbol* const> portList;

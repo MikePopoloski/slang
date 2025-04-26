@@ -1079,19 +1079,81 @@ InstanceBodySymbol& InstanceBodySymbol::fromDefinition(Compilation& comp,
                 }
             }
             else {
-                result->setHasBinds();
+                result->setNeedElaboration();
+                result->flags |= InstanceFlags::TargetedByBind;
             }
         }
     }
 
     if (!definition.bindDirectives.empty()) {
-        if (!definition.bindDirectives.empty())
-            result->setHasBinds();
+        if (!definition.bindDirectives.empty()) {
+            result->setNeedElaboration();
+            result->flags |= InstanceFlags::TargetedByBind;
+        }
         comp.noteInstanceWithDefBind(*result);
     }
 
     result->parameters = params.copy(comp);
     return *result;
+}
+
+void InstanceBodySymbol::finishElaboration(function_ref<void(const Symbol&)> insertCB) const {
+    // Force port types to resolve so that back references to internal
+    // variables and nets are known.
+    for (auto port : portList) {
+        switch (port->kind) {
+            case SymbolKind::Port:
+                port->as<PortSymbol>().getType();
+                break;
+            case SymbolKind::MultiPort:
+                port->as<MultiPortSymbol>().getType();
+                break;
+            default:
+                break;
+        }
+    }
+
+    // If there are bind directives, reach up into the instance body
+    // and pull out the extra bind metadata from its override node.
+    if (flags.has(InstanceFlags::TargetedByBind)) {
+        SmallSet<const BindDirectiveSyntax*, 4> seenBindDirectives;
+        ASTContext context(*this, LookupLocation::max);
+        auto handleBind = [&](const BindDirectiveInfo& info) {
+            if (!seenBindDirectives.emplace(info.bindSyntax).second) {
+                addDiag(diag::DuplicateBind, info.bindSyntax->sourceRange());
+                return;
+            }
+
+            SmallVector<const Symbol*> instances;
+            SmallVector<const Symbol*> implicitNets;
+            if (info.bindSyntax->instantiation->kind == SyntaxKind::CheckerInstantiation) {
+                CheckerInstanceSymbol::fromSyntax(
+                    info.bindSyntax->instantiation->as<CheckerInstantiationSyntax>(), context,
+                    instances, implicitNets, InstanceFlags::FromBind);
+            }
+            else {
+                InstanceSymbol::fromSyntax(
+                    getCompilation(),
+                    info.bindSyntax->instantiation->as<HierarchyInstantiationSyntax>(), context,
+                    instances, implicitNets, &info);
+            }
+
+            for (auto sym : implicitNets)
+                insertCB(*sym);
+            for (auto sym : instances)
+                insertCB(*sym);
+        };
+
+        if (auto node = hierarchyOverrideNode) {
+            for (auto& [bindInfo, targetDefSyntax] : node->binds) {
+                if (!targetDefSyntax)
+                    handleBind(bindInfo);
+            }
+        }
+
+        for (auto& bindInfo : getDefinition().bindDirectives)
+            handleBind(bindInfo);
+    }
 }
 
 const Symbol* InstanceBodySymbol::findPort(std::string_view portName) const {
