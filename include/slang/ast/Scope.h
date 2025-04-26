@@ -28,7 +28,6 @@ namespace slang::ast {
 class ASTContext;
 class Compilation;
 class CompilationUnitSymbol;
-class ForwardingTypedefSymbol;
 class InstanceBodySymbol;
 class NetType;
 class WildcardImportSymbol;
@@ -281,23 +280,6 @@ private:
     // Data stored in sideband tables in the Compilation object for deferred members.
     class DeferredMemberData {
     public:
-        void addForwardingTypedef(const ForwardingTypedefSymbol& symbol);
-        std::span<const ForwardingTypedefSymbol* const> getForwardingTypedefs() const;
-
-        void addPortDeclaration(const syntax::SyntaxNode& syntax, const Symbol* insertion);
-        std::span<std::pair<const syntax::SyntaxNode*, const Symbol*> const> getPortDeclarations()
-            const;
-
-    private:
-        // Track a list of forwarding typedefs declared in the scope; once we've fully elaborated
-        // we'll go back and make sure they're actually valid.
-        std::vector<const ForwardingTypedefSymbol*> forwardingTypedefs;
-
-        // Track a list of non-ANSI port declarations declared in the scope; once we've fully
-        // elaborated we'll go back and make sure they're valid.
-        std::vector<std::pair<const syntax::SyntaxNode*, const Symbol*>> portDecls;
-
-    public:
         // Indicates whether any enums have been registered in the scope.
         bool hasEnums = false;
 
@@ -325,8 +307,6 @@ private:
     void checkImportConflict(const Symbol& member, const Symbol& existing) const;
     void addWildcardImport(const syntax::PackageImportItemSyntax& item,
                            std::span<const syntax::AttributeInstanceSyntax* const> attributes);
-    void tryFixupInstances(const syntax::DataDeclarationSyntax& syntax, const ASTContext& context,
-                           SmallVectorBase<const Symbol*>& results) const;
 
     // The compilation that owns this scope.
     Compilation& compilation;

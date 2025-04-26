@@ -1479,6 +1479,7 @@ void PortSymbol::fromSyntax(
 
     switch (syntax.kind) {
         case SyntaxKind::AnsiPortList: {
+            SLANG_ASSERT(portDeclarations.empty());
             AnsiPortListBuilder builder{scope, implicitMembers};
             for (auto port : syntax.as<AnsiPortListSyntax>().ports) {
                 switch (port->kind) {
@@ -1491,11 +1492,6 @@ void PortSymbol::fromSyntax(
                     default:
                         SLANG_UNREACHABLE;
                 }
-            }
-
-            if (!portDeclarations.empty()) {
-                scope.addDiag(diag::PortDeclInANSIModule,
-                              portDeclarations[0].first->getFirstToken().location());
             }
             break;
         }

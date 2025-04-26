@@ -55,6 +55,9 @@ using namespace syntax;
 
 static size_t countMembers(const SyntaxNode& syntax);
 static bool hasModportExports(const ModportDeclarationSyntax& syntax);
+static std::string_view getIdentifierName(const NamedTypeSyntax& syntax);
+static bool treatAsNonAnsiPort(const Scope& scope, const DataDeclarationSyntax& syntax,
+                               const DefinitionSymbol*& foundDef);
 
 Scope::Scope(Compilation& compilation_, const Symbol* thisSym_) :
     compilation(compilation_), thisSym(thisSym_), nameMap(compilation.allocSymbolMap()) {
@@ -291,7 +294,7 @@ void Scope::addMembers(const SyntaxNode& syntax) {
             break;
         case SyntaxKind::PortDeclaration:
             addDeferredMembers(syntax);
-            getOrAddDeferredData().addPortDeclaration(syntax, lastMember);
+            getOrAddDeferredData();
             break;
         case SyntaxKind::ModportDeclaration:
             addDeferredMembers(syntax);
@@ -380,7 +383,7 @@ void Scope::addMembers(const SyntaxNode& syntax) {
             auto& symbol = ForwardingTypedefSymbol::fromSyntax(
                 *this, syntax.as<ForwardTypedefDeclarationSyntax>());
             addMember(symbol);
-            getOrAddDeferredData().addForwardingTypedef(symbol);
+            getOrAddDeferredData();
             break;
         }
         case SyntaxKind::GenerateRegion:
@@ -420,7 +423,7 @@ void Scope::addMembers(const SyntaxNode& syntax) {
                 case SyntaxKind::ForwardTypedefDeclaration: {
                     auto& symbol = ForwardingTypedefSymbol::fromSyntax(*this, cpd);
                     addMember(symbol);
-                    getOrAddDeferredData().addForwardingTypedef(symbol);
+                    getOrAddDeferredData();
                     break;
                 }
                 case SyntaxKind::ParameterDeclarationStatement: {
@@ -856,6 +859,12 @@ void Scope::elaborate() const {
         }
     }
 
+    // Allow interfaces to implicitly declare extern methods for
+    // exported subroutines that are only declared in modports.
+    if (deferredData.hasModportExports)
+        handleExportedMethods();
+
+    SmallVector<std::pair<const SyntaxNode*, const Symbol*>> nonAnsiPortDecls;
     if (thisSym->kind == SymbolKind::ClassType) {
         // If this is a class type being elaborated, let it inherit members from parent classes.
         thisSym->as<ClassType>().inheritMembers(
@@ -867,10 +876,22 @@ void Scope::elaborate() const {
         thisSym->as<CovergroupType>().inheritMembers(
             [this](const Symbol& member) { insertMember(&member, nullptr, true, true); });
     }
-    else if (deferredData.hasModportExports) {
-        // Allow the interface to implicitly declare extern methods for
-        // exported subroutines that are only declared in modports.
-        handleExportedMethods();
+    else if (thisSym->kind == SymbolKind::InstanceBody) {
+        // If this is an instance body with non-ansi ports we need to
+        // find all port declarations in the body for later elaboration.
+        if (thisSym->as<InstanceBodySymbol>().getDefinition().hasNonAnsiPorts) {
+            for (auto symbol = firstMember; symbol; symbol = symbol->nextInScope) {
+                if (symbol->kind == SymbolKind::DeferredMember) {
+                    const DefinitionSymbol* unused;
+                    auto& node = symbol->as<DeferredMemberSymbol>().node;
+                    if (node.kind == SyntaxKind::PortDeclaration ||
+                        (node.kind == SyntaxKind::DataDeclaration &&
+                         treatAsNonAnsiPort(*this, node.as<DataDeclarationSyntax>(), unused))) {
+                        nonAnsiPortDecls.push_back({&node, symbol});
+                    }
+                }
+            }
+        }
     }
 
     auto insertMembers = [this](auto& members, const Symbol* at) {
@@ -900,15 +921,67 @@ void Scope::elaborate() const {
         }
     };
 
+    // This checks for unused non-ansi port declarations, which can
+    // happen for erroneous port decls in ansi modules, or modules
+    // that don't have any ports at all.
+    bool usedPorts = false;
+    auto checkUnusedPort = [&](const SyntaxNode& syntax) {
+        // If this is a non-ansi module then there's no problem.
+        if (!nonAnsiPortDecls.empty())
+            return;
+
+        // Otherwise, there's a problem. Choose the error
+        // based on whether we have any ports at all or not.
+        if (usedPorts) {
+            addDiag(diag::PortDeclInANSIModule, syntax.sourceRange());
+        }
+        else {
+            auto& declarators = syntax.kind == SyntaxKind::PortDeclaration
+                                    ? syntax.as<PortDeclarationSyntax>().declarators
+                                    : syntax.as<DataDeclarationSyntax>().declarators;
+            for (auto decl : declarators) {
+                // We'll report an error for just the first decl in each syntax entry,
+                // because it should be clear to the user that there aren't any ports
+                // at all in the module header.
+                auto name = decl->name.valueText();
+                if (!name.empty()) {
+                    addDiag(diag::UnusedPortDecl, decl->sourceRange()) << name;
+                    break;
+                }
+            }
+        }
+    };
+
     // Go through deferred instances and elaborate them now.
     SmallVector<const ModuleDeclarationSyntax*> nestedDefs;
     const Symbol* prev = nullptr;
     uint32_t constructIndex = 1;
-    bool usedPorts = false;
 
     for (auto symbol = firstMember; symbol; symbol = symbol->nextInScope) {
-        // Skip over non-deferred members.
         if (symbol->kind != SymbolKind::DeferredMember) {
+            if (symbol->kind == SymbolKind::ForwardingTypedef) {
+                // Ignore forwarding typedefs that have further linked
+                // forward declarations. We only want to process each
+                // named typedef once.
+                auto& fts = symbol->as<ForwardingTypedefSymbol>();
+                if (symbol->name.empty() || fts.getNextForwardDecl())
+                    continue;
+
+                // Try to do a lookup by name; if the program is well-formed we'll find the
+                // corresponding full typedef. If we don't, issue an error.
+                auto it = nameMap->find(symbol->name);
+                SLANG_ASSERT(it != nameMap->end());
+
+                if (it->second->kind == SymbolKind::TypeAlias)
+                    it->second->as<TypeAliasType>().checkForwardDecls();
+                else if (it->second->kind == SymbolKind::ClassType)
+                    it->second->as<ClassType>().checkForwardDecls();
+                else if (it->second->kind == SymbolKind::GenericClassDef)
+                    it->second->as<GenericClassDefSymbol>().checkForwardDecls();
+                else
+                    addDiag(diag::UnresolvedForwardTypedef, symbol->location) << symbol->name;
+            }
+
             prev = symbol;
             continue;
         }
@@ -980,7 +1053,7 @@ void Scope::elaborate() const {
                 SmallVector<const Symbol*> ports;
                 SmallVector<std::pair<Symbol*, const Symbol*>, 4> implicitMembers;
                 PortSymbol::fromSyntax(member.node.as<PortListSyntax>(), *this, ports,
-                                       implicitMembers, deferredData.getPortDeclarations());
+                                       implicitMembers, nonAnsiPortDecls);
                 insertMembers(ports, symbol);
 
                 for (auto [implicitMember, insertionPoint] : implicitMembers)
@@ -1037,12 +1110,21 @@ void Scope::elaborate() const {
                 break;
             }
             case SyntaxKind::PortDeclaration:
-                // Nothing to do here, handled by port creation.
+                checkUnusedPort(member.node);
                 break;
             case SyntaxKind::DataDeclaration: {
-                SmallVector<const Symbol*> instances;
-                tryFixupInstances(member.node.as<DataDeclarationSyntax>(), context, instances);
-                insertMembers(instances, symbol);
+                const DefinitionSymbol* defSym = nullptr;
+                auto& dds = member.node.as<DataDeclarationSyntax>();
+                if (treatAsNonAnsiPort(*this, dds, defSym)) {
+                    checkUnusedPort(dds);
+                }
+                else if (defSym) {
+                    // Assume this is malformed instantiation syntax and create
+                    // the instances anyway.
+                    SmallVector<const Symbol*> instances;
+                    InstanceSymbol::fromFixupSyntax(compilation, *defSym, dds, context, instances);
+                    insertMembers(instances, symbol);
+                }
                 break;
             }
             case SyntaxKind::ModuleDeclaration:
@@ -1134,24 +1216,6 @@ void Scope::elaborate() const {
             }
         }
     }
-    else {
-        // Issue an error if port I/Os were declared but the module doesn't have a port list.
-        for (auto [syntax, symbol] : deferredData.getPortDeclarations()) {
-            auto& declarators = syntax->kind == SyntaxKind::PortDeclaration
-                                    ? syntax->as<PortDeclarationSyntax>().declarators
-                                    : syntax->as<DataDeclarationSyntax>().declarators;
-            for (auto decl : declarators) {
-                // We'll report an error for just the first decl in each syntax entry,
-                // because it should be clear to the user that there aren't any ports
-                // at all in the module header.
-                auto name = decl->name.valueText();
-                if (!name.empty()) {
-                    addDiag(diag::UnusedPortDecl, decl->sourceRange()) << name;
-                    break;
-                }
-            }
-        }
-    }
 
     // If there are bind directives, reach up into the instance body
     // and pull out the extra bind metadata from its override node.
@@ -1197,27 +1261,6 @@ void Scope::elaborate() const {
         }
     }
 
-    SmallSet<std::string_view, 4> observedForwardDecls;
-    for (auto symbol : deferredData.getForwardingTypedefs()) {
-        // Ignore duplicate entries.
-        if (symbol->name.empty() || !observedForwardDecls.emplace(symbol->name).second)
-            continue;
-
-        // Try to do a lookup by name; if the program is well-formed we'll find the
-        // corresponding full typedef. If we don't, issue an error.
-        auto it = nameMap->find(symbol->name);
-        SLANG_ASSERT(it != nameMap->end());
-
-        if (it->second->kind == SymbolKind::TypeAlias)
-            it->second->as<TypeAliasType>().checkForwardDecls();
-        else if (it->second->kind == SymbolKind::ClassType)
-            it->second->as<ClassType>().checkForwardDecls();
-        else if (it->second->kind == SymbolKind::GenericClassDef)
-            it->second->as<GenericClassDefSymbol>().checkForwardDecls();
-        else
-            addDiag(diag::UnresolvedForwardTypedef, symbol->location) << symbol->name;
-    }
-
     // Allow statement blocks containing variables to include them in their member
     // list before allowing anyone else to access the contained statements.
     if (thisSym->kind == SymbolKind::StatementBlock) {
@@ -1231,16 +1274,6 @@ void Scope::elaborate() const {
     SLANG_ASSERT(!deferredMemberPtr);
     if (thisSym->kind == SymbolKind::InstanceBody && TimeTrace::isEnabled())
         TimeTrace::endTrace();
-}
-
-static std::string_view getIdentifierName(const NamedTypeSyntax& syntax) {
-    if (syntax.name->kind == SyntaxKind::IdentifierName)
-        return syntax.name->as<IdentifierNameSyntax>().identifier.valueText();
-
-    if (syntax.name->kind == SyntaxKind::ClassName)
-        return syntax.name->as<ClassNameSyntax>().identifier.valueText();
-
-    return ""sv;
 }
 
 bool Scope::handleDataDeclaration(const DataDeclarationSyntax& syntax) {
@@ -1290,21 +1323,19 @@ bool Scope::handleDataDeclaration(const DataDeclarationSyntax& syntax) {
     if (symbol || namedType.name->kind != SyntaxKind::IdentifierName)
         return false;
 
-    auto def = compilation.tryGetDefinition(name, *this).definition;
-    if (!def || def->kind != SymbolKind::Definition)
-        return false;
-
     // If we're in an instance and have non-ansi ports then assume that this is
     // a non-ansi interface port definition.
-    if (def->as<DefinitionSymbol>().definitionKind == DefinitionKind::Interface &&
-        asSymbol().kind == SymbolKind::InstanceBody &&
-        asSymbol().as<InstanceBodySymbol>().getDefinition().hasNonAnsiPorts) {
-
+    const DefinitionSymbol* defSym = nullptr;
+    if (treatAsNonAnsiPort(*this, syntax, defSym)) {
         // Save for later when we process the ports.
         addDeferredMembers(syntax);
-        getOrAddDeferredData().addPortDeclaration(syntax, lastMember);
+        getOrAddDeferredData();
         return true;
     }
+
+    // If not a definition then nothing to fixup.
+    if (!defSym)
+        return false;
 
     // If we made it this far it's probably a malformed instantiation -- the user forgot
     // to include the parentheses. Let's just treat it like an instantiation instead, as
@@ -1316,27 +1347,6 @@ bool Scope::handleDataDeclaration(const DataDeclarationSyntax& syntax) {
 
     addDeferredMembers(syntax);
     return true;
-}
-
-void Scope::tryFixupInstances(const DataDeclarationSyntax& syntax, const ASTContext& context,
-                              SmallVectorBase<const Symbol*>& results) const {
-    auto& namedType = syntax.type->as<NamedTypeSyntax>();
-    std::string_view name = getIdentifierName(namedType);
-    auto def = compilation.tryGetDefinition(name, *this).definition;
-    if (!def || def->kind != SymbolKind::Definition)
-        return;
-
-    // Matching the check in handleDataDeclaration -- if this is true we
-    // handle this as a non-ansi interface port declaration instead.
-    auto& defSym = def->as<DefinitionSymbol>();
-    if (defSym.definitionKind == DefinitionKind::Interface &&
-        asSymbol().kind == SymbolKind::InstanceBody &&
-        asSymbol().as<InstanceBodySymbol>().getDefinition().hasNonAnsiPorts) {
-        return;
-    }
-
-    // Assume this is malformed instantiation syntax and create the instances anyway.
-    InstanceSymbol::fromFixupSyntax(compilation, defSym, syntax, context, results);
 }
 
 void Scope::handleUserDefinedNet(const UserDefinedNetDeclarationSyntax& syntax) {
@@ -1487,23 +1497,33 @@ void Scope::addWildcardImport(const WildcardImportSymbol& item) {
     importData->wildcardImports.push_back(&item);
 }
 
-void Scope::DeferredMemberData::addForwardingTypedef(const ForwardingTypedefSymbol& symbol) {
-    forwardingTypedefs.push_back(&symbol);
+static std::string_view getIdentifierName(const NamedTypeSyntax& syntax) {
+    if (syntax.name->kind == SyntaxKind::IdentifierName)
+        return syntax.name->as<IdentifierNameSyntax>().identifier.valueText();
+
+    if (syntax.name->kind == SyntaxKind::ClassName)
+        return syntax.name->as<ClassNameSyntax>().identifier.valueText();
+
+    return ""sv;
 }
 
-std::span<const ForwardingTypedefSymbol* const> Scope::DeferredMemberData::getForwardingTypedefs()
-    const {
-    return forwardingTypedefs;
-}
+static bool treatAsNonAnsiPort(const Scope& scope, const DataDeclarationSyntax& syntax,
+                               const DefinitionSymbol*& foundDef) {
+    auto& namedType = syntax.type->as<NamedTypeSyntax>();
+    std::string_view name = getIdentifierName(namedType);
+    auto def = scope.getCompilation().tryGetDefinition(name, scope).definition;
+    if (!def || def->kind != SymbolKind::Definition)
+        return false;
 
-void Scope::DeferredMemberData::addPortDeclaration(const SyntaxNode& syntax,
-                                                   const Symbol* insertion) {
-    portDecls.emplace_back(&syntax, insertion);
-}
+    auto& defSym = def->as<DefinitionSymbol>();
+    foundDef = &defSym;
+    if (defSym.definitionKind == DefinitionKind::Interface &&
+        scope.asSymbol().kind == SymbolKind::InstanceBody &&
+        scope.asSymbol().as<InstanceBodySymbol>().getDefinition().hasNonAnsiPorts) {
+        return true;
+    }
 
-std::span<std::pair<const SyntaxNode*, const Symbol*> const> Scope::DeferredMemberData::
-    getPortDeclarations() const {
-    return portDecls;
+    return false;
 }
 
 static size_t countGenMembers(const SyntaxNode& syntax) {

@@ -21,6 +21,7 @@ namespace slang::ast {
 class ASTContext;
 class Constraint;
 class Expression;
+class ForwardingTypedefSymbol;
 class GenericClassDefSymbol;
 
 class SLANG_EXPORT ClassPropertySymbol : public VariableSymbol {

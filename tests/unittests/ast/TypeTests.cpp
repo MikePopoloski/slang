@@ -391,6 +391,7 @@ module Top;
 
     // These have no actual type and should error.
     typedef enum e1_t;
+    typedef enum e1_t;
     typedef e2;
 
     // Forward declare but get the base type wrong.
@@ -416,16 +417,16 @@ endmodule
     CHECK(diags[2].code == diag::ForwardTypedefDoesNotMatch);
 
     CHECK(report(diags) ==
-          R"(source:5:18: error: forward typedef 'e1_t' does not resolve to a data type
+          R"(source:6:18: error: forward typedef 'e1_t' does not resolve to a data type
     typedef enum e1_t;
                  ^
-source:6:13: error: forward typedef 'e2' does not resolve to a data type
+source:7:13: error: forward typedef 'e2' does not resolve to a data type
     typedef e2;
             ^
-source:9:20: error: forward typedef basic type 'struct' does not match declaration
+source:10:20: error: forward typedef basic type 'struct' does not match declaration
     typedef struct s1_t;
                    ^
-source:12:26: note: declared here
+source:13:26: note: declared here
     typedef enum { SDF } s1_t;
                          ^
 )");
