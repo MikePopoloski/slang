@@ -913,7 +913,6 @@ void Compilation::insertDefinition(Symbol& symbol, const Scope& scope) {
     }
 
     if (isRoot) {
-        // TODO: how do extern modules work with libraries?
         if (auto externDef = getExternDefinition(symbol.name, scope)) {
             auto syntax = symbol.getSyntax();
             SLANG_ASSERT(syntax);
