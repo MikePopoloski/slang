@@ -707,36 +707,42 @@ endmodule
 
 TEST_CASE("Options to override top-level params") {
     auto tree = SyntaxTree::fromText(R"(
-module m #(parameter int foo, string bar, real baz);
-    localparam int j = foo + int'(bar == "asdf" ? baz : 0);
+package p;
+    typedef enum { A = 8, B = 9 } et;
+endpackage
+
+module m #(parameter int foo, string bar, real baz, p::et e);
+    localparam int j = foo + int'(bar == "asdf" ? baz : 0) + int'(e);
 endmodule
 )");
 
-    CompilationOptions coptions;
-    coptions.paramOverrides.push_back("foo=3");
-    coptions.paramOverrides.push_back("bar=\"asdf\"");
-    coptions.paramOverrides.push_back("baz=1.6");
-
-    Bag options;
-    options.set(coptions);
+    CompilationOptions options;
+    options.paramOverrides.push_back("foo=3");
+    options.paramOverrides.push_back("bar=\"asdf\"");
+    options.paramOverrides.push_back("baz=1.6");
+    options.paramOverrides.push_back("e=p::B");
 
     Compilation compilation(options);
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 
     auto& j = compilation.getRoot().lookupName<ParameterSymbol>("m.j");
-    CHECK(j.getValue().integer() == 5);
+    CHECK(j.getValue().integer() == 14);
 }
 
 TEST_CASE("Options to override hierarchical params") {
     auto tree = SyntaxTree::fromText(R"(
+package p;
+    typedef enum { A = 8, B = 9 } et;
+endpackage
+
 module n;
     m m1();
-    m #(3, "asdf", 1.6) m2();
+    m #(3, "asdf", 1.6, p::A) m2();
 endmodule
 
-module m #(parameter int foo, string bar, real baz);
-    localparam int j = foo + int'(bar == "asdf" ? baz : 0);
+module m #(parameter int foo, string bar, real baz, p::et e);
+    localparam int j = foo + int'(bar == "asdf" ? baz : 0) + int'(e);
 endmodule
 )");
 
@@ -744,13 +750,14 @@ endmodule
     options.paramOverrides.push_back("n.m1.foo=3");
     options.paramOverrides.push_back("n.m1.bar=\"asdf\"");
     options.paramOverrides.push_back("n.m1.baz=1.6");
+    options.paramOverrides.push_back("n.m1.e=p::B");
 
     Compilation compilation(options);
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
 
     auto& j = compilation.getRoot().lookupName<ParameterSymbol>("n.m1.j");
-    CHECK(j.getValue().integer() == 5);
+    CHECK(j.getValue().integer() == 14);
 }
 
 TEST_CASE("Invalid param override option handling") {

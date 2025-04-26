@@ -1818,6 +1818,8 @@ void Compilation::parseParamOverrides(
         return;
 
     ScriptSession session;
+    session.copyPackagesFrom(*this);
+
     for (auto& opt : options.paramOverrides) {
         // Strings must be of the form <name>=<value>
         size_t index = opt.find('=');

@@ -107,6 +107,15 @@ void ScriptSession::evalStatement(const StatementSyntax& stmt) {
     block.getStatement(context, stmtCtx).eval(evalContext);
 }
 
+void ScriptSession::copyPackagesFrom(const Compilation& other) {
+    for (auto& pkg : other.getPackages()) {
+        if (auto syntax = pkg->getSyntax();
+            syntax && syntax->kind == SyntaxKind::PackageDeclaration) {
+            compilation.createPackage(scope, syntax->as<ModuleDeclarationSyntax>());
+        }
+    }
+}
+
 Diagnostics ScriptSession::getDiagnostics() {
     Diagnostics result;
     for (auto& tree : syntaxTrees)

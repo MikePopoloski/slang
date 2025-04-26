@@ -348,8 +348,13 @@ issued if not all elements have a time scale specified. Example: `--timescale=1n
 
 `-G <name>=<value>`
 
-Override all parameters with the given name in top-level modules to the provided value.
-This option can be specified more than once to override multiple parameters.
+Overrides parameters to the provided value. If the 'name' is a simple undotted name,
+all parameters in all top-level modules that match the given name will be overridden.
+Otherwise, the name is assumed to be hierarchical and will be treated as if it had
+been written in a `defparam` statement in the design.
+
+The 'value' may be any SystemVerilog literal or evaluatable constant expression,
+including references to packages and enums in the design.
 
 @section analysis Analysis
 
