@@ -54,6 +54,7 @@ using namespace parsing;
 using namespace syntax;
 
 static size_t countMembers(const SyntaxNode& syntax);
+static bool hasModportExports(const ModportDeclarationSyntax& syntax);
 
 Scope::Scope(Compilation& compilation_, const Symbol* thisSym_) :
     compilation(compilation_), thisSym(thisSym_), nameMap(compilation.allocSymbolMap()) {
@@ -274,7 +275,6 @@ void Scope::addMembers(const SyntaxNode& syntax) {
         case SyntaxKind::LoopGenerate:
         case SyntaxKind::GenerateBlock:
         case SyntaxKind::ContinuousAssign:
-        case SyntaxKind::ModportDeclaration:
         case SyntaxKind::ClockingItem:
         case SyntaxKind::DefaultClockingReference:
         case SyntaxKind::DefaultDisableDeclaration:
@@ -292,6 +292,11 @@ void Scope::addMembers(const SyntaxNode& syntax) {
         case SyntaxKind::PortDeclaration:
             addDeferredMembers(syntax);
             getOrAddDeferredData().addPortDeclaration(syntax, lastMember);
+            break;
+        case SyntaxKind::ModportDeclaration:
+            addDeferredMembers(syntax);
+            getOrAddDeferredData().hasModportExports = hasModportExports(
+                syntax.as<ModportDeclarationSyntax>());
             break;
         case SyntaxKind::FunctionDeclaration:
         case SyntaxKind::TaskDeclaration: {
@@ -600,7 +605,7 @@ Scope::DeferredMemberData& Scope::getOrAddDeferredData() const {
 void Scope::addDeferredMembers(const SyntaxNode& syntax) {
     auto sym = compilation.emplace<DeferredMemberSymbol>(syntax);
     addMember(*sym);
-    getOrAddDeferredData().addMember(sym);
+    getOrAddDeferredData();
 
     // We need to figure out how many new symbols could be inserted when we
     // later elaborate this deferred member, so that we can make room in the
@@ -826,27 +831,28 @@ void Scope::elaborate() const {
 
     SLANG_ASSERT(deferredMemberPtr);
     auto deferredData = *std::exchange(deferredMemberPtr, nullptr);
-    auto deferred = deferredData.getMembers();
-
     if (deferredData.isUncacheable)
         compilation.noteCannotCache(*this);
 
     // Enums need to be handled first because their value members may need
     // to be looked up by methods below.
     if (deferredData.hasEnums) {
-        for (auto symbol : deferred) {
-            const Symbol* at = symbol;
+        for (auto symbol = firstMember; symbol; symbol = symbol->nextInScope) {
+            if (symbol->kind != SymbolKind::DeferredMember)
+                continue;
+
             auto& node = symbol->as<DeferredMemberSymbol>().node;
-            if (node.kind == SyntaxKind::EnumType) {
-                ASTContext context(*this, LookupLocation::before(*symbol));
-                EnumType::fromSyntax(compilation, node.as<EnumTypeSyntax>(), context,
-                                     [this, &at](const Symbol& member) {
-                                         auto wrapped =
-                                             compilation.emplace<TransparentMemberSymbol>(member);
-                                         insertMember(wrapped, at, true, false);
-                                         at = wrapped;
-                                     });
-            }
+            if (node.kind != SyntaxKind::EnumType)
+                continue;
+
+            ASTContext context(*this, LookupLocation::before(*symbol));
+            EnumType::fromSyntax(compilation, node.as<EnumTypeSyntax>(), context,
+                                 [this, &symbol](const Symbol& member) {
+                                     auto wrapped = compilation.emplace<TransparentMemberSymbol>(
+                                         member);
+                                     insertMember(wrapped, symbol, true, false);
+                                     symbol = wrapped;
+                                 });
         }
     }
 
@@ -861,12 +867,10 @@ void Scope::elaborate() const {
         thisSym->as<CovergroupType>().inheritMembers(
             [this](const Symbol& member) { insertMember(&member, nullptr, true, true); });
     }
-    else if (thisSym->kind == SymbolKind::InstanceBody &&
-             thisSym->as<InstanceBodySymbol>().getDefinition().definitionKind ==
-                 DefinitionKind::Interface) {
+    else if (deferredData.hasModportExports) {
         // Allow the interface to implicitly declare extern methods for
         // exported subroutines that are only declared in modports.
-        handleExportedMethods(deferred);
+        handleExportedMethods();
     }
 
     auto insertMembers = [this](auto& members, const Symbol* at) {
@@ -897,14 +901,20 @@ void Scope::elaborate() const {
     };
 
     // Go through deferred instances and elaborate them now.
-    bool usedPorts = false;
-    bool hasNestedDefs = false;
+    SmallVector<const ModuleDeclarationSyntax*> nestedDefs;
+    const Symbol* prev = nullptr;
     uint32_t constructIndex = 1;
+    bool usedPorts = false;
 
-    for (auto symbol : deferred) {
+    for (auto symbol = firstMember; symbol; symbol = symbol->nextInScope) {
+        // Skip over non-deferred members.
+        if (symbol->kind != SymbolKind::DeferredMember) {
+            prev = symbol;
+            continue;
+        }
+
         ASTContext context(*this, LookupLocation::before(*symbol));
         auto& member = symbol->as<DeferredMemberSymbol>();
-
         switch (member.node.kind) {
             case SyntaxKind::HierarchyInstantiation: {
                 SmallVector<const Symbol*> instances;
@@ -958,8 +968,8 @@ void Scope::elaborate() const {
                 constructIndex++;
                 break;
             case SyntaxKind::GenerateBlock:
-                // This case is invalid according to the spec but the parser only issues a warning
-                // since some existing code does this anyway.
+                // This case is invalid according to the spec but the parser only issues a
+                // warning since some existing code does this anyway.
                 insertMember(&GenerateBlockSymbol::fromSyntax(
                                  *this, member.node.as<GenerateBlockSyntax>(), constructIndex),
                              symbol, true, true);
@@ -1038,7 +1048,7 @@ void Scope::elaborate() const {
             case SyntaxKind::ModuleDeclaration:
             case SyntaxKind::ProgramDeclaration:
                 // These have to wait until we've seen all instantiations.
-                hasNestedDefs = true;
+                nestedDefs.push_back(&member.node.as<ModuleDeclarationSyntax>());
                 break;
             case SyntaxKind::SpecifyBlock: {
                 SmallVector<const Symbol*> implicitSymbols;
@@ -1089,19 +1099,24 @@ void Scope::elaborate() const {
             default:
                 SLANG_UNREACHABLE;
         }
+
+        // Unlink the deferred member from the list. We don't need it anymore.
+        if (prev)
+            prev->nextInScope = symbol->nextInScope;
+        else
+            firstMember = symbol->nextInScope;
+
+        if (lastMember == symbol) {
+            lastMember = symbol->nextInScope;
+            if (!lastMember)
+                lastMember = prev;
+        }
     }
 
     // If there are nested definitions, go back through and find ones that
     // need to be implicitly instantiated.
-    if (hasNestedDefs) {
-        for (auto symbol : deferred) {
-            auto& member = symbol->as<DeferredMemberSymbol>();
-            if (member.node.kind == SyntaxKind::ModuleDeclaration ||
-                member.node.kind == SyntaxKind::ProgramDeclaration) {
-                handleNestedDefinition(member.node.as<ModuleDeclarationSyntax>());
-            }
-        }
-    }
+    for (auto node : nestedDefs)
+        handleNestedDefinition(*node);
 
     if (usedPorts) {
         // Now that all members are known, force port types to resolve so that
@@ -1179,28 +1194,6 @@ void Scope::elaborate() const {
         if (!instanceBody.getDefinition().bindDirectives.empty()) {
             for (auto& bindInfo : instanceBody.getDefinition().bindDirectives)
                 handleBind(bindInfo);
-        }
-    }
-
-    // Finally unlink any deferred members we had; we no longer need them.
-    if (!deferred.empty()) {
-        const Symbol* symbol = firstMember;
-        const Symbol* prev = nullptr;
-
-        while (symbol) {
-            if (symbol->kind == SymbolKind::DeferredMember) {
-                if (prev)
-                    prev->nextInScope = symbol->nextInScope;
-                else
-                    firstMember = symbol->nextInScope;
-
-                if (lastMember == symbol)
-                    lastMember = symbol->nextInScope;
-            }
-            else {
-                prev = symbol;
-            }
-            symbol = symbol->nextInScope;
         }
     }
 
@@ -1390,7 +1383,7 @@ void Scope::handleNestedDefinition(const ModuleDeclarationSyntax& syntax) const 
     insertMember(&inst, lastMember, /* isElaborating */ true, /* incrementIndex */ true);
 }
 
-void Scope::handleExportedMethods(std::span<Symbol* const> deferredMembers) const {
+void Scope::handleExportedMethods() const {
     SmallSet<std::string_view, 4> waitingForImport;
     SmallMap<std::string_view, const ModportSubroutinePortSyntax*, 4> foundImports;
 
@@ -1399,7 +1392,10 @@ void Scope::handleExportedMethods(std::span<Symbol* const> deferredMembers) cons
         insertMember(&symbol, nullptr, true, true);
     };
 
-    for (auto symbol : deferredMembers) {
+    for (auto symbol = firstMember; symbol; symbol = symbol->nextInScope) {
+        if (symbol->kind != SymbolKind::DeferredMember)
+            continue;
+
         auto& node = symbol->as<DeferredMemberSymbol>().node;
         if (node.kind != SyntaxKind::ModportDeclaration)
             continue;
@@ -1489,14 +1485,6 @@ void Scope::addWildcardImport(const WildcardImportSymbol& item) {
     if (!importData)
         importData = compilation.allocWildcardImportData();
     importData->wildcardImports.push_back(&item);
-}
-
-void Scope::DeferredMemberData::addMember(Symbol* symbol) {
-    members.emplace_back(symbol);
-}
-
-std::span<Symbol* const> Scope::DeferredMemberData::getMembers() const {
-    return members;
 }
 
 void Scope::DeferredMemberData::addForwardingTypedef(const ForwardingTypedefSymbol& symbol) {
@@ -1596,6 +1584,19 @@ static size_t countMembers(const SyntaxNode& syntax) {
         default:
             SLANG_UNREACHABLE;
     }
+}
+
+static bool hasModportExports(const ModportDeclarationSyntax& syntax) {
+    for (auto item : syntax.items) {
+        for (auto port : item->ports->ports) {
+            if (port->kind == SyntaxKind::ModportSubroutinePortList) {
+                auto& portList = port->as<ModportSubroutinePortListSyntax>();
+                if (portList.importExport.kind == TokenKind::ExportKeyword)
+                    return true;
+            }
+        }
+    }
+    return false;
 }
 
 } // namespace slang::ast

@@ -281,9 +281,6 @@ private:
     // Data stored in sideband tables in the Compilation object for deferred members.
     class DeferredMemberData {
     public:
-        void addMember(Symbol* symbol);
-        std::span<Symbol* const> getMembers() const;
-
         void addForwardingTypedef(const ForwardingTypedefSymbol& symbol);
         std::span<const ForwardingTypedefSymbol* const> getForwardingTypedefs() const;
 
@@ -292,9 +289,6 @@ private:
             const;
 
     private:
-        // A list of deferred member symbols.
-        std::vector<Symbol*> members;
-
         // Track a list of forwarding typedefs declared in the scope; once we've fully elaborated
         // we'll go back and make sure they're actually valid.
         std::vector<const ForwardingTypedefSymbol*> forwardingTypedefs;
@@ -313,6 +307,9 @@ private:
         // Indicates whether this scope is uncacheable, for instance if
         // it contains an extern iface method implementation.
         bool isUncacheable = false;
+
+        // Indicates whether this scope has any exported modport subroutines.
+        bool hasModportExports = false;
     };
 
     DeferredMemberData& getOrAddDeferredData() const;
@@ -324,7 +321,7 @@ private:
     bool handleDataDeclaration(const syntax::DataDeclarationSyntax& syntax);
     void handleUserDefinedNet(const syntax::UserDefinedNetDeclarationSyntax& syntax);
     void handleNestedDefinition(const syntax::ModuleDeclarationSyntax& syntax) const;
-    void handleExportedMethods(std::span<Symbol* const> deferredMembers) const;
+    void handleExportedMethods() const;
     void checkImportConflict(const Symbol& member, const Symbol& existing) const;
     void addWildcardImport(const syntax::PackageImportItemSyntax& item,
                            std::span<const syntax::AttributeInstanceSyntax* const> attributes);
