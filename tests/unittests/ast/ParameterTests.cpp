@@ -728,6 +728,31 @@ endmodule
     CHECK(j.getValue().integer() == 5);
 }
 
+TEST_CASE("Options to override hierarchical params") {
+    auto tree = SyntaxTree::fromText(R"(
+module n;
+    m m1();
+    m #(3, "asdf", 1.6) m2();
+endmodule
+
+module m #(parameter int foo, string bar, real baz);
+    localparam int j = foo + int'(bar == "asdf" ? baz : 0);
+endmodule
+)");
+
+    CompilationOptions options;
+    options.paramOverrides.push_back("n.m1.foo=3");
+    options.paramOverrides.push_back("n.m1.bar=\"asdf\"");
+    options.paramOverrides.push_back("n.m1.baz=1.6");
+
+    Compilation compilation(options);
+    compilation.addSyntaxTree(tree);
+    NO_COMPILATION_ERRORS;
+
+    auto& j = compilation.getRoot().lookupName<ParameterSymbol>("n.m1.j");
+    CHECK(j.getValue().integer() == 5);
+}
+
 TEST_CASE("Invalid param override option handling") {
     auto tree = SyntaxTree::fromText(R"(
 module m #(parameter int foo, string bar, real baz);
@@ -750,9 +775,10 @@ endmodule
 
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 4);
-    for (size_t i = 0; i < diags.size(); i++) {
-        CHECK(diags[i].code == diag::InvalidParamOverrideOpt);
-    }
+    CHECK(diags[0].code == diag::CouldNotResolveHierarchicalPath);
+    CHECK(diags[1].code == diag::InvalidParamOverrideOpt);
+    CHECK(diags[2].code == diag::InvalidParamOverrideOpt);
+    CHECK(diags[3].code == diag::InvalidParamOverrideOpt);
 }
 
 TEST_CASE("Empty params for uninstantiated modules") {

@@ -809,7 +809,8 @@ private:
     const RootSymbol& getRoot(bool skipDefParamsAndBinds);
     void elaborate();
     void insertDefinition(Symbol& symbol, const Scope& scope);
-    void parseParamOverrides(flat_hash_map<std::string_view, const ConstantValue*>& results);
+    void parseParamOverrides(bool skipDefParams,
+                             flat_hash_map<std::string_view, const ConstantValue*>& results);
     void checkDPIMethods(std::span<const SubroutineSymbol* const> dpiImports);
     void checkExternIfaceMethods(std::span<const MethodPrototypeSymbol* const> protos);
     void checkModportExports(
@@ -935,7 +936,7 @@ private:
         outOfBlockDecls;
 
     std::unique_ptr<RootSymbol> root;
-    const SourceManager* sourceManager = nullptr;
+    SourceManager* sourceManager = nullptr;
     size_t numErrors = 0; // total number of errors inserted into the diagMap
     bool finalized = false;
     bool finalizing = false; // to prevent reentrant calls to getRoot()

@@ -311,7 +311,7 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamsAndBinds) {
 
     // If any top-level parameter overrides were provided, parse them now.
     flat_hash_map<std::string_view, const ConstantValue*> cliOverrides;
-    parseParamOverrides(cliOverrides);
+    parseParamOverrides(skipDefParamsAndBinds, cliOverrides);
 
     // If there are defparams we need to fully resolve their values up front before
     // we start elaborating any instances.
@@ -520,7 +520,6 @@ const RootSymbol& Compilation::getRoot(bool skipDefParamsAndBinds) {
 
     // If we have any cli param overrides we should apply them to
     // each top-level instance.
-    // TODO: generalize these to full hierarchical paths
     if (!cliOverrides.empty()) {
         for (auto [result, _] : topDefs) {
             auto& def = result.definition->as<DefinitionSymbol>();
@@ -1813,7 +1812,8 @@ const Type& Compilation::getTypeRefType() const {
 }
 
 void Compilation::parseParamOverrides(
-    flat_hash_map<std::string_view, const ConstantValue*>& results) {
+    bool skipDefParams, flat_hash_map<std::string_view, const ConstantValue*>& results) {
+
     if (options.paramOverrides.empty())
         return;
 
@@ -1827,18 +1827,34 @@ void Compilation::parseParamOverrides(
             Diagnostics localDiags;
             std::string_view optView = opt;
             std::string_view name = optView.substr(0, index);
-            if (tryParseName(name, localDiags).kind == SyntaxKind::IdentifierName &&
-                localDiags.empty()) {
 
-                // The name is good, evaluate the value string. Using the ScriptSession
-                // here is a little bit lazy but oh well, this executes almost never
-                // compared to everything else during compilation.
-                std::string_view value = optView.substr(index + 1);
-                ConstantValue cv = session.eval(value);
-                if (cv) {
-                    // Success, store in the map so we can apply the value later.
-                    results.emplace(name, allocConstant(std::move(cv)));
-                    continue;
+            auto& nameSyntax = tryParseName(name, localDiags);
+            if (localDiags.empty()) {
+                if (nameSyntax.kind == SyntaxKind::IdentifierName) {
+                    // The name is good, evaluate the value string. Using the ScriptSession
+                    // here is a little bit lazy but oh well, this executes almost never
+                    // compared to everything else during compilation.
+                    std::string_view value = optView.substr(index + 1);
+                    ConstantValue cv = session.eval(value);
+                    if (cv) {
+                        // Success, store in the map so we can apply the value later.
+                        results.emplace(name, allocConstant(std::move(cv)));
+                        continue;
+                    }
+                }
+                else {
+                    // Not a simple identifier, so treat this as a full defparam.
+                    if (skipDefParams)
+                        continue;
+
+                    SLANG_ASSERT(sourceManager);
+                    auto tree = SyntaxTree::fromText(fmt::format("defparam {};", opt),
+                                                     *sourceManager, "<command-line>"sv);
+
+                    if (tree->diagnostics().empty() && tree->root().kind == SyntaxKind::DefParam) {
+                        addSyntaxTree(std::move(tree));
+                        continue;
+                    }
                 }
             }
         }
