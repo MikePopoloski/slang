@@ -54,9 +54,9 @@ bool isEqual(std::shared_ptr<slang::syntax::SyntaxTree> tree, std::string name_t
         std::ofstream out(name_test);
         out << "original json:";
         out << old_ast_json;
-        out << "\nnew json:";
+        out << "\nnew json:\n";
         out << new_ast_json;
-        out << "\nnew code:";
+        out << "\nnew code:\n";
         out << new_code << "\n";
         out << "Test result:" << (old_ast_json == new_ast_json) << '\n';
         out.close();

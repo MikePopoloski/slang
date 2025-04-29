@@ -8,7 +8,6 @@
 
 #include "slang/ast/printer/defaultAstPrinter.h"
 
-
 namespace slang::ast {
 
 void AstPrinter::handle(const InvalidStatement& t) {
@@ -27,15 +26,16 @@ void AstPrinter::handle(const WaitStatement& t) {
 }
 
 // wait_statement ::= wait fork;
-void AstPrinter::handle([[maybe_unused]] const WaitForkStatement& t) {
+void AstPrinter::handle(const WaitForkStatement& t) {
     write("wait fork;\n");
+    visitDefault(t);
 }
 
 // wait_statement ::= wait_order ( hierarchical_identifier { , hierarchical_identifier } )
 // action_block
 void AstPrinter::handle(const WaitOrderStatement& t) {
     write("wait_order (");
-    visitMembers<>(t.events);
+    visitMembers(t.events);
     write(")");
 
     // action_block ::=statement _or_null | [ statement ] else statement
@@ -47,15 +47,14 @@ void AstPrinter::handle(const WaitOrderStatement& t) {
     write("\n");
 }
 
-// #test schrijven
+// TODO write a test for this
 void AstPrinter::handle(const EmptyStatement& t) {
     // Represents an empty statement, used as a placeholder or an anchor for attributes.
     writeAttributeInstances(t);
     write(";");
-    // visitDefault(t);
 }
 
-// #test schrijven
+// TODO write a test for this
 void AstPrinter::handle(const StatementList& t) {
     // Represents a list of statements.
     visitDefault(t);
@@ -67,8 +66,9 @@ void AstPrinter::handle(const VariableDeclStatement& t) {
 }
 
 // disable_statement ::= disable fork ;
-void AstPrinter::handle([[maybe_unused]] const DisableForkStatement& t) {
+void AstPrinter::handle(const DisableForkStatement& t) {
     write("disable fork ;\n");
+    visitDefault(t);
 }
 
 // disable_statement ::= disable hierarchical_block_identifier ;
@@ -77,14 +77,16 @@ void AstPrinter::handle(const DisableStatement& t) {
     t.target.visit(*this);
     write(";\n");
 }
-// jump_statement ::=break ;
-void AstPrinter::handle([[maybe_unused]] const BreakStatement& t) {
+// jump_statement ::= break ;
+void AstPrinter::handle(const BreakStatement& t) {
     write("break;");
+    visitDefault(t);
 }
 
-// jump_statement ::=continue ;
-void AstPrinter::handle([[maybe_unused]] const ContinueStatement& t) {
+// jump_statement ::= continue ;
+void AstPrinter::handle(const ContinueStatement& t) {
     write("continue;");
+    visitDefault(t);
 }
 
 void AstPrinter::handle(const ExpressionStatement& t) {
@@ -98,17 +100,17 @@ void AstPrinter::handle(const RepeatLoopStatement& t) {
     write("repeat (");
     t.count.visit(*this);
     write(")");
-    indentation_level++;
+    ++indentation_level;
     t.body.visit(*this);
-    indentation_level--;
+    --indentation_level;
     write("\n");
 }
 // loop_statement ::= forever statement_or_null
 void AstPrinter::handle(const ForeverLoopStatement& t) {
     write("forever");
-    indentation_level++;
+    ++indentation_level;
     t.body.visit(*this);
-    indentation_level--;
+    --indentation_level;
     write("\n");
 }
 
@@ -118,19 +120,20 @@ void AstPrinter::handle(const ForeachLoopStatement& t) {
     write("foreach(");
     t.arrayRef.visit(*this);
     write("[");
-    for (auto var : t.loopDims) {
+    for (const auto& var : t.loopDims) {
         if (var.loopVar) {
-            writeName(*var.loopVar);
-            if (var.loopVar != t.loopDims.back().loopVar)
-                write(",",false);
+            writeName(*(var.loopVar));
+            if (&var != &(t.loopDims.back())) {
+                write(",", false);
+            }
         }
     }
     write("]");
     write(")");
 
-    indentation_level++;
+    ++indentation_level;
     t.body.visit(*this);
-    indentation_level--;
+    --indentation_level;
     write("\n");
 }
 // loop_statement ::= while ( expression ) statement_or_null
@@ -141,25 +144,26 @@ void AstPrinter::handle(const WhileLoopStatement& t) {
     t.body.visit(*this);
     write("\n");
 }
+
 // for ( [ for_initialization ] ; [ expression ] ; [ for_step ] ) statement_or_null
 void AstPrinter::handle(const ForLoopStatement& t) {
     write("for (");
 
     // for_initialization ::= list_of_variable_assignments
-    visitMembers<>(t.initializers);
+    visitMembers(t.initializers);
     write(";");
 
     // stop expression
     t.stopExpr->visit(*this);
     write(";");
 
-    // for_step_assignment ::=operator_assignment| inc_or_dec_expression |
+    // for_step_assignment ::= operator_assignment| inc_or_dec_expression |
     // function_subroutine_call
-    visitMembers<>(t.steps);
+    visitMembers(t.steps);
     write(")\n");
-    indentation_level++;
+    ++indentation_level;
     t.body.visit(*this);
-    indentation_level--;
+    --indentation_level;
     write("\n");
 }
 // conditional_statement ::= [ unique_priority ] if ( cond_predicate ) statement_or_null {else
@@ -167,34 +171,34 @@ void AstPrinter::handle(const ForLoopStatement& t) {
 void AstPrinter::handle(const ConditionalStatement& t) {
 
     if (t.check != UniquePriorityCheck::None) {
-        std::string_view priority = toString(t.check);
+        const std::string_view priority = toString(t.check);
         write(lowerFirstLetter(priority));
     }
 
     write("if(");
     // cond_predicate ::= expression_or_cond_pattern { &&& expression_or_cond_pattern }
-    for (auto condition : t.conditions) {
+    for (const auto& condition : t.conditions) {
         condition.expr.get()->visit(*this);
         // cond_pattern ::= expression matches pattern
         if (condition.pattern) {
             write("matches ");
             condition.pattern->visit(*this);
         }
-        if (condition.expr.get() != t.conditions.back().expr.get()) {
+        if (&condition != &(t.conditions.back())) {
             write("&&&");
         }
     }
     write(")\n");
 
-    indentation_level++;
+    ++indentation_level;
     t.ifTrue.visit(*this);
-    indentation_level--;
+    --indentation_level;
 
     if (t.ifFalse) {
         write("else\n");
-        indentation_level++;
+        ++indentation_level;
         t.ifFalse->visit(*this);
-        indentation_level--;
+        --indentation_level;
     }
 }
 
@@ -204,7 +208,7 @@ void AstPrinter::handle(const ConditionalStatement& t) {
 //                  case_inside_item } endcase
 void AstPrinter::handle(const CaseStatement& t) {
     if (t.check != UniquePriorityCheck::None) {
-        std::string_view priority = toString(t.check);
+        const std::string_view priority = toString(t.check);
         write(lowerFirstLetter(priority));
     }
 
@@ -220,11 +224,11 @@ void AstPrinter::handle(const CaseStatement& t) {
 
     write("\n", false);
 
-    indentation_level++;
+    ++indentation_level;
 
-    for (auto item : t.items) {
+    for (const auto& item : t.items) {
         // case_item :: case_item_expression { , case_item_expression } : statement_or_null
-        visitMembers<>(item.expressions);
+        visitMembers(item.expressions);
         write(":");
         item.stmt->visit(*this);
         write("\n");
@@ -233,10 +237,10 @@ void AstPrinter::handle(const CaseStatement& t) {
     // case_item ::= | default [ : ] statement_or_null
     if (t.defaultCase) {
         write("default :");
-        (*t.defaultCase).visit(*this);
+        t.defaultCase->visit(*this);
         write("\n");
     }
-    indentation_level--;
+    --indentation_level;
 
     write("endcase \n");
 }
@@ -261,21 +265,21 @@ void AstPrinter::handle(const BlockStatement& t) {
 
     if (t.blockSymbol) {
         write(":", false);
-        writeName((*t.blockSymbol));
+        writeName(*(t.blockSymbol));
         write("\n");
     }
     else {
         write("\n");
     }
 
-    indentation_level += 1;
+    ++indentation_level;
 
     // first write the information from the statementBlock
     write(blockBuffer);
     blockBuffer = "";
 
     t.body.visit(*this);
-    indentation_level -= 1;
+    --indentation_level;
 
     if (t.blockKind == StatementBlockKind::JoinAll) {
         write("join\n");
@@ -295,17 +299,19 @@ void AstPrinter::handle(const BlockStatement& t) {
 //simple_immediate_assertion_statement ::= simple_immediate_assert_statement
 //simple_immediate_assert_statement    ::= assert ( expression ) action_block
 //action_block                         ::= statement_or_null | [ statement ] else statement_or_null
-void AstPrinter::handle(const ImmediateAssertionStatement& t){
+void AstPrinter::handle(const ImmediateAssertionStatement& t) {
     write(t.assertionKind);
-    if(t.isDeferred)
-        write(t.isFinal?"final":"#0");
+    if (t.isDeferred) {
+        write(t.isFinal ? "final" : "#0");
+    }
     write("(");
     t.cond.visit(*this);
     write(")");
-    if (t.ifTrue)
+    if (t.ifTrue) {
         t.ifTrue->visit(*this);
+    }
 
-    if (t.ifFalse){
+    if (t.ifFalse) {
         write("else");
         t.ifFalse->visit(*this);
     }
@@ -313,39 +319,37 @@ void AstPrinter::handle(const ImmediateAssertionStatement& t){
 
 // concurrent_assertion_statement ::=assert_property_statement| assume_property_statement
 // assert_property_statement      ::=assert property ( property_spec ) action_block
-void AstPrinter::handle(const ConcurrentAssertionStatement& t){
+void AstPrinter::handle(const ConcurrentAssertionStatement& t) {
     write(t.assertionKind);
     write("property");
     write("(");
-    // property_spec ::=[clocking_event ] [ disable iff ( expression_or_dist ) ] property_expr
+    // property_spec ::= [clocking_event ] [ disable iff ( expression_or_dist ) ] property_expr
     t.propertySpec.visit(*this);
     write(")");
     // action_block ::= statement_or_null | [ statement ] else statement_or_null
-    if (t.ifTrue){
-        indentation_level++;
+    if (t.ifTrue) {
+        ++indentation_level;
         t.ifTrue->visit(*this);
-        indentation_level--;
+        --indentation_level;
     }
 
-    if (t.ifFalse){
+    if (t.ifFalse) {
         write("else");
-        indentation_level++;
+        ++indentation_level;
         t.ifFalse->visit(*this);
-        indentation_level--;
+        --indentation_level;
     }
     write("\n");
 }
-//randsequence_statement ::= randsequence ( [ production_identifier ] ) production { production } endsequence
-void AstPrinter::handle(const RandSequenceStatement& t){
-    //
+// randsequence_statement ::= randsequence ( [ production_identifier ] ) production { production } endsequence
+void AstPrinter::handle(const RandSequenceStatement& t) {
     write("randsequence(");
     write(t.firstProduction->name);
     write(")\n");
-    indentation_level++;
+    ++indentation_level;
     t.firstProduction->visit(*this);
-    indentation_level--;
+    --indentation_level;
     write("endsequence");
 }
-
 
 } // namespace slang::ast

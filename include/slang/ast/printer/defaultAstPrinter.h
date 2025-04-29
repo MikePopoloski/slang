@@ -8,7 +8,6 @@
 #pragma once
 
 #include "slang/ast/ASTVisitor.h"
-#include "slang/ast/HierarchicalReference.h"
 #include "slang/ast/SemanticFacts.h"
 #include "slang/ast/expressions/LiteralExpressions.h"
 #include "slang/ast/expressions/SelectExpressions.h"
@@ -26,13 +25,13 @@
 #include <cctype>
 #include <iostream>
 #include <list>
+#include <utility>
+#include <algorithm>
 #include <map>
-#include <regex>
 #include <set>
 #include <string>
 #include <string_view>
-
-
+#include <span>
 
 namespace slang::ast {
 
@@ -42,7 +41,7 @@ concept IsFunc = requires(T t) {
     t.subroutineKind;
 };
 
-/// Provides support for printing a ast back to source code.
+/// Provides support for printing a AST back to source code.
 class SLANG_EXPORT AstPrinter : public ASTVisitor<AstPrinter, true, true, true> {
 public:
     AstPrinter(slang::ast::Compilation& compilation) : compilation(compilation){};
@@ -75,7 +74,7 @@ public:
     void handle(const MinTypMaxExpression& t);
 
     // value_range ::= expression | [ expression : expression ]
-    // TODO uitzoeken waarvoor die valuerange kind dient
+    // TODO Find out where the "valuerange" kind is used for
     void handle(const ValueRangeExpression& t);
 
     // void handle(const BinaryAssertionExpr& t);
@@ -251,23 +250,20 @@ public:
     // assertion_variable_declaration }property_spec [ ; ] endproperty
     void handle(const PropertySymbol& t);
 
-    // property_port_item ::={ attribute_instance } [ local [ property_lvar_port_direction ] ]
+    // property_port_item ::= { attribute_instance } [ local [ property_lvar_port_direction ] ]
     // property_formal_typeformal_port_identifier {variable_dimension} [ = property_actual_arg ]
     void handle(const AssertionPortSymbol& t);
 
-
-    /*
-    package_declaration ::=
-            { attribute_instance } package [ lifetime ] package_identifier ;
-            [ timeunits_declaration ] { { attribute_instance } package_item }
-        endpackage [ : package_identifier ]
-    */
+    // package_declaration ::=
+    //         { attribute_instance } package [ lifetime ] package_identifier ;
+    //         [ timeunits_declaration ] { { attribute_instance } package_item }
+    //     endpackage [ : package_identifier ]
     void handle(const PackageSymbol& t);
 
     // anonymous_program ::= program ; { anonymous_program_item } endprogram
     void handle(const AnonymousProgramSymbol& t);
 
-    // ding zoals initial
+    //
     void handle(const ProceduralBlockSymbol& t);
 
     // continuous_assign ::= assign [ drive_strength ] [ delay3 ] list_of_net_assignments ;
@@ -281,59 +277,59 @@ public:
 
     void handle(const EventListControl& t);
 
-    /// module_declaration    ::= module_ansi_header [ timeunits_declaration ] {
-    /// non_port_module_item } endmodule [ : module_identifier ] interface_declaration ::=
-    /// interface_ansi_header [ timeunits_declaration ] { non_port_interface_item } endinterface [ :
-    /// interface_identifier ] program_declaration    ::= program_ansi_header [
-    /// timeunits_declaration ] { non_port_program_item } endprogram [ : program_identifier ]
+    // module_declaration    ::= module_ansi_header [ timeunits_declaration ] {
+    // non_port_module_item } endmodule [ : module_identifier ] interface_declaration ::=
+    // interface_ansi_header [ timeunits_declaration ] { non_port_interface_item } endinterface [ :
+    // interface_identifier ] program_declaration    ::= program_ansi_header [
+    // timeunits_declaration ] { non_port_program_item } endprogram [ : program_identifier ]
 
-    /// module_ansi_header    ::= { attribute_instance } module_keyword [ lifetime ]
-    /// module_identifier <{ package_import_declaration } [ parameter_port_list ] [
-    /// list_of_port_declarations ];> interface_ansi_header ::= { attribute_instance } interface [
-    /// lifetime ] interface_identifier <{ package_import_declaration } [ parameter_port_list ] [
-    /// list_of_port_declarations ];> program_ansi_header   ::= { attribute_instance } program [
-    /// lifetime ] program_identifier <{ package_import_declaration } [ parameter_port_list ] [
-    /// list_of_port_declarations ] ;>
-    /// <> is handeld in InstanceBodySymbol
+    // module_ansi_header    ::= { attribute_instance } module_keyword [ lifetime ]
+    // module_identifier <{ package_import_declaration } [ parameter_port_list ] [
+    // list_of_port_declarations ];> interface_ansi_header ::= { attribute_instance } interface [
+    // lifetime ] interface_identifier <{ package_import_declaration } [ parameter_port_list ] [
+    // list_of_port_declarations ];> program_ansi_header   ::= { attribute_instance } program [
+    // lifetime ] program_identifier <{ package_import_declaration } [ parameter_port_list ] [
+    // list_of_port_declarations ] ;>
+    // <> is handeld in InstanceBodySymbol
     void handle(const slang::ast::InstanceSymbol& t);
 
-    /// ansi_port_declaration ::=[ net_port_header  ] port_identifier { unpacked_dimension } [ =
-    /// constant_expression ]
-    ///                          | [ variable_port_header ] port_identifier { variable_dimension } [
-    ///                          = constant_expression ]
+    // ansi_port_declaration ::=[ net_port_header  ] port_identifier { unpacked_dimension } [ =
+    // constant_expression ]
+    //                          | [ variable_port_header ] port_identifier { variable_dimension } [
+    //                          = constant_expression ]
     void handle(const slang::ast::PortSymbol& t);
 
-    ///(non ansi) port ::=[ port_expression ] | . port_identifier ( [ port_expression ] )
-    /// port_reference ::= port_identifier constant_select
+    // (non ansi) port ::=[ port_expression ] | . port_identifier ( [ port_expression ] )
+    //  port_reference ::= port_identifier constant_select
     void handleNonAnsiPort(const slang::ast::PortSymbol& t);
 
-    /// ansi_port_declaration ::=[ interface_port_header ] port_identifier { unpacked_dimension } [
-    /// = constant_expression ]
+    // ansi_port_declaration ::=[ interface_port_header ] port_identifier { unpacked_dimension } [
+    // = constant_expression ]
     void handle(const slang::ast::InterfacePortSymbol& t);
 
-    /// net_port_type ::= [ net_type ] data_type_or_implicit
+    // net_port_type ::= [ net_type ] data_type_or_implicit
     void handle(const slang::ast::NetSymbol& t);
 
     void handle(const slang::ast::ScalarType& t);
 
-    /// variable_port_type ::= var_data_type
-    /// var_data_type      ::= data_type | var data_type_or_implicit
+    // variable_port_type ::= var_data_type
+    // var_data_type      ::= data_type | var data_type_or_implicit
     // data_declaration10 ::=  [ var ] [ lifetime ] data_type_or_implicit
     void handle(const slang::ast::VariableSymbol& t);
 
     void handle(const slang::ast::MultiPortSymbol& t);
 
-    /// parameter_declaration ::= parameter data_type_or_implicit list_of_param_assignments
-    /// local_parameter_declaration ::= localparam data_type_or_implicit list_of_param_assignments
-    /// list_of_param_assignments ::= param_assignment { , param_assignment }  always with lenght 1
-    /// ?? param_assignment ::= parameter_identifier { unpacked_dimension } [ =
-    /// constant_param_expression ]
+    // parameter_declaration ::= parameter data_type_or_implicit list_of_param_assignments
+    // local_parameter_declaration ::= localparam data_type_or_implicit list_of_param_assignments
+    // list_of_param_assignments ::= param_assignment { , param_assignment }  always with lenght 1
+    // ?? param_assignment ::= parameter_identifier { unpacked_dimension } [ =
+    // constant_param_expression ]
     void handle(const slang::ast::ParameterSymbol& t);
 
     // Represents a module, interface, or program definition
     void handle(const DefinitionSymbol& t);
 
-    /// package_import_item ::= package_identifier :: identifier
+    // package_import_item ::= package_identifier :: identifier
     void handle(const ExplicitImportSymbol& t);
 
     // package_import_item ::= package_identifier :: *
@@ -438,7 +434,7 @@ public:
     // cross_body ::= { { cross_body_item ; } }
     void handle(const CoverCrossBodySymbol& t);
 
-    //severity_system_task ::=  $fatal [ ( finish_number [, list_of_arguments ] ) ] ;
+    //severity_system_task ::= $fatal [ ( finish_number [, list_of_arguments ] ) ] ;
     //                      | $error [ ( [ list_of_arguments ] ) ] ;
     //                      | $warning [ ( [ list_of_arguments ] ) ] ;
     //                      | $info [ ( [ list_of_arguments ] ) ] ;
@@ -469,7 +465,6 @@ private:
     // instanceBody, to make sure the direction of ansi ports is known.
     std::map<const slang::ast::Symbol*, ArgumentDirection> internalSymbols;
 
-
     // the type in the ast is not the type defined by the type alias, this map is used to convert
     // the type back to the type alias type
     std::map<std::string, std::string> typeConversions;
@@ -490,33 +485,35 @@ private:
     // used to detect if a visit has changed the buffer
     int changedBuffer = 0;
 
-    // the amount of spaces after a newline is depth*depth_multplier
-    std::size_t indentation_level = 0;
-    const int indentation_multiplier = 3;
+    // the amount of spaces after a newline is indentation_level * indentation_multiplier
+    std::uint32_t indentation_level = 0;
+    const std::uint32_t indentation_multiplier = 2;
 
     // converts the type to a type defined by a type alias if a conversion is available
     std::string convertType(std::string type) {
         // check if type in type conversions
 
-
-        std::size_t dot_loc = type.rfind(".");
-        if (typeConversions.count(type.substr(0, dot_loc)))
+        const std::size_t dot_loc = type.rfind(".");
+        if (typeConversions.count(type.substr(0, dot_loc))) {
             return typeConversions[type.substr(0, dot_loc)];
+        }
         return type;
     }
 
-    // this function is used when visiting the members of a scope, in this case not every element has to be ended with the divider.
-    // To prevent this behavouir element which already contain a newline are skipped  if newline is true
+    // this function is used when visiting the members of a scope, in this case
+    // not every element has to be ended with the divider. To prevent this
+    // behaviour elements which already contain a newline are skipped if newline
+    // is true
     void visitMembers(const Symbol* member, const std::string& div = ",", bool newline = true) {
-        std::string endChar = newline?"\n":std::string(div);
+        std::string endChar = newline ? "\n" : div;
         while (member) {
-            int currentBuffer = changedBuffer;
+            const int currentBuffer = changedBuffer;
             member->visit(*this);
             std::string* writeBuffer = (useTempBuffer) ? (tempBuffer) : (&this->buffer);
-            
-            bool needsDivider = endChar != (*writeBuffer).substr((*writeBuffer).length() - endChar.length(), (*writeBuffer).length() - endChar.length());
+
+            const bool needsDivider = !(*writeBuffer).ends_with(endChar);
             if (*writeBuffer != "" && needsDivider && (changedBuffer != currentBuffer)) {
-                write(std::string(div) + (newline?"\n":""),false);
+                write(std::string(div) + (newline ? "\n" : ""), false);
             }
             member = member->getNextSibling();
         }
@@ -525,45 +522,51 @@ private:
     template<typename T>
     void visitMembers(std::span<const T* const> t, const std::string& div = ",",
                       bool newline = false) {
-        for (auto item : t) {
-            int currentBuffer = changedBuffer;
+        for (const auto& item : t) {
+            const int currentBuffer = changedBuffer;
             item->visit(*this);
-            if (item != t.back() && changedBuffer != currentBuffer)
+            if (&item != &(t.back()) && changedBuffer != currentBuffer) {
                 write(div, false);
+            }
             std::string* writeBuffer = (useTempBuffer) ? (tempBuffer) : (&this->buffer);
-            if (*writeBuffer != "" && newline &&("\n" != (*writeBuffer).substr((*writeBuffer).length() - 1, (*writeBuffer).length() - 1)))
+            if (*writeBuffer != "" && newline && !((*writeBuffer).ends_with("\n"))) {
                 write("\n", false);
+            }
         }
     }
 
     template<typename T>
     void visitMembers(std::span<const T> t, const std::string& divider = ",",
                       bool newline = false) {
-        for (auto item : t) {
-            int currentBuffer = changedBuffer;
+        for (const auto& item : t) {
+            const int currentBuffer = changedBuffer;
             handle(item);
 
-            if (&item != &t.back() && changedBuffer != currentBuffer)
+            if (&item != &(t.back()) && changedBuffer != currentBuffer) {
                 write(divider, false);
+            }
 
             std::string* writeBuffer = (useTempBuffer) ? (tempBuffer) : (&this->buffer);
-            if (*writeBuffer != "" && newline &&("\n" != (*writeBuffer).substr((*writeBuffer).length() - 1, (*writeBuffer).length() - 1)))
+            if (*writeBuffer != "" && newline && !((*writeBuffer).ends_with("\n"))) {
                 write("\n", false);
+            }
         }
     }
 
     void write(std::string_view string, bool add_spacer = true, bool use_dollar = false) {
-        if (string != "")
-            changedBuffer++;
+        if (string != "") {
+            ++changedBuffer;
+        }
+
         // check if there is a $ sign in the string and add its content to the writeNext buffer
         // the $ is generated by the typewriter and represents a jump ex: int$[] identifier -> int
         // identifier[]
-        std::size_t dollarLocation = string.find("$");
+        const std::size_t dollarLocation = string.find("$");
         std::string* writeBuffer = (useTempBuffer) ? (tempBuffer) : (&this->buffer);
 
         bool writeNextIsEmpty = writeNextBuffer.empty();
         if (dollarLocation != std::string::npos && use_dollar) {
-            std::string nextStr = std::string(string.substr(dollarLocation + 1));
+            const std::string nextStr = std::string(string.substr(dollarLocation + 1));
             writeNextBuffer.push_back(nextStr);
             string = string.substr(0, dollarLocation);
         }
@@ -572,17 +575,15 @@ private:
             // solves the indentation in new lines
             std::string depth_string = std::string(indentation_level * indentation_multiplier, ' ');
             (*writeBuffer).append(depth_string);
-        }
-
-        // buffer == "" is added to ensure the first char of the program does not have a space
-        // infront of it
-        else if (add_spacer && (*writeBuffer) != "") {
+        } else if (add_spacer && (*writeBuffer) != "") {
+            // buffer == "" is added to ensure the first char of the program does not have a space
+            // infront of it
             (*writeBuffer).append(" ");
         }
         (*writeBuffer).append(std::string(string));
 
         if (!writeNextIsEmpty) {
-            std::string element = writeNextBuffer.front();
+            const std::string element = writeNextBuffer.front();
             writeNextBuffer.pop_front();
             write(element, false);
         }
@@ -591,10 +592,11 @@ private:
     void writeAttributes(std::span<const AttributeSymbol* const> attributes) {
         if (!attributes.empty()) {
             write("(*");
-            for (auto attrib : attributes) {
+            for (const auto& attrib : attributes) {
                 attrib->visit(*this);
-                if (attrib != attributes.back())
+                if (&attrib != &(attributes.back())) {
                     write(",", false);
+                }
                 write("*) ");
             }
         }
@@ -669,7 +671,7 @@ private:
                 write("// unkown net type");
                 break;
             case (NetType::NetKind::UserDefined):
-                // Is handeld in the handler
+                // Is handled in the handler
                 break;
         }
     }
@@ -982,7 +984,7 @@ private:
                 SLANG_UNREACHABLE;
         }
     }
-    
+
     void write(ValueRangeKind kind) {
         switch (kind) {
             case (ValueRangeKind::Simple):
@@ -1008,8 +1010,9 @@ private:
     // It does this by trying to find the scope in which both the caller and the actual item are visible
     std::string getRealName(const Symbol& item, const Symbol* caller) {
         // caller is often this.currSymnol which can be null
-        if (!caller)
+        if (!caller) {
             return std::string(item.name);
+        }
 
         // loop through the parents of the item until the scope of the parent contains the other
         // symbol
@@ -1028,10 +1031,11 @@ private:
 
             if (grandparent) {
                 grandparent->asSymbol().getHierarchicalPath(parent_path_name);
-                parent_path_name += ".";
+                parent_path_name += '.';
                 item.getHierarchicalPath(item_path_name);
 
-                if (parent_path_name.length()<item_path_name.length()&& item_path_name.find(parent_path_name) != std::string::npos) {
+                if (parent_path_name.length() < item_path_name.length() &&
+                    item_path_name.find(parent_path_name) != std::string::npos) {
                     item_path_name.replace(item_path_name.find(parent_path_name),
                                            parent_path_name.length(), "");
                     return item_path_name;
@@ -1040,44 +1044,47 @@ private:
         }
 
         // incase item / caller is a class element is check if it needs extra identification ex:super
-       if(item.getParentScope() && (*caller).getParentScope()){
-            std::pair<const ClassType*, bool> itemClassPair=  Lookup::getContainingClass(*item.getParentScope());
+       if (item.getParentScope() && (*caller).getParentScope()) {
+            std::pair<const ClassType*, bool> itemClassPair = Lookup::getContainingClass(*item.getParentScope());
             //check if the caller is a member of the same class
-            std::pair<const ClassType*, bool> callerClassPair=  Lookup::getContainingClass((*(*caller).getParentScope()));
+            std::pair<const ClassType*, bool> callerClassPair = Lookup::getContainingClass((*(*caller).getParentScope()));
 
-            if(itemClassPair.first && callerClassPair.first){
+            if (itemClassPair.first && callerClassPair.first) {
                 // if they are the same class there is no problem
-                if (itemClassPair.first == callerClassPair.first)
+                if (itemClassPair.first == callerClassPair.first) {
                     return std::string(item.name);
-
-                if (callerClassPair.first->getBaseClass() == itemClassPair.first )
-                    return "super." + std::string(item.name);
-                else{
-                    return std::string(itemClassPair.first->name) +"::" + std::string(item.name);
                 }
-        }
+
+                if (callerClassPair.first->getBaseClass() == itemClassPair.first) {
+                    return "super." + std::string(item.name);
+                } else {
+                    return std::string(itemClassPair.first->name) + "::" + std::string(item.name);
+                }
+            }
         }
         return std::string(item.name);
     }
 
 
-    std::string lowerFirstLetter(std::string_view string) {
-        if (string == "")
+    std::string lowerFirstLetter(const std::string_view string) {
+        if (string == "") {
             return "";
+        }
         std::string new_string = std::string(string);
-        new_string[0] = (char)tolower(new_string[0]);
+        new_string[0] = std::tolower(new_string[0]);
         return new_string;
     }
 
     // lowers all letters of a string
-    std::string lower(std::string_view string) {
-        if (string == "")
+    std::string lower(const std::string_view string) {
+        if (string == "") {
             return "";
-        // TODO: een beter manier vinden om dit te doen
-        std::string new_string = std::string(string);
-        for (auto& x : new_string) {
-            x =  (char)tolower(x);
         }
+        std::string new_string;
+        std::transform(string.begin(), string.end(), std::back_inserter(new_string),
+                       [](unsigned char c) {
+                         return std::tolower(c);
+                       });
         return new_string;
     }
 
