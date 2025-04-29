@@ -175,7 +175,7 @@ void AstPrinter::handle(const ConditionalStatement& t) {
         write(lowerFirstLetter(priority));
     }
 
-    write("if(");
+    write("if (");
     // cond_predicate ::= expression_or_cond_pattern { &&& expression_or_cond_pattern }
     for (const auto& condition : t.conditions) {
         condition.expr.get()->visit(*this);
