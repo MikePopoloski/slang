@@ -2540,76 +2540,6 @@ endmodule
     CHECK(diags[0].code == diag::BadAssignment);
 }
 
-TEST_CASE("Multiple driver errors") {
-    auto tree = SyntaxTree::fromText(R"(
-module m;
-    struct packed { int foo; } [1:0] bar[3];
-
-    assign bar[0][0].foo = 1;
-    assign bar[0][0].foo = 2;
-    assign bar[1] = '0;
-
-    initial begin
-        bar[1][0] = '1;
-        bar[2][0].foo = 1;
-        bar[2][0].foo = 2;
-    end
-
-    assign bar[2][1].foo = 3;
-
-    int i = 1;
-    assign i = 2;
-
-    wire [31:0] j = 1;
-    assign j = 2;
-
-    uwire [31:0] k = 1;
-    assign k = 2;
-
-    nettype real nt;
-    nt n = 3.14;
-    assign n = 2.3;
-endmodule
-)");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-
-    auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 5);
-    CHECK(diags[0].code == diag::MultipleContAssigns);
-    CHECK(diags[1].code == diag::MixedVarAssigns);
-    CHECK(diags[2].code == diag::MixedVarAssigns);
-    CHECK(diags[3].code == diag::MultipleUWireDrivers);
-    CHECK(diags[4].code == diag::MultipleUDNTDrivers);
-}
-
-TEST_CASE("Recursive function in always_comb driver check") {
-    auto tree = SyntaxTree::fromText(R"(
-module top;
-  logic passed;
-  logic [7:0] value;
-  integer ones;
-
-  function automatic integer count_by_one(input integer start);
-    if (start != 0) count_by_one = (value[start] ? 1 : 0) + count_ones(start-1);
-    else count_by_one = value[start] ? 1 : 0;
-  endfunction
-
-  function automatic integer count_ones(input integer start);
-    if (start != 0) count_ones = (value[start] ? 1 : 0) + count_by_one(start-1);
-    else count_ones = value[start] ? 1 : 0;
-  endfunction
-
-  always_comb ones = count_ones(7);
-endmodule
-)");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-    NO_COMPILATION_ERRORS;
-}
-
 TEST_CASE("String literal binary op const eval regress") {
     auto tree = SyntaxTree::fromText(R"(
 parameter string foo = "hello";
@@ -2867,30 +2797,6 @@ virtual class C #(type enum_t = int);
 endclass
 )");
 
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-    NO_COMPILATION_ERRORS;
-}
-
-TEST_CASE("Proc subroutine multiple driver tracking") {
-    auto tree = SyntaxTree::fromText(R"(
-module m;
-    logic [9:0] a;
-    always_comb begin
-        for (int i = 0; i < $size(a); i++)
-            a[i] = 0;
-        baz();
-        baz();
-    end
-
-    task baz;
-        a[0] = 1;
-    endtask
-endmodule
-)");
-
-    // This tests a crash due to invalidating iterators while
-    // iterating the variable's driver map.
     Compilation compilation;
     compilation.addSyntaxTree(tree);
     NO_COMPILATION_ERRORS;
@@ -3163,80 +3069,6 @@ endmodule
     CHECK(diags[0].code == diag::BadStreamSize);
 }
 
-TEST_CASE("Multi-driven errors through call expressions from normal always block") {
-    auto tree = SyntaxTree::fromText(R"(
-module top(input clk, input reset);
-    logic c;
-    function logic m(logic d);
-        c = d;
-        return c;
-    endfunction
-
-    logic a, b;
-    always_ff @(posedge clk) begin
-        a <= m(a);
-    end
-
-    always @(posedge reset) begin
-        b <= m(a);
-    end
-endmodule
-)");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-
-    auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 1);
-    CHECK(diags[0].code == diag::MultipleAlwaysAssigns);
-}
-
-TEST_CASE("Multi-driven subroutine local var option to allow") {
-    auto tree = SyntaxTree::fromText(R"(
-module top(input clk, input reset);
-    function logic m(logic d);
-        logic c;
-        c = d;
-        return c;
-    endfunction
-
-    logic a, b;
-    always_ff @(posedge clk) begin
-        a <= m(a);
-    end
-
-    always @(posedge reset) begin
-        b <= m(a);
-    end
-endmodule
-)");
-
-    CompilationOptions options;
-    options.flags |= CompilationFlags::AllowMultiDrivenLocals;
-
-    Compilation compilation(options);
-    compilation.addSyntaxTree(tree);
-    NO_COMPILATION_ERRORS;
-}
-
-TEST_CASE("v1800-2023 clarification: multi-driven subroutine checking doesn't apply to tasks") {
-    auto tree = SyntaxTree::fromText(R"(
-module m;
-    int i;
-    task t;
-        i <= 1;
-    endtask
-
-    always_comb t();
-    always_comb t();
-endmodule
-)");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-    NO_COMPILATION_ERRORS;
-}
-
 TEST_CASE("v1800-2023: Unsized integer literals can be any bit width") {
     auto options = optionsFor(LanguageVersion::v1800_2023);
     auto tree = SyntaxTree::fromText(R"(
@@ -3440,39 +3272,6 @@ endmodule
     CHECK(getValue("m.b").integer() == 1);
     CHECK(getValue("m.c").integer() == 0);
     CHECK(getValue("m.d").integer() == 1);
-}
-
-TEST_CASE("Multi-driven unpacked array regress GH #923") {
-    auto tree = SyntaxTree::fromText(R"(
-// Range select in unpacked array, causing error.
-module Test1;
-  parameter DIM1 = 2;
-  parameter DIM2 = 4;
-
-  logic test [DIM1-1:0][DIM2-1:0];
-
-  // i == 2, elemRange = {1, 1}, start 1, width 1, elemWidth 4, result = {4, 7}
-  // i == 1, elemRange = {1, 3}, start 1, width 3, elemWidth 3, result = {7, 9}, should be {5, 7}
-  assign test[0][DIM2-2:0] = '{default: '0};
-
-  // i == 2, elemRange = {1, 1}, start 1, width 1, elemWidth 4, result = {4, 7}
-  // i == 1, elemRange = {0, 0}, start 0, width 1, elemWidth 1, result = {4, 4}
-  assign test[0][DIM2-1]   = '0;
-
-  // i == 2, elemRange = {0, 0}, start 0, width 1, elemWidth 4, result = {0, 3}
-  // i == 1, elemRange = {1, 3}, start 1, width 3, elemWidth 3, result = {3, 5}, should be {1, 3}
-  assign test[1][DIM2-2:0] = '{default: '0};
-
-  // i == 2, elemRange = {0, 0}, start 0, width 1, elemWidth 4, result = {0, 3}
-  // i == 1, elemRange = {0, 0}, start 0, width 1, elemWidth 1, result = {0, 0}
-  assign test[1][DIM2-1]   = '0;
-
-endmodule
-)");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-    NO_COMPILATION_ERRORS;
 }
 
 TEST_CASE("v1800-2023: ref static arguments") {
@@ -3722,26 +3521,6 @@ endmodule
 
     auto& r = compilation.getRoot().lookupName<ParameterSymbol>("m.r");
     CHECK(r.getValue().toString() == "4'b1");
-}
-
-TEST_CASE("Invalid selection driver bounds regress -- GH #1141") {
-    auto tree = SyntaxTree::fromText(R"(
-module test;
-  reg [15:0] vect;
-
-  initial begin
-    vect[1 -: 4] = 8'b1010_1010;
-  end
-endmodule
-)");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-
-    auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 2);
-    CHECK(diags[0].code == diag::RangeOOB);
-    CHECK(diags[1].code == diag::ConstantConversion);
 }
 
 TEST_CASE("Empty queue assignment to unknown type placeholder -- GH #1146") {

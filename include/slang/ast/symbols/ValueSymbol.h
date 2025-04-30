@@ -67,7 +67,7 @@ public:
     void addDriver(DriverKind kind, DriverBitRange bounds, const Expression& longestStaticPrefix,
                    const Symbol& containingSymbol, const Expression& procCallExpression) const;
 
-    void addDriver(DriverBitRange bounds, const ValueDriver& driver) const;
+    // void addDriver(DriverBitRange bounds, const ValueDriver& driver) const;
 
     void addDriverFromSideEffect(const ValueDriver& newDriver) const;
 

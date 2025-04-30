@@ -9,7 +9,9 @@
 
 #include "NonProceduralExprVisitor.h"
 
+#include "slang/analysis/LSPUtilities.h"
 #include "slang/ast/ASTVisitor.h"
+#include "slang/ast/EvalContext.h"
 #include "slang/diagnostics/AnalysisDiags.h"
 #include "slang/diagnostics/ExpressionsDiags.h"
 #include "slang/util/TypeTraits.h"
@@ -530,9 +532,21 @@ private:
         driverMap.insert(bounds, &driver, state.driverAlloc);
     }
 
+    static std::string getLSPName(const ValueSymbol& symbol, const ValueDriver& driver) {
+        auto scope = symbol.getParentScope();
+        SLANG_ASSERT(scope);
+
+        FormatBuffer buf;
+        EvalContext evalContext(ASTContext(*scope, LookupLocation::after(symbol)));
+        stringifyLSP(*driver.prefixExpression, evalContext, buf);
+
+        return buf.str();
+    }
+
     bool handleOverlap(const ValueSymbol& symbol, const ValueDriver& curr,
                        const ValueDriver& driver, bool isNet, bool isUWire, bool isSingleDriverUDNT,
                        const NetType* netType) {
+
         auto currRange = curr.getSourceRange();
         auto driverRange = driver.getSourceRange();
 
@@ -545,7 +559,6 @@ private:
 
         if ((isUnidirectionNetPort && !isUWire && !isSingleDriverUDNT) ||
             (!isNet && (curr.isInputPort() || driver.isInputPort()))) {
-
             auto code = diag::InputPortAssign;
             if (isNet) {
                 if (curr.flags.has(AssignFlags::InputPort))
@@ -618,16 +631,19 @@ private:
             // Multiple procedural drivers where one of them is an
             // always_comb / always_ff block.
             ProceduralBlockKind procKind;
+            const ValueDriver* sourceForName = &driver;
             if (driver.isInSingleDriverProcedure()) {
                 procKind = static_cast<ProceduralBlockKind>(driver.source);
             }
             else {
                 procKind = static_cast<ProceduralBlockKind>(curr.source);
                 std::swap(driverRange, currRange);
+                sourceForName = &curr;
             }
 
             auto& diag = context.addDiag(symbol, diag::MultipleAlwaysAssigns, driverRange);
-            diag << symbol.name << SemanticFacts::getProcedureKindStr(procKind);
+            diag << getLSPName(symbol, *sourceForName)
+                 << SemanticFacts::getProcedureKindStr(procKind);
             addAssignedHereNote(diag);
 
             if (driver.procCallExpression || curr.procCallExpression) {
@@ -652,7 +668,7 @@ private:
             code = diag::MixedVarAssigns;
 
         auto& diag = context.addDiag(symbol, code, driverRange);
-        diag << symbol.name;
+        diag << getLSPName(symbol, driver);
         if (isSingleDriverUDNT) {
             SLANG_ASSERT(netType);
             diag << netType->name;
