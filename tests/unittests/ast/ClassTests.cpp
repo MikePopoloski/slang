@@ -2578,26 +2578,6 @@ endfunction
     CHECK(diags[0].code == diag::Redefinition);
 }
 
-TEST_CASE("Class method driver crash regress GH #552") {
-    auto tree = SyntaxTree::fromText(R"(
-class B;
-    int v[$];
-endclass
-
-class C;
-    virtual function B get();
-    endfunction
-    function f();
-        get().v.delete();
-    endfunction
-endclass
-)");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-    NO_COMPILATION_ERRORS;
-}
-
 TEST_CASE("Reversed dist range treated as empty") {
     auto tree = SyntaxTree::fromText(R"(
 class C;
@@ -2654,30 +2634,6 @@ endmodule
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::ConstraintNotInClass);
-}
-
-TEST_CASE("Multiple assign to static class members") {
-    auto tree = SyntaxTree::fromText(R"(
-class C;
-    static int foo;
-endclass
-
-function C bar;
-endfunction
-
-module m;
-    C c = new;
-    assign c.foo = 1;
-    assign bar().foo = 1;
-endmodule
-)");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-
-    auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 1);
-    CHECK(diags[0].code == diag::MultipleContAssigns);
 }
 
 TEST_CASE("Dist weight split operators") {

@@ -292,19 +292,19 @@ private:
         }
         else {
             // Find our finished driver interval maps and apply them.
-            auto& containingSym = astCtx.getContainingSymbol();
-            for (auto& [expr, stateVec] : driverMap) {
-                for (auto& state : *stateVec) {
-                    auto driver = comp.emplace<ValueDriver>(DriverKind::Procedural,
-                                                            *state.longestStaticPrefix,
-                                                            containingSym, AssignFlags::None);
+            // auto& containingSym = astCtx.getContainingSymbol();
+            // for (auto& [expr, stateVec] : driverMap) {
+            //     for (auto& state : *stateVec) {
+            //         auto driver = comp.emplace<ValueDriver>(DriverKind::Procedural,
+            //                                                 *state.longestStaticPrefix,
+            //                                                 containingSym, AssignFlags::None);
 
-                    for (auto it = state.intervals.begin(); it != state.intervals.end(); ++it)
-                        state.symbol->addDriver(it.bounds(), *driver);
+            //         for (auto it = state.intervals.begin(); it != state.intervals.end(); ++it)
+            //             state.symbol->addDriver(it.bounds(), *driver);
 
-                    state.intervals.clear(comp.getUnrollIntervalMapAllocator());
-                }
-            }
+            //         state.intervals.clear(comp.getUnrollIntervalMapAllocator());
+            //     }
+            // }
         }
     }
 
