@@ -10,50 +10,16 @@
 #include "slang/analysis/ClockInference.h"
 #include "slang/analysis/DataFlowAnalysis.h"
 #include "slang/diagnostics/AnalysisDiags.h"
-#include "slang/text/FormatBuffer.h"
 
 namespace slang::analysis {
 
 using namespace ast;
 
-static void stringifyLSP(const Expression& expr, EvalContext& evalContext, FormatBuffer& buffer) {
-    switch (expr.kind) {
-        case ExpressionKind::NamedValue:
-        case ExpressionKind::HierarchicalValue:
-            buffer.append(expr.as<ValueExpressionBase>().symbol.name);
-            break;
-        case ExpressionKind::Conversion:
-            stringifyLSP(expr.as<ConversionExpression>().operand(), evalContext, buffer);
-            break;
-        case ExpressionKind::ElementSelect: {
-            auto& select = expr.as<ElementSelectExpression>();
-            stringifyLSP(select.value(), evalContext, buffer);
-            buffer.format("[{}]", select.selector().eval(evalContext).toString());
-            break;
-        }
-        case ExpressionKind::RangeSelect: {
-            auto& select = expr.as<RangeSelectExpression>();
-            stringifyLSP(select.value(), evalContext, buffer);
-            buffer.format("[{}:{}]", select.left().eval(evalContext).toString(),
-                          select.right().eval(evalContext).toString());
-            break;
-        }
-        case ExpressionKind::MemberAccess: {
-            auto& access = expr.as<MemberAccessExpression>();
-            stringifyLSP(access.value(), evalContext, buffer);
-            buffer.append(".");
-            buffer.append(access.member.name);
-            break;
-        }
-        default:
-            SLANG_UNREACHABLE;
-    }
-}
-
 AnalyzedProcedure::AnalyzedProcedure(AnalysisContext& context, const Symbol& analyzedSymbol,
                                      const AnalyzedProcedure* parentProcedure) :
     analyzedSymbol(&analyzedSymbol), parentProcedure(parentProcedure) {
 
+    DriverKind driverKind = DriverKind::Procedural;
     DataFlowAnalysis dfa(context, analyzedSymbol, true);
     switch (analyzedSymbol.kind) {
         case SymbolKind::ProceduralBlock:
@@ -66,7 +32,9 @@ AnalyzedProcedure::AnalyzedProcedure(AnalysisContext& context, const Symbol& ana
             auto& assign = analyzedSymbol.as<ContinuousAssignSymbol>();
             if (auto delay = assign.getDelay())
                 dfa.handleTiming(*delay);
+
             dfa.run(assign.getAssignment());
+            driverKind = DriverKind::Continuous;
             break;
         }
         default:
@@ -167,8 +135,8 @@ AnalyzedProcedure::AnalyzedProcedure(AnalysisContext& context, const Symbol& ana
         std::vector<std::pair<const ast::ValueDriver*, DriverBitRange>> perSymbol;
         for (auto it = lvalue.assigned.begin(); it != lvalue.assigned.end(); ++it) {
             auto bounds = it.bounds();
-            auto driver = context.alloc.emplace<ValueDriver>(DriverKind::Procedural, **it,
-                                                             analyzedSymbol, AssignFlags::None);
+            auto driver = context.alloc.emplace<ValueDriver>(driverKind, **it, analyzedSymbol,
+                                                             AssignFlags::None);
             perSymbol.emplace_back(driver, bounds);
         }
 

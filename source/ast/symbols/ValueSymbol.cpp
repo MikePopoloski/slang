@@ -50,137 +50,137 @@ bool ValueSymbol::isKind(SymbolKind kind) {
     }
 }
 
-static bool handleOverlap(const Scope& scope, std::string_view name, const ValueDriver& curr,
-                          const ValueDriver& driver, bool isNet, bool isUWire,
-                          bool isSingleDriverUDNT, const NetType* netType) {
-    auto currRange = curr.getSourceRange();
-    auto driverRange = driver.getSourceRange();
+// static bool handleOverlap(const Scope& scope, std::string_view name, const ValueDriver& curr,
+//                           const ValueDriver& driver, bool isNet, bool isUWire,
+//                           bool isSingleDriverUDNT, const NetType* netType) {
+//     auto currRange = curr.getSourceRange();
+//     auto driverRange = driver.getSourceRange();
 
-    // The default handling case for mixed vs multiple assignments is below.
-    // First check for more specialized cases here:
-    // 1. If this is a non-uwire net for an input or output port
-    // 2. If this is a variable for an input port
-    const bool isUnidirectionNetPort = isNet && (curr.isUnidirectionalPort() ||
-                                                 driver.isUnidirectionalPort());
+//     // The default handling case for mixed vs multiple assignments is below.
+//     // First check for more specialized cases here:
+//     // 1. If this is a non-uwire net for an input or output port
+//     // 2. If this is a variable for an input port
+//     const bool isUnidirectionNetPort = isNet && (curr.isUnidirectionalPort() ||
+//                                                  driver.isUnidirectionalPort());
 
-    if ((isUnidirectionNetPort && !isUWire && !isSingleDriverUDNT) ||
-        (!isNet && (curr.isInputPort() || driver.isInputPort()))) {
+//     if ((isUnidirectionNetPort && !isUWire && !isSingleDriverUDNT) ||
+//         (!isNet && (curr.isInputPort() || driver.isInputPort()))) {
 
-        auto code = diag::InputPortAssign;
-        if (isNet) {
-            if (curr.flags.has(AssignFlags::InputPort))
-                code = diag::InputPortCoercion;
-            else
-                code = diag::OutputPortCoercion;
-        }
+//         auto code = diag::InputPortAssign;
+//         if (isNet) {
+//             if (curr.flags.has(AssignFlags::InputPort))
+//                 code = diag::InputPortCoercion;
+//             else
+//                 code = diag::OutputPortCoercion;
+//         }
 
-        // This is a little messy; basically we want to report the correct
-        // range for the port vs the assignment. We only want to do this
-        // for input ports though, as output ports show up at the instantiation
-        // site and we'd rather that be considered the "port declaration".
-        auto portRange = currRange;
-        auto assignRange = driverRange;
-        if (driver.isInputPort() || curr.flags.has(AssignFlags::OutputPort))
-            std::swap(portRange, assignRange);
+//         // This is a little messy; basically we want to report the correct
+//         // range for the port vs the assignment. We only want to do this
+//         // for input ports though, as output ports show up at the instantiation
+//         // site and we'd rather that be considered the "port declaration".
+//         auto portRange = currRange;
+//         auto assignRange = driverRange;
+//         if (driver.isInputPort() || curr.flags.has(AssignFlags::OutputPort))
+//             std::swap(portRange, assignRange);
 
-        auto& diag = scope.addDiag(code, assignRange);
-        diag << name;
+//         auto& diag = scope.addDiag(code, assignRange);
+//         diag << name;
 
-        auto note = code == diag::OutputPortCoercion ? diag::NoteDrivenHere
-                                                     : diag::NoteDeclarationHere;
-        diag.addNote(note, portRange);
+//         auto note = code == diag::OutputPortCoercion ? diag::NoteDrivenHere
+//                                                      : diag::NoteDeclarationHere;
+//         diag.addNote(note, portRange);
 
-        // For variable ports this is an error, for nets it's a warning.
-        return isNet;
-    }
+//         // For variable ports this is an error, for nets it's a warning.
+//         return isNet;
+//     }
 
-    if (curr.isClockVar() || driver.isClockVar()) {
-        // Both drivers being clockvars is allowed.
-        if (curr.isClockVar() && driver.isClockVar())
-            return true;
+//     if (curr.isClockVar() || driver.isClockVar()) {
+//         // Both drivers being clockvars is allowed.
+//         if (curr.isClockVar() && driver.isClockVar())
+//             return true;
 
-        // Procedural drivers are allowed to clockvars.
-        if (curr.kind == DriverKind::Procedural || driver.kind == DriverKind::Procedural)
-            return true;
+//         // Procedural drivers are allowed to clockvars.
+//         if (curr.kind == DriverKind::Procedural || driver.kind == DriverKind::Procedural)
+//             return true;
 
-        // Otherwise we have an error.
-        if (driver.isClockVar())
-            std::swap(driverRange, currRange);
+//         // Otherwise we have an error.
+//         if (driver.isClockVar())
+//             std::swap(driverRange, currRange);
 
-        auto& diag = scope.addDiag(diag::ClockVarTargetAssign, driverRange);
-        diag << name;
-        diag.addNote(diag::NoteReferencedHere, currRange);
-        return false;
-    }
+//         auto& diag = scope.addDiag(diag::ClockVarTargetAssign, driverRange);
+//         diag << name;
+//         diag.addNote(diag::NoteReferencedHere, currRange);
+//         return false;
+//     }
 
-    if (curr.isLocalVarFormalArg() && driver.isLocalVarFormalArg()) {
-        auto& diag = scope.addDiag(diag::LocalFormalVarMultiAssign, driverRange);
-        diag << name;
-        diag.addNote(diag::NoteAssignedHere, currRange);
-        return false;
-    }
+//     if (curr.isLocalVarFormalArg() && driver.isLocalVarFormalArg()) {
+//         auto& diag = scope.addDiag(diag::LocalFormalVarMultiAssign, driverRange);
+//         diag << name;
+//         diag.addNote(diag::NoteAssignedHere, currRange);
+//         return false;
+//     }
 
-    auto addAssignedHereNote = [&](Diagnostic& d) {
-        // If the two locations are the same, the symbol is driven by
-        // the same source location but two different parts of the hierarchy.
-        // In those cases we want a different note about what's going on.
-        if (currRange.start() != driverRange.start()) {
-            d.addNote(diag::NoteAssignedHere, currRange);
-        }
-        else {
-            auto& note = d.addNote(diag::NoteFromHere2, SourceLocation::NoLocation);
-            note << driver.containingSymbol->getHierarchicalPath();
-            note << curr.containingSymbol->getHierarchicalPath();
-        }
-    };
+//     auto addAssignedHereNote = [&](Diagnostic& d) {
+//         // If the two locations are the same, the symbol is driven by
+//         // the same source location but two different parts of the hierarchy.
+//         // In those cases we want a different note about what's going on.
+//         if (currRange.start() != driverRange.start()) {
+//             d.addNote(diag::NoteAssignedHere, currRange);
+//         }
+//         else {
+//             auto& note = d.addNote(diag::NoteFromHere2, SourceLocation::NoLocation);
+//             note << driver.containingSymbol->getHierarchicalPath();
+//             note << curr.containingSymbol->getHierarchicalPath();
+//         }
+//     };
 
-    if (curr.kind == DriverKind::Procedural && driver.kind == DriverKind::Procedural) {
-        // Multiple procedural drivers where one of them is an
-        // always_comb / always_ff block.
-        ProceduralBlockKind procKind;
-        if (driver.isInSingleDriverProcedure()) {
-            procKind = static_cast<ProceduralBlockKind>(driver.source);
-        }
-        else {
-            procKind = static_cast<ProceduralBlockKind>(curr.source);
-            std::swap(driverRange, currRange);
-        }
+//     if (curr.kind == DriverKind::Procedural && driver.kind == DriverKind::Procedural) {
+//         // Multiple procedural drivers where one of them is an
+//         // always_comb / always_ff block.
+//         ProceduralBlockKind procKind;
+//         if (driver.isInSingleDriverProcedure()) {
+//             procKind = static_cast<ProceduralBlockKind>(driver.source);
+//         }
+//         else {
+//             procKind = static_cast<ProceduralBlockKind>(curr.source);
+//             std::swap(driverRange, currRange);
+//         }
 
-        auto& diag = scope.addDiag(diag::MultipleAlwaysAssigns, driverRange);
-        diag << name << SemanticFacts::getProcedureKindStr(procKind);
-        addAssignedHereNote(diag);
+//         auto& diag = scope.addDiag(diag::MultipleAlwaysAssigns, driverRange);
+//         diag << name << SemanticFacts::getProcedureKindStr(procKind);
+//         addAssignedHereNote(diag);
 
-        if (driver.procCallExpression || curr.procCallExpression) {
-            SourceRange extraRange = driver.procCallExpression
-                                         ? driver.prefixExpression->sourceRange
-                                         : curr.prefixExpression->sourceRange;
+//         if (driver.procCallExpression || curr.procCallExpression) {
+//             SourceRange extraRange = driver.procCallExpression
+//                                          ? driver.prefixExpression->sourceRange
+//                                          : curr.prefixExpression->sourceRange;
 
-            diag.addNote(diag::NoteOriginalAssign, extraRange);
-        }
+//             diag.addNote(diag::NoteOriginalAssign, extraRange);
+//         }
 
-        return false;
-    }
+//         return false;
+//     }
 
-    DiagCode code;
-    if (isUWire)
-        code = diag::MultipleUWireDrivers;
-    else if (isSingleDriverUDNT)
-        code = diag::MultipleUDNTDrivers;
-    else if (driver.kind == DriverKind::Continuous && curr.kind == DriverKind::Continuous)
-        code = diag::MultipleContAssigns;
-    else
-        code = diag::MixedVarAssigns;
+//     DiagCode code;
+//     if (isUWire)
+//         code = diag::MultipleUWireDrivers;
+//     else if (isSingleDriverUDNT)
+//         code = diag::MultipleUDNTDrivers;
+//     else if (driver.kind == DriverKind::Continuous && curr.kind == DriverKind::Continuous)
+//         code = diag::MultipleContAssigns;
+//     else
+//         code = diag::MixedVarAssigns;
 
-    auto& diag = scope.addDiag(code, driverRange);
-    diag << name;
-    if (isSingleDriverUDNT) {
-        SLANG_ASSERT(netType);
-        diag << netType->name;
-    }
+//     auto& diag = scope.addDiag(code, driverRange);
+//     diag << name;
+//     if (isSingleDriverUDNT) {
+//         SLANG_ASSERT(netType);
+//         diag << netType->name;
+//     }
 
-    addAssignedHereNote(diag);
-    return false;
-}
+//     addAssignedHereNote(diag);
+//     return false;
+// }
 
 void ValueSymbol::addDriver(DriverKind driverKind, const Expression& longestStaticPrefix,
                             const Symbol& containingSymbol, bitmask<AssignFlags> flags) const {
@@ -194,12 +194,11 @@ void ValueSymbol::addDriver(DriverKind driverKind, const Expression& longestStat
     if (!bounds)
         return;
 
-    auto driver = comp.emplace<ValueDriver>(driverKind, longestStaticPrefix, containingSymbol,
-                                            flags);
-    addDriver(*bounds, *driver);
+    comp.emplace<ValueDriver>(driverKind, longestStaticPrefix, containingSymbol, flags);
+    // addDriver(*bounds, *driver);
 }
 
-void ValueSymbol::addDriver(DriverKind driverKind, DriverBitRange bounds,
+void ValueSymbol::addDriver(DriverKind driverKind, DriverBitRange,
                             const Expression& longestStaticPrefix, const Symbol& containingSymbol,
                             const Expression& procCallExpression) const {
     auto scope = getParentScope();
@@ -210,7 +209,7 @@ void ValueSymbol::addDriver(DriverKind driverKind, DriverBitRange bounds,
                                             AssignFlags::None);
     driver->procCallExpression = &procCallExpression;
 
-    addDriver(bounds, *driver);
+    // addDriver(bounds, *driver);
 }
 
 void ValueSymbol::addDriverFromSideEffect(const ValueDriver& newDriver) const {
@@ -222,7 +221,7 @@ void ValueSymbol::addDriverFromSideEffect(const ValueDriver& newDriver) const {
     if (!bounds)
         return;
 
-    addDriver(*bounds, newDriver);
+    // addDriver(*bounds, newDriver);
 }
 
 template<typename TCallback>
@@ -266,178 +265,179 @@ static void visitPrefixExpressions(const Expression& longestStaticPrefix, bool i
     } while (expr);
 }
 
-static bool isContainedWithin(const Symbol& symbol, const Symbol& container) {
-    const Symbol* current = &symbol;
-    while (true) {
-        if (current->kind == SymbolKind::InstanceBody) {
-            current = current->as<InstanceBodySymbol>().parentInstance;
-            SLANG_ASSERT(current);
-        }
+// static bool isContainedWithin(const Symbol& symbol, const Symbol& container) {
+//     const Symbol* current = &symbol;
+//     while (true) {
+//         if (current->kind == SymbolKind::InstanceBody) {
+//             current = current->as<InstanceBodySymbol>().parentInstance;
+//             SLANG_ASSERT(current);
+//         }
 
-        if (current == &container)
-            return true;
+//         if (current == &container)
+//             return true;
 
-        auto scope = current->getParentScope();
-        if (!scope)
-            return false;
+//         auto scope = current->getParentScope();
+//         if (!scope)
+//             return false;
 
-        current = &scope->asSymbol();
-    }
-}
+//         current = &scope->asSymbol();
+//     }
+// }
 
-void ValueSymbol::addDriver(DriverBitRange bounds, const ValueDriver& driver) const {
-    auto scope = getParentScope();
-    SLANG_ASSERT(scope);
+// void ValueSymbol::addDriver(DriverBitRange bounds, const ValueDriver& driver) const {
+//     auto scope = getParentScope();
+//     SLANG_ASSERT(scope);
 
-    auto& comp = scope->getCompilation();
+//     auto& comp = scope->getCompilation();
 
-    // If this driver is made via an interface port connection we want to
-    // note that fact as it represents a side effect for the instance that
-    // is not captured in the port connections.
-    bool isIfacePortDriver = false;
-    if (!driver.isFromSideEffect) {
-        visitPrefixExpressions(*driver.prefixExpression, /* includeRoot */ true,
-                               [&](const Expression& expr) {
-                                   if (expr.kind == ExpressionKind::HierarchicalValue) {
-                                       auto& hve = expr.as<HierarchicalValueExpression>();
-                                       if (hve.ref.isViaIfacePort()) {
-                                           isIfacePortDriver = true;
-                                           comp.noteInterfacePortDriver(hve.ref, driver);
-                                       }
-                                   }
-                               });
-    }
+//     // If this driver is made via an interface port connection we want to
+//     // note that fact as it represents a side effect for the instance that
+//     // is not captured in the port connections.
+//     bool isIfacePortDriver = false;
+//     if (!driver.isFromSideEffect) {
+//         visitPrefixExpressions(*driver.prefixExpression, /* includeRoot */ true,
+//                                [&](const Expression& expr) {
+//                                    if (expr.kind == ExpressionKind::HierarchicalValue) {
+//                                        auto& hve = expr.as<HierarchicalValueExpression>();
+//                                        if (hve.ref.isViaIfacePort()) {
+//                                            isIfacePortDriver = true;
+//                                            comp.noteInterfacePortDriver(hve.ref, driver);
+//                                        }
+//                                    }
+//                                });
+//     }
 
-    if (driverMap.empty()) {
-        // The first time we add a driver, check whether there is also an
-        // initializer expression that should count as a driver as well.
-        auto addInitializer = [&](DriverKind driverKind) {
-            auto& valExpr = *comp.emplace<NamedValueExpression>(
-                *this, SourceRange{location, location + name.length()});
+//     if (driverMap.empty()) {
+//         // The first time we add a driver, check whether there is also an
+//         // initializer expression that should count as a driver as well.
+//         auto addInitializer = [&](DriverKind driverKind) {
+//             auto& valExpr = *comp.emplace<NamedValueExpression>(
+//                 *this, SourceRange{location, location + name.length()});
 
-            DriverBitRange initBounds{0, getType().getSelectableWidth() - 1};
-            auto initDriver = comp.emplace<ValueDriver>(driverKind, valExpr, scope->asSymbol(),
-                                                        AssignFlags::None);
+//             DriverBitRange initBounds{0, getType().getSelectableWidth() - 1};
+//             auto initDriver = comp.emplace<ValueDriver>(driverKind, valExpr, scope->asSymbol(),
+//                                                         AssignFlags::None);
 
-            driverMap.insert(initBounds, initDriver, comp.getDriverMapAllocator());
-        };
+//             driverMap.insert(initBounds, initDriver, comp.getDriverMapAllocator());
+//         };
 
-        switch (kind) {
-            case SymbolKind::Net:
-                if (getInitializer())
-                    addInitializer(DriverKind::Continuous);
-                break;
-            case SymbolKind::Variable:
-            case SymbolKind::ClassProperty:
-            case SymbolKind::Field:
-                if (getInitializer())
-                    addInitializer(DriverKind::Procedural);
-                break;
-            default:
-                break;
-        }
+//         switch (kind) {
+//             case SymbolKind::Net:
+//                 if (getInitializer())
+//                     addInitializer(DriverKind::Continuous);
+//                 break;
+//             case SymbolKind::Variable:
+//             case SymbolKind::ClassProperty:
+//             case SymbolKind::Field:
+//                 if (getInitializer())
+//                     addInitializer(DriverKind::Procedural);
+//                 break;
+//             default:
+//                 break;
+//         }
 
-        if (driverMap.empty()) {
-            driverMap.insert(bounds, &driver, comp.getDriverMapAllocator());
-            return;
-        }
-    }
+//         if (driverMap.empty()) {
+//             driverMap.insert(bounds, &driver, comp.getDriverMapAllocator());
+//             return;
+//         }
+//     }
 
-    // We need to check for overlap in the following cases:
-    // - static variables (automatic variables can't ever be driven continuously)
-    // - uwire nets
-    // - user-defined nets with no resolution function
-    const bool isNet = kind == SymbolKind::Net;
-    bool isUWire = false;
-    bool isSingleDriverUDNT = false;
-    const NetType* netType = nullptr;
+//     // We need to check for overlap in the following cases:
+//     // - static variables (automatic variables can't ever be driven continuously)
+//     // - uwire nets
+//     // - user-defined nets with no resolution function
+//     const bool isNet = kind == SymbolKind::Net;
+//     bool isUWire = false;
+//     bool isSingleDriverUDNT = false;
+//     const NetType* netType = nullptr;
 
-    if (isNet) {
-        netType = &as<NetSymbol>().netType;
-        isUWire = netType->netKind == NetType::UWire;
-        isSingleDriverUDNT = netType->netKind == NetType::UserDefined &&
-                             netType->getResolutionFunction() == nullptr;
-    }
+//     if (isNet) {
+//         netType = &as<NetSymbol>().netType;
+//         isUWire = netType->netKind == NetType::UWire;
+//         isSingleDriverUDNT = netType->netKind == NetType::UserDefined &&
+//                              netType->getResolutionFunction() == nullptr;
+//     }
 
-    const bool checkOverlap = (VariableSymbol::isKind(kind) &&
-                               as<VariableSymbol>().lifetime == VariableLifetime::Static) ||
-                              isUWire || isSingleDriverUDNT ||
-                              kind == SymbolKind::LocalAssertionVar;
+//     const bool checkOverlap = (VariableSymbol::isKind(kind) &&
+//                                as<VariableSymbol>().lifetime == VariableLifetime::Static) ||
+//                               isUWire || isSingleDriverUDNT ||
+//                               kind == SymbolKind::LocalAssertionVar;
 
-    // TODO: try to clean these conditions up a bit more
-    auto end = driverMap.end();
-    for (auto it = driverMap.find(bounds); it != end; ++it) {
-        // Check whether this pair of drivers overlapping constitutes a problem.
-        // The conditions for reporting a problem are:
-        // - If this is for a mix of input/output and inout ports, always report.
-        // - Don't report for "Other" drivers (procedural force / release, etc)
-        // - Otherwise, if is this a static var or uwire net:
-        //      - Report if a mix of continuous and procedural assignments
-        //      - Don't report if both drivers are sliced ports from an array
-        //        of instances. We already sliced these up correctly when the
-        //        connections were made and the overlap logic here won't work correctly.
-        //      - Report if multiple continuous assignments
-        //      - If both procedural, report if there aren multiple
-        //        always_comb / always_ff procedures.
-        //          - If the allowDupInitialDrivers option is set, allow an initial
-        //            block to overlap even if the other block is an always_comb/ff.
-        // - Assertion local variable formal arguments can't drive more than
-        //   one output to the same local variable.
-        bool isProblem = false;
-        auto curr = *it;
+//     // TODO: try to clean these conditions up a bit more
+//     auto end = driverMap.end();
+//     for (auto it = driverMap.find(bounds); it != end; ++it) {
+//         // Check whether this pair of drivers overlapping constitutes a problem.
+//         // The conditions for reporting a problem are:
+//         // - If this is for a mix of input/output and inout ports, always report.
+//         // - Don't report for "Other" drivers (procedural force / release, etc)
+//         // - Otherwise, if is this a static var or uwire net:
+//         //      - Report if a mix of continuous and procedural assignments
+//         //      - Don't report if both drivers are sliced ports from an array
+//         //        of instances. We already sliced these up correctly when the
+//         //        connections were made and the overlap logic here won't work correctly.
+//         //      - Report if multiple continuous assignments
+//         //      - If both procedural, report if there aren multiple
+//         //        always_comb / always_ff procedures.
+//         //          - If the allowDupInitialDrivers option is set, allow an initial
+//         //            block to overlap even if the other block is an always_comb/ff.
+//         // - Assertion local variable formal arguments can't drive more than
+//         //   one output to the same local variable.
+//         bool isProblem = false;
+//         auto curr = *it;
 
-        if (curr->isUnidirectionalPort() != driver.isUnidirectionalPort()) {
-            isProblem = true;
-        }
-        else if (checkOverlap && driver.kind != DriverKind::Other &&
-                 curr->kind != DriverKind::Other) {
-            if (driver.kind == DriverKind::Continuous || curr->kind == DriverKind::Continuous) {
-                if (!driver.flags.has(AssignFlags::SlicedPort) ||
-                    !curr->flags.has(AssignFlags::SlicedPort)) {
-                    isProblem = true;
-                }
-            }
-            else if (curr->containingSymbol != driver.containingSymbol && curr->isInProcedure() &&
-                     driver.isInProcedure() &&
-                     (curr->isInSingleDriverProcedure() || driver.isInSingleDriverProcedure()) &&
-                     (!comp.hasFlag(CompilationFlags::AllowDupInitialDrivers) ||
-                      (curr->source != DriverSource::Initial &&
-                       driver.source != DriverSource::Initial))) {
-                isProblem = true;
-            }
-            else if (curr->isLocalVarFormalArg() && driver.isLocalVarFormalArg()) {
-                isProblem = true;
-            }
-        }
+//         if (curr->isUnidirectionalPort() != driver.isUnidirectionalPort()) {
+//             isProblem = true;
+//         }
+//         else if (checkOverlap && driver.kind != DriverKind::Other &&
+//                  curr->kind != DriverKind::Other) {
+//             if (driver.kind == DriverKind::Continuous || curr->kind == DriverKind::Continuous) {
+//                 if (!driver.flags.has(AssignFlags::SlicedPort) ||
+//                     !curr->flags.has(AssignFlags::SlicedPort)) {
+//                     isProblem = true;
+//                 }
+//             }
+//             else if (curr->containingSymbol != driver.containingSymbol && curr->isInProcedure()
+//             &&
+//                      driver.isInProcedure() &&
+//                      (curr->isInSingleDriverProcedure() || driver.isInSingleDriverProcedure()) &&
+//                      (!comp.hasFlag(CompilationFlags::AllowDupInitialDrivers) ||
+//                       (curr->source != DriverSource::Initial &&
+//                        driver.source != DriverSource::Initial))) {
+//                 isProblem = true;
+//             }
+//             else if (curr->isLocalVarFormalArg() && driver.isLocalVarFormalArg()) {
+//                 isProblem = true;
+//             }
+//         }
 
-        if (isProblem) {
-            // One last annoying special case: if the previous driver was applied as a
-            // side effect of skipping an instance due to it being cached, and then later
-            // we found we had to visit that instance due to a downward name into it,
-            // we might now be trying to reapply the same driver that caused the original
-            // side effect, which would cause spurious multi-driven errors. Detect that
-            // case and skip it here.
-            if (isIfacePortDriver && curr->isFromSideEffect) [[unlikely]] {
-                if (isContainedWithin(*driver.containingSymbol, *curr->containingSymbol))
-                    continue;
-            }
-            else if (driver.isFromSideEffect &&
-                     isContainedWithin(*curr->containingSymbol, *driver.containingSymbol)) {
-                // This operates in reverse as well; someone already visited the instance
-                // manually and now we're trying to apply a side effect that has already
-                // been applied.
-                continue;
-            }
+//         if (isProblem) {
+//             // One last annoying special case: if the previous driver was applied as a
+//             // side effect of skipping an instance due to it being cached, and then later
+//             // we found we had to visit that instance due to a downward name into it,
+//             // we might now be trying to reapply the same driver that caused the original
+//             // side effect, which would cause spurious multi-driven errors. Detect that
+//             // case and skip it here.
+//             if (isIfacePortDriver && curr->isFromSideEffect) [[unlikely]] {
+//                 if (isContainedWithin(*driver.containingSymbol, *curr->containingSymbol))
+//                     continue;
+//             }
+//             else if (driver.isFromSideEffect &&
+//                      isContainedWithin(*curr->containingSymbol, *driver.containingSymbol)) {
+//                 // This operates in reverse as well; someone already visited the instance
+//                 // manually and now we're trying to apply a side effect that has already
+//                 // been applied.
+//                 continue;
+//             }
 
-            if (!handleOverlap(*scope, name, *curr, driver, isNet, isUWire, isSingleDriverUDNT,
-                               netType)) {
-                break;
-            }
-        }
-    }
+//             if (!handleOverlap(*scope, name, *curr, driver, isNet, isUWire, isSingleDriverUDNT,
+//                                netType)) {
+//                 break;
+//             }
+//         }
+//     }
 
-    driverMap.insert(bounds, &driver, comp.getDriverMapAllocator());
-}
+//     driverMap.insert(bounds, &driver, comp.getDriverMapAllocator());
+// }
 
 void ValueSymbol::addPortBackref(const PortSymbol& port) const {
     auto scope = getParentScope();
