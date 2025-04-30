@@ -9,6 +9,7 @@
 
 #include "slang/analysis/AbstractFlowAnalysis.h"
 #include "slang/analysis/AnalysisManager.h"
+#include "slang/analysis/LSPUtilities.h"
 #include "slang/util/IntervalMap.h"
 #include "slang/util/SmallMap.h"
 #include "slang/util/SmallVector.h"
@@ -109,89 +110,6 @@ public:
     void handleTiming(const TimingControl& timing);
 
 private:
-    // A helper class that finds the longest static prefix of select expressions.
-    template<typename TOwner>
-    struct LSPVisitor {
-        TOwner& owner;
-        const Expression* currentLSP = nullptr;
-
-        explicit LSPVisitor(TOwner& owner) : owner(owner) {}
-
-        void clear() { currentLSP = nullptr; }
-
-        void handle(const ElementSelectExpression& expr) {
-            if (expr.isConstantSelect(owner.getEvalContext())) {
-                if (!currentLSP)
-                    currentLSP = &expr;
-            }
-            else {
-                currentLSP = nullptr;
-            }
-
-            owner.visit(expr.value());
-
-            [[maybe_unused]] auto guard = owner.saveLValueFlag();
-            owner.visit(expr.selector());
-        }
-
-        void handle(const RangeSelectExpression& expr) {
-            if (expr.isConstantSelect(owner.getEvalContext())) {
-                if (!currentLSP)
-                    currentLSP = &expr;
-            }
-            else {
-                currentLSP = nullptr;
-            }
-
-            owner.visit(expr.value());
-
-            [[maybe_unused]] auto guard = owner.saveLValueFlag();
-            owner.visit(expr.left());
-            owner.visit(expr.right());
-        }
-
-        void handle(const MemberAccessExpression& expr) {
-            // If this is a selection of a class or covergroup member,
-            // the lsp depends only on the selected member and not on
-            // the handle itself. Otherwise, the opposite is true.
-            auto& valueType = expr.value().type->getCanonicalType();
-            if (valueType.isClass() || valueType.isCovergroup() || valueType.isVoid()) {
-                auto lsp = std::exchange(currentLSP, nullptr);
-                if (!lsp)
-                    lsp = &expr;
-
-                if (VariableSymbol::isKind(expr.member.kind))
-                    owner.noteReference(expr.member.as<VariableSymbol>(), *lsp);
-
-                // Make sure the value gets visited but not as an lvalue anymore.
-                [[maybe_unused]] auto guard = owner.saveLValueFlag();
-                owner.visit(expr.value());
-            }
-            else {
-                if (!currentLSP)
-                    currentLSP = &expr;
-
-                owner.visit(expr.value());
-            }
-        }
-
-        void handle(const HierarchicalValueExpression& expr) {
-            auto lsp = std::exchange(currentLSP, nullptr);
-            if (!lsp)
-                lsp = &expr;
-
-            owner.noteReference(expr.symbol, *lsp);
-        }
-
-        void handle(const NamedValueExpression& expr) {
-            auto lsp = std::exchange(currentLSP, nullptr);
-            if (!lsp)
-                lsp = &expr;
-
-            owner.noteReference(expr.symbol, *lsp);
-        }
-    };
-
     friend class AbstractFlowAnalysis;
 
     template<typename TOwner>

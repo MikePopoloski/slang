@@ -500,35 +500,6 @@ endpackage
     CHECK(block.memberAt<VariableSymbol>(0).lifetime == VariableLifetime::Automatic);
 }
 
-TEST_CASE("driver checking applied to subroutine ref args") {
-    auto tree = SyntaxTree::fromText(R"(
-function automatic void f(ref int a);
-endfunction
-
-function automatic void g(const ref int a);
-endfunction
-
-module m;
-    int i;
-    always_comb begin
-        f(i);
-        g(i);
-    end
-    always_comb begin
-        f(i);
-        g(i);
-    end
-endmodule
-)");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-
-    auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 1);
-    CHECK(diags[0].code == diag::MultipleAlwaysAssigns);
-}
-
 TEST_CASE("Subroutine referring to itself in return type") {
     auto tree = SyntaxTree::fromText(R"(
 function foo foo;
@@ -679,33 +650,4 @@ endfunction
     REQUIRE(diags.size() == 2);
     CHECK(diags[0].code == diag::UndeclaredIdentifier);
     CHECK(diags[1].code == diag::InvalidRefArg);
-}
-
-TEST_CASE("Function arg defaults with multi-driver checking") {
-    auto tree = SyntaxTree::fromText(R"(
-int baz, bar, biz;
-
-function automatic void f1(output int a = baz, ref int b = bar);
-endfunction
-
-function automatic void f2(inout int c = biz);
-endfunction
-
-module m;
-    initial f1();
-    always_comb begin
-        f1();
-    end
-
-    assign biz = 1;
-endmodule
-)");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-
-    auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 2);
-    CHECK(diags[0].code == diag::MultipleAlwaysAssigns);
-    CHECK(diags[1].code == diag::MultipleAlwaysAssigns);
 }

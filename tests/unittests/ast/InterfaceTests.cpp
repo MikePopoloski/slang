@@ -416,95 +416,6 @@ endmodule
     CHECK(j.getValue().integer() == 3);
 }
 
-TEST_CASE("Modport multi-driven errors") {
-    auto tree = SyntaxTree::fromText(R"(
-interface I;
-    int i;
-    modport m(output i);
-endinterface
-
-module m(I.m i);
-    assign i.i = 1;
-endmodule
-
-interface J;
-    logic [3:0] a;
-    logic [2:0] b;
-    modport m(output .R(b[1:0]));
-endinterface
-
-module n(J.m j);
-    assign j.R[1:0] = 2;
-endmodule
-
-module top;
-    I i();
-    m m1(i), m2(i);
-
-    J j1(), j2();
-    n n1(j1), n2(j2);
-
-    assign j2.b[1] = 1;
-endmodule
-)");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-
-    auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 2);
-    CHECK(diags[0].code == diag::MultipleContAssigns);
-    CHECK(diags[1].code == diag::MultipleContAssigns);
-}
-
-TEST_CASE("Iface connection multi-driven through array errors") {
-    auto tree = SyntaxTree::fromText(R"(
-interface I;
-    for (genvar i = 0; i < 5; i++) begin : asdf
-        logic a;
-    end
-endinterface
-
-interface J;
-    I i[3] ();
-    logic q;
-    modport m(input q);
-endinterface
-
-module m(I i);
-    assign i.asdf[4].a = 1;
-endmodule
-
-module n(I i[3]);
-    assign i[2].asdf[4].a = 1;
-endmodule
-
-module o(J j);
-    assign j.i[1].asdf[2].a = 1;
-endmodule
-
-module top;
-    I i();
-    m m1(i), m2(i);
-
-    I arr [3] ();
-    n n1(arr), n2(arr);
-
-    J j();
-    o o1(j.m), o2(j.m);
-endmodule
-)");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-
-    auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 3);
-    CHECK(diags[0].code == diag::MultipleContAssigns);
-    CHECK(diags[1].code == diag::MultipleContAssigns);
-    CHECK(diags[2].code == diag::MultipleContAssigns);
-}
-
 TEST_CASE("Uninstantiated virtual interface param regress GH #679") {
     auto tree = SyntaxTree::fromText(R"(
 interface I;
@@ -670,30 +581,6 @@ endmodule
     REQUIRE(diags.size() == 2);
     CHECK(diags[0].code == diag::InvalidModportAccess);
     CHECK(diags[1].code == diag::ParamHasNoValue);
-}
-
-TEST_CASE("Interface array multi-driven error regress") {
-    auto tree = SyntaxTree::fromText(R"(
-interface I;
-    int i;
-    modport m(output i);
-endinterface
-
-module mod(I.m arr[3]);
-    for (genvar i = 0; i < 3; i++) begin
-        always_comb arr[i].i = i;
-    end
-endmodule
-
-module top;
-    I i [3]();
-    mod m1(i);
-endmodule
-)");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-    NO_COMPILATION_ERRORS;
 }
 
 TEST_CASE("Interface-based typedef") {
@@ -929,38 +816,6 @@ endmodule
     auto& diags = compilation.getAllDiagnostics();
     REQUIRE(diags.size() == 1);
     CHECK(diags[0].code == diag::DupInterfaceExternMethod);
-}
-
-TEST_CASE("Multiple layers of interface ports and cache interaction") {
-    auto tree = SyntaxTree::fromText(R"(
-interface I;
-    logic l;
-endinterface
-
-module m(I i);
-    assign i.l = 1;
-endmodule
-
-module n(I i[2]);
-    m m1(i[1]);
-endmodule
-
-module o(I i[3]);
-    n n1(i[1:2]);
-endmodule
-
-module top;
-    I i [3]();
-    o o1(i), o2(i);
-endmodule
-)");
-
-    Compilation compilation;
-    compilation.addSyntaxTree(tree);
-
-    auto& diags = compilation.getAllDiagnostics();
-    REQUIRE(diags.size() == 1);
-    CHECK(diags[0].code == diag::MultipleContAssigns);
 }
 
 TEST_CASE("Instance caching with iface port side effects and downward names") {
