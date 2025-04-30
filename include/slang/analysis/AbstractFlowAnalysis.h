@@ -76,6 +76,12 @@ public:
         visit(stmt);
     }
 
+    /// Run the analysis.
+    void run(const Expression& expr) {
+        state = (DERIVED).topState();
+        visit(expr);
+    }
+
 protected:
     using FlowAnalysisBase::FlowAnalysisBase;
 

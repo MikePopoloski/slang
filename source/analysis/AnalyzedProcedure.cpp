@@ -62,6 +62,13 @@ AnalyzedProcedure::AnalyzedProcedure(AnalysisContext& context, const Symbol& ana
         case SymbolKind::Subroutine:
             dfa.run(analyzedSymbol.as<SubroutineSymbol>().getBody());
             break;
+        case SymbolKind::ContinuousAssign: {
+            auto& assign = analyzedSymbol.as<ContinuousAssignSymbol>();
+            if (auto delay = assign.getDelay())
+                dfa.handleTiming(*delay);
+            dfa.run(assign.getAssignment());
+            break;
+        }
         default:
             SLANG_UNREACHABLE;
     }
