@@ -16,12 +16,15 @@
 #include "slang/diagnostics/Diagnostics.h"
 #include "slang/util/BumpAllocator.h"
 #include "slang/util/ConcurrentMap.h"
+#include "slang/util/IntervalMap.h"
 
 namespace slang::ast {
 
 class Compilation;
 class Scope;
 class Symbol;
+class ValueDriver;
+class ValueSymbol;
 
 } // namespace slang::ast
 
@@ -142,12 +145,17 @@ public:
     /// Returns the results of a previous analysis of a scope, if available.
     const AnalyzedScope* getAnalyzedScope(const ast::Scope& scope);
 
+    /// Returns all of the drivers for the given symbol.
+    std::vector<const ast::ValueDriver*> getDrivers(const ast::ValueSymbol& symbol) const;
+
     /// Collects and returns all issued analysis diagnostics.
     /// If @a sourceManager is provided it will be used to sort the diagnostics.
     Diagnostics getDiagnostics(const SourceManager* sourceManager);
 
 private:
     friend struct AnalysisScopeVisitor;
+
+    using SymbolDriverMap = IntervalMap<uint64_t, const ast::ValueDriver*, 5>;
 
     PendingAnalysis analyzeSymbol(const ast::Symbol& symbol);
     void analyzeScopeAsync(const ast::Scope& scope);
@@ -156,14 +164,16 @@ private:
     struct WorkerState {
         AnalysisContext context;
         TypedBumpAllocator<AnalyzedScope> scopeAlloc;
+        SymbolDriverMap::allocator_type driverAlloc;
 
-        WorkerState(AnalysisManager& manager) : context(manager) {}
+        WorkerState(AnalysisManager& manager) : context(manager), driverAlloc(context.alloc) {}
     };
     WorkerState& state();
 
     AnalysisOptions options;
     std::vector<WorkerState> workerStates;
     concurrent_map<const ast::Scope*, std::optional<const AnalyzedScope*>> analyzedScopes;
+    concurrent_map<const ast::ValueSymbol*, SymbolDriverMap> symbolDrivers;
     BS::thread_pool<> threadPool;
 
     // A mutex for shared state; anything protected by it is declared below.
