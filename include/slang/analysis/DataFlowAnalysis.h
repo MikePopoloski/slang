@@ -94,6 +94,17 @@ public:
     /// Returns true if the given symbol is definitely assigned at the current point.
     bool isDefinitelyAssigned(const ValueSymbol& symbol) const;
 
+    // Tracks assigned ranges of symbols used as lvalues in the procedure.
+    struct LValueSymbol {
+        not_null<const ValueSymbol*> symbol;
+        SymbolLSPMap assigned;
+
+        LValueSymbol(const ValueSymbol& symbol) : symbol(&symbol) {}
+    };
+
+    /// Gets all of the lvalues used in the procedure.
+    std::span<const LValueSymbol> getLValues() const { return lvalues; }
+
 private:
     // A helper class that finds the longest static prefix of select expressions.
     template<typename TOwner>
@@ -191,12 +202,6 @@ private:
 
     // Tracks the assigned ranges of each variable across the entire procedure,
     // even if not all branches assign to it.
-    struct LValueSymbol {
-        not_null<const ValueSymbol*> symbol;
-        SymbolLSPMap assigned;
-
-        LValueSymbol(const ValueSymbol& symbol) : symbol(&symbol) {}
-    };
     SmallVector<LValueSymbol> lvalues;
 
     // All of the nets and variables that have been read in the procedure.

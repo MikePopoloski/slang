@@ -147,6 +147,26 @@ AnalyzedProcedure::AnalyzedProcedure(AnalysisContext& context, const Symbol& ana
             }
         }
     }
+
+    // Build a list of drivers for all lvalues.
+    for (auto& lvalue : dfa.getLValues()) {
+        // Skip over automatic variables.
+        auto& symbol = *lvalue.symbol;
+        if (VariableSymbol::isKind(symbol.kind)) {
+            if (symbol.as<VariableSymbol>().lifetime == VariableLifetime::Automatic)
+                continue;
+        }
+
+        std::vector<std::pair<const ast::ValueDriver*, DriverBitRange>> perSymbol;
+        for (auto it = lvalue.assigned.begin(); it != lvalue.assigned.end(); ++it) {
+            auto bounds = it.bounds();
+            auto driver = context.alloc.emplace<ValueDriver>(DriverKind::Procedural, **it,
+                                                             analyzedSymbol, AssignFlags::None);
+            perSymbol.emplace_back(driver, bounds);
+        }
+
+        drivers.emplace_back(&symbol, std::move(perSymbol));
+    }
 }
 
 } // namespace slang::analysis
