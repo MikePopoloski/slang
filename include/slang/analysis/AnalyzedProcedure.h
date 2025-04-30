@@ -27,6 +27,9 @@ namespace slang::analysis {
 class AnalysisContext;
 
 /// Represents an analyzed procedure.
+///
+/// Note that this can include continuous assignments, which are not
+/// technically procedures but are treated as such for analysis purposes.
 class SLANG_EXPORT AnalyzedProcedure {
 public:
     /// The symbol that was analyzed.

@@ -105,6 +105,9 @@ public:
     /// Gets all of the lvalues used in the procedure.
     std::span<const LValueSymbol> getLValues() const { return lvalues; }
 
+    /// Performs handling for a timing control contained in the procedure.
+    void handleTiming(const TimingControl& timing);
+
 private:
     // A helper class that finds the longest static prefix of select expressions.
     template<typename TOwner>
@@ -261,7 +264,6 @@ private:
     void handle(const ProceduralCheckerStatement& stmt);
     void handle(const AssertionInstanceExpression& expr);
     void handle(const EventTriggerStatement& stmt);
-    void handleTiming(const TimingControl& timing);
 
     // **** State Management ****
 

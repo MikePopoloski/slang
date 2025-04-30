@@ -79,7 +79,11 @@ struct AnalysisScopeVisitor {
         visitMembers(symbol);
     }
 
-    void visit(const ProceduralBlockSymbol& symbol) {
+    // We treat continuous assignments as procedures even though they
+    // are technically not. The handling ends up being the same.
+    template<typename T>
+        requires(IsAnyOf<T, ProceduralBlockSymbol, ContinuousAssignSymbol>)
+    void visit(const T& symbol) {
         result.procedures.emplace_back(context, symbol, parentProcedure);
 
         for (auto& [valueSym, drivers] : result.procedures.back().getDrivers()) {
@@ -248,12 +252,11 @@ struct AnalysisScopeVisitor {
                     AttributeSymbol, TransparentMemberSymbol, EmptyMemberSymbol, EnumValueSymbol,
                     ForwardingTypedefSymbol, PortSymbol, MultiPortSymbol, InterfacePortSymbol,
                     InstanceBodySymbol, ModportSymbol, ModportPortSymbol, ModportClockingSymbol,
-                    ContinuousAssignSymbol, ElabSystemTaskSymbol, UninstantiatedDefSymbol,
-                    ConstraintBlockSymbol, DefParamSymbol, SpecparamSymbol, PrimitiveSymbol,
-                    PrimitivePortSymbol, PrimitiveInstanceSymbol, AssertionPortSymbol,
-                    CoverpointSymbol, CoverageBinSymbol, TimingPathSymbol, PulseStyleSymbol,
-                    SystemTimingCheckSymbol, NetAliasSymbol, ConfigBlockSymbol, NetType,
-                    CheckerInstanceBodySymbol> ||
+                    ElabSystemTaskSymbol, UninstantiatedDefSymbol, ConstraintBlockSymbol,
+                    DefParamSymbol, SpecparamSymbol, PrimitiveSymbol, PrimitivePortSymbol,
+                    PrimitiveInstanceSymbol, AssertionPortSymbol, CoverpointSymbol,
+                    CoverageBinSymbol, TimingPathSymbol, PulseStyleSymbol, SystemTimingCheckSymbol,
+                    NetAliasSymbol, ConfigBlockSymbol, NetType, CheckerInstanceBodySymbol> ||
             std::is_base_of_v<Type, T>)
     void visit(const T& symbol) {
         visitExprs(symbol);
