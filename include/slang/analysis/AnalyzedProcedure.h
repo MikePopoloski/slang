@@ -17,6 +17,8 @@ namespace slang::ast {
 
 class Symbol;
 class TimingControl;
+class ValueDriver;
+class ValueSymbol;
 
 } // namespace slang::ast
 
@@ -49,8 +51,16 @@ public:
     /// @note These include procedural checkers contained within the procedure.
     std::span<const AnalyzedAssertion> getAssertions() const { return assertions; }
 
+    using DriverBitRange = std::pair<uint64_t, uint64_t>;
+    using Driver = std::pair<const ast::ValueSymbol*,
+                             std::vector<std::pair<const ast::ValueDriver*, DriverBitRange>>>;
+
+    /// Gets all of the drivers in the procedure.
+    std::span<const Driver> getDrivers() const { return drivers; }
+
 private:
     const ast::TimingControl* inferredClock = nullptr;
+    std::vector<Driver> drivers;
     std::vector<AnalyzedAssertion> assertions;
 };
 

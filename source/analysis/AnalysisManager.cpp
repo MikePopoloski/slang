@@ -107,7 +107,7 @@ const AnalyzedScope& AnalysisManager::analyzeScopeBlocking(
     auto& s = state();
     auto& result = *s.scopeAlloc.emplace(scope);
 
-    AnalysisScopeVisitor visitor(*this, s.context, result, parentProcedure);
+    AnalysisScopeVisitor visitor(s, result, parentProcedure);
     for (auto& member : scope.members())
         member.visit(visitor);
 
@@ -121,6 +121,15 @@ const AnalyzedScope* AnalysisManager::getAnalyzedScope(const Scope& scope) {
             result = *item.second;
     });
     return result;
+}
+
+std::vector<const ValueDriver*> AnalysisManager ::getDrivers(const ValueSymbol& symbol) const {
+    std::vector<const ValueDriver*> drivers;
+    symbolDrivers.cvisit(&symbol, [&drivers](auto& item) {
+        for (auto it = item.second.begin(); it != item.second.end(); ++it)
+            drivers.push_back(*it);
+    });
+    return drivers;
 }
 
 Diagnostics AnalysisManager::getDiagnostics(const SourceManager* sourceManager) {
