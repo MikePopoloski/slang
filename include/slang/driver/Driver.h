@@ -37,6 +37,10 @@ enum class CompilationFlags;
 
 } // namespace slang::ast
 
+namespace slang::analysis {
+enum class AnalysisFlags;
+}
+
 namespace slang::driver {
 
 /// @brief A top-level class that handles argument parsing, option preparation,
@@ -253,11 +257,8 @@ public:
         /// @name Analysis
         /// @{
 
-        /// Respect the unique and priority keywords in data flow analysis.
-        std::optional<bool> dfaUniquePriority;
-
-        /// Require case coverage to include X and Z bits in data flow analysis.
-        std::optional<bool> dfaFourState;
+        /// A collection of flags that control analysis.
+        std::map<analysis::AnalysisFlags, std::optional<bool>> analysisFlags;
 
         /// The maximum number of steps to take when analyzing a case statement.
         std::optional<uint32_t> maxCaseAnalysisSteps;

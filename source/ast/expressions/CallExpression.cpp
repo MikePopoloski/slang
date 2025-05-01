@@ -7,11 +7,11 @@
 //------------------------------------------------------------------------------
 #include "slang/ast/expressions/CallExpression.h"
 
-#include "slang/ast/ASTVisitor.h"
 #include "slang/ast/Compilation.h"
 #include "slang/ast/Constraints.h"
 #include "slang/ast/EvalContext.h"
 #include "slang/ast/SystemSubroutine.h"
+#include "slang/ast/expressions/AssignmentExpressions.h"
 #include "slang/ast/expressions/MiscExpressions.h"
 #include "slang/ast/expressions/SelectExpressions.h"
 #include "slang/ast/symbols/ClassSymbols.h"
@@ -335,9 +335,6 @@ bool CallExpression::bindArgs(const ArgumentListSyntax* argSyntax,
     return !bad;
 }
 
-static void addSubroutineDrivers(const Symbol& procedure, const SubroutineSymbol& sub,
-                                 const Expression& callExpr);
-
 Expression& CallExpression::fromArgs(Compilation& compilation, const Subroutine& subroutine,
                                      const Expression* thisClass,
                                      const ArgumentListSyntax* argSyntax, SourceRange range,
@@ -369,13 +366,6 @@ Expression& CallExpression::fromArgs(Compilation& compilation, const Subroutine&
 
     if (!checkOutputArgs(context, symbol.hasOutputArgs(), range))
         return badExpr(compilation, result);
-
-    // If this subroutine is invoked from a procedure, register drivers for this
-    // particular procedure to detect multiple driver violations.
-    if (!thisClass && symbol.subroutineKind == SubroutineKind::Function) {
-        if (auto proc = context.getProceduralBlock(); proc && !context.scope->isUninstantiated())
-            addSubroutineDrivers(*proc, symbol, *result);
-    }
 
     return *result;
 }
@@ -917,74 +907,6 @@ void CallExpression::serializeTo(ASTSerializer& serializer) const {
             serializer.serialize(*arg);
         serializer.endArray();
     }
-}
-
-class DriverVisitor : public ASTVisitor<DriverVisitor, true, true> {
-public:
-    const Symbol& procedure;
-    const SubroutineSymbol& sub;
-    const Expression& callExpr;
-    SmallSet<const ValueSymbol*, 8> visitedValues;
-    SmallSet<const SubroutineSymbol*, 4>& visitedSubs;
-
-    DriverVisitor(const Symbol& procedure, SmallSet<const SubroutineSymbol*, 4>& visitedSubs,
-                  const SubroutineSymbol& sub, const Expression& callExpr) :
-        procedure(procedure), sub(sub), callExpr(callExpr), visitedSubs(visitedSubs) {}
-
-    void handle(const CallExpression& expr) {
-        if (!expr.isSystemCall() && !expr.thisClass()) {
-            auto& subroutine = *std::get<0>(expr.subroutine);
-            if (subroutine.subroutineKind == SubroutineKind::Function &&
-                visitedSubs.emplace(&subroutine).second) {
-
-                DriverVisitor visitor(procedure, visitedSubs, subroutine, callExpr);
-                subroutine.getBody().visit(visitor);
-            }
-        }
-    }
-
-    void handle(const ValueExpressionBase& expr) {
-        auto& sym = expr.symbol;
-        if (!visitedValues.emplace(&sym).second)
-            return;
-
-        if (sub.getCompilation().hasFlag(CompilationFlags::AllowMultiDrivenLocals)) {
-            auto scope = sym.getParentScope();
-            while (scope && scope->asSymbol().kind == SymbolKind::StatementBlock)
-                scope = scope->asSymbol().getParentScope();
-
-            if (scope == &sub) {
-                // This is a local variable of the subroutine,
-                // so don't do driver checking.
-                return;
-            }
-        }
-
-        // If the target symbol is driven by the subroutine we're inspecting,
-        // add another driver for the procedure we're originally called from.
-        SmallVector<std::pair<DriverBitRange, const ValueDriver*>> drivers;
-        auto range = sym.drivers();
-        for (auto it = range.begin(); it != range.end(); ++it) {
-            if ((*it)->containingSymbol == &sub)
-                drivers.push_back({it.bounds(), *it});
-        }
-
-        // This needs to be a separate loop to avoid mutating the driver map
-        // while iterating over it.
-        for (auto [bounds, driver] : drivers) {
-            sym.addDriver(DriverKind::Procedural, bounds, *driver->prefixExpression, procedure,
-                          callExpr);
-        }
-    }
-};
-
-static void addSubroutineDrivers(const Symbol& procedure, const SubroutineSymbol& sub,
-                                 const Expression& callExpr) {
-    SmallSet<const SubroutineSymbol*, 4> visitedSubs;
-    visitedSubs.emplace(&sub);
-
-    DriverVisitor visitor(procedure, visitedSubs, sub, callExpr);
-    sub.getBody().visit(visitor);
 }
 
 } // namespace slang::ast

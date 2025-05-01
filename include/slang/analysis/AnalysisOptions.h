@@ -24,9 +24,12 @@ enum class SLANG_EXPORT AnalysisFlags {
 
     /// Require X and Z bits be covered for full case coverage.
     /// If not set, only 0 and 1 bits are required.
-    FullCaseFourState = 1 << 2
+    FullCaseFourState = 1 << 2,
+
+    /// Allow multi-driven subroutine local variables.
+    AllowMultiDrivenLocals = 1 << 3
 };
-SLANG_BITMASK(AnalysisFlags, FullCaseFourState)
+SLANG_BITMASK(AnalysisFlags, AllowMultiDrivenLocals)
 
 /// Contains various options that can control analysis behavior.
 struct SLANG_EXPORT AnalysisOptions {
