@@ -27,9 +27,14 @@ enum class SLANG_EXPORT AnalysisFlags {
     FullCaseFourState = 1 << 2,
 
     /// Allow multi-driven subroutine local variables.
-    AllowMultiDrivenLocals = 1 << 3
+    AllowMultiDrivenLocals = 1 << 3,
+
+    /// Signals driven by an always_comb are normally not allowed to be driven
+    /// by any other process. This flag allows initial blocks to
+    /// also drive such signals.
+    AllowDupInitialDrivers = 1 << 4,
 };
-SLANG_BITMASK(AnalysisFlags, AllowMultiDrivenLocals)
+SLANG_BITMASK(AnalysisFlags, AllowDupInitialDrivers)
 
 /// Contains various options that can control analysis behavior.
 struct SLANG_EXPORT AnalysisOptions {
