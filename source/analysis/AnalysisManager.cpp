@@ -123,7 +123,20 @@ const AnalyzedScope* AnalysisManager::getAnalyzedScope(const Scope& scope) {
     return result;
 }
 
-std::vector<const ValueDriver*> AnalysisManager ::getDrivers(const ValueSymbol& symbol) const {
+const AnalyzedProcedure* AnalysisManager::getAnalyzedSubroutine(
+    const SubroutineSymbol& symbol) const {
+
+    const AnalyzedProcedure* result = nullptr;
+    analyzedSubroutines.cvisit(&symbol, [&result](auto& item) { result = item.second.get(); });
+    return result;
+}
+
+void AnalysisManager::addAnalyzedSubroutine(const SubroutineSymbol& symbol,
+                                            std::unique_ptr<AnalyzedProcedure> procedure) {
+    analyzedSubroutines.try_emplace(&symbol, std::move(procedure));
+}
+
+std::vector<const ValueDriver*> AnalysisManager::getDrivers(const ValueSymbol& symbol) const {
     std::vector<const ValueDriver*> drivers;
     symbolDrivers.cvisit(&symbol, [&drivers](auto& item) {
         for (auto it = item.second.begin(); it != item.second.end(); ++it)

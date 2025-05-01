@@ -41,6 +41,7 @@ AnalyzedProcedure::AnalyzedProcedure(AnalysisContext& context, const Symbol& ana
             SLANG_UNREACHABLE;
     }
 
+    canCache = !dfa.sawRecursiveFunction;
     if (dfa.bad)
         return;
 
@@ -124,7 +125,9 @@ AnalyzedProcedure::AnalyzedProcedure(AnalysisContext& context, const Symbol& ana
     }
 
     // Build a list of drivers for all lvalues.
-    for (auto& lvalue : dfa.getLValues()) {
+    auto lvalues = dfa.getLValues();
+    drivers.reserve(lvalues.size());
+    for (auto& lvalue : lvalues) {
         // Skip over automatic variables.
         auto& symbol = *lvalue.symbol;
         if (VariableSymbol::isKind(symbol.kind)) {
@@ -132,7 +135,7 @@ AnalyzedProcedure::AnalyzedProcedure(AnalysisContext& context, const Symbol& ana
                 continue;
         }
 
-        std::vector<std::pair<const ast::ValueDriver*, DriverBitRange>> perSymbol;
+        DriverList perSymbol;
         for (auto it = lvalue.assigned.begin(); it != lvalue.assigned.end(); ++it) {
             auto bounds = it.bounds();
             auto driver = context.alloc.emplace<ValueDriver>(driverKind, **it, analyzedSymbol,
@@ -141,6 +144,12 @@ AnalyzedProcedure::AnalyzedProcedure(AnalysisContext& context, const Symbol& ana
         }
 
         drivers.emplace_back(&symbol, std::move(perSymbol));
+    }
+
+    for (auto& [_, symDriverList] : dfa.getIndirectDrivers()) {
+        drivers.reserve(drivers.size() + symDriverList.size());
+        for (auto& [valueSym, driverList] : symDriverList)
+            drivers.emplace_back(valueSym, driverList);
     }
 }
 
