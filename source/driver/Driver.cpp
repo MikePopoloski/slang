@@ -39,6 +39,7 @@ namespace slang::driver {
 using namespace ast;
 using namespace parsing;
 using namespace syntax;
+using namespace analysis;
 
 Driver::Driver() : diagEngine(sourceManager), sourceLoader(sourceManager) {
     textDiagClient = std::make_shared<TextDiagnosticClient>();
@@ -192,9 +193,6 @@ void Driver::addStandardArgs() {
     addCompFlag(CompilationFlags::AllowSelfDeterminedStreamConcat,
                 "--allow-self-determined-stream-concat",
                 "Allow self-determined streaming concatenation expressions");
-    addCompFlag(
-        CompilationFlags::AllowMultiDrivenLocals, "--allow-multi-driven-locals",
-        "Allow subroutine local variables to be driven from multiple always_comb/_ff blocks");
     addCompFlag(CompilationFlags::AllowMergingAnsiPorts, "--allow-merging-ansi-ports",
                 "Allow merging ANSI port declarations with nets and variables declared in the "
                 "instance body");
@@ -356,13 +354,21 @@ void Driver::addStandardArgs() {
         "<file-pattern>[,...]", CommandLineFlags::CommaList);
 
     // Analysis modifiers
-    cmdLine.add("--dfa-unique-priority", options.dfaUniquePriority,
-                "Respect the 'unique' and 'priority' keywords when analyzing data flow "
-                "through case statements");
+    auto addAnalysisFlag = [&](AnalysisFlags flag, std::string_view name, std::string_view desc) {
+        auto [it, inserted] = options.analysisFlags.emplace(flag, std::nullopt);
+        SLANG_ASSERT(inserted);
+        cmdLine.add(name, it->second, desc);
+    };
 
-    cmdLine.add("--dfa-four-state", options.dfaFourState,
-                "Require that case items cover X and Z bits to assume full coverage "
-                "in data flow analysis");
+    addAnalysisFlag(
+        AnalysisFlags::AllowMultiDrivenLocals, "--allow-multi-driven-locals",
+        "Allow subroutine local variables to be driven from multiple always_comb/_ff blocks");
+    addAnalysisFlag(AnalysisFlags::FullCaseUniquePriority, "--dfa-unique-priority",
+                    "Respect the 'unique' and 'priority' keywords when analyzing data flow "
+                    "through case statements");
+    addAnalysisFlag(AnalysisFlags::FullCaseFourState, "--dfa-four-state",
+                    "Require that case items cover X and Z bits to assume full coverage "
+                    "in data flow analysis");
 
     cmdLine.add("--max-case-analysis-steps", options.maxCaseAnalysisSteps,
                 "Maximum number of steps that can occur during case analysis before giving up",
@@ -469,18 +475,24 @@ bool Driver::processOptions() {
 
     if (options.compat.has_value()) {
         if (options.compat == "vcs") {
-            auto vcsCompatFlags = {CompilationFlags::AllowHierarchicalConst,
-                                   CompilationFlags::AllowUseBeforeDeclare,
-                                   CompilationFlags::RelaxEnumConversions,
-                                   CompilationFlags::RelaxStringConversions,
-                                   CompilationFlags::AllowRecursiveImplicitCall,
-                                   CompilationFlags::AllowBareValParamAssignment,
-                                   CompilationFlags::AllowSelfDeterminedStreamConcat,
-                                   CompilationFlags::AllowMultiDrivenLocals,
-                                   CompilationFlags::AllowMergingAnsiPorts};
+            auto vcsCompFlags = {CompilationFlags::AllowHierarchicalConst,
+                                 CompilationFlags::AllowUseBeforeDeclare,
+                                 CompilationFlags::RelaxEnumConversions,
+                                 CompilationFlags::RelaxStringConversions,
+                                 CompilationFlags::AllowRecursiveImplicitCall,
+                                 CompilationFlags::AllowBareValParamAssignment,
+                                 CompilationFlags::AllowSelfDeterminedStreamConcat,
+                                 CompilationFlags::AllowMergingAnsiPorts};
 
-            for (auto flag : vcsCompatFlags) {
+            for (auto flag : vcsCompFlags) {
                 auto& option = options.compilationFlags.at(flag);
+                if (!option.has_value())
+                    option = true;
+            }
+
+            auto vcsAnalysisFlags = {AnalysisFlags::AllowMultiDrivenLocals};
+            for (auto flag : vcsAnalysisFlags) {
+                auto& option = options.analysisFlags.at(flag);
                 if (!option.has_value())
                     option = true;
             }
@@ -960,12 +972,13 @@ void Driver::runAnalysis(ast::Compilation& compilation) {
     ao.numThreads = options.numThreads.value_or(0);
     if (!options.lintMode())
         ao.flags |= AnalysisFlags::CheckUnused;
-    if (options.dfaUniquePriority.value_or(true))
-        ao.flags |= AnalysisFlags::FullCaseUniquePriority;
-    if (options.dfaFourState.value_or(false))
-        ao.flags |= AnalysisFlags::FullCaseFourState;
     if (options.maxCaseAnalysisSteps)
         ao.maxCaseAnalysisSteps = *options.maxCaseAnalysisSteps;
+
+    for (auto& [flag, value] : options.analysisFlags) {
+        if (value == true)
+            ao.flags |= flag;
+    }
 
     AnalysisManager analysisManager(ao);
     analysisManager.analyze(compilation);

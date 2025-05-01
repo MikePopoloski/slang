@@ -122,16 +122,13 @@ enum class SLANG_EXPORT CompilationFlags {
     /// can only be used in specific assignment-like contexts.
     AllowSelfDeterminedStreamConcat = 1 << 11,
 
-    /// Allow multi-driven subroutine local variables.
-    AllowMultiDrivenLocals = 1 << 12,
-
     /// Allow merging ANSI port declarations with nets and variables
     /// declared in the module body.
-    AllowMergingAnsiPorts = 1 << 13,
+    AllowMergingAnsiPorts = 1 << 12,
 
     /// Disable the use of instance caching, which normally allows skipping
     /// duplicate instance bodies to save time when elaborating.
-    DisableInstanceCaching = 1 << 14,
+    DisableInstanceCaching = 1 << 13,
 };
 SLANG_BITMASK(CompilationFlags, DisableInstanceCaching)
 

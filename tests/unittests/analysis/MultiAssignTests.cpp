@@ -144,15 +144,14 @@ module top(input clk, input reset);
 endmodule
 )";
 
-    CompilationOptions options;
-    options.flags |= CompilationFlags::AllowMultiDrivenLocals;
+    AnalysisOptions options;
+    options.flags |= AnalysisFlags::AllowMultiDrivenLocals;
 
-    Compilation compilation(options);
-    AnalysisManager analysisManager;
+    Compilation compilation;
+    AnalysisManager analysisManager(options);
 
     auto [diags, design] = analyze(code, compilation, analysisManager);
     CHECK_DIAGS_EMPTY;
-    NO_COMPILATION_ERRORS;
 }
 
 TEST_CASE("v1800-2023 clarification: multi-driven subroutine checking doesn't apply to tasks") {

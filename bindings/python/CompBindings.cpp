@@ -54,7 +54,6 @@ void registerCompilation(py::module_& m) {
         .value("AllowRecursiveImplicitCall", CompilationFlags::AllowRecursiveImplicitCall)
         .value("AllowBareValParamAssignment", CompilationFlags::AllowBareValParamAssignment)
         .value("AllowSelfDeterminedStreamConcat", CompilationFlags::AllowSelfDeterminedStreamConcat)
-        .value("AllowMultiDrivenLocals", CompilationFlags::AllowMultiDrivenLocals)
         .value("AllowMergingAnsiPorts", CompilationFlags::AllowMergingAnsiPorts)
         .value("DisableInstanceCaching", CompilationFlags::DisableInstanceCaching);
 
